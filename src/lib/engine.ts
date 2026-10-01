@@ -10,6 +10,9 @@ import { contactParts, logDecision, logEvidence, matchLead, normaliseContact, ty
 import { transferDetails } from "./knowledge";
 import { bankConnectionOf, mentionsCode } from "./bank";
 import { emitEvent } from "./outbound-events";
+import { renderEmail } from "./email/layout";
+import { sendWorkspaceEmail } from "./email/send";
+import { triggerPaymentReceipt } from "./n8n-pipelines";
 import type {
   Authority, AuthorityRule, Department, EvidenceState, FlowAction, GateVerdict, InboundEvent, Invoice, Order, Origin, Proposal,
   ReasonCode, Transaction, WorkEdits, WorkItem,
@@ -582,6 +585,28 @@ const replyCustomer: Performer = {
   },
 };
 
+/**
+ * send_email: a customer-facing email (receipt, payment reminder). The proposal is preset by requestCustomerEmail
+ * (fields: contact = recipient, subject, purpose, refs = JSON; draft = the plain body, editable by the owner when asked).
+ * Only this performer may send customer mail: it hands the work item id to sendWorkspaceEmail as proof the gate approved it.
+ */
+const sendEmail: Performer = {
+  prepare: async (_c, item) => ({ proposal: item.proposal }),
+  perform: async (c, item, p) => {
+    const to = str(p.fields.contact).trim();
+    const subject = str(p.fields.subject);
+    const shop = (((await c.db.from("workspaces").select("name").eq("id", c.ws).maybeSingle()).data ?? null) as { name: string } | null)?.name ?? "NIVO";
+    const mail = renderEmail({ shopName: shop, title: subject, body: p.draft ?? "" });
+    let refs: Record<string, unknown> = {};
+    try { refs = JSON.parse(str(p.fields.refs) || "{}") as Record<string, unknown>; } catch { refs = {}; }
+    const r = await sendWorkspaceEmail({
+      workspaceId: c.ws, to, subject, html: mail.html, text: mail.text, purpose: str(p.fields.purpose) || "customer_email", refs, audience: "customer", workItemId: item.id,
+    });
+    if (r.status !== "sent") throw new Error(r.error ?? "email not sent");
+    return { summary: tr(c)("emailSent", { to, subject }), evidence: "captured", lead_id: item.lead_id, detail: p.draft ?? null };
+  },
+};
+
 const PERFORMERS: Record<FlowAction, Performer> = {
   reply_customer: replyCustomer,
   handoff_lead: handoffLead,
@@ -592,6 +617,7 @@ const PERFORMERS: Record<FlowAction, Performer> = {
   send_care: followUpLike("care"),
   issue_invoice: issueInvoice,
   reconcile_payment: reconcilePayment,
+  send_email: sendEmail,
 };
 
 /* ------------------------------------------------------------------ the gate loop */
@@ -729,6 +755,13 @@ export const runWork = async (c: EngineCtx, spec: WorkSpec): Promise<WorkItem> =
 
 /** Queue the next department's step for a finished item (FLOW_NEXT). */
 export const continueChain = async (c: EngineCtx, item: WorkItem): Promise<void> => {
+  // payment.received: the customer's receipt by email (n8n pipeline email-payment-receipt, when the shop turned it on).
+  if (item.action === "reconcile_payment") {
+    await triggerPaymentReceipt(c.ws, {
+      transactionId: item.subject_type === "transaction" ? item.subject_id : null,
+      invoiceId: item.proposal.candidates?.length === 1 ? item.proposal.candidates[0].id : item.subject_type === "invoice" ? item.subject_id : null,
+    });
+  }
   for (const next of FLOW_NEXT[item.action]) {
     const base = { action: next, parent_id: item.id, origin: item.origin, inbound_event_id: item.inbound_event_id, queue: true } as const;
     if (next === "classify_lead" && item.lead_id) {

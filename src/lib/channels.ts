@@ -27,6 +27,8 @@ export type Connection = {
   readonly lastError: string | null;
   /** `test` = the provider's test mode: its credits are stored as simulated, never real money. */
   readonly environment: Environment;
+  /** SMTP only: the workspace default sender. */
+  readonly isDefault: boolean;
   readonly lastEventAt: string | null;
   /** The first webhook the connection accepted (what the wizard shows as "received +X d"). */
   readonly firstEvent: FirstEvent | null;
@@ -82,11 +84,11 @@ export const webhookUrlFor = (provider: Provider, connectionId: string, origin =
   return provider === "telegram" ? `${base}/api/telegram/${connectionId}` : `${base}/api/connections/${provider === "zalo_oa" ? "zalo" : provider}/${connectionId}`;
 };
 
-type Row = { id: string; workspace_id: string; provider: Provider; name: string; public_meta: Record<string, string> | null; status: ConnectionStatus; last_error: string | null; environment: Environment; last_event_at: string | null; first_event: FirstEvent | null };
-export const CONNECTION_SELECT = "id, workspace_id, provider, name, public_meta, status, last_error, environment, last_event_at, first_event";
+type Row = { id: string; workspace_id: string; provider: Provider; name: string; public_meta: Record<string, string> | null; status: ConnectionStatus; last_error: string | null; environment: Environment; is_default: boolean | null; last_event_at: string | null; first_event: FirstEvent | null };
+export const CONNECTION_SELECT = "id, workspace_id, provider, name, public_meta, status, last_error, environment, is_default, last_event_at, first_event";
 const toConnection = (r: Row, agentIds: ReadonlyArray<string>): Connection => ({
   id: r.id, workspaceId: r.workspace_id, provider: r.provider, name: r.name, meta: r.public_meta ?? {}, status: r.status, lastError: r.last_error,
-  environment: r.environment ?? "live", lastEventAt: r.last_event_at, firstEvent: r.first_event, agentIds,
+  environment: r.environment ?? "live", isDefault: Boolean(r.is_default), lastEventAt: r.last_event_at, firstEvent: r.first_event, agentIds,
 });
 
 /** A workspace's connections with the agents bound to each (service role; callers scope by their own workspace). */

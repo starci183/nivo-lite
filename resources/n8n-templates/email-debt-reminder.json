@@ -1,0 +1,268 @@
+{
+  "name": "email-debt-reminder",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nivo/email-debt-reminder",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "wh",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "nivo-email-debt-reminder"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Webhook').first().json.body.data.api_base + '/api/n8n/data/overdue-invoices' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('Webhook').first().json.body.data.run_token }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "fetch",
+      "name": "Fetch overdue invoices",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $('Webhook').first().json.body || {};\nconst d = msg.data || {};\nconst ok = /^[0-9a-f-]{36}$/i.test(String(d.run_id || '')) && typeof d.run_token === 'string' && /^https:\\/\\/[a-z0-9.-]+\\.[a-z]{2,}(:\\d+)?$/i.test(String(d.api_base || ''));\nconst ctx = { run_id: d.run_id, api_base: d.api_base, valid: ok };\nlet work = [];\nlet note = ok ? '' : 'invalid_payload';\nif (ok) {\n\n  const r = $('Fetch overdue invoices').first().json;\n  if (r.statusCode !== 200 || !r.body) { note = 'fetch_failed'; }\n  else {\n    for (const it of (r.body.items || [])) work.push({ to: it.to, variables: it.variables, refs: it.refs, dedupe: it.dedupe });\n    if (!work.length) note = 'nothing_to_send';\n  }\n}\nif (!work.length) return [{ json: { ctx, skip: true, note: note || 'nothing_to_send' } }];\nreturn work.map((w) => ({ json: { ctx, skip: false, ...w } }));"
+      },
+      "id": "prep",
+      "name": "Prepare emails",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if",
+      "name": "Has email to send",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.ctx.api_base + '/api/n8n/email' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('Webhook').first().json.body.data.run_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $json.to, variables: $json.variables, refs: $json.refs, dedupe: $json.dedupe, attachments: $json.attachments }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 60000
+        }
+      },
+      "id": "send",
+      "name": "Send via NIVO",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $('Webhook').first().json.body || {};\nconst d = msg.data || {};\nconst items = $input.all().map((i) => i.json);\nconst counts = {};\nlet invalid = false;\nfor (const it of items) {\n  if (it.skip) { counts[it.note || 'skipped'] = (counts[it.note || 'skipped'] || 0) + 1; if (it.note === 'invalid_payload') invalid = true; continue; }\n  const code = it.statusCode;\n  const s = (it.body && it.body.status) || (code >= 400 ? 'http_' + code : 'unknown');\n  counts[s] = (counts[s] || 0) + 1;\n}\nconst bad = ['failed', 'no_smtp', 'blocked', 'rate_limited', 'unknown', 'invalid_payload', 'fetch_failed', 'no_accountant_email'].some((k) => counts[k]) || Object.keys(counts).some((k) => k.startsWith('http_') || k === 'fetch_failed');\nconst goodOnly = (counts.sent || 0) + (counts.waiting_decision || 0) > 0;\nconst status = bad ? 'failed' : goodOnly ? 'done' : 'skipped';\nreturn [{ json: { invalid, api_base: d.api_base, run_id: d.run_id, run_token: d.run_token, status, counts } }];"
+      },
+      "id": "collect",
+      "name": "Collect results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.api_base + '/api/n8n/runs/' + $json.run_id + '/complete' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $json.run_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status: $json.status, result: { counts: $json.counts } }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "done",
+      "name": "Report to NIVO",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Fetch overdue invoices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch overdue invoices": {
+      "main": [
+        [
+          {
+            "node": "Prepare emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare emails": {
+      "main": [
+        [
+          {
+            "node": "Has email to send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has email to send": {
+      "main": [
+        [
+          {
+            "node": "Send via NIVO",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Collect results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send via NIVO": {
+      "main": [
+        [
+          {
+            "node": "Collect results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect results": {
+      "main": [
+        [
+          {
+            "node": "Report to NIVO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateKey": "email-debt-reminder"
+  }
+}

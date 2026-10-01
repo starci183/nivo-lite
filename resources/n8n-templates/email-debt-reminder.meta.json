@@ -1,0 +1,48 @@
+{
+  "key": "email-debt-reminder",
+  "version": 1,
+  "pack": "email",
+  "executor": "n8n",
+  "moduleKey": "accounting",
+  "icon": "debt",
+  "name": { "vi": "Nhắc công nợ qua email", "en": "Payment reminders by email" },
+  "description": {
+    "vi": "Mỗi ngày NIVO tìm hoá đơn quá hạn của khách có email và soạn một lời nhắc lịch sự cho từng khách. Mặc định hỏi bạn trước khi gửi.",
+    "en": "Every day NIVO finds overdue invoices of customers with an email and drafts a polite reminder per customer. Asks you before sending by default."
+  },
+  "trigger": {
+    "kind": "schedule",
+    "event": "schedule.daily",
+    "line": { "vi": "Mỗi ngày vào giờ bạn chọn (giờ Việt Nam)", "en": "Every day at the time you pick (Vietnam time)" }
+  },
+  "requires": { "modules": ["accounting"], "channels": [], "connections": ["smtp"], "capabilities": ["has_due_dates"] },
+  "settings": [
+    { "key": "time", "kind": "time", "label": { "vi": "Kiểm tra lúc", "en": "Check at" } },
+    { "key": "after_days", "kind": "number", "min": 0, "max": 60, "suffix": { "vi": "ngày", "en": "days" }, "label": { "vi": "Nhắc khi quá hạn từ", "en": "Remind when overdue by" } },
+    { "key": "repeat_days", "kind": "number", "min": 1, "max": 90, "suffix": { "vi": "ngày", "en": "days" }, "label": { "vi": "Không nhắc lại trong", "en": "Do not remind again within" } },
+    { "key": "subject", "kind": "text", "label": { "vi": "Tiêu đề email", "en": "Email subject" } },
+    { "key": "body", "kind": "textarea", "label": { "vi": "Nội dung email", "en": "Email body" } }
+  ],
+  "contentMode": "fixed",
+  "guardrails": [
+    { "vi": "Lịch sự, không đe doạ, không nhắc tới phí phạt.", "en": "Polite, no threats, no mention of penalties." },
+    { "vi": "Chỉ nêu số tiền, mã phiếu và hạn thanh toán có thật.", "en": "Only the real amount, reference and due date." }
+  ],
+  "variables": ["ten_khach", "ten_shop", "so_tien", "ma_phieu", "han", "so_ngay_tre"],
+  "defaultBody": {
+    "vi": "Chào {ten_khach},\n\n{ten_shop} xin nhắc nhẹ khoản {so_tien} (phiếu {ma_phieu}) đã đến hạn từ ngày {han}. Nếu bạn đã chuyển khoản rồi, bạn bỏ qua email này giúp chúng tôi nhé.\n\nCần hỗ trợ thêm, bạn cứ trả lời email này.",
+    "en": "Hello {ten_khach},\n\nA gentle reminder from {ten_shop}: {so_tien} (ref {ma_phieu}) has been due since {han}. If you have already paid, please ignore this email.\n\nIf you need help, just reply to this email."
+  },
+  "authority": { "action": "send_email" },
+  "defaults": {
+    "time": "09:00",
+    "after_days": 3,
+    "repeat_days": 7,
+    "subject": "Nhắc nhẹ khoản {so_tien} (phiếu {ma_phieu}) tại {ten_shop}"
+  },
+  "n8n": {
+    "webhook": "nivo/email-debt-reminder",
+    "data": ["GET /api/n8n/data/overdue-invoices"],
+    "audience": "customer"
+  }
+}

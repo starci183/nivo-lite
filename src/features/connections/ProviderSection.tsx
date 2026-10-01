@@ -13,6 +13,7 @@ import { ConnectionRow } from "./ConnectionRow"
 import type { AgentOption } from "./wizard/AgentStep"
 import { GoogleWizard } from "./wizard/GoogleWizard"
 import { MoneyWizard } from "./wizard/MoneyWizard"
+import { SmtpWizard } from "./wizard/SmtpWizard"
 import { TelegramWizard } from "./wizard/TelegramWizard"
 import { WebhookWizard } from "./wizard/WebhookWizard"
 import { ZaloWizard } from "./wizard/ZaloWizard"
@@ -28,12 +29,14 @@ export type ProviderSectionProps = {
   /** Zalo OAuth just returned for this connection: open its wizard at the check step. */
   readonly resumeId?: string
   readonly returned?: string
+  /** The signed-in person's email: the default recipient of the SMTP test message. */
+  readonly ownerEmail?: string
 }
 
 type Open = { readonly resumeId?: string } | null
 
 /** One provider card: its connections and the guided "Thêm kết nối" wizard (a new one, or the unfinished one being continued). */
-export const ProviderSection = ({ provider, items, agentNames, agents, localOnly, resumeId, returned }: ProviderSectionProps) => {
+export const ProviderSection = ({ provider, items, agentNames, agents, localOnly, resumeId, returned, ownerEmail = "" }: ProviderSectionProps) => {
   const t = useT(dict)
   const tw = useT(connectionWizard)
   const locale = useLocale()
@@ -61,7 +64,7 @@ export const ProviderSection = ({ provider, items, agentNames, agents, localOnly
         <div>
           {items.map((c) => (
             <ConnectionRow
-              key={c.id} connection={c} localOnly={localOnly} onContinue={def.kind === "money" || def.kind === "zalo" ? () => setOpen({ resumeId: c.id }) : undefined}
+              key={c.id} connection={c} localOnly={localOnly} ownerEmail={ownerEmail} onContinue={def.kind === "money" || def.kind === "zalo" ? () => setOpen({ resumeId: c.id }) : undefined}
               agentNames={c.agentIds.map((id) => agentNames[id]).filter((n): n is string => Boolean(n))}
             />
           ))}
@@ -72,6 +75,7 @@ export const ProviderSection = ({ provider, items, agentNames, agents, localOnly
         {open && def.kind === "zalo" ? <ZaloWizard key={open.resumeId ?? "new"} resumeId={open.resumeId} returned={returned} agents={eligible} onClose={close} /> : null}
         {open && def.kind === "webhook" ? <WebhookWizard onClose={close} /> : null}
         {open && def.kind === "google" ? <GoogleWizard onClose={close} /> : null}
+        {open && def.kind === "email" ? <SmtpWizard ownerEmail={ownerEmail} hasDefault={items.some((c) => c.status === "connected" && c.isDefault)} onClose={close} /> : null}
       </div>
     </SurfaceCard>
   )

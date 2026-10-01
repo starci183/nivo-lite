@@ -1,0 +1,41 @@
+{
+  "key": "email-daily-report",
+  "version": 1,
+  "pack": "email",
+  "executor": "n8n",
+  "moduleKey": null,
+  "icon": "report",
+  "name": { "vi": "Báo cáo cuối ngày qua email", "en": "End-of-day report by email" },
+  "description": {
+    "vi": "Mỗi ngày vào giờ bạn chọn, NIVO gửi chủ shop một email tóm tắt: khách mới, tiền về, hoá đơn quá hạn và việc đang chờ bạn quyết.",
+    "en": "Every day at the time you pick, NIVO emails the owner a summary: new customers, money in, overdue invoices and decisions waiting."
+  },
+  "trigger": {
+    "kind": "schedule",
+    "event": "schedule.daily",
+    "line": { "vi": "Mỗi ngày vào giờ bạn chọn (giờ Việt Nam)", "en": "Every day at the time you pick (Vietnam time)" }
+  },
+  "requires": { "modules": [], "channels": [], "connections": ["smtp"], "capabilities": [] },
+  "settings": [
+    { "key": "time", "kind": "time", "label": { "vi": "Gửi lúc", "en": "Send at" } },
+    { "key": "subject", "kind": "text", "label": { "vi": "Tiêu đề email", "en": "Email subject" } },
+    { "key": "body", "kind": "textarea", "label": { "vi": "Nội dung email", "en": "Email body" } }
+  ],
+  "contentMode": "fixed",
+  "guardrails": [{ "vi": "Chỉ dùng số liệu có thật trong NIVO.", "en": "Only real figures from NIVO." }],
+  "variables": ["ten_shop", "ngay", "tom_tat", "viec_cho"],
+  "defaultBody": {
+    "vi": "Chào bạn,\n\nĐây là tóm tắt ngày {ngay} của {ten_shop}:\n\n{tom_tat}\n\n{viec_cho}\n\nMở NIVO để xem chi tiết và xử lý các việc đang chờ.",
+    "en": "Hello,\n\nHere is the summary for {ngay} at {ten_shop}:\n\n{tom_tat}\n\n{viec_cho}\n\nOpen NIVO for the details and to handle what is waiting."
+  },
+  "authority": { "action": null },
+  "defaults": {
+    "time": "21:00",
+    "subject": "Báo cáo ngày {ngay} của {ten_shop}"
+  },
+  "n8n": {
+    "webhook": "nivo/email-daily-report",
+    "data": ["GET /api/n8n/data/daily-summary"],
+    "audience": "owner"
+  }
+}

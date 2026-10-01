@@ -15,6 +15,7 @@ export const ACTION_DEPARTMENT: Record<FlowAction, Department> = {
   send_care: "sales",
   issue_invoice: "accounting",
   reconcile_payment: "accounting",
+  send_email: "accounting",
 };
 
 export type DefaultRule = { department: Department; action: FlowAction; mode: RuleMode; limit_vnd: number | null; required_fields: Array<string> };
@@ -30,6 +31,8 @@ export const DEFAULT_RULES: Array<DefaultRule> = [
   { department: "sales", action: "send_care", mode: "auto", limit_vnd: null, required_fields: [] },
   { department: "accounting", action: "issue_invoice", mode: "auto", limit_vnd: 20_000_000, required_fields: ["customer", "amount_vnd"] },
   { department: "accounting", action: "reconcile_payment", mode: "auto", limit_vnd: 50_000_000, required_fields: ["amount_vnd"] },
+  // Customer-facing email (receipts, reminders): asks first until the owner grants it on /authority.
+  { department: "accounting", action: "send_email", mode: "ask", limit_vnd: null, required_fields: ["contact"] },
 ];
 
 /**
@@ -48,6 +51,7 @@ export const FLOW_NEXT: Record<FlowAction, Array<FlowAction>> = {
   issue_invoice: [],
   reconcile_payment: ["send_care"],
   send_care: [],
+  send_email: [],
 };
 
 /**

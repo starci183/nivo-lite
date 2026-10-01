@@ -154,7 +154,7 @@ check("chain: order → invoice, payment → care, lead → classify → follow-
   assert.deepEqual(FLOW_NEXT.handoff_lead, ["classify_lead"]);
   assert.deepEqual(FLOW_NEXT.classify_lead, ["send_follow_up"]);
   for (const r of DEFAULT_RULES) assert.equal(ACTION_DEPARTMENT[r.action], r.department);
-  assert.equal(DEFAULT_RULES.length, 9);
+  assert.equal(DEFAULT_RULES.length, 10);
 });
 
 const KNOWLEDGE = `Bảng giá:

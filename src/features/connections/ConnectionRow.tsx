@@ -14,15 +14,16 @@ import type { Connection } from "@/lib/channels"
 import { deleteConnection, disconnectConnection, revealSepayKey, testConnection } from "@/lib/connection-actions"
 import { ACTIONS_CLASS, FULL_BOX_CLASS, ROW_CLASS, ROW_MAIN_CLASS } from "./classNames"
 import { CopyField } from "./CopyField"
+import { SmtpRowExtras } from "./SmtpRowExtras"
 import { StatusBadge } from "./StatusBadge"
 
 /** Props for {@link ConnectionRow}. */
-export type ConnectionRowProps = { readonly connection: Connection; readonly agentNames: ReadonlyArray<string>; readonly localOnly: boolean; readonly onContinue?: () => void }
+export type ConnectionRowProps = { readonly connection: Connection; readonly agentNames: ReadonlyArray<string>; readonly localOnly: boolean; readonly onContinue?: () => void; readonly ownerEmail?: string }
 
 type Note = { tone: "affirmative" | "negative" | "informative"; text: string }
 
 /** One connection: label, facts, status, the agents using it, and Check / Disconnect / Remove. */
-export const ConnectionRow = ({ connection: c, agentNames, localOnly, onContinue }: ConnectionRowProps) => {
+export const ConnectionRow = ({ connection: c, agentNames, localOnly, onContinue, ownerEmail = "" }: ConnectionRowProps) => {
   const t = useT(connections)
   const tw = useT(connectionWizard)
   const tj = useT(webhookWizard)
@@ -34,14 +35,15 @@ export const ConnectionRow = ({ connection: c, agentNames, localOnly, onContinue
   const [confirm, setConfirm] = useState(false)
 
   const facts =
-    c.provider === "google" ? (c.meta.email ?? "")
+    c.provider === "smtp" ? [c.meta.from_email, c.meta.host].filter(Boolean).join(" · ")
+    : c.provider === "google" ? (c.meta.email ?? "")
     : c.provider === "webhook" ? tj("factsRow", { host: c.meta.host ?? "", count: (c.meta.events ?? "").split(",").filter(Boolean).length })
     : c.provider === "telegram" ? (c.meta.bot_username ? `@${c.meta.bot_username}` : "")
     : c.provider === "sepay" || c.provider === "casso" ? [c.meta.bank_code, c.meta.account_masked, c.meta.account_holder].filter(Boolean).join(" · ")
     : c.provider === "payos" ? ""
     : [c.meta.oa_id ? `OA ${c.meta.oa_id}` : "", c.meta.app_id ? `App ${c.meta.app_id}` : ""].filter(Boolean).join(" · ")
   const live = c.status !== "disconnected"
-  const needsAgent = live && c.status !== "pending" && c.provider !== "webhook" && c.provider !== "google" && agentNames.length === 0
+  const needsAgent = live && c.status !== "pending" && c.provider !== "webhook" && c.provider !== "google" && c.provider !== "smtp" && agentNames.length === 0
   const sendTest = () => startTransition(async () => {
     setNote(null)
     const r = await sendWebhookTest(c.id)
@@ -115,6 +117,7 @@ export const ConnectionRow = ({ connection: c, agentNames, localOnly, onContinue
           ? <Button variant="danger-soft" isDisabled={isPending} onPress={() => setConfirm(true)}>{t("disconnect")}</Button>
           : <Button variant="danger-soft" isDisabled={isPending} onPress={remove}>{t("remove")}</Button>}
       </div>
+      {c.provider === "smtp" && live ? <SmtpRowExtras connection={c} ownerEmail={ownerEmail} /> : null}
       {confirm ? (
         <div className={FULL_BOX_CLASS}>
           <Text size="sm">{t("disconnect")}: {c.name}?</Text>

@@ -4,7 +4,7 @@
  * `feedCredit` (src/lib/connection-events.ts). Labels that sit on the provider's own screen (field names, option names) are written
  * exactly as the provider prints them and are not translated; only the explanations carry {vi, en}.
  */
-export type Provider = "telegram" | "sepay" | "zalo_oa" | "payos" | "casso" | "webhook" | "google";
+export type Provider = "telegram" | "sepay" | "zalo_oa" | "payos" | "casso" | "webhook" | "google" | "smtp";
 export type Environment = "test" | "live";
 export type L = { readonly vi: string; readonly en: string };
 export type Locale = keyof L;
@@ -26,7 +26,7 @@ export type VerifyHelp = { readonly intro: L; readonly steps: ReadonlyArray<L>; 
 
 export type ProviderDef = {
   readonly id: Provider;
-  readonly kind: "money" | "telegram" | "zalo" | "webhook" | "google";
+  readonly kind: "money" | "telegram" | "zalo" | "webhook" | "google" | "email";
   readonly title: L;
   /** The provider's own brand name, as in "Mở trang X" and "Làm theo trên X". */
   readonly brand: string;
@@ -192,10 +192,15 @@ export const PROVIDERS: Readonly<Record<Provider, ProviderDef>> = {
     blurb: { vi: "Kết nối tài khoản Google để NIVO ghi đơn hàng vào bảng tính của bạn.", en: "Connect your Google account so NIVO can record orders in your spreadsheet." },
     module: null, environments: ["live"], needsBank: false, dashboard: { live: "https://sheets.google.com" }, credentials: [], verify: {}, guide: [],
   },
+  smtp: {
+    id: "smtp", kind: "email", title: { vi: "Email gửi đi", en: "Outgoing email" }, brand: "SMTP",
+    blurb: { vi: "Gửi báo cáo, biên nhận và nhắc công nợ bằng chính email của cửa hàng bạn.", en: "Send reports, receipts and payment reminders from your own shop email." },
+    module: null, environments: ["live"], needsBank: false, dashboard: {}, credentials: [], verify: {}, guide: [],
+  },
 };
 
 /** Order the providers appear on the Connections page. */
-export const PROVIDER_ORDER: ReadonlyArray<Provider> = ["sepay", "payos", "casso", "telegram", "zalo_oa", "google"];
+export const PROVIDER_ORDER: ReadonlyArray<Provider> = ["sepay", "payos", "casso", "telegram", "zalo_oa", "google", "smtp"];
 
 /** Replace {name} {bank} {account} in a guide or help string. */
 export const fill = (s: string, ctx: Pick<GuideContext, "bank" | "account" | "name">): string =>

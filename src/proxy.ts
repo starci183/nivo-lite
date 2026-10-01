@@ -2,8 +2,8 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { publicConfig } from "./lib/config";
 
-// Reachable without a session. Webhooks (Telegram, bank connection) are each verified by their own secret header; /api/engine by an HMAC (ENGINE_SHARED_SECRET).
-const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/reset-password", "/auth", "/invite", "/api/telegram", "/api/connections", "/api/bank", "/api/sepay", "/api/engine", "/api/v1", "/api/automation"];
+// Reachable without a session. Webhooks (Telegram, bank connection) are each verified by their own secret header; /api/engine by an HMAC (ENGINE_SHARED_SECRET), /api/n8n by a per-run bearer token (hash stored with an expiry).
+const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/reset-password", "/auth", "/invite", "/api/telegram", "/api/connections", "/api/bank", "/api/sepay", "/api/engine", "/api/v1", "/api/automation", "/api/n8n"];
 
 const MEMBER_COOKIE = "nivo_member_gate"; // "<userId>.<ok|off>": short-lived cache of the membership check
 const MEMBER_TTL_SECONDS = 60;

@@ -36,7 +36,7 @@ export const getAuthority = async (): Promise<Authority> => {
 };
 
 const ORDER: Record<string, number> = { chatbot: 0, sales: 1, accounting: 2 };
-const ACTION_ORDER = ["reply_customer", "handoff_lead", "classify_lead", "send_follow_up", "send_quote", "confirm_order", "send_care", "issue_invoice", "reconcile_payment"];
+const ACTION_ORDER = ["reply_customer", "handoff_lead", "classify_lead", "send_follow_up", "send_quote", "confirm_order", "send_care", "issue_invoice", "reconcile_payment", "send_email"];
 
 /** Department × action rules, grouped Chatbot → Sales → Accounting in flow order. */
 export const listRules = async (): Promise<Array<AuthorityRule>> => {

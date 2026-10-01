@@ -56,6 +56,7 @@ const ACTION_WORDS: Record<FlowAction, ReadonlyArray<string>> = {
   send_care: ["chăm sóc", "care"],
   issue_invoice: ["hóa đơn", "hoá đơn", "invoice", "xuất hđ"],
   reconcile_payment: ["đối soát", "thanh toán", "chuyển khoản", "payment", "reconcile"],
+  send_email: ["gửi email", "gửi mail", "email khách", "send email", "email the customer"],
 };
 
 /** "trên / quá / hơn / over / above <amount> … hỏi / ask": an amount threshold. */

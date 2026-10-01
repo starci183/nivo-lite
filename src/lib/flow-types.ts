@@ -1,7 +1,7 @@
 /** NIVO operating flow: the shared contract (FLOW-PLAN §e). Pure types; other lanes compile against this file. */
 export type Department = "chatbot" | "sales" | "accounting";
 export type FlowAction = "reply_customer" | "handoff_lead" | "classify_lead" | "send_follow_up" | "send_quote"
-  | "confirm_order" | "send_care" | "issue_invoice" | "reconcile_payment";
+  | "confirm_order" | "send_care" | "issue_invoice" | "reconcile_payment" | "send_email";
 export type RuleMode = "auto" | "ask" | "never";
 export type ReasonCode = "routine" | "missing_data" | "over_authority" | "unclear_outcome" | "not_allowed";
 export type WorkStatus = "queued" | "done" | "waiting_decision" | "rejected" | "failed";

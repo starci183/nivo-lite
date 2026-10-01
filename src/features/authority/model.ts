@@ -4,7 +4,7 @@ import type { AuthorityRule, Department, FlowAction, RuleMode } from "@/lib/flow
 export const RULE_MATRIX: ReadonlyArray<{ readonly department: Department; readonly actions: ReadonlyArray<FlowAction> }> = [
   { department: "chatbot", actions: ["reply_customer", "handoff_lead"] },
   { department: "sales", actions: ["classify_lead", "send_follow_up", "send_quote", "confirm_order", "send_care"] },
-  { department: "accounting", actions: ["issue_invoice", "reconcile_payment"] },
+  { department: "accounting", actions: ["issue_invoice", "reconcile_payment", "send_email"] },
 ]
 
 /** Actions where a VND limit is meaningful. */
