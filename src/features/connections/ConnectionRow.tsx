@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Alert, Badge, Button, Text } from "@starci/grammar/common"
 import { useT } from "@/i18n/client"
 import { connections } from "@/i18n/dict/connections"
+import { connectionWizard } from "@/i18n/dict/connectionWizard"
 import type { Connection } from "@/lib/channels"
 import { deleteConnection, disconnectConnection, revealSepayKey, testConnection } from "@/lib/connection-actions"
 import { ACTIONS_CLASS, FULL_BOX_CLASS, ROW_CLASS, ROW_MAIN_CLASS } from "./classNames"
@@ -12,13 +13,14 @@ import { CopyField } from "./CopyField"
 import { StatusBadge } from "./StatusBadge"
 
 /** Props for {@link ConnectionRow}. */
-export type ConnectionRowProps = { readonly connection: Connection; readonly agentNames: ReadonlyArray<string>; readonly localOnly: boolean }
+export type ConnectionRowProps = { readonly connection: Connection; readonly agentNames: ReadonlyArray<string>; readonly localOnly: boolean; readonly onContinue?: () => void }
 
 type Note = { tone: "affirmative" | "negative" | "informative"; text: string }
 
 /** One connection: label, facts, status, the agents using it, and Check / Disconnect / Remove. */
-export const ConnectionRow = ({ connection: c, agentNames, localOnly }: ConnectionRowProps) => {
+export const ConnectionRow = ({ connection: c, agentNames, localOnly, onContinue }: ConnectionRowProps) => {
   const t = useT(connections)
+  const tw = useT(connectionWizard)
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [note, setNote] = useState<Note | null>(null)
@@ -27,10 +29,12 @@ export const ConnectionRow = ({ connection: c, agentNames, localOnly }: Connecti
 
   const facts =
     c.provider === "telegram" ? (c.meta.bot_username ? `@${c.meta.bot_username}` : "")
-    : c.provider === "sepay" ? [c.meta.bank_code, c.meta.account_masked, c.meta.account_holder].filter(Boolean).join(" · ")
+    : c.provider === "sepay" || c.provider === "casso" ? [c.meta.bank_code, c.meta.account_masked, c.meta.account_holder].filter(Boolean).join(" · ")
+    : c.provider === "payos" ? ""
     : [c.meta.oa_id ? `OA ${c.meta.oa_id}` : "", c.meta.app_id ? `App ${c.meta.app_id}` : ""].filter(Boolean).join(" · ")
   const live = c.status !== "disconnected"
-  const needsAgent = live && c.provider !== "zalo_oa" && agentNames.length === 0
+  const needsAgent = live && c.status !== "pending" && c.provider !== "zalo_oa" && agentNames.length === 0
+  const isBank = c.provider === "sepay" || c.provider === "payos" || c.provider === "casso"
 
   const check = () => startTransition(async () => {
     setNote(null)
@@ -71,16 +75,18 @@ export const ConnectionRow = ({ connection: c, agentNames, localOnly }: Connecti
         ) : null}
         <div className={ACTIONS_CLASS}>
           <StatusBadge status={c.status} />
+          {c.environment === "test" ? <Badge tone="neutral">{tw("envBadgeTest")}</Badge> : null}
           {needsAgent ? <Badge tone="warning">{t("noAgent")}</Badge> : null}
           {agentNames.length ? <Text size="xs" tone="muted">{t("usedBy", { names: agentNames.join(", ") })}</Text> : null}
         </div>
-        {needsAgent ? <Text size="xs" tone="muted">{c.provider === "sepay" ? t("noAgentHintBank") : t("noAgentHint")}</Text> : null}
+        {needsAgent ? <Text size="xs" tone="muted">{isBank ? t("noAgentHintBank") : t("noAgentHint")}</Text> : null}
         {c.provider === "telegram" && live && localOnly ? <Text size="xs" tone="muted">{t("localNote")}</Text> : null}
         {c.provider === "zalo_oa" && live ? <Text size="xs" tone="muted">{t("zaloSoon")}</Text> : null}
         {c.lastError && live ? <Text size="xs" tone="muted">{c.lastError}</Text> : null}
       </div>
       <div className={ACTIONS_CLASS}>
-        {c.provider === "sepay" && live ? <Button variant="outline" isDisabled={isPending} onPress={show}>{t("showKey")}</Button> : null}
+        {c.status === "pending" && onContinue ? <Button variant="secondary" isDisabled={isPending} onPress={onContinue}>{tw("continue")}</Button> : null}
+        {c.provider === "sepay" && live && c.status !== "pending" ? <Button variant="outline" isDisabled={isPending} onPress={show}>{t("showKey")}</Button> : null}
         {live && c.provider === "telegram" ? <Button variant="secondary" isPending={isPending} onPress={check}>{t("check")}</Button> : null}
         {live
           ? <Button variant="danger-soft" isDisabled={isPending} onPress={() => setConfirm(true)}>{t("disconnect")}</Button>
@@ -98,7 +104,7 @@ export const ConnectionRow = ({ connection: c, agentNames, localOnly }: Connecti
       {keys ? (
         <div className={FULL_BOX_CLASS}>
           <CopyField label={t("webhookUrl")} value={keys.webhookUrl} />
-          <CopyField label={t("apiKey")} value={keys.apiKey} />
+          <CopyField label={t("apiKey")} value={keys.apiKey} secret />
         </div>
       ) : null}
       {note ? <div className="w-full"><Alert title={note.text} tone={note.tone} /></div> : null}

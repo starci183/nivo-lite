@@ -6,8 +6,10 @@ import type { Translate } from "@/i18n/core";
 import { connections as dict } from "@/i18n/dict/connections";
 import {
   decryptSecret, encryptSecret, getConnection, publicSiteUrl, randomSecret, sha256, webhookUrlFor,
-  type Connection, type Provider, type Purpose,
+  type Connection, type Environment, type Provider, type Purpose,
 } from "./channels";
+import { PROVIDERS } from "./connection-providers";
+import { bankName } from "./vn-banks";
 import { requireManager } from "./permissions";
 import { supabaseAdmin } from "./supabase/admin";
 import { tgCall } from "./telegram-api";
@@ -68,10 +70,11 @@ const secretOf = async (connectionId: string): Promise<{ ciphertext: string; web
 /** Insert the connection row, then its secret; undo the row when the secret cannot be stored. */
 const createConnection = async (
   ws: string, userId: string, provider: Provider, name: string, meta: Record<string, string>, ciphertext: string, webhookSecret: string,
+  opts: { status?: "pending" | "connected"; environment?: Environment } = {},
 ): Promise<string> => {
   const db = supabaseAdmin();
   const { data: row, error } = await db.from("connections").insert({
-    workspace_id: ws, provider, name, status: "connected", created_by: userId, public_meta: meta,
+    workspace_id: ws, provider, name, status: opts.status ?? "connected", environment: opts.environment ?? "live", created_by: userId, public_meta: meta,
   }).select("id").single();
   if (error || !row) throw new Error(error?.message ?? "connection not saved");
   const id = row.id as string;
@@ -124,27 +127,71 @@ export const connectTelegram = async (input: { name: string; token: string }): P
     return { connection: (await getConnection(ws, id)) as Connection, webhookRegistered };
   });
 
-/* ------------------------------------------------------------------ SePay (the workspace own bank feed) */
+/* ------------------------------------------------------------------ Bank / payment feeds (SePay, payOS, Casso) */
 
-export type SepayConnected = { connection: Connection; apiKey: string; webhookUrl: string };
+export type MoneyProvider = "sepay" | "payos" | "casso";
+export type WizardConnection = {
+  id: string; provider: Provider; name: string; environment: Environment; status: Connection["status"];
+  webhookUrl: string; apiKey: string; bank: string; account: string; credentialsSaved: boolean;
+  firstEvent: Connection["firstEvent"]; agentIds: ReadonlyArray<string>;
+};
 
-/** Store the account facts and a freshly generated API key (its hash verifies calls; the key itself is encrypted for re-display). */
-export const connectSepay = async (input: { name: string; accountNumber: string; bankCode: string; holder: string }): Promise<Outcome<SepayConnected>> =>
+const isMoney = (p: string): p is MoneyProvider => p === "sepay" || p === "payos" || p === "casso";
+
+const wizardView = async (ws: string, id: string, apiKey = ""): Promise<WizardConnection | null> => {
+  const c = await getConnection(ws, id);
+  if (!c) return null;
+  return {
+    id: c.id, provider: c.provider, name: c.name, environment: c.environment, status: c.status,
+    webhookUrl: webhookUrlFor(c.provider, c.id), apiKey, bank: bankName(c.meta.bank_code ?? ""), account: c.meta.account_masked ?? "",
+    credentialsSaved: false, firstEvent: c.firstEvent, agentIds: c.agentIds,
+  };
+};
+
+/**
+ * Wizard step 2: create the connection as PENDING so its webhook URL (and, for SePay, a freshly generated API key) exist for the
+ * "follow along on the provider" step. SePay: the key hash verifies calls and the key itself is encrypted for re-display.
+ * payOS and Casso: the provider issues the keys; they are pasted in later (saveProviderKeys), so the secret starts empty.
+ */
+export const startMoneyConnection = async (input: { provider: MoneyProvider; environment: Environment; name: string; bankCode: string; accountNumber: string; holder: string }): Promise<Outcome<WizardConnection>> =>
   run(async (tr) => {
     const member = await requireManager();
+    if (!isMoney(input.provider)) throw userError(tr("errGeneric"));
+    const def = PROVIDERS[input.provider];
+    const environment: Environment = def.environments.includes(input.environment) ? input.environment : "live";
     const name = requireName(input.name, tr);
-    const account = input.accountNumber.replace(/\s+/g, "");
-    if (!/^\d{6,20}$/.test(account)) throw userError(tr("errAccount"));
-    const bankCode = clean(input.bankCode, 20).toUpperCase();
-    const holder = clean(input.holder, 80).toUpperCase();
-    if (!bankCode || !holder) throw userError(tr("errBankFields"));
-    const apiKey = `nivo_${randomSecret()}`;
+    const meta: Record<string, string> = {};
+    if (def.needsBank) {
+      const account = input.accountNumber.replace(/\s+/g, "");
+      if (!/^\d{6,20}$/.test(account)) throw userError(tr("errAccount"));
+      const bankCode = clean(input.bankCode, 20).toUpperCase();
+      const holder = clean(input.holder, 80).toUpperCase();
+      if (!bankCode || !holder) throw userError(tr("errBankFields"));
+      Object.assign(meta, { bank_code: bankCode, account_masked: `•••• ${account.slice(-4)}`, account_holder: holder });
+    }
+    const apiKey = input.provider === "sepay" ? `nivo_${randomSecret()}` : "";
     const id = await createConnection(
-      member.workspaceId, member.userId, "sepay", name,
-      { bank_code: bankCode, account_masked: `•••• ${account.slice(-4)}`, account_holder: holder }, encryptSecret(apiKey), sha256(apiKey),
+      member.workspaceId, member.userId, input.provider, name, meta,
+      encryptSecret(apiKey || "{}"), apiKey ? sha256(apiKey) : randomSecret(), { status: "pending", environment },
     );
     refresh();
-    return { connection: (await getConnection(member.workspaceId, id)) as Connection, apiKey, webhookUrl: webhookUrlFor("sepay", id) };
+    return (await wizardView(member.workspaceId, id, apiKey)) as WizardConnection;
+  });
+
+/** Continue an unfinished connection: the same data the wizard had (SePay shows its key again; payOS/Casso keys are never returned). */
+export const resumeConnection = async (connectionId: string): Promise<Outcome<WizardConnection>> =>
+  run(async (tr) => {
+    const member = await requireManager();
+    const c = await own(member.workspaceId, connectionId, tr);
+    const sec = await secretOf(c.id);
+    let apiKey = "";
+    let saved = false;
+    if (sec) {
+      const plain = decryptSecret(sec.ciphertext);
+      if (c.provider === "sepay") apiKey = plain;
+      else saved = plain !== "{}";
+    }
+    return { ...((await wizardView(member.workspaceId, c.id, apiKey)) as WizardConnection), credentialsSaved: saved };
   });
 
 /** Show the SePay API key again (owner or manager only) so it can be pasted into SePay webhook settings. */
@@ -155,6 +202,77 @@ export const revealSepayKey = async (connectionId: string): Promise<Outcome<{ ap
     const sec = await secretOf(connectionId);
     if (!sec) throw userError(tr("errNone"));
     return { apiKey: decryptSecret(sec.ciphertext), webhookUrl: webhookUrlFor("sepay", connectionId) };
+  });
+
+/**
+ * payOS / Casso: store the keys the owner copied from the provider (encrypted). payOS is then asked to confirm the webhook URL itself
+ * (POST /confirm-webhook with the Client ID and API Key); that call needs a public https address, so on a local site it is skipped.
+ */
+export const saveProviderKeys = async (connectionId: string, values: Readonly<Record<string, string>>): Promise<Outcome<{ confirmed: boolean; localOnly: boolean }>> =>
+  run(async (tr) => {
+    const member = await requireManager();
+    const c = await own(member.workspaceId, connectionId, tr);
+    const def = PROVIDERS[c.provider];
+    if (!def.credentials.length) throw userError(tr("errNone"));
+    const stored: Record<string, string> = {};
+    for (const field of def.credentials) {
+      const v = (values[field] ?? "").trim();
+      if (v.length < 8 || v.length > 200) throw userError(tr("errKeys"));
+      stored[field] = v;
+    }
+    const { error } = await supabaseAdmin().from("connection_secrets").update({ ciphertext: encryptSecret(JSON.stringify(stored)) }).eq("connection_id", c.id);
+    if (error) throw new Error(error.message);
+    let confirmed = false;
+    const origin = publicSiteUrl();
+    if (c.provider === "payos" && origin) {
+      const res = await fetch("https://api-merchant.payos.vn/confirm-webhook", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-client-id": stored.clientId, "x-api-key": stored.apiKey },
+        body: JSON.stringify({ webhookUrl: webhookUrlFor("payos", c.id, origin) }),
+      }).catch(() => null);
+      const json = (await res?.json().catch(() => null)) as { code?: string; desc?: string } | null;
+      if (!res || json?.code !== "00") {
+        console.error("payos confirm-webhook failed", res?.status, json?.code, json?.desc);
+        throw userError(tr("errPayosConfirm"));
+      }
+      confirmed = true;
+    }
+    refresh();
+    return { confirmed, localOnly: origin === null };
+  });
+
+export type FirstEventState = { status: Connection["status"]; firstEvent: Connection["firstEvent"] };
+
+/** The wizard asks every 3 seconds: has the first webhook arrived for this connection? */
+export const checkFirstEvent = async (connectionId: string): Promise<Outcome<FirstEventState>> =>
+  run(async (tr) => {
+    const member = await requireManager();
+    const c = await own(member.workspaceId, connectionId, tr);
+    return { status: c.status, firstEvent: c.firstEvent };
+  });
+
+/** Wizard last step: exactly these agents use this connection (add the ticked ones, drop the unticked ones for this connection only). */
+export const setConnectionAgents = async (connectionId: string, agentIds: ReadonlyArray<string>): Promise<Outcome<true>> =>
+  run(async (tr) => {
+    const member = await requireManager();
+    const ws = member.workspaceId;
+    const c = await own(ws, connectionId, tr);
+    const db = supabaseAdmin();
+    const { data: agents } = agentIds.length
+      ? await db.from("agents").select("id, module").eq("workspace_id", ws).in("id", [...agentIds])
+      : { data: [] as Array<{ id: string; module: string }> };
+    const rows = ((agents ?? []) as Array<{ id: string; module: string }>).flatMap((a) => {
+      const purpose = PURPOSE[`${a.module}:${c.provider}`];
+      return purpose ? [{ agent_id: a.id, connection_id: c.id, workspace_id: ws, purpose }] : [];
+    });
+    const del = await db.from("agent_connections").delete().eq("connection_id", c.id);
+    if (del.error) throw new Error(del.error.message);
+    if (rows.length) {
+      const ins = await db.from("agent_connections").insert(rows);
+      if (ins.error) throw new Error(ins.error.message);
+    }
+    refresh();
+    return true as const;
   });
 
 /* ------------------------------------------------------------------ Zalo OA (configuration only for now) */
@@ -245,7 +363,8 @@ export const deleteConnection = async (connectionId: string): Promise<Outcome<tr
 /* ------------------------------------------------------------------ which connections an agent uses */
 
 const PURPOSE: Record<string, Purpose | undefined> = {
-  "chatbot:telegram": "inbound_chat", "chatbot:zalo_oa": "inbound_chat", "sales:telegram": "outbound_chat", "accounting:sepay": "bank_feed",
+  "chatbot:telegram": "inbound_chat", "chatbot:zalo_oa": "inbound_chat", "sales:telegram": "outbound_chat",
+  "accounting:sepay": "bank_feed", "accounting:payos": "bank_feed", "accounting:casso": "bank_feed",
 };
 
 /** Replace the set of connections one agent uses. Only connections that make sense for the agent module can be picked. */

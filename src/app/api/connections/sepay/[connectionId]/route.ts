@@ -1,16 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { ingestBankCredit } from "@/lib/bank-feed";
-import { boundAgent, loadConnectionSecret, safeEqual, sha256 } from "@/lib/channels";
+import { loadConnectionSecret, safeEqual, sha256 } from "@/lib/channels";
+import { feedCredit } from "@/lib/connection-events";
 import type { SepayPayload } from "@/lib/sepay";
-import { supabaseAdmin } from "@/lib/supabase/admin";
 
 /**
- * A workspace's OWN SePay bank feed (not NIVO's billing: that is /api/sepay/webhook). The workspace owner pastes this URL and the
- * generated API key into SePay's webhook settings: POST with `Authorization: Apikey <key>` and the transaction as JSON.
- * Only an incoming credit on a connection bound to the workspace's active ACCOUNTING agent is fed into the normal payment
- * reconciliation (same pipeline as the bank route); otherwise it is acknowledged and ignored. SePay counts a delivery as
- * successful only on HTTP 200/201 with {"success": true}, so every accepted, duplicate or ignored payload answers exactly that.
- * Idempotency: the SePay transaction `id` is the inbound event id (`sepay:<id>`).
+ * A workspace's OWN SePay bank feed (not NIVO's billing: that is /api/sepay/webhook). The wizard shows the owner this URL and the
+ * generated API key to paste into SePay's "Thêm Webhook" form: POST with `Authorization: Apikey <key>` and the transaction as JSON.
+ * Every incoming credit marks the connection as working (pending -> connected); it is fed into payment reconciliation only when
+ * the connection is bound to the workspace's active ACCOUNTING agent, as simulated when the connection is a test-mode one.
+ * SePay counts a delivery as successful only on HTTP 200/201 with {"success": true}, so every accepted, duplicate or ignored
+ * payload answers exactly that. Idempotency: the SePay transaction `id` is the inbound event id (`sepay:<id>`).
  */
 export const dynamic = "force-dynamic";
 
@@ -31,17 +30,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const amount = Number(body.transferAmount ?? 0);
   if (!Number.isFinite(amount) || amount <= 0) return ok({ ignored: "no_amount" });
 
-  const agent = await boundAgent(connectionId, "accounting", ["bank_feed"]).catch(() => null);
-  if (!agent) return ok({ ignored: "no_agent" });
-
-  const db = supabaseAdmin();
-  const { data: meta } = await db.from("connections").select("name").eq("id", connectionId).maybeSingle<{ name: string }>();
   try {
-    const result = await ingestBankCredit(db, conn.workspaceId, {
-      amount, content: (body.content ?? body.description ?? body.code ?? "").trim(), sender: null,
-      eventId: `sepay:${sepayId}`, bankName: meta?.name ?? body.gateway ?? "SePay", origin: "live",
+    const result = await feedCredit(connectionId, conn.workspaceId, {
+      amount, content: (body.content ?? body.description ?? body.code ?? "").trim(), eventId: `sepay:${sepayId}`, fallbackBankName: body.gateway ?? "SePay",
     });
-    return ok({ duplicate: result.duplicate });
+    return ok({ ...result });
   } catch (e) {
     console.error("sepay feed failed", e instanceof Error ? e.message : e);
     // 500 so SePay retries; the inbound event id keeps a retry from being applied twice.

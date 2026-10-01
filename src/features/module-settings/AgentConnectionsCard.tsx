@@ -10,7 +10,7 @@ import { connections as dict } from "@/i18n/dict/connections";
 import { setAgentConnections } from "@/lib/connection-actions";
 import { STACK_CLASS_NAME } from "./classNames";
 
-export type ConnectionOption = { readonly id: string; readonly label: string; readonly status: "connected" | "error" | "disconnected" };
+export type ConnectionOption = { readonly id: string; readonly label: string; readonly status: "pending" | "connected" | "error" | "disconnected" };
 
 type AgentConnectionsCardProps = {
   readonly agentId: string;

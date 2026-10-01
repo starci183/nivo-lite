@@ -9,8 +9,8 @@ import type { ConnectionStatus } from "@/lib/channels"
 export const StatusBadge = ({ status }: { readonly status: ConnectionStatus }) => {
   const t = useT(connections)
   return (
-    <Badge isDot tone={status === "connected" ? "success" : status === "error" ? "danger" : "neutral"}>
-      {status === "connected" ? t("statusConnected") : status === "error" ? t("statusError") : t("statusDisconnected")}
+    <Badge isDot tone={status === "connected" ? "success" : status === "error" ? "danger" : status === "pending" ? "warning" : "neutral"}>
+      {status === "connected" ? t("statusConnected") : status === "pending" ? t("statusPending") : status === "error" ? t("statusError") : t("statusDisconnected")}
     </Badge>
   )
 }

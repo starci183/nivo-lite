@@ -1,3 +1,5 @@
+// Screenshots every main page of nivo.vn (public, owner, staff, phone) with the ready accounts from secrets.env.
+// Usage: node scripts/gallery-shots.mjs   (writes JPEGs to $TEMP/gallery/shots)
 import fs from "node:fs";
 import { chromium } from "playwright";
 const env = Object.fromEntries(fs.readFileSync(process.env.USERPROFILE + "/.nivo-lite/secrets.env", "utf8").split(/\r?\n/).filter((l) => l.includes("=")).map((l) => [l.slice(0, l.indexOf("=")), l.slice(l.indexOf("=") + 1)]));

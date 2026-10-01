@@ -8,9 +8,13 @@ import { supabaseAdmin } from "./supabase/admin";
  * Encryption is AES-256-GCM in app code with env CHANNEL_TOKEN_KEY (32 bytes, base64). Stored form: base64(iv(12) | tag(16) | ciphertext).
  * Which agent uses which connection is `agent_connections`; a webhook only acts for a connection bound to the right active agent.
  */
-export type Provider = "telegram" | "sepay" | "zalo_oa";
-export type ConnectionStatus = "connected" | "error" | "disconnected";
+export type { Provider, Environment } from "./connection-providers";
+import type { Environment, Provider } from "./connection-providers";
+/** `pending`: created by the wizard; set up but no first webhook seen yet (or the wizard was abandoned). */
+export type ConnectionStatus = "pending" | "connected" | "error" | "disconnected";
 export type Purpose = "inbound_chat" | "outbound_chat" | "bank_feed";
+
+export type FirstEvent = { readonly amount: number; readonly content: string; readonly at: string };
 
 export type Connection = {
   readonly id: string;
@@ -21,6 +25,11 @@ export type Connection = {
   readonly meta: Readonly<Record<string, string>>;
   readonly status: ConnectionStatus;
   readonly lastError: string | null;
+  /** `test` = the provider's test mode: its credits are stored as simulated, never real money. */
+  readonly environment: Environment;
+  readonly lastEventAt: string | null;
+  /** The first webhook the connection accepted (what the wizard shows as "received +X d"). */
+  readonly firstEvent: FirstEvent | null;
   /** Ids of the agents that use this connection. */
   readonly agentIds: ReadonlyArray<string>;
 };
@@ -73,10 +82,11 @@ export const webhookUrlFor = (provider: Provider, connectionId: string, origin =
   return provider === "telegram" ? `${base}/api/telegram/${connectionId}` : `${base}/api/connections/${provider}/${connectionId}`;
 };
 
-type Row = { id: string; workspace_id: string; provider: Provider; name: string; public_meta: Record<string, string> | null; status: ConnectionStatus; last_error: string | null };
-export const CONNECTION_SELECT = "id, workspace_id, provider, name, public_meta, status, last_error";
+type Row = { id: string; workspace_id: string; provider: Provider; name: string; public_meta: Record<string, string> | null; status: ConnectionStatus; last_error: string | null; environment: Environment; last_event_at: string | null; first_event: FirstEvent | null };
+export const CONNECTION_SELECT = "id, workspace_id, provider, name, public_meta, status, last_error, environment, last_event_at, first_event";
 const toConnection = (r: Row, agentIds: ReadonlyArray<string>): Connection => ({
-  id: r.id, workspaceId: r.workspace_id, provider: r.provider, name: r.name, meta: r.public_meta ?? {}, status: r.status, lastError: r.last_error, agentIds,
+  id: r.id, workspaceId: r.workspace_id, provider: r.provider, name: r.name, meta: r.public_meta ?? {}, status: r.status, lastError: r.last_error,
+  environment: r.environment ?? "live", lastEventAt: r.last_event_at, firstEvent: r.first_event, agentIds,
 });
 
 /** A workspace's connections with the agents bound to each (service role; callers scope by their own workspace). */

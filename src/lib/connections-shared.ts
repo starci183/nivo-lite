@@ -2,5 +2,5 @@
 export const MODULE_PROVIDERS = {
   chatbot: ["telegram", "zalo_oa"],
   sales: ["telegram"],
-  accounting: ["sepay"],
+  accounting: ["sepay", "payos", "casso"],
 } as const;
