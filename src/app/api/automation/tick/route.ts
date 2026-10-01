@@ -3,7 +3,7 @@ import { runTick } from "@/lib/automation-engine";
 import { verifyTick } from "@/lib/automation-tick";
 
 /**
- * POST /api/automation/tick: the minute tick of the automations (pg_cron -> automation_tick() -> pg_net, see migration 20261005131000). Public path in the
+ * POST /api/automation/tick: the minute tick of the automations (pg_cron -> automation_tick() -> pg_net, see migration 20261005134000). Public path in the
  * proxy; authenticated by an HMAC (src/lib/automation-tick.ts). Idempotent: scheduled runs are unique per trigger, so a double tick does nothing twice.
  */
 export const maxDuration = 30;
