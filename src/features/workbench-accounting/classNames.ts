@@ -30,8 +30,8 @@ export const BAR_COLUMN_CLASS_NAME = cn("flex", "h-full", "min-w-0", "flex-1", "
 /** Stacked bar body (live over simulated). */
 export const BAR_STACK_CLASS_NAME = cn("flex", "w-full", "flex-col", "justify-end", "overflow-hidden", "rounded-t");
 
-/** Live part of a bar: ink. */
-export const BAR_LIVE_CLASS_NAME = cn("w-full", "bg-foreground");
+/** Live part of a bar: accent. */
+export const BAR_LIVE_CLASS_NAME = cn("w-full", "bg-accent");
 
 /** Simulated part of a bar: muted, hatched by lightness only. */
 export const BAR_SIM_CLASS_NAME = cn("w-full", "bg-muted", "opacity-40");

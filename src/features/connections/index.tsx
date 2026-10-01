@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { PageContainer, SectionHeader, Text } from "@starci/grammar/common"
+import { PageContainer, SectionHeader } from "@starci/grammar/common"
 import { connections as dict } from "@/i18n/dict/connections"
 import { getT } from "@/i18n/server"
 import { listConnections, publicSiteUrl, type Provider } from "@/lib/channels"
@@ -36,7 +36,6 @@ export const ConnectionsPage = async () => {
         {PROVIDERS.map((p) => (
           <ProviderSection key={p} provider={p} items={all.filter((c) => c.provider === p)} agentNames={agentNames} localOnly={localOnly} />
         ))}
-        <Text size="xs" tone="muted">{t("agentCardHint")}</Text>
       </div>
     </PageContainer>
   )

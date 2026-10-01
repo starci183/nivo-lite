@@ -181,7 +181,7 @@ export const workbenchAccounting = defineDict({
     countPayments: "{n} khoản thu",
 
     overviewTitle: "Tổng quan kỳ",
-    overviewIntro: "Tháng {month}. Mỗi con số cho biết nguồn của nó; số thật và số mô phỏng không bao giờ cộng gộp.",
+    overviewIntro: "Kỳ {month}. Mỗi con số cho biết nguồn của nó; số thật và số mô phỏng không bao giờ cộng gộp.",
     periodLabel: "Kỳ",
     periodThis: "Tháng này",
     periodLast: "Tháng trước",
