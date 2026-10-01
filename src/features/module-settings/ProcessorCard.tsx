@@ -2,38 +2,34 @@
 
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Alert, Badge, Button, RadioGroup, SurfaceCard, Text } from "@starci/grammar/common";
+import { Alert, Badge, Button, Input, SurfaceCard, Text } from "@starci/grammar/common";
 import { useT } from "@/i18n/client";
 import { engine as dict } from "@/i18n/dict/engine";
+import { DEFAULT_REPLY_TIMEOUT_SEC } from "@/lib/engine-queue-shared";
 import type { Installation } from "@/lib/modules-shared";
 import { STACK_CLASS_NAME } from "./classNames";
-import { getAgentSyncStatus, getEngineStatus, resyncAgent, setProcessor, type AgentSyncStatus, type EngineStatus } from "./processorActions";
+import { getAgentSyncStatus, resyncAgent, setReplyTimeout, type AgentSyncStatus } from "./processorActions";
 
-type Processor = "nivo" | "openclaw";
 type ProcessorCardProps = { readonly installation: Installation; readonly canEdit: boolean };
 
 /** Poll the sync status this often while a sync is queued or running, and (slower) while idle so a background sync shows up on its own. */
 const POLL_BUSY_MS = 2_500;
 const POLL_IDLE_MS = 20_000;
 
-/** "Bộ xử lý": NIVO answers directly (default) or OpenClaw on the engine server, plus whether that server is alive and whether its copy of the agent is current. Owner/manager only. */
+/**
+ * The agent's OpenClaw copy, quietly: which context version it holds and how long ago it was checked (or syncing / drifted / failed), a "sync again"
+ * button, and for the chatbot the longest a customer waits before the app answers directly. There is no choice of engine: OpenClaw is the default. Owner/manager only.
+ */
 export const ProcessorCard = ({ installation, canEdit }: ProcessorCardProps) => {
   const t = useT(dict);
   const router = useRouter();
-  const saved: Processor = installation.settings.processor === "openclaw" ? "openclaw" : "nivo";
-  const [value, setValue] = useState<Processor>(saved);
-  const [status, setStatus] = useState<EngineStatus | "unknown" | undefined>();
+  const savedTimeout = Number(installation.settings.openclawTimeoutSec);
+  const initialTimeout = Number.isFinite(savedTimeout) && savedTimeout >= 5 ? Math.round(savedTimeout) : DEFAULT_REPLY_TIMEOUT_SEC;
   const [sync, setSync] = useState<AgentSyncStatus | undefined>();
+  const [timeoutText, setTimeoutText] = useState(String(initialTimeout));
   const [note, setNote] = useState<{ ok: boolean; text: string } | undefined>();
   const [pending, startTransition] = useTransition();
   const [queuing, setQueuing] = useState(false);
-
-  useEffect(() => {
-    if (!canEdit) return;
-    let live = true;
-    void getEngineStatus().then((r) => { if (live) setStatus(r.ok ? r.data : "unknown"); });
-    return () => { live = false; };
-  }, [canEdit]);
 
   const refreshSync = useCallback(async () => {
     const r = await getAgentSyncStatus(installation.id);
@@ -42,11 +38,11 @@ export const ProcessorCard = ({ installation, canEdit }: ProcessorCardProps) => 
 
   const syncState = sync?.state;
   useEffect(() => {
-    if (!canEdit || saved !== "openclaw") return;
+    if (!canEdit) return;
     void refreshSync();
     const timer = setInterval(() => void refreshSync(), syncState === "syncing" ? POLL_BUSY_MS : POLL_IDLE_MS);
     return () => clearInterval(timer);
-  }, [canEdit, saved, syncState, refreshSync]);
+  }, [canEdit, syncState, refreshSync]);
 
   if (!canEdit) return null;
 
@@ -57,8 +53,6 @@ export const ProcessorCard = ({ installation, canEdit }: ProcessorCardProps) => 
     if (s < 129_600) return t("agoHour", { n: Math.round(s / 3600) });
     return t("agoDay", { n: Math.round(s / 86_400) });
   };
-  const known = status !== undefined && status !== "unknown" ? status : null;
-  const statusLine = status === undefined ? "" : known === null ? t("unknown") : known.lastHeartbeat === null ? t("never") : t(known.online ? "online" : "stale", { ago: ago(known.lastHeartbeat) });
 
   const syncLine = ((): { text: string; tone: "success" | "warning" | "danger" | "neutral" } | null => {
     if (sync === undefined) return null;
@@ -72,15 +66,6 @@ export const ProcessorCard = ({ installation, canEdit }: ProcessorCardProps) => 
     return { text: sync.syncedVersion === null ? t("syncOkNone", { ago: when }) : t("syncOk", { version: sync.syncedVersion, ago: when }), tone: "success" };
   })();
 
-  const save = () => {
-    setNote(undefined);
-    startTransition(async () => {
-      const r = await setProcessor(installation.id, value);
-      setNote(r.ok ? { ok: true, text: t("saved") } : { ok: false, text: r.error });
-      if (r.ok) router.refresh();
-    });
-  };
-
   const resync = async () => {
     setNote(undefined);
     setQueuing(true);
@@ -90,37 +75,33 @@ export const ProcessorCard = ({ installation, canEdit }: ProcessorCardProps) => 
     setSync((prev) => (prev ? { ...prev, state: "syncing" } : { state: "syncing", syncedVersion: null, activeVersion: null, checkedAt: null, error: null, fileCount: 0 }));
   };
 
+  const timeoutValue = Number(timeoutText);
+  const timeoutValid = Number.isInteger(timeoutValue) && timeoutValue >= 5 && timeoutValue <= 120;
+  const saveTimeout = () => {
+    setNote(undefined);
+    startTransition(async () => {
+      const r = await setReplyTimeout(installation.id, timeoutValue);
+      setNote(r.ok ? { ok: true, text: t("saved") } : { ok: false, text: r.error });
+      if (r.ok) router.refresh();
+    });
+  };
+
   return (
     <SurfaceCard label={t("title")} headingLevel={2}>
       <div className={STACK_CLASS_NAME}>
-        <Text size="sm" tone="muted">{t("hint")}</Text>
-        <RadioGroup
-          label={t("title")}
-          isLabelHidden
-          options={[
-            { value: "nivo", label: t("nivo"), description: t("nivoHelp") },
-            { value: "openclaw", label: t("openclaw"), description: t("openclawHelp") },
-          ]}
-          value={value}
-          isDisabled={pending}
-          onValueChange={(v) => setValue(v === "openclaw" ? "openclaw" : "nivo")}
-        />
-        <div className="flex flex-wrap items-center gap-3">
-          <Badge isDot tone={known?.online ? "success" : "neutral"}>{t("status")}</Badge>
-          <Text size="sm" tone="muted">{statusLine}</Text>
+        <div className="flex flex-wrap items-center gap-3" aria-live="polite">
+          <Badge isDot tone={syncLine?.tone ?? "neutral"}>{syncLine?.text ?? "…"}</Badge>
+          <Button variant="secondary" size="sm" isPending={queuing} isDisabled={queuing || sync?.state === "syncing"} onPress={() => void resync()}>{t("resync")}</Button>
         </div>
-        {saved === "openclaw" ? (
+        <Text size="xs" tone="muted">{t("help")}</Text>
+        {installation.moduleKey === "chatbot" ? (
           <div className={STACK_CLASS_NAME}>
-            <div className="flex flex-wrap items-center gap-3" aria-live="polite">
-              <Badge isDot tone={syncLine?.tone ?? "neutral"}>{syncLine?.text ?? "…"}</Badge>
-              <Button variant="secondary" size="sm" isPending={queuing} isDisabled={queuing || sync?.state === "syncing"} onPress={() => void resync()}>{t("resync")}</Button>
+            <Input id="reply-timeout" name="reply-timeout" label={t("timeoutLabel")} variant="secondary" hint={t("timeoutHint")} value={timeoutText} isDisabled={pending} onValueChange={(v) => setTimeoutText(v.replace(/[^0-9]/g, "").slice(0, 3))} />
+            <div>
+              <Button variant="secondary" isPending={pending} isDisabled={!timeoutValid || timeoutValue === initialTimeout} onPress={saveTimeout}>{t("timeoutSave")}</Button>
             </div>
-            <Text size="xs" tone="muted">{t("syncHelp")}</Text>
           </div>
         ) : null}
-        <div>
-          <Button variant="secondary" isPending={pending} isDisabled={value === saved} onPress={save}>{t("save")}</Button>
-        </div>
         {note !== undefined ? <Alert title={note.ok ? t("saved") : t("notSaved")} description={note.ok ? undefined : note.text} tone={note.ok ? "affirmative" : "negative"} /> : null}
       </div>
     </SurfaceCard>

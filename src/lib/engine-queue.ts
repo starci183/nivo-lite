@@ -15,8 +15,19 @@ import { blockedBy } from "./usage";
 /** Who answers a module's customers: NIVO calls the model directly (default), OpenClaw runs on the engine. */
 export type Processor = "nivo" | "openclaw";
 
-/** What the app reads from `module_installations.settings ->> 'processor'`. Anything but "openclaw" is the default. */
-export const processorFromSettings = (settings: Record<string, unknown> | null | undefined): Processor => (settings?.processor === "openclaw" ? "openclaw" : "nivo");
+/**
+ * What the app reads from `module_installations.settings ->> 'processor'`. OpenClaw is the default (a missing setting means openclaw); "nivo" is
+ * only an operator kill switch set in the database, never a choice in the UI. The direct model path otherwise runs only as the silent fallback.
+ */
+export const processorFromSettings = (settings: Record<string, unknown> | null | undefined): Processor => (settings?.processor === "nivo" ? "nivo" : "openclaw");
+
+/** How long a customer waits for OpenClaw before the app answers directly: installation setting "Thời gian chờ tối đa", seconds, default 25. */
+import { DEFAULT_REPLY_TIMEOUT_SEC } from "./engine-queue-shared";
+export { DEFAULT_REPLY_TIMEOUT_SEC };
+export const replyTimeoutSec = (settings: Record<string, unknown> | null | undefined): number => {
+  const n = Number(settings?.openclawTimeoutSec);
+  return Number.isFinite(n) && n >= 5 && n <= 120 ? Math.round(n) : DEFAULT_REPLY_TIMEOUT_SEC;
+};
 
 /** The processor of one module of a workspace (the installation's settings; "nivo" when it has none or cannot be read). */
 export const processorOf = async (db: SupabaseClient, workspaceId: string, moduleKey: ModuleKey): Promise<Processor> => {

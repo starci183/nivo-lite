@@ -69,6 +69,9 @@ jobs:
           docker compose --env-file .env build engine
           docker compose --env-file .env up -d --remove-orphans
           docker image prune -f >/dev/null
+          # Watchdog for the network_mode coupling (engine lives in the openclaw network namespace): every minute from the nivo user crontab, installed idempotently.
+          chmod +x ~/nivo-engine/deploy/watchdog.sh
+          { crontab -l 2>/dev/null | grep -v "nivo-engine-watchdog" || true; echo "* * * * * $HOME/nivo-engine/deploy/watchdog.sh # nivo-engine-watchdog"; } | crontab -
           EOF
 
       - name: Health check

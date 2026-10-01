@@ -6,7 +6,7 @@ import { system } from "@/i18n/dict/system";
 import { ingest, logEvidence } from "./core";
 import { channelOf, completeQueuedTurn, ENGINE_ACTOR } from "./customer-turn";
 import * as ai from "./deepseek";
-import type { EngineJob } from "./engine-queue";
+import { replyTimeoutSec, type EngineJob } from "./engine-queue";
 import { loadAuthority, runWork, type EngineCtx } from "./engine";
 import { drainAfter } from "./flow-ctx";
 import { buildAgentContext } from "./knowledge/index";
@@ -49,8 +49,8 @@ export const chatTurnContext = async (db: SupabaseClient, job: EngineJob) => {
   const turns = history.filter((m) => m.role !== "system").slice(-HISTORY_TURNS).map((m) => ({ role: m.role === "user" ? "user" : "agent", body: m.body }));
   const c = ctxOf(db, ws);
   // Is the agent's OpenClaw copy (AGENTS.md, SOUL.md, knowledge/) current? Then only the dynamic data goes into the turn.
-  const inst = await db.from("module_installations").select("id, active_context_version_id").eq("workspace_id", ws).eq("agent_id", agent.id).maybeSingle();
-  const instRow = inst.data as { id: string; active_context_version_id: string | null } | null;
+  const inst = await db.from("module_installations").select("id, active_context_version_id, settings").eq("workspace_id", ws).eq("agent_id", agent.id).maybeSingle();
+  const instRow = inst.data as { id: string; active_context_version_id: string | null; settings: Record<string, unknown> | null } | null;
   const activeVersion = instRow?.active_context_version_id
     ? ((await db.from("module_context_versions").select("version").eq("id", instRow.active_context_version_id).maybeSingle()).data as { version: number } | null)?.version ?? null
     : null;
@@ -60,7 +60,7 @@ export const chatTurnContext = async (db: SupabaseClient, job: EngineJob) => {
   const authority = ai.authorityBrief(await loadAuthority(c));
   const base = {
     conversation_id: conv.id, message_id: mine.id, module: agent.module, agent_name: agent.name, handled_by: conv.handled_by ?? null,
-    customer_message: mine.body, turns, installation_id: instRow?.id ?? null, synced, mode: slim ? "slim" : "full",
+    customer_message: mine.body, turns, installation_id: instRow?.id ?? null, timeout_ms: replyTimeoutSec(instRow?.settings) * 1000, synced, mode: slim ? "slim" : "full",
   };
   if (slim) {
     // Only what changes per turn: the owner's current authority and the passages closest to this question (PUBLIC only). Rules, persona,
@@ -162,7 +162,7 @@ export const chatTurnCallback = async (db: SupabaseClient, job: EngineJob, body:
     });
     await logEvidence(db, job.workspace_id, {
       kind: done.fallback ? "engine.fallback" : "engine.reply", actor: ACTOR,
-      summary: done.fallback ? `OpenClaw unavailable (${body.op === "chat.fallback" ? body.reason.slice(0, 120) : "no answer"}): answered with the default processor` : done.applied ? "OpenClaw proposed the reply; it passed the authority gate" : "Conversation was taken over by a person: no AI reply",
+      summary: done.fallback ? (body.op === "chat.fallback" && body.reason.startsWith("engine_timeout") ? "fallback: engine_timeout (the engine did not answer in time): answered with the direct model" : `OpenClaw unavailable (${body.op === "chat.fallback" ? body.reason.slice(0, 120) : "no answer"}): answered with the direct model`) : done.applied ? "OpenClaw proposed the reply; it passed the authority gate" : "Conversation was taken over by a person: no AI reply",
       evidence: job.id,
     });
     drainAfter(c, 3);
@@ -247,3 +247,28 @@ export const runEngineTool = async (db: SupabaseClient, job: EngineJob, tool: To
 
 /** The files the engine writes into the agent's OpenClaw workspace, built only from Supabase. Callable from a sync job, or from a chat.turn job whose agent has no copy yet. */
 export const syncBundle = async (db: SupabaseClient, job: EngineJob) => buildAgentBundle(db, job.workspace_id, await installationOfJob(db, job));
+
+/* ------------------------------------------------------------------ the outage sweeper */
+
+/**
+ * Called every minute (pg_cron -> pg_net -> /api/engine/sweep). engine_sweep_claim() cancels, atomically, chat.turn jobs that waited more than 30 s in
+ * the queue or ran past their deadline; from then on the engine cannot answer them (its callbacks find no running job). Each one is answered here with the
+ * direct model, exactly like a fallback the engine reports, and recorded as "fallback: engine_timeout". Idempotent per job (channel receipt).
+ */
+export const sweepEngineTimeouts = async (db: SupabaseClient): Promise<{ swept: number; answered: number; failed: number }> => {
+  const { data, error } = await db.rpc("engine_sweep_claim");
+  if (error) throw new Error(error.message);
+  const jobs = (data ?? []) as Array<EngineJob>;
+  let answered = 0;
+  let failed = 0;
+  for (const job of jobs) {
+    try {
+      const r = await chatTurnCallback(db, job, { op: "chat.fallback", reason: "engine_timeout" });
+      if (r.applied || r.duplicate) answered++;
+    } catch (e) {
+      failed++;
+      console.error("sweep fallback failed:", job.id, e instanceof Error ? e.message : e);
+    }
+  }
+  return { swept: jobs.length, answered, failed };
+};

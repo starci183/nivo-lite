@@ -30,6 +30,8 @@ const FINAL_STATUS = new Set(["ok", "done", "completed", "final", "finished"]);
 @Injectable()
 export class GatewayClient {
   private readonly log = new Logger(GatewayClient.name);
+  /** Sessions this engine already created: a conversation reuses its session, so only its first turn pays for sessions.create. Dropped when a turn on it fails. */
+  private readonly created = new Set<string>();
 
   constructor(@Inject(OPENCLAW_OPTIONS) private readonly options: OpenclawOptions) {}
 
@@ -68,6 +70,9 @@ export class GatewayClient {
         clearTimeout(deadline);
         if (settle) clearTimeout(settle);
         signal.removeEventListener("abort", onAbort);
+        if (err) this.created.delete(req.sessionKey);
+        mark(err ? "failed" : "reply");
+        this.log.log(`turn timing ${req.agentId}: ${marks.map(([n, ms]) => `${n}=${ms}ms`).join(" ")}`);
         socket.removeAllListeners();
         socket.on("error", () => undefined);
         socket.terminate();
@@ -87,14 +92,24 @@ export class GatewayClient {
           socket.send(JSON.stringify({ type: "req", id, method, params }));
         });
 
+      const t0 = Date.now();
+      const marks: Array<[string, number]> = [];
+      const mark = (name: string): void => { marks.push([name, Date.now() - t0]); };
       const startTurn = async (): Promise<void> => {
         await request("connect", connectParams(gateway.auth));
+        mark("connect");
         // sessions.send only talks into an EXISTING session (OpenClaw 2026.7.1: "session not found" otherwise), so create it first. An already
         // existing session is fine; any other refusal shows up again, with its real reason, on sessions.send below.
-        await request("sessions.create", { key: req.sessionKey, agentId: req.agentId }).catch((e: unknown) => this.log.debug(`sessions.create: ${e instanceof Error ? e.message : String(e)}`));
+        if (!this.created.has(req.sessionKey)) {
+          await request("sessions.create", { key: req.sessionKey, agentId: req.agentId }).catch((e: unknown) => this.log.debug(`sessions.create: ${e instanceof Error ? e.message : String(e)}`));
+          this.created.add(req.sessionKey);
+          mark("create");
+        }
         await request("sessions.subscribe", {});
         await request("sessions.messages.subscribe", { key: req.sessionKey, agentId: req.agentId });
+        mark("subscribe");
         await request("sessions.send", { key: req.sessionKey, agentId: req.agentId, message: req.message, thinking: "off", attachments: [], timeoutMs: req.timeoutMs, idempotencyKey: req.idempotencyKey });
+        mark("send_ack");
       };
 
       socket.on("message", (data: WebSocket.RawData) => {

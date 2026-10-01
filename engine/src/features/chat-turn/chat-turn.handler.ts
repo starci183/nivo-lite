@@ -18,6 +18,8 @@ type TurnContext = {
   readonly turns: ReadonlyArray<{ readonly role: string; readonly body: string }>;
   readonly system: string;
   /** The app's view of the agent's OpenClaw copy: false = none yet (or the last sync failed); "slim" mode = only dynamic data is in `system`. */
+  /** The installation's "Thời gian chờ tối đa" in ms: past it the app answers directly. */
+  readonly timeout_ms?: number;
   readonly synced?: boolean;
   readonly mode?: "slim" | "full";
 };
@@ -77,7 +79,7 @@ export class ChatTurnHandler implements JobHandler {
     } else {
       const token = this.tokens.mint({ jobId: job.id, workspaceId: job.workspace_id, conversationId: context.conversation_id }, Math.ceil(this.openclaw.turnTimeoutMs / 1000) + 60);
       try {
-        proposed = await this.gateway.runTurn({ agentId, sessionKey, message: this.compose(context, token), idempotencyKey: `nivo-${job.id}-${job.attempts}`, timeoutMs: this.openclaw.turnTimeoutMs }, signal);
+        proposed = await this.gateway.runTurn({ agentId, sessionKey, message: this.compose(context, token), idempotencyKey: `nivo-${job.id}-${job.attempts}`, timeoutMs: Math.min(this.openclaw.turnTimeoutMs, context.timeout_ms ?? this.openclaw.turnTimeoutMs) }, signal);
       } catch (e) {
         if (signal.aborted) throw e;
         reason = e instanceof Error ? e.message : String(e);

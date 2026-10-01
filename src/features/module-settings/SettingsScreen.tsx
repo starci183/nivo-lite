@@ -105,7 +105,7 @@ export const SettingsScreen = ({ installation, canEdit, connectionOptions, selec
           <AgentConnectionsCard agentId={installation.agentId} options={connectionOptions} selected={selectedConnections} canEdit={canEdit} />
         ) : null}
 
-        {installation.moduleKey === "chatbot" ? <ProcessorCard installation={installation} canEdit={canEdit} /> : null}
+        <ProcessorCard installation={installation} canEdit={canEdit} />
 
         {note !== undefined ? <Alert title={note.ok ? t("saved") : t("notSaved")} description={note.ok ? undefined : note.text} tone={note.ok ? "affirmative" : "negative"} /> : null}
       </div>

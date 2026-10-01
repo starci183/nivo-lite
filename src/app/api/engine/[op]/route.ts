@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { chatTurnCallback, chatTurnContext, isToolName, runEngineTool, syncBundle, type CallbackBody } from "@/lib/engine-bridge";
+import { chatTurnCallback, chatTurnContext, isToolName, runEngineTool, sweepEngineTimeouts, syncBundle, type CallbackBody } from "@/lib/engine-bridge";
 import { loadRunningJob, queueDb, verifyEngineRequest } from "@/lib/engine-queue";
 import { withErrorReport } from "@/lib/errors";
 
@@ -8,6 +8,7 @@ import { withErrorReport } from "@/lib/errors";
  *   POST /api/engine/context   { job_id }                      the system context + transcript of a chat.turn job
  *   POST /api/engine/callback  { job_id, op, text|reason }     the engine's PROPOSED reply (or "could not get one")
  *   POST /api/engine/tool      { job_id, tool, args }          a tool OpenClaw called through the engine's tool bridge
+ *   POST /api/engine/sweep     (header x-sweep-secret)         pg_cron, every minute: answer chat.turn jobs the engine left queued or running too long with the direct model
  *   POST /api/engine/sync-bundle { job_id }                    the files of one agent's OpenClaw workspace, built from Supabase (job: openclaw.sync_agent, or a chat.turn whose agent has no copy yet)
  * The job id must name a RUNNING job; its workspace is the only workspace any of these can touch.
  */
@@ -18,6 +19,19 @@ const json = (body: unknown, status = 200) => NextResponse.json(body, { status, 
 
 async function postHandler(request: Request, { params }: { params: Promise<{ op: string }> }) {
   const { op } = await params;
+  if (op === "sweep") {
+    // Not signed by the engine (it may be down): authenticated by a secret that lives in the Vault and is compared inside Postgres.
+    const db = queueDb();
+    if (!db) return json({ error: "not configured" }, 503);
+    const ok = await db.rpc("engine_sweep_authorized", { p_secret: request.headers.get("x-sweep-secret") ?? "" });
+    if (ok.error || ok.data !== true) return json({ error: "unauthorized" }, 401);
+    try {
+      return json(await sweepEngineTimeouts(db));
+    } catch (e) {
+      console.error("engine sweep failed:", e instanceof Error ? e.message : e);
+      return json({ error: "failed" }, 500);
+    }
+  }
   const raw = await request.text();
   if (!verifyEngineRequest(request.headers, raw)) return json({ error: "unauthorized" }, 401);
   let body: Record<string, unknown>;

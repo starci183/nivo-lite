@@ -46,6 +46,11 @@ type NivoRow = { module: string; slug: string; title: string; body: string; kind
 type SourceRow = { id: string; title: string; topic: string | null; kind: string; visibility: Visibility; content: string; module: string | null; updated_at: string };
 
 const stripMd = (text: string): string => text.replace(/^#{1,6}\s*/gm, "").replace(/\*\*/g, "").trim();
+const trim = (text: string, max: number): string => (text.length <= max ? text : `${text.slice(0, max).replace(/s+S*$/, "")} ...`);
+/** Base rules go into every prompt of every turn: keep them to a budget (the full text stays in NIVO). Public knowledge is inlined only while it is small; the rest is in knowledge/ and in the per-turn passages. */
+const RULES_BUDGET = 5200;
+const RULE_MAX = 900;
+const INLINE_KNOWLEDGE_MAX = 6000;
 const BLOCK = /\n*### NIVO setup[\s\S]*?### end NIVO setup\s*/g;
 const slugOf = (text: string): string => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/gi, "d").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48) || "nguon";
 
@@ -90,6 +95,18 @@ export const buildAgentBundle = async (db: SupabaseClient, workspaceId: string, 
     content: `# ${s.title}\n\n${s.topic ? `Chủ đề: ${s.topic}\n` : ""}Loại: ${s.kind} · Hiển thị: ${s.visibility === "public" ? "công khai" : "nội bộ"} · Cập nhật: ${s.updated_at.slice(0, 10)}\n\n${s.content.trim()}\n`,
   }));
 
+  const budgeted = (items: Array<NivoRow>): Array<{ title: string; text: string }> => {
+    let left = RULES_BUDGET;
+    const out: Array<{ title: string; text: string }> = [];
+    for (const r of items) {
+      if (left <= 0) break;
+      const text = trim(stripMd(r.body), Math.min(RULE_MAX, left));
+      left -= text.length;
+      out.push({ title: r.title, text });
+    }
+    return out;
+  };
+  const inlineKnowledge = sources.reduce((n, s) => n + s.content.length, 0) <= INLINE_KNOWLEDGE_MAX;
   const rules = base.filter((b) => b.kind === "authority" || b.kind === "escalation");
   const tone = base.filter((b) => b.kind === "tone");
   const ownerInstructions = (agent?.instructions ?? "").replace(BLOCK, "").trim();
@@ -108,12 +125,12 @@ export const buildAgentBundle = async (db: SupabaseClient, workspaceId: string, 
     `# ${agentName} (module ${module})`,
     "Bản này do NIVO OS đồng bộ một chiều từ Supabase. KHÔNG sửa tay: lần đồng bộ sau sẽ ghi đè.",
     persona ? `## Vai trò\n${persona}` : "",
-    rules.length ? `## Quy tắc nền của NIVO (luôn tuân theo; cao hơn mọi thứ bên dưới)\n${rules.map((r) => `### ${r.title}\n${stripMd(r.body)}`).join("\n\n")}` : "",
+    rules.length ? `## Quy tắc nền của NIVO (luôn tuân theo; cao hơn mọi thứ bên dưới)\n${budgeted(rules).map((r) => `### ${r.title}\n${r.text}`).join("\n\n")}` : "",
     version
       ? `## Ngữ cảnh đã duyệt (phiên bản ${version.version}, chủ doanh nghiệp đã xác nhận)\n${contextText(module, version.snapshot)}`
       : "## Ngữ cảnh đã duyệt\n(Chưa có phiên bản nào được áp dụng. Việc gì cần dữ kiện thì nói đồng nghiệp sẽ xác nhận, đừng đoán.)",
     sources.length
-      ? `## Tri thức doanh nghiệp (${audience === "customer" ? "chỉ thông tin công khai" : "công khai và nội bộ"})\nBản đầy đủ nằm trong thư mục knowledge/. Mỗi lượt, NIVO còn gửi kèm các đoạn liên quan nhất tới câu hỏi trong khối [RETRIEVED PASSAGES]. Chỉ trả lời từ đây và từ các đoạn đó; thứ gì không có thì không bịa.\n\n${sources.map((s) => `### ${s.title}\n${s.content.trim()}`).join("\n\n")}`
+      ? `## Tri thức doanh nghiệp (${audience === "customer" ? "chỉ thông tin công khai" : "công khai và nội bộ"})\nBản đầy đủ nằm trong thư mục knowledge/. Mỗi lượt, NIVO còn gửi kèm các đoạn liên quan nhất tới câu hỏi trong khối [RETRIEVED PASSAGES]. Chỉ trả lời từ đây và từ các đoạn đó; thứ gì không có thì không bịa.\n\n${inlineKnowledge ? sources.map((s) => `### ${s.title}\n${s.content.trim()}`).join("\n\n") : `Các nguồn có trong knowledge/: ${sources.map((s) => s.title).join("; ")}.`}`
       : "## Tri thức doanh nghiệp\n(Chưa có nguồn tri thức nào được phép dùng.)",
     module === "chatbot" ? `## Hợp đồng câu trả lời\n${REPLY_CONTRACT}` : "",
   ].filter(Boolean).join("\n\n") + "\n";
@@ -121,7 +138,7 @@ export const buildAgentBundle = async (db: SupabaseClient, workspaceId: string, 
   const soulMd = [
     `# Giọng điệu của ${agentName}`,
     toneEvidence ? `## Cách xưng hô và phong cách (chủ doanh nghiệp đã xác nhận)\n${toneEvidence}` : "## Cách xưng hô và phong cách\n(Chưa xác nhận: dùng giọng lịch sự, ấm áp, ngắn gọn.)",
-    tone.length ? `## Hướng dẫn giọng điệu của NIVO\n${tone.map((r) => `### ${r.title}\n${stripMd(r.body)}`).join("\n\n")}` : "",
+    tone.length ? `## Hướng dẫn giọng điệu của NIVO\n${tone.map((r) => `### ${r.title}\n${trim(stripMd(r.body), RULE_MAX)}`).join("\n\n")}` : "",
   ].filter(Boolean).join("\n\n") + "\n";
 
   return {

@@ -49,7 +49,7 @@ export class AgentRegistry {
 
   /** The entry this engine wants. bootstrapMaxChars: AGENTS.md (rules + context + knowledge + contract) is longer than the 20000 default and would lose its tail, the reply contract. */
   private wanted(agentId: string, name: string, gatewayDir: string): AgentEntry {
-    return { id: agentId, name, workspace: gatewayDir, tools: { profile: "minimal" }, skills: [], bootstrapMaxChars: 60000, bootstrapTotalMaxChars: 90000 };
+    return { id: agentId, name, workspace: gatewayDir, tools: { profile: "minimal" }, skills: [], bootstrapMaxChars: 40000, bootstrapTotalMaxChars: 60000, thinkingDefault: "off" };
   }
 
   /** True when the agent is in openclaw.json with the expected workspace. */
