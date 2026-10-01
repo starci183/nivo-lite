@@ -1,4 +1,4 @@
-# nivo-lite on Netlify (standalone Next.js app; the Next.js runtime is detected automatically).
+# nivo-lite on Netlify (standalone Next.js app; the Next.js runtime is declared below so Git builds and CLI builds match).
 [build]
   command = "npm run build"
   publish = ".next"
@@ -6,3 +6,7 @@
 [build.environment]
   NODE_VERSION = "22"
   NEXT_TELEMETRY_DISABLED = "1"
+
+# Git builds do not add the Next.js runtime on their own (the CLI does); without it no server function is deployed and every page 404s.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
