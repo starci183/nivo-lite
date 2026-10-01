@@ -1,4 +1,5 @@
 import "server-only";
+import { redactString, redactValue } from "./redact";
 import { supabaseAdmin } from "./supabase/admin";
 
 /**
@@ -8,6 +9,8 @@ import { supabaseAdmin } from "./supabase/admin";
 export type ErrorCtx = Record<string, unknown> & { workspaceId?: string | null; connectionId?: string | null };
 
 const clip = (v: string, max: number) => (v.length > max ? `${v.slice(0, max)}…` : v);
+/** Clip first (bounds the work), scrub credentials, clip again (a replacement can only shorten, but keep the cap explicit). */
+const clean = (v: string, max: number) => clip(redactString(clip(v, max * 2)), max);
 
 export const reportError = async (scope: string, error: unknown, ctx: ErrorCtx = {}): Promise<void> => {
   try {
@@ -20,11 +23,11 @@ export const reportError = async (scope: string, error: unknown, ctx: ErrorCtx =
     }
     const err = error instanceof Error ? error : null;
     await db.from("app_errors").insert({
-      scope: clip(scope, 120),
-      message: clip(err ? err.message : typeof error === "string" ? error : JSON.stringify(error) ?? String(error), 2000),
-      stack: err?.stack ? clip(err.stack, 6000) : null,
+      scope: clean(scope, 120),
+      message: clean(err ? err.message : typeof error === "string" ? error : JSON.stringify(redactValue(error)) ?? String(error), 2000),
+      stack: err?.stack ? clean(err.stack, 6000) : null,
       workspace_id: ws,
-      ctx: { ...rest, ...(connectionId ? { connectionId } : {}) },
+      ctx: redactValue({ ...rest, ...(connectionId ? { connectionId } : {}) }),
     });
   } catch {
     // Reporting must never break the request it is reporting on.
@@ -54,7 +57,7 @@ export const withErrorReport = <A extends Request, C extends { params?: Promise<
     }
     if (response.status >= 500) {
       const body = await response.clone().text().catch(() => "");
-      await reportError(scope, new Error(`responded ${response.status}${body ? `: ${clip(body, 500)}` : ""}`), await where());
+      await reportError(scope, new Error(`responded ${response.status}${body ? `: ${clean(body, 500)}` : ""}`), await where());
     }
     return response;
   };
