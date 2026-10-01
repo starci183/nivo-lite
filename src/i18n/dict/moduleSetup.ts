@@ -43,6 +43,8 @@ export const moduleSetup = defineDict({
     versionBy: "{who} · {when}",
     inUse: "In use",
     versionFacts: "{count} facts",
+    revisionApplied: "Version {version} · applied {when} by {who}",
+    revisionAppliedPlain: "Version {version} · applied",
   },
   vi: {
     chatTitle: "Chat thiết lập với NIVO",
@@ -85,5 +87,7 @@ export const moduleSetup = defineDict({
     versionBy: "{who} · {when}",
     inUse: "Bản đang dùng",
     versionFacts: "{count} thông tin",
+    revisionApplied: "Bản {version} · đã áp dụng {when} bởi {who}",
+    revisionAppliedPlain: "Bản {version} · đã áp dụng",
   },
 });

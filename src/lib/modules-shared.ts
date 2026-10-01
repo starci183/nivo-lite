@@ -57,6 +57,9 @@ export type SetupSession = {
   createdAt: string;
 };
 
+/** One revision of an installation's setup chat (the history dividers). */
+export type SetupRevision = { id: string; revision: number; status: SetupSession["status"] };
+
 export type SetupMessage = { id: string; setupSessionId: string; role: "user" | "assistant"; author: string; body: string; createdAt: string };
 
 export type ModuleGate = { key: string; label_vi: string; label_en: string; hint_vi: string; hint_en: string };

@@ -11,7 +11,7 @@ import {
 } from "./modules-core";
 import {
   MODULE_GATES, allGatesConfirmed, gateEntry, gateLabel, isModuleKey, snapshotOf,
-  type ContextSnapshot, type ContextVersion, type GateEvidence, type Installation, type ModuleKey, type OperatingMode, type SetupMessage, type SetupSession,
+  type ContextSnapshot, type ContextVersion, type GateEvidence, type Installation, type ModuleKey, type OperatingMode, type SetupMessage, type SetupRevision, type SetupSession,
 } from "./modules-shared";
 import { moduleCopy, moduleSpec } from "./modules";
 import { requireManager } from "./permissions";
@@ -123,9 +123,17 @@ export const installModule = async (moduleKey: ModuleKey): Promise<Outcome<{ mod
 
 /* ------------------------------------------------------------------ setup chat */
 
-export type SetupState = { installation: Installation; session: SetupSession; messages: Array<SetupMessage> };
+export type SetupState = {
+  installation: Installation;
+  /** The current draft session: new messages go here and realtime follows it. */
+  session: SetupSession;
+  /** Every earlier and current revision of this installation, oldest first (for the history dividers). */
+  revisions: Array<SetupRevision>;
+  /** The whole chat across every revision, oldest first. */
+  messages: Array<SetupMessage>;
+};
 
-/** Everything the Setup tab needs: the draft session (created on first open) and its chat. */
+/** Everything the Setup tab needs: the draft session (created on first open) and the full chat history of the installation. */
 export const loadSetup = async (moduleKey: ModuleKey): Promise<Outcome<SetupState>> =>
   run(async () => {
     await requireManager();
@@ -136,8 +144,19 @@ export const loadSetup = async (moduleKey: ModuleKey): Promise<Outcome<SetupStat
     if (!row.data) throw new Error("Not found");
     const installation = toInstallation(row.data as unknown as InstallationRow);
     const draft = await ensureDraftSession(db, session.workspace.id, installation, await getLocale());
-    return { installation, session: draft, messages: await listSetupMessages(db, draft.id) };
+    const sessions = await db.from("module_setup_sessions").select("id, revision, status").eq("installation_id", installation.id).order("revision");
+    fail(sessions.error);
+    const revisions = (sessions.data ?? []) as Array<SetupRevision>;
+    return { installation, session: draft, revisions, messages: await listInstallationMessages(db, revisions.map((r) => r.id)) };
   });
+
+/** The chat of several revisions at once, oldest first (RLS keeps it owner/manager-only). */
+const listInstallationMessages = async (db: Db, sessionIds: ReadonlyArray<string>): Promise<Array<SetupMessage>> => {
+  if (sessionIds.length === 0) return [];
+  const { data, error } = await db.from("module_setup_messages").select("*").in("setup_session_id", [...sessionIds]).order("created_at");
+  fail(error);
+  return ((data ?? []) as Array<MessageRow>).map(toMessage);
+};
 
 const listSetupMessages = async (db: Db, sessionId: string): Promise<Array<SetupMessage>> => {
   const { data, error } = await db.from("module_setup_messages").select("*").eq("setup_session_id", sessionId).order("created_at");

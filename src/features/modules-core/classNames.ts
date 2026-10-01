@@ -2,7 +2,7 @@ import { cn } from "@heroui/react";
 
 export const PAGE_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-6");
 export const FRAME_CLASS_NAME = cn("grid", "min-w-0", "grid-cols-1", "items-start", "gap-6", "lg:grid-cols-[14rem_minmax(0,1fr)]");
-export const RAIL_CLASS_NAME = cn("flex", "min-w-0", "gap-2", "overflow-x-auto", "lg:sticky", "lg:top-6", "lg:flex-col", "lg:overflow-visible");
+export const RAIL_CLASS_NAME = cn("flex", "min-w-0", "gap-2", "overflow-x-auto", "lg:sticky", "lg:top-0", "lg:flex-col", "lg:overflow-visible");
 export const RAIL_HEAD_CLASS_NAME = cn("hidden", "px-2", "pb-1", "lg:block");
 export const RAIL_ITEM_CLASS_NAME = cn("flex", "min-h-14", "min-w-44", "shrink-0", "items-center", "gap-3", "rounded-lg", "border", "border-transparent", "p-2", "hover:bg-surface-tertiary", "focus-visible:outline-2", "focus-visible:outline-focus", "lg:min-w-0");
 export const RAIL_ITEM_ACTIVE_CLASS_NAME = cn("border-separator", "bg-surface");

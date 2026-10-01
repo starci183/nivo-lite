@@ -19,6 +19,7 @@ import {
   BELL_WRAP_CLASS_NAME,
   COLUMN_CLASS_NAME,
   MAIN_CLASS_NAME,
+  MAIN_INSET_CLASS_NAME,
   PAGE_END_SPACER_CLASS_NAME,
   NEW_LABEL_CLASS_NAME,
   NEW_PLUS_CLASS_NAME,
@@ -368,7 +369,7 @@ const Frame = ({ shell: { props: data, on, children } }: FrameProps) => {
             </span>
           </div>
         </header>
-        <main className={MAIN_CLASS_NAME} aria-label={t("groupWorkspace")}>
+        <main className={isFullHeight ? MAIN_CLASS_NAME : `${MAIN_CLASS_NAME} ${MAIN_INSET_CLASS_NAME}`} aria-label={t("groupWorkspace")}>
           {children}
           {isFullHeight ? null : <div className={PAGE_END_SPACER_CLASS_NAME} aria-hidden="true" />}
         </main>

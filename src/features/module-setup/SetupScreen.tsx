@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Badge, Button, EmptyNotice, Meter, SurfaceCard, Text, Textarea } from "@starci/grammar/common";
 import { useLocale, useT } from "@/i18n/client";
@@ -9,7 +9,7 @@ import { moduleSetup } from "@/i18n/dict/moduleSetup";
 import { applySetup, sendSetupMessage, setGate } from "@/lib/module-actions";
 import {
   MODULE_GATES, allGatesConfirmed, gateEntry, gateHint, gateLabel, snapshotOf,
-  type ContextVersion, type GateStatus, type Installation, type SetupMessage, type SetupSession,
+  type ContextVersion, type GateStatus, type Installation, type SetupMessage, type SetupRevision, type SetupSession,
 } from "@/lib/modules-shared";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { MODULE_META } from "@/features/modules-core/meta";
@@ -19,6 +19,7 @@ import * as c from "./classNames";
 type SetupScreenProps = {
   readonly installation: Installation;
   readonly initialSession: SetupSession;
+  readonly initialRevisions: ReadonlyArray<SetupRevision>;
   readonly initialMessages: ReadonlyArray<SetupMessage>;
   readonly initialVersions: ReadonlyArray<ContextVersion>;
 };
@@ -33,11 +34,12 @@ const mergeMessages = (current: ReadonlyArray<SetupMessage>, incoming: ReadonlyA
 };
 
 /** The Setup tab: private chat with NIVO on the left, the draft, gate checklist and versions on the right. */
-export const SetupScreen = ({ installation, initialSession, initialMessages, initialVersions }: SetupScreenProps) => {
+export const SetupScreen = ({ installation, initialSession, initialRevisions, initialMessages, initialVersions }: SetupScreenProps) => {
   const t = useT(moduleSetup);
   const locale = useLocale();
   const router = useRouter();
   const [session, setSession] = useState(initialSession);
+  const [revisions, setRevisions] = useState<ReadonlyArray<SetupRevision>>(initialRevisions);
   const [messages, setMessages] = useState<Array<SetupMessage>>([...initialMessages]);
   const [versions, setVersions] = useState<ReadonlyArray<ContextVersion>>(initialVersions);
   const [text, setText] = useState("");
@@ -49,14 +51,14 @@ export const SetupScreen = ({ installation, initialSession, initialMessages, ini
   const [isGating, startGating] = useTransition();
   const [applyMessage, setApplyMessage] = useState<{ ok: boolean; text: string } | undefined>();
   const [isApplying, startApplying] = useTransition();
-  const endRef = useRef<HTMLDivElement | null>(null);
+  const threadRef = useRef<HTMLDivElement | null>(null);
 
   const gates = MODULE_GATES[installation.moduleKey];
   const meta = MODULE_META[installation.moduleKey];
   const moduleName = { chatbot: locale === "vi" ? "chatbot chăm sóc khách" : "customer care chatbot", sales: locale === "vi" ? "module Bán hàng" : "Sales module", accounting: locale === "vi" ? "module Kế toán" : "Accounting module" }[installation.moduleKey];
 
   // A new draft session (after an apply) arrives through the server: follow it.
-  useEffect(() => { setSession(initialSession); setMessages([...initialMessages]); setVersions(initialVersions); }, [initialSession, initialMessages, initialVersions]);
+  useEffect(() => { setSession(initialSession); setRevisions(initialRevisions); setMessages([...initialMessages]); setVersions(initialVersions); }, [initialSession, initialRevisions, initialMessages, initialVersions]);
 
   // Realtime: NIVO's replies and the owner's other tabs.
   useEffect(() => {
@@ -71,7 +73,8 @@ export const SetupScreen = ({ installation, initialSession, initialMessages, ini
     return () => { void client.removeChannel(channel); };
   }, [session.id]);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ block: "end" }); }, [messages.length, isSending]);
+  // Open at the newest message (the thread scrolls, not the page).
+  useLayoutEffect(() => { const el = threadRef.current; if (el) el.scrollTop = el.scrollHeight; }, [messages.length, isSending, revisions.length]);
 
   const onSend = useCallback((override?: string) => {
     const body = (override ?? text).trim();
@@ -113,6 +116,20 @@ export const SetupScreen = ({ installation, initialSession, initialMessages, ini
     () => activeVersion !== null && JSON.stringify(activeVersion.snapshot) === JSON.stringify(snapshotOf(session.draft, session.gateEvidence)),
     [activeVersion, session.draft, session.gateEvidence],
   );
+  const dayStamp = (iso: string) => new Intl.DateTimeFormat(intlLocale(locale), { day: "2-digit", month: "2-digit", year: "numeric", timeZone: TIME_ZONE }).format(new Date(iso));
+  // The whole history, one group per revision (oldest first); an applied revision ends with its divider, the current draft continues below.
+  const groups = useMemo(() => {
+    const out: Array<{ id: string; messages: Array<SetupMessage>; divider: string | null }> = [];
+    for (const r of revisions) {
+      const own = messages.filter((m) => m.setupSessionId === r.id);
+      if (r.id === session.id) { out.push({ id: r.id, messages: own, divider: null }); continue; }
+      if (own.length === 0) continue;
+      const v = versions.find((x) => x.version === r.revision);
+      out.push({ id: r.id, messages: own, divider: v ? t("revisionApplied", { version: r.revision, when: dayStamp(v.appliedAt), who: v.appliedBy }) : t("revisionAppliedPlain", { version: r.revision }) });
+    }
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [revisions, messages, versions, session.id, locale, t]);
   const stamp = (iso: string) => new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "medium", timeStyle: "short", timeZone: TIME_ZONE }).format(new Date(iso));
 
   return (
@@ -125,7 +142,7 @@ export const SetupScreen = ({ installation, initialSession, initialMessages, ini
             <Text size="xs" tone="muted">{t("chatPrivate")}</Text>
           </div>
         </div>
-        <div className={c.THREAD_CLASS_NAME} aria-live="polite">
+        <div ref={threadRef} className={c.THREAD_CLASS_NAME} aria-live="polite">
           {messages.length === 0 ? (
             <div className={c.EMPTY_CLASS_NAME}>
               <img className={c.EMPTY_ART_CLASS_NAME} src={meta.art} alt="" />
@@ -133,20 +150,24 @@ export const SetupScreen = ({ installation, initialSession, initialMessages, ini
               <Text size="sm" tone="muted">{t("emptyBody")}</Text>
             </div>
           ) : null}
-          {messages.map((m) => (
-            <div key={m.id} className={m.role === "user" ? c.ROW_USER_CLASS_NAME : c.ROW_CLASS_NAME}>
-              <div className={m.role === "user" ? c.BUBBLE_USER_CLASS_NAME : c.BUBBLE_CLASS_NAME}>
-                <span className={c.WHO_CLASS_NAME}>{m.role === "user" ? m.author || t("you") : t("nivo")}</span>
-                {m.body}
-              </div>
-            </div>
+          {groups.map((g) => (
+            <Fragment key={g.id}>
+              {g.messages.map((m) => (
+                <div key={m.id} className={m.role === "user" ? c.ROW_USER_CLASS_NAME : c.ROW_CLASS_NAME}>
+                  <div className={m.role === "user" ? c.BUBBLE_USER_CLASS_NAME : c.BUBBLE_CLASS_NAME}>
+                    <span className={c.WHO_CLASS_NAME}>{m.role === "user" ? m.author || t("you") : t("nivo")}</span>
+                    {m.body}
+                  </div>
+                </div>
+              ))}
+              {g.divider !== null ? <div className={c.DIVIDER_CLASS_NAME} role="separator"><span className={c.DIVIDER_LABEL_CLASS_NAME}>{g.divider}</span></div> : null}
+            </Fragment>
           ))}
           {isSending ? (
             <div className={c.ROW_CLASS_NAME}>
               <div className={c.BUBBLE_CLASS_NAME}><Text size="sm" tone="muted">{t("sending")}</Text></div>
             </div>
           ) : null}
-          <div ref={endRef} />
         </div>
         {chatError !== undefined ? <div className={c.ERROR_CLASS_NAME}><Alert title={t("chatError")} description={chatError} tone="negative" /></div> : null}
         <form

@@ -27,6 +27,7 @@ const SetupPage = async ({ params }: SetupPageProps) => {
     <SetupScreen
       installation={state.data.installation}
       initialSession={state.data.session}
+      initialRevisions={state.data.revisions}
       initialMessages={state.data.messages}
       initialVersions={versions}
     />

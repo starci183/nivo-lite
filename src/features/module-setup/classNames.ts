@@ -1,7 +1,7 @@
 import { cn } from "@heroui/react";
 
 export const GRID_CLASS_NAME = cn("grid", "min-w-0", "grid-cols-1", "items-start", "gap-5", "xl:grid-cols-2");
-export const CHAT_CLASS_NAME = cn("flex", "h-[calc(100dvh-15rem)]", "min-h-[30rem]", "min-w-0", "flex-col", "overflow-hidden", "rounded-lg", "border", "border-separator", "bg-surface", "xl:sticky", "xl:top-6");
+export const CHAT_CLASS_NAME = cn("flex", "h-[calc(100dvh-17rem)]", "min-h-[30rem]", "min-w-0", "flex-col", "overflow-hidden", "rounded-lg", "border", "border-separator", "bg-surface", "xl:sticky", "xl:top-0");
 export const CHAT_HEAD_CLASS_NAME = cn("flex", "items-center", "gap-3", "border-b", "border-separator", "px-4", "py-3");
 export const CHAT_HEAD_ART_CLASS_NAME = cn("h-9", "w-9", "shrink-0", "rounded-lg", "bg-accent-soft", "object-contain", "p-0.5");
 export const THREAD_CLASS_NAME = cn("flex", "min-h-0", "flex-1", "flex-col", "gap-3", "overflow-y-auto", "bg-background", "p-4");
@@ -10,6 +10,8 @@ export const ROW_USER_CLASS_NAME = cn("flex", "min-w-0", "justify-end");
 export const BUBBLE_CLASS_NAME = cn("max-w-[85%]", "whitespace-pre-wrap", "break-words", "rounded-2xl", "rounded-es-sm", "border", "border-separator", "bg-surface", "px-4", "py-2");
 export const BUBBLE_USER_CLASS_NAME = cn("max-w-[85%]", "whitespace-pre-wrap", "break-words", "rounded-2xl", "rounded-ee-sm", "bg-accent-soft", "px-4", "py-2");
 export const WHO_CLASS_NAME = cn("mb-0.5", "block", "text-xs", "text-muted");
+export const DIVIDER_CLASS_NAME = cn("flex", "items-center", "gap-3", "py-1", "before:h-px", "before:flex-1", "before:bg-separator", "after:h-px", "after:flex-1", "after:bg-separator");
+export const DIVIDER_LABEL_CLASS_NAME = cn("text-center", "text-xs", "text-muted");
 export const EMPTY_CLASS_NAME = cn("m-auto", "flex", "max-w-sm", "flex-col", "items-center", "gap-3", "py-6", "text-center");
 export const EMPTY_ART_CLASS_NAME = cn("h-28", "w-auto", "object-contain");
 export const COMPOSER_CLASS_NAME = cn("flex", "shrink-0", "items-end", "gap-2", "border-t", "border-separator", "bg-surface", "p-3");

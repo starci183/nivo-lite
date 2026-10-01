@@ -1,7 +1,7 @@
 import { cn } from "@heroui/react";
 
 /** Vertical rhythm: header, filters, list. */
-export const PAGE_CLASS_NAME = cn("flex", "flex-col", "gap-4", "py-2", "md:py-4");
+export const PAGE_CLASS_NAME = cn("flex", "flex-col", "gap-4");
 /** A tab strip that scrolls sideways on phones instead of widening the page. */
 export const TABS_CLASS_NAME = cn("max-w-full", "overflow-x-auto");
 /** Filter block: kind tabs over department tabs. */

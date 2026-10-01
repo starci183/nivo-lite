@@ -10,6 +10,9 @@ export const COLUMN_CLASS_NAME = cn("flex", "min-h-0", "min-w-0", "flex-1", "fle
  */
 export const MAIN_CLASS_NAME = cn("flex", "min-h-0", "flex-1", "flex-col", "overflow-y-auto");
 
+/** Block inset of a routed page under the top bar (PADDING-9: 1.5rem, 2rem from sm); full-height pages (Office chat) own their edge-to-edge frame and skip it. */
+export const MAIN_INSET_CLASS_NAME = cn("pt-6", "sm:pt-8");
+
 /** Left rail on desktop, bottom tab bar on phones (Zalo pattern). */
 export const RAIL_CLASS_NAME = cn(
   "order-last",
