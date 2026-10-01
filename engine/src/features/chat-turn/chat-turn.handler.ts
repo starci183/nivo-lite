@@ -51,6 +51,10 @@ export class ChatTurnHandler implements JobHandler {
 
   async run(job: EngineJob, signal: AbortSignal): Promise<JobResult> {
     if (!job.workspace_id) throw new PermanentJobError("chat.turn needs a workspace");
+    const t0 = Date.now();
+    const phases: Array<string> = [];
+    const lap = (name: string): void => { phases.push(`${name}=${Date.now() - t0}ms`); };
+    const queued = job.created_at ? Date.now() - Date.parse(job.created_at) : null;
     let context: TurnContext;
     try {
       context = await this.nivo.call<TurnContext>("/api/engine/context", { job_id: job.id }, signal);
@@ -67,6 +71,7 @@ export class ChatTurnHandler implements JobHandler {
     } catch (e) {
       throw this.classify(e);
     }
+    lap("context");
     // A person took over while the job waited: nothing for the AI to say.
     if (context.handled_by && context.handled_by !== "OpenClaw") return { path: "skipped", reason: "handled_by_person" };
 
@@ -89,9 +94,12 @@ export class ChatTurnHandler implements JobHandler {
       }
     }
 
+    lap("openclaw");
     try {
       const body = proposed !== null ? { job_id: job.id, op: "chat.reply", text: proposed } : { job_id: job.id, op: "chat.fallback", reason: reason.slice(0, 200) };
       const result = await this.nivo.call<CallbackResult>("/api/engine/callback", body, signal);
+      lap("callback");
+      this.log.log(`job ${job.id} timing: queue_wait=${queued ?? "?"}ms ${phases.join(" ")}`);
       return { path: proposed !== null ? "openclaw" : "direct_fallback", ...(proposed === null ? { reason } : {}), agent_id: agentId, context_mode: context.mode ?? "full", ...result };
     } catch (e) {
       throw this.classify(e);

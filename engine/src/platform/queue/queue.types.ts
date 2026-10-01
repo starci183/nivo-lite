@@ -7,6 +7,7 @@ export type EngineJob = {
   readonly attempts: number;
   readonly max_attempts: number;
   readonly locked_until: string | null;
+  readonly created_at?: string;
 };
 
 /** What a handler stores as the job result. */
