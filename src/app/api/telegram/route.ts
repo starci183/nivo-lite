@@ -1,13 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { safeEqual } from "@/lib/channels";
 import { handleTelegramUpdate, type TgUpdate } from "@/lib/telegram-inbound";
+import { withErrorReport } from "@/lib/errors";
 
 /**
  * LEGACY Telegram webhook: the single env bot (TELEGRAM_BOT_TOKEN / TELEGRAM_WEBHOOK_SECRET / TELEGRAM_WORKSPACE_ID) for the
  * original workspace. New workspaces connect their own bot and use /api/telegram/<connectionId>. Same pipeline: see telegram-inbound.
  * Always 200 once authenticated: Telegram retries anything else, which would duplicate the customer's message.
  */
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
   const given = request.headers.get("x-telegram-bot-api-secret-token");
   if (!secret || !given || !safeEqual(given, secret)) return NextResponse.json({ ok: false }, { status: 401 });
@@ -21,3 +22,5 @@ export async function POST(request: NextRequest) {
   await handleTelegramUpdate(update, { workspaceId: ws, botToken });
   return NextResponse.json({ ok: true });
 }
+
+export const POST = withErrorReport("api.telegram", postHandler);

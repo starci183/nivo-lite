@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isValidApiKey, orderCodesIn, type SepayPayload } from "@/lib/sepay";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { withErrorReport } from "@/lib/errors";
 
 /**
  * SePay webhook (https://docs.sepay.vn): POST with `Authorization: Apikey <SEPAY_WEBHOOK_API_KEY>` and the transaction as
@@ -16,7 +17,7 @@ const ok = () => NextResponse.json({ success: true });
 
 type Outcome = "paid" | "underpaid" | "expired" | "unmatched" | "ignored";
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   if (!isValidApiKey(request.headers.get("authorization"), process.env.SEPAY_WEBHOOK_API_KEY)) {
     return NextResponse.json({ success: false, message: "unauthorized" }, { status: 401 });
   }
@@ -65,3 +66,5 @@ export async function POST(request: NextRequest) {
   if (upd.error) return NextResponse.json({ success: false, message: upd.error.message }, { status: 500 });
   return ok();
 }
+
+export const POST = withErrorReport("api.sepay", postHandler);

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { loadConnectionSecret, safeEqual, sha256 } from "@/lib/channels";
 import { feedCredit } from "@/lib/connection-events";
 import type { SepayPayload } from "@/lib/sepay";
+import { withErrorReport } from "@/lib/errors";
 
 /**
  * A workspace's OWN SePay bank feed (not NIVO's billing: that is /api/sepay/webhook). The wizard shows the owner this URL and the
@@ -16,7 +17,7 @@ export const dynamic = "force-dynamic";
 const ok = (extra: Record<string, unknown> = {}) => NextResponse.json({ success: true, ...extra });
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export async function POST(request: NextRequest, { params }: { params: Promise<{ connectionId: string }> }) {
+async function postHandler(request: NextRequest, { params }: { params: Promise<{ connectionId: string }> }) {
   const { connectionId } = await params;
   const presented = request.headers.get("authorization")?.match(/^\s*Apikey\s+(.+?)\s*$/i)?.[1];
   const conn = UUID.test(connectionId) && presented ? await loadConnectionSecret(connectionId, "sepay").catch(() => null) : null;
@@ -41,3 +42,5 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ success: false, message: "failed" }, { status: 500 });
   }
 }
+
+export const POST = withErrorReport("api.connections.sepay", postHandler);

@@ -2,6 +2,7 @@ import { createHmac } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { loadConnectionSecret, safeEqual } from "@/lib/channels";
 import { feedCredit } from "@/lib/connection-events";
+import { withErrorReport } from "@/lib/errors";
 
 /**
  * Casso bank-feed webhook for one connection. Webhook V2: header `X-Casso-Signature: t=<ms>,v1=<hex>` where v1 is HMAC-SHA512 (hex) with
@@ -26,7 +27,7 @@ const sortKeys = (data: Record<string, unknown>): Record<string, unknown> => {
 const cassoSignature = (body: Record<string, unknown>, t: string, key: string): string =>
   createHmac("sha512", key).update(`${t}.${JSON.stringify(sortKeys(body))}`).digest("hex");
 
-export async function POST(request: NextRequest, { params }: { params: Promise<{ connectionId: string }> }) {
+async function postHandler(request: NextRequest, { params }: { params: Promise<{ connectionId: string }> }) {
   const { connectionId } = await params;
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   const conn = UUID.test(connectionId) ? await loadConnectionSecret(connectionId, "casso").catch(() => null) : null;
@@ -58,3 +59,5 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ success: false, message: "failed" }, { status: 500 });
   }
 }
+
+export const POST = withErrorReport("api.connections.casso", postHandler);

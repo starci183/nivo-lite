@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { BANK_CONNECTION, bankEventId } from "@/lib/bank";
 import { ingestBankCredit } from "@/lib/bank-feed";
 import { publicConfig } from "@/lib/config";
+import { withErrorReport } from "@/lib/errors";
 
 /**
  * Bank connection webhook (SIMULATED "Vietcombank"): one credit to the workspace's account becomes a bank payment input and
@@ -15,7 +16,7 @@ import { publicConfig } from "@/lib/config";
  */
 type Credit = { amount_vnd?: unknown; content?: unknown; sender_name?: unknown; event_id?: unknown };
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   const secret = process.env.BANK_WEBHOOK_SECRET;
   if (!secret || request.headers.get("x-nivo-bank-secret") !== secret) return NextResponse.json({ ok: false }, { status: 401 });
   const ws = process.env.TELEGRAM_WORKSPACE_ID;
@@ -50,3 +51,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "failed" }, { status: 500 });
   }
 }
+
+export const POST = withErrorReport("api.bank.vietcombank", postHandler);

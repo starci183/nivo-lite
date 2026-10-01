@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { boundAgent, loadConnectionSecret, safeEqual } from "@/lib/channels";
 import { handleTelegramUpdate, type TgUpdate } from "@/lib/telegram-inbound";
+import { withErrorReport } from "@/lib/errors";
 
 /**
  * Per-connection Telegram webhook: /api/telegram/<connectionId>. The connection's own random secret must arrive in
@@ -9,7 +10,7 @@ import { handleTelegramUpdate, type TgUpdate } from "@/lib/telegram-inbound";
  * bound to an active Chatbot agent of that workspace; otherwise it is stored and nothing is replied.
  * Always 200 once authenticated (Telegram retries anything else, which would duplicate the customer's message).
  */
-export async function POST(request: NextRequest, { params }: { params: Promise<{ connectionId: string }> }) {
+async function postHandler(request: NextRequest, { params }: { params: Promise<{ connectionId: string }> }) {
   const { connectionId } = await params;
   const given = request.headers.get("x-telegram-bot-api-secret-token");
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(connectionId);
@@ -20,3 +21,5 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   await handleTelegramUpdate(update, { workspaceId: conn.workspaceId, botToken: conn.credential, connectionId, agentId: agent?.id ?? null });
   return NextResponse.json({ ok: true });
 }
+
+export const POST = withErrorReport("api.telegram.connection", postHandler);

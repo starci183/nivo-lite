@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { chatTurnCallback, chatTurnContext, isToolName, runEngineTool, syncBundle, type CallbackBody } from "@/lib/engine-bridge";
 import { loadRunningJob, queueDb, verifyEngineRequest } from "@/lib/engine-queue";
+import { withErrorReport } from "@/lib/errors";
 
 /**
  * The engine's door into the app (public path: it is authenticated by an HMAC over the body with ENGINE_SHARED_SECRET, not by a session).
@@ -15,7 +16,7 @@ export const maxDuration = 60;
 
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { "Cache-Control": "no-store" } });
 
-export async function POST(request: Request, { params }: { params: Promise<{ op: string }> }) {
+async function postHandler(request: Request, { params }: { params: Promise<{ op: string }> }) {
   const { op } = await params;
   const raw = await request.text();
   if (!verifyEngineRequest(request.headers, raw)) return json({ error: "unauthorized" }, 401);
@@ -59,3 +60,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
     return json({ error: e instanceof Error ? e.message : "failed" }, 500);
   }
 }
+
+export const POST = withErrorReport("api.engine", postHandler);

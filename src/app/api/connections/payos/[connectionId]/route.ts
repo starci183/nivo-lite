@@ -2,6 +2,7 @@ import { createHmac } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { loadConnectionSecret, safeEqual } from "@/lib/channels";
 import { feedCredit } from "@/lib/connection-events";
+import { withErrorReport } from "@/lib/errors";
 
 /**
  * payOS webhook for one connection. payOS posts {code, desc, success, data{orderCode, amount, description, reference, ...}, signature};
@@ -19,7 +20,7 @@ const text = (v: unknown): string => (v === null || v === undefined ? "" : typeo
 const payosSignature = (data: Record<string, unknown>, checksumKey: string): string =>
   createHmac("sha256", checksumKey).update(Object.keys(data).sort().map((k) => `${k}=${text(data[k])}`).join("&")).digest("hex");
 
-export async function POST(request: NextRequest, { params }: { params: Promise<{ connectionId: string }> }) {
+async function postHandler(request: NextRequest, { params }: { params: Promise<{ connectionId: string }> }) {
   const { connectionId } = await params;
   const body = (await request.json().catch(() => null)) as PayosBody | null;
   const conn = UUID.test(connectionId) ? await loadConnectionSecret(connectionId, "payos").catch(() => null) : null;
@@ -51,3 +52,5 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ success: false, message: "failed" }, { status: 500 });
   }
 }
+
+export const POST = withErrorReport("api.connections.payos", postHandler);
