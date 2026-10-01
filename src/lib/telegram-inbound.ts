@@ -112,8 +112,13 @@ export const handleTelegramUpdate = async (update: TgUpdate, { workspaceId: ws, 
     }
 
     await telegramTyping(botToken, chatId);
-    const turn = await withUsage({ workspaceId: ws }, () => customerTurn({ db, ws, actor: "Telegram", locale: LOCALE }, conv, agent, text.trim(), { eventId: `tg:${chatId}:${msg.message_id}` }));
-    await emitEvent(ws, "message.inbound", { conversation_id: conv.id, lead_id: turn.capturedLeadId ?? conv.lead_id, channel: "telegram", text: text.trim(), agent_id: agent.id }, `message.inbound:tg:${chatId}:${msg.message_id}`);
+    let turn: Awaited<ReturnType<typeof customerTurn>> | null = null;
+    try {
+      turn = await withUsage({ workspaceId: ws }, () => customerTurn({ db, ws, actor: "Telegram", locale: LOCALE }, conv, agent, text.trim(), { eventId: `tg:${chatId}:${msg.message_id}` }));
+    } finally {
+      // The customer's message is stored before the model runs, so automations hear about it even when the reply could not be produced.
+      await emitEvent(ws, "message.inbound", { conversation_id: conv.id, lead_id: turn?.capturedLeadId ?? conv.lead_id, channel: "telegram", text: text.trim(), agent_id: agent.id }, `message.inbound:tg:${chatId}:${msg.message_id}`);
+    }
     revalidatePath("/", "layout");
   } catch (e) {
     console.error("telegram webhook failed", e instanceof Error ? e.message : e);

@@ -162,8 +162,13 @@ export const sendAgentMessage = async (
     const conv = must(await supabase.from("agent_conversations").select("*").eq("id", conversationId).single<AgentConversation>());
     const agent = must(await supabase.from("agents").select("*").eq("id", conv.agent_id).single<Agent>());
     if (conv.kind === "customer") {
-      const turn = await withUsage({ workspaceId: ws }, () => customerTurn(c, conv, agent, body));
-      await emitEvent(ws, "message.inbound", { conversation_id: conv.id, lead_id: turn.capturedLeadId ?? conv.lead_id, channel: "website", text: body, agent_id: agent.id }, `message.inbound:${turn.reply.id}`);
+      let turn: Awaited<ReturnType<typeof customerTurn>> | null = null;
+      try {
+        turn = await withUsage({ workspaceId: ws }, () => customerTurn(c, conv, agent, body));
+      } finally {
+        // The customer's message is stored before the model runs, so automations hear about it even when the reply could not be produced.
+        await emitEvent(ws, "message.inbound", { conversation_id: conv.id, lead_id: turn?.capturedLeadId ?? conv.lead_id, channel: "website", text: body, agent_id: agent.id }, `message.inbound:${turn?.reply.id ?? `${conv.id}:${Date.now()}`}`);
+      }
       if (turn.changed) refreshAll();
       return { reply: turn.reply, capturedLeadId: turn.capturedLeadId };
     }
