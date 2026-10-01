@@ -1,0 +1,86 @@
+# Redeploys the engine stack (engine + OpenClaw + n8n) on the VPS with Docker Compose.
+# Runs on a push to main that changes engine/, or by hand (Actions > Deploy engine > Run workflow).
+# Everything comes from the GitHub environment "production":
+#   vars    VPS_HOST, VPS_USER
+#   secrets VPS_SSH_KEY (CI-only deploy key), VPS_KNOWN_HOSTS (pinned host keys), ENGINE_ENV (the whole deploy/.env file)
+# The VPS also runs k3s; this workflow only touches ~/nivo-engine and the "nivo-engine" compose project.
+name: Deploy engine
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "engine/**"
+      - ".github/workflows/engine-deploy.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: engine-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Typecheck and build the engine
+        working-directory: engine
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+
+      - name: SSH setup
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts && chmod 644 ~/.ssh/known_hosts
+          cat >> ~/.ssh/config <<EOF
+          Host vps
+            HostName ${{ vars.VPS_HOST }}
+            User ${{ vars.VPS_USER }}
+            IdentityFile ~/.ssh/deploy_key
+            StrictHostKeyChecking yes
+            BatchMode yes
+            ConnectTimeout 20
+          EOF
+
+      - name: Upload source and env
+        env:
+          ENGINE_ENV: ${{ secrets.ENGINE_ENV }}
+        run: |
+          tar --exclude=node_modules --exclude=dist --exclude=.env -czf - engine \
+            | ssh vps 'set -e; rm -rf ~/nivo-engine.new; mkdir -p ~/nivo-engine.new; tar -xzf - -C ~/nivo-engine.new'
+          printf '%s\n' "$ENGINE_ENV" | ssh vps 'umask 077; cat > ~/nivo-engine.new/engine/deploy/.env'
+
+      - name: Swap and restart
+        run: |
+          ssh vps 'bash -s' <<'EOF'
+          set -euo pipefail
+          rm -rf ~/nivo-engine.prev
+          [ -d ~/nivo-engine ] && mv ~/nivo-engine ~/nivo-engine.prev
+          mv ~/nivo-engine.new/engine ~/nivo-engine && rmdir ~/nivo-engine.new
+          cd ~/nivo-engine/deploy
+          docker compose --env-file .env build engine
+          docker compose --env-file .env up -d --remove-orphans
+          docker image prune -f >/dev/null
+          EOF
+
+      - name: Health check
+        run: |
+          ssh vps 'bash -s' <<'EOF'
+          set -euo pipefail
+          cd ~/nivo-engine/deploy
+          for i in $(seq 1 30); do
+            state=$(docker inspect -f '{{.State.Health.Status}}' nivo-engine-engine-1 2>/dev/null || echo missing)
+            [ "$state" = healthy ] && { echo "engine healthy"; docker compose ps --format 'table {{.Service}}\t{{.Status}}'; exit 0; }
+            sleep 5
+          done
+          echo "engine not healthy (last: $state)"; docker compose ps; docker compose logs --tail 80 engine openclaw
+          exit 1
+          EOF
