@@ -41,6 +41,32 @@ services:
       - openclaw
     logging: *logging
 
+  openclaw-init:
+    # Writes the gateway settings the stack relies on into openclaw.json before the gateway starts (idempotent merge: other
+    # keys, agents and plugins OpenClaw or an operator added are kept). Loopback bind + token auth: only the engine, which
+    # shares the gateway's network namespace, can reach it.
+    image: ${OPENCLAW_IMAGE:-ghcr.io/openclaw/openclaw}:${OPENCLAW_TAG:-2026.7.1}
+    restart: "no"
+    entrypoint: ["node", "-e"]
+    command:
+      - |
+        const fs = require("fs"), p = "/home/node/.openclaw/openclaw.json";
+        let c = {}; try { c = JSON.parse(fs.readFileSync(p, "utf8")); } catch {}
+        c.gateway = { ...(c.gateway || {}), mode: "local", bind: "loopback", port: 18789,
+          auth: { ...((c.gateway || {}).auth || {}), mode: "token", token: process.env.OPENCLAW_GATEWAY_TOKEN } };
+        const model = process.env.OPENCLAW_MODEL;
+        if (model) { c.agents = c.agents || {}; c.agents.defaults = c.agents.defaults || {};
+          c.agents.defaults.model = { ...(c.agents.defaults.model || {}), primary: model }; }
+        fs.mkdirSync("/home/node/.openclaw", { recursive: true });
+        fs.writeFileSync(p, JSON.stringify(c, null, 2), { mode: 0o600 });
+        console.log("openclaw.json ready (gateway local/loopback/token" + (model ? ", model " + model : "") + ")");
+    environment:
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:?set OPENCLAW_GATEWAY_TOKEN in .env}
+      OPENCLAW_MODEL: ${OPENCLAW_MODEL:-deepseek/deepseek-chat}
+    volumes:
+      - openclaw-data:/home/node/.openclaw
+    logging: *logging
+
   openclaw:
     # Same image family nivo-backend provisions (AGENTOS_IMAGE_OPENCLAW_REPOSITORY). Pin a tag you have tested; the protocol document
     # was measured against 2026.7.1. VERIFY the default start command of your tag (docker run --rm <image> --help) before first deploy.
@@ -54,8 +80,9 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
-    ports:
-      - "127.0.0.1:18789:18789"
+    depends_on:
+      openclaw-init:
+        condition: service_completed_successfully
     volumes:
       - openclaw-data:/home/node/.openclaw
     healthcheck:
