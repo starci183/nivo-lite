@@ -89,6 +89,9 @@ export class GatewayClient {
 
       const startTurn = async (): Promise<void> => {
         await request("connect", connectParams(gateway.auth));
+        // sessions.send only talks into an EXISTING session (OpenClaw 2026.7.1: "session not found" otherwise), so create it first. An already
+        // existing session is fine; any other refusal shows up again, with its real reason, on sessions.send below.
+        await request("sessions.create", { key: req.sessionKey, agentId: req.agentId }).catch((e: unknown) => this.log.debug(`sessions.create: ${e instanceof Error ? e.message : String(e)}`));
         await request("sessions.subscribe", {});
         await request("sessions.messages.subscribe", { key: req.sessionKey, agentId: req.agentId });
         await request("sessions.send", { key: req.sessionKey, agentId: req.agentId, message: req.message, thinking: "off", attachments: [], timeoutMs: req.timeoutMs, idempotencyKey: req.idempotencyKey });
