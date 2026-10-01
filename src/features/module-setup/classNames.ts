@@ -1,0 +1,31 @@
+import { cn } from "@heroui/react";
+
+export const GRID_CLASS_NAME = cn("grid", "min-w-0", "grid-cols-1", "items-start", "gap-5", "xl:grid-cols-2");
+export const CHAT_CLASS_NAME = cn("flex", "h-[calc(100dvh-15rem)]", "min-h-[30rem]", "min-w-0", "flex-col", "overflow-hidden", "rounded-lg", "border", "border-separator", "bg-surface", "xl:sticky", "xl:top-6");
+export const CHAT_HEAD_CLASS_NAME = cn("flex", "items-center", "gap-3", "border-b", "border-separator", "px-4", "py-3");
+export const CHAT_HEAD_ART_CLASS_NAME = cn("h-9", "w-9", "shrink-0", "rounded-lg", "bg-accent-soft", "object-contain", "p-0.5");
+export const THREAD_CLASS_NAME = cn("flex", "min-h-0", "flex-1", "flex-col", "gap-3", "overflow-y-auto", "bg-background", "p-4");
+export const ROW_CLASS_NAME = cn("flex", "min-w-0", "justify-start");
+export const ROW_USER_CLASS_NAME = cn("flex", "min-w-0", "justify-end");
+export const BUBBLE_CLASS_NAME = cn("max-w-[85%]", "whitespace-pre-wrap", "break-words", "rounded-2xl", "rounded-es-sm", "border", "border-separator", "bg-surface", "px-4", "py-2");
+export const BUBBLE_USER_CLASS_NAME = cn("max-w-[85%]", "whitespace-pre-wrap", "break-words", "rounded-2xl", "rounded-ee-sm", "bg-accent-soft", "px-4", "py-2");
+export const WHO_CLASS_NAME = cn("mb-0.5", "block", "text-xs", "text-muted");
+export const EMPTY_CLASS_NAME = cn("m-auto", "flex", "max-w-sm", "flex-col", "items-center", "gap-3", "py-6", "text-center");
+export const EMPTY_ART_CLASS_NAME = cn("h-28", "w-auto", "object-contain");
+export const COMPOSER_CLASS_NAME = cn("flex", "shrink-0", "items-end", "gap-2", "border-t", "border-separator", "bg-surface", "p-3");
+export const COMPOSER_INPUT_CLASS_NAME = cn("max-h-32", "min-h-11", "min-w-0", "flex-1", "resize-none", "rounded-lg", "border", "border-separator", "bg-surface-secondary", "px-3", "py-2.5", "text-foreground", "placeholder:text-muted", "focus-visible:outline-2", "focus-visible:outline-focus");
+export const ERROR_CLASS_NAME = cn("px-3", "pb-2");
+
+export const SIDE_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-5");
+export const STACK_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-3");
+export const SECTION_HEAD_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "justify-between", "gap-2");
+export const FACTS_CLASS_NAME = cn("flex", "flex-col", "gap-1.5", "text-sm");
+export const FACT_CLASS_NAME = cn("flex", "items-start", "gap-2");
+export const FACT_DOT_CLASS_NAME = cn("mt-2", "h-1.5", "w-1.5", "shrink-0", "rounded-full", "bg-muted");
+export const GATE_LIST_CLASS_NAME = cn("flex", "flex-col", "divide-y", "divide-separator");
+export const GATE_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-2", "py-3", "first:pt-0", "last:pb-0");
+export const GATE_HEAD_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "justify-between", "gap-2");
+export const GATE_ACTIONS_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "gap-2");
+export const EVIDENCE_CLASS_NAME = cn("whitespace-pre-wrap", "break-words", "rounded-lg", "bg-surface-secondary", "px-3", "py-2", "text-sm");
+export const VERSION_ROW_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "justify-between", "gap-2", "py-2");
+export const VERSION_LIST_CLASS_NAME = cn("flex", "flex-col", "divide-y", "divide-separator");

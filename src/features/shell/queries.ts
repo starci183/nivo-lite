@@ -2,6 +2,7 @@ import "server-only";
 import { getT } from "@/i18n/server";
 import { shell } from "@/i18n/dict/shell";
 import { getSession } from "@/lib/session";
+import type { ShellMember } from "./member-context";
 import { getGovernance, listExceptions } from "@/lib/flow-queries";
 import { supabaseServer } from "@/lib/supabase/server";
 
@@ -19,6 +20,11 @@ export type ShellData = {
   readonly leadCount: number;
   readonly openResponsibilityCount: number;
   readonly agents: ReadonlyArray<ShellAgent>;
+  /** The signed-in person in this workspace: drives role-aware navigation and menus. */
+  readonly member: ShellMember;
+  /** Every workspace the person is an active member of (for the switcher). */
+  readonly workspaces: ReadonlyArray<{ readonly id: string; readonly name: string; readonly role: "owner" | "manager" | "staff" }>;
+  readonly currentWorkspaceId: string;
 };
 
 type ExecRow = { id: string; kind: string; draft: string; responsibility_id: string };
@@ -33,12 +39,17 @@ export const getShellData = async (): Promise<ShellData> => {
   const session = await getSession();
   const supabase = await supabaseServer();
   const wid = session.workspace.id;
-  const [execs, leads, open, agents] = await Promise.all([
+  const [execs, leads, open, agents, mine] = await Promise.all([
     supabase.from("executions").select("id, kind, draft, responsibility_id").eq("workspace_id", wid).eq("status", "pending_approval").order("created_at", { ascending: false }),
     supabase.from("leads").select("id", { count: "exact", head: true }).eq("workspace_id", wid),
     supabase.from("responsibilities").select("id", { count: "exact", head: true }).eq("workspace_id", wid).neq("status", "done"),
     supabase.from("agents").select("id, name, module, status").eq("workspace_id", wid).order("created_at"),
+    supabase.from("workspace_members").select("workspace_id, role, workspaces(name)").eq("user_id", session.userId).eq("status", "active").order("created_at"),
   ]);
+  type MineRow = { workspace_id: string; role: "owner" | "manager" | "staff"; workspaces: { name: string } | Array<{ name: string }> | null };
+  const workspaces = ((mine.data ?? []) as unknown as Array<MineRow>).map((m) => ({
+    id: m.workspace_id, role: m.role, name: (Array.isArray(m.workspaces) ? m.workspaces[0]?.name : m.workspaces?.name) ?? session.workspace.name,
+  }));
   const [governance, exceptions] = await Promise.all([
     getGovernance().catch(() => null),
     listExceptions().catch(() => []),
@@ -76,6 +87,9 @@ export const getShellData = async (): Promise<ShellData> => {
     pendingCount: governance?.pendingDecisions ?? allPending.length,
     leadCount: leads.count ?? 0,
     openResponsibilityCount: open.count ?? 0,
+    workspaces,
+    currentWorkspaceId: wid,
+    member: { userId: session.member.userId, name: session.member.displayName, role: session.member.role, staffId: session.member.staffId },
     agents: ((agents.data ?? []) as Array<ShellAgent>).map((a) => ({ id: a.id, name: a.name, module: a.module, status: a.status })),
   };
 };

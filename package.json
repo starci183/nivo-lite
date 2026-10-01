@@ -3,14 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node scripts/with-secrets.mjs next dev -p 3090",
+    "dev": "node scripts/with-secrets.mjs next dev -p 3100",
     "build": "next build",
-    "start": "node scripts/with-secrets.mjs next start -p 3090",
+    "start": "node scripts/with-secrets.mjs next start -p 3100",
     "typecheck": "tsc --noEmit",
     "db:start": "node scripts/with-secrets.mjs supabase start",
     "db:stop": "supabase stop",
     "db:reset": "node scripts/with-secrets.mjs supabase db reset",
-    "db:status": "supabase status"
+    "db:status": "supabase status",
+    "db:test": "node scripts/with-secrets.mjs node scripts/rls-check.mjs",
+    "seed:knowledge": "node scripts/with-secrets.mjs node scripts/seed-nivo-knowledge.mjs"
   },
   "dependencies": {
     "@dicebear/core": "^10.4.0",

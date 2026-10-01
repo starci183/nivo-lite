@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Screenshot prototype routes as the local demo user.
+// Screenshot app routes as the local demo user.
 // Usage: node scripts/shot.mjs <outDir> <path> [path...]   e.g. node scripts/shot.mjs ../../.shots/a2 / /responsibilities
-// Env: SHOT_WIDTH (1440), SHOT_HEIGHT (900), SHOT_FULL=1 for full-page, BASE_URL (http://localhost:3090)
+// Env: SHOT_WIDTH (1440), SHOT_HEIGHT (900), SHOT_FULL=1 for full-page, BASE_URL (http://localhost:3100)
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { chromium } from "playwright";
@@ -11,7 +11,7 @@ if (!outDir || !paths.length) {
   console.error("usage: node scripts/shot.mjs <outDir> <path> [path...]");
   process.exit(1);
 }
-const base = process.env.BASE_URL || "http://localhost:3090";
+const base = process.env.BASE_URL || "http://localhost:3100";
 const width = Number(process.env.SHOT_WIDTH || 1440);
 const height = Number(process.env.SHOT_HEIGHT || 900);
 mkdirSync(outDir, { recursive: true });

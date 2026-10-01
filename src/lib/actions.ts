@@ -15,8 +15,13 @@ import { loadAuthority, resumeWork, runWork, type EngineCtx } from "./engine";
 import { drainAfter, engineCtx } from "./flow-ctx";
 import { customerTurn } from "./customer-turn";
 import { ownerChatForOffice } from "./flow-actions";
-import { insertHumanMessage, relayStaffAnswer, staffMember } from "./staff-relay";
+import { insertHumanMessage, relayStaffAnswer } from "./staff-relay";
+import { access } from "@/i18n/dict/access";
+import { deciderOf, requireDecide, requireManager } from "./permissions";
 import type { WorkItem } from "./flow-types";
+import { noteIntent, proposeContextNote } from "./context-notes";
+import { knowledgeBrief } from "./knowledge/runtime";
+import { knowledge as knowledgeDict } from "@/i18n/dict/knowledge";
 import type { Agent, AgentConversation, AgentMessage, Execution, Lead, Message, ModuleKey, Outcome, Responsibility } from "./types";
 
 /* ------------------------------------------------------------------ helpers */
@@ -72,6 +77,7 @@ export type AgentSetupInput = {
 /** Install a module as a new agent. Only available modules (Chatbot in this build) can be installed. */
 export const installAgent = async (module: ModuleKey, input: Partial<AgentSetupInput> = {}): Promise<Outcome<Agent>> =>
   run(async () => {
+    await requireManager();
     const spec = moduleSpec(module);
     if (!spec.available) throw new Error(`${spec.name} is already included with this workspace.`);
     const { session, supabase } = await ctx();
@@ -96,6 +102,7 @@ export const suggestAgentSetup = async (description: string): Promise<Outcome<{ 
 
 export const updateAgent = async (agentId: string, input: Partial<AgentSetupInput> & { status?: "active" | "paused" }): Promise<Outcome<Agent>> =>
   run(async () => {
+    await requireManager();
     const { session, supabase } = await ctx();
     const agent = must(await supabase.from("agents").update(input).eq("id", agentId).select().single<Agent>());
     await logEvent(supabase, session.workspace.id, null, "agent.updated", session.userName, (await getT(system))("updatedSetup", { agent: agent.name }));
@@ -157,7 +164,7 @@ export const sendAgentMessage = async (
     must(await supabase.from("agent_messages").insert({ workspace_id: ws, conversation_id: conv.id, role: "user", body }).select().single<AgentMessage>());
     const history = ((await supabase.from("agent_messages").select("*").eq("conversation_id", conv.id).order("created_at")).data ?? []) as AgentMessage[];
     const turns: ai.ChatTurn[] = history.filter((m) => m.role !== "system").map((m) => ({ role: m.role === "user" ? "user" : "agent", body: m.body }));
-    const text = await ai.testChat(agentInput(agent), turns, ai.authorityBrief(await loadAuthority(c)));
+    const text = await ai.testChat(agentInput(agent), turns, ai.authorityBrief(await loadAuthority(c)) + (await knowledgeBrief(c, agent.module, body, "customer")));
     const reply = must(await supabase.from("agent_messages").insert({ workspace_id: ws, conversation_id: conv.id, role: "agent", body: text }).select().single<AgentMessage>());
     return { reply, capturedLeadId: null };
   });
@@ -285,10 +292,13 @@ export const decideExecution = async (executionId: string, decision: "approved" 
     const { session, supabase } = await ctx();
     const ws = session.workspace.id;
     const current = must(await supabase.from("executions").select("*").eq("id", executionId).single<Execution>());
+    const by = deciderOf(session.member);
     if (current.work_item_id) {
       const c = await engineCtx();
       if (current.status !== "pending_approval") throw new Error(translator(system, c.locale)("alreadyDecided"));
-      await resumeWork(c, current.work_item_id, decision, editedDraft ? { draft: editedDraft } : {}, { name: session.userName, kind: "owner" });
+      const wi = must(await supabase.from("work_items").select("assigned_staff_id").eq("id", current.work_item_id).maybeSingle<Pick<WorkItem, "assigned_staff_id">>());
+      await requireDecide(wi, c.locale);
+      await resumeWork(c, current.work_item_id, decision, editedDraft ? { draft: editedDraft } : {}, by);
       // The engine records the execution as approved when it performs; a rejection is recorded here.
       if (decision === "rejected") {
         await supabase.from("executions").update({ status: "rejected", decided_by: session.userName, decided_at: new Date().toISOString(), ...(editedDraft ? { draft: editedDraft } : {}) }).eq("id", executionId);
@@ -297,6 +307,8 @@ export const decideExecution = async (executionId: string, decision: "approved" 
       refreshAll();
       return must(await supabase.from("executions").select("*").eq("id", executionId).single<Execution>());
     }
+    // A legacy draft without a work item has no assignee: owner and manager only.
+    if (by.kind === "staff") throw new Error((await getT(access))("forbiddenDecide"));
     const ex = must(
       await supabase.from("executions").update({
         status: decision, decided_by: session.userName, decided_at: new Date().toISOString(), ...(editedDraft ? { draft: editedDraft } : {}),
@@ -369,25 +381,27 @@ export const addResponsibility = async (leadId: string, input: { title: string; 
 /* ------------------------------------------------------------------ team chat (Office) */
 
 /**
- * Post in the team chat, as the signed-in owner or (asStaffId, "Nhắn với tư cách") as an active staff member: staff have
- * no logins in the prototype, so the owner writes on their behalf and the message carries the staff member's name.
- * Owner messages go to NIVO first: "@nivo …" grants authority (goals, policies, rules) and decisions typed in chat
- * ("đồng ý", "duyệt đơn 45 triệu", "từ chối") resume the matching waiting work; NIVO answers in the thread.
- * Then the Chatbot checks whether the message answers a customer question it escalated (relayStaffAnswer): if so it
- * rewrites the answer for the customer, resolves the waiting reply_customer item with the author as decider (the reply
- * reaches the customer's channel) and confirms in Office. Staff messages never grant authority or decide by typed words.
+ * Post in the team chat as the signed-in member (author = their display name, staff_id = their staff row when they are one).
+ * Owner and manager messages go to NIVO first: "@nivo …" grants authority (goals, policies, rules) and decisions typed in
+ * chat ("đồng ý", "duyệt đơn 45 triệu", "từ chối") resume the matching waiting work; NIVO answers in the thread. A staff
+ * member who addresses NIVO that way gets a friendly "not allowed" instead.
+ * Then the Chatbot checks whether the message answers a customer question it escalated (relayStaffAnswer): it counts when
+ * the author is the staff member the open reply_customer item is assigned to; the Chatbot rewrites it for the customer,
+ * resolves the item with that member as decider (the reply reaches the customer's channel) and confirms in Office.
  * Otherwise, mentioning @handle of an active agent makes that agent reply (its brief includes waiting decisions).
  */
-export const sendTeamMessage = async (body: string, asStaffId?: string | null): Promise<Outcome<Message[]>> =>
+export const sendTeamMessage = async (body: string): Promise<Outcome<Message[]>> =>
   run(async () => {
     const c = await engineCtx();
     const { session, db: supabase, ws } = c;
-    const staff = asStaffId ? await staffMember(c, asStaffId) : null;
-    const author = { name: staff?.name ?? session.userName, staffId: staff?.id ?? null };
+    // Every message is written by the signed-in member: their name, and their staff row when they are one.
+    const { member } = session;
+    const author = { name: member.displayName, staffId: member.staffId, role: member.role };
     const mine = await insertHumanMessage(c, { author_name: author.name, staff_id: author.staffId, body });
     const out: Message[] = [mine];
 
-    if (!staff) {
+    {
+      // @nivo authority commands and typed decisions: owner and manager (a staff member gets a friendly "not allowed").
       const owner = await ownerChatForOffice(body);
       if (owner.handled) {
         if (owner.reply && !owner.posted) {
@@ -417,8 +431,18 @@ export const sendTeamMessage = async (body: string, asStaffId?: string | null): 
       const waiting = ((await supabase.from("work_items").select("department, action, reason, proposal").eq("workspace_id", ws).eq("status", "waiting_decision").order("created_at").limit(10)).data ?? []) as Pick<WorkItem, "department" | "action" | "reason" | "proposal">[];
       const waitingBrief = `${t("waitingBrief")}\n${waiting.map((w) => `- [${gov(c)(`reason_${w.reason ?? "routine"}`)}] ${gov(c)(`dept_${w.department}`)} · ${gov(c)(`action_${w.action}`)}: ${w.proposal?.summary ?? ""}`).join("\n") || t("noWaiting")}`;
       const brief = ai.authorityBrief(await loadAuthority(c));
+      const note = noteIntent(body);
       for (const a of agents) {
-        const text = await ai.agentReply(agentInput(a), transcript, `${open || "(no open responsibilities)"}\n${waitingBrief}`, brief);
+        // "@Chatbot ghi nhớ: ..." is a note for the agent's context: proposed in its draft (always a proposal; a manager approves it in Setup).
+        if (note) {
+          const proposed = await proposeContextNote({ workspaceId: ws, agentId: a.id, text: note, author: { userId: session.userId, name: member.displayName, role: member.role }, locale: c.locale }).catch(() => null);
+          if (proposed) {
+            const reply = translator(knowledgeDict, c.locale)("noteRecorded", { agent: a.name, module: proposed.moduleKey });
+            out.push(must(await supabase.from("messages").insert({ workspace_id: ws, author_kind: "agent", author_name: a.name, agent_id: a.id, body: reply }).select().single<Message>()));
+            continue;
+          }
+        }
+        const text = await ai.agentReply(agentInput(a), transcript, `${open || "(no open responsibilities)"}\n${waitingBrief}`, brief + (await knowledgeBrief(c, a.module, body, "internal")));
         out.push(must(await supabase.from("messages").insert({ workspace_id: ws, author_kind: "agent", author_name: a.name, agent_id: a.id, body: text }).select().single<Message>()));
       }
     }

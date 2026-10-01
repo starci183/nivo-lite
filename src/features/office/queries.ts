@@ -13,6 +13,8 @@ export type PendingApproval = {
   readonly agentName: string
   readonly nextAction: string
   readonly href: string
+  /** Staff member the underlying work item is assigned to (null: nobody, so only owner and manager decide it). */
+  readonly assignedStaffId: string | null
 }
 
 type RespRow = { id: string; lead_id: string; next_action: string; owner_name: string }
@@ -31,6 +33,9 @@ const hydrate = async (supabase: Supabase, executions: ReadonlyArray<Execution>)
   const { data: respData } = await supabase.from("responsibilities").select("id, lead_id, next_action, owner_name").in("id", respIds)
   const resps = (respData ?? []) as Array<RespRow>
   const leadIds = [...new Set(resps.map((r) => r.lead_id))]
+  const workIds = [...new Set(executions.map((e) => e.work_item_id).filter((id): id is string => !!id))]
+  const workRes = workIds.length ? await supabase.from("work_items").select("id, assigned_staff_id").in("id", workIds) : { data: [] }
+  const assignedBy = new Map(((workRes.data ?? []) as Array<{ id: string; assigned_staff_id: string | null }>).map((w) => [w.id, w.assigned_staff_id]))
   const [leadRes, agentRes] = await Promise.all([
     leadIds.length ? supabase.from("leads").select("id, contact_name, company, channel").in("id", leadIds) : Promise.resolve({ data: [] }),
     agentIds.length ? supabase.from("agents").select("id, name").in("id", agentIds) : Promise.resolve({ data: [] }),
@@ -49,6 +54,7 @@ const hydrate = async (supabase: Supabase, executions: ReadonlyArray<Execution>)
       agentName: agent?.name ?? resp?.owner_name ?? t("agentFallback"),
       nextAction: resp?.next_action ?? "",
       href: lead ? `/leads/${lead.id}` : "/leads",
+      assignedStaffId: execution.work_item_id ? (assignedBy.get(execution.work_item_id) ?? null) : null,
     }
   })
 }

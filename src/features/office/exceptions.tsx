@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation"
 import { useEffect, useState, useTransition } from "react"
 import { cn } from "@heroui/react"
 import { Badge, Button, Input, Text, Textarea } from "@starci/grammar/common"
+import { canDecideItem, isManager, useMember } from "@/features/shell/member-context"
 import { useLocale, useT } from "@/i18n/client"
 import { governance } from "@/i18n/dict/governance"
 import { office } from "@/i18n/dict/office"
@@ -125,7 +126,9 @@ export const ExceptionCard = ({ item, staff, ownerName, isFocused }: ExceptionCa
       isLive = false
     }
   }, [isReconcile, isOpen, candidateKey, item.id])
-  const isBusy = isPending && busy !== null
+  const me = useMember()
+  const canAct = canDecideItem(me, item.assigned_staff_id)
+  const isBusy = (isPending && busy !== null) || (isOpen && !canAct)
   const activeStaff = staff.filter((s) => s.active)
 
   const buildEdits = (): WorkEdits | undefined => {
@@ -383,7 +386,8 @@ export const ExceptionCard = ({ item, staff, ownerName, isFocused }: ExceptionCa
             </div>
           ) : null}
 
-          {isOpen ? (
+          {isOpen && !canAct ? <Text size="sm" weight="medium" live="polite">{t("waitingManager")}</Text> : null}
+          {isOpen && canAct ? (
             <div className={APPROVAL_ACTIONS_CLASS_NAME}>
               {isFailed ? null : (
                 <Button variant="primary" isPending={isPending && busy === "approve"} isDisabled={isBusy || isIncomplete} onPress={() => onDecide("approved")}>
@@ -403,9 +407,11 @@ export const ExceptionCard = ({ item, staff, ownerName, isFocused }: ExceptionCa
               <Button variant="ghost" isPending={isPending && busy === "reject"} isDisabled={isBusy} onPress={() => onDecide("rejected")}>
                 {t("exceptionReject")}
               </Button>
-              <Button variant="ghost" isDisabled={isBusy} onPress={() => setIsAssigning((v) => !v)}>
-                {t("exceptionAssign")}
-              </Button>
+              {isManager(me) ? (
+                <Button variant="ghost" isDisabled={isBusy} onPress={() => setIsAssigning((v) => !v)}>
+                  {t("exceptionAssign")}
+                </Button>
+              ) : null}
             </div>
           ) : null}
           {item.lead ? <div><Button variant="ghost" href={item.href}>{t("exceptionOpenLead")}</Button></div> : null}

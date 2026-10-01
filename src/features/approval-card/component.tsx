@@ -29,6 +29,8 @@ export type ApprovalCardBaseProps = {
   readonly agentName: string | null;
   readonly nextAction: string;
   readonly href?: string;
+  /** False when the signed-in member may not decide this draft (staff, not assigned): the buttons give way to a note. */
+  readonly canDecide?: boolean;
   readonly isEditing: boolean;
   readonly editText: string;
   readonly pendingDecision: "approved" | "rejected" | null;
@@ -99,7 +101,8 @@ export const ApprovalCardBase = (props: ApprovalCardBaseProps) => {
             <CopyDraftButton text={isWaiting && isEditing ? editText : execution.draft} />
           </div>
           {error === null ? null : <Text size="sm" live="assertive">{error}</Text>}
-          {isWaiting ? (
+          {isWaiting && props.canDecide === false ? <Text size="sm" weight="medium" live="polite">{t("waitingManager")}</Text> : null}
+          {isWaiting && props.canDecide !== false ? (
             <div className={APPROVAL_CARD_ACTIONS_CLASS_NAME}>
               <Button
                 variant="primary"

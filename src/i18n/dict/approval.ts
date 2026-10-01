@@ -4,6 +4,7 @@ import { defineDict } from "../core";
 export const approval = defineDict({
   en: {
     needsApproval: "Needs your approval",
+    waitingManager: "Waiting for a manager to approve",
     waitingDecision: "Waiting for your decision",
     approved: "Approved",
     rejected: "Rejected",
@@ -35,6 +36,7 @@ export const approval = defineDict({
   },
   vi: {
     needsApproval: "Cần bạn duyệt",
+    waitingManager: "Chờ quản lý duyệt",
     waitingDecision: "Đang chờ bạn quyết định",
     approved: "Đã duyệt",
     rejected: "Đã từ chối",

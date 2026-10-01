@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
+import { canDecideItem, useMember } from "@/features/shell/member-context";
 import { useT } from "@/i18n/client";
 import { approval } from "@/i18n/dict/approval";
 import { decideExecution } from "@/lib/actions";
@@ -18,10 +19,14 @@ export type ApprovalCardProps = {
   readonly agentName: string | null;
   readonly nextAction: string;
   readonly href?: string;
+  /** Staff member the draft's work item is assigned to; without it only owner and manager see decision buttons. */
+  readonly assignedStaffId?: string | null;
 };
 
 /** Approval card for one execution: approve (optionally edited) or reject, then refreshes the page. */
-export const ApprovalCard = (props: ApprovalCardProps) => {
+export const ApprovalCard = ({ assignedStaffId, ...props }: ApprovalCardProps) => {
+  const member = useMember();
+  const canDecide = canDecideItem(member, assignedStaffId);
   const router = useRouter();
   const t = useT(approval);
   const [isPending, startTransition] = useTransition();
@@ -54,6 +59,7 @@ export const ApprovalCard = (props: ApprovalCardProps) => {
   return (
     <ApprovalCardBase
       {...props}
+      canDecide={canDecide}
       isEditing={isEditing}
       editText={editText}
       pendingDecision={isPending ? pendingDecision : null}

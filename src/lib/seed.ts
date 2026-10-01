@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ensureFlowDefaults } from "./flow-seed";
+import { supabaseAdmin } from "./supabase/admin";
 
 type Locale = "vi" | "en";
 
@@ -309,5 +310,48 @@ export const seedWorkspace = async (supabase: SupabaseClient, ws: string, ownerN
 
   // Operating flow: authority, default rules and the simulated flow examples (also backfilled from the session for old workspaces).
   await ensureFlowDefaults(supabase, ws, ownerName, locale);
+  await seedDemoStaffAccount(ws);
+};
 
+const DEMO_STAFF = { email: "ha@nivo.local", name: "Chị Hà", role: "Tư vấn viên" } as const;
+
+/**
+ * Demo workspace only (its owner signs in with DEMO_EMAIL): add a confirmed staff account "Chị Hà · Tư vấn viên" so the
+ * owner can show the staff view. Uses the service role server-side; password from DEMO_STAFF_PASSWORD. Idempotent and
+ * never throws: a missing key or password just means no staff account.
+ */
+export const seedDemoStaffAccount = async (ws: string): Promise<void> => {
+  const password = process.env.DEMO_STAFF_PASSWORD;
+  const demoEmail = process.env.DEMO_EMAIL;
+  if (process.env.NEXT_PUBLIC_DEMO_LOGIN !== "1" || !password || !demoEmail || !process.env.SUPABASE_SERVICE_ROLE_KEY) return;
+  try {
+    const admin = supabaseAdmin();
+    const { data: workspace } = await admin.from("workspaces").select("owner_id").eq("id", ws).maybeSingle();
+    if (!workspace) return;
+    const owner = await admin.auth.admin.getUserById(workspace.owner_id as string);
+    if (owner.data.user?.email?.toLowerCase() !== demoEmail.toLowerCase()) return;
+
+    const existingStaff = await admin.from("staff").select("id").eq("workspace_id", ws).eq("email", DEMO_STAFF.email).maybeSingle();
+    const staffId =
+      (existingStaff.data?.id as string | undefined) ??
+      ((await admin.from("staff").insert({ workspace_id: ws, name: DEMO_STAFF.name, role: DEMO_STAFF.role, email: DEMO_STAFF.email, active: true }).select("id").single()).data?.id as string | undefined);
+    if (!staffId) return;
+
+    let userId: string | undefined;
+    const created = await admin.auth.admin.createUser({ email: DEMO_STAFF.email, password, email_confirm: true, user_metadata: { full_name: DEMO_STAFF.name } });
+    if (created.data.user) userId = created.data.user.id;
+    else {
+      for (let page = 1; page <= 20 && !userId; page += 1) {
+        const list = await admin.auth.admin.listUsers({ page, perPage: 200 });
+        userId = list.data.users.find((u) => u.email?.toLowerCase() === DEMO_STAFF.email)?.id;
+        if (list.error || list.data.users.length < 200) break;
+      }
+    }
+    if (!userId) return;
+    await admin
+      .from("workspace_members")
+      .upsert({ workspace_id: ws, user_id: userId, role: "staff", staff_id: staffId, display_name: DEMO_STAFF.name, status: "active" }, { onConflict: "workspace_id,user_id" });
+  } catch (e) {
+    console.error("demo staff account failed", e);
+  }
 };

@@ -2,6 +2,7 @@ import "server-only";
 import { translator } from "@/i18n/core";
 import { system } from "@/i18n/dict/system";
 import { governance } from "@/i18n/dict/governance";
+import { access } from "@/i18n/dict/access";
 import * as ai from "./deepseek";
 import { logDecision, logEvidence } from "./core";
 import { formatVnd, resumeWork, type Decider, type EngineCtx } from "./engine";
@@ -295,6 +296,8 @@ const decideFromChat = async (c: EngineCtx, text: string, decision: "approved" |
 export const ownerChat = async (c: EngineCtx, text: string, by: Decider): Promise<{ handled: boolean; reply?: string; posted: boolean }> => {
   const raw = text.trim();
   const addressed = /@nivo\b/i.test(raw);
+  // Authority commands and typed decisions are for owner and manager; a staff member only gets a friendly "not allowed" when they address NIVO.
+  if (by.kind === "staff") return addressed ? { handled: true, reply: translator(access, c.locale)("forbidden"), posted: false } : { handled: false, posted: false };
   const body = raw.replace(/@nivo\b[:,]?/gi, "").trim();
   const otherHandles = [...body.matchAll(/@([a-z0-9-]+)/gi)].length > 0;
   if (!addressed && otherHandles) return { handled: false, posted: false }; // an agent is mentioned: normal Office reply

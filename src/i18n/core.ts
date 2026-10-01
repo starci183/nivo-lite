@@ -1,4 +1,4 @@
-/** Locales of the prototype. Vietnamese first (Brand V1.1: Vietnamese first for customer-facing copy). */
+/** Locales of the app. Vietnamese first (Brand V1.1: Vietnamese first for customer-facing copy). */
 export const LOCALES = ["vi", "en"] as const;
 export type Locale = (typeof LOCALES)[number];
 export const DEFAULT_LOCALE: Locale = "vi";

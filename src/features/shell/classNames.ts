@@ -140,3 +140,5 @@ export const PHONE_HIDDEN_CLASS_NAME = cn("hidden", "md:flex");
 export const PHONE_ONLY_CLASS_NAME = cn("flex", "flex-1", "md:hidden");
 /** Layout classes: breathing room at the end of scrolling pages (keeps bottom-right controls clear of overlays). */
 export const PAGE_END_SPACER_CLASS_NAME = cn("h-24", "shrink-0");
+/** Layout classes: the workspace name as the switcher trigger (same box as the plain name; looks like text until hovered). */
+export const WORKSPACE_TRIGGER_CLASS_NAME = cn("min-w-0", "max-w-full", "cursor-pointer", "rounded-md", "text-left", "hover:opacity-80");

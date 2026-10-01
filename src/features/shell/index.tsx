@@ -8,14 +8,18 @@ import { useT } from "@/i18n/client";
 import { shell } from "@/i18n/dict/shell";
 import { FoundingOffer } from "@/components/promo/FoundingOffer";
 import { signOut } from "@/lib/actions";
+import { switchWorkspaceAction } from "@/features/onboarding/actions";
+import { MemberProvider, isManager } from "./member-context";
 import { ConsoleShellBase, type ConsoleShellNavItem } from "./component";
 import type { ShellData } from "./queries";
 
 type Destination = {
   readonly key: string;
-  readonly label: "navOverview" | "navOffice" | "navAuthority" | "navInbox" | "navLeads" | "navResponsibilities" | "navDecisions" | "navModules";
+  readonly label: "navOverview" | "navOffice" | "navAuthority" | "navInbox" | "navLeads" | "navResponsibilities" | "navDecisions" | "navKnowledge" | "navModules" | "navTeam";
   readonly route: string;
   readonly icon: IconName;
+  /** Only owner and manager see this destination. */
+  readonly managerOnly?: boolean;
 };
 
 /** Office first: it is the page people come to. */
@@ -27,7 +31,9 @@ const DESTINATIONS: ReadonlyArray<Destination> = [
   { key: "leads", label: "navLeads", route: "/leads", icon: "account" },
   { key: "responsibilities", label: "navResponsibilities", route: "/responsibilities", icon: "review" },
   { key: "decisions", label: "navDecisions", route: "/decisions", icon: "saved" },
-  { key: "modules", label: "navModules", route: "/modules", icon: "apps" },
+  { key: "knowledge", label: "navKnowledge", route: "/knowledge", icon: "course" },
+  { key: "modules", label: "navModules", route: "/m", icon: "apps" },
+  { key: "team", label: "navTeam", route: "/team", icon: "talents", managerOnly: true },
 ];
 
 /** Pages where nothing may sit above the work: the chat itself, and the dashboard (which has its own hero). */
@@ -53,7 +59,9 @@ export const ConsoleShell = ({ workspaceName, userName, email, avatarUrl, data, 
   const activeKey = pathname.startsWith("/modules/") && pathname.includes("/chat")
     ? "modules"
     : (DESTINATIONS.find((d) => pathname.startsWith(d.route))?.key ?? "overview");
-  const nav: ReadonlyArray<ConsoleShellNavItem> = DESTINATIONS.map((d) => ({
+  const member = data.member;
+  const roleLabel = member.role === "owner" ? t("roleOwner") : member.role === "manager" ? t("roleManager") : t("roleStaff");
+  const nav: ReadonlyArray<ConsoleShellNavItem> = DESTINATIONS.filter((d) => !d.managerOnly || isManager(member)).map((d) => ({
     id: d.key,
     label: t(d.label),
     href: d.route,
@@ -65,7 +73,7 @@ export const ConsoleShell = ({ workspaceName, userName, email, avatarUrl, data, 
   const chatbot = data.agents.find((a) => a.module === "chatbot");
   const newEntries: ReadonlyArray<DropdownMenuEntry> = [
     { id: "new-lead", label: t("newLead"), href: "/leads?new=1" },
-    { id: "add-module", label: t("addModule"), href: "/modules" },
+    { id: "add-module", label: t("addModule"), href: "/m" },
     chatbot
       ? { id: "test-chatbot", label: t("testChatbot"), href: `/modules/${chatbot.id}/chat` }
       : { id: "buy-chatbot", label: t("buyChatbot"), href: "/modules/new?module=chatbot" },
@@ -77,6 +85,10 @@ export const ConsoleShell = ({ workspaceName, userName, email, avatarUrl, data, 
         workspaceName,
         userName,
         email,
+        roleLabel,
+        workspaces: data.workspaces,
+        currentWorkspaceId: data.currentWorkspaceId,
+        role: member.role,
         avatarUrl: avatarUrl ?? undefined,
         nav,
         isSigningOut,
@@ -89,6 +101,13 @@ export const ConsoleShell = ({ workspaceName, userName, email, avatarUrl, data, 
       on={{
         go: (href) => router.push(href),
         search: (query) => router.push(`/leads?q=${encodeURIComponent(query)}`),
+        switchWorkspace: (workspaceId) => {
+          if (workspaceId === data.currentWorkspaceId) return;
+          void switchWorkspaceAction(workspaceId).then(() => {
+            router.push("/chat");
+            router.refresh();
+          });
+        },
         signOut: () => {
           startSignOut(async () => {
             await signOut();
@@ -96,7 +115,7 @@ export const ConsoleShell = ({ workspaceName, userName, email, avatarUrl, data, 
         },
       }}
     >
-      {children}
+      <MemberProvider member={member}>{children}</MemberProvider>
     </ConsoleShellBase>
   );
 };

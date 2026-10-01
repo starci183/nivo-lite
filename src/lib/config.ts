@@ -1,4 +1,4 @@
-/** The one place the prototype reads its environment. */
+/** The one place the app reads its environment. */
 const required = (name: string, value: string | undefined): string => {
   if (!value) throw new Error(`Missing environment variable ${name} (see secrets.example.env)`);
   return value;

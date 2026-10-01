@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import { Badge, Button, Text, Textarea } from "@starci/grammar/common"
 import { AgentAvatar } from "@/components/avatar/PersonAvatar"
+import { canDecideItem, useMember } from "@/features/shell/member-context"
 import { useLocale, useT } from "@/i18n/client"
 import { office } from "@/i18n/dict/office"
 import { decideExecution } from "@/lib/actions"
@@ -60,6 +61,8 @@ export const ApprovalBubble = ({ approval, module, isFocused }: ApprovalBubblePr
   const [isExpanded, setIsExpanded] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const me = useMember()
+  const canAct = canDecideItem(me, approval.assignedStaffId)
   const isWaiting = execution.status === "pending_approval"
   const isBusy = isPending && decision !== null
   const isLong = execution.draft.length > DRAFT_PREVIEW_CHARS
@@ -135,7 +138,8 @@ export const ApprovalBubble = ({ approval, module, isFocused }: ApprovalBubblePr
           ) : null}
           <Text size="xs" tone="muted">{isWaiting ? t("approvalPolicy") : settled}</Text>
           {error ? <Text size="sm" live="assertive">{error}</Text> : null}
-          {isWaiting ? (
+          {isWaiting && !canAct ? <Text size="sm" weight="medium" live="polite">{t("waitingManager")}</Text> : null}
+          {isWaiting && canAct ? (
             <div className={APPROVAL_ACTIONS_CLASS_NAME}>
               <Button
                 variant="primary"

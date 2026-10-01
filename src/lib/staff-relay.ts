@@ -5,6 +5,7 @@ import * as ai from "./deepseek";
 import { logEvidence } from "./core";
 import { loadAuthority, resumeWork, type EngineCtx } from "./engine";
 import { staffHandles } from "./staff-handle";
+import type { Role } from "./members-shared";
 import type { Staff, WorkItem } from "./flow-types";
 import type { Agent, AgentMessage, Message } from "./types";
 
@@ -49,7 +50,7 @@ const postAsChatbot = async (c: EngineCtx, bot: Agent | null, body: string, link
 };
 
 /**
- * A person's message in Office: the owner, or a staff member the owner writes as ("Nhắn với tư cách").
+ * A person's message in Office, authored by the signed-in member (`staff_id` is their staff row when they have one).
  * `staff_id` needs migration 20260930213000_office_staff_messages; before it is applied the message is still stored
  * (under the staff member's name) without the id.
  */
@@ -139,9 +140,9 @@ Never mention colleagues, staff, the owner, approval, internal checks or that yo
 
 /**
  * A message in Office may be the answer the Chatbot is waiting for. It is when:
- *  - its author is a staff member with an open reply_customer item assigned to them, or
- *  - it @mentions the Chatbot while an escalated reply_customer item is open (a staff member, or the owner with a
- *    statement that is not a decision or a question to the bot).
+ *  - its author is the signed-in staff member an open reply_customer item is assigned to (matched by member.staffId), or
+ *  - it @mentions the Chatbot while an escalated reply_customer item is open and the author is owner or manager (with a
+ *    statement that is not a decision or a question to the bot). A staff member never answers an item that is not theirs.
  * Exactly one item must be meant (the only candidate, or the one whose customer the text names); otherwise the Chatbot
  * asks which customer and nothing is sent. The answer is rewritten for the customer (one LLM call) and the item is
  * resolved through the normal decision path with the author as decider: the replyCustomer performer posts it in the
@@ -149,12 +150,13 @@ Never mention colleagues, staff, the owner, approval, internal checks or that yo
  * message is not an answer (the normal Office handling continues).
  */
 export const relayStaffAnswer = async (
-  c: EngineCtx, input: { text: string; author: { name: string; staffId: string | null } },
+  c: EngineCtx, input: { text: string; author: { name: string; staffId: string | null; role: Role } },
 ): Promise<Array<Message> | null> => {
   const bot = await chatbotOf(c);
   const raw = input.text.trim();
   const mentionsBot = !!bot && new RegExp(`@${esc(bot.handle)}(?![a-z0-9-])`, "i").test(raw);
-  if (!input.author.staffId && !mentionsBot) return null;
+  const isManager = input.author.role !== "staff";
+  if (!input.author.staffId && !(isManager && mentionsBot)) return null;
 
   const waiting = ((await c.db.from("work_items").select("*, lead:leads(contact_name)").eq("workspace_id", c.ws).eq("action", "reply_customer")
     .eq("status", "waiting_decision").order("created_at").limit(50)).data ?? []) as Array<WaitingReply>;
@@ -165,7 +167,7 @@ export const relayStaffAnswer = async (
   let pool: Array<WaitingReply>;
   if (input.author.staffId) {
     const mine = escalated.filter((w) => w.assigned_staff_id === input.author.staffId);
-    pool = mine.length ? mine : mentionsBot ? escalated : [];
+    pool = mine.length ? mine : isManager && mentionsBot ? escalated : [];
   } else {
     // The owner: only an explicit statement to the bot; decisions and questions keep their normal meaning.
     const f = fold(answer);
@@ -197,7 +199,7 @@ export const relayStaffAnswer = async (
     const question = String(f.question ?? target.proposal?.summary ?? "");
     const convId = typeof f.conversation_id === "string" ? f.conversation_id : null;
     const reply = await rewriteForCustomer(c, bot, convId, question, answer);
-    await resumeWork(c, target.id, "approved", { draft: reply }, { name: input.author.name, kind: input.author.staffId ? "staff" : "owner" },
+    await resumeWork(c, target.id, "approved", { draft: reply }, { name: input.author.name, kind: isManager ? "owner" : "staff" },
       t("staffRelayNote", { staff: input.author.name, text: clip(answer, 300) }));
     return [await postAsChatbot(c, bot, t("staffRelaySent", { name, reply }), link)];
   } catch (e) {

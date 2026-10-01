@@ -1,108 +1,95 @@
 "use client";
 
-import { nivoIconSource, NivoIcon } from "@/ui";
-import { LocaleSwitch } from "@/i18n/LocaleSwitch";
+import { NivoIcon } from "@/ui";
 import { useT } from "@/i18n/client";
 import { login } from "@/i18n/dict/login";
-import { FoundingOffer } from "@/components/promo/FoundingOffer";
-import { NivoLogo } from "@/components/brand/NivoLogo";
-import { Alert, Button, Heading, IconTile, SurfaceCard, Text } from "@starci/grammar/common";
-import {
-  LOGIN_ACTIONS_CLASS_NAME,
-  LOGIN_BRAND_PANE_CLASS_NAME,
-  LOGIN_CANVAS_CLASS_NAME,
-  LOGIN_CARD_CLASS_NAME,
-  LOGIN_FORM_PANE_CLASS_NAME,
-  LOGIN_HEADLINE_CLASS_NAME,
-  LOGIN_LOCALE_CLASS_NAME,
-  LOGIN_MASCOT_CLASS_NAME,
-  LOGIN_POINTS_ROW_CLASS_NAME,
-  LOGIN_POINT_CLASS_NAME,
-  LOGIN_POINTS_CLASS_NAME,
-  LOGIN_STACK_CLASS_NAME,
-} from "./classNames";
+import { AuthShell } from "@/features/auth/AuthShell";
+import { Alert, Button, Form, Input, Text, TextAction } from "@starci/grammar/common";
+import { auth } from "@/i18n/dict/auth";
+import { LOGIN_ACTIONS_CLASS_NAME, LOGIN_CENTER_CLASS_NAME, LOGIN_FIELDS_CLASS_NAME, LOGIN_ROW_CLASS_NAME } from "./classNames";
 
 /** Resolved facts the pure login card draws. */
 export type LoginBaseData = {
   readonly showDemo: boolean;
+  readonly email: string;
+  readonly password: string;
+  readonly emailError?: string;
+  readonly passwordError?: string;
+  /** Friendly, already translated failure. */
   readonly error?: string;
+  readonly notice?: string;
+  /** True when the failure is "email not confirmed": offer to resend. */
+  readonly canResend: boolean;
+  readonly isPasswordPending: boolean;
   readonly isGooglePending: boolean;
   readonly isDemoPending: boolean;
+  readonly isResendPending: boolean;
+  readonly signUpHref: string;
+  readonly forgotHref: string;
 };
 
 /** Commands the login card reports back. */
 export type LoginBaseActions = {
+  readonly setEmail: (value: string) => void;
+  readonly setPassword: (value: string) => void;
+  readonly submit: () => void;
   readonly google: () => void;
   readonly demo: () => void;
+  readonly resend: () => void;
 };
 
 /** Props for {@link LoginBase}. */
 export type LoginBaseProps = { readonly props: LoginBaseData; readonly on: LoginBaseActions };
 
-const POINTS = [
-  { icon: "explore", text: "pointCapture" },
-  { icon: "account", text: "pointOwner" },
-  { icon: "review", text: "pointApprove" },
-] as const;
-
-/** Draw the split sign-in screen: brand pitch on the left, sign-in card on the right (stacked on mobile). */
+/** Draw the sign-in card: Google, e-mail + password, demo (when enabled), links to sign-up and forgot password. */
 export const LoginBase = ({ props, on }: LoginBaseProps) => {
   const t = useT(login);
+  const a = useT(auth);
+  const busy = props.isPasswordPending || props.isGooglePending || props.isDemoPending;
   return (
-  <main className={LOGIN_CANVAS_CLASS_NAME}>
-    <div className={LOGIN_LOCALE_CLASS_NAME}>
-      <LocaleSwitch />
-    </div>
-    <section className={LOGIN_BRAND_PANE_CLASS_NAME} aria-label={t("aboutLabel")}>
-      <NivoLogo variant="full" height={56} />
-      <div className={LOGIN_HEADLINE_CLASS_NAME}>
-        <Heading level={1} scale="display">
-          {t("headline")}
-        </Heading>
+    <AuthShell label={t("signInLabel")} title={t("signInTitle")} text={t("signInText")}>
+      {props.notice ? <Alert title={props.notice} tone="affirmative" /> : null}
+      {props.error ? (
+        <Alert
+          title={t("failedTitle")}
+          description={props.error}
+          tone="negative"
+          action={props.canResend ? { label: t("resendConfirm"), onAction: on.resend } : undefined}
+        />
+      ) : null}
+      <div className={LOGIN_ACTIONS_CLASS_NAME}>
+        <Button
+          variant="secondary"
+          width="fill"
+          isPending={props.isGooglePending}
+          isDisabled={busy && !props.isGooglePending}
+          startContent={<NivoIcon props={{ name: "google" }} />}
+          onPress={on.google}
+        >
+          {t("google")}
+        </Button>
+        <div className={LOGIN_CENTER_CLASS_NAME}><Text size="sm" tone="muted">{t("or")}</Text></div>
       </div>
-      <Text tone="muted">{t("tagline")}</Text>
-      <div className={LOGIN_POINTS_ROW_CLASS_NAME}>
-        <ul className={LOGIN_POINTS_CLASS_NAME}>
-          {POINTS.map((point) => (
-            <li key={point.text} className={LOGIN_POINT_CLASS_NAME}>
-              <IconTile source={nivoIconSource(point.icon, "leading")} tone="neutral" />
-              <Text weight="medium">{t(point.text)}</Text>
-            </li>
-          ))}
-        </ul>
-        <img className={LOGIN_MASCOT_CLASS_NAME} src="/images/promo/mascot-point.png" alt="" />
-      </div>
-      <FoundingOffer variant="pill" />
-    </section>
-    <section className={LOGIN_FORM_PANE_CLASS_NAME}>
-      <div className={LOGIN_CARD_CLASS_NAME}>
-        <SurfaceCard ariaLabel={t("signInLabel")}>
-          <div className={LOGIN_STACK_CLASS_NAME}>
-            <div>
-              <Heading level={2}>{t("signInTitle")}</Heading>
-              <Text tone="muted">{t("signInText")}</Text>
-            </div>
-            {props.error ? <Alert title={t("failedTitle")} description={props.error} tone="negative" /> : null}
-            <div className={LOGIN_ACTIONS_CLASS_NAME}>
-              {props.showDemo ? (
-                <Button variant="primary" width="fill" isPending={props.isDemoPending} onPress={on.demo}>
-                  {t("demo")}
-                </Button>
-              ) : null}
-              <Button
-                variant={props.showDemo ? "secondary" : "primary"}
-                width="fill"
-                isPending={props.isGooglePending}
-                startContent={<NivoIcon props={{ name: "google" }} />}
-                onPress={on.google}
-              >
-                {t("google")}
-              </Button>
-            </div>
+      <Form label={t("signInLabel")} onSubmit={on.submit} isPending={props.isPasswordPending}>
+        <div className={LOGIN_FIELDS_CLASS_NAME}>
+          <Input id="login-email" name="email" kind="email" label={a("emailLabel")} placeholder={a("emailPlaceholder")} variant="secondary" isRequired isDisabled={busy} value={props.email} isError={Boolean(props.emailError)} errorMessage={props.emailError} onValueChange={on.setEmail} />
+          <Input id="login-password" name="password" kind="password" label={a("passwordLabel")} revealLabel={a("showPassword")} hideLabel={a("hidePassword")} variant="secondary" isRequired isDisabled={busy} value={props.password} isError={Boolean(props.passwordError)} errorMessage={props.passwordError} onValueChange={on.setPassword} />
+          <div className={LOGIN_ROW_CLASS_NAME}>
+            <span />
+            <TextAction href={props.forgotHref}>{t("forgot")}</TextAction>
           </div>
-        </SurfaceCard>
+          <Button variant="primary" width="fill" type="submit" isPending={props.isPasswordPending}>{t("submit")}</Button>
+        </div>
+      </Form>
+      {props.showDemo ? (
+        <Button variant="tertiary" width="fill" isPending={props.isDemoPending} isDisabled={busy && !props.isDemoPending} onPress={on.demo}>
+          {t("demo")}
+        </Button>
+      ) : null}
+      <div className={LOGIN_CENTER_CLASS_NAME}>
+        <Text size="sm" tone="muted">{t("noAccount")}</Text>
+        <TextAction href={props.signUpHref}>{t("signUpLink")}</TextAction>
       </div>
-    </section>
-  </main>
+    </AuthShell>
   );
 };

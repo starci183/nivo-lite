@@ -10,10 +10,16 @@ import { FIELDS_CLASS, STAFF_ACTIONS_CLASS, STAFF_BODY_CLASS, STAFF_FORM_CLASS, 
 import { SaveRow, useSaver } from "./SaveRow"
 
 /** Props for {@link StaffSection}. */
-export type StaffSectionProps = { readonly staff: ReadonlyArray<Staff> }
+export type StaffSectionProps = {
+  readonly staff: ReadonlyArray<Staff>
+  /** Owner and manager can invite a staff member to sign in (a link to /team). */
+  readonly canInvite?: boolean
+  /** Staff rows that already have an account. */
+  readonly linkedStaffIds?: ReadonlyArray<string>
+}
 
 /** Optional staff list: add a person, deactivate or reactivate. Staff are never required for routine work. */
-export const StaffSection = ({ staff }: StaffSectionProps) => {
+export const StaffSection = ({ staff, canInvite = false, linkedStaffIds = [] }: StaffSectionProps) => {
   const t = useT(dict)
   const addSaver = useSaver()
   const toggleSaver = useSaver()
@@ -55,6 +61,11 @@ export const StaffSection = ({ staff }: StaffSectionProps) => {
                 </div>
                 <div className={STAFF_ACTIONS_CLASS}>
                   <Badge tone={s.active ? "success" : "neutral"}>{s.active ? t("staffActive") : t("staffInactive")}</Badge>
+                  {linkedStaffIds.includes(s.id) ? (
+                    <Badge tone="accent">{t("staffHasAccount")}</Badge>
+                  ) : canInvite && s.active ? (
+                    <Button variant="secondary" href={`/team?invite_staff=${encodeURIComponent(s.id)}`}>{t("staffInvite")}</Button>
+                  ) : null}
                   <Button variant="outline" isPending={toggleSaver.isPending} onPress={() => toggleSaver.run(() => saveStaff({ id: s.id, name: s.name, role: s.role, email: s.email, active: !s.active }))}>
                     {s.active ? t("staffDeactivate") : t("staffReactivate")}
                   </Button>

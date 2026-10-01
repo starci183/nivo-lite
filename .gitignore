@@ -8,3 +8,6 @@ next-env.d.ts
 !secrets.example.env
 supabase/.temp/
 supabase/.branches/
+.accounts-contract-ready
+.modules-contract-ready
+*.log

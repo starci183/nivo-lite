@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Headless UAT of the NIVO operating flow, driven through the chat interface, with one video per scene and a pass/fail report.
 //   "Giao quyền -> AI thực hiện -> Kiểm tra kết quả -> Chỉ hỏi khi cần"
-// Usage: BASE_URL=https://nivo.vn UAT_LOCALE=vi node scripts/uat-flow.mjs <outDir>      (BASE_URL defaults to http://localhost:3090)
+// Usage: BASE_URL=https://nivo.vn UAT_LOCALE=vi node scripts/uat-flow.mjs <outDir>      (BASE_URL defaults to http://localhost:3100)
 // Copy is asserted in Vietnamese (the default locale); a few labels also accept the English wording.
 //
 // Non-destructive on the shared demo workspace (one exception: if no Chatbot AI exists, it adds one via "Thêm vào workspace",
@@ -20,7 +20,7 @@ if (!outDir) {
   console.error("usage: node scripts/uat-flow.mjs <outDir>");
   process.exit(1);
 }
-const base = (process.env.BASE_URL || "http://localhost:3090").replace(/\/$/, "");
+const base = (process.env.BASE_URL || "http://localhost:3100").replace(/\/$/, "");
 const locale = process.env.UAT_LOCALE || "vi";
 const DESKTOP = { width: 1440, height: 900 };
 const PHONE = { width: 390, height: 844 };

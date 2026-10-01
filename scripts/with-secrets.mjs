@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-// Runs a command with the prototype's local secrets loaded from a file OUTSIDE the repository.
-// File: $NIVO_PROTOTYPE_SECRETS (or ~/.nivo-prototype/secrets.env), KEY=VALUE per line.
+// Runs a command with the app's local secrets loaded from a file OUTSIDE the repository.
+// File: $NIVO_SECRETS (or ~/.nivo-lite/secrets.env), KEY=VALUE per line.
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-const file = process.env.NIVO_PROTOTYPE_SECRETS || join(homedir(), ".nivo-prototype", "secrets.env");
+const file = process.env.NIVO_SECRETS || join(homedir(), ".nivo-lite", "secrets.env");
 if (!existsSync(file)) {
   console.error(`[with-secrets] missing ${file} — copy secrets.example.env there and fill it in.`);
   process.exit(1);

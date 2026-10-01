@@ -7,6 +7,7 @@ import { ingest } from "./core";
 import { formatVnd, latestInvoiceFor, loadAuthority, runWork, startOrderWork, startPaymentClaim, type EngineCtx } from "./engine";
 import { drainAfter } from "./flow-ctx";
 import { isKnownPrice } from "./knowledge";
+import { knowledgeBrief } from "./knowledge/runtime";
 import { escalateToStaff } from "./staff-relay";
 import { deliverToChannel } from "./telegram";
 import type { Agent, AgentConversation, AgentMessage } from "./types";
@@ -53,7 +54,8 @@ export const customerTurn = async (
   const eventId = opts.eventId?.trim() || mine.id;
   const history = ((await supabase.from("agent_messages").select("*").eq("conversation_id", conv.id).order("created_at")).data ?? []) as AgentMessage[];
   const turns: ai.ChatTurn[] = history.filter((m) => m.role !== "system").map((m) => ({ role: m.role === "user" ? "user" : "agent", body: m.body }));
-  const brief = ai.authorityBrief(await loadAuthority(c));
+  // Customer-facing: NIVO base rules + approved module context + PUBLIC business knowledge only (filtered in SQL).
+  const brief = ai.authorityBrief(await loadAuthority(c)) + (await knowledgeBrief(c, agent.module, body, "customer"));
 
   const out = await ai.customerChat(agentInput(agent), turns, brief); // the one inline LLM call of this request
   let replyText = out.reply;

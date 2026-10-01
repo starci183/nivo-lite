@@ -2,7 +2,18 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { publicConfig } from "./lib/config";
 
-const PUBLIC_PATHS = ["/login", "/auth", "/api/telegram", "/api/bank"]; // webhooks (Telegram, bank connection), each verified by its own secret header
+// Reachable without a session. Webhooks (Telegram, bank connection) are each verified by their own secret header.
+const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/reset-password", "/auth", "/invite", "/api/telegram", "/api/bank", "/api/sepay"];
+
+const MEMBER_COOKIE = "nivo_member_gate"; // "<userId>.<ok|off>": short-lived cache of the membership check
+const MEMBER_TTL_SECONDS = 60;
+
+/** Segment-aware prefix match, so "/auth" never swallows "/authority". */
+const isPublicPath = (pathname: string): boolean =>
+  pathname === "/" || PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+
+/** Only same-site paths may come back through `?next=`. */
+const safeNext = (value: string | null): string | null => (value && value.startsWith("/") && !value.startsWith("//") ? value : null);
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -16,23 +27,63 @@ export async function proxy(request: NextRequest) {
       },
     },
   });
+  // Validates the token with Auth (a revoked session fails here) and refreshes it into the response cookies.
   const { data } = await supabase.auth.getUser();
-  // "/" is the public landing page; everything else in the console needs a session.
-  const isPublic = request.nextUrl.pathname === "/" || PUBLIC_PATHS.some((p) => request.nextUrl.pathname.startsWith(p));
-  if (!data.user && !isPublic) {
+  const { pathname } = request.nextUrl;
+  const isPublic = isPublicPath(pathname);
+
+  /** A redirect that keeps any cookies the session refresh or sign-out just wrote. */
+  const redirectTo = (url: URL) => {
+    const out = NextResponse.redirect(url);
+    for (const cookie of response.cookies.getAll()) out.cookies.set(cookie);
+    return out;
+  };
+
+  if (!data.user) {
+    if (isPublic) return response;
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    return NextResponse.redirect(url);
+    url.search = "";
+    url.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
+    return redirectTo(url);
   }
-  // Signed-in users who open the sign-in page go straight to their dashboard.
-  if (data.user && request.nextUrl.pathname === "/login") {
+
+  // Signed-in users who open the sign-in page go straight to where they were headed.
+  if (pathname === "/login" && request.nextUrl.searchParams.get("reason") !== "disabled") {
     const url = request.nextUrl.clone();
+    const next = safeNext(request.nextUrl.searchParams.get("next"));
     url.pathname = "/dashboard";
-    return NextResponse.redirect(url);
+    url.search = "";
+    return redirectTo(next ? new URL(next, request.nextUrl.origin) : url);
+  }
+
+  // A disabled member loses access immediately: sign out and send them to /login?reason=disabled.
+  if (!isPublic && !pathname.startsWith("/api/")) {
+    const userId = data.user.id;
+    const cached = request.cookies.get(MEMBER_COOKIE)?.value;
+    let verdict: "ok" | "off" | null = cached?.startsWith(`${userId}.`) ? (cached.endsWith(".off") ? "off" : "ok") : null;
+    if (!verdict) {
+      // Under RLS the user only sees their own membership rows. A failed lookup (e.g. schema not migrated) fails open.
+      const { data: rows, error } = await supabase.from("workspace_members").select("status").eq("user_id", userId);
+      if (!error) {
+        verdict = rows && rows.length > 0 && rows.every((r: { status: string }) => r.status === "disabled") ? "off" : "ok";
+        response.cookies.set(MEMBER_COOKIE, `${userId}.${verdict}`, { maxAge: MEMBER_TTL_SECONDS, path: "/", httpOnly: true, sameSite: "lax" });
+      }
+    }
+    if (verdict === "off") {
+      await supabase.auth.signOut({ scope: "local" });
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.search = "";
+      url.searchParams.set("reason", "disabled");
+      const out = redirectTo(url);
+      out.cookies.delete(MEMBER_COOKIE);
+      return out;
+    }
   }
   return response;
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|webp)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|webp)$).*)"],
 };

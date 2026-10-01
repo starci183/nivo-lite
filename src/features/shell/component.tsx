@@ -9,6 +9,7 @@ import { LocaleSwitch } from "@/i18n/LocaleSwitch";
 import { useT } from "@/i18n/client";
 import { shell as shellDict } from "@/i18n/dict/shell";
 import { FoundingBadge } from "@/components/promo/FoundingBadge";
+import { WorkspaceSwitcher } from "@/features/onboarding/WorkspaceSwitcher";
 import { PersonAvatar } from "@/components/avatar/PersonAvatar";
 import { NivoLogo } from "@/components/brand/NivoLogo";
 import {
@@ -48,6 +49,7 @@ import {
   TOPBAR_SPACER_CLASS_NAME,
   TOPBAR_USER_CLASS_NAME,
   WORKSPACE_NAME_CLASS_NAME,
+  WORKSPACE_TRIGGER_CLASS_NAME,
 } from "./classNames";
 
 /** One pending approval as the bell list draws it. */
@@ -69,6 +71,12 @@ export type ConsoleShellBaseData = {
   readonly workspaceName: string;
   readonly userName: string;
   readonly email: string;
+  /** The member's role in this workspace, translated (chip next to the workspace name and in the user menu). */
+  readonly roleLabel: string;
+  readonly role: "owner" | "manager" | "staff";
+  /** Workspaces the person belongs to: the name in the top bar opens the switcher. */
+  readonly workspaces: ReadonlyArray<{ readonly id: string; readonly name: string; readonly role: "owner" | "manager" | "staff" }>;
+  readonly currentWorkspaceId: string;
   readonly avatarUrl?: string;
   readonly nav: ReadonlyArray<ConsoleShellNavItem>;
   readonly isSigningOut: boolean;
@@ -86,6 +94,7 @@ export type ConsoleShellBaseActions = {
   readonly go: (href: string) => void;
   readonly search: (query: string) => void;
   readonly signOut: () => void;
+  readonly switchWorkspace: (workspaceId: string) => void;
 };
 
 /** Props for {@link ConsoleShellBase}. */
@@ -171,10 +180,21 @@ const UserMenu = ({ data, on }: ShellPartProps) => {
   const entries: ReadonlyArray<DropdownMenuEntry> = [
     {
       kind: "section",
+      id: "workspaces",
+      label: t("switchWorkspace"),
+      items: [
+        ...data.workspaces.map((w) => ({ id: `ws-${w.id}`, label: w.id === data.currentWorkspaceId ? `${w.name} ✓` : w.name, onAction: () => on.switchWorkspace(w.id) })),
+        { id: "ws-new", label: t("newWorkspace"), href: "/onboarding?new=1" },
+      ],
+    },
+    {
+      kind: "section",
       id: "account",
       label: data.userName,
       items: [
+        { id: "role", label: `${data.userName} · ${data.roleLabel}`, isDisabled: true },
         { id: "email", label: data.email || t("signedIn"), isDisabled: true },
+        { id: "account", label: t("navAccount"), href: "/account" },
         { id: "signout", label: t("signOut"), onAction: on.signOut },
       ],
     },
@@ -189,6 +209,32 @@ const UserMenu = ({ data, on }: ShellPartProps) => {
         </Button>
       }
     />
+  );
+};
+
+const WorkspaceMenu = ({ data }: { readonly data: ConsoleShellBaseData }) => {
+  const t = useT(shellDict);
+  const [isOpen, setOpen] = useState(false);
+  return (
+    <Popover
+      isOpen={isOpen}
+      onOpenChange={setOpen}
+      placement="bottom"
+      title={t("switchWorkspace")}
+      trigger={
+        <button type="button" className={WORKSPACE_TRIGGER_CLASS_NAME} aria-label={`${t("switchWorkspace")}: ${data.workspaceName}`}>
+          <Text weight="semibold" overflow="truncate">
+            {data.workspaceName}
+          </Text>
+        </button>
+      }
+    >
+      <WorkspaceSwitcher
+        workspaces={data.workspaces}
+        currentId={data.currentWorkspaceId}
+        roleLabels={{ owner: t("roleOwner"), manager: t("roleManager"), staff: t("roleStaff") }}
+      />
+    </Popover>
   );
 };
 
@@ -282,10 +328,9 @@ const Frame = ({ shell: { props: data, on, children } }: FrameProps) => {
               <NivoLogo variant="mark" height={28} />
             </span>
             <div className={WORKSPACE_NAME_CLASS_NAME}>
-              <Text weight="semibold" overflow="truncate">
-                {data.workspaceName}
-              </Text>
+              <WorkspaceMenu data={data} />
             </div>
+            <Badge tone={data.role === "staff" ? "neutral" : "accent"}>{data.roleLabel}</Badge>
             <div className={BADGE_CLASS_NAME}>
               <FoundingBadge isFoundingMember={data.isFoundingMember} />
             </div>

@@ -10,6 +10,7 @@ import { ingest, logEvidence } from "./core";
 import { resumeWork, startInboundWork, startOrderWork, type EngineCtx } from "./engine";
 import { applyAuthorityCore, ownerChat, saveAuthorityCore, saveRuleCore } from "./owner-chat";
 import { drainAfter, engineCtx } from "./flow-ctx";
+import { deciderOf, requireDecide, requireManager } from "./permissions";
 import type { AgentConversation, AgentMessage, Outcome } from "./types";
 import type {
   Authority, AuthorityRule, Department, FlowAction, InboundEvent, RuleMode, SimulateInboundInput, Staff, WorkEdits, WorkItem,
@@ -34,6 +35,7 @@ const G = (c: EngineCtx) => translator(governance, c.locale) as (k: string, v?: 
 /** Save goals, policies, reply style, brand voice and the limits note. */
 export async function saveAuthority(patch: Partial<Omit<Authority, "workspace_id" | "updated_by" | "updated_at">>): Promise<Outcome<Authority>> {
   return run(async () => {
+    await requireManager();
     const c = await engineCtx();
     const a = await saveAuthorityCore(c, patch);
     await logEvidence(c.db, c.ws, { kind: "authority.updated", actor: c.actor, summary: Object.keys(patch).join(", ") });
@@ -45,6 +47,7 @@ export async function saveAuthority(patch: Partial<Omit<Authority, "workspace_id
 /** Save one department × action rule (mode, VND limit, required fields). */
 export async function saveRule(input: { department: Department; action: FlowAction; mode: RuleMode; limit_vnd: number | null; required_fields?: Array<string>; note?: string }): Promise<Outcome<AuthorityRule>> {
   return run(async () => {
+    await requireManager();
     const c = await engineCtx();
     const r = await saveRuleCore(c, input);
     await logEvidence(c.db, c.ws, { kind: "authority.rule_updated", actor: c.actor, summary: `${input.department}.${input.action} → ${input.mode}${input.limit_vnd !== null ? ` < ${input.limit_vnd}` : ""}` });
@@ -56,6 +59,7 @@ export async function saveRule(input: { department: Department; action: FlowActi
 /** Add or update an optional staff member. */
 export async function saveStaff(input: { id?: string; name: string; role: string; email?: string | null; active?: boolean }): Promise<Outcome<Staff>> {
   return run(async () => {
+    await requireManager();
     const c = await engineCtx();
     if (!input.name?.trim()) throw new Error(T(c)("staffNameRequired"));
     const row = { name: input.name.trim(), role: input.role?.trim() ?? "", email: input.email?.trim() || null, ...(input.active !== undefined ? { active: input.active } : {}) };
@@ -114,11 +118,8 @@ export async function simulateInbound(input: SimulateInboundInput): Promise<Outc
 
 /* ------------------------------------------------------------------ decisions */
 
-const deciderFor = async (c: EngineCtx & { session: { email: string } }) => {
-  // Decisions are made by the signed-in user; a staff record with the same email marks them as staff.
-  const { data } = await c.db.from("staff").select("name").eq("workspace_id", c.ws).eq("email", c.session.email).eq("active", true).limit(1);
-  return data?.[0] ? { name: c.actor, kind: "staff" as const } : { name: c.actor, kind: "owner" as const };
-};
+/** Decisions are recorded as the signed-in member (their real name; role staff = kind staff). */
+const deciderFor = async (c: EngineCtx & { session: { member: Parameters<typeof deciderOf>[0] } }) => deciderOf(c.session.member);
 
 /** Minimum length of the owner's written basis before an unclear bank credit may be marked paid. */
 const BASIS_MIN_CHARS = 10;
@@ -145,6 +146,7 @@ export async function decideWorkItem(workItemId: string, decision: "approved" | 
     const c = await engineCtx();
     const cleanBasis = basis?.trim().replace(/\s+/g, " ") ?? "";
     let decisionNote = note ?? null;
+    await requireDecide(await loadItem(c, workItemId), c.locale);
     if (decision === "approved") {
       const current = await loadItem(c, workItemId);
       if (NEEDS_BASIS.includes(current.action) && cleanBasis.length < BASIS_MIN_CHARS) throw new Error(O(c)("basisRequiredError", { n: BASIS_MIN_CHARS }));
@@ -175,6 +177,7 @@ export async function holdWorkItem(workItemId: string, note: string): Promise<Ou
     const text = note.trim().replace(/\s+/g, " ");
     if (!text) throw new Error(O(c)("holdNoteRequired"));
     const current = await loadItem(c, workItemId);
+    await requireDecide(current, c.locale);
     if (current.status !== "waiting_decision") throw new Error(O(c)("holdNotWaiting"));
     const fields = { ...(current.proposal?.fields ?? {}), hold_note: text, hold_by: c.actor, hold_at: new Date().toISOString() };
     const { data, error } = await c.db.from("work_items").update({ proposal: { ...current.proposal, fields }, updated_at: new Date().toISOString() })
@@ -234,6 +237,7 @@ export async function getReconcileDetails(workItemId: string): Promise<Outcome<{
 /** Give an exception to a staff member (or take it back with null). The decision is still made by a signed-in user. */
 export async function assignWorkItem(workItemId: string, staffId: string | null): Promise<Outcome<WorkItem>> {
   return run(async () => {
+    await requireManager();
     const c = await engineCtx();
     let staffName: string | null = null;
     if (staffId) {
@@ -283,6 +287,7 @@ export async function sendAsHuman(conversationId: string, body: string): Promise
 /** Owner grants authority by chat: one LLM call extracts goals/policies/rules, saved with the same code as the forms. */
 export async function applyAuthorityFromChat(text: string): Promise<Outcome<{ summary: string; authority: Authority; rules: Array<AuthorityRule> }>> {
   return run(async () => {
+    await requireManager();
     const c = await engineCtx();
     const out = await applyAuthorityCore(c, text);
     refresh();
