@@ -83,6 +83,10 @@ services:
     depends_on:
       openclaw-init:
         condition: service_completed_successfully
+    # The engine lives in this network namespace, so its port is published here. Bind to the Docker bridge address
+    # (ENGINE_BIND=172.29.0.1) to let k3s Traefik reach it; the k3s Ingress only routes the exact path /healthz.
+    ports:
+      - "${ENGINE_BIND:-127.0.0.1}:8787:8787"
     volumes:
       - openclaw-data:/home/node/.openclaw
     healthcheck:
@@ -170,9 +174,9 @@ services:
       TZ: Asia/Ho_Chi_Minh
       EXECUTIONS_DATA_PRUNE: "true"
       EXECUTIONS_DATA_MAX_AGE: "336"
-    # Loopback only: open the editor through an SSH tunnel (ssh -L 5678:127.0.0.1:5678 <vps>) until a public door is chosen.
+    # N8N_BIND=127.0.0.1 keeps it private (SSH tunnel); N8N_BIND=172.29.0.1 lets k3s Traefik serve it at https://n8n.nivo.vn.
     ports:
-      - "127.0.0.1:5678:5678"
+      - "${N8N_BIND:-127.0.0.1}:5678:5678"
     volumes:
       - n8n-data:/home/node/.n8n
     logging: *logging
