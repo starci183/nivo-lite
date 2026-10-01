@@ -82,7 +82,7 @@ export class AgentSyncService {
     const hash = contentHash(files);
     const previous = (await this.db.from("openclaw_agent_sync").select("content_hash, status").eq("installation_id", bundle.installation_id).maybeSingle()).data as { content_hash: string | null; status: string } | null;
 
-    const current = previous?.content_hash === hash && workspaceMatches(dirs.local, files) && this.registry.has(agentId);
+    const current = previous?.content_hash === hash && workspaceMatches(dirs.local, files) && this.registry.isCurrent(agentId, bundle.agent_name);
     if (current) {
       await this.record(bundle, { status: "ok", error: null, hash, meta: metaOf(files), touchOnly: true });
       return { agent_id: agentId, context_version: bundle.context_version, changed: false, written: 0, removed: 0, registered: false, files: files.length, content_hash: hash };

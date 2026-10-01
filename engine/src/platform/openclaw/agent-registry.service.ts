@@ -47,11 +47,27 @@ export class AgentRegistry {
     return Array.isArray(agents.list) ? (agents.list as Array<AgentEntry>) : [];
   }
 
+  /** The entry this engine wants. bootstrapMaxChars: AGENTS.md (rules + context + knowledge + contract) is longer than the 20000 default and would lose its tail, the reply contract. */
+  private wanted(agentId: string, name: string, gatewayDir: string): AgentEntry {
+    return { id: agentId, name, workspace: gatewayDir, tools: { profile: "minimal" }, skills: [], bootstrapMaxChars: 60000, bootstrapTotalMaxChars: 90000 };
+  }
+
   /** True when the agent is in openclaw.json with the expected workspace. */
   has(agentId: string): boolean {
     try {
       const dirs = this.workspaceDirs(agentId);
       return dirs !== null && this.entriesOf(this.read()).some((e) => e.id === agentId && e.workspace === dirs.gateway);
+    } catch {
+      return false;
+    }
+  }
+
+  /** True when the entry in openclaw.json is exactly what register() would write. */
+  isCurrent(agentId: string, name: string): boolean {
+    try {
+      const dirs = this.workspaceDirs(agentId);
+      const entry = dirs ? this.entriesOf(this.read()).find((e) => e.id === agentId) : undefined;
+      return entry !== undefined && dirs !== null && JSON.stringify(entry) === JSON.stringify({ ...entry, ...this.wanted(agentId, name, dirs.gateway) });
     } catch {
       return false;
     }
@@ -65,8 +81,7 @@ export class AgentRegistry {
     const config = this.read();
     const agents = (typeof config.agents === "object" && config.agents !== null ? config.agents : {}) as Record<string, unknown>;
     const list = this.entriesOf(config);
-    // bootstrapMaxChars: AGENTS.md (rules + context + knowledge + contract) is longer than the 20000 default and would lose its tail (the reply contract).
-    const wanted: AgentEntry = { id: agentId, name, workspace: dirs.gateway, tools: { profile: "minimal" }, skills: [], bootstrapMaxChars: 60000, bootstrapTotalMaxChars: 90000 };
+    const wanted = this.wanted(agentId, name, dirs.gateway);
     const at = list.findIndex((e) => e.id === agentId);
     if (at >= 0 && JSON.stringify(list[at]) === JSON.stringify({ ...list[at], ...wanted })) return false;
     const updated = at >= 0 ? list.map((e, i) => (i === at ? { ...e, ...wanted } : e)) : [...list, wanted];
