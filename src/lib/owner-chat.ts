@@ -4,6 +4,7 @@ import { system } from "@/i18n/dict/system";
 import { governance } from "@/i18n/dict/governance";
 import { access } from "@/i18n/dict/access";
 import * as ai from "./deepseek";
+import { withUsage } from "./usage";
 import { logDecision, logEvidence } from "./core";
 import { formatVnd, resumeWork, type Decider, type EngineCtx } from "./engine";
 import { ACTION_DEPARTMENT } from "./policy";
@@ -79,7 +80,7 @@ export const applyAuthorityCore = async (c: EngineCtx, text: string) => {
   const g = G(c);
   const current = ((await c.db.from("authority").select("*").eq("workspace_id", c.ws).maybeSingle()).data ?? null) as Authority | null;
   const rules = ((await c.db.from("authority_rules").select("*").eq("workspace_id", c.ws)).data ?? []) as Array<AuthorityRule>;
-  const ch = await ai.parseAuthorityChat(text, rules.map((r) => `${r.action}=${r.mode}${r.limit_vnd !== null ? `(limit ${r.limit_vnd})` : ""}`).join(", "));
+  const ch = await withUsage({ workspaceId: c.ws }, () => ai.parseAuthorityChat(text, rules.map((r) => `${r.action}=${r.mode}${r.limit_vnd !== null ? `(limit ${r.limit_vnd})` : ""}`).join(", ")));
   const parts: Array<string> = [];
   const patch: Record<string, unknown> = {};
   const int = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v >= 0 ? Math.round(v) : null);

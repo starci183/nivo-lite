@@ -4,6 +4,8 @@
  * EMBEDDING_BASE_URL (default https://openrouter.ai/api/v1), EMBEDDING_MODEL (default openai/text-embedding-3-small).
  * Never throws: when no key is set or the provider fails, callers get null and fall back to full-text search.
  */
+import { recordUsage, usageScope, type ProviderUsage } from "../usage";
+
 export const EMBEDDING_DIMS = 1536;
 
 const settings = () => {
@@ -38,7 +40,12 @@ export const embedTexts = async (texts: ReadonlyArray<string>, timeoutMs = 20_00
         console.error(`embeddings provider ${res.status}: ${(await res.text()).slice(0, 200).replace(/\s+/g, " ")}`);
         return null;
       }
-      const body = (await res.json()) as { data?: Array<{ index?: number; embedding?: Array<number> }> };
+      const body = (await res.json()) as { data?: Array<{ index?: number; embedding?: Array<number> }>; usage?: ProviderUsage };
+      const scope = usageScope();
+      if (scope) {
+        // Metered like every model call (kind 'embedding'); the provider's usage when present, else an estimate from the input size.
+        await recordUsage({ workspaceId: scope.workspaceId, kind: "embedding", module: scope.module ?? "knowledge", model, usage: body.usage, promptChars: input.reduce((n, t) => n + t.length, 0) });
+      }
       const rows = [...(body.data ?? [])].sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
       if (rows.length !== input.length || rows.some((r) => r.embedding?.length !== EMBEDDING_DIMS)) {
         console.error("embeddings provider returned an unexpected shape");

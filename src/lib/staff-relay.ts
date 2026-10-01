@@ -2,6 +2,7 @@ import "server-only";
 import { translator } from "@/i18n/core";
 import { system } from "@/i18n/dict/system";
 import * as ai from "./deepseek";
+import { QuotaExceededError, withUsage } from "./usage";
 import { logEvidence } from "./core";
 import { loadAuthority, resumeWork, type EngineCtx } from "./engine";
 import { staffHandles } from "./staff-handle";
@@ -134,8 +135,14 @@ THE TEAM HAS ANSWERED the customer's last question ("${clip(question, 300)}"). T
 Write your next message to the customer that gives exactly this answer, in your own warm voice and in the customer's language.
 Keep every fact, number, price, date and condition exactly as the team wrote it; add no new promise, price or detail.
 Never mention colleagues, staff, the owner, approval, internal checks or that you asked someone. Output only the message.`;
-  const text = (await ai.testChat(agent, turns, brief)).trim().replace(/^["“]|["”]$/g, "").trim();
-  return text || answer;
+  try {
+    const reply = await withUsage({ workspaceId: c.ws, kind: "relay", module: "chatbot" }, () => ai.testChat(agent, turns, brief));
+    return reply.trim().replace(/^["“]|["”]$/g, "").trim() || answer;
+  } catch (e) {
+    // Over the plan allowance: no model call; the team's own answer goes to the customer as written.
+    if (e instanceof QuotaExceededError) return answer;
+    throw e;
+  }
 };
 
 /**

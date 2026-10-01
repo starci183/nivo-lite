@@ -3,6 +3,7 @@ import { intlLocale, translator, type Locale } from "@/i18n/core";
 import { system } from "@/i18n/dict/system";
 import { governance } from "@/i18n/dict/governance";
 import * as ai from "./deepseek";
+import { withUsage } from "./usage";
 import { deliverToChannel } from "./telegram";
 import { ACTION_DEPARTMENT, FLOW_NEXT, applyOperatingMode, evaluateGate, isOverLimit } from "./policy";
 import { contactParts, logDecision, logEvidence, matchLead, normaliseContact, type Db } from "./core";
@@ -236,7 +237,7 @@ const classifyLead: Performer = {
     const lead = await mustLead(c, item.lead_id);
     const events = ((await c.db.from("events").select("summary, evidence").eq("lead_id", lead.id).order("created_at").limit(12)).data ?? [])
       .map((e) => `${e.summary}${e.evidence ? `: ${String(e.evidence).slice(0, 400)}` : ""}`);
-    const k = await ai.classifyLead(leadInput(lead), events, await brief(c), c.locale);
+    const k = await withUsage({ workspaceId: c.ws }, async () => ai.classifyLead(leadInput(lead), events, await brief(c), c.locale));
     return {
       proposal: {
         summary: tr(c)("classifySummary", { name: lead.contact_name, stage: stageLabel(c, k.stage), pct: Math.round(k.confidence * 100) }),
@@ -282,7 +283,7 @@ const followUpLike = (kind: "follow_up" | "care" | "quote"): Performer => ({
       const inv = invId ? (((await c.db.from("invoices").select("*").eq("id", invId).maybeSingle()).data ?? null) as Invoice | null) : null;
       const order = inv?.order_id ? (((await c.db.from("orders").select("items").eq("id", inv.order_id).maybeSingle()).data ?? null) as Pick<Order, "items"> | null) : null;
       const note = [order?.items, inv?.invoice_no, formatVnd(inv?.amount_vnd ?? tx?.amount_vnd ?? null, c.locale)].filter(Boolean).join(" · ");
-      const draft = await ai.draftCare(leadInput(lead), note, await brief(c), c.locale);
+      const draft = await withUsage({ workspaceId: c.ws }, async () => ai.draftCare(leadInput(lead), note, await brief(c), c.locale));
       return { proposal: { summary: tr(c)("careSummary", { name: lead.contact_name }), draft, fields: { ...base, customer: lead.contact_name, contact } } };
     }
     if (kind === "quote") {
@@ -294,7 +295,7 @@ const followUpLike = (kind: "follow_up" | "care" | "quote"): Performer => ({
       ? ((await c.db.from("responsibilities").select("*").eq("id", respId).single()).data as Responsibility)
       : await ensureResponsibility(c, lead);
     const agent = resp.owner_agent_id ? (((await c.db.from("agents").select("*").eq("id", resp.owner_agent_id).maybeSingle()).data ?? null) as Agent | null) : await agentFor(c, "sales");
-    const draft = await ai.draftFollowUp(leadInput(lead), lead.context_summary ?? "", resp.next_action, agent ? agentInput(agent) : null, await brief(c));
+    const draft = await withUsage({ workspaceId: c.ws }, async () => ai.draftFollowUp(leadInput(lead), lead.context_summary ?? "", resp.next_action, agent ? agentInput(agent) : null, await brief(c)));
     return { proposal: { summary: tr(c)("followSummary", { name: lead.contact_name }), draft, fields: { ...base, customer: lead.contact_name, contact, responsibility_id: resp.id } } };
   },
   perform: async (c, item, p, by) => {
@@ -332,7 +333,7 @@ const confirmOrder: Performer = {
     let amount: number | null = typeof f.amount_vnd === "number" ? f.amount_vnd : typeof item.proposal.amount_vnd === "number" ? item.proposal.amount_vnd : inb?.amount_vnd ?? null;
     let items = str(f.items);
     if (amount === null && inb?.body?.trim()) {
-      const ex = await ai.extractOrder(inb.body, c.locale); // one LLM call, only when the channel gave no amount
+      const ex = await withUsage({ workspaceId: c.ws }, () => ai.extractOrder(inb.body, c.locale)); // one LLM call, only when the channel gave no amount
       amount = ex.amount_vnd;
       if (!items) items = ex.items;
     }

@@ -7,6 +7,7 @@ import { moduleSetup } from "@/i18n/dict/moduleSetup";
 import { modulesCore } from "@/i18n/dict/modulesCore";
 import { enqueueAgentSync } from "./engine-queue";
 import { mergeSetupTurn, runSetupTurn } from "./module-setup-ai";
+import { withUsage } from "./usage";
 import {
   INSTALLATION_SELECT, toInstallation, toSession, toVersion, type InstallationRow,
 } from "./modules-core";
@@ -193,10 +194,10 @@ export const sendSetupMessage = async (setupSessionId: string, text: string): Pr
     const inserted = await db.from("module_setup_messages").insert({ workspace_id: ws, setup_session_id: setupSessionId, role: "user", author: member.displayName, body });
     fail(inserted.error);
 
-    const turn = await runSetupTurn({
+    const turn = await withUsage({ workspaceId: ws }, () => runSetupTurn({
       moduleKey: installation.moduleKey, locale, draft: draftSession.draft, gates: draftSession.gateEvidence,
       history: history.map((m) => ({ role: m.role, body: m.body })), message: body,
-    });
+    }));
     const merged = mergeSetupTurn(draftSession.draft, draftSession.gateEvidence, turn);
     const updated = await db.from("module_setup_sessions").update({ draft_snapshot: merged.draft, gate_evidence: merged.gates }).eq("id", setupSessionId).select().single();
     fail(updated.error);

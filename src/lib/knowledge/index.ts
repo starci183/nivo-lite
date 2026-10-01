@@ -7,6 +7,7 @@ import { getSession } from "../session";
 import { supabaseServer } from "../supabase/server";
 import { chunkText } from "./chunk";
 import { embedText, embedTexts, toVector } from "./embed";
+import { withUsage } from "../usage";
 import {
   KNOWLEDGE_SUGGESTIONS, MAX_SOURCE_CHARS, SOURCE_KINDS, suggestionTopic, suggestionsFor,
   type AddSourceInput, type Audience, type Citation, type KnowledgeChunk, type KnowledgeModule, type KnowledgeSource, type NivoItem, type NivoKind, type Passage, type Visibility,
@@ -140,7 +141,7 @@ const indexRow = async (db: Db, source: KnowledgeSource): Promise<KnowledgeSourc
   try {
     const pieces = chunkText(source.content);
     if (pieces.length === 0) throw new Error("Không có nội dung để lập chỉ mục.");
-    const vectors = await embedTexts(pieces);
+    const vectors = await withUsage({ workspaceId: source.workspaceId }, () => embedTexts(pieces));
     const del = await db.from("knowledge_chunks").delete().eq("source_id", source.id);
     fail(del.error);
     const rows = pieces.map((content, ord) => ({
@@ -185,7 +186,7 @@ export const reindexSource = async (id: string, content?: string): Promise<Knowl
 type MatchRow = { layer: "nivo" | "business"; id: string; source_id: string | null; module: string | null; kind: string; title: string; content: string; score: number; visibility: Visibility; topic: string | null };
 
 const matchWith = async (db: Db, a: { workspaceId: string; module: ModuleKey; query: string; limit: number; audience: Audience }): Promise<Array<Passage>> => {
-  const vector = a.query.trim() ? await embedText(a.query) : null;
+  const vector = a.query.trim() ? await withUsage({ workspaceId: a.workspaceId }, () => embedText(a.query)) : null;
   const { data, error } = await db.rpc("match_knowledge", {
     p_workspace: a.workspaceId, p_module: a.module, p_query_embedding: vector ? toVector(vector) : null, p_query: a.query, p_limit: a.limit, p_audience: a.audience,
   });

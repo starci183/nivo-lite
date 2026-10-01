@@ -1,5 +1,5 @@
 import "server-only";
-import { serverConfig } from "./config";
+import { completeRaw } from "./deepseek";
 import type { Locale } from "@/i18n/core";
 import { businessKnowledgeBrief, setupKnowledgeText } from "./knowledge/index";
 import { MODULE_GATES, gateEntry, type DraftSnapshot, type GateEvidence, type ModuleKey, type SetupFact } from "./modules-shared";
@@ -94,29 +94,15 @@ export const runSetupTurn = async (input: SetupTurnInput): Promise<SetupTurnResu
     "Valid gate keys: " + gates.map((g) => g.key).join(", "),
   ].join("\n");
 
-  const { deepseekApiKey, deepseekModel, deepseekBaseUrl } = serverConfig();
-  const res = await fetch(`${deepseekBaseUrl}/chat/completions`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${deepseekApiKey}`, "X-Title": "NIVO OS" },
-    body: JSON.stringify({
-      model: deepseekModel,
-      messages: [
-        { role: "system", content: system },
-        ...input.history.slice(-16).map((m) => ({ role: m.role, content: m.body })),
-        { role: "user", content: input.message },
-      ],
-      temperature: 0.3,
-      response_format: { type: "json_object" },
-      ...(deepseekBaseUrl.includes("openrouter.ai") ? { reasoning: { enabled: false } } : {}),
-    }),
-    cache: "no-store",
-  });
-  if (!res.ok) {
-    console.error(`setup model provider ${res.status}: ${(await res.text()).slice(0, 300)}`);
-    throw new Error(locale === "vi" ? "AI đang tạm thời không phản hồi. Bạn thử lại sau ít phút nhé." : "The AI is temporarily unavailable. Please try again in a few minutes.");
-  }
-  const body = (await res.json()) as { choices: Array<{ message: { content: string } }> };
-  const raw = body.choices[0]?.message.content?.trim() ?? "";
+  // The shared model layer: quota-gated and metered (kind 'setup') like every other model call.
+  const raw = await completeRaw(
+    [
+      { role: "system", content: system },
+      ...input.history.slice(-16).map((m) => ({ role: m.role, content: m.body })),
+      { role: "user", content: input.message },
+    ],
+    { json: true, temperature: 0.3, meta: { kind: "setup", module: "setup" } },
+  );
   const parsed = parseLoose(raw);
   if (!isObject(parsed)) return { reply: raw || (locale === "vi" ? "Bạn kể thêm giúp mình nhé." : "Please tell me a bit more."), facts: [], gates: {} };
 

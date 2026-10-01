@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { publicConfig } from "./config";
 import type { ModuleKey } from "./modules-shared";
+import { blockedBy } from "./usage";
 
 /**
  * The control plane's side of the NIVO engine (the worker at /engine, running on a VPS).
@@ -61,6 +62,8 @@ export const enqueueChatTurn = async (workspaceId: string, job: ChatTurnJob): Pr
       console.warn("engine offline: answering the customer turn with the default processor");
       return false;
     }
+    // Over the plan allowance: no engine run. The caller takes the default path, whose customerChat answers with the polite fallback and hands the question to people.
+    if (await blockedBy(workspaceId, "chat_reply")) return false;
     const { error } = await db.rpc("engine_enqueue", {
       p_workspace: workspaceId,
       p_kind: "chat.turn",

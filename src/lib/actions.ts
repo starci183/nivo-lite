@@ -14,6 +14,7 @@ import { ingest } from "./core";
 import { loadAuthority, resumeWork, runWork, type EngineCtx } from "./engine";
 import { drainAfter, engineCtx } from "./flow-ctx";
 import { customerTurn } from "./customer-turn";
+import { withUsage } from "./usage";
 import { ownerChatForOffice } from "./flow-actions";
 import { insertHumanMessage, relayStaffAnswer } from "./staff-relay";
 import { access } from "@/i18n/dict/access";
@@ -98,7 +99,10 @@ export const installAgent = async (module: ModuleKey, input: Partial<AgentSetupI
 
 /** AI helper for the setup form: turn a plain description into a suggested agent setup. */
 export const suggestAgentSetup = async (description: string): Promise<Outcome<{ name: string; handle: string; role: string; instructions: string }>> =>
-  run(() => ai.designModule(description));
+  run(async () => {
+    const { session } = await ctx();
+    return withUsage({ workspaceId: session.workspace.id }, () => ai.designModule(description));
+  });
 
 export const updateAgent = async (agentId: string, input: Partial<AgentSetupInput> & { status?: "active" | "paused" }): Promise<Outcome<Agent>> =>
   run(async () => {
@@ -157,14 +161,14 @@ export const sendAgentMessage = async (
     const conv = must(await supabase.from("agent_conversations").select("*").eq("id", conversationId).single<AgentConversation>());
     const agent = must(await supabase.from("agents").select("*").eq("id", conv.agent_id).single<Agent>());
     if (conv.kind === "customer") {
-      const turn = await customerTurn(c, conv, agent, body);
+      const turn = await withUsage({ workspaceId: ws }, () => customerTurn(c, conv, agent, body));
       if (turn.changed) refreshAll();
       return { reply: turn.reply, capturedLeadId: turn.capturedLeadId };
     }
     must(await supabase.from("agent_messages").insert({ workspace_id: ws, conversation_id: conv.id, role: "user", body }).select().single<AgentMessage>());
     const history = ((await supabase.from("agent_messages").select("*").eq("conversation_id", conv.id).order("created_at")).data ?? []) as AgentMessage[];
     const turns: ai.ChatTurn[] = history.filter((m) => m.role !== "system").map((m) => ({ role: m.role === "user" ? "user" : "agent", body: m.body }));
-    const text = await ai.testChat(agentInput(agent), turns, ai.authorityBrief(await loadAuthority(c)) + (await knowledgeBrief(c, agent.module, body, "customer")));
+    const text = await withUsage({ workspaceId: ws }, async () => ai.testChat(agentInput(agent), turns, ai.authorityBrief(await loadAuthority(c)) + (await knowledgeBrief(c, agent.module, body, "customer"))));
     const reply = must(await supabase.from("agent_messages").insert({ workspace_id: ws, conversation_id: conv.id, role: "agent", body: text }).select().single<AgentMessage>());
     return { reply, capturedLeadId: null };
   });
@@ -194,7 +198,7 @@ export const createLead = async (input: ai.LeadInput & { phone?: string; email?:
   });
 
 const buildContext = async (supabase: Db, ws: string, lead: Lead, history: string[]) => {
-  const summary = await ai.summarizeContext(leadInput(lead), history);
+  const summary = await withUsage({ workspaceId: ws }, () => ai.summarizeContext(leadInput(lead), history));
   await supabase.from("leads").update({ context_summary: summary }).eq("id", lead.id);
   await logEvent(supabase, ws, lead.id, "context.summarised", "NIVO AI", (await getT(system))("contextCreated"), summary);
   return summary;
@@ -216,7 +220,7 @@ const proposeOwner = async (supabase: Db, ws: string, ownerName: string, leadId:
   const all = ((await supabase.from("agents").select("*").eq("workspace_id", ws).eq("status", "active")).data ?? []) as Agent[];
   // Leads are owned by Sales (or a human); the Chatbot captures, Accounting only receives won deals.
   const agents = all.filter((a) => a.module === "sales").length ? all.filter((a) => a.module === "sales") : all;
-  const p = await ai.proposeResponsibility(leadInput(lead), lead.context_summary ?? "", agents.map(agentInput), ownerName);
+  const p = await withUsage({ workspaceId: ws }, () => ai.proposeResponsibility(leadInput(lead), lead.context_summary ?? "", agents.map(agentInput), ownerName));
   const agent = p.owner_kind === "agent" ? agents.find((a) => a.handle === p.owner_handle) ?? agents[0] : undefined;
   const resp = must(
     await supabase.from("responsibilities").insert({
@@ -442,7 +446,7 @@ export const sendTeamMessage = async (body: string): Promise<Outcome<Message[]>>
             continue;
           }
         }
-        const text = await ai.agentReply(agentInput(a), transcript, `${open || "(no open responsibilities)"}\n${waitingBrief}`, brief + (await knowledgeBrief(c, a.module, body, "internal")));
+        const text = await withUsage({ workspaceId: ws }, async () => ai.agentReply(agentInput(a), transcript, `${open || "(no open responsibilities)"}\n${waitingBrief}`, brief + (await knowledgeBrief(c, a.module, body, "internal"))));
         out.push(must(await supabase.from("messages").insert({ workspace_id: ws, author_kind: "agent", author_name: a.name, agent_id: a.id, body: text }).select().single<Message>()));
       }
     }

@@ -3,6 +3,7 @@ import { serverConfig } from "./config";
 import { getLocale } from "@/i18n/server";
 import type { Locale } from "@/i18n/core";
 import type { Authority } from "./flow-types";
+import { blockedBy, exceededMessage, QuotaExceededError, recordUsage, usageScope, DEFAULT_FALLBACK_REPLY, type ProviderUsage, type UsageKind, type UsageModule } from "./usage";
 
 /** The reader's locale; falls back to Vietnamese where no request is available (background work after the response). */
 const safeLocale = async (): Promise<Locale> => {
@@ -22,19 +23,38 @@ type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
 const isOpenRouter = (baseUrl: string) => baseUrl.includes("openrouter.ai");
 
-/** The one integration point with the product's model provider (DeepSeek directly or via OpenRouter, OpenAI-compatible). */
-const complete = async (messages: ChatMessage[], json = false): Promise<string> => {
+export type CallMeta = { readonly kind: UsageKind; readonly module: UsageModule };
+const CHAT_REPLY: CallMeta = { kind: "chat_reply", module: "chatbot" };
+const OWNER_CHAT: CallMeta = { kind: "owner_chat", module: "office" };
+const SETUP: CallMeta = { kind: "setup", module: "setup" };
+const SALES: CallMeta = { kind: "engine", module: "sales" };
+const ACCOUNTING: CallMeta = { kind: "engine", module: "accounting" };
+
+/**
+ * The one integration point with the product's model provider (DeepSeek directly or via OpenRouter, OpenAI-compatible).
+ * Metered: when the request runs inside a usage scope (`withUsage`), the call is refused with a QuotaExceededError once the
+ * workspace is over its plan allowance, and its tokens and cost are recorded afterwards. The scope may override the call's kind.
+ */
+export const completeRaw = async (messages: ChatMessage[], o: { json?: boolean; temperature?: number; meta: CallMeta }): Promise<string> => {
   const { deepseekApiKey, deepseekModel, deepseekBaseUrl } = serverConfig();
+  const scope = usageScope();
+  const kind = scope?.kind ?? o.meta.kind;
+  const module = scope?.module ?? o.meta.module;
+  if (scope) {
+    const blocked = await blockedBy(scope.workspaceId, kind);
+    if (blocked) throw new QuotaExceededError(exceededMessage(await safeLocale()), blocked);
+  }
   const res = await fetch(`${deepseekBaseUrl}/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${deepseekApiKey}`, "X-Title": "NIVO OS" },
     body: JSON.stringify({
       model: deepseekModel,
       messages,
-      temperature: 0.4,
-      ...(json ? { response_format: { type: "json_object" } } : {}),
+      temperature: o.temperature ?? 0.4,
+      ...(o.json ? { response_format: { type: "json_object" } } : {}),
       // OpenRouter's DeepSeek V4 models think by default; the product wants fast chat replies, not visible reasoning.
-      ...(isOpenRouter(deepseekBaseUrl) ? { reasoning: { enabled: false } } : {}),
+      // `usage.include` makes OpenRouter return the exact cost with the token counts.
+      ...(isOpenRouter(deepseekBaseUrl) ? { reasoning: { enabled: false }, usage: { include: true } } : {}),
     }),
     cache: "no-store",
   });
@@ -43,9 +63,18 @@ const complete = async (messages: ChatMessage[], json = false): Promise<string> 
     console.error(`model provider ${res.status}: ${(await res.text()).slice(0, 300)}`);
     throw new Error((await safeLocale()) === "vi" ? "AI đang tạm thời không phản hồi. Bạn thử lại sau ít phút nhé." : "The AI is temporarily unavailable. Please try again in a few minutes.");
   }
-  const body = (await res.json()) as { choices: { message: { content: string } }[] };
-  return body.choices[0]?.message.content?.trim() ?? "";
+  const body = (await res.json()) as { choices: { message: { content: string } }[]; usage?: ProviderUsage; model?: string };
+  const content = body.choices[0]?.message.content?.trim() ?? "";
+  if (scope) {
+    await recordUsage({
+      workspaceId: scope.workspaceId, kind, module, model: body.model || deepseekModel, usage: body.usage,
+      promptChars: messages.reduce((n, m) => n + m.content.length, 0), completionChars: content.length,
+    });
+  }
+  return content;
 };
+
+const complete = (messages: ChatMessage[], json = false, meta: CallMeta = OWNER_CHAT): Promise<string> => completeRaw(messages, { json, meta });
 
 /** JSON completion; tolerates a fenced code block around the JSON. */
 /** Parse a model answer as JSON: bare, fenced, or the first {...} block inside prose. */
@@ -60,11 +89,11 @@ const parseJsonLoose = <T>(raw: string): T | null => {
   return null;
 };
 
-const completeJson = async <T>(messages: ChatMessage[]): Promise<T> => {
+const completeJson = async <T>(messages: ChatMessage[], meta: CallMeta = OWNER_CHAT): Promise<T> => {
   // Some providers occasionally ignore response_format and answer in prose: parse loosely, then ask once more.
-  const first = parseJsonLoose<T>(await complete(messages, true));
+  const first = parseJsonLoose<T>(await complete(messages, true, meta));
   if (first !== null) return first;
-  const again = parseJsonLoose<T>(await complete([...messages, { role: "system", content: "Answer again with ONLY the JSON object described above. No prose, no code fences." }], true));
+  const again = parseJsonLoose<T>(await complete([...messages, { role: "system", content: "Answer again with ONLY the JSON object described above. No prose, no code fences." }], true, meta));
   if (again !== null) return again;
   throw new Error("model did not return JSON");
 };
@@ -94,7 +123,7 @@ export const summarizeContext = async (lead: LeadInput, history: string[]) =>
   complete([
     { role: "system", content: `${NIVO} Write a customer context brief: 3-5 short bullet points starting with "- " (who, need, urgency, risks, what we know). Label the urgency line "Urgency:" / "Mức độ gấp:" and the risk line "Risk:" / "Rủi ro:". No preamble.${await langRule()}` },
     { role: "user", content: `Lead: ${JSON.stringify(lead)}\nHistory:\n${history.join("\n") || "(none)"}` },
-  ]);
+  ], false, SALES);
 
 export const proposeResponsibility = async (lead: LeadInput, context: string, agents: AgentInput[], humanName: string) =>
   completeJson<{ title: string; owner_kind: "human" | "agent"; owner_handle: string | null; next_action: string; due_in_days: number; rationale: string }>([
@@ -103,7 +132,7 @@ export const proposeResponsibility = async (lead: LeadInput, context: string, ag
       content: `${NIVO} Propose ONE responsibility for this lead. Choose the owner: an agent (by handle) when the work is routine follow-up, the human "${humanName}" when judgement or a commitment is needed. Reply as JSON {"title","owner_kind":"human"|"agent","owner_handle":string|null,"next_action","due_in_days":number,"rationale"}. The title, next_action and rationale values:${await langRule()}`,
     },
     { role: "user", content: `Lead: ${JSON.stringify(lead)}\nContext:\n${context}\nAgents: ${JSON.stringify(agents.map(({ name, handle, role }) => ({ name, handle, role })))}` },
-  ]);
+  ], SALES);
 
 export const draftFollowUp = (lead: LeadInput, context: string, nextAction: string, agent: AgentInput | null, brief = "") =>
   complete([
@@ -112,7 +141,7 @@ export const draftFollowUp = (lead: LeadInput, context: string, nextAction: stri
       content: `${NIVO} ${agent ? `You are ${agent.name} (${agent.role}). Instructions: ${agent.instructions}` : ""}${brief} Draft the outbound message that performs the next action. Match the lead's channel. Write in Vietnamese unless the lead's need is in English. Max 120 words. Output only the message.`,
     },
     { role: "user", content: `Lead: ${JSON.stringify(lead)}\nContext:\n${context}\nNext action: ${nextAction}` },
-  ]);
+  ], false, SALES);
 
 export const agentReply = (agent: AgentInput, transcript: string[], workspaceBrief: string, brief = "") =>
   complete([
@@ -146,6 +175,17 @@ export type CustomerChatOut = {
 
 /** Customer-facing chatbot turn: a reply, a lead when the customer has shared enough, and whether a human must confirm. */
 export const customerChat = async (agent: AgentInput, turns: ChatTurn[], brief = ""): Promise<CustomerChatOut> => {
+  try {
+    return await customerChatModel(agent, turns, brief);
+  } catch (e) {
+    if (!(e instanceof QuotaExceededError)) throw e;
+    // Over the plan allowance: no model call. The customer gets a polite acknowledgement and the question is handed to people
+    // (needs_human opens a waiting item for the team; the owner already got the Office notice).
+    return { reply: e.status.fallbackReply ?? DEFAULT_FALLBACK_REPLY, lead: null, needs_human: true, reason: "unclear_outcome", proposed_answer: null, order: null, payment_claim: false };
+  }
+};
+
+const customerChatModel = async (agent: AgentInput, turns: ChatTurn[], brief: string): Promise<CustomerChatOut> => {
   const out = await completeJson<Partial<CustomerChatOut>>([
     {
       role: "system",
@@ -161,7 +201,7 @@ PAYMENT CLAIM: when the customer says they have already paid or transferred the 
 Reply as JSON {"reply": string, "lead": null | {"contact_name","company","need","phone","email"}, "needs_human": boolean, "reason": "over_authority"|"unclear_outcome"|null, "proposed_answer": string|null, "order": null | {"items": string, "amount_vnd": integer}, "payment_claim": boolean}.`,
     },
     ...toMessages(turns),
-  ]);
+  ], CHAT_REPLY);
   return {
     reply: out.reply ?? "",
     lead: out.lead && out.lead.contact_name && out.lead.need ? out.lead : null,
@@ -191,7 +231,7 @@ export const designModule = async (description: string) =>
   completeJson<{ name: string; handle: string; role: string; instructions: string }>([
     { role: "system", content: `${NIVO} Turn the owner's description into an AI module (agent) definition. JSON {"name","handle" (lowercase, a-z0-9-, max 16),"role" (max 6 words),"instructions" (4-6 imperative sentences, include what needs human approval)}. The name, role and instructions values:${await langRule()}` },
     { role: "user", content: description },
-  ]);
+  ], SETUP);
 
 /* ------------------------------------------------------------------ operating flow (engine steps; locale passed explicitly) */
 
@@ -209,7 +249,7 @@ Use "qualified" when the need is clear and fits; "new" when too little is known 
 Use a confidence below 0.6 only when you cannot tell what the message is (spam, unrelated, contradictory, no identifiable need). The next_action, missing and context values:${langFor(locale)}`,
     },
     { role: "user", content: `Lead: ${JSON.stringify(lead)}\nHistory:\n${history.join("\n") || "(none)"}` },
-  ]);
+  ], SALES);
   const stages = ["new", "qualified", "proposal", "won", "lost"] as const;
   return {
     stage: stages.includes(out.stage as (typeof stages)[number]) ? (out.stage as Classification["stage"]) : "new",
@@ -228,7 +268,7 @@ export const extractOrder = async (text: string, locale: Locale): Promise<{ item
       content: `${NIVO} Extract the order from the customer's message. JSON {"items": string (what they order, short), "amount_vnd": integer VND or null when no total is stated (never guess a price), "confidence": number 0..1}. "1,5 triệu" = 1500000. The items value:${langFor(locale)}`,
     },
     { role: "user", content: text },
-  ]);
+  ], ACCOUNTING);
   const amount = typeof out.amount_vnd === "number" && Number.isFinite(out.amount_vnd) && out.amount_vnd >= 0 ? Math.round(out.amount_vnd) : null;
   return { items: out.items ?? "", amount_vnd: amount, confidence: typeof out.confidence === "number" ? out.confidence : 0.5 };
 };
@@ -241,7 +281,7 @@ export const draftCare = (lead: LeadInput, paymentNote: string, brief: string, l
       content: `${NIVO}${brief} You are the Sales AI. Write a short, warm customer-care message after the customer's payment was received: thank them, confirm what was paid (item, amount, record code), and end with the next step: invite them to book their first session / appointment (e.g. "hẹn lịch buổi đầu") by replying with a convenient day and time. No new commitments or prices. Address the customer the way they referred to themselves in the conversation (e.g. "anh" if they wrote "anh"); if unknown use "anh/chị" — never guess gender. Write as the business itself (never mention NIVO or AI). Plain text for a chat app: no markdown, no asterisks. Max 70 words. Output only the message.${langFor(locale)}`,
     },
     { role: "user", content: `Customer: ${JSON.stringify(lead)}\nPayment: ${paymentNote}` },
-  ]);
+  ], false, SALES);
 
 export type AuthorityChange = {
   goals: { revenue_vnd?: number | null; new_customers?: number | null; first_reply_minutes?: number | null; note?: string | null };
