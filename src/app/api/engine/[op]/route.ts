@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { chatTurnCallback, chatTurnContext, isToolName, runEngineTool, type CallbackBody } from "@/lib/engine-bridge";
+import { chatTurnCallback, chatTurnContext, isToolName, runEngineTool, syncBundle, type CallbackBody } from "@/lib/engine-bridge";
 import { loadRunningJob, queueDb, verifyEngineRequest } from "@/lib/engine-queue";
 
 /**
@@ -7,6 +7,7 @@ import { loadRunningJob, queueDb, verifyEngineRequest } from "@/lib/engine-queue
  *   POST /api/engine/context   { job_id }                      the system context + transcript of a chat.turn job
  *   POST /api/engine/callback  { job_id, op, text|reason }     the engine's PROPOSED reply (or "could not get one")
  *   POST /api/engine/tool      { job_id, tool, args }          a tool OpenClaw called through the engine's tool bridge
+ *   POST /api/engine/sync-bundle { job_id }                    the files of one agent's OpenClaw workspace, built from Supabase (job: openclaw.sync_agent, or a chat.turn whose agent has no copy yet)
  * The job id must name a RUNNING job; its workspace is the only workspace any of these can touch.
  */
 export const dynamic = "force-dynamic";
@@ -26,11 +27,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
   } catch {
     return json({ error: "invalid body" }, 400);
   }
-  if (op !== "context" && op !== "callback" && op !== "tool") return json({ error: "not found" }, 404);
+  if (op !== "context" && op !== "callback" && op !== "tool" && op !== "sync-bundle") return json({ error: "not found" }, 404);
 
   const db = queueDb();
   if (!db) return json({ error: "not configured" }, 503);
   try {
+    if (op === "sync-bundle") {
+      const syncJob = await loadRunningJob(db, body.job_id, ["openclaw.sync_agent", "chat.turn"]);
+      if (!syncJob) return json({ error: "no running job" }, 409);
+      return json(await syncBundle(db, syncJob));
+    }
     const job = await loadRunningJob(db, body.job_id, "chat.turn");
     if (!job) return json({ error: "no running job" }, 409);
 

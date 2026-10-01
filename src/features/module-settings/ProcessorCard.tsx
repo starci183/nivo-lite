@@ -1,26 +1,32 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Badge, Button, RadioGroup, SurfaceCard, Text } from "@starci/grammar/common";
 import { useT } from "@/i18n/client";
 import { engine as dict } from "@/i18n/dict/engine";
 import type { Installation } from "@/lib/modules-shared";
 import { STACK_CLASS_NAME } from "./classNames";
-import { getEngineStatus, setProcessor, type EngineStatus } from "./processorActions";
+import { getAgentSyncStatus, getEngineStatus, resyncAgent, setProcessor, type AgentSyncStatus, type EngineStatus } from "./processorActions";
 
 type Processor = "nivo" | "openclaw";
 type ProcessorCardProps = { readonly installation: Installation; readonly canEdit: boolean };
 
-/** "Bộ xử lý": NIVO answers directly (default) or OpenClaw on the engine server, plus whether that server is alive. Owner/manager only. */
+/** Poll the sync status this often while a sync is queued or running, and (slower) while idle so a background sync shows up on its own. */
+const POLL_BUSY_MS = 2_500;
+const POLL_IDLE_MS = 20_000;
+
+/** "Bộ xử lý": NIVO answers directly (default) or OpenClaw on the engine server, plus whether that server is alive and whether its copy of the agent is current. Owner/manager only. */
 export const ProcessorCard = ({ installation, canEdit }: ProcessorCardProps) => {
   const t = useT(dict);
   const router = useRouter();
   const saved: Processor = installation.settings.processor === "openclaw" ? "openclaw" : "nivo";
   const [value, setValue] = useState<Processor>(saved);
   const [status, setStatus] = useState<EngineStatus | "unknown" | undefined>();
+  const [sync, setSync] = useState<AgentSyncStatus | undefined>();
   const [note, setNote] = useState<{ ok: boolean; text: string } | undefined>();
   const [pending, startTransition] = useTransition();
+  const [queuing, setQueuing] = useState(false);
 
   useEffect(() => {
     if (!canEdit) return;
@@ -28,6 +34,19 @@ export const ProcessorCard = ({ installation, canEdit }: ProcessorCardProps) => 
     void getEngineStatus().then((r) => { if (live) setStatus(r.ok ? r.data : "unknown"); });
     return () => { live = false; };
   }, [canEdit]);
+
+  const refreshSync = useCallback(async () => {
+    const r = await getAgentSyncStatus(installation.id);
+    if (r.ok) setSync(r.data);
+  }, [installation.id]);
+
+  const syncState = sync?.state;
+  useEffect(() => {
+    if (!canEdit || saved !== "openclaw") return;
+    void refreshSync();
+    const timer = setInterval(() => void refreshSync(), syncState === "syncing" ? POLL_BUSY_MS : POLL_IDLE_MS);
+    return () => clearInterval(timer);
+  }, [canEdit, saved, syncState, refreshSync]);
 
   if (!canEdit) return null;
 
@@ -41,6 +60,18 @@ export const ProcessorCard = ({ installation, canEdit }: ProcessorCardProps) => 
   const known = status !== undefined && status !== "unknown" ? status : null;
   const statusLine = status === undefined ? "" : known === null ? t("unknown") : known.lastHeartbeat === null ? t("never") : t(known.online ? "online" : "stale", { ago: ago(known.lastHeartbeat) });
 
+  const syncLine = ((): { text: string; tone: "success" | "warning" | "danger" | "neutral" } | null => {
+    if (sync === undefined) return null;
+    if (sync.state === "syncing") return { text: t("syncing"), tone: "neutral" };
+    if (sync.state === "none") return { text: t("syncNone"), tone: "warning" };
+    if (sync.state === "error") return { text: t("syncError", { reason: sync.error ?? "?" }), tone: "danger" };
+    if (sync.syncedVersion !== sync.activeVersion) {
+      return { text: t("syncDrift", { active: sync.activeVersion ?? t("syncNever"), synced: sync.syncedVersion ?? t("syncNever") }), tone: "warning" };
+    }
+    const when = sync.checkedAt ? ago(sync.checkedAt) : "";
+    return { text: sync.syncedVersion === null ? t("syncOkNone", { ago: when }) : t("syncOk", { version: sync.syncedVersion, ago: when }), tone: "success" };
+  })();
+
   const save = () => {
     setNote(undefined);
     startTransition(async () => {
@@ -48,6 +79,15 @@ export const ProcessorCard = ({ installation, canEdit }: ProcessorCardProps) => 
       setNote(r.ok ? { ok: true, text: t("saved") } : { ok: false, text: r.error });
       if (r.ok) router.refresh();
     });
+  };
+
+  const resync = async () => {
+    setNote(undefined);
+    setQueuing(true);
+    const r = await resyncAgent(installation.id);
+    setQueuing(false);
+    if (!r.ok || !r.data.queued) { setNote({ ok: false, text: r.ok ? t("resyncFailed") : r.error }); return; }
+    setSync((prev) => (prev ? { ...prev, state: "syncing" } : { state: "syncing", syncedVersion: null, activeVersion: null, checkedAt: null, error: null, fileCount: 0 }));
   };
 
   return (
@@ -69,6 +109,15 @@ export const ProcessorCard = ({ installation, canEdit }: ProcessorCardProps) => 
           <Badge isDot tone={known?.online ? "success" : "neutral"}>{t("status")}</Badge>
           <Text size="sm" tone="muted">{statusLine}</Text>
         </div>
+        {saved === "openclaw" ? (
+          <div className={STACK_CLASS_NAME}>
+            <div className="flex flex-wrap items-center gap-3" aria-live="polite">
+              <Badge isDot tone={syncLine?.tone ?? "neutral"}>{syncLine?.text ?? "…"}</Badge>
+              <Button variant="secondary" size="sm" isPending={queuing} isDisabled={queuing || sync?.state === "syncing"} onPress={() => void resync()}>{t("resync")}</Button>
+            </div>
+            <Text size="xs" tone="muted">{t("syncHelp")}</Text>
+          </div>
+        ) : null}
         <div>
           <Button variant="secondary" isPending={pending} isDisabled={value === saved} onPress={save}>{t("save")}</Button>
         </div>

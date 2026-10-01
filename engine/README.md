@@ -54,6 +54,7 @@ cd engine && npm run build && node dev/e2e.mjs
 | --- | --- | --- |
 | `chat.turn` | `conversation_id, message_id, event_id, agent_id` | Lấy ngữ cảnh từ app, chạy một lượt khách qua OpenClaw, gửi **câu trả lời đề xuất** về app. Lỗi/timeout/gateway chết: báo app trả lời bằng model trực tiếp, job được đánh dấu `path=direct_fallback`. |
 | `connection.health` | `silentAfterHours?` | Đánh dấu kết nối đang lỗi (`error`) hoặc im lặng quá lâu (mặc định 72 giờ) vào `connections.public_meta.health`. Không đổi `status`. pg_cron enqueue mỗi 15 phút. Có `TODO(office)` để đăng thông báo vào Office. |
+| `openclaw.sync_agent` | `installation_id` | Dựng lại **bản sao OpenClaw** của một agent từ Supabase (nguồn gốc): `AGENTS.md`, `SOUL.md`, `knowledge/*.md` trong workspace `workspace-<agentId>`, đăng ký trong `openclaw.json` (`agents.list`), ghi trạng thái vào `openclaw_agent_sync`. Xem mục bên dưới. |
 | `n8n.emit` | `event, data, urls?` | POST sự kiện NIVO có chữ ký HMAC tới webhook của workspace (hoặc `N8N_DEFAULT_WEBHOOK_URL`). Header: `x-nivo-event`, `x-nivo-delivery` (= id job, để bên nhận chống trùng), `x-nivo-timestamp`, `x-nivo-signature`. Chặn SSRF: đích phải phân giải ra địa chỉ công khai, trừ host trong `N8N_ALLOWED_HOSTS`. |
 
 Thêm job mới: viết một class `implements JobHandler` (`kind` + `run(job, signal)`), đưa vào `JOB_HANDLERS` ở `app.module.ts`. Handler phải chạy lại an toàn (lease có thể hết hạn giữa chừng).
@@ -61,6 +62,12 @@ Thêm job mới: viết một class `implements JobHandler` (`kind` + `run(job, 
 ### Vòng đời job (migration `engine_jobs`)
 
 `queued → running → done | failed | cancelled`. `engine_claim_jobs` dùng `for update skip locked`, mỗi lần claim tăng `attempts` và cấp lease. Worker gia hạn lease mỗi 1/3 thời gian lease; mất lease thì dừng việc. Lỗi: `engine_fail_job` retry với backoff 5s, 10s, 20s... (tối đa 15 phút) đến `max_attempts` rồi `failed`. Tắt máy êm: ngừng claim, chờ job đang chạy tối đa `ENGINE_SHUTDOWN_GRACE_MS`, trả lại phần còn lại (`engine_release_job`, không tính lượt thử).
+
+## Bản sao OpenClaw của agent (`openclaw.sync_agent`)
+
+Supabase là nguồn gốc; OpenClaw chỉ giữ một bản sao, ghi **một chiều**. Job lấy bộ tệp từ app (`POST /api/engine/sync-bundle`, app lọc quyền xem: module chatbot chỉ nhận tri thức `public`), tính hash, rồi ghi từng tệp bằng temp + rename vào `/openclaw-state/workspace-<agentId>` và đăng ký agent trong `openclaw.json` (`agents.list[]` = `{ id, name, workspace, tools: {profile: "minimal"}, skills: [] }`, đúng schema OpenClaw 2026.7.1). Gateway theo dõi tệp cấu hình và nạp lại `agents.*` khi chạy (hybrid hot reload), nên không cần khởi động lại gì. Hash, tệp trên đĩa và đăng ký đều khớp thì chỉ cập nhật `checked_at`. Agent khách hàng chạy với profile công cụ `minimal` (không shell, không đọc tệp, không web).
+
+Kích hoạt: app (áp dụng setup, duyệt ghi chú Office, thêm/sửa/xoá/lập chỉ mục lại tri thức, đổi bộ xử lý sang OpenClaw, nút "Đồng bộ lại"), pg_cron mỗi 5 phút cho mọi installation có `processor = 'openclaw'`, và engine lúc khởi động (VPS mới tự dựng lại từ Supabase). Job trùng được gộp trong SQL (`engine_enqueue_agent_sync`). `chat.turn` thấy agent chưa có bản sao thì đồng bộ ngay trong lượt đó; khi bản sao khớp phiên bản ngữ cảnh đang dùng, mỗi lượt chỉ gửi dữ liệu động (quyền hạn hiện tại, các đoạn tri thức liên quan tới câu hỏi, hội thoại).
 
 ## Chat.turn: mỗi quyết định thiết kế
 
@@ -89,6 +96,6 @@ OpenClaw gọi engine bằng HTTP nội bộ với bearer token **ngắn hạn, 
 ## Chưa xác minh với OpenClaw thật (làm ở lần deploy đầu)
 
 1. Lệnh khởi động và biến môi trường của image OpenClaw bạn ghim (`OPENCLAW_GATEWAY_TOKEN` được nivo-backend dùng; kiểm tra bằng `docker run --rm <image> --help`).
-2. Schema mục agent trong `openclaw.json` nếu bật `OPENCLAW_MANAGE_AGENTS=1` (mặc định tắt; engine ghi mục tối thiểu `{ name }`). Cách khác: tạo agent `ws-<id>-chatbot` bằng tay hoặc script.
+2. ~~Schema mục agent~~ đã xác minh: `agents.list[]` (xem trên). Model đi qua OpenRouter: `OPENCLAW_MODEL=openrouter/deepseek/deepseek-v4-flash` với `OPENROUTER_API_KEY`.
 3. Cách OpenClaw gọi công cụ HTTP: engine đặt hướng dẫn và token vào đầu mỗi lượt để agent gọi bằng công cụ HTTP/exec của nó. Nếu bản bạn dùng hỗ trợ MCP, bọc `/tools` thành một MCP server là bước tiếp theo.
 4. Tắt máy êm (SIGTERM) chưa được thử trên Windows dev; trên Docker/Linux `docker stop` gửi SIGTERM thẳng tới node.

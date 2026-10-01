@@ -76,6 +76,36 @@ export const enqueueChatTurn = async (workspaceId: string, job: ChatTurnJob): Pr
   }
 };
 
+/**
+ * Queue a one-way sync of an installation's OpenClaw agent copy (AGENTS.md, SOUL.md, knowledge/*.md) from Supabase. Collapses into a job
+ * that is already waiting; does nothing for an installation that is not on OpenClaw unless `force`. Never throws: a sync that cannot be queued
+ * is picked up by the 5-minute schedule anyway.
+ */
+export const enqueueAgentSync = async (installationId: string, opts: { readonly force?: boolean } = {}): Promise<boolean> => {
+  try {
+    const db = queueDb();
+    if (!db || !engineSecret()) return false;
+    const { error } = await db.rpc("engine_enqueue_agent_sync", { p_installation: installationId, p_force: opts.force === true });
+    if (error) throw new Error(error.message);
+    return true;
+  } catch (e) {
+    console.error("agent sync enqueue failed:", e instanceof Error ? e.message : e);
+    return false;
+  }
+};
+
+/** The same for every installation of the workspace that is on OpenClaw (business knowledge changed: it is shared by the modules). */
+export const enqueueWorkspaceSync = async (workspaceId: string): Promise<void> => {
+  try {
+    const db = queueDb();
+    if (!db || !engineSecret()) return;
+    const { error } = await db.rpc("engine_enqueue_workspace_sync", { p_workspace: workspaceId });
+    if (error) throw new Error(error.message);
+  } catch (e) {
+    console.error("workspace sync enqueue failed:", e instanceof Error ? e.message : e);
+  }
+};
+
 /* ------------------------------------------------------------------ signed calls from the engine */
 
 const SKEW_MS = 5 * 60_000;
@@ -102,9 +132,9 @@ export type EngineJob = { readonly id: string; readonly workspace_id: string; re
  * The job a signed engine call speaks for. The workspace is NEVER taken from the request: it is the job row's, and the job must be
  * running (leased by a worker). A caller-supplied workspace id is not authorization.
  */
-export const loadRunningJob = async (db: SupabaseClient, jobId: unknown, kind: string): Promise<EngineJob | null> => {
+export const loadRunningJob = async (db: SupabaseClient, jobId: unknown, kind: string | ReadonlyArray<string>): Promise<EngineJob | null> => {
   if (typeof jobId !== "string" || !/^[0-9a-f-]{36}$/i.test(jobId)) return null;
-  const { data } = await db.from("engine_jobs").select("id, workspace_id, kind, payload, status").eq("id", jobId).eq("kind", kind).eq("status", "running").maybeSingle();
+  const { data } = await db.from("engine_jobs").select("id, workspace_id, kind, payload, status").eq("id", jobId).in("kind", typeof kind === "string" ? [kind] : [...kind]).eq("status", "running").maybeSingle();
   const job = data as EngineJob | null;
   return job?.workspace_id ? job : null;
 };

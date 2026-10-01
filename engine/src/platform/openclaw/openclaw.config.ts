@@ -6,8 +6,11 @@ export type OpenclawOptions = {
   /** Null = OpenClaw is not configured: every chat.turn takes the direct-model fallback (the engine still runs n8n and health jobs). */
   readonly gateway: { readonly url: string; readonly auth: OpenclawAuth } | null;
   readonly turnTimeoutMs: number;
-  /** Directory holding openclaw.json (shared volume). Only used when manageAgents is on. */
+  /** Directory holding openclaw.json and the agent workspaces, as the ENGINE sees the shared volume (/openclaw-state). Agent sync needs it. */
   readonly configDir: string | undefined;
+  /** The same directory as the GATEWAY sees it (/home/node/.openclaw): the `workspace` paths written into openclaw.json use this one. */
+  readonly gatewayStateDir: string;
+  /** Register synced agents in openclaw.json (`agents.list`). Needs configDir. */
   readonly manageAgents: boolean;
 };
 
@@ -22,6 +25,7 @@ export const parseOpenclawConfig = (env: EnvSource): OpenclawOptions => {
     gateway: url && auth ? { url, auth } : null,
     turnTimeoutMs: env.int("OPENCLAW_TURN_TIMEOUT_MS", 90_000, { min: 5000, max: 600_000 }),
     configDir: env.optional("OPENCLAW_CONFIG_DIR"),
+    gatewayStateDir: (env.optional("OPENCLAW_GATEWAY_STATE_DIR") ?? "/home/node/.openclaw").replace(/\/+$/, ""),
     manageAgents: env.bool("OPENCLAW_MANAGE_AGENTS", false),
   };
 };

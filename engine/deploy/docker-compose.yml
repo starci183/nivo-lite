@@ -52,6 +52,7 @@ services:
       - |
         const fs = require("fs"), p = "/home/node/.openclaw/openclaw.json";
         let c = {}; try { c = JSON.parse(fs.readFileSync(p, "utf8")); } catch {}
+        c.agents = c.agents || {}; c.agents.defaults = { ...(c.agents.defaults || {}), skipBootstrap: true }; // the engine writes each agent workspace itself (openclaw.sync_agent): no first-run ritual
         c.gateway = { ...(c.gateway || {}), mode: "local", bind: "loopback", port: 18789,
           auth: { ...((c.gateway || {}).auth || {}), mode: "token", token: process.env.OPENCLAW_GATEWAY_TOKEN } };
         const model = process.env.OPENCLAW_MODEL;
@@ -62,7 +63,7 @@ services:
         console.log("openclaw.json ready (gateway local/loopback/token" + (model ? ", model " + model : "") + ")");
     environment:
       OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:?set OPENCLAW_GATEWAY_TOKEN in .env}
-      OPENCLAW_MODEL: ${OPENCLAW_MODEL:-deepseek/deepseek-chat}
+      OPENCLAW_MODEL: ${OPENCLAW_MODEL:-openrouter/deepseek/deepseek-v4-flash}
     volumes:
       - openclaw-data:/home/node/.openclaw
     logging: *logging
@@ -79,7 +80,6 @@ services:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
     depends_on:
       openclaw-init:
         condition: service_completed_successfully
@@ -122,8 +122,9 @@ services:
       OPENCLAW_GATEWAY_URL: ws://127.0.0.1:18789
       OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}
       OPENCLAW_TURN_TIMEOUT_MS: ${OPENCLAW_TURN_TIMEOUT_MS:-90000}
-      OPENCLAW_MANAGE_AGENTS: ${OPENCLAW_MANAGE_AGENTS:-0}
+      OPENCLAW_MANAGE_AGENTS: ${OPENCLAW_MANAGE_AGENTS:-1}
       OPENCLAW_CONFIG_DIR: /openclaw-state
+      OPENCLAW_GATEWAY_STATE_DIR: /home/node/.openclaw
       N8N_DEFAULT_WEBHOOK_URL: ${N8N_DEFAULT_WEBHOOK_URL:-}
       N8N_ALLOWED_HOSTS: ${N8N_ALLOWED_HOSTS:-n8n}
     volumes:

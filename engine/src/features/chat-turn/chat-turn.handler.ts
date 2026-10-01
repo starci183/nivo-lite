@@ -6,6 +6,7 @@ import { GatewayClient } from "../../platform/openclaw/gateway.client";
 import { OPENCLAW_OPTIONS, type OpenclawOptions } from "../../platform/openclaw/openclaw.config";
 import { PermanentJobError, RetryJobError, type EngineJob, type JobHandler, type JobResult } from "../../platform/queue/queue.types";
 import { ToolTokenService } from "../../platform/tools/tool-token.service";
+import { AgentSyncService } from "../agent-sync/agent-sync.service";
 import { TOOL_MANIFEST } from "../tools/tool-manifest";
 
 /** What the app returns for /api/engine/context: everything one turn needs, already filtered for the customer audience. */
@@ -16,6 +17,9 @@ type TurnContext = {
   readonly customer_message: string;
   readonly turns: ReadonlyArray<{ readonly role: string; readonly body: string }>;
   readonly system: string;
+  /** The app's view of the agent's OpenClaw copy: false = none yet (or the last sync failed); "slim" mode = only dynamic data is in `system`. */
+  readonly synced?: boolean;
+  readonly mode?: "slim" | "full";
 };
 
 type CallbackResult = { readonly applied: boolean; readonly fallback: boolean; readonly duplicate: boolean };
@@ -37,6 +41,7 @@ export class ChatTurnHandler implements JobHandler {
     private readonly nivo: NivoClient,
     private readonly gateway: GatewayClient,
     private readonly agents: AgentRegistry,
+    private readonly sync: AgentSyncService,
     private readonly tokens: ToolTokenService,
     @Inject(HTTP_OPTIONS) private readonly http: HttpOptions,
     @Inject(OPENCLAW_OPTIONS) private readonly openclaw: OpenclawOptions,
@@ -47,6 +52,16 @@ export class ChatTurnHandler implements JobHandler {
     let context: TurnContext;
     try {
       context = await this.nivo.call<TurnContext>("/api/engine/context", { job_id: job.id }, signal);
+      // The agent has no OpenClaw copy yet (first turn after switching processor, a fresh VPS): build it now, then ask for the slim context.
+      if (this.gateway.enabled && this.openclaw.manageAgents && (context.synced === false || !this.agents.has(agentIdFor(job.workspace_id, context.module)))) {
+        try {
+          await this.sync.sync(job, signal);
+          context = await this.nivo.call<TurnContext>("/api/engine/context", { job_id: job.id }, signal);
+        } catch (e) {
+          if (signal.aborted) throw e;
+          this.log.warn(`job ${job.id}: inline agent sync failed (${e instanceof Error ? e.message : String(e)}); the turn runs on the full context`);
+        }
+      }
     } catch (e) {
       throw this.classify(e);
     }
@@ -60,7 +75,6 @@ export class ChatTurnHandler implements JobHandler {
     if (!this.gateway.enabled) {
       reason = "openclaw_not_configured";
     } else {
-      this.agents.ensure(agentId);
       const token = this.tokens.mint({ jobId: job.id, workspaceId: job.workspace_id, conversationId: context.conversation_id }, Math.ceil(this.openclaw.turnTimeoutMs / 1000) + 60);
       try {
         proposed = await this.gateway.runTurn({ agentId, sessionKey, message: this.compose(context, token), idempotencyKey: `nivo-${job.id}-${job.attempts}`, timeoutMs: this.openclaw.turnTimeoutMs }, signal);
@@ -76,7 +90,7 @@ export class ChatTurnHandler implements JobHandler {
     try {
       const body = proposed !== null ? { job_id: job.id, op: "chat.reply", text: proposed } : { job_id: job.id, op: "chat.fallback", reason: reason.slice(0, 200) };
       const result = await this.nivo.call<CallbackResult>("/api/engine/callback", body, signal);
-      return { path: proposed !== null ? "openclaw" : "direct_fallback", ...(proposed === null ? { reason } : {}), agent_id: agentId, ...result };
+      return { path: proposed !== null ? "openclaw" : "direct_fallback", ...(proposed === null ? { reason } : {}), agent_id: agentId, context_mode: context.mode ?? "full", ...result };
     } catch (e) {
       throw this.classify(e);
     }

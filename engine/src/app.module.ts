@@ -1,4 +1,6 @@
 import { DynamicModule, Module } from "@nestjs/common";
+import { AgentSyncHandler } from "./features/agent-sync/agent-sync.handler";
+import { AgentSyncService } from "./features/agent-sync/agent-sync.service";
 import { ChatTurnHandler } from "./features/chat-turn/chat-turn.handler";
 import { ConnectionHealthHandler } from "./features/connection-health/connection-health.handler";
 import { HealthController } from "./features/health/health.controller";
@@ -26,7 +28,7 @@ export type AppOptions = {
 };
 
 /**
- * Composition root. The worker loop, the three job handlers (chat.turn, connection.health, n8n.emit), the tool bridge and the health
+ * Composition root. The worker loop, the four job handlers (chat.turn, connection.health, n8n.emit, openclaw.sync_agent), the tool bridge and the health
  * endpoints are composed here; every capability receives its typed options from main.ts, and only main.ts reads the environment.
  */
 @Module({})
@@ -39,10 +41,12 @@ export class AppModule {
       providers: [
         { provide: HTTP_OPTIONS, useValue: o.http },
         { provide: N8N_OPTIONS, useValue: o.n8n },
+        AgentSyncService,
+        AgentSyncHandler,
         ChatTurnHandler,
         ConnectionHealthHandler,
         N8nEmitHandler,
-        { provide: JOB_HANDLERS, useFactory: (...handlers: unknown[]) => handlers, inject: [ChatTurnHandler, ConnectionHealthHandler, N8nEmitHandler] },
+        { provide: JOB_HANDLERS, useFactory: (...handlers: unknown[]) => handlers, inject: [ChatTurnHandler, ConnectionHealthHandler, N8nEmitHandler, AgentSyncHandler] },
         WorkerService,
       ],
     };

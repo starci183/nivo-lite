@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getActiveContext } from "../modules-core";
+import { enqueueWorkspaceSync } from "../engine-queue";
 import { gateEntry, MODULE_GATES, type ContextVersion, type ModuleKey } from "../modules-shared";
 import { getSession } from "../session";
 import { supabaseServer } from "../supabase/server";
@@ -102,13 +103,16 @@ export const addSource = async (input: AddSourceInput): Promise<KnowledgeSource>
   }).select().single();
   fail(error);
   const source = toSource(data as SourceRow);
-  return indexRow(db, source);
+  const indexed = await indexRow(db, source);
+  await enqueueWorkspaceSync(ws);
+  return indexed;
 };
 
 export const deleteSource = async (id: string): Promise<void> => {
   const { db, ws } = await ctx();
   const { error } = await db.from("knowledge_sources").delete().eq("workspace_id", ws).eq("id", id);
   fail(error);
+  await enqueueWorkspaceSync(ws);
 };
 
 /** Change the metadata of a source (title, topic, tags, module, visibility). Content changes go through reindexSource(id, content). */
@@ -123,6 +127,7 @@ export const updateSource = async (id: string, patch: Partial<Pick<AddSourceInpu
   const { data, error } = await db.from("knowledge_sources").update(row).eq("workspace_id", ws).eq("id", id).select().single();
   fail(error);
   if (patch.module !== undefined) await db.from("knowledge_chunks").update({ module: patch.module }).eq("source_id", id);
+  await enqueueWorkspaceSync(ws);
   return toSource(data as SourceRow);
 };
 
@@ -170,7 +175,9 @@ export const reindexSource = async (id: string, content?: string): Promise<Knowl
   const { data, error } = await db.from("knowledge_sources").select("*").eq("workspace_id", ws).eq("id", id).maybeSingle();
   fail(error);
   if (!data) throw new Error("Not found");
-  return indexRow(db, toSource(data as SourceRow));
+  const indexed = await indexRow(db, toSource(data as SourceRow));
+  await enqueueWorkspaceSync(ws);
+  return indexed;
 };
 
 /* ------------------------------------------------------------------ retrieval */
@@ -258,16 +265,18 @@ const activeContextOf = async (db: Db, workspaceId: string, module: ModuleKey, v
  * `audience: "customer"` (customer-facing replies) only ever includes PUBLIC business knowledge; the filter is applied in SQL.
  * Safe when everything is empty: the result is then a short note that no knowledge is available. Pass `db` from a webhook (no session).
  */
-export const buildAgentContext = async (a: { workspaceId: string; module: ModuleKey; query: string; audience?: Audience; db?: Db; limit?: number }): Promise<{ system: string; citations: Array<Citation> }> => {
+export const buildAgentContext = async (a: { workspaceId: string; module: ModuleKey; query: string; audience?: Audience; db?: Db; limit?: number; scope?: "full" | "dynamic" }): Promise<{ system: string; citations: Array<Citation> }> => {
   const audience: Audience = a.audience ?? "internal";
   const viaSession = !a.db;
   const db = (a.db ?? ((await supabaseServer()) as unknown as Db));
+  // "dynamic" = only what changes per question (retrieved passages): the base rules and the active context version already live in the agent's synced OpenClaw workspace.
+  const dynamicOnly = a.scope === "dynamic";
   const citations: Array<Citation> = [];
   const parts: Array<string> = [];
   try {
     const [base, version, passages] = await Promise.all([
-      nivoBase(db, a.module, NIVO_BASE_KINDS),
-      activeContextOf(db, a.workspaceId, a.module, viaSession).catch(() => null),
+      dynamicOnly ? Promise.resolve([] as Array<NivoItem>) : nivoBase(db, a.module, NIVO_BASE_KINDS),
+      dynamicOnly ? Promise.resolve(null) : activeContextOf(db, a.workspaceId, a.module, viaSession).catch(() => null),
       matchWith(db, { workspaceId: a.workspaceId, module: a.module, query: a.query, limit: a.limit ?? 8, audience }),
     ]);
 

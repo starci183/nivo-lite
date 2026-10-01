@@ -5,6 +5,7 @@ import { getLocale } from "@/i18n/server";
 import { translator, type Locale } from "@/i18n/core";
 import { moduleSetup } from "@/i18n/dict/moduleSetup";
 import { modulesCore } from "@/i18n/dict/modulesCore";
+import { enqueueAgentSync } from "./engine-queue";
 import { mergeSetupTurn, runSetupTurn } from "./module-setup-ai";
 import {
   INSTALLATION_SELECT, toInstallation, toSession, toVersion, type InstallationRow,
@@ -295,6 +296,8 @@ export const applySetup = async (installationId: string): Promise<Outcome<{ vers
     fail(closed.error);
     await ensureDraftSession(db, ws, installation, locale);
     await logEvent(db, ws, "module.context_applied", member.displayName, `${moduleName(installation.moduleKey, locale)} v${version}`);
+    // The agent's OpenClaw copy (AGENTS.md, SOUL.md, knowledge/) follows the new active version (no-op unless the module runs on OpenClaw).
+    await enqueueAgentSync(installationId);
     refresh();
     return { version };
   });
@@ -312,6 +315,7 @@ export const renameModule = async (installationId: string, name: string): Promis
     if (!installation.agentId) throw new Error("Not found");
     const upd = await db.from("agents").update({ name: clean }).eq("id", installation.agentId);
     fail(upd.error);
+    await enqueueAgentSync(installationId);
     refresh();
     return loadInstallation(db, installationId);
   });

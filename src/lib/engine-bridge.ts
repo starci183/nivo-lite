@@ -11,6 +11,7 @@ import { loadAuthority, runWork, type EngineCtx } from "./engine";
 import { drainAfter } from "./flow-ctx";
 import { buildAgentContext } from "./knowledge/index";
 import { knowledgeBrief } from "./knowledge/runtime";
+import { buildAgentBundle, installationOfJob, REPLY_CONTRACT } from "./engine-sync";
 import { escalateToStaff } from "./staff-relay";
 import type { Agent, AgentConversation, AgentMessage } from "./types";
 
@@ -36,19 +37,6 @@ const payloadId = (job: EngineJob, key: string): string => {
 
 /* ------------------------------------------------------------------ context */
 
-/** The reply contract the model is held to. Mirrors the one inline customerChat uses (deepseek.ts), so both processors answer in one shape. */
-const REPLY_CONTRACT = `You are talking to a CUSTOMER on the company's chat (website or Telegram). Reply in the customer's language, max 80 words.
-When the customer has shared their need AND their name (company, phone or email if possible), set "lead" (otherwise null).
-If the customer asks for a price, discount, deadline or any commitment that is not clearly allowed by the business knowledge and authority, or you are not sure of the answer:
-set "needs_human": true, "reason": "over_authority" (commitment or price) or "unclear_outcome" (unsure), put in "proposed_answer" ONLY facts found in the business knowledge (never invent a discount, gift, price or policy; if the knowledge has no answer set "proposed_answer": null), written as the FINAL message to the customer, as if the owner has already approved it (warm, concrete, no mention of approval, owner or internal checks), and make "reply" answer what you are allowed to and say politely that the team will confirm the rest shortly: in "reply" never state the discount, gift or commitment itself.
-Asking to be contacted, called back or advised, sharing a need or contact details, and general questions answered by the business knowledge are ROUTINE: capture the lead and answer yourself with "needs_human": false.
-Otherwise "needs_human": false, "reason": null, "proposed_answer": null.
-ORDER: judge ONLY the customer's latest message. When it clearly commits to buy an item whose price is WRITTEN in the business knowledge, set "order": {"items": the item name as written, "amount_vnd": the total price in VND as an integer copied from the knowledge}. In "reply" thank them, repeat the item and price, and say the payment details follow; do not say it is paid. If the item or its price is not in the knowledge: "order": null, "needs_human": true, "reason": "over_authority". Otherwise "order": null.
-PAYMENT CLAIM: when the customer says they have already paid or transferred the money, set "payment_claim": true, "needs_human": false, and in "reply" thank them and say the shop will check the transfer and confirm shortly. Never say the payment is received. Otherwise "payment_claim": false.
-Your FINAL message must be ONLY this JSON object, nothing else:
-{"reply": string, "lead": null | {"contact_name","company","need","phone","email"}, "needs_human": boolean, "reason": "over_authority"|"unclear_outcome"|null, "proposed_answer": string|null, "order": null | {"items": string, "amount_vnd": integer}, "payment_claim": boolean}
-Your reply is only a PROPOSAL: NIVO checks it against the owner's authority before anything reaches the customer.`;
-
 const HISTORY_TURNS = 20;
 
 /** Everything the engine needs to run one chat.turn: the system context (authority, approved knowledge, PUBLIC business knowledge only) and the transcript. */
@@ -60,12 +48,45 @@ export const chatTurnContext = async (db: SupabaseClient, job: EngineJob) => {
   const history = ((await db.from("agent_messages").select("*").eq("conversation_id", conv.id).order("created_at")).data ?? []) as Array<AgentMessage>;
   const turns = history.filter((m) => m.role !== "system").slice(-HISTORY_TURNS).map((m) => ({ role: m.role === "user" ? "user" : "agent", body: m.body }));
   const c = ctxOf(db, ws);
-  const brief = ai.authorityBrief(await loadAuthority(c)) + (await knowledgeBrief(c, agent.module, mine.body, "customer"));
-  const persona = `You are ${agent.name} (@${agent.handle}), role: ${agent.role}.\nInstructions: ${agent.instructions}\nBusiness knowledge: ${agent.knowledge || "(none)"}\nApproval rule: ${agent.approval_rule || "Commitments need human approval."}`;
-  return {
+  // Is the agent's OpenClaw copy (AGENTS.md, SOUL.md, knowledge/) current? Then only the dynamic data goes into the turn.
+  const inst = await db.from("module_installations").select("id, active_context_version_id").eq("workspace_id", ws).eq("agent_id", agent.id).maybeSingle();
+  const instRow = inst.data as { id: string; active_context_version_id: string | null } | null;
+  const activeVersion = instRow?.active_context_version_id
+    ? ((await db.from("module_context_versions").select("version").eq("id", instRow.active_context_version_id).maybeSingle()).data as { version: number } | null)?.version ?? null
+    : null;
+  const syncRow = instRow ? ((await db.from("openclaw_agent_sync").select("status, context_version, synced_at").eq("installation_id", instRow.id).maybeSingle()).data as { status: string; context_version: number | null; synced_at: string | null } | null) : null;
+  const synced = syncRow !== null && syncRow.status === "ok" && syncRow.synced_at !== null;
+  const slim = synced && syncRow.context_version === activeVersion;
+  const authority = ai.authorityBrief(await loadAuthority(c));
+  const base = {
     conversation_id: conv.id, message_id: mine.id, module: agent.module, agent_name: agent.name, handled_by: conv.handled_by ?? null,
-    customer_message: mine.body, turns,
-    system: `You work inside NIVO OS, a responsibility operating system for founder-led service SMEs in Vietnam. Act within the authority the owner granted; ask when data is missing, the action is over the limit, or the outcome is unclear.\n${persona}${brief}\n\n${REPLY_CONTRACT}`,
+    customer_message: mine.body, turns, installation_id: instRow?.id ?? null, synced, mode: slim ? "slim" : "full",
+  };
+  if (slim) {
+    // Only what changes per turn: the owner's current authority and the passages closest to this question (PUBLIC only). Rules, persona,
+    // active context version, tone and the reply contract are in the agent's synced workspace files.
+    const { system: passages } = await buildAgentContext({ workspaceId: ws, module: agent.module, query: mine.body, audience: "customer", db, scope: "dynamic" });
+    return {
+      ...base,
+      system: `Your persona, NIVO rules, the approved context, the tone and the reply contract are in your workspace (AGENTS.md, SOUL.md): follow them.${authority}${passages ? `
+
+[RETRIEVED PASSAGES]
+${passages}` : ""}
+
+Answer with ONLY the JSON object of the reply contract in AGENTS.md.`,
+    };
+  }
+  const brief = authority + (await knowledgeBrief(c, agent.module, mine.body, "customer"));
+  const persona = `You are ${agent.name} (@${agent.handle}), role: ${agent.role}.
+Instructions: ${agent.instructions}
+Business knowledge: ${agent.knowledge || "(none)"}
+Approval rule: ${agent.approval_rule || "Commitments need human approval."}`;
+  return {
+    ...base,
+    system: `You work inside NIVO OS, a responsibility operating system for founder-led service SMEs in Vietnam. Act within the authority the owner granted; ask when data is missing, the action is over the limit, or the outcome is unclear.
+${persona}${brief}
+
+${REPLY_CONTRACT}`,
   };
 };
 
@@ -221,3 +242,8 @@ export const runEngineTool = async (db: SupabaseClient, job: EngineJob, tool: To
   await trace("Conversation handed to a person", reason || undefined);
   return { status: "handed_to_person" };
 };
+
+/* ------------------------------------------------------------------ the OpenClaw copy of an agent */
+
+/** The files the engine writes into the agent's OpenClaw workspace, built only from Supabase. Callable from a sync job, or from a chat.turn job whose agent has no copy yet. */
+export const syncBundle = async (db: SupabaseClient, job: EngineJob) => buildAgentBundle(db, job.workspace_id, await installationOfJob(db, job));
