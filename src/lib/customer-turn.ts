@@ -5,6 +5,7 @@ import { governance } from "@/i18n/dict/governance";
 import * as ai from "./deepseek";
 import { ingest } from "./core";
 import { formatVnd, latestInvoiceFor, loadAuthority, runWork, startOrderWork, startPaymentClaim, type EngineCtx } from "./engine";
+import { enqueueChatTurn, processorOf } from "./engine-queue";
 import { drainAfter } from "./flow-ctx";
 import { isKnownPrice } from "./knowledge";
 import { knowledgeBrief } from "./knowledge/runtime";
@@ -47,17 +48,64 @@ export const customerTurn = async (
 ): Promise<{ reply: AgentMessage; capturedLeadId: string | null; changed: boolean }> => {
   const channel = opts.channel ?? channelOf(conv);
   const { db: supabase, ws } = c;
-  const t = translator(system, c.locale);
-  const gov = translator(governance, c.locale) as (k: string) => string;
   const mine = must(await supabase.from("agent_messages").insert({ workspace_id: ws, conversation_id: conv.id, role: "user", body }).select().single<AgentMessage>());
   if (conv.handled_by) return { reply: mine, capturedLeadId: null, changed: true };
   const eventId = opts.eventId?.trim() || mine.id;
-  const history = ((await supabase.from("agent_messages").select("*").eq("conversation_id", conv.id).order("created_at")).data ?? []) as AgentMessage[];
-  const turns: ai.ChatTurn[] = history.filter((m) => m.role !== "system").map((m) => ({ role: m.role === "user" ? "user" : "agent", body: m.body }));
-  // Customer-facing: NIVO base rules + approved module context + PUBLIC business knowledge only (filtered in SQL).
-  const brief = ai.authorityBrief(await loadAuthority(c)) + (await knowledgeBrief(c, agent.module, body, "customer"));
+  const turns = await loadTurns(c, conv.id);
+  // A module whose processor is OpenClaw hands the model step to the engine (a worker on the VPS). The engine only PROPOSES the
+  // reply: it comes back through completeQueuedTurn and passes the same gate below. Without a queue (engine offline, not configured)
+  // the turn is answered right here, exactly as for the default processor.
+  if ((await processorOf(c.db, ws, agent.module)) === "openclaw" && (await enqueueChatTurn(ws, { conversationId: conv.id, messageId: mine.id, eventId, agentId: agent.id, channel: channel.key }))) {
+    return { reply: mine, capturedLeadId: null, changed: false };
+  }
+  const out = await directReply(c, agent, turns, body);
+  return applyCustomerOut(c, conv, agent, { body, mine, turns, eventId, channel, out });
+};
 
-  const out = await ai.customerChat(agentInput(agent), turns, brief); // the one inline LLM call of this request
+/** The name under which the engine acts in evidence and in conversation hand-offs. */
+export const ENGINE_ACTOR = "OpenClaw";
+
+/** The conversation as chat turns (system lines left out). */
+const loadTurns = async (c: EngineCtx, conversationId: string): Promise<Array<ai.ChatTurn>> => {
+  const history = ((await c.db.from("agent_messages").select("*").eq("conversation_id", conversationId).order("created_at")).data ?? []) as Array<AgentMessage>;
+  return history.filter((m) => m.role !== "system").map((m) => ({ role: m.role === "user" ? "user" : "agent", body: m.body }));
+};
+
+/** The default processor: one inline model call. Customer-facing: NIVO base rules + approved module context + PUBLIC business knowledge only (filtered in SQL). */
+const directReply = async (c: EngineCtx, agent: Agent, turns: Array<ai.ChatTurn>, body: string): Promise<ai.CustomerChatOut> => {
+  const brief = ai.authorityBrief(await loadAuthority(c)) + (await knowledgeBrief(c, agent.module, body, "customer"));
+  return ai.customerChat(agentInput(agent), turns, brief); // the one inline LLM call of this request
+};
+
+/**
+ * The engine's answer (or its fallback) to a queued customer turn. `proposed` is what OpenClaw suggested; null means the engine
+ * could not get an answer (gateway down or timed out) and the app answers with the default processor, so the customer is never
+ * left waiting. Either way the result goes through applyCustomerOut: authority gate, evidence, channel delivery. A conversation a
+ * person has taken over in the meantime gets no AI reply.
+ */
+export const completeQueuedTurn = async (
+  c: EngineCtx, p: { readonly conversationId: string; readonly messageId: string; readonly eventId: string; readonly proposed: ai.CustomerChatOut | null },
+): Promise<{ applied: boolean; fallback: boolean }> => {
+  const conv = must(await c.db.from("agent_conversations").select("*").eq("id", p.conversationId).eq("workspace_id", c.ws).single<AgentConversation>());
+  // A person who took over meanwhile owns the conversation. (The engine's own hand-off still delivers the turn it was made in.)
+  if (conv.handled_by && conv.handled_by !== ENGINE_ACTOR) return { applied: false, fallback: false };
+  const agent = must(await c.db.from("agents").select("*").eq("id", conv.agent_id).eq("workspace_id", c.ws).single<Agent>());
+  const mine = must(await c.db.from("agent_messages").select("*").eq("id", p.messageId).eq("conversation_id", conv.id).single<AgentMessage>());
+  const turns = await loadTurns(c, conv.id);
+  const out = p.proposed ?? (await directReply(c, agent, turns, mine.body));
+  await applyCustomerOut(c, conv, agent, { body: mine.body, mine, turns, eventId: p.eventId, channel: channelOf(conv), out });
+  return { applied: true, fallback: p.proposed === null };
+};
+
+/** Everything after the model step: the reply, the lead hand-off, the order, the payment claim and the waiting item, all through the gate. */
+const applyCustomerOut = async (
+  c: EngineCtx, conv: AgentConversation, agent: Agent,
+  a: { readonly body: string; readonly mine: AgentMessage; readonly turns: Array<ai.ChatTurn>; readonly eventId: string; readonly channel: CustomerChannel; readonly out: ai.CustomerChatOut },
+): Promise<{ reply: AgentMessage; capturedLeadId: string | null; changed: boolean }> => {
+  const { body, mine, turns, eventId, channel, out } = a;
+  const { db: supabase, ws } = c;
+  const t = translator(system, c.locale);
+  const gov = translator(governance, c.locale) as (k: string) => string;
   let replyText = out.reply;
   let needsHuman = out.needs_human;
   let reason = out.reason;

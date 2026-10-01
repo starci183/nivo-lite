@@ -10,6 +10,7 @@ import { renameModule, setModuleLive, setOperatingMode } from "@/lib/module-acti
 import type { Installation, OperatingMode } from "@/lib/modules-shared";
 import { AgentConnectionsCard, type ConnectionOption } from "./AgentConnectionsCard";
 import { GRID_CLASS_NAME, ROW_CLASS_NAME, STACK_CLASS_NAME } from "./classNames";
+import { ProcessorCard } from "./ProcessorCard";
 
 type SettingsScreenProps = {
   readonly installation: Installation;
@@ -103,6 +104,8 @@ export const SettingsScreen = ({ installation, canEdit, connectionOptions, selec
         {installation.agentId ? (
           <AgentConnectionsCard agentId={installation.agentId} options={connectionOptions} selected={selectedConnections} canEdit={canEdit} />
         ) : null}
+
+        {installation.moduleKey === "chatbot" ? <ProcessorCard installation={installation} canEdit={canEdit} /> : null}
 
         {note !== undefined ? <Alert title={note.ok ? t("saved") : t("notSaved")} description={note.ok ? undefined : note.text} tone={note.ok ? "affirmative" : "negative"} /> : null}
       </div>

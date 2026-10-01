@@ -11,3 +11,6 @@ supabase/.branches/
 .accounts-contract-ready
 .modules-contract-ready
 *.log
+!.env.example
+!**/.env.example
+engine/dist/

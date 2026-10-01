@@ -1,0 +1,34 @@
+# Caddy gets and renews the TLS certificates (Let's Encrypt) for both names. DNS A/AAAA records for n8n.<domain> and
+# engine.<domain> must point at the VPS BEFORE the first start, and ports 80/443 must be reachable (the HTTP-01 challenge).
+{
+	email {$ACME_EMAIL}
+}
+
+# n8n: the editor and its webhooks. N8N_ALLOWED_CIDRS (default: everyone) can restrict the editor to your office/VPN addresses.
+# Note that n8n production webhooks (/webhook/*) are called by third parties: if you restrict the CIDRs, keep /webhook/* open.
+n8n.{$DOMAIN} {
+	encode zstd gzip
+	@webhooks path /webhook/* /webhook-test/*
+	@editor_allowed remote_ip {$N8N_ALLOWED_CIDRS}
+	handle @webhooks {
+		reverse_proxy n8n:5678
+	}
+	handle @editor_allowed {
+		reverse_proxy n8n:5678
+	}
+	handle {
+		respond "Forbidden" 403
+	}
+}
+
+# engine: only the health probes are public (uptime monitors). The tool bridge (/tools/*) is internal and never published.
+# The engine shares the network namespace of the openclaw container, so it is reached as openclaw:8787.
+engine.{$DOMAIN} {
+	@probes path /healthz /readyz
+	handle @probes {
+		reverse_proxy openclaw:8787
+	}
+	handle {
+		respond "Not found" 404
+	}
+}
