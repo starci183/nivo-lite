@@ -1,0 +1,43 @@
+{
+  "name": "nivo-lite",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/with-secrets.mjs next dev -p 3090",
+    "build": "next build",
+    "start": "node scripts/with-secrets.mjs next start -p 3090",
+    "typecheck": "tsc --noEmit",
+    "db:start": "node scripts/with-secrets.mjs supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "node scripts/with-secrets.mjs supabase db reset",
+    "db:status": "supabase status"
+  },
+  "dependencies": {
+    "@dicebear/core": "^10.4.0",
+    "@dicebear/styles": "^10.4.0",
+    "@heroicons/react": "^2.2.0",
+    "@heroui/react": "3.2.6",
+    "@heroui/styles": "3.2.6",
+    "@internationalized/date": "^3.12.4",
+    "@starci/grammar": "0.5.4",
+    "@supabase/ssr": "^0.7.0",
+    "@supabase/supabase-js": "^2.57.0",
+    "framer-motion": "^13.1.0",
+    "next": "16.1.6",
+    "next-intl": "^4.13.5",
+    "next-themes": "^0.4.6",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "supabase": "^2.40.0",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "playwright": "^1.51.1"
+  }
+}

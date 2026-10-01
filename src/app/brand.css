@@ -1,0 +1,178 @@
+/*
+ * NIVO Brand System V1.1 (25/09/2026) applied over the @nivo/ui family.
+ * Unlayered, so it wins over `@layer nivo-grammar` without touching the shared package.
+ * Light theme only (the brand has no verified product dark mode).
+ * Semantic mapping: surface-canvas / surface-subtle / text-primary / text-secondary / text-muted /
+ * border-decorative / border-control / action-primary-* / focus-ring / status-* (TO VERIFY values).
+ */
+:root,
+.grammar-common-root[data-grammar-family="nivo"] {
+  /* Core brand */
+  --nivo-accent: #e11d48; /* brand-crimson: action-primary-bg, link, focus-ring */
+  --nivo-accent-foreground: #ffffff; /* action-primary-fg */
+  --nivo-accent-soft: #ffe4e6; /* brand-blush: selection-surface */
+  --nivo-brand-ink: #0f172a; /* signature-ink */
+
+  /* Surfaces: light-first, neutral-dominant, border over elevation */
+  --nivo-canvas: #f8fafc; /* neutral-surface-light */
+  --nivo-surface: #ffffff;
+  --nivo-surface-secondary: #f8fafc;
+  --nivo-surface-tertiary: #f1f5f9;
+  --nivo-overlay: #ffffff;
+  --nivo-default: #f1f5f9;
+  --nivo-default-foreground: #0f172a;
+  --nivo-segment: #ffffff;
+
+  /* Text */
+  --nivo-foreground: #0f172a; /* text-primary */
+  --nivo-muted: #64748b; /* text-muted (neutral-control-light) */
+
+  /* Functional status (TO VERIFY in the brand system; distinct from crimson) */
+  --nivo-success: #166534;
+  --nivo-success-foreground: #ffffff;
+  --nivo-warning: #92400e;
+  --nivo-warning-foreground: #ffffff;
+  --nivo-danger: #b91c1c;
+  --nivo-danger-foreground: #ffffff;
+  --nivo-info: #1d4ed8;
+  --nivo-info-foreground: #ffffff;
+
+  /* Lines */
+  --nivo-border: #e2e8f0; /* border-decorative */
+  --nivo-separator: #e2e8f0;
+  --nivo-scrollbar: #cbd5e1;
+  --nivo-scrim: rgb(15 23 42 / 48%);
+
+  /* Fields: border-control */
+  --nivo-field-background: #ffffff;
+  --nivo-field-foreground: #0f172a;
+  --nivo-field-placeholder: #64748b;
+
+  /* Radius 8px (radius-md) everywhere; no inflated corners. Elevation = 1px decorative border. */
+  --nivo-surface-shadow: 0 0 0 1px #e2e8f0;
+  --nivo-surface-radius: 0.5rem;
+  --nivo-control-radius: 0.5rem;
+  --nivo-field-radius: 0.5rem;
+}
+
+/* action-primary-hover: brand-burgundy */
+.button--primary:hover:not([data-disabled]),
+.button--primary[data-hovered]:not([data-disabled]) {
+  background-color: #7f1d1d;
+}
+
+/* focus-ring: 2px solid crimson, 2px offset */
+:where(a, button, input, textarea, select, [role="button"], [tabindex]):focus-visible {
+  outline: 2px solid #e11d48;
+  outline-offset: 2px;
+}
+
+/* Logo raster references render crisp on white only (brand rule: light surfaces). */
+.nivo-logo {
+  display: block;
+  height: auto;
+  image-rendering: auto;
+}
+
+/* accent-ai: Signal Coral #FB7185 fill, on-accent-ai ink text (6.63:1). Marks AI-prepared content only. */
+.nivo-ai-chip {
+  display: inline-flex;
+}
+.nivo-ai-chip > * {
+  background-color: #fb7185 !important;
+  color: #0f172a !important;
+  border-color: transparent !important;
+  font-weight: 600;
+}
+
+/*
+ * FIELDS ON A SURFACE ARE SECONDARY (UI-RULEBOOK §E.2: every form control on a Surface uses variant="secondary").
+ * Grammar 0.5.4 exposes `variant` on Input only; Textarea, Select, SearchField, NumberField, DateField and ComboBox
+ * cannot take it, so the same secondary treatment (default fill, no outline) is applied here to every field control
+ * rendered inside a SurfaceCard, a SurfaceListCard or an overlay. Focus keeps the 2px crimson ring.
+ */
+:where([data-grammar-surface-card], [data-grammar-surface-depth], [role="dialog"], .starci-core-surface-card)
+  :is(
+    .starci-core-textarea-control,
+    .starci-core-select-trigger,
+    .starci-core-search-field-group,
+    .starci-core-number-field-group,
+    .starci-core-date-group,
+    .starci-core-combo-box-group,
+    .starci-core-input-control input
+  ) {
+  background-color: #f1f5f9;
+  border-color: transparent;
+  box-shadow: none;
+}
+:where([data-grammar-surface-card], [data-grammar-surface-depth], [role="dialog"], .starci-core-surface-card)
+  :is(.starci-core-textarea-control, .starci-core-select-trigger, .starci-core-search-field-group, .starci-core-input-control input):hover {
+  background-color: #e2e8f0;
+}
+
+/* VI | EN switch: neutral segmented control, selected = ink on white (not colour alone: aria-checked + weight). */
+.nivo-locale-switch {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 0.5rem;
+  background: #f1f5f9;
+}
+.nivo-locale-switch button {
+  min-width: 2.25rem;
+  height: 2rem;
+  padding: 0 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #64748b;
+}
+.nivo-locale-switch button[aria-checked="true"] {
+  background: #ffffff;
+  color: #0f172a;
+  font-weight: 700;
+  box-shadow: 0 0 0 1px #e2e8f0;
+}
+
+/* Avatars: people = initials circle (Google-style) or photo; AI agents = rounded square with module glyph. */
+.nivo-avatar {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  color: #ffffff;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+.nivo-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  object-fit: cover;
+}
+.nivo-agent-avatar {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 28%;
+  background: #ffe4e6;
+  color: #e11d48;
+}
+.nivo-avatar-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 30%;
+  height: 30%;
+  min-width: 8px;
+  min-height: 8px;
+  border-radius: 9999px;
+  background: #16a34a;
+  box-shadow: 0 0 0 2px #ffffff;
+}

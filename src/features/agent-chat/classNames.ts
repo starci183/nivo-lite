@@ -1,0 +1,35 @@
+import { cn } from "@heroui/react";
+
+/** The chat IS the page: fills the viewport under the console chrome, nothing scrolls except the thread. */
+export const PAGE_CLASS_NAME = cn("flex", "h-[calc(100dvh-7.5rem)]", "min-h-96", "min-w-0", "overflow-hidden", "rounded-lg", "border", "border-separator", "bg-surface");
+export const LIST_COLUMN_CLASS_NAME = cn("flex", "min-h-0", "w-72", "shrink-0", "flex-col", "border-e", "border-separator", "bg-surface-secondary", "max-lg:hidden");
+export const LIST_COLUMN_OPEN_CLASS_NAME = cn("flex", "min-h-0", "w-full", "flex-col", "bg-surface-secondary", "lg:hidden");
+export const LIST_HEAD_CLASS_NAME = cn("flex", "items-center", "justify-between", "gap-2", "border-b", "border-separator", "p-3");
+export const LIST_SCROLL_CLASS_NAME = cn("flex", "min-h-0", "flex-1", "flex-col", "gap-1", "overflow-y-auto", "p-2");
+export const LIST_ITEM_CLASS_NAME = cn("flex", "min-h-14", "w-full", "min-w-0", "items-center", "gap-3", "rounded-lg", "p-2", "text-start", "hover:bg-surface-tertiary", "focus-visible:outline-2", "focus-visible:outline-focus");
+export const LIST_ITEM_ACTIVE_CLASS_NAME = cn("bg-accent-soft");
+export const LIST_ITEM_COPY_CLASS_NAME = cn("flex", "min-w-0", "flex-1", "flex-col");
+export const MAIN_CLASS_NAME = cn("flex", "min-h-0", "min-w-0", "flex-1", "flex-col", "max-lg:data-[list=open]:hidden");
+export const HEADER_CLASS_NAME = cn("flex", "min-w-0", "items-center", "gap-3", "border-b", "border-separator", "px-3", "py-3");
+export const HEADER_COPY_CLASS_NAME = cn("flex", "min-w-0", "flex-1", "flex-col");
+export const HEADER_ACTIONS_CLASS_NAME = cn("flex", "shrink-0", "items-center", "gap-2");
+export const CHANNEL_BAR_CLASS_NAME = cn("border-b", "border-separator", "px-3");
+export const THREAD_CLASS_NAME = cn("flex", "min-h-0", "flex-1", "flex-col", "gap-3", "overflow-y-auto", "bg-background", "p-4");
+export const MESSAGE_ROW_CLASS_NAME = cn("flex", "min-w-0", "items-end", "gap-2");
+export const MESSAGE_ROW_USER_CLASS_NAME = cn("flex", "min-w-0", "items-end", "justify-end", "gap-2");
+export const BUBBLE_STACK_CLASS_NAME = cn("flex", "min-w-0", "max-w-4/5", "flex-col", "gap-1");
+export const BUBBLE_STACK_USER_CLASS_NAME = cn("flex", "min-w-0", "max-w-4/5", "flex-col", "items-end", "gap-1");
+export const BUBBLE_CLASS_NAME = cn("whitespace-pre-wrap", "break-words", "rounded-2xl", "rounded-es-sm", "bg-surface", "border", "border-separator", "px-4", "py-2");
+export const BUBBLE_USER_CLASS_NAME = cn("whitespace-pre-wrap", "break-words", "rounded-2xl", "rounded-ee-sm", "bg-accent-soft", "px-4", "py-2");
+export const NOTICE_ROW_CLASS_NAME = cn("flex", "min-w-0", "justify-center");
+export const EMPTY_CLASS_NAME = cn("m-auto", "flex", "max-w-md", "flex-col", "items-center", "gap-3", "py-6", "text-center");
+export const EMPTY_CHIPS_CLASS_NAME = cn("flex", "flex-wrap", "justify-center", "gap-2");
+export const EMPTY_FIELD_CLASS_NAME = cn("w-full", "text-start");
+export const STEP_LIST_CLASS_NAME = cn("flex", "w-full", "flex-col", "gap-2", "text-start");
+export const STEP_ROW_CLASS_NAME = cn("flex", "items-start", "gap-3");
+export const COMPOSER_CLASS_NAME = cn("flex", "shrink-0", "flex-col", "gap-2", "border-t", "border-separator", "bg-surface", "p-3");
+export const CHIPS_CLASS_NAME = cn("flex", "min-w-0", "items-center", "gap-2", "overflow-x-auto");
+export const COMPOSER_ROW_CLASS_NAME = cn("flex", "min-w-0", "items-center", "gap-2");
+export const COMPOSER_INPUT_CLASS_NAME = cn("h-11", "min-w-0", "flex-1", "rounded-full", "border", "border-separator", "bg-surface-secondary", "px-4", "text-foreground", "placeholder:text-muted", "focus-visible:outline-2", "focus-visible:outline-focus");
+export const BACK_CLASS_NAME = cn("max-sm:hidden");
+export const NOTICE_LINK_CLASS_NAME = cn("underline", "text-foreground", "focus-visible:outline-2", "focus-visible:outline-focus");

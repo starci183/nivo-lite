@@ -1,0 +1,86 @@
+@layer nivo-ui {
+    .nivo-brand__ink {
+        fill: var(--nivo-brand-ink);
+    }
+
+    .nivo-brand__accent {
+        fill: none;
+        stroke: var(--nivo-brand-accent);
+        stroke-linecap: butt;
+        stroke-width: 18;
+    }
+
+    .theme-switch .switch__control {
+        width: 4rem !important;
+        height: 2.25rem !important;
+        border-radius: 9999px !important;
+    }
+
+    .theme-switch .switch__thumb {
+        display: flex;
+        width: 1.75rem !important;
+        height: 1.75rem !important;
+        margin-inline-start: 0.25rem !important;
+        align-items: center;
+        justify-content: center;
+        border-radius: 9999px !important;
+    }
+
+    .theme-switch[data-selected="true"] .switch__thumb,
+    .theme-switch[aria-checked="true"] .switch__thumb {
+        margin-inline-start: calc(100% - 1.75rem - 0.25rem) !important;
+    }
+
+    .theme-switch .switch__thumb svg {
+        display: block;
+        width: 1rem;
+        height: 1rem;
+        flex: none;
+    }
+
+    .scroll-viewport {
+        overscroll-behavior: contain;
+        scrollbar-width: none;
+    }
+
+    .scroll-viewport::-webkit-scrollbar {
+        display: none;
+    }
+
+    .collapsible-rail {
+        display: none;
+        color: var(--foreground);
+    }
+
+    .collapsible-rail-control {
+        cursor: pointer;
+        border: 0;
+        border-radius: 9999px;
+        background: transparent;
+        color: var(--foreground);
+    }
+
+    .collapsible-rail-control:hover {
+        background: var(--default);
+    }
+
+    .collapsible-rail-control:focus-visible {
+        outline: 2px solid var(--focus);
+        outline-offset: 2px;
+    }
+
+    .pressable-surface .text-press-label {
+        text-decoration-color: var(--separator-tertiary);
+        text-decoration-thickness: 1.5px;
+    }
+
+    .pressable-surface:has(a:hover) .text-press-label {
+        text-decoration-line: none;
+    }
+
+    @media (min-width: 768px) {
+        .collapsible-rail {
+            display: flex;
+        }
+    }
+}

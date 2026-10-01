@@ -1,0 +1,10 @@
+node_modules/
+.next/
+.netlify/
+.shots/
+*.tsbuildinfo
+next-env.d.ts
+.env*
+!secrets.example.env
+supabase/.temp/
+supabase/.branches/

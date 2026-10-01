@@ -1,0 +1,266 @@
+@layer nivo-grammar {
+    /*
+     * THE NIVO FAMILY'S OWN VALUES.
+     *
+     * Common supplies renderer anatomy, geometry and the universal `--grammar-*` spacing. This file
+     * supplies only family-scoped values and theme bindings - the same division Core keeps, which is
+     * why nivo can stop importing Core entirely.
+     *
+     * WHY EVERY BLOCK CARRIES TWO SELECTORS.
+     *
+     * `.grammar-common-root[data-grammar-family="nivo"]` is the family's real scope. `:root` is here
+     * because HeroUI portals its overlays to `<body>`, beside the app tree rather than below the
+     * family root, and a portalled dialog that resolved none of these variables would render
+     * unstyled. Both selectors carry the SAME family values, so the pair can never disagree - unlike
+     * the arrangement this replaced, where a foreign family's root outranked the app's `:root` and
+     * quietly won.
+     *
+     * Raw `--nivo-*` values change with the theme; the semantic bindings below never do, so they are
+     * declared once.
+     */
+    :root,
+    .grammar-common-root[data-grammar-family="nivo"] {
+        color-scheme: light;
+
+        --nivo-font-interface: ui-sans-serif, system-ui, sans-serif;
+        --nivo-font-console: Open Sans, ui-sans-serif, system-ui, sans-serif;
+
+        --nivo-accent: oklch(57% 0.24 25);
+        --nivo-accent-foreground: oklch(100% 0 0);
+        --nivo-accent-soft: color-mix(in oklab, var(--nivo-accent) 15%, transparent);
+        --nivo-brand-ink: oklch(16% 0.035 255);
+        --nivo-brand-accent: var(--nivo-accent);
+
+        --nivo-canvas: oklch(97.02% 0.0015 354.13);
+        --nivo-surface: oklch(100% 0.0008 354.13);
+        --nivo-surface-secondary: oklch(95.24% 0.0012 354.13);
+        --nivo-surface-tertiary: oklch(93.73% 0.0012 354.13);
+        --nivo-overlay: oklch(100% 0.0004 354.13);
+        --nivo-default: oklch(94% 0.0015 354.13);
+        --nivo-default-foreground: oklch(21.03% 0.0059 354.13);
+        --nivo-segment: oklch(100% 0.0015 354.13);
+        --nivo-foreground: oklch(21.03% 0.0015 354.13);
+        /*
+         * Muted text is small, normal-weight body copy, so it owes the 4.5:1 floor and not the 3:1
+         * large-text one. At 55.17% it computed rgb(115, 113, 114) and measured 4.4527:1 on the
+         * sidebar canvas and 4.2220:1 on the secondary ground - under the floor on BOTH. 53% gives
+         * rgb(109, 107, 108) at 4.86 and 4.61, which clears both with enough headroom to survive the
+         * rounding difference between a browser's oklch conversion and a computed one, and stays
+         * plainly muted against a near-black foreground. Hue and chroma are untouched, so the ramp
+         * keeps its tint. The dark value at the block below is a separate ground and a separate
+         * measurement; this mission audited light only and left it alone.
+         */
+        --nivo-muted: oklch(53% 0.003 354.13);
+
+        --nivo-success: oklch(73.29% 0.1941 162.85);
+        --nivo-success-foreground: oklch(21.03% 0.0059 162.85);
+        --nivo-warning: oklch(78.19% 0.159 84.37);
+        --nivo-warning-foreground: oklch(21.03% 0.0059 84.37);
+        --nivo-danger: var(--nivo-accent);
+        --nivo-danger-foreground: oklch(99.11% 0 0);
+        --nivo-info: oklch(72% 0.17 250);
+        --nivo-info-foreground: oklch(21.03% 0.0059 250);
+
+        --nivo-border: oklch(90% 0.0015 354.13);
+        --nivo-separator: oklch(92% 0.0015 354.13);
+        --nivo-scrollbar: oklch(87.1% 0.0015 354.13);
+        --nivo-scrim: oklch(21.03% 0.0015 354.13 / 48%);
+
+        --nivo-field-background: oklch(100% 0.0008 354.13);
+        --nivo-field-foreground: oklch(21.03% 0.0015 354.13);
+        --nivo-field-placeholder: oklch(55.17% 0.003 354.13);
+
+        --nivo-surface-shadow:
+            0 2px 4px 0 rgba(0, 0, 0, 0.04),
+            0 1px 2px 0 rgba(0, 0, 0, 0.06),
+            0 0 1px 0 rgba(0, 0, 0, 0.06);
+        --nivo-surface-radius: 1.5rem;
+        --nivo-control-radius: 0.5rem;
+        --nivo-field-radius: 0.75rem;
+        --nivo-motion-duration: 150ms;
+        --nivo-motion-easing: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /*
+     * Explicit dark. The class hooks answer next-themes (`attribute="class"`); the family hooks
+     * answer the `theme` prop the provider bridges onto the root. The last two selectors outrank the
+     * light block on the root element itself, which the bare `.dark` on `<html>` could not do.
+     */
+    .dark,
+    [data-theme="dark"],
+    .dark .grammar-common-root[data-grammar-family="nivo"],
+    .grammar-common-root[data-grammar-family="nivo"][data-grammar-theme="dark"] {
+        color-scheme: dark;
+
+        --nivo-brand-ink: oklch(99.11% 0.0015 354.13);
+
+        --nivo-canvas: oklch(12% 0.0015 354.13);
+        --nivo-surface: oklch(21.03% 0.003 354.13);
+        --nivo-surface-secondary: oklch(25.7% 0.0023 354.13);
+        --nivo-surface-tertiary: oklch(27.21% 0.0023 354.13);
+        --nivo-overlay: oklch(21.03% 0.003 354.13);
+        --nivo-default: oklch(27.4% 0.0015 354.13);
+        --nivo-default-foreground: oklch(99.11% 0 0);
+        --nivo-segment: oklch(39.64% 0.0015 354.13);
+        --nivo-foreground: oklch(99.11% 0.0015 354.13);
+        --nivo-muted: oklch(70.5% 0.003 354.13);
+
+        --nivo-warning: oklch(82.03% 0.1392 88.38);
+        --nivo-warning-foreground: oklch(21.03% 0.0059 88.38);
+        --nivo-danger: var(--nivo-accent);
+        --nivo-danger-foreground: oklch(99.11% 0 0);
+
+        --nivo-border: oklch(28% 0.0015 354.13);
+        --nivo-separator: oklch(25% 0.0015 354.13);
+        --nivo-scrollbar: oklch(70.5% 0.0015 354.13);
+
+        --nivo-field-background: oklch(21.03% 0.003 354.13);
+        --nivo-field-foreground: oklch(99.11% 0.0015 354.13);
+        --nivo-field-placeholder: oklch(70.5% 0.003 354.13);
+    }
+
+    /*
+     * The semantic contract. Every role HeroUI and Grammar resolve against points at a `--nivo-*`
+     * value, so a leaf names a role and never a colour, and a theme change moves one raw value
+     * rather than forty bindings. `--accent` resolves HERE and nowhere else: that single line is
+     * what the sign-in page was losing to Core.
+     */
+    :root,
+    .grammar-common-root[data-grammar-family="nivo"] {
+        --accent: var(--nivo-accent);
+        --accent-foreground: var(--nivo-accent-foreground);
+        --accent-soft: var(--nivo-accent-soft);
+        --accent-soft-foreground: var(--nivo-accent);
+        --focus: var(--nivo-accent);
+
+        --background: var(--nivo-canvas);
+        --foreground: var(--nivo-foreground);
+        --surface: var(--nivo-surface);
+        --surface-foreground: var(--nivo-foreground);
+        --surface-secondary: var(--nivo-surface-secondary);
+        --surface-secondary-foreground: var(--nivo-foreground);
+        --surface-tertiary: var(--nivo-surface-tertiary);
+        --surface-tertiary-foreground: var(--nivo-foreground);
+        --surface-shadow: var(--nivo-surface-shadow);
+        --overlay: var(--nivo-overlay);
+        --overlay-foreground: var(--nivo-foreground);
+        --default: var(--nivo-default);
+        --default-foreground: var(--nivo-default-foreground);
+        --segment: var(--nivo-segment);
+        --segment-foreground: var(--nivo-foreground);
+        --muted: var(--nivo-muted);
+        --scrim: var(--nivo-scrim);
+
+        --success: var(--nivo-success);
+        --success-foreground: var(--nivo-success-foreground);
+        --success-soft: color-mix(in oklab, var(--nivo-success) 15%, transparent);
+        --warning: var(--nivo-warning);
+        --warning-foreground: var(--nivo-warning-foreground);
+        --warning-soft: color-mix(in oklab, var(--nivo-warning) 18%, transparent);
+        --danger: var(--nivo-danger);
+        --danger-foreground: var(--nivo-danger-foreground);
+        --danger-soft: color-mix(in oklab, var(--nivo-danger) 15%, transparent);
+        --info: var(--nivo-info);
+        --info-foreground: var(--nivo-info-foreground);
+
+        --border: var(--nivo-border);
+        --separator: var(--nivo-separator);
+        --scrollbar: var(--nivo-scrollbar);
+
+        --field-background: var(--nivo-field-background);
+        --field-border: transparent;
+        --field-foreground: var(--nivo-field-foreground);
+        --field-placeholder: var(--nivo-field-placeholder);
+
+        --radius: var(--nivo-control-radius);
+        --field-radius: var(--nivo-field-radius);
+        --tooltip-delay: 0ms;
+        --tooltip-close-delay: 0ms;
+        --skeleton-animation: shimmer;
+    }
+
+    /* The family root paints its own canvas and typeface, the way Core's root does. */
+    .grammar-common-root[data-grammar-family="nivo"] {
+        min-width: 0;
+        background: var(--nivo-canvas);
+        color: var(--nivo-foreground);
+        font-family: var(--nivo-font-interface);
+    }
+
+    /* System dark, for the root the provider has not resolved to an explicit theme yet. */
+    @media (prefers-color-scheme: dark) {
+        .grammar-common-root[data-grammar-family="nivo"][data-grammar-theme="system"] {
+            color-scheme: dark;
+
+            --nivo-brand-ink: oklch(99.11% 0.0015 354.13);
+
+            --nivo-canvas: oklch(12% 0.0015 354.13);
+            --nivo-surface: oklch(21.03% 0.003 354.13);
+            --nivo-surface-secondary: oklch(25.7% 0.0023 354.13);
+            --nivo-surface-tertiary: oklch(27.21% 0.0023 354.13);
+            --nivo-overlay: oklch(21.03% 0.003 354.13);
+            --nivo-default: oklch(27.4% 0.0015 354.13);
+            --nivo-default-foreground: oklch(99.11% 0 0);
+            --nivo-segment: oklch(39.64% 0.0015 354.13);
+            --nivo-foreground: oklch(99.11% 0.0015 354.13);
+            --nivo-muted: oklch(70.5% 0.003 354.13);
+
+            --nivo-warning: oklch(82.03% 0.1392 88.38);
+            --nivo-warning-foreground: oklch(21.03% 0.0059 88.38);
+            --nivo-danger: var(--nivo-accent);
+            --nivo-danger-foreground: oklch(99.11% 0 0);
+
+            --nivo-border: oklch(28% 0.0015 354.13);
+            --nivo-separator: oklch(25% 0.0015 354.13);
+            --nivo-scrollbar: oklch(70.5% 0.0015 354.13);
+
+            --nivo-field-background: oklch(21.03% 0.003 354.13);
+            --nivo-field-foreground: oklch(99.11% 0.0015 354.13);
+            --nivo-field-placeholder: oklch(70.5% 0.003 354.13);
+        }
+    }
+
+    /* Forced colours: the system owns every value, and the shadow stops carrying meaning. */
+    @media (forced-colors: active) {
+        :root,
+        .grammar-common-root[data-grammar-family="nivo"] {
+            --nivo-accent: Highlight;
+            --nivo-accent-foreground: HighlightText;
+            --nivo-accent-soft: Canvas;
+            --nivo-brand-ink: CanvasText;
+            --nivo-canvas: Canvas;
+            --nivo-surface: Canvas;
+            --nivo-surface-secondary: Canvas;
+            --nivo-surface-tertiary: Canvas;
+            --nivo-overlay: Canvas;
+            --nivo-default: Canvas;
+            --nivo-default-foreground: CanvasText;
+            --nivo-segment: Canvas;
+            --nivo-foreground: CanvasText;
+            --nivo-muted: GrayText;
+            --nivo-success: CanvasText;
+            --nivo-success-foreground: Canvas;
+            --nivo-warning: CanvasText;
+            --nivo-warning-foreground: Canvas;
+            --nivo-danger: CanvasText;
+            --nivo-danger-foreground: Canvas;
+            --nivo-info: CanvasText;
+            --nivo-info-foreground: Canvas;
+            --nivo-border: CanvasText;
+            --nivo-separator: CanvasText;
+            --nivo-scrollbar: CanvasText;
+            --nivo-field-background: Field;
+            --nivo-field-foreground: FieldText;
+            --nivo-field-placeholder: GrayText;
+            --nivo-surface-shadow: none;
+        }
+    }
+
+    /* Reduced motion: the family's one duration collapses, so nothing has to opt out per component. */
+    @media (prefers-reduced-motion: reduce) {
+        :root,
+        .grammar-common-root[data-grammar-family="nivo"] {
+            --nivo-motion-duration: 0ms;
+        }
+    }
+}
