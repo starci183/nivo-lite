@@ -87,7 +87,7 @@ export const ConversationPane = (props: {
                   </span>
                   <Text size="sm" tone="muted" overflow="truncate">{c.lastText ? `${prefix}${c.lastText}` : t("noMessages")}</Text>
                   <span className={ROW_CHIPS_CLASS_NAME}>
-                    <Badge tone="neutral">{c.channel === "telegram" ? t("channelTelegram") : t("channelWebsite")}</Badge>
+                    <Badge tone="neutral">{c.channel === "telegram" ? t("channelTelegram") : c.channel === "zalo" ? t("channelZalo") : t("channelWebsite")}</Badge>
                     <StateChips conversation={c} />
                   </span>
                 </span>

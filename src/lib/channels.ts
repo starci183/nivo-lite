@@ -79,7 +79,7 @@ export const publicSiteUrl = (): string | null => {
 /** The webhook URL a provider must call for this connection (built from NEXT_PUBLIC_SITE_URL, even on localhost, for display). */
 export const webhookUrlFor = (provider: Provider, connectionId: string, origin = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3100"): string => {
   const base = origin.replace(/\/$/, "");
-  return provider === "telegram" ? `${base}/api/telegram/${connectionId}` : `${base}/api/connections/${provider}/${connectionId}`;
+  return provider === "telegram" ? `${base}/api/telegram/${connectionId}` : `${base}/api/connections/${provider === "zalo_oa" ? "zalo" : provider}/${connectionId}`;
 };
 
 type Row = { id: string; workspace_id: string; provider: Provider; name: string; public_meta: Record<string, string> | null; status: ConnectionStatus; last_error: string | null; environment: Environment; last_event_at: string | null; first_event: FirstEvent | null };

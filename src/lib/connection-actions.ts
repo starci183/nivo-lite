@@ -13,6 +13,8 @@ import { bankName } from "./vn-banks";
 import { requireManager } from "./permissions";
 import { supabaseAdmin } from "./supabase/admin";
 import { tgCall } from "./telegram-api";
+import { getAccessToken, loadZalo, saveZaloSecret, zaloCallbackUrl, type ZaloSecret } from "./zalo";
+import { authorizeUrl as zaloAuthorizeUrlFor, newVerifier } from "./zalo-api";
 import type { Outcome } from "./types";
 
 /**
@@ -275,20 +277,72 @@ export const setConnectionAgents = async (connectionId: string, agentIds: Readon
     return true as const;
   });
 
-/* ------------------------------------------------------------------ Zalo OA (configuration only for now) */
+/* ------------------------------------------------------------------ Zalo OA (OAuth v4, webhook, CS messages) */
 
-/** Zalo OA: the configuration is stored (secrets encrypted) but nothing is sent or received yet. */
-export const connectZalo = async (input: { name: string; oaId: string; appId: string; appSecret: string; accessToken: string; refreshToken: string }): Promise<Outcome<Connection>> =>
+export type ZaloWizardConnection = {
+  id: string; name: string; status: Connection["status"]; webhookUrl: string; callbackUrl: string;
+  /** The OA has been authorized (NIVO holds tokens). */
+  authorized: boolean; oaSecretSaved: boolean; oaId: string; firstEvent: Connection["firstEvent"]; agentIds: ReadonlyArray<string>;
+};
+
+const zaloView = async (ws: string, id: string): Promise<ZaloWizardConnection | null> => {
+  const c = await getConnection(ws, id);
+  if (!c) return null;
+  const loaded = await loadZalo(id);
+  return {
+    id: c.id, name: c.name, status: c.status, webhookUrl: webhookUrlFor("zalo_oa", c.id), callbackUrl: zaloCallbackUrl(),
+    authorized: Boolean(loaded?.secret.refreshToken), oaSecretSaved: Boolean(loaded?.secret.oaSecret), oaId: c.meta.oa_id ?? "", firstEvent: c.firstEvent, agentIds: c.agentIds,
+  };
+};
+
+/** Zalo wizard: keep the app's keys (encrypted) as a PENDING connection so the callback and webhook URLs exist for the Zalo Developers screens. */
+export const startZaloConnection = async (input: { name: string; appId: string; appSecret: string }): Promise<Outcome<ZaloWizardConnection>> =>
   run(async (tr) => {
     const member = await requireManager();
     const name = requireName(input.name, tr);
-    const oaId = clean(input.oaId, 40);
     const appId = clean(input.appId, 40);
-    if (!oaId || !appId || !input.accessToken.trim()) throw userError(tr("errZaloFields"));
-    const payload = JSON.stringify({ appSecret: input.appSecret.trim(), accessToken: input.accessToken.trim(), refreshToken: input.refreshToken.trim() });
-    const id = await createConnection(member.workspaceId, member.userId, "zalo_oa", name, { oa_id: oaId, app_id: appId }, encryptSecret(payload), randomSecret());
+    const appSecret = input.appSecret.trim();
+    if (!/^\d{6,30}$/.test(appId) || appSecret.length < 8) throw userError(tr("errZaloFields"));
+    // The OA secret key is copied later, from the Webhook screen; until then every webhook is refused (a blank key never verifies).
+    const secret: ZaloSecret = { appId, appSecret, oaSecret: "" };
+    const id = await createConnection(member.workspaceId, member.userId, "zalo_oa", name, { app_id: appId }, encryptSecret(JSON.stringify(secret)), randomSecret(), { status: "pending" });
     refresh();
-    return (await getConnection(member.workspaceId, id)) as Connection;
+    return (await zaloView(member.workspaceId, id)) as ZaloWizardConnection;
+  });
+
+/** The "OA Secret Key" from the Zalo app's Webhook screen: it signs every webhook, so it is what lets NIVO trust the events. */
+export const saveZaloOaSecret = async (connectionId: string, oaSecret: string): Promise<Outcome<true>> =>
+  run(async (tr) => {
+    const member = await requireManager();
+    const c = await own(member.workspaceId, connectionId, tr, "zalo_oa");
+    const key = oaSecret.trim();
+    if (key.length < 8 || key.length > 200) throw userError(tr("errKeys"));
+    const loaded = await loadZalo(c.id);
+    if (!loaded) throw userError(tr("errNone"));
+    await saveZaloSecret(c.id, { ...loaded.secret, oaSecret: key });
+    refresh();
+    return true as const;
+  });
+
+/** Continue an unfinished (or broken) Zalo connection. Keys are never returned. */
+export const resumeZalo = async (connectionId: string): Promise<Outcome<ZaloWizardConnection>> =>
+  run(async (tr) => {
+    const member = await requireManager();
+    const c = await own(member.workspaceId, connectionId, tr, "zalo_oa");
+    return (await zaloView(member.workspaceId, c.id)) as ZaloWizardConnection;
+  });
+
+/** "Kết nối Zalo OA": a fresh PKCE verifier + one-time state are stored with the credential, and the Zalo permission URL is returned. */
+export const zaloAuthorizeUrl = async (connectionId: string): Promise<Outcome<{ url: string }>> =>
+  run(async (tr) => {
+    const member = await requireManager();
+    const c = await own(member.workspaceId, connectionId, tr, "zalo_oa");
+    const loaded = await loadZalo(c.id);
+    if (!loaded) throw userError(tr("errNone"));
+    const verifier = newVerifier();
+    const nonce = randomSecret().slice(0, 32);
+    await saveZaloSecret(c.id, { ...loaded.secret, pkce: { verifier, nonce, exp: Date.now() + 15 * 60_000 } });
+    return { url: zaloAuthorizeUrlFor(loaded.secret.appId, zaloCallbackUrl(), verifier, `${c.id}.${nonce}`) };
   });
 
 /* ------------------------------------------------------------------ check, disconnect, delete */
@@ -309,6 +363,18 @@ export const testConnection = async (connectionId: string): Promise<Outcome<Conn
     const c = await own(member.workspaceId, connectionId, tr);
     if (c.status === "disconnected") throw userError(tr("errNone"));
     const origin = publicSiteUrl();
+    if (c.provider === "zalo_oa") {
+      // The tokens are the thing that can silently die: use (and, when due, refresh) them now.
+      try {
+        await getAccessToken(c.id);
+        await supabaseAdmin().from("connections").update({ ...(c.status === "error" ? { status: "connected" } : {}), last_error: null, updated_at: now() }).eq("id", c.id);
+        refresh();
+        return { provider: c.provider, webhookOk: true, localOnly: origin === null, pending: 0, lastError: null };
+      } catch (e) {
+        console.error("zalo check failed", e instanceof Error ? e.message : e);
+        throw userError(tr("errZaloToken"));
+      }
+    }
     if (c.provider !== "telegram") return { provider: c.provider, webhookOk: false, localOnly: origin === null, pending: 0, lastError: null };
     const sec = await secretOf(c.id);
     if (!sec) throw userError(tr("errNone"));

@@ -26,14 +26,21 @@ const DayRule = ({ label }: { readonly label: string }) => (
   </div>
 );
 
-const Delivery = ({ message, channel, t }: { readonly message: WbMessage; readonly channel: "telegram" | "website"; readonly t: Translate }) => {
-  if (message.delivery === "failed") return <Text size="xs" weight="medium" tone="accent" live="polite">{t("deliveryFailed")}</Text>;
-  if (message.delivery === "sent") return <Text size="xs" tone="muted">{channel === "telegram" ? t("deliverySent") : t("deliveryWebsite")}</Text>;
+const Delivery = ({ message, channel, t }: { readonly message: WbMessage; readonly channel: "telegram" | "zalo" | "website"; readonly t: Translate }) => {
+  if (message.delivery === "failed") {
+    const reason = message.deliveryError ? t(`err_${message.deliveryError}` as Parameters<Translate>[0]) : null
+    return (
+      <Text size="xs" weight="medium" tone="accent" live="polite">
+        {channel === "zalo" ? t("deliveryFailedZalo") : t("deliveryFailed")}{reason && reason !== `err_${message.deliveryError}` ? ` · ${t("deliveryWhy", { reason })}` : ""}
+      </Text>
+    )
+  }
+  if (message.delivery === "sent") return <Text size="xs" tone="muted">{channel === "telegram" ? t("deliverySent") : channel === "zalo" ? t("deliverySentZalo") : t("deliveryWebsite")}</Text>;
   return null;
 };
 
 const Bubble = ({ message, customerName, channel, locale, t }: {
-  readonly message: WbMessage; readonly customerName: string; readonly channel: "telegram" | "website";
+  readonly message: WbMessage; readonly customerName: string; readonly channel: "telegram" | "zalo" | "website";
   readonly locale: ReturnType<typeof useLocale>; readonly t: Translate;
 }) => {
   const out = message.role === "agent";
@@ -118,7 +125,7 @@ export const ThreadPane = (props: {
         <div className={HEAD_TEXT_CLASS_NAME}>
           <Heading level={2}>{name}</Heading>
           <span className="flex flex-wrap items-center gap-1">
-            <Badge tone="neutral">{conv.channel === "telegram" ? t("channelTelegram") : t("channelWebsite")}</Badge>
+            <Badge tone="neutral">{conv.channel === "telegram" ? t("channelTelegram") : conv.channel === "zalo" ? t("channelZalo") : t("channelWebsite")}</Badge>
             <StateChips conversation={conv} />
           </span>
         </div>
@@ -160,7 +167,7 @@ export const ThreadPane = (props: {
                 {t("send")}
               </Button>
             </div>
-            <Text size="xs" tone="muted">{t(conv.channel === "telegram" ? "composerHintTelegram" : "composerHintWebsite", { name: props.userName })}</Text>
+            <Text size="xs" tone="muted">{t(conv.channel === "telegram" ? "composerHintTelegram" : conv.channel === "zalo" ? "composerHintZalo" : "composerHintWebsite", { name: props.userName })}</Text>
           </>
         ) : (
           <Text size="sm" tone="muted">{conv.handledBy ? t("composerLockedOther", { name: conv.handledBy }) : t("composerLocked")}</Text>

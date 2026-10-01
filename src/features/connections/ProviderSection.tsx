@@ -23,18 +23,21 @@ export type ProviderSectionProps = {
   /** The workspace agents (any module); each provider offers the ones of its own module. */
   readonly agents: ReadonlyArray<AgentOption>
   readonly localOnly: boolean
+  /** Zalo OAuth just returned for this connection: open its wizard at the check step. */
+  readonly resumeId?: string
+  readonly returned?: string
 }
 
 type Open = { readonly resumeId?: string } | null
 
 /** One provider card: its connections and the guided "Thêm kết nối" wizard (a new one, or the unfinished one being continued). */
-export const ProviderSection = ({ provider, items, agentNames, agents, localOnly }: ProviderSectionProps) => {
+export const ProviderSection = ({ provider, items, agentNames, agents, localOnly, resumeId, returned }: ProviderSectionProps) => {
   const t = useT(dict)
   const tw = useT(connectionWizard)
   const locale = useLocale()
   const router = useRouter()
   const def = PROVIDERS[provider]
-  const [open, setOpen] = useState<Open>(null)
+  const [open, setOpen] = useState<Open>(resumeId ? { resumeId } : null)
   const eligible = agents.filter((a) => a.module === def.module)
 
   const close = (changed: boolean) => {
@@ -55,7 +58,7 @@ export const ProviderSection = ({ provider, items, agentNames, agents, localOnly
         <div>
           {items.map((c) => (
             <ConnectionRow
-              key={c.id} connection={c} localOnly={localOnly} onContinue={def.kind === "money" ? () => setOpen({ resumeId: c.id }) : undefined}
+              key={c.id} connection={c} localOnly={localOnly} onContinue={def.kind === "money" || def.kind === "zalo" ? () => setOpen({ resumeId: c.id }) : undefined}
               agentNames={c.agentIds.map((id) => agentNames[id]).filter((n): n is string => Boolean(n))}
             />
           ))}
@@ -63,7 +66,7 @@ export const ProviderSection = ({ provider, items, agentNames, agents, localOnly
 
         {open && def.kind === "money" ? <MoneyWizard key={open.resumeId ?? "new"} provider={provider as "sepay" | "payos" | "casso"} resumeId={open.resumeId} agents={eligible} onClose={close} /> : null}
         {open && def.kind === "telegram" ? <TelegramWizard agents={eligible} onClose={close} /> : null}
-        {open && def.kind === "zalo" ? <ZaloWizard onClose={close} /> : null}
+        {open && def.kind === "zalo" ? <ZaloWizard key={open.resumeId ?? "new"} resumeId={open.resumeId} returned={returned} agents={eligible} onClose={close} /> : null}
       </div>
     </SurfaceCard>
   )

@@ -10,8 +10,8 @@ export type L = { readonly vi: string; readonly en: string };
 export type Locale = keyof L;
 
 /** What the wizard knows, to fill into copy values. */
-export type GuideContext = { readonly name: string; readonly webhookUrl: string; readonly apiKey: string; readonly bank: string; readonly account: string };
-export type Token = "webhookName" | "webhookUrl" | "apiKey";
+export type GuideContext = { readonly name: string; readonly webhookUrl: string; readonly apiKey: string; readonly bank: string; readonly account: string; readonly callbackUrl?: string };
+export type Token = "webhookName" | "webhookUrl" | "apiKey" | "callbackUrl";
 
 /** One line of a provider screen: copy a value, make a choice, switch something on, paste a provider value into NIVO, or a plain note. */
 export type GuideItem =
@@ -154,12 +154,26 @@ export const PROVIDERS: Readonly<Record<Provider, ProviderDef>> = {
     ],
   },
   zalo_oa: {
-    id: "zalo_oa", kind: "zalo", title: { vi: "Zalo OA", en: "Zalo OA" }, brand: "Zalo", module: null,
-    blurb: { vi: "Lưu cấu hình Zalo Official Account. Gửi và nhận tin sắp có.", en: "Save your Zalo Official Account settings. Sending and receiving is coming soon." },
-    environments: ["live"], needsBank: false, dashboard: { live: "https://oa.zalo.me" }, credentials: [], verify: {},
+    id: "zalo_oa", kind: "zalo", title: { vi: "Zalo OA", en: "Zalo OA" }, brand: "Zalo", module: "chatbot", earlyAccess: true,
+    blurb: { vi: "Khách nhắn cho Zalo Official Account của cửa hàng; agent Chatbot trả lời họ.", en: "Customers message your shop's Zalo Official Account; the Chatbot agent answers them." },
+    environments: ["live"], needsBank: false, dashboard: { live: "https://developers.zalo.me/apps" }, credentials: [], verify: {},
     guide: [
-      { id: "oa", title: "Zalo Official Account", items: [
-        { kind: "note", text: { vi: "Mở trang quản lý Zalo OA và ứng dụng Zalo của bạn, rồi sao chép OA ID, App ID, App secret và các token.", en: "Open your Zalo OA management page and Zalo app, then copy the OA ID, App ID, App secret and the tokens." } },
+      { id: "app", title: "Tạo ứng dụng", items: [
+        { kind: "note", text: { vi: "Vào developers.zalo.me, đăng nhập bằng tài khoản Zalo quản trị OA của cửa hàng, rồi tạo một ứng dụng mới.", en: "Open developers.zalo.me, sign in with the Zalo account that administers your shop's OA, and create a new app." } },
+        { kind: "choose", label: "Nút", option: "Tạo ứng dụng" },
+        { kind: "note", text: { vi: "Sao chép App ID và Khóa bí mật của ứng dụng (App Secret) ở trang Cài đặt chung rồi dán vào NIVO.", en: "Copy the App ID and the app's secret key (App Secret) from the general settings and paste them into NIVO." } },
+      ] },
+      { id: "link", title: "Official Account", items: [
+        { kind: "choose", label: "Menu", option: "Official Account" },
+        { kind: "note", text: { vi: "Liên kết đúng Official Account của cửa hàng với ứng dụng này (tài khoản của bạn phải là quản trị viên OA).", en: "Link your shop's Official Account to this app (your account must be an administrator of the OA)." } },
+        { kind: "copy", label: "Official Account Callback URL", token: "callbackUrl" },
+        { kind: "note", text: { vi: "Mục Quyền: xin các quyền quản lý tin nhắn, thông tin người quan tâm và gửi tin tư vấn.", en: "Under Permissions, request message management, follower information and consultation messages." } },
+      ] },
+      { id: "webhook", title: "Webhook", items: [
+        { kind: "copy", label: "Webhook URL", token: "webhookUrl" },
+        { kind: "switch", label: "Sự kiện: Người dùng gửi tin nhắn văn bản (user_send_text)", state: { vi: "bật", en: "turn on" } },
+        { kind: "switch", label: "Sự kiện: Quan tâm OA (follow)", state: { vi: "bật", en: "turn on" } },
+        { kind: "paste", label: "OA Secret Key", field: "oaSecret", secret: true, hint: { vi: "Zalo hiển thị khóa này ở trang Webhook. NIVO dùng nó để kiểm tra mỗi tin Zalo gửi tới là thật.", en: "Zalo shows this key on the Webhook page. NIVO uses it to check that every message Zalo sends is genuine." } },
       ] },
     ],
   },
@@ -173,4 +187,4 @@ export const fill = (s: string, ctx: Pick<GuideContext, "bank" | "account" | "na
   s.replace(/\{(bank|account|name)\}/g, (_, k: "bank" | "account" | "name") => ctx[k]);
 
 export const tokenValue = (t: Token, ctx: GuideContext): string =>
-  t === "webhookName" ? `NIVO · ${ctx.name}` : t === "webhookUrl" ? ctx.webhookUrl : ctx.apiKey;
+  t === "webhookName" ? `NIVO · ${ctx.name}` : t === "webhookUrl" ? ctx.webhookUrl : t === "callbackUrl" ? (ctx.callbackUrl ?? "") : ctx.apiKey;

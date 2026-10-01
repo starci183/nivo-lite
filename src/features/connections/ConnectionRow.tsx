@@ -33,7 +33,7 @@ export const ConnectionRow = ({ connection: c, agentNames, localOnly, onContinue
     : c.provider === "payos" ? ""
     : [c.meta.oa_id ? `OA ${c.meta.oa_id}` : "", c.meta.app_id ? `App ${c.meta.app_id}` : ""].filter(Boolean).join(" · ")
   const live = c.status !== "disconnected"
-  const needsAgent = live && c.status !== "pending" && c.provider !== "zalo_oa" && agentNames.length === 0
+  const needsAgent = live && c.status !== "pending" && agentNames.length === 0
   const isBank = c.provider === "sepay" || c.provider === "payos" || c.provider === "casso"
 
   const check = () => startTransition(async () => {
@@ -41,6 +41,7 @@ export const ConnectionRow = ({ connection: c, agentNames, localOnly, onContinue
     const r = await testConnection(c.id)
     if (!r.ok) return setNote({ tone: "negative", text: r.error })
     const d = r.data
+    if (d.provider === "zalo_oa") return setNote({ tone: "affirmative", text: t("zaloCheckOk") })
     if (d.provider !== "telegram") return setNote({ tone: "informative", text: t("checkNothing") })
     if (d.localOnly) return setNote({ tone: "informative", text: t("checkLocal") })
     const parts = [d.webhookOk ? t("checkOk", { pending: d.pending }) : t("checkNotRegistered"), d.lastError ? t("checkLastError", { error: d.lastError }) : ""]
@@ -85,9 +86,9 @@ export const ConnectionRow = ({ connection: c, agentNames, localOnly, onContinue
         {c.lastError && live ? <Text size="xs" tone="muted">{c.lastError}</Text> : null}
       </div>
       <div className={ACTIONS_CLASS}>
-        {c.status === "pending" && onContinue ? <Button variant="secondary" isDisabled={isPending} onPress={onContinue}>{tw("continue")}</Button> : null}
+        {(c.status === "pending" || (c.status === "error" && c.provider === "zalo_oa")) && onContinue ? <Button variant="secondary" isDisabled={isPending} onPress={onContinue}>{c.provider === "zalo_oa" && c.status === "error" ? tw("zaloReauthorize") : tw("continue")}</Button> : null}
         {c.provider === "sepay" && live && c.status !== "pending" ? <Button variant="outline" isDisabled={isPending} onPress={show}>{t("showKey")}</Button> : null}
-        {live && c.provider === "telegram" ? <Button variant="secondary" isPending={isPending} onPress={check}>{t("check")}</Button> : null}
+        {live && c.status !== "pending" && (c.provider === "telegram" || c.provider === "zalo_oa") ? <Button variant="secondary" isPending={isPending} onPress={check}>{t("check")}</Button> : null}
         {live
           ? <Button variant="danger-soft" isDisabled={isPending} onPress={() => setConfirm(true)}>{t("disconnect")}</Button>
           : <Button variant="danger-soft" isDisabled={isPending} onPress={remove}>{t("remove")}</Button>}

@@ -129,7 +129,7 @@ const deliver = async (c: EngineCtx, lead: Lead, text: string): Promise<{ summar
   const conv = await customerConversation(c, lead.id);
   if (conv) {
     await c.db.from("agent_messages").insert({ workspace_id: c.ws, conversation_id: conv.id, role: "agent", body: text });
-    if (conv.channel === "telegram") {
+    if (conv.channel === "telegram" || conv.channel === "zalo") {
       const sent = await deliverToChannel(c.db, conv.id, text);
       return { summary: tr(c)(sent ? "deliveredTelegram" : "telegramFailed", { name: lead.contact_name }), real: sent };
     }

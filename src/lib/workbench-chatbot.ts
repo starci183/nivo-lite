@@ -13,7 +13,7 @@ import type { AgentConversation, Outcome } from "./types";
 
 /* Chatbot workbench: queries and actions for the customer-conversation inbox. Everything runs as the signed-in member through RLS. */
 
-export type WbChannel = "telegram" | "website";
+export type WbChannel = "telegram" | "zalo" | "website";
 export type WbDelivery = "sent" | "failed" | null;
 
 export type WbMessage = {
@@ -25,6 +25,8 @@ export type WbMessage = {
   readonly body: string;
   readonly createdAt: string;
   readonly delivery: WbDelivery;
+  /** Why a push failed (a stable code, e.g. zalo_window_expired). */
+  readonly deliveryError: string | null;
 };
 
 export type WbConversation = {
@@ -80,7 +82,7 @@ type Ctx = Awaited<ReturnType<typeof engineCtx>>;
 type ConvRow = AgentConversation;
 type MsgRow = {
   id: string; conversation_id: string; role: "user" | "agent" | "system"; body: string; created_at: string;
-  author_kind?: "ai" | "human" | null; author_name?: string | null; delivery_status?: "sent" | "failed" | null;
+  author_kind?: "ai" | "human" | null; author_name?: string | null; delivery_status?: "sent" | "failed" | null; delivery_error?: string | null;
 };
 
 const DAY_MS = 86_400_000;
@@ -88,11 +90,11 @@ const VN_OFFSET_MS = 7 * 3_600_000;
 const vnDayStart = (now: number): number => Math.floor((now + VN_OFFSET_MS) / DAY_MS) * DAY_MS - VN_OFFSET_MS;
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1).trimEnd()}…` : s);
 
-const channelOfRow = (c: Pick<ConvRow, "channel">): WbChannel => (c.channel === "telegram" ? "telegram" : "website");
+const channelOfRow = (c: Pick<ConvRow, "channel">): WbChannel => (c.channel === "telegram" ? "telegram" : c.channel === "zalo" ? "zalo" : "website");
 
 const toMessage = (m: MsgRow): WbMessage => ({
   id: m.id, role: m.role, authorKind: m.author_kind === "human" ? "human" : "ai", authorName: m.author_name ?? null, body: m.body, createdAt: m.created_at,
-  delivery: m.delivery_status ?? null,
+  delivery: m.delivery_status ?? null, deliveryError: m.delivery_error ?? null,
 });
 
 /** Conversation id a waiting reply_customer item belongs to. */
@@ -236,8 +238,8 @@ export async function replyAsMember(conversationId: string, body: string): Promi
     }).select("id").single();
     if (ins.error) throw new Error(ins.error.message);
     const sent = await deliverToChannel(c.db, conv.id, text);
-    const status: "sent" | "failed" = conv.channel === "telegram" && !sent ? "failed" : "sent";
-    await c.db.from("agent_messages").update({ delivery_status: status }).eq("id", (ins.data as { id: string }).id).eq("workspace_id", c.ws);
+    const status: "sent" | "failed" = (conv.channel === "telegram" || conv.channel === "zalo") && !sent ? "failed" : "sent";
+    await c.db.from("agent_messages").update(status === "sent" ? { delivery_status: status, delivery_error: null } : { delivery_status: status }).eq("id", (ins.data as { id: string }).id).eq("workspace_id", c.ws);
     await logEvidence(c.db, c.ws, { lead_id: conv.lead_id, kind: "conversation.human_reply", actor: name, summary: translator(system, c.locale)("takenOverNoReply"), evidence: text });
     revalidatePath("/", "layout");
     return { ok: true, data: { delivery: status } };
@@ -262,7 +264,7 @@ export async function answerEscalation(workItemId: string, conversationId: strin
     if (text !== null) {
       const conv = ((await c.db.from("agent_conversations").select("channel").eq("id", conversationId).eq("workspace_id", c.ws).maybeSingle()).data ?? null) as { channel: string | null } | null;
       const posted = res.data.result?.summary === translator(system, c.locale)("replyPostedTelegram");
-      delivered = conv?.channel === "telegram" ? posted : true;
+      delivered = (conv?.channel === "telegram" || conv?.channel === "zalo") ? posted : true;
       // The performer stored the answer as an unlabelled line: attribute it to this member and record honest delivery.
       const { data } = await c.db.from("agent_messages").select("id").eq("conversation_id", conversationId).eq("workspace_id", c.ws).eq("role", "agent")
         .eq("body", answer).is("author_kind", null).order("created_at", { ascending: false }).limit(1);

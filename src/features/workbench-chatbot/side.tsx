@@ -80,7 +80,7 @@ export const SidePane = (props: {
           <PersonAvatar name={name} size="lg" />
           <div className={HEAD_TEXT_CLASS_NAME}>
             <Text weight="semibold" overflow="truncate">{name}</Text>
-            <Text size="sm" tone="muted">{conv.channel === "telegram" ? t("channelTelegramLine") : t("channelWebsiteLine")}</Text>
+            <Text size="sm" tone="muted">{conv.channel === "telegram" ? t("channelTelegramLine") : conv.channel === "zalo" ? t("channelZaloLine") : t("channelWebsiteLine")}</Text>
           </div>
         </div>
       </section>

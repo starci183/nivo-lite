@@ -10,7 +10,7 @@ import { PAGE_CLASS } from "./classNames"
 import { ProviderSection } from "./ProviderSection"
 
 /** The Connections page body (owner | manager): every provider with its connections and the add form. Staff see a friendly 403. */
-export const ConnectionsPage = async () => {
+export const ConnectionsPage = async ({ searchParams }: { readonly searchParams?: Promise<Record<string, string | string[] | undefined>> } = {}) => {
   const t = await getT(dict)
   const me = await getCurrentMember()
   if (!isManagerRole(me.role)) {
@@ -29,12 +29,15 @@ export const ConnectionsPage = async () => {
   const agents = ((agentRows.data ?? []) as Array<{ id: string; name: string; module: string; status: string }>).filter((a) => a.status === "active")
   const agentNames = Object.fromEntries(((agentRows.data ?? []) as Array<{ id: string; name: string }>).map((a) => [a.id, a.name]))
   const localOnly = publicSiteUrl() === null
+  const sp = (await searchParams) ?? {}
+  const one = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : undefined)
+  const zaloId = one("id") && all.some((c) => c.id === one("id") && c.provider === "zalo_oa") ? one("id") : undefined
   return (
     <PageContainer measure="product">
       <div className={PAGE_CLASS}>
         <SectionHeader level={1} eyebrow={t("eyebrow")} title={t("title")} description={t("description")} />
         {PROVIDER_ORDER.map((p) => (
-          <ProviderSection key={p} provider={p} items={all.filter((c) => c.provider === p)} agentNames={agentNames} agents={agents} localOnly={localOnly} />
+          <ProviderSection key={p} provider={p} items={all.filter((c) => c.provider === p)} agentNames={agentNames} agents={agents} localOnly={localOnly} resumeId={p === "zalo_oa" ? zaloId : undefined} returned={p === "zalo_oa" ? one("zalo") : undefined} />
         ))}
       </div>
     </PageContainer>
