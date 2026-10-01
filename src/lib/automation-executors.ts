@@ -209,7 +209,7 @@ export const sheetOrders: Executor = async (x, p) => {
 
 /** After a review request, a customer's next message is read for feedback: a negative one tags the owner in Office. Returns true when it raised an alert. */
 export const checkFeedback = async (x: RunCtx, run: { id: string; payload: Record<string, unknown> }, text: string, leadId: string): Promise<boolean> => {
-  const negative = await isNegativeFeedback(text);
+  const negative = await isNegativeFeedback(text, x.ws);
   await x.db.from("automation_runs").update({ payload: { ...run.payload, feedback: { negative, text: text.slice(0, 300), at: new Date().toISOString() } } }).eq("id", run.id);
   if (!negative) return false;
   const lead = await loadLead(x.db, x.ws, leadId);
