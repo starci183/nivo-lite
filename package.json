@@ -12,7 +12,8 @@
     "db:reset": "node scripts/with-secrets.mjs supabase db reset",
     "db:status": "supabase status",
     "db:test": "node scripts/with-secrets.mjs node scripts/rls-check.mjs",
-    "seed:knowledge": "node scripts/with-secrets.mjs node scripts/seed-nivo-knowledge.mjs"
+    "seed:knowledge": "node scripts/with-secrets.mjs node scripts/seed-nivo-knowledge.mjs",
+    "seed:workspace": "node scripts/with-secrets.mjs node scripts/seed-ready-workspace.mjs"
   },
   "dependencies": {
     "@dicebear/core": "^10.4.0",
