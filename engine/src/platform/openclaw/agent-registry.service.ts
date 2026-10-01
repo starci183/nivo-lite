@@ -65,7 +65,8 @@ export class AgentRegistry {
     const config = this.read();
     const agents = (typeof config.agents === "object" && config.agents !== null ? config.agents : {}) as Record<string, unknown>;
     const list = this.entriesOf(config);
-    const wanted: AgentEntry = { id: agentId, name, workspace: dirs.gateway, tools: { profile: "minimal" }, skills: [] };
+    // bootstrapMaxChars: AGENTS.md (rules + context + knowledge + contract) is longer than the 20000 default and would lose its tail (the reply contract).
+    const wanted: AgentEntry = { id: agentId, name, workspace: dirs.gateway, tools: { profile: "minimal" }, skills: [], bootstrapMaxChars: 60000, bootstrapTotalMaxChars: 90000 };
     const at = list.findIndex((e) => e.id === agentId);
     if (at >= 0 && JSON.stringify(list[at]) === JSON.stringify({ ...list[at], ...wanted })) return false;
     const updated = at >= 0 ? list.map((e, i) => (i === at ? { ...e, ...wanted } : e)) : [...list, wanted];
