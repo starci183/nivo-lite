@@ -47,6 +47,9 @@ const siteOrigin = async (): Promise<string> => {
   return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3100";
 };
 
+/** E-mail links come back through /auth/confirm, which turns the token (or PKCE code) into a session first. */
+const confirmUrl = (origin: string, next: string): string => `${origin}/auth/confirm?next=${encodeURIComponent(next)}`;
+
 /** Password sign-in; on success go to `next` (or the dashboard). */
 export const signInWithPassword = async (input: { email: string; password: string; next?: string }): Promise<AuthResult> => {
   const email = input.email.trim().toLowerCase();
@@ -67,7 +70,7 @@ export const signUpWithPassword = async (input: { name: string; email: string; p
   const { data, error } = await supabase.auth.signUp({
     email,
     password: input.password,
-    options: { data: { full_name: name }, emailRedirectTo: `${await siteOrigin()}${next}` },
+    options: { data: { full_name: name }, emailRedirectTo: confirmUrl(await siteOrigin(), next) },
   });
   if (error) return { ok: false, code: codeOf(error) };
   // Confirmations off (or auto-confirm): a session exists already. Otherwise the confirm screen takes over.
@@ -83,7 +86,7 @@ export const resendConfirmation = async (input: { email: string; next?: string }
   const { error } = await supabase.auth.resend({
     type: "signup",
     email,
-    options: { emailRedirectTo: `${await siteOrigin()}${safeNext(input.next)}` },
+    options: { emailRedirectTo: confirmUrl(await siteOrigin(), safeNext(input.next)) },
   });
   return error ? { ok: false, code: codeOf(error) } : ok;
 };
@@ -93,7 +96,7 @@ export const requestPasswordReset = async (input: { email: string }): Promise<Au
   const email = input.email.trim().toLowerCase();
   if (!EMAIL_RE.test(email)) return { ok: false, code: "generic" };
   const supabase = await supabaseServer();
-  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${await siteOrigin()}/reset-password` });
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: confirmUrl(await siteOrigin(), "/reset-password") });
   if (error && codeOf(error) === "too_many") return { ok: false, code: "too_many" };
   return ok;
 };
