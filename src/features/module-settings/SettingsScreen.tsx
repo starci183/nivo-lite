@@ -8,12 +8,19 @@ import { useT } from "@/i18n/client";
 import { modulesCore } from "@/i18n/dict/modulesCore";
 import { renameModule, setModuleLive, setOperatingMode } from "@/lib/module-actions";
 import type { Installation, OperatingMode } from "@/lib/modules-shared";
+import { AgentConnectionsCard, type ConnectionOption } from "./AgentConnectionsCard";
 import { GRID_CLASS_NAME, ROW_CLASS_NAME, STACK_CLASS_NAME } from "./classNames";
 
-type SettingsScreenProps = { readonly installation: Installation; readonly canEdit: boolean; readonly telegramConnected: boolean };
+type SettingsScreenProps = {
+  readonly installation: Installation;
+  readonly canEdit: boolean;
+  /** The workspace connections this module can use, and the ones its agent has ticked. */
+  readonly connectionOptions: ReadonlyArray<ConnectionOption>;
+  readonly selectedConnections: ReadonlyArray<string>;
+};
 
 /** Settings tab of a module. Every control saves on its own and reports its own result. */
-export const SettingsScreen = ({ installation, canEdit, telegramConnected }: SettingsScreenProps) => {
+export const SettingsScreen = ({ installation, canEdit, connectionOptions, selectedConnections }: SettingsScreenProps) => {
   const t = useT(modulesCore);
   const router = useRouter();
   const [name, setName] = useState(installation.agentName);
@@ -22,7 +29,6 @@ export const SettingsScreen = ({ installation, canEdit, telegramConnected }: Set
   const [note, setNote] = useState<{ ok: boolean; text: string } | undefined>();
   const [pending, startTransition] = useTransition();
   const [which, setWhich] = useState<"name" | "mode" | "live" | null>(null);
-  const isChatbot = installation.moduleKey === "chatbot";
   const canLive = installation.activeContextVersionId !== null;
 
   const act = (kind: "name" | "mode" | "live", fn: () => Promise<{ ok: true } | { ok: false; error: string }>, onFail?: () => void) => {
@@ -94,18 +100,9 @@ export const SettingsScreen = ({ installation, canEdit, telegramConnected }: Set
           </div>
         </SurfaceCard>
 
-        <SurfaceCard label={isChatbot ? t("telegramTitle") : t("channelsTitle")} headingLevel={2}>
-          <div className={STACK_CLASS_NAME}>
-            {isChatbot ? (
-              <>
-                <Badge isDot tone={telegramConnected ? "success" : "warning"}>{telegramConnected ? t("telegramConnected") : t("telegramMissing")}</Badge>
-                <Text size="sm" tone="muted">{t("telegramNote")}</Text>
-              </>
-            ) : (
-              <Text size="sm" tone="muted">{t("channelsNote")}</Text>
-            )}
-          </div>
-        </SurfaceCard>
+        {installation.agentId ? (
+          <AgentConnectionsCard agentId={installation.agentId} options={connectionOptions} selected={selectedConnections} canEdit={canEdit} />
+        ) : null}
 
         {note !== undefined ? <Alert title={note.ok ? t("saved") : t("notSaved")} description={note.ok ? undefined : note.text} tone={note.ok ? "affirmative" : "negative"} /> : null}
       </div>

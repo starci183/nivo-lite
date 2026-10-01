@@ -297,7 +297,7 @@ export const renameModule = async (installationId: string, name: string): Promis
     return loadInstallation(db, installationId);
   });
 
-/** Operating mode: autopilot lets this module's actions run on their own within their limits, assist makes them ask. */
+/** Operating mode: autopilot applies the Authority rules as configured; assist is a gate in the engine that downgrades "auto" to "ask" (rules are never rewritten). */
 export const setOperatingMode = async (installationId: string, mode: OperatingMode): Promise<Outcome<Installation>> =>
   run(async () => {
     await requireManager();
@@ -307,9 +307,6 @@ export const setOperatingMode = async (installationId: string, mode: OperatingMo
     const installation = await loadInstallation(db, installationId);
     const upd = await db.from("module_installations").update({ operating_mode: mode }).eq("id", installationId);
     fail(upd.error);
-    const rules = await db.from("authority_rules").update({ mode: mode === "autopilot" ? "auto" : "ask", updated_at: new Date().toISOString() })
-      .eq("workspace_id", session.workspace.id).eq("department", installation.moduleKey).neq("mode", "never");
-    fail(rules.error);
     refresh();
     return loadInstallation(db, installationId);
   });

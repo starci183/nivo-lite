@@ -58,6 +58,14 @@ export const FLOW_NEXT: Record<FlowAction, Array<FlowAction>> = {
 export const isOverLimit = (limit_vnd: number | null | undefined, amount_vnd: number | null | undefined): boolean =>
   typeof limit_vnd === "number" && typeof amount_vnd === "number" && amount_vnd >= limit_vnd;
 
+/**
+ * Assist mode is a gate, not a rewrite of the owner's rules: while a module's operating_mode is "assist", every "auto"
+ * rule of that department behaves as "ask" at evaluation time. "never" and limits stay untouched; autopilot (or no
+ * installation row, older workspaces) applies the rules as configured.
+ */
+export const applyOperatingMode = <R extends { mode: RuleMode }>(rule: R | null, operatingMode: string | null | undefined): R | null =>
+  rule && operatingMode === "assist" && rule.mode === "auto" ? { ...rule, mode: "ask" } : rule;
+
 /** The confidence below which NIVO treats its own result as unclear. */
 export const MIN_CONFIDENCE = 0.6;
 

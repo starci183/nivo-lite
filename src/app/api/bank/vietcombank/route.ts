@@ -1,13 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
-import { revalidatePath } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
-import { translator } from "@/i18n/core";
-import { system } from "@/i18n/dict/system";
 import { BANK_CONNECTION, bankEventId } from "@/lib/bank";
+import { ingestBankCredit } from "@/lib/bank-feed";
 import { publicConfig } from "@/lib/config";
-import { ingest } from "@/lib/core";
-import { startInboundWork, type EngineCtx } from "@/lib/engine";
-import { drainAfter } from "@/lib/flow-ctx";
 
 /**
  * Bank connection webhook (SIMULATED "Vietcombank"): one credit to the workspace's account becomes a bank payment input and
@@ -19,8 +14,6 @@ import { drainAfter } from "@/lib/flow-ctx";
  * Body: { amount_vnd: number, content: string, sender_name?: string, event_id: string }
  */
 type Credit = { amount_vnd?: unknown; content?: unknown; sender_name?: unknown; event_id?: unknown };
-
-const LOCALE = "vi" as const;
 
 export async function POST(request: NextRequest) {
   const secret = process.env.BANK_WEBHOOK_SECRET;
@@ -42,26 +35,14 @@ export async function POST(request: NextRequest) {
   }
 
   const db = createClient(publicConfig.supabaseUrl, serviceKey, { auth: { persistSession: false } });
-  const c: EngineCtx = { db, ws, actor: BANK_CONNECTION.name, locale: LOCALE };
-  const t = translator(system, LOCALE);
   try {
-    const { event, duplicate } = await ingest(db, ws, {
-      channel: "bank", kind: "payment", origin: "simulated", sender_name: sender, sender_contact: null,
-      body: t("bankEventBody", { bank: BANK_CONNECTION.name, content: content || "—" }), amount_vnd: Math.round(amount),
-      external_ref: content || null, event_id: bankEventId(eventId),
-    }, (n) => t("duplicateBlocked", { n }));
-    if (duplicate) return NextResponse.json({ ok: true, duplicate: true, inbound_event_id: event.id });
-
-    const item = await startInboundWork(c, event, "reconcile_payment", { amount_vnd: Math.round(amount), fields: {} });
-    // The chain (care message to the customer) runs after the response, like every other flow step.
-    drainAfter(c);
-    try {
-      revalidatePath("/", "layout");
-    } catch {
-      // Outside a request scope (scripts): nothing to revalidate.
-    }
+    const r = await ingestBankCredit(db, ws, {
+      amount, content, sender, eventId: bankEventId(eventId), bankName: BANK_CONNECTION.name, origin: "simulated",
+    });
+    if (r.duplicate) return NextResponse.json({ ok: true, duplicate: true, inbound_event_id: r.event.id });
+    const item = r.item;
     return NextResponse.json({
-      ok: true, duplicate: false, inbound_event_id: event.id,
+      ok: true, duplicate: false, inbound_event_id: r.event.id,
       work_item: { id: item.id, status: item.status, reason: item.reason, summary: item.result?.summary ?? item.proposal?.summary ?? null },
     });
   } catch (e) {

@@ -4,7 +4,7 @@ import { system } from "@/i18n/dict/system";
 import { governance } from "@/i18n/dict/governance";
 import * as ai from "./deepseek";
 import { deliverToChannel } from "./telegram";
-import { ACTION_DEPARTMENT, FLOW_NEXT, evaluateGate, isOverLimit } from "./policy";
+import { ACTION_DEPARTMENT, FLOW_NEXT, applyOperatingMode, evaluateGate, isOverLimit } from "./policy";
 import { contactParts, logDecision, logEvidence, matchLead, normaliseContact, type Db } from "./core";
 import { transferDetails } from "./knowledge";
 import { bankConnectionOf, mentionsCode } from "./bank";
@@ -70,8 +70,13 @@ const once = <T>(c: EngineCtx, key: string, fn: () => Promise<T>): Promise<T> =>
 export const loadAuthority = (c: EngineCtx) =>
   once(c, "authority", async () => ((await c.db.from("authority").select("*").eq("workspace_id", c.ws).maybeSingle()).data ?? null) as Authority | null);
 
-const loadRule = async (c: EngineCtx, action: FlowAction) =>
-  ((await c.db.from("authority_rules").select("*").eq("workspace_id", c.ws).eq("action", action).maybeSingle()).data ?? null) as AuthorityRule | null;
+/** The rule for an action, with the department's operating mode applied (assist downgrades "auto" to "ask"; no installation = autopilot). */
+const loadRule = async (c: EngineCtx, action: FlowAction) => {
+  const rule = ((await c.db.from("authority_rules").select("*").eq("workspace_id", c.ws).eq("action", action).maybeSingle()).data ?? null) as AuthorityRule | null;
+  if (!rule || rule.mode !== "auto") return rule;
+  const inst = await c.db.from("module_installations").select("operating_mode").eq("workspace_id", c.ws).eq("module_key", ACTION_DEPARTMENT[action]).limit(1);
+  return applyOperatingMode(rule, ((inst.data ?? [])[0] as { operating_mode?: string } | undefined)?.operating_mode);
+};
 
 const agentFor = (c: EngineCtx, d: Department) =>
   once(c, `agent:${d}`, async () =>

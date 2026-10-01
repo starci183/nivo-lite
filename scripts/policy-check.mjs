@@ -1,7 +1,7 @@
 // Self-check for the pure policy gate (src/lib/policy.ts). Node 22.6+ strips the TypeScript types.
 // Usage: node scripts/policy-check.mjs   (exit code 1 on any failure)
 import assert from "node:assert/strict";
-import { DEFAULT_RULES, FLOW_NEXT, ACTION_DEPARTMENT, evaluateGate, isOverLimit, missingFields } from "../src/lib/policy.ts";
+import { DEFAULT_RULES, FLOW_NEXT, ACTION_DEPARTMENT, applyOperatingMode, evaluateGate, isOverLimit, missingFields } from "../src/lib/policy.ts";
 import { isKnownPrice, pricesInKnowledge, transferDetails } from "../src/lib/knowledge.ts";
 import { mentionsCode } from "../src/lib/bank.ts";
 
@@ -19,8 +19,26 @@ const check = (name, fn) => {
   console.log(`ok  ${name}`);
 };
 
+check("assist: auto rule is downgraded to ask, limit and never untouched", () => {
+  const r = applyOperatingMode(rule("confirm_order"), "assist");
+  assert.equal(r.mode, "ask");
+  assert.equal(r.limit_vnd, 20_000_000);
+  assert.equal(applyOperatingMode(rule("send_care", { mode: "never" }), "assist").mode, "never");
+  assert.equal(applyOperatingMode(rule("send_quote"), "assist").mode, "ask");
+});
+check("autopilot or no installation: rules apply as configured", () => {
+  assert.equal(applyOperatingMode(rule("confirm_order"), "autopilot").mode, "auto");
+  assert.equal(applyOperatingMode(rule("confirm_order"), undefined).mode, "auto");
+  assert.equal(applyOperatingMode(null, "assist"), null);
+});
+
 const order = (amount) => ({ amount_vnd: amount, fields: { customer: "Khách A", items: "Gói chăm sóc", amount_vnd: amount } });
 
+check("assist: a routine order asks (over_authority) through the gate", () => {
+  const v = evaluateGate({ department: "sales", action: "confirm_order", rule: applyOperatingMode(rule("confirm_order"), "assist"), proposal: { summary: "", ...order(5_000_000) } });
+  assert.equal(v.verdict, "ask");
+  assert.equal(v.reason, "over_authority");
+});
 check("routine: order under the limit runs by itself", () => {
   const v = gate("confirm_order", order(5_000_000));
   assert.deepEqual(v, { verdict: "auto", reason: "routine", reasons: ["routine"], missing: [] });
