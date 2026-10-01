@@ -6,6 +6,10 @@ import { Alert, Badge, Button, Text } from "@starci/grammar/common"
 import { useT } from "@/i18n/client"
 import { connections } from "@/i18n/dict/connections"
 import { connectionWizard } from "@/i18n/dict/connectionWizard"
+import { webhookWizard } from "@/i18n/dict/webhookWizard"
+import { googleWizard } from "@/i18n/dict/googleWizard"
+import { startGoogleConnect } from "@/lib/google-actions"
+import { sendWebhookTest } from "@/lib/webhook-actions"
 import type { Connection } from "@/lib/channels"
 import { deleteConnection, disconnectConnection, revealSepayKey, testConnection } from "@/lib/connection-actions"
 import { ACTIONS_CLASS, FULL_BOX_CLASS, ROW_CLASS, ROW_MAIN_CLASS } from "./classNames"
@@ -21,6 +25,8 @@ type Note = { tone: "affirmative" | "negative" | "informative"; text: string }
 export const ConnectionRow = ({ connection: c, agentNames, localOnly, onContinue }: ConnectionRowProps) => {
   const t = useT(connections)
   const tw = useT(connectionWizard)
+  const tj = useT(webhookWizard)
+  const tg = useT(googleWizard)
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [note, setNote] = useState<Note | null>(null)
@@ -28,12 +34,26 @@ export const ConnectionRow = ({ connection: c, agentNames, localOnly, onContinue
   const [confirm, setConfirm] = useState(false)
 
   const facts =
-    c.provider === "telegram" ? (c.meta.bot_username ? `@${c.meta.bot_username}` : "")
+    c.provider === "google" ? (c.meta.email ?? "")
+    : c.provider === "webhook" ? tj("factsRow", { host: c.meta.host ?? "", count: (c.meta.events ?? "").split(",").filter(Boolean).length })
+    : c.provider === "telegram" ? (c.meta.bot_username ? `@${c.meta.bot_username}` : "")
     : c.provider === "sepay" || c.provider === "casso" ? [c.meta.bank_code, c.meta.account_masked, c.meta.account_holder].filter(Boolean).join(" · ")
     : c.provider === "payos" ? ""
     : [c.meta.oa_id ? `OA ${c.meta.oa_id}` : "", c.meta.app_id ? `App ${c.meta.app_id}` : ""].filter(Boolean).join(" · ")
   const live = c.status !== "disconnected"
-  const needsAgent = live && c.status !== "pending" && agentNames.length === 0
+  const needsAgent = live && c.status !== "pending" && c.provider !== "webhook" && c.provider !== "google" && agentNames.length === 0
+  const sendTest = () => startTransition(async () => {
+    setNote(null)
+    const r = await sendWebhookTest(c.id)
+    if (!r.ok) return setNote({ tone: "negative", text: r.error })
+    setNote(r.data.ok ? { tone: "affirmative", text: tj("testOk", { status: r.data.status ?? "" }) } : { tone: "negative", text: `${tj("testFailed")}. ${r.data.error ?? ""}`.trim() })
+  })
+  const reconnectGoogle = () => startTransition(async () => {
+    setNote(null)
+    const r = await startGoogleConnect("/connections")
+    if (!r.ok) return setNote({ tone: "negative", text: r.error })
+    window.location.assign(r.data.url)
+  })
   const isBank = c.provider === "sepay" || c.provider === "payos" || c.provider === "casso"
 
   const check = () => startTransition(async () => {
@@ -87,7 +107,9 @@ export const ConnectionRow = ({ connection: c, agentNames, localOnly, onContinue
       </div>
       <div className={ACTIONS_CLASS}>
         {(c.status === "pending" || (c.status === "error" && c.provider === "zalo_oa")) && onContinue ? <Button variant="secondary" isDisabled={isPending} onPress={onContinue}>{c.provider === "zalo_oa" && c.status === "error" ? tw("zaloReauthorize") : tw("continue")}</Button> : null}
+        {c.provider === "google" && c.status === "error" ? <Button variant="secondary" isPending={isPending} onPress={reconnectGoogle}>{tg("reconnect")}</Button> : null}
         {c.provider === "sepay" && live && c.status !== "pending" ? <Button variant="outline" isDisabled={isPending} onPress={show}>{t("showKey")}</Button> : null}
+        {live && c.provider === "webhook" && c.status !== "pending" ? <Button variant="secondary" isPending={isPending} onPress={sendTest}>{tj("sendTest")}</Button> : null}
         {live && c.status !== "pending" && (c.provider === "telegram" || c.provider === "zalo_oa") ? <Button variant="secondary" isPending={isPending} onPress={check}>{t("check")}</Button> : null}
         {live
           ? <Button variant="danger-soft" isDisabled={isPending} onPress={() => setConfirm(true)}>{t("disconnect")}</Button>

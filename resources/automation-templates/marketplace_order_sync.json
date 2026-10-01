@@ -1,0 +1,45 @@
+{
+  "key": "marketplace_order_sync",
+  "version": 1,
+  "pack": "marketplace",
+  "executor": "definition",
+  "moduleKey": "sales",
+  "icon": "cart",
+  "name": {
+    "vi": "Đồng bộ đơn từ sàn",
+    "en": "Marketplace order sync"
+  },
+  "description": {
+    "vi": "Đơn từ Shopee, Lazada, TikTok Shop được ghi vào NIVO như đơn của shop.",
+    "en": "Orders from Shopee, Lazada or TikTok Shop are recorded in NIVO like your own."
+  },
+  "trigger": {
+    "kind": "event",
+    "event": "order.confirmed",
+    "line": {
+      "vi": "Khi có đơn mới trên sàn",
+      "en": "When a new marketplace order arrives"
+    }
+  },
+  "requires": {
+    "modules": [
+      "sales"
+    ],
+    "channels": [],
+    "connections": [
+      "webhook"
+    ],
+    "capabilities": [
+      "sells_online"
+    ]
+  },
+  "settings": [],
+  "contentMode": "none",
+  "guardrails": [],
+  "variables": [],
+  "defaultBody": null,
+  "authority": {
+    "action": null
+  },
+  "defaults": {}
+}

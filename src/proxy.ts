@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { publicConfig } from "./lib/config";
 
 // Reachable without a session. Webhooks (Telegram, bank connection) are each verified by their own secret header; /api/engine by an HMAC (ENGINE_SHARED_SECRET).
-const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/reset-password", "/auth", "/invite", "/api/telegram", "/api/connections", "/api/bank", "/api/sepay", "/api/engine"];
+const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/reset-password", "/auth", "/invite", "/api/telegram", "/api/connections", "/api/bank", "/api/sepay", "/api/engine", "/api/v1", "/api/automation"];
 
 const MEMBER_COOKIE = "nivo_member_gate"; // "<userId>.<ok|off>": short-lived cache of the membership check
 const MEMBER_TTL_SECONDS = 60;

@@ -1,0 +1,77 @@
+{
+  "key": "contract_renewal",
+  "version": 1,
+  "pack": "contracts",
+  "executor": "definition",
+  "moduleKey": "sales",
+  "icon": "contract",
+  "name": {
+    "vi": "Nhắc gia hạn hợp đồng",
+    "en": "Contract renewal notice"
+  },
+  "description": {
+    "vi": "Báo khách và báo bạn trước khi hợp đồng định kỳ hết hạn.",
+    "en": "Notify the customer and you before a recurring contract ends."
+  },
+  "trigger": {
+    "kind": "event",
+    "event": "contract.expiring",
+    "line": {
+      "vi": "Một khoảng thời gian trước ngày hết hạn",
+      "en": "A while before the end date"
+    }
+  },
+  "requires": {
+    "modules": [
+      "sales"
+    ],
+    "channels": [
+      "customer_chat"
+    ],
+    "connections": [],
+    "capabilities": [
+      "has_recurring_contracts"
+    ]
+  },
+  "settings": [
+    {
+      "key": "beforeDays",
+      "kind": "number",
+      "min": 1,
+      "max": 90,
+      "suffix": {
+        "vi": "ngày",
+        "en": "days"
+      },
+      "label": {
+        "vi": "Nhắc trước",
+        "en": "Remind before"
+      }
+    }
+  ],
+  "contentMode": "ai_per_case",
+  "guardrails": [
+    {
+      "vi": "Không hứa kết quả, không tự cho giảm giá hay ưu đãi ngoài những gì chủ shop đã ghi.",
+      "en": "No outcome promises and no discounts beyond what the owner wrote."
+    },
+    {
+      "vi": "Không bịa giá, giờ, địa chỉ hay chính sách chưa có trong thông tin cửa hàng.",
+      "en": "Never invent prices, hours, addresses or policies that are not in the shop information."
+    }
+  ],
+  "variables": [
+    "ten_khach",
+    "ten_shop"
+  ],
+  "defaultBody": {
+    "vi": "Chào {ten_khach}, hợp đồng của bạn với {ten_shop} sắp đến hạn gia hạn. Bạn muốn tiếp tục không ạ?",
+    "en": "Hi {ten_khach}, your contract with {ten_shop} is coming up for renewal."
+  },
+  "authority": {
+    "action": "send_follow_up"
+  },
+  "defaults": {
+    "beforeDays": 14
+  }
+}

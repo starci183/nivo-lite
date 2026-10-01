@@ -1,0 +1,57 @@
+{
+  "key": "delivery_notice",
+  "version": 1,
+  "pack": "delivery",
+  "executor": "definition",
+  "moduleKey": "sales",
+  "icon": "truck",
+  "name": {
+    "vi": "Báo giao hàng",
+    "en": "Delivery notice"
+  },
+  "description": {
+    "vi": "Báo khách khi đơn đã giao đi hoặc sắp đến nơi.",
+    "en": "Tell customers when their order is on its way."
+  },
+  "trigger": {
+    "kind": "event",
+    "event": "order.shipped",
+    "line": {
+      "vi": "Khi đơn được giao đi",
+      "en": "When an order ships"
+    }
+  },
+  "requires": {
+    "modules": [
+      "sales"
+    ],
+    "channels": [
+      "customer_chat"
+    ],
+    "connections": [],
+    "capabilities": [
+      "has_delivery"
+    ]
+  },
+  "settings": [],
+  "contentMode": "fixed",
+  "guardrails": [
+    {
+      "vi": "Không bịa giá, giờ, địa chỉ hay chính sách chưa có trong thông tin cửa hàng.",
+      "en": "Never invent prices, hours, addresses or policies that are not in the shop information."
+    }
+  ],
+  "variables": [
+    "ten_khach",
+    "ten_shop",
+    "ma_phieu"
+  ],
+  "defaultBody": {
+    "vi": "Chào {ten_khach}, đơn {ma_phieu} của bạn tại {ten_shop} đã được giao đi.",
+    "en": "Hi {ten_khach}, your order {ma_phieu} from {ten_shop} is on its way."
+  },
+  "authority": {
+    "action": "send_care"
+  },
+  "defaults": {}
+}

@@ -4,7 +4,7 @@
  * `feedCredit` (src/lib/connection-events.ts). Labels that sit on the provider's own screen (field names, option names) are written
  * exactly as the provider prints them and are not translated; only the explanations carry {vi, en}.
  */
-export type Provider = "telegram" | "sepay" | "zalo_oa" | "payos" | "casso";
+export type Provider = "telegram" | "sepay" | "zalo_oa" | "payos" | "casso" | "webhook" | "google";
 export type Environment = "test" | "live";
 export type L = { readonly vi: string; readonly en: string };
 export type Locale = keyof L;
@@ -26,7 +26,7 @@ export type VerifyHelp = { readonly intro: L; readonly steps: ReadonlyArray<L>; 
 
 export type ProviderDef = {
   readonly id: Provider;
-  readonly kind: "money" | "telegram" | "zalo";
+  readonly kind: "money" | "telegram" | "zalo" | "webhook" | "google";
   readonly title: L;
   /** The provider's own brand name, as in "Mở trang X" and "Làm theo trên X". */
   readonly brand: string;
@@ -177,10 +177,25 @@ export const PROVIDERS: Readonly<Record<Provider, ProviderDef>> = {
       ] },
     ],
   },
+  webhook: {
+    id: "webhook", kind: "webhook", title: { vi: "n8n / Webhook", en: "n8n / Webhook" }, brand: "n8n",
+    blurb: { vi: "NIVO gửi sự kiện (khách mới, chốt đơn, nhận tiền...) tới n8n, Make, Zapier hoặc bất kỳ địa chỉ nào bạn chọn.", en: "NIVO sends events (new customer, order, payment...) to n8n, Make, Zapier or any address you choose." },
+    module: null, environments: ["live"], needsBank: false, dashboard: { live: "https://n8n.io" }, credentials: [], verify: {},
+    guide: [
+      { id: "n8n", title: "n8n", items: [
+        { kind: "note", text: { vi: "Trong n8n, thêm node Webhook: Method POST, rồi sao chép Production URL.", en: "In n8n add a Webhook node: Method POST, then copy the Production URL." } },
+      ] },
+    ],
+  },
+  google: {
+    id: "google", kind: "google", title: { vi: "Google (Sheets)", en: "Google (Sheets)" }, brand: "Google",
+    blurb: { vi: "Kết nối tài khoản Google để NIVO ghi đơn hàng vào bảng tính của bạn.", en: "Connect your Google account so NIVO can record orders in your spreadsheet." },
+    module: null, environments: ["live"], needsBank: false, dashboard: { live: "https://sheets.google.com" }, credentials: [], verify: {}, guide: [],
+  },
 };
 
 /** Order the providers appear on the Connections page. */
-export const PROVIDER_ORDER: ReadonlyArray<Provider> = ["sepay", "payos", "casso", "telegram", "zalo_oa"];
+export const PROVIDER_ORDER: ReadonlyArray<Provider> = ["sepay", "payos", "casso", "telegram", "zalo_oa", "google"];
 
 /** Replace {name} {bank} {account} in a guide or help string. */
 export const fill = (s: string, ctx: Pick<GuideContext, "bank" | "account" | "name">): string =>

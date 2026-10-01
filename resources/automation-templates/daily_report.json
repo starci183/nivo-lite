@@ -1,0 +1,68 @@
+{
+  "key": "daily_report",
+  "version": 1,
+  "pack": "core",
+  "executor": "implemented",
+  "moduleKey": null,
+  "icon": "report",
+  "name": {
+    "vi": "Báo cáo cuối ngày",
+    "en": "End-of-day report"
+  },
+  "description": {
+    "vi": "Mỗi tối một bản tóm tắt: khách mới, đơn chốt, tiền về và việc đang chờ bạn quyết.",
+    "en": "Each evening a summary: new customers, deals won, money in and decisions waiting for you."
+  },
+  "trigger": {
+    "kind": "schedule",
+    "event": "schedule.daily",
+    "line": {
+      "vi": "Mỗi ngày vào giờ bạn chọn (giờ Việt Nam)",
+      "en": "Every day at the time you pick (Vietnam time)"
+    }
+  },
+  "requires": {
+    "modules": [],
+    "channels": [],
+    "connections": [],
+    "capabilities": []
+  },
+  "settings": [
+    {
+      "key": "time",
+      "kind": "time",
+      "label": {
+        "vi": "Gửi lúc",
+        "en": "Send at"
+      }
+    },
+    {
+      "key": "toOwnerChat",
+      "kind": "toggle",
+      "label": {
+        "vi": "Gửi thêm vào Telegram của chủ shop",
+        "en": "Also send to the owner's Telegram"
+      },
+      "hint": {
+        "vi": "Chỉ gửi khi đã kết nối Telegram.",
+        "en": "Only when Telegram is connected."
+      }
+    }
+  ],
+  "contentMode": "none",
+  "guardrails": [
+    {
+      "vi": "Chỉ dùng số liệu có thật trong NIVO.",
+      "en": "Only real figures from NIVO."
+    }
+  ],
+  "variables": [],
+  "defaultBody": null,
+  "authority": {
+    "action": null
+  },
+  "defaults": {
+    "time": "21:00",
+    "toOwnerChat": true
+  }
+}

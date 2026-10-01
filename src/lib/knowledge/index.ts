@@ -91,6 +91,11 @@ export const fetchUrlText = async (raw: string): Promise<string> => {
 /** Add a source and index it (chunk, embed, store). The row exists even when indexing fails (status failed + reason). */
 export const addSource = async (input: AddSourceInput): Promise<KnowledgeSource> => {
   const { db, ws, userId } = await ctx();
+  return addSourceFor(db, ws, userId, input);
+};
+
+/** The same with an explicit client and workspace (the public API, which has no session). `userId` null = added by an API key. */
+export const addSourceFor = async (db: Db, ws: string, userId: string | null, input: AddSourceInput): Promise<KnowledgeSource> => {
   if (!SOURCE_KINDS.includes(input.kind)) throw new Error("Unknown kind");
   const title = input.title.trim().slice(0, 160);
   let content = input.content.trim();

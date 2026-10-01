@@ -1,0 +1,79 @@
+{
+  "key": "debt_reminder",
+  "version": 1,
+  "pack": "core",
+  "executor": "implemented",
+  "moduleKey": "accounting",
+  "icon": "debt",
+  "name": {
+    "vi": "Nhắc công nợ",
+    "en": "Payment reminders"
+  },
+  "description": {
+    "vi": "Khoản quá hạn được nhắc nhẹ nhàng. Lần nhắc thứ hai, NIVO báo cho bạn biết.",
+    "en": "Overdue amounts get a polite reminder. On the second reminder NIVO tells you."
+  },
+  "trigger": {
+    "kind": "event",
+    "event": "invoice.overdue",
+    "line": {
+      "vi": "Khi một khoản thanh toán quá hạn",
+      "en": "When a payment is overdue"
+    }
+  },
+  "requires": {
+    "modules": [
+      "accounting"
+    ],
+    "channels": [
+      "customer_chat"
+    ],
+    "connections": [],
+    "capabilities": [
+      "has_due_dates"
+    ]
+  },
+  "settings": [
+    {
+      "key": "afterDays",
+      "kind": "number",
+      "min": 1,
+      "max": 60,
+      "suffix": {
+        "vi": "ngày",
+        "en": "days"
+      },
+      "label": {
+        "vi": "Nhắc khi quá hạn",
+        "en": "Remind when overdue by"
+      }
+    }
+  ],
+  "contentMode": "fixed",
+  "guardrails": [
+    {
+      "vi": "Lịch sự, không đe doạ, không nhắc tới phí phạt.",
+      "en": "Polite, no threats, no mention of penalties."
+    },
+    {
+      "vi": "Không bịa giá, giờ, địa chỉ hay chính sách chưa có trong thông tin cửa hàng.",
+      "en": "Never invent prices, hours, addresses or policies that are not in the shop information."
+    }
+  ],
+  "variables": [
+    "ten_khach",
+    "ten_shop",
+    "so_tien",
+    "ma_phieu"
+  ],
+  "defaultBody": {
+    "vi": "Chào {ten_khach}, {ten_shop} xin nhắc nhẹ khoản {so_tien} (mã {ma_phieu}) đã đến hạn. Nếu bạn đã chuyển rồi, bạn bỏ qua tin này giúp mình nhé.",
+    "en": "Hi {ten_khach}, a gentle reminder from {ten_shop}: {so_tien} (ref {ma_phieu}) is due. If you already paid, please ignore this."
+  },
+  "authority": {
+    "action": "send_care"
+  },
+  "defaults": {
+    "afterDays": 3
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "key": "appointment_reminder",
+  "version": 1,
+  "pack": "appointments",
+  "executor": "definition",
+  "moduleKey": "chatbot",
+  "icon": "calendar",
+  "name": {
+    "vi": "Nhắc lịch hẹn",
+    "en": "Appointment reminders"
+  },
+  "description": {
+    "vi": "Nhắc khách trước giờ hẹn để giảm bỏ hẹn.",
+    "en": "Remind customers before their appointment to reduce no-shows."
+  },
+  "trigger": {
+    "kind": "event",
+    "event": "appointment.upcoming",
+    "line": {
+      "vi": "Một khoảng thời gian trước lịch hẹn",
+      "en": "A while before the appointment"
+    }
+  },
+  "requires": {
+    "modules": [
+      "chatbot"
+    ],
+    "channels": [
+      "customer_chat"
+    ],
+    "connections": [],
+    "capabilities": [
+      "has_appointments"
+    ]
+  },
+  "settings": [
+    {
+      "key": "beforeHours",
+      "kind": "number",
+      "min": 1,
+      "max": 72,
+      "suffix": {
+        "vi": "giờ",
+        "en": "hours"
+      },
+      "label": {
+        "vi": "Nhắc trước",
+        "en": "Remind before"
+      }
+    }
+  ],
+  "contentMode": "fixed",
+  "guardrails": [
+    {
+      "vi": "Không bịa giá, giờ, địa chỉ hay chính sách chưa có trong thông tin cửa hàng.",
+      "en": "Never invent prices, hours, addresses or policies that are not in the shop information."
+    }
+  ],
+  "variables": [
+    "ten_khach",
+    "ten_shop"
+  ],
+  "defaultBody": {
+    "vi": "Chào {ten_khach}, {ten_shop} nhắc bạn có lịch hẹn sắp tới. Bạn nhắn lại nếu cần đổi giờ nhé.",
+    "en": "Hi {ten_khach}, a reminder from {ten_shop} of your upcoming appointment."
+  },
+  "authority": {
+    "action": "send_care"
+  },
+  "defaults": {
+    "beforeHours": 3
+  }
+}

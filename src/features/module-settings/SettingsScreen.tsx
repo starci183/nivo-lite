@@ -10,6 +10,7 @@ import { renameModule, setModuleLive, setOperatingMode } from "@/lib/module-acti
 import type { Installation, OperatingMode } from "@/lib/modules-shared";
 import { AgentConnectionsCard, type ConnectionOption } from "./AgentConnectionsCard";
 import { GRID_CLASS_NAME, ROW_CLASS_NAME, STACK_CLASS_NAME } from "./classNames";
+import { ModuleAutomations } from "./ModuleAutomations";
 import { ProcessorCard } from "./ProcessorCard";
 
 type SettingsScreenProps = {
@@ -104,6 +105,8 @@ export const SettingsScreen = ({ installation, canEdit, connectionOptions, selec
         {installation.agentId ? (
           <AgentConnectionsCard agentId={installation.agentId} options={connectionOptions} selected={selectedConnections} canEdit={canEdit} />
         ) : null}
+
+        <ModuleAutomations moduleKey={installation.moduleKey} canEdit={canEdit} />
 
         <ProcessorCard installation={installation} canEdit={canEdit} />
 

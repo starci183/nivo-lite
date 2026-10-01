@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Badge, Button, SurfaceCard, Text } from "@starci/grammar/common"
 import { useLocale, useT } from "@/i18n/client"
 import { connections as dict } from "@/i18n/dict/connections"
@@ -11,8 +11,10 @@ import { PROVIDERS } from "@/lib/connection-providers"
 import { HEAD_CLASS, STACK_CLASS } from "./classNames"
 import { ConnectionRow } from "./ConnectionRow"
 import type { AgentOption } from "./wizard/AgentStep"
+import { GoogleWizard } from "./wizard/GoogleWizard"
 import { MoneyWizard } from "./wizard/MoneyWizard"
 import { TelegramWizard } from "./wizard/TelegramWizard"
+import { WebhookWizard } from "./wizard/WebhookWizard"
 import { ZaloWizard } from "./wizard/ZaloWizard"
 
 /** Props for {@link ProviderSection}. */
@@ -37,7 +39,8 @@ export const ProviderSection = ({ provider, items, agentNames, agents, localOnly
   const locale = useLocale()
   const router = useRouter()
   const def = PROVIDERS[provider]
-  const [open, setOpen] = useState<Open>(resumeId ? { resumeId } : null)
+  const googleBack = useSearchParams().get("google")
+  const [open, setOpen] = useState<Open>(resumeId ? { resumeId } : provider === "google" && googleBack ? {} : null)
   const eligible = agents.filter((a) => a.module === def.module)
 
   const close = (changed: boolean) => {
@@ -67,6 +70,8 @@ export const ProviderSection = ({ provider, items, agentNames, agents, localOnly
         {open && def.kind === "money" ? <MoneyWizard key={open.resumeId ?? "new"} provider={provider as "sepay" | "payos" | "casso"} resumeId={open.resumeId} agents={eligible} onClose={close} /> : null}
         {open && def.kind === "telegram" ? <TelegramWizard agents={eligible} onClose={close} /> : null}
         {open && def.kind === "zalo" ? <ZaloWizard key={open.resumeId ?? "new"} resumeId={open.resumeId} returned={returned} agents={eligible} onClose={close} /> : null}
+        {open && def.kind === "webhook" ? <WebhookWizard onClose={close} /> : null}
+        {open && def.kind === "google" ? <GoogleWizard onClose={close} /> : null}
       </div>
     </SurfaceCard>
   )

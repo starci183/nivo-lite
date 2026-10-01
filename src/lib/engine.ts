@@ -9,6 +9,7 @@ import { ACTION_DEPARTMENT, FLOW_NEXT, applyOperatingMode, evaluateGate, isOverL
 import { contactParts, logDecision, logEvidence, matchLead, normaliseContact, type Db } from "./core";
 import { transferDetails } from "./knowledge";
 import { bankConnectionOf, mentionsCode } from "./bank";
+import { emitEvent } from "./outbound-events";
 import type {
   Authority, AuthorityRule, Department, EvidenceState, FlowAction, GateVerdict, InboundEvent, Invoice, Order, Origin, Proposal,
   ReasonCode, Transaction, WorkEdits, WorkItem,
@@ -194,6 +195,7 @@ const leadForInbound = async (c: EngineCtx, item: WorkItem, inb: InboundEvent | 
   const lead = data as Lead;
   await ensureResponsibility(c, lead);
   await logEvidence(c.db, c.ws, { lead_id: lead.id, work_item_id: item.id, kind: "lead.captured", actor: deptLabel(c, "chatbot"), summary: tr(c)("capturedFrom", { channel: lead.channel }), evidence: inb?.body || null });
+  await emitEvent(c.ws, "lead.created", { lead_id: lead.id, name: lead.contact_name, company: lead.company, channel: lead.channel, need: lead.need, phone: lead.phone ?? null, email: lead.email ?? null, origin: item.origin }, `lead.created:${lead.id}`);
   return lead;
 };
 
@@ -225,6 +227,9 @@ const handoffLead: Performer = {
     await setInbound(c, item.inbound_event_id, { lead_id: lead.id });
     if (str(f.conversation_id)) await c.db.from("agent_conversations").update({ lead_id: lead.id }).eq("id", str(f.conversation_id));
     await ensureResponsibility(c, lead);
+    const leadData = { lead_id: lead.id, name: lead.contact_name, company: lead.company, channel: lead.channel, need: lead.need, phone: lead.phone ?? null, email: lead.email ?? null, origin: item.origin };
+    if (!matched) await emitEvent(c.ws, "lead.created", leadData, `lead.created:${lead.id}`);
+    await emitEvent(c.ws, "handoff.requested", { ...leadData, work_item_id: item.id, conversation_id: str(f.conversation_id) || null }, `handoff.requested:${item.id}`);
     return {
       summary: matched ? tr(c)("leadMatched", { name: lead.contact_name }) : tr(c)("handoffDone", { name: lead.contact_name }),
       evidence: "captured", href: leadHref(lead.id), lead_id: lead.id,
@@ -378,6 +383,13 @@ const confirmOrder: Performer = {
     if (order.lead_id) await c.db.from("leads").update({ stage: "won" }).eq("id", order.lead_id).neq("stage", "lost");
     const summary = tr(c)("orderConfirmed", { no: order.order_no, amount: vnd(c, amount) });
     await logEvidence(c.db, c.ws, { lead_id: order.lead_id, work_item_id: item.id, kind: "order.confirmed", actor: by.name, summary, evidence: str(p.fields.items) || null });
+    const buyer = order.lead_id ? await getLead(c, order.lead_id) : null;
+    const orderData = {
+      order_id: order.id, order_no: order.order_no, lead_id: order.lead_id, customer: buyer?.contact_name ?? str(p.fields.customer), items: str(p.fields.items), amount_vnd: amount,
+      channel: buyer?.channel ?? null, confirmed_by: by.name, status: "confirmed",
+    };
+    await emitEvent(c.ws, "order.confirmed", orderData, `order.confirmed:${order.id}`);
+    if (order.lead_id) await emitEvent(c.ws, "deal.won", { lead_id: order.lead_id, name: orderData.customer, company: buyer?.company ?? null, channel: buyer?.channel ?? null, need: buyer?.need ?? null, order_no: order.order_no, amount_vnd: amount }, `deal.won:${order.lead_id}`);
     return { summary, evidence: "captured", href: leadHref(order.lead_id), lead_id: order.lead_id };
   },
   onReject: async (c, item) => {
@@ -544,6 +556,12 @@ const reconcilePayment: Performer = {
       evidence: [how, str(p.fields.reference)].filter(Boolean).join(" · ") || null,
     });
     await settleClaims(c, item, inv);
+    const payer = inv.lead_id ? await getLead(c, inv.lead_id) : null;
+    const orderRef = inv.order_id ? ((await c.db.from("orders").select("order_no").eq("id", inv.order_id).maybeSingle()).data as { order_no: string } | null) : null;
+    await emitEvent(c.ws, "payment.received", {
+      invoice_id: inv.id, invoice_no: inv.invoice_no, order_id: inv.order_id, order_no: orderRef?.order_no ?? null, lead_id: inv.lead_id, customer: payer?.contact_name ?? str(p.fields.payer),
+      amount_vnd: p.amount_vnd ?? inv.amount_vnd, paid_at: inv.paid_at ?? now(), channel: payer?.channel ?? null,
+    }, `payment.received:${inv.id}`);
     return { summary, evidence: "verified", href: leadHref(inv.lead_id), lead_id: inv.lead_id, detail: how || null };
   },
   onReject: async (c, item) => {
@@ -658,6 +676,7 @@ const finish = async (c: EngineCtx, item: WorkItem, proposal: Proposal, f: Finis
     });
     await logEvidence(c.db, c.ws, { lead_id: done.lead_id, work_item_id: done.id, kind: "work.resumed", actor: f.by.name, summary: res.summary, evidence: res.detail ?? null });
     await postOffice(c, { body: tr(c)("resumedMsg", { user: f.by.name, summary: res.summary }), lead_id: done.lead_id, work_item_id: done.id });
+    await emitEvent(c.ws, "decision.made", { work_item_id: done.id, action: done.action, department: done.department, outcome: f.outcome, decided_by: f.by.name, lead_id: done.lead_id, summary: res.summary }, `decision.made:${done.id}:${f.outcome}`);
   }
   await setInbound(c, done.inbound_event_id, { status: "processed", ...(done.lead_id ? { lead_id: done.lead_id } : {}) });
   if (!noChain) await continueChain(c, done);
@@ -791,6 +810,7 @@ export const resumeWork = async (
       await logEvidence(c.db, c.ws, { lead_id: item.lead_id, work_item_id: item.id, kind: "work.rejected", actor: by.name, summary: tr(c)("rejectedWork", { user: by.name, summary: before.summary }), evidence: note ?? null });
       await postOffice(c, { body: tr(c)("rejectedWork", { user: by.name, summary: before.summary }), lead_id: item.lead_id, work_item_id: item.id });
       await setInbound(c, item.inbound_event_id, { status: "processed" });
+      await emitEvent(c.ws, "decision.made", { work_item_id: item.id, action: item.action, department: item.department, outcome: "rejected", decided_by: by.name, lead_id: item.lead_id, summary: before.summary }, `decision.made:${item.id}:rejected`);
       return rejected;
     } catch (e) {
       await fail(c, item, e);

@@ -7,6 +7,7 @@ import { publicConfig } from "./config";
 import { ingest } from "./core";
 import { customerTurn } from "./customer-turn";
 import { withUsage } from "./usage";
+import { emitEvent } from "./outbound-events";
 import { telegramSend, telegramTyping } from "./telegram";
 import type { Agent, AgentConversation } from "./types";
 
@@ -111,7 +112,8 @@ export const handleTelegramUpdate = async (update: TgUpdate, { workspaceId: ws, 
     }
 
     await telegramTyping(botToken, chatId);
-    await withUsage({ workspaceId: ws }, () => customerTurn({ db, ws, actor: "Telegram", locale: LOCALE }, conv, agent, text.trim(), { eventId: `tg:${chatId}:${msg.message_id}` }));
+    const turn = await withUsage({ workspaceId: ws }, () => customerTurn({ db, ws, actor: "Telegram", locale: LOCALE }, conv, agent, text.trim(), { eventId: `tg:${chatId}:${msg.message_id}` }));
+    await emitEvent(ws, "message.inbound", { conversation_id: conv.id, lead_id: turn.capturedLeadId ?? conv.lead_id, channel: "telegram", text: text.trim(), agent_id: agent.id }, `message.inbound:tg:${chatId}:${msg.message_id}`);
     revalidatePath("/", "layout");
   } catch (e) {
     console.error("telegram webhook failed", e instanceof Error ? e.message : e);

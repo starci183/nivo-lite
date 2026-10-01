@@ -1,0 +1,77 @@
+{
+  "key": "sheet_orders",
+  "version": 1,
+  "pack": "core",
+  "executor": "implemented",
+  "moduleKey": "sales",
+  "icon": "sheet",
+  "name": {
+    "vi": "Ghi đơn vào Google Sheet",
+    "en": "Record orders in Google Sheets"
+  },
+  "description": {
+    "vi": "Mỗi đơn chốt tự thêm một dòng vào bảng tính của bạn; khi khách trả tiền, dòng đó được cập nhật.",
+    "en": "Every confirmed order adds a row to your spreadsheet; when the customer pays, the row is updated."
+  },
+  "trigger": {
+    "kind": "event",
+    "event": "order.confirmed",
+    "line": {
+      "vi": "Khi có đơn chốt, khi nhận tiền, hoặc khi có khách mới",
+      "en": "On a confirmed order, a payment, or a new customer"
+    }
+  },
+  "requires": {
+    "modules": [
+      "sales"
+    ],
+    "channels": [],
+    "connections": [
+      "google"
+    ],
+    "capabilities": []
+  },
+  "settings": [
+    {
+      "key": "recordOrders",
+      "kind": "toggle",
+      "label": {
+        "vi": "Ghi đơn đã chốt",
+        "en": "Record confirmed orders"
+      }
+    },
+    {
+      "key": "markPaid",
+      "kind": "toggle",
+      "label": {
+        "vi": "Cập nhật khi khách trả tiền",
+        "en": "Update the row when paid"
+      }
+    },
+    {
+      "key": "recordLeads",
+      "kind": "toggle",
+      "label": {
+        "vi": "Ghi cả khách mới (trang \"Khách mới\")",
+        "en": "Also record new customers (tab \"Khách mới\")"
+      }
+    }
+  ],
+  "contentMode": "none",
+  "guardrails": [
+    {
+      "vi": "Chỉ ghi vào bảng tính của chủ shop, không gửi gì cho khách.",
+      "en": "Writes only to the owner's spreadsheet, sends nothing to customers."
+    }
+  ],
+  "variables": [],
+  "defaultBody": null,
+  "authority": {
+    "action": null
+  },
+  "defaults": {
+    "recordOrders": true,
+    "markPaid": true,
+    "recordLeads": false
+  }
+}

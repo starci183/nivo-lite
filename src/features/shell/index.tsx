@@ -15,7 +15,7 @@ import type { ShellData } from "./queries";
 
 type Destination = {
   readonly key: string;
-  readonly label: "navOverview" | "navOffice" | "navAuthority" | "navInbox" | "navLeads" | "navResponsibilities" | "navDecisions" | "navKnowledge" | "navModules" | "navTeam" | "navConnections";
+  readonly label: "navOverview" | "navOffice" | "navAuthority" | "navInbox" | "navLeads" | "navResponsibilities" | "navDecisions" | "navAutomations" | "navKnowledge" | "navModules" | "navTeam" | "navConnections";
   readonly route: string;
   readonly icon: IconName;
   /** Only owner and manager see this destination. */
@@ -31,6 +31,7 @@ const DESTINATIONS: ReadonlyArray<Destination> = [
   { key: "leads", label: "navLeads", route: "/leads", icon: "account" },
   { key: "responsibilities", label: "navResponsibilities", route: "/responsibilities", icon: "review" },
   { key: "decisions", label: "navDecisions", route: "/decisions", icon: "saved" },
+  { key: "automations", label: "navAutomations", route: "/automations", icon: "agentos", managerOnly: true },
   { key: "knowledge", label: "navKnowledge", route: "/knowledge", icon: "course" },
   { key: "modules", label: "navModules", route: "/m", icon: "apps" },
   { key: "team", label: "navTeam", route: "/team", icon: "talents", managerOnly: true },

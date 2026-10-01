@@ -1,0 +1,75 @@
+{
+  "key": "ask_review",
+  "version": 1,
+  "pack": "core",
+  "executor": "implemented",
+  "moduleKey": "sales",
+  "icon": "review",
+  "name": {
+    "vi": "Xin đánh giá",
+    "en": "Ask for a review"
+  },
+  "description": {
+    "vi": "Sau khi khách thanh toán, NIVO xin một lời nhận xét. Nếu khách chê, bạn được báo ngay trong Văn phòng.",
+    "en": "After a customer pays, NIVO asks for feedback. If it is negative, you are told in the Office."
+  },
+  "trigger": {
+    "kind": "event",
+    "event": "payment.received",
+    "line": {
+      "vi": "Một khoảng thời gian sau khi khách thanh toán",
+      "en": "A while after a customer pays"
+    }
+  },
+  "requires": {
+    "modules": [
+      "sales"
+    ],
+    "channels": [
+      "customer_chat"
+    ],
+    "connections": [],
+    "capabilities": []
+  },
+  "settings": [
+    {
+      "key": "afterDays",
+      "kind": "number",
+      "min": 1,
+      "max": 30,
+      "suffix": {
+        "vi": "ngày",
+        "en": "days"
+      },
+      "label": {
+        "vi": "Hỏi sau",
+        "en": "Ask after"
+      }
+    }
+  ],
+  "contentMode": "fixed",
+  "guardrails": [
+    {
+      "vi": "Chỉ xin nhận xét, không xin đánh giá 5 sao và không tặng quà.",
+      "en": "Ask for feedback only, no star-begging and no gifts."
+    },
+    {
+      "vi": "Không bịa giá, giờ, địa chỉ hay chính sách chưa có trong thông tin cửa hàng.",
+      "en": "Never invent prices, hours, addresses or policies that are not in the shop information."
+    }
+  ],
+  "variables": [
+    "ten_khach",
+    "ten_shop"
+  ],
+  "defaultBody": {
+    "vi": "Chào {ten_khach}, cảm ơn bạn đã dùng dịch vụ của {ten_shop}. Bạn thấy trải nghiệm thế nào ạ? Một lời nhận xét ngắn của bạn giúp shop rất nhiều!",
+    "en": "Hi {ten_khach}, thank you for choosing {ten_shop}. How was your experience? A short note helps us a lot!"
+  },
+  "authority": {
+    "action": "send_care"
+  },
+  "defaults": {
+    "afterDays": 1
+  }
+}

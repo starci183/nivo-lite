@@ -13,6 +13,7 @@
     "db:status": "supabase status",
     "db:test": "node scripts/with-secrets.mjs node scripts/rls-check.mjs",
     "seed:knowledge": "node scripts/with-secrets.mjs node scripts/seed-nivo-knowledge.mjs",
+    "seed:automations": "node scripts/with-secrets.mjs node scripts/seed-automation-templates.mjs",
     "seed:workspace": "node scripts/with-secrets.mjs node scripts/seed-ready-workspace.mjs"
   },
   "dependencies": {

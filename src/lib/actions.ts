@@ -16,6 +16,7 @@ import { drainAfter, engineCtx } from "./flow-ctx";
 import { customerTurn } from "./customer-turn";
 import { withUsage } from "./usage";
 import { ownerChatForOffice } from "./flow-actions";
+import { emitEvent } from "./outbound-events";
 import { insertHumanMessage, relayStaffAnswer } from "./staff-relay";
 import { access } from "@/i18n/dict/access";
 import { deciderOf, requireDecide, requireManager } from "./permissions";
@@ -162,6 +163,7 @@ export const sendAgentMessage = async (
     const agent = must(await supabase.from("agents").select("*").eq("id", conv.agent_id).single<Agent>());
     if (conv.kind === "customer") {
       const turn = await withUsage({ workspaceId: ws }, () => customerTurn(c, conv, agent, body));
+      await emitEvent(ws, "message.inbound", { conversation_id: conv.id, lead_id: turn.capturedLeadId ?? conv.lead_id, channel: "website", text: body, agent_id: agent.id }, `message.inbound:${turn.reply.id}`);
       if (turn.changed) refreshAll();
       return { reply: turn.reply, capturedLeadId: turn.capturedLeadId };
     }
@@ -360,6 +362,7 @@ export const recordOutcome = async (leadId: string, stage: Lead["stage"], eviden
         dedupeKey: `issue_invoice:lead:${leadId}`, seed: { amount_vnd: null, fields: {} },
       });
       drainAfter(c);
+      await emitEvent(session.workspace.id, "deal.won", { lead_id: leadId, name: lead.contact_name, company: lead.company, channel: lead.channel, need: lead.need, evidence: evidence || null }, `deal.won:${leadId}`);
     }
     refreshAll();
     return lead;

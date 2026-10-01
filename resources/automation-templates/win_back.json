@@ -1,0 +1,95 @@
+{
+  "key": "win_back",
+  "version": 1,
+  "pack": "core",
+  "executor": "implemented",
+  "moduleKey": "sales",
+  "icon": "winback",
+  "name": {
+    "vi": "Gọi khách cũ quay lại",
+    "en": "Win back past customers"
+  },
+  "description": {
+    "vi": "Khách lâu không ghé được soạn sẵn một lời mời kèm ưu đãi. Luôn chờ bạn duyệt trước khi gửi.",
+    "en": "Customers who have not visited in a while get a drafted invitation with an offer. It always waits for your approval."
+  },
+  "trigger": {
+    "kind": "event",
+    "event": "lead.no_reply_after",
+    "line": {
+      "vi": "Khi một khách lâu không có hoạt động",
+      "en": "When a customer has been inactive for a while"
+    }
+  },
+  "requires": {
+    "modules": [
+      "sales"
+    ],
+    "channels": [
+      "customer_chat"
+    ],
+    "connections": [],
+    "capabilities": []
+  },
+  "settings": [
+    {
+      "key": "afterDays",
+      "kind": "number",
+      "min": 7,
+      "max": 365,
+      "suffix": {
+        "vi": "ngày",
+        "en": "days"
+      },
+      "label": {
+        "vi": "Khách im lặng quá",
+        "en": "Inactive for more than"
+      }
+    },
+    {
+      "key": "offer",
+      "kind": "text",
+      "maxLength": 120,
+      "label": {
+        "vi": "Ưu đãi",
+        "en": "Offer"
+      },
+      "hint": {
+        "vi": "Ví dụ: giảm 10% cho lần quay lại.",
+        "en": "For example: 10% off your next visit."
+      }
+    }
+  ],
+  "contentMode": "ai_per_case",
+  "guardrails": [
+    {
+      "vi": "Không hứa kết quả, không tự cho giảm giá hay ưu đãi ngoài những gì chủ shop đã ghi.",
+      "en": "No outcome promises and no discounts beyond what the owner wrote."
+    },
+    {
+      "vi": "Chỉ nêu đúng ưu đãi chủ shop đã ghi ở trên.",
+      "en": "Mention only the offer the owner wrote above."
+    },
+    {
+      "vi": "Không bịa giá, giờ, địa chỉ hay chính sách chưa có trong thông tin cửa hàng.",
+      "en": "Never invent prices, hours, addresses or policies that are not in the shop information."
+    }
+  ],
+  "variables": [
+    "ten_khach",
+    "ten_shop",
+    "uu_dai"
+  ],
+  "defaultBody": {
+    "vi": "Chào {ten_khach}, lâu rồi {ten_shop} chưa gặp bạn! Tặng bạn {uu_dai}. Bạn muốn ghé lúc nào ạ?",
+    "en": "Hi {ten_khach}, we have missed you at {ten_shop}! Here is {uu_dai}. When would you like to visit?"
+  },
+  "authority": {
+    "action": "send_follow_up",
+    "alwaysAsk": true
+  },
+  "defaults": {
+    "afterDays": 30,
+    "offer": "ưu đãi 10% cho lần quay lại"
+  }
+}
