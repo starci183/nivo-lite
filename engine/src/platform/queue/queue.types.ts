@@ -16,6 +16,8 @@ export type JobResult = Record<string, unknown>;
 /** A handler for one job kind. It must be safe to run twice for the same job (a lease can expire mid-run). */
 export interface JobHandler {
   readonly kind: string;
+  /** At most this many jobs of this kind run at once, and they do NOT use up the shared ENGINE_CONCURRENCY slots (a long render must not starve chat turns). */
+  readonly maxConcurrent?: number;
   run(job: EngineJob, signal: AbortSignal): Promise<JobResult>;
 }
 

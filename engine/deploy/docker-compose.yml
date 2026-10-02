@@ -131,8 +131,12 @@ services:
       OPENCLAW_GATEWAY_STATE_DIR: /home/node/.openclaw
       N8N_DEFAULT_WEBHOOK_URL: ${N8N_DEFAULT_WEBHOOK_URL:-}
       N8N_ALLOWED_HOSTS: ${N8N_ALLOWED_HOSTS:-n8n}
+      VIDEO_TTS_PROVIDER: ${VIDEO_TTS_PROVIDER:-edge}
+      VIDEO_MAX_SECONDS: ${VIDEO_MAX_SECONDS:-90}
+      VIDEO_FFMPEG_THREADS: ${VIDEO_FFMPEG_THREADS:-4}
     volumes:
       - openclaw-data:/openclaw-state
+      - video-cache:/var/cache/nivo-video # Vietnamese voiceover clips by text hash: re-rendering the same script costs no TTS call
     stop_grace_period: 45s # longer than ENGINE_SHUTDOWN_GRACE_MS so running jobs can finish or be handed back
     logging: *logging
 
@@ -187,6 +191,7 @@ services:
     logging: *logging
 
 volumes:
+  video-cache:
   caddy-data:
   caddy-config:
   openclaw-data:

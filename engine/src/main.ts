@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { AppModule, type AppOptions } from "./app.module";
+import { parseVideoConfig } from "./features/video-render/video.config";
 import { parseN8nConfig } from "./features/n8n-emit/n8n.config";
 import { ConfigError, EnvSource } from "./platform/config/env.source";
 import { parseHttpConfig } from "./platform/config/http.config";
@@ -28,6 +29,7 @@ const parseOptions = (env: EnvSource): AppOptions => ({
   openclaw: parseOpenclawConfig(env),
   n8n: parseN8nConfig(env),
   http: parseHttpConfig(env),
+  video: parseVideoConfig(env),
 });
 
 async function bootstrap(): Promise<void> {

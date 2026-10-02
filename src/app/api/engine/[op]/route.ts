@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { chatTurnCallback, chatTurnContext, generateCallback, generateInput, isToolName, runEngineTool, sweepEngineTimeouts, syncBundle, type CallbackBody } from "@/lib/engine-bridge";
 import { loadRunningJob, queueDb, verifyEngineRequest } from "@/lib/engine-queue";
 import { withErrorReport } from "@/lib/errors";
+import { readVideoCallback, videoCallback, videoInput } from "@/lib/video/server";
 
 /**
  * The engine's door into the app (public path: it is authenticated by an HMAC over the body with ENGINE_SHARED_SECRET, not by a session).
@@ -9,6 +10,7 @@ import { withErrorReport } from "@/lib/errors";
  *   POST /api/engine/callback  { job_id, op, text|reason }     the engine's PROPOSED reply (or "could not get one")
  *   POST /api/engine/tool      { job_id, tool, args }          a tool OpenClaw called through the engine's tool bridge
  *   POST /api/engine/sweep     (header x-sweep-secret)         pg_cron, every minute: answer chat.turn jobs the engine left queued or running too long with the direct model
+ *   POST /api/engine/video-input { job_id }                    the spec of a video.render job; its results come back as callback ops video.progress / video.result / video.error (src/lib/video/server.ts)
  *   POST /api/engine/sync-bundle { job_id }                    the files of one agent's OpenClaw workspace, built from Supabase (job: openclaw.sync_agent, or a chat.turn whose agent has no copy yet)
  * The job id must name a RUNNING job; its workspace is the only workspace any of these can touch.
  */
@@ -50,7 +52,7 @@ async function postHandler(request: Request, { params }: { params: Promise<{ op:
   } catch {
     return json({ error: "invalid body" }, 400);
   }
-  if (op !== "context" && op !== "callback" && op !== "tool" && op !== "sync-bundle" && op !== "generate-input") return json({ error: "not found" }, 404);
+  if (op !== "context" && op !== "callback" && op !== "tool" && op !== "sync-bundle" && op !== "generate-input" && op !== "video-input") return json({ error: "not found" }, 404);
 
   const db = queueDb();
   if (!db) return json({ error: "not configured" }, 503);
@@ -59,6 +61,18 @@ async function postHandler(request: Request, { params }: { params: Promise<{ op:
       const syncJob = await loadRunningJob(db, body.job_id, ["openclaw.sync_agent", "chat.turn"]);
       if (!syncJob) return json({ error: "no running job" }, 409);
       return json(await syncBundle(db, syncJob));
+    }
+    if (op === "video-input") {
+      const videoJob = await loadRunningJob(db, body.job_id, "video.render");
+      if (!videoJob) return json({ error: "no running job" }, 409);
+      return json(await videoInput(db, videoJob));
+    }
+    if (op === "callback" && typeof body.op === "string" && body.op.startsWith("video.")) {
+      const videoJob = await loadRunningJob(db, body.job_id, "video.render");
+      if (!videoJob) return json({ error: "no running job" }, 409);
+      const cb = readVideoCallback(body);
+      if (!cb) return json({ error: "invalid callback" }, 400);
+      return json(await videoCallback(db, videoJob, cb));
     }
     if (op === "generate-input") {
       const genJob = await loadRunningJob(db, body.job_id, "openclaw.generate");

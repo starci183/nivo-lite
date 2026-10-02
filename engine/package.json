@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "description": "NIVO engine: the long-running worker (durable job queue, OpenClaw, n8n) that runs on a VPS next to the Next.js control plane.",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
@@ -17,6 +19,7 @@
     "@nestjs/core": "^11.1.0",
     "@nestjs/platform-express": "^11.1.0",
     "@supabase/supabase-js": "^2.57.0",
+    "msedge-tts": "^2.0.8",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "ws": "^8.18.0"

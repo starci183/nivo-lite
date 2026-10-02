@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "aspect": "9:16",
+  "brand": { "name": "Tên cửa hàng", "primary": "#2563eb", "secondary": "#0f172a", "logo": null },
+  "music": { "track": "calm-glow", "volume": 0.5 },
+  "voice": { "enabled": true, "name": "vi-VN-NamMinhNeural", "rate_pct": 0 },
+  "captions": true,
+  "scenes": [
+    { "background": { "type": "gradient", "from": "#1e3a8a", "to": "#0f172a" }, "text": "Thông báo", "caption": "Cửa hàng mở cửa trở lại từ 8:00 sáng mai", "voiceover": "Thông báo: cửa hàng mở cửa trở lại từ tám giờ sáng mai.", "duration_s": 0, "transition": "fade" },
+    { "background": { "type": "color", "color": "#dbeafe" }, "text": "Cảm ơn bạn đã chờ", "caption": "Hẹn gặp bạn tại cửa hàng", "voiceover": "Cảm ơn bạn đã chờ đợi. Hẹn gặp bạn tại cửa hàng!", "duration_s": 0, "transition": "none" }
+  ]
+}

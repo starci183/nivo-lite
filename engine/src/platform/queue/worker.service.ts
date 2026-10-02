@@ -68,15 +68,34 @@ export class WorkerService implements OnApplicationBootstrap, BeforeApplicationS
     }
   }
 
+  private runningOf(kind: string): number {
+    let n = 0;
+    for (const { job } of this.running.values()) if (job.kind === kind) n++;
+    return n;
+  }
+
   private async poll(): Promise<void> {
     if (this.polling || this.stopping) return;
-    const free = this.options.concurrency - this.running.size;
-    if (free <= 0) return;
+    // Kinds with their own cap (video.render) are claimed against that cap and do not count against the shared slots.
+    const capped = [...this.handlers.values()].filter((h) => h.maxConcurrent !== undefined);
+    const cappedKinds = new Set(capped.map((h) => h.kind));
+    const sharedRunning = [...this.running.values()].filter(({ job }) => !cappedKinds.has(job.kind)).length;
+    const free = this.options.concurrency - sharedRunning;
+    const claims: Array<{ kinds: string[]; limit: number }> = [];
+    const sharedKinds = [...this.handlers.keys()].filter((k) => !cappedKinds.has(k));
+    if (free > 0 && sharedKinds.length > 0) claims.push({ kinds: sharedKinds, limit: free });
+    for (const h of capped) {
+      const room = (h.maxConcurrent ?? 1) - this.runningOf(h.kind);
+      if (room > 0) claims.push({ kinds: [h.kind], limit: room });
+    }
+    if (claims.length === 0) return;
     this.polling = true;
     try {
-      const jobs = await this.queue.claim(this.options.workerId, [...this.handlers.keys()], free, this.options.leaseSeconds);
+      for (const c of claims) {
+        const jobs = await this.queue.claim(this.options.workerId, c.kinds, c.limit, this.options.leaseSeconds);
+        for (const job of jobs) this.start(job);
+      }
       this.lastPollOk = true;
-      for (const job of jobs) this.start(job);
     } catch (e) {
       this.lastPollOk = false;
       this.log.warn(`claim failed: ${(e as Error).message}`);

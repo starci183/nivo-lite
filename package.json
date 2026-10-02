@@ -14,7 +14,8 @@
     "db:test": "node scripts/with-secrets.mjs node scripts/rls-check.mjs",
     "seed:knowledge": "node scripts/with-secrets.mjs node scripts/seed-nivo-knowledge.mjs",
     "seed:automations": "node scripts/with-secrets.mjs node scripts/seed-automation-templates.mjs",
-    "seed:workspace": "node scripts/with-secrets.mjs node scripts/seed-ready-workspace.mjs"
+    "seed:workspace": "node scripts/with-secrets.mjs node scripts/seed-ready-workspace.mjs",
+    "video:spec-sync": "node scripts/video-spec-sync.mjs"
   },
   "dependencies": {
     "@dicebear/core": "^10.4.0",

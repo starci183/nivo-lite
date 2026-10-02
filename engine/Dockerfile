@@ -11,9 +11,13 @@ RUN npm run build && npm prune --omit=dev
 FROM node:22-alpine AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
+# video.render: ffmpeg (libx264, libass, libfreetype, fontconfig, sidechaincompress, loudnorm) + the TTS cache and render scratch dirs the node user may write.
+RUN apk add --no-cache ffmpeg fontconfig  && mkdir -p /var/cache/nivo-video /tmp/nivo-video  && chown node:node /var/cache/nivo-video /tmp/nivo-video
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/dist ./dist
 COPY --chown=node:node package.json ./
+# Bundled Be Vietnam Pro (SIL OFL, see assets/video/fonts/OFL.txt) and the royalty-free music beds (assets/video/music/LICENSE.md).
+COPY --chown=node:node assets ./assets
 USER node
 EXPOSE 8787
 # Liveness only (process-local): never depends on Supabase or OpenClaw, so their outage does not restart a healthy engine.

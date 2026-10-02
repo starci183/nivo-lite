@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "aspect": "9:16",
+  "brand": { "name": "Tên cửa hàng", "primary": "#16a34a", "secondary": "#0f172a", "logo": null },
+  "music": { "track": "sunny-pop", "volume": 0.5 },
+  "voice": { "enabled": true, "name": "vi-VN-HoaiMyNeural", "rate_pct": 5 },
+  "captions": true,
+  "scenes": [
+    { "background": { "type": "gradient", "from": "#16a34a", "to": "#052e16" }, "text": "Ưu đãi tuần này", "caption": "", "voiceover": "Chào bạn, tuần này cửa hàng có ưu đãi đặc biệt dành cho bạn.", "duration_s": 0, "transition": "fade" },
+    { "background": { "type": "color", "color": "#0f172a" }, "text": "Giảm 20%", "caption": "Cho mọi đơn hàng đến hết Chủ nhật", "voiceover": "Giảm hai mươi phần trăm cho mọi đơn hàng đến hết Chủ nhật.", "duration_s": 0, "transition": "slide" },
+    { "background": { "type": "gradient", "from": "#fde68a", "to": "#f59e0b" }, "text": "Nhắn Zalo để đặt ngay", "caption": "Số lượng có hạn", "voiceover": "Nhắn Zalo để đặt ngay, số lượng có hạn nhé.", "duration_s": 0, "transition": "none" }
+  ]
+}
