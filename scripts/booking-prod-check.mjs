@@ -7,6 +7,7 @@
 //   flow       signed calls against BASE (default https://nivo.vn): chatbot-style booking_request through /api/engine/callback and /api/engine/tool, the minute tick, reminders
 //   public     the public booking page /b/<slug> (slots, book, rate limit, honeypot)
 //   automations the four booking automation cards (switched on in the test workspace, then back OFF): review, come back, waitlist notice
+//   shifts     the optional link to the shifts module: an approved leave blocks a linked resource
 //   real-turn  a real OpenClaw chat.turn (queued engine job) for a booking message; polls the result
 import { createClient } from "@supabase/supabase-js";
 import { createHmac, randomUUID } from "node:crypto";
@@ -395,6 +396,35 @@ const automations = async () => {
   for (const k of keys) await db.from("automation_pipelines").update({ enabled: false }).eq("workspace_id", ws).eq("template_key", k); // back to the default: OFF
 };
 
+/* ------------------------------------------------------------------ optional shifts integration (approved leave blocks a linked resource) */
+const shiftsCheck = async () => {
+  const ws = await workspace();
+  const m = await load(ws);
+  await db.from("booking_rate").delete().neq("key", "");
+  const tue = nextWeekday(2, 6);
+  const svc = m.byName["Cắt tóc nữ"];
+  const times = async () => ((await (await fetch(`${BASE}/api/b/${SLUG}/slots?service=${svc.id}&date=${tue}`)).json()).times ?? []).map((t) => hm(Date.parse(t)));
+  const lan = m.resources.find((r) => r.name.endsWith("Lan"));
+  await db.from("shifts_leave_requests").delete().eq("workspace_id", ws);
+  await db.from("shifts_staff").delete().eq("workspace_id", ws);
+  await db.from("staff").delete().eq("workspace_id", ws).eq("name", "Kiểm thử · Nhân viên Lan");
+  await db.from("booking_resources").update({ staff_id: null }).eq("id", lan.id);
+  const before = await times();
+  const st = ok(await db.from("staff").insert({ workspace_id: ws, name: "Kiểm thử · Nhân viên Lan", role: "Thợ tóc" }).select("id").single(), "staff");
+  const ss = ok(await db.from("shifts_staff").insert({ workspace_id: ws, name: "Kiểm thử · Nhân viên Lan", staff_id: st.id }).select("id").single(), "shifts_staff");
+  await db.from("booking_resources").update({ staff_id: st.id }).eq("id", lan.id);
+  const linkedNoLeave = await times();
+  ok(await db.from("shifts_leave_requests").insert({ workspace_id: ws, staff_id: ss.id, from_date: tue, to_date: tue, reason: "Kiểm thử · nghỉ phép", status: "approved" }), "leave");
+  const afterLeave = await times();
+  // 12:00-12:45 is covered by Lan only (Mai is at lunch), so it disappears when Lan is on approved leave
+  check("S1 optional shifts link: before the link and with a link but no leave the day is the same", `${before.length} times`, `${linkedNoLeave.length} times`, before.length === linkedNoLeave.length && before.includes("12:00"));
+  check("S2 an approved leave of the linked staff member blocks that resource for the day", "12:00 (only Lan works at lunch) and later Lan-only times disappear", `${afterLeave.length} times, 12:00 ${afterLeave.includes("12:00") ? "still offered" : "gone"}`, afterLeave.length < before.length && !afterLeave.includes("12:00") && afterLeave.includes("10:00"));
+  await db.from("shifts_leave_requests").delete().eq("workspace_id", ws);
+  await db.from("shifts_staff").delete().eq("workspace_id", ws);
+  await db.from("booking_resources").update({ staff_id: null }).eq("id", lan.id);
+  await db.from("staff").delete().eq("id", st.id);
+};
+
 /* ------------------------------------------------------------------ one real OpenClaw turn */
 const realTurn = async () => {
   const ws = await workspace();
@@ -443,6 +473,7 @@ for (const p of phases) {
   else if (p === "flow") await flow();
   else if (p === "public") await publicCheck();
   else if (p === "automations") await automations();
+  else if (p === "shifts") await shiftsCheck();
   else if (p === "real-turn") await realTurn();
   else throw new Error(`unknown phase ${p}`);
 }

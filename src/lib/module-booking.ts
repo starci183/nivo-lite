@@ -93,16 +93,43 @@ export const resolveService = (services: ReadonlyArray<ServiceRow>, ref: string)
   return active.find((s) => fold(s.name) === f) ?? active.find((s) => fold(s.name).includes(f) || f.includes(fold(s.name))) ?? null;
 };
 
-/** Bookings (and nothing else) that hold a resource in a time range. */
-export const loadTaken = async (ws: string, fromMs: number, toMs: number): Promise<Array<Taken>> => {
-  const { data } = await adm().from("bookings").select("id, resource_id, start_at, block_end_at, party_size")
-    .eq("workspace_id", ws).eq("holds_slot", true).in("status", [...ACTIVE]).lt("start_at", new Date(toMs).toISOString()).gt("block_end_at", new Date(fromMs).toISOString());
-  return ((data ?? []) as Array<{ id: string; resource_id: string; start_at: string; block_end_at: string; party_size: number }>)
-    .map((b) => ({ id: b.id, resourceId: b.resource_id, startMs: Date.parse(b.start_at), blockEndMs: Date.parse(b.block_end_at), partySize: b.party_size }));
+/**
+ * Optional: the shifts module (staff schedules). A booking resource linked to a staff member (booking_resources.staff_id) is blocked for the whole day
+ * while that person has an APPROVED leave request in shifts_leave_requests. Nothing here depends on shifts: when its tables are missing or empty
+ * the answer is simply no blocks, and the resource's own hours stay the only rule.
+ */
+const externalBlocks = async (ws: string, fromMs: number, toMs: number): Promise<Array<Taken>> => {
+  try {
+    const db = adm();
+    const linked = ((await db.from("booking_resources").select("id, staff_id").eq("workspace_id", ws).not("staff_id", "is", null)).data ?? []) as Array<{ id: string; staff_id: string }>;
+    if (!linked.length) return [];
+    const people = ((await db.from("shifts_staff").select("id, staff_id").eq("workspace_id", ws).in("staff_id", linked.map((l) => l.staff_id))).data ?? []) as Array<{ id: string; staff_id: string }>;
+    if (!people.length) return [];
+    const tz = (await loadSettings(ws)).timezone;
+    const leaves = ((await db.from("shifts_leave_requests").select("staff_id, from_date, to_date").eq("workspace_id", ws).eq("status", "approved").in("staff_id", people.map((p) => p.id))
+      .lte("from_date", localDate(toMs, tz)).gte("to_date", localDate(fromMs, tz))).data ?? []) as Array<{ staff_id: string; from_date: string; to_date: string }>;
+    const out: Array<Taken> = [];
+    for (const l of leaves) {
+      const sid = people.find((p) => p.id === l.staff_id)?.staff_id;
+      for (const r of linked.filter((x) => x.staff_id === sid)) out.push({ id: `leave:${l.staff_id}:${l.from_date}`, resourceId: r.id, startMs: zonedMs(l.from_date, "00:00", tz), blockEndMs: zonedMs(addDays(l.to_date, 1), "00:00", tz), partySize: 1000 });
+    }
+    return out;
+  } catch {
+    return []; // shifts tables not there yet: no external blocks
+  }
 };
 
-/** Optional: the staff directory's shifts lane. Not wired yet (the booking module keeps its own resource hours); returns external blocks when a source exists. */
-const externalBlocks = async (_ws: string, _fromMs: number, _toMs: number): Promise<Array<Taken>> => [];
+/** Bookings that hold a resource in a time range, plus external blocks (approved leave from the shifts module, when it exists). */
+export const loadTaken = async (ws: string, fromMs: number, toMs: number): Promise<Array<Taken>> => {
+  const blocks = await externalBlocks(ws, fromMs, toMs);
+  const { data } = await adm().from("bookings").select("id, resource_id, start_at, block_end_at, party_size")
+    .eq("workspace_id", ws).eq("holds_slot", true).in("status", [...ACTIVE]).lt("start_at", new Date(toMs).toISOString()).gt("block_end_at", new Date(fromMs).toISOString());
+  return [
+    ...((data ?? []) as Array<{ id: string; resource_id: string; start_at: string; block_end_at: string; party_size: number }>)
+      .map((b) => ({ id: b.id, resourceId: b.resource_id, startMs: Date.parse(b.start_at), blockEndMs: Date.parse(b.block_end_at), partySize: b.party_size })),
+    ...blocks,
+  ];
+};
 
 /* ------------------------------------------------------------------ findSlots */
 
@@ -118,7 +145,7 @@ export const findSlotsFor = async (ws: string, a: FindSlotsArgs): Promise<FindSl
   const policy = policyOf(m.settings);
   const fromMs = a.fromMs ?? zonedMs(a.date ?? localDate(Date.now(), policy.timezone), "00:00", policy.timezone);
   const toMs = a.toMs ?? zonedMs(addDays(a.date ?? localDate(fromMs, policy.timezone), 1), "00:00", policy.timezone);
-  const taken = [...(await loadTaken(ws, fromMs, toMs + 86_400_000)), ...(await externalBlocks(ws, fromMs, toMs))];
+  const taken = await loadTaken(ws, fromMs, toMs + 86_400_000);
   const nowMs = a.nowMs ?? Date.now();
   const slots = findSlots({ service: specOf(svc), resources: m.resources, hours: m.hours, exceptions: m.exceptions, taken, policy, fromMs, toMs, nowMs, partySize: a.partySize, resourceId: a.resourceId });
   const name = new Map(m.resources.map((r) => [r.id, r.name]));

@@ -150,11 +150,11 @@ const parseLine = (line: string): Array<{ start: string; end: string }> | null =
   return out;
 };
 
-const ResourceRow = ({ r, hours, kinds, onChanged }: { readonly r: WorkbenchData["model"]["resources"][number] | null; readonly hours: WorkbenchData["model"]["hours"]; readonly kinds: ReadonlyArray<string>; readonly onChanged: Done }) => {
+const ResourceRow = ({ r, hours, kinds, staff, onChanged }: { readonly r: WorkbenchData["model"]["resources"][number] | null; readonly hours: WorkbenchData["model"]["hours"]; readonly kinds: ReadonlyArray<string>; readonly staff: WorkbenchData["staff"]; readonly onChanged: Done }) => {
   const [open, setOpen] = useState(r === null);
-  const [f, setF] = useState({ name: r?.name ?? "", kind: r?.kind ?? "staff", capacity: r?.capacity ?? 1, active: r?.active ?? true });
+  const [f, setF] = useState({ name: r?.name ?? "", kind: r?.kind ?? "staff", capacity: r?.capacity ?? 1, active: r?.active ?? true, staffId: r?.staff_id ?? "" });
   const [lines, setLines] = useState<Array<string>>(r ? [1, 2, 3, 4, 5, 6, 7].map((d) => dayLine(hours, r.id, d)) : []);
-  const { pending, go, note } = useRun(() => { onChanged(); if (!r) setF({ name: "", kind: "staff", capacity: 1, active: true }); });
+  const { pending, go, note } = useRun(() => { onChanged(); if (!r) setF({ name: "", kind: "staff", capacity: 1, active: true, staffId: "" }); });
   const saveHours = () => {
     if (!r) return;
     const rows: Array<{ weekday: number; start: string; end: string }> = [];
@@ -176,11 +176,19 @@ const ResourceRow = ({ r, hours, kinds, onChanged }: { readonly r: WorkbenchData
       </div>
       {open ? (
         <div className="mt-3 flex flex-col gap-3">
-          <form className="flex flex-col gap-3" onSubmit={(e) => { e.preventDefault(); go(() => saveResourceAction({ id: r?.id, name: f.name, kind: f.kind, capacity: f.capacity, color: r?.color ?? "", active: f.active })); }}>
+          <form className="flex flex-col gap-3" onSubmit={(e) => { e.preventDefault(); go(() => saveResourceAction({ id: r?.id, name: f.name, kind: f.kind, capacity: f.capacity, color: r?.color ?? "", active: f.active, staffId: f.staffId })); }}>
             <div className={GRID2}>
               <label className={LABEL}>Tên<input className={FIELD} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required /></label>
               <label className={LABEL}>Loại (thợ, phòng, ghế, khoang...)<input className={FIELD} list="booking-kinds-r" value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value })} /></label>
               <label className={LABEL}>Số khách cùng lúc<input className={FIELD} type="number" min={1} value={f.capacity} onChange={(e) => setF({ ...f, capacity: Number(e.target.value) || 1 })} /></label>
+              {staff.length ? (
+                <label className={LABEL}>Gắn với nhân viên (lấy ngày nghỉ phép từ Lịch ca)
+                  <select className={FIELD} value={f.staffId} onChange={(e) => setF({ ...f, staffId: e.target.value })}>
+                    <option value="">Không gắn</option>
+                    {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </label>
+              ) : null}
             </div>
             <datalist id="booking-kinds-r">{kinds.map((k) => <option key={k} value={k} />)}</datalist>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.active} onChange={(e) => setF({ ...f, active: e.target.checked })} />Đang làm việc</label>
@@ -264,8 +272,8 @@ export const SetupPanel = ({ data, onChanged }: { readonly data: WorkbenchData; 
       </Section>
       <Section title="Người và phòng" hint="Thợ, bác sĩ, phòng, ghế, khoang sửa xe... Mỗi nơi có giờ làm việc riêng. Dịch vụ chỉ xếp được vào đúng loại nó cần.">
         <ul className="m-0 list-none p-0">
-          {data.model.resources.map((r) => <ResourceRow key={r.id + r.name + r.capacity + r.active + r.kind} r={r} hours={data.model.hours} kinds={kinds} onChanged={onChanged} />)}
-          <ResourceRow r={null} hours={data.model.hours} kinds={kinds} onChanged={onChanged} />
+          {data.model.resources.map((r) => <ResourceRow key={r.id + r.name + r.capacity + r.active + r.kind} r={r} hours={data.model.hours} kinds={kinds} staff={data.staff} onChanged={onChanged} />)}
+          <ResourceRow r={null} hours={data.model.hours} kinds={kinds} staff={data.staff} onChanged={onChanged} />
         </ul>
       </Section>
       <ExceptionForm data={data} onChanged={onChanged} />

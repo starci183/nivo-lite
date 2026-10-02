@@ -192,13 +192,13 @@ export async function deleteServiceAction(id: string): Promise<Outcome<true>> {
   });
 }
 
-export type ResourceInput = { readonly id?: string; readonly name: string; readonly kind: string; readonly capacity: number; readonly color: string; readonly active: boolean };
+export type ResourceInput = { readonly id?: string; readonly name: string; readonly kind: string; readonly capacity: number; readonly color: string; readonly active: boolean; readonly staffId?: string | null };
 
 export async function saveResourceAction(r: ResourceInput): Promise<Outcome<{ id: string }>> {
   return run(async () => {
     const c = await ctxOf();
     if (!r.name.trim()) throw new Error("Nhập tên.");
-    const row = { workspace_id: c.ws, name: r.name.trim().slice(0, 120), kind: r.kind.trim().slice(0, 40) || "staff", capacity: Math.min(200, Math.max(1, Math.round(num(r.capacity, 1)))), color: r.color, active: r.active };
+    const row = { workspace_id: c.ws, name: r.name.trim().slice(0, 120), kind: r.kind.trim().slice(0, 40) || "staff", capacity: Math.min(200, Math.max(1, Math.round(num(r.capacity, 1)))), color: r.color, active: r.active, staff_id: r.staffId || null };
     if (r.id) {
       const { error } = await db().from("booking_resources").update(row).eq("id", r.id).eq("workspace_id", c.ws);
       if (error) throw new Error(error.message);

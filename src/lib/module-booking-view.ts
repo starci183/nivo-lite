@@ -18,6 +18,7 @@ export type WorkbenchData = {
   readonly waitlist: ReadonlyArray<WaitView>;
   readonly stats: { readonly byResource: ReadonlyArray<StatView>; readonly byStatus: Readonly<Record<string, number>>; readonly noShowPct: number; readonly doneRevenueVnd: number; readonly total: number };
   readonly exceptionList: ReadonlyArray<{ readonly id: string; readonly resourceId: string | null; readonly date: string; readonly closed: boolean; readonly start: string | null; readonly end: string | null; readonly note: string }>;
+  readonly staff: ReadonlyArray<{ readonly id: string; readonly name: string }>;
   readonly waitingDecisions: number;
 };
 
@@ -37,11 +38,12 @@ export const loadWorkbenchData = async (ws: string, from?: string, to?: string):
   const t = to ?? addDays(f, 6);
   const fromMs = zonedMs(f, "00:00", tz);
   const toMs = zonedMs(addDays(t, 1), "00:00", tz);
-  const [rows, wait, decisions, exc] = await Promise.all([
+  const [rows, wait, decisions, exc, staff] = await Promise.all([
     db.from("bookings").select("*").eq("workspace_id", ws).lt("start_at", new Date(toMs).toISOString()).gt("end_at", new Date(fromMs).toISOString()).order("start_at"),
     db.from("booking_waitlist").select("*").eq("workspace_id", ws).in("status", ["waiting", "notified"]).order("created_at", { ascending: false }).limit(100),
     db.from("work_items").select("id", { count: "exact", head: true }).eq("workspace_id", ws).eq("department", "booking").eq("status", "waiting_decision"),
     db.from("booking_exceptions").select("id, resource_id, on_date, closed, start_time, end_time, note").eq("workspace_id", ws).gte("on_date", addDays(today, -1)).order("on_date").limit(100),
+    db.from("staff").select("id, name").eq("workspace_id", ws).eq("active", true).order("name"),
   ]);
   const all = (rows.data ?? []) as Array<BookingRow>;
   const byStatus: Record<string, number> = {};
@@ -64,6 +66,7 @@ export const loadWorkbenchData = async (ws: string, from?: string, to?: string):
       byStatus, noShowPct: finished > 0 ? Math.round(((byStatus.no_show ?? 0) / finished) * 100) : 0, doneRevenueVnd: revenue, total: all.length,
     },
     exceptionList: ((exc.data ?? []) as Array<{ id: string; resource_id: string | null; on_date: string; closed: boolean; start_time: string | null; end_time: string | null; note: string }>).map((e) => ({ id: e.id, resourceId: e.resource_id, date: e.on_date, closed: e.closed, start: e.start_time?.slice(0, 5) ?? null, end: e.end_time?.slice(0, 5) ?? null, note: e.note })),
+    staff: ((staff.data ?? []) as Array<{ id: string; name: string }>),
     waitingDecisions: decisions.count ?? 0,
   };
 };
