@@ -39,13 +39,9 @@ const fromN8n = (raw: unknown): TemplateDef => {
 export const TEMPLATE_LIST: ReadonlyArray<TemplateDef> = [
   ...(([
     thankPayment, nurtureLeads, dailyReport, afterHours, askReview, debtReminder, winBack, sheetOrders,
-<<<<<<< HEAD
     appointmentReminder, bookingReview, bookingComeback, bookingWaitlistNotice, marketplaceOrderSync, contractRenewal, deliveryNotice,
     inventoryLowStock, inventoryWeeklyReport, inventorySupplierOverdue,
-=======
-    appointmentReminder, marketplaceOrderSync, contractRenewal, deliveryNotice,
-    inventoryLowStock, inventoryWeeklyReport, inventorySupplierOverdue, videoNewOffer,
->>>>>>> 4f53058 (fix(video): register the video_new_offer template after the rebase)
+    videoNewOffer,
   ] as unknown) as ReadonlyArray<TemplateDef>),
   ...[emailDailyReport, emailPaymentReceipt, emailDebtReminder, emailMonthLedger].map(fromN8n),
 ];
