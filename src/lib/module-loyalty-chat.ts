@@ -65,7 +65,10 @@ export const loyaltyChatBlock = async (db: SupabaseClient, ws: string, conv: Con
       exp.points > 0 && exp.firstAt ? `Points expiring soon: ${formatPoints(exp.points)} từ ${exp.firstAt.slice(0, 10)}.` : "No points expiring soon.",
       can.length ? `Can redeem right now: ${can.join(", ")}.` : "Cannot redeem any reward right now (not enough points or limits reached).",
     );
-  } else lines.push("THIS CUSTOMER: not recognised as a member yet.");
+  } else {
+    lines.push("THIS CUSTOMER: not recognised as a member yet.");
+    await logEvidence(db, ws, { lead_id: conv.lead_id, kind: "loyalty.chat_unrecognised", actor: "NIVO", summary: "Chat về điểm thưởng nhưng chưa nhận ra khách này là thành viên", evidence: `conversation ${conv.id}; lead ${conv.lead_id ?? "-"}; customer ${id ?? "-"}` });
+  }
   lines.push("", LOYALTY_REPLY_CONTRACT);
   return lines.join("\n");
 };
