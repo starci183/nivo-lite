@@ -69,6 +69,15 @@ Supabase là nguồn gốc; OpenClaw chỉ giữ một bản sao, ghi **một ch
 
 Kích hoạt: app (áp dụng setup, duyệt ghi chú Office, thêm/sửa/xoá/lập chỉ mục lại tri thức, đổi bộ xử lý sang OpenClaw, nút "Đồng bộ lại"), pg_cron mỗi 5 phút cho mọi installation có `processor = 'openclaw'`, và engine lúc khởi động (VPS mới tự dựng lại từ Supabase). Job trùng được gộp trong SQL (`engine_enqueue_agent_sync`). `chat.turn` thấy agent chưa có bản sao thì đồng bộ ngay trong lượt đó; khi bản sao khớp phiên bản ngữ cảnh đang dùng, mỗi lượt chỉ gửi dữ liệu động (quyền hạn hiện tại, các đoạn tri thức liên quan tới câu hỏi, hội thoại).
 
+## OpenClaw là AI viết chữ duy nhất, và đường lui không có AI
+
+Không còn gọi model trực tiếp ở đâu trong app (`src/lib/deepseek.ts` chỉ còn dựng prompt; `completeRaw` ném lỗi). Embedding tri thức vẫn dùng API embedding riêng vì không phải sinh chữ.
+
+- **Khách chat** (`chat.turn`): OpenClaw lỗi, quá thời gian chờ (cài đặt từng installation `openclawTimeoutSec`, mặc định 25 giây) hoặc engine chết (bộ quét `/api/engine/sweep` do pg_cron + pg_net gọi mỗi phút; job xếp hàng quá 30 giây hoặc chạy quá hạn bị huỷ nguyên tử) thì **không có chữ AI nào**: khách nhận tin nhắn giữ chỗ cố định của chủ (mặc định "Dạ em đã nhận tin, nhân viên sẽ phản hồi anh/chị sớm ạ", sửa trong cài đặt module, tối đa một lần mỗi giờ mỗi hội thoại) và một việc chuyển giao hiện ở Office, bằng chứng `fallback: openclaw_unavailable`.
+- **Mọi chữ khác** (chat thiết lập, chat chủ, Office, phân loại lead, bản nháp tự động): job `openclaw.generate { generation_id }`. App ghi hàng `ai_generations`, xếp job, thăm dò hàng đến khi engine gọi lại `generate.result` (HMAC). Chạy một lượt một lần trên agent "nivo" riêng của workspace (không persona, không công cụ). Kết quả cho job đã huỷ bị bỏ. Hết hạn mức hoặc OpenClaw bận thì giao diện hiện "NIVO đang bận, thử lại sau ít phút".
+- **Watchdog** (`deploy/watchdog.sh`, cron mỗi phút do CI cài): engine ở chung network namespace với openclaw nên khi openclaw khởi động lại, engine mất mạng; watchdog tạo lại *chỉ* dịch vụ engine.
+- **Chi phí và tốc độ**: model `openrouter/deepseek/deepseek-v4-flash` được tắt reasoning qua `params.extra_body`; DeepSeek tự cache tiền tố lặp lại (usage có `cached_tokens`, ghi vào `ai_generations.usage` và việc đo dùng AI).
+
 ## Chat.turn: mỗi quyết định thiết kế
 
 - **Ngữ cảnh do app dựng**, engine gọi `POST /api/engine/context` thay vì chép logic `buildAgentContext` sang engine. Lý do: lọc *chỉ tri thức công khai* cho khách, quyền hạn chủ doanh nghiệp (`authorityBrief`) và phiên bản ngữ cảnh đã duyệt là ranh giới bảo mật; hai bản sao sẽ lệch nhau. Đổi lại mỗi lượt có thêm một request nội bộ.

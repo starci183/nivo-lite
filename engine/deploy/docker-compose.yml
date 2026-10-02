@@ -58,7 +58,10 @@ services:
           auth: { ...((c.gateway || {}).auth || {}), mode: "token", token: process.env.OPENCLAW_GATEWAY_TOKEN } };
         const model = process.env.OPENCLAW_MODEL;
         if (model) { c.agents = c.agents || {}; c.agents.defaults = c.agents.defaults || {};
-          c.agents.defaults.model = { ...(c.agents.defaults.model || {}), primary: model }; }
+          c.agents.defaults.model = { ...(c.agents.defaults.model || {}), primary: model };
+          // OpenRouter DeepSeek V4 models think by default (hundreds of reasoning tokens, seconds of latency, 2x cost): switch reasoning off in the request body.
+          const models = c.agents.defaults.models = c.agents.defaults.models || {}; const prev = models[model] || {};
+          models[model] = { ...prev, params: { ...(prev.params || {}), extra_body: { ...((prev.params || {}).extra_body || {}), reasoning: { enabled: false } } } }; }
         fs.mkdirSync("/home/node/.openclaw", { recursive: true });
         fs.writeFileSync(p, JSON.stringify(c, null, 2), { mode: 0o600 });
         console.log("openclaw.json ready (gateway local/loopback/token" + (model ? ", model " + model : "") + ")");
