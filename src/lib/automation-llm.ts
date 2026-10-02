@@ -1,13 +1,9 @@
 import "server-only";
+import { generateWithOpenClaw } from "./openclaw-generate";
 
 /**
- * The ONE place automations ask a model to write text. OpenClaw is the only text-generating AI of the product: the OpenClaw lane's helper
- * `generateWithOpenClaw(...)` (engine job `openclaw.generate`, asynchronous) is the intended implementation. It is not on main yet, so this adapter is DISABLED:
- * it returns null and every caller falls back to deterministic text (the approved template with its variables filled), which is also what `fixed` templates always do.
- *
- * TODO(openclaw): when `generateWithOpenClaw` lands, call it here (system + prompt in, plain text out; the call is async, so enqueue, and let the run wait
- * as "running" until the job completes or time out to the fallback) and delete the early return. Nothing else in the automations needs to change.
- * This module must never call src/lib/deepseek.ts.
+ * The ONE place automations ask a model to write text. OpenClaw is the only text-generating AI of the product: this adapter calls `generateWithOpenClaw`
+ * (engine job `openclaw.generate`) and returns null when it cannot answer, so callers keep their deterministic fallback. It must never call src/lib/deepseek.ts.
  */
 export type GenerateRequest = {
   readonly workspaceId: string;
@@ -17,9 +13,17 @@ export type GenerateRequest = {
   readonly prompt: string;
 };
 
-export const GENERATION_ENABLED = false;
+export const GENERATION_ENABLED = true;
 
-export const generateText = async (_req: GenerateRequest): Promise<string | null> => {
+/**
+ * Text for an automation, written by OpenClaw (engine job `openclaw.generate`) through `generateWithOpenClaw`. Returns null when OpenClaw cannot answer in time
+ * (engine down, over the plan allowance, timeout): every caller then uses its deterministic text, so an automation never fails only because of the model.
+ */
+export const generateText = async (req: GenerateRequest): Promise<string | null> => {
   if (!GENERATION_ENABLED) return null;
-  return null;
+  const r = await generateWithOpenClaw({
+    workspaceId: req.workspaceId, purpose: `automation_${req.purpose}`, kind: "engine", module: "other", timeoutMs: 40_000,
+    messages: [{ role: "system", content: req.system }, { role: "user", content: req.prompt }],
+  });
+  return r.ok ? r.output.trim() || null : null;
 };
