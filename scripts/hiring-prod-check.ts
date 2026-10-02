@@ -364,7 +364,7 @@ const rls = async (): Promise<void> => {
   console.log("\n== RLS and private files ==");
   const anon = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { auth: { persistSession: false } });
   for (const t of ["hiring_candidates", "hiring_consents", "hiring_interviews", "hiring_offers", "hiring_jobs", "hiring_settings", "hiring_events", "hiring_onboarding", "hiring_availability"]) {
-    const r = await anon.from(t).select("id").limit(1);
+    const r = await anon.from(t).select("workspace_id").limit(1);
     ok(`anon cannot read ${t}`, (r.data ?? []).length === 0, r.error ? r.error.message.slice(0, 60) : "0 rows");
   }
   const cv = ((await db.from("hiring_candidates").select("cv_path").eq("workspace_id", st.ws).not("cv_path", "is", null).limit(1)).data ?? [])[0] as { cv_path: string } | undefined;
