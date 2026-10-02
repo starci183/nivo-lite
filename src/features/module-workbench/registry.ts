@@ -27,4 +27,5 @@ export const WORKBENCHES: Readonly<Record<string, WorkbenchComponent>> = {
   booking: WorkbenchBooking,
   video: WorkbenchVideo,
   hiring: WorkbenchHiring,
+  shifts: WorkbenchShifts,
 };
