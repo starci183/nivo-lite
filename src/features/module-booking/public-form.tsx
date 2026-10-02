@@ -68,8 +68,8 @@ export const PublicBookingForm = ({ slug, services, tz }: { readonly slug: strin
   }
 
   return (
-    <form className="flex flex-col gap-5" onSubmit={submit}>
-      <fieldset className="flex flex-col gap-2">
+    <form className="flex min-w-0 flex-col gap-5" onSubmit={submit}>
+      <fieldset className="flex min-w-0 flex-col gap-2">
         <legend className="mb-1 text-sm font-semibold">1. Chọn dịch vụ</legend>
         {services.length === 0 ? <p className="text-sm text-muted">Cửa hàng chưa mở nhận lịch qua trang này.</p> : null}
         {services.map((s) => (
@@ -83,7 +83,7 @@ export const PublicBookingForm = ({ slug, services, tz }: { readonly slug: strin
         ))}
       </fieldset>
 
-      <fieldset className="flex flex-col gap-2">
+      <fieldset className="flex min-w-0 flex-col gap-2">
         <legend className="mb-1 text-sm font-semibold">2. Chọn ngày và giờ</legend>
         <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Chọn ngày">
           {days.map((d) => (
@@ -101,7 +101,7 @@ export const PublicBookingForm = ({ slug, services, tz }: { readonly slug: strin
         </div>
       </fieldset>
 
-      <fieldset className="flex flex-col gap-3">
+      <fieldset className="flex min-w-0 flex-col gap-3">
         <legend className="mb-1 text-sm font-semibold">3. Thông tin của bạn</legend>
         <label className={LABEL}>Tên của bạn<input className={FIELD} value={name} onChange={(e) => setName(e.target.value)} required autoComplete="name" /></label>
         <label className={LABEL}>Số điện thoại<input className={FIELD} value={phone} onChange={(e) => setPhone(e.target.value)} required inputMode="tel" autoComplete="tel" /></label>

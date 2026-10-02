@@ -17,7 +17,7 @@ const PublicBookingPage = async ({ params }: Props) => {
   const page = await loadPublicPage((await params).slug);
   if (!page) notFound();
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col gap-4 px-4 py-6 md:py-10">
+    <main className="mx-auto flex min-h-dvh w-full min-w-0 max-w-xl flex-col gap-4 overflow-x-clip px-4 py-6 md:py-10">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Đặt lịch hẹn</h1>
         <p className="text-muted">{page.shop}</p>
