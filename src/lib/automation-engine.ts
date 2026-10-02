@@ -120,7 +120,7 @@ const onDecision = async (db: Db, ws: string, data: Readonly<Record<string, unkn
   const itemId = str(data.work_item_id);
   const outcome = str(data.outcome);
   if (!itemId) return;
-  const { data: rows } = await db.from("automation_runs").select("id, pipeline_id, steps").eq("workspace_id", ws).eq("status", "waiting_approval").contains("steps", [{ workItemId: itemId }]);
+  const { data: rows } = await db.from("automation_runs").select("id, pipeline_id, steps").eq("workspace_id", ws).eq("status", "waiting_approval").contains("steps", JSON.stringify([{ workItemId: itemId }]));
   for (const r of (rows ?? []) as Array<{ id: string; pipeline_id: string; steps: Array<Record<string, unknown>> }>) {
     const rejected = outcome === "rejected";
     const steps = [...r.steps.filter((s) => s.status !== "waiting"), { label: rejected ? "Bạn đã từ chối tin này" : outcome === "edited" ? "Bạn đã sửa rồi duyệt, tin đã gửi" : "Bạn đã duyệt, tin đã gửi", status: rejected ? "skipped" : "done", workItemId: itemId }];
