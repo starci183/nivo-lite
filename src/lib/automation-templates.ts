@@ -15,6 +15,7 @@ import marketplaceOrderSync from "../../resources/automation-templates/marketpla
 import nurtureLeads from "../../resources/automation-templates/nurture_leads.json";
 import sheetOrders from "../../resources/automation-templates/sheet_orders.json";
 import thankPayment from "../../resources/automation-templates/thank_payment.json";
+import videoNewOffer from "../../resources/automation-templates/video_new_offer.json";
 import winBack from "../../resources/automation-templates/win_back.json";
 import emailDailyReport from "../../resources/n8n-templates/email-daily-report.meta.json";
 import emailDebtReminder from "../../resources/n8n-templates/email-debt-reminder.meta.json";

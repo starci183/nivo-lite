@@ -1,0 +1,15 @@
+{
+  "goal": "offer",
+  "order": 2,
+  "label": { "vi": "Ưu đãi", "en": "A special offer" },
+  "hint": { "vi": "Báo ưu đãi đang có, đúng thời hạn và điều kiện bạn đã ghi.", "en": "Announce a current offer with the exact terms you wrote." },
+  "default_seconds": 20,
+  "default_aspect": "9:16",
+  "music": "bold-beat",
+  "scenes": [
+    { "role": "hook", "brief": "Mở bằng ưu đãi nổi bật nhất, ngắn gọn, đúng con số đã ghi." },
+    { "role": "body", "brief": "Ưu đãi áp dụng cho gì, cho ai, điều kiện kèm theo." },
+    { "role": "body", "brief": "Thời hạn hoặc số lượng có hạn nếu thông tin có ghi; không tự thêm khan hiếm giả." },
+    { "role": "cta", "brief": "Kêu gọi hành động rõ ràng: nhắn tin, gọi, hoặc đặt lịch trước hạn." }
+  ]
+}

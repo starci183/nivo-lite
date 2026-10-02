@@ -35,7 +35,7 @@
   "included_with_workspace": false,
   "available": true,
   "knowledge_folder": "video",
-  "workbench": null,
+  "workbench": "video",
   "settings_extras": null,
   "requires": {
     "capabilities": [

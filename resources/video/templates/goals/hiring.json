@@ -1,0 +1,15 @@
+{
+  "goal": "hiring",
+  "order": 5,
+  "label": { "vi": "Tuyển dụng", "en": "Hiring" },
+  "hint": { "vi": "Tìm người vào đội: vị trí, công việc, cách ứng tuyển.", "en": "Find people: the role, the work, how to apply." },
+  "default_seconds": 30,
+  "default_aspect": "9:16",
+  "music": "calm-glow",
+  "scenes": [
+    { "role": "hook", "brief": "Mở bằng vị trí đang tìm người và một lý do hấp dẫn có thật." },
+    { "role": "body", "brief": "Công việc hằng ngày và yêu cầu chính, nói thật và ngắn." },
+    { "role": "body", "brief": "Quyền lợi chỉ khi có trong thông tin; không tự đưa con số lương." },
+    { "role": "cta", "brief": "Cách ứng tuyển: gửi tin nhắn hoặc liên hệ theo thông tin đã cung cấp." }
+  ]
+}

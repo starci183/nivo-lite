@@ -1,0 +1,15 @@
+{
+  "goal": "testimonial",
+  "order": 3,
+  "label": { "vi": "Phản hồi khách", "en": "Customer feedback" },
+  "hint": { "vi": "Kể lại lời khách thật nói về bạn. Chỉ dùng phản hồi thật.", "en": "Retell what real customers said. Real feedback only." },
+  "default_seconds": 30,
+  "default_aspect": "9:16",
+  "music": "sunny-pop",
+  "scenes": [
+    { "role": "hook", "brief": "Mở bằng một câu khách thật đã nói (trích đúng, không thêm bớt)." },
+    { "role": "body", "brief": "Khách gặp vấn đề gì trước đó, họ đã chọn bạn vì lý do nào." },
+    { "role": "body", "brief": "Kết quả khách cảm nhận, dùng đúng lời khách; không hứa chắc kết quả cho người khác." },
+    { "role": "cta", "brief": "Mời khách mới liên hệ để được tư vấn." }
+  ]
+}

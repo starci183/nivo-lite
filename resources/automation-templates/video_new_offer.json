@@ -1,0 +1,50 @@
+{
+  "key": "video_new_offer",
+  "version": 1,
+  "pack": "core",
+  "executor": "implemented",
+  "moduleKey": "video",
+  "icon": "report",
+  "name": {
+    "vi": "Soạn video khi có ưu đãi mới",
+    "en": "Draft a video when a new offer is added"
+  },
+  "description": {
+    "vi": "Khi bạn thêm một tri thức công khai thuộc chủ đề Ưu đãi, NIVO soạn sẵn kịch bản video và báo bạn. Chỉ soạn nháp: không dựng, không đăng.",
+    "en": "When you add public knowledge under the topic Ưu đãi, NIVO drafts a video script and tells you. A draft only: nothing is rendered or published."
+  },
+  "trigger": {
+    "kind": "event",
+    "event": "knowledge.offer_added",
+    "line": {
+      "vi": "Khi bạn thêm tri thức công khai thuộc chủ đề Ưu đãi (hoặc Khuyến mãi)",
+      "en": "When you add public knowledge under the topic Ưu đãi (or Khuyến mãi)"
+    }
+  },
+  "requires": {
+    "modules": [
+      "video"
+    ],
+    "channels": [],
+    "connections": [],
+    "capabilities": []
+  },
+  "settings": [],
+  "contentMode": "none",
+  "guardrails": [
+    {
+      "vi": "Chỉ dùng đúng nội dung ưu đãi bạn đã ghi; không tự thêm giá, thời hạn hay điều kiện.",
+      "en": "Uses only the offer you wrote; never adds prices, deadlines or conditions."
+    },
+    {
+      "vi": "Chỉ soạn bản nháp. Dựng video và đăng luôn do bạn bấm.",
+      "en": "Drafts only. Rendering and publishing are always your click."
+    }
+  ],
+  "variables": [],
+  "defaultBody": null,
+  "authority": {
+    "action": null
+  },
+  "defaults": {}
+}

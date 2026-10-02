@@ -1,0 +1,15 @@
+{
+  "goal": "custom",
+  "order": 6,
+  "label": { "vi": "Tuỳ chỉnh", "en": "Custom" },
+  "hint": { "vi": "Bạn tự nói video này để làm gì, NIVO soạn theo.", "en": "Say what the video is for and NIVO writes to it." },
+  "default_seconds": 30,
+  "default_aspect": "9:16",
+  "music": "sunny-pop",
+  "scenes": [
+    { "role": "hook", "brief": "Mở bằng điều khách quan tâm nhất liên quan đến mục đích bạn nêu." },
+    { "role": "body", "brief": "Thông điệp chính của video, một ý duy nhất." },
+    { "role": "body", "brief": "Thông tin hỗ trợ có thật (lý do, bằng chứng, chi tiết)." },
+    { "role": "cta", "brief": "Một hành động rõ ràng khách làm tiếp theo." }
+  ]
+}

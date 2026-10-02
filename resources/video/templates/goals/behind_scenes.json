@@ -1,0 +1,15 @@
+{
+  "goal": "behind_scenes",
+  "order": 4,
+  "label": { "vi": "Hậu trường", "en": "Behind the scenes" },
+  "hint": { "vi": "Cho khách thấy con người và cách làm việc phía sau.", "en": "Show the people and the work behind the business." },
+  "default_seconds": 30,
+  "default_aspect": "9:16",
+  "music": "sunny-pop",
+  "scenes": [
+    { "role": "hook", "brief": "Mở bằng một khoảnh khắc đời thường trong công việc, gợi tò mò." },
+    { "role": "body", "brief": "Cho thấy một bước trong cách làm việc hoặc chuẩn bị." },
+    { "role": "body", "brief": "Giới thiệu con người hoặc giá trị đội ngũ coi trọng, dùng thông tin có thật." },
+    { "role": "cta", "brief": "Mời khách ghé thăm hoặc theo dõi để xem thêm." }
+  ]
+}

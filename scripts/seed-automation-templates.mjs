@@ -15,6 +15,7 @@ if (!url || !key) {
   process.exit(1);
 }
 
+// Module keys come from the registry (resources/modules/<key>/module.json), not a hard-coded list.
 const MODULES = readdirSync(resolve(dirname(fileURLToPath(import.meta.url)), "..", "resources", "modules"), { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name);
 const n8nRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "resources", "n8n-templates");
 const files = [

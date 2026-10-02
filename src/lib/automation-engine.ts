@@ -12,6 +12,7 @@ import { templateOf } from "./automation-templates";
 import { INVENTORY_EXECUTORS, scanInventory } from "./module-inventory-automations";
 import { BOOKING_EXECUTORS, BOOKING_TEMPLATE_KEYS, scanBooking } from "./module-booking-automations";
 import { runBookingTick } from "./module-booking-tick";
+import { offerSources, videoNewOffer } from "./module-video-automation";
 import { supabaseAdmin } from "./supabase/admin";
 
 /**
@@ -26,6 +27,7 @@ const EXECUTORS: Readonly<Record<string, Executor>> = {
   after_hours: afterHours, daily_report: dailyReport, sheet_orders: sheetOrders,
   ...INVENTORY_EXECUTORS,
   ...BOOKING_EXECUTORS,
+  video_new_offer: videoNewOffer,
 };
 
 const DAY = 86_400_000;
@@ -240,6 +242,15 @@ const scan = async (db: Db, l: Loaded, now: Date): Promise<number> => {
         if (prior.used.has(`winback:${lead.id}:${month}`)) continue;
         await trigger(db, l, `winback:${lead.id}:${month}`, lead.id, { lead_id: lead.id, dedupe: `winback:${lead.id}:${month}` });
       }
+      started += 1;
+    }
+    return started;
+  }
+  if (def.key === "video_new_offer") {
+    // A public Ưu đãi source added after the automation was created: draft a video script (the executor never renders or publishes).
+    for (const src of await offerSources(db, ws, new Date(p.created_at), now)) {
+      if (started >= BATCH) break;
+      await trigger(db, l, `video_offer:${src.id}`, src.id, { source_id: src.id, title: src.title });
       started += 1;
     }
     return started;

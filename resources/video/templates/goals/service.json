@@ -1,0 +1,15 @@
+{
+  "goal": "service",
+  "order": 1,
+  "label": { "vi": "Giới thiệu dịch vụ", "en": "Introduce a service" },
+  "hint": { "vi": "Cho khách mới hiểu bạn làm gì, vì sao nên chọn bạn.", "en": "Show new customers what you do and why choose you." },
+  "default_seconds": 30,
+  "default_aspect": "9:16",
+  "music": "calm-glow",
+  "scenes": [
+    { "role": "hook", "brief": "Mở bằng một câu hỏi hoặc vấn đề khách thường gặp mà dịch vụ này giải quyết." },
+    { "role": "body", "brief": "Nói dịch vụ là gì, dành cho ai, trong một câu dễ hiểu." },
+    { "role": "body", "brief": "Một hoặc hai điểm khác biệt có thật trong thông tin đã cung cấp (quy trình, cách làm, cam kết đã ghi)." },
+    { "role": "cta", "brief": "Mời khách nhắn tin hoặc đặt lịch, nêu cách liên hệ nếu có trong thông tin." }
+  ]
+}
