@@ -170,7 +170,7 @@ const RULES: ReadonlyArray<Rule> = [
   // age (legal minimum "đủ 18 tuổi" is allowed: see AGE_OK below)
   { category: "age", on: "fold", re: new RegExp("(\\d{2})\\s*(?:-|~|den|toi)\\s*(\\d{2})\\s*tuoi", "g") },
   { category: "age", on: "fold", re: new RegExp("(?:(duoi|tren|tu|du|khong qua|khong vuot qua|toi da|toi thieu|it nhat|under|over)\\s*)?(\\d{2})\\s*tuoi", "g") },
-  { category: "age", on: "fold", re: new RegExp("(?<![a-z])(?:do tuoi|tuoi tu|tuoi duoi|tuoi tren|sinh nam\\s*\\d{4}|(?:19|20)\\d{2}\\s*tro (?:ve sau|lai))", "g") },
+  { category: "age", on: "fold", re: new RegExp("(?<![a-z])(?:do tuoi|tuoi tu|tuoi duoi|tuoi tren|bao nhieu tuoi|may tuoi|tuoi cua ban|nam sinh|sinh nam\\s*\\d{4}|(?:19|20)\\d{2}\\s*tro (?:ve sau|lai))", "g") },
   { category: "age", on: "fold", re: new RegExp("(?<![a-z])(?:tre trung|tre khoe|con tre|lon tuoi|trung nien|tuoi tre|qua tuoi)(?![a-z])", "g") },
   { category: "religion", on: "fold", re: new RegExp("(?<![a-z])(?:ton giao|cong giao|thien chua|phat giao|dao phat|tin lanh|hoi giao|khong theo dao|theo dao|phat tu|co doc giao|ki to giao)(?![a-z])", "g") },
   { category: "ethnicity", on: "fold", re: new RegExp("(?<![a-z])(?:dan toc|nguoi kinh|nguoi hoa|chung toc|mau da)(?![a-z])", "g") },
@@ -212,7 +212,18 @@ export const findFairnessViolations = (text: string, field = ""): Array<Fairness
   const add = (category: FairnessCategory, start: number, end: number, onFold: boolean) => {
     const o0 = onFold ? map[start] : start;
     const o1 = onFold ? map[Math.min(end, map.length - 1)] : end;
-    const excerpt = text.slice(Math.max(0, o0 - 12), Math.min(text.length, o1 + 18)).replace(/\s+/g, " ").trim();
+    // the matched words with up to two whole words of context on each side
+    let l = o0;
+    for (let k = 0; k < 2; k++) {
+      while (l > 0 && /\s/.test(text[l - 1])) l -= 1;
+      while (l > 0 && !/\s/.test(text[l - 1])) l -= 1;
+    }
+    let r = o1;
+    for (let k = 0; k < 2; k++) {
+      while (r < text.length && /\s/.test(text[r])) r += 1;
+      while (r < text.length && !/\s/.test(text[r])) r += 1;
+    }
+    const excerpt = text.slice(l, r).replace(/\s+/g, " ").trim();
     const key = `${category}:${o0}`;
     if (seen.has(key)) return;
     seen.add(key);

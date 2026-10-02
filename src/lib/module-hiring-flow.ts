@@ -297,15 +297,24 @@ export const setInterviewStatus = async (db: Db, ws: string, id: string, status:
 
 export const OFFER_DAYS = 7;
 
-const offerFallback = (cand: CandidateRow, job: JobRow, terms: OfferTerms, shop: string): string =>
+/** The terms of an offer as plain lines, always written by code from what the owner entered (never by a model). */
+const termsBlock = (job: JobRow, t: OfferTerms): string =>
   [
-    `Chào ${cand.name},`, "",
-    `${shop} rất vui được mời bạn nhận vị trí ${terms.title || job.title}.`,
-    `- Mức thu nhập: ${terms.pay || fmtPay(job.pay_min_vnd, job.pay_max_vnd, job.pay_unit)}`,
-    terms.start_date ? `- Ngày bắt đầu: ${terms.start_date}` : "", terms.probation ? `- Thử việc: ${terms.probation}` : "", job.location ? `- Nơi làm việc: ${job.location}` : "",
-    terms.note ? `- Ghi chú: ${terms.note}` : "", "",
-    `Thư mời có hiệu lực ${OFFER_DAYS} ngày. Bạn xem và trả lời tại đường dẫn bên dưới.`, "", `Trân trọng,`, shop,
-  ].filter((x, i, a) => x !== "" || a[i - 1] !== "").join("\n");
+    "Điều khoản:",
+    `- Vị trí: ${t.title || job.title} (${EMPLOYMENT_LABEL[job.employment_type]})`,
+    `- Thu nhập: ${t.pay || fmtPay(job.pay_min_vnd, job.pay_max_vnd, job.pay_unit)}`,
+    t.start_date ? `- Ngày bắt đầu: ${t.start_date}` : "", t.probation ? `- Thử việc: ${t.probation}` : "", job.location ? `- Nơi làm việc: ${job.location}` : "",
+    t.note ? `- Ghi chú: ${t.note}` : "", `- Thư mời có hiệu lực ${OFFER_DAYS} ngày kể từ khi gửi`,
+  ].filter(Boolean).join("\n");
+
+const composeOffer = (cand: CandidateRow, job: JobRow, t: OfferTerms, shop: string, opening: string | null, closing: string | null): string =>
+  [
+    opening ?? `Chào ${cand.name},
+
+${shop} rất vui được mời bạn nhận vị trí ${t.title || job.title}.`, termsBlock(job, t),
+    closing ?? "Bạn xem thư và trả lời giúp bên mình ở đường dẫn bên dưới nhé.", `Trân trọng,
+${shop}`,
+  ].join("\n\n");
 
 export type OfferRequest = { readonly title: string; readonly pay: string; readonly start_date: string; readonly probation: string; readonly note: string };
 
@@ -333,7 +342,7 @@ export const requestOffer = async (ws: string, candidateId: string, t: OfferRequ
   return { offer: (up.data ?? offer) as OfferRow, item };
 };
 
-/** prepare of send_offer: OpenClaw drafts the letter from the terms (one call). When it cannot, a plain template stands in and says so. */
+/** prepare of send_offer: OpenClaw writes only the greeting and the closing (one call); the terms (pay, start date...) are put in by code from what the owner entered, so the letter can never drift from them. */
 export const prepareOffer = async (c: EngineCtx, item: WorkItem): Promise<Prepared> => {
   const offer = (await c.db.from("hiring_offers").select("*").eq("id", String(item.proposal.fields?.offer_id ?? "")).eq("workspace_id", c.ws).maybeSingle()).data as OfferRow | null;
   if (!offer) throw new HiringError("Không tìm thấy thư mời.");
@@ -342,16 +351,25 @@ export const prepareOffer = async (c: EngineCtx, item: WorkItem): Promise<Prepar
   const shop = await company(c.db, c.ws);
   const settings = await ensureSettings(c.db, c.ws);
   const r = await generateWithOpenClaw({
-    workspaceId: c.ws, purpose: "hiring_offer", kind: "engine", module: "hiring", timeoutMs: 75_000,
+    workspaceId: c.ws, purpose: "hiring_offer", kind: "engine", module: "hiring", responseFormat: "json", timeoutMs: 75_000,
     messages: [
-      { role: "system", content: `Bạn soạn thư mời nhận việc ngắn gọn, lịch sự bằng tiếng Việt cho một doanh nghiệp nhỏ. Chỉ dùng đúng các điều khoản được cung cấp, không thêm quyền lợi, mức lương hay cam kết nào khác. Không nhắc tới giới tính, tuổi, tôn giáo, dân tộc, hôn nhân, thai sản, khuyết tật, quê quán. Giọng điệu: ${settings.ad_tone}. Chỉ trả về nội dung thư (không tiêu đề, không giải thích), 80-150 từ, kết thúc bằng lời mời xem và trả lời ở đường dẫn sẽ được hệ thống thêm vào sau.` },
-      { role: "user", content: `Doanh nghiệp: ${shop}\nỨng viên: ${cand.name}\nVị trí: ${offer.terms.title || job.title} (${EMPLOYMENT_LABEL[job.employment_type]})\nThu nhập: ${offer.terms.pay}\nNgày bắt đầu: ${offer.terms.start_date || "(chưa chốt)"}\nThử việc: ${offer.terms.probation || "(không nêu)"}\nNơi làm việc: ${job.location || "(không nêu)"}\nGhi chú: ${offer.terms.note || "(không)"}\nHiệu lực: ${OFFER_DAYS} ngày` },
+      { role: "system", content: `Bạn viết phần mở đầu và phần kết cho một thư mời nhận việc bằng tiếng Việt của một doanh nghiệp nhỏ. Các điều khoản (lương, ngày bắt đầu...) do hệ thống chèn ở giữa, KHÔNG nêu chúng và KHÔNG nêu con số nào. Không hứa thêm điều gì. Không nhắc tới giới tính, tuổi, tôn giáo, dân tộc, hôn nhân, thai sản, khuyết tật, quê quán. Giọng điệu: ${settings.ad_tone}. Văn bản thuần, không markdown. Trả về DUY NHẤT JSON: {"opening": string, "closing": string}. opening: lời chào "Chào <tên ứng viên>," rồi 1-2 câu nói doanh nghiệp vui được mời bạn nhận vị trí (nêu tên doanh nghiệp và vị trí), kết thúc bằng một câu dẫn vào phần điều khoản. closing: 1-2 câu mời xem thư và trả lời ở đường dẫn bên dưới (hệ thống thêm đường dẫn).` },
+      { role: "user", content: `Doanh nghiệp: ${shop}
+Ứng viên: ${cand.name}
+Vị trí: ${offer.terms.title || job.title}` },
     ],
   });
-  let draft = r.ok ? r.output.trim() : "";
-  const bad = draft ? findFairnessViolations(draft) : [];
-  const usedAi = draft.length > 40 && bad.length === 0;
-  if (!usedAi) draft = offerFallback(cand, job, offer.terms, shop);
+  const o = r.ok ? parseLooseJson(r.output) : null;
+  // the model's two paragraphs must be plain words: no figures, no markdown, nothing about protected traits
+  const clean = (v: unknown): string | null => {
+    if (typeof v !== "string") return null;
+    const t = v.replace(/\*\*?|__|#+ /g, "").trim();
+    return t.length >= 15 && t.length <= 700 && !/\d/.test(t) && findFairnessViolations(t).length === 0 ? t : null;
+  };
+  const opening = clean(o?.opening);
+  const closing = clean(o?.closing);
+  const usedAi = opening !== null && closing !== null;
+  const draft = composeOffer(cand, job, offer.terms, shop, opening, closing);
   return {
     proposal: {
       ...item.proposal, summary: `Gửi thư mời nhận việc cho ${cand.name} (${offer.terms.title || job.title}, ${offer.terms.pay})${usedAi ? "" : " - bản nháp mẫu, OpenClaw chưa soạn được"}`, draft,
@@ -366,7 +384,7 @@ export const performOffer = async (c: EngineCtx, item: WorkItem, p: { draft?: st
   if (!offer) throw new HiringError("Không tìm thấy thư mời.");
   const cand = await loadCandidate(c.db, c.ws, offer.candidate_id);
   const job = await loadJob(c.db, c.ws, offer.job_id);
-  const body = (p.draft ?? "").trim() || offerFallback(cand, job, offer.terms, await company(c.db, c.ws));
+  const body = (p.draft ?? "").trim() || composeOffer(cand, job, offer.terms, await company(c.db, c.ws), null, null);
   const link = `${siteUrl()}/j/thu/${offer.token}`;
   const text = `${body}\n\nXem và trả lời thư mời tại: ${link}`;
   const d = await notifyCandidate(c.db, c.ws, cand, { subject: `Thư mời nhận việc: ${offer.terms.title || job.title}`, text, workItemId: item.id });
