@@ -19,3 +19,4 @@ engine/dist/
 /secrets.env
 /.secrets/
 src/lib/module-registry.generated.ts
+scripts/.render-check.mjs
