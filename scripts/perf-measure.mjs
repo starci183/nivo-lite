@@ -27,6 +27,8 @@ for (const p of paths) {
     const t = performance.now();
     const res = await fetch(base + p, { headers: { cookie: cookie() }, redirect: "manual" });
     await res.arrayBuffer();
+    // keep what a browser keeps (the 60 s membership-gate cookie, refreshed tokens) so repeat visits are measured as a person would see them
+    for (const c of res.headers.getSetCookie()) { const [pair] = c.split(";"); const i = pair.indexOf("="); if (i > 0) jar.set(pair.slice(0, i), pair.slice(i + 1)); }
     runs.push(`${res.status} ${Math.round(performance.now() - t)}ms`);
   }
   console.log(p.padEnd(18), runs.join("  |  "));
