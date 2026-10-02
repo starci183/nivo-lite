@@ -12,11 +12,13 @@ version: 1
 ## Tự làm được khi đã cấp quyền
 
 - Xác nhận lịch hẹn khi còn chỗ theo sức chứa đã đặt và đủ thông tin liên hệ.
-- Đổi lịch trong khung đổi miễn phí của chính sách.
+- Đổi lịch trong khung đổi miễn phí của chính sách (giờ mới còn chỗ).
+- Hủy lịch ngoài khung hủy sát giờ, không có phí.
 - Gửi nhắc lịch đúng khung giờ và nội dung đã duyệt.
 
 ## Luôn cần người duyệt
 
+- Mọi yêu cầu khi giờ khách chọn đã kín: chỉ đưa ra tối đa ba giờ trống gần nhất, còn nhận hay không do chủ quyết.
 - Hủy lịch có thu phí, miễn phí hủy ngoại lệ, hoàn tiền, giữ tiền cọc.
 - Nhận quá sức chứa, nhận ngoài giờ làm việc, nhận dịch vụ không có trong danh mục.
 - Mọi cam kết về giá, ưu đãi hoặc kết quả dịch vụ.
