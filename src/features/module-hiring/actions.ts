@@ -168,3 +168,31 @@ export async function saveAvailabilityAction(memberUserId: string, windows: Read
     return { saved: ok.length };
   });
 }
+
+/**
+ * "Tạo hồ sơ nhân viên": a hired candidate becomes a staff profile of the Lịch & ca làm module (shifts_staff), with the position of the job when the shop already has
+ * one of that name. Only when that module's tables are there; Hiring never depends on them.
+ */
+export async function linkStaffAction(candidateId: string): Promise<Result<{ staffId: string }>> {
+  return run(async (c) => {
+    const db = hdb();
+    const cand = await loadCandidate(db, c.ws, candidateId);
+    if (cand.stage !== "hired") throw new HiringError("Chỉ tạo hồ sơ nhân viên cho người đã nhận việc.");
+    if (cand.staff_id) throw new HiringError("Người này đã có hồ sơ nhân viên.");
+    const job = (await db.from("hiring_jobs").select("title, position").eq("id", cand.job_id).maybeSingle()).data as { title: string; position: string } | null;
+    const names = [job?.position, job?.title].filter((x): x is string => Boolean(x && x.trim()));
+    let positionIds: Array<string> = [];
+    if (names.length) {
+      const pos = await db.from("shifts_positions").select("id, name").eq("workspace_id", c.ws).eq("active", true);
+      if (pos.error && pos.error.code === "42P01") throw new HiringError("Chưa bật module Lịch & ca làm nên chưa tạo được hồ sơ nhân viên.");
+      const hit = ((pos.data ?? []) as Array<{ id: string; name: string }>).find((p) => names.some((n) => n.trim().toLowerCase() === p.name.trim().toLowerCase()));
+      if (hit) positionIds = [hit.id];
+    }
+    const ins = await db.from("shifts_staff").insert({ workspace_id: c.ws, name: cand.name, phone: cand.phone || null, position_ids: positionIds, active: true }).select("id").single();
+    if (ins.error) throw new HiringError(ins.error.code === "42P01" ? "Chưa bật module Lịch & ca làm nên chưa tạo được hồ sơ nhân viên." : ins.error.message);
+    const staffId = (ins.data as { id: string }).id;
+    await db.from("hiring_candidates").update({ staff_id: staffId }).eq("id", candidateId).eq("workspace_id", c.ws);
+    await logCandidate(db, c.ws, candidateId, "staff_linked", c.name, "Tạo hồ sơ nhân viên trong Lịch & ca làm");
+    return { staffId };
+  });
+}

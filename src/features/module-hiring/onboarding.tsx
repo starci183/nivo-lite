@@ -1,8 +1,8 @@
 "use client";
 
-import { Alert, Badge, Checkbox, EmptyNotice, Heading, Meter, Text } from "@starci/grammar/common";
+import { Alert, Badge, Button, Checkbox, EmptyNotice, Heading, Meter, Text } from "@starci/grammar/common";
 import type { HiringWorkbenchData } from "@/lib/module-hiring-queries";
-import { toggleOnboardingAction } from "./actions";
+import { linkStaffAction, toggleOnboardingAction } from "./actions";
 import { CARD_CLASS_NAME, CHIPS_CLASS_NAME, FORM_CLASS_NAME, SECTION_HEAD_CLASS_NAME } from "./classNames";
 import { useRunner } from "./parts";
 
@@ -29,6 +29,7 @@ export const OnboardingPanel = ({ data }: OnboardingPanelProps) => {
               <Text as="span" weight="semibold">{c.name}</Text>
               <Badge tone="success">{jobTitle.get(c.job_id) ?? ""}</Badge>
               <Text as="span" size="sm" tone="muted">{[c.phone, c.email].filter(Boolean).join(" · ")}</Text>
+              {c.staff_id ? <Badge tone="accent">Đã có hồ sơ nhân viên</Badge> : <Button variant="secondary" size="sm" isDisabled={isPending} onPress={() => run(() => linkStaffAction(c.id))}>Tạo hồ sơ nhân viên</Button>}
             </div>
             {items.length ? <Meter label="Tiến độ nhận việc" value={done} minValue={0} maxValue={items.length} valueLabel={`${done}/${items.length}`} /> : null}
             <div className={FORM_CLASS_NAME}>
