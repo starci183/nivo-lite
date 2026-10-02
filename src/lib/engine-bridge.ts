@@ -75,7 +75,10 @@ export const chatTurnContext = async (db: SupabaseClient, job: EngineJob) => {
   const slim = synced && syncRow.context_version === activeVersion;
   const authority = ai.authorityBrief(authorityRaw) + (agent.module === "booking" ? await bookingContextLine(ws) : "") + (await hiringChatBrief(db, ws)); // booking: today, services, hours, policy; hiring: open jobs for the chat
   // Loyalty module installed: the member's points, tier and the reward catalogue (from the ledger) plus the contract addition for a redeem request.
-  const loyalty = agent.module === "chatbot" ? await loyaltyChatBlock(db, ws, conv).catch(() => "") : "";
+  const loyalty = agent.module === "chatbot" ? await loyaltyChatBlock(db, ws, conv).catch(async (e: unknown) => {
+    await logEvidence(db, ws, { lead_id: conv.lead_id, kind: "loyalty.chat_block_failed", actor: "NIVO", summary: "Không dựng được khối thông tin điểm thưởng cho lượt chat này", evidence: e instanceof Error ? e.message.slice(0, 300) : String(e).slice(0, 300) });
+    return "";
+  }) : "";
   const base = {
     conversation_id: conv.id, message_id: mine.id, module: agent.module, agent_name: agent.name, handled_by: conv.handled_by ?? null,
     customer_message: mine.body, turns, installation_id: instRow?.id ?? null, timeout_ms: replyTimeoutSec(instRow?.settings) * 1000, synced, mode: slim ? "slim" : "full",
