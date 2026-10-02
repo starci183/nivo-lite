@@ -1,0 +1,60 @@
+# Deploys the public door of the NIVO VPS: Traefik in Docker (~/nivo-edge, project "nivo-edge"), owner of 80/443 and the Let's Encrypt certificates.
+# Routes (deploy/edge/dynamic/routes.yml) are hot-reloaded by Traefik; compose changes recreate the container. Idempotent.
+# Environment "production": vars VPS_HOST, VPS_USER; secrets VPS_SSH_KEY, VPS_KNOWN_HOSTS. Touches only ~/nivo-edge and the nivo-edge docker network.
+name: Deploy edge
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "deploy/edge/**"
+      - ".github/workflows/edge-deploy.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: edge-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: SSH setup
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts && chmod 644 ~/.ssh/known_hosts
+          cat >> ~/.ssh/config <<EOF2
+          Host vps
+            HostName ${{ vars.VPS_HOST }}
+            User ${{ vars.VPS_USER }}
+            IdentityFile ~/.ssh/deploy_key
+            StrictHostKeyChecking yes
+            BatchMode yes
+            ConnectTimeout 20
+          EOF2
+
+      - name: Upload and apply
+        run: |
+          ssh vps 'mkdir -p ~/nivo-edge/dynamic; docker network inspect nivo-edge >/dev/null 2>&1 || docker network create nivo-edge'
+          scp deploy/edge/docker-compose.yml vps:nivo-edge/
+          scp deploy/edge/dynamic/routes.yml vps:nivo-edge/dynamic/
+          ssh vps 'cd ~/nivo-edge && docker compose config -q && docker compose up -d'
+
+      - name: Health check
+        run: |
+          ssh vps 'bash -s' <<'EOF2'
+          for i in $(seq 1 12); do
+            s=$(docker inspect -f '{{.State.Health.Status}}' nivo-edge-traefik-1 2>/dev/null || echo missing)
+            [ "$s" = healthy ] && { echo "edge healthy"; exit 0; }
+            sleep 5
+          done
+          echo "edge not healthy ($s)"; docker logs --tail 50 nivo-edge-traefik-1; exit 1
+          EOF2

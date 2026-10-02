@@ -20,7 +20,7 @@ x-logging: &logging
 services:
   caddy:
     # Optional public door. Off by default (profile "public"): on a host where another ingress already owns 80/443
-    # (k3s Traefik on the NIVO VPS) the stack runs without it; the engine needs no inbound port at all.
+    # (the Traefik edge in deploy/edge) the stack runs without it; the engine needs no inbound port at all.
     profiles: ["public"]
     image: caddy:2-alpine
     restart: unless-stopped
@@ -88,7 +88,7 @@ services:
       openclaw-init:
         condition: service_completed_successfully
     # The engine lives in this network namespace, so its port is published here. Bind to the Docker bridge address
-    # (ENGINE_BIND=172.29.0.1) to let k3s Traefik reach it; the k3s Ingress only routes the exact path /healthz.
+    # (ENGINE_BIND=172.29.0.1) to let the Traefik edge reach it; the edge only routes the exact path /healthz.
     ports:
       - "${ENGINE_BIND:-127.0.0.1}:8787:8787"
     volumes:
@@ -183,7 +183,7 @@ services:
       TZ: Asia/Ho_Chi_Minh
       EXECUTIONS_DATA_PRUNE: "true"
       EXECUTIONS_DATA_MAX_AGE: "336"
-    # N8N_BIND=127.0.0.1 keeps it private (SSH tunnel); N8N_BIND=172.29.0.1 lets k3s Traefik serve it at https://n8n.nivo.vn.
+    # N8N_BIND=127.0.0.1 keeps it private (SSH tunnel); N8N_BIND=172.29.0.1 lets the Traefik edge serve it at https://n8n.nivo.vn.
     ports:
       - "${N8N_BIND:-127.0.0.1}:5678:5678"
     volumes:

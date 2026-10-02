@@ -1,0 +1,57 @@
+# The public door of the NIVO VPS: Traefik v3 in Docker owns 80/443 and gets Let's Encrypt certificates itself.
+# Its own compose project (~/nivo-edge), so engine / web deploys never recreate it. Routes live in dynamic/routes.yml (file provider),
+# so the Docker socket is NOT mounted. The web container joins the external network "nivo-edge"; n8n and the engine are reached on the
+# docker bridge address 172.29.0.1 (N8N_BIND / ENGINE_BIND in the engine's deploy/.env), because the engine lives in openclaw's network namespace.
+# One-time: docker network create nivo-edge
+name: nivo-edge
+
+services:
+  traefik:
+    image: traefik:v3.6
+    restart: unless-stopped
+    command:
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entryPoint.to=websecure
+      - --entrypoints.web.http.redirections.entryPoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.http.tls.certResolver=le
+      - --certificatesResolvers.le.acme.storage=/acme/acme.json
+      - --certificatesResolvers.le.acme.httpChallenge.entryPoint=web
+      - --certificatesResolvers.le.acme.email=${ACME_EMAIL:-}
+      - --api.dashboard=false
+      - --ping=true
+      - --ping.entryPoint=ping
+      - --entrypoints.ping.address=127.0.0.1:8082
+      # access log goes to stdout; the json-file driver below rotates it (10 MB x 5)
+      - --accesslog=true
+      - --accesslog.bufferingsize=100
+      - --accesslog.fields.headers.defaultmode=drop
+      - --log.level=INFO
+      - --global.sendanonymoususage=false
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./dynamic:/etc/traefik/dynamic:ro
+      - acme:/acme
+    networks: [edge]
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping", "--ping.entryPoint=ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+
+volumes:
+  acme:
+
+networks:
+  edge:
+    name: nivo-edge
+    external: true

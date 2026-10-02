@@ -5,7 +5,7 @@
 #   - the engine cannot reach 127.0.0.1:18789 from inside its own container, or
 #   - the engine container is not running / not healthy, or
 #   - the openclaw container was (re)started after the engine started.
-# Touches nothing else: not k3s, not n8n, not other compose projects. Log: ~/nivo-engine/watchdog.log (rotated at 512 KB, 3 files).
+# Touches nothing else: not the edge, not n8n, not other compose projects. Log: ~/nivo-engine/watchdog.log (rotated at 512 KB, 3 files).
 set -u
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ROOT="$HOME/nivo-engine"

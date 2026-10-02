@@ -3,7 +3,7 @@
 # Everything comes from the GitHub environment "production":
 #   vars    VPS_HOST, VPS_USER
 #   secrets VPS_SSH_KEY (CI-only deploy key), VPS_KNOWN_HOSTS (pinned host keys), ENGINE_ENV (the whole deploy/.env file)
-# The VPS also runs k3s; this workflow only touches ~/nivo-engine and the "nivo-engine" compose project.
+# This workflow only touches ~/nivo-engine and the "nivo-engine" compose project.
 name: Deploy engine
 
 on:

@@ -1,0 +1,86 @@
+# Builds the Next.js app image on the GitHub runner (the VPS only runs it) and ships it to the NIVO VPS: docker save | gzip | ssh docker load.
+# Netlify keeps deploying the same push as the hot fallback. Triggered by changes to the app, or by hand (Actions > Deploy web).
+# Environment "production":
+#   vars    VPS_HOST, VPS_USER
+#   secrets VPS_SSH_KEY, VPS_KNOWN_HOSTS (as for the engine), WEB_ENV (runtime env file), WEB_NEXT_PUBLIC_SUPABASE_URL,
+#           WEB_NEXT_PUBLIC_SUPABASE_ANON_KEY, WEB_NEXT_PUBLIC_DEMO_LOGIN (build args). All pushed by: node scripts/env-sync.mjs
+# Only ~/nivo-web and the "nivo-web" compose project are touched.
+name: Deploy web
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "public/**"
+      - "resources/**"
+      - "package.json"
+      - "package-lock.json"
+      - "next.config.*"
+      - "Dockerfile.web"
+      - ".dockerignore"
+      - "web-deploy/**"
+      - ".github/workflows/web-deploy.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: web-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 30
+    env:
+      TAG: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build the image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.web
+          load: true
+          tags: nivo-web:${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_SUPABASE_URL=${{ secrets.WEB_NEXT_PUBLIC_SUPABASE_URL }}
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.WEB_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+            NEXT_PUBLIC_SITE_URL=https://nivo.vn
+            NEXT_PUBLIC_DEMO_LOGIN=${{ secrets.WEB_NEXT_PUBLIC_DEMO_LOGIN }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: SSH setup
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts && chmod 644 ~/.ssh/known_hosts
+          cat >> ~/.ssh/config <<EOF2
+          Host vps
+            HostName ${{ vars.VPS_HOST }}
+            User ${{ vars.VPS_USER }}
+            IdentityFile ~/.ssh/deploy_key
+            StrictHostKeyChecking yes
+            BatchMode yes
+            ConnectTimeout 20
+            ServerAliveInterval 30
+          EOF2
+
+      - name: Ship the image and the env file
+        env:
+          WEB_ENV: ${{ secrets.WEB_ENV }}
+        run: |
+          ssh vps 'mkdir -p ~/nivo-web'
+          docker save "nivo-web:$TAG" | gzip | ssh vps 'gunzip | docker load'
+          scp web-deploy/docker-compose.yml web-deploy/remote-deploy.sh vps:nivo-web/
+          printf '%s\n' "$WEB_ENV" | ssh vps 'umask 077; cat > ~/nivo-web/.env'
+
+      - name: Start, health-check, roll back if unhealthy
+        run: ssh vps "bash ~/nivo-web/remote-deploy.sh $TAG"

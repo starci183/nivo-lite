@@ -1,0 +1,39 @@
+# Routes of the NIVO edge (Traefik file provider; reloaded on change, no restart). Each host gets its own Let's Encrypt certificate.
+# Add nivo.vn / www.nivo.vn to the `web` router rule at cutover (see deploy/DNS-ROLLBACK.md): the DNS record must already point here.
+http:
+  middlewares:
+    secure-headers:
+      headers:
+        stsSeconds: 31536000
+        contentTypeNosniff: true
+        referrerPolicy: strict-origin-when-cross-origin
+  routers:
+    web:
+      rule: Host(`app-vps.nivo.vn`)
+      entryPoints: [websecure]
+      service: web
+      middlewares: [secure-headers]
+      tls: { certResolver: le }
+    n8n:
+      rule: Host(`n8n.nivo.vn`)
+      entryPoints: [websecure]
+      service: n8n
+      middlewares: [secure-headers]
+      tls: { certResolver: le }
+    # Only the liveness path of the engine is public. /tools (OpenClaw's tool bridge) and everything else is a 404 (no router matches). Traefik sets X-Forwarded-Proto/Host/For itself; TLS ends here, so Proto is https.
+    engine-health:
+      rule: Host(`engine.nivo.vn`) && Path(`/healthz`)
+      entryPoints: [websecure]
+      service: engine
+      tls: { certResolver: le }
+
+  services:
+    web:
+      loadBalancer:
+        servers: [{ url: "http://nivo-web:3000" }]
+    n8n:
+      loadBalancer:
+        servers: [{ url: "http://172.29.0.1:5678" }]
+    engine:
+      loadBalancer:
+        servers: [{ url: "http://172.29.0.1:8787" }]

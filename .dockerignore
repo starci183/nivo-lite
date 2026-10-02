@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.github
+.netlify
+.shots
+engine
+supabase
+design-refs
+docs
+secrets.env
+.secrets
+.env*
+!.env.example
+*.log
