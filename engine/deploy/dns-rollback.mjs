@@ -4,7 +4,8 @@
 //   node scripts/with-secrets.mjs node engine/deploy/dns-rollback.mjs            -> applies the rollback
 //   node scripts/with-secrets.mjs node engine/deploy/dns-rollback.mjs --dry-run  -> shows what it would change
 //   ... --forward                                                                -> the opposite: apex -> VPS 103.142.27.9, DNS only, TTL 60 (the cutover)
-// Only the apex A record is touched. www stays a CNAME to nivo.vn; every other record in the zone belongs to other systems.
+// Touches only the apex A record and the www CNAME (www stays a CNAME to nivo.vn; its proxy flag follows the apex: off for the VPS, on for Netlify).
+// Every other record in the zone belongs to other systems.
 const token = process.env.CLOUDFLARE_API_TOKEN;
 const zoneName = process.env.CLOUDFLARE_ZONE || "nivo.vn";
 if (!token) throw new Error("CLOUDFLARE_API_TOKEN is not set (secrets.env section [cloudflare]; run via scripts/with-secrets.mjs)");
@@ -23,10 +24,14 @@ const api = async (path, init) => {
 
 const [zone] = await api(`/zones?name=${zoneName}`);
 if (!zone) throw new Error(`zone ${zoneName} not found`);
-const [rec] = await api(`/zones/${zone.id}/dns_records?type=A&name=${zoneName}`);
-if (!rec) throw new Error(`no A record for ${zoneName}`);
-console.log(`A ${rec.name}: ${rec.content} proxied=${rec.proxied} ttl=${rec.ttl}  ->  ${target.content} proxied=${target.proxied} ttl=${target.ttl}${dry ? "  (dry run)" : ""}`);
-if (!dry) {
-  await api(`/zones/${zone.id}/dns_records/${rec.id}`, { method: "PATCH", body: JSON.stringify(target) });
-  console.log("done. Proxied records answer with a 5 minute TTL: allow up to 5 minutes for every resolver to follow.");
-}
+const patch = async (type, name) => {
+  const [rec] = await api(`/zones/${zone.id}/dns_records?type=${type}&name=${name}`);
+  if (!rec) throw new Error(`no ${type} record for ${name}`);
+  // Only the apex A changes its content; www keeps pointing at nivo.vn and only follows the proxy flag and TTL.
+  const next = type === "A" ? target : { proxied: target.proxied, ttl: target.ttl };
+  console.log(`${type} ${rec.name}: ${rec.content} proxied=${rec.proxied} ttl=${rec.ttl}  ->  ${next.content ?? rec.content} proxied=${next.proxied} ttl=${next.ttl}${dry ? "  (dry run)" : ""}`);
+  if (!dry) await api(`/zones/${zone.id}/dns_records/${rec.id}`, { method: "PATCH", body: JSON.stringify(next) });
+};
+await patch("A", zoneName);
+await patch("CNAME", `www.${zoneName}`);
+if (!dry) console.log("done. Proxied records answer with a 5 minute TTL: allow up to 5 minutes for every resolver to follow.");

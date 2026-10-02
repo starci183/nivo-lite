@@ -1,5 +1,5 @@
 # Routes of the NIVO edge (Traefik file provider; reloaded on change, no restart). Each host gets its own Let's Encrypt certificate.
-# Add nivo.vn / www.nivo.vn to the `web` router rule at cutover (see deploy/DNS-ROLLBACK.md): the DNS record must already point here.
+# nivo.vn / www.nivo.vn joined the `web` router at the cutover (engine/deploy/DNS-ROLLBACK.md); their DNS must point here before a certificate can be issued.
 http:
   middlewares:
     secure-headers:
@@ -9,7 +9,7 @@ http:
         referrerPolicy: strict-origin-when-cross-origin
   routers:
     web:
-      rule: Host(`app-vps.nivo.vn`)
+      rule: Host(`nivo.vn`) || Host(`www.nivo.vn`) || Host(`app-vps.nivo.vn`)
       entryPoints: [websecure]
       service: web
       middlewares: [secure-headers]
