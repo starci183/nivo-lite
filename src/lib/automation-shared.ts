@@ -36,7 +36,7 @@ export type FieldDef =
   | { readonly key: string; readonly kind: "toggle"; readonly label: L; readonly hint?: L };
 
 /** The authority action a message goes through (src/lib/policy.ts); null = sends nothing to a customer. */
-export type GateAction = "send_care" | "send_follow_up" | "reply_customer" | "send_email" | null;
+export type GateAction = "send_care" | "send_follow_up" | "reply_customer" | "send_email" | "remind_booking" | null;
 
 /**
  * fixed         fill the variables only; no model call; deterministic. Default authority: auto.

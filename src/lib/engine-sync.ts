@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { gateEntry, isModuleKey, MODULE_GATES, type ContextSnapshot, type ModuleKey } from "./modules-shared";
 import { audienceOf as registryAudience, moduleDef } from "./module-registry";
 import type { Visibility } from "./knowledge/shared";
+import { BOOKING_REPLY_ADDENDUM } from "./module-booking-contract";
 
 /**
  * The OpenClaw copy of one agent, built ONLY from Supabase (the source of truth). The engine job `openclaw.sync_agent` fetches this bundle
@@ -44,7 +45,11 @@ Your FINAL message must be ONLY this JSON object, nothing else:
 Your reply is only a PROPOSAL: NIVO checks it against the owner's authority before anything reaches the customer.`;
 
 /** A module with its own reply contract appends it to AGENTS.md (only the chatbot has one today). A customer-facing module lane adds its line here. */
-const REPLY_CONTRACTS: Partial<Record<ModuleKey, string>> = { chatbot: REPLY_CONTRACT };
+const REPLY_CONTRACTS: Partial<Record<ModuleKey, string>> = {
+  chatbot: REPLY_CONTRACT,
+  booking: `${REPLY_CONTRACT}
+${BOOKING_REPLY_ADDENDUM}`, // booking lane: the same customer contract plus the structured booking_request (handled by src/lib/module-booking-chat.ts)
+};
 
 type NivoRow = { module: string; slug: string; title: string; body: string; kind: string };
 type SourceRow = { id: string; title: string; topic: string | null; kind: string; visibility: Visibility; content: string; module: string | null; updated_at: string };

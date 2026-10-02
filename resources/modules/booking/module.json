@@ -35,7 +35,7 @@
   "included_with_workspace": false,
   "available": true,
   "knowledge_folder": "booking",
-  "workbench": null,
+  "workbench": "booking",
   "settings_extras": null,
   "requires": {
     "capabilities": [
@@ -159,6 +159,17 @@
       "limit_vnd": null,
       "required_fields": [],
       "amount_limit": true
+    },
+    {
+      "action": "cancel_booking",
+      "label": {
+        "vi": "Hủy lịch hẹn",
+        "en": "Cancel booking"
+      },
+      "mode": "auto",
+      "limit_vnd": null,
+      "required_fields": [],
+      "amount_limit": false
     },
     {
       "action": "remind_booking",

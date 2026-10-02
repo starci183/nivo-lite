@@ -12,6 +12,9 @@ import { drainAfter } from "./flow-ctx";
 import { buildAgentContext } from "./knowledge/index";
 import { knowledgeBrief } from "./knowledge/runtime";
 import { buildAgentBundle, installationOfJob, REPLY_CONTRACT } from "./engine-sync";
+import { BOOKING_REPLY_ADDENDUM } from "./module-booking-contract";
+import { bookingContextLine } from "./module-booking";
+import { BOOKING_TOOL_NAMES, handleBookingReply, runBookingTool, type BookingToolName } from "./module-booking-chat";
 import { recordEngineUsage, type UsageKind, type UsageModule } from "./usage";
 import { escalateToStaff } from "./staff-relay";
 import type { Agent, AgentConversation, AgentMessage } from "./types";
@@ -67,7 +70,7 @@ export const chatTurnContext = async (db: SupabaseClient, job: EngineJob) => {
   const syncRow = syncRes.data as { status: string; context_version: number | null; synced_at: string | null } | null;
   const synced = syncRow !== null && syncRow.status === "ok" && syncRow.synced_at !== null;
   const slim = synced && syncRow.context_version === activeVersion;
-  const authority = ai.authorityBrief(authorityRaw);
+  const authority = ai.authorityBrief(authorityRaw) + (agent.module === "booking" ? await bookingContextLine(ws) : ""); // booking: today, services, hours, policy
   const base = {
     conversation_id: conv.id, message_id: mine.id, module: agent.module, agent_name: agent.name, handled_by: conv.handled_by ?? null,
     customer_message: mine.body, turns, installation_id: instRow?.id ?? null, timeout_ms: replyTimeoutSec(instRow?.settings) * 1000, synced, mode: slim ? "slim" : "full",
@@ -96,7 +99,8 @@ Approval rule: ${agent.approval_rule || "Commitments need human approval."}`;
     system: `You work inside NIVO OS, a responsibility operating system for founder-led service SMEs in Vietnam. Act within the authority the owner granted; ask when data is missing, the action is over the limit, or the outcome is unclear.
 ${persona}${brief}
 
-${REPLY_CONTRACT}`,
+${agent.module === "booking" ? `${REPLY_CONTRACT}
+${BOOKING_REPLY_ADDENDUM}` : REPLY_CONTRACT}`,
   };
 };
 
@@ -180,6 +184,8 @@ export const chatTurnCallback = async (db: SupabaseClient, job: EngineJob, body:
       conversationId: payloadId(job, "conversation_id"), messageId: payloadId(job, "message_id"), eventId: payloadId(job, "event_id"),
       proposed: body.op === "chat.reply" ? readProposedReply(body.text) : null, reason: "openclaw_unavailable",
     });
+    // booking: a structured booking_request in the proposed reply becomes gated actions (src/lib/module-booking-chat.ts); the reply itself was already applied above.
+    if (body.op === "chat.reply" && done.applied && !done.fallback) await handleBookingReply(db, job, body.text);
     if (!done.fallback && done.applied) {
       await logEvidence(db, job.workspace_id, { kind: "engine.reply", actor: ACTOR, summary: "OpenClaw proposed the reply; it passed the authority gate", evidence: job.id });
       if (body.op === "chat.reply") await recordEngineUsage({ workspaceId: job.workspace_id, kind: "chat_reply", module: "chatbot", model: body.usage?.model, usage: body.usage ?? undefined });
@@ -224,7 +230,7 @@ export const generateCallback = async (db: SupabaseClient, job: EngineJob, body:
 
 /* ------------------------------------------------------------------ tools (OpenClaw -> engine -> here) */
 
-export const TOOL_NAMES = ["knowledge.search", "lead.create_or_update", "approval.request", "handoff.to_person"] as const;
+export const TOOL_NAMES = ["knowledge.search", "lead.create_or_update", "approval.request", "handoff.to_person", ...BOOKING_TOOL_NAMES] as const;
 export type ToolName = (typeof TOOL_NAMES)[number];
 export const isToolName = (v: unknown): v is ToolName => typeof v === "string" && (TOOL_NAMES as ReadonlyArray<string>).includes(v);
 
@@ -233,6 +239,7 @@ export const runEngineTool = async (db: SupabaseClient, job: EngineJob, tool: To
   const ws = job.workspace_id;
   const c = ctxOf(db, ws);
   const t = translator(system, "vi");
+  if ((BOOKING_TOOL_NAMES as ReadonlyArray<string>).includes(tool)) return runBookingTool(db, job, tool as BookingToolName, args); // booking lane: booking.find_slots / booking.request
   const conv = must(await db.from("agent_conversations").select("*").eq("id", payloadId(job, "conversation_id")).eq("workspace_id", ws).single<AgentConversation>());
   const trace = (summary: string, evidence?: string) => logEvidence(db, ws, { lead_id: conv.lead_id, kind: `engine.tool.${tool}`, actor: ACTOR, summary, evidence: evidence ?? job.id });
 

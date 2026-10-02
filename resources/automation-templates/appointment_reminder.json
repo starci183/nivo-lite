@@ -1,29 +1,29 @@
 {
   "key": "appointment_reminder",
-  "version": 1,
+  "version": 2,
   "pack": "appointments",
-  "executor": "definition",
-  "moduleKey": "chatbot",
+  "executor": "implemented",
+  "moduleKey": "booking",
   "icon": "calendar",
   "name": {
     "vi": "Nhắc lịch hẹn",
     "en": "Appointment reminders"
   },
   "description": {
-    "vi": "Nhắc khách trước giờ hẹn để giảm bỏ hẹn.",
-    "en": "Remind customers before their appointment to reduce no-shows."
+    "vi": "NIVO đã tự nhắc khách 24 giờ và 2 giờ trước giờ hẹn. Bật thẻ này để đổi mốc giờ và lời nhắn theo cách của bạn.",
+    "en": "NIVO already reminds customers 24 hours and 2 hours before. Turn this card on to change the timing and the wording."
   },
   "trigger": {
-    "kind": "event",
-    "event": "appointment.upcoming",
+    "kind": "schedule",
+    "event": "booking.upcoming",
     "line": {
-      "vi": "Một khoảng thời gian trước lịch hẹn",
+      "vi": "Một khoảng thời gian trước giờ hẹn",
       "en": "A while before the appointment"
     }
   },
   "requires": {
     "modules": [
-      "chatbot"
+      "booking"
     ],
     "channels": [
       "customer_chat"
@@ -35,7 +35,7 @@
   },
   "settings": [
     {
-      "key": "beforeHours",
+      "key": "firstHours",
       "kind": "number",
       "min": 1,
       "max": 72,
@@ -44,8 +44,22 @@
         "en": "hours"
       },
       "label": {
-        "vi": "Nhắc trước",
-        "en": "Remind before"
+        "vi": "Nhắc lần 1 trước",
+        "en": "First reminder before"
+      }
+    },
+    {
+      "key": "secondHours",
+      "kind": "number",
+      "min": 0,
+      "max": 24,
+      "suffix": {
+        "vi": "giờ (0 = tắt)",
+        "en": "hours (0 = off)"
+      },
+      "label": {
+        "vi": "Nhắc lần 2 trước",
+        "en": "Second reminder before"
       }
     }
   ],
@@ -58,16 +72,21 @@
   ],
   "variables": [
     "ten_khach",
-    "ten_shop"
+    "ten_shop",
+    "dich_vu",
+    "gio_hen",
+    "nguoi_lam",
+    "dia_chi"
   ],
   "defaultBody": {
-    "vi": "Chào {ten_khach}, {ten_shop} nhắc bạn có lịch hẹn sắp tới. Bạn nhắn lại nếu cần đổi giờ nhé.",
-    "en": "Hi {ten_khach}, a reminder from {ten_shop} of your upcoming appointment."
+    "vi": "Chào {ten_khach}, {ten_shop} nhắc bạn có lịch {dich_vu} lúc {gio_hen}. Bạn nhắn lại nếu cần đổi giờ nhé.",
+    "en": "Hi {ten_khach}, a reminder from {ten_shop}: {dich_vu} at {gio_hen}."
   },
   "authority": {
-    "action": "send_care"
+    "action": "remind_booking"
   },
   "defaults": {
-    "beforeHours": 3
+    "firstHours": 24,
+    "secondHours": 2
   }
 }

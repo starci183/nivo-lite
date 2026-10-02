@@ -1,0 +1,58 @@
+{
+  "key": "booking_comeback",
+  "version": 1,
+  "pack": "appointments",
+  "executor": "implemented",
+  "moduleKey": "booking",
+  "icon": "winback",
+  "name": {
+    "vi": "Mời khách quay lại theo dịch vụ",
+    "en": "Invite customers back by service"
+  },
+  "description": {
+    "vi": "Sau số ngày bạn đặt cho từng dịch vụ (ví dụ cắt tóc 30 ngày, nhổ răng 180 ngày), NIVO mời khách đặt lịch lần tiếp theo. Khách đã có lịch sắp tới thì không nhắn.",
+    "en": "After the number of days you set per service, NIVO invites the customer to book again."
+  },
+  "trigger": {
+    "kind": "schedule",
+    "event": "booking.followup",
+    "line": {
+      "vi": "Số ngày sau buổi hẹn, tính theo từng dịch vụ",
+      "en": "N days after the visit, per service"
+    }
+  },
+  "requires": {
+    "modules": [
+      "booking"
+    ],
+    "channels": [
+      "customer_chat"
+    ],
+    "connections": [],
+    "capabilities": [
+      "has_appointments"
+    ]
+  },
+  "settings": [],
+  "contentMode": "fixed",
+  "guardrails": [
+    {
+      "vi": "Không bịa giá, giờ, địa chỉ hay chính sách chưa có trong thông tin cửa hàng.",
+      "en": "Never invent prices, hours, addresses or policies that are not in the shop information."
+    }
+  ],
+  "variables": [
+    "ten_khach",
+    "ten_shop",
+    "dich_vu",
+    "so_ngay"
+  ],
+  "defaultBody": {
+    "vi": "Chào {ten_khach}, đã khoảng {so_ngay} ngày kể từ lần {dich_vu} tại {ten_shop}. Bạn muốn đặt lịch lần tiếp theo không ạ? Bạn nhắn ngày giờ mong muốn, bên mình giữ chỗ cho bạn.",
+    "en": "Hi {ten_khach}, it has been about {so_ngay} days since your {dich_vu}. Would you like to book again?"
+  },
+  "authority": {
+    "action": "send_follow_up"
+  },
+  "defaults": {}
+}

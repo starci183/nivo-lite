@@ -3,6 +3,9 @@ import appointmentReminder from "../../resources/automation-templates/appointmen
 import askReview from "../../resources/automation-templates/ask_review.json";
 import contractRenewal from "../../resources/automation-templates/contract_renewal.json";
 import dailyReport from "../../resources/automation-templates/daily_report.json";
+import bookingComeback from "../../resources/automation-templates/booking_comeback.json";
+import bookingReview from "../../resources/automation-templates/booking_review.json";
+import bookingWaitlistNotice from "../../resources/automation-templates/booking_waitlist_notice.json";
 import debtReminder from "../../resources/automation-templates/debt_reminder.json";
 import deliveryNotice from "../../resources/automation-templates/delivery_notice.json";
 import inventoryLowStock from "../../resources/automation-templates/inventory_low_stock.json";
@@ -35,7 +38,7 @@ const fromN8n = (raw: unknown): TemplateDef => {
 export const TEMPLATE_LIST: ReadonlyArray<TemplateDef> = [
   ...(([
     thankPayment, nurtureLeads, dailyReport, afterHours, askReview, debtReminder, winBack, sheetOrders,
-    appointmentReminder, marketplaceOrderSync, contractRenewal, deliveryNotice,
+    appointmentReminder, bookingReview, bookingComeback, bookingWaitlistNotice, marketplaceOrderSync, contractRenewal, deliveryNotice,
     inventoryLowStock, inventoryWeeklyReport, inventorySupplierOverdue,
   ] as unknown) as ReadonlyArray<TemplateDef>),
   ...[emailDailyReport, emailPaymentReceipt, emailDebtReminder, emailMonthLedger].map(fromN8n),

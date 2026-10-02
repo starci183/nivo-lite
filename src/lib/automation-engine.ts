@@ -10,6 +10,8 @@ import { afterHours, askReview, checkFeedback, dailyReport, debtReminder, nurtur
 import { TRUST_THRESHOLD, resolveConfig, type PipelineConfig, type TemplateDef } from "./automation-shared";
 import { templateOf } from "./automation-templates";
 import { INVENTORY_EXECUTORS, scanInventory } from "./module-inventory-automations";
+import { BOOKING_EXECUTORS, BOOKING_TEMPLATE_KEYS, scanBooking } from "./module-booking-automations";
+import { runBookingTick } from "./module-booking-tick";
 import { supabaseAdmin } from "./supabase/admin";
 
 /**
@@ -23,6 +25,7 @@ const EXECUTORS: Readonly<Record<string, Executor>> = {
   thank_payment: thankPayment, ask_review: askReview, nurture_leads: nurtureLead, win_back: winBack, debt_reminder: debtReminder,
   after_hours: afterHours, daily_report: dailyReport, sheet_orders: sheetOrders,
   ...INVENTORY_EXECUTORS,
+  ...BOOKING_EXECUTORS,
 };
 
 const DAY = 86_400_000;
@@ -169,6 +172,12 @@ export const runTick = async (now: Date = new Date()): Promise<{ readonly pipeli
       console.error(`automation scan ${l.def.key} failed:`, e instanceof Error ? e.message : e);
     }
   }
+  // 3. Booking module: due appointment reminders (built in, independent of any card).
+  try {
+    if (budget()) runs += (await runBookingTick(now.getTime())).reminders;
+  } catch (e) {
+    console.error("booking tick failed:", e instanceof Error ? e.message : e);
+  }
   return { pipelines: list.length, runs };
 };
 
@@ -193,6 +202,7 @@ const scan = async (db: Db, l: Loaded, now: Date): Promise<number> => {
   const ws = p.workspace_id;
   let started = 0;
   if (def.moduleKey === "inventory") return scanInventory(db, l, now, (dedupe, ref, payload) => trigger(db, l, dedupe, ref, payload));
+  if (BOOKING_TEMPLATE_KEYS.includes(def.key)) return scanBooking({ db, ws, def, config, now, pipelineId: p.id, trigger: (dedupe, ref, payload) => trigger(db, l, dedupe, ref, payload) });
   if (def.key === "daily_report") {
     const clock = vnClock(now);
     if (clock.minute >= hhmmToMinutes(String(config.time))) {

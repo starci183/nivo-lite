@@ -1,0 +1,58 @@
+{
+  "key": "booking_waitlist_notice",
+  "version": 1,
+  "pack": "appointments",
+  "executor": "implemented",
+  "moduleKey": "booking",
+  "icon": "calendar",
+  "name": {
+    "vi": "Báo chỗ trống cho khách đang chờ",
+    "en": "Tell waiting customers about a free slot"
+  },
+  "description": {
+    "vi": "Khi lịch có chỗ trống đúng khung giờ khách đang chờ (có người hủy hoặc đổi lịch), NIVO báo khách ngay.",
+    "en": "When a slot opens in the window a waiting customer asked for, NIVO tells them."
+  },
+  "trigger": {
+    "kind": "schedule",
+    "event": "booking.slot_free",
+    "line": {
+      "vi": "Khi có chỗ trống trong khung giờ khách chờ",
+      "en": "When a slot opens in the waiting window"
+    }
+  },
+  "requires": {
+    "modules": [
+      "booking"
+    ],
+    "channels": [
+      "customer_chat"
+    ],
+    "connections": [],
+    "capabilities": [
+      "has_appointments"
+    ]
+  },
+  "settings": [],
+  "contentMode": "fixed",
+  "guardrails": [
+    {
+      "vi": "Không bịa giá, giờ, địa chỉ hay chính sách chưa có trong thông tin cửa hàng.",
+      "en": "Never invent prices, hours, addresses or policies that are not in the shop information."
+    }
+  ],
+  "variables": [
+    "ten_khach",
+    "ten_shop",
+    "dich_vu",
+    "gio_hen"
+  ],
+  "defaultBody": {
+    "vi": "Chào {ten_khach}, {ten_shop} vừa có chỗ trống cho {dich_vu} lúc {gio_hen}. Bạn muốn giữ lịch này thì nhắn lại cho bên mình nhé.",
+    "en": "Hi {ten_khach}, {ten_shop} has a free slot for {dich_vu} at {gio_hen}."
+  },
+  "authority": {
+    "action": "send_care"
+  },
+  "defaults": {}
+}

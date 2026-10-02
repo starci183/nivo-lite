@@ -15,7 +15,7 @@ if (!url || !key) {
   process.exit(1);
 }
 
-const MODULES = ["chatbot", "sales", "accounting"];
+const MODULES = readdirSync(resolve(dirname(fileURLToPath(import.meta.url)), "..", "resources", "modules"), { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name);
 const n8nRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "resources", "n8n-templates");
 const files = [
   ...readdirSync(root).filter((f) => f.endsWith(".json")).map((f) => ({ dir: root, f, expected: f })),

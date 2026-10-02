@@ -93,6 +93,7 @@ export const loadCapabilities = async (db: Db, ws: string, known?: ActiveContext
   const text = [ctx.text, ...((knowledge.data ?? []) as Array<{ title: string; content: string }>).map((k) => `${k.title}\n${k.content.slice(0, 3000)}`)].join("\n");
   const has = new Set<Capability>();
   for (const [cap, re] of Object.entries(CAPABILITY_PATTERNS)) if (affirms(text, re)) has.add(cap as Capability);
+  if (ctx.installed.includes("booking")) has.add("has_appointments"); // the booking module IS the capability
   if (affirms(text, DUE_PATTERN) || (dueInvoices.count ?? 0) > 0) has.add("has_due_dates");
   if (parseHours(ctx.hoursText) || text.split("\n").some((l) => /giờ (làm việc|mở cửa)|mở cửa|opening hours|business hours/i.test(l) && parseHours(l))) has.add("has_opening_hours");
   return has;
