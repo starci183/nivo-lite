@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Seeds a ready-to-use demo account ("Spa Hoa Mai") into whichever Supabase project the env points at. Idempotent.
-//   NIVO_SECRETS="$USERPROFILE/.nivo-lite/cloud.env" npm run -s seed:workspace [-- <workspaceId>]
+//   npm run -s seed:workspace [-- <workspaceId>]
 // Workspace: argv[2] | $SEED_WORKSPACE_ID | the production default below. Falls back to the first workspace, then creates one.
 // Creates: owner + staff accounts (passwords go ONLY into ~/.nivo-lite/secrets.env), the 3 module installations applied
 // exactly like src/lib/module-actions.ts (applySetup), and the business knowledge (chunk + embed like src/lib/knowledge).

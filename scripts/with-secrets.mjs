@@ -1,14 +1,15 @@
 #!/usr/bin/env node
-// Runs a command with the app's local secrets loaded from a file OUTSIDE the repository.
-// File: $NIVO_SECRETS (or ~/.nivo-lite/secrets.env), KEY=VALUE per line.
+// Runs a command with the secrets loaded from the ONE secrets file: <repo>/secrets.env (gitignored).
+// Override with NIVO_SECRETS=<path>. KEY=VALUE per line; comments and section headers are ignored.
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const file = process.env.NIVO_SECRETS || join(homedir(), ".nivo-lite", "secrets.env");
+const repo = join(dirname(fileURLToPath(import.meta.url)), "..");
+const file = process.env.NIVO_SECRETS || join(repo, "secrets.env");
 if (!existsSync(file)) {
-  console.error(`[with-secrets] missing ${file} — copy secrets.example.env there and fill it in.`);
+  console.error(`[with-secrets] missing ${file}: copy secrets.example.env to secrets.env and fill it in.`);
   process.exit(1);
 }
 const env = { ...process.env };
