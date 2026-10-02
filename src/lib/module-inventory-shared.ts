@@ -75,7 +75,8 @@ export const fold = (s: string): string =>
 export type OrderLine = { readonly raw: string; readonly qty: number; readonly name: string };
 
 const SPLIT = /\r?\n|;|,(?!\d)| \+ | và /iu;
-const LEAD_QTY = /^(\d+(?:[.,]\d+)?)\s*(?:x|×)?\s*(.+)$/iu;
+// "2 cà phê", "2x cà phê", "2 x cà phê", "2×cà phê"; the "x" is a multiplier only when it stands alone ("5 xe gạch" keeps "xe").
+const LEAD_QTY = /^(\d+(?:[.,]\d+)?)\s*(?:[x×](?=[\s\d]|$)\s*)?(.+)$/iu;
 const TRAIL_QTY = /^(.+?)(?:\s+x\s*|\s*[×*]\s*|\s*:\s*)(\d+(?:[.,]\d+)?)$/iu;
 
 /** "2 cà phê sữa, bạc xỉu x3\n1 thùng bia" → lines with a quantity and the name part. A line without a number counts as 1. */

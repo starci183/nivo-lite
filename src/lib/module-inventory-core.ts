@@ -253,7 +253,9 @@ export const draftLowStock = async (db: Db, ws: string, o: { readonly itemIds?: 
   }
   if (o.requestApproval !== false) {
     const ctx: EngineCtx = { db, ws, actor: by, locale: "vi" };
-    for (const id of poIds) await requestSend(ctx, id).catch((e) => console.error("inventory requestSend failed:", e instanceof Error ? e.message : e));
+    // A draft without a supplier cannot be sent: it stays a draft until the owner picks one.
+    const withSupplier = new Set((((await db.from("inventory_purchase_orders").select("id").in("id", poIds).not("supplier_id", "is", null)).data ?? []) as Array<{ id: string }>).map((r) => r.id));
+    for (const id of poIds.filter((x) => withSupplier.has(x))) await requestSend(ctx, id).catch((e) => console.error("inventory requestSend failed:", e instanceof Error ? e.message : e));
   }
   return { poIds, lowCount: low.length, skipped };
 };

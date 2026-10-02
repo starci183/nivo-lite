@@ -1,6 +1,6 @@
 // Production check of the Kho & nhập hàng module. Needs the service role; runs the REAL app code (src/lib/module-inventory-*, the engine and its gate)
 // against the production database with test data in the workspaces "Kiểm thử · Quán cà phê" and "Kiểm thử · Cửa hàng vật liệu".
-//   node scripts/with-secrets.mjs npx tsx --conditions=react-server scripts/inventory-prod-check.ts [cafe|building|tick|all] [--reset]
+//   node scripts/with-secrets.mjs npx tsx --require ./scripts/server-only-stub.cjs scripts/inventory-prod-check.ts [cafe|building|tick|all] [--reset]
 // It prints PASS/FAIL per check and never prints a secret. Nothing is sent to a real supplier: the test workspaces have no SMTP connection.
 import { createHmac } from "node:crypto";
 import { installModuleCore } from "../src/lib/module-install";
@@ -208,7 +208,7 @@ const building = async (): Promise<void> => {
   // Paste import + stock-take.
   const imp = await importPasted(ctxOf(ws), "Tên\tĐơn vị\tGiá vốn\tTồn tối thiểu\tTồn\tNhà cung cấp\nKiểm thử Keo dán gạch\tbao\t95000\t10\t40\tBãi cát đá Tân Uyên\nKiểm thử Bột trét\tbao\t180000\t8\t5\t");
   ok("CSV/Excel paste imports items (new + opening stock)", imp.created === 2 && imp.stocked === 2, JSON.stringify(imp));
-  const keo = await itemBySku(ws, "KIEM-THU-KEO-DAN-GACH");
+  const keo = await itemBySku(ws, "KIEM-THU-KEO-DAN");
   const st = await stockTake(ctxOf(ws), [{ itemId: keo.id as string, counted: 38 }]);
   ok("stock-take: a small difference (-2 bao) is adjusted", st.applied === 1 && (await totalOf(ws, keo.id as string)) === 38, JSON.stringify(st));
 };
@@ -222,9 +222,12 @@ const tick = async (): Promise<void> => {
   console.log(`INFO  signed tick → ${res.status} ${(await res.text()).slice(0, 120)}`);
 };
 
-if (which === "cafe" || which === "all") await cafe();
-if (which === "building" || which === "all") await building();
-if (which === "tick") await tick();
-console.log(failed ? `\n${failed} check(s) FAILED` : "\nall checks passed");
-process.exit(failed ? 1 : 0);
+const main = async (): Promise<void> => {
+  if (which === "cafe" || which === "all") await cafe();
+  if (which === "building" || which === "all") await building();
+  if (which === "tick") await tick();
+  console.log(failed ? `${failed} check(s) FAILED` : "all checks passed");
+  process.exit(failed ? 1 : 0);
+};
+main().catch((e) => { console.error("check crashed:", e instanceof Error ? e.stack : e); process.exit(2); });
 void defaultLocation;
