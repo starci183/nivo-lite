@@ -108,7 +108,8 @@ const scoreName = (needle: string, cand: string): number => {
 export const matchOrderLine = (line: OrderLine, recipes: ReadonlyArray<MatchRecipe>, items: ReadonlyArray<MatchItem>): LineMatch | null => {
   const full = fold(line.name);
   const words = full.split(" ");
-  const unitWord = GENERIC_UNIT_WORDS.has(words[0] ?? "") ? words[0] : "";
+  const secondaryUnits = new Set(items.flatMap((it) => it.units.map((u) => fold(u.unit))));
+  const unitWord = GENERIC_UNIT_WORDS.has(words[0] ?? "") || secondaryUnits.has(words[0] ?? "") ? words[0] : "";
   const variants = unitWord ? [words.slice(1).join(" "), full] : [full];
   let best: { score: number; match: LineMatch } | null = null;
   const consider = (score: number, match: LineMatch) => {
@@ -116,7 +117,12 @@ export const matchOrderLine = (line: OrderLine, recipes: ReadonlyArray<MatchReci
   };
   for (const v of variants) {
     if (!v) continue;
-    for (const r of recipes) for (const n of [r.name, ...r.aliases]) consider(scoreName(v, fold(n)) + 1, { kind: "recipe", id: r.id, qty: line.qty });
+    for (const r of recipes) {
+      for (const n of [r.name, ...r.aliases]) {
+        const sc = scoreName(v, fold(n));
+        if (sc > 0) consider(sc + 1, { kind: "recipe", id: r.id, qty: line.qty }); // a recipe beats an item of the same name
+      }
+    }
     for (const it of items) {
       for (const n of [it.name, it.sku, ...it.aliases]) {
         const sc = scoreName(v, fold(n));
