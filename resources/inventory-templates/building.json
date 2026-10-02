@@ -1,0 +1,145 @@
+{
+  "key": "building",
+  "name": "Cửa hàng vật liệu xây dựng",
+  "description": "Xi măng, gạch, cát đá, thép, sơn, điện nước: bán theo đơn vị riêng, nhập theo xe hoặc theo bó.",
+  "suppliers": [
+    {
+      "name": "Nhà máy xi măng & vật liệu Hoà Phát Miền Nam",
+      "contact_name": "anh Tuấn",
+      "channel": "email",
+      "lead_time_days": 2,
+      "payment_terms": "Công nợ 30 ngày"
+    },
+    {
+      "name": "Bãi cát đá Tân Uyên",
+      "contact_name": "chú Sáu",
+      "channel": "phone",
+      "lead_time_days": 1
+    }
+  ],
+  "items": [
+    {
+      "sku": "XM-PCB40",
+      "name": "Xi măng PCB40",
+      "unit": "bao",
+      "units": [
+        {
+          "unit": "tấn",
+          "factor": 20
+        }
+      ],
+      "category": "Xi măng",
+      "cost_vnd": 86000,
+      "sell_price_vnd": 98000,
+      "reorder_point": 100,
+      "reorder_qty": 400,
+      "supplier": "Nhà máy xi măng & vật liệu Hoà Phát Miền Nam",
+      "aliases": [
+        "xi măng",
+        "xi mang"
+      ],
+      "qty": 300
+    },
+    {
+      "sku": "GACH-ONG",
+      "name": "Gạch ống 8x8x18",
+      "unit": "viên",
+      "units": [
+        {
+          "unit": "xe",
+          "factor": 3000
+        }
+      ],
+      "category": "Gạch",
+      "cost_vnd": 1250,
+      "sell_price_vnd": 1600,
+      "reorder_point": 3000,
+      "reorder_qty": 9000,
+      "supplier": "Bãi cát đá Tân Uyên",
+      "aliases": [
+        "gạch",
+        "gạch ống"
+      ],
+      "qty": 8000
+    },
+    {
+      "sku": "CAT-XAY",
+      "name": "Cát xây tô",
+      "unit": "m3",
+      "category": "Cát đá",
+      "cost_vnd": 220000,
+      "sell_price_vnd": 280000,
+      "reorder_point": 10,
+      "reorder_qty": 30,
+      "supplier": "Bãi cát đá Tân Uyên",
+      "qty": 25
+    },
+    {
+      "sku": "DA-1X2",
+      "name": "Đá 1x2",
+      "unit": "m3",
+      "category": "Cát đá",
+      "cost_vnd": 260000,
+      "sell_price_vnd": 330000,
+      "reorder_point": 10,
+      "reorder_qty": 30,
+      "supplier": "Bãi cát đá Tân Uyên",
+      "qty": 22
+    },
+    {
+      "sku": "THEP-D10",
+      "name": "Thép phi 10",
+      "unit": "cây",
+      "units": [
+        {
+          "unit": "bó",
+          "factor": 10
+        }
+      ],
+      "category": "Sắt thép",
+      "cost_vnd": 105000,
+      "sell_price_vnd": 125000,
+      "reorder_point": 50,
+      "reorder_qty": 200,
+      "supplier": "Nhà máy xi măng & vật liệu Hoà Phát Miền Nam",
+      "qty": 120
+    },
+    {
+      "sku": "SON-NUOC",
+      "name": "Sơn nước nội thất 18 lít",
+      "unit": "thùng",
+      "category": "Sơn",
+      "cost_vnd": 1450000,
+      "sell_price_vnd": 1790000,
+      "reorder_point": 5,
+      "reorder_qty": 20,
+      "supplier": "Nhà máy xi măng & vật liệu Hoà Phát Miền Nam",
+      "qty": 12
+    },
+    {
+      "sku": "DAY-DIEN",
+      "name": "Dây điện 2.5mm (cuộn 100m)",
+      "unit": "cuộn",
+      "category": "Điện nước",
+      "cost_vnd": 780000,
+      "sell_price_vnd": 920000,
+      "reorder_point": 4,
+      "reorder_qty": 12,
+      "supplier": "Nhà máy xi măng & vật liệu Hoà Phát Miền Nam",
+      "qty": 9
+    },
+    {
+      "sku": "ONG-PVC",
+      "name": "Ống nước PVC phi 21",
+      "unit": "cây",
+      "category": "Điện nước",
+      "cost_vnd": 28000,
+      "sell_price_vnd": 38000,
+      "reorder_point": 40,
+      "reorder_qty": 120,
+      "supplier": "Nhà máy xi măng & vật liệu Hoà Phát Miền Nam",
+      "qty": 90
+    }
+  ],
+  "recipes": []
+}

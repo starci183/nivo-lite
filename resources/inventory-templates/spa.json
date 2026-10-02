@@ -1,0 +1,177 @@
+{
+  "key": "spa",
+  "name": "Spa & thẩm mỹ",
+  "description": "Vật tư dùng cho liệu trình (tinh dầu, mặt nạ, bông, găng tay); công thức liệu trình tự trừ vật tư khi hoàn tất đơn.",
+  "suppliers": [
+    {
+      "name": "Mỹ phẩm & vật tư spa Ánh Dương",
+      "contact_name": "chị Dương",
+      "channel": "zalo",
+      "lead_time_days": 2
+    },
+    {
+      "name": "Công ty vật tư y tế An Phúc",
+      "contact_name": "chị Phúc",
+      "channel": "email",
+      "lead_time_days": 3,
+      "payment_terms": "Thanh toán trước"
+    }
+  ],
+  "items": [
+    {
+      "sku": "TINH-DAU",
+      "name": "Tinh dầu massage",
+      "unit": "ml",
+      "units": [
+        {
+          "unit": "chai",
+          "factor": 500
+        }
+      ],
+      "category": "Vật tư liệu trình",
+      "cost_vnd": 900,
+      "reorder_point": 500,
+      "reorder_qty": 2000,
+      "supplier": "Mỹ phẩm & vật tư spa Ánh Dương",
+      "qty": 2000
+    },
+    {
+      "sku": "MAT-NA",
+      "name": "Mặt nạ dưỡng da",
+      "unit": "miếng",
+      "units": [
+        {
+          "unit": "hộp",
+          "factor": 10
+        }
+      ],
+      "category": "Vật tư liệu trình",
+      "cost_vnd": 14000,
+      "reorder_point": 20,
+      "reorder_qty": 100,
+      "supplier": "Mỹ phẩm & vật tư spa Ánh Dương",
+      "qty": 60
+    },
+    {
+      "sku": "BONG-TRANG",
+      "name": "Bông tẩy trang",
+      "unit": "miếng",
+      "units": [
+        {
+          "unit": "gói",
+          "factor": 200
+        }
+      ],
+      "category": "Vật tư dùng một lần",
+      "cost_vnd": 350,
+      "reorder_point": 200,
+      "reorder_qty": 1000,
+      "supplier": "Công ty vật tư y tế An Phúc",
+      "qty": 600
+    },
+    {
+      "sku": "GANG-TAY",
+      "name": "Găng tay y tế",
+      "unit": "đôi",
+      "units": [
+        {
+          "unit": "hộp",
+          "factor": 50
+        }
+      ],
+      "category": "Vật tư dùng một lần",
+      "cost_vnd": 1500,
+      "reorder_point": 50,
+      "reorder_qty": 200,
+      "supplier": "Công ty vật tư y tế An Phúc",
+      "qty": 120
+    },
+    {
+      "sku": "KHAN-SPA",
+      "name": "Khăn spa",
+      "unit": "cái",
+      "category": "Đồ vải",
+      "cost_vnd": 25000,
+      "reorder_point": 20,
+      "reorder_qty": 40,
+      "supplier": "Mỹ phẩm & vật tư spa Ánh Dương",
+      "qty": 50
+    },
+    {
+      "sku": "SERUM",
+      "name": "Serum phục hồi",
+      "unit": "ml",
+      "units": [
+        {
+          "unit": "chai",
+          "factor": 30
+        }
+      ],
+      "category": "Mỹ phẩm",
+      "cost_vnd": 3500,
+      "reorder_point": 100,
+      "reorder_qty": 600,
+      "supplier": "Mỹ phẩm & vật tư spa Ánh Dương",
+      "qty": 300
+    },
+    {
+      "sku": "GIAY-GIUONG",
+      "name": "Giấy trải giường",
+      "unit": "cuộn",
+      "category": "Vật tư dùng một lần",
+      "cost_vnd": 45000,
+      "reorder_point": 5,
+      "reorder_qty": 20,
+      "supplier": "Công ty vật tư y tế An Phúc",
+      "qty": 12
+    },
+    {
+      "sku": "CON-SAT",
+      "name": "Cồn sát khuẩn",
+      "unit": "ml",
+      "units": [
+        {
+          "unit": "chai",
+          "factor": 500
+        }
+      ],
+      "category": "Vật tư dùng một lần",
+      "cost_vnd": 80,
+      "reorder_point": 1000,
+      "reorder_qty": 5000,
+      "supplier": "Công ty vật tư y tế An Phúc",
+      "qty": 3000
+    }
+  ],
+  "recipes": [
+    {
+      "name": "Chăm sóc da cơ bản",
+      "aliases": [
+        "cham soc da",
+        "facial"
+      ],
+      "lines": [
+        {
+          "sku": "MAT-NA",
+          "qty": 1
+        },
+        {
+          "sku": "TINH-DAU",
+          "qty": 10
+        },
+        {
+          "sku": "BONG-TRANG",
+          "qty": 6
+        },
+        {
+          "sku": "GANG-TAY",
+          "qty": 1
+        },
+        {
+          "sku": "SERUM",
+          "qty": 3
+        }
+      ]
+    }
+  ]
+}

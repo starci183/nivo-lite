@@ -1,0 +1,61 @@
+{
+  "key": "inventory_low_stock",
+  "version": 1,
+  "pack": "core",
+  "executor": "implemented",
+  "moduleKey": "inventory",
+  "icon": "cart",
+  "name": {
+    "vi": "Cảnh báo sắp hết hàng",
+    "en": "Low-stock alert"
+  },
+  "description": {
+    "vi": "Mỗi ngày kiểm kho một lần: món nào chạm mức tối thiểu thì soạn sẵn đơn nhập theo nhà cung cấp và chờ bạn duyệt.",
+    "en": "Checks stock once a day: items at their minimum get a purchase order drafted per supplier and wait for your approval."
+  },
+  "trigger": {
+    "kind": "schedule",
+    "event": "schedule.daily",
+    "line": {
+      "vi": "Mỗi ngày vào giờ bạn chọn (giờ Việt Nam)",
+      "en": "Every day at the time you pick (Vietnam time)"
+    }
+  },
+  "requires": {
+    "modules": [
+      "inventory"
+    ],
+    "channels": [],
+    "connections": [],
+    "capabilities": []
+  },
+  "settings": [
+    {
+      "key": "time",
+      "kind": "time",
+      "label": {
+        "vi": "Kiểm kho lúc",
+        "en": "Check at"
+      }
+    }
+  ],
+  "contentMode": "none",
+  "guardrails": [
+    {
+      "vi": "Chỉ soạn đơn nháp; gửi cho nhà cung cấp luôn chờ bạn duyệt.",
+      "en": "Only drafts orders; sending to a supplier always waits for you."
+    },
+    {
+      "vi": "Không đặt món đã có đơn nhập đang chờ giao.",
+      "en": "Never orders an item that already has an open purchase order."
+    }
+  ],
+  "variables": [],
+  "defaultBody": null,
+  "authority": {
+    "action": null
+  },
+  "defaults": {
+    "time": "07:30"
+  }
+}

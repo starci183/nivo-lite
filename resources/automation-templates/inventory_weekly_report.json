@@ -1,0 +1,70 @@
+{
+  "key": "inventory_weekly_report",
+  "version": 1,
+  "pack": "core",
+  "executor": "implemented",
+  "moduleKey": "inventory",
+  "icon": "report",
+  "name": {
+    "vi": "Báo cáo tồn kho cuối tuần",
+    "en": "Weekend stock report"
+  },
+  "description": {
+    "vi": "Chiều Chủ nhật: giá trị tồn kho, món sắp hết, hàng nhập xuất trong tuần và đơn nhập đang mở.",
+    "en": "Sunday afternoon: stock value, items running low, the week's stock in and out and open purchase orders."
+  },
+  "trigger": {
+    "kind": "schedule",
+    "event": "schedule.daily",
+    "line": {
+      "vi": "Chủ nhật hằng tuần vào giờ bạn chọn (giờ Việt Nam)",
+      "en": "Every Sunday at the time you pick (Vietnam time)"
+    }
+  },
+  "requires": {
+    "modules": [
+      "inventory"
+    ],
+    "channels": [],
+    "connections": [],
+    "capabilities": []
+  },
+  "settings": [
+    {
+      "key": "time",
+      "kind": "time",
+      "label": {
+        "vi": "Gửi lúc",
+        "en": "Send at"
+      }
+    },
+    {
+      "key": "email",
+      "kind": "email",
+      "label": {
+        "vi": "Gửi thêm tới email",
+        "en": "Also email to"
+      },
+      "hint": {
+        "vi": "Để trống nếu chỉ cần xem trong Văn phòng.",
+        "en": "Leave empty to see it in Office only."
+      }
+    }
+  ],
+  "contentMode": "none",
+  "guardrails": [
+    {
+      "vi": "Chỉ dùng số liệu có thật trong kho.",
+      "en": "Only real stock figures."
+    }
+  ],
+  "variables": [],
+  "defaultBody": null,
+  "authority": {
+    "action": null
+  },
+  "defaults": {
+    "time": "17:00",
+    "email": ""
+  }
+}

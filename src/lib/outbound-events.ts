@@ -69,4 +69,10 @@ export const emitEvent = async (workspaceId: string, event: BusinessEvent, data:
   } catch (e) {
     console.error("automations failed:", event, e instanceof Error ? e.message : e);
   }
+  try {
+    const { onInventoryEvent } = await import("./module-inventory-events");
+    await onInventoryEvent(workspaceId, event, data);
+  } catch (e) {
+    console.error("inventory failed:", event, e instanceof Error ? e.message : e);
+  }
 };

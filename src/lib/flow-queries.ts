@@ -20,7 +20,7 @@ const toView = ({ staff, decisions, ...w }: WorkRow): WorkItemView => ({
   lead: w.lead ?? null,
   assignedStaffName: staff?.name ?? null,
   hasApprovalCard: w.execution_id !== null,
-  href: w.lead_id ? `/leads/${w.lead_id}` : "/chat",
+  href: w.lead_id ? `/leads/${w.lead_id}` : w.department === "inventory" ? "/m/inventory/workbench?tab=orders" : "/chat",
   ...(decisions ? { decidedBy: [...decisions].sort((a, b) => a.created_at.localeCompare(b.created_at)).at(-1)?.decided_by ?? null } : {}),
 });
 

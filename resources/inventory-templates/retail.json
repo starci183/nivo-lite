@@ -1,0 +1,150 @@
+{
+  "key": "retail",
+  "name": "Cửa hàng bán lẻ / tạp hoá",
+  "description": "Hàng tiêu dùng bán nguyên món; mỗi lần bán trừ thẳng số lượng, nhập theo thùng.",
+  "suppliers": [
+    {
+      "name": "Đại lý nước giải khát Bình An",
+      "contact_name": "chị Bình",
+      "channel": "zalo",
+      "lead_time_days": 1
+    },
+    {
+      "name": "Tổng kho hàng tiêu dùng Việt Phát",
+      "contact_name": "anh Phát",
+      "channel": "email",
+      "lead_time_days": 3,
+      "payment_terms": "Công nợ 15 ngày"
+    }
+  ],
+  "items": [
+    {
+      "sku": "NUOC-SUOI",
+      "name": "Nước suối 500ml",
+      "unit": "chai",
+      "units": [
+        {
+          "unit": "thùng",
+          "factor": 24
+        }
+      ],
+      "category": "Đồ uống",
+      "cost_vnd": 3500,
+      "sell_price_vnd": 6000,
+      "reorder_point": 48,
+      "reorder_qty": 240,
+      "supplier": "Đại lý nước giải khát Bình An",
+      "aliases": [
+        "nước suối",
+        "aquafina"
+      ],
+      "qty": 120
+    },
+    {
+      "sku": "NUOC-NGOT",
+      "name": "Nước ngọt lon",
+      "unit": "lon",
+      "units": [
+        {
+          "unit": "thùng",
+          "factor": 24
+        }
+      ],
+      "category": "Đồ uống",
+      "cost_vnd": 7500,
+      "sell_price_vnd": 12000,
+      "reorder_point": 48,
+      "reorder_qty": 240,
+      "supplier": "Đại lý nước giải khát Bình An",
+      "qty": 96
+    },
+    {
+      "sku": "MI-GOI",
+      "name": "Mì gói",
+      "unit": "gói",
+      "units": [
+        {
+          "unit": "thùng",
+          "factor": 30
+        }
+      ],
+      "category": "Thực phẩm",
+      "cost_vnd": 3200,
+      "sell_price_vnd": 5000,
+      "reorder_point": 60,
+      "reorder_qty": 300,
+      "supplier": "Tổng kho hàng tiêu dùng Việt Phát",
+      "aliases": [
+        "mì tôm"
+      ],
+      "qty": 150
+    },
+    {
+      "sku": "DAU-AN",
+      "name": "Dầu ăn 1 lít",
+      "unit": "chai",
+      "category": "Thực phẩm",
+      "cost_vnd": 42000,
+      "sell_price_vnd": 55000,
+      "reorder_point": 10,
+      "reorder_qty": 24,
+      "supplier": "Tổng kho hàng tiêu dùng Việt Phát",
+      "qty": 30
+    },
+    {
+      "sku": "GAO",
+      "name": "Gạo thơm",
+      "unit": "kg",
+      "units": [
+        {
+          "unit": "bao",
+          "factor": 25
+        }
+      ],
+      "category": "Thực phẩm",
+      "cost_vnd": 17000,
+      "sell_price_vnd": 22000,
+      "reorder_point": 50,
+      "reorder_qty": 200,
+      "supplier": "Tổng kho hàng tiêu dùng Việt Phát",
+      "qty": 120
+    },
+    {
+      "sku": "KHAN-GIAY",
+      "name": "Khăn giấy",
+      "unit": "gói",
+      "category": "Gia dụng",
+      "cost_vnd": 6000,
+      "sell_price_vnd": 9000,
+      "reorder_point": 20,
+      "reorder_qty": 100,
+      "supplier": "Tổng kho hàng tiêu dùng Việt Phát",
+      "qty": 60
+    },
+    {
+      "sku": "BANH-QUY",
+      "name": "Bánh quy hộp",
+      "unit": "hộp",
+      "category": "Bánh kẹo",
+      "cost_vnd": 28000,
+      "sell_price_vnd": 38000,
+      "reorder_point": 10,
+      "reorder_qty": 40,
+      "supplier": "Tổng kho hàng tiêu dùng Việt Phát",
+      "qty": 25
+    },
+    {
+      "sku": "BOT-GIAT",
+      "name": "Bột giặt túi 3kg",
+      "unit": "túi",
+      "category": "Gia dụng",
+      "cost_vnd": 85000,
+      "sell_price_vnd": 110000,
+      "reorder_point": 6,
+      "reorder_qty": 24,
+      "supplier": "Tổng kho hàng tiêu dùng Việt Phát",
+      "qty": 14
+    }
+  ],
+  "recipes": []
+}

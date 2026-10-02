@@ -9,6 +9,7 @@ import {
 import { afterHours, askReview, checkFeedback, dailyReport, debtReminder, nurtureLead, sheetOrders, thankPayment, winBack } from "./automation-executors";
 import { TRUST_THRESHOLD, resolveConfig, type PipelineConfig, type TemplateDef } from "./automation-shared";
 import { templateOf } from "./automation-templates";
+import { INVENTORY_EXECUTORS, scanInventory } from "./module-inventory-automations";
 import { supabaseAdmin } from "./supabase/admin";
 
 /**
@@ -21,6 +22,7 @@ import { supabaseAdmin } from "./supabase/admin";
 const EXECUTORS: Readonly<Record<string, Executor>> = {
   thank_payment: thankPayment, ask_review: askReview, nurture_leads: nurtureLead, win_back: winBack, debt_reminder: debtReminder,
   after_hours: afterHours, daily_report: dailyReport, sheet_orders: sheetOrders,
+  ...INVENTORY_EXECUTORS,
 };
 
 const DAY = 86_400_000;
@@ -190,6 +192,7 @@ const scan = async (db: Db, l: Loaded, now: Date): Promise<number> => {
   const { p, def, config } = l;
   const ws = p.workspace_id;
   let started = 0;
+  if (def.moduleKey === "inventory") return scanInventory(db, l, now, (dedupe, ref, payload) => trigger(db, l, dedupe, ref, payload));
   if (def.key === "daily_report") {
     const clock = vnClock(now);
     if (clock.minute >= hhmmToMinutes(String(config.time))) {

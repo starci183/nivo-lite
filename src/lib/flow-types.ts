@@ -33,7 +33,7 @@ export type Proposal = { summary: string; draft?: string; amount_vnd?: number | 
   fields: Record<string, string | number | null>; confidence?: number; outcome?: "clear" | "unclear";
   candidates?: Array<{ id: string; label: string; amount_vnd: number }> };
 export type WorkItem = { id: string; workspace_id: string; department: Department; action: FlowAction;
-  subject_type: "lead" | "order" | "invoice" | "transaction" | "conversation" | "inbound"; subject_id: string | null;
+  subject_type: "lead" | "order" | "invoice" | "transaction" | "conversation" | "inbound" | "purchase_order" | "stock"; subject_id: string | null;
   lead_id: string | null; inbound_event_id: string | null; parent_id: string | null; status: WorkStatus;
   decided_path: "auto" | "human" | null; reason: ReasonCode | null; reasons: string[]; missing_fields: string[];
   proposal: Proposal; result: { summary: string; href?: string } | null; error: string | null; evidence_state: EvidenceState;

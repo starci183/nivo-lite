@@ -21,3 +21,17 @@ Kho & nhập hàng giúp doanh nghiệp (bán lẻ, quán ăn, spa, xưởng, ph
 ## Dấu hiệu cần báo chủ
 
 Tồn âm, chênh lệch kiểm kê lớn, giá nhập tăng đột biến, nhà cung cấp giao trễ nhiều lần.
+
+## Bán hàng tự trừ kho
+
+- Khi đơn hàng được xác nhận, kho tự trừ hàng đã bán. Món bán nguyên (chai nước, bao xi măng) trừ thẳng; món pha chế hoặc liệu trình (ly cà phê sữa, gói chăm sóc da) trừ theo công thức nguyên liệu.
+- Dòng nào không khớp tên hàng hoặc công thức thì không đoán: báo trong Văn phòng để thêm tên gọi khác hoặc chỉnh tay.
+- Mỗi lần trừ ghi mã đơn làm bằng chứng; cùng một đơn không bao giờ trừ hai lần.
+
+## Từ cảnh báo đến đơn nhập
+
+1. Hàng chạm mức tối thiểu (sau mỗi lần xuất kho và kiểm lại mỗi sáng): soạn đơn nháp, gom theo nhà cung cấp quen, bỏ qua món đã có đơn đang chờ giao.
+2. Soạn sẵn tin nhắn đặt hàng lịch sự theo giọng của shop. Đơn gửi nhà cung cấp luôn chờ chủ duyệt.
+3. Gửi qua email nếu nhà cung cấp dùng email và shop đã kết nối email; nhà cung cấp dùng Zalo hoặc điện thoại thì để tin nhắn sẵn cho chủ chép gửi.
+4. Nhận hàng: nhập số thực nhận (đủ hoặc một phần) và giá thực tế. Giá vốn tính lại theo bình quân; đổi giá thì báo chủ; có hoá đơn thì chuyển khoản phải trả cho Kế toán.
+5. Quá hạn giao: soạn tin nhắc nhẹ nhà cung cấp, chủ duyệt mới gửi, nhắc tối đa 2 lần.

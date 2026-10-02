@@ -1,0 +1,202 @@
+{
+  "key": "cafe",
+  "name": "Quán cà phê & trà",
+  "description": "Nguyên liệu pha chế (cà phê, sữa, đường), ly, ống hút; 1 công thức cà phê sữa tự trừ nguyên liệu khi bán.",
+  "suppliers": [
+    {
+      "name": "Cà phê Tây Nguyên Phú Lộc",
+      "contact_name": "chị Hương",
+      "channel": "email",
+      "lead_time_days": 2,
+      "payment_terms": "Thanh toán khi nhận hàng"
+    },
+    {
+      "name": "Tạp hoá sỉ Minh Anh",
+      "contact_name": "anh Minh",
+      "channel": "zalo",
+      "lead_time_days": 1,
+      "payment_terms": "Công nợ 7 ngày"
+    }
+  ],
+  "items": [
+    {
+      "sku": "CF-HAT",
+      "name": "Cà phê hạt rang",
+      "unit": "g",
+      "units": [
+        {
+          "unit": "kg",
+          "factor": 1000
+        }
+      ],
+      "category": "Nguyên liệu",
+      "cost_vnd": 250,
+      "reorder_point": 2000,
+      "reorder_qty": 10000,
+      "supplier": "Cà phê Tây Nguyên Phú Lộc",
+      "aliases": [
+        "cà phê hạt",
+        "ca phe hat"
+      ],
+      "qty": 6000
+    },
+    {
+      "sku": "SUA-DAC",
+      "name": "Sữa đặc",
+      "unit": "ml",
+      "units": [
+        {
+          "unit": "hộp",
+          "factor": 380
+        }
+      ],
+      "category": "Nguyên liệu",
+      "cost_vnd": 60,
+      "reorder_point": 1500,
+      "reorder_qty": 7600,
+      "supplier": "Tạp hoá sỉ Minh Anh",
+      "aliases": [
+        "sữa đặc có đường"
+      ],
+      "qty": 4000
+    },
+    {
+      "sku": "SUA-TUOI",
+      "name": "Sữa tươi",
+      "unit": "ml",
+      "units": [
+        {
+          "unit": "lít",
+          "factor": 1000
+        },
+        {
+          "unit": "thùng",
+          "factor": 12000
+        }
+      ],
+      "category": "Nguyên liệu",
+      "cost_vnd": 30,
+      "reorder_point": 3000,
+      "reorder_qty": 12000,
+      "supplier": "Tạp hoá sỉ Minh Anh",
+      "qty": 8000
+    },
+    {
+      "sku": "DUONG",
+      "name": "Đường cát",
+      "unit": "g",
+      "units": [
+        {
+          "unit": "kg",
+          "factor": 1000
+        }
+      ],
+      "category": "Nguyên liệu",
+      "cost_vnd": 22,
+      "reorder_point": 2000,
+      "reorder_qty": 10000,
+      "supplier": "Tạp hoá sỉ Minh Anh",
+      "qty": 7000
+    },
+    {
+      "sku": "TRA-DEN",
+      "name": "Trà đen",
+      "unit": "g",
+      "units": [
+        {
+          "unit": "kg",
+          "factor": 1000
+        }
+      ],
+      "category": "Nguyên liệu",
+      "cost_vnd": 180,
+      "reorder_point": 1000,
+      "reorder_qty": 5000,
+      "supplier": "Cà phê Tây Nguyên Phú Lộc",
+      "qty": 3000
+    },
+    {
+      "sku": "LY-NHUA",
+      "name": "Ly nhựa 500ml",
+      "unit": "cái",
+      "units": [
+        {
+          "unit": "cây",
+          "factor": 50
+        }
+      ],
+      "category": "Bao bì",
+      "cost_vnd": 900,
+      "reorder_point": 200,
+      "reorder_qty": 1000,
+      "supplier": "Tạp hoá sỉ Minh Anh",
+      "qty": 600
+    },
+    {
+      "sku": "NAP-LY",
+      "name": "Nắp ly",
+      "unit": "cái",
+      "units": [
+        {
+          "unit": "cây",
+          "factor": 100
+        }
+      ],
+      "category": "Bao bì",
+      "cost_vnd": 300,
+      "reorder_point": 200,
+      "reorder_qty": 1000,
+      "supplier": "Tạp hoá sỉ Minh Anh",
+      "qty": 600
+    },
+    {
+      "sku": "ONG-HUT",
+      "name": "Ống hút",
+      "unit": "cái",
+      "units": [
+        {
+          "unit": "hộp",
+          "factor": 100
+        }
+      ],
+      "category": "Bao bì",
+      "cost_vnd": 150,
+      "reorder_point": 200,
+      "reorder_qty": 1000,
+      "supplier": "Tạp hoá sỉ Minh Anh",
+      "qty": 600
+    }
+  ],
+  "recipes": [
+    {
+      "name": "Cà phê sữa",
+      "aliases": [
+        "ca phe sua",
+        "cf sữa",
+        "cafe sữa"
+      ],
+      "lines": [
+        {
+          "sku": "CF-HAT",
+          "qty": 20
+        },
+        {
+          "sku": "SUA-DAC",
+          "qty": 30
+        },
+        {
+          "sku": "LY-NHUA",
+          "qty": 1
+        },
+        {
+          "sku": "NAP-LY",
+          "qty": 1
+        },
+        {
+          "sku": "ONG-HUT",
+          "qty": 1
+        }
+      ]
+    }
+  ]
+}

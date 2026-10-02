@@ -1,4 +1,5 @@
 import type { Performer } from "./engine";
+import { adjustStockPerformer, sendPurchaseOrder } from "./module-inventory-performers";
 import type { FlowAction } from "./flow-types";
 import { publishPerformer } from "./module-content-publish";
 
@@ -13,4 +14,6 @@ import { publishPerformer } from "./module-content-publish";
  */
 export const MODULE_PERFORMERS: Partial<Record<FlowAction, Performer>> = {
   publish_post: publishPerformer,
+  send_purchase_order: sendPurchaseOrder,
+  adjust_stock: adjustStockPerformer,
 };

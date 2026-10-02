@@ -35,7 +35,7 @@
   "included_with_workspace": false,
   "available": true,
   "knowledge_folder": "inventory",
-  "workbench": null,
+  "workbench": "inventory",
   "settings_extras": null,
   "requires": {
     "capabilities": [],
