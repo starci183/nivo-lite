@@ -1,12 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { publicConfig } from "../config";
-import { supabaseFetch } from "./perf";
+import { perfFetch } from "./perf";
 
 export const supabaseServer = async () => {
   const store = await cookies();
   return createServerClient(publicConfig.supabaseUrl, publicConfig.supabaseAnonKey, {
-    global: { fetch: supabaseFetch },
+    global: { fetch: perfFetch },
     cookies: {
       getAll: () => store.getAll(),
       setAll: (list) => {

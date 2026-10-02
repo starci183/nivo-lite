@@ -37,28 +37,6 @@ const opOf = (input: RequestInfo | URL, init?: RequestInit): string => {
 };
 
 /** `fetch` that times each call; pass it as `global.fetch` of a Supabase client. `undefined` when PERF_LOG is off. */
-/**
- * Optional transport for server-side Supabase calls: HTTP/2 over ONE connection (undici, SUPABASE_H2=1). With HTTP/1.1 every
- * parallel query opens its own connection (TCP + TLS + request = 3 round trips at ~220 ms each from Netlify's region); HTTP/2 multiplexes
- * a whole wave over the connection the session lookup already opened. Off by default. With PERF_LOG=1 a request header
- * `x-nivo-h2: 1` turns it on for that request, so the two transports can be compared on the same deploy.
- */
-export const H2_ENABLED = process.env.SUPABASE_H2 === "1";
-let h2Agent: unknown = null;
-const wantsH2 = async (): Promise<boolean> => {
-  if (H2_ENABLED) return true;
-  if (!PERF_ENABLED) return false;
-  try { return (await headers()).get("x-nivo-h2") === "1"; } catch { return false; }
-};
-const sendH2: typeof fetch = async (input, init) => {
-  const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-  if (!/^https:\/\/[^/]+\/(rest|auth)\/v1\//.test(url)) return fetch(input, init);
-  const { Agent, fetch: undiciFetch } = await import("undici");
-  h2Agent ??= new Agent({ allowH2: true, keepAliveTimeout: 20_000, keepAliveMaxTimeout: 60_000 });
-  return (await undiciFetch(url, { ...(init as object), dispatcher: h2Agent as never } as never)) as unknown as Response;
-};
-const send: typeof fetch = async (input, init) => ((await wantsH2()) ? sendH2(input, init) : fetch(input, init));
-
 const background = new AsyncLocalStorage<true>();
 /** Work that runs after the response (queue drains): logged as `after`, not counted in the request's render-path total. */
 export const runInBackground = <T,>(fn: () => Promise<T>): Promise<T> => (PERF_ENABLED ? background.run(true, fn) : fn());
@@ -68,7 +46,7 @@ export const perfFetch: typeof fetch | undefined = PERF_ENABLED
       const started = performance.now();
       if (background.getStore()) {
         try {
-          return await send(input, init);
+          return await fetch(input, init);
         } finally {
           console.log(`[perf] after ${opOf(input, init)} ${Math.round(performance.now() - started)}ms`);
         }
@@ -90,7 +68,7 @@ export const perfFetch: typeof fetch | undefined = PERF_ENABLED
       }
       const myDepth = bucket.depth + 1; // everything finished so far could have been awaited before this call
       try {
-        return await send(input, init);
+        return await fetch(input, init);
       } finally {
         const ms = performance.now() - started;
         bucket.depth = Math.max(bucket.depth, myDepth);
@@ -107,12 +85,9 @@ export const perfFetchFor = (rid: string, route: string): typeof fetch | undefin
     ? async (input, init) => {
         const started = performance.now();
         try {
-          return await send(input, init);
+          return await fetch(input, init);
         } finally {
           console.log(`[perf] rid=${rid} ${route} proxy ${opOf(input, init)} ${Math.round(performance.now() - started)}ms`);
         }
       }
     : undefined;
-
-/** What the server-side Supabase clients pass as `global.fetch`: the timing wrapper (PERF_LOG=1; it also honours the HTTP/2 switch), the plain HTTP/2 transport (SUPABASE_H2=1), or (default) nothing = stock fetch. */
-export const supabaseFetch: typeof fetch | undefined = PERF_ENABLED ? perfFetch : H2_ENABLED ? sendH2 : undefined;
