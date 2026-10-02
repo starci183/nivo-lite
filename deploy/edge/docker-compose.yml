@@ -39,7 +39,7 @@ services:
     networks: [edge]
     mem_limit: 128m
     healthcheck:
-      test: ["CMD", "traefik", "healthcheck", "--ping", "--ping.entryPoint=ping"]
+      test: ["CMD", "traefik", "healthcheck", "--ping", "--ping.entryPoint=ping", "--entrypoints.ping.address=127.0.0.1:8082"]
       interval: 15s
       timeout: 5s
       retries: 4
