@@ -141,6 +141,8 @@ try {
     const ha = ok(await db.from("shifts_staff").insert({ workspace_id: ws, name: "Kiểm thử Hà (mới vào)", staff_id: officeRow.id, position_ids: posIds.filter((p) => p.name !== "Thu ngân").map((p) => p.id), max_hours_week: 20 }).select("id").single(), "ha") as { id: string };
     ok(await db.from("shifts_staff_pay").insert({ staff_id: ha.id, workspace_id: ws, hourly_wage_vnd: 22000 }).select("staff_id").single(), "pay");
   }
+  // The part-timer agreed to extra hours this week, so a swap to her can stay inside the rules.
+  await db.from("shifts_staff").update({ max_hours_week: 60, max_hours_day: 14, min_rest_hours: 8 }).eq("workspace_id", ws).eq("name", "Kiểm thử Hà (mới vào)");
   const staff = ((await db.from("shifts_staff").select("id, name, position_ids").eq("workspace_id", ws).order("created_at")).data ?? []) as Array<{ id: string; name: string; position_ids: string[] }>;
   // Find a swap that is inside the rules: same position, no rule broken for the receiver.
   let pick: { shift: Record<string, string>; to: string } | null = null;
