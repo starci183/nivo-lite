@@ -19,13 +19,14 @@ const ssr = createServerClient(url, anon, {
 });
 const v = await ssr.auth.verifyOtp({ token_hash: link.data.properties.hashed_token, type: "magiclink" });
 if (v.error) throw new Error(v.error.message);
+const extra = process.env.PERF_HEADER ? Object.fromEntries([process.env.PERF_HEADER.split(":").map((x) => x.trim())]) : {}; // e.g. PERF_HEADER="x-nivo-h2: 1"
 const cookie = () => [...jar].map(([k, val]) => `${k}=${val}`).join("; ");
 
 for (const p of paths) {
   const runs = [];
   for (let i = 0; i < 3; i++) {
     const t = performance.now();
-    const res = await fetch(base + p, { headers: { cookie: cookie() }, redirect: "manual" });
+    const res = await fetch(base + p, { headers: { cookie: cookie(), ...extra }, redirect: "manual" });
     await res.arrayBuffer();
     runs.push(`${res.status} ${Math.round(performance.now() - t)}ms`);
   }
