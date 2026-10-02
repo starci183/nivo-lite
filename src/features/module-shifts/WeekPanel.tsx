@@ -213,11 +213,11 @@ export const WeekPanel = ({ data, canManage, onReload }: Props) => {
                     <Text size="xs" weight="semibold">{`${dayName(d)} ${dm(d)}`}</Text>
                     {coverageOfDay(d).map((c) => (
                       <div key={c.blockId} className={COVER_ROW_CLASS_NAME}>
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="flex min-w-0 items-center gap-1 text-xs"><i className={SWATCH_CLASS_NAME} style={{ background: posOf(c.positionId)?.color }} /><span className="truncate">{`${posOf(c.positionId)?.name ?? ""} ${c.start.slice(0, 2)}–${c.end.slice(0, 2)}h`}</span></span>
-                          <span className={`text-xs font-medium tabular-nums ${c.status === "short" ? "text-danger" : c.status === "over" ? "text-warning" : "text-muted"}`}>{`${c.have}/${c.min}${c.ideal > c.min ? `–${c.ideal}` : ""} ${c.status === "short" ? t("cShort") : c.status === "over" ? t("cOver") : t("cOk")}${c.peak ? " ★" : ""}`}</span>
+                        <span className="flex min-w-0 items-center gap-1 text-xs"><i className={SWATCH_CLASS_NAME} style={{ background: posOf(c.positionId)?.color }} /><span className="truncate">{`${posOf(c.positionId)?.name ?? ""} ${c.start.slice(0, 2)}–${c.end.slice(0, 2)}h${c.peak ? " ★" : ""}`}</span></span>
+                        <div className="flex items-center gap-2">
+                          <div className="min-w-0 flex-1">{coverBar(c)}</div>
+                          <span className={`whitespace-nowrap text-xs font-medium tabular-nums ${c.status === "short" ? "text-danger" : c.status === "over" ? "text-warning" : "text-muted"}`}>{`${c.have}/${c.min}${c.ideal > c.min ? `–${c.ideal}` : ""} ${c.status === "short" ? t("cShort") : c.status === "over" ? t("cOver") : t("cOk")}`}</span>
                         </div>
-                        {coverBar(c)}
                       </div>
                     ))}
                   </div>

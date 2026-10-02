@@ -17,7 +17,7 @@ export const shifts = defineDict({
     gridTitle: "Schedule by person", gridHintEdit: "Drag a shift to another person on the same day, or tap a shift then a cell.", gridHintView: "Published schedule. Changes go through swap requests.",
     noShiftsDay: "No shifts this day.", assignTo: "Assign to", breaks: "Breaks", moveWarn: "Moved, but check:",
     vOverlap: "overlaps another shift", vUnavailable: "outside the hours they are free", vLeave: "on leave", vMaxDay: "over the daily hours limit", vMaxWeek: "over the weekly hours limit", vRest: "rest between shifts too short", vPosition: "not able to work this position",
-    reqNoneTitle: "No open requests", reqNoneBody: "Leave, swap and availability requests from staff appear here.", reqLeave: "Leave requests", reqLeaveHint: "You approve leave; a approved leave turns the person's shifts into open shifts.",
+    reqNoneTitle: "No open requests", reqNoneBody: "Leave, swap and availability requests from staff appear here.", reqLeave: "Leave requests", reqLeaveHint: "You approve leave; an approved leave turns the person's shifts into open shifts.",
     reqSwap: "Swaps and open shifts", reqSwapHint: "Inside the rules (same position, nothing broken, enough notice) a swap is approved by itself.", reqAvail: "Availability changes", reqAvailHint: "Approve to apply it to the next schedules.", reqRecent: "Recently handled",
     approve: "Approve", decline: "Decline", stPending: "Pending", stWaiting: "Waiting for you", stApproved: "Approved", stDeclined: "Declined", stAuto: "Approved by rules",
     kindLeave: "leave", kindSwap: "swap", kindClaim: "open shift", swapLine: "{from} offers {shift} to {to}", claimLine: "{name} asks for the open shift {shift}", outsideRules: "Outside the rules",

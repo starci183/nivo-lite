@@ -61,6 +61,9 @@ export const proposeWeek = async (c: EngineCtx, monday: string, by: string): Pro
 
 /* ------------------------------------------------------------------ explanation (OpenClaw writes words, never the schedule) */
 
+/** OpenClaw sometimes adds Markdown despite the instruction: the screen shows plain text. */
+const plain = (s: string): string => s.replace(/\*\*(.+?)\*\*/g, "$1").replace(/^#{1,6}\s*/gm, "").replace(/^\s*[*•]\s+/gm, "- ").replace(/`/g, "").trim();
+
 const money = (n: number) => `${Math.round(n).toLocaleString("vi-VN")}đ`;
 
 /** What the solver found, as plain Vietnamese lines. This is also the fallback text when OpenClaw cannot answer. */
@@ -94,7 +97,7 @@ export const explainSchedule = async (c: EngineCtx, scheduleId: string): Promise
   const r = await generateWithOpenClaw({
     workspaceId: c.ws, purpose: "shifts_explain", kind: "engine", module: "shifts", timeoutMs: 45_000,
     messages: [
-      { role: "system", content: "Bạn là trợ lý xếp lịch ca của một cửa hàng. Viết tiếng Việt đơn giản, thân thiện, ngắn gọn (tối đa 6 gạch đầu dòng). Chỉ dùng đúng các dữ kiện được đưa; KHÔNG bịa người, giờ, số liệu; KHÔNG sửa lịch và không hứa gì thay chủ. Mở đầu bằng một câu tóm tắt, sau đó nêu ca thiếu người kèm gợi ý hỏi ai (nếu có dữ kiện), cuối cùng nhắc chủ rằng lịch chỉ gửi tới nhân viên sau khi chủ duyệt đăng." },
+      { role: "system", content: "Bạn là trợ lý xếp lịch ca của một cửa hàng. Viết tiếng Việt đơn giản, thân thiện, ngắn gọn (tối đa 6 gạch đầu dòng, mỗi dòng bắt đầu bằng dấu gạch ngang). Chỉ dùng văn bản thuần: không dùng dấu * hay # hay định dạng Markdown. Chỉ dùng đúng các dữ kiện được đưa; KHÔNG bịa người, giờ, số liệu; KHÔNG sửa lịch và không hứa gì thay chủ. Mở đầu bằng một câu tóm tắt, sau đó nêu ca thiếu người kèm gợi ý hỏi ai (nếu có dữ kiện), cuối cùng nhắc chủ rằng lịch chỉ gửi tới nhân viên sau khi chủ duyệt đăng." },
       { role: "user", content: `Tuần ${weekLabel(sched.weekStart)}. Kết quả bộ xếp lịch:\n${facts.map((x) => `- ${x}`).join("\n")}\nViết phần giải thích và đề xuất cho chủ cửa hàng.` },
     ],
   });

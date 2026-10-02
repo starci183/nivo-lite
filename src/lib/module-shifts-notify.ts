@@ -27,7 +27,7 @@ export const postOffice = async (c: EngineCtx, body: string, workItemId: string 
   await c.db.from("messages").insert({ workspace_id: c.ws, author_kind: "system", author_name: "NIVO", agent_id: null, body, lead_id: null, work_item_id: workItemId });
 };
 
-const handleMap = async (c: EngineCtx): Promise<Map<string, string>> => officeStaffHandles(c, await activeStaff(c));
+export const handleMap = async (c: EngineCtx): Promise<Map<string, string>> => officeStaffHandles(c, await activeStaff(c));
 
 const viaTelegram = async (c: EngineCtx, chatId: string, text: string): Promise<{ ok: boolean; error?: string }> => {
   try {

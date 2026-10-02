@@ -103,7 +103,7 @@ export const monthSummary = async (ws: string, month: string): Promise<{ rows: A
 };
 
 /** Close the month for one workspace: an Office summary for the owner, evidence for Accounting, and a CSV by email when mail can be sent. Idempotent per month. */
-export const closeMonth = async (ws: string, month: string, opts: { force?: boolean } = {}): Promise<{ done: boolean; emailed: boolean; total: number }> => {
+export const closeMonth = async (ws: string, month: string, opts: { force?: boolean; noEmail?: boolean } = {}): Promise<{ done: boolean; emailed: boolean; total: number }> => {
   const c = ctxOf(ws);
   const marker = `[payroll:${month}]`;
   if (!opts.force) {
@@ -115,7 +115,7 @@ export const closeMonth = async (ws: string, month: string, opts: { force?: bool
   const lines = s.rows.map((r) => `${r.name}: ${r.shifts} ca, ${r.hours} giờ × ${money(r.wage)} = ${money(r.cost)}`);
   const body = `${marker} Chốt công tháng ${month.slice(5)}/${month.slice(0, 4)}: ${s.rows.length} người, ${Math.round(s.hours * 10) / 10} giờ, tổng lương ước tính ${money(s.total)}.\n${lines.join("\n")}\nSố giờ tính theo lịch đã đăng (vào ca là tùy chọn). Kế toán nhận bản này làm căn cứ chi lương.`;
   let emailed = false;
-  const owner = await ownerEmail(ws);
+  const owner = opts.noEmail ? null : await ownerEmail(ws);
   if (owner) {
     const file = csv([["Nhân viên", "Số ca", "Giờ theo lịch", "Giờ đã vào ca", "Lương/giờ", "Thành tiền"], ...s.rows.map((r) => [r.name, r.shifts, r.hours, r.checked, r.wage, r.cost]), ["Tổng", "", Math.round(s.hours * 10) / 10, "", "", s.total]]);
     const r = await sendWorkspaceEmailSafe({ workspaceId: ws, to: owner, subject: `Chốt công tháng ${month.slice(5)}/${month.slice(0, 4)}`, text: body.replace(marker, "").trim(), csvName: `cong-${month}.csv`, csv: file });

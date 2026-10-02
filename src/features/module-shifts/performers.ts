@@ -2,7 +2,7 @@ import "server-only";
 import type { EngineCtx, Performer } from "@/lib/engine";
 import { logEvidence } from "@/lib/core";
 import { dayLabel, loadSetup, nameOf, positionOf, shiftLine, toShift, weekLabel, type Setup } from "@/lib/module-shifts-data";
-import { notifyManagers, notifyStaff } from "@/lib/module-shifts-notify";
+import { handleMap, notifyManagers, notifyStaff } from "@/lib/module-shifts-notify";
 import { affectedShifts, coverCandidates, swapFindings } from "@/lib/module-shifts-rules";
 import { instantOf, toMin, type Shift, type ShiftStaff } from "@/lib/module-shifts-types";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -81,7 +81,10 @@ const publishSchedule: Performer = {
     const pl = ((await db.from("automation_pipelines").select("config").eq("workspace_id", c.ws).eq("template_key", "shifts_shift_reminder").maybeSingle()).data as { config?: Record<string, unknown> } | null)?.config ?? {};
     const remindMin = Number(pl.beforeMinutes) > 0 ? Number(pl.beforeMinutes) : setup.settings.remindMinutes;
     const noshowMin = Number(pl.noShowMinutes) > 0 ? Number(pl.noShowMinutes) : setup.settings.noshowMinutes;
-    for (const s of shifts) jobs += await scheduleShiftJobs(c.ws, s, remindMin, noshowMin, now);
+    for (let i = 0; i < shifts.length; i += 16) {
+      const part = await Promise.all(shifts.slice(i, i + 16).map((s) => scheduleShiftJobs(c.ws, s, remindMin, noshowMin, now)));
+      jobs += part.reduce((n, x) => n + x, 0);
+    }
     const open = shifts.filter((s) => !s.staffId);
     if (open.length) await notifyManagers({ ...c, db }, "gap", `Còn ${open.length} ca trống tuần ${weekLabel(week)}: ${open.slice(0, 4).map((s) => shiftLine(setup, s)).join("; ")}${open.length > 4 ? "…" : ""}. Nhân viên có thể đăng ký ở mục Lịch của tôi.`, { scheduleId });
     await logEvidence(db, c.ws, { work_item_id: item.id, kind: "shifts.published", actor: by.name, summary: `Đã đăng lịch tuần ${weekLabel(week)}: ${sent} người nhận, ${jobs} việc nhắc đã xếp lịch`, evidence: JSON.stringify({ schedule_id: scheduleId, shifts: shifts.length, open: open.length }) });
