@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "note": "Quy tắc theo kênh, dùng cho cả giao diện và lời nhắc cho OpenClaw. Sửa ở đây để đổi cách soạn bài, không sửa mã.",
+  "channels": [
+    {
+      "key": "facebook", "label": "Facebook", "short": "FB", "max_chars": 1500, "hashtags": { "min": 0, "max": 3 },
+      "rules": "Bài dài vừa phải (khoảng 600-1200 ký tự), dòng đầu là câu hỏi hoặc điều khách quan tâm, thân bài xuống dòng thường xuyên, cuối bài có lời kêu gọi rõ (nhắn tin, đặt lịch, ghé cửa hàng) và cách liên hệ. Tối đa 3 hashtag ở cuối."
+    },
+    {
+      "key": "zalo", "label": "Zalo OA", "short": "Zalo", "max_chars": 500, "hashtags": { "min": 0, "max": 0 },
+      "rules": "Ngắn gọn (khoảng 200-400 ký tự), xưng hô gần gũi như nhắn tin cho khách quen, một ý chính và một lời kêu gọi. Không dùng hashtag."
+    },
+    {
+      "key": "tiktok", "label": "TikTok", "short": "TikTok", "max_chars": 300, "hashtags": { "min": 3, "max": 6 },
+      "rules": "Chú thích video thật ngắn (dưới 150 ký tự) với một câu móc đầu, rồi 3-6 hashtag liên quan. Thêm một dòng gợi ý ý tưởng quay (cảnh, câu mở đầu) trong phần ghi chú."
+    },
+    {
+      "key": "instagram", "label": "Instagram", "short": "IG", "max_chars": 1000, "hashtags": { "min": 5, "max": 10 },
+      "rules": "Chú thích gọn (khoảng 300-600 ký tự), câu mở đầu hấp dẫn, xuống dòng thoáng, vài biểu tượng cảm xúc vừa phải, rồi 5-10 hashtag ở cuối."
+    }
+  ],
+  "guardrails": [
+    "Chỉ dùng thông tin thật có trong tri thức doanh nghiệp. Không bịa giá, khuyến mãi, mức giảm, số liệu, địa chỉ, số điện thoại.",
+    "Không hứa kết quả (ví dụ: chắc chắn khỏi, chắc chắn giảm cân, cam kết hiệu quả 100%).",
+    "Không nói giảm giá hoặc quà tặng nếu tri thức không có ưu đãi đó. Không tạo cảm giác khan hiếm giả (chỉ còn vài suất) khi không có thật.",
+    "Không so sánh hạ thấp đối thủ, không dùng tiêu đề giật gân.",
+    "Tuân thủ mục Điều không được nói của chủ doanh nghiệp."
+  ]
+}

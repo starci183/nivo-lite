@@ -35,7 +35,7 @@
   "included_with_workspace": false,
   "available": true,
   "knowledge_folder": "content",
-  "workbench": null,
+  "workbench": "content",
   "settings_extras": null,
   "requires": {
     "capabilities": [

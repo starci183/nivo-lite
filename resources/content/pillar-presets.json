@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "note": "Gợi ý chủ đề nội dung cho mọi ngành. Chủ có thể thêm, sửa, xóa; trọng số là tỉ lệ bài mong muốn. days: 1 = thứ hai ... 7 = Chủ nhật.",
+  "pillars": [
+    { "name": "Sản phẩm và dịch vụ", "description": "Giới thiệu sản phẩm, dịch vụ, cách dùng, điểm khác biệt có thật.", "weight": 3 },
+    { "name": "Kiến thức hữu ích", "description": "Mẹo, hướng dẫn, câu hỏi thường gặp giúp khách hiểu và chọn đúng.", "weight": 3 },
+    { "name": "Khách hàng", "description": "Câu chuyện, phản hồi, ảnh của khách (khi khách đồng ý cho đăng).", "weight": 2 },
+    { "name": "Hậu trường", "description": "Đội ngũ, quy trình làm việc, một ngày ở cửa hàng.", "weight": 1 },
+    { "name": "Ưu đãi", "description": "Ưu đãi thật đang có, thời hạn và điều kiện rõ ràng.", "weight": 1 }
+  ],
+  "cadence": [
+    { "channel": "facebook", "posts_per_week": 3, "days": [2, 4, 6], "time": "19:30" },
+    { "channel": "zalo", "posts_per_week": 1, "days": [3], "time": "10:00" }
+  ]
+}

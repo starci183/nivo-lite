@@ -1,7 +1,7 @@
 ---
 title: Sổ tay vận hành của Nội dung mạng xã hội
 kind: playbook
-version: 1
+version: 2
 ---
 # Sổ tay vận hành của Nội dung mạng xã hội
 
@@ -22,3 +22,10 @@ Nội dung mạng xã hội giúp doanh nghiệp đăng đều đặn mà không
 ## Dấu hiệu cần hỏi chủ
 
 Chủ đề nhạy cảm, bình luận tiêu cực, so sánh đối thủ, thông tin giá chưa có, thời điểm sự kiện sát ngày.
+
+## Bàn làm việc
+
+- **Lên kế hoạch tháng**: một ý tưởng cho mỗi lần đăng theo tần suất đã chọn, cân bằng giữa các chủ đề theo trọng số, có ngày lễ Việt Nam (Tết, 8/3, 30/4 và 1/5, 2/9, 20/10, 20/11, Black Friday, Noel, các ngày đôi 9.9, 10.10, 11.11, 12.12). Danh sách ngày lễ nằm trong `resources/content/calendar-vn.json`.
+- **Soạn bài**: mỗi kênh một bản (Facebook dài, Zalo OA ngắn, TikTok chú thích và hashtag, Instagram). Quy tắc từng kênh nằm trong `resources/content/channels.json`. Chỉ dùng thông tin thật trong Tri thức doanh nghiệp.
+- **Gửi duyệt**: bài đi qua quyền "Đăng bài" (luôn hỏi chủ). Được duyệt rồi mới có nút Đăng.
+- **Đăng**: sao chép nội dung, tải ảnh, tự đăng, rồi "Đánh dấu đã đăng" kèm đường dẫn bài làm bằng chứng. Tự đăng qua API mạng xã hội sẽ có sau.

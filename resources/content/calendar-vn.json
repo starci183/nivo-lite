@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "note": "Ngày lễ và dịp bán hàng ở Việt Nam. fixed = cố định theo dương lịch; nth = thứ n của một tháng (weekday 0 = Chủ nhật); dates = ngày dương lịch của dịp theo âm lịch, ghi từng năm. lead_days = nên bắt đầu đăng trước bao nhiêu ngày. angle = gợi ý góc nội dung (không phải lời hứa khuyến mãi).",
+  "events": [
+    { "key": "new_year", "name": "Tết Dương lịch 1/1", "kind": "holiday", "fixed": { "month": 1, "day": 1 }, "lead_days": 7, "angle": "Lời chúc đầu năm, nhìn lại năm cũ, kế hoạch năm mới của cửa hàng." },
+    { "key": "tet", "name": "Tết Nguyên Đán", "kind": "holiday", "dates": { "2026": "2026-02-17", "2027": "2027-02-06", "2028": "2028-01-26", "2029": "2029-02-13", "2030": "2030-02-03" }, "lead_days": 30, "angle": "Lịch nghỉ Tết, lời chúc, sản phẩm hoặc dịch vụ hợp dịp Tết, nhắc đặt trước." },
+    { "key": "valentine", "name": "Valentine 14/2", "kind": "observance", "fixed": { "month": 2, "day": 14 }, "lead_days": 10, "angle": "Quà tặng và trải nghiệm cho cặp đôi, nhắc đặt trước." },
+    { "key": "women_day", "name": "Quốc tế Phụ nữ 8/3", "kind": "observance", "fixed": { "month": 3, "day": 8 }, "lead_days": 10, "angle": "Tri ân phụ nữ, gợi ý quà tặng, ưu đãi nếu cửa hàng thật sự có." },
+    { "key": "hung_kings", "name": "Giỗ Tổ Hùng Vương 10/3 âm lịch", "kind": "holiday", "dates": { "2026": "2026-04-26", "2027": "2027-04-16", "2028": "2028-04-04", "2029": "2029-04-23", "2030": "2030-04-12" }, "lead_days": 5, "angle": "Lịch nghỉ lễ và giờ mở cửa." },
+    { "key": "liberation", "name": "30/4 và 1/5 (Giải phóng miền Nam, Quốc tế Lao động)", "kind": "holiday", "fixed": { "month": 4, "day": 30 }, "span_days": 2, "lead_days": 10, "angle": "Kỳ nghỉ dài: lịch mở cửa, gợi ý cho gia đình, nhắc đặt lịch sớm." },
+    { "key": "mothers_day", "name": "Ngày của Mẹ", "kind": "observance", "nth": { "month": 5, "weekday": 0, "n": 2 }, "lead_days": 10, "angle": "Quà và lời tri ân dành cho mẹ." },
+    { "key": "children_day", "name": "Quốc tế Thiếu nhi 1/6", "kind": "observance", "fixed": { "month": 6, "day": 1 }, "lead_days": 7, "angle": "Hoạt động và quà cho trẻ em, gia đình." },
+    { "key": "family_day", "name": "Ngày Gia đình Việt Nam 28/6", "kind": "observance", "fixed": { "month": 6, "day": 28 }, "lead_days": 5, "angle": "Khoảnh khắc gia đình, gợi ý đi cùng nhau." },
+    { "key": "vu_lan", "name": "Vu Lan 15/7 âm lịch", "kind": "observance", "dates": { "2026": "2026-08-27", "2027": "2027-08-16", "2028": "2028-09-03", "2029": "2029-08-24", "2030": "2030-08-13" }, "lead_days": 5, "angle": "Lời tri ân cha mẹ, nội dung nhẹ nhàng." },
+    { "key": "national_day", "name": "Quốc khánh 2/9", "kind": "holiday", "fixed": { "month": 9, "day": 2 }, "span_days": 2, "lead_days": 10, "angle": "Kỳ nghỉ lễ: lịch mở cửa, gợi ý cho dịp nghỉ." },
+    { "key": "double_9", "name": "Ngày đôi 9.9", "kind": "sale_day", "fixed": { "month": 9, "day": 9 }, "lead_days": 5, "angle": "Ngày mua sắm trực tuyến. Chỉ nói ưu đãi khi cửa hàng thật sự có." },
+    { "key": "mid_autumn", "name": "Tết Trung thu 15/8 âm lịch", "kind": "holiday", "dates": { "2026": "2026-09-25", "2027": "2027-09-15", "2028": "2028-10-03", "2029": "2029-09-22", "2030": "2030-09-12" }, "lead_days": 14, "angle": "Quà Trung thu, hoạt động cho trẻ em." },
+    { "key": "double_10", "name": "Ngày đôi 10.10", "kind": "sale_day", "fixed": { "month": 10, "day": 10 }, "lead_days": 5, "angle": "Ngày mua sắm trực tuyến. Chỉ nói ưu đãi khi cửa hàng thật sự có." },
+    { "key": "vn_women_day", "name": "Ngày Phụ nữ Việt Nam 20/10", "kind": "observance", "fixed": { "month": 10, "day": 20 }, "lead_days": 10, "angle": "Tri ân phụ nữ, quà tặng, lời chúc cho khách và đội ngũ." },
+    { "key": "double_11", "name": "Ngày đôi 11.11", "kind": "sale_day", "fixed": { "month": 11, "day": 11 }, "lead_days": 7, "angle": "Ngày mua sắm lớn trực tuyến. Chỉ nói ưu đãi khi cửa hàng thật sự có." },
+    { "key": "teachers_day", "name": "Ngày Nhà giáo Việt Nam 20/11", "kind": "observance", "fixed": { "month": 11, "day": 20 }, "lead_days": 10, "angle": "Tri ân thầy cô, quà tặng và lời cảm ơn." },
+    { "key": "black_friday", "name": "Black Friday", "kind": "sale_day", "nth": { "month": 11, "weekday": 5, "n": 4 }, "lead_days": 10, "angle": "Tuần lễ giảm giá. Chỉ nói ưu đãi khi cửa hàng thật sự có, không bịa mức giảm." },
+    { "key": "double_12", "name": "Ngày đôi 12.12", "kind": "sale_day", "fixed": { "month": 12, "day": 12 }, "lead_days": 5, "angle": "Ngày mua sắm cuối năm. Chỉ nói ưu đãi khi cửa hàng thật sự có." },
+    { "key": "noel", "name": "Giáng sinh (Noel) 24-25/12", "kind": "observance", "fixed": { "month": 12, "day": 24 }, "span_days": 2, "lead_days": 14, "angle": "Quà tặng, không khí cuối năm, lịch mở cửa dịp Noel." }
+  ]
+}

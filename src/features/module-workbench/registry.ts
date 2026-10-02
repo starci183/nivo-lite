@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import WorkbenchContent from "@/features/module-content";
 import WorkbenchAccounting from "@/features/workbench-accounting";
 import WorkbenchChatbot from "@/features/workbench-chatbot";
 import WorkbenchSales from "@/features/workbench-sales";
@@ -14,4 +15,5 @@ export const WORKBENCHES: Readonly<Record<string, WorkbenchComponent>> = {
   chatbot: WorkbenchChatbot,
   sales: WorkbenchSales,
   accounting: WorkbenchAccounting,
+  content: WorkbenchContent,
 };

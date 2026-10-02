@@ -1,5 +1,6 @@
 import type { Performer } from "./engine";
 import type { FlowAction } from "./flow-types";
+import { publishPerformer } from "./module-content-publish";
 
 /**
  * Performers of module actions: what actually happens once the authority gate lets an action through (automatically or after a human
@@ -10,4 +11,6 @@ import type { FlowAction } from "./flow-types";
  * An action without a performer is still gated, decided and logged (work_items / decisions); it just records the decision and
  * does nothing else until its module lane adds the performer. Never perform a customer-facing or money action outside this gate.
  */
-export const MODULE_PERFORMERS: Partial<Record<FlowAction, Performer>> = {};
+export const MODULE_PERFORMERS: Partial<Record<FlowAction, Performer>> = {
+  publish_post: publishPerformer,
+};
