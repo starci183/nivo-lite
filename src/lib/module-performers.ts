@@ -6,6 +6,7 @@ import { BOOKING_PERFORMERS } from "./module-booking-performers";
 import { publishVideoPerformer, renderDraftPerformer } from "./module-video-performers";
 import { scheduleInterview, screenCandidate, sendOffer } from "@/features/module-hiring/performers";
 import { LOYALTY_PERFORMERS } from "./module-loyalty-performers";
+import { SHIFTS_PERFORMERS } from "@/features/module-shifts/performers";
 
 /**
  * Performers of module actions: what actually happens once the authority gate lets an action through (automatically or after a human
@@ -27,4 +28,8 @@ export const MODULE_PERFORMERS: Partial<Record<FlowAction, Performer>> = {
   schedule_interview: scheduleInterview,
   send_offer: sendOffer,
   ...LOYALTY_PERFORMERS, // award_points, redeem_reward, send_promo (src/lib/module-loyalty-performers.ts)
+  publish_schedule: SHIFTS_PERFORMERS.publish_schedule,
+  approve_swap: SHIFTS_PERFORMERS.approve_swap,
+  approve_leave: SHIFTS_PERFORMERS.approve_leave,
+  remind_shift: SHIFTS_PERFORMERS.remind_shift,
 };

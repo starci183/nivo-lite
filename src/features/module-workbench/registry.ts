@@ -8,6 +8,7 @@ import WorkbenchVideo from "@/features/module-video";
 import WorkbenchHiring from "@/features/module-hiring";
 import WorkbenchSales from "@/features/workbench-sales";
 import WorkbenchBooking from "@/features/module-booking";
+import WorkbenchShifts from "@/features/module-shifts";
 
 /** A workbench is a server component (it may be async); it takes no props. */
 export type WorkbenchComponent = (props: Record<string, unknown>) => ReactNode | Promise<ReactNode>;

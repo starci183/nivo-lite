@@ -25,6 +25,9 @@ import emailDailyReport from "../../resources/n8n-templates/email-daily-report.m
 import emailDebtReminder from "../../resources/n8n-templates/email-debt-reminder.meta.json";
 import emailMonthLedger from "../../resources/n8n-templates/email-month-ledger.meta.json";
 import emailPaymentReceipt from "../../resources/n8n-templates/email-payment-receipt.meta.json";
+import shiftsLeaveGap from "../../resources/automation-templates/shifts_leave_gap.json";
+import shiftsMonthClose from "../../resources/automation-templates/shifts_month_close.json";
+import shiftsShiftReminder from "../../resources/automation-templates/shifts_shift_reminder.json";
 import type { TemplateDef } from "./automation-shared";
 
 /**

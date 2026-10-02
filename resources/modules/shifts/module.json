@@ -35,7 +35,7 @@
   "included_with_workspace": false,
   "available": true,
   "knowledge_folder": "shifts",
-  "workbench": null,
+  "workbench": "shifts",
   "settings_extras": null,
   "requires": {
     "capabilities": [
@@ -105,8 +105,8 @@
       "key": "labor_limits",
       "label_vi": "Giới hạn giờ làm",
       "label_en": "Working-time limits",
-      "hint_vi": "Số giờ tối đa mỗi ngày và tuần, thời gian nghỉ giữa hai ca.",
-      "hint_en": "Maximum hours per day and week, rest between shifts."
+      "hint_vi": "Số giờ tối đa mỗi ngày và tuần, thời gian nghỉ giữa hai ca, lương theo giờ của từng vị trí hoặc người.",
+      "hint_en": "Maximum hours per day and week, rest between shifts, and the hourly wage per role or person."
     },
     {
       "key": "tone",

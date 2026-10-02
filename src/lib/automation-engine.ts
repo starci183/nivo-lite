@@ -15,6 +15,7 @@ import { INVENTORY_EXECUTORS, scanInventory } from "./module-inventory-automatio
 import { BOOKING_EXECUTORS, BOOKING_TEMPLATE_KEYS, scanBooking } from "./module-booking-automations";
 import { runBookingTick } from "./module-booking-tick";
 import { offerSources, videoNewOffer } from "./module-video-automation";
+import { runShiftsTick } from "./module-shifts-tick";
 import { supabaseAdmin } from "./supabase/admin";
 
 /**
@@ -204,6 +205,7 @@ export const runTick = async (now: Date = new Date()): Promise<{ readonly pipeli
   } catch (e) {
     console.error("booking tick failed:", e instanceof Error ? e.message : e);
   }
+  if (budget()) runs += await runShiftsTick(now); // module "shifts": due shifts.* jobs (reminders, no-show alerts) and the monthly close
   return { pipelines: list.length, runs };
 };
 

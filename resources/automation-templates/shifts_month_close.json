@@ -1,0 +1,68 @@
+{
+  "key": "shifts_month_close",
+  "version": 1,
+  "pack": "core",
+  "executor": "implemented",
+  "moduleKey": "shifts",
+  "icon": "ledger",
+  "name": {
+    "vi": "Chốt công tháng gửi Kế toán",
+    "en": "Monthly hours close for Accounting"
+  },
+  "description": {
+    "vi": "Đầu tháng tổng hợp giờ làm × lương theo giờ của từng người; gửi vào Office và file CSV qua email của chủ nếu đã có email.",
+    "en": "At the start of the month, sums hours × hourly wage per person and sends it to Office and, when mail is set up, a CSV to the owner."
+  },
+  "trigger": {
+    "kind": "schedule",
+    "event": "schedule.monthly",
+    "line": {
+      "vi": "Mỗi tháng vào ngày và giờ bạn chọn (giờ Việt Nam)",
+      "en": "Every month on the day and time you pick (Vietnam time)"
+    }
+  },
+  "requires": {
+    "modules": [
+      "shifts"
+    ],
+    "channels": [],
+    "connections": [],
+    "capabilities": []
+  },
+  "settings": [
+    {
+      "key": "day",
+      "kind": "number",
+      "min": 1,
+      "max": 28,
+      "label": {
+        "vi": "Ngày trong tháng",
+        "en": "Day of the month"
+      }
+    },
+    {
+      "key": "time",
+      "kind": "time",
+      "label": {
+        "vi": "Gửi lúc",
+        "en": "Send at"
+      }
+    }
+  ],
+  "contentMode": "none",
+  "guardrails": [
+    {
+      "vi": "Chỉ dùng giờ trong lịch đã đăng và lương theo giờ đã nhập; không tự chuyển tiền hay trả lương.",
+      "en": "Only uses hours in published schedules and the hourly wages entered; never moves money or pays wages."
+    }
+  ],
+  "variables": [],
+  "defaultBody": null,
+  "authority": {
+    "action": null
+  },
+  "defaults": {
+    "day": 1,
+    "time": "09:00"
+  }
+}
