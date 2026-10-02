@@ -1,5 +1,5 @@
 // Production check of the content module. Needs the service role (run through scripts/with-secrets.mjs):
-//   node scripts/with-secrets.mjs npx --yes tsx --conditions=react-server scripts/content-prod-check.ts [--only spa|cafe] [--out results.json]
+//   node scripts/with-secrets.mjs npx --yes tsx --conditions=react-server scripts/content-prod-check.mts [--only spa|cafe] [--out results.json]
 // For each of two test workspaces from different industries ("Kiểm thử · Nội dung · Spa" and "... · Quán cà phê"):
 //   1. find or create the workspace, install the module, apply a context version (tone gate), add business knowledge
 //   2. pillars + cadence, then "Lên kế hoạch tháng" for 2026-11 through OpenClaw (timing recorded, JSON validated)
@@ -28,7 +28,7 @@ const results: Record<string, unknown> = {};
 
 type Biz = {
   id: "spa" | "cafe"; name: string; summary: string; tone: string; audience: string; claims: string; channels: string;
-  knowledge: Array<{ title: string; kind: "text" | "pricing" | "faq" | "policy"; content: string }>;
+  knowledge: Array<{ title: string; kind: "text" | "faq"; topic: string; content: string }>;
   cadence: Array<{ channel: ContentChannel; posts_per_week: number; days: Array<number>; post_time: string }>;
   settings: { brand_voice: string; avoid: string; cta: string; hashtags: Array<string> };
 };
@@ -39,10 +39,10 @@ const BIZ: Array<Biz> = [
     tone: "Nhẹ nhàng, ấm áp, chăm sóc. Xưng em, gọi khách là chị hoặc anh. Câu ngắn, dễ hiểu.", audience: "Phụ nữ 28 đến 50 tuổi ở TP.HCM, bận rộn, muốn thư giãn và chăm sóc da.",
     claims: "Không hứa kết quả điều trị. Không nói chữa bệnh. Không so sánh với spa khác.", channels: "Facebook và Zalo OA",
     knowledge: [
-      { title: "Bảng giá dịch vụ", kind: "pricing", content: "Gội đầu dưỡng sinh 60 phút: 180.000đ. Chăm sóc da cơ bản 75 phút: 350.000đ. Massage thư giãn toàn thân 90 phút: 450.000đ. Liệu trình trị mụn 10 buổi: 3.200.000đ." },
-      { title: "Thông tin liên hệ và giờ mở cửa", kind: "text", content: "Địa chỉ: 25 Võ Văn Tần, quận 3, TP.HCM. Điện thoại và Zalo: 0900 000 111. Mở cửa 9:00 đến 21:00 mỗi ngày kể cả lễ. Đặt lịch trước qua Zalo." },
-      { title: "Ưu đãi tháng 11", kind: "text", content: "Ưu đãi tháng 11: combo gội đầu dưỡng sinh 3 buổi giá 450.000đ cho khách mới. Tặng 1 mặt nạ dưỡng ẩm khi đặt liệu trình chăm sóc da. Áp dụng từ 1/11 đến 30/11." },
-      { title: "Câu hỏi thường gặp", kind: "faq", content: "Có cần đặt lịch trước không? Nên đặt trước để chọn giờ phù hợp. Có dùng sản phẩm gì? Dùng mỹ phẩm thiên nhiên, kiểm tra da trước khi làm. Có chỗ gửi xe máy miễn phí." },
+      { title: "Bảng giá dịch vụ", kind: "text", topic: "Bảng giá", content: "Gội đầu dưỡng sinh 60 phút: 180.000đ. Chăm sóc da cơ bản 75 phút: 350.000đ. Massage thư giãn toàn thân 90 phút: 450.000đ. Liệu trình trị mụn 10 buổi: 3.200.000đ." },
+      { title: "Thông tin liên hệ và giờ mở cửa", kind: "text", topic: "Liên hệ", content: "Địa chỉ: 25 Võ Văn Tần, quận 3, TP.HCM. Điện thoại và Zalo: 0900 000 111. Mở cửa 9:00 đến 21:00 mỗi ngày kể cả lễ. Đặt lịch trước qua Zalo." },
+      { title: "Ưu đãi tháng 11", kind: "text", topic: "Ưu đãi", content: "Ưu đãi tháng 11: combo gội đầu dưỡng sinh 3 buổi giá 450.000đ cho khách mới. Tặng 1 mặt nạ dưỡng ẩm khi đặt liệu trình chăm sóc da. Áp dụng từ 1/11 đến 30/11." },
+      { title: "Câu hỏi thường gặp", kind: "faq", topic: "Câu hỏi", content: "Có cần đặt lịch trước không? Nên đặt trước để chọn giờ phù hợp. Có dùng sản phẩm gì? Dùng mỹ phẩm thiên nhiên, kiểm tra da trước khi làm. Có chỗ gửi xe máy miễn phí." },
     ],
     cadence: CADENCE_PRESETS.map((c) => ({ channel: c.channel, posts_per_week: c.posts_per_week, days: [...c.days], post_time: c.time })),
     settings: { brand_voice: "Xưng em, gọi khách là chị. Không dùng từ quá y khoa.", avoid: "Không nói chữa khỏi, không nói trẻ ra bao nhiêu tuổi.", cta: "Nhắn Zalo 0900 000 111 để đặt lịch", hashtags: ["#SpaHoaMai"] },
@@ -52,9 +52,9 @@ const BIZ: Array<Biz> = [
     tone: "Trẻ trung, vui vẻ, thân thiện, hơi hài hước. Xưng mình, gọi khách là bạn.", audience: "Dân văn phòng và sinh viên 20 đến 35 tuổi ở Đà Nẵng, thích cà phê đặc sản và làm việc ở quán.",
     claims: "Không nói cà phê tốt cho sức khỏe theo kiểu chữa bệnh. Không so sánh với quán khác.", channels: "Facebook, Instagram và TikTok",
     knowledge: [
-      { title: "Thực đơn và giá", kind: "pricing", content: "Cà phê phin 35.000đ. Bạc xỉu 39.000đ. Cold brew 49.000đ. Cà phê hạt rang xay đóng gói 250g: 120.000đ. Bánh croissant bơ 35.000đ." },
-      { title: "Về Nhà Rang", kind: "text", content: "Nhà Rang rang cà phê tươi mỗi sáng thứ ba và thứ sáu từ hạt Arabica Cầu Đất và Robusta Đắk Lắk. Quán ở 12 Nguyễn Văn Linh, Đà Nẵng, mở cửa 7:00 đến 22:00. Có wifi mạnh và ổ cắm ở mọi bàn." },
-      { title: "Chính sách", kind: "policy", content: "Giao hàng cà phê hạt trong nội thành Đà Nẵng, phí 15.000đ. Không có chương trình khuyến mãi cố định. Có thể xay hạt theo yêu cầu khi mua tại quán." },
+      { title: "Thực đơn và giá", kind: "text", topic: "Bảng giá", content: "Cà phê phin 35.000đ. Bạc xỉu 39.000đ. Cold brew 49.000đ. Cà phê hạt rang xay đóng gói 250g: 120.000đ. Bánh croissant bơ 35.000đ." },
+      { title: "Về Nhà Rang", kind: "text", topic: "Giới thiệu", content: "Nhà Rang rang cà phê tươi mỗi sáng thứ ba và thứ sáu từ hạt Arabica Cầu Đất và Robusta Đắk Lắk. Quán ở 12 Nguyễn Văn Linh, Đà Nẵng, mở cửa 7:00 đến 22:00. Có wifi mạnh và ổ cắm ở mọi bàn." },
+      { title: "Chính sách", kind: "text", topic: "Chính sách", content: "Giao hàng cà phê hạt trong nội thành Đà Nẵng, phí 15.000đ. Không có chương trình khuyến mãi cố định. Có thể xay hạt theo yêu cầu khi mua tại quán." },
     ],
     cadence: [
       { channel: "facebook", posts_per_week: 4, days: [1, 3, 5, 6], post_time: "18:00" },
@@ -90,7 +90,7 @@ const setupBusiness = async (b: Biz, ws: string, ownerId: string): Promise<void>
   }
   for (const k of b.knowledge) {
     const found = ok(await db.from("knowledge_sources").select("id").eq("workspace_id", ws).eq("title", k.title), "source lookup") as Array<{ id: string }>;
-    const base = { kind: k.kind, title: k.title, content: k.content, status: "ready", chunk_count: 0 };
+    const base = { kind: k.kind, topic: k.topic, title: k.title, content: k.content, status: "ready", chunk_count: 0 };
     if (found.length) ok(await db.from("knowledge_sources").update(base).eq("id", found[0].id).select("id"), "source update");
     else ok(await db.from("knowledge_sources").insert({ workspace_id: ws, ...base, created_by: ownerId }).select("id"), "source insert");
   }

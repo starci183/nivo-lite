@@ -3,7 +3,7 @@ import { logDecision, logEvidence } from "./core";
 import { generateWithOpenClaw } from "./openclaw-generate";
 import { claimWarnings } from "./module-content-claims";
 import {
-  channelRule, cleanHashtags, eventsForMonth, GUARDRAILS, isContentChannel, monthKey, slotsForMonth, vnParts, vnToIso, pad2,
+  channelRule, cleanHashtags, eventsForMonth, GUARDRAILS, isContentChannel, monthKey, slotsForMonth, vnDateKey, vnParts, vnToIso, pad2,
   type ContentChannel, type ContentItem, type ContentSettings, type MediaRef, type Pillar, type Variants,
 } from "./module-content-shared";
 import { addEvidence, getItem, listCadence, listItems, listPillars, loadSettings, toItem, type Db } from "./module-content-store";
@@ -100,7 +100,40 @@ export const parseJsonObject = (text: string): Record<string, unknown> | null =>
   const direct = tryParse(t);
   if (direct) return direct;
   const a = t.indexOf("{"); const z = t.lastIndexOf("}");
-  return a >= 0 && z > a ? tryParse(t.slice(a, z + 1)) : null;
+  if (a < 0 || z <= a) return null;
+  const body = t.slice(a, z + 1);
+  const plain = tryParse(body);
+  if (plain) return plain;
+  // Models sometimes forget to close a nested object: when braces are unbalanced, close them at the end.
+  const open = (body.match(/\{/g) ?? []).length - (body.match(/\}/g) ?? []).length;
+  return open > 0 && open <= 3 ? tryParse(body + "}".repeat(open)) : null;
+};
+
+type GenArgs = Parameters<typeof generateWithOpenClaw>[0];
+/** One OpenClaw JSON call; when the answer is not a JSON object, ask once more (the model sometimes wraps or truncates it). */
+const generateJson = async (a: GenArgs): Promise<{ ok: true; parsed: Record<string, unknown>; generationId: string; usage: unknown; timings: Record<string, number> } | { ok: false; message: string }> => {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const r = await generateWithOpenClaw(a);
+    if (!r.ok) return { ok: false, message: r.message };
+    const parsed = parseJsonObject(r.output);
+    if (parsed) return { ok: true, parsed, generationId: r.generationId, usage: r.usage, timings: r.timings };
+  }
+  return { ok: false, message: "OpenClaw trả về kết quả không đọc được. Thử lại." };
+};
+
+/** One theme per slot: every theme gets its quota, and the same theme never comes twice in a row while another still has posts left. */
+export const themeSequence = (quota: ReadonlyArray<{ pillar: Pillar; count: number }>, total: number): Array<Pillar> => {
+  const left = quota.map((q) => ({ pillar: q.pillar, n: q.count }));
+  const out: Array<Pillar> = [];
+  for (let i = 0; i < total; i++) {
+    const prev = out[i - 1];
+    const cand = [...left].filter((x) => x.n > 0).sort((a, b) => b.n - a.n);
+    const pick = cand.find((x) => x.pillar.id !== prev?.id) ?? cand[0];
+    if (!pick) break;
+    pick.n -= 1;
+    out.push(pick.pillar);
+  }
+  return out;
 };
 
 const str = (v: unknown): string => (typeof v === "string" ? v.trim() : "");
@@ -168,50 +201,59 @@ export const planMonth = async (db: Db, ws: string, o: PlanOptions): Promise<Pla
   const existing = await listItems(db, ws, { from: vnToIso(o.y, o.m, 1), to: vnToIso(o.m === 12 ? o.y + 1 : o.y, o.m === 12 ? 1 : o.m + 1, 1) });
   const kept = existing.filter((i) => !(i.status === "idea" && i.source === "plan"));
 
+  // The balance and the holidays are settled in code, so they hold whatever the model does: each slot gets a theme (by weight, never the same theme twice in a row
+  // when avoidable) and each holiday of the month is pinned to the slot just before it. OpenClaw writes the idea for each slot.
+  const themes = themeSequence(quota, slots.length);
+  const dayOf = (iso: string): number => Math.floor(Date.parse(`${vnDateKey(new Date(iso))}T00:00:00Z`) / 86_400_000);
+  const pinned = new Map<number, string>();
+  for (const h of holidays) {
+    const hd = Math.floor(Date.parse(`${h.date}T00:00:00Z`) / 86_400_000);
+    const before = slots.filter((s) => dayOf(s.at) <= hd && dayOf(s.at) >= hd - Math.min(h.lead_days, 7) && !pinned.has(s.n));
+    const after = slots.filter((s) => dayOf(s.at) > hd && dayOf(s.at) <= hd + 2 && !pinned.has(s.n));
+    const pick = before[before.length - 1] ?? after[0];
+    if (pick) pinned.set(pick.n, h.key);
+  }
   const system = [
     "Bạn là người lên lịch nội dung mạng xã hội cho một doanh nghiệp nhỏ ở Việt Nam. Bạn chỉ đề xuất ý tưởng bài đăng; chủ doanh nghiệp sẽ duyệt.",
     brandBlock(brand),
     guardrailBlock(),
-    `Trả về DUY NHẤT một đối tượng JSON dạng: {"ideas":[{"slot":<số thứ tự ô đăng>,"pillar":"<đúng tên một chủ đề>","title":"<tiêu đề ngắn dưới 80 ký tự>","brief":"<2-3 câu: góc nội dung, ý chính, thông tin thật cần dùng, lời kêu gọi>","holiday":"<khóa dịp lễ hoặc null>"}]}. Mỗi ô đăng đúng một ý tưởng. Không thêm chữ nào ngoài JSON.`,
+    `Trả về DUY NHẤT một đối tượng JSON dạng: {"ideas":[{"slot":<số thứ tự ô đăng>,"title":"<tiêu đề ngắn dưới 80 ký tự>","brief":"<2-3 câu: góc nội dung, ý chính, thông tin thật cần dùng, lời kêu gọi>"}]}. Mỗi ô đăng đúng một ý tưởng, đúng chủ đề đã giao cho ô đó. Không thêm chữ nào ngoài JSON.`,
   ].join("\n\n");
+  const holidayText = (key: string): string => { const h = holidays.find((x) => x.key === key); return h ? `dịp ${h.name} (${h.date.split("-").reverse().join("/")}). Gợi ý: ${h.angle}` : ""; };
+  const CHUNK = 12;
+  const chunks: Array<typeof slots> = [];
+  for (let i = 0; i < slots.length; i += CHUNK) chunks.push(slots.slice(i, i + CHUNK));
+  const themeOf = (n: number): Pillar => themes[n - 1];
+  const slotLine = (s: PlanSlot): string => `${s.n}. ${localLabel(s.at)} - kênh: ${s.channels.map((c) => channelRule(c).label).join(", ")} - CHỦ ĐỀ: ${themeOf(s.n).name}${themeOf(s.n).description ? ` (${themeOf(s.n).description})` : ""}${pinned.has(s.n) ? ` - DỊP: ${holidayText(pinned.get(s.n) as string)}` : ""}`;
 
-  const user = [
-    `Tháng cần lên kế hoạch: ${pad2(o.m)}/${o.y}.`,
-    `CÁC Ô ĐĂNG (giờ Việt Nam), mỗi ô một ý tưởng:\n${slots.map((s) => `${s.n}. ${localLabel(s.at)} - kênh: ${s.channels.map((c) => channelRule(c).label).join(", ")}`).join("\n")}`,
-    `SỐ BÀI MỖI CHỦ ĐỀ (cân bằng theo trọng số, cố gắng đúng số này):\n${quota.map((q) => `- ${q.pillar.name}: ${q.count} bài${q.pillar.description ? ` (${q.pillar.description})` : ""}`).join("\n")}`,
-    holidays.length
-      ? `DỊP LỄ VÀ NGÀY ĐẶC BIỆT gần tháng này (đưa vào đúng ô gần ngày đó, chuẩn bị trước vài ngày; điền khóa vào "holiday"):\n${holidays.map((h) => `- [${h.key}] ${h.name}, ngày ${h.date.split("-").reverse().join("/")}. Gợi ý: ${h.angle}`).join("\n")}`
-      : "Tháng này không có dịp lễ lớn.",
-    `ƯU ĐÃI VÀ SẢN PHẨM THẬT có thể nhắc tới:\n${offerLines(brand)}`,
-    kept.length ? `ĐÃ CÓ BÀI TRONG THÁNG (đừng lặp ý):\n${kept.slice(0, 20).map((i) => `- ${i.title}`).join("\n")}` : "",
-    "Chủ đề của một ý tưởng phải nằm trong danh sách chủ đề ở trên. Không hai ô liền kề cùng chủ đề nếu tránh được. Không bịa ưu đãi hay con số.",
-  ].filter(Boolean).join("\n\n");
-
-  const r = await generateWithOpenClaw({
-    workspaceId: ws, purpose: "content_plan", module: "content", responseFormat: "json", timeoutMs: 120_000,
-    messages: [{ role: "system", content: system }, { role: "user", content: user }],
-  });
-  if (!r.ok) return fail(r.message);
-  const parsed = parseJsonObject(r.output);
-  const list = Array.isArray(parsed?.ideas) ? (parsed.ideas as Array<unknown>) : null;
-  if (!parsed || !list) return fail("OpenClaw trả về kết quả không đọc được. Thử lại.");
-
-  const byName = new Map(active.map((p) => [p.name.toLowerCase(), p]));
+  const calls = await Promise.all(chunks.map((chunk) => {
+    const user = [
+      `Tháng cần lên kế hoạch: ${pad2(o.m)}/${o.y}.`,
+      `CÁC Ô ĐĂNG (giờ Việt Nam). Mỗi ô có chủ đề đã giao; viết ý tưởng đúng chủ đề đó:\n${chunk.map(slotLine).join("\n")}`,
+      `ƯU ĐÃI VÀ SẢN PHẨM THẬT có thể nhắc tới:\n${offerLines(brand)}`,
+      kept.length ? `ĐÃ CÓ BÀI TRONG THÁNG (đừng lặp ý):\n${kept.slice(0, 20).map((i) => `- ${i.title}`).join("\n")}` : "",
+      "Ô có DỊP thì ý tưởng phải bám dịp đó (nhưng không bịa ưu đãi cho dịp). Các ý tưởng không trùng nhau. Không bịa ưu đãi hay con số.",
+    ].filter(Boolean).join("\n\n");
+    return generateJson({ workspaceId: ws, purpose: "content_plan", module: "content", responseFormat: "json", timeoutMs: 120_000, messages: [{ role: "system", content: system }, { role: "user", content: user }] });
+  }));
+  const bad = calls.find((c) => !c.ok);
+  if (bad && !bad.ok) return fail(bad.message);
+  const oks = calls.flatMap((c) => (c.ok ? [c] : []));
+  const parsed: Record<string, unknown> = { ideas: oks.flatMap((c) => (Array.isArray(c.parsed.ideas) ? (c.parsed.ideas as Array<unknown>) : [])) };
+  const r = { generationId: oks.map((c) => c.generationId).join(","), usage: oks.map((c) => c.usage), timings: oks[0]?.timings ?? {} };
   const holidayKeys = new Set(holidays.map((h) => h.key));
   const used = new Set<number>();
   const rows: Array<Record<string, unknown>> = [];
-  for (const raw of list) {
+  for (const raw of parsed.ideas as Array<unknown>) {
     const it = raw as Record<string, unknown>;
     const n = typeof it.slot === "number" ? it.slot : Number(it.slot);
     const slot = slots.find((s) => s.n === n);
     const title = str(it.title).slice(0, 200);
     if (!slot || used.has(n) || !title) continue;
     used.add(n);
-    const pillar = byName.get(str(it.pillar).toLowerCase()) ?? null;
-    const hk = str(it.holiday);
     rows.push({
-      workspace_id: ws, title, brief: str(it.brief), pillar_id: pillar?.id ?? null, channels: slot.channels, scheduled_at: slot.at, status: "idea", source: "plan",
-      holiday_key: holidayKeys.has(hk) ? hk : null, created_by: o.actor,
+      workspace_id: ws, title, brief: str(it.brief), pillar_id: themeOf(n).id, channels: slot.channels, scheduled_at: slot.at, status: "idea", source: "plan",
+      holiday_key: pinned.get(n) ?? null, created_by: o.actor,
       evidence: [{ at: new Date().toISOString(), kind: "planned", by: "NIVO", text: `Ý tưởng từ kế hoạch tháng ${pad2(o.m)}/${o.y} (OpenClaw).` }],
     });
   }
@@ -285,7 +327,7 @@ export const draftItem = async (db: Db, ws: string, itemId: string, actor: strin
     brandBlock(brand),
     guardrailBlock(),
     `QUY TẮC TỪNG KÊNH:\n${channels.map((c) => { const r = channelRule(c); return `- ${r.label} (tối đa ${r.max_chars} ký tự): ${r.rules}`; }).join("\n")}`,
-    `Trả về DUY NHẤT một đối tượng JSON: {"title":"<tiêu đề ngắn>","pillar":"<đúng tên một chủ đề hoặc null>","variants":{${shape}},"hashtags":["#chung"],"media":[<số thứ tự ảnh gợi ý hoặc để trống>]}. "text" là nội dung đăng sẵn, giữ xuống dòng bằng \\n. "note" là ghi chú ngắn cho chủ (ví dụ gợi ý quay video), có thể để trống. Không thêm chữ nào ngoài JSON.`,
+    `Trả về DUY NHẤT một đối tượng JSON: {"title":"<tiêu đề ngắn>","pillar":"<đúng tên một chủ đề hoặc null>","hashtags":["#chung"],"media":[<số thứ tự ảnh gợi ý hoặc để trống>],"variants":{${shape}}}. "text" là nội dung đăng sẵn, giữ xuống dòng bằng \\n. "note" là ghi chú ngắn cho chủ (ví dụ gợi ý quay video), có thể để trống. Không thêm chữ nào ngoài JSON.`,
   ].join("\n\n");
 
   const user = [
@@ -299,14 +341,14 @@ export const draftItem = async (db: Db, ws: string, itemId: string, actor: strin
     library.length ? `ẢNH TRONG THƯ VIỆN (chọn tối đa 2 cái hợp nội dung, ghi số thứ tự vào "media"):\n${library.map((m, i) => `${i + 1}. ${m.name}`).join("\n")}` : "Thư viện chưa có ảnh: để \"media\" là [].",
   ].filter(Boolean).join("\n\n");
 
-  const r = await generateWithOpenClaw({
+  const r = await generateJson({
     workspaceId: ws, purpose: "content_draft", module: "content", responseFormat: "json", timeoutMs: 90_000,
     messages: [{ role: "system", content: system }, { role: "user", content: user }],
   });
   if (!r.ok) return fail(r.message);
-  const parsed = parseJsonObject(r.output);
-  const vs = parsed?.variants && typeof parsed.variants === "object" ? (parsed.variants as Record<string, unknown>) : null;
-  if (!parsed || !vs) return fail("OpenClaw trả về kết quả không đọc được. Thử lại.");
+  const parsed = r.parsed;
+  const vs = parsed.variants && typeof parsed.variants === "object" ? (parsed.variants as Record<string, unknown>) : null;
+  if (!vs) return fail("OpenClaw trả về kết quả không đọc được. Thử lại.");
 
   const variants: Variants = { ...item.variants };
   const warnings: Array<string> = [];

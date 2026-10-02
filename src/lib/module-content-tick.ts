@@ -93,25 +93,38 @@ export const offerDraft = async (db: Db, ws: string, now: Date, force: boolean):
   const since = seen ?? new Date(0).toISOString();
   const { data } = await db.from("knowledge_sources").select("id, title, topic, kind, content, module, updated_at").eq("workspace_id", ws).eq("status", "ready").gt("updated_at", since).order("updated_at").limit(5);
   const fresh = ((data ?? []) as Array<{ id: string; title: string; topic: string | null; kind: string; content: string; module: string | null; updated_at: string }>)
-    .filter((r) => (!r.module || r.module === "content") && (r.kind === "pricing" || OFFER_RE.test(`${r.title} ${r.topic ?? ""} ${r.content.slice(0, 400)}`)))
+    .filter((r) => (!r.module || r.module === "content") && (OFFER_RE.test(`${r.title} ${r.topic ?? ""} ${r.content.slice(0, 400)}`)))
     .slice(0, 2);
   if (!fresh.length) return null;
   const [pillars, cadence] = await Promise.all([listPillars(db, ws), listCadence(db, ws)]);
   const offerPillar = pillars.find((pl) => pl.active && /ưu đãi|khuyến mãi|offer|promo/i.test(pl.name)) ?? null;
   const channels: Array<ContentChannel> = cadence.filter((c) => c.posts_per_week > 0).map((c) => c.channel);
   let made = 0;
+  let handled = 0;
   for (const src of fresh) {
-    const ins = await db.from("content_items").insert({
-      workspace_id: ws, title: `Bài về: ${src.title}`.slice(0, 200), brief: `Có thông tin mới trong tri thức: "${src.title}". Viết bài giới thiệu đúng những gì nguồn này nói, không thêm ưu đãi nào khác.`,
-      pillar_id: offerPillar?.id ?? null, channels: channels.length ? channels : ["facebook"], status: "idea", source: "offer", created_by: "NIVO",
-      evidence: [{ at: now.toISOString(), kind: "created", by: "NIVO", text: `Tự soạn vì có nguồn mới: ${src.title}.` }],
-    }).select("id").single();
-    if (ins.error || !ins.data) continue;
-    const r = await draftItem(db, ws, (ins.data as { id: string }).id, "NIVO");
-    if (r.ok) made += 1;
+    const title = `Bài về: ${src.title}`.slice(0, 200);
+    // A source already turned into a post (earlier tick) is not drafted twice; one whose draft failed is retried on the next tick.
+    const prior = await db.from("content_items").select("id, status").eq("workspace_id", ws).eq("source", "offer").eq("title", title).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    const old = prior.data as { id: string; status: string } | null;
+    if (old && old.status !== "idea") { handled += 1; continue; }
+    let id = old?.id;
+    if (!id) {
+      const ins = await db.from("content_items").insert({
+        workspace_id: ws, title, brief: `Có thông tin mới trong tri thức: "${src.title}". Viết bài giới thiệu đúng những gì nguồn này nói, không thêm ưu đãi nào khác.`,
+        pillar_id: offerPillar?.id ?? null, channels: channels.length ? channels : ["facebook"], status: "idea", source: "offer", created_by: "NIVO",
+        evidence: [{ at: now.toISOString(), kind: "created", by: "NIVO", text: `Tự soạn vì có nguồn mới: ${src.title}.` }],
+      }).select("id").single();
+      if (ins.error || !ins.data) continue;
+      id = (ins.data as { id: string }).id;
+    }
+    const r = await draftItem(db, ws, id, "NIVO");
+    if (r.ok) { made += 1; handled += 1; }
   }
-  const latest = fresh[fresh.length - 1].updated_at;
-  await saveSettings(db, ws, { marks: { offer_seen_at: latest > now.toISOString() ? latest : now.toISOString() } });
+  // The mark moves forward only when every fresh source was handled; otherwise the next tick tries the rest again.
+  if (handled === fresh.length) {
+    const latest = fresh[fresh.length - 1].updated_at;
+    await saveSettings(db, ws, { marks: { offer_seen_at: latest > now.toISOString() ? latest : now.toISOString() } });
+  }
   if (made) await office(db, ws, `Có ${made} bản nháp mới từ ưu đãi vừa thêm. Mở Nội dung để đọc và gửi duyệt.`);
   return `soạn ${made}/${fresh.length} bài từ ưu đãi mới`;
 };
