@@ -7,6 +7,8 @@ import {
   type Db, type Executor, type RunCtx,
 } from "./automation-runs";
 import { afterHours, askReview, checkFeedback, dailyReport, debtReminder, nurtureLead, sheetOrders, thankPayment, winBack } from "./automation-executors";
+import { LOYALTY_EXECUTORS, scanLoyalty } from "./module-loyalty-automations";
+import { loyaltyTickFor, loyaltyWorkspaces } from "./module-loyalty-events";
 import { TRUST_THRESHOLD, resolveConfig, type PipelineConfig, type TemplateDef } from "./automation-shared";
 import { templateOf } from "./automation-templates";
 import { INVENTORY_EXECUTORS, scanInventory } from "./module-inventory-automations";
@@ -28,6 +30,7 @@ const EXECUTORS: Readonly<Record<string, Executor>> = {
   ...INVENTORY_EXECUTORS,
   ...BOOKING_EXECUTORS,
   video_new_offer: videoNewOffer,
+  ...LOYALTY_EXECUTORS, // module loyalty (src/lib/module-loyalty-automations.ts)
 };
 
 const DAY = 86_400_000;
@@ -62,6 +65,16 @@ const trigger = async (db: Db, l: Loaded, dedupe: string, triggerRef: string, pa
   const run = await beginRun(db, l.p, dedupe, triggerRef, payload, opts);
   if (!run) return;
   await executeRun(await ctxFor(db, l), run, payload, EXECUTORS[l.def.key]);
+};
+
+/** Start one run of a template for ONE workspace from code (the loyalty tier-up fires this); a no-op when the pipeline is not enabled. */
+export const fireTemplate = async (ws: string, templateKey: string, dedupe: string, triggerRef: string, payload: Record<string, unknown>): Promise<boolean> => {
+  const db = supabaseAdmin();
+  const l = (await enabledPipelines(db, ws)).find((x) => x.def.key === templateKey);
+  if (!l) return false;
+  // Written and gated on the next minute tick, not inside the request or tick that fired it (an OpenClaw message takes seconds).
+  await trigger(db, l, dedupe, triggerRef, payload, { runAt: new Date(Date.now() + 5_000) });
+  return true;
 };
 
 /* ------------------------------------------------------------------ events */
@@ -165,6 +178,17 @@ export const runTick = async (now: Date = new Date()): Promise<{ readonly pipeli
     }
   }
 
+  // 1b. Loyalty: catch-up earning, points expiry and queued promotion sends of every workspace that has the module on.
+  for (const ws of await loyaltyWorkspaces(db)) {
+    if (!budget()) break;
+    try {
+      const out = await loyaltyTickFor(ws, now);
+      runs += out.awards;
+    } catch (e) {
+      console.error("loyalty tick failed:", e instanceof Error ? e.message : e);
+    }
+  }
+
   // 2. Scans: templates that look at the data on a clock.
   for (const l of list) {
     if (!budget()) break;
@@ -205,6 +229,7 @@ const scan = async (db: Db, l: Loaded, now: Date): Promise<number> => {
   let started = 0;
   if (def.moduleKey === "inventory") return scanInventory(db, l, now, (dedupe, ref, payload) => trigger(db, l, dedupe, ref, payload));
   if (BOOKING_TEMPLATE_KEYS.includes(def.key)) return scanBooking({ db, ws, def, config, now, pipelineId: p.id, trigger: (dedupe, ref, payload) => trigger(db, l, dedupe, ref, payload) });
+  if (def.moduleKey === "loyalty") return scanLoyalty(db, l, now, (dedupe, ref, payload) => trigger(db, l, dedupe, ref, payload, { runAt: new Date(Date.now() + 5_000) }));
   if (def.key === "daily_report") {
     const clock = vnClock(now);
     if (clock.minute >= hhmmToMinutes(String(config.time))) {

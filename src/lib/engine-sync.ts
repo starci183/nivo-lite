@@ -5,6 +5,7 @@ import { audienceOf as registryAudience, moduleDef } from "./module-registry";
 import type { Visibility } from "./knowledge/shared";
 import { BOOKING_REPLY_ADDENDUM } from "./module-booking-contract";
 import { HIRING_APPLICATION_CLAUSE, HIRING_APPLICATION_SHAPE, HIRING_REPLY_CONTRACT } from "./module-hiring-contract";
+import { LOYALTY_REPLY_CONTRACT } from "./module-loyalty-shared";
 
 /**
  * The OpenClaw copy of one agent, built ONLY from Supabase (the source of truth). The engine job `openclaw.sync_agent` fetches this bundle
@@ -50,6 +51,7 @@ const REPLY_CONTRACTS: Partial<Record<ModuleKey, string>> = {
   chatbot: REPLY_CONTRACT,
   booking: `${REPLY_CONTRACT}
 ${BOOKING_REPLY_ADDENDUM}`, // booking lane: the same customer contract plus the structured booking_request (handled by src/lib/module-booking-chat.ts)
+  loyalty: LOYALTY_REPLY_CONTRACT, // loyalty lane: points, tier and redeem request (src/lib/module-loyalty-chat.ts)
   hiring: HIRING_REPLY_CONTRACT, // hiring lane: fairness contract of the internal agent (the chat intake clause sits inside REPLY_CONTRACT)
 };
 

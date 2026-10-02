@@ -1,0 +1,5 @@
+[
+  { "key": "voucher-50k", "name": "Phiếu giảm 50.000 ₫", "kind": "voucher", "valueVnd": 50000, "percent": null, "pointsCost": 500, "stock": null, "perCustomerLimit": null, "minTierKey": null, "note": "Dùng cho đơn kế tiếp, không cộng dồn với ưu đãi khác." },
+  { "key": "giam-10", "name": "Giảm 10% đơn kế tiếp", "kind": "percent", "valueVnd": 100000, "percent": 10, "pointsCost": 800, "stock": null, "perCustomerLimit": 2, "minTierKey": null, "note": "Tối đa một lần mỗi đơn." },
+  { "key": "qua-tang", "name": "Quà tặng của cửa hàng", "kind": "item", "valueVnd": 150000, "percent": null, "pointsCost": 1200, "stock": 20, "perCustomerLimit": 1, "minTierKey": "bac", "note": "Nhận trực tiếp tại cửa hàng." }
+]

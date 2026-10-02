@@ -17,6 +17,7 @@ import { bookingContextLine } from "./module-booking";
 import { BOOKING_TOOL_NAMES, handleBookingReply, runBookingTool, type BookingToolName } from "./module-booking-chat";
 import { readChatApplication } from "./module-hiring-contract";
 import { hiringChatBrief } from "./module-hiring-flow";
+import { loyaltyChatBlock } from "./module-loyalty-chat";
 import { recordEngineUsage, type UsageKind, type UsageModule } from "./usage";
 import { escalateToStaff } from "./staff-relay";
 import type { Agent, AgentConversation, AgentMessage } from "./types";
@@ -73,6 +74,8 @@ export const chatTurnContext = async (db: SupabaseClient, job: EngineJob) => {
   const synced = syncRow !== null && syncRow.status === "ok" && syncRow.synced_at !== null;
   const slim = synced && syncRow.context_version === activeVersion;
   const authority = ai.authorityBrief(authorityRaw) + (agent.module === "booking" ? await bookingContextLine(ws) : "") + (await hiringChatBrief(db, ws)); // booking: today, services, hours, policy; hiring: open jobs for the chat
+  // Loyalty module installed: the member's points, tier and the reward catalogue (from the ledger) plus the contract addition for a redeem request.
+  const loyalty = agent.module === "chatbot" ? await loyaltyChatBlock(db, ws, conv).catch(() => "") : "";
   const base = {
     conversation_id: conv.id, message_id: mine.id, module: agent.module, agent_name: agent.name, handled_by: conv.handled_by ?? null,
     customer_message: mine.body, turns, installation_id: instRow?.id ?? null, timeout_ms: replyTimeoutSec(instRow?.settings) * 1000, synced, mode: slim ? "slim" : "full",
@@ -86,7 +89,9 @@ export const chatTurnContext = async (db: SupabaseClient, job: EngineJob) => {
       system: `Your persona, NIVO rules, the approved context, the tone and the reply contract are in your workspace (AGENTS.md, SOUL.md): follow them.${authority}${passages ? `
 
 [RETRIEVED PASSAGES]
-${passages}` : ""}
+${passages}` : ""}${loyalty ? `
+
+${loyalty}` : ""}
 
 Answer with ONLY the JSON object of the reply contract in AGENTS.md.`,
     };
@@ -99,7 +104,9 @@ Approval rule: ${agent.approval_rule || "Commitments need human approval."}`;
   return {
     ...base,
     system: `You work inside NIVO OS, a responsibility operating system for founder-led service SMEs in Vietnam. Act within the authority the owner granted; ask when data is missing, the action is over the limit, or the outcome is unclear.
-${persona}${brief}
+${persona}${brief}${loyalty ? `
+
+${loyalty}` : ""}
 
 ${agent.module === "booking" ? `${REPLY_CONTRACT}
 ${BOOKING_REPLY_ADDENDUM}` : REPLY_CONTRACT}`,
@@ -133,6 +140,12 @@ const validOrder = (o: unknown): ai.CustomerChatOut["order"] => {
   return { items: items.trim(), amount_vnd: Math.round(amount) };
 };
 
+const readLoyalty = (v: unknown): ai.CustomerChatOut["loyalty"] => {
+  if (!v || typeof v !== "object") return null;
+  const { intent, reward_key } = v as { intent?: unknown; reward_key?: unknown };
+  return intent === "redeem" && typeof reward_key === "string" && reward_key.trim() ? { intent: "redeem", reward_key: reward_key.trim().slice(0, 40) } : null;
+};
+
 /**
  * Read the engine's proposed reply as the same structure the inline model returns. An answer that is not the JSON object (a model that
  * ignored the contract) is never sent to the customer as-is: it becomes a proposed answer for a person to approve, with a fixed holding line.
@@ -156,6 +169,7 @@ export const readProposedReply = (raw: string): ai.CustomerChatOut => {
     order: validOrder(obj.order),
     payment_claim: obj.payment_claim === true,
     application: readChatApplication(obj.application),
+    loyalty: readLoyalty(obj.loyalty),
   };
 };
 

@@ -147,6 +147,8 @@ export type CustomerChatOut = {
   payment_claim: boolean;
   /** the person applies for an open job through the chat (Hiring module): validated again by registerChatApplication */
   application?: import("./module-hiring-contract").ChatApplication | null;
+  /** loyalty module: the customer asks to redeem one reward of the catalogue (src/lib/module-loyalty-chat.ts opens the gated redeem_reward) */
+  loyalty?: null | { intent: "redeem"; reward_key: string };
 };
 
 /** Owner testing the agent in its setup screen. */

@@ -7,7 +7,7 @@ import { supabaseAdmin } from "./supabase/admin";
  * creation) plus a short prefix to recognise it. Auth is by key, not by session; a key acts for exactly one workspace and is revocable.
  * The rate limit is per key per minute, counted in Postgres (api_rate_hit), so it holds across serverless instances.
  */
-export const API_KEY_SCOPES = ["leads:read", "leads:write", "messages:write", "knowledge:write", "events:read"] as const;
+export const API_KEY_SCOPES = ["leads:read", "leads:write", "messages:write", "knowledge:write", "events:read", "loyalty:read", "loyalty:write"] as const;
 export type ApiScope = (typeof API_KEY_SCOPES)[number];
 
 /** Requests per minute per key. */

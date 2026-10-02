@@ -11,6 +11,10 @@ Khách hàng thân thiết chỉ nên chạy thật khi các mục dưới đây
 Cần có: mua bao nhiêu được bao nhiêu điểm, hành động khác được điểm (giới thiệu bạn, đánh giá).
 Đủ khi: có công thức tích điểm cụ thể.
 
+## tiers — Hạng thành viên
+Cần có: các hạng (ví dụ Đồng, Bạc, Vàng), mức chi tiêu để lên từng hạng, quyền lợi của từng hạng.
+Đủ khi: có ít nhất hai hạng với ngưỡng chi tiêu bằng VND.
+
 ## rewards — Danh mục quà
 Cần có: danh mục quà, điểm cần cho mỗi món, giá trị quy đổi bằng tiền.
 Đủ khi: có ít nhất các quà chính và điểm.
@@ -26,6 +30,10 @@ Cần có: điểm có hết hạn không, khi nào, báo khách trước bao l�
 ## promo_rules — Quy tắc gửi khuyến mãi
 Cần có: ai được nhận khuyến mãi, tối đa bao nhiêu tin mỗi tháng, giờ được gửi, cách từ chối nhận.
 Đủ khi: có giới hạn tần suất và giờ gửi.
+
+## birthday — Quà sinh nhật
+Cần có: có tặng quà hoặc điểm vào sinh nhật khách không, bao nhiêu điểm hoặc quà gì.
+Đủ khi: có mức điểm thưởng, hoặc ghi rõ không tặng.
 
 ## prohibited — Điều không được hứa
 Cần có: quà, giảm giá, hạng thành viên agent không được tự cam kết.

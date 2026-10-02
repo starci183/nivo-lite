@@ -36,7 +36,7 @@ export type FieldDef =
   | { readonly key: string; readonly kind: "toggle"; readonly label: L; readonly hint?: L };
 
 /** The authority action a message goes through (src/lib/policy.ts); null = sends nothing to a customer. */
-export type GateAction = "send_care" | "send_follow_up" | "reply_customer" | "send_email" | "remind_booking" | null;
+export type GateAction = "send_care" | "send_follow_up" | "reply_customer" | "send_email" | "remind_booking" | "send_promo" | null;
 
 /**
  * fixed         fill the variables only; no model call; deterministic. Default authority: auto.
@@ -112,6 +112,10 @@ export type MessageVars = {
   han?: string;
   ky?: string;
   so_ngay_tre?: string;
+  /** Loyalty templates: points, tier name, the code of a one-time password. */
+  diem?: string;
+  hang?: string;
+  ma?: string;
 };
 
 const NEUTRAL: Readonly<Record<string, string>> = {

@@ -1,0 +1,82 @@
+{
+  "key": "loyalty_winback",
+  "version": 1,
+  "pack": "core",
+  "executor": "implemented",
+  "moduleKey": "loyalty",
+  "icon": "winback",
+  "name": {
+    "vi": "Mời khách thân thiết lâu không quay lại",
+    "en": "Invite lapsed loyalty members back"
+  },
+  "description": {
+    "vi": "Khách lâu không mua được mời quay lại, số ngày tính theo hạng của họ (hạng cao được mời sớm hơn). Luôn chờ bạn duyệt trước khi gửi.",
+    "en": "Members who have not bought for a while are invited back; the number of days follows their tier (higher tiers sooner). It always waits for your approval."
+  },
+  "trigger": {
+    "kind": "schedule",
+    "event": "schedule.daily",
+    "line": {
+      "vi": "Khi khách chưa mua lại quá số ngày của hạng họ",
+      "en": "When a member has not bought for longer than their tier's number of days"
+    }
+  },
+  "requires": {
+    "modules": [
+      "loyalty"
+    ],
+    "channels": [
+      "customer_chat"
+    ],
+    "connections": [],
+    "capabilities": []
+  },
+  "settings": [
+    {
+      "key": "offer",
+      "kind": "text",
+      "maxLength": 120,
+      "label": {
+        "vi": "Ưu đãi",
+        "en": "Offer"
+      },
+      "hint": {
+        "vi": "Ví dụ: tặng thêm 50 điểm cho đơn kế tiếp.",
+        "en": "For example: 50 bonus points on the next order."
+      }
+    }
+  ],
+  "contentMode": "ai_per_case",
+  "guardrails": [
+    {
+      "vi": "Chỉ nêu đúng quà, điểm và quyền lợi đã ghi trong chương trình của cửa hàng.",
+      "en": "Mention only the gifts, points and benefits written in the shop's programme."
+    },
+    {
+      "vi": "Không hứa quà, giảm giá hay hạng thành viên ngoài danh mục.",
+      "en": "Never promise gifts, discounts or tiers outside the catalogue."
+    },
+    {
+      "vi": "Không bịa giá, ngày, địa chỉ hay điều kiện chưa có trong thông tin cửa hàng.",
+      "en": "Never invent prices, dates, addresses or conditions that are not in the shop information."
+    }
+  ],
+  "variables": [
+    "ten_khach",
+    "ten_shop",
+    "diem",
+    "hang",
+    "uu_dai"
+  ],
+  "defaultBody": {
+    "vi": "Chào {ten_khach}, lâu rồi {ten_shop} chưa gặp bạn. Bạn còn {diem} điểm ở hạng {hang}, {uu_dai} Hẹn gặp lại bạn!",
+    "en": "Hi {ten_khach}, we miss you at {ten_shop}. You still have {diem} points at {hang}. {uu_dai}"
+  },
+  "authority": {
+    "action": "send_promo",
+    "alwaysAsk": true
+  },
+  "defaults": {
+    "offer": "tặng thêm điểm cho đơn kế tiếp"
+  }
+}

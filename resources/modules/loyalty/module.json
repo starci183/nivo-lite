@@ -17,12 +17,12 @@
     "vi": [
       "Cộng điểm tự động sau mỗi lần mua",
       "Đổi quà trong hạn mức bạn đặt",
-      "Hỏi bạn trước khi gửi khuyến mãi"
+      "Hỏi bạn trước khi gửi khuyến mãi hay chỉnh điểm"
     ],
     "en": [
       "Awards points after each purchase",
       "Redeems rewards within your limit",
-      "Asks you before sending promotions"
+      "Asks you before sending promotions or adjusting points"
     ]
   },
   "purpose": "a customer loyalty assistant that awards points, redeems rewards within the owner's limit and drafts promotions for approval",
@@ -35,8 +35,8 @@
   "included_with_workspace": false,
   "available": true,
   "knowledge_folder": "loyalty",
-  "workbench": null,
-  "settings_extras": null,
+  "workbench": "loyalty",
+  "settings_extras": "loyalty_program",
   "requires": {
     "capabilities": [
       "customer_messaging"
@@ -81,6 +81,13 @@
       "hint_en": "How much spend earns how many points and what else earns points."
     },
     {
+      "key": "tiers",
+      "label_vi": "Hạng thành viên",
+      "label_en": "Membership tiers",
+      "hint_vi": "Có hạng nào (ví dụ Đồng, Bạc, Vàng), chi tiêu bao nhiêu thì lên hạng, mỗi hạng được quyền lợi gì.",
+      "hint_en": "Which tiers exist (for example Bronze, Silver, Gold), the spend that reaches each and its benefits."
+    },
+    {
       "key": "rewards",
       "label_vi": "Danh mục quà",
       "label_en": "Reward catalogue",
@@ -100,6 +107,13 @@
       "label_en": "Points expiry",
       "hint_vi": "Điểm có hết hạn không, khi nào, báo khách thế nào.",
       "hint_en": "Whether and when points expire and how customers are told."
+    },
+    {
+      "key": "birthday",
+      "label_vi": "Quà sinh nhật",
+      "label_en": "Birthday gift",
+      "hint_vi": "Có tặng quà hay điểm vào sinh nhật khách không, tặng gì.",
+      "hint_en": "Whether members get a gift or points on their birthday and what it is."
     },
     {
       "key": "promo_rules",
@@ -158,6 +172,18 @@
         "contact"
       ],
       "amount_limit": false
+    },
+    {
+      "action": "adjust_points",
+      "label": {
+        "vi": "Điều chỉnh điểm thủ công",
+        "en": "Adjust points by hand"
+      },
+      "mode": "ask",
+      "limit_vnd": null,
+      "required_fields": [],
+      "amount_limit": false,
+      "max_mode": "ask"
     }
   ],
   "connection_providers": []

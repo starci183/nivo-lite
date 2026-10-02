@@ -1,0 +1,8 @@
+{
+  "birthday": "Chúc mừng sinh nhật {ten_khach}! {ten_shop} tặng bạn {uu_dai}. Chúc bạn một ngày thật vui, hẹn gặp lại bạn nhé!",
+  "tier_up": "Chúc mừng {ten_khach}! Bạn vừa lên hạng {hang} tại {ten_shop}. {uu_dai} Cảm ơn bạn đã luôn đồng hành.",
+  "expiring": "Chào {ten_khach}, bạn có {diem} điểm sắp hết hạn vào {han}. Ghé {ten_shop} đổi quà trước ngày đó nhé!",
+  "winback": "Chào {ten_khach}, lâu rồi {ten_shop} chưa gặp bạn. Bạn còn {diem} điểm ở hạng {hang}, {uu_dai} Hẹn gặp lại bạn!",
+  "promo": "Chào {ten_khach}, {ten_shop} có ưu đãi dành riêng cho bạn: {uu_dai}",
+  "otp": "Mã xác nhận xem điểm thưởng tại {ten_shop} của bạn là {ma}. Mã có hiệu lực trong 10 phút, không chia sẻ mã này cho ai."
+}

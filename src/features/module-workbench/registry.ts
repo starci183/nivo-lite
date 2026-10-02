@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import WorkbenchContent from "@/features/module-content";
 import WorkbenchInventory from "@/features/module-inventory";
 import WorkbenchAccounting from "@/features/workbench-accounting";
+import WorkbenchLoyalty from "@/features/module-loyalty";
 import WorkbenchChatbot from "@/features/workbench-chatbot";
 import WorkbenchVideo from "@/features/module-video";
 import WorkbenchHiring from "@/features/module-hiring";
@@ -18,6 +19,7 @@ export type WorkbenchComponent = (props: Record<string, unknown>) => ReactNode |
 export const WORKBENCHES: Readonly<Record<string, WorkbenchComponent>> = {
   chatbot: WorkbenchChatbot,
   sales: WorkbenchSales,
+  loyalty: WorkbenchLoyalty,
   accounting: WorkbenchAccounting,
   content: WorkbenchContent,
   inventory: WorkbenchInventory,

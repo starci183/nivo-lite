@@ -1,0 +1,17 @@
+{
+  "earn": {
+    "perThousandVnd": 1,
+    "perVisit": 0,
+    "categories": [],
+    "trigger": "payment",
+    "minOrderVnd": 0
+  },
+  "tiers": [
+    { "key": "dong", "name": "Đồng", "minSpendVnd": 0, "multiplier": 1, "winbackDays": 60, "benefit": "Tích điểm mọi đơn hàng." },
+    { "key": "bac", "name": "Bạc", "minSpendVnd": 3000000, "multiplier": 1.2, "winbackDays": 45, "benefit": "Điểm thưởng nhân 1,2 và quà sinh nhật." },
+    { "key": "vang", "name": "Vàng", "minSpendVnd": 10000000, "multiplier": 1.5, "winbackDays": 30, "benefit": "Điểm thưởng nhân 1,5, quà sinh nhật và ưu tiên đổi quà." }
+  ],
+  "expiry": { "months": 12, "warnDays": 30 },
+  "birthday": { "enabled": true, "points": 100, "rewardKey": "", "note": "Quà sinh nhật dành cho khách thân thiết." },
+  "promo": { "maxPerMonth": 4, "hourFrom": "08:00", "hourTo": "21:00", "batch": 20 }
+}

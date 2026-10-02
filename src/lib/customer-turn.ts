@@ -11,6 +11,7 @@ import { isKnownPrice } from "./knowledge";
 import { DEFAULT_FALLBACK_REPLY, quotaStatus } from "./usage";
 import { escalateToStaff } from "./staff-relay";
 import { registerChatApplication } from "./module-hiring-flow";
+import { applyLoyaltyIntent } from "./module-loyalty-chat";
 import { deliverToChannel } from "./telegram";
 import type { Agent, AgentConversation, AgentMessage } from "./types";
 
@@ -252,6 +253,12 @@ const applyCustomerOut = async (
     }
   }
 
+  // Loyalty: a clear request to redeem one reward of the catalogue opens a gated redeem_reward (auto within the owner's limit, else a decision).
+  const redeemAsked = await applyLoyaltyIntent(c, { id: conv.id, lead_id: leadId, channel: conv.channel, external_id: conv.external_id }, out.loyalty, mine.id).catch((e: unknown) => {
+    console.error("loyalty redeem failed:", e instanceof Error ? e.message : e);
+    return false;
+  });
+
   if (needsHuman) {
     const question = turns.filter((x) => x.role === "user").at(-1)?.body ?? body;
     const item = await runWork(c, {
@@ -269,7 +276,7 @@ const applyCustomerOut = async (
     await supabase.from("agent_messages").insert({ workspace_id: ws, conversation_id: conv.id, role: "system", body: t("chatNeedsHuman") });
   }
 
-  const changed = Boolean(capturedLeadId || needsHuman || ordered || claimed || applied);
+  const changed = Boolean(capturedLeadId || needsHuman || ordered || claimed || applied || redeemAsked);
   // An order queues the payment record right behind the lead's classification: drain one more step for it.
   if (changed) drainAfter(c, ordered ? 3 : 2);
   return { reply, capturedLeadId, changed };

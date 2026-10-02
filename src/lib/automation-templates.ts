@@ -11,6 +11,10 @@ import deliveryNotice from "../../resources/automation-templates/delivery_notice
 import inventoryLowStock from "../../resources/automation-templates/inventory_low_stock.json";
 import inventorySupplierOverdue from "../../resources/automation-templates/inventory_supplier_overdue.json";
 import inventoryWeeklyReport from "../../resources/automation-templates/inventory_weekly_report.json";
+import loyaltyBirthday from "../../resources/automation-templates/loyalty_birthday.json";
+import loyaltyExpiring from "../../resources/automation-templates/loyalty_expiring.json";
+import loyaltyTierUp from "../../resources/automation-templates/loyalty_tier_up.json";
+import loyaltyWinback from "../../resources/automation-templates/loyalty_winback.json";
 import marketplaceOrderSync from "../../resources/automation-templates/marketplace_order_sync.json";
 import nurtureLeads from "../../resources/automation-templates/nurture_leads.json";
 import sheetOrders from "../../resources/automation-templates/sheet_orders.json";
@@ -42,6 +46,7 @@ export const TEMPLATE_LIST: ReadonlyArray<TemplateDef> = [
     appointmentReminder, bookingReview, bookingComeback, bookingWaitlistNotice, marketplaceOrderSync, contractRenewal, deliveryNotice,
     inventoryLowStock, inventoryWeeklyReport, inventorySupplierOverdue,
     videoNewOffer,
+    loyaltyBirthday, loyaltyTierUp, loyaltyExpiring, loyaltyWinback,
   ] as unknown) as ReadonlyArray<TemplateDef>),
   ...[emailDailyReport, emailPaymentReceipt, emailDebtReminder, emailMonthLedger].map(fromN8n),
 ];

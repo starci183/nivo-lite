@@ -1,0 +1,64 @@
+{
+  "key": "loyalty_tier_up",
+  "version": 1,
+  "pack": "core",
+  "executor": "implemented",
+  "moduleKey": "loyalty",
+  "icon": "review",
+  "name": {
+    "vi": "Chúc mừng lên hạng",
+    "en": "Congratulate a tier upgrade"
+  },
+  "description": {
+    "vi": "Khi một lần mua đưa khách lên hạng cao hơn, báo cho khách biết hạng mới và quyền lợi.",
+    "en": "When a purchase lifts a member to a higher tier, tell them the new tier and its benefits."
+  },
+  "trigger": {
+    "kind": "event",
+    "event": "loyalty.tier_up",
+    "line": {
+      "vi": "Khi khách lên hạng thành viên mới",
+      "en": "When a member reaches a new tier"
+    }
+  },
+  "requires": {
+    "modules": [
+      "loyalty"
+    ],
+    "channels": [
+      "customer_chat"
+    ],
+    "connections": [],
+    "capabilities": []
+  },
+  "settings": [],
+  "contentMode": "ai_per_case",
+  "guardrails": [
+    {
+      "vi": "Chỉ nêu đúng quà, điểm và quyền lợi đã ghi trong chương trình của cửa hàng.",
+      "en": "Mention only the gifts, points and benefits written in the shop's programme."
+    },
+    {
+      "vi": "Không hứa quà, giảm giá hay hạng thành viên ngoài danh mục.",
+      "en": "Never promise gifts, discounts or tiers outside the catalogue."
+    },
+    {
+      "vi": "Không bịa giá, ngày, địa chỉ hay điều kiện chưa có trong thông tin cửa hàng.",
+      "en": "Never invent prices, dates, addresses or conditions that are not in the shop information."
+    }
+  ],
+  "variables": [
+    "ten_khach",
+    "ten_shop",
+    "hang",
+    "uu_dai"
+  ],
+  "defaultBody": {
+    "vi": "Chúc mừng {ten_khach}! Bạn vừa lên hạng {hang} tại {ten_shop}. {uu_dai} Cảm ơn bạn đã luôn đồng hành.",
+    "en": "Congratulations {ten_khach}! You reached {hang} at {ten_shop}. {uu_dai}"
+  },
+  "authority": {
+    "action": "send_promo"
+  },
+  "defaults": {}
+}

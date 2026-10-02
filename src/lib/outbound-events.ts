@@ -64,6 +64,12 @@ export const emitEvent = async (workspaceId: string, event: BusinessEvent, data:
     console.error("outbound webhooks failed:", event, e instanceof Error ? e.message : e);
   }
   try {
+    const { onLoyaltyEvent } = await import("./module-loyalty-events");
+    await onLoyaltyEvent(workspaceId, event, data);
+  } catch (e) {
+    console.error("loyalty failed:", event, e instanceof Error ? e.message : e);
+  }
+  try {
     const { onBusinessEvent } = await import("./automation-engine");
     await onBusinessEvent(workspaceId, event, data, dedupe);
   } catch (e) {
