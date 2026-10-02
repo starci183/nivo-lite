@@ -2,6 +2,7 @@ import "server-only";
 import { after } from "next/server";
 import { getLocale } from "@/i18n/server";
 import { getSession, type Session } from "./session";
+import { runInBackground } from "./supabase/perf";
 import { supabaseServer } from "./supabase/server";
 import { runQueued, type EngineCtx } from "./engine";
 
@@ -20,7 +21,7 @@ export const drainAfter = (c: EngineCtx, limit = 2) => {
   try {
     after(async () => {
       try {
-        await runQueued({ db, ws, actor, locale }, limit);
+        await runInBackground(() => runQueued({ db, ws, actor, locale }, limit));
       } catch (e) {
         console.error("runQueued failed", e);
       }

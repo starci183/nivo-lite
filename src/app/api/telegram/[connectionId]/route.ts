@@ -14,10 +14,12 @@ async function postHandler(request: NextRequest, { params }: { params: Promise<{
   const { connectionId } = await params;
   const given = request.headers.get("x-telegram-bot-api-secret-token");
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(connectionId);
+  // The bound-agent lookup does not depend on the secret check, so it starts with it (one wave instead of two); its result is used only after authentication.
+  const agentP = isUuid && given ? boundAgent(connectionId, "chatbot", ["inbound_chat"]).catch(() => null) : null;
   const conn = isUuid && given ? await loadConnectionSecret(connectionId, "telegram").catch(() => null) : null;
   if (!conn || !given || !safeEqual(given, conn.webhookSecret)) return NextResponse.json({ ok: false }, { status: 401 });
   const update = (await request.json().catch(() => ({}))) as TgUpdate;
-  const agent = await boundAgent(connectionId, "chatbot", ["inbound_chat"]).catch(() => null);
+  const agent = await agentP;
   await handleTelegramUpdate(update, { workspaceId: conn.workspaceId, botToken: conn.credential, connectionId, agentId: agent?.id ?? null });
   return NextResponse.json({ ok: true });
 }

@@ -30,7 +30,7 @@ export const getOverviewFacts = async (): Promise<OverviewFacts> => {
     supabase.from("leads").select("id, stage, created_at, contact_name, company").eq("workspace_id", ws),
     supabase
       .from("executions")
-      .select("id, responsibility_id, created_at")
+      .select("id, responsibility_id, created_at, responsibility:responsibilities(lead_id)")
       .eq("workspace_id", ws)
       .eq("status", "pending_approval")
       .order("created_at", { ascending: false }),
@@ -38,13 +38,13 @@ export const getOverviewFacts = async (): Promise<OverviewFacts> => {
   // Test runs (UAT/DBG, see TEST_RUN_PATTERN in flow-queries) are left out of every dashboard figure.
   const leads = ((leadRes.data ?? []) as Array<{ id: string; stage: LeadStage; created_at: string; contact_name: string | null; company: string | null }>)
     .filter((lead) => !isTestRunName(lead.contact_name, lead.company));
-  const executions = (execRes.data ?? []) as Array<{ id: string; responsibility_id: string; created_at: string }>;
+  const executions = (execRes.data ?? []) as unknown as Array<{ id: string; responsibility_id: string; created_at: string; responsibility: { lead_id: string } | Array<{ lead_id: string }> | null }>;
 
   let href = "/responsibilities?status=waiting_approval";
   const newest = executions[0];
   if (newest !== undefined) {
-    const { data } = await supabase.from("responsibilities").select("lead_id").eq("id", newest.responsibility_id).maybeSingle();
-    const leadId = (data as { lead_id: string } | null)?.lead_id;
+    // The lead comes with the execution (embedded), so this costs no extra request.
+    const leadId = (Array.isArray(newest.responsibility) ? newest.responsibility[0] : newest.responsibility)?.lead_id;
     if (executions.length === 1 && leadId !== undefined) href = `/leads/${leadId}`;
   }
 

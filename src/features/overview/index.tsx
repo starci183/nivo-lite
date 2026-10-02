@@ -10,14 +10,16 @@ import { getOverviewFacts } from "./queries";
 
 /** Connected P01 view: reads responsibilities, agents, events and real pipeline facts, then renders the overview. */
 export const Overview = async () => {
-  const [allResponsibilities, agents, events, facts, promo] = await Promise.all([
+  // One wave: everything is independent (each is already one request, or a few in parallel).
+  const [allResponsibilities, agents, events, facts, promo, governance, exceptions] = await Promise.all([
     listResponsibilities(),
     listAgents(),
     listRecentEvents(6),
     getOverviewFacts(),
     getPromoState(),
+    getGovernance().catch(() => null),
+    listExceptions().catch(() => []),
   ]);
-  const [governance, exceptions] = await Promise.all([getGovernance().catch(() => null), listExceptions().catch(() => [])]);
   // Test runs (UAT/DBG, see TEST_RUN_PATTERN in flow-queries) are left out of every dashboard figure.
   const responsibilities = allResponsibilities.filter((r) => !isTestRunName(r.lead?.contact_name, r.lead?.company));
   const [t, rt, locale] = await Promise.all([getT(overview), getT(respDict), getLocale()]);

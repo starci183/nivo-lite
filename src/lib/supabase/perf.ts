@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { after } from "next/server";
 
 /**
@@ -36,9 +37,20 @@ const opOf = (input: RequestInfo | URL, init?: RequestInit): string => {
 };
 
 /** `fetch` that times each call; pass it as `global.fetch` of a Supabase client. `undefined` when PERF_LOG is off. */
+const background = new AsyncLocalStorage<true>();
+/** Work that runs after the response (queue drains): logged as `after`, not counted in the request's render-path total. */
+export const runInBackground = <T,>(fn: () => Promise<T>): Promise<T> => (PERF_ENABLED ? background.run(true, fn) : fn());
+
 export const perfFetch: typeof fetch | undefined = PERF_ENABLED
   ? async (input, init) => {
       const started = performance.now();
+      if (background.getStore()) {
+        try {
+          return await fetch(input, init);
+        } finally {
+          console.log(`[perf] after ${opOf(input, init)} ${Math.round(performance.now() - started)}ms`);
+        }
+      }
       const { rid, route } = await requestMeta();
       let bucket = buckets.get(rid);
       if (!bucket) {

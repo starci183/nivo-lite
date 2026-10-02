@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { getT } from "@/i18n/server";
 import { access } from "@/i18n/dict/access";
 import { canDecide, isManagerRole, type Member, type Role } from "./members-shared";
@@ -21,7 +22,7 @@ export const requireRole = async (roles: Role[]): Promise<Member> => {
 };
 
 /** Everyone in the current workspace, owners first. Emails are blank for staff viewers. */
-export const listMembers = async (): Promise<Array<MemberListing>> => {
+export const listMembers = cache(async (): Promise<Array<MemberListing>> => {
   const session = await getSession();
   const db = await supabaseServer();
   const { data, error } = await db.rpc("workspace_members_directory", { ws: session.workspace.id });
@@ -31,4 +32,4 @@ export const listMembers = async (): Promise<Array<MemberListing>> => {
     userId: r.user_id, workspaceId: session.workspace.id, role: r.role, staffId: r.staff_id, displayName: r.display_name,
     status: r.status, email: r.email ?? "", lastSignInAt: r.last_sign_in_at,
   }));
-};
+});

@@ -1,9 +1,11 @@
 import "server-only";
+import { cache } from "react";
 import { getT } from "@/i18n/server";
 import { shell } from "@/i18n/dict/shell";
 import { getSession } from "@/lib/session";
 import type { ShellMember } from "./member-context";
-import { getGovernance, listExceptions } from "@/lib/flow-queries";
+import { drainAfter, engineCtx } from "@/lib/flow-ctx";
+import { FOUNDING_OFFER } from "@/lib/promo";
 import { supabaseServer } from "@/lib/supabase/server";
 
 /** One execution waiting for a human decision, as the notification list draws it. */
@@ -27,69 +29,63 @@ export type ShellData = {
   readonly currentWorkspaceId: string;
 };
 
-type ExecRow = { id: string; kind: string; draft: string; responsibility_id: string };
-type RespRow = { id: string; lead_id: string; next_action: string };
-type LeadRow = { id: string; contact_name: string; company: string };
+type ShellRaw = {
+  lead_count: number;
+  open_responsibility_count: number;
+  agents: Array<ShellAgent>;
+  has_chatbot: boolean;
+  is_founding_member: boolean;
+  pending: Array<{ id: string; draft: string; next_action: string | null; lead_id: string | null; contact_name: string | null }>;
+  exceptions: Array<{ id: string; lead_id: string | null; contact_name: string | null; summary: string | null; error: string | null }>;
+  pending_decisions: number;
+};
 
 const clip = (text: string, max: number) => (text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text);
 
-/** Counts, pending approvals and agents for the signed-in workspace. */
-export const getShellData = async (): Promise<ShellData> => {
-  const t = await getT(shell);
+/** Everything the frame reads from the database, in ONE request (SQL function `shell_data`, under the caller's RLS). Once per request. */
+const getShellRaw = cache(async (): Promise<ShellRaw> => {
   const session = await getSession();
   const supabase = await supabaseServer();
-  const wid = session.workspace.id;
-  const [execs, leads, open, agents, mine] = await Promise.all([
-    supabase.from("executions").select("id, kind, draft, responsibility_id").eq("workspace_id", wid).eq("status", "pending_approval").order("created_at", { ascending: false }),
-    supabase.from("leads").select("id", { count: "exact", head: true }).eq("workspace_id", wid),
-    supabase.from("responsibilities").select("id", { count: "exact", head: true }).eq("workspace_id", wid).neq("status", "done"),
-    supabase.from("agents").select("id, name, module, status").eq("workspace_id", wid).order("created_at"),
-    supabase.from("workspace_members").select("workspace_id, role, workspaces(name)").eq("user_id", session.userId).eq("status", "active").order("created_at"),
-  ]);
-  type MineRow = { workspace_id: string; role: "owner" | "manager" | "staff"; workspaces: { name: string } | Array<{ name: string }> | null };
-  const workspaces = ((mine.data ?? []) as unknown as Array<MineRow>).map((m) => ({
-    id: m.workspace_id, role: m.role, name: (Array.isArray(m.workspaces) ? m.workspaces[0]?.name : m.workspaces?.name) ?? session.workspace.name,
+  const { data, error } = await supabase.rpc("shell_data", {
+    ws: session.workspace.id, founding_from: FOUNDING_OFFER.startsAt, founding_to: FOUNDING_OFFER.endsAt,
+  });
+  if (error) throw new Error(error.message);
+  // Chain steps queued by the flow engine are drained after the response, once per request (the Office, dashboard and frame all used to ask).
+  drainAfter(await engineCtx());
+  return data as ShellRaw;
+});
+
+/** Promo flags the frame needs (sidebar offer): from the same single request as the shell data. */
+export const getShellPromoFlags = async (): Promise<{ hasChatbot: boolean; isFoundingMember: boolean }> => {
+  const raw = await getShellRaw();
+  return { hasChatbot: raw.has_chatbot, isFoundingMember: raw.is_founding_member };
+};
+
+/** Counts, pending approvals and agents for the signed-in workspace. */
+export const getShellData = async (): Promise<ShellData> => {
+  const [t, session, raw] = await Promise.all([getT(shell), getSession(), getShellRaw()]);
+  const pending: Array<ShellPending> = raw.pending.map((e) => ({
+    id: e.id,
+    leadName: e.contact_name ?? t("unknownLead"),
+    summary: clip(e.next_action || e.draft, 60),
+    href: e.lead_id ? `/leads/${e.lead_id}` : "/leads",
   }));
-  const [governance, exceptions] = await Promise.all([
-    getGovernance().catch(() => null),
-    listExceptions().catch(() => []),
-  ]);
-  const execRows = (execs.data ?? []) as Array<ExecRow>;
-  let pending: Array<ShellPending> = [];
-  if (execRows.length > 0) {
-    const { data: respData } = await supabase.from("responsibilities").select("id, lead_id, next_action").in("id", [...new Set(execRows.map((e) => e.responsibility_id))]);
-    const resps = (respData ?? []) as Array<RespRow>;
-    const { data: leadData } = await supabase.from("leads").select("id, contact_name, company").in("id", [...new Set(resps.map((r) => r.lead_id))]);
-    const leadRows = (leadData ?? []) as Array<LeadRow>;
-    pending = execRows.map((e) => {
-      const resp = resps.find((r) => r.id === e.responsibility_id);
-      const lead = leadRows.find((l) => l.id === resp?.lead_id);
-      return {
-        id: e.id,
-        leadName: lead ? lead.contact_name : t("unknownLead"),
-        summary: clip(resp?.next_action || e.draft, 60),
-        href: lead ? `/leads/${lead.id}` : "/leads",
-      };
-    });
-  }
   // Exceptions with no approval card of their own (an approval card is already in the list above).
-  const exceptionPending: Array<ShellPending> = exceptions
-    .filter((item) => !item.hasApprovalCard)
-    .map((item) => ({
-      id: `wi-${item.id}`,
-      leadName: item.lead?.contact_name ?? t("unknownLead"),
-      summary: clip(item.proposal.summary || item.error || "", 60),
-      href: "/chat",
-    }));
+  const exceptionPending: Array<ShellPending> = raw.exceptions.map((item) => ({
+    id: `wi-${item.id}`,
+    leadName: item.contact_name ?? t("unknownLead"),
+    summary: clip(item.summary || item.error || "", 60),
+    href: "/chat",
+  }));
   const allPending = [...pending, ...exceptionPending];
   return {
     pending: allPending,
-    pendingCount: governance?.pendingDecisions ?? allPending.length,
-    leadCount: leads.count ?? 0,
-    openResponsibilityCount: open.count ?? 0,
-    workspaces,
-    currentWorkspaceId: wid,
+    pendingCount: raw.pending_decisions,
+    leadCount: raw.lead_count,
+    openResponsibilityCount: raw.open_responsibility_count,
+    workspaces: session.workspaces,
+    currentWorkspaceId: session.workspace.id,
     member: { userId: session.member.userId, name: session.member.displayName, role: session.member.role, staffId: session.member.staffId },
-    agents: ((agents.data ?? []) as Array<ShellAgent>).map((a) => ({ id: a.id, name: a.name, module: a.module, status: a.status })),
+    agents: raw.agents,
   };
 };

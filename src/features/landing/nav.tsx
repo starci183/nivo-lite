@@ -3,14 +3,13 @@ import { NivoLogo } from "@/components/brand/NivoLogo";
 import { LocaleSwitch } from "@/i18n/LocaleSwitch";
 import { landing } from "@/i18n/dict/landing";
 import { getT } from "@/i18n/server";
-import { supabaseServer } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/auth-user";
 import { LANDING_OFFER } from "./offer";
 import { NAV, NAV_ACTIONS, NAV_LINK, NAV_LINKS, NAV_ROW, NAV_SIGNIN } from "./classNames";
 
 const isSignedIn = async (): Promise<boolean> => {
   try {
-    const { data } = await (await supabaseServer()).auth.getUser();
-    return Boolean(data.user);
+    return Boolean(await getAuthUser()); // token signature check only: no Auth round trip for a nav button
   } catch {
     return false;
   }

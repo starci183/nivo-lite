@@ -1,7 +1,9 @@
 import "server-only";
+import { unstable_cache } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { supabaseAdmin } from "./supabase/admin";
+import { getAuthUser } from "./supabase/auth-user";
 import { supabaseServer } from "./supabase/server";
 import { newOrderCode } from "./sepay";
 
@@ -36,11 +38,17 @@ export type BillingWorkspace = { id: string; name: string; status: WorkspaceStat
 /** Cookie holding the workspace used last; same name as session.ts (kept literal to avoid importing the session here). */
 const WORKSPACE_COOKIE = "NIVO_WORKSPACE";
 
-export const listPlans = async (): Promise<Array<Plan>> => {
-  const db = await supabaseServer();
-  const { data } = await db.from("plans").select("*").eq("active", true).order("sort");
-  return (data ?? []) as Array<Plan>;
-};
+/** The plan catalogue is the same for everyone and changes by migration only: cached for 5 minutes (tag "plans"). Used for display; prices that charge money are read live by `getPlan`. */
+const cachedPlans = unstable_cache(
+  async (): Promise<Array<Plan>> => {
+    const { data } = await supabaseAdmin().from("plans").select("*").eq("active", true).order("sort");
+    return (data ?? []) as Array<Plan>;
+  },
+  ["plans_active"],
+  { revalidate: 300, tags: ["plans"] },
+);
+
+export const listPlans = async (): Promise<Array<Plan>> => cachedPlans();
 
 export const getPlan = async (code: string): Promise<Plan | null> => {
   const db = await supabaseServer();
@@ -51,14 +59,15 @@ export const getPlan = async (code: string): Promise<Plan | null> => {
 /** The signed-in user's workspaces with their billing state (RLS: only the ones they belong to). */
 export const myWorkspaces = async (): Promise<Array<BillingWorkspace & { role: string }>> => {
   const db = await supabaseServer();
-  const { data: u } = await db.auth.getUser();
-  if (!u.user) redirect("/login");
-  const { data: members } = await db.from("workspace_members").select("workspace_id, role").eq("user_id", u.user.id).eq("status", "active");
-  const ids = (members ?? []).map((m: { workspace_id: string }) => m.workspace_id);
-  if (!ids.length) return [];
-  const { data } = await db.from("workspaces").select("id, name, status, plan_code, paid_until, created_at").in("id", ids).order("created_at", { ascending: false });
-  const roleOf = new Map((members ?? []).map((m: { workspace_id: string; role: string }) => [m.workspace_id, m.role]));
-  return ((data ?? []) as Array<BillingWorkspace>).map((w) => ({ ...w, role: roleOf.get(w.id) ?? "staff" }));
+  const user = await getAuthUser();
+  if (!user) redirect("/login");
+  // One request: memberships with their workspace embedded (RLS: only the person's own).
+  const { data } = await db.from("workspace_members").select("role, workspace:workspaces(id, name, status, plan_code, paid_until, created_at)").eq("user_id", user.id).eq("status", "active");
+  type W = BillingWorkspace & { created_at: string };
+  type Row = { role: string; workspace: W | Array<W> | null };
+  return ((data ?? []) as unknown as Array<Row>)
+    .flatMap((m) => { const w = Array.isArray(m.workspace) ? m.workspace[0] : m.workspace; return w ? [{ ...w, role: m.role }] : []; })
+    .sort((x, y) => y.created_at.localeCompare(x.created_at));
 };
 
 /**

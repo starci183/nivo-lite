@@ -9,7 +9,7 @@ import { enqueueAgentSync } from "./engine-queue";
 import { mergeSetupTurn, runSetupTurn } from "./module-setup-ai";
 import { withUsage } from "./usage";
 import {
-  INSTALLATION_SELECT, toInstallation, toSession, toVersion, type InstallationRow,
+  INSTALLATION_SELECT, getInstallation, toInstallation, toSession, toVersion, type InstallationRow,
 } from "./modules-core";
 import {
   MODULE_GATES, allGatesConfirmed, gateEntry, gateLabel, isModuleKey, snapshotOf,
@@ -31,6 +31,7 @@ const run = async <T>(fn: () => Promise<T>): Promise<Outcome<T>> => {
   }
 };
 
+type SessionRowShape = Parameters<typeof toSession>[0];
 type MessageRow = { id: string; setup_session_id: string; role: "user" | "assistant"; author: string; body: string; created_at: string };
 
 const toMessage = (r: MessageRow): SetupMessage => ({ id: r.id, setupSessionId: r.setup_session_id, role: r.role, author: r.author, body: r.body, createdAt: r.created_at });
@@ -68,10 +69,23 @@ export const loadSetup = async (moduleKey: ModuleKey): Promise<Outcome<SetupStat
     await requireManager();
     const session = await getSession();
     const db = await supabaseServer();
-    const row = await db.from("module_installations").select(INSTALLATION_SELECT).eq("workspace_id", session.workspace.id).eq("module_key", moduleKey).maybeSingle();
-    fail(row.error);
-    if (!row.data) throw new Error("Not found");
-    const installation = toInstallation(row.data as unknown as InstallationRow);
+    // The installation list is cached for the request (the module layout reads it too), so this costs no request of its own.
+    const installation = await getInstallation(moduleKey);
+    if (!installation) throw new Error("Not found");
+    // Sessions and the whole chat in ONE wave (the chat is filtered through its session's installation), instead of 4 sequential reads.
+    const [sessionRows, chatRows] = await Promise.all([
+      db.from("module_setup_sessions").select("*").eq("installation_id", installation.id).order("revision"),
+      db.from("module_setup_messages").select("*, session:module_setup_sessions!inner(installation_id)").eq("session.installation_id", installation.id).order("created_at"),
+    ]);
+    fail(sessionRows.error);
+    fail(chatRows.error);
+    const rows = (sessionRows.data ?? []) as Array<SessionRowShape>;
+    const latest = rows.at(-1) ?? null;
+    if (latest && latest.status === "draft") {
+      const messages = ((chatRows.data ?? []) as unknown as Array<MessageRow & { session?: unknown }>).map(({ session: _s, ...m }) => toMessage(m));
+      return { installation, session: toSession(latest), revisions: rows.map((r) => ({ id: r.id, revision: r.revision, status: r.status })) as Array<SetupRevision>, messages };
+    }
+    // No open draft yet (first visit, or the last revision was applied): create it, then read again.
     const draft = await ensureDraftSession(db, session.workspace.id, installation, await getLocale());
     const sessions = await db.from("module_setup_sessions").select("id, revision, status").eq("installation_id", installation.id).order("revision");
     fail(sessions.error);

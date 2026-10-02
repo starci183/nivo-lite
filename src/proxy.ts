@@ -38,8 +38,11 @@ export async function proxy(request: NextRequest) {
       },
     },
   });
-  // Validates the token with Auth (a revoked session fails here) and refreshes it into the response cookies.
-  const { data } = await supabase.auth.getUser();
+  // Refreshes an expiring token into the response cookies, and verifies the access token's signature + expiry locally against the
+  // project's published signing key (cached): no Auth round trip per request. A session revoked elsewhere is noticed at the next
+  // token refresh (at most an hour); the disabled-member gate below and every server-side session check still apply.
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const userId = claimsData?.claims?.sub ?? null;
   const { pathname } = request.nextUrl;
   const isPublic = isPublicPath(pathname);
 
@@ -50,7 +53,7 @@ export async function proxy(request: NextRequest) {
     return out;
   };
 
-  if (!data.user) {
+  if (!userId) {
     if (isPublic) return response;
     const url = request.nextUrl.clone();
     url.pathname = "/login";
@@ -70,7 +73,6 @@ export async function proxy(request: NextRequest) {
 
   // A disabled member loses access immediately: sign out and send them to /login?reason=disabled.
   if (!isPublic && !pathname.startsWith("/api/")) {
-    const userId = data.user.id;
     const cached = request.cookies.get(MEMBER_COOKIE)?.value;
     let verdict: "ok" | "off" | null = cached?.startsWith(`${userId}.`) ? (cached.endsWith(".off") ? "off" : "ok") : null;
     if (!verdict) {

@@ -1,10 +1,12 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { unstable_cache } from "next/cache";
 import { getActiveContext } from "../modules-core";
 import { moduleDef } from "../module-registry";
 import { enqueueWorkspaceSync } from "../engine-queue";
 import { gateEntry, MODULE_GATES, type ContextVersion, type ModuleKey } from "../modules-shared";
 import { getSession } from "../session";
+import { supabaseAdmin } from "../supabase/admin";
 import { supabaseServer } from "../supabase/server";
 import { chunkText } from "./chunk";
 import { embedText, embedTexts, toVector } from "./embed";
@@ -62,7 +64,18 @@ export const listTopics = async (): Promise<Array<string>> => {
   const { db, ws } = await ctx();
   const { data, error } = await db.from("knowledge_sources").select("topic").eq("workspace_id", ws).not("topic", "is", null);
   fail(error);
-  return [...new Set(((data ?? []) as Array<{ topic: string }>).map((r) => r.topic.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "vi"));
+  return topicsFrom((data ?? []) as Array<{ topic: string | null }>);
+};
+
+/** The distinct topics of already-loaded sources (the page has them, so it needs no second read). */
+export const topicsFrom = (rows: ReadonlyArray<{ topic: string | null }>): Array<string> =>
+  [...new Set(rows.map((r) => (r.topic ?? "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "vi"));
+
+/** The workspace's business type (drives which suggestions fit). */
+export const getBusinessType = async (): Promise<string | null> => {
+  const { db, ws } = await ctx();
+  const { data } = await db.from("workspaces").select("business_type").eq("id", ws).maybeSingle();
+  return (data as { business_type: string | null } | null)?.business_type ?? null;
 };
 
 const cleanTags = (tags: ReadonlyArray<string> | undefined): Array<string> => [...new Set((tags ?? []).map((t) => t.trim().slice(0, 40)).filter(Boolean))].slice(0, 12);
@@ -213,11 +226,24 @@ export const searchKnowledge = async (module: ModuleKey, query: string, limit = 
 type NivoRow = { id: string; module: KnowledgeModule; slug: string; title: string; body: string; kind: NivoKind; version: number; updated_at: string };
 const toNivo = (r: NivoRow): NivoItem => ({ id: r.id, module: r.module, slug: r.slug, title: r.title, body: r.body, kind: r.kind, version: r.version, updatedAt: r.updated_at });
 
+/**
+ * NIVO's own base knowledge is the same for every workspace (every signed-in person may read it: policy nivo_knowledge_read) and changes
+ * only when NIVO publishes new text, so the read is cached for 5 minutes across requests (tag "nivo_knowledge", `revalidateTag` after a seed).
+ * Nothing workspace-scoped goes through this cache. The caller must still be signed in.
+ */
+const cachedNivoKnowledge = unstable_cache(
+  async (): Promise<Array<NivoRow>> => {
+    const { data, error } = await supabaseAdmin().from("nivo_knowledge").select("id, module, slug, title, body, kind, version, updated_at").order("module").order("kind").order("slug");
+    fail(error);
+    return (data ?? []) as Array<NivoRow>;
+  },
+  ["nivo_knowledge_all"],
+  { revalidate: 300, tags: ["nivo_knowledge"] },
+);
+
 export const listNivoKnowledge = async (): Promise<Array<NivoItem>> => {
-  const { db } = await ctx();
-  const { data, error } = await db.from("nivo_knowledge").select("id, module, slug, title, body, kind, version, updated_at").order("module").order("kind").order("slug");
-  fail(error);
-  return ((data ?? []) as Array<NivoRow>).map(toNivo);
+  const [, rows] = await Promise.all([getSession(), cachedNivoKnowledge()]);
+  return rows.map(toNivo);
 };
 
 /** Counts for the Setup card: NIVO base items of the module (+ core) and the workspace's ready sources. */
@@ -346,14 +372,16 @@ export const setSuggestionState = async (key: string, state: SuggestionState | n
 };
 
 /** Suggestions still open: fitting the installed modules and business type, not dismissed or marked not applicable, no source on that topic yet. */
-export const openSuggestions = async (installed: ReadonlyArray<ModuleKey>, locale: "vi" | "en"): Promise<Array<{ key: string; topic: string; hint: string; visibility: Visibility; modules: ReadonlyArray<ModuleKey> }>> => {
-  const { db, ws } = await ctx();
-  const [ws0, states, topics] = await Promise.all([
-    db.from("workspaces").select("business_type").eq("id", ws).maybeSingle(),
-    listSuggestionStates(),
-    listTopics(),
+export const openSuggestions = async (
+  installed: ReadonlyArray<ModuleKey>, locale: "vi" | "en",
+  /** What the caller already loaded (the knowledge page loads all three in its own wave); anything missing is read here. */
+  known: { readonly states?: Record<string, SuggestionState>; readonly topics?: ReadonlyArray<string>; readonly businessType?: string | null } = {},
+): Promise<Array<{ key: string; topic: string; hint: string; visibility: Visibility; modules: ReadonlyArray<ModuleKey> }>> => {
+  const [type, states, topics] = await Promise.all([
+    known.businessType !== undefined ? known.businessType : getBusinessType(),
+    known.states ?? listSuggestionStates(),
+    known.topics ?? listTopics(),
   ]);
-  const type = (ws0.data as { business_type: string | null } | null)?.business_type ?? null;
   const used = new Set(topics.map((t) => t.toLowerCase()));
   return suggestionsFor(installed, type)
     .filter((s) => !states[s.key] && !used.has(suggestionTopic(s, locale).toLowerCase()))

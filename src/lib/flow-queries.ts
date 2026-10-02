@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { drainAfter, engineCtx } from "./flow-ctx";
 import { listModules } from "./module-registry";
 import type {
@@ -9,15 +10,18 @@ import type {
 const DAY = 86_400_000;
 const WORK_SELECT = "*, lead:leads(id, contact_name, company, channel), staff:staff(name)";
 
-type WorkRow = WorkItem & { lead: WorkItemView["lead"]; staff: { name: string } | null };
+type WorkRow = WorkItem & { lead: WorkItemView["lead"]; staff: { name: string } | null; decisions?: Array<{ decided_by: string; created_at: string }> };
 
-const toView = ({ staff, ...w }: WorkRow): WorkItemView => ({
+const WORK_SELECT_WITH_DECIDER = `${WORK_SELECT}, decisions(decided_by, created_at)`;
+
+const toView = ({ staff, decisions, ...w }: WorkRow): WorkItemView => ({
   ...w,
   proposal: w.proposal ?? { summary: "", fields: {} },
   lead: w.lead ?? null,
   assignedStaffName: staff?.name ?? null,
   hasApprovalCard: w.execution_id !== null,
   href: w.lead_id ? `/leads/${w.lead_id}` : "/chat",
+  ...(decisions ? { decidedBy: [...decisions].sort((a, b) => a.created_at.localeCompare(b.created_at)).at(-1)?.decided_by ?? null } : {}),
 });
 
 type DecisionDb = Omit<DecisionRow, "leadName"> & { lead: { contact_name: string } | null };
@@ -27,31 +31,31 @@ const toDecision = ({ lead, ...d }: DecisionDb): DecisionRow => ({
 });
 
 /** The owner's authority (goals, policies, reply style, brand voice, limits note). */
-export const getAuthority = async (): Promise<Authority> => {
+export const getAuthority = cache(async (): Promise<Authority> => {
   const { db, ws } = await engineCtx();
   const { data } = await db.from("authority").select("*").eq("workspace_id", ws).maybeSingle();
   return (data as Authority | null) ?? {
     workspace_id: ws, goal_revenue_vnd: null, goal_new_customers: null, goal_first_reply_minutes: null, goal_note: "", policies: "",
     reply_style: "", brand_voice: "", limits_note: "", updated_by: null, updated_at: new Date().toISOString(),
   };
-};
+});
 
 const ORDER: Record<string, number> = { chatbot: 0, sales: 1, accounting: 2 };
 const ACTION_ORDER = ["reply_customer", "handoff_lead", "classify_lead", "send_follow_up", "send_quote", "confirm_order", "send_care", "issue_invoice", "reconcile_payment", "send_email"];
 
 /** Department × action rules, grouped Chatbot → Sales → Accounting in flow order. */
-export const listRules = async (): Promise<Array<AuthorityRule>> => {
+export const listRules = cache(async (): Promise<Array<AuthorityRule>> => {
   const { db, ws } = await engineCtx();
   const { data } = await db.from("authority_rules").select("*").eq("workspace_id", ws);
   return ((data ?? []) as Array<AuthorityRule>).sort((a, b) => ORDER[a.department] - ORDER[b.department] || ACTION_ORDER.indexOf(a.action) - ACTION_ORDER.indexOf(b.action));
-};
+});
 
 /** Optional staff (active first). */
-export const listStaff = async (): Promise<Array<Staff>> => {
+export const listStaff = cache(async (): Promise<Array<Staff>> => {
   const { db, ws } = await engineCtx();
   const { data } = await db.from("staff").select("*").eq("workspace_id", ws).order("active", { ascending: false }).order("created_at");
   return (data ?? []) as Array<Staff>;
-};
+});
 
 /** Latest inputs first. */
 export const listInbound = async (limit = 30): Promise<Array<InboundEvent>> => {
@@ -61,21 +65,21 @@ export const listInbound = async (limit = 30): Promise<Array<InboundEvent>> => {
 };
 
 /** Items waiting for a decision plus failed ones, oldest first. `hasApprovalCard` = a legacy approval card already shows it. */
-export const listExceptions = async (): Promise<Array<WorkItemView>> => {
+export const listExceptions = cache(async (): Promise<Array<WorkItemView>> => {
   const c = await engineCtx();
   drainAfter(c);
   const { data } = await c.db.from("work_items").select(WORK_SELECT).eq("workspace_id", c.ws).in("status", ["waiting_decision", "failed"]).order("created_at").limit(100);
   return ((data ?? []) as Array<WorkRow>).map(toView);
-};
+});
 
 /** Work items, newest first (or in flow order for one lead). */
-export const listWorkItems = async (filter: { status?: Array<WorkStatus>; leadId?: string; limit?: number } = {}): Promise<Array<WorkItemView>> => {
+export const listWorkItems = async (filter: { status?: Array<WorkStatus>; leadId?: string; limit?: number; withDecider?: boolean } = {}): Promise<Array<WorkItemView>> => {
   const { db, ws } = await engineCtx();
-  let q = db.from("work_items").select(WORK_SELECT).eq("workspace_id", ws);
+  let q = db.from("work_items").select(filter.withDecider ? WORK_SELECT_WITH_DECIDER : WORK_SELECT).eq("workspace_id", ws);
   if (filter.status?.length) q = q.in("status", filter.status);
   if (filter.leadId) q = q.eq("lead_id", filter.leadId);
   const { data } = await q.order("created_at", { ascending: !!filter.leadId }).limit(filter.limit ?? 50);
-  return ((data ?? []) as Array<WorkRow>).map(toView);
+  return ((data ?? []) as unknown as Array<WorkRow>).map(toView);
 };
 
 /** Decision history: policy (NIVO) and human decisions, newest first. kind: policy | human | rejected. */
@@ -159,7 +163,7 @@ const figure = (rows: ReadonlyArray<{ origin: string | null; amount_vnd: number 
  * matched to an invoice (each live + simulated, test runs excluded; the dashboard shows `status` so they are never one headline).
  * `simulated`/`total` count those orders, invoices and payments plus leads created in 7 days.
  */
-export const getGovernance = async (): Promise<GovernanceWithStatus> => {
+export const getGovernance = cache(async (): Promise<GovernanceWithStatus> => {
   const c = await engineCtx();
   drainAfter(c);
   const { db, ws } = c;
@@ -270,7 +274,7 @@ export const getGovernance = async (): Promise<GovernanceWithStatus> => {
     recentDecisions: ((recent.data ?? []) as Array<DecisionDb>)
       .filter((d) => !isTestDecision(d) && !isTestRunName(d.lead?.contact_name)).slice(0, 5).map(toDecision),
   };
-};
+});
 
 /** One customer's flow: work items in order, orders, invoices, payments and decisions. */
 export const getLeadFlow = async (leadId: string): Promise<LeadFlow> => {

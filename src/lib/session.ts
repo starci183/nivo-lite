@@ -3,6 +3,7 @@ import { supabaseAdmin } from "./supabase/admin";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
+import { getAuthUser } from "./supabase/auth-user";
 import { supabaseServer } from "./supabase/server";
 import { getLocale } from "@/i18n/server";
 import { seedWorkspace } from "./seed";
@@ -22,9 +23,13 @@ export type Session = {
   workspace: Workspace;
   /** The signed-in person's identity in this workspace: role, linked staff row, display name. */
   member: Member;
+  /** Every workspace the person is an active member of (workspace switcher). */
+  workspaces: ReadonlyArray<{ id: string; name: string; role: Role }>;
 };
 
 type MemberRow = { workspace_id: string; user_id: string; role: Role; staff_id: string | null; display_name: string; status: "active" | "disabled" };
+
+type Boot = { member: MemberRow & { created_at: string }; workspace: Workspace | null; demo_seeded: boolean };
 
 const toMember = (r: MemberRow): Member => ({
   userId: r.user_id, workspaceId: r.workspace_id, role: r.role, staffId: r.staff_id, displayName: r.display_name, status: r.status,
@@ -36,24 +41,30 @@ const toMember = (r: MemberRow): Member => ({
  * and demo), otherwise /workspaces (create a paid workspace or accept an invite). Disabled members land on /workspaces too.
  */
 export const getSession = cache(async (): Promise<Session> => {
-  const supabase = await supabaseServer();
-  const { data } = await supabase.auth.getUser();
-  const user = data.user;
+  const user = await getAuthUser();
   if (!user) redirect("/login");
-  const meta = user.user_metadata as { full_name?: string; name?: string; avatar_url?: string };
-  const fallbackName = meta.full_name || meta.name || user.email?.split("@")[0] || "Owner";
+  const meta = user.metadata;
+  const fallbackName = meta.full_name || meta.name || user.email.split("@")[0] || "Owner";
+  const supabase = await supabaseServer();
 
-  const { data: rows } = await supabase.from("workspace_members").select("*").eq("user_id", user.id).order("created_at");
-  const memberships = (rows ?? []) as Array<MemberRow>;
-  const active = memberships.filter((m) => m.status === "active");
+  // ONE request for every membership with its workspace and the "examples already seeded" flag (RPC, runs under RLS).
+  const boot = await supabase.rpc("session_bootstrap");
+  if (boot.error) throw new Error(boot.error.message);
+  const entries = (boot.data ?? []) as Array<Boot>;
+  const active = entries.filter((e) => e.member.status === "active" && e.workspace);
 
   let member: Member | null = null;
   let ws: Workspace | null = null;
+  let seeded = false;
+  let workspaces: Session["workspaces"] = [];
   if (active.length) {
     const wanted = (await cookies()).get(WORKSPACE_COOKIE)?.value;
-    member = toMember(active.find((m) => m.workspace_id === wanted) ?? active[0]);
-    ws = ((await supabase.from("workspaces").select("*").eq("id", member.workspaceId).maybeSingle<Workspace>()).data) ?? null;
-  } else if (memberships.length) {
+    const chosen = active.find((e) => e.member.workspace_id === wanted) ?? active[0];
+    member = toMember(chosen.member);
+    ws = chosen.workspace;
+    seeded = chosen.demo_seeded;
+    workspaces = active.map((e) => ({ id: e.member.workspace_id, role: e.member.role, name: e.workspace?.name ?? "" }));
+  } else if (entries.length) {
     redirect("/workspaces?reason=disabled");
   } else if (process.env.NIVO_ALLOW_WORKSPACE_SIGNUP === "1") {
     // The insert trigger makes the creator the workspace's owner member.
@@ -65,6 +76,7 @@ export const getSession = cache(async (): Promise<Session> => {
     const mine = await supabase.from("workspace_members").select("*").eq("workspace_id", ws.id).eq("user_id", user.id).single<MemberRow>();
     if (mine.error) throw new Error(mine.error.message);
     member = toMember(mine.data);
+    workspaces = [{ id: ws.id, role: member.role, name: ws.name }];
   } else {
     redirect("/workspaces?reason=none");
   }
@@ -75,6 +87,7 @@ export const getSession = cache(async (): Promise<Session> => {
 
   // Operating flow: authority + default rules (cheap check), and the simulated flow examples once per workspace.
   // Governance rows are writable by owner | manager only.
-  if (isManagerRole(member.role)) await ensureFlowDefaults(supabase, ws.id, member.displayName, await getLocale());
-  return { userId: user.id, userName: member.displayName, email: user.email ?? "", avatarUrl: meta.avatar_url ?? null, workspace: ws, member };
+  // The bootstrap already says whether that happened, so a seeded workspace costs no extra request here.
+  if (isManagerRole(member.role) && !seeded) await ensureFlowDefaults(supabase, ws.id, member.displayName, await getLocale());
+  return { userId: user.id, userName: member.displayName, email: user.email, avatarUrl: meta.avatar_url ?? null, workspace: ws, member, workspaces };
 });

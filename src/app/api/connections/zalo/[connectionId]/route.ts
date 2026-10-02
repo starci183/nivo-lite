@@ -21,6 +21,8 @@ export const GET = () => NextResponse.json({ ok: true });
 export async function POST(request: NextRequest, { params }: { params: Promise<{ connectionId: string }> }) {
   const { connectionId } = await params;
   const raw = await request.text();
+  // The bound-agent lookup is independent of the signature check: start it together with the secret read (used only after authentication).
+  const agentP = UUID.test(connectionId) ? boundAgent(connectionId, "chatbot", ["inbound_chat"]).catch(() => null) : null;
   const found = UUID.test(connectionId) ? await loadConnectionSecret(connectionId, "zalo_oa").catch(() => null) : null;
   let secret: ZaloSecret | null = null;
   try {
@@ -34,7 +36,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const event = JSON.parse(raw) as ZaloEvent;
   if (event.app_id && event.app_id !== secret.appId) return NextResponse.json({ ok: true, ignored: "other_app" });
   try {
-    const agent = await boundAgent(connectionId, "chatbot", ["inbound_chat"]).catch(() => null);
+    const agent = await agentP;
     const result = await handleZaloEvent(event, { workspaceId: found.workspaceId, connectionId, agentId: agent?.id ?? null });
     return NextResponse.json({ ok: true, ...result });
   } catch (e) {

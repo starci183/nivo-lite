@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { getPlan, type PaymentOrder, type WorkspaceStatus } from "@/lib/billing";
+import { getAuthUser } from "@/lib/supabase/auth-user";
 import { supabaseServer } from "@/lib/supabase/server";
 import { usageSummary } from "@/lib/usage";
 import { BillingView, type BillingReview } from "./component";
@@ -7,12 +8,15 @@ import { BillingView, type BillingReview } from "./component";
 /** /workspaces/[id]/billing (owner | manager): loads the plan, payments, transfers to review and this month's AI usage. */
 export const Billing = async ({ workspaceId: wsId }: { readonly workspaceId: string }) => {
   const db = await supabaseServer();
-  const { data: u } = await db.auth.getUser();
-  if (!u.user) redirect("/login");
-  const { data: me } = await db.from("workspace_members").select("role").eq("workspace_id", wsId).eq("user_id", u.user.id).eq("status", "active").maybeSingle<{ role: string }>();
+  const user = await getAuthUser();
+  if (!user) redirect("/login");
+  // Independent reads, one wave (RLS limits every one of them to this person's own rows).
+  const [{ data: me }, { data: ws }] = await Promise.all([
+    db.from("workspace_members").select("role").eq("workspace_id", wsId).eq("user_id", user.id).eq("status", "active").maybeSingle<{ role: string }>(),
+    db.from("workspaces").select("status, plan_code, paid_until").eq("id", wsId).single<{ status: WorkspaceStatus; plan_code: string | null; paid_until: string | null }>(),
+  ]);
   if (!me) notFound();
   if (me.role !== "owner" && me.role !== "manager") redirect("/workspaces");
-  const { data: ws } = await db.from("workspaces").select("status, plan_code, paid_until").eq("id", wsId).single<{ status: WorkspaceStatus; plan_code: string | null; paid_until: string | null }>();
   // The usage figures are read with the service role, only after the role check above.
   const [plan, orders, usage] = await Promise.all([
     ws?.plan_code ? getPlan(ws.plan_code) : Promise.resolve(null),

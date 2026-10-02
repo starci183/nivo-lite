@@ -23,24 +23,27 @@ export type PipelineRow = {
 
 type Snapshot = { summary?: string; facts?: Array<{ text: string }>; gates?: Record<string, { evidence?: string }> };
 
-/** The active context versions of the workspace's installed modules: version number and all of its text. */
-const activeContexts = async (db: Db, ws: string): Promise<{ installed: Array<ModuleScope>; versions: Partial<Record<ModuleScope, number>>; text: string; hoursText: string }> => {
-  const inst = ((await db.from("module_installations").select("module_key, active_context_version_id").eq("workspace_id", ws)).data ?? []) as Array<{ module_key: ModuleScope; active_context_version_id: string | null }>;
-  const ids = inst.map((i) => i.active_context_version_id).filter((v): v is string => Boolean(v));
+type ActiveContexts = { installed: Array<ModuleScope>; versions: Partial<Record<ModuleScope, number>>; text: string; hoursText: string; operatingModes: Partial<Record<ModuleScope, string | null>> };
+
+/** The active context versions of the workspace's installed modules: version number and all of its text. One request (the version rows are embedded). */
+const activeContexts = async (db: Db, ws: string): Promise<ActiveContexts> => {
+  type Row = { module_key: ModuleScope; operating_mode: string | null; ctx: { id: string; version: number; snapshot: Snapshot } | Array<{ id: string; version: number; snapshot: Snapshot }> | null };
+  const { data } = await db.from("module_installations").select("module_key, operating_mode, ctx:module_context_versions!active_context_version_id(id, version, snapshot)").eq("workspace_id", ws).order("created_at");
+  const inst = (data ?? []) as unknown as Array<Row>;
   const versions: Partial<Record<ModuleScope, number>> = {};
+  const operatingModes: Partial<Record<ModuleScope, string | null>> = {};
   const parts: Array<string> = [];
   let hoursText = "";
-  if (ids.length) {
-    const rows = ((await db.from("module_context_versions").select("id, version, snapshot").in("id", ids)).data ?? []) as Array<{ id: string; version: number; snapshot: Snapshot }>;
-    for (const r of rows) {
-      const mod = inst.find((i) => i.active_context_version_id === r.id)?.module_key;
-      if (mod) versions[mod] = r.version;
-      const s = r.snapshot ?? {};
-      parts.push(s.summary ?? "", ...(s.facts ?? []).map((f) => f.text), ...Object.values(s.gates ?? {}).map((g) => g.evidence ?? ""));
-      if (s.gates?.hours_sla?.evidence && !hoursText) hoursText = s.gates.hours_sla.evidence;
-    }
+  for (const i of inst) {
+    if (!(i.module_key in operatingModes)) operatingModes[i.module_key] = i.operating_mode;
+    const r = Array.isArray(i.ctx) ? i.ctx[0] : i.ctx;
+    if (!r) continue;
+    versions[i.module_key] = r.version;
+    const s = r.snapshot ?? {};
+    parts.push(s.summary ?? "", ...(s.facts ?? []).map((f) => f.text), ...Object.values(s.gates ?? {}).map((g) => g.evidence ?? ""));
+    if (s.gates?.hours_sla?.evidence && !hoursText) hoursText = s.gates.hours_sla.evidence;
   }
-  return { installed: inst.map((i) => i.module_key), versions, text: parts.join("\n"), hoursText };
+  return { installed: inst.map((i) => i.module_key), versions, text: parts.join("\n"), hoursText, operatingModes };
 };
 
 /** The active context of the workspace as one text plus the version a template of `moduleKey` (null = workspace) is written from. */
@@ -51,11 +54,11 @@ export const loadContextFor = async (db: Db, ws: string, moduleKey: ModuleScope 
 };
 
 /** The shop's real context: name, opening hours (from the active chatbot context when it states them) and tone. Works with any client. */
-export const loadShopContext = async (db: Db, ws: string): Promise<ShopContext & { readonly hoursRange: { from: number; to: number } | null }> => {
+export const loadShopContext = async (db: Db, ws: string, known?: ActiveContexts | Promise<ActiveContexts>): Promise<ShopContext & { readonly hoursRange: { from: number; to: number } | null }> => {
   const [workspace, authority, ctx] = await Promise.all([
     db.from("workspaces").select("name").eq("id", ws).maybeSingle(),
     db.from("authority").select("reply_style, brand_voice").eq("workspace_id", ws).maybeSingle(),
-    activeContexts(db, ws),
+    known ?? activeContexts(db, ws),
   ]);
   const range = parseHours(ctx.hoursText) ?? parseHours(ctx.text.split("\n").find((l) => /giờ (làm việc|mở cửa)|mở cửa|opening hours|business hours/i.test(l) && parseHours(l)) ?? "");
   const a = authority.data as { reply_style?: string; brand_voice?: string } | null;
@@ -81,9 +84,9 @@ const NEGATION = /(không|chưa|chẳng|\bko\b|\bno\b|without)/i;
 const affirms = (text: string, re: RegExp): boolean => text.split(/[\n.;]/).some((line) => re.test(line) && !NEGATION.test(line));
 
 /** What the shop has, derived from its active contexts, its knowledge and its data (never asked directly). */
-export const loadCapabilities = async (db: Db, ws: string): Promise<ReadonlySet<Capability>> => {
-  const ctx = await activeContexts(db, ws);
-  const [knowledge, dueInvoices] = await Promise.all([
+export const loadCapabilities = async (db: Db, ws: string, known?: ActiveContexts | Promise<ActiveContexts>): Promise<ReadonlySet<Capability>> => {
+  const [ctx, knowledge, dueInvoices] = await Promise.all([
+    known ?? activeContexts(db, ws),
     db.from("knowledge_sources").select("title, content").eq("workspace_id", ws).limit(60),
     db.from("invoices").select("id", { count: "exact", head: true }).eq("workspace_id", ws).not("due_at", "is", null),
   ]);
@@ -126,9 +129,9 @@ type Facts = {
   connections: ReadonlyArray<{ provider: string; status: string }>;
 };
 
-const loadFacts = async (db: Db, ws: string): Promise<Facts> => {
+const loadFacts = async (db: Db, ws: string, known: ActiveContexts | Promise<ActiveContexts>): Promise<Facts> => {
   const [ctx, caps, conns, chatbot] = await Promise.all([
-    activeContexts(db, ws), loadCapabilities(db, ws),
+    known, loadCapabilities(db, ws, known),
     db.from("connections").select("provider, status").eq("workspace_id", ws).neq("status", "disconnected"),
     db.from("agents").select("id", { count: "exact", head: true }).eq("workspace_id", ws).eq("module", "chatbot").eq("status", "active"),
   ]);
@@ -156,6 +159,8 @@ type RunRow = {
   error: string | null; created_at: string; finished_at: string | null;
 };
 
+const RUN_COLUMNS = "id, pipeline_id, trigger_ref, status, steps, evidence, error, created_at, finished_at";
+
 const summaryOf = (steps: ReadonlyArray<RunStep>, status: AutomationRunStatus): string => {
   const last = [...steps].reverse().find((s) => s.detail) ?? steps.at(-1);
   return last ? [last.label, last.detail].filter(Boolean).join(": ") : status;
@@ -172,8 +177,13 @@ export const toRunView = (r: RunRow, templateKey: TemplateKey): AutomationRunVie
 /** The latest runs of a workspace (optionally one template), newest first. */
 export const loadRuns = async (db: Db, ws: string, opts: { readonly templateKey?: TemplateKey; readonly limit?: number } = {}): Promise<Array<AutomationRunView>> => {
   const pipelines = ((await db.from("automation_pipelines").select("id, template_key").eq("workspace_id", ws)).data ?? []) as Array<{ id: string; template_key: string }>;
+  return runsOf(db, ws, pipelines, opts);
+};
+
+/** Runs for already-loaded pipelines (loadAutomations fetches both in the same wave and calls `runViews` itself). */
+const runsOf = async (db: Db, ws: string, pipelines: ReadonlyArray<{ id: string; template_key: string }>, opts: { readonly templateKey?: TemplateKey; readonly limit?: number }): Promise<Array<AutomationRunView>> => {
   const keyOf = new Map(pipelines.filter((p) => isTemplateKey(p.template_key)).map((p) => [p.id, p.template_key]));
-  let q = db.from("automation_runs").select("id, pipeline_id, trigger_ref, status, steps, evidence, error, created_at, finished_at").eq("workspace_id", ws).order("created_at", { ascending: false }).limit(opts.limit ?? 30);
+  let q = db.from("automation_runs").select(RUN_COLUMNS).eq("workspace_id", ws).order("created_at", { ascending: false }).limit(opts.limit ?? 30);
   if (opts.templateKey) {
     const id = [...keyOf].find(([, k]) => k === opts.templateKey)?.[0];
     if (!id) return [];
@@ -193,16 +203,30 @@ const contextVersionFor = (def: TemplateDef, versions: Partial<Record<ModuleScop
 
 /** Everything the /automations screen (and a module's Settings section) needs: one card per template, the recent runs and the shop context for previews. */
 export const loadAutomations = async (db: Db, ws: string): Promise<{ cards: Array<AutomationCardView>; runs: Array<AutomationRunView>; shop: ShopContext }> => {
-  const [shopFull, pipelines, runs, google, facts, ctx] = await Promise.all([
-    loadShopContext(db, ws),
+  // One wave: every read starts at once (the installations + their active context versions are ONE request, shared by all consumers).
+  const ctxP = activeContexts(db, ws);
+  const [shopFull, pipelines, runRows, google, facts, ctx, rulesRes] = await Promise.all([
+    loadShopContext(db, ws, ctxP),
     db.from("automation_pipelines").select("*").eq("workspace_id", ws),
-    loadRuns(db, ws, { limit: 80 }),
+    db.from("automation_runs").select(RUN_COLUMNS).eq("workspace_id", ws).order("created_at", { ascending: false }).limit(80),
     googleCardState(ws),
-    loadFacts(db, ws),
-    activeContexts(db, ws),
+    loadFacts(db, ws, ctxP),
+    ctxP,
+    db.from("authority_rules").select("action, mode").eq("workspace_id", ws),
   ]);
+  const rules = (rulesRes.data ?? []) as Array<{ action: string; mode: "auto" | "ask" | "never" }>;
+  const gateFor = (action: FlowAction): "auto" | "ask" | "never" => {
+    const rule = rules.find((r) => r.action === action) ?? null;
+    if (!rule) return "never";
+    return applyOperatingMode(rule, ctx.operatingModes[ACTION_DEPARTMENT[action] as ModuleScope])?.mode ?? "never";
+  };
+  const keyOf = new Map(((pipelines.data ?? []) as Array<PipelineRow>).filter((p) => isTemplateKey(p.template_key)).map((p) => [p.id, p.template_key]));
+  const runs = ((runRows.data ?? []) as Array<RunRow>).flatMap((r) => {
+    const key = keyOf.get(r.pipeline_id);
+    return key ? [toRunView(r, key)] : [];
+  });
   const rows = new Map(((pipelines.data ?? []) as Array<PipelineRow>).map((p) => [p.template_key, p]));
-  const cards = await Promise.all(TEMPLATE_LIST.map(async (def): Promise<AutomationCardView> => {
+  const cards = TEMPLATE_LIST.map((def): AutomationCardView => {
     const row = rows.get(def.key);
     const mine = runs.filter((r) => r.templateKey === def.key);
     const config = resolveConfig(def, row?.config);
@@ -213,13 +237,13 @@ export const loadAutomations = async (db: Db, ws: string): Promise<{ cards: Arra
       key: def.key, def, pipelineId: row?.id ?? null, enabled: row?.enabled ?? false, dismissed: row?.dismissed ?? false, config,
       body: row?.body ?? null, bodyVersion: row?.body_version ?? 0, basedOnContext: row?.based_on_context ?? null, currentContext,
       bodyStale: Boolean(row?.body) && row?.based_on_context !== null && row?.based_on_context !== undefined && currentContext !== null && row.based_on_context !== currentContext,
-      gate: def.authority.alwaysAsk ? "ask" : def.authority.action ? await gateModeFor(db, ws, def.authority.action) : null,
+      gate: def.authority.alwaysAsk ? "ask" : def.authority.action ? gateFor(def.authority.action) : null,
       missing, proposed: !gated, comingSoon: def.executor === "definition",
       lastRunAt: mine[0]?.createdAt ?? null, runCount: mine.length,
       trust: { streak: row?.approval_streak ?? 0, offered: Boolean(row?.trust_offered_at) && !(row?.auto_send), autoSend: row?.auto_send ?? false },
       ...(def.requires.connections.includes("google") ? { google: google.state, sheetUrl: google.sheetUrl ?? (typeof config.sheetUrl === "string" ? config.sheetUrl : null) } : {}),
     };
-  }));
+  });
   const { shop, hours, tone } = shopFull;
   return { cards, runs, shop: { shop, hours, tone } };
 };

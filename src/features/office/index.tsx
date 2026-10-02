@@ -1,7 +1,6 @@
 import { listMembers } from "@/lib/members"
 import { getSession } from "@/lib/session"
 import { staffHandles } from "@/lib/staff-handle"
-import { supabaseServer } from "@/lib/supabase/server"
 import { OfficeMessenger as OfficeMessengerClient, type OfficeMessengerProps as ClientProps } from "./messenger"
 import type { OfficePerson } from "./members"
 
@@ -30,13 +29,9 @@ export const OfficeMessenger = async (props: OfficeMessengerProps) => {
       isMe: m.userId === session.userId,
     }))
 
-  const decidedIds = props.decidedExceptions.map((i) => i.id)
+  // The page loads each decided card with its latest decider already embedded (no extra request here).
   const deciders: Record<string, string> = {}
-  if (decidedIds.length) {
-    const db = await supabaseServer()
-    const { data } = await db.from("decisions").select("work_item_id, decided_by, created_at").in("work_item_id", decidedIds).order("created_at", { ascending: true })
-    for (const row of (data ?? []) as Array<{ work_item_id: string | null; decided_by: string }>) if (row.work_item_id) deciders[row.work_item_id] = row.decided_by
-  }
+  for (const item of props.decidedExceptions) if (item.decidedBy) deciders[item.id] = item.decidedBy
 
   return <OfficeMessengerClient {...props} userName={session.userName} people={people} deciders={deciders} />
 }

@@ -17,44 +17,36 @@ export type PendingApproval = {
   readonly assignedStaffId: string | null
 }
 
-type RespRow = { id: string; lead_id: string; next_action: string; owner_name: string }
 type LeadRow = { id: string; contact_name: string; company: string; channel: string }
-type AgentRow = { id: string; name: string }
+type RespRow = { id: string; lead_id: string; next_action: string; owner_name: string; lead: LeadRow | Array<LeadRow> | null }
+type Embedded = Execution & {
+  responsibility: RespRow | Array<RespRow> | null
+  work_item: { id: string; assigned_staff_id: string | null } | Array<{ id: string; assigned_staff_id: string | null }> | null
+  agent: { id: string; name: string } | Array<{ id: string; name: string }> | null
+}
 
-type Supabase = Awaited<ReturnType<typeof supabaseServer>>
+/** One request per list: the responsibility, its lead, the work item and the agent come embedded in the execution rows. */
+const EXECUTION_SELECT = "*, responsibility:responsibilities(id, lead_id, next_action, owner_name, lead:leads(id, contact_name, company, channel)), work_item:work_items!work_item_id(id, assigned_staff_id), agent:agents(id, name)"
+
+const one = <T,>(v: T | Array<T> | null): T | null => (Array.isArray(v) ? (v[0] ?? null) : v)
 
 /** Attach lead, agent and responsibility context to a list of executions. */
-const hydrate = async (supabase: Supabase, executions: ReadonlyArray<Execution>): Promise<ReadonlyArray<PendingApproval>> => {
-  if (executions.length === 0) return []
+const hydrate = async (rows: ReadonlyArray<Embedded>): Promise<ReadonlyArray<PendingApproval>> => {
+  if (rows.length === 0) return []
   const t = await getT(office)
-
-  const respIds = [...new Set(executions.map((e) => e.responsibility_id))]
-  const agentIds = [...new Set(executions.map((e) => e.agent_id).filter((id): id is string => id !== null))]
-  const { data: respData } = await supabase.from("responsibilities").select("id, lead_id, next_action, owner_name").in("id", respIds)
-  const resps = (respData ?? []) as Array<RespRow>
-  const leadIds = [...new Set(resps.map((r) => r.lead_id))]
-  const workIds = [...new Set(executions.map((e) => e.work_item_id).filter((id): id is string => !!id))]
-  const workRes = workIds.length ? await supabase.from("work_items").select("id, assigned_staff_id").in("id", workIds) : { data: [] }
-  const assignedBy = new Map(((workRes.data ?? []) as Array<{ id: string; assigned_staff_id: string | null }>).map((w) => [w.id, w.assigned_staff_id]))
-  const [leadRes, agentRes] = await Promise.all([
-    leadIds.length ? supabase.from("leads").select("id, contact_name, company, channel").in("id", leadIds) : Promise.resolve({ data: [] }),
-    agentIds.length ? supabase.from("agents").select("id, name").in("id", agentIds) : Promise.resolve({ data: [] }),
-  ])
-  const leads = (leadRes.data ?? []) as Array<LeadRow>
-  const agents = (agentRes.data ?? []) as Array<AgentRow>
-
-  return executions.map((execution) => {
-    const resp = resps.find((r) => r.id === execution.responsibility_id)
-    const lead = leads.find((l) => l.id === resp?.lead_id)
-    const agent = agents.find((a) => a.id === execution.agent_id)
+  return rows.map(({ responsibility, work_item, agent: agentRow, ...execution }) => {
+    const resp = one(responsibility)
+    const lead = one(resp?.lead ?? null)
+    const agent = one(agentRow)
+    const work = one(work_item)
     return {
-      execution,
+      execution: execution as Execution,
       leadName: lead ? `${lead.contact_name} - ${lead.company}` : t("unknownLead"),
       channel: lead?.channel ?? "",
       agentName: agent?.name ?? resp?.owner_name ?? t("agentFallback"),
       nextAction: resp?.next_action ?? "",
       href: lead ? `/leads/${lead.id}` : "/leads",
-      assignedStaffId: execution.work_item_id ? (assignedBy.get(execution.work_item_id) ?? null) : null,
+      assignedStaffId: work?.assigned_staff_id ?? null,
     }
   })
 }
@@ -65,11 +57,11 @@ export const listPendingApprovals = async (): Promise<ReadonlyArray<PendingAppro
   const supabase = await supabaseServer()
   const { data } = await supabase
     .from("executions")
-    .select("*")
+    .select(EXECUTION_SELECT)
     .eq("workspace_id", session.workspace.id)
     .eq("status", "pending_approval")
     .order("created_at", { ascending: false })
-  return hydrate(supabase, (data ?? []) as Array<Execution>)
+  return hydrate((data ?? []) as unknown as Array<Embedded>)
 }
 
 /** The most recently approved or rejected executions, newest decision first. */
@@ -78,10 +70,10 @@ export const listDecidedApprovals = async (): Promise<ReadonlyArray<PendingAppro
   const supabase = await supabaseServer()
   const { data } = await supabase
     .from("executions")
-    .select("*")
+    .select(EXECUTION_SELECT)
     .eq("workspace_id", session.workspace.id)
     .in("status", ["approved", "rejected"])
     .order("decided_at", { ascending: false, nullsFirst: false })
     .limit(8)
-  return hydrate(supabase, (data ?? []) as Array<Execution>)
+  return hydrate((data ?? []) as unknown as Array<Embedded>)
 }

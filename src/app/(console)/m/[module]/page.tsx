@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { SetupScreen } from "@/features/module-setup/SetupScreen";
 import { isManagerRole } from "@/lib/members-shared";
 import { loadSetup } from "@/lib/module-actions";
-import { listContextVersions } from "@/lib/modules-core";
+import { getInstallation, listContextVersions } from "@/lib/modules-core";
 import { isModuleKey } from "@/lib/modules-shared";
 import { getSession } from "@/lib/session";
 import { getT } from "@/i18n/server";
@@ -20,9 +20,10 @@ const SetupPage = async ({ params }: SetupPageProps) => {
     const t = await getT(access);
     return <EmptyNotice message={t("forbidden")} />;
   }
-  const state = await loadSetup(module);
+  // The installation list is cached per request (the layout read it already), so the versions can start with the setup reads.
+  const known = await getInstallation(module);
+  const [state, versions] = await Promise.all([loadSetup(module), known ? listContextVersions(known.id) : Promise.resolve([])]);
   if (!state.ok) notFound();
-  const versions = await listContextVersions(state.data.installation.id);
   return (
     <SetupScreen
       installation={state.data.installation}

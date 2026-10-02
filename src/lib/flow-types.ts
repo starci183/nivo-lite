@@ -43,7 +43,9 @@ export type WorkItemView = WorkItem & {
   assignedStaffName: string | null;
   /** true when a legacy execution approval card already renders this item (Office must not render it twice) */
   hasApprovalCard: boolean;
-  href: string };
+  href: string;
+  /** who made the latest decision on this item: only set by `listWorkItems({ withDecider: true })` (embedded in the same request) */
+  decidedBy?: string | null };
 export type DecisionRow = { id: string; work_item_id: string | null; lead_id: string | null; leadName: string | null;
   department: Department; action: FlowAction; decided_by: string; decider_kind: "policy" | "owner" | "staff";
   outcome: "auto_done" | "approved" | "edited" | "rejected"; reason: ReasonCode | null; note: string | null; created_at: string };

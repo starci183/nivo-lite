@@ -111,9 +111,12 @@ export const getConnection = async (workspaceId: string, connectionId: string): 
 /** Server-side lookup with the decrypted credential and webhook secret. Null when missing, disconnected or undecryptable. */
 export const loadConnectionSecret = async (connectionId: string, provider: Provider): Promise<{ workspaceId: string; credential: string; webhookSecret: string } | null> => {
   const db = supabaseAdmin();
-  const { data: conn } = await db.from("connections").select("workspace_id, status, provider").eq("id", connectionId).maybeSingle();
+  // Both rows in one wave; the secret is only decrypted once the connection row checks out.
+  const [{ data: conn }, { data: sec }] = await Promise.all([
+    db.from("connections").select("workspace_id, status, provider").eq("id", connectionId).maybeSingle(),
+    db.from("connection_secrets").select("ciphertext, webhook_secret").eq("connection_id", connectionId).maybeSingle(),
+  ]);
   if (!conn || conn.provider !== provider || conn.status === "disconnected") return null;
-  const { data: sec } = await db.from("connection_secrets").select("ciphertext, webhook_secret").eq("connection_id", connectionId).maybeSingle();
   if (!sec) return null;
   try {
     return { workspaceId: conn.workspace_id as string, credential: decryptSecret(sec.ciphertext as string), webhookSecret: sec.webhook_secret as string };

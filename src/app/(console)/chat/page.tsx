@@ -4,6 +4,7 @@ import { listDecidedApprovals, listPendingApprovals } from "@/features/office/qu
 import { listExceptions, listWorkItems, getGovernance, listStaff } from "@/lib/flow-queries"
 import type { Staff, WorkItemView } from "@/lib/flow-types"
 import { listAgents, listLeads, listMessages, listResponsibilities } from "@/lib/queries"
+import { listMembers } from "@/lib/members"
 import { getSession } from "@/lib/session"
 
 /** Always render fresh: messages and approvals change constantly. */
@@ -13,7 +14,7 @@ const RECENT_CUSTOMERS = 5
 
 /** Office: the team messenger with agents, approvals inside the thread, and team tasks. */
 const ChatPage = async () => {
-  const [session, messages, agents, responsibilities, pending, decided, leads, exceptionRows, recentItems, governance, staffRows] = await Promise.all([
+  const [session, messages, agents, responsibilities, pending, decided, leads, exceptionRows, recentItems, governance, staffRows, _members] = await Promise.all([
     getSession(),
     listMessages(),
     listAgents(),
@@ -23,9 +24,10 @@ const ChatPage = async () => {
     listLeads(),
     // The flow engine may not be ready yet: the Office must still render without it.
     listExceptions().catch((): WorkItemView[] => []),
-    listWorkItems({ status: ["done", "rejected"], limit: 40 }).catch((): WorkItemView[] => []),
+    listWorkItems({ status: ["done", "rejected"], limit: 40, withDecider: true }).catch((): WorkItemView[] => []),
     getGovernance().catch(() => null),
     listStaff().catch((): Staff[] => []),
+    listMembers().catch(() => []), // warms the per-request cache the messenger wrapper reads
   ])
   const exceptions = exceptionRows.filter((i) => !i.hasApprovalCard)
   const decidedExceptions = recentItems.filter((i) => !i.hasApprovalCard && i.decided_path === "human").slice(0, 12)

@@ -2,7 +2,7 @@ import { PageContainer, SectionHeader } from "@starci/grammar/common"
 import { KnowledgeView } from "@/features/knowledge/KnowledgeView"
 import { getLocale, getT } from "@/i18n/server"
 import { knowledge as dict } from "@/i18n/dict/knowledge"
-import { listSources, listSuggestionStates, listTopics, openSuggestions } from "@/lib/knowledge/index"
+import { getBusinessType, listSources, listSuggestionStates, openSuggestions, topicsFrom } from "@/lib/knowledge/index"
 import { KNOWLEDGE_SUGGESTIONS, suggestionTopic } from "@/lib/knowledge/shared"
 import { isManagerRole } from "@/lib/members-shared"
 import { listInstallations } from "@/lib/modules-core"
@@ -13,12 +13,17 @@ import { getSession } from "@/lib/session"
 const Page = async ({ searchParams }: { readonly searchParams: Promise<{ module?: string }> }) => {
   const { module } = await searchParams
   try {
-    const [session, locale, installations] = await Promise.all([getSession(), getLocale(), listInstallations()])
-    const installed: Array<ModuleKey> = installations.map((i) => i.moduleKey)
+    // The session is cached for the request; with it known, every read below starts in ONE wave (installations, sources, suggestion states, business type).
+    const session = await getSession()
     const canWrite = isManagerRole(session.member.role)
-    const [sources, topics, suggestions, states] = await Promise.all([
-      listSources(), listTopics(), canWrite ? openSuggestions(installed, locale) : Promise.resolve([]), canWrite ? listSuggestionStates() : Promise.resolve<Record<string, "dismissed" | "not_applicable">>({}),
+    const [locale, installations, sources, states, businessType] = await Promise.all([
+      getLocale(), listInstallations(), listSources(),
+      canWrite ? listSuggestionStates() : Promise.resolve<Record<string, "dismissed" | "not_applicable">>({}),
+      canWrite ? getBusinessType() : Promise.resolve(null),
     ])
+    const installed: Array<ModuleKey> = installations.map((i) => i.moduleKey)
+    const topics = topicsFrom(sources)
+    const suggestions = canWrite ? await openSuggestions(installed, locale, { states, topics, businessType }) : []
     const skipped = KNOWLEDGE_SUGGESTIONS.filter((s) => states[s.key] && s.modules.some((m) => installed.includes(m)))
       .map((s) => ({ key: s.key, topic: suggestionTopic(s, locale), state: states[s.key] as "dismissed" | "not_applicable" }))
     const initial = isModuleKey(module) ? module : "all"
