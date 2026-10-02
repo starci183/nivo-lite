@@ -73,3 +73,23 @@ export const resyncAgent = async (installationId: string): Promise<Outcome<{ que
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 };
+
+/** "Tin nhắn giữ chỗ": the fixed line a customer gets when the agent cannot answer in time (owner-approved wording; empty = the default). Owner or manager. */
+export const setHoldingMessage = async (installationId: string, text: string): Promise<Outcome<{ text: string }>> => {
+  try {
+    await requireManager();
+    const clean = text.trim().slice(0, 400);
+    const db = await supabaseServer();
+    const { data, error } = await db.from("module_installations").select("settings").eq("id", installationId).maybeSingle();
+    if (error || !data) throw new Error(error?.message ?? "Not found");
+    const settings: Record<string, unknown> = { ...((data as { settings: Record<string, unknown> | null }).settings ?? {}) };
+    if (clean) settings.holdingMessage = clean;
+    else delete settings.holdingMessage;
+    const upd = await db.from("module_installations").update({ settings }).eq("id", installationId);
+    if (upd.error) throw new Error(upd.error.message);
+    revalidatePath("/", "layout");
+    return { ok: true, data: { text: clean } };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+};

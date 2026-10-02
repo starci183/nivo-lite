@@ -1,5 +1,6 @@
 import "server-only";
-import { completeRaw } from "./deepseek";
+import { generateText } from "./openclaw-generate";
+import { usageScope } from "./usage";
 import type { Locale } from "@/i18n/core";
 import { businessKnowledgeBrief, setupKnowledgeText } from "./knowledge/index";
 import { MODULE_GATES, gateEntry, type DraftSnapshot, type GateEvidence, type ModuleKey, type SetupFact } from "./modules-shared";
@@ -94,15 +95,17 @@ export const runSetupTurn = async (input: SetupTurnInput): Promise<SetupTurnResu
     "Valid gate keys: " + gates.map((g) => g.key).join(", "),
   ].join("\n");
 
-  // The shared model layer: quota-gated and metered (kind 'setup') like every other model call.
-  const raw = await completeRaw(
-    [
+  // OpenClaw is the only text AI: an openclaw.generate job, quota-gated and metered (kind 'setup'). A failure reaches the setup chat as "NIVO đang bận...".
+  const scope = usageScope();
+  if (!scope) throw new Error("setup chat outside a usage scope");
+  const raw = await generateText({
+    workspaceId: scope.workspaceId, purpose: "setup_chat", responseFormat: "json", timeoutMs: 90_000, kind: "setup", module: "setup",
+    messages: [
       { role: "system", content: system },
       ...input.history.slice(-16).map((m) => ({ role: m.role, content: m.body })),
       { role: "user", content: input.message },
     ],
-    { json: true, temperature: 0.3, meta: { kind: "setup", module: "setup" } },
-  );
+  });
   const parsed = parseLoose(raw);
   if (!isObject(parsed)) return { reply: raw || (locale === "vi" ? "Bạn kể thêm giúp mình nhé." : "Please tell me a bit more."), facts: [], gates: {} };
 

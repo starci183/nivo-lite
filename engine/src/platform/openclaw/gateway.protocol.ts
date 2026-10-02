@@ -53,14 +53,39 @@ export const connectParams = (auth: { kind: "token"; token: string } | { kind: "
   scopes: [...SCOPES],
 });
 
-export type SessionMessage = { readonly sessionKey: string | null; readonly role: string | null; readonly fromOwner: boolean; readonly text: string | null };
+/** What one assistant message cost: provider usage as OpenClaw normalises it (input, output, cacheRead, cacheWrite, cost.total) plus who served it. */
+export type MessageUsage = { readonly input: number; readonly output: number; readonly cacheRead: number; readonly cacheWrite: number; readonly cost: number; readonly model: string | null };
+
+export type SessionMessage = {
+  readonly sessionKey: string | null;
+  readonly role: string | null;
+  readonly fromOwner: boolean;
+  readonly text: string | null;
+  /** "stop" = the model finished its answer; "toolUse" and friends = an interim message of a tool-using run. */
+  readonly stopReason: string | null;
+  readonly usage: MessageUsage | null;
+};
+
+const num = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : 0);
+
+const readUsage = (message: unknown): MessageUsage | null => {
+  if (!isRecord(message) || !isRecord(message.usage)) return null;
+  const u = message.usage;
+  const cost = isRecord(u.cost) ? num(u.cost.total) : 0;
+  const provider = typeof message.provider === "string" ? message.provider : null;
+  const model = typeof message.model === "string" ? message.model : null;
+  return { input: num(u.input), output: num(u.output), cacheRead: num(u.cacheRead), cacheWrite: num(u.cacheWrite), cost, model: model ? (provider ? `${provider}/${model}` : model) : null };
+};
 
 /** Narrow a `session.message` payload: `{ sessionKey, senderIsOwner?, agentId?, message, ... }`, message being a string or an object. */
 export const readSessionMessage = (payload: unknown): SessionMessage => {
-  if (!isRecord(payload)) return { sessionKey: null, role: null, fromOwner: false, text: null };
+  if (!isRecord(payload)) return { sessionKey: null, role: null, fromOwner: false, text: null, stopReason: null, usage: null };
   const key = typeof payload.sessionKey === "string" ? payload.sessionKey : typeof payload.key === "string" ? payload.key : null;
   const message = payload.message;
-  return { sessionKey: key, role: isRecord(message) && typeof message.role === "string" ? message.role : null, fromOwner: payload.senderIsOwner === true, text: textOf(message) };
+  return {
+    sessionKey: key, role: isRecord(message) && typeof message.role === "string" ? message.role : null, fromOwner: payload.senderIsOwner === true, text: textOf(message),
+    stopReason: isRecord(message) && typeof message.stopReason === "string" ? message.stopReason : null, usage: readUsage(message),
+  };
 };
 
 const textOf = (v: unknown): string | null => {

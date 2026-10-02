@@ -1,13 +1,10 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import { HTTP_OPTIONS, type HttpOptions } from "../../platform/config/http.config";
 import { NivoClient, NivoHttpError } from "../../platform/nivo/nivo-client.service";
 import { agentIdFor, AgentRegistry, sessionKeyFor } from "../../platform/openclaw/agent-registry.service";
-import { GatewayClient } from "../../platform/openclaw/gateway.client";
+import { GatewayClient, type TurnResult } from "../../platform/openclaw/gateway.client";
 import { OPENCLAW_OPTIONS, type OpenclawOptions } from "../../platform/openclaw/openclaw.config";
 import { PermanentJobError, RetryJobError, type EngineJob, type JobHandler, type JobResult } from "../../platform/queue/queue.types";
-import { ToolTokenService } from "../../platform/tools/tool-token.service";
 import { AgentSyncService } from "../agent-sync/agent-sync.service";
-import { TOOL_MANIFEST } from "../tools/tool-manifest";
 
 /** What the app returns for /api/engine/context: everything one turn needs, already filtered for the customer audience. */
 type TurnContext = {
@@ -44,8 +41,6 @@ export class ChatTurnHandler implements JobHandler {
     private readonly gateway: GatewayClient,
     private readonly agents: AgentRegistry,
     private readonly sync: AgentSyncService,
-    private readonly tokens: ToolTokenService,
-    @Inject(HTTP_OPTIONS) private readonly http: HttpOptions,
     @Inject(OPENCLAW_OPTIONS) private readonly openclaw: OpenclawOptions,
   ) {}
 
@@ -53,7 +48,8 @@ export class ChatTurnHandler implements JobHandler {
     if (!job.workspace_id) throw new PermanentJobError("chat.turn needs a workspace");
     const t0 = Date.now();
     const phases: Array<string> = [];
-    const lap = (name: string): void => { phases.push(`${name}=${Date.now() - t0}ms`); };
+    const phasesMs: Record<string, number> = {};
+    const lap = (name: string): void => { phasesMs[name] = Date.now() - t0; phases.push(`${name}=${phasesMs[name]}ms`); };
     const queued = job.created_at ? Date.now() - Date.parse(job.created_at) : null;
     let context: TurnContext;
     try {
@@ -78,29 +74,36 @@ export class ChatTurnHandler implements JobHandler {
     const agentId = agentIdFor(job.workspace_id, context.module);
     const sessionKey = sessionKeyFor(agentId, context.conversation_id);
     let proposed: string | null = null;
+    let usage: TurnResult["usage"] = null;
+    let gatewayTimings: Record<string, number> = {};
     let reason = "";
     if (!this.gateway.enabled) {
       reason = "openclaw_not_configured";
     } else {
-      const token = this.tokens.mint({ jobId: job.id, workspaceId: job.workspace_id, conversationId: context.conversation_id }, Math.ceil(this.openclaw.turnTimeoutMs / 1000) + 60);
       try {
-        proposed = await this.gateway.runTurn({ agentId, sessionKey, message: this.compose(context, token), idempotencyKey: `nivo-${job.id}-${job.attempts}`, timeoutMs: Math.min(this.openclaw.turnTimeoutMs, context.timeout_ms ?? this.openclaw.turnTimeoutMs) }, signal);
+        const turn = await this.gateway.runTurn({ agentId, sessionKey, message: this.compose(context), idempotencyKey: `nivo-${job.id}-${job.attempts}`, timeoutMs: Math.min(this.openclaw.turnTimeoutMs, context.timeout_ms ?? this.openclaw.turnTimeoutMs) }, signal);
+        proposed = turn.text;
+        usage = turn.usage;
+        gatewayTimings = turn.timings;
       } catch (e) {
         if (signal.aborted) throw e;
         reason = e instanceof Error ? e.message : String(e);
-        this.log.warn(`job ${job.id}: OpenClaw failed (${reason}); falling back to the direct model`);
-      } finally {
-        this.tokens.revoke(job.id);
+        // No direct model exists any more: the app sends the owner's holding line and hands the question to a person.
+        this.log.warn(`job ${job.id}: OpenClaw failed (${reason}); the app will send the holding message and hand over`);
       }
     }
 
     lap("openclaw");
     try {
-      const body = proposed !== null ? { job_id: job.id, op: "chat.reply", text: proposed } : { job_id: job.id, op: "chat.fallback", reason: reason.slice(0, 200) };
+      const body = proposed !== null ? { job_id: job.id, op: "chat.reply", text: proposed, usage } : { job_id: job.id, op: "chat.fallback", reason: reason.slice(0, 200) };
       const result = await this.nivo.call<CallbackResult>("/api/engine/callback", body, signal);
       lap("callback");
       this.log.log(`job ${job.id} timing: queue_wait=${queued ?? "?"}ms ${phases.join(" ")}`);
-      return { path: proposed !== null ? "openclaw" : "direct_fallback", ...(proposed === null ? { reason } : {}), agent_id: agentId, context_mode: context.mode ?? "full", ...result };
+      return {
+        path: proposed !== null ? "openclaw" : "holding_message", ...(proposed === null ? { reason } : {}), agent_id: agentId, context_mode: context.mode ?? "full",
+        timings: { queue_wait_ms: queued ?? -1, context_ms: phasesMs.context, openclaw_ms: phasesMs.openclaw - phasesMs.context, callback_ms: phasesMs.callback - phasesMs.openclaw, ...gatewayTimings },
+        ...(usage ? { usage } : {}), ...result,
+      };
     } catch (e) {
       throw this.classify(e);
     }
@@ -116,19 +119,14 @@ export class ChatTurnHandler implements JobHandler {
    * The text sent into the OpenClaw session. The transcript is included every turn (the session may be new, or was answered by the other
    * processor meanwhile), and the app context is authoritative: it is the PUBLIC, owner-approved view of the business.
    */
-  private compose(c: TurnContext, token: string): string {
+  private compose(c: TurnContext): string {
     const earlier = c.turns.slice(0, -1).map((t) => `${t.role === "user" ? "Customer" : "You"}: ${t.body}`).join("\n");
-    const tools = TOOL_MANIFEST.map((t) => `- ${t.name}: ${t.description} args: ${JSON.stringify(t.args)}`).join("\n");
     return [
       "[NIVO CONTEXT: authoritative; follow it exactly]",
       c.system,
       "",
       "[CONVERSATION SO FAR]",
       earlier || "(this is the first message)",
-      "",
-      "[OPTIONAL TOOLS]",
-      `Call a tool with HTTP POST ${this.http.toolsUrl}/tools/<name>, header "Authorization: Bearer ${token}", JSON body = the args object. The token is valid for this turn only.`,
-      tools,
       "",
       "[CUSTOMER LATEST MESSAGE]",
       c.customer_message,

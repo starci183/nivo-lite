@@ -1,9 +1,18 @@
 import "server-only";
-import { serverConfig } from "./config";
 import { getLocale } from "@/i18n/server";
 import type { Locale } from "@/i18n/core";
 import type { Authority } from "./flow-types";
-import { blockedBy, exceededMessage, QuotaExceededError, recordUsage, usageScope, DEFAULT_FALLBACK_REPLY, type ProviderUsage, type UsageKind, type UsageModule } from "./usage";
+import { generateText } from "./openclaw-generate";
+import { usageScope, type UsageKind, type UsageModule } from "./usage";
+
+/**
+ * DEPRECATED AS A MODEL CLIENT: OpenClaw is the ONLY text-generating AI in NIVO. This file no longer talks to any model provider.
+ * Its prompt builders (summarizeContext, classifyLead, draftFollowUp, parseAuthorityChat, ...) keep their names and shapes so callers do not change,
+ * but every call is now an engine job `openclaw.generate` through `generateWithOpenClaw` (src/lib/openclaw-generate.ts). New code should call
+ * `generateWithOpenClaw` directly. The old direct entry point `completeRaw` is kept only to throw, so nothing can silently bypass OpenClaw.
+ * Every call must run inside a usage scope (`withUsage({ workspaceId }, ...)`): the scope names the workspace the job belongs to.
+ * Embeddings are not text generation and stay on the embedding API (knowledge/embed.ts).
+ */
 
 /** The reader's locale; falls back to Vietnamese where no request is available (background work after the response). */
 const safeLocale = async (): Promise<Locale> => {
@@ -21,60 +30,25 @@ const langRule = async () => langFor(await safeLocale());
 
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
-const isOpenRouter = (baseUrl: string) => baseUrl.includes("openrouter.ai");
-
 export type CallMeta = { readonly kind: UsageKind; readonly module: UsageModule };
 const CHAT_REPLY: CallMeta = { kind: "chat_reply", module: "chatbot" };
 const OWNER_CHAT: CallMeta = { kind: "owner_chat", module: "office" };
 const SETUP: CallMeta = { kind: "setup", module: "setup" };
 const SALES: CallMeta = { kind: "engine", module: "sales" };
 const ACCOUNTING: CallMeta = { kind: "engine", module: "accounting" };
+void CHAT_REPLY;
 
-/**
- * The one integration point with the product's model provider (DeepSeek directly or via OpenRouter, OpenAI-compatible).
- * Metered: when the request runs inside a usage scope (`withUsage`), the call is refused with a QuotaExceededError once the
- * workspace is over its plan allowance, and its tokens and cost are recorded afterwards. The scope may override the call's kind.
- */
-export const completeRaw = async (messages: ChatMessage[], o: { json?: boolean; temperature?: number; meta: CallMeta }): Promise<string> => {
-  const { deepseekApiKey, deepseekModel, deepseekBaseUrl } = serverConfig();
-  const scope = usageScope();
-  const kind = scope?.kind ?? o.meta.kind;
-  const module = scope?.module ?? o.meta.module;
-  if (scope) {
-    const blocked = await blockedBy(scope.workspaceId, kind);
-    if (blocked) throw new QuotaExceededError(exceededMessage(await safeLocale()), blocked);
-  }
-  const res = await fetch(`${deepseekBaseUrl}/chat/completions`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${deepseekApiKey}`, "X-Title": "NIVO OS" },
-    body: JSON.stringify({
-      model: deepseekModel,
-      messages,
-      temperature: o.temperature ?? 0.4,
-      ...(o.json ? { response_format: { type: "json_object" } } : {}),
-      // OpenRouter's DeepSeek V4 models think by default; the product wants fast chat replies, not visible reasoning.
-      // `usage.include` makes OpenRouter return the exact cost with the token counts.
-      ...(isOpenRouter(deepseekBaseUrl) ? { reasoning: { enabled: false }, usage: { include: true } } : {}),
-    }),
-    cache: "no-store",
-  });
-  if (!res.ok) {
-    // The provider's raw error goes to the server log only; the reader gets a plain sentence in their language.
-    console.error(`model provider ${res.status}: ${(await res.text()).slice(0, 300)}`);
-    throw new Error((await safeLocale()) === "vi" ? "AI đang tạm thời không phản hồi. Bạn thử lại sau ít phút nhé." : "The AI is temporarily unavailable. Please try again in a few minutes.");
-  }
-  const body = (await res.json()) as { choices: { message: { content: string } }[]; usage?: ProviderUsage; model?: string };
-  const content = body.choices[0]?.message.content?.trim() ?? "";
-  if (scope) {
-    await recordUsage({
-      workspaceId: scope.workspaceId, kind, module, model: body.model || deepseekModel, usage: body.usage,
-      promptChars: messages.reduce((n, m) => n + m.content.length, 0), completionChars: content.length,
-    });
-  }
-  return content;
+/** REMOVED: a direct model call. Use generateWithOpenClaw (src/lib/openclaw-generate.ts). */
+export const completeRaw = async (_messages: ChatMessage[], _o?: { json?: boolean; temperature?: number; meta?: CallMeta }): Promise<string> => {
+  throw new Error("completeRaw is removed: OpenClaw is the only text AI. Use generateWithOpenClaw from src/lib/openclaw-generate.ts.");
 };
 
-const complete = (messages: ChatMessage[], json = false, meta: CallMeta = OWNER_CHAT): Promise<string> => completeRaw(messages, { json, meta });
+/** Every prompt builder below goes through here: one OpenClaw job in the workspace of the current usage scope. */
+const complete = (messages: ChatMessage[], json = false, meta: CallMeta = OWNER_CHAT): Promise<string> => {
+  const scope = usageScope();
+  if (!scope) return Promise.reject(new Error("AI call outside a usage scope: wrap it in withUsage({ workspaceId }, ...)"));
+  return generateText({ workspaceId: scope.workspaceId, purpose: `${meta.module}:${meta.kind}`, messages, responseFormat: json ? "json" : "text", kind: scope.kind ?? meta.kind, module: scope.module ?? meta.module });
+};
 
 /** JSON completion; tolerates a fenced code block around the JSON. */
 /** Parse a model answer as JSON: bare, fenced, or the first {...} block inside prose. */
@@ -171,55 +145,6 @@ export type CustomerChatOut = {
   order: null | { items: string; amount_vnd: number };
   /** the customer says they have paid / transferred (a claim, never evidence of payment) */
   payment_claim: boolean;
-};
-
-/** Customer-facing chatbot turn: a reply, a lead when the customer has shared enough, and whether a human must confirm. */
-export const customerChat = async (agent: AgentInput, turns: ChatTurn[], brief = ""): Promise<CustomerChatOut> => {
-  try {
-    return await customerChatModel(agent, turns, brief);
-  } catch (e) {
-    if (!(e instanceof QuotaExceededError)) throw e;
-    // Over the plan allowance: no model call. The customer gets a polite acknowledgement and the question is handed to people
-    // (needs_human opens a waiting item for the team; the owner already got the Office notice).
-    return { reply: e.status.fallbackReply ?? DEFAULT_FALLBACK_REPLY, lead: null, needs_human: true, reason: "unclear_outcome", proposed_answer: null, order: null, payment_claim: false };
-  }
-};
-
-const customerChatModel = async (agent: AgentInput, turns: ChatTurn[], brief: string): Promise<CustomerChatOut> => {
-  const out = await completeJson<Partial<CustomerChatOut>>([
-    {
-      role: "system",
-      content: `${NIVO} ${persona(agent, brief)}
-You are talking to a CUSTOMER on the company's chat (website or Telegram). Reply in the customer's language, max 80 words.
-When the customer has shared their need AND their name (company, phone or email if possible), set "lead" (otherwise null).
-If the customer asks for a price, discount, deadline or any commitment that is not clearly allowed by the business knowledge and authority, or you are not sure of the answer:
-set "needs_human": true, "reason": "over_authority" (commitment or price) or "unclear_outcome" (unsure), put in "proposed_answer" ONLY facts found in the business knowledge (never invent a discount, gift, price or policy; if the knowledge has no answer set "proposed_answer": null), written as the FINAL message to the customer, as if the owner has already approved it (warm, concrete, no mention of approval, owner or internal checks), and make "reply" answer what you are allowed to (e.g. list prices) and say politely that the team will confirm the rest shortly: in "reply" never state the discount, gift or commitment itself.
-Asking to be contacted, called back or advised, sharing a need or contact details, and general questions answered by the business knowledge are ROUTINE: capture the lead and answer yourself with "needs_human": false.
-Otherwise "needs_human": false, "reason": null, "proposed_answer": null.
-ORDER: judge ONLY the customer's latest message (an order already placed earlier in the conversation is not a new order). When that message clearly commits to buy (e.g. "mình lấy gói ...", "chốt gói ...", "đặt gói ...") an item whose price is WRITTEN in the business knowledge, set "order": {"items": the item name as written in the knowledge (with quantity if more than one), "amount_vnd": the total price in VND as an integer, copied from the knowledge (never computed from guesses, never invented)}. Also set "lead" when name and contact are known. In "reply" thank them, repeat the item and price, and say the payment details follow in the next message; do not say it is paid. A question, a comparison or "maybe" is NOT an order. If the item or its price is not in the knowledge: "order": null, "needs_human": true, "reason": "over_authority". Otherwise "order": null.
-PAYMENT CLAIM: when the customer says they have already paid or transferred the money (e.g. "mình chuyển khoản rồi", "đã CK", a transfer screenshot or receipt text), set "payment_claim": true, "needs_human": false, and in "reply" thank them and say politely that the shop will check the transfer and confirm shortly. Never say the payment is received or confirmed. Otherwise "payment_claim": false.
-Reply as JSON {"reply": string, "lead": null | {"contact_name","company","need","phone","email"}, "needs_human": boolean, "reason": "over_authority"|"unclear_outcome"|null, "proposed_answer": string|null, "order": null | {"items": string, "amount_vnd": integer}, "payment_claim": boolean}.`,
-    },
-    ...toMessages(turns),
-  ], CHAT_REPLY);
-  return {
-    reply: out.reply ?? "",
-    lead: out.lead && out.lead.contact_name && out.lead.need ? out.lead : null,
-    needs_human: out.needs_human === true,
-    reason: out.reason === "over_authority" || out.reason === "unclear_outcome" ? out.reason : out.needs_human ? "unclear_outcome" : null,
-    proposed_answer: out.proposed_answer ?? null,
-    order: validOrder(out.order),
-    payment_claim: out.payment_claim === true,
-  };
-};
-
-/** An order the model returned, only when it names an item and a positive whole VND amount. */
-const validOrder = (o: unknown): CustomerChatOut["order"] => {
-  if (!o || typeof o !== "object") return null;
-  const { items, amount_vnd } = o as { items?: unknown; amount_vnd?: unknown };
-  const amount = typeof amount_vnd === "number" ? amount_vnd : typeof amount_vnd === "string" ? Number(amount_vnd.replace(/[^\d]/g, "")) : NaN;
-  if (typeof items !== "string" || !items.trim() || !Number.isFinite(amount) || amount <= 0) return null;
-  return { items: items.trim(), amount_vnd: Math.round(amount) };
 };
 
 /** Owner testing the agent in its setup screen. */

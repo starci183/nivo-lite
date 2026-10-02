@@ -41,7 +41,8 @@ export const estimateTokens = (chars: number): number => Math.max(1, Math.ceil(c
 
 /* ------------------------------------------------------------------ recording */
 
-export type ProviderUsage = { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number; cost?: number } | null | undefined;
+/** cached_tokens: prompt tokens the provider served from its prompt cache (OpenRouter prompt_tokens_details.cached_tokens). Informational: not billed separately here. */
+export type ProviderUsage = { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number; cost?: number; cached_tokens?: number } | null | undefined;
 
 export type UsageInput = {
   readonly workspaceId: string;
@@ -90,8 +91,8 @@ export const recordUsage = async (u: UsageInput): Promise<void> => {
  * Engine hook: the engine callback (OpenClaw worker result) calls this with the usage the worker reports, so engine work is
  * metered like inline calls. `usage` is the OpenAI-style object ({ prompt_tokens, completion_tokens, total_tokens, cost? }).
  */
-export const recordEngineUsage = (a: { workspaceId: string; model?: string; module?: UsageModule; usage?: ProviderUsage; promptChars?: number; completionChars?: number }): Promise<void> =>
-  recordUsage({ workspaceId: a.workspaceId, kind: "engine", module: a.module ?? "other", model: a.model ?? "engine", usage: a.usage, promptChars: a.promptChars, completionChars: a.completionChars });
+export const recordEngineUsage = (a: { workspaceId: string; kind?: UsageKind; model?: string; module?: UsageModule; usage?: ProviderUsage; promptChars?: number; completionChars?: number }): Promise<void> =>
+  recordUsage({ workspaceId: a.workspaceId, kind: a.kind ?? "engine", module: a.module ?? "other", model: a.model ?? "engine", usage: a.usage, promptChars: a.promptChars, completionChars: a.completionChars });
 
 /* ------------------------------------------------------------------ quota */
 

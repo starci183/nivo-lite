@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { chatTurnCallback, chatTurnContext, isToolName, runEngineTool, sweepEngineTimeouts, syncBundle, type CallbackBody } from "@/lib/engine-bridge";
+import { chatTurnCallback, chatTurnContext, generateCallback, generateInput, isToolName, runEngineTool, sweepEngineTimeouts, syncBundle, type CallbackBody } from "@/lib/engine-bridge";
 import { loadRunningJob, queueDb, verifyEngineRequest } from "@/lib/engine-queue";
 import { withErrorReport } from "@/lib/errors";
 
@@ -14,6 +14,14 @@ import { withErrorReport } from "@/lib/errors";
  */
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
+
+const numOf = (v: unknown): number | undefined => (typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : undefined);
+/** The usage object the engine reports (tokens, cached tokens, cost, model); unknown fields are dropped. */
+const usageOf = (v: unknown) => {
+  if (!v || typeof v !== "object") return null;
+  const u = v as Record<string, unknown>;
+  return { prompt_tokens: numOf(u.prompt_tokens), completion_tokens: numOf(u.completion_tokens), cached_tokens: numOf(u.cached_tokens), cost: numOf(u.cost), model: typeof u.model === "string" ? u.model.slice(0, 120) : undefined };
+};
 
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { "Cache-Control": "no-store" } });
 
@@ -42,7 +50,7 @@ async function postHandler(request: Request, { params }: { params: Promise<{ op:
   } catch {
     return json({ error: "invalid body" }, 400);
   }
-  if (op !== "context" && op !== "callback" && op !== "tool" && op !== "sync-bundle") return json({ error: "not found" }, 404);
+  if (op !== "context" && op !== "callback" && op !== "tool" && op !== "sync-bundle" && op !== "generate-input") return json({ error: "not found" }, 404);
 
   const db = queueDb();
   if (!db) return json({ error: "not configured" }, 503);
@@ -52,6 +60,19 @@ async function postHandler(request: Request, { params }: { params: Promise<{ op:
       if (!syncJob) return json({ error: "no running job" }, 409);
       return json(await syncBundle(db, syncJob));
     }
+    if (op === "generate-input") {
+      const genJob = await loadRunningJob(db, body.job_id, "openclaw.generate");
+      if (!genJob) return json({ error: "no running job" }, 409);
+      return json(await generateInput(db, genJob));
+    }
+    if (op === "callback" && (body.op === "generate.result" || body.op === "generate.error")) {
+      const genJob = await loadRunningJob(db, body.job_id, "openclaw.generate");
+      if (!genJob) return json({ error: "no running job" }, 409);
+      const timings = body.timings && typeof body.timings === "object" ? (body.timings as Record<string, number>) : null;
+      return json(await generateCallback(db, genJob, body.op === "generate.result"
+        ? { op: "generate.result", text: typeof body.text === "string" ? body.text.slice(0, 100_000) : "", usage: usageOf(body.usage), timings }
+        : { op: "generate.error", reason: typeof body.reason === "string" ? body.reason : "error", timings }));
+    }
     const job = await loadRunningJob(db, body.job_id, "chat.turn");
     if (!job) return json({ error: "no running job" }, 409);
 
@@ -59,7 +80,7 @@ async function postHandler(request: Request, { params }: { params: Promise<{ op:
 
     if (op === "callback") {
       const cb: CallbackBody | null =
-        body.op === "chat.reply" && typeof body.text === "string" ? { op: "chat.reply", text: body.text.slice(0, 20_000) }
+        body.op === "chat.reply" && typeof body.text === "string" ? { op: "chat.reply", text: body.text.slice(0, 20_000), usage: usageOf(body.usage), timings: null }
         : body.op === "chat.fallback" ? { op: "chat.fallback", reason: typeof body.reason === "string" ? body.reason : "" }
         : null;
       if (!cb) return json({ error: "invalid callback" }, 400);

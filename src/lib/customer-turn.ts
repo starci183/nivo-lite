@@ -3,12 +3,12 @@ import { translator } from "@/i18n/core";
 import { system } from "@/i18n/dict/system";
 import { governance } from "@/i18n/dict/governance";
 import * as ai from "./deepseek";
-import { ingest } from "./core";
+import { ingest, logEvidence } from "./core";
 import { formatVnd, latestInvoiceFor, loadAuthority, runWork, startOrderWork, startPaymentClaim, type EngineCtx } from "./engine";
-import { enqueueChatTurn, processorOf } from "./engine-queue";
+import { enqueueChatTurn } from "./engine-queue";
 import { drainAfter } from "./flow-ctx";
 import { isKnownPrice } from "./knowledge";
-import { knowledgeBrief } from "./knowledge/runtime";
+import { DEFAULT_FALLBACK_REPLY, quotaStatus } from "./usage";
 import { escalateToStaff } from "./staff-relay";
 import { deliverToChannel } from "./telegram";
 import type { Agent, AgentConversation, AgentMessage } from "./types";
@@ -52,14 +52,13 @@ export const customerTurn = async (
   if (conv.handled_by) return { reply: mine, capturedLeadId: null, changed: true };
   const eventId = opts.eventId?.trim() || mine.id;
   const turns = await loadTurns(c, conv.id);
-  // A module whose processor is OpenClaw hands the model step to the engine (a worker on the VPS). The engine only PROPOSES the
-  // reply: it comes back through completeQueuedTurn and passes the same gate below. Without a queue (engine offline, not configured)
-  // the turn is answered right here, exactly as for the default processor.
-  if ((await processorOf(c.db, ws, agent.module)) === "openclaw" && (await enqueueChatTurn(ws, { conversationId: conv.id, messageId: mine.id, eventId, agentId: agent.id, channel: channel.key }))) {
+  // OpenClaw is the only text AI: the turn goes to the engine, which only PROPOSES the reply (it comes back through completeQueuedTurn and passes the
+  // same gate below). When it cannot be queued (engine offline, over the plan allowance) no AI text is written: the customer gets the fixed holding line
+  // and the question becomes a hand-off for a person (holdingTurn).
+  if (await enqueueChatTurn(ws, { conversationId: conv.id, messageId: mine.id, eventId, agentId: agent.id, channel: channel.key })) {
     return { reply: mine, capturedLeadId: null, changed: false };
   }
-  const out = await directReply(c, agent, turns, body);
-  return applyCustomerOut(c, conv, agent, { body, mine, turns, eventId, channel, out });
+  return holdingTurn(c, conv, agent, mine, "openclaw_unavailable");
 };
 
 /** The name under which the engine acts in evidence and in conversation hand-offs. */
@@ -71,30 +70,70 @@ const loadTurns = async (c: EngineCtx, conversationId: string): Promise<Array<ai
   return history.filter((m) => m.role !== "system").map((m) => ({ role: m.role === "user" ? "user" : "agent", body: m.body }));
 };
 
-/** The default processor: one inline model call. Customer-facing: NIVO base rules + approved module context + PUBLIC business knowledge only (filtered in SQL). */
-const directReply = async (c: EngineCtx, agent: Agent, turns: Array<ai.ChatTurn>, body: string): Promise<ai.CustomerChatOut> => {
-  const brief = ai.authorityBrief(await loadAuthority(c)) + (await knowledgeBrief(c, agent.module, body, "customer"));
-  return ai.customerChat(agentInput(agent), turns, brief); // the one inline LLM call of this request
+/**
+ * The line a customer gets when OpenClaw cannot answer: the owner's own words (module settings "Tin nhắn giữ chỗ", default below), or the plan's
+ * out-of-allowance line while the workspace is over its quota.
+ */
+const holdingText = async (c: EngineCtx, agent: Agent): Promise<string> => {
+  const quota = await quotaStatus(c.ws);
+  if (quota?.level === "exceeded" && quota.fallbackReply) return quota.fallbackReply;
+  const { data } = await c.db.from("module_installations").select("settings").eq("workspace_id", c.ws).eq("agent_id", agent.id).maybeSingle();
+  const custom = (data as { settings: Record<string, unknown> | null } | null)?.settings?.holdingMessage;
+  return typeof custom === "string" && custom.trim() ? custom.trim().slice(0, 400) : DEFAULT_FALLBACK_REPLY;
 };
 
 /**
- * The engine's answer (or its fallback) to a queued customer turn. `proposed` is what OpenClaw suggested; null means the engine
- * could not get an answer (gateway down or timed out) and the app answers with the default processor, so the customer is never
- * left waiting. Either way the result goes through applyCustomerOut: authority gate, evidence, channel delivery. A conversation a
- * person has taken over in the meantime gets no AI reply.
+ * No AI text at all: the customer's message is stored, the customer gets the fixed holding line (at most once per conversation per hour), and a hand-off
+ * work item goes to the person in charge in Office, recorded as "fallback: <reason>". Idempotent per customer message (work item dedupe key).
+ */
+export const holdingTurn = async (c: EngineCtx, conv: AgentConversation, agent: Agent, mine: AgentMessage, reason: string): Promise<{ reply: AgentMessage; capturedLeadId: null; changed: true }> => {
+  const { db: supabase, ws } = c;
+  const t = translator(system, c.locale);
+  let reply = mine;
+  const recent = await supabase.from("channel_receipts").select("receipt_id").eq("workspace_id", ws).eq("channel", "holding").like("receipt_id", `${conv.id}:%`).gte("created_at", new Date(Date.now() - 3_600_000).toISOString()).limit(1);
+  if (!(recent.data ?? []).length) {
+    const text = await holdingText(c, agent);
+    await supabase.from("channel_receipts").insert({ workspace_id: ws, channel: "holding", receipt_id: `${conv.id}:${Date.now()}` });
+    reply = must(await supabase.from("agent_messages").insert({ workspace_id: ws, conversation_id: conv.id, role: "agent", body: text }).select().single<AgentMessage>());
+    await deliverToChannel(supabase, conv.id, text);
+  }
+  const question = mine.body;
+  const item = await runWork(c, {
+    action: "reply_customer", subject_type: "conversation", subject_id: conv.id, lead_id: conv.lead_id, origin: "live",
+    dedupeKey: `reply_customer:message:${mine.id}`, preset: true, noChain: true, forceAsk: "unclear_outcome",
+    seed: { summary: t("replySummary", { question: question.slice(0, 160) }), draft: "", fields: { question, conversation_id: conv.id } },
+  });
+  if (item.status === "waiting_decision") {
+    await escalateToStaff(c, { workItemId: item.id, conversationId: conv.id, customerName: conv.visitor_name ?? "—", question, proposed: null });
+  }
+  await supabase.from("agent_messages").insert({ workspace_id: ws, conversation_id: conv.id, role: "system", body: t("chatUnavailable") });
+  await logEvidence(supabase, ws, { lead_id: conv.lead_id, kind: "engine.fallback", actor: ENGINE_ACTOR, summary: `fallback: ${reason}`, evidence: mine.id });
+  drainAfter(c, 2);
+  return { reply, capturedLeadId: null, changed: true };
+};
+
+/**
+ * The engine's answer (or its fallback) to a queued customer turn. `proposed` is what OpenClaw suggested; null means OpenClaw could not answer (down,
+ * too slow, swept): the customer gets the holding line and a person gets the question. A proposed reply goes through applyCustomerOut: authority gate,
+ * evidence, channel delivery. A conversation a person has taken over in the meantime gets no AI reply.
  */
 export const completeQueuedTurn = async (
-  c: EngineCtx, p: { readonly conversationId: string; readonly messageId: string; readonly eventId: string; readonly proposed: ai.CustomerChatOut | null },
+  c: EngineCtx, p: { readonly conversationId: string; readonly messageId: string; readonly eventId: string; readonly proposed: ai.CustomerChatOut | null; readonly reason?: string },
 ): Promise<{ applied: boolean; fallback: boolean }> => {
   const conv = must(await c.db.from("agent_conversations").select("*").eq("id", p.conversationId).eq("workspace_id", c.ws).single<AgentConversation>());
   // A person who took over meanwhile owns the conversation. (The engine's own hand-off still delivers the turn it was made in.)
   if (conv.handled_by && conv.handled_by !== ENGINE_ACTOR) return { applied: false, fallback: false };
-  const agent = must(await c.db.from("agents").select("*").eq("id", conv.agent_id).eq("workspace_id", c.ws).single<Agent>());
-  const mine = must(await c.db.from("agent_messages").select("*").eq("id", p.messageId).eq("conversation_id", conv.id).single<AgentMessage>());
-  const turns = await loadTurns(c, conv.id);
-  const out = p.proposed ?? (await directReply(c, agent, turns, mine.body));
-  await applyCustomerOut(c, conv, agent, { body: mine.body, mine, turns, eventId: p.eventId, channel: channelOf(conv), out });
-  return { applied: true, fallback: p.proposed === null };
+  const [agent, mine, turns] = await Promise.all([
+    c.db.from("agents").select("*").eq("id", conv.agent_id).eq("workspace_id", c.ws).single<Agent>().then(must),
+    c.db.from("agent_messages").select("*").eq("id", p.messageId).eq("conversation_id", conv.id).single<AgentMessage>().then(must),
+    loadTurns(c, conv.id),
+  ]);
+  if (p.proposed === null) {
+    await holdingTurn(c, conv, agent, mine, p.reason || "openclaw_unavailable");
+    return { applied: true, fallback: true };
+  }
+  await applyCustomerOut(c, conv, agent, { body: mine.body, mine, turns, eventId: p.eventId, channel: channelOf(conv), out: p.proposed });
+  return { applied: true, fallback: false };
 };
 
 /** Everything after the model step: the reply, the lead hand-off, the order, the payment claim and the waiting item, all through the gate. */

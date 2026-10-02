@@ -26,3 +26,6 @@ const AgentChatPage = async (props: AgentChatPageProps) => {
 };
 
 export default AgentChatPage;
+
+/** OpenClaw writes the text (setup chat, Office replies, classification), so these screens may wait longer than the platform default. */
+export const maxDuration = 60;

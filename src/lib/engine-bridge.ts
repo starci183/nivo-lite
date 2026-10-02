@@ -12,6 +12,7 @@ import { drainAfter } from "./flow-ctx";
 import { buildAgentContext } from "./knowledge/index";
 import { knowledgeBrief } from "./knowledge/runtime";
 import { buildAgentBundle, installationOfJob, REPLY_CONTRACT } from "./engine-sync";
+import { recordEngineUsage, type UsageKind, type UsageModule } from "./usage";
 import { escalateToStaff } from "./staff-relay";
 import type { Agent, AgentConversation, AgentMessage } from "./types";
 
@@ -42,22 +43,31 @@ const HISTORY_TURNS = 20;
 /** Everything the engine needs to run one chat.turn: the system context (authority, approved knowledge, PUBLIC business knowledge only) and the transcript. */
 export const chatTurnContext = async (db: SupabaseClient, job: EngineJob) => {
   const ws = job.workspace_id;
-  const conv = must(await db.from("agent_conversations").select("*").eq("id", payloadId(job, "conversation_id")).eq("workspace_id", ws).single<AgentConversation>());
-  const agent = must(await db.from("agents").select("*").eq("id", conv.agent_id).eq("workspace_id", ws).single<Agent>());
-  const mine = must(await db.from("agent_messages").select("*").eq("id", payloadId(job, "message_id")).eq("conversation_id", conv.id).single<AgentMessage>());
-  const history = ((await db.from("agent_messages").select("*").eq("conversation_id", conv.id).order("created_at")).data ?? []) as Array<AgentMessage>;
-  const turns = history.filter((m) => m.role !== "system").slice(-HISTORY_TURNS).map((m) => ({ role: m.role === "user" ? "user" : "agent", body: m.body }));
   const c = ctxOf(db, ws);
+  // Everything that only needs the job payload runs together; what needs the conversation's agent runs together after it (this call is on the customer's critical path).
+  const [conv, mine, history, authorityRaw] = await Promise.all([
+    db.from("agent_conversations").select("*").eq("id", payloadId(job, "conversation_id")).eq("workspace_id", ws).single<AgentConversation>().then(must),
+    db.from("agent_messages").select("*").eq("id", payloadId(job, "message_id")).eq("conversation_id", payloadId(job, "conversation_id")).single<AgentMessage>().then(must),
+    db.from("agent_messages").select("*").eq("conversation_id", payloadId(job, "conversation_id")).order("created_at").then((r) => (r.data ?? []) as Array<AgentMessage>),
+    loadAuthority(c),
+  ]);
+  const agent = must(await db.from("agents").select("*").eq("id", conv.agent_id).eq("workspace_id", ws).single<Agent>());
+  const turns = history.filter((m) => m.role !== "system").slice(-HISTORY_TURNS).map((m) => ({ role: m.role === "user" ? "user" : "agent", body: m.body }));
   // Is the agent's OpenClaw copy (AGENTS.md, SOUL.md, knowledge/) current? Then only the dynamic data goes into the turn.
-  const inst = await db.from("module_installations").select("id, active_context_version_id, settings").eq("workspace_id", ws).eq("agent_id", agent.id).maybeSingle();
+  const [inst, dynamic] = await Promise.all([
+    db.from("module_installations").select("id, active_context_version_id, settings").eq("workspace_id", ws).eq("agent_id", agent.id).maybeSingle(),
+    buildAgentContext({ workspaceId: ws, module: agent.module, query: mine.body, audience: "customer", db, scope: "dynamic" }),
+  ]);
   const instRow = inst.data as { id: string; active_context_version_id: string | null; settings: Record<string, unknown> | null } | null;
-  const activeVersion = instRow?.active_context_version_id
-    ? ((await db.from("module_context_versions").select("version").eq("id", instRow.active_context_version_id).maybeSingle()).data as { version: number } | null)?.version ?? null
-    : null;
-  const syncRow = instRow ? ((await db.from("openclaw_agent_sync").select("status, context_version, synced_at").eq("installation_id", instRow.id).maybeSingle()).data as { status: string; context_version: number | null; synced_at: string | null } | null) : null;
+  const [versionRes, syncRes] = await Promise.all([
+    instRow?.active_context_version_id ? db.from("module_context_versions").select("version").eq("id", instRow.active_context_version_id).maybeSingle() : Promise.resolve({ data: null }),
+    instRow ? db.from("openclaw_agent_sync").select("status, context_version, synced_at").eq("installation_id", instRow.id).maybeSingle() : Promise.resolve({ data: null }),
+  ]);
+  const activeVersion = (versionRes.data as { version: number } | null)?.version ?? null;
+  const syncRow = syncRes.data as { status: string; context_version: number | null; synced_at: string | null } | null;
   const synced = syncRow !== null && syncRow.status === "ok" && syncRow.synced_at !== null;
   const slim = synced && syncRow.context_version === activeVersion;
-  const authority = ai.authorityBrief(await loadAuthority(c));
+  const authority = ai.authorityBrief(authorityRaw);
   const base = {
     conversation_id: conv.id, message_id: mine.id, module: agent.module, agent_name: agent.name, handled_by: conv.handled_by ?? null,
     customer_message: mine.body, turns, installation_id: instRow?.id ?? null, timeout_ms: replyTimeoutSec(instRow?.settings) * 1000, synced, mode: slim ? "slim" : "full",
@@ -65,7 +75,7 @@ export const chatTurnContext = async (db: SupabaseClient, job: EngineJob) => {
   if (slim) {
     // Only what changes per turn: the owner's current authority and the passages closest to this question (PUBLIC only). Rules, persona,
     // active context version, tone and the reply contract are in the agent's synced workspace files.
-    const { system: passages } = await buildAgentContext({ workspaceId: ws, module: agent.module, query: mine.body, audience: "customer", db, scope: "dynamic" });
+    const passages = dynamic.system;
     return {
       ...base,
       system: `Your persona, NIVO rules, the approved context, the tone and the reply contract are in your workspace (AGENTS.md, SOUL.md): follow them.${authority}${passages ? `
@@ -142,13 +152,21 @@ export const readProposedReply = (raw: string): ai.CustomerChatOut => {
   };
 };
 
-export type CallbackBody = { readonly op: "chat.reply"; readonly text: string } | { readonly op: "chat.fallback"; readonly reason: string };
+/** What the engine reports about one OpenClaw run: provider usage (tokens, cached tokens, cost) and where the time went. */
+export type RunUsage = { readonly prompt_tokens?: number; readonly completion_tokens?: number; readonly cached_tokens?: number; readonly cost?: number; readonly model?: string };
+export type RunTimings = Record<string, number>;
+
+export type CallbackBody =
+  | { readonly op: "chat.reply"; readonly text: string; readonly usage?: RunUsage | null; readonly timings?: RunTimings | null }
+  | { readonly op: "chat.fallback"; readonly reason: string }
+  | { readonly op: "generate.result"; readonly text: string; readonly usage?: RunUsage | null; readonly timings?: RunTimings | null }
+  | { readonly op: "generate.error"; readonly reason: string; readonly timings?: RunTimings | null };
 
 /**
  * The engine hands back its proposed reply (chat.reply) or reports it could not get one (chat.fallback: the app answers with the default
  * processor). Idempotent per job: a retried callback is a no-op, so a customer never gets two replies.
  */
-export const chatTurnCallback = async (db: SupabaseClient, job: EngineJob, body: CallbackBody): Promise<{ applied: boolean; fallback: boolean; duplicate: boolean }> => {
+export const chatTurnCallback = async (db: SupabaseClient, job: EngineJob, body: Extract<CallbackBody, { op: "chat.reply" | "chat.fallback" }>): Promise<{ applied: boolean; fallback: boolean; duplicate: boolean }> => {
   const receipt = await db.from("channel_receipts").insert({ workspace_id: job.workspace_id, channel: "engine", receipt_id: `chat.turn:${job.id}` });
   if (receipt.error) {
     if (receipt.error.code === "23505") return { applied: false, fallback: false, duplicate: true };
@@ -156,21 +174,52 @@ export const chatTurnCallback = async (db: SupabaseClient, job: EngineJob, body:
   }
   try {
     const c = ctxOf(db, job.workspace_id);
+    // No proposed reply (the engine said it could not, or the sweeper cancelled the job): no AI text is written. holdingTurn sends the fixed holding line,
+    // hands the question to a person and records "fallback: openclaw_unavailable" itself.
     const done = await completeQueuedTurn(c, {
       conversationId: payloadId(job, "conversation_id"), messageId: payloadId(job, "message_id"), eventId: payloadId(job, "event_id"),
-      proposed: body.op === "chat.reply" ? readProposedReply(body.text) : null,
+      proposed: body.op === "chat.reply" ? readProposedReply(body.text) : null, reason: "openclaw_unavailable",
     });
-    await logEvidence(db, job.workspace_id, {
-      kind: done.fallback ? "engine.fallback" : "engine.reply", actor: ACTOR,
-      summary: done.fallback ? (body.op === "chat.fallback" && body.reason.startsWith("engine_timeout") ? "fallback: engine_timeout (the engine did not answer in time): answered with the direct model" : `OpenClaw unavailable (${body.op === "chat.fallback" ? body.reason.slice(0, 120) : "no answer"}): answered with the direct model`) : done.applied ? "OpenClaw proposed the reply; it passed the authority gate" : "Conversation was taken over by a person: no AI reply",
-      evidence: job.id,
-    });
+    if (!done.fallback && done.applied) {
+      await logEvidence(db, job.workspace_id, { kind: "engine.reply", actor: ACTOR, summary: "OpenClaw proposed the reply; it passed the authority gate", evidence: job.id });
+      if (body.op === "chat.reply") await recordEngineUsage({ workspaceId: job.workspace_id, kind: "chat_reply", module: "chatbot", model: body.usage?.model, usage: body.usage ?? undefined });
+    } else if (!done.applied) {
+      await logEvidence(db, job.workspace_id, { kind: "engine.reply", actor: ACTOR, summary: "Conversation was taken over by a person: no AI reply", evidence: job.id });
+    }
     drainAfter(c, 3);
     return { ...done, duplicate: false };
   } catch (e) {
     await db.from("channel_receipts").delete().eq("workspace_id", job.workspace_id).eq("channel", "engine").eq("receipt_id", `chat.turn:${job.id}`);
     throw e;
   }
+};
+
+/* ------------------------------------------------------------------ openclaw.generate (every other text the app writes) */
+
+type GenerationRow = { id: string; workspace_id: string; purpose: string; module: string; usage_kind: string; status: string; input: { messages?: Array<{ role: string; content: string }>; response_format?: string; timeout_ms?: number } };
+
+/** What the engine needs to run one generation: the prompt messages the app wrote. The row is the JOB's own (workspace and id come from the job payload). */
+export const generateInput = async (db: SupabaseClient, job: EngineJob) => {
+  const row = must(await db.from("ai_generations").select("*").eq("id", payloadId(job, "generation_id")).eq("workspace_id", job.workspace_id).single<GenerationRow>());
+  if (row.status !== "queued" && row.status !== "running") throw new Error(`generation is ${row.status}`);
+  await db.from("ai_generations").update({ status: "running" }).eq("id", row.id).eq("status", "queued");
+  return { workspace_id: row.workspace_id, purpose: row.purpose, messages: row.input.messages ?? [], response_format: row.input.response_format === "json" ? "json" : "text", timeout_ms: row.input.timeout_ms ?? 45_000 };
+};
+
+/** The engine's result for a generation. Results for a cancelled generation (the caller timed out) are dropped; metering records the ones that count. */
+export const generateCallback = async (db: SupabaseClient, job: EngineJob, body: Extract<CallbackBody, { op: "generate.result" | "generate.error" }>): Promise<{ applied: boolean }> => {
+  const id = payloadId(job, "generation_id");
+  const now = new Date().toISOString();
+  const patch = body.op === "generate.result"
+    ? { status: "done", output: { text: body.text }, usage: body.usage ?? null, timings: body.timings ?? {}, finished_at: now }
+    : { status: "error", error: body.reason.slice(0, 300), timings: body.timings ?? {}, finished_at: now };
+  const { data } = await db.from("ai_generations").update(patch).eq("id", id).eq("workspace_id", job.workspace_id).in("status", ["queued", "running"]).select("usage_kind, module").maybeSingle();
+  if (!data) return { applied: false };
+  if (body.op === "generate.result") {
+    const row = data as { usage_kind: string; module: string };
+    await recordEngineUsage({ workspaceId: job.workspace_id, kind: row.usage_kind as UsageKind, module: row.module as UsageModule, model: body.usage?.model, usage: body.usage ?? undefined, completionChars: body.text.length });
+  }
+  return { applied: true };
 };
 
 /* ------------------------------------------------------------------ tools (OpenClaw -> engine -> here) */
@@ -263,7 +312,7 @@ export const sweepEngineTimeouts = async (db: SupabaseClient): Promise<{ swept: 
   let failed = 0;
   for (const job of jobs) {
     try {
-      const r = await chatTurnCallback(db, job, { op: "chat.fallback", reason: "engine_timeout" });
+      const r = await chatTurnCallback(db, job, { op: "chat.fallback", reason: "openclaw_unavailable" });
       if (r.applied || r.duplicate) answered++;
     } catch (e) {
       failed++;

@@ -53,6 +53,7 @@ services:
         const fs = require("fs"), p = "/home/node/.openclaw/openclaw.json";
         let c = {}; try { c = JSON.parse(fs.readFileSync(p, "utf8")); } catch {}
         c.agents = c.agents || {}; c.agents.defaults = { ...(c.agents.defaults || {}), skipBootstrap: true }; // the engine writes each agent workspace itself (openclaw.sync_agent): no first-run ritual
+        c.session = { ...(c.session || {}), maintenance: { ...((c.session || {}).maintenance || {}), mode: "enforce", pruneAfter: "7d", maxEntries: 400, maxDiskBytes: "400mb" } };
         c.gateway = { ...(c.gateway || {}), mode: "local", bind: "loopback", port: 18789,
           auth: { ...((c.gateway || {}).auth || {}), mode: "token", token: process.env.OPENCLAW_GATEWAY_TOKEN } };
         const model = process.env.OPENCLAW_MODEL;
@@ -116,7 +117,7 @@ services:
       ENGINE_HOST: 0.0.0.0
       ENGINE_PORT: "8787"
       ENGINE_CONCURRENCY: ${ENGINE_CONCURRENCY:-4}
-      ENGINE_POLL_MS: ${ENGINE_POLL_MS:-2000}
+      ENGINE_POLL_MS: ${ENGINE_POLL_MS:-1000}
       ENGINE_LEASE_SECONDS: ${ENGINE_LEASE_SECONDS:-60}
       ENGINE_SHUTDOWN_GRACE_MS: ${ENGINE_SHUTDOWN_GRACE_MS:-30000}
       OPENCLAW_GATEWAY_URL: ws://127.0.0.1:18789

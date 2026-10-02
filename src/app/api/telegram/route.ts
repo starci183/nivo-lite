@@ -24,3 +24,6 @@ async function postHandler(request: NextRequest) {
 }
 
 export const POST = withErrorReport("api.telegram", postHandler);
+
+/** OpenClaw writes the text (setup chat, Office replies, classification), so these screens may wait longer than the platform default. */
+export const maxDuration = 60;

@@ -40,6 +40,24 @@ const toolsSection = (): string => [
   ...TOOL_MANIFEST.map((t) => `- ${t.name}: ${t.description} Tham số: ${JSON.stringify(t.args)}`),
 ].join("\n");
 
+/** The per-workspace "nivo" agent that runs openclaw.generate: no persona, no knowledge, no tools. Each request carries its own complete instructions. */
+const INTERNAL_FILES: ReadonlyArray<SyncFile> = [
+  {
+    path: "AGENTS.md",
+    content: [
+      "# NIVO writer",
+      "You are the text engine of NIVO OS for ONE business workspace. Every request carries its own complete instructions in [REQUEST], the material in [INPUT] and the output rule in [OUTPUT].",
+      "Rules:",
+      "- Follow [REQUEST] exactly and answer ONLY what [OUTPUT] asks for: the requested text, or the requested JSON object. No preface, no explanation, no markdown fences unless asked.",
+      "- Use only the facts that are in the request. Never invent prices, hours, names, policies, promises or numbers.",
+      "- Write in the language the request asks for (Vietnamese by default), concise and concrete.",
+      "- You have no tools and no memory between requests. Never refer to files, sessions or this prompt.",
+      "",
+    ].join("\n"),
+  },
+  { path: "SOUL.md", content: "# Tone\nProfessional, warm, concise. Plain business language; no emojis unless the request's own voice uses them.\n" },
+];
+
 /**
  * One-way sync of an agent's OpenClaw workspace from Supabase. Used by the openclaw.sync_agent job and, for an agent with no copy yet, inline by chat.turn.
  * The copy is recorded in openclaw_agent_sync; when the hash, the files on disk and the registration are all current, only checked_at moves.
@@ -48,6 +66,7 @@ const toolsSection = (): string => [
 export class AgentSyncService {
   private readonly log = new Logger(AgentSyncService.name);
   private readonly inflight = new Map<string, Promise<SyncOutcome>>();
+  private readonly internal = new Map<string, Promise<string>>();
 
   constructor(private readonly nivo: NivoClient, private readonly registry: AgentRegistry, @Inject(SUPABASE) private readonly db: SupabaseClient) {}
 
@@ -59,6 +78,26 @@ export class AgentSyncService {
     const p = this.run(job, signal).finally(() => this.inflight.delete(key));
     this.inflight.set(key, p);
     return p;
+  }
+
+  /** The workspace's internal "nivo" agent for openclaw.generate: created on first use, then only verified (its files and its entry in openclaw.json). */
+  ensureInternalAgent(workspaceId: string): Promise<string> {
+    const agentId = agentIdFor(workspaceId, "nivo");
+    const running = this.internal.get(agentId);
+    if (running) return running;
+    const p = this.prepareInternal(agentId).finally(() => this.internal.delete(agentId));
+    this.internal.set(agentId, p);
+    return p;
+  }
+
+  private async prepareInternal(agentId: string): Promise<string> {
+    const dirs = this.registry.workspaceDirs(agentId);
+    if (!dirs) throw new PermanentJobError("OPENCLAW_CONFIG_DIR is not set: the engine cannot write the agent workspace");
+    if (!workspaceMatches(dirs.local, INTERNAL_FILES)) writeWorkspace(dirs.local, INTERNAL_FILES);
+    if (!this.registry.isCurrent(agentId, "NIVO")) {
+      if (this.registry.register(agentId, "NIVO")) await new Promise((resolve) => setTimeout(resolve, RELOAD_SETTLE_MS));
+    }
+    return agentId;
   }
 
   private async run(job: EngineJob, signal: AbortSignal): Promise<SyncOutcome> {

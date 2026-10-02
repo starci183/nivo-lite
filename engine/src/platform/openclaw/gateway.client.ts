@@ -1,12 +1,19 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import WebSocket from "ws";
 import { OPENCLAW_OPTIONS, type OpenclawOptions } from "./openclaw.config";
-import { connectParams, MAX_PAYLOAD_BYTES, parseFrame, readSessionMessage } from "./gateway.protocol";
+import { connectParams, MAX_PAYLOAD_BYTES, parseFrame, readSessionMessage, type MessageUsage } from "./gateway.protocol";
 
 /** The gateway is not configured, unreachable, refused us, or did not answer in time. The chat.turn handler falls back on any of these. */
 export class GatewayError extends Error {}
 
+/** What a finished run cost, summed over its assistant messages: prompt tokens include the cached ones. */
+export type RunUsage = { readonly prompt_tokens: number; readonly completion_tokens: number; readonly cached_tokens: number; readonly cost: number; readonly model: string | null };
+
+export type TurnResult = { readonly text: string; readonly usage: RunUsage | null; readonly timings: Record<string, number> };
+
 export type TurnRequest = {
+  /** Decides when the answer is final. Default: the JSON contract answer ("reply") or a message that stopped normally. */
+  readonly isFinal?: (text: string) => boolean;
   readonly agentId: string;
   /** Full session key, `agent:<agentId>:<NIVO conversation id>`. */
   readonly sessionKey: string;
@@ -39,7 +46,7 @@ export class GatewayClient {
     return this.options.gateway !== null;
   }
 
-  async runTurn(req: TurnRequest, signal: AbortSignal): Promise<string> {
+  async runTurn(req: TurnRequest, signal: AbortSignal): Promise<TurnResult> {
     for (let attempt = 1; ; attempt++) {
       try {
         return await this.once(req, signal);
@@ -52,16 +59,24 @@ export class GatewayClient {
     }
   }
 
-  private once(req: TurnRequest, signal: AbortSignal): Promise<string> {
+  private once(req: TurnRequest, signal: AbortSignal): Promise<TurnResult> {
     const gateway = this.options.gateway;
     if (!gateway) return Promise.reject(new GatewayError("OpenClaw gateway is not configured"));
 
-    return new Promise<string>((resolve, reject) => {
+    return new Promise<TurnResult>((resolve, reject) => {
       const socket = new WebSocket(gateway.url, { maxPayload: MAX_PAYLOAD_BYTES, handshakeTimeout: 10_000 });
+      const t0 = Date.now();
+      const marks: Array<[string, number]> = [];
+      const mark = (name: string): void => { marks.push([name, Date.now() - t0]); };
       let seq = 0;
       let settled = false;
       let settle: NodeJS.Timeout | null = null;
       let candidate: string | null = null;
+      const used = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, model: null as string | null, seen: false };
+      const addUsage = (u: MessageUsage | null): void => {
+        if (!u) return;
+        used.input += u.input; used.output += u.output; used.cacheRead += u.cacheRead; used.cacheWrite += u.cacheWrite; used.cost += u.cost; used.model = u.model ?? used.model; used.seen = true;
+      };
       const pending = new Map<string, (ok: boolean, payload: unknown, error: { code: string; message: string; retryAfterMs: number | null } | null) => void>();
 
       const finish = (err: Error | null, value?: string): void => {
@@ -77,7 +92,14 @@ export class GatewayClient {
         socket.on("error", () => undefined);
         socket.terminate();
         if (err) reject(err);
-        else resolve(value ?? "");
+        else {
+          marks.push(["total", Date.now() - t0]);
+          resolve({
+            text: value ?? "",
+            usage: used.seen ? { prompt_tokens: used.input + used.cacheRead + used.cacheWrite, completion_tokens: used.output, cached_tokens: used.cacheRead, cost: used.cost, model: used.model } : null,
+            timings: Object.fromEntries(marks),
+          });
+        }
       };
       const onAbort = (): void => finish(new GatewayError("aborted"));
       const deadline = setTimeout(() => finish(new GatewayError(`no answer from OpenClaw within ${req.timeoutMs}ms`)), req.timeoutMs);
@@ -92,9 +114,6 @@ export class GatewayClient {
           socket.send(JSON.stringify({ type: "req", id, method, params }));
         });
 
-      const t0 = Date.now();
-      const marks: Array<[string, number]> = [];
-      const mark = (name: string): void => { marks.push([name, Date.now() - t0]); };
       const startTurn = async (): Promise<void> => {
         await request("connect", connectParams(gateway.auth));
         mark("connect");
@@ -134,8 +153,9 @@ export class GatewayClient {
         const m = readSessionMessage(frame.payload);
         // Only the agent's own words in THIS session; the customer message echoed back (role user / from the owner) is not a reply.
         if (m.sessionKey !== req.sessionKey || m.fromOwner || m.role === "user" || m.role === "system" || m.text === null) return;
+        addUsage(m.usage);
         candidate = m.text;
-        if (looksFinal(m.text)) return finish(null, m.text);
+        if (req.isFinal ? req.isFinal(m.text) : looksFinal(m.text) || m.stopReason === "stop") return finish(null, m.text);
         if (settle) clearTimeout(settle);
         settle = setTimeout(() => finish(null, candidate ?? ""), SETTLE_MS);
       });

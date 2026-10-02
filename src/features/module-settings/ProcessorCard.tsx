@@ -8,7 +8,7 @@ import { engine as dict } from "@/i18n/dict/engine";
 import { DEFAULT_REPLY_TIMEOUT_SEC } from "@/lib/engine-queue-shared";
 import type { Installation } from "@/lib/modules-shared";
 import { STACK_CLASS_NAME } from "./classNames";
-import { getAgentSyncStatus, resyncAgent, setReplyTimeout, type AgentSyncStatus } from "./processorActions";
+import { getAgentSyncStatus, resyncAgent, setHoldingMessage, setReplyTimeout, type AgentSyncStatus } from "./processorActions";
 
 type ProcessorCardProps = { readonly installation: Installation; readonly canEdit: boolean };
 
@@ -25,6 +25,8 @@ export const ProcessorCard = ({ installation, canEdit }: ProcessorCardProps) => 
   const router = useRouter();
   const savedTimeout = Number(installation.settings.openclawTimeoutSec);
   const initialTimeout = Number.isFinite(savedTimeout) && savedTimeout >= 5 ? Math.round(savedTimeout) : DEFAULT_REPLY_TIMEOUT_SEC;
+  const savedHolding = typeof installation.settings.holdingMessage === "string" ? installation.settings.holdingMessage : "";
+  const [holdingText, setHoldingText] = useState(savedHolding);
   const [sync, setSync] = useState<AgentSyncStatus | undefined>();
   const [timeoutText, setTimeoutText] = useState(String(initialTimeout));
   const [note, setNote] = useState<{ ok: boolean; text: string } | undefined>();
@@ -86,6 +88,15 @@ export const ProcessorCard = ({ installation, canEdit }: ProcessorCardProps) => 
     });
   };
 
+  const saveHolding = () => {
+    setNote(undefined);
+    startTransition(async () => {
+      const r = await setHoldingMessage(installation.id, holdingText);
+      setNote(r.ok ? { ok: true, text: t("saved") } : { ok: false, text: r.error });
+      if (r.ok) router.refresh();
+    });
+  };
+
   return (
     <SurfaceCard label={t("title")} headingLevel={2}>
       <div className={STACK_CLASS_NAME}>
@@ -99,6 +110,10 @@ export const ProcessorCard = ({ installation, canEdit }: ProcessorCardProps) => 
             <Input id="reply-timeout" name="reply-timeout" label={t("timeoutLabel")} variant="secondary" hint={t("timeoutHint")} value={timeoutText} isDisabled={pending} onValueChange={(v) => setTimeoutText(v.replace(/[^0-9]/g, "").slice(0, 3))} />
             <div>
               <Button variant="secondary" isPending={pending} isDisabled={!timeoutValid || timeoutValue === initialTimeout} onPress={saveTimeout}>{t("timeoutSave")}</Button>
+            </div>
+            <Input id="holding-message" name="holding-message" label={t("holdingLabel")} variant="secondary" hint={t("holdingHint")} placeholder={t("holdingDefault")} value={holdingText} isDisabled={pending} onValueChange={(v) => setHoldingText(v.slice(0, 400))} />
+            <div>
+              <Button variant="secondary" isPending={pending} isDisabled={holdingText.trim() === savedHolding.trim()} onPress={saveHolding}>{t("timeoutSave")}</Button>
             </div>
           </div>
         ) : null}
