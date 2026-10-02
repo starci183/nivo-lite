@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { publicConfig } from "./lib/config";
+import { PERF_ENABLED, PERF_PATH_HEADER, PERF_RID_HEADER, perfFetchFor } from "./lib/supabase/perf";
 
 // Reachable without a session. Webhooks (Telegram, bank connection) are each verified by their own secret header; /api/engine by an HMAC (ENGINE_SHARED_SECRET), /api/n8n by a per-run bearer token (hash stored with an expiry).
 const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/reset-password", "/auth", "/invite", "/api/telegram", "/api/connections", "/api/bank", "/api/sepay", "/api/engine", "/api/v1", "/api/automation", "/api/n8n"];
@@ -16,13 +17,23 @@ const isPublicPath = (pathname: string): boolean =>
 const safeNext = (value: string | null): string | null => (value && value.startsWith("/") && !value.startsWith("//") ? value : null);
 
 export async function proxy(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  // PERF_LOG=1 only: stamp the request so server-side query timings can be grouped per request.
+  const rid = PERF_ENABLED ? crypto.randomUUID().slice(0, 8) : "";
+  const stamped = (): NextResponse => {
+    if (!PERF_ENABLED) return NextResponse.next({ request });
+    const headers = new Headers(request.headers);
+    headers.set(PERF_RID_HEADER, rid);
+    headers.set(PERF_PATH_HEADER, request.nextUrl.pathname);
+    return NextResponse.next({ request: { headers } });
+  };
+  let response = stamped();
   const supabase = createServerClient(publicConfig.supabaseUrl, publicConfig.supabaseAnonKey, {
+    global: { fetch: perfFetchFor(rid, request.nextUrl.pathname) },
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll: (list) => {
         for (const { name, value } of list) request.cookies.set(name, value);
-        response = NextResponse.next({ request });
+        response = stamped();
         for (const { name, value, options } of list) response.cookies.set(name, value, options);
       },
     },
