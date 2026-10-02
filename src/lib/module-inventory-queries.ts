@@ -1,4 +1,5 @@
 import "server-only";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSession } from "./session";
 import { supabaseServer } from "./supabase/server";
 import { isManagerRole } from "./members-shared";
@@ -39,10 +40,14 @@ export type InventoryWorkbench = {
   readonly nowIso: string;
 };
 
+/** The signed-in member's workbench: their session, their RLS-scoped client. */
 export const getInventoryWorkbench = async (): Promise<InventoryWorkbench> => {
   const session = await getSession();
-  const db = await supabaseServer();
-  const ws = session.workspace.id;
+  return loadInventoryWorkbench(await supabaseServer(), session.workspace.id, isManagerRole(session.member.role));
+};
+
+/** The same data from any client (the service role in checks and scripts), for a workspace and a role. */
+export const loadInventoryWorkbench = async (db: SupabaseClient, ws: string, canManage: boolean): Promise<InventoryWorkbench> => {
   const [loc, sup, itm, lvl, rec, rl, pos, pol, mov, wi] = await Promise.all([
     db.from("inventory_locations").select("id, name, is_default").eq("workspace_id", ws).order("is_default", { ascending: false }).order("created_at"),
     db.from("inventory_suppliers").select("*").eq("workspace_id", ws).order("name"),
@@ -105,7 +110,7 @@ export const getInventoryWorkbench = async (): Promise<InventoryWorkbench> => {
 
   const locations = ((loc.data ?? []) as Array<{ id: string; name: string; is_default: boolean }>);
   return {
-    canManage: isManagerRole(session.member.role),
+    canManage,
     defaultLocationId: locations[0]?.id ?? null,
     locations: locations.map((l) => ({ id: l.id, name: l.name })),
     suppliers: ((sup.data ?? []) as Array<SupplierView>),

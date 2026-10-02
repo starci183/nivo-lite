@@ -57,6 +57,37 @@ export const adjustStock = async (
   return { state: "waiting", workItemId: w.id };
 };
 
+/** Move goods between two locations (stores / warehouses): the total does not change, so no approval is needed; both sides are recorded. */
+export const transferStock = async (c: EngineCtx, a: { itemId: string; fromLocationId: string; toLocationId: string; qty: number; note?: string }): Promise<{ from: number; to: number }> => {
+  if (a.fromLocationId === a.toLocationId) throw new Error("Chọn hai nơi khác nhau.");
+  if (!(a.qty > 0)) throw new Error("Nhập số lượng cần chuyển.");
+  const db = admin();
+  const item = ((await db.from("inventory_items").select("name, unit").eq("workspace_id", c.ws).eq("id", a.itemId).maybeSingle()).data ?? null) as { name: string; unit: string } | null;
+  if (!item) throw new Error("Không tìm thấy mặt hàng.");
+  const names = new Map((((await db.from("inventory_locations").select("id, name").eq("workspace_id", c.ws).in("id", [a.fromLocationId, a.toLocationId])).data ?? []) as Array<{ id: string; name: string }>).map((l) => [l.id, l.name]));
+  if (names.size !== 2) throw new Error("Không tìm thấy kho.");
+  const key = `${Date.now()}`;
+  const reason = `Chuyển ${names.get(a.fromLocationId)} → ${names.get(a.toLocationId)}${a.note ? `: ${a.note}` : ""}`;
+  const out = await applyMovement(db, c.ws, { itemId: a.itemId, locationId: a.fromLocationId, kind: "transfer", delta: -a.qty, reason, refType: "transfer", by: c.actor, dedupe: `transfer:${key}:out:${a.itemId}` });
+  const inn = await applyMovement(db, c.ws, { itemId: a.itemId, locationId: a.toLocationId, kind: "transfer", delta: a.qty, reason, refType: "transfer", by: c.actor, dedupe: `transfer:${key}:in:${a.itemId}` });
+  await logEvidence(db, c.ws, { kind: "inventory.transfer", actor: c.actor, summary: `${item.name}: ${reason} (${formatQty(a.qty)} ${item.unit})` });
+  return { from: out.after, to: inn.after };
+};
+
+export const saveLocation = async (c: EngineCtx, a: { id?: string; name: string }): Promise<void> => {
+  const name = a.name.trim().slice(0, 60);
+  if (!name) throw new Error("Nhập tên kho hoặc điểm bán.");
+  const db = admin();
+  if (a.id) {
+    const { error } = await db.from("inventory_locations").update({ name }).eq("workspace_id", c.ws).eq("id", a.id);
+    if (error) throw new Error(error.message);
+    return;
+  }
+  await defaultLocation(db, c.ws);
+  const { error } = await db.from("inventory_locations").insert({ workspace_id: c.ws, name });
+  if (error) throw new Error(error.message);
+};
+
 /** A stock-take: every counted item that differs from the system is adjusted (small ones now, big ones wait for approval). */
 export const stockTake = async (c: EngineCtx, counts: ReadonlyArray<{ itemId: string; counted: number }>): Promise<{ applied: number; waiting: number; same: number }> => {
   let applied = 0;

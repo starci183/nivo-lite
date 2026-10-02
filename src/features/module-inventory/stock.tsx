@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Badge, Button, Drawer, EmptyNotice, Input, SearchField, SegmentedControl, Select, SurfaceCard, Text } from "@starci/grammar/common";
 import { formatMoney, formatQty, isSmallAdjustment, num, type StockStatus } from "@/lib/module-inventory-shared";
 import type { InventoryWorkbench, ItemView } from "@/lib/module-inventory-queries";
-import { adjustStockAction, draftLowStockAction, saveItem, setItemActive } from "./actions";
+import { adjustStockAction, draftLowStockAction, saveItem, setItemActive, transferStockAction } from "./actions";
 import {
   CHIPS_CLASS_NAME, FORM_CLASS_NAME, FORM_GRID_CLASS_NAME, LIST_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME, TOOLBAR_CLASS_NAME, TOOLBAR_FIELD_CLASS_NAME,
 } from "./classNames";
@@ -68,32 +68,49 @@ const ItemDrawer = ({ item, data, isOpen, onClose }: { readonly item: ItemView |
 
 /* ------------------------------------------------------------------ the adjustment form */
 
-const AdjustDrawer = ({ item, onClose }: { readonly item: ItemView | null; readonly onClose: () => void }) => {
+const AdjustDrawer = ({ item, data, onClose }: { readonly item: ItemView | null; readonly data: InventoryWorkbench; readonly onClose: () => void }) => {
   const run = useRun();
-  const [mode, setMode] = useState<"set" | "delta">("set");
+  const multi = data.locations.length > 1;
+  const [mode, setMode] = useState<"set" | "delta" | "move">("set");
   const [value, setValue] = useState("");
   const [reason, setReason] = useState("");
-  const target = item ? (mode === "set" ? num(value, item.total) : item.total + num(value)) : 0;
-  const delta = item ? target - item.total : 0;
+  const [from, setFrom] = useState(data.defaultLocationId ?? "");
+  const [to, setTo] = useState("");
+  const here = item ? (item.levels.find((l) => l.locationId === from)?.qty ?? 0) : 0;
+  const current = multi ? here : item?.total ?? 0;
+  const target = item ? (mode === "set" ? num(value, current) : current + num(value)) : 0;
+  const delta = target - current;
   const small = item ? isSmallAdjustment(delta, item.cost_vnd) : true;
-  const submit = () => item && run.exec(
-    () => adjustStockAction(mode === "set" ? { itemId: item.id, counted: num(value), reason } : { itemId: item.id, delta: num(value), reason }),
-    (r) => { if (r.state === "applied") { onClose(); return undefined; } return "Thay đổi lớn nên đã gửi cho bạn duyệt (xem mục Chờ duyệt phía trên)."; },
-  );
+  const modes = [{ value: "set", label: "Đặt số mới" }, { value: "delta", label: "Cộng / trừ" }, ...(multi ? [{ value: "move", label: "Chuyển kho" }] : [])];
+  const nameOfLoc = (id: string) => data.locations.find((x) => x.id === id)?.name ?? "";
+  const submit = () => {
+    if (!item) return;
+    if (mode === "move") {
+      run.exec(() => transferStockAction({ itemId: item.id, fromLocationId: from, toLocationId: to, qty: num(value), note: reason }), () => { onClose(); });
+      return;
+    }
+    run.exec(
+      () => adjustStockAction(mode === "set" ? { itemId: item.id, locationId: from || undefined, counted: num(value), reason } : { itemId: item.id, locationId: from || undefined, delta: num(value), reason }),
+      (r) => { if (r.state === "applied") { onClose(); return undefined; } return "Thay đổi lớn nên đã gửi cho bạn duyệt (xem mục Chờ duyệt phía trên)."; },
+    );
+  };
+  const locOptions = data.locations.map((l) => ({ id: l.id, label: l.name }));
   return (
-    <Drawer isOpen={item !== null} onOpenChange={(o) => { if (!o) onClose(); }} title={item ? `Chỉnh tồn ${item.name}` : "Chỉnh tồn"} description={item ? `Đang có ${formatQty(item.total)} ${item.unit}` : undefined} closeLabel="Đóng" placement="right">
+    <Drawer isOpen={item !== null} onOpenChange={(o) => { if (!o) onClose(); }} title={item ? `Chỉnh tồn ${item.name}` : "Chỉnh tồn"} description={item ? `Tổng ${formatQty(item.total)} ${item.unit}${multi ? ` · ${item.levels.map((l) => `${nameOfLoc(l.locationId)} ${formatQty(l.qty)}`).join(" · ")}` : ""}` : undefined} closeLabel="Đóng" placement="right">
       {item ? (
         <div className={FORM_CLASS_NAME}>
-          <SegmentedControl label="Cách chỉnh" options={[{ value: "set", label: "Đặt số mới" }, { value: "delta", label: "Cộng / trừ" }]} value={mode} onValueChange={(v) => setMode(v === "delta" ? "delta" : "set")} />
-          <Input id="adj-value" name="value" label={mode === "set" ? `Số đếm được (${item.unit})` : `Thay đổi (${item.unit}, số âm để trừ)`} variant="secondary" value={value} onValueChange={setValue} />
-          <Input id="adj-reason" name="reason" label="Lý do" hint="Ví dụ: hao hụt, vỡ, đếm lại kho" variant="secondary" value={reason} onValueChange={setReason} />
-          {value.trim() ? (
+          <SegmentedControl label="Cách chỉnh" options={modes} value={mode} onValueChange={(v) => setMode(v === "delta" ? "delta" : v === "move" ? "move" : "set")} />
+          {multi ? <Select label={mode === "move" ? "Chuyển từ" : "Ở kho"} value={from || null} options={locOptions} onValueChange={(v) => setFrom(v ?? "")} /> : null}
+          {mode === "move" ? <Select label="Chuyển tới" placeholder="Chọn kho" value={to || null} options={locOptions.filter((l) => l.id !== from)} onValueChange={(v) => setTo(v ?? "")} /> : null}
+          <Input id="adj-value" name="value" label={mode === "set" ? `Số đếm được (${item.unit})` : mode === "move" ? `Số lượng chuyển (${item.unit})` : `Thay đổi (${item.unit}, số âm để trừ)`} variant="secondary" value={value} onValueChange={setValue} />
+          <Input id="adj-reason" name="reason" label={mode === "move" ? "Ghi chú" : "Lý do"} hint={mode === "move" ? undefined : "Ví dụ: hao hụt, vỡ, đếm lại kho"} variant="secondary" value={reason} onValueChange={setReason} />
+          {value.trim() && mode !== "move" ? (
             <Text size="sm" tone="muted">
-              {formatQty(item.total)} → {formatQty(target)} {item.unit}. {small ? "Thay đổi nhỏ, áp dụng ngay." : `Thay đổi lớn (khoảng ${formatMoney(Math.abs(delta) * item.cost_vnd)}), cần bạn duyệt.`}
+              {formatQty(current)} → {formatQty(target)} {item.unit}. {small ? "Thay đổi nhỏ, áp dụng ngay." : `Thay đổi lớn (khoảng ${formatMoney(Math.abs(delta) * item.cost_vnd)}), cần bạn duyệt.`}
             </Text>
           ) : null}
           <Feedback error={run.error} notice={run.notice} />
-          <div><Button variant="primary" isPending={run.isPending} isDisabled={!value.trim()} onPress={submit}>{small ? "Ghi chỉnh tồn" : "Gửi duyệt chỉnh tồn"}</Button></div>
+          <div><Button variant="primary" isPending={run.isPending} isDisabled={!value.trim() || (mode === "move" && !to)} onPress={submit}>{mode === "move" ? "Chuyển kho" : small ? "Ghi chỉnh tồn" : "Gửi duyệt chỉnh tồn"}</Button></div>
         </div>
       ) : null}
     </Drawer>
@@ -145,6 +162,7 @@ export const StockPanel = ({ data }: { readonly data: InventoryWorkbench }) => {
                   </div>
                   <Text size="sm" tone="muted">
                     {i.sku}{i.category ? ` · ${i.category}` : ""}{supplierOf(i.supplier_id) ? ` · ${supplierOf(i.supplier_id)}` : ""}
+                    {data.locations.length > 1 ? ` · ${i.levels.map((l) => `${data.locations.find((x) => x.id === l.locationId)?.name ?? ""} ${formatQty(l.qty)}`).join(", ")}` : ""}
                     {i.reorder_point > 0 ? ` · tối thiểu ${formatQty(i.reorder_point)}` : ""}{i.cost_vnd > 0 ? ` · vốn ${formatMoney(i.cost_vnd)}/${i.unit}` : ""}
                   </Text>
                 </div>
@@ -162,7 +180,7 @@ export const StockPanel = ({ data }: { readonly data: InventoryWorkbench }) => {
       </SurfaceCard>
       {data.canManage && data.items.some((i) => !i.active) ? <div><Button variant="ghost" size="sm" onPress={() => setShowInactive((v) => !v)}>{showInactive ? "Xem hàng đang theo dõi" : "Xem hàng đã ngừng theo dõi"}</Button></div> : null}
       {editing !== null ? <ItemDrawer key={editing === "new" ? "new" : editing.id} item={editing === "new" ? null : editing} data={data} isOpen onClose={() => setEditing(null)} /> : null}
-      <AdjustDrawer key={adjusting?.id ?? "none"} item={adjusting} onClose={() => setAdjusting(null)} />
+      <AdjustDrawer key={adjusting?.id ?? "none"} item={adjusting} data={data} onClose={() => setAdjusting(null)} />
     </div>
   );
 };

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Badge, Button, Drawer, EmptyNotice, Input, SearchField, SegmentedControl, Select, SurfaceCard, Text, Textarea } from "@starci/grammar/common";
 import { formatQty, num } from "@/lib/module-inventory-shared";
 import type { InventoryWorkbench, RecipeView, SupplierView } from "@/lib/module-inventory-queries";
-import { deleteRecipe, importPasteAction, loadTemplateAction, saveRecipe, saveSupplier, stockTakeAction } from "./actions";
+import { deleteRecipe, importPasteAction, loadTemplateAction, saveLocationAction, saveRecipe, saveSupplier, stockTakeAction } from "./actions";
 import {
   CHIPS_CLASS_NAME, COUNT_FIELD_CLASS_NAME, COUNT_ROW_CLASS_NAME, FORM_CLASS_NAME, FORM_GRID_CLASS_NAME, LINE_ROW_CLASS_NAME, LIST_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME,
   TOOLBAR_CLASS_NAME, TOOLBAR_FIELD_CLASS_NAME,
@@ -44,6 +44,27 @@ const SupplierDrawer = ({ supplier, onClose }: { readonly supplier: SupplierView
   );
 };
 
+/** Several stores or warehouses are optional: one "Kho chính" exists from the first movement; add more here and move goods between them in Chỉnh tồn. */
+const LocationsCard = ({ data }: { readonly data: InventoryWorkbench }) => {
+  const run = useRun();
+  const [name, setName] = useState("");
+  return (
+    <SurfaceCard ariaLabel="Kho và điểm bán">
+      <div className={FORM_CLASS_NAME}>
+        <Text weight="semibold">Kho và điểm bán</Text>
+        <Text size="sm" tone="muted">{data.locations.length ? data.locations.map((l) => l.name).join(" · ") : "Chưa có kho nào: kho chính tự tạo khi có hàng đầu tiên."} Chỉ cần thêm khi bạn có nhiều cửa hàng hoặc kho hàng.</Text>
+        {data.canManage ? (
+          <div className={ROW_ACTIONS_CLASS_NAME}>
+            <Input id="loc-name" name="location" label="Thêm kho hoặc điểm bán" variant="secondary" value={name} onValueChange={setName} />
+            <Button variant="outline" size="sm" isPending={run.isPending} isDisabled={!name.trim()} onPress={() => run.exec(() => saveLocationAction({ name }), () => { setName(""); })}>Thêm</Button>
+          </div>
+        ) : null}
+        <Feedback error={run.error} notice={run.notice} />
+      </div>
+    </SurfaceCard>
+  );
+};
+
 export const SuppliersPanel = ({ data }: { readonly data: InventoryWorkbench }) => {
   const [editing, setEditing] = useState<SupplierView | "new" | null>(null);
   return (
@@ -65,6 +86,7 @@ export const SuppliersPanel = ({ data }: { readonly data: InventoryWorkbench }) 
           </ul>
         )}
       </SurfaceCard>
+      <LocationsCard data={data} />
       {editing !== null ? <SupplierDrawer key={editing === "new" ? "new" : editing.id} supplier={editing === "new" ? null : editing} onClose={() => setEditing(null)} /> : null}
     </div>
   );

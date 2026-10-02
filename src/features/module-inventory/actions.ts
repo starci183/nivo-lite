@@ -5,7 +5,7 @@ import { engineCtx } from "@/lib/flow-ctx";
 import { requireManager } from "@/lib/permissions";
 import { logEvidence } from "@/lib/core";
 import { admin, createPo, draftLowStock, recomputeTotal, requestSend } from "@/lib/module-inventory-core";
-import { adjustStock, cancelPo, importPasted, loadTemplate, receivePo, stockTake, type AdjustResult, type ImportResult, type ReceiveResult } from "@/lib/module-inventory-ops";
+import { adjustStock, cancelPo, importPasted, loadTemplate, receivePo, saveLocation, stockTake, transferStock, type AdjustResult, type ImportResult, type ReceiveResult } from "@/lib/module-inventory-ops";
 import { num } from "@/lib/module-inventory-shared";
 import type { Outcome } from "@/lib/types";
 
@@ -138,12 +138,12 @@ export async function deleteRecipe(id: string): Promise<Outcome<null>> {
 }
 
 /** Quick change (+/-) or a count. Small changes apply at once; bigger ones wait as an adjust_stock decision. */
-export async function adjustStockAction(a: { itemId: string; delta?: number; counted?: number; reason: string }): Promise<Outcome<AdjustResult>> {
+export async function adjustStockAction(a: { itemId: string; locationId?: string; delta?: number; counted?: number; reason: string }): Promise<Outcome<AdjustResult>> {
   return run(async () => {
     const c = await engineCtx();
     if (!uuid(a.itemId)) throw new Error("Chọn mặt hàng.");
     if (a.delta === undefined && a.counted === undefined) throw new Error("Nhập số lượng.");
-    return adjustStock(c, { itemId: a.itemId, delta: a.delta, countedQty: a.counted, reason: text(a.reason, 160) });
+    return adjustStock(c, { itemId: a.itemId, locationId: uuid(a.locationId) ?? undefined, delta: a.delta, countedQty: a.counted, reason: text(a.reason, 160) });
   });
 }
 
@@ -253,5 +253,23 @@ export async function loadTemplateAction(key: string): Promise<Outcome<{ items: 
     const c = await engineCtx();
     await requireManager();
     return loadTemplate(c, text(key, 30));
+  });
+}
+
+export async function transferStockAction(a: { itemId: string; fromLocationId: string; toLocationId: string; qty: number; note: string }): Promise<Outcome<{ from: number; to: number }>> {
+  return run(async () => {
+    const c = await engineCtx();
+    const [item, from, to] = [uuid(a.itemId), uuid(a.fromLocationId), uuid(a.toLocationId)];
+    if (!item || !from || !to) throw new Error("Chọn mặt hàng và hai nơi cần chuyển.");
+    return transferStock(c, { itemId: item, fromLocationId: from, toLocationId: to, qty: a.qty, note: text(a.note, 100) });
+  });
+}
+
+export async function saveLocationAction(a: { id?: string; name: string }): Promise<Outcome<null>> {
+  return run(async () => {
+    const c = await engineCtx();
+    await requireManager();
+    await saveLocation(c, { id: uuid(a.id) ?? undefined, name: a.name });
+    return null;
   });
 }

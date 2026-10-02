@@ -7,7 +7,7 @@ import { installModuleCore } from "../src/lib/module-install";
 import { ensureFlowDefaults } from "../src/lib/flow-seed";
 import { resumeWork, runWork, type EngineCtx } from "../src/lib/engine";
 import { admin, applyMovement, deductForOrder, defaultLocation, totalsOf } from "../src/lib/module-inventory-core";
-import { adjustStock, importPasted, loadTemplate, receivePo, stockTake } from "../src/lib/module-inventory-ops";
+import { adjustStock, importPasted, loadTemplate, receivePo, saveLocation, stockTake, transferStock } from "../src/lib/module-inventory-ops";
 import { INVENTORY_EXECUTORS } from "../src/lib/module-inventory-automations";
 import { tickKey } from "../src/lib/automation-tick";
 import { vnClock } from "../src/lib/automation-hours";
@@ -211,6 +211,14 @@ const building = async (): Promise<void> => {
   const keo = await itemBySku(ws, "KIEM-THU-KEO-DAN");
   const st = await stockTake(ctxOf(ws), [{ itemId: keo.id as string, counted: 38 }]);
   ok("stock-take: a small difference (-2 bao) is adjusted", st.applied === 1 && (await totalOf(ws, keo.id as string)) === 38, JSON.stringify(st));
+  // A second location and a transfer between them (the total must not change).
+  await saveLocation(ctxOf(ws), { name: "Kiểm thử · Kho phụ" });
+  const locs = ((await db.from("inventory_locations").select("id, name, is_default").eq("workspace_id", ws)).data ?? []) as Array<{ id: string; name: string; is_default: boolean }>;
+  const main = locs.find((l) => l.is_default) as { id: string };
+  const second = locs.find((l) => !l.is_default) as { id: string };
+  const xmTotal = await totalOf(ws, xm.id as string);
+  const moved = await transferStock(ctxOf(ws), { itemId: xm.id as string, fromLocationId: main.id, toLocationId: second.id, qty: 10, note: "Kiểm thử" });
+  ok("transfer between locations keeps the total and splits the stock", (await totalOf(ws, xm.id as string)) === xmTotal && moved.to === 10, JSON.stringify(moved));
 };
 
 const tick = async (): Promise<void> => {

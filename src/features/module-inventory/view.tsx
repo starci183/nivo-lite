@@ -15,7 +15,7 @@ import { StockPanel } from "./stock";
 
 type TabId = "stock" | "orders" | "suppliers" | "history" | "recipes" | "count" | "import";
 const TABS: ReadonlyArray<{ readonly id: TabId; readonly label: string }> = [
-  { id: "stock", label: "Tồn kho" }, { id: "orders", label: "Đơn nhập" }, { id: "suppliers", label: "Nhà cung cấp" }, { id: "history", label: "Lịch sử" },
+  { id: "stock", label: "Tồn kho" }, { id: "orders", label: "Đơn nhập" }, { id: "suppliers", label: "NCC & kho" }, { id: "history", label: "Lịch sử" },
   { id: "recipes", label: "Công thức" }, { id: "count", label: "Kiểm kê" }, { id: "import", label: "Nhập dữ liệu" },
 ];
 const isTab = (v: string | null | undefined): v is TabId => !!v && TABS.some((t) => t.id === v);
