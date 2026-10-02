@@ -115,33 +115,54 @@ export const readScript = (raw: unknown): Array<ScriptScene> => {
   });
 };
 
-/** What OpenClaw returns -> a title and scenes. It may wrap the JSON in a code fence or prose; the first balanced object is used. */
-export const parseScriptOutput = (text: string): { readonly ok: true; readonly title: string; readonly scenes: Array<ScriptScene> } | { readonly ok: false; readonly error: string } => {
+/**
+ * The first JSON object of a model answer, with its brackets repaired when the model got the nesting wrong (a missing "}" before "]" is the usual slip; OpenClaw's
+ * JSON mode is not strict). Null when the object is cut off (the text ends inside it): half a scene is worse than asking again.
+ */
+export const extractJsonObject = (text: string): string | null => {
   const body = text.replace(/```(?:json)?/gi, "").trim();
   const start = body.indexOf("{");
-  if (start < 0) return { ok: false, error: "no JSON object" };
-  let depth = 0;
+  if (start < 0) return null;
+  const stack: Array<"{" | "["> = [];
+  let out = "";
   let inString = false;
   let escaped = false;
-  let end = -1;
   for (let i = start; i < body.length; i++) {
     const c = body[i];
     if (inString) {
+      out += c;
       if (escaped) escaped = false;
       else if (c === "\\") escaped = true;
       else if (c === "\"") inString = false;
-    } else if (c === "\"") inString = true;
-    else if (c === "{") depth++;
-    else if (c === "}" && --depth === 0) { end = i; break; }
+      continue;
+    }
+    if (c === "\"") { inString = true; out += c; continue; }
+    if (c === "{" || c === "[") { stack.push(c); out += c; continue; }
+    if (c === "}" || c === "]") {
+      const want = c === "}" ? "{" : "[";
+      if (!stack.includes(want)) continue; // a closer that closes nothing
+      while (stack[stack.length - 1] !== want) out += stack.pop() === "{" ? "}" : "]"; // closers the model forgot
+      stack.pop();
+      out = out.replace(/,s*$/, "") + c;
+      if (stack.length === 0) return out;
+      continue;
+    }
+    out += c;
   }
-  if (end < 0) return { ok: false, error: "JSON is cut off" };
-  let json: unknown;
+  return null;
+};
+
+/** What OpenClaw returns -> a title and scenes. It may wrap the JSON in a code fence or prose; the first object is used. */
+export const parseScriptOutput = (text: string): { readonly ok: true; readonly title: string; readonly scenes: Array<ScriptScene> } | { readonly ok: false; readonly error: string } => {
+  const json = extractJsonObject(text);
+  if (!json) return { ok: false, error: "no complete JSON object" };
+  let parsed: unknown;
   try {
-    json = JSON.parse(body.slice(start, end + 1));
+    parsed = JSON.parse(json);
   } catch {
     return { ok: false, error: "JSON does not parse" };
   }
-  const o = typeof json === "object" && json !== null ? (json as Record<string, unknown>) : {};
+  const o = typeof parsed === "object" && parsed !== null ? (parsed as Record<string, unknown>) : {};
   const scenes = readScript(o.scenes).map((s, i, all) => ({ ...s, role: i === 0 ? "hook" as const : i === all.length - 1 && all.length > 1 ? "cta" as const : s.role === "hook" || s.role === "cta" ? "body" as const : s.role }));
   if (scenes.length < 2) return { ok: false, error: "fewer than 2 scenes" };
   return { ok: true, title: clip(o.title, 120), scenes };
