@@ -75,6 +75,10 @@ const CAPABILITY_PATTERNS: Readonly<Record<Exclude<Capability, "has_opening_hour
 };
 const DUE_PATTERN = /hạn thanh toán|thanh toán sau|công nợ|trả chậm|payment terms|net ?\d+|\d+ ngày.{0,20}thanh toán|thanh toán.{0,20}\d+ ngày/i;
 
+/** True when some sentence of the text says the shop HAS the thing: a sentence that negates it ("Không có lịch hẹn") does not count. */
+const NEGATION = /(không|chưa|chẳng|\bko\b|\bno\b|without)/i;
+const affirms = (text: string, re: RegExp): boolean => text.split(/[\n.;]/).some((line) => re.test(line) && !NEGATION.test(line));
+
 /** What the shop has, derived from its active contexts, its knowledge and its data (never asked directly). */
 export const loadCapabilities = async (db: Db, ws: string): Promise<ReadonlySet<Capability>> => {
   const ctx = await activeContexts(db, ws);
@@ -84,8 +88,8 @@ export const loadCapabilities = async (db: Db, ws: string): Promise<ReadonlySet<
   ]);
   const text = [ctx.text, ...((knowledge.data ?? []) as Array<{ title: string; content: string }>).map((k) => `${k.title}\n${k.content.slice(0, 3000)}`)].join("\n");
   const has = new Set<Capability>();
-  for (const [cap, re] of Object.entries(CAPABILITY_PATTERNS)) if (re.test(text)) has.add(cap as Capability);
-  if (DUE_PATTERN.test(text) || (dueInvoices.count ?? 0) > 0) has.add("has_due_dates");
+  for (const [cap, re] of Object.entries(CAPABILITY_PATTERNS)) if (affirms(text, re)) has.add(cap as Capability);
+  if (affirms(text, DUE_PATTERN) || (dueInvoices.count ?? 0) > 0) has.add("has_due_dates");
   if (parseHours(ctx.hoursText) || text.split("\n").some((l) => /giờ (làm việc|mở cửa)|mở cửa|opening hours|business hours/i.test(l) && parseHours(l))) has.add("has_opening_hours");
   return has;
 };

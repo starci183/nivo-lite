@@ -26,6 +26,10 @@ export const thankPayment: Executor = async (x, p) => {
   if (!lead) return { status: "skipped", steps: [{ label: "Bỏ qua", status: "skipped", detail: "Khoản tiền này chưa gắn với khách nào." }] };
   const conv = await customerConversation(x.db, x.ws, lead.id);
   if (!conv) return noChannel(lead.contact_name);
+  // NIVO's own care message after a payment (the default chain, dedupe "send_care:...") already thanked this customer: do not say it twice.
+  const since = new Date(Date.parse(str(p.at)) - 10 * 60_000 || Date.now() - 20 * 60_000).toISOString();
+  const builtIn = ((await x.db.from("work_items").select("id, status, dedupe_key").eq("workspace_id", x.ws).eq("lead_id", lead.id).eq("action", "send_care").in("status", ["done", "waiting_decision"]).like("dedupe_key", "send_care:%").gte("created_at", since).limit(1)).data ?? [])[0];
+  if (builtIn) return { status: "skipped", steps: [{ label: "Bỏ qua", status: "skipped", detail: "NIVO đã gửi (hoặc đang chờ bạn duyệt) lời cảm ơn mặc định cho khoản này, nên không gửi thêm.", workItemId: builtIn.id as string }] };
   return composeAndSend(x, {
     action: "send_care", lead, conversationId: conv.id, dedupe: `thank:${str(p.invoice_id) || leadId}`,
     summary: `Cảm ơn ${lead.contact_name} đã thanh toán ${vndText(amount)}`, caseNote: `Khách vừa thanh toán ${vndText(amount)}.`,
@@ -209,9 +213,8 @@ export const sheetOrders: Executor = async (x, p) => {
 
 /** After a review request, a customer's next message is read for feedback: a negative one tags the owner in Office. Returns true when it raised an alert. */
 export const checkFeedback = async (x: RunCtx, run: { id: string; payload: Record<string, unknown> }, text: string, leadId: string): Promise<boolean> => {
-  const negative = await isNegativeFeedback(text, x.ws);
-  await x.db.from("automation_runs").update({ payload: { ...run.payload, feedback: { negative, text: text.slice(0, 300), at: new Date().toISOString() } } }).eq("id", run.id);
-  if (!negative) return false;
+  if (!(await isNegativeFeedback(text, x.ws))) return false;
+  await x.db.from("automation_runs").update({ payload: { ...run.payload, alerted: { text: text.slice(0, 300), at: new Date().toISOString() } } }).eq("id", run.id);
   const lead = await loadLead(x.db, x.ws, leadId);
   const name = lead?.contact_name ?? "Khách";
   await postOffice(x.db, x.ws, `@chủ shop: ${name} phản hồi chưa hài lòng sau khi dùng dịch vụ: «${text.slice(0, 200)}». Bạn xem lại và liên hệ giúp nhé.`, leadId);

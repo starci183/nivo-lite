@@ -68,7 +68,9 @@ export const onBusinessEvent = async (ws: string, event: string, data: Readonly<
     try {
       switch (`${l.def.key}:${event}`) {
         case "thank_payment:payment.received":
-          await trigger(db, l, `thank:${dedupe}`, str(data.invoice_id), { ...data });
+          // A minute and a half later: NIVO's own care message after a payment (the default chain) is queued right behind this event; the thank-you
+          // looks for it first so the customer never gets two thank-yous.
+          await trigger(db, l, `thank:${dedupe}`, str(data.invoice_id), { ...data, at: new Date().toISOString() }, { runAt: new Date(Date.now() + 90_000) });
           break;
         case "ask_review:payment.received":
           await trigger(db, l, `review:${dedupe}`, str(data.lead_id), { ...data }, { runAt: new Date(Date.now() + Number(l.config.afterDays || 1) * DAY) });
@@ -106,10 +108,10 @@ const onFeedback = async (db: Db, list: ReadonlyArray<Loaded>, data: Readonly<Re
   const l = list.find((x) => x.def.key === "ask_review");
   const leadId = str(data.lead_id);
   if (!l || !leadId) return;
-  const since = new Date(Date.now() - 14 * DAY).toISOString();
-  const { data: runs } = await db.from("automation_runs").select("id, payload").eq("pipeline_id", l.p.id).eq("trigger_ref", leadId).in("status", ["done", "waiting_approval"]).gte("created_at", since).order("created_at", { ascending: false }).limit(1);
+  const since = new Date(Date.now() - 7 * DAY).toISOString();
+  const { data: runs } = await db.from("automation_runs").select("id, payload").eq("pipeline_id", l.p.id).eq("trigger_ref", leadId).eq("status", "done").gte("created_at", since).order("created_at", { ascending: false }).limit(1);
   const run = ((runs ?? [])[0] ?? null) as { id: string; payload: Record<string, unknown> } | null;
-  if (!run || run.payload.feedback) return;
+  if (!run || run.payload.alerted) return;
   await checkFeedback(await ctxFor(db, l), run, str(data.text), leadId);
 };
 
