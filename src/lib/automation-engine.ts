@@ -275,7 +275,7 @@ const scan = async (db: Db, l: Loaded, now: Date): Promise<number> => {
   }
   if (def.key === "video_new_offer") {
     // A public Ưu đãi source added after the automation was created: draft a video script (the executor never renders or publishes).
-    for (const src of await offerSources(db, ws, new Date(p.created_at), now)) {
+    for (const src of await offerSources(db, ws, new Date(p.updated_at), now)) {
       if (started >= BATCH) break;
       await trigger(db, l, `video_offer:${src.id}`, src.id, { source_id: src.id, title: src.title });
       started += 1;

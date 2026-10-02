@@ -145,7 +145,7 @@ const tpl = (await db.from("automation_templates").select("key, module_key").eq(
 log("automation template", tpl);
 const pipe0 = (await db.from("automation_pipelines").select("id, enabled").eq("workspace_id", ws).eq("template_key", "video_new_offer").maybeSingle()).data as { id: string; enabled: boolean } | null;
 log("pipeline before (default off)", pipe0 ?? "none");
-await db.from("automation_pipelines").upsert({ workspace_id: ws, template_key: "video_new_offer", name: "Soạn video khi có ưu đãi mới", module_key: "video", enabled: true, config: {}, created_by: found.owner_id }, { onConflict: "workspace_id,template_key" });
+await db.from("automation_pipelines").upsert({ workspace_id: ws, template_key: "video_new_offer", name: "Soạn video khi có ưu đãi mới", module_key: "video", enabled: true, config: {}, created_by: found.owner_id, updated_at: new Date().toISOString() }, { onConflict: "workspace_id,template_key" });
 const offer = await addSourceFor(db, ws, null, {
   kind: "text", title: "Kiểm thử · Ưu đãi cuối tuần", topic: "Ưu đãi", visibility: "public",
   content: "Cửa hàng Lá Xanh: cuối tuần này mua chậu cây mini giảm 20%, áp dụng thứ Bảy và Chủ nhật, nhắn tin để đặt trước.",
@@ -155,7 +155,7 @@ const tick = await runTick();
 log("runTick", tick);
 let auto: { id: string; status: string; title: string; script: unknown } | null = null;
 for (let i = 0; i < 60; i++) {
-  const rows = (await db.from("video_projects").select("id, status, title, script, inputs").eq("workspace_id", ws).eq("inputs->>auto", "true").order("created_at", { ascending: false }).limit(1)).data as Array<{ id: string; status: string; title: string; script: unknown }> | null;
+  const rows = (await db.from("video_projects").select("id, status, title, script").eq("workspace_id", ws).contains("inputs", { source_ids: [offer.id] }).limit(1)).data as Array<{ id: string; status: string; title: string; script: unknown }> | null;
   auto = rows?.[0] ?? null;
   if (auto && auto.status !== "scripting") break;
   await sleep(3000);
@@ -164,8 +164,12 @@ log("automation project", auto ? { id: auto.id, status: auto.status, title: auto
 const notified = (await db.from("messages").select("body").eq("workspace_id", ws).like("body", "%Mình đã soạn nháp video%").order("created_at", { ascending: false }).limit(1)).data;
 log("owner notified in Office", notified?.[0]?.body ?? "NO");
 await runTick(); // second tick: the same source must not draft a second project
-const again = (await db.from("video_projects").select("id").eq("workspace_id", ws).eq("inputs->>auto", "true")).data?.length;
-log("auto projects after 2nd tick (expect 1)", again);
+const forOffer = (await db.from("video_projects").select("id").eq("workspace_id", ws).contains("inputs", { source_ids: [offer.id] })).data?.length;
+const runsForOffer = (await db.from("automation_runs").select("id, status").eq("workspace_id", ws).eq("dedupe_key", `video_offer:${offer.id}`)).data;
+const forEarlier = (await db.from("video_projects").select("id").eq("workspace_id", ws).eq("inputs->>auto", "true").contains("inputs", { source_ids: [source.id] })).data?.length;
+log("after 2 ticks: projects for the new offer (expect 1)", forOffer);
+log("after 2 ticks: automation runs for it (expect 1)", runsForOffer);
+log("source added BEFORE switching on is not drafted (expect 0)", forEarlier);
 await db.from("automation_pipelines").update({ enabled: false }).eq("workspace_id", ws).eq("template_key", "video_new_offer");
 log("pipeline switched back off", true);
 

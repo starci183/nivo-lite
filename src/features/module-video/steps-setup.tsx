@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "@heroui/react";
 import { Button, FileDropzone, Input, SegmentedControl, SurfaceCard, Text, Textarea } from "@starci/grammar/common";
 import { useLocale, useT } from "@/i18n/client";
 import { video } from "@/i18n/dict/video";
@@ -25,7 +26,7 @@ export const GoalStep = (p: {
         <ul className={CHOICES_CLASS_NAME} aria-label={t("goalHeading")}>
           {GOAL_TEMPLATES.map((g) => (
             <li key={g.goal}>
-              <button type="button" aria-pressed={p.goal === g.goal} disabled={off} className={p.goal === g.goal ? `${CHOICE_CLASS_NAME} ${CHOICE_ON_CLASS_NAME}` : CHOICE_CLASS_NAME} onClick={() => p.onGoal(g.goal)}>
+              <button type="button" aria-pressed={p.goal === g.goal} disabled={off} className={cn(CHOICE_CLASS_NAME, p.goal === g.goal && CHOICE_ON_CLASS_NAME)} onClick={() => p.onGoal(g.goal)}>
                 <Text as="span" weight="semibold">{g.label[locale]}</Text>
                 <Text as="span" size="xs" tone="muted">{g.hint[locale]}</Text>
               </button>
@@ -91,7 +92,7 @@ export const InputsStep = (p: {
                 const on = p.inputs.media.includes(m.path);
                 return (
                   <li key={m.path}>
-                    <button type="button" aria-pressed={on} aria-label={`${t("mediaUse")}: ${m.name}`} disabled={!p.canEdit} className={on ? `${MEDIA_TILE_CLASS_NAME} ${MEDIA_TILE_ON_CLASS_NAME}` : MEDIA_TILE_CLASS_NAME} onClick={() => p.onInputs({ ...p.inputs, media: toggle(p.inputs.media, m.path) })}>
+                    <button type="button" aria-pressed={on} aria-label={`${t("mediaUse")}: ${m.name}`} disabled={!p.canEdit} className={cn(MEDIA_TILE_CLASS_NAME, on && MEDIA_TILE_ON_CLASS_NAME)} onClick={() => p.onInputs({ ...p.inputs, media: toggle(p.inputs.media, m.path) })}>
                       {m.url ? (m.kind === "image"
                         // eslint-disable-next-line @next/next/no-img-element
                         ? <img src={m.url} alt={m.name} className={MEDIA_IMG_CLASS_NAME} />

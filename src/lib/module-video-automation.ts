@@ -15,7 +15,7 @@ export const isOfferTopic = (topic: string | null | undefined): boolean => /\b(u
 
 export type OfferSource = { readonly id: string; readonly title: string };
 
-/** Sources added since the automation was created (and in the last 7 days) that a video can be made from. */
+/** Sources added since the automation was last switched on or saved (and in the last 7 days) that a video can be made from. */
 export const offerSources = async (db: SupabaseClient, ws: string, since: Date, now: Date = new Date()): Promise<Array<OfferSource>> => {
   const from = new Date(Math.max(since.getTime(), now.getTime() - 7 * 86_400_000)).toISOString();
   const { data } = await db.from("knowledge_sources").select("id, title, topic").eq("workspace_id", ws).eq("visibility", "public").eq("status", "ready").gte("created_at", from).not("topic", "is", null).order("created_at").limit(20);
