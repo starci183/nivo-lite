@@ -120,6 +120,7 @@ export type MessageVars = {
 
 const NEUTRAL: Readonly<Record<string, string>> = {
   ten_shop: "shop", gio_mo_cua: "giờ làm việc của shop", ten_khach: "bạn", so_tien: "", ma_phieu: "", nhu_cau: "dịch vụ bạn quan tâm", uu_dai: "ưu đãi riêng",
+  dich_vu: "dịch vụ", gio_hen: "giờ hẹn", so_ngay: "vài", nguoi_lam: "", dia_chi: "",
 };
 
 /** Fill {ten_khach} {ten_shop} {gio_mo_cua} {so_tien} {ma_phieu} {nhu_cau} {uu_dai} and the email variables. An empty value reads as a neutral word, never as a raw {placeholder}. */
@@ -132,6 +133,7 @@ export const SAMPLE_VARS = {
   ten_khach: "chị Lan", so_tien: "350.000 ₫", ma_phieu: "INV-202610-0012", nhu_cau: "gói chăm sóc da", uu_dai: "ưu đãi 10% cho lần quay lại",
   ngay: "02/10/2026", tom_tat: "- Khách mới: 3\n- Tiền về: 1.200.000 ₫ (2 giao dịch)\n- Hoá đơn quá hạn: 1 (350.000 ₫)", viec_cho: "Đang có 2 việc chờ bạn quyết định trong NIVO.",
   han: "25/09/2026", ky: "09/2026", so_ngay_tre: "7",
+  dich_vu: "cắt tóc", gio_hen: "14:00 thứ Sáu, 09/10/2026", so_ngay: "30", nguoi_lam: "chị Mai", dia_chi: "12 Phố Thử Nghiệm",
 } as const;
 
 export type AutomationRunStatus = "queued" | "running" | "done" | "skipped" | "waiting_approval" | "failed";

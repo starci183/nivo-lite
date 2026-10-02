@@ -6,6 +6,7 @@
 //   slots      findSlots (the engine the app runs, imported as is) on the production rows: buffers, overlap, closed day, plus the database guard against double booking
 //   flow       signed calls against BASE (default https://nivo.vn): chatbot-style booking_request through /api/engine/callback and /api/engine/tool, the minute tick, reminders
 //   public     the public booking page /b/<slug> (slots, book, rate limit, honeypot)
+//   automations the four booking automation cards (switched on in the test workspace, then back OFF): review, come back, waitlist notice
 //   real-turn  a real OpenClaw chat.turn (queued engine job) for a booking message; polls the result
 import { createClient } from "@supabase/supabase-js";
 import { createHmac, randomUUID } from "node:crypto";
@@ -231,7 +232,7 @@ const flow = async () => {
   const want = rem1.length === 2 && rem1.every((r) => r.status === "scheduled") && Math.abs(Date.parse(rem1.find((r) => r.kind === "h24").due_at) - (startMs - 24 * 3_600_000)) < 1000 && Math.abs(Date.parse(rem1.find((r) => r.kind === "h2").due_at) - (startMs - 2 * 3_600_000)) < 1000;
   check("F1c reminder jobs scheduled (24 h and 2 h before)", "h24 + h2 rows, status scheduled, due_at = start - 24h / 2h", rem1.map((r) => `${r.kind}@${hm(Date.parse(r.due_at))} ${localDate(Date.parse(r.due_at), TZ)} ${r.status}`).join("; "), want);
   const lead1 = b1?.lead_id ? (await db.from("leads").select("contact_name, phone").eq("id", b1.lead_id).single()).data : null;
-  check("F1d customer record created/linked from the request", "lead with the name and phone", JSON.stringify(lead1), lead1?.phone === "0900000001");
+  check("F1d customer record created/linked from the request (phone normalised to +84)", "lead with the name and phone 84900000001", JSON.stringify(lead1), lead1?.phone === "84900000001" && lead1?.contact_name === "Kiểm thử · Lan Anh");
 
   // F2: conflict -> waiting decision (both stylists booked at 15:00)
   await reserve(ws, m, "Cắt tóc nữ", "Mai", wed, "15:00", { customer: "Kiểm thử · Giữ chỗ Mai" });
@@ -269,11 +270,7 @@ const flow = async () => {
   check("F5 minute tick: the due reminder goes through the gate and is sent on the chat", "reminder sent, remind_booking done auto, message 'nhắc bạn có lịch'", `tick ${tk.status}; ${remNow?.status}; ${rw?.action}/${rw?.status}/${rw?.decided_path}; ${msgs5.find((x) => /nhắc bạn/.test(x))?.slice(0, 90) ?? "no message"}`, remNow?.status === "sent" && rw?.status === "done" && msgs5.some((x) => /nhắc bạn có lịch/.test(x)));
 
   // F4: late cancel (inside the 24 h window) with a fee -> ask. A booking tomorrow morning, found by the chat intent.
-  const tomorrow = addDays(localDate(Date.now(), TZ), 1);
-  const lateDay = isoWeekday(tomorrow) === 7 || tomorrow === m.exceptions[0].date ? addDays(tomorrow, 1) : tomorrow;
-  const nowH = Number(localHhmm(Date.now(), TZ).slice(0, 2));
-  const lateStart = Date.parse(zonedMs(lateDay, "09:00", TZ) > Date.now() + 2 * 3_600_000 ? new Date(zonedMs(lateDay, "09:00", TZ)).toISOString() : new Date(Date.now() + 6 * 3_600_000).toISOString());
-  void nowH;
+  const lateStart = Math.ceil((Date.now() + 6 * 3_600_000) / 900_000) * 900_000; // 6 hours from now: inside the 24 h free-change window
   const conv4 = await newConversation(ws, "Kiểm thử · Hoa");
   const lead4 = ok(await db.from("leads").insert({ workspace_id: ws, contact_name: "Kiểm thử · Hoa", company: "—", channel: "Website chat", need: "Cắt tóc", phone: "0900000004", origin: "live" }).select("id").single(), "lead4");
   await db.from("agent_conversations").update({ lead_id: lead4.id }).eq("id", conv4);
@@ -354,19 +351,79 @@ const publicCheck = async () => {
   check("P7 rate limit: more than 8 booking requests in 10 minutes from one visitor", "429 after the 8th", `${limited} of 12 rapid requests got 429`, limited >= 3);
 };
 
+/* ------------------------------------------------------------------ the booking automations (cards switched on in the test workspace only) */
+const automations = async () => {
+  const ws = await workspace();
+  const m = await load(ws);
+  await db.from("booking_waitlist").delete().eq("workspace_id", ws);
+  const keys = ["appointment_reminder", "booking_review", "booking_comeback", "booking_waitlist_notice"];
+  const tpl = Object.fromEntries((await db.from("automation_templates").select("key, definition").in("key", keys)).data.map((t) => [t.key, t.definition]));
+  for (const k of keys) ok(await db.from("automation_pipelines").upsert({ workspace_id: ws, template_key: k, name: tpl[k].name.vi, module_key: "booking", enabled: true, config: tpl[k].defaults ?? {}, body: tpl[k].defaultBody?.vi ?? null, body_version: 1 }, { onConflict: "workspace_id,template_key" }), `pipeline ${k}`);
+  const person = async (name, phone) => {
+    const conv = await newConversation(ws, name);
+    const lead = ok(await db.from("leads").insert({ workspace_id: ws, contact_name: name, company: "—", channel: "Website chat", need: "Cắt tóc", phone, origin: "live" }).select("id").single(), "lead");
+    await db.from("agent_conversations").update({ lead_id: lead.id }).eq("id", conv);
+    return { conv, lead: lead.id };
+  };
+  const doneBooking = async (p, svcName, when, ago) => {
+    const svc = m.byName[svcName];
+    const id = await reserve(ws, m, svcName, svcName.includes("Gội") ? "Phòng gội 1" : "Mai", nextWeekday(when, 5), "09:00", { customer: p.name, lead_id: p.lead });
+    await db.from("bookings").update({ status: "done", done_at: new Date(Date.now() - ago).toISOString(), conversation_id: p.conv }).eq("id", id);
+    return id;
+  };
+  const rev = { name: "Kiểm thử · Khách xong 4 giờ trước", ...(await person("Kiểm thử · Khách xong 4 giờ trước", "0900000011")) };
+  const bk = { name: "Kiểm thử · Khách cắt tóc 31 ngày trước", ...(await person("Kiểm thử · Khách cắt tóc 31 ngày trước", "0900000012")) };
+  const wl = { name: "Kiểm thử · Khách chờ lịch", ...(await person("Kiểm thử · Khách chờ lịch", "0900000013")) };
+  const b1 = await doneBooking(rev, "Cắt tóc nữ", 2, 4 * 3_600_000);
+  const b2 = await doneBooking(bk, "Cắt tóc nữ", 3, 31 * 86_400_000);
+  const thu = nextWeekday(4, 6);
+  ok(await db.from("booking_waitlist").insert({ workspace_id: ws, lead_id: wl.lead, conversation_id: wl.conv, customer_name: wl.name, customer_phone: "0900000013", service_id: m.byName["Cắt tóc nữ"].id, window_start: new Date(zonedMs(thu, "09:00", TZ)).toISOString(), window_end: new Date(zonedMs(thu, "12:00", TZ)).toISOString() }), "waitlist");
+  const t = await tick();
+  console.log("tick", t.status, JSON.stringify(t.json));
+  await sleep(2500);
+  const runs = (await db.from("automation_runs").select("dedupe_key, status, steps, pipeline_id").eq("workspace_id", ws).like("dedupe_key", "bk%")).data;
+  const msg = async (conv) => (await db.from("agent_messages").select("role, body").eq("conversation_id", conv).eq("role", "agent").order("created_at", { ascending: false }).limit(1)).data?.[0]?.body ?? "(no message)";
+  const rm = await msg(rev.conv), bm = await msg(bk.conv), wm = await msg(wl.conv);
+  const run = (prefix, id) => runs.find((r) => r.dedupe_key.startsWith(`${prefix}:${id}`));
+  check("A1 booking_review: 4 h after a done booking the card asks for feedback through the gate", "run done, message 'Bạn thấy buổi hẹn thế nào'", `${run("bkreview", b1)?.status}; ${rm.slice(0, 100)}`, run("bkreview", b1)?.status === "done" && /thế nào/.test(rm));
+  check("A2 booking_comeback: 31 days after a 30-day service the card invites the customer back (asks the owner first)", "run waiting_approval (send_follow_up asks), nothing sent yet", `${run("bkback", b2)?.status}; last agent message: ${bm.slice(0, 60)}`, ["waiting_approval", "done"].includes(run("bkback", b2)?.status) );
+  check("A3 booking_waitlist_notice: a free slot in the waiting window notifies the customer and marks the entry", "run done, message 'vừa có chỗ trống', waitlist notified", `${runs.find((r) => r.dedupe_key.startsWith("bkwl:"))?.status}; ${wm.slice(0, 100)}; ${(await db.from("booking_waitlist").select("status").eq("workspace_id", ws).eq("customer_name", wl.name)).data?.[0]?.status}`, /chỗ trống/.test(wm));
+  const t2 = await tick();
+  await sleep(1500);
+  const runs2 = (await db.from("automation_runs").select("dedupe_key").eq("workspace_id", ws).like("dedupe_key", "bk%")).data;
+  check("A4 idempotent: a second tick starts no duplicate runs", `${runs.length} runs`, `${runs2.length} runs`, runs2.length === runs.length && t2.status === 200);
+  for (const k of keys) await db.from("automation_pipelines").update({ enabled: false }).eq("workspace_id", ws).eq("template_key", k); // back to the default: OFF
+};
+
 /* ------------------------------------------------------------------ one real OpenClaw turn */
 const realTurn = async () => {
   const ws = await workspace();
   const m = await load(ws);
-  const conv = await newConversation(ws, "Kiểm thử · Thật");
+  // make sure the agent's OpenClaw copy (AGENTS.md with the booking reply contract) is current: force a sync and wait for it
+  const inst = ok(await db.from("module_installations").select("id").eq("workspace_id", ws).eq("module_key", "booking").single(), "inst");
+  const before = (await db.from("openclaw_agent_sync").select("synced_at").eq("installation_id", inst.id).maybeSingle()).data?.synced_at ?? "";
+  console.log("sync enqueue:", (await db.rpc("engine_enqueue_agent_sync", { p_installation: inst.id, p_force: true })).error?.message ?? "ok");
+  for (let i = 0; i < 40; i++) {
+    const row = (await db.from("openclaw_agent_sync").select("synced_at, status, files").eq("installation_id", inst.id).maybeSingle()).data;
+    if (row && row.synced_at !== before && row.status === "ok") { console.log("synced", row.synced_at, JSON.stringify(row.files)); break; }
+    await sleep(3000);
+  }
+  const who = `Kiểm thử Thật ${String(Date.now()).slice(-4)}`;
+  const conv = await newConversation(ws, who);
   const wed = nextWeekday(4, 4);
-  const text = `Chào shop, mình tên Kiểm thử Thật, số 0900000077. Mình muốn cắt tóc nữ lúc 11:00 ngày ${wed.split("-").reverse().join("/")} được không?`;
+  const phrasings = [
+    `Chào shop, mình tên ${who}, số 0900000077. Mình muốn cắt tóc nữ lúc 11:00 ngày ${wed.split("-").reverse().join("/")} được không?`,
+    `Cho mình đặt cắt tóc nữ 10 giờ sáng thứ Năm tuần sau nhé, tên ${who}, sđt 0911222333`,
+    `${who} đây, 0933444555. Mai có chỗ cắt tóc nữ buổi chiều không shop?`,
+  ];
+  const text = phrasings[Number(process.env.PHRASE ?? 0) % phrasings.length];
   const msg = ok(await db.from("agent_messages").insert({ workspace_id: ws, conversation_id: conv, role: "user", body: text }).select("id").single(), "msg");
   const enq = await db.rpc("engine_enqueue", { p_workspace: ws, p_kind: "chat.turn", p_payload: { conversation_id: conv, message_id: msg.id, event_id: msg.id, agent_id: null, channel: "website" }, p_dedupe_key: `chat.turn:${msg.id}`, p_max_attempts: 2 });
   console.log("enqueued", enq.data ?? enq.error?.message);
   const t0 = Date.now();
   for (;;) {
-    const bks = (await db.from("bookings").select("status, start_at, customer_name").eq("workspace_id", ws).eq("customer_name", "Kiểm thử Thật")).data;
+    const bks = (await db.from("bookings").select("status, start_at, customer_name").eq("workspace_id", ws).eq("customer_name", who)).data;
+    const reqs = (await db.from("events").select("kind").eq("workspace_id", ws).eq("kind", "booking.chat_request").gte("created_at", new Date(t0).toISOString())).data;
     const msgs = (await db.from("agent_messages").select("role, body").eq("conversation_id", conv).order("created_at")).data;
     if (bks.length || Date.now() - t0 > 120_000) {
       console.log("elapsed", ((Date.now() - t0) / 1000).toFixed(1), "s; messages:", JSON.stringify(msgs, null, 1));
@@ -385,6 +442,7 @@ for (const p of phases) {
   else if (p === "slots") await slotsCheck();
   else if (p === "flow") await flow();
   else if (p === "public") await publicCheck();
+  else if (p === "automations") await automations();
   else if (p === "real-turn") await realTurn();
   else throw new Error(`unknown phase ${p}`);
 }

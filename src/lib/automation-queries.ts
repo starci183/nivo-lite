@@ -134,7 +134,7 @@ const loadFacts = async (db: Db, ws: string, known: ActiveContexts | Promise<Act
   const [ctx, caps, conns, chatbot] = await Promise.all([
     known, loadCapabilities(db, ws, known),
     db.from("connections").select("provider, status").eq("workspace_id", ws).neq("status", "disconnected"),
-    db.from("agents").select("id", { count: "exact", head: true }).eq("workspace_id", ws).eq("module", "chatbot").eq("status", "active"),
+    db.from("agents").select("id", { count: "exact", head: true }).eq("workspace_id", ws).in("module", ["chatbot", "booking"]).eq("status", "active"),
   ]);
   const connections = (conns.data ?? []) as Array<{ provider: string; status: string }>;
   return {
