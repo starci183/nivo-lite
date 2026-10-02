@@ -132,12 +132,8 @@ export const fillBody = (body: string, v: MessageVars): string =>
 export const SAMPLE_VARS = {
   ten_khach: "chị Lan", so_tien: "350.000 ₫", ma_phieu: "INV-202610-0012", nhu_cau: "gói chăm sóc da", uu_dai: "ưu đãi 10% cho lần quay lại",
   ngay: "02/10/2026", tom_tat: "- Khách mới: 3\n- Tiền về: 1.200.000 ₫ (2 giao dịch)\n- Hoá đơn quá hạn: 1 (350.000 ₫)", viec_cho: "Đang có 2 việc chờ bạn quyết định trong NIVO.",
-<<<<<<< HEAD
-  han: "25/09/2026", ky: "09/2026", so_ngay_tre: "7",
-  dich_vu: "cắt tóc", gio_hen: "14:00 thứ Sáu, 09/10/2026", so_ngay: "30", nguoi_lam: "chị Mai", dia_chi: "12 Phố Thử Nghiệm",
-=======
   han: "25/09/2026", ky: "09/2026", so_ngay_tre: "7", diem: "1.250", hang: "Bạc",
->>>>>>> b667873 (fix(loyalty): log a failed chat block as evidence; sample points and tier in automation previews)
+  dich_vu: "cắt tóc", gio_hen: "14:00 thứ Sáu, 09/10/2026", so_ngay: "30", nguoi_lam: "chị Mai", dia_chi: "12 Phố Thử Nghiệm",
 } as const;
 
 export type AutomationRunStatus = "queued" | "running" | "done" | "skipped" | "waiting_approval" | "failed";
