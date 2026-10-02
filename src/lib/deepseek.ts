@@ -145,6 +145,8 @@ export type CustomerChatOut = {
   order: null | { items: string; amount_vnd: number };
   /** the customer says they have paid / transferred (a claim, never evidence of payment) */
   payment_claim: boolean;
+  /** the person applies for an open job through the chat (Hiring module): validated again by registerChatApplication */
+  application?: import("./module-hiring-contract").ChatApplication | null;
 };
 
 /** Owner testing the agent in its setup screen. */

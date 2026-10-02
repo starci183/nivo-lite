@@ -15,6 +15,8 @@ import { buildAgentBundle, installationOfJob, REPLY_CONTRACT } from "./engine-sy
 import { BOOKING_REPLY_ADDENDUM } from "./module-booking-contract";
 import { bookingContextLine } from "./module-booking";
 import { BOOKING_TOOL_NAMES, handleBookingReply, runBookingTool, type BookingToolName } from "./module-booking-chat";
+import { readChatApplication } from "./module-hiring-contract";
+import { hiringChatBrief } from "./module-hiring-flow";
 import { recordEngineUsage, type UsageKind, type UsageModule } from "./usage";
 import { escalateToStaff } from "./staff-relay";
 import type { Agent, AgentConversation, AgentMessage } from "./types";
@@ -70,7 +72,7 @@ export const chatTurnContext = async (db: SupabaseClient, job: EngineJob) => {
   const syncRow = syncRes.data as { status: string; context_version: number | null; synced_at: string | null } | null;
   const synced = syncRow !== null && syncRow.status === "ok" && syncRow.synced_at !== null;
   const slim = synced && syncRow.context_version === activeVersion;
-  const authority = ai.authorityBrief(authorityRaw) + (agent.module === "booking" ? await bookingContextLine(ws) : ""); // booking: today, services, hours, policy
+  const authority = ai.authorityBrief(authorityRaw) + (agent.module === "booking" ? await bookingContextLine(ws) : "") + (await hiringChatBrief(db, ws)); // booking: today, services, hours, policy; hiring: open jobs for the chat
   const base = {
     conversation_id: conv.id, message_id: mine.id, module: agent.module, agent_name: agent.name, handled_by: conv.handled_by ?? null,
     customer_message: mine.body, turns, installation_id: instRow?.id ?? null, timeout_ms: replyTimeoutSec(instRow?.settings) * 1000, synced, mode: slim ? "slim" : "full",
@@ -153,6 +155,7 @@ export const readProposedReply = (raw: string): ai.CustomerChatOut => {
     proposed_answer: typeof obj.proposed_answer === "string" && obj.proposed_answer.trim() ? obj.proposed_answer.trim() : null,
     order: validOrder(obj.order),
     payment_claim: obj.payment_claim === true,
+    application: readChatApplication(obj.application),
   };
 };
 

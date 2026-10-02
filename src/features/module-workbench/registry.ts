@@ -4,6 +4,7 @@ import WorkbenchInventory from "@/features/module-inventory";
 import WorkbenchAccounting from "@/features/workbench-accounting";
 import WorkbenchChatbot from "@/features/workbench-chatbot";
 import WorkbenchVideo from "@/features/module-video";
+import WorkbenchHiring from "@/features/module-hiring";
 import WorkbenchSales from "@/features/workbench-sales";
 import WorkbenchBooking from "@/features/module-booking";
 
@@ -22,4 +23,5 @@ export const WORKBENCHES: Readonly<Record<string, WorkbenchComponent>> = {
   inventory: WorkbenchInventory,
   booking: WorkbenchBooking,
   video: WorkbenchVideo,
+  hiring: WorkbenchHiring,
 };

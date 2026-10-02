@@ -4,7 +4,7 @@ import { publicConfig } from "./lib/config";
 import { PERF_ENABLED, PERF_PATH_HEADER, PERF_RID_HEADER, perfFetchFor } from "./lib/supabase/perf";
 
 // Reachable without a session. Webhooks (Telegram, bank connection) are each verified by their own secret header; /api/engine by an HMAC (ENGINE_SHARED_SECRET), /api/n8n by a per-run bearer token (hash stored with an expiry).
-const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/reset-password", "/auth", "/invite", "/api/telegram", "/api/connections", "/api/bank", "/api/sepay", "/api/engine", "/api/v1", "/api/automation", "/api/content", "/api/n8n", "/b", "/api/b"]; // /b/<slug> and /api/b/<slug>: the public booking page (rate limited, honeypot, gate)
+const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/reset-password", "/auth", "/invite", "/api/telegram", "/api/connections", "/api/bank", "/api/sepay", "/api/engine", "/api/v1", "/api/automation", "/api/content", "/api/n8n", "/b", "/api/b", "/api/hiring", "/j"]; // /b/<slug> and /api/b/<slug>: the public booking page (rate limited, honeypot, gate)
 
 const MEMBER_COOKIE = "nivo_member_gate"; // "<userId>.<ok|off>": short-lived cache of the membership check
 const MEMBER_TTL_SECONDS = 60;

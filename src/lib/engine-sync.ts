@@ -4,6 +4,7 @@ import { gateEntry, isModuleKey, MODULE_GATES, type ContextSnapshot, type Module
 import { audienceOf as registryAudience, moduleDef } from "./module-registry";
 import type { Visibility } from "./knowledge/shared";
 import { BOOKING_REPLY_ADDENDUM } from "./module-booking-contract";
+import { HIRING_APPLICATION_CLAUSE, HIRING_APPLICATION_SHAPE, HIRING_REPLY_CONTRACT } from "./module-hiring-contract";
 
 /**
  * The OpenClaw copy of one agent, built ONLY from Supabase (the source of truth). The engine job `openclaw.sync_agent` fetches this bundle
@@ -40,8 +41,8 @@ Asking to be contacted, called back or advised, sharing a need or contact detail
 Otherwise "needs_human": false, "reason": null, "proposed_answer": null.
 ORDER: judge ONLY the customer's latest message. When it clearly commits to buy an item whose price is WRITTEN in the business knowledge, set "order": {"items": the item name as written, "amount_vnd": the total price in VND as an integer copied from the knowledge}. In "reply" thank them, repeat the item and price, and say the payment details follow; do not say it is paid. If the item or its price is not in the knowledge: "order": null, "needs_human": true, "reason": "over_authority". Otherwise "order": null.
 PAYMENT CLAIM: when the customer says they have already paid or transferred the money, set "payment_claim": true, "needs_human": false, and in "reply" thank them and say the shop will check the transfer and confirm shortly. Never say the payment is received. Otherwise "payment_claim": false.
-Your FINAL message must be ONLY this JSON object, nothing else:
-{"reply": string, "lead": null | {"contact_name","company","need","phone","email"}, "needs_human": boolean, "reason": "over_authority"|"unclear_outcome"|null, "proposed_answer": string|null, "order": null | {"items": string, "amount_vnd": integer}, "payment_claim": boolean}
+${HIRING_APPLICATION_CLAUSE}Your FINAL message must be ONLY this JSON object, nothing else:
+{"reply": string, "lead": null | {"contact_name","company","need","phone","email"}, "needs_human": boolean, "reason": "over_authority"|"unclear_outcome"|null, "proposed_answer": string|null, "order": null | {"items": string, "amount_vnd": integer}, "payment_claim": boolean, ${HIRING_APPLICATION_SHAPE}}
 Your reply is only a PROPOSAL: NIVO checks it against the owner's authority before anything reaches the customer.`;
 
 /** A module with its own reply contract appends it to AGENTS.md (only the chatbot has one today). A customer-facing module lane adds its line here. */
@@ -49,6 +50,7 @@ const REPLY_CONTRACTS: Partial<Record<ModuleKey, string>> = {
   chatbot: REPLY_CONTRACT,
   booking: `${REPLY_CONTRACT}
 ${BOOKING_REPLY_ADDENDUM}`, // booking lane: the same customer contract plus the structured booking_request (handled by src/lib/module-booking-chat.ts)
+  hiring: HIRING_REPLY_CONTRACT, // hiring lane: fairness contract of the internal agent (the chat intake clause sits inside REPLY_CONTRACT)
 };
 
 type NivoRow = { module: string; slug: string; title: string; body: string; kind: string };

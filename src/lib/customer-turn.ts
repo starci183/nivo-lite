@@ -10,6 +10,7 @@ import { drainAfter } from "./flow-ctx";
 import { isKnownPrice } from "./knowledge";
 import { DEFAULT_FALLBACK_REPLY, quotaStatus } from "./usage";
 import { escalateToStaff } from "./staff-relay";
+import { registerChatApplication } from "./module-hiring-flow";
 import { deliverToChannel } from "./telegram";
 import type { Agent, AgentConversation, AgentMessage } from "./types";
 
@@ -170,7 +171,19 @@ const applyCustomerOut = async (
     reason = "unclear_outcome";
   }
 
+  // Hiring: a candidate who applied through the chat. The model only proposed it; it is validated again and stored with the consent. A refusal replaces
+  // the model's "thank you", so nobody is told their application went through when it did not.
+  let applied = false;
+  let applicationNote: string | null = null;
+  if (out.application) {
+    const r = await registerChatApplication(ws, conv.id, out.application);
+    applied = r.ok;
+    applicationNote = r.ok ? "Hồ sơ ứng tuyển đã được ghi nhận ở Tuyển dụng." : `Chưa ghi nhận được hồ sơ ứng tuyển: ${r.message}`;
+    if (!r.ok) replyText = `Mình chưa ghi nhận được hồ sơ: ${r.message} Bạn kiểm tra giúp mình nhé.`;
+  }
+
   const reply = must(await supabase.from("agent_messages").insert({ workspace_id: ws, conversation_id: conv.id, role: "agent", body: replyText }).select().single<AgentMessage>());
+  if (applicationNote) await supabase.from("agent_messages").insert({ workspace_id: ws, conversation_id: conv.id, role: "system", body: applicationNote });
   await deliverToChannel(supabase, conv.id, replyText);
   let capturedLeadId: string | null = null;
   let leadId = conv.lead_id;
@@ -256,7 +269,7 @@ const applyCustomerOut = async (
     await supabase.from("agent_messages").insert({ workspace_id: ws, conversation_id: conv.id, role: "system", body: t("chatNeedsHuman") });
   }
 
-  const changed = Boolean(capturedLeadId || needsHuman || ordered || claimed);
+  const changed = Boolean(capturedLeadId || needsHuman || ordered || claimed || applied);
   // An order queues the payment record right behind the lead's classification: drain one more step for it.
   if (changed) drainAfter(c, ordered ? 3 : 2);
   return { reply, capturedLeadId, changed };
