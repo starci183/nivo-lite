@@ -1,0 +1,37 @@
+[
+  {
+    "key": "sales_customer",
+    "label": {
+      "vi": "Bán hàng & khách hàng",
+      "en": "Sales and customers"
+    }
+  },
+  {
+    "key": "operations",
+    "label": {
+      "vi": "Vận hành",
+      "en": "Operations"
+    }
+  },
+  {
+    "key": "finance",
+    "label": {
+      "vi": "Tài chính",
+      "en": "Finance"
+    }
+  },
+  {
+    "key": "marketing",
+    "label": {
+      "vi": "Marketing",
+      "en": "Marketing"
+    }
+  },
+  {
+    "key": "hr",
+    "label": {
+      "vi": "Nhân sự",
+      "en": "People"
+    }
+  }
+]

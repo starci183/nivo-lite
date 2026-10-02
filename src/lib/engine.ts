@@ -5,6 +5,7 @@ import { governance } from "@/i18n/dict/governance";
 import * as ai from "./deepseek";
 import { withUsage } from "./usage";
 import { deliverToChannel } from "./telegram";
+import { MODULE_PERFORMERS } from "./module-performers";
 import { ACTION_DEPARTMENT, FLOW_NEXT, applyOperatingMode, evaluateGate, isOverLimit } from "./policy";
 import { contactParts, logDecision, logEvidence, matchLead, normaliseContact, type Db } from "./core";
 import { transferDetails } from "./knowledge";
@@ -158,9 +159,9 @@ const ensureResponsibility = async (c: EngineCtx, lead: Lead): Promise<Responsib
 
 /* ------------------------------------------------------------------ performers */
 
-type Prepared = { proposal: Proposal; patch?: Partial<Pick<WorkItem, "subject_type" | "subject_id" | "lead_id">> };
-type Performed = { summary: string; evidence: EvidenceState; href?: string; lead_id?: string | null; detail?: string | null };
-type Performer = {
+export type Prepared = { proposal: Proposal; patch?: Partial<Pick<WorkItem, "subject_type" | "subject_id" | "lead_id">> };
+export type Performed = { summary: string; evidence: EvidenceState; href?: string; lead_id?: string | null; detail?: string | null };
+export type Performer = {
   prepare: (c: EngineCtx, item: WorkItem) => Promise<Prepared>;
   perform: (c: EngineCtx, item: WorkItem, p: Proposal, by: { name: string }) => Promise<Performed>;
   onReject?: (c: EngineCtx, item: WorkItem, p: Proposal, by: { name: string }) => Promise<void>;
@@ -607,7 +608,13 @@ const sendEmail: Performer = {
   },
 };
 
-const PERFORMERS: Record<FlowAction, Performer> = {
+/** The gate decides for every registry action; an action whose module has no performer yet (see module-performers.ts) just records the decision. */
+const recordOnly = (action: FlowAction): Performer => ({
+  prepare: async (_c, item) => ({ proposal: { ...item.proposal, summary: item.proposal?.summary ?? "", fields: item.proposal?.fields ?? {} } }),
+  perform: async (c, item) => ({ summary: tr(c)("recordOnly", { action: gl(c, `action_${action}`) }), evidence: "pending", lead_id: item.lead_id }),
+});
+
+const PERFORMERS: Partial<Record<FlowAction, Performer>> = {
   reply_customer: replyCustomer,
   handoff_lead: handoffLead,
   classify_lead: classifyLead,
@@ -619,6 +626,8 @@ const PERFORMERS: Record<FlowAction, Performer> = {
   reconcile_payment: reconcilePayment,
   send_email: sendEmail,
 };
+
+const performerOf = (action: FlowAction): Performer => PERFORMERS[action] ?? MODULE_PERFORMERS[action] ?? recordOnly(action);
 
 /* ------------------------------------------------------------------ the gate loop */
 
@@ -684,7 +693,7 @@ const askHuman = async (c: EngineCtx, item: WorkItem, proposal: Proposal, v: Gat
 type Finish = { path: "auto" | "human"; by: { name: string; kind: "policy" | "owner" | "staff" }; outcome: "auto_done" | "approved" | "edited"; note?: string | null; before?: Proposal };
 
 const finish = async (c: EngineCtx, item: WorkItem, proposal: Proposal, f: Finish, noChain = false): Promise<WorkItem> => {
-  const res = await PERFORMERS[item.action].perform(c, item, proposal, f.by);
+  const res = await performerOf(item.action).perform(c, item, proposal, f.by);
   const done = await patchItem(c, item.id, {
     status: "done", decided_path: f.path, proposal, result: { summary: res.summary, ...(res.href ? { href: res.href } : {}) },
     evidence_state: res.evidence, completed_at: now(), error: null, ...(res.lead_id !== undefined && res.lead_id !== null ? { lead_id: res.lead_id } : {}),
@@ -716,7 +725,7 @@ const processItem = async (c: EngineCtx, claimed: WorkItem, o: ProcessOpts = {})
   try {
     let proposal: Proposal = { ...item.proposal, summary: item.proposal?.summary ?? "", fields: item.proposal?.fields ?? {} };
     if (!o.preset) {
-      const prep = await PERFORMERS[item.action].prepare(c, item);
+      const prep = await performerOf(item.action).prepare(c, item);
       proposal = prep.proposal;
       item = await patchItem(c, item.id, { proposal, ...(prep.patch ?? {}) });
     }
@@ -837,7 +846,7 @@ export const resumeWork = async (
 
   if (decision === "rejected") {
     try {
-      await PERFORMERS[item.action].onReject?.(c, item, merged, by);
+      await performerOf(item.action).onReject?.(c, item, merged, by);
       const rejected = await patchItem(c, item.id, { status: "rejected", decided_path: "human", proposal: merged, completed_at: now(), result: { summary: tr(c)("rejectedResult") } });
       await logDecision(c.db, c.ws, { work_item_id: item.id, lead_id: item.lead_id, department: item.department, action: item.action, decided_by: by.name, decider_kind: by.kind, outcome: "rejected", reason: item.reason, note: note ?? null, before, after: merged });
       await logEvidence(c.db, c.ws, { lead_id: item.lead_id, work_item_id: item.id, kind: "work.rejected", actor: by.name, summary: tr(c)("rejectedWork", { user: by.name, summary: before.summary }), evidence: note ?? null });

@@ -8,7 +8,7 @@ import { governance } from "@/i18n/dict/governance"
 import { saveAuthority, saveRule } from "@/lib/flow-actions"
 import type { Authority, AuthorityRule, Department, FlowAction, RuleMode } from "@/lib/flow-types"
 import { FIELDS_CLASS, GROUP_CLASS, REQUIRED_ROW_CLASS, RULE_LIMIT_CLASS, RULE_LIST_CLASS, RULE_NAME_CLASS, RULE_ROW_CLASS } from "./classNames"
-import { AMOUNT_ACTIONS, draftsFrom, FIELD_KEYS, fromField, MODES, RULE_MATRIX, ruleKey, toField, type RuleDraft } from "./model"
+import { AMOUNT_ACTIONS, draftsFrom, FIELD_KEYS, fromField, MODES, modesFor, RULE_MATRIX, ruleKey, toField, visibleGroups, type RuleDraft } from "./model"
 import { SaveRow, useSaver } from "./SaveRow"
 
 /** Props for {@link RulesSections}. */
@@ -68,7 +68,8 @@ export const RulesSections = ({ authority, rules }: RulesSectionsProps) => {
       return { ok: true as const, data: null }
     })
 
-  const modeOptions = MODES.map((m) => ({ value: m, label: g(`mode_${m}`) }))
+  const groups = visibleGroups(rules)
+  const modeOptionsFor = (action: FlowAction) => modesFor(action).map((m) => ({ value: m, label: g(`mode_${m}`) }))
   const fieldOptions = FIELD_KEYS.map((f) => ({ value: f, label: g(`field_${f}`) }))
 
   return (
@@ -76,7 +77,7 @@ export const RulesSections = ({ authority, rules }: RulesSectionsProps) => {
       <SurfaceCard label={t("scopeTitle")} headingLevel={2}>
         <div className={FIELDS_CLASS}>
           <Text size="sm" tone="muted">{t("scopeDesc")}</Text>
-          {RULE_MATRIX.map((group) => (
+          {groups.map((group) => (
             <div key={group.department} className={GROUP_CLASS}>
               <Heading level={3}>{g(`dept_${group.department}`)}</Heading>
               <div className={RULE_LIST_CLASS}>
@@ -91,7 +92,7 @@ export const RulesSections = ({ authority, rules }: RulesSectionsProps) => {
                       <SegmentedControl
                         label={t("modeLabel", { action: actionName(action) })}
                         isLabelHidden
-                        options={modeOptions}
+                        options={modeOptionsFor(action)}
                         value={d.mode}
                         onValueChange={(v) => { scopeSaver.reset(); if (isMode(v)) patch(key, { mode: v }) }}
                       />
@@ -127,7 +128,7 @@ export const RulesSections = ({ authority, rules }: RulesSectionsProps) => {
             <Heading level={3}>{t("requiredTitle")}</Heading>
             <Text size="sm" tone="muted">{t("requiredHint")}</Text>
           </div>
-          {RULE_MATRIX.flatMap((group) => group.actions.map((action) => ({ department: group.department, action }))).map(({ department, action }) => {
+          {groups.flatMap((group) => group.actions.map((action) => ({ department: group.department, action }))).map(({ department, action }) => {
             const key = ruleKey(department, action)
             return (
               <div key={key} className={REQUIRED_ROW_CLASS}>

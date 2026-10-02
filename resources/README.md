@@ -6,9 +6,10 @@ Thư mục này chứa các tài nguyên của NIVO được nạp (seed) vào S
 
 ```
 resources/
+  modules/                  Registry module: <key>/module.json (tên, quyền hạn, gates, ...), _categories.json
   nivo-knowledge/           Tri thức NIVO nền, chỉ đọc với thành viên workspace
     core/                   Dùng chung cho mọi module
-    chatbot/  sales/  accounting/
+    <key>/                  Một thư mục mỗi module (knowledge_folder trong module.json)
       <slug>.md             Một tài liệu = một dòng trong bảng nivo_knowledge
 ```
 
@@ -21,6 +22,10 @@ Mỗi tệp `.md` có phần đầu (frontmatter) gồm:
 Tên tệp (không có `.md`) là `slug` duy nhất; thư mục cha là `module`. Phần còn lại là nội dung markdown.
 
 Sau này có thể thêm loại tài nguyên khác theo cùng cách, ví dụ `resources/knowledge-suggestions/` hoặc `resources/templates/`, mỗi loại một thư mục riêng và một bước nạp riêng trong `scripts/`.
+
+## Registry module
+
+`resources/modules/<key>/module.json` là nguồn duy nhất của danh sách module. `npm run gen:modules` sinh `src/lib/module-registry.generated.ts`; `npm run seed:modules` nạp bảng `modules` và `authority_actions`. Xem `docs/ADDING-A-MODULE.md`.
 
 ## Nạp vào Supabase
 

@@ -3,9 +3,10 @@ import { Badge, EmptyNotice, PageContainer, SectionHeader, SurfaceCard, Text } f
 import { getT } from "@/i18n/server"
 import { knowledge as dict } from "@/i18n/dict/knowledge"
 import type { KnowledgeModule, NivoItem } from "@/lib/knowledge/shared"
+import { MODULE_KEYS } from "@/lib/module-registry"
 import { PAGE_CLASS, PASSAGE_TEXT_CLASS, ROW_WRAP_CLASS, STACK_CLASS } from "./classNames"
 
-const ORDER: ReadonlyArray<KnowledgeModule> = ["core", "chatbot", "sales", "accounting"]
+const ORDER: ReadonlyArray<KnowledgeModule> = ["core", ...MODULE_KEYS]
 
 /** /knowledge/nivo: NIVO base knowledge per module, read-only for every member. */
 export const NivoBrowse = async ({ items }: { readonly items: ReadonlyArray<NivoItem> }) => {

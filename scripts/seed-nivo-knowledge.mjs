@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Seeds NIVO base knowledge from resources/nivo-knowledge/<module>/<slug>.md into public.nivo_knowledge (upsert by slug, service role).
+// Seeds NIVO base knowledge from resources/nivo-knowledge/<knowledge folder>/<slug>.md into public.nivo_knowledge (upsert by slug, service role).
 // Run: npm run seed:knowledge   (secrets come from ~/.nivo-lite/secrets.env through with-secrets.mjs)
 import { createClient } from "@supabase/supabase-js";
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -7,7 +7,9 @@ import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..", "resources", "nivo-knowledge");
-const MODULES = ["core", "chatbot", "sales", "accounting"];
+// The module folders come from the registry (resources/modules/<key>/module.json knowledge_folder); "core" is shared by every module.
+const modulesDir = join(dirname(root), "modules");
+const MODULES = ["core", ...readdirSync(modulesDir).filter((n) => !n.startsWith("_") && statSync(join(modulesDir, n)).isDirectory()).map((n) => JSON.parse(readFileSync(join(modulesDir, n, "module.json"), "utf8")).knowledge_folder)];
 const KINDS = ["playbook", "authority", "escalation", "setup_checklist", "tone"];
 
 const walk = (dir) => readdirSync(dir).flatMap((n) => {

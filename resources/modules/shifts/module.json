@@ -1,0 +1,166 @@
+{
+  "key": "shifts",
+  "order": 40,
+  "name": {
+    "vi": "Lịch & ca làm",
+    "en": "Shifts and schedules"
+  },
+  "short_name": {
+    "vi": "Lịch ca AI",
+    "en": "Shifts AI"
+  },
+  "description": {
+    "vi": "Xếp lịch ca, xử lý đổi ca và xin nghỉ, nhắc nhân viên trước giờ làm; bạn chỉ duyệt những gì ngoài quy tắc.",
+    "en": "Builds shift schedules, handles swaps and leave requests and reminds staff before they start; you only approve what falls outside your rules."
+  },
+  "points": {
+    "vi": [
+      "Soạn lịch ca theo nhu cầu từng ngày",
+      "Duyệt đổi ca trong quy tắc đã đặt",
+      "Nhắc nhân viên trước giờ vào ca"
+    ],
+    "en": [
+      "Drafts schedules from daily demand",
+      "Approves swaps within your rules",
+      "Reminds staff before each shift"
+    ]
+  },
+  "purpose": "a shift-scheduling assistant that drafts schedules, handles shift swaps and leave requests within the owner's rules and reminds staff before their shifts",
+  "icon": "review",
+  "glyph": "M4 6h16v14H4zM4 10h16M8 3v4M16 3v4M8 14h3",
+  "mascot": "/images/promo/mascot-night.png",
+  "category": "operations",
+  "status": "early",
+  "audience": "internal",
+  "included_with_workspace": false,
+  "available": true,
+  "knowledge_folder": "shifts",
+  "workbench": null,
+  "settings_extras": null,
+  "requires": {
+    "capabilities": [
+      "staff_directory"
+    ],
+    "connections": []
+  },
+  "default_operating_mode": "assist",
+  "agent": {
+    "name": "Shifts Agent",
+    "handle": "shifts",
+    "summary": {
+      "vi": "Xếp lịch ca, xử lý đổi ca và xin nghỉ, nhắc nhân viên trước giờ làm; bạn chỉ duyệt những gì ngoài quy tắc.",
+      "en": "Builds shift schedules, handles swaps and leave requests and reminds staff before they start; you only approve what falls outside your rules."
+    },
+    "capabilities": {
+      "vi": [
+        "Soạn lịch ca theo nhu cầu từng ngày",
+        "Duyệt đổi ca trong quy tắc đã đặt",
+        "Nhắc nhân viên trước giờ vào ca"
+      ],
+      "en": [
+        "Drafts schedules from daily demand",
+        "Approves swaps within your rules",
+        "Reminds staff before each shift"
+      ]
+    },
+    "role": {
+      "vi": "Lên lịch ca và xử lý đổi ca, nghỉ phép",
+      "en": "Plans shifts and handles swaps and leave"
+    },
+    "instructions": {
+      "vi": "Soạn lịch ca từ nhu cầu từng ngày, kiểm tra quy tắc, đề xuất việc cần chủ duyệt. Không tự đăng lịch khi chưa được cấp quyền.",
+      "en": "Draft the shift schedule from daily demand, check it against the rules and propose what needs the owner. Never publish a schedule without authority."
+    }
+  },
+  "gates": [
+    {
+      "key": "staff_roles",
+      "label_vi": "Nhân sự và vai trò",
+      "label_en": "Staff and roles",
+      "hint_vi": "Có những ai, mỗi người làm vai trò gì, ai được phép làm ca nào.",
+      "hint_en": "Who works here, in what role, and who may cover which shift."
+    },
+    {
+      "key": "opening_hours",
+      "label_vi": "Giờ hoạt động",
+      "label_en": "Operating hours",
+      "hint_vi": "Giờ mở cửa và đóng cửa từng ngày trong tuần, ngày nghỉ cố định.",
+      "hint_en": "Opening and closing hours each weekday and fixed days off."
+    },
+    {
+      "key": "coverage",
+      "label_vi": "Số người tối thiểu mỗi ca",
+      "label_en": "Minimum coverage",
+      "hint_vi": "Mỗi ca, mỗi vai trò cần tối thiểu bao nhiêu người.",
+      "hint_en": "How many people each shift and role needs at minimum."
+    },
+    {
+      "key": "swap_leave_rules",
+      "label_vi": "Quy tắc đổi ca và xin nghỉ",
+      "label_en": "Swap and leave rules",
+      "hint_vi": "Báo trước bao lâu, đổi ca cần điều kiện gì, ai duyệt nghỉ.",
+      "hint_en": "How much notice, what a swap needs, who approves leave."
+    },
+    {
+      "key": "labor_limits",
+      "label_vi": "Giới hạn giờ làm",
+      "label_en": "Working-time limits",
+      "hint_vi": "Số giờ tối đa mỗi ngày và tuần, thời gian nghỉ giữa hai ca.",
+      "hint_en": "Maximum hours per day and week, rest between shifts."
+    },
+    {
+      "key": "tone",
+      "label_vi": "Giọng điệu",
+      "label_en": "Tone",
+      "hint_vi": "Cách xưng hô và phong cách khi nhắn tin.",
+      "hint_en": "How it addresses people and the style of its messages."
+    }
+  ],
+  "authority_actions": [
+    {
+      "action": "publish_schedule",
+      "label": {
+        "vi": "Đăng lịch ca",
+        "en": "Publish schedule"
+      },
+      "mode": "ask",
+      "limit_vnd": null,
+      "required_fields": [],
+      "amount_limit": false
+    },
+    {
+      "action": "approve_swap",
+      "label": {
+        "vi": "Duyệt đổi ca",
+        "en": "Approve shift swap"
+      },
+      "mode": "auto",
+      "limit_vnd": null,
+      "required_fields": [],
+      "amount_limit": false
+    },
+    {
+      "action": "approve_leave",
+      "label": {
+        "vi": "Duyệt xin nghỉ",
+        "en": "Approve leave"
+      },
+      "mode": "ask",
+      "limit_vnd": null,
+      "required_fields": [],
+      "amount_limit": false
+    },
+    {
+      "action": "remind_shift",
+      "label": {
+        "vi": "Nhắc ca làm",
+        "en": "Remind staff of a shift"
+      },
+      "mode": "auto",
+      "limit_vnd": null,
+      "required_fields": [],
+      "amount_limit": false
+    }
+  ],
+  "connection_providers": []
+}

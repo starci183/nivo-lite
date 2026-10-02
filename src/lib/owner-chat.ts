@@ -8,6 +8,7 @@ import { withUsage } from "./usage";
 import { logDecision, logEvidence } from "./core";
 import { formatVnd, resumeWork, type Decider, type EngineCtx } from "./engine";
 import { ACTION_DEPARTMENT } from "./policy";
+import { actionDef, listModules } from "./module-registry";
 import type { Authority, AuthorityRule, Department, FlowAction, RuleMode, WorkEdits, WorkItem } from "./flow-types";
 
 /**
@@ -34,6 +35,8 @@ export const saveRuleCore = async (
 ): Promise<AuthorityRule> => {
   if (!ACTIONS.includes(input.action) || ACTION_DEPARTMENT[input.action] !== input.department || !MODES.includes(input.mode)) throw new Error("Invalid rule");
   if (input.limit_vnd !== null && (!Number.isFinite(input.limit_vnd) || input.limit_vnd < 0)) throw new Error(T(c)("amountInvalid"));
+  // An action the registry marks max_mode "ask" (publishing a video or a post) can never be set to run alone.
+  if (input.mode === "auto" && actionDef(input.action).maxMode !== null) throw new Error("Invalid rule");
   const { data, error } = await c.db.from("authority_rules").upsert({
     workspace_id: c.ws, department: input.department, action: input.action, mode: input.mode, limit_vnd: input.limit_vnd,
     ...(input.required_fields ? { required_fields: input.required_fields } : {}), ...(input.note !== undefined ? { note: input.note } : {}),
@@ -46,7 +49,7 @@ export const saveRuleCore = async (
 const vndOf = (c: EngineCtx, n: number) => formatVnd(n, c.locale);
 
 /** Words that name each action in the owner's message (vi + en); a rule change needs one of them. */
-const ACTION_WORDS: Record<FlowAction, ReadonlyArray<string>> = {
+const ACTION_WORDS: Partial<Record<FlowAction, ReadonlyArray<string>>> = {
   reply_customer: ["trả lời khách", "tư vấn", "chatbot", "reply", "answer customer"],
   handoff_lead: ["chuyển lead", "chuyển cho sales", "handoff", "hand off", "lead"],
   classify_lead: ["phân loại", "classify"],
@@ -59,11 +62,19 @@ const ACTION_WORDS: Record<FlowAction, ReadonlyArray<string>> = {
   send_email: ["gửi email", "gửi mail", "email khách", "send email", "email the customer"],
 };
 
+/** An action of a newer module is named by its registry labels (vi + en), lower-cased. */
+const wordsOf = (action: FlowAction): ReadonlyArray<string> => {
+  const known = ACTION_WORDS[action];
+  if (known) return known;
+  const def = actionDef(action);
+  return [def.label.vi.toLowerCase(), def.label.en.toLowerCase()];
+};
+
 /** "trên / quá / hơn / over / above <amount> … hỏi / ask": an amount threshold. */
 const THRESHOLD = /(trên|quá|hơn|vượt|over|above|more than)\s*[\d.,]+\s*(triệu|tr|m|k|nghìn|million)?.*(hỏi|ask)/u;
 
 /** Actions whose rule carries a VND limit. */
-const LIMITED = new Set<FlowAction>(["confirm_order", "issue_invoice", "reconcile_payment", "send_quote"]);
+const LIMITED = new Set<FlowAction>(listModules().flatMap((m) => m.authorityActions.filter((a) => a.amountLimit).map((a) => a.action)));
 
 /** "dưới 20 triệu" / "trên 1,5 tỷ" / "over 20m" → VND; null when the message names no amount limit. */
 const amountIn = (said: string): number | null => {
@@ -108,7 +119,7 @@ export const applyAuthorityCore = async (c: EngineCtx, text: string) => {
   const said = text.toLowerCase().normalize("NFC");
   // Deterministic backstop for the model: "đơn (hàng) dưới/trên/tới 20 triệu" always carries the order limit.
   const amount = amountIn(said);
-  if (amount !== null && ACTION_WORDS.confirm_order.some((w) => said.includes(w)) && !ch.rules.some((r) => r.action === "confirm_order")) {
+  if (amount !== null && wordsOf("confirm_order").some((w) => said.includes(w)) && !ch.rules.some((r) => r.action === "confirm_order")) {
     ch.rules.push({ action: "confirm_order", mode: null, limit_vnd: amount });
   }
   for (const r of ch.rules) {
@@ -116,7 +127,7 @@ export const applyAuthorityCore = async (c: EngineCtx, text: string) => {
     const action = r.action as FlowAction;
     if (!ACTIONS.includes(action)) continue;
     // Only rules the owner actually named change; the model must never rewrite the whole table from a vague sentence.
-    if (!ACTION_WORDS[action].some((w) => said.includes(w))) continue;
+    if (!wordsOf(action).some((w) => said.includes(w))) continue;
     const existing = rules.find((x) => x.action === action);
     // "đơn trên 20 triệu thì hỏi tôi" = do it alone strictly below 20M (confirmed as "dưới 20.000.000 đ"), ask otherwise.
     const isThreshold = r.limit_vnd !== null && r.limit_vnd !== undefined && THRESHOLD.test(said);

@@ -1,22 +1,12 @@
 import { defineDict } from "../core";
+import { REGISTRY_ACTION_LABELS, REGISTRY_DEPT_LABELS } from "@/lib/module-registry.generated";
 
 /** Shared operating-flow labels (departments, actions, gate reasons, statuses). Owned by L1; UI lanes import only. */
 export const governance = defineDict({
   en: {
+    ...REGISTRY_DEPT_LABELS.en,
+    ...REGISTRY_ACTION_LABELS.en,
     motto: "Grant authority → AI does the work → Check the results → Asked only when needed",
-    dept_chatbot: "Chatbot AI",
-    dept_sales: "Sales AI",
-    dept_accounting: "Accounting AI",
-    action_reply_customer: "Reply to customer",
-    action_handoff_lead: "Hand off lead",
-    action_classify_lead: "Classify lead",
-    action_send_follow_up: "Send follow-up",
-    action_send_quote: "Send quote",
-    action_confirm_order: "Confirm order",
-    action_send_care: "Send customer care",
-    action_issue_invoice: "Issue invoice",
-    action_reconcile_payment: "Reconcile payment",
-    action_send_email: "Send email to a customer",
     reason_routine: "Routine",
     reason_missing_data: "Missing data",
     reason_over_authority: "Over authority",
@@ -91,20 +81,9 @@ export const governance = defineDict({
     internalInvoice: "Internal invoice (no e-invoice issued)",
   },
   vi: {
+    ...REGISTRY_DEPT_LABELS.vi,
+    ...REGISTRY_ACTION_LABELS.vi,
     motto: "Giao quyền → AI thực hiện → Kiểm tra kết quả → Chỉ hỏi khi cần",
-    dept_chatbot: "Chatbot AI",
-    dept_sales: "Sales AI",
-    dept_accounting: "Kế toán AI",
-    action_reply_customer: "Trả lời khách",
-    action_handoff_lead: "Chuyển lead",
-    action_classify_lead: "Phân loại",
-    action_send_follow_up: "Gửi theo dõi",
-    action_send_quote: "Gửi báo giá",
-    action_confirm_order: "Xác nhận đơn hàng",
-    action_send_care: "Gửi chăm sóc",
-    action_issue_invoice: "Xuất hóa đơn",
-    action_reconcile_payment: "Đối soát thanh toán",
-    action_send_email: "Gửi email cho khách",
     reason_routine: "Việc thường lệ",
     reason_missing_data: "Thiếu dữ kiện",
     reason_over_authority: "Vượt quyền",

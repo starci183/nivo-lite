@@ -1,0 +1,169 @@
+{
+  "key": "chatbot",
+  "order": 10,
+  "name": {
+    "vi": "Chatbot chăm sóc khách hàng",
+    "en": "Customer care chatbot"
+  },
+  "short_name": {
+    "vi": "Chatbot AI",
+    "en": "Chatbot AI"
+  },
+  "description": {
+    "vi": "Trả lời khách cả ngày lẫn đêm theo những gì bạn dạy, ghi nhận từng khách hàng tiềm năng và chuyển cho Sales.",
+    "en": "Answers customers day and night from what you teach it, captures every lead and hands it to Sales."
+  },
+  "points": {
+    "vi": [
+      "Trả lời theo kiến thức của bạn",
+      "Ghi nhận khách kèm nhu cầu",
+      "Không hứa giá hay thời hạn"
+    ],
+    "en": [
+      "Answers from your knowledge",
+      "Captures leads with their needs",
+      "Never promises price or dates"
+    ]
+  },
+  "purpose": "a customer care chatbot that answers customers from the owner's knowledge, captures leads and hands them over to Sales",
+  "icon": "support",
+  "glyph": "M4 5h16v10H9l-5 4z",
+  "mascot": "/images/promo/mascot-chat.png",
+  "category": "sales_customer",
+  "status": "stable",
+  "audience": "customer",
+  "included_with_workspace": false,
+  "available": true,
+  "knowledge_folder": "chatbot",
+  "workbench": "chatbot",
+  "settings_extras": "chatbot_reply",
+  "requires": {
+    "capabilities": [
+      "customer_chat"
+    ],
+    "connections": []
+  },
+  "default_operating_mode": "assist",
+  "agent": {
+    "name": "Chatbot Agent",
+    "handle": "chatbot",
+    "summary": {
+      "vi": "Trả lời khách trên website cả ngày lẫn đêm, ghi nhận từng khách hàng tiềm năng kèm nhu cầu và chuyển cho Sales.",
+      "en": "Answers customers on your website day and night, captures every lead with context and hands it to Sales."
+    },
+    "capabilities": {
+      "vi": [
+        "Trả lời theo kiến thức doanh nghiệp của bạn",
+        "Ghi nhận khách hàng cùng nhu cầu",
+        "Chuyển mọi khách hàng cho Sales",
+        "Không hứa giá hay thời hạn"
+      ],
+      "en": [
+        "Answers from your business knowledge",
+        "Captures leads with their needs",
+        "Hands every lead to Sales",
+        "Never promises price or dates"
+      ]
+    },
+    "role": {
+      "vi": "Tiếp nhận yêu cầu và ghi nhận khách hàng",
+      "en": "Customer enquiries & lead capture"
+    },
+    "instructions": {
+      "vi": "Chào khách và tìm hiểu khách cần gì. Chỉ trả lời dựa trên kiến thức doanh nghiệp. Khi khách chia sẻ nhu cầu, hỏi tên và công ty rồi ghi nhận khách hàng. Không hứa giá, lịch hay phạm vi công việc: nói rằng một thành viên trong nhóm sẽ xác nhận.",
+      "en": "Greet the customer and understand what they need. Answer only from the business knowledge. When the customer shares a need, ask for their name and company, then capture them as a lead. Never promise price, schedule or scope: say a team member will confirm."
+    }
+  },
+  "gates": [
+    {
+      "key": "identity",
+      "label_vi": "Thông tin doanh nghiệp",
+      "label_en": "Business identity",
+      "hint_vi": "Tên, bạn làm nghề gì, phục vụ ai, ở đâu.",
+      "hint_en": "Name, what you do, who you serve, where."
+    },
+    {
+      "key": "products",
+      "label_vi": "Sản phẩm và giá",
+      "label_en": "Products and prices",
+      "hint_vi": "Dịch vụ/sản phẩm chính và mức giá hoặc cách báo giá.",
+      "hint_en": "Main products or services and their prices or how you quote."
+    },
+    {
+      "key": "support_scope",
+      "label_vi": "Phạm vi hỗ trợ",
+      "label_en": "Support scope",
+      "hint_vi": "Chatbot được trả lời những gì và không trả lời những gì.",
+      "hint_en": "What the chatbot may answer and what it must leave alone."
+    },
+    {
+      "key": "channels",
+      "label_vi": "Kênh tiếp nhận",
+      "label_en": "Channels",
+      "hint_vi": "Khách nhắn qua đâu: website, Telegram, Zalo, Facebook...",
+      "hint_en": "Where customers write: website, Telegram, Zalo, Facebook..."
+    },
+    {
+      "key": "hours_sla",
+      "label_vi": "Giờ làm việc và thời gian phản hồi",
+      "label_en": "Hours and response time",
+      "hint_vi": "Giờ làm việc và bao lâu thì người thật trả lời.",
+      "hint_en": "Opening hours and how fast a person follows up."
+    },
+    {
+      "key": "handoff",
+      "label_vi": "Khi nào chuyển cho người",
+      "label_en": "Handoff rules",
+      "hint_vi": "Tình huống nào bot phải chuyển cho nhân viên và chuyển cho ai.",
+      "hint_en": "When the bot must hand over to a person, and to whom."
+    },
+    {
+      "key": "prohibited",
+      "label_vi": "Điều không được hứa",
+      "label_en": "Prohibited commitments",
+      "hint_vi": "Giá, lịch, bảo hành, hoàn tiền... bot không được tự cam kết.",
+      "hint_en": "Price, schedule, warranty, refunds... the bot must never promise."
+    },
+    {
+      "key": "tone",
+      "label_vi": "Giọng điệu",
+      "label_en": "Tone",
+      "hint_vi": "Cách xưng hô và phong cách trả lời.",
+      "hint_en": "How it addresses people and the style of its answers."
+    }
+  ],
+  "authority_actions": [
+    {
+      "action": "reply_customer",
+      "label": {
+        "vi": "Trả lời khách",
+        "en": "Reply to customer"
+      },
+      "mode": "auto",
+      "limit_vnd": null,
+      "required_fields": [],
+      "amount_limit": false
+    },
+    {
+      "action": "handoff_lead",
+      "label": {
+        "vi": "Chuyển lead",
+        "en": "Hand off lead"
+      },
+      "mode": "auto",
+      "limit_vnd": null,
+      "required_fields": [
+        "contact_name",
+        "need"
+      ],
+      "amount_limit": false,
+      "next": [
+        "classify_lead"
+      ]
+    }
+  ],
+  "connection_providers": [
+    "telegram",
+    "zalo_oa"
+  ]
+}

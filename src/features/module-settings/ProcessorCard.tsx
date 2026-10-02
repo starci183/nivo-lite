@@ -1,14 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { Alert, Badge, Button, Input, SurfaceCard, Text } from "@starci/grammar/common";
+import { useCallback, useEffect, useState } from "react";
+import { Alert, Badge, Button, SurfaceCard, Text } from "@starci/grammar/common";
 import { useT } from "@/i18n/client";
 import { engine as dict } from "@/i18n/dict/engine";
-import { DEFAULT_REPLY_TIMEOUT_SEC } from "@/lib/engine-queue-shared";
 import type { Installation } from "@/lib/modules-shared";
 import { STACK_CLASS_NAME } from "./classNames";
-import { getAgentSyncStatus, resyncAgent, setHoldingMessage, setReplyTimeout, type AgentSyncStatus } from "./processorActions";
+import { getAgentSyncStatus, resyncAgent, type AgentSyncStatus } from "./processorActions";
 
 type ProcessorCardProps = { readonly installation: Installation; readonly canEdit: boolean };
 
@@ -18,19 +16,12 @@ const POLL_IDLE_MS = 20_000;
 
 /**
  * The agent's OpenClaw copy, quietly: which context version it holds and how long ago it was checked (or syncing / drifted / failed), a "sync again"
- * button, and for the chatbot the longest a customer waits before the app answers directly. There is no choice of engine: OpenClaw is the default. Owner/manager only.
+ * button. There is no choice of engine: OpenClaw is the default. Owner/manager only.
  */
 export const ProcessorCard = ({ installation, canEdit }: ProcessorCardProps) => {
   const t = useT(dict);
-  const router = useRouter();
-  const savedTimeout = Number(installation.settings.openclawTimeoutSec);
-  const initialTimeout = Number.isFinite(savedTimeout) && savedTimeout >= 5 ? Math.round(savedTimeout) : DEFAULT_REPLY_TIMEOUT_SEC;
-  const savedHolding = typeof installation.settings.holdingMessage === "string" ? installation.settings.holdingMessage : "";
-  const [holdingText, setHoldingText] = useState(savedHolding);
   const [sync, setSync] = useState<AgentSyncStatus | undefined>();
-  const [timeoutText, setTimeoutText] = useState(String(initialTimeout));
   const [note, setNote] = useState<{ ok: boolean; text: string } | undefined>();
-  const [pending, startTransition] = useTransition();
   const [queuing, setQueuing] = useState(false);
 
   const refreshSync = useCallback(async () => {
@@ -77,26 +68,6 @@ export const ProcessorCard = ({ installation, canEdit }: ProcessorCardProps) => 
     setSync((prev) => (prev ? { ...prev, state: "syncing" } : { state: "syncing", syncedVersion: null, activeVersion: null, checkedAt: null, error: null, fileCount: 0 }));
   };
 
-  const timeoutValue = Number(timeoutText);
-  const timeoutValid = Number.isInteger(timeoutValue) && timeoutValue >= 5 && timeoutValue <= 120;
-  const saveTimeout = () => {
-    setNote(undefined);
-    startTransition(async () => {
-      const r = await setReplyTimeout(installation.id, timeoutValue);
-      setNote(r.ok ? { ok: true, text: t("saved") } : { ok: false, text: r.error });
-      if (r.ok) router.refresh();
-    });
-  };
-
-  const saveHolding = () => {
-    setNote(undefined);
-    startTransition(async () => {
-      const r = await setHoldingMessage(installation.id, holdingText);
-      setNote(r.ok ? { ok: true, text: t("saved") } : { ok: false, text: r.error });
-      if (r.ok) router.refresh();
-    });
-  };
-
   return (
     <SurfaceCard label={t("title")} headingLevel={2}>
       <div className={STACK_CLASS_NAME}>
@@ -105,18 +76,6 @@ export const ProcessorCard = ({ installation, canEdit }: ProcessorCardProps) => 
           <Button variant="secondary" size="sm" isPending={queuing} isDisabled={queuing || sync?.state === "syncing"} onPress={() => void resync()}>{t("resync")}</Button>
         </div>
         <Text size="xs" tone="muted">{t("help")}</Text>
-        {installation.moduleKey === "chatbot" ? (
-          <div className={STACK_CLASS_NAME}>
-            <Input id="reply-timeout" name="reply-timeout" label={t("timeoutLabel")} variant="secondary" hint={t("timeoutHint")} value={timeoutText} isDisabled={pending} onValueChange={(v) => setTimeoutText(v.replace(/[^0-9]/g, "").slice(0, 3))} />
-            <div>
-              <Button variant="secondary" isPending={pending} isDisabled={!timeoutValid || timeoutValue === initialTimeout} onPress={saveTimeout}>{t("timeoutSave")}</Button>
-            </div>
-            <Input id="holding-message" name="holding-message" label={t("holdingLabel")} variant="secondary" hint={t("holdingHint")} placeholder={t("holdingDefault")} value={holdingText} isDisabled={pending} onValueChange={(v) => setHoldingText(v.slice(0, 400))} />
-            <div>
-              <Button variant="secondary" isPending={pending} isDisabled={holdingText.trim() === savedHolding.trim()} onPress={saveHolding}>{t("timeoutSave")}</Button>
-            </div>
-          </div>
-        ) : null}
         {note !== undefined ? <Alert title={note.ok ? t("saved") : t("notSaved")} description={note.ok ? undefined : note.text} tone={note.ok ? "affirmative" : "negative"} /> : null}
       </div>
     </SurfaceCard>

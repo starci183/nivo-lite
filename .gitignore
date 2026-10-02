@@ -18,3 +18,4 @@ engine/dist/
 # The ONE secrets file and SSH keys live at the repo root for convenience. NEVER commit them.
 /secrets.env
 /.secrets/
+src/lib/module-registry.generated.ts

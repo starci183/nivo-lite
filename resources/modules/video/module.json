@@ -1,0 +1,145 @@
+{
+  "key": "video",
+  "order": 80,
+  "name": {
+    "vi": "Tạo video",
+    "en": "Video maker"
+  },
+  "short_name": {
+    "vi": "Video AI",
+    "en": "Video AI"
+  },
+  "description": {
+    "vi": "Dựng bản nháp video giới thiệu từ nội dung và hình ảnh của bạn; chỉ đăng khi bạn đã xem và đồng ý.",
+    "en": "Renders draft videos from your content and photos; nothing is published until you have watched and approved it."
+  },
+  "points": {
+    "vi": [
+      "Dựng bản nháp video từ nội dung của bạn",
+      "Giữ đúng giọng và hình ảnh thương hiệu",
+      "Không bao giờ tự đăng"
+    ],
+    "en": [
+      "Renders draft videos from your content",
+      "Keeps your voice and brand look",
+      "Never publishes by itself"
+    ]
+  },
+  "purpose": "a video assistant that renders draft videos from the business's own content and photos and never publishes without the owner's approval",
+  "icon": "apps",
+  "glyph": "M4 6h12v12H4zM16 10l5-3v10l-5-3z",
+  "mascot": "/images/promo/mascot-celebrate.png",
+  "category": "marketing",
+  "status": "early",
+  "audience": "internal",
+  "included_with_workspace": false,
+  "available": true,
+  "knowledge_folder": "video",
+  "workbench": null,
+  "settings_extras": null,
+  "requires": {
+    "capabilities": [
+      "video_render"
+    ],
+    "connections": []
+  },
+  "default_operating_mode": "assist",
+  "agent": {
+    "name": "Video Agent",
+    "handle": "video",
+    "summary": {
+      "vi": "Dựng bản nháp video giới thiệu từ nội dung và hình ảnh của bạn; chỉ đăng khi bạn đã xem và đồng ý.",
+      "en": "Renders draft videos from your content and photos; nothing is published until you have watched and approved it."
+    },
+    "capabilities": {
+      "vi": [
+        "Dựng bản nháp video từ nội dung của bạn",
+        "Giữ đúng giọng và hình ảnh thương hiệu",
+        "Không bao giờ tự đăng"
+      ],
+      "en": [
+        "Renders draft videos from your content",
+        "Keeps your voice and brand look",
+        "Never publishes by itself"
+      ]
+    },
+    "role": {
+      "vi": "Dựng video nháp để chủ duyệt",
+      "en": "Renders draft videos for the owner to approve"
+    },
+    "instructions": {
+      "vi": "Hỏi mục đích và đối tượng của video, dùng đúng thông tin và hình ảnh doanh nghiệp đã cung cấp. Chỉ tạo bản nháp, không tự đăng.",
+      "en": "Ask what the video is for and who watches it, use only the facts and images the business supplied. Produce drafts only, never publish."
+    }
+  },
+  "gates": [
+    {
+      "key": "brand_assets",
+      "label_vi": "Hình ảnh và nhận diện",
+      "label_en": "Brand assets",
+      "hint_vi": "Logo, màu, phông chữ, nhạc nền và nơi lưu ảnh, video gốc.",
+      "hint_en": "Logo, colours, fonts, music and where the source photos and clips live."
+    },
+    {
+      "key": "video_goals",
+      "label_vi": "Mục đích và đối tượng",
+      "label_en": "Goals and audience",
+      "hint_vi": "Video dùng để làm gì (giới thiệu, khuyến mãi, hướng dẫn) và cho ai xem.",
+      "hint_en": "What videos are for (intro, promo, how-to) and who watches."
+    },
+    {
+      "key": "formats",
+      "label_vi": "Định dạng và thời lượng",
+      "label_en": "Formats and length",
+      "hint_vi": "Tỷ lệ khung hình, thời lượng, kênh sẽ đăng (TikTok, Reels, YouTube).",
+      "hint_en": "Aspect ratio, length and the channels they go to."
+    },
+    {
+      "key": "claims_limits",
+      "label_vi": "Điều không được nói",
+      "label_en": "Claims to avoid",
+      "hint_vi": "Cam kết, so sánh, giá hoặc hình ảnh không được xuất hiện trong video.",
+      "hint_en": "Promises, comparisons, prices or visuals that must never appear."
+    },
+    {
+      "key": "approval",
+      "label_vi": "Quy trình duyệt",
+      "label_en": "Approval flow",
+      "hint_vi": "Ai xem và duyệt bản nháp trước khi đăng.",
+      "hint_en": "Who reviews and approves a draft before it goes out."
+    },
+    {
+      "key": "tone",
+      "label_vi": "Giọng điệu",
+      "label_en": "Tone",
+      "hint_vi": "Cách xưng hô và phong cách khi nhắn tin.",
+      "hint_en": "How it addresses people and the style of its messages."
+    }
+  ],
+  "authority_actions": [
+    {
+      "action": "render_draft",
+      "label": {
+        "vi": "Dựng bản nháp video",
+        "en": "Render a draft video"
+      },
+      "mode": "auto",
+      "limit_vnd": null,
+      "required_fields": [],
+      "amount_limit": false
+    },
+    {
+      "action": "publish_video",
+      "label": {
+        "vi": "Đăng video",
+        "en": "Publish a video"
+      },
+      "mode": "ask",
+      "limit_vnd": null,
+      "required_fields": [],
+      "amount_limit": false,
+      "max_mode": "ask"
+    }
+  ],
+  "connection_providers": []
+}

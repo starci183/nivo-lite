@@ -7,11 +7,13 @@ import { AgentAvatar } from "@/components/avatar/PersonAvatar";
 import { useT } from "@/i18n/client";
 import { modulesCore } from "@/i18n/dict/modulesCore";
 import { renameModule, setModuleLive, setOperatingMode } from "@/lib/module-actions";
+import { moduleDef } from "@/lib/module-registry";
 import type { Installation, OperatingMode } from "@/lib/modules-shared";
 import { AgentConnectionsCard, type ConnectionOption } from "./AgentConnectionsCard";
 import { GRID_CLASS_NAME, ROW_CLASS_NAME, STACK_CLASS_NAME } from "./classNames";
 import { ModuleAutomations } from "./ModuleAutomations";
 import { ProcessorCard } from "./ProcessorCard";
+import { SETTINGS_EXTRAS } from "./registry";
 
 type SettingsScreenProps = {
   readonly installation: Installation;
@@ -32,6 +34,8 @@ export const SettingsScreen = ({ installation, canEdit, connectionOptions, selec
   const [pending, startTransition] = useTransition();
   const [which, setWhich] = useState<"name" | "mode" | "live" | null>(null);
   const canLive = installation.activeContextVersionId !== null;
+  const extrasKey = moduleDef(installation.moduleKey).settingsExtras;
+  const Extras = extrasKey === null ? undefined : SETTINGS_EXTRAS[extrasKey];
 
   const act = (kind: "name" | "mode" | "live", fn: () => Promise<{ ok: true } | { ok: false; error: string }>, onFail?: () => void) => {
     setNote(undefined);
@@ -109,6 +113,8 @@ export const SettingsScreen = ({ installation, canEdit, connectionOptions, selec
         <ModuleAutomations moduleKey={installation.moduleKey} canEdit={canEdit} />
 
         <ProcessorCard installation={installation} canEdit={canEdit} />
+
+        {Extras !== undefined ? <Extras installation={installation} canEdit={canEdit} /> : null}
 
         {note !== undefined ? <Alert title={note.ok ? t("saved") : t("notSaved")} description={note.ok ? undefined : note.text} tone={note.ok ? "affirmative" : "negative"} /> : null}
       </div>

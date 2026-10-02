@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { googleCardState } from "./google";
 import { ACTION_DEPARTMENT, applyOperatingMode } from "./policy";
+import { listModules } from "./module-registry";
 import { minutesToHhmm, parseHours } from "./automation-hours";
 import {
   RUN_STATUS, TRUST_THRESHOLD, isTemplateKey, resolveConfig,
@@ -104,9 +105,7 @@ export const gateModeFor = async (db: Db, ws: string, action: FlowAction): Promi
 
 /* ------------------------------------------------------------------ applicability */
 
-const MODULE_LABEL: Readonly<Record<ModuleScope, { vi: string; en: string }>> = {
-  chatbot: { vi: "Chatbot", en: "Chatbot" }, sales: { vi: "Bán hàng", en: "Sales" }, accounting: { vi: "Kế toán", en: "Accounting" },
-};
+const MODULE_LABEL: Readonly<Record<ModuleScope, { vi: string; en: string }>> = Object.fromEntries(listModules().map((m) => [m.key, { vi: m.name.vi, en: m.name.en }])) as Record<ModuleScope, { vi: string; en: string }>;
 const CONNECTION_LABEL: Readonly<Record<ConnectionNeed, { vi: string; en: string }>> = {
   google: { vi: "kết nối Google", en: "a Google connection" },
   webhook: { vi: "kết nối n8n / webhook", en: "an n8n / webhook connection" },

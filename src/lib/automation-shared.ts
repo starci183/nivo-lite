@@ -6,8 +6,9 @@
  * Every customer-facing send goes through the authority gate (work_items): the owner's rule for the template's action decides whether the
  * message leaves by itself or waits as a decision. Nothing here sends anything.
  */
+import type { ModuleKey } from "./module-registry";
 export type L = { readonly vi: string; readonly en: string };
-export type ModuleScope = "chatbot" | "sales" | "accounting";
+export type ModuleScope = ModuleKey;
 
 export type TemplateKey = string;
 export type ConfigValue = string | number | boolean;

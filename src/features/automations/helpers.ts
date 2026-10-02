@@ -1,6 +1,7 @@
 import type { IconName } from "@/ui"
 import type { AutomationCardView, L, ModuleScope, TemplateDef } from "@/lib/automation-shared"
 import type { Locale } from "@/i18n/core"
+import { listModules } from "@/lib/module-registry"
 
 export const loc = (l: L, locale: Locale): string => l[locale]
 
@@ -32,7 +33,12 @@ export const switchLocked = (s: CardStatus): boolean => s === "soon" || s === "m
 export const startsConnection = (s: CardStatus): boolean => s === "needsGoogle" || s === "needsWebhook" || s === "needsEmail" || s === "googleLost"
 
 export type FilterKey = "all" | ModuleScope | "workspace" | "on"
-export const FILTERS: ReadonlyArray<FilterKey> = ["all", "chatbot", "sales", "accounting", "workspace", "on"]
+/** The filter chips: all, the stable modules, the whole workspace, what is on; plus any other module that owns at least one card (see filtersFor). */
+export const FILTERS: ReadonlyArray<FilterKey> = ["all", ...listModules().filter((m) => m.status === "stable").map((m) => m.key), "workspace", "on"]
+export const filtersFor = (cards: ReadonlyArray<AutomationCardView>): ReadonlyArray<FilterKey> => {
+  const extra = listModules().filter((m) => m.status !== "stable" && cards.some((c) => scopeOf(c.def) === m.key)).map((m) => m.key as FilterKey)
+  return extra.length === 0 ? FILTERS : [...FILTERS.slice(0, FILTERS.indexOf("workspace")), ...extra, ...FILTERS.slice(FILTERS.indexOf("workspace"))]
+}
 
 export const matchesFilter = (c: AutomationCardView, f: FilterKey): boolean => (f === "all" ? true : f === "on" ? c.enabled : scopeOf(c.def) === f)
 

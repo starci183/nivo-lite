@@ -3,6 +3,7 @@ import { generateText } from "./openclaw-generate";
 import { usageScope } from "./usage";
 import type { Locale } from "@/i18n/core";
 import { businessKnowledgeBrief, setupKnowledgeText } from "./knowledge/index";
+import { moduleDef } from "./module-registry";
 import { MODULE_GATES, gateEntry, type DraftSnapshot, type GateEvidence, type ModuleKey, type SetupFact } from "./modules-shared";
 
 /** One turn of the setup chat as the model sees it. */
@@ -24,11 +25,8 @@ export type SetupTurnResult = {
   gates: Record<string, { status: "proposed"; evidence: string }>;
 };
 
-const PURPOSE: Record<ModuleKey, string> = {
-  chatbot: "a customer care chatbot that answers customers from the owner's knowledge, captures leads and hands them over to Sales",
-  sales: "a sales assistant that follows up leads, proposes next steps and drafts messages for the owner to approve",
-  accounting: "an accounting assistant that drafts invoices from won deals, matches payments and reminds about receivables",
-};
+/** What the module is, for the setup prompt: from the registry (module.json purpose). */
+const purposeOf = (key: ModuleKey): string => moduleDef(key).purpose;
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
@@ -62,7 +60,7 @@ export const runSetupTurn = async (input: SetupTurnInput): Promise<SetupTurnResu
   const factLines = input.draft.facts.map((f) => `- ${f.key}: ${f.text}`).join("\n") || "(none yet)";
 
   const system = [
-    "You are NIVO, the setup assistant of a small-business operating system. You are setting up " + PURPOSE[moduleKey] + ".",
+    "You are NIVO, the setup assistant of a small-business operating system. You are setting up " + purposeOf(moduleKey) + ".",
     "The owner is not technical. Talk in plain business language: no jargon, no mention of prompts, models or JSON.",
     `Write the reply in ${lang}.`,
     "Your job each turn: (1) learn from what the owner just said, (2) record it, (3) work out what is STILL missing and ask ONE focused next question.",

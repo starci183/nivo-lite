@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getActiveContext } from "../modules-core";
+import { moduleDef } from "../module-registry";
 import { enqueueWorkspaceSync } from "../engine-queue";
 import { gateEntry, MODULE_GATES, type ContextVersion, type ModuleKey } from "../modules-shared";
 import { getSession } from "../session";
@@ -235,7 +236,7 @@ const nivoBase = async (db: Db, module: ModuleKey, kinds: ReadonlyArray<NivoKind
   const key = `${module}:${kinds.join(",")}`;
   const hit = baseCache.get(key);
   if (hit && Date.now() - hit.at < 5 * 60_000) return hit.items;
-  const { data } = await db.from("nivo_knowledge").select("id, module, slug, title, body, kind, version, updated_at").in("module", [module, "core"]).in("kind", [...kinds]).order("module", { ascending: false }).order("slug");
+  const { data } = await db.from("nivo_knowledge").select("id, module, slug, title, body, kind, version, updated_at").in("module", [moduleDef(module).knowledgeFolder, "core"]).in("kind", [...kinds]).order("module", { ascending: false }).order("slug");
   const items = ((data ?? []) as Array<NivoRow>).map(toNivo);
   if (items.length) baseCache.set(key, { at: Date.now(), items });
   return items;

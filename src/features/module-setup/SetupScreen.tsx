@@ -12,7 +12,7 @@ import {
   type ContextVersion, type GateStatus, type Installation, type SetupMessage, type SetupRevision, type SetupSession,
 } from "@/lib/modules-shared";
 import { supabaseBrowser } from "@/lib/supabase/browser";
-import { MODULE_META } from "@/features/modules-core/meta";
+import { moduleArt } from "@/features/modules-core/meta";
 import { SetupKnowledge } from "./SetupKnowledge";
 import * as c from "./classNames";
 
@@ -54,8 +54,7 @@ export const SetupScreen = ({ installation, initialSession, initialRevisions, in
   const threadRef = useRef<HTMLDivElement | null>(null);
 
   const gates = MODULE_GATES[installation.moduleKey];
-  const meta = MODULE_META[installation.moduleKey];
-  const moduleName = { chatbot: locale === "vi" ? "chatbot chăm sóc khách" : "customer care chatbot", sales: locale === "vi" ? "module Bán hàng" : "Sales module", accounting: locale === "vi" ? "module Kế toán" : "Accounting module" }[installation.moduleKey];
+  const art = moduleArt(installation.moduleKey);
 
   // A new draft session (after an apply) arrives through the server: follow it.
   useEffect(() => { setSession(initialSession); setRevisions(initialRevisions); setMessages([...initialMessages]); setVersions(initialVersions); }, [initialSession, initialRevisions, initialMessages, initialVersions]);
@@ -145,7 +144,7 @@ export const SetupScreen = ({ installation, initialSession, initialRevisions, in
         <div ref={threadRef} className={c.THREAD_CLASS_NAME} aria-live="polite">
           {messages.length === 0 ? (
             <div className={c.EMPTY_CLASS_NAME}>
-              <img className={c.EMPTY_ART_CLASS_NAME} src={meta.art} alt="" />
+              <img className={c.EMPTY_ART_CLASS_NAME} src={art} alt="" />
               <Text weight="semibold">{t("emptyTitle")}</Text>
               <Text size="sm" tone="muted">{t("emptyBody")}</Text>
             </div>

@@ -1,14 +1,19 @@
 import type { AuthorityRule, Department, FlowAction, RuleMode } from "@/lib/flow-types"
+import { actionDef, listModules, moduleDef } from "@/lib/module-registry"
 
-/** Departments and the actions each one can be granted, in display order. */
-export const RULE_MATRIX: ReadonlyArray<{ readonly department: Department; readonly actions: ReadonlyArray<FlowAction> }> = [
-  { department: "chatbot", actions: ["reply_customer", "handoff_lead"] },
-  { department: "sales", actions: ["classify_lead", "send_follow_up", "send_quote", "confirm_order", "send_care"] },
-  { department: "accounting", actions: ["issue_invoice", "reconcile_payment", "send_email"] },
-]
+/** Departments and the actions each one can be granted, in display order. From the module registry (resources/modules/<key>/module.json). */
+export const RULE_MATRIX: ReadonlyArray<{ readonly department: Department; readonly actions: ReadonlyArray<FlowAction> }> =
+  listModules().map((m) => ({ department: m.key, actions: m.authorityActions.map((a) => a.action) }))
+
+/** The groups to show: the stable modules always, any other module once its rules exist (installing a module adds them). */
+export const visibleGroups = (rules: ReadonlyArray<AuthorityRule>): typeof RULE_MATRIX =>
+  RULE_MATRIX.filter((g) => moduleDef(g.department).status === "stable" || rules.some((r) => r.department === g.department))
 
 /** Actions where a VND limit is meaningful. */
-export const AMOUNT_ACTIONS: ReadonlyArray<FlowAction> = ["send_quote", "confirm_order", "issue_invoice", "reconcile_payment"]
+export const AMOUNT_ACTIONS: ReadonlyArray<FlowAction> = listModules().flatMap((m) => m.authorityActions.filter((a) => a.amountLimit).map((a) => a.action))
+
+/** The modes an action may be set to: an action the registry caps at "ask" (publishing) can never run alone. */
+export const modesFor = (action: FlowAction): ReadonlyArray<RuleMode> => (actionDef(action).maxMode === null ? MODES : MODES.filter((mode) => mode !== "auto"))
 
 /** Details an action can require before NIVO acts alone. */
 export const FIELD_KEYS = ["contact_name", "need", "contact", "customer", "items", "amount_vnd"] as const

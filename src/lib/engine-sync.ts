@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { gateEntry, isModuleKey, MODULE_GATES, type ContextSnapshot, type ModuleKey } from "./modules-shared";
+import { audienceOf as registryAudience, moduleDef } from "./module-registry";
 import type { Visibility } from "./knowledge/shared";
 
 /**
@@ -27,7 +28,7 @@ export type AgentBundle = {
 export const openclawAgentId = (workspaceId: string, module: string): string => `ws-${workspaceId.replace(/-/g, "").slice(0, 8)}-${module.replace(/[^a-z0-9]/gi, "").toLowerCase()}`;
 
 /** Modules that talk to customers: only public knowledge may reach their OpenClaw workspace. */
-export const audienceOf = (module: ModuleKey): "customer" | "internal" => (module === "chatbot" ? "customer" : "internal");
+export const audienceOf = (module: ModuleKey): "customer" | "internal" => registryAudience(module);
 
 /** The reply contract the customer-facing model is held to. Mirrors the one inline customerChat uses (deepseek.ts), so both processors answer in one shape. */
 export const REPLY_CONTRACT = `You are talking to a CUSTOMER on the company's chat (website or Telegram). Reply in the customer's language, max 80 words.
@@ -41,6 +42,9 @@ PAYMENT CLAIM: when the customer says they have already paid or transferred the 
 Your FINAL message must be ONLY this JSON object, nothing else:
 {"reply": string, "lead": null | {"contact_name","company","need","phone","email"}, "needs_human": boolean, "reason": "over_authority"|"unclear_outcome"|null, "proposed_answer": string|null, "order": null | {"items": string, "amount_vnd": integer}, "payment_claim": boolean}
 Your reply is only a PROPOSAL: NIVO checks it against the owner's authority before anything reaches the customer.`;
+
+/** A module with its own reply contract appends it to AGENTS.md (only the chatbot has one today). A customer-facing module lane adds its line here. */
+const REPLY_CONTRACTS: Partial<Record<ModuleKey, string>> = { chatbot: REPLY_CONTRACT };
 
 type NivoRow = { module: string; slug: string; title: string; body: string; kind: string };
 type SourceRow = { id: string; title: string; topic: string | null; kind: string; visibility: Visibility; content: string; module: string | null; updated_at: string };
@@ -76,7 +80,7 @@ export const buildAgentBundle = async (db: SupabaseClient, workspaceId: string, 
   const [agentRes, versionRes, baseRes, sourcesRes] = await Promise.all([
     row.agent_id ? db.from("agents").select("name, handle, role, instructions, knowledge, approval_rule").eq("id", row.agent_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
     row.active_context_version_id ? db.from("module_context_versions").select("version, snapshot").eq("id", row.active_context_version_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
-    db.from("nivo_knowledge").select("module, slug, title, body, kind").in("module", [module, "core"]).in("kind", ["authority", "escalation", "tone"]).order("module", { ascending: false }).order("slug"),
+    db.from("nivo_knowledge").select("module, slug, title, body, kind").in("module", [moduleDef(module).knowledgeFolder, "core"]).in("kind", ["authority", "escalation", "tone"]).order("module", { ascending: false }).order("slug"),
     db.from("knowledge_sources").select("id, title, topic, kind, visibility, content, module, updated_at").eq("workspace_id", workspaceId).eq("status", "ready").order("created_at"),
   ]);
   for (const r of [agentRes, versionRes, baseRes, sourcesRes]) if (r.error) throw new Error(r.error.message);
@@ -132,7 +136,7 @@ export const buildAgentBundle = async (db: SupabaseClient, workspaceId: string, 
     sources.length
       ? `## Tri thức doanh nghiệp (${audience === "customer" ? "chỉ thông tin công khai" : "công khai và nội bộ"})\nBản đầy đủ nằm trong thư mục knowledge/. Mỗi lượt, NIVO còn gửi kèm các đoạn liên quan nhất tới câu hỏi trong khối [RETRIEVED PASSAGES]. Chỉ trả lời từ đây và từ các đoạn đó; thứ gì không có thì không bịa.\n\n${inlineKnowledge ? sources.map((s) => `### ${s.title}\n${s.content.trim()}`).join("\n\n") : `Các nguồn có trong knowledge/: ${sources.map((s) => s.title).join("; ")}.`}`
       : "## Tri thức doanh nghiệp\n(Chưa có nguồn tri thức nào được phép dùng.)",
-    module === "chatbot" ? `## Hợp đồng câu trả lời\n${REPLY_CONTRACT}` : "",
+    REPLY_CONTRACTS[module] ? `## Hợp đồng câu trả lời\n${REPLY_CONTRACTS[module]}` : "",
   ].filter(Boolean).join("\n\n") + "\n";
 
   const soulMd = [

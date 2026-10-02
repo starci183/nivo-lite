@@ -1,0 +1,164 @@
+{
+  "key": "loyalty",
+  "order": 70,
+  "name": {
+    "vi": "Khách hàng thân thiết",
+    "en": "Customer loyalty"
+  },
+  "short_name": {
+    "vi": "Thân thiết AI",
+    "en": "Loyalty AI"
+  },
+  "description": {
+    "vi": "Cộng điểm cho khách quen, đổi quà trong hạn mức bạn đặt và soạn ưu đãi; gửi khuyến mãi hàng loạt luôn do bạn duyệt.",
+    "en": "Awards points to regulars, redeems rewards within the limit you set and drafts offers; bulk promotions always wait for your approval."
+  },
+  "points": {
+    "vi": [
+      "Cộng điểm tự động sau mỗi lần mua",
+      "Đổi quà trong hạn mức bạn đặt",
+      "Hỏi bạn trước khi gửi khuyến mãi"
+    ],
+    "en": [
+      "Awards points after each purchase",
+      "Redeems rewards within your limit",
+      "Asks you before sending promotions"
+    ]
+  },
+  "purpose": "a customer loyalty assistant that awards points, redeems rewards within the owner's limit and drafts promotions for approval",
+  "icon": "reward",
+  "glyph": "M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z",
+  "mascot": "/images/promo/mascot-offer.png",
+  "category": "sales_customer",
+  "status": "early",
+  "audience": "customer",
+  "included_with_workspace": false,
+  "available": true,
+  "knowledge_folder": "loyalty",
+  "workbench": null,
+  "settings_extras": null,
+  "requires": {
+    "capabilities": [
+      "customer_messaging"
+    ],
+    "connections": []
+  },
+  "default_operating_mode": "assist",
+  "agent": {
+    "name": "Loyalty Agent",
+    "handle": "loyalty",
+    "summary": {
+      "vi": "Cộng điểm cho khách quen, đổi quà trong hạn mức bạn đặt và soạn ưu đãi; gửi khuyến mãi hàng loạt luôn do bạn duyệt.",
+      "en": "Awards points to regulars, redeems rewards within the limit you set and drafts offers; bulk promotions always wait for your approval."
+    },
+    "capabilities": {
+      "vi": [
+        "Cộng điểm tự động sau mỗi lần mua",
+        "Đổi quà trong hạn mức bạn đặt",
+        "Hỏi bạn trước khi gửi khuyến mãi"
+      ],
+      "en": [
+        "Awards points after each purchase",
+        "Redeems rewards within your limit",
+        "Asks you before sending promotions"
+      ]
+    },
+    "role": {
+      "vi": "Chăm sóc khách quen bằng điểm và ưu đãi",
+      "en": "Looks after regulars with points and offers"
+    },
+    "instructions": {
+      "vi": "Ghi điểm theo quy tắc đã duyệt, trả lời khách về điểm và quà. Không tự tạo ưu đãi mới hay hứa quà ngoài danh mục.",
+      "en": "Record points by the approved rules and answer customers about points and rewards. Never invent new offers or promise rewards outside the catalogue."
+    }
+  },
+  "gates": [
+    {
+      "key": "earn_rules",
+      "label_vi": "Cách tích điểm",
+      "label_en": "How points are earned",
+      "hint_vi": "Mua bao nhiêu được bao nhiêu điểm, hành động nào khác được điểm.",
+      "hint_en": "How much spend earns how many points and what else earns points."
+    },
+    {
+      "key": "rewards",
+      "label_vi": "Danh mục quà",
+      "label_en": "Reward catalogue",
+      "hint_vi": "Đổi được những gì, mỗi món cần bao nhiêu điểm và giá trị quy đổi.",
+      "hint_en": "What can be redeemed, the points each needs and its cash value."
+    },
+    {
+      "key": "limits",
+      "label_vi": "Hạn mức tự đổi quà",
+      "label_en": "Redeem limit",
+      "hint_vi": "Giá trị quà tối đa trợ lý được tự đổi, trên mức đó thì hỏi bạn.",
+      "hint_en": "The reward value the assistant may redeem alone before asking you."
+    },
+    {
+      "key": "expiry",
+      "label_vi": "Hạn dùng điểm",
+      "label_en": "Points expiry",
+      "hint_vi": "Điểm có hết hạn không, khi nào, báo khách thế nào.",
+      "hint_en": "Whether and when points expire and how customers are told."
+    },
+    {
+      "key": "promo_rules",
+      "label_vi": "Quy tắc gửi khuyến mãi",
+      "label_en": "Promotion rules",
+      "hint_vi": "Ai được nhận, gửi tối đa bao nhiêu tin mỗi tháng, giờ được gửi.",
+      "hint_en": "Who receives them, the monthly cap and allowed send hours."
+    },
+    {
+      "key": "prohibited",
+      "label_vi": "Điều không được hứa",
+      "label_en": "Prohibited commitments",
+      "hint_vi": "Quà, giảm giá, hạng thành viên bot không được tự cam kết.",
+      "hint_en": "Gifts, discounts or tiers the assistant must never promise."
+    },
+    {
+      "key": "tone",
+      "label_vi": "Giọng điệu",
+      "label_en": "Tone",
+      "hint_vi": "Cách xưng hô và phong cách khi nhắn tin.",
+      "hint_en": "How it addresses people and the style of its messages."
+    }
+  ],
+  "authority_actions": [
+    {
+      "action": "award_points",
+      "label": {
+        "vi": "Cộng điểm",
+        "en": "Award points"
+      },
+      "mode": "auto",
+      "limit_vnd": null,
+      "required_fields": [],
+      "amount_limit": false
+    },
+    {
+      "action": "redeem_reward",
+      "label": {
+        "vi": "Đổi quà",
+        "en": "Redeem a reward"
+      },
+      "mode": "auto",
+      "limit_vnd": 500000,
+      "required_fields": [],
+      "amount_limit": true
+    },
+    {
+      "action": "send_promo",
+      "label": {
+        "vi": "Gửi khuyến mãi",
+        "en": "Send a promotion"
+      },
+      "mode": "ask",
+      "limit_vnd": null,
+      "required_fields": [
+        "contact"
+      ],
+      "amount_limit": false
+    }
+  ],
+  "connection_providers": []
+}

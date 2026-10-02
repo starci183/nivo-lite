@@ -1,0 +1,155 @@
+{
+  "key": "inventory",
+  "order": 60,
+  "name": {
+    "vi": "Kho & nhập hàng",
+    "en": "Stock and purchasing"
+  },
+  "short_name": {
+    "vi": "Kho AI",
+    "en": "Stock AI"
+  },
+  "description": {
+    "vi": "Theo dõi tồn kho, báo món sắp hết và soạn đơn nhập hàng; gửi đơn cho nhà cung cấp và chỉnh số tồn đều do bạn duyệt.",
+    "en": "Tracks stock, flags items running low and drafts purchase orders; sending an order or adjusting stock waits for your approval."
+  },
+  "points": {
+    "vi": [
+      "Báo món sắp hết theo mức tồn tối thiểu",
+      "Soạn đơn nhập hàng cho nhà cung cấp",
+      "Hỏi bạn trước khi gửi đơn hoặc chỉnh số tồn"
+    ],
+    "en": [
+      "Flags items below the minimum level",
+      "Drafts purchase orders for suppliers",
+      "Asks you before sending an order or adjusting stock"
+    ]
+  },
+  "purpose": "a stock and purchasing assistant that tracks stock levels, flags items running low and drafts purchase orders for the owner to approve",
+  "icon": "servers",
+  "glyph": "M3 8l9-5 9 5v8l-9 5-9-5zM3 8l9 5 9-5M12 13v8",
+  "mascot": "/images/promo/mascot-checklist.png",
+  "category": "operations",
+  "status": "early",
+  "audience": "internal",
+  "included_with_workspace": false,
+  "available": true,
+  "knowledge_folder": "inventory",
+  "workbench": null,
+  "settings_extras": null,
+  "requires": {
+    "capabilities": [],
+    "connections": []
+  },
+  "default_operating_mode": "assist",
+  "agent": {
+    "name": "Inventory Agent",
+    "handle": "inventory",
+    "summary": {
+      "vi": "Theo dõi tồn kho, báo món sắp hết và soạn đơn nhập hàng; gửi đơn cho nhà cung cấp và chỉnh số tồn đều do bạn duyệt.",
+      "en": "Tracks stock, flags items running low and drafts purchase orders; sending an order or adjusting stock waits for your approval."
+    },
+    "capabilities": {
+      "vi": [
+        "Báo món sắp hết theo mức tồn tối thiểu",
+        "Soạn đơn nhập hàng cho nhà cung cấp",
+        "Hỏi bạn trước khi gửi đơn hoặc chỉnh số tồn"
+      ],
+      "en": [
+        "Flags items below the minimum level",
+        "Drafts purchase orders for suppliers",
+        "Asks you before sending an order or adjusting stock"
+      ]
+    },
+    "role": {
+      "vi": "Theo dõi tồn kho và soạn đơn nhập hàng",
+      "en": "Watches stock and drafts purchase orders"
+    },
+    "instructions": {
+      "vi": "Theo dõi mức tồn, báo khi dưới mức tối thiểu và soạn đơn nhập theo nhà cung cấp quen. Không gửi đơn hay chỉnh số tồn khi chưa được duyệt.",
+      "en": "Watch stock levels, flag items below the minimum and draft orders for the usual supplier. Never send an order or adjust stock without approval."
+    }
+  },
+  "gates": [
+    {
+      "key": "items",
+      "label_vi": "Danh mục hàng và đơn vị",
+      "label_en": "Items and units",
+      "hint_vi": "Hàng hóa, vật tư nào cần theo dõi, đơn vị tính, mã hoặc tên gọi.",
+      "hint_en": "Which goods or supplies to track, their units and names."
+    },
+    {
+      "key": "reorder_levels",
+      "label_vi": "Mức tồn tối thiểu",
+      "label_en": "Reorder levels",
+      "hint_vi": "Mỗi món xuống còn bao nhiêu thì cần nhập, nhập bao nhiêu mỗi lần.",
+      "hint_en": "At what level each item needs restocking and the usual order quantity."
+    },
+    {
+      "key": "suppliers",
+      "label_vi": "Nhà cung cấp",
+      "label_en": "Suppliers",
+      "hint_vi": "Mua của ai, liên hệ thế nào, thời gian giao, điều kiện thanh toán.",
+      "hint_en": "Who you buy from, how to reach them, lead times and payment terms."
+    },
+    {
+      "key": "approval_thresholds",
+      "label_vi": "Ngưỡng cần duyệt",
+      "label_en": "Approval thresholds",
+      "hint_vi": "Đơn nhập từ bao nhiêu tiền thì cần bạn duyệt trước khi gửi.",
+      "hint_en": "Order value above which you approve before it is sent."
+    },
+    {
+      "key": "stock_count",
+      "label_vi": "Cách kiểm kê",
+      "label_en": "Stock counting",
+      "hint_vi": "Ai kiểm kho, bao lâu một lần, chênh lệch bao nhiêu thì phải báo.",
+      "hint_en": "Who counts, how often, and what difference must be reported."
+    },
+    {
+      "key": "tone",
+      "label_vi": "Giọng điệu",
+      "label_en": "Tone",
+      "hint_vi": "Cách xưng hô và phong cách khi nhắn tin.",
+      "hint_en": "How it addresses people and the style of its messages."
+    }
+  ],
+  "authority_actions": [
+    {
+      "action": "draft_purchase_order",
+      "label": {
+        "vi": "Soạn đơn nhập hàng",
+        "en": "Draft a purchase order"
+      },
+      "mode": "auto",
+      "limit_vnd": null,
+      "required_fields": [],
+      "amount_limit": false
+    },
+    {
+      "action": "send_purchase_order",
+      "label": {
+        "vi": "Gửi đơn nhập cho nhà cung cấp",
+        "en": "Send a purchase order"
+      },
+      "mode": "ask",
+      "limit_vnd": null,
+      "required_fields": [
+        "amount_vnd"
+      ],
+      "amount_limit": true
+    },
+    {
+      "action": "adjust_stock",
+      "label": {
+        "vi": "Chỉnh số tồn kho",
+        "en": "Adjust stock"
+      },
+      "mode": "ask",
+      "limit_vnd": null,
+      "required_fields": [],
+      "amount_limit": false
+    }
+  ],
+  "connection_providers": []
+}

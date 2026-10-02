@@ -1,6 +1,7 @@
 import "server-only";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { supabaseAdmin } from "./supabase/admin";
+import type { ModuleKey } from "./module-registry";
 
 /**
  * AI usage metering and plan quotas: ONE place every model call goes through (deepseek.ts for chat, knowledge/embed.ts for
@@ -9,7 +10,7 @@ import { supabaseAdmin } from "./supabase/admin";
  */
 
 export type UsageKind = "chat_reply" | "setup" | "owner_chat" | "relay" | "embedding" | "engine";
-export type UsageModule = "chatbot" | "sales" | "accounting" | "setup" | "office" | "knowledge" | "other";
+export type UsageModule = ModuleKey | "setup" | "office" | "knowledge" | "other";
 export type UsageScope = { readonly workspaceId: string; readonly kind?: UsageKind; readonly module?: UsageModule };
 
 const store = new AsyncLocalStorage<UsageScope>();

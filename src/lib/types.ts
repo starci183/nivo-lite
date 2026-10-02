@@ -1,5 +1,7 @@
 export type Workspace = { id: string; owner_id: string; name: string; created_at: string };
-export type ModuleKey = "chatbot" | "sales" | "accounting";
+/** Every module key of the registry (resources/modules/*), generated at build time. */
+export type { ModuleKey } from "./module-registry.generated";
+import type { ModuleKey } from "./module-registry.generated";
 export type Agent = {
   id: string; workspace_id: string; module: ModuleKey; name: string; handle: string; role: string; instructions: string;
   knowledge: string; greeting: string; approval_rule: string; status: "active" | "paused"; created_at: string;

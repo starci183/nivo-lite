@@ -1,0 +1,166 @@
+{
+  "key": "hiring",
+  "order": 100,
+  "name": {
+    "vi": "Tuyển dụng",
+    "en": "Hiring"
+  },
+  "short_name": {
+    "vi": "Tuyển dụng AI",
+    "en": "Hiring AI"
+  },
+  "description": {
+    "vi": "Sàng lọc hồ sơ, xếp lịch phỏng vấn và nhắc ứng viên; gửi thư mời nhận việc luôn do bạn duyệt.",
+    "en": "Screens candidates, schedules interviews and reminds applicants; sending an offer always waits for you."
+  },
+  "points": {
+    "vi": [
+      "Sàng lọc hồ sơ theo tiêu chí bạn đặt",
+      "Xếp lịch phỏng vấn với ứng viên",
+      "Hỏi bạn trước khi gửi thư mời"
+    ],
+    "en": [
+      "Screens candidates against your criteria",
+      "Schedules interviews with applicants",
+      "Asks you before sending an offer"
+    ]
+  },
+  "purpose": "a hiring assistant that screens candidates against the owner's criteria, schedules interviews and drafts offers for the owner to approve",
+  "icon": "jobs",
+  "glyph": "M4 8h16v11H4zM9 8V5h6v3M4 13h16",
+  "mascot": "/images/promo/mascot-point.png",
+  "category": "hr",
+  "status": "early",
+  "audience": "internal",
+  "included_with_workspace": false,
+  "available": true,
+  "knowledge_folder": "hiring",
+  "workbench": null,
+  "settings_extras": null,
+  "requires": {
+    "capabilities": [
+      "email"
+    ],
+    "connections": []
+  },
+  "default_operating_mode": "assist",
+  "agent": {
+    "name": "Hiring Agent",
+    "handle": "hiring",
+    "summary": {
+      "vi": "Sàng lọc hồ sơ, xếp lịch phỏng vấn và nhắc ứng viên; gửi thư mời nhận việc luôn do bạn duyệt.",
+      "en": "Screens candidates, schedules interviews and reminds applicants; sending an offer always waits for you."
+    },
+    "capabilities": {
+      "vi": [
+        "Sàng lọc hồ sơ theo tiêu chí bạn đặt",
+        "Xếp lịch phỏng vấn với ứng viên",
+        "Hỏi bạn trước khi gửi thư mời"
+      ],
+      "en": [
+        "Screens candidates against your criteria",
+        "Schedules interviews with applicants",
+        "Asks you before sending an offer"
+      ]
+    },
+    "role": {
+      "vi": "Sàng lọc ứng viên và xếp lịch phỏng vấn",
+      "en": "Screens candidates and schedules interviews"
+    },
+    "instructions": {
+      "vi": "Đối chiếu hồ sơ với tiêu chí của vị trí, ghi lý do rõ ràng. Không đánh giá theo giới tính, tuổi, nơi sinh hay các yếu tố bị cấm. Không tự gửi thư mời nhận việc.",
+      "en": "Match each application to the role criteria and give clear reasons. Never judge by gender, age, origin or other protected traits. Never send an offer by yourself."
+    }
+  },
+  "gates": [
+    {
+      "key": "open_roles",
+      "label_vi": "Vị trí đang tuyển",
+      "label_en": "Open roles",
+      "hint_vi": "Các vị trí cần tuyển, số lượng, nơi làm việc và mức lương dự kiến.",
+      "hint_en": "Open roles, headcount, location and expected pay."
+    },
+    {
+      "key": "criteria",
+      "label_vi": "Tiêu chí sàng lọc",
+      "label_en": "Screening criteria",
+      "hint_vi": "Yêu cầu bắt buộc và điểm cộng cho từng vị trí.",
+      "hint_en": "Must-haves and nice-to-haves for each role."
+    },
+    {
+      "key": "interview_process",
+      "label_vi": "Quy trình phỏng vấn",
+      "label_en": "Interview process",
+      "hint_vi": "Có mấy vòng, ai phỏng vấn, mỗi vòng bao lâu, khung giờ phỏng vấn.",
+      "hint_en": "How many rounds, who interviews, how long and when."
+    },
+    {
+      "key": "offer_rules",
+      "label_vi": "Quy tắc thư mời",
+      "label_en": "Offer rules",
+      "hint_vi": "Ai được phép chốt mức lương, thông tin gì phải có trong thư mời.",
+      "hint_en": "Who may set pay and what an offer letter must contain."
+    },
+    {
+      "key": "fairness",
+      "label_vi": "Điều không được dùng để loại",
+      "label_en": "Fair-screening limits",
+      "hint_vi": "Những yếu tố tuyệt đối không dùng để đánh giá ứng viên.",
+      "hint_en": "Traits that must never be used to rate a candidate."
+    },
+    {
+      "key": "privacy",
+      "label_vi": "Bảo mật hồ sơ",
+      "label_en": "Candidate privacy",
+      "hint_vi": "Lưu hồ sơ bao lâu, ai được xem, khi nào xóa.",
+      "hint_en": "How long files are kept, who sees them and when they are deleted."
+    },
+    {
+      "key": "tone",
+      "label_vi": "Giọng điệu",
+      "label_en": "Tone",
+      "hint_vi": "Cách xưng hô và phong cách khi nhắn tin.",
+      "hint_en": "How it addresses people and the style of its messages."
+    }
+  ],
+  "authority_actions": [
+    {
+      "action": "screen_candidate",
+      "label": {
+        "vi": "Sàng lọc ứng viên",
+        "en": "Screen a candidate"
+      },
+      "mode": "auto",
+      "limit_vnd": null,
+      "required_fields": [],
+      "amount_limit": false
+    },
+    {
+      "action": "schedule_interview",
+      "label": {
+        "vi": "Xếp lịch phỏng vấn",
+        "en": "Schedule an interview"
+      },
+      "mode": "auto",
+      "limit_vnd": null,
+      "required_fields": [
+        "contact"
+      ],
+      "amount_limit": false
+    },
+    {
+      "action": "send_offer",
+      "label": {
+        "vi": "Gửi thư mời nhận việc",
+        "en": "Send a job offer"
+      },
+      "mode": "ask",
+      "limit_vnd": null,
+      "required_fields": [
+        "contact"
+      ],
+      "amount_limit": false
+    }
+  ],
+  "connection_providers": []
+}

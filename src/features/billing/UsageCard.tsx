@@ -4,6 +4,7 @@ import { Alert, Meter, SurfaceCard, Text } from "@starci/grammar/common";
 import { useLocale, useT } from "@/i18n/client";
 import { intlLocale, TIME_ZONE } from "@/i18n/core";
 import { billing } from "@/i18n/dict/billing";
+import { listModules, pick } from "@/lib/module-registry";
 import type { UsageSummary } from "@/lib/usage";
 import { WARN_AT } from "@/lib/usage-shared";
 import {
@@ -32,7 +33,9 @@ export const UsageCard = ({ usage }: { readonly usage: UsageSummary }) => {
   const { status } = usage;
   const level = status?.level ?? "ok";
   const moduleLabel: Record<string, string> = {
-    chatbot: t("modChatbot"), sales: t("modSales"), accounting: t("modAccounting"), setup: t("modSetup"), office: t("modOffice"), knowledge: t("modKnowledge"), other: t("modOther"),
+    // every module of the registry, then the non-module usage buckets
+    ...Object.fromEntries(listModules().map((m) => [m.key, pick(m.shortName, locale)])),
+    setup: t("modSetup"), office: t("modOffice"), knowledge: t("modKnowledge"), other: t("modOther"),
   };
   const byDay = new Map(usage.daily.map((d) => [d.day, d.tokens]));
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: TIME_ZONE }).format(new Date());

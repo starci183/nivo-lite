@@ -8,6 +8,7 @@ import { intlLocale } from "@/i18n/core";
 import { decisions as decisionsDict } from "@/i18n/dict/decisions";
 import { governance } from "@/i18n/dict/governance";
 import type { DecisionRow, Department } from "@/lib/flow-types";
+import { MODULE_KEYS } from "@/lib/module-registry";
 import { CHIPS_CLASS_NAME, FILTERS_CLASS_NAME, LIST_CLASS_NAME, PAGE_CLASS_NAME, ROW_CLASS_NAME, ROW_FOOT_CLASS_NAME, ROW_HEAD_CLASS_NAME, TABS_CLASS_NAME } from "./classNames";
 import { formatDateTime, outcomeTone, splitBasis } from "./format";
 
@@ -25,7 +26,7 @@ export type DecisionsViewProps = {
 
 const ALL = "all";
 const KINDS: ReadonlyArray<DecisionKind> = ["policy", "human", "rejected"];
-const DEPTS: ReadonlyArray<Department> = ["chatbot", "sales", "accounting"];
+const DEPTS: ReadonlyArray<Department> = MODULE_KEYS;
 
 const KIND_LABEL = { policy: "kindPolicy", human: "kindHuman", rejected: "kindRejected" } as const;
 

@@ -1,0 +1,167 @@
+{
+  "key": "accounting",
+  "order": 30,
+  "name": {
+    "vi": "Kế toán",
+    "en": "Accounting"
+  },
+  "short_name": {
+    "vi": "Kế toán AI",
+    "en": "Accounting AI"
+  },
+  "description": {
+    "vi": "Biến deal đã chốt thành bản nháp hóa đơn, đối chiếu thanh toán và nhắc bạn khoản khách còn nợ.",
+    "en": "Turns won deals into invoice drafts, matches payments and reminds you what customers owe."
+  },
+  "points": {
+    "vi": [
+      "Bản nháp hóa đơn theo phạm vi đã thống nhất",
+      "Đối chiếu thanh toán và nhắc nợ",
+      "Nhận deal đã chốt từ Bán hàng"
+    ],
+    "en": [
+      "Invoice drafts from agreed scope",
+      "Payment matching and reminders",
+      "Receives won deals from Sales"
+    ]
+  },
+  "purpose": "an accounting assistant that drafts invoices from won deals, matches payments and reminds about receivables",
+  "icon": "wallet",
+  "glyph": "M6 3h9l3 3v15H6zM9 12h6M9 16h6M9 8h3",
+  "mascot": "/images/promo/mascot-checklist.png",
+  "category": "finance",
+  "status": "stable",
+  "audience": "internal",
+  "included_with_workspace": true,
+  "available": false,
+  "knowledge_folder": "accounting",
+  "workbench": "accounting",
+  "settings_extras": null,
+  "requires": {
+    "capabilities": [],
+    "connections": []
+  },
+  "default_operating_mode": "assist",
+  "agent": {
+    "name": "Accounting Agent",
+    "handle": "accounting",
+    "summary": {
+      "vi": "Biến deal đã chốt thành bản nháp hóa đơn và nhắc bạn khoản khách còn nợ.",
+      "en": "Turns won deals into invoice drafts and reminds you what customers owe."
+    },
+    "capabilities": {
+      "vi": [
+        "Bản nháp hóa đơn theo phạm vi đã thống nhất",
+        "Nhắc thanh toán",
+        "Nhận deal đã chốt từ Sales"
+      ],
+      "en": [
+        "Invoice drafts from the agreed scope",
+        "Payment reminders",
+        "Receives won deals from Sales"
+      ]
+    },
+    "role": {
+      "vi": "Hóa đơn và công nợ",
+      "en": "Invoices & receivables"
+    },
+    "instructions": {
+      "vi": "",
+      "en": ""
+    }
+  },
+  "gates": [
+    {
+      "key": "scope",
+      "label_vi": "Phạm vi công việc",
+      "label_en": "Scope",
+      "hint_vi": "Kế toán AI làm những việc gì: hóa đơn, đối soát, nhắc nợ...",
+      "hint_en": "What the accounting agent covers: invoices, reconciliation, reminders..."
+    },
+    {
+      "key": "currency_tax",
+      "label_vi": "Tiền tệ và thuế",
+      "label_en": "Currency and tax",
+      "hint_vi": "Đơn vị tiền, thuế GTGT, quy tắc làm tròn.",
+      "hint_en": "Currency, VAT rate, rounding rules."
+    },
+    {
+      "key": "source_evidence",
+      "label_vi": "Nguồn chứng từ",
+      "label_en": "Source evidence",
+      "hint_vi": "Số liệu lấy từ đâu: đơn hàng, sao kê ngân hàng, file...",
+      "hint_en": "Where figures come from: orders, bank statements, files..."
+    },
+    {
+      "key": "approval_policy",
+      "label_vi": "Chính sách duyệt và ngưỡng",
+      "label_en": "Approval policy and thresholds",
+      "hint_vi": "Số tiền nào AI tự làm, số nào cần bạn duyệt.",
+      "hint_en": "Amounts the AI handles alone and amounts you approve."
+    },
+    {
+      "key": "evidence_requirements",
+      "label_vi": "Yêu cầu chứng từ",
+      "label_en": "Evidence requirements",
+      "hint_vi": "Cần những chứng từ nào trước khi xuất hóa đơn hoặc ghi nhận thanh toán.",
+      "hint_en": "Documents required before invoicing or recording a payment."
+    },
+    {
+      "key": "prohibited_actions",
+      "label_vi": "Việc không được làm",
+      "label_en": "Prohibited actions",
+      "hint_vi": "Những thao tác tuyệt đối không tự làm (hoàn tiền, hủy hóa đơn...).",
+      "hint_en": "Actions it must never take alone (refunds, voiding invoices...)."
+    }
+  ],
+  "authority_actions": [
+    {
+      "action": "issue_invoice",
+      "label": {
+        "vi": "Xuất hóa đơn",
+        "en": "Issue invoice"
+      },
+      "mode": "auto",
+      "limit_vnd": 20000000,
+      "required_fields": [
+        "customer",
+        "amount_vnd"
+      ],
+      "amount_limit": true
+    },
+    {
+      "action": "reconcile_payment",
+      "label": {
+        "vi": "Đối soát thanh toán",
+        "en": "Reconcile payment"
+      },
+      "mode": "auto",
+      "limit_vnd": 50000000,
+      "required_fields": [
+        "amount_vnd"
+      ],
+      "amount_limit": true,
+      "next": [
+        "send_care"
+      ]
+    },
+    {
+      "action": "send_email",
+      "label": {
+        "vi": "Gửi email cho khách",
+        "en": "Send email to a customer"
+      },
+      "mode": "ask",
+      "limit_vnd": null,
+      "required_fields": [
+        "contact"
+      ],
+      "amount_limit": false
+    }
+  ],
+  "connection_providers": [
+    "sepay",
+    "payos",
+    "casso"
+  ]
+}

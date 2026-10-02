@@ -1,0 +1,176 @@
+{
+  "key": "booking",
+  "order": 50,
+  "name": {
+    "vi": "Đặt lịch hẹn",
+    "en": "Appointment booking"
+  },
+  "short_name": {
+    "vi": "Đặt lịch AI",
+    "en": "Booking AI"
+  },
+  "description": {
+    "vi": "Nhận lịch hẹn của khách, xếp vào chỗ trống, đổi lịch và nhắc trước giờ hẹn; chuyện thu phí hủy do bạn quyết.",
+    "en": "Takes customer appointments, fits them into free slots, reschedules and reminds before the visit; cancellation fees stay your call."
+  },
+  "points": {
+    "vi": [
+      "Xếp lịch hẹn vào chỗ còn trống",
+      "Đổi lịch và nhắc trước giờ hẹn",
+      "Hỏi bạn trước khi thu phí hủy"
+    ],
+    "en": [
+      "Fits appointments into free slots",
+      "Reschedules and sends reminders",
+      "Asks you before charging a cancellation fee"
+    ]
+  },
+  "purpose": "an appointment-booking assistant that books customers into free slots, reschedules and sends reminders, and asks the owner before charging a cancellation fee",
+  "icon": "saved",
+  "glyph": "M5 5h14v15H5zM5 10h14M9 3v4M15 3v4M9 14h2v2H9z",
+  "mascot": "/images/promo/mascot-point.png",
+  "category": "operations",
+  "status": "early",
+  "audience": "customer",
+  "included_with_workspace": false,
+  "available": true,
+  "knowledge_folder": "booking",
+  "workbench": null,
+  "settings_extras": null,
+  "requires": {
+    "capabilities": [
+      "customer_chat",
+      "calendar"
+    ],
+    "connections": []
+  },
+  "default_operating_mode": "assist",
+  "agent": {
+    "name": "Booking Agent",
+    "handle": "booking",
+    "summary": {
+      "vi": "Nhận lịch hẹn của khách, xếp vào chỗ trống, đổi lịch và nhắc trước giờ hẹn; chuyện thu phí hủy do bạn quyết.",
+      "en": "Takes customer appointments, fits them into free slots, reschedules and reminds before the visit; cancellation fees stay your call."
+    },
+    "capabilities": {
+      "vi": [
+        "Xếp lịch hẹn vào chỗ còn trống",
+        "Đổi lịch và nhắc trước giờ hẹn",
+        "Hỏi bạn trước khi thu phí hủy"
+      ],
+      "en": [
+        "Fits appointments into free slots",
+        "Reschedules and sends reminders",
+        "Asks you before charging a cancellation fee"
+      ]
+    },
+    "role": {
+      "vi": "Nhận và quản lý lịch hẹn của khách",
+      "en": "Takes and manages customer appointments"
+    },
+    "instructions": {
+      "vi": "Hỏi khách muốn đặt dịch vụ gì, ngày giờ nào, rồi đối chiếu lịch trống. Chỉ xác nhận khi còn chỗ. Không hứa hoàn tiền hay miễn phí hủy.",
+      "en": "Ask the customer which service and when, then check free slots. Confirm only when there is room. Never promise refunds or free cancellation."
+    }
+  },
+  "gates": [
+    {
+      "key": "services",
+      "label_vi": "Dịch vụ và thời lượng",
+      "label_en": "Services and duration",
+      "hint_vi": "Các dịch vụ nhận đặt, mỗi dịch vụ mất bao lâu và giá.",
+      "hint_en": "The services you book, how long each takes and its price."
+    },
+    {
+      "key": "capacity",
+      "label_vi": "Sức chứa và người thực hiện",
+      "label_en": "Capacity and providers",
+      "hint_vi": "Cùng lúc nhận được mấy khách, ai hoặc phòng nào thực hiện.",
+      "hint_en": "How many customers at once, and who or which room delivers."
+    },
+    {
+      "key": "hours_buffer",
+      "label_vi": "Giờ nhận lịch và khoảng nghỉ",
+      "label_en": "Booking hours and buffers",
+      "hint_vi": "Khung giờ nhận lịch, khoảng nghỉ giữa hai lịch, đặt trước tối thiểu bao lâu.",
+      "hint_en": "Bookable hours, buffer between visits, minimum lead time."
+    },
+    {
+      "key": "cancel_policy",
+      "label_vi": "Chính sách đổi và hủy lịch",
+      "label_en": "Reschedule and cancellation policy",
+      "hint_vi": "Đổi lịch trước bao lâu thì miễn phí, khi nào thu phí và bao nhiêu.",
+      "hint_en": "How late a change is free, when a fee applies and how much."
+    },
+    {
+      "key": "reminders",
+      "label_vi": "Cách nhắc lịch",
+      "label_en": "Reminders",
+      "hint_vi": "Nhắc trước bao lâu, qua kênh nào, nội dung ra sao.",
+      "hint_en": "How long before, over which channel, and what they say."
+    },
+    {
+      "key": "handoff",
+      "label_vi": "Khi nào chuyển cho người",
+      "label_en": "Handoff rules",
+      "hint_vi": "Tình huống nào phải chuyển cho nhân viên: khách khó, đoàn đông, yêu cầu đặc biệt.",
+      "hint_en": "When a person must take over: difficult requests, groups, special needs."
+    },
+    {
+      "key": "tone",
+      "label_vi": "Giọng điệu",
+      "label_en": "Tone",
+      "hint_vi": "Cách xưng hô và phong cách khi nhắn tin.",
+      "hint_en": "How it addresses people and the style of its messages."
+    }
+  ],
+  "authority_actions": [
+    {
+      "action": "confirm_booking",
+      "label": {
+        "vi": "Xác nhận lịch hẹn",
+        "en": "Confirm booking"
+      },
+      "mode": "auto",
+      "limit_vnd": null,
+      "required_fields": [
+        "contact"
+      ],
+      "amount_limit": false
+    },
+    {
+      "action": "reschedule",
+      "label": {
+        "vi": "Đổi lịch hẹn",
+        "en": "Reschedule"
+      },
+      "mode": "auto",
+      "limit_vnd": null,
+      "required_fields": [],
+      "amount_limit": false
+    },
+    {
+      "action": "cancel_with_fee",
+      "label": {
+        "vi": "Hủy lịch có thu phí",
+        "en": "Cancel with a fee"
+      },
+      "mode": "ask",
+      "limit_vnd": null,
+      "required_fields": [],
+      "amount_limit": true
+    },
+    {
+      "action": "remind_booking",
+      "label": {
+        "vi": "Nhắc lịch hẹn",
+        "en": "Remind about a booking"
+      },
+      "mode": "auto",
+      "limit_vnd": null,
+      "required_fields": [],
+      "amount_limit": false
+    }
+  ],
+  "connection_providers": []
+}

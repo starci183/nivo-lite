@@ -9,7 +9,7 @@ import { intlLocale, TIME_ZONE } from "@/i18n/core"
 import { knowledge } from "@/i18n/dict/knowledge"
 import { decideSuggestion } from "@/lib/knowledge/actions"
 import type { KnowledgeSource, SourceStatus, Visibility } from "@/lib/knowledge/shared"
-import type { ModuleKey } from "@/lib/modules-shared"
+import { MODULE_KEYS, type ModuleKey } from "@/lib/modules-shared"
 import { AddSource, type AddPreset } from "./AddSource"
 import { AskPanel } from "./AskPanel"
 import { FIELD_CLASS, GRID_CLASS, HEAD_ROW_CLASS, ITEM_CLASS, ITEM_MAIN_CLASS, LABEL_CLASS, LIST_CLASS, PAGE_CLASS, ROW_WRAP_CLASS, SIDE_CLASS, STACK_CLASS, SUGGEST_ITEM_CLASS, TITLE_LINK_CLASS } from "./classNames"
@@ -67,9 +67,7 @@ export const KnowledgeView = ({ sources, topics, suggestions, skipped, canWrite,
                   <span className="sr-only">{t("filterModule")}</span>
                   <select className={FIELD_CLASS} value={filter} onChange={(e) => setFilter(e.target.value as "all" | ModuleKey)}>
                     <option value="all">{t("filterAll")}</option>
-                    <option value="chatbot">{t("module_chatbot")}</option>
-                    <option value="sales">{t("module_sales")}</option>
-                    <option value="accounting">{t("module_accounting")}</option>
+                    {MODULE_KEYS.map((k) => <option key={k} value={k}>{t(`module_${k}`)}</option>)}
                   </select>
                 </label>
               </div>

@@ -3,56 +3,32 @@
  * Decides whether an AI step runs by itself ("auto") or asks a human ("ask"), and why.
  */
 import type { AuthorityRule, Department, FlowAction, GateInput, GateVerdict, Proposal, ReasonCode, RuleMode } from "./flow-types";
+import { ACTION_MODULE, actionDef, listModules } from "./module-registry";
 
-/** Which department performs each action. */
-export const ACTION_DEPARTMENT: Record<FlowAction, Department> = {
-  reply_customer: "chatbot",
-  handoff_lead: "chatbot",
-  classify_lead: "sales",
-  send_follow_up: "sales",
-  send_quote: "sales",
-  confirm_order: "sales",
-  send_care: "sales",
-  issue_invoice: "accounting",
-  reconcile_payment: "accounting",
-  send_email: "accounting",
-};
+/** Which department (module) performs each action. Derived from the module registry (resources/modules/<key>/module.json authority_actions). */
+export const ACTION_DEPARTMENT: Record<FlowAction, Department> = ACTION_MODULE;
 
 export type DefaultRule = { department: Department; action: FlowAction; mode: RuleMode; limit_vnd: number | null; required_fields: Array<string> };
 
-/** The authority a new workspace starts with (FLOW-PLAN §b). The owner changes these on /authority. */
-export const DEFAULT_RULES: Array<DefaultRule> = [
-  { department: "chatbot", action: "reply_customer", mode: "auto", limit_vnd: null, required_fields: [] },
-  { department: "chatbot", action: "handoff_lead", mode: "auto", limit_vnd: null, required_fields: ["contact_name", "need"] },
-  { department: "sales", action: "classify_lead", mode: "auto", limit_vnd: null, required_fields: [] },
-  { department: "sales", action: "send_follow_up", mode: "ask", limit_vnd: null, required_fields: ["contact"] },
-  { department: "sales", action: "send_quote", mode: "ask", limit_vnd: null, required_fields: ["amount_vnd"] },
-  { department: "sales", action: "confirm_order", mode: "auto", limit_vnd: 20_000_000, required_fields: ["customer", "items", "amount_vnd"] },
-  { department: "sales", action: "send_care", mode: "auto", limit_vnd: null, required_fields: [] },
-  { department: "accounting", action: "issue_invoice", mode: "auto", limit_vnd: 20_000_000, required_fields: ["customer", "amount_vnd"] },
-  { department: "accounting", action: "reconcile_payment", mode: "auto", limit_vnd: 50_000_000, required_fields: ["amount_vnd"] },
-  // Customer-facing email (receipts, reminders): asks first until the owner grants it on /authority.
-  { department: "accounting", action: "send_email", mode: "ask", limit_vnd: null, required_fields: ["contact"] },
-];
+const rulesOf = (m: ReturnType<typeof listModules>[number]): Array<DefaultRule> =>
+  m.authorityActions.map((a) => ({ department: m.key, action: a.action, mode: a.mode, limit_vnd: a.limitVnd, required_fields: [...a.requiredFields] }));
+
+/** The authority a new workspace starts with (FLOW-PLAN §b), from the registry: the stable modules. The owner changes these on /authority. An early module seeds its own rows when it is installed (see defaultRulesOf). */
+export const DEFAULT_RULES: Array<DefaultRule> = listModules().filter((m) => m.status === "stable").flatMap(rulesOf);
+
+/** The default rules of one module (what installing it grants), whatever its status. */
+export const defaultRulesOf = (department: Department): Array<DefaultRule> => listModules().filter((m) => m.key === department).flatMap(rulesOf);
 
 /**
- * The hand-off chain between departments. After an item is done, each next action is queued for the same subject.
+ * The hand-off chain between departments. After an item is done, each next action is queued for the same subject
+ * (declared per action as `next` in the registry).
  * inbound message/lead → handoff_lead → classify_lead → send_follow_up
  * inbound order → confirm_order → issue_invoice
  * inbound payment → reconcile_payment → send_care (back to the Chatbot conversation)
  */
-export const FLOW_NEXT: Record<FlowAction, Array<FlowAction>> = {
-  reply_customer: [],
-  handoff_lead: ["classify_lead"],
-  classify_lead: ["send_follow_up"],
-  send_follow_up: [],
-  send_quote: [],
-  confirm_order: ["issue_invoice"],
-  issue_invoice: [],
-  reconcile_payment: ["send_care"],
-  send_care: [],
-  send_email: [],
-};
+export const FLOW_NEXT: Record<FlowAction, Array<FlowAction>> = Object.fromEntries(
+  listModules().flatMap((m) => m.authorityActions.map((a) => [a.action, [...a.next]] as const)),
+) as Record<FlowAction, Array<FlowAction>>;
 
 /**
  * Limit semantics (product copy: "Sales tự xác nhận đơn DƯỚI 20 triệu"): `limit_vnd` is the amount the action runs by
@@ -91,7 +67,10 @@ export const missingFields = (rule: Pick<AuthorityRule, "required_fields"> | nul
  * (`GateInput.priorApproval` is deliberately ignored; Sales approving a 45M order does not let Accounting invoice 45M).
  */
 export const evaluateGate = (input: GateInput): GateVerdict => {
-  const { rule, proposal, humanApproved = false } = input;
+  const { proposal, humanApproved = false } = input;
+  // An action the registry caps at "ask" (publish a video or a post) never runs alone, whatever a stored rule says.
+  const cap = input.rule && input.rule.mode === "auto" ? actionDef(input.action).maxMode : null;
+  const rule = cap !== null && input.rule ? { ...input.rule, mode: cap } : input.rule;
   const reasons: Array<ReasonCode> = [];
   const add = (r: ReasonCode) => {
     if (!reasons.includes(r)) reasons.push(r);

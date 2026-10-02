@@ -16,6 +16,7 @@ export const HEADER_TITLE_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "
 export const HEADER_META_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "gap-x-4", "gap-y-1");
 
 export const CATALOG_GRID_CLASS_NAME = cn("grid", "grid-cols-1", "gap-4", "md:grid-cols-3");
+export const CATEGORY_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-3");
 export const CARD_CLASS_NAME = cn("flex", "h-full", "min-w-0", "flex-col", "gap-4");
 export const CARD_ART_WRAP_CLASS_NAME = cn("flex", "h-36", "items-center", "justify-center", "rounded-lg", "bg-accent-soft");
 export const CARD_ART_CLASS_NAME = cn("h-32", "w-auto", "object-contain");

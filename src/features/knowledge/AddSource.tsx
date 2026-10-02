@@ -7,7 +7,7 @@ import { knowledge } from "@/i18n/dict/knowledge"
 import { addKnowledge } from "@/lib/knowledge/actions"
 import { faqToText } from "@/lib/knowledge/chunk"
 import { MAX_SOURCE_CHARS, type SourceKind, type Visibility } from "@/lib/knowledge/shared"
-import type { ModuleKey } from "@/lib/modules-shared"
+import { MODULE_KEYS, type ModuleKey } from "@/lib/modules-shared"
 import { FAQ_ROW_CLASS, FIELD_CLASS, FORM_GRID_CLASS, LABEL_CLASS, ROW_WRAP_CLASS, STACK_CLASS, TAB_ROW_CLASS, TEXTAREA_CLASS } from "./classNames"
 
 type Tab = "text" | "faq" | "file" | "url"
@@ -140,9 +140,7 @@ export const AddSource = ({ topics, preset, onDone, onCancel }: AddSourceProps) 
             {t("fieldModule")}
             <select className={FIELD_CLASS} value={module} disabled={isPending} onChange={(e) => setModule(e.target.value as "all" | ModuleKey)}>
               <option value="all">{t("moduleAll")}</option>
-              <option value="chatbot">{t("module_chatbot")}</option>
-              <option value="sales">{t("module_sales")}</option>
-              <option value="accounting">{t("module_accounting")}</option>
+              {MODULE_KEYS.map((k) => <option key={k} value={k}>{t(`module_${k}`)}</option>)}
             </select>
           </label>
           <Input id="k-tags" name="tags" label={t("fieldTags")} variant="secondary" isDisabled={isPending} value={tags} onValueChange={setTags} />

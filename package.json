@@ -3,9 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/gen-module-registry.mjs",
     "dev": "node scripts/with-secrets.mjs next dev -p 3100",
+    "prebuild": "node scripts/gen-module-registry.mjs",
     "build": "next build",
+    "prestart": "node scripts/gen-module-registry.mjs",
     "start": "node scripts/with-secrets.mjs next start -p 3100",
+    "pretypecheck": "node scripts/gen-module-registry.mjs",
     "typecheck": "tsc --noEmit",
     "db:start": "node scripts/with-secrets.mjs supabase start",
     "db:stop": "supabase stop",
@@ -15,7 +19,10 @@
     "seed:knowledge": "node scripts/with-secrets.mjs node scripts/seed-nivo-knowledge.mjs",
     "seed:automations": "node scripts/with-secrets.mjs node scripts/seed-automation-templates.mjs",
     "seed:workspace": "node scripts/with-secrets.mjs node scripts/seed-ready-workspace.mjs",
-    "video:spec-sync": "node scripts/video-spec-sync.mjs"
+    "video:spec-sync": "node scripts/video-spec-sync.mjs",
+    "postinstall": "node scripts/gen-module-registry.mjs",
+    "gen:modules": "node scripts/gen-module-registry.mjs",
+    "seed:modules": "node scripts/with-secrets.mjs node scripts/seed-modules.mjs"
   },
   "dependencies": {
     "@dicebear/core": "^10.4.0",

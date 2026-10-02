@@ -1,11 +1,8 @@
 import type { Installation, InstallationStatus, ModuleKey } from "@/lib/modules-shared";
+import { moduleDef } from "@/lib/module-registry";
 
-/** Per-module presentation: the mascot and the dictionary keys of its name, summary and bullet points. */
-export const MODULE_META = {
-  chatbot: { art: "/images/promo/mascot-chat.png", name: "chatbotName", what: "chatbotWhat", points: "chatbotPoints" },
-  sales: { art: "/images/promo/mascot-point.png", name: "salesName", what: "salesWhat", points: "salesPoints" },
-  accounting: { art: "/images/promo/mascot-checklist.png", name: "accountingName", what: "accountingWhat", points: "accountingPoints" },
-} as const satisfies Record<ModuleKey, { art: string; name: string; what: string; points: string }>;
+/** Per-module presentation (mascot, name, summary, bullet points) lives in the registry: resources/modules/<key>/module.json. */
+export const moduleArt = (key: ModuleKey): string => moduleDef(key).mascot;
 
 export type ShownStatus = InstallationStatus | "notInstalled";
 

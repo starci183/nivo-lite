@@ -104,7 +104,7 @@ export const AutomationsBoard = ({ initial, layout, moduleKey, focus }: Automati
 
   return (
     <>
-      {layout === "page" ? <AutomationsFilters value={filter} onChange={setFilter} /> : null}
+      {layout === "page" ? <AutomationsFilters value={filter} onChange={setFilter} cards={cards} /> : null}
       {error && !current ? <Alert title={error} tone="negative" dismissLabel={t("detailClose")} onDismiss={() => setError(null)} /> : null}
       {layout === "page" ? (
         <div className={current ? LAYOUT_CLASS : SOLO_CLASS}>

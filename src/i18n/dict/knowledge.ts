@@ -1,8 +1,10 @@
 import { defineDict } from "../core";
+import { REGISTRY_MODULE_LABELS } from "@/lib/module-registry.generated";
 
 /** Tri thức doanh nghiệp (/knowledge), Tri thức NIVO nền (/knowledge/nivo) and the Setup card. */
 export const knowledge = defineDict({
   en: {
+    ...REGISTRY_MODULE_LABELS.en,
     eyebrow: "KNOWLEDGE",
     title: "Business knowledge",
     description: "What you teach NIVO about your business. Every agent shares it. Add what matters to you; nothing here is required.",
@@ -112,9 +114,6 @@ export const knowledge = defineDict({
     nivoDescription: "How NIVO agents work: playbooks, what they may and may not do, when they hand over, what they must learn from you, and their tone. Maintained by NIVO; you can read it but not edit it.",
     nivoBack: "Back to business knowledge",
     moduleCore: "Shared by every module",
-    module_chatbot: "Customer care chatbot",
-    module_sales: "Sales",
-    module_accounting: "Accounting",
     nivoKind_playbook: "Playbook",
     nivoKind_authority: "Authority",
     nivoKind_escalation: "Escalation",
@@ -144,6 +143,7 @@ export const knowledge = defineDict({
     notesSourceSetup: "Setup",
   },
   vi: {
+    ...REGISTRY_MODULE_LABELS.vi,
     eyebrow: "TRI THỨC",
     title: "Tri thức doanh nghiệp",
     description: "Những gì bạn dạy NIVO về doanh nghiệp của mình. Mọi agent dùng chung. Thêm điều bạn thấy quan trọng; không có mục nào bắt buộc.",
@@ -247,9 +247,6 @@ export const knowledge = defineDict({
     nivoDescription: "Cách các agent NIVO làm việc: sổ tay vận hành, điều được và không được làm, khi nào chuyển người, điều phải hỏi bạn khi thiết lập, và giọng điệu. NIVO duy trì; bạn xem được nhưng không sửa.",
     nivoBack: "Về tri thức doanh nghiệp",
     moduleCore: "Dùng chung cho mọi module",
-    module_chatbot: "Chatbot chăm sóc khách",
-    module_sales: "Bán hàng",
-    module_accounting: "Kế toán",
     nivoKind_playbook: "Sổ tay vận hành",
     nivoKind_authority: "Quyền hạn",
     nivoKind_escalation: "Chuyển người",

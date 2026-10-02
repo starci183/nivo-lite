@@ -1,5 +1,6 @@
 import "server-only";
 import { drainAfter, engineCtx } from "./flow-ctx";
+import { listModules } from "./module-registry";
 import type {
   Authority, AuthorityRule, DecisionRow, Department, Governance, InboundEvent, Invoice, LeadFlow, Order, ReasonCode, Staff, Transaction,
   WorkItem, WorkItemView, WorkStatus,
@@ -227,7 +228,8 @@ export const getGovernance = async (): Promise<GovernanceWithStatus> => {
   }
   const waitingCount = w.filter((x) => x.status === "waiting_decision").length;
 
-  const departments = (["chatbot", "sales", "accounting"] as Array<Department>).map((department) => {
+  // The stable modules always get a tile; any other module only once it has work.
+  const departments = listModules().filter((m) => m.status === "stable" || w.some((x) => x.department === m.key)).map((m) => m.key).map((department) => {
     const mine = w.filter((x) => x.department === department);
     return {
       department,

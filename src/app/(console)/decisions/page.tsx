@@ -1,11 +1,12 @@
 import { Decisions } from "@/features/decisions";
 import type { Department } from "@/lib/flow-types";
+import { MODULE_KEYS } from "@/lib/module-registry";
 
 type DecisionsPageProps = { readonly searchParams: Promise<{ kind?: string | string[]; dept?: string | string[] }> };
 
 const first = (v: string | string[] | undefined): string => (Array.isArray(v) ? (v[0] ?? "") : (v ?? ""));
 const KINDS = ["policy", "human", "rejected"] as const;
-const DEPTS: ReadonlyArray<Department> = ["chatbot", "sales", "accounting"];
+const DEPTS: ReadonlyArray<Department> = MODULE_KEYS;
 
 /** Decision history. `?kind=policy|human|rejected&dept=chatbot|sales|accounting` filter the list. */
 const DecisionsPage = async ({ searchParams }: DecisionsPageProps) => {

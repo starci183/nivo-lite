@@ -33,6 +33,8 @@ export const TILE_CLASS = {
   accounting: cn(TILE_BASE, "bg-success/10", "text-success"),
   workspace: cn(TILE_BASE, "bg-foreground/10", "text-foreground"),
 } as const
+/** A module without an accent of its own uses the workspace tile. */
+export const tileClass = (scope: string) => (TILE_CLASS as Record<string, (typeof TILE_CLASS)["workspace"] | undefined>)[scope] ?? TILE_CLASS.workspace
 
 export const DETAIL_CLASS = cn("flex", "min-w-0", "flex-col", "gap-5", "rounded-lg", "border", "border-separator", "bg-surface", "p-4", "lg:sticky", "lg:top-4")
 export const SECTION_CLASS = cn("flex", "min-w-0", "flex-col", "gap-3", "border-t", "border-separator", "pt-4")

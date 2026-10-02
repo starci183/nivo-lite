@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { isModuleKey, moduleDef } from "@/lib/module-registry";
 
 /**
  * Google-style avatar: the photo when there is one, otherwise the person's initials on a colour
@@ -60,18 +61,15 @@ export const PersonAvatar = ({ name, src, size = "md", online }: PersonAvatarPro
 /** AI agents are rounded squares with their module glyph, so a person and an agent are never confused. */
 export type AgentAvatarProps = { readonly module?: string; readonly size?: "xs" | "sm" | "md" | "lg"; readonly online?: boolean; readonly label?: string };
 
-const GLYPH: Record<string, string> = {
-  chatbot: "M4 5h16v10H9l-5 4z",
-  sales: "M4 17l5-5 4 4 7-8M15 8h5v5",
-  accounting: "M6 3h9l3 3v15H6zM9 12h6M9 16h6M9 8h3",
-};
+/** Each module's glyph lives in the registry (resources/modules/<key>/module.json); an unknown key falls back to the chatbot glyph. */
+const glyphOf = (module: string): string => (isModuleKey(module) ? moduleDef(module).glyph : moduleDef("chatbot").glyph);
 
 export const AgentAvatar = ({ module = "chatbot", size = "md", online, label }: AgentAvatarProps) => {
   const px = SIZES[size];
   return (
     <span className="nivo-agent-avatar" style={{ width: px, height: px }} role="img" aria-label={label ?? `AI agent · ${module}`} title={label}>
       <svg viewBox="0 0 24 24" width={Math.round(px * 0.55)} height={Math.round(px * 0.55)} aria-hidden="true">
-        <path d={GLYPH[module] ?? GLYPH.chatbot} fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+        <path d={glyphOf(module)} fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
       {online ? <span className="nivo-avatar-dot" aria-hidden="true" /> : null}
     </span>

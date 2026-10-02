@@ -6,7 +6,7 @@ import { listSources, listSuggestionStates, listTopics, openSuggestions } from "
 import { KNOWLEDGE_SUGGESTIONS, suggestionTopic } from "@/lib/knowledge/shared"
 import { isManagerRole } from "@/lib/members-shared"
 import { listInstallations } from "@/lib/modules-core"
-import { isModuleKey, type ModuleKey } from "@/lib/modules-shared"
+import { isModuleKey, MODULE_KEYS, type ModuleKey } from "@/lib/modules-shared"
 import { getSession } from "@/lib/session"
 
 /** Tri thức doanh nghiệp: workspace knowledge shared by every agent. Everyone reads; owner and manager write. */
@@ -24,7 +24,7 @@ const Page = async ({ searchParams }: { readonly searchParams: Promise<{ module?
     const initial = isModuleKey(module) ? module : "all"
     return (
       <KnowledgeView
-        sources={sources} topics={topics} canWrite={canWrite} initialModule={initial} askModule={isModuleKey(module) ? module : installed[0] ?? "chatbot"}
+        sources={sources} topics={topics} canWrite={canWrite} initialModule={initial} askModule={isModuleKey(module) ? module : installed[0] ?? MODULE_KEYS[0]}
         suggestions={suggestions.map((s) => ({ key: s.key, topic: s.topic, hint: s.hint, visibility: s.visibility }))} skipped={skipped}
       />
     )

@@ -1,0 +1,152 @@
+{
+  "key": "content",
+  "order": 90,
+  "name": {
+    "vi": "Nội dung mạng xã hội",
+    "en": "Social content"
+  },
+  "short_name": {
+    "vi": "Nội dung AI",
+    "en": "Content AI"
+  },
+  "description": {
+    "vi": "Soạn bài đăng và lịch nội dung theo giọng thương hiệu; mọi bài chỉ lên mạng sau khi bạn đồng ý.",
+    "en": "Drafts posts and a content calendar in your brand voice; nothing goes online until you approve it."
+  },
+  "points": {
+    "vi": [
+      "Soạn bài đăng theo giọng thương hiệu",
+      "Gợi ý lịch đăng theo tuần",
+      "Không bao giờ tự đăng bài"
+    ],
+    "en": [
+      "Drafts posts in your brand voice",
+      "Suggests a weekly calendar",
+      "Never posts by itself"
+    ]
+  },
+  "purpose": "a social media assistant that drafts posts and a content calendar in the brand voice and never posts without approval",
+  "icon": "blog",
+  "glyph": "M5 4h14v16H5zM8 8h8M8 12h8M8 16h5",
+  "mascot": "/images/promo/mascot-celebrate.png",
+  "category": "marketing",
+  "status": "early",
+  "audience": "internal",
+  "included_with_workspace": false,
+  "available": true,
+  "knowledge_folder": "content",
+  "workbench": null,
+  "settings_extras": null,
+  "requires": {
+    "capabilities": [
+      "social_publish"
+    ],
+    "connections": []
+  },
+  "default_operating_mode": "assist",
+  "agent": {
+    "name": "Content Agent",
+    "handle": "content",
+    "summary": {
+      "vi": "Soạn bài đăng và lịch nội dung theo giọng thương hiệu; mọi bài chỉ lên mạng sau khi bạn đồng ý.",
+      "en": "Drafts posts and a content calendar in your brand voice; nothing goes online until you approve it."
+    },
+    "capabilities": {
+      "vi": [
+        "Soạn bài đăng theo giọng thương hiệu",
+        "Gợi ý lịch đăng theo tuần",
+        "Không bao giờ tự đăng bài"
+      ],
+      "en": [
+        "Drafts posts in your brand voice",
+        "Suggests a weekly calendar",
+        "Never posts by itself"
+      ]
+    },
+    "role": {
+      "vi": "Soạn bài đăng mạng xã hội để chủ duyệt",
+      "en": "Drafts social posts for the owner to approve"
+    },
+    "instructions": {
+      "vi": "Soạn bài từ thông tin thật của doanh nghiệp, đúng giọng thương hiệu. Không bịa giá, khuyến mãi hay số liệu. Chỉ tạo bản nháp, không tự đăng.",
+      "en": "Write posts from the business's real facts in its brand voice. Never invent prices, promotions or figures. Produce drafts only, never publish."
+    }
+  },
+  "gates": [
+    {
+      "key": "channels",
+      "label_vi": "Kênh đăng bài",
+      "label_en": "Channels",
+      "hint_vi": "Đăng ở đâu: Facebook, Instagram, TikTok, Zalo OA, website.",
+      "hint_en": "Where you post: Facebook, Instagram, TikTok, Zalo OA, website."
+    },
+    {
+      "key": "audience",
+      "label_vi": "Khách hàng mục tiêu",
+      "label_en": "Target audience",
+      "hint_vi": "Bài viết cho ai, họ quan tâm điều gì.",
+      "hint_en": "Who the posts are for and what they care about."
+    },
+    {
+      "key": "pillars",
+      "label_vi": "Chủ đề nội dung",
+      "label_en": "Content themes",
+      "hint_vi": "Các nhóm nội dung chính (khuyến mãi, kiến thức, hậu trường, phản hồi khách).",
+      "hint_en": "Main themes: promotions, tips, behind the scenes, customer stories."
+    },
+    {
+      "key": "cadence",
+      "label_vi": "Tần suất đăng",
+      "label_en": "Posting cadence",
+      "hint_vi": "Mỗi tuần đăng mấy bài, vào ngày giờ nào.",
+      "hint_en": "How many posts a week and at what times."
+    },
+    {
+      "key": "claims_limits",
+      "label_vi": "Điều không được nói",
+      "label_en": "Claims to avoid",
+      "hint_vi": "Cam kết, so sánh, từ ngữ hoặc chủ đề không được dùng.",
+      "hint_en": "Promises, comparisons, wording or topics that are off limits."
+    },
+    {
+      "key": "approval",
+      "label_vi": "Quy trình duyệt",
+      "label_en": "Approval flow",
+      "hint_vi": "Ai duyệt bài trước khi đăng và duyệt qua đâu.",
+      "hint_en": "Who approves a post before it goes out and where."
+    },
+    {
+      "key": "tone",
+      "label_vi": "Giọng điệu",
+      "label_en": "Tone",
+      "hint_vi": "Cách xưng hô và phong cách khi nhắn tin.",
+      "hint_en": "How it addresses people and the style of its messages."
+    }
+  ],
+  "authority_actions": [
+    {
+      "action": "draft_post",
+      "label": {
+        "vi": "Soạn bài đăng",
+        "en": "Draft a post"
+      },
+      "mode": "auto",
+      "limit_vnd": null,
+      "required_fields": [],
+      "amount_limit": false
+    },
+    {
+      "action": "publish_post",
+      "label": {
+        "vi": "Đăng bài",
+        "en": "Publish a post"
+      },
+      "mode": "ask",
+      "limit_vnd": null,
+      "required_fields": [],
+      "amount_limit": false,
+      "max_mode": "ask"
+    }
+  ],
+  "connection_providers": []
+}

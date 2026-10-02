@@ -1,0 +1,191 @@
+{
+  "key": "sales",
+  "order": 20,
+  "name": {
+    "vi": "Bán hàng",
+    "en": "Sales"
+  },
+  "short_name": {
+    "vi": "Sales AI",
+    "en": "Sales AI"
+  },
+  "description": {
+    "vi": "Theo dõi từng khách hàng, đề xuất bước tiếp theo và soạn tin nhắn để bạn duyệt.",
+    "en": "Follows up every lead, proposes the next step and drafts messages for your approval."
+  },
+  "points": {
+    "vi": [
+      "Phụ trách mọi khách hàng mới",
+      "Soạn bản nháp theo dõi để bạn duyệt",
+      "Chuyển deal đã chốt cho Kế toán"
+    ],
+    "en": [
+      "Owns each new lead",
+      "Drafts follow-ups for approval",
+      "Hands won deals to Accounting"
+    ]
+  },
+  "purpose": "a sales assistant that follows up leads, proposes next steps and drafts messages for the owner to approve",
+  "icon": "cart",
+  "glyph": "M4 17l5-5 4 4 7-8M15 8h5v5",
+  "mascot": "/images/promo/mascot-point.png",
+  "category": "sales_customer",
+  "status": "stable",
+  "audience": "internal",
+  "included_with_workspace": true,
+  "available": false,
+  "knowledge_folder": "sales",
+  "workbench": "sales",
+  "settings_extras": null,
+  "requires": {
+    "capabilities": [],
+    "connections": []
+  },
+  "default_operating_mode": "assist",
+  "agent": {
+    "name": "Sales Agent",
+    "handle": "sales",
+    "summary": {
+      "vi": "Theo dõi từng khách hàng, đề xuất bước tiếp theo và soạn tin nhắn để bạn duyệt.",
+      "en": "Follows up every lead, proposes the next step and drafts messages for your approval."
+    },
+    "capabilities": {
+      "vi": [
+        "Phụ trách mọi khách hàng mới",
+        "Soạn bản nháp theo dõi để bạn duyệt",
+        "Chuyển deal đã chốt cho Accounting"
+      ],
+      "en": [
+        "Owns each new lead",
+        "Drafts follow-ups for approval",
+        "Hands won deals to Accounting"
+      ]
+    },
+    "role": {
+      "vi": "Theo dõi khách hàng và soạn đề xuất",
+      "en": "Lead follow-up & proposals"
+    },
+    "instructions": {
+      "vi": "",
+      "en": ""
+    }
+  },
+  "gates": [
+    {
+      "key": "offer_pricing",
+      "label_vi": "Gói bán và quy tắc giá",
+      "label_en": "Offer and pricing rules",
+      "hint_vi": "Bạn bán gì, bảng giá, mức giảm tối đa.",
+      "hint_en": "What you sell, price list, maximum discount."
+    },
+    {
+      "key": "qualification",
+      "label_vi": "Tiêu chí khách tiềm năng",
+      "label_en": "Qualification criteria",
+      "hint_vi": "Khách thế nào là đáng theo đuổi, thế nào thì bỏ qua.",
+      "hint_en": "Which leads are worth pursuing and which to drop."
+    },
+    {
+      "key": "followup_cadence",
+      "label_vi": "Nhịp theo dõi",
+      "label_en": "Follow-up cadence",
+      "hint_vi": "Bao lâu theo dõi một lần, tối đa mấy lần.",
+      "hint_en": "How often to follow up and how many times at most."
+    },
+    {
+      "key": "approval_thresholds",
+      "label_vi": "Ngưỡng cần duyệt",
+      "label_en": "Approval thresholds",
+      "hint_vi": "Báo giá hoặc đơn từ bao nhiêu tiền thì cần bạn duyệt.",
+      "hint_en": "Quote or order amounts above which you must approve."
+    },
+    {
+      "key": "handoff_accounting",
+      "label_vi": "Chuyển sang Kế toán",
+      "label_en": "Handoff to accounting",
+      "hint_vi": "Khi nào đơn đã chốt và cần những thông tin gì để xuất hóa đơn.",
+      "hint_en": "When a deal counts as won and what accounting needs to invoice."
+    },
+    {
+      "key": "tone",
+      "label_vi": "Giọng điệu",
+      "label_en": "Tone",
+      "hint_vi": "Cách xưng hô và phong cách khi nhắn khách.",
+      "hint_en": "How it addresses customers and the style of its messages."
+    }
+  ],
+  "authority_actions": [
+    {
+      "action": "classify_lead",
+      "label": {
+        "vi": "Phân loại",
+        "en": "Classify lead"
+      },
+      "mode": "auto",
+      "limit_vnd": null,
+      "required_fields": [],
+      "amount_limit": false,
+      "next": [
+        "send_follow_up"
+      ]
+    },
+    {
+      "action": "send_follow_up",
+      "label": {
+        "vi": "Gửi theo dõi",
+        "en": "Send follow-up"
+      },
+      "mode": "ask",
+      "limit_vnd": null,
+      "required_fields": [
+        "contact"
+      ],
+      "amount_limit": false
+    },
+    {
+      "action": "send_quote",
+      "label": {
+        "vi": "Gửi báo giá",
+        "en": "Send quote"
+      },
+      "mode": "ask",
+      "limit_vnd": null,
+      "required_fields": [
+        "amount_vnd"
+      ],
+      "amount_limit": true
+    },
+    {
+      "action": "confirm_order",
+      "label": {
+        "vi": "Xác nhận đơn hàng",
+        "en": "Confirm order"
+      },
+      "mode": "auto",
+      "limit_vnd": 20000000,
+      "required_fields": [
+        "customer",
+        "items",
+        "amount_vnd"
+      ],
+      "amount_limit": true,
+      "next": [
+        "issue_invoice"
+      ]
+    },
+    {
+      "action": "send_care",
+      "label": {
+        "vi": "Gửi chăm sóc",
+        "en": "Send customer care"
+      },
+      "mode": "auto",
+      "limit_vnd": null,
+      "required_fields": [],
+      "amount_limit": false
+    }
+  ],
+  "connection_providers": [
+    "telegram"
+  ]
+}

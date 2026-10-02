@@ -15,7 +15,7 @@ import {
   MODULE_GATES, allGatesConfirmed, gateEntry, gateLabel, isModuleKey, snapshotOf,
   type ContextSnapshot, type ContextVersion, type GateEvidence, type Installation, type ModuleKey, type OperatingMode, type SetupMessage, type SetupRevision, type SetupSession,
 } from "./modules-shared";
-import { moduleCopy, moduleSpec } from "./modules";
+import { ensureDraftSession, fail, installModuleCore, loadInstallation, logEvent, moduleName, type Db } from "./module-install";
 import { requireManager } from "./permissions";
 import { getSession } from "./session";
 import { supabaseServer } from "./supabase/server";
@@ -31,94 +31,21 @@ const run = async <T>(fn: () => Promise<T>): Promise<Outcome<T>> => {
   }
 };
 
-type Db = Awaited<ReturnType<typeof supabaseServer>>;
 type MessageRow = { id: string; setup_session_id: string; role: "user" | "assistant"; author: string; body: string; created_at: string };
 
 const toMessage = (r: MessageRow): SetupMessage => ({ id: r.id, setupSessionId: r.setup_session_id, role: r.role, author: r.author, body: r.body, createdAt: r.created_at });
-const fail = (error: { message: string } | null): void => { if (error) throw new Error(error.message); };
 const refresh = () => revalidatePath("/", "layout");
-
-const loadInstallation = async (db: Db, installationId: string): Promise<Installation> => {
-  const { data, error } = await db.from("module_installations").select(INSTALLATION_SELECT).eq("id", installationId).maybeSingle();
-  fail(error);
-  if (!data) throw new Error("Not found");
-  return toInstallation(data as unknown as InstallationRow);
-};
-
-const moduleName = (key: ModuleKey, locale: Locale): string => (translator(modulesCore, locale))(`${key}Name`);
-
-const logEvent = (db: Db, ws: string, kind: string, actor: string, summary: string) =>
-  db.from("events").insert({ workspace_id: ws, lead_id: null, kind, actor, summary, evidence: null });
-
-/** The latest draft session of an installation, creating the first one (with NIVO's welcome) when there is none. */
-const ensureDraftSession = async (db: Db, ws: string, installation: Installation, locale: Locale): Promise<SetupSession> => {
-  const latest = await db.from("module_setup_sessions").select("*").eq("installation_id", installation.id).order("revision", { ascending: false }).limit(1).maybeSingle();
-  fail(latest.error);
-  if (latest.data && latest.data.status === "draft") return toSession(latest.data);
-  const prev = latest.data ? toSession(latest.data) : null;
-  const created = await db.from("module_setup_sessions").insert({
-    workspace_id: ws, installation_id: installation.id, revision: (prev?.revision ?? 0) + 1,
-    draft_snapshot: prev?.draft ?? { summary: "", facts: [] }, gate_evidence: prev?.gateEvidence ?? {},
-  }).select().single();
-  if (created.error) {
-    // Lost a race with another tab: use the session it created.
-    const again = await db.from("module_setup_sessions").select("*").eq("installation_id", installation.id).order("revision", { ascending: false }).limit(1).single();
-    fail(again.error);
-    return toSession(again.data);
-  }
-  const session = toSession(created.data);
-  if (!prev) {
-    const t = translator(moduleSetup, locale);
-    await db.from("module_setup_messages").insert({
-      workspace_id: ws, setup_session_id: session.id, role: "assistant", author: "NIVO",
-      body: t("welcome", { module: moduleName(installation.moduleKey, locale) }),
-    });
-  }
-  return session;
-};
 
 /* ------------------------------------------------------------------ catalogue */
 
-/** Install a module: its installation, its agent (reused when the workspace already has one) and the first setup session. */
+/** Install a module: its installation, its agent (reused when the workspace already has one), its default authority rules, the first setup session and the OpenClaw sync. Any module of the registry. */
 export const installModule = async (moduleKey: ModuleKey): Promise<Outcome<{ moduleKey: ModuleKey }>> =>
   run(async () => {
     if (!isModuleKey(moduleKey)) throw new Error("Unknown module");
     await requireManager();
     const session = await getSession();
     const db = await supabaseServer();
-    const locale = await getLocale();
-    const ws = session.workspace.id;
-
-    const existing = await db.from("module_installations").select("id").eq("workspace_id", ws).eq("module_key", moduleKey).maybeSingle();
-    fail(existing.error);
-    let installationId = existing.data?.id as string | undefined;
-
-    if (!installationId) {
-      let agentId: string | null = null;
-      const agent = await db.from("agents").select("id").eq("workspace_id", ws).eq("module", moduleKey).order("created_at").limit(1).maybeSingle();
-      fail(agent.error);
-      agentId = agent.data?.id ?? null;
-      if (!agentId) {
-        const spec = moduleSpec(moduleKey);
-        const copy = moduleCopy(spec, locale);
-        const created = await db.from("agents").insert({
-          workspace_id: ws, module: moduleKey, name: `${spec.name} Agent`, handle: moduleKey, role: copy.defaultRole, instructions: copy.defaultInstructions,
-        }).select("id").single();
-        fail(created.error);
-        agentId = created.data?.id ?? null;
-      }
-      const inserted = await db.from("module_installations").insert({ workspace_id: ws, module_key: moduleKey, agent_id: agentId, status: "setup" }).select("id").single();
-      if (inserted.error) {
-        const again = await db.from("module_installations").select("id").eq("workspace_id", ws).eq("module_key", moduleKey).single();
-        fail(again.error);
-        installationId = again.data?.id;
-      } else {
-        installationId = inserted.data.id;
-        await logEvent(db, ws, "module.installed", session.userName, `${session.userName}: ${moduleName(moduleKey, locale)}`);
-      }
-    }
-    const installation = await loadInstallation(db, installationId as string);
-    await ensureDraftSession(db, ws, installation, locale);
+    await installModuleCore(db, { workspaceId: session.workspace.id, moduleKey, locale: await getLocale(), actorName: session.userName });
     refresh();
     return { moduleKey };
   });

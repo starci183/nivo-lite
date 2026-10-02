@@ -7,7 +7,7 @@ import { automations as dict } from "@/i18n/dict/automations"
 import type { AutomationCardView } from "@/lib/automation-shared"
 import { NivoIcon } from "@/ui"
 import { BoltIcon } from "./BoltIcon"
-import { BOLT_CLASS, CARD_BUTTON_CLASS, CARD_CLASS, CARD_FOOT_CLASS, CARD_SELECTED_CLASS, CARD_TEXT_CLASS, CARD_TOP_CLASS, LINK_CLASS, TILE_CLASS, TRIGGER_CLASS } from "./classNames"
+import { BOLT_CLASS, CARD_BUTTON_CLASS, CARD_CLASS, CARD_FOOT_CLASS, CARD_SELECTED_CLASS, CARD_TEXT_CLASS, CARD_TOP_CLASS, LINK_CLASS, TRIGGER_CLASS, tileClass } from "./classNames"
 import { iconFor, loc, scopeOf, startsConnection, statusOf, switchLocked, type CardStatus } from "./helpers"
 
 /** Props for {@link AutomationCard}. */
@@ -51,7 +51,7 @@ export const AutomationCard = ({ card, selected, busy, onSelect, onToggle }: Aut
     <article className={selected ? CARD_SELECTED_CLASS : CARD_CLASS} data-automation={card.key}>
       <button type="button" className={CARD_BUTTON_CLASS} onClick={onSelect} aria-pressed={selected} aria-label={`${name}. ${t("selectHint")}`}>
         <span className={CARD_TOP_CLASS}>
-          <span className={TILE_CLASS[scopeOf(def)]} aria-hidden="true"><NivoIcon props={{ name: iconFor(def) }} /></span>
+          <span className={tileClass(scopeOf(def))} aria-hidden="true"><NivoIcon props={{ name: iconFor(def) }} /></span>
           <span className={CARD_TEXT_CLASS}>
             <Text weight="semibold">{name}</Text>
             <span><Badge isDot tone={TONE[status]}>{t(LABEL[status])}</Badge></span>

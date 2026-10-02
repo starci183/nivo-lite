@@ -30,7 +30,6 @@ export type GovernanceBlocksProps = {
   readonly waiting: ReadonlyArray<WorkItemView>;
 };
 
-const DEPARTMENT_ORDER: ReadonlyArray<Department> = ["chatbot", "sales", "accounting"];
 const EXCEPTION_ORDER: ReadonlyArray<ReasonCode> = ["missing_data", "over_authority", "unclear_outcome", "not_allowed"];
 const TOP_WAITING = 3;
 
@@ -120,8 +119,8 @@ export const GovernanceBlocks = ({ governance, waiting }: GovernanceBlocksProps)
               {efficiency.medianDecisionMinutes === null ? t("sumMedianNone") : t("sumMedian", { n: Math.round(efficiency.medianDecisionMinutes) })}
             </Text>
             <div className={DEPT_GRID_CLASS_NAME}>
-              {DEPARTMENT_ORDER.map((key) => {
-                const d = departments.find((item) => item.department === key);
+              {departments.map((d) => {
+                const key = d.department;
                 return (
                   <Link key={key} href="/chat" className={DEPT_TILE_CLASS_NAME}>
                     <Text weight="semibold">{g(`dept_${key}`)}</Text>

@@ -1,5 +1,5 @@
 /** Knowledge layers: pure types and the "Nên bổ sung" suggestion catalogue (no I/O, safe in client components). */
-import type { ModuleKey } from "../modules-shared";
+import { MODULE_KEYS, type ModuleKey } from "../modules-shared";
 
 /** Format of a source (not a business category): what the owner pasted or uploaded. */
 export const SOURCE_KINDS = ["text", "faq", "file", "url"] as const;
@@ -134,7 +134,7 @@ export const KNOWLEDGE_SUGGESTIONS: ReadonlyArray<KnowledgeSuggestion> = [
     hint_vi: "Thông tin xuất hóa đơn, thuế GTGT, chứng từ cần có. Không xuất hóa đơn thì chọn Không áp dụng.", hint_en: "Invoice details, VAT, required documents.",
   },
   {
-    key: "brand_voice", modules: ["chatbot", "sales", "accounting"], gates: ["tone"], visibility: "internal",
+    key: "brand_voice", modules: MODULE_KEYS, gates: ["tone"], visibility: "internal",
     topic_vi: "Cách xưng hô và giọng điệu mẫu", topic_en: "Voice and sample replies",
     hint_vi: "Vài câu mẫu bạn ưng ý để agent nói đúng giọng của bạn.", hint_en: "A few sample replies you like.",
   },
