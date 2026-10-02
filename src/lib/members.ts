@@ -27,9 +27,14 @@ export const listMembers = cache(async (): Promise<Array<MemberListing>> => {
   const db = await supabaseServer();
   const { data, error } = await db.rpc("workspace_members_directory", { ws: session.workspace.id });
   if (error) throw new Error(error.message);
-  type Row = { user_id: string; role: Role; staff_id: string | null; display_name: string; status: "active" | "disabled"; email: string | null; last_sign_in_at: string | null };
-  return ((data ?? []) as Array<Row>).map((r) => ({
-    userId: r.user_id, workspaceId: session.workspace.id, role: r.role, staffId: r.staff_id, displayName: r.display_name,
+  return memberListingsFrom(session.workspace.id, (data ?? []) as Array<DirectoryRow>);
+});
+
+type DirectoryRow = { user_id: string; role: Role; staff_id: string | null; display_name: string; status: "active" | "disabled"; email: string | null; last_sign_in_at: string | null };
+
+/** Members as the app lists them, from directory rows already read (`workspace_members_directory`, also embedded in `office_data`). */
+export const memberListingsFrom = (workspaceId: string, rows: ReadonlyArray<DirectoryRow>): Array<MemberListing> =>
+  rows.map((r) => ({
+    userId: r.user_id, workspaceId, role: r.role, staffId: r.staff_id, displayName: r.display_name,
     status: r.status, email: r.email ?? "", lastSignInAt: r.last_sign_in_at,
   }));
-});

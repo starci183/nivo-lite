@@ -19,7 +19,7 @@ export type PendingApproval = {
 
 type LeadRow = { id: string; contact_name: string; company: string; channel: string }
 type RespRow = { id: string; lead_id: string; next_action: string; owner_name: string; lead: LeadRow | Array<LeadRow> | null }
-type Embedded = Execution & {
+export type Embedded = Execution & {
   responsibility: RespRow | Array<RespRow> | null
   work_item: { id: string; assigned_staff_id: string | null } | Array<{ id: string; assigned_staff_id: string | null }> | null
   agent: { id: string; name: string } | Array<{ id: string; name: string }> | null
@@ -31,7 +31,7 @@ const EXECUTION_SELECT = "*, responsibility:responsibilities(id, lead_id, next_a
 const one = <T,>(v: T | Array<T> | null): T | null => (Array.isArray(v) ? (v[0] ?? null) : v)
 
 /** Attach lead, agent and responsibility context to a list of executions. */
-const hydrate = async (rows: ReadonlyArray<Embedded>): Promise<ReadonlyArray<PendingApproval>> => {
+export const hydrate = async (rows: ReadonlyArray<Embedded>): Promise<ReadonlyArray<PendingApproval>> => {
   if (rows.length === 0) return []
   const t = await getT(office)
   return rows.map(({ responsibility, work_item, agent: agentRow, ...execution }) => {

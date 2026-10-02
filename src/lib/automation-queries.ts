@@ -1,6 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { googleCardState } from "./google";
+import { googleCardFromRow } from "./google";
 import { ACTION_DEPARTMENT, applyOperatingMode } from "./policy";
 import { listModules } from "./module-registry";
 import { minutesToHhmm, parseHours } from "./automation-hours";
@@ -27,9 +27,15 @@ type ActiveContexts = { installed: Array<ModuleScope>; versions: Partial<Record<
 
 /** The active context versions of the workspace's installed modules: version number and all of its text. One request (the version rows are embedded). */
 const activeContexts = async (db: Db, ws: string): Promise<ActiveContexts> => {
-  type Row = { module_key: ModuleScope; operating_mode: string | null; ctx: { id: string; version: number; snapshot: Snapshot } | Array<{ id: string; version: number; snapshot: Snapshot }> | null };
-  const { data } = await db.from("module_installations").select("module_key, operating_mode, ctx:module_context_versions!active_context_version_id(id, version, snapshot)").eq("workspace_id", ws).order("created_at");
-  const inst = (data ?? []) as unknown as Array<Row>;
+  const { data } = await db.from("module_installations").select(INSTALLATION_CONTEXT_SELECT).eq("workspace_id", ws).order("created_at");
+  return contextsFrom((data ?? []) as unknown as Array<InstallationContextRow>);
+};
+
+type InstallationContextRow = { module_key: ModuleScope; operating_mode: string | null; ctx: { id: string; version: number; snapshot: Snapshot } | Array<{ id: string; version: number; snapshot: Snapshot }> | null };
+const INSTALLATION_CONTEXT_SELECT = "module_key, operating_mode, ctx:module_context_versions!active_context_version_id(id, version, snapshot)";
+
+/** The active contexts from installation rows already read (each with its active version embedded). */
+const contextsFrom = (inst: ReadonlyArray<InstallationContextRow>): ActiveContexts => {
   const versions: Partial<Record<ModuleScope, number>> = {};
   const operatingModes: Partial<Record<ModuleScope, string | null>> = {};
   const parts: Array<string> = [];
@@ -60,10 +66,14 @@ export const loadShopContext = async (db: Db, ws: string, known?: ActiveContexts
     db.from("authority").select("reply_style, brand_voice").eq("workspace_id", ws).maybeSingle(),
     known ?? activeContexts(db, ws),
   ]);
+  return shopContextFrom((workspace.data as { name?: string } | null)?.name ?? null, authority.data as { reply_style?: string; brand_voice?: string } | null, ctx);
+};
+
+/** The shop context from rows already read. */
+const shopContextFrom = (name: string | null, a: { reply_style?: string; brand_voice?: string } | null, ctx: ActiveContexts): ShopContext & { readonly hoursRange: { from: number; to: number } | null } => {
   const range = parseHours(ctx.hoursText) ?? parseHours(ctx.text.split("\n").find((l) => /giờ (làm việc|mở cửa)|mở cửa|opening hours|business hours/i.test(l) && parseHours(l)) ?? "");
-  const a = authority.data as { reply_style?: string; brand_voice?: string } | null;
   return {
-    shop: (workspace.data as { name?: string } | null)?.name ?? "shop",
+    shop: name ?? "shop",
     hours: range ? `${minutesToHhmm(range.from)} - ${minutesToHhmm(range.to)}` : "",
     tone: (a?.brand_voice || a?.reply_style || "").trim(),
     hoursRange: range,
@@ -90,11 +100,16 @@ export const loadCapabilities = async (db: Db, ws: string, known?: ActiveContext
     db.from("knowledge_sources").select("title, content").eq("workspace_id", ws).limit(60),
     db.from("invoices").select("id", { count: "exact", head: true }).eq("workspace_id", ws).not("due_at", "is", null),
   ]);
-  const text = [ctx.text, ...((knowledge.data ?? []) as Array<{ title: string; content: string }>).map((k) => `${k.title}\n${k.content.slice(0, 3000)}`)].join("\n");
+  return capabilitiesFrom(ctx, (knowledge.data ?? []) as Array<{ title: string; content: string }>, dueInvoices.count ?? 0);
+};
+
+/** The capabilities from rows already read: the active contexts, the knowledge sources and how many invoices carry a due date. */
+const capabilitiesFrom = (ctx: ActiveContexts, knowledge: ReadonlyArray<{ title: string; content: string }>, dueInvoices: number): ReadonlySet<Capability> => {
+  const text = [ctx.text, ...knowledge.map((k) => `${k.title}\n${k.content.slice(0, 3000)}`)].join("\n");
   const has = new Set<Capability>();
   for (const [cap, re] of Object.entries(CAPABILITY_PATTERNS)) if (affirms(text, re)) has.add(cap as Capability);
   if (ctx.installed.includes("booking")) has.add("has_appointments"); // the booking module IS the capability
-  if (affirms(text, DUE_PATTERN) || (dueInvoices.count ?? 0) > 0) has.add("has_due_dates");
+  if (affirms(text, DUE_PATTERN) || dueInvoices > 0) has.add("has_due_dates");
   if (parseHours(ctx.hoursText) || text.split("\n").some((l) => /giờ (làm việc|mở cửa)|mở cửa|opening hours|business hours/i.test(l) && parseHours(l))) has.add("has_opening_hours");
   return has;
 };
@@ -136,12 +151,14 @@ const loadFacts = async (db: Db, ws: string, known: ActiveContexts | Promise<Act
     db.from("connections").select("provider, status").eq("workspace_id", ws).neq("status", "disconnected"),
     db.from("agents").select("id", { count: "exact", head: true }).eq("workspace_id", ws).in("module", ["chatbot", "booking"]).eq("status", "active"),
   ]);
-  const connections = (conns.data ?? []) as Array<{ provider: string; status: string }>;
-  return {
-    installed: ctx.installed, capabilities: caps, connections,
-    hasChat: (chatbot.count ?? 0) > 0 || connections.some((c) => (c.provider === "telegram" || c.provider === "zalo_oa") && c.status !== "pending"),
-  };
+  return factsFrom(ctx, caps, (conns.data ?? []) as Array<{ provider: string; status: string }>, chatbot.count ?? 0);
 };
+
+/** The facts templates are checked against, from rows already read. `chatAgents` = active chatbot / booking agents. */
+const factsFrom = (ctx: ActiveContexts, caps: ReadonlySet<Capability>, connections: ReadonlyArray<{ provider: string; status: string }>, chatAgents: number): Facts => ({
+  installed: ctx.installed, capabilities: caps, connections,
+  hasChat: chatAgents > 0 || connections.some((c) => (c.provider === "telegram" || c.provider === "zalo_oa") && c.status !== "pending"),
+});
 
 /** Which requirements of a template the shop does not meet yet. */
 export const missingFor = (def: TemplateDef, f: Facts): Array<Missing> => {
@@ -202,20 +219,50 @@ const runsOf = async (db: Db, ws: string, pipelines: ReadonlyArray<{ id: string;
 const contextVersionFor = (def: TemplateDef, versions: Partial<Record<ModuleScope, number>>): number | null =>
   def.moduleKey ? (versions[def.moduleKey] ?? null) : (Object.values(versions).length ? Math.max(...Object.values(versions)) : null);
 
-/** Everything the /automations screen (and a module's Settings section) needs: one card per template, the recent runs and the shop context for previews. */
-export const loadAutomations = async (db: Db, ws: string): Promise<{ cards: Array<AutomationCardView>; runs: Array<AutomationRunView>; shop: ShopContext }> => {
-  // One wave: every read starts at once (the installations + their active context versions are ONE request, shared by all consumers).
-  const ctxP = activeContexts(db, ws);
-  const [shopFull, pipelines, runRows, google, facts, ctx, rulesRes] = await Promise.all([
-    loadShopContext(db, ws, ctxP),
+/** Every row the automations screen reads, as `automations_data` returns them. */
+type AutomationsRaw = {
+  installations: Array<InstallationContextRow>; pipelines: Array<PipelineRow>; runs: Array<RunRow>;
+  google: { status: "pending" | "connected" | "error" | "disconnected"; last_error: string | null; public_meta: Record<string, string> | null } | null;
+  knowledge: Array<{ title: string; content: string }>; due_invoices: number; connections: Array<{ provider: string; status: string }>; chat_agents: number;
+  workspace_name: string | null; authority: { reply_style?: string; brand_voice?: string } | null; rules: Array<{ action: string; mode: "auto" | "ask" | "never" }>;
+};
+
+const automationsRaw = async (db: Db, ws: string): Promise<AutomationsRaw> => {
+  const viaRpc = await db.rpc("automations_data", { ws });
+  if (!viaRpc.error && viaRpc.data) return viaRpc.data as AutomationsRaw;
+  console.error("automations_data failed, reading the screen one table at a time:", viaRpc.error?.message ?? "empty");
+  const [inst, pipelines, runs, google, knowledge, due, conns, chat, workspace, authority, rules] = await Promise.all([
+    db.from("module_installations").select(INSTALLATION_CONTEXT_SELECT).eq("workspace_id", ws).order("created_at"),
     db.from("automation_pipelines").select("*").eq("workspace_id", ws),
     db.from("automation_runs").select(RUN_COLUMNS).eq("workspace_id", ws).order("created_at", { ascending: false }).limit(80),
-    googleCardState(ws),
-    loadFacts(db, ws, ctxP),
-    ctxP,
+    db.from("connections").select("id, status, last_error, public_meta, name").eq("workspace_id", ws).eq("provider", "google").neq("status", "disconnected").order("created_at").limit(1),
+    db.from("knowledge_sources").select("title, content").eq("workspace_id", ws).limit(60),
+    db.from("invoices").select("id", { count: "exact", head: true }).eq("workspace_id", ws).not("due_at", "is", null),
+    db.from("connections").select("provider, status").eq("workspace_id", ws).neq("status", "disconnected"),
+    db.from("agents").select("id", { count: "exact", head: true }).eq("workspace_id", ws).in("module", ["chatbot", "booking"]).eq("status", "active"),
+    db.from("workspaces").select("name").eq("id", ws).maybeSingle(),
+    db.from("authority").select("reply_style, brand_voice").eq("workspace_id", ws).maybeSingle(),
     db.from("authority_rules").select("action, mode").eq("workspace_id", ws),
   ]);
-  const rules = (rulesRes.data ?? []) as Array<{ action: string; mode: "auto" | "ask" | "never" }>;
+  return {
+    installations: (inst.data ?? []) as unknown as Array<InstallationContextRow>, pipelines: (pipelines.data ?? []) as Array<PipelineRow>, runs: (runs.data ?? []) as Array<RunRow>,
+    google: ((google.data ?? [])[0] as AutomationsRaw["google"] | undefined) ?? null, knowledge: (knowledge.data ?? []) as AutomationsRaw["knowledge"], due_invoices: due.count ?? 0,
+    connections: (conns.data ?? []) as AutomationsRaw["connections"], chat_agents: chat.count ?? 0, workspace_name: (workspace.data as { name?: string } | null)?.name ?? null,
+    authority: authority.data as AutomationsRaw["authority"], rules: (rules.data ?? []) as AutomationsRaw["rules"],
+  };
+};
+
+/** Everything the /automations screen (and a module's Settings section) needs: one card per template, the recent runs and the shop context for previews. */
+export const loadAutomations = async (db: Db, ws: string): Promise<{ cards: Array<AutomationCardView>; runs: Array<AutomationRunView>; shop: ShopContext }> => {
+  // ONE request (SQL function automations_data) returns every row below; the separate reads are the fallback.
+  const raw = await automationsRaw(db, ws);
+  const ctx = contextsFrom(raw.installations);
+  const shopFull = shopContextFrom(raw.workspace_name, raw.authority, ctx);
+  const facts = factsFrom(ctx, capabilitiesFrom(ctx, raw.knowledge, raw.due_invoices), raw.connections, raw.chat_agents);
+  const google = googleCardFromRow(raw.google);
+  const pipelines = { data: raw.pipelines };
+  const runRows = { data: raw.runs };
+  const rules = raw.rules;
   const gateFor = (action: FlowAction): "auto" | "ask" | "never" => {
     const rule = rules.find((r) => r.action === action) ?? null;
     if (!rule) return "never";

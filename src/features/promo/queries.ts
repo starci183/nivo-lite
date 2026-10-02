@@ -28,7 +28,7 @@ export type PromoState = {
   readonly onboarding: ReadonlyArray<OnboardingStep>;
 };
 
-type PromoRaw = {
+export type PromoRaw = {
   chatbot: { id: string; knowledge: string } | null;
   is_founding_member: boolean;
   website_leads: Array<{ id: string; created_at: string }>;
@@ -50,10 +50,13 @@ const isAfterHours = (iso: string): boolean => {
 export const getPromoState = cache(async (): Promise<PromoState> => {
   const session = await getSession();
   const supabase = await supabaseServer();
-  const wid = session.workspace.id;
-  const { data, error } = await supabase.rpc("promo_state", { ws: wid, founding_from: FOUNDING_OFFER.startsAt, founding_to: FOUNDING_OFFER.endsAt });
+  const { data, error } = await supabase.rpc("promo_state", { ws: session.workspace.id, founding_from: FOUNDING_OFFER.startsAt, founding_to: FOUNDING_OFFER.endsAt });
   if (error) throw new Error(error.message);
-  const raw = data as PromoRaw;
+  return buildPromoState(data as PromoRaw);
+});
+
+/** The promo / onboarding state from the raw facts (`promo_state`, also embedded in `dashboard_data`). */
+export const buildPromoState = async (raw: PromoRaw): Promise<PromoState> => {
   const chatbot = raw.chatbot;
   const isFoundingMember = raw.is_founding_member;
 
@@ -94,4 +97,4 @@ export const getPromoState = cache(async (): Promise<PromoState> => {
     },
     onboarding,
   };
-});
+};

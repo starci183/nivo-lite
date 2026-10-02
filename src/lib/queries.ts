@@ -26,11 +26,15 @@ export const listLeads = cache(async (): Promise<LeadRow[]> => {
     supabase.from("leads").select("*").eq("workspace_id", session.workspace.id).order("created_at", { ascending: false }),
     supabase.from("responsibilities").select("lead_id, owner_name, next_action, status").eq("workspace_id", session.workspace.id).neq("status", "done"),
   ]);
-  return ((leads ?? []) as Lead[]).map((l) => {
-    const r = resp?.find((x) => x.lead_id === l.id);
+  return leadRowsFrom(leads ?? [], resp ?? []);
+});
+
+/** Leads with the owner and next action of their open responsibility, from rows already read. */
+export const leadRowsFrom = (leads: ReadonlyArray<unknown>, resp: ReadonlyArray<{ lead_id: string; owner_name: string | null; next_action: string | null }>): LeadRow[] =>
+  (leads as Lead[]).map((l) => {
+    const r = resp.find((x) => x.lead_id === l.id);
     return { ...l, owner_name: r?.owner_name ?? null, next_action: r?.next_action ?? null };
   });
-});
 
 export const listResponsibilities = cache(async (): Promise<ResponsibilityWithLead[]> => {
   const { session, supabase } = await ctx();

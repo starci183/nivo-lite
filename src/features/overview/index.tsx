@@ -3,23 +3,35 @@ import { groupByOwner, hourInZone, stamp, toActivityModels, toRowModels } from "
 import { getLocale, getT } from "@/i18n/server";
 import { overview } from "@/i18n/dict/overview";
 import { responsibilities as respDict } from "@/i18n/dict/responsibilities";
-import { getPromoState } from "@/features/promo/queries";
-import { getGovernance, isTestRunName, isTestRunWorkItem, listExceptions } from "@/lib/flow-queries";
+import { buildPromoState, getPromoState } from "@/features/promo/queries";
+import { getGovernance, governanceFrom, isTestRunName, isTestRunWorkItem, listExceptions, workViewsFrom } from "@/lib/flow-queries";
+import { getDashboardData } from "@/lib/page-data";
+import { getSession } from "@/lib/session";
 import { OverviewBase } from "./component";
-import { getOverviewFacts } from "./queries";
+import { getOverviewFacts, overviewFactsFrom } from "./queries";
 
 /** Connected P01 view: reads responsibilities, agents, events and real pipeline facts, then renders the overview. */
 export const Overview = async () => {
-  // One wave: everything is independent (each is already one request, or a few in parallel).
-  const [allResponsibilities, agents, events, facts, promo, governance, exceptions] = await Promise.all([
-    listResponsibilities(),
-    listAgents(),
-    listRecentEvents(6),
-    getOverviewFacts(),
-    getPromoState(),
-    getGovernance().catch(() => null),
-    listExceptions().catch(() => []),
-  ]);
+  // ONE request (SQL function dashboard_data) returns every row this view reads; if it is unavailable the separate reads below take over.
+  const raw = await getDashboardData();
+  const session = await getSession();
+  const [allResponsibilities, agents, events, facts, promo, governance, exceptions] = raw
+    ? [
+        raw.responsibilities, raw.agents, raw.events,
+        overviewFactsFrom(session.userName, raw.leads, raw.pending.map((p) => ({ leadId: p.lead_id }))),
+        await buildPromoState(raw.promo),
+        (() => { try { return governanceFrom(raw.governance, raw.since7); } catch { return null; } })(),
+        workViewsFrom(raw.exceptions),
+      ] as const
+    : await Promise.all([
+        listResponsibilities(),
+        listAgents(),
+        listRecentEvents(6),
+        getOverviewFacts(),
+        getPromoState(),
+        getGovernance().catch(() => null),
+        listExceptions().catch(() => []),
+      ]);
   // Test runs (UAT/DBG, see TEST_RUN_PATTERN in flow-queries) are left out of every dashboard figure.
   const responsibilities = allResponsibilities.filter((r) => !isTestRunName(r.lead?.contact_name, r.lead?.company));
   const [t, rt, locale] = await Promise.all([getT(overview), getT(respDict), getLocale()]);

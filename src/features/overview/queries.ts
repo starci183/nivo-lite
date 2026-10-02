@@ -35,23 +35,24 @@ export const getOverviewFacts = async (): Promise<OverviewFacts> => {
       .eq("status", "pending_approval")
       .order("created_at", { ascending: false }),
   ]);
-  // Test runs (UAT/DBG, see TEST_RUN_PATTERN in flow-queries) are left out of every dashboard figure.
-  const leads = ((leadRes.data ?? []) as Array<{ id: string; stage: LeadStage; created_at: string; contact_name: string | null; company: string | null }>)
-    .filter((lead) => !isTestRunName(lead.contact_name, lead.company));
   const executions = (execRes.data ?? []) as unknown as Array<{ id: string; responsibility_id: string; created_at: string; responsibility: { lead_id: string } | Array<{ lead_id: string }> | null }>;
+  return overviewFactsFrom(session.userName, ((leadRes.data ?? []) as Array<LeadFactRow>), executions.map((e) => ({ leadId: (Array.isArray(e.responsibility) ? e.responsibility[0] : e.responsibility)?.lead_id })));
+};
 
+type LeadFactRow = { id: string; stage: LeadStage; created_at: string; contact_name: string | null; company: string | null };
+
+/** The overview figures from rows already read: leads, and the lead id behind each pending approval (newest first). */
+export const overviewFactsFrom = (userName: string, allLeads: ReadonlyArray<LeadFactRow>, pending: ReadonlyArray<{ leadId: string | null | undefined }>): OverviewFacts => {
+  // Test runs (UAT/DBG, see TEST_RUN_PATTERN in flow-queries) are left out of every dashboard figure.
+  const leads = allLeads.filter((lead) => !isTestRunName(lead.contact_name, lead.company));
   let href = "/responsibilities?status=waiting_approval";
-  const newest = executions[0];
-  if (newest !== undefined) {
-    // The lead comes with the execution (embedded), so this costs no extra request.
-    const leadId = (Array.isArray(newest.responsibility) ? newest.responsibility[0] : newest.responsibility)?.lead_id;
-    if (executions.length === 1 && leadId !== undefined) href = `/leads/${leadId}`;
-  }
+  const leadId = pending[0]?.leadId;
+  if (pending.length === 1 && leadId != null) href = `/leads/${leadId}`;
 
   const since = Date.now() - WEEK_MS;
   return {
-    firstName: session.userName.split(/\s+/)[0] ?? session.userName,
-    pending: { count: executions.length, href },
+    firstName: userName.split(/\s+/)[0] ?? userName,
+    pending: { count: pending.length, href },
     leadsThisWeek: leads.filter((lead) => new Date(lead.created_at).getTime() >= since).length,
     pipeline: {
       total: leads.length,

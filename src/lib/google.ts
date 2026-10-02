@@ -35,7 +35,12 @@ const loadRow = async (workspaceId: string): Promise<Row | null> => {
 
 export const googleCardState = async (workspaceId: string): Promise<{ readonly state: NonNullable<AutomationCardView["google"]>; readonly sheetUrl: string | null }> => {
   if (!googleConfigured()) return { state: "unavailable", sheetUrl: null };
-  const row = await loadRow(workspaceId);
+  return googleCardFromRow(await loadRow(workspaceId));
+};
+
+/** The Google card state from an already-read connection row (the automations screen reads it in its single request). */
+export const googleCardFromRow = (row: Pick<Row, "status" | "last_error" | "public_meta"> | null): { readonly state: NonNullable<AutomationCardView["google"]>; readonly sheetUrl: string | null } => {
+  if (!googleConfigured()) return { state: "unavailable", sheetUrl: null };
   if (!row || row.status === "pending") return { state: "missing", sheetUrl: null };
   const sheetUrl = row.public_meta?.sheet_url || null;
   if (row.status === "error") return { state: row.last_error?.startsWith("consent:") ? "unavailable" : "lost", sheetUrl };

@@ -1,4 +1,4 @@
-import { listMembers } from "@/lib/members"
+import { listMembers, type MemberListing } from "@/lib/members"
 import { getSession } from "@/lib/session"
 import { staffHandles } from "@/lib/staff-handle"
 import { OfficeMessenger as OfficeMessengerClient, type OfficeMessengerProps as ClientProps } from "./messenger"
@@ -7,14 +7,18 @@ import type { OfficePerson } from "./members"
 export type { CustomerEntry } from "./conversations"
 
 /** What the page passes: the messenger's data. The signed-in member, the team and who decided what are added here. */
-export type OfficeMessengerProps = Omit<ClientProps, "people" | "deciders">
+export type OfficeMessengerProps = Omit<ClientProps, "people" | "deciders"> & {
+  /** The team, when the page already read it (one request for the whole Office); otherwise read here. */
+  readonly members?: ReadonlyArray<MemberListing>
+}
 
 /**
  * Office as a messenger. Server wrapper: it adds the real team (every account in the workspace with role and last seen)
  * and the real name behind each decided card, then hands plain data to the client messenger.
  */
-export const OfficeMessenger = async (props: OfficeMessengerProps) => {
-  const [session, accounts] = await Promise.all([getSession(), listMembers().catch(() => [])])
+export const OfficeMessenger = async (allProps: OfficeMessengerProps) => {
+  const { members, ...props } = allProps
+  const [session, accounts] = await Promise.all([getSession(), members ? Promise.resolve(members) : listMembers().catch(() => [])])
   const active = props.staff.filter((s) => s.active)
   const handles = staffHandles(active, props.agents.map((a) => a.handle))
   const people: ReadonlyArray<OfficePerson> = accounts

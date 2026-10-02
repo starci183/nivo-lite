@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { drainAfter, engineCtx } from "./flow-ctx";
+import type { EngineCtx } from "./engine";
 import { listModules } from "./module-registry";
 import type {
   Authority, AuthorityRule, DecisionRow, Department, Governance, InboundEvent, Invoice, LeadFlow, Order, ReasonCode, Staff, Transaction,
@@ -69,8 +70,11 @@ export const listExceptions = cache(async (): Promise<Array<WorkItemView>> => {
   const c = await engineCtx();
   drainAfter(c);
   const { data } = await c.db.from("work_items").select(WORK_SELECT).eq("workspace_id", c.ws).in("status", ["waiting_decision", "failed"]).order("created_at").limit(100);
-  return ((data ?? []) as Array<WorkRow>).map(toView);
+  return workViewsFrom((data ?? []) as Array<WorkRow>);
 });
+
+/** Work items as the app shows them, from rows already read (the SQL page functions return the same shape, lead and staff embedded). */
+export const workViewsFrom = (rows: ReadonlyArray<unknown>): Array<WorkItemView> => (rows as Array<WorkRow>).map(toView);
 
 /** Work items, newest first (or in flow order for one lead). */
 export const listWorkItems = async (filter: { status?: Array<WorkStatus>; leadId?: string; limit?: number; withDecider?: boolean } = {}): Promise<Array<WorkItemView>> => {
@@ -163,11 +167,14 @@ const figure = (rows: ReadonlyArray<{ origin: string | null; amount_vnd: number 
  * matched to an invoice (each live + simulated, test runs excluded; the dashboard shows `status` so they are never one headline).
  * `simulated`/`total` count those orders, invoices and payments plus leads created in 7 days.
  */
-export const getGovernance = cache(async (): Promise<GovernanceWithStatus> => {
-  const c = await engineCtx();
-  drainAfter(c);
-  const { db, ws } = c;
-  const since7 = new Date(Date.now() - 7 * DAY).toISOString();
+/** The rows behind the governance figures, as `fetchGovernanceRows` reads them and as the SQL function `governance_rows` returns them. */
+export type GovernanceRows = {
+  auth: { goal_revenue_vnd: number | null; goal_new_customers: number | null; goal_first_reply_minutes: number | null } | null;
+  leads: Array<unknown>; orders: Array<unknown>; invoices: Array<unknown>; txs: Array<unknown>; work: Array<unknown>;
+  pending_without_work: number; decisions7: Array<unknown>; recent: Array<unknown>;
+};
+
+const fetchGovernanceRows = async (db: EngineCtx["db"], ws: string, since7: string): Promise<GovernanceRows> => {
   const [auth, leadsQ, orders, invoices, txs, work, pendingEx, decisions7, recent] = await Promise.all([
     db.from("authority").select("goal_revenue_vnd, goal_new_customers, goal_first_reply_minutes").eq("workspace_id", ws).maybeSingle(),
     db.from("leads").select("id, contact_name, company, origin, stage, created_at").eq("workspace_id", ws).limit(10000),
@@ -181,25 +188,39 @@ export const getGovernance = cache(async (): Promise<GovernanceWithStatus> => {
     db.from("decisions").select("work_item_id, lead_id, decider_kind, outcome, created_at").eq("workspace_id", ws).gte("created_at", since7),
     db.from("decisions").select("*, lead:leads(contact_name)").eq("workspace_id", ws).order("created_at", { ascending: false }).limit(40),
   ]);
+  return {
+    auth: (auth.data as GovernanceRows["auth"]) ?? null, leads: leadsQ.data ?? [], orders: orders.data ?? [], invoices: invoices.data ?? [], txs: txs.data ?? [],
+    work: work.data ?? [], pending_without_work: pendingEx.count ?? 0, decisions7: decisions7.data ?? [], recent: recent.data ?? [],
+  };
+};
 
+export const getGovernance = cache(async (): Promise<GovernanceWithStatus> => {
+  const c = await engineCtx();
+  drainAfter(c);
+  const since7 = new Date(Date.now() - 7 * DAY).toISOString();
+  return governanceFrom(await fetchGovernanceRows(c.db, c.ws, since7), since7);
+});
+
+/** The governance figures from already-read rows (see `governance_rows`); `since7` is the ISO start of the 7-day window the rows were read with. */
+export const governanceFrom = (rows: GovernanceRows, since7: string): GovernanceWithStatus => {
   // Test-run exclusion (TEST_RUN_PATTERN), propagated lead → order → invoice → payment and lead → work item → decision.
   type LeadRow = { id: string; contact_name: string | null; company: string | null; origin: string | null; stage: string; created_at: string };
-  const allLeads = (leadsQ.data ?? []) as Array<LeadRow>;
+  const allLeads = rows.leads as Array<LeadRow>;
   const testLeads = new Set(allLeads.filter((x) => isTestRunName(x.contact_name, x.company)).map((x) => x.id));
   const isTestLead = (id: string | null) => id !== null && testLeads.has(id);
   type OrderRow = { id: string; lead_id: string | null; order_no: string | null; items: string | null; amount_vnd: number | null; origin: string | null };
-  const allOrders = (orders.data ?? []) as Array<OrderRow>;
+  const allOrders = rows.orders as Array<OrderRow>;
   const testOrders = new Set(allOrders.filter((x) => isTestLead(x.lead_id) || isTestRunName(x.items, x.order_no)).map((x) => x.id));
   type InvoiceRow = { id: string; order_id: string | null; lead_id: string | null; invoice_no: string | null; amount_vnd: number | null; origin: string | null };
-  const allInvoices = (invoices.data ?? []) as Array<InvoiceRow>;
+  const allInvoices = rows.invoices as Array<InvoiceRow>;
   const testInvoices = new Set(allInvoices
     .filter((x) => isTestLead(x.lead_id) || (x.order_id !== null && testOrders.has(x.order_id)) || isTestRunName(x.invoice_no)).map((x) => x.id));
   type TxRow = { id: string; invoice_id: string | null; payer: string | null; reference: string | null; amount_vnd: number | null; status: string; origin: string | null };
-  const allTx = (txs.data ?? []) as Array<TxRow>;
+  const allTx = rows.txs as Array<TxRow>;
   const isTestTx = (x: TxRow) => (x.invoice_id !== null && testInvoices.has(x.invoice_id)) || isTestRunName(x.payer, x.reference);
   type W = Pick<WorkItem, "id" | "lead_id" | "department" | "status" | "reason" | "decided_path" | "created_at" | "updated_at" | "completed_at">
     & { summary: string | null; contact: string | null; customer: string | null };
-  const allWork = (work.data ?? []) as Array<W>;
+  const allWork = rows.work as Array<W>;
   const testWork = new Set(allWork.filter((x) => isTestLead(x.lead_id) || isTestRunName(x.summary, x.contact, x.customer)).map((x) => x.id));
   const isTestDecision = (d: { work_item_id: string | null; lead_id: string | null }) => isTestLead(d.lead_id) || (d.work_item_id !== null && testWork.has(d.work_item_id));
 
@@ -219,7 +240,7 @@ export const getGovernance = cache(async (): Promise<GovernanceWithStatus> => {
   const all: Array<{ origin: string | null }> = [...o, ...i, ...t, ...l];
 
   const created7 = w.filter((x) => x.created_at >= since7);
-  const d7 = ((decisions7.data ?? []) as Array<{ work_item_id: string | null; lead_id: string | null; decider_kind: string; outcome: string; created_at: string }>)
+  const d7 = (rows.decisions7 as Array<{ work_item_id: string | null; lead_id: string | null; decider_kind: string; outcome: string; created_at: string }>)
     .filter((d) => !isTestDecision(d));
   const byId = new Map(w.map((x) => [x.id, x]));
   const waits = d7.filter((d) => d.decider_kind !== "policy" && d.work_item_id && byId.has(d.work_item_id))
@@ -244,7 +265,7 @@ export const getGovernance = cache(async (): Promise<GovernanceWithStatus> => {
   });
 
   const won = leads.filter((x) => x.stage === "won");
-  const a = auth.data as { goal_revenue_vnd: number | null; goal_new_customers: number | null; goal_first_reply_minutes: number | null } | null;
+  const a = rows.auth;
   return {
     goals: { revenueVnd: a?.goal_revenue_vnd ?? null, newCustomers: a?.goal_new_customers ?? null, firstReplyMinutes: a?.goal_first_reply_minutes ?? null },
     results: {
@@ -268,13 +289,13 @@ export const getGovernance = cache(async (): Promise<GovernanceWithStatus> => {
       medianDecisionMinutes: median(waits) === null ? null : Math.round(median(waits)!),
     },
     // Counted once: waiting work items (test runs excluded) + legacy pending approvals that have no work item.
-    pendingDecisions: waitingCount + (pendingEx.count ?? 0),
+    pendingDecisions: waitingCount + rows.pending_without_work,
     exceptions,
     departments,
-    recentDecisions: ((recent.data ?? []) as Array<DecisionDb>)
+    recentDecisions: (rows.recent as Array<DecisionDb>)
       .filter((d) => !isTestDecision(d) && !isTestRunName(d.lead?.contact_name)).slice(0, 5).map(toDecision),
   };
-});
+};
 
 /** One customer's flow: work items in order, orders, invoices, payments and decisions. */
 export const getLeadFlow = async (leadId: string): Promise<LeadFlow> => {
