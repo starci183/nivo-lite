@@ -16,9 +16,14 @@ if (!url || !key) {
 }
 
 const MODULES = ["chatbot", "sales", "accounting"];
-const rows = readdirSync(root).filter((f) => f.endsWith(".json")).map((f) => {
-  const d = JSON.parse(readFileSync(join(root, f), "utf8"));
-  if (f !== `${d.key}.json`) throw new Error(`${f}: key "${d.key}" must match the file name`);
+const n8nRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "resources", "n8n-templates");
+const files = [
+  ...readdirSync(root).filter((f) => f.endsWith(".json")).map((f) => ({ dir: root, f, expected: f })),
+  ...readdirSync(n8nRoot).filter((f) => f.endsWith(".meta.json")).map((f) => ({ dir: n8nRoot, f, expected: f.replace(/\.meta\.json$/, ".json").replace(/\.json$/, "") + ".json" })),
+];
+const rows = files.map(({ dir, f }) => {
+  const d = JSON.parse(readFileSync(join(dir, f), "utf8"));
+  if (f.replace(/(\.meta)?\.json$/, "") !== d.key) throw new Error(`${f}: key "${d.key}" must match the file name`);
   if (d.moduleKey !== null && !MODULES.includes(d.moduleKey)) throw new Error(`${f}: bad moduleKey ${d.moduleKey}`);
   for (const k of ["name", "description", "trigger", "requires", "settings", "contentMode", "guardrails", "variables", "authority", "defaults"]) {
     if (d[k] === undefined) throw new Error(`${f}: missing "${k}"`);

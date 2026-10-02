@@ -1,8 +1,10 @@
 "use client"
 
+import { useState } from "react"
 import { Alert, Button, Heading, Text } from "@starci/grammar/common"
 import { useLocale, useT } from "@/i18n/client"
 import { automations as dict } from "@/i18n/dict/automations"
+import { runAutomationNow } from "@/lib/automation-actions"
 import type { AutomationCardView, AutomationRunView, ConfigValue, ShopContext } from "@/lib/automation-shared"
 import { ACTIONS_CLASS, CARD_FOOT_CLASS, DETAIL_CLASS, FACTS_CLASS } from "./classNames"
 import { GatePanel } from "./GatePanel"
@@ -33,6 +35,8 @@ export type AutomationDetailProps = {
 export const AutomationDetail = ({ card, runs, shop, busy, error, awaitingMessage, onClose, onSaveValues, onSaveBody, onSaveAndEnable, onAnswerTrust, onDismiss, onError }: AutomationDetailProps) => {
   const t = useT(dict)
   const locale = useLocale()
+  const [starting, setStarting] = useState(false)
+  const [started, setStarted] = useState<string | null>(null)
   return (
     <aside className={DETAIL_CLASS} aria-label={loc(card.def.name, locale)} id="automation-detail">
       <div className={CARD_FOOT_CLASS}>
@@ -47,6 +51,12 @@ export const AutomationDetail = ({ card, runs, shop, busy, error, awaitingMessag
       <SettingsForm key={`${card.key}-s`} card={card} busy={busy} onSave={onSaveValues} />
       <MessageSection key={`${card.key}-m`} card={card} shop={shop} busy={busy} onSaveBody={onSaveBody} onSaveAndEnable={onSaveAndEnable} onError={onError} />
       <GatePanel card={card} onAnswerTrust={onAnswerTrust} />
+      {card.def.executor === "n8n" && card.def.trigger.kind === "schedule" && card.enabled ? (
+        <div className={ACTIONS_CLASS}>
+          <Button variant="secondary" isPending={starting} onPress={() => { setStarting(true); setStarted(null); void runAutomationNow(card.key).then((r) => { setStarting(false); r.ok ? setStarted(t("runNowStarted")) : onError(r.error) }) }}>{t("runNow")}</Button>
+          {started ? <span role="status" className="text-sm text-success">{started}</span> : null}
+        </div>
+      ) : null}
       <RunsList runs={runs} />
       <div className={ACTIONS_CLASS}>
         <Button variant="ghost" size="sm" isDisabled={busy} onPress={onDismiss}>{t("dismiss")}</Button>

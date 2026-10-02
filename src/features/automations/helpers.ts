@@ -7,21 +7,21 @@ export const loc = (l: L, locale: Locale): string => l[locale]
 /** Template icon word -> the app's glyph names. */
 const ICONS: Record<TemplateDef["icon"], IconName> = {
   payment: "wallet", leads: "account", report: "overview", review: "review", debt: "credit", winback: "retry",
-  moon: "dark", sheet: "blog", calendar: "streak", cart: "cart", contract: "saved", truck: "servers",
+  moon: "dark", sheet: "blog", calendar: "streak", cart: "cart", contract: "saved", truck: "servers", receipt: "wallet", ledger: "saved",
 }
 export const iconFor = (def: TemplateDef): IconName => ICONS[def.icon] ?? "apps"
 
 export type ScopeKey = ModuleScope | "workspace"
 export const scopeOf = (def: TemplateDef): ScopeKey => def.moduleKey ?? "workspace"
 
-export type CardStatus = "running" | "off" | "soon" | "needsGoogle" | "needsWebhook" | "googleLost" | "googleUnavailable" | "missing"
+export type CardStatus = "running" | "off" | "soon" | "needsGoogle" | "needsWebhook" | "needsEmail" | "googleLost" | "googleUnavailable" | "missing"
 
 /** The one fact the card shows as its badge. */
 export const statusOf = (c: AutomationCardView): CardStatus => {
   if (c.comingSoon) return "soon"
   if (c.google === "unavailable") return "googleUnavailable"
   if (c.google === "lost") return "googleLost"
-  if (c.missing.length === 1 && c.missing[0].kind === "connection") return c.missing[0].key === "webhook" ? "needsWebhook" : "needsGoogle"
+  if (c.missing.length === 1 && c.missing[0].kind === "connection") return c.missing[0].key === "webhook" ? "needsWebhook" : c.missing[0].key === "smtp" ? "needsEmail" : "needsGoogle"
   if (c.missing.length > 0) return "missing"
   return c.enabled ? "running" : "off"
 }
@@ -29,7 +29,7 @@ export const statusOf = (c: AutomationCardView): CardStatus => {
 /** A card the switch cannot toggle by itself. */
 export const switchLocked = (s: CardStatus): boolean => s === "soon" || s === "missing" || s === "googleUnavailable"
 /** A card whose switch starts a connection instead of toggling. */
-export const startsConnection = (s: CardStatus): boolean => s === "needsGoogle" || s === "needsWebhook" || s === "googleLost"
+export const startsConnection = (s: CardStatus): boolean => s === "needsGoogle" || s === "needsWebhook" || s === "needsEmail" || s === "googleLost"
 
 export type FilterKey = "all" | ModuleScope | "workspace" | "on"
 export const FILTERS: ReadonlyArray<FilterKey> = ["all", "chatbot", "sales", "accounting", "workspace", "on"]

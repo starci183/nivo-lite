@@ -53,6 +53,7 @@ export const AutomationsBoard = ({ initial, layout, moduleKey, focus }: Automati
     const status = statusOf(card)
     if (startsConnection(status)) {
       if (status === "needsWebhook") return router.push("/developers")
+      if (status === "needsEmail") return router.push("/connections?connect=smtp")
       const r = await startGoogleConnect(`/automations?focus=${card.key}`)
       if (!r.ok) return setError(r.error)
       return window.location.assign(r.data.url)

@@ -5,7 +5,7 @@ import { ACTION_DEPARTMENT, applyOperatingMode } from "./policy";
 import { minutesToHhmm, parseHours } from "./automation-hours";
 import {
   RUN_STATUS, TRUST_THRESHOLD, isTemplateKey, resolveConfig,
-  type AutomationCardView, type AutomationRunStatus, type AutomationRunView, type Capability, type Missing, type ModuleScope, type RunStep, type ShopContext, type TemplateDef, type TemplateKey,
+  type AutomationCardView, type AutomationRunStatus, type AutomationRunView, type Capability, type ConnectionNeed, type Missing, type ModuleScope, type RunStep, type ShopContext, type TemplateDef, type TemplateKey,
 } from "./automation-shared";
 import { TEMPLATES, TEMPLATE_LIST } from "./automation-templates";
 import type { FlowAction } from "./flow-types";
@@ -107,6 +107,11 @@ export const gateModeFor = async (db: Db, ws: string, action: FlowAction): Promi
 const MODULE_LABEL: Readonly<Record<ModuleScope, { vi: string; en: string }>> = {
   chatbot: { vi: "Chatbot", en: "Chatbot" }, sales: { vi: "Bán hàng", en: "Sales" }, accounting: { vi: "Kế toán", en: "Accounting" },
 };
+const CONNECTION_LABEL: Readonly<Record<ConnectionNeed, { vi: string; en: string }>> = {
+  google: { vi: "kết nối Google", en: "a Google connection" },
+  webhook: { vi: "kết nối n8n / webhook", en: "an n8n / webhook connection" },
+  smtp: { vi: "Email gửi đi", en: "outgoing email" },
+};
 const CAPABILITY_LABEL: Readonly<Record<Capability, { vi: string; en: string }>> = {
   has_opening_hours: { vi: "giờ mở cửa trong thông tin cửa hàng", en: "opening hours in the shop information" },
   has_deposits: { vi: "chính sách đặt cọc", en: "a deposit policy" },
@@ -140,7 +145,7 @@ export const missingFor = (def: TemplateDef, f: Facts): Array<Missing> => {
   const out: Array<Missing> = [];
   for (const m of def.requires.modules) if (!f.installed.includes(m)) out.push({ kind: "module", key: m, label: { vi: `module ${MODULE_LABEL[m].vi}`, en: `the ${MODULE_LABEL[m].en} module` }, href: `/modules/new?module=${m}` });
   for (const c of def.requires.channels) if (c === "customer_chat" && !f.hasChat) out.push({ kind: "channel", key: c, label: { vi: "một kênh chat với khách (website, Telegram hoặc Zalo)", en: "a customer chat channel (website, Telegram or Zalo)" }, href: "/connections" });
-  for (const c of def.requires.connections) if (!f.connections.some((x) => x.provider === c)) out.push({ kind: "connection", key: c, label: { vi: c === "google" ? "kết nối Google" : "kết nối n8n / webhook", en: c === "google" ? "a Google connection" : "an n8n / webhook connection" }, href: c === "google" ? "/connections" : "/developers" });
+  for (const c of def.requires.connections) if (!f.connections.some((x) => x.provider === c)) out.push({ kind: "connection", key: c, label: CONNECTION_LABEL[c], href: c === "webhook" ? "/developers" : c === "smtp" ? "/connections?connect=smtp" : "/connections" });
   for (const cap of def.requires.capabilities) if (!f.capabilities.has(cap)) out.push({ kind: "capability", key: cap, label: CAPABILITY_LABEL[cap], href: "/knowledge" });
   return out;
 };

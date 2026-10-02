@@ -23,8 +23,10 @@ export const verifyRun = async (authorization: string | null, expectedRunId?: st
   const { data: run } = await db.from("n8n_runs").select("id, workspace_id, template_key, token_hash, expires_at, status").eq("id", runId).maybeSingle();
   if (!run || !safeEqual(run.token_hash as string, hashToken(token)) || Date.parse(run.expires_at as string) < Date.now()) return null;
   if (run.status === "done" || run.status === "failed" || run.status === "skipped") return null;
-  const { data: pipe } = await db.from("n8n_pipelines").select("config").eq("workspace_id", run.workspace_id).eq("template_key", run.template_key).maybeSingle();
-  return { runId, workspaceId: run.workspace_id as string, templateKey: run.template_key as string, config: ((pipe?.config ?? {}) as Record<string, unknown>) };
+  // The pipeline lives in automation_pipelines (one gallery for every automation): its settings are `config`, the shop's approved wording is `body`.
+  const { data: pipe } = await db.from("automation_pipelines").select("config, body").eq("workspace_id", run.workspace_id).eq("template_key", run.template_key).maybeSingle();
+  const config = { ...((pipe?.config ?? {}) as Record<string, unknown>), ...(pipe?.body ? { body: pipe.body as string } : {}) };
+  return { runId, workspaceId: run.workspace_id as string, templateKey: run.template_key as string, config };
 };
 
 /** Queue one run (a no-op returning null when the pipeline is off, unless `force`, or this event already ran). */

@@ -20,10 +20,10 @@ export type AutomationCardProps = {
 }
 
 const TONE: Record<CardStatus, "success" | "neutral" | "warning" | "danger"> = {
-  running: "success", off: "neutral", soon: "neutral", needsGoogle: "warning", needsWebhook: "warning", googleLost: "danger", googleUnavailable: "neutral", missing: "warning",
+  running: "success", off: "neutral", soon: "neutral", needsGoogle: "warning", needsWebhook: "warning", needsEmail: "warning", googleLost: "danger", googleUnavailable: "neutral", missing: "warning",
 }
-const LABEL: Record<CardStatus, "statusRunning" | "statusOff" | "statusSoon" | "statusNeedsGoogle" | "statusNeedsWebhook" | "statusMissing"> = {
-  running: "statusRunning", off: "statusOff", soon: "statusSoon", needsGoogle: "statusNeedsGoogle", needsWebhook: "statusNeedsWebhook", googleLost: "statusNeedsGoogle", googleUnavailable: "statusNeedsGoogle", missing: "statusMissing",
+const LABEL: Record<CardStatus, "statusRunning" | "statusOff" | "statusSoon" | "statusNeedsGoogle" | "statusNeedsWebhook" | "statusNeedsEmail" | "statusMissing"> = {
+  running: "statusRunning", off: "statusOff", soon: "statusSoon", needsGoogle: "statusNeedsGoogle", needsWebhook: "statusNeedsWebhook", needsEmail: "statusNeedsEmail", googleLost: "statusNeedsGoogle", googleUnavailable: "statusNeedsGoogle", missing: "statusMissing",
 }
 
 /** One automation: module-coloured icon, name, what it is, what starts it, and its switch. Pressing the text selects it; the switch is separate. */

@@ -18,7 +18,7 @@ export type Capability =
   | "has_opening_hours" | "has_deposits" | "has_due_dates" | "has_appointments" | "sells_online" | "has_recurring_contracts" | "has_delivery";
 /** What the business talks to customers on. "customer_chat": a Telegram / Zalo OA connection or the website chat. */
 export type ChannelNeed = "customer_chat";
-export type ConnectionNeed = "google" | "webhook";
+export type ConnectionNeed = "google" | "webhook" | "smtp";
 
 export type Requires = {
   readonly modules: ReadonlyArray<ModuleScope>;
@@ -30,12 +30,12 @@ export type Requires = {
 /** One setting on a template card (the message body is separate: see contentMode). */
 export type FieldDef =
   | { readonly key: string; readonly kind: "number"; readonly label: L; readonly hint?: L; readonly min: number; readonly max: number; readonly suffix?: L }
-  | { readonly key: string; readonly kind: "text"; readonly label: L; readonly hint?: L; readonly maxLength: number }
+  | { readonly key: string; readonly kind: "text" | "email"; readonly label: L; readonly hint?: L; readonly maxLength?: number }
   | { readonly key: string; readonly kind: "time"; readonly label: L; readonly hint?: L }
   | { readonly key: string; readonly kind: "toggle"; readonly label: L; readonly hint?: L };
 
 /** The authority action a message goes through (src/lib/policy.ts); null = sends nothing to a customer. */
-export type GateAction = "send_care" | "send_follow_up" | "reply_customer" | null;
+export type GateAction = "send_care" | "send_follow_up" | "reply_customer" | "send_email" | null;
 
 /**
  * fixed         fill the variables only; no model call; deterministic. Default authority: auto.
@@ -44,17 +44,22 @@ export type GateAction = "send_care" | "send_follow_up" | "reply_customer" | nul
  */
 export type ContentMode = "fixed" | "ai_per_case" | "none";
 
-export type TemplatePack = "core" | "appointments" | "marketplace" | "contracts" | "delivery";
+export type TemplatePack = "core" | "email" | "appointments" | "marketplace" | "contracts" | "delivery";
 
 export type TemplateDef = {
   readonly key: TemplateKey;
   readonly version: number;
   readonly pack: TemplatePack;
-  /** "definition": the definition and gating exist, no executor yet (capability-gated packs). */
-  readonly executor: "implemented" | "definition";
+  /**
+   * "implemented": run by src/lib/automation-engine.ts. "n8n": a shared n8n workflow (resources/n8n-templates/<key>.json) started through n8n_start_run().
+   * "definition": the definition and gating exist, no executor yet (capability-gated packs).
+   */
+  readonly executor: "implemented" | "n8n" | "definition";
+  /** executor "n8n": the webhook the engine calls and who receives the email. */
+  readonly n8n?: { readonly webhook: string; readonly audience: "owner" | "customer" };
   /** Exactly one owner: a module, or null for a workspace-wide automation (daily report, backups, connection alerts). */
   readonly moduleKey: ModuleScope | null;
-  readonly icon: "payment" | "leads" | "report" | "review" | "debt" | "winback" | "moon" | "sheet" | "calendar" | "cart" | "contract" | "truck";
+  readonly icon: "payment" | "leads" | "report" | "review" | "debt" | "winback" | "moon" | "sheet" | "calendar" | "cart" | "contract" | "truck" | "receipt" | "ledger";
   readonly name: L;
   /** One line. */
   readonly description: L;
@@ -73,7 +78,7 @@ export type TemplateDef = {
   readonly defaults: PipelineConfig;
 };
 
-export const isTemplateKey = (v: unknown): v is TemplateKey => typeof v === "string" && /^[a-z][a-z0-9_]{2,40}$/.test(v);
+export const isTemplateKey = (v: unknown): v is TemplateKey => typeof v === "string" && /^[a-z][a-z0-9_-]{2,60}$/.test(v);
 
 /** The saved config over the template defaults, every setting coerced to its kind and clamped. Keys that are not settings (a sheet id) are kept as they are. */
 export const resolveConfig = (def: TemplateDef, saved: Readonly<Record<string, unknown>> | null | undefined): PipelineConfig => {
@@ -84,7 +89,8 @@ export const resolveConfig = (def: TemplateDef, saved: Readonly<Record<string, u
     if (f.kind === "number") out[f.key] = Math.min(f.max, Math.max(f.min, Math.round(Number(v) || 0)));
     else if (f.kind === "toggle") out[f.key] = v === true || v === "true";
     else if (f.kind === "time") out[f.key] = /^([01]\d|2[0-3]):[0-5]\d$/.test(String(v)) ? String(v) : String(def.defaults[f.key] ?? "00:00");
-    else out[f.key] = String(v ?? "").trim().slice(0, f.maxLength) || String(def.defaults[f.key] ?? "");
+    else if (f.kind === "email") out[f.key] = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(v ?? "").trim()) ? String(v).trim().toLowerCase() : "";
+    else out[f.key] = String(v ?? "").trim().slice(0, f.maxLength ?? 200) || String(def.defaults[f.key] ?? "");
   }
   return out;
 };
@@ -98,19 +104,30 @@ export type MessageVars = {
   ma_phieu?: string;
   nhu_cau?: string;
   uu_dai?: string;
+  /** Email templates: date, summary lines, waiting-decisions line, due date, period, days late. */
+  ngay?: string;
+  tom_tat?: string;
+  viec_cho?: string;
+  han?: string;
+  ky?: string;
+  so_ngay_tre?: string;
 };
 
-const NEUTRAL: Readonly<Record<keyof MessageVars, string>> = {
+const NEUTRAL: Readonly<Record<string, string>> = {
   ten_shop: "shop", gio_mo_cua: "giờ làm việc của shop", ten_khach: "bạn", so_tien: "", ma_phieu: "", nhu_cau: "dịch vụ bạn quan tâm", uu_dai: "ưu đãi riêng",
 };
 
-/** Fill {ten_khach} {ten_shop} {gio_mo_cua} {so_tien} {ma_phieu} {nhu_cau} {uu_dai}. An empty value reads as a neutral word, never as a raw {placeholder}. */
+/** Fill {ten_khach} {ten_shop} {gio_mo_cua} {so_tien} {ma_phieu} {nhu_cau} {uu_dai} and the email variables. An empty value reads as a neutral word, never as a raw {placeholder}. */
 export const fillBody = (body: string, v: MessageVars): string =>
-  body.replace(/\{(ten_khach|ten_shop|gio_mo_cua|so_tien|ma_phieu|nhu_cau|uu_dai)\}/g, (_, k: keyof MessageVars) => (v[k] ?? "").trim() || NEUTRAL[k])
-    .replace(/[ \t]{2,}/g, " ").replace(/\s+([.,!?])/g, "$1").trim();
+  body.replace(/\{([a-z_]+)\}/g, (_, k: string) => ((v as Readonly<Record<string, string | undefined>>)[k] ?? "").trim() || (NEUTRAL[k] ?? ""))
+    .replace(/[ \t]{2,}/g, " ").replace(/[ \t]+([.,!?])/g, "$1").trim();
 
 /** A friendly sample customer for previews. */
-export const SAMPLE_VARS = { ten_khach: "chị Lan", so_tien: "350.000 ₫", ma_phieu: "INV-202610-0012", nhu_cau: "gói chăm sóc da", uu_dai: "ưu đãi 10% cho lần quay lại" } as const;
+export const SAMPLE_VARS = {
+  ten_khach: "chị Lan", so_tien: "350.000 ₫", ma_phieu: "INV-202610-0012", nhu_cau: "gói chăm sóc da", uu_dai: "ưu đãi 10% cho lần quay lại",
+  ngay: "02/10/2026", tom_tat: "- Khách mới: 3\n- Tiền về: 1.200.000 ₫ (2 giao dịch)\n- Hoá đơn quá hạn: 1 (350.000 ₫)", viec_cho: "Đang có 2 việc chờ bạn quyết định trong NIVO.",
+  han: "25/09/2026", ky: "09/2026", so_ngay_tre: "7",
+} as const;
 
 export type AutomationRunStatus = "queued" | "running" | "done" | "skipped" | "waiting_approval" | "failed";
 export const RUN_STATUS: ReadonlyArray<AutomationRunStatus> = ["queued", "running", "done", "skipped", "waiting_approval", "failed"];

@@ -7,6 +7,7 @@ import { loadAutomations, loadContextFor, loadRuns, type PipelineRow } from "./a
 import { isTemplateKey, resolveConfig, type AutomationCardView, type AutomationRunView, type PipelineConfig, type ShopContext, type TemplateDef, type TemplateKey } from "./automation-shared";
 import { templateOf } from "./automation-templates";
 import { logEvidence } from "./core";
+import { startPipelineRun } from "./n8n-pipelines";
 import { requireManager } from "./permissions";
 import { supabaseAdmin } from "./supabase/admin";
 import type { Outcome } from "./types";
@@ -81,13 +82,16 @@ export const toggleAutomation = async (key: TemplateKey, enabled: boolean): Prom
     const existing = await currentPipeline(ws, key);
     const patch: Parameters<typeof upsertPipeline>[3] = { enabled };
     if (enabled) {
+      // Never switched on by an API call or a stale screen while a requirement is missing (a module, a chat channel, a connection, a capability).
+      const card = (await loadAutomations(supabaseAdmin(), ws)).cards.find((c) => c.key === key);
+      if (card && card.missing.length > 0) throw new Error(`Chưa bật được: cần ${card.missing.map((m) => m.label.vi).join(", ")}.`);
       patch.dismissed = false;
       let config: PipelineConfig = resolveConfig(def, existing?.config);
       if (def.requires.connections.includes("google") && !config.spreadsheetId) {
         const sheet = await provisionOrdersSheet(ws, member.userId, config);
         config = { ...config, spreadsheetId: sheet.spreadsheetId, sheetUrl: sheet.spreadsheetUrl };
-        patch.config = config;
       }
+      patch.config = config; // the defaults are stored with it (n8n pipelines read the subject and the time from here)
       if (def.defaultBody && !existing?.body) {
         const ctx = await loadContextFor(supabaseAdmin(), ws, def.moduleKey);
         patch.body = def.defaultBody.vi;
@@ -116,7 +120,7 @@ export const saveAutomation = async (key: TemplateKey, input: { readonly values?
     }
     if (input.body !== undefined) {
       if (!def.defaultBody) throw new Error("Mẫu này không có lời nhắn.");
-      const body = input.body.trim().slice(0, 600);
+      const body = input.body.trim().slice(0, def.executor === "n8n" ? 4000 : 600);
       if (body.length < 10) throw new Error("Lời nhắn quá ngắn.");
       const unknown = [...body.matchAll(/\{([a-z_]+)\}/g)].map((m) => m[1]).filter((v) => !def.variables.includes(v));
       if (unknown.length) throw new Error(`Lời nhắn có chỗ trống không dùng được: {${unknown[0]}}.`);
@@ -158,6 +162,23 @@ export const answerAutoSend = async (key: TemplateKey, accept: boolean): Promise
       accept ? `Chủ shop cho phép "${def.name.vi}" tự gửi` : `Chủ shop chưa cho "${def.name.vi}" tự gửi`, `${existing.approval_streak} lần duyệt liên tiếp không sửa.`);
     revalidatePath("/automations");
     return cardOf(ws, key);
+  });
+
+/** "Chạy thử ngay": one run of a scheduled n8n template now (the engine delivers it to n8n; the result appears in the run history). */
+export const runAutomationNow = async (key: TemplateKey): Promise<Outcome<true>> =>
+  run(async () => {
+    const member = await requireManager();
+    const def = definition(key);
+    if (def.executor !== "n8n" || def.trigger.kind !== "schedule") throw new Error("Mẫu này không chạy thử được.");
+    const pipeline = await currentPipeline(member.workspaceId, key);
+    if (!pipeline?.enabled) throw new Error("Hãy bật tự động hoá này trước.");
+    const nowVn = new Date(Date.now() + 7 * 3_600_000);
+    const data = def.trigger.event === "schedule.monthly"
+      ? { period: new Date(Date.UTC(nowVn.getUTCFullYear(), nowVn.getUTCMonth() - 1, 1)).toISOString().slice(0, 7) }
+      : { date: nowVn.toISOString().slice(0, 10) };
+    const id = await startPipelineRun(member.workspaceId, key, data, `manual:${Date.now()}`, true);
+    if (!id) throw new Error("Chưa xếp được lượt chạy. Thử lại sau ít phút.");
+    return true as const;
   });
 
 /** The run history (all templates, or one), newest first. */

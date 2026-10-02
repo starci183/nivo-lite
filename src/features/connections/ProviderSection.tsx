@@ -42,8 +42,10 @@ export const ProviderSection = ({ provider, items, agentNames, agents, localOnly
   const locale = useLocale()
   const router = useRouter()
   const def = PROVIDERS[provider]
-  const googleBack = useSearchParams().get("google")
-  const [open, setOpen] = useState<Open>(resumeId ? { resumeId } : provider === "google" && googleBack ? {} : null)
+  const params = useSearchParams()
+  const googleBack = params.get("google")
+  // /connections?connect=<provider> opens that provider's wizard (the Automations cards send the owner here when a connection is missing).
+  const [open, setOpen] = useState<Open>(resumeId ? { resumeId } : (provider === "google" && googleBack) || params.get("connect") === provider ? {} : null)
   const eligible = agents.filter((a) => a.module === def.module)
 
   const close = (changed: boolean) => {
