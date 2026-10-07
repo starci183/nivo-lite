@@ -1,0 +1,52 @@
+# Adds one SSH public key to the deploy user's authorized_keys on the NIVO VPS, so another repository can deploy its
+# own compose project there with its own key (first use: namnivo-lite). Run by hand only (Actions > Authorize deploy key).
+# Idempotent: a key that is already present is left alone. To revoke, remove the line carrying the key's comment on the VPS.
+# Environment "production": vars VPS_HOST, VPS_USER; secrets VPS_SSH_KEY, VPS_KNOWN_HOSTS.
+name: Authorize deploy key
+
+on:
+  workflow_dispatch:
+    inputs:
+      public_key:
+        description: "ssh-ed25519 public key with a comment, e.g. ssh-ed25519 AAAA... namnivo-lite-ci"
+        required: true
+        type: string
+
+jobs:
+  authorize:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 5
+    steps:
+      - name: Check the key shape
+        env:
+          PUBLIC_KEY: ${{ inputs.public_key }}
+        run: |
+          printf '%s\n' "$PUBLIC_KEY" | grep -Eq '^ssh-ed25519 [A-Za-z0-9+/=]{60,100} [A-Za-z0-9._@-]{3,60}$' || { echo "not a single ed25519 public key with a comment"; exit 1; }
+
+      - name: SSH setup
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts && chmod 644 ~/.ssh/known_hosts
+          cat >> ~/.ssh/config <<EOF2
+          Host vps
+            HostName ${{ vars.VPS_HOST }}
+            User ${{ vars.VPS_USER }}
+            IdentityFile ~/.ssh/deploy_key
+            StrictHostKeyChecking yes
+            BatchMode yes
+            ConnectTimeout 20
+          EOF2
+
+      - name: Add the key if it is not there yet
+        env:
+          PUBLIC_KEY: ${{ inputs.public_key }}
+        run: |
+          printf '%s\n' "$PUBLIC_KEY" | ssh vps 'umask 077; mkdir -p ~/.ssh; touch ~/.ssh/authorized_keys; read -r key; if grep -qxF "$key" ~/.ssh/authorized_keys; then echo "already authorized"; else printf "%s\n" "$key" >> ~/.ssh/authorized_keys; echo "authorized"; fi'
+
+      - name: Report free memory and running projects
+        run: ssh vps 'free -m | head -2; docker ps --format "{{.Names}}\t{{.Status}}" | head -20'
