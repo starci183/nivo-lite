@@ -14,6 +14,13 @@ http:
       service: web
       middlewares: [secure-headers]
       tls: { certResolver: le }
+    # nguyentuannam.org (repo namnivo-lite): its own compose project ~/namnivo-web, reached as namnivo-web:3000 on the nivo-edge network.
+    namnivo:
+      rule: Host(`nguyentuannam.org`) || Host(`www.nguyentuannam.org`) || Host(`app.nguyentuannam.org`)
+      entryPoints: [websecure]
+      service: namnivo
+      middlewares: [secure-headers]
+      tls: { certResolver: le }
     n8n:
       rule: Host(`n8n.nivo.vn`)
       entryPoints: [websecure]
@@ -31,6 +38,9 @@ http:
     web:
       loadBalancer:
         servers: [{ url: "http://nivo-web:3000" }]
+    namnivo:
+      loadBalancer:
+        servers: [{ url: "http://namnivo-web:3000" }]
     n8n:
       loadBalancer:
         servers: [{ url: "http://172.29.0.1:5678" }]
