@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { publicConfig } from "./lib/config";
+import { onPublicOrigin } from "./lib/request-origin";
 import { PERF_ENABLED, PERF_PATH_HEADER, PERF_RID_HEADER, perfFetchFor } from "./lib/supabase/perf";
 
 // Reachable without a session. Webhooks (Telegram, bank connection) are each verified by their own secret header; /api/engine by an HMAC (ENGINE_SHARED_SECRET), /api/n8n by a per-run bearer token (hash stored with an expiry).
@@ -46,9 +47,9 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isPublic = isPublicPath(pathname);
 
-  /** A redirect that keeps any cookies the session refresh or sign-out just wrote. */
+  /** A redirect (on the public origin, never the server bind address) that keeps any cookies the session refresh or sign-out just wrote. */
   const redirectTo = (url: URL) => {
-    const out = NextResponse.redirect(url);
+    const out = NextResponse.redirect(onPublicOrigin(request, url));
     for (const cookie of response.cookies.getAll()) out.cookies.set(cookie);
     return out;
   };

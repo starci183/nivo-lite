@@ -2,6 +2,7 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 import { postAuthPath } from "@/features/auth/destination";
+import { requestOrigin } from "@/lib/request-origin";
 
 const TYPES: readonly EmailOtpType[] = ["signup", "recovery", "invite", "email_change", "magiclink", "email"];
 
@@ -12,7 +13,8 @@ const TYPES: readonly EmailOtpType[] = ["signup", "recovery", "invite", "email_c
  * The token becomes a session cookie, then: recovery -> /reset-password, anything else -> `next` or the dashboard.
  */
 export const GET = async (request: NextRequest) => {
-  const { searchParams, origin } = request.nextUrl;
+  const { searchParams } = request.nextUrl;
+  const origin = requestOrigin(request);
   const next = unwrapNext(searchParams.get("next"), origin);
   const isRecovery = searchParams.get("type") === "recovery" || next?.startsWith("/reset-password") === true;
   const fail = () => NextResponse.redirect(new URL(isRecovery ? "/reset-password?error=invalid" : "/login?error=link_expired", origin));

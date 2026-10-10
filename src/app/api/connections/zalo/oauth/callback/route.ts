@@ -6,6 +6,7 @@ import { isManagerRole } from "@/lib/members-shared";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { REFRESH_TTL_MS, exchangeCode } from "@/lib/zalo-api";
 import { loadZalo, registerRefreshTarget, saveZaloSecret } from "@/lib/zalo";
+import { requestOrigin } from "@/lib/request-origin";
 
 /**
  * Where Zalo sends the browser after the owner grants the OA permissions: ?code=...&oa_id=...&state=<connectionId>.<nonce>.
@@ -18,7 +19,7 @@ export const dynamic = "force-dynamic";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function GET(request: NextRequest) {
-  const back = (qs: string) => NextResponse.redirect(new URL(`/connections?${qs}`, request.nextUrl.origin));
+  const back = (qs: string) => NextResponse.redirect(new URL(`/connections?${qs}`, requestOrigin(request)));
   const q = request.nextUrl.searchParams;
   const code = q.get("code");
   const [connectionId = "", nonce = ""] = (q.get("state") ?? "").split(".");
