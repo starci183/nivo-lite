@@ -8,7 +8,6 @@ import { webhookWizard } from "@/i18n/dict/webhookWizard"
 import { finishWebhookConnection, sendWebhookTest, startWebhookConnection, type WebhookTestResult, type WebhookView } from "@/lib/webhook-actions"
 import { WEBHOOK_EVENTS, WEBHOOK_EVENT_LABEL } from "@/lib/webhook-shared"
 import { CodeBlock } from "../CodeBlock"
-import { CopyField } from "../CopyField"
 import { FIELDS_CLASS, NUMBERED_CLASS } from "./classNames"
 import { N8N_VERIFY_SNIPPET } from "./webhookSnippet"
 import { WebhookTestAlert } from "./WebhookTestAlert"
@@ -75,7 +74,10 @@ export const WebhookWizard = ({ onClose }: { readonly onClose: (changed: boolean
       {index === 1 && created ? (
         <>
           <Text size="sm" tone="muted">{t("secretIntro")}</Text>
-          <CopyField label={t("secretLabel")} value={created.signingSecret} secret />
+          <Input
+            id="webhook-signing-secret" name="signingSecret" label={t("secretLabel")} variant="secondary" kind="password" value={created.signingSecret}
+            isReadOnly isCopyable copyLabel={c("copy")} copiedLabel={c("copied")} revealLabel={c("reveal")} hideLabel={c("hide")}
+          />
           <Text weight="semibold">{t("n8nTitle")}</Text>
           <ol className={NUMBERED_CLASS}><li>{t("n8nStep1")}</li><li>{t("n8nStep2")}</li><li>{t("n8nStep3")}</li></ol>
           <CodeBlock label={t("codeLabel")} code={N8N_VERIFY_SNIPPET} />

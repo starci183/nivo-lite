@@ -34,7 +34,9 @@ export const connectionWizard = defineDict({
     fieldHolder: "Account holder",
     fieldName: "Connection name",
     fieldNameHint: "A label only you see, for example Main account.",
-    createdLocked: "The connection is created, so these answers are fixed. Remove the connection to start again.",
+    createdLocked: "The connection is created. Changes here are saved when you press Next.",
+    accountKeep: "Leave blank to keep {account}.",
+    editSaved: "Changes saved. Update the same values on {brand} too.",
     create: "Create connection",
 
     openProvider: "Open {brand}",
@@ -42,6 +44,8 @@ export const connectionWizard = defineDict({
     guideChoose: "Choose {option}",
     guideSwitch: "{state}",
     guideCopy: "Copy and paste into {field}",
+    guideCopyHint: "Copy it and paste it into this box on {brand}.",
+    guideCopyEdit: "You can change it here. Paste the same value into this box on {brand}.",
     copy: "Copy",
     copied: "Copied",
     reveal: "Show",
@@ -71,6 +75,7 @@ export const connectionWizard = defineDict({
 
     pendingBadge: "Unfinished",
     continue: "Continue",
+    edit: "Edit",
 
     tgChecking: "Checking the bot…",
     tgCheckTitle: "Check the bot",
@@ -127,7 +132,9 @@ export const connectionWizard = defineDict({
     fieldHolder: "Chủ tài khoản",
     fieldName: "Tên kết nối",
     fieldNameHint: "Nhãn chỉ bạn thấy, ví dụ VCB chính.",
-    createdLocked: "Kết nối đã được tạo nên các câu trả lời này đã cố định. Xóa kết nối để làm lại từ đầu.",
+    createdLocked: "Kết nối đã được tạo. Sửa ở đây sẽ được lưu khi bạn bấm Tiếp.",
+    accountKeep: "Để trống để giữ {account}.",
+    editSaved: "Đã lưu thay đổi. Hãy sửa giống vậy trên {brand}.",
     create: "Tạo kết nối",
 
     openProvider: "Mở trang {brand}",
@@ -135,6 +142,8 @@ export const connectionWizard = defineDict({
     guideChoose: "Chọn {option}",
     guideSwitch: "{state}",
     guideCopy: "Sao chép và dán vào ô {field}",
+    guideCopyHint: "Sao chép rồi dán vào ô này trên {brand}.",
+    guideCopyEdit: "Có thể sửa ở đây. Dán đúng giá trị này vào ô tương ứng trên {brand}.",
     copy: "Sao chép",
     copied: "Đã chép",
     reveal: "Hiện",
@@ -164,6 +173,7 @@ export const connectionWizard = defineDict({
 
     pendingBadge: "Chưa hoàn tất",
     continue: "Tiếp tục",
+    edit: "Sửa",
 
     tgChecking: "Đang kiểm tra bot…",
     tgCheckTitle: "Kiểm tra bot",

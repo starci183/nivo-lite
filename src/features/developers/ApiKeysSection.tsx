@@ -3,8 +3,8 @@
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Alert, Button, Input, SurfaceCard, Text } from "@starci/grammar/common"
-import { CopyField } from "@/features/connections/CopyField"
 import { useT } from "@/i18n/client"
+import { connectionWizard } from "@/i18n/dict/connectionWizard"
 import { developers as dict } from "@/i18n/dict/developers"
 import { createApiKey, type ApiKeyView } from "@/lib/api-keys-actions"
 import { ApiKeyItem } from "./ApiKeyItem"
@@ -13,6 +13,7 @@ import { FIELD_GROW_CLASS, FORM_ROW_CLASS, KEY_BOX_CLASS, STACK_CLASS } from "./
 /** "Khoá API": create a key (shown once), then the list with revoke. */
 export const ApiKeysSection = ({ items, loadError }: { readonly items: ReadonlyArray<ApiKeyView>; readonly loadError: string | null }) => {
   const t = useT(dict)
+  const tc = useT(connectionWizard)
   const router = useRouter()
   const [name, setName] = useState("")
   const [fresh, setFresh] = useState<string | null>(null)
@@ -43,7 +44,7 @@ export const ApiKeysSection = ({ items, loadError }: { readonly items: ReadonlyA
           <div className={KEY_BOX_CLASS}>
             <Text weight="semibold">{t("newKeyTitle")}</Text>
             <Alert tone="cautionary" title={t("newKeyWarn")} />
-            <CopyField label={t("newKeyTitle")} value={fresh} />
+            <Input id="api-key-fresh" name="apiKey" label={t("newKeyTitle")} variant="secondary" value={fresh} isReadOnly isCopyable copyLabel={tc("copy")} copiedLabel={tc("copied")} />
             <div><Button variant="outline" onPress={() => setFresh(null)}>{t("newKeyDone")}</Button></div>
           </div>
         ) : null}

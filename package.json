@@ -31,7 +31,7 @@
     "@heroui/react": "3.2.6",
     "@heroui/styles": "3.2.6",
     "@internationalized/date": "^3.12.4",
-    "@starci/grammar": "0.5.4",
+    "@starci/grammar": "0.8.4",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.57.0",
     "framer-motion": "^13.1.0",

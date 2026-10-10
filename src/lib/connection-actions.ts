@@ -134,7 +134,7 @@ export const connectTelegram = async (input: { name: string; token: string }): P
 export type MoneyProvider = "sepay" | "payos" | "casso";
 export type WizardConnection = {
   id: string; provider: Provider; name: string; environment: Environment; status: Connection["status"];
-  webhookUrl: string; apiKey: string; bank: string; account: string; credentialsSaved: boolean;
+  webhookUrl: string; apiKey: string; bank: string; bankCode: string; account: string; holder: string; credentialsSaved: boolean;
   firstEvent: Connection["firstEvent"]; agentIds: ReadonlyArray<string>;
 };
 
@@ -145,7 +145,8 @@ const wizardView = async (ws: string, id: string, apiKey = ""): Promise<WizardCo
   if (!c) return null;
   return {
     id: c.id, provider: c.provider, name: c.name, environment: c.environment, status: c.status,
-    webhookUrl: webhookUrlFor(c.provider, c.id), apiKey, bank: bankName(c.meta.bank_code ?? ""), account: c.meta.account_masked ?? "",
+    webhookUrl: webhookUrlFor(c.provider, c.id), apiKey, bank: bankName(c.meta.bank_code ?? ""), bankCode: c.meta.bank_code ?? "", account: c.meta.account_masked ?? "",
+    holder: c.meta.account_holder ?? "",
     credentialsSaved: false, firstEvent: c.firstEvent, agentIds: c.agentIds,
   };
 };
@@ -178,6 +179,50 @@ export const startMoneyConnection = async (input: { provider: MoneyProvider; env
     );
     refresh();
     return (await wizardView(member.workspaceId, id, apiKey)) as WizardConnection;
+  });
+
+const SEPAY_KEY = /^[A-Za-z0-9_-]{16,128}$/;
+
+/**
+ * Edit a bank/payment connection after it was created: environment, name, bank account and, for SePay, the API key (NIVO's generated
+ * one or one the owner typed into SePay). A blank account number keeps the stored one. Returns the wizard view with the current key.
+ */
+export const updateMoneyConnection = async (
+  connectionId: string,
+  input: { environment: Environment; name: string; bankCode: string; accountNumber: string; holder: string; apiKey?: string },
+): Promise<Outcome<WizardConnection>> =>
+  run(async (tr) => {
+    const member = await requireManager();
+    const c = await own(member.workspaceId, connectionId, tr);
+    if (!isMoney(c.provider)) throw userError(tr("errGeneric"));
+    const def = PROVIDERS[c.provider];
+    const environment: Environment = def.environments.includes(input.environment) ? input.environment : c.environment;
+    const name = requireName(input.name, tr);
+    const meta: Record<string, string> = { ...c.meta };
+    if (def.needsBank) {
+      const bankCode = clean(input.bankCode, 20).toUpperCase();
+      const holder = clean(input.holder, 80).toUpperCase();
+      if (!bankCode || !holder) throw userError(tr("errBankFields"));
+      const account = input.accountNumber.replace(/\s+/g, "");
+      if (account && !/^\d{6,20}$/.test(account)) throw userError(tr("errAccount"));
+      Object.assign(meta, { bank_code: bankCode, account_holder: holder }, account ? { account_masked: `•••• ${account.slice(-4)}` } : {});
+    }
+    const db = supabaseAdmin();
+    let apiKey = "";
+    if (c.provider === "sepay") {
+      const sec = await secretOf(c.id);
+      const current = sec ? decryptSecret(sec.ciphertext) : "";
+      apiKey = (input.apiKey ?? current).trim();
+      if (!SEPAY_KEY.test(apiKey)) throw userError(tr("errApiKey"));
+      if (apiKey !== current) {
+        const { error } = await db.from("connection_secrets").update({ ciphertext: encryptSecret(apiKey), webhook_secret: sha256(apiKey) }).eq("connection_id", c.id);
+        if (error) throw new Error(error.message);
+      }
+    }
+    const { error } = await db.from("connections").update({ name, environment, public_meta: meta, updated_at: now() }).eq("id", c.id);
+    if (error) throw new Error(error.message);
+    refresh();
+    return (await wizardView(member.workspaceId, c.id, apiKey)) as WizardConnection;
   });
 
 /** Continue an unfinished connection: the same data the wizard had (SePay shows its key again; payOS/Casso keys are never returned). */

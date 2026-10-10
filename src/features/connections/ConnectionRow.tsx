@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Alert, Badge, Button, Text } from "@starci/grammar/common"
+import { Alert, Badge, Button, Input, Text } from "@starci/grammar/common"
 import { useT } from "@/i18n/client"
 import { connections } from "@/i18n/dict/connections"
 import { connectionWizard } from "@/i18n/dict/connectionWizard"
@@ -13,7 +13,6 @@ import { sendWebhookTest } from "@/lib/webhook-actions"
 import type { Connection } from "@/lib/channels"
 import { deleteConnection, disconnectConnection, revealSepayKey, testConnection } from "@/lib/connection-actions"
 import { ACTIONS_CLASS, FULL_BOX_CLASS, ROW_CLASS, ROW_MAIN_CLASS } from "./classNames"
-import { CopyField } from "./CopyField"
 import { SmtpRowExtras } from "./SmtpRowExtras"
 import { StatusBadge } from "./StatusBadge"
 
@@ -110,6 +109,7 @@ export const ConnectionRow = ({ connection: c, agentNames, localOnly, onContinue
       <div className={ACTIONS_CLASS}>
         {(c.status === "pending" || (c.status === "error" && c.provider === "zalo_oa")) && onContinue ? <Button variant="secondary" isDisabled={isPending} onPress={onContinue}>{c.provider === "zalo_oa" && c.status === "error" ? tw("zaloReauthorize") : tw("continue")}</Button> : null}
         {c.provider === "google" && c.status === "error" ? <Button variant="secondary" isPending={isPending} onPress={reconnectGoogle}>{tg("reconnect")}</Button> : null}
+        {MONEY.has(c.provider) && c.status !== "pending" && onContinue ? <Button variant="outline" isDisabled={isPending} onPress={onContinue}>{tw("edit")}</Button> : null}
         {c.provider === "sepay" && live && c.status !== "pending" ? <Button variant="outline" isDisabled={isPending} onPress={show}>{t("showKey")}</Button> : null}
         {live && c.provider === "webhook" && c.status !== "pending" ? <Button variant="secondary" isPending={isPending} onPress={sendTest}>{tj("sendTest")}</Button> : null}
         {live && c.status !== "pending" && (c.provider === "telegram" || c.provider === "zalo_oa") ? <Button variant="secondary" isPending={isPending} onPress={check}>{t("check")}</Button> : null}
@@ -129,11 +129,20 @@ export const ConnectionRow = ({ connection: c, agentNames, localOnly, onContinue
       ) : null}
       {keys ? (
         <div className={FULL_BOX_CLASS}>
-          <CopyField label={t("webhookUrl")} value={keys.webhookUrl} />
-          <CopyField label={t("apiKey")} value={keys.apiKey} secret />
+          <Input
+            id={`row-${c.id}-url`} name="webhookUrl" label={t("webhookUrl")} variant="secondary" value={keys.webhookUrl}
+            isReadOnly isCopyable copyLabel={tw("copy")} copiedLabel={tw("copied")}
+          />
+          <Input
+            id={`row-${c.id}-key`} name="apiKey" label={t("apiKey")} variant="secondary" kind="password" value={keys.apiKey}
+            isReadOnly isCopyable copyLabel={tw("copy")} copiedLabel={tw("copied")} revealLabel={tw("reveal")} hideLabel={tw("hide")}
+          />
         </div>
       ) : null}
       {note ? <div className="w-full"><Alert title={note.text} tone={note.tone} /></div> : null}
     </div>
   )
 }
+
+/** Bank and payment feeds reopen their wizard to edit name, account, environment and (SePay) the API key. */
+const MONEY: ReadonlySet<string> = new Set(["sepay", "payos", "casso"])
