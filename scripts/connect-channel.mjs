@@ -42,8 +42,9 @@ rl._writeToOutput = (s) => { if (!muted) process.stdout.write(s); };
 const lines = [];
 const waiting = [];
 rl.on("line", (l) => (waiting.length ? waiting.shift()(l) : lines.push(l)));
-rl.on("close", () => { while (waiting.length) waiting.shift()(null); });
-const nextLine = () => new Promise((res) => (lines.length ? res(lines.shift()) : waiting.push(res)));
+let closed = false;
+rl.on("close", () => { closed = true; while (waiting.length) waiting.shift()(null); });
+const nextLine = () => new Promise((res) => (lines.length ? res(lines.shift()) : closed ? res(null) : waiting.push(res)));
 const readAnswer = async () => {
   const l = await nextLine();
   if (l === null) fail("Het input.");
