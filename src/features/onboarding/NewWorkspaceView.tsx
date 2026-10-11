@@ -20,7 +20,7 @@ export type NewWorkspaceViewProps = { readonly plans: ReadonlyArray<Plan> };
 
 const TYPE_KEY = { retail: "typeRetail", services: "typeServices", clinic: "typeClinic", education: "typeEducation", other: "typeOther" } as const;
 /** The plan highlighted as "most popular" (the one most workspaces need). */
-const RECOMMENDED_PLAN = "growth";
+const RECOMMENDED_PLAN = "pro";
 
 const Check = () => (
   <svg viewBox="0 0 16 16" className={CHECK_CLASS_NAME} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -64,6 +64,25 @@ export const NewWorkspaceView = ({ plans }: NewWorkspaceViewProps) => {
             <div className={PLANS_CLASS_NAME} role="radiogroup" aria-label={t("choosePlan")}>
               {plans.map((p) => {
                 const on = p.code === planCode;
+                if (p.is_custom) {
+                  return (
+                    <div key={p.code} className={PLAN_CLASS_NAME} aria-label={locale === "vi" ? p.name_vi : p.name_en}>
+                      <span className="flex flex-col gap-1 pr-8">
+                        <span className="text-lg font-semibold text-foreground">{locale === "vi" ? p.name_vi : p.name_en}</span>
+                        <span className="text-sm text-muted">{t("customSeats")}</span>
+                      </span>
+                      <span className={PRICE_CLASS_NAME}>
+                        <span className={PRICE_BIG_CLASS_NAME}>{t("customPrice")}</span>
+                      </span>
+                      <ul className={FEATURES_CLASS_NAME}>
+                        {(p.features[locale] ?? []).map((f) => (
+                          <li key={f} className={FEATURE_CLASS_NAME}><Check />{f}</li>
+                        ))}
+                      </ul>
+                      <span className="text-sm text-muted">{t("customHow")}</span>
+                    </div>
+                  );
+                }
                 return (
                   <button key={p.code} type="button" role="radio" aria-checked={on} className={`${PLAN_CLASS_NAME} ${on ? PLAN_ON_CLASS_NAME : ""}`} onClick={() => setPlanCode(p.code)}>
                     {p.code === RECOMMENDED_PLAN ? <span className={PLAN_TAG_CLASS_NAME}>{t("recommended")}</span> : null}

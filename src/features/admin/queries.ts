@@ -1,5 +1,6 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { quotaStatus } from "@/lib/usage";
 
 /**
  * Reads for the team console. Service-role client, server components only: callers must have passed requirePlatformAdmin().
@@ -150,8 +151,18 @@ export const loadWorkspaceDetail = async (id: string) => {
     e[s.status] = (e[s.status] ?? 0) + 1;
     kinds.set(s.kind, e);
   }
+  const [quota, override] = await Promise.all([
+    quotaStatus(id),
+    db.from("ai_quota_overrides").select("credits_limit").eq("workspace_id", id).maybeSingle<{ credits_limit: number | null }>(),
+  ]);
   return {
     ws: { ...ws, ownerEmail: emails.get(ws.owner_id) ?? "—" },
+    credits: {
+      used: quota?.creditsUsed ?? 0,
+      limit: quota?.creditsLimit ?? null,
+      costUsd: quota?.costUsd ?? 0,
+      ownLimit: override.data?.credits_limit == null ? null : Number(override.data.credits_limit),
+    },
     members: members.map((m) => ({ ...m, email: emails.get(m.user_id) ?? "—" })),
     invites, orders, sepay, billingEvents,
     modules: installs.map((i) => ({
