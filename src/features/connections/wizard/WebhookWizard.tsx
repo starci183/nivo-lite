@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Alert, Button, CheckboxGroup, Input, Text } from "@starci/grammar/common"
+import { Alert, Button, CheckboxGroup, Input, LeadingNumber, List, ListItem, Text } from "@starci/grammar/common"
 import { useLocale, useT } from "@/i18n/client"
 import { connectionWizard } from "@/i18n/dict/connectionWizard"
 import { webhookWizard } from "@/i18n/dict/webhookWizard"
@@ -81,7 +81,7 @@ export const WebhookWizard = ({ onClose }: { readonly onClose: (changed: boolean
             isReadOnly {...copy}
           />
           <Text weight="semibold">{t("n8nTitle")}</Text>
-          <ol className={NUMBERED_CLASS}><li>{t("n8nStep1")}</li><li>{t("n8nStep2")}</li><li>{t("n8nStep3")}</li></ol>
+          <List as="ol" className={NUMBERED_CLASS}>{[t("n8nStep1"), t("n8nStep2"), t("n8nStep3")].map((step, i) => <ListItem key={step}><Text size="sm" startContent={<LeadingNumber position={i + 1} />}>{step}</Text></ListItem>)}</List>
           <CodeBlock label={t("codeLabel")} code={N8N_VERIFY_SNIPPET} />
           <Text size="xs" tone="muted">{t("n8nNote")}</Text>
         </>

@@ -2,8 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { useEffect, useState, useTransition } from "react"
-import { cn } from "@heroui/react"
-import { Badge, Button, Input, Text, Textarea } from "@starci/grammar/common"
+import { Badge, Button, ChatBubble, Input, RadioGroup, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
 import { canDecideItem, isManager, useMember } from "@/features/shell/member-context"
 import { useLocale, useT } from "@/i18n/client"
 import { governance } from "@/i18n/dict/governance"
@@ -12,23 +11,18 @@ import { assignWorkItem, decideWorkItem, getReconcileDetails, holdWorkItem, type
 import type { Staff, WorkEdits, WorkItemView } from "@/lib/flow-types"
 import {
   APPROVAL_ACTIONS_CLASS_NAME,
+  APPROVAL_BODY_CLASS_NAME,
   APPROVAL_CARD_CLASS_NAME,
-  APPROVAL_FOCUS_CLASS_NAME,
   APPROVAL_QUOTE_CLASS_NAME,
   APPROVAL_STATUS_CLASS_NAME,
   APPROVAL_TEXT_CLASS_NAME,
-  AUTHOR_LINE_CLASS_NAME,
   AVATAR_SLOT_CLASS_NAME,
-  BUBBLE_COLUMN_CLASS_NAME,
-  EXCEPTION_CANDIDATE_CLASS_NAME,
-  EXCEPTION_CANDIDATE_ON_CLASS_NAME,
   EXCEPTION_FIELDS_CLASS_NAME,
   INFO_SECTION_CLASS_NAME,
   INFO_TITLE_CLASS_NAME,
   MEMBER_TEXT_CLASS_NAME,
   PENDING_ROW_CLASS_NAME,
   ROW_FIRST_CLASS_NAME,
-  ROW_THEIRS_CLASS_NAME,
 } from "./classNames"
 import { formatStamp, formatTime } from "./format"
 import { AgentAvatar } from "@/components/avatar/PersonAvatar"
@@ -56,9 +50,6 @@ const BASIS_MIN_CHARS = 10
 
 /** Actions whose approval needs a written basis: a matching amount is not evidence. */
 const needsBasis = (item: WorkItemView): boolean => item.action === "reconcile_payment"
-
-/** Candidate invoice row: stacked detail lines (customer, invoice, amount, order). */
-const CANDIDATE_DETAIL_CLASS_NAME = cn("flex", "w-full", "flex-col", "items-start", "gap-0.5", "rounded-lg", "border", "border-separator", "px-3", "py-2", "text-left")
 
 const fieldText = (value: string | number | null | undefined): string => (typeof value === "string" ? value : typeof value === "number" ? String(value) : "")
 
@@ -210,17 +201,23 @@ export const ExceptionCard = ({ item, staff, ownerName, isFocused, agent = null 
   const title = `${g(`action_${item.action}`)}${item.lead ? ` · ${item.lead.contact_name}` : ""}`
 
   return (
-    <div id={exceptionAnchor(item.id)} className={`${ROW_THEIRS_CLASS_NAME} ${ROW_FIRST_CLASS_NAME}`} data-testid="exception-card" data-status={item.status}>
-      <div className={AVATAR_SLOT_CLASS_NAME}>
-        {agent ? <AgentAvatar module={agent.module} label={agent.name} size="sm" /> : <NivoAvatar />}
-      </div>
-      <div className={BUBBLE_COLUMN_CLASS_NAME}>
-        <div className={AUTHOR_LINE_CLASS_NAME}>
-          <Text size="sm" weight="semibold">{agent ? agent.name : t("nivoCore")}</Text>
-          {agent ? <AiChip /> : null}
-          <Text size="xs" tone="muted">{formatTime(item.created_at, locale)}</Text>
-        </div>
-        <article className={isFocused ? `${APPROVAL_CARD_CLASS_NAME} ${APPROVAL_FOCUS_CLASS_NAME}` : APPROVAL_CARD_CLASS_NAME} aria-label={title}>
+    <div className={ROW_FIRST_CLASS_NAME} data-testid="exception-card" data-status={item.status}>
+      {/* The work item speaks as its department's agent (Sales, Accounting, Chatbot), or as NIVO Core when none is installed. */}
+      <ChatBubble
+        id={exceptionAnchor(item.id)}
+        author={agent ? agent.name : t("nivoCore")}
+        avatar={
+          <div className={AVATAR_SLOT_CLASS_NAME}>
+            {agent ? <AgentAvatar module={agent.module} label={agent.name} size="sm" /> : <NivoAvatar />}
+          </div>
+        }
+        status={agent ? <AiChip /> : undefined}
+        meta={formatTime(item.created_at, locale)}
+        footer={
+        // BOUNDARY-5: a nested SurfaceCard under the message, inside the messenger card; the jump focus is its one highlight.
+        <div className={APPROVAL_CARD_CLASS_NAME}>
+        <SurfaceCard depth="nested" ariaLabel={title} isHighlight={isFocused}>
+        <div className={APPROVAL_BODY_CLASS_NAME}>
           <div className={APPROVAL_STATUS_CLASS_NAME}>
             {isOpen ? (
               <Badge tone={isFailed ? "danger" : "warning"} isDot>{isReconcile && !isFailed ? t("reconcileWaiting") : item.reason ? g(`reason_${item.reason}`) : isFailed ? g("status_failed") : t("exceptionTitle")}</Badge>
@@ -231,11 +228,6 @@ export const ExceptionCard = ({ item, staff, ownerName, isFocused, agent = null 
             {isReconcile && isOpen && !isFailed && item.reason ? <Badge tone="neutral">{g(`reason_${item.reason}`)}</Badge> : null}
             {item.origin === "simulated" ? <Badge tone="neutral">{t("simulatedTag")}</Badge> : null}
           </div>
-          <div className={APPROVAL_TEXT_CLASS_NAME}>
-            <Text weight="semibold">{title}</Text>
-            {item.reason && isOpen && !isFailed ? <Text size="sm" tone="muted">{g(`reasonHint_${item.reason}`)}</Text> : null}
-          </div>
-
           {isFailed && item.error ? (
             <div className={APPROVAL_QUOTE_CLASS_NAME}>
               <Text size="xs" tone="muted" weight="medium">{t("exceptionErrorLabel")}</Text>
@@ -285,46 +277,38 @@ export const ExceptionCard = ({ item, staff, ownerName, isFocused, agent = null 
           ) : null}
 
           {isOpen && candidates.length > 0 ? (
-            <div className={EXCEPTION_FIELDS_CLASS_NAME} role="radiogroup" aria-label={t("exceptionCandidates")}>
-              <Text size="sm" weight="medium">{t("exceptionCandidates")}</Text>
+            <div className={EXCEPTION_FIELDS_CLASS_NAME}>
               {isReconcile && !details ? <Text size="xs" tone="muted">{t("candidatesLoading")}</Text> : null}
-              {candidates.map((c) => {
-                const d = details?.candidates.find((x) => x.id === c.id)
-                const isOn = candidateId === c.id
-                if (isReconcile && d) {
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      role="radio"
-                      aria-checked={isOn}
-                      data-testid="reconcile-candidate"
-                      className={isOn ? `${CANDIDATE_DETAIL_CLASS_NAME} ${EXCEPTION_CANDIDATE_ON_CLASS_NAME}` : CANDIDATE_DETAIL_CLASS_NAME}
-                      onClick={() => setCandidateId(c.id)}
-                    >
-                      <Text size="sm" weight="semibold">{d.customer ?? t("candidateNoCustomer")}</Text>
-                      <Text size="sm">{`${t("candidateInvoice", { no: d.invoice_no })} · ${t("candidateAmount")}: ${money(d.amount_vnd)}`}</Text>
-                      <Text size="xs" tone="muted">{d.order_no ? `${t("candidateOrder")}: ${d.order_no}${d.order_items ? ` · ${d.order_items}` : ""}` : t("candidateNoOrder")}</Text>
-                      {d.status !== "issued" ? <Text size="xs" tone="muted">{t("candidateNotIssued", { status: d.status })}</Text> : null}
-                    </button>
-                  )
-                }
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={isOn}
-                    className={isOn ? `${EXCEPTION_CANDIDATE_CLASS_NAME} ${EXCEPTION_CANDIDATE_ON_CLASS_NAME}` : EXCEPTION_CANDIDATE_CLASS_NAME}
-                    onClick={() => setCandidateId(c.id)}
-                  >
-                    <Text size="sm" weight="medium">{c.label}</Text>
-                    {c.label.includes(new Intl.NumberFormat("vi-VN").format(c.amount_vnd)) ? null : (
-                      <Text size="sm" tone="muted">{new Intl.NumberFormat(locale === "vi" ? "vi-VN" : "en-US").format(c.amount_vnd)}</Text>
-                    )}
-                  </button>
-                )
-              })}
+              <RadioGroup
+                label={t("exceptionCandidates")}
+                variant="secondary"
+                value={candidateId}
+                isDisabled={isBusy}
+                onValueChange={setCandidateId}
+                options={candidates.map((c) => {
+                  const d = details?.candidates.find((x) => x.id === c.id)
+                  if (isReconcile && d) {
+                    return {
+                      value: c.id,
+                      label: <span data-testid="reconcile-candidate">{d.customer ?? t("candidateNoCustomer")}</span>,
+                      description: (
+                        <>
+                          <Text size="sm">{`${t("candidateInvoice", { no: d.invoice_no })} · ${t("candidateAmount")}: ${money(d.amount_vnd)}`}</Text>
+                          <Text size="xs" tone="muted">{d.order_no ? `${t("candidateOrder")}: ${d.order_no}${d.order_items ? ` · ${d.order_items}` : ""}` : t("candidateNoOrder")}</Text>
+                          {d.status !== "issued" ? <Text size="xs" tone="muted">{t("candidateNotIssued", { status: d.status })}</Text> : null}
+                        </>
+                      ),
+                    }
+                  }
+                  return {
+                    value: c.id,
+                    label: c.label,
+                    description: c.label.includes(new Intl.NumberFormat("vi-VN").format(c.amount_vnd))
+                      ? undefined
+                      : new Intl.NumberFormat(locale === "vi" ? "vi-VN" : "en-US").format(c.amount_vnd),
+                  }
+                })}
+              />
             </div>
           ) : null}
 
@@ -420,8 +404,16 @@ export const ExceptionCard = ({ item, staff, ownerName, isFocused, agent = null 
             </div>
           ) : null}
           {item.lead ? <div><Button variant="ghost" href={item.href}>{t("exceptionOpenLead")}</Button></div> : null}
-        </article>
-      </div>
+        </div>
+        </SurfaceCard>
+        </div>
+        }
+      >
+        <div className={APPROVAL_TEXT_CLASS_NAME}>
+          <Text weight="semibold">{title}</Text>
+          {item.reason && isOpen && !isFailed ? <Text size="sm" tone="muted">{g(`reasonHint_${item.reason}`)}</Text> : null}
+        </div>
+      </ChatBubble>
     </div>
   )
 }
@@ -448,16 +440,23 @@ export const ExceptionList = ({ items, agents = [], onJump }: ExceptionListProps
         <Text size="sm" tone="muted">{t("exceptionsNone")}</Text>
       ) : (
         items.map((item) => (
-          <button key={item.id} type="button" className={PENDING_ROW_CLASS_NAME} onClick={() => onJump(item.id)} aria-label={`${t("exceptionJump")}: ${g(`action_${item.action}`)}`}>
-            {(() => {
-              const agent = departmentAgent(agents, item.department)
-              return agent ? <AgentAvatar module={agent.module} label={agent.name} size="xs" /> : <NivoAvatar size="xs" />
-            })()}
-            <span className={MEMBER_TEXT_CLASS_NAME}>
-              <Text size="sm" weight="medium" overflow="clamp-2">{`${g(`action_${item.action}`)}${item.lead ? ` · ${item.lead.contact_name}` : ""}`}</Text>
-              <Text size="xs" tone="muted" overflow="truncate">{item.reason ? g(`reason_${item.reason}`) : g("status_failed")}</Text>
-            </span>
-          </button>
+          // BOUNDARY-5 + STATE-5: one exception is a nested card whose whole face jumps to it in the thread.
+          <SurfaceCard
+            key={item.id}
+            depth="nested"
+            wholeAction={{ kind: "button", press: () => onJump(item.id), label: `${t("exceptionJump")}: ${g(`action_${item.action}`)}` }}
+          >
+            <div className={PENDING_ROW_CLASS_NAME}>
+              {(() => {
+                const agent = departmentAgent(agents, item.department)
+                return agent ? <AgentAvatar module={agent.module} label={agent.name} size="sm" /> : <NivoAvatar isDecorative />
+              })()}
+              <div className={MEMBER_TEXT_CLASS_NAME}>
+                <Text size="sm" weight="medium" overflow="clamp-2">{`${g(`action_${item.action}`)}${item.lead ? ` · ${item.lead.contact_name}` : ""}`}</Text>
+                <Text size="xs" tone="muted" overflow="truncate">{item.reason ? g(`reason_${item.reason}`) : g("status_failed")}</Text>
+              </div>
+            </div>
+          </SurfaceCard>
         ))
       )}
     </section>

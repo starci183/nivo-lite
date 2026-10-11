@@ -1,39 +1,30 @@
 "use client";
 
-import { useState } from "react";
-import { SectionHeader, Tabs, Text } from "@starci/grammar/common";
+import { useState, type ReactNode } from "react";
+import { DescriptionList, SectionHeader, SurfaceCard, Tabs, Text, TextAction, type DescriptionListStatItem } from "@starci/grammar/common";
 import { useLocale, useT } from "@/i18n/client";
 import { workbenchAccounting } from "@/i18n/dict/workbenchAccounting";
 import type { AccountingWorkbench, Measure, PeriodKey, WeekBar } from "@/lib/workbench-accounting";
 import {
-  BAR_COLUMN_CLASS_NAME, BAR_LABELS_CLASS_NAME, BAR_LIVE_CLASS_NAME, BAR_SIM_CLASS_NAME, BAR_STACK_CLASS_NAME, BARS_CLASS_NAME, BLOCK_CLASS_NAME,
-  BLOCK_HEAD_CLASS_NAME, LEGEND_CLASS_NAME, MEASURE_CLASS_NAME, MEASURE_GRID_CLASS_NAME, MEASURE_VALUE_CLASS_NAME, PANEL_CLASS_NAME, SWATCH_CLASS_NAME,
+  BAR_COLUMN_CLASS_NAME, BAR_LABEL_CLASS_NAME, BAR_LABELS_CLASS_NAME, BAR_LIVE_CLASS_NAME, BAR_SIM_CLASS_NAME, BAR_STACK_CLASS_NAME, BARS_CLASS_NAME, BLOCK_CLASS_NAME,
+  BLOCK_HEAD_CLASS_NAME, LEGEND_CLASS_NAME, MEASURE_META_CLASS_NAME, PANEL_CLASS_NAME, SWATCH_LIVE_CLASS_NAME, SWATCH_SIM_CLASS_NAME,
 } from "./classNames";
 import { formatDay, formatMoney, formatMonth } from "./format";
 
-type MeasureCellProps = {
-  readonly label: string;
+type MeasureMetaProps = {
   readonly hint: string;
-  readonly source: string;
-  readonly measure: Measure;
-  readonly unit: "countInvoices" | "countPayments";
+  readonly lines: ReadonlyArray<string>;
+  readonly action?: ReactNode;
 };
 
-/** One figure: the real amount large, the simulated amount beside it (never added), and where it comes from. */
-const MeasureCell = ({ label, hint, source, measure, unit }: MeasureCellProps) => {
-  const t = useT(workbenchAccounting);
-  const locale = useLocale();
-  return (
-    <div className={MEASURE_CLASS_NAME}>
-      <Text size="sm" weight="semibold">{label}</Text>
-      <Text size="xs" tone="muted">{hint}</Text>
-      <p className={MEASURE_VALUE_CLASS_NAME}>{formatMoney(measure.vnd.live, locale)}</p>
-      <Text size="xs" tone="muted">{`${t("originLive")} · ${t(unit, { n: measure.count.live })}`}</Text>
-      <Text size="xs" tone="muted">{`${t("originSimulated")}: ${formatMoney(measure.vnd.simulated, locale)} · ${t(unit, { n: measure.count.simulated })}`}</Text>
-      <Text size="xs" tone="muted">{`${t("sourceLabel")}: ${source}`}</Text>
-    </div>
-  );
-};
+/** The lines under one figure: what it counts, the live and simulated parts (never added), and where it comes from. */
+const MeasureMeta = ({ hint, lines, action }: MeasureMetaProps) => (
+  <div className={MEASURE_META_CLASS_NAME}>
+    <Text size="xs" tone="muted">{hint}</Text>
+    {lines.map((line, i) => <Text key={`${i}-${line}`} size="xs" tone="muted">{line}</Text>)}
+    {action}
+  </div>
+);
 
 /** Weekly income bars: live in ink, simulated light, each with its own number below. */
 const Trend = ({ weeks }: { readonly weeks: ReadonlyArray<WeekBar> }) => {
@@ -54,7 +45,7 @@ const Trend = ({ weeks }: { readonly weeks: ReadonlyArray<WeekBar> }) => {
       </div>
       <div className={BAR_LABELS_CLASS_NAME}>
         {weeks.map((w) => (
-          <div key={w.startIso} className="min-w-0 flex-1">
+          <div key={w.startIso} className={BAR_LABEL_CLASS_NAME}>
             <Text size="xs" tone="muted">{formatDay(w.startIso, locale, false)}</Text>
             <Text size="xs" weight="medium">{formatMoney(w.live, locale)}</Text>
             {w.simulated > 0 ? <Text size="xs" tone="muted">{`+ ${formatMoney(w.simulated, locale)}`}</Text> : null}
@@ -72,6 +63,43 @@ export const OverviewPanel = ({ data, onOpenQuestions }: { readonly data: Accoun
   const [period, setPeriod] = useState<PeriodKey>("this");
   const p = data.periods[period];
   const waitingTotal = data.waiting.count.live + data.waiting.count.simulated;
+  const money = (n: number) => formatMoney(n, locale);
+  const moneyItem = (id: string, label: string, hint: string, source: string, measure: Measure, unit: "countInvoices" | "countPayments"): DescriptionListStatItem => ({
+    id,
+    term: label,
+    description: money(measure.vnd.live),
+    meta: (
+      <MeasureMeta
+        hint={hint}
+        lines={[
+          `${t("originLive")} · ${t(unit, { n: measure.count.live })}`,
+          `${t("originSimulated")}: ${money(measure.vnd.simulated)} · ${t(unit, { n: measure.count.simulated })}`,
+          `${t("sourceLabel")}: ${source}`,
+        ]}
+      />
+    ),
+  });
+  const measures: ReadonlyArray<DescriptionListStatItem> = [
+    moneyItem("income", t("mIncome"), t("mIncomeHint"), t("mIncomeSource"), p.income, "countInvoices"),
+    moneyItem("receivable", t("mReceivable"), t("mReceivableHint"), t("mReceivableSource"), p.receivable, "countInvoices"),
+    moneyItem("unmatched", t("mUnmatched"), t("mUnmatchedHint"), t("mUnmatchedSource"), p.unmatched, "countPayments"),
+    {
+      id: "waiting",
+      term: t("mWaiting"),
+      description: String(data.waiting.count.live),
+      meta: (
+        <MeasureMeta
+          hint={t("mWaitingHint")}
+          lines={[
+            t("originLive"),
+            `${t("originSimulated")}: ${data.waiting.count.simulated}`,
+            `${data.waiting.knownVnd > 0 ? `${t("waitingAmount", { amount: money(data.waiting.knownVnd) })} · ` : ""}${t("sourceLabel")}: ${t("mWaitingSource")}`,
+          ]}
+          action={waitingTotal > 0 ? <TextAction size="xs" onPress={onOpenQuestions}>{t("openQuestions")}</TextAction> : undefined}
+        />
+      ),
+    },
+  ];
   return (
     <div className={PANEL_CLASS_NAME}>
       <section className={BLOCK_CLASS_NAME} aria-label={t("overviewTitle")}>
@@ -86,32 +114,20 @@ export const OverviewPanel = ({ data, onOpenQuestions }: { readonly data: Accoun
             onSelect={(key) => setPeriod(key === "last" ? "last" : "this")}
           />
         </div>
-        <div className={MEASURE_GRID_CLASS_NAME}>
-          <MeasureCell label={t("mIncome")} hint={t("mIncomeHint")} source={t("mIncomeSource")} measure={p.income} unit="countInvoices" />
-          <MeasureCell label={t("mReceivable")} hint={t("mReceivableHint")} source={t("mReceivableSource")} measure={p.receivable} unit="countInvoices" />
-          <MeasureCell label={t("mUnmatched")} hint={t("mUnmatchedHint")} source={t("mUnmatchedSource")} measure={p.unmatched} unit="countPayments" />
-          <div className={MEASURE_CLASS_NAME}>
-            <Text size="sm" weight="semibold">{t("mWaiting")}</Text>
-            <Text size="xs" tone="muted">{t("mWaitingHint")}</Text>
-            <p className={MEASURE_VALUE_CLASS_NAME}>{data.waiting.count.live}</p>
-            <Text size="xs" tone="muted">{t("originLive")}</Text>
-            <Text size="xs" tone="muted">{`${t("originSimulated")}: ${data.waiting.count.simulated}`}</Text>
-            <Text size="xs" tone="muted">
-              {data.waiting.knownVnd > 0 ? `${t("waitingAmount", { amount: formatMoney(data.waiting.knownVnd, locale) })} · ` : ""}
-              {`${t("sourceLabel")}: ${t("mWaitingSource")}`}
-            </Text>
-            {waitingTotal > 0 ? <Text as="span" size="xs" weight="medium"><button type="button" className="cursor-pointer text-left underline" onClick={onOpenQuestions}>{t("openQuestions")}</button></Text> : null}
-          </div>
-        </div>
+        <SurfaceCard ariaLabel={t("overviewTitle")}>
+          <DescriptionList layout="stat-strip" isDivided items={measures} />
+        </SurfaceCard>
         {data.excludedTest > 0 ? <Text size="xs" tone="muted">{t("excludedTest", { n: data.excludedTest })}</Text> : null}
       </section>
 
       <section className={BLOCK_CLASS_NAME} aria-label={t("trendTitle")}>
         <SectionHeader level={2} title={t("trendTitle")} description={t("trendIntro")} />
-        <Trend weeks={p.weeks} />
+        <SurfaceCard ariaLabel={t("trendTitle")}>
+          <Trend weeks={p.weeks} />
+        </SurfaceCard>
         <div className={LEGEND_CLASS_NAME}>
-          <Text size="xs" tone="muted"><span className={`${SWATCH_CLASS_NAME} bg-foreground`} /> {t("originLive")}</Text>
-          <Text size="xs" tone="muted"><span className={`${SWATCH_CLASS_NAME} bg-muted opacity-40`} /> {t("originSimulated")}</Text>
+          <Text size="xs" tone="muted" startContent={<span aria-hidden className={SWATCH_LIVE_CLASS_NAME} />}>{t("originLive")}</Text>
+          <Text size="xs" tone="muted" startContent={<span aria-hidden className={SWATCH_SIM_CLASS_NAME} />}>{t("originSimulated")}</Text>
           <Text size="xs" tone="muted">{`${t("sourceLabel")}: ${t("mIncomeSource")}`}</Text>
         </div>
       </section>

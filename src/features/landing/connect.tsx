@@ -1,26 +1,8 @@
-import { Button } from "@starci/grammar/common";
+import { Badge, Button, PageContainer, Region, SectionHeader, SurfaceCopyGroup, SurfaceListCard, Text } from "@starci/grammar/common";
 import { getT } from "@/i18n/server";
 import { landing } from "@/i18n/dict/landing";
 import { LANDING_OFFER } from "./offer";
-import {
-  CONNECT,
-  CONNECT_ART,
-  CONNECT_EYEBROW,
-  CONNECT_GRID,
-  CONNECT_ITEM,
-  CONNECT_ITEM_ON,
-  CONNECT_LEAD,
-  CONNECT_LIST,
-  CONNECT_NAME,
-  CONNECT_NOTE,
-  CONNECT_OK,
-  CONNECT_SOON,
-  CONNECT_TEXT,
-  EYEBROW_DOT,
-  H2,
-  RAIL,
-  SECTION,
-} from "./classNames";
+import { CHANNEL_ROW, CONNECT_COPY, CONNECT_GRID, SECTION_STACK } from "./classNames";
 
 const CHANNELS = [
   { name: "chWebsite", text: "chWebsiteText", live: true },
@@ -29,45 +11,51 @@ const CHANNELS = [
   { name: "chForm", text: "chFormText", live: false },
 ] as const;
 
-/** Connect section on ink: the channel that works today and the ones on the roadmap. */
+const HEADING_ID = "landing-connect";
+
+/**
+ * Connect section: the channel that works today and the ones on the roadmap. It sits on the page canvas: the ink
+ * band is spent once per page, on the final call to action (DISCIPLINE-3). The channel state is stated in words on a
+ * Badge; only the live channel takes a status tone (ACCENT-5).
+ */
 export const LandingConnect = async () => {
   const t = await getT(landing);
   return (
-    <section className={CONNECT} aria-labelledby="landing-connect">
-      <div className={`${SECTION} ${RAIL}`}>
+    <Region labelledBy={HEADING_ID}>
+      <PageContainer measure="product">
         <div className={CONNECT_GRID}>
-          <div className="flex flex-col items-start gap-5">
-            <span className={CONNECT_EYEBROW}>
-              <span className={EYEBROW_DOT} />
-              {t("connectEyebrow")}
-            </span>
-            <h2 id="landing-connect" className={H2}>
-              {t("connectTitle")}
-            </h2>
-            <p className={CONNECT_LEAD}>{t("connectLead")}</p>
-            <img className={CONNECT_ART} src="/images/promo/mascot-offer.png" alt="" width={160} height={160} loading="lazy" />
+          <div className={CONNECT_COPY}>
+            <SectionHeader id={HEADING_ID} eyebrow={t("connectEyebrow")} title={t("connectTitle")} description={t("connectLead")} />
             <Button variant="primary" size="lg" href={LANDING_OFFER.ctaHref}>
               {t("connectCta")}
             </Button>
           </div>
-          <div className="flex flex-col gap-4">
-            <ul className={CONNECT_LIST}>
+          <div className={SECTION_STACK}>
+            <SurfaceListCard ariaLabel={t("connectTitle")}>
               {CHANNELS.map((c) => (
-                <li key={c.name} className={c.live ? CONNECT_ITEM_ON : CONNECT_ITEM}>
-                  <div>
-                    <p className={CONNECT_NAME}>{t(c.name)}</p>
-                    <p className={CONNECT_TEXT}>{t(c.text)}</p>
-                  </div>
-                  <span className={c.live ? CONNECT_OK : CONNECT_SOON}>
-                    {c.live ? t("connectAvailable") : t("connectRoadmap")}
-                  </span>
+                <li key={c.name} className={CHANNEL_ROW}>
+                  <SurfaceCopyGroup>
+                    <Text weight="medium">{t(c.name)}</Text>
+                    <Text size="sm" tone="muted">
+                      {t(c.text)}
+                    </Text>
+                  </SurfaceCopyGroup>
+                  {c.live ? (
+                    <Badge tone="success" isDot>
+                      {t("connectAvailable")}
+                    </Badge>
+                  ) : (
+                    <Badge tone="neutral">{t("connectRoadmap")}</Badge>
+                  )}
                 </li>
               ))}
-            </ul>
-            <p className={CONNECT_NOTE}>{t("connectNote")}</p>
+            </SurfaceListCard>
+            <Text size="sm" tone="muted">
+              {t("connectNote")}
+            </Text>
           </div>
         </div>
-      </div>
-    </section>
+      </PageContainer>
+    </Region>
   );
 };

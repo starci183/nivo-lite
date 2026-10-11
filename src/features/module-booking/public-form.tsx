@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { cn } from "@heroui/react";
+import { Alert, Button, Form, Heading, HorizontalScrollRegion, Input, NumberField, RadioGroup, SegmentedControl, SurfaceCard, Text, TextAction } from "@starci/grammar/common";
 import { addDays, localDate, localHhmm } from "@/lib/module-booking-availability";
 import { dayText } from "@/lib/module-booking-copy";
-import { FIELD, LABEL, vnd } from "./shared";
+import { HONEYPOT, PUBLIC_FORM, ROW, STACK, vnd } from "./shared";
 
 type Svc = { readonly id: string; readonly name: string; readonly description: string; readonly durationMin: number; readonly priceVnd: number | null };
 type Result = { readonly ok: boolean; readonly state: string; readonly message: string; readonly alternatives?: ReadonlyArray<string> };
@@ -38,8 +38,7 @@ export const PublicBookingForm = ({ slug, services, tz }: { readonly slug: strin
     return () => { cancelled = true; };
   }, [slug, serviceId, date, party]);
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submit = async () => {
     setBusy(true);
     setResult(null);
     try {
@@ -59,69 +58,93 @@ export const PublicBookingForm = ({ slug, services, tz }: { readonly slug: strin
 
   if (result?.ok) {
     return (
-      <div role="status" className="rounded-2xl border border-separator bg-surface p-5">
-        <h2 className="text-lg font-semibold">{result.state === "confirmed" ? "Đã xác nhận lịch hẹn" : "Đã gửi yêu cầu"}</h2>
-        <p className="mt-2">{result.message}</p>
-        <button type="button" className="mt-4 text-sm text-accent underline" onClick={() => { setResult(null); setStart(""); token.current = crypto.randomUUID(); }}>Đặt thêm một lịch khác</button>
-      </div>
+      <SurfaceCard ariaLabel={result.state === "confirmed" ? "Đã xác nhận lịch hẹn" : "Đã gửi yêu cầu"}>
+        <div className={STACK}>
+          <Heading level={2}>{result.state === "confirmed" ? "Đã xác nhận lịch hẹn" : "Đã gửi yêu cầu"}</Heading>
+          <Text live="polite">{result.message}</Text>
+          <div className={ROW}>
+            <TextAction size="sm" onPress={() => { setResult(null); setStart(""); token.current = crypto.randomUUID(); }}>Đặt thêm một lịch khác</TextAction>
+          </div>
+        </div>
+      </SurfaceCard>
     );
   }
 
   return (
-    <form className="flex min-w-0 flex-col gap-5" onSubmit={submit}>
-      <fieldset className="flex min-w-0 flex-col gap-2">
-        <legend className="mb-1 text-sm font-semibold">1. Chọn dịch vụ</legend>
-        {services.length === 0 ? <p className="text-sm text-muted">Cửa hàng chưa mở nhận lịch qua trang này.</p> : null}
-        {services.map((s) => (
-          <label key={s.id} className={cn("flex cursor-pointer items-start gap-3 rounded-xl border p-3", serviceId === s.id ? "border-accent bg-accent/10" : "border-separator bg-surface")}>
-            <input type="radio" name="service" className="mt-1" checked={serviceId === s.id} onChange={() => setServiceId(s.id)} />
-            <span className="flex min-w-0 flex-col">
-              <span className="font-medium">{s.name}</span>
-              <span className="text-sm text-muted">{s.durationMin} phút{s.priceVnd ? ` · ${vnd(s.priceVnd)}` : ""}{s.description ? ` · ${s.description}` : ""}</span>
-            </span>
-          </label>
-        ))}
-      </fieldset>
+    <Form label="Đặt lịch hẹn" isPending={busy} validationBehavior="aria" onSubmit={() => void submit()}>
+      <div className={PUBLIC_FORM}>
+        <SurfaceCard ariaLabel="1. Chọn dịch vụ">
+          {services.length === 0 ? (
+            <div className={STACK}>
+              <Heading level={2}>1. Chọn dịch vụ</Heading>
+              <Text size="sm" tone="muted">Cửa hàng chưa mở nhận lịch qua trang này.</Text>
+            </div>
+          ) : (
+            <RadioGroup
+              label="1. Chọn dịch vụ"
+              name="service"
+              variant="secondary"
+              options={services.map((s) => ({ value: s.id, label: s.name, description: `${s.durationMin} phút${s.priceVnd ? ` · ${vnd(s.priceVnd)}` : ""}${s.description ? ` · ${s.description}` : ""}` }))}
+              value={serviceId}
+              onValueChange={setServiceId}
+            />
+          )}
+        </SurfaceCard>
 
-      <fieldset className="flex min-w-0 flex-col gap-2">
-        <legend className="mb-1 text-sm font-semibold">2. Chọn ngày và giờ</legend>
-        <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Chọn ngày">
-          {days.map((d) => (
-            <button key={d} type="button" onClick={() => setDate(d)} aria-pressed={date === d} className={cn("shrink-0 rounded-xl border px-3 py-2 text-sm", date === d ? "border-accent bg-accent/10 font-semibold" : "border-separator bg-surface")}>
-              {dayText(d)}
-            </button>
-          ))}
-        </div>
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4" role="group" aria-label="Chọn giờ">
-          {times === null ? <p className="col-span-full text-sm text-muted">Đang tìm giờ trống...</p> : times.length === 0 ? <p className="col-span-full text-sm text-muted">Ngày này chưa còn giờ trống. Bạn chọn ngày khác nhé.</p> : times.map((t) => (
-            <button key={t} type="button" onClick={() => setStart(t)} aria-pressed={start === t} className={cn("rounded-xl border py-2 text-sm", start === t ? "border-accent bg-accent text-accent-foreground font-semibold" : "border-separator bg-surface")}>
-              {localHhmm(Date.parse(t), tz)}
-            </button>
-          ))}
-        </div>
-      </fieldset>
+        <SurfaceCard ariaLabel="2. Chọn ngày và giờ">
+          <div className={STACK}>
+            <HorizontalScrollRegion overflow="needed" isFocusable={false}>
+              <SegmentedControl label="2. Chọn ngày và giờ" options={days.map((d) => ({ value: d, label: dayText(d) }))} value={date} onValueChange={setDate} />
+            </HorizontalScrollRegion>
+            {times === null ? (
+              <Text size="sm" tone="muted" live="polite">Đang tìm giờ trống...</Text>
+            ) : times.length === 0 ? (
+              <Text size="sm" tone="muted" live="polite">Ngày này chưa còn giờ trống. Bạn chọn ngày khác nhé.</Text>
+            ) : (
+              <RadioGroup
+                label="Chọn giờ"
+                name="start"
+                variant="secondary"
+                orientation="horizontal"
+                options={times.map((t) => ({ value: t, label: localHhmm(Date.parse(t), tz) }))}
+                value={start || null}
+                onValueChange={setStart}
+              />
+            )}
+          </div>
+        </SurfaceCard>
 
-      <fieldset className="flex min-w-0 flex-col gap-3">
-        <legend className="mb-1 text-sm font-semibold">3. Thông tin của bạn</legend>
-        <label className={LABEL}>Tên của bạn<input className={FIELD} value={name} onChange={(e) => setName(e.target.value)} required autoComplete="name" /></label>
-        <label className={LABEL}>Số điện thoại<input className={FIELD} value={phone} onChange={(e) => setPhone(e.target.value)} required inputMode="tel" autoComplete="tel" /></label>
-        <label className={LABEL}>Email (không bắt buộc)<input className={FIELD} type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" /></label>
-        <label className={LABEL}>Số người<input className={FIELD} type="number" min={1} max={20} value={party} onChange={(e) => setParty(Math.max(1, Number(e.target.value) || 1))} /></label>
-        <label className={LABEL}>Ghi chú (không bắt buộc)<input className={FIELD} value={note} onChange={(e) => setNote(e.target.value)} /></label>
-        <div aria-hidden className="absolute -left-[9999px] h-0 w-0 overflow-hidden"><label>Website<input tabIndex={-1} autoComplete="off" value={website} onChange={(e) => setWebsite(e.target.value)} /></label></div>
-      </fieldset>
+        <SurfaceCard ariaLabel="3. Thông tin của bạn">
+          <div className={STACK}>
+            <Heading level={2}>3. Thông tin của bạn</Heading>
+            <Input id="bk-public-name" name="name" label="Tên của bạn" variant="secondary" isRequired value={name} onValueChange={setName} />
+            <Input id="bk-public-phone" name="phone" kind="tel" label="Số điện thoại" variant="secondary" isRequired value={phone} onValueChange={setPhone} />
+            <Input id="bk-public-email" name="email" kind="email" label="Email (không bắt buộc)" variant="secondary" value={email} onValueChange={setEmail} />
+            <NumberField label="Số người" variant="secondary" minValue={1} maxValue={20} step={1} value={party} onValueChange={(v) => setParty(Number.isFinite(v) ? Math.max(1, v) : 1)} />
+            <Input id="bk-public-note" name="note" label="Ghi chú (không bắt buộc)" variant="secondary" value={note} onValueChange={setNote} />
+            {/* grammar gap: no Common honeypot field; the bot trap stays a raw, visually hidden input. */}
+            <div aria-hidden className={HONEYPOT}><label>Website<input tabIndex={-1} autoComplete="off" value={website} onChange={(e) => setWebsite(e.target.value)} /></label></div>
+          </div>
+        </SurfaceCard>
 
-      {result && !result.ok ? (
-        <div role="alert" className="rounded-xl border border-danger p-3 text-sm text-danger">
-          {result.message}
-          {result.alternatives?.length ? <div className="mt-2 flex flex-wrap gap-2">{result.alternatives.map((a) => <button key={a} type="button" className="rounded-lg border border-separator bg-surface px-2 py-1 text-foreground" onClick={() => { setDate(localDate(Date.parse(a), tz)); setStart(a); setResult(null); }}>{dayText(localDate(Date.parse(a), tz))} {localHhmm(Date.parse(a), tz)}</button>)}</div> : null}
-        </div>
-      ) : null}
+        {result && !result.ok ? (
+          <div className={STACK}>
+            <Alert tone="negative" title={result.message} />
+            {result.alternatives?.length ? (
+              <div className={ROW}>
+                {result.alternatives.map((a) => (
+                  <Button key={a} size="sm" variant="outline" onPress={() => { setDate(localDate(Date.parse(a), tz)); setStart(a); setResult(null); }}>
+                    {`${dayText(localDate(Date.parse(a), tz))} ${localHhmm(Date.parse(a), tz)}`}
+                  </Button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
-      <button type="submit" disabled={busy || !start || !name.trim() || !phone.trim() || !svc} className="h-12 rounded-xl bg-accent px-4 font-semibold text-accent-foreground disabled:opacity-50">
-        {busy ? "Đang gửi..." : "Đặt lịch hẹn"}
-      </button>
-      <p className="text-center text-xs text-muted">Bạn không cần tạo tài khoản. Cửa hàng sẽ nhắn xác nhận qua số điện thoại hoặc email bạn để lại.</p>
-    </form>
+        <Button type="submit" variant="primary" size="lg" width="fill" isPending={busy} isDisabled={busy || !start || !name.trim() || !phone.trim() || !svc}>Đặt lịch hẹn</Button>
+        <Text size="xs" tone="muted">Bạn không cần tạo tài khoản. Cửa hàng sẽ nhắn xác nhận qua số điện thoại hoặc email bạn để lại.</Text>
+      </div>
+    </Form>
   );
 };

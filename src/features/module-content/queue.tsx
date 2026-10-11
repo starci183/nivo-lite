@@ -2,13 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Alert, Button, EmptyNotice, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common";
+import { Alert, Button, EmptyNotice, ListItem, SurfaceListCard, Text } from "@starci/grammar/common";
 import { canDecideItem, useMember } from "@/features/shell/member-context";
 import { useT } from "@/i18n/client";
 import { content } from "@/i18n/dict/content";
 import { decideWorkItem } from "@/lib/flow-actions";
 import { channelRule, copyText, type ContentItem } from "@/lib/module-content-shared";
-import { CHIPS_CLASS_NAME, LIST_CLASS_NAME, QUOTE_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME } from "./classNames";
+import { CHIPS_CLASS_NAME, QUOTE_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME } from "./classNames";
 import { dateText, timeText } from "./format";
 import { ChannelBadges } from "./parts";
 
@@ -42,7 +42,7 @@ const QueueCard = ({ item, onOpen }: { readonly item: ContentItem; readonly onOp
   };
 
   return (
-    <li className={ROW_CLASS_NAME}>
+    <ListItem className={ROW_CLASS_NAME}>
       <div className={ROW_MAIN_CLASS_NAME}>
         <Text size="xs" tone="muted">{item.scheduled_at ? `${dateText(item.scheduled_at)} · ${timeText(item.scheduled_at)}` : t("noDate")}</Text>
         <Text weight="semibold">{item.title}</Text>
@@ -65,7 +65,7 @@ const QueueCard = ({ item, onOpen }: { readonly item: ContentItem; readonly onOp
         ) : null}
         <Button variant="outline" size="sm" onPress={() => onOpen(item.id)}>{t("queueOpen")}</Button>
       </div>
-    </li>
+    </ListItem>
   );
 };
 
@@ -75,29 +75,22 @@ export const QueuePanel = ({ waiting, ready, onOpen }: QueuePanelProps) => {
   return (
     <>
       <Alert title={t("queueWhy")} tone="informative" />
-      <SurfaceCard ariaLabel={t("tabQueue")}>
-        {waiting.length === 0 ? <EmptyNotice message={t("queueEmptyTitle")} description={t("queueEmptyBody")} /> : (
-          <ul className={LIST_CLASS_NAME}>{waiting.map((i) => <QueueCard key={i.id} item={i} onOpen={onOpen} />)}</ul>
-        )}
-      </SurfaceCard>
+      <SurfaceListCard ariaLabel={t("tabQueue")} empty={<EmptyNotice message={t("queueEmptyTitle")} description={t("queueEmptyBody")} />}>
+        {waiting.map((i) => <QueueCard key={i.id} item={i} onOpen={onOpen} />)}
+      </SurfaceListCard>
       {ready.length ? (
-        <>
-          <SectionHeader level={2} title={t("readyTitle")} />
-          <SurfaceCard ariaLabel={t("readyTitle")}>
-            <ul className={LIST_CLASS_NAME}>
-              {ready.map((i) => (
-                <li key={i.id} className={ROW_CLASS_NAME}>
-                  <div className={ROW_MAIN_CLASS_NAME}>
-                    <Text size="xs" tone="muted">{i.scheduled_at ? `${dateText(i.scheduled_at)} · ${timeText(i.scheduled_at)}` : t("noDate")}</Text>
-                    <Text weight="semibold">{i.title}</Text>
-                    <div className={CHIPS_CLASS_NAME}><ChannelBadges channels={i.channels} />{i.approved_by ? <Text as="span" size="xs" tone="muted">{t("approvedBy", { who: i.approved_by })}</Text> : null}</div>
-                  </div>
-                  <div className={ROW_ACTIONS_CLASS_NAME}><Button variant="primary" size="sm" onPress={() => onOpen(i.id)}>{t("postedTitle")}</Button></div>
-                </li>
-              ))}
-            </ul>
-          </SurfaceCard>
-        </>
+        <SurfaceListCard label={t("readyTitle")} headingLevel={2}>
+          {ready.map((i) => (
+            <ListItem key={i.id} className={ROW_CLASS_NAME}>
+              <div className={ROW_MAIN_CLASS_NAME}>
+                <Text size="xs" tone="muted">{i.scheduled_at ? `${dateText(i.scheduled_at)} · ${timeText(i.scheduled_at)}` : t("noDate")}</Text>
+                <Text weight="semibold">{i.title}</Text>
+                <div className={CHIPS_CLASS_NAME}><ChannelBadges channels={i.channels} />{i.approved_by ? <Text as="span" size="xs" tone="muted">{t("approvedBy", { who: i.approved_by })}</Text> : null}</div>
+              </div>
+              <div className={ROW_ACTIONS_CLASS_NAME}><Button variant="primary" size="sm" onPress={() => onOpen(i.id)}>{t("postedTitle")}</Button></div>
+            </ListItem>
+          ))}
+        </SurfaceListCard>
       ) : null}
     </>
   );

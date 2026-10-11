@@ -5,7 +5,7 @@ import { Alert, Badge, Button, SurfaceCard, Text } from "@starci/grammar/common"
 import { useT } from "@/i18n/client";
 import { engine as dict } from "@/i18n/dict/engine";
 import type { Installation } from "@/lib/modules-shared";
-import { STACK_CLASS_NAME } from "./classNames";
+import { ACTIONS_CLASS_NAME, STACK_CLASS_NAME } from "./classNames";
 import { getAgentSyncStatus, resyncAgent, type AgentSyncStatus } from "./processorActions";
 
 type ProcessorCardProps = { readonly installation: Installation; readonly canEdit: boolean };
@@ -71,7 +71,7 @@ export const ProcessorCard = ({ installation, canEdit }: ProcessorCardProps) => 
   return (
     <SurfaceCard label={t("title")} headingLevel={2}>
       <div className={STACK_CLASS_NAME}>
-        <div className="flex flex-wrap items-center gap-3" aria-live="polite">
+        <div className={ACTIONS_CLASS_NAME} aria-live="polite">
           <Badge isDot tone={syncLine?.tone ?? "neutral"}>{syncLine?.text ?? "…"}</Badge>
           <Button variant="secondary" size="sm" isPending={queuing} isDisabled={queuing || sync?.state === "syncing"} onPress={() => void resync()}>{t("resync")}</Button>
         </div>

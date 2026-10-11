@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useId, useRef, useState, useTransition, type CSSProperties, type FormEvent } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion } from "framer-motion"
-import { Button, CloseButton, Form, Input, Text } from "@starci/grammar/common"
-import { NivoIcon } from "@/ui/leaves/NivoIcon"
+import { Button, ChatBubble, CloseButton, Form, IconButton, Input, List, ListItem, SurfaceCard, Text } from "@starci/grammar/common"
+import { nivoIconSource } from "@/ui"
 import { useLocale, useT } from "@/i18n/client"
 import { guide as dict } from "@/i18n/dict/guide"
 import { askGuide } from "@/lib/guide/actions"
@@ -12,8 +12,8 @@ import { pageAt } from "@/lib/guide/sitemap"
 import type { GuideLink, GuideReply } from "@/lib/guide/types"
 import { useGuideSpotlight, queueSpotlight } from "./spotlight"
 import {
-  ASK_INPUT_CLASS, ASK_ROW_CLASS, VIEWPORT_CLASS, BUBBLE_CLASS, BUBBLE_ICON_CLASS, FOOT_CLASS, GUIDE_MSG_CLASS, LINKS_CLASS, MESSAGES_CLASS, PANEL_CLASS,
-  PANEL_HEAD_CLASS, PANEL_HEAD_TEXT_CLASS, STEPS_CLASS, SUGGEST_CLASS, USER_MSG_CLASS,
+  ASK_INPUT_CLASS, ASK_ROW_CLASS, VIEWPORT_CLASS, BUBBLE_CLASS, FOOT_CLASS, LINKS_CLASS, MESSAGES_CLASS, PANEL_BODY_CLASS, PANEL_CLASS,
+  PANEL_HEAD_CLASS, PANEL_HEAD_TEXT_CLASS, REPLY_CLASS, STEPS_CLASS, SUGGEST_CLASS,
 } from "./classNames"
 
 /** Props for {@link GuideBubble}. */
@@ -167,23 +167,20 @@ export const GuideBubble = ({ isManager }: GuideBubbleProps) => {
     if (typeof window === "undefined") return undefined
     const h = window.innerHeight
     // Phones: full width, sitting just above the bubble so it stays visible.
-    if (window.innerWidth < 640) return { left: 8, right: 8, bottom: h - top + GAP, maxHeight: Math.min(PANEL_MAX_H, top - GAP - TOP_RESERVE + 16) }
+    if (window.innerWidth < 640) return { left: 8, right: 8, bottom: h - top + GAP, height: Math.min(PANEL_MAX_H, top - GAP - TOP_RESERVE + 16) }
     // Beside the bubble, never over it: level with its bottom edge, or opening downwards when the bubble sits high.
     const across = side === "right" ? { right: EDGE + SIZE + GAP } : { left: contentLeft() + EDGE + SIZE + GAP }
     const anchor = top + SIZE
     return anchor >= h / 2
-      ? { ...across, width: PANEL_W, bottom: h - anchor, maxHeight: Math.min(PANEL_MAX_H, anchor - EDGE) }
-      : { ...across, width: PANEL_W, top, maxHeight: Math.min(PANEL_MAX_H, h - top - EDGE) }
+      ? { ...across, width: PANEL_W, bottom: h - anchor, height: Math.min(PANEL_MAX_H, anchor - EDGE) }
+      : { ...across, width: PANEL_W, top, height: Math.min(PANEL_MAX_H, h - top - EDGE) }
   })()
 
   return (
     <>
       <div ref={viewportRef} className={VIEWPORT_CLASS} aria-hidden="true" />
-      <motion.button
-        type="button"
-        aria-label={open ? t("close") : t("open")}
-        aria-expanded={open}
-        aria-controls={panelId}
+      {/* framer-motion owns the drag and the settle; the Grammar IconButton inside owns the action, its name and focus. */}
+      <motion.div
         className={BUBBLE_CLASS}
         style={{ x, y, visibility: ready ? "visible" : "hidden" }}
         drag
@@ -194,16 +191,21 @@ export const GuideBubble = ({ isManager }: GuideBubbleProps) => {
         onDragStart={() => { dragged.current = true }}
         // framer starts its own release animation right after onDragEnd; settle on the next frame so ours is not cancelled.
         onDragEnd={() => requestAnimationFrame(() => settle(x.get() + SIZE / 2 < window.innerWidth / 2 ? "left" : "right", y.get()))}
-        onClick={() => {
-          if (dragged.current) {
-            dragged.current = false
-            return
-          }
-          setOpen((o) => !o)
-        }}
       >
-        <span className={BUBBLE_ICON_CLASS}><NivoIcon props={{ name: open ? "close" : "support" }} /></span>
-      </motion.button>
+        <IconButton
+          source={nivoIconSource(open ? "close" : "support", "leading")}
+          label={open ? t("close") : t("open")}
+          aria-expanded={open}
+          aria-controls={panelId}
+          onPress={() => {
+            if (dragged.current) {
+              dragged.current = false
+              return
+            }
+            setOpen((o) => !o)
+          }}
+        />
+      </motion.div>
 
       <AnimatePresence>
         {open ? (
@@ -219,55 +221,67 @@ export const GuideBubble = ({ isManager }: GuideBubbleProps) => {
             exit={reduce ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.97 }}
             transition={{ duration: reduce ? 0 : 0.18, ease: [0.4, 0, 0.2, 1] }}
           >
-            <header className={PANEL_HEAD_CLASS}>
-              <div className={PANEL_HEAD_TEXT_CLASS}>
-                <Text weight="semibold">{t("title")}</Text>
-                <Text size="xs" tone="muted">{here ? t("here", { page: here.title[locale] }) : t("subtitle")}</Text>
-              </div>
-              <CloseButton label={t("close")} size="sm" onPress={() => setOpen(false)} />
-            </header>
-
-            <div ref={listRef} className={MESSAGES_CLASS} aria-live="polite">
-              <div className={GUIDE_MSG_CLASS}><Text size="sm">{t("greeting")}</Text></div>
-              {messages.map((m) => m.role === "user" ? (
-                <div key={m.id} className={USER_MSG_CLASS}><Text size="sm">{m.text}</Text></div>
-              ) : (
-                <div key={m.id} className={GUIDE_MSG_CLASS}>
-                  <Text size="sm">{m.reply.answer}</Text>
-                  {m.reply.steps.length ? (
-                    <>
-                      <Text size="xs" tone="muted">{t("steps")}</Text>
-                      <ol className={STEPS_CLASS}>{m.reply.steps.map((s) => <li key={s}>{s}</li>)}</ol>
-                    </>
-                  ) : null}
-                  {m.reply.links.length ? (
-                    <div className={LINKS_CLASS}>
-                      {m.reply.links.map((l) => <Button key={l.pageId} variant="outline" size="sm" onPress={() => go(l)}>{l.label}</Button>)}
-                    </div>
-                  ) : null}
-                  {m.reply.source === "ai" ? <Text size="xs" tone="muted">{t("aiNote")}</Text> : null}
-                </div>
-              ))}
-              {isPending ? <div className={GUIDE_MSG_CLASS}><Text size="sm" tone="muted">{t("thinking")}</Text></div> : null}
-            </div>
-
-            {messages.length === 0 ? (
-              <div className={SUGGEST_CLASS}>
-                {suggestions.map((s) => <Button key={s} variant="secondary" size="sm" isDisabled={isPending} onPress={() => send(s)}>{s}</Button>)}
-              </div>
-            ) : null}
-
-            <div className={FOOT_CLASS}>
-              <Form label={t("title")} onSubmit={onSubmit} isPending={isPending}>
-                <div className={ASK_ROW_CLASS}>
-                  <div className={ASK_INPUT_CLASS}>
-                    <Input id={`${panelId}-q`} name="question" label={t("questionLabel")} placeholder={t("placeholder")} variant="secondary" value={question} onValueChange={setQuestion} />
+            {/* SURFACE-2 / BOUNDARY-6: the panel is one top-level card (theme shadow, no border); its bands are joined inside it. */}
+            <SurfaceCard ariaLabel={t("title")} composition="joined" height="fill">
+              <div className={PANEL_BODY_CLASS}>
+                <header className={PANEL_HEAD_CLASS}>
+                  <div className={PANEL_HEAD_TEXT_CLASS}>
+                    <Text weight="semibold">{t("title")}</Text>
+                    <Text size="xs" tone="muted">{here ? t("here", { page: here.title[locale] }) : t("subtitle")}</Text>
                   </div>
-                  <Button type="submit" variant="primary" isPending={isPending} isDisabled={!question.trim()}>{t("send")}</Button>
+                  <CloseButton label={t("close")} size="sm" onPress={() => setOpen(false)} />
+                </header>
+
+                <div ref={listRef} className={MESSAGES_CLASS} aria-live="polite">
+                  <ChatBubble side="incoming"><Text as="p" size="sm">{t("greeting")}</Text></ChatBubble>
+                  {messages.map((m) => m.role === "user" ? (
+                    <ChatBubble key={m.id} side="outgoing"><Text as="p" size="sm">{m.text}</Text></ChatBubble>
+                  ) : (
+                    <ChatBubble
+                      key={m.id}
+                      side="incoming"
+                      {...(m.reply.source === "ai" ? { footer: <Text size="xs" tone="muted">{t("aiNote")}</Text> } : {})}
+                    >
+                      <div className={REPLY_CLASS}>
+                        <Text as="p" size="sm">{m.reply.answer}</Text>
+                        {m.reply.steps.length ? (
+                          <>
+                            <Text size="xs" tone="muted">{t("steps")}</Text>
+                            <List as="ol" className={STEPS_CLASS} label={t("steps")}>
+                              {m.reply.steps.map((step, i) => <ListItem key={step}><Text size="sm">{`${i + 1}. ${step}`}</Text></ListItem>)}
+                            </List>
+                          </>
+                        ) : null}
+                        {m.reply.links.length ? (
+                          <div className={LINKS_CLASS}>
+                            {m.reply.links.map((l) => <Button key={l.pageId} variant="outline" size="sm" onPress={() => go(l)}>{l.label}</Button>)}
+                          </div>
+                        ) : null}
+                      </div>
+                    </ChatBubble>
+                  ))}
+                  {isPending ? <ChatBubble side="incoming"><Text as="p" size="sm" tone="muted">{t("thinking")}</Text></ChatBubble> : null}
                 </div>
-              </Form>
-              {messages.length ? <Button variant="ghost" size="sm" isDisabled={isPending} onPress={() => setMessages([])}>{t("restart")}</Button> : null}
-            </div>
+
+                {messages.length === 0 ? (
+                  <div className={SUGGEST_CLASS}>
+                    {suggestions.map((s) => <Button key={s} variant="secondary" size="sm" isDisabled={isPending} onPress={() => send(s)}>{s}</Button>)}
+                  </div>
+                ) : null}
+
+                <div className={FOOT_CLASS}>
+                  <Form label={t("title")} onSubmit={onSubmit} isPending={isPending}>
+                    <div className={ASK_ROW_CLASS}>
+                      <div className={ASK_INPUT_CLASS}>
+                        <Input id={`${panelId}-q`} name="question" label={t("questionLabel")} placeholder={t("placeholder")} variant="secondary" value={question} onValueChange={setQuestion} />
+                      </div>
+                      <Button type="submit" variant="primary" isPending={isPending} isDisabled={!question.trim()}>{t("send")}</Button>
+                    </div>
+                  </Form>
+                  {messages.length ? <div><Button variant="ghost" size="sm" isDisabled={isPending} onPress={() => setMessages([])}>{t("restart")}</Button></div> : null}
+                </div>
+              </div>
+            </SurfaceCard>
           </motion.section>
         ) : null}
       </AnimatePresence>

@@ -2,11 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { Badge, Text } from "@starci/grammar/common";
+import { Badge, List, ListItem, Text, TextAction } from "@starci/grammar/common";
 import { useT } from "@/i18n/client";
 import { onboarding } from "@/i18n/dict/onboarding";
 import { switchWorkspaceAction } from "./actions";
-import { SWITCH_CLASS_NAME, SWITCH_ITEM_CLASS_NAME } from "./classNames";
+import { COPY_CLASS_NAME, SWITCH_CLASS_NAME } from "./classNames";
 
 /** One workspace the person is an active member of. */
 export type SwitcherWorkspace = { readonly id: string; readonly name: string; readonly role: "owner" | "manager" | "staff" };
@@ -21,7 +21,8 @@ export type WorkspaceSwitcherProps = {
 
 /**
  * Lists the person's workspaces (current one marked), switches with a cookie + reload, and ends with "Tạo workspace mới"
- * (-> /workspaces/new) and "Tất cả workspace" (-> /workspaces). Meant for the shell's user menu.
+ * (-> /workspaces/new) and "Tất cả workspace" (-> /workspaces). Meant for the shell's user menu. Every entry is a Grammar
+ * TextAction: a command for a switch (`appearance="choice"`, `isCurrent` on the current one), a destination for the two links.
  */
 export const WorkspaceSwitcher = ({ workspaces, currentId, roleLabels }: WorkspaceSwitcherProps) => {
   const t = useT(onboarding);
@@ -36,28 +37,29 @@ export const WorkspaceSwitcher = ({ workspaces, currentId, roleLabels }: Workspa
     });
   };
   return (
-    <ul className={SWITCH_CLASS_NAME} aria-label={t("switchTitle")}>
+    <List className={SWITCH_CLASS_NAME} label={t("switchTitle")}>
       {workspaces.map((w) => (
-        <li key={w.id}>
-          <button type="button" className={SWITCH_ITEM_CLASS_NAME} disabled={isPending} aria-current={w.id === currentId ? "true" : undefined} onClick={() => pick(w.id)}>
-            <span>
-              <Text weight="medium">{w.name}</Text>
-              <Text size="sm" tone="muted">{roleLabels[w.role]}</Text>
+        <ListItem key={w.id}>
+          <TextAction
+            appearance="choice"
+            isCurrent={w.id === currentId}
+            isDisabled={isPending}
+            onPress={() => pick(w.id)}
+            endContent={w.id === currentId ? <Badge tone="accent">{t("switchCurrent")}</Badge> : undefined}
+          >
+            <span className={COPY_CLASS_NAME}>
+              <Text as="span" weight="medium">{w.name}</Text>
+              <Text as="span" size="sm" tone="muted">{roleLabels[w.role]}</Text>
             </span>
-            {w.id === currentId ? <Badge tone="accent">{t("switchCurrent")}</Badge> : null}
-          </button>
-        </li>
+          </TextAction>
+        </ListItem>
       ))}
-      <li>
-        <a className={SWITCH_ITEM_CLASS_NAME} href="/workspaces">
-          <Text weight="medium">{t("switchAll")}</Text>
-        </a>
-      </li>
-      <li>
-        <a className={SWITCH_ITEM_CLASS_NAME} href="/workspaces/new">
-          <Text weight="medium" tone="accent">{t("switchNew")}</Text>
-        </a>
-      </li>
-    </ul>
+      <ListItem>
+        <TextAction appearance="choice" href="/workspaces">{t("switchAll")}</TextAction>
+      </ListItem>
+      <ListItem>
+        <TextAction appearance="choice" href="/workspaces/new">{t("switchNew")}</TextAction>
+      </ListItem>
+    </List>
   );
 };

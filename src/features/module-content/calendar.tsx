@@ -2,14 +2,17 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { Button, EmptyNotice, SurfaceCard, Text } from "@starci/grammar/common";
+import { Button, EmptyNotice, ListBox, ListItem, SurfaceCard, SurfaceListCard, Text } from "@starci/grammar/common";
 import { useT } from "@/i18n/client";
 import { content } from "@/i18n/dict/content";
 import { daysInMonth, isoWeekday, pad2, vnDateKey, vnParts, type ContentItem, type Pillar } from "@/lib/module-content-shared";
 import { moveItemAction } from "./actions";
-import { AGENDA_WRAP_CLASS_NAME, CELL_CLASS_NAME, CELL_DROP_CLASS_NAME, CELL_OUT_CLASS_NAME, CELL_TODAY_CLASS_NAME, CHIP_CLASS_NAME, CHIPS_CLASS_NAME, GRID_CLASS_NAME, GRID_HEAD_CLASS_NAME, GRID_WRAP_CLASS_NAME, LIST_CLASS_NAME, ROW_BUTTON_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME } from "./classNames";
+import {
+  AGENDA_WRAP_CLASS_NAME, CELL_CLASS_NAME, CELL_DROP_CLASS_NAME, CELL_OUT_CLASS_NAME, CELL_TODAY_CLASS_NAME, CHIP_CLASS_NAME, CHIP_SKIPPED_CLASS_NAME, CHIPS_CLASS_NAME, GRID_CLASS_NAME, GRID_HEAD_CLASS_NAME,
+  GRID_WRAP_CLASS_NAME, ROW_CLASS_NAME,
+} from "./classNames";
 import { dateText, moveToDay, timeText } from "./format";
-import { ChannelBadges, pillarBorder, StatusBadge } from "./parts";
+import { ChannelBadges, StatusBadge } from "./parts";
 
 export type CalendarProps = {
   readonly items: ReadonlyArray<ContentItem>;
@@ -74,24 +77,27 @@ export const MonthCalendar = ({ items, pillars, y, m, nowIso, canManage, onOpen,
     });
   };
 
-  const chip = (i: ContentItem) => (
-    <button
-      key={i.id} type="button" draggable={canManage && i.status !== "published"}
-      onDragStart={(e) => { setDragId(i.id); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", i.id); }}
-      onDragEnd={() => { setDragId(null); setOverKey(null); }}
-      onClick={() => onOpen(i.id)} className={`${CHIP_CLASS_NAME} ${pillarBorder(pillars, i.pillar_id)} ${i.status === "skipped" ? "opacity-50" : ""}`}
-      aria-label={`${timeText(i.scheduled_at)} ${i.title}`}
-    >
-      <Text as="span" size="xs" tone="muted">{timeText(i.scheduled_at)} · {t(`status_${i.status}`)}</Text>
-      <Text as="span" size="xs" weight="medium" overflow="clamp-2">{i.title}</Text>
-    </button>
-  );
+  // grammar gap: the chip must be a drag source, which Button does not publish; it stays the smallest app-owned button.
+  const chip = (i: ContentItem) => {
+    const pillar = pillars.find((p) => p.id === i.pillar_id)?.name;
+    return (
+      <button
+        key={i.id} type="button" draggable={canManage && i.status !== "published"}
+        onDragStart={(e) => { setDragId(i.id); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", i.id); }}
+        onDragEnd={() => { setDragId(null); setOverKey(null); }}
+        onClick={() => onOpen(i.id)} className={i.status === "skipped" ? `${CHIP_CLASS_NAME} ${CHIP_SKIPPED_CLASS_NAME}` : CHIP_CLASS_NAME}
+        aria-label={`${timeText(i.scheduled_at)} ${i.title}${pillar ? ` · ${pillar}` : ""}`}
+      >
+        <Text as="span" size="xs" tone="muted">{timeText(i.scheduled_at)} · {t(`status_${i.status}`)}</Text>
+        <Text as="span" size="xs" weight="medium" overflow="clamp-2">{i.title}</Text>
+      </button>
+    );
+  };
 
   if (!hasSetup && items.length === 0) {
     return (
       <SurfaceCard ariaLabel={t("setupFirstTitle")}>
-        <EmptyNotice message={t("setupFirstTitle")} description={t("setupFirstBody")} />
-        <Button variant="secondary" onPress={onOpenSettings}>{t("openSettings")}</Button>
+        <EmptyNotice message={t("setupFirstTitle")} description={t("setupFirstBody")} actionLabel={t("openSettings")} actionVariant="secondary" onAction={onOpenSettings} />
       </SurfaceCard>
     );
   }
@@ -100,8 +106,9 @@ export const MonthCalendar = ({ items, pillars, y, m, nowIso, canManage, onOpen,
   return (
     <>
       <div className={GRID_WRAP_CLASS_NAME}>
+        <SurfaceCard ariaLabel={t("monthTitle", { m: pad2(m), y })} composition="joined">
         <div className={GRID_CLASS_NAME} role="grid" aria-label={t("monthTitle", { m: pad2(m), y })}>
-          {weekdays.map((d) => <div key={d} role="columnheader" className={GRID_HEAD_CLASS_NAME}><Text as="span" size="xs" weight="semibold" tone="muted">{d}</Text></div>)}
+          {weekdays.map((d) => <div key={d} role="columnheader" className={GRID_HEAD_CLASS_NAME}><Text as="span" size="xs" weight="semibold">{d}</Text></div>)}
           {cells.map((c, idx) => {
             if (c.day === null) return <div key={`e${idx}`} className={`${CELL_CLASS_NAME} ${CELL_OUT_CLASS_NAME}`} role="gridcell" aria-hidden />;
             const key = `${y}-${pad2(m)}-${pad2(c.day)}`;
@@ -122,6 +129,7 @@ export const MonthCalendar = ({ items, pillars, y, m, nowIso, canManage, onOpen,
             );
           })}
         </div>
+        </SurfaceCard>
         {canManage ? <Text size="xs" tone="muted">{t("dragHint")}</Text> : null}
         {monthItems.length === 0 ? <Text size="sm" tone="muted">{t("emptyMonthBody")}</Text> : null}
       </div>
@@ -129,36 +137,32 @@ export const MonthCalendar = ({ items, pillars, y, m, nowIso, canManage, onOpen,
       <div className={AGENDA_WRAP_CLASS_NAME}>
         <SurfaceCard ariaLabel={t("monthTitle", { m: pad2(m), y })}>
           {monthItems.length === 0 ? <EmptyNotice message={t("emptyMonthTitle")} description={t("emptyMonthBody")} /> : (
-            <ul className={LIST_CLASS_NAME}>
-              {monthItems.map((i) => (
-                <li key={i.id} className={ROW_CLASS_NAME}>
-                  <button type="button" className={ROW_BUTTON_CLASS_NAME} onClick={() => onOpen(i.id)}>
-                    <div className={ROW_MAIN_CLASS_NAME}>
-                      <Text size="xs" tone="muted">{dateText(i.scheduled_at)} · {timeText(i.scheduled_at)}</Text>
-                      <Text weight="semibold">{i.title}</Text>
-                      <div className={CHIPS_CLASS_NAME}><StatusBadge status={i.status} /><ChannelBadges channels={i.channels} /></div>
-                    </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <ListBox
+              label={t("monthTitle", { m: pad2(m), y })} selectionMode="none" onAction={onOpen}
+              items={monthItems.map((i) => ({
+                id: i.id,
+                label: i.title,
+                description: (
+                  <>
+                    <Text as="span" size="xs" tone="muted">{dateText(i.scheduled_at)} · {timeText(i.scheduled_at)}</Text>
+                    <span className={CHIPS_CLASS_NAME}><ChannelBadges channels={i.channels} /></span>
+                  </>
+                ),
+                trailing: <StatusBadge status={i.status} />,
+              }))}
+            />
           )}
         </SurfaceCard>
       </div>
 
       {unscheduled.length ? (
-        <SurfaceCard ariaLabel={t("noDateTitle")}>
-          <ul className={LIST_CLASS_NAME}>
-            <li className={ROW_CLASS_NAME}><Text weight="semibold">{t("noDateTitle")}</Text></li>
-            {unscheduled.map((i) => (
-              <li key={i.id} className={ROW_CLASS_NAME}>
-                <div className={ROW_MAIN_CLASS_NAME}>
-                  <div className={CHIPS_CLASS_NAME}>{chip(i)}<StatusBadge status={i.status} /></div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </SurfaceCard>
+        <SurfaceListCard label={t("noDateTitle")} headingLevel={2}>
+          {unscheduled.map((i) => (
+            <ListItem key={i.id} className={ROW_CLASS_NAME}>
+              <div className={CHIPS_CLASS_NAME}>{chip(i)}<StatusBadge status={i.status} /></div>
+            </ListItem>
+          ))}
+        </SurfaceListCard>
       ) : null}
     </>
   );

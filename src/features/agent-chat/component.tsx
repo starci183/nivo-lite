@@ -4,13 +4,13 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AgentAvatar } from "@/components/avatar/PersonAvatar";
 import { useT } from "@/i18n/client";
 import { agentChat } from "@/i18n/dict/agentChat";
-import { Alert, Badge, Button, Input, Tabs, Text } from "@starci/grammar/common";
+import { Alert, Badge, Button, ChatBubble, FillViewport, Form, Input, Link, ListBox, SurfaceCard, Tabs, Text, Textarea } from "@starci/grammar/common";
 import {
-  BACK_CLASS_NAME, BUBBLE_CLASS_NAME, BUBBLE_STACK_CLASS_NAME, BUBBLE_STACK_USER_CLASS_NAME, BUBBLE_USER_CLASS_NAME, CHANNEL_BAR_CLASS_NAME, CHIPS_CLASS_NAME,
+  BACK_CLASS_NAME, FRAME_CLASS_NAME, CHANNEL_BAR_CLASS_NAME, CHIPS_CLASS_NAME,
   COMPOSER_CLASS_NAME, COMPOSER_INPUT_CLASS_NAME, COMPOSER_ROW_CLASS_NAME, EMPTY_CHIPS_CLASS_NAME, EMPTY_CLASS_NAME, EMPTY_FIELD_CLASS_NAME,
   HEADER_ACTIONS_CLASS_NAME, HEADER_CLASS_NAME, HEADER_COPY_CLASS_NAME, LIST_COLUMN_CLASS_NAME, LIST_COLUMN_OPEN_CLASS_NAME, LIST_HEAD_CLASS_NAME,
-  LIST_ITEM_ACTIVE_CLASS_NAME, LIST_ITEM_CLASS_NAME, LIST_ITEM_COPY_CLASS_NAME, LIST_SCROLL_CLASS_NAME, MAIN_CLASS_NAME, MESSAGE_ROW_CLASS_NAME,
-  MESSAGE_ROW_USER_CLASS_NAME, NOTICE_LINK_CLASS_NAME, NOTICE_ROW_CLASS_NAME, PAGE_CLASS_NAME, STEP_LIST_CLASS_NAME, STEP_ROW_CLASS_NAME, THREAD_CLASS_NAME,
+  LIST_SCROLL_CLASS_NAME, MAIN_CLASS_NAME,
+  NOTICE_ROW_CLASS_NAME, STEP_LIST_CLASS_NAME, STEP_ROW_CLASS_NAME, THREAD_CLASS_NAME,
 } from "./classNames";
 
 /** Which channel the owner is looking at. */
@@ -89,13 +89,15 @@ const Bubbles = (props: AgentChatBaseProps) => {
         }
         const isUser = message.role === "user";
         return (
-          <div className={isUser ? MESSAGE_ROW_USER_CLASS_NAME : MESSAGE_ROW_CLASS_NAME} key={message.id}>
-            {isUser ? null : <AgentAvatar module={props.agentModule} size="sm" label={props.agentName} />}
-            <div className={isUser ? BUBBLE_STACK_USER_CLASS_NAME : BUBBLE_STACK_CLASS_NAME}>
-              <Text size="xs" tone="muted">{`${isUser ? (props.tab === "test" ? t("fromYou") : t("fromVisitor")) : props.agentName} · ${message.timeLabel}`}</Text>
-              <div className={isUser ? BUBBLE_USER_CLASS_NAME : BUBBLE_CLASS_NAME}><Text size="sm">{message.body}</Text></div>
-            </div>
-          </div>
+          <ChatBubble
+            key={message.id}
+            side={isUser ? "outgoing" : "incoming"}
+            author={isUser ? (props.tab === "test" ? t("fromYou") : t("fromVisitor")) : props.agentName}
+            avatar={isUser ? undefined : <AgentAvatar module={props.agentModule} size="sm" label={props.agentName} />}
+            meta={message.timeLabel}
+          >
+            {message.body}
+          </ChatBubble>
         );
       })}
       {props.isSending ? <Text size="sm" tone="muted" live="polite">{t("typing", { name: props.agentName })}</Text> : null}
@@ -149,7 +151,7 @@ const Thread = (props: AgentChatBaseProps) => {
       {props.hasSelection ? <Bubbles {...props} /> : <EmptyThread {...props} />}
       {props.tab === "customer" && props.leadId ? (
         <div className={NOTICE_ROW_CLASS_NAME} data-testid="handoff-notice">
-          <Text size="xs" tone="muted"><a className={NOTICE_LINK_CLASS_NAME} href={`/leads/${props.leadId}#flow`}>{t("handoffGate")}</a></Text>
+          <Text size="xs" tone="muted"><Link href={`/leads/${props.leadId}#flow`}>{t("handoffGate")}</Link></Text>
         </div>
       ) : null}
       {props.isTakenOver ? <div className={NOTICE_ROW_CLASS_NAME} data-testid="takeover-notice"><Text size="xs" tone="muted">{t("takenOverNotice")}</Text></div> : null}
@@ -162,34 +164,36 @@ const Composer = (props: AgentChatBaseProps) => {
   const t = useT(agentChat);
   const canSend = props.draft.trim().length > 0 && !props.isSending;
   return (
-    <form
-      className={COMPOSER_CLASS_NAME}
-      aria-label={t("composerLabel")}
-      onSubmit={(event) => { event.preventDefault(); if (canSend) props.onSend(); }}
-    >
-      {props.error ? <Alert tone="negative" title={t("notSent")} description={props.error} /> : null}
-      {props.tab === "test" && props.hasSelection ? (
-        <div className={CHIPS_CLASS_NAME}>
-          {(props.hasCustomerChannel ? CUSTOMER_PROMPTS : TEAM_PROMPTS).map((key) => (
-            <Button key={key} variant="outline" size="sm" isDisabled={props.isSending} onPress={() => props.onSend(t(key))}>{t(key)}</Button>
-          ))}
+    <div className={COMPOSER_CLASS_NAME}>
+      <Form label={t("composerLabel")} isPending={props.isSending} onSubmit={(_data, event) => { event.preventDefault(); if (canSend) props.onSend(); }}>
+        {props.error ? <Alert tone="negative" title={t("notSent")} description={props.error} /> : null}
+        {props.tab === "test" && props.hasSelection ? (
+          <div className={CHIPS_CLASS_NAME}>
+            {(props.hasCustomerChannel ? CUSTOMER_PROMPTS : TEAM_PROMPTS).map((key) => (
+              <Button key={key} variant="outline" size="sm" isDisabled={props.isSending} onPress={() => props.onSend(t(key))}>{t(key)}</Button>
+            ))}
+          </div>
+        ) : null}
+        <div className={COMPOSER_ROW_CLASS_NAME}>
+          {/* The Grammar Textarea owns Enter-to-send (Shift+Enter breaks the line). */}
+          <div className={COMPOSER_INPUT_CLASS_NAME}>
+            <Textarea
+              id="agent-chat-message"
+              name="message"
+              label={t("messageLabel")}
+              isLabelHidden
+              variant="secondary"
+              rows={1}
+              placeholder={props.isTakenOver ? t("staffPlaceholder") : props.tab === "customer" ? t("widgetPlaceholder") : t("messagePlaceholder", { name: props.agentName })}
+              value={props.draft}
+              onValueChange={props.onDraft}
+              onSubmitShortcut={() => { if (canSend) props.onSend(); }}
+            />
+          </div>
+          <Button type="submit" variant="primary" isPending={props.isSending} isDisabled={!canSend}>{t("send")}</Button>
         </div>
-      ) : null}
-      <div className={COMPOSER_ROW_CLASS_NAME}>
-        <input
-          id="agent-chat-message"
-          name="message"
-          type="text"
-          autoComplete="off"
-          aria-label={t("messageLabel")}
-          className={COMPOSER_INPUT_CLASS_NAME}
-          placeholder={props.isTakenOver ? t("staffPlaceholder") : props.tab === "customer" ? t("widgetPlaceholder") : t("messagePlaceholder", { name: props.agentName })}
-          value={props.draft}
-          onChange={(event) => props.onDraft(event.target.value)}
-        />
-        <Button type="submit" variant="primary" isPending={props.isSending} isDisabled={!canSend}>{t("send")}</Button>
-      </div>
-    </form>
+      </Form>
+    </div>
   );
 };
 
@@ -205,21 +209,24 @@ const ConversationList = (props: ListProps) => {
       </div>
       <div className={LIST_SCROLL_CLASS_NAME}>
         {!props.isLoadingList && props.conversations.length === 0 ? <Text as="p" size="sm" tone="muted">{t("railEmptyHelp")}</Text> : null}
-        {props.conversations.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={`${LIST_ITEM_CLASS_NAME} ${item.isSelected ? LIST_ITEM_ACTIVE_CLASS_NAME : ""}`}
-            aria-current={item.isSelected ? "true" : undefined}
-            onClick={() => props.onPick(item.id, item.kind)}
-          >
-            <AgentAvatar module={props.agentModule} size="md" label={item.title} />
-            <span className={LIST_ITEM_COPY_CLASS_NAME}>
-              <Text size="sm" weight="medium" overflow="truncate">{item.title}</Text>
-              <Text size="xs" tone="muted" overflow="truncate">{`${item.kindLabel} · ${item.timeLabel}${item.hasLead ? ` · ${t("leadCaptured")}` : ""}`}</Text>
-            </span>
-          </button>
-        ))}
+        {props.conversations.length === 0 ? null : (
+          // The Grammar ListBox owns the rows, the selected face and the keyboard model (SURFACE-4, FOCUS-2).
+          <ListBox
+            label={t("railTitle")}
+            selectionMode="single"
+            selectedIds={props.conversations.filter((item) => item.isSelected).map((item) => item.id)}
+            onSelectionChange={(ids) => {
+              const picked = props.conversations.find((item) => item.id === ids[0]);
+              if (picked) props.onPick(picked.id, picked.kind);
+            }}
+            items={props.conversations.map((item) => ({
+              id: item.id,
+              label: item.title,
+              description: `${item.kindLabel} · ${item.timeLabel}${item.hasLead ? ` · ${t("leadCaptured")}` : ""}`,
+              leading: <AgentAvatar module={props.agentModule} size="md" label={item.title} />,
+            }))}
+          />
+        )}
       </div>
     </>
   );
@@ -234,7 +241,11 @@ export const AgentChatBase = (props: AgentChatBaseProps) => {
     setIsListOpen(false);
   };
   return (
-    <div className={PAGE_CLASS_NAME}>
+    <FillViewport minHeight="md" bottomInset="page">
+      {/* FillViewport owns the page height below the chrome; SURFACE-2 / BOUNDARY-6: the chat is one top-level card, its
+          columns are joined faces inside it. */}
+      <SurfaceCard ariaLabel={t("pageLabel")} composition="joined" height="fill">
+      <div className={FRAME_CLASS_NAME}>
       <aside className={LIST_COLUMN_CLASS_NAME} aria-label={t("railTitle")}>
         <ConversationList {...props} onPick={onPick} />
       </aside>
@@ -276,6 +287,8 @@ export const AgentChatBase = (props: AgentChatBaseProps) => {
         <Thread {...props} />
         <Composer {...props} />
       </section>
-    </div>
+      </div>
+      </SurfaceCard>
+    </FillViewport>
   );
 };

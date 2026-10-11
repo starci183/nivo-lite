@@ -13,6 +13,7 @@ import {
   COLUMN_HEAD_CLASS_NAME,
   HEAD_TEXT_CLASS_NAME,
   INFO_BODY_CLASS_NAME,
+  INFO_DRAWER_BODY_CLASS_NAME,
   INFO_SECTION_CLASS_NAME,
   INFO_TITLE_CLASS_NAME,
   MEMBER_ACTIONS_CLASS_NAME,
@@ -56,10 +57,12 @@ export type InfoPanelProps = {
   readonly onMention: (handle: string) => void
   readonly onOpenTasks: () => void
   readonly onClose: () => void
+  /** Docked as a column (draws its own header and close); false inside the Drawer, which owns title, close and inset. */
+  readonly isDocked: boolean
 }
 
 /** Right column: what waits for approval, who is in the chat, and the team's tasks. */
-export const InfoPanel = ({ avatarUrl, agents, people, staff = [], pending, exceptions, tasks, moduleOf, onJump, onJumpException, onMention, onOpenTasks, onClose }: InfoPanelProps) => {
+export const InfoPanel = ({ avatarUrl, agents, people, staff = [], pending, exceptions, tasks, moduleOf, onJump, onJumpException, onMention, onOpenTasks, onClose, isDocked }: InfoPanelProps) => {
   const t = useT(office)
   const locale = useLocale()
   const lastSeen = (person: OfficePerson): { readonly text: string; readonly online: boolean } => {
@@ -73,13 +76,15 @@ export const InfoPanel = ({ avatarUrl, agents, people, staff = [], pending, exce
   const openTasks = tasks.filter((task) => task.status !== "done").length
   return (
     <>
-      <div className={COLUMN_HEAD_CLASS_NAME}>
-        <div className={HEAD_TEXT_CLASS_NAME}>
-          <Text weight="semibold">{t("infoTitle")}</Text>
+      {isDocked ? (
+        <div className={COLUMN_HEAD_CLASS_NAME}>
+          <div className={HEAD_TEXT_CLASS_NAME}>
+            <Text weight="semibold">{t("infoTitle")}</Text>
+          </div>
+          <IconButton source={nivoIconSource("close", "leading")} label={t("infoClose")} onPress={onClose} />
         </div>
-        <IconButton source={nivoIconSource("close", "leading")} label={t("infoClose")} onPress={onClose} />
-      </div>
-      <div className={INFO_BODY_CLASS_NAME}>
+      ) : null}
+      <div className={isDocked ? INFO_BODY_CLASS_NAME : INFO_DRAWER_BODY_CLASS_NAME}>
         <PendingList items={pending} moduleOf={moduleOf} onJump={onJump} />
         <ExceptionList items={exceptions} agents={agents} onJump={onJumpException} />
 

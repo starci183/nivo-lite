@@ -19,7 +19,7 @@ export const SAVE_ROW_CLASS = cn("flex", "flex-wrap", "items-center", "justify-e
 export const GROUP_CLASS = cn("flex", "flex-col", "gap-2")
 
 /** One rule row: action, mode, limit. */
-export const RULE_ROW_CLASS = cn("grid", "grid-cols-1", "items-end", "gap-3", "border-t", "border-separator", "py-3", "md:grid-cols-[minmax(0,1fr)_auto_14rem]")
+export const RULE_ROW_CLASS = cn("grid", "grid-cols-1", "items-end", "gap-3", "py-3", "first:pt-0", "last:pb-0", "md:grid-cols-[minmax(0,1fr)_auto_14rem]")
 
 /** Action name column of a rule row. */
 export const RULE_NAME_CLASS = cn("flex", "min-w-0", "flex-col", "gap-1")
@@ -27,14 +27,20 @@ export const RULE_NAME_CLASS = cn("flex", "min-w-0", "flex-col", "gap-1")
 /** Limit cell of a rule row. */
 export const RULE_LIMIT_CLASS = cn("w-full")
 
-/** Rule rows list. */
-export const RULE_LIST_CLASS = cn("flex", "flex-col")
+/** Rule rows list: one hairline between rows, none at the edges (BOUNDARY-3 case-1). */
+export const RULE_LIST_CLASS = cn("flex", "flex-col", "divide-y", "divide-separator")
 
-/** Required-field group row. */
-export const REQUIRED_ROW_CLASS = cn("border-t", "border-separator", "py-3")
+/** Required-field groups: one hairline between groups (BOUNDARY-3 case-1). */
+export const REQUIRED_LIST_CLASS = cn("flex", "flex-col", "divide-y", "divide-separator")
 
-/** One staff row. */
-export const STAFF_ROW_CLASS = cn("flex", "flex-wrap", "items-center", "justify-between", "gap-3", "border-t", "border-separator", "py-3")
+/** Required-field group row; separator-facing sides `py-3` (PADDING-3). */
+export const REQUIRED_ROW_CLASS = cn("py-3", "first:pt-0", "last:pb-0")
+
+/** Staff rows: one hairline between rows (BOUNDARY-3 case-1). */
+export const STAFF_LIST_CLASS = cn("divide-y", "divide-separator")
+
+/** One staff row; separator-facing sides `py-3` (PADDING-3). */
+export const STAFF_ROW_CLASS = cn("flex", "flex-wrap", "items-center", "justify-between", "gap-3", "py-3", "first:pt-0", "last:pb-0")
 
 /** Staff name + meta column. */
 export const STAFF_BODY_CLASS = cn("flex", "min-w-0", "flex-col", "gap-1")

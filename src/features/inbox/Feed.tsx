@@ -1,11 +1,11 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { Badge, Button, EmptyNotice, SectionHeader, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
+import { Badge, Button, EmptyNotice, SectionHeader, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
 import { useLocale, useT } from "@/i18n/client"
 import { inbox as dict } from "@/i18n/dict/inbox"
 import { governance } from "@/i18n/dict/governance"
-import { FEED_BADGES_CLASS, FEED_FOOT_CLASS, FEED_HEAD_CLASS, FEED_HEADER_CLASS, FEED_ITEM_CLASS, FEED_LIST_CLASS, FEED_META_CLASS, FEED_TITLE_CLASS } from "./classNames"
+import { FEED_BADGES_CLASS, FEED_FOOT_CLASS, FEED_HEAD_CLASS, FEED_ITEM_CLASS, FEED_META_CLASS, FEED_SECTION_CLASS, FEED_TITLE_CLASS } from "./classNames"
 import { formatVnd, type FeedEvent } from "./model"
 import { bankConnectionOf } from "@/lib/bank"
 
@@ -30,16 +30,18 @@ export const Feed = ({ events, nowIso }: FeedProps) => {
   }
 
   return (
-    <SurfaceCard ariaLabel={t("feedAria")}>
-      <div className={FEED_HEADER_CLASS}>
-        <SectionHeader level={2} title={t("feedTitle")} description={t("feedDesc")} />
-        <Button variant="secondary" onPress={() => router.refresh()}>{t("feedRefresh")}</Button>
-      </div>
-      {events.length === 0 ? (
-        <EmptyNotice message={t("feedEmptyTitle")} description={t("feedEmptyBody")} />
-      ) : (
-        <ul className={FEED_LIST_CLASS}>
-          {events.map((e) => (
+    // COLLECTION-1: the feed is a section with its own heading; SurfaceListCard is the published list container.
+    <section className={FEED_SECTION_CLASS} aria-label={t("feedAria")}>
+      <SectionHeader
+        level={2}
+        title={t("feedTitle")}
+        description={t("feedDesc")}
+        action={<Button variant="secondary" onPress={() => router.refresh()}>{t("feedRefresh")}</Button>}
+      />
+      <SurfaceListCard ariaLabel={t("feedTitle")} empty={<EmptyNotice message={t("feedEmptyTitle")} description={t("feedEmptyBody")} />}>
+        {events.length === 0
+          ? undefined
+          : events.map((e) => (
             <li key={e.id} className={FEED_ITEM_CLASS}>
               <div className={FEED_HEAD_CLASS}>
                 <div className={FEED_TITLE_CLASS}>
@@ -69,8 +71,7 @@ export const Feed = ({ events, nowIso }: FeedProps) => {
               ) : null}
             </li>
           ))}
-        </ul>
-      )}
-    </SurfaceCard>
+      </SurfaceListCard>
+    </section>
   )
 }

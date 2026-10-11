@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Badge, Button, Drawer, EmptyNotice, Input, Select, SurfaceCard, Text, Textarea } from "@starci/grammar/common";
+import { Badge, Button, Drawer, EmptyNotice, HorizontalScrollRegion, Input, ListItem, Select, SurfaceCard, SurfaceListCard, Text, Textarea } from "@starci/grammar/common";
 import { decideWorkItem } from "@/lib/flow-actions";
 import { formatMoney, formatQty, isOpenPo, num, type PoStatus } from "@/lib/module-inventory-shared";
 import type { InventoryWorkbench, PoView } from "@/lib/module-inventory-queries";
 import { cancelPoAction, createPoAction, receivePoAction, remindSupplierAction, requestSendAction, updatePoDraft } from "./actions";
 import {
-  BOARD_CLASS_NAME, CARD_CLASS_NAME, CHIPS_CLASS_NAME, FORM_CLASS_NAME, FORM_GRID_CLASS_NAME, LANE_BODY_CLASS_NAME, LANE_CLASS_NAME, LANE_HEAD_CLASS_NAME, LINE_ROW_CLASS_NAME, QUOTE_CLASS_NAME, ROW_ACTIONS_CLASS_NAME,
+  BOARD_CLASS_NAME, CHIPS_CLASS_NAME, FORM_CLASS_NAME, FORM_GRID_CLASS_NAME, LANE_CLASS_NAME, LANE_ROW_CLASS_NAME, LINE_ROW_CLASS_NAME, QUOTE_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, STACK_CLASS_NAME,
 } from "./classNames";
 import { Feedback, PO_LABEL, PoBadge, formatDate, useRun } from "./parts";
 
@@ -55,7 +55,7 @@ const PoDrawer = ({ po, data, onClose }: { readonly po: PoView; readonly data: I
       <div className={FORM_CLASS_NAME}>
         {editable ? (
           <div className={FORM_GRID_CLASS_NAME}>
-            <Select label="Nhà cung cấp" placeholder="Chọn nhà cung cấp" value={supplierId || null} options={data.suppliers.map((s) => ({ id: s.id, label: s.name }))} onValueChange={(v) => setSupplierId(v ?? "")} />
+            <Select variant="secondary" label="Nhà cung cấp" placeholder="Chọn nhà cung cấp" value={supplierId || null} options={data.suppliers.map((s) => ({ id: s.id, label: s.name }))} onValueChange={(v) => setSupplierId(v ?? "")} />
             <Input id="po-expected" name="expected" label="Cần hàng trước (năm-tháng-ngày)" hint="Ví dụ 2026-10-15" variant="secondary" value={expected} onValueChange={setExpected} />
           </div>
         ) : (
@@ -67,7 +67,7 @@ const PoDrawer = ({ po, data, onClose }: { readonly po: PoView; readonly data: I
           <>
             {po.lines.map((l, i) => (
               <div key={l.id} className={LINE_ROW_CLASS_NAME}>
-                <Text size="sm" weight="medium">{l.name} <Text as="span" size="xs" tone="muted">({l.unit})</Text></Text>
+                <Text size="sm" weight="medium">{`${l.name} (${l.unit})`}</Text>
                 <Input id={`po-q-${l.id}`} name={`q-${l.id}`} label="Số lượng" variant="secondary" value={lines[i]?.qty ?? ""} onValueChange={(v) => setLine(i, "qty", v)} />
                 <Input id={`po-c-${l.id}`} name={`c-${l.id}`} label="Đơn giá" variant="secondary" value={lines[i]?.unitCost ?? ""} onValueChange={(v) => setLine(i, "unitCost", v)} />
               </div>
@@ -79,7 +79,10 @@ const PoDrawer = ({ po, data, onClose }: { readonly po: PoView; readonly data: I
             <Text size="sm" tone="muted">Nhập số thực nhận (nhận một phần cũng được) và giá thực tế; giá vốn sẽ tính lại theo bình quân.</Text>
             {po.lines.map((l, i) => (
               <div key={l.id} className={LINE_ROW_CLASS_NAME}>
-                <Text size="sm" weight="medium">{l.name} <Text as="span" size="xs" tone="muted">đặt {formatQty(l.qtyOrdered)}, đã nhận {formatQty(l.qtyReceived)} {l.unit}</Text></Text>
+                <div>
+                  <Text size="sm" weight="medium">{l.name}</Text>
+                  <Text size="xs" tone="muted">đặt {formatQty(l.qtyOrdered)}, đã nhận {formatQty(l.qtyReceived)} {l.unit}</Text>
+                </div>
                 <Input id={`rc-q-${l.id}`} name={`rq-${l.id}`} label="Nhận lần này" variant="secondary" value={recv[i]?.qty ?? ""} onValueChange={(v) => setRecvLine(i, "qty", v)} />
                 <Input id={`rc-c-${l.id}`} name={`rc-${l.id}`} label="Đơn giá thực" variant="secondary" value={recv[i]?.unitCost ?? ""} onValueChange={(v) => setRecvLine(i, "unitCost", v)} />
               </div>
@@ -92,7 +95,7 @@ const PoDrawer = ({ po, data, onClose }: { readonly po: PoView; readonly data: I
 
         {po.status === "waiting_approval" ? (
           <>
-            <Textarea label={`Tin nhắn gửi ${po.supplierName} (${channelWord(po.channel)})`} description="NIVO soạn sẵn; bạn sửa được trước khi duyệt." rows={9} value={message} onValueChange={setMessage} />
+            <Textarea variant="secondary" label={`Tin nhắn gửi ${po.supplierName} (${channelWord(po.channel)})`} description="NIVO soạn sẵn; bạn sửa được trước khi duyệt." rows={9} value={message} onValueChange={setMessage} />
           </>
         ) : po.message ? (
           <div className={QUOTE_CLASS_NAME}>
@@ -150,10 +153,10 @@ const CreateDrawer = ({ data, onClose }: { readonly data: InventoryWorkbench; re
   return (
     <Drawer isOpen onOpenChange={(o) => { if (!o) onClose(); }} title="Tạo đơn nhập" description="Chọn nhà cung cấp và mặt hàng. Đơn tạo ra ở dạng nháp, bạn gửi duyệt sau." closeLabel="Đóng" placement="right">
       <div className={FORM_CLASS_NAME}>
-        <Select label="Nhà cung cấp" placeholder="Chọn nhà cung cấp" value={supplierId || null} options={data.suppliers.map((s) => ({ id: s.id, label: s.name }))} onValueChange={(v) => setSupplierId(v ?? "")} />
+        <Select variant="secondary" label="Nhà cung cấp" placeholder="Chọn nhà cung cấp" value={supplierId || null} options={data.suppliers.map((s) => ({ id: s.id, label: s.name }))} onValueChange={(v) => setSupplierId(v ?? "")} />
         {lines.map((l, i) => (
           <div key={i} className={LINE_ROW_CLASS_NAME}>
-            <Select label={`Mặt hàng ${i + 1}`} placeholder="Chọn hàng" value={l.itemId || null} options={options} onValueChange={(v) => pickItem(i, v ?? "")} />
+            <Select variant="secondary" label={`Mặt hàng ${i + 1}`} placeholder="Chọn hàng" value={l.itemId || null} options={options} onValueChange={(v) => pickItem(i, v ?? "")} />
             <Input id={`new-q-${i}`} name={`nq-${i}`} label="Số lượng" variant="secondary" value={l.qty} onValueChange={(v) => setLine(i, { qty: v })} />
             <Input id={`new-c-${i}`} name={`nc-${i}`} label="Đơn giá" variant="secondary" value={l.unitCost} onValueChange={(v) => setLine(i, { unitCost: v })} />
           </div>
@@ -174,7 +177,7 @@ export const OrdersPanel = ({ data }: { readonly data: InventoryWorkbench }) => 
   const open = data.pos.find((p) => p.id === openId) ?? null;
   const lanes = LANES.map((status) => ({ status, rows: data.pos.filter((p) => p.status === status) }));
   return (
-    <div className="flex min-w-0 flex-col gap-3">
+    <div className={STACK_CLASS_NAME}>
       <div className={ROW_ACTIONS_CLASS_NAME}>
         {data.canManage ? <Button variant="primary" size="sm" onPress={() => setCreating(true)}>Tạo đơn nhập</Button> : null}
         <Text size="sm" tone="muted">{data.metrics.openPos} đơn đang mở</Text>
@@ -182,30 +185,28 @@ export const OrdersPanel = ({ data }: { readonly data: InventoryWorkbench }) => 
       {data.pos.length === 0 ? (
         <SurfaceCard ariaLabel="Đơn nhập"><EmptyNotice message="Chưa có đơn nhập nào" description="Khi hàng xuống mức tối thiểu, NIVO tự soạn đơn nháp theo nhà cung cấp. Bạn cũng tự tạo đơn được." /></SurfaceCard>
       ) : (
-        <div className={BOARD_CLASS_NAME} role="group" aria-label="Đơn nhập theo trạng thái">
-          {lanes.map((lane) => (
-            <section key={lane.status} className={LANE_CLASS_NAME} aria-label={PO_LABEL[lane.status]}>
-              <div className={LANE_HEAD_CLASS_NAME}>
-                <Text weight="semibold" size="sm">{PO_LABEL[lane.status]}</Text>
-                <Badge tone="neutral">{lane.rows.length}</Badge>
+        <HorizontalScrollRegion overflow="needed" aria-label="Đơn nhập theo trạng thái">
+          <div className={BOARD_CLASS_NAME} role="group" aria-label="Đơn nhập theo trạng thái">
+            {lanes.map((lane) => (
+              <div key={lane.status} className={LANE_CLASS_NAME}>
+                <SurfaceListCard label={PO_LABEL[lane.status]} headingLevel={3} fact={String(lane.rows.length)}>
+                  {lane.rows.map((p) => (
+                    <ListItem key={p.id} className={LANE_ROW_CLASS_NAME}>
+                      <div className={CHIPS_CLASS_NAME}>
+                        <Text weight="semibold" size="sm">{p.po_no}</Text>
+                        <PoBadge status={p.status} />
+                      </div>
+                      <Text size="sm">{p.supplierName}</Text>
+                      <Text size="xs" tone="muted">{p.lines.length} mặt hàng · {formatMoney(p.total_vnd)}{p.expected_at && isOpenPo(p.status) ? ` · hẹn ${formatDate(p.expected_at)}` : ""}</Text>
+                      {p.status === "sent" && p.sent_via === "copy" ? <Text size="xs" tone="muted">Đã duyệt, chép tin gửi qua {channelWord(p.channel)}</Text> : null}
+                      <div><Button variant="outline" size="sm" onPress={() => setOpenId(p.id)}>Mở</Button></div>
+                    </ListItem>
+                  ))}
+                </SurfaceListCard>
               </div>
-              <ul className={LANE_BODY_CLASS_NAME}>
-                {lane.rows.map((p) => (
-                  <li key={p.id} className={CARD_CLASS_NAME}>
-                    <div className={CHIPS_CLASS_NAME}>
-                      <Text weight="semibold" size="sm">{p.po_no}</Text>
-                      <PoBadge status={p.status} />
-                    </div>
-                    <Text size="sm">{p.supplierName}</Text>
-                    <Text size="xs" tone="muted">{p.lines.length} mặt hàng · {formatMoney(p.total_vnd)}{p.expected_at && isOpenPo(p.status) ? ` · hẹn ${formatDate(p.expected_at)}` : ""}</Text>
-                    {p.status === "sent" && p.sent_via === "copy" ? <Text size="xs" tone="muted">Đã duyệt, chép tin gửi qua {channelWord(p.channel)}</Text> : null}
-                    <div><Button variant="outline" size="sm" onPress={() => setOpenId(p.id)}>Mở</Button></div>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
-        </div>
+            ))}
+          </div>
+        </HorizontalScrollRegion>
       )}
       {open ? <PoDrawer key={open.id + open.status} po={open} data={data} onClose={() => setOpenId(null)} /> : null}
       {creating ? <CreateDrawer data={data} onClose={() => setCreating(false)} /> : null}

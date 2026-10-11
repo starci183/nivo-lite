@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Alert, Button, FileDropzone, Input, Select, SurfaceCard, Text } from "@starci/grammar/common";
+import { Alert, Button, FileDropzone, Input, MediaFrame, Select, SurfaceCard, Text } from "@starci/grammar/common";
 import { useT } from "@/i18n/client";
 import { video } from "@/i18n/dict/video";
 import { MUSIC_TRACKS } from "@/lib/video/spec";
@@ -62,17 +62,25 @@ export const BrandCard = ({ brand, media, canEdit, onSaved }: BrandCardProps) =>
         <div className={FIELD_ROW_CLASS_NAME}>
           <div className={STACK_SM_CLASS_NAME}>
             <Text as="span" size="sm" weight="medium">{t("primary")}</Text>
+            {/* grammar gap: no Common colour picker (see COLOR_CLASS_NAME). */}
             <input type="color" aria-label={t("primary")} className={COLOR_CLASS_NAME} value={draft.primary} disabled={!canEdit || pending} onChange={(e) => set({ primary: e.target.value })} />
           </div>
           <div className={STACK_SM_CLASS_NAME}>
             <Text as="span" size="sm" weight="medium">{t("secondary")}</Text>
+            {/* grammar gap: no Common colour picker (see COLOR_CLASS_NAME). */}
             <input type="color" aria-label={t("secondary")} className={COLOR_CLASS_NAME} value={draft.secondary} disabled={!canEdit || pending} onChange={(e) => set({ secondary: e.target.value })} />
           </div>
           <div className={STACK_SM_CLASS_NAME}>
             <Text as="span" size="sm" weight="medium">{t("logo")}</Text>
             <div className={ROW_CLASS_NAME}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              {logo?.url ? <img src={logo.url} alt={t("logo")} className={LOGO_CLASS_NAME} /> : <Text as="span" size="xs" tone="muted">{t("logoNone")}</Text>}
+              {logo?.url ? (
+                <div className={LOGO_CLASS_NAME}>
+                  <MediaFrame aspect="square" fit="contain">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={logo.url} alt={t("logo")} />
+                  </MediaFrame>
+                </div>
+              ) : <Text as="span" size="xs" tone="muted">{t("logoNone")}</Text>}
               {canEdit ? <FileDropzone label={t("logoUpload")} isLabelHidden accept="image/png,image/jpeg,image/webp" hideFileList isDisabled={pending} prompt={t("logoUpload")} onFilesChange={(files) => { void pickLogo(files); }} /> : null}
               {canEdit && draft.logoPath ? <Button size="sm" variant="ghost" isDisabled={pending} onPress={() => set({ logoPath: null })}>{t("logoRemove")}</Button> : null}
             </div>
@@ -80,12 +88,12 @@ export const BrandCard = ({ brand, media, canEdit, onSaved }: BrandCardProps) =>
         </div>
         <div className={FIELD_ROW_CLASS_NAME}>
           <Select
-            label={t("music")} value={draft.musicTrack ?? NO_MUSIC} isDisabled={!canEdit || pending}
+            label={t("music")} variant="secondary" value={draft.musicTrack ?? NO_MUSIC} isDisabled={!canEdit || pending}
             options={[{ id: NO_MUSIC, label: t("musicNone") }, ...MUSIC_TRACKS.map((m) => ({ id: m.id, label: m.label }))]}
             onValueChange={(v) => set({ musicTrack: v && v !== NO_MUSIC ? v : null })}
           />
           <Select
-            label={t("voice")} value={draft.voice} isDisabled={!canEdit || pending}
+            label={t("voice")} variant="secondary" value={draft.voice} isDisabled={!canEdit || pending}
             options={[{ id: "vi-VN-HoaiMyNeural", label: t("voice_f") }, { id: "vi-VN-NamMinhNeural", label: t("voice_m") }]}
             onValueChange={(v) => set({ voice: v ?? draft.voice })}
           />

@@ -2,12 +2,12 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Alert, Badge, Button, Input, Text } from "@starci/grammar/common"
+import { Alert, Badge, Button, Input, SurfaceCard, Text } from "@starci/grammar/common"
 import { useT } from "@/i18n/client"
 import { email } from "@/i18n/dict/email"
 import type { Connection } from "@/lib/channels"
 import { changeSmtpPassword, sendSmtpTest, setDefaultSmtp } from "@/lib/email-actions"
-import { ACTIONS_CLASS, FULL_BOX_CLASS } from "./classNames"
+import { ACTIONS_CLASS, FULL_CLASS, PANEL_CLASS } from "./classNames"
 
 /** Props for {@link SmtpRowExtras}. */
 export type SmtpRowExtrasProps = { readonly connection: Connection; readonly ownerEmail: string }
@@ -57,25 +57,33 @@ export const SmtpRowExtras = ({ connection: c, ownerEmail }: SmtpRowExtrasProps)
         {c.status === "connected" && !c.isDefault ? <Button variant="outline" isDisabled={isPending} onPress={makeDefault}>{t("rowSetDefault")}</Button> : null}
       </div>
       {panel === "test" ? (
-        <div className={FULL_BOX_CLASS}>
-          <Input id={`smtp-row-to-${c.id}`} name="testTo" label={t("testTo")} variant="secondary" isDisabled={isPending} value={to} onValueChange={setTo} />
-          <div className={ACTIONS_CLASS}>
-            <Button variant="primary" isPending={isPending} isDisabled={!to.trim()} onPress={test}>{t("testSend")}</Button>
-            <Button variant="ghost" onPress={close}>{t("rowCancel")}</Button>
-          </div>
+        <div className={FULL_CLASS}>
+          <SurfaceCard depth="nested" ariaLabel={t("rowTest")}>
+            <div className={PANEL_CLASS}>
+              <Input id={`smtp-row-to-${c.id}`} name="testTo" label={t("testTo")} variant="secondary" isDisabled={isPending} value={to} onValueChange={setTo} />
+              <div className={ACTIONS_CLASS}>
+                <Button variant="primary" isPending={isPending} isDisabled={!to.trim()} onPress={test}>{t("testSend")}</Button>
+                <Button variant="ghost" onPress={close}>{t("rowCancel")}</Button>
+              </div>
+            </div>
+          </SurfaceCard>
         </div>
       ) : null}
       {panel === "password" ? (
-        <div className={FULL_BOX_CLASS}>
-          <Input id={`smtp-row-pw-${c.id}`} name="password" label={t("rowNewPassword")} variant="secondary" kind="password" isDisabled={isPending} value={password} onValueChange={setPassword} />
-          <Text size="xs" tone="muted">{t("passwordStored")}</Text>
-          <div className={ACTIONS_CLASS}>
-            <Button variant="primary" isPending={isPending} isDisabled={!password.trim()} onPress={savePassword}>{t("rowSavePassword")}</Button>
-            <Button variant="ghost" onPress={close}>{t("rowCancel")}</Button>
-          </div>
+        <div className={FULL_CLASS}>
+          <SurfaceCard depth="nested" ariaLabel={t("rowChangePassword")}>
+            <div className={PANEL_CLASS}>
+              <Input id={`smtp-row-pw-${c.id}`} name="password" label={t("rowNewPassword")} variant="secondary" kind="password" isDisabled={isPending} value={password} onValueChange={setPassword} />
+              <Text size="xs" tone="muted">{t("passwordStored")}</Text>
+              <div className={ACTIONS_CLASS}>
+                <Button variant="primary" isPending={isPending} isDisabled={!password.trim()} onPress={savePassword}>{t("rowSavePassword")}</Button>
+                <Button variant="ghost" onPress={close}>{t("rowCancel")}</Button>
+              </div>
+            </div>
+          </SurfaceCard>
         </div>
       ) : null}
-      {note ? <div className="w-full"><Alert title={note.text} tone={note.tone} /></div> : null}
+      {note ? <div className={FULL_CLASS}><Alert title={note.text} tone={note.tone} /></div> : null}
     </>
   )
 }

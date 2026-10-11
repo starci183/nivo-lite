@@ -40,7 +40,7 @@ export const DraftCard = (props: DraftCardProps) => {
   };
 
   return (
-    <SurfaceCard label={t("followUp")}>
+    <SurfaceCard label={t("followUp")} headingLevel={2}>
       <div className={EXECUTION_CARD_BODY_CLASS_NAME}>
         <Text tone="muted">{props.explanation}</Text>
         {error === null ? null : <Alert tone="negative" title={t("draftFailed")} description={error} />}

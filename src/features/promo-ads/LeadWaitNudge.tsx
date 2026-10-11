@@ -10,7 +10,10 @@ import type { LeadWait } from "./queries"
 
 type LeadWaitNudgeProps = { readonly leadId: string }
 
-/** Small note under the lead header: website lead, no chatbot. Wait hours only when computed from real events. */
+/**
+ * Small note under the lead header: website lead, no chatbot. Wait hours only when computed from real events.
+ * The old leading border was decoration (DISCIPLINE-1); the note is copy plus a quiet action.
+ */
 export const LeadWaitNudge = ({ leadId }: LeadWaitNudgeProps) => {
   const t = useT(promoAds)
   const [wait, setWait] = useState<LeadWait | null>(null)

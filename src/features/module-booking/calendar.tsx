@@ -5,7 +5,11 @@ import { cn } from "@heroui/react";
 import { addDays, localDate, zonedMs } from "@/lib/module-booking-availability";
 import { dayText } from "@/lib/module-booking-copy";
 import type { BookingView, WorkbenchData } from "@/lib/module-booking-view";
-import { STATUS_STYLE, hm, minutesOfDay } from "./shared";
+import { EmptyNotice, HorizontalScrollRegion, SurfaceCard, Text } from "@starci/grammar/common";
+import {
+  CAL_BLOCK_BY_STATUS, CAL_BLOCK_FALLBACK, CAL_BLOCK_MOVABLE, CAL_BLOCK_TENTATIVE, CAL_COLUMN, CAL_CORNER, CAL_GRID, CAL_GUTTER, CAL_HEAD, CAL_HEAD_TODAY, CAL_HOUR_LABEL,
+  CAL_HOUR_LINE, CAL_NOW_LINE, CAL_RELATIVE, hm, minutesOfDay,
+} from "./shared";
 
 const PX_PER_HOUR = 56;
 const ACTIVE = ["requested", "confirmed", "rescheduled"];
@@ -102,63 +106,74 @@ export const Calendar = ({ data, mode, date, resourceFilter, showCancelled, onOp
     onMove(id, zonedMs(c.date, time, tz), mode === "day" ? (c.resourceId as string) : b.resourceId);
   };
 
-  if (!cols.length) return <p className="text-sm text-muted">Chưa có người hoặc phòng nào. Vào tab Thiết lập để thêm.</p>;
+  if (!cols.length) {
+    return (
+      <SurfaceCard ariaLabel="Lịch hẹn">
+        <EmptyNotice message="Chưa có người hoặc phòng nào" description="Vào tab Thiết lập để thêm." />
+      </SurfaceCard>
+    );
+  }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-separator bg-surface" role="region" aria-label="Lịch hẹn">
-      <div className="flex min-w-[40rem]">
-        <div className="sticky left-0 z-20 w-12 shrink-0 border-r border-separator bg-surface">
-          <div className="h-12 border-b border-separator" />
-          <div className="relative" style={{ height }}>
-            {hours.map((h) => (
-              <div key={h} className="absolute right-1 -translate-y-2 text-[11px] text-muted" style={{ top: (h - range.start) * PX_PER_HOUR }}>{String(h).padStart(2, "0")}:00</div>
-            ))}
-          </div>
-        </div>
-        {cols.map((c) => {
-          const items = inCol(c);
-          const lanes = layout(items);
-          return (
-            <div key={c.key} className="min-w-36 flex-1 border-r border-separator last:border-r-0">
-              <div className={cn("flex h-12 flex-col justify-center border-b border-separator px-2", c.date === nowDay && mode === "week" && "bg-accent/10")}>
-                <span className="truncate text-sm font-semibold">{c.label}</span>
-                <span className="truncate text-xs text-muted">{c.sub}</span>
-              </div>
-              <div className="relative" style={{ height }} onDragOver={(e) => e.preventDefault()} onDrop={(e) => drop(c, e)}>
-                {hours.map((h) => <div key={h} className="absolute inset-x-0 border-t border-separator/60" style={{ top: (h - range.start) * PX_PER_HOUR }} />)}
-                {c.date === nowDay && nowMin >= range.start * 60 && nowMin <= range.end * 60 ? (
-                  <div className="pointer-events-none absolute inset-x-0 z-10 border-t-2 border-danger" style={{ top: ((nowMin - range.start * 60) / 60) * PX_PER_HOUR }} />
-                ) : null}
-                {items.map((b) => {
-                  const l = lanes.get(b.id) ?? { lane: 0, lanes: 1 };
-                  const top = ((minutesOfDay(hm(b.startMs, tz)) - range.start * 60) / 60) * PX_PER_HOUR;
-                  const h = Math.max(24, ((b.endMs - b.startMs) / 3_600_000) * PX_PER_HOUR - 2);
-                  const movable = ACTIVE.includes(b.status);
-                  return (
-                    <button
-                      key={b.id}
-                      type="button"
-                      draggable={movable}
-                      onDragStart={(e) => {
-                        grab.current = e.clientY - e.currentTarget.getBoundingClientRect().top;
-                        e.dataTransfer.setData("text/plain", b.id);
-                        e.dataTransfer.effectAllowed = "move";
-                      }}
-                      onClick={() => onOpen(b)}
-                      className={cn("absolute overflow-hidden rounded-md border-l-4 px-1.5 py-0.5 text-left text-xs shadow-sm focus-visible:outline-2 focus-visible:outline-focus", STATUS_STYLE[b.status]?.block, movable && "cursor-grab active:cursor-grabbing", !b.holds && b.status === "requested" && "border-dashed opacity-80")}
-                      style={{ top, height: h, left: `calc(${(l.lane / l.lanes) * 100}% + 2px)`, width: `calc(${100 / l.lanes}% - 4px)` }}
-                      aria-label={`${hm(b.startMs, tz)} ${b.customer} ${b.service}`}
-                    >
-                      <span className="block truncate font-semibold">{hm(b.startMs, tz)}-{hm(b.endMs, tz)} {b.customer || "Khách"}</span>
-                      <span className="block truncate">{b.service}{mode === "week" ? ` · ${names.get(b.resourceId) ?? ""}` : ""}</span>
-                    </button>
-                  );
-                })}
-              </div>
+    <SurfaceCard ariaLabel="Lịch hẹn" composition="joined">
+      <HorizontalScrollRegion overflow="needed" aria-label="Lịch hẹn">
+        <div className={CAL_GRID}>
+          <div className={CAL_GUTTER}>
+            <div className={CAL_CORNER} />
+            <div className={CAL_RELATIVE} style={{ height }}>
+              {hours.map((h) => (
+                <div key={h} className={CAL_HOUR_LABEL} style={{ top: (h - range.start) * PX_PER_HOUR }}>
+                  <Text as="span" size="xs" tone="muted">{`${String(h).padStart(2, "0")}:00`}</Text>
+                </div>
+              ))}
             </div>
-          );
-        })}
-      </div>
-    </div>
+          </div>
+          {cols.map((c) => {
+            const items = inCol(c);
+            const lanes = layout(items);
+            return (
+              <div key={c.key} className={CAL_COLUMN}>
+                <div className={c.date === nowDay && mode === "week" ? CAL_HEAD_TODAY : CAL_HEAD}>
+                  <Text as="span" size="sm" weight="semibold" overflow="truncate">{c.label}</Text>
+                  <Text as="span" size="xs" tone="muted" overflow="truncate">{c.sub}</Text>
+                </div>
+                <div className={CAL_RELATIVE} style={{ height }} onDragOver={(e) => e.preventDefault()} onDrop={(e) => drop(c, e)}>
+                  {hours.map((h) => <div key={h} className={CAL_HOUR_LINE} style={{ top: (h - range.start) * PX_PER_HOUR }} />)}
+                  {c.date === nowDay && nowMin >= range.start * 60 && nowMin <= range.end * 60 ? (
+                    <div className={CAL_NOW_LINE} style={{ top: ((nowMin - range.start * 60) / 60) * PX_PER_HOUR }} />
+                  ) : null}
+                  {items.map((b) => {
+                    const l = lanes.get(b.id) ?? { lane: 0, lanes: 1 };
+                    const top = ((minutesOfDay(hm(b.startMs, tz)) - range.start * 60) / 60) * PX_PER_HOUR;
+                    const h = Math.max(24, ((b.endMs - b.startMs) / 3_600_000) * PX_PER_HOUR - 2);
+                    const movable = ACTIVE.includes(b.status);
+                    // grammar gap: a draggable, absolutely positioned block has no Common action owner, so it stays a native button.
+                    return (
+                      <button
+                        key={b.id}
+                        type="button"
+                        draggable={movable}
+                        onDragStart={(e) => {
+                          grab.current = e.clientY - e.currentTarget.getBoundingClientRect().top;
+                          e.dataTransfer.setData("text/plain", b.id);
+                          e.dataTransfer.effectAllowed = "move";
+                        }}
+                        onClick={() => onOpen(b)}
+                        className={cn(CAL_BLOCK_BY_STATUS[b.status] ?? CAL_BLOCK_FALLBACK, movable && CAL_BLOCK_MOVABLE, !b.holds && b.status === "requested" && CAL_BLOCK_TENTATIVE)}
+                        style={{ top, height: h, left: `calc(${(l.lane / l.lanes) * 100}% + 2px)`, width: `calc(${100 / l.lanes}% - 4px)` }}
+                        aria-label={`${hm(b.startMs, tz)} ${b.customer} ${b.service}`}
+                      >
+                        <Text as="span" size="xs" weight="semibold" overflow="truncate">{`${hm(b.startMs, tz)}-${hm(b.endMs, tz)} ${b.customer || "Khách"}`}</Text>
+                        <Text as="span" size="xs" overflow="truncate">{`${b.service}${mode === "week" ? ` · ${names.get(b.resourceId) ?? ""}` : ""}`}</Text>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </HorizontalScrollRegion>
+    </SurfaceCard>
   );
 };

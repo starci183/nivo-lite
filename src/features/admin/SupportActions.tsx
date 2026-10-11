@@ -2,10 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Alert, Button, Input, Select, SurfaceCard, Text } from "@starci/grammar/common";
+import { Alert, AlertDialog, Button, Input, Select, SurfaceCard, Text } from "@starci/grammar/common";
 import type { Outcome } from "@/lib/types";
 import { extendSubscription, resendWorkspaceInvite, setWorkspacePlan, setWorkspaceStatus } from "./actions";
-import { ACTION_CLASS, ACTION_ROW_CLASS, CONFIRM_CLASS, STACK_CLASS } from "./classNames";
+import { ACTION_CLASS, ACTION_ROW_CLASS, STACK_CLASS } from "./classNames";
 
 export type SupportActionsProps = {
   readonly workspaceId: string;
@@ -30,7 +30,7 @@ const PLAN_OPTIONS = [
   { id: "enterprise", label: "Enterprise · by contract (keep a 50% token margin)" },
 ];
 
-/** Support actions. Each one asks for a confirmation in the page first; the server re-checks the admin and writes platform_audit. */
+/** Support actions. Each one asks for a confirmation in an AlertDialog first; the server re-checks the admin and writes platform_audit. */
 export const SupportActions = ({ workspaceId, status, planCode, creditsLimit, invites }: SupportActionsProps) => {
   const router = useRouter();
   const [isPending, start] = useTransition();
@@ -67,12 +67,12 @@ export const SupportActions = ({ workspaceId, status, planCode, creditsLimit, in
   const sentence = !pending ? "" : pending.kind === "extend" ? `Extend the subscription by ${pending.days} days?` : pending.kind === "status" ? `Mark this workspace ${pending.to}?` : pending.kind === "plan" ? `Move this workspace to ${pending.code}${pending.credits === null ? " with the plan's credits" : ` with its own ${pending.credits} credits a month`}?` : `Resend the invitation to ${pending.email}? The old link stops working.`;
 
   return (
-    <SurfaceCard label="Support actions" ariaLabel="Support actions">
+    <SurfaceCard label="Support actions" headingLevel={2}>
       <div className={STACK_CLASS}>
         <Text size="sm" tone="muted">Manual, for support. Every action is confirmed here and logged in the audit trail. There is no impersonation.</Text>
         <div className={ACTION_CLASS}>
           <div className={ACTION_ROW_CLASS}>
-            <Input id="extend-days" name="days" label="Extend subscription by (days)" value={days} onValueChange={setDays} isError={!daysOk} errorMessage={daysOk ? undefined : "1 to 366"} />
+            <Input id="extend-days" name="days" label="Extend subscription by (days)" variant="secondary" value={days} onValueChange={setDays} isError={!daysOk} errorMessage={daysOk ? undefined : "1 to 366"} />
             <Button variant="secondary" isDisabled={!daysOk || isPending} onPress={() => ask({ kind: "extend", days: n })}>Extend</Button>
           </div>
           <div className={ACTION_ROW_CLASS}>
@@ -81,7 +81,7 @@ export const SupportActions = ({ workspaceId, status, planCode, creditsLimit, in
           </div>
           <div className={ACTION_ROW_CLASS}>
             <Select label="Plan" options={PLAN_OPTIONS} value={plan} onValueChange={setPlan} />
-            <Input id="admin-credits" name="credits" label="Own credits a month (blank: the plan's)" value={credits} onValueChange={setCredits} isError={!creditsOk} errorMessage={creditsOk ? undefined : "A whole number"} />
+            <Input id="admin-credits" name="credits" label="Own credits a month (blank: the plan's)" variant="secondary" value={credits} onValueChange={setCredits} isError={!creditsOk} errorMessage={creditsOk ? undefined : "A whole number"} />
             <Button variant="secondary" isDisabled={!plan || !creditsOk || isPending} onPress={() => plan && ask({ kind: "plan", code: plan, credits: c })}>Set plan</Button>
           </div>
           {invites.length > 0 ? (
@@ -90,15 +90,17 @@ export const SupportActions = ({ workspaceId, status, planCode, creditsLimit, in
             </div>
           ) : null}
         </div>
-        {pending ? (
-          <Alert tone="cautionary" title="Confirm" description={sentence} />
-        ) : null}
-        {pending ? (
-          <div className={CONFIRM_CLASS}>
-            <Button variant="primary" isPending={isPending} onPress={run}>Confirm</Button>
-            <Button variant="ghost" isDisabled={isPending} onPress={() => setPending(null)}>Cancel</Button>
-          </div>
-        ) : null}
+        <AlertDialog
+          isOpen={pending !== null}
+          onOpenChange={(open) => { if (!open) setPending(null); }}
+          title={sentence}
+          tone={pending?.kind === "status" && pending.to === "past_due" ? "negative" : "informative"}
+          confirmLabel="Confirm"
+          cancelLabel="Cancel"
+          isConfirmPending={isPending}
+          onConfirm={run}
+          onCancel={() => setPending(null)}
+        />
         {message ? <Alert tone={message.tone} title={message.tone === "affirmative" ? "Done" : "Could not do that"} description={message.text} /> : null}
       </div>
     </SurfaceCard>

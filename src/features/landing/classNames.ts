@@ -1,88 +1,67 @@
-/** Marketing layout classes for the public landing page. Raw brand hex is allowed here (campaign/marketing blocks). */
-export const PAGE = "min-h-dvh bg-white text-[#0F172A]";
-export const RAIL = "mx-auto w-full max-w-[1040px] px-4 md:px-0";
-export const SECTION = "scroll-mt-20 py-16 md:py-24";
-export const EYEBROW = "inline-flex h-[26px] items-center gap-2 rounded-sm border border-[#E2E8F0] bg-white px-2.5 text-xs font-medium uppercase tracking-wider text-[#334155]";
-export const EYEBROW_DOT = "block size-1.5 bg-[#E11D48]";
-export const H2 = "text-3xl font-bold leading-tight tracking-tight md:text-4xl";
-export const LEAD = "text-base leading-7 text-[#334155] md:text-lg";
-export const CENTER = "flex flex-col items-center gap-4 text-center";
+/**
+ * App-owned layout of the public landing page. Only flex/grid/gap/width classes live here: every face, edge,
+ * corner, inset, type size and colour belongs to the Grammar component that draws it (SurfaceCard, TopBar,
+ * Footer, Text, Heading, Badge, MediaFrame ...). No literal colour, no arbitrary value.
+ */
+
+/** Page regions: a marketing surface whose sections are deliberately spacious (GAP-6 case-2), block inset PADDING-9. */
+export const MAIN = "flex min-w-0 flex-col gap-8 py-6 sm:py-8";
+/** Blocks inside one section: heading, then content (GAP-4 case-1). */
+export const SECTION_STACK = "flex min-w-0 flex-col gap-4";
+/** Reading cap for a lead paragraph (MEASURE-4 case-1). */
+export const LEAD_MEASURE = "max-w-2xl";
 
 /* Nav */
-export const NAV = "sticky top-0 z-30 border-b border-[#E2E8F0] bg-white/90 backdrop-blur";
-export const NAV_ROW = "mx-auto flex h-16 w-full max-w-[1200px] items-center justify-between gap-3 px-4 md:h-20 md:px-8";
-export const NAV_LINKS = "hidden items-center gap-1 rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] p-1 lg:flex";
-export const NAV_LINK = "flex h-9 items-center rounded-sm px-3.5 text-sm font-medium text-[#0F172A] hover:bg-white hover:text-[#7F1D1D]";
-export const NAV_ACTIONS = "flex items-center gap-2 md:gap-3";
+/** The in-page anchors leave the bar below the wide breakpoint (layout only). */
+export const NAV_LINKS = "hidden min-w-0 lg:flex";
+/** "Sign in" leaves the bar on phones; "Try now" stays (layout only). */
 export const NAV_SIGNIN = "hidden sm:block";
 
 /* Hero */
-export const HERO = "relative isolate overflow-hidden border-b border-[#E2E8F0] bg-white pt-12 md:pt-20";
-export const HERO_GLOW = "pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-2/3 bg-gradient-to-b from-transparent to-[#FFE4E6]";
-export const HERO_COPY = "mx-auto flex max-w-4xl flex-col items-center gap-5 px-4 text-center";
-export const H1 = "text-balance text-4xl font-bold leading-[1.1] tracking-tight md:text-6xl md:leading-[1.14]";
-export const H1_ACCENT = "block text-[#E11D48]";
-export const HERO_ACTIONS = "flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row";
-export const HERO_NOTE = "text-xs text-[#64748B]";
-export const HERO_SHOT = "mx-auto mt-12 w-full max-w-[1120px] px-4 md:mt-16";
-export const HERO_SHOT_FADE = "translate-y-6 md:translate-y-10";
-
-/* Browser frame */
-export const FRAME = "overflow-hidden rounded-lg border border-[#E2E8F0] bg-white shadow-[0_24px_60px_-24px_rgba(15,23,42,0.28)]";
-export const FRAME_BAR = "flex items-center gap-3 border-b border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2";
-export const FRAME_DOTS = "flex gap-1.5";
-export const FRAME_DOT = "block size-2.5 rounded-full bg-[#CBD5E1]";
-export const FRAME_LABEL = "ml-auto rounded-sm bg-[#FB7185] px-2 py-0.5 text-[11px] font-medium text-[#0F172A]";
-export const FRAME_IMG = "block h-auto w-full";
-export const TAGLINE = "text-xs font-medium uppercase tracking-wider text-[#64748B]";
+/** Hero copy: eyebrow, title, lead, actions, notes (GAP-4 case-1). */
+export const HERO_COPY = "flex min-w-0 flex-col items-start gap-4";
+/** Primary and secondary call to action, side by side from `sm` (GAP-3 case-3). */
+export const HERO_ACTIONS = "flex w-full flex-col gap-3 sm:w-auto sm:flex-row";
+/** Hero notes: one qualifier under another (GAP-1 case-1). */
+export const HERO_NOTES = "flex flex-col gap-1";
 
 /* Trust strip */
-export const TRUST = "py-12 md:py-16";
-export const TRUST_LEAD = "mb-7 text-center text-sm text-[#334155]";
-export const TRUST_BOX = "relative flex flex-col border border-[#E2E8F0] md:flex-row";
-export const TRUST_CORNER = "absolute size-[5px] bg-[#CBD5E1]";
-export const TRUST_WHO = "flex flex-col justify-center gap-1.5 border-b border-[#E2E8F0] p-6 md:w-80 md:shrink-0 md:border-b-0 md:border-r";
-export const TRUST_CHIPS = "flex flex-wrap content-center gap-3 p-5 md:p-6";
-export const CHIP = "inline-flex h-10 items-center gap-2 rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] px-3.5 text-sm text-[#0F172A]";
+/** Audience copy beside the watched situations; stacks on phones (GAP-5). */
+export const TRUST_ROW = "flex min-w-0 flex-col gap-6 md:flex-row";
+/** Audience copy column (GAP-1 case-1: label, name, qualifier read as one identity). */
+export const TRUST_WHO = "flex min-w-0 flex-col gap-1 md:w-80 md:shrink-0";
+/** Watched situations: a wrapping grid of peers (GAP-3). */
+export const TRUST_LIST = "grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3";
 
 /* Product */
-export const PRODUCT_HEAD = CENTER;
-export const PRODUCT_BOX = "mt-12 flex flex-col border border-[#E2E8F0] md:mt-14";
-export const PRODUCT_TABS = "overflow-x-auto border-b border-[#E2E8F0] px-3 pt-2";
-export const PRODUCT_PANEL = "flex min-w-0 grow flex-col gap-5 p-6";
+/** Desktop panel: tabs, framed shot, title and bullets (GAP-4). Hidden on phones, where the stack shows every view. */
+export const PRODUCT_DESKTOP = "hidden min-w-0 flex-col gap-4 md:flex";
+/** Panel title beside its three benefits (GAP-5). */
+export const PRODUCT_COPY = "grid grid-cols-2 gap-6";
+/** Benefit list rows (GAP-3). */
 export const BULLETS = "flex flex-col gap-3";
-export const BULLET = "flex items-start gap-3 text-sm leading-6 text-[#334155]";
-export const BULLET_MARK = "mt-2 block size-1.5 shrink-0 bg-[#E11D48]";
-export const PANEL_TITLE = "text-xl font-bold leading-7";
-export const STACK = "mt-10 flex flex-col gap-10 md:hidden";
-export const STACK_ITEM = "flex flex-col gap-4";
-export const STACK_NAME = "text-xs font-medium uppercase tracking-wider text-[#64748B]";
+/** Phone stack: one article per view (GAP-6 between views). */
+export const PRODUCT_STACK = "flex min-w-0 flex-col gap-8 md:hidden";
 
 /* Flow */
-export const FLOW = "border-y border-[#E2E8F0] bg-[#F8FAFC]";
-export const FLOW_GRID = "mt-12 grid grid-cols-1 gap-4 md:mt-14 md:grid-cols-2 lg:grid-cols-4";
-export const FLOW_STEP = "relative flex flex-col gap-3 rounded-lg border border-[#E2E8F0] bg-white p-5";
-export const FLOW_STEP_HUMAN = "relative flex flex-col gap-3 rounded-lg border border-[#E11D48] bg-[#FFE4E6] p-5";
-export const FLOW_ART = "h-28 w-auto self-start select-none";
-export const FLOW_META = "flex items-center justify-between gap-2 text-xs text-[#64748B]";
-export const FLOW_NAME = "flex items-center gap-2 text-sm font-medium text-[#334155]";
-export const FLOW_TITLE = "text-lg font-bold leading-6";
-export const FLOW_TEXT = "text-sm leading-6 text-[#334155]";
-export const FLOW_ARROW = "absolute -right-3.5 top-1/2 z-10 hidden size-7 -translate-y-1/2 items-center justify-center rounded-full border border-[#E2E8F0] bg-white text-[#64748B] lg:flex";
-export const AI_CHIP = "rounded-sm bg-[#FB7185] px-1.5 py-0.5 text-[11px] font-bold text-[#0F172A]";
-export const FLOW_TAG = "text-xs font-medium text-[#166534]";
+/** Four steps: one column, two from `md`, four from `lg` (GAP-4 case-2). */
+export const FLOW_GRID = "grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4";
+/** A card fills its grid cell so peer cards share one height. */
+export const FLOW_ITEM = "flex min-w-0";
+/** Step label and the human-approval tag (GAP-2 case-4). */
+export const FLOW_META = "flex flex-wrap items-center justify-between gap-2";
+/** Agent name and its "AI" mark (GAP-2 case-4). */
+export const FLOW_NAME = "flex flex-wrap items-center gap-2";
+/** Card body rhythm (GAP-3). */
+export const FLOW_BODY = "flex min-w-0 flex-col gap-3";
 
 /* Connect */
-export const CONNECT = "bg-[#0F172A] text-white";
-export const CONNECT_GRID = "grid grid-cols-1 gap-10 lg:grid-cols-2 lg:items-center lg:gap-16";
-export const CONNECT_EYEBROW = "inline-flex h-[26px] items-center gap-2 rounded-sm border border-white/20 px-2.5 text-xs font-medium uppercase tracking-wider text-[#FB7185]";
-export const CONNECT_LEAD = "text-base leading-7 text-white/75 md:text-lg";
-export const CONNECT_LIST = "flex flex-col gap-3";
-export const CONNECT_ITEM = "flex items-start justify-between gap-4 rounded-lg border border-white/15 bg-white/5 p-4";
-export const CONNECT_ITEM_ON = "flex items-start justify-between gap-4 rounded-lg border border-[#FB7185] bg-white/10 p-4";
-export const CONNECT_NAME = "text-base font-medium";
-export const CONNECT_TEXT = "mt-1 text-sm leading-6 text-white/70";
-export const CONNECT_OK = "shrink-0 rounded-sm bg-[#FB7185] px-2 py-0.5 text-xs font-bold text-[#0F172A]";
-export const CONNECT_SOON = "shrink-0 rounded-sm border border-white/30 px-2 py-0.5 text-xs font-medium text-white/80";
-export const CONNECT_NOTE = "text-sm text-white/60";
-export const CONNECT_ART = "h-40 w-auto self-start select-none";
+/** Copy and the channel list; two columns from `lg` (GAP-5). */
+export const CONNECT_GRID = "grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start";
+/** Copy column: header, then its call to action (GAP-4). */
+export const CONNECT_COPY = "flex min-w-0 flex-col items-start gap-4";
+/** Channel row inside the joined list card (BOUNDARY-2 case-1, PADDING-3/4 side contact). */
+export const CHANNEL_ROW = "flex items-start justify-between gap-4 border-b border-separator px-4 py-3 last:border-b-0";
+
+/** In-page anchor targets clear the sticky top bar when a nav link scrolls to them (MARGIN, layout only). */
+export const ANCHOR = "scroll-mt-16";

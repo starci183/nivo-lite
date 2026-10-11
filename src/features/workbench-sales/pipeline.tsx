@@ -2,21 +2,20 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import Link from "next/link";
-import { Badge, Button, Dialog, Text, Textarea } from "@starci/grammar/common";
+import { Badge, Button, Dialog, EmptyNotice, HorizontalScrollRegion, SegmentedControl, SurfaceListCard, Text, TextAction, Textarea } from "@starci/grammar/common";
 import { useLocale, useT } from "@/i18n/client";
 import { workbenchSales } from "@/i18n/dict/workbenchSales";
 import { recordOutcome } from "@/lib/actions";
 import type { LeadStage } from "@/lib/types";
 import type { SalesDeal } from "@/lib/workbench-sales";
-import { BOARD_CLASS_NAME, CARD_CLASS_NAME, CHIPS_CLASS_NAME, FORM_CLASS_NAME, LANE_BODY_CLASS_NAME, LANE_CLASS_NAME, LANE_HEAD_CLASS_NAME, STAGE_CHOICES_CLASS_NAME } from "./classNames";
+import { BOARD_CLASS_NAME, CHIPS_CLASS_NAME, DEAL_ROW_CLASS_NAME, FORM_CLASS_NAME, LANE_CLASS_NAME, ROW_ACTIONS_CLASS_NAME } from "./classNames";
 import { formatDate, formatVnd, formatVndCompact } from "./format";
-import { stageTone } from "./parts";
 
 const STAGES: ReadonlyArray<LeadStage> = ["new", "qualified", "proposal", "won", "lost"];
 const OPEN_LANES: ReadonlyArray<LeadStage> = ["new", "qualified", "proposal"];
 const MIN_REASON_CHARS = 5;
 const isClosing = (s: LeadStage): boolean => s === "won" || s === "lost";
+const isStage = (v: string): v is LeadStage => (STAGES as ReadonlyArray<string>).includes(v);
 
 /** Props for {@link PipelinePanel}. */
 export type PipelinePanelProps = {
@@ -75,17 +74,19 @@ const MoveDialog = ({ deal, onClose }: MoveDialogProps) => {
       }
     >
       <div className={FORM_CLASS_NAME}>
-        <Text size="sm" weight="medium">{t("moveTo")}</Text>
-        <div className={STAGE_CHOICES_CLASS_NAME} role="group" aria-label={t("moveTo")}>
-          {STAGES.filter((s) => deal && s !== deal.stage).map((s) => (
-            <Button key={s} variant={target === s ? "primary" : "outline"} size="sm" onPress={() => setTarget(s)}>{t(`stage_${s}`)}</Button>
-          ))}
-        </div>
+        <SegmentedControl
+          label={t("moveTo")}
+          options={STAGES.filter((s) => deal && s !== deal.stage).map((s) => ({ value: s, label: t(`stage_${s}`) }))}
+          value={target ?? ""}
+          isDisabled={isPending}
+          onValueChange={(v) => setTarget(isStage(v) ? v : null)}
+        />
         {target ? (
           <Textarea
             label={needsReason ? t(target === "won" ? "reasonWonLabel" : "reasonLostLabel") : t("noteLabel")}
             description={needsReason ? t("reasonHint", { n: MIN_REASON_CHARS }) : undefined}
             isRequired={needsReason}
+            variant="secondary"
             rows={3}
             value={reason}
             isDisabled={isPending}
@@ -99,15 +100,13 @@ const MoveDialog = ({ deal, onClose }: MoveDialogProps) => {
   );
 };
 
-const DealCard = ({ deal, onMove }: { readonly deal: SalesDeal; readonly onMove: (deal: SalesDeal) => void }) => {
+const DealRow = ({ deal, onMove }: { readonly deal: SalesDeal; readonly onMove: (deal: SalesDeal) => void }) => {
   const t = useT(workbenchSales);
   const locale = useLocale();
   const closed = deal.stage === "won" || deal.stage === "lost";
   return (
-    <li className={CARD_CLASS_NAME}>
-      <Link href={`/leads/${deal.leadId}`}>
-        <Text as="span" weight="semibold">{deal.customer}</Text>
-      </Link>
+    <li className={DEAL_ROW_CLASS_NAME}>
+      <TextAction href={`/leads/${deal.leadId}`}>{deal.customer}</TextAction>
       {deal.company ? <Text size="xs" tone="muted">{deal.company}</Text> : null}
       <div className={CHIPS_CLASS_NAME}>
         <Text as="span" size="sm" weight="semibold">{deal.valueVnd !== null ? formatVnd(deal.valueVnd, locale) : t("noValue")}</Text>
@@ -121,35 +120,32 @@ const DealCard = ({ deal, onMove }: { readonly deal: SalesDeal; readonly onMove:
       <Text size="xs" tone="muted">
         {[deal.owner ? t("owner", { name: deal.owner }) : t("ownerNone"), deal.dueAt && !closed ? t("due", { date: formatDate(deal.dueAt, locale) }) : null].filter(Boolean).join(" · ")}
       </Text>
-      <div>
+      <div className={ROW_ACTIONS_CLASS_NAME}>
         <Button variant="tertiary" size="sm" onPress={() => onMove(deal)}>{t("moveButton")}</Button>
       </div>
     </li>
   );
 };
 
-type LaneProps = { readonly title: string; readonly deals: ReadonlyArray<SalesDeal>; readonly hidden?: number; readonly tone: ReturnType<typeof stageTone>; readonly onMove: (deal: SalesDeal) => void };
+type LaneProps = { readonly title: string; readonly deals: ReadonlyArray<SalesDeal>; readonly hidden?: number; readonly onMove: (deal: SalesDeal) => void };
 
-const Lane = ({ title, deals, hidden = 0, tone, onMove }: LaneProps) => {
+/** One stage: a labelled collection of deal rows (COLLECTION-1, SurfaceListCard). */
+const Lane = ({ title, deals, hidden = 0, onMove }: LaneProps) => {
   const t = useT(workbenchSales);
   const locale = useLocale();
   const total = deals.reduce((s, d) => s + (d.valueVnd ?? 0), 0);
+  const fact = total > 0 ? `${deals.length + hidden} · ${formatVndCompact(total, locale)}` : String(deals.length + hidden);
   return (
-    <section className={LANE_CLASS_NAME} aria-label={title}>
-      <div className={LANE_HEAD_CLASS_NAME}>
-        <div className={CHIPS_CLASS_NAME}>
-          <Badge tone={tone} isDot>{title}</Badge>
-          <Text as="span" size="xs" tone="muted">{deals.length + hidden}</Text>
-        </div>
-        {total > 0 ? <Text as="span" size="xs" tone="muted">{formatVndCompact(total, locale)}</Text> : null}
-      </div>
-      {deals.length === 0 ? (
-        <Text size="sm" tone="muted">{t("laneEmpty")}</Text>
-      ) : (
-        <ul className={LANE_BODY_CLASS_NAME}>{deals.map((d) => <DealCard key={d.leadId} deal={d} onMove={onMove} />)}</ul>
-      )}
-      {hidden > 0 ? <Text size="xs" tone="muted">{t("laneMore", { n: hidden })}</Text> : null}
-    </section>
+    <div className={LANE_CLASS_NAME}>
+      <SurfaceListCard
+        label={title}
+        fact={fact}
+        empty={<EmptyNotice message={t("laneEmpty")} />}
+        footer={hidden > 0 ? <Text size="xs" tone="muted">{t("laneMore", { n: hidden })}</Text> : undefined}
+      >
+        {deals.map((d) => <DealRow key={d.leadId} deal={d} onMove={onMove} />)}
+      </SurfaceListCard>
+    </div>
   );
 };
 
@@ -160,11 +156,13 @@ export const PipelinePanel = ({ deals, closedHidden }: PipelinePanelProps) => {
   const by = (s: LeadStage) => deals.filter((d) => d.stage === s);
   return (
     <>
-      <div className={BOARD_CLASS_NAME}>
-        {OPEN_LANES.map((s) => <Lane key={s} title={t(`stage_${s}`)} deals={by(s)} tone={stageTone(s)} onMove={setMoving} />)}
-        <Lane title={t("stage_won")} deals={by("won")} hidden={closedHidden.won} tone="success" onMove={setMoving} />
-        <Lane title={t("stage_lost")} deals={by("lost")} hidden={closedHidden.lost} tone="danger" onMove={setMoving} />
-      </div>
+      <HorizontalScrollRegion overflow="needed" aria-label={t("tab_pipeline")}>
+        <div className={BOARD_CLASS_NAME}>
+          {OPEN_LANES.map((s) => <Lane key={s} title={t(`stage_${s}`)} deals={by(s)} onMove={setMoving} />)}
+          <Lane title={t("stage_won")} deals={by("won")} hidden={closedHidden.won} onMove={setMoving} />
+          <Lane title={t("stage_lost")} deals={by("lost")} hidden={closedHidden.lost} onMove={setMoving} />
+        </div>
+      </HorizontalScrollRegion>
       <MoveDialog key={moving?.leadId ?? "none"} deal={moving} onClose={() => setMoving(null)} />
     </>
   );

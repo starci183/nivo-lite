@@ -1,65 +1,65 @@
 import { cn } from "@heroui/react";
 
-/** Whole workbench: metrics strip above a three-pane inbox. */
+/** Whole workbench: metrics strip above a three-pane inbox (GAP-4). */
 export const WORKBENCH_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-4");
 
-/* ---------- Metrics ---------- */
+/* ---------- Inbox frame (inside a joined SurfaceCard, which owns face, corner and edge) ---------- */
 
-export const METRICS_CLASS_NAME = cn("grid", "grid-cols-1", "divide-y", "divide-separator", "rounded-lg", "border", "border-separator", "bg-surface", "sm:grid-cols-3", "sm:divide-x", "sm:divide-y-0");
-export const METRIC_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-0.5", "px-4", "py-3");
-export const METRIC_VALUE_CLASS_NAME = cn("text-2xl", "font-semibold", "leading-8", "text-foreground", "tabular-nums");
-
-/* ---------- Inbox frame ---------- */
-
-export const INBOX_CLASS_NAME = cn("relative", "flex", "h-[var(--office-h,70dvh)]", "min-h-[28rem]", "min-w-0", "overflow-hidden", "rounded-lg", "border", "border-separator", "bg-surface");
-export const LIST_PANE_CLASS_NAME = cn("w-full", "min-w-0", "shrink-0", "flex-col", "border-separator", "md:w-80", "md:border-r");
-export const THREAD_PANE_CLASS_NAME = cn("min-w-0", "flex-1", "flex-col");
-export const SIDE_PANE_CLASS_NAME = cn("absolute", "inset-0", "z-20", "flex-col", "overflow-y-auto", "bg-surface", "sm:left-auto", "sm:w-80", "sm:border-l", "sm:border-separator", "xl:static", "xl:z-auto", "xl:w-80", "xl:shrink-0");
+/** The three panes, filling the joined card that FillViewport sizes. */
+export const INBOX_CLASS_NAME = cn("relative", "flex", "h-full", "min-h-0", "min-w-0", "flex-1", "overflow-hidden");
+/** Conversation list pane; one inline seam against the thread from md (BOUNDARY-4 case-3). */
+const LIST_PANE_CLASS_NAME = cn("w-full", "min-w-0", "shrink-0", "flex-col", "border-separator", "md:w-80", "md:border-r");
+export const LIST_PANE_OPEN_CLASS_NAME = cn(LIST_PANE_CLASS_NAME, "flex");
+export const LIST_PANE_WIDE_ONLY_CLASS_NAME = cn(LIST_PANE_CLASS_NAME, "hidden", "md:flex");
+/** Thread pane. */
+const THREAD_PANE_CLASS_NAME = cn("min-w-0", "flex-1", "flex-col");
+export const THREAD_PANE_OPEN_CLASS_NAME = cn(THREAD_PANE_CLASS_NAME, "flex");
+export const THREAD_PANE_WIDE_ONLY_CLASS_NAME = cn(THREAD_PANE_CLASS_NAME, "hidden", "md:flex");
+/** Customer pane: an overlay on narrow screens, a docked column from xl (SURFACE-2 face of the panel it covers; BOUNDARY-4 case-3 seam). */
+const SIDE_PANE_CLASS_NAME = cn("absolute", "inset-0", "z-20", "flex-col", "overflow-y-auto", "bg-surface", "sm:left-auto", "sm:w-80", "sm:border-l", "sm:border-separator", "xl:static", "xl:z-auto", "xl:w-80", "xl:shrink-0");
+export const SIDE_PANE_OPEN_CLASS_NAME = cn(SIDE_PANE_CLASS_NAME, "flex");
+export const SIDE_PANE_DOCKED_ONLY_CLASS_NAME = cn(SIDE_PANE_CLASS_NAME, "hidden", "xl:flex");
+/** Pane head band with its closing seam (BOUNDARY-1 case-2, PADDING-4 inline / PADDING-3 block). */
 export const HEAD_CLASS_NAME = cn("flex", "min-h-16", "shrink-0", "items-center", "gap-3", "border-b", "border-separator", "px-4", "py-3");
 export const HEAD_TEXT_CLASS_NAME = cn("flex", "min-w-0", "flex-1", "flex-col");
+/** The back control, phones only. */
 export const PHONE_ONLY_CLASS_NAME = cn("flex", "md:hidden");
-export const BACK_GLYPH_CLASS_NAME = cn("flex", "rotate-180");
-export const HIDDEN_BELOW_MD_CLASS_NAME = cn("hidden", "md:flex");
+/** The close control of the customer pane, until the pane docks at xl. */
+export const UNTIL_DOCKED_CLASS_NAME = cn("xl:hidden");
+/** A centred empty or waiting region filling its pane (PADDING-5 case-1). */
+export const CENTER_CLASS_NAME = cn("flex", "flex-1", "items-center", "justify-center", "p-6");
+/** Chips on one line (GAP-1: one identity). */
+export const CHIPS_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "gap-1");
 
 /* ---------- Conversation list ---------- */
 
-export const FILTERS_CLASS_NAME = cn("flex", "shrink-0", "gap-1", "overflow-x-auto", "px-3", "pb-2");
-export const FILTER_CLASS_NAME = cn("shrink-0", "rounded-full", "border", "border-separator", "px-3", "py-1", "text-sm", "text-muted", "hover:bg-surface-secondary");
-export const FILTER_ACTIVE_CLASS_NAME = cn("border-accent", "bg-accent-soft", "text-foreground");
+/** Search band (PADDING-3 inline, PADDING-3 top, PADDING-2 towards the filters). */
+export const SEARCH_CLASS_NAME = cn("shrink-0", "px-3", "pt-3", "pb-2");
+/** Filter band. */
+export const FILTERS_CLASS_NAME = cn("shrink-0", "px-3", "pb-2");
+/** The scrolling list body. */
 export const LIST_BODY_CLASS_NAME = cn("flex", "min-h-0", "flex-1", "flex-col", "overflow-y-auto", "px-2", "pb-2");
-export const ROW_CLASS_NAME = cn("flex", "w-full", "items-start", "gap-3", "rounded-lg", "px-3", "py-2.5", "text-left", "text-foreground", "hover:bg-surface-secondary", "focus-visible:outline-2", "focus-visible:outline-accent");
-export const ROW_ACTIVE_CLASS_NAME = cn("bg-accent-soft", "hover:bg-accent-soft");
-export const ROW_TEXT_CLASS_NAME = cn("flex", "min-w-0", "flex-1", "flex-col", "gap-1");
-export const ROW_LINE_CLASS_NAME = cn("flex", "min-w-0", "items-baseline", "justify-between", "gap-2");
-export const ROW_CHIPS_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "gap-1");
 
 /* ---------- Thread ---------- */
 
-export const THREAD_SCROLL_CLASS_NAME = cn("flex", "min-h-0", "flex-1", "flex-col", "gap-3", "overflow-y-auto", "px-4", "py-4");
-export const MSG_ROW_CLASS_NAME = cn("flex", "w-full", "gap-2");
-export const MSG_ROW_OUT_CLASS_NAME = cn("justify-end");
-export const MSG_COLUMN_CLASS_NAME = cn("flex", "max-w-[85%]", "flex-col", "gap-1", "sm:max-w-[72%]");
-export const MSG_COLUMN_OUT_CLASS_NAME = cn("items-end");
-export const MSG_AUTHOR_CLASS_NAME = cn("flex", "items-center", "gap-2");
-export const BUBBLE_IN_CLASS_NAME = cn("w-fit", "max-w-full", "whitespace-pre-wrap", "break-words", "rounded-2xl", "rounded-tl-md", "bg-surface-secondary", "px-4", "py-2");
-export const BUBBLE_AI_CLASS_NAME = cn("w-fit", "max-w-full", "whitespace-pre-wrap", "break-words", "rounded-2xl", "rounded-tr-md", "border", "border-separator", "bg-surface", "px-4", "py-2");
-export const BUBBLE_HUMAN_CLASS_NAME = cn("w-fit", "max-w-full", "whitespace-pre-wrap", "break-words", "rounded-2xl", "rounded-tr-md", "bg-accent-soft", "px-4", "py-2");
-export const SYSTEM_LINE_CLASS_NAME = cn("flex", "items-center", "justify-center", "gap-3", "px-6", "py-1", "text-center");
-export const SYSTEM_RULE_CLASS_NAME = cn("h-px", "min-w-6", "flex-1", "bg-separator");
-export const DELIVERY_CLASS_NAME = cn("flex", "items-center", "gap-1");
+/** The message scroll owner (GAP-3 between messages, PADDING-4). */
+export const THREAD_SCROLL_CLASS_NAME = cn("flex", "min-h-0", "flex-1", "flex-col", "gap-3", "overflow-y-auto", "p-4");
 
 /* ---------- Composer ---------- */
 
-export const COMPOSER_CLASS_NAME = cn("flex", "shrink-0", "flex-col", "gap-2", "border-t", "border-separator", "bg-surface", "px-4", "pt-3", "pb-3");
+/** Composer band: its leading seam and inset (BOUNDARY-1 case-3, PADDING-4 inline, PADDING-3 block). */
+export const COMPOSER_CLASS_NAME = cn("flex", "shrink-0", "flex-col", "gap-2", "border-t", "border-separator", "bg-surface", "px-4", "py-3");
+/** Field and the action that submits it (GAP-2). */
 export const COMPOSER_ROW_CLASS_NAME = cn("flex", "items-end", "gap-2");
 export const COMPOSER_FIELD_CLASS_NAME = cn("min-w-0", "flex-1");
 
 /* ---------- Side panel ---------- */
 
-export const SIDE_SECTION_CLASS_NAME = cn("flex", "flex-col", "gap-3", "border-b", "border-separator", "px-4", "py-4");
-export const SIDE_FACTS_CLASS_NAME = cn("grid", "grid-cols-[5.5rem_1fr]", "gap-x-3", "gap-y-1.5");
+/** One side band with its trailing seam (BOUNDARY-2, PADDING-4). */
+export const SIDE_SECTION_CLASS_NAME = cn("flex", "flex-col", "gap-3", "border-b", "border-separator", "p-4");
 export const CUSTOMER_HEAD_CLASS_NAME = cn("flex", "items-center", "gap-3");
-export const ESCALATION_CLASS_NAME = cn("flex", "flex-col", "gap-3", "border-b", "border-separator", "bg-surface-secondary", "px-4", "py-4");
-export const QUOTE_CLASS_NAME = cn("whitespace-pre-wrap", "break-words", "border-l-2", "border-separator", "pl-3");
+/** The waiting escalation: a recessed band of its own (SURFACE-3 case-1). */
+export const ESCALATION_CLASS_NAME = cn("flex", "flex-col", "gap-3", "border-b", "border-separator", "bg-surface-secondary", "p-4");
+/** The question and who it is assigned to (GAP-1). */
+export const QUESTION_CLASS_NAME = cn("flex", "flex-col", "gap-1");
 export const ACTIONS_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "gap-2");
-export const EMPTY_CLASS_NAME = cn("flex", "flex-1", "items-center", "justify-center", "p-6");

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react"
-import { Button, EmptyNotice, Heading, Icon, IconButton, Text } from "@starci/grammar/common"
+import { Button, Drawer, EmptyNotice, FillViewport, Heading, IconButton, IconTile, SurfaceCard, Text } from "@starci/grammar/common"
 import { nivoIconSource } from "@/ui"
 import { useLocale, useT } from "@/i18n/client"
 import { office } from "@/i18n/dict/office"
@@ -13,7 +13,6 @@ import { OfficePromoCard } from "@/features/promo-ads/OfficePromoCard"
 import type { Staff, WorkItemView } from "@/lib/flow-types"
 import { ApprovalBubble, approvalAnchor } from "./approvals"
 import {
-  BACK_GLYPH_CLASS_NAME,
   COLUMN_HEAD_CLASS_NAME,
   HEAD_AVATAR_CLASS_NAME,
   NARROW_ONLY_CLASS_NAME,
@@ -22,7 +21,7 @@ import {
   HEAD_TEXT_CLASS_NAME,
   INFO_COLUMN_CLASS_NAME,
   LIST_COLUMN_CLASS_NAME,
-  MESSENGER_CLASS_NAME,
+  MESSENGER_BODY_CLASS_NAME,
   PHONE_HIDDEN_CLASS_NAME,
   PHONE_ONLY_CLASS_NAME,
   PROMO_SLOT_CLASS_NAME,
@@ -42,7 +41,6 @@ import { DaySeparator, MessageRow, PendingBubble } from "./messages"
 import type { PendingApproval } from "./queries"
 import { TasksPanel } from "./tasks"
 import { buildThread } from "./timeline"
-import { useFillViewport } from "./useFillViewport"
 
 export type { CustomerEntry } from "./conversations"
 
@@ -115,19 +113,23 @@ export const OfficeMessenger = ({
   const [phoneView, setPhoneView] = useState<"list" | "thread">("thread")
   const [centre, setCentre] = useState<"chat" | "tasks">("chat")
   const [isInfoOpen, setIsInfoOpen] = useState(false)
+  const [isInfoDocked, setIsInfoDocked] = useState(false)
   const [focusedId, setFocusedId] = useState<string | null>(null)
   const me = useMember()
   const [isPending, startTransition] = useTransition()
-  const rootRef = useRef<HTMLDivElement | null>(null)
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const composerHostRef = useRef<HTMLDivElement | null>(null)
   const stickRef = useRef(true)
   const refreshTimer = useRef<number | null>(null)
 
-  useFillViewport(rootRef)
-
+  // Wide screens dock the info panel as a column; narrower ones open it in a Grammar Drawer.
   useEffect(() => {
-    setIsInfoOpen(window.matchMedia(WIDE_INFO_QUERY).matches)
+    const query = window.matchMedia(WIDE_INFO_QUERY)
+    setIsInfoOpen(query.matches)
+    setIsInfoDocked(query.matches)
+    const onChange = (event: MediaQueryListEvent) => setIsInfoDocked(event.matches)
+    query.addEventListener("change", onChange)
+    return () => query.removeEventListener("change", onChange)
   }, [])
 
   const append = useCallback((incoming: ReadonlyArray<Message>) => {
@@ -326,7 +328,12 @@ export const OfficeMessenger = ({
   )
 
   return (
-    <div ref={rootRef} className={MESSENGER_CLASS_NAME} aria-label={t("messengerLabel")} role="region">
+    <>
+      {/* FillViewport owns "fill the height below the chrome"; SURFACE-2 / BOUNDARY-6: the messenger is one top-level card
+          on the canvas; its columns are joined faces inside it. */}
+      <FillViewport minHeight="md" bottomInset="page">
+      <SurfaceCard ariaLabel={t("messengerLabel")} composition="joined" height="fill">
+      <div className={MESSENGER_BODY_CLASS_NAME}>
       <div className={phoneView === "list" ? LIST_COLUMN_CLASS_NAME : `${LIST_COLUMN_CLASS_NAME} ${PHONE_HIDDEN_CLASS_NAME}`}>
         <ConversationList
           groupName={workspaceName}
@@ -344,12 +351,12 @@ export const OfficeMessenger = ({
 
       <div className={phoneView === "thread" ? THREAD_COLUMN_CLASS_NAME : `${THREAD_COLUMN_CLASS_NAME} ${PHONE_HIDDEN_CLASS_NAME}`}>
         <header className={COLUMN_HEAD_CLASS_NAME}>
-          <div className={`${PHONE_ONLY_CLASS_NAME} ${BACK_GLYPH_CLASS_NAME}`}>
-            <IconButton source={nivoIconSource("next", "leading")} label={t("back")} onPress={() => (centre === "tasks" ? setCentre("chat") : setPhoneView("list"))} />
+          <div className={PHONE_ONLY_CLASS_NAME}>
+            <IconButton source={nivoIconSource("back", "leading")} label={t("back")} onPress={() => (centre === "tasks" ? setCentre("chat") : setPhoneView("list"))} />
           </div>
-          <span className={HEAD_AVATAR_CLASS_NAME} aria-hidden="true">
-            <Icon source={nivoIconSource("community", "leading")} usage="leading" />
-          </span>
+          <div className={HEAD_AVATAR_CLASS_NAME}>
+            <IconTile source={nivoIconSource("community", "leading")} tone="neutral" />
+          </div>
           <div className={HEAD_TEXT_CLASS_NAME}>
             <Heading level={1}>{centre === "tasks" ? t("tasksTitle") : t("title")}</Heading>
             {centre === "tasks" ? null : (
@@ -394,9 +401,10 @@ export const OfficeMessenger = ({
         )}
       </div>
 
-      {isInfoOpen ? (
+      {isInfoDocked && isInfoOpen ? (
         <aside className={INFO_COLUMN_CLASS_NAME} aria-label={t("infoTitle")}>
           <InfoPanel
+            isDocked
             avatarUrl={avatarUrl}
             agents={agents}
             people={people}
@@ -417,7 +425,34 @@ export const OfficeMessenger = ({
           />
         </aside>
       ) : null}
-    </div>
+      </div>
+      </SurfaceCard>
+      </FillViewport>
+      {isInfoDocked ? null : (
+        <Drawer isOpen={isInfoOpen} onOpenChange={setIsInfoOpen} placement="right" title={t("infoTitle")} closeLabel={t("infoClose")}>
+          <InfoPanel
+            isDocked={false}
+            avatarUrl={avatarUrl}
+            agents={agents}
+            people={people}
+            staff={unlinked}
+            pending={pending}
+            exceptions={exceptions}
+            tasks={tasks}
+            moduleOf={moduleOf}
+            onJump={onJump}
+            onJumpException={onJumpException}
+            onMention={onMention}
+            onOpenTasks={() => {
+              setCentre("tasks")
+              setPhoneView("thread")
+              if (!window.matchMedia(WIDE_INFO_QUERY).matches) setIsInfoOpen(false)
+            }}
+            onClose={() => setIsInfoOpen(false)}
+          />
+        </Drawer>
+      )}
+    </>
   )
 }
 

@@ -6,17 +6,14 @@ export const PAGE_CLASS_NAME = cn("flex", "flex-col", "gap-4");
 /** Header actions: the secondary and the one primary. */
 export const HEADER_ACTIONS_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "gap-3");
 
-/** Decision banner content: mark, copy, link. */
-export const BANNER_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "gap-4");
 
-/** Banner copy column. */
-export const BANNER_COPY_CLASS_NAME = cn("flex", "min-w-0", "flex-1", "basis-56", "flex-col", "gap-1");
 
-/** The KPI band: five cards on one line on wide screens. */
-export const KPI_GRID_CLASS_NAME = cn("grid", "grid-cols-2", "gap-2", "sm:grid-cols-3", "lg:grid-cols-5");
+/** The KPI band: five whole-action cards on one line on wide screens (GAP-4 case-2: cards in one collection grid). */
+export const KPI_GRID_CLASS_NAME = cn("grid", "grid-cols-2", "gap-4", "sm:grid-cols-3", "lg:grid-cols-5");
 
-/** One KPI: label over the number. */
-export const KPI_CLASS_NAME = cn("flex", "min-h-12", "flex-col", "gap-1", "rounded-lg", "p-2", "no-underline", "hover:bg-surface-secondary", "focus-visible:outline-2", "focus-visible:outline-focus");
+/** One KPI's copy: label over the number (GAP-1). */
+export const KPI_COPY_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-1");
+
 
 /** Rail: pipeline, agents, activity stacked. */
 export const RAIL_CLASS_NAME = cn("flex", "flex-col", "gap-6");
@@ -42,8 +39,6 @@ export const ACTIVITY_HEAD_CLASS_NAME = cn("flex", "items-baseline", "justify-be
 /** Main column: section title line, then owner sections. */
 export const MAIN_CLASS_NAME = cn("flex", "flex-col", "gap-4");
 
-/** Needs-you strip: mark, copy, one action. */
-export const NEEDS_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "gap-3");
 
 /** Page: tighter top rhythm inside the shell's page area. */
 export const PAGE_INSET_CLASS_NAME = cn("py-2", "md:py-4");
@@ -55,16 +50,22 @@ export const STACK_CLASS_NAME = cn("flex", "flex-col", "gap-3");
 export const BLOCK_CLASS_NAME = cn("flex", "flex-col", "gap-3");
 
 /** Three department tiles: one column on phones, three from sm. */
-export const DEPT_GRID_CLASS_NAME = cn("grid", "grid-cols-1", "gap-2", "sm:grid-cols-3");
+export const DEPT_GRID_CLASS_NAME = cn("grid", "grid-cols-1", "gap-4", "sm:grid-cols-3");
 
-/** One department tile (a link into Office). */
-export const DEPT_TILE_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-1", "rounded-lg", "border", "border-separator", "p-3", "no-underline", "hover:bg-surface-secondary", "focus-visible:outline-2", "focus-visible:outline-focus");
+/** One department card's copy: name, done, waiting, last activity (GAP-1). */
+export const TILE_COPY_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-1");
 
-/** Result metrics: two across on phones, five on wide screens. */
-export const METRIC_GRID_CLASS_NAME = cn("grid", "grid-cols-1", "gap-3", "min-[480px]:grid-cols-2", "lg:grid-cols-5");
+/** Waiting items: nested whole-action cards stacked (GAP-3). */
+export const WAIT_LIST_CLASS_NAME = cn("flex", "flex-col", "gap-3");
 
-/** One result metric: label, value, context. */
-export const METRIC_TILE_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-1", "break-words");
+/** Decision history rows: one hairline between rows (BOUNDARY-3 case-1). */
+export const HISTORY_LIST_CLASS_NAME = cn("divide-y", "divide-separator");
+
+/** One decision history row: separator-facing sides take `py-3` (PADDING-3), the outer edges close on the card inset. */
+export const HISTORY_ROW_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-1", "py-3", "first:pt-0", "last:pb-0");
+
+
+
 
 /** A goal line: text with an optional link. */
 export const GOAL_LINE_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "gap-x-3", "gap-y-1");
@@ -72,8 +73,6 @@ export const GOAL_LINE_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "gap
 /** Badges on one wrapping line. */
 export const CHIP_ROW_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "gap-2");
 
-/** A waiting item or decision row. */
-export const WAIT_ROW_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-1", "rounded-lg", "px-2", "py-2", "no-underline", "hover:bg-surface-secondary", "focus-visible:outline-2", "focus-visible:outline-focus");
 
 /** Status results: one row per status, separated by a hairline. */
 export const STATUS_LIST_CLASS_NAME = cn("flex", "flex-col", "divide-y", "divide-separator");
@@ -88,4 +87,4 @@ export const STATUS_LABEL_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-1"
 export const STATUS_SPLIT_CLASS_NAME = cn("grid", "grid-cols-2", "gap-3", "md:contents");
 
 /** One origin cell: origin label, value, record count. */
-export const STATUS_CELL_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-0.5", "break-words");
+export const STATUS_CELL_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-1", "break-words");

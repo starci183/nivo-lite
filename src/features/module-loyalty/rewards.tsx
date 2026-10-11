@@ -2,13 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Badge, Button, EmptyNotice, Input, Select, SurfaceCard, Switch, Text, Textarea } from "@starci/grammar/common";
+import { Badge, Button, EmptyNotice, Input, ListItem, Select, SurfaceCard, SurfaceListCard, Switch, Text, Textarea } from "@starci/grammar/common";
 import { useLocale, useT } from "@/i18n/client";
 import { loyalty } from "@/i18n/dict/loyalty";
 import type { LoyaltyWorkbenchData } from "@/lib/module-loyalty-queries";
 import { formatVndShort, tierOf, type LoyaltyConfig, type Reward, type RewardKind } from "@/lib/module-loyalty-shared";
 import { addPresetRewardsAction, deleteRewardAction, saveRewardAction } from "./actions";
-import { BODY_CLASS_NAME, CHIPS_CLASS_NAME, FIELD_PAIR_CLASS_NAME, FORM_CLASS_NAME, LIST_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME } from "./classNames";
+import { CHIPS_CLASS_NAME, FIELD_PAIR_CLASS_NAME, FORM_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME } from "./classNames";
 import { formatNumber, parseDigits } from "./format";
 
 const KINDS: ReadonlyArray<RewardKind> = ["voucher", "item", "percent"];
@@ -59,7 +59,7 @@ const RewardForm = ({ reward, config, onDone }: { readonly reward: Reward | null
     <div className={FORM_CLASS_NAME}>
       <Input id="reward-name" name="name" label={t("rewardName")} variant="secondary" isRequired value={name} isDisabled={pending} onValueChange={(v) => setName(v.slice(0, 80))} />
       <div className={FIELD_PAIR_CLASS_NAME}>
-        <Select label={t("rewardKind")} options={kindOptions} value={kind} isDisabled={pending} onValueChange={(v) => setKind(KINDS.find((k) => k === v) ?? "voucher")} />
+        <Select label={t("rewardKind")} variant="secondary" options={kindOptions} value={kind} isDisabled={pending} onValueChange={(v) => setKind(KINDS.find((k) => k === v) ?? "voucher")} />
         <Input id="reward-cost" name="cost" label={t("rewardCost")} variant="secondary" isRequired value={cost} isError={costBad} errorMessage={costBad ? t("rewardCostRequired") : undefined} isDisabled={pending} onValueChange={(v) => setCost(digitsOnly(v))} />
       </div>
       <div className={FIELD_PAIR_CLASS_NAME}>
@@ -70,8 +70,8 @@ const RewardForm = ({ reward, config, onDone }: { readonly reward: Reward | null
         <Input id="reward-stock" name="stock" label={t("rewardStock")} variant="secondary" hint={t("rewardStockHint")} value={stock} isDisabled={pending} onValueChange={(v) => setStock(digitsOnly(v))} />
         <Input id="reward-limit" name="limit" label={t("rewardLimit")} variant="secondary" hint={t("rewardLimitHint")} value={limit} isDisabled={pending} onValueChange={(v) => setLimit(digitsOnly(v))} />
       </div>
-      <Select label={t("rewardMinTier")} options={tierOptions} value={minTier} isDisabled={pending} onValueChange={(v) => setMinTier(v ?? "any")} />
-      <Textarea label={t("rewardNote")} rows={2} maxLength={200} value={note} isDisabled={pending} onValueChange={setNote} />
+      <Select label={t("rewardMinTier")} variant="secondary" options={tierOptions} value={minTier} isDisabled={pending} onValueChange={(v) => setMinTier(v ?? "any")} />
+      <Textarea label={t("rewardNote")} variant="secondary" rows={2} maxLength={200} value={note} isDisabled={pending} onValueChange={setNote} />
       <Switch label={t("rewardActive")} isSelected={active} isDisabled={pending} onSelectedChange={setActive} />
       <div className={ROW_ACTIONS_CLASS_NAME}>
         <Button variant="primary" isPending={pending} onPress={save}>{t("save")}</Button>
@@ -114,7 +114,7 @@ const RewardRow = ({ reward, config, canManage, onEdit }: { readonly reward: Rew
   };
 
   return (
-    <li className={ROW_CLASS_NAME}>
+    <ListItem className={ROW_CLASS_NAME}>
       <div className={ROW_MAIN_CLASS_NAME}>
         <div className={CHIPS_CLASS_NAME}>
           <Text as="span" weight="semibold">{reward.name}</Text>
@@ -147,7 +147,7 @@ const RewardRow = ({ reward, config, canManage, onEdit }: { readonly reward: Rew
           )}
         </div>
       ) : null}
-    </li>
+    </ListItem>
   );
 };
 
@@ -172,32 +172,28 @@ export const RewardsPanel = ({ data }: { readonly data: LoyaltyWorkbenchData }) 
 
   return (
     <>
-      <SurfaceCard label={t("rewardsTitle")} headingLevel={2} labelEnd={data.canManage && !editing ? <Button variant="primary" size="sm" onPress={() => setEditing("new")}>{t("rewardAdd")}</Button> : undefined}>
-        {data.rewards.length === 0 ? (
-          <>
-            <EmptyNotice message={t("rewardsEmptyTitle")} description={data.canManage ? t("rewardsEmptyBody") : t("rewardsEmptyBodyStaff")} />
-            {data.canManage ? (
-              <div className={BODY_CLASS_NAME}>
-                <div>
-                  <Button variant="primary" isPending={pending} onPress={preset}>{t("presetButton")}</Button>
-                </div>
-              </div>
-            ) : null}
-          </>
-        ) : (
-          <ul className={LIST_CLASS_NAME}>
-            {data.rewards.map((r) => <RewardRow key={r.id} reward={r} config={cfg} canManage={data.canManage} onEdit={() => setEditing(r.id)} />)}
-          </ul>
-        )}
-        <div className={BODY_CLASS_NAME} aria-live="polite">{note ? <Text size="sm" weight="medium">{note.text}</Text> : null}</div>
-        {!data.canManage ? <div className={BODY_CLASS_NAME}><Text size="xs" tone="muted">{t("readOnlyNote")}</Text></div> : null}
-      </SurfaceCard>
+      <SurfaceListCard
+        label={t("rewardsTitle")} headingLevel={2}
+        labelEnd={data.canManage && !editing ? <Button variant="primary" size="sm" onPress={() => setEditing("new")}>{t("rewardAdd")}</Button> : undefined}
+        empty={
+          <EmptyNotice
+            message={t("rewardsEmptyTitle")} description={data.canManage ? t("rewardsEmptyBody") : t("rewardsEmptyBodyStaff")}
+            {...(data.canManage ? { actionLabel: t("presetButton"), actionVariant: "secondary" as const, isActionPending: pending, onAction: preset } : {})}
+          />
+        }
+        footer={note || !data.canManage ? (
+          <div className={FORM_CLASS_NAME}>
+            {note ? <Text size="sm" weight="medium" live="polite">{note.text}</Text> : null}
+            {!data.canManage ? <Text size="xs" tone="muted">{t("readOnlyNote")}</Text> : null}
+          </div>
+        ) : undefined}
+      >
+        {data.rewards.map((r) => <RewardRow key={r.id} reward={r} config={cfg} canManage={data.canManage} onEdit={() => setEditing(r.id)} />)}
+      </SurfaceListCard>
 
       {data.canManage && editing ? (
         <SurfaceCard label={target ? t("rewardEditTitle") : t("rewardAdd")} headingLevel={2}>
-          <div className={BODY_CLASS_NAME}>
-            <RewardForm key={editing} reward={target} config={cfg} onDone={() => setEditing(null)} />
-          </div>
+          <RewardForm key={editing} reward={target} config={cfg} onDone={() => setEditing(null)} />
         </SurfaceCard>
       ) : null}
     </>

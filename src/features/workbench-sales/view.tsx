@@ -1,13 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { EmptyNotice, SurfaceCard, Tabs, Text } from "@starci/grammar/common";
+import { Badge, DescriptionList, EmptyNotice, HorizontalScrollRegion, SurfaceCard, Tabs } from "@starci/grammar/common";
 import { useLocale, useT } from "@/i18n/client";
 import { workbenchSales } from "@/i18n/dict/workbenchSales";
 import type { SalesWorkbenchData } from "@/lib/workbench-sales";
 import { ActivityPanel } from "./activity";
 import { AttentionPanel } from "./attention";
-import { METRICS_CLASS_NAME, METRIC_ALERT_CLASS_NAME, METRIC_CLASS_NAME, PAGE_CLASS_NAME, PANEL_CLASS_NAME, TABS_CLASS_NAME } from "./classNames";
+import { PAGE_CLASS_NAME, PANEL_CLASS_NAME } from "./classNames";
 import { DecisionsPanel, decisionAnchor } from "./decisions";
 import { formatVnd } from "./format";
 import { HandoffsPanel } from "./handoffs";
@@ -24,14 +24,6 @@ export type SalesWorkbenchViewProps = {
   /** The tab named in `?tab=`, already validated on the server. */
   readonly initialTab: string | null;
 };
-
-const Metric = ({ label, value, basis, isAlert = false }: { readonly label: string; readonly value: string; readonly basis: string; readonly isAlert?: boolean }) => (
-  <div className={isAlert ? `${METRIC_CLASS_NAME} ${METRIC_ALERT_CLASS_NAME}` : METRIC_CLASS_NAME}>
-    <Text size="xs" tone="muted" weight="medium">{label}</Text>
-    <Text size="metric-lead" weight="semibold">{value}</Text>
-    <Text size="xs" tone="muted">{basis}</Text>
-  </div>
-);
 
 /** The Sales workbench: four honest figures, then five surfaces as tabs. */
 export const SalesWorkbenchView = ({ data, initialTab }: SalesWorkbenchViewProps) => {
@@ -91,16 +83,27 @@ export const SalesWorkbenchView = ({ data, initialTab }: SalesWorkbenchViewProps
 
   return (
     <div className={PAGE_CLASS_NAME}>
-      <div className={METRICS_CLASS_NAME} role="group" aria-label={t("metricsAria")}>
-        <Metric label={t("metricOpen")} value={String(m.openCount)} basis={t("metricOpenBasis")} />
-        <Metric label={t("metricProposal")} value={formatVnd(m.proposalValueVnd, locale)} basis={t("metricProposalBasis", { n: m.proposalCount })} />
-        <Metric label={t("metricWon")} value={String(m.wonCount)} basis={m.wonValueVnd > 0 ? t("metricWonBasis", { value: formatVnd(m.wonValueVnd, locale) }) : t("metricWonNoValue")} />
-        <Metric label={t("metricWaiting")} value={String(m.waitingCount)} basis={t("metricWaitingBasis")} isAlert={m.waitingCount > 0} />
-      </div>
+      <SurfaceCard ariaLabel={t("metricsAria")}>
+        <DescriptionList
+          layout="stat-strip"
+          isDivided
+          items={[
+            { id: "open", term: t("metricOpen"), description: String(m.openCount), meta: t("metricOpenBasis") },
+            { id: "proposal", term: t("metricProposal"), description: formatVnd(m.proposalValueVnd, locale), meta: t("metricProposalBasis", { n: m.proposalCount }) },
+            { id: "won", term: t("metricWon"), description: String(m.wonCount), meta: m.wonValueVnd > 0 ? t("metricWonBasis", { value: formatVnd(m.wonValueVnd, locale) }) : t("metricWonNoValue") },
+            {
+              id: "waiting",
+              term: t("metricWaiting"),
+              description: String(m.waitingCount),
+              meta: m.waitingCount > 0 ? <Badge tone="warning" isDot>{t("metricWaitingBasis")}</Badge> : t("metricWaitingBasis"),
+            },
+          ]}
+        />
+      </SurfaceCard>
 
-      <div className={TABS_CLASS_NAME}>
+      <HorizontalScrollRegion overflow="needed" isFocusable={false}>
         <Tabs label={t("tabsLabel")} selectedKey={tab} items={items} inset="none" labelVisibility="always" panelId={panelId} onSelect={select} />
-      </div>
+      </HorizontalScrollRegion>
 
       <div className={PANEL_CLASS_NAME} role="tabpanel" id={panelId(tab)}>
         {tab === "attention" ? <AttentionPanel rows={data.attention} nowIso={data.nowIso} onOpenDecision={openDecision} /> : null}

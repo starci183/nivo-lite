@@ -1,6 +1,6 @@
 "use client";
 
-import { Alert, Badge, Button, DescriptionList, EmptyNotice, Heading, Icon, SurfaceCard, Text } from "@starci/grammar/common";
+import { Alert, Badge, Button, DescriptionList, EmptyNotice, Heading, Icon, List, ListItem, SurfaceCard, Text } from "@starci/grammar/common";
 import { nivoIconSource, type IconName } from "@/ui";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -11,8 +11,8 @@ import { refreshContext } from "@/lib/actions";
 import type { LeadDetail } from "@/lib/types";
 import { AiChip } from "@/features/approval-card/AiChip";
 import {
-  CHIPS_CLASS_NAME, FACTS_GRID_CLASS_NAME, GROUP_CLASS_NAME, HEADER_ACTIONS_CLASS_NAME, HEADER_CLASS_NAME, ITEM_CLASS_NAME,
-  LIST_CLASS_NAME, QUOTE_CLASS_NAME, STACK_CLASS_NAME,
+  CHIPS_CLASS_NAME, FACTS_GRID_CLASS_NAME, GROUP_CLASS_NAME, HEADER_ACTIONS_CLASS_NAME, HEADER_CLASS_NAME, LIST_CLASS_NAME,
+  QUOTE_CLASS_NAME, STACK_CLASS_NAME,
 } from "./classNames";
 
 type ContextPanelProps = { readonly detail: LeadDetail };
@@ -101,14 +101,13 @@ export const ContextPanel = ({ detail }: ContextPanelProps) => {
           <AiChip />
         </div>
         {bullets.length > 0 ? (
-          <ul className={LIST_CLASS_NAME}>
+          <List className={LIST_CLASS_NAME} label={t("contextBrief")}>
             {bullets.map((item, index) => (
-              <li key={`${index}-${item}`} className={ITEM_CLASS_NAME}>
-                <Icon source={nivoIconSource(bulletIcon(item), "chip")} usage="chip" />
-                <Text as="span">{item}</Text>
-              </li>
+              <ListItem key={`${index}-${item}`}>
+                <Text startContent={<Icon source={nivoIconSource(bulletIcon(item), "chip")} usage="chip" />}>{item}</Text>
+              </ListItem>
             ))}
-          </ul>
+          </List>
         ) : (
           <Text>{summary}</Text>
         )}
@@ -136,7 +135,7 @@ export const ContextPanel = ({ detail }: ContextPanelProps) => {
   );
 
   return (
-    <SurfaceCard label={t("contextTitle")}>
+    <SurfaceCard label={t("contextTitle")} headingLevel={2}>
       <div className={STACK_CLASS_NAME}>
         <div className={HEADER_CLASS_NAME}>
           <div className={HEADER_ACTIONS_CLASS_NAME}>
@@ -171,9 +170,11 @@ export const ContextPanel = ({ detail }: ContextPanelProps) => {
         </div>
         <div className={GROUP_CLASS_NAME}>
           <Heading level={3}>{t("customerWords")}</Heading>
-          <blockquote className={QUOTE_CLASS_NAME}>
-            <Text>{lead.need}</Text>
-          </blockquote>
+          <SurfaceCard depth="nested">
+            <blockquote className={QUOTE_CLASS_NAME}>
+              <Text>{lead.need}</Text>
+            </blockquote>
+          </SurfaceCard>
         </div>
         {brief}
         {error === null ? null : <Alert tone="negative" title={t("somethingWrong")} description={error} />}

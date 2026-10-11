@@ -2,14 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Alert, Button, Input, NumberField, SectionHeader, SurfaceCard, Switch, Text, Textarea } from "@starci/grammar/common";
+import { Alert, Button, CheckboxGroup, Input, NumberField, SectionHeader, SurfaceCard, Switch, Textarea } from "@starci/grammar/common";
 import { useT } from "@/i18n/client";
 import { content } from "@/i18n/dict/content";
 import { AUTOMATION_KEYS, CHANNEL_RULES, type AutomationKey, type Cadence, type ContentSettings, type Pillar } from "@/lib/module-content-shared";
 import {
   applyCadencePresetsAction, applyPillarPresetsAction, runAutomationsNowAction, saveBrandAction, saveCadenceAction, savePillarsAction, setAutomationAction,
 } from "./actions";
-import { CHIPS_CLASS_NAME, FORM_CLASS_NAME, FORM_ROW_CLASS_NAME } from "./classNames";
+import { CHIPS_CLASS_NAME, DAYS_FIELD_CLASS_NAME, FORM_CLASS_NAME, FORM_ROW_CLASS_NAME } from "./classNames";
 
 export type SettingsPanelProps = {
   readonly pillars: ReadonlyArray<Pillar>;
@@ -38,13 +38,13 @@ const PillarsCard = ({ pillars, canManage, say }: { readonly pillars: ReadonlyAr
   });
   return (
     <SurfaceCard ariaLabel={t("settingsPillars")}>
-      <div className={`${FORM_CLASS_NAME} p-4`}>
+      <div className={FORM_CLASS_NAME}>
         <SectionHeader level={2} title={t("settingsPillars")} description={t("settingsPillarsBody")} />
         {rows.map((r, i) => (
           <div key={r.id ?? `new${i}`} className={FORM_ROW_CLASS_NAME}>
             <Input id={`pillar-name-${i}`} name={`pillar-name-${i}`} label={t("pillarName")} variant="secondary" value={r.name} isDisabled={!canManage || isPending} onValueChange={(v) => patch(i, { name: v })} />
             <Input id={`pillar-desc-${i}`} name={`pillar-desc-${i}`} label={t("pillarDesc")} variant="secondary" value={r.description} isDisabled={!canManage || isPending} onValueChange={(v) => patch(i, { description: v })} />
-            <NumberField label={t("pillarWeight")} value={r.weight} minValue={0} maxValue={20} isDisabled={!canManage || isPending} onValueChange={(v) => patch(i, { weight: v })} />
+            <NumberField variant="secondary" label={t("pillarWeight")} value={r.weight} minValue={0} maxValue={20} isDisabled={!canManage || isPending} onValueChange={(v) => patch(i, { weight: v })} />
             <div className={CHIPS_CLASS_NAME}>
               <Switch label={t("pillarActive")} isSelected={r.active} isDisabled={!canManage || isPending} onSelectedChange={(v) => patch(i, { active: v })} />
               <Button variant="ghost" size="sm" isDisabled={!canManage || isPending} onPress={() => setRows((cur) => cur.filter((_, j) => j !== i))}>{t("remove")}</Button>
@@ -83,30 +83,27 @@ const CadenceCard = ({ cadence, canManage, say }: { readonly cadence: ReadonlyAr
   });
   return (
     <SurfaceCard ariaLabel={t("settingsCadence")}>
-      <div className={`${FORM_CLASS_NAME} p-4`}>
+      <div className={FORM_CLASS_NAME}>
         <SectionHeader level={2} title={t("settingsCadence")} description={t("settingsCadenceBody")} />
         {rows.map((r, i) => (
-          <div key={r.channel} className="flex flex-col gap-2 rounded-lg border border-separator p-3">
+          <SurfaceCard key={r.channel} depth="nested" ariaLabel={CHANNEL_RULES[i].label}>
+          <div className={FORM_CLASS_NAME}>
             <Switch label={`${t("cadenceOn")}: ${CHANNEL_RULES[i].label}`} isSelected={r.on} isDisabled={!canManage || isPending} onSelectedChange={(v) => patch(i, { on: v })} />
             {r.on ? (
               <div className={FORM_ROW_CLASS_NAME}>
-                <NumberField label={t("cadencePerWeek")} value={r.perWeek} minValue={1} maxValue={21} isDisabled={!canManage || isPending} onValueChange={(v) => patch(i, { perWeek: v })} />
+                <NumberField variant="secondary" label={t("cadencePerWeek")} value={r.perWeek} minValue={1} maxValue={21} isDisabled={!canManage || isPending} onValueChange={(v) => patch(i, { perWeek: v })} />
                 <Input id={`cad-time-${r.channel}`} name={`cad-time-${r.channel}`} label={t("cadenceTime")} variant="secondary" value={r.time} hint={t("addTimeHint")} isDisabled={!canManage || isPending} onValueChange={(v) => patch(i, { time: v })} />
-                <div className="flex flex-col gap-1 sm:col-span-2">
-                  <Text size="sm" weight="medium">{t("cadenceDays")}</Text>
-                  <div className={CHIPS_CLASS_NAME}>
-                    {days.map((d, k) => {
-                      const dayNo = k + 1;
-                      const sel = r.days.includes(dayNo);
-                      return (
-                        <Button key={d} variant={sel ? "primary" : "outline"} size="sm" isDisabled={!canManage || isPending} onPress={() => patch(i, { days: sel ? r.days.filter((x) => x !== dayNo) : [...r.days, dayNo].sort() })}>{d}</Button>
-                      );
-                    })}
-                  </div>
+                <div className={DAYS_FIELD_CLASS_NAME}>
+                  <CheckboxGroup
+                    label={t("cadenceDays")} orientation="horizontal" variant="secondary" isDisabled={!canManage || isPending}
+                    options={days.map((d, k) => ({ value: String(k + 1), label: d }))} value={r.days.map(String)}
+                    onValueChange={(v) => patch(i, { days: v.map(Number).sort((a, b) => a - b) })}
+                  />
                 </div>
               </div>
             ) : null}
           </div>
+          </SurfaceCard>
         ))}
         <div className={CHIPS_CLASS_NAME}>
           <Button variant="secondary" size="sm" isDisabled={!canManage || isPending} onPress={preset}>{t("cadencePreset")}</Button>
@@ -131,10 +128,10 @@ const BrandCard = ({ settings, canManage, say }: { readonly settings: ContentSet
   });
   return (
     <SurfaceCard ariaLabel={t("settingsBrand")}>
-      <div className={`${FORM_CLASS_NAME} p-4`}>
+      <div className={FORM_CLASS_NAME}>
         <SectionHeader level={2} title={t("settingsBrand")} description={t("settingsBrandBody")} />
-        <Textarea label={t("brandVoice")} rows={3} value={voice} isDisabled={!canManage || isPending} onValueChange={setVoice} />
-        <Textarea label={t("brandAvoid")} rows={3} value={avoid} isDisabled={!canManage || isPending} onValueChange={setAvoid} />
+        <Textarea variant="secondary" label={t("brandVoice")} rows={3} value={voice} isDisabled={!canManage || isPending} onValueChange={setVoice} />
+        <Textarea variant="secondary" label={t("brandAvoid")} rows={3} value={avoid} isDisabled={!canManage || isPending} onValueChange={setAvoid} />
         <Input id="brand-cta" name="brand-cta" label={t("brandCta")} variant="secondary" value={cta} isDisabled={!canManage || isPending} onValueChange={setCta} />
         <Input id="brand-tags" name="brand-tags" label={t("brandHashtags")} variant="secondary" value={tags} hint={t("fieldHashtagsHint")} isDisabled={!canManage || isPending} onValueChange={setTags} />
         <div className={CHIPS_CLASS_NAME}><Button variant="primary" size="sm" isPending={isPending} isDisabled={!canManage} onPress={save}>{t("brandSave")}</Button></div>
@@ -169,12 +166,10 @@ const AutomationCard = ({ settings, canManage, say }: { readonly settings: Conte
   });
   return (
     <SurfaceCard ariaLabel={t("settingsAuto")}>
-      <div className={`${FORM_CLASS_NAME} p-4`}>
+      <div className={FORM_CLASS_NAME}>
         <SectionHeader level={2} title={t("settingsAuto")} description={t("settingsAutoBody")} />
         {AUTOMATION_KEYS.map((k) => (
-          <div key={k} className="flex flex-col gap-1">
-            <Switch label={t(AUTO_COPY[k].title)} description={t(AUTO_COPY[k].body)} isSelected={on[k]} isDisabled={!canManage || isPending} onSelectedChange={(v) => toggle(k, v)} />
-          </div>
+          <Switch key={k} label={t(AUTO_COPY[k].title)} description={t(AUTO_COPY[k].body)} isSelected={on[k]} isDisabled={!canManage || isPending} onSelectedChange={(v) => toggle(k, v)} />
         ))}
         <div className={CHIPS_CLASS_NAME}><Button variant="outline" size="sm" isPending={isPending} isDisabled={!canManage} onPress={runNow}>{t("autoRunNow")}</Button></div>
       </div>

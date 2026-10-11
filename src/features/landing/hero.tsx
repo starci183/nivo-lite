@@ -1,64 +1,56 @@
-import { Button } from "@starci/grammar/common";
+import { Button, Heading, PageContainer, Region, Text } from "@starci/grammar/common";
 import { getLocale, getT } from "@/i18n/server";
 import { landing } from "@/i18n/dict/landing";
 import { BrowserFrame } from "./BrowserFrame";
 import { LANDING_OFFER } from "./offer";
-import {
-  EYEBROW,
-  EYEBROW_DOT,
-  H1,
-  H1_ACCENT,
-  HERO,
-  HERO_ACTIONS,
-  HERO_COPY,
-  HERO_GLOW,
-  HERO_NOTE,
-  HERO_SHOT,
-  LEAD,
-  TAGLINE,
-} from "./classNames";
+import { HERO_ACTIONS, HERO_COPY, HERO_NOTES, LEAD_MEASURE, SECTION_STACK } from "./classNames";
 
-/** Hero: promise, calls to action and one large real screenshot of the Overview. */
+/**
+ * Hero, the page's focal point (HIERARCHY-6): promise, calls to action and one large real screenshot of the
+ * Overview. The one display heading of the page (FONT-6); the second title line no longer takes accent paint,
+ * because headings spend no accent (ACCENT-6 case-2).
+ */
 export const LandingHero = async () => {
   const [t, locale] = await Promise.all([getT(landing), getLocale()]);
   return (
-    <section className={HERO} aria-labelledby="landing-h1">
-      <div className={HERO_GLOW} aria-hidden="true" />
-      <div className={HERO_COPY}>
-        <span className={EYEBROW}>
-          <span className={EYEBROW_DOT} />
-          {t("heroEyebrow")}
-        </span>
-        <h1 id="landing-h1" className={H1}>
-          {t("heroLine1")}
-          <span className={H1_ACCENT}>{t("heroLine2")}</span>
-        </h1>
-        <p className={`${LEAD} max-w-2xl`}>{t("heroLead")}</p>
-        <div className={HERO_ACTIONS}>
-          <div className="w-full sm:w-auto">
-            <Button variant="primary" size="lg" width="fill" href={LANDING_OFFER.ctaHref}>
-              {t("heroCta")}
-            </Button>
+    <Region label={`${t("heroLine1")} ${t("heroLine2")}`}>
+      <PageContainer measure="product">
+        <div className={SECTION_STACK}>
+          <div className={HERO_COPY}>
+            <Text size="sm" tone="muted" weight="medium">
+              {t("heroEyebrow")}
+            </Text>
+            <Heading level={1} scale="display">
+              {t("heroLine1")}
+              <br />
+              {t("heroLine2")}
+            </Heading>
+            <div className={LEAD_MEASURE}>
+              <Text tone="muted">{t("heroLead")}</Text>
+            </div>
+            <div className={HERO_ACTIONS}>
+              <Button variant="primary" size="lg" width="fill" href={LANDING_OFFER.ctaHref}>
+                {t("heroCta")}
+              </Button>
+              <Button variant="secondary" size="lg" width="fill" href="#product">
+                {t("heroSecondary")}
+              </Button>
+            </div>
+            <div className={HERO_NOTES}>
+              <Text size="xs">{t("heroNote", { days: LANDING_OFFER.trialDays })}</Text>
+              <Text size="xs">{t("tagline")}</Text>
+            </div>
           </div>
-          <div className="w-full sm:w-auto">
-            <Button variant="secondary" size="lg" width="fill" href="#product">
-              {t("heroSecondary")}
-            </Button>
-          </div>
+          <BrowserFrame
+            src={`/images/landing/${locale}/overview.png`}
+            alt={t("shotOverview")}
+            label={t("demoLabel")}
+            width={1440}
+            height={830}
+            priority
+          />
         </div>
-        <p className={HERO_NOTE}>{t("heroNote", { days: LANDING_OFFER.trialDays })}</p>
-        <p className={TAGLINE}>{t("tagline")}</p>
-      </div>
-      <div className={HERO_SHOT}>
-        <BrowserFrame
-          src={`/images/landing/${locale}/overview.png`}
-          alt={t("shotOverview")}
-          label={t("demoLabel")}
-          width={1440}
-          height={830}
-          priority
-        />
-      </div>
-    </section>
+      </PageContainer>
+    </Region>
   );
 };

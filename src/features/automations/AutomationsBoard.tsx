@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Alert, Text } from "@starci/grammar/common"
+import { Alert, EmptyNotice, PrimaryRailLayout } from "@starci/grammar/common"
 import { useT } from "@/i18n/client"
 import { automations as dict } from "@/i18n/dict/automations"
 import { answerAutoSend, dismissAutomation, saveAutomation, toggleAutomation } from "@/lib/automation-actions"
@@ -11,7 +11,7 @@ import { startGoogleConnect } from "@/lib/google-actions"
 import { AutomationCard } from "./AutomationCard"
 import { AutomationDetail } from "./AutomationDetail"
 import { AutomationsFilters } from "./AutomationsFilters"
-import { GRID_CLASS, GRID_WIDE_CLASS, LAYOUT_CLASS, LIST_CLASS, SOLO_CLASS } from "./classNames"
+import { GRID_CLASS, GRID_WIDE_CLASS, LIST_CLASS, SOLO_CLASS } from "./classNames"
 import { HiddenList } from "./HiddenList"
 import { hiddenCards, matchesFilter, scopeOf, startsConnection, statusOf, visibleCards, type FilterKey } from "./helpers"
 import { useAutomations, type AutomationsData } from "./useAutomations"
@@ -89,15 +89,16 @@ export const AutomationsBoard = ({ initial, layout, moduleKey, focus }: Automati
       onAnswerTrust={(accept) => void apply(current.key, () => answerAutoSend(current.key, accept))}
       onDismiss={() => void apply(current.key, () => dismissAutomation(current.key, true)).then((ok) => ok && setSelected(null))}
       onError={setError}
+      isNested={layout === "module"}
     />
   ) : null
 
   const list = shown.length === 0 ? (
-    <Text size="sm" tone="muted">{filter === "all" ? (layout === "module" ? t("moduleEmpty") : t("emptyAll")) : t("emptyFiltered")}</Text>
+    <EmptyNotice message={filter === "all" ? (layout === "module" ? t("moduleEmpty") : t("emptyAll")) : t("emptyFiltered")} />
   ) : (
     <div className={layout === "module" ? LIST_CLASS : current ? GRID_CLASS : GRID_WIDE_CLASS}>
       {shown.map((c) => (
-        <AutomationCard key={c.key} card={c} selected={c.key === selected} busy={busyKey === c.key} onSelect={() => select(c.key)} onToggle={(next) => void toggle(c, next)} />
+        <AutomationCard key={c.key} card={c} selected={c.key === selected} busy={busyKey === c.key} onSelect={() => select(c.key)} onToggle={(next) => void toggle(c, next)} isNested={layout === "module"} />
       ))}
     </div>
   )
@@ -107,10 +108,7 @@ export const AutomationsBoard = ({ initial, layout, moduleKey, focus }: Automati
       {layout === "page" ? <AutomationsFilters value={filter} onChange={setFilter} cards={cards} /> : null}
       {error && !current ? <Alert title={error} tone="negative" dismissLabel={t("detailClose")} onDismiss={() => setError(null)} /> : null}
       {layout === "page" ? (
-        <div className={current ? LAYOUT_CLASS : SOLO_CLASS}>
-          <div className="flex min-w-0 flex-col gap-4">{list}</div>
-          {detail}
-        </div>
+        <PrimaryRailLayout primary={<div className={SOLO_CLASS}>{list}</div>} rail={detail ?? undefined} railWidth="wide" />
       ) : <>{list}{detail}</>}
       <HiddenList cards={hidden} busyKey={busyKey} onRestore={(key) => void apply(key, () => dismissAutomation(key, false))} />
     </>

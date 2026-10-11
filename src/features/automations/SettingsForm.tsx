@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Time } from "@internationalized/date"
-import { Button, Input, NumberField, Switch, TimeField } from "@starci/grammar/common"
+import { Button, Input, NumberField, Switch, Text, TimeField } from "@starci/grammar/common"
 import { useLocale, useT } from "@/i18n/client"
 import { automations as dict } from "@/i18n/dict/automations"
 import type { AutomationCardView, ConfigValue } from "@/lib/automation-shared"
@@ -52,7 +52,7 @@ export const SettingsForm = ({ card, busy, onSave }: SettingsFormProps) => {
       </div>
       <div className={ACTIONS_CLASS}>
         <Button variant="secondary" isPending={busy} onPress={() => void onSave(values).then(setSaved)}>{t("save")}</Button>
-        {saved ? <span role="status" className="text-sm text-success">{t("saved")}</span> : null}
+        {saved ? <Text size="sm" live="polite">{t("saved")}</Text> : null}
       </div>
     </section>
   )

@@ -1,7 +1,6 @@
 "use client";
 
-import { Badge, EmptyNotice, PageContainer, SectionHeader, SurfaceCard, Tabs, Text, TextAction } from "@starci/grammar/common";
-import Link from "next/link";
+import { Badge, EmptyNotice, PageContainer, SectionHeader, SurfaceCard, SurfaceListCard, Tabs, Text, TextAction } from "@starci/grammar/common";
 import { useRouter } from "next/navigation";
 import { useLocale, useT } from "@/i18n/client";
 import { intlLocale } from "@/i18n/core";
@@ -9,7 +8,7 @@ import { decisions as decisionsDict } from "@/i18n/dict/decisions";
 import { governance } from "@/i18n/dict/governance";
 import type { DecisionRow, Department } from "@/lib/flow-types";
 import { MODULE_KEYS } from "@/lib/module-registry";
-import { CHIPS_CLASS_NAME, FILTERS_CLASS_NAME, LIST_CLASS_NAME, PAGE_CLASS_NAME, ROW_CLASS_NAME, ROW_FOOT_CLASS_NAME, ROW_HEAD_CLASS_NAME, TABS_CLASS_NAME } from "./classNames";
+import { CHIPS_CLASS_NAME, FILTERS_CLASS_NAME, PAGE_CLASS_NAME, ROW_CLASS_NAME, ROW_FOOT_CLASS_NAME, ROW_HEAD_CLASS_NAME, TABS_CLASS_NAME } from "./classNames";
 import { formatDateTime, outcomeTone, splitBasis } from "./format";
 
 export type DecisionKind = "policy" | "human" | "rejected";
@@ -91,8 +90,8 @@ export const DecisionsView = ({ rows, kind, dept, limit, hasFailed }: DecisionsV
         ) : (
           <>
             <Text size="xs" tone="muted">{rows.length >= limit ? t("countCapped", { n: rows.length }) : t("count", { n: rows.length })}</Text>
-            <SurfaceCard ariaLabel={t("listAria")}>
-              <ul className={LIST_CLASS_NAME}>
+            {/* COLLECTION-1: the published list container; rows keep their own trailing seam (BOUNDARY-2). */}
+            <SurfaceListCard ariaLabel={t("listAria")}>
                 {rows.map((row) => (
                   <li key={row.id} className={ROW_CLASS_NAME}>
                     <div className={ROW_HEAD_CLASS_NAME}>
@@ -118,17 +117,14 @@ export const DecisionsView = ({ rows, kind, dept, limit, hasFailed }: DecisionsV
                     })()}
                     <div className={ROW_FOOT_CLASS_NAME}>
                       {row.lead_id ? (
-                        <Link href={`/leads/${row.lead_id}`}>
-                          <Text as="span" size="sm" weight="medium">{`${row.leadName ?? t("openLead")} →`}</Text>
-                        </Link>
+                        <TextAction href={`/leads/${row.lead_id}`} size="sm">{`${row.leadName ?? t("openLead")} →`}</TextAction>
                       ) : (
                         <Text size="xs" tone="muted">{t("noLead")}</Text>
                       )}
                     </div>
                   </li>
                 ))}
-              </ul>
-            </SurfaceCard>
+            </SurfaceListCard>
           </>
         )}
         {isFiltered && !hasFailed && rows.length > 0 ? <TextAction onPress={() => router.push("/decisions")}>{t("clearFilters")}</TextAction> : null}

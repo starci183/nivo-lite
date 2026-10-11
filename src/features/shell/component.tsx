@@ -1,8 +1,25 @@
 "use client";
 
-import { NivoIcon, nivoIconSource, StarCiDashboardThemeBoundary, type IconName } from "@/ui";
-import { Badge, Button, DropdownMenu, IconButton, Popover, SearchField, Text, type DropdownMenuEntry } from "@starci/grammar/common";
-import Link from "next/link";
+import { nivoIconSource, StarCiDashboardThemeBoundary, type IconName } from "@/ui";
+import {
+  Badge,
+  Button,
+  Drawer,
+  DropdownMenu,
+  Icon,
+  IconButton,
+  List,
+  ListItem,
+  Popover,
+  SearchField,
+  Sidebar,
+  Text,
+  TextAction,
+  TopBar,
+  WorkspaceShell,
+  type DropdownMenuEntry,
+  type SidebarItem,
+} from "@starci/grammar/common";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { LocaleSwitch } from "@/i18n/LocaleSwitch";
@@ -15,42 +32,17 @@ import { NivoLogo } from "@/components/brand/NivoLogo";
 import {
   ACTIONS_CLASS_NAME,
   BADGE_CLASS_NAME,
-  BELL_COUNT_CLASS_NAME,
-  BELL_WRAP_CLASS_NAME,
-  COLUMN_CLASS_NAME,
-  MAIN_CLASS_NAME,
-  MAIN_INSET_CLASS_NAME,
-  PAGE_END_SPACER_CLASS_NAME,
+  BRAND_CLASS_NAME,
+  COMPACT_NAV_CLASS_NAME,
   NEW_LABEL_CLASS_NAME,
   NEW_PLUS_CLASS_NAME,
   NOTIFY_ITEM_CLASS_NAME,
   NOTIFY_LIST_CLASS_NAME,
   NOTIFY_PANEL_CLASS_NAME,
-  RAIL_BADGE_CLASS_NAME,
-  RAIL_CLASS_NAME,
-  RAIL_GLYPH_ACCENT_CLASS_NAME,
-  RAIL_GLYPH_ACTIVE_CLASS_NAME,
-  RAIL_GLYPH_CLASS_NAME,
-  RAIL_GLYPH_MUTED_CLASS_NAME,
-  RAIL_ITEM_ACTIVE_CLASS_NAME,
-  RAIL_ITEM_CLASS_NAME,
-  RAIL_LABEL_CLASS_NAME,
-  RAIL_LOGO_CLASS_NAME,
-  RAIL_NAV_CLASS_NAME,
-  PHONE_HIDDEN_CLASS_NAME,
-  PHONE_ONLY_CLASS_NAME,
-  RAIL_SPACER_CLASS_NAME,
-  RAIL_USER_CLASS_NAME,
-  ROOT_CLASS_NAME,
+  PAGE_END_SPACER_CLASS_NAME,
   SR_ONLY_CLASS_NAME,
-  TOPBAR_CLASS_NAME,
-  TOPBAR_IDENTITY_CLASS_NAME,
-  TOPBAR_MARK_CLASS_NAME,
   TOPBAR_SEARCH_CLASS_NAME,
-  TOPBAR_SPACER_CLASS_NAME,
-  TOPBAR_USER_CLASS_NAME,
   WORKSPACE_NAME_CLASS_NAME,
-  WORKSPACE_TRIGGER_CLASS_NAME,
 } from "./classNames";
 
 /** One pending approval as the bell list draws it. */
@@ -107,69 +99,84 @@ export type ConsoleShellBaseProps = {
 
 type FrameProps = { readonly shell: ConsoleShellBaseProps };
 
-type RailItemProps = { readonly item: ConsoleShellNavItem };
+/** The compact bar keeps these three; the rest sit behind "More" (the wide Sidebar shows everything). */
+const PHONE_TABS = new Set(["chat", "overview", "leads"]);
 
-/** Phone bottom bar keeps these four; the rest sit behind "Thêm" (the desktop rail shows everything). */
-const PHONE_TABS = new Set(["chat", "overview", "leads", "authority"]);
+/** Office carries the real pending count as the item's trailing badge. */
+const toSidebarItem = (item: ConsoleShellNavItem): SidebarItem => ({
+  id: item.id,
+  label: item.label,
+  source: nivoIconSource(item.icon, "leading"),
+  trailing: item.badge > 0 ? <Badge tone="accent">{item.badge}</Badge> : undefined,
+});
 
-const RailItem = ({ item, phoneHidden = false }: RailItemProps & { readonly phoneHidden?: boolean }) => {
-  const glyphTone = item.isPrimary ? RAIL_GLYPH_ACCENT_CLASS_NAME : item.isActive ? RAIL_GLYPH_ACTIVE_CLASS_NAME : RAIL_GLYPH_MUTED_CLASS_NAME;
+type NavPartProps = { readonly items: ReadonlyArray<ConsoleShellNavItem>; readonly on: ConsoleShellBaseActions };
+
+/** Wide navigation: the Grammar `Sidebar` rail owns item selection (SURFACE-4) and its rail edge. */
+const WideNavigation = ({ items, on }: NavPartProps) => {
+  const t = useT(shellDict);
   return (
-    <Link
-      href={item.href}
-      aria-current={item.isActive ? "page" : undefined}
-      className={`${RAIL_ITEM_CLASS_NAME}${item.isActive ? ` ${RAIL_ITEM_ACTIVE_CLASS_NAME}` : ""}${phoneHidden ? ` ${PHONE_HIDDEN_CLASS_NAME}` : ""}`}
-    >
-      <span className={`${RAIL_GLYPH_CLASS_NAME} ${glyphTone}`}>
-        <NivoIcon props={{ name: item.icon, usage: "leading" }} />
-        {item.badge > 0 ? (
-          <span className={RAIL_BADGE_CLASS_NAME}>
-            <Badge tone="accent">{item.badge}</Badge>
-          </span>
-        ) : null}
-      </span>
-      <span className={RAIL_LABEL_CLASS_NAME}>
-        <Text size="xs" weight={item.isActive || item.isPrimary ? "semibold" : "medium"} tone={item.isPrimary ? "accent" : item.isActive ? "default" : "muted"}>
-          {item.label}
-        </Text>
-      </span>
-    </Link>
+    <Sidebar
+      label={t("mainNavigation")}
+      presentation="rail"
+      groups={[{ id: "destinations", items: items.map(toSidebarItem) }]}
+      selectedKey={items.find((item) => item.isActive)?.id}
+      onAction={(id) => {
+        const target = items.find((item) => item.id === id);
+        if (target) on.go(target.href);
+      }}
+    />
   );
 };
 
-/** Phone-only "More" tab: the destinations that don't fit the bottom bar. */
-const PhoneMore = ({ items }: { readonly items: ReadonlyArray<ConsoleShellNavItem> }) => {
+/** Leading glyph for a Button: the Heroicon resolved through the NIVO registry. */
+const LeadingGlyph = ({ name }: { readonly name: IconName }) => <Icon source={nivoIconSource(name, "leading")} usage="leading" />;
+
+/** Compact navigation (below the wide breakpoint): the first destinations as route actions, the rest in a drawer `Sidebar`. */
+const CompactNavigation = ({ items, on }: NavPartProps) => {
   const t = useT(shellDict);
   const [isOpen, setOpen] = useState(false);
-  const isActive = items.some((item) => item.isActive);
+  const tabs = items.filter((item) => PHONE_TABS.has(item.id));
+  const more = items.filter((item) => !PHONE_TABS.has(item.id));
+  const isMoreActive = more.some((item) => item.isActive);
   return (
-    <div className={PHONE_ONLY_CLASS_NAME}>
-      <Popover
+    <div className={COMPACT_NAV_CLASS_NAME}>
+      {tabs.map((item) => (
+        <TextAction
+          key={item.id}
+          href={item.href}
+          appearance="route"
+          size="sm"
+          isCurrent={item.isActive}
+          endContent={item.badge > 0 ? <Badge tone="accent">{item.badge}</Badge> : undefined}
+        >
+          {item.label}
+        </TextAction>
+      ))}
+      <Drawer
         isOpen={isOpen}
         onOpenChange={setOpen}
-        placement="top"
+        placement="bottom"
         title={t("navMore")}
         trigger={
-          <button type="button" className={`${RAIL_ITEM_CLASS_NAME}${isActive ? ` ${RAIL_ITEM_ACTIVE_CLASS_NAME}` : ""}`} aria-label={t("navMore")}>
-            <span className={`${RAIL_GLYPH_CLASS_NAME} ${isActive ? RAIL_GLYPH_ACTIVE_CLASS_NAME : RAIL_GLYPH_MUTED_CLASS_NAME}`}>
-              <NivoIcon props={{ name: "apps", usage: "leading" }} />
-            </span>
-            <span className={RAIL_LABEL_CLASS_NAME}>
-              <Text size="xs" weight={isActive ? "semibold" : "medium"} tone={isActive ? "default" : "muted"}>
-                {t("navMore")}
-              </Text>
-            </span>
-          </button>
+          <Button variant={isMoreActive ? "secondary" : "ghost"} size="sm" startContent={<LeadingGlyph name="apps" />}>
+            {t("navMore")}
+          </Button>
         }
       >
-        <div className={NOTIFY_LIST_CLASS_NAME}>
-          {items.map((item) => (
-            <Link key={item.id} href={item.href} className={NOTIFY_ITEM_CLASS_NAME} aria-current={item.isActive ? "page" : undefined} onClick={() => setOpen(false)}>
-              <Text weight={item.isActive ? "semibold" : "medium"}>{item.label}</Text>
-            </Link>
-          ))}
-        </div>
-      </Popover>
+        <Sidebar
+          label={t("navMore")}
+          presentation="drawer"
+          groups={[{ id: "more", items: more.map(toSidebarItem) }]}
+          selectedKey={more.find((item) => item.isActive)?.id}
+          onAction={(id) => {
+            const target = more.find((item) => item.id === id);
+            if (!target) return;
+            setOpen(false);
+            on.go(target.href);
+          }}
+        />
+      </Drawer>
     </div>
   );
 };
@@ -223,11 +230,11 @@ const WorkspaceMenu = ({ data }: { readonly data: ConsoleShellBaseData }) => {
       placement="bottom"
       title={t("switchWorkspace")}
       trigger={
-        <button type="button" className={WORKSPACE_TRIGGER_CLASS_NAME} aria-label={`${t("switchWorkspace")}: ${data.workspaceName}`}>
-          <Text weight="semibold" overflow="truncate">
-            {data.workspaceName}
-          </Text>
-        </button>
+        // The workspace name is the switcher trigger: a quiet Grammar Button instead of a hand-styled raw button.
+        <Button variant="ghost" size="sm">
+          <span className={SR_ONLY_CLASS_NAME}>{`${t("switchWorkspace")}: `}</span>
+          {data.workspaceName}
+        </Button>
       }
     >
       <WorkspaceSwitcher
@@ -250,17 +257,12 @@ const Notifications = ({ data, on }: ShellPartProps) => {
       placement="bottom"
       title={count === 0 ? t("notifications") : t("pendingTitle", { count })}
       trigger={
-        <div className={BELL_WRAP_CLASS_NAME}>
-          <IconButton
-            source={nivoIconSource("notification", "leading")}
-            label={count === 0 ? t("notifications") : t("pendingLabel", { count })}
-          />
-          {count > 0 ? (
-            <span className={BELL_COUNT_CLASS_NAME}>
-              <Badge tone="accent">{count}</Badge>
-            </span>
-          ) : null}
-        </div>
+        <IconButton
+          source={nivoIconSource("notification", "leading")}
+          label={t("notifications")}
+          badge={count}
+          badgeLabel={t("pendingTitle", { count })}
+        />
       }
     >
       <div className={NOTIFY_PANEL_CLASS_NAME}>
@@ -269,18 +271,18 @@ const Notifications = ({ data, on }: ShellPartProps) => {
             {t("nothingWaiting")}
           </Text>
         ) : (
-          <div className={NOTIFY_LIST_CLASS_NAME}>
+          <List label={t("pendingTitle", { count })} className={NOTIFY_LIST_CLASS_NAME}>
             {data.pending.slice(0, 5).map((item) => (
-              <Link key={item.id} href={item.href} className={NOTIFY_ITEM_CLASS_NAME} onClick={() => setOpen(false)}>
-                <Text weight="medium" overflow="truncate">
+              <ListItem key={item.id} className={NOTIFY_ITEM_CLASS_NAME}>
+                <TextAction href={item.href} appearance="inline" onFollow={() => setOpen(false)}>
                   {item.leadName}
-                </Text>
+                </TextAction>
                 <Text size="sm" tone="muted" overflow="clamp-2">
                   {item.summary}
                 </Text>
-              </Link>
+              </ListItem>
             ))}
-          </div>
+          </List>
         )}
         <Button
           variant="outline"
@@ -306,80 +308,75 @@ const Frame = ({ shell: { props: data, on, children } }: FrameProps) => {
   const isFullHeight = pathname === "/chat" || /^\/modules\/[^/]+\/chat/.test(pathname);
   const [query, setQuery] = useState("");
   return (
-    <div className={ROOT_CLASS_NAME}>
-      <nav className={RAIL_CLASS_NAME} aria-label={t("mainNavigation")}>
-        <div className={RAIL_LOGO_CLASS_NAME}>
-          <NivoLogo variant="mark" height={32} />
-        </div>
-        <div className={RAIL_NAV_CLASS_NAME}>
-          {data.nav.map((item) => (
-            <RailItem key={item.id} item={item} phoneHidden={!PHONE_TABS.has(item.id)} />
-          ))}
-          <PhoneMore items={data.nav.filter((item) => !PHONE_TABS.has(item.id))} />
-        </div>
-        <div className={RAIL_SPACER_CLASS_NAME} />
-        <div className={RAIL_USER_CLASS_NAME}>
-          <UserMenu data={data} on={on} />
-        </div>
-      </nav>
-      <div className={COLUMN_CLASS_NAME}>
-        <header className={TOPBAR_CLASS_NAME}>
-          <div className={TOPBAR_IDENTITY_CLASS_NAME}>
-            <span className={TOPBAR_MARK_CLASS_NAME}>
+    <WorkspaceShell
+      align="stretch"
+      header={
+        <TopBar
+          position="sticky"
+          brand={
+            <div className={BRAND_CLASS_NAME}>
               <NivoLogo variant="mark" height={28} />
-            </span>
-            <div className={WORKSPACE_NAME_CLASS_NAME}>
-              <WorkspaceMenu data={data} />
+              <div className={WORKSPACE_NAME_CLASS_NAME}>
+                <WorkspaceMenu data={data} />
+              </div>
+              <Badge tone={data.role === "staff" ? "neutral" : "accent"}>{data.roleLabel}</Badge>
+              <div className={BADGE_CLASS_NAME}>
+                <FoundingBadge isFoundingMember={data.isFoundingMember} />
+              </div>
             </div>
-            <Badge tone={data.role === "staff" ? "neutral" : "accent"}>{data.roleLabel}</Badge>
-            <div className={BADGE_CLASS_NAME}>
-              <FoundingBadge isFoundingMember={data.isFoundingMember} />
-            </div>
-          </div>
-          <div className={TOPBAR_SPACER_CLASS_NAME} />
-          <div className={TOPBAR_SEARCH_CLASS_NAME}>
-            <SearchField
-              label={t("searchLeads")}
-              isLabelHidden
-              placeholder={t("searchPlaceholder")}
-              value={query}
-              onValueChange={setQuery}
-              onClear={() => setQuery("")}
-              onSubmit={(value) => {
-                const text = value.trim();
-                if (text.length > 0) on.search(text);
-              }}
-            />
-          </div>
-          <div className={ACTIONS_CLASS_NAME}>
-            <DropdownMenu
-              placement="bottom end"
-              entries={data.newEntries}
-              trigger={
-                <Button variant="secondary" size="sm">
-                  <span className={NEW_LABEL_CLASS_NAME}>{t("newLabel")}</span>
-                  <span className={NEW_PLUS_CLASS_NAME}>+</span>
-                </Button>
-              }
-            />
-            <LocaleSwitch />
-            <Notifications data={data} on={on} />
-            <span className={TOPBAR_USER_CLASS_NAME}>
+          }
+          actions={
+            <div className={ACTIONS_CLASS_NAME}>
+              <div className={TOPBAR_SEARCH_CLASS_NAME}>
+                <SearchField
+                  label={t("searchLeads")}
+                  isLabelHidden
+                  placeholder={t("searchPlaceholder")}
+                  value={query}
+                  onValueChange={setQuery}
+                  onClear={() => setQuery("")}
+                  onSubmit={(value) => {
+                    const text = value.trim();
+                    if (text.length > 0) on.search(text);
+                  }}
+                />
+              </div>
+              <DropdownMenu
+                placement="bottom end"
+                entries={data.newEntries}
+                trigger={
+                  <Button variant="secondary" size="sm">
+                    <span className={NEW_LABEL_CLASS_NAME}>{t("newLabel")}</span>
+                    <span className={NEW_PLUS_CLASS_NAME}>+</span>
+                  </Button>
+                }
+              />
+              <LocaleSwitch />
+              <Notifications data={data} on={on} />
               <UserMenu data={data} on={on} />
-            </span>
-          </div>
-        </header>
-        <main className={isFullHeight ? MAIN_CLASS_NAME : `${MAIN_CLASS_NAME} ${MAIN_INSET_CLASS_NAME}`} aria-label={t("groupWorkspace")}>
+            </div>
+          }
+        />
+      }
+      navigation={<WideNavigation items={data.nav} on={on} />}
+      navigationLabel={t("mainNavigation")}
+      navigationTrack="intrinsic"
+      navigationVisibility="wide"
+      compactNavigation={<CompactNavigation items={data.nav} on={on} />}
+      compactNavigationLabel={t("mainNavigation")}
+      primaryLabel={t("groupWorkspace")}
+      primary={
+        <>
           {children}
+          {data.strip}
           {isFullHeight ? null : <div className={PAGE_END_SPACER_CLASS_NAME} aria-hidden="true" />}
-        </main>
-        {data.strip}
-      </div>
-    </div>
+        </>
+      }
+    />
   );
 };
 
-/** Draw the console chrome (Zalo-style rail, light top bar, one optional strip) around the routed page. */
+/** Draw the console chrome (Grammar WorkspaceShell: TopBar, wide Sidebar, compact navigation, one optional strip) around the routed page. */
 export const ConsoleShellBase = (props: ConsoleShellBaseProps) => (
   <StarCiDashboardThemeBoundary content={Frame} contentProps={{ shell: props }} />
 );

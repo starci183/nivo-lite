@@ -9,13 +9,13 @@ import { LandingHero } from "./hero";
 import { LandingNav } from "./nav";
 import { LandingProduct } from "./product";
 import { LandingTrustStrip } from "./trust-strip";
-import { PAGE } from "./classNames";
+import { MAIN } from "./classNames";
 
-/** Public marketing page: template order, no console shell. */
+/** Public marketing page: template order, no console shell. `#top` is the footer's "back to top" anchor. */
 export const Landing = () => (
-  <div id="top" className={PAGE}>
+  <div id="top">
     <LandingNav />
-    <main>
+    <main className={MAIN}>
       <LandingHero />
       <LandingTrustStrip />
       <LandingProduct />

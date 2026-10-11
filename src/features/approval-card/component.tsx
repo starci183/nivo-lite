@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Badge, Button, SurfaceCard, Text, Textarea } from "@starci/grammar/common";
+import { Badge, Button, Divider, SurfaceCard, Text, Textarea } from "@starci/grammar/common";
 import { AgentAvatar } from "@/components/avatar/PersonAvatar";
 
 import { useLocale, useT } from "@/i18n/client";
@@ -88,9 +88,11 @@ export const ApprovalCardBase = (props: ApprovalCardBaseProps) => {
           <Text weight="semibold">{nextAction}</Text>
           <Text size="sm" tone="muted">{t("willSend", { lead: leadName, channel })}</Text>
         </div>
+        {/* BOUNDARY-1 case-1: the seam between the two joined bands is the Grammar Divider. */}
+        <Divider semantics="presentation" />
         <div className={APPROVAL_CARD_BAND_DIVIDED_CLASS_NAME}>
           {isWaiting && isEditing ? (
-            <Textarea label={t("draftLabel")} rows={8} value={editText} isDisabled={isBusy} onValueChange={props.onEditChange} />
+            <Textarea variant="secondary" label={t("draftLabel")} rows={8} value={editText} isDisabled={isBusy} onValueChange={props.onEditChange} />
           ) : (
             <div className={APPROVAL_CARD_QUOTE_CLASS_NAME}>
               <Text>{execution.draft}</Text>

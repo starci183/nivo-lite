@@ -1,12 +1,12 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Alert, Button, Text, Textarea } from "@starci/grammar/common"
+import { Alert, Button, Heading, SurfaceCard, TagGroup, Text, Textarea } from "@starci/grammar/common"
 import { useLocale, useT } from "@/i18n/client"
 import { automations as dict } from "@/i18n/dict/automations"
 import { generateAutomationBody } from "@/lib/automation-actions"
 import { fillBody, SAMPLE_VARS, type AutomationCardView, type ShopContext } from "@/lib/automation-shared"
-import { ACTIONS_CLASS, BUBBLE_CLASS, CHIPS_CLASS, FACTS_CLASS, SECTION_CLASS, VAR_CHIP_CLASS } from "./classNames"
+import { ACTIONS_CLASS, FACTS_CLASS, PRESERVE_LINES_CLASS, SECTION_CLASS } from "./classNames"
 
 /** Props for {@link MessageSection}. */
 export type MessageSectionProps = {
@@ -57,17 +57,17 @@ export const MessageSection = ({ card, shop, busy, onSaveBody, onSaveAndEnable, 
   return (
     <section className={SECTION_CLASS} aria-label={t("messageTitle")}>
       <div className={FACTS_CLASS}>
-        <Text weight="semibold">{t("messageTitle")}</Text>
+        <Heading level={3}>{t("messageTitle")}</Heading>
         <Text size="sm" tone="muted">{t("messageHelp")}</Text>
       </div>
       {card.bodyStale ? (
         <Alert title={t("staleTitle")} description={t("staleBody")} tone="cautionary" action={{ label: t("regenerate"), onAction: () => void compose() }} />
       ) : null}
-      <Textarea id={`${card.key}-body`} name="body" label={t("messageLabel")} rows={5} maxLength={600} value={body} isDisabled={disabled} onValueChange={(v) => { setBody(v); setNote(null) }} />
+      <Textarea id={`${card.key}-body`} name="body" label={t("messageLabel")} variant="secondary" rows={5} maxLength={600} value={body} isDisabled={disabled} onValueChange={(v) => { setBody(v); setNote(null) }} />
       {note ? <Text size="xs" tone="muted">{note === "proposal" ? t("proposalNote") : t("fallbackNote")}</Text> : null}
       <div className={FACTS_CLASS}>
         <Text size="xs" tone="muted">{t("variablesTitle")}</Text>
-        <div className={CHIPS_CLASS}>{def.variables.map((v) => <span key={v} className={VAR_CHIP_CLASS}>{`{${v}}`}</span>)}</div>
+        <TagGroup label={t("variablesTitle")} size="sm" items={def.variables.map((v) => ({ id: v, label: `{${v}}` }))} />
       </div>
       <div className={ACTIONS_CLASS}>
         {card.body === null ? (
@@ -78,7 +78,9 @@ export const MessageSection = ({ card, shop, busy, onSaveBody, onSaveAndEnable, 
       </div>
       <div className={FACTS_CLASS}>
         <Text size="xs" tone="muted">{t("previewTitle")}</Text>
-        <div className={BUBBLE_CLASS}>{preview}</div>
+        <SurfaceCard depth="nested" ariaLabel={t("previewTitle")}>
+          <div className={PRESERVE_LINES_CLASS}><Text size="sm">{preview}</Text></div>
+        </SurfaceCard>
         {shop.tone.trim() ? <Text size="xs" tone="muted">{t("previewTone", { tone: shop.tone })}</Text> : null}
       </div>
     </section>

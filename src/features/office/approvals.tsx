@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
-import { Badge, Button, Text, Textarea } from "@starci/grammar/common"
+import { Badge, Button, ChatBubble, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
 import { AgentAvatar } from "@/components/avatar/PersonAvatar"
 import { canDecideItem, useMember } from "@/features/shell/member-context"
 import { useLocale, useT } from "@/i18n/client"
@@ -11,21 +11,18 @@ import { decideExecution } from "@/lib/actions"
 import type { ModuleKey } from "@/lib/types"
 import {
   APPROVAL_ACTIONS_CLASS_NAME,
+  APPROVAL_BODY_CLASS_NAME,
   APPROVAL_CARD_CLASS_NAME,
-  APPROVAL_FOCUS_CLASS_NAME,
   APPROVAL_LINK_CLASS_NAME,
   APPROVAL_QUOTE_CLASS_NAME,
   APPROVAL_STATUS_CLASS_NAME,
   APPROVAL_TEXT_CLASS_NAME,
-  AUTHOR_LINE_CLASS_NAME,
   AVATAR_SLOT_CLASS_NAME,
-  BUBBLE_COLUMN_CLASS_NAME,
   INFO_SECTION_CLASS_NAME,
   INFO_TITLE_CLASS_NAME,
   MEMBER_TEXT_CLASS_NAME,
   PENDING_ROW_CLASS_NAME,
   ROW_FIRST_CLASS_NAME,
-  ROW_THEIRS_CLASS_NAME,
 } from "./classNames"
 import { formatStamp, formatTime } from "./format"
 import { AiChip } from "./messages"
@@ -97,16 +94,22 @@ export const ApprovalBubble = ({ approval, module, isFocused }: ApprovalBubblePr
     : t("approvalDecidedNoTime", { status: statusWord, who })
 
   return (
-    <div id={approvalAnchor(execution.id)} className={`${ROW_THEIRS_CLASS_NAME} ${ROW_FIRST_CLASS_NAME}`}>
-      <div className={AVATAR_SLOT_CLASS_NAME}>
-        <AgentAvatar module={module} label={approval.agentName} size="sm" />
-      </div>
-      <div className={BUBBLE_COLUMN_CLASS_NAME}>
-        <div className={AUTHOR_LINE_CLASS_NAME}>
-          <Text size="sm" weight="semibold">{approval.agentName}</Text>
-          <Text size="xs" tone="muted">{formatTime(execution.created_at, locale)}</Text>
-        </div>
-        <article className={isFocused ? `${APPROVAL_CARD_CLASS_NAME} ${APPROVAL_FOCUS_CLASS_NAME}` : APPROVAL_CARD_CLASS_NAME} aria-label={approval.nextAction || t("approvalWaiting")}>
+    <div className={ROW_FIRST_CLASS_NAME}>
+      <ChatBubble
+        id={approvalAnchor(execution.id)}
+        author={approval.agentName}
+        avatar={
+          <div className={AVATAR_SLOT_CLASS_NAME}>
+            <AgentAvatar module={module} label={approval.agentName} size="sm" />
+          </div>
+        }
+        meta={formatTime(execution.created_at, locale)}
+        footer={
+        // BOUNDARY-5: the decision card sits under the message, inside the messenger card, so it is a nested SurfaceCard;
+        // the jump focus is its one highlight.
+        <div className={APPROVAL_CARD_CLASS_NAME}>
+        <SurfaceCard depth="nested" ariaLabel={approval.nextAction || t("approvalWaiting")} isHighlight={isFocused}>
+        <div className={APPROVAL_BODY_CLASS_NAME}>
           <div className={APPROVAL_STATUS_CLASS_NAME}>
             {isWaiting ? (
               <Badge tone="warning" isDot>{t("approvalWaiting")}</Badge>
@@ -117,12 +120,6 @@ export const ApprovalBubble = ({ approval, module, isFocused }: ApprovalBubblePr
             <div className={APPROVAL_LINK_CLASS_NAME}>
               <Button variant="ghost" size="sm" href={approval.href}>{t("openLead")}</Button>
             </div>
-          </div>
-          <div className={APPROVAL_TEXT_CLASS_NAME}>
-            {approval.nextAction ? <Text weight="semibold">{approval.nextAction}</Text> : null}
-            <Text size="sm" tone="muted">
-              {approval.channel ? t("approvalTo", { lead: approval.leadName, channel: approval.channel }) : t("approvalToNoChannel", { lead: approval.leadName })}
-            </Text>
           </div>
           {isWaiting && isEditing ? (
             <Textarea label={t("draftLabel")} rows={6} value={editText} isDisabled={isBusy} onValueChange={setEditText} />
@@ -156,8 +153,18 @@ export const ApprovalBubble = ({ approval, module, isFocused }: ApprovalBubblePr
               </Button>
             </div>
           ) : null}
-        </article>
-      </div>
+        </div>
+        </SurfaceCard>
+        </div>
+        }
+      >
+        <div className={APPROVAL_TEXT_CLASS_NAME}>
+          {approval.nextAction ? <Text weight="semibold">{approval.nextAction}</Text> : null}
+          <Text size="sm" tone="muted">
+            {approval.channel ? t("approvalTo", { lead: approval.leadName, channel: approval.channel }) : t("approvalToNoChannel", { lead: approval.leadName })}
+          </Text>
+        </div>
+      </ChatBubble>
     </div>
   )
 }
@@ -182,13 +189,20 @@ export const PendingList = ({ items, moduleOf, onJump }: PendingListProps) => {
         <Text size="sm" tone="muted">{t("pendingNone")}</Text>
       ) : (
         items.map((item) => (
-          <button key={item.execution.id} type="button" className={PENDING_ROW_CLASS_NAME} onClick={() => onJump(item.execution.id)} aria-label={`${t("pendingJump")}: ${item.nextAction || item.leadName}`}>
-            <AgentAvatar module={moduleOf(item.execution.agent_id)} label={item.agentName} size="xs" />
-            <span className={MEMBER_TEXT_CLASS_NAME}>
-              <Text size="sm" weight="medium" overflow="clamp-2">{item.nextAction || item.leadName}</Text>
-              <Text size="xs" tone="muted" overflow="truncate">{`${item.agentName} · ${item.leadName}`}</Text>
-            </span>
-          </button>
+          // BOUNDARY-5 + STATE-5: one waiting request is a nested card whose whole face jumps to it in the thread.
+          <SurfaceCard
+            key={item.execution.id}
+            depth="nested"
+            wholeAction={{ kind: "button", press: () => onJump(item.execution.id), label: `${t("pendingJump")}: ${item.nextAction || item.leadName}` }}
+          >
+            <div className={PENDING_ROW_CLASS_NAME}>
+              <AgentAvatar module={moduleOf(item.execution.agent_id)} label={item.agentName} size="xs" />
+              <div className={MEMBER_TEXT_CLASS_NAME}>
+                <Text size="sm" weight="medium" overflow="clamp-2">{item.nextAction || item.leadName}</Text>
+                <Text size="xs" tone="muted" overflow="truncate">{`${item.agentName} · ${item.leadName}`}</Text>
+              </div>
+            </div>
+          </SurfaceCard>
         ))
       )}
     </section>

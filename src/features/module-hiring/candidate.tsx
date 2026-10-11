@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Alert, Badge, Button, Dialog, Drawer, Heading, Input, NumberField, SegmentedControl, Select, Text, Textarea } from "@starci/grammar/common";
+import { Alert, AlertDialog, Badge, Button, Dialog, Drawer, Heading, Image, Input, List, ListItem, MediaFrame, NumberField, SegmentedControl, Select, SurfaceCard, Text, Textarea } from "@starci/grammar/common";
 import type { HiringWorkbenchData } from "@/lib/module-hiring-queries";
 import {
   INTERVIEW_STATUS_LABEL, OFFER_STATUS_LABEL, SCORE_LABEL, STAGE_LABEL, fmtPay, fmtVnDateTime, type CandidateRow, type Stage,
@@ -11,7 +11,7 @@ import {
   type CandidateDetail, type ItemOutcome,
 } from "./actions";
 import {
-  CHIPS_CLASS_NAME, CV_FRAME_CLASS_NAME, FORM_CLASS_NAME, FORM_GRID_CLASS_NAME, QUOTE_CLASS_NAME, REASON_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, SCORE_CLASS_NAME,
+  CHIPS_CLASS_NAME, CV_FRAME_CLASS_NAME, FORM_CLASS_NAME, FORM_GRID_CLASS_NAME, PAIR_CLASS_NAME, PRE_WRAP_CLASS_NAME, REASON_CLASS_NAME, REASONS_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, SCORE_CLASS_NAME,
 } from "./classNames";
 import { SOURCE_LABEL, scoreTone, stageTone, useRunner } from "./parts";
 
@@ -38,10 +38,10 @@ const InterviewDialog = ({ c, data, onClose }: { readonly c: CandidateRow; reado
           <Alert tone={result.status === "done" ? "affirmative" : "informative"} title={result.status === "done" ? "Đã xếp lịch" : "Đang chờ bạn duyệt"} description={result.summary} />
         ) : (
           <>
-            <Select label="Người phỏng vấn" options={data.members.map((m) => ({ id: m.userId, label: `${m.name}${m.windows.length ? "" : " (chưa khai báo lịch rảnh: dùng 9h-17h)"}` }))} value={who} onValueChange={(v) => setWho(v ?? "")} />
+            <Select label="Người phỏng vấn" variant="secondary" options={data.members.map((m) => ({ id: m.userId, label: `${m.name}${m.windows.length ? "" : " (chưa khai báo lịch rảnh: dùng 9h-17h)"}` }))} value={who} onValueChange={(v) => setWho(v ?? "")} />
             <SegmentedControl label="Hình thức" options={[{ value: "in_person", label: "Trực tiếp" }, { value: "online", label: "Online" }]} value={mode} onValueChange={setMode} />
             <Input id="iv-loc" name="location" label={mode === "online" ? "Đường dẫn cuộc họp" : "Địa điểm"} variant="secondary" value={location} onValueChange={setLocation} />
-            <NumberField label="Thời lượng (phút)" minValue={15} maxValue={180} step={15} value={duration} onValueChange={(v) => setDuration(Number.isFinite(v) ? v : 30)} />
+            <NumberField label="Thời lượng (phút)" variant="secondary" minValue={15} maxValue={180} step={15} value={duration} onValueChange={(v) => setDuration(Number.isFinite(v) ? v : 30)} />
           </>
         )}
       </div>
@@ -77,7 +77,7 @@ const OfferDialog = ({ c, data, onClose }: { readonly c: CandidateRow; readonly 
               <Input id="of-start" name="start_date" label="Ngày bắt đầu" variant="secondary" value={start} onValueChange={setStart} />
               <Input id="of-prob" name="probation" label="Thử việc" variant="secondary" value={probation} onValueChange={setProbation} />
             </div>
-            <Textarea label="Ghi chú thêm" rows={2} value={note} onValueChange={setNote} />
+            <Textarea label="Ghi chú thêm" variant="secondary" rows={2} value={note} onValueChange={setNote} />
           </>
         )}
       </div>
@@ -146,19 +146,23 @@ export const CandidateDrawer = ({ c, data, onClose }: CandidateDrawerProps) => {
                   <Text size="metric-lead" weight="semibold">{`${c.score}/100`}</Text>
                   <Badge tone={scoreTone(c.score_label)}>{c.score_label ? SCORE_LABEL[c.score_label] : ""}</Badge>
                 </div>
-                {c.score_summary ? <pre className={QUOTE_CLASS_NAME}>{c.score_summary}</pre> : null}
-                <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                {c.score_summary ? (
+                  <SurfaceCard depth="nested" ariaLabel="Tóm tắt sàng lọc">
+                    <div className={PRE_WRAP_CLASS_NAME}><Text as="p" size="sm">{c.score_summary}</Text></div>
+                  </SurfaceCard>
+                ) : null}
+                <List className={REASONS_CLASS_NAME}>
                   {c.score_reasons.map((r, i) => (
-                    <li key={`${r.criterion}-${i}`} className={REASON_CLASS_NAME}>
+                    <ListItem key={`${r.criterion}-${i}`} className={REASON_CLASS_NAME}>
                       <Badge tone={r.status === "met" ? "success" : r.status === "unmet" ? "danger" : "neutral"}>{r.status === "met" ? "Khớp" : r.status === "unmet" ? "Chưa khớp" : "Chưa rõ"}</Badge>
-                      <div><Text size="sm" weight="medium">{r.criterion}</Text><Text size="xs" tone="muted">{r.note}</Text></div>
-                    </li>
+                      <div className={PAIR_CLASS_NAME}><Text size="sm" weight="medium">{r.criterion}</Text><Text size="xs" tone="muted">{r.note}</Text></div>
+                    </ListItem>
                   ))}
-                </ul>
+                </List>
                 <Text size="xs" tone="muted">NIVO chỉ đối chiếu với yêu cầu đã viết của công việc. Không dùng giới tính, tuổi hay các yếu tố bị cấm. Điểm không loại ai: loại là quyết định của bạn.</Text>
               </>
             ) : <Text tone="muted">Chưa sàng lọc. Hồ sơ mới sẽ được sàng lọc tự động trong ít phút.</Text>}
-            <div><Button variant="secondary" size="sm" isPending={isPending} isDisabled={isPending} onPress={() => run(() => rescreenAction(c.id), (o) => setMsg(o.status === "done" ? "Đã sàng lọc lại." : o.summary))}>Sàng lọc lại</Button></div>
+            <div className={ROW_ACTIONS_CLASS_NAME}><Button variant="secondary" size="sm" isPending={isPending} isDisabled={isPending} onPress={() => run(() => rescreenAction(c.id), (o) => setMsg(o.status === "done" ? "Đã sàng lọc lại." : o.summary))}>Sàng lọc lại</Button></div>
 
             <Heading level={3}>CV</Heading>
             {detail?.cv ? (
@@ -167,14 +171,18 @@ export const CandidateDrawer = ({ c, data, onClose }: CandidateDrawerProps) => {
                   {detail.cv.mime === "application/pdf" || detail.cv.mime.startsWith("image/") ? <Button variant="secondary" size="sm" onPress={() => setShowCv((v) => !v)}>{showCv ? "Ẩn xem trước" : "Xem trước"}</Button> : null}
                   <Button variant="tertiary" size="sm" href={detail.cv.url} target="_blank" rel="noreferrer">{`Mở ${detail.cv.name}`}</Button>
                 </div>
-                {showCv ? (detail.cv.mime === "application/pdf" ? <iframe title="CV" src={detail.cv.url} className={CV_FRAME_CLASS_NAME} /> : <img alt="CV" src={detail.cv.url} className="max-h-96 w-full rounded-lg border border-separator object-contain" />) : null}
+                {showCv ? (
+                  <MediaFrame aspect="portrait" fit="contain">
+                    {detail.cv.mime === "application/pdf" ? <iframe title="CV" src={detail.cv.url} className={CV_FRAME_CLASS_NAME} /> : <Image src={detail.cv.url} alt="CV" fit="contain" />}
+                  </MediaFrame>
+                ) : null}
                 <Text size="xs" tone="muted">Liên kết xem CV chỉ có hiệu lực vài phút.</Text>
               </>
             ) : <Text tone="muted">{c.cv_path ? "Đang tải CV..." : "Ứng viên không gửi CV."}</Text>}
 
             <Heading level={3}>Câu trả lời</Heading>
-            {c.answers.length ? c.answers.map((a) => (<div key={a.question_id}><Text size="sm" weight="medium">{a.question}</Text><Text size="sm">{a.answer}</Text></div>)) : <Text tone="muted">Chưa có câu trả lời.</Text>}
-            {c.availability ? <div><Text size="sm" weight="medium">Lịch có thể làm</Text><Text size="sm">{c.availability}</Text></div> : null}
+            {c.answers.length ? c.answers.map((a) => (<div key={a.question_id} className={PAIR_CLASS_NAME}><Text size="sm" weight="medium">{a.question}</Text><Text size="sm">{a.answer}</Text></div>)) : <Text tone="muted">Chưa có câu trả lời.</Text>}
+            {c.availability ? <div className={PAIR_CLASS_NAME}><Text size="sm" weight="medium">Lịch có thể làm</Text><Text size="sm">{c.availability}</Text></div> : null}
 
             {interviews.length ? (
               <>
@@ -195,21 +203,21 @@ export const CandidateDrawer = ({ c, data, onClose }: CandidateDrawerProps) => {
             ) : null}
 
             <Heading level={3}>Ghi chú</Heading>
-            <Textarea label="Ghi chú nội bộ" isLabelHidden rows={3} value={notes} onValueChange={setNotes} description="Chỉ ghi về kỹ năng, kinh nghiệm, lịch làm việc." />
-            <div><Button variant="secondary" size="sm" isPending={isPending} isDisabled={isPending || notes === c.notes} onPress={() => run(() => saveNotesAction(c.id, notes), () => setMsg("Đã lưu ghi chú."))}>Lưu ghi chú</Button></div>
+            <Textarea label="Ghi chú nội bộ" isLabelHidden variant="secondary" rows={3} value={notes} onValueChange={setNotes} description="Chỉ ghi về kỹ năng, kinh nghiệm, lịch làm việc." />
+            <div className={ROW_ACTIONS_CLASS_NAME}><Button variant="secondary" size="sm" isPending={isPending} isDisabled={isPending || notes === c.notes} onPress={() => run(() => saveNotesAction(c.id, notes), () => setMsg("Đã lưu ghi chú."))}>Lưu ghi chú</Button></div>
 
             <Heading level={3}>Lịch sử</Heading>
             {detail ? (
               detail.events.length ? (
-                <ul className="m-0 flex list-none flex-col gap-2 p-0">
-                  {detail.events.map((e) => (<li key={e.id}><Text size="sm">{e.summary}</Text><Text size="xs" tone="muted">{`${e.actor} · ${fmtVnDateTime(e.created_at)}`}</Text></li>))}
-                </ul>
+                <List className={REASONS_CLASS_NAME}>
+                  {detail.events.map((e) => (<ListItem key={e.id} className={PAIR_CLASS_NAME}><Text size="sm">{e.summary}</Text><Text size="xs" tone="muted">{`${e.actor} · ${fmtVnDateTime(e.created_at)}`}</Text></ListItem>))}
+                </List>
               ) : <Text tone="muted">Chưa có.</Text>
             ) : <Text tone="muted">Đang tải...</Text>}
 
             <Heading level={3}>Dữ liệu của ứng viên</Heading>
             <Text size="sm" tone="muted">{`Hồ sơ được lưu riêng trong kho của doanh nghiệp, tự xóa sau ${data.settings?.retention_days ?? 90} ngày khi bị loại hoặc rút. Ứng viên yêu cầu xóa thì xóa ngay.`}</Text>
-            <div><Button variant="danger-soft" size="sm" onPress={() => setDialog("delete")}>Xóa hồ sơ ngay</Button></div>
+            <div className={ROW_ACTIONS_CLASS_NAME}><Button variant="danger-soft" size="sm" onPress={() => setDialog("delete")}>Xóa hồ sơ ngay</Button></div>
           </div>
         ) : null}
       </Drawer>
@@ -221,17 +229,18 @@ export const CandidateDrawer = ({ c, data, onClose }: CandidateDrawerProps) => {
           description="Loại là quyết định của bạn. Ghi lý do theo yêu cầu công việc."
           footer={(close) => (<><Button variant="tertiary" onPress={close}>Hủy</Button><Button variant="danger" isPending={isPending} isDisabled={isPending || reason.trim().length < 3} onPress={() => run(() => moveCandidateAction(c.id, "rejected", reason.trim()), () => setDialog(null))}>Loại ứng viên</Button></>)}
         >
-          <div className={FORM_CLASS_NAME}>{error ? <Alert tone="negative" title="Chưa loại được" description={error} urgency="assertive" /> : null}<Textarea label="Lý do" rows={3} value={reason} onValueChange={setReason} /></div>
+          <div className={FORM_CLASS_NAME}>{error ? <Alert tone="negative" title="Chưa loại được" description={error} urgency="assertive" /> : null}<Textarea label="Lý do" variant="secondary" rows={3} value={reason} onValueChange={setReason} /></div>
         </Dialog>
       ) : null}
       {c && dialog === "delete" ? (
-        <Dialog
-          isOpen onOpenChange={(o) => { if (!o) setDialog(null); }} size="sm" title={`Xóa hồ sơ ${c.name}?`} closeLabel="Đóng"
+        <AlertDialog
+          isOpen onOpenChange={(o) => { if (!o) setDialog(null); }} tone="negative" title={`Xóa hồ sơ ${c.name}?`}
           description="Xóa vĩnh viễn thông tin, câu trả lời, file CV, lịch phỏng vấn và thư mời của ứng viên này. Không khôi phục được."
-          footer={(close) => (<><Button variant="tertiary" onPress={close}>Hủy</Button><Button variant="danger" isPending={isPending} isDisabled={isPending} onPress={() => run(() => deleteCandidateAction(c.id), () => { setDialog(null); onClose(); })}>Xóa vĩnh viễn</Button></>)}
+          confirmLabel="Xóa vĩnh viễn" cancelLabel="Hủy" isConfirmPending={isPending}
+          onConfirm={() => run(() => deleteCandidateAction(c.id), () => { setDialog(null); onClose(); })}
         >
           <Text>Dùng khi ứng viên yêu cầu xóa dữ liệu của họ.</Text>
-        </Dialog>
+        </AlertDialog>
       ) : null}
     </>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { Alert, Meter, SurfaceCard, Text } from "@starci/grammar/common";
+import { Alert, DescriptionList, Heading, List, ListItem, Meter, SurfaceCard, Text } from "@starci/grammar/common";
 import { useLocale, useT } from "@/i18n/client";
 import { intlLocale, TIME_ZONE } from "@/i18n/core";
 import { billing } from "@/i18n/dict/billing";
@@ -8,8 +8,8 @@ import { listModules, pick } from "@/lib/module-registry";
 import type { UsageSummary } from "@/lib/usage";
 import { WARN_AT } from "@/lib/usage-shared";
 import {
-  BAR_CLASS_NAME, BAR_SLOT_CLASS_NAME, CHART_AXIS_CLASS_NAME, CHART_CLASS_NAME, FACTS_CLASS_NAME, FACT_CLASS_NAME,
-  MODULE_ROW_CLASS_NAME, ROWS_CLASS_NAME, USAGE_BLOCK_CLASS_NAME,
+  BAR_CLASS_NAME, BAR_SLOT_CLASS_NAME, CHART_AXIS_CLASS_NAME, CHART_CLASS_NAME, MODULE_LIST_CLASS_NAME, MODULE_ROW_CLASS_NAME,
+  STACK_CLASS_NAME, USAGE_BLOCK_CLASS_NAME,
 } from "./classNames";
 
 /** How a meter reads: calm below 80%, cautionary from 80%, negative once the allowance is used up. */
@@ -46,83 +46,94 @@ export const UsageCard = ({ usage }: { readonly usage: UsageSummary }) => {
 
   return (
     <SurfaceCard label={t("usageTitle")} headingLevel={2}>
-      <Text size="sm" tone="muted">{t("usageText")}</Text>
-      {level === "exceeded" ? <Alert tone="negative" title={t("usageExceeded")} /> : null}
-      {level === "warn" ? <Alert tone="cautionary" title={t("usageWarn", { pct: Math.round((status?.ratio ?? 0) * 100) })} /> : null}
-      {status ? (
-        <>
-          <div className={USAGE_BLOCK_CLASS_NAME}>
-            <Meter
-              label={t("usageCredits")}
-              value={status.creditsLimit === null ? 0 : Math.min(status.creditsUsed, status.creditsLimit)}
-              minValue={0}
-              maxValue={status.creditsLimit ?? 1}
-              valueLabel={reading(Math.round(status.creditsUsed), status.creditsLimit)}
-              tone={toneOf(status.creditsUsed, status.creditsLimit)}
-            />
-            {status.messagesLimit === null ? null : (
+      <div className={STACK_CLASS_NAME}>
+        <Text size="sm" tone="muted">{t("usageText")}</Text>
+        {level === "exceeded" ? <Alert tone="negative" title={t("usageExceeded")} /> : null}
+        {level === "warn" ? <Alert tone="cautionary" title={t("usageWarn", { pct: Math.round((status?.ratio ?? 0) * 100) })} /> : null}
+        {status ? (
+          <>
+            <div className={USAGE_BLOCK_CLASS_NAME}>
               <Meter
-                label={t("usageMessages")}
-                value={Math.min(status.messagesUsed, status.messagesLimit)}
+                label={t("usageCredits")}
+                value={status.creditsLimit === null ? 0 : Math.min(status.creditsUsed, status.creditsLimit)}
                 minValue={0}
-                maxValue={status.messagesLimit}
-                valueLabel={reading(status.messagesUsed, status.messagesLimit)}
-                tone={toneOf(status.messagesUsed, status.messagesLimit)}
+                maxValue={status.creditsLimit ?? 1}
+                valueLabel={reading(Math.round(status.creditsUsed), status.creditsLimit)}
+                tone={toneOf(status.creditsUsed, status.creditsLimit)}
               />
-            )}
-          </div>
-          <div className={FACTS_CLASS_NAME}>
-            <div className={FACT_CLASS_NAME}>
-              <Text size="sm" tone="muted">{t("usageCreditsLeft")}</Text>
-              <Text weight="semibold">{status.creditsLimit === null ? t("usageNoLimit") : credit(Math.max(0, status.creditsLimit - status.creditsUsed))}</Text>
+              {status.messagesLimit === null ? null : (
+                <Meter
+                  label={t("usageMessages")}
+                  value={Math.min(status.messagesUsed, status.messagesLimit)}
+                  minValue={0}
+                  maxValue={status.messagesLimit}
+                  valueLabel={reading(status.messagesUsed, status.messagesLimit)}
+                  tone={toneOf(status.messagesUsed, status.messagesLimit)}
+                />
+              )}
             </div>
-            {status.creditsCarried > 0 ? (
-              <div className={FACT_CLASS_NAME}>
-                <Text size="sm" tone="muted">{t("usageCarried")}</Text>
-                <Text weight="semibold">{credit(status.creditsCarried)}</Text>
-              </div>
-            ) : null}
-            <div className={FACT_CLASS_NAME}>
-              <Text size="sm" tone="muted">{t("usagePeriod")}</Text>
-              <Text weight="semibold">{new Intl.DateTimeFormat(intlLocale(locale), { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${status.periodStart}T00:00:00Z`))}</Text>
-            </div>
-          </div>
-        </>
-      ) : null}
+            <DescriptionList
+              layout="columns"
+              isDivided
+              items={[
+                {
+                  id: "left",
+                  term: t("usageCreditsLeft"),
+                  description: <Text weight="semibold">{status.creditsLimit === null ? t("usageNoLimit") : credit(Math.max(0, status.creditsLimit - status.creditsUsed))}</Text>,
+                },
+                ...(status.creditsCarried > 0
+                  ? [{ id: "carried", term: t("usageCarried"), description: <Text weight="semibold">{credit(status.creditsCarried)}</Text> }]
+                  : []),
+                {
+                  id: "period",
+                  term: t("usagePeriod"),
+                  description: (
+                    <Text weight="semibold">
+                      {new Intl.DateTimeFormat(intlLocale(locale), { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${status.periodStart}T00:00:00Z`))}
+                    </Text>
+                  ),
+                },
+              ]}
+            />
+          </>
+        ) : null}
 
-      <Text weight="medium">{t("usageByModule")}</Text>
-      {usage.byModule.length ? (
-        <ul className={ROWS_CLASS_NAME}>
-          {usage.byModule.map((m) => (
-            <li key={m.module} className={MODULE_ROW_CLASS_NAME}>
-              <Text weight="medium">{moduleLabel[m.module] ?? m.module}</Text>
-              <Text size="sm" tone="muted">{t("usageModuleLine", { calls: nf.format(m.calls), credits: credit(m.credits) })}</Text>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <Text tone="muted">{t("usageEmpty")}</Text>
-      )}
-
-      {days.length ? (
         <div className={USAGE_BLOCK_CLASS_NAME}>
-          <Text weight="medium">{t("usageDaily")}</Text>
-          <div className={CHART_CLASS_NAME} role="img" aria-label={t("usageDailyLabel", { peak: credit(peak) })}>
-            {days.map((d) => {
-              const v = byDay.get(d) ?? 0;
-              return (
-                <div key={d} className={BAR_SLOT_CLASS_NAME} title={`${d}: ${credit(v)}`}>
-                  <div className={BAR_CLASS_NAME} style={{ height: `${v > 0 ? Math.max(4, Math.round((v / peak) * 100)) : 0}%` }} />
-                </div>
-              );
-            })}
-          </div>
-          <div className={CHART_AXIS_CLASS_NAME}>
-            <Text size="sm" tone="muted">{days[0]?.slice(8)}</Text>
-            <Text size="sm" tone="muted">{days.at(-1)?.slice(8)}</Text>
-          </div>
+          <Heading level={3}>{t("usageByModule")}</Heading>
+          {usage.byModule.length ? (
+            <List className={MODULE_LIST_CLASS_NAME} label={t("usageByModule")}>
+              {usage.byModule.map((m) => (
+                <ListItem key={m.module} className={MODULE_ROW_CLASS_NAME}>
+                  <Text weight="medium">{moduleLabel[m.module] ?? m.module}</Text>
+                  <Text size="sm" tone="muted">{t("usageModuleLine", { calls: nf.format(m.calls), credits: credit(m.credits) })}</Text>
+                </ListItem>
+              ))}
+            </List>
+          ) : (
+            <Text tone="muted">{t("usageEmpty")}</Text>
+          )}
         </div>
-      ) : null}
+
+        {days.length ? (
+          <div className={USAGE_BLOCK_CLASS_NAME}>
+            <Heading level={3}>{t("usageDaily")}</Heading>
+            <div className={CHART_CLASS_NAME} role="img" aria-label={t("usageDailyLabel", { peak: credit(peak) })}>
+              {days.map((d) => {
+                const v = byDay.get(d) ?? 0;
+                return (
+                  <div key={d} className={BAR_SLOT_CLASS_NAME} title={`${d}: ${credit(v)}`}>
+                    <div className={BAR_CLASS_NAME} style={{ height: `${v > 0 ? Math.max(4, Math.round((v / peak) * 100)) : 0}%` }} />
+                  </div>
+                );
+              })}
+            </div>
+            <div className={CHART_AXIS_CLASS_NAME}>
+              <Text size="sm" tone="muted">{days[0]?.slice(8)}</Text>
+              <Text size="sm" tone="muted">{days.at(-1)?.slice(8)}</Text>
+            </div>
+          </div>
+        ) : null}
+      </div>
     </SurfaceCard>
   );
 };

@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Alert, Button, CheckboxGroup, SurfaceCard, Text } from "@starci/grammar/common";
+import { Alert, Button, CheckboxGroup, SurfaceCard, Text, TextAction } from "@starci/grammar/common";
 import { StatusBadge } from "@/features/connections/StatusBadge";
 import { useT } from "@/i18n/client";
 import { connections as dict } from "@/i18n/dict/connections";
 import { setAgentConnections } from "@/lib/connection-actions";
-import { STACK_CLASS_NAME } from "./classNames";
+import { ACTIONS_CLASS_NAME, STACK_CLASS_NAME } from "./classNames";
 
 export type ConnectionOption = { readonly id: string; readonly label: string; readonly status: "pending" | "connected" | "error" | "disconnected" };
 
@@ -53,9 +52,9 @@ export const AgentConnectionsCard = ({ agentId, options, selected, canEdit }: Ag
           />
         )}
         {canEdit ? (
-          <div className="flex flex-wrap items-center gap-3">
+          <div className={ACTIONS_CLASS_NAME}>
             <Button variant="secondary" isPending={pending} isDisabled={!dirty} onPress={save}>{t("agentCardSave")}</Button>
-            <Link href="/connections" className="text-sm underline">{t("agentCardManage")}</Link>
+            <TextAction href="/connections" size="sm" appearance="inline">{t("agentCardManage")}</TextAction>
           </div>
         ) : (
           <Text size="xs" tone="muted">{t("agentCardReadOnly")}</Text>

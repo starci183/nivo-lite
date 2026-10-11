@@ -1,14 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Alert, Badge, Button, CheckboxGroup, Dialog, EmptyNotice, Heading, Input, NumberField, SegmentedControl, Select, SurfaceListCard, Switch, Text, Textarea } from "@starci/grammar/common";
+import { Alert, Badge, Button, CheckboxGroup, Dialog, EmptyNotice, Heading, Input, NumberField, SegmentedControl, Select, SurfaceCard, SurfaceListCard, Switch, Text, Textarea } from "@starci/grammar/common";
 import type { HiringWorkbenchData } from "@/lib/module-hiring-queries";
 import {
   EMPLOYMENT_LABEL, JOB_STATUS_LABEL, PAY_UNIT_LABEL, fmtPay, validateJobDraft, fairnessMessage, type AdVariants, type JobQuestion, type JobRow, type JobStatus, type QuestionType,
 } from "@/lib/module-hiring-shared";
 import { generateAdAction, saveJobAction, setJobStatusAction } from "./actions";
 import {
-  AD_GRID_CLASS_NAME, CHIPS_CLASS_NAME, FORM_CLASS_NAME, FORM_GRID_CLASS_NAME, QUESTION_CLASS_NAME, QUOTE_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME, SECTION_HEAD_CLASS_NAME,
+  AD_GRID_CLASS_NAME, CHIPS_CLASS_NAME, FORM_CLASS_NAME, FORM_GRID_CLASS_NAME, PRE_WRAP_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME, SECTION_HEAD_CLASS_NAME,
 } from "./classNames";
 import { copyText, useRunner } from "./parts";
 
@@ -94,31 +94,32 @@ const JobEditor = ({ job, onClose }: EditorProps) => {
           <Input id="job-position" name="position" label="Vị trí" variant="secondary" value={position} onValueChange={setPosition} />
           <SegmentedControl label="Hình thức" options={[{ value: "full_time", label: EMPLOYMENT_LABEL.full_time }, { value: "part_time", label: EMPLOYMENT_LABEL.part_time }]} value={type} onValueChange={setType} />
           <Input id="job-schedule" name="schedule" label="Lịch làm" placeholder="Ví dụ: Ca tối 17h-22h, 5 buổi/tuần" variant="secondary" value={schedule} onValueChange={setSchedule} />
-          <NumberField label="Lương từ (đồng)" minValue={0} step={500000} formatOptions={{ maximumFractionDigits: 0 }} value={payMin ?? undefined} onValueChange={(v) => setPayMin(toNumber(v))} />
-          <NumberField label="Lương đến (đồng)" minValue={0} step={500000} formatOptions={{ maximumFractionDigits: 0 }} value={payMax ?? undefined} onValueChange={(v) => setPayMax(toNumber(v))} />
-          <Select label="Tính lương theo" options={(["month", "hour", "shift"] as const).map((u) => ({ id: u, label: PAY_UNIT_LABEL[u] }))} value={unit} onValueChange={(v) => setUnit(v ?? "month")} />
+          <NumberField variant="secondary" label="Lương từ (đồng)" minValue={0} step={500000} formatOptions={{ maximumFractionDigits: 0 }} value={payMin ?? undefined} onValueChange={(v) => setPayMin(toNumber(v))} />
+          <NumberField variant="secondary" label="Lương đến (đồng)" minValue={0} step={500000} formatOptions={{ maximumFractionDigits: 0 }} value={payMax ?? undefined} onValueChange={(v) => setPayMax(toNumber(v))} />
+          <Select variant="secondary" label="Tính lương theo" options={(["month", "hour", "shift"] as const).map((u) => ({ id: u, label: PAY_UNIT_LABEL[u] }))} value={unit} onValueChange={(v) => setUnit(v ?? "month")} />
           <Input id="job-location" name="location" label="Nơi làm việc" variant="secondary" value={location} onValueChange={setLocation} />
-          <NumberField label="Cần tuyển (người)" minValue={1} maxValue={500} step={1} value={headcount} onValueChange={(v) => setHeadcount(Number.isFinite(v) ? v : 1)} />
+          <NumberField variant="secondary" label="Cần tuyển (người)" minValue={1} maxValue={500} step={1} value={headcount} onValueChange={(v) => setHeadcount(Number.isFinite(v) ? v : 1)} />
         </div>
-        <Textarea label="Mô tả công việc" rows={4} maxLength={6000} value={description} onValueChange={setDescription} />
+        <Textarea variant="secondary" label="Mô tả công việc" rows={4} maxLength={6000} value={description} onValueChange={setDescription} />
         <Heading level={3}>Yêu cầu (dùng để sàng lọc)</Heading>
         <div className={FORM_GRID_CLASS_NAME}>
-          <Textarea label="Kỹ năng" description="Mỗi dòng một kỹ năng." rows={3} value={skills} onValueChange={setSkills} />
-          <Textarea label="Lịch có thể làm" description="Mỗi dòng một lựa chọn, ví dụ: Ca tối, Cuối tuần." rows={3} value={availability} onValueChange={setAvailability} />
-          <Textarea label="Bắt buộc khác" description="Mỗi dòng một yêu cầu, ví dụ: Biết dùng máy POS." rows={3} value={must} onValueChange={setMust} />
-          <Textarea label="Điểm cộng" description="Mỗi dòng một điểm." rows={3} value={nice} onValueChange={setNice} />
-          <NumberField label="Kinh nghiệm tối thiểu (năm)" minValue={0} maxValue={50} step={1} value={years ?? undefined} onValueChange={(v) => setYears(toNumber(v))} />
+          <Textarea variant="secondary" label="Kỹ năng" description="Mỗi dòng một kỹ năng." rows={3} value={skills} onValueChange={setSkills} />
+          <Textarea variant="secondary" label="Lịch có thể làm" description="Mỗi dòng một lựa chọn, ví dụ: Ca tối, Cuối tuần." rows={3} value={availability} onValueChange={setAvailability} />
+          <Textarea variant="secondary" label="Bắt buộc khác" description="Mỗi dòng một yêu cầu, ví dụ: Biết dùng máy POS." rows={3} value={must} onValueChange={setMust} />
+          <Textarea variant="secondary" label="Điểm cộng" description="Mỗi dòng một điểm." rows={3} value={nice} onValueChange={setNice} />
+          <NumberField variant="secondary" label="Kinh nghiệm tối thiểu (năm)" minValue={0} maxValue={50} step={1} value={years ?? undefined} onValueChange={(v) => setYears(toNumber(v))} />
           <Input id="job-exp-note" name="experience_note" label="Ghi chú kinh nghiệm" variant="secondary" value={expNote} onValueChange={setExpNote} />
         </div>
         <Heading level={3}>Câu hỏi cho ứng viên</Heading>
         <Text size="sm" tone="muted">Ứng viên trả lời khi nộp hồ sơ hoặc chat. Đặt "đáp án mong muốn" nếu muốn NIVO đối chiếu (ví dụ: Có thể làm cuối tuần? mong muốn Có).</Text>
         {questions.map((q, i) => (
-          <div key={q.id} className={QUESTION_CLASS_NAME}>
+          <SurfaceCard key={q.id} depth="nested" ariaLabel={`Câu hỏi ${i + 1}`}>
+          <div className={FORM_CLASS_NAME}>
             <Input id={`job-q-${q.id}`} name={`q_${q.id}`} label={`Câu hỏi ${i + 1}`} variant="secondary" value={q.text} onValueChange={(v) => setQ(i, { text: v })} />
             <div className={FORM_GRID_CLASS_NAME}>
-              <Select label="Kiểu trả lời" options={QTYPES.map((t) => ({ id: t.id, label: t.label }))} value={q.type} onValueChange={(v) => setQ(i, { type: (v ?? "text") as QuestionType, expect: "" })} />
+              <Select variant="secondary" label="Kiểu trả lời" options={QTYPES.map((t) => ({ id: t.id, label: t.label }))} value={q.type} onValueChange={(v) => setQ(i, { type: (v ?? "text") as QuestionType, expect: "" })} />
               {q.type === "yesno" ? (
-                <Select label="Đáp án mong muốn" options={[{ id: "", label: "Không chấm điểm" }, { id: "yes", label: "Có" }, { id: "no", label: "Không" }]} value={q.expect} onValueChange={(v) => setQ(i, { expect: v ?? "" })} />
+                <Select variant="secondary" label="Đáp án mong muốn" options={[{ id: "", label: "Không chấm điểm" }, { id: "yes", label: "Có" }, { id: "no", label: "Không" }]} value={q.expect} onValueChange={(v) => setQ(i, { expect: v ?? "" })} />
               ) : q.type === "number" ? (
                 <Input id={`job-qe-${q.id}`} name={`qe_${q.id}`} label="Tối thiểu (để trống: không chấm)" variant="secondary" value={q.expect} onValueChange={(v) => setQ(i, { expect: v })} />
               ) : q.type === "choice" ? (
@@ -131,9 +132,10 @@ const JobEditor = ({ job, onClose }: EditorProps) => {
               <Button variant="ghost" size="sm" onPress={() => setQuestions((p) => p.filter((_, k) => k !== i))}>Xóa câu hỏi</Button>
             </div>
           </div>
+          </SurfaceCard>
         ))}
-        {questions.length < 12 ? <div><Button variant="secondary" size="sm" onPress={() => setQuestions((p) => [...p, { id: `q${Date.now().toString(36).slice(-5)}`, text: "", type: "text", required: false, choices: "", expect: "" }])}>Thêm câu hỏi</Button></div> : null}
-        <CheckboxGroup label="Nhận hồ sơ qua" orientation="horizontal" options={[{ value: "page", label: "Trang ứng tuyển" }, { value: "chat", label: "Chatbot của cửa hàng" }]} value={channels} onValueChange={setChannels} />
+        {questions.length < 12 ? <div className={ROW_ACTIONS_CLASS_NAME}><Button variant="secondary" size="sm" onPress={() => setQuestions((p) => [...p, { id: `q${Date.now().toString(36).slice(-5)}`, text: "", type: "text", required: false, choices: "", expect: "" }])}>Thêm câu hỏi</Button></div> : null}
+        <CheckboxGroup variant="secondary" label="Nhận hồ sơ qua" orientation="horizontal" options={[{ value: "page", label: "Trang ứng tuyển" }, { value: "chat", label: "Chatbot của cửa hàng" }]} value={channels} onValueChange={setChannels} />
       </div>
     </Dialog>
   );
@@ -158,7 +160,9 @@ const AdDialog = ({ job, onClose }: { readonly job: Job; readonly onClose: () =>
           <Heading level={3}>{label}</Heading>
           <Button variant="secondary" size="sm" onPress={() => void copy(key, ads[key])}>{copied === key ? "Đã chép" : "Chép nội dung"}</Button>
         </div>
-        <pre className={QUOTE_CLASS_NAME}>{ads[key]}</pre>
+        <SurfaceCard depth="nested" ariaLabel={label}>
+          <div className={PRE_WRAP_CLASS_NAME}><Text as="p" size="sm">{ads[key]}</Text></div>
+        </SurfaceCard>
       </div>
     ) : null;
   return (

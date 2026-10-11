@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { Badge, SectionHeader, SurfaceCard, Text, TextAction } from "@starci/grammar/common";
+import { Badge, List, ListItem, SectionHeader, SurfaceCard, Text, TextAction } from "@starci/grammar/common";
 import { useLocale, useT } from "@/i18n/client";
 import { intlLocale } from "@/i18n/core";
 import { governance as governanceDict } from "@/i18n/dict/governance";
@@ -12,15 +11,17 @@ import {
   BLOCK_CLASS_NAME,
   CHIP_ROW_CLASS_NAME,
   DEPT_GRID_CLASS_NAME,
-  DEPT_TILE_CLASS_NAME,
   GOAL_LINE_CLASS_NAME,
+  HISTORY_LIST_CLASS_NAME,
+  HISTORY_ROW_CLASS_NAME,
   STACK_CLASS_NAME,
   STATUS_CELL_CLASS_NAME,
   STATUS_LABEL_CLASS_NAME,
   STATUS_LIST_CLASS_NAME,
   STATUS_ROW_CLASS_NAME,
   STATUS_SPLIT_CLASS_NAME,
-  WAIT_ROW_CLASS_NAME,
+  TILE_COPY_CLASS_NAME,
+  WAIT_LIST_CLASS_NAME,
 } from "./classNames";
 
 /** Props for {@link GovernanceBlocks}. `governance` is null when the flow data could not be read. */
@@ -122,12 +123,19 @@ export const GovernanceBlocks = ({ governance, waiting }: GovernanceBlocksProps)
               {departments.map((d) => {
                 const key = d.department;
                 return (
-                  <Link key={key} href="/chat" className={DEPT_TILE_CLASS_NAME}>
-                    <Text weight="semibold">{g(`dept_${key}`)}</Text>
-                    <Text size="sm">{t("deptDone", { n: d?.done7d ?? 0 })}</Text>
-                    <Text size="sm" tone={d && d.waiting > 0 ? "accent" : "muted"}>{t("deptWaiting", { n: d?.waiting ?? 0 })}</Text>
-                    <Text size="xs" tone="muted">{d?.lastActivityAt ? t("deptLast", { time: time(d.lastActivityAt) }) : t("deptNoActivity")}</Text>
-                  </Link>
+                  // BOUNDARY-5: a card inside the summary card is `depth="nested"`; STATE-5: the whole tile opens Office.
+                  <SurfaceCard
+                    key={key}
+                    depth="nested"
+                    wholeAction={{ kind: "link", href: "/chat", label: `${g(`dept_${key}`)}: ${t("deptWaiting", { n: d?.waiting ?? 0 })}` }}
+                  >
+                    <div className={TILE_COPY_CLASS_NAME}>
+                      <Text weight="semibold">{g(`dept_${key}`)}</Text>
+                      <Text size="sm">{t("deptDone", { n: d?.done7d ?? 0 })}</Text>
+                      <Text size="sm" tone={d && d.waiting > 0 ? "accent" : "muted"}>{t("deptWaiting", { n: d?.waiting ?? 0 })}</Text>
+                      <Text size="xs" tone="muted">{d?.lastActivityAt ? t("deptLast", { time: time(d.lastActivityAt) }) : t("deptNoActivity")}</Text>
+                    </div>
+                  </SurfaceCard>
                 );
               })}
             </div>
@@ -186,17 +194,25 @@ export const GovernanceBlocks = ({ governance, waiting }: GovernanceBlocksProps)
             ) : (
               <>
                 <Text weight="semibold">{pendingDecisions === 1 ? t("waitingCountOne") : t("waitingCount", { n: pendingDecisions })}</Text>
-                {waiting.slice(0, TOP_WAITING).map((item) => (
-                  <Link key={item.id} href="/chat" className={WAIT_ROW_CLASS_NAME}>
-                    <div className={CHIP_ROW_CLASS_NAME}>
-                      <Badge tone="neutral">{g(`dept_${item.department}`)}</Badge>
-                      {item.reason ? <Badge tone="warning">{g(`reason_${item.reason}`)}</Badge> : null}
-                      {item.origin === "simulated" ? <Badge tone="neutral">{g("origin_simulated")}</Badge> : null}
-                    </div>
-                    <Text size="sm" weight="medium">{g(`action_${item.action}`)}{item.lead ? ` · ${item.lead.contact_name}` : ""}</Text>
-                    {item.proposal.summary ? <Text size="sm" tone="muted" overflow="clamp-2">{item.proposal.summary}</Text> : null}
-                  </Link>
-                ))}
+                <div className={WAIT_LIST_CLASS_NAME}>
+                  {waiting.slice(0, TOP_WAITING).map((item) => {
+                    const title = `${g(`action_${item.action}`)}${item.lead ? ` · ${item.lead.contact_name}` : ""}`;
+                    return (
+                      // BOUNDARY-5 + STATE-5: one waiting item is one nested card whose whole face opens Office.
+                      <SurfaceCard key={item.id} depth="nested" wholeAction={{ kind: "link", href: "/chat", label: title }}>
+                        <div className={TILE_COPY_CLASS_NAME}>
+                          <div className={CHIP_ROW_CLASS_NAME}>
+                            <Badge tone="neutral">{g(`dept_${item.department}`)}</Badge>
+                            {item.reason ? <Badge tone="warning">{g(`reason_${item.reason}`)}</Badge> : null}
+                            {item.origin === "simulated" ? <Badge tone="neutral">{g("origin_simulated")}</Badge> : null}
+                          </div>
+                          <Text size="sm" weight="medium">{title}</Text>
+                          {item.proposal.summary ? <Text size="sm" tone="muted" overflow="clamp-2">{item.proposal.summary}</Text> : null}
+                        </div>
+                      </SurfaceCard>
+                    );
+                  })}
+                </div>
                 {pendingDecisions > TOP_WAITING ? <Text size="sm" tone="muted">{t("waitingMore", { n: pendingDecisions })}</Text> : null}
               </>
             )}
@@ -236,18 +252,20 @@ export const GovernanceBlocks = ({ governance, waiting }: GovernanceBlocksProps)
             {recentDecisions.length === 0 ? (
               <Text tone="muted">{t("historyEmpty")}</Text>
             ) : (
-              recentDecisions.slice(0, 5).map((row) => (
-                <div key={row.id} className={WAIT_ROW_CLASS_NAME}>
-                  <div className={CHIP_ROW_CLASS_NAME}>
-                    <Text size="sm" weight="semibold">{g(`action_${row.action}`)}</Text>
-                    <Badge tone={outcomeTone(row.outcome)}>{g(`outcome_${row.outcome}`)}</Badge>
-                    <span title={exact(row.created_at)}><Text size="xs" tone="muted">{time(row.created_at)}</Text></span>
-                  </div>
-                  <Text size="sm" tone="muted">
-                    {`${g(`dept_${row.department}`)} · ${row.decider_kind === "policy" ? g("decider_policy") : row.decided_by}${row.leadName ? ` · ${row.leadName}` : ""}`}
-                  </Text>
-                </div>
-              ))
+              <List label={t("historyTitle")} className={HISTORY_LIST_CLASS_NAME}>
+                {recentDecisions.slice(0, 5).map((row) => (
+                  <ListItem key={row.id} className={HISTORY_ROW_CLASS_NAME}>
+                    <div className={CHIP_ROW_CLASS_NAME}>
+                      <Text size="sm" weight="semibold">{g(`action_${row.action}`)}</Text>
+                      <Badge tone={outcomeTone(row.outcome)}>{g(`outcome_${row.outcome}`)}</Badge>
+                      <span title={exact(row.created_at)}><Text size="xs" tone="muted">{time(row.created_at)}</Text></span>
+                    </div>
+                    <Text size="sm" tone="muted">
+                      {`${g(`dept_${row.department}`)} · ${row.decider_kind === "policy" ? g("decider_policy") : row.decided_by}${row.leadName ? ` · ${row.leadName}` : ""}`}
+                    </Text>
+                  </ListItem>
+                ))}
+              </List>
             )}
             <Text size="xs" tone="muted">{t("historySource")}</Text>
           </div>

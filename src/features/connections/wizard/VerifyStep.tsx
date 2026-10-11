@@ -1,12 +1,12 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Alert, Text } from "@starci/grammar/common"
+import { Alert, LeadingNumber, List, ListItem, Spinner, Text } from "@starci/grammar/common"
 import { useLocale, useT } from "@/i18n/client"
 import { connectionWizard } from "@/i18n/dict/connectionWizard"
 import { checkFirstEvent, type FirstEventState } from "@/lib/connection-actions"
 import { fill, type GuideContext, type VerifyHelp } from "@/lib/connection-providers"
-import { NUMBERED_CLASS, PULSE_CLASS, WAITING_CLASS } from "./classNames"
+import { COPY_CLASS, NUMBERED_CLASS } from "./classNames"
 
 /** Props for {@link VerifyStep}. */
 export type VerifyStepProps = {
@@ -48,18 +48,15 @@ export const VerifyStep = ({ connectionId, help, ctx, onReceived, initial }: Ver
   return (
     <>
       {help ? (
-        <div className="flex min-w-0 flex-col gap-2">
+        <div className={COPY_CLASS}>
           <Text size="sm">{help.intro[locale]}</Text>
-          <ol className={NUMBERED_CLASS}>{help.steps.map((s) => <li key={s.vi}>{fill(s[locale], ctx)}</li>)}</ol>
+          <List as="ol" className={NUMBERED_CLASS}>{help.steps.map((s, i) => <ListItem key={s.vi}><Text size="sm" startContent={<LeadingNumber position={i + 1} />}>{fill(s[locale], ctx)}</Text></ListItem>)}</List>
         </div>
       ) : null}
       {event ? (
         <Alert tone="affirmative" title={event.content ? t("verifyReceived", { amount: money(event.amount), content: event.content }) : t("verifyReceivedNoContent", { amount: money(event.amount) })} />
       ) : (
-        <div className={WAITING_CLASS} role="status" aria-live="polite">
-          <span className={PULSE_CLASS} aria-hidden="true" />
-          <Text size="sm" weight="medium">{t("verifyWaiting")}</Text>
-        </div>
+        <Text size="sm" weight="medium" startContent={<Spinner size="sm" label={t("verifyWaiting")} />}>{t("verifyWaiting")}</Text>
       )}
       {failed && !event ? <Text size="xs" tone="muted">{t("verifyError")}</Text> : null}
     </>

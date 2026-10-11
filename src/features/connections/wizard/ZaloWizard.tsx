@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState, useTransition } from "react"
-import { Alert, Button, Input, Text } from "@starci/grammar/common"
+import { Alert, Button, Input, Spinner, Text } from "@starci/grammar/common"
 import { useLocale, useT } from "@/i18n/client"
 import { connections } from "@/i18n/dict/connections"
 import { connectionWizard } from "@/i18n/dict/connectionWizard"
@@ -10,7 +10,7 @@ import {
 } from "@/lib/connection-actions"
 import { PROVIDERS } from "@/lib/connection-providers"
 import { AgentStep, type AgentOption } from "./AgentStep"
-import { BUTTONS_CLASS, FIELDS_CLASS, PULSE_CLASS, WAITING_CLASS } from "./classNames"
+import { BUTTONS_CLASS, FIELDS_CLASS } from "./classNames"
 import { GuideView } from "./GuideView"
 import { WizardFrame } from "./WizardFrame"
 
@@ -55,10 +55,7 @@ const ZaloVerify = ({ connectionId, initial, onReceived }: { readonly connection
       {event ? (
         <Alert tone="affirmative" title={t("zaloVerifyReceived", { name: event.content || "Zalo" })} />
       ) : (
-        <div className={WAITING_CLASS} role="status" aria-live="polite">
-          <span className={PULSE_CLASS} aria-hidden="true" />
-          <Text size="sm" weight="medium">{t("zaloVerifyWaiting")}</Text>
-        </div>
+        <Text size="sm" weight="medium" startContent={<Spinner size="sm" label={t("zaloVerifyWaiting")} />}>{t("zaloVerifyWaiting")}</Text>
       )}
     </>
   )

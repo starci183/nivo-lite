@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, Button, EmptyNotice, SurfaceCard, Tabs, Text } from "@starci/grammar/common";
+import { Alert, Badge, Button, DescriptionList, EmptyNotice, SurfaceCard, Tabs, Text } from "@starci/grammar/common";
 import { useT } from "@/i18n/client";
 import { content } from "@/i18n/dict/content";
 import type { ContentWorkbenchData } from "@/lib/module-content-data";
@@ -10,7 +10,7 @@ import { BalancePanel } from "./balance";
 import { MonthCalendar } from "./calendar";
 import { AddDialog, PlanDialog, QuickDialog } from "./dialogs";
 import { ItemEditor } from "./editor";
-import { METRIC_ALERT_CLASS_NAME, METRIC_CLASS_NAME, METRICS_CLASS_NAME, PAGE_CLASS_NAME, PANEL_CLASS_NAME, TABS_CLASS_NAME, TOOLBAR_CLASS_NAME } from "./classNames";
+import { PAGE_CLASS_NAME, PANEL_CLASS_NAME, TOOLBAR_CLASS_NAME } from "./classNames";
 import { ListPanel } from "./list";
 import { QueuePanel } from "./queue";
 import { SettingsPanel } from "./settings";
@@ -19,14 +19,6 @@ type TabId = "calendar" | "list" | "queue" | "balance" | "settings";
 const TAB_IDS: ReadonlyArray<TabId> = ["calendar", "list", "queue", "balance", "settings"];
 const isTab = (k: string | null | undefined): k is TabId => !!k && (TAB_IDS as ReadonlyArray<string>).includes(k);
 const panelId = (k: string): string => `content-panel-${k}`;
-
-const Metric = ({ label, value, basis, isAlert = false }: { readonly label: string; readonly value: string; readonly basis: string; readonly isAlert?: boolean }) => (
-  <div className={isAlert ? `${METRIC_CLASS_NAME} ${METRIC_ALERT_CLASS_NAME}` : METRIC_CLASS_NAME}>
-    <Text size="xs" tone="muted" weight="medium">{label}</Text>
-    <Text size="metric-lead" weight="semibold">{value}</Text>
-    <Text size="xs" tone="muted">{basis}</Text>
-  </div>
-);
 
 export type ContentWorkbenchViewProps = { readonly data: ContentWorkbenchData | null; readonly initialTab: string | null };
 
@@ -91,12 +83,19 @@ export const ContentWorkbenchView = ({ data, initialTab }: ContentWorkbenchViewP
 
   return (
     <div className={PAGE_CLASS_NAME}>
-      <div className={METRICS_CLASS_NAME} role="group" aria-label={t("metricsAria")}>
-        <Metric label={t("mWeek")} value={String(inThisWeek)} basis={t("mWeekBasis")} />
-        <Metric label={t("mWaiting")} value={String(waiting.length)} basis={t("mWaitingBasis")} isAlert={waiting.length > 0} />
-        <Metric label={t("mReady")} value={String(ready.length)} basis={t("mReadyBasis")} />
-        <Metric label={t("mToday")} value={String(dueToday)} basis={t("mTodayBasis")} />
-      </div>
+      <SurfaceCard ariaLabel={t("metricsAria")}>
+        <DescriptionList
+          layout="stat-strip"
+          isDivided
+          items={[
+            { id: "week", term: t("mWeek"), description: String(inThisWeek), meta: t("mWeekBasis") },
+            // A waiting decision is an authority-reported state, so it is carried by a warning Badge rather than a border colour.
+            { id: "waiting", term: t("mWaiting"), description: waiting.length > 0 ? <Badge tone="warning" isDot>{String(waiting.length)}</Badge> : String(waiting.length), meta: t("mWaitingBasis") },
+            { id: "ready", term: t("mReady"), description: String(ready.length), meta: t("mReadyBasis") },
+            { id: "today", term: t("mToday"), description: String(dueToday), meta: t("mTodayBasis") },
+          ]}
+        />
+      </SurfaceCard>
 
       {data.canManage ? (
         <div className={TOOLBAR_CLASS_NAME}>
@@ -108,9 +107,7 @@ export const ContentWorkbenchView = ({ data, initialTab }: ContentWorkbenchViewP
 
       {error ? <Alert tone="negative" title={error} dismissLabel={t("close")} onDismiss={() => setError(null)} /> : null}
 
-      <div className={TABS_CLASS_NAME}>
-        <Tabs label={t("tabsLabel")} selectedKey={tab} items={tabs} inset="none" labelVisibility="always" panelId={panelId} onSelect={select} />
-      </div>
+      <Tabs label={t("tabsLabel")} selectedKey={tab} items={tabs} inset="none" labelVisibility="always" panelId={panelId} onSelect={select} />
 
       <div className={PANEL_CLASS_NAME} role="tabpanel" id={panelId(tab)}>
         {tab === "calendar" || tab === "balance" ? (

@@ -1,9 +1,8 @@
-import Link from "next/link"
 import { redirect } from "next/navigation"
-import { Heading, Text } from "@starci/grammar/common"
+import { Button, Heading, PageContainer, SurfaceCard, Text } from "@starci/grammar/common"
+import { ACTION_STACK, INVITE_COLUMN, INVITE_MAIN } from "@/app/classNames"
 import { NivoLogo } from "@/components/brand/NivoLogo"
 import { AcceptInvite } from "@/features/team/AcceptInvite"
-import { CARD_CLASS, INVITE_ACTIONS_CLASS, INVITE_CANVAS_CLASS, INVITE_CARD_CLASS } from "@/features/team/classNames"
 import { getInvitePreview } from "@/features/team/invite-preview"
 import { invite as dict } from "@/i18n/dict/invite"
 import { getT } from "@/i18n/server"
@@ -11,9 +10,11 @@ import { supabaseServer } from "@/lib/supabase/server"
 
 type InvitePageProps = { readonly params: Promise<{ token: string }> }
 
-const linkButton = "inline-flex min-h-10 items-center justify-center rounded-full px-5 py-2 text-sm font-medium"
-
-/** A public invitation page: who invited you, to what, and the right next step for signed-out and signed-in visitors. */
+/**
+ * A public invitation page: who invited you, to what, and the right next step for signed-out and signed-in visitors.
+ * The card is Grammar's `SurfaceCard`, the hand-drawn pill links are `Button href` (CTA-2) and the sign-out submit is
+ * a `Button type="submit"`; one primary per state (CTA-1).
+ */
 const InvitePage = async ({ params }: InvitePageProps) => {
   const { token } = await params
   const t = await getT(dict)
@@ -26,22 +27,31 @@ const InvitePage = async ({ params }: InvitePageProps) => {
     redirect(`/login?next=${encodeURIComponent(next)}`)
   }
 
-  const frame = (title: string, body: string, extra?: React.ReactNode) => (
-    <main className={INVITE_CANVAS_CLASS}>
-      <div className={INVITE_CARD_CLASS}>
-        <NivoLogo variant="full" height={40} />
-        <section className={CARD_CLASS}><Heading level={1} scale="standard">{title}</Heading>
-          <div className={INVITE_ACTIONS_CLASS}>
-            <Text tone="muted">{body}</Text>
-            {extra}
-          </div>
-        </section>
-      </div>
+  const shell = (title: string, content: React.ReactNode) => (
+    <main className={INVITE_MAIN}>
+      <PageContainer measure="reading">
+        <div className={INVITE_COLUMN}>
+          <NivoLogo variant="full" height={40} />
+          <SurfaceCard ariaLabel={title}>
+            <div className={ACTION_STACK}>
+              <Heading level={1}>{title}</Heading>
+              {content}
+            </div>
+          </SurfaceCard>
+        </div>
+      </PageContainer>
     </main>
   )
+  const frame = (title: string, body: string, extra?: React.ReactNode) =>
+    shell(title, (
+      <>
+        <Text tone="muted">{body}</Text>
+        {extra}
+      </>
+    ))
 
   const toSignIn = (
-    <Link href="/login" className={`${linkButton} border border-separator`}>{t("goSignIn")}</Link>
+    <Button variant="secondary" width="fill" href="/login">{t("goSignIn")}</Button>
   )
 
   if (!preview) return frame(t("invalidTitle"), t("invalidBody"), toSignIn)
@@ -58,40 +68,33 @@ const InvitePage = async ({ params }: InvitePageProps) => {
 
   const mismatch = user && (user.email ?? "").toLowerCase() !== preview.email.toLowerCase()
 
-  return (
-    <main className={INVITE_CANVAS_CLASS}>
-      <div className={INVITE_CARD_CLASS}>
-        <NivoLogo variant="full" height={40} />
-        <section className={CARD_CLASS}><Heading level={1} scale="standard">{t("title", { workspace: preview.workspaceName })}</Heading>
-          <div className={INVITE_ACTIONS_CLASS}>
-            <Text>{lead}</Text>
-            <Text size="sm" tone="muted">{t("forEmail", { email: preview.email })}</Text>
-            {preview.staffName ? <Text size="sm" tone="muted">{t("asStaff", { name: preview.staffName })}</Text> : null}
-            {!user ? (
-              <>
-                <Text size="sm" tone="muted">{t("signedOutHint", { email: preview.email })}</Text>
-                <Link href={`/login?next=${encodeURIComponent(next)}`} className={`${linkButton} bg-accent text-accent-foreground`}>{t("signIn")}</Link>
-                <Link href={`/signup?invite=${encodeURIComponent(token)}`} className={`${linkButton} border border-separator`}>{t("signUp")}</Link>
-              </>
-            ) : mismatch ? (
-              <>
-                <Text weight="semibold">{t("mismatchTitle")}</Text>
-                <Text size="sm" tone="muted">{t("mismatchBody", { current: user.email ?? "", email: preview.email })}</Text>
-                <form action={signOutAndBack}>
-                  <button type="submit" className={`${linkButton} w-full border border-separator`}>{t("switchAccount")}</button>
-                </form>
-              </>
-            ) : (
-              <>
-                <Text size="sm" tone="muted">{t("signedInAs", { email: user.email ?? "" })}</Text>
-                <AcceptInvite token={token} />
-              </>
-            )}
-          </div>
-        </section>
-      </div>
-    </main>
-  )
+  return shell(t("title", { workspace: preview.workspaceName }), (
+    <>
+      <Text>{lead}</Text>
+      <Text size="sm" tone="muted">{t("forEmail", { email: preview.email })}</Text>
+      {preview.staffName ? <Text size="sm" tone="muted">{t("asStaff", { name: preview.staffName })}</Text> : null}
+      {!user ? (
+        <>
+          <Text size="sm" tone="muted">{t("signedOutHint", { email: preview.email })}</Text>
+          <Button variant="primary" width="fill" href={`/login?next=${encodeURIComponent(next)}`}>{t("signIn")}</Button>
+          <Button variant="secondary" width="fill" href={`/signup?invite=${encodeURIComponent(token)}`}>{t("signUp")}</Button>
+        </>
+      ) : mismatch ? (
+        <>
+          <Text weight="semibold">{t("mismatchTitle")}</Text>
+          <Text size="sm" tone="muted">{t("mismatchBody", { current: user.email ?? "", email: preview.email })}</Text>
+          <form action={signOutAndBack}>
+            <Button variant="secondary" width="fill" type="submit">{t("switchAccount")}</Button>
+          </form>
+        </>
+      ) : (
+        <>
+          <Text size="sm" tone="muted">{t("signedInAs", { email: user.email ?? "" })}</Text>
+          <AcceptInvite token={token} />
+        </>
+      )}
+    </>
+  ))
 }
 
 export default InvitePage

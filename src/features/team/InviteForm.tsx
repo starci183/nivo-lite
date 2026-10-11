@@ -2,12 +2,12 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Alert, Button, Input, Select, SurfaceCard, Text } from "@starci/grammar/common"
+import { Alert, Button, Form, Input, Select, SurfaceCard, Text } from "@starci/grammar/common"
 import { useT } from "@/i18n/client"
 import { team } from "@/i18n/dict/team"
 import { createInvite, type InviteResult } from "@/lib/invites"
 import type { StaffChoice } from "./queries"
-import { FOOTER_CLASS, FORM_GRID_CLASS, LINK_BOX_CLASS, LINK_TEXT_CLASS, STACK_CLASS } from "./classNames"
+import { FOOTER_CLASS, FORM_GRID_CLASS, LINK_BOX_CLASS, STACK_CLASS } from "./classNames"
 
 /** Props for {@link InviteForm}. */
 export type InviteFormProps = { readonly staffChoices: ReadonlyArray<StaffChoice> }
@@ -45,16 +45,6 @@ export const InviteForm = ({ staffChoices }: InviteFormProps) => {
     })
   }
 
-  const copy = async () => {
-    if (!sent) return
-    try {
-      await navigator.clipboard.writeText(sent.link)
-      setCopied(true)
-    } catch {
-      // The link is selectable on screen.
-    }
-  }
-
   const staffOptions = [
     { id: NO_STAFF, label: t("staffNone") },
     ...staffChoices.map((s) => ({ id: s.id, label: s.role ? t("staffOption", { name: s.name, role: s.role }) : s.name })),
@@ -69,8 +59,9 @@ export const InviteForm = ({ staffChoices }: InviteFormProps) => {
 
   return (
     <div data-guide="team.invite">
-      <SurfaceCard label={t("formTitle")} headingLevel={2}>
-        <form className={STACK_CLASS} onSubmit={(e) => { e.preventDefault(); submit() }}>
+    <SurfaceCard label={t("formTitle")} headingLevel={2}>
+      <Form label={t("formTitle")} onSubmit={submit} isPending={isPending}>
+        <div className={STACK_CLASS}>
           <Text size="sm" tone="muted">{t("formDesc")}</Text>
           <div className={FORM_GRID_CLASS}>
             <Input id="invite-email" name="email" kind="email" label={t("fieldEmail")} variant="secondary" isRequired isDisabled={isPending} value={email} onValueChange={setEmail} />
@@ -82,18 +73,27 @@ export const InviteForm = ({ staffChoices }: InviteFormProps) => {
           {sent ? (
             <div className={LINK_BOX_CLASS}>
               <Text size="sm" live="polite">{sentText}</Text>
-              <Text size="xs" tone="muted">{t("sentLink")}</Text>
-              <code className={LINK_TEXT_CLASS}>{sent.link}</code>
-              <div className={FOOTER_CLASS}>
-                <Button variant="outline" onPress={copy}>{copied ? t("inviteCopied") : t("inviteCopy")}</Button>
-              </div>
+              <Input
+                id="invite-sent-link"
+                name="inviteLink"
+                label={t("sentLink")}
+                variant="secondary"
+                value={sent.link}
+                isReadOnly
+                isCopyable
+                copyLabel={t("inviteCopy")}
+                copiedLabel={t("inviteCopied")}
+                onCopy={() => setCopied(true)}
+              />
+              {copied ? <Text size="xs" tone="muted" live="polite">{t("inviteCopied")}</Text> : null}
             </div>
           ) : null}
           <div className={FOOTER_CLASS}>
             <Button variant="primary" type="submit" isPending={isPending}>{t("submit")}</Button>
           </div>
-        </form>
-      </SurfaceCard>
+        </div>
+      </Form>
+    </SurfaceCard>
     </div>
   )
 }

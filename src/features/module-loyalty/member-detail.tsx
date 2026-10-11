@@ -2,13 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, useTransition } from "react";
-import { Alert, Badge, Button, EmptyNotice, Input, SurfaceCard, Text, Textarea, type BadgeTone } from "@starci/grammar/common";
+import { Alert, Badge, Button, DescriptionList, EmptyNotice, Input, ListItem, SurfaceCard, SurfaceListCard, Text, Textarea, Timeline, type BadgeTone } from "@starci/grammar/common";
 import { useLocale, useT } from "@/i18n/client";
 import { loyalty } from "@/i18n/dict/loyalty";
 import type { MemberDetail } from "@/lib/module-loyalty-queries";
 import { displayPhone, formatVndShort, type LedgerKind, type LoyaltyConfig } from "@/lib/module-loyalty-shared";
 import { adjustPointsAction, loadMemberAction, redeemForMemberAction, updateMemberAction } from "./actions";
-import { BODY_CLASS_NAME, CHIPS_CLASS_NAME, FORM_CLASS_NAME, LEDGER_ITEM_CLASS_NAME, LIST_CLASS_NAME, REWARD_LINE_CLASS_NAME } from "./classNames";
+import { BODY_CLASS_NAME, CHIPS_CLASS_NAME, FORM_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME } from "./classNames";
 import { formatDate, formatDateTime, formatNumber, parseSigned } from "./format";
 import { tierTone } from "./tier";
 
@@ -61,7 +61,7 @@ const EditForm = ({ detail, onSaved }: { readonly detail: MemberDetail; readonly
     <div className={FORM_CLASS_NAME}>
       <Input id={`member-name-${m.id}`} name="name" label={t("fieldName")} variant="secondary" value={name} isRequired isDisabled={pending} onValueChange={(v) => setName(v.slice(0, 80))} />
       <Input id={`member-birthday-${m.id}`} name="birthday" label={t("fieldBirthday")} variant="secondary" placeholder={t("birthdayPlaceholder")} hint={t("birthdayHint")} value={birthday} isError={iso === undefined} errorMessage={iso === undefined ? t("birthdayInvalid") : undefined} isDisabled={pending} onValueChange={(v) => setBirthday(v.slice(0, 10))} />
-      <Textarea label={t("fieldNote")} rows={2} maxLength={300} value={note} isDisabled={pending} onValueChange={setNote} />
+      <Textarea label={t("fieldNote")} variant="secondary" rows={2} maxLength={300} value={note} isDisabled={pending} onValueChange={setNote} />
       <div>
         <Button variant="secondary" isPending={pending} onPress={save}>{t("save")}</Button>
       </div>
@@ -167,7 +167,7 @@ export const MemberDetailPanel = ({ id, config, canManage, nowIso, onClose }: {
   if (!detail) {
     return (
       <SurfaceCard ariaLabel={t("loading")}>
-        <div className={BODY_CLASS_NAME}><Text size="sm" tone="muted" live="polite">{t("loading")}</Text></div>
+        <Text size="sm" tone="muted" live="polite">{t("loading")}</Text>
       </SurfaceCard>
     );
   }
@@ -197,8 +197,13 @@ export const MemberDetailPanel = ({ id, config, canManage, nowIso, onClose }: {
         <div className={BODY_CLASS_NAME}>
           {canManage ? <EditForm key={`${m.id}-${m.name}-${m.birthday}-${m.note}`} detail={detail} onSaved={changed} /> : (
             <>
-              <Text size="sm">{t("fieldBirthday")}: {m.birthday ? formatDate(m.birthday, locale) : t("none")}</Text>
-              <Text size="sm">{t("fieldNote")}: {m.note || t("none")}</Text>
+              <DescriptionList
+                layout="columns"
+                items={[
+                  { id: "birthday", term: t("fieldBirthday"), description: m.birthday ? formatDate(m.birthday, locale) : t("none") },
+                  { id: "note", term: t("fieldNote"), description: m.note || t("none") },
+                ]}
+              />
               <Text size="xs" tone="muted">{t("readOnlyNote")}</Text>
             </>
           )}
@@ -212,42 +217,44 @@ export const MemberDetailPanel = ({ id, config, canManage, nowIso, onClose }: {
         </div>
       </SurfaceCard>
 
-      <SurfaceCard label={t("redeemTitle")} headingLevel={3}>
-        <div className={BODY_CLASS_NAME}>
-          {detail.rewards.length === 0 ? <Text size="sm" tone="muted">{t("redeemEmpty")}</Text> : null}
-          {detail.rewards.map(({ reward, block }) => (
-            <div key={reward.id} className={REWARD_LINE_CLASS_NAME}>
-              <div>
-                <Text weight="medium">{reward.name}</Text>
-                <Text size="sm" tone="muted">{pts(reward.pointsCost)}{reward.valueVnd > 0 ? ` · ${formatVndShort(reward.valueVnd)}` : ""}</Text>
-                {block ? <Text size="sm">{block}</Text> : null}
-                {redeemNote && redeemNote.rewardId === reward.id ? <Text size="sm" weight="medium" live="polite">{redeemNote.text}</Text> : null}
-              </div>
-              {!block ? <Button variant="primary" size="sm" isPending={busyReward === reward.id} isDisabled={busyReward !== null} onPress={() => redeem(reward.id)}>{t("redeemButton")}</Button> : null}
+      <SurfaceListCard label={t("redeemTitle")} headingLevel={3} empty={<EmptyNotice message={t("redeemEmpty")} />}>
+        {detail.rewards.map(({ reward, block }) => (
+          <ListItem key={reward.id} className={ROW_CLASS_NAME}>
+            <div className={ROW_MAIN_CLASS_NAME}>
+              <Text weight="medium">{reward.name}</Text>
+              <Text size="sm" tone="muted">{pts(reward.pointsCost)}{reward.valueVnd > 0 ? ` · ${formatVndShort(reward.valueVnd)}` : ""}</Text>
+              {block ? <Text size="sm">{block}</Text> : null}
+              {redeemNote && redeemNote.rewardId === reward.id ? <Text size="sm" weight="medium" live="polite">{redeemNote.text}</Text> : null}
             </div>
-          ))}
-        </div>
-      </SurfaceCard>
+            {!block ? <Button variant="primary" size="sm" isPending={busyReward === reward.id} isDisabled={busyReward !== null} onPress={() => redeem(reward.id)}>{t("redeemButton")}</Button> : null}
+          </ListItem>
+        ))}
+      </SurfaceListCard>
 
       <SurfaceCard label={t("ledgerTitle")} headingLevel={3}>
-        <div className={BODY_CLASS_NAME}>
-          {detail.ledger.length === 0 ? <EmptyNotice message={t("ledgerEmpty")} /> : (
-            <ul className={LIST_CLASS_NAME}>
-              {detail.ledger.map((row) => (
-                <li key={row.id} className={LEDGER_ITEM_CLASS_NAME}>
-                  <div className={CHIPS_CLASS_NAME}>
-                    <Badge tone={KIND_TONE[row.kind]}>{t(`kind_${row.kind}`)}</Badge>
-                    <Text as="span" weight="semibold">{row.points > 0 ? "+" : ""}{pts(row.points)}</Text>
-                    {row.amountVnd ? <Text as="span" size="sm" tone="muted">{formatVndShort(row.amountVnd)}</Text> : null}
-                  </div>
-                  <Text size="xs" tone="muted">{formatDateTime(row.occurredAt, locale)} · {t("ledgerBy", { who: row.by || "-" })}</Text>
-                  {row.ref ? <Text size="sm">{row.ref}</Text> : null}
-                  {row.evidence ? <Text size="xs" tone="muted">{t("ledgerEvidence", { text: row.evidence })}</Text> : null}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        {detail.ledger.length === 0 ? <EmptyNotice message={t("ledgerEmpty")} /> : (
+          <Timeline
+            label={t("ledgerTitle")}
+            items={detail.ledger.map((row) => ({
+              id: row.id,
+              title: (
+                <span className={CHIPS_CLASS_NAME}>
+                  <Badge tone={KIND_TONE[row.kind]}>{t(`kind_${row.kind}`)}</Badge>
+                  <Text as="span" weight="semibold">{row.points > 0 ? "+" : ""}{pts(row.points)}</Text>
+                  {row.amountVnd ? <Text as="span" size="sm" tone="muted">{formatVndShort(row.amountVnd)}</Text> : null}
+                </span>
+              ),
+              dateTime: row.occurredAt,
+              timeLabel: `${formatDateTime(row.occurredAt, locale)} · ${t("ledgerBy", { who: row.by || "-" })}`,
+              description: row.ref || row.evidence ? (
+                <>
+                  {row.ref ? <Text as="span" size="sm">{row.ref}</Text> : null}
+                  {row.evidence ? <Text as="span" size="xs" tone="muted">{t("ledgerEvidence", { text: row.evidence })}</Text> : null}
+                </>
+              ) : undefined,
+            }))}
+          />
+        )}
       </SurfaceCard>
       <Text size="xs" tone="muted">{t("asOf", { date: formatDateTime(nowIso, locale) })}</Text>
     </div>

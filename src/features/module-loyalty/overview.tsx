@@ -2,20 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
-import { Alert, Button, EmptyNotice, Progress, SurfaceCard, Text } from "@starci/grammar/common";
+import { Alert, DescriptionList, EmptyNotice, Input, Meter, SurfaceCard, Text } from "@starci/grammar/common";
 import { useLocale, useT } from "@/i18n/client";
 import { loyalty } from "@/i18n/dict/loyalty";
 import type { LoyaltyWorkbenchData } from "@/lib/module-loyalty-queries";
 import { syncMembersAction } from "./actions";
-import { BODY_CLASS_NAME, LINK_ROW_CLASS_NAME, LINK_VALUE_CLASS_NAME, OVERVIEW_GRID_CLASS_NAME, STAT_LINE_CLASS_NAME, TIER_ROW_CLASS_NAME } from "./classNames";
+import { BODY_CLASS_NAME, OVERVIEW_GRID_CLASS_NAME } from "./classNames";
 import { formatNumber } from "./format";
-
-const StatLine = ({ label, value }: { readonly label: string; readonly value: string }) => (
-  <div className={STAT_LINE_CLASS_NAME}>
-    <Text size="sm">{label}</Text>
-    <Text size="sm" weight="semibold">{value}</Text>
-  </div>
-);
 
 /** The public check link with a copy button. */
 const PublicLink = ({ slug, enabled }: { readonly slug: string; readonly enabled: boolean }) => {
@@ -24,21 +17,13 @@ const PublicLink = ({ slug, enabled }: { readonly slug: string; readonly enabled
   const [copied, setCopied] = useState(false);
   useEffect(() => setOrigin(window.location.origin), []);
   const url = `${origin}/l/${slug}`;
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-    } catch {
-      setCopied(false);
-    }
-  };
   return (
     <div className={BODY_CLASS_NAME}>
       <Text size="sm" tone="muted">{t("publicBody")}</Text>
-      <div className={LINK_ROW_CLASS_NAME}>
-        <code className={LINK_VALUE_CLASS_NAME}>{url}</code>
-        <Button variant="outline" onPress={copy}>{copied ? t("copied") : t("copy")}</Button>
-      </div>
+      <Input
+        id="loyalty-public-link" name="publicLink" label={t("publicTitle")} variant="secondary" value={url} isReadOnly
+        isCopyable copyLabel={t("copy")} copiedLabel={t("copied")} onCopy={() => setCopied(true)}
+      />
       <Text size="xs" tone="muted" live="polite">{enabled ? (copied ? t("copiedNote") : t("publicOn")) : t("publicOff")}</Text>
     </div>
   );
@@ -69,14 +54,10 @@ export const OverviewPanel = ({ data }: { readonly data: LoyaltyWorkbenchData })
     <>
       {s.members === 0 ? (
         <SurfaceCard ariaLabel={t("emptyMembersTitle")}>
-          <EmptyNotice message={t("emptyMembersTitle")} description={data.canManage ? t("emptyMembersBody") : t("emptyMembersBodyStaff")} />
-          {data.canManage ? (
-            <div className={BODY_CLASS_NAME}>
-              <div>
-                <Button variant="primary" isPending={pending} onPress={sync}>{t("syncButton")}</Button>
-              </div>
-            </div>
-          ) : null}
+          <EmptyNotice
+            message={t("emptyMembersTitle")} description={data.canManage ? t("emptyMembersBody") : t("emptyMembersBodyStaff")}
+            {...(data.canManage ? { actionLabel: t("syncButton"), actionVariant: "primary" as const, isActionPending: pending, onAction: sync } : {})}
+          />
         </SurfaceCard>
       ) : null}
       <div aria-live="polite">
@@ -88,25 +69,23 @@ export const OverviewPanel = ({ data }: { readonly data: LoyaltyWorkbenchData })
           <div className={BODY_CLASS_NAME}>
             <Text size="sm" tone="muted">{t("tiersBody")}</Text>
             {s.tierCounts.map((x) => (
-              <div key={x.key} className={TIER_ROW_CLASS_NAME}>
-                <div className={STAT_LINE_CLASS_NAME}>
-                  <Text size="sm" weight="medium">{x.name}</Text>
-                  <Text size="sm" weight="semibold">{t("customers", { n: formatNumber(x.count, locale) })}</Text>
-                </div>
-                <Progress label={t("tierBarLabel", { name: x.name, n: x.count })} value={Math.round((x.count / maxCount) * 100)} />
-              </div>
+              <Meter key={x.key} label={x.name} value={x.count} maxValue={maxCount} valueLabel={t("customers", { n: formatNumber(x.count, locale) })} />
             ))}
           </div>
         </SurfaceCard>
 
         <SurfaceCard label={t("statsTitle")} headingLevel={2}>
-          <div className={BODY_CLASS_NAME}>
-            <StatLine label={t("statEarned")} value={t("points", { n: formatNumber(s.earned30d, locale) })} />
-            <StatLine label={t("statExpired")} value={t("points", { n: formatNumber(s.expired30d, locale) })} />
-            <StatLine label={t("statRedemptions")} value={String(s.redemptions30d)} />
-            <StatLine label={t("statPromos")} value={String(s.promosSent30d)} />
-            <StatLine label={t("statBirthdays")} value={String(s.birthdaysThisMonth)} />
-          </div>
+          <DescriptionList
+            layout="columns"
+            isDivided
+            items={[
+              { id: "earned", term: t("statEarned"), description: t("points", { n: formatNumber(s.earned30d, locale) }) },
+              { id: "expired", term: t("statExpired"), description: t("points", { n: formatNumber(s.expired30d, locale) }) },
+              { id: "redemptions", term: t("statRedemptions"), description: String(s.redemptions30d) },
+              { id: "promos", term: t("statPromos"), description: String(s.promosSent30d) },
+              { id: "birthdays", term: t("statBirthdays"), description: String(s.birthdaysThisMonth) },
+            ]}
+          />
         </SurfaceCard>
       </div>
 

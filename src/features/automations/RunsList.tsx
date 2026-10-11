@@ -1,12 +1,11 @@
 "use client"
 
-import Link from "next/link"
-import { Badge, Text } from "@starci/grammar/common"
+import { Badge, Disclosure, Heading, List, ListItem, Text, TextAction } from "@starci/grammar/common"
 import { intlLocale, TIME_ZONE } from "@/i18n/core"
 import { useLocale, useT } from "@/i18n/client"
 import { automations as dict } from "@/i18n/dict/automations"
 import type { AutomationRunView } from "@/lib/automation-shared"
-import { DISCLOSURE_BODY_CLASS, DISCLOSURE_CLASS, LINK_CLASS, RUN_HEAD_CLASS, RUN_ROW_CLASS, SECTION_CLASS } from "./classNames"
+import { FACTS_CLASS, PRESERVE_LINES_CLASS, ROWS_CLASS, RUN_HEAD_CLASS, RUN_ROW_CLASS, SECTION_CLASS } from "./classNames"
 
 /** Props for {@link RunsList}. */
 export type RunsListProps = { readonly runs: ReadonlyArray<AutomationRunView> }
@@ -27,30 +26,31 @@ export const RunsList = ({ runs }: RunsListProps) => {
 
   return (
     <section className={SECTION_CLASS} aria-label={t("runsTitle")}>
-      <Text weight="semibold">{t("runsTitle")}</Text>
+      <Heading level={3}>{t("runsTitle")}</Heading>
       {runs.length === 0 ? <Text size="sm" tone="muted">{t("runsEmpty")}</Text> : null}
-      <div>
+      {runs.length > 0 ? (
+        <List label={t("runsTitle")} className={ROWS_CLASS}>
         {runs.map((r) => (
-          <div key={r.id} className={RUN_ROW_CLASS}>
+          <ListItem key={r.id} className={RUN_ROW_CLASS}>
             <div className={RUN_HEAD_CLASS}>
               <Badge isDot tone={TONE[r.status]}>{label(r)}</Badge>
               <Text size="xs" tone="muted">{when(r.createdAt)}</Text>
-              {r.status === "waiting_approval" ? <Link href="/decisions" className={`${LINK_CLASS} text-xs`}>{t("runOpenDecisions")}</Link> : null}
+              {r.status === "waiting_approval" ? <TextAction href="/decisions" size="xs" appearance="inline">{t("runOpenDecisions")}</TextAction> : null}
             </div>
             <Text size="sm">{r.summary}</Text>
             {r.status === "failed" && r.error ? <Text size="sm" tone="muted">{r.error}</Text> : null}
             {r.message || r.evidence ? (
-              <details className={DISCLOSURE_CLASS}>
-                <summary>{t("runMore")}</summary>
-                <div className={DISCLOSURE_BODY_CLASS}>
-                  {r.message ? <div><Text size="xs" tone="muted">{t("runMessage")}</Text><p className="whitespace-pre-line">{r.message}</p></div> : null}
-                  {r.evidence ? <div><Text size="xs" tone="muted">{t("runEvidence")}</Text><p className="whitespace-pre-line">{r.evidence}</p></div> : null}
+              <Disclosure title={t("runMore")} headingLevel={4}>
+                <div className={FACTS_CLASS}>
+                  {r.message ? <div className={FACTS_CLASS}><Text size="xs" tone="muted">{t("runMessage")}</Text><div className={PRESERVE_LINES_CLASS}><Text size="sm">{r.message}</Text></div></div> : null}
+                  {r.evidence ? <div className={FACTS_CLASS}><Text size="xs" tone="muted">{t("runEvidence")}</Text><div className={PRESERVE_LINES_CLASS}><Text size="sm">{r.evidence}</Text></div></div> : null}
                 </div>
-              </details>
+              </Disclosure>
             ) : null}
-          </div>
+          </ListItem>
         ))}
-      </div>
+        </List>
+      ) : null}
     </section>
   )
 }

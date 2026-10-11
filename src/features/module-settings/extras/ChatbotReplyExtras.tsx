@@ -6,7 +6,7 @@ import { Alert, Button, Input, SurfaceCard } from "@starci/grammar/common";
 import { useT } from "@/i18n/client";
 import { engine as dict } from "@/i18n/dict/engine";
 import { DEFAULT_REPLY_TIMEOUT_SEC } from "@/lib/engine-queue-shared";
-import { STACK_CLASS_NAME } from "../classNames";
+import { ACTIONS_CLASS_NAME, STACK_CLASS_NAME } from "../classNames";
 import { setHoldingMessage, setReplyTimeout } from "../processorActions";
 import type { SettingsExtraProps } from "../registry";
 
@@ -38,11 +38,11 @@ export const ChatbotReplyExtras = ({ installation, canEdit }: SettingsExtraProps
     <SurfaceCard label={t("replyTitle")} headingLevel={2}>
       <div className={STACK_CLASS_NAME}>
         <Input id="reply-timeout" name="reply-timeout" label={t("timeoutLabel")} variant="secondary" hint={t("timeoutHint")} value={timeoutText} isDisabled={pending} onValueChange={(v) => setTimeoutText(v.replace(/[^0-9]/g, "").slice(0, 3))} />
-        <div>
+        <div className={ACTIONS_CLASS_NAME}>
           <Button variant="secondary" isPending={pending} isDisabled={!timeoutValid || timeoutValue === initialTimeout} onPress={() => save(() => setReplyTimeout(installation.id, timeoutValue))}>{t("timeoutSave")}</Button>
         </div>
         <Input id="holding-message" name="holding-message" label={t("holdingLabel")} variant="secondary" hint={t("holdingHint")} placeholder={t("holdingDefault")} value={holdingText} isDisabled={pending} onValueChange={(v) => setHoldingText(v.slice(0, 400))} />
-        <div>
+        <div className={ACTIONS_CLASS_NAME}>
           <Button variant="secondary" isPending={pending} isDisabled={holdingText.trim() === savedHolding.trim()} onPress={() => save(() => setHoldingMessage(installation.id, holdingText))}>{t("timeoutSave")}</Button>
         </div>
         {note !== undefined ? <Alert title={note.ok ? t("saved") : t("notSaved")} description={note.ok ? undefined : note.text} tone={note.ok ? "affirmative" : "negative"} /> : null}

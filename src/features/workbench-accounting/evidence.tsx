@@ -2,14 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Badge, Button, EmptyNotice, Input, SectionHeader, Text, Textarea } from "@starci/grammar/common";
+import { parseDate, type DateValue } from "@internationalized/date";
+import { Alert, Badge, Button, DateField, EmptyNotice, Form, Input, SectionHeader, SurfaceCard, SurfaceListCard, Text, Textarea } from "@starci/grammar/common";
 import { useLocale, useT } from "@/i18n/client";
 import { workbenchAccounting } from "@/i18n/dict/workbenchAccounting";
 import type { AccountingWorkbench, CreditRow, MatchState } from "@/lib/workbench-accounting";
 import { admitManualEvidence } from "./actions";
 import {
-  BLOCK_CLASS_NAME, BLOCK_HEAD_CLASS_NAME, CHIPS_CLASS_NAME, DATE_INPUT_CLASS_NAME, FORM_ACTIONS_CLASS_NAME, FORM_CLASS_NAME, FORM_GRID_CLASS_NAME,
-  FORM_WIDE_CLASS_NAME, LIST_CLASS_NAME, PANEL_CLASS_NAME, ROW_ASIDE_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME,
+  BLOCK_CLASS_NAME, BLOCK_HEAD_CLASS_NAME, CHIPS_CLASS_NAME, FORM_ACTIONS_CLASS_NAME, FORM_CLASS_NAME, FORM_GRID_CLASS_NAME,
+  FORM_WIDE_CLASS_NAME, PANEL_CLASS_NAME, ROW_ASIDE_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME,
 } from "./classNames";
 import { digitsToNumber, formatDay, formatMoney, todayVn } from "./format";
 
@@ -26,7 +27,7 @@ const ManualForm = ({ onDone }: { readonly onDone: () => void }) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [amount, setAmount] = useState("");
-  const [date, setDate] = useState(todayVn());
+  const [date, setDate] = useState<DateValue | null>(() => parseDate(todayVn()));
   const [content, setContent] = useState("");
   const [payer, setPayer] = useState("");
   const [note, setNote] = useState("");
@@ -37,7 +38,7 @@ const ManualForm = ({ onDone }: { readonly onDone: () => void }) => {
     setError(null);
     setNotice(null);
     startTransition(async () => {
-      const res = await admitManualEvidence({ amount: digitsToNumber(amount) ?? 0, date, content, note, payer }).catch((e: unknown) => ({ ok: false as const, error: e instanceof Error ? e.message : "" }));
+      const res = await admitManualEvidence({ amount: digitsToNumber(amount) ?? 0, date: date ? date.toString() : todayVn(), content, note, payer }).catch((e: unknown) => ({ ok: false as const, error: e instanceof Error ? e.message : "" }));
       if (!res.ok) return setError(res.error);
       if (res.data.duplicate) return setNotice(t("manualDuplicate"));
       router.refresh();
@@ -46,35 +47,33 @@ const ManualForm = ({ onDone }: { readonly onDone: () => void }) => {
   };
 
   return (
-    <form className={FORM_CLASS_NAME} onSubmit={(e) => { e.preventDefault(); submit(); }} aria-label={t("manualTitle")}>
-      <div>
-        <Text weight="semibold">{t("manualTitle")}</Text>
-        <Text size="sm" tone="muted">{t("manualIntro")}</Text>
-      </div>
-      <div className={FORM_GRID_CLASS_NAME}>
-        <Input id="wb-acc-amount" name="amount" label={t("fAmount")} variant="secondary" value={amount} isRequired isDisabled={isPending} hint={amount ? formatMoney(digitsToNumber(amount), locale) : undefined} onValueChange={setAmount} />
-        <div className="flex flex-col gap-1">
-          <label htmlFor="wb-acc-date" className="text-sm font-medium text-foreground">{t("fDate")}</label>
-          <input id="wb-acc-date" name="date" type="date" required className={DATE_INPUT_CLASS_NAME} value={date} max={todayVn()} disabled={isPending} onChange={(e) => setDate(e.target.value)} />
+    <SurfaceCard label={t("manualTitle")}>
+      <Form label={t("manualTitle")} isPending={isPending} onSubmit={submit}>
+        <div className={FORM_CLASS_NAME}>
+          <Text size="sm" tone="muted">{t("manualIntro")}</Text>
+          <div className={FORM_GRID_CLASS_NAME}>
+            <Input id="wb-acc-amount" name="amount" label={t("fAmount")} variant="secondary" value={amount} isRequired isDisabled={isPending} hint={amount ? formatMoney(digitsToNumber(amount), locale) : undefined} onValueChange={setAmount} />
+            <DateField name="date" label={t("fDate")} variant="secondary" isRequired isDisabled={isPending} value={date} maxValue={parseDate(todayVn())} onValueChange={setDate} />
+            <div className={FORM_WIDE_CLASS_NAME}>
+              <Input id="wb-acc-content" name="content" label={t("fContent")} variant="secondary" value={content} isRequired isDisabled={isPending} hint={t("fContentHint")} onValueChange={setContent} />
+            </div>
+            <div className={FORM_WIDE_CLASS_NAME}>
+              <Input id="wb-acc-payer" name="payer" label={t("fPayer")} variant="secondary" value={payer} isDisabled={isPending} onValueChange={setPayer} />
+            </div>
+            <div className={FORM_WIDE_CLASS_NAME}>
+              <Textarea id="wb-acc-note" name="note" label={t("fNote")} variant="secondary" rows={3} value={note} isDisabled={isPending} onValueChange={setNote} />
+            </div>
+          </div>
+          {error ? <Alert tone="negative" title={error} /> : null}
+          {notice ? <Alert tone="cautionary" title={notice} /> : null}
+          <div className={FORM_ACTIONS_CLASS_NAME}>
+            <Button type="submit" isPending={isPending}>{t("manualSave")}</Button>
+            <Button variant="ghost" isDisabled={isPending} onPress={onDone}>{t("cancel")}</Button>
+          </div>
+          <Text size="xs" tone="muted">{t("manualFoot")}</Text>
         </div>
-        <div className={FORM_WIDE_CLASS_NAME}>
-          <Input id="wb-acc-content" name="content" label={t("fContent")} variant="secondary" value={content} isRequired isDisabled={isPending} hint={t("fContentHint")} onValueChange={setContent} />
-        </div>
-        <div className={FORM_WIDE_CLASS_NAME}>
-          <Input id="wb-acc-payer" name="payer" label={t("fPayer")} variant="secondary" value={payer} isDisabled={isPending} onValueChange={setPayer} />
-        </div>
-        <div className={FORM_WIDE_CLASS_NAME}>
-          <Textarea id="wb-acc-note" name="note" label={t("fNote")} rows={3} value={note} isDisabled={isPending} onValueChange={setNote} />
-        </div>
-      </div>
-      {error ? <Text size="sm" tone="accent">{error}</Text> : null}
-      {notice ? <Text size="sm" tone="muted">{notice}</Text> : null}
-      <div className={FORM_ACTIONS_CLASS_NAME}>
-        <Button type="submit" isPending={isPending}>{t("manualSave")}</Button>
-        <Button variant="ghost" isDisabled={isPending} onPress={onDone}>{t("cancel")}</Button>
-      </div>
-      <Text size="xs" tone="muted">{t("manualFoot")}</Text>
-    </form>
+      </Form>
+    </SurfaceCard>
   );
 };
 
@@ -92,10 +91,7 @@ export const EvidencePanel = ({ data }: { readonly data: AccountingWorkbench }) 
           {isFormOpen ? null : <Button onPress={() => setIsFormOpen(true)}>{t("manualOpen")}</Button>}
         </div>
         {isFormOpen ? <ManualForm onDone={() => setIsFormOpen(false)} /> : null}
-        {data.credits.length === 0 ? (
-          <EmptyNotice message={t("creditsEmpty")} description={t("creditsEmptyBody")} />
-        ) : (
-          <ul className={LIST_CLASS_NAME}>
+        <SurfaceListCard ariaLabel={t("creditsTitle")} empty={<EmptyNotice message={t("creditsEmpty")} description={t("creditsEmptyBody")} />}>
             {data.credits.map((c) => (
               <li key={c.id} className={ROW_CLASS_NAME}>
                 <div className={ROW_MAIN_CLASS_NAME}>
@@ -113,16 +109,12 @@ export const EvidencePanel = ({ data }: { readonly data: AccountingWorkbench }) 
                 </div>
               </li>
             ))}
-          </ul>
-        )}
+        </SurfaceListCard>
       </section>
 
       <section className={BLOCK_CLASS_NAME} aria-label={t("invoicesTitle")}>
         <SectionHeader level={2} title={t("invoicesTitle")} description={t("invoicesIntro")} />
-        {data.invoices.length === 0 ? (
-          <EmptyNotice message={t("invoicesEmpty")} description={t("invoicesEmptyBody")} />
-        ) : (
-          <ul className={LIST_CLASS_NAME}>
+        <SurfaceListCard ariaLabel={t("invoicesTitle")} empty={<EmptyNotice message={t("invoicesEmpty")} description={t("invoicesEmptyBody")} />}>
             {data.invoices.map((i) => (
               <li key={i.id} className={ROW_CLASS_NAME}>
                 <div className={ROW_MAIN_CLASS_NAME}>
@@ -139,17 +131,13 @@ export const EvidencePanel = ({ data }: { readonly data: AccountingWorkbench }) 
                 </div>
               </li>
             ))}
-          </ul>
-        )}
+        </SurfaceListCard>
         <Text size="xs" tone="muted">{t("internalNote")}</Text>
       </section>
 
       <section className={BLOCK_CLASS_NAME} aria-label={t("ordersTitle")}>
         <SectionHeader level={2} title={t("ordersTitle")} description={t("ordersIntro")} />
-        {data.ordersWithoutInvoice.length === 0 ? (
-          <EmptyNotice message={t("ordersEmpty")} description={t("ordersEmptyBody")} />
-        ) : (
-          <ul className={LIST_CLASS_NAME}>
+        <SurfaceListCard ariaLabel={t("ordersTitle")} empty={<EmptyNotice message={t("ordersEmpty")} description={t("ordersEmptyBody")} />}>
             {data.ordersWithoutInvoice.map((o) => (
               <li key={o.id} className={ROW_CLASS_NAME}>
                 <div className={ROW_MAIN_CLASS_NAME}>
@@ -163,8 +151,7 @@ export const EvidencePanel = ({ data }: { readonly data: AccountingWorkbench }) 
                 </div>
               </li>
             ))}
-          </ul>
-        )}
+        </SurfaceListCard>
       </section>
     </div>
   );

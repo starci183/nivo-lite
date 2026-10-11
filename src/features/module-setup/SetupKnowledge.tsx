@@ -1,15 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState, useTransition } from "react";
-import Link from "next/link";
-import { Alert, Button, SurfaceCard, Text } from "@starci/grammar/common";
+import { Alert, Button, List, ListItem, SurfaceCard, Text, TextAction } from "@starci/grammar/common";
 import { useLocale, useT } from "@/i18n/client";
 import { intlLocale, TIME_ZONE } from "@/i18n/core";
 import { knowledge } from "@/i18n/dict/knowledge";
 import type { ContextNote } from "@/lib/context-notes";
 import { approveNoteAndApply, dismissNote, listPendingNotes, loadKnowledgeCounts } from "@/lib/context-notes-actions";
 import type { ModuleKey } from "@/lib/modules-shared";
-import { CARD_LIST_CLASS, NOTE_CLASS, ROW_WRAP_CLASS, STACK_CLASS } from "@/features/knowledge/classNames";
+import { CARD_LIST_CLASS, LIST_CLASS, NOTE_CLASS, ROW_WRAP_CLASS, STACK_CLASS } from "@/features/knowledge/classNames";
 
 type SetupKnowledgeProps = {
   readonly installationId: string;
@@ -64,17 +63,19 @@ export const SetupKnowledge = ({ installationId, moduleKey, refreshKey, onApplie
     <>
       <SurfaceCard label={t("cardTitle")} headingLevel={2}>
         <div className={STACK_CLASS}>
-          <ul className={CARD_LIST_CLASS}>
-            <li>{t("cardNivo", { count: counts?.nivo ?? 0 })}</li>
-            <li>
-              {t("cardBusiness", { count: counts?.business ?? 0 })}
-              {counts && counts.business > 0 ? <span className="text-muted"> ({t("cardPublic", { count: counts.publicSources })})</span> : null}
-            </li>
-          </ul>
+          <List label={t("cardTitle")} className={CARD_LIST_CLASS}>
+            <ListItem><Text size="sm">{t("cardNivo", { count: counts?.nivo ?? 0 })}</Text></ListItem>
+            <ListItem>
+              <Text size="sm">
+                {t("cardBusiness", { count: counts?.business ?? 0 })}
+                {counts && counts.business > 0 ? <Text as="span" size="sm" tone="muted"> ({t("cardPublic", { count: counts.publicSources })})</Text> : null}
+              </Text>
+            </ListItem>
+          </List>
           {counts && counts.business === 0 ? <Text size="xs" tone="muted">{t("cardEmpty")}</Text> : null}
           <div className={ROW_WRAP_CLASS}>
-            <Link href={`/knowledge?module=${moduleKey}`} className="text-sm underline underline-offset-2">{t("cardLink")}</Link>
-            <Link href="/knowledge/nivo" className="text-sm text-muted underline underline-offset-2">{t("nivoLink")}</Link>
+            <TextAction href={`/knowledge?module=${moduleKey}`} size="sm" appearance="inline">{t("cardLink")}</TextAction>
+            <TextAction href="/knowledge/nivo" size="sm" appearance="muted">{t("nivoLink")}</TextAction>
           </div>
         </div>
       </SurfaceCard>
@@ -83,16 +84,20 @@ export const SetupKnowledge = ({ installationId, moduleKey, refreshKey, onApplie
         <div className={STACK_CLASS}>
           <Text size="xs" tone="muted">{t("notesHint")}</Text>
           {notes.length === 0 ? <Text size="sm" tone="muted">{t("notesEmpty")}</Text> : null}
+          {notes.length > 0 ? (
+          <List label={t("notesTitle")} className={LIST_CLASS}>
           {notes.map((n) => (
-            <div key={n.id} className={NOTE_CLASS}>
+            <ListItem key={n.id} className={NOTE_CLASS}>
               <Text size="sm">{n.body}</Text>
               <Text size="xs" tone="muted">{t("notesFrom", { source: n.source === "office" ? t("notesSourceOffice") : t("notesSourceSetup"), who: n.authorName, when: stamp(n.createdAt) })}</Text>
               <div className={ROW_WRAP_CLASS}>
                 <Button variant="ghost" size="sm" isDisabled={isPending} onPress={() => dismiss(n.id)}>{t("notesDismiss")}</Button>
               </div>
-            </div>
+            </ListItem>
           ))}
-          {notes.length > 0 ? <div><Button variant="primary" isPending={isPending} onPress={approve}>{isPending ? t("notesApproving") : t("notesApprove")}</Button></div> : null}
+          </List>
+          ) : null}
+          {notes.length > 0 ? <div className={ROW_WRAP_CLASS}><Button variant="primary" isPending={isPending} onPress={approve}>{isPending ? t("notesApproving") : t("notesApprove")}</Button></div> : null}
           {message !== null ? <Alert title={message.ok ? t("notesTitle") : t("notesFailed")} description={message.text} tone={message.ok ? "affirmative" : "negative"} /> : null}
         </div>
       </SurfaceCard>

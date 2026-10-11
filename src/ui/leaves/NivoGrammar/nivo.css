@@ -142,6 +142,8 @@
         --surface-tertiary: var(--nivo-surface-tertiary);
         --surface-tertiary-foreground: var(--nivo-foreground);
         --surface-shadow: var(--nivo-surface-shadow);
+        /* Grammar reads --shadow-surface for a top-level SurfaceCard (BOUNDARY-6); --surface-shadow is the HeroUI name. */
+        --shadow-surface: var(--nivo-surface-shadow);
         --overlay: var(--nivo-overlay);
         --overlay-foreground: var(--nivo-foreground);
         --default: var(--nivo-default);

@@ -7,7 +7,7 @@ import { authority as dict } from "@/i18n/dict/authority"
 import { governance } from "@/i18n/dict/governance"
 import { saveAuthority, saveRule } from "@/lib/flow-actions"
 import type { Authority, AuthorityRule, Department, FlowAction, RuleMode } from "@/lib/flow-types"
-import { FIELDS_CLASS, GROUP_CLASS, REQUIRED_ROW_CLASS, RULE_LIMIT_CLASS, RULE_LIST_CLASS, RULE_NAME_CLASS, RULE_ROW_CLASS } from "./classNames"
+import { FIELDS_CLASS, GROUP_CLASS, REQUIRED_LIST_CLASS, REQUIRED_ROW_CLASS, RULE_LIMIT_CLASS, RULE_LIST_CLASS, RULE_NAME_CLASS, RULE_ROW_CLASS } from "./classNames"
 import { AMOUNT_ACTIONS, draftsFrom, FIELD_KEYS, fromField, MODES, modesFor, RULE_MATRIX, ruleKey, toField, visibleGroups, type RuleDraft } from "./model"
 import { SaveRow, useSaver } from "./SaveRow"
 
@@ -99,6 +99,7 @@ export const RulesSections = ({ authority, rules }: RulesSectionsProps) => {
                       {AMOUNT_ACTIONS.includes(action) ? (
                         <div className={RULE_LIMIT_CLASS}>
                           <NumberField
+                            variant="secondary"
                             label={t("limitLabel")}
                             minValue={0}
                             step={1_000_000}
@@ -123,25 +124,28 @@ export const RulesSections = ({ authority, rules }: RulesSectionsProps) => {
       <SurfaceCard label={t("limitsTitle")} headingLevel={2}>
         <div className={FIELDS_CLASS}>
           <Text size="sm" tone="muted">{t("limitsDesc")}</Text>
-          <Textarea label={t("limitsNote")} description={t("limitsNoteHint")} rows={3} value={limitsNote} onValueChange={(v) => { limitsSaver.reset(); setLimitsNote(v) }} />
+          <Textarea variant="secondary" label={t("limitsNote")} description={t("limitsNoteHint")} rows={3} value={limitsNote} onValueChange={(v) => { limitsSaver.reset(); setLimitsNote(v) }} />
           <div>
             <Heading level={3}>{t("requiredTitle")}</Heading>
             <Text size="sm" tone="muted">{t("requiredHint")}</Text>
           </div>
-          {groups.flatMap((group) => group.actions.map((action) => ({ department: group.department, action }))).map(({ department, action }) => {
-            const key = ruleKey(department, action)
-            return (
-              <div key={key} className={REQUIRED_ROW_CLASS}>
-                <CheckboxGroup
-                  label={t("requiredFor", { action: `${actionName(action)} · ${g(`dept_${department}`)}` })}
-                  orientation="horizontal"
-                  options={fieldOptions}
-                  value={[...draft[key]!.required]}
-                  onValueChange={(v) => { limitsSaver.reset(); patch(key, { required: FIELD_KEYS.filter((f) => v.includes(f)) }) }}
-                />
-              </div>
-            )
-          })}
+          <div className={REQUIRED_LIST_CLASS}>
+            {groups.flatMap((group) => group.actions.map((action) => ({ department: group.department, action }))).map(({ department, action }) => {
+              const key = ruleKey(department, action)
+              return (
+                <div key={key} className={REQUIRED_ROW_CLASS}>
+                  <CheckboxGroup
+                    variant="secondary"
+                    label={t("requiredFor", { action: `${actionName(action)} · ${g(`dept_${department}`)}` })}
+                    orientation="horizontal"
+                    options={fieldOptions}
+                    value={[...draft[key]!.required]}
+                    onValueChange={(v) => { limitsSaver.reset(); patch(key, { required: FIELD_KEYS.filter((f) => v.includes(f)) }) }}
+                  />
+                </div>
+              )
+            })}
+          </div>
           <SaveRow saver={limitsSaver} onSave={onSaveLimits} />
         </div>
       </SurfaceCard>

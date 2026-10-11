@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { Alert, Heading, Text } from "@starci/grammar/common";
+import { Alert, Heading, PageContainer, SurfaceCard, Text } from "@starci/grammar/common";
 import { Respond } from "@/features/module-hiring/public/Respond";
-import { CANVAS_CLASS_NAME, CARD_CLASS_NAME, COLUMN_CLASS_NAME, FOOT_CLASS_NAME } from "@/features/module-hiring/public/classNames";
+import { CARD_STACK, FOOT_LINE, PUBLIC_MAIN, PUBLIC_STACK } from "@/app/classNames";
 import { hdb } from "@/lib/module-hiring-core";
 import { loadInterviewByToken } from "@/lib/module-hiring-flow";
 import { fmtVnDateTime } from "@/lib/module-hiring-shared";
@@ -15,18 +15,21 @@ const SlotPage = async ({ params }: Props) => {
   const { token } = await params;
   const hit = await loadInterviewByToken(hdb(), token).catch(() => null);
   const frame = (body: React.ReactNode) => (
-    <main className={CANVAS_CLASS_NAME}>
-      <div className={COLUMN_CLASS_NAME}>
-        {body}
-        <div className={FOOT_CLASS_NAME}><Text size="xs" tone="muted">Vận hành bởi NIVO.</Text></div>
-      </div>
+    <main className={PUBLIC_MAIN}>
+      <PageContainer measure="reading">
+        <div className={PUBLIC_STACK}>
+          {body}
+          <div className={FOOT_LINE}><Text size="xs">Vận hành bởi NIVO.</Text></div>
+        </div>
+      </PageContainer>
     </main>
   );
   if (!hit) return frame(<Alert tone="cautionary" title="Đường dẫn này không còn hiệu lực" description="Vui lòng liên hệ doanh nghiệp để được hỗ trợ." />);
   const { iv, cand, job, shop } = hit;
   const where = `${iv.mode === "online" ? "Online" : "Trực tiếp"}${iv.location ? `: ${iv.location}` : ""}`;
   return frame(
-    <section className={CARD_CLASS_NAME} aria-label="Chọn giờ phỏng vấn">
+    <SurfaceCard ariaLabel="Chọn giờ phỏng vấn">
+      <div className={CARD_STACK}>
       <Text size="sm" tone="muted">{shop}</Text>
       <Heading level={1} scale="standard">{`Chào ${cand.name}, mời bạn phỏng vấn vị trí ${job.title}`}</Heading>
       <Text tone="muted">{`${where}. Khoảng ${iv.duration_min} phút${iv.interviewer_name ? `, người phỏng vấn: ${iv.interviewer_name}` : ""}.`}</Text>
@@ -40,7 +43,8 @@ const SlotPage = async ({ params }: Props) => {
       ) : (
         <Alert tone="cautionary" title="Lịch này đã đóng" description="Vui lòng liên hệ doanh nghiệp nếu cần xếp lại." />
       )}
-    </section>,
+      </div>
+    </SurfaceCard>,
   );
 };
 

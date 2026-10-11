@@ -1,7 +1,7 @@
 import { cn } from "@heroui/react";
 
-/** One responsibility row inside its card: tile, text column, actions. */
-export const ROW_CLASS_NAME = cn("flex", "list-none", "flex-wrap", "items-center", "gap-4", "border-t", "border-separator", "px-4", "py-4", "first:border-t-0", "sm:flex-nowrap");
+/** One responsibility row inside its SurfaceListCard: trailing seam dropped on the last row (BOUNDARY-2 case-1), row inset px-4 py-3 (PADDING-3/4). */
+export const ROW_CLASS_NAME = cn("flex", "list-none", "flex-wrap", "items-center", "gap-4", "border-b", "border-separator", "px-4", "py-3", "last:border-b-0", "sm:flex-nowrap");
 
 /** The text column of a row. */
 export const ROW_BODY_CLASS_NAME = cn("flex", "min-w-0", "flex-1", "basis-56", "flex-col", "gap-1");
@@ -14,9 +14,6 @@ export const ROW_META_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "gap-
 
 /** Open and the actions menu, kept together on the right. */
 export const ROW_ACTIONS_CLASS_NAME = cn("flex", "shrink-0", "items-center", "gap-2");
-
-/** A list of row cards. */
-export const ROW_LIST_CLASS_NAME = cn("m-0", "flex", "list-none", "flex-col", "gap-3", "p-0");
 
 /** The stack of owner sections. */
 export const GROUPS_CLASS_NAME = cn("flex", "flex-col", "gap-6");

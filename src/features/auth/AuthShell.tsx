@@ -7,7 +7,7 @@ import { useT } from "@/i18n/client";
 import { login } from "@/i18n/dict/login";
 import { FoundingOffer } from "@/components/promo/FoundingOffer";
 import { NivoLogo } from "@/components/brand/NivoLogo";
-import { Heading, IconTile, SurfaceCard, Text } from "@starci/grammar/common";
+import { Heading, IconTile, Image, List, ListItem, MediaFrame, Region, SurfaceCard, SurfaceCopyGroup, Text } from "@starci/grammar/common";
 import {
   AUTH_BRAND_PANE_CLASS_NAME,
   AUTH_CANVAS_CLASS_NAME,
@@ -39,7 +39,7 @@ export const AuthShell = ({ label, title, text, children }: AuthShellProps) => {
       <div className={AUTH_LOCALE_CLASS_NAME}>
         <LocaleSwitch />
       </div>
-      <section className={AUTH_BRAND_PANE_CLASS_NAME} aria-label={t("aboutLabel")}>
+      <Region label={t("aboutLabel")} className={AUTH_BRAND_PANE_CLASS_NAME}>
         <NivoLogo variant="full" height={56} />
         <div className={AUTH_HEADLINE_CLASS_NAME}>
           <Heading level={1} scale="display">
@@ -48,26 +48,30 @@ export const AuthShell = ({ label, title, text, children }: AuthShellProps) => {
         </div>
         <Text tone="muted">{t("tagline")}</Text>
         <div className={AUTH_POINTS_ROW_CLASS_NAME}>
-          <ul className={AUTH_POINTS_CLASS_NAME}>
+          <List className={AUTH_POINTS_CLASS_NAME}>
             {POINTS.map((point) => (
-              <li key={point.text} className={AUTH_POINT_CLASS_NAME}>
+              <ListItem key={point.text} className={AUTH_POINT_CLASS_NAME}>
                 <IconTile source={nivoIconSource(point.icon, "leading")} tone="neutral" />
                 <Text weight="medium">{t(point.text)}</Text>
-              </li>
+              </ListItem>
             ))}
-          </ul>
-          <img className={AUTH_MASCOT_CLASS_NAME} src="/images/promo/mascot-point.png" alt="" />
+          </List>
+          <div className={AUTH_MASCOT_CLASS_NAME}>
+            <MediaFrame treatment="plain" aspect="square" fit="contain">
+              <Image src="/images/promo/mascot-point.png" alt="" aspect="square" fit="contain" plate="none" />
+            </MediaFrame>
+          </div>
         </div>
         <FoundingOffer variant="pill" />
-      </section>
+      </Region>
       <section className={AUTH_FORM_PANE_CLASS_NAME}>
         <div className={AUTH_CARD_CLASS_NAME}>
           <SurfaceCard ariaLabel={label}>
             <div className={AUTH_STACK_CLASS_NAME}>
-              <div>
+              <SurfaceCopyGroup>
                 <Heading level={2}>{title}</Heading>
                 {text ? <Text tone="muted">{text}</Text> : null}
-              </div>
+              </SurfaceCopyGroup>
               {children}
             </div>
           </SurfaceCard>

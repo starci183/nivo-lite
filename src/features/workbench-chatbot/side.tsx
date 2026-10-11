@@ -1,25 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Alert, Badge, Button, Heading, IconButton, Text, Textarea } from "@starci/grammar/common";
+import { Alert, Badge, Button, DescriptionList, Heading, IconButton, SectionHeader, SurfaceCard, Text, Textarea, type DescriptionListItem } from "@starci/grammar/common";
 import { nivoIconSource } from "@/ui";
 import { PersonAvatar } from "@/components/avatar/PersonAvatar";
 import { useT } from "@/i18n/client";
 import { workbenchChatbot } from "@/i18n/dict/workbenchChatbot";
 import type { WbThread } from "@/lib/workbench-chatbot";
 import {
-  ACTIONS_CLASS_NAME, CUSTOMER_HEAD_CLASS_NAME, ESCALATION_CLASS_NAME, HEAD_CLASS_NAME, HEAD_TEXT_CLASS_NAME, QUOTE_CLASS_NAME, SIDE_FACTS_CLASS_NAME, SIDE_SECTION_CLASS_NAME,
+  ACTIONS_CLASS_NAME, CUSTOMER_HEAD_CLASS_NAME, ESCALATION_CLASS_NAME, HEAD_CLASS_NAME, HEAD_TEXT_CLASS_NAME, QUESTION_CLASS_NAME, SIDE_SECTION_CLASS_NAME, UNTIL_DOCKED_CLASS_NAME,
 } from "./classNames";
 
 const STAGES = ["new", "qualified", "proposal", "won", "lost"] as const;
 
-const Fact = ({ label, value }: { readonly label: string; readonly value: string | null }) =>
-  value ? (
-    <>
-      <Text size="xs" tone="muted">{label}</Text>
-      <Text size="sm" overflow="clamp-2">{value}</Text>
-    </>
-  ) : null;
+/** One lead fact, or nothing when the value is missing. */
+const fact = (id: string, term: string, value: string | null): ReadonlyArray<DescriptionListItem> => (value ? [{ id, term, description: value }] : []);
 
 /** Right pane: customer, who is replying (take over / hand back), the waiting escalation and the lead. */
 export const SidePane = (props: {
@@ -59,7 +54,7 @@ export const SidePane = (props: {
   );
 
   if (!thread) {
-    return <div className={HEAD_CLASS_NAME}><div className={HEAD_TEXT_CLASS_NAME} /><div className="xl:hidden">{closeButton}</div></div>;
+    return <div className={HEAD_CLASS_NAME}><div className={HEAD_TEXT_CLASS_NAME} /><div className={UNTIL_DOCKED_CLASS_NAME}>{closeButton}</div></div>;
   }
 
   const conv = thread.conversation;
@@ -72,7 +67,7 @@ export const SidePane = (props: {
     <>
       <div className={HEAD_CLASS_NAME}>
         <div className={HEAD_TEXT_CLASS_NAME}><Heading level={2}>{t("customerTitle")}</Heading></div>
-        <div className="xl:hidden">{closeButton}</div>
+        <div className={UNTIL_DOCKED_CLASS_NAME}>{closeButton}</div>
       </div>
 
       <section className={SIDE_SECTION_CLASS_NAME}>
@@ -87,15 +82,15 @@ export const SidePane = (props: {
 
       {escalation ? (
         <section className={ESCALATION_CLASS_NAME} aria-label={t("escalationTitle")}>
-          <div className="flex items-center gap-2">
+          <div className={ACTIONS_CLASS_NAME}>
             <Badge tone="warning" isDot>{t("escalationTitle")}</Badge>
           </div>
-          <div className="flex flex-col gap-1">
+          <div className={QUESTION_CLASS_NAME}>
             <Text size="xs" tone="muted">{t("escalationAsked")}</Text>
-            <div className={QUOTE_CLASS_NAME}><Text as="p" size="sm">{escalation.question}</Text></div>
+            <SurfaceCard depth="nested" ariaLabel={t("escalationAsked")}><Text as="p" size="sm">{escalation.question}</Text></SurfaceCard>
             {escalation.staffName ? <Text size="xs" tone="muted">{t("escalationAssigned", { name: escalation.staffName })}</Text> : null}
           </div>
-          <Textarea label={t("escalationDraft")} description={t("escalationDraftHint", { name: props.userName })} rows={4} value={draft} onValueChange={setDraft} />
+          <Textarea label={t("escalationDraft")} variant="secondary" description={t("escalationDraftHint", { name: props.userName })} rows={4} value={draft} onValueChange={setDraft} />
           {notice ? <Alert tone={notice.tone} title={notice.tone === "negative" ? t("notSent") : t("escalationSent")} description={notice.tone === "negative" ? notice.text : undefined} /> : null}
           <div className={ACTIONS_CLASS_NAME}>
             <Button variant="primary" isPending={isSending} isDisabled={draft.trim().length === 0} onPress={() => void answer(draft)}>{t("escalationSend")}</Button>
@@ -105,7 +100,7 @@ export const SidePane = (props: {
       ) : null}
 
       <section className={SIDE_SECTION_CLASS_NAME} aria-label={t("handlingTitle")}>
-        <Text size="xs" tone="muted" weight="medium">{t("handlingTitle")}</Text>
+        <SectionHeader level={3} title={t("handlingTitle")} />
         <Text size="sm">{conv.handledBy ? (mine ? t("handlingYou") : t("handlingOther", { name: conv.handledBy })) : t("handlingAi")}</Text>
         <div className={ACTIONS_CLASS_NAME}>
           {conv.handledBy === null ? (
@@ -118,16 +113,14 @@ export const SidePane = (props: {
       </section>
 
       <section className={SIDE_SECTION_CLASS_NAME} aria-label={t("leadTitle")}>
-        <Text size="xs" tone="muted" weight="medium">{t("leadTitle")}</Text>
+        <SectionHeader level={3} title={t("leadTitle")} />
         {lead ? (
           <>
             <Text weight="semibold">{lead.name}</Text>
-            <div className={SIDE_FACTS_CLASS_NAME}>
-              <Fact label={t("leadStage")} value={stage} />
-              <Fact label={t("leadNeed")} value={lead.need || null} />
-              <Fact label={t("leadPhone")} value={lead.phone} />
-              <Fact label={t("leadEmail")} value={lead.email} />
-            </div>
+            <DescriptionList
+              layout="columns"
+              items={[...fact("stage", t("leadStage"), stage), ...fact("need", t("leadNeed"), lead.need || null), ...fact("phone", t("leadPhone"), lead.phone), ...fact("email", t("leadEmail"), lead.email)]}
+            />
             <div className={ACTIONS_CLASS_NAME}>
               <Button variant="outline" size="sm" href={`/leads/${lead.id}`}>{t("leadOpen")}</Button>
             </div>

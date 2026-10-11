@@ -1,5 +1,4 @@
-import Link from "next/link"
-import { PageContainer, SectionHeader } from "@starci/grammar/common"
+import { Button, Link, PageContainer, SectionHeader, TextAction } from "@starci/grammar/common"
 import { automations as dict } from "@/i18n/dict/automations"
 import { getT } from "@/i18n/server"
 import { loadAutomations } from "@/lib/automation-queries"
@@ -7,7 +6,7 @@ import { getCurrentMember, isManagerRole } from "@/lib/members"
 import { getSession } from "@/lib/session"
 import { supabaseAdmin } from "@/lib/supabase/admin"
 import { AutomationsBoard } from "./AutomationsBoard"
-import { CHIP_CLASS, HEAD_CLASS, LINK_CLASS, MUTED_LINK_CLASS, PAGE_CLASS } from "./classNames"
+import { LINK_ROW_CLASS, PAGE_CLASS } from "./classNames"
 
 /** The Automations page ("Tự động hoá"): ready-made jobs the owner switches on. Owner and manager only; staff see a friendly 403. */
 export const AutomationsPage = async ({ focus }: { readonly focus?: string }) => {
@@ -16,8 +15,10 @@ export const AutomationsPage = async ({ focus }: { readonly focus?: string }) =>
   if (!isManagerRole(me.role)) {
     return (
       <PageContainer measure="product">
-        <SectionHeader level={1} title={t("forbiddenTitle")} description={t("forbiddenBody")} />
-        <Link href="/chat" className="text-sm underline">{t("forbiddenBack")}</Link>
+        <div className={PAGE_CLASS}>
+          <SectionHeader level={1} title={t("forbiddenTitle")} description={t("forbiddenBody")} />
+          <div className={LINK_ROW_CLASS}><Button variant="secondary" href="/chat">{t("forbiddenBack")}</Button></div>
+        </div>
       </PageContainer>
     )
   }
@@ -27,11 +28,12 @@ export const AutomationsPage = async ({ focus }: { readonly focus?: string }) =>
       <div className={PAGE_CLASS}>
         <SectionHeader
           level={1}
-          title={<span className={HEAD_CLASS}>{t("title")}<span className={CHIP_CLASS}>{session.workspace.name}</span></span>}
-          description={<>{t("leadBefore")}<Link href="/authority" className={LINK_CLASS}>{t("leadLink")}</Link>{t("leadAfter")}</>}
+          eyebrow={session.workspace.name}
+          title={t("title")}
+          description={<>{t("leadBefore")}<Link href="/authority">{t("leadLink")}</Link>{t("leadAfter")}</>}
         />
         <AutomationsBoard initial={{ cards: data.cards, runs: data.runs, shop: data.shop }} layout="page" focus={focus} />
-        <Link href="/developers" className={MUTED_LINK_CLASS}>{t("advanced")}</Link>
+        <div className={LINK_ROW_CLASS}><TextAction href="/developers" size="sm" appearance="muted">{t("advanced")}</TextAction></div>
       </div>
     </PageContainer>
   )

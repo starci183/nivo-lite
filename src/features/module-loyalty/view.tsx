@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { EmptyNotice, SurfaceCard, Tabs, Text } from "@starci/grammar/common";
+import { DescriptionList, EmptyNotice, SurfaceCard, Tabs } from "@starci/grammar/common";
 import { useLocale, useT } from "@/i18n/client";
 import { loyalty } from "@/i18n/dict/loyalty";
 import type { LoyaltyWorkbenchData } from "@/lib/module-loyalty-queries";
-import { METRICS_CLASS_NAME, METRIC_CLASS_NAME, PAGE_CLASS_NAME, PANEL_CLASS_NAME, TABS_CLASS_NAME } from "./classNames";
+import { PAGE_CLASS_NAME, PANEL_CLASS_NAME } from "./classNames";
 import { formatNumber } from "./format";
 import { MembersPanel } from "./members";
 import { OverviewPanel } from "./overview";
@@ -17,14 +17,6 @@ type TabId = "overview" | "members" | "rewards" | "promo" | "pending";
 const TAB_IDS: ReadonlyArray<TabId> = ["overview", "members", "rewards", "promo", "pending"];
 const isTab = (key: string | null | undefined): key is TabId => !!key && (TAB_IDS as ReadonlyArray<string>).includes(key);
 const panelId = (key: string): string => `loyalty-panel-${key}`;
-
-const Metric = ({ label, value, basis }: { readonly label: string; readonly value: string; readonly basis: string }) => (
-  <div className={METRIC_CLASS_NAME}>
-    <Text size="xs" tone="muted" weight="medium">{label}</Text>
-    <Text size="metric-lead" weight="semibold">{value}</Text>
-    <Text size="xs" tone="muted">{basis}</Text>
-  </div>
-);
 
 /** The loyalty workbench: four honest figures, then five surfaces as tabs (kept in `?tab=`). */
 export const LoyaltyWorkbenchView = ({ data }: { readonly data: LoyaltyWorkbenchData | null }) => {
@@ -72,20 +64,25 @@ export const LoyaltyWorkbenchView = ({ data }: { readonly data: LoyaltyWorkbench
 
   return (
     <div className={PAGE_CLASS_NAME}>
-      <div className={METRICS_CLASS_NAME} role="group" aria-label={t("metricsAria")}>
-        <Metric label={t("metricMembers")} value={formatNumber(s.members, locale)} basis={t("metricMembersBasis", { n: formatNumber(s.active90d, locale) })} />
-        <Metric label={t("metricOutstanding")} value={t("points", { n: formatNumber(s.pointsOutstanding, locale) })} basis={t("metricOutstandingBasis")} />
-        <Metric label={t("metricSpend")} value={`${formatNumber(s.spend30d, locale)} ₫`} basis={t("metricSpendBasis")} />
-        <Metric
-          label={t("metricRedeemed")}
-          value={t("points", { n: formatNumber(s.redeemed30d, locale) })}
-          basis={t("metricRedeemedBasis", { n: s.redemptions30d, value: `${formatNumber(s.rewardValue30d, locale)} ₫` })}
+      <SurfaceCard ariaLabel={t("metricsAria")}>
+        <DescriptionList
+          layout="stat-strip"
+          isDivided
+          items={[
+            { id: "members", term: t("metricMembers"), description: formatNumber(s.members, locale), meta: t("metricMembersBasis", { n: formatNumber(s.active90d, locale) }) },
+            { id: "outstanding", term: t("metricOutstanding"), description: t("points", { n: formatNumber(s.pointsOutstanding, locale) }), meta: t("metricOutstandingBasis") },
+            { id: "spend", term: t("metricSpend"), description: `${formatNumber(s.spend30d, locale)} ₫`, meta: t("metricSpendBasis") },
+            {
+              id: "redeemed",
+              term: t("metricRedeemed"),
+              description: t("points", { n: formatNumber(s.redeemed30d, locale) }),
+              meta: t("metricRedeemedBasis", { n: s.redemptions30d, value: `${formatNumber(s.rewardValue30d, locale)} ₫` }),
+            },
+          ]}
         />
-      </div>
+      </SurfaceCard>
 
-      <div className={TABS_CLASS_NAME}>
-        <Tabs label={t("tabsLabel")} selectedKey={tab} items={items} inset="none" labelVisibility="always" panelId={panelId} onSelect={select} />
-      </div>
+      <Tabs label={t("tabsLabel")} selectedKey={tab} items={items} inset="none" labelVisibility="always" panelId={panelId} onSelect={select} />
 
       <div className={PANEL_CLASS_NAME} role="tabpanel" id={panelId(tab)}>
         {tab === "overview" ? <OverviewPanel data={data} /> : null}

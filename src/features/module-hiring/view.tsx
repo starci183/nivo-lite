@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { EmptyNotice, SurfaceCard, Tabs, Text } from "@starci/grammar/common";
+import { Badge, DescriptionList, EmptyNotice, HorizontalScrollRegion, SurfaceCard, Tabs } from "@starci/grammar/common";
 import type { HiringWorkbenchData } from "@/lib/module-hiring-queries";
 import { CandidateDrawer } from "./candidate";
-import { METRICS_CLASS_NAME, METRIC_ALERT_CLASS_NAME, METRIC_CLASS_NAME, PAGE_CLASS_NAME, PANEL_CLASS_NAME, TABS_CLASS_NAME } from "./classNames";
+import { PAGE_CLASS_NAME, PANEL_CLASS_NAME } from "./classNames";
 import { InterviewsPanel } from "./interviews";
 import { JobsPanel } from "./jobs";
 import { OffersPanel } from "./offers";
@@ -16,14 +16,6 @@ type TabId = "jobs" | "candidates" | "interviews" | "offers" | "onboarding" | "s
 const TAB_IDS: ReadonlyArray<TabId> = ["jobs", "candidates", "interviews", "offers", "onboarding", "settings"];
 const isTab = (v: string | null | undefined): v is TabId => !!v && (TAB_IDS as ReadonlyArray<string>).includes(v);
 const panelId = (key: string): string => `hiring-panel-${key}`;
-
-const Metric = ({ label, value, basis, isAlert = false }: { readonly label: string; readonly value: string; readonly basis: string; readonly isAlert?: boolean }) => (
-  <div className={isAlert ? `${METRIC_CLASS_NAME} ${METRIC_ALERT_CLASS_NAME}` : METRIC_CLASS_NAME}>
-    <Text size="xs" tone="muted" weight="medium">{label}</Text>
-    <Text size="metric-lead" weight="semibold">{value}</Text>
-    <Text size="xs" tone="muted">{basis}</Text>
-  </div>
-);
 
 /** Props for {@link HiringWorkbenchView}. */
 export type HiringWorkbenchViewProps = { readonly data: HiringWorkbenchData | null; readonly failed?: boolean };
@@ -88,15 +80,21 @@ export const HiringWorkbenchView = ({ data, failed = false }: HiringWorkbenchVie
 
   return (
     <div className={PAGE_CLASS_NAME}>
-      <div className={METRICS_CLASS_NAME} role="group" aria-label="Số liệu tuyển dụng">
-        <Metric label="Tin đang mở" value={String(open)} basis={`${data.jobs.length} tin tất cả`} />
-        <Metric label="Hồ sơ mới" value={String(fresh)} basis="Chưa được xét" isAlert={fresh > 0} />
-        <Metric label="Phỏng vấn sắp tới" value={String(upcoming)} basis="Đã được ứng viên xác nhận" />
-        <Metric label="Chờ bạn duyệt" value={String(waiting)} basis="Thư mời và việc của Tuyển dụng" isAlert={waiting > 0} />
-      </div>
-      <div className={TABS_CLASS_NAME}>
+      <SurfaceCard ariaLabel="Số liệu tuyển dụng">
+        <DescriptionList
+          layout="stat-strip"
+          isDivided
+          items={[
+            { id: "open", term: "Tin đang mở", description: String(open), meta: `${data.jobs.length} tin tất cả` },
+            { id: "fresh", term: "Hồ sơ mới", description: String(fresh), meta: fresh > 0 ? <Badge tone="warning" isDot>Chưa được xét</Badge> : "Chưa được xét" },
+            { id: "upcoming", term: "Phỏng vấn sắp tới", description: String(upcoming), meta: "Đã được ứng viên xác nhận" },
+            { id: "waiting", term: "Chờ bạn duyệt", description: String(waiting), meta: waiting > 0 ? <Badge tone="warning" isDot>Thư mời và việc của Tuyển dụng</Badge> : "Thư mời và việc của Tuyển dụng" },
+          ]}
+        />
+      </SurfaceCard>
+      <HorizontalScrollRegion overflow="needed" isFocusable={false}>
         <Tabs label="Tuyển dụng" selectedKey={tab} items={items} inset="none" labelVisibility="always" panelId={panelId} onSelect={select} />
-      </div>
+      </HorizontalScrollRegion>
       <div className={PANEL_CLASS_NAME} role="tabpanel" id={panelId(tab)}>
         {tab === "jobs" ? <JobsPanel data={data} onOpenPipeline={(id) => { setJobId(id); select("candidates"); }} /> : null}
         {tab === "candidates" ? <PipelinePanel data={data} jobId={jobId} onJob={setJobId} onOpen={setOpenId} /> : null}

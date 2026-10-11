@@ -22,12 +22,10 @@ import {
   ACTIVITY_TEXT_CLASS_NAME,
   AGENT_ROW_CLASS_NAME,
   AGENT_TEXT_CLASS_NAME,
-  BANNER_COPY_CLASS_NAME,
   HEADER_ACTIONS_CLASS_NAME,
-  KPI_CLASS_NAME,
+  KPI_COPY_CLASS_NAME,
   KPI_GRID_CLASS_NAME,
   MAIN_CLASS_NAME,
-  NEEDS_CLASS_NAME,
   PAGE_CLASS_NAME,
   PAGE_INSET_CLASS_NAME,
   RAIL_CLASS_NAME,
@@ -67,13 +65,16 @@ const KIND_ICONS: Record<string, IconName> = {
 
 type KpiProps = { label: string; value: number; href: string; isAlert?: boolean };
 
+/** One KPI: a top-level card on the page canvas (BOUNDARY-6) whose whole face opens the filtered list (STATE-5, SURFACE-4 case-3). */
 const Kpi = (props: KpiProps) => (
-  <Link href={props.href} className={KPI_CLASS_NAME} aria-label={`${props.label}: ${props.value}`}>
-    <Text size="xs" tone="muted">{props.label}</Text>
-    <Text size="metric-lead" weight="semibold" tone={props.isAlert === true && props.value > 0 ? "accent" : "default"}>
-      {String(props.value)}
-    </Text>
-  </Link>
+  <SurfaceCard wholeAction={{ kind: "link", href: props.href, label: `${props.label}: ${props.value}` }}>
+    <div className={KPI_COPY_CLASS_NAME}>
+      <Text size="xs" tone="muted">{props.label}</Text>
+      <Text size="metric-lead" weight="semibold" tone={props.isAlert === true && props.value > 0 ? "accent" : "default"}>
+        {String(props.value)}
+      </Text>
+    </div>
+  </SurfaceCard>
 );
 
 const ROW_LIMIT = 6;
@@ -115,15 +116,13 @@ export const OverviewBase = (props: OverviewBaseProps) => {
         <GovernanceBlocks governance={props.governance} waiting={props.waiting} />
 
         <SectionHeader level={2} title={t("ownerBelow")} />
-        <SurfaceCard ariaLabel={t("kpiAria")}>
-          <div className={KPI_GRID_CLASS_NAME}>
-            <Kpi label={t("kpiOpen")} value={props.counts.open} href="/responsibilities?status=open" />
-            <Kpi label={t("kpiWaiting")} value={props.counts.waitingApproval} href="/responsibilities?status=waiting_approval" isAlert />
-            <Kpi label={t("kpiToday")} value={props.counts.dueToday} href="/responsibilities?due=today" />
-            <Kpi label={t("kpiOverdue")} value={props.counts.overdue} href="/responsibilities?due=overdue" isAlert />
-            <Kpi label={t("kpiLeads")} value={props.counts.leadsThisWeek} href="/leads" />
-          </div>
-        </SurfaceCard>
+        <section className={KPI_GRID_CLASS_NAME} aria-label={t("kpiAria")}>
+          <Kpi label={t("kpiOpen")} value={props.counts.open} href="/responsibilities?status=open" />
+          <Kpi label={t("kpiWaiting")} value={props.counts.waitingApproval} href="/responsibilities?status=waiting_approval" isAlert />
+          <Kpi label={t("kpiToday")} value={props.counts.dueToday} href="/responsibilities?due=today" />
+          <Kpi label={t("kpiOverdue")} value={props.counts.overdue} href="/responsibilities?due=overdue" isAlert />
+          <Kpi label={t("kpiLeads")} value={props.counts.leadsThisWeek} href="/leads" />
+        </section>
 
         <PrimaryRailLayout
           railWidth="standard"

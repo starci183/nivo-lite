@@ -1,12 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { Badge, Button, Input, SurfaceCard, Text } from "@starci/grammar/common"
+import { Badge, Button, Input, List, ListItem, SurfaceCard, Text } from "@starci/grammar/common"
 import { useT } from "@/i18n/client"
 import { authority as dict } from "@/i18n/dict/authority"
 import { saveStaff } from "@/lib/flow-actions"
 import type { Staff } from "@/lib/flow-types"
-import { FIELDS_CLASS, STAFF_ACTIONS_CLASS, STAFF_BODY_CLASS, STAFF_FORM_CLASS, STAFF_ROW_CLASS } from "./classNames"
+import { FIELDS_CLASS, STAFF_ACTIONS_CLASS, STAFF_LIST_CLASS, STAFF_BODY_CLASS, STAFF_FORM_CLASS, STAFF_ROW_CLASS } from "./classNames"
 import { SaveRow, useSaver } from "./SaveRow"
 
 /** Props for {@link StaffSection}. */
@@ -52,9 +52,9 @@ export const StaffSection = ({ staff, canInvite = false, linkedStaffIds = [] }: 
         {staff.length === 0 ? (
           <Text size="sm">{t("staffEmpty")}</Text>
         ) : (
-          <div>
+          <List label={t("staffTitle")} className={STAFF_LIST_CLASS}>
             {staff.map((s) => (
-              <div key={s.id} className={STAFF_ROW_CLASS}>
+              <ListItem key={s.id} className={STAFF_ROW_CLASS}>
                 <div className={STAFF_BODY_CLASS}>
                   <Text weight="semibold" overflow="truncate">{s.name}</Text>
                   <Text size="sm" tone="muted" overflow="truncate">{[s.role, s.email].filter(Boolean).join(" · ")}</Text>
@@ -70,9 +70,9 @@ export const StaffSection = ({ staff, canInvite = false, linkedStaffIds = [] }: 
                     {s.active ? t("staffDeactivate") : t("staffReactivate")}
                   </Button>
                 </div>
-              </div>
+              </ListItem>
             ))}
-          </div>
+          </List>
         )}
         <div className={STAFF_FORM_CLASS}>
           <Input id="staff-name" name="staff_name" label={t("staffName")} variant="secondary" value={name} isError={Boolean(nameError)} errorMessage={nameError} onValueChange={(v) => { setNameError(null); setName(v) }} />

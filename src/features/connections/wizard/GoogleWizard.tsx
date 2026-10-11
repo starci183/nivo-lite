@@ -8,6 +8,7 @@ import { connectionWizard } from "@/i18n/dict/connectionWizard"
 import { googleWizard } from "@/i18n/dict/googleWizard"
 import { startGoogleConnect } from "@/lib/google-actions"
 import { PROVIDERS } from "@/lib/connection-providers"
+import { COPY_CLASS } from "./classNames"
 import { WizardFrame } from "./WizardFrame"
 
 const FAIL_KEY = { denied: "failDenied", unavailable: "failUnavailable", state: "failState", no_refresh: "failNoRefresh" } as const
@@ -40,7 +41,7 @@ export const GoogleWizard = ({ onClose, reconnect = false }: { readonly onClose:
   return (
     <WizardFrame title={tw("title", { provider: def.title[locale] })} steps={[t("stepConnect"), t("stepDone")]} index={index} footer={footer}>
       {index === 0 ? (
-        <div className="flex flex-col gap-2">
+        <div className={COPY_CLASS}>
           <Text weight="semibold">{t("allowTitle")}</Text>
           <Text size="sm">{t("allowOnlyFiles")}</Text>
           <Text size="sm" tone="muted">{t("allowNoOthers")}</Text>
