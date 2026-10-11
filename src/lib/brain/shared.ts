@@ -123,7 +123,8 @@ const STALE_DAYS = 120
 
 /**
  * NIVO's suggestion for a proposal, with its reason in plain words. Deterministic (no model call), checked in this order:
- * a later start date schedules it; a value tied to a situation the current one is not ("cuối tuần") suggests two facts; a much less
+ * a later start date schedules it; a value tied to a situation the current one is not ("cuối tuần") suggests two facts; fresh figures from a
+ * connected system backed by a record (SePay reconciliation) apply; a much less
  * trusted source (a customer's message, the model's guess) suggests rejecting; a source at least as trusted, or a current value nobody has
  * confirmed for months, suggests applying; anything else: ask the person who proposed it.
  */
@@ -146,6 +147,12 @@ export const suggestResolution = (p: Fact, current: Fact | null, now = Date.now(
     return { action: "split", reason: {
       vi: `"${p.value}" có vẻ chỉ đúng trong một hoàn cảnh (${newConditions.join(", ").replace(/-/g, " ")}). Có thể cả hai cùng đúng: giữ "${current.value}" và thêm một sự thật riêng cho hoàn cảnh đó.`,
       en: `"${p.value}" looks tied to one situation (${newConditions.join(", ").replace(/-/g, " ")}). Both may be true: keep "${current.value}" and add a separate fact for that situation.`,
+    } }
+  }
+  if (p.sourceKind === "system" && p.evidence.some((e) => e.kind === "data_record")) {
+    return { action: "apply", reason: {
+      vi: `Số liệu mới từ hệ thống (${p.proposedBy}), có bản ghi đối soát làm bằng chứng; "${current.value}" là số cũ. Áp dụng; số cũ vào lịch sử.`,
+      en: `Fresh figures from a connected system (${p.proposedBy}), backed by a reconciled record; "${current.value}" is older. Apply it; the old figure goes to history.`,
     } }
   }
   if (p.trust + 20 <= current.trust && (p.sourceKind === "customer" || p.sourceKind === "ai")) {
