@@ -39,6 +39,8 @@ export const BrainView = ({ facts, lessons, lenses, canWrite, business }: BrainV
   const lessonsActive = lessons.filter((l) => l.status === "active").length
   const lessonsProposed = lessons.filter((l) => l.status === "proposed").length
   const waiting = proposed.length + lessonsProposed
+  // While the brain is empty the empty state owns the one primary "add" (CTA-1 case-5); the header offers it once there is something.
+  const isEmpty = facts.length === 0
 
   const [surface, setSurface] = useState<Surface>(waiting > 0 && canWrite ? "review" : "map")
   const [lensKey, setLensKey] = useState<string | null>(null)
@@ -60,7 +62,7 @@ export const BrainView = ({ facts, lessons, lenses, canWrite, business }: BrainV
             title={t("title")}
             description={t("intro")}
             meta={<TextAction href="/knowledge" size="sm" appearance="inline">{t("knowledgeLink")}</TextAction>}
-            action={canWrite ? <Button variant="primary" onPress={() => setDrawer({})}>{t("addFact")}</Button> : undefined}
+            action={canWrite && !isEmpty ? <Button variant="primary" onPress={() => setDrawer({})}>{t("addFact")}</Button> : undefined}
           />
         </div>
 
@@ -102,7 +104,7 @@ export const BrainView = ({ facts, lessons, lenses, canWrite, business }: BrainV
               ) : null}
               {surface === "map" ? <MapPanel facts={facts} lens={lens} business={business} onAdd={canWrite ? () => setDrawer({}) : undefined} /> : null}
               {surface === "review" ? <ReviewPanel facts={facts} lessons={lessons} lenses={lenses} /> : null}
-              {surface === "facts" ? <FactsPanel facts={facts} lenses={lenses} lens={lens} canWrite={canWrite} /> : null}
+              {surface === "facts" ? <FactsPanel facts={facts} lenses={lenses} lens={lens} canWrite={canWrite} onAdd={canWrite ? () => setDrawer({}) : undefined} /> : null}
               {surface === "lessons" ? <LessonsPanel lessons={lessons} lenses={lenses} canWrite={canWrite} /> : null}
             </div>
           }

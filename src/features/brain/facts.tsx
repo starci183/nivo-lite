@@ -19,10 +19,12 @@ export type FactsPanelProps = {
   /** The agent the owner is looking through, or null for the whole business. */
   readonly lens: Lens | null
   readonly canWrite: boolean
+  /** The page command, offered here only while the brain is empty (the header drops it then: one primary per view). */
+  readonly onAdd?: () => void
 }
 
 /** Every fact in force (and the ones scheduled to take over), grouped by subject, searchable, through the chosen lens. */
-export const FactsPanel = ({ facts, lenses, lens, canWrite }: FactsPanelProps) => {
+export const FactsPanel = ({ facts, lenses, lens, canWrite, onAdd }: FactsPanelProps) => {
   const t = useT(brain)
   const locale = useLocale()
   const router = useRouter()
@@ -53,7 +55,7 @@ export const FactsPanel = ({ facts, lenses, lens, canWrite }: FactsPanelProps) =
         {canWrite ? <Button variant="primary" onPress={() => setDrawer({ editing: null })}>{t("addFact")}</Button> : null}
       </div>
       {note ? <Alert tone={note.tone} title={note.text} /> : null}
-      {groups.length === 0 ? <EmptyNotice message={facts.length ? t("factsEmpty") : t("mapEmptyTitle")} description={facts.length ? undefined : t("mapEmptyBody")} /> : null}
+      {groups.length === 0 ? <EmptyNotice message={facts.length ? t("factsEmpty") : t("mapEmptyTitle")} description={facts.length ? undefined : t("mapEmptyBody")} actionLabel={!facts.length && onAdd ? t("emptyAction") : undefined} onAction={!facts.length ? onAdd : undefined} /> : null}
       {groups.map((g) => (
         <SurfaceListCard key={g[0].subjectKey} label={g[0].subjectLabel} headingLevel={2} labelEnd={<Badge tone="neutral">{typeLabel(t, g[0].subjectType)}</Badge>}>
           {g.map((f) => {
