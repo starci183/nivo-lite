@@ -1,11 +1,12 @@
 "use client"
 
-import { Field, Fieldset, Input, SurfaceCard, Text } from "@starci/grammar/common"
+import { useId } from "react"
+import { Input, Label, Select, SurfaceCard, Switch, Text } from "@starci/grammar/common"
 import { useLocale, useT } from "@/i18n/client"
 import { connectionWizard } from "@/i18n/dict/connectionWizard"
 import { fill, tokenValue, type GuideContext, type GuideItem, type GuideStep, type Token } from "@/lib/connection-providers"
 import { useCopyField } from "../useCopyField"
-import { ITEMS_CLASS } from "./classNames"
+import { SCREENS_CLASS, SCREEN_CLASS, SCREEN_FIELDS_CLASS } from "./classNames"
 
 /** Props for {@link GuideView}. */
 export type GuideViewProps = {
@@ -20,17 +21,22 @@ export type GuideViewProps = {
   readonly isDisabled?: boolean
 }
 
-const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 /** A stable id fragment from a provider label. */
 const slug = (label: string) => label.normalize("NFD").replace(/[^A-Za-z0-9]+/g, "-").toLowerCase()
 
-/** The provider's own screens, one nested Grammar surface each (BOUNDARY-5 case-1), field by field: values to copy, plain "Chọn X" for choices, boxes to paste into. */
+/**
+ * The provider's own screens, one per block: the screen's name as a `Label` outside a nested `SurfaceCard`, and inside it each
+ * field drawn as the control the provider shows - values to copy (in-field copy), the choice to make as a read-only `Select`
+ * already set to the right option, a setting to turn on as a read-only `Switch`, and the boxes to paste provider values into.
+ */
 export const GuideView = ({ brand, steps, ctx, values, onValue, editable, isDisabled }: GuideViewProps) => {
   const t = useT(connectionWizard)
   const locale = useLocale()
   const copy = useCopyField()
+  const base = useId()
 
-  const item = (it: GuideItem, i: number) => {
+  const item = (it: GuideItem, i: number, screen: string) => {
+    const id = `${base}-${screen}-${i}`
     if (it.kind === "copy") {
       const edit = editable?.[it.token]
       const hint = edit ? t("guideCopyEdit", { brand }) : t("guideCopyHint", { brand })
@@ -51,22 +57,34 @@ export const GuideView = ({ brand, steps, ctx, values, onValue, editable, isDisa
         />
       )
     }
-    if (it.kind === "note") return <Text key={i} size="sm" tone="muted">{it.text[locale]}</Text>
-    const answer = it.kind === "choose" ? t("guideChoose", { option: fill(it.option, ctx) }) : cap(t("guideSwitch", { state: it.state[locale] }))
-    return (
-      <Field key={i} id={`guide-${slug(it.label)}-${i}`} label={it.label} isReadOnly>
-        {(control) => <output id={control.id} aria-describedby={control["aria-describedby"]}><Text as="span" size="sm" weight="semibold">{answer}</Text></output>}
-      </Field>
-    )
+    if (it.kind === "choose") {
+      const option = fill(it.option, ctx)
+      return (
+        <Select
+          key={i} name={id} label={it.label} description={t("guideChooseHint", { brand })} variant="secondary" isReadOnly
+          options={[{ id: "provider-option", label: option }]} value="provider-option"
+        />
+      )
+    }
+    if (it.kind === "switch") {
+      return <Switch key={i} label={it.label} description={t("guideSwitchHint", { brand })} isSelected isReadOnly />
+    }
+    return <Text key={i} size="sm" tone="muted">{it.text[locale]}</Text>
   }
 
   return (
-    <div className={ITEMS_CLASS}>
-      {steps.map((s) => (
-        <SurfaceCard key={s.id} depth="nested">
-          <Fieldset legend={t("onScreen", { brand, title: s.title })} isDisabled={isDisabled}>{s.items.map(item)}</Fieldset>
-        </SurfaceCard>
-      ))}
+    <div className={SCREENS_CLASS}>
+      {steps.map((s) => {
+        const headingId = `${base}-${slug(s.id)}`
+        return (
+          <section key={s.id} className={SCREEN_CLASS} aria-labelledby={headingId}>
+            <Label as="h4" id={headingId}>{t("onScreen", { brand, title: s.title })}</Label>
+            <SurfaceCard depth="nested">
+              <div className={SCREEN_FIELDS_CLASS}>{s.items.map((it, i) => item(it, i, slug(s.id)))}</div>
+            </SurfaceCard>
+          </section>
+        )
+      })}
     </div>
   )
 }
