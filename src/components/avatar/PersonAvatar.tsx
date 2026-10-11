@@ -67,7 +67,7 @@ const glyphOf = (module: string): string => (isModuleKey(module) ? moduleDef(mod
 export const AgentAvatar = ({ module = "chatbot", size = "md", online, label }: AgentAvatarProps) => {
   const px = SIZES[size];
   return (
-    <span className="nivo-agent-avatar" style={{ width: px, height: px }} role="img" aria-label={label ?? `AI agent · ${module}`} title={label}>
+    <span className="nivo-agent-avatar" data-module={module} style={{ width: px, height: px }} role="img" aria-label={label ?? `AI agent · ${module}`} title={label}>
       <svg viewBox="0 0 24 24" width={Math.round(px * 0.55)} height={Math.round(px * 0.55)} aria-hidden="true">
         <path d={glyphOf(module)} fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
       </svg>

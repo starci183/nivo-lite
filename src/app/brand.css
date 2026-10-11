@@ -164,6 +164,17 @@
   background: #ffe4e6;
   color: #e11d48;
 }
+/* Each agent wears its module's own colour (Zalo-style group chats: who is speaking reads at a glance). */
+.nivo-agent-avatar[data-module="sales"] { background: #ccfbf1; color: #0f766e; }
+.nivo-agent-avatar[data-module="accounting"] { background: #fef3c7; color: #b45309; }
+.nivo-agent-avatar[data-module="chatbot"] { background: #ede9fe; color: #6d28d9; }
+.nivo-agent-avatar[data-module="booking"] { background: #e0f2fe; color: #0369a1; }
+.nivo-agent-avatar[data-module="inventory"] { background: #ecfccb; color: #4d7c0f; }
+.nivo-agent-avatar[data-module="loyalty"] { background: #fce7f3; color: #be185d; }
+.nivo-agent-avatar[data-module="shifts"] { background: #e0e7ff; color: #4338ca; }
+.nivo-agent-avatar[data-module="hiring"] { background: #ffedd5; color: #c2410c; }
+.nivo-agent-avatar[data-module="content"] { background: #f3e8ff; color: #7e22ce; }
+.nivo-agent-avatar[data-module="video"] { background: #fee2e2; color: #b91c1c; }
 .nivo-avatar-dot {
   position: absolute;
   right: -1px;

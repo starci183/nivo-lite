@@ -354,7 +354,7 @@ export const OfficeMessenger = ({
             <Heading level={1}>{centre === "tasks" ? t("tasksTitle") : t("title")}</Heading>
             {centre === "tasks" ? null : (
               <Text size="sm" tone="muted" overflow="truncate">
-                {memberCount === 1 ? t("memberCountOne") : t("memberCount", { n: memberCount })}
+                {memberCount === 1 ? t("memberCountOne") : agents.length > 0 ? t("memberCountAgents", { n: memberCount, agents: agents.length }) : t("memberCount", { n: memberCount })}
               </Text>
             )}
           </div>

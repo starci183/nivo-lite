@@ -211,15 +211,16 @@ export const TYPING_CLASS_NAME = cn("min-h-6", "px-12", "pt-1")
 export const APPROVAL_CARD_CLASS_NAME = cn(
   "flex",
   "w-full",
-  "max-w-xl",
+  "max-w-lg",
   "flex-col",
-  "gap-3",
+  "gap-2",
   "rounded-2xl",
   "rounded-tl-md",
   "border",
   "border-separator",
   "bg-surface",
-  "p-4",
+  "px-4",
+  "py-3",
   "transition-shadow",
 )
 
@@ -263,6 +264,8 @@ export const COMPOSER_FIELD_CLASS_NAME = cn(
   "[&_textarea]:max-h-40!",
   "[&_textarea]:resize-none!",
   "[&_textarea]:[field-sizing:content]",
+  "[&_textarea]:rounded-3xl!",
+  "[&_textarea]:px-4!",
 )
 
 /** Mention autocomplete list above the composer. */
