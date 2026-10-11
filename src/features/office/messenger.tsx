@@ -331,8 +331,8 @@ export const OfficeMessenger = ({
     <>
       {/* FillViewport owns "fill the height below the chrome"; SURFACE-2 / BOUNDARY-6: the messenger is one top-level card
           on the canvas; its columns are joined faces inside it. */}
-      <FillViewport minHeight="md" bottomInset="page">
-      <SurfaceCard ariaLabel={t("messengerLabel")} composition="joined" height="fill">
+      <FillViewport minHeight="md" bottomInset="none">
+      <SurfaceCard ariaLabel={t("messengerLabel")} composition="joined" height="fill" frame="frameless">
       <div className={MESSENGER_BODY_CLASS_NAME}>
       <div className={phoneView === "list" ? LIST_COLUMN_CLASS_NAME : `${LIST_COLUMN_CLASS_NAME} ${PHONE_HIDDEN_CLASS_NAME}`}>
         <ConversationList

@@ -2,8 +2,11 @@ import { cn } from "@heroui/react"
 
 /* ---------- Messenger frame ---------- */
 
-/** Columns inside the messenger SurfaceCard (the card owns face, radius, clip and elevation: SURFACE-2, BOUNDARY-6). */
-export const MESSENGER_BODY_CLASS_NAME = cn("flex", "h-full", "min-h-0", "min-w-0")
+/**
+ * Columns inside the messenger SurfaceCard. Office is full-bleed (frameless card, no page inset), so the body paints the surface
+ * itself and its column seams run from the header seam to the window's bottom edge.
+ */
+export const MESSENGER_BODY_CLASS_NAME = cn("flex", "h-full", "min-h-0", "min-w-0", "bg-surface")
 
 /** Left column: conversation list. Full width on phones, fixed width beside the thread from md; one inline seam (BOUNDARY-4 case-3). */
 export const LIST_COLUMN_CLASS_NAME = cn("flex", "w-full", "min-w-0", "shrink-0", "flex-col", "border-separator", "md:w-72", "md:border-r", "xl:w-80")
@@ -79,8 +82,11 @@ export const TYPING_CLASS_NAME = cn("min-h-6", "px-12", "pt-1")
 
 /* ---------- Approval and exception cards in the thread ---------- */
 
-/** Width of a decision card in the thread (the nested SurfaceCard inside owns face, outline and inset: BOUNDARY-5). */
-export const APPROVAL_CARD_CLASS_NAME = cn("w-full", "max-w-xl")
+/**
+ * Width of a decision card in the thread (the nested SurfaceCard inside owns face, outline and inset: BOUNDARY-5). It must be a definite
+ * width: ChatBubble's footer shrinks to its content, so a percentage width resolves against 0 and the card breaks one letter per line.
+ */
+export const APPROVAL_CARD_CLASS_NAME = cn("w-[36rem]", "max-w-full")
 
 /** Content stack inside a decision card (GAP-3). */
 export const APPROVAL_BODY_CLASS_NAME = cn("flex", "flex-col", "gap-3")

@@ -1,4 +1,3 @@
-import { PageContainer } from "@starci/grammar/common"
 import { OfficeMessenger } from "@/features/office"
 import { hydrate, listDecidedApprovals, listPendingApprovals, type Embedded } from "@/features/office/queries"
 import { listExceptions, listWorkItems, getGovernance, governanceFrom, listStaff, workViewsFrom } from "@/lib/flow-queries"
@@ -56,28 +55,27 @@ const ChatPage = async () => {
   const leadNames = Object.fromEntries(leads.map((l) => [l.id, l.contact_name]))
   const customers = leads.slice(0, RECENT_CUSTOMERS).map((l) => ({ id: l.id, name: l.contact_name, preview: l.next_action ?? l.need ?? null, at: l.created_at }))
 
+  // Office is a full-bleed workspace: no page inset, the messenger reaches the sidebar seam, the window edge and the bottom.
   return (
-    <PageContainer measure="full">
-      <OfficeMessenger
-        workspaceId={session.workspace.id}
-        workspaceName={session.workspace.name}
-        userName={session.userName}
-        avatarUrl={session.avatarUrl ?? null}
-        initialMessages={thread}
-        agents={agents}
-        pending={pending}
-        decided={decided}
-        exceptions={exceptions}
-        decidedExceptions={decidedExceptions}
-        members={members}
-        staff={staffRows}
-        pendingDecisions={pendingDecisions}
-        tasks={responsibilities}
-        customers={customers}
-        leadNames={leadNames}
-        nowIso={nowIso}
-      />
-    </PageContainer>
+    <OfficeMessenger
+      workspaceId={session.workspace.id}
+      workspaceName={session.workspace.name}
+      userName={session.userName}
+      avatarUrl={session.avatarUrl ?? null}
+      initialMessages={thread}
+      agents={agents}
+      pending={pending}
+      decided={decided}
+      exceptions={exceptions}
+      decidedExceptions={decidedExceptions}
+      members={members}
+      staff={staffRows}
+      pendingDecisions={pendingDecisions}
+      tasks={responsibilities}
+      customers={customers}
+      leadNames={leadNames}
+      nowIso={nowIso}
+    />
   )
 }
 
