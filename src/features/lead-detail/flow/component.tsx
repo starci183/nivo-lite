@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge, EmptyNotice, Heading, List, ListItem, SurfaceCard, Text } from "@starci/grammar/common";
+import { Badge, EmptyNotice, Heading, List, ListItem, ListRow, SurfaceCard, Text } from "@starci/grammar/common";
 import { useLocale, useT } from "@/i18n/client";
 import { governance } from "@/i18n/dict/governance";
 import { lead as leadDict } from "@/i18n/dict/lead";
@@ -8,7 +8,11 @@ import type { LeadFlow } from "@/lib/flow-types";
 import { ITEM, ITEM_HEAD, ITEM_META, LIST, SECTION, STACK } from "./classNames";
 import { formatDay, formatVnd, formatWhen } from "./format";
 
-type FlowViewProps = { readonly flow: LeadFlow | null };
+type FlowViewProps = {
+  readonly flow: LeadFlow | null;
+  /** STATE-8: the card keeps its label and the steps heading, the steps are three skeleton rows. */
+  readonly isLoading?: boolean;
+};
 
 /** "Work flow" panel: this lead's AI work items in order, plus orders, invoices, payments and decisions. */
 export const FlowView = (props: FlowViewProps) => {
@@ -16,6 +20,20 @@ export const FlowView = (props: FlowViewProps) => {
   const g = useT(governance);
   const locale = useLocale();
   const { flow } = props;
+  if (props.isLoading === true) {
+    return (
+      <SurfaceCard label={t("flowTitle")} headingLevel={2}>
+        <div className={STACK} data-testid="lead-flow">
+          <div className={SECTION}>
+            <Heading level={3}>{t("flowSteps")}</Heading>
+            <List as="ol" className={LIST} label={t("flowSteps")}>
+              {[0, 1, 2].map((n) => <ListRow key={n} isSkeleton title={t("flowSteps")} description={t("flowSteps")} />)}
+            </List>
+          </div>
+        </div>
+      </SurfaceCard>
+    );
+  }
   if (flow === null) {
     return (
       <SurfaceCard label={t("flowTitle")} headingLevel={2}>

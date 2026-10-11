@@ -50,3 +50,6 @@ export const STAFF_ACTIONS_CLASS = cn("flex", "items-center", "gap-3")
 
 /** Add-staff form grid. */
 export const STAFF_FORM_CLASS = cn("grid", "grid-cols-1", "gap-4", "md:grid-cols-3")
+
+/** Breadcrumb trail above the page heading: one heading block (GAP-2). */
+export const HEAD_CLASS = cn("flex", "min-w-0", "flex-col", "gap-2")

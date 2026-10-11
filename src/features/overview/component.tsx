@@ -5,7 +5,7 @@ import { OnboardingChecklist } from "@/components/promo/OnboardingChecklist";
 import type { PromoState } from "@/features/promo/queries";
 
 import Link from "next/link";
-import { Badge, Button, EmptyNotice, PrimaryRailLayout, SectionHeader, SurfaceCard, SurfaceListCard, Text, TextAction } from "@starci/grammar/common";
+import { Badge, Button, EmptyNotice, PrimaryRailLayout, SectionHeader, Skeleton, SurfaceCard, SurfaceListCard, Text, TextAction } from "@starci/grammar/common";
 import { TileIcon, type IconName } from "@/ui";
 import { AgentAvatar } from "@/components/avatar/PersonAvatar";
 import { useT } from "@/i18n/client";
@@ -48,7 +48,10 @@ export type OverviewBaseProps = {
   agents: ReadonlyArray<Pick<Agent, "id" | "name" | "handle" | "status" | "module">>;
   activity: ReadonlyArray<ActivityModel>;
   hasAgents: boolean;
-  promo: PromoState;
+  /** The promo / onboarding state; null while it loads. */
+  promo: PromoState | null;
+  /** STATE-8: the same page while its data loads - headings, labels and links stay, figures, groups and rail rows are skeletons. */
+  isLoading?: boolean;
 };
 
 const KIND_ICONS: Record<string, IconName> = {
@@ -63,14 +66,14 @@ const KIND_ICONS: Record<string, IconName> = {
   "agent.updated": "agentos",
 };
 
-type KpiProps = { label: string; value: number; href: string; isAlert?: boolean };
+type KpiProps = { label: string; value: number; href: string; isAlert?: boolean; isLoading?: boolean };
 
 /** One KPI: a top-level card on the page canvas (BOUNDARY-6) whose whole face opens the filtered list (STATE-5, SURFACE-4 case-3). */
 const Kpi = (props: KpiProps) => (
-  <SurfaceCard wholeAction={{ kind: "link", href: props.href, label: `${props.label}: ${props.value}` }}>
+  <SurfaceCard wholeAction={{ kind: "link", href: props.href, label: props.isLoading === true ? props.label : `${props.label}: ${props.value}` }}>
     <div className={KPI_COPY_CLASS_NAME}>
       <Text size="xs" tone="muted">{props.label}</Text>
-      <Text size="metric-lead" weight="semibold" tone={props.isAlert === true && props.value > 0 ? "accent" : "default"}>
+      <Text size="metric-lead" weight="semibold" isSkeleton={props.isLoading === true} tone={props.isAlert === true && props.value > 0 ? "accent" : "default"}>
         {String(props.value)}
       </Text>
     </div>
@@ -95,6 +98,7 @@ const trimGroups = (groups: ReadonlyArray<OwnerGroupModel>): ReadonlyArray<Owner
 /** P01 Overview: what needs you first, one next action, real counts, open work, agents and recent activity. */
 export const OverviewBase = (props: OverviewBaseProps) => {
   const t = useT(overview);
+  const isLoading = props.isLoading === true;
   const hasChatbot = props.agents.some((agent) => agent.module === "chatbot");
   const needsYou = (props.governance?.pendingDecisions ?? 0) > 0;
   return (
@@ -103,8 +107,8 @@ export const OverviewBase = (props: OverviewBaseProps) => {
         <SectionHeader
           level={1}
           eyebrow={t("eyebrow")}
-          title={props.title}
-          description={t("description", { time: props.updatedLabel })}
+          title={isLoading ? <Skeleton shape="text" /> : props.title}
+          description={isLoading ? undefined : t("description", { time: props.updatedLabel })}
           action={
             <div className={HEADER_ACTIONS_CLASS_NAME}>
               <Button variant="outline" href="/chat">{t("openOffice")}</Button>
@@ -113,15 +117,15 @@ export const OverviewBase = (props: OverviewBaseProps) => {
           }
         />
 
-        <GovernanceBlocks governance={props.governance} waiting={props.waiting} />
+        <GovernanceBlocks governance={props.governance} waiting={props.waiting} isLoading={isLoading} />
 
         <SectionHeader level={2} title={t("ownerBelow")} />
         <section className={KPI_GRID_CLASS_NAME} aria-label={t("kpiAria")}>
-          <Kpi label={t("kpiOpen")} value={props.counts.open} href="/responsibilities?status=open" />
-          <Kpi label={t("kpiWaiting")} value={props.counts.waitingApproval} href="/responsibilities?status=waiting_approval" isAlert />
-          <Kpi label={t("kpiToday")} value={props.counts.dueToday} href="/responsibilities?due=today" />
-          <Kpi label={t("kpiOverdue")} value={props.counts.overdue} href="/responsibilities?due=overdue" isAlert />
-          <Kpi label={t("kpiLeads")} value={props.counts.leadsThisWeek} href="/leads" />
+          <Kpi label={t("kpiOpen")} value={props.counts.open} href="/responsibilities?status=open" isLoading={isLoading} />
+          <Kpi label={t("kpiWaiting")} value={props.counts.waitingApproval} href="/responsibilities?status=waiting_approval" isAlert isLoading={isLoading} />
+          <Kpi label={t("kpiToday")} value={props.counts.dueToday} href="/responsibilities?due=today" isLoading={isLoading} />
+          <Kpi label={t("kpiOverdue")} value={props.counts.overdue} href="/responsibilities?due=overdue" isAlert isLoading={isLoading} />
+          <Kpi label={t("kpiLeads")} value={props.counts.leadsThisWeek} href="/leads" isLoading={isLoading} />
         </section>
 
         <PrimaryRailLayout
@@ -133,14 +137,15 @@ export const OverviewBase = (props: OverviewBaseProps) => {
                 level={2}
                 title={t("byOwner")}
                 action={
-                  props.groupTotal > ROW_LIMIT ? (
+                  !isLoading && props.groupTotal > ROW_LIMIT ? (
                     <TextAction href="/responsibilities" appearance="section">{t("viewAllCount", { n: props.groupTotal })}</TextAction>
                   ) : (
-                    <Text size="xs" tone="muted">{props.verifiedLabel}</Text>
+                    <Text size="xs" tone="muted" isSkeleton={isLoading}>{props.verifiedLabel}</Text>
                   )
                 }
               />
               <OwnerGroups
+                isLoading={isLoading}
                 groups={trimGroups(props.groups)}
                 emptyMessage={t("emptyMessage")}
                 emptyDescription={props.hasAgents ? t("emptyWithAgents") : t("emptyNoAgents")}
@@ -151,18 +156,19 @@ export const OverviewBase = (props: OverviewBaseProps) => {
           }
           rail={
             <div className={RAIL_CLASS_NAME}>
-              <OnboardingChecklist steps={props.promo.onboarding} />
+              <OnboardingChecklist steps={props.promo?.onboarding ?? []} />
 
               <SurfaceListCard
                 label={t("agents")}
+                isLoading={isLoading}
                 footer={
-                  hasChatbot ? undefined : (
+                  isLoading || hasChatbot ? undefined : (
                     <Button variant="secondary" size="sm" href="/modules/new?module=chatbot">{t("buyChatbot")}</Button>
                   )
                 }
                 empty={<EmptyNotice message={t("agentsEmpty")} description={t("agentsEmptyDesc")} />}
               >
-                {props.agents.length === 0
+                {isLoading || props.agents.length === 0
                   ? undefined
                   : props.agents.map((agent) => (
                       <li key={agent.id} className={AGENT_ROW_CLASS_NAME}>
@@ -180,10 +186,11 @@ export const OverviewBase = (props: OverviewBaseProps) => {
 
               <SurfaceListCard
                 label={t("activity")}
+                isLoading={isLoading}
                 footer={<TextAction href="/responsibilities" appearance="section">{t("viewAll")}</TextAction>}
                 empty={<EmptyNotice message={t("activityEmpty")} description={t("activityEmptyDesc")} />}
               >
-                {props.activity.length === 0
+                {isLoading || props.activity.length === 0
                   ? undefined
                   : props.activity.map((item) => {
                       const body = (

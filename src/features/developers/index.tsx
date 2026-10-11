@@ -1,13 +1,11 @@
 import { PageContainer, SectionHeader, TextAction } from "@starci/grammar/common"
-import { ConnectionsBoard } from "@/features/connections/ConnectionsBoard"
 import { developers as dict } from "@/i18n/dict/developers"
 import { getT } from "@/i18n/server"
 import { listApiKeys } from "@/lib/api-keys-actions"
 import { listConnections, publicSiteUrl } from "@/lib/channels"
 import { getCurrentMember, isManagerRole } from "@/lib/members"
-import { ApiKeysSection } from "./ApiKeysSection"
-import { PAGE_CLASS, STACK_CLASS } from "./classNames"
-import { QuickStart } from "./QuickStart"
+import { PAGE_CLASS } from "./classNames"
+import { DevelopersView } from "./view"
 
 /** The "Nâng cao" page body (owner | manager): outgoing webhooks, API keys, the quick guide. Staff see a friendly 403. */
 export const DevelopersPage = async () => {
@@ -24,20 +22,5 @@ export const DevelopersPage = async () => {
     )
   }
   const [hooks, keys] = await Promise.all([listConnections(me.workspaceId, "webhook"), listApiKeys()])
-  return (
-    <PageContainer measure="product">
-      <div className={PAGE_CLASS}>
-        <SectionHeader level={1} eyebrow={t("eyebrow")} title={t("title")} description={t("description")} />
-        <div><TextAction href="/automations" size="sm">{t("backToAutomations")}</TextAction></div>
-
-        <div className={STACK_CLASS}>
-          <SectionHeader level={2} title={t("eventsTitle")} description={t("eventsBody")} />
-          <ConnectionsBoard items={hooks} agentNames={{}} agents={[]} localOnly={false} ownerEmail="" groups={[{ id: "tools", providers: ["webhook"] }]} isEmbedded canManage={me.role === "owner"} />
-        </div>
-
-        <ApiKeysSection items={keys.ok ? keys.data : []} loadError={keys.ok ? null : keys.error} />
-        <QuickStart base={`${publicSiteUrl() ?? "https://nivo.vn"}/api/v1`} />
-      </div>
-    </PageContainer>
-  )
+  return <DevelopersView hooks={hooks} keys={keys.ok ? keys.data : []} keysError={keys.ok ? null : keys.error} canManage={me.role === "owner"} base={`${publicSiteUrl() ?? "https://nivo.vn"}/api/v1`} />
 }

@@ -3,6 +3,7 @@ import { defineDict } from "../core";
 /** Copy for the executive overview (P01). Board, row and due wording live in the responsibilities dict. */
 export const overview = defineDict({
   en: {
+    loadFailed: "The overview could not be loaded. Try again.",
     morning: "Good morning, {name}",
     afternoon: "Good afternoon, {name}",
     evening: "Good evening, {name}",
@@ -115,6 +116,7 @@ export const overview = defineDict({
     ownerBelow: "Open responsibilities",
   },
   vi: {
+    loadFailed: "Chưa tải được tổng quan. Hãy thử lại.",
     morning: "Chào buổi sáng, {name}",
     afternoon: "Chào buổi chiều, {name}",
     evening: "Chào buổi tối, {name}",

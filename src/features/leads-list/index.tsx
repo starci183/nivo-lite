@@ -1,14 +1,14 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Button, EmptyNotice, PageContainer, SearchField, SectionHeader, SurfaceListCard, Tabs, TextAction } from "@starci/grammar/common"
+import { Breadcrumbs, Button, EmptyNotice, PageContainer, SearchField, SectionHeader, SurfaceListCard, Tabs, TextAction } from "@starci/grammar/common"
 import { useT } from "@/i18n/client"
 import { leads as leadsDict } from "@/i18n/dict/leads"
 import type { LeadRow } from "@/lib/queries"
 import type { LeadStage } from "@/lib/types"
 import { LeadsPromoRow } from "@/features/promo-ads/LeadsPromoRow"
 import { LeadListRow } from "./component"
-import { FILTERS_CLASS, PAGE_CLASS, SEARCH_CLASS } from "./classNames"
+import { FILTERS_CLASS, HEAD_CLASS, PAGE_CLASS, SEARCH_CLASS } from "./classNames"
 import { NewLeadForm } from "./NewLeadForm"
 import { STAGE_ORDER, STAGE_VIEW } from "./stage"
 
@@ -18,6 +18,8 @@ export type LeadsListProps = {
   readonly nowIso: string
   readonly initialQuery?: string
   readonly initialFormOpen?: boolean
+  /** STATE-8: the same page while its data loads - heading, filters and tabs stay, counts and the list are skeletons. */
+  readonly isLoading?: boolean
 }
 
 const ALL = "all"
@@ -25,7 +27,7 @@ const ALL = "all"
 const isStage = (key: string): key is LeadStage => (STAGE_ORDER as ReadonlyArray<string>).includes(key)
 
 /** Leads page body: header, filters, stage tabs, optional new-lead form and lead cards. */
-export const LeadsList = ({ leads, nowIso, initialQuery = "", initialFormOpen = false }: LeadsListProps) => {
+export const LeadsList = ({ leads, nowIso, initialQuery = "", initialFormOpen = false, isLoading = false }: LeadsListProps) => {
   const t = useT(leadsDict)
   const [query, setQuery] = useState(initialQuery)
   const [isFormOpen, setIsFormOpen] = useState(initialFormOpen)
@@ -60,13 +62,16 @@ export const LeadsList = ({ leads, nowIso, initialQuery = "", initialFormOpen = 
   return (
     <PageContainer measure="product">
       <div className={PAGE_CLASS}>
-        <SectionHeader
-          level={1}
-          eyebrow={t("eyebrow")}
-          title={t("title")}
-          description={t("descriptionShort")}
-          action={isFormOpen ? undefined : <Button variant="primary" onPress={() => setIsFormOpen(true)}>{t("newLead")}</Button>}
-        />
+        <div className={HEAD_CLASS}>
+          <Breadcrumbs label={t("crumbLabel")} items={[{ id: "home", label: t("crumbHome"), href: "/dashboard" }, { id: "leads", label: t("title") }]} />
+          <SectionHeader
+            level={1}
+            eyebrow={t("eyebrow")}
+            title={t("title")}
+            description={t("descriptionShort")}
+            action={isFormOpen ? undefined : <Button variant="primary" onPress={() => setIsFormOpen(true)}>{t("newLead")}</Button>}
+          />
+        </div>
         {isFormOpen ? <NewLeadForm onCancel={() => setIsFormOpen(false)} /> : null}
         <div className={FILTERS_CLASS}>
           <div className={SEARCH_CLASS}>
@@ -79,11 +84,15 @@ export const LeadsList = ({ leads, nowIso, initialQuery = "", initialFormOpen = 
           selectedKey={stage}
           inset="none"
           labelVisibility="always"
-          items={[{ id: ALL, label: t("tabAll", { n: counts[ALL] ?? 0 }) }, ...STAGE_ORDER.map((s) => ({ id: s, label: t("tabStage", { stage: t(STAGE_VIEW[s].key), n: counts[s] ?? 0 }) }))]}
+          items={[
+            { id: ALL, label: isLoading ? t("tabAllBare") : t("tabAll", { n: counts[ALL] ?? 0 }) },
+            ...STAGE_ORDER.map((s) => ({ id: s, label: isLoading ? t(STAGE_VIEW[s].key) : t("tabStage", { stage: t(STAGE_VIEW[s].key), n: counts[s] ?? 0 }) })),
+          ]}
           onSelect={(key) => setStage(key === ALL || isStage(key) ? key : ALL)}
         />
         <SurfaceListCard
-          ariaLabel={visible.length === 0 ? t("emptyAria") : t("listAria")}
+          ariaLabel={visible.length === 0 && !isLoading ? t("emptyAria") : t("listAria")}
+          isLoading={isLoading}
           empty={
             leads.length === 0 ? (
               <EmptyNotice message={t("emptyTitle")} description={t("emptyBody")} actionLabel={t("newLead")} actionVariant="secondary" onAction={() => setIsFormOpen(true)} />
@@ -92,9 +101,9 @@ export const LeadsList = ({ leads, nowIso, initialQuery = "", initialFormOpen = 
             )
           }
         >
-          {visible.map((lead) => <LeadListRow key={lead.id} lead={lead} nowIso={nowIso} />)}
+          {(isLoading ? [] : visible).map((lead) => <LeadListRow key={lead.id} lead={lead} nowIso={nowIso} />)}
         </SurfaceListCard>
-        {visible.length > 0 ? <LeadsPromoRow /> : null}
+        {!isLoading && visible.length > 0 ? <LeadsPromoRow /> : null}
       </div>
     </PageContainer>
   )

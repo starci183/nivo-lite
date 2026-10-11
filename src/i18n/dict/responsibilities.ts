@@ -3,6 +3,9 @@ import { defineDict } from "../core";
 /** Copy for the responsibility board, rows, owner groups and the due/relative-time phrases. */
 export const responsibilities = defineDict({
   en: {
+    crumbLabel: "Breadcrumb",
+    crumbHome: "Overview",
+    loadFailed: "The responsibilities could not be loaded. Try again.",
     statusOpen: "Open",
     statusWaiting: "Waiting approval",
     statusDone: "Done",
@@ -78,6 +81,9 @@ export const responsibilities = defineDict({
     drafting: "Drafting",
   },
   vi: {
+    crumbLabel: "Đường dẫn",
+    crumbHome: "Tổng quan",
+    loadFailed: "Chưa tải được danh sách trách nhiệm. Hãy thử lại.",
     statusOpen: "Đang mở",
     statusWaiting: "Chờ duyệt",
     statusDone: "Hoàn tất",

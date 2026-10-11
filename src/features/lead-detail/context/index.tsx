@@ -15,7 +15,12 @@ import {
   QUOTE_CLASS_NAME, STACK_CLASS_NAME,
 } from "./classNames";
 
-type ContextPanelProps = { readonly detail: LeadDetail };
+type ContextPanelProps = {
+  /** The lead's detail; null while it loads. */
+  readonly detail: LeadDetail | null;
+  /** STATE-8: the card keeps its labels, the facts and the customer's words are skeletons. */
+  readonly isLoading?: boolean;
+};
 
 const toBullets = (summary: string): ReadonlyArray<string> =>
   summary
@@ -49,7 +54,30 @@ const toSignals = (bullets: ReadonlyArray<string>, labels: { readonly Urgency: s
   });
 
 /** P02: customer context with the AI-prepared brief, signals and refresh / copy actions. */
-export const ContextPanel = ({ detail }: ContextPanelProps) => {
+export const ContextPanel = ({ detail, isLoading = false }: ContextPanelProps) =>
+  isLoading || detail === null ? <ContextLoading /> : <ContextLoaded detail={detail} />;
+
+const ContextLoading = () => {
+  const t = useT(leadDict);
+  return (
+    <SurfaceCard label={t("contextTitle")} headingLevel={2}>
+      <div className={STACK_CLASS_NAME}>
+        <div className={FACTS_GRID_CLASS_NAME}>
+          <DescriptionList layout="stacked" isDivided isLoading items={[{ id: "contact", term: t("factContact"), description: "" }, { id: "company", term: t("factCompany"), description: "" }]} />
+          <DescriptionList layout="stacked" isDivided isLoading items={[{ id: "channel", term: t("factChannel"), description: "" }, { id: "captured", term: t("factCaptured"), description: "" }]} />
+        </div>
+        <div className={GROUP_CLASS_NAME}>
+          <Heading level={3}>{t("customerWords")}</Heading>
+          <SurfaceCard depth="nested">
+            <Text isSkeleton>{t("customerWords")}</Text>
+          </SurfaceCard>
+        </div>
+      </div>
+    </SurfaceCard>
+  );
+};
+
+const ContextLoaded = ({ detail }: { readonly detail: LeadDetail }) => {
   const { lead, events } = detail;
   const t = useT(leadDict);
   const locale = useLocale();

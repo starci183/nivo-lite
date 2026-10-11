@@ -10,7 +10,7 @@ import type { AutomationCardView, ConfigValue, ModuleScope } from "@/lib/automat
 import { startGoogleConnect } from "@/lib/google-actions"
 import { setAutomationGoogleAccount } from "@/lib/automation-actions"
 import { GoogleAccountPicker } from "./GoogleAccountPicker"
-import { AutomationCard } from "./AutomationCard"
+import { AutomationCard, AutomationCardSkeleton } from "./AutomationCard"
 import { AutomationDetail } from "./AutomationDetail"
 import { AutomationsFilters } from "./AutomationsFilters"
 import { GRID_CLASS, GRID_WIDE_CLASS, LIST_CLASS, SOLO_CLASS } from "./classNames"
@@ -25,10 +25,12 @@ export type AutomationsBoardProps = {
   readonly layout: "page" | "module"
   readonly moduleKey?: ModuleScope
   readonly focus?: string
+  /** STATE-8: the cards are still loading - the filters stay, the collection is three skeleton cards. */
+  readonly isLoading?: boolean
 }
 
 /** The cards, their switches and the detail panel. Shared by /automations and the module Settings section. */
-export const AutomationsBoard = ({ initial, layout, moduleKey, focus }: AutomationsBoardProps) => {
+export const AutomationsBoard = ({ initial, layout, moduleKey, focus, isLoading = false }: AutomationsBoardProps) => {
   const t = useT(dict)
   const router = useRouter()
   const { cards, runs, shop, busyKey, error, setError, apply } = useAutomations(initial)
@@ -95,7 +97,11 @@ export const AutomationsBoard = ({ initial, layout, moduleKey, focus }: Automati
     />
   ) : null
 
-  const list = shown.length === 0 ? (
+  const list = isLoading ? (
+    <div className={layout === "module" ? LIST_CLASS : GRID_WIDE_CLASS} aria-busy="true">
+      {[0, 1, 2].map((n) => <AutomationCardSkeleton key={n} isNested={layout === "module"} />)}
+    </div>
+  ) : shown.length === 0 ? (
     <EmptyNotice message={filter === "all" ? (layout === "module" ? t("moduleEmpty") : t("emptyAll")) : t("emptyFiltered")} />
   ) : (
     <div className={layout === "module" ? LIST_CLASS : current ? GRID_CLASS : GRID_WIDE_CLASS}>

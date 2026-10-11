@@ -39,3 +39,6 @@ export const ACTIONS_CLASS = cn("flex", "flex-wrap", "items-center", "justify-en
 
 /** Stage badge + company line under the next step (GAP-2). */
 export const ROW_META_CLASS = cn("flex", "min-w-0", "items-center", "gap-2")
+
+/** Breadcrumb trail above the page heading: one heading block (GAP-2). */
+export const HEAD_CLASS = cn("flex", "min-w-0", "flex-col", "gap-2")

@@ -1,6 +1,6 @@
 "use client";
 
-import { EmptyNotice, Heading, Icon, List, ListItem, Meter, Region, SectionHeader, Stepper, SurfaceCard, Text } from "@starci/grammar/common";
+import { EmptyNotice, Heading, Icon, List, ListItem, ListRow, Meter, Region, SectionHeader, Skeleton, Stepper, SurfaceCard, Text } from "@starci/grammar/common";
 import { nivoIconSource } from "@/ui";
 import { useLocale, useT } from "@/i18n/client";
 import { common } from "@/i18n/dict/common";
@@ -11,12 +11,31 @@ import { stageLabel, toEventViews } from "./format";
 import { HistoryList } from "./HistoryList";
 import { OutcomeForm } from "./OutcomeForm";
 
-type PanelProps = { detail: LeadDetail };
+type PanelProps = {
+  /** The lead's detail; null while it loads. */
+  detail: LeadDetail | null;
+  /** STATE-8: the card keeps its label and the section keeps its heading, the data is skeleton. */
+  isLoading?: boolean;
+};
 
 const EVIDENCE_KINDS = new Set(["outcome.recorded", "execution.approved"]);
 
 /** Outcome card: stage progression, record-outcome form and evidence already recorded. */
-export const OutcomePanel = (props: PanelProps) => {
+export const OutcomePanel = (props: PanelProps) =>
+  props.isLoading === true || props.detail === null ? <OutcomeLoading /> : <OutcomeLoaded detail={props.detail} />;
+
+const OutcomeLoading = () => {
+  const t = useT(leadDict);
+  return (
+    <SurfaceCard label={t("outcome")} headingLevel={2}>
+      <div className={STACK}>
+        <Skeleton shape="text" lines={4} />
+      </div>
+    </SurfaceCard>
+  );
+};
+
+const OutcomeLoaded = (props: { detail: LeadDetail }) => {
   const { lead, events } = props.detail;
   const t = useT(leadDict);
   const tc = useT(common);
@@ -80,6 +99,17 @@ export const OutcomePanel = (props: PanelProps) => {
 export const HistoryPanel = (props: PanelProps) => {
   const t = useT(leadDict);
   const locale = useLocale();
+  if (props.isLoading === true || props.detail === null) {
+    return (
+      <Region id="history" labelledBy="history-title" className={HISTORY_ANCHOR}>
+        <SectionHeader id="history-title" level={2} title={t("history")} />
+        <List label={t("history")}>
+          {[0, 1, 2].map((n) => <ListRow key={n} isSkeleton title={t("history")} description={t("history")} />)}
+        </List>
+        <Text as="p" size="xs" tone="muted">{t("auditFooter")}</Text>
+      </Region>
+    );
+  }
   const events = toEventViews(props.detail.events, Date.now(), t, locale);
 
   return (

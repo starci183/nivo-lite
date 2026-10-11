@@ -1,7 +1,7 @@
 "use client";
 
 import { AgentAvatar, PersonAvatar } from "@/components/avatar/PersonAvatar";
-import { Badge, DescriptionList, Region, SectionHeader, SurfaceCard, Text, Timeline, type BadgeTone } from "@starci/grammar/common";
+import { Badge, DescriptionList, Region, SectionHeader, Skeleton, SurfaceCard, Text, Timeline, type BadgeTone } from "@starci/grammar/common";
 import type { ReactNode } from "react";
 import { useT } from "@/i18n/client";
 import { lead as leadDict } from "@/i18n/dict/lead";
@@ -23,17 +23,48 @@ export type PreviousItem = { readonly id: string; readonly title: string; readon
 
 /** Props of the presentational responsibility panel. */
 export type ResponsibilityBaseProps = {
-  readonly current: Responsibility | null;
-  readonly ownerHandle: string | null;
-  readonly due: DueFacts | null;
-  readonly previous: ReadonlyArray<PreviousItem>;
+  readonly current?: Responsibility | null;
+  readonly ownerHandle?: string | null;
+  readonly due?: DueFacts | null;
+  readonly previous?: ReadonlyArray<PreviousItem>;
   /** Client-owned actions for the current responsibility, or the empty-state action when there is none. */
-  readonly actions: ReactNode;
+  readonly actions?: ReactNode;
+  /** STATE-8: the card keeps its labels, the next step, the owner and the due date are skeletons. */
+  readonly isLoading?: boolean;
 };
 
 /** Pure view: current responsibility card (next action, owner, due, status) plus the earlier responsibilities timeline. */
-export const ResponsibilityBase = ({ current, ownerHandle, due, previous, actions }: ResponsibilityBaseProps) => {
+export const ResponsibilityBase = ({ current = null, ownerHandle = null, due = null, previous = [], actions = null, isLoading = false }: ResponsibilityBaseProps) => {
   const t = useT(leadDict);
+  if (isLoading) {
+    return (
+      <div className={PANEL_CLASS_NAME}>
+        <SurfaceCard label={t("nextStepOwner")} headingLevel={2}>
+          <div className={BODY_CLASS_NAME}>
+            <div className={TITLE_ROW_CLASS_NAME}>
+              <Text size="sm" tone="muted" isSkeleton>{t("nextStep")}</Text>
+            </div>
+            <div className={FOCAL_CLASS_NAME}>
+              <Text size="xs" tone="muted" weight="semibold">{t("nextStep")}</Text>
+              <Text size="md" weight="semibold" isSkeleton>{t("nextStep")}</Text>
+            </div>
+            <SurfaceCard depth="nested" ariaLabel={t("accountable")}>
+              <div className={OWNER_ROW_CLASS_NAME}>
+                <div className={OWNER_CLASS_NAME}>
+                  <Skeleton shape="circle" size="md" />
+                  <div className={OWNER_COPY_CLASS_NAME}>
+                    <Text weight="semibold" isSkeleton>{t("accountable")}</Text>
+                    <Text size="xs" tone="muted">{t("accountable")}</Text>
+                  </div>
+                </div>
+                <DescriptionList layout="stacked" isLoading items={[{ id: "due", term: t("due"), description: "" }]} />
+              </div>
+            </SurfaceCard>
+          </div>
+        </SurfaceCard>
+      </div>
+    );
+  }
   return (
     <div className={PANEL_CLASS_NAME}>
       <SurfaceCard label={t("nextStepOwner")} headingLevel={2}>

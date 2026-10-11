@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Alert, Badge, Button, DescriptionList, Form, Input, ListItem, PageContainer, Region, SectionHeader, SurfaceCard, SurfaceListCard, Text } from "@starci/grammar/common";
+import { Alert, Badge, Breadcrumbs, Button, DescriptionList, Form, Input, ListItem, PageContainer, Region, SectionHeader, SurfaceCard, SurfaceListCard, Text } from "@starci/grammar/common";
 import { useT } from "@/i18n/client";
 import { account } from "@/i18n/dict/account";
 import type { Outcome } from "@/lib/types";
@@ -10,6 +10,7 @@ import { changeEmail, changePassword, revokeSession, signOutCurrent, signOutOthe
 import {
   ACTIONS_CLASS_NAME,
   FORM_CLASS_NAME,
+  HEAD_CLASS_NAME,
   PAGE_CLASS_NAME,
   SECTION_CLASS_NAME,
   SESSION_INFO_CLASS_NAME,
@@ -34,6 +35,8 @@ export type AccountViewProps = {
   readonly providers: ReadonlyArray<string>;
   readonly sessions: ReadonlyArray<SessionView>;
   readonly sessionsFailed: boolean;
+  /** STATE-8: the same page while its data loads - labels stay, values and the device rows are skeletons. */
+  readonly isLoading?: boolean;
 };
 
 /** Run a server action, tracking pending state and surfacing success or failure text. */
@@ -62,7 +65,7 @@ const Feedback = ({ error, done }: { readonly error: string | null; readonly don
   return null;
 };
 
-const ProfileCard = ({ name }: { readonly name: string }) => {
+const ProfileCard = ({ name, isLoading }: { readonly name: string; readonly isLoading: boolean }) => {
   const t = useT(account);
   const router = useRouter();
   const [value, setValue] = useState(name);
@@ -77,10 +80,10 @@ const ProfileCard = ({ name }: { readonly name: string }) => {
     <SurfaceCard label={t("profileTitle")} headingLevel={2}>
       <Form label={t("profileTitle")} onSubmit={submit} isPending={a.isPending}>
         <div className={FORM_CLASS_NAME}>
-          <Input id="account-name" name="name" label={t("displayName")} hint={t("displayNameHint")} variant="secondary" isRequired isDisabled={a.isPending} value={value} onValueChange={setValue} />
+          <Input id="account-name" name="name" label={t("displayName")} hint={t("displayNameHint")} variant="secondary" isRequired isDisabled={a.isPending} isSkeleton={isLoading} value={value} onValueChange={setValue} />
           <Feedback error={localError ?? a.error} done={localError ? null : a.done} />
           <div className={ACTIONS_CLASS_NAME}>
-            <Button type="submit" variant="primary" isPending={a.isPending}>{t("saveProfile")}</Button>
+            <Button type="submit" variant="primary" isPending={a.isPending} isSkeleton={isLoading}>{t("saveProfile")}</Button>
           </div>
         </div>
       </Form>
@@ -88,7 +91,7 @@ const ProfileCard = ({ name }: { readonly name: string }) => {
   );
 };
 
-const EmailCard = ({ email }: { readonly email: string }) => {
+const EmailCard = ({ email, isLoading }: { readonly email: string; readonly isLoading: boolean }) => {
   const t = useT(account);
   const [isEditing, setEditing] = useState(false);
   const [value, setValue] = useState("");
@@ -96,7 +99,7 @@ const EmailCard = ({ email }: { readonly email: string }) => {
   return (
     <SurfaceCard label={t("emailTitle")} headingLevel={2}>
       <div className={FORM_CLASS_NAME}>
-        <DescriptionList layout="stacked" items={[{ id: "email", term: t("emailCurrent"), description: <Text weight="medium">{email}</Text> }]} />
+        <DescriptionList layout="stacked" isLoading={isLoading} items={[{ id: "email", term: t("emailCurrent"), description: <Text weight="medium">{email}</Text> }]} />
         <Text size="sm" tone="muted">{t("emailHint")}</Text>
         {isEditing ? (
           <Form label={t("changeEmail")} onSubmit={() => a.run(() => changeEmail(value), t("emailSent"), () => { setEditing(false); setValue(""); })} isPending={a.isPending}>
@@ -110,7 +113,7 @@ const EmailCard = ({ email }: { readonly email: string }) => {
           </Form>
         ) : (
           <div className={ACTIONS_CLASS_NAME}>
-            <Button variant="secondary" onPress={() => setEditing(true)}>{t("changeEmail")}</Button>
+            <Button variant="secondary" isSkeleton={isLoading} onPress={() => setEditing(true)}>{t("changeEmail")}</Button>
           </div>
         )}
         <Feedback error={a.error} done={a.done} />
@@ -119,7 +122,7 @@ const EmailCard = ({ email }: { readonly email: string }) => {
   );
 };
 
-const PasswordCard = () => {
+const PasswordCard = ({ isLoading }: { readonly isLoading: boolean }) => {
   const t = useT(account);
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
@@ -138,12 +141,12 @@ const PasswordCard = () => {
       <Form label={t("passwordTitle")} onSubmit={submit} isPending={a.isPending}>
         <div className={FORM_CLASS_NAME}>
           <Text size="sm" tone="muted">{t("passwordHint")}</Text>
-          <Input id="account-current-password" name="current" kind="password" label={t("currentPassword")} variant="secondary" isRequired isDisabled={a.isPending} value={current} onValueChange={setCurrent} />
-          <Input id="account-new-password" name="next" kind="newPassword" label={t("newPassword")} variant="secondary" isRequired isDisabled={a.isPending} value={next} onValueChange={setNext} />
-          <Input id="account-confirm-password" name="confirm" kind="newPassword" label={t("confirmPassword")} variant="secondary" isRequired isDisabled={a.isPending} value={confirm} onValueChange={setConfirm} />
+          <Input id="account-current-password" name="current" kind="password" label={t("currentPassword")} variant="secondary" isRequired isDisabled={a.isPending} isSkeleton={isLoading} value={current} onValueChange={setCurrent} />
+          <Input id="account-new-password" name="next" kind="newPassword" label={t("newPassword")} variant="secondary" isRequired isDisabled={a.isPending} isSkeleton={isLoading} value={next} onValueChange={setNext} />
+          <Input id="account-confirm-password" name="confirm" kind="newPassword" label={t("confirmPassword")} variant="secondary" isRequired isDisabled={a.isPending} isSkeleton={isLoading} value={confirm} onValueChange={setConfirm} />
           <Feedback error={localError ?? a.error} done={localError ? null : a.done} />
           <div className={ACTIONS_CLASS_NAME}>
-            <Button type="submit" variant="primary" isPending={a.isPending}>{t("changePassword")}</Button>
+            <Button type="submit" variant="primary" isPending={a.isPending} isSkeleton={isLoading}>{t("changePassword")}</Button>
           </div>
         </div>
       </Form>
@@ -151,7 +154,7 @@ const PasswordCard = () => {
   );
 };
 
-const MethodsCard = ({ providers }: { readonly providers: ReadonlyArray<string> }) => {
+const MethodsCard = ({ providers, isLoading }: { readonly providers: ReadonlyArray<string>; readonly isLoading: boolean }) => {
   const t = useT(account);
   const rows = [
     { key: "google", label: t("methodGoogle") },
@@ -161,6 +164,7 @@ const MethodsCard = ({ providers }: { readonly providers: ReadonlyArray<string> 
     <SurfaceCard label={t("methodsTitle")} headingLevel={2}>
       <DescriptionList
         layout="columns"
+        isLoading={isLoading}
         isDivided
         items={rows.map((row) => {
           const linked = providers.includes(row.key);
@@ -175,7 +179,7 @@ const MethodsCard = ({ providers }: { readonly providers: ReadonlyArray<string> 
   );
 };
 
-const SessionsCard = ({ sessions, failed }: { readonly sessions: ReadonlyArray<SessionView>; readonly failed: boolean }) => {
+const SessionsCard = ({ sessions, failed, isLoading }: { readonly sessions: ReadonlyArray<SessionView>; readonly failed: boolean; readonly isLoading: boolean }) => {
   const t = useT(account);
   const router = useRouter();
   const a = useAction();
@@ -190,8 +194,8 @@ const SessionsCard = ({ sessions, failed }: { readonly sessions: ReadonlyArray<S
     <Region labelledBy="account-sessions-title" className={SECTION_CLASS_NAME}>
       <SectionHeader id="account-sessions-title" level={2} title={t("sessionsTitle")} description={t("sessionsHint")} />
       {failed ? <Alert tone="negative" title={t("sessionsFailed")} /> : null}
-      <SurfaceListCard ariaLabel={t("sessionsTitle")}>
-        {sessions.map((s) => (
+      <SurfaceListCard ariaLabel={t("sessionsTitle")} isLoading={isLoading}>
+        {isLoading ? undefined : sessions.map((s) => (
           <ListItem key={s.id} className={SESSION_ROW_CLASS_NAME} data-testid="session-row" data-current={s.isCurrent ? "1" : "0"}>
             <div className={SESSION_INFO_CLASS_NAME}>
               <div className={SESSION_TITLE_CLASS_NAME}>
@@ -210,7 +214,7 @@ const SessionsCard = ({ sessions, failed }: { readonly sessions: ReadonlyArray<S
       </SurfaceListCard>
       <Feedback error={a.error} done={a.done} />
       <div className={ACTIONS_CLASS_NAME}>
-        {others.length > 0 ? (
+        {isLoading ? null : others.length > 0 ? (
           <Button variant="danger-soft" isPending={a.isPending && busyId === null} isDisabled={a.isPending} onPress={() => { setBusyId(null); a.run(signOutOthers, t("othersDone"), () => router.refresh()); }}>
             {t("signOutOthers")}
           </Button>
@@ -223,17 +227,20 @@ const SessionsCard = ({ sessions, failed }: { readonly sessions: ReadonlyArray<S
 };
 
 /** The /account screen: profile, email, password, sign-in methods and device sessions. */
-export const AccountView = ({ name, email, providers, sessions, sessionsFailed }: AccountViewProps) => {
+export const AccountView = ({ name, email, providers, sessions, sessionsFailed, isLoading = false }: AccountViewProps) => {
   const t = useT(account);
   return (
     <PageContainer measure="product">
       <div className={PAGE_CLASS_NAME}>
-        <SectionHeader level={1} eyebrow={t("eyebrow")} title={t("title")} description={t("description")} />
-        <ProfileCard name={name} />
-        <EmailCard email={email} />
-        <PasswordCard />
-        <MethodsCard providers={providers} />
-        <SessionsCard sessions={sessions} failed={sessionsFailed} />
+        <div className={HEAD_CLASS_NAME}>
+          <Breadcrumbs label={t("crumbLabel")} items={[{ id: "home", label: t("crumbHome"), href: "/dashboard" }, { id: "account", label: t("title") }]} />
+          <SectionHeader level={1} eyebrow={t("eyebrow")} title={t("title")} description={t("description")} />
+        </div>
+        <ProfileCard name={name} isLoading={isLoading} />
+        <EmailCard email={email} isLoading={isLoading} />
+        <PasswordCard isLoading={isLoading} />
+        <MethodsCard providers={providers} isLoading={isLoading} />
+        <SessionsCard sessions={sessions} failed={sessionsFailed} isLoading={isLoading} />
       </div>
     </PageContainer>
   );

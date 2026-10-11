@@ -19,6 +19,8 @@ export type MembersListProps = {
   readonly staffNames: Readonly<Record<string, string>>
   readonly selfId: string
   readonly selfRole: Role
+  /** STATE-8: the members are loading - the heading and the column headers stay, the body is skeleton rows. */
+  readonly isLoading?: boolean
 }
 
 type Confirm = { readonly userId: string; readonly kind: "remove" | "disable" }
@@ -28,7 +30,7 @@ type MemberRow = { readonly id: string; readonly member: MemberListing }
 const ROLE_KEY = { owner: "roleOwner", manager: "roleManager", staff: "roleStaff" } as const
 
 /** Members of the workspace as a DataTable: who they are, role, status, last sign-in, the actions an owner | manager has on them, and an AlertDialog for remove / disable. */
-export const MembersList = ({ members, staffNames, selfId, selfRole }: MembersListProps) => {
+export const MembersList = ({ members, staffNames, selfId, selfRole, isLoading = false }: MembersListProps) => {
   const t = useT(team)
   const locale = useLocale()
   const router = useRouter()
@@ -133,13 +135,14 @@ export const MembersList = ({ members, staffNames, selfId, selfRole }: MembersLi
 
   return (
     <Region labelledBy="team-members-title" className={SECTION_CLASS}>
-      <SectionHeader id="team-members-title" level={2} title={t("membersTitle")} description={t("membersDesc", { count: members.length })} />
+      <SectionHeader id="team-members-title" level={2} title={t("membersTitle")} description={isLoading ? undefined : t("membersDesc", { count: members.length })} />
       {error ? <Alert title={t("errGeneric")} description={error} tone="negative" /> : null}
       <DataTable
         label={t("membersTitle")}
         columns={columns}
         rows={members.map((m): MemberRow => ({ id: m.userId, member: m }))}
         renderCell={renderCell}
+        isLoading={isLoading}
         emptyContent={null}
       />
       <AlertDialog

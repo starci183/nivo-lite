@@ -44,17 +44,17 @@ export const useSaver = (): Saver => {
 }
 
 /** Props for {@link SaveRow}. */
-export type SaveRowProps = { readonly saver: Saver; readonly onSave: () => void; readonly label?: string; readonly variant?: "primary" | "secondary" }
+export type SaveRowProps = { readonly saver: Saver; readonly onSave: () => void; readonly label?: string; readonly variant?: "primary" | "secondary"; readonly isLoading?: boolean }
 
 /** The section footer: one primary save with pending state, a saved note and an inline error. */
-export const SaveRow = ({ saver, onSave, label, variant = "primary" }: SaveRowProps) => {
+export const SaveRow = ({ saver, onSave, label, variant = "primary", isLoading = false }: SaveRowProps) => {
   const t = useT(authority)
   return (
     <>
       {saver.error ? <Alert title={t("saveFailTitle")} description={saver.error} tone="negative" /> : null}
       <div className={SAVE_ROW_CLASS}>
         {saver.saved ? <Text live="polite" size="sm" tone="muted">{t("saved")}</Text> : null}
-        <Button variant={variant} isPending={saver.isPending} onPress={onSave}>{label ?? t("saveLabel")}</Button>
+        <Button variant={variant} isPending={saver.isPending} isSkeleton={isLoading} onPress={onSave}>{label ?? t("saveLabel")}</Button>
       </div>
     </>
   )

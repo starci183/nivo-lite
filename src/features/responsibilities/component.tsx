@@ -16,11 +16,14 @@ export type OwnerGroupsProps = {
   emptyDescription: string;
   emptyActionLabel?: string;
   emptyHref?: string;
+  /** STATE-8: the collection is loading - one list card of three skeleton rows in its own container. */
+  isLoading?: boolean;
 };
 
 /** Responsibilities grouped by owner: a header per owner, then one card per responsibility, or an empty notice. */
 export const OwnerGroups = (props: OwnerGroupsProps) => {
   const t = useT(responsibilities);
+  if (props.isLoading) return <SurfaceListCard ariaLabel={t("groupAria")} isLoading />;
   if (props.groups.length === 0) {
     return (
       <SurfaceCard ariaLabel={t("groupAria")}>

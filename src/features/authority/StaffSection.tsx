@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Badge, Button, Input, List, ListItem, SurfaceCard, Text } from "@starci/grammar/common"
+import { Badge, Button, Input, List, ListItem, ListRow, SurfaceCard, Text } from "@starci/grammar/common"
 import { useT } from "@/i18n/client"
 import { authority as dict } from "@/i18n/dict/authority"
 import { saveStaff } from "@/lib/flow-actions"
@@ -16,10 +16,12 @@ export type StaffSectionProps = {
   readonly canInvite?: boolean
   /** Staff rows that already have an account. */
   readonly linkedStaffIds?: ReadonlyArray<string>
+  /** STATE-8: the staff rows and the form are skeletons while the list loads. */
+  readonly isLoading?: boolean
 }
 
 /** Optional staff list: add a person, deactivate or reactivate. Staff are never required for routine work. */
-export const StaffSection = ({ staff, canInvite = false, linkedStaffIds = [] }: StaffSectionProps) => {
+export const StaffSection = ({ staff, canInvite = false, linkedStaffIds = [], isLoading = false }: StaffSectionProps) => {
   const t = useT(dict)
   const addSaver = useSaver()
   const toggleSaver = useSaver()
@@ -49,7 +51,11 @@ export const StaffSection = ({ staff, canInvite = false, linkedStaffIds = [] }: 
     <SurfaceCard label={t("staffTitle")} headingLevel={2}>
       <div className={FIELDS_CLASS}>
         <Text size="sm" tone="muted">{t("staffDesc")}</Text>
-        {staff.length === 0 ? (
+        {isLoading ? (
+          <List label={t("staffTitle")} className={STAFF_LIST_CLASS}>
+            {[0, 1, 2].map((n) => <ListRow key={n} isSkeleton title={t("staffTitle")} description={t("staffDesc")} actions={t("staffAdd")} />)}
+          </List>
+        ) : staff.length === 0 ? (
           <Text size="sm">{t("staffEmpty")}</Text>
         ) : (
           <List label={t("staffTitle")} className={STAFF_LIST_CLASS}>
@@ -75,11 +81,11 @@ export const StaffSection = ({ staff, canInvite = false, linkedStaffIds = [] }: 
           </List>
         )}
         <div className={STAFF_FORM_CLASS}>
-          <Input id="staff-name" name="staff_name" label={t("staffName")} variant="secondary" value={name} isError={Boolean(nameError)} errorMessage={nameError} onValueChange={(v) => { setNameError(null); setName(v) }} />
-          <Input id="staff-role" name="staff_role" label={t("staffRole")} variant="secondary" value={role} onValueChange={setRole} />
-          <Input id="staff-email" name="staff_email" label={t("staffEmail")} kind="email" variant="secondary" value={email} onValueChange={setEmail} />
+          <Input id="staff-name" name="staff_name" label={t("staffName")} variant="secondary" isSkeleton={isLoading} value={name} isError={Boolean(nameError)} errorMessage={nameError} onValueChange={(v) => { setNameError(null); setName(v) }} />
+          <Input id="staff-role" name="staff_role" label={t("staffRole")} variant="secondary" isSkeleton={isLoading} value={role} onValueChange={setRole} />
+          <Input id="staff-email" name="staff_email" label={t("staffEmail")} kind="email" variant="secondary" isSkeleton={isLoading} value={email} onValueChange={setEmail} />
         </div>
-        <SaveRow saver={addSaver} onSave={onAdd} label={t("staffAdd")} variant="secondary" />
+        <SaveRow saver={addSaver} onSave={onAdd} label={t("staffAdd")} variant="secondary" isLoading={isLoading} />
         {toggleSaver.error ? <Text size="sm" live="assertive">{toggleSaver.error}</Text> : null}
       </div>
     </SurfaceCard>

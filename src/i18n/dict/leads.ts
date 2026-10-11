@@ -3,6 +3,9 @@ import { defineDict } from "../core";
 /** Leads list, new-lead form, lead page header and journey. */
 export const leads = defineDict({
   en: {
+    crumbHome: "Overview",
+    loadFailedLeads: "The leads could not be loaded. Try again.",
+    loadFailedLead: "This lead could not be loaded. Try again.",
     eyebrow: "PIPELINE",
     title: "Leads",
     description: "Every lead gets context, an owner and a next action the moment it arrives. Updated {time}.",
@@ -29,6 +32,7 @@ export const leads = defineDict({
     clearFilters: "Clear filters",
     tabsLabel: "Lead stage",
     tabAll: "All ({n})",
+    tabAllBare: "All",
     tabStage: "{stage} ({n})",
     listHeading: "Leads · {n}",
     verified: "Verified {time}",
@@ -111,6 +115,9 @@ export const leads = defineDict({
     stepInvoiced: "Invoiced",
   },
   vi: {
+    crumbHome: "Tổng quan",
+    loadFailedLeads: "Chưa tải được danh sách khách hàng. Hãy thử lại.",
+    loadFailedLead: "Chưa tải được khách hàng này. Hãy thử lại.",
     eyebrow: "PHỄU KHÁCH HÀNG",
     title: "Khách hàng",
     description: "Mỗi khách hàng có bối cảnh, người phụ trách và bước tiếp theo ngay khi được ghi nhận. Cập nhật {time}.",
@@ -137,6 +144,7 @@ export const leads = defineDict({
     clearFilters: "Xóa bộ lọc",
     tabsLabel: "Giai đoạn khách hàng",
     tabAll: "Tất cả ({n})",
+    tabAllBare: "Tất cả",
     tabStage: "{stage} ({n})",
     listHeading: "Khách hàng · {n}",
     verified: "Đã kiểm tra {time}",

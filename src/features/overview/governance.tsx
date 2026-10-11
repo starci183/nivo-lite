@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge, List, ListItem, SectionHeader, SurfaceCard, Text, TextAction } from "@starci/grammar/common";
+import { Badge, List, ListItem, SectionHeader, Skeleton, SurfaceCard, Text, TextAction } from "@starci/grammar/common";
 import { useLocale, useT } from "@/i18n/client";
 import { intlLocale } from "@/i18n/core";
 import { governance as governanceDict } from "@/i18n/dict/governance";
@@ -29,6 +29,8 @@ export type GovernanceBlocksProps = {
   readonly governance: GovernanceWithStatus | null;
   /** Work items waiting for a decision, oldest first (test runs already removed). */
   readonly waiting: ReadonlyArray<WorkItemView>;
+  /** STATE-8: the blocks keep their headings and card labels, the figures and rows are skeletons. */
+  readonly isLoading?: boolean;
 };
 
 const EXCEPTION_ORDER: ReadonlyArray<ReasonCode> = ["missing_data", "over_authority", "unclear_outcome", "not_allowed"];
@@ -76,7 +78,7 @@ const StatusRow = ({ label, context, split, count, unit, money = false }: Status
 };
 
 /** The five governance blocks of the operating flow: overview, results by status, waiting, exceptions, decision history. */
-export const GovernanceBlocks = ({ governance, waiting }: GovernanceBlocksProps) => {
+export const GovernanceBlocks = ({ governance, waiting, isLoading = false }: GovernanceBlocksProps) => {
   const t = useT(overview);
   const g = useT(governanceDict);
   const locale = useLocale();
@@ -95,6 +97,28 @@ export const GovernanceBlocks = ({ governance, waiting }: GovernanceBlocksProps)
     if (abs < 7 * 86_400) return rtf.format(Math.round(secs / 86_400), "day");
     return exact(iso);
   };
+
+  if (isLoading) {
+    const blocks: ReadonlyArray<{ readonly key: string; readonly title: string; readonly description?: string; readonly lines: number }> = [
+      { key: "sum", title: t("sumTitle"), description: t("motto"), lines: 3 },
+      { key: "results", title: t("resultsTitle"), description: t("resultsIntro"), lines: 6 },
+      { key: "waiting", title: t("waitingTitle"), lines: 2 },
+      { key: "exceptions", title: t("exceptionsTitle"), lines: 2 },
+      { key: "history", title: t("historyTitle"), lines: 4 },
+    ];
+    return (
+      <div className={STACK_CLASS_NAME}>
+        {blocks.map((block) => (
+          <section key={block.key} className={BLOCK_CLASS_NAME} aria-label={block.title} aria-busy="true">
+            <SectionHeader level={2} title={block.title} description={block.description} />
+            <SurfaceCard ariaLabel={block.title}>
+              <Skeleton shape="text" lines={block.lines} />
+            </SurfaceCard>
+          </section>
+        ))}
+      </div>
+    );
+  }
 
   if (governance === null) {
     return (

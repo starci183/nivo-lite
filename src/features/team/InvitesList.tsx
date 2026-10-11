@@ -13,14 +13,18 @@ import type { PendingInvite } from "./queries"
 import { ACTIONS_CLASS, FACTS_CLASS, IDENTITY_CLASS, IDENTITY_TEXT_CLASS, LINK_BOX_CLASS, ROW_CLASS, SECTION_CLASS } from "./classNames"
 
 /** Props for {@link InvitesList}. */
-export type InvitesListProps = { readonly invites: ReadonlyArray<PendingInvite> }
+export type InvitesListProps = {
+  readonly invites: ReadonlyArray<PendingInvite>
+  /** STATE-8: the invitations are loading - the heading stays, the list is three skeleton rows. */
+  readonly isLoading?: boolean
+}
 
 const ROLE_KEY = { manager: "roleManager", staff: "roleStaff" } as const
 
 type Shown = { id: string; email: string; link: string; copied: boolean }
 
 /** Pending invitations with expiry, resend, revoke and "copy invite link" (which issues a fresh link). */
-export const InvitesList = ({ invites }: InvitesListProps) => {
+export const InvitesList = ({ invites, isLoading = false }: InvitesListProps) => {
   const t = useT(team)
   const locale = useLocale()
   const router = useRouter()
@@ -78,8 +82,8 @@ export const InvitesList = ({ invites }: InvitesListProps) => {
       <SectionHeader id="team-invites-title" level={2} title={t("invitesTitle")} description={t("invitesDesc")} />
       {error ? <Alert title={t("errGeneric")} description={error} tone="negative" /> : null}
       {notice ? <Text size="sm" live="polite">{notice}</Text> : null}
-      <SurfaceListCard ariaLabel={t("invitesTitle")} empty={<EmptyNotice message={t("invitesEmpty")} />}>
-        {invites.map((i) => (
+      <SurfaceListCard ariaLabel={t("invitesTitle")} isLoading={isLoading} empty={<EmptyNotice message={t("invitesEmpty")} />}>
+        {(isLoading ? [] : invites).map((i) => (
           <ListItem key={i.id} className={ROW_CLASS}>
             <div className={IDENTITY_CLASS}>
               <PersonAvatar name={i.email} size="md" />

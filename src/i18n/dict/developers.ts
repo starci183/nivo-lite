@@ -3,6 +3,9 @@ import { defineDict } from "../core";
 /** The "Nâng cao" developers page: outgoing events, API keys, quick start. */
 export const developers = defineDict({
   en: {
+    crumbLabel: "Breadcrumb",
+    crumbHome: "Overview",
+    loadFailed: "The Advanced page could not be loaded. Try again.",
     eyebrow: "Advanced",
     title: "Advanced",
     description: "Connect NIVO to n8n, Make, Zapier or your own tools. For owners and managers.",
@@ -51,6 +54,9 @@ export const developers = defineDict({
     n8nSteps: "Method POST. URL as above. Authentication: Generic Credential Type, then Header Auth with Name Authorization and Value Bearer nvk_... . Turn on Send Body, JSON.",
   },
   vi: {
+    crumbLabel: "Đường dẫn",
+    crumbHome: "Tổng quan",
+    loadFailed: "Chưa tải được trang Nâng cao. Hãy thử lại.",
     eyebrow: "Nâng cao",
     title: "Nâng cao",
     description: "Nối NIVO với n8n, Make, Zapier hoặc công cụ của riêng bạn. Dành cho chủ shop và quản lý.",

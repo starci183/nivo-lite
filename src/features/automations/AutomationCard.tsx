@@ -31,6 +31,32 @@ const LABEL: Record<CardStatus, "statusRunning" | "statusOff" | "statusSoon" | "
 }
 
 /**
+ * STATE-8 case-2: one automation card while the collection loads - the resolved card's anatomy (icon tile, name, status,
+ * description, trigger line, detail action) as inert geometry; the switch needs the card's state, so it is not drawn.
+ */
+export const AutomationCardSkeleton = ({ isNested = false }: { readonly isNested?: boolean }) => {
+  const t = useT(dict)
+  return (
+    <SurfaceCard ariaLabel={t("loading")} depth={isNested ? "nested" : "top"}>
+      <div className={CARD_STACK_CLASS} aria-busy="true">
+        <div className={CARD_TOP_CLASS}>
+          <IconTile source={nivoIconSource("trigger", "leading")} tone="neutral" isSkeleton />
+          <div className={CARD_TEXT_CLASS}>
+            <Text weight="semibold" isSkeleton>{t("loading")}</Text>
+            <div className={ACTIONS_CLASS}><Badge isDot tone="neutral" isSkeleton>{t("statusOff")}</Badge></div>
+          </div>
+        </div>
+        <Text size="sm" tone="muted" isSkeleton>{t("loading")}</Text>
+        <Text size="xs" tone="muted" isSkeleton>{t("loading")}</Text>
+        <div className={CARD_FOOT_CLASS}>
+          <TextAction appearance="disclosure" size="sm" isSkeleton>{t("selectHint")}</TextAction>
+        </div>
+      </div>
+    </SurfaceCard>
+  )
+}
+
+/**
  * One automation as one Grammar SurfaceCard: neutral icon tile, name, status, what it is, what starts it, and its switch.
  * "Xem chi tiết" selects it (the switch is a separate, disjoint control, STATE-5 case-4); the selected card carries the one accent sweep.
  */

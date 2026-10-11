@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Alert, Button, Input, List, SurfaceCard, Text } from "@starci/grammar/common"
+import { Alert, Button, Input, List, ListRow, SurfaceCard, Text } from "@starci/grammar/common"
 import { useT } from "@/i18n/client"
 import { useCopyField } from "@/features/connections/useCopyField"
 import { developers as dict } from "@/i18n/dict/developers"
@@ -11,7 +11,7 @@ import { ApiKeyItem } from "./ApiKeyItem"
 import { FIELD_GROW_CLASS, FORM_ROW_CLASS, KEY_LIST_CLASS, STACK_CLASS } from "./classNames"
 
 /** "Khoá API": create a key (shown once), then the list with revoke. */
-export const ApiKeysSection = ({ items, loadError }: { readonly items: ReadonlyArray<ApiKeyView>; readonly loadError: string | null }) => {
+export const ApiKeysSection = ({ items, loadError, isLoading = false }: { readonly items: ReadonlyArray<ApiKeyView>; readonly loadError: string | null; readonly isLoading?: boolean }) => {
   const t = useT(dict)
   const copy = useCopyField()
   const router = useRouter()
@@ -35,9 +35,9 @@ export const ApiKeysSection = ({ items, loadError }: { readonly items: ReadonlyA
         <Text size="sm" tone="muted">{t("keysBody")}</Text>
         <div className={FORM_ROW_CLASS}>
           <div className={FIELD_GROW_CLASS}>
-            <Input id="api-key-name" name="keyName" label={t("keyName")} variant="secondary" placeholder={t("keyNameHint")} isDisabled={isPending} value={name} onValueChange={setName} />
+            <Input id="api-key-name" name="keyName" label={t("keyName")} variant="secondary" placeholder={t("keyNameHint")} isDisabled={isPending} isSkeleton={isLoading} value={name} onValueChange={setName} />
           </div>
-          <Button variant="primary" isPending={isPending} isDisabled={name.trim().length < 2} onPress={create}>{t("create")}</Button>
+          <Button variant="primary" isPending={isPending} isSkeleton={isLoading} isDisabled={name.trim().length < 2} onPress={create}>{t("create")}</Button>
         </div>
         {error ? <Alert tone="negative" title={error} /> : null}
         {fresh ? (
@@ -50,8 +50,13 @@ export const ApiKeysSection = ({ items, loadError }: { readonly items: ReadonlyA
           </SurfaceCard>
         ) : null}
         {loadError ? <Alert tone="negative" title={t("keysLoadFailed")} description={loadError} /> : null}
-        {items.length === 0 && !loadError ? <Text size="sm" tone="muted">{t("keysEmpty")}</Text> : null}
-        {items.length > 0 ? (
+        {isLoading ? (
+          <List className={KEY_LIST_CLASS} label={t("keysTitle")}>
+            {[0, 1, 2].map((n) => <ListRow key={n} isSkeleton title={t("keysTitle")} description={t("keysBody")} actions={t("revoke")} />)}
+          </List>
+        ) : null}
+        {!isLoading && items.length === 0 && !loadError ? <Text size="sm" tone="muted">{t("keysEmpty")}</Text> : null}
+        {!isLoading && items.length > 0 ? (
           <List className={KEY_LIST_CLASS} label={t("keysTitle")}>
             {items.map((k) => <ApiKeyItem key={k.id} item={k} />)}
           </List>

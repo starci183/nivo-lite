@@ -53,3 +53,6 @@ export const LIST_HEAD_CLASS_NAME = cn("flex", "items-baseline", "justify-betwee
 
 /** Heading and count. */
 export const LIST_TITLE_CLASS_NAME = cn("flex", "items-baseline", "gap-3");
+
+/** Breadcrumb trail above the page heading: one heading block (GAP-2). */
+export const HEAD_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-2");
