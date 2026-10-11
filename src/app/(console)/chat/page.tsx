@@ -7,6 +7,8 @@ import { leadRowsFrom, listAgents, listLeads, listMessages, listResponsibilities
 import { listMembers, memberListingsFrom } from "@/lib/members"
 import { getOfficeData } from "@/lib/page-data"
 import { getSession } from "@/lib/session"
+import { supabaseServer } from "@/lib/supabase/server"
+import type { Agent, Message } from "@/lib/types"
 
 /** Always render fresh: messages and approvals change constantly. */
 export const dynamic = "force-dynamic"
@@ -46,6 +48,7 @@ const ChatPage = async () => {
         listStaff().catch((): Staff[] => []),
         listMembers().catch(() => []),
       ])
+  const thread = await speakAsDepartmentAgents(messages, agents)
   const exceptions = exceptionRows.filter((i) => !i.hasApprovalCard)
   const decidedExceptions = recentItems.filter((i) => !i.hasApprovalCard && i.decided_path === "human").slice(0, 12)
   const pendingDecisions = governance?.pendingDecisions ?? pending.length + exceptions.length
@@ -60,7 +63,7 @@ const ChatPage = async () => {
         workspaceName={session.workspace.name}
         userName={session.userName}
         avatarUrl={session.avatarUrl ?? null}
-        initialMessages={messages}
+        initialMessages={thread}
         agents={agents}
         pending={pending}
         decided={decided}
@@ -79,6 +82,22 @@ const ChatPage = async () => {
 }
 
 export default ChatPage
+
+/**
+ * Lines the engine wrote as "NIVO" before work-item lines spoke as their department's agent: each one tied to a work item is shown
+ * as that department's installed agent (Sales, Accounting, Chatbot). Anything else stays a NIVO Core line.
+ */
+const speakAsDepartmentAgents = async (messages: ReadonlyArray<Message>, agents: ReadonlyArray<Agent>): Promise<ReadonlyArray<Message>> => {
+  const ids = [...new Set(messages.filter((m) => m.agent_id === null && m.author_kind === "system" && m.work_item_id).map((m) => m.work_item_id as string))]
+  if (ids.length === 0) return messages
+  const { data } = await (await supabaseServer()).from("work_items").select("id, department").in("id", ids)
+  const departmentOf = new Map(((data ?? []) as Array<{ id: string; department: string }>).map((w) => [w.id, w.department]))
+  const agentOf = new Map<string, Agent>(agents.filter((a) => a.status === "active").map((a) => [a.module, a]))
+  return messages.map((m) => {
+    const agent = m.agent_id === null && m.author_kind === "system" && m.work_item_id ? agentOf.get(departmentOf.get(m.work_item_id) ?? "") : undefined
+    return agent ? { ...m, author_kind: "agent", author_name: agent.name, agent_id: agent.id } : m
+  })
+}
 
 /** OpenClaw writes the text (setup chat, Office replies, classification), so these screens may wait longer than the platform default. */
 export const maxDuration = 60;

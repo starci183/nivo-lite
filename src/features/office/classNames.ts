@@ -50,7 +50,7 @@ export const INFO_COLUMN_CLASS_NAME = cn(
 /* ---------- Column headers ---------- */
 
 /** Shared header bar height and padding for all three columns. */
-export const COLUMN_HEAD_CLASS_NAME = cn("flex", "min-h-16", "shrink-0", "items-center", "gap-3", "border-b", "border-separator", "px-4", "py-3")
+export const COLUMN_HEAD_CLASS_NAME = cn("flex", "h-18", "shrink-0", "items-center", "gap-3", "border-b", "border-separator", "px-4")
 
 /** Title block inside a header: grows and truncates. */
 export const HEAD_TEXT_CLASS_NAME = cn("flex", "min-w-0", "flex-1", "flex-col")
@@ -128,8 +128,8 @@ export const COUNT_DOT_CLASS_NAME = cn(
 
 /* ---------- Thread ---------- */
 
-/** Scroll region holding the messages. */
-export const THREAD_SCROLL_CLASS_NAME = cn("min-h-0", "flex-1", "overflow-y-auto", "overscroll-contain")
+/** Scroll region holding the messages: a tinted ground so white bubbles stand out, as in Zalo. */
+export const THREAD_SCROLL_CLASS_NAME = cn("min-h-0", "flex-1", "overflow-y-auto", "overscroll-contain", "bg-surface-secondary")
 
 /** Message column inside the scroll region. */
 export const THREAD_BODY_CLASS_NAME = cn("mx-auto", "flex", "w-full", "max-w-4xl", "flex-col", "gap-1", "px-3", "py-4", "sm:px-6")
@@ -137,11 +137,11 @@ export const THREAD_BODY_CLASS_NAME = cn("mx-auto", "flex", "w-full", "max-w-4xl
 /** Promo slot at the top of the thread (scrolls away with history). */
 export const PROMO_SLOT_CLASS_NAME = cn("pb-3")
 
-/** Day separator: rule, label, rule. */
-export const DAY_CLASS_NAME = cn("flex", "items-center", "gap-3", "py-3")
+/** Day separator: one centred pill, as in Zalo. */
+export const DAY_CLASS_NAME = cn("flex", "justify-center", "py-3")
 
-/** Rule beside a day label. */
-export const DAY_RULE_CLASS_NAME = cn("h-px", "flex-1", "bg-separator")
+/** The day pill. */
+export const DAY_PILL_CLASS_NAME = cn("rounded-full", "bg-surface-tertiary", "px-3", "py-1")
 
 /** A message from someone else: avatar then bubble column. */
 export const ROW_THEIRS_CLASS_NAME = cn("group", "flex", "items-end", "gap-2", "pr-6", "sm:pr-16")
@@ -165,7 +165,7 @@ export const BUBBLE_COLUMN_MINE_CLASS_NAME = cn("items-end")
 export const AUTHOR_LINE_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "gap-2", "px-1")
 
 /** Bubble from someone else. */
-export const BUBBLE_THEIRS_CLASS_NAME = cn("w-fit", "max-w-full", "whitespace-pre-wrap", "break-words", "rounded-2xl", "rounded-tl-md", "bg-surface-secondary", "px-4", "py-2")
+export const BUBBLE_THEIRS_CLASS_NAME = cn("w-fit", "max-w-full", "whitespace-pre-wrap", "break-words", "rounded-2xl", "rounded-tl-md", "border", "border-separator", "bg-surface", "px-4", "py-2")
 
 /** My bubble: blush selection surface. */
 export const BUBBLE_MINE_CLASS_NAME = cn("w-fit", "max-w-full", "whitespace-pre-wrap", "break-words", "rounded-2xl", "rounded-tr-md", "bg-accent-soft", "px-4", "py-2")
@@ -358,7 +358,7 @@ export const NARROW_ONLY_CLASS_NAME = cn("inline", "sm:hidden")
 export const NIVO_AVATAR_CLASS_NAME = cn("inline-flex", "size-8", "items-center", "justify-center", "rounded-full", "border", "border-separator", "bg-surface")
 
 /** NIVO message bubble: neutral surface with a coral edge so it reads as the company core. */
-export const BUBBLE_NIVO_CLASS_NAME = cn("w-fit", "max-w-full", "whitespace-pre-wrap", "break-words", "rounded-2xl", "rounded-tl-md", "border-l-2", "border-accent", "bg-surface-secondary", "px-4", "py-2")
+export const BUBBLE_NIVO_CLASS_NAME = cn("w-fit", "max-w-full", "whitespace-pre-wrap", "break-words", "rounded-2xl", "rounded-tl-md", "border-l-2", "border-accent", "bg-surface", "px-4", "py-2")
 
 /** Stack of inputs inside an exception card. */
 export const EXCEPTION_FIELDS_CLASS_NAME = cn("flex", "flex-col", "gap-3")
@@ -371,3 +371,6 @@ export const EXCEPTION_CANDIDATE_ON_CLASS_NAME = cn("border-accent", "bg-accent-
 
 /** Mention option NIVO mark tile. */
 export const NIVO_OPTION_MARK_CLASS_NAME = cn("inline-flex", "size-8", "shrink-0", "items-center", "justify-center", "rounded-full", "border", "border-separator", "bg-surface")
+
+/** Send time at the foot of the last bubble of a group (Zalo places it inside the bubble). */
+export const BUBBLE_TIME_CLASS_NAME = cn("mt-1", "block")

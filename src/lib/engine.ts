@@ -107,11 +107,16 @@ const agentInput = (a: Agent): ai.AgentInput => ({ name: a.name, handle: a.handl
 
 /* ------------------------------------------------------------------ Office + inbound status */
 
-/** One short line in the Office thread from NIVO (agent_id null, author "NIVO": Office renders it as NIVO Core), linked to the work item. */
+/**
+ * One short line in the Office thread, linked to the work item. It speaks as the department's own agent (Sales, Accounting,
+ * Chatbot) when that agent is installed; without one it stays a NIVO Core line (agent_id null, author "NIVO").
+ */
 const postOffice = async (c: EngineCtx, m: { body: string; lead_id: string | null; work_item_id: string | null; dept?: Department }) => {
-  await c.db.from("messages").insert({
-    workspace_id: c.ws, author_kind: "system", author_name: "NIVO", agent_id: null, body: m.body, lead_id: m.lead_id, work_item_id: m.work_item_id,
-  });
+  const agent = m.dept ? await agentFor(c, m.dept).catch(() => null) : null;
+  const author = agent
+    ? { author_kind: "agent", author_name: agent.name, agent_id: agent.id }
+    : { author_kind: "system", author_name: "NIVO", agent_id: null };
+  await c.db.from("messages").insert({ workspace_id: c.ws, ...author, body: m.body, lead_id: m.lead_id, work_item_id: m.work_item_id });
 };
 
 const setInbound = async (c: EngineCtx, id: string | null, patch: Partial<Pick<InboundEvent, "status" | "lead_id">>) => {
@@ -653,7 +658,7 @@ const fail = async (c: EngineCtx, item: WorkItem, e: unknown): Promise<WorkItem>
   const msg = e instanceof Error ? e.message : String(e);
   const failed = await patchItem(c, item.id, { status: "failed", error: msg.slice(0, 500) }).catch(() => ({ ...item, status: "failed" as const, error: msg }));
   await logEvidence(c.db, c.ws, { lead_id: item.lead_id, work_item_id: item.id, kind: "work.failed", actor: "NIVO", summary: tr(c)("failedMsg", { dept: deptLabel(c, item.department), action: gl(c, `action_${item.action}`), error: msg }) }).catch(() => {});
-  await postOffice(c, { body: tr(c)("failedMsg", { dept: deptLabel(c, item.department), action: gl(c, `action_${item.action}`), error: msg }), lead_id: item.lead_id, work_item_id: item.id }).catch(() => {});
+  await postOffice(c, { dept: item.department, body: tr(c)("failedMsg", { dept: deptLabel(c, item.department), action: gl(c, `action_${item.action}`), error: msg }), lead_id: item.lead_id, work_item_id: item.id }).catch(() => {});
   await setInbound(c, item.inbound_event_id, { status: "failed" }).catch(() => {});
   return failed;
 };
@@ -703,14 +708,14 @@ const finish = async (c: EngineCtx, item: WorkItem, proposal: Proposal, f: Finis
   if (f.path === "auto") {
     await logDecision(c.db, c.ws, { work_item_id: done.id, lead_id: done.lead_id, department: done.department, action: done.action, decided_by: "NIVO", decider_kind: "policy", outcome: "auto_done", reason: "routine", note: res.summary });
     await logEvidence(c.db, c.ws, { lead_id: done.lead_id, work_item_id: done.id, kind: "work.auto_done", actor: dept, summary: res.summary, evidence: res.detail ?? null });
-    await postOffice(c, { body: tr(c)("autoMsg", { dept, summary: res.summary }), lead_id: done.lead_id, work_item_id: done.id });
+    await postOffice(c, { dept: done.department, body: tr(c)("autoMsg", { dept, summary: res.summary }), lead_id: done.lead_id, work_item_id: done.id });
   } else {
     await logDecision(c.db, c.ws, {
       work_item_id: done.id, lead_id: done.lead_id, department: done.department, action: done.action, decided_by: f.by.name,
       decider_kind: f.by.kind, outcome: f.outcome, reason: item.reason, note: f.note ?? res.summary, before: f.before ?? null, after: proposal,
     });
     await logEvidence(c.db, c.ws, { lead_id: done.lead_id, work_item_id: done.id, kind: "work.resumed", actor: f.by.name, summary: res.summary, evidence: res.detail ?? null });
-    await postOffice(c, { body: tr(c)("resumedMsg", { user: f.by.name, summary: res.summary }), lead_id: done.lead_id, work_item_id: done.id });
+    await postOffice(c, { dept: done.department, body: tr(c)("resumedMsg", { user: f.by.name, summary: res.summary }), lead_id: done.lead_id, work_item_id: done.id });
     await emitEvent(c.ws, "decision.made", { work_item_id: done.id, action: done.action, department: done.department, outcome: f.outcome, decided_by: f.by.name, lead_id: done.lead_id, summary: res.summary }, `decision.made:${done.id}:${f.outcome}`);
   }
   await setInbound(c, done.inbound_event_id, { status: "processed", ...(done.lead_id ? { lead_id: done.lead_id } : {}) });
@@ -850,7 +855,7 @@ export const resumeWork = async (
       const rejected = await patchItem(c, item.id, { status: "rejected", decided_path: "human", proposal: merged, completed_at: now(), result: { summary: tr(c)("rejectedResult") } });
       await logDecision(c.db, c.ws, { work_item_id: item.id, lead_id: item.lead_id, department: item.department, action: item.action, decided_by: by.name, decider_kind: by.kind, outcome: "rejected", reason: item.reason, note: note ?? null, before, after: merged });
       await logEvidence(c.db, c.ws, { lead_id: item.lead_id, work_item_id: item.id, kind: "work.rejected", actor: by.name, summary: tr(c)("rejectedWork", { user: by.name, summary: before.summary }), evidence: note ?? null });
-      await postOffice(c, { body: tr(c)("rejectedWork", { user: by.name, summary: before.summary }), lead_id: item.lead_id, work_item_id: item.id });
+      await postOffice(c, { dept: item.department, body: tr(c)("rejectedWork", { user: by.name, summary: before.summary }), lead_id: item.lead_id, work_item_id: item.id });
       await setInbound(c, item.inbound_event_id, { status: "processed" });
       await emitEvent(c.ws, "decision.made", { work_item_id: item.id, action: item.action, department: item.department, outcome: "rejected", decided_by: by.name, lead_id: item.lead_id, summary: before.summary }, `decision.made:${item.id}:rejected`);
       return rejected;

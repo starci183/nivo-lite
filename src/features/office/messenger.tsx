@@ -34,7 +34,7 @@ import {
 } from "./classNames"
 import { Composer, type OfficeStaffMember } from "./composer"
 import { staffHandles } from "@/lib/staff-handle"
-import { ExceptionCard, exceptionAnchor } from "./exceptions"
+import { ExceptionCard, departmentAgent, exceptionAnchor } from "./exceptions"
 import { ConversationList, type CustomerEntry } from "./conversations"
 import { InfoPanel, type OfficePerson } from "./members"
 import { useMember } from "@/features/shell/member-context"
@@ -288,7 +288,7 @@ export const OfficeMessenger = ({
           items.map((item) => {
             if (item.kind === "day") return <DaySeparator key={item.key} label={item.label} />
             if (item.kind === "exception") {
-              return <ExceptionCard key={item.key} item={item.item} staff={staff} ownerName={deciders[item.item.id] ?? userName} isFocused={focusedId === item.item.id} />
+              return <ExceptionCard key={item.key} item={item.item} staff={staff} ownerName={deciders[item.item.id] ?? userName} isFocused={focusedId === item.item.id} agent={departmentAgent(agents, item.item.department)} />
             }
             if (item.kind === "approval") {
               return (
@@ -309,6 +309,7 @@ export const OfficeMessenger = ({
                 isMine={message.author_kind === "human" && message.author_name === userName}
                 leadName={message.lead_id ? (leadNames[message.lead_id] ?? null) : null}
                 isContinuation={item.isContinuation}
+                isGroupEnd={item.isGroupEnd}
                 onReply={onMention}
               />
             )
