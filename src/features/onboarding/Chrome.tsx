@@ -6,7 +6,7 @@ import { AccountMenu } from "./AccountMenu";
 import { FRAME_CLASS_NAME, SHELL_CLASS_NAME, TOP_CLASS_NAME, TOP_END_CLASS_NAME } from "./classNames";
 
 /** Page frame of the /workspaces area (outside the console shell): logo, language switch and (when signed in) the account menu, content inside the Grammar page inset. */
-export const Chrome = ({ children, email }: { readonly children: ReactNode; readonly email?: string }) => (
+export const Chrome = ({ children, email, hasWorkspace = false }: { readonly children: ReactNode; readonly email?: string; readonly hasWorkspace?: boolean }) => (
   <main className={SHELL_CLASS_NAME}>
     <PageContainer measure="product">
       <div className={FRAME_CLASS_NAME}>
@@ -16,7 +16,7 @@ export const Chrome = ({ children, email }: { readonly children: ReactNode; read
           </Link>
           <div className={TOP_END_CLASS_NAME}>
             <LocaleSwitch />
-            {email ? <AccountMenu email={email} /> : null}
+            {email ? <AccountMenu email={email} hasWorkspace={hasWorkspace} /> : null}
           </div>
         </div>
         {children}

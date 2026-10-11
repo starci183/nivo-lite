@@ -28,7 +28,7 @@ const WorkspacesPage = async ({ searchParams }: WorkspacesPageProps) => {
     canBill: w.role === "owner" || w.role === "manager",
   }));
   return (
-    <Chrome email={data.user.email ?? ""}>
+    <Chrome email={data.user.email ?? ""} hasWorkspace={workspaces.some((w) => w.state === "active")}>
       <WorkspacesHome workspaces={workspaces} invites={invites} email={data.user.email ?? ""} reason={reason === "disabled" || reason === "none" ? reason : undefined} />
     </Chrome>
   );
