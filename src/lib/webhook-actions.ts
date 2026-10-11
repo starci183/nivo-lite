@@ -3,7 +3,7 @@
 import { createHmac, randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { decryptSecret, encryptSecret, randomSecret } from "./channels";
-import { requireManager } from "./permissions";
+import { requireManager, requireOwner } from "./permissions";
 import { assertPublicTarget } from "./outbound-guard";
 import { eventsOf, workspaceSigningSecret } from "./outbound-events";
 import { isWebhookEvent, type WebhookEvent } from "./webhook-shared";
@@ -56,7 +56,7 @@ const urlOf = async (connectionId: string): Promise<string> => {
 /** Wizard step "địa chỉ + sự kiện": create the connection as PENDING and return the signing secret to copy. */
 export const startWebhookConnection = async (input: { name: string; url: string; events: ReadonlyArray<string> }): Promise<Outcome<WebhookView>> =>
   run(async () => {
-    const member = await requireManager();
+    const member = await requireOwner();
     const name = input.name.trim().slice(0, 60);
     if (name.length < 2) throw new Error("Đặt tên cho kết nối (ít nhất 2 ký tự), ví dụ: n8n của shop.");
     const events = pickEvents(input.events);
@@ -80,7 +80,7 @@ export const startWebhookConnection = async (input: { name: string; url: string;
 /** Show the signing secret and the chosen events again (owner or manager). */
 export const revealWebhook = async (connectionId: string): Promise<Outcome<WebhookView>> =>
   run(async () => {
-    const member = await requireManager();
+    const member = await requireOwner();
     const c = await ownWebhook(member.workspaceId, connectionId);
     return { id: c.id, name: c.name, host: c.meta.host ?? "", events: eventsOf(c.meta), signingSecret: secretOrThrow(member.workspaceId) };
   });
@@ -88,7 +88,7 @@ export const revealWebhook = async (connectionId: string): Promise<Outcome<Webho
 /** Change which events a webhook connection receives. */
 export const updateWebhookEvents = async (connectionId: string, events: ReadonlyArray<string>): Promise<Outcome<Array<WebhookEvent>>> =>
   run(async () => {
-    const member = await requireManager();
+    const member = await requireOwner();
     const c = await ownWebhook(member.workspaceId, connectionId);
     const picked = pickEvents(events);
     const { error } = await supabaseAdmin().from("connections").update({ public_meta: { ...c.meta, events: picked.join(",") }, updated_at: new Date().toISOString() }).eq("id", c.id);
@@ -130,7 +130,7 @@ export const sendWebhookTest = async (connectionId: string): Promise<Outcome<Web
 /** Wizard last step: mark the connection live (events start flowing). */
 export const finishWebhookConnection = async (connectionId: string): Promise<Outcome<true>> =>
   run(async () => {
-    const member = await requireManager();
+    const member = await requireOwner();
     const c = await ownWebhook(member.workspaceId, connectionId);
     const { error } = await supabaseAdmin().from("connections").update({ status: "connected", last_error: null, updated_at: new Date().toISOString() }).eq("id", c.id);
     if (error) throw new Error(error.message);

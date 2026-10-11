@@ -38,7 +38,7 @@ export const ConnectionsPage = async ({ searchParams }: { readonly searchParams?
     <PageContainer measure="product">
       <div className={PAGE_CLASS}>
         <ConnectionsBoard
-          items={all} agentNames={agentNames} agents={agents} localOnly={localOnly} ownerEmail={ownerEmail}
+          items={all} agentNames={agentNames} agents={agents} localOnly={localOnly} ownerEmail={ownerEmail} canManage={me.role === "owner"}
           {...(zaloId ? { zaloResumeId: zaloId } : {})} {...(one("zalo") ? { zaloReturned: one("zalo") } : {})}
         />
         <TextAction href="/automations">{t("automationsLink")}</TextAction>

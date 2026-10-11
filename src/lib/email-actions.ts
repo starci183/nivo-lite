@@ -9,7 +9,7 @@ import { renderEmail } from "./email/layout";
 import { presetOf, type Security } from "./email/presets";
 import { isEmailAddress } from "./email/send";
 import { SmtpFailure, assertSmtpTarget, classifySmtpError, sendThroughSmtp, type SmtpConfig } from "./email/smtp";
-import { requireManager } from "./permissions";
+import { requireOwner } from "./permissions";
 import { supabaseAdmin } from "./supabase/admin";
 import type { Outcome } from "./types";
 
@@ -64,7 +64,7 @@ const failureText = (e: unknown, tr: Tr): string => {
 /** Wizard: validate the form and store the connection as PENDING (it turns connected only after a test email is sent). */
 export const startSmtpConnection = async (input: SmtpInput): Promise<Outcome<SmtpView>> =>
   run(async (tr) => {
-    const member = await requireManager();
+    const member = await requireOwner();
     const preset = presetOf(input.preset);
     if (!preset) throw userError(tr("err_generic"));
     const host = clean(input.host, 253).toLowerCase();
@@ -116,7 +116,7 @@ const configOf = async (c: Connection): Promise<SmtpConfig> => {
  */
 export const sendSmtpTest = async (connectionId: string, to: string, makeDefault: boolean): Promise<Outcome<{ to: string; isDefault: boolean }>> =>
   run(async (tr) => {
-    const member = await requireManager();
+    const member = await requireOwner();
     const ws = member.workspaceId;
     const c = await ownSmtp(ws, connectionId, tr);
     if (c.status === "disconnected") throw userError(tr("err_none"));
@@ -159,7 +159,7 @@ export const sendSmtpTest = async (connectionId: string, to: string, makeDefault
 /** "Đổi mật khẩu": the new password replaces the stored one; the connection must be tested again before it is trusted. */
 export const changeSmtpPassword = async (connectionId: string, password: string): Promise<Outcome<true>> =>
   run(async (tr) => {
-    const member = await requireManager();
+    const member = await requireOwner();
     const c = await ownSmtp(member.workspaceId, connectionId, tr);
     if (c.status === "disconnected") throw userError(tr("err_none"));
     if (!password.trim()) throw userError(tr("err_password"));
@@ -174,7 +174,7 @@ export const changeSmtpPassword = async (connectionId: string, password: string)
 /** Mark one connected SMTP connection as the workspace default (the others stop being default). */
 export const setDefaultSmtp = async (connectionId: string): Promise<Outcome<true>> =>
   run(async (tr) => {
-    const member = await requireManager();
+    const member = await requireOwner();
     const c = await ownSmtp(member.workspaceId, connectionId, tr);
     if (c.status !== "connected") throw userError(tr("err_not_connected"));
     const db = supabaseAdmin();

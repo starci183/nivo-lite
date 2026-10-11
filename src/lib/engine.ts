@@ -5,6 +5,8 @@ import { governance } from "@/i18n/dict/governance";
 import * as ai from "./deepseek";
 import { withUsage } from "./usage";
 import { deliverToChannel } from "./telegram";
+import { conversationAccess } from "./channels";
+import type { Access } from "./connection-access";
 import { MODULE_PERFORMERS } from "./module-performers";
 import { ACTION_DEPARTMENT, FLOW_NEXT, applyOperatingMode, evaluateGate, isOverLimit } from "./policy";
 import { contactParts, logDecision, logEvidence, matchLead, normaliseContact, type Db } from "./core";
@@ -725,6 +727,28 @@ const finish = async (c: EngineCtx, item: WorkItem, proposal: Proposal, f: Finis
 
 type ProcessOpts = { preset?: boolean; noChain?: boolean; forceAsk?: ReasonCode };
 
+/** Actions that send the customer a message through their conversation's channel (the agent-access check applies to them). */
+const CUSTOMER_OUT: ReadonlySet<string> = new Set(["reply_customer", "send_follow_up", "send_quote", "send_care", "issue_invoice"]);
+
+const ACCESS_RANK: Readonly<Record<Access, number>> = { read: 0, ask: 1, auto: 2 };
+
+/**
+ * The access the item's department agent has on the connection the message would leave through: the conversation named in
+ * the proposal, else the customer's latest conversation. "auto" when there is no connection (website chat) or nothing is
+ * bound; when the department's own agent is not bound, the connection's strongest grant decides (the agent that owns the channel).
+ */
+const outboundAccess = async (c: EngineCtx, item: WorkItem, proposal: Proposal): Promise<Access> => {
+  const fromProposal = typeof proposal.fields?.conversation_id === "string" ? proposal.fields.conversation_id : null;
+  const convId = fromProposal ?? (item.subject_type === "conversation" ? item.subject_id : null) ?? (item.lead_id ? (await customerConversation(c, item.lead_id))?.id ?? null : null);
+  if (!convId) return "auto";
+  const { connectionId, grants } = await conversationAccess(convId);
+  if (!connectionId || grants.length === 0) return "auto";
+  const own = await agentFor(c, item.department);
+  const mine = own ? grants.find((g) => g.agentId === own.id) : undefined;
+  if (mine) return mine.access;
+  return grants.reduce<Access>((best, g) => (ACCESS_RANK[g.access] > ACCESS_RANK[best] ? g.access : best), "read");
+};
+
 const processItem = async (c: EngineCtx, claimed: WorkItem, o: ProcessOpts = {}): Promise<WorkItem> => {
   let item = claimed;
   try {
@@ -737,6 +761,10 @@ const processItem = async (c: EngineCtx, claimed: WorkItem, o: ProcessOpts = {})
     const rule = await loadRule(c, item.action);
     let v = evaluateGate({ department: item.department, action: item.action, rule, proposal });
     if (o.forceAsk) v = { verdict: "ask", reason: o.forceAsk, reasons: [o.forceAsk, ...v.reasons.filter((r) => r !== o.forceAsk && r !== "routine")], missing: v.missing };
+    // Agent access: a message that would leave through a connection the agent may only read, or must ask for, waits for a person.
+    if (v.verdict === "auto" && CUSTOMER_OUT.has(item.action) && (await outboundAccess(c, item, proposal)) !== "auto") {
+      v = { verdict: "ask", reason: "over_authority", reasons: ["over_authority", ...v.reasons.filter((r) => r !== "over_authority" && r !== "routine")], missing: v.missing };
+    }
     if (v.verdict === "auto") return await finish(c, item, proposal, { path: "auto", by: NIVO_BY, outcome: "auto_done" }, o.noChain);
     return await askHuman(c, item, proposal, v, rule);
   } catch (e) {

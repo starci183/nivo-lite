@@ -8,6 +8,9 @@ import type { WorkItem } from "./flow-types";
 /** Owner or manager, else a friendly translated error (authority, rules, staff and agent edits). */
 export const requireManager = (): Promise<Member> => requireRole(["owner", "manager"]);
 
+/** The workspace owner only, else a friendly translated error: connections, their credentials and agent access to them. */
+export const requireOwner = (): Promise<Member> => requireRole(["owner"]);
+
 /** Who a decision is recorded as: the real member's name; staff accounts are `staff`, owner and manager are `owner`. */
 export const deciderOf = (member: Member): Decider => ({ name: member.displayName, kind: member.role === "staff" ? "staff" : "owner" });
 

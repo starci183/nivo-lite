@@ -35,6 +35,8 @@ export type ConnectionsBoardProps = {
   readonly groups?: typeof PROVIDER_GROUPS
   /** Inside another page (Developers): no page heading, no attention banner, no group headings. */
   readonly isEmbedded?: boolean
+  /** The workspace owner: adds, changes and removes connections and decides which agents use them. Others read. */
+  readonly canManage?: boolean
 }
 
 type Open = { readonly provider: Provider; readonly resumeId?: string } | null
@@ -47,7 +49,7 @@ const RESUMABLE: ReadonlySet<string> = new Set(["money", "zalo"])
  * providers grouped by what they bring in: connected providers as their own list, the rest in one compact "Not connected" list per
  * group. Every wizard opens in one Drawer, so the lists stay where they are.
  */
-export const ConnectionsBoard = ({ items, agentNames, agents, localOnly, zaloResumeId, zaloReturned, ownerEmail, groups = PROVIDER_GROUPS, isEmbedded = false }: ConnectionsBoardProps) => {
+export const ConnectionsBoard = ({ items, agentNames, agents, localOnly, zaloResumeId, zaloReturned, ownerEmail, groups = PROVIDER_GROUPS, isEmbedded = false, canManage = false }: ConnectionsBoardProps) => {
   const t = useT(dict)
   const tw = useT(connectionWizard)
   const locale = useLocale()
@@ -88,9 +90,11 @@ export const ConnectionsBoard = ({ items, agentNames, agents, localOnly, zaloRes
           tone="cautionary"
           title={t("attentionTitle", { name: first.name, provider: PROVIDERS[first.provider].title[locale] })}
           description={[first.status === "pending" ? t("attentionPending") : t("attentionError"), attention.length > 1 ? t("attentionMore", { count: attention.length - 1 }) : ""].filter(Boolean).join(" ")}
-          {...(canReopen(first.provider) ? { action: { label: t("attentionAction"), onAction: () => setOpen({ provider: first.provider, resumeId: first.id }) } } : {})}
+          {...(canManage && canReopen(first.provider) ? { action: { label: t("attentionAction"), onAction: () => setOpen({ provider: first.provider, resumeId: first.id }) } } : {})}
         />
       ) : null}
+
+      {canManage || isEmbedded ? null : <Alert tone="informative" title={t("ownerOnly")} />}
 
       {groups.map((group) => {
         const used = group.providers.filter((p) => items.some((c) => c.provider === p))
@@ -105,11 +109,11 @@ export const ConnectionsBoard = ({ items, agentNames, agents, localOnly, zaloRes
                 <div key={p} data-guide={`connections.${p}`}>
                   <SurfaceListCard
                     label={PROVIDERS[p].title[locale]} headingLevel={3} fact={t("connectionCount", { count: rows.length })}
-                    labelEnd={<Button variant="ghost" onPress={() => setOpen({ provider: p })}>{t("add")}</Button>}
+                    {...(canManage ? { labelEnd: <Button variant="ghost" onPress={() => setOpen({ provider: p })}>{t("add")}</Button> } : {})}
                   >
                     {rows.map((c) => (
                       <ConnectionRow
-                        key={c.id} connection={c} agentNames={namesFor(c)} localOnly={localOnly} ownerEmail={ownerEmail}
+                        key={c.id} connection={c} agentNames={namesFor(c)} localOnly={localOnly} ownerEmail={ownerEmail} agents={agents} canManage={canManage}
                         {...(canReopen(p) ? { onOpen: () => setOpen({ provider: p, resumeId: c.id }) } : {})}
                       />
                     ))}
@@ -126,7 +130,7 @@ export const ConnectionsBoard = ({ items, agentNames, agents, localOnly, zaloRes
                     title={<span data-guide={`connections.${p}`}>{PROVIDERS[p].title[locale]}</span>}
                     {...(PROVIDERS[p].earlyAccess ? { badges: <Badge tone="neutral">{tw("earlyAccess")}</Badge> } : {})}
                     description={PROVIDERS[p].blurb[locale]}
-                    actions={<Button variant="outline" onPress={() => setOpen({ provider: p })}>{t("connect")}</Button>}
+                    {...(canManage ? { actions: <Button variant="outline" onPress={() => setOpen({ provider: p })}>{t("connect")}</Button> } : {})}
                   />
                 ))}
               </SurfaceListCard>

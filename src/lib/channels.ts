@@ -12,7 +12,8 @@ export type { Provider, Environment } from "./connection-providers";
 import type { Environment, Provider } from "./connection-providers";
 /** `pending`: created by the wizard; set up but no first webhook seen yet (or the wizard was abandoned). */
 export type ConnectionStatus = "pending" | "connected" | "error" | "disconnected";
-export type Purpose = "inbound_chat" | "outbound_chat" | "bank_feed";
+export type { Purpose, Access } from "./connection-access";
+import type { Access, Purpose } from "./connection-access";
 
 export type FirstEvent = { readonly amount: number; readonly content: string; readonly at: string };
 
@@ -34,6 +35,8 @@ export type Connection = {
   readonly firstEvent: FirstEvent | null;
   /** Ids of the agents that use this connection. */
   readonly agentIds: ReadonlyArray<string>;
+  /** Each agent's access level through this connection (same agents as agentIds). */
+  readonly grants: ReadonlyArray<{ readonly agentId: string; readonly access: Access }>;
 };
 
 const key = (): Buffer => {
@@ -86,9 +89,9 @@ export const webhookUrlFor = (provider: Provider, connectionId: string, origin =
 
 type Row = { id: string; workspace_id: string; provider: Provider; name: string; public_meta: Record<string, string> | null; status: ConnectionStatus; last_error: string | null; environment: Environment; is_default: boolean | null; last_event_at: string | null; first_event: FirstEvent | null };
 export const CONNECTION_SELECT = "id, workspace_id, provider, name, public_meta, status, last_error, environment, is_default, last_event_at, first_event";
-const toConnection = (r: Row, agentIds: ReadonlyArray<string>): Connection => ({
+const toConnection = (r: Row, grants: ReadonlyArray<{ agentId: string; access: Access }>): Connection => ({
   id: r.id, workspaceId: r.workspace_id, provider: r.provider, name: r.name, meta: r.public_meta ?? {}, status: r.status, lastError: r.last_error,
-  environment: r.environment ?? "live", isDefault: Boolean(r.is_default), lastEventAt: r.last_event_at, firstEvent: r.first_event, agentIds,
+  environment: r.environment ?? "live", isDefault: Boolean(r.is_default), lastEventAt: r.last_event_at, firstEvent: r.first_event, agentIds: grants.map((g) => g.agentId), grants,
 });
 
 /** A workspace's connections with the agents bound to each (service role; callers scope by their own workspace). */
@@ -99,9 +102,11 @@ export const listConnections = async (workspaceId: string, provider?: Provider):
   const { data } = await q;
   const rows = (data ?? []) as Array<Row>;
   if (!rows.length) return [];
-  const { data: links } = await db.from("agent_connections").select("agent_id, connection_id").in("connection_id", rows.map((r) => r.id));
-  const byConn = new Map<string, Array<string>>();
-  for (const l of (links ?? []) as Array<{ agent_id: string; connection_id: string }>) byConn.set(l.connection_id, [...(byConn.get(l.connection_id) ?? []), l.agent_id]);
+  const { data: links } = await db.from("agent_connections").select("agent_id, connection_id, access").in("connection_id", rows.map((r) => r.id));
+  const byConn = new Map<string, Array<{ agentId: string; access: Access }>>();
+  for (const l of (links ?? []) as Array<{ agent_id: string; connection_id: string; access: Access | null }>) {
+    byConn.set(l.connection_id, [...(byConn.get(l.connection_id) ?? []), { agentId: l.agent_id, access: l.access ?? "auto" }]);
+  }
   return rows.map((r) => toConnection(r, byConn.get(r.id) ?? []));
 };
 
@@ -128,17 +133,35 @@ export const loadConnectionSecret = async (connectionId: string, provider: Provi
 
 /**
  * The active agent of `module` that a connection is bound to (null when none: the message has nobody to answer it).
- * Bindings are what make a webhook act: an unbound connection stores the message and replies nothing.
+ * Bindings are what make a webhook act: an unbound connection stores the message and replies nothing. With `acting`, an agent
+ * that may only read through the connection does not count: the message is stored and nobody answers it.
  */
-export const boundAgent = async (connectionId: string, module: "chatbot" | "accounting", purposes: ReadonlyArray<Purpose>): Promise<{ id: string } | null> => {
+export const boundAgent = async (
+  connectionId: string, module: "chatbot" | "accounting", purposes: ReadonlyArray<Purpose>, opts: { readonly acting?: boolean } = {},
+): Promise<{ id: string; access: Access } | null> => {
   const db = supabaseAdmin();
-  const { data } = await db.from("agent_connections").select("agent_id, purpose, agents!inner(id, module, status, created_at)").eq("connection_id", connectionId).in("purpose", [...purposes]);
-  type Link = { agents: { id: string; module: string; status: string; created_at: string } | Array<{ id: string; module: string; status: string; created_at: string }> };
+  const { data } = await db.from("agent_connections").select("agent_id, purpose, access, agents!inner(id, module, status, created_at)").eq("connection_id", connectionId).in("purpose", [...purposes]);
+  type AgentRow = { id: string; module: string; status: string; created_at: string };
+  type Link = { access: Access | null; agents: AgentRow | Array<AgentRow> };
   const agents = ((data ?? []) as unknown as Array<Link>)
-    .map((l) => (Array.isArray(l.agents) ? l.agents[0] : l.agents))
-    .filter((a) => a && a.module === module && a.status === "active")
-    .sort((a, b) => a.created_at.localeCompare(b.created_at));
-  return agents[0] ? { id: agents[0].id } : null;
+    .map((l) => ({ agent: Array.isArray(l.agents) ? l.agents[0] : l.agents, access: l.access ?? "auto" }))
+    .filter((x) => x.agent && x.agent.module === module && x.agent.status === "active" && (!opts.acting || x.access !== "read"))
+    .sort((a, b) => a.agent.created_at.localeCompare(b.agent.created_at));
+  return agents[0] ? { id: agents[0].agent.id, access: agents[0].access } : null;
+};
+
+/** The access of the agents bound to the connection a conversation came in on, strongest first (empty: not bound, or no connection). */
+export const conversationAccess = async (conversationId: string): Promise<{ connectionId: string | null; grants: Array<{ agentId: string; module: string; access: Access }> }> => {
+  const db = supabaseAdmin();
+  const { data: conv } = await db.from("agent_conversations").select("connection_id").eq("id", conversationId).maybeSingle<{ connection_id: string | null }>();
+  if (!conv?.connection_id) return { connectionId: null, grants: [] };
+  const { data } = await db.from("agent_connections").select("agent_id, access, agents!inner(module, status)").eq("connection_id", conv.connection_id);
+  type Link = { agent_id: string; access: Access | null; agents: { module: string; status: string } | Array<{ module: string; status: string }> };
+  const grants = ((data ?? []) as unknown as Array<Link>).flatMap((l) => {
+    const a = Array.isArray(l.agents) ? l.agents[0] : l.agents;
+    return a && a.status === "active" ? [{ agentId: l.agent_id, module: a.module, access: l.access ?? "auto" }] : [];
+  });
+  return { connectionId: conv.connection_id, grants };
 };
 
 /**

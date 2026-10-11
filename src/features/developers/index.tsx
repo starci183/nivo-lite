@@ -32,7 +32,7 @@ export const DevelopersPage = async () => {
 
         <div className={STACK_CLASS}>
           <SectionHeader level={2} title={t("eventsTitle")} description={t("eventsBody")} />
-          <ConnectionsBoard items={hooks} agentNames={{}} agents={[]} localOnly={false} ownerEmail="" groups={[{ id: "tools", providers: ["webhook"] }]} isEmbedded />
+          <ConnectionsBoard items={hooks} agentNames={{}} agents={[]} localOnly={false} ownerEmail="" groups={[{ id: "tools", providers: ["webhook"] }]} isEmbedded canManage={me.role === "owner"} />
         </div>
 
         <ApiKeysSection items={keys.ok ? keys.data : []} loadError={keys.ok ? null : keys.error} />

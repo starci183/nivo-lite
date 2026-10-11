@@ -22,7 +22,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const { connectionId } = await params;
   const raw = await request.text();
   // The bound-agent lookup is independent of the signature check: start it together with the secret read (used only after authentication).
-  const agentP = UUID.test(connectionId) ? boundAgent(connectionId, "chatbot", ["inbound_chat"]).catch(() => null) : null;
+  const agentP = UUID.test(connectionId) ? boundAgent(connectionId, "chatbot", ["inbound_chat"], { acting: true }).catch(() => null) : null;
   const found = UUID.test(connectionId) ? await loadConnectionSecret(connectionId, "zalo_oa").catch(() => null) : null;
   let secret: ZaloSecret | null = null;
   try {

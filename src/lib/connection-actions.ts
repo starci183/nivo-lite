@@ -6,11 +6,12 @@ import type { Translate } from "@/i18n/core";
 import { connections as dict } from "@/i18n/dict/connections";
 import {
   decryptSecret, encryptSecret, getConnection, publicSiteUrl, randomSecret, sha256, webhookUrlFor,
-  type Connection, type Environment, type Provider, type Purpose,
+  type Connection, type Environment, type Provider,
 } from "./channels";
 import { PROVIDERS } from "./connection-providers";
+import { DEFAULT_ACCESS, isAccess, purposeFor, type Access } from "./connection-access";
 import { bankName } from "./vn-banks";
-import { requireManager } from "./permissions";
+import { requireManager, requireOwner } from "./permissions";
 import { supabaseAdmin } from "./supabase/admin";
 import { tgCall } from "./telegram-api";
 import { getAccessToken, loadZalo, saveZaloSecret, zaloCallbackUrl, type ZaloSecret } from "./zalo";
@@ -95,7 +96,7 @@ export type TelegramConnected = { connection: Connection; webhookRegistered: boo
 /** Validate the token with getMe, store it encrypted, then point the bot webhook at this connection own URL. */
 export const connectTelegram = async (input: { name: string; token: string }): Promise<Outcome<TelegramConnected>> =>
   run(async (tr) => {
-    const member = await requireManager();
+    const member = await requireOwner();
     const ws = member.workspaceId;
     const name = requireName(input.name, tr);
     const token = input.token.trim();
@@ -158,7 +159,7 @@ const wizardView = async (ws: string, id: string, apiKey = ""): Promise<WizardCo
  */
 export const startMoneyConnection = async (input: { provider: MoneyProvider; environment: Environment; name: string; bankCode: string; accountNumber: string; holder: string }): Promise<Outcome<WizardConnection>> =>
   run(async (tr) => {
-    const member = await requireManager();
+    const member = await requireOwner();
     if (!isMoney(input.provider)) throw userError(tr("errGeneric"));
     const def = PROVIDERS[input.provider];
     const environment: Environment = def.environments.includes(input.environment) ? input.environment : "live";
@@ -192,7 +193,7 @@ export const updateMoneyConnection = async (
   input: { environment: Environment; name: string; bankCode: string; accountNumber: string; holder: string; apiKey?: string },
 ): Promise<Outcome<WizardConnection>> =>
   run(async (tr) => {
-    const member = await requireManager();
+    const member = await requireOwner();
     const c = await own(member.workspaceId, connectionId, tr);
     if (!isMoney(c.provider)) throw userError(tr("errGeneric"));
     const def = PROVIDERS[c.provider];
@@ -228,7 +229,7 @@ export const updateMoneyConnection = async (
 /** Continue an unfinished connection: the same data the wizard had (SePay shows its key again; payOS/Casso keys are never returned). */
 export const resumeConnection = async (connectionId: string): Promise<Outcome<WizardConnection>> =>
   run(async (tr) => {
-    const member = await requireManager();
+    const member = await requireOwner();
     const c = await own(member.workspaceId, connectionId, tr);
     const sec = await secretOf(c.id);
     let apiKey = "";
@@ -244,7 +245,7 @@ export const resumeConnection = async (connectionId: string): Promise<Outcome<Wi
 /** Show the SePay API key again (owner or manager only) so it can be pasted into SePay webhook settings. */
 export const revealSepayKey = async (connectionId: string): Promise<Outcome<{ apiKey: string; webhookUrl: string }>> =>
   run(async (tr) => {
-    const member = await requireManager();
+    const member = await requireOwner();
     await own(member.workspaceId, connectionId, tr, "sepay");
     const sec = await secretOf(connectionId);
     if (!sec) throw userError(tr("errNone"));
@@ -257,7 +258,7 @@ export const revealSepayKey = async (connectionId: string): Promise<Outcome<{ ap
  */
 export const saveProviderKeys = async (connectionId: string, values: Readonly<Record<string, string>>): Promise<Outcome<{ confirmed: boolean; localOnly: boolean }>> =>
   run(async (tr) => {
-    const member = await requireManager();
+    const member = await requireOwner();
     const c = await own(member.workspaceId, connectionId, tr);
     const def = PROVIDERS[c.provider];
     if (!def.credentials.length) throw userError(tr("errNone"));
@@ -298,30 +299,6 @@ export const checkFirstEvent = async (connectionId: string): Promise<Outcome<Fir
     return { status: c.status, firstEvent: c.firstEvent };
   });
 
-/** Wizard last step: exactly these agents use this connection (add the ticked ones, drop the unticked ones for this connection only). */
-export const setConnectionAgents = async (connectionId: string, agentIds: ReadonlyArray<string>): Promise<Outcome<true>> =>
-  run(async (tr) => {
-    const member = await requireManager();
-    const ws = member.workspaceId;
-    const c = await own(ws, connectionId, tr);
-    const db = supabaseAdmin();
-    const { data: agents } = agentIds.length
-      ? await db.from("agents").select("id, module").eq("workspace_id", ws).in("id", [...agentIds])
-      : { data: [] as Array<{ id: string; module: string }> };
-    const rows = ((agents ?? []) as Array<{ id: string; module: string }>).flatMap((a) => {
-      const purpose = PURPOSE[`${a.module}:${c.provider}`];
-      return purpose ? [{ agent_id: a.id, connection_id: c.id, workspace_id: ws, purpose }] : [];
-    });
-    const del = await db.from("agent_connections").delete().eq("connection_id", c.id);
-    if (del.error) throw new Error(del.error.message);
-    if (rows.length) {
-      const ins = await db.from("agent_connections").insert(rows);
-      if (ins.error) throw new Error(ins.error.message);
-    }
-    refresh();
-    return true as const;
-  });
-
 /* ------------------------------------------------------------------ Zalo OA (OAuth v4, webhook, CS messages) */
 
 export type ZaloWizardConnection = {
@@ -343,7 +320,7 @@ const zaloView = async (ws: string, id: string): Promise<ZaloWizardConnection | 
 /** Zalo wizard: keep the app's keys (encrypted) as a PENDING connection so the callback and webhook URLs exist for the Zalo Developers screens. */
 export const startZaloConnection = async (input: { name: string; appId: string; appSecret: string }): Promise<Outcome<ZaloWizardConnection>> =>
   run(async (tr) => {
-    const member = await requireManager();
+    const member = await requireOwner();
     const name = requireName(input.name, tr);
     const appId = clean(input.appId, 40);
     const appSecret = input.appSecret.trim();
@@ -358,7 +335,7 @@ export const startZaloConnection = async (input: { name: string; appId: string; 
 /** The "OA Secret Key" from the Zalo app's Webhook screen: it signs every webhook, so it is what lets NIVO trust the events. */
 export const saveZaloOaSecret = async (connectionId: string, oaSecret: string): Promise<Outcome<true>> =>
   run(async (tr) => {
-    const member = await requireManager();
+    const member = await requireOwner();
     const c = await own(member.workspaceId, connectionId, tr, "zalo_oa");
     const key = oaSecret.trim();
     if (key.length < 8 || key.length > 200) throw userError(tr("errKeys"));
@@ -372,7 +349,7 @@ export const saveZaloOaSecret = async (connectionId: string, oaSecret: string): 
 /** Continue an unfinished (or broken) Zalo connection. Keys are never returned. */
 export const resumeZalo = async (connectionId: string): Promise<Outcome<ZaloWizardConnection>> =>
   run(async (tr) => {
-    const member = await requireManager();
+    const member = await requireOwner();
     const c = await own(member.workspaceId, connectionId, tr, "zalo_oa");
     return (await zaloView(member.workspaceId, c.id)) as ZaloWizardConnection;
   });
@@ -380,7 +357,7 @@ export const resumeZalo = async (connectionId: string): Promise<Outcome<ZaloWiza
 /** "Kết nối Zalo OA": a fresh PKCE verifier + one-time state are stored with the credential, and the Zalo permission URL is returned. */
 export const zaloAuthorizeUrl = async (connectionId: string): Promise<Outcome<{ url: string }>> =>
   run(async (tr) => {
-    const member = await requireManager();
+    const member = await requireOwner();
     const c = await own(member.workspaceId, connectionId, tr, "zalo_oa");
     const loaded = await loadZalo(c.id);
     if (!loaded) throw userError(tr("errNone"));
@@ -445,7 +422,7 @@ export const testConnection = async (connectionId: string): Promise<Outcome<Conn
 /** Stop using a connection: remove the Telegram webhook, wipe the stored credential, keep the row (and its history) as disconnected. */
 export const disconnectConnection = async (connectionId: string): Promise<Outcome<true>> =>
   run(async (tr) => {
-    const member = await requireManager();
+    const member = await requireOwner();
     const c = await own(member.workspaceId, connectionId, tr);
     const db = supabaseAdmin();
     if (c.provider === "telegram" && publicSiteUrl()) {
@@ -462,7 +439,7 @@ export const disconnectConnection = async (connectionId: string): Promise<Outcom
 /** Remove a disconnected connection from the list (its conversations stay; bindings go with it). */
 export const deleteConnection = async (connectionId: string): Promise<Outcome<true>> =>
   run(async (tr) => {
-    const member = await requireManager();
+    const member = await requireOwner();
     const c = await own(member.workspaceId, connectionId, tr);
     if (c.status !== "disconnected") throw userError(tr("errStillConnected"));
     const { error } = await supabaseAdmin().from("connections").delete().eq("id", c.id);
@@ -471,36 +448,108 @@ export const deleteConnection = async (connectionId: string): Promise<Outcome<tr
     return true as const;
   });
 
-/* ------------------------------------------------------------------ which connections an agent uses */
+/* ------------------------------------------------------------------ agent access to connections (owner only, both directions) */
 
-const PURPOSE: Record<string, Purpose | undefined> = {
-  "chatbot:telegram": "inbound_chat", "chatbot:zalo_oa": "inbound_chat", "sales:telegram": "outbound_chat",
-  "accounting:sepay": "bank_feed", "accounting:payos": "bank_feed", "accounting:casso": "bank_feed",
+/** One requested change: `access` null removes the agent's access to the connection. */
+type GrantChange = { readonly agentId: string; readonly connectionId: string; readonly access: Access | null };
+
+/**
+ * The one writer of agent access, used by both directions (a connection's agents, an agent's connections) and the wizards.
+ * Every pair is checked against the workspace and the module rules (purposeFor); a pair that cannot be granted is refused with
+ * a reason. Each real change is written to agent_access_log (who, when, before, after).
+ */
+const applyGrants = async (ws: string, by: { userId: string; displayName: string }, changes: ReadonlyArray<GrantChange>, tr: Tr): Promise<void> => {
+  if (changes.length === 0) return;
+  const db = supabaseAdmin();
+  const agentIds = [...new Set(changes.map((x) => x.agentId))];
+  const connIds = [...new Set(changes.map((x) => x.connectionId))];
+  const [{ data: agents }, { data: conns }, { data: current }] = await Promise.all([
+    db.from("agents").select("id, name, module").eq("workspace_id", ws).in("id", agentIds),
+    db.from("connections").select("id, name, provider, status").eq("workspace_id", ws).in("id", connIds),
+    db.from("agent_connections").select("agent_id, connection_id, access").eq("workspace_id", ws).in("agent_id", agentIds).in("connection_id", connIds),
+  ]);
+  const agentOf = new Map(((agents ?? []) as Array<{ id: string; name: string; module: string }>).map((a) => [a.id, a]));
+  const connOf = new Map(((conns ?? []) as Array<{ id: string; name: string; provider: string; status: string }>).map((c) => [c.id, c]));
+  const before = new Map(((current ?? []) as Array<{ agent_id: string; connection_id: string; access: Access }>).map((r) => [`${r.agent_id}:${r.connection_id}`, r.access]));
+  const log: Array<Record<string, unknown>> = [];
+  for (const ch of changes) {
+    const agent = agentOf.get(ch.agentId);
+    const conn = connOf.get(ch.connectionId);
+    if (!agent || !conn) throw userError(tr("errNone"));
+    const was = before.get(`${ch.agentId}:${ch.connectionId}`) ?? null;
+    if (was === ch.access) continue;
+    if (ch.access === null) {
+      const del = await db.from("agent_connections").delete().eq("agent_id", agent.id).eq("connection_id", conn.id);
+      if (del.error) throw new Error(del.error.message);
+    } else {
+      const purpose = purposeFor(agent.module, conn.provider);
+      if (!purpose) throw userError(tr("errAccessPair", { agent: agent.name, connection: conn.name }));
+      if (conn.status === "disconnected" && was === null) throw userError(tr("errAccessDisconnected", { connection: conn.name }));
+      const up = await db.from("agent_connections").upsert(
+        { agent_id: agent.id, connection_id: conn.id, workspace_id: ws, purpose, access: ch.access },
+        { onConflict: "agent_id,connection_id" },
+      );
+      if (up.error) throw new Error(up.error.message);
+    }
+    log.push({
+      workspace_id: ws, connection_id: conn.id, agent_id: agent.id, connection_name: conn.name, agent_name: agent.name,
+      before_access: was, after_access: ch.access, changed_by: by.userId, changed_by_name: by.displayName,
+    });
+  }
+  if (log.length) {
+    const r = await db.from("agent_access_log").insert(log);
+    if (r.error) console.error("agent access log failed", r.error.message);
+  }
 };
 
-/** Replace the set of connections one agent uses. Only connections that make sense for the agent module can be picked. */
-export const setAgentConnections = async (agentId: string, connectionIds: ReadonlyArray<string>): Promise<Outcome<true>> =>
+const normalise = (v: unknown): Access | null => (v === null ? null : isAccess(v) ? v : DEFAULT_ACCESS);
+
+/** One agent's access to one connection (null removes it). Saved at once from either picker. */
+export const setGrant = async (connectionId: string, agentId: string, access: Access | null): Promise<Outcome<true>> =>
   run(async (tr) => {
-    const member = await requireManager();
+    const member = await requireOwner();
+    await applyGrants(member.workspaceId, member, [{ agentId, connectionId, access: normalise(access) }], tr);
+    refresh();
+    return true as const;
+  });
+
+type ByAgent = string | { readonly agentId: string; readonly access: Access };
+type ByConnection = string | { readonly connectionId: string; readonly access: Access };
+
+/**
+ * Exactly these agents use this connection (wizards' last step). A bare id keeps that agent's current level, or starts at
+ * DEFAULT_ACCESS; an agent left out loses its access to this connection only.
+ */
+export const setConnectionAgents = async (connectionId: string, wanted: ReadonlyArray<ByAgent>): Promise<Outcome<true>> =>
+  run(async (tr) => {
+    const member = await requireOwner();
+    const ws = member.workspaceId;
+    const c = await own(ws, connectionId, tr);
+    const have = new Map(c.grants.map((g) => [g.agentId, g.access]));
+    const next = new Map(wanted.map((w) => (typeof w === "string" ? [w, have.get(w) ?? DEFAULT_ACCESS] : [w.agentId, w.access])));
+    const changes: Array<GrantChange> = [
+      ...[...next].map(([agentId, access]) => ({ agentId, connectionId, access })),
+      ...c.grants.filter((g) => !next.has(g.agentId)).map((g) => ({ agentId: g.agentId, connectionId, access: null })),
+    ];
+    await applyGrants(ws, member, changes, tr);
+    refresh();
+    return true as const;
+  });
+
+/** Exactly these connections are used by this agent (the agent's settings). Same rules as setConnectionAgents, the other way. */
+export const setAgentConnections = async (agentId: string, wanted: ReadonlyArray<ByConnection>): Promise<Outcome<true>> =>
+  run(async (tr) => {
+    const member = await requireOwner();
     const ws = member.workspaceId;
     const db = supabaseAdmin();
-    const { data: agent } = await db.from("agents").select("id, module").eq("id", agentId).eq("workspace_id", ws).maybeSingle<{ id: string; module: string }>();
-    if (!agent) throw userError(tr("errNone"));
-    const { data: found } = connectionIds.length
-      ? await db.from("connections").select("id, provider, status").eq("workspace_id", ws).in("id", [...connectionIds])
-      : { data: [] as Array<{ id: string; provider: string; status: string }> };
-    const known = new Map((found ?? []).map((c) => [c.id as string, c as { provider: string; status: string }]));
-    const rows = connectionIds.flatMap((id) => {
-      const c = known.get(id);
-      const purpose = c ? PURPOSE[`${agent.module}:${c.provider}`] : undefined;
-      return c && c.status !== "disconnected" && purpose ? [{ agent_id: agent.id, connection_id: id, workspace_id: ws, purpose }] : [];
-    });
-    const del = await db.from("agent_connections").delete().eq("agent_id", agent.id);
-    if (del.error) throw new Error(del.error.message);
-    if (rows.length) {
-      const ins = await db.from("agent_connections").insert(rows);
-      if (ins.error) throw new Error(ins.error.message);
-    }
+    const { data: rows } = await db.from("agent_connections").select("connection_id, access").eq("workspace_id", ws).eq("agent_id", agentId);
+    const have = new Map(((rows ?? []) as Array<{ connection_id: string; access: Access }>).map((r) => [r.connection_id, r.access]));
+    const next = new Map(wanted.map((w) => (typeof w === "string" ? [w, have.get(w) ?? DEFAULT_ACCESS] : [w.connectionId, w.access])));
+    const changes: Array<GrantChange> = [
+      ...[...next].map(([connectionId, access]) => ({ agentId, connectionId, access })),
+      ...[...have.keys()].filter((id) => !next.has(id)).map((connectionId) => ({ agentId, connectionId, access: null })),
+    ];
+    await applyGrants(ws, member, changes, tr);
     refresh();
     return true as const;
   });

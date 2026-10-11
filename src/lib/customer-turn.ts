@@ -13,6 +13,7 @@ import { escalateToStaff } from "./staff-relay";
 import { registerChatApplication } from "./module-hiring-flow";
 import { applyLoyaltyIntent } from "./module-loyalty-chat";
 import { deliverToChannel } from "./telegram";
+import { conversationAccess } from "./channels";
 import type { Agent, AgentConversation, AgentMessage } from "./types";
 
 /** How the customer reached us: the inbound channel key and the label shown on the lead. */
@@ -183,9 +184,25 @@ const applyCustomerOut = async (
     if (!r.ok) replyText = `Mình chưa ghi nhận được hồ sơ: ${r.message} Bạn kiểm tra giúp mình nhé.`;
   }
 
-  const reply = must(await supabase.from("agent_messages").insert({ workspace_id: ws, conversation_id: conv.id, role: "agent", body: replyText }).select().single<AgentMessage>());
+  // Agent access through this conversation's connection: "auto" (or the website chat) sends; "ask" and "read" turn the reply into a decision
+  // card with the draft, and the approved reply_customer sends it.
+  let reply: AgentMessage;
+  if (await replyNeedsApproval(conv.id, agent.id)) {
+    const item = await runWork(c, {
+      action: "reply_customer", subject_type: "conversation", subject_id: conv.id, lead_id: conv.lead_id, origin: "live",
+      dedupeKey: `reply_customer:access:${mine.id}`, preset: true, noChain: true, forceAsk: "over_authority",
+      seed: { summary: t("replySummary", { question: body.slice(0, 160) }), draft: replyText, fields: { question: body, conversation_id: conv.id } },
+    });
+    if (item.status === "waiting_decision") {
+      await escalateToStaff(c, { workItemId: item.id, conversationId: conv.id, customerName: conv.visitor_name ?? "—", question: body, proposed: replyText });
+    }
+    await supabase.from("agent_messages").insert({ workspace_id: ws, conversation_id: conv.id, role: "system", body: t("replyAwaitsApproval") });
+    reply = mine;
+  } else {
+    reply = must(await supabase.from("agent_messages").insert({ workspace_id: ws, conversation_id: conv.id, role: "agent", body: replyText }).select().single<AgentMessage>());
+    await deliverToChannel(supabase, conv.id, replyText);
+  }
   if (applicationNote) await supabase.from("agent_messages").insert({ workspace_id: ws, conversation_id: conv.id, role: "system", body: applicationNote });
-  await deliverToChannel(supabase, conv.id, replyText);
   let capturedLeadId: string | null = null;
   let leadId = conv.lead_id;
   const transcript = [...turns, { role: "agent" as const, body: replyText }].map((x) => `${x.role === "user" ? out.lead?.contact_name ?? conv.visitor_name ?? "Customer" : agent.name}: ${x.body}`).join("\n");
@@ -280,4 +297,12 @@ const applyCustomerOut = async (
   // An order queues the payment record right behind the lead's classification: drain one more step for it.
   if (changed) drainAfter(c, ordered ? 3 : 2);
   return { reply, capturedLeadId, changed };
+};
+
+/** True when this agent may not send through the conversation's connection on its own (access "ask" or "read"). */
+const replyNeedsApproval = async (conversationId: string, agentId: string): Promise<boolean> => {
+  const { connectionId, grants } = await conversationAccess(conversationId).catch(() => ({ connectionId: null, grants: [] }));
+  if (!connectionId) return false;
+  const mine = grants.find((g) => g.agentId === agentId);
+  return mine ? mine.access !== "auto" : false;
 };

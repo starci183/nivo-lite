@@ -4,7 +4,7 @@ import { getT } from "@/i18n/server";
 import { googleWizard } from "@/i18n/dict/googleWizard";
 import { buildAuthUrl, safeReturnTo, signState } from "./google-sheets-core";
 import { googleConfigured, googleStateKey } from "./google";
-import { requireManager } from "./permissions";
+import { requireOwner } from "./permissions";
 import type { Outcome } from "./types";
 
 /**
@@ -14,7 +14,7 @@ import type { Outcome } from "./types";
 export const startGoogleConnect = async (returnTo: string): Promise<Outcome<{ url: string }>> => {
   const tr = await getT(googleWizard);
   try {
-    const member = await requireManager();
+    const member = await requireOwner();
     if (!googleConfigured()) return { ok: false, error: tr("errNotConfigured") };
     const state = signState(googleStateKey(), { workspaceId: member.workspaceId, userId: member.userId, returnTo: safeReturnTo(returnTo) });
     const url = buildAuthUrl(state);

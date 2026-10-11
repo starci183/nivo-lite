@@ -18,13 +18,15 @@ import { SETTINGS_EXTRAS } from "./registry";
 type SettingsScreenProps = {
   readonly installation: Installation;
   readonly canEdit: boolean;
+  /** The workspace owner: may change which connections this agent uses and how far. */
+  readonly canGrant?: boolean;
   /** The workspace connections this module can use, and the ones its agent has ticked. */
   readonly connectionOptions: ReadonlyArray<ConnectionOption>;
   readonly selectedConnections: ReadonlyArray<string>;
 };
 
 /** Settings tab of a module. Every control saves on its own and reports its own result. */
-export const SettingsScreen = ({ installation, canEdit, connectionOptions, selectedConnections }: SettingsScreenProps) => {
+export const SettingsScreen = ({ installation, canEdit, canGrant = false, connectionOptions, selectedConnections }: SettingsScreenProps) => {
   const t = useT(modulesCore);
   const router = useRouter();
   const [name, setName] = useState(installation.agentName);
@@ -107,7 +109,7 @@ export const SettingsScreen = ({ installation, canEdit, connectionOptions, selec
         </SurfaceCard>
 
         {installation.agentId ? (
-          <AgentConnectionsCard agentId={installation.agentId} options={connectionOptions} selected={selectedConnections} canEdit={canEdit} />
+          <AgentConnectionsCard agentId={installation.agentId} options={connectionOptions} selected={selectedConnections} canEdit={canGrant} />
         ) : null}
 
         <ModuleAutomations moduleKey={installation.moduleKey} canEdit={canEdit} />

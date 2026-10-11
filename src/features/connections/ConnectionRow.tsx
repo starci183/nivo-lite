@@ -19,6 +19,7 @@ import { AccountLogo } from "./ProviderLogo"
 import { SmtpRowExtras } from "./SmtpRowExtras"
 import { StatusBadge } from "./StatusBadge"
 import { useCopyField } from "./useCopyField"
+import { AgentAccessPicker, type PickerAgent } from "./AgentAccessPicker"
 
 /** Props for {@link ConnectionRow}. */
 export type ConnectionRowProps = {
@@ -28,6 +29,10 @@ export type ConnectionRowProps = {
   /** Reopen this connection's wizard (bank feeds and Zalo): continue an unfinished one, or edit it. */
   readonly onOpen?: () => void
   readonly ownerEmail?: string
+  /** The workspace agents, for the access picker. */
+  readonly agents?: ReadonlyArray<PickerAgent>
+  /** The workspace owner: may change the connection and who uses it. Everyone else sees the row read-only (checks still run). */
+  readonly canManage?: boolean
 }
 
 type Note = { tone: "affirmative" | "negative" | "informative"; text: string }
@@ -40,7 +45,7 @@ const MONEY: ReadonlySet<string> = new Set(["sepay", "payos", "casso"])
  * One connection as a list row: name and status, one facts line, an Alert only when something needs acting on, at most one visible
  * action (the one its state calls for), and every other command - destructive ones last, each behind a confirmation - in its menu.
  */
-export const ConnectionRow = ({ connection: c, agentNames, localOnly, onOpen, ownerEmail = "" }: ConnectionRowProps) => {
+export const ConnectionRow = ({ connection: c, agentNames, localOnly, onOpen, ownerEmail = "", agents = [], canManage = false }: ConnectionRowProps) => {
   const t = useT(connections)
   const tw = useT(connectionWizard)
   const tj = useT(webhookWizard)
@@ -123,10 +128,10 @@ export const ConnectionRow = ({ connection: c, agentNames, localOnly, onOpen, ow
   }
 
   // The one visible action: what this connection's state asks for next.
-  const resumable = (c.status === "pending" || (c.status === "error" && c.provider === "zalo_oa")) && onOpen
+  const resumable = canManage && (c.status === "pending" || (c.status === "error" && c.provider === "zalo_oa")) && onOpen
   const primary =
     resumable ? <Button variant="secondary" onPress={onOpen}>{c.provider === "zalo_oa" && c.status === "error" ? tw("zaloReauthorize") : tw("continue")}</Button>
-    : c.provider === "google" && c.status === "error" ? <Button variant="secondary" isPending={busy === "google"} onPress={reconnectGoogle}>{tg("reconnect")}</Button>
+    : canManage && c.provider === "google" && c.status === "error" ? <Button variant="secondary" isPending={busy === "google"} onPress={reconnectGoogle}>{tg("reconnect")}</Button>
     : live && c.status !== "pending" && (c.provider === "telegram" || c.provider === "zalo_oa") ? <Button variant="outline" isPending={busy === "check"} onPress={check}>{t("check")}</Button>
     : live && c.provider === "webhook" && c.status !== "pending" ? <Button variant="outline" isPending={busy === "test"} onPress={sendTest}>{tj("sendTest")}</Button>
     : null
@@ -135,7 +140,7 @@ export const ConnectionRow = ({ connection: c, agentNames, localOnly, onOpen, ow
     ...(isBank && c.status !== "pending" && onOpen ? [{ id: "edit", label: t("edit"), onAction: onOpen }] : []),
     ...(c.provider === "sepay" && live && c.status !== "pending" ? [{ id: "keys", label: t("showKey"), onAction: showKeys }] : []),
   ]
-  const entries: DropdownMenuEntry[] = [
+  const entries: DropdownMenuEntry[] = !canManage ? [] : [
     ...(commands.length ? [{ kind: "section" as const, id: "commands", items: commands }] : []),
     {
       kind: "section", id: "danger",
@@ -174,11 +179,12 @@ export const ConnectionRow = ({ connection: c, agentNames, localOnly, onOpen, ow
       actions={
         <>
           {primary}
-          <DropdownMenu
+          {USES_AGENTS(c.provider) && live ? <AgentAccessPicker connection={c} agents={agents} canEdit={canManage} onError={(text) => setNote({ tone: "negative", text })} /> : null}
+          {entries.length ? <DropdownMenu
             placement="bottom end"
             trigger={<IconButton source={nivoIconSource("more", "leading")} label={t("more", { name: c.name })} variant="ghost" isDisabled={busy === "keys"} />}
             entries={entries}
-          />
+          /> : null}
           <AlertDialog
             isOpen={confirm === "disconnect"} onOpenChange={(open) => { if (!open) setConfirm(null) }} tone="negative"
             title={t("disconnectTitle", { name: c.name })} description={t("disconnectBody")}
@@ -196,3 +202,6 @@ export const ConnectionRow = ({ connection: c, agentNames, localOnly, onOpen, ow
     </ListRow>
   )
 }
+
+/** Providers an agent works through (the others are the workspace's own tools: outgoing webhooks, Google, SMTP). */
+const USES_AGENTS = (provider: string): boolean => provider !== "webhook" && provider !== "google" && provider !== "smtp"
