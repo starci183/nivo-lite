@@ -15,3 +15,17 @@ export const FULL_CLASS = cn("w-full", "min-w-0")
 /** Content stacked inside a nested panel or a row detail (GAP-3). */
 export const PANEL_CLASS = cn("flex", "min-w-0", "flex-col", "gap-3")
 export const FULL_BOX_CLASS = cn(PANEL_CLASS, "w-full")
+
+/* ---------- Connector library ---------- */
+
+/** Search, filters and the grid, stacked. */
+export const LIBRARY_FILTERS_CLASS = cn("flex", "min-w-0", "flex-col", "gap-4")
+/** Connector cards: one column on a phone, up to three on a wide screen. */
+export const LIBRARY_GRID_CLASS = cn("grid", "grid-cols-1", "gap-3", "sm:grid-cols-2", "xl:grid-cols-3")
+/** Inside a card: logo row, blurb, footer. */
+export const LIBRARY_CARD_CLASS = cn("flex", "h-full", "min-w-0", "flex-col", "gap-3")
+export const LIBRARY_CARD_HEAD_CLASS = cn("flex", "items-center", "gap-3")
+/** Badge on the left, action on the right (wraps on narrow cards). */
+export const LIBRARY_CARD_FOOT_CLASS = cn("mt-auto", "flex", "flex-wrap", "items-center", "justify-between", "gap-2")
+/** Connector detail drawer body. */
+export const DETAIL_CLASS = cn("flex", "min-w-0", "flex-col", "gap-4")

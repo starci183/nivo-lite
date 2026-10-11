@@ -429,6 +429,11 @@ export const disconnectConnection = async (connectionId: string): Promise<Outcom
       const sec = await secretOf(c.id);
       if (sec) await tgCall(decryptSecret(sec.ciphertext), "deleteWebhook").catch((e) => console.error("telegram deleteWebhook failed", e instanceof Error ? e.message : e));
     }
+    // A personal Telegram session is logged out at Telegram first, so the session stops working everywhere, not only here.
+    if (c.provider === "telegram_user") {
+      const { forgetTelegramUserSession } = await import("./connectors/telegram-user");
+      await forgetTelegramUserSession(c.id, member.workspaceId).catch((e: unknown) => console.error("telegram user logout failed", e instanceof Error ? e.message : e));
+    }
     await db.from("connection_secrets").delete().eq("connection_id", c.id);
     const { error } = await db.from("connections").update({ status: "disconnected", last_error: null, updated_at: now() }).eq("id", c.id);
     if (error) throw new Error(error.message);

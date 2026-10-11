@@ -36,6 +36,7 @@
     "framer-motion": "^13.1.0",
     "imapflow": "^2.4.0",
     "mailparser": "^3.9.38",
+    "mammoth": "^1.13.0",
     "mssql": "^12.7.4",
     "mysql2": "^3.24.5",
     "next": "16.1.6",
@@ -49,6 +50,7 @@
     "read-excel-file": "^9.3.12",
     "server-only": "^0.0.1",
     "telegram": "^2.26.22",
+    "unpdf": "^1.8.1",
     "yaml": "^2.9.1"
   },
   "devDependencies": {

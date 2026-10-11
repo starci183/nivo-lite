@@ -2,15 +2,18 @@
 
 import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Alert, Badge, Button, Drawer, ListRow, SectionHeader, SurfaceListCard } from "@starci/grammar/common"
+import { Alert, Badge, Button, Drawer, EmptyNotice, ListRow, SectionHeader, SurfaceListCard, Tabs, Text } from "@starci/grammar/common"
 import { useLocale, useT } from "@/i18n/client"
 import { connections as dict } from "@/i18n/dict/connections"
 import { connectionWizard } from "@/i18n/dict/connectionWizard"
 import type { Connection, Provider } from "@/lib/channels"
 import { PROVIDER_GROUPS, PROVIDERS, type ProviderGroup } from "@/lib/connection-providers"
-import { GROUP_CLASS, PAGE_CLASS } from "./classNames"
+import { DETAIL_CLASS, GROUP_CLASS, PAGE_CLASS } from "./classNames"
 import { ConnectionRow } from "./ConnectionRow"
 import { ProviderLogo } from "./ProviderLogo"
+import { ConnectorLibrary, ConnectorLogo } from "./ConnectorLibrary"
+import { entryById } from "@/lib/connector-catalog"
+import { wantConnector } from "@/lib/connector-interest-actions"
 import type { AgentOption } from "./wizard/AgentStep"
 import { GoogleWizard } from "./wizard/GoogleWizard"
 import { MoneyWizard } from "./wizard/MoneyWizard"
@@ -64,6 +67,20 @@ export const ConnectionsBoard = ({ items, agentNames, agents, localOnly, zaloRes
     : null,
   )
 
+  const [view, setView] = useState<"library" | "connected">(
+    params.get("tab") === "library" || (params.get("tab") !== "connected" && !items.some((c) => c.status !== "disconnected")) ? "library" : "connected",
+  )
+  const [detail, setDetail] = useState<string | null>(null)
+  const [wanted, setWanted] = useState<ReadonlySet<string>>(new Set())
+  const [detailNote, setDetailNote] = useState<string | null>(null)
+  const entry = detail ? entryById(detail) : undefined
+  const detailRows = entry?.provider ? sortRows(items.filter((c) => c.provider === entry.provider)) : []
+  const want = async (id: string) => {
+    const r = await wantConnector(id)
+    setDetailNote(r.ok ? t("detailWanted") : r.error)
+    if (r.ok) setWanted((w) => new Set([...w, id]))
+  }
+
   const close = (changed: boolean) => {
     setOpen(null)
     if (changed) router.refresh()
@@ -97,10 +114,28 @@ export const ConnectionsBoard = ({ items, agentNames, agents, localOnly, zaloRes
 
       {canManage || isEmbedded ? null : <Alert tone="informative" title={t("ownerOnly")} />}
 
+      {isEmbedded ? null : (
+        <Tabs
+          label={t("title")}
+          selectedKey={view}
+          onSelect={(k) => setView(k === "library" ? "library" : "connected")}
+          items={[{ id: "connected", label: `${t("tabConnected")} · ${live.length}` }, { id: "library", label: t("tabLibrary") }]}
+        />
+      )}
+
+      {!isEmbedded && view === "library" ? <ConnectorLibrary items={items} onOpen={(id) => { setDetailNote(null); setDetail(id) }} /> : null}
+
+      {!isEmbedded && view === "connected" && live.length === 0 ? (
+        <EmptyNotice message={t("connectedEmpty")} description={t("connectedEmptyHint")} />
+      ) : null}
+
+      {isEmbedded || view === "connected" ? (
+        <>
       {groups.map((group) => {
         const used = group.providers.filter((p) => items.some((c) => c.provider === p))
         const unused = group.providers.filter((p) => !used.includes(p))
         const groupCount = items.filter((c) => group.providers.includes(c.provider)).length
+        if (!isEmbedded && used.length === 0) return null
         return (
           <section key={group.id} className={GROUP_CLASS} {...(isEmbedded ? {} : { "aria-labelledby": `group-${group.id}` })}>
             {isEmbedded ? null : <SectionHeader id={`group-${group.id}`} level={2} title={t(GROUP_TITLE[group.id])} {...(groupCount ? { count: groupCount } : {})} />}
@@ -122,7 +157,7 @@ export const ConnectionsBoard = ({ items, agentNames, agents, localOnly, zaloRes
                 </div>
               )
             })}
-            {unused.length ? (
+            {isEmbedded && unused.length ? (
               <SurfaceListCard label={t("notConnected")} headingLevel={3}>
                 {unused.map((p) => (
                   <ListRow
@@ -139,6 +174,48 @@ export const ConnectionsBoard = ({ items, agentNames, agents, localOnly, zaloRes
           </section>
         )
       })}
+
+        </>
+      ) : null}
+
+      <Drawer
+        isOpen={detail !== null} onOpenChange={(isOpen) => { if (!isOpen) setDetail(null) }}
+        title={entry ? entry.name[locale] : ""} closeLabel={tw("close")} placement="right"
+      >
+        {entry ? (
+          <div className={DETAIL_CLASS}>
+            <ListRow
+              leading={<ConnectorLogo entry={entry} />}
+              title={t(`cat_${entry.category}`)}
+              badges={<Badge tone={entry.status === "official" ? "success" : "neutral"}>{t(entry.status === "soon" ? "statusSoon" : entry.status === "early" ? "statusEarly" : "statusOfficial")}</Badge>}
+              description={entry.blurb[locale]}
+            />
+            <Text size="sm"><Text as="span" size="sm" weight="semibold">{t("detailBrings")}: </Text>{entry.brings[locale]}</Text>
+            <Text size="sm"><Text as="span" size="sm" weight="semibold">{t("detailFor")}: </Text>{entry.audience.map((a) => t(`aud_${a}`)).join(", ")}</Text>
+            {entry.provider ? (
+              <>
+                {detailRows.length === 0 ? <Text size="sm" tone="muted">{t("detailNone")}</Text> : (
+                  <SurfaceListCard label={t("detailYours")} headingLevel={3} fact={t("connectionCount", { count: detailRows.length })}>
+                    {detailRows.map((c) => (
+                      <ConnectionRow
+                        key={c.id} connection={c} agentNames={namesFor(c)} localOnly={localOnly} ownerEmail={ownerEmail} agents={agents} canManage={canManage}
+                        {...(canReopen(c.provider) ? { onOpen: () => { setDetail(null); setOpen({ provider: c.provider, resumeId: c.id }) } } : {})}
+                      />
+                    ))}
+                  </SurfaceListCard>
+                )}
+                {canManage ? <div><Button variant="primary" onPress={() => { const p = entry.provider; setDetail(null); if (p) setOpen({ provider: p }) }}>{t("detailAdd")}</Button></div> : <Alert tone="informative" title={t("ownerOnly")} />}
+              </>
+            ) : (
+              <>
+                <Text size="sm" tone="muted">{t("detailSoon")}</Text>
+                <div><Button variant="primary" isDisabled={wanted.has(entry.id)} onPress={() => void want(entry.id)}>{t("detailWant")}</Button></div>
+              </>
+            )}
+            {detailNote ? <Alert tone="informative" title={detailNote} /> : null}
+          </div>
+        ) : null}
+      </Drawer>
 
       <Drawer
         isOpen={open !== null} onOpenChange={(isOpen) => { if (!isOpen) close(true) }}
