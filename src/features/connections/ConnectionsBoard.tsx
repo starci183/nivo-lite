@@ -2,13 +2,13 @@
 
 import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Alert, Badge, Button, Drawer, SectionHeader, SurfaceListCard, Text } from "@starci/grammar/common"
+import { Alert, Badge, Button, Drawer, ListRow, SectionHeader, SurfaceListCard } from "@starci/grammar/common"
 import { useLocale, useT } from "@/i18n/client"
 import { connections as dict } from "@/i18n/dict/connections"
 import { connectionWizard } from "@/i18n/dict/connectionWizard"
 import type { Connection, Provider } from "@/lib/channels"
 import { PROVIDER_GROUPS, PROVIDERS, type ProviderGroup } from "@/lib/connection-providers"
-import { ACTIONS_CLASS, GROUP_CLASS, LIST_CLASS, OFFER_CLASS, OFFER_MAIN_CLASS, PAGE_CLASS } from "./classNames"
+import { GROUP_CLASS, PAGE_CLASS } from "./classNames"
 import { ConnectionRow } from "./ConnectionRow"
 import { ProviderLogo } from "./ProviderLogo"
 import type { AgentOption } from "./wizard/AgentStep"
@@ -95,43 +95,40 @@ export const ConnectionsBoard = ({ items, agentNames, agents, localOnly, zaloRes
       {groups.map((group) => {
         const used = group.providers.filter((p) => items.some((c) => c.provider === p))
         const unused = group.providers.filter((p) => !used.includes(p))
+        const groupCount = items.filter((c) => group.providers.includes(c.provider)).length
         return (
           <section key={group.id} className={GROUP_CLASS} {...(isEmbedded ? {} : { "aria-labelledby": `group-${group.id}` })}>
-            {isEmbedded ? null : <SectionHeader id={`group-${group.id}`} level={2} title={t(GROUP_TITLE[group.id])} count={group.providers.length} />}
-            {used.map((p) => (
-              <div key={p} data-guide={`connections.${p}`}>
-              <SurfaceListCard
-                label={PROVIDERS[p].title[locale]} headingLevel={3} fact={PROVIDERS[p].blurb[locale]}
-                labelEnd={<Button variant="ghost" onPress={() => setOpen({ provider: p })}>{t("add")}</Button>}
-              >
-                <ul className={LIST_CLASS}>
-                  {items.filter((c) => c.provider === p).map((c) => (
-                    <ConnectionRow
-                      key={c.id} connection={c} agentNames={namesFor(c)} localOnly={localOnly} ownerEmail={ownerEmail}
-                      {...(canReopen(p) ? { onOpen: () => setOpen({ provider: p, resumeId: c.id }) } : {})}
-                    />
-                  ))}
-                </ul>
-              </SurfaceListCard>
-              </div>
-            ))}
+            {isEmbedded ? null : <SectionHeader id={`group-${group.id}`} level={2} title={t(GROUP_TITLE[group.id])} {...(groupCount ? { count: groupCount } : {})} />}
+            {used.map((p) => {
+              const rows = sortRows(items.filter((c) => c.provider === p))
+              return (
+                <div key={p} data-guide={`connections.${p}`}>
+                  <SurfaceListCard
+                    label={PROVIDERS[p].title[locale]} headingLevel={3} fact={t("connectionCount", { count: rows.length })}
+                    labelEnd={<Button variant="ghost" onPress={() => setOpen({ provider: p })}>{t("add")}</Button>}
+                  >
+                    {rows.map((c) => (
+                      <ConnectionRow
+                        key={c.id} connection={c} agentNames={namesFor(c)} localOnly={localOnly} ownerEmail={ownerEmail}
+                        {...(canReopen(p) ? { onOpen: () => setOpen({ provider: p, resumeId: c.id }) } : {})}
+                      />
+                    ))}
+                  </SurfaceListCard>
+                </div>
+              )
+            })}
             {unused.length ? (
               <SurfaceListCard label={t("notConnected")} headingLevel={3}>
-                <ul className={LIST_CLASS}>
-                  {unused.map((p) => (
-                    <li key={p} className={OFFER_CLASS} data-guide={`connections.${p}`}>
-                      <ProviderLogo provider={p} />
-                      <div className={OFFER_MAIN_CLASS}>
-                        <div className={ACTIONS_CLASS}>
-                          <Text weight="semibold">{PROVIDERS[p].title[locale]}</Text>
-                          {PROVIDERS[p].earlyAccess ? <Badge tone="neutral">{tw("earlyAccess")}</Badge> : null}
-                        </div>
-                        <Text size="sm" tone="muted">{PROVIDERS[p].blurb[locale]}</Text>
-                      </div>
-                      <Button variant="outline" onPress={() => setOpen({ provider: p })}>{t("connect")}</Button>
-                    </li>
-                  ))}
-                </ul>
+                {unused.map((p) => (
+                  <ListRow
+                    key={p}
+                    leading={<ProviderLogo provider={p} />}
+                    title={<span data-guide={`connections.${p}`}>{PROVIDERS[p].title[locale]}</span>}
+                    {...(PROVIDERS[p].earlyAccess ? { badges: <Badge tone="neutral">{tw("earlyAccess")}</Badge> } : {})}
+                    description={PROVIDERS[p].blurb[locale]}
+                    actions={<Button variant="outline" onPress={() => setOpen({ provider: p })}>{t("connect")}</Button>}
+                  />
+                ))}
               </SurfaceListCard>
             ) : null}
           </section>
@@ -152,3 +149,8 @@ export const ConnectionsBoard = ({ items, agentNames, agents, localOnly, zaloRes
     </div>
   )
 }
+
+/** Rows of one provider: what needs attention first, then what runs, then what was disconnected; newest first within each. */
+const STATUS_RANK: Readonly<Record<string, number>> = { error: 0, pending: 0, connected: 1, disconnected: 2 }
+const sortRows = (rows: ReadonlyArray<Connection>): ReadonlyArray<Connection> =>
+  [...rows].sort((a, b) => (STATUS_RANK[a.status] ?? 1) - (STATUS_RANK[b.status] ?? 1))

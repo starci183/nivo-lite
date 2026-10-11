@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Alert, AlertDialog, Badge, Button, DropdownMenu, IconButton, Input, Text, TextAction, type DropdownMenuEntry, type DropdownMenuItem } from "@starci/grammar/common"
+import { Alert, AlertDialog, Badge, Button, DropdownMenu, IconButton, Input, ListRow, Text, TextAction, type DropdownMenuEntry, type DropdownMenuItem } from "@starci/grammar/common"
 import { useT } from "@/i18n/client"
 import { connections } from "@/i18n/dict/connections"
 import { connectionWizard } from "@/i18n/dict/connectionWizard"
@@ -14,8 +14,8 @@ import type { Connection } from "@/lib/channels"
 import { deleteConnection, disconnectConnection, revealSepayKey, testConnection } from "@/lib/connection-actions"
 import { bankName } from "@/lib/vn-banks"
 import { nivoIconSource } from "@/ui"
-import { ACTIONS_CLASS, FULL_BOX_CLASS, META_CLASS, ROW_CLASS, ROW_HEAD_CLASS, ROW_MAIN_CLASS } from "./classNames"
-import { BankLogo } from "./ProviderLogo"
+import { FULL_BOX_CLASS } from "./classNames"
+import { AccountLogo } from "./ProviderLogo"
 import { SmtpRowExtras } from "./SmtpRowExtras"
 import { StatusBadge } from "./StatusBadge"
 import { useCopyField } from "./useCopyField"
@@ -61,7 +61,7 @@ export const ConnectionRow = ({ connection: c, agentNames, localOnly, onOpen, ow
     : c.provider === "google" ? (c.meta.email ?? "")
     : c.provider === "webhook" ? tj("factsRow", { host: c.meta.host ?? "", count: (c.meta.events ?? "").split(",").filter(Boolean).length })
     : c.provider === "telegram" ? ""
-    : c.provider === "sepay" || c.provider === "casso" ? [c.meta.account_masked, c.meta.account_holder].filter(Boolean).join(" · ")
+    : c.provider === "sepay" || c.provider === "casso" ? [c.meta.bank_code ? bankName(c.meta.bank_code) : "", c.meta.account_masked, c.meta.account_holder].filter(Boolean).join(" · ")
     : c.provider === "payos" ? ""
     : [c.meta.oa_id ? `OA ${c.meta.oa_id}` : "", c.meta.app_id ? `App ${c.meta.app_id}` : ""].filter(Boolean).join(" · ")
   const usedBy = agentNames.length ? t("usedBy", { names: agentNames.join(", ") }) : ""
@@ -145,63 +145,54 @@ export const ConnectionRow = ({ connection: c, agentNames, localOnly, onOpen, ow
     },
   ]
 
+  const details = [
+    needsAgent ? <Alert key="agent" tone="cautionary" title={t("noAgent")} description={isBank ? t("noAgentHintBank") : t("noAgentHint")} /> : null,
+    c.lastError && live ? <Alert key="error" tone="negative" title={t("statusError")} description={c.lastError} /> : null,
+    c.provider === "telegram" && live && localOnly ? <Text key="local" size="xs" tone="muted">{t("localNote")}</Text> : null,
+    c.provider === "zalo_oa" && live ? <Text key="zalo" size="xs" tone="muted">{t("zaloSoon")}</Text> : null,
+    c.provider === "smtp" && live ? <SmtpRowExtras key="smtp" connection={c} ownerEmail={ownerEmail} /> : null,
+    keys ? (
+      <div key="keys" className={FULL_BOX_CLASS}>
+        <Input id={`row-${c.id}-url`} name="webhookUrl" label={t("webhookUrl")} variant="secondary" value={keys.webhookUrl} isReadOnly {...copy} />
+        <Input id={`row-${c.id}-key`} name="apiKey" label={t("apiKey")} variant="secondary" kind="password" value={keys.apiKey} isReadOnly {...copy} />
+      </div>
+    ) : null,
+    note ? <Alert key="note" title={note.text} tone={note.tone} /> : null,
+  ].filter(Boolean)
+
   return (
-    <li className={ROW_CLASS}>
-      <div className={ROW_HEAD_CLASS}>
-        <div className={ROW_MAIN_CLASS}>
-          <div className={ACTIONS_CLASS}>
-            <Text weight="semibold">{c.name}</Text>
-            <StatusBadge status={c.status} />
-            {c.environment === "test" ? <Badge tone="neutral">{tw("envBadgeTest")}</Badge> : null}
-          </div>
-          <div className={META_CLASS}>
-            {isBank && c.meta.bank_code ? <BankLogo code={c.meta.bank_code} name={bankName(c.meta.bank_code)} /> : null}
-            {c.provider === "telegram" && c.meta.bot_username
-              ? <TextAction href={`https://t.me/${c.meta.bot_username}`} target="_blank">{`@${c.meta.bot_username}`}</TextAction>
-              : null}
-            <Text size="sm" tone="muted">{[facts, usedBy].filter(Boolean).join(" · ")}</Text>
-          </div>
-        </div>
-        <div className={ACTIONS_CLASS}>
+    <ListRow
+      leading={<AccountLogo connection={c} />}
+      title={c.name}
+      badges={<><StatusBadge status={c.status} />{c.environment === "test" ? <Badge tone="neutral">{tw("envBadgeTest")}</Badge> : null}</>}
+      description={
+        c.provider === "telegram" && c.meta.bot_username
+          ? <><TextAction href={`https://t.me/${c.meta.bot_username}`} target="_blank">{`@${c.meta.bot_username}`}</TextAction>{usedBy ? ` · ${usedBy}` : ""}</>
+          : [facts, usedBy].filter(Boolean).join(" · ") || undefined
+      }
+      state={c.status === "error" ? "negative" : c.status === "pending" ? "cautionary" : c.status === "disconnected" ? "unavailable" : "neutral"}
+      actions={
+        <>
           {primary}
           <DropdownMenu
             placement="bottom end"
             trigger={<IconButton source={nivoIconSource("more", "leading")} label={t("more", { name: c.name })} variant="ghost" isDisabled={busy === "keys"} />}
             entries={entries}
           />
-        </div>
-      </div>
-
-      {needsAgent ? <Alert tone="cautionary" title={t("noAgent")} description={isBank ? t("noAgentHintBank") : t("noAgentHint")} /> : null}
-      {c.lastError && live ? <Alert tone="negative" title={t("statusError")} description={c.lastError} /> : null}
-      {c.provider === "telegram" && live && localOnly ? <Text size="xs" tone="muted">{t("localNote")}</Text> : null}
-      {c.provider === "zalo_oa" && live ? <Text size="xs" tone="muted">{t("zaloSoon")}</Text> : null}
-      {c.provider === "smtp" && live ? <SmtpRowExtras connection={c} ownerEmail={ownerEmail} /> : null}
-
-      {keys ? (
-        <div className={FULL_BOX_CLASS}>
-          <Input
-            id={`row-${c.id}-url`} name="webhookUrl" label={t("webhookUrl")} variant="secondary" value={keys.webhookUrl}
-            isReadOnly {...copy}
+          <AlertDialog
+            isOpen={confirm === "disconnect"} onOpenChange={(open) => { if (!open) setConfirm(null) }} tone="negative"
+            title={t("disconnectTitle", { name: c.name })} description={t("disconnectBody")}
+            confirmLabel={t("disconnect")} cancelLabel={t("cancel")} onConfirm={disconnect} isConfirmPending={busy === "disconnect"}
           />
-          <Input
-            id={`row-${c.id}-key`} name="apiKey" label={t("apiKey")} variant="secondary" kind="password" value={keys.apiKey}
-            isReadOnly {...copy}
+          <AlertDialog
+            isOpen={confirm === "remove"} onOpenChange={(open) => { if (!open) setConfirm(null) }} tone="negative"
+            title={t("removeTitle", { name: c.name })} description={t("removeBody")}
+            confirmLabel={t("remove")} cancelLabel={t("cancel")} onConfirm={remove} isConfirmPending={busy === "remove"}
           />
-        </div>
-      ) : null}
-      {note ? <Alert title={note.text} tone={note.tone} /> : null}
-
-      <AlertDialog
-        isOpen={confirm === "disconnect"} onOpenChange={(open) => { if (!open) setConfirm(null) }} tone="negative"
-        title={t("disconnectTitle", { name: c.name })} description={t("disconnectBody")}
-        confirmLabel={t("disconnect")} cancelLabel={t("cancel")} onConfirm={disconnect} isConfirmPending={busy === "disconnect"}
-      />
-      <AlertDialog
-        isOpen={confirm === "remove"} onOpenChange={(open) => { if (!open) setConfirm(null) }} tone="negative"
-        title={t("removeTitle", { name: c.name })} description={t("removeBody")}
-        confirmLabel={t("remove")} cancelLabel={t("cancel")} onConfirm={remove} isConfirmPending={busy === "remove"}
-      />
-    </li>
+        </>
+      }
+    >
+      {details.length ? details : undefined}
+    </ListRow>
   )
 }

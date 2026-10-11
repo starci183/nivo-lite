@@ -1,16 +1,10 @@
 import { cn } from "@heroui/react"
 
-export const PAGE_CLASS = cn("flex", "flex-col", "gap-8")
+export const PAGE_CLASS = cn("flex", "flex-col", "gap-6")
 export const GROUP_CLASS = cn("flex", "min-w-0", "flex-col", "gap-4")
-export const LIST_CLASS = cn("flex", "min-w-0", "flex-col", "divide-y", "divide-separator")
-export const ROW_CLASS = cn("flex", "min-w-0", "flex-col", "gap-3", "py-3", "first:pt-0", "last:pb-0")
-export const ROW_HEAD_CLASS = cn("flex", "flex-wrap", "items-center", "gap-x-4", "gap-y-3")
-export const ROW_MAIN_CLASS = cn("flex", "min-w-0", "flex-1", "basis-64", "flex-col", "gap-1")
-export const META_CLASS = cn("flex", "min-w-0", "flex-wrap", "items-center", "gap-x-2", "gap-y-1")
-export const OFFER_CLASS = cn("flex", "flex-wrap", "items-center", "gap-x-4", "gap-y-3", "py-3", "first:pt-0", "last:pb-0")
-export const OFFER_MAIN_CLASS = cn("flex", "min-w-0", "flex-1", "basis-56", "flex-col", "gap-1")
 export const ACTIONS_CLASS = cn("flex", "flex-wrap", "items-center", "gap-2")
 export const PROVIDER_LOGO_CLASS = cn("size-7")
-export const BANK_LOGO_CLASS = cn("inline-flex", "h-5", "w-14", "shrink-0", "items-center", "overflow-hidden")
+/** The leading slot of a bank-feed row: the same 40px row height as an IconTile, wide enough for a bank wordmark. */
+export const BANK_FRAME_CLASS = cn("flex", "h-10", "w-16", "shrink-0", "items-center", "justify-center")
 export const BOX_CLASS = cn("flex", "min-w-0", "flex-col", "gap-3")
 export const FULL_BOX_CLASS = cn(BOX_CLASS, "w-full")

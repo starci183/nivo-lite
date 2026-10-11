@@ -1,11 +1,11 @@
 "use client"
 
 import { IconTile, Image } from "@starci/grammar/common"
-import type { Provider } from "@/lib/channels"
+import type { Connection, Provider } from "@/lib/channels"
 import { PROVIDER_LOGO } from "@/lib/connection-providers"
 import { bankLogo } from "@/lib/vn-banks"
 import { nivoIconSource } from "@/ui"
-import { BANK_LOGO_CLASS, PROVIDER_LOGO_CLASS } from "./classNames"
+import { BANK_FRAME_CLASS, PROVIDER_LOGO_CLASS } from "./classNames"
 
 /** The provider's own mark in a neutral tile (outgoing email, which has no brand, keeps the envelope glyph). Decorative: the name sits beside it. */
 export const ProviderLogo = ({ provider }: { readonly provider: Provider }) => {
@@ -18,8 +18,17 @@ export const ProviderLogo = ({ provider }: { readonly provider: Provider }) => {
   )
 }
 
-/** The bank's logo next to its account facts; nothing when the bank is not in NIVO's list. */
-export const BankLogo = ({ code, name }: { readonly code: string; readonly name: string }) => {
-  const src = bankLogo(code)
-  return src ? <span className={BANK_LOGO_CLASS}><Image src={src} alt={name} aspect="wide" fit="contain" width={56} height={21} /></span> : null
+/**
+ * The identity mark of one connection row: a bank feed shows its bank's own wordmark in a fixed 64x40 frame (a bank logo is a
+ * horizontal wordmark, which a square tile would shrink to a sliver; trimmed of its whitespace in public/logos/banks) (several accounts of one provider are told apart at a
+ * glance by bank, then by name and the account's last digits); every other connection shows its provider's mark.
+ */
+export const AccountLogo = ({ connection }: { readonly connection: Connection }) => {
+  const code = connection.meta.bank_code ?? ""
+  const src = BANK_PROVIDERS.has(connection.provider) ? bankLogo(code) : null
+  return src
+    ? <span className={BANK_FRAME_CLASS}><Image src={src} alt="" aspect="auto" fit="contain" plate="none" width={64} height={26} /></span>
+    : <ProviderLogo provider={connection.provider} />
 }
+
+const BANK_PROVIDERS: ReadonlySet<string> = new Set(["sepay", "casso"])

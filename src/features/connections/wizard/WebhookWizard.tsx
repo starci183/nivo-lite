@@ -64,7 +64,7 @@ export const WebhookWizard = ({ onClose }: { readonly onClose: (changed: boolean
             <Input id="webhook-name" name="name" label={t("fieldName")} variant="secondary" isDisabled={isPending} value={name} onValueChange={setName} />
             <Input id="webhook-url" name="url" label={t("fieldUrl")} variant="secondary" placeholder="https://" hint={t("urlHint")} isDisabled={isPending} value={url} onValueChange={setUrl} />
           </div>
-          <CheckboxGroup
+          <CheckboxGroup variant="secondary"
             label={t("eventsLabel")}
             isDisabled={isPending}
             options={WEBHOOK_EVENTS.map((e) => ({ value: e, label: WEBHOOK_EVENT_LABEL[e][locale] }))}

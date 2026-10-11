@@ -109,14 +109,14 @@ export const SmtpWizard = ({ ownerEmail, hasDefault, onClose }: SmtpWizardProps)
       {step === "provider" ? (
         <>
           <Text size="sm" tone="muted">{t("chooseHint")}</Text>
-          <RadioGroup
+          <RadioGroup variant="secondary"
             label={t("stepProvider")} isLabelHidden value={preset.id} onValueChange={pickPreset}
             options={SMTP_PRESETS.map((p) => ({ value: p.id, label: p.title[locale], description: p.blurb[locale] }))}
           />
           {preset.modes.length > 1 ? (
             <>
               <Text size="sm" weight="semibold">{t("modeTitle")}</Text>
-              <RadioGroup
+              <RadioGroup variant="secondary"
                 label={t("modeTitle")} isLabelHidden value={mode.id} onValueChange={(v) => applyMode(preset, v)}
                 options={preset.modes.map((m) => ({ value: m.id, label: m.label[locale], description: m.when[locale] }))}
               />
@@ -157,7 +157,7 @@ export const SmtpWizard = ({ ownerEmail, hasDefault, onClose }: SmtpWizardProps)
               <>
                 <Input id="smtp-host" name="host" label={t("fieldHost")} variant="secondary" isDisabled={Boolean(conn) || isPending} value={host} onValueChange={setHost} />
                 <Input id="smtp-port" name="port" label={t("fieldPort")} variant="secondary" isDisabled={Boolean(conn) || isPending} value={port} onValueChange={setPort} />
-                <Select
+                <Select variant="secondary"
                   label={t("fieldSecurity")} isDisabled={Boolean(conn) || isPending} value={security}
                   options={[{ id: "starttls", label: `${t("secStarttls")} (587)` }, { id: "tls", label: `${t("secTls")} (465)` }]} onValueChange={(v) => setSecurity(v === "tls" ? "tls" : "starttls")}
                 />
@@ -178,7 +178,7 @@ export const SmtpWizard = ({ ownerEmail, hasDefault, onClose }: SmtpWizardProps)
         <>
           <Text size="sm" tone="muted">{t("notConnectedYet")}</Text>
           <Input id="smtp-test-to" name="testTo" label={t("testTo")} variant="secondary" hint={t("testToHint")} isDisabled={isPending || Boolean(tested)} value={testTo} onValueChange={setTestTo} />
-          <CheckboxGroup
+          <CheckboxGroup variant="secondary"
             label={t("makeDefault")} isLabelHidden isDisabled={isPending || Boolean(tested)}
             options={[{ value: "default", label: t("makeDefault"), description: t("makeDefaultHint") }]}
             value={makeDefault ? ["default"] : []} onValueChange={(v) => setMakeDefault(v.includes("default"))}

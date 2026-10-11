@@ -163,7 +163,7 @@ export const MoneyWizard = ({ provider, resumeId, agents, onClose }: MoneyWizard
       {step === "env" ? (
         <>
           {def.environments.includes("test") ? <Text size="sm" tone="muted">{t("envHint")}</Text> : null}
-          <RadioGroup
+          <RadioGroup variant="secondary"
             label={t("stepEnv")} isLabelHidden isDisabled={isPending} value={env} onValueChange={(v) => setEnv(v === "test" ? "test" : "live")}
             options={def.environments.map((e) => ({ value: e, label: e === "test" ? t("envTest") : t("envLive"), description: e === "test" ? t("envTestBody", { brand: def.brand }) : t("envLiveBody") }))}
           />
@@ -178,7 +178,7 @@ export const MoneyWizard = ({ provider, resumeId, agents, onClose }: MoneyWizard
             <Input id="w-name" name="name" label={t("fieldName")} variant="secondary" hint={t("fieldNameHint")} isDisabled={isPending} value={f.name} onValueChange={(v) => setF((p) => ({ ...p, name: v }))} />
             {def.needsBank ? (
               <>
-                <Select
+                <Select variant="secondary"
                   label={t("fieldBank")} placeholder={t("fieldBankPlaceholder")} isDisabled={isPending} value={f.bank || null}
                   options={VN_BANKS.map((b) => ({ id: b.code, label: `${b.name} (${b.code})` }))} onValueChange={(v) => setF((p) => ({ ...p, bank: v ?? "" }))}
                 />

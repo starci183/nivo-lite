@@ -22,7 +22,7 @@ export const AgentStep = ({ agents, value, onValue, isDisabled }: AgentStepProps
   return (
     <>
       <Text size="sm" tone="muted">{t("agentHint")}</Text>
-      <CheckboxGroup
+      <CheckboxGroup variant="secondary"
         label={t("agentHint")}
         isLabelHidden
         isDisabled={isDisabled}
