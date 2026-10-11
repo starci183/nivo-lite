@@ -4,7 +4,7 @@
  * `feedCredit` (src/lib/connection-events.ts). Labels that sit on the provider's own screen (field names, option names) are written
  * exactly as the provider prints them and are not translated; only the explanations carry {vi, en}.
  */
-export type Provider = "telegram" | "sepay" | "zalo_oa" | "payos" | "casso" | "webhook" | "google" | "smtp";
+export type Provider = "telegram" | "sepay" | "zalo_oa" | "payos" | "casso" | "webhook" | "google" | "smtp" | "openapi" | "database" | "csv_import" | "imap" | "telegram_user";
 export type Environment = "test" | "live";
 export type L = { readonly vi: string; readonly en: string };
 export type Locale = keyof L;
@@ -26,7 +26,7 @@ export type VerifyHelp = { readonly intro: L; readonly steps: ReadonlyArray<L>; 
 
 export type ProviderDef = {
   readonly id: Provider;
-  readonly kind: "money" | "telegram" | "zalo" | "webhook" | "google" | "email";
+  readonly kind: "money" | "telegram" | "zalo" | "webhook" | "google" | "email" | "data";
   readonly title: L;
   /** The provider's own brand name, as in "Mở trang X" and "Làm theo trên X". */
   readonly brand: string;
@@ -53,6 +53,32 @@ const SMALL_TRANSFER: L = {
 };
 
 export const PROVIDERS: Readonly<Record<Provider, ProviderDef>> = {
+
+  openapi: {
+    id: "openapi", kind: "data", title: { vi: "API của bạn (Swagger / OpenAPI)", en: "Your API (Swagger / OpenAPI)" }, brand: "OpenAPI",
+    blurb: { vi: "Dán link Swagger: NIVO kéo dữ liệu từ các API bạn chọn, và agent được gọi những API bạn cho phép.", en: "Paste a Swagger link: NIVO pulls data from the endpoints you pick, and agents may call the ones you allow." },
+    module: null, environments: ["live"], needsBank: false, dashboard: {}, credentials: [], verify: {}, guide: [],
+  },
+  database: {
+    id: "database", kind: "data", title: { vi: "Cơ sở dữ liệu doanh nghiệp", en: "Business database" }, brand: "Database",
+    blurb: { vi: "PostgreSQL, MySQL hoặc SQL Server, chỉ đọc: chọn bảng khách hàng, đơn hàng, sản phẩm để NIVO đồng bộ.", en: "PostgreSQL, MySQL or SQL Server, read only: pick the customer, order and product tables NIVO syncs." },
+    module: null, environments: ["live"], needsBank: false, dashboard: {}, credentials: [], verify: {}, guide: [],
+  },
+  csv_import: {
+    id: "csv_import", kind: "data", title: { vi: "Nhập Excel / CSV", en: "Excel / CSV import" }, brand: "Excel",
+    blurb: { vi: "Tải lên file Excel hoặc CSV danh sách khách, đơn hàng, sản phẩm; ghép cột một lần, tải lại để cập nhật.", en: "Upload an Excel or CSV list of customers, orders or products; map the columns once, upload again to update." },
+    module: null, environments: ["live"], needsBank: false, dashboard: {}, credentials: [], verify: {}, guide: [],
+  },
+  imap: {
+    id: "imap", kind: "data", title: { vi: "Hộp thư email (IMAP)", en: "Mailbox (IMAP)" }, brand: "IMAP",
+    blurb: { vi: "Đọc email đến của hộp thư bạn chọn (chỉ đọc) để agent nắm yêu cầu, đơn hàng và hóa đơn gửi qua email.", en: "Reads incoming mail of the mailbox you choose (read only) so agents see requests, orders and invoices sent by email." },
+    module: null, environments: ["live"], needsBank: false, dashboard: {}, credentials: [], verify: {}, guide: [],
+  },
+  telegram_user: {
+    id: "telegram_user", kind: "data", title: { vi: "Telegram cá nhân", en: "Personal Telegram" }, brand: "Telegram", earlyAccess: true,
+    blurb: { vi: "Đọc tin nhắn của những cuộc trò chuyện bạn chọn trên tài khoản Telegram cá nhân. Chỉ đọc, ngắt bất cứ lúc nào.", en: "Reads the chats you pick on a personal Telegram account. Read only, disconnect any time." },
+    module: null, environments: ["live"], needsBank: false, dashboard: {}, credentials: [], verify: {}, guide: [],
+  },
   sepay: {
     id: "sepay", kind: "money", title: { vi: "Nguồn tiền về (SePay)", en: "Bank feed (SePay)" }, brand: "SePay",
     blurb: { vi: "Tiền vào tài khoản ngân hàng của bạn được báo cho agent Kế toán để đối soát.", en: "Money arriving in your bank account reaches the Accounting agent for matching." },
@@ -203,10 +229,11 @@ export const PROVIDERS: Readonly<Record<Provider, ProviderDef>> = {
 export const PROVIDER_ORDER: ReadonlyArray<Provider> = ["sepay", "payos", "casso", "telegram", "zalo_oa", "google", "smtp"];
 
 /** The Connections page groups providers by what they bring in; order inside a group is the display order. */
-export type ProviderGroup = "money" | "chat" | "tools";
+export type ProviderGroup = "money" | "chat" | "data" | "tools";
 export const PROVIDER_GROUPS: ReadonlyArray<{ readonly id: ProviderGroup; readonly providers: ReadonlyArray<Provider> }> = [
   { id: "money", providers: ["sepay", "payos", "casso"] },
   { id: "chat", providers: ["telegram", "zalo_oa"] },
+  { id: "data", providers: ["database", "openapi", "csv_import", "imap", "telegram_user"] },
   { id: "tools", providers: ["google", "smtp"] },
 ];
 

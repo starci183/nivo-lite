@@ -20,6 +20,7 @@ import { SmtpRowExtras } from "./SmtpRowExtras"
 import { StatusBadge } from "./StatusBadge"
 import { useCopyField } from "./useCopyField"
 import { AgentAccessPicker, type PickerAgent } from "./AgentAccessPicker"
+import { syncNow } from "@/lib/data-hub-actions"
 
 /** Props for {@link ConnectionRow}. */
 export type ConnectionRowProps = {
@@ -36,7 +37,7 @@ export type ConnectionRowProps = {
 }
 
 type Note = { tone: "affirmative" | "negative" | "informative"; text: string }
-type Busy = "check" | "test" | "google" | "keys" | "disconnect" | "remove" | null
+type Busy = "check" | "test" | "google" | "keys" | "disconnect" | "remove" | "sync" | null
 type Confirm = "disconnect" | "remove" | null
 
 const MONEY: ReadonlySet<string> = new Set(["sepay", "payos", "casso"])
@@ -105,6 +106,11 @@ export const ConnectionRow = ({ connection: c, agentNames, localOnly, onOpen, ow
     if (!r.ok) return setNote({ tone: "negative", text: r.error })
     window.location.assign(r.data.url)
   })
+  const sync = () => run("sync", async () => {
+    const r = await syncNow(c.id)
+    setNote(r.ok ? { tone: "affirmative", text: t("syncDone", { rows: r.data.rows }) } : { tone: "negative", text: r.error })
+    if (r.ok) router.refresh()
+  })
   const showKeys = () => run("keys", async () => {
     const r = await revealSepayKey(c.id)
     if (!r.ok) return setNote({ tone: "negative", text: r.error })
@@ -133,10 +139,12 @@ export const ConnectionRow = ({ connection: c, agentNames, localOnly, onOpen, ow
     resumable ? <Button variant="secondary" onPress={onOpen}>{c.provider === "zalo_oa" && c.status === "error" ? tw("zaloReauthorize") : tw("continue")}</Button>
     : canManage && c.provider === "google" && c.status === "error" ? <Button variant="secondary" isPending={busy === "google"} onPress={reconnectGoogle}>{tg("reconnect")}</Button>
     : live && c.status !== "pending" && (c.provider === "telegram" || c.provider === "zalo_oa") ? <Button variant="outline" isPending={busy === "check"} onPress={check}>{t("check")}</Button>
+    : canManage && live && DATA.has(c.provider) && c.status !== "pending" && c.provider !== "csv_import" ? <Button variant="outline" isPending={busy === "sync"} onPress={sync}>{t("syncNow")}</Button>
     : live && c.provider === "webhook" && c.status !== "pending" ? <Button variant="outline" isPending={busy === "test"} onPress={sendTest}>{tj("sendTest")}</Button>
     : null
 
   const commands: DropdownMenuItem[] = [
+    ...(DATA.has(c.provider) && live && onOpen ? [{ id: "edit", label: t("edit"), onAction: onOpen }] : []),
     ...(isBank && c.status !== "pending" && onOpen ? [{ id: "edit", label: t("edit"), onAction: onOpen }] : []),
     ...(c.provider === "sepay" && live && c.status !== "pending" ? [{ id: "keys", label: t("showKey"), onAction: showKeys }] : []),
   ]
@@ -205,3 +213,6 @@ export const ConnectionRow = ({ connection: c, agentNames, localOnly, onOpen, ow
 
 /** Providers an agent works through (the others are the workspace's own tools: outgoing webhooks, Google, SMTP). */
 const USES_AGENTS = (provider: string): boolean => provider !== "webhook" && provider !== "google" && provider !== "smtp"
+
+/** Data connectors: synced into the hub (manual "Sync now" besides the schedule; the CSV import updates by uploading again). */
+const DATA: ReadonlySet<string> = new Set(["openapi", "database", "csv_import", "imap", "telegram_user"])

@@ -4,6 +4,7 @@ import { loadAutomations } from "@/lib/automation-queries";
 import { SAMPLE_VARS, fillBody } from "@/lib/automation-shared";
 import { verifyTick } from "@/lib/automation-tick";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { runDueDataSyncs } from "@/lib/data-hub";
 
 /**
  * POST /api/automation/tick: the minute tick of the automations (pg_cron -> automation_tick() -> pg_net, see migration 20261005134000). Public path in the
@@ -32,7 +33,9 @@ export async function POST(request: NextRequest) {
       });
     }
     const out = await runTick();
-    return NextResponse.json({ ok: true, ...out });
+    // Data connectors ride the same minute tick; a failure there never fails the automations.
+    const data = await runDueDataSyncs(15_000).catch((e: unknown) => ({ ran: 0, error: e instanceof Error ? e.message : String(e) }));
+    return NextResponse.json({ ok: true, ...out, data });
   } catch (e) {
     console.error("automation tick failed:", e instanceof Error ? e.message : e);
     return NextResponse.json({ ok: false, error: { code: "tick_failed", message: "Lỗi khi chạy tự động hoá." } }, { status: 500 });

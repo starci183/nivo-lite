@@ -18,6 +18,7 @@ import { SmtpWizard } from "./wizard/SmtpWizard"
 import { TelegramWizard } from "./wizard/TelegramWizard"
 import { WebhookWizard } from "./wizard/WebhookWizard"
 import { ZaloWizard } from "./wizard/ZaloWizard"
+import { DataWizard } from "./wizard/data"
 
 /** Props for {@link ConnectionsBoard}. */
 export type ConnectionsBoardProps = {
@@ -41,8 +42,8 @@ export type ConnectionsBoardProps = {
 
 type Open = { readonly provider: Provider; readonly resumeId?: string } | null
 
-const GROUP_TITLE: Record<ProviderGroup, "groupMoney" | "groupChat" | "groupTools"> = { money: "groupMoney", chat: "groupChat", tools: "groupTools" }
-const RESUMABLE: ReadonlySet<string> = new Set(["money", "zalo"])
+const GROUP_TITLE: Record<ProviderGroup, "groupMoney" | "groupChat" | "groupData" | "groupTools"> = { money: "groupMoney", chat: "groupChat", data: "groupData", tools: "groupTools" }
+const RESUMABLE: ReadonlySet<string> = new Set(["money", "zalo", "data"])
 
 /**
  * The Connections board. One focal point (the first connection that needs attention, with the page's only filled action), then the
@@ -145,6 +146,7 @@ export const ConnectionsBoard = ({ items, agentNames, agents, localOnly, zaloRes
       >
         {open && def?.kind === "money" ? <MoneyWizard key={open.resumeId ?? "new"} provider={open.provider as "sepay" | "payos" | "casso"} resumeId={open.resumeId} agents={eligible} onClose={close} /> : null}
         {open && def?.kind === "telegram" ? <TelegramWizard agents={eligible} onClose={close} /> : null}
+        {open && def?.kind === "data" ? <DataWizard key={open.resumeId ?? "new"} provider={open.provider} agents={agents} {...(open.resumeId ? { resumeId: open.resumeId } : {})} onClose={close} /> : null}
         {open && def?.kind === "zalo" ? <ZaloWizard key={open.resumeId ?? "new"} resumeId={open.resumeId} returned={zaloReturned} agents={eligible} onClose={close} /> : null}
         {open && def?.kind === "webhook" ? <WebhookWizard onClose={close} /> : null}
         {open && def?.kind === "google" ? <GoogleWizard onClose={close} /> : null}
