@@ -1,15 +1,18 @@
 -- NIVO guide (the in-app navigation assistant): NIVO pays for its tokens, so they are metered under their own kind
--- 'guide' and never count toward a workspace's monthly AI allowance. Additive.
+-- 'guide' and never count toward a workspace's monthly allowance (tokens, cost or credits). Additive; builds on
+-- 20261014100000_credit_plans.sql (same ai_quota_status shape, guide rows left out of the sums).
 
 alter table public.ai_usage_events drop constraint if exists ai_usage_events_kind_check;
 alter table public.ai_usage_events
   add constraint ai_usage_events_kind_check
   check (kind in ('chat_reply', 'setup', 'owner_chat', 'relay', 'embedding', 'engine', 'guide'));
 
-create or replace function public.ai_quota_status(p_workspace uuid)
+drop function if exists public.ai_quota_status(uuid);
+create function public.ai_quota_status(p_workspace uuid)
 returns table (
   period_start date, messages_used bigint, tokens_used bigint, cost_usd numeric,
-  messages_limit int, tokens_limit bigint, fallback_reply text
+  messages_limit int, tokens_limit bigint, fallback_reply text,
+  credits_used numeric, credits_limit bigint
 ) language sql stable security definer set search_path = public as $$
   with p as (
     select date_trunc('month', now() at time zone 'Asia/Ho_Chi_Minh')::date as d
@@ -29,7 +32,9 @@ returns table (
     u.cost,
     coalesce(o.messages_limit, pl.ai_messages_per_month),
     coalesce(o.tokens_limit, pl.ai_tokens_per_month),
-    o.fallback_reply
+    o.fallback_reply,
+    round(u.cost * 250, 2),
+    coalesce(o.credits_limit, pl.ai_credits_per_month)
   from p
   cross join u
   left join public.workspaces w on w.id = p_workspace
