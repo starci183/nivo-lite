@@ -28,3 +28,5 @@ export const PAGE_CLASS = cn("flex", "min-w-0", "flex-col", "gap-6")
 export const HEAD_CLASS = cn("flex", "min-w-0", "flex-col", "gap-2")
 /** The rail beside the panel: its cards serve one region, so blocks under one purpose (GAP-4), as Rail's own frame. */
 export const SIDE_CLASS = cn("flex", "min-w-0", "flex-col", "gap-4")
+/** Loading: the figures card's four cells, 2 x 2 then one row, as the stat strip lays them out. */
+export const STAT_SKELETON_CLASS = cn("grid", "min-w-0", "grid-cols-2", "gap-6", "md:grid-cols-4")

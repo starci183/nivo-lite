@@ -6,7 +6,7 @@ export const knowledge = defineDict({
   en: {
     ...REGISTRY_MODULE_LABELS.en,
     crumbLabel: "Breadcrumb",
-    crumbBrain: "Brain",
+    crumbBrain: "Second Brain",
     title: "Documents",
     description: "What you teach NIVO about your business. Every agent shares it. Add what matters to you; nothing here is required.",
     nivoLink: "NIVO base knowledge",
@@ -145,7 +145,7 @@ export const knowledge = defineDict({
   vi: {
     ...REGISTRY_MODULE_LABELS.vi,
     crumbLabel: "Đường dẫn",
-    crumbBrain: "Bộ não",
+    crumbBrain: "Second Brain",
     title: "Tài liệu",
     description: "Những gì bạn dạy NIVO về doanh nghiệp của mình. Mọi agent dùng chung. Thêm điều bạn thấy quan trọng; không có mục nào bắt buộc.",
     nivoLink: "Tri thức NIVO nền",
