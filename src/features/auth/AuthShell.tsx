@@ -59,11 +59,9 @@ export const AuthShell = ({ label, title, text, children }: AuthShellProps) => {
               <div className={AUTH_DETAILS_CLASS_NAME}>
                 <List className={AUTH_POINTS_CLASS_NAME}>
                   {POINTS.map((point) => (
-                    <ListItem key={point.text}>
-                      <span className={AUTH_POINT_CLASS_NAME}>
-                        <IncludedMark />
-                        <Text>{t(point.text)}</Text>
-                      </span>
+                    <ListItem key={point.text} className={AUTH_POINT_CLASS_NAME}>
+                      <IncludedMark />
+                      <Text>{t(point.text)}</Text>
                     </ListItem>
                   ))}
                 </List>
