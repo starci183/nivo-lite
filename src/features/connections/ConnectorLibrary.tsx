@@ -68,6 +68,7 @@ export const ConnectorLibrary = ({ items, onOpen }: ConnectorLibraryProps) => {
         <div className={LIBRARY_SORT_CLASS}>
           <Select
             label={t("libSort")}
+            isLabelHidden
             options={[{ id: "popular", label: t("libSortPopular") }, { id: "name", label: t("libSortName") }]}
             value={sort}
             onValueChange={(v) => setSort(v === "name" ? "name" : "popular")}
