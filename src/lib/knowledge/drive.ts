@@ -9,7 +9,7 @@ export type LinkTarget =
 /** Stable error codes. The server prefixes its (Vietnamese) message with one, the client shows its own vi/en copy. */
 export const LINK_ERROR = {
   notPublic: "NOT_PUBLIC", folder: "DRIVE_FOLDER", unsupported: "UNSUPPORTED_TYPE",
-  needGrant: "NEED_DRIVE_GRANT", grantLost: "DRIVE_GRANT_LOST", noAccess: "DRIVE_NO_ACCESS",
+  needGrant: "NEED_DRIVE_GRANT", grantLost: "DRIVE_GRANT_LOST", noAccess: "DRIVE_NO_ACCESS", tokenExpired: "PICKER_TOKEN_EXPIRED",
 } as const;
 export type LinkErrorCode = (typeof LINK_ERROR)[keyof typeof LINK_ERROR];
 

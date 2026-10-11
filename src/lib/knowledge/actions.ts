@@ -7,7 +7,7 @@ import type { ExtractionInfo } from "../brain/shared";
 import { getSession } from "../session";
 import { googleConfigured } from "../google";
 import { safeReturnTo } from "../google-sheets-core";
-import { resolveLink } from "./drive";
+import { linkError, LINK_ERROR, resolveLink } from "./drive";
 import { fetchFile, listFolder, type DriveFile } from "./drive-api";
 import { disconnectDrive, driveAuthUrl, driveGrantOf, withDriveToken, type DriveGrant } from "./drive-grant";
 import { fileTextKind, textFromBytes } from "./extract";
@@ -163,6 +163,50 @@ export const listDriveFolder = async (url: string): Promise<Outcome<{ name: stri
     if (target.kind !== "drive-folder" || !target.folderId) throw new Error("Đây không phải liên kết thư mục Google Drive.");
     const folderId = target.folderId;
     return withDriveToken(member.workspaceId, (token) => listFolder(token, folderId));
+  });
+
+/* ------------------------------------------------------------------ Google Picker (drive.file): items the owner picked, read with a short-lived token */
+
+/**
+ * The Picker token is a browser-held drive.file access token (about an hour). It only travels inside these calls to Google and is never
+ * stored, logged or returned. A 401 from Google means it expired: the row asks the owner to pick again.
+ */
+const pickerToken = (v: unknown): string => {
+  if (typeof v !== "string" || v.length < 20 || v.length > 4096 || !/^[w.~+/=-]+$/.test(v)) throw linkError(LINK_ERROR.tokenExpired, "Phiên Google Drive đã hết hạn. Hãy chọn lại.");
+  return v;
+};
+const expired = (e: unknown): never => {
+  if ((e as { status?: number }).status === 401) throw linkError(LINK_ERROR.tokenExpired, "Phiên Google Drive đã hết hạn. Hãy chọn lại.");
+  throw e;
+};
+
+/**
+ * A folder picked in the Google Picker -> its children. Reports what Google returned: `empty` is true when the listing came back with no
+ * files or was refused (403/404), which is what the drawer turns into the "pick the files inside" row. No claim is made about why.
+ */
+export const listPickedFolder = async (folderId: string, token: string): Promise<Outcome<{ name: string; files: ReadonlyArray<DriveFile>; truncated: boolean; empty: boolean }>> =>
+  run(async () => {
+    await managers();
+    const t = pickerToken(token);
+    try {
+      const r = await listFolder(t, folderId);
+      return { ...r, empty: r.files.length === 0 };
+    } catch (e) {
+      const status = (e as { status?: number }).status;
+      if (status === 403 || status === 404) return { name: "", files: [], truncated: false, empty: true };
+      return expired(e);
+    }
+  });
+
+/** One picked Drive file: exported (Docs, Sheets, Slides) or downloaded (alt=media), then indexed like an uploaded file. */
+export const addKnowledgePickedFile = async (fileId: string, token: string, meta: Omit<AddSourceInput, "kind" | "title" | "content">): Promise<Outcome<KnowledgeSource>> =>
+  run(async () => {
+    await managers();
+    const t = pickerToken(token);
+    const file = await fetchFile(t, fileId).catch(expired);
+    const source = await addSource({ ...meta, kind: "file", title: file.name.replace(/.[^.]+$/, ""), content: file.text });
+    refresh();
+    return source;
   });
 
 /** One Drive file of an expanded folder: read with the grant, then indexed through the same path as an uploaded file. */

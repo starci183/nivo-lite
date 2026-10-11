@@ -6,13 +6,14 @@ import { useT } from "@/i18n/client"
 import { knowledge } from "@/i18n/dict/knowledge"
 import { CreditsAlert } from "@/features/brain/CreditsAlert"
 import { extractionSettled, type ExtractionInfo } from "@/lib/brain/shared"
-import { addKnowledge, addKnowledgeDriveFile, addKnowledgeFile, addKnowledgeLink, disconnectDriveGrant, driveGrantStatus, listDriveFolder, pollExtractions, startDriveGrant } from "@/lib/knowledge/actions"
+import { addKnowledge, addKnowledgeDriveFile, addKnowledgeFile, addKnowledgeLink, addKnowledgePickedFile, disconnectDriveGrant, driveGrantStatus, listDriveFolder, listPickedFolder, pollExtractions, startDriveGrant } from "@/lib/knowledge/actions"
 import { faqToText } from "@/lib/knowledge/chunk"
 import { driveReadMode, isGoogleDriveLink, LINK_ERROR, linkErrorCode, MAX_FOLDER_FILES, parseLinks, resolveLink } from "@/lib/knowledge/drive"
 import type { DriveGrant } from "@/lib/knowledge/drive-grant"
 import type { Visibility } from "@/lib/knowledge/shared"
 import { MODULE_KEYS, type ModuleKey } from "@/lib/modules-shared"
 import { driveReturn, savePending, takePending } from "./driveReturn"
+import { pickerConfigured, pickFromDrive, type PickedDoc } from "./picker"
 import { FAQ_ROW_CLASS, FORM_GRID_CLASS, LIST_CLASS, ROW_WRAP_CLASS, STACK_CLASS } from "./classNames"
 
 type Mode = "files" | "write" | "faq"
@@ -22,6 +23,8 @@ type Item = {
   readonly kind: "file" | "link" | "drive"
   /** A file found inside a pasted Drive folder: read with the Drive grant by id. */
   readonly driveId?: string
+  /** Picked in the Google Picker: read with the short-lived Picker token held in this drawer (never stored). */
+  readonly viaPicker?: boolean
   /** Topic used when the topic field is empty (the folder's name). */
   readonly topic?: string
   /** The folder it came from. */
@@ -59,8 +62,9 @@ const NEED_GRANT = `${LINK_ERROR.needGrant}: `
 const GRANT_LOST = `${LINK_ERROR.grantLost}: `
 type Grant = DriveGrant & { readonly configured: boolean }
 const isFolderLink = (url: string): boolean => resolveLink(url).kind === "drive-folder"
-const NO_RETRY = new Set(["errBadType", "errTooBig", "errBadLink", "errEmptyFolder", "errDriveType"])
-const canRetry = (x: { readonly status: ItemStatus; readonly error?: string }): boolean => x.status === "waiting" || (x.status === "failed" && !NO_RETRY.has(x.error ?? ""))
+const NO_RETRY = new Set(["errBadType", "errTooBig", "errBadLink", "errEmptyFolder", "errDriveType", "errPickerFolder"])
+const canRetry = (x: { readonly status: ItemStatus; readonly error?: string }): boolean =>
+  x.status === "waiting" || (x.status === "failed" && !NO_RETRY.has(x.error ?? "") && linkErrorCode(x.error ?? "") !== LINK_ERROR.tokenExpired)
 
 const sizeLabel = (bytes: number): string => (bytes >= 1_000_000 ? `${(bytes / 1_000_000).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1000))} KB`)
 let counter = 0
@@ -91,6 +95,9 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
   const [truncated, setTruncated] = useState(false)
   const [driveAnswer, setDriveAnswer] = useState<{ readonly ok: boolean; readonly reason: string | null } | null>(null)
   const grantRef = useRef<Grant | null>(null)
+  const pickerToken = useRef<string | null>(null)
+  const [picking, setPicking] = useState(false)
+  const showPicker = pickerConfigured()
   grantRef.current = grant
 
   const loadGrant = async (): Promise<Grant | null> => {
@@ -199,6 +206,44 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
     })
   }
 
+  /** Google Picker (drive.file): the picked files become rows; a picked folder is listed with the Picker token, and when Google returns nothing or refuses (403/404) its row says to pick the files inside. */
+  const pickDrive = async (): Promise<void> => {
+    setError(null)
+    setPicking(true)
+    try {
+      const picked = await pickFromDrive()
+      if (!picked || picked.docs.length === 0) return
+      pickerToken.current = picked.token
+      const rows: Array<Item> = []
+      for (const d of picked.docs) {
+        if (d.mimeType === "application/vnd.google-apps.folder") rows.push(...(await pickedFolderRows(d, picked.token)))
+        else rows.push(pickedFileRow(d))
+      }
+      setItems((cur) => {
+        const have = new Set(cur.filter((x) => x.driveId).map((x) => x.driveId))
+        return [...cur, ...rows.filter((x) => !x.driveId || !have.has(x.driveId))]
+      })
+    } catch {
+      setError(t("pickerFailed"))
+    } finally {
+      setPicking(false)
+    }
+  }
+
+  const pickedFileRow = (d: PickedDoc, origin?: string, topicName?: string): Item => {
+    const bad = driveReadMode(d.mimeType, d.name) === null ? "errDriveType" : null
+    return { id: nextId(), kind: "drive", viaPicker: true, name: d.name, driveId: d.id, status: bad ? "failed" : "waiting", ...(origin ? { origin } : {}), ...(topicName ? { topic: topicName } : {}), ...(bad ? { error: bad } : {}) }
+  }
+
+  const pickedFolderRows = async (d: PickedDoc, token: string): Promise<Array<Item>> => {
+    const r = await listPickedFolder(d.id, token)
+    if (!r.ok) return [{ id: nextId(), kind: "drive", viaPicker: true, name: d.name, driveId: d.id, status: "failed", error: r.error }]
+    if (r.data.empty) return [{ id: nextId(), kind: "drive", viaPicker: true, name: d.name, driveId: d.id, status: "failed", error: "errPickerFolder" }]
+    if (r.data.truncated) setTruncated(true)
+    setTopic((cur) => cur || d.name.slice(0, 80))
+    return r.data.files.map((f) => ({ ...pickedFileRow({ id: f.id, name: f.path ? `${f.path}/${f.name}` : f.name, mimeType: f.mimeType }, d.name, d.name.slice(0, 80)), ...(f.size !== null ? { size: f.size } : {}) }))
+  }
+
   /** Keep the pasted links and settings, then go to Google for the Drive consent; the callback brings the browser back to this page. */
   const connectDrive = async (): Promise<void> => {
     setError(null); setDriveAnswer(null)
@@ -217,11 +262,11 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
 
   const message = (raw: string): string => {
     switch (raw) {
-      case "errBadType": case "errTooBig": case "errBadLink": case "errEmptyFolder": case "errDriveType": return t(raw)
+      case "errBadType": case "errTooBig": case "errBadLink": case "errEmptyFolder": case "errDriveType": case "errPickerFolder": return t(raw)
       default: {
         const code = linkErrorCode(raw)
         return code === LINK_ERROR.notPublic ? t("errNotPublic") : code === LINK_ERROR.folder ? t("errFolder") : code === LINK_ERROR.unsupported ? t("errUnsupported")
-          : code === LINK_ERROR.needGrant ? t("errNeedGrant") : code === LINK_ERROR.grantLost ? t("errGrantLost") : code === LINK_ERROR.noAccess ? t("errNoAccess") : raw
+          : code === LINK_ERROR.needGrant ? t("errNeedGrant") : code === LINK_ERROR.grantLost ? t("errGrantLost") : code === LINK_ERROR.noAccess ? t("errNoAccess") : code === LINK_ERROR.tokenExpired ? t("errPickerExpired") : raw
       }
     }
   }
@@ -241,6 +286,9 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
         form.set("topic", m.topic ?? "")
         form.set("tags", m.tags.join(","))
         result = await addKnowledgeFile(form)
+      } else if (item.kind === "drive" && item.driveId && item.viaPicker) {
+        if (!pickerToken.current) { patch(item.id, { status: "failed", error: `${LINK_ERROR.tokenExpired}: ` }); return false }
+        result = await addKnowledgePickedFile(item.driveId, pickerToken.current, { ...m, topic: m.topic ?? item.topic ?? null })
       } else if (item.kind === "drive" && item.driveId) {
         result = await addKnowledgeDriveFile(item.driveId, { ...m, topic: m.topic ?? item.topic ?? null })
       } else {
@@ -330,8 +378,8 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
       description={mode === "files" ? t("drawerHint") : undefined}
       closeLabel={t("addCancel")}
       placement="right"
-      isDismissable={!busy}
-      isKeyboardDismissDisabled={busy}
+      isDismissable={!busy && !picking}
+      isKeyboardDismissDisabled={busy || picking}
       footer={(closeDrawer) => (
         <>
           <Button variant="primary" isPending={busy} isDisabled={!canSubmit} onPress={() => { void (mode === "files" ? runBatch() : runNote()) }}>{submitLabel}</Button>
@@ -358,8 +406,10 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
             <Textarea id="k-links" name="links" label={t("linksField")} description={t("linksHint")} variant="secondary" rows={4} value={links} isDisabled={busy} onValueChange={setLinks} />
             <div className={ROW_WRAP_CLASS}>
               <Button variant="secondary" size="sm" isDisabled={busy || reading || parseLinks(links).length === 0} onPress={() => { void queueLinks() }}>{t("linksQueue")}</Button>
+              {showPicker ? <Button variant="secondary" size="sm" isPending={picking} isDisabled={busy || reading} onPress={() => { void pickDrive() }}>{t("pickerButton")}</Button> : null}
               {reading ? <Text size="sm" tone="muted">{t("folderReading")}</Text> : null}
             </div>
+            {showPicker ? <Text size="sm" tone="muted">{t("pickerHint")}</Text> : null}
             {grant?.state === "connected" ? (
               <div className={ROW_WRAP_CLASS}>
                 <Text size="sm" tone="muted">{t("driveConnected", { email: grant.email || "Google" })}</Text>
