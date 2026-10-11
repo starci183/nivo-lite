@@ -1,23 +1,31 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Alert, Badge, Button, ComboBox, Drawer, FileDropzone, Input, List, ListItem, ListRow, SegmentedControl, Select, SurfaceListCard, Textarea } from "@starci/grammar/common"
+import { Alert, Badge, Button, ComboBox, Drawer, FileDropzone, Input, List, ListItem, ListRow, SegmentedControl, Select, SurfaceListCard, Text, Textarea } from "@starci/grammar/common"
 import { useT } from "@/i18n/client"
 import { knowledge } from "@/i18n/dict/knowledge"
 import { CreditsAlert } from "@/features/brain/CreditsAlert"
 import { extractionSettled, type ExtractionInfo } from "@/lib/brain/shared"
-import { addKnowledge, addKnowledgeFile, addKnowledgeLink, pollExtractions } from "@/lib/knowledge/actions"
+import { addKnowledge, addKnowledgeDriveFile, addKnowledgeFile, addKnowledgeLink, disconnectDriveGrant, driveGrantStatus, listDriveFolder, pollExtractions, startDriveGrant } from "@/lib/knowledge/actions"
 import { faqToText } from "@/lib/knowledge/chunk"
-import { LINK_ERROR, linkErrorCode, parseLinks, resolveLink } from "@/lib/knowledge/drive"
+import { driveReadMode, isGoogleDriveLink, LINK_ERROR, linkErrorCode, MAX_FOLDER_FILES, parseLinks, resolveLink } from "@/lib/knowledge/drive"
+import type { DriveGrant } from "@/lib/knowledge/drive-grant"
 import type { Visibility } from "@/lib/knowledge/shared"
 import { MODULE_KEYS, type ModuleKey } from "@/lib/modules-shared"
+import { driveReturn, savePending, takePending } from "./driveReturn"
 import { FAQ_ROW_CLASS, FORM_GRID_CLASS, LIST_CLASS, ROW_WRAP_CLASS, STACK_CLASS } from "./classNames"
 
 type Mode = "files" | "write" | "faq"
 type ItemStatus = "waiting" | "indexing" | "ready" | "failed"
 type Item = {
   readonly id: string
-  readonly kind: "file" | "link"
+  readonly kind: "file" | "link" | "drive"
+  /** A file found inside a pasted Drive folder: read with the Drive grant by id. */
+  readonly driveId?: string
+  /** Topic used when the topic field is empty (the folder's name). */
+  readonly topic?: string
+  /** The folder it came from. */
+  readonly origin?: string
   readonly name: string
   readonly size?: number
   readonly file?: File
@@ -47,6 +55,13 @@ const CONCURRENCY = 2
 const ACCEPT = ".txt,.md,.markdown,.csv,.pdf,.docx,text/plain,text/markdown,text/csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 const STATUS_TONE: Record<ItemStatus, "neutral" | "warning" | "success" | "danger"> = { waiting: "neutral", indexing: "warning", ready: "success", failed: "danger" }
 
+const NEED_GRANT = `${LINK_ERROR.needGrant}: `
+const GRANT_LOST = `${LINK_ERROR.grantLost}: `
+type Grant = DriveGrant & { readonly configured: boolean }
+const isFolderLink = (url: string): boolean => resolveLink(url).kind === "drive-folder"
+const NO_RETRY = new Set(["errBadType", "errTooBig", "errBadLink", "errEmptyFolder", "errDriveType"])
+const canRetry = (x: { readonly status: ItemStatus; readonly error?: string }): boolean => x.status === "waiting" || (x.status === "failed" && !NO_RETRY.has(x.error ?? ""))
+
 const sizeLabel = (bytes: number): string => (bytes >= 1_000_000 ? `${(bytes / 1_000_000).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1000))} KB`)
 let counter = 0
 const nextId = (): string => `item-${Date.now()}-${counter++}`
@@ -71,6 +86,31 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
   const [error, setError] = useState<string | null>(null)
   const [doneCount, setDoneCount] = useState(0)
   const seenPreset = useRef<number | null>(preset?.nonce ?? null)
+  const [grant, setGrant] = useState<Grant | null>(null)
+  const [reading, setReading] = useState(false)
+  const [truncated, setTruncated] = useState(false)
+  const [driveAnswer, setDriveAnswer] = useState<{ readonly ok: boolean; readonly reason: string | null } | null>(null)
+  const grantRef = useRef<Grant | null>(null)
+  grantRef.current = grant
+
+  const loadGrant = async (): Promise<Grant | null> => {
+    const r = await driveGrantStatus()
+    const next = r.ok ? r.data : null
+    grantRef.current = next
+    setGrant(next)
+    return next
+  }
+  // The workspace's Drive access, and what to restore when Google sent the browser back here (answer + the links that were pasted).
+  useEffect(() => {
+    void loadGrant()
+    const back = driveReturn()
+    const pending = takePending()
+    if (back) setDriveAnswer({ ok: back.result === "ok", reason: back.reason })
+    if (pending) {
+      setLinks(pending.links); setTopic((cur) => cur || pending.topic); setTags(pending.tags)
+      setVisibility(pending.visibility); setModule(MODULE_KEYS.find((k) => k === pending.module) ?? "all")
+    }
+  }, [])
 
   // A new suggestion preset reopens on "Write" with its topic filled in.
   useEffect(() => {
@@ -122,26 +162,66 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
     })
   }
 
-  const queueLinks = (): void => {
+  /** Pasted links -> queue rows. A Drive folder becomes one row per file (recursive, see drive-api.ts); without the grant its row fails with "Cần cấp quyền Google Drive". */
+  const expand = async (urls: ReadonlyArray<string>): Promise<Array<Item>> => {
+    const out: Array<Item> = []
+    for (const u of urls) {
+      const target = resolveLink(u)
+      if (target.kind === "invalid") { out.push({ id: nextId(), kind: "link", name: u, status: "failed", error: "errBadLink" }); continue }
+      if (target.kind !== "drive-folder") { out.push({ id: nextId(), kind: "link", name: u, status: "waiting" }); continue }
+      const g = grantRef.current ?? (await loadGrant())
+      if (!g || g.state !== "connected") { out.push({ id: nextId(), kind: "link", name: u, status: "failed", error: g?.state === "lost" ? GRANT_LOST : NEED_GRANT }); continue }
+      const r = await listDriveFolder(u)
+      if (!r.ok) { out.push({ id: nextId(), kind: "link", name: u, status: "failed", error: r.error }); continue }
+      if (r.data.truncated) setTruncated(true)
+      if (r.data.files.length === 0) { out.push({ id: nextId(), kind: "link", name: u, status: "failed", error: "errEmptyFolder" }); continue }
+      setTopic((cur) => cur || r.data.name.slice(0, 80))
+      for (const f of r.data.files) {
+        const label = f.path ? `${f.path}/${f.name}` : f.name
+        const bad = driveReadMode(f.mimeType, f.name) === null ? "errDriveType" : f.size !== null && f.size > MAX_FILE_BYTES ? "errTooBig" : null
+        out.push({ id: nextId(), kind: "drive", name: label, driveId: f.id, topic: r.data.name.slice(0, 80), origin: r.data.name, ...(f.size !== null ? { size: f.size } : {}), status: bad ? "failed" : "waiting", ...(bad ? { error: bad } : {}) })
+      }
+    }
+    return out
+  }
+
+  const queueLinks = async (): Promise<void> => {
     const urls = parseLinks(links)
     if (urls.length === 0) return
-    setItems((cur) => {
-      const known = new Set(cur.filter((x) => x.kind === "link").map((x) => x.name))
-      const fresh: Array<Item> = urls.filter((u) => !known.has(u)).map((u) => {
-        const invalid = resolveLink(u).kind === "invalid"
-        return { id: nextId(), kind: "link", name: u, status: invalid ? "failed" : "waiting", ...(invalid ? { error: "errBadLink" } : {}) } as Item
-      })
-      return [...cur, ...fresh]
-    })
     setLinks("")
+    setReading(true)
+    const known = new Set(items.filter((x) => x.kind === "link").map((x) => x.name))
+    const fresh = await expand(urls.filter((u) => !known.has(u)))
+    setReading(false)
+    setItems((cur) => {
+      const have = new Set(cur.filter((x) => x.driveId).map((x) => x.driveId))
+      return [...cur, ...fresh.filter((x) => !x.driveId || !have.has(x.driveId))]
+    })
+  }
+
+  /** Keep the pasted links and settings, then go to Google for the Drive consent; the callback brings the browser back to this page. */
+  const connectDrive = async (): Promise<void> => {
+    setError(null); setDriveAnswer(null)
+    const kept = [links, ...items.filter((x) => x.kind === "link" && x.status !== "ready").map((x) => x.name)].filter(Boolean).join("\n")
+    savePending({ links: kept, topic, tags, visibility, module })
+    const r = await startDriveGrant(`${window.location.pathname}${window.location.search}`)
+    if (r.ok) window.location.assign(r.data.url)
+    else setError(r.error)
+  }
+
+  const disconnectDrive = async (): Promise<void> => {
+    const r = await disconnectDriveGrant()
+    if (!r.ok) { setError(r.error); return }
+    await loadGrant()
   }
 
   const message = (raw: string): string => {
     switch (raw) {
-      case "errBadType": case "errTooBig": case "errBadLink": return t(raw)
+      case "errBadType": case "errTooBig": case "errBadLink": case "errEmptyFolder": case "errDriveType": return t(raw)
       default: {
         const code = linkErrorCode(raw)
-        return code === LINK_ERROR.notPublic ? t("errNotPublic") : code === LINK_ERROR.folder ? t("errFolder") : code === LINK_ERROR.unsupported ? t("errUnsupported") : raw
+        return code === LINK_ERROR.notPublic ? t("errNotPublic") : code === LINK_ERROR.folder ? t("errFolder") : code === LINK_ERROR.unsupported ? t("errUnsupported")
+          : code === LINK_ERROR.needGrant ? t("errNeedGrant") : code === LINK_ERROR.grantLost ? t("errGrantLost") : code === LINK_ERROR.noAccess ? t("errNoAccess") : raw
       }
     }
   }
@@ -161,6 +241,8 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
         form.set("topic", m.topic ?? "")
         form.set("tags", m.tags.join(","))
         result = await addKnowledgeFile(form)
+      } else if (item.kind === "drive" && item.driveId) {
+        result = await addKnowledgeDriveFile(item.driveId, { ...m, topic: m.topic ?? item.topic ?? null })
       } else {
         result = await addKnowledgeLink(item.name, m)
       }
@@ -175,14 +257,23 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
   }
 
   const runBatch = async () => {
-    // Links still sitting in the textarea join the queue first.
-    const typed = parseLinks(links).filter((u) => !items.some((x) => x.kind === "link" && x.name === u))
-    const typedItems: Array<Item> = typed.map((u) => ({ id: nextId(), kind: "link", name: u, status: "waiting" }))
-    if (typedItems.length > 0) { setItems((cur) => [...cur, ...typedItems]); setLinks("") }
-    const queue = [...items, ...typedItems].filter((x) => x.status === "waiting" || (x.status === "failed" && x.error !== "errBadType" && x.error !== "errTooBig" && x.error !== "errBadLink"))
-    if (queue.length === 0) return
     setBusy(true)
     setError(null)
+    // Links still sitting in the textarea join the queue first (a Drive folder expands into its files).
+    const typed = parseLinks(links).filter((u) => !items.some((x) => x.kind === "link" && x.name === u))
+    const typedItems = typed.length > 0 ? await expand(typed) : []
+    if (typedItems.length > 0) { setItems((cur) => [...cur, ...typedItems]); setLinks("") }
+    // A folder row that failed earlier (no grant yet, ...) is expanded again now.
+    const queue: Array<Item> = []
+    for (const x of items.filter(canRetry)) {
+      if (x.kind === "link" && isFolderLink(x.name)) {
+        const rows = await expand([x.name])
+        setItems((cur) => cur.flatMap((y) => (y.id === x.id ? rows : [y])))
+        queue.push(...rows.filter((y) => y.status === "waiting"))
+      } else queue.push(x)
+    }
+    queue.push(...typedItems.filter((x) => x.status === "waiting"))
+    if (queue.length === 0) { setBusy(false); return }
     let ok = 0
     let next = 0
     const worker = async () => {
@@ -220,9 +311,13 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
     onClose()
   }
 
-  const retryable = items.filter((x) => x.status === "waiting" || (x.status === "failed" && x.error !== "errBadType" && x.error !== "errTooBig" && x.error !== "errBadLink"))
+  const retryable = items.filter(canRetry)
   const pendingCount = retryable.length + parseLinks(links).filter((u) => !items.some((x) => x.kind === "link" && x.name === u)).length
   const hasFailed = items.some((x) => x.status === "failed")
+  const wantsDrive = parseLinks(links).some(isGoogleDriveLink) || items.some((x) => x.kind === "link" && (isGoogleDriveLink(x.name) || x.error?.startsWith(LINK_ERROR.needGrant)))
+  const driveReason = driveAnswer && !driveAnswer.ok
+    ? t(driveAnswer.reason === "denied" ? "driveErrDenied" : driveAnswer.reason === "scope" ? "driveErrScope" : driveAnswer.reason === "unavailable" ? "driveErrUnavailable" : "driveErrGeneric")
+    : null
   const noteBody = mode === "faq" ? faqToText(pairs) : content
   const canSubmit = mode === "files" ? pendingCount > 0 : title.trim().length > 0 && noteBody.trim().length > 0
   const submitLabel = busy ? t("saving") : mode === "files" ? t(hasFailed ? "submitRetry" : "submitFiles", { count: pendingCount }) : t("save")
@@ -262,15 +357,31 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
             />
             <Textarea id="k-links" name="links" label={t("linksField")} description={t("linksHint")} variant="secondary" rows={4} value={links} isDisabled={busy} onValueChange={setLinks} />
             <div className={ROW_WRAP_CLASS}>
-              <Button variant="secondary" size="sm" isDisabled={busy || parseLinks(links).length === 0} onPress={queueLinks}>{t("linksQueue")}</Button>
+              <Button variant="secondary" size="sm" isDisabled={busy || reading || parseLinks(links).length === 0} onPress={() => { void queueLinks() }}>{t("linksQueue")}</Button>
+              {reading ? <Text size="sm" tone="muted">{t("folderReading")}</Text> : null}
             </div>
+            {grant?.state === "connected" ? (
+              <div className={ROW_WRAP_CLASS}>
+                <Text size="sm" tone="muted">{t("driveConnected", { email: grant.email || "Google" })}</Text>
+                <Button variant="ghost" size="sm" isDisabled={busy} onPress={() => { void disconnectDrive() }}>{t("driveDisconnect")}</Button>
+              </div>
+            ) : grant?.configured && (wantsDrive || grant.state === "lost" || driveReason) ? (
+              <div className={STACK_CLASS}>
+                <Alert tone="informative" appearance="soft" title={t("driveAlertTitle")} description={grant.state === "lost" ? t("driveLostBody") : t("driveAlertBody")} />
+                <div className={ROW_WRAP_CLASS}>
+                  <Button variant="secondary" size="sm" isDisabled={busy} onPress={() => { void connectDrive() }}>{t(grant.state === "lost" ? "driveRegrant" : "driveGrant")}</Button>
+                </div>
+              </div>
+            ) : null}
+            {driveReason ? <Alert tone="negative" title={driveReason} /> : null}
+            {truncated ? <Alert tone="cautionary" appearance="soft" title={t("folderTruncated", { count: MAX_FOLDER_FILES })} /> : null}
             {items.length > 0 ? (
               <SurfaceListCard label={t("queueTitle")} headingLevel={3} fact={t("queueCount", { count: items.length })}>
                 {items.map((x) => (
                   <ListRow
                     key={x.id}
                     title={x.name}
-                    description={x.status === "failed" && x.error ? message(x.error) : [t(x.kind === "file" ? "itemFile" : "itemLink"), x.size ? sizeLabel(x.size) : null, x.status === "ready" ? factsNote(x.sourceId) : null].filter(Boolean).join(" · ")}
+                    description={x.status === "failed" && x.error ? message(x.error) : [t(x.kind === "file" ? "itemFile" : x.kind === "drive" ? "itemDrive" : isFolderLink(x.name) ? "itemFolder" : "itemLink"), x.origin ? t("folderFrom", { name: x.origin }) : null, x.size ? sizeLabel(x.size) : null, x.status === "ready" ? factsNote(x.sourceId) : null].filter(Boolean).join(" · ")}
                     badges={<Badge isDot tone={STATUS_TONE[x.status]}>{t(`item${x.status[0]?.toUpperCase()}${x.status.slice(1)}` as "itemWaiting")}</Badge>}
                     actions={x.status === "waiting" || x.status === "failed" ? <Button variant="ghost" size="sm" isDisabled={busy} onPress={() => setItems((cur) => cur.filter((y) => y.id !== x.id))}>{t("itemRemove")}</Button> : undefined}
                   />

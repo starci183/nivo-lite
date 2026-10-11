@@ -99,6 +99,7 @@ export const listConnections = async (workspaceId: string, provider?: Provider):
   const db = supabaseAdmin();
   let q = db.from("connections").select(CONNECTION_SELECT).eq("workspace_id", workspaceId).order("created_at");
   if (provider) q = q.eq("provider", provider);
+  else q = q.neq("provider", "google_drive"); // the Drive read grant (knowledge/drive-grant.ts) lives in the Add documents drawer, not in the channel list
   const { data } = await q;
   const rows = (data ?? []) as Array<Row>;
   if (!rows.length) return [];

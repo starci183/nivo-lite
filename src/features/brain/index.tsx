@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Breadcrumbs, Button, DescriptionList, PageContainer, PrimaryRailLayout, SectionHeader, SurfaceCard, Tabs, Text, TextAction } from "@starci/grammar/common"
 import { useT } from "@/i18n/client"
 import { brain } from "@/i18n/dict/brain"
@@ -11,6 +11,7 @@ import { HEAD_CLASS, LENS_CLASS, PAGE_CLASS, STACK_CLASS } from "./classNames"
 import { FactsPanel } from "./facts"
 import { useRouter } from "next/navigation"
 import { AddDocumentsDrawer } from "@/features/knowledge/AddDocumentsDrawer"
+import { driveReturn } from "@/features/knowledge/driveReturn"
 import { FactDrawer } from "./form"
 import { LessonsPanel } from "./lessons"
 import { MapPanel } from "./map"
@@ -61,6 +62,8 @@ export const BrainView = ({ facts, documents, lessons, lenses, extractions = [],
   const lens = lenses.find((l) => l.module === lensKey) ?? null
   const [drawer, setDrawer] = useState<{ preset?: StarterPreset } | null>(null)
   const [isAddingDocs, setAddingDocs] = useState(false)
+  // Back from the Google Drive consent (?drive=ok|error): the Add documents drawer reopens with the pasted links kept.
+  useEffect(() => { if (driveReturn()) setAddingDocs(true) }, [])
   const router = useRouter()
   const addDocs = () => setAddingDocs(true)
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useEffect, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Badge, Breadcrumbs, Button, Disclosure, EmptyNotice, Link, List, ListItem, PageContainer, PrimaryRailLayout, SectionHeader, Select, SurfaceCard, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
 import { useLocale, useT } from "@/i18n/client"
@@ -11,6 +11,7 @@ import type { KnowledgeSource, SourceStatus, Visibility } from "@/lib/knowledge/
 import { MODULE_KEYS, type ModuleKey } from "@/lib/modules-shared"
 import { AddDocumentsDrawer, type AddPreset } from "./AddDocumentsDrawer"
 import { AskPanel } from "./AskPanel"
+import { driveReturn } from "./driveReturn"
 import { FILTER_CLASS, HEAD_CLASS, ITEM_CLASS, ITEM_MAIN_CLASS, LIST_CLASS, PAGE_CLASS, ROW_WRAP_CLASS, SIDE_CLASS, SOURCE_ROW_CLASS, STACK_CLASS, SUGGEST_ITEM_CLASS } from "./classNames"
 import { knowledgeTrail } from "./trail"
 
@@ -37,6 +38,8 @@ export const KnowledgeView = ({ sources, topics, suggestions, skipped, canWrite,
   const [filter, setFilter] = useState<"all" | ModuleKey>(initialModule)
   const [adding, setAdding] = useState(false)
   const [preset, setPreset] = useState<AddPreset | null>(null)
+  // Back from the Google Drive consent (?drive=ok|error): the Add documents drawer reopens with the pasted links kept.
+  useEffect(() => { if (driveReturn()) setAdding(true) }, [])
   const [isPending, start] = useTransition()
 
   const shown = sources.filter((s) => filter === "all" || s.module === null || s.module === filter)

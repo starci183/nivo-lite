@@ -7,6 +7,9 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 export const GOOGLE_SCOPE = "https://www.googleapis.com/auth/drive.file openid email";
+/** Read access to the owner's Drive for the Second Brain import (a Google RESTRICTED scope; see knowledge/drive-api.ts). Asked on top of drive.file. */
+export const DRIVE_READ_SCOPE = "https://www.googleapis.com/auth/drive.readonly openid email";
+export const DRIVE_PURPOSE = "drive_read";
 export const STATE_TTL_MS = 10 * 60 * 1000;
 export const ORDERS_TAB = "Đơn hàng";
 export const LEADS_TAB = "Khách mới";
@@ -40,10 +43,10 @@ export const redirectUri = (env: Env = process.env): string => `${siteOrigin(env
 export const safeReturnTo = (v: string | null | undefined): string => (typeof v === "string" && /^\/(?![/\\])/.test(v) && !/[\r\n]/.test(v) ? v : "/connections");
 
 /** Append ?google=ok / ?google=error&reason=x to a return path, keeping its own query. */
-export const withResult = (returnTo: string, result: "ok" | "error", reason?: string): string => {
+export const withResult = (returnTo: string, result: "ok" | "error", reason?: string, key: "google" | "drive" = "google"): string => {
   const [path, query = ""] = safeReturnTo(returnTo).split("?");
   const params = new URLSearchParams(query);
-  params.set("google", result);
+  params.set(key, result);
   if (reason) params.set("reason", reason);
   else params.delete("reason");
   return `${path}?${params.toString()}`;
@@ -51,7 +54,8 @@ export const withResult = (returnTo: string, result: "ok" | "error", reason?: st
 
 /* ------------------------------------------------------------------ signed state */
 
-export type OAuthState = { readonly w: string; readonly u: string; readonly r: string; readonly e: number };
+/** `p` = purpose: absent for the original Sheets connection, "drive_read" for the Drive read grant (same callback route). */
+export type OAuthState = { readonly w: string; readonly u: string; readonly r: string; readonly e: number; readonly p?: string };
 const b64u = (b: Buffer): string => b.toString("base64url");
 
 /** The state-signing key: derived from the channel key, never the channel key itself. */
@@ -61,8 +65,8 @@ export const stateKey = (channelKeyBase64: string | undefined): Buffer => {
   return createHmac("sha256", raw).update("nivo:google-oauth-state:v1").digest();
 };
 
-export const signState = (key: Buffer, s: { workspaceId: string; userId: string; returnTo: string }, now = Date.now()): string => {
-  const body = b64u(Buffer.from(JSON.stringify({ w: s.workspaceId, u: s.userId, r: safeReturnTo(s.returnTo), e: now + STATE_TTL_MS } satisfies OAuthState)));
+export const signState = (key: Buffer, s: { workspaceId: string; userId: string; returnTo: string; purpose?: string }, now = Date.now()): string => {
+  const body = b64u(Buffer.from(JSON.stringify({ w: s.workspaceId, u: s.userId, r: safeReturnTo(s.returnTo), e: now + STATE_TTL_MS, ...(s.purpose ? { p: s.purpose } : {}) } satisfies OAuthState)));
   return `${body}.${b64u(createHmac("sha256", key).update(body).digest())}`;
 };
 
@@ -76,21 +80,21 @@ export const verifyState = (key: Buffer, value: string | null | undefined, now =
   if (given.length !== expect.length || !timingSafeEqual(given, expect)) return null;
   try {
     const s = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as OAuthState;
-    if (typeof s.w !== "string" || typeof s.u !== "string" || typeof s.r !== "string" || typeof s.e !== "number" || s.e < now) return null;
+    if (typeof s.w !== "string" || typeof s.u !== "string" || typeof s.r !== "string" || typeof s.e !== "number" || s.e < now || (s.p !== undefined && typeof s.p !== "string")) return null;
     return { ...s, r: safeReturnTo(s.r) };
   } catch {
     return null;
   }
 };
 
-export const buildAuthUrl = (state: string, env: Env = process.env): string | null => {
+export const buildAuthUrl = (state: string, env: Env = process.env, scope: string = GOOGLE_SCOPE): string | null => {
   const client = googleClient(env);
   if (!client) return null;
   const u = new URL(authEndpoint(env));
   u.searchParams.set("client_id", client.clientId);
   u.searchParams.set("redirect_uri", redirectUri(env));
   u.searchParams.set("response_type", "code");
-  u.searchParams.set("scope", GOOGLE_SCOPE);
+  u.searchParams.set("scope", scope);
   u.searchParams.set("access_type", "offline");
   u.searchParams.set("prompt", "select_account consent"); // a workspace may connect several accounts: always let the owner pick one
   u.searchParams.set("include_granted_scopes", "true");
@@ -124,7 +128,7 @@ const call = async (url: string, init: RequestInit): Promise<Json> => {
   return json;
 };
 
-export type TokenSet = { readonly accessToken: string; readonly refreshToken: string | null; readonly expiresAt: number; readonly idToken: string | null };
+export type TokenSet = { readonly accessToken: string; readonly refreshToken: string | null; readonly expiresAt: number; readonly idToken: string | null; readonly scope: string | null };
 
 const tokenCall = async (form: Record<string, string>, env: Env): Promise<TokenSet> => {
   const j = await call(tokenEndpoint(env), { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams(form).toString() });
@@ -134,6 +138,7 @@ const tokenCall = async (form: Record<string, string>, env: Env): Promise<TokenS
     refreshToken: typeof j.refresh_token === "string" ? j.refresh_token : null,
     expiresAt: Date.now() + (typeof j.expires_in === "number" ? j.expires_in : 3600) * 1000,
     idToken: typeof j.id_token === "string" ? j.id_token : null,
+    scope: typeof j.scope === "string" ? j.scope : null,
   };
 };
 

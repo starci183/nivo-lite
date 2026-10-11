@@ -10,7 +10,9 @@ import { getSession } from "../session";
 import { supabaseAdmin } from "../supabase/admin";
 import { supabaseServer } from "../supabase/server";
 import { chunkText } from "./chunk";
-import { linkError, LINK_ERROR, resolveLink } from "./drive";
+import { linkError, linkErrorCode, LINK_ERROR, resolveLink } from "./drive";
+import { fetchFile } from "./drive-api";
+import { driveGrantOf, withDriveToken } from "./drive-grant";
 import { sniffTextKind, textFromBytes } from "./extract";
 import { embeddingModel, embedText, embedTexts, toVector } from "./embed";
 import { blockedBy, withUsage } from "../usage";
@@ -105,7 +107,27 @@ const pageTitle = (html: string): string | null => {
  * The text of a link (http/https, public hosts, 10 seconds, 12 MB). Google Docs / Sheets / Slides / Drive share links are
  * turned into their public export URL first (see drive.ts). Web pages, text, PDF and Word are read; anything else fails clearly.
  */
-export const fetchUrlDoc = async (raw: string): Promise<{ text: string; title: string | null }> => {
+export const fetchUrlDoc = async (raw: string, workspaceId?: string): Promise<{ text: string; title: string | null }> => {
+  const target = resolveLink(raw);
+  if (target.kind === "drive-folder") {
+    // The Add documents drawer expands a folder into its files before it gets here; a folder only arrives when that could not happen.
+    if (workspaceId && (await driveGrantOf(workspaceId)).state === "connected") throw linkError(LINK_ERROR.folder, "Hãy thêm thư mục từ hộp 'Thêm tài liệu' để nhập từng tệp trong đó.");
+    throw linkError(LINK_ERROR.needGrant, "Cần cấp quyền Google Drive để đọc thư mục.");
+  }
+  try {
+    return await fetchPublicDoc(raw);
+  } catch (e) {
+    // A Google file that is not public: read it with the owner's Drive grant, when the workspace has one.
+    const driveId = target.kind === "google" || target.kind === "drive-file" ? target.driveId : undefined;
+    if (!workspaceId || !driveId || linkErrorCode(e instanceof Error ? e.message : "") !== LINK_ERROR.notPublic) throw e;
+    const grant = await driveGrantOf(workspaceId);
+    if (grant.state === "none") throw linkError(LINK_ERROR.needGrant, "Cần cấp quyền Google Drive để đọc tệp riêng tư.");
+    const file = await withDriveToken(workspaceId, (token) => fetchFile(token, driveId));
+    return { text: file.text, title: file.name.slice(0, 160) };
+  }
+};
+
+const fetchPublicDoc = async (raw: string): Promise<{ text: string; title: string | null }> => {
   const target = resolveLink(raw);
   if (target.kind === "invalid") throw new Error("Link không hợp lệ.");
   if (target.kind === "drive-folder") throw linkError(LINK_ERROR.folder, "Chưa đọc được thư mục Google Drive. Hãy chia sẻ từng tệp (hoặc một tài liệu công khai).");
@@ -153,7 +175,7 @@ export const addSourceFor = async (db: Db, ws: string, userId: string | null, in
   let content = input.content.trim();
   if (!title && input.kind !== "url") throw new Error("Cần đặt tên cho nguồn tri thức.");
   if (input.kind === "url") {
-    const doc = await fetchUrlDoc(input.content);
+    const doc = await fetchUrlDoc(input.content, userId ? ws : undefined); // the Drive grant is for people signed in, not for API keys
     content = doc.text;
     if (!title) title = (doc.title ?? input.content.trim().replace(/^https?:\/\//, "")).slice(0, 160);
   }

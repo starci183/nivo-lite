@@ -5,6 +5,11 @@ import { requireRole, getCurrentMember } from "../members";
 import { drainBrainWork, extractionsOf } from "../brain/doc-facts";
 import type { ExtractionInfo } from "../brain/shared";
 import { getSession } from "../session";
+import { googleConfigured } from "../google";
+import { safeReturnTo } from "../google-sheets-core";
+import { resolveLink } from "./drive";
+import { fetchFile, listFolder, type DriveFile } from "./drive-api";
+import { disconnectDrive, driveAuthUrl, driveGrantOf, withDriveToken, type DriveGrant } from "./drive-grant";
 import { fileTextKind, textFromBytes } from "./extract";
 import type { ModuleKey } from "../modules-shared";
 import { isModuleKey } from "../modules-shared";
@@ -124,4 +129,48 @@ export const pollExtractions = async (sourceIds: Array<string>): Promise<Outcome
     const list = await extractionsOf(ws, sourceIds.slice(0, 50));
     if (list.some((x) => x.status === "queued" || x.status === "running")) afterResponse(() => drainBrainWork(ws));
     return list;
+  });
+
+/* ------------------------------------------------------------------ Google Drive grant (private files and folders) */
+
+/** The workspace's Drive read grant for the Add documents drawer; `configured` = the Google OAuth client exists on this server. */
+export const driveGrantStatus = async (): Promise<Outcome<DriveGrant & { readonly configured: boolean }>> =>
+  run(async () => {
+    const member = await managers();
+    return { ...(await driveGrantOf(member.workspaceId)), configured: googleConfigured() };
+  });
+
+/** Start the Drive consent: the Google URL to go to; the callback brings the browser back to `returnTo` with ?drive=ok|error. */
+export const startDriveGrant = async (returnTo: string): Promise<Outcome<{ url: string }>> =>
+  run(async () => {
+    const member = await managers();
+    const url = googleConfigured() ? driveAuthUrl(member.workspaceId, member.userId, safeReturnTo(returnTo)) : null;
+    if (!url) throw new Error("Google chưa được bật cho NIVO.");
+    return { url };
+  });
+
+export const disconnectDriveGrant = async (): Promise<Outcome<null>> =>
+  run(async () => {
+    await disconnectDrive((await managers()).workspaceId);
+    return null;
+  });
+
+/** A pasted Drive folder link -> its files (root + 3 nested levels), read with the grant. The drawer turns each into a queue row. */
+export const listDriveFolder = async (url: string): Promise<Outcome<{ name: string; files: ReadonlyArray<DriveFile>; truncated: boolean }>> =>
+  run(async () => {
+    const member = await managers();
+    const target = resolveLink(url);
+    if (target.kind !== "drive-folder" || !target.folderId) throw new Error("Đây không phải liên kết thư mục Google Drive.");
+    const folderId = target.folderId;
+    return withDriveToken(member.workspaceId, (token) => listFolder(token, folderId));
+  });
+
+/** One Drive file of an expanded folder: read with the grant, then indexed through the same path as an uploaded file. */
+export const addKnowledgeDriveFile = async (fileId: string, meta: Omit<AddSourceInput, "kind" | "title" | "content">): Promise<Outcome<KnowledgeSource>> =>
+  run(async () => {
+    const member = await managers();
+    const file = await withDriveToken(member.workspaceId, (token) => fetchFile(token, fileId));
+    const source = await addSource({ ...meta, kind: "file", title: file.name.replace(/\.[^.]+$/, ""), content: file.text });
+    refresh();
+    return source;
   });
