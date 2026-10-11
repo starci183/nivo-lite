@@ -6,7 +6,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useTransition, type ReactNode } from "react";
 import { useT } from "@/i18n/client";
 import { shell } from "@/i18n/dict/shell";
-import { FoundingOffer } from "@/components/promo/FoundingOffer";
 import { signOut } from "@/lib/actions";
 import { switchWorkspaceAction } from "@/features/onboarding/actions";
 import { MemberProvider, isManager } from "./member-context";
@@ -46,8 +45,6 @@ const DESTINATIONS: ReadonlyArray<Destination> = [
   { key: "credits", label: "navCredits", route: "/billing", icon: "wallet", group: "setup", managerOnly: true },
 ];
 
-/** Pages where no promo strip sits with the work: the chat itself, the dashboard (which has its own hero) and the brain. */
-const isStripFree = (pathname: string) => pathname.startsWith("/chat") || pathname.startsWith("/dashboard") || pathname.startsWith("/brain") || /^\/modules\/[^/]+\/chat/.test(pathname);
 
 /** Props for {@link ConsoleShell}: plain session data from the server layout. */
 export type ConsoleShellProps = {
@@ -89,7 +86,6 @@ export const ConsoleShell = ({ workspaceName, userName, email, avatarUrl, data, 
       ? { id: "test-chatbot", label: t("testChatbot"), href: `/modules/${chatbot.id}/chat` }
       : { id: "buy-chatbot", label: t("buyChatbot"), href: "/modules/new?module=chatbot" },
   ];
-  const showStrip = !promo.hasChatbot && !isStripFree(pathname);
   return (
     <ConsoleShellBase
       props={{
@@ -107,7 +103,8 @@ export const ConsoleShell = ({ workspaceName, userName, email, avatarUrl, data, 
         pendingCount: data.pendingCount,
         newEntries,
         isFoundingMember: promo.isFoundingMember,
-        strip: showStrip ? <FoundingOffer variant="strip" /> : null,
+        // No promotional strip on working pages (DISCIPLINE-3 case-5): the offer lives in the dashboard hero and on the landing.
+        strip: null,
       }}
       on={{
         go: (href) => router.push(href),

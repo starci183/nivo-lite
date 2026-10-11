@@ -2,13 +2,13 @@
 
 import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Alert, Badge, Button, Drawer, EmptyNotice, ListRow, SectionHeader, SurfaceListCard, Tabs, Text } from "@starci/grammar/common"
+import { Alert, Badge, Breadcrumbs, Button, Drawer, EmptyNotice, ListRow, SectionHeader, SurfaceListCard, Tabs, Text } from "@starci/grammar/common"
 import { useLocale, useT } from "@/i18n/client"
 import { connections as dict } from "@/i18n/dict/connections"
 import { connectionWizard } from "@/i18n/dict/connectionWizard"
 import type { Connection, Provider } from "@/lib/channels"
 import { PROVIDER_GROUPS, PROVIDERS, type ProviderGroup } from "@/lib/connection-providers"
-import { DETAIL_CLASS, GROUP_CLASS, PAGE_CLASS } from "./classNames"
+import { DETAIL_CLASS, GROUP_CLASS, PAGE_CLASS, HEAD_CLASS } from "./classNames"
 import { ConnectionRow } from "./ConnectionRow"
 import { ProviderLogo } from "./ProviderLogo"
 import { ConnectorLibrary, ConnectorLogo } from "./ConnectorLibrary"
@@ -98,10 +98,15 @@ export const ConnectionsBoard = ({ items, agentNames, agents, localOnly, zaloRes
 
   return (
     <div className={PAGE_CLASS}>
-      {isEmbedded ? null : <SectionHeader
-        level={1} title={t("title")} description={t("description")}
-        meta={attention.length ? t("summary", { live: live.length, attention: attention.length }) : t("summaryCalm", { live: live.length })}
-      />}
+      {isEmbedded ? null : (
+        <div className={HEAD_CLASS}>
+          <Breadcrumbs label={t("crumbLabel")} items={[{ id: "home", label: t("crumbHome"), href: "/dashboard" }, { id: "connections", label: t("title") }]} />
+          <SectionHeader
+            level={1} title={t("title")} description={t("description")}
+            meta={attention.length ? t("summary", { live: live.length, attention: attention.length }) : t("summaryCalm", { live: live.length })}
+          />
+        </div>
+      )}
 
       {first && !isEmbedded ? (
         <Alert

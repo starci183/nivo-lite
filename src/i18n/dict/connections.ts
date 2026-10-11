@@ -5,6 +5,8 @@ export const connections = defineDict({
   en: {
     eyebrow: "CONNECTIONS",
     title: "Connections",
+    crumbLabel: "Breadcrumb",
+    crumbHome: "Overview",
     description: "Connect your own Telegram bots, bank feeds and Zalo OA. Then choose, in each module's Settings, which connections that agent uses.",
     forbiddenTitle: "Only owners and managers can manage connections",
     forbiddenBody: "Ask an owner or manager to add or change a connection.",
@@ -185,6 +187,8 @@ export const connections = defineDict({
   vi: {
     eyebrow: "KẾT NỐI",
     title: "Kết nối",
+    crumbLabel: "Đường dẫn",
+    crumbHome: "Tổng quan",
     description: "Kết nối bot Telegram, nguồn tiền về ngân hàng và Zalo OA của chính bạn. Sau đó chọn, trong Cài đặt của từng module, agent đó dùng kết nối nào.",
     forbiddenTitle: "Chỉ chủ và quản lý mới quản lý được kết nối",
     forbiddenBody: "Hãy nhờ chủ hoặc quản lý thêm hay sửa kết nối.",

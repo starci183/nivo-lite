@@ -8,7 +8,7 @@ import type { Connection } from "@/lib/channels"
 import { CATALOG, CATEGORIES, matches, type CatalogEntry, type ConnectorAudience, type ConnectorCategory } from "@/lib/connector-catalog"
 import { PROVIDER_LOGO } from "@/lib/connection-providers"
 import { nivoIconSource } from "@/ui"
-import { LIBRARY_CARD_CLASS, LIBRARY_CARD_FOOT_CLASS, LIBRARY_CARD_HEAD_CLASS, LIBRARY_FILTERS_CLASS, LIBRARY_GRID_CLASS, PROVIDER_LOGO_CLASS } from "./classNames"
+import { LIBRARY_CARD_CLASS, LIBRARY_CARD_FOOT_CLASS, LIBRARY_CARD_HEAD_CLASS, LIBRARY_FILTERS_CLASS, LIBRARY_GRID_CLASS, PROVIDER_LOGO_CLASS, LIBRARY_SEARCH_CLASS, LIBRARY_SORT_CLASS, LIBRARY_TOOLBAR_CLASS } from "./classNames"
 
 /** The connector's own logo when it has one, else its category glyph. */
 export const ConnectorLogo = ({ entry }: { readonly entry: CatalogEntry }) => {
@@ -61,7 +61,19 @@ export const ConnectorLibrary = ({ items, onOpen }: ConnectorLibraryProps) => {
 
   return (
     <div className={LIBRARY_FILTERS_CLASS}>
-      <SearchField id="connector-search" label={t("libSearch")} isLabelHidden placeholder={t("libSearch")} value={text} onValueChange={setText} onClear={() => setText("")} clearLabel={t("libClear")} />
+      <div className={LIBRARY_TOOLBAR_CLASS}>
+        <div className={LIBRARY_SEARCH_CLASS}>
+          <SearchField id="connector-search" label={t("libSearch")} isLabelHidden placeholder={t("libSearch")} value={text} onValueChange={setText} onClear={() => setText("")} clearLabel={t("libClear")} />
+        </div>
+        <div className={LIBRARY_SORT_CLASS}>
+          <Select
+            label={t("libSort")}
+            options={[{ id: "popular", label: t("libSortPopular") }, { id: "name", label: t("libSortName") }]}
+            value={sort}
+            onValueChange={(v) => setSort(v === "name" ? "name" : "popular")}
+          />
+        </div>
+      </div>
       <TagGroup
         label={t("libCategory")}
         selectionMode="single"
@@ -72,21 +84,13 @@ export const ConnectorLibrary = ({ items, onOpen }: ConnectorLibraryProps) => {
           ...CATEGORIES.filter((c) => (perCategory.get(c) ?? 0) > 0).map((c) => ({ id: c, label: `${t(`cat_${c}`)} · ${perCategory.get(c) ?? 0}` })),
         ]}
       />
-      <div className={LIBRARY_CARD_FOOT_CLASS}>
-        <TagGroup
+      <TagGroup
           label={t("libAudience")}
           selectionMode="single"
           selectedIds={[audience]}
           onSelectionChange={(ids: ReadonlyArray<string>) => setAudience((ids[0] as ConnectorAudience | "all" | undefined) ?? "all")}
           items={[{ id: "all", label: t("libAnyAgent") }, ...AUDIENCES.map((a) => ({ id: a, label: t(`aud_${a}`) }))]}
         />
-        <Select
-          label={t("libSort")}
-          options={[{ id: "popular", label: t("libSortPopular") }, { id: "name", label: t("libSortName") }]}
-          value={sort}
-          onValueChange={(v) => setSort(v === "name" ? "name" : "popular")}
-        />
-      </div>
       {shown.length === 0 ? (
         <EmptyNotice message={t("libEmpty")} description={t("libEmptyHint")} />
       ) : (

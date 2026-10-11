@@ -29,3 +29,11 @@ export const LIBRARY_CARD_HEAD_CLASS = cn("flex", "items-center", "gap-3")
 export const LIBRARY_CARD_FOOT_CLASS = cn("mt-auto", "flex", "flex-wrap", "items-center", "justify-between", "gap-2")
 /** Connector detail drawer body. */
 export const DETAIL_CLASS = cn("flex", "min-w-0", "flex-col", "gap-4")
+
+/** Breadcrumb trail above the page heading: one heading block (GAP-2). */
+export const HEAD_CLASS = cn("flex", "min-w-0", "flex-col", "gap-2")
+/** Library toolbar: search grows, the sort sits beside it from sm (GAP-3), stacked on phones. */
+export const LIBRARY_TOOLBAR_CLASS = cn("flex", "min-w-0", "flex-col", "gap-3", "sm:flex-row", "sm:items-end")
+export const LIBRARY_SEARCH_CLASS = cn("min-w-0", "flex-1")
+/** The sort keeps a compact width beside the search. */
+export const LIBRARY_SORT_CLASS = cn("w-full", "sm:w-48", "sm:shrink-0")
