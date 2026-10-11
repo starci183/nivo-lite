@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useId, useRef, useState, useTransition, type CSSProperties, type FormEvent } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion } from "framer-motion"
-import { Button, ChatBubble, CloseButton, Form, Input, List, ListItem, SurfaceCard, Text } from "@starci/grammar/common"
-import { NivoIcon } from "@/ui/leaves/NivoIcon"
+import { Button, ChatBubble, CloseButton, Form, IconButton, Input, List, ListItem, SurfaceCard, Text } from "@starci/grammar/common"
+import { nivoIconSource } from "@/ui/leaves/Icon"
 import { useLocale, useT } from "@/i18n/client"
 import { guide as dict } from "@/i18n/dict/guide"
 import { askGuide } from "@/lib/guide/actions"
@@ -12,7 +12,7 @@ import { pageAt } from "@/lib/guide/sitemap"
 import type { GuideLink, GuideReply } from "@/lib/guide/types"
 import { useGuideSpotlight, queueSpotlight } from "./spotlight"
 import {
-  ASK_INPUT_CLASS, ASK_ROW_CLASS, VIEWPORT_CLASS, BUBBLE_CLASS, BUBBLE_ICON_CLASS, FOOT_CLASS, LINKS_CLASS, MESSAGES_CLASS, PANEL_BODY_CLASS, PANEL_CLASS,
+  ASK_INPUT_CLASS, ASK_ROW_CLASS, VIEWPORT_CLASS, BUBBLE_CLASS, FOOT_CLASS, LINKS_CLASS, MESSAGES_CLASS, PANEL_BODY_CLASS, PANEL_CLASS,
   PANEL_HEAD_CLASS, PANEL_HEAD_TEXT_CLASS, REPLY_CLASS, STEPS_CLASS, SUGGEST_CLASS,
 } from "./classNames"
 
@@ -196,13 +196,8 @@ export const GuideBubble = ({ isManager }: GuideBubbleProps) => {
   return (
     <>
       <div ref={viewportRef} className={VIEWPORT_CLASS} aria-hidden="true" />
-      {/* framer-motion owns the drag and the settle. grammar gap: no floating accent action button, so the bubble is the app's own
-          accent-filled round button (brand red, 56px) with the Nivo glyph; its name, state and focus ring follow the IconButton contract. */}
-      <motion.button
-        type="button"
-        aria-label={open ? t("close") : t("open")}
-        aria-expanded={open}
-        aria-controls={panelId}
+      {/* framer-motion owns the drag and the settle; the bubble itself is Grammar's floating accent action (0.9.3). */}
+      <motion.div
         className={BUBBLE_CLASS}
         style={{ x, y, visibility: ready ? "visible" : "hidden" }}
         drag
@@ -213,16 +208,25 @@ export const GuideBubble = ({ isManager }: GuideBubbleProps) => {
         onDragStart={() => { dragged.current = true }}
         // framer starts its own release animation right after onDragEnd; settle on the next frame so ours is not cancelled.
         onDragEnd={() => requestAnimationFrame(() => settle(x.get() + SIZE / 2 < window.innerWidth / 2 ? "left" : "right", y.get()))}
-        onClick={() => {
-          if (dragged.current) {
-            dragged.current = false
-            return
-          }
-          setOpen((o) => !o)
-        }}
       >
-        <span className={BUBBLE_ICON_CLASS}><NivoIcon props={{ name: open ? "close" : "support" }} /></span>
-      </motion.button>
+        <IconButton
+          source={nivoIconSource(open ? "close" : "support", "leading")}
+          label={open ? t("close") : t("open")}
+          variant="primary"
+          size="lg"
+          isFloating
+          aria-expanded={open}
+          aria-controls={panelId}
+          onPress={() => {
+            // A press that ends a drag is not a click.
+            if (dragged.current) {
+              dragged.current = false
+              return
+            }
+            setOpen((o) => !o)
+          }}
+        />
+      </motion.div>
 
       <AnimatePresence>
         {open ? (

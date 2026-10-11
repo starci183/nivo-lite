@@ -18,8 +18,8 @@ export type WizardFrameProps = {
 }
 
 /**
- * The one frame every connection wizard shares, inside the Connections Drawer: "Bước n/N", the step's name and a Grammar Progress
- * (a horizontal Stepper cannot fit five labelled steps in a 24rem drawer), then the step body and its buttons.
+ * The one frame every connection wizard shares, inside the Connections Drawer: "Bước n/N", the step's name and a Grammar Progress in
+ * step mode, one segment per step (a horizontal Stepper cannot fit five labelled steps in a 24rem drawer), then the body and buttons.
  */
 export const WizardFrame = ({ title, steps, index, children, footer }: WizardFrameProps) => {
   const t = useT(connectionWizard)
@@ -29,7 +29,7 @@ export const WizardFrame = ({ title, steps, index, children, footer }: WizardFra
       <div className={HEADER_CLASS}>
         <Text size="xs" tone="muted">{stepOf}</Text>
         <Heading level={3}>{steps[index]}</Heading>
-        <Progress label={stepOf} value={Math.round(((index + 1) / steps.length) * 100)} />
+        <Progress label={stepOf} steps={{ total: steps.length, completed: index + 1 }} valueText={stepOf} />
       </div>
       <div className={BODY_CLASS}>{children}</div>
       <div className={FOOTER_CLASS}>{footer}</div>

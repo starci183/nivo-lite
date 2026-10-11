@@ -83,10 +83,10 @@ export const TYPING_CLASS_NAME = cn("min-h-6", "px-12", "pt-1")
 /* ---------- Approval and exception cards in the thread ---------- */
 
 /**
- * Width of a decision card in the thread (the nested SurfaceCard inside owns face, outline and inset: BOUNDARY-5). It must be a definite
- * width: ChatBubble's footer shrinks to its content, so a percentage width resolves against 0 and the card breaks one letter per line.
+ * Width of a decision card in the thread (the nested SurfaceCard inside owns face, outline and inset: BOUNDARY-5). Grammar 0.9.3 gives a
+ * ChatBubble with a footer a definite stack width and stretches the footer, so the card can take the footer's width up to 36rem.
  */
-export const APPROVAL_CARD_CLASS_NAME = cn("w-[36rem]", "max-w-full")
+export const APPROVAL_CARD_CLASS_NAME = cn("w-full", "max-w-xl")
 
 /** Content stack inside a decision card (GAP-3). */
 export const APPROVAL_BODY_CLASS_NAME = cn("flex", "flex-col", "gap-3")
