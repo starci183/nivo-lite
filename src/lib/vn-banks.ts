@@ -35,3 +35,6 @@ export const VN_BANKS: ReadonlyArray<VnBank> = [
 ];
 
 export const bankName = (code: string): string => VN_BANKS.find((b) => b.code === code)?.name ?? code;
+
+/** The bank's logo (public/logos/banks/<code>.png, from VietQR's bank list), or null for a code NIVO does not list. */
+export const bankLogo = (code: string): string | null => (VN_BANKS.some((b) => b.code === code) ? `/logos/banks/${code}.png` : null);
