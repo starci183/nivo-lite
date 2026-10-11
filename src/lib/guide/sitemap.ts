@@ -90,6 +90,13 @@ export const GUIDE_PAGES: ReadonlyArray<GuidePage> = [
     keywords: ["tri thuc", "kien thuc", "day ai", "bang gia", "price list", "teach the ai", "faq", "cau hoi thuong gap", "tai lieu", "knowledge"],
   },
   {
+    id: "brain", path: "/brain",
+    title: { vi: "Bộ não", en: "Brain" },
+    what: { vi: "Những gì doanh nghiệp biết (giá, giờ mở cửa, chính sách, khách...) ở một chỗ; mỗi agent đọc theo góc nhìn riêng. Duyệt đề xuất và mâu thuẫn ở đây.", en: "What the business knows (prices, hours, policies, customers...) in one place; each agent reads its own view. Review proposals and conflicts here." },
+    steps: { vi: ["Mở Bộ não", "Xem tab Cần duyệt: áp dụng hoặc từ chối theo gợi ý của NIVO", "Tab Sự thật: Thêm sự thật hoặc Giá trị mới"], en: ["Open Brain", "Check To review: apply or reject as NIVO suggests", "Facts tab: Add fact or New value"] },
+    keywords: ["bo nao", "second brain", "su that", "mau thuan", "agent nho", "ghi nho", "doi gia", "gia moi", "agent biet gi", "bai hoc", "brain", "memory"],
+  },
+  {
     id: "modules", path: "/m", managerOnly: true,
     title: { vi: "Module", en: "Modules" },
     what: { vi: "Cài và cấu hình các agent: Chatbot, Bán hàng, Kế toán, Đặt lịch, Kho, Tuyển dụng…", en: "Install and set up agents: Chatbot, Sales, Accounting, Booking, Inventory, Hiring…" },

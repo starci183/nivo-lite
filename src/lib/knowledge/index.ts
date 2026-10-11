@@ -11,6 +11,7 @@ import { supabaseServer } from "../supabase/server";
 import { chunkText } from "./chunk";
 import { embedText, embedTexts, toVector } from "./embed";
 import { withUsage } from "../usage";
+import { recall, recallBlock } from "../brain/recall";
 import {
   KNOWLEDGE_SUGGESTIONS, MAX_SOURCE_CHARS, SOURCE_KINDS, suggestionTopic, suggestionsFor,
   type AddSourceInput, type Audience, type Citation, type KnowledgeChunk, type KnowledgeModule, type KnowledgeSource, type NivoItem, type NivoKind, type Passage, type Visibility,
@@ -307,10 +308,15 @@ export const buildAgentContext = async (a: { workspaceId: string; module: Module
   const citations: Array<Citation> = [];
   const parts: Array<string> = [];
   try {
-    const [base, version, passages] = await Promise.all([
+    const [base, version, passages, brain] = await Promise.all([
       dynamicOnly ? Promise.resolve([] as Array<NivoItem>) : nivoBase(db, a.module, NIVO_BASE_KINDS),
       dynamicOnly ? Promise.resolve(null) : activeContextOf(db, a.workspaceId, a.module, viaSession).catch(() => null),
       matchWith(db, { workspaceId: a.workspaceId, module: a.module, query: a.query, limit: a.limit ?? 8, audience }),
+      // The shared brain through this agent's view (facts; data hub rows for internal agents). Never blocks the turn.
+      recall(db, a.workspaceId, { module: a.module, audience, query: a.query }).catch((e: unknown) => {
+        console.error("brain recall failed:", e instanceof Error ? e.message : String(e));
+        return null;
+      }),
     ]);
 
     if (base.length) {
@@ -325,6 +331,13 @@ export const buildAgentContext = async (a: { workspaceId: string; module: Module
       parts.push(`NIVO BASE RULES (always follow; they outrank everything below):\n${lines.join("\n\n")}`);
     }
     if (version) parts.push(`APPROVED MODULE CONTEXT (version ${version.version}, confirmed by the owner):\n${trim(contextLines(version, a.module), 3000)}`);
+
+    if (brain) {
+      const block = recallBlock(brain);
+      if (block) parts.push(block);
+      for (const f of brain.facts) citations.push({ layer: "brain", id: f.id, sourceId: null, title: `${f.subjectLabel} · ${f.attributeLabel}`, topic: null });
+      for (const d of brain.records) citations.push({ layer: "data", id: d.id, sourceId: d.connectionId, title: d.title, topic: d.entity });
+    }
 
     const business = passages.filter((p) => p.layer === "business").slice(0, 5);
     const playbook = passages.filter((p) => p.layer === "nivo" && !NIVO_BASE_KINDS.includes(p.kind as NivoKind)).slice(0, 3);

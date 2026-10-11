@@ -49,7 +49,8 @@ export type Passage = {
   topic: string | null;
 };
 
-export type Citation = { layer: "nivo" | "business"; id: string; sourceId: string | null; title: string; topic: string | null };
+/** `brain` = a fact of the shared brain, `data` = a data hub record (see src/lib/brain/recall.ts). */
+export type Citation = { layer: "nivo" | "business" | "brain" | "data"; id: string; sourceId: string | null; title: string; topic: string | null };
 
 export type AddSourceInput = {
   kind: SourceKind;

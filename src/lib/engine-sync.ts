@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { gateEntry, isModuleKey, MODULE_GATES, type ContextSnapshot, type ModuleKey } from "./modules-shared";
 import { audienceOf as registryAudience, moduleDef } from "./module-registry";
+import { standingMemory } from "./brain/recall";
 import type { Visibility } from "./knowledge/shared";
 import { BOOKING_REPLY_ADDENDUM } from "./module-booking-contract";
 import { HIRING_APPLICATION_CLAUSE, HIRING_APPLICATION_SHAPE, HIRING_REPLY_CONTRACT } from "./module-hiring-contract";
@@ -133,6 +134,12 @@ export const buildAgentBundle = async (db: SupabaseClient, workspaceId: string, 
     ].filter(Boolean).join("\n")
     : "";
   const toneEvidence = version ? gateEntry(version.snapshot.gates, "tone").evidence : "";
+  // The shared brain, seen through this agent's view: its facts (public only for a customer-facing agent) and its approved lessons.
+  // A brain that cannot be read (not migrated yet) must never stop the sync, so it degrades to nothing.
+  const memory = await standingMemory(db, workspaceId, module, audience).catch((e: unknown) => {
+    console.error("brain standing memory failed:", e instanceof Error ? e.message : e);
+    return "";
+  });
 
   const agentsMd = [
     `# ${agentName} (module ${module})`,
@@ -142,6 +149,7 @@ export const buildAgentBundle = async (db: SupabaseClient, workspaceId: string, 
     version
       ? `## Ngữ cảnh đã duyệt (phiên bản ${version.version}, chủ doanh nghiệp đã xác nhận)\n${contextText(module, version.snapshot)}`
       : "## Ngữ cảnh đã duyệt\n(Chưa có phiên bản nào được áp dụng. Việc gì cần dữ kiện thì nói đồng nghiệp sẽ xác nhận, đừng đoán.)",
+    memory,
     sources.length
       ? `## Tri thức doanh nghiệp (${audience === "customer" ? "chỉ thông tin công khai" : "công khai và nội bộ"})\nBản đầy đủ nằm trong thư mục knowledge/. Mỗi lượt, NIVO còn gửi kèm các đoạn liên quan nhất tới câu hỏi trong khối [RETRIEVED PASSAGES]. Chỉ trả lời từ đây và từ các đoạn đó; thứ gì không có thì không bịa.\n\n${inlineKnowledge ? sources.map((s) => `### ${s.title}\n${s.content.trim()}`).join("\n\n") : `Các nguồn có trong knowledge/: ${sources.map((s) => s.title).join("; ")}.`}`
       : "## Tri thức doanh nghiệp\n(Chưa có nguồn tri thức nào được phép dùng.)",
