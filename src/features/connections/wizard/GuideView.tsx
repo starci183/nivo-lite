@@ -4,6 +4,7 @@ import { Field, Fieldset, Input, SurfaceCard, Text } from "@starci/grammar/commo
 import { useLocale, useT } from "@/i18n/client"
 import { connectionWizard } from "@/i18n/dict/connectionWizard"
 import { fill, tokenValue, type GuideContext, type GuideItem, type GuideStep, type Token } from "@/lib/connection-providers"
+import { useCopyField } from "../useCopyField"
 import { ITEMS_CLASS } from "./classNames"
 
 /** Props for {@link GuideView}. */
@@ -27,6 +28,7 @@ const slug = (label: string) => label.normalize("NFD").replace(/[^A-Za-z0-9]+/g,
 export const GuideView = ({ brand, steps, ctx, values, onValue, editable, isDisabled }: GuideViewProps) => {
   const t = useT(connectionWizard)
   const locale = useLocale()
+  const copy = useCopyField()
 
   const item = (it: GuideItem, i: number) => {
     if (it.kind === "copy") {
@@ -36,7 +38,7 @@ export const GuideView = ({ brand, steps, ctx, values, onValue, editable, isDisa
         <Input
           key={i} id={`guide-${it.token}`} name={it.token} label={it.label} hint={hint} variant="secondary" kind={it.secret ? "password" : "text"}
           value={edit ? edit.value : tokenValue(it.token, ctx)} isReadOnly={!edit} isDisabled={isDisabled}
-          isCopyable copyLabel={t("copy")} copiedLabel={t("copied")} revealLabel={t("reveal")} hideLabel={t("hide")}
+          {...copy}
           {...(edit ? { onValueChange: edit.onChange } : {})}
         />
       )

@@ -1,15 +1,14 @@
-import { Button, PageContainer, SectionHeader, TextAction } from "@starci/grammar/common"
+import { PageContainer, SectionHeader, TextAction } from "@starci/grammar/common"
 import { connections as dict } from "@/i18n/dict/connections"
 import { getT } from "@/i18n/server"
 import { listConnections, publicSiteUrl } from "@/lib/channels"
-import { PROVIDER_ORDER } from "@/lib/connection-providers"
 import { getCurrentMember, isManagerRole } from "@/lib/members"
 import { getSession } from "@/lib/session"
 import { supabaseServer } from "@/lib/supabase/server"
-import { ACTIONS_CLASS, PAGE_CLASS } from "./classNames"
-import { ProviderSection } from "./ProviderSection"
+import { PAGE_CLASS } from "./classNames"
+import { ConnectionsBoard } from "./ConnectionsBoard"
 
-/** The Connections page body (owner | manager): every provider with its connections and the add form. Staff see a friendly 403. */
+/** The Connections page body (owner | manager): the grouped connections board. Staff see a friendly 403. */
 export const ConnectionsPage = async ({ searchParams }: { readonly searchParams?: Promise<Record<string, string | string[] | undefined>> } = {}) => {
   const t = await getT(dict)
   const me = await getCurrentMember()
@@ -17,8 +16,8 @@ export const ConnectionsPage = async ({ searchParams }: { readonly searchParams?
     return (
       <PageContainer measure="product">
         <div className={PAGE_CLASS}>
-          <SectionHeader level={1} eyebrow={t("eyebrow")} title={t("forbiddenTitle")} description={t("forbiddenBody")} />
-          <div className={ACTIONS_CLASS}><Button variant="secondary" href="/chat">{t("forbiddenBack")}</Button></div>
+          <SectionHeader level={1} title={t("forbiddenTitle")} description={t("forbiddenBody")} />
+          <TextAction href="/chat">{t("forbiddenBack")}</TextAction>
         </div>
       </PageContainer>
     )
@@ -38,11 +37,11 @@ export const ConnectionsPage = async ({ searchParams }: { readonly searchParams?
   return (
     <PageContainer measure="product">
       <div className={PAGE_CLASS}>
-        <SectionHeader level={1} eyebrow={t("eyebrow")} title={t("title")} description={t("description")} />
-        {PROVIDER_ORDER.map((p) => (
-          <ProviderSection key={p} provider={p} items={all.filter((c) => c.provider === p)} agentNames={agentNames} agents={agents} localOnly={localOnly} resumeId={p === "zalo_oa" ? zaloId : undefined} returned={p === "zalo_oa" ? one("zalo") : undefined} ownerEmail={ownerEmail} />
-        ))}
-        <div className={ACTIONS_CLASS}><TextAction href="/automations" size="sm" appearance="inline">{t("automationsLink")}</TextAction></div>
+        <ConnectionsBoard
+          items={all} agentNames={agentNames} agents={agents} localOnly={localOnly} ownerEmail={ownerEmail}
+          {...(zaloId ? { zaloResumeId: zaloId } : {})} {...(one("zalo") ? { zaloReturned: one("zalo") } : {})}
+        />
+        <TextAction href="/automations">{t("automationsLink")}</TextAction>
       </div>
     </PageContainer>
   )

@@ -19,8 +19,8 @@ export const INFO_COLUMN_CLASS_NAME = cn("flex", "w-72", "shrink-0", "flex-col",
 
 /* ---------- Column headers ---------- */
 
-/** Shared header band of every column: one trailing seam (BOUNDARY-1 case-2), separator-facing inset (PADDING-3). */
-export const COLUMN_HEAD_CLASS_NAME = cn("flex", "min-h-16", "shrink-0", "items-center", "gap-3", "border-b", "border-separator", "px-4", "py-3")
+/** Shared header band of every column, one fixed height so the three column heads line up: one trailing seam (BOUNDARY-1 case-2), separator-facing inset (PADDING-3). */
+export const COLUMN_HEAD_CLASS_NAME = cn("flex", "h-18", "shrink-0", "items-center", "gap-3", "border-b", "border-separator", "px-4")
 
 /** Title block inside a header: grows and truncates. */
 export const HEAD_TEXT_CLASS_NAME = cn("flex", "min-w-0", "flex-1", "flex-col")
@@ -53,7 +53,7 @@ export const LIST_TRAILING_CLASS_NAME = cn("flex", "shrink-0", "flex-col", "item
 
 /* ---------- Thread ---------- */
 
-/** Scroll region holding the messages. */
+/** Scroll region holding the messages (no app-painted ground: ChatBubble owns the incoming and outgoing faces, SURFACE-3/4). */
 export const THREAD_SCROLL_CLASS_NAME = cn("min-h-0", "flex-1", "overflow-y-auto", "overscroll-contain")
 
 /** Message column inside the scroll region. */

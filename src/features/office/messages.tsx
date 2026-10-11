@@ -50,11 +50,13 @@ export type MessageRowProps = {
   /** Contact name of the lead the message points at, when known. */
   readonly leadName: string | null
   readonly isContinuation: boolean
+  /** True for the last bubble of a group from one author: it carries the send time. */
+  readonly isGroupEnd?: boolean
   readonly onReply: (handle: string) => void
 }
 
 /** One chat message (person, agent or me) as a Grammar ChatBubble, or a centred system notice. */
-export const MessageRow = ({ message, agent, isMine, leadName, isContinuation, onReply }: MessageRowProps) => {
+export const MessageRow = ({ message, agent, isMine, leadName, isContinuation, isGroupEnd = true, onReply }: MessageRowProps) => {
   const t = useT(office)
   const locale = useLocale()
   const [isCopied, setIsCopied] = useState(false)
@@ -85,7 +87,8 @@ export const MessageRow = ({ message, agent, isMine, leadName, isContinuation, o
   const isAgent = message.author_kind === "agent"
   const time = formatTime(message.created_at, locale)
   const author = isNivo ? t("nivoCore") : message.author_name
-  // ChatBubble owns the message anatomy (avatar column, author line, face, hover actions); the thread owns grouping.
+  // ChatBubble owns the message anatomy (avatar column, author line, face, hover actions); the thread owns grouping
+  // (the author line is shown on the first bubble of someone else's group, the time on the last bubble of every group).
   const bubble = (
     <ChatBubble
       side={isMine ? "outgoing" : "incoming"}
@@ -105,7 +108,6 @@ export const MessageRow = ({ message, agent, isMine, leadName, isContinuation, o
         )
       }
       status={!isContinuation && isAgent && !isNivo ? <AiChip /> : undefined}
-      meta={isContinuation ? undefined : time}
       actions={
         <ButtonGroup label={`${author} · ${time}`}>
           <Button variant="secondary" size="sm" onPress={onCopy}>{isCopied ? t("copied") : t("copyText")}</Button>
@@ -115,6 +117,8 @@ export const MessageRow = ({ message, agent, isMine, leadName, isContinuation, o
       }
     >
       <Text as="p">{renderBody(message.body)}</Text>
+      {/* Zalo-style: the send time shows once, at the foot of the last bubble of a group from one author. */}
+      {isGroupEnd ? <Text as="p" size="xs" tone="muted">{time}</Text> : null}
     </ChatBubble>
   )
   return isContinuation ? bubble : <div className={ROW_FIRST_CLASS_NAME}>{bubble}</div>

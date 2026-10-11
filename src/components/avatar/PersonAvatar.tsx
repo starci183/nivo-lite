@@ -68,7 +68,7 @@ const glyphSource = (path: string): IconSource => {
  * blush square with crimson glyph.
  */
 export const AgentAvatar = ({ module = "chatbot", size = "md", online, label }: AgentAvatarProps) => (
-  <span className={MARK} title={label}>
+  <span className={MARK} title={label} data-module={module}>
     <IconTile source={glyphSource(glyphOf(module))} tone="neutral" size={TILE_SIZE[size]} ariaLabel={label ?? `AI agent · ${module}`} />
     <Presence online={online} />
   </span>

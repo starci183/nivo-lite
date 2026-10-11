@@ -163,7 +163,7 @@ export const MoneyWizard = ({ provider, resumeId, agents, onClose }: MoneyWizard
       {step === "env" ? (
         <>
           {def.environments.includes("test") ? <Text size="sm" tone="muted">{t("envHint")}</Text> : null}
-          <RadioGroup
+          <RadioGroup variant="secondary"
             label={t("stepEnv")} isLabelHidden isDisabled={isPending} value={env} onValueChange={(v) => setEnv(v === "test" ? "test" : "live")}
             options={def.environments.map((e) => ({ value: e, label: e === "test" ? t("envTest") : t("envLive"), description: e === "test" ? t("envTestBody", { brand: def.brand }) : t("envLiveBody") }))}
           />

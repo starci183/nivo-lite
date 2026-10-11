@@ -58,6 +58,7 @@ export const InviteForm = ({ staffChoices }: InviteFormProps) => {
         : t("sentNoEmail", { email: sent.email })
 
   return (
+    <div data-guide="team.invite">
     <SurfaceCard label={t("formTitle")} headingLevel={2}>
       <Form label={t("formTitle")} onSubmit={submit} isPending={isPending}>
         <div className={STACK_CLASS}>
@@ -93,5 +94,6 @@ export const InviteForm = ({ staffChoices }: InviteFormProps) => {
         </div>
       </Form>
     </SurfaceCard>
+    </div>
   )
 }

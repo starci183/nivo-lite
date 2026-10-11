@@ -20,7 +20,7 @@ export type NewWorkspaceViewProps = { readonly plans: ReadonlyArray<Plan> };
 
 const TYPE_KEY = { retail: "typeRetail", services: "typeServices", clinic: "typeClinic", education: "typeEducation", other: "typeOther" } as const;
 /** The plan highlighted as "most popular" (the one most workspaces need). */
-const RECOMMENDED_PLAN = "growth";
+const RECOMMENDED_PLAN = "pro";
 
 /** /workspaces/new: step 1 choose a plan, step 2 name + business type; step 3 (payment) is its own page. */
 export const NewWorkspaceView = ({ plans }: NewWorkspaceViewProps) => {
@@ -29,7 +29,7 @@ export const NewWorkspaceView = ({ plans }: NewWorkspaceViewProps) => {
   const money = useMoney();
   const router = useRouter();
   const [step, setStep] = useState<1 | 2>(1);
-  const [planCode, setPlanCode] = useState<string>((plans.find((p) => p.code === RECOMMENDED_PLAN) ?? plans[0])?.code ?? "");
+  const [planCode, setPlanCode] = useState<string>((plans.find((p) => p.code === RECOMMENDED_PLAN) ?? plans.find((p) => !p.is_custom))?.code ?? "");
   const [name, setName] = useState("");
   const [type, setType] = useState<string>("retail");
   const [error, setError] = useState<string | null>(null);
@@ -45,8 +45,10 @@ export const NewWorkspaceView = ({ plans }: NewWorkspaceViewProps) => {
     });
   };
 
+  // A custom (contract) plan is shown but cannot be picked here: the NIVO team turns it on for the contract.
   const planOptions = plans.map((p) => ({
     value: p.code,
+    isDisabled: p.is_custom,
     label: (
       <span className={PLAN_LABEL_CLASS_NAME}>
         {locale === "vi" ? p.name_vi : p.name_en}
@@ -55,10 +57,10 @@ export const NewWorkspaceView = ({ plans }: NewWorkspaceViewProps) => {
     ),
     description: (
       <span className={PLAN_BODY_CLASS_NAME}>
-        <Text as="span" size="sm" tone="muted">{t("seats", { n: p.seats })}</Text>
+        <Text as="span" size="sm" tone="muted">{p.is_custom ? t("customSeats") : t("seats", { n: p.seats })}</Text>
         <span className={PRICE_CLASS_NAME}>
-          <Text as="span" size="metric-lead" weight="semibold">{money(Number(p.price_vnd))}</Text>
-          <Text as="span" size="sm" tone="muted">{p.period === "year" ? t("perYear") : t("perMonth")}</Text>
+          <Text as="span" size="metric-lead" weight="semibold">{p.is_custom ? t("customPrice") : money(Number(p.price_vnd))}</Text>
+          {p.is_custom ? null : <Text as="span" size="sm" tone="muted">{p.period === "year" ? t("perYear") : t("perMonth")}</Text>}
         </span>
         <List className={FEATURES_CLASS_NAME}>
           {(p.features[locale] ?? []).map((f) => (
@@ -67,6 +69,7 @@ export const NewWorkspaceView = ({ plans }: NewWorkspaceViewProps) => {
             </ListItem>
           ))}
         </List>
+        {p.is_custom ? <Text as="span" size="sm" tone="muted">{t("customHow")}</Text> : null}
       </span>
     ),
   }));

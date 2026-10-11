@@ -29,13 +29,15 @@ export const WorkspaceDetailView = ({ data, now }: { readonly data: WorkspaceDet
               { id: "status", term: "Billing status", description: <Badge tone={STATUS_TONE[ws.status] ?? "neutral"}>{ws.status}</Badge> },
               { id: "plan", term: "Plan", description: <Value>{ws.plan_code ?? "—"}</Value> },
               { id: "paid", term: "Paid until", description: <Value>{fmtDate(ws.paid_until)}</Value> },
-              { id: "members", term: "Members", description: <Value>{data.members.filter((m) => m.status === "active").length}</Value> },
+              { id: "credits", term: "AI credits this month", description: <Value>{`${Math.round(data.credits.used).toLocaleString("en-US")} / ${data.credits.limit === null ? "no limit" : data.credits.limit.toLocaleString("en-US")}${data.credits.ownLimit === null ? "" : " (own)"}`}</Value> },
+              { id: "cost", term: "Model cost this month (USD)", description: <Value>{`$${data.credits.costUsd.toFixed(2)}`}</Value> },
             ]}
           />
           <DescriptionList
             layout="columns"
             isDivided
             items={[
+              { id: "members", term: "Members", description: <Value>{data.members.filter((m) => m.status === "active").length}</Value> },
               { id: "last", term: "Last customer message", description: <Value>{ago(data.activity.lastCustomerMessageAt, now)}</Value> },
               { id: "msgs", term: "Messages, 7 days", description: <Value>{data.activity.messages7d}</Value> },
               { id: "decisions", term: "Waiting decisions", description: <Value>{data.activity.openDecisions}</Value> },
@@ -45,7 +47,7 @@ export const WorkspaceDetailView = ({ data, now }: { readonly data: WorkspaceDet
         </div>
       </SurfaceCard>
 
-      <SupportActions workspaceId={ws.id} status={ws.status} invites={data.invites.map((i) => ({ id: i.id, email: i.email }))} />
+      <SupportActions workspaceId={ws.id} status={ws.status} planCode={ws.plan_code} creditsLimit={data.credits.ownLimit} invites={data.invites.map((i) => ({ id: i.id, email: i.email }))} />
 
       <div className={GRID_CLASS}>
         <SurfaceListCard label="Members and roles" headingLevel={2}>

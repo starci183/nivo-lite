@@ -9,7 +9,7 @@ const GROUP_WINDOW_MS = 5 * 60_000
 /** One entry of the rendered thread: a day separator, a message or an approval request. */
 export type ThreadItem =
   | { readonly kind: "day"; readonly key: string; readonly label: string }
-  | { readonly kind: "message"; readonly key: string; readonly message: Message; readonly isContinuation: boolean }
+  | { readonly kind: "message"; readonly key: string; readonly message: Message; readonly isContinuation: boolean; readonly isGroupEnd: boolean }
   | { readonly kind: "approval"; readonly key: string; readonly approval: PendingApproval }
   | { readonly kind: "exception"; readonly key: string; readonly item: WorkItemView }
 
@@ -60,8 +60,12 @@ export const buildThread = (
       previous.author_kind === message.author_kind &&
       previous.author_name === message.author_name &&
       new Date(message.created_at).getTime() - new Date(previous.created_at).getTime() < GROUP_WINDOW_MS
-    items.push({ kind: "message", key: message.id, message, isContinuation })
+    items.push({ kind: "message", key: message.id, message, isContinuation, isGroupEnd: true })
     previous = message
   }
-  return items
+  // A bubble closes its group unless the next entry continues it (Zalo shows the time once, on the last bubble).
+  return items.map((item, index) => {
+    const next = items[index + 1]
+    return item.kind === "message" && next?.kind === "message" && next.isContinuation ? { ...item, isGroupEnd: false } : item
+  })
 }

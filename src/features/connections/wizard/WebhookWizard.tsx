@@ -12,11 +12,13 @@ import { FIELDS_CLASS, NUMBERED_CLASS } from "./classNames"
 import { N8N_VERIFY_SNIPPET } from "./webhookSnippet"
 import { WebhookTestAlert } from "./WebhookTestAlert"
 import { WizardFrame } from "./WizardFrame"
+import { useCopyField } from "../useCopyField"
 
 /** n8n / Make / Zapier webhook in the shared wizard frame: address and events, signing secret, a test send, done. */
 export const WebhookWizard = ({ onClose }: { readonly onClose: (changed: boolean) => void }) => {
   const t = useT(webhookWizard)
   const c = useT(connectionWizard)
+  const copy = useCopyField()
   const locale = useLocale()
   const [index, setIndex] = useState(0)
   const [name, setName] = useState(t("defaultName"))
@@ -62,7 +64,7 @@ export const WebhookWizard = ({ onClose }: { readonly onClose: (changed: boolean
             <Input id="webhook-name" name="name" label={t("fieldName")} variant="secondary" isDisabled={isPending} value={name} onValueChange={setName} />
             <Input id="webhook-url" name="url" label={t("fieldUrl")} variant="secondary" placeholder="https://" hint={t("urlHint")} isDisabled={isPending} value={url} onValueChange={setUrl} />
           </div>
-          <CheckboxGroup
+          <CheckboxGroup variant="secondary"
             label={t("eventsLabel")}
             isDisabled={isPending}
             options={WEBHOOK_EVENTS.map((e) => ({ value: e, label: WEBHOOK_EVENT_LABEL[e][locale] }))}
@@ -76,7 +78,7 @@ export const WebhookWizard = ({ onClose }: { readonly onClose: (changed: boolean
           <Text size="sm" tone="muted">{t("secretIntro")}</Text>
           <Input
             id="webhook-signing-secret" name="signingSecret" label={t("secretLabel")} variant="secondary" kind="password" value={created.signingSecret}
-            isReadOnly isCopyable copyLabel={c("copy")} copiedLabel={c("copied")} revealLabel={c("reveal")} hideLabel={c("hide")}
+            isReadOnly {...copy}
           />
           <Text weight="semibold">{t("n8nTitle")}</Text>
           <List as="ol" className={NUMBERED_CLASS}>{[t("n8nStep1"), t("n8nStep2"), t("n8nStep3")].map((step, i) => <ListItem key={step}><Text size="sm" startContent={<LeadingNumber position={i + 1} />}>{step}</Text></ListItem>)}</List>

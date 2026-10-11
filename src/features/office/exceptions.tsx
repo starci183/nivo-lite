@@ -25,7 +25,9 @@ import {
   ROW_FIRST_CLASS_NAME,
 } from "./classNames"
 import { formatStamp, formatTime } from "./format"
-import { NivoAvatar } from "./messages"
+import { AgentAvatar } from "@/components/avatar/PersonAvatar"
+import type { Agent } from "@/lib/types"
+import { AiChip, NivoAvatar } from "./messages"
 
 /** DOM id of the thread card for one work item. */
 export const exceptionAnchor = (workItemId: string): string => `exception-${workItemId}`
@@ -39,6 +41,8 @@ export type ExceptionCardProps = {
   readonly staff: ReadonlyArray<Staff>
   readonly ownerName: string
   readonly isFocused: boolean
+  /** The department's own agent (Sales, Accounting, Chatbot); the card speaks as NIVO Core when none is installed. */
+  readonly agent?: Agent | null
 }
 
 /** Minimum written basis before an unclear bank credit may be marked paid (mirrors the server check in decideWorkItem). */
@@ -59,7 +63,7 @@ const digits = (value: string): number | null => {
  * stopped, what NIVO proposes, the missing inputs, and the owner's four choices. Once decided it
  * stays as a record with who, when and the result.
  */
-export const ExceptionCard = ({ item, staff, ownerName, isFocused }: ExceptionCardProps) => {
+export const ExceptionCard = ({ item, staff, ownerName, isFocused, agent = null }: ExceptionCardProps) => {
   const t = useT(office)
   const g = useT(governance)
   const locale = useLocale()
@@ -198,14 +202,16 @@ export const ExceptionCard = ({ item, staff, ownerName, isFocused }: ExceptionCa
 
   return (
     <div className={ROW_FIRST_CLASS_NAME} data-testid="exception-card" data-status={item.status}>
+      {/* The work item speaks as its department's agent (Sales, Accounting, Chatbot), or as NIVO Core when none is installed. */}
       <ChatBubble
         id={exceptionAnchor(item.id)}
-        author={t("nivoCore")}
+        author={agent ? agent.name : t("nivoCore")}
         avatar={
           <div className={AVATAR_SLOT_CLASS_NAME}>
-            <NivoAvatar />
+            {agent ? <AgentAvatar module={agent.module} label={agent.name} size="sm" /> : <NivoAvatar />}
           </div>
         }
+        status={agent ? <AiChip /> : undefined}
         meta={formatTime(item.created_at, locale)}
         footer={
         // BOUNDARY-5: a nested SurfaceCard under the message, inside the messenger card; the jump focus is its one highlight.
@@ -415,11 +421,13 @@ export const ExceptionCard = ({ item, staff, ownerName, isFocused }: ExceptionCa
 /** Props for {@link ExceptionList}. */
 export type ExceptionListProps = {
   readonly items: ReadonlyArray<WorkItemView>
+  /** Installed agents, so each row shows the department agent that raised it. */
+  readonly agents?: ReadonlyArray<Agent>
   readonly onJump: (workItemId: string) => void
 }
 
 /** Info-panel "Exceptions" list; each row jumps to its card in the thread. */
-export const ExceptionList = ({ items, onJump }: ExceptionListProps) => {
+export const ExceptionList = ({ items, agents = [], onJump }: ExceptionListProps) => {
   const t = useT(office)
   const g = useT(governance)
   return (
@@ -439,7 +447,10 @@ export const ExceptionList = ({ items, onJump }: ExceptionListProps) => {
             wholeAction={{ kind: "button", press: () => onJump(item.id), label: `${t("exceptionJump")}: ${g(`action_${item.action}`)}` }}
           >
             <div className={PENDING_ROW_CLASS_NAME}>
-              <NivoAvatar isDecorative />
+              {(() => {
+                const agent = departmentAgent(agents, item.department)
+                return agent ? <AgentAvatar module={agent.module} label={agent.name} size="sm" /> : <NivoAvatar isDecorative />
+              })()}
               <div className={MEMBER_TEXT_CLASS_NAME}>
                 <Text size="sm" weight="medium" overflow="clamp-2">{`${g(`action_${item.action}`)}${item.lead ? ` · ${item.lead.contact_name}` : ""}`}</Text>
                 <Text size="xs" tone="muted" overflow="truncate">{item.reason ? g(`reason_${item.reason}`) : g("status_failed")}</Text>
@@ -451,3 +462,7 @@ export const ExceptionList = ({ items, onJump }: ExceptionListProps) => {
     </section>
   )
 }
+
+/** The active agent installed for a department (its module), or null when the department has none. */
+export const departmentAgent = (agents: ReadonlyArray<Agent>, department: string): Agent | null =>
+  agents.find((a) => a.module === department && a.status === "active") ?? null

@@ -1,8 +1,8 @@
 import { cn } from "@heroui/react"
 
-/** The wizard region below the provider's rows; its leading seam is a Grammar Divider (BOUNDARY-1 case-1), its parts sit on GAP-5. */
+/** The wizard inside the Connections Drawer: header, body and footer on GAP-5. */
 export const WIZARD_CLASS = cn("flex", "min-w-0", "flex-col", "gap-6")
-export const HEADER_CLASS = cn("flex", "min-w-0", "flex-col", "gap-3")
+export const HEADER_CLASS = cn("flex", "min-w-0", "flex-col", "gap-2")
 export const BODY_CLASS = cn("flex", "min-w-0", "flex-col", "gap-4")
 export const FIELDS_CLASS = cn("grid", "grid-cols-1", "gap-4", "md:grid-cols-2")
 export const FOOTER_CLASS = cn("flex", "flex-col", "gap-2", "sm:flex-row", "sm:flex-wrap", "sm:items-center")

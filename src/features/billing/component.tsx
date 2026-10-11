@@ -13,7 +13,7 @@ export type BillingOrder = { readonly id: string; readonly amount_vnd: number; r
 export type BillingReview = { readonly id: string; readonly status: "underpaid" | "expired" | "unmatched"; readonly transfer_amount: number | null; readonly received_at: string; readonly content: string | null };
 export type BillingViewProps = {
   readonly workspaceId: string;
-  readonly plan: { readonly name_vi: string; readonly name_en: string } | null;
+  readonly plan: { readonly name_vi: string; readonly name_en: string; readonly is_custom?: boolean } | null;
   readonly status: "pending_payment" | "active" | "past_due" | "cancelled";
   readonly paidUntil: string | null;
   readonly orders: ReadonlyArray<BillingOrder>;
@@ -51,7 +51,7 @@ export const BillingView = ({ workspaceId: wsId, plan, status, paidUntil, orders
                 { id: "paidUntil", term: t("paidUntil"), description: <Text weight="semibold">{paidUntil ? day.format(new Date(paidUntil)) : t("notPaid")}</Text> },
               ]}
             />
-            {plan ? (
+            {plan && !plan.is_custom ? (
               <div className={ACTIONS_CLASS_NAME}>
                 <RenewButton workspaceId={wsId} />
                 <Text size="sm" tone="muted">{t("renewHint")}</Text>

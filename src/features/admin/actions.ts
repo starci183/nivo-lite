@@ -62,6 +62,35 @@ export async function setWorkspaceStatus(workspaceId: string, status: "active" |
   }
 }
 
+/**
+ * Move a workspace to another plan (Enterprise is assigned here, by contract) and optionally give it its own monthly credit allowance
+ * (null clears it, so the plan's allowance applies). Paid-until is untouched: Extend handles the period.
+ */
+export async function setWorkspacePlan(workspaceId: string, planCode: string, creditsLimit: number | null): Promise<Outcome<{ planCode: string; creditsLimit: number | null }>> {
+  try {
+    const admin = await requirePlatformAdmin();
+    if (!UUID.test(workspaceId)) return fail("Invalid workspace.");
+    if (creditsLimit !== null && (!Number.isInteger(creditsLimit) || creditsLimit < 0 || creditsLimit > 100_000_000)) return fail("Credits must be a whole number from 0 to 100,000,000.");
+    const db = supabaseAdmin();
+    const { data: plan } = await db.from("plans").select("code").eq("code", planCode).eq("active", true).maybeSingle<{ code: string }>();
+    if (!plan) return fail("Unknown or retired plan.");
+    const { data: ws } = await db.from("workspaces").select("plan_code").eq("id", workspaceId).maybeSingle<{ plan_code: string | null }>();
+    if (!ws) return fail("Workspace not found.");
+    const { data: before } = await db.from("ai_quota_overrides").select("credits_limit").eq("workspace_id", workspaceId).maybeSingle<{ credits_limit: number | null }>();
+    const { error } = await db.from("workspaces").update({ plan_code: plan.code }).eq("id", workspaceId);
+    if (error) return fail(error.message);
+    const quota = await db.from("ai_quota_overrides").upsert({ workspace_id: workspaceId, credits_limit: creditsLimit, updated_at: new Date().toISOString() }, { onConflict: "workspace_id" });
+    if (quota.error) return fail(quota.error.message);
+    await audit(admin, "workspace.set_plan", workspaceId, { from: ws.plan_code, to: plan.code, creditsFrom: before?.credits_limit ?? null, creditsTo: creditsLimit });
+    revalidatePath(`/admin/${workspaceId}`);
+    revalidatePath("/admin");
+    return { ok: true, data: { planCode: plan.code, creditsLimit } };
+  } catch (e) {
+    await reportError("admin.set_plan", e, { workspaceId });
+    return fail(e instanceof Error ? e.message : String(e));
+  }
+}
+
 const siteUrl = async (): Promise<string> => {
   const env = process.env.NEXT_PUBLIC_SITE_URL;
   if (env) return env.replace(/\/$/, "");

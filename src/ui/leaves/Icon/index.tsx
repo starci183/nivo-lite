@@ -1,5 +1,7 @@
 import {
   AcademicCapIcon,
+  DocumentDuplicateIcon,
+  CheckIcon,
   ArrowPathIcon,
   ArrowRightIcon,
   ArrowRightStartOnRectangleIcon,
@@ -119,7 +121,7 @@ export type IconName =
 "home" | "explore" | "community" | "league" | "review" |
 "light" | "dark" | "locale" | "google" | "github" |
 "search" | "cart" | "notification" | "account" | "saved" | "blog" | "talents" | "jobs" | "practice" |
-"overview" | "apps" | "agentos" | "servers" | "domains" | "wallet" | "support" | "sidebar";
+"overview" | "apps" | "agentos" | "servers" | "domains" | "wallet" | "support" | "sidebar" | "copy" | "copied";
 
 /**
  * The meaning-to-glyph map. The only file in the repository that names a Heroicon.
@@ -229,6 +231,8 @@ export const ICON_SOURCES: Record<IconName, GlyphCuts> = {
   wallet: cuts(WalletIcon, WalletSolidIcon),
   support: cuts(LifebuoyIcon, LifebuoySolidIcon),
   sidebar: cuts(SidebarSimpleIcon, SidebarSimpleIcon),
+  copy: cuts(DocumentDuplicateIcon, DocumentDuplicateIcon),
+  copied: cuts(CheckIcon, CheckIcon),
   google: cuts(GoogleMark, GoogleMark),
   github: cuts(GithubMark, GithubMark)
 };

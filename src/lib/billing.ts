@@ -19,6 +19,10 @@ export type Plan = {
   seats: number;
   features: { vi: string[]; en: string[] };
   sort: number;
+  /** Monthly AI credits (null = unlimited). */
+  ai_credits_per_month: number | null;
+  /** Contract plan (Enterprise): shown, never bought in the app; NIVO assigns it in the team console. */
+  is_custom: boolean;
 };
 
 export type PaymentOrder = {

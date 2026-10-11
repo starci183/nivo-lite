@@ -24,7 +24,7 @@ export const createWorkspaceAction = async (input: { planCode: string; name: str
   const name = input.name.trim();
   if (name.length < 2 || name.length > 80) return { ok: false, error: t("errName") };
   const plan = await getPlan(input.planCode);
-  if (!plan) return { ok: false, error: t("errPlan") };
+  if (!plan || plan.is_custom) return { ok: false, error: t("errPlan") };
   const businessType = (BUSINESS_TYPES as ReadonlyArray<string>).includes(input.businessType) ? input.businessType : "other";
   const admin = supabaseAdmin();
   const created = await admin
@@ -63,7 +63,7 @@ export const newOrderAction = async (workspaceId: string): Promise<Outcome<{ ord
   const db = await supabaseServer();
   const { data: last } = await db.from("payment_orders").select("plan_code").eq("workspace_id", workspaceId).order("created_at", { ascending: false }).limit(1);
   const plan = await getPlan(ws.plan_code ?? (last?.[0] as { plan_code: string } | undefined)?.plan_code ?? "");
-  if (!plan) return { ok: false, error: t("errPlan") };
+  if (!plan || plan.is_custom) return { ok: false, error: t("errPlan") };
   const order = await createPaymentOrder(workspaceId, user.id, plan);
   revalidatePath("/onboarding/payment");
   return { ok: true, data: { orderId: order.id } };
