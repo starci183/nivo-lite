@@ -18,6 +18,7 @@ import {
   TopBar,
   WorkspaceShell,
   type DropdownMenuEntry,
+  type SidebarGroup,
   type SidebarItem,
 } from "@starci/grammar/common";
 import { usePathname } from "next/navigation";
@@ -54,6 +55,8 @@ export type ConsoleShellNavItem = {
   readonly label: string;
   readonly href: string;
   readonly icon: IconName;
+  /** Rail section the destination belongs to. */
+  readonly group: "work" | "operate" | "setup";
   readonly isActive: boolean;
   readonly isPrimary: boolean;
   readonly badge: number;
@@ -112,6 +115,16 @@ const toSidebarItem = (item: ConsoleShellNavItem): SidebarItem => ({
 
 type NavPartProps = { readonly items: ReadonlyArray<ConsoleShellNavItem>; readonly on: ConsoleShellBaseActions };
 
+const GROUP_ORDER = ["work", "operate", "setup"] as const;
+
+/** The rail sections in order, empty ones dropped; the daily-work section carries no heading. */
+const toSidebarGroups = (items: ReadonlyArray<ConsoleShellNavItem>, label: (group: "operate" | "setup") => string): ReadonlyArray<SidebarGroup> =>
+  GROUP_ORDER.map((group) => ({
+    id: group,
+    ...(group === "work" ? {} : { label: label(group) }),
+    items: items.filter((item) => item.group === group).map(toSidebarItem),
+  })).filter((group) => group.items.length > 0);
+
 /** Wide navigation: the Grammar `Sidebar` rail owns item selection (SURFACE-4) and its rail edge. */
 const WideNavigation = ({ items, on }: NavPartProps) => {
   const t = useT(shellDict);
@@ -119,7 +132,7 @@ const WideNavigation = ({ items, on }: NavPartProps) => {
     <Sidebar
       label={t("mainNavigation")}
       presentation="rail"
-      groups={[{ id: "destinations", items: items.map(toSidebarItem) }]}
+      groups={toSidebarGroups(items, (group) => t(group === "operate" ? "groupOperate" : "groupSetup"))}
       selectedKey={items.find((item) => item.isActive)?.id}
       onAction={(id) => {
         const target = items.find((item) => item.id === id);
@@ -167,7 +180,7 @@ const CompactNavigation = ({ items, on }: NavPartProps) => {
         <Sidebar
           label={t("navMore")}
           presentation="drawer"
-          groups={[{ id: "more", items: more.map(toSidebarItem) }]}
+          groups={toSidebarGroups(more, (group) => t(group === "operate" ? "groupOperate" : "groupSetup"))}
           selectedKey={more.find((item) => item.isActive)?.id}
           onAction={(id) => {
             const target = more.find((item) => item.id === id);

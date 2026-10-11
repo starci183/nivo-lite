@@ -46,6 +46,8 @@ import {
   ArrowLeftIcon,
   EllipsisHorizontalIcon } from
 "@heroicons/react/24/outline";
+import { BrainIcon } from "@starci/heroicons/24/outline";
+import { BrainIcon as BrainSolidIcon } from "@starci/heroicons/16/solid";
 import {
   AcademicCapIcon as AcademicCapSolidIcon,
   ArrowPathIcon as ArrowPathSolidIcon,
@@ -121,7 +123,7 @@ export type IconName =
 "home" | "explore" | "community" | "league" | "review" |
 "light" | "dark" | "locale" | "google" | "github" |
 "search" | "cart" | "notification" | "account" | "saved" | "blog" | "talents" | "jobs" | "practice" |
-"overview" | "apps" | "agentos" | "servers" | "domains" | "wallet" | "support" | "sidebar" | "copy" | "copied";
+"overview" | "brain" | "apps" | "agentos" | "servers" | "domains" | "wallet" | "support" | "sidebar" | "copy" | "copied";
 
 /**
  * The meaning-to-glyph map. The only file in the repository that names a Heroicon.
@@ -200,6 +202,7 @@ export const ICON_SOURCES: Record<IconName, GlyphCuts> = {
   signUp: cuts(UserPlusIcon, UserPlusSolidIcon),
   close: cuts(XMarkIcon, XMarkSolidIcon),
   next: cuts(ArrowRightIcon, ArrowRightSolidIcon),
+  brain: cuts(BrainIcon, BrainSolidIcon),
   back: cuts(ArrowLeftIcon, ArrowLeftSolidIcon),
   more: cuts(EllipsisHorizontalIcon, EllipsisHorizontalSolidIcon),
   trigger: cuts(BoltIcon, BoltSolidIcon),

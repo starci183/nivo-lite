@@ -15,28 +15,34 @@ import type { ShellData } from "./queries";
 
 type Destination = {
   readonly key: string;
-  readonly label: "navOverview" | "navOffice" | "navAuthority" | "navInbox" | "navLeads" | "navResponsibilities" | "navDecisions" | "navAutomations" | "navKnowledge" | "navBrain" | "navModules" | "navTeam" | "navConnections";
+  readonly label: "navOverview" | "navOffice" | "navAuthority" | "navInbox" | "navLeads" | "navResponsibilities" | "navDecisions" | "navAutomations" | "navBrain" | "navModules" | "navTeam" | "navConnections";
   readonly route: string;
   readonly icon: IconName;
+  /** Rail section: the daily work, running the business, setting it up. */
+  readonly group: "work" | "operate" | "setup";
+  /** Other routes that belong to this destination (Documents live under the Brain). */
+  readonly also?: ReadonlyArray<string>;
   /** Only owner and manager see this destination. */
   readonly managerOnly?: boolean;
 };
 
-/** Office first: it is the page people come to. */
+/**
+ * Office first: it is the page people come to. Three rail sections keep the daily work on top; the Brain owns the business
+ * memory, so its documents (/knowledge) are no separate destination.
+ */
 const DESTINATIONS: ReadonlyArray<Destination> = [
-  { key: "chat", label: "navOffice", route: "/chat", icon: "community" },
-  { key: "overview", label: "navOverview", route: "/dashboard", icon: "overview" },
-  { key: "authority", label: "navAuthority", route: "/authority", icon: "password" },
-  { key: "inbox", label: "navInbox", route: "/inbox", icon: "email" },
-  { key: "leads", label: "navLeads", route: "/leads", icon: "account" },
-  { key: "responsibilities", label: "navResponsibilities", route: "/responsibilities", icon: "review" },
-  { key: "decisions", label: "navDecisions", route: "/decisions", icon: "saved" },
-  { key: "automations", label: "navAutomations", route: "/automations", icon: "agentos", managerOnly: true },
-  { key: "knowledge", label: "navKnowledge", route: "/knowledge", icon: "course" },
-  { key: "brain", label: "navBrain", route: "/brain", icon: "explore" },
-  { key: "modules", label: "navModules", route: "/m", icon: "apps" },
-  { key: "team", label: "navTeam", route: "/team", icon: "talents", managerOnly: true },
-  { key: "connections", label: "navConnections", route: "/connections", icon: "servers", managerOnly: true },
+  { key: "chat", label: "navOffice", route: "/chat", icon: "community", group: "work" },
+  { key: "overview", label: "navOverview", route: "/dashboard", icon: "overview", group: "work" },
+  { key: "leads", label: "navLeads", route: "/leads", icon: "account", group: "work" },
+  { key: "responsibilities", label: "navResponsibilities", route: "/responsibilities", icon: "review", group: "work" },
+  { key: "inbox", label: "navInbox", route: "/inbox", icon: "email", group: "work" },
+  { key: "brain", label: "navBrain", route: "/brain", icon: "brain", group: "operate", also: ["/knowledge"] },
+  { key: "authority", label: "navAuthority", route: "/authority", icon: "password", group: "operate" },
+  { key: "decisions", label: "navDecisions", route: "/decisions", icon: "saved", group: "operate" },
+  { key: "automations", label: "navAutomations", route: "/automations", icon: "agentos", group: "operate", managerOnly: true },
+  { key: "modules", label: "navModules", route: "/m", icon: "apps", group: "setup" },
+  { key: "team", label: "navTeam", route: "/team", icon: "talents", group: "setup", managerOnly: true },
+  { key: "connections", label: "navConnections", route: "/connections", icon: "servers", group: "setup", managerOnly: true },
 ];
 
 /** Pages where no promo strip sits with the work: the chat itself, the dashboard (which has its own hero) and the brain. */
@@ -61,7 +67,7 @@ export const ConsoleShell = ({ workspaceName, userName, email, avatarUrl, data, 
   const [isSigningOut, startSignOut] = useTransition();
   const activeKey = pathname.startsWith("/modules/") && pathname.includes("/chat")
     ? "modules"
-    : (DESTINATIONS.find((d) => pathname.startsWith(d.route))?.key ?? "overview");
+    : (DESTINATIONS.find((d) => [d.route, ...(d.also ?? [])].some((route) => pathname.startsWith(route)))?.key ?? "overview");
   const member = data.member;
   const roleLabel = member.role === "owner" ? t("roleOwner") : member.role === "manager" ? t("roleManager") : t("roleStaff");
   const nav: ReadonlyArray<ConsoleShellNavItem> = DESTINATIONS.filter((d) => !d.managerOnly || isManager(member)).map((d) => ({
@@ -69,6 +75,7 @@ export const ConsoleShell = ({ workspaceName, userName, email, avatarUrl, data, 
     label: t(d.label),
     href: d.route,
     icon: d.icon,
+    group: d.group,
     isActive: d.key === activeKey,
     isPrimary: d.key === "chat",
     badge: d.key === "chat" ? data.pendingCount : 0,
