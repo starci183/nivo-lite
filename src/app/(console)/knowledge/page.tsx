@@ -1,3 +1,4 @@
+import { unstable_rethrow } from "next/navigation"
 import { after } from "next/server"
 import { KnowledgeView } from "@/features/knowledge/KnowledgeView"
 import { getLocale } from "@/i18n/server"
@@ -38,6 +39,7 @@ const Page = async ({ searchParams }: { readonly searchParams: Promise<{ module?
       />
     )
   } catch (e) {
+    unstable_rethrow(e) // Next signals (redirect, notFound, dynamic usage) pass through unlogged
     // STATE-8 case-4: log it, then let the route's error.tsx keep the chrome and show the failure.
     console.error("knowledge page failed:", e instanceof Error ? e.message : e)
     throw e

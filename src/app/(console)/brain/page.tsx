@@ -1,3 +1,4 @@
+import { unstable_rethrow } from "next/navigation"
 import { after } from "next/server"
 import { BrainView } from "@/features/brain"
 import type { Lens } from "@/features/brain/shared"
@@ -45,6 +46,7 @@ const Page = async () => {
       <BrainView facts={visible} documents={documents} lessons={lessons} lenses={lenses} extractions={extractions} canWrite={canWrite} business={session.workspace.name} />
     )
   } catch (e) {
+    unstable_rethrow(e) // Next signals (redirect, notFound, dynamic usage) pass through unlogged
     console.error("brain page failed:", e instanceof Error ? e.message : e)
     // STATE-8 case-4: let the route's error view keep the trail and heading with one Alert and a retry.
     throw new Error(t("loadFailed"))

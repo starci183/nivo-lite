@@ -1,3 +1,4 @@
+import { unstable_rethrow } from "next/navigation"
 import { AuthorityPage } from "@/features/authority"
 import { getAuthority, listRules, listStaff } from "@/lib/flow-queries"
 
@@ -7,6 +8,7 @@ const Page = async () => {
     const [authority, rules, staff] = await Promise.all([getAuthority(), listRules(), listStaff()])
     return <AuthorityPage authority={authority} rules={rules} staff={staff} />
   } catch (error) {
+    unstable_rethrow(error) // Next signals (redirect, notFound, dynamic usage) pass through unlogged
     console.error("[authority] load failed", error)
     throw error
   }

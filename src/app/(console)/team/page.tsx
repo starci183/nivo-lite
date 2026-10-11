@@ -1,3 +1,4 @@
+import { unstable_rethrow } from "next/navigation"
 import { TeamForbidden, TeamPage } from "@/features/team"
 import { loadTeam } from "@/features/team/queries"
 import { getCurrentMember, isManagerRole } from "@/lib/members"
@@ -9,6 +10,7 @@ const Page = async () => {
   try {
     return <TeamPage data={await loadTeam()} />
   } catch (error) {
+    unstable_rethrow(error) // Next signals (redirect, notFound, dynamic usage) pass through unlogged
     console.error("[team] load failed", error)
     throw error
   }
