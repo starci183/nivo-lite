@@ -39,8 +39,8 @@ const DESTINATIONS: ReadonlyArray<Destination> = [
   { key: "connections", label: "navConnections", route: "/connections", icon: "servers", managerOnly: true },
 ];
 
-/** Pages where nothing may sit above the work: the chat itself, and the dashboard (which has its own hero). */
-const isStripFree = (pathname: string) => pathname.startsWith("/chat") || pathname.startsWith("/dashboard") || /^\/modules\/[^/]+\/chat/.test(pathname);
+/** Pages where no promo strip sits with the work: the chat itself, the dashboard (which has its own hero) and the brain. */
+const isStripFree = (pathname: string) => pathname.startsWith("/chat") || pathname.startsWith("/dashboard") || pathname.startsWith("/brain") || /^\/modules\/[^/]+\/chat/.test(pathname);
 
 /** Props for {@link ConsoleShell}: plain session data from the server layout. */
 export type ConsoleShellProps = {

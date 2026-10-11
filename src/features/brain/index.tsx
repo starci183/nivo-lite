@@ -1,14 +1,16 @@
 "use client"
 
 import { useState } from "react"
-import { SegmentedControl, Tabs, Text } from "@starci/grammar/common"
+import { Button, DescriptionList, PageContainer, PrimaryRailLayout, SectionHeader, Tabs, Text, TextAction } from "@starci/grammar/common"
 import { useT } from "@/i18n/client"
 import { brain } from "@/i18n/dict/brain"
 import type { Fact, Lesson } from "@/lib/brain/shared"
-import { LENS_CLASS, STACK_CLASS } from "./classNames"
+import { HEAD_ROW_CLASS, LENS_CLASS, PAGE_CLASS, STACK_CLASS } from "./classNames"
 import { FactsPanel } from "./facts"
+import { FactDrawer } from "./form"
 import { LessonsPanel } from "./lessons"
 import { MapPanel } from "./map"
+import { BrainRail, type StarterPreset } from "./rail"
 import { ReviewPanel } from "./review"
 import type { Lens } from "./shared"
 
@@ -18,48 +20,95 @@ export type BrainViewProps = {
   readonly lessons: ReadonlyArray<Lesson>
   readonly lenses: ReadonlyArray<Lens>
   readonly canWrite: boolean
+  /** The workspace's name: the subject of the starter facts (opening hours, address...). */
+  readonly business: string
 }
 
 type Surface = "map" | "review" | "facts" | "lessons"
-const ALL = "all"
 
 /**
- * Bộ não: one shared memory, seen through each agent's lens. Review is where the daily work is (it opens first when something waits);
- * the map shows health at a glance; facts and lessons are the full lists.
+ * Bộ não, laid out like Tri thức: header, actions, four key figures, then the active surface with the rail beside it
+ * (agent views, what is worth adding, how it learns). Review opens first when something waits.
  */
-export const BrainView = ({ facts, lessons, lenses, canWrite }: BrainViewProps) => {
+export const BrainView = ({ facts, lessons, lenses, canWrite, business }: BrainViewProps) => {
   const t = useT(brain)
-  const waiting = facts.filter((f) => f.status === "proposed").length + lessons.filter((l) => l.status === "proposed").length
+  const active = facts.filter((f) => f.status === "active")
+  const scheduled = facts.filter((f) => f.status === "scheduled").length
+  const proposed = facts.filter((f) => f.status === "proposed")
+  const conflicts = proposed.filter((p) => active.some((a) => a.subjectKey === p.subjectKey && a.attribute === p.attribute)).length
+  const lessonsActive = lessons.filter((l) => l.status === "active").length
+  const lessonsProposed = lessons.filter((l) => l.status === "proposed").length
+  const waiting = proposed.length + lessonsProposed
+
   const [surface, setSurface] = useState<Surface>(waiting > 0 && canWrite ? "review" : "map")
-  const [lensKey, setLensKey] = useState<string>(ALL)
+  const [lensKey, setLensKey] = useState<string | null>(null)
   const lens = lenses.find((l) => l.module === lensKey) ?? null
+  const [drawer, setDrawer] = useState<{ preset?: StarterPreset } | null>(null)
+
+  const onLens = (module: string | null) => {
+    setLensKey(module)
+    if (surface !== "map" && surface !== "facts") setSurface("map")
+  }
 
   return (
-    <div className={STACK_CLASS}>
-      <Tabs
-        label={t("tabsLabel")}
-        selectedKey={surface}
-        inset="none"
-        labelVisibility="always"
-        items={[
-          { id: "map", label: t("tabMap") },
-          ...(canWrite ? [{ id: "review", label: waiting ? `${t("tabReview")} (${waiting})` : t("tabReview") }] : []),
-          { id: "facts", label: t("tabFacts") },
-          { id: "lessons", label: t("tabLessons") },
-        ]}
-        onSelect={(k) => setSurface(k === "review" || k === "facts" || k === "lessons" ? k : "map")}
-      />
-      {surface === "map" || surface === "facts" ? (
-        <div className={LENS_CLASS}>
-          <SegmentedControl label={t("lensLabel")} value={lensKey} onValueChange={setLensKey}
-            options={[{ value: ALL, label: t("lensAll") }, ...lenses.map((l) => ({ value: l.module, label: l.name }))]} />
-          {lens ? <Text size="xs" tone="muted">{t("lensHint")}</Text> : null}
+    <PageContainer measure="product">
+      <div className={PAGE_CLASS}>
+        <SectionHeader level={1} eyebrow={t("eyebrow")} title={t("title")} description={t("intro")} />
+
+        <div className={HEAD_ROW_CLASS}>
+          <TextAction href="/knowledge" size="sm" appearance="inline">{t("knowledgeLink")}</TextAction>
+          {canWrite ? <Button variant="primary" onPress={() => setDrawer({})}>{t("addFact")}</Button> : null}
         </div>
+
+        <DescriptionList
+          layout="stat-strip"
+          isDivided
+          items={[
+            { id: "facts", term: t("statFacts"), description: String(active.length), meta: t("statFactsMeta", { n: String(scheduled) }) },
+            { id: "review", term: t("statReview"), description: String(waiting), meta: t("statReviewMeta", { n: String(conflicts) }) },
+            { id: "lessons", term: t("statLessons"), description: String(lessonsActive), meta: t("statLessonsMeta", { n: String(lessonsProposed) }) },
+            { id: "agents", term: t("statAgents"), description: String(lenses.length), meta: t("statAgentsMeta") },
+          ]}
+        />
+
+        <PrimaryRailLayout
+          railWidth="standard"
+          primary={
+            <div className={STACK_CLASS}>
+              <Tabs
+                label={t("tabsLabel")}
+                selectedKey={surface}
+                inset="none"
+                labelVisibility="always"
+                items={[
+                  { id: "map", label: t("tabMap") },
+                  ...(canWrite ? [{ id: "review", label: waiting ? `${t("tabReview")} (${waiting})` : t("tabReview") }] : []),
+                  { id: "facts", label: t("tabFacts") },
+                  { id: "lessons", label: t("tabLessons") },
+                ]}
+                onSelect={(k) => setSurface(k === "review" || k === "facts" || k === "lessons" ? k : "map")}
+              />
+              {lens && (surface === "map" || surface === "facts") ? (
+                <div className={LENS_CLASS}>
+                  <Text size="sm" tone="muted">{t("lensShowing", { agent: lens.name })}</Text>
+                  <TextAction size="sm" appearance="inline" onPress={() => setLensKey(null)}>{t("lensClear")}</TextAction>
+                </div>
+              ) : null}
+              {surface === "map" ? <MapPanel facts={facts} lens={lens} onAdd={canWrite ? () => setDrawer({}) : undefined} /> : null}
+              {surface === "review" ? <ReviewPanel facts={facts} lessons={lessons} lenses={lenses} /> : null}
+              {surface === "facts" ? <FactsPanel facts={facts} lenses={lenses} lens={lens} canWrite={canWrite} /> : null}
+              {surface === "lessons" ? <LessonsPanel lessons={lessons} lenses={lenses} canWrite={canWrite} /> : null}
+            </div>
+          }
+          rail={
+            <BrainRail facts={facts} lenses={lenses} lens={lens} onLens={onLens} business={business} canWrite={canWrite}
+              onStart={(preset) => setDrawer({ preset })} />
+          }
+        />
+      </div>
+      {drawer ? (
+        <FactDrawer key={drawer.preset?.attributeLabel ?? "new"} isOpen editing={null} lenses={lenses} preset={drawer.preset} onClose={() => setDrawer(null)} />
       ) : null}
-      {surface === "map" ? <MapPanel facts={facts} lens={lens} /> : null}
-      {surface === "review" ? <ReviewPanel facts={facts} lessons={lessons} lenses={lenses} /> : null}
-      {surface === "facts" ? <FactsPanel facts={facts} lenses={lenses} lens={lens} canWrite={canWrite} /> : null}
-      {surface === "lessons" ? <LessonsPanel lessons={lessons} lenses={lenses} canWrite={canWrite} /> : null}
-    </div>
+    </PageContainer>
   )
 }

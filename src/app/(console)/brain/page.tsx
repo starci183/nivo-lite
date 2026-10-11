@@ -34,10 +34,7 @@ const Page = async () => {
     // Staff read the brain through their own reach: restricted facts stay with owners and managers.
     const visible = canWrite ? facts : facts.filter((f) => f.scope !== "restricted")
     return (
-      <PageContainer measure="product">
-        <SectionHeader level={1} eyebrow={t("eyebrow")} title={t("title")} description={t("intro")} />
-        <BrainView facts={visible} lessons={lessons} lenses={lenses} canWrite={canWrite} />
-      </PageContainer>
+      <BrainView facts={visible} lessons={lessons} lenses={lenses} canWrite={canWrite} business={session.workspace.name} />
     )
   } catch (e) {
     console.error("brain page failed:", e instanceof Error ? e.message : e)

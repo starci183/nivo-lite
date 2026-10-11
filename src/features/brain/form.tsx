@@ -16,23 +16,25 @@ export type FactDrawerProps = {
   /** The fact getting a new value; null adds a new fact. */
   readonly editing: Fact | null
   readonly lenses: ReadonlyArray<Lens>
+  /** Prefilled answers for a new fact (a "Nên bổ sung" suggestion). */
+  readonly preset?: { readonly subjectType: SubjectType; readonly subjectLabel: string; readonly attributeLabel: string; readonly scope: Scope }
   readonly onClose: (message?: string) => void
 }
 
 const day = (iso: string | null) => (iso ? iso.slice(0, 10) : "")
 
 /** Add a fact, or a new value for one (the old value is kept in history). Owners and managers apply directly. */
-export const FactDrawer = ({ isOpen, editing, lenses, onClose }: FactDrawerProps) => {
+export const FactDrawer = ({ isOpen, editing, lenses, preset, onClose }: FactDrawerProps) => {
   const t = useT(brain)
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [f, setF] = useState(() => ({
-    subjectType: editing?.subjectType ?? ("business" as SubjectType),
-    subjectLabel: editing?.subjectLabel ?? "",
-    attributeLabel: editing?.attributeLabel ?? "",
+    subjectType: editing?.subjectType ?? preset?.subjectType ?? ("business" as SubjectType),
+    subjectLabel: editing?.subjectLabel ?? preset?.subjectLabel ?? "",
+    attributeLabel: editing?.attributeLabel ?? preset?.attributeLabel ?? "",
     value: "",
-    scope: editing?.scope ?? ("internal" as Scope),
+    scope: editing?.scope ?? preset?.scope ?? ("internal" as Scope),
     modules: [...(editing?.modules ?? [])],
     validFrom: "",
     validTo: day(editing?.validTo ?? null),

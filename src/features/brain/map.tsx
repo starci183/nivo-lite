@@ -12,6 +12,8 @@ import { SCOPE_KEY, SCOPE_TONE, dateOf, sourceLabel, subjectsOf, typeLabel, type
 export type MapPanelProps = {
   readonly facts: ReadonlyArray<Fact>
   readonly lens: Lens | null
+  /** Offered on the empty map (owners and managers): opens the add-fact drawer. */
+  readonly onAdd?: () => void
 }
 
 /**
@@ -74,7 +76,7 @@ const layout = (subjects: ReadonlyArray<Subject>, lens: Lens | null, groupLabel:
   return out
 }
 
-export const MapPanel = ({ facts, lens }: MapPanelProps) => {
+export const MapPanel = ({ facts, lens, onAdd }: MapPanelProps) => {
   const t = useT(brain)
   const locale = useLocale()
   const subjects = useMemo(() => subjectsOf(facts), [facts])
@@ -82,7 +84,7 @@ export const MapPanel = ({ facts, lens }: MapPanelProps) => {
   const [selected, setSelected] = useState<string | null>(null)
   const current = bubbles.find((b) => b.key === selected) ?? bubbles.find((b) => b.health === "conflict") ?? bubbles[0]
 
-  if (!bubbles.length) return <EmptyNotice message={t("mapEmptyTitle")} description={t("mapEmptyBody")} />
+  if (!bubbles.length) return <EmptyNotice message={t("mapEmptyTitle")} description={t("mapEmptyBody")} actionLabel={onAdd ? t("emptyAction") : undefined} onAction={onAdd} />
   return (
     <div className={MAP_GRID_CLASS}>
       <div className={MAP_FRAME_CLASS}>
