@@ -1,11 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { Button, DescriptionList, PageContainer, PrimaryRailLayout, SectionHeader, Tabs, Text, TextAction } from "@starci/grammar/common"
+import { Breadcrumbs, Button, DescriptionList, PageContainer, PrimaryRailLayout, SectionHeader, SurfaceCard, Tabs, Text, TextAction } from "@starci/grammar/common"
 import { useT } from "@/i18n/client"
 import { brain } from "@/i18n/dict/brain"
 import type { Fact, Lesson } from "@/lib/brain/shared"
-import { HEAD_ROW_CLASS, LENS_CLASS, PAGE_CLASS, STACK_CLASS } from "./classNames"
+import { HEAD_CLASS, LENS_CLASS, PAGE_CLASS, STACK_CLASS } from "./classNames"
 import { FactsPanel } from "./facts"
 import { FactDrawer } from "./form"
 import { LessonsPanel } from "./lessons"
@@ -53,23 +53,29 @@ export const BrainView = ({ facts, lessons, lenses, canWrite, business }: BrainV
   return (
     <PageContainer measure="product">
       <div className={PAGE_CLASS}>
-        <SectionHeader level={1} eyebrow={t("eyebrow")} title={t("title")} description={t("intro")} />
-
-        <div className={HEAD_ROW_CLASS}>
-          <TextAction href="/knowledge" size="sm" appearance="inline">{t("knowledgeLink")}</TextAction>
-          {canWrite ? <Button variant="primary" onPress={() => setDrawer({})}>{t("addFact")}</Button> : null}
+        <div className={HEAD_CLASS}>
+          <Breadcrumbs label={t("crumbLabel")} items={[{ id: "home", label: t("crumbHome"), href: "/dashboard" }, { id: "brain", label: t("title") }]} />
+          <SectionHeader
+            level={1}
+            title={t("title")}
+            description={t("intro")}
+            meta={<TextAction href="/knowledge" size="sm" appearance="inline">{t("knowledgeLink")}</TextAction>}
+            action={canWrite ? <Button variant="primary" onPress={() => setDrawer({})}>{t("addFact")}</Button> : undefined}
+          />
         </div>
 
-        <DescriptionList
-          layout="stat-strip"
-          isDivided
-          items={[
-            { id: "facts", term: t("statFacts"), description: String(active.length), meta: t("statFactsMeta", { n: String(scheduled) }) },
-            { id: "review", term: t("statReview"), description: String(waiting), meta: t("statReviewMeta", { n: String(conflicts) }) },
-            { id: "lessons", term: t("statLessons"), description: String(lessonsActive), meta: t("statLessonsMeta", { n: String(lessonsProposed) }) },
-            { id: "agents", term: t("statAgents"), description: String(lenses.length), meta: t("statAgentsMeta") },
-          ]}
-        />
+        <SurfaceCard treatment="ink" ariaLabel={t("statsLabel")}>
+          <DescriptionList
+            layout="stat-strip"
+            isDivided
+            items={[
+              { id: "facts", term: t("statFacts"), description: String(active.length), meta: t("statFactsMeta", { n: String(scheduled) }) },
+              { id: "review", term: t("statReview"), description: String(waiting), meta: t("statReviewMeta", { n: String(conflicts) }) },
+              { id: "lessons", term: t("statLessons"), description: String(lessonsActive), meta: t("statLessonsMeta", { n: String(lessonsProposed) }) },
+              { id: "agents", term: t("statAgents"), description: String(lenses.length), meta: t("statAgentsMeta") },
+            ]}
+          />
+        </SurfaceCard>
 
         <PrimaryRailLayout
           railWidth="standard"
@@ -94,7 +100,7 @@ export const BrainView = ({ facts, lessons, lenses, canWrite, business }: BrainV
                   <TextAction size="sm" appearance="inline" onPress={() => setLensKey(null)}>{t("lensClear")}</TextAction>
                 </div>
               ) : null}
-              {surface === "map" ? <MapPanel facts={facts} lens={lens} onAdd={canWrite ? () => setDrawer({}) : undefined} /> : null}
+              {surface === "map" ? <MapPanel facts={facts} lens={lens} business={business} onAdd={canWrite ? () => setDrawer({}) : undefined} /> : null}
               {surface === "review" ? <ReviewPanel facts={facts} lessons={lessons} lenses={lenses} /> : null}
               {surface === "facts" ? <FactsPanel facts={facts} lenses={lenses} lens={lens} canWrite={canWrite} /> : null}
               {surface === "lessons" ? <LessonsPanel lessons={lessons} lenses={lenses} canWrite={canWrite} /> : null}

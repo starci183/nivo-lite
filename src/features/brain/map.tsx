@@ -1,17 +1,19 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Badge, EmptyNotice, ListRow, SurfaceListCard, Text } from "@starci/grammar/common"
+import { Badge, Divider, EmptyNotice, ListRow, SurfaceCard, SurfaceListCard, Text } from "@starci/grammar/common"
 import { useLocale, useT } from "@/i18n/client"
 import { brain } from "@/i18n/dict/brain"
 import { visibleTo, type Fact, type SubjectType } from "@/lib/brain/shared"
-import { LEGEND_CLASS, LEGEND_DOT_CLASS, LEGEND_ITEM_CLASS, MAP_FRAME_CLASS, MAP_GRID_CLASS, MAP_SVG_CLASS } from "./classNames"
+import { LEGEND_CLASS, LEGEND_DOT_CLASS, LEGEND_ITEM_CLASS, MAP_EMPTY_BAND_CLASS, MAP_GRID_CLASS, MAP_SVG_CLASS } from "./classNames"
 import { SCOPE_KEY, SCOPE_TONE, dateOf, sourceLabel, subjectsOf, typeLabel, type Lens, type Subject } from "./shared"
 
 /** Props for {@link MapPanel}. */
 export type MapPanelProps = {
   readonly facts: ReadonlyArray<Fact>
   readonly lens: Lens | null
+  /** The workspace's name: the centre of the drawing while the brain is still empty. */
+  readonly business: string
   /** Offered on the empty map (owners and managers): opens the add-fact drawer. */
   readonly onAdd?: () => void
 }
@@ -76,7 +78,7 @@ const layout = (subjects: ReadonlyArray<Subject>, lens: Lens | null, groupLabel:
   return out
 }
 
-export const MapPanel = ({ facts, lens, onAdd }: MapPanelProps) => {
+export const MapPanel = ({ facts, lens, business, onAdd }: MapPanelProps) => {
   const t = useT(brain)
   const locale = useLocale()
   const subjects = useMemo(() => subjectsOf(facts), [facts])
@@ -84,10 +86,37 @@ export const MapPanel = ({ facts, lens, onAdd }: MapPanelProps) => {
   const [selected, setSelected] = useState<string | null>(null)
   const current = bubbles.find((b) => b.key === selected) ?? bubbles.find((b) => b.health === "conflict") ?? bubbles[0]
 
-  if (!bubbles.length) return <EmptyNotice message={t("mapEmptyTitle")} description={t("mapEmptyBody")} actionLabel={onAdd ? t("emptyAction") : undefined} onAction={onAdd} />
+  // Empty brain: still draw it - the business at the centre and the first kinds waiting around it (dashed) - with the empty notice in the same card.
+  if (!bubbles.length) {
+    const seeds = [t("mapSeedBusiness"), t("mapSeedService"), t("mapSeedPolicy")]
+    return (
+      <SurfaceCard ariaLabel={t("mapAria")} composition="joined">
+        <svg viewBox={`0 0 ${W} ${H}`} className={MAP_SVG_CLASS} role="img" aria-label={t("mapEmptyTitle")}>
+          {seeds.map((label, i) => {
+            const a = (i / seeds.length) * Math.PI * 2 - Math.PI / 2
+            const x = W / 2 + Math.cos(a) * 150
+            const y = H / 2 + Math.sin(a) * 110
+            return (
+              <g key={label}>
+                <line x1={W / 2} y1={H / 2} x2={x} y2={y} stroke="var(--separator)" strokeDasharray="4 4" />
+                <circle cx={x} cy={y} r={26} fill="var(--muted)" fillOpacity={0.08} stroke="var(--muted)" strokeDasharray="4 4" />
+                <text x={x} y={y + 44} textAnchor="middle" fontSize={12} fill="var(--muted)">{label}</text>
+              </g>
+            )
+          })}
+          <circle cx={W / 2} cy={H / 2} r={34} fill="var(--accent)" fillOpacity={0.15} stroke="var(--accent)" />
+          <text x={W / 2} y={H / 2 + 52} textAnchor="middle" fontSize={13} fill="var(--foreground)">{business.length > 26 ? `${business.slice(0, 25)}…` : business}</text>
+        </svg>
+        <Divider semantics="presentation" />
+        <div className={MAP_EMPTY_BAND_CLASS}>
+          <EmptyNotice message={t("mapEmptyTitle")} description={t("mapEmptyBody")} actionLabel={onAdd ? t("emptyAction") : undefined} onAction={onAdd} />
+        </div>
+      </SurfaceCard>
+    )
+  }
   return (
     <div className={MAP_GRID_CLASS}>
-      <div className={MAP_FRAME_CLASS}>
+      <SurfaceCard ariaLabel={t("mapAria")} composition="joined">
         <svg viewBox={`0 0 ${W} ${H}`} className={MAP_SVG_CLASS} role="img" aria-label={t("mapAria")}>
           {bubbles.map((b) => {
             const on = b.key === current?.key
@@ -105,6 +134,7 @@ export const MapPanel = ({ facts, lens, onAdd }: MapPanelProps) => {
             )
           })}
         </svg>
+        <Divider semantics="presentation" />
         <div className={LEGEND_CLASS}>
           {(["ok", "pending", "conflict", "hidden"] as const).map((h) => (
             <span key={h} className={LEGEND_ITEM_CLASS}>
@@ -113,7 +143,7 @@ export const MapPanel = ({ facts, lens, onAdd }: MapPanelProps) => {
             </span>
           ))}
         </div>
-      </div>
+      </SurfaceCard>
       {current ? (
         <SurfaceListCard label={current.label} headingLevel={2} labelEnd={<Badge tone="neutral">{typeLabel(t, current.type)}</Badge>}>
           {current.subjects.flatMap((s) => [

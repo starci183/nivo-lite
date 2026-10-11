@@ -3,7 +3,14 @@ import { defineDict } from "../core";
 /** Bộ não: the shared memory of the business and each agent's view of it. */
 export const brain = defineDict({
   en: {
-    eyebrow: "Second brain",
+    crumbLabel: "Breadcrumb",
+    crumbHome: "Overview",
+    statsLabel: "The brain in figures",
+    lensView: "View",
+    lensViewing: "Viewing",
+    mapSeedBusiness: "Business",
+    mapSeedService: "Services",
+    mapSeedPolicy: "Policies",
     title: "Brain",
     intro: "What your business knows, in one place. Every agent reads it through its own view; you decide what changes.",
     tabsLabel: "Brain sections",
@@ -152,7 +159,14 @@ export const brain = defineDict({
     splitDone: "Kept both: a separate fact was added for that situation.",
   },
   vi: {
-    eyebrow: "Second brain",
+    crumbLabel: "Đường dẫn",
+    crumbHome: "Tổng quan",
+    statsLabel: "Bộ não qua các con số",
+    lensView: "Xem",
+    lensViewing: "Đang xem",
+    mapSeedBusiness: "Doanh nghiệp",
+    mapSeedService: "Dịch vụ",
+    mapSeedPolicy: "Chính sách",
     title: "Bộ não",
     intro: "Những gì doanh nghiệp biết, ở một chỗ. Mỗi agent đọc qua góc nhìn riêng; bạn quyết định điều gì thay đổi.",
     tabsLabel: "Các phần của bộ não",

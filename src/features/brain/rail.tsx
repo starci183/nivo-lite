@@ -1,13 +1,11 @@
 "use client"
 
-import { Badge, List, ListBox, ListItem, SurfaceCard, Text } from "@starci/grammar/common"
+import { Badge, Button, ListRow, StaticStateRow, SurfaceListCard } from "@starci/grammar/common"
 import { useT } from "@/i18n/client"
 import { brain } from "@/i18n/dict/brain"
 import { keyOf, visibleTo, type Fact, type Scope, type SubjectType } from "@/lib/brain/shared"
-import { RAIL_LIST_CLASS, SIDE_CLASS, STACK_CLASS, START_ITEM_CLASS } from "./classNames"
+import { SIDE_CLASS } from "./classNames"
 import type { Lens, T } from "./shared"
-
-const ALL = "all"
 
 export type StarterPreset = { readonly subjectType: SubjectType; readonly subjectLabel: string; readonly attributeLabel: string; readonly scope: Scope }
 
@@ -39,52 +37,55 @@ export const BrainRail = ({ facts, lenses, lens, onLens, business, canWrite, onS
   const have = new Set(active.map((f) => f.attribute))
   const missing = starters(t, business).filter((s) => !have.has(keyOf(s.preset.attributeLabel)))
 
+  const views: ReadonlyArray<{ id: string; module: string | null; name: string; hint: string; count: string; tone: "success" | "neutral" }> = [
+    { id: "all", module: null, name: t("lensAll"), hint: t("lensAllHint"), count: String(active.length), tone: "neutral" },
+    ...lenses.map((l) => ({
+      id: l.module,
+      module: l.module,
+      name: l.name,
+      hint: l.audience === "customer" ? t("lensCustomer") : t("lensInternal"),
+      count: t("lensSeen", { n: String(active.filter((f) => visibleTo(f, l.audience, l.module)).length), total: String(active.length) }),
+      tone: l.audience === "customer" ? ("success" as const) : ("neutral" as const),
+    })),
+  ]
+
   return (
     <div className={SIDE_CLASS}>
-      <SurfaceCard label={t("lensTitle")} headingLevel={2}>
-        <div className={STACK_CLASS}>
-          <Text size="sm" tone="muted">{t("lensIntro")}</Text>
-          <ListBox
-            label={t("lensTitle")}
-            selectionMode="single"
-            selectedIds={[lens?.module ?? ALL]}
-            onSelectionChange={(ids) => { const id = ids[0]; if (id) onLens(id === ALL ? null : id) }}
-            items={[
-              { id: ALL, label: t("lensAll"), description: t("lensAllHint"), trailing: <Badge tone="neutral">{String(active.length)}</Badge> },
-              ...lenses.map((l) => ({
-                id: l.module,
-                label: l.name,
-                description: l.audience === "customer" ? t("lensCustomer") : t("lensInternal"),
-                trailing: <Badge tone={l.audience === "customer" ? "success" : "neutral"}>{t("lensSeen", { n: String(active.filter((f) => visibleTo(f, l.audience, l.module)).length), total: String(active.length) })}</Badge>,
-              })),
-            ]}
-          />
-        </div>
-      </SurfaceCard>
+      <SurfaceListCard label={t("lensTitle")} headingLevel={2} fact={t("lensIntro")}>
+        {views.map((v) => {
+          const isCurrent = (lens?.module ?? null) === v.module
+          return (
+            <ListRow
+              key={v.id}
+              title={v.name}
+              description={v.hint}
+              badges={<Badge tone={v.tone}>{v.count}</Badge>}
+              actions={isCurrent
+                ? <Badge tone="accent">{t("lensViewing")}</Badge>
+                : <Button variant="ghost" size="sm" onPress={() => onLens(v.module)}>{t("lensView")}</Button>}
+            />
+          )
+        })}
+      </SurfaceListCard>
 
       {canWrite ? (
-        <SurfaceCard label={t("startTitle")} headingLevel={2}>
-          <div className={STACK_CLASS}>
-            <Text size="sm" tone="muted">{missing.length ? t("startHint") : t("startAllDone")}</Text>
-            {missing.length ? (
-              <ListBox
-                label={t("startTitle")}
-                selectionMode="none"
-                onAction={(id) => { const s = missing.find((m) => m.key === id); if (s) onStart(s.preset) }}
-                items={missing.map((s) => ({ id: s.key, label: s.title, description: s.hint, trailing: <Text size="sm" tone="accent">{t("startAdd")}</Text> }))}
-              />
-            ) : null}
-          </div>
-        </SurfaceCard>
+        <SurfaceListCard label={t("startTitle")} headingLevel={2} fact={missing.length ? t("startHint") : t("startAllDone")}>
+          {missing.map((s) => (
+            <ListRow
+              key={s.key}
+              title={s.title}
+              description={s.hint}
+              actions={<Button variant="ghost" size="sm" onPress={() => onStart(s.preset)}>{t("startAdd")}</Button>}
+            />
+          ))}
+        </SurfaceListCard>
       ) : null}
 
-      <SurfaceCard label={t("howTitle")} headingLevel={2}>
-        <List label={t("howTitle")} className={RAIL_LIST_CLASS}>
-          {[t("how1"), t("how2"), t("how3")].map((line) => (
-            <ListItem key={line} className={START_ITEM_CLASS}><Text size="sm">{line}</Text></ListItem>
-          ))}
-        </List>
-      </SurfaceCard>
+      <SurfaceListCard label={t("howTitle")} headingLevel={2}>
+        {[t("how1"), t("how2"), t("how3")].map((line) => (
+          <StaticStateRow key={line} item={{ id: line, label: line }} />
+        ))}
+      </SurfaceListCard>
     </div>
   )
 }

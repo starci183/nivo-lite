@@ -40,7 +40,7 @@ const Page = async () => {
     console.error("brain page failed:", e instanceof Error ? e.message : e)
     return (
       <PageContainer measure="product">
-        <SectionHeader level={1} eyebrow={t("eyebrow")} title={t("title")} description={t("mineUnavailable")} />
+        <SectionHeader level={1} title={t("title")} description={t("mineUnavailable")} />
       </PageContainer>
     )
   }
