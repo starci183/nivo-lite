@@ -115,6 +115,8 @@ export type QuotaStatus = {
   readonly creditsLimit: number | null;
   /** Credits carried from last month (0 when the plan does not roll over). */
   readonly creditsCarried: number;
+  /** Top-up credits still spendable now (after the part of this month's overage that is already spent; see credit_topups). */
+  readonly topupBalance: number;
   readonly messagesExceeded: boolean;
   readonly tokensExceeded: boolean;
   readonly creditsExceeded: boolean;
@@ -131,9 +133,20 @@ export const DEFAULT_FALLBACK_REPLY = "Dạ em đã ghi nhận, nhân viên sẽ
 type StatusRow = {
   period_start: string; messages_used: number; tokens_used: number; cost_usd: number; messages_limit: number | null; tokens_limit: number | null;
   fallback_reply: string | null; credits_used?: number | string | null; credits_limit?: number | string | null; credits_carried?: number | string | null;
+  topup_balance?: number | string | null;
 };
 
 const ratioOf = (used: number, limit: number | null): number => (limit === null ? 0 : limit <= 0 ? 1 : used / limit);
+
+/**
+ * Credits are one pool: the allowance first, then the top-ups. The pool is the allowance (or the use, once past it) plus the top-up
+ * credits still left, so the ratio reaches 1 only when the allowance is used up AND no top-up credit is left.
+ */
+const creditRatioOf = (used: number, limit: number | null, topup: number): number => {
+  if (limit === null) return 0;
+  const pool = Math.max(used, limit) + topup;
+  return pool <= 0 ? 1 : used / pool;
+};
 
 /** This month's use against the allowance. null when it cannot be read (metering then fails open). */
 export const quotaStatus = async (workspaceId: string): Promise<QuotaStatus | null> => {
@@ -153,16 +166,17 @@ export const quotaStatus = async (workspaceId: string): Promise<QuotaStatus | nu
     const creditsUsed = row.credits_used == null ? creditsOf(costUsd) : Number(row.credits_used);
     const creditsLimit = row.credits_limit == null ? null : Number(row.credits_limit);
     const creditsCarried = row.credits_carried == null ? 0 : Number(row.credits_carried);
+    const topupBalance = row.topup_balance == null ? 0 : Math.max(0, Number(row.topup_balance));
     const mRatio = ratioOf(messagesUsed, messagesLimit);
     const tRatio = ratioOf(tokensUsed, tokensLimit);
-    const cRatio = ratioOf(creditsUsed, creditsLimit);
+    const cRatio = creditRatioOf(creditsUsed, creditsLimit, topupBalance);
     const messagesExceeded = messagesLimit !== null && mRatio >= 1;
     const tokensExceeded = tokensLimit !== null && tRatio >= 1;
-    const creditsExceeded = creditsLimit !== null && cRatio >= 1;
+    const creditsExceeded = creditsLimit !== null && creditsUsed >= creditsLimit && topupBalance <= 0;
     const ratio = Math.max(mRatio, tRatio, cRatio);
     return {
       periodStart: row.period_start, messagesUsed, tokensUsed, costUsd, messagesLimit, tokensLimit,
-      fallbackReply: row.fallback_reply?.trim() || null, creditsUsed, creditsLimit, creditsCarried, messagesExceeded, tokensExceeded, creditsExceeded, ratio,
+      fallbackReply: row.fallback_reply?.trim() || null, creditsUsed, creditsLimit, creditsCarried, topupBalance, messagesExceeded, tokensExceeded, creditsExceeded, ratio,
       level: messagesExceeded || tokensExceeded || creditsExceeded ? "exceeded" : ratio >= WARN_AT ? "warn" : "ok",
     };
   } catch (e) {
@@ -179,8 +193,8 @@ export class QuotaExceededError extends Error {
   }
 }
 
-const EXCEEDED_VI = "Workspace của bạn đã dùng hết hạn mức AI của tháng này, nên AI tạm dừng cho đến kỳ mới. Bạn có thể nâng cấp gói trong mục Thanh toán để dùng tiếp.";
-const EXCEEDED_EN = "Your workspace has used up this month's AI allowance, so AI is paused until the next period. You can upgrade your plan in Billing to continue.";
+const EXCEEDED_VI = "Workspace của bạn đã dùng hết hạn mức AI của tháng này, nên AI tạm dừng cho đến kỳ mới. Bạn có thể nạp thêm credit hoặc nâng cấp gói tại Credit & gói (/billing) để dùng tiếp.";
+const EXCEEDED_EN = "Your workspace has used up this month's AI allowance, so AI is paused until the next period. You can top up credits or upgrade your plan in Credits & plan (/billing) to continue.";
 
 export const exceededMessage = (locale: "vi" | "en"): string => (locale === "vi" ? EXCEEDED_VI : EXCEEDED_EN);
 
@@ -209,12 +223,13 @@ const fmtN = (n: number) => new Intl.NumberFormat("vi-VN").format(n);
 const noticeBody = (level: "warn" | "exceeded", s: QuotaStatus): string => {
   const use = [
     s.creditsLimit !== null ? `${fmtN(Math.round(s.creditsUsed))}/${fmtN(s.creditsLimit)} credit` : null,
+    s.topupBalance > 0 ? `${fmtN(s.topupBalance)} credit nạp thêm còn lại` : null,
     s.messagesLimit !== null ? `${fmtN(s.messagesUsed)}/${fmtN(s.messagesLimit)} tin nhắn` : null,
     s.tokensLimit !== null ? `${fmtN(s.tokensUsed)}/${fmtN(s.tokensLimit)} token` : null,
   ].filter(Boolean).join(", ");
   return level === "warn"
-    ? `Mức dùng AI tháng này đã đạt ${Math.round(s.ratio * 100)}% hạn mức (${use}). Khi hết hạn mức, chatbot sẽ chuyển câu hỏi của khách cho nhân viên thay vì tự trả lời. Xem chi tiết hoặc nâng cấp gói ở mục Thanh toán.`
-    : `Workspace đã dùng hết hạn mức AI của tháng này (${use}). Chatbot tạm dừng tự trả lời: khách nhận lời xác nhận lịch sự và câu hỏi được chuyển cho nhân viên. Nâng cấp gói ở mục Thanh toán để chatbot hoạt động lại.`;
+    ? `Mức dùng AI tháng này đã đạt ${Math.round(s.ratio * 100)}% hạn mức (${use}). Khi hết hạn mức, chatbot sẽ chuyển câu hỏi của khách cho nhân viên thay vì tự trả lời. Nạp thêm credit hoặc nâng cấp gói tại Credit & gói (/billing).`
+    : `Workspace đã dùng hết hạn mức AI của tháng này (${use}). Chatbot tạm dừng tự trả lời: khách nhận lời xác nhận lịch sự và câu hỏi được chuyển cho nhân viên. Nạp thêm credit hoặc nâng cấp gói tại Credit & gói (/billing) để chatbot hoạt động lại.`;
 };
 
 /** Post an Office notice ONCE per workspace, month and level (the notices table's primary key is the lock). */
