@@ -7,16 +7,20 @@ import { brain } from "@/i18n/dict/brain"
 import type { Fact, Lesson } from "@/lib/brain/shared"
 import { HEAD_CLASS, LENS_CLASS, PAGE_CLASS, STACK_CLASS } from "./classNames"
 import { FactsPanel } from "./facts"
+import { useRouter } from "next/navigation"
+import { AddDocumentsDrawer } from "@/features/knowledge/AddDocumentsDrawer"
 import { FactDrawer } from "./form"
 import { LessonsPanel } from "./lessons"
 import { MapPanel } from "./map"
 import { BrainRail, type StarterPreset } from "./rail"
 import { ReviewPanel } from "./review"
-import type { Lens } from "./shared"
+import type { BrainDoc, Lens } from "./shared"
 
 /** Props for {@link BrainView}. */
 export type BrainViewProps = {
   readonly facts: ReadonlyArray<Fact>
+  /** The business documents (indexed for every agent). */
+  readonly documents: ReadonlyArray<BrainDoc>
   readonly lessons: ReadonlyArray<Lesson>
   readonly lenses: ReadonlyArray<Lens>
   readonly canWrite: boolean
@@ -30,7 +34,7 @@ type Surface = "map" | "review" | "facts" | "lessons"
  * Bộ não, laid out like Tri thức: header, actions, four key figures, then the active surface with the rail beside it
  * (agent views, what is worth adding, how it learns). Review opens first when something waits.
  */
-export const BrainView = ({ facts, lessons, lenses, canWrite, business }: BrainViewProps) => {
+export const BrainView = ({ facts, documents, lessons, lenses, canWrite, business }: BrainViewProps) => {
   const t = useT(brain)
   const active = facts.filter((f) => f.status === "active")
   const scheduled = facts.filter((f) => f.status === "scheduled").length
@@ -40,12 +44,16 @@ export const BrainView = ({ facts, lessons, lenses, canWrite, business }: BrainV
   const lessonsProposed = lessons.filter((l) => l.status === "proposed").length
   const waiting = proposed.length + lessonsProposed
   // While the brain is empty the empty state owns the one primary "add" (CTA-1 case-5); the header offers it once there is something.
-  const isEmpty = facts.length === 0
+  const isEmpty = facts.length === 0 && documents.length === 0
+  const docsIndexing = documents.filter((d) => d.status !== "ready" && d.status !== "failed").length
 
   const [surface, setSurface] = useState<Surface>(waiting > 0 && canWrite ? "review" : "map")
   const [lensKey, setLensKey] = useState<string | null>(null)
   const lens = lenses.find((l) => l.module === lensKey) ?? null
   const [drawer, setDrawer] = useState<{ preset?: StarterPreset } | null>(null)
+  const [isAddingDocs, setAddingDocs] = useState(false)
+  const router = useRouter()
+  const addDocs = () => setAddingDocs(true)
 
   const onLens = (module: string | null) => {
     setLensKey(module)
@@ -62,7 +70,7 @@ export const BrainView = ({ facts, lessons, lenses, canWrite, business }: BrainV
             title={t("title")}
             description={t("intro")}
             meta={<TextAction href="/knowledge" size="sm" appearance="inline">{t("knowledgeLink")}</TextAction>}
-            action={canWrite && !isEmpty ? <Button variant="primary" onPress={() => setDrawer({})}>{t("addFact")}</Button> : undefined}
+            action={canWrite && !isEmpty ? <Button variant="primary" onPress={addDocs}>{t("addDocs")}</Button> : undefined}
           />
         </div>
 
@@ -71,9 +79,9 @@ export const BrainView = ({ facts, lessons, lenses, canWrite, business }: BrainV
             layout="stat-strip"
             isDivided
             items={[
+              { id: "docs", term: t("statDocs"), description: String(documents.length), meta: t("statDocsMeta", { n: String(docsIndexing) }) },
               { id: "facts", term: t("statFacts"), description: String(active.length), meta: t("statFactsMeta", { n: String(scheduled) }) },
               { id: "review", term: t("statReview"), description: String(waiting), meta: t("statReviewMeta", { n: String(conflicts) }) },
-              { id: "lessons", term: t("statLessons"), description: String(lessonsActive), meta: t("statLessonsMeta", { n: String(lessonsProposed) }) },
               { id: "agents", term: t("statAgents"), description: String(lenses.length), meta: t("statAgentsMeta") },
             ]}
           />
@@ -102,9 +110,9 @@ export const BrainView = ({ facts, lessons, lenses, canWrite, business }: BrainV
                   <TextAction size="sm" appearance="inline" onPress={() => setLensKey(null)}>{t("lensClear")}</TextAction>
                 </div>
               ) : null}
-              {surface === "map" ? <MapPanel facts={facts} lens={lens} business={business} onAdd={canWrite ? () => setDrawer({}) : undefined} /> : null}
+              {surface === "map" ? <MapPanel facts={facts} lens={lens} business={business} onAdd={canWrite ? addDocs : undefined} /> : null}
               {surface === "review" ? <ReviewPanel facts={facts} lessons={lessons} lenses={lenses} /> : null}
-              {surface === "facts" ? <FactsPanel facts={facts} lenses={lenses} lens={lens} canWrite={canWrite} onAdd={canWrite ? () => setDrawer({}) : undefined} /> : null}
+              {surface === "facts" ? <FactsPanel facts={facts} lenses={lenses} lens={lens} canWrite={canWrite} onAdd={canWrite ? addDocs : undefined} /> : null}
               {surface === "lessons" ? <LessonsPanel lessons={lessons} lenses={lenses} canWrite={canWrite} /> : null}
             </div>
           }
@@ -114,6 +122,7 @@ export const BrainView = ({ facts, lessons, lenses, canWrite, business }: BrainV
           }
         />
       </div>
+      <AddDocumentsDrawer isOpen={isAddingDocs} onClose={() => setAddingDocs(false)} onAdded={() => router.refresh()} />
       {drawer ? (
         <FactDrawer key={drawer.preset?.attributeLabel ?? "new"} isOpen editing={null} lenses={lenses} preset={drawer.preset} onClose={() => setDrawer(null)} />
       ) : null}

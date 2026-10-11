@@ -41,3 +41,6 @@ export const subjectsOf = (facts: ReadonlyArray<Fact>): Array<Subject> => {
 
 export const dateOf = (iso: string | null, locale: "vi" | "en"): string =>
   iso ? new Date(iso).toLocaleDateString(locale === "vi" ? "vi-VN" : "en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }) : ""
+
+/** A document of the brain, as the page shows it (no content: the text stays on the server). */
+export type BrainDoc = { readonly id: string; readonly title: string; readonly topic: string | null; readonly status: "pending" | "ready" | "failed" | string; readonly chunkCount: number }
