@@ -1,8 +1,7 @@
 /**
  * Google OAuth + Sheets: the pure request builders, parsers and REST calls (plain fetch, no googleapis package).
- * NO "server-only" import and no local runtime imports, so scripts/google-sheets-mock-e2e.mjs can load it directly with
- * `node` (type stripping) and drive it against local mock servers. Token storage and the connection rows live in google.ts.
- * Hosts are overridable for tests: GOOGLE_OAUTH_BASE (one base replacing accounts.google.com and oauth2.googleapis.com),
+ * NO "server-only" import and no local runtime imports. Token storage and the connection rows live in google.ts.
+ * Hosts are overridable (a local fake): GOOGLE_OAUTH_BASE (one base replacing accounts.google.com and oauth2.googleapis.com),
  * GOOGLE_SHEETS_BASE.
  */
 import { createHmac, timingSafeEqual } from "node:crypto";

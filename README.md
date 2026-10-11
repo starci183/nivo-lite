@@ -19,4 +19,4 @@ NIVO OS lite: a standalone Next.js 16 + Supabase app (split out of the StarCi mo
 - Invite emails are sent over SMTP (`SMTP_URL`, locally Inbucket); "Copy invite link" works without email.
 
 ## Checks
-`npx tsc --noEmit -p .`, `node scripts/policy-check.mjs`, `npm run build`, `npm run db:test` (RLS and membership rules against the local stack).
+`npx tsc --noEmit -p .` and `npm run build`. The front end carries no tests (StarCi R97 `FE_NO_TESTS`): no spec, e2e, Playwright or check scripts.

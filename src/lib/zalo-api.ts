@@ -4,7 +4,7 @@ import { safeEqual } from "./channels";
 
 /**
  * The one place that talks to Zalo. Hosts default to the real ones and can be pointed at a local fake with
- * ZALO_OAUTH_BASE / ZALO_API_BASE (scripts/zalo-mock-e2e.mjs). Nothing here touches the database or logs a secret.
+ * ZALO_OAUTH_BASE / ZALO_API_BASE. Nothing here touches the database or logs a secret.
  *
  *   Authorization   GET  {OAUTH}/v4/oa/permission?app_id&redirect_uri&code_challenge&state      (PKCE, S256 = base64url(sha256(verifier)))
  *   Token + refresh POST {OAUTH}/v4/oa/access_token   header secret_key=<App Secret>, form: code|refresh_token, app_id, grant_type, code_verifier

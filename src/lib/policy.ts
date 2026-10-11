@@ -1,5 +1,5 @@
 /**
- * NIVO CORE policy gate: pure, no I/O (unit-checked by scripts/policy-check.mjs).
+ * NIVO CORE policy gate: pure, no I/O.
  * Decides whether an AI step runs by itself ("auto") or asks a human ("ask"), and why.
  */
 import type { AuthorityRule, Department, FlowAction, GateInput, GateVerdict, Proposal, ReasonCode, RuleMode } from "./flow-types";

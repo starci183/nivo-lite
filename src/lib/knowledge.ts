@@ -1,5 +1,5 @@
 /**
- * Reading the owner's business knowledge (the agent's "knowledge" text): pure, no I/O (checked by scripts/policy-check.mjs).
+ * Reading the owner's business knowledge (the agent's "knowledge" text): pure, no I/O.
  * The chatbot may only take an order at a price the owner wrote down, and payment details come from the owner's own line.
  */
 
