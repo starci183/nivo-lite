@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireRole, getCurrentMember } from "../members";
+import { fileTextKind, textFromBytes } from "./extract";
 import type { ModuleKey } from "../modules-shared";
 import { isModuleKey } from "../modules-shared";
 import type { Outcome } from "../types";
@@ -25,6 +26,41 @@ export const addKnowledge = async (input: AddSourceInput): Promise<Outcome<Knowl
   run(async () => {
     await managers();
     const source = await addSource(input);
+    refresh();
+    return source;
+  });
+
+const MAX_UPLOAD_BYTES = 10_000_000;
+
+/**
+ * Batch flow, one file per call: read the text of a .txt / .md / .csv / .pdf / .docx upload, then create and index the source
+ * through the same path as addKnowledge. FormData: file, visibility, module, topic, tags (comma separated).
+ */
+export const addKnowledgeFile = async (form: FormData): Promise<Outcome<KnowledgeSource>> =>
+  run(async () => {
+    await managers();
+    const file = form.get("file");
+    if (!(file instanceof File)) throw new Error("Thiếu tệp.");
+    const kind = fileTextKind(file.name);
+    if (!kind) throw new Error("Chỉ nhận .txt, .md, .csv, .pdf hoặc .docx.");
+    if (file.size > MAX_UPLOAD_BYTES) throw new Error("Tệp quá lớn (tối đa 10 MB).");
+    const content = await textFromBytes(kind, new Uint8Array(await file.arrayBuffer()));
+    const mod = String(form.get("module") ?? "");
+    const source = await addSource({
+      kind: "file", title: file.name.replace(/^.*[\\/]/, "").replace(/\.[^.]+$/, ""), content,
+      topic: String(form.get("topic") ?? "") || null,
+      tags: String(form.get("tags") ?? "").split(",").map((x) => x.trim()).filter(Boolean),
+      module: isModuleKey(mod) ? mod : null, visibility: form.get("visibility") === "public" ? "public" : "internal",
+    });
+    refresh();
+    return source;
+  });
+
+/** Batch flow, one link per call: Google Docs/Sheets/Slides/Drive share links become public export URLs, then it is indexed like any link. */
+export const addKnowledgeLink = async (url: string, meta: Omit<AddSourceInput, "kind" | "title" | "content">): Promise<Outcome<KnowledgeSource>> =>
+  run(async () => {
+    await managers();
+    const source = await addSource({ ...meta, kind: "url", title: "", content: url });
     refresh();
     return source;
   });

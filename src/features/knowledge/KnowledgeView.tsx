@@ -9,7 +9,7 @@ import { knowledge } from "@/i18n/dict/knowledge"
 import { decideSuggestion } from "@/lib/knowledge/actions"
 import type { KnowledgeSource, SourceStatus, Visibility } from "@/lib/knowledge/shared"
 import { MODULE_KEYS, type ModuleKey } from "@/lib/modules-shared"
-import { AddSource, type AddPreset } from "./AddSource"
+import { AddDocumentsDrawer, type AddPreset } from "./AddDocumentsDrawer"
 import { AskPanel } from "./AskPanel"
 import { FILTER_CLASS, HEAD_CLASS, ITEM_CLASS, ITEM_MAIN_CLASS, LIST_CLASS, PAGE_CLASS, ROW_WRAP_CLASS, SIDE_CLASS, SOURCE_ROW_CLASS, STACK_CLASS, SUGGEST_ITEM_CLASS } from "./classNames"
 import { knowledgeTrail } from "./trail"
@@ -54,13 +54,13 @@ export const KnowledgeView = ({ sources, topics, suggestions, skipped, canWrite,
             title={t("title")}
             description={t("description")}
             meta={<TextAction href="/knowledge/nivo" size="sm" appearance="inline">{t("nivoLink")}</TextAction>}
-            action={canWrite && !adding ? <Button variant="primary" onPress={() => openAdd(null)}>{t("addButton")}</Button> : undefined}
+            action={canWrite ? <Button variant="primary" onPress={() => openAdd(null)}>{t("addButton")}</Button> : undefined}
           />
         </div>
         {!canWrite ? <Text size="sm" tone="muted">{t("readOnlyNote")}</Text> : null}
 
-        {adding && canWrite ? (
-          <AddSource key={preset?.nonce ?? 0} topics={topics} preset={preset} onCancel={() => setAdding(false)} onDone={() => { setAdding(false); router.refresh() }} />
+        {canWrite ? (
+          <AddDocumentsDrawer isOpen={adding} topics={topics} preset={preset} onClose={() => setAdding(false)} onAdded={() => router.refresh()} />
         ) : null}
 
         <PrimaryRailLayout
