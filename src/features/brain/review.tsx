@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation"
 import { Alert, Badge, Button, EmptyNotice, Input, ListRow, SurfaceListCard, Text } from "@starci/grammar/common"
 import { useLocale, useT } from "@/i18n/client"
 import { brain } from "@/i18n/dict/brain"
-import { decideFact, decideLessonAction, splitFactAction } from "@/lib/brain/actions"
+import { chooseFactAction, decideFact, decideLessonAction, keepCurrentAction, splitFactAction } from "@/lib/brain/actions"
+import { planReview, type ConflictGroup } from "@/lib/brain/conflicts"
 import { suggestResolution, type Fact, type Lesson, type Resolution } from "@/lib/brain/shared"
-import { BUTTONS_CLASS, COMPARE_CLASS, STACK_CLASS } from "./classNames"
-import { sourceLabel, type Lens } from "./shared"
+import { BUTTONS_CLASS, COMPARE_CLASS, OPTIONS_CLASS, OPTION_CLASS, STACK_CLASS } from "./classNames"
+import { dateOf, sourceLabel, type Lens } from "./shared"
 
 /** Props for {@link ReviewPanel}. */
 export type ReviewPanelProps = {
@@ -75,6 +76,125 @@ const ProposalRow = ({ p, current }: { readonly p: Fact; readonly current: Fact 
   )
 }
 
+/** Where a value was read: the document (or other source), its quote and the date, for the last two pieces of evidence. */
+const Provenance = ({ f }: { readonly f: Fact }) => {
+  const t = useT(brain)
+  const locale = useLocale()
+  return (
+    <>
+      {f.evidence.slice(-2).map((e) => (
+        <div key={`${e.kind}:${e.ref}`} className={COMPARE_CLASS}>
+          <Text size="xs" tone="muted">{t("optionSource", { source: e.label })} · {t("optionDate", { date: dateOf(e.at ?? f.proposedAt, locale) })}</Text>
+          {e.quote ? <Text size="xs" tone="muted">&ldquo;{e.quote}&rdquo;</Text> : null}
+        </div>
+      ))}
+      {f.evidence.length === 0 ? <Text size="xs" tone="muted">{t("by", { who: f.proposedBy, source: sourceLabel(t, f.sourceKind), trust: String(f.trust) })} · {t("optionDate", { date: dateOf(f.proposedAt, locale) })}</Text> : null}
+      {f.validFrom ? <Text size="xs" tone="muted">{t("since", { date: dateOf(f.validFrom, locale) })}</Text> : null}
+    </>
+  )
+}
+
+/**
+ * Several waiting values for ONE subject + attribute (two documents disagree, or one says "5k" today and "7k" later): one card, the competing
+ * values side by side with their document, quote and date. Choosing one applies it and rejects the others with a note.
+ */
+const ConflictCard = ({ g }: { readonly g: ConflictGroup }) => {
+  const t = useT(brain)
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
+  const [note, setNote] = useState<Note | null>(null)
+  const [done, setDone] = useState(false)
+  const first = g.options[0] as Fact
+  const finish = (text: string) => {
+    setDone(true)
+    setNote({ tone: "affirmative", text })
+    router.refresh()
+  }
+  const pick = (id: string) => startTransition(async () => {
+    const r = await chooseFactAction(id)
+    if (!r.ok) return setNote({ tone: "negative", text: r.error })
+    finish(t("picked"))
+  })
+  const keep = () => startTransition(async () => {
+    const r = await keepCurrentAction(first.subjectKey, first.attribute)
+    if (!r.ok) return setNote({ tone: "negative", text: r.error })
+    finish(t("keptCurrent"))
+  })
+  const stop = (retireId: string) => startTransition(async () => {
+    const r = await decideFact(retireId, "apply")
+    if (!r.ok) return setNote({ tone: "negative", text: r.error })
+    finish(t("retiredDone"))
+  })
+  return (
+    <ListRow
+      title={`${g.subjectLabel} · ${g.attributeLabel}`}
+      description={t("conflictGroupHint", { n: String(g.options.length) })}
+      badges={<Badge tone="danger">{t("conflictGroup")}</Badge>}
+    >
+      <div className={STACK_CLASS}>
+        <div className={OPTIONS_CLASS}>
+          {g.current ? (
+            <div className={OPTION_CLASS}>
+              <Badge tone="neutral">{t("conflictOptionCurrent")}</Badge>
+              <Text size="sm" weight="semibold">{g.current.value}</Text>
+              <Provenance f={g.current} />
+            </div>
+          ) : null}
+          {g.options.map((o, i) => (
+            <div key={o.id} className={OPTION_CLASS}>
+              <Text size="xs" tone="muted">{t("conflictOption", { n: String(i + 1) })}</Text>
+              <Text size="sm" weight="semibold">{o.value}{o.unit ? ` ${o.unit}` : ""}</Text>
+              <Provenance f={o} />
+              {done ? null : <Button variant="primary" size="sm" isPending={isPending} onPress={() => pick(o.id)}>{t("pickValue")}</Button>}
+            </div>
+          ))}
+        </div>
+        {done ? null : (
+          <div className={BUTTONS_CLASS}>
+            {g.current ? <Button variant="outline" size="sm" isDisabled={isPending} onPress={keep}>{t("keepCurrentValue")}</Button> : <Button variant="ghost" size="sm" isDisabled={isPending} onPress={keep}>{t("reject")}</Button>}
+            {g.retire ? <Button variant="ghost" size="sm" isDisabled={isPending} onPress={() => stop((g.retire as Fact).id)}>{t("retireApply")}</Button> : null}
+          </div>
+        )}
+        {note ? <Alert tone={note.tone} title={note.text} /> : null}
+      </div>
+    </ListRow>
+  )
+}
+
+/** An active value whose only source (a document) changed or was deleted: stop using it, or keep it. Nothing is retired without the owner. */
+const RetireRow = ({ p, current }: { readonly p: Fact; readonly current: Fact | null }) => {
+  const t = useT(brain)
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
+  const [note, setNote] = useState<Note | null>(null)
+  const [done, setDone] = useState(false)
+  const act = (to: "apply" | "reject") => startTransition(async () => {
+    const r = await decideFact(p.id, to, to === "reject" ? t("retireKept") : "")
+    if (!r.ok) return setNote({ tone: "negative", text: r.error })
+    setDone(true)
+    setNote({ tone: "affirmative", text: to === "apply" ? t("retiredDone") : t("retireKept") })
+    router.refresh()
+  })
+  return (
+    <ListRow
+      title={`${p.subjectLabel} · ${p.attributeLabel}`}
+      description={t("retireBody", { value: current?.value ?? p.value })}
+      badges={<Badge tone="warning">{t("retireBadge")}</Badge>}
+    >
+      <div className={STACK_CLASS}>
+        {p.evidence.map((e) => <Text key={`${e.kind}:${e.ref}`} size="xs" tone="muted">{e.label}</Text>)}
+        {done ? null : (
+          <div className={BUTTONS_CLASS}>
+            <Button variant="primary" size="sm" isPending={isPending} onPress={() => act("apply")}>{t("retireApply")}</Button>
+            <Button variant="ghost" size="sm" isDisabled={isPending} onPress={() => act("reject")}>{t("retireKeep")}</Button>
+          </div>
+        )}
+        {note ? <Alert tone={note.tone} title={note.text} /> : null}
+      </div>
+    </ListRow>
+  )
+}
+
 /** A proposed lesson with approve / reject. */
 const LessonRow = ({ l, agent }: { readonly l: Lesson; readonly agent: string }) => {
   const t = useT(brain)
@@ -104,16 +224,13 @@ const LessonRow = ({ l, agent }: { readonly l: Lesson; readonly agent: string })
   )
 }
 
-/** Everything waiting for the owner: fact proposals (conflicts first) and proposed lessons. */
+/** Everything waiting for the owner: conflicts first (one card per key), then single proposals, "no source left" rows and proposed lessons. */
 export const ReviewPanel = ({ facts, lessons, lenses }: ReviewPanelProps) => {
   const t = useT(brain)
-  const active = new Map(facts.filter((f) => f.status === "active").map((f) => [`${f.subjectKey}|${f.attribute}`, f]))
-  const proposals = facts.filter((f) => f.status === "proposed")
-    .map((p) => ({ p, current: active.get(`${p.subjectKey}|${p.attribute}`) ?? null }))
-    .sort((a, b) => Number(b.current !== null) - Number(a.current !== null) || b.p.proposedAt.localeCompare(a.p.proposedAt))
+  const plan = planReview(facts)
   const waitingLessons = lessons.filter((l) => l.status === "proposed")
   const agentName = (m: string | null) => (m === null ? t("lessonsAll") : lenses.find((l) => l.module === m)?.name ?? m)
-  const total = proposals.length + waitingLessons.length
+  const total = plan.cards + waitingLessons.length
   return (
     <SurfaceListCard
       label={`${t("tabReview")} (${total})`}
@@ -122,7 +239,9 @@ export const ReviewPanel = ({ facts, lessons, lenses }: ReviewPanelProps) => {
     >
       {total === 0 ? null : (
         <>
-          {proposals.map(({ p, current }) => <ProposalRow key={p.id} p={p} current={current} />)}
+          {plan.groups.map((g) => <ConflictCard key={g.key} g={g} />)}
+          {plan.singles.map(({ p, current }) => <ProposalRow key={p.id} p={p} current={current} />)}
+          {plan.retires.map(({ p, current }) => <RetireRow key={p.id} p={p} current={current} />)}
           {waitingLessons.map((l) => <LessonRow key={l.id} l={l} agent={agentName(l.module)} />)}
         </>
       )}

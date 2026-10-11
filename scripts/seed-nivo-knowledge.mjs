@@ -31,16 +31,18 @@ const parse = (file) => {
   return { module, slug, title: meta.title, kind: meta.kind, version: Number(meta.version) || 1, body: m[2].trim() };
 };
 
+// Same default as src/lib/knowledge/embed.ts (qwen3-embedding, 1536 dimensions); every stored vector says which model made it.
+const EMBED_MODEL = process.env.EMBEDDING_MODEL || "qwen/qwen3-embedding-8b";
 const embedAll = async (texts) => {
   const key = process.env.EMBEDDING_API_KEY || process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || process.env.DEEPSEEK_API_KEY;
   if (!key) return null;
   const base = (process.env.EMBEDDING_BASE_URL || "https://openrouter.ai/api/v1").replace(/\/+$/, "");
-  const model = process.env.EMBEDDING_MODEL || "openai/text-embedding-3-small";
+  const model = EMBED_MODEL;
   const out = [];
   for (let i = 0; i < texts.length; i += 16) {
     const res = await fetch(`${base}/embeddings`, {
       method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-      body: JSON.stringify({ model, input: texts.slice(i, i + 16).map((t) => t.slice(0, 8000)) }),
+      body: JSON.stringify({ model, input: texts.slice(i, i + 16).map((t) => t.slice(0, 8000)), dimensions: 1536 }),
     });
     if (!res.ok) { console.error(`embeddings provider ${res.status}`); return null; }
     const j = await res.json();
@@ -62,7 +64,7 @@ for (const i of items) { if (slugs.has(i.slug)) throw new Error(`duplicate slug 
 
 const vectors = await embedAll(items.map((i) => `${i.title}\n\n${i.body}`));
 const now = new Date().toISOString();
-const rows = items.map((i, n) => ({ ...i, embedding: vectors ? `[${vectors[n].join(",")}]` : null, updated_at: now }));
+const rows = items.map((i, n) => ({ ...i, embedding: vectors ? `[${vectors[n].join(",")}]` : null, embedding_model: vectors ? EMBED_MODEL : null, updated_at: now }));
 const { error } = await db.from("nivo_knowledge").upsert(rows, { onConflict: "slug" });
 if (error) { console.error("upsert failed:", error.message); process.exit(1); }
 

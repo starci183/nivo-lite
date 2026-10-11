@@ -7,7 +7,7 @@ import { generateWithOpenClaw } from "../openclaw-generate"
 import { supabaseAdmin } from "../supabase/admin"
 import { getSession } from "../session"
 import type { Outcome } from "../types"
-import { applyFact, proposeFact, rejectFact, retireFact, splitFact, type ProposeOutcome } from "./facts"
+import { applyFact, chooseFact, keepCurrent, proposeFact, rejectFact, retireFact, splitFact, type ProposeOutcome } from "./facts"
 import { mineLessons, type MineResult } from "./learn"
 import { decideLesson, proposeLesson, retireLesson } from "./lessons"
 import type { Fact, Lesson, Scope, SubjectType } from "./shared"
@@ -68,6 +68,22 @@ export const decideFact = async (id: string, to: "apply" | "reject", note = ""):
   const fact = to === "apply" ? await applyFact(db, me.ws, id, me.name, note) : await rejectFact(db, me.ws, id, me.name, note)
   await changed(me.ws)
   return fact
+})
+
+/** Several documents disagree: this value is applied and every other waiting value for the same subject + attribute is rejected with a note. */
+export const chooseFactAction = async (id: string): Promise<Outcome<Fact>> => run(async () => {
+  const me = await manager()
+  const fact = await chooseFact(supabaseAdmin(), me.ws, id, me.name)
+  await changed(me.ws)
+  return fact
+})
+
+/** Several documents disagree: keep what is in force and reject every waiting value for that subject + attribute. */
+export const keepCurrentAction = async (subjectKey: string, attribute: string): Promise<Outcome<number>> => run(async () => {
+  const me = await manager()
+  const n = await keepCurrent(supabaseAdmin(), me.ws, subjectKey, attribute, me.name)
+  await changed(me.ws)
+  return n
 })
 
 /** Keep both values: the proposal becomes its own fact for the situation it names; the current value stays. */

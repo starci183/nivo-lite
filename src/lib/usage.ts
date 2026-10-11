@@ -9,8 +9,11 @@ import type { ModuleKey } from "./module-registry";
  * nothing is recorded and nothing is blocked (scripts, tests).
  */
 
-/** `guide` is the in-app navigation assistant: NIVO pays for it, so it is metered but never blocked and never counts toward the allowance. */
-export type UsageKind = "chat_reply" | "setup" | "owner_chat" | "relay" | "embedding" | "engine" | "guide";
+/**
+ * `guide` is the in-app navigation assistant: NIVO pays for it, so it is metered but never blocked and never counts toward the allowance.
+ * `brain` is the second brain's own work (reading facts out of documents): charged to the workspace's credits like any non-customer call.
+ */
+export type UsageKind = "chat_reply" | "setup" | "owner_chat" | "relay" | "embedding" | "engine" | "guide" | "brain";
 export type UsageModule = ModuleKey | "setup" | "office" | "knowledge" | "other";
 export type UsageScope = { readonly workspaceId: string; readonly kind?: UsageKind; readonly module?: UsageModule };
 
@@ -27,6 +30,7 @@ export const usageScope = (): UsageScope | undefined => store.getStore();
 /** USD per 1M tokens, used only when the provider returns no cost. TO_CONFIRM: approximate list prices, not a contract. */
 const PRICES: ReadonlyArray<{ readonly match: string; readonly in: number; readonly out: number }> = [
   { match: "deepseek", in: 0.14, out: 0.28 },
+  { match: "qwen3-embedding", in: 0.01, out: 0 },
   { match: "text-embedding-3-small", in: 0.02, out: 0 },
   { match: "text-embedding-3-large", in: 0.13, out: 0 },
 ];
@@ -191,8 +195,10 @@ const CUSTOMER_FACING: ReadonlySet<UsageKind> = new Set(["chat_reply", "relay"])
  * Before a model call: the status when the call must NOT be made (over the allowance), else null. Fails open when the status
  * cannot be read. The owner is told once that the limit was reached.
  */
-export const blockedBy = async (workspaceId: string, kind: UsageKind): Promise<QuotaStatus | null> => {
-  if (kind === "embedding") return null; // cheap, and callers already fall back to full-text search
+export const blockedBy = async (workspaceId: string, kind: UsageKind, opts: { readonly bulk?: boolean } = {}): Promise<QuotaStatus | null> => {
+  // Embedding one query or one small document is cheap and callers fall back to full-text search, so it is never blocked; a BULK embedding
+  // (a very large document, a re-embed batch) is real spend and stops with the credits.
+  if (kind === "embedding" && !opts.bulk) return null;
   if (kind === "guide") return null; // paid by NIVO, outside the workspace allowance
   const s = await quotaStatus(workspaceId);
   if (!s) return null;

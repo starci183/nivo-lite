@@ -1,7 +1,11 @@
+import { after } from "next/server"
 import { PageContainer, SectionHeader } from "@starci/grammar/common"
 import { KnowledgeView } from "@/features/knowledge/KnowledgeView"
 import { getLocale, getT } from "@/i18n/server"
 import { knowledge as dict } from "@/i18n/dict/knowledge"
+import { drainBrainWork } from "@/lib/brain/doc-facts"
+import { reembedStale } from "@/lib/knowledge/reembed"
+import { supabaseAdmin } from "@/lib/supabase/admin"
 import { getBusinessType, listSources, listSuggestionStates, openSuggestions, topicsFrom } from "@/lib/knowledge/index"
 import { KNOWLEDGE_SUGGESTIONS, suggestionTopic } from "@/lib/knowledge/shared"
 import { isManagerRole } from "@/lib/members-shared"
@@ -21,6 +25,8 @@ const Page = async ({ searchParams }: { readonly searchParams: Promise<{ module?
       canWrite ? listSuggestionStates() : Promise.resolve<Record<string, "dismissed" | "not_applicable">>({}),
       canWrite ? getBusinessType() : Promise.resolve(null),
     ])
+    // Re-embedding after a model change and reading the facts of queued documents run after the response, bounded.
+    if (canWrite) after(async () => { await reembedStale(supabaseAdmin(), session.workspace.id); await drainBrainWork(session.workspace.id) })
     const installed: Array<ModuleKey> = installations.map((i) => i.moduleKey)
     const topics = topicsFrom(sources)
     const suggestions = canWrite ? await openSuggestions(installed, locale, { states, topics, businessType }) : []

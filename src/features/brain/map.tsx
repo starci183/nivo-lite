@@ -4,6 +4,7 @@ import { useMemo, useState } from "react"
 import { Badge, Divider, EmptyNotice, ListRow, SurfaceCard, SurfaceListCard, Text } from "@starci/grammar/common"
 import { useLocale, useT } from "@/i18n/client"
 import { brain } from "@/i18n/dict/brain"
+import { hasConflict } from "@/lib/brain/conflicts"
 import { visibleTo, type Fact, type SubjectType } from "@/lib/brain/shared"
 import { LEGEND_CLASS, LEGEND_DOT_CLASS, LEGEND_ITEM_CLASS, MAP_EMPTY_BAND_CLASS, MAP_GRID_CLASS, MAP_SVG_CLASS } from "./classNames"
 import { SCOPE_KEY, SCOPE_TONE, dateOf, sourceLabel, subjectsOf, typeLabel, type Lens, type Subject } from "./shared"
@@ -36,7 +37,7 @@ type Bubble = { key: string; label: string; type: SubjectType; subjects: Readonl
 const healthOf = (subjects: ReadonlyArray<Subject>, lens: Lens | null): { health: Health; seen: number; total: number } => {
   const facts = subjects.flatMap((s) => s.active)
   const seen = lens ? facts.filter((f) => visibleTo(f, lens.audience, lens.module)).length : facts.length
-  const conflict = subjects.some((s) => s.proposed.some((p) => s.active.some((a) => a.attribute === p.attribute)))
+  const conflict = subjects.some((s) => hasConflict(s.active, s.proposed))
   const pending = subjects.some((s) => s.proposed.length > 0)
   const health: Health = lens && seen === 0 ? "hidden" : conflict ? "conflict" : pending ? "pending" : "ok"
   return { health, seen, total: facts.length }

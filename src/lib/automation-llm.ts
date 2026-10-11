@@ -7,8 +7,8 @@ import { generateWithOpenClaw } from "./openclaw-generate";
  */
 export type GenerateRequest = {
   readonly workspaceId: string;
-  /** What the text is for: "personalize" (once, at enable time) or "per_case" (one customer message) or "classify" (a one-word label). */
-  readonly purpose: "personalize" | "per_case" | "classify";
+  /** What the text is for: "personalize" (once, at enable time) or "per_case" (one customer message) or "classify" (a one-word label) or "brain_facts" (facts read out of one document; billed under usage kind "brain" by the caller's usage scope). */
+  readonly purpose: "personalize" | "per_case" | "classify" | "brain_facts";
   readonly system: string;
   readonly prompt: string;
 };

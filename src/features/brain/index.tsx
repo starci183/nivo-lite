@@ -4,7 +4,9 @@ import { useState } from "react"
 import { Breadcrumbs, Button, DescriptionList, PageContainer, PrimaryRailLayout, SectionHeader, SurfaceCard, Tabs, Text, TextAction } from "@starci/grammar/common"
 import { useT } from "@/i18n/client"
 import { brain } from "@/i18n/dict/brain"
-import type { Fact, Lesson } from "@/lib/brain/shared"
+import { planReview } from "@/lib/brain/conflicts"
+import type { ExtractionInfo, Fact, Lesson } from "@/lib/brain/shared"
+import { CreditsAlert } from "./CreditsAlert"
 import { HEAD_CLASS, LENS_CLASS, PAGE_CLASS, STACK_CLASS } from "./classNames"
 import { FactsPanel } from "./facts"
 import { useRouter } from "next/navigation"
@@ -23,6 +25,8 @@ export type BrainViewProps = {
   readonly documents: ReadonlyArray<BrainDoc>
   readonly lessons: ReadonlyArray<Lesson>
   readonly lenses: ReadonlyArray<Lens>
+  /** Where the reading of each document's facts stands. */
+  readonly extractions?: ReadonlyArray<ExtractionInfo>
   readonly canWrite: boolean
   /** The workspace's name: the subject of the starter facts (opening hours, address...). */
   readonly business: string
@@ -34,18 +38,21 @@ type Surface = "map" | "review" | "facts" | "lessons"
  * Bộ não, laid out like Tri thức: header, actions, four key figures, then the active surface with the rail beside it
  * (agent views, what is worth adding, how it learns). Review opens first when something waits.
  */
-export const BrainView = ({ facts, documents, lessons, lenses, canWrite, business }: BrainViewProps) => {
+export const BrainView = ({ facts, documents, lessons, lenses, extractions = [], canWrite, business }: BrainViewProps) => {
   const t = useT(brain)
   const active = facts.filter((f) => f.status === "active")
   const scheduled = facts.filter((f) => f.status === "scheduled").length
-  const proposed = facts.filter((f) => f.status === "proposed")
-  const conflicts = proposed.filter((p) => active.some((a) => a.subjectKey === p.subjectKey && a.attribute === p.attribute)).length
+  // One card per key: a key whose waiting values disagree counts once, and as a conflict (see planReview).
+  const plan = planReview(facts)
+  const conflicts = plan.conflicts
   const lessonsActive = lessons.filter((l) => l.status === "active").length
   const lessonsProposed = lessons.filter((l) => l.status === "proposed").length
-  const waiting = proposed.length + lessonsProposed
+  const waiting = plan.cards + lessonsProposed
+  const reading = extractions.filter((x) => x.status === "queued" || x.status === "running").length
+  const outOfCredits = extractions.some((x) => x.status === "blocked_credits")
   // While the brain is empty the empty state owns the one primary "add" (CTA-1 case-5); the header offers it once there is something.
   const isEmpty = facts.length === 0 && documents.length === 0
-  const docsIndexing = documents.filter((d) => d.status !== "ready" && d.status !== "failed").length
+  const docsIndexing = documents.filter((d) => d.status !== "ready" && d.status !== "failed").length + reading
 
   const [surface, setSurface] = useState<Surface>(waiting > 0 && canWrite ? "review" : "map")
   const [lensKey, setLensKey] = useState<string | null>(null)
@@ -73,6 +80,8 @@ export const BrainView = ({ facts, documents, lessons, lenses, canWrite, busines
             action={canWrite && !isEmpty ? <Button variant="primary" onPress={addDocs}>{t("addDocs")}</Button> : undefined}
           />
         </div>
+
+        {outOfCredits && canWrite ? <CreditsAlert /> : null}
 
         <SurfaceCard ariaLabel={t("statsLabel")}>
           <DescriptionList

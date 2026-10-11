@@ -33,7 +33,7 @@ export const subjectsOf = (facts: ReadonlyArray<Fact>): Array<Subject> => {
       s.label = f.subjectLabel
       s.type = f.subjectType
     } else if (f.status === "scheduled") s.scheduled.push(f)
-    else s.proposed.push(f)
+    else if (f.proposalKind === "set") s.proposed.push(f) // a "stop using" proposal is handled in the review list, not drawn as a value
     map.set(f.subjectKey, s)
   }
   return [...map.entries()].map(([key, s]) => ({ key, ...s })).sort((a, b) => a.label.localeCompare(b.label, "vi"))

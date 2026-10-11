@@ -325,13 +325,13 @@ const chunkText = (text, size = CHUNK_SIZE, overlap = CHUNK_OVERLAP) => {
 };
 const embedKey = process.env.EMBEDDING_API_KEY || process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || process.env.DEEPSEEK_API_KEY;
 const embedBase = (process.env.EMBEDDING_BASE_URL || process.env.DEEPSEEK_BASE_URL || "https://openrouter.ai/api/v1").replace(/\/+$/, "");
-const embedModel = process.env.EMBEDDING_MODEL || "openai/text-embedding-3-small";
+const embedModel = process.env.EMBEDDING_MODEL || "qwen/qwen3-embedding-8b";
 const embedTexts = async (texts) => {
   if (!embedKey || !texts.length) return null;
   const out = [];
   for (let i = 0; i < texts.length; i += 16) {
     const input = texts.slice(i, i + 16).map((t) => t.slice(0, 8000));
-    const res = await fetch(`${embedBase}/embeddings`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${embedKey}` }, body: JSON.stringify({ model: embedModel, input }) });
+    const res = await fetch(`${embedBase}/embeddings`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${embedKey}` }, body: JSON.stringify({ model: embedModel, input, dimensions: 1536 }) });
     if (!res.ok) { console.error(`embeddings provider ${res.status}`); return null; }
     const rows = [...((await res.json()).data ?? [])].sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
     if (rows.length !== input.length || rows.some((r) => r.embedding?.length !== 1536)) { console.error("embeddings: unexpected shape"); return null; }
@@ -410,7 +410,7 @@ const seedSource = async (s) => {
   } else {
     id = ok(await db.from("knowledge_sources").insert({ workspace_id: WS, ...base, created_by: owner.id }).select("id").single(), "source insert").id;
   }
-  const rows = pieces.map((content, ord) => ({ workspace_id: WS, source_id: id, module: null, visibility: s.visibility, ord, content, embedding: vectors ? toVector(vectors[ord]) : null }));
+  const rows = pieces.map((content, ord) => ({ workspace_id: WS, source_id: id, module: null, visibility: s.visibility, ord, content, embedding: vectors ? toVector(vectors[ord]) : null, embedding_model: vectors ? embedModel : null }));
   ok(await db.from("knowledge_chunks").insert(rows), "chunks insert");
   log(`knowledge "${s.title}" (${s.visibility}): ${pieces.length} chunk(s)${vectors ? ", embedded" : ", NO embeddings"}`);
 };
@@ -429,7 +429,7 @@ log(`counts: installations=${inst} context_versions=${vers} setup_messages=${msg
 {
   const query = "combo thư giãn giá bao nhiêu";
   const qv = (await embedTexts([query]))?.[0];
-  const r = await db.rpc("match_knowledge", { p_workspace: WS, p_module: "chatbot", p_query_embedding: qv ? toVector(qv) : null, p_query: query, p_limit: 8, p_audience: "customer" });
+  const r = await db.rpc("match_knowledge", { p_workspace: WS, p_module: "chatbot", p_query_embedding: qv ? toVector(qv) : null, p_query: query, p_limit: 8, p_audience: "customer", p_query_model: qv ? embedModel : null });
   if (r.error) { log(`match_knowledge error: ${r.error.message}`); process.exitCode = 1; }
   else {
     const biz = r.data.filter((x) => x.layer === "business");

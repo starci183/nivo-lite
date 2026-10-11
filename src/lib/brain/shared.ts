@@ -13,6 +13,7 @@ export type SourceKind = "owner" | "manager" | "document" | "system" | "staff" |
 export type LessonStatus = "proposed" | "active" | "retired" | "rejected"
 export type LessonOrigin = "edits" | "note" | "outcome" | "manual"
 export type Audience = "customer" | "internal"
+export type ProposalKind = "set" | "retire"
 
 export const SUBJECT_TYPES: ReadonlyArray<SubjectType> = ["business", "product", "service", "policy", "customer", "person", "supplier", "place", "other"]
 export const SCOPES: ReadonlyArray<Scope> = ["public", "internal", "restricted"]
@@ -25,6 +26,9 @@ export type Evidence = {
   readonly quote?: string
   readonly at?: string
   readonly connectionId?: string
+  /** Document evidence: the knowledge source it was read from and its title (`ref` and `label` carry the same two values). */
+  readonly sourceId?: string
+  readonly title?: string
 }
 
 export type Fact = {
@@ -46,6 +50,8 @@ export type Fact = {
   readonly validTo: string | null
   readonly supersedesId: string | null
   readonly conflictWith: string | null
+  /** 'set' = a value; 'retire' = a proposal to stop using the active fact in `conflictWith` (its last evidence is gone). */
+  readonly proposalKind: ProposalKind
   readonly evidence: ReadonlyArray<Evidence>
   readonly proposedBy: string
   readonly proposedAt: string
@@ -92,6 +98,14 @@ export const numberOf = (raw: string): number | null => {
   // With a scale word "1,2" / "1.5" is a decimal; without one "650.000" / "650,000" groups thousands.
   const n = scale > 1 ? Number(digits.replace(",", ".")) : Number(digits.replace(/[.,](?=\d{3}(\D|$))/g, "").replace(",", "."))
   return Number.isFinite(n) ? Math.round(n * scale * 100) / 100 : null
+}
+
+/** Two values say the same thing: equal numbers, or equal once normalised ("650.000đ" vs "650000 d" are both 650000). */
+export const sameValue = (a: string, b: string): boolean => {
+  const na = numberOf(a)
+  const nb = numberOf(b)
+  if (na !== null && nb !== null && keyOf(a.replace(/[\d.,\s]/g, "")) === keyOf(b.replace(/[\d.,\s]/g, ""))) return na === nb
+  return keyOf(a) === keyOf(b)
 }
 
 /** Whether a fact is visible to an agent with this audience and module (the "view" of the one shared brain). */
@@ -178,3 +192,20 @@ export const suggestResolution = (p: Fact, current: Fact | null, now = Date.now(
     en: `The sources disagree and the new one (${p.trust}) is less trusted than the old one (${current.trust}). Ask ${p.proposedBy} before deciding.`,
   } }
 }
+
+/* ------------------------------------------------------------------ reading facts out of documents */
+
+/** Where the reading of one document stands (brain_extractions.status). `blocked_credits`: the workspace is out of credits, nothing ran. */
+export type ExtractionStatus = "queued" | "running" | "done" | "failed" | "blocked_credits"
+
+/** What the UI needs of a document's extraction record. */
+export type ExtractionInfo = {
+  readonly sourceId: string
+  readonly status: ExtractionStatus
+  /** Facts filed from this document (new proposals, evidence added to waiting or active facts). */
+  readonly factsProposed: number
+  readonly error: string | null
+}
+
+/** Whether the reading will not change any more without outside help (shown as done, failed or paused). */
+export const extractionSettled = (s: ExtractionStatus): boolean => s === "done" || s === "failed" || s === "blocked_credits"

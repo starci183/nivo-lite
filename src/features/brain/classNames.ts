@@ -30,3 +30,6 @@ export const HEAD_CLASS = cn("flex", "min-w-0", "flex-col", "gap-2")
 export const SIDE_CLASS = cn("flex", "min-w-0", "flex-col", "gap-4")
 /** Loading: the figures card's four cells, 2 x 2 then one row, as the stat strip lays them out. */
 export const STAT_SKELETON_CLASS = cn("grid", "min-w-0", "grid-cols-2", "gap-6", "md:grid-cols-4")
+/** A conflict card: the competing values side by side (one column on a phone, two from sm up), each in its own bordered box. */
+export const OPTIONS_CLASS = cn("grid", "min-w-0", "grid-cols-1", "gap-3", "sm:grid-cols-2")
+export const OPTION_CLASS = cn("flex", "min-w-0", "flex-col", "items-start", "gap-2", "rounded-lg", "border", "border-separator", "p-3")

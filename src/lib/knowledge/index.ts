@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { unstable_cache } from "next/cache";
+import { after } from "next/server";
 import { getActiveContext } from "../modules-core";
 import { moduleDef } from "../module-registry";
 import { enqueueWorkspaceSync } from "../engine-queue";
@@ -11,8 +12,9 @@ import { supabaseServer } from "../supabase/server";
 import { chunkText } from "./chunk";
 import { linkError, LINK_ERROR, resolveLink } from "./drive";
 import { sniffTextKind, textFromBytes } from "./extract";
-import { embedText, embedTexts, toVector } from "./embed";
-import { withUsage } from "../usage";
+import { embeddingModel, embedText, embedTexts, toVector } from "./embed";
+import { blockedBy, withUsage } from "../usage";
+import { drainBrainWork, onSourceDeleted, queueExtraction } from "../brain/doc-facts";
 import { recall, recallBlock } from "../brain/recall";
 import {
   KNOWLEDGE_SUGGESTIONS, MAX_SOURCE_CHARS, SOURCE_KINDS, suggestionTopic, suggestionsFor,
@@ -170,6 +172,9 @@ export const addSourceFor = async (db: Db, ws: string, userId: string | null, in
 
 export const deleteSource = async (id: string): Promise<void> => {
   const { db, ws } = await ctx();
+  // What the document taught the brain is withdrawn first (pending proposals rejected, active facts that lose their last evidence get a retire proposal).
+  const doomed = await db.from("knowledge_sources").select("title").eq("workspace_id", ws).eq("id", id).maybeSingle();
+  if (doomed.data) await onSourceDeleted(ws, id, (doomed.data as { title: string }).title);
   const { error } = await db.from("knowledge_sources").delete().eq("workspace_id", ws).eq("id", id);
   fail(error);
   await enqueueWorkspaceSync(ws);
@@ -191,30 +196,57 @@ export const updateSource = async (id: string, patch: Partial<Pick<AddSourceInpu
   return toSource(data as SourceRow);
 };
 
+/** Above this many passages a document is a BULK embedding: it stops when the workspace has no credits left (a small one is still indexed). */
+const BULK_CHUNKS = 40;
+
+/** Runs `fn` after the response when there is a request to run after; outside one (engine, scripts) the next /brain or /knowledge load does the work. */
+export const afterResponse = (fn: () => Promise<void>): void => {
+  try {
+    after(fn);
+  } catch {
+    // no request scope
+  }
+};
+
+/** The document is ready: queue the reading of its facts (cheap), and read it after the response. Never throws. */
+const scheduleBrain = async (source: KnowledgeSource): Promise<void> => {
+  try {
+    await queueExtraction(source.workspaceId, source);
+    afterResponse(() => drainBrainWork(source.workspaceId));
+  } catch (e) {
+    console.error("brain: queueing a document failed:", e instanceof Error ? e.message : String(e));
+  }
+};
+
 /**
- * Chunk and embed one source. Without embeddings (no key or provider error) the passages are stored with a null vector:
- * full-text search still finds them, and the source says so. Status goes indexing -> ready | failed.
+ * Chunk and embed one source. Without embeddings (no key, a provider error, or no credits for a very large document) the passages are stored with
+ * a null vector: full-text search still finds them, the source says so, and the re-embed path (reembed.ts) fills the vectors in later.
+ * Every vector is stored with the model that made it. Status goes indexing -> ready | failed; when it is ready the reading of its facts is queued.
  */
 const indexRow = async (db: Db, source: KnowledgeSource): Promise<KnowledgeSource> => {
   await db.from("knowledge_sources").update({ status: "indexing", error: null, updated_at: new Date().toISOString() }).eq("id", source.id);
   try {
     const pieces = chunkText(source.content);
     if (pieces.length === 0) throw new Error("Không có nội dung để lập chỉ mục.");
-    const vectors = await withUsage({ workspaceId: source.workspaceId }, () => embedTexts(pieces));
+    const model = embeddingModel();
+    const noCredits = pieces.length > BULK_CHUNKS && (await blockedBy(source.workspaceId, "embedding", { bulk: true })) !== null;
+    const vectors = noCredits ? null : await withUsage({ workspaceId: source.workspaceId, module: "knowledge" }, () => embedTexts(pieces));
     const del = await db.from("knowledge_chunks").delete().eq("source_id", source.id);
     fail(del.error);
     const rows = pieces.map((content, ord) => ({
       workspace_id: source.workspaceId, source_id: source.id, module: source.module, visibility: source.visibility, ord, content,
-      embedding: vectors ? toVector(vectors[ord] as Array<number>) : null,
+      embedding: vectors ? toVector(vectors[ord] as Array<number>) : null, embedding_model: vectors ? model : null,
     }));
     for (let i = 0; i < rows.length; i += 50) {
       const ins = await db.from("knowledge_chunks").insert(rows.slice(i, i + 50));
       fail(ins.error);
     }
-    const note = vectors ? null : "Chưa tạo được vector ngữ nghĩa; vẫn tìm được theo từ khóa.";
+    const note = vectors ? null : noCredits ? "Hết credit: đã lưu và tìm được theo từ khóa; vector ngữ nghĩa sẽ tạo khi bạn nạp thêm credit." : "Chưa tạo được vector ngữ nghĩa; vẫn tìm được theo từ khóa.";
     const { data, error } = await db.from("knowledge_sources").update({ status: "ready", error: note, chunk_count: pieces.length, updated_at: new Date().toISOString() }).eq("id", source.id).select().single();
     fail(error);
-    return toSource(data as SourceRow);
+    const ready = toSource(data as SourceRow);
+    await scheduleBrain(ready);
+    return ready;
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     const { data } = await db.from("knowledge_sources").update({ status: "failed", error: message.slice(0, 400), updated_at: new Date().toISOString() }).eq("id", source.id).select().single();
@@ -248,6 +280,8 @@ const matchWith = async (db: Db, a: { workspaceId: string; module: ModuleKey; qu
   const vector = a.query.trim() ? await withUsage({ workspaceId: a.workspaceId }, () => embedText(a.query)) : null;
   const { data, error } = await db.rpc("match_knowledge", {
     p_workspace: a.workspaceId, p_module: a.module, p_query_embedding: vector ? toVector(vector) : null, p_query: a.query, p_limit: a.limit, p_audience: a.audience,
+    // Only vectors made by this same model are compared with the query vector (see 20261021100000_embedding_model.sql).
+    p_query_model: vector ? embeddingModel() : null,
   });
   if (error) { console.error("match_knowledge failed:", error.message); return []; }
   return ((data ?? []) as Array<MatchRow>).map((r) => ({

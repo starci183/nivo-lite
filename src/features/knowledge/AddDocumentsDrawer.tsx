@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from "react"
 import { Alert, Badge, Button, ComboBox, Drawer, FileDropzone, Input, List, ListItem, ListRow, SegmentedControl, Select, SurfaceListCard, Textarea } from "@starci/grammar/common"
 import { useT } from "@/i18n/client"
 import { knowledge } from "@/i18n/dict/knowledge"
-import { addKnowledge, addKnowledgeFile, addKnowledgeLink } from "@/lib/knowledge/actions"
+import { CreditsAlert } from "@/features/brain/CreditsAlert"
+import { extractionSettled, type ExtractionInfo } from "@/lib/brain/shared"
+import { addKnowledge, addKnowledgeFile, addKnowledgeLink, pollExtractions } from "@/lib/knowledge/actions"
 import { faqToText } from "@/lib/knowledge/chunk"
 import { LINK_ERROR, linkErrorCode, parseLinks, resolveLink } from "@/lib/knowledge/drive"
 import type { Visibility } from "@/lib/knowledge/shared"
@@ -20,6 +22,8 @@ type Item = {
   readonly size?: number
   readonly file?: File
   readonly status: ItemStatus
+  /** The source created for it once indexed: its facts are read afterwards (brain_extractions). */
+  readonly sourceId?: string
   /** Raw server message, or a ready-made key for a client-side failure. */
   readonly error?: string
 }
@@ -77,6 +81,32 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
       setVisibility(preset.visibility ?? "internal")
     }
   }, [preset])
+
+  // Progress of reading facts out of the documents added in this run: polled while any is still being read (the poll also nudges waiting work).
+  const [extractions, setExtractions] = useState<Record<string, ExtractionInfo>>({})
+  const watched = items.filter((x) => x.status === "ready" && x.sourceId).map((x) => x.sourceId as string)
+  const watchedKey = watched.join(",")
+  const unsettled = watched.some((id) => { const e = extractions[id]; return !e || !extractionSettled(e.status) })
+  useEffect(() => {
+    if (!isOpen || !unsettled) return
+    let cancelled = false
+    const ids = watchedKey.split(",").filter(Boolean)
+    const tick = async () => {
+      const r = await pollExtractions(ids)
+      if (!cancelled && r.ok) setExtractions((cur) => ({ ...cur, ...Object.fromEntries(r.data.map((x) => [x.sourceId, x])) }))
+    }
+    void tick()
+    const handle = setInterval(() => { void tick() }, 5000)
+    return () => { cancelled = true; clearInterval(handle) }
+  }, [isOpen, unsettled, watchedKey])
+  const outOfCredits = watched.some((id) => extractions[id]?.status === "blocked_credits")
+  const factsNote = (id: string | undefined): string | null => {
+    if (!id) return null
+    const e = extractions[id]
+    if (!e || e.status === "queued" || e.status === "running") return t("extReading")
+    if (e.status === "done") return e.factsProposed > 0 ? t("extDone", { n: e.factsProposed }) : t("extNone")
+    return e.status === "blocked_credits" ? t("extBlocked") : t("extFailed")
+  }
 
   const patch = (id: string, change: Partial<Item>) => setItems((cur) => cur.map((x) => (x.id === id ? { ...x, ...change } : x)))
 
@@ -136,7 +166,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
       }
       if (!result.ok) { patch(item.id, { status: "failed", error: result.error }); return false }
       if (result.data.status === "failed") { patch(item.id, { status: "failed", error: result.data.error ?? t("saveFailed") }); return false }
-      patch(item.id, { status: "ready" })
+      patch(item.id, { status: "ready", sourceId: result.data.id })
       return true
     } catch (e) {
       patch(item.id, { status: "failed", error: e instanceof Error ? e.message : String(e) })
@@ -240,7 +270,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
                   <ListRow
                     key={x.id}
                     title={x.name}
-                    description={x.status === "failed" && x.error ? message(x.error) : [t(x.kind === "file" ? "itemFile" : "itemLink"), x.size ? sizeLabel(x.size) : null].filter(Boolean).join(" · ")}
+                    description={x.status === "failed" && x.error ? message(x.error) : [t(x.kind === "file" ? "itemFile" : "itemLink"), x.size ? sizeLabel(x.size) : null, x.status === "ready" ? factsNote(x.sourceId) : null].filter(Boolean).join(" · ")}
                     badges={<Badge isDot tone={STATUS_TONE[x.status]}>{t(`item${x.status[0]?.toUpperCase()}${x.status.slice(1)}` as "itemWaiting")}</Badge>}
                     actions={x.status === "waiting" || x.status === "failed" ? <Button variant="ghost" size="sm" isDisabled={busy} onPress={() => setItems((cur) => cur.filter((y) => y.id !== x.id))}>{t("itemRemove")}</Button> : undefined}
                   />
@@ -248,6 +278,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
               </SurfaceListCard>
             ) : null}
             {doneCount > 0 && !busy ? <Alert title={t("batchDone", { count: doneCount })} tone="affirmative" /> : null}
+            {outOfCredits ? <CreditsAlert /> : null}
           </div>
         ) : (
           <div className={STACK_CLASS}>

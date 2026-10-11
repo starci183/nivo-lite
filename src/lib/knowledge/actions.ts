@@ -2,12 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { requireRole, getCurrentMember } from "../members";
+import { drainBrainWork, extractionsOf } from "../brain/doc-facts";
+import type { ExtractionInfo } from "../brain/shared";
+import { getSession } from "../session";
 import { fileTextKind, textFromBytes } from "./extract";
 import type { ModuleKey } from "../modules-shared";
 import { isModuleKey } from "../modules-shared";
 import type { Outcome } from "../types";
 import {
-  addSource, deleteSource, reindexSource, searchKnowledge, setSuggestionState, updateSource,
+  addSource, afterResponse, deleteSource, reindexSource, searchKnowledge, setSuggestionState, updateSource,
   type AddSourceInput, type Audience, type KnowledgeSource, type Passage, type SuggestionState,
 } from "./index";
 
@@ -108,4 +111,17 @@ export const decideSuggestion = async (key: string, state: SuggestionState | nul
     refresh();
     revalidatePath("/", "layout");
     return null;
+  });
+
+/**
+ * Progress of reading facts out of documents, for the Add documents drawer ("Đang đọc sự thật…" / "Đã đề xuất N sự thật"). Asking also gives
+ * work that is still waiting a push: it runs after this response, bounded, and never blocks the poll.
+ */
+export const pollExtractions = async (sourceIds: Array<string>): Promise<Outcome<Array<ExtractionInfo>>> =>
+  run(async () => {
+    await managers();
+    const ws = (await getSession()).workspace.id;
+    const list = await extractionsOf(ws, sourceIds.slice(0, 50));
+    if (list.some((x) => x.status === "queued" || x.status === "running")) afterResponse(() => drainBrainWork(ws));
+    return list;
   });

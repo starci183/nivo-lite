@@ -167,6 +167,11 @@ export const knowledge = defineDict({
     noteRecorded: "Noted in the context draft of {agent}. An owner or manager needs to approve it in Setup: /m/{module}",
     notesSourceOffice: "Office",
     notesSourceSetup: "Setup",
+    extReading: "Reading facts...",
+    extDone: "Proposed {n} facts",
+    extNone: "No facts found",
+    extBlocked: "Waiting for credits",
+    extFailed: "Could not read facts",
   },
   vi: {
     ...REGISTRY_MODULE_LABELS.vi,
@@ -324,5 +329,10 @@ export const knowledge = defineDict({
     noteRecorded: "Đã ghi vào bản nháp context của {agent}, chờ chủ hoặc quản lý duyệt ở Setup: /m/{module}",
     notesSourceOffice: "Office",
     notesSourceSetup: "Setup",
+    extReading: "Đang đọc sự thật…",
+    extDone: "Đã đề xuất {n} sự thật",
+    extNone: "Không tìm thấy sự thật nào",
+    extBlocked: "Chờ nạp credit",
+    extFailed: "Chưa đọc được sự thật",
   },
 });
