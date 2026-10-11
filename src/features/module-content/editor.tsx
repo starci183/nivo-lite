@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useRef, useState, useTransition } from "react";
-import { Alert, Button, Checkbox, Dialog, Input, SectionHeader, Select, Tabs, Text, Textarea } from "@starci/grammar/common";
+import { useMemo, useState, useTransition } from "react";
+import { Alert, Button, CheckboxGroup, Dialog, FileDropzone, Input, List, ListItem, MediaFrame, SectionHeader, Select, SurfaceCard, Tabs, Text, TextAction, Textarea, Timeline } from "@starci/grammar/common";
 import { useT } from "@/i18n/client";
 import { content } from "@/i18n/dict/content";
 import { supabaseBrowser } from "@/lib/supabase/browser";
@@ -13,7 +13,7 @@ import {
 } from "@/lib/module-content-shared";
 import { claimWarnings } from "@/lib/module-content-claims";
 import { draftItemAction, markPublishedAction, saveItemAction, submitForApprovalAction, transitionItemAction } from "./actions";
-import { CHIPS_CLASS_NAME, FORM_CLASS_NAME, FORM_ROW_CLASS_NAME, HISTORY_CLASS_NAME, MEDIA_GRID_CLASS_NAME, MEDIA_TILE_CLASS_NAME, QUOTE_CLASS_NAME, THUMB_CLASS_NAME } from "./classNames";
+import { CHIPS_CLASS_NAME, FORM_CLASS_NAME, FORM_ROW_CLASS_NAME, MEDIA_GRID_CLASS_NAME, MEDIA_TILE_CLASS_NAME, QUOTE_CLASS_NAME } from "./classNames";
 import { dateText, dateTimeText, timeText, toIso } from "./format";
 import { StatusBadge } from "./parts";
 
@@ -29,12 +29,18 @@ const MediaThumb = ({ m, urls }: { readonly m: MediaRef; readonly urls: ContentW
   const key = m.kind === "video_render" ? `video:${m.id}` : (m.path ?? "");
   const url = urls[key]?.view;
   if (isImage(m) && url) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={url} alt={m.name} className={THUMB_CLASS_NAME} loading="lazy" />;
+    return (
+      <MediaFrame aspect="landscape">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={url} alt={m.name} loading="lazy" />
+      </MediaFrame>
+    );
   }
-  if (m.kind === "video_render" && url) return <video src={url} className={THUMB_CLASS_NAME} controls preload="metadata" />;
-  return <div className={`${THUMB_CLASS_NAME} flex items-center justify-center`}><Text size="xs" tone="muted">{m.name}</Text></div>;
+  if (m.kind === "video_render" && url) return <MediaFrame aspect="landscape"><video src={url} controls preload="metadata" aria-label={m.name} /></MediaFrame>;
+  return <Text size="xs" tone="muted">{m.name}</Text>;
 };
+
+const CHANNEL_OPTIONS = CONTENT_CHANNELS.map((c) => ({ value: c, label: channelRule(c).label }));
 
 /** Item editor: details, the text of each channel, media, then (once approved) the "Đăng" step. Idea and draft are editable; the rest is read-only. */
 export const ItemEditor = ({ item, data, onClose }: EditorProps) => {
@@ -44,7 +50,6 @@ export const ItemEditor = ({ item, data, onClose }: EditorProps) => {
   const [busy, setBusy] = useState<string | null>(null);
   const [note, setNote] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
   const [warnings, setWarnings] = useState<ReadonlyArray<string>>([]);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const open = item.status === "idea" || item.status === "draft";
   const canManage = data.canManage;
@@ -182,14 +187,10 @@ export const ItemEditor = ({ item, data, onClose }: EditorProps) => {
         {item.holiday_key ? <Text size="sm" tone="muted">{t("holidayTag")}: {item.holiday_key}</Text> : null}
 
         <Input id="ce-title" name="title" label={t("fieldTitle")} variant="secondary" value={title} isDisabled={!editable || isPending} onValueChange={setTitle} />
-        <Textarea label={t("fieldBrief")} rows={3} value={brief} isDisabled={!editable || isPending} onValueChange={setBrief} />
+        <Textarea variant="secondary" label={t("fieldBrief")} rows={3} value={brief} isDisabled={!editable || isPending} onValueChange={setBrief} />
         <div className={FORM_ROW_CLASS_NAME}>
-          <Select label={t("fieldPillar")} options={pillarOptions} value={pillarId ?? ""} isDisabled={!editable || isPending} onValueChange={(v) => setPillarId(v || null)} />
-          <div className={CHIPS_CLASS_NAME} role="group" aria-label={t("fieldChannels")}>
-            {CONTENT_CHANNELS.map((c) => (
-              <Checkbox key={c} label={channelRule(c).label} isSelected={channels.includes(c)} isDisabled={!editable || isPending} onSelectedChange={(on) => setChannels((cur) => (on ? [...cur, c] : cur.filter((x) => x !== c)))} />
-            ))}
-          </div>
+          <Select variant="secondary" label={t("fieldPillar")} options={pillarOptions} value={pillarId ?? ""} isDisabled={!editable || isPending} onValueChange={(v) => setPillarId(v || null)} />
+          <CheckboxGroup label={t("fieldChannels")} orientation="horizontal" variant="secondary" options={CHANNEL_OPTIONS} value={channels} isDisabled={!editable || isPending} onValueChange={(v) => setChannels(CONTENT_CHANNELS.filter((c) => v.includes(c)))} />
           <Input id="ce-date" name="date" label={t("fieldDate")} variant="secondary" value={date} hint={t("addDateHint")} isDisabled={item.status === "published" || !canManage || isPending} onValueChange={setDate} />
           <Input id="ce-time" name="time" label={t("fieldTime")} variant="secondary" value={time} hint={t("addTimeHint")} isDisabled={item.status === "published" || !canManage || isPending} onValueChange={setTime} />
         </div>
@@ -205,16 +206,16 @@ export const ItemEditor = ({ item, data, onClose }: EditorProps) => {
         ) : null}
 
         {allWarnings.length ? (
-          <Alert tone="cautionary" title={t("draftWarnTitle")} description={<ul className="m-0 list-disc pl-5">{allWarnings.map((w) => <li key={w}>{w}</li>)}</ul>} />
+          <Alert tone="cautionary" title={t("draftWarnTitle")} description={<List label={t("draftWarnTitle")}>{allWarnings.map((w) => <ListItem key={w}><Text as="span" size="sm">{w}</Text></ListItem>)}</List>} />
         ) : null}
 
         {channels.length ? (
           <>
             <Tabs label={t("fieldChannels")} selectedKey={activeTab} inset="none" labelVisibility="always" items={channels.map((c) => ({ id: c, label: channelRule(c).label }))} onSelect={(k) => setTab(k as ContentChannel)} />
             <div className={FORM_CLASS_NAME}>
-              <Textarea label={t("variantFor", { channel: rule.label })} rows={9} value={cur.text} isDisabled={!editable || isPending} onValueChange={(v) => setVariant({ text: v })} description={t("variantChars", { n: cur.text.length, max: rule.max_chars })} />
+              <Textarea variant="secondary" label={t("variantFor", { channel: rule.label })} rows={9} value={cur.text} isDisabled={!editable || isPending} onValueChange={(v) => setVariant({ text: v })} description={t("variantChars", { n: cur.text.length, max: rule.max_chars })} />
               {rule.hashtags.max > 0 ? <Input id={`ce-tags-${activeTab}`} name={`tags-${activeTab}`} label={t("fieldHashtags")} variant="secondary" value={tagText[activeTab] ?? ""} hint={t("fieldHashtagsHint")} isDisabled={!editable || isPending} onValueChange={(v) => setTagText((x) => ({ ...x, [activeTab]: v }))} /> : null}
-              <Textarea label={t("fieldNote")} rows={2} value={cur.note} isDisabled={!editable || isPending} onValueChange={(v) => setVariant({ note: v })} />
+              <Textarea variant="secondary" label={t("fieldNote")} rows={2} value={cur.note} isDisabled={!editable || isPending} onValueChange={(v) => setVariant({ note: v })} />
             </div>
           </>
         ) : null}
@@ -235,19 +236,18 @@ export const ItemEditor = ({ item, data, onClose }: EditorProps) => {
         {editable ? (
           <div className={CHIPS_CLASS_NAME}>
             <Button variant="outline" size="sm" isDisabled={isPending} onPress={() => setPickLibrary((v) => !v)}>{t("mediaAttachLibrary")}</Button>
-            <Button variant="outline" size="sm" isPending={busy === "upload"} isDisabled={isPending} onPress={() => fileRef.current?.click()}>{t("mediaUpload")}</Button>
-            <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,video/mp4" hidden onChange={(e) => { upload(e.target.files?.[0]); e.target.value = ""; }} />
-            {videoOptions.length ? <Select label={t("mediaVideo")} isLabelHidden placeholder={t("mediaVideo")} options={videoOptions} value={null} isDisabled={isPending} onValueChange={(id) => { const v = data.videos.find((x) => x.id === id); if (v) attach({ kind: "video_render", id: v.id, name: v.name }); }} /> : null}
+            <FileDropzone label={t("mediaUpload")} isLabelHidden accept="image/jpeg,image/png,image/webp,video/mp4" hideFileList isDisabled={isPending} prompt={busy === "upload" ? t("mediaUploading") : t("mediaUpload")} onFilesChange={(files) => upload(files[0])} />
+            {videoOptions.length ? <Select variant="secondary" label={t("mediaVideo")} isLabelHidden placeholder={t("mediaVideo")} options={videoOptions} value={null} isDisabled={isPending} onValueChange={(id) => { const v = data.videos.find((x) => x.id === id); if (v) attach({ kind: "video_render", id: v.id, name: v.name }); }} /> : null}
           </div>
         ) : null}
         {editable && pickLibrary ? (
           libraryFree.length === 0 ? <Text size="sm" tone="muted">{t("mediaLibraryEmpty")}</Text> : (
             <div className={MEDIA_GRID_CLASS_NAME}>
               {libraryFree.map((m) => (
-                <button key={m.path} type="button" className={MEDIA_TILE_CLASS_NAME} onClick={() => attach(m)}>
+                <div key={m.path} className={MEDIA_TILE_CLASS_NAME}>
                   <MediaThumb m={m} urls={data.urls} />
-                  <Text size="xs" overflow="truncate">{m.name}</Text>
-                </button>
+                  <TextAction appearance="plain" size="xs" onPress={() => attach(m)}>{m.name}</TextAction>
+                </div>
               ))}
             </div>
           )
@@ -270,8 +270,8 @@ export const ItemEditor = ({ item, data, onClose }: EditorProps) => {
               const v = item.variants[c];
               const files = media.map((m) => ({ m, url: data.urls[m.kind === "video_render" ? `video:${m.id}` : (m.path ?? "")] })).filter((x) => x.url);
               return (
-                <div key={c} className="flex flex-col gap-2 rounded-lg border border-separator p-3">
-                  <div className={CHIPS_CLASS_NAME}><Text weight="semibold">{channelRule(c).label}</Text><Text as="span" size="xs" tone="muted">{t("comingSoon")}</Text></div>
+                <SurfaceCard key={c} depth="nested" label={channelRule(c).label} headingLevel={4} labelEnd={<Text as="span" size="xs" tone="muted">{t("comingSoon")}</Text>}>
+                  <div className={FORM_CLASS_NAME}>
                   {c === "zalo" ? <Text size="xs" tone="muted">{t("zaloNote")}</Text> : null}
                   <div className={QUOTE_CLASS_NAME}><Text as="p" size="sm">{copyText(v)}</Text></div>
                   <div className={CHIPS_CLASS_NAME}>
@@ -287,7 +287,8 @@ export const ItemEditor = ({ item, data, onClose }: EditorProps) => {
                       <Button variant="primary" size="sm" isPending={busy === `posted-${c}`} isDisabled={isPending} onPress={() => markPosted(c)}>{t("markPosted")}</Button>
                     </div>
                   ) : null}
-                </div>
+                  </div>
+                </SurfaceCard>
               );
             })}
           </>
@@ -295,9 +296,7 @@ export const ItemEditor = ({ item, data, onClose }: EditorProps) => {
 
         <SectionHeader level={3} title={t("evidenceTitle")} />
         {item.evidence.length === 0 ? <Text size="sm" tone="muted">{t("evidenceEmpty")}</Text> : (
-          <ul className={HISTORY_CLASS_NAME}>
-            {[...item.evidence].reverse().map((e, i) => <li key={`${e.at}-${i}`}><Text size="xs" tone="muted">{dateTimeText(e.at)} · {e.text}</Text></li>)}
-          </ul>
+          <Timeline label={t("evidenceTitle")} items={[...item.evidence].reverse().map((e, i) => ({ id: `${e.at}-${i}`, title: e.text, dateTime: e.at, timeLabel: dateTimeText(e.at) }))} />
         )}
         {pillarName ? <Text size="xs" tone="muted">{t("fieldPillar")}: {pillarName}</Text> : null}
 

@@ -62,15 +62,15 @@ export const AgentSetupForm = ({ values, onChange, onSubmit, submitLabel, isPend
         </SurfaceCard>
         <SurfaceCard label={t("sectionBehaviour")} headingLevel={2}>
           <div className={CARD_STACK_CLASS_NAME}>
-            <Textarea name="instructions" label={t("fieldInstructions")} description={t("descInstructions")} rows={6} maxLength={LIMITS.instructions} value={values.instructions} isDisabled={isPending} onValueChange={(instructions) => onChange({ instructions })} />
-            <Textarea name="approval_rule" label={t("fieldApproval")} description={t("descApproval")} rows={3} maxLength={LIMITS.approval_rule} value={values.approval_rule} isDisabled={isPending} onValueChange={(approval_rule) => onChange({ approval_rule })} />
+            <Textarea variant="secondary" name="instructions" label={t("fieldInstructions")} description={t("descInstructions")} rows={6} maxLength={LIMITS.instructions} value={values.instructions} isDisabled={isPending} onValueChange={(instructions) => onChange({ instructions })} />
+            <Textarea variant="secondary" name="approval_rule" label={t("fieldApproval")} description={t("descApproval")} rows={3} maxLength={LIMITS.approval_rule} value={values.approval_rule} isDisabled={isPending} onValueChange={(approval_rule) => onChange({ approval_rule })} />
           </div>
         </SurfaceCard>
         <SurfaceCard label={t("sectionKnowledge")} headingLevel={2}>
-          <Textarea name="knowledge" label={t("fieldKnowledge")} description={t("descKnowledge")} rows={6} maxLength={LIMITS.knowledge} placeholder={t("placeholderKnowledge")} value={values.knowledge} isDisabled={isPending} onValueChange={(knowledge) => onChange({ knowledge })} />
+          <Textarea variant="secondary" name="knowledge" label={t("fieldKnowledge")} description={t("descKnowledge")} rows={6} maxLength={LIMITS.knowledge} placeholder={t("placeholderKnowledge")} value={values.knowledge} isDisabled={isPending} onValueChange={(knowledge) => onChange({ knowledge })} />
         </SurfaceCard>
         <SurfaceCard label={t("sectionGreeting")} headingLevel={2}>
-          <Textarea name="greeting" label={t("fieldOpening")} description={t("descOpening")} rows={3} maxLength={LIMITS.greeting} placeholder={t("placeholderOpening")} value={values.greeting} isDisabled={isPending} onValueChange={(greeting) => onChange({ greeting })} />
+          <Textarea variant="secondary" name="greeting" label={t("fieldOpening")} description={t("descOpening")} rows={3} maxLength={LIMITS.greeting} placeholder={t("placeholderOpening")} value={values.greeting} isDisabled={isPending} onValueChange={(greeting) => onChange({ greeting })} />
         </SurfaceCard>
         {beforeSubmit ?? null}
         <div className={CARD_STACK_CLASS_NAME}>
@@ -101,7 +101,7 @@ export const AgentSetupForm = ({ values, onChange, onSubmit, submitLabel, isPend
         </SurfaceCard>
         <SurfaceCard label={t("suggestTitle")} headingLevel={2}>
           <div className={CARD_STACK_CLASS_NAME}>
-            <Textarea name="description" label={t("fieldDescribe")} description={t("descDescribe")} rows={3} value={description} isDisabled={isSuggesting} onValueChange={setDescription} />
+            <Textarea variant="secondary" name="description" label={t("fieldDescribe")} description={t("descDescribe")} rows={3} value={description} isDisabled={isSuggesting} onValueChange={setDescription} />
             {suggestError !== undefined ? <Alert title={t("noSuggestion")} description={suggestError} tone="negative" /> : null}
             <Button variant="secondary" isPending={isSuggesting} isDisabled={description.trim().length < 3} onPress={onSuggest}>{t("suggestTitle")}</Button>
           </div>

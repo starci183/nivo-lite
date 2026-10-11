@@ -1,18 +1,18 @@
 "use client";
 
-import { Alert, Badge, Button, Progress, Select, SurfaceCard, Text, Textarea } from "@starci/grammar/common";
+import { Alert, Badge, Button, HorizontalScrollRegion, List, ListItem, MediaFrame, Progress, Select, SurfaceCard, Text, Textarea } from "@starci/grammar/common";
 import { useT } from "@/i18n/client";
 import { video } from "@/i18n/dict/video";
 import type { Locale } from "@/i18n/core";
 import { estimateScriptSeconds, newScene, type Brand, type MediaItem, type ProjectView, type SceneRole, type ScriptScene } from "@/lib/module-video-shared";
 import {
-  FOOTER_CLASS_NAME, FRAME_CARD_TEXT_CLASS_NAME, FRAME_CLASS_NAME, FRAME_TEXT_CLASS_NAME, MEDIA_IMG_CLASS_NAME, PLAYER_CLASS_NAME, ROW_CLASS_NAME, SCENE_CLASS_NAME, SCENE_HEAD_CLASS_NAME,
-  STACK_CLASS_NAME, STACK_SM_CLASS_NAME, STORYBOARD_CLASS_NAME,
+  FOOTER_CLASS_NAME, FRAME_FILL_CLASS_NAME, ROW_CLASS_NAME, STACK_CLASS_NAME, STACK_SM_CLASS_NAME, STORY_ITEM_CLASS_NAME, STORY_ITEM_WIDE_CLASS_NAME, STORYBOARD_CLASS_NAME,
 } from "./classNames";
 
 const NONE = "none";
 const MAX_SECONDS = 90;
-const ratio = (aspect: string): string => (aspect === "9:16" ? "9 / 16" : aspect === "1:1" ? "1 / 1" : "16 / 9");
+/** The MediaFrame aspect that matches a video frame: portrait for 9:16, square for 1:1, landscape otherwise. */
+const frameAspect = (aspect: string): "portrait" | "square" | "landscape" => (aspect === "9:16" ? "portrait" : aspect === "1:1" ? "square" : "landscape");
 const ROLE_TONE: Record<SceneRole, "accent" | "neutral" | "success"> = { hook: "accent", body: "neutral", cta: "success" };
 
 /* ------------------------------------------------------------------ step 3: the script */
@@ -48,26 +48,27 @@ export const ScriptStep = (p: {
       </SurfaceCard>
 
       {p.scenes.map((s, i) => (
-        <section key={s.id} className={SCENE_CLASS_NAME} aria-label={t("sceneN", { n: i + 1 })}>
-          <div className={SCENE_HEAD_CLASS_NAME}>
+        <SurfaceCard
+          key={s.id} label={t("sceneN", { n: i + 1 })} headingLevel={3}
+          labelEnd={(
             <div className={ROW_CLASS_NAME}>
-              <Text as="span" weight="semibold">{t("sceneN", { n: i + 1 })}</Text>
               <Badge tone={ROLE_TONE[s.role]}>{t(`role_${s.role}`)}</Badge>
-            </div>
-            <div className={ROW_CLASS_NAME}>
               <Button size="sm" variant="ghost" isDisabled={off || i === 0} onPress={() => move(i, -1)}>{t("moveUp")}</Button>
               <Button size="sm" variant="ghost" isDisabled={off || i === p.scenes.length - 1} onPress={() => move(i, 1)}>{t("moveDown")}</Button>
               <Button size="sm" variant="danger-soft" isDisabled={off || p.scenes.length <= 1} onPress={() => p.onScenes(p.scenes.filter((_, k) => k !== i))}>{t("removeScene")}</Button>
             </div>
+          )}
+        >
+          <div className={STACK_CLASS_NAME}>
+            <Textarea label={t("captionLabel")} variant="secondary" rows={2} maxLength={160} value={s.caption} isDisabled={off} onValueChange={(v) => edit(i, { caption: v })} />
+            <Textarea label={t("voiceLabel")} variant="secondary" rows={3} maxLength={420} value={s.voiceover} isDisabled={off} onValueChange={(v) => edit(i, { voiceover: v })} />
+            {s.visual ? <Text size="xs" tone="muted">{t("visualHint", { text: s.visual })}</Text> : null}
+            <Select
+              label={t("mediaPick")} variant="secondary" value={s.media ?? NONE} options={mediaOptions} isDisabled={off}
+              onValueChange={(v) => edit(i, { media: v && v !== NONE ? v : null })}
+            />
           </div>
-          <Textarea label={t("captionLabel")} rows={2} maxLength={160} value={s.caption} isDisabled={off} onValueChange={(v) => edit(i, { caption: v })} />
-          <Textarea label={t("voiceLabel")} rows={3} maxLength={420} value={s.voiceover} isDisabled={off} onValueChange={(v) => edit(i, { voiceover: v })} />
-          {s.visual ? <Text size="xs" tone="muted">{t("visualHint", { text: s.visual })}</Text> : null}
-          <Select
-            label={t("mediaPick")} value={s.media ?? NONE} options={mediaOptions} isDisabled={off}
-            onValueChange={(v) => edit(i, { media: v && v !== NONE ? v : null })}
-          />
-        </section>
+        </SurfaceCard>
       ))}
 
       {p.canEdit ? <div className={ROW_CLASS_NAME}><Button variant="outline" isDisabled={off || p.scenes.length >= 12} onPress={() => p.onScenes([...p.scenes, newScene(p.scenes.length ? "body" : "hook")])}>{t("addScene")}</Button></div> : null}
@@ -88,15 +89,15 @@ export const ScriptStep = (p: {
 const Frame = ({ scene, media, brand, aspect, index }: { readonly scene: ScriptScene; readonly media: ReadonlyArray<MediaItem>; readonly brand: Brand; readonly aspect: string; readonly index: number }) => {
   const m = scene.media ? media.find((x) => x.path === scene.media) : null;
   const dark = index % 2 === 1;
-  const bg = { background: `linear-gradient(160deg, ${dark ? brand.secondary : brand.primary}, ${dark ? brand.primary : brand.secondary})` };
+  // grammar gap: a scene without media previews the brand kit colours (workspace data) as its fill; MediaFrame has no fill slot.
+  const fill = { background: `linear-gradient(160deg, ${dark ? brand.secondary : brand.primary}, ${dark ? brand.primary : brand.secondary})` };
   return (
-    <div className={FRAME_CLASS_NAME} style={{ height: aspect === "16:9" ? 108 : 176, aspectRatio: ratio(aspect), ...(m?.url ? {} : bg) }}>
+    <MediaFrame aspect={frameAspect(aspect)} caption={scene.caption ? <Text as="span" size="xs">{scene.caption}</Text> : undefined}>
       {m?.url ? (m.kind === "image"
         // eslint-disable-next-line @next/next/no-img-element
-        ? <img src={m.url} alt={m.name} className={MEDIA_IMG_CLASS_NAME} />
-        : <video src={`${m.url}#t=0.5`} preload="metadata" muted playsInline aria-label={m.name} className={MEDIA_IMG_CLASS_NAME} />) : null}
-      {m?.url ? <div className={`${FRAME_TEXT_CLASS_NAME} absolute bottom-0 left-0`}>{scene.caption}</div> : <div className={FRAME_CARD_TEXT_CLASS_NAME}>{scene.caption}</div>}
-    </div>
+        ? <img src={m.url} alt={m.name} />
+        : <video src={`${m.url}#t=0.5`} preload="metadata" muted playsInline aria-label={m.name} />) : <div className={FRAME_FILL_CLASS_NAME} style={fill} aria-hidden />}
+    </MediaFrame>
   );
 };
 
@@ -116,14 +117,16 @@ export const PreviewStep = (p: {
       <SurfaceCard label={t("storyboardHeading")} fact={t("estimated", { n: total })}>
         <div className={STACK_CLASS_NAME}>
           <Text size="xs" tone="muted">{t("storyboardHint")}</Text>
-          <ol className={STORYBOARD_CLASS_NAME} aria-label={t("storyboardHeading")}>
-            {p.scenes.map((s, i) => (
-              <li key={s.id} className={STACK_SM_CLASS_NAME}>
-                <Frame scene={s} media={p.media} brand={p.brand} aspect={p.project.aspect} index={i} />
-                <Text as="span" size="xs" tone="muted">{t("sceneN", { n: i + 1 })}</Text>
-              </li>
-            ))}
-          </ol>
+          <HorizontalScrollRegion overflow="needed" aria-label={t("storyboardHeading")}>
+            <List as="ol" className={STORYBOARD_CLASS_NAME} label={t("storyboardHeading")}>
+              {p.scenes.map((s, i) => (
+                <ListItem key={s.id} className={p.project.aspect === "16:9" ? STORY_ITEM_WIDE_CLASS_NAME : STORY_ITEM_CLASS_NAME}>
+                  <Frame scene={s} media={p.media} brand={p.brand} aspect={p.project.aspect} index={i} />
+                  <Text as="span" size="xs" tone="muted">{t("sceneN", { n: i + 1 })}</Text>
+                </ListItem>
+              ))}
+            </List>
+          </HorizontalScrollRegion>
         </div>
       </SurfaceCard>
       {live ? (
@@ -154,7 +157,9 @@ export const ResultStep = (p: {
       <SurfaceCard label={t("resultHeading")} fact={`${t("version", { n: p.project.renderCount })} · ${t(`status_${p.project.status}`)}`}>
         <div className={STACK_CLASS_NAME}>
           {r?.videoUrl ? (
-            <video controls playsInline preload="metadata" poster={r.posterUrl ?? undefined} src={r.videoUrl} className={PLAYER_CLASS_NAME} style={{ aspectRatio: ratio(p.project.aspect) }} aria-label={p.project.title} />
+            <MediaFrame aspect={frameAspect(p.project.aspect)} fit="contain">
+              <video controls playsInline preload="metadata" poster={r.posterUrl ?? undefined} src={r.videoUrl} aria-label={p.project.title} />
+            </MediaFrame>
           ) : r?.status === "failed" ? <Alert tone="negative" title={t("renderFailed")} description={r.error ?? undefined} /> : <Text size="sm" tone="muted">{t("status_rendering")}</Text>}
           <div className={ROW_CLASS_NAME}>
             {r?.durationMs ? <Badge tone="neutral">{t("seconds", { n: Math.round(r.durationMs / 1000) })}</Badge> : null}

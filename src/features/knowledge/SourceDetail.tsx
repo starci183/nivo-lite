@@ -1,15 +1,14 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Alert, Badge, Button, PageContainer, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common"
+import { Alert, AlertDialog, Badge, Button, List, ListItem, PageContainer, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common"
 import { useLocale, useT } from "@/i18n/client"
 import { intlLocale, TIME_ZONE } from "@/i18n/core"
 import { knowledge } from "@/i18n/dict/knowledge"
 import { deleteKnowledge, reindexKnowledge, updateKnowledge } from "@/lib/knowledge/actions"
 import type { KnowledgeChunk, KnowledgeSource } from "@/lib/knowledge/shared"
-import { PAGE_CLASS, PASSAGE_CLASS, PASSAGE_TEXT_CLASS, ROW_WRAP_CLASS, STACK_CLASS } from "./classNames"
+import { ITEM_CLASS, LIST_CLASS, PAGE_CLASS, PASSAGE_CLASS, PASSAGE_TEXT_CLASS, ROW_WRAP_CLASS, STACK_CLASS } from "./classNames"
 
 type SourceDetailProps = { readonly source: KnowledgeSource; readonly chunks: ReadonlyArray<KnowledgeChunk>; readonly canWrite: boolean }
 
@@ -21,6 +20,7 @@ export const SourceDetail = ({ source, chunks, canWrite }: SourceDetailProps) =>
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<"reindex" | "delete" | "vis" | null>(null)
   const [, start] = useTransition()
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const act = (kind: "reindex" | "delete" | "vis", fn: () => Promise<{ ok: boolean; error?: string }>, after?: () => void) => {
     setError(null)
@@ -38,11 +38,11 @@ export const SourceDetail = ({ source, chunks, canWrite }: SourceDetailProps) =>
   return (
     <PageContainer measure="product">
       <div className={PAGE_CLASS}>
-        <Link href="/knowledge" className="text-sm text-muted underline-offset-2 hover:underline">{t("back")}</Link>
+        <div className={ROW_WRAP_CLASS}><Button variant="ghost" size="sm" href="/knowledge">{t("back")}</Button></div>
         <SectionHeader level={1} eyebrow={source.topic ?? t(`kind_${source.kind}`)} title={source.title} description={t("detailMeta", { when })} />
         <div className={ROW_WRAP_CLASS}>
-          <Badge tone={isPublic ? "success" : "neutral"}>{isPublic ? t("visPublicLong") : t("visInternalLong")}</Badge>
           <Badge isDot tone={source.status === "ready" ? "success" : source.status === "failed" ? "danger" : "warning"}>{t(`status_${source.status}`)}</Badge>
+          <Badge tone="neutral">{isPublic ? t("visPublicLong") : t("visInternalLong")}</Badge>
           <Text size="sm" tone="muted">{t("chunks", { count: source.chunkCount })}{source.module ? ` · ${t(`module_${source.module}`)}` : ""}</Text>
         </div>
         {source.error ? <Alert title={source.status === "failed" ? t("status_failed") : t("noVectors")} description={source.error} tone={source.status === "failed" ? "negative" : "neutral"} /> : null}
@@ -52,24 +52,38 @@ export const SourceDetail = ({ source, chunks, canWrite }: SourceDetailProps) =>
           <div className={ROW_WRAP_CLASS}>
             <Button variant="secondary" isPending={busy === "reindex"} onPress={() => act("reindex", () => reindexKnowledge(source.id))}>{busy === "reindex" ? t("reindexing") : t("reindex")}</Button>
             <Button variant="secondary" isPending={busy === "vis"} onPress={() => act("vis", () => updateKnowledge(source.id, { visibility: isPublic ? "internal" : "public" }))}>{isPublic ? t("makeInternal") : t("makePublic")}</Button>
-            <Button variant="ghost" isPending={busy === "delete"} onPress={() => { if (window.confirm(t("deleteConfirm"))) act("delete", () => deleteKnowledge(source.id), () => router.push("/knowledge")) }}>{busy === "delete" ? t("deleting") : t("delete")}</Button>
+            <Button variant="ghost" isPending={busy === "delete"} onPress={() => setConfirmDelete(true)}>{busy === "delete" ? t("deleting") : t("delete")}</Button>
+            <AlertDialog
+              isOpen={confirmDelete}
+              onOpenChange={setConfirmDelete}
+              title={t("deleteConfirm")}
+              confirmLabel={t("delete")}
+              cancelLabel={t("addCancel")}
+              onConfirm={() => { setConfirmDelete(false); act("delete", () => deleteKnowledge(source.id), () => router.push("/knowledge")) }}
+            />
           </div>
         ) : null}
 
         <SurfaceCard label={t("passagesTitle")} headingLevel={2}>
           <div className={STACK_CLASS}>
             <Text size="sm" tone="muted">{t("passagesHint")}</Text>
-            {chunks.map((c) => (
-              <div key={c.id} className={PASSAGE_CLASS}>
-                <Text size="xs" tone="muted">#{c.ord + 1} · {c.hasEmbedding ? t("passageVector") : t("passageKeyword")} · {c.content.length}</Text>
-                <div className={PASSAGE_TEXT_CLASS}>{c.content}</div>
-              </div>
-            ))}
+            {chunks.length > 0 ? (
+              <List label={t("passagesTitle")} className={LIST_CLASS}>
+                {chunks.map((c) => (
+                  <ListItem key={c.id} className={ITEM_CLASS}>
+                    <div className={PASSAGE_CLASS}>
+                      <Text size="xs" tone="muted">#{c.ord + 1} · {c.hasEmbedding ? t("passageVector") : t("passageKeyword")} · {c.content.length}</Text>
+                      <div className={PASSAGE_TEXT_CLASS}><Text size="sm">{c.content}</Text></div>
+                    </div>
+                  </ListItem>
+                ))}
+              </List>
+            ) : null}
           </div>
         </SurfaceCard>
 
         <SurfaceCard label={t("contentTitle")} headingLevel={2}>
-          <div className={PASSAGE_TEXT_CLASS}>{source.content.length > 6000 ? `${source.content.slice(0, 6000)} ...` : source.content}</div>
+          <div className={PASSAGE_TEXT_CLASS}><Text size="sm">{source.content.length > 6000 ? `${source.content.slice(0, 6000)} ...` : source.content}</Text></div>
         </SurfaceCard>
       </div>
     </PageContainer>

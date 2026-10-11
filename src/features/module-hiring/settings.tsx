@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Alert, Button, Heading, Input, NumberField, Select, SurfaceCard, Switch, Text, Textarea } from "@starci/grammar/common";
 import type { HiringWorkbenchData, MemberView } from "@/lib/module-hiring-queries";
 import { saveAvailabilityAction, saveSettingsAction, type WindowInput } from "./actions";
-import { FORM_CLASS_NAME, FORM_GRID_CLASS_NAME, SECTION_HEAD_CLASS_NAME } from "./classNames";
+import { FORM_CLASS_NAME, FORM_GRID_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, SECTION_HEAD_CLASS_NAME } from "./classNames";
 import { useRunner } from "./parts";
 
 const DAYS: ReadonlyArray<{ readonly weekday: number; readonly label: string }> = [
@@ -53,7 +53,7 @@ const Availability = ({ members, meUserId }: { readonly members: ReadonlyArray<M
   if (!members.length) return <Text tone="muted">Chưa có thành viên.</Text>;
   return (
     <div className={FORM_CLASS_NAME}>
-      <Select label="Thành viên" options={members.map((m) => ({ id: m.userId, label: m.name }))} value={who} onValueChange={(v) => pick(v ?? who)} />
+      <Select label="Thành viên" variant="secondary" options={members.map((m) => ({ id: m.userId, label: m.name }))} value={who} onValueChange={(v) => pick(v ?? who)} />
       <div className={FORM_GRID_CLASS_NAME}>
         {DAYS.map((d) => (
           <Input
@@ -65,7 +65,7 @@ const Availability = ({ members, meUserId }: { readonly members: ReadonlyArray<M
       </div>
       {error ? <Alert tone="negative" title="Chưa lưu được" description={error} urgency="assertive" /> : null}
       {ok ? <Alert tone="affirmative" title={ok} /> : null}
-      <div><Button variant="secondary" isPending={isPending} isDisabled={isPending || bad.length > 0} onPress={save}>Lưu lịch rảnh</Button></div>
+      <div className={ROW_ACTIONS_CLASS_NAME}><Button variant="secondary" isPending={isPending} isDisabled={isPending || bad.length > 0} onPress={save}>Lưu lịch rảnh</Button></div>
     </div>
   );
 };
@@ -95,20 +95,22 @@ export const SettingsPanel = ({ data }: SettingsPanelProps) => {
       <SurfaceCard label="Trang ứng tuyển và hồ sơ ứng viên">
         <div className={FORM_CLASS_NAME}>
           <Input id="st-slug" name="slug" label="Tên trong đường dẫn" variant="secondary" value={slug} onValueChange={(v) => { setSlug(v); setOk(null); }} hint={`${data.origin}/j/${slug || "ten-cua-hang"}/ten-tin`} />
-          <NumberField label="Giữ hồ sơ đã loại hoặc đã rút (ngày)" description="Sau số ngày này hồ sơ và file CV tự xóa. Từ 7 đến 730 ngày." minValue={7} maxValue={730} step={1} value={days} onValueChange={(v) => { setDays(Number.isFinite(v) ? v : 90); setOk(null); }} />
-          <Textarea label="Lời đồng ý ứng viên thấy khi nộp hồ sơ" rows={3} maxLength={800} value={consent} onValueChange={(v) => { setConsent(v); setOk(null); }} />
+          <NumberField variant="secondary" label="Giữ hồ sơ đã loại hoặc đã rút (ngày)" description="Sau số ngày này hồ sơ và file CV tự xóa. Từ 7 đến 730 ngày." minValue={7} maxValue={730} step={1} value={days} onValueChange={(v) => { setDays(Number.isFinite(v) ? v : 90); setOk(null); }} />
+          <Textarea variant="secondary" label="Lời đồng ý ứng viên thấy khi nộp hồ sơ" rows={3} maxLength={800} value={consent} onValueChange={(v) => { setConsent(v); setOk(null); }} />
           <Input id="st-tone" name="tone" label="Giọng điệu của tin đăng và thư mời" variant="secondary" value={tone} onValueChange={(v) => { setTone(v); setOk(null); }} />
           <Switch label="Báo khi có ứng viên mới" description="NIVO nhắn một dòng trong Office." isSelected={notify} onSelectedChange={(v) => { setNotify(v); setOk(null); }} />
           <Switch label="Nhắc phỏng vấn" description="Nhắc ứng viên và Office trước buổi hẹn 24 giờ." isSelected={remind} onSelectedChange={(v) => { setRemind(v); setOk(null); }} />
           <Switch label="Tự đóng tin khi đủ người" description="Đóng tin khi số người đã nhận việc bằng số cần tuyển." isSelected={close} onSelectedChange={(v) => { setClose(v); setOk(null); }} />
           {error ? <Alert tone="negative" title="Chưa lưu được" description={error} urgency="assertive" /> : null}
           {ok ? <Alert tone="affirmative" title={ok} /> : null}
-          <div><Button variant="primary" isPending={isPending} isDisabled={isPending} onPress={save}>Lưu thiết lập</Button></div>
+          <div className={ROW_ACTIONS_CLASS_NAME}><Button variant="primary" isPending={isPending} isDisabled={isPending} onPress={save}>Lưu thiết lập</Button></div>
         </div>
       </SurfaceCard>
       <SurfaceCard label="Lịch rảnh để phỏng vấn">
+        <div className={FORM_CLASS_NAME}>
         <Text size="sm" tone="muted">NIVO chỉ đề xuất giờ phỏng vấn trong các khung này (giờ Việt Nam). Người nào chưa khai báo thì dùng thứ hai đến thứ sáu, 9h-17h.</Text>
         <Availability members={data.members} meUserId={data.meUserId} />
+        </div>
       </SurfaceCard>
     </>
   );

@@ -2,17 +2,20 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Alert, Button, Checkbox, Dialog, Input, Select, Text, Textarea } from "@starci/grammar/common";
+import { Alert, Button, CheckboxGroup, Dialog, Input, Select, Text, Textarea } from "@starci/grammar/common";
 import { useT } from "@/i18n/client";
 import { content } from "@/i18n/dict/content";
 import { channelRule, CONTENT_CHANNELS, pad2, type ContentChannel, type Pillar } from "@/lib/module-content-shared";
 import { createItemAction, planMonthAction, quickDraftAction } from "./actions";
-import { CHIPS_CLASS_NAME, FORM_CLASS_NAME, FORM_ROW_CLASS_NAME } from "./classNames";
+import { FORM_CLASS_NAME, FORM_ROW_CLASS_NAME } from "./classNames";
 import { toIso } from "./format";
 
 type Note = { tone: "ok" | "error"; text: string } | null;
 const NoteAlert = ({ note, onDismiss, label }: { readonly note: Note; readonly onDismiss: () => void; readonly label: string }) =>
   note ? <Alert title={note.text} tone={note.tone === "ok" ? "affirmative" : "negative"} dismissLabel={label} onDismiss={onDismiss} /> : null;
+
+const CHANNEL_OPTIONS = CONTENT_CHANNELS.map((c) => ({ value: c, label: channelRule(c).label }));
+const toChannels = (v: ReadonlyArray<string>): Array<ContentChannel> => CONTENT_CHANNELS.filter((c) => v.includes(c));
 
 const monthOptions = (y: number, m: number): Array<{ id: string; label: string }> =>
   Array.from({ length: 4 }, (_, i) => {
@@ -43,7 +46,7 @@ export const PlanDialog = ({ y, m, lastPlan, onClose }: PlanDialogProps) => {
     <Dialog isOpen onOpenChange={(o) => { if (!o && !isPending) onClose(); }} size="md" title={t("planTitle")} description={t("planBody")} closeLabel={t("close")} isDismissable={!isPending}
       footer={<><Button variant="outline" isDisabled={isPending} onPress={onClose}>{t("close")}</Button><Button variant="primary" isPending={isPending} onPress={run}>{t("planRun")}</Button></>}>
       <div className={FORM_CLASS_NAME}>
-        <Select label={t("planMonthLabel")} options={monthOptions(y, m)} value={ym} isDisabled={isPending} onValueChange={(v) => v && setYm(v)} />
+        <Select variant="secondary" label={t("planMonthLabel")} options={monthOptions(y, m)} value={ym} isDisabled={isPending} onValueChange={(v) => v && setYm(v)} />
         {isPending ? <Text size="sm" live="polite">{t("planRunning")}</Text> : null}
         {lastPlan ? <Text size="xs" tone="muted">{lastPlan}</Text> : null}
         <NoteAlert note={note} onDismiss={() => setNote(null)} label={t("close")} />
@@ -75,12 +78,8 @@ export const QuickDialog = ({ onClose, onOpenItem, defaultChannels }: { readonly
     <Dialog isOpen onOpenChange={(o) => { if (!o && !isPending) onClose(); }} size="md" title={t("quickTitle")} description={t("quickBody")} closeLabel={t("close")} isDismissable={!isPending}
       footer={<><Button variant="outline" isDisabled={isPending} onPress={onClose}>{t("cancel")}</Button><Button variant="primary" isPending={isPending} isDisabled={topic.trim().length < 3 || channels.length === 0} onPress={run}>{t("quickRun")}</Button></>}>
       <div className={FORM_CLASS_NAME}>
-        <Textarea label={t("quickTopic")} rows={4} value={topic} description={t("quickTopicHint")} isDisabled={isPending} onValueChange={setTopic} />
-        <div className={CHIPS_CLASS_NAME} role="group" aria-label={t("quickChannels")}>
-          {CONTENT_CHANNELS.map((c) => (
-            <Checkbox key={c} label={channelRule(c).label} isSelected={channels.includes(c)} isDisabled={isPending} onSelectedChange={(on) => setChannels((cur) => (on ? [...cur, c] : cur.filter((x) => x !== c)))} />
-          ))}
-        </div>
+        <Textarea variant="secondary" label={t("quickTopic")} rows={4} value={topic} description={t("quickTopicHint")} isDisabled={isPending} onValueChange={setTopic} />
+        <CheckboxGroup label={t("quickChannels")} orientation="horizontal" variant="secondary" options={CHANNEL_OPTIONS} value={channels} isDisabled={isPending} onValueChange={(v) => setChannels(toChannels(v))} />
         {isPending ? <Text size="sm" live="polite">{t("quickRunning")}</Text> : null}
         <NoteAlert note={note} onDismiss={() => setNote(null)} label={t("close")} />
       </div>
@@ -118,12 +117,8 @@ export const AddDialog = ({ pillars, onClose, onOpenItem }: { readonly pillars: 
           <Input id="add-date" name="date" label={t("addDate")} variant="secondary" value={date} hint={t("addDateHint")} isDisabled={isPending} onValueChange={setDate} />
           <Input id="add-time" name="time" label={t("addTime")} variant="secondary" value={time} hint={t("addTimeHint")} isDisabled={isPending} onValueChange={setTime} />
         </div>
-        {pillars.length ? <Select label={t("fieldPillar")} options={[{ id: "", label: t("noPillar") }, ...pillars.filter((p) => p.active).map((p) => ({ id: p.id, label: p.name }))]} value={pillarId ?? ""} isDisabled={isPending} onValueChange={(v) => setPillarId(v || null)} /> : null}
-        <div className={CHIPS_CLASS_NAME} role="group" aria-label={t("fieldChannels")}>
-          {CONTENT_CHANNELS.map((c) => (
-            <Checkbox key={c} label={channelRule(c).label} isSelected={channels.includes(c)} isDisabled={isPending} onSelectedChange={(on) => setChannels((cur) => (on ? [...cur, c] : cur.filter((x) => x !== c)))} />
-          ))}
-        </div>
+        {pillars.length ? <Select variant="secondary" label={t("fieldPillar")} options={[{ id: "", label: t("noPillar") }, ...pillars.filter((p) => p.active).map((p) => ({ id: p.id, label: p.name }))]} value={pillarId ?? ""} isDisabled={isPending} onValueChange={(v) => setPillarId(v || null)} /> : null}
+        <CheckboxGroup label={t("fieldChannels")} orientation="horizontal" variant="secondary" options={CHANNEL_OPTIONS} value={channels} isDisabled={isPending} onValueChange={(v) => setChannels(toChannels(v))} />
         <NoteAlert note={note} onDismiss={() => setNote(null)} label={t("close")} />
       </div>
     </Dialog>

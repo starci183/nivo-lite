@@ -1,15 +1,14 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Badge, Button, EmptyNotice, SurfaceCard, Text, type BadgeTone } from "@starci/grammar/common";
+import { Alert, Badge, Button, EmptyNotice, SurfaceListCard, Text, TextAction, type BadgeTone } from "@starci/grammar/common";
 import { useLocale, useT } from "@/i18n/client";
 import { workbenchSales } from "@/i18n/dict/workbenchSales";
 import type { WorkStatus } from "@/lib/flow-types";
 import type { HandoffRow } from "@/lib/workbench-sales";
 import { handoffToAccounting } from "./actions";
-import { CHIPS_CLASS_NAME, LIST_CLASS_NAME, QUOTE_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME } from "./classNames";
+import { CHIPS_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME } from "./classNames";
 import { formatDate, formatVnd } from "./format";
 
 const INVOICE_TONE: Record<string, BadgeTone> = { draft: "neutral", issued: "accent", paid: "success", void: "danger" };
@@ -61,9 +60,7 @@ const HandoffItem = ({ row }: { readonly row: HandoffRow }) => {
           {row.confirmedAt ? <Text as="span" size="xs" tone="muted">{formatDate(row.confirmedAt, locale)}</Text> : null}
         </div>
         {row.leadId ? (
-          <Link href={`/leads/${row.leadId}`}>
-            <Text as="span" weight="semibold">{row.customer}</Text>
-          </Link>
+          <TextAction href={`/leads/${row.leadId}`}>{row.customer}</TextAction>
         ) : (
           <Text weight="semibold">{row.customer}</Text>
         )}
@@ -72,10 +69,7 @@ const HandoffItem = ({ row }: { readonly row: HandoffRow }) => {
         {row.invoice ? <Text size="xs" tone="muted">{t("invoiceLine", { no: row.invoice.no })}</Text> : null}
         {workText ? <Text size="sm" weight="medium">{workText}</Text> : null}
         {isFailed && row.work?.error ? (
-          <div className={QUOTE_CLASS_NAME}>
-            <Text size="xs" tone="muted" weight="medium">{t("errorLabel")}</Text>
-            <Text as="p" size="sm">{row.work.error}</Text>
-          </div>
+          <Alert tone="negative" urgency="polite" title={t("errorLabel")} description={row.work.error} />
         ) : null}
         {row.orderStatus === "won_without_order" && !row.work ? <Text size="sm" tone="muted">{t("wonNoOrderHint")}</Text> : null}
         {note ? <Text size="sm" weight="medium" live="polite">{note}</Text> : null}
@@ -96,13 +90,9 @@ export const HandoffsPanel = ({ rows }: HandoffsPanelProps) => {
   return (
     <>
       <Text size="sm" tone="muted">{t("handoffIntro")}</Text>
-      <SurfaceCard ariaLabel={t("tab_handoff")}>
-        {rows.length === 0 ? (
-          <EmptyNotice message={t("handoffEmptyTitle")} description={t("handoffEmptyBody")} />
-        ) : (
-          <ul className={LIST_CLASS_NAME}>{rows.map((row) => <HandoffItem key={row.key} row={row} />)}</ul>
-        )}
-      </SurfaceCard>
+      <SurfaceListCard ariaLabel={t("tab_handoff")} empty={<EmptyNotice message={t("handoffEmptyTitle")} description={t("handoffEmptyBody")} />}>
+        {rows.map((row) => <HandoffItem key={row.key} row={row} />)}
+      </SurfaceListCard>
     </>
   );
 };

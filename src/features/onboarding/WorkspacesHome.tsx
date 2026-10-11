@@ -2,16 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Alert, Badge, Button, Form, Input } from "@starci/grammar/common";
+import { Alert, Badge, Button, EmptyNotice, Form, Heading, Image, Input, List, ListItem, MediaFrame, Region, SectionHeader, SurfaceCard, SurfaceListCard, Text } from "@starci/grammar/common";
 import { useT } from "@/i18n/client";
 import { onboarding } from "@/i18n/dict/onboarding";
 import { acceptInviteForMe, type MyInvite } from "@/lib/onboarding";
 import { openWorkspaceAction } from "./actions";
 import { WorkspaceTile } from "./WorkspaceTile";
 import {
-  ACTIONS_CLASS_NAME, CARD_CLASS_NAME, CHIPS_CLASS_NAME, EMPTY_CLASS_NAME, EMPTY_IMG_CLASS_NAME, GRID_CLASS_NAME, H1_CLASS_NAME, INVITE_CLASS_NAME,
-  LIST_CLASS_NAME, MUTED_CLASS_NAME, SECTION_TITLE_CLASS_NAME, STACK_CLASS_NAME, STACK_SM_CLASS_NAME, TOP_ROW_CLASS_NAME, WS_CARD_CLASS_NAME,
-  WS_GRID_CLASS_NAME, WS_HEAD_CLASS_NAME, WS_META_CLASS_NAME, WS_NAME_CLASS_NAME,
+  ACTIONS_CLASS_NAME, CENTERED_CLASS_NAME, CHIPS_CLASS_NAME, COPY_CLASS_NAME, GRID_CLASS_NAME, INVITE_ROW_CLASS_NAME, MASCOT_CLASS_NAME, STACK_CLASS_NAME,
+  STACK_MD_CLASS_NAME, WS_CARD_CLASS_NAME, WS_GRID_CLASS_NAME, WS_HEAD_CLASS_NAME,
 } from "./classNames";
 
 /** One workspace card, already resolved on the server (plan name, state, whether billing is reachable). */
@@ -42,6 +41,7 @@ const inviteToken = (text: string): string | null => {
   return m ? m[1] : /^[A-Za-z0-9_-]{16,}$/.test(text.trim()) ? text.trim() : null;
 };
 
+/** One workspace: a top-level SurfaceCard in the collection grid. */
 const Card = ({ w }: { readonly w: WorkspaceCard }) => {
   const t = useT(onboarding);
   const [isPending, start] = useTransition();
@@ -50,25 +50,27 @@ const Card = ({ w }: { readonly w: WorkspaceCard }) => {
   const blocked = needsPayment && w.role !== "owner";
   const meta = [w.planName, w.paidUntil ? t("paidUntil", { date: w.paidUntil }) : null].filter(Boolean).join(" · ");
   return (
-    <li className={WS_CARD_CLASS_NAME}>
-      <div className={WS_HEAD_CLASS_NAME}>
-        <WorkspaceTile name={w.name} />
-        <div className="min-w-0 flex-1">
-          <h3 className={WS_NAME_CLASS_NAME}>{w.name}</h3>
-          <p className={WS_META_CLASS_NAME}>{meta || t(ROLE_KEY[w.role])}</p>
+    <SurfaceCard ariaLabel={w.name} height="fill">
+      <div className={WS_CARD_CLASS_NAME}>
+        <div className={WS_HEAD_CLASS_NAME}>
+          <WorkspaceTile name={w.name} />
+          <div className={COPY_CLASS_NAME}>
+            <Heading level={2}>{w.name}</Heading>
+            <Text size="sm" tone="muted">{meta || t(ROLE_KEY[w.role])}</Text>
+          </div>
+        </div>
+        <div className={CHIPS_CLASS_NAME}>
+          <Badge tone={STATE_TONE[w.state]} isDot>{t(STATE_KEY[w.state])}</Badge>
+          <Badge tone="neutral">{t(ROLE_KEY[w.role])}</Badge>
+        </div>
+        <div className={ACTIONS_CLASS_NAME}>
+          <Button variant={needsPayment ? "primary" : "secondary"} isDisabled={blocked} isPending={isPending} onPress={() => start(async () => { await openWorkspaceAction(w.id); })}>
+            {needsPayment ? t("payNow") : t("open")}
+          </Button>
+          {w.canBill && !needsPayment ? <Button variant="ghost" href={`/workspaces/${w.id}/billing`}>{t("billingLink")}</Button> : null}
         </div>
       </div>
-      <div className={CHIPS_CLASS_NAME}>
-        <Badge tone={STATE_TONE[w.state]} isDot>{t(STATE_KEY[w.state])}</Badge>
-        <Badge tone="neutral">{t(ROLE_KEY[w.role])}</Badge>
-      </div>
-      <div className={ACTIONS_CLASS_NAME}>
-        <Button variant={needsPayment ? "primary" : "secondary"} isDisabled={blocked} isPending={isPending} onPress={() => start(async () => { await openWorkspaceAction(w.id); })}>
-          {needsPayment ? t("payNow") : t("open")}
-        </Button>
-        {w.canBill && !needsPayment ? <Button variant="ghost" href={`/workspaces/${w.id}/billing`}>{t("billingLink")}</Button> : null}
-      </div>
-    </li>
+    </SurfaceCard>
   );
 };
 
@@ -102,69 +104,62 @@ export const WorkspacesHome = ({ workspaces, invites, email, reason }: Workspace
   };
 
   return (
-    <div>
-      <div className={STACK_CLASS_NAME}>
-        <div className={TOP_ROW_CLASS_NAME}>
-          <div className={STACK_SM_CLASS_NAME}>
-            <h1 className={H1_CLASS_NAME}>{t("workspacesTitle")}</h1>
-            <p className={MUTED_CLASS_NAME}>{t("workspacesText")}</p>
-          </div>
-          {workspaces.length ? <Button variant="primary" size="lg" href="/workspaces/new">{t("createNew")}</Button> : null}
-        </div>
-        {reason ? <Alert tone="cautionary" title={reason === "disabled" ? t("reasonDisabled") : t("reasonNone")} /> : null}
+    <div className={STACK_CLASS_NAME}>
+      <SectionHeader
+        level={1}
+        title={t("workspacesTitle")}
+        description={t("workspacesText")}
+        action={workspaces.length ? <Button variant="primary" size="lg" href="/workspaces/new">{t("createNew")}</Button> : undefined}
+      />
+      {reason ? <Alert tone="cautionary" title={reason === "disabled" ? t("reasonDisabled") : t("reasonNone")} /> : null}
 
-        {workspaces.length ? (
-          <ul className={`${LIST_CLASS_NAME} ${WS_GRID_CLASS_NAME}`} aria-label={t("myWorkspaces")}>
-            {workspaces.map((w) => <Card key={w.id} w={w} />)}
-          </ul>
-        ) : (
-          <div className={EMPTY_CLASS_NAME}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className={EMPTY_IMG_CLASS_NAME} src="/images/promo/mascot-checklist.png" alt="" />
-            <div className={STACK_SM_CLASS_NAME}>
-              <h2 className={SECTION_TITLE_CLASS_NAME}>{t("emptyTitle")}</h2>
-              <p className={MUTED_CLASS_NAME}>{t("emptyText")}</p>
+      {workspaces.length ? (
+        <List className={WS_GRID_CLASS_NAME} label={t("myWorkspaces")}>
+          {workspaces.map((w) => (
+            <ListItem key={w.id}>
+              <Card w={w} />
+            </ListItem>
+          ))}
+        </List>
+      ) : (
+        <SurfaceCard ariaLabel={t("emptyTitle")}>
+          <div className={CENTERED_CLASS_NAME}>
+            <div className={MASCOT_CLASS_NAME}>
+              <MediaFrame treatment="plain" aspect="portrait" fit="contain">
+                <Image src="/images/promo/mascot-checklist.png" alt="" aspect="portrait" fit="contain" plate="none" />
+              </MediaFrame>
             </div>
+            <EmptyNotice message={t("emptyTitle")} description={t("emptyText")} />
             <Button variant="primary" size="lg" href="/workspaces/new">{t("createNew")}</Button>
           </div>
-        )}
+        </SurfaceCard>
+      )}
 
-        <div className={GRID_CLASS_NAME}>
-          <section className={CARD_CLASS_NAME} aria-labelledby="ws-invites">
-            <div className={STACK_CLASS_NAME}>
-              <div className={STACK_SM_CLASS_NAME}>
-                <h2 id="ws-invites" className={SECTION_TITLE_CLASS_NAME}>{t("pendingInvites")}</h2>
-                <p className={MUTED_CLASS_NAME}>{t("pathJoinText", { email })}</p>
-              </div>
-              {invites.length ? (
-                <ul className={LIST_CLASS_NAME}>
-                  {invites.map((i) => (
-                    <li key={i.id} className={INVITE_CLASS_NAME}>
-                      <div className={WS_HEAD_CLASS_NAME}>
-                        <WorkspaceTile name={i.workspaceName || "?"} size={44} />
-                        <div className="min-w-0 flex-1">
-                          <h3 className={WS_NAME_CLASS_NAME}>{i.workspaceName}</h3>
-                          <p className={WS_META_CLASS_NAME}>{[t("inviteRole", { role: i.role === "manager" ? t("roleManager") : t("roleStaff") }), i.invitedBy ? t("inviteBy", { name: i.invitedBy }) : null].filter(Boolean).join(" · ")}</p>
-                        </div>
-                      </div>
-                      <div className={ACTIONS_CLASS_NAME}>
-                        <Button variant="secondary" isPending={isPending && busy === i.id} isDisabled={isPending} onPress={() => join(i.id)}>{t("join")}</Button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className={MUTED_CLASS_NAME}>{t("noInvites", { email })}</p>
-              )}
-            </div>
-          </section>
-          <section className={CARD_CLASS_NAME} aria-labelledby="ws-link-title">
-            <Form label={t("haveLink")} onSubmit={openLink}>
-              <div className={STACK_CLASS_NAME}>
-                <div className={STACK_SM_CLASS_NAME}>
-                  <h2 id="ws-link-title" className={SECTION_TITLE_CLASS_NAME}>{t("haveLink")}</h2>
-                  <p className={MUTED_CLASS_NAME}>{t("haveLinkText")}</p>
+      <div className={GRID_CLASS_NAME}>
+        <Region labelledBy="ws-invites" className={STACK_MD_CLASS_NAME}>
+          <SectionHeader id="ws-invites" level={2} title={t("pendingInvites")} description={t("pathJoinText", { email })} />
+          <SurfaceListCard ariaLabel={t("pendingInvites")} empty={<EmptyNotice message={t("noInvites", { email })} />}>
+            {invites.map((i) => (
+              <ListItem key={i.id} className={INVITE_ROW_CLASS_NAME}>
+                <div className={WS_HEAD_CLASS_NAME}>
+                  <WorkspaceTile name={i.workspaceName || "?"} size="md" />
+                  <div className={COPY_CLASS_NAME}>
+                    <Text weight="semibold" overflow="truncate">{i.workspaceName}</Text>
+                    <Text size="sm" tone="muted">{[t("inviteRole", { role: i.role === "manager" ? t("roleManager") : t("roleStaff") }), i.invitedBy ? t("inviteBy", { name: i.invitedBy }) : null].filter(Boolean).join(" · ")}</Text>
+                  </div>
                 </div>
+                <div className={ACTIONS_CLASS_NAME}>
+                  <Button variant="secondary" isPending={isPending && busy === i.id} isDisabled={isPending} onPress={() => join(i.id)}>{t("join")}</Button>
+                </div>
+              </ListItem>
+            ))}
+          </SurfaceListCard>
+        </Region>
+        <Region labelledBy="ws-link-title" className={STACK_MD_CLASS_NAME}>
+          <SectionHeader id="ws-link-title" level={2} title={t("haveLink")} description={t("haveLinkText")} />
+          <SurfaceCard ariaLabel={t("haveLink")}>
+            <Form label={t("haveLink")} onSubmit={openLink}>
+              <div className={STACK_MD_CLASS_NAME}>
                 <Input id="ws-link" name="link" label={t("haveLink")} placeholder={t("linkPlaceholder")} variant="secondary" value={link} onValueChange={setLink} />
                 {error ? <Alert tone="negative" title={t("errGeneric")} description={error} /> : null}
                 <div className={ACTIONS_CLASS_NAME}>
@@ -172,8 +167,8 @@ export const WorkspacesHome = ({ workspaces, invites, email, reason }: Workspace
                 </div>
               </div>
             </Form>
-          </section>
-        </div>
+          </SurfaceCard>
+        </Region>
       </div>
     </div>
   );

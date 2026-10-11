@@ -1,13 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Badge, Button, EmptyNotice, SectionHeader, SurfaceCard, Text, type BadgeTone } from "@starci/grammar/common";
+import { Alert, Badge, Button, EmptyNotice, List, ListItem, MediaFrame, SectionHeader, SurfaceCard, Text, type BadgeTone } from "@starci/grammar/common";
 import { useLocale, useT } from "@/i18n/client";
 import { video } from "@/i18n/dict/video";
 import { templateOf, type Brand, type MediaItem, type ProjectStatus, type ProjectView } from "@/lib/module-video-shared";
 import { archiveVideo, duplicateVideo, listVideos, type Snapshot } from "./actions";
 import { BrandCard } from "./brand";
-import { CARD_BODY_CLASS_NAME, CARD_CLASS_NAME, GRID_CLASS_NAME, PAGE_CLASS_NAME, ROW_CLASS_NAME, STACK_CLASS_NAME, THUMB_CLASS_NAME, THUMB_IMG_CLASS_NAME } from "./classNames";
+import { GRID_CLASS_NAME, GRID_ITEM_CLASS_NAME, PAGE_CLASS_NAME, ROW_CLASS_NAME, STACK_CLASS_NAME, STACK_SM_CLASS_NAME } from "./classNames";
 import { Editor } from "./editor";
 
 const STATUS_TONE: Record<ProjectStatus, BadgeTone> = { draft: "neutral", scripting: "accent", rendering: "accent", ready: "warning", approved: "success", published: "success", archived: "neutral" };
@@ -26,32 +26,36 @@ const Card = ({ p, canEdit, busy, onOpen, onDuplicate, onArchive }: {
   const locale = useLocale();
   const r = p.render;
   return (
-    <li className={CARD_CLASS_NAME}>
-      <div className={THUMB_CLASS_NAME}>
-        {r?.posterUrl
-          // eslint-disable-next-line @next/next/no-img-element
-          ? <img src={r.posterUrl} alt={p.title} className={THUMB_IMG_CLASS_NAME} />
-          : <Text as="span" size="sm" tone="muted">{r?.status === "rendering" || r?.status === "queued" ? t("status_rendering") : t("notRendered")}</Text>}
-      </div>
-      <div className={CARD_BODY_CLASS_NAME}>
-        <Text weight="semibold" overflow="clamp-2">{p.title}</Text>
-        <div className={ROW_CLASS_NAME}>
-          <Badge tone={STATUS_TONE[p.status]}>{t(`status_${p.status}`)}</Badge>
-          <Badge tone="neutral">{templateOf(p.goal).label[locale]}</Badge>
-          <Badge tone="neutral">{p.aspect}</Badge>
+    <ListItem className={GRID_ITEM_CLASS_NAME}>
+      <SurfaceCard ariaLabel={p.title} height="fill">
+        <div className={STACK_CLASS_NAME}>
+          {r?.posterUrl ? (
+            <MediaFrame aspect="landscape" fit="contain">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={r.posterUrl} alt={p.title} />
+            </MediaFrame>
+          ) : <Text size="sm" tone="muted">{r?.status === "rendering" || r?.status === "queued" ? t("status_rendering") : t("notRendered")}</Text>}
+          <div className={STACK_SM_CLASS_NAME}>
+            <Text weight="semibold" overflow="clamp-2">{p.title}</Text>
+            <div className={ROW_CLASS_NAME}>
+              <Badge tone={STATUS_TONE[p.status]}>{t(`status_${p.status}`)}</Badge>
+              <Badge tone="neutral">{templateOf(p.goal).label[locale]}</Badge>
+              <Badge tone="neutral">{p.aspect}</Badge>
+            </div>
+            <Text size="xs" tone="muted">
+              {r?.durationMs ? t("seconds", { n: Math.round(r.durationMs / 1000) }) : t("seconds", { n: p.targetSeconds })}
+              {p.renderCount > 0 ? ` · ${t("renders", { n: p.renderCount })}` : ""}
+              {` · ${t("views")}: ${t("viewsNone")}`}
+            </Text>
+          </div>
+          <div className={ROW_CLASS_NAME}>
+            <Button size="sm" variant="outline" onPress={onOpen}>{t("open")}</Button>
+            {canEdit ? <Button size="sm" variant="secondary" isDisabled={busy} onPress={onDuplicate}>{t("duplicate")}</Button> : null}
+            {canEdit ? <Button size="sm" variant="ghost" isDisabled={busy || p.status === "scripting" || p.status === "rendering"} onPress={onArchive}>{t("archive")}</Button> : null}
+          </div>
         </div>
-        <Text size="xs" tone="muted">
-          {r?.durationMs ? t("seconds", { n: Math.round(r.durationMs / 1000) }) : t("seconds", { n: p.targetSeconds })}
-          {p.renderCount > 0 ? ` · ${t("renders", { n: p.renderCount })}` : ""}
-          {` · ${t("views")}: ${t("viewsNone")}`}
-        </Text>
-        <div className={ROW_CLASS_NAME}>
-          <Button size="sm" variant="primary" onPress={onOpen}>{t("open")}</Button>
-          {canEdit ? <Button size="sm" variant="secondary" isDisabled={busy} onPress={onDuplicate}>{t("duplicate")}</Button> : null}
-          {canEdit ? <Button size="sm" variant="ghost" isDisabled={busy || p.status === "scripting" || p.status === "rendering"} onPress={onArchive}>{t("archive")}</Button> : null}
-        </div>
-      </div>
-    </li>
+      </SurfaceCard>
+    </ListItem>
   );
 };
 
@@ -118,7 +122,7 @@ export const VideoWorkbenchView = ({ initial, canEdit }: VideoWorkbenchViewProps
       {!canEdit ? <Alert tone="cautionary" title={t("viewOnly")} /> : null}
       {error ? <Alert tone="negative" title={error} dismissLabel={t("back")} onDismiss={() => setError(null)} /> : null}
       <div className={STACK_CLASS_NAME}>
-        <Text weight="semibold" as="span">{`${t("tabLibrary")} · ${t("libraryCount", { n: projects.length })}`}</Text>
+        <SectionHeader level={2} title={t("tabLibrary")} meta={t("libraryCount", { n: projects.length })} />
         {projects.length === 0 ? (
           <SurfaceCard ariaLabel={t("libraryEmptyTitle")}>
             <EmptyNotice
@@ -127,7 +131,7 @@ export const VideoWorkbenchView = ({ initial, canEdit }: VideoWorkbenchViewProps
             />
           </SurfaceCard>
         ) : (
-          <ul className={GRID_CLASS_NAME} aria-label={t("tabLibrary")}>
+          <List className={GRID_CLASS_NAME} label={t("tabLibrary")}>
             {projects.map((p) => (
               <Card
                 key={p.id} p={p} canEdit={canEdit} busy={busy} onOpen={() => setOpen({ project: p })}
@@ -135,7 +139,7 @@ export const VideoWorkbenchView = ({ initial, canEdit }: VideoWorkbenchViewProps
                 onArchive={() => { void act(() => archiveVideo(p.id, true)); }}
               />
             ))}
-          </ul>
+          </List>
         )}
       </div>
       <BrandCard brand={brand} media={media} canEdit={canEdit} onSaved={(b, m) => { setBrand(b); setMedia(m); }} />

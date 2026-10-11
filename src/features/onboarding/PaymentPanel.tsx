@@ -2,16 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
-import { Alert, Button } from "@starci/grammar/common";
+import { Alert, Button, Image, Input, MediaFrame, ProgressCircle, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common";
 import { useT } from "@/i18n/client";
 import { onboarding } from "@/i18n/dict/onboarding";
 import { newOrderAction, orderStatusAction, switchWorkspaceAction } from "./actions";
 import { useMoney } from "./useMoney";
 import { Stepper } from "./Stepper";
 import {
-  ACTIONS_CLASS_NAME, AMOUNT_CLASS_NAME, CENTER_CLASS_NAME, CODE_CHIP_CLASS_NAME, DETAILS_CLASS_NAME, DETAIL_ROW_CLASS_NAME, H1_CLASS_NAME, LIVE_CLASS_NAME,
-  LIVE_DOT_CLASS_NAME, MUTED_CLASS_NAME, PAY_CARD_CLASS_NAME, QR_CLASS_NAME, QR_WRAP_CLASS_NAME, RING_TEXT_CLASS_NAME, RING_WRAP_CLASS_NAME,
-  STACK_CLASS_NAME, STACK_SM_CLASS_NAME, SUCCESS_CLASS_NAME, SUCCESS_IMG_CLASS_NAME,
+  ACTIONS_CLASS_NAME, CENTERED_CLASS_NAME, CENTER_CLASS_NAME, COPY_CLASS_NAME, COUNTDOWN_CLASS_NAME, MASCOT_CLASS_NAME, PAY_DETAILS_CLASS_NAME,
+  PAY_GRID_CLASS_NAME, QR_CLASS_NAME, QR_WRAP_CLASS_NAME, STACK_MD_CLASS_NAME,
 } from "./classNames";
 
 /** What the payment screen needs; everything sensitive was decided on the server. */
@@ -34,44 +33,19 @@ const clock = (ms: number) => {
   return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 };
 
-const CopyButton = ({ value }: { readonly value: string }) => {
-  const t = useT(onboarding);
-  const [copied, setCopied] = useState(false);
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      // Clipboard blocked: the value stays selectable on screen.
-    }
-  };
-  return <Button size="sm" variant={copied ? "secondary" : "outline"} onPress={copy}>{copied ? t("copied") : t("copy")}</Button>;
-};
-
-const Row = ({ label, value, children }: { readonly label: string; readonly value: string; readonly children?: React.ReactNode }) => (
-  <div className={DETAIL_ROW_CLASS_NAME}>
-    <div className="min-w-0">
-      <p className={MUTED_CLASS_NAME}>{label}</p>
-      <div className="break-words text-base font-semibold text-foreground">{children ?? value}</div>
-    </div>
-    <CopyButton value={value} />
+/** A decorative mascot (allowed in a settled / empty state) inside a plain MediaFrame, so it sits on the card face with no plate. */
+const Mascot = ({ src }: { readonly src: string }) => (
+  <div className={MASCOT_CLASS_NAME}>
+    <MediaFrame treatment="plain" aspect="portrait" fit="contain">
+      <Image src={src} alt="" aspect="portrait" fit="contain" plate="none" />
+    </MediaFrame>
   </div>
 );
 
-const Ring = ({ left, label }: { readonly left: number; readonly label: string }) => {
-  const r = 28;
-  const c = 2 * Math.PI * r;
-  const frac = Math.min(1, Math.max(0, left / WINDOW_MS));
-  return (
-    <div className={RING_WRAP_CLASS_NAME} role="timer" aria-label={label}>
-      <svg viewBox="0 0 64 64" className="size-16 -rotate-90" aria-hidden="true">
-        <circle cx="32" cy="32" r={r} fill="none" stroke="currentColor" strokeWidth="4" className="text-divider" />
-        <circle cx="32" cy="32" r={r} fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - frac)} className="text-accent transition-[stroke-dashoffset] duration-1000 ease-linear" />
-      </svg>
-      <span className={RING_TEXT_CLASS_NAME}>{clock(left)}</span>
-    </div>
-  );
+/** One transfer detail: read-only and copyable through Grammar's Input. */
+const Detail = ({ id, label, value }: { readonly id: string; readonly label: string; readonly value: string }) => {
+  const t = useT(onboarding);
+  return <Input id={id} name={id} label={label} variant="secondary" value={value} isReadOnly isCopyable copyLabel={t("copy")} copiedLabel={t("copied")} />;
 };
 
 /** Step 3: the VietQR code, copyable bank details, a countdown, and polling until the transfer lands. */
@@ -136,15 +110,13 @@ export const PaymentPanel = ({ workspaceId, workspaceName, planName, returnTo, b
     return (
       <div className={CENTER_CLASS_NAME}>
         <Stepper steps={steps} current={3} label={t("payTitle")} />
-        <div className={SUCCESS_CLASS_NAME} role="status">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className={SUCCESS_IMG_CLASS_NAME} src="/images/promo/mascot-celebrate.png" alt="" />
-          <div className={STACK_SM_CLASS_NAME}>
-            <h1 className={H1_CLASS_NAME}>{t("paidTitle")}</h1>
-            <p className={MUTED_CLASS_NAME}>{t("paidText")}</p>
+        <SurfaceCard ariaLabel={t("paidTitle")}>
+          <div className={CENTERED_CLASS_NAME} role="status">
+            <Mascot src="/images/promo/mascot-celebrate.png" />
+            <SectionHeader level={1} title={t("paidTitle")} description={t("paidText")} />
+            <Button variant="primary" size="lg" href={returnTo}>{t("toWorkspace")}</Button>
           </div>
-          <Button variant="primary" size="lg" href={returnTo}>{t("toWorkspace")}</Button>
-        </div>
+        </SurfaceCard>
       </div>
     );
   }
@@ -153,19 +125,17 @@ export const PaymentPanel = ({ workspaceId, workspaceName, planName, returnTo, b
     return (
       <div className={CENTER_CLASS_NAME}>
         <Stepper steps={steps} current={3} label={t("payTitle")} />
-        <div className={SUCCESS_CLASS_NAME}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="h-40 w-auto select-none" src="/images/promo/mascot-night.png" alt="" />
-          <div className={STACK_SM_CLASS_NAME}>
-            <h1 className={H1_CLASS_NAME}>{t("expiredTitle")}</h1>
-            <p className={MUTED_CLASS_NAME}>{t("expiredText")}</p>
+        <SurfaceCard ariaLabel={t("expiredTitle")}>
+          <div className={CENTERED_CLASS_NAME}>
+            <Mascot src="/images/promo/mascot-night.png" />
+            <SectionHeader level={1} title={t("expiredTitle")} description={t("expiredText")} />
+            {error ? <Alert tone="negative" title={t("errGeneric")} description={error} /> : null}
+            <div className={ACTIONS_CLASS_NAME}>
+              <Button variant="primary" size="lg" isPending={isPending} onPress={regenerate}>{t("regenerate")}</Button>
+              <Button variant="ghost" href="/workspaces">{t("allWorkspaces")}</Button>
+            </div>
           </div>
-          {error ? <Alert tone="negative" title={t("errGeneric")} description={error} /> : null}
-          <div className={ACTIONS_CLASS_NAME}>
-            <Button variant="primary" size="lg" isPending={isPending} onPress={regenerate}>{t("regenerate")}</Button>
-            <Button variant="ghost" href="/workspaces">{t("allWorkspaces")}</Button>
-          </div>
-        </div>
+        </SurfaceCard>
       </div>
     );
   }
@@ -173,45 +143,44 @@ export const PaymentPanel = ({ workspaceId, workspaceName, planName, returnTo, b
   return (
     <div className={CENTER_CLASS_NAME}>
       <Stepper steps={steps} current={3} label={t("payTitle")} />
-      <div className={STACK_SM_CLASS_NAME}>
-        <h1 className={H1_CLASS_NAME}>{t("payTitle")}</h1>
-        <p className={MUTED_CLASS_NAME}>{[workspaceName, planName].filter(Boolean).join(" · ")}</p>
-      </div>
-      <div className={PAY_CARD_CLASS_NAME}>
-        <div className={QR_WRAP_CLASS_NAME}>
-          <p className="m-0 text-sm font-medium text-foreground">{t("scanTitle")}</p>
-          {configured ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img className={QR_CLASS_NAME} src={order.qrUrl} alt={t("qrAlt")} width={256} height={256} />
-          ) : (
-            <Alert tone="cautionary" title={t("notConfigured")} />
-          )}
-          {left !== null ? (
-            <div className="flex items-center gap-3">
-              <Ring left={left} label={t("expiresIn", { time: clock(left) })} />
-              <p className={MUTED_CLASS_NAME}>{t("expiresIn", { time: clock(left) })}</p>
+      <SectionHeader level={1} title={t("payTitle")} description={[workspaceName, planName].filter(Boolean).join(" · ")} />
+      <SurfaceCard ariaLabel={t("payTitle")}>
+        <div className={PAY_GRID_CLASS_NAME}>
+          <div className={QR_WRAP_CLASS_NAME}>
+            <Text size="sm" weight="medium">{t("scanTitle")}</Text>
+            {configured ? (
+              <div className={QR_CLASS_NAME}>
+                <MediaFrame aspect="square" fit="contain">
+                  <Image src={order.qrUrl} alt={t("qrAlt")} width={256} height={256} aspect="square" fit="contain" />
+                </MediaFrame>
+              </div>
+            ) : (
+              <Alert tone="cautionary" title={t("notConfigured")} />
+            )}
+            {left !== null ? (
+              <div className={COUNTDOWN_CLASS_NAME}>
+                <ProgressCircle label={t("expiresIn", { time: clock(left) })} value={Math.round(Math.min(1, Math.max(0, left / WINDOW_MS)) * 100)} />
+                <Text size="sm" tone="muted">{t("expiresIn", { time: clock(left) })}</Text>
+              </div>
+            ) : null}
+          </div>
+          <div className={PAY_DETAILS_CLASS_NAME}>
+            <div className={COPY_CLASS_NAME}>
+              <Text size="sm" tone="muted">{t("amount")}</Text>
+              <Text size="metric-lead" weight="semibold">{money(order.amount)}</Text>
             </div>
-          ) : null}
+            <div className={STACK_MD_CLASS_NAME}>
+              <Detail id="pay-bank" label={t("bank")} value={bank.bank} />
+              <Detail id="pay-account" label={t("account")} value={bank.account} />
+              <Detail id="pay-holder" label={t("holder")} value={bank.holder} />
+              <Detail id="pay-content" label={t("content")} value={order.code} />
+            </div>
+            <Text size="sm" tone="muted">{t("contentWarn")}</Text>
+            <Alert tone="pending" title={t("waiting")} urgency="polite" />
+            <Text size="sm" tone="muted">{t("trust")}</Text>
+          </div>
         </div>
-        <div className={STACK_CLASS_NAME}>
-          <div className={STACK_SM_CLASS_NAME}>
-            <p className={MUTED_CLASS_NAME}>{t("amount")}</p>
-            <p className={AMOUNT_CLASS_NAME}>{money(order.amount)}</p>
-          </div>
-          <div className={DETAILS_CLASS_NAME}>
-            <Row label={t("bank")} value={bank.bank} />
-            <Row label={t("account")} value={bank.account} />
-            <Row label={t("holder")} value={bank.holder} />
-            <Row label={t("content")} value={order.code}><span className={CODE_CHIP_CLASS_NAME}>{order.code}</span></Row>
-          </div>
-          <p className={MUTED_CLASS_NAME}>{t("contentWarn")}</p>
-          <div className={LIVE_CLASS_NAME} role="status" aria-live="polite">
-            <span className={LIVE_DOT_CLASS_NAME} aria-hidden="true" />
-            {t("waiting")}
-          </div>
-          <p className={MUTED_CLASS_NAME}>{t("trust")}</p>
-        </div>
-      </div>
+      </SurfaceCard>
     </div>
   );
 };

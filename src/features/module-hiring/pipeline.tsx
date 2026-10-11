@@ -1,15 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Alert, Badge, Button, Dialog, EmptyNotice, Heading, Select, Text, Textarea } from "@starci/grammar/common";
+import { Alert, Badge, Button, Dialog, EmptyNotice, Heading, HorizontalScrollRegion, Select, SurfaceListCard, Text, Textarea } from "@starci/grammar/common";
 import type { HiringWorkbenchData } from "@/lib/module-hiring-queries";
 import { BOARD_STAGES, SCORE_LABEL, STAGE_LABEL, type CandidateRow, type Stage } from "@/lib/module-hiring-shared";
 import { moveCandidateAction } from "./actions";
 import {
-  BOARD_CLASS_NAME, CARD_CLASS_NAME, CARD_DRAG_CLASS_NAME, CHIPS_CLASS_NAME, FORM_CLASS_NAME, LANE_BODY_CLASS_NAME, LANE_CLASS_NAME, LANE_HEAD_CLASS_NAME, LANE_OVER_CLASS_NAME,
-  PIPELINE_LIST_CLASS_NAME, SECTION_HEAD_CLASS_NAME,
+  BOARD_CLASS_NAME, BOARD_FRAME_CLASS_NAME, CARD_CLASS_NAME, CARD_DRAG_CLASS_NAME, CHIPS_CLASS_NAME, FORM_CLASS_NAME, LANE_CLASS_NAME, LANE_OVER_CLASS_NAME,
+  PIPELINE_LIST_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, SECTION_HEAD_CLASS_NAME,
 } from "./classNames";
-import { SOURCE_LABEL, ago, scoreTone, stageTone, useRunner } from "./parts";
+import { SOURCE_LABEL, ago, scoreTone, useRunner } from "./parts";
 
 const ALL_JOBS = "all";
 
@@ -57,7 +57,7 @@ export const PipelinePanel = ({ data, jobId, onJob, onOpen }: PipelinePanelProps
 
   const Card = ({ c, draggable }: { readonly c: CandidateRow; readonly draggable: boolean }) => (
     <li
-      className={`${CARD_CLASS_NAME} ${draggable ? CARD_DRAG_CLASS_NAME : ""}`}
+      className={draggable ? CARD_DRAG_CLASS_NAME : CARD_CLASS_NAME}
       draggable={draggable}
       onDragStart={draggable ? (e) => { e.dataTransfer.setData("text/plain", c.id); e.dataTransfer.effectAllowed = "move"; setDragId(c.id); } : undefined}
       onDragEnd={draggable ? () => { setDragId(null); setOver(null); } : undefined}
@@ -68,7 +68,7 @@ export const PipelinePanel = ({ data, jobId, onJob, onOpen }: PipelinePanelProps
       </div>
       <Text size="xs" tone="muted">{[jobId === ALL_JOBS ? jobTitle.get(c.job_id) : null, SOURCE_LABEL[c.source] ?? c.source, ago(c.created_at, data.nowIso)].filter(Boolean).join(" · ")}</Text>
       {c.score_label ? <Text size="xs">{`Gợi ý: ${SCORE_LABEL[c.score_label]}`}</Text> : null}
-      <div className={CHIPS_CLASS_NAME}>
+      <div className={ROW_ACTIONS_CLASS_NAME}>
         <Button variant="tertiary" size="sm" onPress={() => onOpen(c.id)}>Mở hồ sơ</Button>
       </div>
       <MoveSelect c={c} onMove={move} disabled={isPending} />
@@ -79,7 +79,7 @@ export const PipelinePanel = ({ data, jobId, onJob, onOpen }: PipelinePanelProps
     const list = by(s);
     return (
       <section
-        key={s} className={`${LANE_CLASS_NAME} ${over === s ? LANE_OVER_CLASS_NAME : ""}`} aria-label={STAGE_LABEL[s]}
+        key={s} className={over === s ? LANE_OVER_CLASS_NAME : LANE_CLASS_NAME} aria-label={STAGE_LABEL[s]}
         onDragOver={(e) => { if (dragId) { e.preventDefault(); setOver(s); } }}
         onDragLeave={() => setOver((o) => (o === s ? null : o))}
         onDrop={(e) => {
@@ -91,11 +91,9 @@ export const PipelinePanel = ({ data, jobId, onJob, onOpen }: PipelinePanelProps
           if (c) move(c, s);
         }}
       >
-        <div className={LANE_HEAD_CLASS_NAME}>
-          <Badge tone={stageTone(s)} isDot>{STAGE_LABEL[s]}</Badge>
-          <Text as="span" size="xs" tone="muted">{list.length}</Text>
-        </div>
-        {list.length === 0 ? <Text size="sm" tone="muted">Chưa có ai</Text> : <ul className={LANE_BODY_CLASS_NAME}>{list.map((c) => <Card key={c.id} c={c} draggable />)}</ul>}
+        <SurfaceListCard label={STAGE_LABEL[s]} fact={String(list.length)} empty={<EmptyNotice message="Chưa có ai" />}>
+          {list.map((c) => <Card key={c.id} c={c} draggable />)}
+        </SurfaceListCard>
       </section>
     );
   };
@@ -114,15 +112,18 @@ export const PipelinePanel = ({ data, jobId, onJob, onOpen }: PipelinePanelProps
         <EmptyNotice message="Chưa có ứng viên" description="Mở một tin tuyển dụng, chép link ứng tuyển và đăng lên nhóm Facebook hoặc Zalo. Hồ sơ nộp qua link hoặc chat sẽ hiện ở đây." />
       ) : (
         <>
-          <div className={BOARD_CLASS_NAME}>{BOARD_STAGES.map(lane)}</div>
+          <div className={BOARD_FRAME_CLASS_NAME}>
+            <HorizontalScrollRegion overflow="needed" aria-label="Ứng viên theo giai đoạn">
+              <div className={BOARD_CLASS_NAME}>{BOARD_STAGES.map(lane)}</div>
+            </HorizontalScrollRegion>
+          </div>
           <div className={PIPELINE_LIST_CLASS_NAME}>
             {BOARD_STAGES.map((s) => {
               const list = by(s);
               return list.length === 0 ? null : (
-                <section key={s} aria-label={STAGE_LABEL[s]} className={FORM_CLASS_NAME}>
-                  <div className={LANE_HEAD_CLASS_NAME}><Badge tone={stageTone(s)} isDot>{STAGE_LABEL[s]}</Badge><Text as="span" size="xs" tone="muted">{list.length}</Text></div>
-                  <ul className={LANE_BODY_CLASS_NAME}>{list.map((c) => <Card key={c.id} c={c} draggable={false} />)}</ul>
-                </section>
+                <SurfaceListCard key={s} label={STAGE_LABEL[s]} fact={String(list.length)}>
+                  {list.map((c) => <Card key={c.id} c={c} draggable={false} />)}
+                </SurfaceListCard>
               );
             })}
           </div>
@@ -137,7 +138,7 @@ export const PipelinePanel = ({ data, jobId, onJob, onOpen }: PipelinePanelProps
         >
           <div className={FORM_CLASS_NAME}>
             {error ? <Alert tone="negative" title="Chưa loại được" description={error} urgency="assertive" /> : null}
-            <Textarea label="Lý do" rows={3} value={reason} onValueChange={setReason} />
+            <Textarea label="Lý do" variant="secondary" rows={3} value={reason} onValueChange={setReason} />
             <Text size="sm" tone="muted">Ứng viên đã loại được giữ theo thời hạn lưu hồ sơ rồi tự xóa.</Text>
           </div>
         </Dialog>

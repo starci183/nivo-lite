@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Alert, Badge, Button, Input, Text } from "@starci/grammar/common"
+import { Alert, AlertDialog, Badge, Button, Input, Link, ListItem, SurfaceCard, Text } from "@starci/grammar/common"
 import { useT } from "@/i18n/client"
 import { connections } from "@/i18n/dict/connections"
 import { connectionWizard } from "@/i18n/dict/connectionWizard"
@@ -12,7 +12,7 @@ import { startGoogleConnect } from "@/lib/google-actions"
 import { sendWebhookTest } from "@/lib/webhook-actions"
 import type { Connection } from "@/lib/channels"
 import { deleteConnection, disconnectConnection, revealSepayKey, testConnection } from "@/lib/connection-actions"
-import { ACTIONS_CLASS, FULL_BOX_CLASS, ROW_CLASS, ROW_MAIN_CLASS } from "./classNames"
+import { ACTIONS_CLASS, FULL_CLASS, PANEL_CLASS, ROW_CLASS, ROW_MAIN_CLASS } from "./classNames"
 import { SmtpRowExtras } from "./SmtpRowExtras"
 import { StatusBadge } from "./StatusBadge"
 
@@ -87,12 +87,12 @@ export const ConnectionRow = ({ connection: c, agentNames, localOnly, onContinue
   })
 
   return (
-    <div className={ROW_CLASS}>
+    <ListItem className={ROW_CLASS}>
       <div className={ROW_MAIN_CLASS}>
         <Text weight="semibold">{c.name}</Text>
         {facts ? (
           c.provider === "telegram" && c.meta.bot_username
-            ? <a className="text-sm underline" href={`https://t.me/${c.meta.bot_username}`} target="_blank" rel="noreferrer">{facts}</a>
+            ? <Text size="sm"><Link href={`https://t.me/${c.meta.bot_username}`} kind="external">{facts}</Link></Text>
             : <Text size="sm" tone="muted">{facts}</Text>
         ) : null}
         <div className={ACTIONS_CLASS}>
@@ -118,29 +118,33 @@ export const ConnectionRow = ({ connection: c, agentNames, localOnly, onContinue
           : <Button variant="danger-soft" isDisabled={isPending} onPress={remove}>{t("remove")}</Button>}
       </div>
       {c.provider === "smtp" && live ? <SmtpRowExtras connection={c} ownerEmail={ownerEmail} /> : null}
-      {confirm ? (
-        <div className={FULL_BOX_CLASS}>
-          <Text size="sm">{t("disconnect")}: {c.name}?</Text>
-          <div className={ACTIONS_CLASS}>
-            <Button variant="danger" isPending={isPending} onPress={disconnect}>{t("disconnect")}</Button>
-            <Button variant="outline" onPress={() => setConfirm(false)}>{t("cancel")}</Button>
-          </div>
-        </div>
-      ) : null}
+      <AlertDialog
+        isOpen={confirm}
+        onOpenChange={setConfirm}
+        title={`${t("disconnect")}: ${c.name}?`}
+        confirmLabel={t("disconnect")}
+        cancelLabel={t("cancel")}
+        isConfirmPending={isPending}
+        onConfirm={disconnect}
+      />
       {keys ? (
-        <div className={FULL_BOX_CLASS}>
-          <Input
-            id={`row-${c.id}-url`} name="webhookUrl" label={t("webhookUrl")} variant="secondary" value={keys.webhookUrl}
-            isReadOnly isCopyable copyLabel={tw("copy")} copiedLabel={tw("copied")}
-          />
-          <Input
-            id={`row-${c.id}-key`} name="apiKey" label={t("apiKey")} variant="secondary" kind="password" value={keys.apiKey}
-            isReadOnly isCopyable copyLabel={tw("copy")} copiedLabel={tw("copied")} revealLabel={tw("reveal")} hideLabel={tw("hide")}
-          />
+        <div className={FULL_CLASS}>
+          <SurfaceCard depth="nested" ariaLabel={t("showKey")}>
+            <div className={PANEL_CLASS}>
+              <Input
+                id={`row-${c.id}-url`} name="webhookUrl" label={t("webhookUrl")} variant="secondary" value={keys.webhookUrl}
+                isReadOnly isCopyable copyLabel={tw("copy")} copiedLabel={tw("copied")}
+              />
+              <Input
+                id={`row-${c.id}-key`} name="apiKey" label={t("apiKey")} variant="secondary" kind="password" value={keys.apiKey}
+                isReadOnly isCopyable copyLabel={tw("copy")} copiedLabel={tw("copied")} revealLabel={tw("reveal")} hideLabel={tw("hide")}
+              />
+            </div>
+          </SurfaceCard>
         </div>
       ) : null}
-      {note ? <div className="w-full"><Alert title={note.text} tone={note.tone} /></div> : null}
-    </div>
+      {note ? <div className={FULL_CLASS}><Alert title={note.text} tone={note.tone} /></div> : null}
+    </ListItem>
   )
 }
 

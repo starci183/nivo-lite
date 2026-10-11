@@ -1,58 +1,40 @@
 import { cn } from "@heroui/react"
 
-/** Vertical rhythm between header, members, invitations and the invite form. */
+/** Vertical rhythm between header, members, invitations and the invite form (GAP-5: page regions). */
 export const PAGE_CLASS = cn("flex", "flex-col", "gap-6")
 
-/** Stack inside a card. */
+/** A named section: its SectionHeader, notices and the collection (GAP-4). */
+export const SECTION_CLASS = cn("flex", "flex-col", "gap-4")
+
+/** Stack inside a card (GAP-4). */
 export const STACK_CLASS = cn("flex", "flex-col", "gap-4")
 
-/** One member / invite row: identity left, facts and actions right; wraps on phones. */
-export const ROW_CLASS = cn("flex", "flex-wrap", "items-center", "gap-x-4", "gap-y-3", "border-t", "border-separator", "py-3", "first:border-t-0")
+/** One invite row of the SurfaceListCard: trailing seam dropped on the last row (BOUNDARY-2 case-1), row inset PADDING-4 inline / PADDING-3 block; identity, facts and actions wrap on phones. */
+export const ROW_CLASS = cn("flex", "flex-wrap", "items-center", "gap-x-4", "gap-y-3", "border-b", "border-separator", "px-4", "py-3", "last:border-b-0")
 
-/** Avatar + name + email column. */
+/** Avatar + name + email column (GAP-3). */
 export const IDENTITY_CLASS = cn("flex", "min-w-0", "flex-1", "basis-64", "items-center", "gap-3")
 
-/** Name / email text stack. */
-export const IDENTITY_TEXT_CLASS = cn("flex", "min-w-0", "flex-col", "gap-0.5")
+/** Name / email lines of one identity (GAP-1). */
+export const IDENTITY_TEXT_CLASS = cn("flex", "min-w-0", "flex-col", "gap-1")
 
-/** Name line (name + "You" chip). */
+/** Name line (name + "You" badge, GAP-2). */
 export const NAME_LINE_CLASS = cn("flex", "min-w-0", "items-center", "gap-2")
 
-/** Role, status and last sign-in cluster. */
-export const FACTS_CLASS = cn("flex", "flex-wrap", "items-center", "gap-x-5", "gap-y-2")
+/** Role badge cluster (GAP-2 case-4). */
+export const FACTS_CLASS = cn("flex", "flex-wrap", "items-center", "gap-2")
 
-/** One labelled fact (small caption over a value). */
-export const FACT_CLASS = cn("flex", "min-w-28", "flex-col", "gap-0.5")
-
-/** Column heading row, hidden on phones. */
-export const HEAD_ROW_CLASS = cn("hidden", "items-center", "gap-4", "pb-2", "md:flex")
-
-/** Buttons at the end of a row. */
+/** Buttons at the end of a row (GAP-2 case-3). */
 export const ACTIONS_CLASS = cn("flex", "flex-wrap", "items-center", "gap-2")
 
-/** Inline confirmation under a row. */
-export const CONFIRM_CLASS = cn("flex", "w-full", "flex-col", "gap-3", "rounded-lg", "bg-surface-secondary", "p-3")
+/** A freshly issued invite link under its row: the read-only copyable Input and its note (GAP-2). */
+export const LINK_BOX_CLASS = cn("flex", "w-full", "flex-col", "gap-2")
 
-/** Invite form grid: two columns on desktop. */
+/** Invite form grid: two columns on desktop (GAP-4). */
 export const FORM_GRID_CLASS = cn("grid", "grid-cols-1", "gap-4", "md:grid-cols-2")
 
-/** Copyable link box. */
-export const LINK_BOX_CLASS = cn("flex", "flex-col", "gap-2", "rounded-lg", "bg-surface-secondary", "p-3")
-
-/** The link text itself: selectable, wraps anywhere. */
-export const LINK_TEXT_CLASS = cn("break-all", "font-mono", "text-sm", "select-all")
-
-/** Right-aligned form footer. */
+/** Right-aligned form footer (GAP-3). */
 export const FOOTER_CLASS = cn("flex", "flex-wrap", "items-center", "justify-end", "gap-3")
 
-/** Public invitation page canvas. */
-export const INVITE_CANVAS_CLASS = cn("flex", "min-h-dvh", "items-center", "justify-center", "bg-background", "px-4", "py-10")
-
-/** Public invitation card width. */
-export const INVITE_CARD_CLASS = cn("flex", "w-full", "max-w-md", "flex-col", "gap-5")
-
-/** Invitation page action stack. */
+/** Accept-invitation action stack on the public invite page (GAP-3). */
 export const INVITE_ACTIONS_CLASS = cn("flex", "flex-col", "gap-3")
-
-/** The invitation card surface (plain section: grammar SurfaceCard is client-only). */
-export const CARD_CLASS = cn("flex", "flex-col", "gap-4", "rounded-2xl", "border", "border-separator", "bg-surface", "p-6", "shadow-sm")

@@ -4,7 +4,7 @@ import { NivoIcon } from "@/ui";
 import { useT } from "@/i18n/client";
 import { login } from "@/i18n/dict/login";
 import { AuthShell } from "@/features/auth/AuthShell";
-import { Alert, Button, Form, Input, Text, TextAction } from "@starci/grammar/common";
+import { Alert, Button, Divider, Form, Input, Text, TextAction } from "@starci/grammar/common";
 import { auth } from "@/i18n/dict/auth";
 import { LOGIN_ACTIONS_CLASS_NAME, LOGIN_CENTER_CLASS_NAME, LOGIN_FIELDS_CLASS_NAME, LOGIN_ROW_CLASS_NAME } from "./classNames";
 
@@ -68,14 +68,13 @@ export const LoginBase = ({ props, on }: LoginBaseProps) => {
         >
           {t("google")}
         </Button>
-        <div className={LOGIN_CENTER_CLASS_NAME}><Text size="sm" tone="muted">{t("or")}</Text></div>
+        <Divider label={t("or")} />
       </div>
       <Form label={t("signInLabel")} onSubmit={on.submit} isPending={props.isPasswordPending}>
         <div className={LOGIN_FIELDS_CLASS_NAME}>
           <Input id="login-email" name="email" kind="email" label={a("emailLabel")} placeholder={a("emailPlaceholder")} variant="secondary" isRequired isDisabled={busy} value={props.email} isError={Boolean(props.emailError)} errorMessage={props.emailError} onValueChange={on.setEmail} />
           <Input id="login-password" name="password" kind="password" label={a("passwordLabel")} revealLabel={a("showPassword")} hideLabel={a("hidePassword")} variant="secondary" isRequired isDisabled={busy} value={props.password} isError={Boolean(props.passwordError)} errorMessage={props.passwordError} onValueChange={on.setPassword} />
           <div className={LOGIN_ROW_CLASS_NAME}>
-            <span />
             <TextAction href={props.forgotHref}>{t("forgot")}</TextAction>
           </div>
           <Button variant="primary" width="fill" type="submit" isPending={props.isPasswordPending}>{t("submit")}</Button>

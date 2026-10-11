@@ -1,14 +1,14 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Button, EmptyNotice, PageContainer, SearchField, SectionHeader, SurfaceCard, Tabs, TextAction } from "@starci/grammar/common"
+import { Button, EmptyNotice, PageContainer, SearchField, SectionHeader, SurfaceListCard, Tabs, TextAction } from "@starci/grammar/common"
 import { useT } from "@/i18n/client"
 import { leads as leadsDict } from "@/i18n/dict/leads"
 import type { LeadRow } from "@/lib/queries"
 import type { LeadStage } from "@/lib/types"
 import { LeadsPromoRow } from "@/features/promo-ads/LeadsPromoRow"
 import { LeadListRow } from "./component"
-import { FILTERS_CLASS, LIST_CLASS, PAGE_CLASS, SEARCH_CLASS, TABS_CLASS } from "./classNames"
+import { FILTERS_CLASS, PAGE_CLASS, SEARCH_CLASS } from "./classNames"
 import { NewLeadForm } from "./NewLeadForm"
 import { STAGE_ORDER, STAGE_VIEW } from "./stage"
 
@@ -27,7 +27,7 @@ const isStage = (key: string): key is LeadStage => (STAGE_ORDER as ReadonlyArray
 /** Leads page body: header, filters, stage tabs, optional new-lead form and lead cards. */
 export const LeadsList = ({ leads, nowIso, initialQuery = "", initialFormOpen = false }: LeadsListProps) => {
   const t = useT(leadsDict)
-    const [query, setQuery] = useState(initialQuery)
+  const [query, setQuery] = useState(initialQuery)
   const [isFormOpen, setIsFormOpen] = useState(initialFormOpen)
   const [stage, setStage] = useState<string>(ALL)
 
@@ -74,31 +74,26 @@ export const LeadsList = ({ leads, nowIso, initialQuery = "", initialFormOpen = 
           </div>
           {isFiltered ? <TextAction onPress={onClear}>{t("clearFilters")}</TextAction> : null}
         </div>
-        <div className={TABS_CLASS}>
-          <Tabs
-            label={t("tabsLabel")}
-            selectedKey={stage}
-            inset="none"
-            labelVisibility="always"
-            items={[{ id: ALL, label: t("tabAll", { n: counts[ALL] ?? 0 }) }, ...STAGE_ORDER.map((s) => ({ id: s, label: t("tabStage", { stage: t(STAGE_VIEW[s].key), n: counts[s] ?? 0 }) }))]}
-            onSelect={(key) => setStage(key === ALL || isStage(key) ? key : ALL)}
-          />
-        </div>
-        {visible.length === 0 ? (
-          <SurfaceCard ariaLabel={t("emptyAria")}>
-            {leads.length === 0 ? (
+        <Tabs
+          label={t("tabsLabel")}
+          selectedKey={stage}
+          inset="none"
+          labelVisibility="always"
+          items={[{ id: ALL, label: t("tabAll", { n: counts[ALL] ?? 0 }) }, ...STAGE_ORDER.map((s) => ({ id: s, label: t("tabStage", { stage: t(STAGE_VIEW[s].key), n: counts[s] ?? 0 }) }))]}
+          onSelect={(key) => setStage(key === ALL || isStage(key) ? key : ALL)}
+        />
+        <SurfaceListCard
+          ariaLabel={visible.length === 0 ? t("emptyAria") : t("listAria")}
+          empty={
+            leads.length === 0 ? (
               <EmptyNotice message={t("emptyTitle")} description={t("emptyBody")} actionLabel={t("newLead")} actionVariant="secondary" onAction={() => setIsFormOpen(true)} />
             ) : (
               <EmptyNotice message={t("noMatchTitle")} description={t("noMatchBody")} actionLabel={t("clearFilters")} actionVariant="secondary" onAction={onClear} />
-            )}
-          </SurfaceCard>
-        ) : (
-          <SurfaceCard ariaLabel={t("listAria")}>
-          <ul className={LIST_CLASS}>
-            {visible.map((lead) => <LeadListRow key={lead.id} lead={lead} nowIso={nowIso} />)}
-          </ul>
-          </SurfaceCard>
-        )}
+            )
+          }
+        >
+          {visible.map((lead) => <LeadListRow key={lead.id} lead={lead} nowIso={nowIso} />)}
+        </SurfaceListCard>
         {visible.length > 0 ? <LeadsPromoRow /> : null}
       </div>
     </PageContainer>

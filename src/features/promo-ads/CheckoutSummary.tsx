@@ -1,34 +1,35 @@
 "use client"
 
-import { Badge, SurfaceCard, Text } from "@starci/grammar/common"
+import { Badge, DescriptionList, SurfaceCard, Text } from "@starci/grammar/common"
 import { useT } from "@/i18n/client"
 import { promoAds } from "@/i18n/dict/promoAds"
 import { FOUNDING_OFFER, isOfferLive } from "@/lib/promo"
-import { SUMMARY_LIST, SUMMARY_ROW, SUMMARY_VALUE } from "./classNames"
 
 type CheckoutSummaryProps = { readonly moduleName: string }
 
-/** Order summary before "Add to workspace". Only states what is true: no amounts are invented. */
+/**
+ * Order summary before "Add to workspace". Only states what is true: no amounts are invented. Term/value pairs are
+ * Grammar's `DescriptionList` (divided columns) instead of hand-drawn bordered rows; the applied campaign is a Badge.
+ */
 export const CheckoutSummary = ({ moduleName }: CheckoutSummaryProps) => {
   const t = useT(promoAds)
-  const rows: ReadonlyArray<{ readonly label: string; readonly value: string }> = [
-    { label: t("summaryModule"), value: moduleName },
-    { label: t("summaryPlan"), value: t("summaryPlanValue") },
-    ...(isOfferLive() ? [{ label: FOUNDING_OFFER.name, value: t("summaryApplied", { percent: FOUNDING_OFFER.percentOff }) }] : []),
-    { label: t("summaryStarts"), value: t("summaryToday") },
+  const rows: ReadonlyArray<{ readonly id: string; readonly label: string; readonly value: string; readonly isOffer?: boolean }> = [
+    { id: "module", label: t("summaryModule"), value: moduleName },
+    { id: "plan", label: t("summaryPlan"), value: t("summaryPlanValue") },
+    ...(isOfferLive() ? [{ id: "offer", label: FOUNDING_OFFER.name, value: t("summaryApplied", { percent: FOUNDING_OFFER.percentOff }), isOffer: true }] : []),
+    { id: "starts", label: t("summaryStarts"), value: t("summaryToday") },
   ]
   return (
     <SurfaceCard label={t("summaryTitle")} headingLevel={2}>
-      <div className={SUMMARY_LIST}>
-        {rows.map((row) => (
-          <div key={row.label} className={SUMMARY_ROW}>
-            <Text size="sm" tone="muted">{row.label}</Text>
-            <div className={SUMMARY_VALUE}>
-              {row.label === FOUNDING_OFFER.name ? <Badge tone="accent">{row.value}</Badge> : <Text weight="medium">{row.value}</Text>}
-            </div>
-          </div>
-        ))}
-      </div>
+      <DescriptionList
+        layout="columns"
+        isDivided
+        items={rows.map((row) => ({
+          id: row.id,
+          term: row.label,
+          description: row.isOffer === true ? <Badge tone="accent">{row.value}</Badge> : <Text weight="medium">{row.value}</Text>,
+        }))}
+      />
     </SurfaceCard>
   )
 }

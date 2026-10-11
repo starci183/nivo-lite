@@ -1,12 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Badge, Button, Drawer, EmptyNotice, Input, SearchField, SegmentedControl, Select, SurfaceCard, Text } from "@starci/grammar/common";
+import { Badge, Button, Drawer, EmptyNotice, Input, ListItem, SearchField, SegmentedControl, Select, SurfaceListCard, Text } from "@starci/grammar/common";
 import { formatMoney, formatQty, isSmallAdjustment, num, type StockStatus } from "@/lib/module-inventory-shared";
 import type { InventoryWorkbench, ItemView } from "@/lib/module-inventory-queries";
 import { adjustStockAction, draftLowStockAction, saveItem, setItemActive, transferStockAction } from "./actions";
 import {
-  CHIPS_CLASS_NAME, FORM_CLASS_NAME, FORM_GRID_CLASS_NAME, LIST_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME, TOOLBAR_CLASS_NAME, TOOLBAR_FIELD_CLASS_NAME,
+  CHIPS_CLASS_NAME, FORM_CLASS_NAME, FORM_GRID_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME, STACK_CLASS_NAME, TOOLBAR_CLASS_NAME, TOOLBAR_FIELD_CLASS_NAME,
 } from "./classNames";
 import { Feedback, StockBadge, useRun } from "./parts";
 
@@ -46,7 +46,7 @@ const ItemDrawer = ({ item, data, isOpen, onClose }: { readonly item: ItemView |
         <Input id="inv-units" name="units" label="Đơn vị khác" hint="Ví dụ: thùng=24, kg=1000 (1 thùng bằng 24 đơn vị gốc)" variant="secondary" value={f.units} onValueChange={set("units")} />
         <div className={FORM_GRID_CLASS_NAME}>
           <Input id="inv-cat" name="category" label="Nhóm hàng" variant="secondary" value={f.category} onValueChange={set("category")} />
-          <Select label="Nhà cung cấp quen" placeholder="Chưa chọn" value={f.supplierId || null} options={data.suppliers.map((s) => ({ id: s.id, label: s.name }))} onValueChange={(v) => set("supplierId")(v ?? "")} />
+          <Select variant="secondary" label="Nhà cung cấp quen" placeholder="Chưa chọn" value={f.supplierId || null} options={data.suppliers.map((s) => ({ id: s.id, label: s.name }))} onValueChange={(v) => set("supplierId")(v ?? "")} />
         </div>
         <div className={FORM_GRID_CLASS_NAME}>
           <Input id="inv-cost" name="cost" label="Giá vốn / đơn vị gốc (₫)" variant="secondary" value={f.cost} onValueChange={set("cost")} />
@@ -100,8 +100,8 @@ const AdjustDrawer = ({ item, data, onClose }: { readonly item: ItemView | null;
       {item ? (
         <div className={FORM_CLASS_NAME}>
           <SegmentedControl label="Cách chỉnh" options={modes} value={mode} onValueChange={(v) => setMode(v === "delta" ? "delta" : v === "move" ? "move" : "set")} />
-          {multi ? <Select label={mode === "move" ? "Chuyển từ" : "Ở kho"} value={from || null} options={locOptions} onValueChange={(v) => setFrom(v ?? "")} /> : null}
-          {mode === "move" ? <Select label="Chuyển tới" placeholder="Chọn kho" value={to || null} options={locOptions.filter((l) => l.id !== from)} onValueChange={(v) => setTo(v ?? "")} /> : null}
+          {multi ? <Select variant="secondary" label={mode === "move" ? "Chuyển từ" : "Ở kho"} value={from || null} options={locOptions} onValueChange={(v) => setFrom(v ?? "")} /> : null}
+          {mode === "move" ? <Select variant="secondary" label="Chuyển tới" placeholder="Chọn kho" value={to || null} options={locOptions.filter((l) => l.id !== from)} onValueChange={(v) => setTo(v ?? "")} /> : null}
           <Input id="adj-value" name="value" label={mode === "set" ? `Số đếm được (${item.unit})` : mode === "move" ? `Số lượng chuyển (${item.unit})` : `Thay đổi (${item.unit}, số âm để trừ)`} variant="secondary" value={value} onValueChange={setValue} />
           <Input id="adj-reason" name="reason" label={mode === "move" ? "Ghi chú" : "Lý do"} hint={mode === "move" ? undefined : "Ví dụ: hao hụt, vỡ, đếm lại kho"} variant="secondary" value={reason} onValueChange={setReason} />
           {value.trim() && mode !== "move" ? (
@@ -135,7 +135,7 @@ export const StockPanel = ({ data }: { readonly data: InventoryWorkbench }) => {
   const lowCount = data.metrics.lowCount + data.metrics.outCount;
 
   return (
-    <div className="flex min-w-0 flex-col gap-3">
+    <div className={STACK_CLASS_NAME}>
       <div className={TOOLBAR_CLASS_NAME}>
         <div className={TOOLBAR_FIELD_CLASS_NAME}>
           <SearchField label="Tìm hàng" isLabelHidden placeholder="Tìm theo tên, mã, nhóm" clearLabel="Xoá tìm kiếm" value={q} onValueChange={setQ} onClear={() => setQ("")} />
@@ -147,37 +147,34 @@ export const StockPanel = ({ data }: { readonly data: InventoryWorkbench }) => {
       </div>
       <SegmentedControl label="Lọc theo tình trạng" isLabelHidden options={FILTERS.map((f) => ({ value: f.id, label: f.label }))} value={filter} onValueChange={(v) => setFilter(FILTERS.find((f) => f.id === v)?.id ?? "all")} />
       <Feedback error={run.error} notice={run.notice} />
-      <SurfaceCard ariaLabel="Danh sách hàng">
-        {rows.length === 0 ? (
-          <EmptyNotice message={data.items.length === 0 ? "Chưa có mặt hàng nào" : "Không có mặt hàng phù hợp"} description={data.items.length === 0 ? "Thêm hàng, dán bảng từ Excel hoặc nạp mẫu theo ngành ở tab Nhập dữ liệu." : "Thử đổi bộ lọc hoặc từ khoá."} />
-        ) : (
-          <ul className={LIST_CLASS_NAME} aria-label="Hàng trong kho">
-            {rows.map((i) => (
-              <li key={i.id} className={ROW_CLASS_NAME}>
-                <div className={ROW_MAIN_CLASS_NAME}>
-                  <div className={CHIPS_CLASS_NAME}>
-                    <Text weight="semibold">{i.name}</Text>
-                    <StockBadge status={i.status} />
-                    {i.onOrder > 0 ? <Badge tone="accent">Đang đặt {formatQty(i.onOrder)} {i.unit}</Badge> : null}
-                  </div>
-                  <Text size="sm" tone="muted">
-                    {i.sku}{i.category ? ` · ${i.category}` : ""}{supplierOf(i.supplier_id) ? ` · ${supplierOf(i.supplier_id)}` : ""}
-                    {data.locations.length > 1 ? ` · ${i.levels.map((l) => `${data.locations.find((x) => x.id === l.locationId)?.name ?? ""} ${formatQty(l.qty)}`).join(", ")}` : ""}
-                    {i.reorder_point > 0 ? ` · tối thiểu ${formatQty(i.reorder_point)}` : ""}{i.cost_vnd > 0 ? ` · vốn ${formatMoney(i.cost_vnd)}/${i.unit}` : ""}
-                  </Text>
-                </div>
-                <div className={ROW_ACTIONS_CLASS_NAME}>
-                  <Text size="md" weight="semibold">{formatQty(i.total)} {i.unit}</Text>
-                  <Button variant="outline" size="sm" aria-label={`Giảm ${formatQty(stepOf(i))} ${i.unit} ${i.name}`} isDisabled={run.isPending} onPress={() => quick(i, -1)}>−{formatQty(stepOf(i))}</Button>
-                  <Button variant="outline" size="sm" aria-label={`Tăng ${formatQty(stepOf(i))} ${i.unit} ${i.name}`} isDisabled={run.isPending} onPress={() => quick(i, 1)}>+{formatQty(stepOf(i))}</Button>
-                  <Button variant="ghost" size="sm" onPress={() => setAdjusting(i)}>Chỉnh tồn</Button>
-                  {data.canManage ? <Button variant="ghost" size="sm" onPress={() => setEditing(i)}>Sửa</Button> : null}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </SurfaceCard>
+      <SurfaceListCard
+        ariaLabel="Hàng trong kho"
+        empty={<EmptyNotice message={data.items.length === 0 ? "Chưa có mặt hàng nào" : "Không có mặt hàng phù hợp"} description={data.items.length === 0 ? "Thêm hàng, dán bảng từ Excel hoặc nạp mẫu theo ngành ở tab Nhập dữ liệu." : "Thử đổi bộ lọc hoặc từ khoá."} />}
+      >
+        {rows.map((i) => (
+          <ListItem key={i.id} className={ROW_CLASS_NAME}>
+            <div className={ROW_MAIN_CLASS_NAME}>
+              <div className={CHIPS_CLASS_NAME}>
+                <Text weight="semibold">{i.name}</Text>
+                <StockBadge status={i.status} />
+                {i.onOrder > 0 ? <Badge tone="accent">Đang đặt {formatQty(i.onOrder)} {i.unit}</Badge> : null}
+              </div>
+              <Text size="sm" tone="muted">
+                {i.sku}{i.category ? ` · ${i.category}` : ""}{supplierOf(i.supplier_id) ? ` · ${supplierOf(i.supplier_id)}` : ""}
+                {data.locations.length > 1 ? ` · ${i.levels.map((l) => `${data.locations.find((x) => x.id === l.locationId)?.name ?? ""} ${formatQty(l.qty)}`).join(", ")}` : ""}
+                {i.reorder_point > 0 ? ` · tối thiểu ${formatQty(i.reorder_point)}` : ""}{i.cost_vnd > 0 ? ` · vốn ${formatMoney(i.cost_vnd)}/${i.unit}` : ""}
+              </Text>
+            </div>
+            <div className={ROW_ACTIONS_CLASS_NAME}>
+              <Text size="md" weight="semibold">{formatQty(i.total)} {i.unit}</Text>
+              <Button variant="outline" size="sm" aria-label={`Giảm ${formatQty(stepOf(i))} ${i.unit} ${i.name}`} isDisabled={run.isPending} onPress={() => quick(i, -1)}>−{formatQty(stepOf(i))}</Button>
+              <Button variant="outline" size="sm" aria-label={`Tăng ${formatQty(stepOf(i))} ${i.unit} ${i.name}`} isDisabled={run.isPending} onPress={() => quick(i, 1)}>+{formatQty(stepOf(i))}</Button>
+              <Button variant="ghost" size="sm" onPress={() => setAdjusting(i)}>Chỉnh tồn</Button>
+              {data.canManage ? <Button variant="ghost" size="sm" onPress={() => setEditing(i)}>Sửa</Button> : null}
+            </div>
+          </ListItem>
+        ))}
+      </SurfaceListCard>
       {data.canManage && data.items.some((i) => !i.active) ? <div><Button variant="ghost" size="sm" onPress={() => setShowInactive((v) => !v)}>{showInactive ? "Xem hàng đang theo dõi" : "Xem hàng đã ngừng theo dõi"}</Button></div> : null}
       {editing !== null ? <ItemDrawer key={editing === "new" ? "new" : editing.id} item={editing === "new" ? null : editing} data={data} isOpen onClose={() => setEditing(null)} /> : null}
       <AdjustDrawer key={adjusting?.id ?? "none"} item={adjusting} data={data} onClose={() => setAdjusting(null)} />

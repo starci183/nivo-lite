@@ -1,10 +1,10 @@
 "use client"
 
-import { Alert, Text } from "@starci/grammar/common"
+import { Alert, Heading, List, ListItem, Text } from "@starci/grammar/common"
 import { useLocale, useT } from "@/i18n/client"
 import { automations as dict } from "@/i18n/dict/automations"
 import type { AutomationCardView } from "@/lib/automation-shared"
-import { FACTS_CLASS, LIST_PLAIN_CLASS, SECTION_CLASS } from "./classNames"
+import { FACTS_CLASS, SECTION_CLASS } from "./classNames"
 import { loc } from "./helpers"
 
 /** Props for {@link GatePanel}. */
@@ -23,7 +23,7 @@ export const GatePanel = ({ card, onAnswerTrust }: GatePanelProps) => {
     <section className={SECTION_CLASS} aria-label={t("gateTitle")}>
       {sendsToCustomer ? (
         <div className={FACTS_CLASS}>
-          <Text weight="semibold">{t("gateTitle")}</Text>
+          <Heading level={3}>{t("gateTitle")}</Heading>
           {gateLine ? <Text size="sm">{gateLine}</Text> : null}
           {def.authority.alwaysAsk ? <Text size="sm">{t("alwaysAsk")}</Text> : null}
           {card.trust.autoSend ? <Text size="sm" tone="muted">{t("autoSendOn")}</Text> : null}
@@ -41,8 +41,8 @@ export const GatePanel = ({ card, onAnswerTrust }: GatePanelProps) => {
       ) : null}
       {def.guardrails.length > 0 ? (
         <div className={FACTS_CLASS}>
-          <Text size="sm" weight="semibold">{t("guardrailsTitle")}</Text>
-          <ul className={LIST_PLAIN_CLASS}>{def.guardrails.map((g, i) => <li key={i}>{loc(g, locale)}</li>)}</ul>
+          <Heading level={4}>{t("guardrailsTitle")}</Heading>
+          <List className={FACTS_CLASS} label={t("guardrailsTitle")}>{def.guardrails.map((g, i) => <ListItem key={i}><Text size="sm">{loc(g, locale)}</Text></ListItem>)}</List>
         </div>
       ) : null}
     </section>

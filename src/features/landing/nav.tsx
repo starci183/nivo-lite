@@ -1,11 +1,11 @@
-import { Button } from "@starci/grammar/common";
+import { Button, NavLandmark, TextAction, TopBar } from "@starci/grammar/common";
 import { NivoLogo } from "@/components/brand/NivoLogo";
 import { LocaleSwitch } from "@/i18n/LocaleSwitch";
 import { landing } from "@/i18n/dict/landing";
 import { getT } from "@/i18n/server";
 import { getAuthUser } from "@/lib/supabase/auth-user";
 import { LANDING_OFFER } from "./offer";
-import { NAV, NAV_ACTIONS, NAV_LINK, NAV_LINKS, NAV_ROW, NAV_SIGNIN } from "./classNames";
+import { NAV_LINKS, NAV_SIGNIN } from "./classNames";
 
 const isSignedIn = async (): Promise<boolean> => {
   try {
@@ -15,7 +15,7 @@ const isSignedIn = async (): Promise<boolean> => {
   }
 };
 
-/** Top bar: logo, in-page anchors, language switch and sign-in / try actions. */
+/** Top bar (Grammar `TopBar`, the page banner): logo, in-page anchors, language switch and sign-in / try actions. */
 export const LandingNav = async () => {
   const [t, signedIn] = await Promise.all([getT(landing), isSignedIn()]);
   const links = [
@@ -25,19 +25,27 @@ export const LandingNav = async () => {
     { href: "#faq", label: t("navFaq") },
   ];
   return (
-    <header className={NAV}>
-      <nav className={NAV_ROW} aria-label={t("navLabel")}>
+    <TopBar
+      position="sticky"
+      brand={
+        // Unstyled home link around the approved logo raster; the anchor only carries the destination and its name.
         <a href="/" aria-label={t("homeLabel")}>
           <NivoLogo variant="full" height={36} />
         </a>
+      }
+      navigation={
         <div className={NAV_LINKS}>
-          {links.map((l) => (
-            <a key={l.href} className={NAV_LINK} href={l.href}>
-              {l.label}
-            </a>
-          ))}
+          <NavLandmark label={t("navLabel")} layout="bar">
+            {links.map((l) => (
+              <TextAction key={l.href} href={l.href} appearance="route" size="sm">
+                {l.label}
+              </TextAction>
+            ))}
+          </NavLandmark>
         </div>
-        <div className={NAV_ACTIONS}>
+      }
+      actions={
+        <>
           <LocaleSwitch />
           <div className={NAV_SIGNIN}>
             <Button variant="secondary" size="sm" href={signedIn ? "/dashboard" : "/login"}>
@@ -47,8 +55,8 @@ export const LandingNav = async () => {
           <Button variant="primary" size="sm" href={LANDING_OFFER.ctaHref}>
             {t("tryNow")}
           </Button>
-        </div>
-      </nav>
-    </header>
+        </>
+      }
+    />
   );
 };

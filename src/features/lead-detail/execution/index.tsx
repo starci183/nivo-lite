@@ -1,13 +1,13 @@
 "use client";
 
-import { SurfaceListCard } from "@starci/grammar/common";
+import { List, ListItem, Region, SectionHeader } from "@starci/grammar/common";
 
 import { ApprovalCard } from "@/features/approval-card";
 import { useT } from "@/i18n/client";
 import { lead as leadDict } from "@/i18n/dict/lead";
 import type { LeadDetail } from "@/lib/types";
 
-import { EXECUTION_EARLIER_LIST_CLASS_NAME, EXECUTION_PANEL_CLASS_NAME } from "./classNames";
+import { EXECUTION_EARLIER_LIST_CLASS_NAME, EXECUTION_EARLIER_SECTION_CLASS_NAME, EXECUTION_PANEL_CLASS_NAME } from "./classNames";
 import { DraftCard } from "./DraftCard";
 
 /** Props for the execution panel. */
@@ -55,20 +55,22 @@ export const ExecutionPanel = (props: ExecutionPanelProps) => {
         />
       )}
       {earlier.length === 0 ? null : (
-        <SurfaceListCard label={t("earlierApprovals")} fact={t("decidedCount", { count: earlier.length })}>
-          <div className={EXECUTION_EARLIER_LIST_CLASS_NAME}>
+        <Region labelledBy="earlier-approvals-title" className={EXECUTION_EARLIER_SECTION_CLASS_NAME}>
+          <SectionHeader id="earlier-approvals-title" level={2} title={t("earlierApprovals")} meta={t("decidedCount", { count: earlier.length })} />
+          <List className={EXECUTION_EARLIER_LIST_CLASS_NAME} label={t("earlierApprovals")}>
             {earlier.map((e) => (
-              <ApprovalCard
-                key={e.id}
-                execution={e}
-                leadName={lead.contact_name}
-                channel={lead.channel}
-                agentName={agentName(e.agent_id)}
-                nextAction={nextActionOf(e.responsibility_id)}
-              />
+              <ListItem key={e.id}>
+                <ApprovalCard
+                  execution={e}
+                  leadName={lead.contact_name}
+                  channel={lead.channel}
+                  agentName={agentName(e.agent_id)}
+                  nextAction={nextActionOf(e.responsibility_id)}
+                />
+              </ListItem>
             ))}
-          </div>
-        </SurfaceListCard>
+          </List>
+        </Region>
       )}
     </div>
   );

@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Alert, Badge, Button, EmptyNotice, SectionHeader, Text } from "@starci/grammar/common";
+import { Alert, Badge, Button, EmptyNotice, ListItem, SectionHeader, SurfaceCard, SurfaceListCard, Text } from "@starci/grammar/common";
 import { useT } from "@/i18n/client";
 import { shifts as dict } from "@/i18n/dict/shifts";
 import type { BenchData, WorkItemLite } from "@/lib/module-shifts-view";
 import { decideAvailabilityAction, decideWorkAction } from "./actions";
-import { BLOCK_CLASS_NAME, LIST_CLASS_NAME, LIST_ITEM_CLASS_NAME, PANEL_CLASS_NAME, ROW_CLASS_NAME } from "./classNames";
+import { BLOCK_CLASS_NAME, CARD_ROW_CLASS_NAME, PANEL_CLASS_NAME, ROW_CLASS_NAME, STACK_SM_CLASS_NAME } from "./classNames";
 import { DAY_LONG, dm } from "./format";
 
 type Props = { readonly data: BenchData; readonly onReload: () => Promise<void> };
@@ -54,51 +54,51 @@ export const RequestsPanel = ({ data, onReload }: Props) => {
   return (
     <div className={PANEL_CLASS_NAME}>
       {error ? <Alert tone="negative" title={t("errTitle")} description={error} /> : null}
-      {none ? <EmptyNotice message={t("reqNoneTitle")} description={t("reqNoneBody")} /> : null}
+      {none ? <SurfaceCard ariaLabel={t("reqNoneTitle")}><EmptyNotice message={t("reqNoneTitle")} description={t("reqNoneBody")} /></SurfaceCard> : null}
 
       {openLeaves.length ? (
-        <section className={BLOCK_CLASS_NAME}>
+        <div className={BLOCK_CLASS_NAME}>
           <SectionHeader level={2} title={t("reqLeave")} description={t("reqLeaveHint")} />
-          <div className={LIST_CLASS_NAME}>
+          <SurfaceListCard ariaLabel={t("reqLeave")}>
             {openLeaves.map((l) => (
-              <div key={l.id} className={LIST_ITEM_CLASS_NAME}>
-                <div className="min-w-0">
+              <ListItem key={l.id} className={CARD_ROW_CLASS_NAME}>
+                <div className={STACK_SM_CLASS_NAME}>
                   <Text size="sm" weight="semibold">{`${name(l.staffId)}: ${DAY_LONG[(new Date(`${l.from}T00:00:00Z`).getUTCDay() + 6) % 7]} ${dm(l.from)}${l.to !== l.from ? ` – ${dm(l.to)}` : ""}`}</Text>
                   {l.reason ? <Text size="xs" tone="muted">{l.reason}</Text> : null}
                   {l.item?.summary ? <Text size="xs" tone="muted">{l.item.summary}</Text> : null}
                 </div>
                 <div className={ROW_CLASS_NAME}>{statusBadge(l.status, l.item, t)}{buttons(l.item)}</div>
-              </div>
+              </ListItem>
             ))}
-          </div>
-        </section>
+          </SurfaceListCard>
+        </div>
       ) : null}
 
       {openSwaps.length ? (
-        <section className={BLOCK_CLASS_NAME}>
+        <div className={BLOCK_CLASS_NAME}>
           <SectionHeader level={2} title={t("reqSwap")} description={t("reqSwapHint")} />
-          <div className={LIST_CLASS_NAME}>
+          <SurfaceListCard ariaLabel={t("reqSwap")}>
             {openSwaps.map((s) => (
-              <div key={s.id} className={LIST_ITEM_CLASS_NAME}>
-                <div className="min-w-0">
+              <ListItem key={s.id} className={CARD_ROW_CLASS_NAME}>
+                <div className={STACK_SM_CLASS_NAME}>
                   <Text size="sm" weight="semibold">{s.kind === "claim" ? t("claimLine", { name: name(s.toStaffId), shift: s.shiftLine }) : t("swapLine", { from: name(s.fromStaffId), to: name(s.toStaffId), shift: s.shiftLine })}</Text>
                   {s.checks.length ? <Text size="xs" tone="muted">{`${t("outsideRules")}: ${s.checks.join(" ")}`}</Text> : null}
                   {s.reason ? <Text size="xs" tone="muted">{s.reason}</Text> : null}
                 </div>
                 <div className={ROW_CLASS_NAME}>{statusBadge(s.status, s.item, t)}{buttons(s.item)}</div>
-              </div>
+              </ListItem>
             ))}
-          </div>
-        </section>
+          </SurfaceListCard>
+        </div>
       ) : null}
 
       {openAvail.length ? (
-        <section className={BLOCK_CLASS_NAME}>
+        <div className={BLOCK_CLASS_NAME}>
           <SectionHeader level={2} title={t("reqAvail")} description={t("reqAvailHint")} />
-          <div className={LIST_CLASS_NAME}>
+          <SurfaceListCard ariaLabel={t("reqAvail")}>
             {openAvail.map((a) => (
-              <div key={a.id} className={LIST_ITEM_CLASS_NAME}>
-                <div className="min-w-0">
+              <ListItem key={a.id} className={CARD_ROW_CLASS_NAME}>
+                <div className={STACK_SM_CLASS_NAME}>
                   <Text size="sm" weight="semibold">{`${name(a.staffId)}: ${a.available ? t("canWork") : t("cannotWork")} ${a.date ? dm(a.date) : DAY_LONG[a.weekday ?? 0]} ${a.start}–${a.end}`}</Text>
                   {a.note ? <Text size="xs" tone="muted">{a.note}</Text> : null}
                 </div>
@@ -106,21 +106,21 @@ export const RequestsPanel = ({ data, onReload }: Props) => {
                   <Button size="sm" variant="primary" isDisabled={pending} onPress={() => decideAvail(a.id, "approved")}>{t("approve")}</Button>
                   <Button size="sm" variant="outline" isDisabled={pending} onPress={() => decideAvail(a.id, "declined")}>{t("decline")}</Button>
                 </div>
-              </div>
+              </ListItem>
             ))}
-          </div>
-        </section>
+          </SurfaceListCard>
+        </div>
       ) : null}
 
       {recent.length ? (
-        <section className={BLOCK_CLASS_NAME}>
+        <div className={BLOCK_CLASS_NAME}>
           <SectionHeader level={2} title={t("reqRecent")} />
-          <div className={LIST_CLASS_NAME}>
+          <SurfaceListCard ariaLabel={t("reqRecent")}>
             {recent.map((r) => (
-              <div key={r.key} className={LIST_ITEM_CLASS_NAME}><Text size="sm">{r.node}</Text>{statusBadge(r.status, r.item, t)}</div>
+              <ListItem key={r.key} className={CARD_ROW_CLASS_NAME}><Text size="sm">{r.node}</Text>{statusBadge(r.status, r.item, t)}</ListItem>
             ))}
-          </div>
-        </section>
+          </SurfaceListCard>
+        </div>
       ) : null}
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@starci/grammar/common";
+import { Button, SurfaceCard, Text } from "@starci/grammar/common";
 import { useT } from "@/i18n/client";
 import { promo } from "@/i18n/dict/promo";
 import type { WebsiteLeadStats } from "@/features/promo/queries";
@@ -12,7 +12,11 @@ export type MissedLeadsInsightProps = {
   readonly ctaHref?: string;
 };
 
-/** Insight computed from this workspace's website leads; hidden once a Chatbot exists or when there are no website leads. */
+/**
+ * Insight computed from this workspace's website leads; hidden once a Chatbot exists or when there are no website
+ * leads. One top-level `SurfaceCard`; the coral leading edge and the mascot were decoration (DISCIPLINE-1,
+ * DISCIPLINE-3: the overview's one signature moment is the Founding 50 band).
+ */
 export const MissedLeadsInsight = ({ hasChatbot, stats, ctaHref = "/modules/new?module=chatbot" }: MissedLeadsInsightProps) => {
   const t = useT(promo);
   if (hasChatbot || stats.count === 0) return null;
@@ -22,21 +26,22 @@ export const MissedLeadsInsight = ({ hasChatbot, stats, ctaHref = "/modules/new?
     return t("waitDays", { n: Math.round(hours / 24) });
   };
   return (
-    <section className={c.INSIGHT} aria-label={t("insightAria")}>
-      <img className={c.INSIGHT_ART} src="/images/promo/mascot-night.png" alt="" />
-      <div className={c.INSIGHT_COPY}>
-        <p className={c.INSIGHT_EYEBROW}>{t("insightEyebrow")}</p>
-        <p className={c.INSIGHT_TITLE}>
-          {t(stats.count === 1 ? "insightTitleOne" : "insightTitle", { after: stats.afterHoursCount, count: stats.count })}
-        </p>
-        <p className={c.INSIGHT_TEXT}>
-          {stats.avgWaitHours !== null ? `${t("insightWait", { wait: waitLabel(stats.avgWaitHours) })} ` : ""}
-          {t("insightText")}
-        </p>
+    <SurfaceCard ariaLabel={t("insightAria")}>
+      <div className={c.INSIGHT}>
+        <div className={c.INSIGHT_COPY}>
+          <Text size="xs">{t("insightEyebrow")}</Text>
+          <Text size="md" weight="semibold">
+            {t(stats.count === 1 ? "insightTitleOne" : "insightTitle", { after: stats.afterHoursCount, count: stats.count })}
+          </Text>
+          <Text size="sm" tone="muted">
+            {stats.avgWaitHours !== null ? `${t("insightWait", { wait: waitLabel(stats.avgWaitHours) })} ` : ""}
+            {t("insightText")}
+          </Text>
+        </div>
+        <Button variant="secondary" href={ctaHref}>
+          {t("addChatbot")}
+        </Button>
       </div>
-      <Button variant="secondary" href={ctaHref}>
-        {t("addChatbot")}
-      </Button>
-    </section>
+    </SurfaceCard>
   );
 };

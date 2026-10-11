@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Alert, Badge, Button, Heading, PageContainer, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common";
+import { Alert, Badge, Button, Heading, Image, List, ListItem, MediaFrame, PageContainer, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common";
 import { useLocale, useT } from "@/i18n/client";
 import { modulesCore } from "@/i18n/dict/modulesCore";
 import { installModule } from "@/lib/module-actions";
@@ -10,8 +10,7 @@ import { modulesByCategory, pick, pickList } from "@/lib/module-registry";
 import type { Installation, ModuleKey } from "@/lib/modules-shared";
 import { STATUS_TONE, statusOf } from "./meta";
 import {
-  CARD_ART_CLASS_NAME, CARD_ART_WRAP_CLASS_NAME, CARD_CLASS_NAME, CARD_FOOT_CLASS_NAME, CARD_HEAD_CLASS_NAME, CARD_POINTS_CLASS_NAME, CARD_POINT_CLASS_NAME,
-  CARD_POINT_DOT_CLASS_NAME, CATALOG_GRID_CLASS_NAME, CATEGORY_CLASS_NAME, PAGE_CLASS_NAME,
+  BADGES_CLASS_NAME, CARD_CLASS_NAME, CARD_FOOT_CLASS_NAME, CARD_HEAD_CLASS_NAME, CARD_POINTS_CLASS_NAME, CATALOG_GRID_CLASS_NAME, CATEGORY_CLASS_NAME, PAGE_CLASS_NAME,
 } from "./classNames";
 
 type ModuleCatalogProps = { readonly installations: ReadonlyArray<Installation>; readonly canInstall: boolean };
@@ -51,25 +50,22 @@ export const ModuleCatalog = ({ installations, canInstall }: ModuleCatalogProps)
                 return (
                   <SurfaceCard key={key} ariaLabel={pick(def.name, locale)}>
                     <div className={CARD_CLASS_NAME}>
-                      <div className={CARD_ART_WRAP_CLASS_NAME}>
-                        <img className={CARD_ART_CLASS_NAME} src={def.mascot} alt="" />
-                      </div>
+                      <MediaFrame aspect="landscape" fit="contain">
+                        <Image src={def.mascot} alt="" aspect="landscape" fit="contain" plate="none" />
+                      </MediaFrame>
                       <div className={CARD_HEAD_CLASS_NAME}>
-                        <Text weight="semibold" size="md">{pick(def.name, locale)}</Text>
-                        <span className="flex flex-wrap items-center justify-end gap-1">
+                        <Heading level={3}>{pick(def.name, locale)}</Heading>
+                        <span className={BADGES_CLASS_NAME}>
                           {def.status === "early" ? <Badge tone="accent">{t("earlyBadge")}</Badge> : null}
                           <Badge isDot tone={STATUS_TONE[status]}>{t(`status_${status}`)}</Badge>
                         </span>
                       </div>
                       <Text size="sm" tone="muted">{pick(def.description, locale)}</Text>
-                      <ul className={CARD_POINTS_CLASS_NAME}>
+                      <List label={pick(def.name, locale)} className={CARD_POINTS_CLASS_NAME}>
                         {pickList(def.points, locale).map((point) => (
-                          <li key={point} className={CARD_POINT_CLASS_NAME}>
-                            <span className={CARD_POINT_DOT_CLASS_NAME} aria-hidden="true" />
-                            <span>{point}</span>
-                          </li>
+                          <ListItem key={point}><Text size="sm" tone="muted">{point}</Text></ListItem>
                         ))}
-                      </ul>
+                      </List>
                       {def.status === "early" ? <Text size="xs" tone="muted">{t("earlyHint")}</Text> : null}
                       <div className={CARD_FOOT_CLASS_NAME}>
                         {installation !== null ? (

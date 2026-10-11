@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Alert, Badge, Button, Form, Heading, Input, SurfaceCard, Text } from "@starci/grammar/common";
+import { Alert, Badge, Button, DescriptionList, EmptyNotice, Form, Heading, Input, ListItem, SurfaceCard, SurfaceListCard, Text } from "@starci/grammar/common";
 import { useT } from "@/i18n/client";
 import { loyaltyPublic } from "@/i18n/dict/loyaltyPublic";
 import { requestCodeAction, verifyCodeAction, type PublicResult } from "./actions";
-import { CARD_CLASS_NAME, FIGURES_CLASS_NAME, FIGURE_CLASS_NAME, FORM_CLASS_NAME, LIST_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME } from "./classNames";
+import { CARD_CLASS_NAME, FORM_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME } from "./classNames";
 
 /** Props for {@link CheckForm}. */
 export type CheckFormProps = {
@@ -53,34 +53,27 @@ export const CheckForm = ({ slug, shop }: CheckFormProps) => {
       <SurfaceCard ariaLabel={t("hello", { name: result.name })}>
         <div className={CARD_CLASS_NAME}>
           <Heading level={2} scale="standard">{t("hello", { name: result.name })}</Heading>
-          <div className={FIGURES_CLASS_NAME}>
-            <div className={FIGURE_CLASS_NAME}>
-              <Text size="xs" tone="muted" weight="medium">{t("tier")}</Text>
-              <Text size="metric-lead" weight="semibold">{result.tierName ?? t("noTier")}</Text>
-            </div>
-            <div className={FIGURE_CLASS_NAME}>
-              <Text size="xs" tone="muted" weight="medium">{t("points")}</Text>
-              <Text size="metric-lead" weight="semibold">{result.points.toLocaleString("vi-VN")}</Text>
-            </div>
-          </div>
+          <DescriptionList
+            layout="stat-strip"
+            isDivided
+            items={[
+              { id: "tier", term: t("tier"), description: result.tierName ?? t("noTier") },
+              { id: "points", term: t("points"), description: result.points.toLocaleString("vi-VN") },
+            ]}
+          />
           {result.nextTier ? <Text size="sm" tone="muted">{t("nextTier", { amount: vnd(result.nextTier.missingVnd), tier: result.nextTier.name })}</Text> : null}
           {result.expiring.points > 0 ? <Alert tone="affirmative" title={t("expiring", { points: result.expiring.points.toLocaleString("vi-VN"), date: day(result.expiring.firstAt) })} /> : null}
-          <Heading level={3} scale="standard">{t("rewardsTitle")}</Heading>
-          {result.rewards.length === 0 ? (
-            <Text tone="muted">{t("noRewards")}</Text>
-          ) : (
-            <ul className={LIST_CLASS_NAME}>
-              {result.rewards.map((r) => (
-                <li key={r.name} className={ROW_CLASS_NAME}>
-                  <div className={ROW_MAIN_CLASS_NAME}>
-                    <Text weight="semibold">{r.name}</Text>
-                    <Text size="sm" tone="muted">{r.pointsCost.toLocaleString("vi-VN")} {t("pointsUnit")}{r.note ? ` · ${r.note}` : ""}</Text>
-                  </div>
-                  <Badge tone={r.canRedeem ? "success" : "neutral"}>{r.canRedeem ? t("canRedeem") : t("needMore")}</Badge>
-                </li>
-              ))}
-            </ul>
-          )}
+          <SurfaceListCard label={t("rewardsTitle")} headingLevel={3} depth="nested" empty={<EmptyNotice message={t("noRewards")} />}>
+            {result.rewards.map((r) => (
+              <ListItem key={r.name} className={ROW_CLASS_NAME}>
+                <div className={ROW_MAIN_CLASS_NAME}>
+                  <Text weight="semibold">{r.name}</Text>
+                  <Text size="sm" tone="muted">{r.pointsCost.toLocaleString("vi-VN")} {t("pointsUnit")}{r.note ? ` · ${r.note}` : ""}</Text>
+                </div>
+                <Badge tone={r.canRedeem ? "success" : "neutral"}>{r.canRedeem ? t("canRedeem") : t("needMore")}</Badge>
+              </ListItem>
+            ))}
+          </SurfaceListCard>
           <Text size="sm" tone="muted">{t("redeemHint")}</Text>
           <Button variant="outline" onPress={() => { setStep("phone"); setCode(""); setResult(null); }}>{t("back")}</Button>
         </div>

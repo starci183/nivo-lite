@@ -1,18 +1,17 @@
 "use client";
 
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Badge, Heading, PageContainer, Text } from "@starci/grammar/common";
-import { RouteTabs } from "@/ui";
+import { Badge, Heading, IconTile, Image, PageContainer, PrimaryRailLayout, Text, TextAction } from "@starci/grammar/common";
+import { nivoIconSource, RouteTabs } from "@/ui";
 import { useLocale, useT } from "@/i18n/client";
 import { modulesCore } from "@/i18n/dict/modulesCore";
 import { moduleDef, pick } from "@/lib/module-registry";
 import type { Installation, ModuleKey } from "@/lib/modules-shared";
 import { STATUS_TONE, TAB_ROUTES, statusOf, tabHref, type ModuleTab } from "./meta";
 import {
-  FRAME_CLASS_NAME, HEADER_ART_CLASS_NAME, HEADER_CLASS_NAME, HEADER_COPY_CLASS_NAME, HEADER_META_CLASS_NAME, HEADER_TITLE_CLASS_NAME,
-  MAIN_CLASS_NAME, RAIL_ART_CLASS_NAME, RAIL_CLASS_NAME, RAIL_COPY_CLASS_NAME, RAIL_HEAD_CLASS_NAME, RAIL_ITEM_ACTIVE_CLASS_NAME, RAIL_ITEM_CLASS_NAME,
+  HEADER_CLASS_NAME, HEADER_COPY_CLASS_NAME, HEADER_META_CLASS_NAME, HEADER_TITLE_CLASS_NAME,
+  MAIN_CLASS_NAME, RAIL_CLASS_NAME, RAIL_COPY_CLASS_NAME, RAIL_HEAD_CLASS_NAME,
 } from "./classNames";
 
 type ModuleChromeProps = {
@@ -38,33 +37,40 @@ export const ModuleChrome = ({ current, installations, canSetup, children }: Mod
 
   return (
     <PageContainer measure="product">
-      <div className={FRAME_CLASS_NAME}>
+      <PrimaryRailLayout
+        railPosition="leading"
+        railWidth="compact"
+        align="start"
+        collapsedOrder="rail-first"
+        rail={
         <nav aria-label={t("navLabel")} className={RAIL_CLASS_NAME}>
           <div className={RAIL_HEAD_CLASS_NAME}>
-            <Link href="/m" className="text-sm text-muted underline-offset-2 hover:underline">{t("allModules")}</Link>
+            <TextAction href="/m" size="sm" appearance="muted">{t("allModules")}</TextAction>
           </div>
           {installations.map((installation) => {
             const k = installation.moduleKey;
             const isCurrent = k === key;
             return (
-              <Link
+              <TextAction
                 key={k}
                 href={`/m/${k}`}
-                aria-current={isCurrent ? "page" : undefined}
-                className={`${RAIL_ITEM_CLASS_NAME} ${isCurrent ? RAIL_ITEM_ACTIVE_CLASS_NAME : ""}`}
+                appearance="route"
+                isCurrent={isCurrent}
+                startContent={<IconTile source={nivoIconSource("apps", "leading")} artwork={<Image src={moduleDef(k).mascot} alt="" aspect="square" fit="contain" plate="none" />} />}
               >
-                <img className={RAIL_ART_CLASS_NAME} src={moduleDef(k).mascot} alt="" />
                 <span className={RAIL_COPY_CLASS_NAME}>
-                  <Text weight="semibold" size="sm">{pick(moduleDef(k).name, locale)}</Text>
+                  <Text as="span" weight="semibold" size="sm">{pick(moduleDef(k).name, locale)}</Text>
                   <Badge isDot tone={STATUS_TONE[statusOf(installation)]}>{t(`status_${statusOf(installation)}`)}</Badge>
                 </span>
-              </Link>
+              </TextAction>
             );
           })}
         </nav>
+        }
+        primary={
         <div className={MAIN_CLASS_NAME}>
           <header className={HEADER_CLASS_NAME}>
-            <img className={HEADER_ART_CLASS_NAME} src={def.mascot} alt="" />
+            <IconTile size="md" source={nivoIconSource("apps", "leading")} artwork={<Image src={def.mascot} alt="" aspect="square" fit="contain" plate="none" />} />
             <div className={HEADER_COPY_CLASS_NAME}>
               <div className={HEADER_TITLE_CLASS_NAME}>
                 <Heading level={1}>{pick(def.name, locale)}</Heading>
@@ -83,7 +89,8 @@ export const ModuleChrome = ({ current, installations, canSetup, children }: Mod
           />
           {children}
         </div>
-      </div>
+        }
+      />
     </PageContainer>
   );
 };

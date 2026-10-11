@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Alert, Badge, Button, SurfaceCard, Text } from "@starci/grammar/common"
+import { Alert, Badge, Button, EmptyNotice, Input, ListItem, Region, SectionHeader, SurfaceListCard, Text } from "@starci/grammar/common"
 import { PersonAvatar } from "@/components/avatar/PersonAvatar"
 import { intlLocale, TIME_ZONE } from "@/i18n/core"
 import { useLocale, useT } from "@/i18n/client"
@@ -10,7 +10,7 @@ import { team } from "@/i18n/dict/team"
 import { copyInviteLink, resendInvite, revokeInvite, type InviteResult } from "@/lib/invites"
 import type { Outcome } from "@/lib/types"
 import type { PendingInvite } from "./queries"
-import { ACTIONS_CLASS, FACTS_CLASS, IDENTITY_CLASS, IDENTITY_TEXT_CLASS, LINK_BOX_CLASS, LINK_TEXT_CLASS, ROW_CLASS, STACK_CLASS } from "./classNames"
+import { ACTIONS_CLASS, FACTS_CLASS, IDENTITY_CLASS, IDENTITY_TEXT_CLASS, LINK_BOX_CLASS, ROW_CLASS, SECTION_CLASS } from "./classNames"
 
 /** Props for {@link InvitesList}. */
 export type InvitesListProps = { readonly invites: ReadonlyArray<PendingInvite> }
@@ -74,45 +74,49 @@ export const InvitesList = ({ invites }: InvitesListProps) => {
   })
 
   return (
-    <SurfaceCard label={t("invitesTitle")} headingLevel={2}>
-      <div className={STACK_CLASS}>
-        <Text size="sm" tone="muted">{t("invitesDesc")}</Text>
-        {error ? <Alert title={t("errGeneric")} description={error} tone="negative" /> : null}
-        {notice ? <Text size="sm" live="polite">{notice}</Text> : null}
-        {invites.length === 0 ? (
-          <Text size="sm">{t("invitesEmpty")}</Text>
-        ) : (
-          <ul>
-            {invites.map((i) => (
-              <li key={i.id} className={ROW_CLASS}>
-                <div className={IDENTITY_CLASS}>
-                  <PersonAvatar name={i.email} size="md" />
-                  <div className={IDENTITY_TEXT_CLASS}>
-                    <Text weight="semibold" overflow="truncate">{i.email}</Text>
-                    <Text size="sm" tone="muted">{i.expired ? t("inviteExpired", { date: date(i.expiresAt) }) : t("inviteExpires", { date: date(i.expiresAt) })}</Text>
-                    {i.staffName ? <Text size="xs" tone="muted" overflow="truncate">{t("inviteStaffFor", { name: i.staffName })}</Text> : null}
-                  </div>
-                </div>
-                <div className={FACTS_CLASS}>
-                  <Badge tone={i.expired ? "warning" : "accent"}>{t(ROLE_KEY[i.role])}</Badge>
-                </div>
-                <div className={ACTIONS_CLASS}>
-                  <Button variant="outline" isPending={isPending && busy === i.id} onPress={() => onResend(i.id)}>{t("inviteResend")}</Button>
-                  <Button variant="outline" isPending={isPending && busy === i.id} onPress={() => onCopy(i.id)}>{t("inviteCopy")}</Button>
-                  <Button variant="ghost" isPending={isPending && busy === i.id} onPress={() => onRevoke(i.id)}>{t("inviteRevoke")}</Button>
-                </div>
-                {shown?.id === i.id ? (
-                  <div className={LINK_BOX_CLASS}>
-                    <Text size="xs" tone="muted">{t("inviteLinkLabel", { email: shown.email })}</Text>
-                    <code className={LINK_TEXT_CLASS}>{shown.link}</code>
-                    <Text size="xs" tone="muted" live="polite">{shown.copied ? t("inviteCopied") : t("inviteRotateNote")}</Text>
-                  </div>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </SurfaceCard>
+    <Region labelledBy="team-invites-title" className={SECTION_CLASS}>
+      <SectionHeader id="team-invites-title" level={2} title={t("invitesTitle")} description={t("invitesDesc")} />
+      {error ? <Alert title={t("errGeneric")} description={error} tone="negative" /> : null}
+      {notice ? <Text size="sm" live="polite">{notice}</Text> : null}
+      <SurfaceListCard ariaLabel={t("invitesTitle")} empty={<EmptyNotice message={t("invitesEmpty")} />}>
+        {invites.map((i) => (
+          <ListItem key={i.id} className={ROW_CLASS}>
+            <div className={IDENTITY_CLASS}>
+              <PersonAvatar name={i.email} size="md" />
+              <div className={IDENTITY_TEXT_CLASS}>
+                <Text weight="semibold" overflow="truncate">{i.email}</Text>
+                <Text size="sm" tone="muted">{i.expired ? t("inviteExpired", { date: date(i.expiresAt) }) : t("inviteExpires", { date: date(i.expiresAt) })}</Text>
+                {i.staffName ? <Text size="xs" tone="muted" overflow="truncate">{t("inviteStaffFor", { name: i.staffName })}</Text> : null}
+              </div>
+            </div>
+            <div className={FACTS_CLASS}>
+              <Badge tone={i.expired ? "warning" : "accent"}>{t(ROLE_KEY[i.role])}</Badge>
+            </div>
+            <div className={ACTIONS_CLASS}>
+              <Button variant="outline" isPending={isPending && busy === i.id} onPress={() => onResend(i.id)}>{t("inviteResend")}</Button>
+              <Button variant="outline" isPending={isPending && busy === i.id} onPress={() => onCopy(i.id)}>{t("inviteCopy")}</Button>
+              <Button variant="ghost" isPending={isPending && busy === i.id} onPress={() => onRevoke(i.id)}>{t("inviteRevoke")}</Button>
+            </div>
+            {shown?.id === i.id ? (
+              <div className={LINK_BOX_CLASS}>
+                <Input
+                  id={`invite-link-${i.id}`}
+                  name="inviteLink"
+                  label={t("inviteLinkLabel", { email: shown.email })}
+                  variant="secondary"
+                  value={shown.link}
+                  isReadOnly
+                  isCopyable
+                  copyLabel={t("inviteCopy")}
+                  copiedLabel={t("inviteCopied")}
+                  onCopy={() => setShown((s) => (s ? { ...s, copied: true } : s))}
+                />
+                <Text size="xs" tone="muted" live="polite">{shown.copied ? t("inviteCopied") : t("inviteRotateNote")}</Text>
+              </div>
+            ) : null}
+          </ListItem>
+        ))}
+      </SurfaceListCard>
+    </Region>
   )
 }

@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
+import { Badge, Button, CloseButton, SurfaceCard, Text } from "@starci/grammar/common";
 import { useT } from "@/i18n/client";
 import { promo } from "@/i18n/dict/promo";
 import { isOfferLive } from "@/lib/promo";
@@ -18,6 +18,9 @@ export type SidebarAdProps = {
 /**
  * Compact sidebar card. Before the Chatbot is bought it is a dismissible Founding 50 ad; afterwards a quiet
  * "Founding member" card (only claiming the locked price when the purchase really happened inside the offer window).
+ * Both are Grammar `SurfaceCard`s nested in the navigation surface (BOUNDARY-5 case-1). The ad no longer paints an
+ * ink gradient or a mascot: the sidebar is chrome, where the mascot is forbidden, and the page's own decision keeps
+ * the one primary action (ACCENT-1), so the ad's action is `secondary`.
  */
 export const SidebarAd = ({ hasChatbot, isFoundingMember, ctaHref = "/modules/new?module=chatbot" }: SidebarAdProps) => {
   const t = useT(promo);
@@ -33,43 +36,46 @@ export const SidebarAd = ({ hasChatbot, isFoundingMember, ctaHref = "/modules/ne
   if (hasChatbot) {
     if (!isFoundingMember) return null;
     return (
-      <div className={c.MEMBER} role="note" aria-label={t("foundingMember")}>
-        <p className={c.MEMBER_HEAD}>
-          <span className={c.DOT} aria-hidden="true" />
-          {t("foundingMember")}
-        </p>
-        <p className={c.MEMBER_TEXT}>{t("priceLocked")}</p>
+      <div role="note" aria-label={t("foundingMember")}>
+        <SurfaceCard depth="nested">
+          <div className={c.STACK}>
+            <Badge tone="accent" isDot>
+              {t("foundingMember")}
+            </Badge>
+            <Text size="xs">{t("priceLocked")}</Text>
+          </div>
+        </SurfaceCard>
       </div>
     );
   }
   if (dismissed || !isOfferLive()) return null;
 
+  const dismiss = () => {
+    setDismissed(true);
+    try {
+      window.localStorage.setItem(STORAGE_KEY, "1");
+    } catch {
+      /* ignore */
+    }
+  };
+
   return (
-    <aside className={c.AD} aria-label={t("adAria")}>
-      <img className={c.AD_ART} src="/images/promo/mascot-chat.png" alt="" />
-      <button
-        type="button"
-        className={c.AD_CLOSE}
-        aria-label={t("adDismiss")}
-        onClick={() => {
-          setDismissed(true);
-          try {
-            window.localStorage.setItem(STORAGE_KEY, "1");
-          } catch {
-            /* ignore */
-          }
-        }}
-      >
-        <span aria-hidden="true">×</span>
-      </button>
-      <div className={c.AD_BODY}>
-        <p className={c.AD_TITLE}>{t("adTitle")}</p>
-        <p className={c.AD_TEXT}>{t("adText")}</p>
-        <span className={c.AD_OFF}>{t("adOff")}</span>
-        <Link className={c.AD_CTA} href={ctaHref}>
-          {t("addChatbot")}
-        </Link>
-      </div>
+    <aside aria-label={t("adAria")}>
+      <SurfaceCard depth="nested">
+        <div className={c.STACK}>
+          <div className={c.AD_HEAD}>
+            <Text size="sm" weight="semibold">
+              {t("adTitle")}
+            </Text>
+            <CloseButton label={t("adDismiss")} size="sm" onPress={dismiss} />
+          </div>
+          <Text size="xs">{t("adText")}</Text>
+          <Badge tone="accent">{t("adOff")}</Badge>
+          <Button variant="secondary" size="sm" href={ctaHref}>
+            {t("addChatbot")}
+          </Button>
+        </div>
+      </SurfaceCard>
     </aside>
   );
 };

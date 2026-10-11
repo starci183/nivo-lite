@@ -5,7 +5,7 @@ import { Alert, Badge, Button, EmptyNotice, Heading, SurfaceListCard, Text } fro
 import type { HiringWorkbenchData } from "@/lib/module-hiring-queries";
 import { INTERVIEW_STATUS_LABEL, fmtVnDateTime, vnInstant, vnParts, type InterviewRow } from "@/lib/module-hiring-shared";
 import { setInterviewStatusAction } from "./actions";
-import { CHIPS_CLASS_NAME, DAY_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME, SECTION_HEAD_CLASS_NAME, SLOT_CLASS_NAME, WEEK_CLASS_NAME } from "./classNames";
+import { CHIPS_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME, SECTION_HEAD_CLASS_NAME, SLOT_CLASS_NAME, WEEK_CLASS_NAME } from "./classNames";
 import { copyText, useRunner } from "./parts";
 
 const DAY_NAMES = ["Chủ nhật", "Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu", "Thứ bảy"];
@@ -63,20 +63,20 @@ export const InterviewsPanel = ({ data, onOpen }: InterviewsPanelProps) => {
           const items = confirmed.filter((i) => Date.parse(i.slot_start!) >= d.start.getTime() && Date.parse(i.slot_start!) < d.end.getTime()).sort((a, b) => a.slot_start!.localeCompare(b.slot_start!));
           const isToday = week === 0 && d.p.day === today.day && d.p.m === today.m;
           return (
-            <section key={d.start.toISOString()} className={DAY_CLASS_NAME} aria-label={`${DAY_NAMES[d.p.weekday]} ${d.p.day}/${d.p.m + 1}`}>
-              <div className={CHIPS_CLASS_NAME}>
-                <Text as="span" size="sm" weight="semibold">{DAY_NAMES[d.p.weekday]}</Text>
-                <Text as="span" size="xs" tone="muted">{`${String(d.p.day).padStart(2, "0")}/${String(d.p.m + 1).padStart(2, "0")}`}</Text>
-                {isToday ? <Badge tone="accent">Hôm nay</Badge> : null}
-              </div>
-              {items.length === 0 ? <Text size="xs" tone="muted">Trống</Text> : items.map((i) => (
-                <div key={i.id} className={SLOT_CLASS_NAME}>
+            <SurfaceListCard
+              key={d.start.toISOString()}
+              label={`${DAY_NAMES[d.p.weekday]} ${String(d.p.day).padStart(2, "0")}/${String(d.p.m + 1).padStart(2, "0")}`}
+              labelEnd={isToday ? <Badge tone="accent">Hôm nay</Badge> : undefined}
+              empty={<EmptyNotice message="Trống" />}
+            >
+              {items.map((i) => (
+                <li key={i.id} className={SLOT_CLASS_NAME}>
                   <Text size="sm" weight="semibold">{`${hhmm(i.slot_start!)} · ${names.get(i.candidate_id) ?? "Ứng viên"}`}</Text>
                   <Text size="xs" tone="muted">{[titles.get(i.job_id), i.interviewer_name, i.mode === "online" ? "Online" : i.location].filter(Boolean).join(" · ")}</Text>
                   {actions(i)}
-                </div>
+                </li>
               ))}
-            </section>
+            </SurfaceListCard>
           );
         })}
       </div>

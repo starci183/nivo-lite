@@ -1,16 +1,12 @@
 "use client";
 
-import { cn } from "@heroui/react";
-import { Button, FileDropzone, Input, SegmentedControl, SurfaceCard, Text, Textarea } from "@starci/grammar/common";
+import { Button, Checkbox, CheckboxGroup, FileDropzone, Input, List, ListItem, MediaFrame, RadioGroup, SegmentedControl, SurfaceCard, Text, Textarea } from "@starci/grammar/common";
 import { useLocale, useT } from "@/i18n/client";
 import { video } from "@/i18n/dict/video";
 import { ASPECT_CHOICES, DURATIONS, GOAL_TEMPLATES, type Brand, type Goal, type MediaItem, type ProjectInputs, type SourceChoice } from "@/lib/module-video-shared";
 import type { Aspect } from "@/lib/video/spec";
 import { BrandCard } from "./brand";
-import {
-  CHOICES_CLASS_NAME, CHOICE_CLASS_NAME, CHOICE_ON_CLASS_NAME, FOOTER_CLASS_NAME, MEDIA_GRID_CLASS_NAME, MEDIA_IMG_CLASS_NAME, MEDIA_TILE_CLASS_NAME, MEDIA_TILE_ON_CLASS_NAME,
-  ROW_CLASS_NAME, SOURCE_CLASS_NAME, STACK_CLASS_NAME, STACK_SM_CLASS_NAME,
-} from "./classNames";
+import { FOOTER_CLASS_NAME, FOOTER_END_CLASS_NAME, MEDIA_GRID_CLASS_NAME, ROW_CLASS_NAME, STACK_CLASS_NAME, STACK_SM_CLASS_NAME } from "./classNames";
 
 /** Step 1: the goal, the frame and the length. */
 export const GoalStep = (p: {
@@ -23,16 +19,11 @@ export const GoalStep = (p: {
   return (
     <SurfaceCard label={t("goalHeading")}>
       <div className={STACK_CLASS_NAME}>
-        <ul className={CHOICES_CLASS_NAME} aria-label={t("goalHeading")}>
-          {GOAL_TEMPLATES.map((g) => (
-            <li key={g.goal}>
-              <button type="button" aria-pressed={p.goal === g.goal} disabled={off} className={cn(CHOICE_CLASS_NAME, p.goal === g.goal && CHOICE_ON_CLASS_NAME)} onClick={() => p.onGoal(g.goal)}>
-                <Text as="span" weight="semibold">{g.label[locale]}</Text>
-                <Text as="span" size="xs" tone="muted">{g.hint[locale]}</Text>
-              </button>
-            </li>
-          ))}
-        </ul>
+        <RadioGroup
+          label={t("goalHeading")} isLabelHidden variant="secondary" value={p.goal} isDisabled={off}
+          options={GOAL_TEMPLATES.map((g) => ({ value: g.goal, label: g.label[locale], description: g.hint[locale] }))}
+          onValueChange={(v) => { const g = GOAL_TEMPLATES.find((x) => x.goal === v); if (g) p.onGoal(g.goal); }}
+        />
         <SegmentedControl
           label={t("aspectLabel")} value={p.aspect} isDisabled={off} onValueChange={(v) => p.onAspect(v as Aspect)}
           options={ASPECT_CHOICES.map((a) => ({ value: a.value, label: a[locale] }))}
@@ -42,8 +33,7 @@ export const GoalStep = (p: {
           options={[...new Set([...DURATIONS, p.seconds])].sort((a, b) => a - b).map((s) => ({ value: String(s), label: t("seconds", { n: s }) }))}
         />
         <Input id="video-title" name="title" label={t("titleLabel")} hint={t("titleHint")} variant="secondary" value={p.title} isDisabled={off} onValueChange={p.onTitle} />
-        <div className={FOOTER_CLASS_NAME}>
-          <span />
+        <div className={FOOTER_END_CLASS_NAME}>
           <Button variant="primary" isPending={p.busy} isDisabled={off} onPress={p.onNext}>{t("next")}</Button>
         </div>
       </div>
@@ -63,45 +53,47 @@ export const InputsStep = (p: {
     <div className={STACK_CLASS_NAME}>
       <SurfaceCard label={t("inputsHeading")}>
         <div className={STACK_CLASS_NAME}>
-          <div className={STACK_SM_CLASS_NAME}>
-            <Text weight="semibold">{t("sourcesHeading")}</Text>
-            <Text size="xs" tone="muted">{t("sourcesHint")}</Text>
-          </div>
-          {p.sources.length === 0 ? <Text size="sm" tone="muted">{t("sourcesEmpty")}</Text> : (
-            <div className={STACK_SM_CLASS_NAME} role="group" aria-label={t("sourcesHeading")}>
-              {p.sources.map((s) => (
-                <label key={s.id} className={SOURCE_CLASS_NAME}>
-                  <input type="checkbox" checked={p.inputs.sourceIds.includes(s.id)} disabled={!p.canEdit} onChange={() => p.onInputs({ ...p.inputs, sourceIds: toggle(p.inputs.sourceIds, s.id) })} />
-                  <span className={STACK_SM_CLASS_NAME}>
-                    <Text as="span" weight="medium">{s.topic ? `${s.topic} · ${s.title}` : s.title}</Text>
-                    <Text as="span" size="xs" tone="muted" overflow="clamp-2">{s.excerpt}</Text>
-                  </span>
-                </label>
-              ))}
+          {p.sources.length === 0 ? (
+            <div className={STACK_SM_CLASS_NAME}>
+              <Text weight="semibold">{t("sourcesHeading")}</Text>
+              <Text size="xs" tone="muted">{t("sourcesHint")}</Text>
+              <Text size="sm" tone="muted">{t("sourcesEmpty")}</Text>
             </div>
+          ) : (
+            <CheckboxGroup
+              label={t("sourcesHeading")} description={t("sourcesHint")} variant="secondary" isDisabled={!p.canEdit} value={p.inputs.sourceIds}
+              options={p.sources.map((s) => ({ value: s.id, label: s.topic ? `${s.topic} · ${s.title}` : s.title, description: <Text as="span" size="xs" tone="muted" overflow="clamp-2">{s.excerpt}</Text> }))}
+              onValueChange={(ids) => p.onInputs({ ...p.inputs, sourceIds: ids })}
+            />
           )}
-          <Textarea label={t("notesLabel")} description={t("notesHint")} rows={3} maxLength={600} value={p.inputs.notes} isDisabled={!p.canEdit} onValueChange={(v) => p.onInputs({ ...p.inputs, notes: v })} />
+          <Textarea label={t("notesLabel")} variant="secondary" description={t("notesHint")} rows={3} maxLength={600} value={p.inputs.notes} isDisabled={!p.canEdit} onValueChange={(v) => p.onInputs({ ...p.inputs, notes: v })} />
         </div>
       </SurfaceCard>
 
       <SurfaceCard label={t("mediaHeading")} fact={t("mediaHint")}>
         <div className={STACK_CLASS_NAME}>
           {p.media.length === 0 ? <Text size="sm" tone="muted">{t("mediaEmpty")}</Text> : (
-            <ul className={MEDIA_GRID_CLASS_NAME} aria-label={t("mediaHeading")}>
+            <List className={MEDIA_GRID_CLASS_NAME} label={t("mediaHeading")}>
               {p.media.filter((m) => m.kind === "image" || m.kind === "video").map((m) => {
                 const on = p.inputs.media.includes(m.path);
                 return (
-                  <li key={m.path}>
-                    <button type="button" aria-pressed={on} aria-label={`${t("mediaUse")}: ${m.name}`} disabled={!p.canEdit} className={cn(MEDIA_TILE_CLASS_NAME, on && MEDIA_TILE_ON_CLASS_NAME)} onClick={() => p.onInputs({ ...p.inputs, media: toggle(p.inputs.media, m.path) })}>
-                      {m.url ? (m.kind === "image"
-                        // eslint-disable-next-line @next/next/no-img-element
-                        ? <img src={m.url} alt={m.name} className={MEDIA_IMG_CLASS_NAME} />
-                        : <video src={`${m.url}#t=0.5`} preload="metadata" muted playsInline aria-label={m.name} className={MEDIA_IMG_CLASS_NAME} />) : <Text size="xs">{m.name}</Text>}
-                    </button>
-                  </li>
+                  <ListItem key={m.path} className={STACK_SM_CLASS_NAME}>
+                    {m.url ? (
+                      <MediaFrame aspect="square">
+                        {m.kind === "image"
+                          // eslint-disable-next-line @next/next/no-img-element
+                          ? <img src={m.url} alt={m.name} />
+                          : <video src={`${m.url}#t=0.5`} preload="metadata" muted playsInline aria-label={m.name} />}
+                      </MediaFrame>
+                    ) : null}
+                    <Checkbox
+                      label={m.name} variant="secondary" isSelected={on} isDisabled={!p.canEdit}
+                      onSelectedChange={() => p.onInputs({ ...p.inputs, media: toggle(p.inputs.media, m.path) })}
+                    />
+                  </ListItem>
                 );
               })}
-            </ul>
+            </List>
           )}
           {p.canEdit ? <FileDropzone label={t("upload")} accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm" multiple hideFileList isDisabled={p.busy} prompt={t("upload")} onFilesChange={p.onUpload} /> : null}
         </div>

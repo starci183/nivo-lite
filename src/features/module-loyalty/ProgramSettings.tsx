@@ -7,7 +7,7 @@ import { useT } from "@/i18n/client";
 import { loyalty } from "@/i18n/dict/loyalty";
 import type { LoyaltyConfig } from "@/lib/module-loyalty-shared";
 import { loadProgramAction, saveProgramAction } from "./actions";
-import { BODY_CLASS_NAME, FIELD_PAIR_CLASS_NAME, FIELD_TRIPLE_CLASS_NAME, FORM_CLASS_NAME, LINK_ROW_CLASS_NAME, LINK_VALUE_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, SUBROW_CLASS_NAME } from "./classNames";
+import { BODY_CLASS_NAME, FIELD_PAIR_CLASS_NAME, FIELD_TRIPLE_CLASS_NAME, FORM_CLASS_NAME, ROW_ACTIONS_CLASS_NAME } from "./classNames";
 
 type TierDraft = { key: string; name: string; minSpend: string; multiplier: string; winback: string; benefit: string };
 type CategoryDraft = { match: string; rate: string; label: string };
@@ -66,7 +66,6 @@ export const LoyaltyProgramExtras = ({ canEdit }: SettingsExtraProps) => {
   const [form, setForm] = useState<Form | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [origin, setOrigin] = useState("");
-  const [copied, setCopied] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -96,7 +95,7 @@ export const LoyaltyProgramExtras = ({ canEdit }: SettingsExtraProps) => {
   if (!form || !loaded) {
     return (
       <SurfaceCard ariaLabel={t("loading")}>
-        <div className={BODY_CLASS_NAME}><Text size="sm" tone="muted" live="polite">{t("loading")}</Text></div>
+        <Text size="sm" tone="muted" live="polite">{t("loading")}</Text>
       </SurfaceCard>
     );
   }
@@ -129,14 +128,6 @@ export const LoyaltyProgramExtras = ({ canEdit }: SettingsExtraProps) => {
   };
 
   const url = `${origin}/l/${loaded.slug}`;
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-    } catch {
-      setCopied(false);
-    }
-  };
   const rewardOptions = [{ id: "none", label: t("birthdayNoReward") }, ...loaded.rewards.map((r) => ({ id: r.key, label: r.name }))];
   const triggerOptions = [{ id: "payment", label: t("triggerPayment") }, { id: "order", label: t("triggerOrder") }];
 
@@ -151,26 +142,29 @@ export const LoyaltyProgramExtras = ({ canEdit }: SettingsExtraProps) => {
           <Input id="lp-per-visit" name="perVisit" label={t("setPerVisit")} variant="secondary" value={form.perVisit} isDisabled={off} onValueChange={(v) => set("perVisit", whole(v))} />
           <Input id="lp-min-order" name="minOrder" label={t("setMinOrder")} variant="secondary" hint={t("setMinOrderHint")} value={form.minOrder} isDisabled={off} onValueChange={(v) => set("minOrder", whole(v))} />
         </div>
-        <Select label={t("setTrigger")} description={t("setTriggerHint")} options={triggerOptions} value={form.trigger} isDisabled={off} onValueChange={(v) => set("trigger", v === "order" ? "order" : "payment")} />
+        <Select label={t("setTrigger")} variant="secondary" description={t("setTriggerHint")} options={triggerOptions} value={form.trigger} isDisabled={off} onValueChange={(v) => set("trigger", v === "order" ? "order" : "payment")} />
 
         <Heading level={3}>{t("setCategories")}</Heading>
         <Text size="sm" tone="muted">{t("setCategoriesHint")}</Text>
         {form.categories.map((c, i) => (
-          <div key={i} className={SUBROW_CLASS_NAME}>
+          <SurfaceCard key={i} depth="nested" ariaLabel={`${t("setCategories")} ${i + 1}`}>
+            <div className={FORM_CLASS_NAME}>
             <div className={FIELD_TRIPLE_CLASS_NAME}>
               <Input id={`lp-cat-match-${i}`} name={`catMatch${i}`} label={t("setCatMatch")} variant="secondary" value={c.match} isDisabled={off} onValueChange={(v) => setCat(i, { match: v.slice(0, 40) })} />
               <Input id={`lp-cat-rate-${i}`} name={`catRate${i}`} label={t("setCatRate")} variant="secondary" value={c.rate} isDisabled={off} onValueChange={(v) => setCat(i, { rate: decimal(v) })} />
               <Input id={`lp-cat-label-${i}`} name={`catLabel${i}`} label={t("setCatLabel")} variant="secondary" value={c.label} isDisabled={off} onValueChange={(v) => setCat(i, { label: v.slice(0, 40) })} />
             </div>
             {canEdit ? <div><Button variant="danger-soft" size="sm" isDisabled={pending} onPress={() => set("categories", form.categories.filter((_, j) => j !== i))}>{t("setRemove")}</Button></div> : null}
-          </div>
+            </div>
+          </SurfaceCard>
         ))}
         {canEdit && form.categories.length < 12 ? <div><Button variant="outline" size="sm" isDisabled={pending} onPress={() => set("categories", [...form.categories, { match: "", rate: "1", label: "" }])}>{t("setAddCategory")}</Button></div> : null}
       </Section>
 
       <Section title={t("setTiersTitle")} hint={t("setTiersHint")}>
         {form.tiers.map((x, i) => (
-          <div key={x.key || `new-${i}`} className={SUBROW_CLASS_NAME}>
+          <SurfaceCard key={x.key || `new-${i}`} depth="nested" ariaLabel={x.name || `${t("setTierName")} ${i + 1}`}>
+            <div className={FORM_CLASS_NAME}>
             <div className={FIELD_PAIR_CLASS_NAME}>
               <Input id={`lp-tier-name-${i}`} name={`tierName${i}`} label={t("setTierName")} variant="secondary" value={x.name} isDisabled={off} onValueChange={(v) => setTier(i, { name: v.slice(0, 30) })} />
               <Input id={`lp-tier-spend-${i}`} name={`tierSpend${i}`} label={t("setTierSpend")} variant="secondary" hint={i === 0 ? t("setTierFirst") : undefined} value={i === 0 ? "0" : x.minSpend} isDisabled={off || i === 0} onValueChange={(v) => setTier(i, { minSpend: whole(v) })} />
@@ -179,7 +173,8 @@ export const LoyaltyProgramExtras = ({ canEdit }: SettingsExtraProps) => {
             </div>
             <Input id={`lp-tier-benefit-${i}`} name={`tierBenefit${i}`} label={t("setTierBenefit")} variant="secondary" value={x.benefit} isDisabled={off} onValueChange={(v) => setTier(i, { benefit: v.slice(0, 200) })} />
             {canEdit && form.tiers.length > 1 && i > 0 ? <div><Button variant="danger-soft" size="sm" isDisabled={pending} onPress={() => set("tiers", form.tiers.filter((_, j) => j !== i))}>{t("setRemove")}</Button></div> : null}
-          </div>
+            </div>
+          </SurfaceCard>
         ))}
         {canEdit && form.tiers.length < 8 ? <div><Button variant="outline" size="sm" isDisabled={pending} onPress={() => set("tiers", [...form.tiers, { key: "", name: "", minSpend: "", multiplier: "1", winback: "45", benefit: "" }])}>{t("setAddTier")}</Button></div> : null}
       </Section>
@@ -195,7 +190,7 @@ export const LoyaltyProgramExtras = ({ canEdit }: SettingsExtraProps) => {
         <Switch label={t("setBirthdayOn")} isSelected={form.birthdayOn} isDisabled={off} onSelectedChange={(v) => set("birthdayOn", v)} />
         <div className={FIELD_PAIR_CLASS_NAME}>
           <Input id="lp-birthday-points" name="birthdayPoints" label={t("setBirthdayPoints")} variant="secondary" value={form.birthdayPoints} isDisabled={off || !form.birthdayOn} onValueChange={(v) => set("birthdayPoints", whole(v))} />
-          <Select label={t("setBirthdayReward")} options={rewardOptions} value={form.birthdayReward || "none"} isDisabled={off || !form.birthdayOn} onValueChange={(v) => set("birthdayReward", !v || v === "none" ? "" : v)} />
+          <Select label={t("setBirthdayReward")} variant="secondary" options={rewardOptions} value={form.birthdayReward || "none"} isDisabled={off || !form.birthdayOn} onValueChange={(v) => set("birthdayReward", !v || v === "none" ? "" : v)} />
         </div>
         <Input id="lp-birthday-note" name="birthdayNote" label={t("setBirthdayNote")} variant="secondary" hint={t("setBirthdayNoteHint")} value={form.birthdayNote} isDisabled={off || !form.birthdayOn} onValueChange={(v) => set("birthdayNote", v.slice(0, 200))} />
       </Section>
@@ -211,10 +206,10 @@ export const LoyaltyProgramExtras = ({ canEdit }: SettingsExtraProps) => {
 
       <Section title={t("setPublicTitle")} hint={t("publicBody")}>
         <Switch label={t("setPublicOn")} isSelected={form.enabled} isDisabled={off} onSelectedChange={(v) => set("enabled", v)} />
-        <div className={LINK_ROW_CLASS_NAME}>
-          <code className={LINK_VALUE_CLASS_NAME}>{url}</code>
-          <Button variant="outline" onPress={copy}>{copied ? t("copied") : t("copy")}</Button>
-        </div>
+        <Input
+          id="lp-public-link" name="publicLink" label={t("publicTitle")} variant="secondary" value={url} isReadOnly
+          isCopyable copyLabel={t("copy")} copiedLabel={t("copied")}
+        />
       </Section>
 
       {canEdit ? (

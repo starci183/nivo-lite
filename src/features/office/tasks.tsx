@@ -52,10 +52,10 @@ export const TasksPanel = ({ items }: TasksPanelProps) => {
     <div className={STACK_CLASS_NAME}>
       <div className={FILTERS_CLASS_NAME}>
         <div className={FILTER_CARD_CLASS_NAME}>
-          <Select label={t("filterOwner")} options={ownerOptions} value={owner} onValueChange={(value) => setOwner(value ?? ALL)} />
+          <Select variant="secondary" label={t("filterOwner")} options={ownerOptions} value={owner} onValueChange={(value) => setOwner(value ?? ALL)} />
         </div>
         <div className={FILTER_CARD_CLASS_NAME}>
-          <Select label={t("filterStatus")} options={statusOptions} value={status} onValueChange={(value) => setStatus(value ?? ALL)} />
+          <Select variant="secondary" label={t("filterStatus")} options={statusOptions} value={status} onValueChange={(value) => setStatus(value ?? ALL)} />
         </div>
         {isFiltered ? (
           <Button variant="ghost" onPress={() => { setOwner(ALL); setStatus(ALL) }}>{t("clearFilters")}</Button>

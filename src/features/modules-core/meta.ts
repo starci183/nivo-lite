@@ -1,8 +1,4 @@
 import type { Installation, InstallationStatus, ModuleKey } from "@/lib/modules-shared";
-import { moduleDef } from "@/lib/module-registry";
-
-/** Per-module presentation (mascot, name, summary, bullet points) lives in the registry: resources/modules/<key>/module.json. */
-export const moduleArt = (key: ModuleKey): string => moduleDef(key).mascot;
 
 export type ShownStatus = InstallationStatus | "notInstalled";
 

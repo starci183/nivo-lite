@@ -2,13 +2,13 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Alert, Button, Input, SurfaceCard, Text } from "@starci/grammar/common"
+import { Alert, Button, Input, List, SurfaceCard, Text } from "@starci/grammar/common"
 import { useT } from "@/i18n/client"
 import { connectionWizard } from "@/i18n/dict/connectionWizard"
 import { developers as dict } from "@/i18n/dict/developers"
 import { createApiKey, type ApiKeyView } from "@/lib/api-keys-actions"
 import { ApiKeyItem } from "./ApiKeyItem"
-import { FIELD_GROW_CLASS, FORM_ROW_CLASS, KEY_BOX_CLASS, STACK_CLASS } from "./classNames"
+import { FIELD_GROW_CLASS, FORM_ROW_CLASS, KEY_LIST_CLASS, STACK_CLASS } from "./classNames"
 
 /** "Khoá API": create a key (shown once), then the list with revoke. */
 export const ApiKeysSection = ({ items, loadError }: { readonly items: ReadonlyArray<ApiKeyView>; readonly loadError: string | null }) => {
@@ -41,16 +41,21 @@ export const ApiKeysSection = ({ items, loadError }: { readonly items: ReadonlyA
         </div>
         {error ? <Alert tone="negative" title={error} /> : null}
         {fresh ? (
-          <div className={KEY_BOX_CLASS}>
-            <Text weight="semibold">{t("newKeyTitle")}</Text>
-            <Alert tone="cautionary" title={t("newKeyWarn")} />
-            <Input id="api-key-fresh" name="apiKey" label={t("newKeyTitle")} variant="secondary" value={fresh} isReadOnly isCopyable copyLabel={tc("copy")} copiedLabel={tc("copied")} />
-            <div><Button variant="outline" onPress={() => setFresh(null)}>{t("newKeyDone")}</Button></div>
-          </div>
+          <SurfaceCard depth="nested" label={t("newKeyTitle")} headingLevel={3}>
+            <div className={STACK_CLASS}>
+              <Alert tone="cautionary" title={t("newKeyWarn")} />
+              <Input id="api-key-fresh" name="apiKey" label={t("newKeyTitle")} variant="secondary" value={fresh} isReadOnly isCopyable copyLabel={tc("copy")} copiedLabel={tc("copied")} />
+              <div><Button variant="outline" onPress={() => setFresh(null)}>{t("newKeyDone")}</Button></div>
+            </div>
+          </SurfaceCard>
         ) : null}
         {loadError ? <Alert tone="negative" title={t("keysLoadFailed")} description={loadError} /> : null}
         {items.length === 0 && !loadError ? <Text size="sm" tone="muted">{t("keysEmpty")}</Text> : null}
-        <div>{items.map((k) => <ApiKeyItem key={k.id} item={k} />)}</div>
+        {items.length > 0 ? (
+          <List className={KEY_LIST_CLASS} label={t("keysTitle")}>
+            {items.map((k) => <ApiKeyItem key={k.id} item={k} />)}
+          </List>
+        ) : null}
       </div>
     </SurfaceCard>
   )

@@ -1,5 +1,4 @@
-import Link from "next/link"
-import { PageContainer, SectionHeader } from "@starci/grammar/common"
+import { PageContainer, SectionHeader, TextAction } from "@starci/grammar/common"
 import { ProviderSection } from "@/features/connections/ProviderSection"
 import { developers as dict } from "@/i18n/dict/developers"
 import { getT } from "@/i18n/server"
@@ -17,8 +16,10 @@ export const DevelopersPage = async () => {
   if (!isManagerRole(me.role)) {
     return (
       <PageContainer measure="product">
-        <SectionHeader level={1} eyebrow={t("eyebrow")} title={t("forbiddenTitle")} description={t("forbiddenBody")} />
-        <Link href="/chat" className="text-sm underline">{t("forbiddenBack")}</Link>
+        <div className={PAGE_CLASS}>
+          <SectionHeader level={1} eyebrow={t("eyebrow")} title={t("forbiddenTitle")} description={t("forbiddenBody")} />
+          <div><TextAction href="/chat" size="sm">{t("forbiddenBack")}</TextAction></div>
+        </div>
       </PageContainer>
     )
   }
@@ -27,7 +28,7 @@ export const DevelopersPage = async () => {
     <PageContainer measure="product">
       <div className={PAGE_CLASS}>
         <SectionHeader level={1} eyebrow={t("eyebrow")} title={t("title")} description={t("description")} />
-        <Link href="/automations" className="text-sm underline">{t("backToAutomations")}</Link>
+        <div><TextAction href="/automations" size="sm">{t("backToAutomations")}</TextAction></div>
 
         <div className={STACK_CLASS}>
           <SectionHeader level={2} title={t("eventsTitle")} description={t("eventsBody")} />

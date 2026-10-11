@@ -30,11 +30,11 @@ export const GoalsSection = ({ authority }: AuthoritySectionProps) => {
       <div className={FIELDS_CLASS}>
         <Text size="sm" tone="muted">{t("goalsDesc")}</Text>
         <div className={GOALS_GRID_CLASS}>
-          <NumberField label={t("goalRevenue")} description={t("goalRevenueHint")} minValue={0} step={1_000_000} formatOptions={{ maximumFractionDigits: 0 }} value={toField(revenue)} onValueChange={(v) => { saver.reset(); setRevenue(fromField(v)) }} />
-          <NumberField label={t("goalCustomers")} minValue={0} step={1} formatOptions={{ maximumFractionDigits: 0 }} value={toField(customers)} onValueChange={(v) => { saver.reset(); setCustomers(fromField(v)) }} />
-          <NumberField label={t("goalReply")} minValue={1} step={1} formatOptions={{ maximumFractionDigits: 0 }} value={toField(reply)} onValueChange={(v) => { saver.reset(); setReply(fromField(v)) }} />
+          <NumberField variant="secondary" label={t("goalRevenue")} description={t("goalRevenueHint")} minValue={0} step={1_000_000} formatOptions={{ maximumFractionDigits: 0 }} value={toField(revenue)} onValueChange={(v) => { saver.reset(); setRevenue(fromField(v)) }} />
+          <NumberField variant="secondary" label={t("goalCustomers")} minValue={0} step={1} formatOptions={{ maximumFractionDigits: 0 }} value={toField(customers)} onValueChange={(v) => { saver.reset(); setCustomers(fromField(v)) }} />
+          <NumberField variant="secondary" label={t("goalReply")} minValue={1} step={1} formatOptions={{ maximumFractionDigits: 0 }} value={toField(reply)} onValueChange={(v) => { saver.reset(); setReply(fromField(v)) }} />
         </div>
-        <Textarea label={t("goalNote")} description={t("goalNoteHint")} rows={2} value={note} onValueChange={(v) => { saver.reset(); setNote(v) }} />
+        <Textarea variant="secondary" label={t("goalNote")} description={t("goalNoteHint")} rows={2} value={note} onValueChange={(v) => { saver.reset(); setNote(v) }} />
         <SaveRow saver={saver} onSave={onSave} />
       </div>
     </SurfaceCard>
@@ -55,9 +55,9 @@ export const PoliciesSection = ({ authority }: AuthoritySectionProps) => {
     <SurfaceCard label={t("policiesTitle")} headingLevel={2}>
       <div className={FIELDS_CLASS}>
         <Text size="sm" tone="muted">{t("policiesDesc")}</Text>
-        <Textarea label={t("policies")} description={t("policiesHint")} rows={4} value={policies} onValueChange={(v) => { saver.reset(); setPolicies(v) }} />
-        <Textarea label={t("replyStyle")} description={t("replyStyleHint")} rows={2} value={replyStyle} onValueChange={(v) => { saver.reset(); setReplyStyle(v) }} />
-        <Textarea label={t("brandVoice")} description={t("brandVoiceHint")} rows={2} value={brandVoice} onValueChange={(v) => { saver.reset(); setBrandVoice(v) }} />
+        <Textarea variant="secondary" label={t("policies")} description={t("policiesHint")} rows={4} value={policies} onValueChange={(v) => { saver.reset(); setPolicies(v) }} />
+        <Textarea variant="secondary" label={t("replyStyle")} description={t("replyStyleHint")} rows={2} value={replyStyle} onValueChange={(v) => { saver.reset(); setReplyStyle(v) }} />
+        <Textarea variant="secondary" label={t("brandVoice")} description={t("brandVoiceHint")} rows={2} value={brandVoice} onValueChange={(v) => { saver.reset(); setBrandVoice(v) }} />
         <SaveRow saver={saver} onSave={onSave} />
       </div>
     </SurfaceCard>

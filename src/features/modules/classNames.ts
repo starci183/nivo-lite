@@ -16,15 +16,12 @@ export const ROW_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "justify-b
 export const ROW_COPY_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-1");
 export const ACTIONS_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "gap-2");
 export const LIST_CLASS_NAME = cn("flex", "flex-col", "gap-2");
-export const STEP_ROW_CLASS_NAME = cn("flex", "items-start", "gap-3");
-export const STATS_GRID_CLASS_NAME = cn("grid", "grid-cols-2", "gap-4", "sm:grid-cols-4");
-export const STAT_CLASS_NAME = cn("flex", "min-w-0", "flex-col");
 export const AGENT_TOP_CLASS_NAME = cn("flex", "flex-wrap", "items-start", "gap-4");
-export const CONVERSATION_ROW_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "justify-between", "gap-3", "px-4", "py-3");
+/** One conversation row of the Grammar list card: its own trailing seam, the last row drops it (BOUNDARY-2 case-1), band inset PADDING-4 inline / PADDING-3 block. */
+export const CONVERSATION_ROW_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "justify-between", "gap-3", "border-b", "border-separator", "px-4", "py-3", "last:border-b-0");
 export const BUBBLE_ROW_CLASS_NAME = cn("flex", "min-w-0", "items-start", "gap-3");
 export const BUBBLE_WIDTH_CLASS_NAME = cn("min-w-0", "max-w-full");
 export const CATALOG_HEAD_CLASS_NAME = cn("flex", "items-start", "justify-between", "gap-3");
-export const CAPABILITY_ROW_CLASS_NAME = cn("flex", "items-center", "gap-2");
 export const SAVE_ROW_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "gap-3");
 export const FOUNDING_LINE_CLASS_NAME = cn("flex", "items-center", "gap-3");
 export const MASCOT_CLASS_NAME = cn("h-12", "w-auto", "shrink-0", "object-contain");

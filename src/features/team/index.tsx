@@ -1,5 +1,4 @@
-import Link from "next/link"
-import { PageContainer, SectionHeader, Text } from "@starci/grammar/common"
+import { Link, PageContainer, SectionHeader, Text } from "@starci/grammar/common"
 import { getT } from "@/i18n/server"
 import { team as dict } from "@/i18n/dict/team"
 import { InviteForm } from "./InviteForm"
@@ -30,7 +29,7 @@ export const TeamForbidden = async () => {
     <PageContainer measure="product">
       <div className={PAGE_CLASS}>
         <SectionHeader level={1} eyebrow={t("eyebrow")} title={t("forbiddenTitle")} description={t("forbiddenBody")} />
-        <Text><Link href="/chat" className="underline">{t("forbiddenBack")}</Link></Text>
+        <Text><Link href="/chat">{t("forbiddenBack")}</Link></Text>
       </div>
     </PageContainer>
   )

@@ -1,5 +1,4 @@
-import Link from "next/link"
-import { PageContainer, SectionHeader } from "@starci/grammar/common"
+import { Button, PageContainer, SectionHeader, TextAction } from "@starci/grammar/common"
 import { connections as dict } from "@/i18n/dict/connections"
 import { getT } from "@/i18n/server"
 import { listConnections, publicSiteUrl } from "@/lib/channels"
@@ -7,7 +6,7 @@ import { PROVIDER_ORDER } from "@/lib/connection-providers"
 import { getCurrentMember, isManagerRole } from "@/lib/members"
 import { getSession } from "@/lib/session"
 import { supabaseServer } from "@/lib/supabase/server"
-import { PAGE_CLASS } from "./classNames"
+import { ACTIONS_CLASS, PAGE_CLASS } from "./classNames"
 import { ProviderSection } from "./ProviderSection"
 
 /** The Connections page body (owner | manager): every provider with its connections and the add form. Staff see a friendly 403. */
@@ -17,8 +16,10 @@ export const ConnectionsPage = async ({ searchParams }: { readonly searchParams?
   if (!isManagerRole(me.role)) {
     return (
       <PageContainer measure="product">
-        <SectionHeader level={1} eyebrow={t("eyebrow")} title={t("forbiddenTitle")} description={t("forbiddenBody")} />
-        <Link href="/chat" className="text-sm underline">{t("forbiddenBack")}</Link>
+        <div className={PAGE_CLASS}>
+          <SectionHeader level={1} eyebrow={t("eyebrow")} title={t("forbiddenTitle")} description={t("forbiddenBody")} />
+          <div className={ACTIONS_CLASS}><Button variant="secondary" href="/chat">{t("forbiddenBack")}</Button></div>
+        </div>
       </PageContainer>
     )
   }
@@ -41,7 +42,7 @@ export const ConnectionsPage = async ({ searchParams }: { readonly searchParams?
         {PROVIDER_ORDER.map((p) => (
           <ProviderSection key={p} provider={p} items={all.filter((c) => c.provider === p)} agentNames={agentNames} agents={agents} localOnly={localOnly} resumeId={p === "zalo_oa" ? zaloId : undefined} returned={p === "zalo_oa" ? one("zalo") : undefined} ownerEmail={ownerEmail} />
         ))}
-        <Link href="/automations" className="text-sm underline">{t("automationsLink")}</Link>
+        <div className={ACTIONS_CLASS}><TextAction href="/automations" size="sm" appearance="inline">{t("automationsLink")}</TextAction></div>
       </div>
     </PageContainer>
   )

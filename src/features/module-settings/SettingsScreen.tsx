@@ -10,7 +10,7 @@ import { renameModule, setModuleLive, setOperatingMode } from "@/lib/module-acti
 import { moduleDef } from "@/lib/module-registry";
 import type { Installation, OperatingMode } from "@/lib/modules-shared";
 import { AgentConnectionsCard, type ConnectionOption } from "./AgentConnectionsCard";
-import { GRID_CLASS_NAME, ROW_CLASS_NAME, STACK_CLASS_NAME } from "./classNames";
+import { ACTIONS_CLASS_NAME, GRID_CLASS_NAME, GROW_CLASS_NAME, ROW_CLASS_NAME, STACK_CLASS_NAME } from "./classNames";
 import { ModuleAutomations } from "./ModuleAutomations";
 import { ProcessorCard } from "./ProcessorCard";
 import { SETTINGS_EXTRAS } from "./registry";
@@ -55,12 +55,12 @@ export const SettingsScreen = ({ installation, canEdit, connectionOptions, selec
           <div className={STACK_CLASS_NAME}>
             <div className={ROW_CLASS_NAME}>
               <AgentAvatar module={installation.moduleKey} size="lg" label={installation.agentName} online={live} />
-              <div className="min-w-0 flex-1">
+              <div className={GROW_CLASS_NAME}>
                 <Input id="module-name" name="name" label={t("displayName")} variant="secondary" hint={t("displayNameHint")} value={name} isDisabled={!canEdit || pending} onValueChange={(v) => setName(v.slice(0, 40))} />
               </div>
             </div>
             <Text size="sm" tone="muted">{t("agentLine", { handle: installation.agentHandle })}</Text>
-            <div>
+            <div className={ACTIONS_CLASS_NAME}>
               <Button variant="secondary" isPending={pending && which === "name"} isDisabled={!canEdit || name.trim().length < 2 || name.trim() === installation.agentName} onPress={() => act("name", () => renameModule(installation.id, name))}>{t("saveName")}</Button>
             </div>
           </div>

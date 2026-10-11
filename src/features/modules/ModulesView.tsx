@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge, Button, Heading, Icon, PageContainer, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common";
+import { Badge, Button, Heading, Icon, List, ListItem, PageContainer, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common";
 import { nivoIconSource } from "@/ui";
 import { AgentAvatar } from "@/components/avatar/PersonAvatar";
 import Image from "next/image";
@@ -8,12 +8,11 @@ import { MODULES, moduleCopy } from "@/lib/modules";
 import { useLocale, useT } from "@/i18n/client";
 import { modules } from "@/i18n/dict/modules";
 import { offerEndLabel } from "@/features/promo-ads/format";
-import { RIBBON, RIBBON_WRAP } from "@/features/promo-ads/classNames";
 import { FOUNDING_OFFER, isOfferLive } from "@/lib/promo";
 import { AgentCard } from "@/features/modules/AgentCard";
 import type { AgentStats } from "@/features/modules/queries";
 import {
-  CAPABILITY_ROW_CLASS_NAME, CARD_STACK_CLASS_NAME, CATALOG_GRID_CLASS_NAME, CATALOG_HEAD_CLASS_NAME, FOUNDING_LINE_CLASS_NAME, LIST_CLASS_NAME, MASCOT_CLASS_NAME, PAGE_STACK_CLASS_NAME, SECTION_STACK_CLASS_NAME,
+  CARD_STACK_CLASS_NAME, CATALOG_GRID_CLASS_NAME, CATALOG_HEAD_CLASS_NAME, FOUNDING_LINE_CLASS_NAME, LIST_CLASS_NAME, MASCOT_CLASS_NAME, PAGE_STACK_CLASS_NAME, SECTION_STACK_CLASS_NAME,
 } from "@/features/modules/classNames";
 
 type ModulesViewProps = { readonly stats: ReadonlyArray<AgentStats>; readonly updatedAt?: string };
@@ -45,24 +44,23 @@ export const ModulesView = ({ stats }: ModulesViewProps) => {
             const badge = installed !== undefined ? (spec.includedWithWorkspace ? t("badgeIncluded") : t("badgeInWorkspace")) : t("badgeNotInWorkspace");
             const copy = moduleCopy(spec, locale);
             return (
-              <div key={spec.key} className={RIBBON_WRAP}>
-              {isFounding ? <span className={RIBBON}>{t("foundingRibbon", { name: FOUNDING_OFFER.name, percent: FOUNDING_OFFER.percentOff })}</span> : null}
-              <SurfaceCard ariaLabel={spec.name} height="fill">
+              <SurfaceCard key={spec.key} ariaLabel={spec.name} height="fill">
                 <div className={CARD_STACK_CLASS_NAME}>
                   <div className={CATALOG_HEAD_CLASS_NAME}>
                     <AgentAvatar module={spec.key} size="md" label={spec.name} />
-                    {isFounding ? null : <Badge tone="neutral" isDot={installed !== undefined}>{badge}</Badge>}
+                    {isFounding
+                      ? <Badge tone="accent">{t("foundingRibbon", { name: FOUNDING_OFFER.name, percent: FOUNDING_OFFER.percentOff })}</Badge>
+                      : <Badge tone="neutral" isDot={installed !== undefined}>{badge}</Badge>}
                   </div>
                   <Heading level={3}>{spec.name}</Heading>
                   <Text as="p" size="sm" tone="muted">{copy.summary}</Text>
-                  <div className={LIST_CLASS_NAME}>
+                  <List label={spec.name} className={LIST_CLASS_NAME}>
                     {copy.capabilities.map((capability) => (
-                      <div key={capability} className={CAPABILITY_ROW_CLASS_NAME}>
-                        <Icon source={nivoIconSource("complete", "leading")} usage="leading" />
-                        <Text size="sm">{capability}</Text>
-                      </div>
+                      <ListItem key={capability}>
+                        <Text size="sm" startContent={<Icon source={nivoIconSource("complete", "leading")} usage="leading" />}>{capability}</Text>
+                      </ListItem>
                     ))}
-                  </div>
+                  </List>
                   {installed !== undefined
                     ? <Button variant="outline" href={`/modules/${installed.agent.id}`}>{t("open", { name: spec.name })}</Button>
                     : <Button variant="secondary" href={`/modules/new?module=${spec.key}`}>{t("buy", { name: spec.name })}</Button>}
@@ -75,7 +73,6 @@ export const ModulesView = ({ stats }: ModulesViewProps) => {
                   {installed === undefined ? <Text size="xs" tone="muted">{t("billedWithPlan")}</Text> : null}
                 </div>
               </SurfaceCard>
-              </div>
             );
           })}
         </div>

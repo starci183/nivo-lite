@@ -110,19 +110,19 @@ export const Simulator = ({ initialEventId }: SimulatorProps) => {
         </div>
         <Form label={t("simTitle")} onSubmit={onSubmit} isPending={isPending}>
           <div className={FORM_GRID_CLASS}>
-            <Select label={t("channel")} name="channel" options={CHANNELS.map((c) => ({ id: c, label: g(`channel_${c}`) }))} value={values.channel} isDisabled={isPending} onValueChange={(v) => { if (isChannel(v)) set("channel", v) }} />
-            <Select label={t("kind")} name="kind" options={KINDS.map((k) => ({ id: k, label: g(`kind_${k}`) }))} value={values.kind} isDisabled={isPending} onValueChange={(v) => { if (isKind(v)) set("kind", v) }} />
+            <Select variant="secondary" label={t("channel")} name="channel" options={CHANNELS.map((c) => ({ id: c, label: g(`channel_${c}`) }))} value={values.channel} isDisabled={isPending} onValueChange={(v) => { if (isChannel(v)) set("channel", v) }} />
+            <Select variant="secondary" label={t("kind")} name="kind" options={KINDS.map((k) => ({ id: k, label: g(`kind_${k}`) }))} value={values.kind} isDisabled={isPending} onValueChange={(v) => { if (isKind(v)) set("kind", v) }} />
             <Input id="sim-name" name="sender_name" label={t("senderName")} hint={t("senderNameHint")} variant="secondary" isRequired isDisabled={isPending} value={values.name} isError={Boolean(nameError)} errorMessage={nameError} onValueChange={(v) => { setNameError(null); set("name", v) }} />
             <Input id="sim-contact" name="sender_contact" label={t("contact")} variant="secondary" isDisabled={isPending} value={values.contact} onValueChange={(v) => set("contact", v)} />
             <div className={FORM_WIDE_CLASS}>
-              <Textarea label={t("body")} name="body" rows={3} isDisabled={isPending} value={values.body} onValueChange={(v) => set("body", v)} />
+              <Textarea variant="secondary" label={t("body")} name="body" rows={3} isDisabled={isPending} value={values.body} onValueChange={(v) => set("body", v)} />
             </div>
             {values.kind === "order" ? (
               <div className={FORM_WIDE_CLASS}>
                 <Input id="sim-items" name="items" label={t("items")} variant="secondary" isDisabled={isPending} value={values.items} onValueChange={(v) => set("items", v)} />
               </div>
             ) : null}
-            <NumberField label={t("amount")} name="amount" minValue={0} step={1_000_000} formatOptions={{ maximumFractionDigits: 0 }} isDisabled={isPending} value={values.amount} onValueChange={(v) => set("amount", v)} />
+            <NumberField variant="secondary" label={t("amount")} name="amount" minValue={0} step={1_000_000} formatOptions={{ maximumFractionDigits: 0 }} isDisabled={isPending} value={values.amount} onValueChange={(v) => set("amount", v)} />
             <Input id="sim-ref" name="external_ref" label={t("reference")} variant="secondary" isDisabled={isPending} value={values.reference} onValueChange={(v) => set("reference", v)} />
             <div className={EVENT_ID_ROW_CLASS}>
               <div className={EVENT_ID_INPUT_CLASS}>

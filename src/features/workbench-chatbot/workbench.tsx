@@ -1,17 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { Alert, EmptyNotice, Text } from "@starci/grammar/common";
+import { Alert, DescriptionList, EmptyNotice, FillViewport, SurfaceCard } from "@starci/grammar/common";
 import { useT } from "@/i18n/client";
 import { workbenchChatbot } from "@/i18n/dict/workbenchChatbot";
-import { useFillViewport } from "@/features/office/useFillViewport";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import {
   answerEscalation, handBack, loadChatbotOverview, loadChatbotThread, replyAsMember, takeOver,
   type WbMetrics, type WbOverview, type WbThread,
 } from "@/lib/workbench-chatbot";
 import {
-  INBOX_CLASS_NAME, LIST_PANE_CLASS_NAME, METRIC_CLASS_NAME, METRIC_VALUE_CLASS_NAME, METRICS_CLASS_NAME, SIDE_PANE_CLASS_NAME, THREAD_PANE_CLASS_NAME, WORKBENCH_CLASS_NAME,
+  CENTER_CLASS_NAME, INBOX_CLASS_NAME, LIST_PANE_OPEN_CLASS_NAME, LIST_PANE_WIDE_ONLY_CLASS_NAME, SIDE_PANE_DOCKED_ONLY_CLASS_NAME, SIDE_PANE_OPEN_CLASS_NAME,
+  THREAD_PANE_OPEN_CLASS_NAME, THREAD_PANE_WIDE_ONLY_CLASS_NAME, WORKBENCH_CLASS_NAME,
 } from "./classNames";
 import { ConversationPane, matchesFilter, type InboxFilter } from "./list";
 import { SidePane } from "./side";
@@ -35,19 +35,9 @@ const responseLabel = (m: WbMetrics, t: Translate): { value: string; sub: string
   return { value, sub: t("metricResponseSub", { n: m.sample }) };
 };
 
-const Metric = ({ label, value, sub }: { readonly label: string; readonly value: string; readonly sub: string }) => (
-  <div className={METRIC_CLASS_NAME}>
-    <Text size="xs" tone="muted" weight="medium">{label}</Text>
-    <span className={METRIC_VALUE_CLASS_NAME}>{value}</span>
-    <Text size="xs" tone="muted">{sub}</Text>
-  </div>
-);
-
 /** The Chatbot workbench: metrics, then conversation list, thread and customer panel with realtime updates. */
 export const ChatbotWorkbench = ({ initial, initialThread, userName }: ChatbotWorkbenchProps) => {
   const t = useT(workbenchChatbot);
-  const frameRef = useRef<HTMLDivElement | null>(null);
-  useFillViewport(frameRef);
 
   const [overview, setOverview] = useState<WbOverview>(initial);
   const [selectedId, setSelectedId] = useState<string | null>(initialThread?.conversation.id ?? null);
@@ -127,19 +117,27 @@ export const ChatbotWorkbench = ({ initial, initialThread, userName }: ChatbotWo
 
   return (
     <div className={WORKBENCH_CLASS_NAME}>
-      <div className={METRICS_CLASS_NAME}>
-        <Metric label={t("metricToday")} value={String(overview.metrics.today)} sub={t("metricTodaySub")} />
-        <Metric label={t("metricWaiting")} value={String(overview.metrics.waiting)} sub={t("metricWaitingSub")} />
-        <Metric label={t("metricResponse")} value={response.value} sub={response.sub} />
-      </div>
+      <SurfaceCard>
+        <DescriptionList
+          layout="stat-strip"
+          isDivided
+          items={[
+            { id: "today", term: t("metricToday"), description: String(overview.metrics.today), meta: t("metricTodaySub") },
+            { id: "waiting", term: t("metricWaiting"), description: String(overview.metrics.waiting), meta: t("metricWaitingSub") },
+            { id: "response", term: t("metricResponse"), description: response.value, meta: response.sub },
+          ]}
+        />
+      </SurfaceCard>
 
       {loadFailed ? (
         <Alert tone="negative" title={t("loadError")} action={{ label: t("reload"), onAction: () => void refresh() }} />
       ) : null}
       {actionError ? <Alert tone="negative" title={t("actionFailed")} description={actionError} /> : null}
 
-      <div ref={frameRef} className={INBOX_CLASS_NAME}>
-        <div className={`${LIST_PANE_CLASS_NAME} ${pane === "list" ? "flex" : "hidden md:flex"}`}>
+      <FillViewport minHeight="md" bottomInset="page">
+      <SurfaceCard ariaLabel={t("title")} composition="joined" height="fill">
+      <div className={INBOX_CLASS_NAME}>
+        <div className={pane === "list" ? LIST_PANE_OPEN_CLASS_NAME : LIST_PANE_WIDE_ONLY_CLASS_NAME}>
           <ConversationPane
             conversations={visible}
             total={overview.conversations.length}
@@ -153,9 +151,9 @@ export const ChatbotWorkbench = ({ initial, initialThread, userName }: ChatbotWo
           />
         </div>
 
-        <div className={`${THREAD_PANE_CLASS_NAME} ${pane === "list" ? "hidden md:flex" : "flex"}`}>
+        <div className={pane === "list" ? THREAD_PANE_WIDE_ONLY_CLASS_NAME : THREAD_PANE_OPEN_CLASS_NAME}>
           {selectedId === null ? (
-            <div className="flex flex-1 items-center justify-center p-6">
+            <div className={CENTER_CLASS_NAME}>
               <EmptyNotice message={t("pickTitle")} description={t("pickBody")} />
             </div>
           ) : (
@@ -177,7 +175,7 @@ export const ChatbotWorkbench = ({ initial, initialThread, userName }: ChatbotWo
         </div>
 
         {selectedId !== null ? (
-          <aside className={`${SIDE_PANE_CLASS_NAME} ${infoOpen ? "flex" : "hidden xl:flex"}`} aria-label={t("customerTitle")}>
+          <aside className={infoOpen ? SIDE_PANE_OPEN_CLASS_NAME : SIDE_PANE_DOCKED_ONLY_CLASS_NAME} aria-label={t("customerTitle")}>
             <SidePane
               thread={thread}
               userName={userName}
@@ -197,6 +195,8 @@ export const ChatbotWorkbench = ({ initial, initialThread, userName }: ChatbotWo
           </aside>
         ) : null}
       </div>
+      </SurfaceCard>
+      </FillViewport>
     </div>
   );
 };

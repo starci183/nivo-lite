@@ -1,10 +1,9 @@
-import Link from "next/link"
-import { Badge, EmptyNotice, PageContainer, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common"
+import { Badge, Button, Disclosure, EmptyNotice, List, ListItem, PageContainer, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common"
 import { getT } from "@/i18n/server"
 import { knowledge as dict } from "@/i18n/dict/knowledge"
 import type { KnowledgeModule, NivoItem } from "@/lib/knowledge/shared"
 import { MODULE_KEYS } from "@/lib/module-registry"
-import { PAGE_CLASS, PASSAGE_TEXT_CLASS, ROW_WRAP_CLASS, STACK_CLASS } from "./classNames"
+import { ITEM_CLASS, LIST_CLASS, PAGE_CLASS, PASSAGE_TEXT_CLASS, ROW_WRAP_CLASS } from "./classNames"
 
 const ORDER: ReadonlyArray<KnowledgeModule> = ["core", ...MODULE_KEYS]
 
@@ -14,7 +13,7 @@ export const NivoBrowse = async ({ items }: { readonly items: ReadonlyArray<Nivo
   return (
     <PageContainer measure="product">
       <div className={PAGE_CLASS}>
-        <Link href="/knowledge" className="text-sm text-muted underline-offset-2 hover:underline">{t("nivoBack")}</Link>
+        <div className={ROW_WRAP_CLASS}><Button variant="ghost" size="sm" href="/knowledge">{t("nivoBack")}</Button></div>
         <SectionHeader level={1} eyebrow={t("eyebrow")} title={t("nivoTitle")} description={t("nivoDescription")} />
         {items.length === 0 ? <EmptyNotice message={t("nivoTitle")} description={t("nivoEmpty")} /> : null}
         {ORDER.map((m) => {
@@ -22,20 +21,24 @@ export const NivoBrowse = async ({ items }: { readonly items: ReadonlyArray<Nivo
           if (list.length === 0) return null
           return (
             <SurfaceCard key={m} label={m === "core" ? t("moduleCore") : t(`module_${m}`)} headingLevel={2}>
-              <div className={STACK_CLASS}>
+              <List label={m === "core" ? t("moduleCore") : t(`module_${m}`)} className={LIST_CLASS}>
                 {list.map((i) => (
-                  <details key={i.id} className="rounded-lg border border-separator px-3 py-2">
-                    <summary className="cursor-pointer">
-                      <span className={ROW_WRAP_CLASS}>
-                        <Text weight="semibold" size="sm">{i.title}</Text>
-                        <Badge tone="accent">{t(`nivoKind_${i.kind}`)}</Badge>
-                        <Text size="xs" tone="muted">{t("nivoVersion", { version: i.version })}</Text>
-                      </span>
-                    </summary>
-                    <div className={`${PASSAGE_TEXT_CLASS} pt-3`}>{i.body}</div>
-                  </details>
+                  <ListItem key={i.id} className={ITEM_CLASS}>
+                    <Disclosure
+                      headingLevel={3}
+                      title={
+                        <span className={ROW_WRAP_CLASS}>
+                          <Text as="span" weight="semibold" size="sm">{i.title}</Text>
+                          <Badge tone="neutral">{t(`nivoKind_${i.kind}`)}</Badge>
+                          <Text as="span" size="xs" tone="muted">{t("nivoVersion", { version: i.version })}</Text>
+                        </span>
+                      }
+                    >
+                      <div className={PASSAGE_TEXT_CLASS}><Text size="sm">{i.body}</Text></div>
+                    </Disclosure>
+                  </ListItem>
                 ))}
-              </div>
+              </List>
             </SurfaceCard>
           )
         })}

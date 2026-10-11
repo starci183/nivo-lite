@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Button, SurfaceCard, Text } from "@starci/grammar/common";
+import { Alert, SurfaceCard, Text, TextAction } from "@starci/grammar/common";
 import { AutomationsBoard } from "@/features/automations/AutomationsBoard";
 import type { AutomationsData } from "@/features/automations/useAutomations";
 import { useT } from "@/i18n/client";
@@ -32,15 +31,12 @@ export const ModuleAutomations = ({ moduleKey, canEdit }: ModuleAutomationsProps
 
   if (!canEdit) return null;
   return (
-    <SurfaceCard label={t("moduleTitle")} headingLevel={2} labelEnd={<Link href="/automations" className="text-sm text-accent underline underline-offset-2">{t("seeAll")}</Link>}>
+    <SurfaceCard label={t("moduleTitle")} headingLevel={2} labelEnd={<TextAction href="/automations" size="sm" appearance="inline">{t("seeAll")}</TextAction>}>
       <div className={STACK_CLASS_NAME}>
         <Text size="sm" tone="muted">{t("moduleHelp")}</Text>
         {failed ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <Text size="sm">{t("loadFailed")}</Text>
-            <Button variant="outline" size="sm" onPress={() => { setFailed(false); setAttempt((n) => n + 1); }}>{t("retry")}</Button>
-          </div>
-        ) : data === null ? <Text size="sm" tone="muted">{t("loading")}</Text> : <AutomationsBoard initial={data} layout="module" moduleKey={moduleKey} />}
+          <Alert tone="negative" title={t("loadFailed")} action={{ label: t("retry"), onAction: () => { setFailed(false); setAttempt((n) => n + 1); } }} />
+        ) : data === null ? <Text size="sm" tone="muted" live="polite">{t("loading")}</Text> : <AutomationsBoard initial={data} layout="module" moduleKey={moduleKey} />}
       </div>
     </SurfaceCard>
   );

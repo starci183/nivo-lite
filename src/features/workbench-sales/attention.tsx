@@ -2,14 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Badge, Button, EmptyNotice, SurfaceCard, Text, type BadgeTone } from "@starci/grammar/common";
-import Link from "next/link";
+import { Badge, Button, EmptyNotice, SurfaceListCard, Text, TextAction, type BadgeTone } from "@starci/grammar/common";
 import { useT } from "@/i18n/client";
 import { governance } from "@/i18n/dict/governance";
 import { workbenchSales } from "@/i18n/dict/workbenchSales";
 import type { AttentionKind, AttentionRow } from "@/lib/workbench-sales";
 import { retryFailedStep, stopFailedStep } from "./actions";
-import { CHIPS_CLASS_NAME, LIST_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME } from "./classNames";
+import { CHIPS_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME } from "./classNames";
 import { AgeText, StageBadge, useFieldLabel } from "./parts";
 
 const KIND_TONE: Record<AttentionKind, BadgeTone> = { decision: "warning", clarify: "warning", failed: "danger", overdue: "danger", awaiting_reply: "accent" };
@@ -58,9 +57,7 @@ const AttentionItem = ({ row, nowIso, onOpenDecision }: { readonly row: Attentio
           <AgeText since={row.since} nowIso={nowIso} />
         </div>
         {row.leadId ? (
-          <Link href={`/leads/${row.leadId}`}>
-            <Text as="span" weight="semibold">{row.customer}{row.company ? ` · ${row.company}` : ""}</Text>
-          </Link>
+          <TextAction href={`/leads/${row.leadId}`}>{`${row.customer}${row.company ? ` · ${row.company}` : ""}`}</TextAction>
         ) : (
           <Text weight="semibold">{row.customer}</Text>
         )}
@@ -89,18 +86,9 @@ const AttentionItem = ({ row, nowIso, onOpenDecision }: { readonly row: Attentio
 /** Surface 1: opportunities that need a person, most urgent first. */
 export const AttentionPanel = ({ rows, nowIso, onOpenDecision }: AttentionPanelProps) => {
   const t = useT(workbenchSales);
-  if (rows.length === 0) {
-    return (
-      <SurfaceCard ariaLabel={t("tab_attention")}>
-        <EmptyNotice message={t("attentionEmptyTitle")} description={t("attentionEmptyBody")} />
-      </SurfaceCard>
-    );
-  }
   return (
-    <SurfaceCard ariaLabel={t("tab_attention")}>
-      <ul className={LIST_CLASS_NAME}>
-        {rows.map((row) => <AttentionItem key={row.key} row={row} nowIso={nowIso} onOpenDecision={onOpenDecision} />)}
-      </ul>
-    </SurfaceCard>
+    <SurfaceListCard ariaLabel={t("tab_attention")} empty={<EmptyNotice message={t("attentionEmptyTitle")} description={t("attentionEmptyBody")} />}>
+      {rows.map((row) => <AttentionItem key={row.key} row={row} nowIso={nowIso} onOpenDecision={onOpenDecision} />)}
+    </SurfaceListCard>
   );
 };

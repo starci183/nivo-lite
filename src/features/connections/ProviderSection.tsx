@@ -2,13 +2,13 @@
 
 import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Badge, Button, SurfaceCard, Text } from "@starci/grammar/common"
+import { Badge, Button, List, SurfaceCard, Text } from "@starci/grammar/common"
 import { useLocale, useT } from "@/i18n/client"
 import { connections as dict } from "@/i18n/dict/connections"
 import { connectionWizard } from "@/i18n/dict/connectionWizard"
 import type { Connection, Provider } from "@/lib/channels"
 import { PROVIDERS } from "@/lib/connection-providers"
-import { HEAD_CLASS, STACK_CLASS } from "./classNames"
+import { HEAD_CLASS, ROWS_CLASS, STACK_CLASS } from "./classNames"
 import { ConnectionRow } from "./ConnectionRow"
 import type { AgentOption } from "./wizard/AgentStep"
 import { GoogleWizard } from "./wizard/GoogleWizard"
@@ -63,14 +63,16 @@ export const ProviderSection = ({ provider, items, agentNames, agents, localOnly
         </div>
 
         {items.length === 0 && !open ? <Text size="sm" tone="muted">{t("emptyList")}</Text> : null}
-        <div>
-          {items.map((c) => (
-            <ConnectionRow
-              key={c.id} connection={c} localOnly={localOnly} ownerEmail={ownerEmail} onContinue={def.kind === "money" || def.kind === "zalo" ? () => setOpen({ resumeId: c.id }) : undefined}
-              agentNames={c.agentIds.map((id) => agentNames[id]).filter((n): n is string => Boolean(n))}
-            />
-          ))}
-        </div>
+        {items.length > 0 ? (
+          <List label={def.title[locale]} className={ROWS_CLASS}>
+            {items.map((c) => (
+              <ConnectionRow
+                key={c.id} connection={c} localOnly={localOnly} ownerEmail={ownerEmail} onContinue={def.kind === "money" || def.kind === "zalo" ? () => setOpen({ resumeId: c.id }) : undefined}
+                agentNames={c.agentIds.map((id) => agentNames[id]).filter((n): n is string => Boolean(n))}
+              />
+            ))}
+          </List>
+        ) : null}
 
         {open && def.kind === "money" ? <MoneyWizard key={open.resumeId ?? "new"} provider={provider as "sepay" | "payos" | "casso"} resumeId={open.resumeId} agents={eligible} onClose={close} /> : null}
         {open && def.kind === "telegram" ? <TelegramWizard agents={eligible} onClose={close} /> : null}

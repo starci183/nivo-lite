@@ -2,12 +2,12 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Alert, Button, Input, Select, SurfaceCard, Text } from "@starci/grammar/common"
+import { Alert, Button, Form, Input, Select, SurfaceCard, Text } from "@starci/grammar/common"
 import { useT } from "@/i18n/client"
 import { team } from "@/i18n/dict/team"
 import { createInvite, type InviteResult } from "@/lib/invites"
 import type { StaffChoice } from "./queries"
-import { FOOTER_CLASS, FORM_GRID_CLASS, LINK_BOX_CLASS, LINK_TEXT_CLASS, STACK_CLASS } from "./classNames"
+import { FOOTER_CLASS, FORM_GRID_CLASS, LINK_BOX_CLASS, STACK_CLASS } from "./classNames"
 
 /** Props for {@link InviteForm}. */
 export type InviteFormProps = { readonly staffChoices: ReadonlyArray<StaffChoice> }
@@ -45,16 +45,6 @@ export const InviteForm = ({ staffChoices }: InviteFormProps) => {
     })
   }
 
-  const copy = async () => {
-    if (!sent) return
-    try {
-      await navigator.clipboard.writeText(sent.link)
-      setCopied(true)
-    } catch {
-      // The link is selectable on screen.
-    }
-  }
-
   const staffOptions = [
     { id: NO_STAFF, label: t("staffNone") },
     ...staffChoices.map((s) => ({ id: s.id, label: s.role ? t("staffOption", { name: s.name, role: s.role }) : s.name })),
@@ -69,29 +59,39 @@ export const InviteForm = ({ staffChoices }: InviteFormProps) => {
 
   return (
     <SurfaceCard label={t("formTitle")} headingLevel={2}>
-      <form className={STACK_CLASS} onSubmit={(e) => { e.preventDefault(); submit() }}>
-        <Text size="sm" tone="muted">{t("formDesc")}</Text>
-        <div className={FORM_GRID_CLASS}>
-          <Input id="invite-email" name="email" kind="email" label={t("fieldEmail")} variant="secondary" isRequired isDisabled={isPending} value={email} onValueChange={setEmail} />
-          <Select label={t("fieldRole")} name="role" options={[{ id: "staff", label: t("roleStaff") }, { id: "manager", label: t("roleManager") }]} value={role} isDisabled={isPending} onValueChange={(v) => { if (v === "manager" || v === "staff") setRole(v) }} />
-          <Select label={t("fieldStaff")} name="staff" options={staffOptions} value={staffId} isDisabled={isPending} onValueChange={(v) => setStaffId(v ?? NO_STAFF)} />
-        </div>
-        <Text size="xs" tone="muted">{t("staffHint")}</Text>
-        {error ? <Alert title={t("errGeneric")} description={error} tone="negative" /> : null}
-        {sent ? (
-          <div className={LINK_BOX_CLASS}>
-            <Text size="sm" live="polite">{sentText}</Text>
-            <Text size="xs" tone="muted">{t("sentLink")}</Text>
-            <code className={LINK_TEXT_CLASS}>{sent.link}</code>
-            <div className={FOOTER_CLASS}>
-              <Button variant="outline" onPress={copy}>{copied ? t("inviteCopied") : t("inviteCopy")}</Button>
-            </div>
+      <Form label={t("formTitle")} onSubmit={submit} isPending={isPending}>
+        <div className={STACK_CLASS}>
+          <Text size="sm" tone="muted">{t("formDesc")}</Text>
+          <div className={FORM_GRID_CLASS}>
+            <Input id="invite-email" name="email" kind="email" label={t("fieldEmail")} variant="secondary" isRequired isDisabled={isPending} value={email} onValueChange={setEmail} />
+            <Select label={t("fieldRole")} name="role" options={[{ id: "staff", label: t("roleStaff") }, { id: "manager", label: t("roleManager") }]} value={role} isDisabled={isPending} onValueChange={(v) => { if (v === "manager" || v === "staff") setRole(v) }} />
+            <Select label={t("fieldStaff")} name="staff" options={staffOptions} value={staffId} isDisabled={isPending} onValueChange={(v) => setStaffId(v ?? NO_STAFF)} />
           </div>
-        ) : null}
-        <div className={FOOTER_CLASS}>
-          <Button variant="primary" type="submit" isPending={isPending}>{t("submit")}</Button>
+          <Text size="xs" tone="muted">{t("staffHint")}</Text>
+          {error ? <Alert title={t("errGeneric")} description={error} tone="negative" /> : null}
+          {sent ? (
+            <div className={LINK_BOX_CLASS}>
+              <Text size="sm" live="polite">{sentText}</Text>
+              <Input
+                id="invite-sent-link"
+                name="inviteLink"
+                label={t("sentLink")}
+                variant="secondary"
+                value={sent.link}
+                isReadOnly
+                isCopyable
+                copyLabel={t("inviteCopy")}
+                copiedLabel={t("inviteCopied")}
+                onCopy={() => setCopied(true)}
+              />
+              {copied ? <Text size="xs" tone="muted" live="polite">{t("inviteCopied")}</Text> : null}
+            </div>
+          ) : null}
+          <div className={FOOTER_CLASS}>
+            <Button variant="primary" type="submit" isPending={isPending}>{t("submit")}</Button>
+          </div>
         </div>
-      </form>
+      </Form>
     </SurfaceCard>
   )
 }

@@ -1,8 +1,9 @@
+import { PageContainer, Region, SectionHeader } from "@starci/grammar/common";
 import { getLocale } from "@/i18n/server";
 import { translator } from "@/i18n/core";
 import { landingBottom } from "@/i18n/dict/landingBottom";
+import { ANCHOR } from "../classNames";
 import { FOUNDING_OFFER, LANDING_OFFER } from "../offer";
-import { Eyebrow } from "./eyebrow";
 import { FaqList, type FaqEntry } from "./faq-list";
 import { formatDate, formatVnd } from "./format";
 import * as c from "./classNames";
@@ -22,17 +23,16 @@ export const LandingFaq = async () => {
   const right = [entry(5), entry(6), entry(7, price), entry(8)];
 
   return (
-    <section id="faq" aria-label={t("faqAria")} className={c.SECTION}>
-      <div className={c.GRID}>
-        <div className={c.FAQ_HEAD}>
-          <Eyebrow>{t("faqEyebrow")}</Eyebrow>
-          <h2 className={c.H2}>{t("faqTitle")}</h2>
+    <Region id="faq" label={t("faqAria")} className={ANCHOR}>
+      <PageContainer measure="product">
+        <div className={c.SECTION_STACK}>
+          <SectionHeader eyebrow={t("faqEyebrow")} title={t("faqTitle")} />
+          <div className={c.FAQ_GRID}>
+            <FaqList label={t("faqListLeft")} entries={left} defaultOpenId="q1" />
+            <FaqList label={t("faqListRight")} entries={right} />
+          </div>
         </div>
-        <div className={c.FAQ_BOX}>
-          <FaqList label={t("faqListLeft")} entries={left} defaultOpenId="q1" />
-          <FaqList label={t("faqListRight")} entries={right} />
-        </div>
-      </div>
-    </section>
+      </PageContainer>
+    </Region>
   );
 };

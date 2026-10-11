@@ -2,17 +2,16 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Alert, Badge, Button, Form, Input, PageContainer, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common";
+import { Alert, Badge, Button, DescriptionList, Form, Input, ListItem, PageContainer, Region, SectionHeader, SurfaceCard, SurfaceListCard, Text } from "@starci/grammar/common";
 import { useT } from "@/i18n/client";
 import { account } from "@/i18n/dict/account";
 import type { Outcome } from "@/lib/types";
 import { changeEmail, changePassword, revokeSession, signOutCurrent, signOutOthers, updateProfile } from "./actions";
 import {
   ACTIONS_CLASS_NAME,
-  FACT_ROW_CLASS_NAME,
   FORM_CLASS_NAME,
-  LIST_CLASS_NAME,
   PAGE_CLASS_NAME,
+  SECTION_CLASS_NAME,
   SESSION_INFO_CLASS_NAME,
   SESSION_ROW_CLASS_NAME,
   SESSION_TITLE_CLASS_NAME,
@@ -97,10 +96,7 @@ const EmailCard = ({ email }: { readonly email: string }) => {
   return (
     <SurfaceCard label={t("emailTitle")} headingLevel={2}>
       <div className={FORM_CLASS_NAME}>
-        <div>
-          <Text size="sm" tone="muted">{t("emailCurrent")}</Text>
-          <Text weight="medium">{email}</Text>
-        </div>
+        <DescriptionList layout="stacked" items={[{ id: "email", term: t("emailCurrent"), description: <Text weight="medium">{email}</Text> }]} />
         <Text size="sm" tone="muted">{t("emailHint")}</Text>
         {isEditing ? (
           <Form label={t("changeEmail")} onSubmit={() => a.run(() => changeEmail(value), t("emailSent"), () => { setEditing(false); setValue(""); })} isPending={a.isPending}>
@@ -163,17 +159,18 @@ const MethodsCard = ({ providers }: { readonly providers: ReadonlyArray<string> 
   ];
   return (
     <SurfaceCard label={t("methodsTitle")} headingLevel={2}>
-      <ul className={LIST_CLASS_NAME}>
-        {rows.map((row) => {
+      <DescriptionList
+        layout="columns"
+        isDivided
+        items={rows.map((row) => {
           const linked = providers.includes(row.key);
-          return (
-            <li key={row.key} className={FACT_ROW_CLASS_NAME}>
-              <Text weight="medium">{row.label}</Text>
-              <Badge tone={linked ? "success" : "neutral"}>{linked ? t("methodLinked") : t("methodNotLinked")}</Badge>
-            </li>
-          );
+          return {
+            id: row.key,
+            term: row.label,
+            description: <Badge tone={linked ? "success" : "neutral"}>{linked ? t("methodLinked") : t("methodNotLinked")}</Badge>,
+          };
         })}
-      </ul>
+      />
     </SurfaceCard>
   );
 };
@@ -183,48 +180,45 @@ const SessionsCard = ({ sessions, failed }: { readonly sessions: ReadonlyArray<S
   const router = useRouter();
   const a = useAction();
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [isSigningOut, startSignOut] = useTransition();
   const others = sessions.filter((s) => !s.isCurrent);
   const revoke = (id: string) => {
     setBusyId(id);
     a.run(() => revokeSession(id), t("sessionRevoked"), () => router.refresh());
   };
   return (
-    <SurfaceCard label={t("sessionsTitle")} headingLevel={2}>
-      <div className={LIST_CLASS_NAME}>
-        <Text size="sm" tone="muted">{t("sessionsHint")}</Text>
-        {failed ? <Alert tone="negative" title={t("sessionsFailed")} /> : null}
-        <ul className={LIST_CLASS_NAME} aria-label={t("sessionsTitle")}>
-          {sessions.map((s) => (
-            <li key={s.id} className={SESSION_ROW_CLASS_NAME} data-testid="session-row" data-current={s.isCurrent ? "1" : "0"}>
-              <div className={SESSION_INFO_CLASS_NAME}>
-                <div className={SESSION_TITLE_CLASS_NAME}>
-                  <Text weight="medium">{s.device ?? t("deviceUnknown")}</Text>
-                  {s.isCurrent ? <Badge tone="accent" isDot>{t("current")}</Badge> : null}
-                </div>
-                <Text size="sm" tone="muted">{[s.ip ? `${t("ipLabel")} ${s.ip}` : null, t("created", { when: s.created }), t("lastActive", { when: s.lastActive })].filter(Boolean).join(" · ")}</Text>
+    <Region labelledBy="account-sessions-title" className={SECTION_CLASS_NAME}>
+      <SectionHeader id="account-sessions-title" level={2} title={t("sessionsTitle")} description={t("sessionsHint")} />
+      {failed ? <Alert tone="negative" title={t("sessionsFailed")} /> : null}
+      <SurfaceListCard ariaLabel={t("sessionsTitle")}>
+        {sessions.map((s) => (
+          <ListItem key={s.id} className={SESSION_ROW_CLASS_NAME} data-testid="session-row" data-current={s.isCurrent ? "1" : "0"}>
+            <div className={SESSION_INFO_CLASS_NAME}>
+              <div className={SESSION_TITLE_CLASS_NAME}>
+                <Text weight="medium">{s.device ?? t("deviceUnknown")}</Text>
+                {s.isCurrent ? <Badge tone="accent" isDot>{t("current")}</Badge> : null}
               </div>
-              {s.isCurrent ? (
-                <form action={signOutCurrent}>
-                  <Button type="submit" variant="outline">{t("signOutThis")}</Button>
-                </form>
-              ) : (
-                <Button variant="outline" isPending={a.isPending && busyId === s.id} isDisabled={a.isPending} onPress={() => revoke(s.id)}>{t("signOut")}</Button>
-              )}
-            </li>
-          ))}
-        </ul>
-        <Feedback error={a.error} done={a.done} />
-        <div className={ACTIONS_CLASS_NAME}>
-          {others.length > 0 ? (
-            <Button variant="danger-soft" isPending={a.isPending && busyId === null} isDisabled={a.isPending} onPress={() => { setBusyId(null); a.run(signOutOthers, t("othersDone"), () => router.refresh()); }}>
-              {t("signOutOthers")}
-            </Button>
-          ) : (
-            <Text size="sm" tone="muted">{t("noOthers")}</Text>
-          )}
-        </div>
+              <Text size="sm" tone="muted">{[s.ip ? `${t("ipLabel")} ${s.ip}` : null, t("created", { when: s.created }), t("lastActive", { when: s.lastActive })].filter(Boolean).join(" · ")}</Text>
+            </div>
+            {s.isCurrent ? (
+              <Button variant="outline" isPending={isSigningOut} isDisabled={a.isPending} onPress={() => startSignOut(async () => { await signOutCurrent(); })}>{t("signOutThis")}</Button>
+            ) : (
+              <Button variant="outline" isPending={a.isPending && busyId === s.id} isDisabled={a.isPending} onPress={() => revoke(s.id)}>{t("signOut")}</Button>
+            )}
+          </ListItem>
+        ))}
+      </SurfaceListCard>
+      <Feedback error={a.error} done={a.done} />
+      <div className={ACTIONS_CLASS_NAME}>
+        {others.length > 0 ? (
+          <Button variant="danger-soft" isPending={a.isPending && busyId === null} isDisabled={a.isPending} onPress={() => { setBusyId(null); a.run(signOutOthers, t("othersDone"), () => router.refresh()); }}>
+            {t("signOutOthers")}
+          </Button>
+        ) : (
+          <Text size="sm" tone="muted">{t("noOthers")}</Text>
+        )}
       </div>
-    </SurfaceCard>
+    </Region>
   );
 };
 

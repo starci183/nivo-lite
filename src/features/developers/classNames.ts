@@ -1,12 +1,22 @@
 import { cn } from "@heroui/react"
 
+/** Page regions (GAP-5). */
 export const PAGE_CLASS = cn("flex", "flex-col", "gap-6")
+/** Blocks inside one card or section (GAP-4). */
 export const STACK_CLASS = cn("flex", "min-w-0", "flex-col", "gap-4")
+/** Key name field and the create action side by side (GAP-3 case-1). */
 export const FORM_ROW_CLASS = cn("flex", "min-w-0", "flex-col", "gap-3", "sm:flex-row", "sm:items-end")
+/** The field takes the remaining width. */
 export const FIELD_GROW_CLASS = cn("min-w-0", "flex-1")
-export const KEY_BOX_CLASS = cn("flex", "min-w-0", "flex-col", "gap-3", "rounded-lg", "border", "border-warning", "bg-surface-secondary", "p-4")
-export const KEY_ROW_CLASS = cn("flex", "flex-wrap", "items-center", "gap-x-4", "gap-y-3", "border-t", "border-separator", "py-3", "first:border-t-0")
+/** API key rows inside the card: one parent declaration draws every seam (BOUNDARY-3); List owns the reset. */
+export const KEY_LIST_CLASS = cn("flex", "min-w-0", "flex-col", "divide-y", "divide-separator")
+/** One key row between separators (PADDING-3 case-3); outer rows meet the band edge (PADDING-0). */
+export const KEY_ROW_CLASS = cn("flex", "flex-wrap", "items-center", "gap-x-4", "gap-y-3", "py-3", "first:pt-0", "last:pb-0")
+/** Name, prefix and dates of one key (GAP-1). */
 export const KEY_MAIN_CLASS = cn("flex", "min-w-0", "flex-1", "basis-64", "flex-col", "gap-1")
+/** Status badge and revoke action (GAP-2). */
 export const ACTIONS_CLASS = cn("flex", "flex-wrap", "items-center", "gap-2")
-export const CONFIRM_CLASS = cn("flex", "w-full", "flex-col", "gap-2", "rounded-lg", "bg-surface-secondary", "p-3")
+/** A failure note spanning the whole row. */
+export const ROW_NOTE_CLASS = cn("w-full")
+/** One guide example: heading, note, code (GAP-2). */
 export const EXAMPLE_CLASS = cn("flex", "min-w-0", "flex-col", "gap-2")

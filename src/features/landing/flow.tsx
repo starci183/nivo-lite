@@ -1,76 +1,62 @@
+import { Badge, Heading, List, ListItem, PageContainer, Region, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common";
 import { getT } from "@/i18n/server";
 import { landing } from "@/i18n/dict/landing";
-import {
-  AI_CHIP,
-  EYEBROW,
-  EYEBROW_DOT,
-  FLOW,
-  FLOW_ART,
-  FLOW_ARROW,
-  FLOW_GRID,
-  FLOW_META,
-  FLOW_NAME,
-  FLOW_STEP,
-  FLOW_STEP_HUMAN,
-  FLOW_TAG,
-  FLOW_TEXT,
-  FLOW_TITLE,
-  H2,
-  LEAD,
-  RAIL,
-  SECTION,
-} from "./classNames";
+import { LandingIconTile } from "./LandingIconTile";
+import { ANCHOR, FLOW_BODY, FLOW_GRID, FLOW_ITEM, FLOW_META, FLOW_NAME, SECTION_STACK } from "./classNames";
 
+/**
+ * Each step's identity glyph (ACCENT-2). The step mascots were removed: an illustration inside a card is a second
+ * signature moment, and the page keeps only one (DISCIPLINE-3 case-3; the final call to action carries it).
+ */
 const STEPS = [
-  { n: 1, art: "mascot-chat", ai: true, human: false },
-  { n: 2, art: "mascot-point", ai: true, human: false },
-  { n: 3, art: "mascot-checklist", ai: false, human: true },
-  { n: 4, art: "mascot-celebrate", ai: true, human: false },
+  { n: 1, icon: "send", ai: true, human: false },
+  { n: 2, icon: "agentos", ai: true, human: false },
+  { n: 3, icon: "review", ai: false, human: true },
+  { n: 4, icon: "wallet", ai: true, human: false },
 ] as const;
 
 type NameKey = "flow1Name" | "flow2Name" | "flow3Name" | "flow4Name";
 type TitleKey = "flow1Title" | "flow2Title" | "flow3Title" | "flow4Title";
 type TextKey = "flow1Text" | "flow2Text" | "flow3Text" | "flow4Text";
 
-/** "Three agents, one flow": Chatbot, Sales Agent, owner approval, Accounting Agent. */
+const HEADING_ID = "landing-flow";
+
+/** "Three agents, one flow": Chatbot, Sales Agent, owner approval, Accounting Agent, as an ordered list of cards. */
 export const LandingFlow = async () => {
   const t = await getT(landing);
   return (
-    <section id="how" className={`${FLOW} scroll-mt-20`} aria-labelledby="landing-flow">
-      <div className={`${SECTION} ${RAIL}`}>
-        <div className="flex flex-col items-center gap-4 text-center">
-          <span className={EYEBROW}>
-            <span className={EYEBROW_DOT} />
-            {t("flowEyebrow")}
-          </span>
-          <h2 id="landing-flow" className={H2}>
-            {t("flowTitle")}
-          </h2>
-          <p className={`${LEAD} max-w-2xl`}>{t("flowLead")}</p>
+    <Region id="how" labelledBy={HEADING_ID} className={ANCHOR}>
+      <PageContainer measure="product">
+        <div className={SECTION_STACK}>
+          <SectionHeader id={HEADING_ID} eyebrow={t("flowEyebrow")} title={t("flowTitle")} description={t("flowLead")} />
+          <List as="ol" label={t("flowTitle")} className={FLOW_GRID}>
+            {STEPS.map((s) => (
+              <ListItem key={s.n} className={FLOW_ITEM}>
+                {/* The owner-approval step is the one featured card (isHighlight: one card only). */}
+                <SurfaceCard height="fill" isHighlight={s.human}>
+                  <div className={FLOW_BODY}>
+                    <div className={FLOW_META}>
+                      <Text size="xs">{t("flowStepLabel", { n: s.n })}</Text>
+                      {s.human ? <Badge tone="neutral">{t("flowHuman")}</Badge> : null}
+                    </div>
+                    <LandingIconTile name={s.icon} />
+                    <div className={FLOW_NAME}>
+                      <Text size="sm" weight="medium">
+                        {t(`flow${s.n}Name` as NameKey)}
+                      </Text>
+                      {s.ai ? <Badge tone="neutral">AI</Badge> : null}
+                    </div>
+                    <Heading level={3}>{t(`flow${s.n}Title` as TitleKey)}</Heading>
+                    <Text size="sm" tone="muted">
+                      {t(`flow${s.n}Text` as TextKey)}
+                    </Text>
+                  </div>
+                </SurfaceCard>
+              </ListItem>
+            ))}
+          </List>
         </div>
-        <ol className={FLOW_GRID}>
-          {STEPS.map((s) => (
-            <li key={s.n} className={s.human ? FLOW_STEP_HUMAN : FLOW_STEP}>
-              <div className={FLOW_META}>
-                <span>{t("flowStepLabel", { n: s.n })}</span>
-                {s.human ? <span className={FLOW_TAG}>{t("flowHuman")}</span> : null}
-              </div>
-              <img className={FLOW_ART} src={`/images/promo/${s.art}.png`} alt="" width={112} height={112} loading="lazy" />
-              <p className={FLOW_NAME}>
-                {t(`flow${s.n}Name` as NameKey)}
-                {s.ai ? <span className={AI_CHIP}>AI</span> : null}
-              </p>
-              <h3 className={FLOW_TITLE}>{t(`flow${s.n}Title` as TitleKey)}</h3>
-              <p className={FLOW_TEXT}>{t(`flow${s.n}Text` as TextKey)}</p>
-              {s.n < 4 ? (
-                <span className={FLOW_ARROW} aria-hidden="true">
-                  →
-                </span>
-              ) : null}
-            </li>
-          ))}
-        </ol>
-      </div>
-    </section>
+      </PageContainer>
+    </Region>
   );
 };

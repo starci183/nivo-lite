@@ -1,36 +1,23 @@
-import { cn } from "@heroui/react";
-import { FRAME, FRAME_BAR, FRAME_DOT, FRAME_DOTS, FRAME_IMG, FRAME_LABEL } from "./classNames";
+import { Image, MediaFrame } from "@starci/grammar/common";
 
 /** Props for {@link BrowserFrame}. */
 export type BrowserFrameProps = {
   readonly src: string;
   readonly alt: string;
+  /** Visible caption under the shot; on the landing it always says the data is demo data. */
   readonly label: string;
   readonly width: number;
   readonly height: number;
   readonly priority?: boolean;
-  readonly className?: string;
 };
 
-/** A real product screenshot in a browser-style frame, always labelled as demo data. */
-export const BrowserFrame = ({ src, alt, label, width, height, priority = false, className }: BrowserFrameProps) => (
-  <figure className={cn(FRAME, className)}>
-    <div className={FRAME_BAR} aria-hidden="true">
-      <span className={FRAME_DOTS}>
-        <span className={FRAME_DOT} />
-        <span className={FRAME_DOT} />
-        <span className={FRAME_DOT} />
-      </span>
-      <span className={FRAME_LABEL}>{label}</span>
-    </div>
-    <img
-      className={FRAME_IMG}
-      src={src}
-      alt={alt}
-      width={width}
-      height={height}
-      loading={priority ? "eager" : "lazy"}
-      decoding="async"
-    />
-  </figure>
+/**
+ * A real product screenshot framed by Grammar's `MediaFrame` (BOUNDARY-5 case-2, SURFACE-3 case-3), always captioned
+ * as demo data. The old hand-drawn browser chrome (dots, tinted label) carried no information and was removed
+ * (DISCIPLINE-1).
+ */
+export const BrowserFrame = ({ src, alt, label, width, height, priority = false }: BrowserFrameProps) => (
+  <MediaFrame treatment="framed" aspect="auto" caption={label}>
+    <Image src={src} alt={alt} width={width} height={height} aspect="auto" fit="contain" loading={priority ? "eager" : "lazy"} />
+  </MediaFrame>
 );

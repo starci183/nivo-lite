@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Badge, Button, SearchField, Select, Tabs, Text, TextAction } from "@starci/grammar/common";
+import { Button, SearchField, Select, Tabs, Text, TextAction } from "@starci/grammar/common";
 import { useT } from "@/i18n/client";
 import { responsibilities } from "@/i18n/dict/responsibilities";
 import { OwnerGroups } from "./component";
@@ -194,7 +194,7 @@ export const ResponsibilityBoard = (props: ResponsibilityBoardProps) => {
       <div className={LIST_HEAD_CLASS_NAME}>
         <div className={LIST_TITLE_CLASS_NAME}>
           <Text weight="semibold">{t("byOwner")}</Text>
-          <Badge tone="neutral">{String(visible.length)}</Badge>
+          <Text size="sm" tone="muted">{String(visible.length)}</Text>
         </div>
         <Text size="xs" tone="muted">{props.verifiedLabel}</Text>
       </div>

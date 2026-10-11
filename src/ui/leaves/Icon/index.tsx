@@ -40,12 +40,16 @@ import {
   UserPlusIcon,
   WalletIcon,
   WindowIcon,
-  XMarkIcon } from
+  XMarkIcon,
+  ArrowLeftIcon,
+  EllipsisHorizontalIcon } from
 "@heroicons/react/24/outline";
 import {
   AcademicCapIcon as AcademicCapSolidIcon,
   ArrowPathIcon as ArrowPathSolidIcon,
   ArrowRightIcon as ArrowRightSolidIcon,
+  ArrowLeftIcon as ArrowLeftSolidIcon,
+  EllipsisHorizontalIcon as EllipsisHorizontalSolidIcon,
   ArrowRightEndOnRectangleIcon as ArrowRightEndOnRectangleSolidIcon,
   BellIcon as BellSolidIcon,
   BoltIcon as BoltSolidIcon,
@@ -111,7 +115,7 @@ import { GithubMark, GoogleMark } from "./product-brands";
 export type IconName =
 "brand" | "streak" | "credit" | "reward" | "course" |
 "email" | "password" | "revealPassword" | "hidePassword" | "code" |
-"complete" | "pending" | "signIn" | "signUp" | "close" | "next" | "disclosure" | "retry" | "send" |
+"complete" | "pending" | "signIn" | "signUp" | "close" | "next" | "back" | "more" | "trigger" | "disclosure" | "retry" | "send" |
 "home" | "explore" | "community" | "league" | "review" |
 "light" | "dark" | "locale" | "google" | "github" |
 "search" | "cart" | "notification" | "account" | "saved" | "blog" | "talents" | "jobs" | "practice" |
@@ -194,6 +198,9 @@ export const ICON_SOURCES: Record<IconName, GlyphCuts> = {
   signUp: cuts(UserPlusIcon, UserPlusSolidIcon),
   close: cuts(XMarkIcon, XMarkSolidIcon),
   next: cuts(ArrowRightIcon, ArrowRightSolidIcon),
+  back: cuts(ArrowLeftIcon, ArrowLeftSolidIcon),
+  more: cuts(EllipsisHorizontalIcon, EllipsisHorizontalSolidIcon),
+  trigger: cuts(BoltIcon, BoltSolidIcon),
   disclosure: cuts(ChevronRightIcon, ChevronRightSolidIcon),
   retry: cuts(ArrowPathIcon, ArrowPathSolidIcon),
   send: cuts(PaperAirplaneIcon, PaperAirplaneSolidIcon),

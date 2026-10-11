@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Badge, Button, EmptyNotice, Input, SectionHeader, SurfaceCard, Text, Textarea, type BadgeTone } from "@starci/grammar/common";
+import { Badge, Button, EmptyNotice, Input, SectionHeader, SurfaceCard, SurfaceListCard, Text, TextAction, Textarea, type BadgeTone } from "@starci/grammar/common";
 import { splitBasis } from "@/features/decisions/format";
 import { canDecideItem, useMember } from "@/features/shell/member-context";
 import { useLocale, useT } from "@/i18n/client";
@@ -13,7 +12,7 @@ import { decideExecution } from "@/lib/actions";
 import { decideWorkItem } from "@/lib/flow-actions";
 import type { DecisionRow, WorkEdits } from "@/lib/flow-types";
 import type { SalesDecision } from "@/lib/workbench-sales";
-import { CHIPS_CLASS_NAME, FORM_CLASS_NAME, LIST_CLASS_NAME, QUOTE_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME } from "./classNames";
+import { CHIPS_CLASS_NAME, FORM_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, ROW_CLASS_NAME, ROW_FOCUSED_CLASS_NAME, ROW_MAIN_CLASS_NAME } from "./classNames";
 import { formatDateTime, formatVnd, parseAmount } from "./format";
 import { AgeText, useFieldLabel } from "./parts";
 
@@ -90,16 +89,14 @@ const PendingCard = ({ item, nowIso, isFocused }: { readonly item: SalesDecision
   };
 
   return (
-    <li id={decisionAnchor(item.id)} className={`${ROW_CLASS_NAME} ${isFocused ? "bg-surface-secondary" : ""}`}>
+    <li id={decisionAnchor(item.id)} className={isFocused ? ROW_FOCUSED_CLASS_NAME : ROW_CLASS_NAME}>
       <div className={ROW_MAIN_CLASS_NAME}>
         <div className={CHIPS_CLASS_NAME}>
           <Badge tone="warning" isDot>{item.reason ? g(`reason_${item.reason}`) : t("kind_decision")}</Badge>
           <AgeText since={item.createdAt} nowIso={nowIso} />
         </div>
         {item.leadId ? (
-          <Link href={`/leads/${item.leadId}`}>
-            <Text as="span" weight="semibold">{item.customer}</Text>
-          </Link>
+          <TextAction href={`/leads/${item.leadId}`}>{item.customer}</TextAction>
         ) : (
           <Text weight="semibold">{item.customer}</Text>
         )}
@@ -109,10 +106,10 @@ const PendingCard = ({ item, nowIso, isFocused }: { readonly item: SalesDecision
         {item.hasAmount && !missing.includes("amount_vnd") && !isEditing ? <Text size="sm" weight="semibold">{formatVnd(item.amountVnd, locale)}</Text> : null}
 
         {item.draft && !isEditing ? (
-          <div className={QUOTE_CLASS_NAME}>
+          <SurfaceCard depth="nested" ariaLabel={t("draftLabel")}>
             <Text size="xs" tone="muted" weight="medium">{t("draftLabel")}</Text>
             <Text as="p" size="sm">{item.draft}</Text>
-          </div>
+          </SurfaceCard>
         ) : null}
 
         {canAct && (missing.length > 0 || isEditing) ? (
@@ -129,7 +126,7 @@ const PendingCard = ({ item, nowIso, isFocused }: { readonly item: SalesDecision
                 onValueChange={(v) => setValues((cur) => ({ ...cur, [name]: v }))}
               />
             ))}
-            {isEditing && item.draft ? <Textarea label={t("draftLabel")} rows={4} value={draft} isDisabled={isPending} onValueChange={setDraft} /> : null}
+            {isEditing && item.draft ? <Textarea label={t("draftLabel")} variant="secondary" rows={4} value={draft} isDisabled={isPending} onValueChange={setDraft} /> : null}
             {isEditing && item.hasAmount && !missing.includes("amount_vnd") ? (
               <Input id={`${item.id}-amount`} name="amount_vnd" label={g("field_amount_vnd")} variant="secondary" value={amount} isDisabled={isPending} onValueChange={setAmount} />
             ) : null}
@@ -158,22 +155,12 @@ export const DecisionsPanel = ({ pending, decided, nowIso, focusId }: DecisionsP
   const locale = useLocale();
   return (
     <>
-      <SurfaceCard ariaLabel={t("pendingTitle")}>
-        {pending.length === 0 ? (
-          <EmptyNotice message={t("decisionsEmptyTitle")} description={t("decisionsEmptyBody")} />
-        ) : (
-          <ul className={LIST_CLASS_NAME}>
-            {pending.map((d) => <PendingCard key={d.id} item={d} nowIso={nowIso} isFocused={focusId === d.id} />)}
-          </ul>
-        )}
-      </SurfaceCard>
+      <SurfaceListCard ariaLabel={t("pendingTitle")} empty={<EmptyNotice message={t("decisionsEmptyTitle")} description={t("decisionsEmptyBody")} />}>
+        {pending.map((d) => <PendingCard key={d.id} item={d} nowIso={nowIso} isFocused={focusId === d.id} />)}
+      </SurfaceListCard>
       <SectionHeader level={2} title={t("decidedTitle")} description={t("decidedBody")} />
-      <SurfaceCard ariaLabel={t("decidedTitle")}>
-        {decided.length === 0 ? (
-          <EmptyNotice message={t("decidedEmptyTitle")} description={t("decidedEmptyBody")} />
-        ) : (
-          <ul className={LIST_CLASS_NAME}>
-            {decided.map((row) => (
+      <SurfaceListCard ariaLabel={t("decidedTitle")} empty={<EmptyNotice message={t("decidedEmptyTitle")} description={t("decidedEmptyBody")} />}>
+        {decided.map((row) => (
               <li key={row.id} className={ROW_CLASS_NAME}>
                 <div className={ROW_MAIN_CLASS_NAME}>
                   <div className={CHIPS_CLASS_NAME}>
@@ -181,9 +168,7 @@ export const DecisionsPanel = ({ pending, decided, nowIso, focusId }: DecisionsP
                     <Badge tone={OUTCOME_TONE[row.outcome]}>{g(`outcome_${row.outcome}`)}</Badge>
                   </div>
                   {row.lead_id ? (
-                    <Link href={`/leads/${row.lead_id}`}>
-                      <Text as="span" size="sm" weight="medium">{row.leadName ?? t("openCustomer")}</Text>
-                    </Link>
+                    <TextAction href={`/leads/${row.lead_id}`} size="sm">{row.leadName ?? t("openCustomer")}</TextAction>
                   ) : null}
                   <Text size="xs" tone="muted">{t("decidedBy", { who: row.decider_kind === "policy" ? g("decider_policy") : row.decided_by, time: formatDateTime(row.created_at, locale) })}</Text>
                   {(() => {
@@ -197,10 +182,8 @@ export const DecisionsPanel = ({ pending, decided, nowIso, focusId }: DecisionsP
                   })()}
                 </div>
               </li>
-            ))}
-          </ul>
-        )}
-      </SurfaceCard>
+        ))}
+      </SurfaceListCard>
     </>
   );
 };

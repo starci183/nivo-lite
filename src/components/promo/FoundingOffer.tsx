@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { Alert, Badge, Button, DescriptionList, Image, Meter, SectionHeader, SurfaceCard, Text, TextAction } from "@starci/grammar/common";
 import { intlLocale, TIME_ZONE } from "@/i18n/core";
 import { promo } from "@/i18n/dict/promo";
 import { useLocale, useT } from "@/i18n/client";
@@ -64,16 +64,20 @@ const endLabel = (locale: ReturnType<typeof useLocale>) =>
 
 const UNIT_KEYS = { days: "unitDays", hours: "unitHours", minutes: "unitMinutes", seconds: "unitSeconds" } as const;
 
+/** The four units are key figures side by side: Grammar's stat strip (term = unit, description = value; HIERARCHY-3). */
 const Countdown = ({ left, date }: { readonly left: Remaining | null; readonly date: string }) => {
   const t = useT(promo);
   return (
-    <div className={c.COUNTDOWN} role="timer" aria-label={t("countdownAria", { date })}>
-      {(["days", "hours", "minutes", "seconds"] as const).map((unit) => (
-        <div key={unit} className={c.UNIT}>
-          <span className={c.UNIT_VALUE}>{left ? pad(left[unit]) : "--"}</span>
-          <span className={c.UNIT_LABEL}>{t(UNIT_KEYS[unit])}</span>
-        </div>
-      ))}
+    <div className={c.HERO_COUNTDOWN} role="timer" aria-label={t("countdownAria", { date })}>
+      <DescriptionList
+        layout="stat-strip"
+        isDivided
+        items={(["days", "hours", "minutes", "seconds"] as const).map((unit) => ({
+          id: unit,
+          term: t(UNIT_KEYS[unit]),
+          description: left ? pad(left[unit]) : "--",
+        }))}
+      />
     </div>
   );
 };
@@ -85,8 +89,12 @@ export type FoundingOfferProps = {
 };
 
 /**
- * Founding 50 campaign banner with NIVO's unicorn. All copy, dates and the cap come from `@/lib/promo`;
- * the slot counter only renders when the owner has entered a real number.
+ * Founding 50 campaign blocks. All copy, dates and the cap come from `@/lib/promo`; the slot counter only renders
+ * when the owner has entered a real number.
+ * - hero: the screen's one signature moment, Grammar's ink band (`SurfaceCard treatment="ink"`) with the offer
+ *   unicorn in its decorative artwork slot (DISCIPLINE-3).
+ * - strip / inline: notices, so the DNA `Alert` carries them (ACCENT-5 case-5, DISCIPLINE-1 case-5).
+ * - pill: a `Badge` naming the campaign beside one muted line.
  */
 export const FoundingOffer = ({ variant = "hero", ctaHref = O.ctaHref }: FoundingOfferProps) => {
   const left = useCountdown();
@@ -103,14 +111,14 @@ export const FoundingOffer = ({ variant = "hero", ctaHref = O.ctaHref }: Foundin
   if (variant === "pill") {
     return (
       <div className={c.PILL_WRAP} role="note" aria-label={offerAria}>
-        <span className={c.PILL_TAG}>{O.name}</span>
-        <span className={c.PILL_TEXT}>
+        <Badge tone="accent">{O.name}</Badge>
+        <Text size="sm" tone="muted">
           {t("pillText", {
             percent,
             cap,
             ends: left ? t("pillEndsIn", { d: left.days, h: pad(left.hours), m: pad(left.minutes) }) : t("pillEndsOn", { date }),
           })}
-        </span>
+        </Text>
       </div>
     );
   }
@@ -119,67 +127,55 @@ export const FoundingOffer = ({ variant = "hero", ctaHref = O.ctaHref }: Foundin
     if (dismissed.hidden) return null;
     return (
       <div className={c.STRIP} role="region" aria-label={offerAria}>
-        <span>
-          <span className={c.STRIP_STRONG}>{O.name}:</span> {t("stripHeadline", { percent, cap })}
-        </span>
-        <span className={c.STRIP_META}>{left ? t("endsIn", { d: left.days, h: pad(left.hours), m: pad(left.minutes) }) : t("endsOn", { date })}</span>
-        <Link className={c.STRIP_LINK} href={ctaHref}>
-          {t("cta")} →
-        </Link>
-        <button type="button" className={c.STRIP_CLOSE} aria-label={t("adDismiss")} onClick={dismissed.dismiss}>
-          <span aria-hidden="true">×</span>
-        </button>
+        <Alert
+          tone="informative"
+          title={`${O.name}: ${t("stripHeadline", { percent, cap })}`}
+          description={
+            <>
+              {left ? t("endsIn", { d: left.days, h: pad(left.hours), m: pad(left.minutes) }) : t("endsOn", { date })}{" "}
+              {/* A destination, so a TextAction with href rather than the Alert's command action (CTA-2). */}
+              <TextAction href={ctaHref} appearance="inline">
+                {t("cta")}
+              </TextAction>
+            </>
+          }
+          dismissLabel={t("adDismiss")}
+          onDismiss={dismissed.dismiss}
+        />
       </div>
     );
   }
 
   if (variant === "inline") {
-    return (
-      <div className={c.INLINE} role="note">
-        <span className={c.INLINE_BADGE}>-{O.percentOff}%</span>
-        <div>
-          <p className={c.INLINE_TITLE}>
-            {t("inlineTitle", { name: O.name, percent, cap })}
-          </p>
-          <p className={c.INLINE_TEXT}>
-            {t("inlineText", { conditions, date })}
-          </p>
-        </div>
-      </div>
-    );
+    return <Alert tone="informative" title={t("inlineTitle", { name: O.name, percent, cap })} description={t("inlineText", { conditions, date })} />;
   }
 
   const claimed = O.slotsClaimed;
   return (
-    <section className={c.HERO} aria-label={offerAria}>
-      <img className={c.HERO_BAND} src="/images/promo/founding50-hero-sm.jpg" alt="" />
-      <div className={c.HERO_GRID}>
-        <div className={c.HERO_TEXT}>
-          <p className={c.EYEBROW}>
-            <span className={c.PILL}>{O.name}</span> {t("eyebrow")}
-          </p>
-          <h2 className={c.HEADLINE}>
-            <span className={c.PERCENT}>{t("heroPercent", { percent })}</span> {t("heroRest", { cap })}
-          </h2>
-          <p className={c.SUBLINE}>{t("subline")}</p>
-          <div className={c.ROW}>
-            <Link className={c.CTA} href={ctaHref}>
-              {t("cta")}
-            </Link>
-            <Countdown left={left} date={date} />
-          </div>
-          <p className={c.COUNT_CAPTION}>{t("caption", { date, cap })}</p>
-          {claimed !== null ? (
-            <>
-              <div className={c.METER} role="meter" aria-valuemin={0} aria-valuemax={O.cap} aria-valuenow={claimed}>
-                <div className={c.METER_FILL} style={{ width: `${Math.min(100, (claimed / O.cap) * 100)}%` }} />
-              </div>
-              <p className={c.COUNT_CAPTION}>{t("slotsTaken", { claimed, cap })}</p>
-            </>
-          ) : null}
-          <p className={c.FINE}>{conditions}</p>
+    <SurfaceCard
+      treatment="ink"
+      ariaLabel={offerAria}
+      artwork={<Image src="/images/promo/mascot-offer.png" alt="" aspect="auto" fit="contain" />}
+    >
+      <div className={c.HERO_COPY}>
+        <SectionHeader
+          eyebrow={`${O.name} ${t("eyebrow")}`}
+          title={`${t("heroPercent", { percent })} ${t("heroRest", { cap })}`}
+          description={t("subline")}
+        />
+        <div className={c.HERO_ROW}>
+          {/* grammar gap: a primary Button on the ink band is accent on accent; secondary until an on-ink primary ships. */}
+          <Button variant="secondary" href={ctaHref}>
+            {t("cta")}
+          </Button>
+          <Countdown left={left} date={date} />
         </div>
+        <Text size="xs">{t("caption", { date, cap })}</Text>
+        {claimed !== null ? (
+          <Meter label={t("slotsTaken", { claimed, cap })} value={claimed} minValue={0} maxValue={O.cap} valueLabel={`${claimed}/${O.cap}`} />
+        ) : null}
+        <Text size="xs">{conditions}</Text>
       </div>
-    </section>
+    </SurfaceCard>
   );
 };

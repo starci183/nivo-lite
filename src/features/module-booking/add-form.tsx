@@ -1,11 +1,16 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { cn } from "@heroui/react";
-import { Button } from "@starci/grammar/common";
+import { parseDate, parseTime, type DateValue } from "@internationalized/date";
+import { Alert, Button, DateField, Dialog, Input, NumberField, Select, Text, TimeField, type TimeFieldProps } from "@starci/grammar/common";
+
+type TimeValue = NonNullable<TimeFieldProps["value"]>;
 import type { WorkbenchData } from "@/lib/module-booking-view";
 import { addBookingAction } from "./actions";
-import { FIELD, LABEL, vnd } from "./shared";
+import { GRID_PAIR, STACK, WIDE2, hhmmOf, vnd } from "./shared";
+
+/** Select id for "let NIVO pick a free resource" (a list key cannot be empty). */
+const AUTO_RESOURCE = "auto";
 
 /** "Thêm lịch hẹn": the manual form. A taken slot is refused with the reason; the owner can then choose to stack it anyway. */
 export const AddBookingDialog = ({ data, defaultDate, onClose, onAdded }: { readonly data: WorkbenchData; readonly defaultDate: string; readonly onClose: () => void; readonly onAdded: () => void }) => {
@@ -14,8 +19,8 @@ export const AddBookingDialog = ({ data, defaultDate, onClose, onAdded }: { read
   const [phone, setPhone] = useState("");
   const [serviceId, setServiceId] = useState(services[0]?.id ?? "");
   const [resourceId, setResourceId] = useState("");
-  const [date, setDate] = useState(defaultDate);
-  const [time, setTime] = useState("09:00");
+  const [date, setDate] = useState<DateValue | null>(() => parseDate(defaultDate));
+  const [time, setTime] = useState<TimeValue | null>(() => parseTime("09:00"));
   const [party, setParty] = useState(1);
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -23,11 +28,13 @@ export const AddBookingDialog = ({ data, defaultDate, onClose, onAdded }: { read
   const [pending, start] = useTransition();
   const svc = services.find((s) => s.id === serviceId);
   const resources = data.model.resources.filter((r) => r.active && (!svc?.resource_kind || r.kind === svc.resource_kind));
+  const isIncomplete = services.length === 0 || !name.trim() || !serviceId || date === null || time === null;
 
   const submit = (force: boolean) => {
+    if (date === null || time === null) return;
     setError(null);
     start(async () => {
-      const res = await addBookingAction({ name, phone, serviceId, resourceId, date, time, party, note, force });
+      const res = await addBookingAction({ name, phone, serviceId, resourceId, date: date.toString(), time: hhmmOf(time), party, note, force });
       if (!res.ok) return setError(res.error);
       if (!res.data.ok) {
         setError(res.data.reason ?? "Không thêm được lịch hẹn.");
@@ -39,40 +46,50 @@ export const AddBookingDialog = ({ data, defaultDate, onClose, onAdded }: { read
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-center md:p-4" role="dialog" aria-modal="true" aria-label="Thêm lịch hẹn" onClick={onClose}>
-      <form
-        className="max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl bg-surface p-4 shadow-xl md:max-w-lg md:rounded-2xl"
-        onClick={(e) => e.stopPropagation()}
-        onSubmit={(e) => { e.preventDefault(); submit(false); }}
-      >
-        <h2 className="text-lg font-semibold">Thêm lịch hẹn</h2>
-        {services.length === 0 ? <p className="mt-2 text-sm text-muted">Bạn chưa có dịch vụ nào. Vào tab Thiết lập để thêm dịch vụ trước.</p> : null}
-        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <label className={LABEL}>Tên khách<input className={FIELD} value={name} onChange={(e) => setName(e.target.value)} required autoComplete="off" /></label>
-          <label className={LABEL}>Số điện thoại<input className={FIELD} value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" autoComplete="off" /></label>
-          <label className={cn(LABEL, "sm:col-span-2")}>Dịch vụ
-            <select className={FIELD} value={serviceId} onChange={(e) => { setServiceId(e.target.value); setResourceId(""); }}>
-              {services.map((s) => <option key={s.id} value={s.id}>{s.name} · {s.duration_min} phút{s.price_vnd ? ` · ${vnd(s.price_vnd)}` : ""}</option>)}
-            </select>
-          </label>
-          <label className={LABEL}>Ngày<input className={FIELD} type="date" value={date} onChange={(e) => setDate(e.target.value)} required /></label>
-          <label className={LABEL}>Giờ<input className={FIELD} type="time" value={time} onChange={(e) => setTime(e.target.value)} required step={data.model.settings.slot_step_min * 60} /></label>
-          <label className={LABEL}>Người hoặc phòng
-            <select className={FIELD} value={resourceId} onChange={(e) => setResourceId(e.target.value)}>
-              <option value="">Tự chọn chỗ còn trống</option>
-              {resources.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-            </select>
-          </label>
-          <label className={LABEL}>Số khách<input className={FIELD} type="number" min={1} max={200} value={party} onChange={(e) => setParty(Math.max(1, Number(e.target.value) || 1))} /></label>
-          <label className={cn(LABEL, "sm:col-span-2")}>Ghi chú<input className={FIELD} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Yêu cầu đặc biệt của khách" /></label>
-        </div>
-        {error ? <p role="alert" className="mt-3 text-sm text-danger">{error}</p> : null}
-        <div className="mt-4 flex flex-wrap justify-end gap-2">
+    <Dialog
+      isOpen
+      onOpenChange={(open) => { if (!open) onClose(); }}
+      size="md"
+      title="Thêm lịch hẹn"
+      closeLabel="Đóng"
+      footer={
+        <>
           <Button variant="outline" onPress={onClose} isDisabled={pending}>Đóng</Button>
           {canForce ? <Button variant="danger-soft" onPress={() => submit(true)} isDisabled={pending}>Vẫn xếp chồng</Button> : null}
-          <Button variant="primary" type="submit" isPending={pending} isDisabled={pending || services.length === 0}>Thêm lịch hẹn</Button>
+          <Button variant="primary" isPending={pending} isDisabled={pending || isIncomplete} onPress={() => submit(false)}>Thêm lịch hẹn</Button>
+        </>
+      }
+    >
+      <div className={STACK}>
+        {services.length === 0 ? <Text size="sm" tone="muted">Bạn chưa có dịch vụ nào. Vào tab Thiết lập để thêm dịch vụ trước.</Text> : null}
+        <div className={GRID_PAIR}>
+          <Input id="bk-add-name" name="name" label="Tên khách" variant="secondary" isRequired value={name} onValueChange={setName} />
+          <Input id="bk-add-phone" name="phone" kind="tel" label="Số điện thoại" variant="secondary" value={phone} onValueChange={setPhone} />
+          <div className={WIDE2}>
+            <Select
+              label="Dịch vụ"
+              variant="secondary"
+              options={services.map((s) => ({ id: s.id, label: `${s.name} · ${s.duration_min} phút${s.price_vnd ? ` · ${vnd(s.price_vnd)}` : ""}` }))}
+              value={serviceId || null}
+              onValueChange={(v) => { setServiceId(v ?? ""); setResourceId(""); }}
+            />
+          </div>
+          <DateField label="Ngày" variant="secondary" isRequired value={date} onValueChange={setDate} />
+          <TimeField label="Giờ" variant="secondary" isRequired granularity="minute" hourCycle={24} value={time} onValueChange={setTime} />
+          <Select
+            label="Người hoặc phòng"
+            variant="secondary"
+            options={[{ id: AUTO_RESOURCE, label: "Tự chọn chỗ còn trống" }, ...resources.map((r) => ({ id: r.id, label: r.name }))]}
+            value={resourceId || AUTO_RESOURCE}
+            onValueChange={(v) => setResourceId(!v || v === AUTO_RESOURCE ? "" : v)}
+          />
+          <NumberField label="Số khách" variant="secondary" minValue={1} maxValue={200} step={1} value={party} onValueChange={(v) => setParty(Number.isFinite(v) ? Math.max(1, v) : 1)} />
+          <div className={WIDE2}>
+            <Input id="bk-add-note" name="note" label="Ghi chú" variant="secondary" placeholder="Yêu cầu đặc biệt của khách" value={note} onValueChange={setNote} />
+          </div>
         </div>
-      </form>
-    </div>
+        {error ? <Alert tone="negative" title={error} /> : null}
+      </div>
+    </Dialog>
   );
 };

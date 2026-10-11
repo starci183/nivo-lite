@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge, EmptyNotice, SurfaceCard, Text } from "@starci/grammar/common";
+import { Badge, EmptyNotice, Heading, List, ListItem, SurfaceCard, Text } from "@starci/grammar/common";
 import { useLocale, useT } from "@/i18n/client";
 import { governance } from "@/i18n/dict/governance";
 import { lead as leadDict } from "@/i18n/dict/lead";
@@ -18,7 +18,7 @@ export const FlowView = (props: FlowViewProps) => {
   const { flow } = props;
   if (flow === null) {
     return (
-      <SurfaceCard label={t("flowTitle")}>
+      <SurfaceCard label={t("flowTitle")} headingLevel={2}>
         <EmptyNotice message={t("flowUnavailable")} description={t("flowUnavailableHint")} />
       </SurfaceCard>
     );
@@ -29,7 +29,7 @@ export const FlowView = (props: FlowViewProps) => {
   const orderNo = new Map(orders.map((order) => [order.id, order.order_no]));
 
   return (
-    <SurfaceCard label={t("flowTitle")} fact={t("flowFact", { count: ordered.length })}>
+    <SurfaceCard label={t("flowTitle")} headingLevel={2} fact={t("flowFact", { count: ordered.length })}>
       <div className={STACK} data-testid="lead-flow">
         {hasSimulated ? (
           <div className={ITEM_META}>
@@ -39,17 +39,17 @@ export const FlowView = (props: FlowViewProps) => {
         ) : null}
 
         <div className={SECTION}>
-          <Text as="p" size="sm" weight="semibold">{t("flowSteps")}</Text>
+          <Heading level={3}>{t("flowSteps")}</Heading>
           {ordered.length === 0 ? (
             <EmptyNotice message={t("flowNoSteps")} description={t("flowNoStepsHint")} />
           ) : (
-            <ol className={LIST} aria-label={t("flowSteps")}>
+            <List as="ol" className={LIST} label={t("flowSteps")}>
               {ordered.map((item) => {
                 const line = [g(`dept_${item.department}`), g(`action_${item.action}`), g(`status_${item.status}`), item.decided_path ? g(`path_${item.decided_path}`) : null].filter(Boolean).join(" · ");
                 const tone = item.status === "done" ? "success" : item.status === "waiting_decision" ? "warning" : item.status === "failed" || item.status === "rejected" ? "danger" : "neutral";
                 const summary = item.result?.summary ?? item.proposal?.summary ?? null;
                 return (
-                  <li key={item.id} className={ITEM} data-testid="flow-work-item" data-status={item.status} data-action={item.action}>
+                  <ListItem key={item.id} className={ITEM} data-testid="flow-work-item" data-status={item.status} data-action={item.action}>
                     <div className={ITEM_HEAD}>
                       <Text as="span" size="sm" weight="medium">{line}</Text>
                       <Text as="span" size="xs" tone="muted"><time dateTime={item.created_at}>{formatWhen(item.created_at, locale)}</time></Text>
@@ -64,36 +64,36 @@ export const FlowView = (props: FlowViewProps) => {
                     {summary ? <Text as="p" size="sm">{summary}</Text> : null}
                     {item.error ? <Text as="p" size="xs" tone="muted">{`${t("flowError")}: ${item.error}`}</Text> : null}
                     {item.assignedStaffName ? <Text as="p" size="xs" tone="muted">{t("flowAssignedTo", { name: item.assignedStaffName })}</Text> : null}
-                  </li>
+                  </ListItem>
                 );
               })}
-            </ol>
+            </List>
           )}
         </div>
 
         <div className={SECTION}>
-          <Text as="p" size="sm" weight="semibold">{t("flowOrders")}</Text>
+          <Heading level={3}>{t("flowOrders")}</Heading>
           {orders.length === 0 ? <Text as="p" size="xs" tone="muted">{t("flowNone")}</Text> : (
-            <ul className={LIST} aria-label={t("flowOrders")}>
+            <List className={LIST} label={t("flowOrders")}>
               {orders.map((order) => (
-                <li key={order.id} className={ITEM} data-testid="flow-order" data-status={order.status}>
+                <ListItem key={order.id} className={ITEM} data-testid="flow-order" data-status={order.status}>
                   <div className={ITEM_HEAD}>
                     <Text as="span" size="sm" weight="medium">{`${order.order_no} · ${formatVnd(order.amount_vnd, locale)}`}</Text>
                     <Badge tone={order.status === "cancelled" ? "danger" : order.status === "draft" ? "neutral" : "success"}>{g(`order_${order.status}`)}</Badge>
                   </div>
                   {order.items ? <Text as="p" size="xs" tone="muted">{order.items}</Text> : null}
-                </li>
+                </ListItem>
               ))}
-            </ul>
+            </List>
           )}
         </div>
 
         <div className={SECTION}>
-          <Text as="p" size="sm" weight="semibold">{t("flowInvoices")}</Text>
+          <Heading level={3}>{t("flowInvoices")}</Heading>
           {invoices.length === 0 ? <Text as="p" size="xs" tone="muted">{t("flowNone")}</Text> : (
-            <ul className={LIST} aria-label={t("flowInvoices")}>
+            <List className={LIST} label={t("flowInvoices")}>
               {invoices.map((invoice) => (
-                <li key={invoice.id} className={ITEM} data-testid="flow-invoice" data-status={invoice.status}>
+                <ListItem key={invoice.id} className={ITEM} data-testid="flow-invoice" data-status={invoice.status}>
                   <div className={ITEM_HEAD}>
                     <Text as="span" size="sm" weight="medium">{`${invoice.invoice_no} · ${formatVnd(invoice.amount_vnd, locale)}`}</Text>
                     <Badge tone={invoice.status === "paid" ? "success" : invoice.status === "void" ? "danger" : "neutral"}>{g(`invoice_${invoice.status}`)}</Badge>
@@ -107,35 +107,35 @@ export const FlowView = (props: FlowViewProps) => {
                       g("internalInvoice"),
                     ].filter(Boolean).join(" · ")}
                   </Text>
-                </li>
+                </ListItem>
               ))}
-            </ul>
+            </List>
           )}
         </div>
 
         <div className={SECTION}>
-          <Text as="p" size="sm" weight="semibold">{t("flowPayments")}</Text>
+          <Heading level={3}>{t("flowPayments")}</Heading>
           {transactions.length === 0 ? <Text as="p" size="xs" tone="muted">{t("flowNone")}</Text> : (
-            <ul className={LIST} aria-label={t("flowPayments")}>
+            <List className={LIST} label={t("flowPayments")}>
               {transactions.map((tx) => (
-                <li key={tx.id} className={ITEM} data-testid="flow-transaction" data-status={tx.status}>
+                <ListItem key={tx.id} className={ITEM} data-testid="flow-transaction" data-status={tx.status}>
                   <div className={ITEM_HEAD}>
                     <Text as="span" size="sm" weight="medium">{`${formatVnd(tx.amount_vnd, locale)} · ${tx.payer ?? g("channel_bank")}`}</Text>
                     <Badge tone={tx.status === "matched" ? "success" : "warning"}>{g(`tx_${tx.status}`)}</Badge>
                   </div>
                   <Text as="p" size="xs" tone="muted">{[tx.reference ? t("flowUnmatchedRef", { ref: tx.reference }) : null, formatWhen(tx.occurred_at, locale)].filter(Boolean).join(" · ")}</Text>
-                </li>
+                </ListItem>
               ))}
-            </ul>
+            </List>
           )}
         </div>
 
         <div className={SECTION}>
-          <Text as="p" size="sm" weight="semibold">{t("flowDecisions")}</Text>
+          <Heading level={3}>{t("flowDecisions")}</Heading>
           {decisions.length === 0 ? <Text as="p" size="xs" tone="muted">{t("flowNone")}</Text> : (
-            <ul className={LIST} aria-label={t("flowDecisions")}>
+            <List className={LIST} label={t("flowDecisions")}>
               {decisions.map((decision) => (
-                <li key={decision.id} className={ITEM} data-testid="flow-decision" data-outcome={decision.outcome}>
+                <ListItem key={decision.id} className={ITEM} data-testid="flow-decision" data-outcome={decision.outcome}>
                   <div className={ITEM_HEAD}>
                     <Text as="span" size="sm" weight="medium">{`${g(`dept_${decision.department}`)} · ${g(`action_${decision.action}`)}`}</Text>
                     <Badge tone={decision.outcome === "rejected" ? "danger" : decision.outcome === "auto_done" ? "neutral" : "success"}>{g(`outcome_${decision.outcome}`)}</Badge>
@@ -145,9 +145,9 @@ export const FlowView = (props: FlowViewProps) => {
                   </Text>
                   {decision.reason ? <Text as="p" size="xs" tone="muted">{`${t("flowGate")}: ${g(`reason_${decision.reason}`)}`}</Text> : null}
                   {decision.note ? <Text as="p" size="sm">{decision.note}</Text> : null}
-                </li>
+                </ListItem>
               ))}
-            </ul>
+            </List>
           )}
         </div>
       </div>

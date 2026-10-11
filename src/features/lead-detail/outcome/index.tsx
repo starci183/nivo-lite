@@ -1,18 +1,17 @@
 "use client";
 
-import { EmptyNotice, Icon, Meter, Stepper, SurfaceCard, Text } from "@starci/grammar/common";
+import { EmptyNotice, Heading, Icon, List, ListItem, Meter, Region, SectionHeader, Stepper, SurfaceCard, Text } from "@starci/grammar/common";
 import { nivoIconSource } from "@/ui";
 import { useLocale, useT } from "@/i18n/client";
 import { common } from "@/i18n/dict/common";
 import { lead as leadDict } from "@/i18n/dict/lead";
 import type { LeadDetail } from "@/lib/types";
-import { EVIDENCE_HEAD, EVIDENCE_ITEM, EVIDENCE_STACK, HISTORY_ANCHOR, STACK } from "./classNames";
+import { EVIDENCE_HEAD, EVIDENCE_ITEM, EVIDENCE_LIST, EVIDENCE_STACK, HISTORY_ANCHOR, STACK } from "./classNames";
 import { stageLabel, toEventViews } from "./format";
 import { HistoryList } from "./HistoryList";
 import { OutcomeForm } from "./OutcomeForm";
 
 type PanelProps = { detail: LeadDetail };
-
 
 const EVIDENCE_KINDS = new Set(["outcome.recorded", "execution.approved"]);
 
@@ -39,7 +38,7 @@ export const OutcomePanel = (props: PanelProps) => {
   const currentStepId = isClosed ? "closed" : lead.stage;
 
   return (
-    <SurfaceCard label={t("outcome")} fact={t("currentStage", { stage: stageLabel(lead.stage, tc) })}>
+    <SurfaceCard label={t("outcome")} headingLevel={2} fact={t("currentStage", { stage: stageLabel(lead.stage, tc) })}>
       <div className={STACK}>
         <Stepper label={t("stageStepperLabel")} steps={steps} currentStepId={currentStepId} />
         <div className={EVIDENCE_STACK}>
@@ -58,19 +57,18 @@ export const OutcomePanel = (props: PanelProps) => {
           <EmptyNotice message={t("noEvidence")} description={t("noEvidenceHint")} />
         ) : (
           <div className={EVIDENCE_STACK}>
-            <Text as="p" size="sm" weight="semibold">{t("evidenceRecorded", { count: evidence.length })}</Text>
-            {evidence.map((event) => (
-              <SurfaceCard key={event.id} depth="nested" ariaLabel={t("evidenceAria", { label: event.label })}>
-                <div className={EVIDENCE_ITEM}>
+            <Heading level={3}>{t("evidenceRecorded", { count: evidence.length })}</Heading>
+            <List className={EVIDENCE_LIST} label={t("evidenceRecorded", { count: evidence.length })}>
+              {evidence.map((event) => (
+                <ListItem key={event.id} className={EVIDENCE_ITEM}>
                   <div className={EVIDENCE_HEAD}>
-                    <Icon source={nivoIconSource("blog", "chip")} usage="chip" />
-                    <Text as="span" size="xs" tone="muted" weight="semibold">{t("evidence")}</Text>
+                    <Text as="span" size="xs" tone="muted" weight="semibold" startContent={<Icon source={nivoIconSource("blog", "chip")} usage="chip" />}>{t("evidence")}</Text>
                     <Text as="span" size="xs" tone="muted">{`· ${event.label} · ${event.actor} · ${event.timeLabel}`}</Text>
                   </div>
                   <Text as="p" size="sm">{event.evidence}</Text>
-                </div>
-              </SurfaceCard>
-            ))}
+                </ListItem>
+              ))}
+            </List>
           </div>
         )}
       </div>
@@ -78,24 +76,21 @@ export const OutcomePanel = (props: PanelProps) => {
   );
 };
 
-/** Rail card: append-only audit trail of every event on the lead. */
+/** History section: append-only audit trail of every event on the lead (a collection, so a named section, not a card). */
 export const HistoryPanel = (props: PanelProps) => {
   const t = useT(leadDict);
   const locale = useLocale();
   const events = toEventViews(props.detail.events, Date.now(), t, locale);
 
   return (
-    <div id="history" className={HISTORY_ANCHOR}>
-    <SurfaceCard label={t("history")} fact={t("eventsCount", { count: events.length })}>
-      <div className={STACK}>
-        {events.length === 0 ? (
-          <EmptyNotice message={t("noHistory")} description={t("noHistoryHint")} />
-        ) : (
-          <HistoryList events={events} />
-        )}
-        <Text as="p" size="xs" tone="muted">{t("auditFooter")}</Text>
-      </div>
-    </SurfaceCard>
-    </div>
+    <Region id="history" labelledBy="history-title" className={HISTORY_ANCHOR}>
+      <SectionHeader id="history-title" level={2} title={t("history")} meta={t("eventsCount", { count: events.length })} />
+      {events.length === 0 ? (
+        <EmptyNotice message={t("noHistory")} description={t("noHistoryHint")} />
+      ) : (
+        <HistoryList events={events} />
+      )}
+      <Text as="p" size="xs" tone="muted">{t("auditFooter")}</Text>
+    </Region>
   );
 };

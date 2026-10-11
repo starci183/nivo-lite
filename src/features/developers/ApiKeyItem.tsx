@@ -2,14 +2,14 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Alert, Badge, Button, Text } from "@starci/grammar/common"
+import { Alert, AlertDialog, Badge, Button, ListItem, Text } from "@starci/grammar/common"
 import { useLocale, useT } from "@/i18n/client"
 import { developers as dict } from "@/i18n/dict/developers"
 import { intlLocale, TIME_ZONE } from "@/i18n/core"
 import { revokeApiKey, type ApiKeyView } from "@/lib/api-keys-actions"
-import { ACTIONS_CLASS, CONFIRM_CLASS, KEY_MAIN_CLASS, KEY_ROW_CLASS } from "./classNames"
+import { ACTIONS_CLASS, KEY_MAIN_CLASS, KEY_ROW_CLASS, ROW_NOTE_CLASS } from "./classNames"
 
-/** One API key: name, prefix, dates, status and a two-step "Thu hồi". */
+/** One API key row: name, prefix, dates, status and "Thu hồi" confirmed through an AlertDialog. */
 export const ApiKeyItem = ({ item }: { readonly item: ApiKeyView }) => {
   const t = useT(dict)
   const locale = useLocale()
@@ -28,26 +28,28 @@ export const ApiKeyItem = ({ item }: { readonly item: ApiKeyView }) => {
   })
 
   return (
-    <div className={KEY_ROW_CLASS}>
+    <ListItem className={KEY_ROW_CLASS}>
       <div className={KEY_MAIN_CLASS}>
         <Text weight="semibold">{item.name}</Text>
         <Text size="sm" tone="muted">{t("prefix", { prefix: `${item.prefix}…` })}</Text>
-        <Text size="xs" tone="muted">{t("created", { date: date(item.createdAt) })} · {item.lastUsedAt ? t("lastUsed", { date: date(item.lastUsedAt) }) : t("neverUsed")}</Text>
+        <Text size="xs" tone="muted">{`${t("created", { date: date(item.createdAt) })} · ${item.lastUsedAt ? t("lastUsed", { date: date(item.lastUsedAt) }) : t("neverUsed")}`}</Text>
       </div>
       <div className={ACTIONS_CLASS}>
         <Badge isDot tone={item.revokedAt ? "neutral" : "success"}>{item.revokedAt ? t("revoked") : t("active")}</Badge>
         {item.revokedAt ? null : <Button variant="danger-soft" isDisabled={isPending} onPress={() => setConfirm(true)}>{t("revoke")}</Button>}
       </div>
-      {confirm ? (
-        <div className={CONFIRM_CLASS}>
-          <Text size="sm">{t("revokeAsk", { name: item.name })}</Text>
-          <div className={ACTIONS_CLASS}>
-            <Button variant="danger" isPending={isPending} onPress={revoke}>{t("revokeConfirm")}</Button>
-            <Button variant="outline" isDisabled={isPending} onPress={() => setConfirm(false)}>{t("cancel")}</Button>
-          </div>
-        </div>
-      ) : null}
-      {error ? <div className="w-full"><Alert tone="negative" title={error} /></div> : null}
-    </div>
+      <AlertDialog
+        isOpen={confirm}
+        onOpenChange={setConfirm}
+        title={t("revokeAsk", { name: item.name })}
+        tone="negative"
+        confirmLabel={t("revokeConfirm")}
+        cancelLabel={t("cancel")}
+        isConfirmPending={isPending}
+        onConfirm={revoke}
+        onCancel={() => setConfirm(false)}
+      />
+      {error ? <div className={ROW_NOTE_CLASS}><Alert tone="negative" title={error} /></div> : null}
+    </ListItem>
   )
 }

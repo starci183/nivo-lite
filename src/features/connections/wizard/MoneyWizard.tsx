@@ -179,7 +179,7 @@ export const MoneyWizard = ({ provider, resumeId, agents, onClose }: MoneyWizard
             {def.needsBank ? (
               <>
                 <Select
-                  label={t("fieldBank")} placeholder={t("fieldBankPlaceholder")} isDisabled={isPending} value={f.bank || null}
+                  label={t("fieldBank")} variant="secondary" placeholder={t("fieldBankPlaceholder")} isDisabled={isPending} value={f.bank || null}
                   options={VN_BANKS.map((b) => ({ id: b.code, label: `${b.name} (${b.code})` }))} onValueChange={(v) => setF((p) => ({ ...p, bank: v ?? "" }))}
                 />
                 <Input

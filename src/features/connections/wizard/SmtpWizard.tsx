@@ -1,15 +1,15 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Alert, Button, CheckboxGroup, Input, RadioGroup, Select, Text } from "@starci/grammar/common"
+import { Alert, Button, CheckboxGroup, Input, LeadingNumber, List, ListItem, RadioGroup, Select, Text } from "@starci/grammar/common"
 import { useLocale, useT } from "@/i18n/client"
 import { connectionWizard } from "@/i18n/dict/connectionWizard"
 import { email } from "@/i18n/dict/email"
 import { sendSmtpTest, startSmtpConnection, type SmtpView } from "@/lib/email-actions"
 import { PROVIDERS } from "@/lib/connection-providers"
 import { SMTP_PRESETS, modeOf, type Security, type SmtpPreset } from "@/lib/email/presets"
-import { BUTTONS_CLASS } from "./classNames"
-import { CAUTION_LIST_CLASS, SMTP_FIELDS_CLASS, SMTP_PREFILL_CLASS, STEP_ITEM_CLASS, STEP_LIST_CLASS } from "./smtpClassNames"
+import { BUTTONS_CLASS, STEP_LIST_CLASS } from "./classNames"
+import { SMTP_FIELDS_CLASS, STEP_ITEM_CLASS } from "./smtpClassNames"
 import { WizardFrame } from "./WizardFrame"
 
 /** Props for {@link SmtpWizard}. */
@@ -129,18 +129,18 @@ export const SmtpWizard = ({ ownerEmail, hasDefault, onClose }: SmtpWizardProps)
         <>
           <Text size="sm" weight="semibold">{mode.label[locale]}</Text>
           <Text size="sm" tone="muted">{mode.when[locale]}</Text>
-          {mode.host ? <div className={SMTP_PREFILL_CLASS}>{t("prefilled", { host: mode.host, port: mode.port, security: mode.security === "tls" ? t("secTls") : t("secStarttls") })}</div> : null}
+          {mode.host ? <Alert tone="informative" title={t("prefilled", { host: mode.host, port: mode.port, security: mode.security === "tls" ? t("secTls") : t("secStarttls") })} /> : null}
           <Text size="sm" weight="semibold">{t("stepsTitle")}</Text>
-          <ol className={STEP_LIST_CLASS}>
-            {mode.steps.map((s) => (
-              <li key={s.text.vi}>
+          <List as="ol" className={STEP_LIST_CLASS}>
+            {mode.steps.map((s, i) => (
+              <ListItem key={s.text.vi}>
                 <div className={STEP_ITEM_CLASS}>
-                  <span>{s.text[locale]}</span>
+                  <Text size="sm" startContent={<LeadingNumber position={i + 1} />}>{s.text[locale]}</Text>
                   {s.link ? <div className={BUTTONS_CLASS}><Button variant="outline" href={s.link.url} target="_blank" rel="noreferrer">{s.link.label[locale]}</Button></div> : null}
                 </div>
-              </li>
+              </ListItem>
             ))}
-          </ol>
+          </List>
           {mode.cautions.length ? (
             <Alert tone="cautionary" title={t("cautionTitle")} description={mode.cautions.map((c) => c[locale]).join(" ")} />
           ) : null}
@@ -158,7 +158,7 @@ export const SmtpWizard = ({ ownerEmail, hasDefault, onClose }: SmtpWizardProps)
                 <Input id="smtp-host" name="host" label={t("fieldHost")} variant="secondary" isDisabled={Boolean(conn) || isPending} value={host} onValueChange={setHost} />
                 <Input id="smtp-port" name="port" label={t("fieldPort")} variant="secondary" isDisabled={Boolean(conn) || isPending} value={port} onValueChange={setPort} />
                 <Select
-                  label={t("fieldSecurity")} isDisabled={Boolean(conn) || isPending} value={security}
+                  label={t("fieldSecurity")} variant="secondary" isDisabled={Boolean(conn) || isPending} value={security}
                   options={[{ id: "starttls", label: `${t("secStarttls")} (587)` }, { id: "tls", label: `${t("secTls")} (465)` }]} onValueChange={(v) => setSecurity(v === "tls" ? "tls" : "starttls")}
                 />
               </>

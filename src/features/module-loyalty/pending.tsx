@@ -2,14 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Badge, Button, EmptyNotice, SurfaceCard, Text, Textarea } from "@starci/grammar/common";
+import { Badge, Button, EmptyNotice, ListItem, SurfaceListCard, Text, Textarea } from "@starci/grammar/common";
 import { canDecideItem, useMember } from "@/features/shell/member-context";
 import { useLocale, useT } from "@/i18n/client";
 import { loyalty } from "@/i18n/dict/loyalty";
 import { decideWorkItem } from "@/lib/flow-actions";
 import type { PendingItem } from "@/lib/module-loyalty-queries";
 import { formatVndShort } from "@/lib/module-loyalty-shared";
-import { CHIPS_CLASS_NAME, FORM_CLASS_NAME, LIST_CLASS_NAME, QUOTE_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME } from "./classNames";
+import { CHIPS_CLASS_NAME, FORM_CLASS_NAME, QUOTE_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME } from "./classNames";
 import { daysSince, formatDateTime } from "./format";
 
 const PendingCard = ({ item, nowIso }: { readonly item: PendingItem; readonly nowIso: string }) => {
@@ -40,7 +40,7 @@ const PendingCard = ({ item, nowIso }: { readonly item: PendingItem; readonly no
   };
 
   return (
-    <li className={ROW_CLASS_NAME}>
+    <ListItem className={ROW_CLASS_NAME}>
       <div className={ROW_MAIN_CLASS_NAME}>
         <div className={CHIPS_CLASS_NAME}>
           <Badge tone="warning" isDot>{t(`action_${item.action}`)}</Badge>
@@ -58,7 +58,7 @@ const PendingCard = ({ item, nowIso }: { readonly item: PendingItem; readonly no
         ) : null}
         {canAct && isEditing && item.action === "send_promo" ? (
           <div className={FORM_CLASS_NAME}>
-            <Textarea label={t("draftLabel")} description={t("draftEditHint")} rows={5} value={draft} isDisabled={isPending} onValueChange={setDraft} />
+            <Textarea label={t("draftLabel")} variant="secondary" description={t("draftEditHint")} rows={5} value={draft} isDisabled={isPending} onValueChange={setDraft} />
           </div>
         ) : null}
         <div aria-live="polite">{error ? <Text size="sm">{error}</Text> : null}</div>
@@ -71,7 +71,7 @@ const PendingCard = ({ item, nowIso }: { readonly item: PendingItem; readonly no
           <Button variant="danger-soft" size="sm" isPending={isPending && busy === "rejected"} isDisabled={isPending} onPress={() => onDecide("rejected")}>{t("reject")}</Button>
         </div>
       ) : null}
-    </li>
+    </ListItem>
   );
 };
 
@@ -79,14 +79,8 @@ const PendingCard = ({ item, nowIso }: { readonly item: PendingItem; readonly no
 export const PendingPanel = ({ items, nowIso }: { readonly items: ReadonlyArray<PendingItem>; readonly nowIso: string }) => {
   const t = useT(loyalty);
   return (
-    <SurfaceCard ariaLabel={t("tab_pending")}>
-      {items.length === 0 ? (
-        <EmptyNotice message={t("pendingEmptyTitle")} description={t("pendingEmptyBody")} />
-      ) : (
-        <ul className={LIST_CLASS_NAME}>
-          {items.map((item) => <PendingCard key={item.id} item={item} nowIso={nowIso} />)}
-        </ul>
-      )}
-    </SurfaceCard>
+    <SurfaceListCard ariaLabel={t("tab_pending")} empty={<EmptyNotice message={t("pendingEmptyTitle")} description={t("pendingEmptyBody")} />}>
+      {items.map((item) => <PendingCard key={item.id} item={item} nowIso={nowIso} />)}
+    </SurfaceListCard>
   );
 };

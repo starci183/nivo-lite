@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { DescriptionList } from "@starci/grammar/common";
 import { useT } from "@/i18n/client";
 import { promo } from "@/i18n/dict/promo";
 import { FOUNDING_OFFER } from "@/lib/promo";
-import { CD, CD_LABEL, CD_UNIT, CD_VALUE } from "./classNames";
 
 type Left = { days: number; hours: number; minutes: number; seconds: number };
 
@@ -28,7 +28,11 @@ const UNITS = [
 
 export type CountdownProps = { readonly date: string };
 
-/** Live Founding 50 countdown to the real end date (ticks after mount, so the server render never mismatches). */
+/**
+ * Live Founding 50 countdown to the real end date (ticks after mount, so the server render never mismatches).
+ * The four units are key figures side by side, so Grammar's `DescriptionList layout="stat-strip"` draws them
+ * (term = unit, description = value; HIERARCHY-3), replacing the hand-drawn translucent unit boxes.
+ */
 export const OfferCountdown = ({ date }: CountdownProps) => {
   const t = useT(promo);
   const [left, setLeft] = useState<Left | null>(null);
@@ -39,13 +43,12 @@ export const OfferCountdown = ({ date }: CountdownProps) => {
     return () => window.clearInterval(id);
   }, []);
   return (
-    <div className={CD} role="timer" aria-label={t("countdownAria", { date })}>
-      {UNITS.map(([unit, key]) => (
-        <div key={unit} className={CD_UNIT}>
-          <span className={CD_VALUE}>{left ? pad(left[unit]) : "--"}</span>
-          <span className={CD_LABEL}>{t(key)}</span>
-        </div>
-      ))}
+    <div role="timer" aria-label={t("countdownAria", { date })}>
+      <DescriptionList
+        layout="stat-strip"
+        isDivided
+        items={UNITS.map(([unit, key]) => ({ id: unit, term: t(key), description: left ? pad(left[unit]) : "--" }))}
+      />
     </div>
   );
 };
