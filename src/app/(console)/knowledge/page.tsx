@@ -38,7 +38,7 @@ const Page = async ({ searchParams }: { readonly searchParams: Promise<{ module?
     const t = await getT(dict)
     return (
       <PageContainer measure="product">
-        <SectionHeader level={1} eyebrow={t("eyebrow")} title={t("loadFailTitle")} description={t("loadFailBody")} />
+        <SectionHeader level={1} title={t("loadFailTitle")} description={t("loadFailBody")} />
       </PageContainer>
     )
   }

@@ -1,9 +1,10 @@
-import { Badge, Button, Disclosure, EmptyNotice, List, ListItem, PageContainer, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common"
+import { Badge, Breadcrumbs, Button, Disclosure, EmptyNotice, List, ListItem, PageContainer, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common"
 import { getT } from "@/i18n/server"
 import { knowledge as dict } from "@/i18n/dict/knowledge"
 import type { KnowledgeModule, NivoItem } from "@/lib/knowledge/shared"
 import { MODULE_KEYS } from "@/lib/module-registry"
-import { ITEM_CLASS, LIST_CLASS, PAGE_CLASS, PASSAGE_TEXT_CLASS, ROW_WRAP_CLASS } from "./classNames"
+import { HEAD_CLASS, ITEM_CLASS, LIST_CLASS, PAGE_CLASS, PASSAGE_TEXT_CLASS, ROW_WRAP_CLASS } from "./classNames"
+import { knowledgeTrail } from "./trail"
 
 const ORDER: ReadonlyArray<KnowledgeModule> = ["core", ...MODULE_KEYS]
 
@@ -13,8 +14,10 @@ export const NivoBrowse = async ({ items }: { readonly items: ReadonlyArray<Nivo
   return (
     <PageContainer measure="product">
       <div className={PAGE_CLASS}>
-        <div className={ROW_WRAP_CLASS}><Button variant="ghost" size="sm" href="/knowledge">{t("nivoBack")}</Button></div>
-        <SectionHeader level={1} eyebrow={t("eyebrow")} title={t("nivoTitle")} description={t("nivoDescription")} />
+        <div className={HEAD_CLASS}>
+          <Breadcrumbs label={t("crumbLabel")} items={knowledgeTrail({ brain: t("crumbBrain"), docs: t("title") }, t("nivoTitle"))} />
+          <SectionHeader level={1} title={t("nivoTitle")} description={t("nivoDescription")} />
+        </div>
         {items.length === 0 ? <EmptyNotice message={t("nivoTitle")} description={t("nivoEmpty")} /> : null}
         {ORDER.map((m) => {
           const list = items.filter((i) => i.module === m)

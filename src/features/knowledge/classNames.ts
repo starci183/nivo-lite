@@ -6,7 +6,8 @@ export const PAGE_CLASS = cn("flex", "min-w-0", "flex-col", "gap-6")
 export const STACK_CLASS = cn("flex", "min-w-0", "flex-col", "gap-4")
 /** Adjacent inline actions and chips (GAP-2). */
 export const ROW_WRAP_CLASS = cn("flex", "flex-wrap", "items-center", "gap-2")
-export const HEAD_ROW_CLASS = cn("flex", "flex-wrap", "items-center", "justify-between", "gap-3")
+/** Breadcrumb trail above the page heading: one heading block (GAP-2). */
+export const HEAD_CLASS = cn("flex", "min-w-0", "flex-col", "gap-2")
 /** The module filter keeps a control-sized width instead of stretching across the column (MEASURE-4 case-2). */
 export const FILTER_CLASS = cn("w-full", "max-w-xs")
 export const SIDE_CLASS = cn("flex", "min-w-0", "flex-col", "gap-6")

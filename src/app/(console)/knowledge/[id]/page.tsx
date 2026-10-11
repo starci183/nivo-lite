@@ -15,7 +15,7 @@ const Page = async ({ params }: { readonly params: Promise<{ id: string }> }) =>
   if (!found) {
     return (
       <PageContainer measure="product">
-        <SectionHeader level={1} eyebrow={t("eyebrow")} title={t("notFoundTitle")} description={t("back")} />
+        <SectionHeader level={1} title={t("notFoundTitle")} description={t("back")} />
       </PageContainer>
     )
   }

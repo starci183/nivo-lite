@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Badge, Button, Disclosure, EmptyNotice, Link, List, ListItem, PageContainer, PrimaryRailLayout, SectionHeader, Select, SurfaceCard, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
+import { Badge, Breadcrumbs, Button, Disclosure, EmptyNotice, Link, List, ListItem, PageContainer, PrimaryRailLayout, SectionHeader, Select, SurfaceCard, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
 import { useLocale, useT } from "@/i18n/client"
 import { intlLocale, TIME_ZONE } from "@/i18n/core"
 import { knowledge } from "@/i18n/dict/knowledge"
@@ -11,7 +11,8 @@ import type { KnowledgeSource, SourceStatus, Visibility } from "@/lib/knowledge/
 import { MODULE_KEYS, type ModuleKey } from "@/lib/modules-shared"
 import { AddSource, type AddPreset } from "./AddSource"
 import { AskPanel } from "./AskPanel"
-import { FILTER_CLASS, HEAD_ROW_CLASS, ITEM_CLASS, ITEM_MAIN_CLASS, LIST_CLASS, PAGE_CLASS, ROW_WRAP_CLASS, SIDE_CLASS, SOURCE_ROW_CLASS, STACK_CLASS, SUGGEST_ITEM_CLASS } from "./classNames"
+import { FILTER_CLASS, HEAD_CLASS, ITEM_CLASS, ITEM_MAIN_CLASS, LIST_CLASS, PAGE_CLASS, ROW_WRAP_CLASS, SIDE_CLASS, SOURCE_ROW_CLASS, STACK_CLASS, SUGGEST_ITEM_CLASS } from "./classNames"
+import { knowledgeTrail } from "./trail"
 
 export type SuggestionView = { readonly key: string; readonly topic: string; readonly hint: string; readonly visibility: Visibility }
 export type SkippedView = { readonly key: string; readonly topic: string; readonly state: "dismissed" | "not_applicable" }
@@ -46,10 +47,15 @@ export const KnowledgeView = ({ sources, topics, suggestions, skipped, canWrite,
   return (
     <PageContainer measure="product">
       <div className={PAGE_CLASS}>
-        <SectionHeader level={1} eyebrow={t("eyebrow")} title={t("title")} description={t("description")} />
-        <div className={HEAD_ROW_CLASS}>
-          <TextAction href="/knowledge/nivo" size="sm" appearance="inline">{t("nivoLink")}</TextAction>
-          {canWrite && !adding ? <Button variant="primary" onPress={() => openAdd(null)}>{t("addButton")}</Button> : null}
+        <div className={HEAD_CLASS}>
+          <Breadcrumbs label={t("crumbLabel")} items={knowledgeTrail({ brain: t("crumbBrain"), docs: t("title") })} />
+          <SectionHeader
+            level={1}
+            title={t("title")}
+            description={t("description")}
+            meta={<TextAction href="/knowledge/nivo" size="sm" appearance="inline">{t("nivoLink")}</TextAction>}
+            action={canWrite && !adding ? <Button variant="primary" onPress={() => openAdd(null)}>{t("addButton")}</Button> : undefined}
+          />
         </div>
         {!canWrite ? <Text size="sm" tone="muted">{t("readOnlyNote")}</Text> : null}
 

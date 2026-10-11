@@ -2,13 +2,14 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Alert, AlertDialog, Badge, Button, List, ListItem, PageContainer, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common"
+import { Alert, AlertDialog, Badge, Breadcrumbs, Button, List, ListItem, PageContainer, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common"
 import { useLocale, useT } from "@/i18n/client"
 import { intlLocale, TIME_ZONE } from "@/i18n/core"
 import { knowledge } from "@/i18n/dict/knowledge"
 import { deleteKnowledge, reindexKnowledge, updateKnowledge } from "@/lib/knowledge/actions"
 import type { KnowledgeChunk, KnowledgeSource } from "@/lib/knowledge/shared"
-import { ITEM_CLASS, LIST_CLASS, PAGE_CLASS, PASSAGE_CLASS, PASSAGE_TEXT_CLASS, ROW_WRAP_CLASS, STACK_CLASS } from "./classNames"
+import { ITEM_CLASS, LIST_CLASS, PAGE_CLASS, PASSAGE_CLASS, HEAD_CLASS, PASSAGE_TEXT_CLASS, ROW_WRAP_CLASS, STACK_CLASS } from "./classNames"
+import { knowledgeTrail } from "./trail"
 
 type SourceDetailProps = { readonly source: KnowledgeSource; readonly chunks: ReadonlyArray<KnowledgeChunk>; readonly canWrite: boolean }
 
@@ -38,8 +39,10 @@ export const SourceDetail = ({ source, chunks, canWrite }: SourceDetailProps) =>
   return (
     <PageContainer measure="product">
       <div className={PAGE_CLASS}>
-        <div className={ROW_WRAP_CLASS}><Button variant="ghost" size="sm" href="/knowledge">{t("back")}</Button></div>
-        <SectionHeader level={1} eyebrow={source.topic ?? t(`kind_${source.kind}`)} title={source.title} description={t("detailMeta", { when })} />
+        <div className={HEAD_CLASS}>
+          <Breadcrumbs label={t("crumbLabel")} items={knowledgeTrail({ brain: t("crumbBrain"), docs: t("title") }, source.title)} />
+          <SectionHeader level={1} title={source.title} description={t("detailMeta", { when })} meta={source.topic ?? t(`kind_${source.kind}`)} />
+        </div>
         <div className={ROW_WRAP_CLASS}>
           <Badge isDot tone={source.status === "ready" ? "success" : source.status === "failed" ? "danger" : "warning"}>{t(`status_${source.status}`)}</Badge>
           <Badge tone="neutral">{isPublic ? t("visPublicLong") : t("visInternalLong")}</Badge>
