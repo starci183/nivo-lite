@@ -1,8 +1,6 @@
 import { after } from "next/server"
-import { PageContainer, SectionHeader } from "@starci/grammar/common"
 import { KnowledgeView } from "@/features/knowledge/KnowledgeView"
-import { getLocale, getT } from "@/i18n/server"
-import { knowledge as dict } from "@/i18n/dict/knowledge"
+import { getLocale } from "@/i18n/server"
 import { drainBrainWork } from "@/lib/brain/doc-facts"
 import { reembedStale } from "@/lib/knowledge/reembed"
 import { supabaseAdmin } from "@/lib/supabase/admin"
@@ -40,13 +38,9 @@ const Page = async ({ searchParams }: { readonly searchParams: Promise<{ module?
       />
     )
   } catch (e) {
+    // STATE-8 case-4: log it, then let the route's error.tsx keep the chrome and show the failure.
     console.error("knowledge page failed:", e instanceof Error ? e.message : e)
-    const t = await getT(dict)
-    return (
-      <PageContainer measure="product">
-        <SectionHeader level={1} title={t("loadFailTitle")} description={t("loadFailBody")} />
-      </PageContainer>
-    )
+    throw e
   }
 }
 

@@ -1,4 +1,4 @@
-import { Badge, Breadcrumbs, Button, Disclosure, EmptyNotice, List, ListItem, PageContainer, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common"
+import { Badge, Breadcrumbs, Button, Disclosure, EmptyNotice, List, ListItem, PageContainer, SectionHeader, SurfaceCard, SurfaceListCard, Text } from "@starci/grammar/common"
 import { getT } from "@/i18n/server"
 import { knowledge as dict } from "@/i18n/dict/knowledge"
 import type { KnowledgeModule, NivoItem } from "@/lib/knowledge/shared"
@@ -9,7 +9,7 @@ import { knowledgeTrail } from "./trail"
 const ORDER: ReadonlyArray<KnowledgeModule> = ["core", ...MODULE_KEYS]
 
 /** /knowledge/nivo: NIVO base knowledge per module, read-only for every member. */
-export const NivoBrowse = async ({ items }: { readonly items: ReadonlyArray<NivoItem> }) => {
+export const NivoBrowse = async ({ items, isLoading = false }: { readonly items: ReadonlyArray<NivoItem>; /** STATE-8: the same page while its data loads - trail, heading and the first card label stay, its rows are skeletons. */ readonly isLoading?: boolean }) => {
   const t = await getT(dict)
   return (
     <PageContainer measure="product">
@@ -18,7 +18,8 @@ export const NivoBrowse = async ({ items }: { readonly items: ReadonlyArray<Nivo
           <Breadcrumbs label={t("crumbLabel")} items={knowledgeTrail({ brain: t("crumbBrain"), docs: t("title") }, t("nivoTitle"))} />
           <SectionHeader level={1} title={t("nivoTitle")} description={t("nivoDescription")} />
         </div>
-        {items.length === 0 ? <EmptyNotice message={t("nivoTitle")} description={t("nivoEmpty")} /> : null}
+        {isLoading ? <SurfaceListCard label={t("moduleCore")} headingLevel={2} isLoading /> : null}
+        {!isLoading && items.length === 0 ? <EmptyNotice message={t("nivoTitle")} description={t("nivoEmpty")} /> : null}
         {ORDER.map((m) => {
           const list = items.filter((i) => i.module === m)
           if (list.length === 0) return null

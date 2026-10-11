@@ -4,7 +4,9 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AgentAvatar } from "@/components/avatar/PersonAvatar";
 import { useT } from "@/i18n/client";
 import { agentChat } from "@/i18n/dict/agentChat";
-import { Alert, Badge, Button, ChatBubble, FillViewport, Form, Input, Link, ListBox, SurfaceCard, Tabs, Text, Textarea } from "@starci/grammar/common";
+import { modulesCore } from "@/i18n/dict/modulesCore";
+import { shell } from "@/i18n/dict/shell";
+import { Alert, Badge, Breadcrumbs, Button, ChatBubble, FillViewport, Form, Input, Link, List, ListBox, ListRow, Skeleton, SurfaceCard, Tabs, Text, Textarea } from "@starci/grammar/common";
 import {
   BACK_CLASS_NAME, FRAME_CLASS_NAME, CHANNEL_BAR_CLASS_NAME, CHIPS_CLASS_NAME,
   COMPOSER_CLASS_NAME, COMPOSER_INPUT_CLASS_NAME, COMPOSER_ROW_CLASS_NAME, EMPTY_CHIPS_CLASS_NAME, EMPTY_CLASS_NAME, EMPTY_FIELD_CLASS_NAME,
@@ -69,6 +71,8 @@ export type AgentChatBaseProps = {
   readonly onStart: () => void;
   readonly onSelect: (conversationId: string, kind: AgentChatTab) => void;
   readonly onOpenLead: (leadId: string) => void;
+  /** STATE-8: the same chat while the agent and its conversations load - the frame, labels and composer stay; names, the list and the thread are skeletons. */
+  readonly isLoading?: boolean;
 };
 
 const CUSTOMER_PROMPTS = ["customerPrompt1", "customerPrompt2", "customerPrompt3"] as const;
@@ -148,7 +152,7 @@ const Thread = (props: AgentChatBaseProps) => {
   return (
     <div className={THREAD_CLASS_NAME} role="log" aria-label={t("messagesLabel")}>
       {props.banner ?? null}
-      {props.hasSelection ? <Bubbles {...props} /> : <EmptyThread {...props} />}
+      {props.isLoading ? <Skeleton shape="text" lines={4} /> : props.hasSelection ? <Bubbles {...props} /> : <EmptyThread {...props} />}
       {props.tab === "customer" && props.leadId ? (
         <div className={NOTICE_ROW_CLASS_NAME} data-testid="handoff-notice">
           <Text size="xs" tone="muted"><Link href={`/leads/${props.leadId}#flow`}>{t("handoffGate")}</Link></Text>
@@ -162,7 +166,7 @@ const Thread = (props: AgentChatBaseProps) => {
 
 const Composer = (props: AgentChatBaseProps) => {
   const t = useT(agentChat);
-  const canSend = props.draft.trim().length > 0 && !props.isSending;
+  const canSend = props.draft.trim().length > 0 && !props.isSending && !props.isLoading;
   return (
     <div className={COMPOSER_CLASS_NAME}>
       <Form label={t("composerLabel")} isPending={props.isSending} onSubmit={(_data, event) => { event.preventDefault(); if (canSend) props.onSend(); }}>
@@ -184,7 +188,8 @@ const Composer = (props: AgentChatBaseProps) => {
               isLabelHidden
               variant="secondary"
               rows={1}
-              placeholder={props.isTakenOver ? t("staffPlaceholder") : props.tab === "customer" ? t("widgetPlaceholder") : t("messagePlaceholder", { name: props.agentName })}
+              isDisabled={props.isLoading}
+              placeholder={props.isLoading ? t("messageLabel") : props.isTakenOver ? t("staffPlaceholder") : props.tab === "customer" ? t("widgetPlaceholder") : t("messagePlaceholder", { name: props.agentName })}
               value={props.draft}
               onValueChange={props.onDraft}
               onSubmitShortcut={() => { if (canSend) props.onSend(); }}
@@ -205,11 +210,16 @@ const ConversationList = (props: ListProps) => {
     <>
       <div className={LIST_HEAD_CLASS_NAME}>
         <Text weight="semibold">{t("railTitle")}</Text>
-        <Button variant="outline" size="sm" isPending={props.isStarting} onPress={props.onStart}>{props.tab === "customer" ? t("newVisitor") : t("newTest")}</Button>
+        <Button variant="outline" size="sm" isDisabled={props.isLoading} isPending={props.isStarting} onPress={props.onStart}>{props.tab === "customer" ? t("newVisitor") : t("newTest")}</Button>
       </div>
       <div className={LIST_SCROLL_CLASS_NAME}>
-        {!props.isLoadingList && props.conversations.length === 0 ? <Text as="p" size="sm" tone="muted">{t("railEmptyHelp")}</Text> : null}
-        {props.conversations.length === 0 ? null : (
+        {props.isLoading ? (
+          <List label={t("railTitle")}>
+            {[0, 1, 2].map((row) => <ListRow key={row} isSkeleton title="" description="" leading="" />)}
+          </List>
+        ) : null}
+        {!props.isLoading && !props.isLoadingList && props.conversations.length === 0 ? <Text as="p" size="sm" tone="muted">{t("railEmptyHelp")}</Text> : null}
+        {props.isLoading || props.conversations.length === 0 ? null : (
           // The Grammar ListBox owns the rows, the selected face and the keyboard model (SURFACE-4, FOCUS-2).
           <ListBox
             label={t("railTitle")}
@@ -235,12 +245,23 @@ const ConversationList = (props: ListProps) => {
 /** Presentational agent chat, Zalo style: history list, then a thread that fills the page with the composer pinned at the bottom. */
 export const AgentChatBase = (props: AgentChatBaseProps) => {
   const t = useT(agentChat);
+  const tm = useT(modulesCore);
+  const ts = useT(shell);
   const [isListOpen, setIsListOpen] = useState(false);
   const onPick = (id: string, kind: AgentChatTab) => {
     props.onSelect(id, kind);
     setIsListOpen(false);
   };
   return (
+    <>
+    <Breadcrumbs
+      label={ts("crumbLabel")}
+      items={[
+        { id: "home", label: ts("crumbHome"), href: "/dashboard" },
+        { id: "modules", label: tm("catalogTitle"), href: "/m" },
+        ...(props.isLoading ? [] : [{ id: "agent", label: props.agentName }]),
+      ]}
+    />
     <FillViewport minHeight="md" bottomInset="page">
       {/* FillViewport owns the page height below the chrome; SURFACE-2 / BOUNDARY-6: the chat is one top-level card, its
           columns are joined faces inside it. */}
@@ -257,10 +278,10 @@ export const AgentChatBase = (props: AgentChatBaseProps) => {
       <section className={MAIN_CLASS_NAME} data-list={isListOpen ? "open" : "closed"} aria-label={t("pageLabel")}>
         <header className={HEADER_CLASS_NAME}>
           <span className={BACK_CLASS_NAME}><Button variant="ghost" size="sm" onPress={props.onBack}>{t("backModules")}</Button></span>
-          <AgentAvatar module={props.agentModule} size="md" label={props.agentName} online={props.isAgentActive} />
+          {props.isLoading ? <Skeleton shape="circle" size="md" /> : <AgentAvatar module={props.agentModule} size="md" label={props.agentName} online={props.isAgentActive} />}
           <div className={HEADER_COPY_CLASS_NAME}>
-            <Text weight="semibold" overflow="truncate">{props.agentName}</Text>
-            <Text size="xs" tone="muted" overflow="truncate">{props.tab === "customer" ? (props.isTakenOver ? t("takenOverStatus") : t("asVisitor")) : `${props.isAgentActive ? t("statusActive") : t("statusPaused")} · ${props.agentRole}`}</Text>
+            <Text weight="semibold" overflow="truncate" isSkeleton={props.isLoading}>{props.agentName}</Text>
+            <Text size="xs" tone="muted" overflow="truncate" isSkeleton={props.isLoading}>{props.tab === "customer" ? (props.isTakenOver ? t("takenOverStatus") : t("asVisitor")) : `${props.isAgentActive ? t("statusActive") : t("statusPaused")} · ${props.agentRole}`}</Text>
           </div>
           <div className={HEADER_ACTIONS_CLASS_NAME}>
             {props.tab === "customer" ? <Badge tone="success">{t("realAiBadge")}</Badge> : null}
@@ -268,11 +289,11 @@ export const AgentChatBase = (props: AgentChatBaseProps) => {
               <Button variant="outline" size="sm" isPending={props.isTakingOver} onPress={props.onToggleTakeover}>{props.isTakenOver ? t("giveBack") : t("takeOver")}</Button>
             ) : null}
             {props.leadId ? <Button variant="outline" size="sm" onPress={() => props.onOpenLead(props.leadId ?? "")}>{t("openLead")}</Button> : null}
-            <Button variant="ghost" size="sm" onPress={() => setIsListOpen((open) => !open)}>{t("historyToggle")}</Button>
+            <Button variant="ghost" size="sm" isDisabled={props.isLoading} onPress={() => setIsListOpen((open) => !open)}>{t("historyToggle")}</Button>
             {props.setupHref ? <Button variant="ghost" size="sm" href={props.setupHref}>{t("setupLink")}</Button> : null}
           </div>
         </header>
-        {props.hasCustomerChannel ? (
+        {props.hasCustomerChannel && !props.isLoading ? (
           <div className={CHANNEL_BAR_CLASS_NAME}>
             <Tabs
               label={t("channelLabel")}
@@ -290,5 +311,6 @@ export const AgentChatBase = (props: AgentChatBaseProps) => {
       </div>
       </SurfaceCard>
     </FillViewport>
+    </>
   );
 };

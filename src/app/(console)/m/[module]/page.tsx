@@ -26,6 +26,7 @@ const SetupPage = async ({ params }: SetupPageProps) => {
   if (!state.ok) notFound();
   return (
     <SetupScreen
+      moduleKey={module}
       installation={state.data.installation}
       initialSession={state.data.session}
       initialRevisions={state.data.revisions}

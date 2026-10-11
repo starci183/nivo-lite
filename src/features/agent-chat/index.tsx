@@ -14,12 +14,19 @@ import { AgentChatBase, type AgentChatTab } from "./component";
 
 /** Plain agent data handed over by the server page. */
 export type AgentChatProps = {
-  readonly agent: { readonly id: string; readonly module?: string; readonly name: string; readonly handle: string; readonly role: string; readonly isActive: boolean; readonly hasCustomerChannel: boolean };
+  /** Null while the agent loads (isLoading). */
+  readonly agent: { readonly id: string; readonly module?: string; readonly name: string; readonly handle: string; readonly role: string; readonly isActive: boolean; readonly hasCustomerChannel: boolean } | null;
   readonly initialTab: AgentChatTab;
   readonly initialConversationId: string | null;
   /** True only for a Founding 50 member arriving with ?welcome=1. */
   readonly showWelcome?: boolean;
+  /** STATE-8: the same chat while the agent loads - the frame, labels and composer real; the agent's name, the list and the thread skeletons. */
+  readonly isLoading?: boolean;
 };
+
+type ConnectedProps = Omit<AgentChatProps, "agent"> & { readonly agent: NonNullable<AgentChatProps["agent"]> };
+
+const NOOP = (): void => undefined;
 
 const OPTIMISTIC_PREFIX = "optimistic-";
 
@@ -34,8 +41,19 @@ const mergeMessage = (current: ReadonlyArray<AgentMessage>, incoming: AgentMessa
   return [...withoutEcho, incoming];
 };
 
-/** Connected agent chat: loads conversations, sends messages, follows realtime inserts. */
-export const AgentChat = (props: AgentChatProps) => {
+/** Connected agent chat: loads conversations, sends messages, follows realtime inserts. Without an agent it is the loading frame. */
+export const AgentChat = (props: AgentChatProps) =>
+  props.agent === null ? (
+    <AgentChatBase
+      isLoading agentName="" agentHandle="" agentRole="" isAgentActive={false} hasCustomerChannel={false} tab="test" conversations={[]} messages={[]}
+      hasSelection={false} isLoadingList isSending={false} isStarting={false} draft="" visitorName="" error={null} leadId={null} isTakenOver={false}
+      isTakingOver={false} onToggleTakeover={NOOP} onBack={NOOP} onTab={NOOP} onDraft={NOOP} onVisitorName={NOOP} onSend={NOOP} onStart={NOOP} onSelect={NOOP} onOpenLead={NOOP}
+    />
+  ) : (
+    <ConnectedAgentChat {...props} agent={props.agent} />
+  );
+
+const ConnectedAgentChat = (props: ConnectedProps) => {
   const { agent } = props;
   const router = useRouter();
   const t = useT(agentChat);

@@ -1,24 +1,15 @@
 "use client";
 
+import { RouteError } from "@/components/state/RouteError";
 import { useT } from "@/i18n/client";
 import { shell } from "@/i18n/dict/shell";
-import { EmptyNotice, PageContainer } from "@starci/grammar/common";
 
 type ConsoleErrorProps = { readonly reset: () => void };
 
-/** Route error boundary: says what failed and offers a retry. */
+/** STATE-8 case-5, last resort: a route without its own error view keeps the shell trail and heading, with one Alert and a retry. */
 const ConsoleError = ({ reset }: ConsoleErrorProps) => {
   const t = useT(shell);
-  return (
-  <PageContainer measure="reading">
-    <EmptyNotice
-      message={t("errorTitle")}
-      description={t("errorText")}
-      actionLabel={t("retry")}
-      onAction={reset}
-    />
-  </PageContainer>
-  );
+  return <RouteError crumbs={[{ id: "home", label: t("crumbHome") }]} title={t("crumbHome")} onRetry={reset} />;
 };
 
 export default ConsoleError;

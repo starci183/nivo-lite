@@ -6,7 +6,7 @@ import { getCurrentMember, isManagerRole } from "@/lib/members"
 import { getSession } from "@/lib/session"
 import { supabaseServer } from "@/lib/supabase/server"
 import { PAGE_CLASS } from "./classNames"
-import { ConnectionsBoard } from "./ConnectionsBoard"
+import { ConnectionsView } from "./ConnectionsView"
 
 /** The Connections page body (owner | manager): the grouped connections board. Staff see a friendly 403. */
 export const ConnectionsPage = async ({ searchParams }: { readonly searchParams?: Promise<Record<string, string | string[] | undefined>> } = {}) => {
@@ -35,14 +35,9 @@ export const ConnectionsPage = async ({ searchParams }: { readonly searchParams?
   const zaloId = one("id") && all.some((c) => c.id === one("id") && c.provider === "zalo_oa") ? one("id") : undefined
   const ownerEmail = (await getSession()).email
   return (
-    <PageContainer measure="product">
-      <div className={PAGE_CLASS}>
-        <ConnectionsBoard
-          items={all} agentNames={agentNames} agents={agents} localOnly={localOnly} ownerEmail={ownerEmail} canManage={me.role === "owner"}
-          {...(zaloId ? { zaloResumeId: zaloId } : {})} {...(one("zalo") ? { zaloReturned: one("zalo") } : {})}
-        />
-        <TextAction href="/automations">{t("automationsLink")}</TextAction>
-      </div>
-    </PageContainer>
+    <ConnectionsView
+      items={all} agentNames={agentNames} agents={agents} localOnly={localOnly} ownerEmail={ownerEmail} canManage={me.role === "owner"}
+      {...(zaloId ? { zaloResumeId: zaloId } : {})} {...(one("zalo") ? { zaloReturned: one("zalo") } : {})}
+    />
   )
 }

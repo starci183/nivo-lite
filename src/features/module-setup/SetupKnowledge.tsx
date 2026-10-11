@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, useTransition } from "react";
-import { Alert, Button, List, ListItem, SurfaceCard, Text, TextAction } from "@starci/grammar/common";
+import { Alert, Button, List, ListItem, Skeleton, SurfaceCard, Text, TextAction } from "@starci/grammar/common";
 import { useLocale, useT } from "@/i18n/client";
 import { intlLocale, TIME_ZONE } from "@/i18n/core";
 import { knowledge } from "@/i18n/dict/knowledge";
@@ -16,12 +16,14 @@ type SetupKnowledgeProps = {
   /** Changes when the draft changes (revision, fact count): reloads the notes. */
   readonly refreshKey: string;
   readonly onApplied: () => void;
+  /** STATE-8: card labels stay, the counts and notes are skeletons and nothing is read. */
+  readonly isLoading?: boolean;
 };
 
 type Counts = { nivo: number; business: number; publicSources: number };
 
 /** Right column of Setup: the knowledge this module runs on, and notes from Office waiting for approval. */
-export const SetupKnowledge = ({ installationId, moduleKey, refreshKey, onApplied }: SetupKnowledgeProps) => {
+export const SetupKnowledge = ({ installationId, moduleKey, refreshKey, onApplied, isLoading = false }: SetupKnowledgeProps) => {
   const t = useT(knowledge);
   const locale = useLocale();
   const [counts, setCounts] = useState<Counts | null>(null);
@@ -35,7 +37,7 @@ export const SetupKnowledge = ({ installationId, moduleKey, refreshKey, onApplie
     if (n.ok) setNotes(n.data);
   }, [moduleKey, installationId]);
 
-  useEffect(() => { void load(); }, [load, refreshKey]);
+  useEffect(() => { if (!isLoading) void load(); }, [load, refreshKey, isLoading]);
 
   const stamp = (iso: string) => new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "short", timeStyle: "short", timeZone: TIME_ZONE }).format(new Date(iso));
 
@@ -58,6 +60,15 @@ export const SetupKnowledge = ({ installationId, moduleKey, refreshKey, onApplie
       onApplied();
     });
   };
+
+  if (isLoading) {
+    return (
+      <>
+        <SurfaceCard label={t("cardTitle")} headingLevel={2}><Skeleton shape="text" lines={2} /></SurfaceCard>
+        <SurfaceCard label={t("notesTitle")} headingLevel={2}><Skeleton shape="text" lines={2} /></SurfaceCard>
+      </>
+    );
+  }
 
   return (
     <>
