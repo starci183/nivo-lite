@@ -27,11 +27,13 @@ export type BrainRailProps = {
   readonly onLens: (module: string | null) => void
   readonly business: string
   readonly canWrite: boolean
+  /** STATE-8: each list card shows its three skeleton rows. */
+  readonly isLoading?: boolean
   readonly onStart: (preset: StarterPreset) => void
 }
 
 /** The side of Bộ não: who sees what (the lens), what is worth adding, and how the brain learns. */
-export const BrainRail = ({ facts, lenses, lens, onLens, business, canWrite, onStart }: BrainRailProps) => {
+export const BrainRail = ({ facts, lenses, lens, onLens, business, canWrite, onStart, isLoading = false }: BrainRailProps) => {
   const t = useT(brain)
   const active = facts.filter((f) => f.status === "active")
   const have = new Set(active.map((f) => f.attribute))
@@ -51,8 +53,8 @@ export const BrainRail = ({ facts, lenses, lens, onLens, business, canWrite, onS
 
   return (
     <div className={SIDE_CLASS}>
-      <SurfaceListCard label={t("lensTitle")} headingLevel={2} fact={t("lensIntro")}>
-        {views.map((v) => {
+      <SurfaceListCard label={t("lensTitle")} headingLevel={2} fact={t("lensIntro")} isLoading={isLoading}>
+        {isLoading ? null : views.map((v) => {
           const isCurrent = (lens?.module ?? null) === v.module
           return (
             <ListRow
@@ -69,8 +71,8 @@ export const BrainRail = ({ facts, lenses, lens, onLens, business, canWrite, onS
       </SurfaceListCard>
 
       {canWrite ? (
-        <SurfaceListCard label={t("startTitle")} headingLevel={2} fact={missing.length ? t("startHint") : t("startAllDone")}>
-          {missing.map((s) => (
+        <SurfaceListCard label={t("startTitle")} headingLevel={2} fact={isLoading ? t("startHint") : missing.length ? t("startHint") : t("startAllDone")} isLoading={isLoading}>
+          {isLoading ? null : missing.map((s) => (
             <ListRow
               key={s.key}
               title={s.title}

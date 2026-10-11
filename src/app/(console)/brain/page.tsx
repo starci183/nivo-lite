@@ -1,5 +1,4 @@
 import { after } from "next/server"
-import { PageContainer, SectionHeader } from "@starci/grammar/common"
 import { BrainView } from "@/features/brain"
 import type { Lens } from "@/features/brain/shared"
 import { getT } from "@/i18n/server"
@@ -47,11 +46,8 @@ const Page = async () => {
     )
   } catch (e) {
     console.error("brain page failed:", e instanceof Error ? e.message : e)
-    return (
-      <PageContainer measure="product">
-        <SectionHeader level={1} title={t("title")} description={t("mineUnavailable")} />
-      </PageContainer>
-    )
+    // STATE-8 case-4: let the route's error view keep the trail and heading with one Alert and a retry.
+    throw new Error(t("loadFailed"))
   }
 }
 

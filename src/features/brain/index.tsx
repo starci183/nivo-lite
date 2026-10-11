@@ -28,6 +28,8 @@ export type BrainViewProps = {
   /** Where the reading of each document's facts stands. */
   readonly extractions?: ReadonlyArray<ExtractionInfo>
   readonly canWrite: boolean
+  /** STATE-8: the same page while its data loads - labels stay, figures, the graph and the rail rows are skeletons. */
+  readonly isLoading?: boolean
   /** The workspace's name: the subject of the starter facts (opening hours, address...). */
   readonly business: string
 }
@@ -38,7 +40,7 @@ type Surface = "map" | "review" | "facts" | "lessons"
  * Bộ não, laid out like Tri thức: header, actions, four key figures, then the active surface with the rail beside it
  * (agent views, what is worth adding, how it learns). Review opens first when something waits.
  */
-export const BrainView = ({ facts, documents, lessons, lenses, extractions = [], canWrite, business }: BrainViewProps) => {
+export const BrainView = ({ facts, documents, lessons, lenses, extractions = [], canWrite, business, isLoading = false }: BrainViewProps) => {
   const t = useT(brain)
   const active = facts.filter((f) => f.status === "active")
   const scheduled = facts.filter((f) => f.status === "scheduled").length
@@ -77,7 +79,7 @@ export const BrainView = ({ facts, documents, lessons, lenses, extractions = [],
             title={t("title")}
             description={t("intro")}
             meta={<TextAction href="/knowledge" size="sm" appearance="inline">{t("knowledgeLink")}</TextAction>}
-            action={canWrite && !isEmpty ? <Button variant="primary" onPress={addDocs}>{t("addDocs")}</Button> : undefined}
+            action={canWrite && !isEmpty && !isLoading ? <Button variant="primary" onPress={addDocs}>{t("addDocs")}</Button> : undefined}
           />
         </div>
 
@@ -85,6 +87,7 @@ export const BrainView = ({ facts, documents, lessons, lenses, extractions = [],
 
         <SurfaceCard ariaLabel={t("statsLabel")}>
           <DescriptionList
+            isLoading={isLoading}
             layout="stat-strip"
             isDivided
             items={[
@@ -119,14 +122,14 @@ export const BrainView = ({ facts, documents, lessons, lenses, extractions = [],
                   <TextAction size="sm" appearance="inline" onPress={() => setLensKey(null)}>{t("lensClear")}</TextAction>
                 </div>
               ) : null}
-              {surface === "map" ? <MapPanel facts={facts} lens={lens} business={business} onAdd={canWrite ? addDocs : undefined} /> : null}
+              {surface === "map" ? <MapPanel isLoading={isLoading} facts={facts} documents={documents} lens={lens} business={business} onAdd={canWrite ? addDocs : undefined} /> : null}
               {surface === "review" ? <ReviewPanel facts={facts} lessons={lessons} lenses={lenses} /> : null}
               {surface === "facts" ? <FactsPanel facts={facts} lenses={lenses} lens={lens} canWrite={canWrite} onAdd={canWrite ? addDocs : undefined} /> : null}
               {surface === "lessons" ? <LessonsPanel lessons={lessons} lenses={lenses} canWrite={canWrite} /> : null}
             </div>
           }
           rail={
-            <BrainRail facts={facts} lenses={lenses} lens={lens} onLens={onLens} business={business} canWrite={canWrite}
+            <BrainRail isLoading={isLoading} facts={facts} lenses={lenses} lens={lens} onLens={onLens} business={business} canWrite={canWrite}
               onStart={(preset) => setDrawer({ preset })} />
           }
         />
