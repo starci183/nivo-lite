@@ -1,10 +1,6 @@
 import { cn } from "@heroui/react"
 
-export const WIZARD_CLASS = cn("flex", "min-w-0", "flex-col", "gap-6", "border-t", "border-separator", "pt-6")
-export const HEADER_CLASS = cn("flex", "min-w-0", "flex-col", "gap-3")
-export const SEGMENTS_CLASS = cn("grid", "gap-1")
-export const SEGMENT_CLASS = cn("h-1", "rounded-full", "bg-separator")
-export const SEGMENT_DONE_CLASS = cn("h-1", "rounded-full", "bg-accent")
+export const WIZARD_CLASS = cn("flex", "min-w-0", "flex-col", "gap-6")
 export const BODY_CLASS = cn("flex", "min-w-0", "flex-col", "gap-4")
 export const FIELDS_CLASS = cn("grid", "grid-cols-1", "gap-4", "md:grid-cols-2")
 export const FOOTER_CLASS = cn("flex", "flex-col", "gap-2", "sm:flex-row", "sm:flex-wrap", "sm:items-center")

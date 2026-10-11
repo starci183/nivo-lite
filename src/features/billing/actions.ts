@@ -24,6 +24,7 @@ export const renewAction = async (workspaceId: string): Promise<Outcome<null>> =
   const { data: ws } = await db.from("workspaces").select("plan_code").eq("id", workspaceId).maybeSingle<{ plan_code: string | null }>();
   const plan = ws?.plan_code ? await getPlan(ws.plan_code) : null;
   if (!plan) return { ok: false, error: t("errGeneric") };
+  if (plan.is_custom) return { ok: false, error: t("errCustomPlan") };
   await createPaymentOrder(workspaceId, u.user.id, plan);
   redirect(`/workspaces/new/payment?ws=${workspaceId}&return=billing`);
 };

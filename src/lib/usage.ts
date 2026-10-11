@@ -108,19 +108,26 @@ export type QuotaStatus = {
   readonly messagesLimit: number | null;
   readonly tokensLimit: number | null;
   readonly fallbackReply: string | null;
+  /** Credits spent this month (model cost x CREDITS_PER_USD) and the allowance (null = unlimited). */
+  readonly creditsUsed: number;
+  readonly creditsLimit: number | null;
   readonly messagesExceeded: boolean;
   readonly tokensExceeded: boolean;
-  /** The larger of the two used/allowance ratios (0 when both are unlimited). */
+  readonly creditsExceeded: boolean;
+  /** The largest used/allowance ratio (0 when every allowance is unlimited). */
   readonly ratio: number;
   readonly level: QuotaLevel;
 };
 
-import { WARN_AT } from "./usage-shared";
+import { WARN_AT, creditsOf } from "./usage-shared";
 
 /** Default polite reply the customer gets when the workspace is over its allowance (configurable per workspace in ai_quota_overrides). */
 export const DEFAULT_FALLBACK_REPLY = "Dạ em đã ghi nhận, nhân viên sẽ phản hồi anh/chị sớm ạ";
 
-type StatusRow = { period_start: string; messages_used: number; tokens_used: number; cost_usd: number; messages_limit: number | null; tokens_limit: number | null; fallback_reply: string | null };
+type StatusRow = {
+  period_start: string; messages_used: number; tokens_used: number; cost_usd: number; messages_limit: number | null; tokens_limit: number | null;
+  fallback_reply: string | null; credits_used?: number | string | null; credits_limit?: number | string | null;
+};
 
 const ratioOf = (used: number, limit: number | null): number => (limit === null ? 0 : limit <= 0 ? 1 : used / limit);
 
@@ -138,15 +145,20 @@ export const quotaStatus = async (workspaceId: string): Promise<QuotaStatus | nu
     const tokensUsed = Number(row.tokens_used);
     const messagesLimit = row.messages_limit === null ? null : Number(row.messages_limit);
     const tokensLimit = row.tokens_limit === null ? null : Number(row.tokens_limit);
+    const costUsd = Number(row.cost_usd);
+    const creditsUsed = row.credits_used == null ? creditsOf(costUsd) : Number(row.credits_used);
+    const creditsLimit = row.credits_limit == null ? null : Number(row.credits_limit);
     const mRatio = ratioOf(messagesUsed, messagesLimit);
     const tRatio = ratioOf(tokensUsed, tokensLimit);
+    const cRatio = ratioOf(creditsUsed, creditsLimit);
     const messagesExceeded = messagesLimit !== null && mRatio >= 1;
     const tokensExceeded = tokensLimit !== null && tRatio >= 1;
-    const ratio = Math.max(mRatio, tRatio);
+    const creditsExceeded = creditsLimit !== null && cRatio >= 1;
+    const ratio = Math.max(mRatio, tRatio, cRatio);
     return {
-      periodStart: row.period_start, messagesUsed, tokensUsed, costUsd: Number(row.cost_usd), messagesLimit, tokensLimit,
-      fallbackReply: row.fallback_reply?.trim() || null, messagesExceeded, tokensExceeded, ratio,
-      level: messagesExceeded || tokensExceeded ? "exceeded" : ratio >= WARN_AT ? "warn" : "ok",
+      periodStart: row.period_start, messagesUsed, tokensUsed, costUsd, messagesLimit, tokensLimit,
+      fallbackReply: row.fallback_reply?.trim() || null, creditsUsed, creditsLimit, messagesExceeded, tokensExceeded, creditsExceeded, ratio,
+      level: messagesExceeded || tokensExceeded || creditsExceeded ? "exceeded" : ratio >= WARN_AT ? "warn" : "ok",
     };
   } catch (e) {
     console.error("quota status failed:", e instanceof Error ? e.message : String(e));
@@ -167,7 +179,7 @@ const EXCEEDED_EN = "Your workspace has used up this month's AI allowance, so AI
 
 export const exceededMessage = (locale: "vi" | "en"): string => (locale === "vi" ? EXCEEDED_VI : EXCEEDED_EN);
 
-/** Customer-facing kinds stop when EITHER allowance is used up; everything else only when the token budget is. */
+/** Customer-facing kinds stop when ANY allowance is used up; everything else when the credits (or a legacy token budget) are. */
 const CUSTOMER_FACING: ReadonlySet<UsageKind> = new Set(["chat_reply", "relay"]);
 
 /**
@@ -178,7 +190,7 @@ export const blockedBy = async (workspaceId: string, kind: UsageKind): Promise<Q
   if (kind === "embedding") return null; // cheap, and callers already fall back to full-text search
   const s = await quotaStatus(workspaceId);
   if (!s) return null;
-  const blocked = CUSTOMER_FACING.has(kind) ? s.level === "exceeded" : s.tokensExceeded;
+  const blocked = CUSTOMER_FACING.has(kind) ? s.level === "exceeded" : s.tokensExceeded || s.creditsExceeded;
   if (!blocked) return null;
   await notifyOwner(workspaceId, s);
   return s;
@@ -190,6 +202,7 @@ const fmtN = (n: number) => new Intl.NumberFormat("vi-VN").format(n);
 
 const noticeBody = (level: "warn" | "exceeded", s: QuotaStatus): string => {
   const use = [
+    s.creditsLimit !== null ? `${fmtN(Math.round(s.creditsUsed))}/${fmtN(s.creditsLimit)} credit` : null,
     s.messagesLimit !== null ? `${fmtN(s.messagesUsed)}/${fmtN(s.messagesLimit)} tin nhắn` : null,
     s.tokensLimit !== null ? `${fmtN(s.tokensUsed)}/${fmtN(s.tokensLimit)} token` : null,
   ].filter(Boolean).join(", ");
@@ -216,8 +229,8 @@ const notifyOwner = async (workspaceId: string, s: QuotaStatus): Promise<void> =
 
 export type UsageSummary = {
   readonly status: QuotaStatus | null;
-  readonly byModule: ReadonlyArray<{ readonly module: string; readonly calls: number; readonly tokens: number; readonly costUsd: number }>;
-  readonly daily: ReadonlyArray<{ readonly day: string; readonly tokens: number }>;
+  readonly byModule: ReadonlyArray<{ readonly module: string; readonly calls: number; readonly tokens: number; readonly costUsd: number; readonly credits: number }>;
+  readonly daily: ReadonlyArray<{ readonly day: string; readonly tokens: number; readonly credits: number }>;
 };
 
 /** This month's figures for the billing card. Call only after the caller was verified as owner | manager of the workspace. */
@@ -228,7 +241,7 @@ export const usageSummary = async (workspaceId: string): Promise<UsageSummary> =
   const { data } = await admin.from("ai_usage_daily").select("day, module, calls, prompt_tokens, completion_tokens, cost_usd").eq("workspace_id", workspaceId).gte("day", from).order("day");
   const rows = (data ?? []) as Array<{ day: string; module: string; calls: number; prompt_tokens: number; completion_tokens: number; cost_usd: number }>;
   const mod = new Map<string, { module: string; calls: number; tokens: number; costUsd: number }>();
-  const day = new Map<string, number>();
+  const day = new Map<string, { tokens: number; costUsd: number }>();
   for (const r of rows) {
     const tokens = Number(r.prompt_tokens) + Number(r.completion_tokens);
     const m = mod.get(r.module) ?? { module: r.module, calls: 0, tokens: 0, costUsd: 0 };
@@ -236,7 +249,12 @@ export const usageSummary = async (workspaceId: string): Promise<UsageSummary> =
     m.tokens += tokens;
     m.costUsd += Number(r.cost_usd);
     mod.set(r.module, m);
-    day.set(r.day, (day.get(r.day) ?? 0) + tokens);
+    const d = day.get(r.day) ?? { tokens: 0, costUsd: 0 };
+    day.set(r.day, { tokens: d.tokens + tokens, costUsd: d.costUsd + Number(r.cost_usd) });
   }
-  return { status, byModule: [...mod.values()].sort((a, b) => b.tokens - a.tokens), daily: [...day.entries()].map(([d, tokens]) => ({ day: d, tokens })) };
+  return {
+    status,
+    byModule: [...mod.values()].map((m) => ({ ...m, credits: creditsOf(m.costUsd) })).sort((a, b) => b.credits - a.credits),
+    daily: [...day.entries()].map(([d, v]) => ({ day: d, tokens: v.tokens, credits: creditsOf(v.costUsd) })),
+  };
 };

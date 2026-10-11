@@ -25,6 +25,8 @@ export const WorkspaceDetailView = ({ data, now }: { readonly data: WorkspaceDet
           <Fact label="Billing status"><Badge tone={STATUS_TONE[ws.status] ?? "neutral"}>{ws.status}</Badge></Fact>
           <Fact label="Plan">{ws.plan_code ?? "—"}</Fact>
           <Fact label="Paid until">{fmtDate(ws.paid_until)}</Fact>
+          <Fact label="AI credits this month">{`${Math.round(data.credits.used).toLocaleString("en-US")} / ${data.credits.limit === null ? "no limit" : data.credits.limit.toLocaleString("en-US")}${data.credits.ownLimit === null ? "" : " (own)"}`}</Fact>
+          <Fact label="Model cost this month (USD)">{`$${data.credits.costUsd.toFixed(2)}`}</Fact>
           <Fact label="Members">{data.members.filter((m) => m.status === "active").length}</Fact>
           <Fact label="Last customer message">{ago(data.activity.lastCustomerMessageAt, now)}</Fact>
           <Fact label="Messages, 7 days">{data.activity.messages7d}</Fact>
@@ -33,7 +35,7 @@ export const WorkspaceDetailView = ({ data, now }: { readonly data: WorkspaceDet
         </div>
       </SurfaceCard>
 
-      <SupportActions workspaceId={ws.id} status={ws.status} invites={data.invites.map((i) => ({ id: i.id, email: i.email }))} />
+      <SupportActions workspaceId={ws.id} status={ws.status} planCode={ws.plan_code} creditsLimit={data.credits.ownLimit} invites={data.invites.map((i) => ({ id: i.id, email: i.email }))} />
 
       <div className={GRID_CLASS}>
         <SurfaceCard label="Members and roles" ariaLabel="Members and roles">
