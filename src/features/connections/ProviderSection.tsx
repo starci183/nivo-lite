@@ -54,31 +54,33 @@ export const ProviderSection = ({ provider, items, agentNames, agents, localOnly
   }
 
   return (
-    <SurfaceCard label={def.title[locale]} headingLevel={2}>
-      <div className={STACK_CLASS}>
-        <div className={HEAD_CLASS}>
-          <Text size="sm" tone="muted">{def.blurb[locale]}</Text>
-          {def.earlyAccess ? <Badge tone="warning">{tw("earlyAccess")}</Badge> : null}
-          {open ? null : <Button variant="secondary" onPress={() => setOpen({})}>{t("add")}</Button>}
-        </div>
+    <div data-guide={`connections.${provider}`}>
+      <SurfaceCard label={def.title[locale]} headingLevel={2}>
+        <div className={STACK_CLASS}>
+          <div className={HEAD_CLASS}>
+            <Text size="sm" tone="muted">{def.blurb[locale]}</Text>
+            {def.earlyAccess ? <Badge tone="warning">{tw("earlyAccess")}</Badge> : null}
+            {open ? null : <Button variant="secondary" onPress={() => setOpen({})}>{t("add")}</Button>}
+          </div>
 
-        {items.length === 0 && !open ? <Text size="sm" tone="muted">{t("emptyList")}</Text> : null}
-        <div>
-          {items.map((c) => (
-            <ConnectionRow
-              key={c.id} connection={c} localOnly={localOnly} ownerEmail={ownerEmail} onContinue={def.kind === "money" || def.kind === "zalo" ? () => setOpen({ resumeId: c.id }) : undefined}
-              agentNames={c.agentIds.map((id) => agentNames[id]).filter((n): n is string => Boolean(n))}
-            />
-          ))}
-        </div>
+          {items.length === 0 && !open ? <Text size="sm" tone="muted">{t("emptyList")}</Text> : null}
+          <div>
+            {items.map((c) => (
+              <ConnectionRow
+                key={c.id} connection={c} localOnly={localOnly} ownerEmail={ownerEmail} onContinue={def.kind === "money" || def.kind === "zalo" ? () => setOpen({ resumeId: c.id }) : undefined}
+                agentNames={c.agentIds.map((id) => agentNames[id]).filter((n): n is string => Boolean(n))}
+              />
+            ))}
+          </div>
 
-        {open && def.kind === "money" ? <MoneyWizard key={open.resumeId ?? "new"} provider={provider as "sepay" | "payos" | "casso"} resumeId={open.resumeId} agents={eligible} onClose={close} /> : null}
-        {open && def.kind === "telegram" ? <TelegramWizard agents={eligible} onClose={close} /> : null}
-        {open && def.kind === "zalo" ? <ZaloWizard key={open.resumeId ?? "new"} resumeId={open.resumeId} returned={returned} agents={eligible} onClose={close} /> : null}
-        {open && def.kind === "webhook" ? <WebhookWizard onClose={close} /> : null}
-        {open && def.kind === "google" ? <GoogleWizard onClose={close} /> : null}
-        {open && def.kind === "email" ? <SmtpWizard ownerEmail={ownerEmail} hasDefault={items.some((c) => c.status === "connected" && c.isDefault)} onClose={close} /> : null}
-      </div>
-    </SurfaceCard>
+          {open && def.kind === "money" ? <MoneyWizard key={open.resumeId ?? "new"} provider={provider as "sepay" | "payos" | "casso"} resumeId={open.resumeId} agents={eligible} onClose={close} /> : null}
+          {open && def.kind === "telegram" ? <TelegramWizard agents={eligible} onClose={close} /> : null}
+          {open && def.kind === "zalo" ? <ZaloWizard key={open.resumeId ?? "new"} resumeId={open.resumeId} returned={returned} agents={eligible} onClose={close} /> : null}
+          {open && def.kind === "webhook" ? <WebhookWizard onClose={close} /> : null}
+          {open && def.kind === "google" ? <GoogleWizard onClose={close} /> : null}
+          {open && def.kind === "email" ? <SmtpWizard ownerEmail={ownerEmail} hasDefault={items.some((c) => c.status === "connected" && c.isDefault)} onClose={close} /> : null}
+        </div>
+      </SurfaceCard>
+    </div>
   )
 }

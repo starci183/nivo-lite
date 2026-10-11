@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
+import { GuideBubble } from "@/features/guide";
 import { ConsoleShell } from "@/features/shell";
 import { getShellData, getShellPromoFlags } from "@/features/shell/queries";
+import { isManagerRole } from "@/lib/members-shared";
 import { getSession } from "@/lib/session";
 
 type ConsoleLayoutProps = { readonly children: ReactNode };
@@ -19,6 +21,7 @@ const ConsoleLayout = async ({ children }: ConsoleLayoutProps) => {
       promo={promo}
     >
       {children}
+      <GuideBubble isManager={isManagerRole(session.member.role)} />
     </ConsoleShell>
   );
 };

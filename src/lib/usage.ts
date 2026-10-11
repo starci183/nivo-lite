@@ -9,7 +9,8 @@ import type { ModuleKey } from "./module-registry";
  * nothing is recorded and nothing is blocked (scripts, tests).
  */
 
-export type UsageKind = "chat_reply" | "setup" | "owner_chat" | "relay" | "embedding" | "engine";
+/** `guide` is the in-app navigation assistant: NIVO pays for it, so it is metered but never blocked and never counts toward the allowance. */
+export type UsageKind = "chat_reply" | "setup" | "owner_chat" | "relay" | "embedding" | "engine" | "guide";
 export type UsageModule = ModuleKey | "setup" | "office" | "knowledge" | "other";
 export type UsageScope = { readonly workspaceId: string; readonly kind?: UsageKind; readonly module?: UsageModule };
 
@@ -176,6 +177,7 @@ const CUSTOMER_FACING: ReadonlySet<UsageKind> = new Set(["chat_reply", "relay"])
  */
 export const blockedBy = async (workspaceId: string, kind: UsageKind): Promise<QuotaStatus | null> => {
   if (kind === "embedding") return null; // cheap, and callers already fall back to full-text search
+  if (kind === "guide") return null; // paid by NIVO, outside the workspace allowance
   const s = await quotaStatus(workspaceId);
   if (!s) return null;
   const blocked = CUSTOMER_FACING.has(kind) ? s.level === "exceeded" : s.tokensExceeded;
@@ -225,7 +227,7 @@ export const usageSummary = async (workspaceId: string): Promise<UsageSummary> =
   const admin = supabaseAdmin();
   const status = await quotaStatus(workspaceId);
   const from = status?.periodStart ?? new Date().toISOString().slice(0, 8) + "01";
-  const { data } = await admin.from("ai_usage_daily").select("day, module, calls, prompt_tokens, completion_tokens, cost_usd").eq("workspace_id", workspaceId).gte("day", from).order("day");
+  const { data } = await admin.from("ai_usage_daily").select("day, module, calls, prompt_tokens, completion_tokens, cost_usd").eq("workspace_id", workspaceId).neq("kind", "guide").gte("day", from).order("day"); // guide tokens are NIVO's, not the workspace's
   const rows = (data ?? []) as Array<{ day: string; module: string; calls: number; prompt_tokens: number; completion_tokens: number; cost_usd: number }>;
   const mod = new Map<string, { module: string; calls: number; tokens: number; costUsd: number }>();
   const day = new Map<string, number>();

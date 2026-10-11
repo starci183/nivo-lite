@@ -16,3 +16,11 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+/* NIVO guide: the place the guide sent someone to is outlined for a moment (src/features/guide/spotlight.ts). */
+[data-guide-spotlight="on"] {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: var(--nivo-surface-radius, 1rem);
+  transition: outline-color 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
