@@ -62,3 +62,25 @@ export const COUNTDOWN_CLASS_NAME = cn("flex", "items-center", "gap-3");
 /* Workspace switcher. */
 /** Switcher entries, a compact navigation list (GAP-1 as Sidebar's list); List owns the reset. */
 export const SWITCH_CLASS_NAME = cn("flex", "flex-col", "gap-1");
+
+/* Workspaces home. */
+/** Welcome card: copy column beside the art band from md, stacked on mobile (GAP-5). */
+export const WELCOME_GRID_CLASS_NAME = cn("grid", "grid-cols-1", "md:grid-cols-5");
+/** Copy column of the welcome card (GAP-4). */
+export const WELCOME_COPY_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "items-start", "gap-4", "p-4", "md:col-span-3");
+/** SURFACE-6 case-1: the decorative hero band at full accent strength; it carries one aria-hidden image and no copy. This is the page's only brand signature moment (DISCIPLINE-3). */
+export const WELCOME_ART_CLASS_NAME = "relative isolate order-first h-40 overflow-hidden bg-accent md:order-none md:col-span-2 md:h-auto";
+/** A square frame as tall as the band, centred: the square mascot fits the band whatever its height. */
+export const WELCOME_IMAGE_CLASS_NAME = cn("absolute", "inset-y-0", "left-1/2", "aspect-square", "h-full", "-translate-x-1/2");
+/** Invite link input beside its button; stacked on mobile (GAP-3). */
+export const LINK_ROW_CLASS_NAME = cn("flex", "flex-col", "gap-3", "sm:flex-row", "sm:items-end");
+/** The input takes the remaining width of the link row. */
+export const LINK_FIELD_CLASS_NAME = cn("min-w-0", "flex-1");
+/** Account menu trigger: the email names the button; phones show only the avatar (the email stays for screen readers), wider screens truncate it. */
+export const ACCOUNT_EMAIL_CLASS_NAME = cn("sr-only", "sm:not-sr-only", "sm:max-w-56");
+/** Locale switch beside the account menu (GAP-3). */
+export const TOP_END_CLASS_NAME = cn("flex", "items-center", "gap-3");
+/** Join card, first band (no invites): outer edge on top and sides, a separator below (PADDING-4 / PADDING-3). */
+export const JOIN_EMPTY_BAND_CLASS_NAME = cn("px-4", "pb-3", "pt-4");
+/** Join card, last band (invite link form): a separator above, outer edge on the other sides (PADDING-3 / PADDING-4). */
+export const JOIN_LINK_BAND_CLASS_NAME = cn("px-4", "pb-4", "pt-3");

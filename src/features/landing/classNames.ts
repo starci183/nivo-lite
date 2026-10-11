@@ -21,9 +21,17 @@ export const NAV_SIGNIN = "hidden sm:block";
 /** Hero copy: eyebrow, title, lead, actions, notes (GAP-4 case-1). */
 export const HERO_COPY = "flex min-w-0 flex-col items-start gap-4";
 /** Primary and secondary call to action, side by side from `sm` (GAP-3 case-3). */
-export const HERO_ACTIONS = "flex w-full flex-col gap-3 sm:w-auto sm:flex-row";
+export const HERO_ACTIONS = "grid w-full grid-cols-1 gap-3 sm:w-auto sm:auto-cols-max sm:grid-flow-col";
 /** Hero notes: one qualifier under another (GAP-1 case-1). */
 export const HERO_NOTES = "flex flex-col gap-1";
+/** Two columns from `lg`, copy first; stacked on phones (GAP-5). */
+export const HERO_GRID = "grid min-w-0 grid-cols-1 gap-8 lg:grid-cols-2 lg:items-center";
+/** Three included facts side by side, wrapping on narrow widths (GAP-3 case-3). */
+export const HERO_FACTS = "flex flex-wrap items-center gap-x-4 gap-y-2";
+/** One included fact: mark then words (GAP-2). */
+export const HERO_FACT = "flex items-center gap-2";
+/** Hero art band: decorative image, no copy on it (SURFACE-6 case-1, the page's only accent slab). */
+export const HERO_ART_BAND = "relative isolate min-h-32 overflow-hidden bg-accent";
 
 /* Trust strip */
 /** Audience copy beside the watched situations; stacks on phones (GAP-5). */

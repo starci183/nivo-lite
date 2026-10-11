@@ -1,31 +1,33 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { nivoIconSource } from "@/ui";
 import { LocaleSwitch } from "@/i18n/LocaleSwitch";
 import { useT } from "@/i18n/client";
 import { login } from "@/i18n/dict/login";
 import { FoundingOffer } from "@/components/promo/FoundingOffer";
 import { NivoLogo } from "@/components/brand/NivoLogo";
-import { Heading, IconTile, Image, List, ListItem, MediaFrame, Region, SurfaceCard, SurfaceCopyGroup, Text } from "@starci/grammar/common";
+import { Heading, Image, IncludedMark, List, ListItem, Region, SurfaceCard, SurfaceCopyGroup, Text } from "@starci/grammar/common";
 import {
+  AUTH_ART_BAND_CLASS_NAME,
+  AUTH_BRAND_CARD_CLASS_NAME,
   AUTH_BRAND_PANE_CLASS_NAME,
+  AUTH_BRAND_STACK_CLASS_NAME,
+  AUTH_DETAILS_CLASS_NAME,
+  AUTH_PITCH_CLASS_NAME,
+  AUTH_TAGLINE_CLASS_NAME,
   AUTH_CANVAS_CLASS_NAME,
   AUTH_CARD_CLASS_NAME,
   AUTH_FORM_PANE_CLASS_NAME,
-  AUTH_HEADLINE_CLASS_NAME,
   AUTH_LOCALE_CLASS_NAME,
-  AUTH_MASCOT_CLASS_NAME,
   AUTH_POINTS_CLASS_NAME,
-  AUTH_POINTS_ROW_CLASS_NAME,
   AUTH_POINT_CLASS_NAME,
   AUTH_STACK_CLASS_NAME,
 } from "./classNames";
 
 const POINTS = [
-  { icon: "explore", text: "pointCapture" },
-  { icon: "account", text: "pointOwner" },
-  { icon: "review", text: "pointApprove" },
+  { text: "pointCapture" },
+  { text: "pointOwner" },
+  { text: "pointApprove" },
 ] as const;
 
 /** Props for {@link AuthShell}. */
@@ -39,31 +41,39 @@ export const AuthShell = ({ label, title, text, children }: AuthShellProps) => {
       <div className={AUTH_LOCALE_CLASS_NAME}>
         <LocaleSwitch />
       </div>
-      <Region label={t("aboutLabel")} className={AUTH_BRAND_PANE_CLASS_NAME}>
-        <NivoLogo variant="full" height={56} />
-        <div className={AUTH_HEADLINE_CLASS_NAME}>
-          <Heading level={1} scale="display">
-            {t("headline")}
-          </Heading>
+      <div className={AUTH_BRAND_PANE_CLASS_NAME}>
+        <div className={AUTH_BRAND_CARD_CLASS_NAME}>
+          <Region label={t("aboutLabel")}>
+          <SurfaceCard ariaLabel={t("aboutLabel")} composition="joined">
+            <div className={AUTH_ART_BAND_CLASS_NAME} aria-hidden="true">
+              <Image src="/images/entry/login-mascot.png" alt="" aspect="wide" fit="contain" plate="none" loading="eager" />
+            </div>
+            <div className={AUTH_BRAND_STACK_CLASS_NAME}>
+              <div className={AUTH_PITCH_CLASS_NAME}>
+                <NivoLogo variant="full" height={40} />
+                <Heading level={1}>{t("headline")}</Heading>
+                <div className={AUTH_TAGLINE_CLASS_NAME}>
+                  <Text tone="muted">{t("tagline")}</Text>
+                </div>
+              </div>
+              <div className={AUTH_DETAILS_CLASS_NAME}>
+                <List className={AUTH_POINTS_CLASS_NAME}>
+                  {POINTS.map((point) => (
+                    <ListItem key={point.text}>
+                      <span className={AUTH_POINT_CLASS_NAME}>
+                        <IncludedMark />
+                        <Text>{t(point.text)}</Text>
+                      </span>
+                    </ListItem>
+                  ))}
+                </List>
+                <FoundingOffer variant="pill" />
+              </div>
+            </div>
+          </SurfaceCard>
+          </Region>
         </div>
-        <Text tone="muted">{t("tagline")}</Text>
-        <div className={AUTH_POINTS_ROW_CLASS_NAME}>
-          <List className={AUTH_POINTS_CLASS_NAME}>
-            {POINTS.map((point) => (
-              <ListItem key={point.text} className={AUTH_POINT_CLASS_NAME}>
-                <IconTile source={nivoIconSource(point.icon, "leading")} tone="neutral" />
-                <Text weight="medium">{t(point.text)}</Text>
-              </ListItem>
-            ))}
-          </List>
-          <div className={AUTH_MASCOT_CLASS_NAME}>
-            <MediaFrame treatment="plain" aspect="square" fit="contain">
-              <Image src="/images/promo/mascot-point.png" alt="" aspect="square" fit="contain" plate="none" />
-            </MediaFrame>
-          </div>
-        </div>
-        <FoundingOffer variant="pill" />
-      </Region>
+      </div>
       <section className={AUTH_FORM_PANE_CLASS_NAME}>
         <div className={AUTH_CARD_CLASS_NAME}>
           <SurfaceCard ariaLabel={label}>

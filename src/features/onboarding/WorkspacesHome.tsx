@@ -2,15 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Alert, Badge, Button, EmptyNotice, Form, Heading, Image, Input, List, ListItem, MediaFrame, Region, SectionHeader, SurfaceCard, SurfaceListCard, Text } from "@starci/grammar/common";
+import { Alert, Badge, Button, Divider, EmptyNotice, Form, Heading, Image, Input, List, ListItem, ListRow, Region, SectionHeader, Stepper, SurfaceCard, Text } from "@starci/grammar/common";
 import { useT } from "@/i18n/client";
 import { onboarding } from "@/i18n/dict/onboarding";
 import { acceptInviteForMe, type MyInvite } from "@/lib/onboarding";
 import { openWorkspaceAction } from "./actions";
 import { WorkspaceTile } from "./WorkspaceTile";
 import {
-  ACTIONS_CLASS_NAME, CENTERED_CLASS_NAME, CHIPS_CLASS_NAME, COPY_CLASS_NAME, GRID_CLASS_NAME, INVITE_ROW_CLASS_NAME, MASCOT_CLASS_NAME, STACK_CLASS_NAME,
-  STACK_MD_CLASS_NAME, WS_CARD_CLASS_NAME, WS_GRID_CLASS_NAME, WS_HEAD_CLASS_NAME,
+  ACTIONS_CLASS_NAME, CHIPS_CLASS_NAME, COPY_CLASS_NAME, LINK_FIELD_CLASS_NAME, JOIN_EMPTY_BAND_CLASS_NAME, JOIN_LINK_BAND_CLASS_NAME, LINK_ROW_CLASS_NAME, STACK_CLASS_NAME, STACK_MD_CLASS_NAME, WELCOME_ART_CLASS_NAME,
+  WELCOME_COPY_CLASS_NAME, WELCOME_GRID_CLASS_NAME, WELCOME_IMAGE_CLASS_NAME, WS_CARD_CLASS_NAME, WS_GRID_CLASS_NAME, WS_HEAD_CLASS_NAME,
 } from "./classNames";
 
 /** One workspace card, already resolved on the server (plan name, state, whether billing is reachable). */
@@ -111,7 +111,7 @@ export const WorkspacesHome = ({ workspaces, invites, email, reason }: Workspace
         description={t("workspacesText")}
         action={workspaces.length ? <Button variant="primary" size="lg" href="/workspaces/new">{t("createNew")}</Button> : undefined}
       />
-      {reason ? <Alert tone="cautionary" title={reason === "disabled" ? t("reasonDisabled") : t("reasonNone")} /> : null}
+      {reason === "disabled" ? <Alert tone="cautionary" title={t("reasonDisabled")} /> : null}
 
       {workspaces.length ? (
         <List className={WS_GRID_CLASS_NAME} label={t("myWorkspaces")}>
@@ -122,54 +122,69 @@ export const WorkspacesHome = ({ workspaces, invites, email, reason }: Workspace
           ))}
         </List>
       ) : (
-        <SurfaceCard ariaLabel={t("emptyTitle")}>
-          <div className={CENTERED_CLASS_NAME}>
-            <div className={MASCOT_CLASS_NAME}>
-              <MediaFrame treatment="plain" aspect="portrait" fit="contain">
-                <Image src="/images/promo/mascot-checklist.png" alt="" aspect="portrait" fit="contain" plate="none" />
-              </MediaFrame>
+        <SurfaceCard ariaLabel={t("welcomeTitle")} composition="joined">
+          <div className={WELCOME_GRID_CLASS_NAME}>
+            <div className={WELCOME_COPY_CLASS_NAME}>
+              <Heading level={2}>{t("welcomeTitle")}</Heading>
+              <Text tone="muted">{t("welcomeText")}</Text>
+              <Stepper
+                label={t("welcomeStepsLabel")}
+                orientation="vertical"
+                currentStepId="s1"
+                steps={[
+                  { id: "s1", label: t("welcomeStep1") },
+                  { id: "s2", label: t("welcomeStep2") },
+                  { id: "s3", label: t("welcomeStep3") },
+                ]}
+              />
+              <Button variant="primary" size="lg" href="/workspaces/new">{t("createFirst")}</Button>
             </div>
-            <EmptyNotice message={t("emptyTitle")} description={t("emptyText")} />
-            <Button variant="primary" size="lg" href="/workspaces/new">{t("createNew")}</Button>
+            {/* SURFACE-6 hero band: the page's one brand signature moment (DISCIPLINE-3). */}
+            <div className={WELCOME_ART_CLASS_NAME} aria-hidden="true">
+              <div className={WELCOME_IMAGE_CLASS_NAME}>
+                <Image src="/images/entry/workspace-welcome.png" alt="" aspect="square" fit="contain" plate="none" />
+              </div>
+            </div>
           </div>
         </SurfaceCard>
       )}
 
-      <div className={GRID_CLASS_NAME}>
-        <Region labelledBy="ws-invites" className={STACK_MD_CLASS_NAME}>
-          <SectionHeader id="ws-invites" level={2} title={t("pendingInvites")} description={t("pathJoinText", { email })} />
-          <SurfaceListCard ariaLabel={t("pendingInvites")} empty={<EmptyNotice message={t("noInvites", { email })} />}>
-            {invites.map((i) => (
-              <ListItem key={i.id} className={INVITE_ROW_CLASS_NAME}>
-                <div className={WS_HEAD_CLASS_NAME}>
-                  <WorkspaceTile name={i.workspaceName || "?"} size="md" />
-                  <div className={COPY_CLASS_NAME}>
-                    <Text weight="semibold" overflow="truncate">{i.workspaceName}</Text>
-                    <Text size="sm" tone="muted">{[t("inviteRole", { role: i.role === "manager" ? t("roleManager") : t("roleStaff") }), i.invitedBy ? t("inviteBy", { name: i.invitedBy }) : null].filter(Boolean).join(" · ")}</Text>
-                  </div>
-                </div>
-                <div className={ACTIONS_CLASS_NAME}>
-                  <Button variant="secondary" isPending={isPending && busy === i.id} isDisabled={isPending} onPress={() => join(i.id)}>{t("join")}</Button>
-                </div>
-              </ListItem>
-            ))}
-          </SurfaceListCard>
-        </Region>
-        <Region labelledBy="ws-link-title" className={STACK_MD_CLASS_NAME}>
-          <SectionHeader id="ws-link-title" level={2} title={t("haveLink")} description={t("haveLinkText")} />
-          <SurfaceCard ariaLabel={t("haveLink")}>
+      <Region labelledBy="ws-join" className={STACK_MD_CLASS_NAME}>
+        <SectionHeader id="ws-join" level={2} title={t("joinTitle")} description={t("joinText", { email })} />
+        <SurfaceCard ariaLabel={t("joinTitle")} composition="joined">
+          {invites.length ? (
+            <List label={t("pendingInvites")}>
+              {invites.map((i) => (
+                <ListRow
+                  key={i.id}
+                  leading={<WorkspaceTile name={i.workspaceName || "?"} size="md" />}
+                  title={i.workspaceName}
+                  description={[t("inviteRole", { role: i.role === "manager" ? t("roleManager") : t("roleStaff") }), i.invitedBy ? t("inviteBy", { name: i.invitedBy }) : null].filter(Boolean).join(" · ")}
+                  actions={<Button variant="secondary" isPending={isPending && busy === i.id} isDisabled={isPending} onPress={() => join(i.id)}>{t("join")}</Button>}
+                />
+              ))}
+            </List>
+          ) : (
+            <div className={JOIN_EMPTY_BAND_CLASS_NAME}>
+              <Text size="sm" tone="muted">{t("noInvitesQuiet")}</Text>
+            </div>
+          )}
+          <Divider semantics="presentation" />
+          <div className={JOIN_LINK_BAND_CLASS_NAME}>
             <Form label={t("haveLink")} onSubmit={openLink}>
               <div className={STACK_MD_CLASS_NAME}>
-                <Input id="ws-link" name="link" label={t("haveLink")} placeholder={t("linkPlaceholder")} variant="secondary" value={link} onValueChange={setLink} />
-                {error ? <Alert tone="negative" title={t("errGeneric")} description={error} /> : null}
-                <div className={ACTIONS_CLASS_NAME}>
+                <div className={LINK_ROW_CLASS_NAME}>
+                  <div className={LINK_FIELD_CLASS_NAME}>
+                    <Input id="ws-link" name="link" label={t("haveLink")} placeholder={t("linkPlaceholder")} variant="secondary" value={link} onValueChange={setLink} />
+                  </div>
                   <Button type="submit" variant="outline" isDisabled={!link.trim()}>{t("openLink")}</Button>
                 </div>
+                {error ? <Alert tone="negative" appearance="soft" title={t("errGeneric")} description={error} /> : null}
               </div>
             </Form>
-          </SurfaceCard>
-        </Region>
-      </div>
+          </div>
+        </SurfaceCard>
+      </Region>
     </div>
   );
 };
