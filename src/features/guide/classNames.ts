@@ -3,10 +3,17 @@ import { cn } from "@heroui/react"
 /** The invisible layer the bubble may be dragged within (framer measures it). */
 export const VIEWPORT_CLASS = cn("pointer-events-none", "fixed", "inset-0", "z-0")
 /**
- * The draggable holder of the guide's Grammar IconButton: position, drag affordance and stacking only (the IconButton owns the
- * plate, glyph and focus ring). grammar gap: no floating accent action button, so the bubble wears IconButton's own plate.
+ * The guide bubble: a 56px accent-filled round button, draggable (framer-motion owns position and drag). grammar gap: Grammar has no
+ * floating accent action, and IconButton's tertiary plate is too quiet for the one way into the guide, so the app paints it with
+ * semantic tokens only (accent face, accent foreground, the focus ring token).
  */
-export const BUBBLE_CLASS = cn("fixed", "left-0", "top-0", "z-50", "flex", "size-14", "touch-none", "select-none", "items-center", "justify-center", "cursor-grab", "active:cursor-grabbing")
+export const BUBBLE_CLASS = cn(
+  "fixed", "left-0", "top-0", "z-50", "flex", "size-14", "touch-none", "select-none", "items-center", "justify-center", "rounded-full",
+  "bg-accent", "text-accent-foreground", "shadow-lg", "outline-none", "focus-visible:ring-2", "focus-visible:ring-focus", "focus-visible:ring-offset-2",
+  "cursor-grab", "active:cursor-grabbing",
+)
+/** The glyph inside the bubble (decorative; the button carries the name). */
+export const BUBBLE_ICON_CLASS = cn("pointer-events-none", "flex", "size-6", "items-center", "justify-center")
 /** The floating panel's position and stacking (the SurfaceCard inside owns face, radius, clip and elevation: BOUNDARY-6). */
 export const PANEL_CLASS = cn("fixed", "z-50", "flex", "flex-col")
 /** Panel anatomy inside the joined card: head, scrolling messages, suggestions, ask form. */

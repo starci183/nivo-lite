@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useId, useRef, useState, useTransition, type CSSProperties, type FormEvent } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion } from "framer-motion"
-import { Button, ChatBubble, CloseButton, Form, IconButton, Input, List, ListItem, SurfaceCard, Text } from "@starci/grammar/common"
-import { nivoIconSource } from "@/ui"
+import { Button, ChatBubble, CloseButton, Form, Input, List, ListItem, SurfaceCard, Text } from "@starci/grammar/common"
+import { NivoIcon } from "@/ui/leaves/NivoIcon"
 import { useLocale, useT } from "@/i18n/client"
 import { guide as dict } from "@/i18n/dict/guide"
 import { askGuide } from "@/lib/guide/actions"
@@ -12,7 +12,7 @@ import { pageAt } from "@/lib/guide/sitemap"
 import type { GuideLink, GuideReply } from "@/lib/guide/types"
 import { useGuideSpotlight, queueSpotlight } from "./spotlight"
 import {
-  ASK_INPUT_CLASS, ASK_ROW_CLASS, VIEWPORT_CLASS, BUBBLE_CLASS, FOOT_CLASS, LINKS_CLASS, MESSAGES_CLASS, PANEL_BODY_CLASS, PANEL_CLASS,
+  ASK_INPUT_CLASS, ASK_ROW_CLASS, VIEWPORT_CLASS, BUBBLE_CLASS, BUBBLE_ICON_CLASS, FOOT_CLASS, LINKS_CLASS, MESSAGES_CLASS, PANEL_BODY_CLASS, PANEL_CLASS,
   PANEL_HEAD_CLASS, PANEL_HEAD_TEXT_CLASS, REPLY_CLASS, STEPS_CLASS, SUGGEST_CLASS,
 } from "./classNames"
 
@@ -29,6 +29,10 @@ const SIZE = 56
 const EDGE = 16
 const TOP_RESERVE = 88
 const BOTTOM_RESERVE = 96
+/** On chat pages the composer and its suggestion row own the bottom band, so the bubble stays above them. */
+const CHAT_BOTTOM_RESERVE = 232
+const isChatPage = (pathname: string): boolean => pathname.startsWith("/chat") || /^\/modules\/[^/]+\/chat/.test(pathname)
+const bottomReserve = (pathname: string): number => (isChatPage(pathname) ? CHAT_BOTTOM_RESERVE : BOTTOM_RESERVE)
 const POS_KEY = "nivo.guide.position"
 const MSG_KEY = "nivo.guide.messages"
 const PANEL_W = 384
@@ -80,15 +84,21 @@ export const GuideBubble = ({ isManager }: GuideBubbleProps) => {
   /** The viewport the bubble may be dragged within (a fixed, invisible layer; framer measures it). */
   const viewportRef = useRef<HTMLDivElement>(null)
   const sideRef = useRef<Side>("right")
+  /** The height the member chose (as a share of the window), kept while pages with a taller bottom band push the bubble up. */
   const topRatio = useRef(1)
+  const pathRef = useRef(pathname)
+  pathRef.current = pathname
   useGuideSpotlight(pathname)
 
-  /** Settle on a side edge at a clamped height, animated unless the reader prefers less motion. */
-  const settle = useCallback((to: Side, wantTop: number, instant = false) => {
+  /**
+   * Settle on a side edge at a clamped height, animated unless the reader prefers less motion. `remember` stores the place as the
+   * member's choice; a page change only re-clamps that choice (e.g. above the Office composer) without overwriting it.
+   */
+  const settle = useCallback((to: Side, wantTop: number, instant = false, remember = true) => {
     const w = window.innerWidth
     const h = window.innerHeight
     const nx = to === "right" ? w - SIZE - EDGE : contentLeft() + EDGE
-    const ny = clamp(wantTop, TOP_RESERVE, h - SIZE - BOTTOM_RESERVE)
+    const ny = clamp(wantTop, TOP_RESERVE, h - SIZE - bottomReserve(pathRef.current))
     const spring = { type: "spring" as const, stiffness: 420, damping: 34 }
     if (instant || reduce) {
       x.set(nx)
@@ -98,9 +108,10 @@ export const GuideBubble = ({ isManager }: GuideBubbleProps) => {
       void animate(y, ny, spring)
     }
     sideRef.current = to
-    topRatio.current = ny / h
     setSide(to)
     setTop(ny)
+    if (!remember) return
+    topRatio.current = ny / h
     writeJson("local", POS_KEY, { side: to, top: ny / h })
   }, [reduce, x, y])
   const settleRef = useRef(settle)
@@ -110,13 +121,19 @@ export const GuideBubble = ({ isManager }: GuideBubbleProps) => {
   useEffect(() => {
     const saved = readJson<{ side: Side; top: number }>("local", POS_KEY)
     const h = window.innerHeight
-    settleRef.current(saved?.side === "left" ? "left" : "right", saved ? saved.top * h : h, true)
+    topRatio.current = saved ? saved.top : 1
+    settleRef.current(saved?.side === "left" ? "left" : "right", topRatio.current * h, true, false)
     setMessages(readJson<ReadonlyArray<Msg>>("session", MSG_KEY) ?? [])
     setReady(true)
-    const onResize = () => settleRef.current(sideRef.current, topRatio.current * window.innerHeight, true)
+    const onResize = () => settleRef.current(sideRef.current, topRatio.current * window.innerHeight, true, false)
     window.addEventListener("resize", onResize)
     return () => window.removeEventListener("resize", onResize)
   }, [])
+
+  // Another page may reserve a taller bottom band (the Office composer): re-clamp the member's chosen height, animated.
+  useEffect(() => {
+    if (ready) settleRef.current(sideRef.current, topRatio.current * window.innerHeight, false, false)
+  }, [pathname, ready])
 
   useEffect(() => {
     if (ready) writeJson("session", MSG_KEY, messages.slice(-20))
@@ -179,8 +196,13 @@ export const GuideBubble = ({ isManager }: GuideBubbleProps) => {
   return (
     <>
       <div ref={viewportRef} className={VIEWPORT_CLASS} aria-hidden="true" />
-      {/* framer-motion owns the drag and the settle; the Grammar IconButton inside owns the action, its name and focus. */}
-      <motion.div
+      {/* framer-motion owns the drag and the settle. grammar gap: no floating accent action button, so the bubble is the app's own
+          accent-filled round button (brand red, 56px) with the Nivo glyph; its name, state and focus ring follow the IconButton contract. */}
+      <motion.button
+        type="button"
+        aria-label={open ? t("close") : t("open")}
+        aria-expanded={open}
+        aria-controls={panelId}
         className={BUBBLE_CLASS}
         style={{ x, y, visibility: ready ? "visible" : "hidden" }}
         drag
@@ -191,21 +213,16 @@ export const GuideBubble = ({ isManager }: GuideBubbleProps) => {
         onDragStart={() => { dragged.current = true }}
         // framer starts its own release animation right after onDragEnd; settle on the next frame so ours is not cancelled.
         onDragEnd={() => requestAnimationFrame(() => settle(x.get() + SIZE / 2 < window.innerWidth / 2 ? "left" : "right", y.get()))}
+        onClick={() => {
+          if (dragged.current) {
+            dragged.current = false
+            return
+          }
+          setOpen((o) => !o)
+        }}
       >
-        <IconButton
-          source={nivoIconSource(open ? "close" : "support", "leading")}
-          label={open ? t("close") : t("open")}
-          aria-expanded={open}
-          aria-controls={panelId}
-          onPress={() => {
-            if (dragged.current) {
-              dragged.current = false
-              return
-            }
-            setOpen((o) => !o)
-          }}
-        />
-      </motion.div>
+        <span className={BUBBLE_ICON_CLASS}><NivoIcon props={{ name: open ? "close" : "support" }} /></span>
+      </motion.button>
 
       <AnimatePresence>
         {open ? (
