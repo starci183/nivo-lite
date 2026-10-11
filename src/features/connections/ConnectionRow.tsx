@@ -63,7 +63,8 @@ export const ConnectionRow = ({ connection: c, agentNames, localOnly, onOpen, ow
   const isBank = MONEY.has(c.provider)
   const needsAgent = live && c.status !== "pending" && c.provider !== "webhook" && c.provider !== "google" && c.provider !== "smtp" && agentNames.length === 0
   const facts =
-    c.provider === "smtp" ? [c.meta.from_email, c.meta.host].filter(Boolean).join(" · ")
+    DATA.has(c.provider) ? [c.meta.account, c.meta.email, c.meta.host, c.meta.summary].filter(Boolean).join(" · ")
+    : c.provider === "smtp" ? [c.meta.from_email, c.meta.host].filter(Boolean).join(" · ")
     : c.provider === "google" ? (c.meta.email ?? "")
     : c.provider === "webhook" ? tj("factsRow", { host: c.meta.host ?? "", count: (c.meta.events ?? "").split(",").filter(Boolean).length })
     : c.provider === "telegram" ? ""
