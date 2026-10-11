@@ -9,6 +9,8 @@ import { getSession } from "../session";
 import { supabaseAdmin } from "../supabase/admin";
 import { supabaseServer } from "../supabase/server";
 import { chunkText } from "./chunk";
+import { linkError, LINK_ERROR, resolveLink } from "./drive";
+import { sniffTextKind, textFromBytes } from "./extract";
 import { embedText, embedTexts, toVector } from "./embed";
 import { withUsage } from "../usage";
 import { recall, recallBlock } from "../brain/recall";
@@ -91,17 +93,50 @@ const htmlToText = (html: string): string =>
     .replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, "\"").replace(/&#39;/g, "'")
     .replace(/[ \t]+/g, " ").replace(/\n\s*\n+/g, "\n\n").trim();
 
-/** The text of a web page (http/https, public hosts, 10 seconds, 1 MB). */
-export const fetchUrlText = async (raw: string): Promise<string> => {
-  let url: URL;
-  try { url = new URL(raw.trim()); } catch { throw new Error("Link không hợp lệ."); }
-  if (!/^https?:$/.test(url.protocol) || !isPublicHost(url.hostname)) throw new Error("Chỉ lấy được liên kết công khai (http/https).");
+const MAX_DOWNLOAD_BYTES = 12_000_000;
+const pageTitle = (html: string): string | null => {
+  const m = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
+  return m ? htmlToText(m[1] as string).slice(0, 160) || null : null;
+};
+
+/**
+ * The text of a link (http/https, public hosts, 10 seconds, 12 MB). Google Docs / Sheets / Slides / Drive share links are
+ * turned into their public export URL first (see drive.ts). Web pages, text, PDF and Word are read; anything else fails clearly.
+ */
+export const fetchUrlDoc = async (raw: string): Promise<{ text: string; title: string | null }> => {
+  const target = resolveLink(raw);
+  if (target.kind === "invalid") throw new Error("Link không hợp lệ.");
+  if (target.kind === "drive-folder") throw linkError(LINK_ERROR.folder, "Chưa đọc được thư mục Google Drive. Hãy chia sẻ từng tệp (hoặc một tài liệu công khai).");
+  const url = new URL(target.fetchUrl);
+  if (!isPublicHost(url.hostname)) throw new Error("Chỉ lấy được liên kết công khai (http/https).");
+  const google = target.kind !== "web";
+  const notPublic = () => linkError(LINK_ERROR.notPublic, "Hãy chia sẻ tệp ở chế độ 'Bất kỳ ai có đường liên kết'.");
   const res = await fetch(url, { signal: AbortSignal.timeout(10_000), headers: { "User-Agent": "NIVO-OS-Knowledge/1.0" }, redirect: "follow" });
+  const finalHost = new URL(res.url || url).hostname;
+  if (google && (res.status === 401 || res.status === 403 || res.status === 404 || finalHost === "accounts.google.com")) throw notPublic();
   if (!res.ok) throw new Error(`Không mở được liên kết (${res.status}).`);
   const type = res.headers.get("content-type") ?? "";
-  const body = (await res.text()).slice(0, 1_000_000);
-  return (type.includes("html") ? htmlToText(body) : body).slice(0, MAX_SOURCE_CHARS);
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  if (bytes.length > MAX_DOWNLOAD_BYTES) throw new Error("Tệp quá lớn để đọc.");
+  const kind = sniffTextKind(bytes, type);
+  let text: string;
+  let title: string | null = null;
+  if (kind) {
+    text = await textFromBytes(kind, bytes);
+  } else if (/html/i.test(type)) {
+    const html = new TextDecoder("utf-8").decode(bytes.subarray(0, 1_000_000));
+    // A Google export that answers with a page is the sign-in wall or the Drive virus-scan page: not readable as a public file.
+    if (google) throw notPublic();
+    title = pageTitle(html);
+    text = htmlToText(html);
+  } else {
+    throw linkError(LINK_ERROR.unsupported, `Chưa đọc được loại tệp này (${type.split(";")[0] || "không rõ"}). Hỗ trợ trang web, văn bản, PDF và Word.`);
+  }
+  return { text: text.slice(0, MAX_SOURCE_CHARS), title };
 };
+
+/** The text of a link; see {@link fetchUrlDoc}. */
+export const fetchUrlText = async (raw: string): Promise<string> => (await fetchUrlDoc(raw)).text;
 
 /** Add a source and index it (chunk, embed, store). The row exists even when indexing fails (status failed + reason). */
 export const addSource = async (input: AddSourceInput): Promise<KnowledgeSource> => {
@@ -112,10 +147,14 @@ export const addSource = async (input: AddSourceInput): Promise<KnowledgeSource>
 /** The same with an explicit client and workspace (the public API, which has no session). `userId` null = added by an API key. */
 export const addSourceFor = async (db: Db, ws: string, userId: string | null, input: AddSourceInput): Promise<KnowledgeSource> => {
   if (!SOURCE_KINDS.includes(input.kind)) throw new Error("Unknown kind");
-  const title = input.title.trim().slice(0, 160);
+  let title = input.title.trim().slice(0, 160);
   let content = input.content.trim();
-  if (!title) throw new Error("Cần đặt tên cho nguồn tri thức.");
-  if (input.kind === "url") content = await fetchUrlText(input.content);
+  if (!title && input.kind !== "url") throw new Error("Cần đặt tên cho nguồn tri thức.");
+  if (input.kind === "url") {
+    const doc = await fetchUrlDoc(input.content);
+    content = doc.text;
+    if (!title) title = (doc.title ?? input.content.trim().replace(/^https?:\/\//, "")).slice(0, 160);
+  }
   if (!content) throw new Error("Nội dung đang trống.");
   if (content.length > MAX_SOURCE_CHARS) throw new Error(`Nội dung dài quá ${MAX_SOURCE_CHARS.toLocaleString("vi-VN")} ký tự. Hãy tách thành nhiều nguồn.`);
   const { data, error } = await db.from("knowledge_sources").insert({
