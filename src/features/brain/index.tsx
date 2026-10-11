@@ -64,7 +64,7 @@ export const BrainView = ({ facts, lessons, lenses, canWrite, business }: BrainV
           />
         </div>
 
-        <SurfaceCard treatment="ink" ariaLabel={t("statsLabel")}>
+        <SurfaceCard ariaLabel={t("statsLabel")}>
           <DescriptionList
             layout="stat-strip"
             isDivided
