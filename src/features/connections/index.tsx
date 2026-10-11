@@ -1,24 +1,24 @@
-import { PageContainer, SectionHeader, TextAction } from "@starci/grammar/common"
+import Link from "next/link"
+import { PageContainer, SectionHeader } from "@starci/grammar/common"
 import { connections as dict } from "@/i18n/dict/connections"
 import { getT } from "@/i18n/server"
 import { listConnections, publicSiteUrl } from "@/lib/channels"
+import { PROVIDER_ORDER } from "@/lib/connection-providers"
 import { getCurrentMember, isManagerRole } from "@/lib/members"
 import { getSession } from "@/lib/session"
 import { supabaseServer } from "@/lib/supabase/server"
 import { PAGE_CLASS } from "./classNames"
-import { ConnectionsBoard } from "./ConnectionsBoard"
+import { ProviderSection } from "./ProviderSection"
 
-/** The Connections page body (owner | manager): the grouped connections board. Staff see a friendly 403. */
+/** The Connections page body (owner | manager): every provider with its connections and the add form. Staff see a friendly 403. */
 export const ConnectionsPage = async ({ searchParams }: { readonly searchParams?: Promise<Record<string, string | string[] | undefined>> } = {}) => {
   const t = await getT(dict)
   const me = await getCurrentMember()
   if (!isManagerRole(me.role)) {
     return (
       <PageContainer measure="product">
-        <div className={PAGE_CLASS}>
-          <SectionHeader level={1} title={t("forbiddenTitle")} description={t("forbiddenBody")} />
-          <TextAction href="/chat">{t("forbiddenBack")}</TextAction>
-        </div>
+        <SectionHeader level={1} eyebrow={t("eyebrow")} title={t("forbiddenTitle")} description={t("forbiddenBody")} />
+        <Link href="/chat" className="text-sm underline">{t("forbiddenBack")}</Link>
       </PageContainer>
     )
   }
@@ -37,11 +37,11 @@ export const ConnectionsPage = async ({ searchParams }: { readonly searchParams?
   return (
     <PageContainer measure="product">
       <div className={PAGE_CLASS}>
-        <ConnectionsBoard
-          items={all} agentNames={agentNames} agents={agents} localOnly={localOnly} ownerEmail={ownerEmail}
-          {...(zaloId ? { zaloResumeId: zaloId } : {})} {...(one("zalo") ? { zaloReturned: one("zalo") } : {})}
-        />
-        <TextAction href="/automations">{t("automationsLink")}</TextAction>
+        <SectionHeader level={1} eyebrow={t("eyebrow")} title={t("title")} description={t("description")} />
+        {PROVIDER_ORDER.map((p) => (
+          <ProviderSection key={p} provider={p} items={all.filter((c) => c.provider === p)} agentNames={agentNames} agents={agents} localOnly={localOnly} resumeId={p === "zalo_oa" ? zaloId : undefined} returned={p === "zalo_oa" ? one("zalo") : undefined} ownerEmail={ownerEmail} />
+        ))}
+        <Link href="/automations" className="text-sm underline">{t("automationsLink")}</Link>
       </div>
     </PageContainer>
   )

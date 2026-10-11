@@ -202,25 +202,6 @@ export const PROVIDERS: Readonly<Record<Provider, ProviderDef>> = {
 /** Order the providers appear on the Connections page. */
 export const PROVIDER_ORDER: ReadonlyArray<Provider> = ["sepay", "payos", "casso", "telegram", "zalo_oa", "google", "smtp"];
 
-/** The Connections page groups providers by what they bring in; order inside a group is the display order. */
-export type ProviderGroup = "money" | "chat" | "tools";
-export const PROVIDER_GROUPS: ReadonlyArray<{ readonly id: ProviderGroup; readonly providers: ReadonlyArray<Provider> }> = [
-  { id: "money", providers: ["sepay", "payos", "casso"] },
-  { id: "chat", providers: ["telegram", "zalo_oa"] },
-  { id: "tools", providers: ["google", "smtp"] },
-];
-
-/** The provider's own mark (public/logos/providers). Outgoing email has none: it is the shop's own mailbox. */
-export const PROVIDER_LOGO: Readonly<Partial<Record<Provider, string>>> = {
-  sepay: "/logos/providers/sepay.png",
-  payos: "/logos/providers/payos.svg",
-  casso: "/logos/providers/casso.svg",
-  telegram: "/logos/providers/telegram.svg",
-  zalo_oa: "/logos/providers/zalo.svg",
-  google: "/logos/providers/googlesheets.svg",
-  webhook: "/logos/providers/n8n.svg",
-};
-
 /** Replace {name} {bank} {account} in a guide or help string. */
 export const fill = (s: string, ctx: Pick<GuideContext, "bank" | "account" | "name">): string =>
   s.replace(/\{(bank|account|name)\}/g, (_, k: "bank" | "account" | "name") => ctx[k]);

@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { PageContainer, SectionHeader } from "@starci/grammar/common"
-import { ConnectionsBoard } from "@/features/connections/ConnectionsBoard"
+import { ProviderSection } from "@/features/connections/ProviderSection"
 import { developers as dict } from "@/i18n/dict/developers"
 import { getT } from "@/i18n/server"
 import { listApiKeys } from "@/lib/api-keys-actions"
@@ -31,7 +31,7 @@ export const DevelopersPage = async () => {
 
         <div className={STACK_CLASS}>
           <SectionHeader level={2} title={t("eventsTitle")} description={t("eventsBody")} />
-          <ConnectionsBoard items={hooks} agentNames={{}} agents={[]} localOnly={false} ownerEmail="" groups={[{ id: "tools", providers: ["webhook"] }]} isEmbedded />
+          <ProviderSection provider="webhook" items={hooks} agentNames={{}} agents={[]} localOnly={false} />
         </div>
 
         <ApiKeysSection items={keys.ok ? keys.data : []} loadError={keys.ok ? null : keys.error} />
