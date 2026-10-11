@@ -21,3 +21,6 @@ export const BADGES_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "justif
 /** Selling points of one module (GAP-1: a short list of facts under the description). */
 export const CARD_POINTS_CLASS_NAME = cn("flex", "flex-col", "gap-1");
 export const CARD_FOOT_CLASS_NAME = cn("mt-auto", "flex", "items-center", "justify-between", "gap-2", "pt-2");
+
+/** Breadcrumb trail above the page heading: one heading block (GAP-2). */
+export const HEAD_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-2");

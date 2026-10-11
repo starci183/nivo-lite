@@ -2,22 +2,29 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Alert, Badge, Button, Heading, Image, List, ListItem, MediaFrame, PageContainer, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common";
+import { Alert, Badge, Breadcrumbs, Button, Heading, Image, List, ListItem, MediaFrame, PageContainer, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common";
 import { useLocale, useT } from "@/i18n/client";
 import { modulesCore } from "@/i18n/dict/modulesCore";
+import { shell } from "@/i18n/dict/shell";
 import { installModule } from "@/lib/module-actions";
 import { modulesByCategory, pick, pickList } from "@/lib/module-registry";
 import type { Installation, ModuleKey } from "@/lib/modules-shared";
 import { STATUS_TONE, statusOf } from "./meta";
 import {
-  BADGES_CLASS_NAME, CARD_CLASS_NAME, CARD_FOOT_CLASS_NAME, CARD_HEAD_CLASS_NAME, CARD_POINTS_CLASS_NAME, CATALOG_GRID_CLASS_NAME, CATEGORY_CLASS_NAME, PAGE_CLASS_NAME,
+  BADGES_CLASS_NAME, CARD_CLASS_NAME, CARD_FOOT_CLASS_NAME, CARD_HEAD_CLASS_NAME, CARD_POINTS_CLASS_NAME, CATALOG_GRID_CLASS_NAME, CATEGORY_CLASS_NAME, PAGE_CLASS_NAME, HEAD_CLASS_NAME,
 } from "./classNames";
 
-type ModuleCatalogProps = { readonly installations: ReadonlyArray<Installation>; readonly canInstall: boolean };
+type ModuleCatalogProps = {
+  readonly installations: ReadonlyArray<Installation>;
+  readonly canInstall: boolean;
+  /** STATE-8: the same page while the installations load - the registry's cards stay real, each status and action is a skeleton. */
+  readonly isLoading?: boolean;
+};
 
 /** /m: every module of the registry as a card, grouped by category. Install creates the module, its agent and the first setup session, then opens it. */
-export const ModuleCatalog = ({ installations, canInstall }: ModuleCatalogProps) => {
+export const ModuleCatalog = ({ installations, canInstall, isLoading = false }: ModuleCatalogProps) => {
   const t = useT(modulesCore);
+  const ts = useT(shell);
   const locale = useLocale();
   const router = useRouter();
   const [busy, setBusy] = useState<ModuleKey | null>(null);
@@ -37,7 +44,10 @@ export const ModuleCatalog = ({ installations, canInstall }: ModuleCatalogProps)
   return (
     <PageContainer measure="product">
       <div className={PAGE_CLASS_NAME}>
-        <SectionHeader level={1} eyebrow={t("eyebrow")} title={t("catalogTitle")} description={t("catalogDescription")} />
+        <div className={HEAD_CLASS_NAME}>
+          <Breadcrumbs label={ts("crumbLabel")} items={[{ id: "home", label: ts("crumbHome"), href: "/dashboard" }, { id: "modules", label: t("catalogTitle") }]} />
+          <SectionHeader level={1} eyebrow={t("eyebrow")} title={t("catalogTitle")} description={t("catalogDescription")} />
+        </div>
         {error !== undefined ? <Alert title={t("installFailed")} description={error} tone="negative" /> : null}
         {modulesByCategory().map(({ category, modules }) => (
           <section key={category.key} className={CATEGORY_CLASS_NAME} aria-label={pick(category.label, locale)}>
@@ -57,7 +67,7 @@ export const ModuleCatalog = ({ installations, canInstall }: ModuleCatalogProps)
                         <Heading level={3}>{pick(def.name, locale)}</Heading>
                         <span className={BADGES_CLASS_NAME}>
                           {def.status === "early" ? <Badge tone="accent">{t("earlyBadge")}</Badge> : null}
-                          <Badge isDot tone={STATUS_TONE[status]}>{t(`status_${status}`)}</Badge>
+                          <Badge isDot isSkeleton={isLoading} tone={STATUS_TONE[status]}>{t(`status_${status}`)}</Badge>
                         </span>
                       </div>
                       <Text size="sm" tone="muted">{pick(def.description, locale)}</Text>
@@ -68,7 +78,9 @@ export const ModuleCatalog = ({ installations, canInstall }: ModuleCatalogProps)
                       </List>
                       {def.status === "early" ? <Text size="xs" tone="muted">{t("earlyHint")}</Text> : null}
                       <div className={CARD_FOOT_CLASS_NAME}>
-                        {installation !== null ? (
+                        {isLoading ? (
+                          <Button variant="secondary" isSkeleton>{t("openModule")}</Button>
+                        ) : installation !== null ? (
                           <Button variant="secondary" href={`/m/${key}`}>{t("openModule")}</Button>
                         ) : canInstall ? (
                           <Button variant="primary" isPending={busy === key} isDisabled={busy !== null} onPress={() => onInstall(key)}>{t("install")}</Button>

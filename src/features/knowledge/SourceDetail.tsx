@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Alert, AlertDialog, Badge, Breadcrumbs, Button, List, ListItem, PageContainer, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common"
+import { Alert, AlertDialog, Badge, Breadcrumbs, Button, Heading, List, ListItem, PageContainer, SectionHeader, Skeleton, SurfaceCard, Text } from "@starci/grammar/common"
 import { useLocale, useT } from "@/i18n/client"
 import { intlLocale, TIME_ZONE } from "@/i18n/core"
 import { knowledge } from "@/i18n/dict/knowledge"
@@ -11,10 +11,17 @@ import type { KnowledgeChunk, KnowledgeSource } from "@/lib/knowledge/shared"
 import { ITEM_CLASS, LIST_CLASS, PAGE_CLASS, PASSAGE_CLASS, HEAD_CLASS, PASSAGE_TEXT_CLASS, ROW_WRAP_CLASS, STACK_CLASS } from "./classNames"
 import { knowledgeTrail } from "./trail"
 
-type SourceDetailProps = { readonly source: KnowledgeSource; readonly chunks: ReadonlyArray<KnowledgeChunk>; readonly canWrite: boolean }
+type SourceDetailProps = {
+  /** Null while the source loads (isLoading). */
+  readonly source: KnowledgeSource | null
+  readonly chunks: ReadonlyArray<KnowledgeChunk>
+  readonly canWrite: boolean
+  /** STATE-8: the same page while its data loads - trail, card labels stay; the title, facts and passages are skeletons. */
+  readonly isLoading?: boolean
+}
 
 /** One source: metadata, its passages as agents retrieve them, original content, reindex / visibility / delete. */
-export const SourceDetail = ({ source, chunks, canWrite }: SourceDetailProps) => {
+export const SourceDetail = ({ source, chunks, canWrite, isLoading = false }: SourceDetailProps) => {
   const t = useT(knowledge)
   const locale = useLocale()
   const router = useRouter()
@@ -32,6 +39,29 @@ export const SourceDetail = ({ source, chunks, canWrite }: SourceDetailProps) =>
       if (!r.ok) { setError(r.error ?? t("detailFailed")); return }
       after ? after() : router.refresh()
     })
+  }
+  if (source === null || isLoading) {
+    return (
+      <PageContainer measure="product">
+        <div className={PAGE_CLASS} aria-busy="true">
+          <div className={HEAD_CLASS}>
+            <Breadcrumbs label={t("crumbLabel")} items={knowledgeTrail({ brain: t("crumbBrain"), docs: t("title") })} />
+            <Heading level={1} isSkeleton>{t("title")}</Heading>
+            <Text size="sm" tone="muted" isSkeleton>{t("detailMeta", { when: "" })}</Text>
+          </div>
+          <div className={ROW_WRAP_CLASS}>
+            <Badge isSkeleton tone="neutral">{t("status_ready")}</Badge>
+            <Badge isSkeleton tone="neutral">{t("visInternalLong")}</Badge>
+          </div>
+          <SurfaceCard label={t("passagesTitle")} headingLevel={2}>
+            <Skeleton shape="text" lines={4} />
+          </SurfaceCard>
+          <SurfaceCard label={t("contentTitle")} headingLevel={2}>
+            <Skeleton shape="text" lines={6} />
+          </SurfaceCard>
+        </div>
+      </PageContainer>
+    )
   }
   const when = new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "medium", timeStyle: "short", timeZone: TIME_ZONE }).format(new Date(source.createdAt))
   const isPublic = source.visibility === "public"

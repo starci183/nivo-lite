@@ -41,6 +41,8 @@ export type ConnectionsBoardProps = {
   readonly isEmbedded?: boolean
   /** The workspace owner: adds, changes and removes connections and decides which agents use them. Others read. */
   readonly canManage?: boolean
+  /** STATE-8: the same board while its data loads - heading, tab labels and the library's catalog stay; counts, statuses and the connection lists are skeletons. */
+  readonly isLoading?: boolean
 }
 
 type Open = { readonly provider: Provider; readonly resumeId?: string } | null
@@ -53,7 +55,7 @@ const RESUMABLE: ReadonlySet<string> = new Set(["money", "zalo", "data"])
  * providers grouped by what they bring in: connected providers as their own list, the rest in one compact "Not connected" list per
  * group. Every wizard opens in one Drawer, so the lists stay where they are.
  */
-export const ConnectionsBoard = ({ items, agentNames, agents, localOnly, zaloResumeId, zaloReturned, ownerEmail, groups = PROVIDER_GROUPS, isEmbedded = false, canManage = false }: ConnectionsBoardProps) => {
+export const ConnectionsBoard = ({ items, agentNames, agents, localOnly, zaloResumeId, zaloReturned, ownerEmail, groups = PROVIDER_GROUPS, isEmbedded = false, canManage = false, isLoading = false }: ConnectionsBoardProps) => {
   const t = useT(dict)
   const tw = useT(connectionWizard)
   const locale = useLocale()
@@ -68,7 +70,7 @@ export const ConnectionsBoard = ({ items, agentNames, agents, localOnly, zaloRes
   )
 
   const [view, setView] = useState<"library" | "connected">(
-    params.get("tab") === "library" || (params.get("tab") !== "connected" && !items.some((c) => c.status !== "disconnected")) ? "library" : "connected",
+    params.get("tab") === "library" || (params.get("tab") !== "connected" && !isLoading && !items.some((c) => c.status !== "disconnected")) ? "library" : "connected",
   )
   const [detail, setDetail] = useState<string | null>(null)
   const [wanted, setWanted] = useState<ReadonlySet<string>>(new Set())
@@ -103,7 +105,7 @@ export const ConnectionsBoard = ({ items, agentNames, agents, localOnly, zaloRes
           <Breadcrumbs label={t("crumbLabel")} items={[{ id: "home", label: t("crumbHome"), href: "/dashboard" }, { id: "connections", label: t("title") }]} />
           <SectionHeader
             level={1} title={t("title")} description={t("description")}
-            meta={attention.length ? t("summary", { live: live.length, attention: attention.length }) : t("summaryCalm", { live: live.length })}
+            {...(isLoading ? {} : { meta: attention.length ? t("summary", { live: live.length, attention: attention.length }) : t("summaryCalm", { live: live.length }) })}
           />
         </div>
       )}
@@ -117,20 +119,22 @@ export const ConnectionsBoard = ({ items, agentNames, agents, localOnly, zaloRes
         />
       ) : null}
 
-      {canManage || isEmbedded ? null : <Alert tone="informative" title={t("ownerOnly")} />}
+      {canManage || isEmbedded || isLoading ? null : <Alert tone="informative" title={t("ownerOnly")} />}
 
       {isEmbedded ? null : (
         <Tabs
           label={t("title")}
           selectedKey={view}
           onSelect={(k) => setView(k === "library" ? "library" : "connected")}
-          items={[{ id: "connected", label: `${t("tabConnected")} · ${live.length}` }, { id: "library", label: t("tabLibrary") }]}
+          items={[{ id: "connected", label: isLoading ? t("tabConnected") : `${t("tabConnected")} · ${live.length}` }, { id: "library", label: t("tabLibrary") }]}
         />
       )}
 
-      {!isEmbedded && view === "library" ? <ConnectorLibrary items={items} onOpen={(id) => { setDetailNote(null); setDetail(id) }} /> : null}
+      {!isEmbedded && view === "library" ? <ConnectorLibrary isLoading={isLoading} items={items} onOpen={(id) => { setDetailNote(null); setDetail(id) }} /> : null}
 
-      {!isEmbedded && view === "connected" && live.length === 0 ? (
+      {!isEmbedded && view === "connected" && isLoading ? <SurfaceListCard label={t("tabConnected")} headingLevel={2} isLoading /> : null}
+
+      {!isEmbedded && view === "connected" && !isLoading && live.length === 0 ? (
         <EmptyNotice message={t("connectedEmpty")} description={t("connectedEmptyHint")} />
       ) : null}
 

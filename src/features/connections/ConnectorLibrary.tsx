@@ -26,6 +26,8 @@ export type ConnectorLibraryProps = {
   readonly items: ReadonlyArray<Connection>
   /** Open a connector's detail (its connections, what it brings, add or "want it"). */
   readonly onOpen: (entryId: string) => void
+  /** STATE-8: the catalog is known, the workspace's connection counts are not - each card's count badge and action are skeletons. */
+  readonly isLoading?: boolean
 }
 
 type Sort = "popular" | "name"
@@ -36,7 +38,7 @@ const AUDIENCES: ReadonlyArray<ConnectorAudience> = ["chatbot", "sales", "accoun
  * agent it serves, sorted by popularity or name. A card shows the connector's status and how many connections the workspace
  * has of it; pressing it opens the detail. Built for a catalog of a hundred connectors: nothing here names one.
  */
-export const ConnectorLibrary = ({ items, onOpen }: ConnectorLibraryProps) => {
+export const ConnectorLibrary = ({ items, onOpen, isLoading = false }: ConnectorLibraryProps) => {
   const t = useT(dict)
   const locale = useLocale()
   const [text, setText] = useState("")
@@ -108,11 +110,12 @@ export const ConnectorLibrary = ({ items, onOpen }: ConnectorLibraryProps) => {
                     </div>
                     <Text size="sm" tone="muted" overflow="clamp-2">{e.blurb[locale]}</Text>
                     <div className={LIBRARY_CARD_FOOT_CLASS}>
-                      {n > 0 ? <Badge tone="success" isDot>{t("libConnected", { count: n })}</Badge>
+                      {isLoading ? <Badge tone="neutral" isSkeleton>{t("statusSoon")}</Badge>
+                        : n > 0 ? <Badge tone="success" isDot>{t("libConnected", { count: n })}</Badge>
                         : e.status === "soon" ? <Badge tone="neutral">{t("statusSoon")}</Badge>
                         : e.status === "early" ? <Badge tone="neutral">{t("statusEarly")}</Badge>
                         : null}
-                      <Button variant="outline" size="sm" onPress={() => onOpen(e.id)}>
+                      <Button variant="outline" size="sm" isSkeleton={isLoading} onPress={() => onOpen(e.id)}>
                         {e.status === "soon" ? t("libDetails") : n > 0 ? t("libManage") : t("connect")}
                       </Button>
                     </div>

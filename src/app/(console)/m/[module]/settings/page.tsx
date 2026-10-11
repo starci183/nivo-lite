@@ -22,7 +22,7 @@ const SettingsPage = async ({ params }: SettingsPageProps) => {
   const agentId = installation.agentId;
   const connectionOptions = options.map((c) => ({ id: c.id, status: c.status, access: agentId ? (c.grants.find((g) => g.agentId === agentId)?.access ?? null) : null, label: c.provider === "telegram" && c.meta.bot_username ? `${c.name} (@${c.meta.bot_username})` : (c.provider === "sepay" || c.provider === "casso") && c.meta.account_masked ? `${c.name} (${c.meta.account_masked ?? ""})` : c.name }));
   const selectedConnections = installation.agentId ? all.filter((c) => c.agentIds.includes(installation.agentId as string)).map((c) => c.id) : [];
-  return <SettingsScreen installation={installation} canEdit={isManagerRole(session.member.role)} canGrant={session.member.role === "owner"} connectionOptions={connectionOptions} selectedConnections={selectedConnections} />;
+  return <SettingsScreen moduleKey={module} installation={installation} canEdit={isManagerRole(session.member.role)} canGrant={session.member.role === "owner"} connectionOptions={connectionOptions} selectedConnections={selectedConnections} />;
 };
 
 export default SettingsPage;

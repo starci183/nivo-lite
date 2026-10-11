@@ -25,12 +25,14 @@ type KnowledgeViewProps = {
   readonly canWrite: boolean
   readonly initialModule: ModuleKey | "all"
   readonly askModule: ModuleKey
+  /** STATE-8: the same page while its data loads - labels stay, the sources and suggestion rows are skeletons. */
+  readonly isLoading?: boolean
 }
 
 const STATUS_TONE: Record<SourceStatus, "neutral" | "warning" | "success" | "danger"> = { pending: "neutral", indexing: "warning", ready: "success", failed: "danger" }
 
 /** /knowledge: sources of the workspace (shared by every agent), suggestions, and "Thử hỏi". */
-export const KnowledgeView = ({ sources, topics, suggestions, skipped, canWrite, initialModule, askModule }: KnowledgeViewProps) => {
+export const KnowledgeView = ({ sources, topics, suggestions, skipped, canWrite, initialModule, askModule, isLoading = false }: KnowledgeViewProps) => {
   const t = useT(knowledge)
   const locale = useLocale()
   const router = useRouter()
@@ -54,10 +56,10 @@ export const KnowledgeView = ({ sources, topics, suggestions, skipped, canWrite,
             title={t("title")}
             description={t("description")}
             meta={<TextAction href="/knowledge/nivo" size="sm" appearance="inline">{t("nivoLink")}</TextAction>}
-            action={canWrite ? <Button variant="primary" onPress={() => openAdd(null)}>{t("addButton")}</Button> : undefined}
+            action={canWrite && !isLoading ? <Button variant="primary" onPress={() => openAdd(null)}>{t("addButton")}</Button> : undefined}
           />
         </div>
-        {!canWrite ? <Text size="sm" tone="muted">{t("readOnlyNote")}</Text> : null}
+        {!canWrite && !isLoading ? <Text size="sm" tone="muted">{t("readOnlyNote")}</Text> : null}
 
         {canWrite ? (
           <AddDocumentsDrawer isOpen={adding} topics={topics} preset={preset} onClose={() => setAdding(false)} onAdded={() => router.refresh()} />
@@ -77,7 +79,8 @@ export const KnowledgeView = ({ sources, topics, suggestions, skipped, canWrite,
               <SurfaceListCard
                 label={t("listTitle")}
                 headingLevel={2}
-                fact={t("listCount", { count: shown.length })}
+                isLoading={isLoading}
+                {...(isLoading ? {} : { fact: t("listCount", { count: shown.length }) })}
                 empty={<EmptyNotice message={t("emptyTitle")} description={t("emptyBody")} />}
               >
                 {shown.length === 0 ? null : shown.map((s) => (
@@ -101,7 +104,8 @@ export const KnowledgeView = ({ sources, topics, suggestions, skipped, canWrite,
           rail={
             <div className={SIDE_CLASS}>
               <AskPanel initialModule={askModule} />
-              {canWrite ? (
+              {isLoading ? <SurfaceListCard label={t("suggestTitle")} headingLevel={2} isLoading /> : null}
+              {canWrite && !isLoading ? (
                 <SurfaceCard label={t("suggestTitle")} headingLevel={2}>
                   <div className={STACK_CLASS}>
                     <Text size="sm" tone="muted">{t("suggestHint")}</Text>
