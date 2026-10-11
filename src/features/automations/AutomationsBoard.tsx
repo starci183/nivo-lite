@@ -8,6 +8,8 @@ import { automations as dict } from "@/i18n/dict/automations"
 import { answerAutoSend, dismissAutomation, saveAutomation, toggleAutomation } from "@/lib/automation-actions"
 import type { AutomationCardView, ConfigValue, ModuleScope } from "@/lib/automation-shared"
 import { startGoogleConnect } from "@/lib/google-actions"
+import { setAutomationGoogleAccount } from "@/lib/automation-actions"
+import { GoogleAccountPicker } from "./GoogleAccountPicker"
 import { AutomationCard } from "./AutomationCard"
 import { AutomationDetail } from "./AutomationDetail"
 import { AutomationsFilters } from "./AutomationsFilters"
@@ -98,7 +100,15 @@ export const AutomationsBoard = ({ initial, layout, moduleKey, focus }: Automati
   ) : (
     <div className={layout === "module" ? LIST_CLASS : current ? GRID_CLASS : GRID_WIDE_CLASS}>
       {shown.map((c) => (
-        <AutomationCard key={c.key} card={c} selected={c.key === selected} busy={busyKey === c.key} onSelect={() => select(c.key)} onToggle={(next) => void toggle(c, next)} isNested={layout === "module"} />
+        <AutomationCard
+          key={c.key} card={c} selected={c.key === selected} busy={busyKey === c.key} onSelect={() => select(c.key)} onToggle={(next) => void toggle(c, next)} isNested={layout === "module"}
+          {...(c.def.requires.connections.includes("google") ? {
+            extra: <GoogleAccountPicker
+              current={typeof c.config.googleConnectionId === "string" ? c.config.googleConnectionId : null} isBusy={busyKey === c.key}
+              onPick={(id) => void apply(c.key, () => setAutomationGoogleAccount(c.key, id))}
+            />,
+          } : {})}
+        />
       ))}
     </div>
   )

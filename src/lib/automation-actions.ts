@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { provisionOrdersSheet } from "./google";
+import { provisionOrdersSheet, listGoogleAccounts } from "./google";
 import { proposeBody } from "./automation-ai";
 import { loadAutomations, loadContextFor, loadRuns, type PipelineRow } from "./automation-queries";
 import { isTemplateKey, resolveConfig, type AutomationCardView, type AutomationRunView, type PipelineConfig, type ShopContext, type TemplateDef, type TemplateKey } from "./automation-shared";
@@ -101,6 +101,33 @@ export const toggleAutomation = async (key: TemplateKey, enabled: boolean): Prom
     }
     await upsertPipeline(ws, member.userId, def, patch);
     await evidence(ws, member.displayName, enabled ? "automation.enabled" : "automation.disabled", `${enabled ? "Bật" : "Tắt"} tự động hoá: ${def.name.vi}`);
+    revalidatePath("/automations");
+    return cardOf(ws, key);
+  });
+
+/** The workspace's Google accounts (owner | manager), for the account picker of a Sheets automation. */
+export const listAutomationGoogleAccounts = async (): Promise<Outcome<ReadonlyArray<{ readonly id: string; readonly email: string; readonly status: string }>>> =>
+  run(async () => {
+    const member = await requireManager();
+    return listGoogleAccounts(member.workspaceId);
+  });
+
+/**
+ * Which Google account a Sheets automation writes with (a workspace may connect several). Changing the account forgets the
+ * spreadsheet made with the previous one, so the next switch-on creates it in the chosen account.
+ */
+export const setAutomationGoogleAccount = async (key: TemplateKey, connectionId: string): Promise<Outcome<AutomationCardView>> =>
+  run(async () => {
+    const member = await requireManager();
+    const def = definition(key);
+    if (!def.requires.connections.includes("google")) throw new Error("Tự động hoá này không dùng Google.");
+    const ws = member.workspaceId;
+    if (!(await listGoogleAccounts(ws)).some((a) => a.id === connectionId)) throw new Error("Không tìm thấy tài khoản Google này.");
+    const existing = await currentPipeline(ws, key);
+    const before = resolveConfig(def, existing?.config);
+    const changed = before.googleConnectionId !== connectionId;
+    const config: PipelineConfig = changed ? { ...before, googleConnectionId: connectionId, spreadsheetId: "", sheetUrl: "" } : before;
+    await upsertPipeline(ws, member.userId, def, { config });
     revalidatePath("/automations");
     return cardOf(ws, key);
   });

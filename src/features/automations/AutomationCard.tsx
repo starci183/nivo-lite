@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { Badge, Icon, IconTile, Link, Switch, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
 import { useLocale, useT } from "@/i18n/client"
 import { automations as dict } from "@/i18n/dict/automations"
@@ -17,6 +19,8 @@ export type AutomationCardProps = {
   readonly onToggle: (next: boolean) => void
   /** The card sits inside another bounded surface (the module Settings card): outline instead of elevation (BOUNDARY-5 case-1). */
   readonly isNested?: boolean
+  /** Extra controls under the card text (the Google account picker of a Sheets automation). */
+  readonly extra?: React.ReactNode
 }
 
 const TONE: Record<CardStatus, "success" | "neutral" | "warning" | "danger"> = {
@@ -30,7 +34,7 @@ const LABEL: Record<CardStatus, "statusRunning" | "statusOff" | "statusSoon" | "
  * One automation as one Grammar SurfaceCard: neutral icon tile, name, status, what it is, what starts it, and its switch.
  * "Xem chi tiết" selects it (the switch is a separate, disjoint control, STATE-5 case-4); the selected card carries the one accent sweep.
  */
-export const AutomationCard = ({ card, selected, busy, onSelect, onToggle, isNested = false }: AutomationCardProps) => {
+export const AutomationCard = ({ card, selected, busy, onSelect, onToggle, isNested = false, extra }: AutomationCardProps) => {
   const t = useT(dict)
   const locale = useLocale()
   const def = card.def
@@ -64,6 +68,7 @@ export const AutomationCard = ({ card, selected, busy, onSelect, onToggle, isNes
         <Text size="xs" tone="muted" startContent={<Icon source={nivoIconSource("trigger", "chip")} usage="chip" />}>{loc(def.trigger.line, locale)}</Text>
         {note}
         {card.sheetUrl ? <Text size="xs"><Link href={card.sheetUrl} kind="external">{t("openSheet")}</Link></Text> : null}
+        {extra}
         <div className={CARD_FOOT_CLASS}>
           <TextAction appearance="disclosure" size="sm" isCurrent={selected} onPress={onSelect}>{t("selectHint")}</TextAction>
           <Switch

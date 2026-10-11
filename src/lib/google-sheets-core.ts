@@ -92,7 +92,7 @@ export const buildAuthUrl = (state: string, env: Env = process.env): string | nu
   u.searchParams.set("response_type", "code");
   u.searchParams.set("scope", GOOGLE_SCOPE);
   u.searchParams.set("access_type", "offline");
-  u.searchParams.set("prompt", "consent");
+  u.searchParams.set("prompt", "select_account consent"); // a workspace may connect several accounts: always let the owner pick one
   u.searchParams.set("include_granted_scopes", "true");
   u.searchParams.set("state", state);
   return u.toString();

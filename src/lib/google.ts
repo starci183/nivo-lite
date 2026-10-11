@@ -28,9 +28,24 @@ const now = () => new Date().toISOString();
 export const googleStateKey = (): Buffer => stateKey(process.env.CHANNEL_TOKEN_KEY);
 export const googleConfigured = (): boolean => googleClient() !== null;
 
-const loadRow = async (workspaceId: string): Promise<Row | null> => {
-  const { data } = await supabaseAdmin().from("connections").select("id, status, last_error, public_meta, name").eq("workspace_id", workspaceId).eq("provider", "google").neq("status", "disconnected").order("created_at").limit(1).maybeSingle();
+/**
+ * A workspace may connect several Google accounts. `connectionId` picks one (an automation stores its own in its config as
+ * `googleConnectionId`); without it, the oldest live one (the behaviour before several accounts were possible).
+ */
+const loadRow = async (workspaceId: string, connectionId?: string | null): Promise<Row | null> => {
+  let q = supabaseAdmin().from("connections").select("id, status, last_error, public_meta, name").eq("workspace_id", workspaceId).eq("provider", "google").neq("status", "disconnected");
+  if (connectionId) q = q.eq("id", connectionId);
+  const { data } = await q.order("created_at").limit(1).maybeSingle();
   return (data as Row | null) ?? null;
+};
+
+/** The Google account an automation config names (googleConnectionId), if any. */
+const connectionOf = (config: PipelineConfig): string | null => (typeof config.googleConnectionId === "string" && config.googleConnectionId ? config.googleConnectionId : null);
+
+/** The workspace's live Google accounts, for an automation's account picker. */
+export const listGoogleAccounts = async (workspaceId: string): Promise<ReadonlyArray<{ readonly id: string; readonly email: string; readonly status: string }>> => {
+  const { data } = await supabaseAdmin().from("connections").select("id, status, public_meta").eq("workspace_id", workspaceId).eq("provider", "google").neq("status", "disconnected").order("created_at");
+  return ((data ?? []) as Array<{ id: string; status: string; public_meta: Record<string, string> | null }>).map((r) => ({ id: r.id, email: r.public_meta?.email ?? "", status: r.status }));
 };
 
 export const googleCardState = async (workspaceId: string): Promise<{ readonly state: NonNullable<AutomationCardView["google"]>; readonly sheetUrl: string | null }> => {
@@ -60,10 +75,18 @@ const writeSecret = async (connectionId: string, stored: Stored | Record<string,
   }
 };
 
-/** Store a successful consent: the one Google connection of the workspace is created or updated (re-consent), status connected. */
+/**
+ * Store a successful consent. The same Google account (same email) re-consenting updates its connection; another account
+ * becomes another connection, so a workspace can hold several.
+ */
 export const saveGoogleConnection = async (workspaceId: string, userId: string, tokens: TokenSet, email: string | null): Promise<void> => {
   const db = supabaseAdmin();
-  const row = await loadRow(workspaceId);
+  const sameAccount = email
+    ? (((await db.from("connections").select("id, status, last_error, public_meta, name").eq("workspace_id", workspaceId).eq("provider", "google").neq("status", "disconnected").eq("public_meta->>email", email).limit(1)).data ?? [])[0] as Row | undefined) ?? null
+    : null;
+  // A row left by a refused consent (no email yet) is reused for the first account rather than leaving an empty card behind.
+  const failed = sameAccount ? null : (((await db.from("connections").select("id, status, last_error, public_meta, name").eq("workspace_id", workspaceId).eq("provider", "google").eq("status", "error").like("last_error", "consent:%").limit(1)).data ?? [])[0] as Row | undefined) ?? null;
+  const row = sameAccount ?? failed;
   let refresh = tokens.refreshToken;
   if (!refresh && row) {
     try {
@@ -122,9 +145,9 @@ const markLost = async (connectionId: string): Promise<void> => {
 };
 
 /** A valid access token for the workspace: refreshed lazily shortly before expiry (and re-stored encrypted). Throws google_missing / google_lost. */
-const accessToken = async (workspaceId: string, force = false): Promise<string> => {
+const accessToken = async (workspaceId: string, force = false, connectionId: string | null = null): Promise<string> => {
   if (!googleConfigured()) throw new Error("google_unavailable");
-  const row = await loadRow(workspaceId);
+  const row = await loadRow(workspaceId, connectionId);
   if (!row || row.status === "pending") throw new Error("google_missing");
   if (row.status === "error") throw new Error(row.last_error?.startsWith("consent:") ? "google_unavailable" : "google_lost");
   const { data } = await supabaseAdmin().from("connection_secrets").select("ciphertext").eq("connection_id", row.id).maybeSingle();
@@ -151,13 +174,13 @@ const accessToken = async (workspaceId: string, force = false): Promise<string> 
 };
 
 /** Run `fn` with a token; one forced refresh and retry when Google answers 401 (the token was revoked or rotated early). */
-const withToken = async <T>(workspaceId: string, fn: (token: string) => Promise<T>): Promise<T> => {
-  const token = await accessToken(workspaceId);
+const withToken = async <T>(workspaceId: string, fn: (token: string) => Promise<T>, connectionId: string | null = null): Promise<T> => {
+  const token = await accessToken(workspaceId, false, connectionId);
   try {
     return await fn(token);
   } catch (e) {
     if ((e as Partial<GoogleHttpError>).status !== 401) throw e;
-    return fn(await accessToken(workspaceId, true));
+    return fn(await accessToken(workspaceId, true, connectionId));
   }
 };
 
@@ -169,11 +192,11 @@ export const provisionOrdersSheet = async (workspaceId: string, _userId: string,
   const db = supabaseAdmin();
   const { data: ws } = await db.from("workspaces").select("name").eq("id", workspaceId).maybeSingle();
   const title = `NIVO · Đơn hàng · ${(ws as { name?: string } | null)?.name ?? "NIVO"}`.slice(0, 120);
-  const made = await withToken(workspaceId, (token) => createOrdersSpreadsheet(token, title));
-  const row = await loadRow(workspaceId);
+  const made = await withToken(workspaceId, (token) => createOrdersSpreadsheet(token, title), connectionOf(config));
+  const row = await loadRow(workspaceId, connectionOf(config));
   if (row) await db.from("connections").update({ public_meta: { ...(row.public_meta ?? {}), sheet_id: made.spreadsheetId, sheet_url: made.spreadsheetUrl }, updated_at: now() }).eq("id", row.id);
   return made;
 };
 
 export const runSheetOrdersEvent = async (workspaceId: string, config: PipelineConfig, event: SheetEventIn): Promise<{ readonly evidence: string; readonly skipped?: boolean }> =>
-  withToken(workspaceId, (token) => applySheetEvent(token, config, event));
+  withToken(workspaceId, (token) => applySheetEvent(token, config, event), connectionOf(config));
