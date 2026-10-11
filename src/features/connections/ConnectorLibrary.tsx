@@ -12,7 +12,7 @@ import { LIBRARY_CARD_CLASS, LIBRARY_CARD_FOOT_CLASS, LIBRARY_CARD_HEAD_CLASS, L
 
 /** The connector's own logo when it has one, else its category glyph. */
 export const ConnectorLogo = ({ entry }: { readonly entry: CatalogEntry }) => {
-  const src = entry.provider ? PROVIDER_LOGO[entry.provider] : undefined
+  const src = entry.logo ?? (entry.provider ? PROVIDER_LOGO[entry.provider] : undefined)
   return (
     <IconTile
       source={nivoIconSource(entry.glyph, "leading")} tone="neutral" size="md"

@@ -33,6 +33,8 @@ export type CatalogEntry = {
   /** Set when the app can set it up today. */
   readonly provider?: Provider
   readonly glyph: ConnectorGlyph
+  /** Artwork for a connector that is not a provider yet (a provider's logo comes from PROVIDER_LOGO). */
+  readonly logo?: string
 }
 
 const real = (
@@ -79,11 +81,11 @@ export const CATALOG: ReadonlyArray<CatalogEntry> = [
   soon("momo", "MoMo", "payments", { vi: "Thanh toán ví MoMo.", en: "MoMo wallet payments." }, { vi: "Giao dịch ví", en: "Wallet payments" }, ["accounting"], ["momo", "ví"], 63, "wallet"),
   soon("ghn", "Giao Hàng Nhanh", "commerce", { vi: "Trạng thái vận đơn GHN.", en: "GHN shipment status." }, { vi: "Vận đơn", en: "Shipments" }, ["sales"], ["ghn", "giao hàng", "vận chuyển"], 58, "cart"),
   soon("ghtk", "Giao Hàng Tiết Kiệm", "commerce", { vi: "Trạng thái vận đơn GHTK.", en: "GHTK shipment status." }, { vi: "Vận đơn", en: "Shipments" }, ["sales"], ["ghtk", "giao hàng"], 57, "cart"),
-  soon("google_calendar", "Google Calendar", "productivity", { vi: "Lịch hẹn cho Đặt lịch.", en: "Appointments for Booking." }, { vi: "Lịch hẹn", en: "Appointments" }, ["any"], ["calendar", "lịch"], 52, "apps"),
-  soon("google_drive", "Google Drive", "productivity", { vi: "Tài liệu trong thư mục bạn chọn.", en: "Documents in the folder you pick." }, { vi: "Tài liệu", en: "Documents" }, ["any"], ["drive", "tài liệu"], 61, "apps"),
-  soon("notion", "Notion", "productivity", { vi: "Trang và database Notion làm tri thức.", en: "Notion pages and databases as knowledge." }, { vi: "Tri thức", en: "Knowledge" }, ["any"], ["notion"], 50, "apps"),
-  soon("slack", "Slack", "productivity", { vi: "Nhận thông báo và duyệt việc trong Slack.", en: "Notices and approvals in Slack." }, { vi: "Thông báo, duyệt", en: "Notices, approvals" }, ["any"], ["slack"], 40, "apps"),
-  soon("airtable", "Airtable", "data", { vi: "Bảng Airtable làm nguồn dữ liệu.", en: "Airtable bases as a data source." }, { vi: "Bảng dữ liệu", en: "Tables" }, ["any"], ["airtable"], 38, "servers"),
+  { ...soon("google_calendar", "Google Calendar", "productivity", { vi: "Lịch hẹn cho Đặt lịch.", en: "Appointments for Booking." }, { vi: "Lịch hẹn", en: "Appointments" }, ["any"], ["calendar", "lịch"], 52, "apps"), logo: "/logos/connectors/calendar.svg" },
+  { ...soon("google_drive", "Google Drive", "productivity", { vi: "Tài liệu trong thư mục bạn chọn.", en: "Documents in the folder you pick." }, { vi: "Tài liệu", en: "Documents" }, ["any"], ["drive", "tài liệu"], 61, "apps"), logo: "/logos/connectors/google_drive_generic.svg" },
+  { ...soon("notion", "Notion", "productivity", { vi: "Trang và database Notion làm tri thức.", en: "Notion pages and databases as knowledge." }, { vi: "Tri thức", en: "Knowledge" }, ["any"], ["notion"], 50, "apps"), logo: "/logos/connectors/notion_generic.svg" },
+  { ...soon("slack", "Slack", "productivity", { vi: "Nhận thông báo và duyệt việc trong Slack.", en: "Notices and approvals in Slack." }, { vi: "Thông báo, duyệt", en: "Notices, approvals" }, ["any"], ["slack"], 40, "apps"), logo: "/logos/connectors/slack_generic.svg" },
+  { ...soon("airtable", "Airtable", "data", { vi: "Bảng Airtable làm nguồn dữ liệu.", en: "Airtable bases as a data source." }, { vi: "Bảng dữ liệu", en: "Tables" }, ["any"], ["airtable"], 38, "servers"), logo: "/logos/connectors/airtable_generic.svg" },
 ]
 
 export const entryById = (id: string): CatalogEntry | undefined => CATALOG.find((e) => e.id === id)

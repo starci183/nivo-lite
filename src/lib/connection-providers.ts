@@ -246,6 +246,13 @@ export const PROVIDER_LOGO: Readonly<Partial<Record<Provider, string>>> = {
   zalo_oa: "/logos/providers/zalo.svg",
   google: "/logos/providers/googlesheets.svg",
   webhook: "/logos/providers/n8n.svg",
+  // NIVO's own connector artwork (public/logos/connectors): the data sources have no brand of their own.
+  database: "/logos/connectors/database.svg",
+  openapi: "/logos/connectors/openapi.svg",
+  csv_import: "/logos/connectors/csv_import.svg",
+  imap: "/logos/connectors/imap.svg",
+  telegram_user: "/logos/connectors/telegram_user.svg",
+  smtp: "/logos/connectors/smtp.svg",
 };
 
 /** Replace {name} {bank} {account} in a guide or help string. */
