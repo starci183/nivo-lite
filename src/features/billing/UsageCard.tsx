@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Alert, DescriptionList, Heading, List, ListItem, Meter, SurfaceCard, Text } from "@starci/grammar/common";
 import { useLocale, useT } from "@/i18n/client";
 import { intlLocale, TIME_ZONE } from "@/i18n/core";
@@ -29,6 +30,7 @@ const daysBetween = (from: string, to: string): Array<string> => {
 export const UsageCard = ({ usage }: { readonly usage: UsageSummary }) => {
   const t = useT(billing);
   const locale = useLocale();
+  const router = useRouter();
   const nf = new Intl.NumberFormat(intlLocale(locale));
   const { status } = usage;
   const level = status?.level ?? "ok";
@@ -48,8 +50,8 @@ export const UsageCard = ({ usage }: { readonly usage: UsageSummary }) => {
     <SurfaceCard label={t("usageTitle")} headingLevel={2}>
       <div className={STACK_CLASS_NAME}>
         <Text size="sm" tone="muted">{t("usageText")}</Text>
-        {level === "exceeded" ? <Alert tone="negative" title={t("usageExceeded")} /> : null}
-        {level === "warn" ? <Alert tone="cautionary" title={t("usageWarn", { pct: Math.round((status?.ratio ?? 0) * 100) })} /> : null}
+        {level === "exceeded" ? <Alert tone="negative" title={t("usageExceeded")} action={{ label: t("usageOpenCredits"), onAction: () => router.push("/billing") }} /> : null}
+        {level === "warn" ? <Alert tone="cautionary" title={t("usageWarn", { pct: Math.round((status?.ratio ?? 0) * 100) })} action={{ label: t("usageOpenCredits"), onAction: () => router.push("/billing") }} /> : null}
         {status ? (
           <>
             <div className={USAGE_BLOCK_CLASS_NAME}>

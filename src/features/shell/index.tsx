@@ -15,7 +15,7 @@ import type { ShellData } from "./queries";
 
 type Destination = {
   readonly key: string;
-  readonly label: "navOverview" | "navOffice" | "navAuthority" | "navInbox" | "navLeads" | "navResponsibilities" | "navDecisions" | "navAutomations" | "navBrain" | "navModules" | "navTeam" | "navConnections";
+  readonly label: "navOverview" | "navOffice" | "navAuthority" | "navInbox" | "navLeads" | "navResponsibilities" | "navDecisions" | "navAutomations" | "navBrain" | "navModules" | "navTeam" | "navConnections" | "navCredits";
   readonly route: string;
   readonly icon: IconName;
   /** Rail section: the daily work, running the business, setting it up. */
@@ -43,6 +43,7 @@ const DESTINATIONS: ReadonlyArray<Destination> = [
   { key: "modules", label: "navModules", route: "/m", icon: "apps", group: "setup" },
   { key: "team", label: "navTeam", route: "/team", icon: "talents", group: "setup", managerOnly: true },
   { key: "connections", label: "navConnections", route: "/connections", icon: "servers", group: "setup", managerOnly: true },
+  { key: "credits", label: "navCredits", route: "/billing", icon: "wallet", group: "setup", managerOnly: true },
 ];
 
 /** Pages where no promo strip sits with the work: the chat itself, the dashboard (which has its own hero) and the brain. */

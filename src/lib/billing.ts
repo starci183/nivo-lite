@@ -9,6 +9,8 @@ import { newOrderCode } from "./sepay";
 
 export type WorkspaceStatus = "pending_payment" | "active" | "past_due" | "cancelled";
 export type OrderStatus = "pending" | "paid" | "expired" | "cancelled";
+/** plan: first payment or renewal; upgrade: switch to a higher plan for the prorated difference; topup: a pack of extra credits. */
+export type OrderKind = "plan" | "upgrade" | "topup";
 
 export type Plan = {
   code: string;
@@ -35,6 +37,10 @@ export type PaymentOrder = {
   expires_at: string;
   paid_at: string | null;
   created_at: string;
+  kind: OrderKind;
+  pack_code: string | null;
+  /** What was sold, frozen at order time (top-up: credits; upgrade: the proration inputs). */
+  detail: Record<string, unknown>;
 };
 
 export type BillingWorkspace = { id: string; name: string; status: WorkspaceStatus; plan_code: string | null; paid_until: string | null };
@@ -96,13 +102,19 @@ export const setWorkspaceCookie = async (workspaceId: string) => {
   (await cookies()).set(WORKSPACE_COOKIE, workspaceId, { path: "/", httpOnly: true, sameSite: "lax", maxAge: 60 * 60 * 24 * 365 });
 };
 
+/** What distinguishes an upgrade or top-up order from a plan payment; omitted = a plan payment for `plan.price_vnd`. */
+export type OrderExtras = { kind?: OrderKind; packCode?: string; amountVnd?: number; detail?: Record<string, unknown> };
+
 /** Create a pending payment order (service role: customers never write billing tables). Retries on a code collision. */
-export const createPaymentOrder = async (workspaceId: string, userId: string, plan: Plan): Promise<PaymentOrder> => {
+export const createPaymentOrder = async (workspaceId: string, userId: string, plan: Plan, extras: OrderExtras = {}): Promise<PaymentOrder> => {
   const admin = supabaseAdmin();
   for (let attempt = 0; attempt < 5; attempt++) {
     const { data, error } = await admin
       .from("payment_orders")
-      .insert({ workspace_id: workspaceId, created_by: userId, plan_code: plan.code, amount_vnd: plan.price_vnd, order_code: newOrderCode() })
+      .insert({
+        workspace_id: workspaceId, created_by: userId, plan_code: plan.code, amount_vnd: extras.amountVnd ?? plan.price_vnd, order_code: newOrderCode(),
+        kind: extras.kind ?? "plan", pack_code: extras.packCode ?? null, detail: extras.detail ?? {},
+      })
       .select()
       .single();
     if (!error) return data as PaymentOrder;
@@ -123,7 +135,7 @@ export const readOrder = async (orderId: string): Promise<PaymentOrder | null> =
   return order;
 };
 
-/** The newest order of a workspace that can still be paid (pending and not expired), if any. */
+/** The newest plan payment (not an upgrade or a top-up) of a workspace that can still be paid (pending and not expired), if any. */
 export const latestOpenOrder = async (workspaceId: string): Promise<PaymentOrder | null> => {
   const db = await supabaseServer();
   const { data } = await db
@@ -131,6 +143,7 @@ export const latestOpenOrder = async (workspaceId: string): Promise<PaymentOrder
     .select("*")
     .eq("workspace_id", workspaceId)
     .eq("status", "pending")
+    .eq("kind", "plan")
     .gt("expires_at", new Date().toISOString())
     .order("created_at", { ascending: false })
     .limit(1);

@@ -156,10 +156,10 @@ export const GUIDE_PAGES: ReadonlyArray<GuidePage> = [
   },
   {
     id: "billing", path: "/billing", managerOnly: true,
-    title: { vi: "Thanh toán và gói", en: "Billing and plan" },
-    what: { vi: "Gói đang dùng, hạn dùng, mức dùng AI, nâng cấp và gia hạn.", en: "Your plan, paid-until date, AI usage, upgrades and renewals." },
-    steps: { vi: ["Mở Thanh toán", "Xem gói và hạn dùng", "Bấm Nâng cấp hoặc Gia hạn nếu cần"], en: ["Open Billing", "Check the plan and paid-until date", "Upgrade or renew if needed"] },
-    keywords: ["thanh toan", "goi cuoc", "nang cap", "gia han", "hoa don nivo", "han muc ai", "billing", "plan", "upgrade"],
+    title: { vi: "Credit và gói", en: "Credits and plan" },
+    what: { vi: "Credit AI đã dùng và còn lại, nạp thêm credit, nâng cấp gói và lịch sử thanh toán.", en: "AI credits used and left, top-ups, plan upgrades and payment history." },
+    steps: { vi: ["Mở Credit & gói", "Xem credit tháng này và dự báo hết", "Bấm Mua để nạp thêm hoặc Nâng cấp để đổi gói"], en: ["Open Credits & plan", "Check this month's credits and the run-out forecast", "Buy a pack to top up, or upgrade the plan"] },
+    keywords: ["thanh toan", "goi cuoc", "nang cap", "gia han", "hoa don nivo", "han muc ai", "billing", "plan", "upgrade", "credit", "nap them credit", "het credit", "top up", "topup"],
   },
   {
     id: "account", path: "/account",
