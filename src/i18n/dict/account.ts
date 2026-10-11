@@ -3,6 +3,9 @@ import { defineDict } from "../core";
 /** Account area: profile, email, password, sign-in methods and sessions. */
 export const account = defineDict({
   en: {
+    crumbLabel: "Breadcrumb",
+    crumbHome: "Overview",
+    loadFailed: "Your account could not be loaded. Try again.",
     eyebrow: "Account",
     title: "Your account",
     description: "Manage your profile, sign-in details and the devices signed in to NIVO OS.",
@@ -60,6 +63,9 @@ export const account = defineDict({
     unknownError: "Something went wrong. Please try again.",
   },
   vi: {
+    crumbLabel: "Đường dẫn",
+    crumbHome: "Tổng quan",
+    loadFailed: "Chưa tải được tài khoản của bạn. Hãy thử lại.",
     eyebrow: "Tài khoản",
     title: "Tài khoản của bạn",
     description: "Quản lý hồ sơ, thông tin đăng nhập và các thiết bị đang đăng nhập NIVO OS.",

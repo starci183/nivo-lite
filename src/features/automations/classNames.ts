@@ -35,3 +35,6 @@ export const ROWS_CLASS = cn("divide-y", "divide-separator")
 export const RUN_ROW_CLASS = cn("flex", "flex-col", "gap-1", "py-2")
 export const RUN_HEAD_CLASS = cn("flex", "flex-wrap", "items-center", "gap-2")
 export const HIDDEN_ROW_CLASS = cn("flex", "flex-wrap", "items-center", "justify-between", "gap-2", "py-2")
+
+/** Breadcrumb trail above the page heading: one heading block (GAP-2). */
+export const HEAD_CLASS = cn("flex", "min-w-0", "flex-col", "gap-2")

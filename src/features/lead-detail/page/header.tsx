@@ -4,14 +4,13 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { PersonAvatar } from "@/components/avatar/PersonAvatar";
 import { nivoIconSource } from "@/ui";
-import { Badge, Button, DropdownMenu, IconButton, SectionHeader, Text, TextAction } from "@starci/grammar/common";
+import { Badge, Breadcrumbs, Button, DropdownMenu, Heading, IconButton, SectionHeader, Skeleton, Text } from "@starci/grammar/common";
 import { useT } from "@/i18n/client";
 import { leads } from "@/i18n/dict/leads";
 import { draftExecution, refreshContext, suggestResponsibility } from "@/lib/actions";
 import {
   ACTIONS_CLASS_NAME,
   HEADER_CLASS_NAME,
-  BACK_CLASS_NAME,
   IDENTITY_BODY_CLASS_NAME,
   IDENTITY_CLASS_NAME,
   TITLE_INLINE_CLASS_NAME,
@@ -25,10 +24,12 @@ type LeadHeaderProps = {
   readonly stageLabel: string;
   readonly stageTone: "neutral" | "accent" | "warning" | "success" | "danger";
   readonly primary: PrimaryAction;
+  /** STATE-8: the trail stays real, the name, the facts line and the avatar are skeletons and the actions are not drawn. */
+  readonly isLoading?: boolean;
 };
 
 /** Lead page header: path back, eyebrow + name + stage, action bar and the journey stepper. */
-export const LeadHeader = ({ leadId, name, meta, stageLabel, stageTone, primary }: LeadHeaderProps) => {
+export const LeadHeader = ({ leadId, name, meta, stageLabel, stageTone, primary, isLoading = false }: LeadHeaderProps) => {
   const router = useRouter();
   const t = useT(leads);
   const [isPending, startTransition] = useTransition();
@@ -56,9 +57,35 @@ export const LeadHeader = ({ leadId, name, meta, stageLabel, stageTone, primary 
     }
   };
 
+  const trail = (
+    <Breadcrumbs
+      label={t("crumbLabel")}
+      items={[
+        { id: "home", label: t("crumbHome"), href: "/dashboard" },
+        { id: "leads", label: t("title"), href: "/leads" },
+        { id: "lead", label: isLoading ? t("detailEyebrow") : name },
+      ]}
+    />
+  );
+
+  if (isLoading) {
+    return (
+      <div className={HEADER_CLASS_NAME}>
+        {trail}
+        <div className={IDENTITY_CLASS_NAME}>
+          <Skeleton shape="circle" size="lg" />
+          <div className={IDENTITY_BODY_CLASS_NAME}>
+            <Heading level={1} isSkeleton>{t("detailLoading")}</Heading>
+            <Text tone="muted" isSkeleton>{t("detailLoading")}</Text>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={HEADER_CLASS_NAME}>
-      <div className={BACK_CLASS_NAME}><TextAction href="/leads" appearance="muted" size="sm">{`← ${t("backToList")}`}</TextAction></div>
+      {trail}
       <div className={IDENTITY_CLASS_NAME}>
         <PersonAvatar name={name} size="lg" />
         <div className={IDENTITY_BODY_CLASS_NAME}>

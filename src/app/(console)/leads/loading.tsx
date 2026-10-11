@@ -1,20 +1,6 @@
-"use client";
+import { LeadsList } from "@/features/leads-list";
 
-import { useT } from "@/i18n/client"
-import { leads } from "@/i18n/dict/leads"
-import { PageContainer, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common"
+/** STATE-8: the Leads page itself, with no data yet - the same heading, filters and tabs, the list as three skeleton rows. */
+const LeadsLoading = () => <LeadsList isLoading leads={[]} nowIso="" />;
 
-/** Leads skeleton: same layout, cards in loading state. */
-const LeadsLoading = () => {
-  const t = useT(leads)
-  return (
-    <PageContainer measure="product">
-      <SectionHeader level={1} eyebrow={t("eyebrow")} title={t("title")} description={t("descriptionShort")} />
-      <SurfaceCard ariaLabel={t("loadingLeads")}>
-        <Text isSkeleton>{t("loadingLeads")}</Text>
-      </SurfaceCard>
-    </PageContainer>
-  )
-}
-
-export default LeadsLoading
+export default LeadsLoading;

@@ -29,6 +29,8 @@ export type ResponsibilityBoardProps = {
   rows: Array<ResponsibilityRowModel>;
   initial: BoardInitialFilters;
   verifiedLabel: string;
+  /** STATE-8: the rows are loading - tabs, filters and labels stay, counts and the list are skeletons. */
+  isLoading?: boolean;
 };
 
 const ALL = "all";
@@ -56,6 +58,7 @@ const byNewest = (a: ResponsibilityRowModel, b: ResponsibilityRowModel): number 
 /** The full board: filter cards, status tabs with counts, search and sort over the same owner-grouped rows. */
 export const ResponsibilityBoard = (props: ResponsibilityBoardProps) => {
   const t = useT(responsibilities);
+  const isLoading = props.isLoading === true;
   const dueOptions: ReadonlyArray<{ id: DueKey; label: string }> = [
     { id: "any", label: t("anyTime") },
     { id: "overdue", label: t("dueOverdue") },
@@ -162,7 +165,7 @@ export const ResponsibilityBoard = (props: ResponsibilityBoardProps) => {
           labelVisibility="always"
           items={(["all", "open", "waiting_approval", "done"] as const).map((id) => ({
             id,
-            label: `${id === "all" ? t("tabAll") : statusLabel(t, id)} (${counts[id]})`,
+            label: isLoading ? (id === "all" ? t("tabAll") : statusLabel(t, id)) : `${id === "all" ? t("tabAll") : statusLabel(t, id)} (${counts[id]})`,
           }))}
           onSelect={(key) => {
             if (key === "all" || key === "open" || key === "waiting_approval" || key === "done") setStatus(key);
@@ -194,12 +197,12 @@ export const ResponsibilityBoard = (props: ResponsibilityBoardProps) => {
       <div className={LIST_HEAD_CLASS_NAME}>
         <div className={LIST_TITLE_CLASS_NAME}>
           <Text weight="semibold">{t("byOwner")}</Text>
-          <Text size="sm" tone="muted">{String(visible.length)}</Text>
+          <Text size="sm" tone="muted" isSkeleton={isLoading}>{String(visible.length)}</Text>
         </div>
-        <Text size="xs" tone="muted">{props.verifiedLabel}</Text>
+        <Text size="xs" tone="muted" isSkeleton={isLoading}>{props.verifiedLabel}</Text>
       </div>
 
-      <OwnerGroups groups={groups} emptyMessage={empty.message} emptyDescription={empty.description} />
+      <OwnerGroups isLoading={isLoading} groups={groups} emptyMessage={empty.message} emptyDescription={empty.description} />
     </div>
   );
 };

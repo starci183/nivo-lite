@@ -12,19 +12,25 @@ import { AMOUNT_ACTIONS, draftsFrom, FIELD_KEYS, fromField, MODES, modesFor, RUL
 import { SaveRow, useSaver } from "./SaveRow"
 
 /** Props for {@link RulesSections}. */
-export type RulesSectionsProps = { readonly authority: Authority; readonly rules: ReadonlyArray<AuthorityRule> }
+export type RulesSectionsProps = {
+  /** The stored authority; null while it loads. */
+  readonly authority: Authority | null
+  readonly rules: ReadonlyArray<AuthorityRule>
+  /** STATE-8: labels stay, the unresolved values and the save actions are skeletons. */
+  readonly isLoading?: boolean
+}
 
 const isMode = (v: string): v is RuleMode => (MODES as ReadonlyArray<string>).includes(v)
 
 /** Sections 3 and 4: the automation scope (mode and VND limit per action) and the limits (note and required details). */
-export const RulesSections = ({ authority, rules }: RulesSectionsProps) => {
+export const RulesSections = ({ authority, rules, isLoading = false }: RulesSectionsProps) => {
   const t = useT(dict)
   const g = useT(governance)
   const scopeSaver = useSaver()
   const limitsSaver = useSaver()
   const [baseline, setBaseline] = useState<Record<string, RuleDraft>>(() => draftsFrom(rules))
   const [draft, setDraft] = useState<Record<string, RuleDraft>>(() => draftsFrom(rules))
-  const [limitsNote, setLimitsNote] = useState(authority.limits_note)
+  const [limitsNote, setLimitsNote] = useState(authority?.limits_note ?? "")
   const noteOf = (department: Department, action: FlowAction) => rules.find((r) => r.department === department && r.action === action)?.note ?? ""
 
   const patch = (key: string, next: Partial<RuleDraft>) => setDraft((prev) => ({ ...prev, [key]: { ...prev[key]!, ...next } }))
@@ -91,6 +97,7 @@ export const RulesSections = ({ authority, rules }: RulesSectionsProps) => {
                       </div>
                       <SegmentedControl
                         label={t("modeLabel", { action: actionName(action) })}
+                        isDisabled={isLoading}
                         isLabelHidden
                         options={modeOptionsFor(action)}
                         value={d.mode}
@@ -104,7 +111,7 @@ export const RulesSections = ({ authority, rules }: RulesSectionsProps) => {
                             minValue={0}
                             step={1_000_000}
                             formatOptions={{ maximumFractionDigits: 0 }}
-                            isDisabled={d.mode === "never"}
+                            isDisabled={isLoading || d.mode === "never"}
                             value={toField(d.limit)}
                             onValueChange={(v) => { scopeSaver.reset(); patch(key, { limit: fromField(v) }) }}
                           />
@@ -117,14 +124,14 @@ export const RulesSections = ({ authority, rules }: RulesSectionsProps) => {
             </div>
           ))}
           <Text size="xs" tone="muted">{t("limitHint")}</Text>
-          <SaveRow saver={scopeSaver} onSave={onSaveScope} />
+          <SaveRow saver={scopeSaver} onSave={onSaveScope} isLoading={isLoading} />
         </div>
       </SurfaceCard>
 
       <SurfaceCard label={t("limitsTitle")} headingLevel={2}>
         <div className={FIELDS_CLASS}>
           <Text size="sm" tone="muted">{t("limitsDesc")}</Text>
-          <Textarea variant="secondary" label={t("limitsNote")} description={t("limitsNoteHint")} rows={3} value={limitsNote} onValueChange={(v) => { limitsSaver.reset(); setLimitsNote(v) }} />
+          <Textarea variant="secondary" isDisabled={isLoading} label={t("limitsNote")} description={t("limitsNoteHint")} rows={3} value={limitsNote} onValueChange={(v) => { limitsSaver.reset(); setLimitsNote(v) }} />
           <div>
             <Heading level={3}>{t("requiredTitle")}</Heading>
             <Text size="sm" tone="muted">{t("requiredHint")}</Text>
@@ -138,6 +145,7 @@ export const RulesSections = ({ authority, rules }: RulesSectionsProps) => {
                     variant="secondary"
                     label={t("requiredFor", { action: `${actionName(action)} · ${g(`dept_${department}`)}` })}
                     orientation="horizontal"
+                    isDisabled={isLoading}
                     options={fieldOptions}
                     value={[...draft[key]!.required]}
                     onValueChange={(v) => { limitsSaver.reset(); patch(key, { required: FIELD_KEYS.filter((f) => v.includes(f)) }) }}
@@ -146,7 +154,7 @@ export const RulesSections = ({ authority, rules }: RulesSectionsProps) => {
               )
             })}
           </div>
-          <SaveRow saver={limitsSaver} onSave={onSaveLimits} />
+          <SaveRow saver={limitsSaver} onSave={onSaveLimits} isLoading={isLoading} />
         </div>
       </SurfaceCard>
     </>

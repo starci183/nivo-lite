@@ -3,6 +3,8 @@ import { defineDict } from "../core";
 /** The Team page (/team): members, roles, pending invitations. */
 export const team = defineDict({
   en: {
+    crumbLabel: "Breadcrumb",
+    crumbHome: "Overview",
     eyebrow: "TEAM",
     title: "Team and invitations",
     description: "Who can sign in to this workspace, what they may do, and who is still invited.",
@@ -80,6 +82,8 @@ export const team = defineDict({
     errGeneric: "Something went wrong. Please try again.",
   },
   vi: {
+    crumbLabel: "Đường dẫn",
+    crumbHome: "Tổng quan",
     eyebrow: "ĐỘI NGŨ",
     title: "Đội ngũ và lời mời",
     description: "Ai được đăng nhập vào workspace này, được làm gì, và ai đang được mời.",

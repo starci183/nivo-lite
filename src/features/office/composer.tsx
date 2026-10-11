@@ -31,11 +31,13 @@ export type ComposerProps = {
   readonly hostRef: RefObject<HTMLDivElement | null>
   readonly onDraftChange: (value: string) => void
   readonly onSend: () => void
+  /** STATE-8: the composer stays in place, disabled, until the conversation has loaded. */
+  readonly isLoading?: boolean
 }
 
 /** Pinned composer: a slim row of quick questions, then @, the message field and Send. */
 export const Composer = ({
-  draft, agents, staff = [], chatbotHandle = null, error, isPending, hostRef, onDraftChange, onSend,
+  draft, agents, staff = [], chatbotHandle = null, error, isPending, hostRef, onDraftChange, onSend, isLoading = false,
 }: ComposerProps) => {
   const t = useT(office)
   const quickPrompts = [t("promptNivoAuthority"), t("promptNivoExceptions"), t("promptAttention"), t("promptSummary"), t("promptInvoices")]
@@ -70,11 +72,11 @@ export const Composer = ({
       {error ? <Alert tone="negative" title={t("sendFailed")} description={error} /> : null}
       <div className={CHIPS_CLASS_NAME} role="group" aria-label={t("quickLabel")}>
         {prompts.map((prompt) => (
-          <Button key={prompt} variant="secondary" size="sm" onPress={() => onPrompt(prompt)}>{prompt}</Button>
+          <Button key={prompt} variant="secondary" size="sm" isDisabled={isLoading} onPress={() => onPrompt(prompt)}>{prompt}</Button>
         ))}
       </div>
       <div className={COMPOSER_ROW_CLASS_NAME}>
-        <Button variant="ghost" onPress={onAt}>
+        <Button variant="ghost" isDisabled={isLoading} onPress={onAt}>
           <span aria-hidden="true">@</span>
           <span className={SR_ONLY_CLASS_NAME}>{t("mentionButton")}</span>
         </Button>
@@ -86,6 +88,7 @@ export const Composer = ({
             variant="secondary"
             placeholder={t("composerPlaceholder")}
             rows={1}
+            isDisabled={isLoading}
             value={draft}
             onValueChange={onDraftChange}
             onSubmitShortcut={onSend}
@@ -95,7 +98,7 @@ export const Composer = ({
         <Button
           variant="primary"
           isPending={isPending}
-          isDisabled={draft.trim().length === 0}
+          isDisabled={isLoading || draft.trim().length === 0}
           onPress={onSend}
           startContent={<Icon source={nivoIconSource("send", "leading")} usage="leading" />}
         >

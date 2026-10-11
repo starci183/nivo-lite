@@ -3,6 +3,9 @@ import { defineDict } from "../core";
 /** Office (team messenger, tasks, approvals) copy. */
 export const office = defineDict({
   en: {
+    crumbLabel: "Breadcrumb",
+    crumbHome: "Overview",
+    loadFailed: "The Office could not be loaded. Your messages are safe; try again.",
     title: "Office",
     messengerLabel: "Office messenger",
     listLabel: "Conversations",
@@ -185,6 +188,9 @@ export const office = defineDict({
     openArrow: "Open →",
   },
   vi: {
+    crumbLabel: "Đường dẫn",
+    crumbHome: "Tổng quan",
+    loadFailed: "Chưa tải được Office. Tin nhắn vẫn an toàn; hãy thử lại.",
     title: "Office",
     messengerLabel: "Trò chuyện Office",
     listLabel: "Cuộc trò chuyện",

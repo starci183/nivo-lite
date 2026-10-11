@@ -38,3 +38,6 @@ export const FOOTER_CLASS = cn("flex", "flex-wrap", "items-center", "justify-end
 
 /** Accept-invitation action stack on the public invite page (GAP-3). */
 export const INVITE_ACTIONS_CLASS = cn("flex", "flex-col", "gap-3")
+
+/** Breadcrumb trail above the page heading: one heading block (GAP-2). */
+export const HEAD_CLASS = cn("flex", "min-w-0", "flex-col", "gap-2")

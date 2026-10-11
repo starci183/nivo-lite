@@ -14,3 +14,6 @@ export const ROW_HEAD_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "just
 export const CHIPS_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "gap-2");
 /** Footer line under a row: lead link. */
 export const ROW_FOOT_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "gap-x-4", "gap-y-1");
+
+/** Breadcrumb trail above the page heading: one heading block (GAP-2). */
+export const HEAD_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-2");

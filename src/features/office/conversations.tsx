@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { Badge, Button, IconTile, ListBox, SearchField, Text } from "@starci/grammar/common"
+import { Badge, Button, IconTile, List, ListBox, ListRow, SearchField, Text } from "@starci/grammar/common"
 import { nivoIconSource } from "@/ui"
 import { AgentAvatar, PersonAvatar } from "@/components/avatar/PersonAvatar"
 import { useLocale, useT } from "@/i18n/client"
@@ -36,12 +36,14 @@ export type ConversationListProps = {
   readonly pendingCount: number
   readonly nowIso: string
   readonly onOpenGroup: () => void
+  /** STATE-8: the list keeps its title, search and section caption, its rows are three skeleton rows. */
+  readonly isLoading?: boolean
 }
 
 const contains = (text: string, query: string) => text.toLocaleLowerCase("vi").includes(query.toLocaleLowerCase("vi"))
 
 /** Left column: the Office group chat, each agent (1:1 chat) and recent customers, with search. */
-export const ConversationList = ({ groupName, messages, agents, customers, pendingCount, nowIso, onOpenGroup }: ConversationListProps) => {
+export const ConversationList = ({ groupName, messages, agents, customers, pendingCount, nowIso, onOpenGroup, isLoading = false }: ConversationListProps) => {
   const t = useT(office)
   const locale = useLocale()
   const router = useRouter()
@@ -71,6 +73,18 @@ export const ConversationList = ({ groupName, messages, agents, customers, pendi
       <div className={LIST_SEARCH_CLASS_NAME}>
         <SearchField label={t("searchLabel")} isLabelHidden placeholder={t("searchPlaceholder")} clearLabel={t("clearSearch")} value={query} onValueChange={setQuery} onClear={() => setQuery("")} />
       </div>
+      {isLoading ? (
+        <nav className={LIST_BODY_CLASS_NAME} aria-label={t("listLabel")} aria-busy="true">
+          <section className={LIST_SECTION_CLASS_NAME} aria-label={t("sectionGroups")}>
+            <div className={LIST_CAPTION_CLASS_NAME}>
+              <Text size="xs" tone="muted" weight="semibold">{t("sectionGroups")}</Text>
+            </div>
+            <List label={t("sectionGroups")}>
+              {[0, 1, 2].map((n) => <ListRow key={n} isSkeleton title={t("title")} description={t("groupPreviewEmpty")} leading={<span />} />)}
+            </List>
+          </section>
+        </nav>
+      ) : (
       <nav className={LIST_BODY_CLASS_NAME} aria-label={t("listLabel")}>
         {isEmpty ? <Text size="sm" tone="muted">{t("noMatches", { q })}</Text> : null}
         {/* Each section is a Grammar ListBox: rows, selection face, focus and keyboard model are its own (SURFACE-4, FOCUS-2). */}
@@ -145,6 +159,7 @@ export const ConversationList = ({ groupName, messages, agents, customers, pendi
           </section>
         ) : null}
       </nav>
+      )}
     </>
   )
 }

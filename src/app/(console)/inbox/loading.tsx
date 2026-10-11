@@ -1,20 +1,6 @@
-"use client"
+import { InboxView } from "@/features/inbox/view"
 
-import { PageContainer, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common"
-import { useT } from "@/i18n/client"
-import { inbox } from "@/i18n/dict/inbox"
-
-/** Inbox skeleton: same header, one card in loading state. */
-const InboxLoading = () => {
-  const t = useT(inbox)
-  return (
-    <PageContainer measure="product">
-      <SectionHeader level={1} eyebrow={t("eyebrow")} title={t("title")} description={t("description")} />
-      <SurfaceCard ariaLabel={t("loading")}>
-        <Text isSkeleton>{t("loading")}</Text>
-      </SurfaceCard>
-    </PageContainer>
-  )
-}
+/** STATE-8: the Inbox page itself, with no data yet - the same heading, notice, bank card and simulator, the feed as three skeleton rows. */
+const InboxLoading = () => <InboxView isLoading events={[]} nowIso="" initialEventId="" />
 
 export default InboxLoading

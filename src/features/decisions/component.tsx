@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge, EmptyNotice, PageContainer, SectionHeader, SurfaceCard, SurfaceListCard, Tabs, Text, TextAction } from "@starci/grammar/common";
+import { Badge, Breadcrumbs, EmptyNotice, PageContainer, SectionHeader, SurfaceCard, SurfaceListCard, Tabs, Text, TextAction } from "@starci/grammar/common";
 import { useRouter } from "next/navigation";
 import { useLocale, useT } from "@/i18n/client";
 import { intlLocale } from "@/i18n/core";
@@ -8,7 +8,7 @@ import { decisions as decisionsDict } from "@/i18n/dict/decisions";
 import { governance } from "@/i18n/dict/governance";
 import type { DecisionRow, Department } from "@/lib/flow-types";
 import { MODULE_KEYS } from "@/lib/module-registry";
-import { CHIPS_CLASS_NAME, FILTERS_CLASS_NAME, PAGE_CLASS_NAME, ROW_CLASS_NAME, ROW_FOOT_CLASS_NAME, ROW_HEAD_CLASS_NAME, TABS_CLASS_NAME } from "./classNames";
+import { CHIPS_CLASS_NAME, FILTERS_CLASS_NAME, HEAD_CLASS_NAME, PAGE_CLASS_NAME, ROW_CLASS_NAME, ROW_FOOT_CLASS_NAME, ROW_HEAD_CLASS_NAME, TABS_CLASS_NAME } from "./classNames";
 import { formatDateTime, outcomeTone, splitBasis } from "./format";
 
 export type DecisionKind = "policy" | "human" | "rejected";
@@ -19,8 +19,8 @@ export type DecisionsViewProps = {
   readonly kind: DecisionKind | null;
   readonly dept: Department | null;
   readonly limit: number;
-  /** True when the query failed (for example the flow tables are not migrated yet). */
-  readonly hasFailed: boolean;
+  /** STATE-8: the same page while its data loads - the heading and both tab rows stay, the list is skeleton rows. */
+  readonly isLoading?: boolean;
 };
 
 const ALL = "all";
@@ -41,7 +41,7 @@ const hrefFor = (kind: DecisionKind | null, dept: Department | null) => {
 };
 
 /** /decisions body: filters plus a list (not a table, so it reads on a phone) of who decided what, when and with what result. */
-export const DecisionsView = ({ rows, kind, dept, limit, hasFailed }: DecisionsViewProps) => {
+export const DecisionsView = ({ rows, kind, dept, limit, isLoading = false }: DecisionsViewProps) => {
   const t = useT(decisionsDict);
   const g = useT(governance);
   const locale = useLocale();
@@ -51,7 +51,10 @@ export const DecisionsView = ({ rows, kind, dept, limit, hasFailed }: DecisionsV
   return (
     <PageContainer measure="product">
       <div className={PAGE_CLASS_NAME}>
-        <SectionHeader level={1} eyebrow={t("eyebrow")} title={t("title")} description={t("description")} />
+        <div className={HEAD_CLASS_NAME}>
+          <Breadcrumbs label={t("crumbLabel")} items={[{ id: "home", label: t("crumbHome"), href: "/dashboard" }, { id: "decisions", label: t("title") }]} />
+          <SectionHeader level={1} eyebrow={t("eyebrow")} title={t("title")} description={t("description")} />
+        </div>
         <div className={FILTERS_CLASS_NAME}>
           <div className={TABS_CLASS_NAME}>
             <Tabs
@@ -75,10 +78,8 @@ export const DecisionsView = ({ rows, kind, dept, limit, hasFailed }: DecisionsV
           </div>
         </div>
 
-        {hasFailed ? (
-          <SurfaceCard ariaLabel={t("loadFailedTitle")}>
-            <EmptyNotice message={t("loadFailedTitle")} description={t("loadFailedBody")} />
-          </SurfaceCard>
+        {isLoading ? (
+          <SurfaceListCard ariaLabel={t("listAria")} isLoading />
         ) : rows.length === 0 ? (
           <SurfaceCard ariaLabel={t("listAria")}>
             {isFiltered ? (
@@ -127,7 +128,7 @@ export const DecisionsView = ({ rows, kind, dept, limit, hasFailed }: DecisionsV
             </SurfaceListCard>
           </>
         )}
-        {isFiltered && !hasFailed && rows.length > 0 ? <TextAction onPress={() => router.push("/decisions")}>{t("clearFilters")}</TextAction> : null}
+        {isFiltered && !isLoading && rows.length > 0 ? <TextAction onPress={() => router.push("/decisions")}>{t("clearFilters")}</TextAction> : null}
       </div>
     </PageContainer>
   );

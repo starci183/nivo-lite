@@ -3,6 +3,8 @@ import { defineDict } from "../core";
 /** Copy for the decision history page (/decisions). Department, action, outcome and reason labels live in the governance dict. */
 export const decisions = defineDict({
   en: {
+    crumbLabel: "Breadcrumb",
+    crumbHome: "Overview",
     eyebrow: "DECISIONS",
     title: "Decision history",
     description: "Who decided, when, and what came of it. Routine work NIVO completed inside your authority is listed too.",
@@ -29,6 +31,8 @@ export const decisions = defineDict({
     countCapped: "Latest {n} shown",
   },
   vi: {
+    crumbLabel: "Đường dẫn",
+    crumbHome: "Tổng quan",
     eyebrow: "QUYẾT ĐỊNH",
     title: "Lịch sử quyết định",
     description: "Ai quyết định, khi nào và kết quả ra sao. Việc thường lệ NIVO tự hoàn thành trong quyền bạn giao cũng được ghi ở đây.",

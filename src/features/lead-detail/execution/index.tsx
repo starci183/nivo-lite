@@ -1,20 +1,43 @@
 "use client";
 
-import { List, ListItem, Region, SectionHeader } from "@starci/grammar/common";
+import { Button, List, ListItem, Region, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common";
 
 import { ApprovalCard } from "@/features/approval-card";
 import { useT } from "@/i18n/client";
 import { lead as leadDict } from "@/i18n/dict/lead";
 import type { LeadDetail } from "@/lib/types";
 
-import { EXECUTION_EARLIER_LIST_CLASS_NAME, EXECUTION_EARLIER_SECTION_CLASS_NAME, EXECUTION_PANEL_CLASS_NAME } from "./classNames";
+import { EXECUTION_CARD_BODY_CLASS_NAME, EXECUTION_EARLIER_LIST_CLASS_NAME, EXECUTION_EARLIER_SECTION_CLASS_NAME, EXECUTION_PANEL_CLASS_NAME } from "./classNames";
 import { DraftCard } from "./DraftCard";
 
 /** Props for the execution panel. */
-export type ExecutionPanelProps = { readonly detail: LeadDetail };
+export type ExecutionPanelProps = {
+  /** The lead's detail; null while it loads. */
+  readonly detail: LeadDetail | null;
+  /** STATE-8: the card keeps its label, the copy and the action are skeletons. */
+  readonly isLoading?: boolean;
+};
 
 /** P04 Human x AI execution: draft with the owning agent, then approve, edit or reject before anything is sent. */
-export const ExecutionPanel = (props: ExecutionPanelProps) => {
+export const ExecutionPanel = (props: ExecutionPanelProps) =>
+  props.isLoading === true || props.detail === null ? <ExecutionLoading /> : <ExecutionLoaded detail={props.detail} />;
+
+/** The execution card while the lead loads: the follow-up card's label stays, its copy and its one action are skeletons. */
+const ExecutionLoading = () => {
+  const t = useT(leadDict);
+  return (
+    <div className={EXECUTION_PANEL_CLASS_NAME}>
+      <SurfaceCard label={t("followUp")} headingLevel={2}>
+        <div className={EXECUTION_CARD_BODY_CLASS_NAME}>
+          <Text tone="muted" isSkeleton>{t("noOpenNext")}</Text>
+          <Button variant="primary" isSkeleton>{t("draftWith", { name: "AI" })}</Button>
+        </div>
+      </SurfaceCard>
+    </div>
+  );
+};
+
+const ExecutionLoaded = (props: { readonly detail: LeadDetail }) => {
   const t = useT(leadDict);
   const { lead, responsibilities, executions, agents } = props.detail;
   const current = [...responsibilities]

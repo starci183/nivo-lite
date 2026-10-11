@@ -3,6 +3,8 @@ import { defineDict } from "../core";
 /** The Authority ("Giao quyền") page: goals, policies, automation scope, limits and optional staff. */
 export const authority = defineDict({
   en: {
+    crumbLabel: "Breadcrumb",
+    crumbHome: "Overview",
     eyebrow: "AUTHORITY",
     title: "Grant authority",
     description: "Tell NIVO what you want, how to speak for your business, and what it may do alone. Everything else, it asks you.",
@@ -58,6 +60,8 @@ export const authority = defineDict({
     loadFailBody: "The authority settings are not available yet. Try again in a moment.",
   },
   vi: {
+    crumbLabel: "Đường dẫn",
+    crumbHome: "Tổng quan",
     eyebrow: "GIAO QUYỀN",
     title: "Giao quyền",
     description: "Cho NIVO biết bạn muốn gì, nói thay doanh nghiệp thế nào và được tự làm những việc gì. Còn lại, NIVO sẽ hỏi bạn.",

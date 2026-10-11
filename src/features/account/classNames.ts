@@ -14,3 +14,5 @@ export const SESSION_ROW_CLASS_NAME = cn("flex", "flex-col", "gap-3", "border-b"
 export const SESSION_INFO_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-1");
 /** Device name beside the current badge (GAP-2). */
 export const SESSION_TITLE_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "gap-2");
+/** Breadcrumb trail above the page heading: one heading block (GAP-2). */
+export const HEAD_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-2");

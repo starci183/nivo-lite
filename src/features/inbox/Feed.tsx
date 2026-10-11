@@ -10,12 +10,17 @@ import { formatVnd, type FeedEvent } from "./model"
 import { bankConnectionOf } from "@/lib/bank"
 
 /** Props for {@link Feed}. */
-export type FeedProps = { readonly events: ReadonlyArray<FeedEvent>; readonly nowIso: string }
+export type FeedProps = {
+  readonly events: ReadonlyArray<FeedEvent>
+  readonly nowIso: string
+  /** STATE-8: the feed is loading - its heading stays, the rows are three skeleton rows. */
+  readonly isLoading?: boolean
+}
 
 const STATUS_TONE = { received: "neutral", processed: "success", needs_decision: "warning", failed: "danger" } as const
 
 /** Feed of received inputs, newest first. Every row says whether it is live or simulated. */
-export const Feed = ({ events, nowIso }: FeedProps) => {
+export const Feed = ({ events, nowIso, isLoading = false }: FeedProps) => {
   const router = useRouter()
   const t = useT(dict)
   const g = useT(governance)
@@ -36,10 +41,10 @@ export const Feed = ({ events, nowIso }: FeedProps) => {
         level={2}
         title={t("feedTitle")}
         description={t("feedDesc")}
-        action={<Button variant="secondary" onPress={() => router.refresh()}>{t("feedRefresh")}</Button>}
+        action={<Button variant="secondary" isSkeleton={isLoading} onPress={() => router.refresh()}>{t("feedRefresh")}</Button>}
       />
-      <SurfaceListCard ariaLabel={t("feedTitle")} empty={<EmptyNotice message={t("feedEmptyTitle")} description={t("feedEmptyBody")} />}>
-        {events.length === 0
+      <SurfaceListCard ariaLabel={t("feedTitle")} isLoading={isLoading} empty={<EmptyNotice message={t("feedEmptyTitle")} description={t("feedEmptyBody")} />}>
+        {isLoading || events.length === 0
           ? undefined
           : events.map((e) => (
             <li key={e.id} className={FEED_ITEM_CLASS}>

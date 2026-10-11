@@ -3,6 +3,8 @@ import { defineDict } from "../core";
 /** The Automations page (/automations) and the "Tự động hoá của module" section of module Settings. Template names, descriptions and settings are data (resources/automation-templates). */
 export const automations = defineDict({
   en: {
+    crumbLabel: "Breadcrumb",
+    crumbHome: "Overview",
     title: "Automations",
     leadBefore: "Switch on and it runs. Messages to customers still follow your permissions on the ",
     leadLink: "Authority",
@@ -97,6 +99,8 @@ export const automations = defineDict({
     workspaceChip: "Workspace",
   },
   vi: {
+    crumbLabel: "Đường dẫn",
+    crumbHome: "Tổng quan",
     title: "Tự động hoá",
     leadBefore: "Bật là chạy. Tin gửi khách vẫn theo quyền ở trang ",
     leadLink: "Giao quyền",

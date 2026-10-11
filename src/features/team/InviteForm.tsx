@@ -10,12 +10,16 @@ import type { StaffChoice } from "./queries"
 import { FOOTER_CLASS, FORM_GRID_CLASS, LINK_BOX_CLASS, STACK_CLASS } from "./classNames"
 
 /** Props for {@link InviteForm}. */
-export type InviteFormProps = { readonly staffChoices: ReadonlyArray<StaffChoice> }
+export type InviteFormProps = {
+  readonly staffChoices: ReadonlyArray<StaffChoice>
+  /** STATE-8: the choices are loading - the labels stay, the inputs and the action are skeletons. */
+  readonly isLoading?: boolean
+}
 
 const NO_STAFF = "none"
 
 /** Invite by email: role, optionally "this person is" an existing staff row. Shows the copyable link after sending. */
-export const InviteForm = ({ staffChoices }: InviteFormProps) => {
+export const InviteForm = ({ staffChoices, isLoading = false }: InviteFormProps) => {
   const t = useT(team)
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -64,9 +68,9 @@ export const InviteForm = ({ staffChoices }: InviteFormProps) => {
         <div className={STACK_CLASS}>
           <Text size="sm" tone="muted">{t("formDesc")}</Text>
           <div className={FORM_GRID_CLASS}>
-            <Input id="invite-email" name="email" kind="email" label={t("fieldEmail")} variant="secondary" isRequired isDisabled={isPending} value={email} onValueChange={setEmail} />
-            <Select label={t("fieldRole")} name="role" options={[{ id: "staff", label: t("roleStaff") }, { id: "manager", label: t("roleManager") }]} value={role} isDisabled={isPending} onValueChange={(v) => { if (v === "manager" || v === "staff") setRole(v) }} />
-            <Select label={t("fieldStaff")} name="staff" options={staffOptions} value={staffId} isDisabled={isPending} onValueChange={(v) => setStaffId(v ?? NO_STAFF)} />
+            <Input id="invite-email" name="email" kind="email" label={t("fieldEmail")} variant="secondary" isRequired isDisabled={isPending} isSkeleton={isLoading} value={email} onValueChange={setEmail} />
+            <Select label={t("fieldRole")} name="role" options={[{ id: "staff", label: t("roleStaff") }, { id: "manager", label: t("roleManager") }]} value={role} isDisabled={isPending || isLoading} onValueChange={(v) => { if (v === "manager" || v === "staff") setRole(v) }} />
+            <Select label={t("fieldStaff")} name="staff" options={staffOptions} value={staffId} isDisabled={isPending || isLoading} onValueChange={(v) => setStaffId(v ?? NO_STAFF)} />
           </div>
           <Text size="xs" tone="muted">{t("staffHint")}</Text>
           {error ? <Alert title={t("errGeneric")} description={error} tone="negative" /> : null}
@@ -89,7 +93,7 @@ export const InviteForm = ({ staffChoices }: InviteFormProps) => {
             </div>
           ) : null}
           <div className={FOOTER_CLASS}>
-            <Button variant="primary" type="submit" isPending={isPending}>{t("submit")}</Button>
+            <Button variant="primary" type="submit" isPending={isPending} isSkeleton={isLoading}>{t("submit")}</Button>
           </div>
         </div>
       </Form>

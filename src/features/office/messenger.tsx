@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react"
-import { Button, Drawer, EmptyNotice, FillViewport, Heading, IconButton, IconTile, SurfaceCard, Text } from "@starci/grammar/common"
+import { Button, ChatBubble, Drawer, EmptyNotice, FillViewport, Heading, IconButton, IconTile, Skeleton, SurfaceCard, Text } from "@starci/grammar/common"
 import { nivoIconSource } from "@/ui"
 import { useLocale, useT } from "@/i18n/client"
 import { office } from "@/i18n/dict/office"
@@ -25,6 +25,8 @@ import {
   PHONE_HIDDEN_CLASS_NAME,
   PHONE_ONLY_CLASS_NAME,
   PROMO_SLOT_CLASS_NAME,
+  ROW_FIRST_CLASS_NAME,
+  AVATAR_SLOT_CLASS_NAME,
   TASKS_SCROLL_CLASS_NAME,
   THREAD_BODY_CLASS_NAME,
   THREAD_COLUMN_CLASS_NAME,
@@ -71,9 +73,13 @@ export type OfficeMessengerProps = {
   readonly leadNames: Readonly<Record<string, string>>
   /** Render time (ISO) fixed on the server so day labels agree with hydration. */
   readonly nowIso: string
+  /** STATE-8: the same Office while its data loads - the frame, the columns, the heading and the composer stay, the thread is three skeleton messages. */
+  readonly isLoading?: boolean
 }
 
 const WIDE_INFO_QUERY = "(min-width: 1280px)"
+/** Which side each of the three skeleton messages is on (STATE-8 case-2). */
+const SKELETON_SIDES = ["incoming", "incoming", "outgoing"] as const
 const FOCUS_MS = 2400
 const REFRESH_DEBOUNCE_MS = 700
 
@@ -101,6 +107,7 @@ export const OfficeMessenger = ({
   customers,
   leadNames,
   nowIso,
+  isLoading = false,
 }: OfficeMessengerProps) => {
   const router = useRouter()
   const t = useT(office)
@@ -124,13 +131,14 @@ export const OfficeMessenger = ({
 
   // Wide screens dock the info panel as a column; narrower ones open it in a Grammar Drawer.
   useEffect(() => {
+    if (isLoading) return
     const query = window.matchMedia(WIDE_INFO_QUERY)
     setIsInfoOpen(query.matches)
     setIsInfoDocked(query.matches)
     const onChange = (event: MediaQueryListEvent) => setIsInfoDocked(event.matches)
     query.addEventListener("change", onChange)
     return () => query.removeEventListener("change", onChange)
-  }, [])
+  }, [isLoading])
 
   const append = useCallback((incoming: ReadonlyArray<Message>) => {
     // Any person's message clears its optimistic bubble.
@@ -153,6 +161,7 @@ export const OfficeMessenger = ({
   }, [])
 
   useEffect(() => {
+    if (isLoading) return
     const client = supabaseBrowser()
     const channel = client
       .channel(`office-${workspaceId}`)
@@ -171,7 +180,7 @@ export const OfficeMessenger = ({
       if (refreshTimer.current !== null) window.clearTimeout(refreshTimer.current)
       void client.removeChannel(channel)
     }
-  }, [workspaceId, append, router])
+  }, [workspaceId, append, router, isLoading])
 
   useEffect(() => {
     const node = scrollRef.current
@@ -281,10 +290,23 @@ export const OfficeMessenger = ({
   const thread = (
     <div ref={scrollRef} className={THREAD_SCROLL_CLASS_NAME} role="log" aria-label={t("conversationLabel")}>
       <div className={THREAD_BODY_CLASS_NAME}>
-        <div className={PROMO_SLOT_CLASS_NAME}>
-          <OfficePromoCard hasChatbot={hasChatbot} />
-        </div>
-        {items.length === 0 ? (
+        {isLoading ? null : (
+          <div className={PROMO_SLOT_CLASS_NAME}>
+            <OfficePromoCard hasChatbot={hasChatbot} />
+          </div>
+        )}
+        {isLoading ? (
+          SKELETON_SIDES.map((side, n) => (
+            <div key={n} className={ROW_FIRST_CLASS_NAME} aria-hidden="true">
+              <ChatBubble
+                side={side}
+                avatar={side === "incoming" ? <div className={AVATAR_SLOT_CLASS_NAME}><Skeleton shape="circle" size="sm" /></div> : undefined}
+              >
+                <Text as="p" isSkeleton>{t("composerPlaceholder")}</Text>
+              </ChatBubble>
+            </div>
+          ))
+        ) : items.length === 0 ? (
           <EmptyNotice message={t("emptyMessage")} description={t("emptyMessageHint")} />
         ) : (
           items.map((item) => {
@@ -342,6 +364,7 @@ export const OfficeMessenger = ({
           customers={customers}
           pendingCount={waitingCount}
           nowIso={nowIso}
+          isLoading={isLoading}
           onOpenGroup={() => {
             setCentre("chat")
             setPhoneView("thread")
@@ -360,7 +383,7 @@ export const OfficeMessenger = ({
           <div className={HEAD_TEXT_CLASS_NAME}>
             <Heading level={1}>{centre === "tasks" ? t("tasksTitle") : t("title")}</Heading>
             {centre === "tasks" ? null : (
-              <Text size="sm" tone="muted" overflow="truncate">
+              <Text size="sm" tone="muted" overflow="truncate" isSkeleton={isLoading}>
                 {memberCount === 1 ? t("memberCountOne") : agents.length > 0 ? t("memberCountAgents", { n: memberCount, agents: agents.length }) : t("memberCount", { n: memberCount })}
               </Text>
             )}
@@ -396,6 +419,7 @@ export const OfficeMessenger = ({
               hostRef={composerHostRef}
               onDraftChange={setDraft}
               onSend={onSend}
+              isLoading={isLoading}
             />
           </>
         )}

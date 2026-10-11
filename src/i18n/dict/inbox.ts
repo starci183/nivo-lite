@@ -3,6 +3,8 @@ import { defineDict } from "../core";
 /** The Inbox ("Đầu vào") page: inbound simulator and the feed of everything NIVO received. */
 export const inbox = defineDict({
   en: {
+    crumbLabel: "Breadcrumb",
+    crumbHome: "Overview",
     eyebrow: "INBOX",
     title: "Inbound",
     description: "Every message, order and payment NIVO receives, with its source and whether it is real or simulated.",
@@ -70,6 +72,8 @@ export const inbox = defineDict({
     unnamed: "Unknown sender",
   },
   vi: {
+    crumbLabel: "Đường dẫn",
+    crumbHome: "Tổng quan",
     eyebrow: "ĐẦU VÀO",
     title: "Đầu vào",
     description: "Mọi tin nhắn, đơn hàng và thanh toán NIVO nhận được, kèm nguồn và cho biết là thật hay mô phỏng.",

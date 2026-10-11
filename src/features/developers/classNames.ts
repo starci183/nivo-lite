@@ -20,3 +20,5 @@ export const ACTIONS_CLASS = cn("flex", "flex-wrap", "items-center", "gap-2")
 export const ROW_NOTE_CLASS = cn("w-full")
 /** One guide example: heading, note, code (GAP-2). */
 export const EXAMPLE_CLASS = cn("flex", "min-w-0", "flex-col", "gap-2")
+/** Breadcrumb trail above the page heading: one heading block (GAP-2). */
+export const HEAD_CLASS = cn("flex", "min-w-0", "flex-col", "gap-2");
