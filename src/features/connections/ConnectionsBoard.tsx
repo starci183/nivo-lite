@@ -99,8 +99,9 @@ export const ConnectionsBoard = ({ items, agentNames, agents, localOnly, zaloRes
           <section key={group.id} className={GROUP_CLASS} {...(isEmbedded ? {} : { "aria-labelledby": `group-${group.id}` })}>
             {isEmbedded ? null : <SectionHeader id={`group-${group.id}`} level={2} title={t(GROUP_TITLE[group.id])} count={group.providers.length} />}
             {used.map((p) => (
+              <div key={p} data-guide={`connections.${p}`}>
               <SurfaceListCard
-                key={p} label={PROVIDERS[p].title[locale]} headingLevel={3} fact={PROVIDERS[p].blurb[locale]}
+                label={PROVIDERS[p].title[locale]} headingLevel={3} fact={PROVIDERS[p].blurb[locale]}
                 labelEnd={<Button variant="ghost" onPress={() => setOpen({ provider: p })}>{t("add")}</Button>}
               >
                 <ul className={LIST_CLASS}>
@@ -112,12 +113,13 @@ export const ConnectionsBoard = ({ items, agentNames, agents, localOnly, zaloRes
                   ))}
                 </ul>
               </SurfaceListCard>
+              </div>
             ))}
             {unused.length ? (
               <SurfaceListCard label={t("notConnected")} headingLevel={3}>
                 <ul className={LIST_CLASS}>
                   {unused.map((p) => (
-                    <li key={p} className={OFFER_CLASS}>
+                    <li key={p} className={OFFER_CLASS} data-guide={`connections.${p}`}>
                       <ProviderLogo provider={p} />
                       <div className={OFFER_MAIN_CLASS}>
                         <div className={ACTIONS_CLASS}>

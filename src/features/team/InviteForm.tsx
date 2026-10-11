@@ -68,30 +68,32 @@ export const InviteForm = ({ staffChoices }: InviteFormProps) => {
         : t("sentNoEmail", { email: sent.email })
 
   return (
-    <SurfaceCard label={t("formTitle")} headingLevel={2}>
-      <form className={STACK_CLASS} onSubmit={(e) => { e.preventDefault(); submit() }}>
-        <Text size="sm" tone="muted">{t("formDesc")}</Text>
-        <div className={FORM_GRID_CLASS}>
-          <Input id="invite-email" name="email" kind="email" label={t("fieldEmail")} variant="secondary" isRequired isDisabled={isPending} value={email} onValueChange={setEmail} />
-          <Select label={t("fieldRole")} name="role" options={[{ id: "staff", label: t("roleStaff") }, { id: "manager", label: t("roleManager") }]} value={role} isDisabled={isPending} onValueChange={(v) => { if (v === "manager" || v === "staff") setRole(v) }} />
-          <Select label={t("fieldStaff")} name="staff" options={staffOptions} value={staffId} isDisabled={isPending} onValueChange={(v) => setStaffId(v ?? NO_STAFF)} />
-        </div>
-        <Text size="xs" tone="muted">{t("staffHint")}</Text>
-        {error ? <Alert title={t("errGeneric")} description={error} tone="negative" /> : null}
-        {sent ? (
-          <div className={LINK_BOX_CLASS}>
-            <Text size="sm" live="polite">{sentText}</Text>
-            <Text size="xs" tone="muted">{t("sentLink")}</Text>
-            <code className={LINK_TEXT_CLASS}>{sent.link}</code>
-            <div className={FOOTER_CLASS}>
-              <Button variant="outline" onPress={copy}>{copied ? t("inviteCopied") : t("inviteCopy")}</Button>
-            </div>
+    <div data-guide="team.invite">
+      <SurfaceCard label={t("formTitle")} headingLevel={2}>
+        <form className={STACK_CLASS} onSubmit={(e) => { e.preventDefault(); submit() }}>
+          <Text size="sm" tone="muted">{t("formDesc")}</Text>
+          <div className={FORM_GRID_CLASS}>
+            <Input id="invite-email" name="email" kind="email" label={t("fieldEmail")} variant="secondary" isRequired isDisabled={isPending} value={email} onValueChange={setEmail} />
+            <Select label={t("fieldRole")} name="role" options={[{ id: "staff", label: t("roleStaff") }, { id: "manager", label: t("roleManager") }]} value={role} isDisabled={isPending} onValueChange={(v) => { if (v === "manager" || v === "staff") setRole(v) }} />
+            <Select label={t("fieldStaff")} name="staff" options={staffOptions} value={staffId} isDisabled={isPending} onValueChange={(v) => setStaffId(v ?? NO_STAFF)} />
           </div>
-        ) : null}
-        <div className={FOOTER_CLASS}>
-          <Button variant="primary" type="submit" isPending={isPending}>{t("submit")}</Button>
-        </div>
-      </form>
-    </SurfaceCard>
+          <Text size="xs" tone="muted">{t("staffHint")}</Text>
+          {error ? <Alert title={t("errGeneric")} description={error} tone="negative" /> : null}
+          {sent ? (
+            <div className={LINK_BOX_CLASS}>
+              <Text size="sm" live="polite">{sentText}</Text>
+              <Text size="xs" tone="muted">{t("sentLink")}</Text>
+              <code className={LINK_TEXT_CLASS}>{sent.link}</code>
+              <div className={FOOTER_CLASS}>
+                <Button variant="outline" onPress={copy}>{copied ? t("inviteCopied") : t("inviteCopy")}</Button>
+              </div>
+            </div>
+          ) : null}
+          <div className={FOOTER_CLASS}>
+            <Button variant="primary" type="submit" isPending={isPending}>{t("submit")}</Button>
+          </div>
+        </form>
+      </SurfaceCard>
+    </div>
   )
 }

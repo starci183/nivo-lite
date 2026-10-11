@@ -81,7 +81,7 @@ export const InfoPanel = ({ avatarUrl, agents, people, staff = [], pending, exce
       </div>
       <div className={INFO_BODY_CLASS_NAME}>
         <PendingList items={pending} moduleOf={moduleOf} onJump={onJump} />
-        <ExceptionList items={exceptions} onJump={onJumpException} />
+        <ExceptionList items={exceptions} agents={agents} onJump={onJumpException} />
 
         <section className={INFO_SECTION_CLASS_NAME} aria-label={t("membersTitle")}>
           <div className={INFO_TITLE_CLASS_NAME}>

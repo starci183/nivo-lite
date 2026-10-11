@@ -19,8 +19,9 @@ import {
   BUBBLE_MINE_CLASS_NAME,
   BUBBLE_NIVO_CLASS_NAME,
   BUBBLE_THEIRS_CLASS_NAME,
+  BUBBLE_TIME_CLASS_NAME,
   DAY_CLASS_NAME,
-  DAY_RULE_CLASS_NAME,
+  DAY_PILL_CLASS_NAME,
   MENTION_CLASS_NAME,
   NIVO_AVATAR_CLASS_NAME,
   NOTICE_CLASS_NAME,
@@ -36,9 +37,9 @@ export type DaySeparatorProps = { readonly label: string }
 /** Day divider such as "Today" or "Yesterday". */
 export const DaySeparator = ({ label }: DaySeparatorProps) => (
   <div className={DAY_CLASS_NAME} role="separator" aria-label={label}>
-    <span className={DAY_RULE_CLASS_NAME} />
-    <Text size="xs" tone="muted" weight="medium">{label}</Text>
-    <span className={DAY_RULE_CLASS_NAME} />
+    <span className={DAY_PILL_CLASS_NAME}>
+      <Text size="xs" tone="muted" weight="medium">{label}</Text>
+    </span>
   </div>
 )
 
@@ -78,11 +79,13 @@ export type MessageRowProps = {
   /** Contact name of the lead the message points at, when known. */
   readonly leadName: string | null
   readonly isContinuation: boolean
+  /** True for the last bubble of a group from one author: it carries the send time. */
+  readonly isGroupEnd?: boolean
   readonly onReply: (handle: string) => void
 }
 
 /** One chat bubble (person, agent or me) or a centred system notice. */
-export const MessageRow = ({ message, agent, isMine, leadName, isContinuation, onReply }: MessageRowProps) => {
+export const MessageRow = ({ message, agent, isMine, leadName, isContinuation, isGroupEnd = true, onReply }: MessageRowProps) => {
   const t = useT(office)
   const locale = useLocale()
   const [isCopied, setIsCopied] = useState(false)
@@ -127,16 +130,16 @@ export const MessageRow = ({ message, agent, isMine, leadName, isContinuation, o
         </div>
       )}
       <div className={isMine ? `${BUBBLE_COLUMN_CLASS_NAME} ${BUBBLE_COLUMN_MINE_CLASS_NAME}` : BUBBLE_COLUMN_CLASS_NAME}>
-        {isContinuation ? null : (
+        {isContinuation || isMine ? null : (
           <div className={AUTHOR_LINE_CLASS_NAME}>
-            {isMine ? null : <Text size="sm" weight="semibold">{isNivo ? t("nivoCore") : message.author_name}</Text>}
+            <Text size="sm" weight="semibold">{isNivo ? t("nivoCore") : message.author_name}</Text>
             {isAgent && !isNivo ? <AiChip /> : null}
-            <Text size="xs" tone="muted">{time}</Text>
           </div>
         )}
         <div className={BUBBLE_WRAP_CLASS_NAME}>
-          <div className={isMine ? BUBBLE_MINE_CLASS_NAME : isNivo ? BUBBLE_NIVO_CLASS_NAME : BUBBLE_THEIRS_CLASS_NAME} title={isContinuation ? time : undefined}>
+          <div className={isMine ? BUBBLE_MINE_CLASS_NAME : isNivo ? BUBBLE_NIVO_CLASS_NAME : BUBBLE_THEIRS_CLASS_NAME} title={time}>
             <Text as="p">{renderBody(message.body)}</Text>
+            {isGroupEnd ? <span className={BUBBLE_TIME_CLASS_NAME}><Text size="xs" tone="muted">{time}</Text></span> : null}
           </div>
           <div className={isMine ? `${BUBBLE_ACTIONS_CLASS_NAME} ${BUBBLE_ACTIONS_MINE_CLASS_NAME}` : BUBBLE_ACTIONS_CLASS_NAME}>
             <Button variant="ghost" size="sm" onPress={onCopy}>{isCopied ? t("copied") : t("copyText")}</Button>
