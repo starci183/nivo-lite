@@ -111,7 +111,10 @@ export type QuotaStatus = {
   readonly fallbackReply: string | null;
   /** Credits spent this month (model cost x CREDITS_PER_USD) and the allowance (null = unlimited). */
   readonly creditsUsed: number;
+  /** This month's allowance including the credits carried from last month (Pro, Max). */
   readonly creditsLimit: number | null;
+  /** Credits carried from last month (0 when the plan does not roll over). */
+  readonly creditsCarried: number;
   readonly messagesExceeded: boolean;
   readonly tokensExceeded: boolean;
   readonly creditsExceeded: boolean;
@@ -127,7 +130,7 @@ export const DEFAULT_FALLBACK_REPLY = "Dạ em đã ghi nhận, nhân viên sẽ
 
 type StatusRow = {
   period_start: string; messages_used: number; tokens_used: number; cost_usd: number; messages_limit: number | null; tokens_limit: number | null;
-  fallback_reply: string | null; credits_used?: number | string | null; credits_limit?: number | string | null;
+  fallback_reply: string | null; credits_used?: number | string | null; credits_limit?: number | string | null; credits_carried?: number | string | null;
 };
 
 const ratioOf = (used: number, limit: number | null): number => (limit === null ? 0 : limit <= 0 ? 1 : used / limit);
@@ -149,6 +152,7 @@ export const quotaStatus = async (workspaceId: string): Promise<QuotaStatus | nu
     const costUsd = Number(row.cost_usd);
     const creditsUsed = row.credits_used == null ? creditsOf(costUsd) : Number(row.credits_used);
     const creditsLimit = row.credits_limit == null ? null : Number(row.credits_limit);
+    const creditsCarried = row.credits_carried == null ? 0 : Number(row.credits_carried);
     const mRatio = ratioOf(messagesUsed, messagesLimit);
     const tRatio = ratioOf(tokensUsed, tokensLimit);
     const cRatio = ratioOf(creditsUsed, creditsLimit);
@@ -158,7 +162,7 @@ export const quotaStatus = async (workspaceId: string): Promise<QuotaStatus | nu
     const ratio = Math.max(mRatio, tRatio, cRatio);
     return {
       periodStart: row.period_start, messagesUsed, tokensUsed, costUsd, messagesLimit, tokensLimit,
-      fallbackReply: row.fallback_reply?.trim() || null, creditsUsed, creditsLimit, messagesExceeded, tokensExceeded, creditsExceeded, ratio,
+      fallbackReply: row.fallback_reply?.trim() || null, creditsUsed, creditsLimit, creditsCarried, messagesExceeded, tokensExceeded, creditsExceeded, ratio,
       level: messagesExceeded || tokensExceeded || creditsExceeded ? "exceeded" : ratio >= WARN_AT ? "warn" : "ok",
     };
   } catch (e) {

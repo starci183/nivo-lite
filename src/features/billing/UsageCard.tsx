@@ -76,6 +76,12 @@ export const UsageCard = ({ usage }: { readonly usage: UsageSummary }) => {
               <Text size="sm" tone="muted">{t("usageCreditsLeft")}</Text>
               <Text weight="semibold">{status.creditsLimit === null ? t("usageNoLimit") : credit(Math.max(0, status.creditsLimit - status.creditsUsed))}</Text>
             </div>
+            {status.creditsCarried > 0 ? (
+              <div className={FACT_CLASS_NAME}>
+                <Text size="sm" tone="muted">{t("usageCarried")}</Text>
+                <Text weight="semibold">{credit(status.creditsCarried)}</Text>
+              </div>
+            ) : null}
             <div className={FACT_CLASS_NAME}>
               <Text size="sm" tone="muted">{t("usagePeriod")}</Text>
               <Text weight="semibold">{new Intl.DateTimeFormat(intlLocale(locale), { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${status.periodStart}T00:00:00Z`))}</Text>

@@ -25,9 +25,9 @@ type Pending =
 /** Plans a workspace can be moved to (the server re-checks that the plan exists and is active). */
 const PLAN_OPTIONS = [
   { id: "starter", label: "Starter · 1,150 credits" },
-  { id: "pro", label: "Pro · 5,765 credits" },
-  { id: "max", label: "Max · 19,227 credits" },
-  { id: "enterprise", label: "Enterprise · by contract" },
+  { id: "pro", label: "Pro · 6,918 credits + rollover" },
+  { id: "max", label: "Max · 24,034 credits + rollover" },
+  { id: "enterprise", label: "Enterprise · by contract (keep a 50% token margin)" },
 ];
 
 /** Support actions. Each one asks for a confirmation in the page first; the server re-checks the admin and writes platform_audit. */
