@@ -92,10 +92,14 @@ export const assertPublicHost = async (host: string): Promise<{ address: string;
   return { address: first.address, family: first.family === 6 ? 6 : 4 };
 };
 
-/** fetch() to a public http(s) URL only, with a time limit and a size cap. Redirects are followed manually and re-checked. */
+/** fetch() to a public http(s) URL only, with a time limit and a size cap. Redirects are followed manually and re-checked; a redirect to
+ * another origin drops the request headers. */
 export const safeFetch = async (rawUrl: string, init: RequestInit & { timeoutMs?: number; maxBytes?: number } = {}): Promise<{ status: number; headers: Headers; text: string }> => {
   let url = new URL(rawUrl);
+  const origin = url.origin;
   for (let hop = 0; hop < 4; hop++) {
+    // A redirect to another origin never carries the caller's headers (an API key or a bearer token must not leak there).
+    if (url.origin !== origin) init = { ...init, headers: {} };
     if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error("Chỉ hỗ trợ địa chỉ http hoặc https.");
     await assertPublicHost(url.hostname);
     const ctrl = new AbortController();
