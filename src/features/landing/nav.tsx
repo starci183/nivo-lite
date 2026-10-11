@@ -48,11 +48,12 @@ export const LandingNav = async () => {
         <>
           <LocaleSwitch />
           <div className={NAV_SIGNIN}>
-            <Button variant="secondary" size="sm" href={signedIn ? "/dashboard" : "/login"}>
+            <Button variant="ghost" size="sm" href={signedIn ? "/dashboard" : "/login"}>
               {signedIn ? t("openDashboard") : t("signIn")}
             </Button>
           </div>
-          <Button variant="primary" size="sm" href={LANDING_OFFER.ctaHref}>
+          {/* The hero's "Try NIVO OS" is the page's one primary for this command (CTA-1 case-5); the bar's copy steps down. */}
+          <Button variant="secondary" size="sm" href={LANDING_OFFER.ctaHref}>
             {t("tryNow")}
           </Button>
         </>
