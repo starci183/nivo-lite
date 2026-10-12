@@ -3,7 +3,9 @@
 #
 #   docker build -f be/apps/api/Dockerfile -t nivo-lite/api:<tag> .
 #
-# It follows the image canon and diverges from it nowhere. Credentials are mounted at run time and never enter the image.
+# It follows the image canon and diverges from it in one place: the runtime installs ffmpeg and fontconfig (apk) because the video
+# render job shells out to ffmpeg (libx264, libass, libfreetype, sidechaincompress, loudnorm) and writes its TTS cache and scratch files under
+# /var/cache/nivo-video and /tmp/nivo-video, which the unprivileged node user must own. Credentials are mounted at run time and never enter the image.
 
 FROM node:22.14.0-alpine3.21 AS manifests
 WORKDIR /app
@@ -26,6 +28,10 @@ FROM node:22.14.0-alpine3.21 AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
+
+RUN apk add --no-cache ffmpeg fontconfig \
+ && mkdir -p /var/cache/nivo-video /tmp/nivo-video \
+ && chown node:node /var/cache/nivo-video /tmp/nivo-video
 
 COPY --from=manifests /app ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
