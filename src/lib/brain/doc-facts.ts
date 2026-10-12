@@ -36,7 +36,7 @@ type Rec = {
   prompt_version: number; content_hash: string | null; windows_total: number; windows_done: number; attempts: number; orphan_fact_ids: Array<string>; updated_at: string
 }
 
-type SourceRow = { id: string; workspace_id: string; title: string; content: string; visibility: "public" | "internal"; status: string; updated_at: string }
+type SourceRow = { id: string; workspace_id: string; title: string; content: string; visibility: "public" | "internal"; status: string; updated_at: string; installation_id: string | null }
 
 const BY = "NIVO"
 const MAX_ATTEMPTS = 3
@@ -87,7 +87,7 @@ const finalizeOrphans = async (db: Db, ws: string, ids: ReadonlyArray<string>, w
   for (const id of ids) {
     const f = await getFact(db, ws, id)
     if (!f || f.status !== "active" || f.evidence.length > 0) continue
-    const waiting = await byKey(db, ws, f.subjectKey, f.attribute, "proposed")
+    const waiting = await byKey(db, ws, f.subjectKey, f.attribute, "proposed", f.installationId)
     if (waiting.some((p) => p.proposalKind === "set")) continue
     if (await proposeRetire(db, ws, f, why, BY)) n += 1
   }
@@ -170,7 +170,7 @@ export const runExtraction = async (ws: string, sourceId: string, until: number)
   const rec = await claim(db, sourceId)
   if (!rec) return
   try {
-    const { data } = await db.from("knowledge_sources").select("id, workspace_id, title, content, visibility, status, updated_at").eq("id", sourceId).eq("workspace_id", ws).maybeSingle()
+    const { data } = await db.from("knowledge_sources").select("id, workspace_id, title, content, visibility, status, updated_at, installation_id").eq("id", sourceId).eq("workspace_id", ws).maybeSingle()
     const src = data as SourceRow | null
     if (!src) return
     if (src.status !== "ready") return void (await save(db, sourceId, { status: "queued" }))
@@ -209,7 +209,9 @@ export const runExtraction = async (ws: string, sourceId: string, until: number)
             subjectType: f.subjectType, subjectLabel: f.subjectLabel, attributeLabel: f.attributeLabel, value: f.value, unit: f.unit,
             // Public only when the model says so AND the owner marked the document public; otherwise the fact keeps the audience of the fact it may replace, else internal.
             scope: f.scope === "public" && src.visibility === "public" ? "public" : undefined,
-            sourceKind: "document", validFrom: f.validFrom, autoApply: false, proposedBy: `Tài liệu: ${src.title.slice(0, 80)}`,
+            sourceKind: "document", validFrom: f.validFrom, autoApply: false,
+            // A document kept for one agent instance proposes facts for that instance only (null = shared, as before).
+            installationId: src.installation_id, proposedBy: `Tài liệu: ${src.title.slice(0, 80)}`,
             evidence: [{ kind: "document", ref: src.id, label: src.title, quote: f.quote ?? undefined, at: evidenceAt, sourceId: src.id, title: src.title }],
           })
           filed += 1

@@ -21,7 +21,7 @@ type Rec = {
   prompt_version: number; content_hash: string | null; windows_total: number; windows_done: number; attempts: number; orphan_fact_ids: Array<string>; updated_at: string;
 };
 
-export type FactsSource = { readonly id: string; readonly title: string; readonly content: string; readonly visibility: "public" | "internal"; readonly updated_at: string };
+export type FactsSource = { readonly id: string; readonly title: string; readonly content: string; readonly visibility: "public" | "internal"; readonly updated_at: string; /** The one agent instance this document is kept for; null = shared by every instance of the type. */ readonly installation_id?: string | null };
 
 const BY = "NIVO";
 
@@ -60,7 +60,7 @@ const finalizeOrphans = async (db: Db, ws: string, ids: ReadonlyArray<string>, w
   for (const id of ids) {
     const f = await getFact(db, ws, id);
     if (!f || f.status !== "active" || f.evidence.length > 0) continue;
-    const waiting = await byKey(db, ws, f.subjectKey, f.attribute, "proposed");
+    const waiting = await byKey(db, ws, f.subjectKey, f.attribute, "proposed", f.installationId);
     if (waiting.some((p) => p.proposalKind === "set")) continue;
     if (await proposeRetire(db, ws, f, why, BY)) n += 1;
   }
@@ -144,7 +144,7 @@ export const extractDocument = async (d: ExtractDeps, ws: string, src: FactsSour
         await proposeFact(db, ws, {
           subjectType: f.subjectType, subjectLabel: f.subjectLabel, attributeLabel: f.attributeLabel, value: f.value, unit: f.unit,
           scope: f.scope === "public" && src.visibility === "public" ? "public" : undefined,
-          sourceKind: "document", validFrom: f.validFrom, autoApply: false, proposedBy: `Tài liệu: ${src.title.slice(0, 80)}`,
+          sourceKind: "document", validFrom: f.validFrom, autoApply: false, installationId: src.installation_id ?? null, proposedBy: `Tài liệu: ${src.title.slice(0, 80)}`,
           evidence: [{ kind: "document", ref: src.id, label: src.title, quote: f.quote ?? undefined, at: src.updated_at, sourceId: src.id, title: src.title }],
         });
         filed += 1;

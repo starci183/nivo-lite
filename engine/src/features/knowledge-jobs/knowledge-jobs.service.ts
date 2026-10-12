@@ -19,7 +19,7 @@ type Db = SupabaseClient;
 type SourceRow = {
   id: string; workspace_id: string; module: string | null; kind: "text" | "faq" | "file" | "url"; topic: string | null; visibility: "public" | "internal";
   title: string; content: string; status: SourceStatus; error: string | null; chunk_count: number; storage_path: string | null; source_url: string | null;
-  created_by: string | null; updated_at: string;
+  created_by: string | null; updated_at: string; installation_id?: string | null;
 };
 
 /** The bucket's own limit (job_outbox migration: file_size_limit 12582912). */
