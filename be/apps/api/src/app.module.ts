@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
+import { AdminHttpModule } from "@features/api/admin"
 import { SystemHealthHttpModule } from "@features/api/system-health"
 import { WorkspacesHttpModule } from "@features/api/workspaces"
 import { AuthGuard, IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } from "@modules/domain/identity"
@@ -11,7 +12,14 @@ import {
     SupabaseModule,
     createSupabaseAccessTokenVerifier,
 } from "@modules/integrations/supabase"
+import { AiQuotaOverridesModule } from "@modules/domain/ai-quota-overrides"
 import { LivenessModule } from "@modules/domain/liveness"
+import {
+    PLATFORM_ADMIN_ERROR_KINDS,
+    PLATFORM_ADMIN_MESSAGES,
+    PlatformAdminModule,
+} from "@modules/domain/platform-admin"
+import { PlatformAuditModule } from "@modules/domain/platform-audit"
 import { EventsModule } from "@modules/domain/events"
 import {
     WORKSPACE_INVITES_ERROR_KINDS,
@@ -59,6 +67,7 @@ export class AppModule {
                         ERRORS_MESSAGES,
                         HTTP_SECURITY_MESSAGES,
                         IDENTITY_MESSAGES,
+                        PLATFORM_ADMIN_MESSAGES,
                         JOBS_MESSAGES,
                         QUEUE_MESSAGES,
                         WORKSPACE_INVITES_MESSAGES,
@@ -75,6 +84,7 @@ export class AppModule {
                         JOBS_ERROR_KINDS,
                         QUEUE_ERROR_KINDS,
                         IDENTITY_ERROR_KINDS,
+                        PLATFORM_ADMIN_ERROR_KINDS,
                         SUPABASE_ERROR_KINDS,
                         WORKSPACE_INVITES_ERROR_KINDS,
                         WORKSPACE_MEMBERS_ERROR_KINDS,
@@ -111,8 +121,12 @@ export class AppModule {
                     ...options.workspaceInvites,
                 }),
                 LivenessModule.register({ isGlobal: true }),
+                PlatformAuditModule.register({ isGlobal: true }),
+                AiQuotaOverridesModule.register({ isGlobal: true }),
+                PlatformAdminModule.register({ isGlobal: true, ...options.platformAdmin }),
                 SystemHealthHttpModule,
                 WorkspacesHttpModule,
+                AdminHttpModule,
             ],
             providers: [
                 { provide: SUPABASE_ACCESS_TOKEN_VERIFIER, useValue: verifyAccessToken },
