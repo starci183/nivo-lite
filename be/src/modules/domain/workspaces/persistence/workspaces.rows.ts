@@ -1,27 +1,31 @@
-import type { Database } from "../../../../../../supabase/types/database.types"
-
-type Tables = Database["public"]["Tables"]
-
 /** A membership of the caller joined with its workspace, as the memberships read selects it. */
-export type MembershipRow = Pick<
-    Tables["workspace_members"]["Row"],
-    "workspace_id" | "user_id" | "staff_id" | "display_name"
-> & {
+export interface MembershipRow {
+    /** The workspace the membership belongs to. */
+    workspace_id: string
+    /** The Auth user. */
+    user_id: string
+    /** The staff row the account is, when it is one. */
+    staff_id: string | null
+    /** The name Office and the decision history show. */
+    display_name: string
     /** Constrained by a CHECK in the table. */
     role: "owner" | "manager" | "staff"
     /** Constrained by a CHECK in the table. */
     status: "active" | "disabled"
     /** The workspace name. */
-    workspace_name: Tables["workspaces"]["Row"]["name"]
+    workspace_name: string
     /** The workspace status. */
-    workspace_status: Tables["workspaces"]["Row"]["status"]
+    workspace_status: string
     /** The Auth user who owns the workspace. */
-    owner_id: Tables["workspaces"]["Row"]["owner_id"]
+    owner_id: string
     /** When the workspace was created. */
-    workspace_created_at: Tables["workspaces"]["Row"]["created_at"]
+    workspace_created_at: string
     /** The business type chosen at onboarding. */
-    business_type: Tables["workspaces"]["Row"]["business_type"]
+    business_type: string | null
 }
 
 /** The id of a created workspace. */
-export type CreatedRow = Pick<Tables["workspaces"]["Row"], "id">
+export interface CreatedRow {
+    /** The new workspace. */
+    id: string
+}

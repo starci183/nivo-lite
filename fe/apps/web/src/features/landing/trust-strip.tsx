@@ -1,5 +1,5 @@
 import { List, ListItem, PageContainer, Region, SurfaceCard, Text } from "@starci/grammar/common";
-import { NivoIcon } from "@/ui";
+import { Icon as NivoIcon } from "@/components/leaves/Icon"
 import { getT } from "@/i18n/server";
 import { landing } from "@/i18n/dict/landing";
 import { SECTION_STACK, TRUST_LIST, TRUST_ROW, TRUST_WHO } from "./classNames";

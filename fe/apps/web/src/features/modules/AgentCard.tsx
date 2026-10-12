@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Badge, Button, DropdownMenu, SurfaceCard, Text } from "@starci/grammar/common";
-import { AgentAvatar } from "@/components/avatar/PersonAvatar";
+import { AgentAvatar } from "@/components/blocks/AgentAvatar"
 import { updateAgent } from "@/lib/actions";
 import { useT } from "@/i18n/client";
 import { modules } from "@/i18n/dict/modules";
@@ -41,7 +41,7 @@ export const AgentCard = ({ stats }: AgentCardProps) => {
     <SurfaceCard ariaLabel={agent.name}>
       <div className={CARD_STACK_CLASS_NAME}>
         <div className={AGENT_TOP_CLASS_NAME}>
-          <AgentAvatar module={agent.module} size="lg" label={agent.name} online={isActive} />
+          <AgentAvatar module={agent.module} size="lg" label={agent.name} />
           <div className={HEADER_COPY_CLASS_NAME}>
             <div className={TITLE_ROW_CLASS_NAME}>
               <Text weight="semibold">{agent.name}</Text>

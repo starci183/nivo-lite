@@ -1,7 +1,7 @@
 "use client";
 
 import { Button, PageContainer, SectionHeader, Stepper, SurfaceCard, Text } from "@starci/grammar/common";
-import { AgentAvatar } from "@/components/avatar/PersonAvatar";
+import { AgentAvatar } from "@/components/blocks/AgentAvatar"
 import { useLocale, useT } from "@/i18n/client";
 import { modules } from "@/i18n/dict/modules";
 import { moduleCopy } from "@/lib/modules";

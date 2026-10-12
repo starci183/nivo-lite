@@ -1,6 +1,7 @@
 "use client";
 
-import { AgentAvatar, PersonAvatar } from "@/components/avatar/PersonAvatar";
+import { AgentAvatar } from "@/components/blocks/AgentAvatar"
+import { PersonAvatar } from "@/components/leaves/PersonAvatar"
 import { Avatar, Badge, DescriptionList, Region, SectionHeader, SurfaceCard, Text, Timeline, type BadgeTone } from "@starci/grammar/common";
 import type { ReactNode } from "react";
 import { useT } from "@/i18n/client";
