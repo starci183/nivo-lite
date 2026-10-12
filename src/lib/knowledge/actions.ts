@@ -133,17 +133,28 @@ export const pollExtractions = async (sourceIds: Array<string>): Promise<Outcome
 
 /* ------------------------------------------------------------------ Google Drive grant (private files and folders) */
 
-/** The workspace's Drive read grant for the Add documents drawer; `configured` = the Google OAuth client exists on this server. */
+/**
+ * drive.readonly is a Google *restricted* scope: the published OAuth app does not ask for it. The read grant stays an internal tool,
+ * offered only to the Google accounts listed in NIVO_DRIVE_READ_EMAILS (comma separated); customers use the Picker (drive.file).
+ */
+const mayGrantDriveRead = async (): Promise<boolean> => {
+  const allowed = (process.env.NIVO_DRIVE_READ_EMAILS ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean)
+  if (!allowed.length) return false
+  return allowed.includes((await getSession()).email.toLowerCase())
+}
+
+/** The workspace's Drive read grant for the Add documents drawer; `configured` = the Google client exists and this person may use it. */
 export const driveGrantStatus = async (): Promise<Outcome<DriveGrant & { readonly configured: boolean }>> =>
   run(async () => {
     const member = await managers();
-    return { ...(await driveGrantOf(member.workspaceId)), configured: googleConfigured() };
+    return { ...(await driveGrantOf(member.workspaceId)), configured: googleConfigured() && (await mayGrantDriveRead()) };
   });
 
 /** Start the Drive consent: the Google URL to go to; the callback brings the browser back to `returnTo` with ?drive=ok|error. */
 export const startDriveGrant = async (returnTo: string): Promise<Outcome<{ url: string }>> =>
   run(async () => {
     const member = await managers();
+    if (!(await mayGrantDriveRead())) throw new Error("Quyền đọc toàn bộ Google Drive chỉ dành cho tài khoản nội bộ. Dùng \"Chọn từ Google Drive\".");
     const url = googleConfigured() ? driveAuthUrl(member.workspaceId, member.userId, safeReturnTo(returnTo)) : null;
     if (!url) throw new Error("Google chưa được bật cho NIVO.");
     return { url };
