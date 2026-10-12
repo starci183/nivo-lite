@@ -31,7 +31,7 @@ type ModuleChromeProps = {
 /**
  * The frame of every agent instance page: the installed agents on the left (one row per instance), the instance's header and its
  * Setup | Workbench | Settings tabs. A multi-instance type (several Chatbots, one per branch or page) shows the instance name as the heading
- * and in the trail: Tổng quan > Agent > Chatbot > Chi nhánh Q1.
+ * and in the trail: Tổng quan > Agent > Chatbot, with the instance name as the heading.
  */
 export const ModuleChrome = ({ current, moduleKey, installations, canSetup, isLoading = false, children }: ModuleChromeProps) => {
   const t = useT(modulesCore);
@@ -56,8 +56,8 @@ export const ModuleChrome = ({ current, moduleKey, installations, canSetup, isLo
   const crumbs = [
     { id: "home", label: ts("crumbHome"), href: "/dashboard" },
     { id: "modules", label: t("catalogTitle"), href: "/agents" },
+    // The instance name leads the page as its heading, so the trail ends at the type (one place per name; a short trail that fits a phone).
     isInstance ? { id: "module", label: typeName, href: agentListHref(key) } : { id: "module", label: typeName },
-    ...(isInstance ? [{ id: "instance", label: current.name }] : []),
   ];
 
   return (
