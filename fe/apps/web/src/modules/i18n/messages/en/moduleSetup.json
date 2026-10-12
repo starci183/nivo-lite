@@ -9,8 +9,6 @@
   "nivo": "NIVO",
   "emptyTitle": "Tell NIVO about your business",
   "emptyBody": "Write a few plain sentences: what you sell, who your customers are, what must never be promised. NIVO fills the checklist and asks for what is missing.",
-  "starter1": "We are a small business. Let me explain what we do.",
-  "starter2": "I will tell you our prices and rules.",
   "welcome": "Hi, I am NIVO. I will set up your {module} with you. Tell me about your business in your own words. I will note what I understand and ask about what is missing.",
   "draftTitle": "What NIVO understood",
   "draftEmpty": "Nothing yet. Your draft appears here as you chat.",

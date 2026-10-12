@@ -1,12 +1,10 @@
-import { redirect } from "next/navigation";
+import { OnboardingRedirectPage } from "@/features/pages/OnboardingRedirectPage"
 
-type Props = { readonly searchParams: Promise<Record<string, string | undefined>> };
+type PageProps = { readonly searchParams: Promise<Record<string, string | undefined>> }
 
-/** Old payment URL: forwards its query to /workspaces/new/payment. */
-const OnboardingPaymentPage = async ({ searchParams }: Props) => {
-  const q = new URLSearchParams();
-  for (const [k, v] of Object.entries(await searchParams)) if (v) q.set(k, v);
-  redirect(`/workspaces/new/payment${q.size ? `?${q.toString()}` : ""}`);
-};
+/** The old payment url: forwards its query to the payment page of a new workspace. */
+const Page = async (props: PageProps) => (
+    <OnboardingRedirectPage target="/workspaces/new/payment" search={await props.searchParams} />
+)
 
-export default OnboardingPaymentPage;
+export default Page

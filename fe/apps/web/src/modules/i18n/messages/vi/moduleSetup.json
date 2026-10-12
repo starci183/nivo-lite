@@ -9,8 +9,6 @@
   "nivo": "NIVO",
   "emptyTitle": "Hãy kể cho NIVO về doanh nghiệp của bạn",
   "emptyBody": "Viết vài câu đơn giản: bạn bán gì, khách hàng là ai, điều gì tuyệt đối không được hứa. NIVO điền vào danh sách bên phải và hỏi phần còn thiếu.",
-  "starter1": "Chúng tôi là doanh nghiệp nhỏ, để tôi kể về việc chúng tôi làm.",
-  "starter2": "Tôi sẽ nói về giá và các quy tắc của chúng tôi.",
   "welcome": "Chào bạn, mình là NIVO. Mình sẽ cùng bạn thiết lập {module}. Bạn kể về doanh nghiệp bằng lời của bạn nhé. Mình ghi lại phần mình hiểu và hỏi thêm phần còn thiếu.",
   "draftTitle": "NIVO đã hiểu",
   "draftEmpty": "Chưa có gì. Bản nháp sẽ hiện ở đây khi bạn trò chuyện.",
