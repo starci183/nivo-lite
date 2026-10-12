@@ -1,0 +1,20 @@
+{
+  "metricReorder": "Mặt hàng dưới mức đặt lại",
+  "metricReorderBasis": "Ở hoặc dưới mức tồn tối thiểu, trên {n} mặt hàng đang dùng",
+  "metricAwaiting": "Đơn nhập chờ duyệt",
+  "metricAwaitingBasis": "Đơn đặt hàng bạn chưa duyệt",
+  "metricValue": "Giá trị tồn kho",
+  "metricValueBasis": "Tính theo giá vốn bình quân",
+  "metricStockOuts": "Hết hàng, 7 ngày",
+  "metricStockOutsBasis": "Mặt hàng đã về 0 trong 7 ngày qua",
+  "metricStockOutsUnknown": "Chưa đọc được lịch sử xuất nhập",
+  "tabStock": "Tồn kho",
+  "tabOrders": "Đơn nhập",
+  "tabSuppliers": "NCC & kho",
+  "tabHistory": "Lịch sử",
+  "tabRecipes": "Công thức",
+  "tabCount": "Kiểm kê",
+  "tabImport": "Nhập dữ liệu",
+  "loadFailedTitle": "Chưa tải được dữ liệu kho",
+  "loadFailedBody": "Thử tải lại trang sau ít phút."
+}
