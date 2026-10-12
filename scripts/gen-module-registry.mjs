@@ -30,7 +30,7 @@ const defs = dirs.map((dir) => {
   const m = readJson(file);
   const at = `modules/${dir}/module.json`;
   if (m.key !== dir) fail(`${at}: key "${m.key}" must equal the folder name`);
-  if (!/^[a-z][a-z0-9]{1,23}$/.test(m.key)) fail(`${at}: key must be short lowercase ASCII`);
+  if (!/^[a-z][a-z0-9_]{1,23}$/.test(m.key)) fail(`${at}: key must be short lowercase ASCII`);
   if (typeof m.order !== "number") fail(`${at}: order (number) is required`);
   for (const f of ["name", "short_name", "description"]) bilingual(m[f], `${at} ${f}`);
   for (const l of LOC) if (!Array.isArray(m.points?.[l]) || !m.points[l].length) fail(`${at}: points.${l} must be a non-empty array`);
@@ -47,6 +47,14 @@ const defs = dirs.map((dir) => {
   if (m.settings_extras !== null && typeof m.settings_extras !== "string") fail(`${at}: settings_extras must be a string key or null`);
   if (!Array.isArray(m.requires?.capabilities) || !Array.isArray(m.requires?.connections)) fail(`${at}: requires.{capabilities,connections} must be arrays`);
   if (!Array.isArray(m.connection_providers)) fail(`${at}: connection_providers must be an array`);
+  if (m.accepts !== undefined) {
+    if (!Array.isArray(m.accepts)) fail(`${at}: accepts must be an array`);
+    for (const c of m.accepts) {
+      if (typeof c?.command !== "string" || !/^[a-z][a-z0-9_]{2,40}$/.test(c.command)) fail(`${at}: accepts command "${c?.command}" is not a valid action key`);
+      if (!Array.isArray(c.required_fields)) fail(`${at}: accepts ${c.command} required_fields must be an array`);
+      if (typeof c.description !== "string" || !c.description) fail(`${at}: accepts ${c.command} needs a description`);
+    }
+  }
   for (const f of ["summary", "capabilities", "role", "instructions"]) if (!m.agent?.[f]) fail(`${at}: agent.${f} is required`);
   if (!m.agent.name || !m.agent.handle) fail(`${at}: agent.name and agent.handle are required`);
   if (!Array.isArray(m.gates) || !m.gates.length) fail(`${at}: gates must be a non-empty array`);
@@ -74,6 +82,8 @@ for (const m of defs) for (const a of m.authority_actions) {
   seenActions.set(a.action, m.key);
 }
 
+for (const m of defs) for (const c of m.accepts ?? []) if (!m.authority_actions.some((a) => a.action === c.command)) fail(`modules/${m.key}: accepts "${c.command}" which is not one of its authority_actions`);
+
 for (const m of defs) for (const a of m.authority_actions) for (const n of a.next ?? []) if (!seenActions.has(n)) fail(`modules/${m.key}: action ${a.action} chains to unknown action ${n}`);
 
 const norm = (m) => ({
@@ -81,7 +91,8 @@ const norm = (m) => ({
   icon: m.icon, glyph: m.glyph, mascot: m.mascot, category: m.category, status: m.status, audience: m.audience,
   includedWithWorkspace: !!m.included_with_workspace, available: !!m.available,
   knowledgeFolder: m.knowledge_folder, workbench: m.workbench, settingsExtras: m.settings_extras,
-  requires: m.requires, connectionProviders: m.connection_providers, defaultOperatingMode: m.default_operating_mode,
+  requires: m.requires, connectionProviders: m.connection_providers,
+  accepts: (m.accepts ?? []).map((c) => ({ command: c.command, requiredFields: c.required_fields, description: c.description })), defaultOperatingMode: m.default_operating_mode,
   agent: m.agent,
   gates: m.gates,
   authorityActions: m.authority_actions.map((a) => ({
@@ -123,7 +134,10 @@ export type ModuleDef = {
   readonly includedWithWorkspace: boolean; readonly available: boolean; readonly knowledgeFolder: string;
   readonly workbench: string | null; readonly settingsExtras: string | null;
   readonly requires: { readonly capabilities: ReadonlyArray<string>; readonly connections: ReadonlyArray<string> };
-  readonly connectionProviders: ReadonlyArray<string>; readonly defaultOperatingMode: "assist" | "autopilot";
+  readonly connectionProviders: ReadonlyArray<string>;
+  /** Commands another module may send to this one (an action of this module with the fields it needs). */
+  readonly accepts: ReadonlyArray<{ readonly command: ActionKey; readonly requiredFields: ReadonlyArray<string>; readonly description: string }>;
+  readonly defaultOperatingMode: "assist" | "autopilot";
   readonly agent: { readonly name: string; readonly handle: string; readonly summary: Bilingual; readonly capabilities: BilingualList; readonly role: Bilingual; readonly instructions: Bilingual };
   readonly gates: ReadonlyArray<RegistryGate>;
   readonly authorityActions: ReadonlyArray<RegistryAction>;
