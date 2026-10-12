@@ -8,6 +8,7 @@ import { Icon as GrammarIcon } from "@starci/grammar/common"
 import type { IconUsage } from "@starci/grammar/common"
 import Image from "next/image"
 import type { SVGProps } from "react"
+import { GOOGLE_MARK } from "./classNames"
 
 /** Every source in this registry is callable (Heroicons are forward-ref callables; custom marks are functions). */
 type GlyphComponent = (props: SVGProps<SVGSVGElement>) => unknown
@@ -47,7 +48,7 @@ const SidebarSimpleIcon = (props: SVGProps<SVGSVGElement>) => (
 
 /** Google's mark: a static asset, because the provider's own colours may not be redrawn as source colours. */
 const GoogleMark = (props: SVGProps<SVGSVGElement>) => (
-    <Image src="/brand/google-mark.svg" alt="" width={24} height={24} className={props.className} aria-hidden="true" />
+    <Image src="/brand/google-mark.svg" alt="" width={24} height={24} className={GOOGLE_MARK} aria-hidden="true" />
 )
 
 /** GitHub's mark, monochrome by specification, so it takes the row's own colour. */

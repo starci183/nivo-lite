@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useRouter } from "next/navigation"
+import { navigation } from "@/modules/i18n"
 import { useState } from "react"
 import type { DropdownMenuEntry } from "@starci/grammar/common"
 import {
@@ -38,7 +38,7 @@ type ConsoleHeaderProps = {
 export const ConsoleHeader = (props: ConsoleHeaderProps) => {
     const t = useTranslations("shell")
     const tPromo = useTranslations("promo")
-    const router = useRouter()
+    const router = navigation.useRouter()
     const signOut = useSignOut(writeSignOut)
     const switchWorkspace = useSwitchWorkspace(props.currentWorkspaceId, writeSwitchWorkspace)
     const language = useLocaleSwitch()

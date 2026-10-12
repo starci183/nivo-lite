@@ -63,7 +63,7 @@ export class JobClaimService implements JobClaims {
         return this.guarded(COMPLETE_JOB, [write.jobId, write.expectedFencingToken, this.clock.now()], write)
     }
 
-    /** Marks the job failed under the token the caller holds, so BullMQ can retry it. */
+    /** Marks the job failed under the token the caller holds, so the queue can retry it. */
     fail(write: FailWrite): Promise<void> {
         return this.guarded(FAIL_JOB, [write.jobId, write.expectedFencingToken, write.reason, this.clock.now()], write)
     }

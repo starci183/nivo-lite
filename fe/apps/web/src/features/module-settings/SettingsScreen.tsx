@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Avatar, Badge, Button, Input, SegmentedControl, Switch, SurfaceCard, Text } from "@starci/grammar/common";
-import { AgentAvatar } from "@/components/avatar/PersonAvatar";
+import { AgentAvatar } from "@/components/blocks/AgentAvatar"
 import { useLocale, useT } from "@/i18n/client";
 import { modulesCore } from "@/i18n/dict/modulesCore";
 import { renameInstance, renameModule, setModuleLive, setOperatingMode } from "@/lib/module-actions";
@@ -66,7 +66,7 @@ export const SettingsScreen = ({ installation, moduleKey, isLoading = false, can
         <SurfaceCard label={t("agentTitle")} headingLevel={2}>
           <div className={STACK_CLASS_NAME}>
             <div className={ROW_CLASS_NAME}>
-              {installation === null ? <Avatar name="" size="lg" isSkeleton /> : <AgentAvatar module={installation.moduleKey} size="lg" label={installation.agentName} online={live} />}
+              {installation === null ? <Avatar name="" size="lg" isSkeleton /> : <AgentAvatar module={installation.moduleKey} size="lg" label={installation.agentName} />}
               <div className={GROW_CLASS_NAME}>
                 <Input id="module-name" name="name" label={t("displayName")} variant="secondary" hint={t("displayNameHint")} value={name} isSkeleton={isLoading} isDisabled={!canEdit || pending} onValueChange={(v) => setName(v.slice(0, 40))} />
               </div>

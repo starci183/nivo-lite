@@ -1,6 +1,5 @@
 import { IconTile } from "@starci/grammar/common"
 import type { IconSource, IconSourceProps, IconTileSize } from "@starci/grammar/common"
-import { MARK, PRESENCE_DOT } from "./classNames"
 
 /** What the square agent mark draws. */
 type AgentMarkProps = {
@@ -10,7 +9,6 @@ type AgentMarkProps = {
     readonly label: string
     readonly module: string
     readonly size?: "xs" | "sm" | "md" | "lg"
-    readonly online?: boolean
 }
 
 /** IconTile publishes `sm` (32px) and `md` (40px) only; `lg` takes `md`, `xs` takes `sm`. */
@@ -45,13 +43,10 @@ const glyphSource = (path: string): IconSource => {
 
 /** An AI agent: the grammar's neutral `IconTile` with the module glyph, so an agent and a person are never confused. */
 export const AgentMark = (props: AgentMarkProps) => (
-    <span className={MARK} title={props.label} data-module={props.module}>
-        <IconTile
-            source={glyphSource(props.glyph)}
-            tone="neutral"
-            size={TILE_SIZE[props.size ?? "md"]}
-            ariaLabel={props.label}
-        />
-        {props.online ? <span className={PRESENCE_DOT} aria-hidden="true" /> : null}
-    </span>
+    <IconTile
+        source={glyphSource(props.glyph)}
+        tone="neutral"
+        size={TILE_SIZE[props.size ?? "md"]}
+        ariaLabel={props.label}
+    />
 )

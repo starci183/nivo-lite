@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useRouter } from "next/navigation"
+import { navigation } from "@/modules/i18n"
 import { useConsoleNav } from "@/hooks/console"
 import { ConsoleNavigationBase } from "./component"
 
@@ -14,7 +14,7 @@ type ConsoleNavigationProps = {
 /** The connected wide rail: destinations by role, the current route highlighted and the pending count on the Office. */
 export const ConsoleNavigation = (props: ConsoleNavigationProps) => {
     const t = useTranslations("shell")
-    const router = useRouter()
+    const router = navigation.useRouter()
     const items = useConsoleNav(props.role, props.pendingCount)
     return (
         <ConsoleNavigationBase

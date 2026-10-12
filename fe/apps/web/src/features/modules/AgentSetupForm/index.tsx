@@ -2,7 +2,7 @@
 
 import { useState, useTransition, type ReactNode } from "react";
 import { Alert, Button, Input, SurfaceCard, Text, Textarea } from "@starci/grammar/common";
-import { AgentAvatar } from "@/components/avatar/PersonAvatar";
+import { AgentAvatar } from "@/components/blocks/AgentAvatar"
 import { suggestAgentSetup, type AgentSetupInput } from "@/lib/actions";
 import { useT } from "@/i18n/client";
 import { modules } from "@/i18n/dict/modules";

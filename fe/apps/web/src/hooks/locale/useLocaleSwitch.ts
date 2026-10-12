@@ -1,5 +1,5 @@
 import { useLocale, useTranslations } from "next-intl"
-import { useRouter } from "next/navigation"
+import { navigation } from "@/modules/i18n"
 import { useTransition } from "react"
 import { setLocale } from "@/i18n/actions"
 
@@ -23,7 +23,7 @@ type LocaleChoice = {
 export const useLocaleSwitch = (): LocaleChoice => {
     const t = useTranslations("shell")
     const locale = useLocale()
-    const router = useRouter()
+    const router = navigation.useRouter()
     const [isPending, startTransition] = useTransition()
     return {
         label: t("languageLabel"),

@@ -1,6 +1,5 @@
 import { Avatar } from "@starci/grammar/common"
 import type { AvatarSize } from "@starci/grammar/common"
-import { MARK, PRESENCE_DOT } from "./classNames"
 
 /** What the avatar draws for one person. */
 type PersonAvatarProps = {
@@ -8,8 +7,6 @@ type PersonAvatarProps = {
     readonly src?: string | null
     /** `xs` renders the grammar's smallest plate (`sm`, 32px): the grammar publishes no 24px avatar. */
     readonly size?: "xs" | "sm" | "md" | "lg"
-    /** Small dot for "online / active". */
-    readonly online?: boolean
 }
 
 const AVATAR_SIZE: Record<NonNullable<PersonAvatarProps["size"]>, AvatarSize> = {
@@ -33,15 +30,11 @@ const initialsOf = (name: string): string => {
     return (first + last).toLocaleUpperCase("vi")
 }
 
-/** A person: the grammar `Avatar` (photo, or the initials while it loads or fails) with an optional presence dot. */
 export const PersonAvatar = (props: PersonAvatarProps) => (
-    <span className={MARK} title={props.name}>
-        <Avatar
-            name={props.name}
-            src={props.src ?? undefined}
-            fallback={initialsOf(props.name)}
-            size={AVATAR_SIZE[props.size ?? "md"]}
-        />
-        {props.online ? <span className={PRESENCE_DOT} aria-hidden="true" /> : null}
-    </span>
+    <Avatar
+        name={props.name}
+        src={props.src ?? undefined}
+        fallback={initialsOf(props.name)}
+        size={AVATAR_SIZE[props.size ?? "md"]}
+    />
 )

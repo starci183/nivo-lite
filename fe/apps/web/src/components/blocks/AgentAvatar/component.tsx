@@ -7,7 +7,6 @@ export interface AgentAvatarBaseProps {
         readonly label: string
         readonly module: string
         readonly size?: "xs" | "sm" | "md" | "lg"
-        readonly online?: boolean
     }
 }
 
@@ -18,6 +17,5 @@ export const AgentAvatarBase = (props: AgentAvatarBaseProps) => (
         label={props.props.label}
         module={props.props.module}
         size={props.props.size}
-        online={props.props.online}
     />
 )

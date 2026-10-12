@@ -1,4 +1,4 @@
-import type { IconName } from "@/ui"
+import type { IconName } from "@/components/leaves/Icon"
 import type { LeadStage } from "@/lib/types"
 import { intlLocale, TIME_ZONE, type Locale, type Translate } from "@/i18n/core"
 import type { leads } from "@/i18n/dict/leads"

@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useRouter } from "next/navigation"
+import { navigation } from "@/modules/i18n"
 import { useState } from "react"
 import { useConsoleNav } from "@/hooks/console"
 import { ConsoleCompactNavigationBase } from "./component"
@@ -18,7 +18,7 @@ const PHONE_TABS = new Set(["chat", "overview", "leads"])
 /** The connected compact navigation shown below the wide breakpoint. */
 export const ConsoleCompactNavigation = (props: ConsoleCompactNavigationProps) => {
     const t = useTranslations("shell")
-    const router = useRouter()
+    const router = navigation.useRouter()
     const items = useConsoleNav(props.role, props.pendingCount)
     const [isMoreOpen, setMoreOpen] = useState(false)
     return (

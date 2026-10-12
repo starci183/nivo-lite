@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { PersonAvatar } from "@/components/avatar/PersonAvatar";
-import { nivoIconSource } from "@/ui";
+import { PersonAvatar } from "@/components/leaves/PersonAvatar"
+import { nivoIconSource } from "@/components/leaves/Icon"
 import { Avatar, Badge, Breadcrumbs, Button, DropdownMenu, IconButton, SectionHeader, Text } from "@starci/grammar/common";
 import { useT } from "@/i18n/client";
 import { leads } from "@/i18n/dict/leads";

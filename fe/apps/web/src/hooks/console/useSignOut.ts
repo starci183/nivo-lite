@@ -1,4 +1,4 @@
-import { useRouter } from "next/navigation"
+import { navigation } from "@/modules/i18n"
 import { useTransition } from "react"
 import { APP_ROUTES } from "@/modules/routes"
 
@@ -9,7 +9,7 @@ type SignOut = {
 
 /** Ends the session with the db action the connected block entry passes in, then sends the reader to the sign-in page. */
 export const useSignOut = (end: () => Promise<unknown>): SignOut => {
-    const router = useRouter()
+    const router = navigation.useRouter()
     const [, startTransition] = useTransition()
     return {
         signOut: () => {

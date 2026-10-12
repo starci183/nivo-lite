@@ -1,5 +1,5 @@
 import { useTranslations } from "next-intl"
-import { usePathname } from "next/navigation"
+import { navigation } from "@/modules/i18n"
 import type { ConsoleNavItem } from "@/modules/types"
 import { DESTINATIONS, OFFICE_ROUTE, activeDestinationKey } from "./console.shared"
 
@@ -9,7 +9,7 @@ export const useConsoleNav = (
     pendingCount: number,
 ): ReadonlyArray<ConsoleNavItem> => {
     const t = useTranslations("shell")
-    const pathname = usePathname()
+    const pathname = navigation.usePathname()
     const activeKey = activeDestinationKey(pathname)
     return DESTINATIONS.filter((d) => !d.managerOnly || role !== "staff").map((d) => ({
         id: d.key,

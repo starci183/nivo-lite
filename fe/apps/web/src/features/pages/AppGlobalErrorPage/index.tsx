@@ -1,5 +1,3 @@
-"use client"
-
 import messages from "@/modules/i18n/messages/vi/app.json"
 import { DEFAULT_LOCALE } from "@/modules/i18n"
 import { AppGlobalErrorPageBase } from "./component"

@@ -8,7 +8,6 @@ import { AgentAvatarBase } from "./component"
 type AgentAvatarProps = {
     readonly module?: string
     readonly size?: "xs" | "sm" | "md" | "lg"
-    readonly online?: boolean
     readonly label?: string
 }
 
@@ -26,7 +25,6 @@ export const AgentAvatar = (props: AgentAvatarProps) => {
                 label: props.label ?? t("agentAvatarLabel", { module }),
                 module,
                 size: props.size,
-                online: props.online,
             }}
         />
     )

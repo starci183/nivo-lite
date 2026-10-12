@@ -1,4 +1,4 @@
-import { useRouter } from "next/navigation"
+import { navigation } from "@/modules/i18n"
 import { useTransition } from "react"
 import { OFFICE_ROUTE } from "./console.shared"
 
@@ -7,7 +7,7 @@ export const useSwitchWorkspace = (
     currentId: string,
     switchTo: (workspaceId: string) => Promise<unknown>,
 ): ((workspaceId: string) => void) => {
-    const router = useRouter()
+    const router = navigation.useRouter()
     const [, startTransition] = useTransition()
     return (workspaceId) => {
         if (workspaceId === currentId) return
