@@ -62,7 +62,11 @@ export const writeChatReply = async (input: unknown): Promise<DbOutcome<ChatRepl
     const marked = toOutcome(
         await client
             .from("agent_messages")
-            .update(delivery === "sent" ? { delivery_status: delivery, delivery_error: null } : { delivery_status: delivery })
+            .update(
+                delivery === "sent"
+                    ? { delivery_status: delivery, delivery_error: null }
+                    : { delivery_status: delivery },
+            )
             .eq("id", inserted.value.id)
             .eq("workspace_id", workspaceId)
             .select("id"),

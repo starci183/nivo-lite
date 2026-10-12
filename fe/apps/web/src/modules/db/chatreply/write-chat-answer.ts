@@ -29,7 +29,11 @@ export const writeChatAnswer = async (input: unknown): Promise<DbOutcome<ChatAns
     const parsed = chatAnswerSchema.safeParse(input)
     if (!parsed.success) return dbFailure("invalid", `chat-${parsed.field}`)
     const { workItemId, conversationId, text } = parsed.data
-    const decided = await decideWorkItem(workItemId, text === null ? "rejected" : "approved", text === null ? undefined : { draft: text })
+    const decided = await decideWorkItem(
+        workItemId,
+        text === null ? "rejected" : "approved",
+        text === null ? undefined : { draft: text },
+    )
     if (!decided.ok) return dbFailure("refused", `chat-decision:${decided.error.slice(0, 80)}`)
     const context = await engineCtx()
     const attributed =

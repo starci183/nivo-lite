@@ -26,7 +26,10 @@ type Client = Awaited<ReturnType<typeof createServerDbClient>>
  * The Chatbot agents whose conversations a workbench shows: one instance's own agent (several Chatbots, one per branch or
  * Fanpage), else every Chatbot agent of the workspace (the single-instance case, and legacy agents that predate installations).
  */
-const chatbotAgentIds = async (client: Client, query: ChatbotOverviewQuery): Promise<DbOutcome<ReadonlyArray<string>>> => {
+const chatbotAgentIds = async (
+    client: Client,
+    query: ChatbotOverviewQuery,
+): Promise<DbOutcome<ReadonlyArray<string>>> => {
     if (query.installationId !== null) {
         const siblings = toOutcome(
             await client

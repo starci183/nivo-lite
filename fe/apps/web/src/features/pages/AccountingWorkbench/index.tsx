@@ -14,6 +14,9 @@ interface AccountingWorkbenchProps {
     readonly tab: string | null
 }
 
+/** The ribbon of a workbench that could not be read. */
+const NO_FIGURES: ReadonlyArray<never> = []
+
 type Format = Awaited<ReturnType<typeof getFormatter>>
 type Translate = Awaited<ReturnType<typeof getTranslations>>
 
@@ -57,9 +60,10 @@ const figuresOf = (data: AccountingWorkbenchData, format: Format, t: Translate) 
 }
 
 /** The words that tell why the workbench could not be shown: a refusal is not an outage. */
-const failureBodyOf = (outcome: Awaited<ReturnType<typeof readAccountingWorkbench>> | null, t: Translate): string => {
-    if (outcome?.kind === "refused") return t("loadRefused")
-    return t("loadFailedBody")
+const statusOf = (outcome: Awaited<ReturnType<typeof readAccountingWorkbench>> | null) => {
+    if (outcome === null) return { data: null, failure: "unavailable" as const }
+    if (outcome.kind === "ok") return { data: outcome.value, failure: null }
+    return { data: null, failure: outcome.kind }
 }
 
 /** Accounting workbench slot of /agents/accounting/workbench: the agent dashboard frame around the four Accounting surfaces. */
@@ -89,21 +93,20 @@ export const AccountingWorkbench = async (props: AccountingWorkbenchProps) => {
               role: session.member.role,
           })
         : null
-    const data = outcome?.kind === "ok" ? outcome.value : null
-    const failureBody = failureBodyOf(outcome, t)
+    const { data, failure } = statusOf(outcome)
     return (
         <AccountingWorkbenchBase
             props={{
                 data,
                 dashboard,
-                figures: data === null ? [] : figuresOf(data, format, t),
+                figures: failure === null && data !== null ? figuresOf(data, format, t) : NO_FIGURES,
                 labels: {
                     overview: t("tabOverview"),
                     evidence: t("tabEvidence"),
                     questions: t("tabQuestions"),
                     ledger: t("tabLedger"),
                     loadFailedTitle: t("loadFailedTitle"),
-                    loadFailedBody: failureBody,
+                    loadFailedBody: failure === "refused" ? t("loadRefused") : t("loadFailedBody"),
                 },
                 initialTab: props.tab,
                 questionsHref: workbenchHref("accounting", { tab: "questions" }),

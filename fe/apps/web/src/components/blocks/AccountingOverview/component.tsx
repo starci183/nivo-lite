@@ -1,5 +1,5 @@
 import { DescriptionList, Meter, SectionHeader, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
-import { AccountingBlock } from "@/components/composites/AccountingBlock"
+import { AccountingBlock } from "@/components/branches/AccountingBlock"
 import { AccountingSectionHead } from "@/components/composites/AccountingSectionHead"
 import { MEASURE_META_CLASS_NAME, PANEL_CLASS_NAME, WEEKS_CLASS_NAME } from "./classNames"
 
@@ -73,15 +73,14 @@ const MeasureMeta = (props: MeasureMetaProps) => (
 /** Period selector, four honest measures and the weekly trend. */
 export const AccountingOverviewBase = (props: AccountingOverviewBaseProps) => (
     <div className={PANEL_CLASS_NAME}>
-        <AccountingBlock label={props.props.title}>
-            <AccountingSectionHead
-                title={props.props.title}
-                intro={props.props.intro}
-                choiceLabel={props.props.periodLabel}
-                choices={props.props.periodItems}
-                selectedChoice={props.props.selectedPeriod}
-                onChoose={props.on.selectPeriod}
-            />
+        <AccountingSectionHead
+            title={props.props.title}
+            intro={props.props.intro}
+            choiceLabel={props.props.periodLabel}
+            choices={props.props.periodItems}
+            selectedChoice={props.props.selectedPeriod}
+            onChoose={props.on.selectPeriod}
+        >
             <SurfaceCard ariaLabel={props.props.title}>
                 <DescriptionList
                     layout="stat-strip"
@@ -106,7 +105,7 @@ export const AccountingOverviewBase = (props: AccountingOverviewBaseProps) => (
                     {props.props.excludedNote}
                 </Text>
             )}
-        </AccountingBlock>
+        </AccountingSectionHead>
         <AccountingBlock label={props.props.trendTitle}>
             <SectionHeader level={2} title={props.props.trendTitle} description={props.props.trendIntro} />
             <SurfaceCard ariaLabel={props.props.trendTitle}>

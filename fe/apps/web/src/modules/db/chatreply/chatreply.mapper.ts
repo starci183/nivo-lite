@@ -21,8 +21,7 @@ export interface ChatAnswerInput {
 export type ChatInputField = "input" | "conversation" | "work-item" | "body"
 
 type Parse<Data> =
-    | { readonly success: true; readonly data: Data }
-    | { readonly success: false; readonly field: ChatInputField }
+    { readonly success: true; readonly data: Data } | { readonly success: false; readonly field: ChatInputField }
 
 const UUID = /^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$/u
 const BODY_MAX = 4000

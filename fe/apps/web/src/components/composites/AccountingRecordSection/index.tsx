@@ -1,7 +1,7 @@
 import { SectionHeader, Text } from "@starci/grammar/common"
 import type { ReactNode } from "react"
-import { AccountingBlock } from "@/components/composites/AccountingBlock"
-import { AccountingRecordList } from "@/components/composites/AccountingRecordList"
+import { AccountingBlock } from "@/components/branches/AccountingBlock"
+import { AccountingRecordList } from "@/components/branches/AccountingRecordList"
 import { HEAD_CLASS_NAME } from "./classNames"
 
 /** One status mark on a row. */

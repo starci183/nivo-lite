@@ -22,8 +22,6 @@ export type {
 export type {
     ChatbotChannel,
     ChatbotConversation,
-    ChatbotDelivery,
-    ChatbotEscalation,
     ChatbotLead,
     ChatbotMessage,
     ChatbotMetrics,

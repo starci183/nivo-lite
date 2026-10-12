@@ -69,7 +69,10 @@ export const readChatbotGaps = async (workspaceId: string): Promise<DbOutcome<Ch
             reopenedCount: row.reopened_count,
         })),
         lenses: agentRows.value
-            .filter((agent, position, all) => isModuleKey(agent.module) && all.findIndex((other) => other.module === agent.module) === position)
+            .filter(
+                (agent, position, all) =>
+                    isModuleKey(agent.module) && all.findIndex((other) => other.module === agent.module) === position,
+            )
             .map((agent) => ({
                 module: agent.module,
                 name: agent.name,

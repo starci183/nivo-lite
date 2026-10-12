@@ -99,7 +99,8 @@ const toMessage = (row: MessageRow): ChatbotMessage => ({
 /** The conversation id a waiting reply_customer item belongs to: the id in its proposal fields, else its subject. */
 export const waitingConversationId = (item: WaitingBrief): string | null => {
     const proposal = item.proposal
-    const fields = typeof proposal === "object" && proposal !== null && !Array.isArray(proposal) ? proposal.fields : null
+    const fields =
+        typeof proposal === "object" && proposal !== null && !Array.isArray(proposal) ? proposal.fields : null
     if (typeof fields === "object" && fields !== null && !Array.isArray(fields)) {
         const id = fields.conversation_id
         if (typeof id === "string") return id
@@ -108,7 +109,9 @@ export const waitingConversationId = (item: WaitingBrief): string | null => {
 }
 
 /** Groups messages by conversation, keeping their order. */
-const messagesByConversation = (messages: ReadonlyArray<MessageBrief>): ReadonlyMap<string, ReadonlyArray<MessageBrief>> => {
+const messagesByConversation = (
+    messages: ReadonlyArray<MessageBrief>,
+): ReadonlyMap<string, ReadonlyArray<MessageBrief>> => {
     const map = new Map<string, Array<MessageBrief>>()
     for (const message of messages) {
         const list = map.get(message.conversation_id)
@@ -125,7 +128,9 @@ interface ConversationLines {
     readonly talkCount: number
 }
 
-const linesOf = (lines: ReadonlyArray<{ readonly role: string; readonly body: string; readonly created_at: string }>): ConversationLines => {
+const linesOf = (
+    lines: ReadonlyArray<{ readonly role: string; readonly body: string; readonly created_at: string }>,
+): ConversationLines => {
     const talk = lines.filter((line) => line.role !== "system")
     return { last: lines.at(-1) ?? null, lastTalk: talk.at(-1) ?? null, talkCount: talk.length }
 }
@@ -185,7 +190,12 @@ export const buildChatbotOverview = (records: OverviewRecords): ChatbotOverview 
             const delta = firstResponseMinutes(lines)
             if (delta !== null) deltas.push(delta)
             const leadId = row.lead_id
-            return toConversation(row, linesOf(lines), leadId === null ? undefined : leadName.get(leadId), waiting.has(row.id))
+            return toConversation(
+                row,
+                linesOf(lines),
+                leadId === null ? undefined : leadName.get(leadId),
+                waiting.has(row.id),
+            )
         })
         .sort((a, b) => b.lastAt.localeCompare(a.lastAt))
     const dayStart = vnDayStart(records.now)
@@ -232,9 +242,10 @@ const proposalText = (proposal: WaitingRow["proposal"], key: "summary" | "draft"
 
 /** The question the customer asked, from the proposal's fields, else its summary. */
 const proposalQuestion = (proposal: WaitingRow["proposal"]): string => {
-    const fields = typeof proposal === "object" && proposal !== null && !Array.isArray(proposal) ? proposal.fields : null
+    const fields =
+        typeof proposal === "object" && proposal !== null && !Array.isArray(proposal) ? proposal.fields : null
     if (typeof fields === "object" && fields !== null && !Array.isArray(fields) && fields.question !== undefined) {
-        return String(fields.question)
+        return typeof fields.question === "string" ? fields.question : proposalText(proposal, "summary")
     }
     return proposalText(proposal, "summary")
 }

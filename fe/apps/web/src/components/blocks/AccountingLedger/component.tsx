@@ -10,9 +10,9 @@ import {
     Textarea,
     Timeline,
 } from "@starci/grammar/common"
-import { AccountingBlock } from "@/components/composites/AccountingBlock"
+import { AccountingBlock } from "@/components/branches/AccountingBlock"
 import { AccountingFormActions } from "@/components/composites/AccountingFormActions"
-import { AccountingRecordList } from "@/components/composites/AccountingRecordList"
+import { AccountingRecordList } from "@/components/branches/AccountingRecordList"
 import { AccountingSectionHead } from "@/components/composites/AccountingSectionHead"
 import type { AccountingLineageItem } from "@/hooks/accounting"
 import type { AccountingRecordView } from "@/hooks/accountingRecords"
@@ -163,15 +163,14 @@ export const AccountingLedgerBase = (props: AccountingLedgerBaseProps) => {
     const drawer = props.props.drawer
     return (
         <div className={PANEL_CLASS_NAME}>
-            <AccountingBlock label={props.props.title}>
-                <AccountingSectionHead
-                    title={props.props.title}
-                    intro={props.props.intro}
-                    choiceLabel={props.props.filterLabel}
-                    choices={props.props.filterItems}
-                    selectedChoice={props.props.selectedFilter}
-                    onChoose={props.on.selectFilter}
-                />
+            <AccountingSectionHead
+                title={props.props.title}
+                intro={props.props.intro}
+                choiceLabel={props.props.filterLabel}
+                choices={props.props.filterItems}
+                selectedChoice={props.props.selectedFilter}
+                onChoose={props.on.selectFilter}
+            >
                 <AccountingRecordList
                     label={props.props.title}
                     empty={props.props.empty}
@@ -182,7 +181,7 @@ export const AccountingLedgerBase = (props: AccountingLedgerBaseProps) => {
                 <Text size="xs" tone="muted">
                     {props.props.foot}
                 </Text>
-            </AccountingBlock>
+            </AccountingSectionHead>
             <Drawer
                 isOpen={drawer.isOpen}
                 onOpenChange={(open) => {
