@@ -5,16 +5,13 @@
  */
 import type { Locale } from "@/i18n/core";
 import {
-  ACTION_KEYS, MODULE_CATEGORIES, MODULE_KEYS, MODULE_REGISTRY,
+  ACTION_KEYS, MODULE_CATEGORIES, MODULE_KEYS, MODULE_REGISTRY, isActionKey, isModuleKey,
   type ActionKey, type Bilingual, type ModuleCategory, type ModuleCategoryKey, type ModuleDef, type ModuleKey, type RegistryAction, type RegistryCommand, type RegistryGate,
 } from "@/modules/catalog";
 
-export { ACTION_KEYS, MODULE_CATEGORIES, MODULE_KEYS, MODULE_REGISTRY };
+export { ACTION_KEYS, MODULE_CATEGORIES, MODULE_KEYS, MODULE_REGISTRY, isActionKey, isModuleKey };
 export type { ActionKey, Bilingual, ModuleCategory, ModuleCategoryKey, ModuleDef, ModuleKey, RegistryAction, RegistryCommand, RegistryGate };
 
-export const isModuleKey = (value: string | undefined | null): value is ModuleKey =>
-  typeof value === "string" && Object.prototype.hasOwnProperty.call(MODULE_REGISTRY, value);
-export const isActionKey = (value: string | undefined | null): value is ActionKey => typeof value === "string" && (ACTION_KEYS as ReadonlyArray<string>).includes(value);
 
 /** The definition of a module; throws for a key that is not in the registry (use isModuleKey first on user input). */
 export const moduleDef = (key: ModuleKey): ModuleDef => MODULE_REGISTRY[key];

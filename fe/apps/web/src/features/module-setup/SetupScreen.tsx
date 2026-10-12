@@ -37,7 +37,7 @@ type SetupScreenProps = {
 };
 
 /** The unresolved draft session of a loading screen: empty, never shown. */
-const LOADING_SESSION: SetupSession = { id: "", installationId: "", revision: 0, status: "draft", draft: { summary: "", facts: [] }, gateEvidence: {}, createdAt: "" };
+const LOADING_SESSION: SetupSession = { id: "", workspaceId: "", installationId: "", revision: 0, status: "draft", draft: { summary: "", facts: [] }, gateEvidence: {}, createdAt: "" };
 
 const GATE_TONE: Record<GateStatus, "neutral" | "warning" | "success"> = { missing: "neutral", proposed: "warning", confirmed: "success" };
 
