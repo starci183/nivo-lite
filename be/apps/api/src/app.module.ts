@@ -2,7 +2,9 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
 import { ModulesHttpModule } from "@features/api/modules"
+import { ExternalApiHttpModule } from "@features/api/external-api"
 import { SystemHealthHttpModule } from "@features/api/system-health"
+import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
 import { WorkspacesHttpModule } from "@features/api/workspaces"
 import { AuthGuard, IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } from "@modules/domain/identity"
 import {
@@ -21,6 +23,7 @@ import {
     MODULES_MESSAGES,
     ModulesModule,
 } from "@modules/domain/modules"
+import { PUBLIC_API_ERROR_KINDS, PUBLIC_API_MESSAGES, PublicApiModule } from "@modules/domain/public-api"
 import { EventsModule } from "@modules/domain/events"
 import {
     WORKSPACE_INVITES_ERROR_KINDS,
@@ -65,11 +68,13 @@ export class AppModule {
                 I18nModule.register({
                     isGlobal: true,
                     bundles: [
+                        API_KEYS_MESSAGES,
                         ERRORS_MESSAGES,
                         HTTP_SECURITY_MESSAGES,
                         IDENTITY_MESSAGES,
                         JOBS_MESSAGES,
                         MODULES_MESSAGES,
+                        PUBLIC_API_MESSAGES,
                         QUEUE_MESSAGES,
                         WORKSPACE_INVITES_MESSAGES,
                         WORKSPACE_MEMBERS_MESSAGES,
@@ -79,6 +84,7 @@ export class AppModule {
                 ErrorsModule.register({
                     isGlobal: true,
                     kinds: [
+                        API_KEYS_ERROR_KINDS,
                         CONFIG_ERROR_KINDS,
                         DATABASE_ERROR_KINDS,
                         HTTP_SECURITY_ERROR_KINDS,
@@ -86,6 +92,7 @@ export class AppModule {
                         QUEUE_ERROR_KINDS,
                         IDENTITY_ERROR_KINDS,
                         MODULES_ERROR_KINDS,
+                        PUBLIC_API_ERROR_KINDS,
                         SUPABASE_ERROR_KINDS,
                         WORKSPACE_INVITES_ERROR_KINDS,
                         WORKSPACE_MEMBERS_ERROR_KINDS,
@@ -125,6 +132,9 @@ export class AppModule {
                 AuthorityActionsModule.register({ isGlobal: true }),
                 ModulesModule.register({ isGlobal: true, categories: MODULE_CATEGORIES, catalog: MODULE_CATALOG }),
                 ModulesHttpModule,
+                ApiKeysModule.register({ isGlobal: true }),
+                PublicApiModule.register({ isGlobal: true }),
+                ExternalApiHttpModule,
                 SystemHealthHttpModule,
                 WorkspacesHttpModule,
             ],
