@@ -4,8 +4,8 @@ import type { ReactNode } from "react";
 import { LocaleSwitch } from "@/i18n/LocaleSwitch";
 import { useT } from "@/i18n/client";
 import { login } from "@/i18n/dict/login";
-import { FoundingOffer } from "@/components/promo/FoundingOffer";
-import { NivoLogo } from "@/components/brand/NivoLogo";
+import { FoundingOffer } from "@/components/blocks/FoundingOffer"
+import { BrandLogo } from "@/components/blocks/BrandLogo"
 import { Heading, Image, IncludedMark, List, ListItem, Region, SurfaceCard, SurfaceCopyGroup, Text, TextAction } from "@starci/grammar/common";
 import {
   AUTH_ART_BAND_CLASS_NAME,
@@ -51,7 +51,7 @@ export const AuthShell = ({ label, title, text, children }: AuthShellProps) => {
             </div>
             <div className={AUTH_BRAND_STACK_CLASS_NAME}>
               <div className={AUTH_PITCH_CLASS_NAME}>
-                <NivoLogo variant="full" height={40} />
+                <BrandLogo variant="full" height={40} />
                 <Heading level={1}>{t("headline")}</Heading>
                 <div className={AUTH_TAGLINE_CLASS_NAME}>
                   <Text tone="muted">{t("tagline")}</Text>

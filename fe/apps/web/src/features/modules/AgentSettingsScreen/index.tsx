@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Badge, Button, EmptyNotice, Heading, Switch, SurfaceCard, SurfaceListCard, Tabs, Text } from "@starci/grammar/common";
-import { AgentAvatar } from "@/components/avatar/PersonAvatar";
+import { AgentAvatar } from "@/components/blocks/AgentAvatar"
 import { updateAgent } from "@/lib/actions";
 import { useLocale, useT } from "@/i18n/client";
 import { common } from "@/i18n/dict/common";
@@ -62,7 +62,7 @@ export const AgentSettingsScreen = ({ agent, conversations }: AgentSettingsScree
       <SurfaceCard ariaLabel={t("statusAria", { name: agent.name })}>
         <div className={PAGE_STACK_CLASS_NAME}>
           <div className={AGENT_TOP_CLASS_NAME}>
-            <AgentAvatar module={agent.module} size="lg" label={agent.name} online={isActive} />
+            <AgentAvatar module={agent.module} size="lg" label={agent.name} />
             <div className={HEADER_COPY_CLASS_NAME}>
               <div className={TITLE_ROW_CLASS_NAME}>
                 <Heading level={1}>{agent.name}</Heading>

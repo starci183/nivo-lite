@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Alert, Badge, Button, Form, Icon, Input, List, ListItem, RadioGroup, SectionHeader, Select, SurfaceCard, Text } from "@starci/grammar/common";
-import { nivoIconSource } from "@/ui";
+import { nivoIconSource } from "@/components/leaves/Icon"
 import { useLocale, useT } from "@/i18n/client";
 import { onboarding } from "@/i18n/dict/onboarding";
 import type { Plan } from "@/lib/billing";

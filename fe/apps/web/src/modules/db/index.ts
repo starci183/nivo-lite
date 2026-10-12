@@ -4,4 +4,7 @@ export { exchangeAuthCode, refreshSession, verifyEmailLink } from "./auth/read-s
 export { endGatedSession, readMemberGate } from "./auth/read-member-gate"
 export { getPrincipal } from "./principal"
 export { readApiKeys } from "./developers/read-api-keys"
+export type { Principal } from "./principal"
+export { readShell } from "./shell/read-shell"
+export type { ShellApproval, ShellException } from "./shell/shell.mapper"
 export { createServerDbClient } from "./server"

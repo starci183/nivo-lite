@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
-import { canDecideItem, useMember } from "@/features/shell/member-context";
+import { canDecideItem, useMember } from "@/hooks/member"
 import { useT } from "@/i18n/client";
 import { approval } from "@/i18n/dict/approval";
 import { decideExecution } from "@/lib/actions";
