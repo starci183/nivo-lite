@@ -1,7 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { EventsService } from "@modules/domain/events"
-import { ToolTokenService } from "@modules/integrations/openclaw"
 import {
     APPROVAL_REQUESTER,
     BOOKING_TOOLS,
@@ -9,6 +8,7 @@ import {
     HANDOFF_TOOL,
     KNOWLEDGE_SEARCH,
     LEAD_WRITER,
+    TOOL_TOKENS,
 } from "./agent-tools.decorators"
 import { AgentToolsService } from "./agent-tools.service"
 import type {
@@ -18,6 +18,7 @@ import type {
     HandoffTool,
     KnowledgeSearch,
     LeadWriter,
+    ToolTokens,
 } from "./agent-tools.port"
 import { AgentToolsError, AgentToolsErrorCode } from "./errors/agent-tools.error"
 import { TOOL_MANIFEST } from "./tool-manifest.policy"
@@ -27,29 +28,30 @@ const ctx = { jobId: "job-1", workspaceId: "ws-1", conversationId: "conv-1" }
 
 /** The service with every collaborator replaced; a null `verified` makes the token invalid. */
 const build = async (verified: typeof claims | null = claims) => {
-    const tokens = mock<ToolTokenService>({
+    const tokens = mock<ToolTokens>({
         mint: jest.fn(() => "signed-token"),
         revoke: jest.fn(),
         verify: jest.fn(() => verified),
     })
-    const events = mock<EventsService>({ record: jest.fn(async () => undefined) })
+    const events = mock<EventsService>({ record: jest.fn(() => Promise.resolve()) })
     const knowledge = mock<KnowledgeSearch>({
-        search: jest.fn(async () => ({
-            passages: "Opening hours 8-17",
-            citations: [{ title: "Hours", topic: "faq" }],
-        })),
+        search: jest.fn(() =>
+            Promise.resolve({ passages: "Opening hours 8-17", citations: [{ title: "Hours", topic: "faq" }] }),
+        ),
     })
-    const leads = mock<LeadWriter>({ createOrUpdate: jest.fn(async () => ({ leadId: "lead-1", status: "done" })) })
-    const booking = mock<BookingTools>({ run: jest.fn(async () => ({ slots: ["09:00"] })) })
+    const leads = mock<LeadWriter>({
+        createOrUpdate: jest.fn(() => Promise.resolve({ leadId: "lead-1", status: "done" })),
+    })
+    const booking = mock<BookingTools>({ run: jest.fn(() => Promise.resolve({ slots: ["09:00"] })) })
     const approvals = mock<ApprovalRequester>({
-        request: jest.fn(async () => ({ workItemId: "wi-1", status: "waiting_decision" })),
+        request: jest.fn(() => Promise.resolve({ workItemId: "wi-1", status: "waiting_decision" })),
     })
-    const handoffs = mock<HandoffTool>({ handoff: jest.fn(async () => undefined) })
-    const conversations = mock<ConversationLeads>({ leadIdOf: jest.fn(async () => "lead-9") })
+    const handoffs = mock<HandoffTool>({ handoff: jest.fn(() => Promise.resolve()) })
+    const conversations = mock<ConversationLeads>({ leadIdOf: jest.fn(() => Promise.resolve("lead-9")) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentToolsService,
-            { provide: ToolTokenService, useValue: tokens },
+            { provide: TOOL_TOKENS, useValue: tokens },
             { provide: EventsService, useValue: events },
             { provide: KNOWLEDGE_SEARCH, useValue: knowledge },
             { provide: LEAD_WRITER, useValue: leads },
@@ -86,12 +88,11 @@ describe("AgentToolsService", () => {
     describe("issue, revoke and manifest", () => {
         it("delegates the token to the tool token service", async () => {
             const { service, tokens } = await build()
-            const subject = { jobId: "job-1", workspaceId: "ws-1", conversationId: "conv-1" }
 
-            expect(service.issue(subject, 60)).toBe("signed-token")
+            expect(service.issue(ctx, 60)).toBe("signed-token")
             service.revoke("job-1")
 
-            expect(tokens.mint).toHaveBeenCalledWith(subject, 60)
+            expect(tokens.mint).toHaveBeenCalledWith(ctx, 60)
             expect(tokens.revoke).toHaveBeenCalledWith("job-1")
         })
 
@@ -147,9 +148,14 @@ describe("AgentToolsService", () => {
 
             await service.runTool("t", "knowledge.search", { query: "q".repeat(300) })
 
-            expect(events.record).toHaveBeenCalledWith(
-                expect.objectContaining({ summary: `Knowledge search: ${"q".repeat(100)}` }),
-            )
+            expect(events.record).toHaveBeenCalledWith({
+                workspaceId: "ws-1",
+                kind: "engine.tool.knowledge.search",
+                actor: "NIVO engine",
+                summary: `Knowledge search: ${"q".repeat(100)}`,
+                leadId: "lead-9",
+                evidence: "job-1",
+            })
         })
 
         it("hands the lead to the writer and traces the lead it returns", async () => {
@@ -234,7 +240,14 @@ describe("AgentToolsService", () => {
 
             await service.runTool("t", "handoff.to_person", {})
 
-            expect(events.record).toHaveBeenCalledWith(expect.objectContaining({ evidence: "job-1" }))
+            expect(events.record).toHaveBeenCalledWith({
+                workspaceId: "ws-1",
+                kind: "engine.tool.handoff.to_person",
+                actor: "NIVO engine",
+                summary: "Conversation handed to a person",
+                leadId: "lead-9",
+                evidence: "job-1",
+            })
         })
 
         it("leaves the booking tools to their port, which traces itself", async () => {

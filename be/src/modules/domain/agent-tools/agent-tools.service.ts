@@ -1,8 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { EventsService } from "@modules/domain/events"
-import { ToolTokenService } from "@modules/integrations/openclaw"
-import type { ToolTokenSubject } from "@modules/integrations/openclaw"
-import type { ToolArgs, ToolContext, ToolManifestEntry, ToolOutcome } from "./agent-tools.contracts"
+import type { JsonResult, ToolArgs, ToolContext, ToolManifestEntry } from "./agent-tools.contracts"
 import {
     InjectApprovalRequester,
     InjectBookingTools,
@@ -10,6 +8,7 @@ import {
     InjectHandoffTool,
     InjectKnowledgeSearch,
     InjectLeadWriter,
+    InjectToolTokens,
 } from "./agent-tools.decorators"
 import type {
     ApprovalRequester,
@@ -18,6 +17,7 @@ import type {
     HandoffTool,
     KnowledgeSearch,
     LeadWriter,
+    ToolTokens,
 } from "./agent-tools.port"
 import { AgentToolsError, AgentToolsErrorCode } from "./errors/agent-tools.error"
 import { approvalOf, handoffReasonOf, leadOf, queryOf } from "./tool-args.policy"
@@ -36,7 +36,7 @@ const SUMMARY_QUERY_CHARS = 100
  */
 export class AgentToolsService {
     constructor(
-        private readonly tokens: ToolTokenService,
+        @InjectToolTokens() private readonly tokens: ToolTokens,
         private readonly events: EventsService,
         @InjectKnowledgeSearch() private readonly knowledge: KnowledgeSearch,
         @InjectLeadWriter() private readonly leads: LeadWriter,
@@ -47,7 +47,7 @@ export class AgentToolsService {
     ) {}
 
     /** Mints the token of a job for the tool bridge; an empty text when the bridge has no secret. */
-    issue(subject: ToolTokenSubject, ttlSeconds: number): string {
+    issue(subject: ToolContext, ttlSeconds: number): string {
         return this.tokens.mint(subject, ttlSeconds)
     }
 
@@ -62,7 +62,7 @@ export class AgentToolsService {
     }
 
     /** Runs one tool for the job named by the token. */
-    async runTool(token: string, tool: string, args: ToolArgs): Promise<ToolOutcome> {
+    async runTool(token: string, tool: string, args: ToolArgs): Promise<JsonResult> {
         const claims = this.tokens.verify(token)
         if (claims === null) throw new AgentToolsError({ code: AgentToolsErrorCode.TokenInvalid })
         if (!isToolName(tool)) {
@@ -73,10 +73,10 @@ export class AgentToolsService {
             workspaceId: claims.workspaceId,
             conversationId: claims.conversationId,
         }
-        return this.dispatch(ctx, tool, args)
+        return await this.dispatch(ctx, tool, args)
     }
 
-    private async dispatch(ctx: ToolContext, tool: ToolName, args: ToolArgs): Promise<ToolOutcome> {
+    private dispatch(ctx: ToolContext, tool: ToolName, args: ToolArgs): Promise<JsonResult> {
         if (isBookingTool(tool)) return this.booking.run(ctx, tool, args)
         if (tool === "knowledge.search") return this.searchKnowledge(ctx, args)
         if (tool === "lead.create_or_update") return this.createLead(ctx, args)
@@ -84,7 +84,7 @@ export class AgentToolsService {
         return this.handOff(ctx, args)
     }
 
-    private async searchKnowledge(ctx: ToolContext, args: ToolArgs): Promise<ToolOutcome> {
+    private async searchKnowledge(ctx: ToolContext, args: ToolArgs): Promise<JsonResult> {
         const query = queryOf(args)
         const found = await this.knowledge.search(ctx, query)
         await this.trace(ctx, "knowledge.search", `Knowledge search: ${query.slice(0, SUMMARY_QUERY_CHARS)}`)
@@ -94,7 +94,7 @@ export class AgentToolsService {
         }
     }
 
-    private async createLead(ctx: ToolContext, args: ToolArgs): Promise<ToolOutcome> {
+    private async createLead(ctx: ToolContext, args: ToolArgs): Promise<JsonResult> {
         const written = await this.leads.createOrUpdate(ctx, leadOf(args))
         await this.events.record({
             workspaceId: ctx.workspaceId,
@@ -107,7 +107,7 @@ export class AgentToolsService {
         return { lead_id: written.leadId, status: written.status }
     }
 
-    private async requestApproval(ctx: ToolContext, args: ToolArgs): Promise<ToolOutcome> {
+    private async requestApproval(ctx: ToolContext, args: ToolArgs): Promise<JsonResult> {
         const result = await this.approvals.request(ctx, approvalOf(args))
         await this.trace(
             ctx,
@@ -118,7 +118,7 @@ export class AgentToolsService {
         return { work_item_id: result.workItemId, status: result.status }
     }
 
-    private async handOff(ctx: ToolContext, args: ToolArgs): Promise<ToolOutcome> {
+    private async handOff(ctx: ToolContext, args: ToolArgs): Promise<JsonResult> {
         const reason = handoffReasonOf(args)
         await this.handoffs.handoff(ctx, reason)
         await this.trace(

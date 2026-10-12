@@ -1,13 +1,16 @@
 /** The arguments of a tool call as OpenClaw sent them: untrusted, sanitised by the tool-args policy. */
-export type ToolArgs = Readonly<Record<string, unknown>>
+export interface ToolArgs {
+    /** Any member. */
+    readonly [key: string]: unknown
+}
 
 /** The JSON object a tool answers with. */
-export type JsonResult = Readonly<Record<string, unknown>>
+export interface JsonResult {
+    /** Any member. */
+    readonly [key: string]: unknown
+}
 
-/** What a tool call returns to the bridge. */
-export type ToolOutcome = JsonResult
-
-/** The job a tool call runs for, taken only from the verified token claims. */
+/** The job a tool call runs for (and a token is minted for), taken only from the verified token claims. */
 export interface ToolContext {
     /** The job whose token was presented. */
     readonly jobId: string
@@ -89,3 +92,12 @@ export interface ApprovalResult {
 
 /** A lead id, or null when there is none. */
 export type OptionalLeadId = string | null
+
+/** The claims of a tool token: its job and an expiry in unix seconds. */
+export interface ToolClaims extends ToolContext {
+    /** Expiry, unix seconds. */
+    readonly exp: number
+}
+
+/** The claims of a valid token, or null. */
+export type OptionalToolClaims = ToolClaims | null

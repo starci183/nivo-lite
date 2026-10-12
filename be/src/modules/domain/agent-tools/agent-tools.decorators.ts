@@ -7,6 +7,7 @@ import type {
     HandoffTool,
     KnowledgeSearch,
     LeadWriter,
+    ToolTokens,
 } from "./agent-tools.port"
 
 /** Token of the knowledge search port. */
@@ -26,6 +27,12 @@ export const HANDOFF_TOOL: unique symbol = Symbol("domain.agent-tools.handoff-to
 
 /** Token of the conversation leads port. */
 export const CONVERSATION_LEADS: unique symbol = Symbol("domain.agent-tools.conversation-leads")
+
+/** Token of the tool tokens port. */
+export const TOOL_TOKENS: unique symbol = Symbol("domain.agent-tools.tool-tokens")
+
+/** Injects the tool tokens port. Parameter type: ToolTokens. */
+export const InjectToolTokens = (): TypedParameterDecorator<ToolTokens> => injector<ToolTokens>(TOOL_TOKENS)
 
 /** Injects the knowledge search port. Parameter type: KnowledgeSearch. */
 export const InjectKnowledgeSearch = (): TypedParameterDecorator<KnowledgeSearch> =>

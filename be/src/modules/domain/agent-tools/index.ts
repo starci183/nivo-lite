@@ -12,9 +12,11 @@ export {
     InjectConversationLeads,
     InjectHandoffTool,
     InjectKnowledgeSearch,
+    InjectToolTokens,
     InjectLeadWriter,
     KNOWLEDGE_SEARCH,
     LEAD_WRITER,
+    TOOL_TOKENS,
 } from "./agent-tools.decorators"
 export type {
     ApprovalRequester,
@@ -23,6 +25,7 @@ export type {
     HandoffTool,
     KnowledgeSearch,
     LeadWriter,
+    ToolTokens,
 } from "./agent-tools.port"
 export type {
     ApprovalReason,
@@ -36,9 +39,10 @@ export type {
     LeadWriteResult,
     OptionalLeadId,
     ToolArgs,
+    OptionalToolClaims,
+    ToolClaims,
     ToolContext,
     ToolManifestEntry,
-    ToolOutcome,
 } from "./agent-tools.contracts"
 export { isToolName, TOOL_MANIFEST } from "./tool-manifest.policy"
 export type { ToolName } from "./tool-manifest.policy"

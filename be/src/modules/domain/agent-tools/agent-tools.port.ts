@@ -9,6 +9,7 @@ import type {
     OptionalLeadId,
     ToolArgs,
     ToolContext,
+    OptionalToolClaims,
 } from "./agent-tools.contracts"
 
 /** Reads the PUBLIC customer knowledge of the conversation's own installation (owner: the knowledge lane). */
@@ -51,4 +52,14 @@ export interface HandoffTool {
 export interface ConversationLeads {
     /** The lead of the conversation, or null. */
     leadIdOf(ctx: ToolContext): Promise<OptionalLeadId>
+}
+
+/** The short-lived per-job tool tokens; the app root binds it to the OpenClaw ToolTokenService. */
+export interface ToolTokens {
+    /** Mints a token for a job; an empty text when the bridge has no secret. */
+    mint(subject: ToolContext, ttlSeconds: number): string
+    /** Ends the token of a job. */
+    revoke(jobId: string): void
+    /** The claims of a valid token of a running job, or null. */
+    verify(token: string): OptionalToolClaims
 }
