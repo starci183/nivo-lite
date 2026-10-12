@@ -1,0 +1,21 @@
+{
+  "metricToday": "Bookings today",
+  "metricTodayBasis": "Not cancelled, starting today",
+  "metricNoShow": "No-show rate, 30 days",
+  "metricNoShowBasis": "{n} finished bookings counted",
+  "metricNoShowNone": "No finished booking in the last 30 days yet",
+  "metricUtilisation": "Utilisation this week",
+  "metricUtilisationBasis": "Booked hours over opening hours, Monday to Sunday",
+  "metricUtilisationNone": "No opening hours set for this week",
+  "metricDeposits": "Deposits pending",
+  "metricDepositsBasis": "Worth {value}, on bookings still open",
+  "metricDepositsNone": "No open booking is waiting for a deposit",
+  "tabCalendar": "Calendar",
+  "tabToday": "Today",
+  "tabWaitlist": "Waitlist",
+  "tabStats": "Statistics",
+  "tabSetup": "Setup",
+  "addBooking": "Add booking",
+  "loadFailedTitle": "The bookings could not be loaded",
+  "loadFailedBody": "Try reloading the page. If it keeps failing, tell NIVO."
+}

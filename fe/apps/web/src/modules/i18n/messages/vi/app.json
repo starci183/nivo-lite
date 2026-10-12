@@ -1,0 +1,13 @@
+{
+  "title": "NIVO OS",
+  "description": "Hệ điều hành trách nhiệm cho doanh nghiệp dịch vụ do người sáng lập dẫn dắt.",
+  "errorTitle": "Đã có lỗi xảy ra",
+  "errorText": "Không thể hiển thị trang này. Không có dữ liệu nào bị mất. Hãy thử lại.",
+  "retry": "Thử lại",
+  "loading": "Đang tải",
+  "notFoundTitle": "Không tìm thấy trang",
+  "notFoundText": "Trang này không tồn tại hoặc bạn không còn quyền truy cập.",
+  "notFoundHome": "Về tổng quan",
+  "globalErrorTitle": "NIVO OS chưa thể khởi động",
+  "globalErrorText": "Một lỗi bất ngờ đã dừng trang. Hãy thử lại sau giây lát."
+}
