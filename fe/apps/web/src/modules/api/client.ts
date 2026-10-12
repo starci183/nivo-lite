@@ -11,6 +11,8 @@ export interface ApiRequest {
     readonly token: string
     /** The reader's locale, sent as the request language so the api answers in the language of the page. */
     readonly locale: string
+    /** The workspace the call acts in, sent as X-Workspace-Id; the back end proves the caller membership in it. */
+    readonly workspaceId?: string
     readonly method?: ApiMethod
     /** A JSON body; omitted for reads. */
     readonly body?: unknown
@@ -72,6 +74,7 @@ export const request = async <T>(
             headers: {
                 "accept-language": input.locale,
                 authorization: `Bearer ${input.token}`,
+                ...(input.workspaceId === undefined ? {} : { "x-workspace-id": input.workspaceId }),
                 ...(input.body === undefined ? {} : { "content-type": "application/json" }),
             },
             ...(input.body === undefined ? {} : { body: JSON.stringify(input.body) }),
