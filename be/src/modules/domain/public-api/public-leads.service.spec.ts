@@ -2,7 +2,6 @@ import { Test } from "@nestjs/testing"
 import { fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
 import type { MockEntityManager, RecordingQueueOutbox } from "@starci/jest-preset"
 import { ApiKeysService } from "@modules/domain/api-keys"
-import type { ApiPrincipal } from "@modules/domain/api-keys"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
 import { PUBLIC_API_QUEUE, PublicApiQueue } from "@modules/queues/public-api"
@@ -17,7 +16,7 @@ import {
     MATCH_LEAD_BY_PHONE,
 } from "./persistence/public-api.sql"
 
-const WHO: ApiPrincipal = { keyId: "key-1", workspaceId: "workspace-1", name: "n8n", scopes: [] }
+const WHO = { keyId: "key-1", workspaceId: "workspace-1", name: "n8n", scopes: [] }
 
 const AUTH = "Bearer nvk_secret"
 

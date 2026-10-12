@@ -3622,6 +3622,12 @@ isOneToOne: false
 "api_key_auth":
 { Args: { "p_hash": string }; Returns: Json
                            },
+"api_key_create":
+{ Args: { "p_name": string; "p_workspace": string }; Returns: Json
+                           },
+"api_key_revoke":
+{ Args: { "p_key": string; "p_workspace": string }; Returns: Json
+                           },
 "api_rate_hit":
 { Args: { "p_key": string }; Returns: number
                            },

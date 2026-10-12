@@ -1,7 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
-import { ApiKeysHttpModule } from "@features/api/api-keys"
 import { ExternalApiHttpModule } from "@features/api/external-api"
 import { SystemHealthHttpModule } from "@features/api/system-health"
 import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
@@ -121,7 +120,6 @@ export class AppModule {
                 LivenessModule.register({ isGlobal: true }),
                 ApiKeysModule.register({ isGlobal: true }),
                 PublicApiModule.register({ isGlobal: true }),
-                ApiKeysHttpModule,
                 ExternalApiHttpModule,
                 SystemHealthHttpModule,
                 WorkspacesHttpModule,

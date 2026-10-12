@@ -2,14 +2,13 @@ import { Test } from "@nestjs/testing"
 import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { ApiKeysService } from "@modules/domain/api-keys"
-import type { ApiPrincipal } from "@modules/domain/api-keys"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { PublicApiErrorCode } from "./errors/public-api.error"
 import { PublicEventsService } from "./public-events.service"
 import { LIST_EVENTS } from "./persistence/public-api.sql"
 
-const WHO: ApiPrincipal = { keyId: "key-1", workspaceId: "workspace-1", name: "n8n", scopes: [] }
+const WHO = { keyId: "key-1", workspaceId: "workspace-1", name: "n8n", scopes: [] }
 
 const AUTH = "Bearer nvk_secret"
 

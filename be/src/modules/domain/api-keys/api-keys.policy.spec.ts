@@ -1,15 +1,5 @@
 import { ApiKeysErrorCode } from "./errors/api-keys.error"
-import {
-    KEY_PREFIX,
-    RATE_LIMIT_PER_MINUTE,
-    admitKey,
-    bearerKey,
-    buildKey,
-    cleanName,
-    hashKey,
-    mayManageKeys,
-    secondsToRenewal,
-} from "./api-keys.policy"
+import { RATE_LIMIT_PER_MINUTE, admitKey, bearerKey, hashKey, secondsToRenewal } from "./api-keys.policy"
 
 const NOW = new Date("2026-10-12T10:00:20.000Z")
 
@@ -30,21 +20,6 @@ describe("api-keys policy", () => {
         })
     })
 
-    describe("buildKey", () => {
-        it("makes an nvk key from the entropy with its 12 character prefix and its hash", () => {
-            const built = buildKey(new Uint8Array(32).fill(7))
-
-            expect(built.key.startsWith(KEY_PREFIX)).toBe(true)
-            expect(built.key).toHaveLength(KEY_PREFIX.length + 43)
-            expect(built.prefix).toBe(built.key.slice(0, 12))
-            expect(built.hash).toBe(hashKey(built.key))
-        })
-
-        it("makes a different key from different entropy", () => {
-            expect(buildKey(new Uint8Array(32).fill(1)).key).not.toBe(buildKey(new Uint8Array(32).fill(2)).key)
-        })
-    })
-
     describe("bearerKey", () => {
         it("reads the key of a Bearer header, whatever the case of the scheme", () => {
             expect(bearerKey("Bearer nvk_abc")).toBe("nvk_abc")
@@ -56,19 +31,6 @@ describe("api-keys policy", () => {
             expect(bearerKey("Basic nvk_abc")).toBeUndefined()
             expect(bearerKey("Bearer eyJhbGciOi")).toBeUndefined()
             expect(bearerKey("Bearer nvk_abc extra")).toBeUndefined()
-        })
-    })
-
-    describe("cleanName", () => {
-        it("collapses white space and bounds the length", () => {
-            expect(cleanName("  n8n   ban hang ")).toEqual({ kind: "ok", value: "n8n ban hang" })
-            const long = cleanName("x".repeat(100))
-            expect(long.kind === "ok" && long.value.length).toBe(60)
-        })
-
-        it("refuses a name shorter than two characters", () => {
-            expect(cleanName("  a ")).toMatchObject({ kind: "refused", code: ApiKeysErrorCode.NameTooShort })
-            expect(cleanName("")).toMatchObject({ kind: "refused", code: ApiKeysErrorCode.NameTooShort })
         })
     })
 
@@ -129,15 +91,6 @@ describe("api-keys policy", () => {
             expect(
                 admitKey({ id: "key-1", workspace_id: "workspace-1", scopes: ["leads:read"] }, "leads:read", NOW),
             ).toMatchObject({ kind: "ok", value: { name: "" } })
-        })
-    })
-
-    describe("mayManageKeys", () => {
-        it("lets an owner and a manager manage keys and nobody else", () => {
-            expect(mayManageKeys("owner")).toBe(true)
-            expect(mayManageKeys("manager")).toBe(true)
-            expect(mayManageKeys("staff")).toBe(false)
-            expect(mayManageKeys(undefined)).toBe(false)
         })
     })
 })

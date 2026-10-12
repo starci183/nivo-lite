@@ -13,8 +13,6 @@ export const API_KEY_SCOPES = [
 export type ApiScope = (typeof API_KEY_SCOPES)[number]
 
 /** The value of an `Authorization` request header, absent when the caller sent none. */
-export type BearerHeader = string | undefined
-
 /** What a verified key stands for: it acts for exactly one workspace. */
 export interface ApiPrincipal {
     /** The key id. */
@@ -25,30 +23,6 @@ export interface ApiPrincipal {
     readonly name: string
     /** The scopes the key carries. */
     readonly scopes: ReadonlyArray<string>
-}
-
-/** One key as the workspace manager sees it: never the key itself, which is not stored. */
-export interface ApiKeyView {
-    /** The key id. */
-    readonly id: string
-    /** The name the owner gave the key. */
-    readonly name: string
-    /** The first characters of the key, enough to recognise it. */
-    readonly prefix: string
-    /** When the key was created, ISO 8601. */
-    readonly createdAt: string
-    /** When the key last authenticated a request, ISO 8601, or null. */
-    readonly lastUsedAt: string | null
-    /** When the key was revoked, ISO 8601, or null while it works. */
-    readonly revokedAt: string | null
-}
-
-/** A key just created: the secret is shown here once and never again. */
-export interface CreatedApiKey {
-    /** The secret key. */
-    readonly key: string
-    /** The stored view of the key. */
-    readonly item: ApiKeyView
 }
 
 /** What the `api_key_auth` function answers for a bearer key hash; null when no key has the hash. */
