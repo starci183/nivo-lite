@@ -417,7 +417,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
   }
 
   const retryable = items.filter(canRetry)
-  const pendingCount = retryable.length + parseLinks(links).filter((u) => !items.some((x) => x.kind === "link" && x.name === u)).length
+  const pendingCount = retryable.length + parseLinks(links).filter((u) => !linkProblem(u) && !items.some((x) => x.kind === "link" && x.name === u)).length
   const hasFailed = items.some((x) => x.status === "failed")
   const wantsDrive = parseLinks(links).some(isGoogleDriveLink) || items.some((x) => x.kind === "link" && (isGoogleDriveLink(x.name) || x.error?.startsWith(LINK_ERROR.needGrant)))
   const driveReason = driveAnswer && !driveAnswer.ok
