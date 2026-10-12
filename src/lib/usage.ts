@@ -13,7 +13,7 @@ import type { ModuleKey } from "./module-registry";
  * `guide` is the in-app navigation assistant: NIVO pays for it, so it is metered but never blocked and never counts toward the allowance.
  * `brain` is the second brain's own work (reading facts out of documents): charged to the workspace's credits like any non-customer call.
  */
-export type UsageKind = "chat_reply" | "setup" | "owner_chat" | "relay" | "embedding" | "engine" | "guide" | "brain";
+export type UsageKind = "chat_reply" | "setup" | "owner_chat" | "relay" | "embedding" | "engine" | "guide" | "brain" | "office_command";
 export type UsageModule = ModuleKey | "setup" | "office" | "knowledge" | "other";
 export type UsageScope = { readonly workspaceId: string; readonly kind?: UsageKind; readonly module?: UsageModule };
 

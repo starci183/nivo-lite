@@ -36,7 +36,9 @@ import { staffHandles } from "@/lib/staff-handle"
 import { ExceptionCard, departmentAgent, exceptionAnchor } from "./exceptions"
 import { ConversationList, type CustomerEntry } from "./conversations"
 import { InfoPanel, type OfficePerson } from "./members"
-import { useMember } from "@/features/shell/member-context"
+import { isManager, useMember } from "@/features/shell/member-context"
+import { CommandCard, acceptsCommands, workItemHref } from "./command-card"
+import type { CommandCandidate } from "@/lib/office-command-rules"
 import { DaySeparator, MessageRow, PendingBubble } from "./messages"
 import type { PendingApproval } from "./queries"
 import { TasksPanel } from "./tasks"
@@ -69,6 +71,10 @@ export type OfficeMessengerProps = {
   readonly customers: ReadonlyArray<CustomerEntry>
   /** Lead id to contact name, for lead chips on system notices. */
   readonly leadNames: Readonly<Record<string, string>>
+  /** Confirm cards of "@agent ..." messages (owner and manager only; empty for staff). */
+  readonly candidates?: ReadonlyArray<CommandCandidate>
+  /** Work item id to its department, for the link on a command mirror line. */
+  readonly workItemModules?: Readonly<Record<string, string>>
   /** Render time (ISO) fixed on the server so day labels agree with hydration. */
   readonly nowIso: string
   /** STATE-8: the same Office while its data loads - the frame, the columns, the heading and the composer stay, the thread is three skeleton messages. */
@@ -102,6 +108,8 @@ export const OfficeMessenger = ({
   tasks,
   customers,
   leadNames,
+  candidates = [],
+  workItemModules = {},
   nowIso,
   isLoading = false,
 }: OfficeMessengerProps) => {
@@ -113,6 +121,8 @@ export const OfficeMessenger = ({
   const [outbox, setOutbox] = useState<ReadonlyArray<{ readonly id: string; readonly body: string; readonly failed: boolean }>>([])
   const [error, setError] = useState<string | null>(null)
   const [typing, setTyping] = useState<string | null>(null)
+  /** The one agent a manager's message is being read for as a command: the confirm card shows as a skeleton until it arrives. */
+  const [reading, setReading] = useState<{ readonly handle: string; readonly module: Agent["module"] } | null>(null)
   const [phoneView, setPhoneView] = useState<"list" | "thread">("thread")
   const [centre, setCentre] = useState<"chat" | "tasks">("chat")
   const [isInfoOpen, setIsInfoOpen] = useState(false)
@@ -165,6 +175,13 @@ export const OfficeMessenger = ({
         append([payload.new as Message])
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "work_items", filter: `workspace_id=eq.${workspaceId}` }, () => {
+        if (refreshTimer.current !== null) window.clearTimeout(refreshTimer.current)
+        refreshTimer.current = window.setTimeout(() => {
+          refreshTimer.current = null
+          router.refresh()
+        }, REFRESH_DEBOUNCE_MS)
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "office_command_candidates", filter: `workspace_id=eq.${workspaceId}` }, () => {
         if (refreshTimer.current !== null) window.clearTimeout(refreshTimer.current)
         refreshTimer.current = window.setTimeout(() => {
           refreshTimer.current = null
@@ -248,9 +265,13 @@ export const OfficeMessenger = ({
     const pendingId = `pending-${Date.now()}`
     setOutbox((current) => [...current, { id: pendingId, body, failed: false }])
     setTyping(mentioned.length ? mentioned.join(", ") : null)
+    // Owner / manager and exactly one agent that takes commands: the reply is a confirm card, so draw its skeleton while NIVO reads the message.
+    const target = agents.find((a) => a.status === "active" && handles.length === 1 && a.handle === handles[0])
+    setReading(isManager(me) && acceptsCommands(target) && target ? { handle: target.handle, module: target.module } : null)
     startTransition(async () => {
       const result = await sendTeamMessage(body).catch(() => ({ ok: false as const, error: t("sendFailed") }))
       setTyping(null)
+      setReading(null)
       if (result.ok) {
         append(result.data)
         setOutbox((current) => current.filter((o) => o.id !== pendingId))
@@ -266,8 +287,8 @@ export const OfficeMessenger = ({
   const approvals = useMemo(() => [...pending, ...decided], [pending, decided])
   const cards = useMemo(() => [...exceptions, ...decidedExceptions], [exceptions, decidedExceptions])
   const items = useMemo(
-    () => buildThread(messages, approvals, cards, nowIso, locale, { today: t("today"), yesterday: t("yesterday") }),
-    [messages, approvals, cards, nowIso, locale, t],
+    () => buildThread(messages, approvals, cards, nowIso, locale, { today: t("today"), yesterday: t("yesterday") }, candidates),
+    [messages, approvals, cards, nowIso, locale, t, candidates],
   )
   const hasChatbot = agents.some((a) => a.module === "chatbot")
   const linkedStaff = new Set(people.map((p) => p.staffId).filter((id): id is string => id !== null))
@@ -301,6 +322,10 @@ export const OfficeMessenger = ({
             if (item.kind === "exception") {
               return <ExceptionCard key={item.key} item={item.item} staff={staff} ownerName={deciders[item.item.id] ?? userName} isFocused={focusedId === item.item.id} agent={departmentAgent(agents, item.item.department)} />
             }
+            if (item.kind === "command") {
+              const handle = agents.find((a) => a.module === item.candidate.module)?.handle ?? item.candidate.module
+              return <CommandCard key={item.key} candidate={item.candidate} handle={handle} module={item.candidate.module} />
+            }
             if (item.kind === "approval") {
               return (
                 <ApprovalBubble
@@ -321,6 +346,7 @@ export const OfficeMessenger = ({
                 leadName={message.lead_id ? (leadNames[message.lead_id] ?? null) : null}
                 isContinuation={item.isContinuation}
                 isGroupEnd={item.isGroupEnd}
+                workItemHref={message.work_item_id && workItemModules[message.work_item_id] ? workItemHref(workItemModules[message.work_item_id], message.work_item_id) : null}
                 onReply={onMention}
               />
             )
@@ -329,6 +355,7 @@ export const OfficeMessenger = ({
         {outbox.map((o) => (
           <PendingBubble key={o.id} body={o.body} failed={o.failed} />
         ))}
+        {reading ? <CommandCard candidate={null} handle={reading.handle} module={reading.module} isLoading /> : null}
         <div className={TYPING_CLASS_NAME}>
           {typing ? <Text size="sm" tone="muted" live="polite">{t("typing", { name: typing })}</Text> : null}
         </div>

@@ -3,6 +3,7 @@ import type { Message } from "@/lib/types"
 import { dayKey, dayLabel, type DayWords } from "./format"
 import type { WorkItemView } from "@/lib/flow-types"
 import type { PendingApproval } from "./queries"
+import type { CommandCandidate } from "@/lib/office-command-rules"
 
 const GROUP_WINDOW_MS = 5 * 60_000
 
@@ -12,6 +13,8 @@ export type ThreadItem =
   | { readonly kind: "message"; readonly key: string; readonly message: Message; readonly isContinuation: boolean; readonly isGroupEnd: boolean }
   | { readonly kind: "approval"; readonly key: string; readonly approval: PendingApproval }
   | { readonly kind: "exception"; readonly key: string; readonly item: WorkItemView }
+  /** The confirm card of an owner's "@agent ..." message, placed right under that message. */
+  | { readonly kind: "command"; readonly key: string; readonly candidate: CommandCandidate }
 
 type Entry = { readonly at: string; readonly message?: Message; readonly approval?: PendingApproval; readonly exception?: WorkItemView }
 
@@ -26,7 +29,10 @@ export const buildThread = (
   nowIso: string,
   locale: Locale,
   words: DayWords,
+  candidates: ReadonlyArray<CommandCandidate> = [],
 ): ReadonlyArray<ThreadItem> => {
+  const under = new Map<string, Array<CommandCandidate>>()
+  for (const candidate of candidates) under.set(candidate.message_id, [...(under.get(candidate.message_id) ?? []), candidate])
   const entries: Array<Entry> = [
     ...messages.map((message) => ({ at: message.created_at, message })),
     ...approvals.map((approval) => ({ at: approval.execution.created_at, approval })),
@@ -62,6 +68,11 @@ export const buildThread = (
       new Date(message.created_at).getTime() - new Date(previous.created_at).getTime() < GROUP_WINDOW_MS
     items.push({ kind: "message", key: message.id, message, isContinuation, isGroupEnd: true })
     previous = message
+    for (const candidate of under.get(message.id) ?? []) {
+      items.push({ kind: "command", key: `command-${candidate.id}`, candidate })
+      // The card breaks the author's run: the next message starts a new group.
+      previous = null
+    }
   }
   // A bubble closes its group unless the next entry continues it (Zalo shows the time once, on the last bubble).
   return items.map((item, index) => {
