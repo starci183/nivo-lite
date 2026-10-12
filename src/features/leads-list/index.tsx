@@ -79,7 +79,7 @@ export const LeadsList = ({ leads, nowIso, initialQuery = "", initialFormOpen = 
           </div>
           {isFiltered ? <TextAction onPress={onClear}>{t("clearFilters")}</TextAction> : null}
         </div>
-        <Tabs
+        <Tabs variant="primary"
           label={t("tabsLabel")}
           selectedKey={stage}
           inset="none"

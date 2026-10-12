@@ -93,7 +93,7 @@ export const HiringWorkbenchView = ({ data, failed = false }: HiringWorkbenchVie
         />
       </SurfaceCard>
       <HorizontalScrollRegion overflow="needed" isFocusable={false}>
-        <Tabs label="Tuyển dụng" selectedKey={tab} items={items} inset="none" labelVisibility="always" panelId={panelId} onSelect={select} />
+        <Tabs variant="primary" label="Tuyển dụng" selectedKey={tab} items={items} inset="none" labelVisibility="always" panelId={panelId} onSelect={select} />
       </HorizontalScrollRegion>
       <div className={PANEL_CLASS_NAME} role="tabpanel" id={panelId(tab)}>
         {tab === "jobs" ? <JobsPanel data={data} onOpenPipeline={(id) => { setJobId(id); select("candidates"); }} /> : null}

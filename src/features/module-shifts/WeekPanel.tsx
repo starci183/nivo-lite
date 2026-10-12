@@ -250,7 +250,7 @@ export const WeekPanel = ({ data, canManage, onReload }: Props) => {
                 </SurfaceCard>
               </div>
               <div className={DAYLIST_CLASS_NAME}>
-                <Tabs label={t("gridTitle")} selectedKey={dates[dayIdx]} inset="none" labelVisibility="always" items={dates.map((d) => ({ id: d, label: `${dayName(d)} ${dm(d)}` }))} onSelect={(k) => setDayIdx(Math.max(0, dates.indexOf(k)))} />
+                <Tabs variant="secondary" label={t("gridTitle")} selectedKey={dates[dayIdx]} inset="none" labelVisibility="always" items={dates.map((d) => ({ id: d, label: `${dayName(d)} ${dm(d)}` }))} onSelect={(k) => setDayIdx(Math.max(0, dates.indexOf(k)))} />
                 <SurfaceListCard ariaLabel={`${dayName(dates[dayIdx])} ${dm(dates[dayIdx])}`} isVerdict empty={<EmptyNotice message={t("noShiftsDay")} />}>
                   {dayShifts.map((s) => {
                     const v = broken.get(s.id);

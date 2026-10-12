@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Alert, Badge, Button, Icon, ListRow, SurfaceListCard } from "@starci/grammar/common"
+import { Alert, Badge, Button, IconButton, ListRow, SurfaceListCard } from "@starci/grammar/common"
 import { useLocale, useT } from "@/i18n/client"
 import { intlLocale, TIME_ZONE } from "@/i18n/core"
 import { brain } from "@/i18n/dict/brain"
@@ -74,7 +74,7 @@ export const KnowledgeGapsCard = ({ gaps, lenses, business, isLoading = false }:
               actions={(
                 <>
                   <Button variant="ghost" size="sm" isDisabled={isPending} onPress={() => setAnswering(g)}>{t("gapAnswer")}</Button>
-                  <Button variant="danger-soft" size="sm" isDisabled={isPending} startContent={<Icon source={nivoIconSource("trash", "chip")} usage="chip" />} onPress={() => dismiss(g)}>{t("gapDismiss")}</Button>
+                  <IconButton variant="danger-soft" source={nivoIconSource("trash", "leading")} label={t("gapDismiss")} isDisabled={isPending} onPress={() => dismiss(g)} />
                 </>
               )}
             />

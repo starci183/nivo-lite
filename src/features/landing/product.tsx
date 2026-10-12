@@ -52,7 +52,7 @@ export const LandingProduct = () => {
           <SectionHeader id={HEADING_ID} eyebrow={t("productEyebrow")} title={t("productTitle")} />
           <div className={PRODUCT_DESKTOP}>
             <SurfaceCard>
-              <Tabs
+              <Tabs variant="secondary"
                 label={t("tabsLabel")}
                 selectedKey={current.id}
                 inset="none"

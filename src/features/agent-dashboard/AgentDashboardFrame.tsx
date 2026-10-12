@@ -50,7 +50,7 @@ import { ConnectionsRegion, DoneRegion, KnowledgeRegion, WaitingRegion } from ".
  * Shared URL contract of a workbench: `?tab=<tab id>` selects a tab and `?focus=<record id>` names the record the "Chờ bạn" row leads to
  * (see workbenchHref); the module reads `focus` on the server and opens/highlights that record.
  *
- * The page strip is `Tabs variant="primary"` (the Frontend standard: the page's main areas), set here once for every module.
+ * TABS: the strip is `Tabs variant="primary"` (grammar 0.9.10): it switches the page's main areas. Tabs inside a module's own panels, drawers, cards or rails use `variant="secondary"`.
  */
 
 export type AgentDashboardTab = {
@@ -153,7 +153,7 @@ export const AgentDashboardFrame = ({
       </div>
 
       {tabs.length > 1 ? (
-        <Tabs label={t("tabsLabel")} selectedKey={selected} items={tabs.map(({ id, label }) => ({ id, label }))} variant="primary" inset="none" labelVisibility="always" panelId={tabPanelId} onSelect={select} />
+        <Tabs variant="primary" label={t("tabsLabel")} selectedKey={selected} items={tabs.map(({ id, label }) => ({ id, label }))} inset="none" labelVisibility="always" panelId={tabPanelId} onSelect={select} />
       ) : null}
       <div className={PANEL_CLASS_NAME} role={tabs.length > 1 ? "tabpanel" : undefined} id={tabs.length > 1 ? tabPanelId(selected) : undefined}>
         {active?.content ?? (isLoading ? <SurfaceListCard ariaLabel={active?.label ?? t("tabsLabel")} isLoading /> : null)}

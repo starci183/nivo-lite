@@ -211,7 +211,7 @@ export const ItemEditor = ({ item, data, onClose }: EditorProps) => {
 
         {channels.length ? (
           <>
-            <Tabs label={t("fieldChannels")} selectedKey={activeTab} inset="none" labelVisibility="always" items={channels.map((c) => ({ id: c, label: channelRule(c).label }))} onSelect={(k) => setTab(k as ContentChannel)} />
+            <Tabs variant="secondary" label={t("fieldChannels")} selectedKey={activeTab} inset="none" labelVisibility="always" items={channels.map((c) => ({ id: c, label: channelRule(c).label }))} onSelect={(k) => setTab(k as ContentChannel)} />
             <div className={FORM_CLASS_NAME}>
               <Textarea variant="secondary" label={t("variantFor", { channel: rule.label })} rows={9} value={cur.text} isDisabled={!editable || isPending} onValueChange={(v) => setVariant({ text: v })} description={t("variantChars", { n: cur.text.length, max: rule.max_chars })} />
               {rule.hashtags.max > 0 ? <Input id={`ce-tags-${activeTab}`} name={`tags-${activeTab}`} label={t("fieldHashtags")} variant="secondary" value={tagText[activeTab] ?? ""} hint={t("fieldHashtagsHint")} isDisabled={!editable || isPending} onValueChange={(v) => setTagText((x) => ({ ...x, [activeTab]: v }))} /> : null}

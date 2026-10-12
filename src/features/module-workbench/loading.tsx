@@ -11,6 +11,9 @@ import { AccountingWorkbenchLoading } from "@/features/workbench-accounting/load
 import { ChatbotWorkbenchLoading } from "@/features/workbench-chatbot/loading";
 import { LeadGenWorkbenchLoading } from "@/features/module-lead-gen/loading";
 import { SalesWorkbenchLoading } from "@/features/workbench-sales/loading";
+import { BookingWorkbenchLoading } from "@/features/module-booking/loading";
+import { InventoryWorkbenchLoading } from "@/features/module-inventory/loading";
+import { LoyaltyWorkbenchLoading } from "@/features/module-loyalty/loading";
 
 /**
  * Loading views of the workbenches built on the agent dashboard frame, by the same key as WORKBENCHES in ./registry.
@@ -21,6 +24,9 @@ const LOADINGS: Readonly<Record<string, ComponentType>> = {
   sales: SalesWorkbenchLoading,
   accounting: AccountingWorkbenchLoading,
   lead_gen: LeadGenWorkbenchLoading,
+  booking: BookingWorkbenchLoading,
+  loyalty: LoyaltyWorkbenchLoading,
+  inventory: InventoryWorkbenchLoading,
 };
 
 /** STATE-8: the workbench slot while it loads - the module's own frame, or (a module not on the frame yet) its card with the content as a skeleton. */
