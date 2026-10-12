@@ -16,7 +16,7 @@ const YEAR_SECONDS = 60 * 60 * 24 * 365
 /** Makes a workspace the current one (cookie), only when the caller is an active member of it under RLS. */
 export const writeSwitchWorkspace = async (workspaceId: string): Promise<DbOutcome<true>> => {
     const principal = await getPrincipal()
-    if (principal.kind !== "ok") return principal
+    if (principal.kind !== "ok") return dbFailure("refused", "anonymous")
     const parsed = workspaceIdSchema.safeParse(workspaceId)
     if (!parsed.success) return dbFailure("invalid", "workspace-id")
     const client = await createServerDbClient()
