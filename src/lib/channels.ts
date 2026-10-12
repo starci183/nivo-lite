@@ -85,6 +85,8 @@ export const publicSiteUrl = (): string | null => {
 /** The webhook URL a provider must call for this connection (built from NEXT_PUBLIC_SITE_URL, even on localhost, for display). */
 export const webhookUrlFor = (provider: Provider, connectionId: string, origin = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3100"): string => {
   const base = origin.replace(/\/$/, "");
+  // Meta has ONE webhook for the whole app (the Page id inside each event finds the connection).
+  if (provider === "meta") return `${base}/api/connections/meta/webhook`;
   return provider === "telegram" ? `${base}/api/telegram/${connectionId}` : `${base}/api/connections/${provider === "zalo_oa" ? "zalo" : provider}/${connectionId}`;
 };
 

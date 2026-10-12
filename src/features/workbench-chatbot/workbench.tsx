@@ -192,7 +192,7 @@ export const ChatbotWorkbench = ({ dashboard, initial, initialThread, userName, 
                 const res = await answerEscalation(item.workItemId, selectedId, text);
                 await refresh();
                 if (!res.ok) return res.error;
-                return text !== null && !res.data.delivered && (thread?.conversation.channel === "telegram" || thread?.conversation.channel === "zalo") ? t("escalationSentFailed") : null;
+                return text !== null && !res.data.delivered && thread?.conversation.channel !== undefined && thread.conversation.channel !== "website" ? t("escalationSentFailed") : null;
               }}
             />
           </aside>

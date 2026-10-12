@@ -20,7 +20,7 @@ import { conversationAccess } from "./channels";
 import type { Agent, AgentConversation, AgentMessage } from "./types";
 
 /** How the customer reached us: the inbound channel key and the label shown on the lead. */
-export type CustomerChannel = { readonly key: "website" | "telegram"; readonly label: string };
+export type CustomerChannel = { readonly key: "website" | "telegram" | "facebook" | "instagram"; readonly label: string };
 
 const must = <T>(res: { data: T | null; error: { message: string } | null }): T => {
   if (res.error) throw new Error(res.error.message);
@@ -32,7 +32,10 @@ const agentInput = (a: Agent): ai.AgentInput => ({ name: a.name, handle: a.handl
 
 /** The channel a stored conversation belongs to. */
 export const channelOf = (conv: AgentConversation): CustomerChannel =>
-  conv.channel === "telegram" ? { key: "telegram", label: "Telegram" } : { key: "website", label: "Website chat" };
+  conv.channel === "telegram" ? { key: "telegram", label: "Telegram" }
+  : conv.channel === "facebook" ? { key: "facebook", label: "Facebook Messenger" }
+  : conv.channel === "instagram" ? { key: "instagram", label: "Instagram" }
+  : { key: "website", label: "Website chat" };
 
 /** A paid record counts as "just confirmed" for a customer's late "đã chuyển khoản" within this window. */
 const RECENTLY_PAID_MS = 14 * 86_400_000;

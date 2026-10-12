@@ -96,7 +96,7 @@ export const ConversationPane = (props: {
                   <>
                     <Text size="sm" tone="muted" overflow="truncate">{c.lastText ? `${prefix}${c.lastText}` : t("noMessages")}</Text>
                     <span className={CHIPS_CLASS_NAME}>
-                      <Badge tone="neutral">{c.channel === "telegram" ? t("channelTelegram") : c.channel === "zalo" ? t("channelZalo") : t("channelWebsite")}</Badge>
+                      <Badge tone="neutral">{c.channel === "telegram" ? t("channelTelegram") : c.channel === "zalo" ? t("channelZalo") : c.channel === "facebook" ? t("channelFacebook") : c.channel === "instagram" ? t("channelInstagram") : t("channelWebsite")}</Badge>
                       <StateChips conversation={c} />
                     </span>
                   </>

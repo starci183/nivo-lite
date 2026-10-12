@@ -8,6 +8,8 @@ import { connections } from "@/i18n/dict/connections"
 import { connectionWizard } from "@/i18n/dict/connectionWizard"
 import { webhookWizard } from "@/i18n/dict/webhookWizard"
 import { googleWizard } from "@/i18n/dict/googleWizard"
+import { metaWizard } from "@/i18n/dict/metaWizard"
+import { testMeta } from "@/lib/meta-actions"
 import { startGoogleConnect } from "@/lib/google-actions"
 import { sendWebhookTest } from "@/lib/webhook-actions"
 import type { Connection } from "@/lib/channels"
@@ -51,6 +53,7 @@ export const ConnectionRow = ({ connection: c, agentNames, localOnly, onOpen, ow
   const tw = useT(connectionWizard)
   const tj = useT(webhookWizard)
   const tg = useT(googleWizard)
+  const tm = useT(metaWizard)
   const router = useRouter()
   const copy = useCopyField()
   const [, startTransition] = useTransition()
@@ -70,6 +73,7 @@ export const ConnectionRow = ({ connection: c, agentNames, localOnly, onOpen, ow
     : c.provider === "telegram" ? ""
     : c.provider === "sepay" || c.provider === "casso" ? [c.meta.bank_code ? bankName(c.meta.bank_code) : "", c.meta.account_masked, c.meta.account_holder].filter(Boolean).join(" · ")
     : c.provider === "payos" ? ""
+    : c.provider === "meta" ? [c.meta.page_name, c.meta.ig_username ? `@${c.meta.ig_username}` : ""].filter(Boolean).join(" · ")
     : [c.meta.oa_id ? `OA ${c.meta.oa_id}` : "", c.meta.app_id ? `App ${c.meta.app_id}` : ""].filter(Boolean).join(" · ")
   const usedBy = agentNames.length ? t("usedBy", { names: agentNames.join(", ") }) : ""
 
@@ -87,6 +91,13 @@ export const ConnectionRow = ({ connection: c, agentNames, localOnly, onOpen, ow
   }
 
   const check = () => run("check", async () => {
+    if (c.provider === "meta") {
+      const m = await testMeta(c.id)
+      if (!m.ok) return setNote({ tone: "negative", text: m.error })
+      setNote(m.data.ok ? { tone: "affirmative", text: tm("rowCheckOk", { fields: m.data.page.fields.join(", ") }) } : { tone: "negative", text: m.data.tokenOk ? tm("rowCheckBad") : tm("testToken") })
+      router.refresh()
+      return
+    }
     const r = await testConnection(c.id)
     if (!r.ok) return setNote({ tone: "negative", text: r.error })
     const d = r.data
@@ -135,11 +146,11 @@ export const ConnectionRow = ({ connection: c, agentNames, localOnly, onOpen, ow
   }
 
   // The one visible action: what this connection's state asks for next.
-  const resumable = canManage && (c.status === "pending" || (c.status === "error" && c.provider === "zalo_oa")) && onOpen
+  const resumable = canManage && (c.status === "pending" || (c.status === "error" && (c.provider === "zalo_oa" || c.provider === "meta"))) && onOpen
   const primary =
-    resumable ? <Button variant="secondary" onPress={onOpen}>{c.provider === "zalo_oa" && c.status === "error" ? tw("zaloReauthorize") : tw("continue")}</Button>
+    resumable ? <Button variant="secondary" onPress={onOpen}>{c.provider === "zalo_oa" && c.status === "error" ? tw("zaloReauthorize") : c.provider === "meta" && c.status === "error" ? tm("reconnect") : tw("continue")}</Button>
     : canManage && c.provider === "google" && c.status === "error" ? <Button variant="secondary" isPending={busy === "google"} onPress={reconnectGoogle}>{tg("reconnect")}</Button>
-    : live && c.status !== "pending" && (c.provider === "telegram" || c.provider === "zalo_oa") ? <Button variant="outline" isPending={busy === "check"} onPress={check}>{t("check")}</Button>
+    : live && c.status !== "pending" && (c.provider === "telegram" || c.provider === "zalo_oa" || c.provider === "meta") ? <Button variant="outline" isPending={busy === "check"} onPress={check}>{t("check")}</Button>
     : canManage && live && DATA.has(c.provider) && c.status !== "pending" && c.provider !== "csv_import" ? <Button variant="outline" isPending={busy === "sync"} onPress={sync}>{t("syncNow")}</Button>
     : live && c.provider === "webhook" && c.status !== "pending" ? <Button variant="outline" isPending={busy === "test"} onPress={sendTest}>{tj("sendTest")}</Button>
     : null
@@ -147,6 +158,7 @@ export const ConnectionRow = ({ connection: c, agentNames, localOnly, onOpen, ow
   const commands: DropdownMenuItem[] = [
     ...(DATA.has(c.provider) && live && onOpen ? [{ id: "edit", label: t("edit"), onAction: onOpen }] : []),
     ...(isBank && c.status !== "pending" && onOpen ? [{ id: "edit", label: t("edit"), onAction: onOpen }] : []),
+    ...(c.provider === "meta" && live && c.status !== "pending" && onOpen ? [{ id: "edit", label: t("edit"), onAction: onOpen }] : []),
     ...(c.provider === "sepay" && live && c.status !== "pending" ? [{ id: "keys", label: t("showKey"), onAction: showKeys }] : []),
   ]
   const entries: DropdownMenuEntry[] = !canManage ? [] : [

@@ -13,7 +13,9 @@ import type { AgentConversation, Outcome } from "./types";
 
 /* Chatbot workbench: queries and actions for the customer-conversation inbox. Everything runs as the signed-in member through RLS. */
 
-export type WbChannel = "telegram" | "zalo" | "website";
+export type WbChannel = "telegram" | "zalo" | "facebook" | "instagram" | "website";
+/** Channels a reply is pushed to from NIVO (the website chat is read in the page itself). */
+const PUSHED: ReadonlySet<string | null> = new Set(["telegram", "zalo", "facebook", "instagram"]);
 export type WbDelivery = "sent" | "failed" | null;
 
 export type WbMessage = {
@@ -98,7 +100,7 @@ const median = (xs: ReadonlyArray<number>): number | null => {
 };
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1).trimEnd()}…` : s);
 
-const channelOfRow = (c: Pick<ConvRow, "channel">): WbChannel => (c.channel === "telegram" ? "telegram" : c.channel === "zalo" ? "zalo" : "website");
+const channelOfRow = (c: Pick<ConvRow, "channel">): WbChannel => (c.channel === "telegram" || c.channel === "zalo" || c.channel === "facebook" || c.channel === "instagram" ? c.channel : "website");
 
 const toMessage = (m: MsgRow): WbMessage => ({
   id: m.id, role: m.role, authorKind: m.author_kind === "human" ? "human" : "ai", authorName: m.author_name ?? null, body: m.body, createdAt: m.created_at,
@@ -250,7 +252,7 @@ export async function replyAsMember(conversationId: string, body: string): Promi
     }).select("id").single();
     if (ins.error) throw new Error(ins.error.message);
     const sent = await deliverToChannel(c.db, conv.id, text);
-    const status: "sent" | "failed" = (conv.channel === "telegram" || conv.channel === "zalo") && !sent ? "failed" : "sent";
+    const status: "sent" | "failed" = PUSHED.has(conv.channel ?? null) && !sent ? "failed" : "sent";
     await c.db.from("agent_messages").update(status === "sent" ? { delivery_status: status, delivery_error: null } : { delivery_status: status }).eq("id", (ins.data as { id: string }).id).eq("workspace_id", c.ws);
     await logEvidence(c.db, c.ws, { lead_id: conv.lead_id, kind: "conversation.human_reply", actor: name, summary: translator(system, c.locale)("takenOverNoReply"), evidence: text });
     revalidatePath("/", "layout");
@@ -276,7 +278,7 @@ export async function answerEscalation(workItemId: string, conversationId: strin
     if (text !== null) {
       const conv = ((await c.db.from("agent_conversations").select("channel").eq("id", conversationId).eq("workspace_id", c.ws).maybeSingle()).data ?? null) as { channel: string | null } | null;
       const posted = res.data.result?.summary === translator(system, c.locale)("replyPostedTelegram");
-      delivered = (conv?.channel === "telegram" || conv?.channel === "zalo") ? posted : true;
+      delivered = PUSHED.has(conv?.channel ?? null) ? posted : true;
       // The performer stored the answer as an unlabelled line: attribute it to this member and record honest delivery.
       const { data } = await c.db.from("agent_messages").select("id").eq("conversation_id", conversationId).eq("workspace_id", c.ws).eq("role", "agent")
         .eq("body", answer).is("author_kind", null).order("created_at", { ascending: false }).limit(1);

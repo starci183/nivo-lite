@@ -305,16 +305,7 @@
   ],
   "connection_providers": [
     "telegram",
-    "zalo_oa"
-  ],
-  "accepts": [
-    {
-      "command": "classify_lead",
-      "required_fields": [
-        "contact",
-        "need"
-      ],
-      "description": "A hot lead handed over by lead_gen (handoff_to_sales): Sales classifies it and takes over the follow-up."
-    }
+    "zalo_oa",
+    "meta"
   ]
 }

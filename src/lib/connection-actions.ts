@@ -429,6 +429,12 @@ export const disconnectConnection = async (connectionId: string): Promise<Outcom
       const sec = await secretOf(c.id);
       if (sec) await tgCall(decryptSecret(sec.ciphertext), "deleteWebhook").catch((e) => console.error("telegram deleteWebhook failed", e instanceof Error ? e.message : e));
     }
+    // A Facebook Page stops sending its events to NIVO's app before its token is wiped (best effort: a dead token has nothing to cancel).
+    if (c.provider === "meta") {
+      const { loadMetaPage, unsubscribePage } = await import("./meta");
+      const page = await loadMetaPage(c.id).catch(() => null);
+      if (page) await unsubscribePage(page.pageId, page.pageToken).catch((e) => console.error("meta unsubscribe failed", e instanceof Error ? e.message : e));
+    }
     // A personal Telegram session is logged out at Telegram first, so the session stops working everywhere, not only here.
     if (c.provider === "telegram_user") {
       const { forgetTelegramUserSession } = await import("./connectors/telegram-user");
