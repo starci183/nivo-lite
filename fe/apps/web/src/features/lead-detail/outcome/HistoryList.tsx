@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Icon, SurfaceAccordionCard, Text, Timeline } from "@starci/grammar/common";
-import { nivoIconSource } from "@/ui";
+import { nivoIconSource } from "@/components/leaves/Icon"
 import { useT } from "@/i18n/client";
 import { lead as leadDict } from "@/i18n/dict/lead";
 import { ENTRY_STACK } from "./classNames";

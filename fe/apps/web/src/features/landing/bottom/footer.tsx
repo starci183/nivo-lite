@@ -1,7 +1,7 @@
 import { Footer, Text } from "@starci/grammar/common";
 import { getT } from "@/i18n/server";
 import { landingBottom } from "@/i18n/dict/landingBottom";
-import { NivoLogo } from "@/components/brand/NivoLogo";
+import { BrandLogo } from "@/components/blocks/BrandLogo"
 import { LANDING_OFFER } from "../offer";
 import { FOOT_BRAND, FOOT_LEGAL } from "./classNames";
 
@@ -29,7 +29,7 @@ export const LandingFooter = async ({ anchorBase = "" }: { readonly anchorBase?:
         <div className={FOOT_BRAND}>
           {/* Unstyled home link around the approved logo raster. */}
           <a href={`${anchorBase}#top`} aria-label={t("footerHome")}>
-            <NivoLogo variant="full" height={40} />
+            <BrandLogo variant="full" height={40} />
           </a>
           <Text size="sm" tone="muted">
             {t("footerAbout")}

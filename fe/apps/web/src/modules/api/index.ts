@@ -1,3 +1,3 @@
 export { request } from "./client"
 export type { ApiRequest } from "./client"
-export type { ApiIssue, Outcome } from "./outcome"
+export type { ApiFault, ApiIssue, Outcome } from "./outcome"

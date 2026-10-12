@@ -1,7 +1,7 @@
 "use client";
 
 import { Alert, Badge, Button, DescriptionList, EmptyNotice, Heading, Icon, List, ListItem, SurfaceCard, Text } from "@starci/grammar/common";
-import { nivoIconSource, type IconName } from "@/ui";
+import { nivoIconSource, type IconName } from "@/components/leaves/Icon"
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useLocale, useT } from "@/i18n/client";
