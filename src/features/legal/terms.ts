@@ -14,7 +14,7 @@ const vi: LegalDoc = {
       id: "plans",
       title: "3. Gói dịch vụ và credit AI",
       items: [
-        "Mỗi gói có mức credit AI hằng tháng. (TODO: xác nhận credit tháng có cộng dồn hay không.)",
+        "Mỗi gói có mức credit AI hằng tháng; gói Pro và Max được cộng dồn phần chưa dùng sang tháng kế tiếp (tối đa bằng một tháng).",
         "Khi hết credit tháng, bạn có thể mua thêm gói nạp. Credit nạp có hiệu lực 12 tháng kể từ ngày mua.",
         "Thanh toán bằng chuyển khoản ngân hàng qua mã VietQR do SePay xử lý. Đơn hàng được xác nhận khi nhận được khoản chuyển đúng số tiền và nội dung.",
       ],
@@ -31,10 +31,10 @@ const vi: LegalDoc = {
     { id: "content", title: "5. Nội dung của khách hàng", paragraphs: ["Bạn giữ quyền sở hữu dữ liệu và tài liệu bạn đưa vào NIVO. Bạn cấp cho chúng tôi quyền hạn chế để lưu trữ và xử lý chúng nhằm cung cấp dịch vụ, theo Chính sách quyền riêng tư."] },
     { id: "ai", title: "6. Kết quả do AI tạo ra", paragraphs: ["AI có thể sai hoặc thiếu sót. Hãy xem lại kết quả trước khi dựa vào hoặc gửi cho khách hàng, nhất là các nội dung về tiền, hợp đồng và pháp lý. Bạn chịu trách nhiệm về quyết định dựa trên kết quả đó."] },
     { id: "availability", title: "7. Tình trạng dịch vụ", paragraphs: ["Chúng tôi cố gắng giữ dịch vụ hoạt động ổn định nhưng không cam kết không gián đoạn. Dịch vụ phụ thuộc vào bên thứ ba (Zalo, Telegram, SePay, Google, nhà cung cấp AI) có thể thay đổi hoặc gặp sự cố."] },
-    { id: "termination", title: "8. Chấm dứt", paragraphs: ["Bạn có thể ngừng dùng và yêu cầu xóa tài khoản bất kỳ lúc nào. Chúng tôi có thể tạm ngưng hoặc chấm dứt tài khoản vi phạm điều khoản này. Credit chưa dùng không được hoàn lại, trừ khi pháp luật quy định khác. (TODO: xác nhận chính sách hoàn tiền.)"] },
-    { id: "liability", title: "9. Giới hạn trách nhiệm", paragraphs: ["Trong phạm vi pháp luật cho phép, dịch vụ được cung cấp ở trạng thái hiện có, và NIVO không chịu trách nhiệm về thiệt hại gián tiếp hay mất lợi nhuận. Trách nhiệm tối đa của NIVO không vượt quá số tiền bạn đã trả trong 12 tháng gần nhất. (TODO: luật sư xác nhận.)"] },
+    { id: "termination", title: "8. Chấm dứt", paragraphs: ["Bạn có thể ngừng dùng và yêu cầu xóa tài khoản bất kỳ lúc nào. Chúng tôi có thể tạm ngưng hoặc chấm dứt tài khoản vi phạm điều khoản này. Credit chưa dùng không được hoàn lại, trừ khi pháp luật quy định khác."] },
+    { id: "liability", title: "9. Giới hạn trách nhiệm", paragraphs: ["Trong phạm vi pháp luật cho phép, dịch vụ được cung cấp ở trạng thái hiện có, và NIVO không chịu trách nhiệm về thiệt hại gián tiếp hay mất lợi nhuận. Trách nhiệm tối đa của NIVO không vượt quá số tiền bạn đã trả trong 12 tháng gần nhất."] },
     { id: "law", title: "10. Luật áp dụng", paragraphs: ["Điều khoản này tuân theo pháp luật Việt Nam. Tranh chấp được giải quyết thương lượng trước, nếu không được thì tại tòa án có thẩm quyền của Việt Nam."] },
-    { id: "contact", title: "11. Liên hệ", paragraphs: ["Gửi câu hỏi tới support@nivo.vn. (TODO: chủ sở hữu xác nhận hộp thư.)"] },
+    { id: "contact", title: "11. Liên hệ", paragraphs: ["Gửi câu hỏi tới support@nivo.vn."] },
   ],
 };
 
@@ -49,7 +49,7 @@ const en: LegalDoc = {
       id: "plans",
       title: "3. Plans and AI credits",
       items: [
-        "Each plan includes a monthly AI credit allowance. (TODO: confirm whether monthly credits roll over.)",
+        "Each plan includes a monthly AI credit allowance; on Pro and Max, unused credits carry into the next month (up to one month's allowance).",
         "When the monthly credits run out you can buy top-up packs. Top-up credits are valid for 12 months from purchase.",
         "Payment is by bank transfer through a VietQR code handled by SePay. An order is confirmed when a transfer with the right amount and reference is received.",
       ],
@@ -66,10 +66,10 @@ const en: LegalDoc = {
     { id: "content", title: "5. Customer content", paragraphs: ["You keep ownership of the data and documents you put into NIVO. You give us a limited right to store and process them to provide the service, as described in the Privacy Policy."] },
     { id: "ai", title: "6. AI output", paragraphs: ["AI can be wrong or incomplete. Review its output before you rely on it or send it to a customer, especially anything about money, contracts or legal matters. You are responsible for decisions made on that output."] },
     { id: "availability", title: "7. Availability", paragraphs: ["We work to keep the service running but do not promise it will be uninterrupted. The service depends on third parties (Zalo, Telegram, SePay, Google, AI providers) that may change or fail."] },
-    { id: "termination", title: "8. Termination", paragraphs: ["You may stop using NIVO and ask us to delete your account at any time. We may suspend or end an account that breaks these terms. Unused credits are not refunded unless the law requires it. (TODO: confirm refund policy.)"] },
-    { id: "liability", title: "9. Limits of liability", paragraphs: ["To the extent the law allows, the service is provided as is, and NIVO is not liable for indirect loss or lost profit. NIVO's total liability is capped at the amount you paid in the last 12 months. (TODO: lawyer to confirm.)"] },
+    { id: "termination", title: "8. Termination", paragraphs: ["You may stop using NIVO and ask us to delete your account at any time. We may suspend or end an account that breaks these terms. Unused credits are not refunded unless the law requires it."] },
+    { id: "liability", title: "9. Limits of liability", paragraphs: ["To the extent the law allows, the service is provided as is, and NIVO is not liable for indirect loss or lost profit. NIVO's total liability is capped at the amount you paid in the last 12 months."] },
     { id: "law", title: "10. Governing law", paragraphs: ["These terms are governed by the law of Vietnam. Disputes are first settled by negotiation, and otherwise by the competent courts of Vietnam."] },
-    { id: "contact", title: "11. Contact", paragraphs: ["Send questions to support@nivo.vn. (TODO: owner to confirm the mailbox.)"] },
+    { id: "contact", title: "11. Contact", paragraphs: ["Send questions to support@nivo.vn."] },
   ],
 };
 

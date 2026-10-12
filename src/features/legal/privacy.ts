@@ -12,7 +12,7 @@ const vi: LegalDoc = {
       id: "who",
       title: "1. Chúng tôi là ai",
       paragraphs: [
-        "NIVO OS (nivo.vn) do CÔNG TY TNHH CÔNG NGHỆ NIVO vận hành. Câu hỏi về quyền riêng tư xin gửi tới privacy@nivo.vn. (TODO: chủ sở hữu xác nhận hộp thư này và địa chỉ đăng ký.)",
+        "NIVO OS (nivo.vn) do đội ngũ NIVO vận hành. Câu hỏi về quyền riêng tư xin gửi tới support@nivo.vn.",
       ],
     },
     {
@@ -41,7 +41,7 @@ const vi: LegalDoc = {
       id: "ai",
       title: "4. Xử lý bằng AI",
       paragraphs: [
-        "Để tạo câu trả lời và đề xuất, nội dung liên quan được gửi tới các nhà cung cấp mô hình AI: OpenRouter để tạo embedding cho Second Brain, và hệ thống AI của NIVO để sinh nội dung. NIVO không dùng dữ liệu của bạn để huấn luyện mô hình. (TODO: xác nhận điều khoản không-huấn-luyện của từng nhà cung cấp.)",
+        "Để tạo câu trả lời và đề xuất, nội dung liên quan được gửi tới các nhà cung cấp mô hình AI: OpenRouter để tạo embedding cho Second Brain, và hệ thống AI của NIVO để sinh nội dung. NIVO không dùng dữ liệu của bạn để huấn luyện mô hình.",
       ],
     },
     {
@@ -55,14 +55,14 @@ const vi: LegalDoc = {
       id: "retention",
       title: "6. Thời gian lưu giữ và xóa dữ liệu",
       paragraphs: [
-        "Chúng tôi giữ dữ liệu trong thời gian không gian làm việc còn hoạt động. Khi bạn yêu cầu xóa tài khoản hoặc không gian làm việc, chúng tôi xóa dữ liệu trong vòng 30 ngày, trừ phần pháp luật yêu cầu phải giữ (ví dụ chứng từ thanh toán). (TODO: xác nhận thời hạn.) Ngắt kết nối một kênh hoặc tài khoản Google sẽ xóa token đã lưu của kết nối đó.",
+        "Chúng tôi giữ dữ liệu trong thời gian không gian làm việc còn hoạt động. Khi bạn yêu cầu xóa tài khoản hoặc không gian làm việc, chúng tôi xóa dữ liệu trong vòng 30 ngày, trừ phần pháp luật yêu cầu phải giữ (ví dụ chứng từ thanh toán). Ngắt kết nối một kênh hoặc tài khoản Google sẽ xóa token đã lưu của kết nối đó.",
       ],
     },
     {
       id: "rights",
       title: "7. Quyền của bạn",
       paragraphs: [
-        "Bạn có quyền truy cập, chỉnh sửa, xuất, hạn chế xử lý và yêu cầu xóa dữ liệu cá nhân của mình, cũng như rút lại sự đồng ý đã cấp. Hãy gửi yêu cầu tới privacy@nivo.vn. Bạn chịu trách nhiệm có căn cứ hợp pháp để nhập dữ liệu của khách hàng của mình vào NIVO.",
+        "Bạn có quyền truy cập, chỉnh sửa, xuất, hạn chế xử lý và yêu cầu xóa dữ liệu cá nhân của mình, cũng như rút lại sự đồng ý đã cấp. Hãy gửi yêu cầu tới support@nivo.vn. Bạn chịu trách nhiệm có căn cứ hợp pháp để nhập dữ liệu của khách hàng của mình vào NIVO.",
       ],
     },
     {
@@ -89,7 +89,7 @@ const vi: LegalDoc = {
     {
       id: "changes",
       title: "10. Thay đổi và liên hệ",
-      paragraphs: ["Chúng tôi sẽ cập nhật ngày ở đầu trang khi chính sách thay đổi. Liên hệ: privacy@nivo.vn. (TODO: xác nhận.)"],
+      paragraphs: ["Chúng tôi sẽ cập nhật ngày ở đầu trang khi chính sách thay đổi. Liên hệ: support@nivo.vn."],
     },
   ],
 };
@@ -103,7 +103,7 @@ const en: LegalDoc = {
       id: "who",
       title: "1. Who we are",
       paragraphs: [
-        "NIVO OS (nivo.vn) is operated by CÔNG TY TNHH CÔNG NGHỆ NIVO. Privacy questions go to privacy@nivo.vn. (TODO: owner to confirm this mailbox and the registered address.)",
+        "NIVO OS (nivo.vn) is operated by the NIVO team. Privacy questions go to support@nivo.vn.",
       ],
     },
     {
@@ -132,7 +132,7 @@ const en: LegalDoc = {
       id: "ai",
       title: "4. AI processing",
       paragraphs: [
-        "To draft replies and suggestions, the relevant content is sent to AI model providers: OpenRouter for Second Brain embeddings, and NIVO's AI engine for generation. NIVO does not use your data to train models. (TODO: confirm each provider's no-training terms.)",
+        "To draft replies and suggestions, the relevant content is sent to AI model providers: OpenRouter for Second Brain embeddings, and NIVO's AI engine for generation. NIVO does not use your data to train models.",
       ],
     },
     {
@@ -146,14 +146,14 @@ const en: LegalDoc = {
       id: "retention",
       title: "6. Retention and deletion",
       paragraphs: [
-        "We keep data while the workspace is active. When you ask us to delete your account or workspace, we delete the data within 30 days, except what the law requires us to keep (for example payment records). (TODO: confirm the period.) Disconnecting a channel or a Google account removes that connection's stored token.",
+        "We keep data while the workspace is active. When you ask us to delete your account or workspace, we delete the data within 30 days, except what the law requires us to keep (for example payment records). Disconnecting a channel or a Google account removes that connection's stored token.",
       ],
     },
     {
       id: "rights",
       title: "7. Your rights",
       paragraphs: [
-        "You may access, correct, export, restrict the processing of and ask us to delete your personal data, and withdraw consent you gave. Send requests to privacy@nivo.vn. You are responsible for having a lawful basis to enter your own customers' data into NIVO.",
+        "You may access, correct, export, restrict the processing of and ask us to delete your personal data, and withdraw consent you gave. Send requests to support@nivo.vn. You are responsible for having a lawful basis to enter your own customers' data into NIVO.",
       ],
     },
     {
@@ -180,7 +180,7 @@ const en: LegalDoc = {
     {
       id: "changes",
       title: "10. Changes and contact",
-      paragraphs: ["We will update the date at the top when this policy changes. Contact: privacy@nivo.vn. (TODO: confirm.)"],
+      paragraphs: ["We will update the date at the top when this policy changes. Contact: support@nivo.vn."],
     },
   ],
 };
