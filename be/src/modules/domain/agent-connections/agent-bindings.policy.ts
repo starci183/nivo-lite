@@ -16,7 +16,8 @@ import type { BoundAgentRow, BoundConnectionRow } from "./persistence/agent-conn
  */
 export const INBOUND_MODULES: ReadonlyArray<string> = ["chatbot", "booking", "loyalty"]
 
-const PURPOSES: ReadonlyArray<string> = [
+/** Every purpose a binding can have. */
+export const PURPOSES: ReadonlyArray<Purpose> = [
     "inbound_chat",
     "outbound_chat",
     "bank_feed",
@@ -26,7 +27,7 @@ const PURPOSES: ReadonlyArray<string> = [
 ]
 
 /** True when a stored text is one of the purposes. */
-export const isPurpose = (value: string): value is Purpose => PURPOSES.includes(value)
+export const isPurpose = (value: string): value is Purpose => PURPOSES.some((purpose) => purpose === value)
 
 /** True when a stored text is one of the three access levels. */
 export const isAccess = (value: string): value is Access => value === "read" || value === "ask" || value === "auto"

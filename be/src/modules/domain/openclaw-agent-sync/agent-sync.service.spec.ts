@@ -9,6 +9,7 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AGENTS_QUEUE_PRODUCER } from "@modules/queues/agents"
 import type { AgentsQueue } from "@modules/queues/agents"
+import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { AgentBundleService, PauseClient } from "@modules/domain/agents"
 import { INTERNAL_FILES } from "./agent-sync.policy"
 import { AgentSyncService } from "./agent-sync.service"
@@ -112,6 +113,7 @@ const build = async (setup: Setup = {}) => {
     const bundles = mock<AgentBundleService>({ build: jest.fn(() => Promise.resolve(BUNDLE)) })
     const queue = mock<AgentsQueue>({ enqueueSyncAgents: jest.fn(() => Promise.resolve()) })
     const pause = mock<PauseClient>({ wait: jest.fn(() => Promise.resolve()) })
+    const members = mock<WorkspaceMembersService>()
     const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -126,6 +128,7 @@ const build = async (setup: Setup = {}) => {
             { provide: AgentBundleService, useValue: bundles },
             { provide: AGENTS_QUEUE_PRODUCER, useValue: queue },
             { provide: PauseClient, useValue: pause },
+            { provide: WorkspaceMembersService, useValue: members },
         ],
     }).compile()
     return {
@@ -138,6 +141,7 @@ const build = async (setup: Setup = {}) => {
         queue,
         pause,
         logger,
+        members,
     }
 }
 
@@ -172,6 +176,28 @@ describe("AgentSyncService", () => {
 
             expect(tx.commits).toBe(1)
             expect(queue.enqueueSyncAgents).toHaveBeenCalledTimes(1)
+        })
+    })
+
+    describe("requestFor", () => {
+        it("queues the sync for an owner or manager of the workspace", async () => {
+            const { service, queue, members } = await build()
+
+            await service.requestFor("u1", { workspaceId: "w1", installationId: "i1", force: false })
+
+            expect(members.require).toHaveBeenCalledWith("u1", "w1", ["owner", "manager"])
+            expect(queue.enqueueSyncAgents).toHaveBeenCalledTimes(1)
+        })
+
+        it("queues nothing for someone who may not", async () => {
+            const { service, queue, members } = await build()
+            const refusal = new Error("not a manager")
+            members.require.mockRejectedValue(refusal)
+
+            await expect(
+                service.requestFor("u1", { workspaceId: "w1", installationId: null, force: false }),
+            ).rejects.toBe(refusal)
+            expect(queue.enqueueSyncAgents).not.toHaveBeenCalled()
         })
     })
 

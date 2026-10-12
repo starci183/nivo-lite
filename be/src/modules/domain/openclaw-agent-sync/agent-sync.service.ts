@@ -3,6 +3,7 @@ import type { EntityManager } from "typeorm"
 import { agentIdFor } from "@modules/integrations/openclaw"
 import { InjectOpenclawAgentRegistry, InjectOpenclawWorkspaceWriter } from "@modules/integrations/openclaw"
 import type { AgentRegistryService, WorkspaceWriterService } from "@modules/integrations/openclaw"
+import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -28,6 +29,9 @@ import {
     RECORD_SYNC_WRITTEN,
 } from "./persistence/openclaw-agent-sync.sql"
 
+/** Who may ask for a sync. */
+const GOVERNORS = ["owner", "manager"] as const
+
 /** The most installations one scope syncs in one job. */
 const SCOPE_LIMIT = 500
 
@@ -50,6 +54,7 @@ export class AgentSyncService {
         private readonly bundles: AgentBundleService,
         @InjectAgentsQueue() private readonly queue: AgentsQueue,
         private readonly pause: PauseClient,
+        private readonly members: WorkspaceMembersService,
     ) {}
 
     /** Queues a sync of one installation (or of a whole workspace) in the caller's transaction; requests of one minute are one job. */
@@ -68,6 +73,12 @@ export class AgentSyncService {
     /** Queues a sync in its own transaction, for a caller that has none open. */
     requestNow(request: SyncRequest): Promise<void> {
         return this.entityManager.transaction((tx) => this.request(request, tx))
+    }
+
+    /** Queues a sync on behalf of a signed-in owner or manager of the workspace the request names. */
+    async requestFor(userId: string, request: SyncRequest): Promise<void> {
+        await this.members.require(userId, request.workspaceId, GOVERNORS)
+        await this.requestNow(request)
     }
 
     /**

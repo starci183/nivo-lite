@@ -9,6 +9,7 @@ import {
     DELETE_BINDING,
     LIST_AGENTS_OF_CONNECTION,
     LIST_CONNECTIONS_OF_AGENT,
+    LIST_CONNECTIONS_OF_WORKSPACE_AGENT,
     UPSERT_BINDING,
 } from "./persistence/agent-connections.sql"
 
@@ -102,6 +103,44 @@ describe("AgentBindingsService", () => {
 
             expect(connections.map((connection) => connection.id)).toEqual(["c1"])
             expect(em.query).toHaveBeenCalledWith(LIST_CONNECTIONS_OF_AGENT, ["a1", ["outbound_chat"]])
+        })
+    })
+
+    describe("connectionsOfAgent", () => {
+        it("lists every connection of an agent of the workspace for a member, whatever the purpose", async () => {
+            const rows = [
+                {
+                    id: "c1",
+                    provider: "telegram",
+                    name: "Shop bot",
+                    status: "connected",
+                    created_at: "2026-10-01T00:00:00.000Z",
+                    access: "ask",
+                    purpose: "tool",
+                },
+            ]
+            const em = mockEntityManager({ query: [LIST_CONNECTIONS_OF_WORKSPACE_AGENT, rows] })
+            const { service, members } = await build(em)
+
+            const connections = await service.connectionsOfAgent("u1", "w1", "a1")
+
+            expect(members.require).toHaveBeenCalledWith("u1", "w1")
+            expect(connections.map((connection) => connection.id)).toEqual(["c1"])
+            expect(em.query).toHaveBeenCalledWith(LIST_CONNECTIONS_OF_WORKSPACE_AGENT, [
+                "a1",
+                "w1",
+                ["inbound_chat", "outbound_chat", "bank_feed", "data_source", "tool", "lead_source"],
+            ])
+        })
+
+        it("reads nothing for someone who is not a member", async () => {
+            const em = mockEntityManager()
+            const { service, members } = await build(em)
+            const refusal = new Error("not a member")
+            members.require.mockRejectedValue(refusal)
+
+            await expect(service.connectionsOfAgent("u1", "w1", "a1")).rejects.toBe(refusal)
+            expect(em.query).not.toHaveBeenCalled()
         })
     })
 

@@ -4,6 +4,7 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import {
     INBOUND_MODULES,
+    PURPOSES,
     boundAgentsOf,
     boundConnectionsOf,
     handoversFrom,
@@ -28,6 +29,7 @@ import {
     DELETE_BINDING,
     LIST_AGENTS_OF_CONNECTION,
     LIST_CONNECTIONS_OF_AGENT,
+    LIST_CONNECTIONS_OF_WORKSPACE_AGENT,
     UPSERT_BINDING,
 } from "./persistence/agent-connections.sql"
 
@@ -71,6 +73,21 @@ export class AgentBindingsService {
             purposesOf(purpose),
         ])
         return boundConnectionsOf(rows, options)
+    }
+
+    /** Every connection granted to an agent of the caller's workspace, whatever the purpose; any member may look. */
+    async connectionsOfAgent(
+        userId: string,
+        workspaceId: string,
+        agentId: string,
+    ): Promise<ReadonlyArray<BoundConnection>> {
+        await this.members.require(userId, workspaceId)
+        const rows = await this.entityManager.query<Array<BoundConnectionRow>>(LIST_CONNECTIONS_OF_WORKSPACE_AGENT, [
+            agentId,
+            workspaceId,
+            PURPOSES,
+        ])
+        return boundConnectionsOf(rows, {})
     }
 
     /** Inbound chat: the front door agent of a connection and the agents it hands over to. */

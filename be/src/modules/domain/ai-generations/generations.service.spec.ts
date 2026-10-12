@@ -14,6 +14,7 @@ import { AI_GENERATIONS_OPTIONS, AI_GENERATIONS_USAGE } from "./ai-generations.d
 import { AiGenerationsLogEvent } from "./ai-generations.log-events"
 import type { AiGenerationsOptions } from "./ai-generations.options"
 import type { UsageGate } from "./ai-generations.port"
+import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { EngineStatusService } from "@modules/domain/agents"
 import { AiGenerationsErrorCode } from "./errors/ai-generations.error"
 import { GenerationsService } from "./generations.service"
@@ -62,6 +63,7 @@ const build = async (setup: Setup = {}) => {
             return Promise.resolve()
         }),
     })
+    const members = mock<WorkspaceMembersService>()
     const logger = mock<Logger>()
     const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => `[${key}]`) })
     const moduleRef = await Test.createTestingModule({
@@ -77,12 +79,33 @@ const build = async (setup: Setup = {}) => {
             { provide: EngineStatusService, useValue: engine },
             { provide: QUEUE_OUTBOX, useValue: outbox },
             { provide: PauseClient, useValue: pause },
+            { provide: WorkspaceMembersService, useValue: members },
         ],
     }).compile()
-    return { service: moduleRef.get(GenerationsService), tx, outbox, usage, pause, logger, catalog }
+    return { service: moduleRef.get(GenerationsService), tx, outbox, usage, pause, logger, catalog, members }
 }
 
 describe("GenerationsService", () => {
+    describe("generateFor", () => {
+        it("proves the caller belongs to the workspace, then writes the text", async () => {
+            const { service, members } = await build()
+
+            const outcome = await service.generateFor("u1", paramsOf())
+
+            expect(members.require).toHaveBeenCalledWith("u1", "w1")
+            expect(outcome.ok).toBe(true)
+        })
+
+        it("writes nothing for someone who is not a member", async () => {
+            const { service, members, tx } = await build()
+            const refusal = new Error("not a member")
+            members.require.mockRejectedValue(refusal)
+
+            await expect(service.generateFor("u1", paramsOf())).rejects.toBe(refusal)
+            expect(tx.em.query).not.toHaveBeenCalled()
+        })
+    })
+
     describe("generate", () => {
         it("writes the row and its job in one transaction and answers the text once the job filled it", async () => {
             const { service, tx, outbox, pause } = await build({ progress: [QUEUED, DONE] })

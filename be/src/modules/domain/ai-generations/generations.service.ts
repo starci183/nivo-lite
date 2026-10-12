@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -53,6 +54,7 @@ export class GenerationsService {
         @InjectAiGenerationsOptions() private readonly options: AiGenerationsOptions,
         @InjectClock() private readonly clock: Clock,
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly members: WorkspaceMembersService,
     ) {}
 
     /** Writes one text and answers with it, or with the reason there is none. */
@@ -69,6 +71,12 @@ export class GenerationsService {
             this.logger.error(AiGenerationsLogEvent.GenerationFailed, cause, { purpose: params.purpose })
             return failure("error", busy)
         })
+    }
+
+    /** A generation a signed-in member asks for from the app: the caller must belong to the workspace the text is written for. */
+    async generateFor(userId: string, params: GenerateParams): Promise<GenerationOutcome> {
+        await this.members.require(userId, params.workspaceId)
+        return this.generate(params)
     }
 
     /** For callers that just want the text: the output, or an `AiGenerationsError` carrying the sentence to show. */

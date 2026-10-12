@@ -27,3 +27,11 @@ RETURNING agent_id`
 
 /** Removes the grant of a connection to an agent ($1 agent, $2 connection, $3 workspace). */
 export const DELETE_BINDING = sql`DELETE FROM public.agent_connections WHERE agent_id = $1 AND connection_id = $2 AND workspace_id = $3`
+
+/** The connections an agent of the workspace is bound to for any of the purposes ($1 agent, $2 workspace, $3 purposes). */
+export const LIST_CONNECTIONS_OF_WORKSPACE_AGENT = sql`SELECT c.id, c.provider, c.name, c.status, c.created_at, ac.access, ac.purpose
+FROM public.agent_connections ac
+JOIN public.connections c ON c.id = ac.connection_id
+WHERE ac.agent_id = $1 AND ac.workspace_id = $2 AND ac.purpose = ANY($3::text[])
+ORDER BY c.created_at, c.id
+LIMIT 200`

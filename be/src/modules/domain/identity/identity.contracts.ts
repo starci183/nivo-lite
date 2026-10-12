@@ -14,6 +14,8 @@ export enum PublicReason {
     Health = "health",
     /** A webhook whose signature is verified before its domain intake runs. */
     SignedWebhook = "signed-webhook",
+    /** A door whose caller carries a short-lived tool token that the domain verifies (the tools OpenClaw agents call back). */
+    ToolToken = "tool-token",
 }
 
 /** The metadata `@Public` attaches to a door. */
