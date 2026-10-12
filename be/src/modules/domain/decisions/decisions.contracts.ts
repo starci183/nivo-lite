@@ -50,14 +50,7 @@ export interface Proposal {
 
 /** The kind of record a work item is about. */
 export type SubjectType =
-    | "lead"
-    | "order"
-    | "invoice"
-    | "transaction"
-    | "conversation"
-    | "inbound"
-    | "purchase_order"
-    | "stock"
+    "lead" | "order" | "invoice" | "transaction" | "conversation" | "inbound" | "purchase_order" | "stock"
 
 /** What a performer reported it did. */
 export interface WorkResult {
@@ -277,9 +270,19 @@ export interface WorkPerformer {
     /** Builds the proposal of an item; may call the model once. */
     prepare(ctx: WorkContext, item: WorkItem): Promise<Prepared>
     /** Does the work once the gate or a person allowed it. */
-    perform(ctx: WorkContext, item: WorkItem, proposal: Proposal, by: Decider | { readonly name: string }): Promise<Performed>
+    perform(
+        ctx: WorkContext,
+        item: WorkItem,
+        proposal: Proposal,
+        by: Decider | { readonly name: string },
+    ): Promise<Performed>
     /** Undoes what `prepare` set up when a person rejects the item. */
-    onReject?(ctx: WorkContext, item: WorkItem, proposal: Proposal, by: Decider | { readonly name: string }): Promise<void>
+    onReject?(
+        ctx: WorkContext,
+        item: WorkItem,
+        proposal: Proposal,
+        by: Decider | { readonly name: string },
+    ): Promise<void>
 }
 
 /** A command a module accepts from other agents, as its definition declares it. */
@@ -325,7 +328,8 @@ export interface ActionEntry {
 }
 
 /** The refusal reasons of the command bus. */
-export type CommandRefusal = "unknown_module" | "unknown_command" | "unknown_sender" | "missing_fields" | "too_deep" | "cycle"
+export type CommandRefusal =
+    "unknown_module" | "unknown_command" | "unknown_sender" | "missing_fields" | "too_deep" | "cycle"
 
 /** What the command bus takes. */
 export interface SendCommandInput {
@@ -393,4 +397,259 @@ export interface OfficeLineInput {
     readonly command?: boolean
     /** The instance whose agent speaks. */
     readonly installation_id?: string | null
+}
+
+/** The kind of input a channel delivered. */
+export type InboundKind = "message" | "lead" | "order" | "payment"
+/** Where an input stands. */
+export type InboundStatus = "received" | "processed" | "needs_decision" | "failed"
+
+/** One input a channel delivered (a customer message, a lead, an order or a payment), as the engine reads it. */
+export interface InboundEventRecord {
+    /** The id. */
+    readonly id: string
+    /** The workspace. */
+    readonly workspace_id: string
+    /** The channel it came through. */
+    readonly channel: string
+    /** What kind of input it is. */
+    readonly kind: InboundKind
+    /** Real or simulated. */
+    readonly origin: Origin
+    /** The sender's name. */
+    readonly sender_name: string | null
+    /** The sender's phone or email. */
+    readonly sender_contact: string | null
+    /** The text. */
+    readonly body: string
+    /** The money in it, VND. */
+    readonly amount_vnd: number | null
+    /** The external reference (bank reference, order number). */
+    readonly external_ref: string | null
+    /** The idempotency key. */
+    readonly dedupe_key: string
+    /** How many times the channel redelivered it. */
+    readonly duplicate_count: number
+    /** When it was last redelivered. */
+    readonly last_duplicate_at: string | null
+    /** The customer it belongs to. */
+    readonly lead_id: string | null
+    /** Where it stands. */
+    readonly status: InboundStatus
+    /** When it arrived. */
+    readonly created_at: string
+    /** The channel's own event id. */
+    readonly event_id: string | null
+}
+
+/** Where a responsibility stands. */
+export type ResponsibilityStatus = "open" | "waiting_approval" | "done"
+/** Who owns a responsibility. */
+export type ResponsibilityOwnerKind = "human" | "agent"
+
+/** One thing somebody (a person or an agent) owes a customer. */
+export interface ResponsibilityRecord {
+    /** The id. */
+    readonly id: string
+    /** The workspace. */
+    readonly workspace_id: string
+    /** The customer. */
+    readonly lead_id: string
+    /** What it is. */
+    readonly title: string
+    /** Person or agent. */
+    readonly owner_kind: ResponsibilityOwnerKind
+    /** The owning agent, when an agent owns it. */
+    readonly owner_agent_id: string | null
+    /** The display name of the owner. */
+    readonly owner_name: string
+    /** The next step. */
+    readonly next_action: string
+    /** When it is due. */
+    readonly due_at: string | null
+    /** Where it stands. */
+    readonly status: ResponsibilityStatus
+    /** When it was created. */
+    readonly created_at: string
+}
+
+/** One line of the evidence log as a caller writes it; the workspace comes from the context. */
+export interface EvidenceEntry {
+    /** The customer it is about. */
+    readonly lead_id?: string | null
+    /** The work item it belongs to. */
+    readonly work_item_id?: string | null
+    /** A dotted name such as `core.duplicate_blocked`. */
+    readonly kind: string
+    /** Who did it. */
+    readonly actor: string
+    /** One short sentence. */
+    readonly summary: string
+    /** The raw text that backs it. */
+    readonly evidence?: string | null
+}
+
+/** One line of the decision log as a caller writes it; the workspace comes from the context. */
+export interface DecisionEntry {
+    /** The work item decided. */
+    readonly work_item_id: string | null
+    /** The customer. */
+    readonly lead_id: string | null
+    /** The module. */
+    readonly department: string
+    /** The action key. */
+    readonly action: string
+    /** Who decided: a person's name or NIVO. */
+    readonly decided_by: string
+    /** Policy, owner or staff. */
+    readonly decider_kind: DeciderKind
+    /** What was decided. */
+    readonly outcome: DecisionOutcome
+    /** Why the gate asked. */
+    readonly reason?: ReasonCode | null
+    /** A note from the decider. */
+    readonly note?: string | null
+    /** The proposal before the decision, JSON-serialisable. */
+    readonly before?: Proposal | null
+    /** The proposal after the decision, JSON-serialisable. */
+    readonly after?: Proposal | null
+}
+
+/** The owner's authority, or null before the workspace has one. */
+export type OptionalAuthority = Authority | null
+/** The rule of one action, or null when the owner granted none. */
+export type OptionalAuthorityRule = AuthorityRule | null
+/** A module of the registry, or null when no such module exists. */
+export type OptionalModuleEntry = ModuleEntry | null
+/** An authority action of the registry, or null when no such action exists. */
+export type OptionalActionEntry = ActionEntry | null
+/** A work item, or null when none matches. */
+export type OptionalWorkItem = WorkItem | null
+/** A performer, or null when the action has none. */
+export type OptionalWorkPerformer = WorkPerformer | null
+
+/** The agent that speaks for a department in the Office. */
+export interface AgentIdentity {
+    /** The agent id. */
+    readonly id: string
+    /** The display name. */
+    readonly name: string
+}
+/** An agent identity, or null when the department has no agent. */
+export type OptionalAgentIdentity = AgentIdentity | null
+
+/** The position after which the next page of work items starts (keyset on created_at, id). */
+export interface WorkItemCursor {
+    /** The `created_at` of the last item of the previous page. */
+    readonly createdAt: string
+    /** The id of the last item of the previous page. */
+    readonly id: string
+}
+/** A cursor, or null for the first page. */
+export type OptionalWorkItemCursor = WorkItemCursor | null
+
+/** What a work-item listing asks for. */
+export interface ListWorkItemsQuery {
+    /** Only these statuses; an empty list means every status. */
+    readonly statuses: ReadonlyArray<WorkStatus>
+    /** Where the page starts; null for the first page. */
+    readonly after: OptionalWorkItemCursor
+    /** The page size; clamped to 1..100. */
+    readonly limit: number
+}
+
+/** One page of work items, newest first. */
+export interface WorkItemPage {
+    /** The items of the page. */
+    readonly items: ReadonlyArray<WorkItem>
+    /** The cursor of the next page; null on the last one. */
+    readonly next: OptionalWorkItemCursor
+}
+
+/** The whole authority sheet the Authority page edits. */
+export interface AuthorityProfile extends Authority {
+    /** The monthly revenue goal, VND. */
+    readonly goal_revenue_vnd: number | null
+    /** The new-customer goal. */
+    readonly goal_new_customers: number | null
+    /** The first-reply goal, minutes. */
+    readonly goal_first_reply_minutes: number | null
+    /** Free note on the goals. */
+    readonly goal_note: string
+    /** Who saved it last. */
+    readonly updated_by: string | null
+    /** When it was saved last. */
+    readonly updated_at: string
+}
+/** The authority sheet, or null before the workspace has one. */
+export type OptionalAuthorityProfile = AuthorityProfile | null
+
+/** A stored rule with its workspace and note, as the Authority page lists it. */
+export interface AuthorityRuleRecord extends AuthorityRule {
+    /** The workspace. */
+    readonly workspace_id: string
+    /** A note on the rule. */
+    readonly note: string
+    /** When it was saved last. */
+    readonly updated_at: string
+}
+
+/** What the Authority page reads: the sheet and every stored rule. */
+export interface AuthoritySheet {
+    /** The goals and house rules, null before the workspace has any. */
+    readonly profile: OptionalAuthorityProfile
+    /** Every stored rule. */
+    readonly rules: ReadonlyArray<AuthorityRuleRecord>
+}
+
+/** The fields of the authority sheet a manager changes; omitted fields stay as they are. */
+export interface AuthorityPatch {
+    /** The business policies. */
+    readonly policies?: string
+    /** How replies are written. */
+    readonly reply_style?: string
+    /** The brand voice. */
+    readonly brand_voice?: string
+    /** What the agent must always ask about first. */
+    readonly limits_note?: string
+    /** The monthly revenue goal, VND. */
+    readonly goal_revenue_vnd?: number | null
+    /** The new-customer goal. */
+    readonly goal_new_customers?: number | null
+    /** The first-reply goal, minutes. */
+    readonly goal_first_reply_minutes?: number | null
+    /** Free note on the goals. */
+    readonly goal_note?: string
+}
+
+/** One rule a manager saves. */
+export interface RuleChange {
+    /** The action key; its module is the one the registry gives. */
+    readonly action: string
+    /** The mode. */
+    readonly mode: RuleMode
+    /** The action runs alone strictly below this amount, VND; null means no limit. */
+    readonly limit_vnd: number | null
+    /** Fields that must be present. */
+    readonly required_fields: ReadonlyArray<string>
+}
+
+/** What creating a responsibility takes. */
+export interface NewResponsibility {
+    /** The customer. */
+    readonly lead_id: string
+    /** What it is. */
+    readonly title: string
+    /** `human`, or the id of the owning agent. */
+    readonly owner: string
+    /** The next step. */
+    readonly next_action: string
+    /** When it is due; null for no date. */
+    readonly due_at: string | null
+}
+
+/** A responsibility with the name of its customer, as the Responsibilities page lists it. */
+export interface ResponsibilityListing extends ResponsibilityRecord {
+    /** The customer's name. */
+    readonly contact_name: string
 }
