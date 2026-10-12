@@ -11,6 +11,8 @@ export interface ApiRequest {
     readonly token: string
     /** The reader's locale, sent as the request language so the api answers in the language of the page. */
     readonly locale: string
+    /** The workspace the caller acts in, sent as X-Workspace-Id. */
+    readonly workspaceId?: string
     readonly method?: ApiMethod
     /** A JSON body; omitted for reads. */
     readonly body?: unknown
@@ -71,6 +73,7 @@ export const request = async <T>(
             signal: signal === undefined ? timeout : AbortSignal.any([signal, timeout]),
             headers: {
                 "accept-language": input.locale,
+                ...(input.workspaceId === undefined ? {} : { "x-workspace-id": input.workspaceId }),
                 authorization: `Bearer ${input.token}`,
                 ...(input.body === undefined ? {} : { "content-type": "application/json" }),
             },
