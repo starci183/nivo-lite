@@ -7,6 +7,8 @@ import { parseHttpSecurityConfig, RequestValidationService } from "@modules/plat
 import { createJsonLogger, LoggingLogEvent } from "@modules/platform/logging"
 import { parseJobsConfig } from "@modules/platform/jobs"
 import { parseQueueConfig } from "@modules/platform/queue"
+import { parseWorkspaceInvitesConfig } from "@modules/domain/workspace-invites"
+import { parseWorkspacesConfig } from "@modules/domain/workspaces"
 import { parseSupabaseConfig } from "@modules/integrations/supabase"
 import { AppModule } from "./app.module"
 import type { ApiOptions } from "./api.options"
@@ -26,6 +28,8 @@ const bootstrap = async (): Promise<void> => {
         },
         database: parsePrimaryDatabaseConfig(env),
         supabase: parseSupabaseConfig(env),
+        workspaces: parseWorkspacesConfig(env),
+        workspaceInvites: parseWorkspaceInvitesConfig(env),
         queue: parseQueueConfig(env),
         jobs: parseJobsConfig(env),
     }
