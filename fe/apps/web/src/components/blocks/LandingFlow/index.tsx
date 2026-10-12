@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server"
-import type { IconName } from "@/ui"
+import type { IconName } from "@/components/leaves/Icon"
 import { LandingFlowBase } from "./component"
 
 /**

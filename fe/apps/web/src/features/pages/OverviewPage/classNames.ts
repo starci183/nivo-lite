@@ -6,3 +6,5 @@ export const PAGE_INSET_CLASS_NAME = "py-2 md:py-4"
 export const ACTIONS_CLASS_NAME = "flex flex-wrap items-center gap-3"
 /** Main column: section title line, then owner sections. */
 export const MAIN_CLASS_NAME = "flex flex-col gap-4"
+/** Rail: onboarding, agents and activity stacked. */
+export const RAIL_CLASS_NAME = "flex flex-col gap-6"

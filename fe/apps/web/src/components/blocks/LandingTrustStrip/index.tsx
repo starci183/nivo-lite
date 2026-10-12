@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server"
-import type { IconName } from "@/ui"
+import type { IconName } from "@/components/leaves/Icon"
 import { LandingTrustStripBase } from "./component"
 
 /** The situations the product watches: catalog key and the glyph that names each. */

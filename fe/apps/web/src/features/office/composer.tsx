@@ -2,7 +2,7 @@
 
 import { useMemo, type RefObject } from "react"
 import { Alert, Button, Icon, Text, Textarea, type TextareaMentionOption } from "@starci/grammar/common"
-import { nivoIconSource } from "@/ui"
+import { nivoIconSource } from "@/components/leaves/Icon"
 import { useT } from "@/i18n/client"
 import { office } from "@/i18n/dict/office"
 import type { Agent } from "@/lib/types"

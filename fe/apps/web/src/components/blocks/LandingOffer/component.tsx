@@ -9,7 +9,7 @@ import {
     Text,
 } from "@starci/grammar/common"
 import { LandingFact } from "@/components/composites/LandingFact"
-import type { IconName } from "@/ui"
+import type { IconName } from "@/components/leaves/Icon"
 import { ANCHOR, BENTO, FACTS_COL, PRICE_ROW, PRICE_STACK, SECTION_STACK, TILE_BODY, TILE_FOOT } from "./classNames"
 
 /** One scope fact beside the price card. */

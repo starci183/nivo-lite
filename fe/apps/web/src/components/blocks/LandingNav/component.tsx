@@ -1,5 +1,5 @@
 import { Button, Image, NavLandmark, TextAction, TopBar } from "@starci/grammar/common"
-import { LocaleSwitch } from "@/i18n/LocaleSwitch"
+import { LocaleSegments } from "@/components/composites/LocaleSegments"
 import { NAV_LINKS, NAV_SIGNIN } from "./classNames"
 
 /** One in-page destination of the bar. */
@@ -21,6 +21,15 @@ interface LandingNavBaseProps {
         readonly accountLabel: string
         readonly tryHref: string
         readonly tryLabel: string
+        readonly language: {
+            readonly label: string
+            readonly locale: string
+            readonly isPending: boolean
+            readonly options: ReadonlyArray<{ readonly value: string; readonly label: string; readonly name: string }>
+        }
+    }
+    readonly on: {
+        readonly chooseLocale: (locale: string) => void
     }
 }
 
@@ -59,7 +68,13 @@ export const LandingNavBase = (props: LandingNavBaseProps) => (
         }
         actions={
             <>
-                <LocaleSwitch />
+                <LocaleSegments
+                    label={props.props.language.label}
+                    value={props.props.language.locale}
+                    options={props.props.language.options}
+                    isDisabled={props.props.language.isPending}
+                    onChange={props.on.chooseLocale}
+                />
                 <div className={NAV_SIGNIN}>
                     <Button variant="ghost" size="sm" href={props.props.accountHref}>
                         {props.props.accountLabel}

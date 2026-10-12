@@ -3,6 +3,8 @@ export const APP_ROUTES = {
     home: "/",
     login: "/login",
     dashboard: "/dashboard",
+    automations: "/automations",
+    chat: "/chat",
     authCallback: "/auth/callback",
 } as const
 

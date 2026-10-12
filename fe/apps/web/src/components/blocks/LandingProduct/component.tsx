@@ -10,7 +10,7 @@ import {
     Text,
 } from "@starci/grammar/common"
 import { LandingBrowserFrame } from "@/components/composites/LandingBrowserFrame"
-import { NivoIcon } from "@/ui"
+import { Icon } from "@/components/leaves/Icon"
 import { ANCHOR, BULLETS, PRODUCT_COPY, PRODUCT_DESKTOP, PRODUCT_STACK, SECTION_STACK, VIEW_STACK } from "./classNames"
 
 /** One screenshot of the product with its size. */
@@ -59,7 +59,7 @@ const Bullets = (props: BulletsProps) => (
     <List className={BULLETS}>
         {props.items.map((item) => (
             <ListItem key={item}>
-                <Text size="sm" startContent={<NivoIcon props={CHECK_ICON} />}>
+                <Text size="sm" startContent={<Icon props={CHECK_ICON} />}>
                     {item}
                 </Text>
             </ListItem>

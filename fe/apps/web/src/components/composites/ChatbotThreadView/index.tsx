@@ -11,7 +11,7 @@ import {
 import { useEffect, useRef } from "react"
 import { ChatbotChips } from "@/components/branches/ChatbotChips"
 import { ChatbotComposer } from "@/components/branches/ChatbotComposer"
-import { nivoIconSource } from "@/ui"
+import { nivoIconSource } from "@/components/leaves/Icon"
 import {
     CENTER_CLASS_NAME,
     HEAD_CLASS_NAME,

@@ -1,7 +1,7 @@
 "use client";
 
 import { EmptyNotice, Heading, Icon, List, ListItem, Meter, Region, SectionHeader, Stepper, SurfaceCard, Text, Timeline } from "@starci/grammar/common";
-import { nivoIconSource } from "@/ui";
+import { nivoIconSource } from "@/components/leaves/Icon"
 import { useLocale, useT } from "@/i18n/client";
 import { common } from "@/i18n/dict/common";
 import { lead as leadDict } from "@/i18n/dict/lead";

@@ -1,6 +1,6 @@
 import { SurfaceCard, Text } from "@starci/grammar/common"
 import { LandingIconTile } from "@/components/leaves/LandingIconTile"
-import type { IconName } from "@/ui"
+import type { IconName } from "@/components/leaves/Icon"
 import { FACT_BODY } from "./classNames"
 
 /** One scope fact: its glyph, a value and its explanation. */

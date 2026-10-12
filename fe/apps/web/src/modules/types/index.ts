@@ -29,3 +29,4 @@ export type {
     ChatbotRole,
     ChatbotThread,
 } from "./chatbot"
+export type { ConsoleIconName, ConsoleNavItem, ConsolePending, ConsoleWorkspace } from "./console"

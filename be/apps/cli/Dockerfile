@@ -22,7 +22,10 @@ COPY be/tsconfig.json be/tsconfig.build.json be/
 COPY be/src be/src
 COPY supabase/types supabase/types
 COPY be/apps/cli be/apps/cli
-RUN npm run build:be
+# The generated database types live outside be/ (supabase/types), which widens the compiler root: tsc then writes be/dist/be/... and be/dist/supabase/...
+# and tsc-alias, which expects be/dist/src/..., leaves the path aliases unresolved. The import is type-only, so nothing at run time needs the
+# second tree: flatten the output so the entry sits where the canon says (be/dist/apps/<app>/src/main.js) and resolve the aliases on the flat tree.
+RUN npm run build:be && if [ -d be/dist/be ]; then cp -r be/dist/be/. be/dist/ && rm -rf be/dist/be be/dist/supabase && cd be && ../node_modules/.bin/tsc-alias -p tsconfig.build.json; fi
 
 FROM node:22.14.0-alpine3.21 AS runtime
 WORKDIR /app

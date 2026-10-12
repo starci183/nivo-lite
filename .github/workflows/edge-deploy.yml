@@ -1,14 +1,12 @@
 # Deploys the public door of the NIVO VPS: Traefik in Docker (~/nivo-edge, project "nivo-edge"), owner of 80/443 and the Let's Encrypt certificates.
 # Routes (deploy/edge/dynamic/routes.yml) are hot-reloaded by Traefik; compose changes recreate the container. Idempotent.
+# Lite cutover: runs by hand only, FIRST in the order edge -> api -> web (be/docs/runbooks/cutover.md). The new routes send api.nivo.vn and
+# every /api/ path of the product hosts to the api, and Traefik keeps a router whose upstream is down answering 502, so the edge goes live
+# before the api only if nothing calls those paths yet: the runbook deploys the api right after, then the web.
 # Environment "production": vars VPS_HOST, VPS_USER; secrets VPS_SSH_KEY, VPS_KNOWN_HOSTS. Touches only ~/nivo-edge and the nivo-edge docker network.
 name: Deploy edge
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "deploy/edge/**"
-      - ".github/workflows/edge-deploy.yml"
   workflow_dispatch:
 
 concurrency:

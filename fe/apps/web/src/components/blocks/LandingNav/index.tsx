@@ -1,5 +1,8 @@
-import { getTranslations } from "next-intl/server"
+"use client"
+
+import { useTranslations } from "next-intl"
 import { LANDING_ANCHORS } from "@/hooks/landing"
+import { useLocaleSwitch } from "@/hooks/locale"
 import { CONSOLE_ROUTES } from "@/modules/routes"
 import { LandingNavBase } from "./component"
 
@@ -13,9 +16,10 @@ interface LandingNavProps {
 /** The approved NIVO logo raster. */
 const LOGO_SRC = "/brand/nivo-logo.png"
 
-/** The landing top bar with its copy resolved on the server. */
-export const LandingNav = async (props: LandingNavProps) => {
-    const t = await getTranslations("landing")
+/** The landing top bar with its copy resolved; the language switch is wired here because it needs the browser. */
+export const LandingNav = (props: LandingNavProps) => {
+    const t = useTranslations("landing")
+    const language = useLocaleSwitch()
     const anchor = (target: string): string => `${props.anchorBase}${target}`
     return (
         <LandingNavBase
@@ -34,7 +38,14 @@ export const LandingNav = async (props: LandingNavProps) => {
                 accountLabel: props.isSignedIn ? t("openDashboard") : t("signIn"),
                 tryHref: CONSOLE_ROUTES.login,
                 tryLabel: t("tryNow"),
+                language: {
+                    label: language.label,
+                    locale: language.locale,
+                    isPending: language.isPending,
+                    options: language.options,
+                },
             }}
+            on={{ chooseLocale: language.choose }}
         />
     )
 }

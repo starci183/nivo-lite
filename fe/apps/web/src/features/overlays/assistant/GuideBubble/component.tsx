@@ -1,5 +1,5 @@
 import { Button, ChatBubble, Drawer, Form, IconButton, Input, List, ListItem, Text } from "@starci/grammar/common"
-import { nivoIconSource } from "@/ui"
+import { nivoIconSource } from "@/components/leaves/Icon"
 import {
     ASK_INPUT_CLASS,
     ASK_ROW_CLASS,

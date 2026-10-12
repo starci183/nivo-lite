@@ -1,8 +1,9 @@
 "use client"
 
 import { Badge, Button, IconButton, Text } from "@starci/grammar/common"
-import { nivoIconSource } from "@/ui"
-import { AgentAvatar, PersonAvatar } from "@/components/avatar/PersonAvatar"
+import { nivoIconSource } from "@/components/leaves/Icon"
+import { AgentAvatar } from "@/components/blocks/AgentAvatar"
+import { PersonAvatar } from "@/components/leaves/PersonAvatar"
 import { useLocale, useT } from "@/i18n/client"
 import { office } from "@/i18n/dict/office"
 import type { Agent, ModuleKey, ResponsibilityWithLead } from "@/lib/types"
@@ -98,7 +99,7 @@ export const InfoPanel = ({ avatarUrl, agents, people, staff = [], pending, exce
             const seen = lastSeen(person)
             return (
               <div key={person.userId} className={MEMBER_ROW_CLASS_NAME} data-testid="office-person">
-                <PersonAvatar name={person.name} src={person.isMe ? avatarUrl : null} online={person.isMe || seen.online} />
+                <PersonAvatar name={person.name} src={person.isMe ? avatarUrl : null} />
                 <div className={MEMBER_TEXT_CLASS_NAME}>
                   <Text weight="medium" overflow="truncate">{person.name}</Text>
                   <Text size="sm" tone="muted" overflow="truncate">{[roleLabel(person.role), person.handle ? `@${person.handle}` : null].filter(Boolean).join(" · ")}</Text>
@@ -130,7 +131,7 @@ export const InfoPanel = ({ avatarUrl, agents, people, staff = [], pending, exce
             const isActive = agent.status === "active"
             return (
               <div key={agent.id} className={MEMBER_ROW_CLASS_NAME}>
-                <AgentAvatar module={agent.module} label={agentDisplayName(agent)} online={isActive} />
+                <AgentAvatar module={agent.module} label={agentDisplayName(agent)} />
                 <div className={MEMBER_TEXT_CLASS_NAME}>
                   <Text weight="medium" overflow="truncate">{agentDisplayName(agent)}</Text>
                   <Text size="sm" tone="muted" overflow="truncate">{isActive ? `@${agent.handle} · ${agent.role}` : t("paused")}</Text>

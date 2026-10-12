@@ -1,5 +1,5 @@
 import { List, ListItem, PageContainer, Region, SurfaceCard, Text } from "@starci/grammar/common"
-import { NivoIcon, type IconName } from "@/ui"
+import { Icon, type IconName } from "@/components/leaves/Icon"
 import { SECTION_STACK, TRUST_LIST, TRUST_ROW, TRUST_WHO } from "./classNames"
 
 /** One situation the product watches. */
@@ -46,7 +46,7 @@ export const LandingTrustStripBase = (props: LandingTrustStripBaseProps) => {
                             <List label={props.props.forLabel} className={TRUST_LIST}>
                                 {chips.map((chip) => (
                                     <ListItem key={chip.id}>
-                                        <Text size="sm" startContent={<NivoIcon props={chip.iconProps} />}>
+                                        <Text size="sm" startContent={<Icon props={chip.iconProps} />}>
                                             {chip.label}
                                         </Text>
                                     </ListItem>

@@ -1,5 +1,5 @@
 import { Alert, Button, Icon, Text, Textarea } from "@starci/grammar/common"
-import { nivoIconSource } from "@/ui"
+import { nivoIconSource } from "@/components/leaves/Icon"
 import { COMPOSER_CLASS_NAME, COMPOSER_FIELD_CLASS_NAME, COMPOSER_ROW_CLASS_NAME } from "./classNames"
 
 /** The composer: active only while the signed-in member holds the conversation. */

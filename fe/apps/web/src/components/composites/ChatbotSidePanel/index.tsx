@@ -9,7 +9,7 @@ import {
     Text,
 } from "@starci/grammar/common"
 import { ChatbotEscalationForm } from "@/components/branches/ChatbotEscalationForm"
-import { nivoIconSource } from "@/ui"
+import { nivoIconSource } from "@/components/leaves/Icon"
 import {
     ACTIONS_CLASS_NAME,
     CUSTOMER_HEAD_CLASS_NAME,

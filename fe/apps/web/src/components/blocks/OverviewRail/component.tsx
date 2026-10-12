@@ -1,15 +1,14 @@
 import { Badge, Button, EmptyNotice, ListRow, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
-import { AgentAvatar } from "@/components/avatar/PersonAvatar"
-import { OnboardingChecklist } from "@/components/promo/OnboardingChecklist"
-import type { OnboardingStep } from "@/features/promo/queries"
-import type { ModuleKey } from "@/lib/modules-shared"
-import { TileIcon, type IconName } from "@/ui"
+import { AgentMark } from "@/components/leaves/AgentMark"
+import { TileIcon } from "@/components/composites/TileIcon"
+import type { IconName } from "@/components/leaves/Icon"
 import { RAIL_CLASS_NAME } from "./classNames"
 
 /** One agent row. */
 interface OverviewRailAgent {
     readonly id: string
-    readonly module: ModuleKey
+    readonly module: string
+    readonly glyph: string
     readonly name: string
     readonly isActive: boolean
     readonly statusLabel: string
@@ -29,7 +28,6 @@ interface OverviewRailActivity {
 /** The resolved words and rows of the overview rail. */
 interface OverviewRailBaseProps {
     readonly props: {
-        readonly steps: ReadonlyArray<OnboardingStep>
         readonly agentsTitle: string
         readonly agentsEmpty: string
         readonly agentsEmptyBody: string
@@ -51,7 +49,6 @@ export const OverviewRailBase = (props: OverviewRailBaseProps) => {
     const activity = props.props.activity.map((item) => ({ item, iconProps: { icon: item.icon } }))
     return (
         <div className={RAIL_CLASS_NAME}>
-            <OnboardingChecklist steps={props.props.steps} />
             <SurfaceListCard
                 label={props.props.agentsTitle}
                 footer={
@@ -66,7 +63,7 @@ export const OverviewRailBase = (props: OverviewRailBaseProps) => {
                 {props.props.agents.map((agent) => (
                     <ListRow
                         key={agent.id}
-                        leading={<AgentAvatar module={agent.module} label={agent.name} online={agent.isActive} />}
+                        leading={<AgentMark glyph={agent.glyph} label={agent.name} module={agent.module} />}
                         title={agent.name}
                         badges={
                             <Badge tone={agent.isActive ? "success" : "neutral"} isDot>

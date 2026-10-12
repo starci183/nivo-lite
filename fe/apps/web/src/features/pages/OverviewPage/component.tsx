@@ -2,14 +2,21 @@ import { Button, PageContainer, PrimaryRailLayout, SectionHeader } from "@starci
 import { OverviewGovernance } from "@/components/blocks/OverviewGovernance"
 import { OverviewRail } from "@/components/blocks/OverviewRail"
 import { OverviewKpis } from "@/components/composites/OverviewKpis"
-import { FoundingOffer } from "@/components/promo/FoundingOffer"
+import { FoundingOffer } from "@/components/blocks/FoundingOffer"
+import { OnboardingChecklist } from "@/components/blocks/OnboardingChecklist"
 import { OwnerGroups } from "@/features/responsibilities/component"
 import type { OwnerGroupModel, ActivityModel } from "@/features/responsibilities/format"
 import type { OnboardingStep } from "@/features/promo/queries"
 import type { GovernanceWithStatus } from "@/lib/flow-queries"
 import type { WorkItemView } from "@/lib/flow-types"
 import type { Agent } from "@/lib/types"
-import { MAIN_CLASS_NAME, PAGE_CLASS_NAME, PAGE_INSET_CLASS_NAME, ACTIONS_CLASS_NAME } from "./classNames"
+import {
+    MAIN_CLASS_NAME,
+    PAGE_CLASS_NAME,
+    PAGE_INSET_CLASS_NAME,
+    ACTIONS_CLASS_NAME,
+    RAIL_CLASS_NAME,
+} from "./classNames"
 
 /** One count of the KPI band. */
 interface OverviewPageKpi {
@@ -96,11 +103,10 @@ export const OverviewPageBase = (props: OverviewPageBaseProps) => (
                         </div>
                     }
                     rail={
-                        <OverviewRail
-                            agents={props.props.agents}
-                            activity={props.props.activity}
-                            steps={props.props.steps}
-                        />
+                        <div className={RAIL_CLASS_NAME}>
+                            <OnboardingChecklist steps={props.props.steps} />
+                            <OverviewRail agents={props.props.agents} activity={props.props.activity} />
+                        </div>
                     }
                 />
                 <FoundingOffer variant="hero" />

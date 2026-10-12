@@ -1,4 +1,4 @@
-import { RouteError } from "@/components/state/RouteError"
+import { RouteError } from "@/components/blocks/RouteError"
 
 /** The words and the retry of the overview failure view. */
 interface OverviewErrorPageBaseProps {

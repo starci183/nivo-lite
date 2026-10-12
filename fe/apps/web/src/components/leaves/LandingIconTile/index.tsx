@@ -1,7 +1,7 @@
 "use client"
 
 import { IconTile } from "@starci/grammar/common"
-import { nivoIconSource, type IconName } from "@/ui"
+import { nivoIconSource, type IconName } from "@/components/leaves/Icon"
 
 /** A serialisable glyph name, so a server component can pass it. */
 interface LandingIconTileProps {

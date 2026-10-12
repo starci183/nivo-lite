@@ -1,16 +1,15 @@
 import { getTranslations } from "next-intl/server"
-import type { OnboardingStep } from "@/features/promo/queries"
 import type { ActivityModel } from "@/features/responsibilities/format"
+import { isModuleKey, moduleDef } from "@/lib/module-registry"
 import type { Agent } from "@/lib/types"
 import { CONSOLE_ROUTES, agentChatHref, leadHref } from "@/modules/routes"
-import type { IconName } from "@/ui"
+import type { IconName } from "@/components/leaves/Icon"
 import { OverviewRailBase } from "./component"
 
 /** The agents, the recent activity and the onboarding steps the rail shows. */
 interface OverviewRailProps {
     readonly agents: ReadonlyArray<Agent>
     readonly activity: ReadonlyArray<ActivityModel>
-    readonly steps: ReadonlyArray<OnboardingStep>
 }
 
 /** The glyph of each kind of activity. */
@@ -33,7 +32,6 @@ export const OverviewRail = async (props: OverviewRailProps) => {
     return (
         <OverviewRailBase
             props={{
-                steps: props.steps,
                 agentsTitle: t("agents"),
                 agentsEmpty: t("agentsEmpty"),
                 agentsEmptyBody: t("agentsEmptyDesc"),
@@ -43,6 +41,7 @@ export const OverviewRail = async (props: OverviewRailProps) => {
                 agents: props.agents.map((agent) => ({
                     id: agent.id,
                     module: agent.module,
+                    glyph: isModuleKey(agent.module) ? moduleDef(agent.module).glyph : moduleDef("chatbot").glyph,
                     name: agent.name,
                     isActive: agent.status === "active",
                     statusLabel: agent.status === "active" ? t("active") : t("paused"),
