@@ -12,6 +12,7 @@ import { drainAfter } from "./flow-ctx";
 import { buildAgentContext } from "./knowledge/index";
 import { knowledgeBrief } from "./knowledge/runtime";
 import { buildAgentBundle, installationOfJob, REPLY_CONTRACT } from "./engine-sync";
+import { handoversOf } from "./agent-bindings";
 import { BOOKING_REPLY_ADDENDUM } from "./module-booking-contract";
 import { bookingContextLine } from "./module-booking";
 import { BOOKING_TOOL_NAMES, handleBookingReply, runBookingTool, type BookingToolName } from "./module-booking-chat";
@@ -73,9 +74,13 @@ export const chatTurnContext = async (db: SupabaseClient, job: EngineJob) => {
   const syncRow = syncRes.data as { status: string; context_version: number | null; synced_at: string | null } | null;
   const synced = syncRow !== null && syncRow.status === "ok" && syncRow.synced_at !== null;
   const slim = synced && syncRow.context_version === activeVersion;
-  const authority = ai.authorityBrief(authorityRaw) + (agent.module === "booking" ? await bookingContextLine(ws) : "") + (await hiringChatBrief(db, ws)); // booking: today, services, hours, policy; hiring: open jobs for the chat
+  // Handover by intent (lib/agent-bindings): the front-door chatbot also carries the booking flow when a Booking agent is bound inbound to the same
+  // connection; the model only writes a structured booking_request, handleBookingReply runs it through the booking agent's gate.
+  const handovers = await handoversOf(conv.connection_id ?? null, agent);
+  const bookingOn = agent.module === "booking" || handovers.some((h) => h.module === "booking");
+  const authority = ai.authorityBrief(authorityRaw) + (bookingOn ? await bookingContextLine(ws) : "") + (await hiringChatBrief(db, ws)); // booking: today, services, hours, policy; hiring: open jobs for the chat
   // Loyalty module installed: the member's points, tier and the reward catalogue (from the ledger) plus the contract addition for a redeem request.
-  const loyalty = agent.module === "chatbot" ? await loyaltyChatBlock(db, ws, conv).catch(async (e: unknown) => {
+  const loyalty = agent.module === "chatbot" || agent.module === "loyalty" ? await loyaltyChatBlock(db, ws, conv).catch(async (e: unknown) => {
     await logEvidence(db, ws, { lead_id: conv.lead_id, kind: "loyalty.chat_block_failed", actor: "NIVO", summary: "Không dựng được khối thông tin điểm thưởng cho lượt chat này", evidence: e instanceof Error ? e.message.slice(0, 300) : String(e).slice(0, 300) });
     return "";
   }) : "";
@@ -94,7 +99,9 @@ export const chatTurnContext = async (db: SupabaseClient, job: EngineJob) => {
 [RETRIEVED PASSAGES]
 ${passages}` : ""}${loyalty ? `
 
-${loyalty}` : ""}
+${loyalty}` : ""}${bookingOn && agent.module !== "booking" ? `
+
+${BOOKING_REPLY_ADDENDUM}` : ""}
 
 Answer with ONLY the JSON object of the reply contract in AGENTS.md.`,
     };
@@ -111,7 +118,7 @@ ${persona}${brief}${loyalty ? `
 
 ${loyalty}` : ""}
 
-${agent.module === "booking" ? `${REPLY_CONTRACT}
+${bookingOn ? `${REPLY_CONTRACT}
 ${BOOKING_REPLY_ADDENDUM}` : REPLY_CONTRACT}`,
   };
 };

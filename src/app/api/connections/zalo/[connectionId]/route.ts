@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { boundAgent, loadConnectionSecret } from "@/lib/channels";
+import { routeInbound } from "@/lib/agent-bindings";
+import { loadConnectionSecret } from "@/lib/channels";
 import type { ZaloSecret } from "@/lib/zalo";
 import { verifyWebhookSignature, type ZaloEvent } from "@/lib/zalo-api";
 import { handleZaloEvent } from "@/lib/zalo-inbound";
@@ -8,7 +9,7 @@ import { handleZaloEvent } from "@/lib/zalo-inbound";
  * A workspace's own Zalo OA webhook: /api/connections/zalo/<connectionId>. Zalo signs every call with
  * `X-ZEvent-Signature: mac=sha256(app_id + raw body + timestamp + OA secret key)`; the OA secret key is read from this connection's
  * encrypted credential, so an event can only ever reach the workspace that registered this OA. The customer's message is answered only
- * when the connection is bound to an active Chatbot agent. Always 200 once authenticated (Zalo retries anything else; a replayed
+ * when the connection is bound (inbound_chat, through lib/agent-bindings) to an active Chatbot, Booking or Loyalty agent (the chatbot is the front door). Always 200 once authenticated (Zalo retries anything else; a replayed
  * msg_id is dropped by the receipt claim).
  */
 export const dynamic = "force-dynamic";
@@ -22,7 +23,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const { connectionId } = await params;
   const raw = await request.text();
   // The bound-agent lookup is independent of the signature check: start it together with the secret read (used only after authentication).
-  const agentP = UUID.test(connectionId) ? boundAgent(connectionId, "chatbot", ["inbound_chat"], { acting: true }).catch(() => null) : null;
+  const agentP = UUID.test(connectionId) ? routeInbound(connectionId).then((r) => r.front).catch(() => null) : null;
   const found = UUID.test(connectionId) ? await loadConnectionSecret(connectionId, "zalo_oa").catch(() => null) : null;
   let secret: ZaloSecret | null = null;
   try {

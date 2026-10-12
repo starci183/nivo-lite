@@ -13,6 +13,8 @@ export type AgentConversation = {
   handled_by?: string | null; handled_at?: string | null;
   /** where the customer is: "website" (the page itself) or a real channel such as "telegram" with its chat id */
   channel?: string | null; external_id?: string | null;
+  /** the connection (bot / OA) the conversation came in on; null for the website chat and the legacy env bot */
+  connection_id?: string | null;
 };
 export type AgentMessage = {
   id: string; workspace_id: string; conversation_id: string; role: "user" | "agent" | "system"; body: string; created_at: string;

@@ -3,13 +3,14 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { publicConfig } from "./config";
 import { ingest } from "./core";
+import { INBOUND_MODULES } from "./agent-bindings";
 import { customerTurn, type CustomerChannel } from "./customer-turn";
 import type { Agent, AgentConversation } from "./types";
 import { getAccessToken } from "./zalo";
 import { userDisplayName, type ZaloEvent } from "./zalo-api";
 
 /**
- * Inbound Zalo OA event -> a customer turn of the workspace's Chatbot AI (the same path as Telegram and the website chat): the AI
+ * Inbound Zalo OA event -> a customer turn of the connection's front-door agent (the Chatbot AI; Booking or Loyalty when only those are bound) (the same path as Telegram and the website chat): the AI
  * replies through the same authority gate. Called by /api/connections/zalo/<connectionId> after the signature was verified.
  * Idempotency: Zalo may deliver an event twice, so each `message.msg_id` is claimed once in `channel_receipts`; the channel event id
  * `zalo:<msg_id>` is also the inbound dedupe key. The conversation belongs to the connection it came in on (`connection_id`), keyed by
@@ -71,7 +72,7 @@ export const handleZaloEvent = async (event: ZaloEvent, { workspaceId: ws, conne
     return { handled: false, reason: "no_agent" };
   }
 
-  const agent = (((await db.from("agents").select("*").eq("workspace_id", ws).eq("module", "chatbot").eq("id", agentId).limit(1)).data ?? [])[0] ?? null) as Agent | null;
+  const agent = (((await db.from("agents").select("*").eq("workspace_id", ws).in("module", [...INBOUND_MODULES]).eq("id", agentId).limit(1)).data ?? [])[0] ?? null) as Agent | null;
   if (!agent) return { handled: false, reason: "no_agent" };
 
   let conv = existing;
@@ -81,6 +82,10 @@ export const handleZaloEvent = async (event: ZaloEvent, { workspaceId: ws, conne
     }).select().single();
     if (created.error) throw new Error(created.error.message);
     conv = created.data as AgentConversation;
+  } else if (conv.agent_id !== agent.id) {
+    // The bindings changed since this chat began: it follows the connection's current front door.
+    await db.from("agent_conversations").update({ agent_id: agent.id }).eq("id", conv.id);
+    conv = { ...conv, agent_id: agent.id };
   }
   await customerTurn({ db, ws, actor: "Zalo", locale: LOCALE }, conv, agent, text, { channel: ZALO_CHANNEL, eventId: `zalo:${msgId}` });
   revalidatePath("/", "layout");

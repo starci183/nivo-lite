@@ -1,6 +1,7 @@
 import "server-only";
 import { createCipheriv, createDecipheriv, createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { supabaseAdmin } from "./supabase/admin";
+import { agentsFor } from "./agent-bindings";
 
 /**
  * Per-workspace connections (Telegram bots, SePay bank feeds, Zalo OA config). Non-secret facts live in `connections` (members
@@ -140,15 +141,8 @@ export const loadConnectionSecret = async (connectionId: string, provider: Provi
 export const boundAgent = async (
   connectionId: string, module: "chatbot" | "accounting", purposes: ReadonlyArray<Purpose>, opts: { readonly acting?: boolean } = {},
 ): Promise<{ id: string; access: Access } | null> => {
-  const db = supabaseAdmin();
-  const { data } = await db.from("agent_connections").select("agent_id, purpose, access, agents!inner(id, module, status, created_at)").eq("connection_id", connectionId).in("purpose", [...purposes]);
-  type AgentRow = { id: string; module: string; status: string; created_at: string };
-  type Link = { access: Access | null; agents: AgentRow | Array<AgentRow> };
-  const agents = ((data ?? []) as unknown as Array<Link>)
-    .map((l) => ({ agent: Array.isArray(l.agents) ? l.agents[0] : l.agents, access: l.access ?? "auto" }))
-    .filter((x) => x.agent && x.agent.module === module && x.agent.status === "active" && (!opts.acting || x.access !== "read"))
-    .sort((a, b) => a.agent.created_at.localeCompare(b.agent.created_at));
-  return agents[0] ? { id: agents[0].agent.id, access: agents[0].access } : null;
+  const first = (await agentsFor(connectionId, purposes, { modules: [module], ...(opts.acting ? { acting: true } : {}) }))[0];
+  return first ? { id: first.id, access: first.access } : null;
 };
 
 /** The access of the agents bound to the connection a conversation came in on, strongest first (empty: not bound, or no connection). */
