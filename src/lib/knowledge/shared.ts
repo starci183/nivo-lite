@@ -17,6 +17,8 @@ export type KnowledgeSource = {
   workspaceId: string;
   /** null = shared by every module (the default) */
   module: ModuleKey | null;
+  /** null = shared by every instance of the module (the default); set = only that agent instance reads it */
+  installationId: string | null;
   kind: SourceKind;
   topic: string | null;
   tags: Array<string>;
@@ -60,6 +62,8 @@ export type AddSourceInput = {
   tags?: Array<string>;
   module?: ModuleKey | null;
   visibility?: Visibility;
+  /** Restrict the document to ONE agent instance (one branch's Chatbot); its module follows the instance. Omitted or null = every instance. */
+  installationId?: string | null;
 };
 
 export const MAX_SOURCE_CHARS = 120_000;

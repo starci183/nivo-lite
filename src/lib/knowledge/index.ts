@@ -32,10 +32,10 @@ type Db = SupabaseClient;
 type SourceRow = {
   id: string; workspace_id: string; module: ModuleKey | null; kind: KnowledgeSource["kind"]; topic: string | null; tags: Array<string> | null;
   visibility: Visibility; title: string; content: string; status: KnowledgeSource["status"]; error: string | null; chunk_count: number;
-  created_by: string | null; created_at: string; updated_at: string;
+  created_by: string | null; created_at: string; updated_at: string; installation_id?: string | null;
 };
 const toSource = (r: SourceRow): KnowledgeSource => ({
-  id: r.id, workspaceId: r.workspace_id, module: r.module, kind: r.kind, topic: r.topic, tags: r.tags ?? [], visibility: r.visibility, title: r.title,
+  id: r.id, workspaceId: r.workspace_id, module: r.module, installationId: r.installation_id ?? null, kind: r.kind, topic: r.topic, tags: r.tags ?? [], visibility: r.visibility, title: r.title,
   content: r.content, status: r.status, error: r.error, chunkCount: r.chunk_count, createdBy: r.created_by, createdAt: r.created_at, updatedAt: r.updated_at,
 });
 const fail = (error: { message: string } | null): void => { if (error) throw new Error(error.message); };
@@ -183,8 +183,13 @@ export const addSourceFor = async (db: Db, ws: string, userId: string | null, in
   }
   if (!content) throw new Error("Nội dung đang trống.");
   if (content.length > MAX_SOURCE_CHARS) throw new Error(`Nội dung dài quá ${MAX_SOURCE_CHARS.toLocaleString("vi-VN")} ký tự. Hãy tách thành nhiều nguồn.`);
+  // A document kept for one agent instance: the instance must belong to this workspace, and the document's module is the instance's type.
+  const instance = input.installationId
+    ? (((await db.from("module_installations").select("id, module_key").eq("workspace_id", ws).eq("id", input.installationId).maybeSingle()).data ?? null) as { id: string; module_key: ModuleKey } | null)
+    : null;
+  if (input.installationId && !instance) throw new Error("Unknown agent");
   const { data, error } = await db.from("knowledge_sources").insert({
-    workspace_id: ws, module: input.module ?? null, kind: input.kind, topic: input.topic?.trim().slice(0, 80) || null, tags: cleanTags(input.tags),
+    workspace_id: ws, module: instance?.module_key ?? input.module ?? null, installation_id: instance?.id ?? null, kind: input.kind, topic: input.topic?.trim().slice(0, 80) || null, tags: cleanTags(input.tags),
     visibility: input.visibility === "public" ? "public" : "internal", title, content, status: "pending", created_by: userId,
   }).select().single();
   fail(error);

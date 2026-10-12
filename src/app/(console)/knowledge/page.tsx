@@ -10,6 +10,7 @@ import { KNOWLEDGE_SUGGESTIONS, suggestionTopic } from "@/lib/knowledge/shared"
 import { isManagerRole } from "@/lib/members-shared"
 import { listInstallations } from "@/lib/modules-core"
 import { isModuleKey, MODULE_KEYS, type ModuleKey } from "@/lib/modules-shared"
+import { moduleName } from "@/lib/module-registry"
 import { getSession } from "@/lib/session"
 
 /** Tri thức doanh nghiệp: workspace knowledge shared by every agent. Everyone reads; owner and manager write. */
@@ -32,9 +33,12 @@ const Page = async ({ searchParams }: { readonly searchParams: Promise<{ module?
     const skipped = KNOWLEDGE_SUGGESTIONS.filter((s) => states[s.key] && s.modules.some((m) => installed.includes(m)))
       .map((s) => ({ key: s.key, topic: suggestionTopic(s, locale), state: states[s.key] as "dismissed" | "not_applicable" }))
     const initial = isModuleKey(module) ? module : "all"
+    // Types with several agent instances (one Chatbot per branch or Fanpage): a document can be kept for one of them.
+    const multi = installations.filter((i) => i.isMulti && installations.filter((j) => j.moduleKey === i.moduleKey).length > 1)
+    const instances = multi.map((i) => ({ id: i.id, moduleKey: i.moduleKey, label: `${moduleName(i.moduleKey, locale)} – ${i.name}` }))
     return (
       <KnowledgeView
-        sources={sources} topics={topics} canWrite={canWrite} initialModule={initial} askModule={isModuleKey(module) ? module : installed[0] ?? MODULE_KEYS[0]}
+        sources={sources} topics={topics} canWrite={canWrite} initialModule={initial} instances={instances} askModule={isModuleKey(module) ? module : installed[0] ?? MODULE_KEYS[0]}
         suggestions={suggestions.map((s) => ({ key: s.key, topic: s.topic, hint: s.hint, visibility: s.visibility }))} skipped={skipped}
       />
     )

@@ -54,7 +54,12 @@ export type AddDocumentsDrawerProps = {
   /** Topics already used, offered in the topic field. */
   readonly topics?: ReadonlyArray<string>
   readonly preset?: AddPreset | null
+  /** Agent instances a document may be kept for (types with several instances: one Chatbot per branch or Fanpage). */
+  readonly instances?: ReadonlyArray<InstanceOption>
 }
+
+/** One agent instance offered in "For": "<type> – <instance>". */
+export type InstanceOption = { readonly id: string; readonly moduleKey: ModuleKey; readonly label: string }
 
 const FILE_TYPES = /\.(txt|md|markdown|csv|pdf|docx|xlsx|pptx)$/i
 const MAX_FILE_BYTES = 10_000_000
@@ -85,7 +90,7 @@ const splitUrls = (text: string): Array<string> => parseLinks(text.trim().split(
  * "Thêm tài liệu": add many files and links in one go (default tab), or write a note / Q&A pair.
  * Visibility, module, topic and tags are chosen once for the whole batch. Items are processed two at a time.
  */
-export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], preset = null }: AddDocumentsDrawerProps) => {
+export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], preset = null, instances = [] }: AddDocumentsDrawerProps) => {
   const t = useT(knowledge)
   const [mode, setMode] = useState<Mode>(preset ? "write" : "files")
   const [items, setItems] = useState<ReadonlyArray<Item>>([])
@@ -101,6 +106,9 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
   const [tags, setTags] = useState("")
   const [visibility, setVisibility] = useState<Visibility>(preset?.visibility ?? "internal")
   const [module, setModule] = useState<"all" | ModuleKey>("all")
+  // One agent instance (several Chatbots, one per branch or Fanpage): the documents are read by that instance only.
+  const [instanceId, setInstanceId] = useState<string | null>(null)
+  const instanceOf = (id: string | null) => (id ? instances.find((i) => i.id === id) ?? null : null)
   const [optionsOpen, setOptionsOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -356,7 +364,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
     }
   }
 
-  const meta = () => ({ topic: topic.trim() || null, visibility, module: module === "all" ? null : module, tags: tags.split(",").map((x) => x.trim()).filter(Boolean) })
+  const meta = () => ({ topic: topic.trim() || null, visibility, module: module === "all" ? null : module, tags: tags.split(",").map((x) => x.trim()).filter(Boolean), installationId: instanceId })
 
   const runOne = async (item: Item): Promise<boolean> => {
     patch(item.id, { status: "indexing", error: undefined })
@@ -368,6 +376,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
         form.set("file", item.file)
         form.set("visibility", m.visibility)
         form.set("module", m.module ?? "")
+        form.set("installation", m.installationId ?? "")
         form.set("topic", m.topic ?? item.topic ?? "")
         form.set("tags", m.tags.join(","))
         result = await addKnowledgeFile(form)
@@ -466,7 +475,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
 
   const optionsSummary = [
     `${t("fieldVisibility")}: ${visibility === "public" ? t("visPublicShort") : t("visInternalShort")}`,
-    `${t("fieldModule")}: ${module === "all" ? t("moduleAll") : t(`module_${module}`)}`,
+    `${t("fieldModule")}: ${instanceOf(instanceId)?.label ?? (module === "all" ? t("moduleAll") : t(`module_${module}`))}`,
     topic.trim() || null,
   ].filter(Boolean).join(" · ")
 
@@ -494,9 +503,16 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
             onValueChange={(v) => setVisibility(v === "public" ? "public" : "internal")}
           />
           <Select
-            label={t("fieldModule")} variant="secondary" value={module} isDisabled={busy}
-            options={[{ id: "all", label: t("moduleAll") }, ...MODULE_KEYS.map((k) => ({ id: k, label: t(`module_${k}`) }))]}
-            onValueChange={(v) => setModule(MODULE_KEYS.find((k) => k === v) ?? "all")}
+            label={t("fieldModule")} variant="secondary" value={instanceId ? `inst:${instanceId}` : module} isDisabled={busy}
+            options={[
+              { id: "all", label: t("moduleAll") }, ...MODULE_KEYS.map((k) => ({ id: k, label: t(`module_${k}`) })),
+              ...instances.map((i) => ({ id: `inst:${i.id}`, label: i.label })),
+            ]}
+            onValueChange={(v) => {
+              const inst = typeof v === "string" && v.startsWith("inst:") ? instanceOf(v.slice(5)) : null
+              setInstanceId(inst?.id ?? null)
+              setModule(inst ? inst.moduleKey : MODULE_KEYS.find((k) => k === v) ?? "all")
+            }}
           />
           <ComboBox
             id="k-topic" name="topic" label={t("fieldTopic")} description={t("fieldTopicHint")} variant="secondary" allowsCustomValue menuTrigger="focus"
