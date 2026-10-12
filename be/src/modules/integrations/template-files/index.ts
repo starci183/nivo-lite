@@ -1,0 +1,6 @@
+export { TEMPLATE_FILES_ERROR_KINDS } from "./errors/template-files.error"
+export { parseTemplateFilesConfig } from "./template-files.config"
+export type { TemplateFiles } from "./template-files.contracts"
+export type { TemplateFilesOptions } from "./template-files.options"
+export { InjectTemplateFiles } from "./template-files.decorators"
+export { TemplateFilesModule } from "./template-files.module"
