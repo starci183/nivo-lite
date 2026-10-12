@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Puts the apex back on Netlify: A nivo.vn -> 75.2.60.5, proxied through Cloudflare (the state before the VPS cutover).
 // The token comes from the single secrets file (section [cloudflare]: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ZONE), so run it through with-secrets:
-//   node scripts/with-secrets.mjs node engine/deploy/dns-rollback.mjs            -> applies the rollback
-//   node scripts/with-secrets.mjs node engine/deploy/dns-rollback.mjs --dry-run  -> shows what it would change
+//   node scripts/with-secrets.mjs node deploy/stack/dns-rollback.mjs            -> applies the rollback
+//   node scripts/with-secrets.mjs node deploy/stack/dns-rollback.mjs --dry-run  -> shows what it would change
 //   ... --forward                                                                -> the opposite: apex -> VPS 103.142.27.9, DNS only, TTL 60 (the cutover)
 // Touches only the apex A record and the www CNAME (www stays a CNAME to nivo.vn; its proxy flag follows the apex: off for the VPS, on for Netlify).
 // Every other record in the zone belongs to other systems.

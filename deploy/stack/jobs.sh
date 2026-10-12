@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
-# Operator helper for the background jobs on Supabase Queues (pgmq), run ON THE VPS from engine/deploy (~/nivo-engine/deploy). Everything
-# goes through the engine container's own Supabase client (SUPABASE_URL + service role from its env; nothing is printed but results).
+# Operator helper for the background jobs on Supabase Queues (pgmq), run ON THE VPS from the stack folder (~/nivo-engine/deploy). Everything
+# goes through the api container's own Supabase client (SUPABASE_URL + service role from its env; nothing is printed but results).
 #   ./jobs.sh stats                  per queue depth and oldest age, jobs running, failed in 24 h, oldest queued outbox row (job_stats)
 #   ./jobs.sh failed [N]             the last N (default 20) failed jobs: outbox id, name, attempts, last_error (never the payload)
 #   ./jobs.sh open [N]               the oldest N (default 20) queued/running jobs
 #   ./jobs.sh retry <outbox-id>      send one failed job again (job_requeue: new message, attempts reset)
 #   ./jobs.sh retry-failed [hours]   send again every job that failed in the last <hours> (default 24)
-# Jobs are idempotent and the outbox row is the record of every job: retry is always safe (docs/OPERATIONS-JOBS.md).
+# Jobs are idempotent and the outbox row is the record of every job: retry is always safe (be/docs/runbooks/jobs-operations.md).
 # The same queries run in the Supabase SQL editor: select * from job_stats(); select * from pgmq.metrics('knowledge'); select * from pgmq.a_knowledge;
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
-engine_node() { docker compose --env-file .env exec -T engine node -e "$1" "${@:2}"; }
+api_node() { docker compose --env-file .env exec -T api node -e "$1" "${@:2}"; }
 
 cmd="${1:-stats}"
 case "$cmd" in
   stats|failed|open|retry|retry-failed) ;;
   *) sed -n '2,10p' "$0"; exit 2 ;;
 esac
-engine_node '
+api_node '
   const { createClient } = require("@supabase/supabase-js");
   const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
   const [op, arg] = process.argv.slice(1);
