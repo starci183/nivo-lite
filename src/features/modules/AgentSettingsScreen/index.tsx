@@ -80,7 +80,7 @@ export const AgentSettingsScreen = ({ agent, conversations }: AgentSettingsScree
           {statusError !== undefined ? <Alert title={t("statusNotChanged")} description={statusError} tone="negative" /> : null}
         </div>
       </SurfaceCard>
-      <Tabs
+      <Tabs variant="primary"
         label={t("tabsLabel")}
         selectedKey={tab}
         items={[{ id: "setup", label: t("tabSetup") }, { id: "conversations", label: t("tabConversations", { count: conversations.length }) }]}

@@ -138,7 +138,7 @@ export const LedgerPanel = ({ data }: { readonly data: AccountingWorkbench }) =>
       <section className={BLOCK_CLASS_NAME} aria-label={t("ledgerTitle")}>
         <div className={FILTER_CLASS_NAME}>
           <SectionHeader level={2} title={t("ledgerTitle")} description={t("ledgerIntro")} />
-          <Tabs
+          <Tabs variant="secondary"
             label={t("kindLabel")}
             selectedKey={filter}
             inset="none"

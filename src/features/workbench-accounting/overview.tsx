@@ -105,7 +105,7 @@ export const OverviewPanel = ({ data, onOpenQuestions }: { readonly data: Accoun
       <section className={BLOCK_CLASS_NAME} aria-label={t("overviewTitle")}>
         <div className={BLOCK_HEAD_CLASS_NAME}>
           <SectionHeader level={2} title={t("overviewTitle")} description={t("overviewIntro", { month: formatMonth(p.fromIso, locale) })} />
-          <Tabs
+          <Tabs variant="secondary"
             label={t("periodLabel")}
             selectedKey={period}
             inset="none"

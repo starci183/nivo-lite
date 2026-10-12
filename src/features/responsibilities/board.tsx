@@ -158,7 +158,7 @@ export const ResponsibilityBoard = (props: ResponsibilityBoardProps) => {
       ) : null}
 
       <div className={TOOLBAR_CLASS_NAME}>
-        <Tabs
+        <Tabs variant="primary"
           label={t("tabsLabel")}
           selectedKey={status}
           inset="none"

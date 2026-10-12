@@ -57,7 +57,7 @@ export const DecisionsView = ({ rows, kind, dept, limit, isLoading = false }: De
         </div>
         <div className={FILTERS_CLASS_NAME}>
           <div className={TABS_CLASS_NAME}>
-            <Tabs
+            <Tabs variant="secondary"
               label={t("kindLabel")}
               selectedKey={kind ?? ALL}
               inset="none"
@@ -67,7 +67,7 @@ export const DecisionsView = ({ rows, kind, dept, limit, isLoading = false }: De
             />
           </div>
           <div className={TABS_CLASS_NAME}>
-            <Tabs
+            <Tabs variant="secondary"
               label={t("deptLabel")}
               selectedKey={dept ?? ALL}
               inset="none"

@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { DescriptionList, EmptyNotice, SurfaceCard, Tabs } from "@starci/grammar/common";
+import { EmptyNotice, SurfaceCard } from "@starci/grammar/common";
+import { AgentDashboardFrame } from "@/features/agent-dashboard";
 import { useLocale, useT } from "@/i18n/client";
 import { loyalty } from "@/i18n/dict/loyalty";
+import type { AgentDashboardData } from "@/lib/agent-dashboard-shared";
 import type { LoyaltyWorkbenchData } from "@/lib/module-loyalty-queries";
-import { PAGE_CLASS_NAME, PANEL_CLASS_NAME } from "./classNames";
+import type { LoyaltyFigures } from "@/lib/workbench-loyalty";
 import { formatNumber } from "./format";
 import { MembersPanel } from "./members";
 import { OverviewPanel } from "./overview";
@@ -13,84 +14,61 @@ import { PendingPanel } from "./pending";
 import { PromoPanel } from "./promo";
 import { RewardsPanel } from "./rewards";
 
-type TabId = "overview" | "members" | "rewards" | "promo" | "pending";
-const TAB_IDS: ReadonlyArray<TabId> = ["overview", "members", "rewards", "promo", "pending"];
-const isTab = (key: string | null | undefined): key is TabId => !!key && (TAB_IDS as ReadonlyArray<string>).includes(key);
-const panelId = (key: string): string => `loyalty-panel-${key}`;
+/** Props for {@link LoyaltyWorkbenchView}. */
+export type LoyaltyWorkbenchViewProps = {
+  /** Null when the programme tables could not be read: the ribbon fails in place and the only tab says so. */
+  readonly data: LoyaltyWorkbenchData | null;
+  readonly figures: LoyaltyFigures | null;
+  /** The frame's common regions (waiting, done, connections, knowledge), loaded on the server. */
+  readonly dashboard: AgentDashboardData;
+  /** `?tab=` of the route, read on the server. */
+  readonly initialTab: string | null;
+};
 
-/** The loyalty workbench: four honest figures, then five surfaces as tabs (kept in `?tab=`). */
-export const LoyaltyWorkbenchView = ({ data }: { readonly data: LoyaltyWorkbenchData | null }) => {
+/** The loyalty workbench: the agent dashboard frame (four figures, waiting, done, connections, knowledge) around the five loyalty surfaces as tabs. */
+export const LoyaltyWorkbenchView = ({ data, figures, dashboard, initialTab }: LoyaltyWorkbenchViewProps) => {
   const t = useT(loyalty);
   const locale = useLocale();
-  const [tab, setTab] = useState<TabId>("overview");
 
-  const select = useCallback((key: string) => {
-    if (!isTab(key)) return;
-    setTab(key);
-    try {
-      const url = new URL(window.location.href);
-      url.searchParams.set("tab", key);
-      window.history.replaceState(null, "", url);
-    } catch {
-      // the address bar is a convenience only
-    }
-  }, []);
-
-  // The route does not pass ?tab=, so read it once in the browser (after hydration, so server and client markup match).
-  useEffect(() => {
-    const fromUrl = new URLSearchParams(window.location.search).get("tab");
-    if (isTab(fromUrl)) setTab(fromUrl);
-  }, []);
-
-  if (!data) {
+  if (!data || !figures) {
     return (
-      <div className={PAGE_CLASS_NAME}>
-        <SurfaceCard ariaLabel={t("loadFailedTitle")}>
-          <EmptyNotice message={t("loadFailedTitle")} description={t("loadFailedBody")} />
-        </SurfaceCard>
-      </div>
+      <AgentDashboardFrame
+        module="loyalty"
+        data={dashboard}
+        figures={[]}
+        figuresFailed
+        tabs={[{
+          id: "overview",
+          label: t("tab_overview"),
+          content: (
+            <SurfaceCard ariaLabel={t("loadFailedTitle")}>
+              <EmptyNotice message={t("loadFailedTitle")} description={t("loadFailedBody")} />
+            </SurfaceCard>
+          ),
+        }]}
+      />
     );
   }
 
-  const s = data.stats;
   const count = (n: number): string => (n > 0 ? ` (${n})` : "");
-  const items = [
-    { id: "overview", label: t("tab_overview") },
-    { id: "members", label: t("tab_members") },
-    { id: "rewards", label: t("tab_rewards") },
-    { id: "promo", label: t("tab_promo") },
-    { id: "pending", label: `${t("tab_pending")}${count(data.pending.length)}` },
-  ];
-
   return (
-    <div className={PAGE_CLASS_NAME}>
-      <SurfaceCard ariaLabel={t("metricsAria")}>
-        <DescriptionList
-          layout="stat-strip"
-          isDivided
-          items={[
-            { id: "members", term: t("metricMembers"), description: formatNumber(s.members, locale), meta: t("metricMembersBasis", { n: formatNumber(s.active90d, locale) }) },
-            { id: "outstanding", term: t("metricOutstanding"), description: t("points", { n: formatNumber(s.pointsOutstanding, locale) }), meta: t("metricOutstandingBasis") },
-            { id: "spend", term: t("metricSpend"), description: `${formatNumber(s.spend30d, locale)} ₫`, meta: t("metricSpendBasis") },
-            {
-              id: "redeemed",
-              term: t("metricRedeemed"),
-              description: t("points", { n: formatNumber(s.redeemed30d, locale) }),
-              meta: t("metricRedeemedBasis", { n: s.redemptions30d, value: `${formatNumber(s.rewardValue30d, locale)} ₫` }),
-            },
-          ]}
-        />
-      </SurfaceCard>
-
-      <Tabs label={t("tabsLabel")} selectedKey={tab} items={items} inset="none" labelVisibility="always" panelId={panelId} onSelect={select} />
-
-      <div className={PANEL_CLASS_NAME} role="tabpanel" id={panelId(tab)}>
-        {tab === "overview" ? <OverviewPanel data={data} /> : null}
-        {tab === "members" ? <MembersPanel data={data} /> : null}
-        {tab === "rewards" ? <RewardsPanel data={data} /> : null}
-        {tab === "promo" ? <PromoPanel data={data} /> : null}
-        {tab === "pending" ? <PendingPanel items={data.pending} nowIso={data.nowIso} /> : null}
-      </div>
-    </div>
+    <AgentDashboardFrame
+      module="loyalty"
+      data={dashboard}
+      initialTab={initialTab}
+      figures={[
+        { id: "active", term: t("metricMembers"), description: formatNumber(figures.activeMembers, locale), meta: t("metricMembersBasis", { n: formatNumber(figures.members, locale) }) },
+        { id: "issued", term: t("metricIssued"), description: t("points", { n: formatNumber(figures.pointsIssued30d, locale) }), meta: t("metricIssuedBasis") },
+        { id: "redemptions", term: t("metricRedemptions"), description: formatNumber(figures.redemptions30d, locale), meta: t("metricRedemptionsBasis", { n: formatNumber(figures.pointsRedeemed30d, locale) }) },
+        { id: "atRisk", term: t("metricAtRisk"), description: formatNumber(figures.atRisk, locale), meta: t("metricAtRiskBasis") },
+      ]}
+      tabs={[
+        { id: "overview", label: t("tab_overview"), content: <OverviewPanel data={data} /> },
+        { id: "members", label: t("tab_members"), content: <MembersPanel data={data} /> },
+        { id: "rewards", label: t("tab_rewards"), content: <RewardsPanel data={data} /> },
+        { id: "promo", label: t("tab_promo"), content: <PromoPanel data={data} /> },
+        { id: "pending", label: `${t("tab_pending")}${count(data.pending.length)}`, content: <PendingPanel items={data.pending} nowIso={data.nowIso} /> },
+      ]}
+    />
   );
 };

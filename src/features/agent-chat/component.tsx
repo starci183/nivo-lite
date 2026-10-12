@@ -291,7 +291,7 @@ export const AgentChatBase = (props: AgentChatBaseProps) => {
         </header>
         {props.hasCustomerChannel && !props.isLoading ? (
           <div className={CHANNEL_BAR_CLASS_NAME}>
-            <Tabs
+            <Tabs variant="secondary"
               label={t("channelLabel")}
               selectedKey={props.tab}
               items={[{ id: "test", label: t("tabTest") }, { id: "customer", label: t("tabCustomer") }]}

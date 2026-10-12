@@ -1,9 +1,5 @@
 import { cn } from "@heroui/react";
 
-/** Vertical rhythm of the workbench: figures, waiting decisions, tabs, panel (GAP-4). */
-export const PAGE_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-4", "py-2", "md:py-4");
-/** The panel under the tabs (GAP-3). */
-export const PANEL_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-3");
 /** Stacked blocks of one tab (GAP-3). */
 export const STACK_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-3");
 /** Stacked cards of one tab (GAP-4). */

@@ -48,7 +48,7 @@ export const Bench = ({ initial, initialMine, positions, isManager }: Props) => 
 
   return (
     <div className={BENCH_CLASS_NAME}>
-      {isManager ? <Tabs label={t("tabsLabel")} selectedKey={tab} inset="none" labelVisibility="always" items={items} onSelect={(k) => setTab(k as Tab)} /> : null}
+      {isManager ? <Tabs variant="primary" label={t("tabsLabel")} selectedKey={tab} inset="none" labelVisibility="always" items={items} onSelect={(k) => setTab(k as Tab)} /> : null}
       {isManager && data && tab === "week" ? <WeekPanel data={data} canManage onReload={reload} /> : null}
       {isManager && data && tab === "requests" ? <RequestsPanel data={data} onReload={reloadAll} /> : null}
       {isManager && data && tab === "setup" ? <SetupPanel data={data} onReload={reloadAll} /> : null}

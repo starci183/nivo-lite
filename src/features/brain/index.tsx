@@ -112,7 +112,7 @@ export const BrainView = ({ facts, documents, lessons, lenses, extractions = [],
           railWidth="standard"
           primary={
             <div className={STACK_CLASS}>
-              <Tabs
+              <Tabs variant="primary"
                 label={t("tabsLabel")}
                 selectedKey={surface}
                 inset="none"

@@ -107,7 +107,7 @@ export const ContentWorkbenchView = ({ data, initialTab }: ContentWorkbenchViewP
 
       {error ? <Alert tone="negative" title={error} dismissLabel={t("close")} onDismiss={() => setError(null)} /> : null}
 
-      <Tabs label={t("tabsLabel")} selectedKey={tab} items={tabs} inset="none" labelVisibility="always" panelId={panelId} onSelect={select} />
+      <Tabs variant="primary" label={t("tabsLabel")} selectedKey={tab} items={tabs} inset="none" labelVisibility="always" panelId={panelId} onSelect={select} />
 
       <div className={PANEL_CLASS_NAME} role="tabpanel" id={panelId(tab)}>
         {tab === "calendar" || tab === "balance" ? (

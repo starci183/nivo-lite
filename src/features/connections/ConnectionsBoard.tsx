@@ -129,7 +129,7 @@ export const ConnectionsBoard = ({ items, agentNames, agents, localOnly, zaloRes
       {canManage || isEmbedded || isLoading ? null : <Alert tone="informative" title={t("ownerOnly")} />}
 
       {isEmbedded ? null : (
-        <Tabs
+        <Tabs variant="primary"
           label={t("title")}
           selectedKey={view}
           onSelect={(k) => setView(k === "library" ? "library" : "connected")}
