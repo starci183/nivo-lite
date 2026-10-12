@@ -1,17 +1,12 @@
 import type { AuthorityRule, RuleMode } from "@modules/domain/authority-rules"
 import type { Locale } from "@modules/platform/i18n"
 import type {
-    DecidedPath,
-    OptionalWorkItem,
     Origin,
     Proposal,
-    ProposalCandidate,
     ProposalFieldValue,
     ReasonCode,
     SubjectType,
     WorkItem,
-    WorkResult,
-    WorkStatus,
     EvidenceState,
 } from "@modules/domain/work-items"
 
@@ -28,7 +23,7 @@ export type {
     WorkItem,
     WorkResult,
     WorkStatus,
-}
+} from "@modules/domain/work-items"
 
 /** What a decision outcome was. */
 export type DecisionOutcome = "auto_done" | "approved" | "edited" | "rejected"
