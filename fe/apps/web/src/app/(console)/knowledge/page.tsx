@@ -1,5 +1,6 @@
 import { unstable_rethrow } from "next/navigation"
 import { after } from "next/server"
+import { instanceOptions } from "@/features/knowledge/instances"
 import { KnowledgeView } from "@/features/knowledge/KnowledgeView"
 import { getLocale } from "@/i18n/server"
 import { drainBrainWork } from "@/lib/brain/doc-facts"
@@ -10,7 +11,6 @@ import { KNOWLEDGE_SUGGESTIONS, suggestionTopic } from "@/lib/knowledge/shared"
 import { isManagerRole } from "@/lib/members-shared"
 import { listInstallations } from "@/lib/modules-core"
 import { isModuleKey, MODULE_KEYS, type ModuleKey } from "@/lib/modules-shared"
-import { moduleName } from "@/lib/module-registry"
 import { getSession } from "@/lib/session"
 
 /** Tri thức doanh nghiệp: workspace knowledge shared by every agent. Everyone reads; owner and manager write. */
@@ -34,8 +34,7 @@ const Page = async ({ searchParams }: { readonly searchParams: Promise<{ module?
       .map((s) => ({ key: s.key, topic: suggestionTopic(s, locale), state: states[s.key] as "dismissed" | "not_applicable" }))
     const initial = isModuleKey(module) ? module : "all"
     // Types with several agent instances (one Chatbot per branch or Fanpage): a document can be kept for one of them.
-    const multi = installations.filter((i) => i.isMulti && installations.filter((j) => j.moduleKey === i.moduleKey).length > 1)
-    const instances = multi.map((i) => ({ id: i.id, moduleKey: i.moduleKey, label: `${moduleName(i.moduleKey, locale)} – ${i.name}` }))
+    const instances = instanceOptions(installations, locale)
     return (
       <KnowledgeView
         sources={sources} topics={topics} canWrite={canWrite} workspaceId={session.workspace.id} initialModule={initial} instances={instances} askModule={isModuleKey(module) ? module : installed[0] ?? MODULE_KEYS[0]}

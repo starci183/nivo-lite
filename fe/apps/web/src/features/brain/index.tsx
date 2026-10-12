@@ -12,7 +12,7 @@ import { CreditsAlert } from "./CreditsAlert"
 import { HEAD_CLASS, LENS_CLASS, PAGE_CLASS, STACK_CLASS } from "./classNames"
 import { FactsPanel } from "./facts"
 import { useRouter } from "next/navigation"
-import { AddDocumentsDrawer } from "@/features/knowledge/AddDocumentsDrawer"
+import { AddDocumentsDrawer, type InstanceOption } from "@/features/knowledge/AddDocumentsDrawer"
 import { driveReturn } from "@/features/knowledge/driveReturn"
 import { FactDrawer } from "./form"
 import { ProcessingNotice } from "./processing"
@@ -34,6 +34,8 @@ export type BrainViewProps = {
   readonly canWrite: boolean
   /** The workspace: the processing notice follows its knowledge_sources, and the Add documents drawer uploads under its prefix. */
   readonly workspaceId?: string
+  /** Agent instances a document may be kept for (types with several instances), offered in the Add documents drawer. */
+  readonly instances?: ReadonlyArray<InstanceOption>
   /** Questions customers asked that the brain could not answer (owners and managers; empty for staff). */
   readonly gaps?: ReadonlyArray<KnowledgeGap>
   /** How many gaps are open in all (the list shows the most asked). */
@@ -50,7 +52,7 @@ type Surface = "map" | "review" | "facts" | "lessons"
  * Bộ não, laid out like Tri thức: header, actions, four key figures, then the active surface with the rail beside it
  * (agent views, what is worth adding, how it learns). Review opens first when something waits.
  */
-export const BrainView = ({ facts, documents, lessons, lenses, extractions = [], gaps = [], gapsOpen = gaps.length, canWrite, workspaceId = "", business, isLoading = false }: BrainViewProps) => {
+export const BrainView = ({ facts, documents, lessons, lenses, extractions = [], gaps = [], gapsOpen = gaps.length, canWrite, workspaceId = "", instances = [], business, isLoading = false }: BrainViewProps) => {
   const t = useT(brain)
   const active = facts.filter((f) => f.status === "active")
   const scheduled = facts.filter((f) => f.status === "scheduled").length
@@ -151,7 +153,7 @@ export const BrainView = ({ facts, documents, lessons, lenses, extractions = [],
           }
         />
       </div>
-      <AddDocumentsDrawer isOpen={isAddingDocs} workspaceId={workspaceId} onClose={() => setAddingDocs(false)} onAdded={() => router.refresh()} />
+      <AddDocumentsDrawer isOpen={isAddingDocs} workspaceId={workspaceId} instances={instances} onClose={() => setAddingDocs(false)} onAdded={() => router.refresh()} />
       {drawer ? (
         <FactDrawer key={drawer.preset?.attributeLabel ?? "new"} isOpen editing={null} lenses={lenses} preset={drawer.preset} onClose={() => setDrawer(null)} />
       ) : null}

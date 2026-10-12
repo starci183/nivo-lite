@@ -7,7 +7,7 @@ import { useLocale, useT } from "@/i18n/client"
 import { intlLocale, TIME_ZONE } from "@/i18n/core"
 import { knowledge } from "@/i18n/dict/knowledge"
 import { deleteKnowledge, reindexKnowledge, updateKnowledge } from "@/lib/knowledge/actions"
-import type { KnowledgeChunk, KnowledgeSource } from "@/lib/knowledge/shared"
+import { isKeywordOnlyNote, type KnowledgeChunk, type KnowledgeSource } from "@/lib/knowledge/shared"
 import { ITEM_CLASS, LIST_CLASS, PAGE_CLASS, PASSAGE_CLASS, HEAD_CLASS, PASSAGE_TEXT_CLASS, ROW_WRAP_CLASS, STACK_CLASS } from "./classNames"
 import { knowledgeTrail } from "./trail"
 
@@ -77,7 +77,7 @@ export const SourceDetail = ({ source, chunks, canWrite, isLoading = false }: So
           <Badge tone="neutral">{isPublic ? t("visPublicLong") : t("visInternalLong")}</Badge>
           <Text size="sm" tone="muted">{t("chunks", { count: source.chunkCount })}{source.module ? ` · ${t(`module_${source.module}`)}` : ""}</Text>
         </div>
-        {source.error ? <Alert title={source.status === "failed" ? t("status_failed") : t("noVectors")} description={source.error} tone={source.status === "failed" ? "negative" : "neutral"} /> : null}
+        {source.error ? <Alert title={source.status === "failed" ? t("status_failed") : isKeywordOnlyNote(source.error) ? t("noVectors") : t("noFacts")} description={source.error} tone={source.status === "failed" ? "negative" : "neutral"} /> : null}
         {error !== null ? <Alert title={t("detailFailed")} description={error} tone="negative" /> : null}
 
         {canWrite ? (

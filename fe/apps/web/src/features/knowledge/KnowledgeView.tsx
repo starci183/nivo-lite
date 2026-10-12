@@ -9,7 +9,7 @@ import { knowledge } from "@/i18n/dict/knowledge"
 import { decideSuggestion } from "@/lib/knowledge/actions"
 import { useLiveSources } from "@/lib/knowledge/live"
 import { retrySource } from "@/lib/knowledge/queue"
-import { isInFlight, type KnowledgeSource, type SourceStatus, type Visibility } from "@/lib/knowledge/shared"
+import { isInFlight, isKeywordOnlyNote, type KnowledgeSource, type SourceStatus, type Visibility } from "@/lib/knowledge/shared"
 import { MODULE_KEYS, type ModuleKey } from "@/lib/modules-shared"
 import { AddDocumentsDrawer, type AddPreset, type InstanceOption } from "./AddDocumentsDrawer"
 import { AskPanel } from "./AskPanel"
@@ -118,7 +118,7 @@ export const KnowledgeView = ({ sources: initialSources, topics, suggestions, sk
                       <Text size="xs" tone="muted">
                         {[s.topic, t(`kind_${s.kind}`), s.installationId ? (instances.find((i) => i.id === s.installationId)?.label ?? null) : s.module ? t(`module_${s.module}`) : null, t("chunks", { count: s.chunkCount }), when(s.createdAt)].filter(Boolean).join(" · ")}
                       </Text>
-                      {s.error ? <Text size="xs" tone="muted">{s.status === "failed" ? s.error : t("noVectors")}</Text> : null}
+                      {s.error ? <Text size="xs" tone="muted">{s.status === "failed" ? s.error : isKeywordOnlyNote(s.error) ? t("noVectors") : t("noFacts")}</Text> : null}
                     </div>
                     <div className={ROW_WRAP_CLASS}>
                       <Badge isDot tone={STATUS_TONE[s.status]}>{statusLabel(s)}</Badge>

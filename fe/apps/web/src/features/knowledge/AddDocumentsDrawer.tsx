@@ -611,7 +611,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, workspaceId, topi
                     title={x.name}
                     description={x.status === "failed" && x.error ? message(x.error) : [t(x.kind === "file" ? "itemFile" : x.kind === "drive" ? "itemDrive" : isFolderLink(x.name) ? "itemFolder" : "itemLink"), x.origin ? t(x.fromZip ? "zipFrom" : "folderFrom", { name: x.origin }) : null, x.size ? sizeLabel(x.size) : null].filter(Boolean).join(" · ")}
                     badges={<Badge isDot tone={STATUS_TONE[x.status]}>{x.status === "uploading" ? t("itemUploading", { percent: x.progress ?? 0 }) : t(x.status === "queued" ? "itemQueued" : x.status === "failed" ? "itemFailed" : "itemWaiting")}</Badge>}
-                    actions={x.status === "waiting" || x.status === "failed" ? <Button variant="ghost" size="sm" isDisabled={busy} onPress={() => setItems((cur) => cur.filter((y) => y.id !== x.id))}>{t("itemRemove")}</Button> : undefined}
+                    actions={x.status === "waiting" || x.status === "failed" ? <IconButton source={nivoIconSource("trash", "leading")} label={t("itemRemove")} variant="danger-soft" isDisabled={busy} onPress={() => setItems((cur) => cur.filter((y) => y.id !== x.id))} /> : undefined}
                   />
                 ))}
               </SurfaceListCard>

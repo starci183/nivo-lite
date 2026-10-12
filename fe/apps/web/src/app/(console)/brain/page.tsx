@@ -1,7 +1,8 @@
 import { unstable_rethrow } from "next/navigation"
 import { after } from "next/server"
 import { BrainView } from "@/features/brain"
-import { getT } from "@/i18n/server"
+import { instanceOptions } from "@/features/knowledge/instances"
+import { getLocale, getT } from "@/i18n/server"
 import { brain as dict } from "@/i18n/dict/brain"
 import { drainBrainWork, extractionsOf } from "@/lib/brain/doc-facts"
 import { listFacts, maintain } from "@/lib/brain/facts"
@@ -11,6 +12,7 @@ import { listLessons } from "@/lib/brain/lessons"
 import { listSources } from "@/lib/knowledge/index"
 import { reembedStale } from "@/lib/knowledge/reembed"
 import { isManagerRole } from "@/lib/members-shared"
+import { listInstallations } from "@/lib/modules-core"
 import { getSession } from "@/lib/session"
 import { supabaseAdmin } from "@/lib/supabase/admin"
 
@@ -26,7 +28,7 @@ const Page = async () => {
     const canWrite = isManagerRole(session.member.role)
     const db = supabaseAdmin()
     await maintain(db, ws)
-    const [facts, lessons, lenses, sources, extractions, gaps, gapsOpen] = await Promise.all([
+    const [facts, lessons, lenses, sources, extractions, gaps, gapsOpen, installations, locale] = await Promise.all([
       listFacts(db, ws, { status: ["active", "proposed", "scheduled"], limit: 2000 }),
       listLessons(db, ws, ["active", "proposed", "retired"]),
       agentLenses(db, ws),
@@ -35,6 +37,9 @@ const Page = async () => {
       // Questions customers asked that the brain could not answer: owners and managers only.
       canWrite ? listGaps(db, ws) : Promise.resolve([]),
       canWrite ? countOpenGaps(db, ws) : Promise.resolve(0),
+      // The Add documents drawer offers a document to one instance of a type that has several.
+      listInstallations(),
+      getLocale(),
     ])
     // Waiting background work (re-embedding after a model change, facts of documents still queued) runs AFTER the response, bounded; the page never waits for it.
     if (canWrite) after(async () => { await reembedStale(db, ws); await drainBrainWork(ws) })
@@ -42,7 +47,7 @@ const Page = async () => {
     // Staff read the brain through their own reach: restricted facts stay with owners and managers.
     const visible = canWrite ? facts : facts.filter((f) => f.scope !== "restricted")
     return (
-      <BrainView facts={visible} documents={documents} lessons={lessons} lenses={lenses} extractions={extractions} gaps={gaps} gapsOpen={gapsOpen} canWrite={canWrite} workspaceId={ws} business={session.workspace.name} />
+      <BrainView facts={visible} documents={documents} lessons={lessons} lenses={lenses} extractions={extractions} gaps={gaps} gapsOpen={gapsOpen} canWrite={canWrite} workspaceId={ws} instances={instanceOptions(installations, locale)} business={session.workspace.name} />
     )
   } catch (e) {
     unstable_rethrow(e) // Next signals (redirect, notFound, dynamic usage) pass through unlogged

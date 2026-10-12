@@ -346,3 +346,9 @@ export const suggestionsFor = (installed: ReadonlyArray<ModuleKey>, businessType
 
 export const suggestionTopic = (s: KnowledgeSuggestion, locale: "vi" | "en"): string => (locale === "vi" ? s.topic_vi : s.topic_en);
 export const suggestionHint = (s: KnowledgeSuggestion, locale: "vi" | "en"): string => (locale === "vi" ? s.hint_vi : s.hint_en);
+
+/**
+ * A ready source can still carry a note in `error` (it is not a failure): the passages have no vectors (search by keyword only), or the
+ * facts could not be read. Which one decides the label, so a facts note is never shown as "keyword search only".
+ */
+export const isKeywordOnlyNote = (note: string): boolean => /vector|từ khóa/i.test(note)
