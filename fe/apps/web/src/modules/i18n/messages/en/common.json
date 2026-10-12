@@ -18,5 +18,8 @@
   "stageQualified": "Qualified",
   "stageProposal": "Proposal",
   "stageWon": "Won",
-  "stageLost": "Lost"
+  "stageLost": "Lost",
+  "brandLogo": "NIVO",
+  "brandLogoOs": "NIVO OS",
+  "agentAvatarLabel": "AI agent · {module}"
 }

@@ -56,5 +56,11 @@
   "retry": "Try again",
   "notFoundTitle": "Page not found",
   "notFoundText": "This page does not exist or has moved.",
-  "backToOverview": "Back to Overview"
+  "backToOverview": "Back to Overview",
+  "brandLogo": "NIVO",
+  "languageLabel": "Language",
+  "localeShortVi": "VI",
+  "localeShortEn": "EN",
+  "localeNameVi": "Tiếng Việt",
+  "localeNameEn": "English"
 }

@@ -18,5 +18,8 @@
   "stageQualified": "Đủ điều kiện",
   "stageProposal": "Đề xuất",
   "stageWon": "Chốt được",
-  "stageLost": "Không chốt"
+  "stageLost": "Không chốt",
+  "brandLogo": "NIVO",
+  "brandLogoOs": "NIVO OS",
+  "agentAvatarLabel": "Agent AI · {module}"
 }
