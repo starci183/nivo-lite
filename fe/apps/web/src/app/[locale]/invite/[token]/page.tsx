@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation"
 import { Button, Heading, PageContainer, SurfaceCard, Text } from "@starci/grammar/common"
 import { ACTION_STACK, INVITE_COLUMN, INVITE_MAIN } from "@/app/classNames"
-import { NivoLogo } from "@/components/brand/NivoLogo"
+import { BrandLogo } from "@/components/blocks/BrandLogo"
 import { AcceptInvite } from "@/features/team/AcceptInvite"
 import { getInvitePreview } from "@/features/team/invite-preview"
 import { invite as dict } from "@/i18n/dict/invite"
@@ -31,7 +31,7 @@ const InvitePage = async ({ params }: InvitePageProps) => {
     <main className={INVITE_MAIN}>
       <PageContainer measure="reading">
         <div className={INVITE_COLUMN}>
-          <NivoLogo variant="full" height={40} />
+          <BrandLogo variant="full" height={40} />
           <SurfaceCard ariaLabel={title}>
             <div className={ACTION_STACK}>
               <Heading level={1}>{title}</Heading>
