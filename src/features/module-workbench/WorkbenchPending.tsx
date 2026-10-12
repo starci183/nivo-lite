@@ -5,12 +5,12 @@ import { tabHref } from "@/features/modules-core/meta";
 import type { ModuleKey } from "@/lib/modules-shared";
 
 /** What a module without a workbench yet shows: a clean "Đang hoàn thiện" state that points to the Setup tab. */
-export const WorkbenchPending = async ({ module }: { readonly module: ModuleKey }) => {
+export const WorkbenchPending = async ({ module, installationId }: { readonly module: ModuleKey; readonly installationId: string }) => {
   const t = await getT(modulesCore);
   return (
     <SurfaceCard ariaLabel={t("workbenchTitle")}>
       <EmptyNotice message={t("workbenchTitle")} description={t("workbenchBody")} />
-      <Button variant="secondary" href={tabHref(module, "setup")}>{t("workbenchSetup")}</Button>
+      <Button variant="secondary" href={tabHref(module, "setup", installationId)}>{t("workbenchSetup")}</Button>
     </SurfaceCard>
   );
 };

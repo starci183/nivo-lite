@@ -11,7 +11,10 @@ import WorkbenchBooking from "@/features/module-booking";
 import WorkbenchShifts from "@/features/module-shifts";
 import WorkbenchLeadGen from "@/features/module-lead-gen";
 
-/** A workbench is a server component (it may be async); it takes no props. */
+/**
+ * A workbench is a server component (it may be async). It receives `tab`, `focus` and `installation` (the instance it is opened for); a
+ * multi-instance type (chatbot, booking, lead_gen) scopes its data to that installation, a single-instance type may ignore it.
+ */
 export type WorkbenchComponent = (props: Record<string, unknown>) => ReactNode | Promise<ReactNode>;
 
 /**

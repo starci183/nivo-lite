@@ -7,11 +7,18 @@ export { MODULE_KEYS, isModuleKey };
 export type InstallationStatus = "installing" | "setup" | "ready" | "live" | "paused";
 export type OperatingMode = "assist" | "autopilot";
 
-/** One installed module of a workspace. */
+/**
+ * One installed agent of a workspace: an INSTANCE of a module type. Single-instance types (accounting, inventory...) have one per workspace;
+ * multi-instance types (chatbot, booking, lead_gen: isMultiInstance) may have several, each with its own name, agent, connections and setup.
+ */
 export type Installation = {
   id: string;
   workspaceId: string;
   moduleKey: ModuleKey;
+  /** The instance label ("Chatbot – Chi nhánh Q1"); the type's name for the first instance and every single-instance type. */
+  name: string;
+  /** The type allows several instances (copied from the registry at insert). */
+  isMulti: boolean;
   agentId: string | null;
   /** The agent's display name and handle (read-through, for headers and mentions). */
   agentName: string;
@@ -84,3 +91,48 @@ export const snapshotOf = (draft: DraftSnapshot, gates: GateEvidence): ContextSn
   facts: draft.facts,
   gates: Object.fromEntries(Object.entries(gates).filter(([, g]) => g.status === "confirmed")),
 });
+
+/* ------------------------------------------------------------------ instances (pure) */
+
+/** Case-insensitive, trimmed key of an instance name (the database enforces unique (workspace, type, lower(name))). */
+export const instanceNameKey = (name: string): string => name.trim().toLowerCase();
+
+/**
+ * The suggested name of a new instance of a type: the type's name for the first one, then "<Loại> 2", "<Loại> 3"... (the next number after
+ * the instances that exist, skipping any name already taken, case-insensitive).
+ */
+export const nextInstanceName = (typeName: string, taken: ReadonlyArray<string>): string => {
+  const used = new Set(taken.map(instanceNameKey));
+  if (taken.length === 0 && !used.has(instanceNameKey(typeName))) return typeName;
+  for (let n = Math.max(2, taken.length + 1); n < 1000; n += 1) {
+    const candidate = `${typeName} ${n}`;
+    if (!used.has(instanceNameKey(candidate))) return candidate;
+  }
+  return `${typeName} ${Date.now()}`;
+};
+
+/** A clean instance name, or null when it is too short or too long (1-80 characters after trimming, as in the database). */
+export const cleanInstanceName = (name: string): string | null => {
+  const clean = name.replace(/\s+/g, " ").trim();
+  return clean.length >= 1 && clean.length <= 80 ? clean : null;
+};
+
+/** The instances of one type, oldest first (the first is what type-level callers mean by "the" installation). */
+export const instancesOf = <T extends Pick<Installation, "moduleKey" | "createdAt">>(installations: ReadonlyArray<T>, moduleKey: ModuleKey): Array<T> =>
+  installations.filter((i) => i.moduleKey === moduleKey).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+
+/** Shown name of an instance: its own name when the type has several (or it was renamed), else nothing extra is needed. */
+export const showsInstanceName = (i: Pick<Installation, "isMulti" | "name">, typeName: string): boolean => i.isMulti || instanceNameKey(i.name) !== instanceNameKey(typeName);
+
+/**
+ * The route of an agent instance: /agents/<type>/<installationId>[/workbench|/settings][?query]. Without an installation id it is the
+ * type-level URL (/agents/<type>[/tab]), which redirects to the only instance, or to the instance that owns `?focus=`, or to the list.
+ */
+export const agentHref = (module: ModuleKey, installationId: string | null | undefined, tab: "setup" | "workbench" | "settings" = "setup", query?: string): string => {
+  const base = installationId ? `/agents/${module}/${installationId}` : `/agents/${module}`;
+  const path = tab === "setup" ? base : `${base}/${tab}`;
+  return query ? `${path}?${query}` : path;
+};
+
+/** The list of a type's instances (/agents/<type>?list=1): shown even when there is only one, so "Thêm <loại> mới" is always reachable. */
+export const agentListHref = (module: ModuleKey): string => `/agents/${module}?list=1`;

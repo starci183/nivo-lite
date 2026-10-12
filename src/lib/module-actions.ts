@@ -6,16 +6,17 @@ import { translator, type Locale } from "@/i18n/core";
 import { moduleSetup } from "@/i18n/dict/moduleSetup";
 import { modulesCore } from "@/i18n/dict/modulesCore";
 import { enqueueAgentSync } from "./engine-queue";
+import { isMultiInstance } from "./module-registry";
 import { mergeSetupTurn, runSetupTurn } from "./module-setup-ai";
 import type { SetupWrite, WriteDecision } from "./module-setup-writes";
 import { decideWrite, loadWrites, openGapsFor, storeWrites } from "./module-setup-writes-server";
 import { engineCtx } from "./flow-ctx";
 import { withUsage } from "./usage";
 import {
-  INSTALLATION_SELECT, getInstallation, toInstallation, toSession, toVersion, type InstallationRow,
+  INSTALLATION_SELECT, getInstallationById, toInstallation, toSession, toVersion, type InstallationRow,
 } from "./modules-core";
 import {
-  MODULE_GATES, allGatesConfirmed, gateEntry, gateLabel, isModuleKey, snapshotOf,
+  MODULE_GATES, allGatesConfirmed, cleanInstanceName, gateEntry, gateLabel, instanceNameKey, isModuleKey, snapshotOf,
   type ContextSnapshot, type ContextVersion, type GateEvidence, type Installation, type ModuleKey, type OperatingMode, type SetupMessage, type SetupRevision, type SetupSession,
 } from "./modules-shared";
 import { ensureDraftSession, fail, installModuleCore, loadInstallation, logEvent, moduleName, type Db } from "./module-install";
@@ -43,15 +44,55 @@ const refresh = () => revalidatePath("/", "layout");
 /* ------------------------------------------------------------------ catalogue */
 
 /** Install a module: its installation, its agent (reused when the workspace already has one), its default authority rules, the first setup session and the OpenClaw sync. Any module of the registry. */
-export const installModule = async (moduleKey: ModuleKey): Promise<Outcome<{ moduleKey: ModuleKey }>> =>
+export const installModule = async (moduleKey: ModuleKey): Promise<Outcome<{ moduleKey: ModuleKey; installationId: string }>> =>
   run(async () => {
     if (!isModuleKey(moduleKey)) throw new Error("Unknown agent");
     await requireManager();
     const session = await getSession();
     const db = await supabaseServer();
-    await installModuleCore(db, { workspaceId: session.workspace.id, moduleKey, locale: await getLocale(), actorName: session.userName });
+    const r = await installModuleCore(db, { workspaceId: session.workspace.id, moduleKey, locale: await getLocale(), actorName: session.userName });
     refresh();
-    return { moduleKey };
+    return { moduleKey, installationId: r.installationId };
+  });
+
+/**
+ * Add another instance of a multi-instance type ("Thêm Chatbot mới": one per branch, brand or Fanpage): a new installation with its own
+ * agent, setup chat and connections. Authority rules stay per type (shared by every instance).
+ */
+export const addInstance = async (moduleKey: ModuleKey, name: string): Promise<Outcome<{ moduleKey: ModuleKey; installationId: string }>> =>
+  run(async () => {
+    if (!isModuleKey(moduleKey)) throw new Error("Unknown agent");
+    await requireManager();
+    const t = translator(modulesCore, await getLocale());
+    if (!isMultiInstance(moduleKey)) throw new Error(t("instanceSingleOnly"));
+    const clean = cleanInstanceName(name);
+    if (!clean) throw new Error(t("instanceNameInvalid"));
+    const session = await getSession();
+    const db = await supabaseServer();
+    const taken = await db.from("module_installations").select("name").eq("workspace_id", session.workspace.id).eq("module_key", moduleKey);
+    fail(taken.error);
+    if (((taken.data ?? []) as Array<{ name: string }>).some((r) => instanceNameKey(r.name) === instanceNameKey(clean))) throw new Error(t("instanceNameTaken"));
+    const r = await installModuleCore(db, { workspaceId: session.workspace.id, moduleKey, locale: await getLocale(), actorName: session.userName, newInstance: true, name: clean });
+    refresh();
+    return { moduleKey, installationId: r.installationId };
+  });
+
+/** Rename an instance (its label in lists, the chrome and Office). Unique per type in the workspace, case-insensitive. */
+export const renameInstance = async (installationId: string, name: string): Promise<Outcome<Installation>> =>
+  run(async () => {
+    await requireManager();
+    const t = translator(modulesCore, await getLocale());
+    const clean = cleanInstanceName(name);
+    if (!clean) throw new Error(t("instanceNameInvalid"));
+    const db = await supabaseServer();
+    const installation = await loadInstallation(db, installationId);
+    const taken = await db.from("module_installations").select("id, name").eq("workspace_id", installation.workspaceId).eq("module_key", installation.moduleKey).neq("id", installationId);
+    fail(taken.error);
+    if (((taken.data ?? []) as Array<{ name: string }>).some((r) => instanceNameKey(r.name) === instanceNameKey(clean))) throw new Error(t("instanceNameTaken"));
+    const upd = await db.from("module_installations").update({ name: clean }).eq("id", installationId);
+    fail(upd.error);
+    refresh();
+    return loadInstallation(db, installationId);
   });
 
 /* ------------------------------------------------------------------ setup chat */
@@ -68,14 +109,14 @@ export type SetupState = {
   writes: Array<SetupWrite>;
 };
 
-/** Everything the Setup tab needs: the draft session (created on first open) and the full chat history of the installation. */
-export const loadSetup = async (moduleKey: ModuleKey): Promise<Outcome<SetupState>> =>
+/** Everything the Setup tab of one instance needs: the draft session (created on first open) and the full chat history of the installation. */
+export const loadSetup = async (installationId: string): Promise<Outcome<SetupState>> =>
   run(async () => {
     await requireManager();
     const session = await getSession();
     const db = await supabaseServer();
-    // The installation list is cached for the request (the module layout reads it too), so this costs no request of its own.
-    const installation = await getInstallation(moduleKey);
+    // The installation list is cached for the request (the instance layout reads it too), so this costs no request of its own.
+    const installation = await getInstallationById(installationId);
     if (!installation) throw new Error("Not found");
     // Sessions and the whole chat in ONE wave (the chat is filtered through its session's installation), instead of 4 sequential reads.
     const [sessionRows, chatRows] = await Promise.all([
@@ -145,7 +186,7 @@ export const sendSetupMessage = async (setupSessionId: string, text: string): Pr
     // The customer questions the agent could not answer yet (knowledge gaps) are part of what the chat asks about.
     const gaps = await openGapsFor(db, ws, installation.moduleKey);
     const turn = await withUsage({ workspaceId: ws }, () => runSetupTurn({
-      moduleKey: installation.moduleKey, locale, draft: draftSession.draft, gates: draftSession.gateEvidence,
+      moduleKey: installation.moduleKey, installationId: installation.id, locale, draft: draftSession.draft, gates: draftSession.gateEvidence,
       history: history.map((m) => ({ role: m.role, body: m.body })), message: body, gaps,
     }));
     const merged = mergeSetupTurn(draftSession.draft, draftSession.gateEvidence, turn);
@@ -174,7 +215,7 @@ export const decideSetupWrite = async (writeId: string, change: WriteDecision): 
     fail(sessionRow.error);
     if (!sessionRow.data) throw new Error("Not found");
     const installation = await loadInstallation(c.db, sessionRow.data.installation_id);
-    const written = await decideWrite(c.db, c, installation.moduleKey, c.locale, writeId, change);
+    const written = await decideWrite(c.db, c, installation.moduleKey, c.locale, writeId, change, { id: installation.id, isMulti: installation.isMulti });
     refresh();
     return written;
   });
