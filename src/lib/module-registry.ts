@@ -6,11 +6,11 @@
 import type { Locale } from "@/i18n/core";
 import {
   ACTION_KEYS, MODULE_CATEGORIES, MODULE_KEYS, MODULE_REGISTRY,
-  type ActionKey, type Bilingual, type ModuleCategory, type ModuleCategoryKey, type ModuleDef, type ModuleKey, type RegistryAction, type RegistryGate,
+  type ActionKey, type Bilingual, type ModuleCategory, type ModuleCategoryKey, type ModuleDef, type ModuleKey, type RegistryAction, type RegistryCommand, type RegistryGate,
 } from "./module-registry.generated";
 
 export { ACTION_KEYS, MODULE_CATEGORIES, MODULE_KEYS, MODULE_REGISTRY };
-export type { ActionKey, Bilingual, ModuleCategory, ModuleCategoryKey, ModuleDef, ModuleKey, RegistryAction, RegistryGate };
+export type { ActionKey, Bilingual, ModuleCategory, ModuleCategoryKey, ModuleDef, ModuleKey, RegistryAction, RegistryCommand, RegistryGate };
 
 export const isModuleKey = (value: string | undefined | null): value is ModuleKey =>
   typeof value === "string" && Object.prototype.hasOwnProperty.call(MODULE_REGISTRY, value);
@@ -45,3 +45,8 @@ export const actionDef = (action: ActionKey): RegistryAction => {
 
 /** Modules whose agent talks to customers: only public knowledge may reach their OpenClaw workspace. */
 export const audienceOf = (key: ModuleKey): "customer" | "internal" => MODULE_REGISTRY[key].audience;
+
+/** The commands a module accepts from other agents (its declared contract in module.json `accepts`). */
+export const acceptsOf = (key: ModuleKey): ReadonlyArray<RegistryCommand> => MODULE_REGISTRY[key].accepts;
+/** One accepted command of a module, or null when the module does not accept it. */
+export const commandOf = (key: ModuleKey, command: string): RegistryCommand | null => MODULE_REGISTRY[key].accepts.find((a) => a.command === command) ?? null;

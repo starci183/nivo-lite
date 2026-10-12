@@ -65,6 +65,23 @@ const defs = dirs.map((dir) => {
     if (!Array.isArray(a.required_fields)) fail(`${at}: action ${a.action} required_fields`);
     if (a.max_mode !== undefined && !["ask", "never"].includes(a.max_mode)) fail(`${at}: action ${a.action} max_mode`);
   }
+  // The command contract (agent command bus): every authority action has exactly one accepted command, with the payload keys a sender must supply.
+  if (!Array.isArray(m.accepts) || !m.accepts.length) fail(`${at}: accepts must be a non-empty array`);
+  const actionKeys = new Set(m.authority_actions.map((a) => a.action));
+  const commandKeys = new Set();
+  const covered = new Set();
+  for (const a of m.accepts) {
+    if (!/^[a-z][a-z0-9_]{2,40}$/.test(a.command)) fail(`${at}: bad command key "${a.command}"`);
+    if (commandKeys.has(a.command)) fail(`${at}: duplicate command ${a.command}`);
+    commandKeys.add(a.command);
+    if (!actionKeys.has(a.action)) fail(`${at}: command ${a.command} maps to ${a.action}, which is not an authority action of ${m.key}`);
+    if (covered.has(a.action)) fail(`${at}: action ${a.action} is accepted by two commands`);
+    covered.add(a.action);
+    if (!/^[a-z][a-z_]{1,30}$/.test(a.subject_type ?? "")) fail(`${at}: command ${a.command} subject_type must be lower_snake`);
+    if (!Array.isArray(a.required_fields) || a.required_fields.some((f) => typeof f !== "string" || !f)) fail(`${at}: command ${a.command} required_fields must be an array of keys`);
+    bilingual(a.description, `${at} command ${a.command} description`);
+  }
+  for (const act of actionKeys) if (!covered.has(act)) fail(`${at}: authority action ${act} has no accepted command`);
   return m;
 }).sort((a, b) => a.order - b.order || a.key.localeCompare(b.key));
 
@@ -88,6 +105,7 @@ const norm = (m) => ({
     action: a.action, label: a.label, mode: a.mode, limitVnd: a.limit_vnd, requiredFields: a.required_fields,
     amountLimit: !!a.amount_limit, maxMode: a.max_mode ?? null, note: a.note ?? "", next: a.next ?? [],
   })),
+  accepts: m.accepts.map((a) => ({ command: a.command, action: a.action, subjectType: a.subject_type, requiredFields: a.required_fields, description: a.description })),
 });
 const list = defs.map(norm);
 const labels = { dept: { en: {}, vi: {} }, module: { en: {}, vi: {} }, action: { en: {}, vi: {} } };
@@ -117,6 +135,9 @@ export type RegistryAction = {
   readonly action: ActionKey; readonly label: Bilingual; readonly mode: "auto" | "ask" | "never"; readonly limitVnd: number | null;
   readonly requiredFields: ReadonlyArray<string>; readonly amountLimit: boolean; readonly maxMode: "ask" | "never" | null; readonly note: string; readonly next: ReadonlyArray<ActionKey>;
 };
+export type RegistryCommand = {
+  readonly command: string; readonly action: ActionKey; readonly subjectType: string; readonly requiredFields: ReadonlyArray<string>; readonly description: Bilingual;
+};
 export type ModuleDef = {
   readonly key: ModuleKey; readonly order: number; readonly name: Bilingual; readonly shortName: Bilingual; readonly description: Bilingual; readonly points: BilingualList; readonly purpose: string;
   readonly icon: string; readonly glyph: string; readonly mascot: string; readonly category: ModuleCategoryKey; readonly status: ModuleStatus; readonly audience: ModuleAudience;
@@ -127,6 +148,8 @@ export type ModuleDef = {
   readonly agent: { readonly name: string; readonly handle: string; readonly summary: Bilingual; readonly capabilities: BilingualList; readonly role: Bilingual; readonly instructions: Bilingual };
   readonly gates: ReadonlyArray<RegistryGate>;
   readonly authorityActions: ReadonlyArray<RegistryAction>;
+  /** The command contract: what other agents may ask this module to do (agent-commands.ts). */
+  readonly accepts: ReadonlyArray<RegistryCommand>;
 };
 export type ModuleCategory = { readonly key: ModuleCategoryKey; readonly label: Bilingual };
 

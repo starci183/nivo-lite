@@ -141,5 +141,31 @@
       "max_mode": "ask"
     }
   ],
+  "accepts": [
+    {
+      "command": "render_draft",
+      "action": "render_draft",
+      "subject_type": "video_project",
+      "required_fields": [
+        "subject_id"
+      ],
+      "description": {
+        "vi": "dựng bản nháp video",
+        "en": "render a video draft"
+      }
+    },
+    {
+      "command": "publish_video",
+      "action": "publish_video",
+      "subject_type": "video_project",
+      "required_fields": [
+        "subject_id"
+      ],
+      "description": {
+        "vi": "đăng video",
+        "en": "publish the video"
+      }
+    }
+  ],
   "connection_providers": []
 }

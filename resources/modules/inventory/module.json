@@ -151,5 +151,41 @@
       "amount_limit": false
     }
   ],
+  "accepts": [
+    {
+      "command": "draft_purchase_order",
+      "action": "draft_purchase_order",
+      "subject_type": "purchase_order",
+      "required_fields": [],
+      "description": {
+        "vi": "soạn đơn nhập hàng",
+        "en": "draft a purchase order"
+      }
+    },
+    {
+      "command": "send_purchase_order",
+      "action": "send_purchase_order",
+      "subject_type": "purchase_order",
+      "required_fields": [
+        "subject_id"
+      ],
+      "description": {
+        "vi": "gửi đơn nhập cho nhà cung cấp",
+        "en": "send the purchase order"
+      }
+    },
+    {
+      "command": "adjust_stock",
+      "action": "adjust_stock",
+      "subject_type": "stock",
+      "required_fields": [
+        "subject_id"
+      ],
+      "description": {
+        "vi": "chỉnh số tồn kho",
+        "en": "adjust the stock"
+      }
+    }
+  ],
   "connection_providers": []
 }

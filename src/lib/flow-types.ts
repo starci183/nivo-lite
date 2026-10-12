@@ -36,7 +36,9 @@ export type Proposal = { summary: string; draft?: string; amount_vnd?: number | 
   candidates?: Array<{ id: string; label: string; amount_vnd: number }> };
 export type WorkItem = { id: string; workspace_id: string; department: Department; action: FlowAction;
   subject_type: "lead" | "order" | "invoice" | "transaction" | "conversation" | "inbound" | "purchase_order" | "stock"; subject_id: string | null;
-  lead_id: string | null; inbound_event_id: string | null; parent_id: string | null; status: WorkStatus;
+  lead_id: string | null; inbound_event_id: string | null; parent_id: string | null;
+  /** the command chain this item belongs to (its root's id) and the hops from the root: see agent-commands.ts */
+  chain_id: string | null; depth: number; status: WorkStatus;
   decided_path: "auto" | "human" | null; reason: ReasonCode | null; reasons: string[]; missing_fields: string[];
   proposal: Proposal; result: { summary: string; href?: string } | null; error: string | null; evidence_state: EvidenceState;
   assigned_staff_id: string | null; execution_id: string | null; origin: Origin; created_at: string; updated_at: string; completed_at: string | null };

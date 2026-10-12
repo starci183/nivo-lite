@@ -185,6 +185,69 @@
       "amount_limit": false
     }
   ],
+  "accepts": [
+    {
+      "command": "classify_lead",
+      "action": "classify_lead",
+      "subject_type": "lead",
+      "required_fields": [
+        "lead_id"
+      ],
+      "description": {
+        "vi": "phân loại khách",
+        "en": "classify the lead"
+      }
+    },
+    {
+      "command": "send_follow_up",
+      "action": "send_follow_up",
+      "subject_type": "lead",
+      "required_fields": [
+        "lead_id"
+      ],
+      "description": {
+        "vi": "soạn tin theo dõi",
+        "en": "follow up"
+      }
+    },
+    {
+      "command": "send_quote",
+      "action": "send_quote",
+      "subject_type": "lead",
+      "required_fields": [
+        "lead_id"
+      ],
+      "description": {
+        "vi": "gửi báo giá",
+        "en": "send a quote"
+      }
+    },
+    {
+      "command": "confirm_order",
+      "action": "confirm_order",
+      "subject_type": "order",
+      "required_fields": [
+        "subject_id"
+      ],
+      "description": {
+        "vi": "xác nhận đơn hàng",
+        "en": "confirm the order"
+      }
+    },
+    {
+      "command": "send_care",
+      "action": "send_care",
+      "subject_type": "invoice",
+      "required_fields": [
+        "subject_id",
+        "lead_id"
+      ],
+      "description": {
+        "vi": "gửi tin chăm sóc",
+        "en": "send the care message"
+      }
+    }
+  ],
   "connection_providers": [
     "telegram",
     "zalo_oa"

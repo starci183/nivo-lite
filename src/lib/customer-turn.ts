@@ -4,6 +4,7 @@ import { system } from "@/i18n/dict/system";
 import { governance } from "@/i18n/dict/governance";
 import * as ai from "./deepseek";
 import { ingest, logEvidence } from "./core";
+import { sendCommandItem } from "./agent-commands";
 import { formatVnd, latestInvoiceFor, loadAuthority, runWork, startOrderWork, startPaymentClaim, type EngineCtx } from "./engine";
 import { enqueueChatTurn } from "./engine-queue";
 import { drainAfter } from "./flow-ctx";
@@ -215,10 +216,10 @@ const applyCustomerOut = async (
     }, (n) => t("duplicateBlocked", { n }));
     // A redelivered channel event is one input: no second hand-off.
     if (!duplicate) {
-      const item = await runWork(c, {
-        action: "handoff_lead", subject_type: "conversation", subject_id: conv.id, inbound_event_id: event.id, origin: "live",
+      const item = await sendCommandItem(c, {
+        from: "inbound", to: "chatbot", command: "handoff_lead", reason: "the chatbot captured a lead", inboundEventId: event.id, origin: "live",
         dedupeKey: `handoff_lead:conversation:${conv.id}`,
-        seed: { fields: { contact_name: out.lead.contact_name, company: out.lead.company, need: out.lead.need, contact, channel_label: channel.label, conversation_id: conv.id, transcript } },
+        payload: { subject_type: "conversation", subject_id: conv.id, contact_name: out.lead.contact_name, company: out.lead.company, need: out.lead.need, contact, channel_label: channel.label, conversation_id: conv.id, transcript },
       });
       capturedLeadId = item.lead_id;
       leadId = item.lead_id ?? leadId;
