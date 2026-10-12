@@ -25,6 +25,7 @@ Bộ này dựng trên **một VPS Ubuntu**: `caddy` (TLS, cửa công khai duy 
 | 8787 (trong namespace của openclaw) | engine: `/healthz`, `/readyz`, `/tools/*` | Chỉ trong mạng compose. Caddy chỉ công khai `/healthz` và `/readyz` |
 | 5678 | n8n | Chỉ trong mạng compose, ra ngoài qua Caddy |
 | 5432 | n8n-db | Chỉ trong mạng compose |
+| 6379 | redis (BullMQ, job nền) | **Không** xuất bản cổng; engine gọi `redis://redis:6379` trong mạng compose |
 
 ```bash
 sudo ufw default deny incoming && sudo ufw default allow outgoing
@@ -71,13 +72,13 @@ Lần đầu `deploy.sh` sẽ dừng ở bước kiểm tra `.env`: tạo `.env`
 2. **OpenClaw**: cấu hình nhà cung cấp model và tạo agent. Control UI qua tunnel: `ssh -L 18789:127.0.0.1:18789 deploy@<ip>` rồi mở `http://127.0.0.1:18789`. Engine dùng agent `ws-<8 ký tự đầu workspace id>-chatbot` cho mỗi workspace (hoặc bật `OPENCLAW_MANAGE_AGENTS=1` sau khi xác minh schema).
 3. **Ứng dụng Next (Netlify)**: đặt biến `ENGINE_SHARED_SECRET` **cùng giá trị** rồi deploy lại.
 4. **Kiểm tra**: `curl https://engine.<domain>/healthz` trả `{"status":"ok",...}`. Trong Settings của module Chatbot, thẻ **Bộ xử lý** hiển thị nhịp tim; chọn *OpenClaw (máy chủ riêng)* và gửi một tin thử.
-5. `docker compose --env-file .env logs -f engine` để xem job chạy.
+5. `docker compose --env-file .env logs -f engine` để xem job chạy. Dòng `BullMQ workers up` và `outbox relay up` nghĩa là job nền (đọc tài liệu, embedding...) đã chạy; `curl .../readyz` phải có `"redis":{"configured":true,"ok":true}`. Kiến trúc và vận hành: `docs/JOBS.md`.
 
 Nếu engine ngừng, ứng dụng tự trả lời bằng bộ xử lý mặc định (không có nhịp tim trong 90 giây), nên khách không phải chờ.
 
 ## 6. Sao lưu
 
-Dữ liệu trạng thái nằm trong 5 volume: `n8n-db` (Postgres của n8n), `n8n-data`, `openclaw-data` (cấu hình, agent, phiên), `caddy-data` (chứng chỉ), `caddy-config`. Hàng đợi `engine_jobs` nằm ở Supabase (đã nằm trong sao lưu của Supabase). Engine không có trạng thái cục bộ.
+Dữ liệu trạng thái nằm trong các volume: `n8n-db` (Postgres của n8n), `n8n-data`, `openclaw-data` (cấu hình, agent, phiên), `caddy-data` (chứng chỉ), `caddy-config`, `redis-data` (hàng đợi BullMQ, appendonly). `redis-data` không cần sao lưu: nguồn sự thật là bảng `job_outbox` ở Supabase; mất Redis chỉ mất các job đang chạy, chủ bấm "Thử lại" trên tài liệu lỗi. Hàng đợi `engine_jobs` nằm ở Supabase (đã nằm trong sao lưu của Supabase). Engine không có trạng thái cục bộ.
 
 ```bash
 cd /opt/nivo-engine/deploy
@@ -103,3 +104,5 @@ Cùng một VPS không phải bản sao lưu độc lập: **chép `BACKUP_DIR` 
 | Caddy không xin được chứng chỉ | DNS chưa trỏ đúng, cổng 80/443 bị chặn |
 | `/api/engine/*` trả 401 | `ENGINE_SHARED_SECRET` hai bên khác nhau, hoặc đồng hồ VPS lệch hơn 5 phút (`timedatectl`) |
 | Job `failed` | `select kind, status, error from engine_jobs order by created_at desc limit 20;` |
+| Tài liệu đứng ở "Đang chờ" | `/healthz` → `outbox.oldestUnrelayedAgeSeconds` lớn: relay không chạy (`REDIS_URL`, `docker compose ps redis`); `select name, attempts, last_error from job_outbox where relayed_at is null;` |
+| Job nền lỗi (BullMQ) | `/healthz` → `jobs.failed`; chi tiết: `docker compose exec redis redis-cli zrange nivo:knowledge:failed 0 20` (xem `docs/JOBS.md`, mục Vận hành) |

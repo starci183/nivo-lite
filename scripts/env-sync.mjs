@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Pushes secrets.env to the GitHub environment "production":
-//   ENGINE_ENV  the [engine] block (the VPS docker stack's .env)
+//   ENGINE_ENV  the [engine] block (the VPS docker stack's .env) + REDIS_URL (default redis://redis:6379) and the app keys the jobs need
 //   WEB_ENV     the server-side [app] keys (+ ENGINE_SHARED_SECRET), NEXT_PUBLIC_SITE_URL forced to https://nivo.vn (the web container's runtime env_file)
 //   WEB_NEXT_PUBLIC_SUPABASE_URL / _ANON_KEY / _DEMO_LOGIN  build args baked into the client bundle (public values, kept as secrets for one place to manage)
 // Usage: node scripts/env-sync.mjs            -> updates the secrets (needs gh logged in)
@@ -27,6 +27,19 @@ if (!app.length) throw new Error("no [app] block found in secrets.env");
 
 const kv = (line) => [line.slice(0, line.indexOf("=")), line.slice(line.indexOf("=") + 1).replace(/^["']|["']$/g, "")];
 const appMap = new Map(app.map(kv));
+
+// The engine runs the BullMQ background jobs (docs/JOBS.md): it needs Redis (the compose service "redis" unless the [engine] block says
+// otherwise) and the app keys the knowledge jobs use. Each is taken from the [app] block only when the [engine] block does not set it.
+const engineKeys = new Set(engine.map((l) => kv(l)[0]));
+if (!engineKeys.has("REDIS_URL")) engine.push("REDIS_URL=redis://redis:6379");
+for (const k of ["CHANNEL_TOKEN_KEY", "EMBEDDING_MODEL", "EMBEDDING_BASE_URL", "EMBEDDING_API_KEY"]) {
+  if (!engineKeys.has(k) && appMap.get(k)) engine.push(`${k}=${appMap.get(k)}`);
+}
+// Google OAuth (Drive reads with the stored grant): the app's GOOGLE_OAUTH_* or, as for WEB_ENV below, the Supabase Google client.
+const googleId = appMap.get("GOOGLE_OAUTH_CLIENT_ID") || appMap.get("SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID");
+const googleSecret = appMap.get("GOOGLE_OAUTH_CLIENT_SECRET") || appMap.get("SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET");
+if (!engineKeys.has("GOOGLE_OAUTH_CLIENT_ID") && googleId) engine.push(`GOOGLE_OAUTH_CLIENT_ID=${googleId}`);
+if (!engineKeys.has("GOOGLE_OAUTH_CLIENT_SECRET") && googleSecret) engine.push(`GOOGLE_OAUTH_CLIENT_SECRET=${googleSecret}`);
 // Google OAuth keys are Supabase CLI config, not read by the app: do not ship them to the web host.
 const WEB_SKIP = /^SUPABASE_AUTH_EXTERNAL_/;
 const quote = (v) => (/[$#\s"]|\\/.test(v) && !v.includes("'") ? `'${v}'` : v);

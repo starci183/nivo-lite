@@ -10,6 +10,9 @@
 #              sessions.send is refused. Consequences: the engine listens inside openclaw namespace (caddy reaches it as openclaw:8787),
 #              and recreating openclaw recreates the engine too (compose does this for you).
 #   n8n        behind caddy at n8n.<domain>; talks to its own postgres (n8n-db).
+#   redis      BullMQ for the background jobs (docs/JOBS.md). No published port; the engine reaches it as redis:6379 through openclaw's
+#              namespace, which is on the compose default network. appendonly so queued jobs survive a restart (the job_outbox in
+#              Supabase is the source of truth anyway: a lost Redis is refilled by the relay only for rows not yet relayed).
 
 name: nivo-engine
 
@@ -111,6 +114,8 @@ services:
     depends_on:
       openclaw:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       SUPABASE_URL: ${SUPABASE_URL:?set SUPABASE_URL in .env}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?set SUPABASE_SERVICE_ROLE_KEY in .env}
@@ -134,10 +139,35 @@ services:
       VIDEO_TTS_PROVIDER: ${VIDEO_TTS_PROVIDER:-edge}
       VIDEO_MAX_SECONDS: ${VIDEO_MAX_SECONDS:-90}
       VIDEO_FFMPEG_THREADS: ${VIDEO_FFMPEG_THREADS:-4}
+      # Background jobs (BullMQ, docs/JOBS.md) and what the knowledge jobs need (embeddings, Drive reads, encrypted channel tokens).
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      JOBS_CONCURRENCY: ${JOBS_CONCURRENCY:-4}
+      JOBS_WORKSPACE_CONCURRENCY: ${JOBS_WORKSPACE_CONCURRENCY:-2}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-}
+      CHANNEL_TOKEN_KEY: ${CHANNEL_TOKEN_KEY:-}
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
     volumes:
       - openclaw-data:/openclaw-state
       - video-cache:/var/cache/nivo-video # Vietnamese voiceover clips by text hash: re-rendering the same script costs no TTS call
     stop_grace_period: 45s # longer than ENGINE_SHUTDOWN_GRACE_MS so running jobs can finish or be handed back
+    logging: *logging
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 200mb --maxmemory-policy noeviction
+    volumes:
+      - redis-data:/data
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
     logging: *logging
 
   n8n-db:
@@ -197,3 +227,4 @@ volumes:
   openclaw-data:
   n8n-data:
   n8n-db:
+  redis-data:

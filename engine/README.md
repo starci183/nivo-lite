@@ -100,7 +100,8 @@ OpenClaw gọi engine bằng HTTP nội bộ với bearer token **ngắn hạn, 
 
 - `ENGINE_SHARED_SECRET` (32+ ký tự) ký HMAC-SHA256 `<timestamp>.<body>` cho mọi lời gọi engine → app (lệch quá 5 phút bị từ chối). Khoá token công cụ và khoá ký n8n được *dẫn xuất* từ nó, khoá n8n riêng cho từng workspace.
 - Engine dùng service-role key của Supabase: chỉ đặt trên VPS, không vào image, không vào log. Lỗi cấu hình chỉ nêu tên biến, không nêu giá trị.
-- `/healthz` (liveness, chỉ phụ thuộc tiến trình) và `/readyz` (lần poll hàng đợi gần nhất chạm được DB) là hai thứ khác nhau.
+- `/healthz` (liveness, chỉ phụ thuộc tiến trình; kèm độ trễ outbox `outbox.oldestUnrelayedAgeSeconds` và số job BullMQ lỗi `jobs.failed`, lấy từ bộ đệm) và `/readyz` (lần poll hàng đợi gần nhất chạm được DB, và Redis trả PING khi có `REDIS_URL`) là hai thứ khác nhau.
+- Job nền thứ hai: BullMQ trên Redis (`src/platform/bullmq/`, outbox `job_outbox` → relay → worker). Kiến trúc, hợp đồng job và cách thêm job: `docs/JOBS.md` ở gốc repo. Hàng đợi `engine_jobs` vẫn phục vụ OpenClaw như cũ.
 
 ## Chưa xác minh với OpenClaw thật (làm ở lần deploy đầu)
 
