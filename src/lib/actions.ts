@@ -11,6 +11,7 @@ import { system } from "@/i18n/dict/system";
 import { governance } from "@/i18n/dict/governance";
 import { translator } from "@/i18n/core";
 import { ingest } from "./core";
+import { sendCommandItem } from "./agent-commands";
 import { loadAuthority, resumeWork, runWork, type EngineCtx } from "./engine";
 import { drainAfter, engineCtx } from "./flow-ctx";
 import { customerTurn } from "./customer-turn";
@@ -192,10 +193,10 @@ export const createLead = async (input: ai.LeadInput & { phone?: string; email?:
       channel: "manual", kind: "lead", origin: "live", sender_name: input.contact_name, sender_contact: contact,
       body: input.need, amount_vnd: null, external_ref: `${input.channel}:${input.company}`,
     }, (n) => t("duplicateBlocked", { n }));
-    const item = await runWork(c, {
-      action: "handoff_lead", subject_type: "inbound", subject_id: event.id, inbound_event_id: event.id, origin: "live",
+    const item = await sendCommandItem(c, {
+      from: "owner", to: "chatbot", command: "handoff_lead", reason: "manual lead", inboundEventId: event.id, origin: "live",
       dedupeKey: `handoff_lead:inbound:${event.id}`,
-      seed: { fields: { contact_name: input.contact_name, company: input.company, need: input.need, contact, channel_label: input.channel } },
+      payload: { subject_type: "inbound", subject_id: event.id, contact_name: input.contact_name, company: input.company, need: input.need, contact, channel_label: input.channel },
     });
     const leadId = item.lead_id ?? event.lead_id;
     if (!leadId) throw new Error(item.status === "waiting_decision" ? t("stillMissing", { fields: item.missing_fields.map((f) => gov(c)(`field_${f}`)).join(", ") }) : item.error ?? "Could not create the lead");

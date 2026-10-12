@@ -162,5 +162,43 @@
       "amount_limit": false
     }
   ],
+  "accepts": [
+    {
+      "command": "screen_candidate",
+      "action": "screen_candidate",
+      "subject_type": "inbound",
+      "required_fields": [
+        "subject_id"
+      ],
+      "description": {
+        "vi": "sàng lọc ứng viên",
+        "en": "screen the candidate"
+      }
+    },
+    {
+      "command": "schedule_interview",
+      "action": "schedule_interview",
+      "subject_type": "inbound",
+      "required_fields": [
+        "subject_id"
+      ],
+      "description": {
+        "vi": "xếp lịch phỏng vấn",
+        "en": "schedule the interview"
+      }
+    },
+    {
+      "command": "send_offer",
+      "action": "send_offer",
+      "subject_type": "inbound",
+      "required_fields": [
+        "subject_id"
+      ],
+      "description": {
+        "vi": "gửi thư mời nhận việc",
+        "en": "send the offer"
+      }
+    }
+  ],
   "connection_providers": []
 }

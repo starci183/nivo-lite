@@ -148,5 +148,29 @@
       "max_mode": "ask"
     }
   ],
+  "accepts": [
+    {
+      "command": "draft_post",
+      "action": "draft_post",
+      "subject_type": "inbound",
+      "required_fields": [],
+      "description": {
+        "vi": "soạn bài đăng",
+        "en": "draft a post"
+      }
+    },
+    {
+      "command": "publish_post",
+      "action": "publish_post",
+      "subject_type": "inbound",
+      "required_fields": [
+        "subject_id"
+      ],
+      "description": {
+        "vi": "đăng bài",
+        "en": "publish the post"
+      }
+    }
+  ],
   "connection_providers": []
 }

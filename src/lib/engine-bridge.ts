@@ -7,6 +7,7 @@ import { ingest, logEvidence } from "./core";
 import { channelOf, completeQueuedTurn, ENGINE_ACTOR } from "./customer-turn";
 import * as ai from "./deepseek";
 import { replyTimeoutSec, type EngineJob } from "./engine-queue";
+import { sendCommandItem } from "./agent-commands";
 import { loadAuthority, runWork, type EngineCtx } from "./engine";
 import { drainAfter } from "./flow-ctx";
 import { buildAgentContext } from "./knowledge/index";
@@ -291,9 +292,9 @@ export const runEngineTool = async (db: SupabaseClient, job: EngineJob, tool: To
       channel: channel.key, kind: "lead", origin: "live", sender_name: name, sender_contact: contact, body: need, amount_vnd: null, external_ref: conv.id, event_id: `engine:${job.id}:lead`,
     }, (n) => t("duplicateBlocked", { n }));
     if (duplicate) return { lead_id: null, status: "duplicate" };
-    const item = await runWork(c, {
-      action: "handoff_lead", subject_type: "conversation", subject_id: conv.id, inbound_event_id: event.id, origin: "live", dedupeKey: `handoff_lead:conversation:${conv.id}`,
-      seed: { fields: { contact_name: name, company: text(args.company, 120), need, contact, channel_label: channel.label, conversation_id: conv.id } },
+    const item = await sendCommandItem(c, {
+      from: "inbound", to: "chatbot", command: "handoff_lead", reason: "the agent captured a lead", inboundEventId: event.id, origin: "live", dedupeKey: `handoff_lead:conversation:${conv.id}`,
+      payload: { subject_type: "conversation", subject_id: conv.id, contact_name: name, company: text(args.company, 120), need, contact, channel_label: channel.label, conversation_id: conv.id },
     });
     await db.from("agent_conversations").update({ visitor_name: name, ...(item.lead_id ? { lead_id: item.lead_id } : {}) }).eq("id", conv.id);
     await trace(`Lead handed to Sales through the gate (${item.status})`, event.id);

@@ -162,6 +162,32 @@
       ]
     }
   ],
+  "accepts": [
+    {
+      "command": "reply_customer",
+      "action": "reply_customer",
+      "subject_type": "conversation",
+      "required_fields": [
+        "subject_id"
+      ],
+      "description": {
+        "vi": "trả lời khách",
+        "en": "reply to the customer"
+      }
+    },
+    {
+      "command": "handoff_lead",
+      "action": "handoff_lead",
+      "subject_type": "conversation",
+      "required_fields": [
+        "subject_id"
+      ],
+      "description": {
+        "vi": "tiếp nhận khách mới",
+        "en": "take in the new lead"
+      }
+    }
+  ],
   "connection_providers": [
     "telegram",
     "zalo_oa"
