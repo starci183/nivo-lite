@@ -136,3 +136,10 @@ export const agentHref = (module: ModuleKey, installationId: string | null | und
 
 /** The list of a type's instances (/agents/<type>?list=1): shown even when there is only one, so "Thêm <loại> mới" is always reachable. */
 export const agentListHref = (module: ModuleKey): string => `/agents/${module}?list=1`;
+
+/**
+ * How an agent is named in lists, Office and mentions: "<agent name> – <instance>" when it drives a named instance of a multi-instance type
+ * (and the two differ), else its own name.
+ */
+export const agentDisplayName = (a: { readonly name: string; readonly instance_name?: string | null }): string =>
+  a.instance_name && instanceNameKey(a.instance_name) !== instanceNameKey(a.name) ? `${a.name} – ${a.instance_name}` : a.name;

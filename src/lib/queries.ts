@@ -9,8 +9,24 @@ const ctx = async () => ({ session: await getSession(), supabase: await supabase
 export const listAgents = cache(async (): Promise<Agent[]> => {
   const { session, supabase } = await ctx();
   const { data } = await supabase.from("agents").select("*").eq("workspace_id", session.workspace.id).order("created_at");
-  return (data ?? []) as Agent[];
+  return withInstanceNames((data ?? []) as Agent[]);
 });
+
+/**
+ * Agents with the name of the instance each one drives, for a multi-instance type (several Chatbots, one per branch or Fanpage): lists,
+ * Office members and mentions can then tell "Chatbot – Chi nhánh Q1" from "Chatbot – Chi nhánh Q7". Never throws (names are a courtesy).
+ */
+export const withInstanceNames = async (agents: ReadonlyArray<Agent>): Promise<Array<Agent>> => {
+  if (agents.length === 0) return [];
+  try {
+    const { supabase } = await ctx();
+    const { data } = await supabase.from("module_installations").select("agent_id, name, is_multi").in("agent_id", agents.map((a) => a.id));
+    const byAgent = new Map(((data ?? []) as Array<{ agent_id: string; name: string; is_multi: boolean }>).filter((r) => r.is_multi).map((r) => [r.agent_id, r.name]));
+    return agents.map((a) => ({ ...a, instance_name: byAgent.get(a.id) ?? null }));
+  } catch {
+    return [...agents];
+  }
+};
 
 export const getAgent = async (id: string): Promise<Agent | null> => {
   const { supabase } = await ctx();

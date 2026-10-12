@@ -22,10 +22,12 @@ export type AuthorityViewProps = {
   readonly linkedStaffIds: ReadonlyArray<string>
   /** STATE-8: the same page while its data loads - labels stay, values and the staff rows are skeletons. */
   readonly isLoading?: boolean
+  /** Departments with several agent instances: their names (the rules are shared by every instance of a type). */
+  readonly instanceNames?: Readonly<Record<string, ReadonlyArray<string>>>
 }
 
 /** The "Giao quyền" page: motto, four authority sections in the order of the operating flow, then optional staff. */
-export const AuthorityView = ({ authority, rules, staff, canEdit, linkedStaffIds, isLoading = false }: AuthorityViewProps) => {
+export const AuthorityView = ({ authority, rules, staff, canEdit, linkedStaffIds, isLoading = false, instanceNames }: AuthorityViewProps) => {
   const t = useT(dict)
   const g = useT(governance)
   return (
@@ -41,7 +43,7 @@ export const AuthorityView = ({ authority, rules, staff, canEdit, linkedStaffIds
         <div inert={!canEdit || isLoading} className={PAGE_CLASS} data-testid="authority-sections" data-readonly={canEdit ? undefined : "true"}>
           <GoalsSection authority={authority} isLoading={isLoading} />
           <PoliciesSection authority={authority} isLoading={isLoading} />
-          <RulesSections authority={authority} rules={rules} isLoading={isLoading} />
+          <RulesSections authority={authority} rules={rules} isLoading={isLoading} instanceNames={instanceNames} />
           <StaffSection staff={staff} canInvite={canEdit} linkedStaffIds={linkedStaffIds} isLoading={isLoading} />
         </div>
       </div>

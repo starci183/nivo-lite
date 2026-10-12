@@ -7,6 +7,7 @@ import { useLocale, useT } from "@/i18n/client"
 import { office } from "@/i18n/dict/office"
 import type { Agent, ModuleKey, ResponsibilityWithLead } from "@/lib/types"
 import type { WorkItemView } from "@/lib/flow-types"
+import { agentDisplayName } from "@/lib/modules-shared"
 import { PendingList } from "./approvals"
 import { ExceptionList } from "./exceptions"
 import {
@@ -129,9 +130,9 @@ export const InfoPanel = ({ avatarUrl, agents, people, staff = [], pending, exce
             const isActive = agent.status === "active"
             return (
               <div key={agent.id} className={MEMBER_ROW_CLASS_NAME}>
-                <AgentAvatar module={agent.module} label={agent.name} online={isActive} />
+                <AgentAvatar module={agent.module} label={agentDisplayName(agent)} online={isActive} />
                 <div className={MEMBER_TEXT_CLASS_NAME}>
-                  <Text weight="medium" overflow="truncate">{agent.name}</Text>
+                  <Text weight="medium" overflow="truncate">{agentDisplayName(agent)}</Text>
                   <Text size="sm" tone="muted" overflow="truncate">{isActive ? `@${agent.handle} · ${agent.role}` : t("paused")}</Text>
                   <div className={MEMBER_ACTIONS_CLASS_NAME}>
                     {isActive ? <Button variant="ghost" size="sm" onPress={() => onMention(agent.handle)}>{t("mention")}</Button> : null}

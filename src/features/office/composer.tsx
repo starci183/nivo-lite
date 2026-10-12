@@ -6,6 +6,7 @@ import { nivoIconSource } from "@/ui"
 import { useT } from "@/i18n/client"
 import { office } from "@/i18n/dict/office"
 import type { Agent } from "@/lib/types"
+import { agentDisplayName } from "@/lib/modules-shared"
 import {
   CHIPS_CLASS_NAME,
   COMPOSER_CLASS_NAME,
@@ -49,7 +50,7 @@ export const Composer = ({
       { id: "nivo", label: "nivo", description: `${t("nivoCore")} · ${t("nivoRole")}` },
       ...agents
         .filter((a) => a.status === "active")
-        .map((a) => ({ id: `agent-${a.id}`, label: a.handle, description: `${a.name} · ${a.role}` })),
+        .map((a) => ({ id: `agent-${a.id}`, label: a.handle, description: `${agentDisplayName(a)} · ${a.role}` })),
       ...staff.map((m) => ({ id: `staff-${m.id}`, label: m.handle, description: `${m.name} · ${m.role || t("staffTag")}` })),
     ],
     [agents, staff, t],
