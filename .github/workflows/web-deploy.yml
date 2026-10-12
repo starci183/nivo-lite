@@ -51,6 +51,9 @@ jobs:
             NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.WEB_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
             NEXT_PUBLIC_SITE_URL=https://nivo.vn
             NEXT_PUBLIC_DEMO_LOGIN=${{ secrets.WEB_NEXT_PUBLIC_DEMO_LOGIN }}
+            NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ secrets.WEB_NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
+            NEXT_PUBLIC_GOOGLE_PICKER_API_KEY=${{ secrets.WEB_NEXT_PUBLIC_GOOGLE_PICKER_API_KEY }}
+            NEXT_PUBLIC_GOOGLE_APP_ID=${{ secrets.WEB_NEXT_PUBLIC_GOOGLE_APP_ID }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

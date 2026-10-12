@@ -31,12 +31,18 @@ const appMap = new Map(app.map(kv));
 const WEB_SKIP = /^SUPABASE_AUTH_EXTERNAL_/;
 const quote = (v) => (/[$#\s"]|\\/.test(v) && !v.includes("'") ? `'${v}'` : v);
 const web = new Map([...appMap].filter(([k]) => !WEB_SKIP.test(k)));
+// The same Google OAuth client also serves the app's own Google features (Sheets connector, Drive read grant): ship it under the
+// app's names unless secrets.env sets GOOGLE_OAUTH_* explicitly.
+if (!web.get("GOOGLE_OAUTH_CLIENT_ID") && appMap.get("SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID")) web.set("GOOGLE_OAUTH_CLIENT_ID", appMap.get("SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID"));
+if (!web.get("GOOGLE_OAUTH_CLIENT_SECRET") && appMap.get("SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET")) web.set("GOOGLE_OAUTH_CLIENT_SECRET", appMap.get("SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET"));
+// The Picker's public client id is the same client id (public by nature).
+if (!appMap.get("NEXT_PUBLIC_GOOGLE_CLIENT_ID")) appMap.set("NEXT_PUBLIC_GOOGLE_CLIENT_ID", web.get("GOOGLE_OAUTH_CLIENT_ID") ?? "");
 web.set("NEXT_PUBLIC_SITE_URL", "https://nivo.vn");
 const shared = engine.map(kv).find(([k]) => k === "ENGINE_SHARED_SECRET");
 if (shared && shared[1]) web.set("ENGINE_SHARED_SECRET", shared[1]);
 const webEnv = [...web].filter(([, v]) => v !== "").map(([k, v]) => `${k}=${quote(v)}`);
 
-const buildArgs = ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "NEXT_PUBLIC_DEMO_LOGIN"];
+const buildArgs = ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "NEXT_PUBLIC_DEMO_LOGIN", "NEXT_PUBLIC_GOOGLE_CLIENT_ID", "NEXT_PUBLIC_GOOGLE_PICKER_API_KEY", "NEXT_PUBLIC_GOOGLE_APP_ID"];
 for (const k of buildArgs.slice(0, 2)) if (!appMap.get(k)) throw new Error(`${k} missing in the [app] block`);
 
 const wi = process.argv.indexOf("--write-web");
