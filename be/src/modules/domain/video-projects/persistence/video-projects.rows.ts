@@ -1,5 +1,3 @@
-import type { MemberRole } from "../video-projects.contracts"
-
 /** The project to render with everything the spec needs: one joined row of `SELECT_PROJECT_FOR_RENDER`. */
 export interface ProjectRenderRow {
     /** The project id. */
@@ -14,8 +12,6 @@ export interface ProjectRenderRow {
     readonly script: unknown
     /** The version the next render snapshots. */
     readonly version: number
-    /** The caller's role in the workspace. */
-    readonly role: MemberRole
     /** The status of the render the project points at, or null. */
     readonly render_status: string | null
     /** The workspace name. */

@@ -12,9 +12,9 @@ import type { ProjectRenderRow } from "./persistence/video-projects.rows"
 @Injectable()
 /** The `video_projects` rows: the project a render starts from, locked in the transaction that queues the render, and the status the render leaves it in. */
 export class VideoProjectsService {
-    /** The project with the caller's role and the brand kit, locked in the caller's transaction; null when it does not exist or the caller is no member of its workspace. */
-    async forRender(manager: EntityManager, projectId: string, principalId: string): Promise<ProjectLookup> {
-        const [row] = await manager.query<Array<ProjectRenderRow>>(SELECT_PROJECT_FOR_RENDER, [projectId, principalId])
+    /** The project with its brand kit, locked in the caller's transaction; null when it does not exist. */
+    async forRender(manager: EntityManager, projectId: string): Promise<ProjectLookup> {
+        const [row] = await manager.query<Array<ProjectRenderRow>>(SELECT_PROJECT_FOR_RENDER, [projectId])
         if (row === undefined) return null
         return {
             id: row.id,
@@ -23,7 +23,6 @@ export class VideoProjectsService {
             status: row.status,
             script: row.script,
             version: row.version,
-            role: row.role,
             renderStatus: row.render_status,
             workspaceName: row.workspace_name,
             brand: {

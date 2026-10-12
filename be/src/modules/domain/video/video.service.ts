@@ -3,6 +3,7 @@ import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
+import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { VideoProjectsService } from "@modules/domain/video-projects"
 import { VideoProjectVersionsService } from "@modules/domain/video-project-versions"
 import { VideoRendersService } from "@modules/domain/video-renders"
@@ -24,6 +25,7 @@ const OPEN_RENDER_STATUSES: ReadonlyArray<string | null> = ["queued", "rendering
 export class VideoService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly members: WorkspaceMembersService,
         private readonly projects: VideoProjectsService,
         private readonly versions: VideoProjectVersionsService,
         private readonly renders: VideoRendersService,
@@ -34,14 +36,15 @@ export class VideoService {
     /**
      * Queues a render of a project of the caller: the spec is built from the script and the brand kit and validated, then the render row, the
      * project version, the project's new status and the render-video job are written in one transaction, so the job exists exactly when the
-     * render does. Only an owner or manager of the workspace may render.
+     * render does. Only an owner or manager of the workspace may render (the workspace-members capability refuses anyone else).
      */
     requestRender(principalId: string, projectId: string): Promise<RenderQueued> {
         return this.entityManager.transaction(async (manager) => {
-            const project = await this.projects.forRender(manager, projectId, principalId)
-            if (project === null || project.role === "staff") {
+            const project = await this.projects.forRender(manager, projectId)
+            if (project === null) {
                 throw new VideoError({ code: VideoErrorCode.ProjectNotFound, params: { projectId } })
             }
+            await this.members.require(principalId, project.workspaceId, ["owner", "manager"])
             if (project.status === "scripting" || OPEN_RENDER_STATUSES.includes(project.renderStatus)) {
                 throw new VideoError({ code: VideoErrorCode.ProjectBusy, params: { projectId } })
             }

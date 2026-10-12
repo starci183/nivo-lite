@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { EventsService } from "@modules/domain/events"
 import { ContentItemsService } from "@modules/domain/content-items"
 import type { DueItem } from "@modules/domain/content-items"
 import { ContentSettingsService } from "@modules/domain/content-settings"
@@ -13,13 +14,7 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ContentService } from "./content.service"
 import { ContentLogEvent } from "./content.log-events"
-import {
-    INSERT_EVIDENCE,
-    INSERT_NOTICE,
-    SELECT_CADENCE_CHANNELS,
-    SELECT_FRESH_SOURCES,
-    SELECT_PILLARS,
-} from "./persistence/content.sql"
+import { INSERT_NOTICE, SELECT_CADENCE_CHANNELS, SELECT_FRESH_SOURCES, SELECT_PILLARS } from "./persistence/content.sql"
 
 /** Monday 12 October 2026, 09:30 in Vietnam. */
 const MONDAY = "2026-10-12T02:30:00.000Z"
@@ -50,6 +45,7 @@ const build = async (entityManager: MockEntityManager) => {
     catalog.get.mockImplementation((key, params) => PATTERNS[key] ?? `${key}:${JSON.stringify(params)}`)
     const items = mock<ContentItemsService>()
     const settings = mock<ContentSettingsService>()
+    const events = mock<EventsService>()
     const logger = mock<Logger>()
     items.listBetween.mockResolvedValue([])
     items.hasOffer.mockResolvedValue(false)
@@ -62,12 +58,13 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: ContentItemsService, useValue: items },
             { provide: ContentSettingsService, useValue: settings },
+            { provide: EventsService, useValue: events },
             { provide: CLOCK, useValue: new FakeClock(MONDAY) },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: LOGGER, useValue: logger },
         ],
     }).compile()
-    return { content: moduleRef.get(ContentService), items, settings, logger }
+    return { content: moduleRef.get(ContentService), items, settings, events, logger }
 }
 
 describe("ContentService", () => {
@@ -83,10 +80,7 @@ describe("ContentService", () => {
         it("honours force only for the one workspace it is asked about", async () => {
             const { content, settings, items } = await build(
                 mockEntityManager({
-                    query: [
-                        [INSERT_EVIDENCE, []],
-                        [INSERT_NOTICE, []],
-                    ],
+                    query: [[INSERT_NOTICE, []]],
                 }),
             )
             settings.tickWorkspaces.mockResolvedValue([
@@ -138,12 +132,9 @@ describe("ContentService", () => {
 
         it("tells what is due today, how many are not approved, and remembers the day", async () => {
             const em = mockEntityManager({
-                query: [
-                    [INSERT_EVIDENCE, []],
-                    [INSERT_NOTICE, []],
-                ],
+                query: [[INSERT_NOTICE, []]],
             })
-            const { content, settings, items } = await build(em)
+            const { content, settings, items, events } = await build(em)
             settings.tickWorkspaces.mockResolvedValue([reminderOf()])
             items.listBetween.mockResolvedValue([
                 itemOf(),
@@ -175,21 +166,18 @@ describe("ContentService", () => {
                 "workspace-1",
                 `content.reminder.body:${JSON.stringify({ count: 2, lines, tail: 'content.reminder.notReady:{"count":1}' })}`,
             ])
-            expect(em.query).toHaveBeenCalledWith(INSERT_EVIDENCE, [
-                "workspace-1",
-                "content.reminder",
-                'content.reminder.evidence:{"count":2}',
-                "2026-10-12",
-            ])
+            expect(events.record).toHaveBeenCalledWith({
+                workspaceId: "workspace-1",
+                kind: "content.reminder",
+                actor: "NIVO",
+                summary: 'content.reminder.evidence:{"count":2}',
+            })
             expect(settings.mergeMarks).toHaveBeenCalledWith("workspace-1", { reminder_day: "2026-10-12" })
         })
 
         it("says everything is approved when it is", async () => {
             const em = mockEntityManager({
-                query: [
-                    [INSERT_EVIDENCE, []],
-                    [INSERT_NOTICE, []],
-                ],
+                query: [[INSERT_NOTICE, []]],
             })
             const { content, settings, items } = await build(em)
             settings.tickWorkspaces.mockResolvedValue([reminderOf()])
@@ -240,7 +228,6 @@ describe("ContentService", () => {
                         ],
                     ],
                     [INSERT_NOTICE, []],
-                    [INSERT_EVIDENCE, []],
                 ],
             })
             const { content, settings, items } = await build(em)
@@ -274,7 +261,6 @@ describe("ContentService", () => {
                 query: [
                     [SELECT_PILLARS, []],
                     [INSERT_NOTICE, []],
-                    [INSERT_EVIDENCE, []],
                 ],
             })
             const { content, settings, items } = await build(em)
@@ -294,7 +280,6 @@ describe("ContentService", () => {
                 query: [
                     [SELECT_PILLARS, []],
                     [INSERT_NOTICE, []],
-                    [INSERT_EVIDENCE, []],
                 ],
             })
             const { content, settings } = await build(em)

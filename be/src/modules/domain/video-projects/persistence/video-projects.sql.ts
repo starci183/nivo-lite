@@ -1,14 +1,13 @@
 import { sql } from "@modules/platform/database"
 
 /**
- * The project a caller asks to render, locked for the transaction, with the caller's role in its workspace, the workspace name, the brand kit and the
- * status of the render it points at ($1 project, $2 caller). No row = the project does not exist or the caller is not a member.
+ * The project a caller asks to render, locked for the transaction, with the workspace name, the brand kit and the
+ * status of the render it points at ($1 project). No row = the project does not exist.
  */
-export const SELECT_PROJECT_FOR_RENDER = sql`SELECT p.id, p.workspace_id, p.aspect, p.status, p.script, p.version, m.role,
+export const SELECT_PROJECT_FOR_RENDER = sql`SELECT p.id, p.workspace_id, p.aspect, p.status, p.script, p.version,
        r.status AS render_status, w.name AS workspace_name,
        k.shop_name, k.primary_color, k.secondary_color, k.logo_path, k.music_track, k.voice
 FROM public.video_projects p
-JOIN public.workspace_members m ON m.workspace_id = p.workspace_id AND m.user_id = $2 AND m.status = 'active'
 JOIN public.workspaces w ON w.id = p.workspace_id
 LEFT JOIN public.video_brand_kits k ON k.workspace_id = p.workspace_id
 LEFT JOIN public.video_renders r ON r.id = p.render_id

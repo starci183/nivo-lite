@@ -1,4 +1,5 @@
 import { NestFactory } from "@nestjs/core"
+import type { NestExpressApplication } from "@nestjs/platform-express"
 import { SystemClockService } from "@modules/platform/clock"
 import { EnvSource, parseServerConfig } from "@modules/platform/config"
 import { parsePrimaryDatabaseConfig } from "@modules/platform/database"
@@ -6,12 +7,17 @@ import { parseHttpSecurityConfig, RequestValidationService } from "@modules/plat
 import { createJsonLogger, LoggingLogEvent } from "@modules/platform/logging"
 import { parseJobsConfig } from "@modules/platform/jobs"
 import { parseQueueConfig } from "@modules/platform/queue"
+import { parseWorkspaceInvitesConfig } from "@modules/domain/workspace-invites"
+import { parseWorkspacesConfig } from "@modules/domain/workspaces"
 import { parseVideoConfig } from "@modules/domain/video"
-import { parseSupabaseConfig } from "@modules/integrations/supabase"
 import { parseFfmpegConfig } from "@modules/integrations/ffmpeg"
+import { parseSupabaseConfig } from "@modules/integrations/supabase"
 import { parseTtsConfig } from "@modules/integrations/tts"
 import { AppModule } from "./app.module"
 import type { ApiOptions } from "./api.options"
+
+/** Proxy hops in front of the API (the Traefik edge): the rate limit keys on the real client address, not on the proxy. */
+const TRUSTED_PROXY_HOPS = 1
 
 /** Reads the environment once, composes the API from parsed options and serves until a shutdown signal. */
 const bootstrap = async (): Promise<void> => {
@@ -25,13 +31,16 @@ const bootstrap = async (): Promise<void> => {
         },
         database: parsePrimaryDatabaseConfig(env),
         supabase: parseSupabaseConfig(env),
+        workspaces: parseWorkspacesConfig(env),
+        workspaceInvites: parseWorkspaceInvitesConfig(env),
         queue: parseQueueConfig(env),
         jobs: parseJobsConfig(env),
         ffmpeg: parseFfmpegConfig(env),
         tts: parseTtsConfig(env),
         video: parseVideoConfig(env),
     }
-    const app = await NestFactory.create(AppModule.register(options), { rawBody: true })
+    const app = await NestFactory.create<NestExpressApplication>(AppModule.register(options), { rawBody: true })
+    app.set("trust proxy", TRUSTED_PROXY_HOPS)
     app.enableCors({ origin: [...options.httpSecurity.allowedOrigins] })
     app.enableShutdownHooks()
     app.useGlobalPipes(app.get(RequestValidationService))

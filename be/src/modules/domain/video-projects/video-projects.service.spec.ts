@@ -15,7 +15,6 @@ const ROW = {
     status: "draft",
     script: [{ caption: "Hello" }],
     version: 3,
-    role: "owner",
     render_status: "done",
     workspace_name: "Bakery",
     shop_name: "Bakery Shop",
@@ -33,18 +32,17 @@ const build = async () => {
 
 describe("VideoProjectsService", () => {
     describe("forRender", () => {
-        it("answers the project with the caller's role and the brand kit", async () => {
+        it("answers the project with its brand kit", async () => {
             const manager = mockEntityManager({ query: [SELECT_PROJECT_FOR_RENDER, [ROW]] })
             const projects = await build()
 
-            await expect(projects.forRender(manager, "project-1", "person-1")).resolves.toEqual({
+            await expect(projects.forRender(manager, "project-1")).resolves.toEqual({
                 id: "project-1",
                 workspaceId: "workspace-1",
                 aspect: "9:16",
                 status: "draft",
                 script: [{ caption: "Hello" }],
                 version: 3,
-                role: "owner",
                 renderStatus: "done",
                 workspaceName: "Bakery",
                 brand: {
@@ -56,14 +54,14 @@ describe("VideoProjectsService", () => {
                     voice: "vi-VN-NamMinhNeural",
                 },
             })
-            expect(manager.query).toHaveBeenCalledWith(SELECT_PROJECT_FOR_RENDER, ["project-1", "person-1"])
+            expect(manager.query).toHaveBeenCalledWith(SELECT_PROJECT_FOR_RENDER, ["project-1"])
         })
 
-        it("answers nothing when the project does not exist or the caller is no member", async () => {
+        it("answers nothing when the project does not exist ", async () => {
             const manager = mockEntityManager({ query: [SELECT_PROJECT_FOR_RENDER, []] })
             const projects = await build()
 
-            await expect(projects.forRender(manager, "project-1", "person-1")).resolves.toBeNull()
+            await expect(projects.forRender(manager, "project-1")).resolves.toBeNull()
         })
     })
 

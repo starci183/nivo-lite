@@ -1,6 +1,3 @@
-/** The role a member holds in a workspace. */
-export type MemberRole = "owner" | "manager" | "staff"
-
 /** The brand kit of the project's workspace; every field is null when the workspace saved none. */
 export interface ProjectBrand {
     /** The shop name shown in the video. */
@@ -31,8 +28,6 @@ export interface ProjectForRender {
     readonly script: unknown
     /** The version the next render snapshots. */
     readonly version: number
-    /** The caller's role in the workspace. */
-    readonly role: MemberRole
     /** The status of the render the project points at, or null. */
     readonly renderStatus: string | null
     /** The workspace name. */
@@ -51,5 +46,5 @@ export interface RenderStart {
     readonly spec: string
 }
 
-/** The answer of looking a project up for a render: the project, or null when it does not exist or the caller is no member of its workspace. */
+/** The answer of looking a project up for a render: the project, or null when it does not exist. */
 export type ProjectLookup = ProjectForRender | null

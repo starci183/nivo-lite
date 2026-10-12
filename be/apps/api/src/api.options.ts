@@ -4,6 +4,8 @@ import type { FfmpegOptions } from "@modules/integrations/ffmpeg"
 import type { TtsOptions } from "@modules/integrations/tts"
 import type { ServerOptions } from "@modules/platform/config"
 import type { DatabaseConnectionOptions } from "@modules/platform/database"
+import type { WorkspaceInvitesOptions } from "@modules/domain/workspace-invites"
+import type { WorkspacesOptions } from "@modules/domain/workspaces"
 import type { HttpSecurityOptions } from "@modules/platform/http-security"
 import type { JobsConfig } from "@modules/platform/jobs"
 import type { QueueConfig } from "@modules/platform/queue"
@@ -18,7 +20,11 @@ export interface ApiOptions {
     readonly database: DatabaseConnectionOptions
     /** Supabase Auth, Storage and token-verification configuration. */
     readonly supabase: SupabaseOptions
-    /** How the queue relay and the pgmq workers run. */
+    /** Whether a person with no workspace may create a free one. */
+    readonly workspaces: WorkspacesOptions
+    /** Invitation links and how long they stay valid. */
+    readonly workspaceInvites: Omit<WorkspaceInvitesOptions, "delivery">
+    /** How the pgmq workers run. */
     readonly queue: QueueConfig
     /** Who this worker is and how long a job claim lasts. */
     readonly jobs: JobsConfig

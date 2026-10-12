@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { builder, fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
 import type { RecordingQueueOutbox } from "@starci/jest-preset"
+import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { VideoProjectsService } from "@modules/domain/video-projects"
 import { VideoProjectVersionsService } from "@modules/domain/video-project-versions"
 import { VideoRendersService } from "@modules/domain/video-renders"
@@ -23,7 +24,6 @@ const projectOf = builder<Found>({
     status: "draft",
     script: [{ caption: "Welcome", voiceover: "Hello", media: null }],
     version: 3,
-    role: "owner",
     renderStatus: null,
     workspaceName: "Bakery",
     brand: {
@@ -38,6 +38,7 @@ const projectOf = builder<Found>({
 
 const build = async () => {
     const tx = fakeTransaction(mockEntityManager())
+    const members = mock<WorkspaceMembersService>()
     const projects = mock<VideoProjectsService>()
     const versions = mock<VideoProjectVersionsService>()
     const renders = mock<VideoRendersService>()
@@ -50,6 +51,7 @@ const build = async () => {
             VideoService,
             VideoRenderQueue,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
+            { provide: WorkspaceMembersService, useValue: members },
             { provide: VideoProjectsService, useValue: projects },
             { provide: VideoProjectVersionsService, useValue: versions },
             { provide: VideoRendersService, useValue: renders },
@@ -57,7 +59,7 @@ const build = async () => {
             { provide: QUEUE_OUTBOX, useValue: outbox },
         ],
     }).compile()
-    return { video: moduleRef.get(VideoService), tx, projects, versions, renders, outbox }
+    return { video: moduleRef.get(VideoService), tx, members, projects, versions, renders, outbox }
 }
 
 describe("VideoService", () => {
@@ -100,18 +102,28 @@ describe("VideoService", () => {
             expect(tx.commits).toBe(1)
         })
 
-        it.each([
-            ["no project", null],
-            ["a member who is only staff", projectOf({ role: "staff" })],
-        ])("refuses %s", async (_label, found) => {
+        it("refuses a project that does not exist", async () => {
             const { video, projects, renders, outbox } = await build()
-            projects.forRender.mockResolvedValue(found)
+            projects.forRender.mockResolvedValue(null)
 
             await expect(video.requestRender("person-1", "project-1")).rejects.toMatchObject({
                 code: VideoErrorCode.ProjectNotFound,
                 params: { projectId: "project-1" },
             })
 
+            expect(renders.open).not.toHaveBeenCalled()
+            expect(outbox.jobs).toEqual([])
+        })
+
+        it("refuses anyone who does not manage the workspace", async () => {
+            const { video, projects, members, renders, outbox } = await build()
+            projects.forRender.mockResolvedValue(projectOf())
+            const refusal = new Error("not a manager")
+            members.require.mockRejectedValue(refusal)
+
+            await expect(video.requestRender("person-1", "project-1")).rejects.toBe(refusal)
+
+            expect(members.require).toHaveBeenCalledWith("person-1", WORKSPACE, ["owner", "manager"])
             expect(renders.open).not.toHaveBeenCalled()
             expect(outbox.jobs).toEqual([])
         })

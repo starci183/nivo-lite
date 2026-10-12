@@ -28,9 +28,3 @@ LIMIT 5`
  * never writes a table that is not its own; the function moves into the Office capability when that lands.
  */
 export const INSERT_NOTICE = sql`SELECT public.post_office_notice($1, $2) AS posted`
-
-/**
- * An evidence line of what NIVO did ($1 workspace, $2 kind, $3 summary, $4 evidence). The audit trail is written by one definer function of the
- * database, so this capability never writes a table that is not its own; the function moves into the audit capability when that lands.
- */
-export const INSERT_EVIDENCE = sql`SELECT public.log_nivo_evidence($1, $2, $3, $4) AS logged`

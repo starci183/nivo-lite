@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { EventsService } from "@modules/domain/events"
 import { ContentItemsService } from "@modules/domain/content-items"
 import type { DueItem } from "@modules/domain/content-items"
 import { ContentSettingsService } from "@modules/domain/content-settings"
@@ -23,13 +24,7 @@ import {
     vnDateKey,
     weekStartKey,
 } from "./content-time.policy"
-import {
-    INSERT_EVIDENCE,
-    INSERT_NOTICE,
-    SELECT_CADENCE_CHANNELS,
-    SELECT_FRESH_SOURCES,
-    SELECT_PILLARS,
-} from "./persistence/content.sql"
+import { INSERT_NOTICE, SELECT_CADENCE_CHANNELS, SELECT_FRESH_SOURCES, SELECT_PILLARS } from "./persistence/content.sql"
 import type { CadenceRow, FreshSourceRow, PillarRow } from "./persistence/content.rows"
 
 /** The id every uuid sorts after: where the keyset scan of the workspaces starts. */
@@ -60,6 +55,7 @@ export class ContentService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly items: ContentItemsService,
+        private readonly events: EventsService,
         private readonly settings: ContentSettingsService,
         @InjectClock() private readonly clock: Clock,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
@@ -114,12 +110,12 @@ export class ContentService {
         const due = items.filter((item) => item.status !== "published" && item.status !== "skipped")
         if (due.length > 0) {
             await this.notify(workspaceId, this.reminderBody(due))
-            await this.entityManager.query(INSERT_EVIDENCE, [
+            await this.events.record({
                 workspaceId,
-                "content.reminder",
-                this.text("content.reminder.evidence", { count: due.length }),
-                vnDateKey(now),
-            ])
+                kind: "content.reminder",
+                actor: "NIVO",
+                summary: this.text("content.reminder.evidence", { count: due.length }),
+            })
         }
         await this.settings.mergeMarks(workspaceId, { reminder_day: vnDateKey(now) })
         return due.length
@@ -150,12 +146,12 @@ export class ContentService {
         const items = await this.items.listBetween(workspaceId, window.from, window.to)
         const pillars = await this.entityManager.query<Array<PillarRow>>(SELECT_PILLARS, [workspaceId])
         await this.notify(workspaceId, this.summaryBody(items, pillars))
-        await this.entityManager.query(INSERT_EVIDENCE, [
+        await this.events.record({
             workspaceId,
-            "content.weekly_summary",
-            this.text("content.summary.evidence", { count: items.length }),
-            weekStartKey(now),
-        ])
+            kind: "content.weekly_summary",
+            actor: "NIVO",
+            summary: this.text("content.summary.evidence", { count: items.length }),
+        })
         await this.settings.mergeMarks(workspaceId, { summary_week: weekStartKey(now) })
         return items.length
     }
