@@ -15,12 +15,17 @@ type CardProps = {
   readonly write: FactWrite | RuleWrite;
   /** Sends the owner's decision; resolves to an error message, or undefined when it worked. */
   readonly onDecide: (id: string, change: WriteDecision) => Promise<string | undefined>;
+  /**
+   * The instance being set up, when its type allows several (one Chatbot per branch): a fact may be kept for this instance only, and a
+   * rule card says that authority is shared by every instance of the type. Null for a single-instance type.
+   */
+  readonly instance?: { readonly name: string; readonly typeName: string } | null;
 };
 
 const MODES: ReadonlyArray<RuleMode> = ["auto", "ask", "never"];
 
 /** One proposed write of the setup chat. Fact: subject · attribute · value · scope. Rule: action · mode · limit. The owner confirms (edited or not) before anything is written. */
-export const SetupWriteCard = ({ write, onDecide }: CardProps) => {
+export const SetupWriteCard = ({ write, onDecide, instance = null }: CardProps) => {
   const t = useT(moduleSetup);
   const locale = useLocale();
   const [isEditing, setEditing] = useState(false);
@@ -32,6 +37,9 @@ export const SetupWriteCard = ({ write, onDecide }: CardProps) => {
   const [scope, setScope] = useState<Scope>(write.kind === "fact" ? write.payload.scope : "internal");
   const [mode, setMode] = useState<RuleMode>(write.kind === "rule" ? write.payload.mode : "ask");
   const [limit, setLimit] = useState<number | null>(write.kind === "rule" ? write.payload.limitVnd : null);
+  // Shared by every instance of the type unless the owner keeps it for this one (only offered for a multi-instance type).
+  const [onlyThis, setOnlyThis] = useState(false);
+  const forLabel = instance ? (onlyThis ? t("wForThis", { name: instance.name }) : t("wForAll", { type: instance.typeName })) : "";
 
   const money = (n: number | null) => (n === null ? t("wLimitNone") : new Intl.NumberFormat(intlLocale(locale), { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(n));
   const scopeLabel = (s: Scope) => t(s === "public" ? "wScopePublic" : s === "internal" ? "wScopeInternal" : "wScopeRestricted");
@@ -62,11 +70,12 @@ export const SetupWriteCard = ({ write, onDecide }: CardProps) => {
   }
 
   const currentValue = write.kind === "fact" ? write.current?.value : undefined;
-  const isConflict = write.kind === "fact" && write.current !== null && !sameValue(write.current.value, value);
+  // `current` is the shared value: a value kept for this instance only sits beside it and never conflicts with it.
+  const isConflict = write.kind === "fact" && !onlyThis && write.current !== null && !sameValue(write.current.value, value);
   const canConfirm = write.kind === "fact" ? value.trim().length > 0 && (resolution !== "both" || !isConflict || situation.trim().length > 0) : true;
 
   const confirm = () => {
-    if (write.kind === "fact") void decide({ decision: "confirm", fact: { value, scope }, resolution: isConflict ? resolution : undefined, situation: resolution === "both" ? situation : undefined });
+    if (write.kind === "fact") void decide({ decision: "confirm", fact: { value, scope }, resolution: isConflict ? resolution : undefined, situation: resolution === "both" ? situation : undefined, onlyThisAgent: instance !== null && onlyThis });
     else void decide({ decision: "confirm", rule: { mode, limitVnd: actionDef(write.payload.action).amountLimit ? limit : null } });
   };
 
@@ -76,6 +85,7 @@ export const SetupWriteCard = ({ write, onDecide }: CardProps) => {
       { id: "attribute", term: t("wAttribute"), description: write.payload.attributeLabel },
       ...(isEditing ? [] : [{ id: "value", term: t("wValue"), description: value }]),
       ...(isEditing ? [] : [{ id: "scope", term: t("wScope"), description: scopeLabel(scope) }]),
+      ...(isEditing || instance === null ? [] : [{ id: "for", term: t("wFor"), description: forLabel }]),
     ]
     : [
       { id: "action", term: t("wAction"), description: pick(actionDef(write.payload.action).label, locale) },
@@ -91,6 +101,7 @@ export const SetupWriteCard = ({ write, onDecide }: CardProps) => {
         {write.kind === "fact" && write.payload.gapId ? <Badge tone="warning">{t("wGap")}</Badge> : null}
       </div>
       <DescriptionList layout="stacked" items={items} />
+      {write.kind === "rule" && instance !== null ? <Text size="xs" tone="muted">{t("wRuleShared", { type: instance.typeName })}</Text> : null}
 
       {isEditing ? (
         <div className={c.WRITE_FIELDS_CLASS_NAME}>
@@ -101,6 +112,12 @@ export const SetupWriteCard = ({ write, onDecide }: CardProps) => {
                 label={t("wScope")} value={scope} onValueChange={(v) => setScope(v === "public" || v === "restricted" ? v : "internal")}
                 options={[{ value: "public", label: t("wScopePublic") }, { value: "internal", label: t("wScopeInternal") }, { value: "restricted", label: t("wScopeRestricted") }]}
               />
+              {instance !== null ? (
+                <SegmentedControl
+                  label={t("wFor")} value={onlyThis ? "this" : "all"} onValueChange={(v) => setOnlyThis(v === "this")}
+                  options={[{ value: "all", label: t("wForAll", { type: instance.typeName }) }, { value: "this", label: t("wForThis", { name: instance.name }) }]}
+                />
+              ) : null}
             </>
           ) : (
             <>

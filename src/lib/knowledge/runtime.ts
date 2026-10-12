@@ -9,9 +9,9 @@ import type { Audience } from "./shared";
  * Uses the engine's own db client (so it works from webhooks) and never throws: an agent without knowledge still answers safely.
  * `customer` = a reply the customer will read (public knowledge only); `internal` = Office and owner-facing work.
  */
-export const knowledgeBrief = async (c: { db: unknown; ws: string }, module: ModuleKey, query: string, audience: Audience): Promise<string> => {
+export const knowledgeBrief = async (c: { db: unknown; ws: string }, module: ModuleKey, query: string, audience: Audience, installationId: string | null = null): Promise<string> => {
   try {
-    const { system } = await buildAgentContext({ workspaceId: c.ws, module, query, audience, db: c.db as SupabaseClient });
+    const { system } = await buildAgentContext({ workspaceId: c.ws, module, query, audience, db: c.db as SupabaseClient, installationId });
     return system ? `\n\n${system}` : "";
   } catch (e) {
     console.error("knowledgeBrief failed:", e instanceof Error ? e.message : String(e));

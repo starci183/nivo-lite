@@ -27,12 +27,16 @@ import type { Audience, Passage, Visibility } from "./shared";
  * Narrowing: a caller may ask for a NARROWER view than its module has (lensFor's `audience: "customer"`): text that leaves the building
  * (a customer chat reply, a job ad, an offer letter, a supplier message) is written from the public view even by an internal module.
  * A lens can never be widened beyond what the registry and PUBLIC_ONLY_MODULES allow.
+ *
+ * Instances: a multi-instance type (one Chatbot per branch or Fanpage) reads the knowledge shared by every instance (installation_id null on
+ * the document or the fact, the default) plus what is restricted to ITS instance (installation_id = its own). A lens without an instance
+ * (a type-level caller) reads the shared knowledge only; instance-restricted documents and facts never reach another instance.
  * Embedding calls stay metered: lensPassages runs the query embedding inside withUsage, so credits are charged as before.
  */
 
 type Db = SupabaseClient;
 
-export type Lens = { readonly workspaceId: string; readonly module: ModuleKey; readonly audience: Audience };
+export type Lens = { readonly workspaceId: string; readonly module: ModuleKey; readonly audience: Audience; readonly installationId: string | null };
 
 /**
  * Marketing modules publish what they write (social posts, videos), so they read PUBLIC knowledge only, whatever the module registry
@@ -40,15 +44,35 @@ export type Lens = { readonly workspaceId: string; readonly module: ModuleKey; r
  */
 const PUBLIC_ONLY_MODULES: ReadonlySet<ModuleKey> = new Set<ModuleKey>(["content", "video"]);
 
-/** The lens of one module in one workspace. `audience` can only narrow the view to "customer", never widen it. */
-export const lensFor = (workspaceId: string, module: ModuleKey, opts: { readonly audience?: Audience } = {}): Lens => ({
-  workspaceId, module,
+/**
+ * The lens of one module in one workspace. `audience` can only narrow the view to "customer", never widen it. `installationId` scopes it
+ * to one agent instance: the shared knowledge plus that instance's own (default: shared only).
+ */
+export const lensFor = (workspaceId: string, module: ModuleKey, opts: { readonly audience?: Audience; readonly installationId?: string | null } = {}): Lens => ({
+  workspaceId, module, installationId: opts.installationId ?? null,
   audience: PUBLIC_ONLY_MODULES.has(module) || registryAudience(module) === "customer" || opts.audience === "customer" ? "customer" : "internal",
 });
 
 const dbOf = async (db?: Db): Promise<Db> => db ?? ((await supabaseServer()) as unknown as Db);
 
 /* ------------------------------------------------------------------ documents */
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The PostgREST filter of the documents a lens may read: of every module or its own, and shared by every instance or restricted to its own.
+ * The instance id only ever comes from the lens (a uuid), never from user text.
+ */
+const sourceScope = (lens: Lens): string => {
+  const own = lens.installationId && UUID.test(lens.installationId) ? lens.installationId : null;
+  const modules = ["module.is.null", `module.eq.${lens.module}`];
+  const instances = own ? ["installation_id.is.null", `installation_id.eq.${own}`] : ["installation_id.is.null"];
+  return modules.flatMap((m) => instances.map((i) => `and(${m},${i})`)).join(",");
+};
+
+/** Defence in depth for a document row: the same rule as sourceScope, in code. */
+const inLens = (lens: Lens, s: { readonly module: string | null; readonly installation_id?: string | null }): boolean =>
+  (s.module === null || s.module === lens.module) && (!s.installation_id || s.installation_id === lens.installationId);
 
 type MatchRow = { layer: "nivo" | "business"; id: string; source_id: string | null; module: string | null; kind: string; title: string; content: string; score: number; visibility: Visibility; topic: string | null };
 
@@ -59,7 +83,7 @@ export const lensPassages = async (lens: Lens, query: string, limit = 8, db?: Db
   const { data, error } = await client.rpc("match_knowledge", {
     p_workspace: lens.workspaceId, p_module: lens.module, p_query_embedding: vector ? toVector(vector) : null, p_query: query, p_limit: limit, p_audience: lens.audience,
     // Only vectors made by this same model are compared with the query vector (see 20261021100000_embedding_model.sql).
-    p_query_model: vector ? embeddingModel() : null,
+    p_query_model: vector ? embeddingModel() : null, p_installation: lens.installationId,
   });
   if (error) { console.error("match_knowledge failed:", error.message); return []; }
   return ((data ?? []) as Array<MatchRow>).map((r) => ({
@@ -67,25 +91,25 @@ export const lensPassages = async (lens: Lens, query: string, limit = 8, db?: Db
   }));
 };
 
-export type LensSource = { id: string; title: string; topic: string | null; kind: string; visibility: Visibility; content: string; module: string | null; created_at: string; updated_at: string };
+export type LensSource = { id: string; title: string; topic: string | null; kind: string; visibility: Visibility; content: string; module: string | null; installation_id: string | null; created_at: string; updated_at: string };
 
 /** The whole documents the lens may read (ready ones, oldest first), for a synced workspace or a standing brand context; use lensPassages for a question. */
 export const lensSources = async (lens: Lens, limit = 200, db?: Db): Promise<Array<LensSource>> => {
   const client = await dbOf(db);
-  let q = client.from("knowledge_sources").select("id, title, topic, kind, visibility, content, module, created_at, updated_at")
-    .eq("workspace_id", lens.workspaceId).eq("status", "ready").or(`module.is.null,module.eq.${lens.module}`);
+  let q = client.from("knowledge_sources").select("id, title, topic, kind, visibility, content, module, installation_id, created_at, updated_at")
+    .eq("workspace_id", lens.workspaceId).eq("status", "ready").or(sourceScope(lens));
   if (lens.audience === "customer") q = q.eq("visibility", "public");
   const { data, error } = await q.order("created_at").limit(limit);
   if (error) throw new Error(error.message);
   // Defence in depth: the filters above are the rule; this keeps a mistake in them from becoming a leak.
-  return ((data ?? []) as Array<LensSource>).filter((s) => (s.module === null || s.module === lens.module) && (lens.audience === "internal" || s.visibility === "public"));
+  return ((data ?? []) as Array<LensSource>).filter((s) => inLens(lens, s) && (lens.audience === "internal" || s.visibility === "public"));
 };
 
 /* ------------------------------------------------------------------ brain facts */
 
 /** The brain facts inside the lens (active, in force, visibleTo). With a query: the best matches (default 8); without: the whole view (default 500). */
 export const lensFacts = async (lens: Lens, query?: string, limit?: number, db?: Db): Promise<Array<Fact>> => {
-  const view = await factsForView(await dbOf(db), lens.workspaceId, lens.audience, lens.module);
+  const view = await factsForView(await dbOf(db), lens.workspaceId, lens.audience, lens.module, 500, lens.installationId);
   return query === undefined ? view.slice(0, limit ?? 500) : searchFacts(view, query, limit ?? 8);
 };
 
@@ -132,6 +156,7 @@ export const lensPassagesText = async (lens: Lens, query: string, limit = 5, db?
   const client = await dbOf(db);
   const { data, error } = await client.rpc("match_knowledge", {
     p_workspace: lens.workspaceId, p_module: lens.module, p_query_embedding: null, p_query: query, p_limit: limit, p_audience: lens.audience, p_query_model: null,
+    p_installation: lens.installationId,
   });
   if (error) { console.error("match_knowledge (text) failed:", error.message); return []; }
   return ((data ?? []) as Array<MatchRow>).filter((r) => r.layer === "business").map((r) => ({
@@ -150,7 +175,7 @@ export type LensCounts = {
 
 const countSources = async (client: Db, lens: Lens, visibility: Visibility): Promise<number> => {
   const { count, error } = await client.from("knowledge_sources").select("id", { count: "exact", head: true })
-    .eq("workspace_id", lens.workspaceId).eq("status", "ready").eq("visibility", visibility).or(`module.is.null,module.eq.${lens.module}`);
+    .eq("workspace_id", lens.workspaceId).eq("status", "ready").eq("visibility", visibility).or(sourceScope(lens));
   if (error) throw new Error(error.message);
   return count ?? 0;
 };

@@ -86,7 +86,8 @@ export const buildAgentBundle = async (db: SupabaseClient, workspaceId: string, 
   const row = inst.data as { id: string; workspace_id: string; module_key: string; agent_id: string | null; active_context_version_id: string | null } | null;
   if (!row || !isModuleKey(row.module_key)) throw new Error("installation not found in this workspace");
   const module = row.module_key;
-  const lens = lensFor(workspaceId, module);
+  // The instance's own lens: the shared documents plus the ones restricted to this instance (one branch's Chatbot holds its own).
+  const lens = lensFor(workspaceId, module, { installationId: row.id });
   const audience = lens.audience;
 
   const [agentRes, versionRes, baseRes, sourceRows] = await Promise.all([

@@ -10,6 +10,8 @@ import { MODULE_GATES, gateEntry, type DraftSnapshot, type GateEvidence, type Mo
 /** One turn of the setup chat as the model sees it. */
 export type SetupTurnInput = {
   moduleKey: ModuleKey;
+  /** The instance being set up: the knowledge brief reads the shared knowledge plus this instance's own. */
+  installationId?: string | null;
   locale: Locale;
   draft: DraftSnapshot;
   gates: GateEvidence;
@@ -60,7 +62,7 @@ export const runSetupTurn = async (input: SetupTurnInput): Promise<SetupTurnResu
   // Continuous QA: NIVO's own checklist + authority for this module, and what the owner already wrote in Tri thức.
   const [nivoSetup, business] = await Promise.all([
     setupKnowledgeText(moduleKey).catch(() => ""),
-    businessKnowledgeBrief(moduleKey, input.message).catch(() => ({ text: "", sourceCount: 0, notApplicable: [] as Array<string> })),
+    businessKnowledgeBrief(moduleKey, input.message, input.installationId ?? null).catch(() => ({ text: "", sourceCount: 0, notApplicable: [] as Array<string> })),
   ]);
   const gaps = input.gaps ?? [];
   const specs = writeSpecLines(moduleKey);

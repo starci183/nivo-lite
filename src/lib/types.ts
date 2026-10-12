@@ -15,6 +15,8 @@ export type AgentConversation = {
   channel?: string | null; external_id?: string | null;
   /** the connection (bot / OA) the conversation came in on; null for the website chat and the legacy env bot */
   connection_id?: string | null;
+  /** the agent instance that handles it (its agent's installation; set by the database) */
+  installation_id?: string | null;
 };
 export type AgentMessage = {
   id: string; workspace_id: string; conversation_id: string; role: "user" | "agent" | "system"; body: string; created_at: string;

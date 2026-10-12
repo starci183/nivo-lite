@@ -43,6 +43,8 @@ export type Fact = {
   readonly unit: string | null
   readonly scope: Scope
   readonly modules: ReadonlyArray<string>
+  /** Null = shared by every agent (and every instance of a type); set = only that agent instance reads it (one branch's Chatbot). */
+  readonly installationId: string | null
   readonly status: FactStatus
   readonly sourceKind: SourceKind
   readonly trust: number
@@ -109,7 +111,9 @@ export const sameValue = (a: string, b: string): boolean => {
 }
 
 /** Whether a fact is visible to an agent with this audience and module (the "view" of the one shared brain). */
-export const visibleTo = (fact: Pick<Fact, "scope" | "modules">, audience: Audience, module: string): boolean => {
+export const visibleTo = (fact: Pick<Fact, "scope" | "modules"> & { readonly installationId?: string | null }, audience: Audience, module: string, installationId: string | null = null): boolean => {
+  // A fact restricted to one agent instance is read by that instance only.
+  if (fact.installationId && fact.installationId !== installationId) return false
   if (fact.scope === "public") return true
   if (fact.scope === "internal") return audience === "internal"
   return audience === "internal" && fact.modules.includes(module)

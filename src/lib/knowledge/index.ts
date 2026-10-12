@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { unstable_cache } from "next/cache";
 import { after } from "next/server";
-import { getActiveContext } from "../modules-core";
+import { getActiveContextOf } from "../modules-core";
 import { moduleDef } from "../module-registry";
 import { enqueueWorkspaceSync } from "../engine-queue";
 import { gateEntry, MODULE_GATES, type ContextVersion, type ModuleKey } from "../modules-shared";
@@ -367,9 +367,11 @@ const contextLines = (v: ContextVersion, module: ModuleKey): string => {
   return [v.snapshot.summary, ...gates, ...facts].filter(Boolean).join("\n");
 };
 
-const activeContextOf = async (db: Db, workspaceId: string, module: ModuleKey, viaSession: boolean): Promise<ContextVersion | null> => {
-  if (viaSession) return getActiveContext(module);
-  const inst = await db.from("module_installations").select("active_context_version_id").eq("workspace_id", workspaceId).eq("module_key", module).maybeSingle();
+/** The context version an instance runs on: the given installation, else the type's first (oldest) one. */
+const activeContextOf = async (db: Db, workspaceId: string, module: ModuleKey, viaSession: boolean, installationId: string | null): Promise<ContextVersion | null> => {
+  if (viaSession && installationId) return getActiveContextOf(installationId);
+  const q = db.from("module_installations").select("active_context_version_id").eq("workspace_id", workspaceId).eq("module_key", module);
+  const inst = await (installationId ? q.eq("id", installationId) : q.order("created_at")).limit(1).maybeSingle();
   const id = (inst.data as { active_context_version_id: string | null } | null)?.active_context_version_id;
   if (!id) return null;
   const v = await db.from("module_context_versions").select("*").eq("id", id).maybeSingle();
@@ -383,9 +385,13 @@ const activeContextOf = async (db: Db, workspaceId: string, module: ModuleKey, v
  * `audience: "customer"` (customer-facing replies) only ever includes PUBLIC business knowledge; the filter is applied in SQL.
  * Safe when everything is empty: the result is then a short note that no knowledge is available. Pass `db` from a webhook (no session).
  */
-export const buildAgentContext = async (a: { workspaceId: string; module: ModuleKey; query: string; audience?: Audience; db?: Db; limit?: number; scope?: "full" | "dynamic" }): Promise<{ system: string; citations: Array<Citation> }> => {
+export const buildAgentContext = async (a: {
+  workspaceId: string; module: ModuleKey; query: string; audience?: Audience; db?: Db; limit?: number; scope?: "full" | "dynamic";
+  /** The agent instance speaking (one branch's Chatbot): its own context version and its instance-restricted knowledge. Default: the type's first. */
+  installationId?: string | null;
+}): Promise<{ system: string; citations: Array<Citation> }> => {
   // The lens decides what this agent reads; a caller can only narrow it (a customer-facing reply passes audience "customer").
-  const lens = lensFor(a.workspaceId, a.module, { audience: a.audience });
+  const lens = lensFor(a.workspaceId, a.module, { audience: a.audience, installationId: a.installationId ?? null });
   const audience: Audience = lens.audience;
   const viaSession = !a.db;
   const db = (a.db ?? ((await supabaseServer()) as unknown as Db));
@@ -396,7 +402,7 @@ export const buildAgentContext = async (a: { workspaceId: string; module: Module
   try {
     const [base, version, passages, brain] = await Promise.all([
       dynamicOnly ? Promise.resolve([] as Array<NivoItem>) : nivoBase(db, a.module, NIVO_BASE_KINDS),
-      dynamicOnly ? Promise.resolve(null) : activeContextOf(db, a.workspaceId, a.module, viaSession).catch(() => null),
+      dynamicOnly ? Promise.resolve(null) : activeContextOf(db, a.workspaceId, a.module, viaSession, a.installationId ?? null).catch(() => null),
       lensPassages(lens, a.query, a.limit ?? 8, db),
       // The shared brain through this agent's view (facts; data hub rows for internal agents). Never blocks the turn.
       recall(db, lens, { query: a.query }).catch((e: unknown) => {
@@ -491,12 +497,13 @@ export const openSuggestions = async (
  * For the setup chat: the business knowledge at a glance, so the assistant checks it BEFORE asking anything, plus the passages
  * closest to the owner's message and the suggestions the owner marked not applicable (those checklist items count as covered).
  */
-export const businessKnowledgeBrief = async (module: ModuleKey, message: string): Promise<{ text: string; sourceCount: number; notApplicable: Array<string> }> => {
+export const businessKnowledgeBrief = async (module: ModuleKey, message: string, installationId: string | null = null): Promise<{ text: string; sourceCount: number; notApplicable: Array<string> }> => {
   const { db, ws } = await ctx();
+  const lens = lensFor(ws, module, { installationId });
   const [sources, states, passages] = await Promise.all([
-    lensSources(lensFor(ws, module), 200, db).then((rows) => ({ data: rows.reverse().slice(0, 40) })), // newest 40, through the lens
+    lensSources(lens, 200, db).then((rows) => ({ data: rows.reverse().slice(0, 40) })), // newest 40, through the lens
     listSuggestionStates(),
-    lensPassages(lensFor(ws, module), message, 6, db),
+    lensPassages(lens, message, 6, db),
   ]);
   const list = (sources.data ?? []) as Array<{ title: string; topic: string | null; kind: string; visibility: Visibility; content: string }>;
   const notApplicable = KNOWLEDGE_SUGGESTIONS.filter((s) => states[s.key]).map((s) => `${s.topic_en} (gates: ${s.gates.join(", ")})`);
