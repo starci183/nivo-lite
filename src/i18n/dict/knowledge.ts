@@ -151,6 +151,7 @@ export const knowledge = defineDict({
     visPublicLong: "Public: the chatbot may answer customers from it",
     visInternalLong: "Internal: only internal agents and staff",
     noVectors: "Keyword search only",
+    noFacts: "Facts not read yet",
     open: "Open",
     // detail
     back: "All documents",
@@ -372,6 +373,7 @@ export const knowledge = defineDict({
     visPublicLong: "Công khai: chatbot được dùng để trả lời khách",
     visInternalLong: "Nội bộ: chỉ agent nội bộ và nhân viên",
     noVectors: "Chỉ tìm theo từ khóa",
+    noFacts: "Chưa đọc được sự thật",
     open: "Mở",
     back: "Tất cả tài liệu",
     detailMeta: "Thêm {when}",

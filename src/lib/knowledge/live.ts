@@ -5,6 +5,16 @@ import { supabaseBrowser } from "../supabase/browser"
 import { LIVE_COLUMNS, sourceFromRow, type LiveRow } from "./queue"
 import { IN_FLIGHT_STATUSES, isInFlight, type KnowledgeSource } from "./shared"
 
+/**
+ * Realtime filters rows through RLS with the token the socket joined with. The browser client reads its session from the cookie
+ * asynchronously, so a channel opened straight away joins with the anon key and never sees a member's rows: hand the session token
+ * to the socket before any channel subscribes.
+ */
+const authorizeRealtime = async (sb: ReturnType<typeof supabaseBrowser>): Promise<void> => {
+  const { data } = await sb.auth.getSession()
+  if (data.session) await sb.realtime.setAuth(data.session.access_token)
+}
+
 const byNewest = (a: KnowledgeSource, b: KnowledgeSource): number => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0)
 
 /**
@@ -30,7 +40,11 @@ export const useLiveSources = (workspaceId: string, initial: ReadonlyArray<Knowl
         return (data as unknown as Array<LiveRow>).map((r) => ({ ...sourceFromRow(r), content: known.get(r.id)?.content ?? "" }))
       })
     }
-    const channel = sb.channel(`knowledge-sources-${workspaceId}`)
+    let cancelled = false
+    let channel: ReturnType<typeof sb.channel> | null = null
+    void authorizeRealtime(sb).catch(() => undefined).then(() => {
+      if (cancelled) return
+      channel = sb.channel(`knowledge-sources-${workspaceId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "knowledge_sources", filter: `workspace_id=eq.${workspaceId}` }, (payload) => {
         if (payload.eventType === "DELETE") {
           const id = (payload.old as { id?: string }).id
@@ -52,7 +66,8 @@ export const useLiveSources = (workspaceId: string, initial: ReadonlyArray<Knowl
         if (connected.current) void reload()
         connected.current = true
       })
-    return () => { void sb.removeChannel(channel) }
+    })
+    return () => { cancelled = true; if (channel) void sb.removeChannel(channel) }
   }, [workspaceId])
 
   return rows
@@ -86,7 +101,11 @@ export const useInFlight = (workspaceId: string, seed: ReadonlyArray<InFlight>):
         .in("status", IN_FLIGHT_STATUSES)
       for (const r of (data ?? []) as Array<LiveRow>) apply(r)
     }
-    const channel = sb.channel(`knowledge-progress-${workspaceId}`)
+    let cancelled = false
+    let channel: ReturnType<typeof sb.channel> | null = null
+    void authorizeRealtime(sb).catch(() => undefined).then(() => {
+      if (cancelled) return
+      channel = sb.channel(`knowledge-progress-${workspaceId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "knowledge_sources", filter: `workspace_id=eq.${workspaceId}` }, (payload) => {
         if (payload.eventType === "DELETE") {
           const id = (payload.old as { id?: string }).id
@@ -100,7 +119,8 @@ export const useInFlight = (workspaceId: string, seed: ReadonlyArray<InFlight>):
         // Catch up on documents queued before the channel opened (or while it was down).
         void reload()
       })
-    return () => { void sb.removeChannel(channel) }
+    })
+    return () => { cancelled = true; if (channel) void sb.removeChannel(channel) }
   }, [workspaceId])
 
   const all = [...seen.values()]
