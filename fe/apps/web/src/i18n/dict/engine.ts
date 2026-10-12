@@ -1,59 +1,6 @@
-import { defineDict } from "../core";
+import en from "@/modules/i18n/messages/en/engine.json"
+import vi from "@/modules/i18n/messages/vi/engine.json"
+import { defineDict } from "../core"
 
 /** The quiet "bản trên OpenClaw" block in module Settings, and the fixed line a customer gets when the engine's answer cannot be parsed. */
-export const engine = defineDict({
-  en: {
-    title: "Agent copy",
-    help: "The agent runs on OpenClaw from a copy of your setup, rules and knowledge. It follows what you approved here, and updates itself every 5 minutes.",
-    syncOk: "OpenClaw copy: v{version} · {ago}",
-    syncOkNone: "OpenClaw copy: no context version yet · {ago}",
-    syncing: "Syncing...",
-    syncError: "Sync failed: {reason}",
-    syncDrift: "Out of step: Supabase v{active}, OpenClaw v{synced}",
-    syncNone: "Not synced yet",
-    syncNever: "none",
-    resync: "Sync again",
-    resyncFailed: "Could not queue the sync",
-    ago: "{n}s ago",
-    agoMin: "{n} min ago",
-    agoHour: "{n} h ago",
-    agoDay: "{n} d ago",
-    replyTitle: "Customer replies",
-    timeoutLabel: "Longest wait (seconds)",
-    timeoutHint: "If the agent has not answered by then, the customer gets a direct answer instead (5 to 120, default 25).",
-    timeoutSave: "Save",
-    holdingLabel: "Holding message",
-    holdingHint: "What a customer gets when the agent cannot answer in time. A person is then asked to reply. Leave empty for the default.",
-    holdingDefault: "Dạ em đã nhận tin, nhân viên sẽ phản hồi anh/chị sớm ạ",
-    saved: "Saved",
-    notSaved: "Could not save",
-    holdingReply: "I have noted your question; the team will get back to you shortly.",
-  },
-  vi: {
-    title: "Bản sao của agent",
-    help: "Agent chạy trên OpenClaw từ một bản sao thiết lập, quy tắc và tri thức bạn đã duyệt. Bản sao tự cập nhật mỗi 5 phút.",
-    syncOk: "Bản trên OpenClaw: v{version} · {ago}",
-    syncOkNone: "Bản trên OpenClaw: chưa có phiên bản ngữ cảnh · {ago}",
-    syncing: "Đang đồng bộ…",
-    syncError: "Lỗi đồng bộ: {reason}",
-    syncDrift: "Đang lệch: Supabase v{active}, OpenClaw v{synced}",
-    syncNone: "Chưa đồng bộ lần nào",
-    syncNever: "chưa có",
-    resync: "Đồng bộ lại",
-    resyncFailed: "Chưa xếp được lịch đồng bộ",
-    ago: "{n} giây trước",
-    agoMin: "{n} phút trước",
-    agoHour: "{n} giờ trước",
-    agoDay: "{n} ngày trước",
-    replyTitle: "Trả lời khách",
-    timeoutLabel: "Thời gian chờ tối đa (giây)",
-    timeoutHint: "Quá thời gian này mà agent chưa trả lời thì khách nhận câu trả lời trực tiếp (từ 5 đến 120, mặc định 25).",
-    timeoutSave: "Lưu",
-    holdingLabel: "Tin nhắn giữ chỗ",
-    holdingHint: "Khách nhận câu này khi agent chưa trả lời kịp, và một nhân viên sẽ được nhờ trả lời. Để trống thì dùng câu mặc định.",
-    holdingDefault: "Dạ em đã nhận tin, nhân viên sẽ phản hồi anh/chị sớm ạ",
-    saved: "Đã lưu",
-    notSaved: "Chưa lưu được",
-    holdingReply: "Mình đã ghi nhận câu hỏi của bạn, đội ngũ sẽ phản hồi bạn sớm nhé.",
-  },
-});
+export const engine = defineDict("engine", { en, vi })
