@@ -45,6 +45,7 @@
     "connections": []
   },
   "default_operating_mode": "assist",
+  "multi_instance": true,
   "agent": {
     "name": "Booking Agent",
     "handle": "booking",

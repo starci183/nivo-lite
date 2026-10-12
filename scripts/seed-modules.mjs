@@ -19,7 +19,7 @@ const db = createClient(url, service, { auth: { persistSession: false, autoRefre
 const now = new Date().toISOString();
 const moduleRows = mods.map((m) => ({
   key: m.key, sort_order: m.order, status: m.status, category: m.category, audience: m.audience, knowledge_folder: m.knowledge_folder,
-  workbench: m.workbench, default_operating_mode: m.default_operating_mode, definition: m, updated_at: now,
+  workbench: m.workbench, default_operating_mode: m.default_operating_mode, multi_instance: m.multi_instance === true, definition: m, updated_at: now,
 }));
 const actionRows = mods.flatMap((m) => m.authority_actions.map((a, i) => ({
   action: a.action, module_key: m.key, sort_order: i, default_mode: a.mode, default_limit_vnd: a.limit_vnd, default_required_fields: a.required_fields,

@@ -44,6 +44,10 @@ const defs = dirs.map((dir) => {
   if (!["stable", "early"].includes(m.status)) fail(`${at}: status must be stable | early`);
   if (!["customer", "internal"].includes(m.audience)) fail(`${at}: audience must be customer | internal`);
   if (!["assist", "autopilot"].includes(m.default_operating_mode)) fail(`${at}: default_operating_mode must be assist | autopilot`);
+  // multi_instance: a workspace may install several agents of this type (one per branch, brand or page). Only customer-facing types:
+  // a back-office agent (accounting, inventory, shifts...) is the business's single ledger and stays one per workspace.
+  if (m.multi_instance !== undefined && typeof m.multi_instance !== "boolean") fail(`${at}: multi_instance must be a boolean`);
+  if (m.multi_instance === true && m.audience !== "customer") fail(`${at}: multi_instance is only allowed for audience "customer" (back-office agents stay one per workspace)`);
   if (!existsSync(join(knowledgeDir, m.knowledge_folder))) fail(`${at}: knowledge folder resources/nivo-knowledge/${m.knowledge_folder} not found`);
   if (m.workbench !== null && typeof m.workbench !== "string") fail(`${at}: workbench must be a string key or null`);
   if (m.settings_extras !== null && typeof m.settings_extras !== "string") fail(`${at}: settings_extras must be a string key or null`);
@@ -114,6 +118,7 @@ const norm = (m) => ({
   knowledgeFolder: m.knowledge_folder, workbench: m.workbench, settingsExtras: m.settings_extras,
   requires: m.requires, connectionProviders: m.connection_providers,
   defaultOperatingMode: m.default_operating_mode,
+  multiInstance: m.multi_instance === true,
   agent: m.agent,
   gates: m.gates,
   authorityActions: m.authority_actions.map((a) => ({
@@ -164,6 +169,8 @@ export type ModuleDef = {
   readonly requires: { readonly capabilities: ReadonlyArray<string>; readonly connections: ReadonlyArray<string> };
   readonly connectionProviders: ReadonlyArray<string>;
   readonly defaultOperatingMode: "assist" | "autopilot";
+  /** Several installations (instances) of this type may exist in one workspace (module.json "multi_instance"). */
+  readonly multiInstance: boolean;
   readonly agent: { readonly name: string; readonly handle: string; readonly summary: Bilingual; readonly capabilities: BilingualList; readonly role: Bilingual; readonly instructions: Bilingual };
   readonly gates: ReadonlyArray<RegistryGate>;
   readonly authorityActions: ReadonlyArray<RegistryAction>;

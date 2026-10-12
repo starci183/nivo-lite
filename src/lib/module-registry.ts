@@ -50,3 +50,9 @@ export const audienceOf = (key: ModuleKey): "customer" | "internal" => MODULE_RE
 export const acceptsOf = (key: ModuleKey): ReadonlyArray<RegistryCommand> => MODULE_REGISTRY[key].accepts;
 /** One accepted command of a module, or null when the module does not accept it. */
 export const commandOf = (key: ModuleKey, command: string): RegistryCommand | null => MODULE_REGISTRY[key].accepts.find((a) => a.command === command) ?? null;
+
+/**
+ * Whether a workspace may install several agents of this type (module.json "multi_instance"): customer-facing types such as one Chatbot per
+ * branch or Fanpage, one Booking agent per branch, one Lead-gen agent per page. Back-office types stay one per workspace (single ledger).
+ */
+export const isMultiInstance = (key: ModuleKey): boolean => MODULE_REGISTRY[key].multiInstance;
