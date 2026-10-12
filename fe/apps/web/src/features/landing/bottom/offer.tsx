@@ -1,5 +1,5 @@
 import { Badge, Button, PageContainer, Region, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common";
-import type { IconName } from "@/ui";
+import type { IconName } from "@/components/leaves/Icon"
 import { getLocale } from "@/i18n/server";
 import { translator } from "@/i18n/core";
 import { landingBottom } from "@/i18n/dict/landingBottom";

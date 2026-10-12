@@ -39,3 +39,4 @@ export type {
     SalesMetrics,
     SalesWorkbenchData,
 } from "./sales"
+export type { ConsoleIconName, ConsoleNavItem, ConsolePending, ConsoleWorkspace } from "./console"

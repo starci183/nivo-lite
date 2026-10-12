@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link, PageContainer } from "@starci/grammar/common";
-import { NivoLogo } from "@/components/brand/NivoLogo";
+import { BrandLogo } from "@/components/blocks/BrandLogo"
 import { LocaleSwitch } from "@/i18n/LocaleSwitch";
 import { AccountMenu } from "./AccountMenu";
 import { FRAME_CLASS_NAME, SHELL_CLASS_NAME, TOP_CLASS_NAME, TOP_END_CLASS_NAME } from "./classNames";
@@ -12,7 +12,7 @@ export const Chrome = ({ children, email, hasWorkspace = false }: { readonly chi
       <div className={FRAME_CLASS_NAME}>
         <div className={TOP_CLASS_NAME}>
           <Link href="/workspaces" visited="uniform">
-            <NivoLogo variant="full" height={44} />
+            <BrandLogo variant="full" height={44} />
           </Link>
           <div className={TOP_END_CLASS_NAME}>
             <LocaleSwitch />

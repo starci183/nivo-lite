@@ -39,14 +39,21 @@ services:
     networks: [edge]
     mem_limit: 128m
     healthcheck:
-      test: ["CMD", "traefik", "healthcheck", "--ping", "--ping.entryPoint=ping", "--entrypoints.ping.address=127.0.0.1:8082"]
+      test:
+        [
+          "CMD",
+          "traefik",
+          "healthcheck",
+          "--ping",
+          "--ping.entryPoint=ping",
+          "--entrypoints.ping.address=127.0.0.1:8082",
+        ]
       interval: 15s
       timeout: 5s
       retries: 4
     logging:
       driver: json-file
       options: { max-size: "10m", max-file: "5" }
-
 
 volumes:
   acme:

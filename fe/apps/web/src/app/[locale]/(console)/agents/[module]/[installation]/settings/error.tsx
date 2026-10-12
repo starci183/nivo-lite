@@ -1,6 +1,6 @@
 "use client";
 
-import { RouteError } from "@/components/state/RouteError";
+import { RouteError } from "@/components/blocks/RouteError"
 import { moduleDef, pick } from "@/lib/module-registry";
 import { isModuleKey } from "@/lib/modules-shared";
 import { useParams } from "next/navigation";
