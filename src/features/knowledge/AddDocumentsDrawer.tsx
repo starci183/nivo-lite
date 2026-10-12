@@ -14,7 +14,7 @@ import type { Visibility } from "@/lib/knowledge/shared"
 import { MODULE_KEYS, type ModuleKey } from "@/lib/modules-shared"
 import { driveReturn, savePending, takePending } from "./driveReturn"
 import { pickerConfigured, pickFromDrive, type PickedDoc } from "./picker"
-import { FAQ_ROW_CLASS, LINK_ACTION_CLASS, LINK_FIELD_CLASS, LINK_ROW_CLASS, LIST_CLASS, ROW_WRAP_CLASS, STACK_CLASS } from "./classNames"
+import { FAQ_ROW_CLASS, FOOTER_CLASS, LINK_ACTION_CLASS, LINK_FIELD_CLASS, LINK_ROW_CLASS, LIST_CLASS, ROW_WRAP_CLASS, STACK_CLASS } from "./classNames"
 
 type Mode = "files" | "write" | "faq"
 type ItemStatus = "waiting" | "indexing" | "ready" | "failed"
@@ -468,10 +468,11 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
       isDismissable={!busy && !picking}
       isKeyboardDismissDisabled={busy || picking}
       footer={(closeDrawer) => (
-        <ButtonGroup label={t("addTitle")}>
+        // A decision with its way out: two separate buttons at gap-2, never a ButtonGroup (CTA-1 case-7).
+        <div className={FOOTER_CLASS}>
           <Button variant="ghost" isDisabled={busy} onPress={() => { closeDrawer() }}>{t("addCancel")}</Button>
           <Button variant="primary" isPending={busy} isDisabled={busy} onPress={submit}>{submitLabel}</Button>
-        </ButtonGroup>
+        </div>
       )}
     >
       <div className={STACK_CLASS}>

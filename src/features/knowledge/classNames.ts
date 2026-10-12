@@ -33,3 +33,6 @@ export const PASSAGE_TEXT_CLASS = cn("whitespace-pre-wrap", "break-words")
 export const NOTE_CLASS = cn("flex", "min-w-0", "flex-col", "gap-2", "py-3", "first:pt-0", "last:pb-0")
 /** Plain count lines inside a card (GAP-2). */
 export const CARD_LIST_CLASS = cn("flex", "min-w-0", "flex-col", "gap-2")
+
+/** Drawer footer: the way out, then the one primary, as separate buttons (GAP-2, CTA-1 case-7). */
+export const FOOTER_CLASS = cn("flex", "items-center", "justify-end", "gap-2")
