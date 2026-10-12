@@ -1,28 +1,30 @@
-import type { Database } from "../../../../../../supabase/types/database.types"
-
-/** One generated row of public.connections. */
-export type ConnectionsRow = Database["public"]["Tables"]["connections"]["Row"]
-
 /** One generated row of public.connection_secrets. */
-export type ConnectionSecretsRow = Database["public"]["Tables"]["connection_secrets"]["Row"]
+export interface ConnectionSecretsRow {
+    /** The sealed credential. */
+    readonly ciphertext: string
+    /** The secret the provider signs its webhooks with. */
+    readonly webhook_secret: string
+}
 
-/** The columns the service reads of a connection (the row type holds more). */
-export type ConnectionSelectRow = Pick<
-    ConnectionsRow,
-    | "id"
-    | "workspace_id"
-    | "provider"
-    | "name"
-    | "public_meta"
-    | "status"
-    | "last_error"
-    | "environment"
-    | "is_default"
-    | "last_event_at"
-    | "first_event"
-    | "created_by"
-    | "created_at"
->
+/** The columns the service reads of a connection. */
+export interface ConnectionSelectRow {
+    readonly id: string
+    readonly workspace_id: string
+    readonly provider: string
+    readonly name: string
+    readonly public_meta: unknown
+    readonly status: string
+    readonly last_error: string | null
+    readonly environment: string | null
+    readonly is_default: boolean | null
+    readonly last_event_at: string | null
+    readonly first_event: unknown
+    readonly created_by: string | null
+    readonly created_at: string
+}
 
 /** The member columns authorisation reads. */
-export type MemberRow = Pick<Database["public"]["Tables"]["workspace_members"]["Row"], "role" | "display_name">
+export interface MemberRow {
+    readonly role: string
+    readonly display_name: string
+}

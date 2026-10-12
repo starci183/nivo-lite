@@ -1,10 +1,13 @@
-import type { Database } from "../../../../../../supabase/types/database.types"
-
 /** The agent columns a grant check reads. */
-export type AgentRow = Pick<Database["public"]["Tables"]["agents"]["Row"], "id" | "name" | "module">
+export interface AgentRow {
+    readonly id: string
+    readonly name: string
+    readonly module: string
+}
 
 /** The columns of a stored grant. */
-export type GrantRow = Pick<
-    Database["public"]["Tables"]["agent_connections"]["Row"],
-    "agent_id" | "connection_id" | "access"
->
+export interface GrantRow {
+    readonly agent_id: string
+    readonly connection_id: string
+    readonly access: string
+}
