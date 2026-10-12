@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
+import { LeadsHttpModule } from "@features/api/leads"
 import { SystemHealthHttpModule } from "@features/api/system-health"
 import { AuthGuard, IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } from "@modules/domain/identity"
 import {
@@ -10,7 +11,15 @@ import {
     createSupabaseAccessTokenVerifier,
     createSupabaseAdminClient,
 } from "@modules/integrations/supabase"
+import { CONTRACTS_ERROR_KINDS, CONTRACTS_MESSAGES, ContractsModule } from "@modules/domain/contracts"
+import { LEADS_ERROR_KINDS, LEADS_MESSAGES, LeadsModule } from "@modules/domain/leads"
 import { LivenessModule } from "@modules/domain/liveness"
+import { MessagesModule } from "@modules/domain/messages"
+import {
+    RESPONSIBILITIES_ERROR_KINDS,
+    RESPONSIBILITIES_MESSAGES,
+    ResponsibilitiesModule,
+} from "@modules/domain/responsibilities"
 import { ClockModule } from "@modules/platform/clock"
 import { CONFIG_ERROR_KINDS } from "@modules/platform/config"
 import { CqrsModule } from "@modules/platform/cqrs"
@@ -42,7 +51,15 @@ export class AppModule {
                 LoggingModule.register({ isGlobal: true }),
                 I18nModule.register({
                     isGlobal: true,
-                    bundles: [ERRORS_MESSAGES, HTTP_SECURITY_MESSAGES, IDENTITY_MESSAGES, JOBS_MESSAGES],
+                    bundles: [
+                        ERRORS_MESSAGES,
+                        HTTP_SECURITY_MESSAGES,
+                        IDENTITY_MESSAGES,
+                        JOBS_MESSAGES,
+                        LEADS_MESSAGES,
+                        RESPONSIBILITIES_MESSAGES,
+                        CONTRACTS_MESSAGES,
+                    ],
                 }),
                 ErrorsModule.register({
                     isGlobal: true,
@@ -53,6 +70,9 @@ export class AppModule {
                         JOBS_ERROR_KINDS,
                         IDENTITY_ERROR_KINDS,
                         SUPABASE_ERROR_KINDS,
+                        LEADS_ERROR_KINDS,
+                        RESPONSIBILITIES_ERROR_KINDS,
+                        CONTRACTS_ERROR_KINDS,
                     ],
                 }),
                 CqrsModule.register({ isGlobal: true }),
@@ -76,7 +96,12 @@ export class AppModule {
                     ...options.jobs,
                 }),
                 IdentityModule.register({ isGlobal: true, verifyAccessToken }),
+                ContractsModule.register({ isGlobal: true }),
+                LeadsModule.register({ isGlobal: true }),
+                MessagesModule.register({ isGlobal: true }),
+                ResponsibilitiesModule.register({ isGlobal: true }),
                 LivenessModule.register({ isGlobal: true }),
+                LeadsHttpModule,
                 SystemHealthHttpModule,
             ],
             providers: [

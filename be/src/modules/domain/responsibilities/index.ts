@@ -1,0 +1,5 @@
+export { RESPONSIBILITIES_ERROR_KINDS } from "./errors/responsibilities.error"
+export { RESPONSIBILITIES_MESSAGES } from "./messages/responsibilities.messages"
+export { ResponsibilitiesModule } from "./responsibilities.module"
+export { ResponsibilitiesService } from "./responsibilities.service"
+export type { ResponsibilityActor } from "./responsibilities.contracts"
