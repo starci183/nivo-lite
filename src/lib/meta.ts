@@ -285,7 +285,7 @@ export const noteComment = async (connectionId: string, platform: MetaPlatform, 
 
 /* ------------------------------------------------------------------ sends */
 
-export type SendResult = { readonly ok: true; readonly ids: ReadonlyArray<string> } | { readonly ok: false; readonly reason: MetaFailure; readonly detail?: string };
+export type SendResult = { readonly ok: true; readonly ids: ReadonlyArray<string>; /** a private reply: the PSID / IGSID of the commenter the message reached (links a comment to the later DM thread) */ readonly recipientId?: string } | { readonly ok: false; readonly reason: MetaFailure; readonly detail?: string };
 const refuse = (reason: MetaFailure, detail?: string): SendResult => ({ ok: false, reason, ...(detail ? { detail } : {}) });
 
 const failed = (e: unknown): SendResult => {
@@ -375,11 +375,11 @@ const privateOn = async (platform: MetaPlatform, page: MetaPage, commentId: stri
     .eq("connection_id", page.connectionId).eq("comment_id", commentId).is("private_replied_at", null).select("comment_id");
   if (claim.error || !claim.data?.length) return refuse("already_replied");
   try {
-    const res = await graph<{ message_id?: string }>(`${page.pageId}/messages`, {
+    const res = await graph<{ message_id?: string; recipient_id?: string }>(`${page.pageId}/messages`, {
       token: page.pageToken, method: "POST",
       body: { recipient: { comment_id: commentId }, message: { text: chunkText(platform, text)[0] ?? text.trim() } },
     });
-    return { ok: true, ids: res.message_id ? [res.message_id] : [] };
+    return { ok: true, ids: res.message_id ? [res.message_id] : [], ...(res.recipient_id ? { recipientId: res.recipient_id } : {}) };
   } catch (e) {
     // Meta said it already was answered: keep the claim. Any other failure gives the one reply back.
     const failure = e instanceof MetaGraphError ? e.failure : "error";

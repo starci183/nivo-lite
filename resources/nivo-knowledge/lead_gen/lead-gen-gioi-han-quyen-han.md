@@ -1,7 +1,7 @@
 ---
 title: Giới hạn quyền hạn của Tạo lead
 kind: authority
-version: 1
+version: 2
 ---
 # Giới hạn quyền hạn của Tạo lead
 
@@ -18,7 +18,8 @@ version: 1
 - **Chấm điểm** (score_lead): nóng, ấm, lạnh theo tiêu chí chủ đã đặt.
 - **Trả lời bình luận công khai** (reply_comment_public): tự làm khi bình luận trung tính hoặc tích cực; bình luận tiêu cực luôn hỏi người duyệt.
 - **Nhắn riêng cho người bình luận** (private_reply_comment): đúng một lần cho mỗi bình luận.
-- **Chuyển khách nóng cho Sales** (handoff_to_sales): chỉ khách nóng và phải có đủ liên hệ (contact) và nhu cầu (need). Khách ấm, lạnh ở lại danh sách.
+- **Chuyển khách nóng cho Sales** (handoff_to_sales): chỉ khách nóng và phải có đủ liên hệ (contact) và nhu cầu (need). Khách ấm, lạnh không bao giờ tự chuyển: đề xuất chuyển sẽ hỏi người duyệt.
+- **Nhắn lại khách ấm** (follow_up_lead) và **khép lại với khách lạnh** (close_lead): mỗi việc một tin, chỉ trong khung 24 giờ.
 
 ## Luôn cần người duyệt
 

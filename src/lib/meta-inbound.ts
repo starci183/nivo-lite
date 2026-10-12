@@ -7,6 +7,7 @@ import { sendCommandItem } from "./agent-commands";
 import { customerTurn, type CustomerChannel } from "./customer-turn";
 import { runWork, type EngineCtx } from "./engine";
 import { drainAfter } from "./flow-ctx";
+import { handleLeadGenEvent, leadGenFor } from "./lead-flow-inbound";
 import { fetchLead, fetchMention, fetchProfileName, loadMetaPage, MetaGraphError, noteComment, touchThread, type MetaPage } from "./meta";
 import type { MetaEvent, MetaLead } from "./meta-core";
 import { supabaseAdmin } from "./supabase/admin";
@@ -134,7 +135,13 @@ const handleLead = async (db: Db, conn: Conn, ev: MetaEvent, page: MetaPage | nu
     // The lead_gen agent receives it (capture_lead); its own handoff_to_sales then reaches Sales as a typed command (classify_lead), see continueChain.
     await sendCommandItem(c, {
       from: "inbound", to: "lead_gen", command: "capture_lead", reason: "lead_ad", origin: "live", inboundEventId: event.id,
-      dedupeKey: `capture_lead:inbound:${event.id}`, payload: { subject_type: "inbound", subject_id: event.id, ...fields },
+      dedupeKey: `capture_lead:inbound:${event.id}`,
+      payload: {
+        subject_type: "inbound", subject_id: event.id, ...fields, platform: "facebook", source_kind: "leadgen", form_id: ev.form_id ?? "", ad_id: ev.ad_id ?? "", leadgen_id: ev.leadgen_id ?? "",
+        connection_id: conn.id, phone: lead.phone ?? "", email: lead.email ?? "", turn: `t:${ev.event_key}`, message_at: ev.timestamp,
+        // the answers of the form (without the contact fields) are what the score reads
+        text: Object.entries(lead.fields).filter(([k]) => !["full_name", "name", "first_name", "last_name", "phone_number", "phone", "email"].includes(k)).map(([k, v]) => `${k.replace(/_/g, " ")}: ${v}`).join("\n"),
+      },
     });
   } else {
     // No lead_gen agent bound: Sales (bound `lead_source`) takes the lead through the usual hand-off.
@@ -144,7 +151,7 @@ const handleLead = async (db: Db, conn: Conn, ev: MetaEvent, page: MetaPage | nu
     });
   }
   await markProcessed(db, event.id);
-  drainAfter(c, 2);
+  drainAfter(c, 4);
   revalidatePath("/", "layout");
   return { event_key: ev.event_key, handled: true };
 };
@@ -166,7 +173,9 @@ const handleChat = async (db: Db, conn: Conn, ev: MetaEvent, page: MetaPage | nu
   if ((ev.kind === "dm" || ev.kind === "postback") && personId) await touchThread(conn.id, platform, personId, ev.timestamp);
   if ((ev.kind === "comment" || ev.kind === "mention") && ev.comment_id) await noteComment(conn.id, platform, ev.comment_id, ev.timestamp);
 
-  const agent = (await routeInbound(conn.id)).front;
+  // The lead_gen agent bound to this connection takes comments, mentions and the DMs of its leads (lead-flow-inbound.ts); else the chatbot front door.
+  const leadGen = await leadGenFor(db, conn, ev);
+  const agent = leadGen ? null : (await routeInbound(conn.id)).front;
   const agentRow = agent
     ? (((await db.from("agents").select("*").eq("workspace_id", ws).in("module", [...INBOUND_MODULES]).eq("id", agent.id).limit(1)).data ?? [])[0] ?? null) as Agent | null
     : null;
@@ -186,6 +195,12 @@ const handleChat = async (db: Db, conn: Conn, ev: MetaEvent, page: MetaPage | nu
   if (duplicate && event.status === "processed") return { event_key: ev.event_key, handled: false, reason: "duplicate" };
   await markReceived(db, conn.id, shownName, body);
 
+  if (leadGen) {
+    await handleLeadGenEvent(db, ws, ev, { agent: leadGen, eventId: event.id, name: shownName, text, connectionId: conn.id });
+    await markProcessed(db, event.id);
+    revalidatePath("/", "layout");
+    return { event_key: ev.event_key, handled: true };
+  }
   if (!agentRow) return { event_key: ev.event_key, handled: false, reason: "no_agent" };
   if (!text) return { event_key: ev.event_key, handled: false, reason: "no_text" };
 

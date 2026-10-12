@@ -1,7 +1,7 @@
 ---
 title: Sổ tay vận hành của Tạo lead
 kind: playbook
-version: 1
+version: 2
 ---
 # Sổ tay vận hành của Tạo lead
 
@@ -23,6 +23,17 @@ Tạo lead thu khách tiềm năng từ Facebook và Instagram (form quảng cá
 3. **Lọc**: hỏi tối đa 4 câu đã duyệt, mỗi lần một câu. Khách không muốn trả lời thì dừng, không hỏi lại.
 4. **Chấm điểm**: nóng, ấm, lạnh theo tiêu chí của chủ, ghi lý do ngắn.
 5. **Xử lý theo điểm**: nóng thì chuyển Sales; ấm thì gửi thông tin công khai và để lại danh sách chờ; lạnh thì cảm ơn và dừng.
+
+## Các trạng thái của một khách
+
+`new` (mới ghi nhận) → `greeted` (đã chào) → `qualifying` (đang hỏi, mỗi lượt một câu, tối đa 4) → một trong ba kết cục:
+- **`handed_off`**: khách nóng có đủ liên hệ và nhu cầu, đã chuyển Sales (lệnh classify_lead). Dừng hỏi ngay khi đủ điều kiện nóng.
+- **`nurturing`**: khách ấm, nhận đúng một tin nhắn lại trong khung 24 giờ; ngoài khung thì Sales soạn tin nhắn lại cho người duyệt.
+- **`closed`**: khách lạnh, nhận một lời cảm ơn lịch sự trong khung 24 giờ (ngoài khung thì đóng im lặng). Khách nhắn lại thì mở lại.
+Khách từ form quảng cáo hoặc lượt nhắc tên không có khung nhắn: chấm điểm ngay (`scored`), nóng thì chuyển Sales, ấm thì Sales nhắn lại, lạnh thì đóng.
+Khi cần người (khiếu nại, hoàn tiền, bực bội, hỏi người thật, độ tin cậy dưới 0,6, tri thức không trả lời được) khách chuyển sang `escalated`: bot dừng, đến khi người trả cuộc trò chuyện lại.
+
+Mỗi lượt khách nhắn chỉ tốn tối đa một lần gọi mô hình AI (để đọc câu trả lời tự do thành tín hiệu: nhu cầu, liên hệ, ngân sách, thời điểm, khu vực, cảm xúc). Điểm nóng, ấm, lạnh do quy tắc tính, không do mô hình quyết.
 
 ## Bình luận công khai
 
