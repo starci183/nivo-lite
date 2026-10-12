@@ -240,3 +240,21 @@ export const setModuleLive = async (installationId: string, on: boolean): Promis
     refresh();
     return updated;
   });
+
+/* ------------------------------------------------------------------ settings cards (one outcome vocabulary) */
+
+const toDb = <T>(outcome: Outcome<T>): DbOutcome<true> => (outcome.ok ? dbOk(true) : dbFailure("invalid", outcome.error));
+
+/** Save the name of an agent; for a multi-instance agent the instance label and its agent share the name. */
+export const saveAgentName = async (installationId: string, name: string, isInstance: boolean): Promise<DbOutcome<true>> => {
+  if (!isInstance) return toDb(await renameModule(installationId, name));
+  const renamed = await renameInstance(installationId, name);
+  return renamed.ok ? toDb(await renameModule(installationId, name.trim().slice(0, 40))) : toDb(renamed);
+};
+
+/** Choose how an agent runs. */
+export const chooseOperatingMode = async (installationId: string, mode: OperatingMode): Promise<DbOutcome<true>> =>
+  toDb(await setOperatingMode(installationId, mode));
+
+/** Switch an agent live or paused. */
+export const chooseLive = async (installationId: string, on: boolean): Promise<DbOutcome<true>> => toDb(await setModuleLive(installationId, on));

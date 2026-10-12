@@ -145,3 +145,43 @@ export const modeSchema = rowValueSchema("installationId", (fields): OperatingMo
 export const liveSchema = rowValueSchema("installationId", (fields) =>
     typeof fields.on === "boolean" ? fields.on : undefined,
 )
+
+/** A JSON object: the shape of a stored payload. */
+export type JsonObject = { [key: string]: Json | undefined }
+
+/** Whether a value is plain JSON data. */
+export const isJson = (value: unknown): value is Json => {
+    if (value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean")
+        return true
+    if (Array.isArray(value)) return value.every(isJson)
+    return isRecord(value) && Object.values(value).every((item) => item === undefined || isJson(item))
+}
+
+/** The value as a JSON object, or null when it is anything else. */
+export const toJsonObject = (value: unknown): JsonObject | null => {
+    if (!isRecord(value) || !isJson(value) || value === null || Array.isArray(value)) return null
+    return Object.fromEntries(Object.entries(value))
+}
+
+/** One setting of an installation a change writes: the name and the value (null removes it). */
+export type SettingChange = {
+    readonly name: "openclawTimeoutSec" | "holdingMessage"
+    readonly value: number | string | null
+}
+
+const REPLY_TIMEOUT_MIN = 5
+const REPLY_TIMEOUT_MAX = 120
+const HOLDING_MAX = 400
+
+/** The bounded schema of a settings change: the reply timeout in seconds, or the holding message. */
+export const settingsSchema = rowValueSchema("installationId", (fields): SettingChange | undefined => {
+    if (fields.name === "openclawTimeoutSec") {
+        const seconds = Math.round(Number(fields.value))
+        return seconds >= REPLY_TIMEOUT_MIN && seconds <= REPLY_TIMEOUT_MAX
+            ? { name: fields.name, value: seconds }
+            : undefined
+    }
+    if (fields.name !== "holdingMessage" || typeof fields.value !== "string") return undefined
+    const text = fields.value.trim().slice(0, HOLDING_MAX)
+    return { name: fields.name, value: text === "" ? null : text }
+})

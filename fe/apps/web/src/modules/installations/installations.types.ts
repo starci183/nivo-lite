@@ -89,3 +89,6 @@ export type SetupMessage = {
     readonly body: string
     readonly createdAt: string
 }
+
+/** What the extra settings card of a module receives, rendered under the common settings cards of an agent. */
+export type SettingsExtraProps = { readonly installation: Installation; readonly canEdit: boolean }

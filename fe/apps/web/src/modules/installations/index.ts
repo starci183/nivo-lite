@@ -24,4 +24,5 @@ export type {
     SetupMessage,
     SetupRevision,
     SetupSession,
+    SettingsExtraProps,
 } from "./installations.types"

@@ -1,5 +1,6 @@
 import type { Json } from "../../../../../../../supabase/types/database.types"
-import { isRecord, objectOf, rowValueSchema, uuidOf } from "../modules/modules.mapper"
+import { isJson, isRecord, objectOf, rowValueSchema, toJsonObject, uuidOf } from "../modules/modules.mapper"
+import type { JsonObject } from "../modules/modules.mapper"
 import type {
     ContextSnapshot,
     ContextVersion,
@@ -161,23 +162,6 @@ export const messageSchema = rowValueSchema("setupSessionId", (fields) => {
 export const applySchema = rowValueSchema("installationId", (fields): "vi" | "en" =>
     fields.locale === "en" ? "en" : "vi",
 )
-
-/** A JSON object: the shape of a stored payload. */
-export type JsonObject = { [key: string]: Json | undefined }
-
-/** Whether a value is plain JSON data. */
-export const isJson = (value: unknown): value is Json => {
-    if (value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean")
-        return true
-    if (Array.isArray(value)) return value.every(isJson)
-    return isRecord(value) && Object.values(value).every((item) => item === undefined || isJson(item))
-}
-
-/** The value as a JSON object, or null when it is anything else. */
-export const toJsonObject = (value: unknown): JsonObject | null => {
-    if (!isRecord(value) || !isJson(value) || value === null || Array.isArray(value)) return null
-    return Object.fromEntries(Object.entries(value))
-}
 
 /** The states of a confirm card of the setup chat. */
 export type CardStatus = "proposed" | "applied" | "rejected" | "superseded"
