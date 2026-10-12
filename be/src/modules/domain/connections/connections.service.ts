@@ -4,8 +4,10 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { decodeChannelKey, decryptSecret, encryptSecret, randomSecret } from "./connection-cipher.policy"
 import { cleanConnectionName } from "./connection-name.policy"
 import { isPlannedConnector } from "./connector-catalog.policy"
+import { publicSiteUrl, webhookUrlFor } from "./connection-url.policy"
 import type {
     ConnectionActor,
+    ConnectionOwner,
     ConnectionEvent,
     ConnectionMember,
     ConnectionPatch,
@@ -29,6 +31,7 @@ import {
     FIND_ACTIVE_MEMBER,
     FIND_CONNECTION,
     FIND_CONNECTIONS_BY_IDS,
+    FIND_LIVE_BY_META,
     FIND_SECRET,
     INSERT_CONNECTION,
     INSERT_CONNECTOR_INTEREST,
@@ -46,6 +49,7 @@ type SecretRow = Pick<ConnectionSecretsRow, "ciphertext" | "webhook_secret">
 /** The connections of a workspace and their sealed secrets, reached only through the primary EntityManager. */
 export class ConnectionsService {
     private readonly key: Buffer
+    private readonly siteUrl: string | undefined
 
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
@@ -54,6 +58,17 @@ export class ConnectionsService {
         const key = decodeChannelKey(options.channelTokenKey.reveal())
         if (key === null) throw new ConnectionsError({ code: ConnectionsErrorCode.KeyInvalid })
         this.key = key
+        this.siteUrl = options.publicSiteUrl
+    }
+
+    /** The webhook address a provider must call for a connection (built from the site url even on localhost, for display). */
+    webhookUrl(provider: Provider, connectionId: string, origin: string | undefined = this.siteUrl): string {
+        return webhookUrlFor(provider, connectionId, origin)
+    }
+
+    /** The public https origin providers can reach, or null on localhost, plain http or when unset. */
+    publicOrigin(): string | null {
+        return publicSiteUrl(this.siteUrl)
     }
 
     /** Requires an active member of the workspace holding one of the roles; answers who they are. */
@@ -93,6 +108,21 @@ export class ConnectionsService {
     ): Promise<ReadonlyArray<ConnectionRecord>> {
         const rows = await manager.query<Array<ConnectionSelectRow>>(FIND_CONNECTIONS_BY_IDS, [workspaceId, ids])
         return rows.map(toConnectionRecord)
+    }
+
+    /** The oldest live connection of a provider whose public fact `key` equals `value`, in any workspace (a bot or a Page is live in one place only). */
+    async findLiveByMeta(
+        provider: Provider,
+        key: string,
+        value: string,
+        manager: EntityManager = this.entityManager,
+    ): Promise<ConnectionOwner | null> {
+        const [row] = await manager.query<Array<{ id: string; workspace_id: string }>>(FIND_LIVE_BY_META, [
+            provider,
+            key,
+            value,
+        ])
+        return row === undefined ? null : { id: row.id, workspaceId: row.workspace_id }
     }
 
     /** Every connection of the workspace, oldest first. */

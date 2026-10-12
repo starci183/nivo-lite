@@ -16,6 +16,7 @@ import {
     FIND_ACTIVE_MEMBER,
     FIND_CONNECTION,
     FIND_CONNECTIONS_BY_IDS,
+    FIND_LIVE_BY_META,
     FIND_SECRET,
     INSERT_CONNECTION,
     INSERT_CONNECTOR_INTEREST,
@@ -64,6 +65,32 @@ describe("ConnectionsService", () => {
     it("refuses to start with a key that is not 32 bytes", async () => {
         await expect(build(mockEntityManager(), randomBytes(8))).rejects.toMatchObject({
             code: ConnectionsErrorCode.KeyInvalid,
+        })
+    })
+
+    describe("addresses", () => {
+        it("builds the webhook address of a connection and the public origin from the site url", async () => {
+            const moduleRef = await Test.createTestingModule({
+                providers: [
+                    ConnectionsService,
+                    { provide: PRIMARY_ENTITY_MANAGER, useValue: mockEntityManager() },
+                    {
+                        provide: MODULE_OPTIONS_TOKEN,
+                        useValue: {
+                            channelTokenKey: new Secret(KEY.toString("base64")),
+                            publicSiteUrl: "https://nivo.vn/app",
+                        },
+                    },
+                ],
+            }).compile()
+            const service = moduleRef.get(ConnectionsService)
+
+            expect(service.webhookUrl("telegram", "c1")).toBe("https://nivo.vn/app/api/telegram/c1")
+            expect(service.webhookUrl("sepay", "c1", "https://other.test")).toBe(
+                "https://other.test/api/connections/sepay/c1",
+            )
+            expect(service.publicOrigin()).toBe("https://nivo.vn")
+            expect((await build(mockEntityManager())).publicOrigin()).toBeNull()
         })
     })
 
@@ -155,6 +182,22 @@ describe("ConnectionsService", () => {
                 1,
             )
             expect(em.query).toHaveBeenCalledWith(LIST_CONNECTIONS_BY_PROVIDER, ["ws-1", "sepay", true])
+        })
+    })
+
+    describe("findLiveByMeta", () => {
+        it("answers the live owner of a public fact, or null", async () => {
+            const em = mockEntityManager({
+                query: [[FIND_LIVE_BY_META, [{ id: "c9", workspace_id: "ws-9" }]]],
+            })
+            const none = mockEntityManager({ query: [FIND_LIVE_BY_META, []] })
+
+            await expect((await build(em)).findLiveByMeta("telegram", "bot_id", "42")).resolves.toEqual({
+                id: "c9",
+                workspaceId: "ws-9",
+            })
+            expect(em.query).toHaveBeenCalledWith(FIND_LIVE_BY_META, ["telegram", "bot_id", "42"])
+            await expect((await build(none)).findLiveByMeta("meta", "page_id", "1")).resolves.toBeNull()
         })
     })
 

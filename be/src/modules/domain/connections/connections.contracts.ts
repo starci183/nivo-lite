@@ -165,3 +165,11 @@ export interface ListByProviderOptions {
     /** Include disconnected connections. */
     readonly includeDisconnected: boolean
 }
+
+/** The identity of a connection found by one of its public facts. */
+export interface ConnectionOwner {
+    /** The id of the connection. */
+    readonly id: string
+    /** The workspace that owns it. */
+    readonly workspaceId: string
+}

@@ -5,6 +5,7 @@ import { ChannelSetupError, ChannelSetupErrorCode } from "./errors/channel-setup
 import { InjectChannelSetupOptions } from "./channel-setup.decorators"
 import type { PayosCredential, TelegramBot, TelegramWebhookInfo } from "./channel-setup.contracts"
 import type { ChannelSetupOptions } from "./channel-setup.options"
+import { zaloAuthorizeUrl, zaloCallbackUrl } from "./zalo-oauth.policy"
 
 type Json = Readonly<Record<string, unknown>>
 
@@ -22,6 +23,17 @@ export class ChannelSetupClient {
         @InjectHttpClient() private readonly http: HttpClient,
         @InjectChannelSetupOptions() private readonly options: ChannelSetupOptions,
     ) {}
+
+    /** The callback address to register on the Zalo app, or null without a site url. */
+    zaloCallbackUrl(): string | null {
+        return zaloCallbackUrl(this.options)
+    }
+
+    /** The Zalo permission url the owner opens to authorize the Official Account, or null without a site url. */
+    zaloAuthorizeUrl(appId: string, verifier: string, state: string): string | null {
+        const callback = zaloCallbackUrl(this.options)
+        return callback === null ? null : zaloAuthorizeUrl(this.options, appId, callback, verifier, state)
+    }
 
     /** The bot a token belongs to; rejects with CredentialRejected when Telegram does not know the token. */
     async telegramGetMe(token: string): Promise<TelegramBot> {

@@ -16,6 +16,7 @@ export type {
     ConnectionActor,
     ConnectionEvent,
     ConnectionMember,
+    ConnectionOwner,
     ConnectionPatch,
     ConnectionRecord,
     ConnectionRole,

@@ -41,3 +41,6 @@ export const RECORD_EVENT = sql`UPDATE public.connections SET last_event_at = $2
 
 /** Records that a workspace wants a planned connector, once. */
 export const INSERT_CONNECTOR_INTEREST = sql`INSERT INTO public.connector_interest (workspace_id, connector_id, user_id) VALUES ($1, $2, $3) ON CONFLICT (workspace_id, connector_id) DO NOTHING`
+
+/** The oldest live connection of a provider whose public fact `key` equals `value` (a Telegram bot id, a Meta Page id). */
+export const FIND_LIVE_BY_META = sql`SELECT id, workspace_id FROM public.connections WHERE provider = $1 AND public_meta ->> $2 = $3 AND status <> 'disconnected' ORDER BY created_at LIMIT 1`

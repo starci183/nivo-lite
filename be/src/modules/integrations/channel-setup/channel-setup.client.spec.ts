@@ -116,6 +116,29 @@ describe("ChannelSetupClient", () => {
         })
     })
 
+    describe("zalo addresses", () => {
+        it("builds the callback and the authorization url from the site url", async () => {
+            const { client } = await build()
+
+            expect(client.zaloCallbackUrl()).toBe("https://nivo.vn/api/connections/zalo/oauth/callback")
+            expect(client.zaloAuthorizeUrl("app-1", "verifier", "c.n")).toContain("app_id=app-1")
+        })
+
+        it("has neither without a site url", async () => {
+            const moduleRef = await Test.createTestingModule({
+                providers: [
+                    ChannelSetupClient,
+                    { provide: HTTP_CLIENT, useValue: mock<HttpClient>() },
+                    { provide: CHANNEL_SETUP_OPTIONS, useValue: { ...OPTIONS, siteUrl: undefined } },
+                ],
+            }).compile()
+            const client = moduleRef.get(ChannelSetupClient)
+
+            expect(client.zaloCallbackUrl()).toBeNull()
+            expect(client.zaloAuthorizeUrl("app-1", "verifier", "c.n")).toBeNull()
+        })
+    })
+
     describe("payosConfirmWebhook", () => {
         const credential = { clientId: "cid", apiKey: "key" }
 
