@@ -31,12 +31,12 @@ type Db = SupabaseClient;
 
 type SourceRow = {
   id: string; workspace_id: string; module: ModuleKey | null; kind: KnowledgeSource["kind"]; topic: string | null; tags: Array<string> | null;
-  visibility: Visibility; title: string; content: string; status: KnowledgeSource["status"]; error: string | null; chunk_count: number;
+  visibility: Visibility; title: string; content: string; status: KnowledgeSource["status"]; error: string | null; chunk_count: number; progress?: number | null;
   created_by: string | null; created_at: string; updated_at: string;
 };
 const toSource = (r: SourceRow): KnowledgeSource => ({
   id: r.id, workspaceId: r.workspace_id, module: r.module, kind: r.kind, topic: r.topic, tags: r.tags ?? [], visibility: r.visibility, title: r.title,
-  content: r.content, status: r.status, error: r.error, chunkCount: r.chunk_count, createdBy: r.created_by, createdAt: r.created_at, updatedAt: r.updated_at,
+  content: r.content, status: r.status, error: r.error, chunkCount: r.chunk_count, progress: r.progress ?? 0, createdBy: r.created_by, createdAt: r.created_at, updatedAt: r.updated_at,
 });
 const fail = (error: { message: string } | null): void => { if (error) throw new Error(error.message); };
 
