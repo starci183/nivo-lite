@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState, type ClipboardEvent } from "react"
-import { Alert, Badge, Button, ButtonGroup, ComboBox, Disclosure, Drawer, FileDropzone, IconButton, Input, List, ListItem, ListRow, SegmentedControl, Select, SurfaceListCard, Tabs, Text, Textarea } from "@starci/grammar/common"
+import { Alert, Badge, Button, ComboBox, Drawer, FileDropzone, IconButton, Input, List, ListItem, ListRow, SegmentedControl, Select, SurfaceAccordionCard, SurfaceListCard, Tabs, Text, Textarea } from "@starci/grammar/common"
 import { nivoIconSource } from "@/ui"
 import { useT } from "@/i18n/client"
 import { knowledge } from "@/i18n/dict/knowledge"
@@ -15,7 +15,7 @@ import type { Visibility } from "@/lib/knowledge/shared"
 import { MODULE_KEYS, type ModuleKey } from "@/lib/modules-shared"
 import { driveReturn, savePending, takePending } from "./driveReturn"
 import { pickerConfigured, pickFromDrive, type PickedDoc } from "./picker"
-import { FAQ_ROW_CLASS, FOOTER_CLASS, LINK_ACTION_CLASS, LINK_FIELD_CLASS, LINK_ROW_CLASS, LIST_CLASS, ROW_WRAP_CLASS, STACK_CLASS } from "./classNames"
+import { FAQ_ROW_CLASS, FOOTER_CLASS, LINK_ACTION_CLASS, LINK_FIELD_CLASS, LINK_ROW_CLASS, LIST_CLASS, OPTIONS_SUMMARY_CLASS, PICKER_CLASS, ROW_WRAP_CLASS, STACK_CLASS } from "./classNames"
 
 type Mode = "files" | "write" | "faq"
 type ItemStatus = "waiting" | "indexing" | "ready" | "failed"
@@ -98,6 +98,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
   const [tags, setTags] = useState("")
   const [visibility, setVisibility] = useState<Visibility>(preset?.visibility ?? "internal")
   const [module, setModule] = useState<"all" | ModuleKey>("all")
+  const [optionsOpen, setOptionsOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [doneCount, setDoneCount] = useState(0)
@@ -242,19 +243,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
     return out
   }
 
-  const queueLinks = async (): Promise<void> => {
-    const urls = parseLinks(links)
-    if (urls.length === 0) return
-    setRows([newRow()]); setRowErrors({})
-    setReading(true)
-    const known = new Set(items.filter((x) => x.kind === "link").map((x) => x.name))
-    const fresh = await expand(urls.filter((u) => !known.has(u)))
-    setReading(false)
-    setItems((cur) => {
-      const have = new Set(cur.filter((x) => x.driveId).map((x) => x.driveId))
-      return [...cur, ...fresh.filter((x) => !x.driveId || !have.has(x.driveId))]
-    })
-  }
+
 
   /** Google Picker (drive.file): the picked files become rows; a picked folder is listed with the Picker token, and when Google returns nothing or refuses (403/404) its row says to pick the files inside. */
   const pickDrive = async (): Promise<void> => {
@@ -429,33 +418,49 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
   }
   const pickMode = (key: string) => { if (busy) return; setMode(key === "write" ? "write" : key === "faq" ? "faq" : "files"); setTried(false) }
 
-  const optionsSummary = [visibility === "public" ? t("visPublicShort") : t("visInternalShort"), module === "all" ? t("moduleAll") : t(`module_${module}`), topic.trim() || null].filter(Boolean).join(" · ")
+  const optionsSummary = [
+    `${t("fieldVisibility")}: ${visibility === "public" ? t("visPublicShort") : t("visInternalShort")}`,
+    `${t("fieldModule")}: ${module === "all" ? t("moduleAll") : t(`module_${module}`)}`,
+    topic.trim() || null,
+  ].filter(Boolean).join(" · ")
 
+  // The batch options are one surface that opens in place (owner ruling 2026-10-12): the summary names who may read the batch, and the
+  // fields open INSIDE the card, never loose on the drawer.
   const options = (
-    <Disclosure
-      headingLevel={3}
-      title={t("optionsTitle")}
-      summary={optionsSummary}
-    >
-      <div className={STACK_CLASS}>
-        <ComboBox
-          id="k-topic" name="topic" label={t("fieldTopic")} description={t("fieldTopicHint")} variant="secondary" allowsCustomValue menuTrigger="focus"
-          options={topics.map((x) => ({ id: x, label: x }))} inputValue={topic} isDisabled={busy}
-          onInputChange={(v) => setTopic(v.slice(0, 80))} onValueChange={(v) => { if (v !== null) setTopic(v) }}
-        />
-        <Input id="k-tags" name="tags" label={t("fieldTags")} hint={t("fieldTagsHint")} variant="secondary" isDisabled={busy} value={tags} onValueChange={setTags} />
-        <SegmentedControl
-          label={t("fieldVisibility")} description={t(visibility === "public" ? "visPublicDesc" : "visInternalDesc")} width="fill" isDisabled={busy} value={visibility}
-          options={[{ value: "internal", label: t("visInternalShort") }, { value: "public", label: t("visPublicShort") }]}
-          onValueChange={(v) => setVisibility(v === "public" ? "public" : "internal")}
-        />
-        <Select
-          label={t("fieldModule")} variant="secondary" value={module} isDisabled={busy}
-          options={[{ id: "all", label: t("moduleAll") }, ...MODULE_KEYS.map((k) => ({ id: k, label: t(`module_${k}`) }))]}
-          onValueChange={(v) => setModule(MODULE_KEYS.find((k) => k === v) ?? "all")}
-        />
-      </div>
-    </Disclosure>
+    <SurfaceAccordionCard
+      ariaLabel={t("optionsTitle")}
+      depth="nested"
+      isOpen={optionsOpen}
+      onOpenChange={setOptionsOpen}
+      summaryRender={optionsSummary}
+      bodyRender={null}
+      renderSummary={(summary) => (
+        <div className={OPTIONS_SUMMARY_CLASS}>
+          <Text weight="medium">{t("optionsTitle")}</Text>
+          <Text size="sm" tone="muted">{summary}</Text>
+        </div>
+      )}
+      renderBody={() => (
+        <div className={STACK_CLASS}>
+          <SegmentedControl
+            label={t("fieldVisibility")} description={t(visibility === "public" ? "visPublicDesc" : "visInternalDesc")} width="fill" isDisabled={busy} value={visibility}
+            options={[{ value: "internal", label: t("visInternalShort") }, { value: "public", label: t("visPublicShort") }]}
+            onValueChange={(v) => setVisibility(v === "public" ? "public" : "internal")}
+          />
+          <Select
+            label={t("fieldModule")} variant="secondary" value={module} isDisabled={busy}
+            options={[{ id: "all", label: t("moduleAll") }, ...MODULE_KEYS.map((k) => ({ id: k, label: t(`module_${k}`) }))]}
+            onValueChange={(v) => setModule(MODULE_KEYS.find((k) => k === v) ?? "all")}
+          />
+          <ComboBox
+            id="k-topic" name="topic" label={t("fieldTopic")} description={t("fieldTopicHint")} variant="secondary" allowsCustomValue menuTrigger="focus"
+            options={topics.map((x) => ({ id: x, label: x }))} inputValue={topic} isDisabled={busy}
+            onInputChange={(v) => setTopic(v.slice(0, 80))} onValueChange={(v) => { if (v !== null) setTopic(v) }}
+          />
+          <Input id="k-tags" name="tags" label={t("fieldTags")} hint={t("fieldTagsHint")} variant="secondary" isDisabled={busy} value={tags} onValueChange={setTags} />
+        </div>
+      )}
+    />
   )
 
   return (
@@ -493,6 +498,14 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
               multiple hideFileList accept={ACCEPT} isDisabled={busy} onFilesChange={addFiles}
               {...(noDocs ? { isInvalid: true, errorMessage: t("hintNoDocs") } : {})}
             />
+            {showPicker ? (
+              <div className={PICKER_CLASS}>
+                <div className={ROW_WRAP_CLASS}>
+                  <Button variant="secondary" size="sm" isPending={picking} isDisabled={busy || reading} onPress={() => { void pickDrive() }}>{t("pickerButton")}</Button>
+                </div>
+                <Text size="sm" tone="muted">{t("pickerHint")}</Text>
+              </div>
+            ) : null}
             <div className={STACK_CLASS}>
               <Text weight="medium">{t("linksField")}</Text>
               <Text size="sm" tone="muted">{t("linksHint")}</Text>
@@ -512,15 +525,10 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
                 </div>
               ))}
               <div className={ROW_WRAP_CLASS}>
-                <Button variant="secondary" size="sm" isDisabled={busy} onPress={addRow}>{t("linkAdd")}</Button>
+                <Button variant="ghost" size="sm" isDisabled={busy} onPress={addRow}>{t("linkAdd")}</Button>
               </div>
             </div>
-            <ButtonGroup label={t("linksField")}>
-              <Button variant="secondary" size="sm" isDisabled={busy || reading || parseLinks(links).length === 0} onPress={() => { void queueLinks() }}>{t("linksQueue")}</Button>
-              {showPicker ? <Button variant="secondary" size="sm" isPending={picking} isDisabled={busy || reading} onPress={() => { void pickDrive() }}>{t("pickerButton")}</Button> : null}
-            </ButtonGroup>
             {reading ? <Text size="sm" tone="muted">{t("folderReading")}</Text> : null}
-            {showPicker ? <Text size="sm" tone="muted">{t("pickerHint")}</Text> : null}
             {grant?.state === "connected" ? (
               <div className={ROW_WRAP_CLASS}>
                 <Text size="sm" tone="muted">{t("driveConnected", { email: grant.email || "Google" })}</Text>

@@ -36,3 +36,7 @@ export const CARD_LIST_CLASS = cn("flex", "min-w-0", "flex-col", "gap-2")
 
 /** Drawer footer: the way out, then the one primary, as separate buttons (GAP-2, CTA-1 case-7). */
 export const FOOTER_CLASS = cn("flex", "items-center", "justify-end", "gap-2")
+/** The Google Drive source under the drop zone: the button, then the one-line promise (GAP-2). */
+export const PICKER_CLASS = cn("flex", "min-w-0", "flex-col", "gap-2")
+/** The batch-options card summary: its title over who may read the batch. */
+export const OPTIONS_SUMMARY_CLASS = cn("flex", "min-w-0", "flex-col", "gap-1")
