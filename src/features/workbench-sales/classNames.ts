@@ -1,10 +1,5 @@
 import { cn } from "@heroui/react";
 
-/** Vertical rhythm of the workbench: metrics, tabs, panel (GAP-4; routed block inset PADDING-9 at the compact step). */
-export const PAGE_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-4", "py-2", "md:py-4");
-/** The panel under the tabs (GAP-3 between its blocks). */
-export const PANEL_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-3", "focus-visible:outline-2", "focus-visible:outline-focus");
-
 /** One list row inside a SurfaceListCard: divided (BOUNDARY-2 case-1, PADDING-4/PADDING-3), stacks on phones, spreads on wide screens. */
 export const ROW_CLASS_NAME = cn("flex", "flex-col", "gap-3", "border-b", "border-separator", "px-4", "py-3", "last:border-b-0", "md:flex-row", "md:items-start", "md:justify-between");
 /** The row opened from the Attention surface: a recessed neutral band (SURFACE-3 case-1, no Grammar owner for a row highlight). */

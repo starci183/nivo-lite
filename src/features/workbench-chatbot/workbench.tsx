@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { Alert, DescriptionList, EmptyNotice, FillViewport, SurfaceCard } from "@starci/grammar/common";
+import { useRouter } from "next/navigation";
+import { Alert, EmptyNotice, FillViewport, SurfaceCard } from "@starci/grammar/common";
+import { AgentDashboardFrame } from "@/features/agent-dashboard";
+import type { AgentDashboardData } from "@/lib/agent-dashboard-shared";
 import { useT } from "@/i18n/client";
 import { workbenchChatbot } from "@/i18n/dict/workbenchChatbot";
 import { supabaseBrowser } from "@/lib/supabase/browser";
@@ -18,6 +21,8 @@ import { SidePane } from "./side";
 import { ThreadPane } from "./thread";
 
 export type ChatbotWorkbenchProps = {
+  /** The frame's common regions (waiting, done, connections, knowledge), loaded on the server. */
+  readonly dashboard: AgentDashboardData;
   readonly initial: WbOverview;
   readonly initialThread: WbThread | null;
   readonly userName: string;
@@ -30,14 +35,15 @@ const contains = (text: string, query: string) => text.toLocaleLowerCase("vi").i
 type Translate = ReturnType<typeof useT<typeof workbenchChatbot.en>>;
 
 const responseLabel = (m: WbMetrics, t: Translate): { value: string; sub: string } => {
-  if (m.avgFirstResponseMin === null) return { value: "—", sub: t("metricResponseNone") };
-  const value = m.avgFirstResponseMin < 1 ? t("seconds", { n: Math.max(1, Math.round(m.avgFirstResponseMin * 60)) }) : t("minutes", { n: Math.round(m.avgFirstResponseMin * 10) / 10 });
+  if (m.p50FirstResponseMin === null) return { value: "—", sub: t("metricResponseNone") };
+  const value = m.p50FirstResponseMin < 1 ? t("seconds", { n: Math.max(1, Math.round(m.p50FirstResponseMin * 60)) }) : t("minutes", { n: Math.round(m.p50FirstResponseMin * 10) / 10 });
   return { value, sub: t("metricResponseSub", { n: m.sample }) };
 };
 
-/** The Chatbot workbench: metrics, then conversation list, thread and customer panel with realtime updates. */
-export const ChatbotWorkbench = ({ initial, initialThread, userName }: ChatbotWorkbenchProps) => {
+/** The Chatbot workbench: the agent dashboard frame around the inbox (conversation list, thread and customer panel) with realtime updates. */
+export const ChatbotWorkbench = ({ dashboard, initial, initialThread, userName }: ChatbotWorkbenchProps) => {
   const t = useT(workbenchChatbot);
+  const router = useRouter();
 
   const [overview, setOverview] = useState<WbOverview>(initial);
   const [selectedId, setSelectedId] = useState<string | null>(initialThread?.conversation.id ?? null);
@@ -76,15 +82,20 @@ export const ChatbotWorkbench = ({ initial, initialThread, userName }: ChatbotWo
     };
     const filterSql = `workspace_id=eq.${workspaceId}`;
     const channel = client.channel(`chatbot-workbench-${workspaceId}`);
-    for (const table of ["agent_messages", "agent_conversations", "work_items"]) {
+    for (const table of ["agent_messages", "agent_conversations"]) {
       channel.on("postgres_changes", { event: "*", schema: "public", table, filter: filterSql }, schedule);
     }
+    // A work item moved (a question raised or answered): the inbox and the frame's "Chờ bạn" / "Đã tự làm" regions both change.
+    channel.on("postgres_changes", { event: "*", schema: "public", table: "work_items", filter: filterSql }, () => {
+      schedule();
+      router.refresh();
+    });
     channel.subscribe();
     return () => {
       clearTimeout(timer);
       void client.removeChannel(channel);
     };
-  }, [workspaceId, refresh]);
+  }, [workspaceId, refresh, router]);
 
   const select = (id: string) => {
     setSelectedId(id);
@@ -106,6 +117,7 @@ export const ChatbotWorkbench = ({ initial, initialThread, userName }: ChatbotWo
       const res = await fn();
       if (!res.ok) setActionError(res.error ?? t("loadError"));
       await refresh();
+      router.refresh();
     });
 
   const q = query.trim();
@@ -115,20 +127,8 @@ export const ChatbotWorkbench = ({ initial, initialThread, userName }: ChatbotWo
   );
   const response = responseLabel(overview.metrics, t);
 
-  return (
+  const inbox = (
     <div className={WORKBENCH_CLASS_NAME}>
-      <SurfaceCard>
-        <DescriptionList
-          layout="stat-strip"
-          isDivided
-          items={[
-            { id: "today", term: t("metricToday"), description: String(overview.metrics.today), meta: t("metricTodaySub") },
-            { id: "waiting", term: t("metricWaiting"), description: String(overview.metrics.waiting), meta: t("metricWaitingSub") },
-            { id: "response", term: t("metricResponse"), description: response.value, meta: response.sub },
-          ]}
-        />
-      </SurfaceCard>
-
       {loadFailed ? (
         <Alert tone="negative" title={t("loadError")} action={{ label: t("reload"), onAction: () => void refresh() }} />
       ) : null}
@@ -198,5 +198,19 @@ export const ChatbotWorkbench = ({ initial, initialThread, userName }: ChatbotWo
       </SurfaceCard>
       </FillViewport>
     </div>
+  );
+
+  return (
+    <AgentDashboardFrame
+      module="chatbot"
+      data={dashboard}
+      figures={[
+        { id: "today", term: t("metricToday"), description: String(overview.metrics.today), meta: t("metricTodaySub") },
+        { id: "waiting", term: t("metricWaiting"), description: String(overview.metrics.waiting), meta: t("metricWaitingSub") },
+        { id: "response", term: t("metricResponse"), description: response.value, meta: response.sub },
+        { id: "leads", term: t("metricLeads"), description: String(overview.metrics.leadsCaptured7d), meta: t("metricLeadsSub") },
+      ]}
+      tabs={[{ id: "inbox", label: t("title"), content: inbox }]}
+    />
   );
 };

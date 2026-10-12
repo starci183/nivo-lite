@@ -1,8 +1,5 @@
 import { cn } from "@heroui/react";
 
-/** The whole workbench: sub-tabs over one panel (GAP-5 between regions). */
-export const WORKBENCH_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-6");
-
 /** A panel's stacked regions, each with its own heading (GAP-5). */
 export const PANEL_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-6");
 

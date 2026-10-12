@@ -1,6 +1,6 @@
 import "server-only";
 import { drainAfter, engineCtx } from "./flow-ctx";
-import { listDecisions, listWorkItems } from "./flow-queries";
+import { isTestRunName, listDecisions, listWorkItems } from "./flow-queries";
 import type { DecisionRow, EvidenceState, FlowAction, Invoice, Order, ReasonCode, WorkItemView } from "./flow-types";
 import type { Execution, Lead, LeadStage, Responsibility } from "./types";
 
@@ -13,6 +13,7 @@ const MIN = 60_000;
 const OPEN_STAGES: ReadonlyArray<LeadStage> = ["new", "qualified", "proposal"];
 const AWAITING_REPLY_AFTER_MS = 3 * MIN;
 const BOARD_CLOSED_LIMIT = 8;
+const CONVERSION_WINDOW_DAYS = 90;
 
 export type AttentionKind = "decision" | "failed" | "clarify" | "overdue" | "awaiting_reply";
 
@@ -103,6 +104,15 @@ export type AutoActivity = {
   href: string;
 };
 
+/** Conversion of the leads created in the last CONVERSION_WINDOW_DAYS days (test runs left out): how many reached "won", overall and per source (the lead's channel). */
+export type SalesConversion = {
+  windowDays: number;
+  leads: number;
+  won: number;
+  /** One entry per source, the most leads first. */
+  sources: ReadonlyArray<{ source: string; leads: number; won: number }>;
+};
+
 export type SalesMetrics = {
   openCount: number;
   proposalValueVnd: number;
@@ -110,6 +120,7 @@ export type SalesMetrics = {
   wonCount: number;
   wonValueVnd: number;
   waitingCount: number;
+  conversion: SalesConversion;
 };
 
 export type SalesWorkbenchData = {
@@ -127,6 +138,24 @@ export type SalesWorkbenchData = {
 };
 
 const PRIORITY: Record<AttentionKind, number> = { decision: 0, failed: 1, clarify: 2, overdue: 3, awaiting_reply: 4 };
+
+/** Conversion by source: leads created in the window that are now "won", grouped by channel. Test-run leads (UAT / DBG names) are excluded. */
+const conversionOf = (leads: ReadonlyArray<Lead>, nowMs: number): SalesConversion => {
+  const since = new Date(nowMs - CONVERSION_WINDOW_DAYS * 86_400_000).toISOString();
+  const bySource = new Map<string, { source: string; leads: number; won: number }>();
+  let total = 0;
+  let won = 0;
+  for (const l of leads) {
+    if (l.created_at < since || isTestRunName(l.contact_name, l.company)) continue;
+    const source = l.channel || "other";
+    const row = bySource.get(source) ?? { source, leads: 0, won: 0 };
+    row.leads += 1;
+    total += 1;
+    if (l.stage === "won") { row.won += 1; won += 1; }
+    bySource.set(source, row);
+  }
+  return { windowDays: CONVERSION_WINDOW_DAYS, leads: total, won, sources: [...bySource.values()].sort((a, b) => b.leads - a.leads || b.won - a.won) };
+};
 
 /** Start of the current month in Vietnam time (UTC+7), as an ISO instant. */
 const monthStartIso = (now: number): string => {
@@ -349,6 +378,7 @@ export const getSalesWorkbench = async (): Promise<SalesWorkbenchData> => {
     wonCount: wonIds.size,
     wonValueVnd,
     waitingCount: decisions.length,
+    conversion: conversionOf(leads, nowMs),
   };
 
   return {
