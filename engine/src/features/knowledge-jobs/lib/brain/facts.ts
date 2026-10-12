@@ -1,0 +1,235 @@
+// PORTED from src/lib/brain/facts.ts (keep in sync by hand): the write path document facts use (toFact, byKey, getFact, proposeFact,
+// applyFact, chooseFact, keepCurrent, rejectFact, retireFact, proposeRetire). Conflict detection lives here, as on the web: a new value next to an active one is filed
+// as a proposal with conflict_with = the active fact (conflicts.ts on the web only GROUPS those rows for the review screen, it writes nothing).
+// The function bodies are copied unchanged; only the imports differ.
+import type { SupabaseClient } from "@supabase/supabase-js"
+import {
+  AUTO_APPLY_TRUST, TRUST, keyOf, numberOf, sameValue,
+  type Evidence, type Fact, type FactStatus, type ProposalKind, type Scope, type SourceKind, type SubjectType,
+} from "./shared"
+import { resolveGapsForFact } from "./gaps"
+/**
+ * Facts of the shared brain (server side). Every function takes the database client and the workspace id, so the same code runs from a
+ * server action, an engine job or a check script. Rules:
+ *  - exactly one ACTIVE fact per (subject, attribute); applying a new value supersedes the old one, which is kept as history;
+ *  - the same value again only adds evidence (no duplicate rows);
+ *  - a different value from a source below AUTO_APPLY_TRUST becomes a PROPOSAL that names the fact it disagrees with;
+ *  - nothing is ever deleted: a wrong fact is rejected or retired.
+ */
+
+type Db = SupabaseClient
+
+type Row = {
+  id: string; subject_type: SubjectType; subject_key: string; subject_label: string; attribute: string; attribute_label: string
+  value: string; value_number: number | string | null; unit: string | null; scope: Scope; modules: Array<string> | null; status: FactStatus
+  source_kind: SourceKind; trust: number; valid_from: string | null; valid_to: string | null; supersedes_id: string | null
+  conflict_with: string | null; proposal_kind: ProposalKind | null; evidence: Array<Evidence> | null; proposed_by: string; proposed_at: string; decided_by: string | null
+  decided_at: string | null; decision_note: string | null
+}
+
+export const toFact = (r: Row): Fact => ({
+  id: r.id, subjectType: r.subject_type, subjectKey: r.subject_key, subjectLabel: r.subject_label, attribute: r.attribute,
+  attributeLabel: r.attribute_label, value: r.value, valueNumber: r.value_number === null ? null : Number(r.value_number), unit: r.unit,
+  scope: r.scope, modules: r.modules ?? [], status: r.status, sourceKind: r.source_kind, trust: r.trust, validFrom: r.valid_from,
+  validTo: r.valid_to, supersedesId: r.supersedes_id, conflictWith: r.conflict_with, proposalKind: r.proposal_kind ?? "set", evidence: r.evidence ?? [], proposedBy: r.proposed_by,
+  proposedAt: r.proposed_at, decidedBy: r.decided_by, decidedAt: r.decided_at, decisionNote: r.decision_note,
+})
+
+const fail = (e: { message: string } | null) => { if (e) throw new Error(e.message) }
+const now = () => new Date().toISOString()
+const EVIDENCE_MAX = 20
+
+export type FactInput = {
+  readonly subjectType?: SubjectType
+  readonly subjectLabel: string
+  readonly attributeLabel: string
+  readonly value: string
+  readonly unit?: string | null
+  readonly scope?: Scope
+  readonly modules?: ReadonlyArray<string>
+  readonly sourceKind: SourceKind
+  readonly validFrom?: string | null
+  readonly validTo?: string | null
+  readonly evidence?: ReadonlyArray<Evidence>
+  readonly proposedBy: string
+  /** Force the review path (false) or the direct path (true); default: direct only from a trusted source. */
+  readonly autoApply?: boolean
+}
+
+export type ProposeOutcome = "applied" | "proposed" | "conflict" | "reinforced"
+
+const mergeEvidence = (have: ReadonlyArray<Evidence>, add: ReadonlyArray<Evidence>): Array<Evidence> => {
+  const seen = new Set(have.map((e) => `${e.kind}:${e.ref}`))
+  return [...have, ...add.filter((e) => !seen.has(`${e.kind}:${e.ref}`))].slice(-EVIDENCE_MAX)
+}
+
+export const byKey = async (db: Db, ws: string, subjectKey: string, attribute: string, status: FactStatus): Promise<Array<Fact>> => {
+  const { data, error } = await db.from("brain_facts").select("*").eq("workspace_id", ws).eq("subject_key", subjectKey).eq("attribute", attribute).eq("status", status)
+  fail(error)
+  return ((data ?? []) as Array<Row>).map(toFact)
+}
+
+export const getFact = async (db: Db, ws: string, id: string): Promise<Fact | null> => {
+  const { data, error } = await db.from("brain_facts").select("*").eq("workspace_id", ws).eq("id", id).maybeSingle()
+  fail(error)
+  return data ? toFact(data as Row) : null
+}
+
+/**
+ * Record what a source says. Same value as the active fact: its evidence grows (and its trust, if this source is more trusted).
+ * Same value as a waiting proposal: that proposal's evidence grows. Otherwise a new row: applied at once from a trusted source (or when
+ * `autoApply`), else a proposal that names the active fact it would replace (`conflict_with`).
+ */
+export const proposeFact = async (db: Db, ws: string, input: FactInput): Promise<{ fact: Fact; outcome: ProposeOutcome }> => {
+  const subjectLabel = input.subjectLabel.trim().slice(0, 160)
+  const attributeLabel = input.attributeLabel.trim().slice(0, 120)
+  const value = input.value.trim().slice(0, 2000)
+  const subjectKey = keyOf(subjectLabel)
+  const attribute = keyOf(attributeLabel)
+  if (!subjectKey || !attribute || !value) throw new Error("A fact needs a subject, an attribute and a value.")
+  const trust = TRUST[input.sourceKind]
+  const evidence = input.evidence ?? []
+
+  const [active] = await byKey(db, ws, subjectKey, attribute, "active")
+  if (active && sameValue(active.value, value)) {
+    const { data, error } = await db.from("brain_facts")
+      .update({ evidence: mergeEvidence(active.evidence, evidence), trust: Math.max(active.trust, trust), updated_at: now() })
+      .eq("id", active.id).select("*").single()
+    fail(error)
+    // A source confirms the value again: a waiting proposal to stop using it no longer holds.
+    if (evidence.length) {
+      fail((await db.from("brain_facts").update({ status: "rejected", decision_note: "Có nguồn xác nhận lại giá trị này", decided_at: now(), updated_at: now() })
+        .eq("workspace_id", ws).eq("subject_key", subjectKey).eq("attribute", attribute).eq("status", "proposed").eq("proposal_kind", "retire")).error)
+    }
+    return { fact: toFact(data as Row), outcome: "reinforced" }
+  }
+  const waiting = (await byKey(db, ws, subjectKey, attribute, "proposed")).find((p) => p.proposalKind === "set" && sameValue(p.value, value))
+  if (waiting) {
+    const { data, error } = await db.from("brain_facts")
+      .update({ evidence: mergeEvidence(waiting.evidence, evidence), trust: Math.max(waiting.trust, trust), updated_at: now() })
+      .eq("id", waiting.id).select("*").single()
+    fail(error)
+    const fact = toFact(data as Row)
+    if (input.autoApply ?? trust >= AUTO_APPLY_TRUST) return { fact: await applyFact(db, ws, fact.id, input.proposedBy), outcome: "applied" }
+    return { fact, outcome: active ? "conflict" : "proposed" }
+  }
+
+  // A new value for a known fact keeps that fact's kind and audience unless the caller says otherwise: a staff member correcting a
+  // public price must not quietly turn it internal (the chatbot would lose it).
+  const scope = input.scope ?? active?.scope ?? "internal"
+  const modules = scope === "restricted" ? [...(input.modules ?? active?.modules ?? [])] : []
+  const { data, error } = await db.from("brain_facts").insert({
+    workspace_id: ws, subject_type: input.subjectType ?? active?.subjectType ?? "business", subject_key: subjectKey, subject_label: subjectLabel, attribute,
+    attribute_label: attributeLabel, value, value_number: numberOf(value), unit: input.unit?.trim() || active?.unit || null, scope,
+    modules, status: "proposed", source_kind: input.sourceKind, trust,
+    valid_from: input.validFrom ?? null, valid_to: input.validTo ?? null, conflict_with: active?.id ?? null, evidence, proposed_by: input.proposedBy,
+  }).select("*").single()
+  fail(error)
+  const fact = toFact(data as Row)
+  if (input.autoApply ?? trust >= AUTO_APPLY_TRUST) return { fact: await applyFact(db, ws, fact.id, input.proposedBy), outcome: "applied" }
+  return { fact, outcome: active ? "conflict" : "proposed" }
+}
+
+/**
+ * Approve a proposal. Valid from now (or no date): it becomes the active fact and the current active one is superseded and closed now.
+ * Valid from a later date: it is SCHEDULED, and the current value stays in force until that moment (its valid_to is set to it);
+ * promoteDue makes the switch when the time comes.
+ */
+export const applyFact = async (db: Db, ws: string, id: string, decidedBy: string, note?: string): Promise<Fact> => {
+  const fact = await getFact(db, ws, id)
+  if (!fact) throw new Error("Fact not found.")
+  if (fact.status !== "proposed") throw new Error("Only a proposed fact can be applied.")
+  const [current] = await byKey(db, ws, fact.subjectKey, fact.attribute, "active")
+  const at = now()
+  if (fact.proposalKind === "retire") {
+    // Applying a retire proposal stops the active fact it points at; the proposal itself is closed as "expired" with the reason.
+    if (current) await retireFact(db, ws, current.id, decidedBy, note?.trim() || "Không còn nguồn nào xác nhận giá trị này")
+    const { data, error } = await db.from("brain_facts").update({
+      status: "expired", decided_by: decidedBy, decided_at: at, decision_note: note?.trim() || "Đã ngừng dùng", updated_at: at,
+    }).eq("id", id).eq("status", "proposed").select("*").single()
+    fail(error)
+    return toFact(data as Row)
+  }
+  if (fact.validFrom && Date.parse(fact.validFrom) > Date.now()) {
+    // Only one scheduled change per fact: a newer approval replaces an older plan.
+    fail((await db.from("brain_facts").update({ status: "rejected", decision_note: "Thay bằng lịch mới", updated_at: at })
+      .eq("workspace_id", ws).eq("subject_key", fact.subjectKey).eq("attribute", fact.attribute).eq("status", "scheduled")).error)
+    if (current) fail((await db.from("brain_facts").update({ valid_to: fact.validFrom, updated_at: at }).eq("id", current.id).eq("status", "active")).error)
+    const { data, error } = await db.from("brain_facts").update({
+      status: "scheduled", supersedes_id: current?.id ?? null, conflict_with: null, decided_by: decidedBy, decided_at: at, decision_note: note?.trim() || null, updated_at: at,
+    }).eq("id", id).eq("status", "proposed").select("*").single()
+    fail(error)
+    return toFact(data as Row)
+  }
+  if (current) {
+    fail((await db.from("brain_facts").update({ status: "superseded", valid_to: current.validTo ?? at, updated_at: at }).eq("id", current.id).eq("status", "active")).error)
+  }
+  const { data, error } = await db.from("brain_facts").update({
+    status: "active", supersedes_id: current?.id ?? null, conflict_with: null, decided_by: decidedBy, decided_at: at,
+    decision_note: note?.trim() || null, valid_from: fact.validFrom ?? at, updated_at: at,
+  }).eq("id", id).eq("status", "proposed").select("*").single()
+  fail(error)
+  const applied = toFact(data as Row)
+  // A fact customers may read can answer a question they asked that the brain could not (knowledge gaps).
+  await resolveGapsForFact(db, ws, applied)
+  return applied
+}
+
+/**
+ * Choose one of several competing proposals for the same subject + attribute: it is applied (exactly as applyFact does) and every other
+ * proposal waiting for that key is rejected with a note naming the chosen value. Used by the conflict card.
+ */
+export const chooseFact = async (db: Db, ws: string, id: string, decidedBy: string): Promise<Fact> => {
+  const winner = await getFact(db, ws, id)
+  if (!winner || winner.status !== "proposed" || winner.proposalKind !== "set") throw new Error("Only a proposed value can be chosen.")
+  const fact = await applyFact(db, ws, id, decidedBy, "Được chọn khi có nhiều giá trị khác nhau")
+  for (const other of await byKey(db, ws, winner.subjectKey, winner.attribute, "proposed")) {
+    if (other.id === id) continue
+    await rejectFact(db, ws, other.id, decidedBy, other.proposalKind === "retire" ? "Đã chọn giá trị mới" : `Đã chọn giá trị khác: ${winner.value}`)
+  }
+  return fact
+}
+
+/** Keep the value in force: every proposal waiting for that subject + attribute is rejected. Returns how many. */
+export const keepCurrent = async (db: Db, ws: string, subjectKey: string, attribute: string, decidedBy: string): Promise<number> => {
+  const waiting = await byKey(db, ws, subjectKey, attribute, "proposed")
+  for (const p of waiting) await rejectFact(db, ws, p.id, decidedBy, "Giữ giá trị đang dùng")
+  return waiting.length
+}
+
+/**
+ * Propose to stop using an active fact (its only evidence was a document that changed or was deleted). Nothing is retired silently:
+ * the owner decides. One waiting proposal per fact.
+ */
+export const proposeRetire = async (db: Db, ws: string, active: Fact, why: Evidence, proposedBy: string): Promise<boolean> => {
+  const waiting = (await byKey(db, ws, active.subjectKey, active.attribute, "proposed")).find((p) => p.proposalKind === "retire")
+  if (waiting) return false
+  const { error } = await db.from("brain_facts").insert({
+    workspace_id: ws, subject_type: active.subjectType, subject_key: active.subjectKey, subject_label: active.subjectLabel, attribute: active.attribute,
+    attribute_label: active.attributeLabel, value: active.value, value_number: active.valueNumber, unit: active.unit, scope: active.scope, modules: [...active.modules],
+    status: "proposed", source_kind: "document", trust: TRUST.document, conflict_with: active.id, proposal_kind: "retire", evidence: [why], proposed_by: proposedBy,
+  })
+  fail(error)
+  return true
+}
+
+/** Turn a proposal down; it stays in the history with the reason. */
+export const rejectFact = async (db: Db, ws: string, id: string, decidedBy: string, note?: string): Promise<Fact> => {
+  const { data, error } = await db.from("brain_facts")
+    .update({ status: "rejected", decided_by: decidedBy, decided_at: now(), decision_note: note?.trim() || null, updated_at: now() })
+    .eq("workspace_id", ws).eq("id", id).eq("status", "proposed").select("*").maybeSingle()
+  fail(error)
+  if (!data) throw new Error("Only a proposed fact can be rejected.")
+  return toFact(data as Row)
+}
+
+/** Stop an active fact without a replacement (no longer true): it expires now. */
+export const retireFact = async (db: Db, ws: string, id: string, decidedBy: string, note?: string): Promise<Fact> => {
+  const at = now()
+  const { data, error } = await db.from("brain_facts")
+    .update({ status: "expired", valid_to: at, decided_by: decidedBy, decided_at: at, decision_note: note?.trim() || null, updated_at: at })
+    .eq("workspace_id", ws).eq("id", id).eq("status", "active").select("*").maybeSingle()
+  fail(error)
+  if (!data) throw new Error("Only an active fact can be retired.")
+  return toFact(data as Row)
+}
