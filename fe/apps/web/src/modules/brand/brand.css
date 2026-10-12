@@ -1,0 +1,75 @@
+/* NIVO Brand System V1.1: the one place the app writes colour. Crimson accent, ink text, neutral slate surfaces. */
+:root,
+.light {
+    --starci-core-accent: #e11d48;
+    --accent: #e11d48;
+    --accent-foreground: #ffffff;
+    --accent-soft: #ffe4e6;
+    --accent-soft-foreground: #9f1239;
+
+    --background: #f8fafc;
+    --foreground: #0f172a;
+    --surface: #ffffff;
+    --surface-secondary: #f1f5f9;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --separator: #e2e8f0;
+    --backdrop: rgb(15 23 42 / 48%);
+
+    --success: #166534;
+    --success-foreground: #ffffff;
+    --success-soft: #dcfce7;
+    --success-soft-foreground: #14532d;
+
+    --warning: #92400e;
+    --warning-foreground: #ffffff;
+    --warning-soft: #fef3c7;
+    --warning-soft-foreground: #78350f;
+
+    --danger: #b91c1c;
+    --danger-foreground: #ffffff;
+    --danger-soft: #fee2e2;
+    --danger-soft-foreground: #7f1d1d;
+
+    --info: #1d4ed8;
+    --info-foreground: #ffffff;
+    --info-soft: #dbeafe;
+    --info-soft-foreground: #1e3a8a;
+}
+
+.dark {
+    --starci-core-accent: #fb7185;
+    --accent: #fb7185;
+    --accent-foreground: #0f172a;
+    --accent-soft: #4c0519;
+    --accent-soft-foreground: #fecdd3;
+
+    --background: #0f172a;
+    --foreground: #f8fafc;
+    --surface: #1e293b;
+    --surface-secondary: #273449;
+    --muted: #94a3b8;
+    --border: #334155;
+    --separator: #334155;
+    --backdrop: rgb(2 6 23 / 64%);
+
+    --success: #4ade80;
+    --success-foreground: #052e16;
+    --success-soft: #14532d;
+    --success-soft-foreground: #bbf7d0;
+
+    --warning: #fbbf24;
+    --warning-foreground: #451a03;
+    --warning-soft: #78350f;
+    --warning-soft-foreground: #fde68a;
+
+    --danger: #f87171;
+    --danger-foreground: #450a0a;
+    --danger-soft: #7f1d1d;
+    --danger-soft-foreground: #fecaca;
+
+    --info: #60a5fa;
+    --info-foreground: #0f172a;
+    --info-soft: #1e3a8a;
+    --info-soft-foreground: #bfdbfe;
+}

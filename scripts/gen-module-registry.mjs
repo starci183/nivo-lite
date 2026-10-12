@@ -15,9 +15,9 @@ const out = join(web, "src", "lib", "module-registry.generated.ts");
 const fail = (msg) => { console.error(`gen-module-registry: ${msg}`); process.exit(1); };
 const readJson = (file) => { try { return JSON.parse(readFileSync(file, "utf8")); } catch (e) { return fail(`${file}: ${e.message}`); } };
 
-const iconSrc = readFileSync(join(web, "src", "ui", "leaves", "Icon", "index.tsx"), "utf8");
-const iconBlock = iconSrc.match(/export type IconName =([\s\S]*?);\r?\n/)?.[1] ?? "";
-const ICONS = new Set([...iconBlock.matchAll(/"([A-Za-z0-9]+)"/g)].map((m) => m[1]));
+const iconSrc = readFileSync(join(web, "src", "components", "leaves", "Icon", "index.tsx"), "utf8");
+const iconBlock = iconSrc.match(/const ICON_SOURCES = \{([\s\S]*?)\r?\n\} satisfies/)?.[1] ?? "";
+const ICONS = new Set([...iconBlock.matchAll(/^\s+([A-Za-z0-9]+): cuts\(/gm)].map((m) => m[1]));
 
 const categories = readJson(join(modulesDir, "_categories.json"));
 const categoryKeys = new Set(categories.map((c) => c.key));
@@ -38,7 +38,7 @@ const defs = dirs.map((dir) => {
   for (const f of ["name", "short_name", "description"]) bilingual(m[f], `${at} ${f}`);
   for (const l of LOC) if (!Array.isArray(m.points?.[l]) || !m.points[l].length) fail(`${at}: points.${l} must be a non-empty array`);
   if (typeof m.purpose !== "string" || !m.purpose) fail(`${at}: purpose (English, one line for the setup prompt) is required`);
-  if (!ICONS.has(m.icon)) fail(`${at}: icon "${m.icon}" is not an IconName of src/ui`);
+  if (!ICONS.has(m.icon)) fail(`${at}: icon "${m.icon}" is not an IconName of src/components/leaves/Icon`);
   if (typeof m.glyph !== "string") fail(`${at}: glyph (svg path) is required`);
   if (!existsSync(join(web, "public", m.mascot))) fail(`${at}: mascot ${m.mascot} not found in public/`);
   if (!categoryKeys.has(m.category)) fail(`${at}: unknown category "${m.category}"`);

@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Alert, Badge, Button, DescriptionList, Heading, IconButton, SectionHeader, SurfaceCard, Text, Textarea, type DescriptionListItem } from "@starci/grammar/common";
-import { nivoIconSource } from "@/ui";
-import { PersonAvatar } from "@/components/avatar/PersonAvatar";
+import { nivoIconSource } from "@/components/leaves/Icon"
+import { PersonAvatar } from "@/components/leaves/PersonAvatar"
 import { useT } from "@/i18n/client";
 import { workbenchChatbot } from "@/i18n/dict/workbenchChatbot";
 import type { WbThread } from "@/lib/workbench-chatbot";

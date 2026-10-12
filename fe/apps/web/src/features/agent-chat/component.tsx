@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { AgentAvatar } from "@/components/avatar/PersonAvatar";
+import { AgentAvatar } from "@/components/blocks/AgentAvatar"
 import { useT } from "@/i18n/client";
 import { agentChat } from "@/i18n/dict/agentChat";
 import { modulesCore } from "@/i18n/dict/modulesCore";
@@ -114,7 +114,7 @@ const EmptyThread = (props: AgentChatBaseProps) => {
   const isCustomer = props.tab === "customer";
   return (
     <div className={EMPTY_CLASS_NAME}>
-      <AgentAvatar module={props.agentModule} size="lg" label={props.agentName} online={props.isAgentActive} />
+      <AgentAvatar module={props.agentModule} size="lg" label={props.agentName} />
       <Text weight="semibold">{t("emptyGreeting", { name: props.agentName })}</Text>
       <Text as="p" size="sm" tone="muted">{isCustomer ? t("customerEmptyHelp") : t("emptyGreetingHelp")}</Text>
       {isCustomer ? (
@@ -274,7 +274,7 @@ export const AgentChatBase = (props: AgentChatBaseProps) => {
       <section className={MAIN_CLASS_NAME} data-list={isListOpen ? "open" : "closed"} aria-label={t("pageLabel")}>
         <header className={HEADER_CLASS_NAME}>
           <span className={BACK_CLASS_NAME}><Button variant="ghost" size="sm" onPress={props.onBack}>{t("backModules")}</Button></span>
-          {props.isLoading ? <Avatar name="" size="md" isSkeleton /> : <AgentAvatar module={props.agentModule} size="md" label={props.agentName} online={props.isAgentActive} />}
+          {props.isLoading ? <Avatar name="" size="md" isSkeleton /> : <AgentAvatar module={props.agentModule} size="md" label={props.agentName} />}
           <div className={HEADER_COPY_CLASS_NAME}>
             <Text weight="semibold" overflow="truncate" isSkeleton={props.isLoading}>{props.agentName}</Text>
             <Text size="xs" tone="muted" overflow="truncate" isSkeleton={props.isLoading}>{props.tab === "customer" ? (props.isTakenOver ? t("takenOverStatus") : t("asVisitor")) : `${props.isAgentActive ? t("statusActive") : t("statusPaused")} · ${props.agentRole}`}</Text>

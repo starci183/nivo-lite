@@ -56,5 +56,11 @@
   "retry": "Thử lại",
   "notFoundTitle": "Không tìm thấy trang",
   "notFoundText": "Trang này không tồn tại hoặc đã được chuyển.",
-  "backToOverview": "Về Tổng quan"
+  "backToOverview": "Về Tổng quan",
+  "brandLogo": "NIVO",
+  "languageLabel": "Ngôn ngữ",
+  "localeShortVi": "VI",
+  "localeShortEn": "EN",
+  "localeNameVi": "Tiếng Việt",
+  "localeNameEn": "English"
 }

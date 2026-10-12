@@ -1,8 +1,8 @@
 "use client";
 
 import { Badge, Button, Heading, Icon, List, ListItem, PageContainer, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common";
-import { nivoIconSource } from "@/ui";
-import { AgentAvatar } from "@/components/avatar/PersonAvatar";
+import { nivoIconSource } from "@/components/leaves/Icon"
+import { AgentAvatar } from "@/components/blocks/AgentAvatar"
 import Image from "next/image";
 import { MODULES, moduleCopy } from "@/lib/modules";
 import { useLocale, useT } from "@/i18n/client";

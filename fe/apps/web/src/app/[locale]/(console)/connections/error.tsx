@@ -1,6 +1,6 @@
 "use client"
 
-import { RouteError } from "@/components/state/RouteError"
+import { RouteError } from "@/components/blocks/RouteError"
 import { useT } from "@/i18n/client"
 import { connections as dict } from "@/i18n/dict/connections"
 
