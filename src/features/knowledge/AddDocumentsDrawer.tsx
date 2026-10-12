@@ -492,10 +492,11 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
           selectedKey={mode}
           items={[{ id: "files", label: t("tabFiles") }, { id: "write", label: t("tabWrite") }, { id: "faq", label: t("tabFaq") }]}
           onSelect={pickMode}
+          panelId={(k) => `add-docs-panel-${k}`}
         />
 
         {mode === "files" ? (
-          <div className={STACK_CLASS}>
+          <div className={STACK_CLASS} id="add-docs-panel-files" role="tabpanel">
             <FileDropzone
               id="k-files" name="files" label={t("filesDrop")} isLabelHidden prompt={t("filesDrop")} description={t("filesHint")}
               multiple hideFileList accept={ACCEPT} isDisabled={busy} onFilesChange={addFiles}
@@ -558,7 +559,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
             {outOfCredits ? <CreditsAlert /> : null}
           </div>
         ) : (
-          <div className={STACK_CLASS}>
+          <div className={STACK_CLASS} id={`add-docs-panel-${mode}`} role="tabpanel">
             <Input id="k-title" name="title" label={t("fieldTitle")} hint={t("fieldTitleHint")} variant="secondary" isRequired isDisabled={busy} value={title} onValueChange={setTitle} {...(noTitle ? { isError: true, errorMessage: t("hintNeedTitle") } : {})} />
             {mode === "write" ? (
               <Textarea id="k-content" name="content" label={t("fieldContent")} description={t("fieldContentHint")} variant="secondary" rows={9} value={content} isDisabled={busy} onValueChange={setContent} {...(noContent ? { isInvalid: true, errorMessage: t("hintNeedContent") } : {})} />
