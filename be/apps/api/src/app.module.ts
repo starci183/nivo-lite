@@ -1,8 +1,11 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
+import { InventoryHttpModule } from "@features/api/inventory"
 import { SystemHealthHttpModule } from "@features/api/system-health"
 import { WorkspacesHttpModule } from "@features/api/workspaces"
+import { DeductOrderQueueModule } from "@features/jobs/deduct-order"
+import { ReplenishStockQueueModule } from "@features/jobs/replenish-stock"
 import { AuthGuard, IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } from "@modules/domain/identity"
 import {
     SUPABASE_ACCESS_TOKEN_VERIFIER,
@@ -11,7 +14,9 @@ import {
     SupabaseModule,
     createSupabaseAccessTokenVerifier,
 } from "@modules/integrations/supabase"
+import { INVENTORY_ERROR_KINDS, INVENTORY_MESSAGES, InventoryModule } from "@modules/domain/inventory"
 import { LivenessModule } from "@modules/domain/liveness"
+import { MODULE_OPS_ERROR_KINDS, MODULE_OPS_MESSAGES, ModuleOpsModule } from "@modules/domain/module-ops"
 import { EventsModule } from "@modules/domain/events"
 import {
     WORKSPACE_INVITES_ERROR_KINDS,
@@ -59,7 +64,9 @@ export class AppModule {
                         ERRORS_MESSAGES,
                         HTTP_SECURITY_MESSAGES,
                         IDENTITY_MESSAGES,
+                        INVENTORY_MESSAGES,
                         JOBS_MESSAGES,
+                        MODULE_OPS_MESSAGES,
                         QUEUE_MESSAGES,
                         WORKSPACE_INVITES_MESSAGES,
                         WORKSPACE_MEMBERS_MESSAGES,
@@ -75,6 +82,8 @@ export class AppModule {
                         JOBS_ERROR_KINDS,
                         QUEUE_ERROR_KINDS,
                         IDENTITY_ERROR_KINDS,
+                        INVENTORY_ERROR_KINDS,
+                        MODULE_OPS_ERROR_KINDS,
                         SUPABASE_ERROR_KINDS,
                         WORKSPACE_INVITES_ERROR_KINDS,
                         WORKSPACE_MEMBERS_ERROR_KINDS,
@@ -111,6 +120,11 @@ export class AppModule {
                     ...options.workspaceInvites,
                 }),
                 LivenessModule.register({ isGlobal: true }),
+                ModuleOpsModule.register({ isGlobal: true }),
+                InventoryModule.register({ isGlobal: true }),
+                InventoryHttpModule,
+                ReplenishStockQueueModule,
+                DeductOrderQueueModule,
                 SystemHealthHttpModule,
                 WorkspacesHttpModule,
             ],
