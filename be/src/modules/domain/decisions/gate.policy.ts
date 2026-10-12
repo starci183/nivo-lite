@@ -8,7 +8,7 @@ import type {
     ReasonCode,
     RuleMode,
 } from "./decisions.contracts"
-import type { OptionalNumber, OptionalOperatingMode } from "./decisions-views.contracts"
+import type { OptionalNumber } from "./decisions-views.contracts"
 
 /** The confidence below which the engine treats its own result as unclear. */
 export const MIN_CONFIDENCE = 0.6
@@ -19,16 +19,6 @@ export const MIN_CONFIDENCE = 0.6
  */
 export const isOverLimit = (limitVnd: OptionalNumber, amountVnd: OptionalNumber): boolean =>
     typeof limitVnd === "number" && typeof amountVnd === "number" && amountVnd >= limitVnd
-
-/**
- * Assist mode is a gate, not a rewrite of the owner's rules: while a module's operating mode is "assist", every "auto" rule
- * of that module behaves as "ask". "never" and limits stay untouched; autopilot, or no installation, applies the rule as set.
- */
-export const applyOperatingMode = (
-    rule: OptionalAuthorityRule,
-    operatingMode: OptionalOperatingMode,
-): OptionalAuthorityRule =>
-    rule !== null && operatingMode === "assist" && rule.mode === "auto" ? { ...rule, mode: "ask" } : rule
 
 const isEmpty = (value: ProposalFieldValue | undefined): boolean =>
     value === null || value === undefined || (typeof value === "string" && value.trim() === "")

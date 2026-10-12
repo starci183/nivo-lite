@@ -1,23 +1,17 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { AuthorityService } from "@modules/domain/authority"
+import type { AuthorityPatch, AuthorityProfile } from "@modules/domain/authority"
+import { AuthorityRulesService } from "@modules/domain/authority-rules"
+import type { AuthorityRuleRecord, RuleChange } from "@modules/domain/authority-rules"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember, WorkspaceRole } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { mergeAuthority } from "./authority.policy"
 import type { WorkContext, WorkItem } from "./decisions.contracts"
-import type {
-    AuthorityPatch,
-    AuthorityProfile,
-    AuthorityRuleRecord,
-    AuthoritySheet,
-    ListWorkItemsQuery,
-    RuleChange,
-    WorkItemPage,
-} from "./decisions-views.contracts"
+import type { AuthoritySheet, ListWorkItemsQuery, WorkItemPage } from "./decisions-views.contracts"
 import { DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
 import { EvidenceService } from "./evidence.service"
 import { clampPageSize, splitPage } from "./paging.policy"
-import { FIND_AUTHORITY_PROFILE, LIST_RULES, UPSERT_AUTHORITY, UPSERT_RULE } from "./persistence/authority.sql"
 import type { WorkItemViewRow } from "./persistence/work-item-views.rows"
 import { FIND_WORK_ITEM_VIEW, LIST_WORK_ITEMS } from "./persistence/work-item-views.sql"
 
@@ -34,6 +28,8 @@ export class DecisionsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly members: WorkspaceMembersService,
+        private readonly authority: AuthorityService,
+        private readonly rules: AuthorityRulesService,
         private readonly evidence: EvidenceService,
     ) {}
 
@@ -65,33 +61,13 @@ export class DecisionsService {
     /** The goals, house rules and every rule of the workspace; owner and manager only. */
     async readAuthority(principalId: string, workspaceId: string): Promise<AuthoritySheet> {
         await this.members.require(principalId, workspaceId, MANAGERS)
-        const profile = await this.entityManager.query<Array<AuthorityProfile>>(FIND_AUTHORITY_PROFILE, [workspaceId])
-        const rules = await this.entityManager.query<Array<AuthorityRuleRecord>>(LIST_RULES, [workspaceId])
-        return { profile: profile[0] ?? null, rules }
+        return { profile: await this.authority.profileOf(workspaceId), rules: await this.rules.list(workspaceId) }
     }
 
     /** Saves the fields of the patch over the stored sheet; owner and manager only. */
     async updateAuthority(principalId: string, workspaceId: string, patch: AuthorityPatch): Promise<AuthorityProfile> {
         const member = await this.members.require(principalId, workspaceId, MANAGERS)
-        const current = (
-            await this.entityManager.query<Array<AuthorityProfile>>(FIND_AUTHORITY_PROFILE, [workspaceId])
-        )[0]
-        const next = mergeAuthority(current ?? null, patch)
-        const saved = (
-            await this.entityManager.query<Array<AuthorityProfile>>(UPSERT_AUTHORITY, [
-                workspaceId,
-                next.policies,
-                next.reply_style,
-                next.brand_voice,
-                next.limits_note,
-                next.goal_revenue_vnd,
-                next.goal_new_customers,
-                next.goal_first_reply_minutes,
-                next.goal_note,
-                member.displayName,
-            ])
-        )[0]
-        if (saved === undefined) throw new DecisionsError({ code: DecisionsErrorCode.NotFound })
+        const saved = await this.authority.save(workspaceId, patch, member.displayName)
         await this.log(workspaceId, member, "authority.updated", Object.keys(patch).join(", "))
         return saved
     }
@@ -99,18 +75,7 @@ export class DecisionsService {
     /** Saves the rule of one action; owner and manager only. */
     async saveRule(principalId: string, workspaceId: string, change: RuleChange): Promise<AuthorityRuleRecord> {
         const member = await this.members.require(principalId, workspaceId, MANAGERS)
-        const saved = (
-            await this.entityManager.query<Array<AuthorityRuleRecord>>(UPSERT_RULE, [
-                workspaceId,
-                change.action,
-                change.mode,
-                change.limit_vnd,
-                change.required_fields,
-            ])
-        )[0]
-        if (saved === undefined) {
-            throw new DecisionsError({ code: DecisionsErrorCode.UnknownAction, params: { action: change.action } })
-        }
+        const saved = await this.rules.save(workspaceId, change)
         const limit = change.limit_vnd === null ? "" : ` < ${change.limit_vnd}`
         const summary = `${saved.department}.${saved.action} -> ${change.mode}${limit}`
         await this.log(workspaceId, member, "authority.rule_updated", summary)

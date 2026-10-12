@@ -1,157 +1,40 @@
+import type { AuthorityRule, RuleMode } from "@modules/domain/authority-rules"
 import type { Locale } from "@modules/platform/i18n"
+import type {
+    DecidedPath,
+    OptionalWorkItem,
+    Origin,
+    Proposal,
+    ProposalCandidate,
+    ProposalFieldValue,
+    ReasonCode,
+    SubjectType,
+    WorkItem,
+    WorkResult,
+    WorkStatus,
+    EvidenceState,
+} from "@modules/domain/work-items"
 
-/** What a rule of the owner's authority says about an action: run alone, ask a person, or never. */
-export type RuleMode = "auto" | "ask" | "never"
-
-/** Why the gate decided what it decided. */
-export type ReasonCode = "routine" | "missing_data" | "over_authority" | "unclear_outcome" | "not_allowed"
-
-/** Where a work item stands. */
-export type WorkStatus = "queued" | "done" | "waiting_decision" | "rejected" | "failed"
-
-/** How much evidence backs the result of a work item. */
-export type EvidenceState = "pending" | "captured" | "reviewed" | "verified" | "customer_confirmed"
-
-/** Whether the input was real or simulated. */
-export type Origin = "live" | "simulated"
-
-/** How the item was decided: by policy alone or by a person. */
-export type DecidedPath = "auto" | "human"
+export type {
+    DecidedPath,
+    EvidenceState,
+    OptionalWorkItem,
+    Origin,
+    Proposal,
+    ProposalCandidate,
+    ProposalFieldValue,
+    ReasonCode,
+    SubjectType,
+    WorkItem,
+    WorkResult,
+    WorkStatus,
+}
 
 /** What a decision outcome was. */
 export type DecisionOutcome = "auto_done" | "approved" | "edited" | "rejected"
 
 /** Who decides: a policy, the owner or a staff member. */
 export type DeciderKind = "policy" | "owner" | "staff"
-
-/** The value of one field of a proposal. */
-export type ProposalFieldValue = string | number | null
-
-/** One invoice a payment may settle. */
-export interface ProposalCandidate {
-    /** The invoice id. */
-    readonly id: string
-    /** The line the owner reads. */
-    readonly label: string
-    /** The amount of the invoice, VND. */
-    readonly amount_vnd: number
-}
-
-/** What an agent proposes to do: the summary, an optional draft and the structured fields the gate and the performer read. */
-export interface Proposal {
-    /** One sentence for the owner. */
-    readonly summary: string
-    /** The text to send, when the action sends one. */
-    readonly draft?: string
-    /** The money involved, VND. */
-    readonly amount_vnd?: number | null
-    /** The structured fields of the proposal. */
-    readonly fields: Readonly<Record<string, ProposalFieldValue>>
-    /** How sure the agent is, 0..1. */
-    readonly confidence?: number
-    /** Whether the outcome is clear. */
-    readonly outcome?: "clear" | "unclear"
-    /** The invoices a payment may settle. */
-    readonly candidates?: ReadonlyArray<ProposalCandidate>
-}
-
-/** The kind of record a work item is about. */
-export type SubjectType =
-    "lead" | "order" | "invoice" | "transaction" | "conversation" | "inbound" | "purchase_order" | "stock"
-
-/** What a performer reported it did. */
-export interface WorkResult {
-    /** One sentence for the log. */
-    readonly summary: string
-    /** Where the owner can see it. */
-    readonly href?: string
-}
-
-/** One work item as the decisions capability reads and writes it. */
-export interface WorkItem {
-    /** The id. */
-    readonly id: string
-    /** The workspace. */
-    readonly workspace_id: string
-    /** The module that performs it. */
-    readonly department: string
-    /** The action key. */
-    readonly action: string
-    /** The kind of record it is about. */
-    readonly subject_type: SubjectType
-    /** The id of that record. */
-    readonly subject_id: string | null
-    /** The customer it is about. */
-    readonly lead_id: string | null
-    /** The input that started it. */
-    readonly inbound_event_id: string | null
-    /** The item that asked for it. */
-    readonly parent_id: string | null
-    /** The root of its command chain. */
-    readonly chain_id: string | null
-    /** Hops from the root. */
-    readonly depth: number
-    /** Where it stands. */
-    readonly status: WorkStatus
-    /** How it was decided. */
-    readonly decided_path: DecidedPath | null
-    /** Why the gate asked. */
-    readonly reason: ReasonCode | null
-    /** Every reason, the first one is `reason`. */
-    readonly reasons: ReadonlyArray<string>
-    /** Required fields still missing. */
-    readonly missing_fields: ReadonlyArray<string>
-    /** What the agent proposes. */
-    readonly proposal: Proposal
-    /** What was done. */
-    readonly result: WorkResult | null
-    /** The failure, when it failed. */
-    readonly error: string | null
-    /** How much evidence backs the result. */
-    readonly evidence_state: EvidenceState
-    /** The staff member it is assigned to. */
-    readonly assigned_staff_id: string | null
-    /** The legacy approval execution. */
-    readonly execution_id: string | null
-    /** Real or simulated. */
-    readonly origin: Origin
-    /** When it was created. */
-    readonly created_at: string
-    /** When it last changed. */
-    readonly updated_at: string
-    /** When it finished. */
-    readonly completed_at: string | null
-    /** The agent instance that handles it. */
-    readonly installation_id: string | null
-}
-
-/** The rule of the owner's authority for one action. */
-export interface AuthorityRule {
-    /** The id. */
-    readonly id: string
-    /** The module. */
-    readonly department: string
-    /** The action key. */
-    readonly action: string
-    /** The mode. */
-    readonly mode: RuleMode
-    /** The action runs alone strictly below this amount, VND; null means no limit. */
-    readonly limit_vnd: number | null
-    /** Fields that must be present. */
-    readonly required_fields: ReadonlyArray<string>
-}
-
-/** The owner's goals and house rules that the prompts carry. */
-export interface Authority {
-    /** The business policies. */
-    readonly policies: string
-    /** How replies are written. */
-    readonly reply_style: string
-    /** The brand voice. */
-    readonly brand_voice: string
-    /** What the agent must always ask about first. */
-    readonly limits_note: string
-}
 
 /** What the gate answers. */
 export interface GateVerdict {
@@ -380,22 +263,6 @@ export type CommandResult =
           readonly missing?: ReadonlyArray<string>
       }
 
-/** One line of the Office thread. */
-export interface OfficeLineInput {
-    /** The text. */
-    readonly body: string
-    /** The customer it is about. */
-    readonly lead_id: string | null
-    /** The work item it mirrors. */
-    readonly work_item_id: string | null
-    /** The department whose agent speaks. */
-    readonly dept?: string
-    /** True for a command mirror, always a system line. */
-    readonly command?: boolean
-    /** The instance whose agent speaks. */
-    readonly installation_id?: string | null
-}
-
 /** The kind of input a channel delivered. */
 export type InboundKind = "message" | "lead" | "order" | "payment"
 
@@ -440,38 +307,6 @@ export interface InboundEventRecord {
     readonly event_id: string | null
 }
 
-/** Where a responsibility stands. */
-export type ResponsibilityStatus = "open" | "waiting_approval" | "done"
-
-/** Who owns a responsibility. */
-export type ResponsibilityOwnerKind = "human" | "agent"
-
-/** One thing somebody (a person or an agent) owes a customer. */
-export interface ResponsibilityRecord {
-    /** The id. */
-    readonly id: string
-    /** The workspace. */
-    readonly workspace_id: string
-    /** The customer. */
-    readonly lead_id: string
-    /** What it is. */
-    readonly title: string
-    /** Person or agent. */
-    readonly owner_kind: ResponsibilityOwnerKind
-    /** The owning agent, when an agent owns it. */
-    readonly owner_agent_id: string | null
-    /** The display name of the owner. */
-    readonly owner_name: string
-    /** The next step. */
-    readonly next_action: string
-    /** When it is due. */
-    readonly due_at: string | null
-    /** Where it stands. */
-    readonly status: ResponsibilityStatus
-    /** When it was created. */
-    readonly created_at: string
-}
-
 /** One line of the evidence log as a caller writes it; the workspace comes from the context. */
 export interface EvidenceEntry {
     /** The customer it is about. */
@@ -514,34 +349,14 @@ export interface DecisionEntry {
     readonly after?: Proposal | null
 }
 
-/** The owner's authority, or null before the workspace has one. */
-export type OptionalAuthority = Authority | null
-
-/** The rule of one action, or null when the owner granted none. */
-export type OptionalAuthorityRule = AuthorityRule | null
-
 /** A module of the registry, or null when no such module exists. */
 export type OptionalModuleEntry = ModuleEntry | null
 
 /** An authority action of the registry, or null when no such action exists. */
 export type OptionalActionEntry = ActionEntry | null
 
-/** A work item, or null when none matches. */
-export type OptionalWorkItem = WorkItem | null
-
 /** A performer, or null when the action has none. */
 export type OptionalWorkPerformer = WorkPerformer | null
-
-/** The agent that speaks for a department in the Office. */
-export interface AgentIdentity {
-    /** The agent id. */
-    readonly id: string
-    /** The display name. */
-    readonly name: string
-}
-
-/** An agent identity, or null when the department has no agent. */
-export type OptionalAgentIdentity = AgentIdentity | null
 
 /** A text in both languages. */
 export interface Bilingual {
@@ -559,3 +374,9 @@ export interface ActorRef {
 
 /** Whoever performs or rejects an item: a person who decided, or any named actor. */
 export type PerformedBy = Decider | ActorRef
+
+export type { AuthorityRule, RuleMode }
+export type { Authority, OptionalAuthority } from "@modules/domain/authority"
+export type { OptionalAuthorityRule } from "@modules/domain/authority-rules"
+export type { AgentIdentity, OfficeLineInput, OptionalAgentIdentity } from "@modules/domain/messages"
+export type { ResponsibilityRecord, ResponsibilityStatus } from "@modules/domain/responsibilities"

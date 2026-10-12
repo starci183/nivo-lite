@@ -1,15 +1,18 @@
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
+import { AuthorityService } from "@modules/domain/authority"
+import type { AuthorityProfile } from "@modules/domain/authority"
+import { AuthorityRulesService } from "@modules/domain/authority-rules"
+import type { AuthorityRuleRecord, RuleChange } from "@modules/domain/authority-rules"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { WorkItem } from "./decisions.contracts"
-import type { AuthorityProfile, AuthorityRuleRecord, ListWorkItemsQuery, RuleChange } from "./decisions-views.contracts"
+import type { ListWorkItemsQuery } from "./decisions-views.contracts"
 import { DecisionsService } from "./decisions.service"
 import { DecisionsErrorCode } from "./errors/decisions.error"
 import { EvidenceService } from "./evidence.service"
-import { FIND_AUTHORITY_PROFILE, LIST_RULES, UPSERT_AUTHORITY, UPSERT_RULE } from "./persistence/authority.sql"
 import type { WorkItemViewRow } from "./persistence/work-item-views.rows"
 import { FIND_WORK_ITEM_VIEW, LIST_WORK_ITEMS } from "./persistence/work-item-views.sql"
 
@@ -93,15 +96,19 @@ const queryOf = builder<ListWorkItemsQuery>({ statuses: ["waiting_decision"], af
 const build = async (entityManager: MockEntityManager) => {
     const members = mock<WorkspaceMembersService>({ require: jest.fn().mockResolvedValue(memberOf()) })
     const evidence = mock<EvidenceService>({ log: jest.fn().mockResolvedValue(undefined) })
+    const authority = mock<AuthorityService>({ profileOf: jest.fn(), save: jest.fn() })
+    const rules = mock<AuthorityRulesService>({ list: jest.fn(), save: jest.fn() })
     const moduleRef = await Test.createTestingModule({
         providers: [
             DecisionsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: EvidenceService, useValue: evidence },
+            { provide: AuthorityService, useValue: authority },
+            { provide: AuthorityRulesService, useValue: rules },
         ],
     }).compile()
-    return { service: moduleRef.get(DecisionsService), members, evidence }
+    return { service: moduleRef.get(DecisionsService), members, evidence, authority, rules }
 }
 
 describe("DecisionsService", () => {
@@ -150,113 +157,45 @@ describe("DecisionsService", () => {
 
     describe("readAuthority", () => {
         it("answers the sheet and the rules for a manager", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [FIND_AUTHORITY_PROFILE, [profileOf()]],
-                    [LIST_RULES, [ruleOf()]],
-                ],
-            })
-            const { service, members } = await build(em)
+            const { service, members, authority, rules } = await build(mockEntityManager())
+            authority.profileOf.mockResolvedValue(profileOf())
+            rules.list.mockResolvedValue([ruleOf()])
 
             await expect(service.readAuthority("user-1", "ws-1")).resolves.toEqual({
                 profile: profileOf(),
                 rules: [ruleOf()],
             })
             expect(members.require).toHaveBeenCalledWith("user-1", "ws-1", ["owner", "manager"])
-        })
-
-        it("answers no sheet before the workspace has one", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [FIND_AUTHORITY_PROFILE, []],
-                    [LIST_RULES, []],
-                ],
-            })
-            const { service } = await build(em)
-
-            await expect(service.readAuthority("user-1", "ws-1")).resolves.toEqual({ profile: null, rules: [] })
+            expect(authority.profileOf).toHaveBeenCalledWith("ws-1")
+            expect(rules.list).toHaveBeenCalledWith("ws-1")
         })
     })
 
     describe("updateAuthority", () => {
-        it("merges the patch over the stored sheet, saves it and logs it", async () => {
-            const saved = profileOf({ policies: "P2" })
-            const em = mockEntityManager({
-                query: [
-                    [FIND_AUTHORITY_PROFILE, [profileOf()]],
-                    [UPSERT_AUTHORITY, [saved]],
-                ],
-            })
-            const { service, evidence } = await build(em)
+        it("saves the patch stamped with the caller and logs it", async () => {
+            const { service, authority, evidence } = await build(mockEntityManager())
+            authority.save.mockResolvedValue(profileOf({ policies: "P2" }))
 
-            await expect(service.updateAuthority("user-1", "ws-1", { policies: "P2" })).resolves.toEqual(saved)
+            await expect(
+                service.updateAuthority("user-1", "ws-1", { policies: "P2", goal_note: "n" }),
+            ).resolves.toEqual(profileOf({ policies: "P2" }))
 
-            expect(em.query).toHaveBeenCalledWith(UPSERT_AUTHORITY, [
-                "ws-1",
-                "P2",
-                "R",
-                "B",
-                "L",
-                null,
-                null,
-                null,
-                "",
-                "An",
-            ])
+            expect(authority.save).toHaveBeenCalledWith("ws-1", { policies: "P2", goal_note: "n" }, "An")
             expect(evidence.log).toHaveBeenCalledWith(
                 { workspaceId: "ws-1", actor: "An", locale: "en" },
-                { kind: "authority.updated", actor: "An", summary: "policies" },
+                { kind: "authority.updated", actor: "An", summary: "policies, goal_note" },
             )
-        })
-
-        it("creates the sheet when the workspace has none", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [FIND_AUTHORITY_PROFILE, []],
-                    [UPSERT_AUTHORITY, [profileOf()]],
-                ],
-            })
-            const { service } = await build(em)
-
-            await service.updateAuthority("user-1", "ws-1", { goal_note: "grow" })
-
-            expect(em.query).toHaveBeenCalledWith(UPSERT_AUTHORITY, [
-                "ws-1",
-                "",
-                "",
-                "",
-                "",
-                null,
-                null,
-                null,
-                "grow",
-                "An",
-            ])
-        })
-
-        it("refuses when nothing came back from the save", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [FIND_AUTHORITY_PROFILE, []],
-                    [UPSERT_AUTHORITY, []],
-                ],
-            })
-            const { service } = await build(em)
-
-            await expect(service.updateAuthority("user-1", "ws-1", {})).rejects.toMatchObject({
-                code: DecisionsErrorCode.NotFound,
-            })
         })
     })
 
     describe("saveRule", () => {
         it("saves the rule and logs it with its limit", async () => {
-            const em = mockEntityManager({ query: [UPSERT_RULE, [ruleOf()]] })
-            const { service, evidence } = await build(em)
+            const { service, rules, evidence } = await build(mockEntityManager())
+            rules.save.mockResolvedValue(ruleOf())
 
             await expect(service.saveRule("user-1", "ws-1", changeOf())).resolves.toEqual(ruleOf())
 
-            expect(em.query).toHaveBeenCalledWith(UPSERT_RULE, ["ws-1", "confirm_order", "ask", 1000, ["customer"]])
+            expect(rules.save).toHaveBeenCalledWith("ws-1", changeOf())
             expect(evidence.log).toHaveBeenCalledWith(
                 { workspaceId: "ws-1", actor: "An", locale: "en" },
                 { kind: "authority.rule_updated", actor: "An", summary: "sales.confirm_order -> ask < 1000" },
@@ -264,8 +203,8 @@ describe("DecisionsService", () => {
         })
 
         it("logs a rule without a limit plainly", async () => {
-            const em = mockEntityManager({ query: [UPSERT_RULE, [ruleOf({ limit_vnd: null })]] })
-            const { service, evidence } = await build(em)
+            const { service, rules, evidence } = await build(mockEntityManager())
+            rules.save.mockResolvedValue(ruleOf({ limit_vnd: null }))
 
             await service.saveRule("user-1", "ws-1", changeOf({ limit_vnd: null }))
 
@@ -273,16 +212,6 @@ describe("DecisionsService", () => {
                 { workspaceId: "ws-1", actor: "An", locale: "en" },
                 { kind: "authority.rule_updated", actor: "An", summary: "sales.confirm_order -> ask" },
             )
-        })
-
-        it("refuses an action the registry does not know", async () => {
-            const { service, evidence } = await build(mockEntityManager({ query: [UPSERT_RULE, []] }))
-
-            await expect(service.saveRule("user-1", "ws-1", changeOf())).rejects.toMatchObject({
-                code: DecisionsErrorCode.UnknownAction,
-                params: { action: "confirm_order" },
-            })
-            expect(evidence.log).not.toHaveBeenCalled()
         })
     })
 })
