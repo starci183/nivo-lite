@@ -640,6 +640,7 @@ const recordOnly = (action: FlowAction): Performer => ({
 const PERFORMERS: Partial<Record<FlowAction, Performer>> = {
   reply_customer: replyCustomer,
   handoff_lead: handoffLead,
+  capture_lead: handoffLead, // lead_gen: the same lead record (matched or created) as the chatbot hand-off; handoff_to_sales then carries it to Sales
   classify_lead: classifyLead,
   send_follow_up: followUpLike("follow_up"),
   send_quote: followUpLike("quote"),
@@ -828,6 +829,13 @@ export const continueChain = async (c: EngineCtx, item: WorkItem): Promise<void>
     const to = ACTION_DEPARTMENT[next];
     if (next === "classify_lead" && item.lead_id) {
       await sendCommand(c, { ...chain, to, command: next, reason: "handoff", dedupeKey: `classify_lead:after:${item.id}`, payload: { subject_type: "lead", subject_id: item.lead_id, lead_id: item.lead_id } });
+    } else if (next === "handoff_to_sales" && item.lead_id) {
+      // lead_gen -> Sales: the hand-off is lead_gen's own gated action (handoff_to_sales); when it is done, FLOW_NEXT sends Sales classify_lead (branch above).
+      const lead = await getLead(c, item.lead_id);
+      await sendCommand(c, {
+        ...chain, to, command: next, reason: "lead_captured", dedupeKey: `handoff_to_sales:after:${item.id}`,
+        payload: { subject_type: "lead", subject_id: item.lead_id, lead_id: item.lead_id, contact: lead?.phone ?? lead?.email ?? "", need: lead?.need ?? "" },
+      });
     } else if (next === "send_follow_up" && item.lead_id) {
       if (item.proposal.fields?.stage === "lost") continue;
       if ((await getLead(c, item.lead_id))?.stage === "won") continue; // the customer already bought: no sales follow-up

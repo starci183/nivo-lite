@@ -1,8 +1,9 @@
 "use client";
 
+import { parseDate } from "@internationalized/date";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Alert, Badge, Button, Drawer, EmptyNotice, Form, Input, ListRow, Select, SurfaceListCard, Text, Textarea, type BadgeTone } from "@starci/grammar/common";
+import { Alert, Badge, Button, DatePicker, Drawer, EmptyNotice, Form, Input, ListRow, Select, SurfaceListCard, Text, Textarea, type BadgeTone } from "@starci/grammar/common";
 import { useLocale, useT } from "@/i18n/client";
 import { workbenchSales } from "@/i18n/dict/workbenchSales";
 import { CONTRACT_STATUSES, dayText, daysLeft, type Contract, type ContractStatus } from "@/lib/sales-contracts-shared";
@@ -12,6 +13,8 @@ import { formatVnd, parseAmount } from "./format";
 
 const STATUS_TONE: Record<ContractStatus, BadgeTone> = { active: "success", ended: "neutral", cancelled: "danger" };
 const NO_LEAD = "none";
+/** The stored YYYY-MM-DD as a date value; an empty or malformed text is no date. */
+const dateOf = (text: string) => { try { return text ? parseDate(text) : null; } catch { return null; } };
 const VN_OFFSET_MS = 7 * 3_600_000;
 
 /** Props for {@link ContractsPanel}. */
@@ -29,7 +32,7 @@ type DrawerProps = {
   readonly onClose: (message?: string) => void;
 };
 
-/** Add or edit a recurring contract. Dates are typed as YYYY-MM-DD (the server validates them). */
+/** Add or edit a recurring contract. Dates are picked with the grammar DatePicker (stored as YYYY-MM-DD; the server validates them again). */
 const ContractDrawer = ({ editing, leads, today, onClose }: DrawerProps) => {
   const t = useT(workbenchSales);
   const router = useRouter();
@@ -79,8 +82,8 @@ const ContractDrawer = ({ editing, leads, today, onClose }: DrawerProps) => {
             options={[{ id: NO_LEAD, label: t("contractLeadNone") }, ...leads.map((l) => ({ id: l.id, label: l.name }))]} onValueChange={(v) => pickLead(v ?? NO_LEAD)} />
           <Input id="contract-customer" name="customer" label={t("contractCustomer")} variant="secondary" value={f.customerName} onValueChange={(v) => set("customerName", v)} isRequired />
           <Input id="contract-plan" name="plan" label={t("contractPlan")} hint={t("contractPlanHint")} variant="secondary" value={f.plan} onValueChange={(v) => set("plan", v)} />
-          <Input id="contract-start" name="startsOn" label={t("contractStart")} variant="secondary" placeholder="2026-11-01" value={f.startsOn} onValueChange={(v) => set("startsOn", v)} isRequired />
-          <Input id="contract-end" name="endsOn" label={t("contractEnd")} hint={t("contractEndHint")} variant="secondary" placeholder="2027-10-31" value={f.endsOn} onValueChange={(v) => set("endsOn", v)} isRequired />
+          <DatePicker name="startsOn" label={t("contractStart")} variant="secondary" value={dateOf(f.startsOn)} onValueChange={(v) => set("startsOn", v ? v.toString() : "")} isRequired />
+          <DatePicker name="endsOn" label={t("contractEnd")} description={t("contractEndHint")} variant="secondary" value={dateOf(f.endsOn)} minValue={dateOf(f.startsOn) ?? undefined} onValueChange={(v) => set("endsOn", v ? v.toString() : "")} isRequired />
           <Input id="contract-amount" name="amount" label={t("contractAmount")} variant="secondary" value={f.amount} onValueChange={(v) => set("amount", v)} />
           <Select label={t("contractStatus")} value={f.status} variant="secondary"
             options={CONTRACT_STATUSES.map((s) => ({ id: s, label: t(`contractStatus_${s}`) }))} onValueChange={(v) => set("status", CONTRACT_STATUSES.find((s) => s === v) ?? "active")} />

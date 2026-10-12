@@ -39,7 +39,9 @@
   "settings_extras": null,
   "requires": {
     "capabilities": [],
-    "connections": ["meta"]
+    "connections": [
+      "meta"
+    ]
   },
   "default_operating_mode": "assist",
   "agent": {
@@ -80,49 +82,116 @@
       "label_vi": "Khách lý tưởng và khu vực",
       "label_en": "Ideal customer and area",
       "hint_vi": "Khách thế nào là phù hợp, ở khu vực nào, độ tuổi hoặc ngành nào.",
-      "hint_en": "Who the ideal customer is, in which area, age group or industry."
+      "hint_en": "Who the ideal customer is, in which area, age group or industry.",
+      "writes": [
+        {
+          "kind": "fact",
+          "subjectType": "customer",
+          "attributeLabel": "Khách hàng lý tưởng",
+          "scope": "internal"
+        }
+      ]
     },
     {
       "key": "public_offers",
       "label_vi": "Ưu đãi và giá công khai",
       "label_en": "Public offers and prices",
       "hint_vi": "Gói, ưu đãi và mức giá được phép nói công khai với người lạ.",
-      "hint_en": "Packages, offers and prices that may be told to strangers."
+      "hint_en": "Packages, offers and prices that may be told to strangers.",
+      "writes": [
+        {
+          "kind": "fact",
+          "subjectType": "product",
+          "attributeLabel": "Ưu đãi và giá công khai",
+          "scope": "public"
+        }
+      ]
     },
     {
       "key": "qualification",
       "label_vi": "Câu hỏi lọc khách",
       "label_en": "Qualification questions",
       "hint_vi": "Tối đa 4 câu hỏi, kèm tiêu chí khách nóng, ấm, lạnh.",
-      "hint_en": "At most 4 questions, with the hot, warm and cold criteria."
+      "hint_en": "At most 4 questions, with the hot, warm and cold criteria.",
+      "writes": [
+        {
+          "kind": "fact",
+          "subjectType": "policy",
+          "attributeLabel": "Câu hỏi sàng lọc khách",
+          "scope": "internal"
+        },
+        {
+          "kind": "fact",
+          "subjectType": "policy",
+          "attributeLabel": "Tiêu chí khách nóng, ấm, lạnh",
+          "scope": "internal"
+        }
+      ]
     },
     {
       "key": "objections",
       "label_vi": "Phản đối thường gặp và cách đáp",
       "label_en": "Objections and answers",
       "hint_vi": "Khách hay chê gì (đắt, xa, chưa tin) và trả lời thế nào.",
-      "hint_en": "What prospects push back on (price, distance, trust) and how to answer."
+      "hint_en": "What prospects push back on (price, distance, trust) and how to answer.",
+      "writes": [
+        {
+          "kind": "fact",
+          "subjectType": "policy",
+          "attributeLabel": "Cách trả lời khi khách do dự",
+          "scope": "internal"
+        }
+      ]
     },
     {
       "key": "forbidden_claims",
       "label_vi": "Điều không được nói",
       "label_en": "Forbidden claims",
       "hint_vi": "Cam kết, so sánh, kết quả hoặc từ ngữ tuyệt đối không được dùng.",
-      "hint_en": "Promises, comparisons, results or wording that must never be used."
+      "hint_en": "Promises, comparisons, results or wording that must never be used.",
+      "writes": [
+        {
+          "kind": "fact",
+          "subjectType": "policy",
+          "attributeLabel": "Điều không được hứa với khách",
+          "scope": "restricted"
+        }
+      ]
     },
     {
       "key": "hours_owner",
       "label_vi": "Giờ làm việc và người nhận lead",
       "label_en": "Working hours and who receives leads",
       "hint_vi": "Giờ người thật trả lời và ai nhận khách nóng.",
-      "hint_en": "When a person replies and who receives hot leads."
+      "hint_en": "When a person replies and who receives hot leads.",
+      "writes": [
+        {
+          "kind": "fact",
+          "subjectType": "policy",
+          "attributeLabel": "Giờ làm việc và người nhận khách",
+          "scope": "internal"
+        },
+        {
+          "kind": "rule",
+          "action": "handoff_to_sales",
+          "field": "mode"
+        }
+      ]
     },
     {
       "key": "tone",
       "label_vi": "Giọng điệu",
       "label_en": "Tone",
       "hint_vi": "Cách xưng hô và phong cách khi nhắn khách (dùng chung với các agent khác).",
-      "hint_en": "How it addresses people and the style of its messages (shared with the other agents)."
+      "hint_en": "How it addresses people and the style of its messages (shared with the other agents).",
+      "writes": [
+        {
+          "kind": "fact",
+          "subjectType": "policy",
+          "attributeLabel": "Giọng điệu trả lời",
+          "scope": "restricted"
+        }
+      ]
     },
     {
       "key": "channels_posts",
@@ -135,15 +204,24 @@
   "authority_actions": [
     {
       "action": "capture_lead",
-      "label": { "vi": "Ghi nhận khách tiềm năng", "en": "Capture lead" },
+      "label": {
+        "vi": "Ghi nhận khách tiềm năng",
+        "en": "Capture lead"
+      },
       "mode": "auto",
       "limit_vnd": null,
       "required_fields": [],
-      "amount_limit": false
+      "amount_limit": false,
+      "next": [
+        "handoff_to_sales"
+      ]
     },
     {
       "action": "greet_prospect",
-      "label": { "vi": "Chào khách", "en": "Greet prospect" },
+      "label": {
+        "vi": "Chào khách",
+        "en": "Greet prospect"
+      },
       "mode": "auto",
       "limit_vnd": null,
       "required_fields": [],
@@ -152,7 +230,10 @@
     },
     {
       "action": "ask_qualifying",
-      "label": { "vi": "Hỏi câu lọc khách", "en": "Ask qualifying questions" },
+      "label": {
+        "vi": "Hỏi câu lọc khách",
+        "en": "Ask qualifying questions"
+      },
       "mode": "auto",
       "limit_vnd": null,
       "required_fields": [],
@@ -161,7 +242,10 @@
     },
     {
       "action": "score_lead",
-      "label": { "vi": "Chấm điểm khách", "en": "Score lead" },
+      "label": {
+        "vi": "Chấm điểm khách",
+        "en": "Score lead"
+      },
       "mode": "auto",
       "limit_vnd": null,
       "required_fields": [],
@@ -169,7 +253,10 @@
     },
     {
       "action": "reply_comment_public",
-      "label": { "vi": "Trả lời bình luận công khai", "en": "Reply to a public comment" },
+      "label": {
+        "vi": "Trả lời bình luận công khai",
+        "en": "Reply to a public comment"
+      },
       "mode": "auto",
       "limit_vnd": null,
       "required_fields": [],
@@ -178,7 +265,10 @@
     },
     {
       "action": "private_reply_comment",
-      "label": { "vi": "Nhắn riêng cho người bình luận", "en": "Private reply to a comment" },
+      "label": {
+        "vi": "Nhắn riêng cho người bình luận",
+        "en": "Private reply to a comment"
+      },
       "mode": "auto",
       "limit_vnd": null,
       "required_fields": [],
@@ -187,43 +277,69 @@
     },
     {
       "action": "send_lead_offer",
-      "label": { "vi": "Gửi ưu đãi cho khách", "en": "Send an offer to a lead" },
+      "label": {
+        "vi": "Gửi ưu đãi cho khách",
+        "en": "Send an offer to a lead"
+      },
       "mode": "ask",
       "limit_vnd": null,
-      "required_fields": ["contact"],
+      "required_fields": [
+        "contact"
+      ],
       "amount_limit": false
     },
     {
       "action": "quote_custom_price",
-      "label": { "vi": "Báo giá riêng", "en": "Quote a custom price" },
+      "label": {
+        "vi": "Báo giá riêng",
+        "en": "Quote a custom price"
+      },
       "mode": "ask",
       "limit_vnd": null,
-      "required_fields": ["amount_vnd"],
+      "required_fields": [
+        "amount_vnd"
+      ],
       "amount_limit": true
     },
     {
       "action": "handoff_to_sales",
-      "label": { "vi": "Chuyển khách nóng cho Sales", "en": "Hand a hot lead to Sales" },
+      "label": {
+        "vi": "Chuyển khách nóng cho Sales",
+        "en": "Hand a hot lead to Sales"
+      },
       "mode": "auto",
       "limit_vnd": null,
-      "required_fields": ["contact", "need"],
+      "required_fields": [
+        "contact",
+        "need"
+      ],
       "amount_limit": false,
       "note": "Auto for hot leads only; warm and cold leads stay in the list.",
-      "next": ["classify_lead"]
+      "next": [
+        "classify_lead"
+      ]
     },
     {
       "action": "message_with_human_agent_tag",
-      "label": { "vi": "Nhắn bằng thẻ nhân viên (ngoài 24 giờ)", "en": "Message with the human agent tag" },
+      "label": {
+        "vi": "Nhắn bằng thẻ nhân viên (ngoài 24 giờ)",
+        "en": "Message with the human agent tag"
+      },
       "mode": "ask",
       "limit_vnd": null,
-      "required_fields": ["contact"],
+      "required_fields": [
+        "contact"
+      ],
       "amount_limit": false,
       "max_mode": "ask",
       "note": "Only a person's reply to an open support case, never marketing."
     },
     {
       "action": "message_outside_window",
-      "label": { "vi": "Nhắn ngoài khung 24 giờ", "en": "Message outside the 24-hour window" },
+      "label": {
+        "vi": "Nhắn ngoài khung 24 giờ",
+        "en": "Message outside the 24-hour window"
+      },
       "mode": "never",
       "limit_vnd": null,
       "required_fields": [],
@@ -232,12 +348,159 @@
     },
     {
       "action": "hide_or_delete_comment",
-      "label": { "vi": "Ẩn hoặc xóa bình luận của khách", "en": "Hide or delete a customer comment" },
+      "label": {
+        "vi": "Ẩn hoặc xóa bình luận của khách",
+        "en": "Hide or delete a customer comment"
+      },
       "mode": "never",
       "limit_vnd": null,
       "required_fields": [],
       "amount_limit": false,
       "max_mode": "never"
+    }
+  ],
+  "accepts": [
+    {
+      "command": "capture_lead",
+      "action": "capture_lead",
+      "subject_type": "inbound",
+      "required_fields": [],
+      "description": {
+        "vi": "ghi nhận khách tiềm năng",
+        "en": "capture the lead"
+      }
+    },
+    {
+      "command": "greet_prospect",
+      "action": "greet_prospect",
+      "subject_type": "lead",
+      "required_fields": [
+        "lead_id"
+      ],
+      "description": {
+        "vi": "chào khách",
+        "en": "greet the prospect"
+      }
+    },
+    {
+      "command": "ask_qualifying",
+      "action": "ask_qualifying",
+      "subject_type": "lead",
+      "required_fields": [
+        "lead_id"
+      ],
+      "description": {
+        "vi": "hỏi câu lọc khách",
+        "en": "ask the qualifying questions"
+      }
+    },
+    {
+      "command": "score_lead",
+      "action": "score_lead",
+      "subject_type": "lead",
+      "required_fields": [
+        "lead_id"
+      ],
+      "description": {
+        "vi": "chấm điểm khách",
+        "en": "score the lead"
+      }
+    },
+    {
+      "command": "reply_comment_public",
+      "action": "reply_comment_public",
+      "subject_type": "inbound",
+      "required_fields": [
+        "subject_id"
+      ],
+      "description": {
+        "vi": "trả lời bình luận công khai",
+        "en": "reply to the public comment"
+      }
+    },
+    {
+      "command": "private_reply_comment",
+      "action": "private_reply_comment",
+      "subject_type": "inbound",
+      "required_fields": [
+        "subject_id"
+      ],
+      "description": {
+        "vi": "nhắn riêng cho người bình luận",
+        "en": "send a private reply to the commenter"
+      }
+    },
+    {
+      "command": "send_lead_offer",
+      "action": "send_lead_offer",
+      "subject_type": "lead",
+      "required_fields": [
+        "lead_id"
+      ],
+      "description": {
+        "vi": "gửi ưu đãi cho khách",
+        "en": "send an offer to the lead"
+      }
+    },
+    {
+      "command": "quote_custom_price",
+      "action": "quote_custom_price",
+      "subject_type": "lead",
+      "required_fields": [
+        "lead_id"
+      ],
+      "description": {
+        "vi": "báo giá riêng",
+        "en": "quote a custom price"
+      }
+    },
+    {
+      "command": "handoff_to_sales",
+      "action": "handoff_to_sales",
+      "subject_type": "lead",
+      "required_fields": [
+        "lead_id"
+      ],
+      "description": {
+        "vi": "chuyển khách nóng cho Bán hàng",
+        "en": "hand the hot lead to Sales"
+      }
+    },
+    {
+      "command": "message_with_human_agent_tag",
+      "action": "message_with_human_agent_tag",
+      "subject_type": "lead",
+      "required_fields": [
+        "lead_id"
+      ],
+      "description": {
+        "vi": "nhắn bằng thẻ nhân viên",
+        "en": "message with the human agent tag"
+      }
+    },
+    {
+      "command": "message_outside_window",
+      "action": "message_outside_window",
+      "subject_type": "lead",
+      "required_fields": [
+        "lead_id"
+      ],
+      "description": {
+        "vi": "nhắn ngoài khung 24 giờ",
+        "en": "message outside the 24-hour window"
+      }
+    },
+    {
+      "command": "hide_or_delete_comment",
+      "action": "hide_or_delete_comment",
+      "subject_type": "inbound",
+      "required_fields": [
+        "subject_id"
+      ],
+      "description": {
+        "vi": "ẩn hoặc xóa bình luận",
+        "en": "hide or delete the comment"
+      }
     }
   ],
   "connection_providers": [

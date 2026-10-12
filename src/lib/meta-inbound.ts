@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { agentsFor, INBOUND_MODULES, routeInbound } from "./agent-bindings";
 import { ingest } from "./core";
 import type { Db } from "./core";
+import { sendCommandItem } from "./agent-commands";
 import { customerTurn, type CustomerChannel } from "./customer-turn";
 import { runWork, type EngineCtx } from "./engine";
 import { drainAfter } from "./flow-ctx";
@@ -19,7 +20,7 @@ import type { Agent, AgentConversation } from "./types";
  *   2. a person's message or a comment opens (or moves forward) the 24 hour window / the 7 day private-reply window (meta_threads, meta_comments);
  *   3. it is dispatched through the agent bindings (agent-bindings.ts): dm, postback, comment and mention go to the connection's
  *      `inbound_chat` front door exactly like Telegram and Zalo (customerTurn: the reply passes the authority gate, then deliverMeta
- *      sends it); a leadgen goes to the agents bound `lead_source`, and is handed to Sales through the gate (handoff_lead).
+ *      sends it); a leadgen goes to the agents bound `lead_source`: the lead_gen agent when bound (capture_lead, then handoff_to_sales -> Sales classify_lead), else Sales (handoff_lead).
  * A connection nobody is bound to still stores the event (nobody answers it).
  */
 export type MetaResult = {
@@ -128,10 +129,20 @@ const handleLead = async (db: Db, conn: Conn, ev: MetaEvent, page: MetaPage | nu
   const sources = await agentsFor(conn.id, "lead_source", { acting: true });
   if (sources.length === 0) return { event_key: ev.event_key, handled: false, reason: "no_agent" };
   const c: EngineCtx = { db, ws, actor: "Facebook Lead Ads", locale: LOCALE };
-  await runWork(c, {
-    action: "handoff_lead", subject_type: "inbound", subject_id: event.id, inbound_event_id: event.id, origin: "live", dedupeKey: `handoff_lead:inbound:${event.id}`,
-    seed: { fields: { contact_name: name, company: "", need: leadNeed(lead, ev), contact, channel_label: "Facebook Lead Ads" } },
-  });
+  const fields = { contact_name: name, company: "", need: leadNeed(lead, ev), contact, channel_label: "Facebook Lead Ads" };
+  if (sources.some((s) => s.module === "lead_gen")) {
+    // The lead_gen agent receives it (capture_lead); its own handoff_to_sales then reaches Sales as a typed command (classify_lead), see continueChain.
+    await sendCommandItem(c, {
+      from: "inbound", to: "lead_gen", command: "capture_lead", reason: "lead_ad", origin: "live", inboundEventId: event.id,
+      dedupeKey: `capture_lead:inbound:${event.id}`, payload: { subject_type: "inbound", subject_id: event.id, ...fields },
+    });
+  } else {
+    // No lead_gen agent bound: Sales (bound `lead_source`) takes the lead through the usual hand-off.
+    await runWork(c, {
+      action: "handoff_lead", subject_type: "inbound", subject_id: event.id, inbound_event_id: event.id, origin: "live", dedupeKey: `handoff_lead:inbound:${event.id}`,
+      seed: { fields },
+    });
+  }
   await markProcessed(db, event.id);
   drainAfter(c, 2);
   revalidatePath("/", "layout");

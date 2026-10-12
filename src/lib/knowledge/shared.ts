@@ -83,9 +83,6 @@ export type KnowledgeSuggestion = {
   visibility: Visibility;
 };
 
-/** `lead_gen` is registered by its own change; until it is in MODULE_KEYS the cast keeps its suggestions from matching anything. */
-const LEAD_GEN = "lead_gen" as string as ModuleKey;
-
 export const KNOWLEDGE_SUGGESTIONS: ReadonlyArray<KnowledgeSuggestion> = [
   {
     key: "about", modules: ["chatbot", "sales"], gates: ["identity"], visibility: "public",
@@ -279,39 +276,39 @@ export const KNOWLEDGE_SUGGESTIONS: ReadonlyArray<KnowledgeSuggestion> = [
     topic_vi: "Giới hạn lời hứa và người duyệt video", topic_en: "Claim limits and video approval",
     hint_vi: "Điều không được hứa trong video, hình ảnh cấm dùng, ai duyệt trước khi đăng. Ví dụ: không hứa 'giảm cân', không dùng ảnh khách khi chưa xin phép; chủ duyệt mọi video.", hint_en: "What a video must not promise, banned imagery, who approves before posting. E.g. no weight-loss promises, no customer photos without consent; owner approves every video.",
   },
-  /* lead_gen: its module is added by a parallel change; these only show once it is installed */
+  /* lead_gen: gate keys are those of resources/modules/lead_gen/module.json */
   {
-    key: "lead_icp", modules: [LEAD_GEN], gates: ["audience"], visibility: "internal",
+    key: "lead_icp", modules: ["lead_gen"], gates: ["icp_area"], visibility: "internal",
     topic_vi: "Khách hàng lý tưởng", topic_en: "Ideal customer",
     hint_vi: "Ai là khách đáng chăm nhất: độ tuổi, nghề, khu vực, ngân sách, vấn đề họ gặp. Ví dụ: chủ quán cà phê 1-3 chi nhánh ở TP.HCM, ngân sách 5-20 triệu/tháng.", hint_en: "Who is worth pursuing: age, job, area, budget, the problem they have. E.g. owners of 1-3 cafés in HCMC, budget 5-20M a month.",
   },
   {
-    key: "lead_questions", modules: [LEAD_GEN], gates: ["qualification"], visibility: "internal",
+    key: "lead_questions", modules: ["lead_gen"], gates: ["qualification"], visibility: "internal",
     topic_vi: "Câu hỏi sàng lọc khách", topic_en: "Qualification questions",
     hint_vi: "Vài câu hỏi theo thứ tự để hiểu nhu cầu, mỗi lần chỉ hỏi một câu. Ví dụ: Anh/chị quan tâm dịch vụ nào? Ngân sách khoảng bao nhiêu? Cần xong trước ngày nào? Gọi số nào tiện?", hint_en: "A few ordered questions to understand need, one at a time. E.g. Which service? Rough budget? Needed by when? Best number to call?",
   },
   {
-    key: "lead_scoring", modules: [LEAD_GEN], gates: ["qualification"], visibility: "internal",
+    key: "lead_scoring", modules: ["lead_gen"], gates: ["qualification"], visibility: "internal",
     topic_vi: "Tiêu chí khách nóng, ấm, lạnh", topic_en: "Hot, warm and cold criteria",
     hint_vi: "Dấu hiệu từng mức và việc làm tiếp. Ví dụ: Nóng = để lại số và hỏi giá hoặc lịch, gọi trong 15 phút; Ấm = quan tâm nhưng chưa rõ ngân sách, nhắn lại sau 1 ngày; Lạnh = chỉ xem, nuôi bằng nội dung.", hint_en: "Signals for each level and the next step. E.g. Hot = leaves a number and asks price or dates, call within 15 min; Warm = interested, no budget yet, follow up in a day; Cold = browsing, nurture.",
   },
   {
-    key: "lead_objections", modules: [LEAD_GEN], gates: ["objections"], visibility: "internal",
+    key: "lead_objections", modules: ["lead_gen"], gates: ["objections"], visibility: "internal",
     topic_vi: "Cách trả lời khi khách do dự", topic_en: "Objection handling",
     hint_vi: "Các lời từ chối hay gặp và câu trả lời bạn muốn dùng. Ví dụ: 'Đắt quá' thì nêu giá trị và gói nhỏ hơn; 'Để suy nghĩ' thì hẹn nhắn lại vào ngày cụ thể.", hint_en: "Common pushbacks and the reply you want. E.g. 'Too expensive': explain value, offer a smaller package; 'Let me think': agree a day to follow up.",
   },
   {
-    key: "lead_offers", modules: [LEAD_GEN], gates: ["offer_pricing"], visibility: "public",
+    key: "lead_offers", modules: ["lead_gen"], gates: ["public_offers"], visibility: "public",
     topic_vi: "Ưu đãi và giá công khai", topic_en: "Public offers and prices",
     hint_vi: "Giá và ưu đãi được phép nói công khai, thời hạn, điều kiện. Ví dụ: gói khởi đầu 2.990.000đ; giảm 10% cho 20 khách đầu tháng 10; tư vấn miễn phí.", hint_en: "Prices and offers that may be shared openly, with dates and conditions. E.g. starter pack 2,990,000đ; 10% off for the first 20 customers in October; free consultation.",
   },
   {
-    key: "lead_forbidden_claims", modules: [LEAD_GEN], gates: ["prohibited"], visibility: "internal",
+    key: "lead_forbidden_claims", modules: ["lead_gen"], gates: ["forbidden_claims"], visibility: "internal",
     topic_vi: "Điều không được hứa với khách", topic_en: "Forbidden claims",
     hint_vi: "Cam kết, so sánh, kết quả không được nói với khách tiềm năng. Ví dụ: không hứa doanh thu tăng bao nhiêu %; không nhắc giá chưa công bố; không chê đối thủ.", hint_en: "Promises, comparisons and results never to state to prospects. E.g. no promised revenue growth; no unpublished prices; no knocking competitors.",
   },
   {
-    key: "lead_routing", modules: [LEAD_GEN], gates: ["handoff"], visibility: "internal",
+    key: "lead_routing", modules: ["lead_gen"], gates: ["hours_owner"], visibility: "internal",
     topic_vi: "Giờ làm việc và ai nhận khách", topic_en: "Working hours and who receives leads",
     hint_vi: "Khung giờ gọi lại, ai nhận khách nóng, khách ngoài giờ xử lý ra sao. Ví dụ: Hương nhận khách 8-18h; sau 18h hẹn gọi 8h sáng; khách nóng báo Zalo chủ ngay.", hint_en: "Call-back hours, who gets hot leads, what happens out of hours. E.g. Huong takes leads 8-18h; after 18h promise a call at 8am; hot leads ping the owner on Zalo.",
   },

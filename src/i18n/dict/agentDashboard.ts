@@ -39,6 +39,7 @@ export const agentDashboard = defineDict({
     connPurpose_bank_feed: "Reads payments",
     connPurpose_data_source: "Reads data",
     connPurpose_tool: "Calls this API",
+    connPurpose_lead_source: "Receives lead ads",
     // Knowledge
     knowTitle: "Knowledge",
     knowAudienceCustomer: "Reads public knowledge only, because its answers reach customers.",
@@ -89,6 +90,7 @@ export const agentDashboard = defineDict({
     connPurpose_bank_feed: "Đọc giao dịch",
     connPurpose_data_source: "Đọc dữ liệu",
     connPurpose_tool: "Gọi API này",
+    connPurpose_lead_source: "Nhận lead từ quảng cáo",
     knowTitle: "Tri thức",
     knowAudienceCustomer: "Chỉ đọc tri thức công khai, vì câu trả lời của nó đến tay khách hàng.",
     knowAudienceInternal: "Đọc cả tri thức công khai và nội bộ.",
