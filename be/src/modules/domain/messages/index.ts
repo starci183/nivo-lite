@@ -1,0 +1,6 @@
+export type { AgentIdentity, MessagesScope, OfficeLineInput, OptionalAgentIdentity } from "./office-lines.contracts"
+export { AGENT_DIRECTORY, InjectAgentDirectory } from "./office-lines.decorators"
+export type { AgentDirectory } from "./office-lines.port"
+export { MessagesModule } from "./messages.module"
+export type { MessagesOptions } from "./messages.options"
+export { OfficeLinesService } from "./office-lines.service"
