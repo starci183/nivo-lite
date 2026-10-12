@@ -1,0 +1,23 @@
+{
+  "open": "Open the NIVO guide",
+  "close": "Close the guide",
+  "title": "NIVO guide",
+  "subtitle": "Finds the right page for you",
+  "here": "You are on: {page}",
+  "greeting": "What would you like to do in NIVO? Ask in your own words and I'll show you the way.",
+  "placeholder": "Ask how to do something in NIVO",
+  "questionLabel": "Your question",
+  "send": "Ask",
+  "thinking": "Looking…",
+  "steps": "Steps",
+  "aiNote": "Written by AI. Check the page before you act.",
+  "restart": "Start over",
+  "suggestSepay": "Get notified when money arrives",
+  "suggestTelegram": "Let a bot answer customers",
+  "suggestTeam": "Invite my staff",
+  "suggestKnowledge": "Teach the AI my price list",
+  "suggestLeads": "Add a new customer",
+  "suggestOffice": "Approve work the AI proposed",
+  "suggestAccount": "Change my password",
+  "failed": "The guide could not answer. Try again in a moment."
+}

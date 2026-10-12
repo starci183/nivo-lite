@@ -1,34 +1,38 @@
-import type { Metadata, Viewport } from "next";
-import { Open_Sans } from "next/font/google";
-import type { CSSProperties, ReactNode } from "react";
-import { Providers } from "@/components/providers/Providers";
-import { getLocale } from "@/i18n/server";
-import "../globals.css";
+import { hasLocale } from "next-intl"
+import { getMessages } from "next-intl/server"
+import { notFound } from "next/navigation"
+import type { ReactNode } from "react"
+import { AppLayout, appLayoutMetadata } from "@/features/layouts/AppLayout"
+import { PRODUCT_TIME_ZONE, routing } from "@/modules/i18n"
+import { Providers } from "./providers"
+import "../globals.css"
 
-const openSans = Open_Sans({ subsets: ["latin", "vietnamese"] });
+type LayoutProps = {
+    readonly children: ReactNode
+    readonly params: Promise<{ readonly locale: string }>
+}
 
-export const metadata: Metadata = {
-  title: "NIVO OS",
-  description: "The responsibility operating system for founder-led service businesses.",
-};
+/** The viewport of this route segment. */
+export { appLayoutViewport as viewport } from "@/features/layouts/AppLayout"
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1 };
+/** The localized document title of this route segment. */
+export const generateMetadata = async (props: LayoutProps) => appLayoutMetadata((await props.params).locale)
 
-type RootLayoutProps = { readonly children: ReactNode };
+/** The locale segment's document, providers and app chrome. */
+const Layout = async (props: LayoutProps) => {
+    const { locale } = await props.params
+    if (!hasLocale(routing.locales, locale)) notFound()
+    const messages = await getMessages({ locale })
+    return (
+        <AppLayout
+            locale={locale}
+            content={
+                <Providers locale={locale} messages={messages} timeZone={PRODUCT_TIME_ZONE}>
+                    {props.children}
+                </Providers>
+            }
+        />
+    )
+}
 
-/** Root document: Open Sans on the body, the reader's locale, and the provider stack. */
-const RootLayout = async ({ children }: RootLayoutProps) => {
-  const locale = await getLocale();
-  return (
-  <html lang={locale} suppressHydrationWarning>
-    <body
-      className="min-h-dvh bg-background text-foreground antialiased"
-      style={{ "--font-open-sans": openSans.style.fontFamily } as CSSProperties}
-    >
-      <Providers locale={locale}>{children}</Providers>
-    </body>
-  </html>
-  );
-};
-
-export default RootLayout;
+export default Layout

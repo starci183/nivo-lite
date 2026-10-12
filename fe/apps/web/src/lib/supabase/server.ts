@@ -1,21 +1,7 @@
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
-import { publicConfig } from "../config";
-import { perfFetch } from "./perf";
+import "server-only"
+import type { SupabaseClient } from "@supabase/supabase-js"
+import { createServerDbClient } from "@/modules/db"
 
-export const supabaseServer = async () => {
-  const store = await cookies();
-  return createServerClient(publicConfig.supabaseUrl, publicConfig.supabaseAnonKey, {
-    global: { fetch: perfFetch },
-    cookies: {
-      getAll: () => store.getAll(),
-      setAll: (list) => {
-        try {
-          for (const { name, value, options } of list) store.set(name, value, options);
-        } catch {
-          // Called from a Server Component: the proxy refreshes the session instead.
-        }
-      },
-    },
-  });
-};
+/** Shim for Wave 3: the cookie-backed server client now comes from modules/db; the untyped shape older callers query with stays. */
+export const supabaseServer = async (): Promise<SupabaseClient> =>
+    (await createServerDbClient()) as unknown as SupabaseClient
