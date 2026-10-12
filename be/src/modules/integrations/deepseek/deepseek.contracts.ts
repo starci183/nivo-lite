@@ -255,12 +255,20 @@ export interface CallMeta {
     readonly module: string
 }
 
+/** What a command does, in both languages. */
+export interface CommandDescription {
+    /** Vietnamese. */
+    readonly vi: string
+    /** English. */
+    readonly en: string
+}
+
 /** One command of the agent the owner's message may map to. */
 export interface CommandOption {
     /** The command key. */
     readonly command: string
     /** What it does, in both languages. */
-    readonly description: { readonly vi: string; readonly en: string }
+    readonly description: CommandDescription
     /** The kind of record it is about. */
     readonly subjectType: string
     /** The payload keys it needs. */
