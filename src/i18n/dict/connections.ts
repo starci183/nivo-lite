@@ -75,6 +75,10 @@ export const connections = defineDict({
     localNote: "Local site: the connection is saved, but Telegram can only reach you once the app runs on its public domain. The webhook is registered there.",
     connectedOk: "Connected.",
 
+    purpose_inbound_chat: "Listens and answers customers here",
+    purpose_outbound_chat: "Sends its messages through here",
+    purpose_bank_feed: "Reads the incoming transactions",
+    purpose_lead_source: "Receives the leads of your lead ads",
     agentCardTitle: "Connections this agent uses",
     agentCardHint: "Each connection this agent can work through, with how far it may go. The same setting as the Agents button on the Connections page.",
     agentCardNone: "No connection of a suitable type yet.",
@@ -257,6 +261,10 @@ export const connections = defineDict({
     localNote: "Trang đang chạy trên máy: kết nối đã được lưu, nhưng Telegram chỉ gọi tới được khi ứng dụng chạy trên tên miền công khai. Webhook sẽ được đăng ký ở đó.",
     connectedOk: "Đã kết nối.",
 
+    purpose_inbound_chat: "Nghe và trả lời khách qua kênh này",
+    purpose_outbound_chat: "Gửi tin của mình qua kênh này",
+    purpose_bank_feed: "Đọc các giao dịch đi vào",
+    purpose_lead_source: "Nhận lead từ quảng cáo biểu mẫu của bạn",
     agentCardTitle: "Kết nối dùng cho agent này",
     agentCardHint: "Các kết nối agent này dùng được, kèm mức quyền. Đây cũng chính là nút Agent ở trang Kết nối.",
     agentCardNone: "Chưa có kết nối phù hợp.",

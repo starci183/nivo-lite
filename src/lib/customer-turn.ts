@@ -4,10 +4,13 @@ import { system } from "@/i18n/dict/system";
 import { governance } from "@/i18n/dict/governance";
 import * as ai from "./deepseek";
 import { ingest, logEvidence } from "./core";
+import { sendCommandItem } from "./agent-commands";
 import { formatVnd, latestInvoiceFor, loadAuthority, runWork, startOrderWork, startPaymentClaim, type EngineCtx } from "./engine";
 import { enqueueChatTurn } from "./engine-queue";
 import { drainAfter } from "./flow-ctx";
 import { isKnownPrice } from "./knowledge";
+import { lensFor } from "./knowledge/lens";
+import { noteKnowledgeGap } from "./brain/gaps-detect";
 import { DEFAULT_FALLBACK_REPLY, quotaStatus } from "./usage";
 import { escalateToStaff } from "./staff-relay";
 import { registerChatApplication } from "./module-hiring-flow";
@@ -17,7 +20,7 @@ import { conversationAccess } from "./channels";
 import type { Agent, AgentConversation, AgentMessage } from "./types";
 
 /** How the customer reached us: the inbound channel key and the label shown on the lead. */
-export type CustomerChannel = { readonly key: "website" | "telegram"; readonly label: string };
+export type CustomerChannel = { readonly key: "website" | "telegram" | "facebook" | "instagram"; readonly label: string };
 
 const must = <T>(res: { data: T | null; error: { message: string } | null }): T => {
   if (res.error) throw new Error(res.error.message);
@@ -29,7 +32,10 @@ const agentInput = (a: Agent): ai.AgentInput => ({ name: a.name, handle: a.handl
 
 /** The channel a stored conversation belongs to. */
 export const channelOf = (conv: AgentConversation): CustomerChannel =>
-  conv.channel === "telegram" ? { key: "telegram", label: "Telegram" } : { key: "website", label: "Website chat" };
+  conv.channel === "telegram" ? { key: "telegram", label: "Telegram" }
+  : conv.channel === "facebook" ? { key: "facebook", label: "Facebook Messenger" }
+  : conv.channel === "instagram" ? { key: "instagram", label: "Instagram" }
+  : { key: "website", label: "Website chat" };
 
 /** A paid record counts as "just confirmed" for a customer's late "đã chuyển khoản" within this window. */
 const RECENTLY_PAID_MS = 14 * 86_400_000;
@@ -215,10 +221,10 @@ const applyCustomerOut = async (
     }, (n) => t("duplicateBlocked", { n }));
     // A redelivered channel event is one input: no second hand-off.
     if (!duplicate) {
-      const item = await runWork(c, {
-        action: "handoff_lead", subject_type: "conversation", subject_id: conv.id, inbound_event_id: event.id, origin: "live",
+      const item = await sendCommandItem(c, {
+        from: "inbound", to: "chatbot", command: "handoff_lead", reason: "the chatbot captured a lead", inboundEventId: event.id, origin: "live",
         dedupeKey: `handoff_lead:conversation:${conv.id}`,
-        seed: { fields: { contact_name: out.lead.contact_name, company: out.lead.company, need: out.lead.need, contact, channel_label: channel.label, conversation_id: conv.id, transcript } },
+        payload: { subject_type: "conversation", subject_id: conv.id, contact_name: out.lead.contact_name, company: out.lead.company, need: out.lead.need, contact, channel_label: channel.label, conversation_id: conv.id, transcript },
       });
       capturedLeadId = item.lead_id;
       leadId = item.lead_id ?? leadId;
@@ -292,6 +298,12 @@ const applyCustomerOut = async (
     }
     await supabase.from("agent_messages").insert({ workspace_id: ws, conversation_id: conv.id, role: "system", body: t("chatNeedsHuman") });
   }
+
+  // Learning loop: a question the knowledge could not answer is remembered (counted, deduped) for the owner to fill in the Second Brain. Never throws.
+  await noteKnowledgeGap(supabase, lensFor(ws, agent.module, { audience: "customer" }), {
+    conversationId: conv.id, question: body,
+    signals: { knowledgeGap: out.knowledge_gap ?? null, needsHuman: out.needs_human, proposedAnswer: out.proposed_answer, isTransaction: Boolean(out.order || out.payment_claim || out.application || out.loyalty) },
+  });
 
   const changed = Boolean(capturedLeadId || needsHuman || ordered || claimed || applied || redeemAsked);
   // An order queues the payment record right behind the lead's classification: drain one more step for it.

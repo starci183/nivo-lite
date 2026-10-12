@@ -13,7 +13,9 @@ import type { AgentConversation, Outcome } from "./types";
 
 /* Chatbot workbench: queries and actions for the customer-conversation inbox. Everything runs as the signed-in member through RLS. */
 
-export type WbChannel = "telegram" | "zalo" | "website";
+export type WbChannel = "telegram" | "zalo" | "facebook" | "instagram" | "website";
+/** Channels a reply is pushed to from NIVO (the website chat is read in the page itself). */
+const PUSHED: ReadonlySet<string | null> = new Set(["telegram", "zalo", "facebook", "instagram"]);
 export type WbDelivery = "sent" | "failed" | null;
 
 export type WbMessage = {
@@ -47,9 +49,11 @@ export type WbConversation = {
 export type WbMetrics = {
   readonly today: number;
   readonly waiting: number;
-  /** Average minutes from a customer's first message to the first reply, last 30 days; null when nothing to compute from. */
-  readonly avgFirstResponseMin: number | null;
+  /** Median (p50) minutes from a customer's first message to the first reply, last 30 days; null when nothing to compute from. */
+  readonly p50FirstResponseMin: number | null;
   readonly sample: number;
+  /** Leads captured by the Chatbot: leads created in the last 7 days that came out of one of its customer conversations. */
+  readonly leadsCaptured7d: number;
 };
 
 export type WbLead = { readonly id: string; readonly name: string; readonly company: string; readonly stage: string; readonly need: string; readonly phone: string | null; readonly email: string | null };
@@ -88,9 +92,15 @@ type MsgRow = {
 const DAY_MS = 86_400_000;
 const VN_OFFSET_MS = 7 * 3_600_000;
 const vnDayStart = (now: number): number => Math.floor((now + VN_OFFSET_MS) / DAY_MS) * DAY_MS - VN_OFFSET_MS;
+const median = (xs: ReadonlyArray<number>): number | null => {
+  if (!xs.length) return null;
+  const sorted = [...xs].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+};
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1).trimEnd()}…` : s);
 
-const channelOfRow = (c: Pick<ConvRow, "channel">): WbChannel => (c.channel === "telegram" ? "telegram" : c.channel === "zalo" ? "zalo" : "website");
+const channelOfRow = (c: Pick<ConvRow, "channel">): WbChannel => (c.channel === "telegram" || c.channel === "zalo" || c.channel === "facebook" || c.channel === "instagram" ? c.channel : "website");
 
 const toMessage = (m: MsgRow): WbMessage => ({
   id: m.id, role: m.role, authorKind: m.author_kind === "human" ? "human" : "ai", authorName: m.author_name ?? null, body: m.body, createdAt: m.created_at,
@@ -112,7 +122,7 @@ export async function loadChatbotOverview(): Promise<WbOverview> {
   const now = Date.now();
   const nowIso = new Date(now).toISOString();
   const agentIds = await chatbotAgentIds(c);
-  const empty: WbOverview = { workspaceId: c.ws, nowIso, conversations: [], metrics: { today: 0, waiting: 0, avgFirstResponseMin: null, sample: 0 } };
+  const empty: WbOverview = { workspaceId: c.ws, nowIso, conversations: [], metrics: { today: 0, waiting: 0, p50FirstResponseMin: null, sample: 0, leadsCaptured7d: 0 } };
   if (!agentIds.length) return empty;
 
   const convRows = ((await c.db.from("agent_conversations").select("*").eq("workspace_id", c.ws).eq("kind", "customer").in("agent_id", agentIds)
@@ -126,11 +136,14 @@ export async function loadChatbotOverview(): Promise<WbOverview> {
     c.db.from("agent_messages").select("id, conversation_id, role, body, created_at").eq("workspace_id", c.ws).in("conversation_id", ids)
       .gte("created_at", since).order("created_at", { ascending: true }).limit(6000),
     c.db.from("work_items").select("id, subject_id, proposal").eq("workspace_id", c.ws).eq("action", "reply_customer").eq("status", "waiting_decision").limit(200),
-    leadIds.length ? c.db.from("leads").select("id, contact_name").eq("workspace_id", c.ws).in("id", leadIds) : Promise.resolve({ data: [] }),
+    leadIds.length ? c.db.from("leads").select("id, contact_name, created_at").eq("workspace_id", c.ws).in("id", leadIds) : Promise.resolve({ data: [] }),
   ]);
   const msgs = (msgRes.data ?? []) as Array<MsgRow>;
   const waiting = new Set(((waitRes.data ?? []) as Array<Pick<WorkItem, "subject_id" | "proposal">>).map(waitingConversationId).filter((x): x is string => !!x));
-  const leadName = new Map(((leadRes.data ?? []) as Array<{ id: string; contact_name: string }>).map((l) => [l.id, l.contact_name]));
+  const leadRows = (leadRes.data ?? []) as Array<{ id: string; contact_name: string; created_at: string }>;
+  const leadName = new Map(leadRows.map((l) => [l.id, l.contact_name]));
+  const capturedSince = new Date(now - 7 * DAY_MS).toISOString();
+  const leadsCaptured7d = leadRows.filter((l) => l.created_at >= capturedSince).length;
 
   const byConv = new Map<string, Array<MsgRow>>();
   for (const m of msgs) {
@@ -158,14 +171,15 @@ export async function loadChatbotOverview(): Promise<WbOverview> {
     };
   }).sort((a, b) => b.lastAt.localeCompare(a.lastAt));
 
-  const avg = deltas.length ? deltas.reduce((s, x) => s + x, 0) / deltas.length : null;
+  const p50 = median(deltas);
   return {
     workspaceId: c.ws, nowIso, conversations,
     metrics: {
       today: convRows.filter((r) => Date.parse(r.created_at) >= dayStart).length,
       waiting: conversations.filter((x) => x.waiting).length,
-      avgFirstResponseMin: avg === null ? null : Math.round(avg * 100) / 100,
+      p50FirstResponseMin: p50 === null ? null : Math.round(p50 * 100) / 100,
       sample: deltas.length,
+      leadsCaptured7d,
     },
   };
 }
@@ -238,7 +252,7 @@ export async function replyAsMember(conversationId: string, body: string): Promi
     }).select("id").single();
     if (ins.error) throw new Error(ins.error.message);
     const sent = await deliverToChannel(c.db, conv.id, text);
-    const status: "sent" | "failed" = (conv.channel === "telegram" || conv.channel === "zalo") && !sent ? "failed" : "sent";
+    const status: "sent" | "failed" = PUSHED.has(conv.channel ?? null) && !sent ? "failed" : "sent";
     await c.db.from("agent_messages").update(status === "sent" ? { delivery_status: status, delivery_error: null } : { delivery_status: status }).eq("id", (ins.data as { id: string }).id).eq("workspace_id", c.ws);
     await logEvidence(c.db, c.ws, { lead_id: conv.lead_id, kind: "conversation.human_reply", actor: name, summary: translator(system, c.locale)("takenOverNoReply"), evidence: text });
     revalidatePath("/", "layout");
@@ -264,7 +278,7 @@ export async function answerEscalation(workItemId: string, conversationId: strin
     if (text !== null) {
       const conv = ((await c.db.from("agent_conversations").select("channel").eq("id", conversationId).eq("workspace_id", c.ws).maybeSingle()).data ?? null) as { channel: string | null } | null;
       const posted = res.data.result?.summary === translator(system, c.locale)("replyPostedTelegram");
-      delivered = (conv?.channel === "telegram" || conv?.channel === "zalo") ? posted : true;
+      delivered = PUSHED.has(conv?.channel ?? null) ? posted : true;
       // The performer stored the answer as an unlabelled line: attribute it to this member and record honest delivery.
       const { data } = await c.db.from("agent_messages").select("id").eq("conversation_id", conversationId).eq("workspace_id", c.ws).eq("role", "agent")
         .eq("body", answer).is("author_kind", null).order("created_at", { ascending: false }).limit(1);

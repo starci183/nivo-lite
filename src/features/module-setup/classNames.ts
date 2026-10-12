@@ -26,3 +26,8 @@ export const EVIDENCE_CLASS_NAME = cn("whitespace-pre-wrap", "break-words");
 /** One version row of the Grammar list card: BOUNDARY-2 case-1 with the band inset (PADDING-4 inline, PADDING-3 block). */
 export const VERSION_ROW_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "justify-between", "gap-2", "border-b", "border-separator", "px-4", "py-3", "last:border-b-0");
 export const VERSION_COPY_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-1");
+/** Confirm cards under NIVO's reply (an approval card in the bubble footer). */
+export const WRITES_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-3");
+export const WRITE_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-2", "rounded-lg", "border", "border-separator", "p-3");
+export const WRITE_HEAD_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "justify-between", "gap-2");
+export const WRITE_FIELDS_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-3");

@@ -5,6 +5,7 @@ import { Breadcrumbs, Button, DescriptionList, PageContainer, PrimaryRailLayout,
 import { useT } from "@/i18n/client"
 import { brain } from "@/i18n/dict/brain"
 import { planReview } from "@/lib/brain/conflicts"
+import type { KnowledgeGap } from "@/lib/brain/gaps-shared"
 import type { ExtractionInfo, Fact, Lesson } from "@/lib/brain/shared"
 import { CreditsAlert } from "./CreditsAlert"
 import { HEAD_CLASS, LENS_CLASS, PAGE_CLASS, STACK_CLASS } from "./classNames"
@@ -29,6 +30,10 @@ export type BrainViewProps = {
   /** Where the reading of each document's facts stands. */
   readonly extractions?: ReadonlyArray<ExtractionInfo>
   readonly canWrite: boolean
+  /** Questions customers asked that the brain could not answer (owners and managers; empty for staff). */
+  readonly gaps?: ReadonlyArray<KnowledgeGap>
+  /** How many gaps are open in all (the list shows the most asked). */
+  readonly gapsOpen?: number
   /** STATE-8: the same page while its data loads - labels stay, figures, the graph and the rail rows are skeletons. */
   readonly isLoading?: boolean
   /** The workspace's name: the subject of the starter facts (opening hours, address...). */
@@ -41,7 +46,7 @@ type Surface = "map" | "review" | "facts" | "lessons"
  * Bộ não, laid out like Tri thức: header, actions, four key figures, then the active surface with the rail beside it
  * (agent views, what is worth adding, how it learns). Review opens first when something waits.
  */
-export const BrainView = ({ facts, documents, lessons, lenses, extractions = [], canWrite, business, isLoading = false }: BrainViewProps) => {
+export const BrainView = ({ facts, documents, lessons, lenses, extractions = [], gaps = [], gapsOpen = gaps.length, canWrite, business, isLoading = false }: BrainViewProps) => {
   const t = useT(brain)
   const active = facts.filter((f) => f.status === "active")
   const scheduled = facts.filter((f) => f.status === "scheduled").length
@@ -98,6 +103,7 @@ export const BrainView = ({ facts, documents, lessons, lenses, extractions = [],
               { id: "facts", term: t("statFacts"), description: String(active.length), meta: t("statFactsMeta", { n: String(scheduled) }) },
               { id: "review", term: t("statReview"), description: String(waiting), meta: t("statReviewMeta", { n: String(conflicts) }) },
               { id: "agents", term: t("statAgents"), description: String(lenses.length), meta: t("statAgentsMeta") },
+              ...(canWrite ? [{ id: "gaps", term: t("statGaps"), description: String(gapsOpen), meta: t("statGapsMeta") }] : []),
             ]}
           />
         </SurfaceCard>
@@ -132,7 +138,7 @@ export const BrainView = ({ facts, documents, lessons, lenses, extractions = [],
             </div>
           }
           rail={
-            <BrainRail isLoading={isLoading} facts={facts} lenses={lenses} lens={lens} onLens={onLens} business={business} canWrite={canWrite}
+            <BrainRail isLoading={isLoading} gaps={gaps} facts={facts} lenses={lenses} lens={lens} onLens={onLens} business={business} canWrite={canWrite}
               onStart={(preset) => setDrawer({ preset })} />
           }
         />

@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { lensBrief, lensFor } from "./knowledge/lens";
 import { generateWithOpenClaw } from "./openclaw-generate";
 import { supabaseAdmin } from "./supabase/admin";
 import {
@@ -197,7 +198,9 @@ export const generateJobAd = async (db: Db, ws: string, jobId: string): Promise<
   const settings = await ensureSettings(db, ws);
   const wsName = ((await db.from("workspaces").select("name").eq("id", ws).maybeSingle()).data as { name: string } | null)?.name ?? "";
   const link = publicJobUrl(settings.public_slug, job.slug);
-  const user = `Doanh nghiệp: ${wsName}\nGiọng điệu: ${settings.ad_tone}\n\n${jobFacts(job)}`;
+  // A job ad is published: public view only.
+  const knowledge = await lensBrief(lensFor(ws, "hiring", { audience: "customer" }), `${job.title} ${wsName}`.trim(), { db, budget: 900, factLimit: 4, passageLimit: 2 });
+  const user = `Doanh nghiệp: ${wsName}\nGiọng điệu: ${settings.ad_tone}\n\n${jobFacts(job)}${knowledge ? `\n\n${knowledge}` : ""}`;
   const t0 = Date.now();
   let attempts = 0;
   let timings: Record<string, number> = {};

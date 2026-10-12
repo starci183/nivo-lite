@@ -1,6 +1,7 @@
 import "server-only";
 import { logDecision, logEvidence } from "./core";
 import { generateWithOpenClaw } from "./openclaw-generate";
+import { lensFacts, lensFor, lensSources } from "./knowledge/lens";
 import { claimWarnings } from "./module-content-claims";
 import {
   channelRule, cleanHashtags, eventsForMonth, GUARDRAILS, isContentChannel, monthKey, slotsForMonth, vnDateKey, vnParts, vnToIso, pad2,
@@ -35,11 +36,14 @@ const clip = (s: string, n: number): string => (s.length > n ? `${s.slice(0, n).
 /** Everything the posts are grounded in: the business knowledge, the tone gate of the applied context, the owner's brand settings and limits. */
 export const loadBrandContext = async (db: Db, ws: string, settings?: ContentSettings): Promise<BrandContext> => {
   const s = settings ?? (await loadSettings(db, ws));
-  const [shopRes, authRes, instRes, srcRes] = await Promise.all([
+  // Posts are published: the content lens is PUBLIC-only (documents and brain facts), whatever a source or fact says about other modules.
+  const lens = lensFor(ws, "content");
+  const [shopRes, authRes, instRes, rows, brain] = await Promise.all([
     db.from("workspaces").select("name").eq("id", ws).maybeSingle(),
     db.from("authority").select("brand_voice, reply_style, limits_note, policies").eq("workspace_id", ws).maybeSingle(),
     db.from("module_installations").select("active_context_version_id").eq("workspace_id", ws).eq("module_key", "content").maybeSingle(),
-    db.from("knowledge_sources").select("title, topic, kind, content, module").eq("workspace_id", ws).eq("status", "ready").order("created_at"),
+    lensSources(lens, 200, db),
+    lensFacts(lens, undefined, 40, db).catch(() => []), // the approved facts of the brain inside the public view
   ]);
   const auth = (authRes.data ?? {}) as { brand_voice?: string; reply_style?: string; limits_note?: string; policies?: string };
 
@@ -55,7 +59,6 @@ export const loadBrandContext = async (db: Db, ws: string, settings?: ContentSet
     gates = snap?.gates ?? {};
   }
 
-  const rows = ((srcRes.data ?? []) as Array<{ title: string; topic: string | null; kind: string; content: string; module: string | null }>).filter((r) => !r.module || r.module === "content");
   let used = 0;
   const parts: Array<string> = [];
   for (const r of rows) {
@@ -64,8 +67,9 @@ export const loadBrandContext = async (db: Db, ws: string, settings?: ContentSet
     parts.push(block);
     used += block.length;
   }
+  const brainText = brain.length ? `Sự thật đã duyệt (công khai):\n${clip(brain.map((f) => `- ${f.subjectLabel} · ${f.attributeLabel}: ${f.value}`).join("\n"), 2500)}` : "";
   const factLines = facts.map((f) => `- ${f.text}`).join("\n");
-  const knowledge = [ctxSummary ? `Tóm tắt doanh nghiệp: ${ctxSummary}` : "", factLines ? `Điều đã xác nhận khi thiết lập:\n${factLines}` : "", ...parts].filter(Boolean).join("\n\n");
+  const knowledge = [ctxSummary ? `Tóm tắt doanh nghiệp: ${ctxSummary}` : "", factLines ? `Điều đã xác nhận khi thiết lập:\n${factLines}` : "", brainText, ...parts].filter(Boolean).join("\n\n");
 
   const voice = [gates.tone?.evidence, auth.brand_voice, auth.reply_style, s.brand_voice].map((x) => (x ?? "").trim()).filter(Boolean).join(" | ");
   const avoid = [gates.claims_limits?.evidence, auth.limits_note, s.avoid].map((x) => (x ?? "").trim()).filter(Boolean).join(" | ");

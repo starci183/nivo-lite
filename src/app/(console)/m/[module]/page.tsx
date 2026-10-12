@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { SetupScreen } from "@/features/module-setup/SetupScreen";
 import { isManagerRole } from "@/lib/members-shared";
+import { unmetRequirements } from "@/lib/module-requirements";
 import { loadSetup } from "@/lib/module-actions";
 import { getInstallation, listContextVersions } from "@/lib/modules-core";
 import { isModuleKey } from "@/lib/modules-shared";
@@ -22,7 +23,7 @@ const SetupPage = async ({ params }: SetupPageProps) => {
   }
   // The installation list is cached per request (the layout read it already), so the versions can start with the setup reads.
   const known = await getInstallation(module);
-  const [state, versions] = await Promise.all([loadSetup(module), known ? listContextVersions(known.id) : Promise.resolve([])]);
+  const [state, versions, unmet] = await Promise.all([loadSetup(module), known ? listContextVersions(known.id) : Promise.resolve([]), unmetRequirements(module)]);
   if (!state.ok) notFound();
   return (
     <SetupScreen
@@ -32,6 +33,8 @@ const SetupPage = async ({ params }: SetupPageProps) => {
       initialRevisions={state.data.revisions}
       initialMessages={state.data.messages}
       initialVersions={versions}
+      unmetRequirements={unmet}
+      initialWrites={state.data.writes}
     />
   );
 };

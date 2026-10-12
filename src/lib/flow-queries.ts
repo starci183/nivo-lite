@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { drainAfter, engineCtx } from "./flow-ctx";
 import type { EngineCtx } from "./engine";
-import { listModules } from "./module-registry";
+import { listModules, MODULE_KEYS } from "./module-registry";
 import type {
   Authority, AuthorityRule, DecisionRow, Department, Governance, InboundEvent, Invoice, LeadFlow, Order, ReasonCode, Staff, Transaction,
   WorkItem, WorkItemView, WorkStatus,
@@ -41,14 +41,18 @@ export const getAuthority = cache(async (): Promise<Authority> => {
   };
 });
 
-const ORDER: Record<string, number> = { chatbot: 0, sales: 1, accounting: 2 };
-const ACTION_ORDER = ["reply_customer", "handoff_lead", "classify_lead", "send_follow_up", "send_quote", "confirm_order", "send_care", "issue_invoice", "reconcile_payment", "send_email"];
+/** Department position = the module registry order (every module, future ones included); an unknown department sorts last. */
+const DEPARTMENT_ORDER: ReadonlyMap<string, number> = new Map(MODULE_KEYS.map((k, i) => [k as string, i]));
+const rank = (department: string): number => DEPARTMENT_ORDER.get(department) ?? MODULE_KEYS.length;
+/** Action position inside its department = the order of the module's authorityActions in the registry. */
+const ACTION_ORDER: ReadonlyMap<string, number> = new Map(listModules().flatMap((m) => m.authorityActions.map((a, i) => [`${m.key}.${a.action}`, i] as const)));
+const actionRank = (r: { department: string; action: string }): number => ACTION_ORDER.get(`${r.department}.${r.action}`) ?? Number.MAX_SAFE_INTEGER;
 
 /** Department × action rules, grouped Chatbot → Sales → Accounting in flow order. */
 export const listRules = cache(async (): Promise<Array<AuthorityRule>> => {
   const { db, ws } = await engineCtx();
   const { data } = await db.from("authority_rules").select("*").eq("workspace_id", ws);
-  return ((data ?? []) as Array<AuthorityRule>).sort((a, b) => ORDER[a.department] - ORDER[b.department] || ACTION_ORDER.indexOf(a.action) - ACTION_ORDER.indexOf(b.action));
+  return ((data ?? []) as Array<AuthorityRule>).sort((a, b) => rank(a.department) - rank(b.department) || actionRank(a) - actionRank(b) || a.action.localeCompare(b.action));
 });
 
 /** Optional staff (active first). */

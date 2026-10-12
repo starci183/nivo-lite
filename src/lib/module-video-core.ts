@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { logEvidence } from "./core";
 import { resolveBotToken, type Connection } from "./channels";
 import { buildAgentContext } from "./knowledge/index";
+import { lensFor, lensSources } from "./knowledge/lens";
 import { generateWithOpenClaw, type GenMessage } from "./openclaw-generate";
 import { telegramSend } from "./telegram";
 import { enqueueRender, getRender, signedRenderUrls } from "./video/client";
@@ -61,9 +62,8 @@ export const saveBrand = async (c: VideoCtx, b: Brand): Promise<Brand> => {
 
 /** Public business sources the video may be based on (customer-facing output: never internal knowledge). */
 export const sourceChoices = async (c: Pick<VideoCtx, "db" | "ws">): Promise<Array<SourceChoice>> => {
-  const { data, error } = await c.db.from("knowledge_sources").select("id, title, topic, content").eq("workspace_id", c.ws).eq("visibility", "public").eq("status", "ready").order("created_at", { ascending: false }).limit(40);
-  fail(error);
-  return ((data ?? []) as Array<{ id: string; title: string; topic: string | null; content: string }>).map((r) => ({ id: r.id, title: r.title, topic: r.topic, excerpt: r.content.replace(/\s+/g, " ").trim().slice(0, 220) }));
+  const rows = (await lensSources(lensFor(c.ws, "video"), 200, c.db)).reverse().slice(0, 40); // the video lens is public-only
+  return rows.map((r) => ({ id: r.id, title: r.title, topic: r.topic, excerpt: r.content.replace(/\s+/g, " ").trim().slice(0, 220) }));
 };
 
 /** What the workspace uploaded to the `media` bucket (newest first), with a short-lived preview URL. */
@@ -228,7 +228,7 @@ export const scenePlan = (seconds: number): { readonly scenes: number; readonly 
 
 const sourcesText = async (c: Pick<VideoCtx, "db" | "ws">, ids: ReadonlyArray<string>): Promise<string> => {
   if (!ids.length) return "";
-  const { data } = await c.db.from("knowledge_sources").select("id, title, topic, content").eq("workspace_id", c.ws).eq("visibility", "public").in("id", [...ids]);
+  const data = (await lensSources(lensFor(c.ws, "video"), 200, c.db)).filter((r) => ids.includes(r.id));
   let budget = MAX_SOURCE_CHARS_TOTAL;
   const parts: Array<string> = [];
   for (const r of (data ?? []) as Array<{ title: string; topic: string | null; content: string }>) {

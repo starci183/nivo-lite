@@ -50,6 +50,7 @@ export const TEMPLATE_LIST: ReadonlyArray<TemplateDef> = [
     inventoryLowStock, inventoryWeeklyReport, inventorySupplierOverdue,
     videoNewOffer,
     loyaltyBirthday, loyaltyTierUp, loyaltyExpiring, loyaltyWinback,
+    shiftsShiftReminder, shiftsLeaveGap, shiftsMonthClose, // module shifts: run by src/lib/module-shifts-tick.ts and the leave action, which read the pipeline row
   ] as unknown) as ReadonlyArray<TemplateDef>),
   ...[emailDailyReport, emailPaymentReceipt, emailDebtReminder, emailMonthLedger].map(fromN8n),
 ];

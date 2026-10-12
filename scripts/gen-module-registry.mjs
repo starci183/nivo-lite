@@ -22,6 +22,8 @@ const categories = readJson(join(modulesDir, "_categories.json"));
 const categoryKeys = new Set(categories.map((c) => c.key));
 const bilingual = (v, where) => { if (!v || typeof v.vi !== "string" || typeof v.en !== "string" || !v.vi || !v.en) fail(`${where}: needs non-empty vi and en`); };
 const LOC = ["vi", "en"];
+const SUBJECT_TYPES = ["business", "product", "service", "policy", "customer", "person", "supplier", "place", "other"];
+const SCOPES = ["public", "internal", "restricted"];
 
 const dirs = readdirSync(modulesDir).filter((n) => !n.startsWith("_") && statSync(join(modulesDir, n)).isDirectory());
 const defs = dirs.map((dir) => {
@@ -30,7 +32,7 @@ const defs = dirs.map((dir) => {
   const m = readJson(file);
   const at = `modules/${dir}/module.json`;
   if (m.key !== dir) fail(`${at}: key "${m.key}" must equal the folder name`);
-  if (!/^[a-z][a-z0-9]{1,23}$/.test(m.key)) fail(`${at}: key must be short lowercase ASCII`);
+  if (!/^[a-z][a-z0-9_]{1,23}$/.test(m.key)) fail(`${at}: key must be short lowercase ASCII`);
   if (typeof m.order !== "number") fail(`${at}: order (number) is required`);
   for (const f of ["name", "short_name", "description"]) bilingual(m[f], `${at} ${f}`);
   for (const l of LOC) if (!Array.isArray(m.points?.[l]) || !m.points[l].length) fail(`${at}: points.${l} must be a non-empty array`);
@@ -55,6 +57,18 @@ const defs = dirs.map((dir) => {
     for (const f of ["key", "label_vi", "label_en", "hint_vi", "hint_en"]) if (typeof g[f] !== "string" || !g[f]) fail(`${at}: gate ${g.key ?? "?"} needs ${f}`);
     if (gateKeys.has(g.key)) fail(`${at}: duplicate gate ${g.key}`);
     gateKeys.add(g.key);
+    // writes: what the setup chat extracts from the owner's answer to this gate (a Second Brain fact or an authority rule field).
+    if (g.writes !== undefined && !Array.isArray(g.writes)) fail(`${at}: gate ${g.key} writes must be an array`);
+    for (const w of g.writes ?? []) {
+      if (w.kind === "fact") {
+        if (!SUBJECT_TYPES.includes(w.subjectType)) fail(`${at}: gate ${g.key} fact write: subjectType must be one of ${SUBJECT_TYPES.join(", ")}`);
+        if (typeof w.attributeLabel !== "string" || !w.attributeLabel) fail(`${at}: gate ${g.key} fact write needs attributeLabel`);
+        if (!SCOPES.includes(w.scope)) fail(`${at}: gate ${g.key} fact write: scope must be public | internal | restricted`);
+      } else if (w.kind === "rule") {
+        if (!m.authority_actions.some((a) => a.action === w.action)) fail(`${at}: gate ${g.key} rule write: action "${w.action}" is not an authority action of ${m.key}`);
+        if (!["mode", "limit_vnd"].includes(w.field)) fail(`${at}: gate ${g.key} rule write: field must be mode | limit_vnd`);
+      } else fail(`${at}: gate ${g.key} write kind must be fact | rule`);
+    }
   }
   if (!Array.isArray(m.authority_actions) || !m.authority_actions.length) fail(`${at}: authority_actions must be a non-empty array`);
   for (const a of m.authority_actions) {
@@ -65,6 +79,23 @@ const defs = dirs.map((dir) => {
     if (!Array.isArray(a.required_fields)) fail(`${at}: action ${a.action} required_fields`);
     if (a.max_mode !== undefined && !["ask", "never"].includes(a.max_mode)) fail(`${at}: action ${a.action} max_mode`);
   }
+  // The command contract (agent command bus): every authority action has exactly one accepted command, with the payload keys a sender must supply.
+  if (!Array.isArray(m.accepts) || !m.accepts.length) fail(`${at}: accepts must be a non-empty array`);
+  const actionKeys = new Set(m.authority_actions.map((a) => a.action));
+  const commandKeys = new Set();
+  const covered = new Set();
+  for (const a of m.accepts) {
+    if (!/^[a-z][a-z0-9_]{2,40}$/.test(a.command)) fail(`${at}: bad command key "${a.command}"`);
+    if (commandKeys.has(a.command)) fail(`${at}: duplicate command ${a.command}`);
+    commandKeys.add(a.command);
+    if (!actionKeys.has(a.action)) fail(`${at}: command ${a.command} maps to ${a.action}, which is not an authority action of ${m.key}`);
+    if (covered.has(a.action)) fail(`${at}: action ${a.action} is accepted by two commands`);
+    covered.add(a.action);
+    if (!/^[a-z][a-z_]{1,30}$/.test(a.subject_type ?? "")) fail(`${at}: command ${a.command} subject_type must be lower_snake`);
+    if (!Array.isArray(a.required_fields) || a.required_fields.some((f) => typeof f !== "string" || !f)) fail(`${at}: command ${a.command} required_fields must be an array of keys`);
+    bilingual(a.description, `${at} command ${a.command} description`);
+  }
+  for (const act of actionKeys) if (!covered.has(act)) fail(`${at}: authority action ${act} has no accepted command`);
   return m;
 }).sort((a, b) => a.order - b.order || a.key.localeCompare(b.key));
 
@@ -81,13 +112,15 @@ const norm = (m) => ({
   icon: m.icon, glyph: m.glyph, mascot: m.mascot, category: m.category, status: m.status, audience: m.audience,
   includedWithWorkspace: !!m.included_with_workspace, available: !!m.available,
   knowledgeFolder: m.knowledge_folder, workbench: m.workbench, settingsExtras: m.settings_extras,
-  requires: m.requires, connectionProviders: m.connection_providers, defaultOperatingMode: m.default_operating_mode,
+  requires: m.requires, connectionProviders: m.connection_providers,
+  defaultOperatingMode: m.default_operating_mode,
   agent: m.agent,
   gates: m.gates,
   authorityActions: m.authority_actions.map((a) => ({
     action: a.action, label: a.label, mode: a.mode, limitVnd: a.limit_vnd, requiredFields: a.required_fields,
     amountLimit: !!a.amount_limit, maxMode: a.max_mode ?? null, note: a.note ?? "", next: a.next ?? [],
   })),
+  accepts: m.accepts.map((a) => ({ command: a.command, action: a.action, subjectType: a.subject_type, requiredFields: a.required_fields, description: a.description })),
 });
 const list = defs.map(norm);
 const labels = { dept: { en: {}, vi: {} }, module: { en: {}, vi: {} }, action: { en: {}, vi: {} } };
@@ -112,10 +145,16 @@ export type BilingualList = { readonly vi: ReadonlyArray<string>; readonly en: R
 export type ModuleStatus = "stable" | "early";
 export type ModuleAudience = "customer" | "internal";
 export type ModuleCategoryKey = ${categories.map((c) => JSON.stringify(c.key)).join(" | ")};
-export type RegistryGate = { readonly key: string; readonly label_vi: string; readonly label_en: string; readonly hint_vi: string; readonly hint_en: string };
+export type GateWrite =
+  | { readonly kind: "fact"; readonly subjectType: "business" | "product" | "service" | "policy" | "customer" | "person" | "supplier" | "place" | "other"; readonly attributeLabel: string; readonly scope: "public" | "internal" | "restricted" }
+  | { readonly kind: "rule"; readonly action: ActionKey; readonly field: "mode" | "limit_vnd" };
+export type RegistryGate = { readonly key: string; readonly label_vi: string; readonly label_en: string; readonly hint_vi: string; readonly hint_en: string; readonly writes?: ReadonlyArray<GateWrite> };
 export type RegistryAction = {
   readonly action: ActionKey; readonly label: Bilingual; readonly mode: "auto" | "ask" | "never"; readonly limitVnd: number | null;
   readonly requiredFields: ReadonlyArray<string>; readonly amountLimit: boolean; readonly maxMode: "ask" | "never" | null; readonly note: string; readonly next: ReadonlyArray<ActionKey>;
+};
+export type RegistryCommand = {
+  readonly command: string; readonly action: ActionKey; readonly subjectType: string; readonly requiredFields: ReadonlyArray<string>; readonly description: Bilingual;
 };
 export type ModuleDef = {
   readonly key: ModuleKey; readonly order: number; readonly name: Bilingual; readonly shortName: Bilingual; readonly description: Bilingual; readonly points: BilingualList; readonly purpose: string;
@@ -123,10 +162,13 @@ export type ModuleDef = {
   readonly includedWithWorkspace: boolean; readonly available: boolean; readonly knowledgeFolder: string;
   readonly workbench: string | null; readonly settingsExtras: string | null;
   readonly requires: { readonly capabilities: ReadonlyArray<string>; readonly connections: ReadonlyArray<string> };
-  readonly connectionProviders: ReadonlyArray<string>; readonly defaultOperatingMode: "assist" | "autopilot";
+  readonly connectionProviders: ReadonlyArray<string>;
+  readonly defaultOperatingMode: "assist" | "autopilot";
   readonly agent: { readonly name: string; readonly handle: string; readonly summary: Bilingual; readonly capabilities: BilingualList; readonly role: Bilingual; readonly instructions: Bilingual };
   readonly gates: ReadonlyArray<RegistryGate>;
   readonly authorityActions: ReadonlyArray<RegistryAction>;
+  /** The command contract: what other agents may ask this module to do (agent-commands.ts). */
+  readonly accepts: ReadonlyArray<RegistryCommand>;
 };
 export type ModuleCategory = { readonly key: ModuleCategoryKey; readonly label: Bilingual };
 

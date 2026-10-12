@@ -16,6 +16,7 @@ import { BOOKING_EXECUTORS, BOOKING_TEMPLATE_KEYS, scanBooking } from "./module-
 import { runBookingTick } from "./module-booking-tick";
 import { offerSources, videoNewOffer } from "./module-video-automation";
 import { runShiftsTick } from "./module-shifts-tick";
+import { SALES_EXECUTORS, scanContracts } from "./sales-automations";
 import { supabaseAdmin } from "./supabase/admin";
 
 /**
@@ -32,6 +33,7 @@ const EXECUTORS: Readonly<Record<string, Executor>> = {
   ...BOOKING_EXECUTORS,
   video_new_offer: videoNewOffer,
   ...LOYALTY_EXECUTORS, // module loyalty (src/lib/module-loyalty-automations.ts)
+  ...SALES_EXECUTORS, // delivery_notice, contract_renewal (src/lib/sales-automations.ts)
 };
 
 const DAY = 86_400_000;
@@ -98,6 +100,12 @@ export const onBusinessEvent = async (ws: string, event: string, data: Readonly<
           break;
         case "after_hours:message.inbound":
           await onInbound(db, l, data, dedupe);
+          break;
+        case "delivery_notice:order.shipped":
+          await trigger(db, l, `ship:${dedupe}`, str(data.order_id), { ...data });
+          break;
+        case "contract_renewal:contract.expiring":
+          await trigger(db, l, `renew:${dedupe}`, str(data.contract_id), { ...data });
           break;
         case "sheet_orders:order.confirmed":
         case "sheet_orders:deal.won":
@@ -232,6 +240,7 @@ const scan = async (db: Db, l: Loaded, now: Date): Promise<number> => {
   if (def.moduleKey === "inventory") return scanInventory(db, l, now, (dedupe, ref, payload) => trigger(db, l, dedupe, ref, payload));
   if (BOOKING_TEMPLATE_KEYS.includes(def.key)) return scanBooking({ db, ws, def, config, now, pipelineId: p.id, trigger: (dedupe, ref, payload) => trigger(db, l, dedupe, ref, payload) });
   if (def.moduleKey === "loyalty") return scanLoyalty(db, l, now, (dedupe, ref, payload) => trigger(db, l, dedupe, ref, payload, { runAt: new Date(Date.now() + 5_000) }));
+  if (def.key === "contract_renewal") return scanContracts(db, { id: p.id, ws, config }, now, BATCH);
   if (def.key === "daily_report") {
     const clock = vnClock(now);
     if (clock.minute >= hhmmToMinutes(String(config.time))) {

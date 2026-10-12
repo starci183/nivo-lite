@@ -162,5 +162,50 @@
       "amount_limit": false
     }
   ],
-  "connection_providers": []
+  "accepts": [
+    {
+      "command": "publish_schedule",
+      "action": "publish_schedule",
+      "subject_type": "inbound",
+      "required_fields": [],
+      "description": {
+        "vi": "đăng lịch ca",
+        "en": "publish the schedule"
+      }
+    },
+    {
+      "command": "approve_swap",
+      "action": "approve_swap",
+      "subject_type": "inbound",
+      "required_fields": [],
+      "description": {
+        "vi": "duyệt đổi ca",
+        "en": "approve the swap"
+      }
+    },
+    {
+      "command": "approve_leave",
+      "action": "approve_leave",
+      "subject_type": "inbound",
+      "required_fields": [],
+      "description": {
+        "vi": "duyệt xin nghỉ",
+        "en": "approve the leave"
+      }
+    },
+    {
+      "command": "remind_shift",
+      "action": "remind_shift",
+      "subject_type": "inbound",
+      "required_fields": [],
+      "description": {
+        "vi": "nhắc ca làm",
+        "en": "remind about the shift"
+      }
+    }
+  ],
+  "connection_providers": [
+    "telegram",
+    "zalo_oa"
+  ]
 }

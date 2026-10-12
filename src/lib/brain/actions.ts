@@ -7,6 +7,7 @@ import { generateWithOpenClaw } from "../openclaw-generate"
 import { supabaseAdmin } from "../supabase/admin"
 import { getSession } from "../session"
 import type { Outcome } from "../types"
+import { dismissGap, answerGap } from "./gaps"
 import { applyFact, chooseFact, keepCurrent, proposeFact, rejectFact, retireFact, splitFact, type ProposeOutcome } from "./facts"
 import { mineLessons, type MineResult } from "./learn"
 import { decideLesson, proposeLesson, retireLesson } from "./lessons"
@@ -47,6 +48,8 @@ export type FactForm = {
   readonly validFrom: string | null
   readonly validTo: string | null
   readonly note: string
+  /** The knowledge gap this fact answers (the owner pressed "Thêm câu trả lời" on it): it is marked answered once the fact is in force. */
+  readonly gapId?: string | null
 }
 
 /** Add a fact, or a new value for an existing one (the old value is superseded and kept in history). */
@@ -58,8 +61,17 @@ export const saveFact = async (form: FactForm): Promise<Outcome<{ fact: Fact; ou
     proposedBy: me.name, autoApply: true,
     evidence: [{ kind: "manual", ref: `manual:${Date.now()}`, label: `${me.name} nhập trên trang Bộ não`, quote: form.note.trim() || undefined, at: new Date().toISOString() }],
   })
+  if (form.gapId && (r.outcome === "applied" || r.outcome === "reinforced") && r.fact.status === "active") await answerGap(supabaseAdmin(), me.ws, form.gapId, `fact:${r.fact.id}`)
   await changed(me.ws)
   return r
+})
+
+/** "Bỏ qua": the owner does not need this customer question answered. It leaves the list for good (soft: the row is kept). */
+export const dismissGapAction = async (id: string): Promise<Outcome<null>> => run(async () => {
+  const me = await manager()
+  await dismissGap(supabaseAdmin(), me.ws, id, me.name)
+  revalidatePath("/brain")
+  return null
 })
 
 export const decideFact = async (id: string, to: "apply" | "reject", note = ""): Promise<Outcome<Fact>> => run(async () => {

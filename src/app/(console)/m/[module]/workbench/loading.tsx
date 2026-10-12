@@ -1,7 +1,6 @@
-import { ModuleWorkbench } from "@/features/module-workbench";
-import { MODULE_KEYS } from "@/lib/modules-shared";
+import { WorkbenchLoading } from "@/features/module-workbench/loading";
 
-/** STATE-8: the workbench slot while it loads - its own card, the module's content as a skeleton (inside the module's frame). */
-const WorkbenchLoading = () => <ModuleWorkbench isLoading module={MODULE_KEYS[0]} />;
+/** STATE-8: the workbench slot while it loads - the module's own frame with real labels and skeleton values (inside the module's chrome). */
+const WorkbenchLoadingRoute = () => <WorkbenchLoading />;
 
-export default WorkbenchLoading;
+export default WorkbenchLoadingRoute;

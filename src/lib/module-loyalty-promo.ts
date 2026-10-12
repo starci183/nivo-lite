@@ -1,6 +1,7 @@
 import "server-only";
 import { runWork, type EngineCtx } from "./engine";
 import { hhmmToMinutes, vnClock } from "./automation-hours";
+import { lensBrief, lensFor } from "./knowledge/lens";
 import { generateWithOpenClaw } from "./openclaw-generate";
 import { loadShopContext } from "./automation-queries";
 import { loadMembers, loadProgram, reachOf, shopNameOf, type Db } from "./module-loyalty-core";
@@ -41,16 +42,18 @@ export const draftPromo = async (db: Db, ws: string, p: { brief: string; segment
   const who = segmentLabel(p.config, p.segment);
   const base = fillLoyaltyBody(MESSAGE_TEMPLATES.promo, { ten_khach: "{ten_khach}", ten_shop: shop.shop, uu_dai: p.brief.trim() || "ưu đãi riêng cho khách thân thiết" });
   try {
+    // Customer-facing text: business knowledge through the loyalty lens (public only), used to keep names and facts accurate.
+    const knowledge = await lensBrief(lensFor(ws, "loyalty"), `${p.brief} ${shop.shop}`.trim(), { db, budget: 1000, factLimit: 4, passageLimit: 3 });
     const system = [
       "Write ONE promotion message from a shop to a loyalty-programme customer, to be sent through their chat (Zalo, Telegram or website).",
       "Vietnamese, warm and plain, no markdown, no emojis unless the shop's tone uses them, at most 60 words.",
       "Start by greeting the customer with the placeholder {ten_khach}. You may also use {ten_shop}, {diem} (their points) and {hang} (their tier). Use no other placeholders.",
-      "Mention ONLY the offer the owner wrote. Never invent a discount, gift, price, date or condition that the owner did not write. End with one easy next step.",
+      "Mention ONLY the offer the owner wrote (the business knowledge below is only for accurate names and facts, never a source of new offers). Never invent a discount, gift, price, date or condition that the owner did not write. End with one easy next step.",
       "Output only the message.",
     ].join("\n");
     const prompt = [
       `Shop: ${shop.shop}`, shop.tone ? `Tone: ${shop.tone}` : "", `Customers receiving it: ${who}`, `Tiers: ${p.config.tiers.map((t) => t.name).join(", ")}`,
-      `The owner's offer / brief: ${p.brief.trim() || "(none: keep it a friendly thank-you without any offer)"}`,
+      `The owner's offer / brief: ${p.brief.trim() || "(none: keep it a friendly thank-you without any offer)"}`, knowledge,
     ].filter(Boolean).join("\n");
     const r = await generateWithOpenClaw({
       workspaceId: ws, purpose: "loyalty_promo_draft", kind: "engine", module: "other", timeoutMs: 45_000,

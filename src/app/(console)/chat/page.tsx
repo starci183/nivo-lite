@@ -8,6 +8,7 @@ import { getOfficeData } from "@/lib/page-data"
 import { getSession } from "@/lib/session"
 import { supabaseServer } from "@/lib/supabase/server"
 import type { Agent, Message } from "@/lib/types"
+import { COMMAND_LINE_AUTHOR } from "@/lib/agent-command-rules"
 
 /** Always render fresh: messages and approvals change constantly. */
 export const dynamic = "force-dynamic"
@@ -92,7 +93,7 @@ const speakAsDepartmentAgents = async (messages: ReadonlyArray<Message>, agents:
   const departmentOf = new Map(((data ?? []) as Array<{ id: string; department: string }>).map((w) => [w.id, w.department]))
   const agentOf = new Map<string, Agent>(agents.filter((a) => a.status === "active").map((a) => [a.module, a]))
   return messages.map((m) => {
-    const agent = m.agent_id === null && m.author_kind === "system" && m.work_item_id ? agentOf.get(departmentOf.get(m.work_item_id) ?? "") : undefined
+    const agent = m.agent_id === null && m.author_kind === "system" && m.author_name !== COMMAND_LINE_AUTHOR && m.work_item_id ? agentOf.get(departmentOf.get(m.work_item_id) ?? "") : undefined
     return agent ? { ...m, author_kind: "agent", author_name: agent.name, agent_id: agent.id } : m
   })
 }

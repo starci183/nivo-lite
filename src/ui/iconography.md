@@ -42,6 +42,7 @@ icon leaf selects the outline or micro drawing from the role.
 | `signIn` | Enter account/session | `ArrowRightStartOnRectangleIcon` (outline), `ArrowRightEndOnRectangleIcon` (chip) | The arrow crossing a boundary names session entry. Heroicons 2.1 split the old `ArrowRightOnRectangleIcon` in two and deprecated that name; the outline cut here is its byte-identical successor `ArrowRightStartOnRectangleIcon`, so the drawing is unchanged |
 | `signUp` | Create an account | `UserPlusIcon` | A person with a plus names account creation |
 | `close` | Dismiss/close | `XMarkIcon` | The conventional close mark has one unambiguous action |
+| `trash` | Remove/dismiss a row | `TrashIcon` | The bin is the established metaphor for taking an item out of a list; `close` stays for dismissing a surface |
 | `next` | Continue/go forward | `ArrowRightIcon` | A forward arrow names progression without implying login |
 | `disclosure` | Open the profile/details named by a row | `ChevronRightIcon` | A chevron denotes disclosure into the row's own destination, not a generic forward action |
 | `retry` | Retry/refresh failed work | `ArrowPathIcon` | The circular path names repeating the same operation |

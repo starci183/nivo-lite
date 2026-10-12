@@ -2,6 +2,7 @@ import "server-only";
 import { after } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { actorOf, str, type Executor } from "./automation-runs";
+import { lensFor, lensSources } from "./knowledge/lens";
 import { beginScripting, createProject, runScripting, type VideoCtx } from "./module-video-core";
 
 /**
@@ -18,8 +19,8 @@ export type OfferSource = { readonly id: string; readonly title: string };
 /** Sources added since the automation was last switched on or saved (and in the last 7 days) that a video can be made from. */
 export const offerSources = async (db: SupabaseClient, ws: string, since: Date, now: Date = new Date()): Promise<Array<OfferSource>> => {
   const from = new Date(Math.max(since.getTime(), now.getTime() - 7 * 86_400_000)).toISOString();
-  const { data } = await db.from("knowledge_sources").select("id, title, topic").eq("workspace_id", ws).eq("visibility", "public").eq("status", "ready").gte("created_at", from).not("topic", "is", null).order("created_at").limit(20);
-  return ((data ?? []) as Array<{ id: string; title: string; topic: string | null }>).filter((r) => isOfferTopic(r.topic)).map((r) => ({ id: r.id, title: r.title }));
+  const data = (await lensSources(lensFor(ws, "video"), 200, db)).filter((r) => r.topic !== null && r.created_at >= from).slice(0, 20);
+  return data.filter((r) => isOfferTopic(r.topic)).map((r) => ({ id: r.id, title: r.title }));
 };
 
 /** The script takes a minute: it finishes after the tick's response (a long-lived server keeps running; a function platform extends via after()). */
@@ -35,7 +36,7 @@ const later = (fn: () => Promise<unknown>): void => {
 export const videoNewOffer: Executor = async (x, p) => {
   const sourceId = str(p.source_id);
   const title = str(p.title) || "Ưu đãi mới";
-  const src = ((await x.db.from("knowledge_sources").select("id").eq("workspace_id", x.ws).eq("id", sourceId).eq("visibility", "public").maybeSingle()).data ?? null) as { id: string } | null;
+  const src = (await lensSources(lensFor(x.ws, "video"), 200, x.db)).find((r) => r.id === sourceId) ?? null;
   if (!src) return { status: "skipped", steps: [{ label: "Bỏ qua", status: "skipped", detail: "Tri thức này không còn hoặc chưa để công khai." }] };
   const c: VideoCtx = { db: x.db, ws: x.ws, userId: null, actor: actorOf(x.def) };
   const project = await createProject(c, {

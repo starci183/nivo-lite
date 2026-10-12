@@ -1,9 +1,9 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { gateEntry, isModuleKey, MODULE_GATES, type ContextSnapshot, type ModuleKey } from "./modules-shared";
-import { audienceOf as registryAudience, moduleDef } from "./module-registry";
+import { moduleDef } from "./module-registry";
 import { standingMemory } from "./brain/recall";
-import type { Visibility } from "./knowledge/shared";
+import { lensFor, lensSources } from "./knowledge/lens";
 import { BOOKING_REPLY_ADDENDUM } from "./module-booking-contract";
 import { HIRING_APPLICATION_CLAUSE, HIRING_APPLICATION_SHAPE, HIRING_REPLY_CONTRACT } from "./module-hiring-contract";
 import { LOYALTY_REPLY_CONTRACT } from "./module-loyalty-shared";
@@ -32,7 +32,7 @@ export type AgentBundle = {
 export const openclawAgentId = (workspaceId: string, module: string): string => `ws-${workspaceId.replace(/-/g, "").slice(0, 8)}-${module.replace(/[^a-z0-9]/gi, "").toLowerCase()}`;
 
 /** Modules that talk to customers: only public knowledge may reach their OpenClaw workspace. */
-export const audienceOf = (module: ModuleKey): "customer" | "internal" => registryAudience(module);
+export const audienceOf = (module: ModuleKey): "customer" | "internal" => lensFor("", module).audience;
 
 /** The reply contract the customer-facing model is held to. Mirrors the one inline customerChat uses (deepseek.ts), so both processors answer in one shape. */
 export const REPLY_CONTRACT = `You are talking to a CUSTOMER on the company's chat (website or Telegram). Reply in the customer's language, max 80 words.
@@ -43,8 +43,9 @@ Asking to be contacted, called back or advised, sharing a need or contact detail
 Otherwise "needs_human": false, "reason": null, "proposed_answer": null.
 ORDER: judge ONLY the customer's latest message. When it clearly commits to buy an item whose price is WRITTEN in the business knowledge, set "order": {"items": the item name as written, "amount_vnd": the total price in VND as an integer copied from the knowledge}. In "reply" thank them, repeat the item and price, and say the payment details follow; do not say it is paid. If the item or its price is not in the knowledge: "order": null, "needs_human": true, "reason": "over_authority". Otherwise "order": null.
 PAYMENT CLAIM: when the customer says they have already paid or transferred the money, set "payment_claim": true, "needs_human": false, and in "reply" thank them and say the shop will check the transfer and confirm shortly. Never say the payment is received. Otherwise "payment_claim": false.
+KNOWLEDGE GAP: when the customer asked something the business knowledge does not answer (a fact, price, policy or detail that is simply not written there), set "knowledge_gap": {"question": the customer's question in one short sentence, in their language, "topic": "subject | attribute" it would be filed under, e.g. "Combo thư giãn | Giá"}. A question the knowledge DOES answer, a greeting, an order or a payment claim is not a gap: "knowledge_gap": null.
 ${HIRING_APPLICATION_CLAUSE}Your FINAL message must be ONLY this JSON object, nothing else:
-{"reply": string, "lead": null | {"contact_name","company","need","phone","email"}, "needs_human": boolean, "reason": "over_authority"|"unclear_outcome"|null, "proposed_answer": string|null, "order": null | {"items": string, "amount_vnd": integer}, "payment_claim": boolean, ${HIRING_APPLICATION_SHAPE}}
+{"reply": string, "lead": null | {"contact_name","company","need","phone","email"}, "needs_human": boolean, "reason": "over_authority"|"unclear_outcome"|null, "proposed_answer": string|null, "order": null | {"items": string, "amount_vnd": integer}, "payment_claim": boolean, "knowledge_gap": null | {"question": string, "topic": string}, ${HIRING_APPLICATION_SHAPE}}
 Your reply is only a PROPOSAL: NIVO checks it against the owner's authority before anything reaches the customer.`;
 
 /** A module with its own reply contract appends it to AGENTS.md (only the chatbot has one today). A customer-facing module lane adds its line here. */
@@ -52,12 +53,12 @@ const REPLY_CONTRACTS: Partial<Record<ModuleKey, string>> = {
   chatbot: REPLY_CONTRACT,
   booking: `${REPLY_CONTRACT}
 ${BOOKING_REPLY_ADDENDUM}`, // booking lane: the same customer contract plus the structured booking_request (handled by src/lib/module-booking-chat.ts)
-  loyalty: LOYALTY_REPLY_CONTRACT, // loyalty lane: points, tier and redeem request (src/lib/module-loyalty-chat.ts)
+  loyalty: `${REPLY_CONTRACT}
+${LOYALTY_REPLY_CONTRACT}`, // loyalty lane: the same customer contract plus points, tier and redeem request (src/lib/module-loyalty-chat.ts); the loyalty agent can be a connection's front door
   hiring: HIRING_REPLY_CONTRACT, // hiring lane: fairness contract of the internal agent (the chat intake clause sits inside REPLY_CONTRACT)
 };
 
 type NivoRow = { module: string; slug: string; title: string; body: string; kind: string };
-type SourceRow = { id: string; title: string; topic: string | null; kind: string; visibility: Visibility; content: string; module: string | null; updated_at: string };
 
 const stripMd = (text: string): string => text.replace(/^#{1,6}\s*/gm, "").replace(/\*\*/g, "").trim();
 const trim = (text: string, max: number): string => (text.length <= max ? text : `${text.slice(0, max).replace(/s+S*$/, "")} ...`);
@@ -85,23 +86,21 @@ export const buildAgentBundle = async (db: SupabaseClient, workspaceId: string, 
   const row = inst.data as { id: string; workspace_id: string; module_key: string; agent_id: string | null; active_context_version_id: string | null } | null;
   if (!row || !isModuleKey(row.module_key)) throw new Error("installation not found in this workspace");
   const module = row.module_key;
-  const audience = audienceOf(module);
+  const lens = lensFor(workspaceId, module);
+  const audience = lens.audience;
 
-  const [agentRes, versionRes, baseRes, sourcesRes] = await Promise.all([
+  const [agentRes, versionRes, baseRes, sourceRows] = await Promise.all([
     row.agent_id ? db.from("agents").select("name, handle, role, instructions, knowledge, approval_rule").eq("id", row.agent_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
     row.active_context_version_id ? db.from("module_context_versions").select("version, snapshot").eq("id", row.active_context_version_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
     db.from("nivo_knowledge").select("module, slug, title, body, kind").in("module", [moduleDef(module).knowledgeFolder, "core"]).in("kind", ["authority", "escalation", "tone"]).order("module", { ascending: false }).order("slug"),
-    db.from("knowledge_sources").select("id, title, topic, kind, visibility, content, module, updated_at").eq("workspace_id", workspaceId).eq("status", "ready").order("created_at"),
+    lensSources(lens, 200, db), // the lens decides which documents this agent may hold (module + audience)
   ]);
-  for (const r of [agentRes, versionRes, baseRes, sourcesRes]) if (r.error) throw new Error(r.error.message);
+  for (const r of [agentRes, versionRes, baseRes]) if (r.error) throw new Error(r.error.message);
 
   const agent = agentRes.data as { name: string; handle: string; role: string; instructions: string; knowledge: string | null; approval_rule: string | null } | null;
   const version = versionRes.data as { version: number; snapshot: ContextSnapshot } | null;
   const base = (baseRes.data ?? []) as Array<NivoRow>;
-  const sources = ((sourcesRes.data ?? []) as Array<SourceRow>)
-    .filter((s) => s.module === null || s.module === module)
-    // The audience filter: a customer-facing agent never receives internal sources.
-    .filter((s) => audience === "internal" || s.visibility === "public");
+  const sources = sourceRows;
 
   const agentName = agent?.name ?? `${module} agent`;
   const knowledgeFiles: Array<BundleFile> = sources.map((s, i) => ({
@@ -136,7 +135,7 @@ export const buildAgentBundle = async (db: SupabaseClient, workspaceId: string, 
   const toneEvidence = version ? gateEntry(version.snapshot.gates, "tone").evidence : "";
   // The shared brain, seen through this agent's view: its facts (public only for a customer-facing agent) and its approved lessons.
   // A brain that cannot be read (not migrated yet) must never stop the sync, so it degrades to nothing.
-  const memory = await standingMemory(db, workspaceId, module, audience).catch((e: unknown) => {
+  const memory = await standingMemory(db, lens).catch((e: unknown) => {
     console.error("brain standing memory failed:", e instanceof Error ? e.message : e);
     return "";
   });

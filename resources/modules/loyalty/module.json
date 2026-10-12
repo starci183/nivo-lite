@@ -186,5 +186,55 @@
       "max_mode": "ask"
     }
   ],
-  "connection_providers": []
+  "accepts": [
+    {
+      "command": "award_points",
+      "action": "award_points",
+      "subject_type": "lead",
+      "required_fields": [],
+      "description": {
+        "vi": "cộng điểm",
+        "en": "award points"
+      }
+    },
+    {
+      "command": "redeem_reward",
+      "action": "redeem_reward",
+      "subject_type": "lead",
+      "required_fields": [
+        "lead_id"
+      ],
+      "description": {
+        "vi": "đổi quà",
+        "en": "redeem a reward"
+      }
+    },
+    {
+      "command": "send_promo",
+      "action": "send_promo",
+      "subject_type": "lead",
+      "required_fields": [],
+      "description": {
+        "vi": "gửi khuyến mãi",
+        "en": "send the promotion"
+      }
+    },
+    {
+      "command": "adjust_points",
+      "action": "adjust_points",
+      "subject_type": "lead",
+      "required_fields": [
+        "lead_id"
+      ],
+      "description": {
+        "vi": "điều chỉnh điểm",
+        "en": "adjust points"
+      }
+    }
+  ],
+  "connection_providers": [
+    "telegram",
+    "zalo_oa",
+    "meta"
+  ]
 }

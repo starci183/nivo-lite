@@ -183,5 +183,71 @@
       "amount_limit": false
     }
   ],
-  "connection_providers": []
+  "accepts": [
+    {
+      "command": "confirm_booking",
+      "action": "confirm_booking",
+      "subject_type": "lead",
+      "required_fields": [
+        "lead_id"
+      ],
+      "description": {
+        "vi": "xác nhận lịch hẹn",
+        "en": "confirm the booking"
+      }
+    },
+    {
+      "command": "reschedule",
+      "action": "reschedule",
+      "subject_type": "lead",
+      "required_fields": [
+        "lead_id"
+      ],
+      "description": {
+        "vi": "đổi lịch hẹn",
+        "en": "reschedule the booking"
+      }
+    },
+    {
+      "command": "cancel_with_fee",
+      "action": "cancel_with_fee",
+      "subject_type": "lead",
+      "required_fields": [
+        "lead_id"
+      ],
+      "description": {
+        "vi": "hủy lịch hẹn có thu phí",
+        "en": "cancel the booking with a fee"
+      }
+    },
+    {
+      "command": "cancel_booking",
+      "action": "cancel_booking",
+      "subject_type": "lead",
+      "required_fields": [
+        "lead_id"
+      ],
+      "description": {
+        "vi": "hủy lịch hẹn",
+        "en": "cancel the booking"
+      }
+    },
+    {
+      "command": "remind_booking",
+      "action": "remind_booking",
+      "subject_type": "lead",
+      "required_fields": [
+        "lead_id"
+      ],
+      "description": {
+        "vi": "nhắc lịch hẹn",
+        "en": "remind about the booking"
+      }
+    }
+  ],
+  "connection_providers": [
+    "telegram",
+    "zalo_oa",
+    "meta"
+  ]
 }

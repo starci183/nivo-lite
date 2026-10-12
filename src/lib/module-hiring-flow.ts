@@ -4,6 +4,7 @@ import type { EngineCtx, Performed, Prepared } from "./engine";
 import { runQueued, runWork } from "./engine";
 import { renderEmail } from "./email/layout";
 import { sendWorkspaceEmail } from "./email/send";
+import { lensBrief, lensFor } from "./knowledge/lens";
 import { generateWithOpenClaw } from "./openclaw-generate";
 import {
   HiringError, ensureSettings, hdb, loadCandidate, loadJob, logCandidate, parseLooseJson, postOffice, publicJobUrl, siteUrl, submitApplication, type Db,
@@ -90,11 +91,13 @@ export const prepareScreening = async (c: EngineCtx, item: WorkItem): Promise<Pr
   let questions: Array<string> = [];
   const lines = s.reasons.map((r) => `- [${r.status === "met" ? "khớp" : r.status === "unmet" ? "chưa khớp" : "chưa rõ"}] ${r.criterion}: ${r.note}`).join("\n");
   const answers = cand.answers.map((a) => `Hỏi: ${a.question}\nĐáp: ${scrubProtected(a.answer)}`).join("\n\n");
+  // Screening notes are internal; the knowledge is about the business and the role, never about the candidate.
+  const knowledge = await lensBrief(lensFor(c.ws, "hiring"), `${job.title} ${criteriaText(job).slice(0, 200)}`, { db: c.db, budget: 900, factLimit: 4, passageLimit: 2 });
   const r = await generateWithOpenClaw({
     workspaceId: c.ws, purpose: "hiring_screen", kind: "engine", module: "hiring", responseFormat: "json", timeoutMs: 75_000,
     messages: [
       { role: "system", content: SCREEN_SYSTEM },
-      { role: "user", content: `TIÊU CHÍ CÔNG VIỆC\n${criteriaText(job)}\n\nKẾT QUẢ ĐỐI CHIẾU TỰ ĐỘNG (điểm ${s.score}/100)\n${lines || "(không có tiêu chí để chấm)"}\n\nCÂU TRẢ LỜI CỦA ỨNG VIÊN\n${answers || "(chưa có)"}\n\nLịch có thể làm: ${scrubProtected(cand.availability) || "(chưa ghi)"}` },
+      { role: "user", content: `TIÊU CHÍ CÔNG VIỆC\n${criteriaText(job)}\n\nKẾT QUẢ ĐỐI CHIẾU TỰ ĐỘNG (điểm ${s.score}/100)\n${lines || "(không có tiêu chí để chấm)"}\n\nCÂU TRẢ LỜI CỦA ỨNG VIÊN\n${answers || "(chưa có)"}\n\nLịch có thể làm: ${scrubProtected(cand.availability) || "(chưa ghi)"}${knowledge ? `\n\n${knowledge}` : ""}` },
     ],
   });
   if (r.ok) {
@@ -350,13 +353,15 @@ export const prepareOffer = async (c: EngineCtx, item: WorkItem): Promise<Prepar
   const job = await loadJob(c.db, c.ws, offer.job_id);
   const shop = await company(c.db, c.ws);
   const settings = await ensureSettings(c.db, c.ws);
+  // The letter goes to the candidate: public view only.
+  const knowledge = await lensBrief(lensFor(c.ws, "hiring", { audience: "customer" }), `${shop} ${offer.terms.title || job.title}`, { db: c.db, budget: 700, factLimit: 3, passageLimit: 2 });
   const r = await generateWithOpenClaw({
     workspaceId: c.ws, purpose: "hiring_offer", kind: "engine", module: "hiring", responseFormat: "json", timeoutMs: 75_000,
     messages: [
       { role: "system", content: `Bạn viết phần mở đầu và phần kết cho một thư mời nhận việc bằng tiếng Việt của một doanh nghiệp nhỏ. Các điều khoản (lương, ngày bắt đầu...) do hệ thống chèn ở giữa, KHÔNG nêu chúng và KHÔNG nêu con số nào. Không hứa thêm điều gì. Không nhắc tới giới tính, tuổi, tôn giáo, dân tộc, hôn nhân, thai sản, khuyết tật, quê quán. Giọng điệu: ${settings.ad_tone}. Văn bản thuần, không markdown. Trả về DUY NHẤT JSON: {"opening": string, "closing": string}. opening: lời chào "Chào <tên ứng viên>," rồi 1-2 câu nói doanh nghiệp vui được mời bạn nhận vị trí (nêu tên doanh nghiệp và vị trí), kết thúc bằng một câu dẫn vào phần điều khoản. closing: 1-2 câu mời xem thư và trả lời ở đường dẫn bên dưới (hệ thống thêm đường dẫn).` },
       { role: "user", content: `Doanh nghiệp: ${shop}
 Ứng viên: ${cand.name}
-Vị trí: ${offer.terms.title || job.title}` },
+Vị trí: ${offer.terms.title || job.title}${knowledge ? `\n\n${knowledge}` : ""}` },
     ],
   });
   const o = r.ok ? parseLooseJson(r.output) : null;

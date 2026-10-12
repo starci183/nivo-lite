@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { logDecision, logEvidence } from "./core";
 import { runWork, type EngineCtx } from "./engine";
 import { isEmailAddress } from "./email/send";
+import { lensBrief, lensFor } from "./knowledge/lens";
 import { generateWithOpenClaw } from "./openclaw-generate";
 import {
   fallbackOrderMessage, formatMoney, formatQty, isOpenPo, matchOrderLine, parseOrderLines, stockStatus, suggestOrderQty,
@@ -316,11 +317,13 @@ export const composeOrderMessage = async (db: Db, ws: string, po: PoFull, kind: 
   const task = kind === "order"
     ? "Viết tin nhắn đặt hàng gửi nhà cung cấp: lịch sự, ngắn gọn, nêu rõ từng mặt hàng và số lượng, ngày cần hàng, nhờ xác nhận và báo nếu thiếu hàng hoặc đổi giá. Không bịa giá hay điều khoản chưa có."
     : "Viết tin nhắn nhắc nhẹ nhà cung cấp về đơn đã quá hạn giao: lịch sự, không trách móc, hỏi khi nào giao được và nêu phần còn thiếu.";
+  // The message leaves the building (to a supplier): public view only, even though inventory is an internal module.
+  const knowledge = await lensBrief(lensFor(ws, "inventory", { audience: "customer" }), `${po.supplier?.name ?? ""} ${lines.map((l) => l.name).join(" ")}`.trim(), { db, budget: 900, factLimit: 3, passageLimit: 2 });
   const r = await generateWithOpenClaw({
     workspaceId: ws, purpose: kind === "order" ? "inventory_po_message" : "inventory_po_reminder", module: "inventory", timeoutMs: 40_000,
     messages: [
       { role: "system", content: "Bạn là trợ lý kho & nhập hàng của một cửa hàng ở Việt Nam. Chỉ viết đúng nội dung tin nhắn bằng tiếng Việt đơn giản, không tiêu đề, không giải thích, không dùng ký hiệu markdown." },
-      { role: "user", content: `${task}\n\n${facts}` },
+      { role: "user", content: `${task}\n\n${facts}${knowledge ? `\n\n${knowledge}` : ""}` },
     ],
   }).catch(() => null);
   const text = r && r.ok ? r.output.trim() : "";

@@ -1,9 +1,11 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 import { intlLocale, translator, type Locale } from "@/i18n/core";
 import { system } from "@/i18n/dict/system";
 import { governance } from "@/i18n/dict/governance";
 import * as ai from "./deepseek";
 import { withUsage } from "./usage";
+import { startOutboundChat } from "./agent-outbound";
 import { deliverToChannel } from "./telegram";
 import { conversationAccess } from "./channels";
 import type { Access } from "./connection-access";
@@ -13,6 +15,8 @@ import { contactParts, logDecision, logEvidence, matchLead, normaliseContact, ty
 import { transferDetails } from "./knowledge";
 import { bankConnectionOf, mentionsCode } from "./bank";
 import { emitEvent } from "./outbound-events";
+import { sendCommand } from "./agent-commands";
+import { COMMAND_LINE_AUTHOR } from "./agent-command-rules";
 import { renderEmail } from "./email/layout";
 import { sendWorkspaceEmail } from "./email/send";
 import { triggerPaymentReceipt } from "./n8n-pipelines";
@@ -49,6 +53,11 @@ export type WorkSpec = {
   noChain?: boolean;
   /** always ask a human, with this reason (e.g. the chatbot flagged a commitment) */
   forceAsk?: ReasonCode;
+  /** the command chain this item joins and its depth (sendCommand sets both); a new item without one starts its own chain at depth 0 */
+  chainId?: string | null;
+  depth?: number;
+  /** called once, only when this call really inserted the row, before the gate runs (the command bus posts its Office mirror here) */
+  onInserted?: (row: WorkItem) => Promise<void>;
 };
 
 const NIVO_BY = { name: "NIVO", kind: "policy" as const };
@@ -113,9 +122,12 @@ const agentInput = (a: Agent): ai.AgentInput => ({ name: a.name, handle: a.handl
  * One short line in the Office thread, linked to the work item. It speaks as the department's own agent (Sales, Accounting,
  * Chatbot) when that agent is installed; without one it stays a NIVO Core line (agent_id null, author "NIVO").
  */
-const postOffice = async (c: EngineCtx, m: { body: string; lead_id: string | null; work_item_id: string | null; dept?: Department }) => {
-  const agent = m.dept ? await agentFor(c, m.dept).catch(() => null) : null;
-  const author = agent
+export const postOffice = async (c: EngineCtx, m: { body: string; lead_id: string | null; work_item_id: string | null; dept?: Department; command?: boolean }) => {
+  const agent = m.dept && !m.command ? await agentFor(c, m.dept).catch(() => null) : null;
+  // A command mirror line is always a NIVO system line, never the receiving agent speaking.
+  const author = m.command
+    ? { author_kind: "system", author_name: COMMAND_LINE_AUTHOR, agent_id: null }
+    : agent
     ? { author_kind: "agent", author_name: agent.name, agent_id: agent.id }
     : { author_kind: "system", author_name: "NIVO", agent_id: null };
   await c.db.from("messages").insert({ workspace_id: c.ws, ...author, body: m.body, lead_id: m.lead_id, work_item_id: m.work_item_id });
@@ -148,6 +160,10 @@ const deliver = async (c: EngineCtx, lead: Lead, text: string): Promise<{ summar
     }
     return { summary: tr(c)("deliveredWebsite", { name: lead.contact_name }), real: true };
   }
+  // No conversation to answer in: the sales agent may start one on a connection it is bound to for outbound_chat (platform limits in agent-outbound.ts).
+  const sales = await agentFor(c, "sales");
+  const started = sales ? await startOutboundChat(c.db, c.ws, sales.id, lead.id, text).catch(() => null) : null;
+  if (started) return { summary: tr(c)("deliveredTelegram", { name: lead.contact_name }), real: true };
   return { summary: tr(c)("simulatedDelivery", { channel: lead.channel }), real: false };
 };
 
@@ -624,6 +640,7 @@ const recordOnly = (action: FlowAction): Performer => ({
 const PERFORMERS: Partial<Record<FlowAction, Performer>> = {
   reply_customer: replyCustomer,
   handoff_lead: handoffLead,
+  capture_lead: handoffLead, // lead_gen: the same lead record (matched or created) as the chatbot hand-off; handoff_to_sales then carries it to Sales
   classify_lead: classifyLead,
   send_follow_up: followUpLike("follow_up"),
   send_quote: followUpLike("quote"),
@@ -777,8 +794,9 @@ const processItem = async (c: EngineCtx, claimed: WorkItem, o: ProcessOpts = {})
  * A second call with the same dedupe key returns the existing item and logs `core.duplicate_blocked`.
  */
 export const runWork = async (c: EngineCtx, spec: WorkSpec): Promise<WorkItem> => {
+  const id = randomUUID();
   const ins = await c.db.from("work_items").upsert({
-    workspace_id: c.ws, department: ACTION_DEPARTMENT[spec.action], action: spec.action, subject_type: spec.subject_type, subject_id: spec.subject_id ?? null,
+    id, chain_id: spec.chainId ?? id, depth: spec.depth ?? 0, workspace_id: c.ws, department: ACTION_DEPARTMENT[spec.action], action: spec.action, subject_type: spec.subject_type, subject_id: spec.subject_id ?? null,
     lead_id: spec.lead_id ?? null, inbound_event_id: spec.inbound_event_id ?? null, parent_id: spec.parent_id ?? null, dedupe_key: spec.dedupeKey,
     status: "queued", proposal: { summary: "", fields: {}, ...(spec.seed ?? {}) }, origin: spec.origin,
   }, { onConflict: "workspace_id,dedupe_key", ignoreDuplicates: true }).select();
@@ -789,6 +807,7 @@ export const runWork = async (c: EngineCtx, spec: WorkSpec): Promise<WorkItem> =
     await logEvidence(c.db, c.ws, { lead_id: existing?.lead_id ?? null, work_item_id: existing?.id ?? null, kind: "core.duplicate_blocked", actor: "NIVO", summary: tr(c)("workDuplicate"), evidence: spec.dedupeKey });
     return existing;
   }
+  if (spec.onInserted) await spec.onInserted(row);
   if (spec.queue) return row;
   const claimed = await claim(c, row);
   if (!claimed) return row;
@@ -804,25 +823,34 @@ export const continueChain = async (c: EngineCtx, item: WorkItem): Promise<void>
       invoiceId: item.proposal.candidates?.length === 1 ? item.proposal.candidates[0].id : item.subject_type === "invoice" ? item.subject_id : null,
     });
   }
+  // Every hand-off is a typed command to the next department (agent-commands.ts): contract check, depth/cycle limits, the receiver's own gate, an Office mirror line.
+  const chain = { from: item.department, parentId: item.id, chainId: item.chain_id ?? item.id, origin: item.origin, inboundEventId: item.inbound_event_id, queue: true } as const;
   for (const next of FLOW_NEXT[item.action]) {
-    const base = { action: next, parent_id: item.id, origin: item.origin, inbound_event_id: item.inbound_event_id, queue: true } as const;
+    const to = ACTION_DEPARTMENT[next];
     if (next === "classify_lead" && item.lead_id) {
-      await runWork(c, { ...base, subject_type: "lead", subject_id: item.lead_id, lead_id: item.lead_id, dedupeKey: `classify_lead:after:${item.id}` });
+      await sendCommand(c, { ...chain, to, command: next, reason: "handoff", dedupeKey: `classify_lead:after:${item.id}`, payload: { subject_type: "lead", subject_id: item.lead_id, lead_id: item.lead_id } });
+    } else if (next === "handoff_to_sales" && item.lead_id) {
+      // lead_gen -> Sales: the hand-off is lead_gen's own gated action (handoff_to_sales); when it is done, FLOW_NEXT sends Sales classify_lead (branch above).
+      const lead = await getLead(c, item.lead_id);
+      await sendCommand(c, {
+        ...chain, to, command: next, reason: "lead_captured", dedupeKey: `handoff_to_sales:after:${item.id}`,
+        payload: { subject_type: "lead", subject_id: item.lead_id, lead_id: item.lead_id, contact: lead?.phone ?? lead?.email ?? "", need: lead?.need ?? "" },
+      });
     } else if (next === "send_follow_up" && item.lead_id) {
       if (item.proposal.fields?.stage === "lost") continue;
       if ((await getLead(c, item.lead_id))?.stage === "won") continue; // the customer already bought: no sales follow-up
       const pending = await c.db.from("work_items").select("id", { count: "exact", head: true }).eq("lead_id", item.lead_id).eq("action", "send_follow_up").eq("status", "waiting_decision");
       if ((pending.count ?? 0) > 0) continue; // one follow-up waiting per customer is enough
-      await runWork(c, { ...base, subject_type: "lead", subject_id: item.lead_id, lead_id: item.lead_id, dedupeKey: `send_follow_up:after:${item.id}` });
+      await sendCommand(c, { ...chain, to, command: next, reason: "classified", dedupeKey: `send_follow_up:after:${item.id}`, payload: { subject_type: "lead", subject_id: item.lead_id, lead_id: item.lead_id } });
     } else if (next === "issue_invoice" && item.subject_type === "order" && item.subject_id) {
-      await runWork(c, { ...base, subject_type: "order", subject_id: item.subject_id, lead_id: item.lead_id, dedupeKey: `issue_invoice:order:${item.subject_id}` });
+      await sendCommand(c, { ...chain, to, command: next, reason: "order_confirmed", dedupeKey: `issue_invoice:order:${item.subject_id}`, payload: { subject_type: "order", subject_id: item.subject_id, lead_id: item.lead_id } });
     } else if (next === "send_care" && (item.subject_type === "transaction" || item.subject_type === "invoice") && item.subject_id && item.lead_id) {
       // One care message per paid invoice, whichever way it was confirmed (a bank credit, or the owner checking a claim).
       const invoiceId = item.proposal.candidates?.length === 1 ? item.proposal.candidates[0].id : null;
-      await runWork(c, {
-        ...base, subject_type: item.subject_type, subject_id: item.subject_id, lead_id: item.lead_id,
+      await sendCommand(c, {
+        ...chain, to, command: next, reason: "payment_confirmed",
         dedupeKey: invoiceId ? `send_care:invoice:${invoiceId}` : `send_care:transaction:${item.subject_id}`,
-        seed: { fields: invoiceId ? { invoice_id: invoiceId } : {} },
+        payload: { subject_type: item.subject_type, subject_id: item.subject_id, lead_id: item.lead_id, ...(invoiceId ? { invoice_id: invoiceId } : {}) },
       });
     }
   }

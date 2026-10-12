@@ -6,7 +6,7 @@ import { Alert, Select, SurfaceCard, Text, TextAction } from "@starci/grammar/co
 import { StatusBadge } from "@/features/connections/StatusBadge";
 import { useT } from "@/i18n/client";
 import { connections as dict } from "@/i18n/dict/connections";
-import { ACCESS_LEVELS, isAccess, type Access } from "@/lib/connection-access";
+import { ACCESS_LEVELS, isAccess, type Access, type Purpose } from "@/lib/connection-access";
 import { setGrant } from "@/lib/connection-actions";
 import { ACTIONS_CLASS_NAME, STACK_CLASS_NAME } from "./classNames";
 
@@ -16,6 +16,8 @@ export type ConnectionOption = {
   readonly status: "pending" | "connected" | "error" | "disconnected";
   /** This agent's access through the connection (null: none). */
   readonly access?: Access | null;
+  /** What this agent does through the connection (listens, sends, reads transactions); null when it is only a data source. */
+  readonly purpose?: Purpose | null;
 };
 
 type AgentConnectionsCardProps = {
@@ -72,7 +74,7 @@ export const AgentConnectionsCard = ({ agentId, options, canEdit }: AgentConnect
             <div key={o.id} className={ACTIONS_CLASS_NAME}>
               <Select
                 label={o.label}
-                description={<StatusBadge status={o.status} />}
+                description={<><StatusBadge status={o.status} />{o.purpose === "inbound_chat" || o.purpose === "outbound_chat" || o.purpose === "bank_feed" || o.purpose === "lead_source" ? <Text size="xs" tone="muted">{t(`purpose_${o.purpose}`)}</Text> : null}</>}
                 options={levelOptions.map((l) => ({ ...l, isDisabled: o.status === "disconnected" && l.id !== NONE }))}
                 value={accessOf(o) ?? NONE}
                 onValueChange={(v) => pick(o, v)}

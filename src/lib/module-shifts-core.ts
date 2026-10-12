@@ -1,4 +1,5 @@
 import "server-only";
+import { lensBrief, lensFor } from "./knowledge/lens";
 import { generateWithOpenClaw } from "./openclaw-generate";
 import { logEvidence } from "./core";
 import { runWork, type EngineCtx } from "./engine";
@@ -94,11 +95,12 @@ export const explainSchedule = async (c: EngineCtx, scheduleId: string): Promise
   if (!sched) throw new Error("Không tìm thấy bản lịch.");
   const shifts = await loadShifts(c.db, c.ws, scheduleId);
   const facts = factsOf(setup, sched, shifts);
+  const knowledge = await lensBrief(lensFor(c.ws, "shifts"), "ca làm giờ làm quy định nhân viên nghỉ lương thưởng", { db: c.db, budget: 900, factLimit: 4, passageLimit: 2 });
   const r = await generateWithOpenClaw({
     workspaceId: c.ws, purpose: "shifts_explain", kind: "engine", module: "shifts", timeoutMs: 45_000,
     messages: [
       { role: "system", content: "Bạn là trợ lý xếp lịch ca của một cửa hàng. Viết tiếng Việt đơn giản, thân thiện, ngắn gọn (tối đa 6 gạch đầu dòng, mỗi dòng bắt đầu bằng dấu gạch ngang). Chỉ dùng văn bản thuần: không dùng dấu * hay # hay định dạng Markdown. Chỉ dùng đúng các dữ kiện được đưa; KHÔNG bịa người, giờ, số liệu; KHÔNG sửa lịch và không hứa gì thay chủ. Mở đầu bằng một câu tóm tắt, sau đó nêu ca thiếu người kèm gợi ý hỏi ai (nếu có dữ kiện), cuối cùng nhắc chủ rằng lịch chỉ gửi tới nhân viên sau khi chủ duyệt đăng." },
-      { role: "user", content: `Tuần ${weekLabel(sched.weekStart)}. Kết quả bộ xếp lịch:\n${facts.map((x) => `- ${x}`).join("\n")}\nViết phần giải thích và đề xuất cho chủ cửa hàng.` },
+      { role: "user", content: `Tuần ${weekLabel(sched.weekStart)}. Kết quả bộ xếp lịch:\n${facts.map((x) => `- ${x}`).join("\n")}\nViết phần giải thích và đề xuất cho chủ cửa hàng.${knowledge ? `\n\n${knowledge}` : ""}` },
     ],
   });
   const source = r.ok && r.output.trim() ? "openclaw" : "fallback";

@@ -1,6 +1,7 @@
 import "server-only";
 import { logEvidence } from "./core";
 import { draftItem } from "./module-content-ai";
+import { lensFor, lensSources } from "./knowledge/lens";
 import { channelLabel, pad2, vnDateKey, vnParts, vnToIso, weekStartKey, type AutomationKey, type ContentChannel, type ContentItem } from "./module-content-shared";
 import { listCadence, listItems, listPillars, loadSettings, saveSettings, type Db } from "./module-content-store";
 
@@ -91,9 +92,10 @@ export const offerDraft = async (db: Db, ws: string, now: Date, force: boolean):
     return null;
   }
   const since = seen ?? new Date(0).toISOString();
-  const { data } = await db.from("knowledge_sources").select("id, title, topic, kind, content, module, updated_at").eq("workspace_id", ws).eq("status", "ready").gt("updated_at", since).order("updated_at").limit(5);
-  const fresh = ((data ?? []) as Array<{ id: string; title: string; topic: string | null; kind: string; content: string; module: string | null; updated_at: string }>)
-    .filter((r) => (!r.module || r.module === "content") && (OFFER_RE.test(`${r.title} ${r.topic ?? ""} ${r.content.slice(0, 400)}`)))
+  // Posts are published: only what the (public-only) content lens may read can become a post.
+  const data = (await lensSources(lensFor(ws, "content"), 200, db)).filter((r) => r.updated_at > since).sort((a, b) => a.updated_at.localeCompare(b.updated_at)).slice(0, 5);
+  const fresh = data
+    .filter((r) => (OFFER_RE.test(`${r.title} ${r.topic ?? ""} ${r.content.slice(0, 400)}`)))
     .slice(0, 2);
   if (!fresh.length) return null;
   const [pillars, cadence] = await Promise.all([listPillars(db, ws), listCadence(db, ws)]);

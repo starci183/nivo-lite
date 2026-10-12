@@ -5,6 +5,7 @@ import { system } from "@/i18n/dict/system";
 import { ApiError, field } from "./api-v1";
 import type { ApiPrincipal } from "./api-keys";
 import { contactParts, ingest, logEvidence, matchLead } from "./core";
+import { sendCommandItem } from "./agent-commands";
 import { runWork, type EngineCtx } from "./engine";
 import { drainAfter } from "./flow-ctx";
 import { addSourceFor } from "./knowledge/index";
@@ -55,9 +56,9 @@ export const upsertLead = async (who: ApiPrincipal, body: Record<string, unknown
   }, (n) => t("duplicateBlocked", { n }));
   if (duplicate) return { lead_id: event.lead_id, status: "unchanged", work_item_id: null };
 
-  const item = await runWork(c, {
-    action: "handoff_lead", subject_type: "inbound", subject_id: event.id, inbound_event_id: event.id, origin: "live", dedupeKey: `handoff_lead:inbound:${event.id}`,
-    seed: { fields: { contact_name: name, company, need: needIn || "Khách tạo qua API", contact, channel_label: channel } },
+  const item = await sendCommandItem(c, {
+    from: "inbound", to: "chatbot", command: "handoff_lead", reason: "lead created through the API", inboundEventId: event.id, origin: "live", dedupeKey: `handoff_lead:inbound:${event.id}`,
+    payload: { subject_type: "inbound", subject_id: event.id, contact_name: name, company, need: needIn || "Khách tạo qua API", contact, channel_label: channel },
   });
   const leadId = item.lead_id ?? event.lead_id ?? existing?.id ?? null;
   await logEvidence(db, ws, {

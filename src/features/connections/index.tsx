@@ -33,11 +33,13 @@ export const ConnectionsPage = async ({ searchParams }: { readonly searchParams?
   const sp = (await searchParams) ?? {}
   const one = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : undefined)
   const zaloId = one("id") && all.some((c) => c.id === one("id") && c.provider === "zalo_oa") ? one("id") : undefined
+  const metaId = one("id") && all.some((c) => c.id === one("id") && c.provider === "meta") ? one("id") : undefined
   const ownerEmail = (await getSession()).email
   return (
     <ConnectionsView
       items={all} agentNames={agentNames} agents={agents} localOnly={localOnly} ownerEmail={ownerEmail} canManage={me.role === "owner"}
       {...(zaloId ? { zaloResumeId: zaloId } : {})} {...(one("zalo") ? { zaloReturned: one("zalo") } : {})}
+      {...(metaId ? { metaResumeId: metaId } : {})} {...(one("meta") ? { metaReturned: one("meta") } : {})}
     />
   )
 }

@@ -1,7 +1,8 @@
 import "server-only";
 import { drainAfter, engineCtx } from "./flow-ctx";
-import { listDecisions, listWorkItems } from "./flow-queries";
+import { isTestRunName, listDecisions, listWorkItems } from "./flow-queries";
 import type { DecisionRow, EvidenceState, FlowAction, Invoice, Order, ReasonCode, WorkItemView } from "./flow-types";
+import type { Contract } from "./sales-contracts-shared";
 import type { Execution, Lead, LeadStage, Responsibility } from "./types";
 
 /**
@@ -13,6 +14,7 @@ const MIN = 60_000;
 const OPEN_STAGES: ReadonlyArray<LeadStage> = ["new", "qualified", "proposal"];
 const AWAITING_REPLY_AFTER_MS = 3 * MIN;
 const BOARD_CLOSED_LIMIT = 8;
+const CONVERSION_WINDOW_DAYS = 90;
 
 export type AttentionKind = "decision" | "failed" | "clarify" | "overdue" | "awaiting_reply";
 
@@ -89,6 +91,11 @@ export type HandoffRow = {
   /** the accounting step for this order (invoice) when one exists */
   work: { id: string; status: WorkItemView["status"]; reason: ReasonCode | null; error: string | null } | null;
   canHandoff: boolean;
+  /** Shipping state (set by the "mark shipped" action); canShip is true for a confirmed, not yet shipped order */
+  shippedAt: string | null;
+  carrier: string | null;
+  trackingCode: string | null;
+  canShip: boolean;
 };
 
 export type AutoActivity = {
@@ -103,6 +110,15 @@ export type AutoActivity = {
   href: string;
 };
 
+/** Conversion of the leads created in the last CONVERSION_WINDOW_DAYS days (test runs left out): how many reached "won", overall and per source (the lead's channel). */
+export type SalesConversion = {
+  windowDays: number;
+  leads: number;
+  won: number;
+  /** One entry per source, the most leads first. */
+  sources: ReadonlyArray<{ source: string; leads: number; won: number }>;
+};
+
 export type SalesMetrics = {
   openCount: number;
   proposalValueVnd: number;
@@ -110,6 +126,7 @@ export type SalesMetrics = {
   wonCount: number;
   wonValueVnd: number;
   waitingCount: number;
+  conversion: SalesConversion;
 };
 
 export type SalesWorkbenchData = {
@@ -124,9 +141,31 @@ export type SalesWorkbenchData = {
   handoffs: ReadonlyArray<HandoffRow>;
   activity: ReadonlyArray<AutoActivity>;
   staff: ReadonlyArray<{ id: string; name: string }>;
+  /** recurring contracts, soonest end first (active ones before ended and cancelled) */
+  contracts: ReadonlyArray<Contract>;
+  /** customers a contract can be linked to */
+  leadOptions: ReadonlyArray<{ id: string; name: string }>;
 };
 
 const PRIORITY: Record<AttentionKind, number> = { decision: 0, failed: 1, clarify: 2, overdue: 3, awaiting_reply: 4 };
+
+/** Conversion by source: leads created in the window that are now "won", grouped by channel. Test-run leads (UAT / DBG names) are excluded. */
+const conversionOf = (leads: ReadonlyArray<Lead>, nowMs: number): SalesConversion => {
+  const since = new Date(nowMs - CONVERSION_WINDOW_DAYS * 86_400_000).toISOString();
+  const bySource = new Map<string, { source: string; leads: number; won: number }>();
+  let total = 0;
+  let won = 0;
+  for (const l of leads) {
+    if (l.created_at < since || isTestRunName(l.contact_name, l.company)) continue;
+    const source = l.channel || "other";
+    const row = bySource.get(source) ?? { source, leads: 0, won: 0 };
+    row.leads += 1;
+    total += 1;
+    if (l.stage === "won") { row.won += 1; won += 1; }
+    bySource.set(source, row);
+  }
+  return { windowDays: CONVERSION_WINDOW_DAYS, leads: total, won, sources: [...bySource.values()].sort((a, b) => b.leads - a.leads || b.won - a.won) };
+};
 
 /** Start of the current month in Vietnam time (UTC+7), as an ISO instant. */
 const monthStartIso = (now: number): string => {
@@ -155,7 +194,7 @@ export const getSalesWorkbench = async (): Promise<SalesWorkbenchData> => {
   const nowIso = new Date(nowMs).toISOString();
   const monthStart = monthStartIso(nowMs);
 
-  const [leadsRes, respRes, ordersRes, invoicesRes, convRes, execRes, staffRes, outcomeRes, items, humanDecided] = await Promise.all([
+  const [leadsRes, respRes, ordersRes, invoicesRes, convRes, execRes, staffRes, outcomeRes, items, humanDecided, contractsRes] = await Promise.all([
     db.from("leads").select("*").eq("workspace_id", ws).order("created_at", { ascending: false }).limit(500),
     db.from("responsibilities").select("*").eq("workspace_id", ws).neq("status", "done").order("due_at", { ascending: true, nullsFirst: false }).limit(500),
     db.from("orders").select("*").eq("workspace_id", ws).neq("status", "draft").order("created_at", { ascending: false }).limit(200),
@@ -166,6 +205,7 @@ export const getSalesWorkbench = async (): Promise<SalesWorkbenchData> => {
     db.from("events").select("lead_id, evidence, actor, created_at").eq("workspace_id", ws).eq("kind", "outcome.recorded").order("created_at", { ascending: false }).limit(600),
     listWorkItems({ limit: 400 }),
     listDecisions({ kind: "human", department: "sales", limit: 15 }),
+    db.from("contracts").select("*").eq("workspace_id", ws).order("ends_on", { ascending: true }).limit(300),
   ]);
 
   const leads = (leadsRes.data ?? []) as Array<Lead>;
@@ -305,6 +345,8 @@ export const getSalesWorkbench = async (): Promise<SalesWorkbenchData> => {
       orderStatus: o.status, confirmedAt: o.confirmed_at,
       invoice: inv ? { no: inv.invoice_no, status: inv.status, amountVnd: inv.amount_vnd, issuedAt: inv.issued_at, paidAt: inv.paid_at } : null,
       work: slimWork(work), canHandoff: o.status === "confirmed" && !inv && noActive,
+      shippedAt: o.shipped_at ?? null, carrier: o.carrier ?? null, trackingCode: o.tracking_code ?? null,
+      canShip: ["confirmed", "invoiced", "paid"].includes(o.status) && !o.shipped_at,
     };
   });
   const leadsWithOrder = new Set(orders.map((o) => o.lead_id).filter((x): x is string => !!x));
@@ -313,6 +355,7 @@ export const getSalesWorkbench = async (): Promise<SalesWorkbenchData> => {
     handoffs.push({
       key: `lead:${l.id}`, orderId: null, leadId: l.id, customer: l.contact_name, orderNo: null, items: l.need, amountVnd: quoteByLead.get(l.id) ?? null,
       orderStatus: "won_without_order", confirmedAt: closedByLead.get(l.id)?.at ?? null, invoice: null, work: slimWork(invoiceWorkBySubject.get(l.id)), canHandoff: false,
+      shippedAt: null, carrier: null, trackingCode: null, canShip: false,
     });
   }
   handoffs.sort((a, b) => (b.confirmedAt ?? "").localeCompare(a.confirmedAt ?? ""));
@@ -349,10 +392,13 @@ export const getSalesWorkbench = async (): Promise<SalesWorkbenchData> => {
     wonCount: wonIds.size,
     wonValueVnd,
     waitingCount: decisions.length,
+    conversion: conversionOf(leads, nowMs),
   };
 
   return {
     nowIso, metrics, attention, deals, closedHidden: { won: Math.max(0, won.length - BOARD_CLOSED_LIMIT), lost: Math.max(0, lost.length - BOARD_CLOSED_LIMIT) },
     decisions, decided: humanDecided, handoffs, activity, staff: ((staffRes.data ?? []) as Array<{ id: string; name: string }>),
+    contracts: ((contractsRes.data ?? []) as Array<Contract>).sort((a, b) => Number(a.status !== "active") - Number(b.status !== "active") || a.ends_on.localeCompare(b.ends_on)),
+    leadOptions: leads.slice(0, 200).map((l) => ({ id: l.id, name: l.company && l.company !== "—" ? `${l.contact_name} · ${l.company}` : l.contact_name })),
   };
 };
