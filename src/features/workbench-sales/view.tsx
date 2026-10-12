@@ -7,14 +7,15 @@ import { workbenchSales } from "@/i18n/dict/workbenchSales";
 import type { SalesWorkbenchData } from "@/lib/workbench-sales";
 import { ActivityPanel } from "./activity";
 import { AttentionPanel } from "./attention";
+import { ContractsPanel } from "./contracts";
 import { PAGE_CLASS_NAME, PANEL_CLASS_NAME } from "./classNames";
 import { DecisionsPanel, decisionAnchor } from "./decisions";
 import { formatVnd } from "./format";
 import { HandoffsPanel } from "./handoffs";
 import { PipelinePanel } from "./pipeline";
 
-type TabId = "attention" | "pipeline" | "decisions" | "handoff" | "activity";
-const TAB_IDS: ReadonlyArray<TabId> = ["attention", "pipeline", "decisions", "handoff", "activity"];
+type TabId = "attention" | "pipeline" | "decisions" | "handoff" | "contracts" | "activity";
+const TAB_IDS: ReadonlyArray<TabId> = ["attention", "pipeline", "decisions", "handoff", "contracts", "activity"];
 const isTab = (key: string | null | undefined): key is TabId => !!key && (TAB_IDS as ReadonlyArray<string>).includes(key);
 const panelId = (key: string): string => `sales-panel-${key}`;
 
@@ -25,7 +26,7 @@ export type SalesWorkbenchViewProps = {
   readonly initialTab: string | null;
 };
 
-/** The Sales workbench: four honest figures, then five surfaces as tabs. */
+/** The Sales workbench: four honest figures, then six surfaces as tabs. */
 export const SalesWorkbenchView = ({ data, initialTab }: SalesWorkbenchViewProps) => {
   const t = useT(workbenchSales);
   const locale = useLocale();
@@ -78,6 +79,7 @@ export const SalesWorkbenchView = ({ data, initialTab }: SalesWorkbenchViewProps
     { id: "pipeline", label: t("tab_pipeline") },
     { id: "decisions", label: `${t("tab_decisions")}${count(data.decisions.length)}` },
     { id: "handoff", label: t("tab_handoff") },
+    { id: "contracts", label: t("tab_contracts") },
     { id: "activity", label: t("tab_activity") },
   ];
 
@@ -110,6 +112,7 @@ export const SalesWorkbenchView = ({ data, initialTab }: SalesWorkbenchViewProps
         {tab === "pipeline" ? <PipelinePanel deals={data.deals} closedHidden={data.closedHidden} /> : null}
         {tab === "decisions" ? <DecisionsPanel pending={data.decisions} decided={data.decided} nowIso={data.nowIso} focusId={focusId} /> : null}
         {tab === "handoff" ? <HandoffsPanel rows={data.handoffs} /> : null}
+        {tab === "contracts" ? <ContractsPanel contracts={data.contracts} leads={data.leadOptions} nowIso={data.nowIso} /> : null}
         {tab === "activity" ? <ActivityPanel rows={data.activity} /> : null}
       </div>
     </div>

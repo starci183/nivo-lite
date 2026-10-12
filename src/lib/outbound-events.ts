@@ -18,7 +18,7 @@ import { WEBHOOK_EVENTS, isWebhookEvent, type WebhookEvent } from "./webhook-sha
  */
 export { WEBHOOK_EVENTS, isWebhookEvent, type WebhookEvent };
 /** Events that only automations listen for. */
-export type InternalEvent = "message.inbound";
+export type InternalEvent = "message.inbound" | "order.shipped" | "contract.expiring";
 export type BusinessEvent = WebhookEvent | InternalEvent;
 
 /** The per-workspace signing key the engine uses for n8n.emit (null until ENGINE_SHARED_SECRET is configured). */
