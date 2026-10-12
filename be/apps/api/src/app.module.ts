@@ -1,7 +1,10 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
+import { BookingHttpModule } from "@features/api/booking"
+import { PublicBookingHttpModule } from "@features/api/public-booking"
 import { SystemHealthHttpModule } from "@features/api/system-health"
+import { BOOKINGS_ERROR_KINDS, BOOKINGS_MESSAGES, BookingsModule } from "@modules/domain/bookings"
 import { AuthGuard, IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } from "@modules/domain/identity"
 import {
     SUPABASE_ACCESS_TOKEN_VERIFIER,
@@ -42,7 +45,13 @@ export class AppModule {
                 LoggingModule.register({ isGlobal: true }),
                 I18nModule.register({
                     isGlobal: true,
-                    bundles: [ERRORS_MESSAGES, HTTP_SECURITY_MESSAGES, IDENTITY_MESSAGES, JOBS_MESSAGES],
+                    bundles: [
+                        ERRORS_MESSAGES,
+                        HTTP_SECURITY_MESSAGES,
+                        IDENTITY_MESSAGES,
+                        JOBS_MESSAGES,
+                        BOOKINGS_MESSAGES,
+                    ],
                 }),
                 ErrorsModule.register({
                     isGlobal: true,
@@ -53,6 +62,7 @@ export class AppModule {
                         JOBS_ERROR_KINDS,
                         IDENTITY_ERROR_KINDS,
                         SUPABASE_ERROR_KINDS,
+                        BOOKINGS_ERROR_KINDS,
                     ],
                 }),
                 CqrsModule.register({ isGlobal: true }),
@@ -77,7 +87,10 @@ export class AppModule {
                 }),
                 IdentityModule.register({ isGlobal: true, verifyAccessToken }),
                 LivenessModule.register({ isGlobal: true }),
+                BookingsModule.register({ isGlobal: true }),
                 SystemHealthHttpModule,
+                PublicBookingHttpModule,
+                BookingHttpModule,
             ],
             providers: [
                 {
