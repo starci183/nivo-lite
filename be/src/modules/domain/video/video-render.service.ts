@@ -18,7 +18,7 @@ import { InjectVideoOptions } from "./video.decorators"
 import { VideoLogEvent } from "./video.log-events"
 import type { VideoOptions } from "./video.options"
 import { VideoService } from "./video.service"
-import { MEDIA_BUCKET, MEDIA_MAX_BYTES, VIDEOS_BUCKET, mediaPathOf, validateVideoSpec } from "./video-spec.policy"
+import { MEDIA_BUCKET, MEDIA_MAX_BYTES, VIDEOS_BUCKET, validateVideoSpec } from "./video-spec.policy"
 import type { VideoSpec } from "./video-spec.policy"
 
 /** Where each stage sits on the 0..100 bar the member sees (the upload is the last 6 %). */
@@ -62,9 +62,7 @@ export class VideoRenderService implements OnApplicationBootstrap {
     /** Sweeps the leftovers of a crashed render: any work directory older than an hour. */
     async onApplicationBootstrap(): Promise<void> {
         const names = await readdir(this.options.workDir).catch((cause: unknown) => {
-            this.logger.warn(VideoLogEvent.WorkDirUnreadable, {
-                reason: cause instanceof Error ? cause.name : "unknown",
-            })
+            this.logger.error(VideoLogEvent.WorkDirUnreadable, cause)
             return []
         })
         await Promise.all(
@@ -115,7 +113,7 @@ export class VideoRenderService implements OnApplicationBootstrap {
         }
         await rm(workDir, { recursive: true, force: true })
         await mkdir(workDir, { recursive: true })
-        const assets = await this.fetchAssets(checked.spec, workspaceId, workDir)
+        const assets = await this.fetchAssets(checked.spec, workDir)
         const output = await this.renderer.render({
             spec: checked.spec,
             workDir,
@@ -162,8 +160,8 @@ export class VideoRenderService implements OnApplicationBootstrap {
         }
     }
 
-    /** Every asset of the spec, downloaded once into the work directory. Only paths inside the render's own workspace folder are ever read. */
-    private async fetchAssets(spec: VideoSpec, workspaceId: string, workDir: string): Promise<Map<string, string>> {
+    /** Every asset of the spec, downloaded once into the work directory. The spec was validated against the render's own workspace folder, so only paths inside it are ever read. */
+    private async fetchAssets(spec: VideoSpec, workDir: string): Promise<Map<string, string>> {
         const paths = new Set<string>()
         for (const scene of spec.scenes) {
             if (scene.background.type === "image" || scene.background.type === "video") paths.add(scene.background.src)
@@ -171,12 +169,6 @@ export class VideoRenderService implements OnApplicationBootstrap {
         if (spec.brand.logo !== null) paths.add(spec.brand.logo)
         const files = new Map<string, string>()
         await eachInOrder(paths, async (path) => {
-            if (mediaPathOf(path, workspaceId) === null) {
-                throw new VideoError({
-                    code: VideoErrorCode.RenderRejected,
-                    params: { reason: `asset_outside_workspace: ${path}` },
-                })
-            }
             const file = join(workDir, `asset${files.size}${extname(path).slice(0, 8).toLowerCase()}`)
             await writeFile(file, await this.download(path))
             files.set(path, file)

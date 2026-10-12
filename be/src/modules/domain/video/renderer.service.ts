@@ -124,6 +124,10 @@ interface MixedAudio {
 /** Deliveries below this number fail on a voice error so the queue retries them; later ones fall back to captions only. */
 const STRICT_TTS_ATTEMPTS = 3
 
+/** The number at an index of a list, 0 when the list is shorter. */
+const valueAt = (list: ReadonlyArray<number>, index: number): number =>
+    list.slice(index, index + 1).reduce((sum, value) => sum + value, 0)
+
 const voiceoverKind = (requested: number, clips: ReadonlyArray<VoiceClip | null>): string => {
     if (requested === 0) return "none"
     return clips.some((clip) => clip !== null) ? "tts" : "captions_only"
@@ -216,7 +220,7 @@ export class RendererService {
         })
 
         const posterFile = join(workDir, "poster.jpg")
-        await this.ffmpeg.run("ffmpeg", posterArgs(videoFile, lengths[0] ?? 0, total, size.width, posterFile), {
+        await this.ffmpeg.run("ffmpeg", posterArgs(videoFile, valueAt(lengths, 0), total, size.width, posterFile), {
             signal,
             cwd: workDir,
         })
@@ -298,7 +302,7 @@ export class RendererService {
             }
             const args = sceneArgs({
                 scene,
-                length: (lengths[index] ?? 0) + (fades[index] ?? 0),
+                length: valueAt(lengths, index) + valueAt(fades, index),
                 size,
                 assets: input.assets,
                 output,
@@ -312,6 +316,21 @@ export class RendererService {
         return files
     }
 
+    /** The bundled file of the track the spec names, null for none; a track whose file is missing is a rejected render. */
+    private async musicFileOf(spec: VideoSpec): Promise<string | null> {
+        const track = MUSIC_TRACKS.find((candidate) => candidate.id === spec.music?.track)
+        if (track === undefined) return null
+        const file = join(this.options.assetsDir, "music", `${track.id}.mp3`)
+        await stat(file).catch((cause: unknown) => {
+            throw new VideoError({
+                code: VideoErrorCode.RenderRejected,
+                params: { reason: `music_missing: ${track.id}` },
+                cause,
+            })
+        })
+        return file
+    }
+
     /** Step 3: voices on a timeline, music ducked under them, two-pass loudness normalisation. */
     private async audio(
         input: RenderInput,
@@ -320,19 +339,9 @@ export class RendererService {
         total: number,
     ): Promise<MixedAudio> {
         const { spec, workDir, signal } = input
-        const track = MUSIC_TRACKS.find((candidate) => candidate.id === spec.music?.track)
-        const musicFile = track === undefined ? null : join(this.options.assetsDir, "music", `${track.id}.mp3`)
-        if (musicFile !== null) {
-            await stat(musicFile).catch((cause: unknown) => {
-                throw new VideoError({
-                    code: VideoErrorCode.RenderRejected,
-                    params: { reason: `music_missing: ${track?.id ?? ""}` },
-                    cause,
-                })
-            })
-        }
+        const musicFile = await this.musicFileOf(spec)
         const voices = clips.flatMap((clip, index) =>
-            clip === null ? [] : [{ file: clip.file, start: starts[index] ?? 0 }],
+            clip === null ? [] : [{ file: clip.file, start: valueAt(starts, index) }],
         )
         const premix = join(workDir, "premix.wav")
         const output = join(workDir, "audio.m4a")
