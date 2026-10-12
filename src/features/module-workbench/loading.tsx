@@ -9,6 +9,7 @@ import { moduleDef } from "@/lib/module-registry";
 import { isModuleKey } from "@/lib/modules-shared";
 import { AccountingWorkbenchLoading } from "@/features/workbench-accounting/loading";
 import { ChatbotWorkbenchLoading } from "@/features/workbench-chatbot/loading";
+import { LeadGenWorkbenchLoading } from "@/features/module-lead-gen/loading";
 import { SalesWorkbenchLoading } from "@/features/workbench-sales/loading";
 
 /**
@@ -19,6 +20,7 @@ const LOADINGS: Readonly<Record<string, ComponentType>> = {
   chatbot: ChatbotWorkbenchLoading,
   sales: SalesWorkbenchLoading,
   accounting: AccountingWorkbenchLoading,
+  lead_gen: LeadGenWorkbenchLoading,
 };
 
 /** STATE-8: the workbench slot while it loads - the module's own frame, or (a module not on the frame yet) its card with the content as a skeleton. */
