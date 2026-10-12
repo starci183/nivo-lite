@@ -121,3 +121,20 @@ export const lensBrief = async (lens: Lens, query: string, o: { readonly db?: Db
     return "";
   }
 };
+
+/* ------------------------------------------------------------------ keyword-only search */
+
+/**
+ * The business passages whose words match a question, WITHOUT the query embedding: no credits are spent. Used to check whether the knowledge
+ * could answer at all (knowledge gaps), never to write a reply. Same lens filtering in SQL as lensPassages.
+ */
+export const lensPassagesText = async (lens: Lens, query: string, limit = 5, db?: Db): Promise<Array<Passage>> => {
+  const client = await dbOf(db);
+  const { data, error } = await client.rpc("match_knowledge", {
+    p_workspace: lens.workspaceId, p_module: lens.module, p_query_embedding: null, p_query: query, p_limit: limit, p_audience: lens.audience, p_query_model: null,
+  });
+  if (error) { console.error("match_knowledge (text) failed:", error.message); return []; }
+  return ((data ?? []) as Array<MatchRow>).filter((r) => r.layer === "business").map((r) => ({
+    layer: r.layer, id: r.id, sourceId: r.source_id, module: r.module, kind: r.kind, title: r.title, content: r.content, score: r.score, visibility: r.visibility, topic: r.topic,
+  }));
+};

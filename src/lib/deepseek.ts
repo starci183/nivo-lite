@@ -145,6 +145,8 @@ export type CustomerChatOut = {
   order: null | { items: string; amount_vnd: number };
   /** the customer says they have paid / transferred (a claim, never evidence of payment) */
   payment_claim: boolean;
+  /** the customer asked something the business knowledge does not answer; `topic` is "subject | attribute" (src/lib/brain/gaps-detect.ts records it for the owner to fill) */
+  knowledge_gap?: null | { question: string; topic: string };
   /** the person applies for an open job through the chat (Hiring module): validated again by registerChatApplication */
   application?: import("./module-hiring-contract").ChatApplication | null;
   /** loyalty module: the customer asks to redeem one reward of the catalogue (src/lib/module-loyalty-chat.ts opens the gated redeem_reward) */

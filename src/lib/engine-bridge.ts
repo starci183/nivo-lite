@@ -156,6 +156,13 @@ const readLoyalty = (v: unknown): ai.CustomerChatOut["loyalty"] => {
   return intent === "redeem" && typeof reward_key === "string" && reward_key.trim() ? { intent: "redeem", reward_key: reward_key.trim().slice(0, 40) } : null;
 };
 
+const readKnowledgeGap = (v: unknown): ai.CustomerChatOut["knowledge_gap"] => {
+  if (!v || typeof v !== "object") return null;
+  const { question, topic } = v as { question?: unknown; topic?: unknown };
+  const q = text(question, 300);
+  return q ? { question: q, topic: text(topic, 160) } : null;
+};
+
 /**
  * Read the engine's proposed reply as the same structure the inline model returns. An answer that is not the JSON object (a model that
  * ignored the contract) is never sent to the customer as-is: it becomes a proposed answer for a person to approve, with a fixed holding line.
@@ -178,6 +185,7 @@ export const readProposedReply = (raw: string): ai.CustomerChatOut => {
     proposed_answer: typeof obj.proposed_answer === "string" && obj.proposed_answer.trim() ? obj.proposed_answer.trim() : null,
     order: validOrder(obj.order),
     payment_claim: obj.payment_claim === true,
+    knowledge_gap: readKnowledgeGap(obj.knowledge_gap),
     application: readChatApplication(obj.application),
     loyalty: readLoyalty(obj.loyalty),
   };

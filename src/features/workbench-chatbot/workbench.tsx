@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Alert, DescriptionList, EmptyNotice, FillViewport, SurfaceCard } from "@starci/grammar/common";
 import { useT } from "@/i18n/client";
@@ -21,6 +22,8 @@ export type ChatbotWorkbenchProps = {
   readonly initial: WbOverview;
   readonly initialThread: WbThread | null;
   readonly userName: string;
+  /** Owner/manager only: the questions customers asked that the brain could not answer, drawn under the inbox. */
+  readonly gapsCard?: ReactNode;
 };
 
 const REFRESH_DEBOUNCE_MS = 600;
@@ -36,7 +39,7 @@ const responseLabel = (m: WbMetrics, t: Translate): { value: string; sub: string
 };
 
 /** The Chatbot workbench: metrics, then conversation list, thread and customer panel with realtime updates. */
-export const ChatbotWorkbench = ({ initial, initialThread, userName }: ChatbotWorkbenchProps) => {
+export const ChatbotWorkbench = ({ initial, initialThread, userName, gapsCard = null }: ChatbotWorkbenchProps) => {
   const t = useT(workbenchChatbot);
 
   const [overview, setOverview] = useState<WbOverview>(initial);
@@ -197,6 +200,7 @@ export const ChatbotWorkbench = ({ initial, initialThread, userName }: ChatbotWo
       </div>
       </SurfaceCard>
       </FillViewport>
+      {gapsCard}
     </div>
   );
 };

@@ -4,6 +4,7 @@ import {
   AUTO_APPLY_TRUST, TRUST, inForce, keyOf, numberOf, sameValue, visibleTo,
   type Audience, type Evidence, type Fact, type FactStatus, type ProposalKind, type Scope, type SourceKind, type SubjectType,
 } from "./shared"
+import { resolveGapsForFact } from "./gaps"
 
 /**
  * Facts of the shared brain (server side). Every function takes the database client and the workspace id, so the same code runs from a
@@ -166,7 +167,10 @@ export const applyFact = async (db: Db, ws: string, id: string, decidedBy: strin
     decision_note: note?.trim() || null, valid_from: fact.validFrom ?? at, updated_at: at,
   }).eq("id", id).eq("status", "proposed").select("*").single()
   fail(error)
-  return toFact(data as Row)
+  const applied = toFact(data as Row)
+  // A fact customers may read can answer a question they asked that the brain could not (knowledge gaps).
+  await resolveGapsForFact(db, ws, applied)
+  return applied
 }
 
 /**
@@ -239,6 +243,7 @@ export const promoteDue = async (db: Db, ws: string): Promise<number> => {
       fail((await db.from("brain_facts").update({ status: "superseded", valid_to: old.validTo ?? at, updated_at: at }).eq("id", old.id).eq("status", "active")).error)
     }
     fail((await db.from("brain_facts").update({ status: "active", updated_at: at }).eq("id", f.id).eq("status", "scheduled")).error)
+    await resolveGapsForFact(db, ws, { ...f, status: "active" })
     n += 1
   }
   return n

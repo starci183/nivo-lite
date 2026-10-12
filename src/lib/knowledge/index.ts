@@ -18,6 +18,7 @@ import { embeddingModel, embedTexts, toVector } from "./embed";
 import { blockedBy, withUsage } from "../usage";
 import { drainBrainWork, onSourceDeleted, queueExtraction } from "../brain/doc-facts";
 import { recall, recallBlock } from "../brain/recall";
+import { resolveGapsForDocument } from "../brain/gaps";
 import { lensFor, lensPassages, lensSources } from "./lens";
 import {
   KNOWLEDGE_SUGGESTIONS, MAX_SOURCE_CHARS, SOURCE_KINDS, suggestionTopic, suggestionsFor,
@@ -268,6 +269,8 @@ const indexRow = async (db: Db, source: KnowledgeSource): Promise<KnowledgeSourc
     const { data, error } = await db.from("knowledge_sources").update({ status: "ready", error: note, chunk_count: pieces.length, updated_at: new Date().toISOString() }).eq("id", source.id).select().single();
     fail(error);
     const ready = toSource(data as SourceRow);
+    // A public document may answer a question customers asked that the brain could not (knowledge gaps); best effort, never blocks indexing.
+    await resolveGapsForDocument(supabaseAdmin(), ready.workspaceId, ready);
     await scheduleBrain(ready);
     return ready;
   } catch (e) {

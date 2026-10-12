@@ -8,6 +8,8 @@ import { formatVnd, latestInvoiceFor, loadAuthority, runWork, startOrderWork, st
 import { enqueueChatTurn } from "./engine-queue";
 import { drainAfter } from "./flow-ctx";
 import { isKnownPrice } from "./knowledge";
+import { lensFor } from "./knowledge/lens";
+import { noteKnowledgeGap } from "./brain/gaps-detect";
 import { DEFAULT_FALLBACK_REPLY, quotaStatus } from "./usage";
 import { escalateToStaff } from "./staff-relay";
 import { registerChatApplication } from "./module-hiring-flow";
@@ -292,6 +294,12 @@ const applyCustomerOut = async (
     }
     await supabase.from("agent_messages").insert({ workspace_id: ws, conversation_id: conv.id, role: "system", body: t("chatNeedsHuman") });
   }
+
+  // Learning loop: a question the knowledge could not answer is remembered (counted, deduped) for the owner to fill in the Second Brain. Never throws.
+  await noteKnowledgeGap(supabase, lensFor(ws, agent.module, { audience: "customer" }), {
+    conversationId: conv.id, question: body,
+    signals: { knowledgeGap: out.knowledge_gap ?? null, needsHuman: out.needs_human, proposedAnswer: out.proposed_answer, isTransaction: Boolean(out.order || out.payment_claim || out.application || out.loyalty) },
+  });
 
   const changed = Boolean(capturedLeadId || needsHuman || ordered || claimed || applied || redeemAsked);
   // An order queues the payment record right behind the lead's classification: drain one more step for it.
