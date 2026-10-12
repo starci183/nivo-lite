@@ -3,7 +3,7 @@ import { Open_Sans } from "next/font/google";
 import type { CSSProperties, ReactNode } from "react";
 import { Providers } from "@/components/providers/Providers";
 import { getLocale } from "@/i18n/server";
-import "./globals.css";
+import "../globals.css";
 
 const openSans = Open_Sans({ subsets: ["latin", "vietnamese"] });
 
