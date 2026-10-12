@@ -1,13 +1,14 @@
 "use client";
 
-import { FoundingOffer } from "@/components/promo/FoundingOffer";
-import { OnboardingChecklist } from "@/components/promo/OnboardingChecklist";
+import { FoundingOffer } from "@/components/blocks/FoundingOffer"
+import { OnboardingChecklist } from "@/components/blocks/OnboardingChecklist"
 import type { PromoState } from "@/features/promo/queries";
 
 import Link from "next/link";
 import { Badge, Button, EmptyNotice, PrimaryRailLayout, SectionHeader, SurfaceCard, SurfaceListCard, Text, TextAction } from "@starci/grammar/common";
-import { TileIcon, type IconName } from "@/ui";
-import { AgentAvatar } from "@/components/avatar/PersonAvatar";
+import { TileIcon } from "@/components/composites/TileIcon"
+import { type IconName } from "@/components/leaves/Icon"
+import { AgentAvatar } from "@/components/blocks/AgentAvatar"
 import { useT } from "@/i18n/client";
 import { overview } from "@/i18n/dict/overview";
 import { OwnerGroups } from "@/features/responsibilities/component";
@@ -173,7 +174,7 @@ export const OverviewBase = (props: OverviewBaseProps) => {
                   ? undefined
                   : props.agents.map((agent) => (
                       <li key={agent.id} className={AGENT_ROW_CLASS_NAME}>
-                        <AgentAvatar module={agent.module} label={agent.name} online={agent.status === "active"} />
+                        <AgentAvatar module={agent.module} label={agent.name} />
                         <div className={AGENT_TEXT_CLASS_NAME}>
                           <Text weight="semibold" overflow="truncate">{agent.name}</Text>
                           <div>

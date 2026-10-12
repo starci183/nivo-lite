@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Badge, Breadcrumbs, Heading, IconTile, Image, PageContainer, PrimaryRailLayout, Tabs, Text, TextAction } from "@starci/grammar/common";
-import { nivoIconSource } from "@/ui";
+import { nivoIconSource } from "@/components/leaves/Icon"
 import { useLocale, useT } from "@/i18n/client";
 import { modulesCore } from "@/i18n/dict/modulesCore";
 import { shell } from "@/i18n/dict/shell";

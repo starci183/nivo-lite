@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Alert, Badge, Button, DropdownMenu, EmptyNotice, IconButton, Input, ListRow, SurfaceListCard, Text } from "@starci/grammar/common"
-import { nivoIconSource } from "@/ui"
+import { nivoIconSource } from "@/components/leaves/Icon"
 import { useLocale, useT } from "@/i18n/client"
 import { brain } from "@/i18n/dict/brain"
 import { retireFactAction } from "@/lib/brain/actions"

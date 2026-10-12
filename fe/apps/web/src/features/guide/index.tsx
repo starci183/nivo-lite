@@ -4,7 +4,7 @@ import { useCallback, useEffect, useId, useRef, useState, useTransition, type CS
 import { usePathname, useRouter } from "next/navigation"
 import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion } from "framer-motion"
 import { Button, ChatBubble, CloseButton, Form, IconButton, Input, List, ListItem, SurfaceCard, Text } from "@starci/grammar/common"
-import { nivoIconSource } from "@/ui/leaves/Icon"
+import { nivoIconSource } from "@/components/leaves/Icon"
 import { useLocale, useT } from "@/i18n/client"
 import { guide as dict } from "@/i18n/dict/guide"
 import { askGuide } from "@/lib/guide/actions"

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Badge, Button, Divider, SurfaceCard, Text, Textarea } from "@starci/grammar/common";
-import { AgentAvatar } from "@/components/avatar/PersonAvatar";
+import { AgentAvatar } from "@/components/blocks/AgentAvatar"
 
 import { useLocale, useT } from "@/i18n/client";
 import { approval } from "@/i18n/dict/approval";

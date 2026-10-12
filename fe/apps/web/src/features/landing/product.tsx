@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Heading, List, ListItem, PageContainer, Region, SectionHeader, SurfaceCard, Tabs, Text } from "@starci/grammar/common";
-import { NivoIcon } from "@/ui";
+import { Icon as NivoIcon } from "@/components/leaves/Icon"
 import { useLocale, useT } from "@/i18n/client";
 import { landing } from "@/i18n/dict/landing";
 import { BrowserFrame } from "./BrowserFrame";
