@@ -4,10 +4,10 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Avatar, Badge, Button, Input, SegmentedControl, Switch, SurfaceCard, Text } from "@starci/grammar/common";
 import { AgentAvatar } from "@/components/avatar/PersonAvatar";
-import { useT } from "@/i18n/client";
+import { useLocale, useT } from "@/i18n/client";
 import { modulesCore } from "@/i18n/dict/modulesCore";
-import { renameModule, setModuleLive, setOperatingMode } from "@/lib/module-actions";
-import { moduleDef } from "@/lib/module-registry";
+import { renameInstance, renameModule, setModuleLive, setOperatingMode } from "@/lib/module-actions";
+import { moduleDef, pick } from "@/lib/module-registry";
 import type { Installation, ModuleKey, OperatingMode } from "@/lib/modules-shared";
 import { AgentConnectionsCard, type ConnectionOption } from "./AgentConnectionsCard";
 import { ACTIONS_CLASS_NAME, GRID_CLASS_NAME, GROW_CLASS_NAME, ROW_CLASS_NAME, STACK_CLASS_NAME } from "./classNames";
@@ -39,12 +39,17 @@ export const SettingsScreen = ({ installation, moduleKey, isLoading = false, can
   const [live, setLive] = useState(installation?.liveEnabled ?? false);
   const [note, setNote] = useState<{ ok: boolean; text: string } | undefined>();
   const [pending, startTransition] = useTransition();
-  const [which, setWhich] = useState<"name" | "mode" | "live" | null>(null);
+  const [which, setWhich] = useState<"name" | "instance" | "mode" | "live" | null>(null);
+  const locale = useLocale();
+  // A multi-instance type (one Chatbot per branch or page): the instance has its own name, shown in lists, the header and Office.
+  const [instanceName, setInstanceName] = useState(installation?.name ?? "");
+  const isInstance = installation?.isMulti === true;
+  const typeShort = pick(moduleDef(moduleKey).shortName, locale);
   const canLive = installation?.activeContextVersionId != null;
   const extrasKey = moduleDef(moduleKey).settingsExtras;
   const Extras = extrasKey === null ? undefined : SETTINGS_EXTRAS[extrasKey];
 
-  const act = (kind: "name" | "mode" | "live", fn: () => Promise<{ ok: true } | { ok: false; error: string }>, onFail?: () => void) => {
+  const act = (kind: "name" | "instance" | "mode" | "live", fn: () => Promise<{ ok: true } | { ok: false; error: string }>, onFail?: () => void) => {
     setNote(undefined);
     setWhich(kind);
     startTransition(async () => {
@@ -70,6 +75,14 @@ export const SettingsScreen = ({ installation, moduleKey, isLoading = false, can
             <div className={ACTIONS_CLASS_NAME}>
               <Button variant="secondary" isSkeleton={isLoading} isPending={pending && which === "name"} isDisabled={installation === null || !canEdit || name.trim().length < 2 || name.trim() === installation.agentName} onPress={() => installation !== null && act("name", () => renameModule(installation.id, name))}>{t("saveName")}</Button>
             </div>
+            {isInstance && installation !== null ? (
+              <>
+                <Input id="instance-name" name="instanceName" label={t("instanceNameTitle")} variant="secondary" hint={t("instanceNameSettingsHint")} value={instanceName} isDisabled={!canEdit || pending} onValueChange={(v) => setInstanceName(v.slice(0, 80))} />
+                <div className={ACTIONS_CLASS_NAME}>
+                  <Button variant="secondary" isPending={pending && which === "instance"} isDisabled={!canEdit || instanceName.trim().length < 1 || instanceName.trim() === installation.name} onPress={() => act("instance", () => renameInstance(installation.id, instanceName))}>{t("saveInstanceName")}</Button>
+                </div>
+              </>
+            ) : null}
           </div>
         </SurfaceCard>
 
@@ -92,6 +105,7 @@ export const SettingsScreen = ({ installation, moduleKey, isLoading = false, can
             />
             <Text size="sm" isSkeleton={isLoading}>{mode === "autopilot" ? t("modeAutopilotHelp") : t("modeAssistHelp")}</Text>
             <Text size="xs" tone="muted">{t("modeNote")}</Text>
+            {isInstance ? <Text size="xs" tone="muted">{t("authorityShared", { type: typeShort })}</Text> : null}
           </div>
         </SurfaceCard>
       </div>

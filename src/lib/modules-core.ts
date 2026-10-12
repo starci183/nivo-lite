@@ -2,15 +2,16 @@ import "server-only";
 import { cache } from "react";
 import { getSession } from "./session";
 import { supabaseServer } from "./supabase/server";
+import { isMultiInstance, moduleName } from "./module-registry";
 import {
-  isModuleKey, type ContextSnapshot, type ContextVersion, type Installation, type InstallationStatus, type ModuleKey, type OperatingMode, type SetupSession,
+  instancesOf, isModuleKey, type ContextSnapshot, type ContextVersion, type Installation, type InstallationStatus, type ModuleKey, type OperatingMode, type SetupSession,
 } from "./modules-shared";
 
 /** The module foundation contract. Types and the gate catalogue live in modules-shared.ts (client-safe) and are re-exported here. */
 export * from "./modules-shared";
 
 export type InstallationRow = {
-  id: string; workspace_id: string; module_key: ModuleKey; agent_id: string | null; status: InstallationStatus; operating_mode: OperatingMode;
+  id: string; workspace_id: string; module_key: ModuleKey; name: string | null; is_multi: boolean | null; agent_id: string | null; status: InstallationStatus; operating_mode: OperatingMode;
   live_enabled: boolean; active_context_version_id: string | null; settings: Record<string, unknown> | null; created_at: string;
   agent?: { name: string; handle: string } | null;
   active?: { version: number } | null;
@@ -21,7 +22,7 @@ type SessionRow = { id: string; installation_id: string; revision: number; statu
 export const INSTALLATION_SELECT = "*, agent:agents(name, handle), active:module_context_versions!module_installations_active_version_fk(version)";
 
 export const toInstallation = (r: InstallationRow): Installation => ({
-  id: r.id, workspaceId: r.workspace_id, moduleKey: r.module_key, agentId: r.agent_id,
+  id: r.id, workspaceId: r.workspace_id, moduleKey: r.module_key, name: r.name?.trim() || moduleName(r.module_key, "vi"), isMulti: r.is_multi ?? isMultiInstance(r.module_key), agentId: r.agent_id,
   agentName: r.agent?.name ?? "", agentHandle: r.agent?.handle ?? r.module_key,
   status: r.status, operatingMode: r.operating_mode, liveEnabled: r.live_enabled,
   activeContextVersionId: r.active_context_version_id, activeVersion: r.active?.version ?? null,
@@ -35,7 +36,7 @@ export const toSession = (r: SessionRow): SetupSession => ({
   draft: r.draft_snapshot ?? { summary: "", facts: [] }, gateEvidence: r.gate_evidence ?? {}, createdAt: r.created_at,
 });
 
-/** Every installed module of the signed-in workspace (the three modules at most). */
+/** Every installed agent (instance) of the signed-in workspace, oldest first. */
 export const listInstallations = cache(async (): Promise<Array<Installation>> => {
   const session = await getSession();
   const db = await supabaseServer();
@@ -44,15 +45,26 @@ export const listInstallations = cache(async (): Promise<Array<Installation>> =>
   return ((data ?? []) as unknown as Array<InstallationRow>).map(toInstallation);
 });
 
-/** One module's installation in the signed-in workspace, null when it is not installed. */
+/**
+ * The FIRST (oldest) installation of a type in the signed-in workspace, null when it is not installed. For a single-instance type that is
+ * the installation; for a multi-instance type prefer getInstallationById (an instance route) or listInstances.
+ */
 export const getInstallation = async (moduleKey: ModuleKey): Promise<Installation | null> => {
   if (!isModuleKey(moduleKey)) return null;
-  return (await listInstallations()).find((i) => i.moduleKey === moduleKey) ?? null;
+  return instancesOf(await listInstallations(), moduleKey)[0] ?? null;
 };
 
-/** The context version in use for a module (what its agent runs on), null when none has been applied. */
-export const getActiveContext = async (moduleKey: ModuleKey): Promise<ContextVersion | null> => {
-  const installation = await getInstallation(moduleKey);
+/** Every instance of a type in the signed-in workspace, oldest first. */
+export const listInstances = async (moduleKey: ModuleKey): Promise<Array<Installation>> =>
+  isModuleKey(moduleKey) ? instancesOf(await listInstallations(), moduleKey) : [];
+
+/** One installation of the signed-in workspace by id (RLS and the cached list keep it inside the workspace), null when unknown. */
+export const getInstallationById = async (installationId: string): Promise<Installation | null> =>
+  (await listInstallations()).find((i) => i.id === installationId) ?? null;
+
+/** The context version in use for an instance (what its agent runs on), null when none has been applied. */
+export const getActiveContextOf = async (installationId: string): Promise<ContextVersion | null> => {
+  const installation = await getInstallationById(installationId);
   if (!installation?.activeContextVersionId) return null;
   const db = await supabaseServer();
   const { data } = await db.from("module_context_versions").select("*").eq("id", installation.activeContextVersionId).maybeSingle<VersionRow>();

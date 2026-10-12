@@ -39,9 +39,9 @@ const ruleInForce = async (db: Db, ws: string, action: RulePayload["action"]): P
   return { mode: def.mode, limitVnd: def.limitVnd, requiredFields: [...def.requiredFields] };
 };
 
-/** The active fact for the same subject + attribute (the brain keeps exactly one). */
-const factInForce = async (ws: string, p: Pick<FactPayload, "subjectLabel" | "attributeLabel">) => {
-  const [active] = await byKey(supabaseAdmin(), ws, keyOf(p.subjectLabel), keyOf(p.attributeLabel), "active");
+/** The active fact for the same subject + attribute in one scope (the brain keeps exactly one per scope: shared, or one instance's own). */
+const factInForce = async (ws: string, p: Pick<FactPayload, "subjectLabel" | "attributeLabel">, installationId: string | null = null) => {
+  const [active] = await byKey(supabaseAdmin(), ws, keyOf(p.subjectLabel), keyOf(p.attributeLabel), "active", installationId);
   return active ?? null;
 };
 
@@ -129,6 +129,8 @@ const SCOPES: ReadonlyArray<Scope> = ["public", "internal", "restricted"];
  */
 export const decideWrite = async (
   db: Db, ctx: EngineCtx, moduleKey: ModuleKey, locale: Locale, writeId: string, change: WriteDecision,
+  /** The instance whose setup chat this is, when its type allows several (a fact confirmed "only for this agent" is scoped to it). */
+  instance: { readonly id: string; readonly isMulti: boolean } | null = null,
 ): Promise<SetupWrite> => {
   const { data, error } = await db.from("module_setup_writes").select("*").eq("workspace_id", ctx.ws).eq("id", writeId).maybeSingle();
   fail(error);
@@ -169,7 +171,8 @@ export const decideWrite = async (
   const baseAttribute = (edit?.attributeLabel ?? base.attributeLabel).trim();
   if (!value || !subjectLabel || !baseAttribute) throw new Error("A fact needs a subject, an attribute and a value.");
 
-  const current = await factInForce(ctx.ws, { subjectLabel, attributeLabel: baseAttribute });
+  const scopeId = change.onlyThisAgent && instance?.isMulti ? instance.id : null;
+  const current = await factInForce(ctx.ws, { subjectLabel, attributeLabel: baseAttribute }, scopeId);
   const conflict = current !== null && !sameValue(current.value, value);
   let resolution: Resolution | undefined;
   if (conflict) {
@@ -195,7 +198,7 @@ export const decideWrite = async (
   };
   const { fact, outcome } = await proposeFact(supabaseAdmin(), ctx.ws, {
     subjectType: base.subjectType, subjectLabel, attributeLabel, value, scope, modules: scope === "restricted" ? [moduleKey] : [],
-    sourceKind: "owner", proposedBy: ctx.actor, evidence: [evidence],
+    sourceKind: "owner", proposedBy: ctx.actor, evidence: [evidence], installationId: scopeId,
   });
   if (fact.status !== "active") throw new Error("The Second Brain kept this value for review instead of applying it.");
   if (base.gapId) await markGapAnswered(ctx.ws, base.gapId, `fact:${fact.id}`);

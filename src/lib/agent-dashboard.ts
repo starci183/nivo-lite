@@ -12,12 +12,15 @@ import type { WorkItemView } from "./flow-types";
 import { lensCounts, lensFor } from "./knowledge/lens";
 import { isManagerRole } from "./members-shared";
 import { pick } from "./module-registry";
-import { getInstallation, type ModuleKey } from "./modules-core";
+import { getInstallation, getInstallationById, type ModuleKey } from "./modules-core";
 
 /**
  * Loader of the agent dashboard frame's common regions (features/agent-dashboard). One call per module page:
  *
  *   const dashboard = await loadAgentDashboard("sales");
+ *
+ * Multi-instance types (one Chatbot per branch, one Booking agent per branch, one Lead-gen agent per page) pass `installationId`: waiting,
+ * done, connections and the knowledge lens are then that instance's only (work_items.installation_id, its agent's bindings, its lens).
  *
  * Every region is read on its own and fails on its own (Region.ok === false): a broken knowledge count never hides the waiting list.
  * Test runs (UAT / DBG names, see flow-queries TEST_RUN_PATTERN) are left out of every count and list here.
@@ -38,6 +41,8 @@ const PURPOSES: ReadonlyArray<Purpose> = ["inbound_chat", "outbound_chat", "bank
 export type LoadAgentDashboardOptions = {
   /** Where a waiting item leads. Default: the module's workbench focused on the item. */
   readonly decisionHref?: (item: WorkItemView) => string;
+  /** The instance whose dashboard this is (default: the type's first installation). */
+  readonly installationId?: string | null;
 };
 
 type Ctx = Awaited<ReturnType<typeof engineCtx>>;
@@ -90,11 +95,14 @@ export const loadAgentDashboard = async (module: ModuleKey, opts: LoadAgentDashb
     const label = t(action);
     return label === action ? "" : label;
   };
-  const installation = await getInstallation(module);
+  const installation = opts.installationId ? await getInstallationById(opts.installationId) : await getInstallation(module);
+  // A multi-instance type shows only its own instance's work; a single-instance type keeps reading the whole department.
+  const scopeId = installation?.isMulti ? installation.id : null;
+  const mine = (i: { readonly installation_id?: string | null }): boolean => scopeId === null || i.installation_id === scopeId;
 
   const waiting = settle<WaitingData>("waiting", async () => {
-    const rows = (await listExceptions()).filter((i) => i.department === module && i.status === "waiting_decision" && !isTestRunWorkItem(i));
-    const href = opts.decisionHref ?? ((i: WorkItemView) => workbenchHref(module, { focus: i.id }));
+    const rows = (await listExceptions()).filter((i) => i.department === module && i.status === "waiting_decision" && mine(i) && !isTestRunWorkItem(i));
+    const href = opts.decisionHref ?? ((i: WorkItemView) => workbenchHref(module, { focus: i.id, installationId: installation?.id ?? null }));
     const items: Array<DashboardItem> = rows.slice(0, LIST_LIMIT).map((i) => {
       const customer = i.lead?.contact_name ?? (typeof i.proposal.fields?.customer === "string" ? i.proposal.fields.customer : "");
       return {
@@ -110,10 +118,11 @@ export const loadAgentDashboard = async (module: ModuleKey, opts: LoadAgentDashb
 
   const done = settle<DoneData>("done", async () => {
     const since = new Date(Date.now() - 7 * DAY_MS).toISOString();
-    const { data, error } = await c.db.from("work_items")
+    let q = c.db.from("work_items")
       .select("id, action, lead_id, completed_at, updated_at, result, summary:proposal->>summary, contact:proposal->fields->>contact_name, customer:proposal->fields->>customer, lead:leads(contact_name, company)")
-      .eq("workspace_id", c.ws).eq("department", module).eq("status", "done").eq("decided_path", "auto").gte("completed_at", since)
-      .order("completed_at", { ascending: false }).limit(DONE_SCAN_LIMIT);
+      .eq("workspace_id", c.ws).eq("department", module).eq("status", "done").eq("decided_path", "auto").gte("completed_at", since);
+    if (scopeId) q = q.eq("installation_id", scopeId);
+    const { data, error } = await q.order("completed_at", { ascending: false }).limit(DONE_SCAN_LIMIT);
     if (error) throw new Error(error.message);
     const rows = ((data ?? []) as unknown as Array<DoneRow>).filter((r) => {
       const lead = firstOf(r.lead);
@@ -147,13 +156,13 @@ export const loadAgentDashboard = async (module: ModuleKey, opts: LoadAgentDashb
   });
 
   const knowledge = settle<KnowledgeData>("knowledge", async () => {
-    const counts = await lensCounts(lensFor(c.ws, module), c.db as never);
+    const counts = await lensCounts(lensFor(c.ws, module, { installationId: installation?.id ?? null }), c.db as never);
     return { ...counts, gaps: await openGaps(module, c) };
   });
 
   const [w, d, conn, k] = await Promise.all([waiting, done, connections, knowledge]);
   return {
-    agent: installation?.agentId ? { id: installation.agentId, name: installation.agentName, mode: installation.operatingMode } : null,
+    agent: installation?.agentId ? { id: installation.agentId, name: installation.isMulti ? installation.name : installation.agentName, mode: installation.operatingMode } : null,
     waiting: w, done: d, connections: conn, knowledge: k,
   };
 };

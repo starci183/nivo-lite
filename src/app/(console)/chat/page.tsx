@@ -2,7 +2,7 @@ import { OfficeMessenger } from "@/features/office"
 import { hydrate, listDecidedApprovals, listPendingApprovals, type Embedded } from "@/features/office/queries"
 import { listExceptions, listWorkItems, getGovernance, governanceFrom, listStaff, workViewsFrom } from "@/lib/flow-queries"
 import type { Staff, WorkItemView } from "@/lib/flow-types"
-import { leadRowsFrom, listAgents, listLeads, listMessages, listResponsibilities } from "@/lib/queries"
+import { leadRowsFrom, listAgents, listLeads, listMessages, listResponsibilities, withInstanceNames } from "@/lib/queries"
 import { listMembers, memberListingsFrom } from "@/lib/members"
 import { getOfficeData } from "@/lib/page-data"
 import { getSession } from "@/lib/session"
@@ -24,7 +24,7 @@ const ChatPage = async () => {
   const [messages, agents, responsibilities, pending, decided, leads, exceptionRows, recentItems, governance, staffRows, members] = raw
     ? [
         [...raw.messages].reverse(),
-        raw.agents,
+        await withInstanceNames(raw.agents as Array<Agent>),
         raw.responsibilities,
         await hydrate(raw.pending as Array<Embedded>),
         await hydrate(raw.decided as Array<Embedded>),

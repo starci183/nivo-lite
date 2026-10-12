@@ -6,12 +6,15 @@ import { getSession } from "@/lib/session";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { loadAgentDashboard } from "@/lib/agent-dashboard";
 import { workbenchHref } from "@/lib/agent-dashboard-shared";
+import type { Installation } from "@/lib/modules-shared";
 import { loadChatbotOverview, loadChatbotThread } from "@/lib/workbench-chatbot";
 import { ChatbotWorkbench } from "./workbench";
 
 type ChatbotWorkbenchPageProps = {
   /** `?focus=` of the route: the conversation a "Chờ bạn" row leads to. */
   readonly focus?: string | null;
+  /** The Chatbot instance (one per branch or Fanpage): only its conversations, decisions and figures. */
+  readonly installation?: Installation | null;
 };
 
 /**
@@ -21,14 +24,16 @@ type ChatbotWorkbenchPageProps = {
  * Owners and managers also get the questions customers asked that the brain could not answer (knowledge gaps), to fill them in place:
  * the card replaces the frame's own "Tri thức" gaps block, so the gaps show once, with their actions.
  */
-export default async function ChatbotWorkbenchPage({ focus = null }: ChatbotWorkbenchPageProps = {}) {
+export default async function ChatbotWorkbenchPage({ focus = null, installation = null }: ChatbotWorkbenchPageProps = {}) {
+  const installationId = installation?.id ?? null;
   const [session, overview, dashboard] = await Promise.all([
     getSession(),
-    loadChatbotOverview(),
+    loadChatbotOverview(installationId),
     loadAgentDashboard("chatbot", {
+      installationId,
       decisionHref: (item) => {
         const conversation = item.proposal.fields?.conversation_id;
-        return workbenchHref("chatbot", { focus: typeof conversation === "string" ? conversation : (item.subject_id ?? undefined) });
+        return workbenchHref("chatbot", { installationId, focus: typeof conversation === "string" ? conversation : (item.subject_id ?? undefined) });
       },
     }),
   ]);

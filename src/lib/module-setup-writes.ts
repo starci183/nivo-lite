@@ -36,7 +36,11 @@ export type SetupWrite = FactWrite | RuleWrite;
 /** The owner's decision on one card, with their edits. */
 export type WriteDecision =
   | { decision: "reject" }
-  | { decision: "confirm"; fact?: { value: string; scope: Scope; subjectLabel?: string; attributeLabel?: string }; rule?: { mode: RuleMode; limitVnd: number | null }; resolution?: Resolution; situation?: string };
+  | {
+    decision: "confirm"; fact?: { value: string; scope: Scope; subjectLabel?: string; attributeLabel?: string }; rule?: { mode: RuleMode; limitVnd: number | null }; resolution?: Resolution; situation?: string;
+    /** Multi-instance agent (one Chatbot per branch): the fact is for THIS instance only instead of every instance of the type (the default). */
+    onlyThisAgent?: boolean;
+  };
 
 /** What the model returned for one write, before validation. */
 export type ProposedFact = { gateKey: string; kind: "fact"; payload: FactPayload };

@@ -36,9 +36,20 @@ export const officeStaffHandles = async (c: EngineCtx, staff: ReadonlyArray<Staf
   return staffHandles(staff, agents.map((a) => a.handle));
 };
 
-/** The workspace's customer-facing Chatbot (oldest active one), or null when none is installed. */
-const chatbotOf = async (c: EngineCtx): Promise<Agent | null> =>
-  (((await c.db.from("agents").select("*").eq("workspace_id", c.ws).eq("module", "chatbot").eq("status", "active").order("created_at").limit(1)).data ?? [])[0] ?? null) as Agent | null;
+/** Every active Chatbot of the workspace (one per branch or Fanpage when there are several), oldest first. */
+const chatbots = async (c: EngineCtx): Promise<Array<Agent>> =>
+  ((await c.db.from("agents").select("*").eq("workspace_id", c.ws).eq("module", "chatbot").eq("status", "active").order("created_at")).data ?? []) as Array<Agent>;
+
+/** The Chatbot that speaks about a conversation: the conversation's own agent when it is a Chatbot instance, else the oldest active one. */
+const chatbotOf = async (c: EngineCtx, conversationId?: string | null): Promise<Agent | null> => {
+  const all = await chatbots(c);
+  if (conversationId) {
+    const conv = ((await c.db.from("agent_conversations").select("agent_id").eq("workspace_id", c.ws).eq("id", conversationId).maybeSingle()).data ?? null) as { agent_id: string } | null;
+    const own = conv ? all.find((a) => a.id === conv.agent_id) : undefined;
+    if (own) return own;
+  }
+  return all[0] ?? null;
+};
 
 /** A line in Office written by the Chatbot (NIVO when no Chatbot is installed), linked to the work item. */
 const postAsChatbot = async (c: EngineCtx, bot: Agent | null, body: string, link: { lead_id: string | null; work_item_id: string | null }): Promise<Message> => {
@@ -84,7 +95,7 @@ export const escalateToStaff = async (c: EngineCtx, args: EscalateArgs): Promise
     if (!staff.length) return null;
     const person = staff.find((s) => ADVISOR_ROLE.test(fold(s.role ?? ""))) ?? staff[0];
     const handle = (await officeStaffHandles(c, staff)).get(person.id) ?? "staff";
-    const bot = await chatbotOf(c);
+    const bot = await chatbotOf(c, args.conversationId);
 
     // Same effect as assignWorkItem: the item is theirs, recorded in the evidence log.
     const { data, error } = await c.db.from("work_items").update({ assigned_staff_id: person.id, updated_at: new Date().toISOString() })
@@ -159,9 +170,12 @@ Never mention colleagues, staff, the owner, approval, internal checks or that yo
 export const relayStaffAnswer = async (
   c: EngineCtx, input: { text: string; author: { name: string; staffId: string | null; role: Role } },
 ): Promise<Array<Message> | null> => {
-  const bot = await chatbotOf(c);
   const raw = input.text.trim();
-  const mentionsBot = !!bot && new RegExp(`@${esc(bot.handle)}(?![a-z0-9-])`, "i").test(raw);
+  // Any Chatbot instance may be @mentioned (@chatbot, @chatbot-2...): the one mentioned speaks, else the oldest.
+  const bots = await chatbots(c);
+  const mentioned = bots.find((b) => new RegExp(`@${esc(b.handle)}(?![a-z0-9-])`, "i").test(raw)) ?? null;
+  const bot = mentioned ?? bots[0] ?? null;
+  const mentionsBot = mentioned !== null;
   const isManager = input.author.role !== "staff";
   if (!input.author.staffId && !(isManager && mentionsBot)) return null;
 

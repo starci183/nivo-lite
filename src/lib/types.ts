@@ -5,6 +5,8 @@ import type { ModuleKey } from "./module-registry.generated";
 export type Agent = {
   id: string; workspace_id: string; module: ModuleKey; name: string; handle: string; role: string; instructions: string;
   knowledge: string; greeting: string; approval_rule: string; status: "active" | "paused"; created_at: string;
+  /** Display only: the name of the instance this agent drives when its type allows several (one Chatbot per branch); set by withInstanceNames. */
+  instance_name?: string | null;
 };
 export type AgentConversation = {
   id: string; workspace_id: string; agent_id: string; kind: "test" | "customer"; visitor_name: string | null;
@@ -15,6 +17,8 @@ export type AgentConversation = {
   channel?: string | null; external_id?: string | null;
   /** the connection (bot / OA) the conversation came in on; null for the website chat and the legacy env bot */
   connection_id?: string | null;
+  /** the agent instance that handles it (its agent's installation; set by the database) */
+  installation_id?: string | null;
 };
 export type AgentMessage = {
   id: string; workspace_id: string; conversation_id: string; role: "user" | "agent" | "system"; body: string; created_at: string;

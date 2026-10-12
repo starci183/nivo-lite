@@ -59,6 +59,7 @@ export const addKnowledgeFile = async (form: FormData): Promise<Outcome<Knowledg
       topic: String(form.get("topic") ?? "") || null,
       tags: String(form.get("tags") ?? "").split(",").map((x) => x.trim()).filter(Boolean),
       module: isModuleKey(mod) ? mod : null, visibility: form.get("visibility") === "public" ? "public" : "internal",
+      installationId: String(form.get("installation") ?? "") || null,
     });
     refresh();
     return source;

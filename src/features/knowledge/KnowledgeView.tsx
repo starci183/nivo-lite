@@ -9,7 +9,7 @@ import { knowledge } from "@/i18n/dict/knowledge"
 import { decideSuggestion } from "@/lib/knowledge/actions"
 import type { KnowledgeSource, SourceStatus, Visibility } from "@/lib/knowledge/shared"
 import { MODULE_KEYS, type ModuleKey } from "@/lib/modules-shared"
-import { AddDocumentsDrawer, type AddPreset } from "./AddDocumentsDrawer"
+import { AddDocumentsDrawer, type AddPreset, type InstanceOption } from "./AddDocumentsDrawer"
 import { AskPanel } from "./AskPanel"
 import { driveReturn } from "./driveReturn"
 import { FILTER_CLASS, HEAD_CLASS, ITEM_CLASS, ITEM_MAIN_CLASS, LIST_CLASS, PAGE_CLASS, ROW_WRAP_CLASS, SIDE_CLASS, SOURCE_ROW_CLASS, STACK_CLASS, SUGGEST_ITEM_CLASS } from "./classNames"
@@ -26,6 +26,8 @@ type KnowledgeViewProps = {
   readonly canWrite: boolean
   readonly initialModule: ModuleKey | "all"
   readonly askModule: ModuleKey
+  /** Agent instances a document may be kept for (types with several instances); their names label restricted documents. */
+  readonly instances?: ReadonlyArray<InstanceOption>
   /** STATE-8: the same page while its data loads - labels stay, the sources and suggestion rows are skeletons. */
   readonly isLoading?: boolean
 }
@@ -33,7 +35,7 @@ type KnowledgeViewProps = {
 const STATUS_TONE: Record<SourceStatus, "neutral" | "warning" | "success" | "danger"> = { pending: "neutral", indexing: "warning", ready: "success", failed: "danger" }
 
 /** /knowledge: sources of the workspace (shared by every agent), suggestions, and "Thử hỏi". */
-export const KnowledgeView = ({ sources, topics, suggestions, skipped, canWrite, initialModule, askModule, isLoading = false }: KnowledgeViewProps) => {
+export const KnowledgeView = ({ sources, topics, suggestions, skipped, canWrite, initialModule, askModule, instances = [], isLoading = false }: KnowledgeViewProps) => {
   const t = useT(knowledge)
   const locale = useLocale()
   const router = useRouter()
@@ -65,7 +67,7 @@ export const KnowledgeView = ({ sources, topics, suggestions, skipped, canWrite,
         {!canWrite && !isLoading ? <Text size="sm" tone="muted">{t("readOnlyNote")}</Text> : null}
 
         {canWrite ? (
-          <AddDocumentsDrawer isOpen={adding} topics={topics} preset={preset} onClose={() => setAdding(false)} onAdded={() => router.refresh()} />
+          <AddDocumentsDrawer isOpen={adding} topics={topics} preset={preset} instances={instances} onClose={() => setAdding(false)} onAdded={() => router.refresh()} />
         ) : null}
 
         <PrimaryRailLayout
@@ -91,7 +93,7 @@ export const KnowledgeView = ({ sources, topics, suggestions, skipped, canWrite,
                     <div className={ITEM_MAIN_CLASS}>
                       <Text weight="semibold" overflow="truncate"><Link href={`/knowledge/${s.id}`} visited="uniform">{s.title}</Link></Text>
                       <Text size="xs" tone="muted">
-                        {[s.topic, t(`kind_${s.kind}`), s.module ? t(`module_${s.module}`) : null, t("chunks", { count: s.chunkCount }), when(s.createdAt)].filter(Boolean).join(" · ")}
+                        {[s.topic, t(`kind_${s.kind}`), s.installationId ? (instances.find((i) => i.id === s.installationId)?.label ?? null) : s.module ? t(`module_${s.module}`) : null, t("chunks", { count: s.chunkCount }), when(s.createdAt)].filter(Boolean).join(" · ")}
                       </Text>
                       {s.error ? <Text size="xs" tone="muted">{s.status === "failed" ? s.error : t("noVectors")}</Text> : null}
                     </div>

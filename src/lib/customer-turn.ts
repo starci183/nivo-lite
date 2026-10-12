@@ -300,7 +300,7 @@ const applyCustomerOut = async (
   }
 
   // Learning loop: a question the knowledge could not answer is remembered (counted, deduped) for the owner to fill in the Second Brain. Never throws.
-  await noteKnowledgeGap(supabase, lensFor(ws, agent.module, { audience: "customer" }), {
+  await noteKnowledgeGap(supabase, lensFor(ws, agent.module, { audience: "customer", installationId: conv.installation_id ?? null }), {
     conversationId: conv.id, question: body,
     signals: { knowledgeGap: out.knowledge_gap ?? null, needsHuman: out.needs_human, proposedAnswer: out.proposed_answer, isTransaction: Boolean(out.order || out.payment_claim || out.application || out.loyalty) },
   });

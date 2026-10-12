@@ -7,6 +7,7 @@ import { useLocale, useT } from "@/i18n/client";
 import { intlLocale, TIME_ZONE } from "@/i18n/core";
 import { moduleSetup } from "@/i18n/dict/moduleSetup";
 import { applySetup, decideSetupWrite, sendSetupMessage, setGate } from "@/lib/module-actions";
+import { moduleDef, pick } from "@/lib/module-registry";
 import type { SetupWrite, WriteDecision } from "@/lib/module-setup-writes";
 import {
   MODULE_GATES, allGatesConfirmed, gateEntry, gateHint, gateLabel, snapshotOf,
@@ -58,6 +59,8 @@ export const SetupScreen = ({ installation, moduleKey, initialSession, initialRe
   const [versions, setVersions] = useState<ReadonlyArray<ContextVersion>>(initialVersions);
   const [writes, setWrites] = useState<Array<SetupWrite>>([...initialWrites]);
   const [text, setText] = useState("");
+  // A multi-instance agent (one Chatbot per branch or page): facts may be kept for this instance only; authority stays per type.
+  const instance = installation?.isMulti ? { name: installation.name, typeName: pick(moduleDef(moduleKey).shortName, locale) } : null;
   const [chatError, setChatError] = useState<string | undefined>();
   const [isSending, startSending] = useTransition();
   const [gateError, setGateError] = useState<string | undefined>();
@@ -197,7 +200,7 @@ export const SetupScreen = ({ installation, moduleKey, initialSession, initialRe
                       return (
                         <ChatBubble
                           key={m.id} side={m.role === "user" ? "outgoing" : "incoming"} author={m.role === "user" ? m.author || t("you") : t("nivo")}
-                          footer={cards.length > 0 ? <div className={c.WRITES_CLASS_NAME}>{cards.map((w) => <SetupWriteCard key={w.id} write={w} onDecide={onDecideWrite} />)}</div> : undefined}
+                          footer={cards.length > 0 ? <div className={c.WRITES_CLASS_NAME}>{cards.map((w) => <SetupWriteCard key={w.id} write={w} onDecide={onDecideWrite} instance={instance} />)}</div> : undefined}
                         >
                           {m.body}
                         </ChatBubble>

@@ -1,20 +1,17 @@
-import { notFound } from "next/navigation";
-import { ModuleWorkbench } from "@/features/module-workbench";
-import { isModuleKey } from "@/lib/modules-shared";
+import { notFound, redirect } from "next/navigation";
+import { resolveTypeRoute } from "@/lib/agent-routes";
+import { agentListHref, isModuleKey } from "@/lib/modules-shared";
 
-type WorkbenchPageProps = {
+type WorkbenchRedirectProps = {
   params: Promise<{ module: string }>;
-  searchParams: Promise<{ tab?: string | string[]; focus?: string | string[] }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-const first = (v: string | string[] | undefined): string | null => (Array.isArray(v) ? (v[0] ?? null) : (v ?? null)) || null;
-
-/** Workbench slot: the module's own working surface (built per module). `?tab=` and `?focus=` are the shared deep-link contract of the agent dashboard frame. */
-const WorkbenchPage = async ({ params, searchParams }: WorkbenchPageProps) => {
+/** The pre-instance URL /agents/<type>/workbench: to the only instance, or the instance that owns `?focus=`, else the list of instances. */
+const WorkbenchRedirect = async ({ params, searchParams }: WorkbenchRedirectProps) => {
   const { module } = await params;
   if (!isModuleKey(module)) notFound();
-  const query = await searchParams;
-  return <ModuleWorkbench module={module} tab={first(query.tab)} focus={first(query.focus)} />;
+  redirect((await resolveTypeRoute(module, "workbench", await searchParams)) ?? agentListHref(module));
 };
 
-export default WorkbenchPage;
+export default WorkbenchRedirect;

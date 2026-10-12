@@ -10,6 +10,7 @@ import { replyTimeoutSec, type EngineJob } from "./engine-queue";
 import { sendCommandItem } from "./agent-commands";
 import { loadAuthority, runWork, type EngineCtx } from "./engine";
 import { drainAfter } from "./flow-ctx";
+import { isModuleKey } from "./module-registry";
 import { buildAgentContext } from "./knowledge/index";
 import { knowledgeBrief } from "./knowledge/runtime";
 import { buildAgentBundle, installationOfJob, REPLY_CONTRACT } from "./engine-sync";
@@ -64,7 +65,7 @@ export const chatTurnContext = async (db: SupabaseClient, job: EngineJob) => {
   // Is the agent's OpenClaw copy (AGENTS.md, SOUL.md, knowledge/) current? Then only the dynamic data goes into the turn.
   const [inst, dynamic] = await Promise.all([
     db.from("module_installations").select("id, active_context_version_id, settings").eq("workspace_id", ws).eq("agent_id", agent.id).maybeSingle(),
-    buildAgentContext({ workspaceId: ws, module: agent.module, query: mine.body, audience: "customer", db, scope: "dynamic" }),
+    buildAgentContext({ workspaceId: ws, module: agent.module, query: mine.body, audience: "customer", db, scope: "dynamic", installationId: conv.installation_id ?? null }),
   ]);
   const instRow = inst.data as { id: string; active_context_version_id: string | null; settings: Record<string, unknown> | null } | null;
   const [versionRes, syncRes] = await Promise.all([
@@ -107,7 +108,7 @@ ${BOOKING_REPLY_ADDENDUM}` : ""}
 Answer with ONLY the JSON object of the reply contract in AGENTS.md.`,
     };
   }
-  const brief = authority + (await knowledgeBrief(c, agent.module, mine.body, "customer"));
+  const brief = authority + (await knowledgeBrief(c, agent.module, mine.body, "customer", conv.installation_id ?? null));
   const persona = `You are ${agent.name} (@${agent.handle}), role: ${agent.role}.
 Instructions: ${agent.instructions}
 Business knowledge: ${agent.knowledge || "(none)"}
@@ -283,7 +284,10 @@ export const runEngineTool = async (db: SupabaseClient, job: EngineJob, tool: To
     const query = text(args.query, 400);
     if (!query) throw new Error("query is required");
     // Customer audience: PUBLIC business knowledge only, filtered in SQL.
-    const { system: block, citations } = await buildAgentContext({ workspaceId: ws, module: "chatbot", query, audience: "customer", db, limit: 6 });
+    // The conversation's own instance: its context version and the knowledge restricted to it (one branch's Chatbot).
+    const inst = conv.installation_id ? ((await db.from("module_installations").select("module_key").eq("id", conv.installation_id).maybeSingle()).data as { module_key: string } | null) : null;
+    const module = inst && isModuleKey(inst.module_key) ? inst.module_key : "chatbot";
+    const { system: block, citations } = await buildAgentContext({ workspaceId: ws, module, query, audience: "customer", db, limit: 6, installationId: inst ? conv.installation_id : null });
     await trace(`Knowledge search: ${query.slice(0, 100)}`);
     return { passages: block, citations: citations.map((x) => ({ title: x.title, topic: x.topic })) };
   }

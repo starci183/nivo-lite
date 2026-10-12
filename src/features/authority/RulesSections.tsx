@@ -18,12 +18,14 @@ export type RulesSectionsProps = {
   readonly rules: ReadonlyArray<AuthorityRule>
   /** STATE-8: labels stay, the unresolved values and the save actions are skeletons. */
   readonly isLoading?: boolean
+  /** Departments with several agent instances (one Chatbot per branch): their names, shown under the department; the rules are shared by all. */
+  readonly instanceNames?: Readonly<Record<string, ReadonlyArray<string>>>
 }
 
 const isMode = (v: string): v is RuleMode => (MODES as ReadonlyArray<string>).includes(v)
 
 /** Sections 3 and 4: the automation scope (mode and VND limit per action) and the limits (note and required details). */
-export const RulesSections = ({ authority, rules, isLoading = false }: RulesSectionsProps) => {
+export const RulesSections = ({ authority, rules, isLoading = false, instanceNames = {} }: RulesSectionsProps) => {
   const t = useT(dict)
   const g = useT(governance)
   const scopeSaver = useSaver()
@@ -86,6 +88,7 @@ export const RulesSections = ({ authority, rules, isLoading = false }: RulesSect
           {groups.map((group) => (
             <div key={group.department} className={GROUP_CLASS}>
               <Heading level={3}>{g(`dept_${group.department}`)}</Heading>
+              {(instanceNames[group.department]?.length ?? 0) > 1 ? <Text size="xs" tone="muted">{t("instancesShared", { names: (instanceNames[group.department] ?? []).join(", ") })}</Text> : null}
               <div className={RULE_LIST_CLASS}>
                 {group.actions.map((action) => {
                   const key = ruleKey(group.department, action)

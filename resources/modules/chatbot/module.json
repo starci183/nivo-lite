@@ -44,6 +44,7 @@
     "connections": []
   },
   "default_operating_mode": "assist",
+  "multi_instance": true,
   "agent": {
     "name": "Chatbot Agent",
     "handle": "chatbot",

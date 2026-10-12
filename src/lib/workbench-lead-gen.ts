@@ -174,8 +174,11 @@ const median = (xs: ReadonlyArray<number>): number | null => {
 type ConversationRow = { id: string; lead_id: string | null };
 type MessageRow = { conversation_id: string; role: "user" | "agent" | "system"; body: string; created_at: string };
 
-/** Load the Lead Gen workbench for the signed-in workspace. A failed read throws: the route's RouteError shows it. */
-export const getLeadGenWorkbench = async (): Promise<LeadGenWorkbenchData> => {
+/**
+ * Load the Lead Gen workbench for the signed-in workspace. A failed read throws: the route's RouteError shows it. With `installationId`
+ * (one Lead-gen agent per page or ad account) only that instance's prospects and work items count (installation_id on leads and work items).
+ */
+export const getLeadGenWorkbench = async (installationId: string | null = null): Promise<LeadGenWorkbenchData> => {
   const c = await engineCtx();
   const { db, ws } = c;
   drainAfter(c);
@@ -186,9 +189,10 @@ export const getLeadGenWorkbench = async (): Promise<LeadGenWorkbenchData> => {
     listWorkItems({ limit: 600 }),
   ]);
   if (leadsRes.error) throw new Error(leadsRes.error.message);
-  const allLeads = (leadsRes.data ?? []) as Array<Lead>;
+  const ownLead = (l: Lead): boolean => installationId === null || (l as Lead & { installation_id?: string | null }).installation_id === installationId;
+  const allLeads = ((leadsRes.data ?? []) as Array<Lead>).filter(ownLead);
 
-  const leadGenItems = items.filter((w) => w.department === "lead_gen");
+  const leadGenItems = items.filter((w) => w.department === "lead_gen" && (installationId === null || w.installation_id === installationId));
   const capture = latestBy(leadGenItems, "capture_lead");
   const scoring = latestBy(leadGenItems, "score_lead");
   const handoffItem = latestBy(leadGenItems, "handoff_to_sales");

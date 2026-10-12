@@ -1,4 +1,4 @@
-import type { Installation, InstallationStatus, ModuleKey } from "@/lib/modules-shared";
+import { agentHref, type Installation, type InstallationStatus, type ModuleKey } from "@/lib/modules-shared";
 
 export type ShownStatus = InstallationStatus | "notInstalled";
 
@@ -10,7 +10,8 @@ export const STATUS_TONE: Record<ShownStatus, "neutral" | "accent" | "success" |
 
 export const TAB_ROUTES = ["setup", "workbench", "settings"] as const;
 export type ModuleTab = (typeof TAB_ROUTES)[number];
-export const tabHref = (module: ModuleKey, tab: ModuleTab): string => (tab === "setup" ? `/agents/${module}` : `/agents/${module}/${tab}`);
+/** A tab of one instance (/agents/<type>/<id>/<tab>); without an id, the type-level URL that redirects to the right instance. */
+export const tabHref = (module: ModuleKey, tab: ModuleTab, installationId?: string | null): string => agentHref(module, installationId, tab);
 
 /** Accent-insensitive text for matching: NFD, marks stripped, d-stroke folded, lower case ("Bán hàng" -> "ban hang"). */
 export const fold = (text: string): string => text.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/gi, "d").toLowerCase();

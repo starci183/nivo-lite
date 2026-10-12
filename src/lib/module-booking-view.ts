@@ -28,7 +28,12 @@ const view = (b: BookingRow, services: Model["services"]): BookingView => ({
   feeVnd: b.cancel_fee_vnd, checkedIn: b.checked_in_at !== null, note: b.note, conflictNote: b.conflict_note, source: b.source_channel, leadId: b.lead_id, reschedules: b.reschedule_count,
 });
 
-export const loadWorkbenchData = async (ws: string, from?: string, to?: string): Promise<WorkbenchData> => {
+/**
+ * The booking workbench data. Services, resources and hours are shared by every Booking agent of the workspace in this version, so the
+ * calendar shows every booking on them (a slot taken by another branch's agent is still taken); `installationId` scopes the waiting
+ * decisions count to one instance.
+ */
+export const loadWorkbenchData = async (ws: string, from?: string, to?: string, installationId: string | null = null): Promise<WorkbenchData> => {
   const db = supabaseAdmin();
   const model = await loadModel(ws);
   const tz = model.settings.timezone;
@@ -41,7 +46,9 @@ export const loadWorkbenchData = async (ws: string, from?: string, to?: string):
   const [rows, wait, decisions, exc, staff] = await Promise.all([
     db.from("bookings").select("*").eq("workspace_id", ws).lt("start_at", new Date(toMs).toISOString()).gt("end_at", new Date(fromMs).toISOString()).order("start_at"),
     db.from("booking_waitlist").select("*").eq("workspace_id", ws).in("status", ["waiting", "notified"]).order("created_at", { ascending: false }).limit(100),
-    db.from("work_items").select("id", { count: "exact", head: true }).eq("workspace_id", ws).eq("department", "booking").eq("status", "waiting_decision"),
+    (installationId
+      ? db.from("work_items").select("id", { count: "exact", head: true }).eq("workspace_id", ws).eq("department", "booking").eq("status", "waiting_decision").eq("installation_id", installationId)
+      : db.from("work_items").select("id", { count: "exact", head: true }).eq("workspace_id", ws).eq("department", "booking").eq("status", "waiting_decision")),
     db.from("booking_exceptions").select("id, resource_id, on_date, closed, start_time, end_time, note").eq("workspace_id", ws).gte("on_date", addDays(today, -1)).order("on_date").limit(100),
     db.from("staff").select("id, name").eq("workspace_id", ws).eq("active", true).order("name"),
   ]);
