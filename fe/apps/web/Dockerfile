@@ -1,15 +1,15 @@
 # nivo-lite/web - the web Next app (standalone output). The build context is the APP ROOT (the folder holding the one
 # package.json and package-lock.json), not this folder:
 #
-#   docker build -f fe/apps/web/Dockerfile -t nivo-lite/web:<tag> \
-#     --build-arg NEXT_PUBLIC_SUPABASE_URL=... --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=... \
-#     --build-arg NEXT_PUBLIC_API_URL=https://api.nivo.vn --build-arg NEXT_PUBLIC_SITE_URL=https://nivo.vn .
+#   docker build -f fe/apps/web/Dockerfile -t nivo-lite/web:<tag> .
+#
+# Pass the public values with --build-arg: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, NEXT_PUBLIC_API_URL (default https://api.nivo.vn),
+# NEXT_PUBLIC_SITE_URL (default https://nivo.vn) and the optional demo-login and Google Picker values.
 #
 # NEXT_PUBLIC_* values are published to every browser by design, so they are the one kind of build argument; every server-only
 # variable is supplied at run time (env_file). It follows the image canon (knowledge/hfs/docker.md) and diverges from it nowhere.
 # No secret is built in: credentials are mounted at run time and .dockerignore keeps them out of the build context.
-# The standalone output is switched on here with NEXT_OUTPUT=standalone until next.config.ts sets it unconditionally; Netlify keeps
-# building the same source without this file until the cutover retires it.
+# The standalone output is switched on here with NEXT_OUTPUT=standalone until next.config.ts sets it unconditionally.
 
 FROM node:22.14.0-alpine3.21 AS manifests
 WORKDIR /app

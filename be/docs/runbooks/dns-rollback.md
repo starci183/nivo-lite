@@ -5,11 +5,11 @@ Zone `nivo.vn` is on Cloudflare. Token: `CLOUDFLARE_API_TOKEN` in `secrets.env` 
 
 ## State before the cutover (recorded 2026-10-02)
 
-| Type  | Name       | Content                | Proxied | TTL  |
-|-------|------------|------------------------|---------|------|
-| A     | nivo.vn    | 75.2.60.5 (Netlify)    | yes     | auto |
-| CNAME | www.nivo.vn| nivo.vn                | yes     | auto |
-| CNAME | webmail.nivo.vn | nivo.vn           | yes     | auto |
+| Type  | Name            | Content             | Proxied | TTL  |
+| ----- | --------------- | ------------------- | ------- | ---- |
+| A     | nivo.vn         | 75.2.60.5 (Netlify) | yes     | auto |
+| CNAME | www.nivo.vn     | nivo.vn             | yes     | auto |
+| CNAME | webmail.nivo.vn | nivo.vn             | yes     | auto |
 
 Added for the VPS (DNS only, TTL 60): `app-vps.nivo.vn`, `n8n.nivo.vn`, `engine.nivo.vn` -> 103.142.27.9.
 Note: `*.nivo.vn` -> 180.93.136.138 is a wildcard that other systems use; explicit records win over it.

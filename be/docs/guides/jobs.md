@@ -1,7 +1,12 @@
 # Background jobs
 
+> Status at the lite cutover. This guide records the queue design as it ran in production on the engine (file names below are the engine's).
+> The api implements the same semantics on the lite ports: `be/src/modules/platform/queue` (outbox, relay, pgmq transport, worker) and
+> `be/src/modules/platform/jobs` (claim and fencing), with the knowledge jobs under `be/src/features/jobs`. When a name here and the code disagree, the code wins; the
+> lanes that move a piece (queue, knowledge) update its rows. The engine is retired by `be/docs/runbooks/cutover.md`.
+
 Heavy work (reading a document, chunking, embedding, reading facts, re-embedding) does not run inside a web request. The request writes a
-row and returns; the engine does the work and the UI follows the row through Supabase realtime. Owner rulings (2026-10-12): "fire, don't
+row and returns; a worker does the work and the UI follows the row through Supabase realtime. Owner rulings (2026-10-12): "fire, don't
 sit and wait", built the standard way even for lite; and a lite app has NO self-hosted infra (monorepo + Supabase only), so the transport is
 **Supabase Queues (pgmq)** in the project's own Postgres, not Redis/BullMQ.
 
@@ -28,7 +33,7 @@ policy, idempotent handlers and typed job contracts. Only the transport is pgmq.
         │  success → job_ack     retryable error → job_fail (5 s, 10 s, 20 s)     final / unrecoverable → onFailed + job_archive
         │  writes knowledge_sources.status / progress / error
         ▼
- Supabase realtime on knowledge_sources ──▶ Badge per row, "Đang xử lý N tài liệu" + Progress on /brain and /knowledge
+ Supabase realtime on knowledge_sources ──▶ Badge per row, "Processing N documents" + Progress on /brain and /knowledge
 ```
 
 Why no relay: `job_enqueue` (and the knowledge RPCs that call it) writes the outbox row and sends the pgmq message in the same transaction
@@ -42,14 +47,14 @@ chained jobs, so it is not simpler.
 
 Where things live:
 
-| Piece | File |
-| --- | --- |
-| Outbox table, knowledge RPCs, bucket, realtime | `supabase/migrations/20261012102200_job-outbox.sql` |
-| pgmq queue, job RPCs, slots, enqueue without relay | `supabase/migrations/20261012102300_pgmq-transport.sql` |
-| Job contracts (the source) | `src/lib/jobs/contracts.ts` |
-| Job contracts (engine copy, GENERATED) | `engine/src/platform/pgmq/contracts.ts` (`node engine/dev/sync-shared.mjs`) |
-| Consumer, policy, producer | `engine/src/platform/pgmq/` (`JobsModule`: `JobRegistry`, `JobProducer`, `JobHandler`) |
-| Knowledge handlers | `engine/src/features/knowledge-jobs/` |
+| Piece                                              | File                                                                                   |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Outbox table, knowledge RPCs, bucket, realtime     | `supabase/migrations/20261012102200_job-outbox.sql`                                    |
+| pgmq queue, job RPCs, slots, enqueue without relay | `supabase/migrations/20261012102300_pgmq-transport.sql`                                |
+| Job contracts (the source)                         | `src/lib/jobs/contracts.ts`                                                            |
+| Job contracts (engine copy, GENERATED)             | `engine/src/platform/pgmq/contracts.ts` (`node engine/dev/sync-shared.mjs`)            |
+| Consumer, policy, producer                         | `engine/src/platform/pgmq/` (`JobsModule`: `JobRegistry`, `JobProducer`, `JobHandler`) |
+| Knowledge handlers                                 | `engine/src/features/knowledge-jobs/`                                                  |
 
 The old `engine_jobs` queue (`engine/src/platform/queue`) is separate and still carries the OpenClaw work (chat turns, generate, agent
 sync, video render). It is not replaced. `ENGINE_WORKER_ENABLED=0` turns that worker off (for local runs against real data).
@@ -65,18 +70,18 @@ them under an advisory lock per workspace, so two engines never both take the la
 
 pgmq: queue `knowledge` (`pgmq.q_knowledge`, archive `pgmq.a_knowledge`). The engine never calls the `pgmq` schema directly; it calls:
 
-| RPC | Caller | Does |
-| --- | --- | --- |
-| `job_enqueue(ws, queue, name, payload, dedupe)` | service role (engine, server code, other RPCs) | outbox row + `pgmq.send`, idempotent on `dedupe` |
-| `job_read(queue, vt, qty, ws_limit)` | engine | `pgmq.read` + workspace slot + attempt count; returns `msg_id, attempt, enqueued_at, message` |
-| `job_touch(queue, msg_id, vt)` | engine | `pgmq.set_vt` + slot lease renewal while a handler runs |
-| `job_ack(queue, msg_id)` | engine | `pgmq.delete`, slot freed, outbox `done` |
-| `job_fail(queue, msg_id, delay_s, error)` | engine | `pgmq.set_vt(delay)`, slot freed, outbox back to `queued` with the error |
-| `job_archive(queue, msg_id, error)` | engine | `pgmq.archive`, slot freed, outbox `failed` |
-| `job_requeue(outbox_id)` | operators (`jobs.sh retry`) | a failed job sent again, attempts reset |
-| `job_stats()` | engine (`/healthz`, readiness), watchdog | per-queue depth and oldest age, running, failed in 24 h, oldest queued |
-| `knowledge_enqueue_source(ws, kind, title, storage_path, url, meta)` | owner/manager (browser), service role | source row + `knowledge.index` job |
-| `knowledge_retry_source(source)` | owner/manager, service role | a `failed` / `blocked_credits` source back to `queued` with a new job (`:retry:<ms>` key) |
+| RPC                                                                  | Caller                                         | Does                                                                                          |
+| -------------------------------------------------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `job_enqueue(ws, queue, name, payload, dedupe)`                      | service role (engine, server code, other RPCs) | outbox row + `pgmq.send`, idempotent on `dedupe`                                              |
+| `job_read(queue, vt, qty, ws_limit)`                                 | engine                                         | `pgmq.read` + workspace slot + attempt count; returns `msg_id, attempt, enqueued_at, message` |
+| `job_touch(queue, msg_id, vt)`                                       | engine                                         | `pgmq.set_vt` + slot lease renewal while a handler runs                                       |
+| `job_ack(queue, msg_id)`                                             | engine                                         | `pgmq.delete`, slot freed, outbox `done`                                                      |
+| `job_fail(queue, msg_id, delay_s, error)`                            | engine                                         | `pgmq.set_vt(delay)`, slot freed, outbox back to `queued` with the error                      |
+| `job_archive(queue, msg_id, error)`                                  | engine                                         | `pgmq.archive`, slot freed, outbox `failed`                                                   |
+| `job_requeue(outbox_id)`                                             | operators (`jobs.sh retry`)                    | a failed job sent again, attempts reset                                                       |
+| `job_stats()`                                                        | engine (`/healthz`, readiness), watchdog       | per-queue depth and oldest age, running, failed in 24 h, oldest queued                        |
+| `knowledge_enqueue_source(ws, kind, title, storage_path, url, meta)` | owner/manager (browser), service role          | source row + `knowledge.index` job                                                            |
+| `knowledge_retry_source(source)`                                     | owner/manager, service role                    | a `failed` / `blocked_credits` source back to `queued` with a new job (`:retry:<ms>` key)     |
 
 Every `job_*` RPC is `security definer`, revoked from `anon` / `authenticated`, granted to `service_role`.
 
@@ -86,11 +91,11 @@ Every `job_*` RPC is `security definer`, revoked from `anon` / `authenticated`, 
 upload bucket. The engine gets a generated copy (the engine image is built from `engine/` alone). Payloads carry ids, never rows: the
 handler re-reads the current state.
 
-| Job | Payload | Does |
-| --- | --- | --- |
-| `knowledge.index` | `{ sourceId, workspaceId }` | read (storage / link / Drive / text) → chunk → embed → `extracting_facts`, enqueue `knowledge.facts` |
-| `knowledge.facts` | `{ sourceId, workspaceId }` | read facts window by window into `brain_facts` proposals → `ready` |
-| `knowledge.reembed` | `{ workspaceId, model? }` | re-embed chunks made by another model; hands over to a follow-up job after 100 batches |
+| Job                 | Payload                     | Does                                                                                                 |
+| ------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `knowledge.index`   | `{ sourceId, workspaceId }` | read (storage / link / Drive / text) → chunk → embed → `extracting_facts`, enqueue `knowledge.facts` |
+| `knowledge.facts`   | `{ sourceId, workspaceId }` | read facts window by window into `brain_facts` proposals → `ready`                                   |
+| `knowledge.reembed` | `{ workspaceId, model? }`   | re-embed chunks made by another model; hands over to a follow-up job after 100 batches               |
 
 `knowledge_sources.status`: `queued → reading → indexing → extracting_facts → ready`, or `failed` / `blocked_credits`. A source in
 `extracting_facts` already has every passage indexed: agents read it (`lensSources`, `lensPassages`) like a `ready` one.
@@ -106,7 +111,7 @@ handler re-reads the current state.
   handler runs) runs out, and counts as one more attempt.
 - `PermanentJobError` (bad payload, missing subject) and `BlockedCreditsError` (the workspace has no credits) end the job at once.
   Credits: the source becomes `blocked_credits` with the Vietnamese reason; nothing retries on its own, the owner tops up and presses
-  Thử lại (`knowledge_retry_source`).
+  Retry (`knowledge_retry_source`).
 - A handler's `onFailed(ctx, error)` runs once when the job ends as failed (the last attempt or an unrecoverable error). The knowledge
   handlers write the failure themselves on their last attempt (`ctx.isFinalAttempt`), so they do not need it.
 - A job aborted by shutdown is handed back (`job_fail` with delay 0); it is not final.
@@ -161,15 +166,15 @@ On the VPS, `engine/deploy/jobs.sh` wraps the same (`stats`, `failed`, `open`, `
 
 Settings (engine env, all optional):
 
-| Variable | Default | Meaning |
-| --- | --- | --- |
-| `JOBS_ENABLED` | `1` | `0` = do not consume (producers still enqueue; messages wait) |
-| `JOBS_CONCURRENCY` | `4` | jobs one engine runs at a time |
-| `JOBS_WORKSPACE_CONCURRENCY` | `2` | jobs of one workspace running at a time across all engines |
-| `JOBS_POLL_MS` | `1500` | pause between empty polls |
-| `JOBS_VT_SECONDS` | `60` | visibility timeout of a read message (extended every third of it) |
-| `ENGINE_SHUTDOWN_GRACE_MS` | `30000` | time running jobs get on shutdown |
-| `ENGINE_WORKER_ENABLED` | `1` | the old `engine_jobs` worker; `0` = off |
+| Variable                     | Default | Meaning                                                           |
+| ---------------------------- | ------- | ----------------------------------------------------------------- |
+| `JOBS_ENABLED`               | `1`     | `0` = do not consume (producers still enqueue; messages wait)     |
+| `JOBS_CONCURRENCY`           | `4`     | jobs one engine runs at a time                                    |
+| `JOBS_WORKSPACE_CONCURRENCY` | `2`     | jobs of one workspace running at a time across all engines        |
+| `JOBS_POLL_MS`               | `1500`  | pause between empty polls                                         |
+| `JOBS_VT_SECONDS`            | `60`    | visibility timeout of a read message (extended every third of it) |
+| `ENGINE_SHUTDOWN_GRACE_MS`   | `30000` | time running jobs get on shutdown                                 |
+| `ENGINE_WORKER_ENABLED`      | `1`     | the old `engine_jobs` worker; `0` = off                           |
 
 Local: `npm run dev:stack` (engine in watch mode against the local Supabase stack, env from `secrets.env` or `NIVO_SECRETS=<file>`;
 `DEV_ENGINE_PORT` changes the port). The local Supabase image ships pgmq; apply the migrations and nothing else is needed.
