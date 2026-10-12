@@ -74,7 +74,6 @@ icon leaf selects the outline or micro drawing from the role.
 | `wallet` | Wallet and billing | `WalletIcon` | A wallet names stored balance and payment activity |
 | `support` | Product support | `LifebuoyIcon` | A lifebuoy is the established help and assistance metaphor |
 | `sidebar` | Toggle the console rail | StarCi `SidebarSimpleIcon` regular path | One stable sidebar glyph preserves the control identity in both expanded and collapsed states; direction is communicated by state and accessible label, not by swapping drawings |
-| `trash` | Remove a row (link, item) | `TrashIcon` | A trash can is the established delete-this-row metaphor; pairs with `IconButton variant="danger-soft"` |
 
 ## Selection procedure
 
