@@ -212,9 +212,7 @@
       "limit_vnd": null,
       "required_fields": [],
       "amount_limit": false,
-      "next": [
-        "handoff_to_sales"
-      ]
+      "note": "Creates or merges the lead (dedupe by Messenger/Instagram id, phone, email) and keeps its source: platform, post, ad or form id, referral. Which step follows (greet, score) is decided by the lead flow, not by a fixed chain."
     },
     {
       "action": "greet_prospect",
@@ -226,7 +224,7 @@
       "limit_vnd": null,
       "required_fields": [],
       "amount_limit": false,
-      "note": "Only inside the 24-hour window and only from public knowledge."
+      "note": "First reply inside the 24-hour window, composed from public knowledge only, in the brand voice."
     },
     {
       "action": "ask_qualifying",
@@ -238,7 +236,7 @@
       "limit_vnd": null,
       "required_fields": [],
       "amount_limit": false,
-      "note": "At most 4 questions, from the approved set."
+      "note": "At most 4 questions, from the owner approved set, one per turn; the answers are stored on the lead."
     },
     {
       "action": "score_lead",
@@ -249,7 +247,8 @@
       "mode": "auto",
       "limit_vnd": null,
       "required_fields": [],
-      "amount_limit": false
+      "amount_limit": false,
+      "note": "Pure scoring (hot, warm, cold) from the owner criteria plus the answers; one model call per turn at most, only to read free text."
     },
     {
       "action": "reply_comment_public",
@@ -314,10 +313,34 @@
         "need"
       ],
       "amount_limit": false,
-      "note": "Auto for hot leads only; warm and cold leads stay in the list.",
+      "note": "Auto for hot leads only (contact and need present). A warm or cold lead is never handed over on its own: the proposal asks a person.",
       "next": [
         "classify_lead"
       ]
+    },
+    {
+      "action": "follow_up_lead",
+      "label": {
+        "vi": "Nhắn lại khách ấm",
+        "en": "Follow up a warm lead"
+      },
+      "mode": "auto",
+      "limit_vnd": null,
+      "required_fields": [],
+      "amount_limit": false,
+      "note": "Warm leads get one follow-up inside the 24-hour window; outside it the lead goes to a person (Sales follow-up), never a marketing message."
+    },
+    {
+      "action": "close_lead",
+      "label": {
+        "vi": "Khép lại với khách lạnh",
+        "en": "Politely close a cold lead"
+      },
+      "mode": "auto",
+      "limit_vnd": null,
+      "required_fields": [],
+      "amount_limit": false,
+      "note": "Cold leads get one polite closing line inside the 24-hour window, then the bot stops."
     },
     {
       "action": "message_with_human_agent_tag",
@@ -464,6 +487,30 @@
       "description": {
         "vi": "chuyển khách nóng cho Bán hàng",
         "en": "hand the hot lead to Sales"
+      }
+    },
+    {
+      "command": "follow_up_lead",
+      "action": "follow_up_lead",
+      "subject_type": "lead",
+      "required_fields": [
+        "lead_id"
+      ],
+      "description": {
+        "vi": "nhắn lại khách ấm",
+        "en": "follow up the warm lead"
+      }
+    },
+    {
+      "command": "close_lead",
+      "action": "close_lead",
+      "subject_type": "lead",
+      "required_fields": [
+        "lead_id"
+      ],
+      "description": {
+        "vi": "khép lại với khách lạnh",
+        "en": "politely close the cold lead"
       }
     },
     {

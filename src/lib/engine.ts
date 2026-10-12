@@ -16,6 +16,7 @@ import { transferDetails } from "./knowledge";
 import { bankConnectionOf, mentionsCode } from "./bank";
 import { emitEvent } from "./outbound-events";
 import { sendCommand } from "./agent-commands";
+import { leadGenContinue } from "./lead-flow";
 import { COMMAND_LINE_AUTHOR } from "./agent-command-rules";
 import { renderEmail } from "./email/layout";
 import { sendWorkspaceEmail } from "./email/send";
@@ -167,7 +168,7 @@ const deliver = async (c: EngineCtx, lead: Lead, text: string): Promise<{ summar
   return { summary: tr(c)("simulatedDelivery", { channel: lead.channel }), real: false };
 };
 
-const ensureResponsibility = async (c: EngineCtx, lead: Lead): Promise<Responsibility> => {
+export const ensureResponsibility = async (c: EngineCtx, lead: Lead): Promise<Responsibility> => {
   const open = (((await c.db.from("responsibilities").select("*").eq("lead_id", lead.id).neq("status", "done").order("created_at", { ascending: false }).limit(1)).data ?? [])[0] ?? null) as Responsibility | null;
   if (open) return open;
   const sales = await agentFor(c, "sales");
@@ -640,7 +641,6 @@ const recordOnly = (action: FlowAction): Performer => ({
 const PERFORMERS: Partial<Record<FlowAction, Performer>> = {
   reply_customer: replyCustomer,
   handoff_lead: handoffLead,
-  capture_lead: handoffLead, // lead_gen: the same lead record (matched or created) as the chatbot hand-off; handoff_to_sales then carries it to Sales
   classify_lead: classifyLead,
   send_follow_up: followUpLike("follow_up"),
   send_quote: followUpLike("quote"),
@@ -745,7 +745,11 @@ const finish = async (c: EngineCtx, item: WorkItem, proposal: Proposal, f: Finis
 type ProcessOpts = { preset?: boolean; noChain?: boolean; forceAsk?: ReasonCode };
 
 /** Actions that send the customer a message through their conversation's channel (the agent-access check applies to them). */
-const CUSTOMER_OUT: ReadonlySet<string> = new Set(["reply_customer", "send_follow_up", "send_quote", "send_care", "issue_invoice"]);
+const CUSTOMER_OUT: ReadonlySet<string> = new Set([
+  "reply_customer", "send_follow_up", "send_quote", "send_care", "issue_invoice",
+  // lead_gen: every action that speaks to a person on Facebook / Instagram
+  "greet_prospect", "ask_qualifying", "follow_up_lead", "close_lead", "reply_comment_public", "private_reply_comment", "message_with_human_agent_tag",
+]);
 
 const ACCESS_RANK: Readonly<Record<Access, number>> = { read: 0, ask: 1, auto: 2 };
 
@@ -823,19 +827,18 @@ export const continueChain = async (c: EngineCtx, item: WorkItem): Promise<void>
       invoiceId: item.proposal.candidates?.length === 1 ? item.proposal.candidates[0].id : item.subject_type === "invoice" ? item.subject_id : null,
     });
   }
+  // lead_gen steps chain by the lead flow's state machine (lead-flow.ts: score, then greet / ask / hand off / follow up / close); only handoff_to_sales
+  // keeps the generic loop below (its `next` is Sales classify_lead).
+  if (item.department === "lead_gen" && item.action !== "handoff_to_sales") {
+    await leadGenContinue(c, item);
+    return;
+  }
   // Every hand-off is a typed command to the next department (agent-commands.ts): contract check, depth/cycle limits, the receiver's own gate, an Office mirror line.
   const chain = { from: item.department, parentId: item.id, chainId: item.chain_id ?? item.id, origin: item.origin, inboundEventId: item.inbound_event_id, queue: true } as const;
   for (const next of FLOW_NEXT[item.action]) {
     const to = ACTION_DEPARTMENT[next];
     if (next === "classify_lead" && item.lead_id) {
       await sendCommand(c, { ...chain, to, command: next, reason: "handoff", dedupeKey: `classify_lead:after:${item.id}`, payload: { subject_type: "lead", subject_id: item.lead_id, lead_id: item.lead_id } });
-    } else if (next === "handoff_to_sales" && item.lead_id) {
-      // lead_gen -> Sales: the hand-off is lead_gen's own gated action (handoff_to_sales); when it is done, FLOW_NEXT sends Sales classify_lead (branch above).
-      const lead = await getLead(c, item.lead_id);
-      await sendCommand(c, {
-        ...chain, to, command: next, reason: "lead_captured", dedupeKey: `handoff_to_sales:after:${item.id}`,
-        payload: { subject_type: "lead", subject_id: item.lead_id, lead_id: item.lead_id, contact: lead?.phone ?? lead?.email ?? "", need: lead?.need ?? "" },
-      });
     } else if (next === "send_follow_up" && item.lead_id) {
       if (item.proposal.fields?.stage === "lost") continue;
       if ((await getLead(c, item.lead_id))?.stage === "won") continue; // the customer already bought: no sales follow-up
