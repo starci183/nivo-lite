@@ -10,6 +10,7 @@ export {
 export { AGENT_STATUS_TONE, STATUS_FILTERS, agentStatusOf, foldText, isStatusFilter } from "./installations.status"
 export type { StatusFilter } from "./installations.status"
 export { AGENTS_ROUTE, agentHref, agentListHref } from "./installations.routes"
+export type { AgentTab } from "./installations.routes"
 export type {
     ContextSnapshot,
     ContextVersion,
