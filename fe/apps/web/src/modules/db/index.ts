@@ -1,9 +1,7 @@
 import "server-only"
 
-export { readSession, refreshSession } from "./auth/read-session"
-export { writeExchangeCode } from "./auth/write-exchange-code"
-export { EMAIL_LINK_TYPES, isEmailLinkType, writeVerifyEmailLink } from "./auth/write-verify-email-link"
-export { createServerDbClient } from "./server"
-export { dbFailure, dbOk, toOutcome } from "./outcome"
-export type { DbFailure, DbFailureKind, DbOk, DbOutcome } from "./outcome"
+export { exchangeAuthCode, refreshSession, verifyEmailLink } from "./auth/read-session"
+export { endGatedSession, readMemberGate } from "./auth/read-member-gate"
+export { getPrincipal } from "./principal"
 export type { Principal } from "./principal"
+export { createServerDbClient } from "./server"

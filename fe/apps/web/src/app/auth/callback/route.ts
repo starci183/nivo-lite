@@ -1,21 +1,21 @@
+import "server-only"
+
 import { NextResponse, type NextRequest } from "next/server"
 import { postAuthPath } from "@/features/auth/destination"
 import { requestOrigin } from "@/lib/request-origin"
 import { supabaseServer } from "@/lib/supabase/server"
-import { isEmailLinkType, writeExchangeCode, writeVerifyEmailLink } from "@/modules/db"
-import { APP_ROUTES } from "@/modules/routes"
+import { exchangeAuthCode, verifyEmailLink } from "@/modules/db"
+import { APP_ROUTES, safeNextPath } from "@/modules/routes"
 
-/** `{{ .RedirectTo }}` can be the e-mail link route's own URL (`/auth/confirm?next=/x`); keep only the inner destination. */
+const EMAIL_LINK_ROUTES: ReadonlySet<string> = new Set(["/auth/confirm", APP_ROUTES.authCallback])
+
+/** `{{ .RedirectTo }}` can be this route's own URL (`/auth/confirm?next=/x`); keep only the inner same-origin destination. */
 const unwrapNext = (raw: string | null, origin: string): string | null => {
     if (!raw) return null
-    try {
-        const url = new URL(raw, origin)
-        if (url.origin === origin && (url.pathname === "/auth/confirm" || url.pathname === APP_ROUTES.authCallback))
-            return url.searchParams.get("next")
-        return url.origin === origin ? `${url.pathname}${url.search}` : raw
-    } catch {
-        return raw
-    }
+    const inner = safeNextPath(raw, origin)
+    if (inner === "/" && raw !== "/") return null
+    const url = new URL(inner, origin)
+    return EMAIL_LINK_ROUTES.has(url.pathname) ? safeNextPath(url.searchParams.get("next"), origin) : inner
 }
 
 /**
@@ -24,14 +24,14 @@ const unwrapNext = (raw: string | null, origin: string): string | null => {
  * - `token_hash` + `type` (NIVO's e-mail templates), with `next` that may itself be this route's URL.
  * The credential becomes a session cookie, then: recovery -> /reset-password, anything else -> `next` or the console.
  */
-export const GET = async (request: NextRequest) => {
+export const GET = async (request: NextRequest): Promise<NextResponse> => {
     const { searchParams } = request.nextUrl
     const origin = requestOrigin(request)
     const next = unwrapNext(searchParams.get("next"), origin)
     const type = searchParams.get("type")
     const isRecovery = type === "recovery" || next?.startsWith("/reset-password") === true
-    const to = (path: string) => NextResponse.redirect(new URL(path, origin))
-    const fail = (code: string) =>
+    const to = (path: string): NextResponse => NextResponse.redirect(new URL(path, origin))
+    const fail = (code: string): NextResponse =>
         to(isRecovery ? "/reset-password?error=invalid" : `${APP_ROUTES.login}?error=${code}`)
 
     const providerError = searchParams.get("error_code") ?? searchParams.get("error")
@@ -40,9 +40,9 @@ export const GET = async (request: NextRequest) => {
     const code = searchParams.get("code")
     const tokenHash = searchParams.get("token_hash")
     if (code) {
-        if ((await writeExchangeCode(code)).kind !== "ok") return fail("link_expired")
-    } else if (tokenHash && isEmailLinkType(type)) {
-        if ((await writeVerifyEmailLink(type, tokenHash)).kind !== "ok") return fail("link_expired")
+        if ((await exchangeAuthCode(code)).kind !== "ok") return fail("link_expired")
+    } else if (tokenHash && type) {
+        if ((await verifyEmailLink(type, tokenHash)).kind !== "ok") return fail("link_expired")
     } else {
         return fail(type === null ? "missing_code" : "link_expired")
     }
