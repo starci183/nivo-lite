@@ -50,9 +50,9 @@ export interface ConsoleHeaderBaseProps {
     }
 }
 
-type PartProps = ConsoleHeaderBaseProps
+type BrandProps = Pick<ConsoleHeaderBaseProps, "props">
 
-const Brand = ({ props }: PartProps) => (
+const Brand = ({ props }: BrandProps) => (
     <div className={BRAND}>
         <NivoLogo variant="mark" height={28} label={props.logoLabel} />
         <div className={WORKSPACE_NAME}>
@@ -65,7 +65,7 @@ const Brand = ({ props }: PartProps) => (
     </div>
 )
 
-const Actions = ({ props, on }: PartProps) => (
+const Actions = ({ props, on }: ConsoleHeaderBaseProps) => (
     <div className={ACTIONS}>
         <div className={SEARCH}>
             <SearchField

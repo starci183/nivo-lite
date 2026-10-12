@@ -66,9 +66,7 @@ const Steps = ({ props }: StepsProps) => {
     )
 }
 
-/** Draws the onboarding progress card, or the single "all set" line once every step is done. */
-export const OnboardingChecklistBase = (base: OnboardingChecklistBaseProps) => {
-    const { props, on } = base
+const Checklist = ({ props, on }: OnboardingChecklistBaseProps) => {
     const doneCount = props.steps.filter((step) => step.done).length
     if (props.steps.length === 0) return null
     if (doneCount === props.steps.length) {
@@ -112,3 +110,8 @@ export const OnboardingChecklistBase = (base: OnboardingChecklistBaseProps) => {
         </SurfaceCard>
     )
 }
+
+/** Draws the onboarding progress card, or the single "all set" line once every step is done. */
+export const OnboardingChecklistBase = (props: OnboardingChecklistBaseProps) => (
+    <Checklist props={props.props} on={props.on} />
+)

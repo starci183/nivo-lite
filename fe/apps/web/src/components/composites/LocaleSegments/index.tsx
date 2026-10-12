@@ -8,7 +8,7 @@ type LocaleSwitchOption = {
 }
 
 /** What the language switch draws and reports. */
-type LocaleSwitchProps = {
+type LocaleSegmentsProps = {
     readonly label: string
     readonly value: string
     readonly options: ReadonlyArray<LocaleSwitchOption>
@@ -17,7 +17,7 @@ type LocaleSwitchProps = {
 }
 
 /** The language switch: two joined segments, the chosen one carried by the grammar's selected state. */
-export const LocaleSegments = (props: LocaleSwitchProps) => (
+export const LocaleSegments = (props: LocaleSegmentsProps) => (
     <SegmentedControl
         label={props.label}
         isLabelHidden

@@ -87,3 +87,13 @@ export const shellFromJson = (json: Json): ShellFacts | null => {
         pendingDecisions: count(json.pending_decisions),
     }
 }
+
+const WORKSPACE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu
+
+type WorkspaceIdParse = { readonly success: true; readonly data: string } | { readonly success: false }
+
+/** Bounds the workspace id a switch request carries before it reaches a query. */
+export const workspaceIdSchema = {
+    safeParse: (input: string): WorkspaceIdParse =>
+        WORKSPACE_ID.test(input) ? { success: true, data: input } : { success: false },
+}
