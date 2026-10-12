@@ -5,6 +5,7 @@ import { Breadcrumbs, Button, DescriptionList, PageContainer, PrimaryRailLayout,
 import { useT } from "@/i18n/client"
 import { brain } from "@/i18n/dict/brain"
 import { planReview } from "@/lib/brain/conflicts"
+import { isInFlight, type SourceStatus } from "@/lib/knowledge/shared"
 import type { KnowledgeGap } from "@/lib/brain/gaps-shared"
 import type { ExtractionInfo, Fact, Lesson } from "@/lib/brain/shared"
 import { CreditsAlert } from "./CreditsAlert"
@@ -14,6 +15,7 @@ import { useRouter } from "next/navigation"
 import { AddDocumentsDrawer } from "@/features/knowledge/AddDocumentsDrawer"
 import { driveReturn } from "@/features/knowledge/driveReturn"
 import { FactDrawer } from "./form"
+import { ProcessingNotice } from "./processing"
 import { LessonsPanel } from "./lessons"
 import { MapPanel } from "./map"
 import { BrainRail, type StarterPreset } from "./rail"
@@ -30,6 +32,8 @@ export type BrainViewProps = {
   /** Where the reading of each document's facts stands. */
   readonly extractions?: ReadonlyArray<ExtractionInfo>
   readonly canWrite: boolean
+  /** The workspace: the processing notice follows its knowledge_sources, and the Add documents drawer uploads under its prefix. */
+  readonly workspaceId?: string
   /** Questions customers asked that the brain could not answer (owners and managers; empty for staff). */
   readonly gaps?: ReadonlyArray<KnowledgeGap>
   /** How many gaps are open in all (the list shows the most asked). */
@@ -46,7 +50,7 @@ type Surface = "map" | "review" | "facts" | "lessons"
  * Bộ não, laid out like Tri thức: header, actions, four key figures, then the active surface with the rail beside it
  * (agent views, what is worth adding, how it learns). Review opens first when something waits.
  */
-export const BrainView = ({ facts, documents, lessons, lenses, extractions = [], gaps = [], gapsOpen = gaps.length, canWrite, business, isLoading = false }: BrainViewProps) => {
+export const BrainView = ({ facts, documents, lessons, lenses, extractions = [], gaps = [], gapsOpen = gaps.length, canWrite, workspaceId = "", business, isLoading = false }: BrainViewProps) => {
   const t = useT(brain)
   const active = facts.filter((f) => f.status === "active")
   const scheduled = facts.filter((f) => f.status === "scheduled").length
@@ -60,7 +64,7 @@ export const BrainView = ({ facts, documents, lessons, lenses, extractions = [],
   const outOfCredits = extractions.some((x) => x.status === "blocked_credits")
   // While the brain is empty the empty state owns the one primary "add" (CTA-1 case-5); the header offers it once there is something.
   const isEmpty = facts.length === 0 && documents.length === 0
-  const docsIndexing = documents.filter((d) => d.status !== "ready" && d.status !== "failed").length + reading
+  const docsIndexing = documents.filter((d) => d.status === "pending" || isInFlight(d.status)).length + reading
 
   const [surface, setSurface] = useState<Surface>(waiting > 0 && canWrite ? "review" : "map")
   const [lensKey, setLensKey] = useState<string | null>(null)
@@ -92,6 +96,10 @@ export const BrainView = ({ facts, documents, lessons, lenses, extractions = [],
         </div>
 
         {outOfCredits && canWrite ? <CreditsAlert /> : null}
+
+        {!isLoading && workspaceId ? (
+          <ProcessingNotice workspaceId={workspaceId} seed={documents.filter((d) => isInFlight(d.status)).map((d) => ({ id: d.id, status: d.status as SourceStatus, progress: d.progress ?? 0 }))} />
+        ) : null}
 
         <SurfaceCard ariaLabel={t("statsLabel")}>
           <DescriptionList
@@ -143,7 +151,7 @@ export const BrainView = ({ facts, documents, lessons, lenses, extractions = [],
           }
         />
       </div>
-      <AddDocumentsDrawer isOpen={isAddingDocs} onClose={() => setAddingDocs(false)} onAdded={() => router.refresh()} />
+      <AddDocumentsDrawer isOpen={isAddingDocs} workspaceId={workspaceId} onClose={() => setAddingDocs(false)} onAdded={() => router.refresh()} />
       {drawer ? (
         <FactDrawer key={drawer.preset?.attributeLabel ?? "new"} isOpen editing={null} lenses={lenses} preset={drawer.preset} onClose={() => setDrawer(null)} />
       ) : null}

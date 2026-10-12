@@ -5,9 +5,8 @@ import { Alert, Badge, Button, ComboBox, Drawer, FileDropzone, IconButton, Input
 import { nivoIconSource } from "@/ui"
 import { useT } from "@/i18n/client"
 import { knowledge } from "@/i18n/dict/knowledge"
-import { CreditsAlert } from "@/features/brain/CreditsAlert"
-import { extractionSettled, type ExtractionInfo } from "@/lib/brain/shared"
-import { addKnowledge, addKnowledgeDriveFile, addKnowledgeFile, addKnowledgeLink, addKnowledgePickedFile, disconnectDriveGrant, driveGrantStatus, listDriveFolder, listPickedFolder, pollExtractions, startDriveGrant } from "@/lib/knowledge/actions"
+import { disconnectDriveGrant, driveGrantStatus, listDriveFolder, listPickedFolder, startDriveGrant } from "@/lib/knowledge/actions"
+import { enqueueSource, uploadToBucket, type EnqueueMeta } from "@/lib/knowledge/queue"
 import { faqToText } from "@/lib/knowledge/chunk"
 import { isZipName, readZip } from "@/lib/knowledge/zip"
 import { driveReadMode, isGoogleDriveLink, LINK_ERROR, linkErrorCode, MAX_FOLDER_FILES, parseLinks, resolveLink } from "@/lib/knowledge/drive"
@@ -16,10 +15,12 @@ import type { Visibility } from "@/lib/knowledge/shared"
 import { MODULE_KEYS, type ModuleKey } from "@/lib/modules-shared"
 import { driveReturn, savePending, takePending } from "./driveReturn"
 import { pickerConfigured, pickFromDrive, type PickedDoc } from "./picker"
+import { readPickedFile } from "./pickerRead"
 import { FAQ_ROW_CLASS, FOOTER_CLASS, LINK_ACTION_CLASS, LINK_FIELD_CLASS, LINK_ROW_CLASS, LIST_CLASS, OPTIONS_SUMMARY_CLASS, PICKER_CLASS, ROW_WRAP_CLASS, STACK_CLASS } from "./classNames"
 
 type Mode = "files" | "write" | "faq"
-type ItemStatus = "waiting" | "indexing" | "ready" | "failed"
+/** waiting: not sent yet. uploading: bytes on their way to storage. queued: handed to the job queue (a worker reads it from here). */
+type ItemStatus = "waiting" | "uploading" | "queued" | "failed"
 type Item = {
   readonly id: string
   readonly kind: "file" | "link" | "drive"
@@ -36,9 +37,11 @@ type Item = {
   readonly name: string
   readonly size?: number
   readonly file?: File
+  /** Drive mime type of a Picker file (decides export or download). */
+  readonly mimeType?: string
   readonly status: ItemStatus
-  /** The source created for it once indexed: its facts are read afterwards (brain_extractions). */
-  readonly sourceId?: string
+  /** Upload progress, 0-100. */
+  readonly progress?: number
   /** Raw server message, or a ready-made key for a client-side failure. */
   readonly error?: string
 }
@@ -49,7 +52,9 @@ export type AddPreset = { readonly topic: string; readonly visibility?: Visibili
 export type AddDocumentsDrawerProps = {
   readonly isOpen: boolean
   readonly onClose: () => void
-  /** Called once a run has added at least one document (refresh the page behind). */
+  /** The workspace the documents go to (storage prefix and queue). */
+  readonly workspaceId: string
+  /** Called once a run has queued at least one document (refresh the page behind). */
   readonly onAdded?: () => void
   /** Topics already used, offered in the topic field. */
   readonly topics?: ReadonlyArray<string>
@@ -58,15 +63,16 @@ export type AddDocumentsDrawerProps = {
 
 const FILE_TYPES = /\.(txt|md|markdown|csv|pdf|docx|xlsx|pptx)$/i
 const MAX_FILE_BYTES = 10_000_000
-const CONCURRENCY = 2
+/** Uploads in flight at once. Only bytes travel from the browser; nothing is read or indexed here. */
+const UPLOAD_PARALLEL = 4
 const ACCEPT = ".txt,.md,.markdown,.csv,.pdf,.docx,.xlsx,.pptx,.zip,text/plain,text/markdown,text/csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/zip,application/x-zip-compressed"
-const STATUS_TONE: Record<ItemStatus, "neutral" | "warning" | "success" | "danger"> = { waiting: "neutral", indexing: "warning", ready: "success", failed: "danger" }
+const STATUS_TONE: Record<ItemStatus, "neutral" | "warning" | "success" | "danger"> = { waiting: "neutral", uploading: "warning", queued: "success", failed: "danger" }
 
 const NEED_GRANT = `${LINK_ERROR.needGrant}: `
 const GRANT_LOST = `${LINK_ERROR.grantLost}: `
 type Grant = DriveGrant & { readonly configured: boolean }
 const isFolderLink = (url: string): boolean => resolveLink(url).kind === "drive-folder"
-const NO_RETRY = new Set(["errBadType", "errTooBig", "errBadLink", "errEmptyFolder", "errDriveType", "errPickerFolder", "errNestedZip", "errZipBad", "errZipTooBig", "errZipTotal", "errZipBomb", "errZipEmpty"])
+const NO_RETRY = new Set(["errBadType", "errDriveType", "errTooBig", "errBadLink", "errEmptyFolder", "errDriveType", "errPickerFolder", "errNestedZip", "errZipBad", "errZipTooBig", "errZipTotal", "errZipBomb", "errZipEmpty"])
 const canRetry = (x: { readonly status: ItemStatus; readonly error?: string }): boolean =>
   x.status === "waiting" || (x.status === "failed" && !NO_RETRY.has(x.error ?? "") && linkErrorCode(x.error ?? "") !== LINK_ERROR.tokenExpired)
 
@@ -83,9 +89,9 @@ const splitUrls = (text: string): Array<string> => parseLinks(text.trim().split(
 
 /**
  * "Thêm tài liệu": add many files and links in one go (default tab), or write a note / Q&A pair.
- * Visibility, module, topic and tags are chosen once for the whole batch. Items are processed two at a time.
+ * Visibility, module, topic and tags are chosen once for the whole batch. The browser only uploads; a worker reads and indexes in the background.
  */
-export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], preset = null }: AddDocumentsDrawerProps) => {
+export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, workspaceId, topics = [], preset = null }: AddDocumentsDrawerProps) => {
   const t = useT(knowledge)
   const [mode, setMode] = useState<Mode>(preset ? "write" : "files")
   const [items, setItems] = useState<ReadonlyArray<Item>>([])
@@ -104,7 +110,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
   const [optionsOpen, setOptionsOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [doneCount, setDoneCount] = useState(0)
+  const [queuedCount, setQueuedCount] = useState(0)
   const seenPreset = useRef<number | null>(preset?.nonce ?? null)
   const [grant, setGrant] = useState<Grant | null>(null)
   const [reading, setReading] = useState(false)
@@ -150,32 +156,6 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
       setVisibility(preset.visibility ?? "internal")
     }
   }, [preset])
-
-  // Progress of reading facts out of the documents added in this run: polled while any is still being read (the poll also nudges waiting work).
-  const [extractions, setExtractions] = useState<Record<string, ExtractionInfo>>({})
-  const watched = items.filter((x) => x.status === "ready" && x.sourceId).map((x) => x.sourceId as string)
-  const watchedKey = watched.join(",")
-  const unsettled = watched.some((id) => { const e = extractions[id]; return !e || !extractionSettled(e.status) })
-  useEffect(() => {
-    if (!isOpen || !unsettled) return
-    let cancelled = false
-    const ids = watchedKey.split(",").filter(Boolean)
-    const tick = async () => {
-      const r = await pollExtractions(ids)
-      if (!cancelled && r.ok) setExtractions((cur) => ({ ...cur, ...Object.fromEntries(r.data.map((x) => [x.sourceId, x])) }))
-    }
-    void tick()
-    const handle = setInterval(() => { void tick() }, 5000)
-    return () => { cancelled = true; clearInterval(handle) }
-  }, [isOpen, unsettled, watchedKey])
-  const outOfCredits = watched.some((id) => extractions[id]?.status === "blocked_credits")
-  const factsNote = (id: string | undefined): string | null => {
-    if (!id) return null
-    const e = extractions[id]
-    if (!e || e.status === "queued" || e.status === "running") return t("extReading")
-    if (e.status === "done") return e.factsProposed > 0 ? t("extDone", { n: e.factsProposed }) : t("extNone")
-    return e.status === "blocked_credits" ? t("extBlocked") : t("extFailed")
-  }
 
   /** Why a link cannot be added, or null: not a link, or a Drive folder without the Drive grant. */
   const linkProblem = (value: string): string | null => {
@@ -317,7 +297,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
 
   const pickedFileRow = (d: PickedDoc, origin?: string, topicName?: string): Item => {
     const bad = driveReadMode(d.mimeType, d.name) === null ? "errDriveType" : null
-    return { id: nextId(), kind: "drive", viaPicker: true, name: d.name, driveId: d.id, status: bad ? "failed" : "waiting", ...(origin ? { origin } : {}), ...(topicName ? { topic: topicName } : {}), ...(bad ? { error: bad } : {}) }
+    return { id: nextId(), kind: "drive", viaPicker: true, name: d.name, driveId: d.id, mimeType: d.mimeType, status: bad ? "failed" : "waiting", ...(origin ? { origin } : {}), ...(topicName ? { topic: topicName } : {}), ...(bad ? { error: bad } : {}) }
   }
 
   const pickedFolderRows = async (d: PickedDoc, token: string): Promise<Array<Item>> => {
@@ -332,7 +312,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
   /** Keep the pasted links and settings, then go to Google for the Drive consent; the callback brings the browser back to this page. */
   const connectDrive = async (): Promise<void> => {
     setError(null); setDriveAnswer(null)
-    const kept = [links, ...items.filter((x) => x.kind === "link" && x.status !== "ready").map((x) => x.name)].filter(Boolean).join("\n")
+    const kept = [links, ...items.filter((x) => x.kind === "link" && x.status !== "queued").map((x) => x.name)].filter(Boolean).join("\n")
     savePending({ links: kept, topic, tags, visibility, module })
     const r = await startDriveGrant(`${window.location.pathname}${window.location.search}`)
     if (r.ok) window.location.assign(r.data.url)
@@ -347,7 +327,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
 
   const message = (raw: string): string => {
     switch (raw) {
-      case "errBadType": case "errTooBig": case "errBadLink": case "errEmptyFolder": case "errDriveType": case "errPickerFolder": case "errNestedZip": case "errZipBad": case "errZipTooBig": case "errZipTotal": case "errZipBomb": case "errZipEmpty": return t(raw)
+      case "errBadType": case "errTooBig": case "errBadLink": case "errEmptyFolder": case "errDriveType": case "errPickerFolder": case "errNestedZip": case "errZipBad": case "errZipTooBig": case "errZipTotal": case "errZipBomb": case "errZipEmpty": case "errUpload": case "errEnqueue": return t(raw)
       default: {
         const code = linkErrorCode(raw)
         return code === LINK_ERROR.notPublic ? t("errNotPublic") : code === LINK_ERROR.folder ? t("errFolder") : code === LINK_ERROR.unsupported ? t("errUnsupported")
@@ -358,33 +338,41 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
 
   const meta = () => ({ topic: topic.trim() || null, visibility, module: module === "all" ? null : module, tags: tags.split(",").map((x) => x.trim()).filter(Boolean) })
 
-  const runOne = async (item: Item): Promise<boolean> => {
-    patch(item.id, { status: "indexing", error: undefined })
+  const stripExt = (name: string): string => name.replace(/^.*[\\/]/, "").replace(/\.[^.]+$/, "")
+  const driveFileUrl = (id: string): string => `https://drive.google.com/file/d/${id}/view`
+
+  /** One row: upload its bytes (files, ZIP entries, Picker files), then hand it to the queue. Links and grant-read Drive files go straight to the queue. */
+  const sendOne = async (item: Item): Promise<boolean> => {
+    patch(item.id, { status: "uploading", progress: 0, error: undefined })
+    const m = meta()
+    const info: EnqueueMeta = { topic: m.topic ?? item.topic ?? null, tags: m.tags, visibility: m.visibility, module: m.module, origin: item.origin ?? null }
+    let stage: "upload" | "queue" = "upload"
     try {
-      const m = meta()
-      let result
-      if (item.kind === "file" && item.file) {
-        const form = new FormData()
-        form.set("file", item.file)
-        form.set("visibility", m.visibility)
-        form.set("module", m.module ?? "")
-        form.set("topic", m.topic ?? item.topic ?? "")
-        form.set("tags", m.tags.join(","))
-        result = await addKnowledgeFile(form)
-      } else if (item.kind === "drive" && item.driveId && item.viaPicker) {
-        if (!pickerToken.current) { patch(item.id, { status: "failed", error: `${LINK_ERROR.tokenExpired}: ` }); return false }
-        result = await addKnowledgePickedFile(item.driveId, pickerToken.current, { ...m, topic: m.topic ?? item.topic ?? null })
-      } else if (item.kind === "drive" && item.driveId) {
-        result = await addKnowledgeDriveFile(item.driveId, { ...m, topic: m.topic ?? item.topic ?? null })
+      if (item.kind === "link") {
+        stage = "queue"
+        await enqueueSource({ workspaceId, kind: "url", title: item.name.replace(/^https?:\/\//i, ""), url: item.name, meta: info })
+      } else if (item.kind === "drive" && item.driveId && !item.viaPicker) {
+        // Read with the workspace's Drive grant, which the worker holds: no bytes pass through here.
+        stage = "queue"
+        await enqueueSource({ workspaceId, kind: "url", title: stripExt(item.name), url: driveFileUrl(item.driveId), meta: info })
       } else {
-        result = await addKnowledgeLink(item.name, m)
+        let file = item.file
+        if (item.kind === "drive" && item.driveId) {
+          // The Picker token is short-lived and stays in this tab: read the bytes now, the worker gets the stored copy.
+          if (!pickerToken.current) { patch(item.id, { status: "failed", error: `${LINK_ERROR.tokenExpired}: ` }); return false }
+          file = await readPickedFile(pickerToken.current, item.driveId, item.mimeType ?? "", item.name)
+        }
+        if (!file) throw new Error("errUpload")
+        const path = await uploadToBucket(workspaceId, file, (progress) => patch(item.id, { progress }))
+        stage = "queue"
+        await enqueueSource({ workspaceId, kind: "file", title: stripExt(file.name), storagePath: path, meta: info })
       }
-      if (!result.ok) { patch(item.id, { status: "failed", error: result.error }); return false }
-      if (result.data.status === "failed") { patch(item.id, { status: "failed", error: result.data.error ?? t("saveFailed") }); return false }
-      patch(item.id, { status: "ready", sourceId: result.data.id })
+      patch(item.id, { status: "queued", progress: 100 })
       return true
     } catch (e) {
-      patch(item.id, { status: "failed", error: e instanceof Error ? e.message : String(e) })
+      const raw = e instanceof Error ? e.message : String(e)
+      const known = raw === "errDriveType" || raw === "errTooBig" || linkErrorCode(raw) === LINK_ERROR.tokenExpired
+      patch(item.id, { status: "failed", error: known ? raw : stage === "upload" ? "errUpload" : "errEnqueue" })
       return false
     }
   }
@@ -409,33 +397,38 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
     if (queue.length === 0) { setBusy(false); return }
     let ok = 0
     let next = 0
-    const worker = async () => {
+    const lane = async () => {
       while (next < queue.length) {
         const item = queue[next++] as Item
-        if (await runOne(item)) ok++
+        if (await sendOne(item)) ok++
       }
     }
-    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, queue.length) }, worker))
+    await Promise.all(Array.from({ length: Math.min(UPLOAD_PARALLEL, queue.length) }, lane))
     setBusy(false)
-    setDoneCount((n) => n + ok)
+    setQueuedCount((n) => n + ok)
     if (ok > 0) onAdded?.()
   }
 
+  /** A note or a Q&A list has no file: it goes straight to the queue with its text. */
   const runNote = async () => {
     setBusy(true)
     setError(null)
     const body = mode === "faq" ? faqToText(pairs) : content
-    const result = await addKnowledge({ kind: mode === "faq" ? "faq" : "text", title, content: body, ...meta() })
+    try {
+      await enqueueSource({ workspaceId, kind: mode === "faq" ? "faq" : "text", title: title.trim(), meta: { ...meta(), content: body } })
+    } catch (e) {
+      setBusy(false)
+      setError(e instanceof Error ? e.message : t("errEnqueue"))
+      return
+    }
     setBusy(false)
-    if (!result.ok) { setError(result.error); return }
-    if (result.data.status === "failed") { setError(result.data.error ?? t("saveFailed")); return }
+    setQueuedCount((n) => n + 1)
+    setTitle(""); setContent(""); setPairs([{ q: "", a: "" }]); setTried(false)
     onAdded?.()
-    reset()
-    onClose()
   }
 
   const reset = () => {
-    setItems([]); setRows([newRow()]); setRowErrors({}); setTried(false); setTitle(""); setContent(""); setPairs([{ q: "", a: "" }]); setError(null); setDoneCount(0); setZipTruncated(false); setZipSkips([]); zipSeen.current = new Set()
+    setItems([]); setRows([newRow()]); setRowErrors({}); setTried(false); setTitle(""); setContent(""); setPairs([{ q: "", a: "" }]); setError(null); setQueuedCount(0); setZipTruncated(false); setZipSkips([]); zipSeen.current = new Set()
   }
 
   const close = () => {
@@ -455,9 +448,12 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
   const noDocs = tried && mode === "files" && pendingCount === 0
   const noTitle = tried && mode !== "files" && title.trim().length === 0
   const noContent = tried && mode !== "files" && noteBody.trim().length === 0
-  const submitLabel = busy ? t("saving") : mode === "files" ? (pendingCount > 0 ? t(hasFailed ? "submitRetry" : "submitFiles", { count: pendingCount }) : t("submitEmpty")) : t("save")
+  /** Everything typed or dropped has been sent: the primary becomes "Xong". */
+  const isDone = queuedCount > 0 && !busy && (mode === "files" ? pendingCount === 0 : title.trim().length === 0 && noteBody.trim().length === 0)
+  const submitLabel = busy ? t("saving") : isDone ? t("done") : mode === "files" ? (pendingCount > 0 ? t(hasFailed ? "submitRetry" : "submitFiles", { count: pendingCount }) : t("submitEmpty")) : t("save")
   /** Pressed with nothing to add: no disabled button, the empty input says what is missing. */
   const submit = () => {
+    if (isDone) { close(); return }
     if (mode === "files" ? pendingCount === 0 : title.trim().length === 0 || noteBody.trim().length === 0) { setTried(true); return }
     setTried(false)
     void (mode === "files" ? runBatch() : runNote())
@@ -522,7 +518,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
       footer={(closeDrawer) => (
         // A decision with its way out: two separate buttons at gap-2, never a ButtonGroup (CTA-1 case-7).
         <div className={FOOTER_CLASS}>
-          <Button variant="ghost" isDisabled={busy} onPress={() => { closeDrawer() }}>{t("addCancel")}</Button>
+          {isDone ? null : <Button variant="ghost" isDisabled={busy} onPress={() => { closeDrawer() }}>{t("addCancel")}</Button>}
           <Button variant="primary" isPending={busy} isDisabled={busy} onPress={submit}>{submitLabel}</Button>
         </div>
       )}
@@ -598,15 +594,13 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
                   <ListRow
                     key={x.id}
                     title={x.name}
-                    description={x.status === "failed" && x.error ? message(x.error) : [t(x.kind === "file" ? "itemFile" : x.kind === "drive" ? "itemDrive" : isFolderLink(x.name) ? "itemFolder" : "itemLink"), x.origin ? t(x.fromZip ? "zipFrom" : "folderFrom", { name: x.origin }) : null, x.size ? sizeLabel(x.size) : null, x.status === "ready" ? factsNote(x.sourceId) : null].filter(Boolean).join(" · ")}
-                    badges={<Badge isDot tone={STATUS_TONE[x.status]}>{t(`item${x.status[0]?.toUpperCase()}${x.status.slice(1)}` as "itemWaiting")}</Badge>}
+                    description={x.status === "failed" && x.error ? message(x.error) : [t(x.kind === "file" ? "itemFile" : x.kind === "drive" ? "itemDrive" : isFolderLink(x.name) ? "itemFolder" : "itemLink"), x.origin ? t(x.fromZip ? "zipFrom" : "folderFrom", { name: x.origin }) : null, x.size ? sizeLabel(x.size) : null].filter(Boolean).join(" · ")}
+                    badges={<Badge isDot tone={STATUS_TONE[x.status]}>{x.status === "uploading" ? t("itemUploading", { percent: x.progress ?? 0 }) : t(x.status === "queued" ? "itemQueued" : x.status === "failed" ? "itemFailed" : "itemWaiting")}</Badge>}
                     actions={x.status === "waiting" || x.status === "failed" ? <Button variant="ghost" size="sm" isDisabled={busy} onPress={() => setItems((cur) => cur.filter((y) => y.id !== x.id))}>{t("itemRemove")}</Button> : undefined}
                   />
                 ))}
               </SurfaceListCard>
             ) : null}
-            {doneCount > 0 && !busy ? <Alert title={t("batchDone", { count: doneCount })} tone="affirmative" /> : null}
-            {outOfCredits ? <CreditsAlert /> : null}
           </div>
         ) : (
           <div className={STACK_CLASS} id={`add-docs-panel-${mode}`} role="tabpanel">
@@ -629,6 +623,8 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
             )}
           </div>
         )}
+
+        {queuedCount > 0 && !busy ? <Alert title={t("batchQueued", { count: queuedCount })} tone="affirmative" /> : null}
 
         {options}
 

@@ -4,7 +4,14 @@ import { MODULE_KEYS, type ModuleKey } from "../modules-shared";
 /** Format of a source (not a business category): what the owner pasted or uploaded. */
 export const SOURCE_KINDS = ["text", "faq", "file", "url"] as const;
 export type SourceKind = (typeof SOURCE_KINDS)[number];
-export type SourceStatus = "pending" | "indexing" | "ready" | "failed";
+/**
+ * Where a source stands. The job queue writes queued -> reading -> indexing -> extracting_facts -> ready (or failed / blocked_credits);
+ * `pending` is the older synchronous value, kept so existing rows still read.
+ */
+export type SourceStatus = "pending" | "queued" | "reading" | "indexing" | "extracting_facts" | "ready" | "failed" | "blocked_credits";
+/** Statuses a worker still has to move on: the Second Brain notice and the live list watch these. */
+export const IN_FLIGHT_STATUSES: ReadonlyArray<SourceStatus> = ["queued", "reading", "indexing", "extracting_facts"];
+export const isInFlight = (status: string): boolean => (IN_FLIGHT_STATUSES as ReadonlyArray<string>).includes(status);
 /** public: customer-facing agents may answer from it. internal: internal agents and staff only. */
 export type Visibility = "public" | "internal";
 /** Who the answer is for. `customer` only ever sees public passages (enforced in match_knowledge). */
@@ -26,6 +33,8 @@ export type KnowledgeSource = {
   status: SourceStatus;
   error: string | null;
   chunkCount: number;
+  /** 0-100 while a worker is on it. */
+  progress: number;
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;

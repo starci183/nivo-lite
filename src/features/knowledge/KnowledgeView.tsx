@@ -2,12 +2,14 @@
 
 import { useEffect, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Badge, Breadcrumbs, Button, Disclosure, EmptyNotice, Link, List, ListItem, PageContainer, PrimaryRailLayout, SectionHeader, Select, SurfaceCard, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
+import { Alert, Badge, Breadcrumbs, Button, Disclosure, EmptyNotice, Link, List, ListItem, PageContainer, PrimaryRailLayout, SectionHeader, Select, SurfaceCard, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
 import { useLocale, useT } from "@/i18n/client"
 import { intlLocale, TIME_ZONE } from "@/i18n/core"
 import { knowledge } from "@/i18n/dict/knowledge"
 import { decideSuggestion } from "@/lib/knowledge/actions"
-import type { KnowledgeSource, SourceStatus, Visibility } from "@/lib/knowledge/shared"
+import { useLiveSources } from "@/lib/knowledge/live"
+import { retrySource } from "@/lib/knowledge/queue"
+import { isInFlight, type KnowledgeSource, type SourceStatus, type Visibility } from "@/lib/knowledge/shared"
 import { MODULE_KEYS, type ModuleKey } from "@/lib/modules-shared"
 import { AddDocumentsDrawer, type AddPreset } from "./AddDocumentsDrawer"
 import { AskPanel } from "./AskPanel"
@@ -24,16 +26,20 @@ type KnowledgeViewProps = {
   readonly suggestions: ReadonlyArray<SuggestionView>
   readonly skipped: ReadonlyArray<SkippedView>
   readonly canWrite: boolean
+  /** The workspace: the live list follows its knowledge_sources, and the drawer uploads under its prefix. */
+  readonly workspaceId: string
   readonly initialModule: ModuleKey | "all"
   readonly askModule: ModuleKey
   /** STATE-8: the same page while its data loads - labels stay, the sources and suggestion rows are skeletons. */
   readonly isLoading?: boolean
 }
 
-const STATUS_TONE: Record<SourceStatus, "neutral" | "warning" | "success" | "danger"> = { pending: "neutral", indexing: "warning", ready: "success", failed: "danger" }
+const STATUS_TONE: Record<SourceStatus, "neutral" | "warning" | "success" | "danger"> = {
+  pending: "neutral", queued: "neutral", reading: "warning", indexing: "warning", extracting_facts: "warning", ready: "success", failed: "danger", blocked_credits: "warning",
+}
 
 /** /knowledge: sources of the workspace (shared by every agent), suggestions, and "Thử hỏi". */
-export const KnowledgeView = ({ sources, topics, suggestions, skipped, canWrite, initialModule, askModule, isLoading = false }: KnowledgeViewProps) => {
+export const KnowledgeView = ({ sources: initialSources, topics, suggestions, skipped, canWrite, workspaceId, initialModule, askModule, isLoading = false }: KnowledgeViewProps) => {
   const t = useT(knowledge)
   const locale = useLocale()
   const router = useRouter()
@@ -43,11 +49,27 @@ export const KnowledgeView = ({ sources, topics, suggestions, skipped, canWrite,
   // Back from the Google Drive consent (?drive=ok|error): the Add documents drawer reopens with the pasted links kept.
   useEffect(() => { if (driveReturn()) setAdding(true) }, [])
   const [isPending, start] = useTransition()
+  // Realtime: new sources appear at the top as they are created, and a worker's status and progress show as they change.
+  const sources = useLiveSources(workspaceId, initialSources)
+  const [retrying, setRetrying] = useState<ReadonlySet<string>>(new Set())
+  const [retryFailed, setRetryFailed] = useState(false)
 
   const shown = sources.filter((s) => filter === "all" || s.module === null || s.module === filter)
   const when = (iso: string) => new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "medium", timeZone: TIME_ZONE }).format(new Date(iso))
   const decide = (key: string, state: "dismissed" | "not_applicable" | null) => start(async () => { await decideSuggestion(key, state); router.refresh() })
   const openAdd = (p: AddPreset | null) => { setPreset(p); setAdding(true) }
+  const retry = async (id: string) => {
+    setRetryFailed(false)
+    setRetrying((cur) => new Set(cur).add(id))
+    try {
+      await retrySource(id)
+    } catch {
+      setRetryFailed(true)
+    } finally {
+      setRetrying((cur) => { const next = new Set(cur); next.delete(id); return next })
+    }
+  }
+  const statusLabel = (s: KnowledgeSource): string => (isInFlight(s.status) && s.progress > 0 && s.progress < 100 ? `${t(`status_${s.status}`)} ${s.progress}%` : t(`status_${s.status}`))
 
   return (
     <PageContainer measure="product">
@@ -65,7 +87,7 @@ export const KnowledgeView = ({ sources, topics, suggestions, skipped, canWrite,
         {!canWrite && !isLoading ? <Text size="sm" tone="muted">{t("readOnlyNote")}</Text> : null}
 
         {canWrite ? (
-          <AddDocumentsDrawer isOpen={adding} topics={topics} preset={preset} onClose={() => setAdding(false)} onAdded={() => router.refresh()} />
+          <AddDocumentsDrawer isOpen={adding} workspaceId={workspaceId} topics={topics} preset={preset} onClose={() => setAdding(false)} onAdded={() => router.refresh()} />
         ) : null}
 
         <PrimaryRailLayout
@@ -79,6 +101,7 @@ export const KnowledgeView = ({ sources, topics, suggestions, skipped, canWrite,
                   onValueChange={(v) => setFilter(MODULE_KEYS.find((k) => k === v) ?? "all")}
                 />
               </div>
+              {retryFailed ? <Alert tone="negative" title={t("errEnqueue")} /> : null}
               <SurfaceListCard
                 label={t("listTitle")}
                 headingLevel={2}
@@ -96,8 +119,10 @@ export const KnowledgeView = ({ sources, topics, suggestions, skipped, canWrite,
                       {s.error ? <Text size="xs" tone="muted">{s.status === "failed" ? s.error : t("noVectors")}</Text> : null}
                     </div>
                     <div className={ROW_WRAP_CLASS}>
-                      <Badge isDot tone={STATUS_TONE[s.status]}>{t(`status_${s.status}`)}</Badge>
+                      <Badge isDot tone={STATUS_TONE[s.status]}>{statusLabel(s)}</Badge>
                       <Badge tone="neutral">{s.visibility === "public" ? t("vis_public") : t("vis_internal")}</Badge>
+                      {canWrite && s.status === "failed" ? <Button variant="ghost" size="sm" isPending={retrying.has(s.id)} onPress={() => { void retry(s.id) }}>{t("retry")}</Button> : null}
+                      {s.status === "blocked_credits" ? <TextAction href="/billing" size="sm" appearance="inline">{t("creditsLink")}</TextAction> : null}
                     </div>
                   </li>
                 ))}
