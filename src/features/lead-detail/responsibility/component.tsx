@@ -1,7 +1,7 @@
 "use client";
 
 import { AgentAvatar, PersonAvatar } from "@/components/avatar/PersonAvatar";
-import { Badge, DescriptionList, Region, SectionHeader, Skeleton, SurfaceCard, Text, Timeline, type BadgeTone } from "@starci/grammar/common";
+import { Avatar, Badge, DescriptionList, Region, SectionHeader, SurfaceCard, Text, Timeline, type BadgeTone } from "@starci/grammar/common";
 import type { ReactNode } from "react";
 import { useT } from "@/i18n/client";
 import { lead as leadDict } from "@/i18n/dict/lead";
@@ -51,7 +51,7 @@ export const ResponsibilityBase = ({ current = null, ownerHandle = null, due = n
             <SurfaceCard depth="nested" ariaLabel={t("accountable")}>
               <div className={OWNER_ROW_CLASS_NAME}>
                 <div className={OWNER_CLASS_NAME}>
-                  <Skeleton shape="circle" size="md" />
+                  <Avatar name="" size="md" isSkeleton />
                   <div className={OWNER_COPY_CLASS_NAME}>
                     <Text weight="semibold" isSkeleton>{t("accountable")}</Text>
                     <Text size="xs" tone="muted">{t("accountable")}</Text>

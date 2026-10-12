@@ -32,7 +32,7 @@ const LABEL: Record<CardStatus, "statusRunning" | "statusOff" | "statusSoon" | "
 
 /**
  * STATE-8 case-2: one automation card while the collection loads - the resolved card's anatomy (icon tile, name, status,
- * description, trigger line, detail action) as inert geometry; the switch needs the card's state, so it is not drawn.
+ * description, trigger line, detail action, switch) as inert geometry.
  */
 export const AutomationCardSkeleton = ({ isNested = false }: { readonly isNested?: boolean }) => {
   const t = useT(dict)

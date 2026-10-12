@@ -222,7 +222,7 @@ const CreditsSkeleton = ({ header }: { readonly header: ReactNode }) => {
         <SurfaceCard label={t("balanceLabel")} headingLevel={2}>
           <div className={STACK_CLASS_NAME}>
             <Text size="metric-lead" isSkeleton>{t("loading")}</Text>
-            <Skeleton shape="text" lines={1} />
+            <Meter label={t("meterLabel")} value={0} isSkeleton />
             <DescriptionList
               layout="columns"
               isDivided

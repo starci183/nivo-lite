@@ -74,7 +74,7 @@ export const KnowledgeView = ({ sources, topics, suggestions, skipped, canWrite,
             <div className={STACK_CLASS}>
               <div className={FILTER_CLASS}>
                 <Select
-                  label={t("filterModule")} variant="primary" value={filter}
+                  label={t("filterModule")} variant="primary" value={filter} isSkeleton={isLoading}
                   options={[{ id: "all", label: t("filterAll") }, ...MODULE_KEYS.map((k) => ({ id: k, label: t(`module_${k}`) }))]}
                   onValueChange={(v) => setFilter(MODULE_KEYS.find((k) => k === v) ?? "all")}
                 />

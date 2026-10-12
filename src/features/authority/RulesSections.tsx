@@ -97,7 +97,7 @@ export const RulesSections = ({ authority, rules, isLoading = false }: RulesSect
                       </div>
                       <SegmentedControl
                         label={t("modeLabel", { action: actionName(action) })}
-                        isDisabled={isLoading}
+                        isSkeleton={isLoading}
                         isLabelHidden
                         options={modeOptionsFor(action)}
                         value={d.mode}
@@ -111,7 +111,8 @@ export const RulesSections = ({ authority, rules, isLoading = false }: RulesSect
                             minValue={0}
                             step={1_000_000}
                             formatOptions={{ maximumFractionDigits: 0 }}
-                            isDisabled={isLoading || d.mode === "never"}
+                            isSkeleton={isLoading}
+                            isDisabled={d.mode === "never"}
                             value={toField(d.limit)}
                             onValueChange={(v) => { scopeSaver.reset(); patch(key, { limit: fromField(v) }) }}
                           />
@@ -131,7 +132,7 @@ export const RulesSections = ({ authority, rules, isLoading = false }: RulesSect
       <SurfaceCard label={t("limitsTitle")} headingLevel={2}>
         <div className={FIELDS_CLASS}>
           <Text size="sm" tone="muted">{t("limitsDesc")}</Text>
-          <Textarea variant="secondary" isDisabled={isLoading} label={t("limitsNote")} description={t("limitsNoteHint")} rows={3} value={limitsNote} onValueChange={(v) => { limitsSaver.reset(); setLimitsNote(v) }} />
+          <Textarea variant="secondary" isSkeleton={isLoading} label={t("limitsNote")} description={t("limitsNoteHint")} rows={3} value={limitsNote} onValueChange={(v) => { limitsSaver.reset(); setLimitsNote(v) }} />
           <div>
             <Heading level={3}>{t("requiredTitle")}</Heading>
             <Text size="sm" tone="muted">{t("requiredHint")}</Text>
@@ -145,7 +146,7 @@ export const RulesSections = ({ authority, rules, isLoading = false }: RulesSect
                     variant="secondary"
                     label={t("requiredFor", { action: `${actionName(action)} · ${g(`dept_${department}`)}` })}
                     orientation="horizontal"
-                    isDisabled={isLoading}
+                    isSkeleton={isLoading}
                     options={fieldOptions}
                     value={[...draft[key]!.required]}
                     onValueChange={(v) => { limitsSaver.reset(); patch(key, { required: FIELD_KEYS.filter((f) => v.includes(f)) }) }}

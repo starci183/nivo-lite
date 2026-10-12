@@ -2,7 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Alert, Badge, Button, ChatBubble, ChatWorkspace, Divider, EmptyNotice, FillViewport, Form, Heading, List, ListItem, Meter, Skeleton, Spinner, SurfaceCard, SurfaceListCard, Text, Textarea } from "@starci/grammar/common";
+import { Alert, Badge, Button, ChatBubble, ChatBubbleSkeletons, ChatWorkspace, Divider, EmptyNotice, FillViewport, Form, Heading, List, ListItem, Meter, Skeleton, Spinner, SurfaceCard, SurfaceListCard, Text, Textarea } from "@starci/grammar/common";
 import { useLocale, useT } from "@/i18n/client";
 import { intlLocale, TIME_ZONE } from "@/i18n/core";
 import { moduleSetup } from "@/i18n/dict/moduleSetup";
@@ -157,7 +157,7 @@ export const SetupScreen = ({ installation, moduleKey, initialSession, initialRe
             }
             conversation={
               <div ref={threadRef} className={c.THREAD_CLASS_NAME} aria-live="polite">
-                {isLoading ? <Skeleton shape="text" lines={4} /> : null}
+                {isLoading ? <ChatBubbleSkeletons count={3} /> : null}
                 {!isLoading && messages.length === 0 ? <EmptyNotice message={t("emptyTitle")} description={t("emptyBody")} /> : null}
                 {groups.map((g) => (
                   <Fragment key={g.id}>
@@ -184,7 +184,7 @@ export const SetupScreen = ({ installation, moduleKey, initialSession, initialRe
                     <div className={c.COMPOSER_FIELD_CLASS_NAME}>
                       <Textarea
                         id="setup-composer" name="message" label={t("chatPlaceholder")} isLabelHidden placeholder={t("chatPlaceholder")}
-                        rows={2} maxLength={4000} value={text} isDisabled={isSending || isLoading} onValueChange={setText} onSubmitShortcut={() => onSend()}
+                        rows={2} maxLength={4000} value={text} isSkeleton={isLoading} isDisabled={isSending} onValueChange={setText} onSubmitShortcut={() => onSend()}
                       />
                     </div>
                     <Button variant="primary" isPending={isSending} isDisabled={isLoading || text.trim().length === 0} onPress={() => onSend()}>{t("send")}</Button>
@@ -215,7 +215,7 @@ export const SetupScreen = ({ installation, moduleKey, initialSession, initialRe
 
         <SurfaceCard label={t("gatesTitle")} headingLevel={2}>
           <div className={c.STACK_CLASS_NAME}>
-            {isLoading ? <Text size="sm" tone="muted" isSkeleton>{t("gatesProgress", { done: 0, total: gates.length })}</Text> : <Meter label={t("gatesProgress", { done: confirmedCount, total: gates.length })} value={confirmedCount} minValue={0} maxValue={gates.length} />}
+            <Meter label={t("gatesProgress", { done: confirmedCount, total: gates.length })} value={confirmedCount} minValue={0} maxValue={gates.length} isSkeleton={isLoading} />
             {gateError !== undefined ? <Alert title={t("applyFailed")} description={gateError} tone="negative" /> : null}
             <List label={t("gatesTitle")} className={c.GATE_LIST_CLASS_NAME}>
               {gates.map((g) => {

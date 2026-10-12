@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { Badge, Button, IconTile, List, ListBox, ListRow, SearchField, Text } from "@starci/grammar/common"
+import { Badge, Button, IconTile, ListBox, SearchField, Text } from "@starci/grammar/common"
 import { nivoIconSource } from "@/ui"
 import { AgentAvatar, PersonAvatar } from "@/components/avatar/PersonAvatar"
 import { useLocale, useT } from "@/i18n/client"
@@ -79,9 +79,7 @@ export const ConversationList = ({ groupName, messages, agents, customers, pendi
             <div className={LIST_CAPTION_CLASS_NAME}>
               <Text size="xs" tone="muted" weight="semibold">{t("sectionGroups")}</Text>
             </div>
-            <List label={t("sectionGroups")}>
-              {[0, 1, 2].map((n) => <ListRow key={n} isSkeleton title={t("title")} description={t("groupPreviewEmpty")} leading={<span />} />)}
-            </List>
+            <ListBox label={t("sectionGroups")} items={[]} isLoading loadingRows={3} />
           </section>
         </nav>
       ) : (

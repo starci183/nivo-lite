@@ -35,11 +35,11 @@ export const GoalsSection = ({ authority, isLoading = false }: AuthoritySectionP
       <div className={FIELDS_CLASS}>
         <Text size="sm" tone="muted">{t("goalsDesc")}</Text>
         <div className={GOALS_GRID_CLASS}>
-          <NumberField variant="secondary" isDisabled={isLoading} label={t("goalRevenue")} description={t("goalRevenueHint")} minValue={0} step={1_000_000} formatOptions={{ maximumFractionDigits: 0 }} value={toField(revenue)} onValueChange={(v) => { saver.reset(); setRevenue(fromField(v)) }} />
-          <NumberField variant="secondary" isDisabled={isLoading} label={t("goalCustomers")} minValue={0} step={1} formatOptions={{ maximumFractionDigits: 0 }} value={toField(customers)} onValueChange={(v) => { saver.reset(); setCustomers(fromField(v)) }} />
-          <NumberField variant="secondary" isDisabled={isLoading} label={t("goalReply")} minValue={1} step={1} formatOptions={{ maximumFractionDigits: 0 }} value={toField(reply)} onValueChange={(v) => { saver.reset(); setReply(fromField(v)) }} />
+          <NumberField variant="secondary" isSkeleton={isLoading} label={t("goalRevenue")} description={t("goalRevenueHint")} minValue={0} step={1_000_000} formatOptions={{ maximumFractionDigits: 0 }} value={toField(revenue)} onValueChange={(v) => { saver.reset(); setRevenue(fromField(v)) }} />
+          <NumberField variant="secondary" isSkeleton={isLoading} label={t("goalCustomers")} minValue={0} step={1} formatOptions={{ maximumFractionDigits: 0 }} value={toField(customers)} onValueChange={(v) => { saver.reset(); setCustomers(fromField(v)) }} />
+          <NumberField variant="secondary" isSkeleton={isLoading} label={t("goalReply")} minValue={1} step={1} formatOptions={{ maximumFractionDigits: 0 }} value={toField(reply)} onValueChange={(v) => { saver.reset(); setReply(fromField(v)) }} />
         </div>
-        <Textarea variant="secondary" isDisabled={isLoading} label={t("goalNote")} description={t("goalNoteHint")} rows={2} value={note} onValueChange={(v) => { saver.reset(); setNote(v) }} />
+        <Textarea variant="secondary" isSkeleton={isLoading} label={t("goalNote")} description={t("goalNoteHint")} rows={2} value={note} onValueChange={(v) => { saver.reset(); setNote(v) }} />
         <SaveRow saver={saver} onSave={onSave} isLoading={isLoading} />
       </div>
     </SurfaceCard>
@@ -60,9 +60,9 @@ export const PoliciesSection = ({ authority, isLoading = false }: AuthoritySecti
     <SurfaceCard label={t("policiesTitle")} headingLevel={2}>
       <div className={FIELDS_CLASS}>
         <Text size="sm" tone="muted">{t("policiesDesc")}</Text>
-        <Textarea variant="secondary" isDisabled={isLoading} label={t("policies")} description={t("policiesHint")} rows={4} value={policies} onValueChange={(v) => { saver.reset(); setPolicies(v) }} />
-        <Textarea variant="secondary" isDisabled={isLoading} label={t("replyStyle")} description={t("replyStyleHint")} rows={2} value={replyStyle} onValueChange={(v) => { saver.reset(); setReplyStyle(v) }} />
-        <Textarea variant="secondary" isDisabled={isLoading} label={t("brandVoice")} description={t("brandVoiceHint")} rows={2} value={brandVoice} onValueChange={(v) => { saver.reset(); setBrandVoice(v) }} />
+        <Textarea variant="secondary" isSkeleton={isLoading} label={t("policies")} description={t("policiesHint")} rows={4} value={policies} onValueChange={(v) => { saver.reset(); setPolicies(v) }} />
+        <Textarea variant="secondary" isSkeleton={isLoading} label={t("replyStyle")} description={t("replyStyleHint")} rows={2} value={replyStyle} onValueChange={(v) => { saver.reset(); setReplyStyle(v) }} />
+        <Textarea variant="secondary" isSkeleton={isLoading} label={t("brandVoice")} description={t("brandVoiceHint")} rows={2} value={brandVoice} onValueChange={(v) => { saver.reset(); setBrandVoice(v) }} />
         <SaveRow saver={saver} onSave={onSave} isLoading={isLoading} />
       </div>
     </SurfaceCard>

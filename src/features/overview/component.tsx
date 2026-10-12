@@ -5,7 +5,7 @@ import { OnboardingChecklist } from "@/components/promo/OnboardingChecklist";
 import type { PromoState } from "@/features/promo/queries";
 
 import Link from "next/link";
-import { Badge, Button, EmptyNotice, PrimaryRailLayout, SectionHeader, Skeleton, SurfaceCard, SurfaceListCard, Text, TextAction } from "@starci/grammar/common";
+import { Badge, Button, EmptyNotice, PrimaryRailLayout, SectionHeader, SurfaceCard, SurfaceListCard, Text, TextAction } from "@starci/grammar/common";
 import { TileIcon, type IconName } from "@/ui";
 import { AgentAvatar } from "@/components/avatar/PersonAvatar";
 import { useT } from "@/i18n/client";
@@ -107,8 +107,9 @@ export const OverviewBase = (props: OverviewBaseProps) => {
         <SectionHeader
           level={1}
           eyebrow={t("eyebrow")}
-          title={isLoading ? <Skeleton shape="text" /> : props.title}
-          description={isLoading ? undefined : t("description", { time: props.updatedLabel })}
+          title={props.title}
+          description={t("description", { time: props.updatedLabel })}
+          isSkeleton={isLoading}
           action={
             <div className={HEADER_ACTIONS_CLASS_NAME}>
               <Button variant="outline" href="/chat">{t("openOffice")}</Button>

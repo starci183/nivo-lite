@@ -1,6 +1,6 @@
 "use client";
 
-import { EmptyNotice, Heading, Icon, List, ListItem, ListRow, Meter, Region, SectionHeader, Skeleton, Stepper, SurfaceCard, Text } from "@starci/grammar/common";
+import { EmptyNotice, Heading, Icon, List, ListItem, Meter, Region, SectionHeader, Stepper, SurfaceCard, Text, Timeline } from "@starci/grammar/common";
 import { nivoIconSource } from "@/ui";
 import { useLocale, useT } from "@/i18n/client";
 import { common } from "@/i18n/dict/common";
@@ -26,10 +26,20 @@ export const OutcomePanel = (props: PanelProps) =>
 
 const OutcomeLoading = () => {
   const t = useT(leadDict);
+  const tc = useT(common);
+  const steps = [
+    { id: "new", label: stageLabel("new", tc) },
+    { id: "qualified", label: stageLabel("qualified", tc) },
+    { id: "proposal", label: stageLabel("proposal", tc) },
+    { id: "closed", label: t("wonOrLost") },
+  ];
   return (
     <SurfaceCard label={t("outcome")} headingLevel={2}>
       <div className={STACK}>
-        <Skeleton shape="text" lines={4} />
+        <Stepper label={t("stageStepperLabel")} steps={steps} currentStepId="" isLoading />
+        <div className={EVIDENCE_STACK}>
+          <Meter label={t("evidenceState")} value={0} isSkeleton />
+        </div>
       </div>
     </SurfaceCard>
   );
@@ -103,9 +113,7 @@ export const HistoryPanel = (props: PanelProps) => {
     return (
       <Region id="history" labelledBy="history-title" className={HISTORY_ANCHOR}>
         <SectionHeader id="history-title" level={2} title={t("history")} />
-        <List label={t("history")}>
-          {[0, 1, 2].map((n) => <ListRow key={n} isSkeleton title={t("history")} description={t("history")} />)}
-        </List>
+        <Timeline label={t("history")} items={[]} isLoading loadingRows={3} />
         <Text as="p" size="xs" tone="muted">{t("auditFooter")}</Text>
       </Region>
     );

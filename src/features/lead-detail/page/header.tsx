@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { PersonAvatar } from "@/components/avatar/PersonAvatar";
 import { nivoIconSource } from "@/ui";
-import { Badge, Breadcrumbs, Button, DropdownMenu, Heading, IconButton, SectionHeader, Skeleton, Text } from "@starci/grammar/common";
+import { Avatar, Badge, Breadcrumbs, Button, DropdownMenu, IconButton, SectionHeader, Text } from "@starci/grammar/common";
 import { useT } from "@/i18n/client";
 import { leads } from "@/i18n/dict/leads";
 import { draftExecution, refreshContext, suggestResponsibility } from "@/lib/actions";
@@ -63,7 +63,7 @@ export const LeadHeader = ({ leadId, name, meta, stageLabel, stageTone, primary,
       items={[
         { id: "home", label: t("crumbHome"), href: "/dashboard" },
         { id: "leads", label: t("title"), href: "/leads" },
-        { id: "lead", label: isLoading ? t("detailEyebrow") : name },
+        isLoading ? { id: "lead", label: "", isSkeleton: true as const } : { id: "lead", label: name },
       ]}
     />
   );
@@ -73,10 +73,9 @@ export const LeadHeader = ({ leadId, name, meta, stageLabel, stageTone, primary,
       <div className={HEADER_CLASS_NAME}>
         {trail}
         <div className={IDENTITY_CLASS_NAME}>
-          <Skeleton shape="circle" size="lg" />
+          <Avatar name="" size="lg" isSkeleton />
           <div className={IDENTITY_BODY_CLASS_NAME}>
-            <Heading level={1} isSkeleton>{t("detailLoading")}</Heading>
-            <Text tone="muted" isSkeleton>{t("detailLoading")}</Text>
+            <SectionHeader level={1} isSkeleton title="" description="" />
           </div>
         </div>
       </div>

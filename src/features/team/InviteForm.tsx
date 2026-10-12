@@ -69,8 +69,8 @@ export const InviteForm = ({ staffChoices, isLoading = false }: InviteFormProps)
           <Text size="sm" tone="muted">{t("formDesc")}</Text>
           <div className={FORM_GRID_CLASS}>
             <Input id="invite-email" name="email" kind="email" label={t("fieldEmail")} variant="secondary" isRequired isDisabled={isPending} isSkeleton={isLoading} value={email} onValueChange={setEmail} />
-            <Select label={t("fieldRole")} name="role" options={[{ id: "staff", label: t("roleStaff") }, { id: "manager", label: t("roleManager") }]} value={role} isDisabled={isPending || isLoading} onValueChange={(v) => { if (v === "manager" || v === "staff") setRole(v) }} />
-            <Select label={t("fieldStaff")} name="staff" options={staffOptions} value={staffId} isDisabled={isPending || isLoading} onValueChange={(v) => setStaffId(v ?? NO_STAFF)} />
+            <Select label={t("fieldRole")} name="role" options={[{ id: "staff", label: t("roleStaff") }, { id: "manager", label: t("roleManager") }]} value={role} isSkeleton={isLoading} isDisabled={isPending} onValueChange={(v) => { if (v === "manager" || v === "staff") setRole(v) }} />
+            <Select label={t("fieldStaff")} name="staff" options={staffOptions} value={staffId} isSkeleton={isLoading} isDisabled={isPending} onValueChange={(v) => setStaffId(v ?? NO_STAFF)} />
           </div>
           <Text size="xs" tone="muted">{t("staffHint")}</Text>
           {error ? <Alert title={t("errGeneric")} description={error} tone="negative" /> : null}

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Alert, Badge, Button, Input, Skeleton, SegmentedControl, Switch, SurfaceCard, Text } from "@starci/grammar/common";
+import { Alert, Avatar, Badge, Button, Input, SegmentedControl, Switch, SurfaceCard, Text } from "@starci/grammar/common";
 import { AgentAvatar } from "@/components/avatar/PersonAvatar";
 import { useT } from "@/i18n/client";
 import { modulesCore } from "@/i18n/dict/modulesCore";
@@ -61,7 +61,7 @@ export const SettingsScreen = ({ installation, moduleKey, isLoading = false, can
         <SurfaceCard label={t("agentTitle")} headingLevel={2}>
           <div className={STACK_CLASS_NAME}>
             <div className={ROW_CLASS_NAME}>
-              {installation === null ? <Skeleton shape="circle" size="lg" /> : <AgentAvatar module={installation.moduleKey} size="lg" label={installation.agentName} online={live} />}
+              {installation === null ? <Avatar name="" size="lg" isSkeleton /> : <AgentAvatar module={installation.moduleKey} size="lg" label={installation.agentName} online={live} />}
               <div className={GROW_CLASS_NAME}>
                 <Input id="module-name" name="name" label={t("displayName")} variant="secondary" hint={t("displayNameHint")} value={name} isSkeleton={isLoading} isDisabled={!canEdit || pending} onValueChange={(v) => setName(v.slice(0, 40))} />
               </div>
@@ -80,7 +80,8 @@ export const SettingsScreen = ({ installation, moduleKey, isLoading = false, can
               isLabelHidden
               options={[{ value: "assist", label: t("modeAssist") }, { value: "autopilot", label: t("modeAutopilot") }]}
               value={mode}
-              isDisabled={isLoading || !canEdit || pending}
+              isSkeleton={isLoading}
+              isDisabled={!canEdit || pending}
               onValueChange={(v) => {
                 if (installation === null) return;
                 const next: OperatingMode = v === "autopilot" ? "autopilot" : "assist";
@@ -102,7 +103,8 @@ export const SettingsScreen = ({ installation, moduleKey, isLoading = false, can
               name="live"
               label={t("liveSwitch")}
               isSelected={live}
-              isDisabled={isLoading || !canEdit || pending || (!canLive && !live)}
+              isSkeleton={isLoading}
+              isDisabled={!canEdit || pending || (!canLive && !live)}
               onSelectedChange={(next) => {
                 if (installation === null) return;
                 setLive(next);

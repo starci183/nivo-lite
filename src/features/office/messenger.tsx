@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react"
-import { Button, ChatBubble, Drawer, EmptyNotice, FillViewport, Heading, IconButton, IconTile, Skeleton, SurfaceCard, Text } from "@starci/grammar/common"
+import { Button, ChatBubbleSkeletons, Drawer, EmptyNotice, FillViewport, Heading, IconButton, IconTile, SurfaceCard, Text } from "@starci/grammar/common"
 import { nivoIconSource } from "@/ui"
 import { useLocale, useT } from "@/i18n/client"
 import { office } from "@/i18n/dict/office"
@@ -25,8 +25,6 @@ import {
   PHONE_HIDDEN_CLASS_NAME,
   PHONE_ONLY_CLASS_NAME,
   PROMO_SLOT_CLASS_NAME,
-  ROW_FIRST_CLASS_NAME,
-  AVATAR_SLOT_CLASS_NAME,
   TASKS_SCROLL_CLASS_NAME,
   THREAD_BODY_CLASS_NAME,
   THREAD_COLUMN_CLASS_NAME,
@@ -78,8 +76,6 @@ export type OfficeMessengerProps = {
 }
 
 const WIDE_INFO_QUERY = "(min-width: 1280px)"
-/** Which side each of the three skeleton messages is on (STATE-8 case-2). */
-const SKELETON_SIDES = ["incoming", "incoming", "outgoing"] as const
 const FOCUS_MS = 2400
 const REFRESH_DEBOUNCE_MS = 700
 
@@ -296,16 +292,7 @@ export const OfficeMessenger = ({
           </div>
         )}
         {isLoading ? (
-          SKELETON_SIDES.map((side, n) => (
-            <div key={n} className={ROW_FIRST_CLASS_NAME} aria-hidden="true">
-              <ChatBubble
-                side={side}
-                avatar={side === "incoming" ? <div className={AVATAR_SLOT_CLASS_NAME}><Skeleton shape="circle" size="sm" /></div> : undefined}
-              >
-                <Text as="p" isSkeleton>{t("composerPlaceholder")}</Text>
-              </ChatBubble>
-            </div>
-          ))
+          <ChatBubbleSkeletons count={3} hasAvatar />
         ) : items.length === 0 ? (
           <EmptyNotice message={t("emptyMessage")} description={t("emptyMessageHint")} />
         ) : (

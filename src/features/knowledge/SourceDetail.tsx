@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Alert, AlertDialog, Badge, Breadcrumbs, Button, Heading, List, ListItem, PageContainer, SectionHeader, Skeleton, SurfaceCard, Text } from "@starci/grammar/common"
+import { Alert, AlertDialog, Badge, Breadcrumbs, Button, List, ListItem, PageContainer, SectionHeader, Skeleton, SurfaceCard, Text } from "@starci/grammar/common"
 import { useLocale, useT } from "@/i18n/client"
 import { intlLocale, TIME_ZONE } from "@/i18n/core"
 import { knowledge } from "@/i18n/dict/knowledge"
@@ -45,9 +45,8 @@ export const SourceDetail = ({ source, chunks, canWrite, isLoading = false }: So
       <PageContainer measure="product">
         <div className={PAGE_CLASS} aria-busy="true">
           <div className={HEAD_CLASS}>
-            <Breadcrumbs label={t("crumbLabel")} items={knowledgeTrail({ brain: t("crumbBrain"), docs: t("title") })} />
-            <Heading level={1} isSkeleton>{t("title")}</Heading>
-            <Text size="sm" tone="muted" isSkeleton>{t("detailMeta", { when: "" })}</Text>
+            <Breadcrumbs label={t("crumbLabel")} items={knowledgeTrail({ brain: t("crumbBrain"), docs: t("title") }, "").map((crumb) => crumb.id === "current" ? { ...crumb, isSkeleton: true as const } : crumb)} />
+            <SectionHeader level={1} isSkeleton title="" description="" />
           </div>
           <div className={ROW_WRAP_CLASS}>
             <Badge isSkeleton tone="neutral">{t("status_ready")}</Badge>

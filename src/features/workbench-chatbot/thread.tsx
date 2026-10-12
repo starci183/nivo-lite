@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useRef, useState } from "react";
-import { Alert, Badge, Button, ChatBubble, Divider, Heading, Icon, IconButton, Text, Textarea } from "@starci/grammar/common";
+import { Alert, Badge, Button, ChatBubble, ChatBubbleSkeletons, Divider, Heading, Icon, IconButton, Text, Textarea } from "@starci/grammar/common";
 import { nivoIconSource } from "@/ui";
 import { PersonAvatar } from "@/components/avatar/PersonAvatar";
 import { useLocale, useT } from "@/i18n/client";
@@ -80,7 +80,8 @@ export const ThreadPane = (props: {
   }, [thread?.conversation.id]);
 
   if (!thread) {
-    return <div className={CENTER_CLASS_NAME}><Text size="sm" tone="muted" isSkeleton={props.isLoading}>{t("pickBody")}</Text></div>;
+    if (props.isLoading) return <div className={CENTER_CLASS_NAME}><ChatBubbleSkeletons count={3} hasAvatar /></div>;
+    return <div className={CENTER_CLASS_NAME}><Text size="sm" tone="muted">{t("pickBody")}</Text></div>;
   }
 
   const conv = thread.conversation;

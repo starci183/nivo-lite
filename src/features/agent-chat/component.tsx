@@ -6,7 +6,7 @@ import { useT } from "@/i18n/client";
 import { agentChat } from "@/i18n/dict/agentChat";
 import { modulesCore } from "@/i18n/dict/modulesCore";
 import { shell } from "@/i18n/dict/shell";
-import { Alert, Badge, Breadcrumbs, Button, ChatBubble, FillViewport, Form, Input, Link, List, ListBox, ListRow, Skeleton, SurfaceCard, Tabs, Text, Textarea } from "@starci/grammar/common";
+import { Alert, Avatar, Badge, Breadcrumbs, Button, ChatBubble, ChatBubbleSkeletons, FillViewport, Form, Input, Link, ListBox, SurfaceCard, Tabs, Text, Textarea } from "@starci/grammar/common";
 import {
   BACK_CLASS_NAME, FRAME_CLASS_NAME, CHANNEL_BAR_CLASS_NAME, CHIPS_CLASS_NAME,
   COMPOSER_CLASS_NAME, COMPOSER_INPUT_CLASS_NAME, COMPOSER_ROW_CLASS_NAME, EMPTY_CHIPS_CLASS_NAME, EMPTY_CLASS_NAME, EMPTY_FIELD_CLASS_NAME,
@@ -152,7 +152,7 @@ const Thread = (props: AgentChatBaseProps) => {
   return (
     <div className={THREAD_CLASS_NAME} role="log" aria-label={t("messagesLabel")}>
       {props.banner ?? null}
-      {props.isLoading ? <Skeleton shape="text" lines={4} /> : props.hasSelection ? <Bubbles {...props} /> : <EmptyThread {...props} />}
+      {props.isLoading ? <ChatBubbleSkeletons count={4} hasAvatar /> : props.hasSelection ? <Bubbles {...props} /> : <EmptyThread {...props} />}
       {props.tab === "customer" && props.leadId ? (
         <div className={NOTICE_ROW_CLASS_NAME} data-testid="handoff-notice">
           <Text size="xs" tone="muted"><Link href={`/leads/${props.leadId}#flow`}>{t("handoffGate")}</Link></Text>
@@ -188,7 +188,7 @@ const Composer = (props: AgentChatBaseProps) => {
               isLabelHidden
               variant="secondary"
               rows={1}
-              isDisabled={props.isLoading}
+              isSkeleton={props.isLoading}
               placeholder={props.isLoading ? t("messageLabel") : props.isTakenOver ? t("staffPlaceholder") : props.tab === "customer" ? t("widgetPlaceholder") : t("messagePlaceholder", { name: props.agentName })}
               value={props.draft}
               onValueChange={props.onDraft}
@@ -213,11 +213,7 @@ const ConversationList = (props: ListProps) => {
         <Button variant="outline" size="sm" isDisabled={props.isLoading} isPending={props.isStarting} onPress={props.onStart}>{props.tab === "customer" ? t("newVisitor") : t("newTest")}</Button>
       </div>
       <div className={LIST_SCROLL_CLASS_NAME}>
-        {props.isLoading ? (
-          <List label={t("railTitle")}>
-            {[0, 1, 2].map((row) => <ListRow key={row} isSkeleton title="" description="" leading="" />)}
-          </List>
-        ) : null}
+        {props.isLoading ? <ListBox label={t("railTitle")} items={[]} isLoading loadingRows={3} /> : null}
         {!props.isLoading && !props.isLoadingList && props.conversations.length === 0 ? <Text as="p" size="sm" tone="muted">{t("railEmptyHelp")}</Text> : null}
         {props.isLoading || props.conversations.length === 0 ? null : (
           // The Grammar ListBox owns the rows, the selected face and the keyboard model (SURFACE-4, FOCUS-2).
@@ -259,7 +255,7 @@ export const AgentChatBase = (props: AgentChatBaseProps) => {
       items={[
         { id: "home", label: ts("crumbHome"), href: "/dashboard" },
         { id: "modules", label: tm("catalogTitle"), href: "/m" },
-        ...(props.isLoading ? [] : [{ id: "agent", label: props.agentName }]),
+        props.isLoading ? { id: "agent", label: "", isSkeleton: true as const } : { id: "agent", label: props.agentName },
       ]}
     />
     <FillViewport minHeight="md" bottomInset="page">
@@ -278,7 +274,7 @@ export const AgentChatBase = (props: AgentChatBaseProps) => {
       <section className={MAIN_CLASS_NAME} data-list={isListOpen ? "open" : "closed"} aria-label={t("pageLabel")}>
         <header className={HEADER_CLASS_NAME}>
           <span className={BACK_CLASS_NAME}><Button variant="ghost" size="sm" onPress={props.onBack}>{t("backModules")}</Button></span>
-          {props.isLoading ? <Skeleton shape="circle" size="md" /> : <AgentAvatar module={props.agentModule} size="md" label={props.agentName} online={props.isAgentActive} />}
+          {props.isLoading ? <Avatar name="" size="md" isSkeleton /> : <AgentAvatar module={props.agentModule} size="md" label={props.agentName} online={props.isAgentActive} />}
           <div className={HEADER_COPY_CLASS_NAME}>
             <Text weight="semibold" overflow="truncate" isSkeleton={props.isLoading}>{props.agentName}</Text>
             <Text size="xs" tone="muted" overflow="truncate" isSkeleton={props.isLoading}>{props.tab === "customer" ? (props.isTakenOver ? t("takenOverStatus") : t("asVisitor")) : `${props.isAgentActive ? t("statusActive") : t("statusPaused")} · ${props.agentRole}`}</Text>
