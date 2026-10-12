@@ -1,7 +1,7 @@
 import type { AcceptedCommand } from "@modules/domain/decisions"
 import type { ProposedCommand } from "@modules/integrations/deepseek"
 import { DomainError } from "@modules/platform/errors"
-import type { MessageRefs, ReadyResolution } from "./office.contracts"
+import type { MessageRefs, ReadyResolution } from "./office-command-candidates.contracts"
 import {
     acceptsText,
     cardRowsOf,

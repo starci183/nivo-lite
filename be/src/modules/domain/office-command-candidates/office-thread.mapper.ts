@@ -1,4 +1,4 @@
-import type { ApprovalView } from "./office.contracts"
+import type { ApprovalView } from "./office-command-candidates.contracts"
 import type { ApprovalRow } from "./persistence/office-thread.rows"
 
 const leadNameOf = (row: ApprovalRow): string | null => {

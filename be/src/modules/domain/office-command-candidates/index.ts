@@ -1,6 +1,10 @@
-export { OFFICE_ERROR_KINDS, OfficeError, OfficeErrorCode } from "./errors/office.error"
-export { OFFICE_MESSAGES } from "./messages/office.messages"
-export { OfficeModule } from "./office.module"
+export {
+    OFFICE_COMMAND_CANDIDATES_ERROR_KINDS,
+    OfficeCommandCandidatesError,
+    OfficeCommandCandidatesErrorCode,
+} from "./errors/office-command-candidates.error"
+export { OFFICE_COMMAND_CANDIDATES_MESSAGES } from "./messages/office-command-candidates.messages"
+export { OfficeCommandCandidatesModule } from "./office-command-candidates.module"
 export { OfficeCommandService } from "./office-command.service"
 export { OfficeThreadService } from "./office-thread.service"
 export type {
@@ -17,4 +21,4 @@ export type {
     ProposeOutcome,
     ProposeRequest,
     ShownRow,
-} from "./office.contracts"
+} from "./office-command-candidates.contracts"

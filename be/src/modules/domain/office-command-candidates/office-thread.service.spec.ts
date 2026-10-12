@@ -4,8 +4,8 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { OfficeErrorCode } from "./errors/office.error"
-import type { MessageView } from "./office.contracts"
+import { OfficeCommandCandidatesErrorCode } from "./errors/office-command-candidates.error"
+import type { MessageView } from "./office-command-candidates.contracts"
 import { OfficeThreadService } from "./office-thread.service"
 import type { ApprovalRow } from "./persistence/office-thread.rows"
 import { LIST_DECIDED_APPROVALS, LIST_MESSAGES, LIST_PENDING_APPROVALS } from "./persistence/office-thread.sql"
@@ -98,7 +98,7 @@ describe("OfficeThreadService", () => {
 
             await expect(
                 service.messages("u-1", "ws-1", { before: { createdAt: "later", id: "x" }, limit: 10 }),
-            ).rejects.toMatchObject({ code: OfficeErrorCode.PageInvalid })
+            ).rejects.toMatchObject({ code: OfficeCommandCandidatesErrorCode.PageInvalid })
         })
     })
 

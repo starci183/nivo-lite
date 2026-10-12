@@ -1,4 +1,4 @@
-import type { MessageView } from "./office.contracts"
+import type { MessageView } from "./office-command-candidates.contracts"
 import { clampPageSize, isValidCursor, splitPage, THREAD_PAGE_MAX } from "./thread-page.policy"
 
 const line = (id: string, createdAt: string): MessageView => ({

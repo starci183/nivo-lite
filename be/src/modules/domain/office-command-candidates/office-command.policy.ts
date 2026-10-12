@@ -11,7 +11,7 @@ import type {
     ReadyResolution,
     Resolution,
     ShownRow,
-} from "./office.contracts"
+} from "./office-command-candidates.contracts"
 
 /** Handles ("@ke-toan") named in a message, lower case, in order, without repeats. */
 export const mentionedHandles = (body: string): ReadonlyArray<string> => [

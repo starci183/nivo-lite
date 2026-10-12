@@ -1,4 +1,9 @@
-import type { MessageCursor, MessagePage, MessageView, OptionalMessageCursor } from "./office.contracts"
+import type {
+    MessageCursor,
+    MessagePage,
+    MessageView,
+    OptionalMessageCursor,
+} from "./office-command-candidates.contracts"
 
 /** The biggest page of the thread one call returns. */
 export const THREAD_PAGE_MAX = 100

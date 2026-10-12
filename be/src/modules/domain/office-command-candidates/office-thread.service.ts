@@ -2,8 +2,11 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { OfficeError, OfficeErrorCode } from "./errors/office.error"
-import type { ApprovalView, MessagePage, MessagePageQuery, MessageView } from "./office.contracts"
+import {
+    OfficeCommandCandidatesError,
+    OfficeCommandCandidatesErrorCode,
+} from "./errors/office-command-candidates.error"
+import type { ApprovalView, MessagePage, MessagePageQuery, MessageView } from "./office-command-candidates.contracts"
 import { toApprovalView } from "./office-thread.mapper"
 import type { ApprovalRow } from "./persistence/office-thread.rows"
 import { LIST_DECIDED_APPROVALS, LIST_MESSAGES, LIST_PENDING_APPROVALS } from "./persistence/office-thread.sql"
@@ -26,7 +29,8 @@ export class OfficeThreadService {
     async messages(principalId: string, workspaceId: string, query: MessagePageQuery): Promise<MessagePage> {
         await this.members.require(principalId, workspaceId)
         const before = query.before
-        if (before !== null && !isValidCursor(before)) throw new OfficeError({ code: OfficeErrorCode.PageInvalid })
+        if (before !== null && !isValidCursor(before))
+            throw new OfficeCommandCandidatesError({ code: OfficeCommandCandidatesErrorCode.PageInvalid })
         const size = clampPageSize(query.limit)
         const rows = await this.entityManager.query<Array<MessageView>>(LIST_MESSAGES, [
             workspaceId,

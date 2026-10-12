@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { CommandBusService, ModuleCatalogService, OfficeLinesService } from "@modules/domain/decisions"
+import { CommandBusService, ModuleCatalogService } from "@modules/domain/decisions"
+import { OfficeLinesService } from "@modules/domain/messages"
 import type { CommandResult, SendCommandInput, WorkContext } from "@modules/domain/decisions"
 import { EventsService } from "@modules/domain/events"
 import { isManagerRole, WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -11,7 +12,10 @@ import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { OfficeError, OfficeErrorCode } from "./errors/office.error"
+import {
+    OfficeCommandCandidatesError,
+    OfficeCommandCandidatesErrorCode,
+} from "./errors/office-command-candidates.error"
 import type {
     CandidateView,
     CommandReading,
@@ -24,10 +28,10 @@ import type {
     ReferencePool,
     ReadyResolution,
     ReplyOutcome,
-} from "./office.contracts"
-import { InjectCommandReader } from "./office.decorators"
-import { OfficeLogEvent } from "./office.log-events"
-import type { CommandReader } from "./office.port"
+} from "./office-command-candidates.contracts"
+import { InjectCommandReader } from "./office-command-candidates.decorators"
+import { OfficeCommandCandidatesLogEvent } from "./office-command-candidates.log-events"
+import type { CommandReader } from "./office-command-candidates.port"
 import {
     acceptsText,
     cardRowsOf,
@@ -165,7 +169,10 @@ export class OfficeCommandService {
         if (claimed === undefined) return this.alreadyHandled(workspaceId, request.candidateId)
         if ((await this.modules.entryOf(claimed.module)) === null) {
             await this.release(workspaceId, claimed.id, `no agent ${claimed.module}`)
-            throw new OfficeError({ code: OfficeErrorCode.ModuleUnknown, params: { module: claimed.module } })
+            throw new OfficeCommandCandidatesError({
+                code: OfficeCommandCandidatesErrorCode.ModuleUnknown,
+                params: { module: claimed.module },
+            })
         }
         const ctx: WorkContext = { workspaceId, actor: member.displayName, locale: request.locale }
         const result = await this.send(ctx, claimed, {
@@ -177,7 +184,10 @@ export class OfficeCommandService {
         })
         if (!result.ok) {
             await this.release(workspaceId, claimed.id, result.detail)
-            throw new OfficeError({ code: OfficeErrorCode.CommandRefused, params: { detail: result.detail } })
+            throw new OfficeCommandCandidatesError({
+                code: OfficeCommandCandidatesErrorCode.CommandRefused,
+                params: { detail: result.detail },
+            })
         }
         await this.entityManager.query(ATTACH_WORK_ITEM, [workspaceId, claimed.id, result.item.id])
         return { workItemId: result.item.id, module: claimed.module, created: result.created }
@@ -194,16 +204,20 @@ export class OfficeCommandService {
         const row = (
             await this.entityManager.query<Array<CandidateView>>(FIND_CANDIDATE, [workspaceId, candidateId])
         )[0]
-        if (row === undefined) throw new OfficeError({ code: OfficeErrorCode.CandidateNotFound })
-        if (row.status === "sent") throw new OfficeError({ code: OfficeErrorCode.CandidateSent })
+        if (row === undefined)
+            throw new OfficeCommandCandidatesError({ code: OfficeCommandCandidatesErrorCode.CandidateNotFound })
+        if (row.status === "sent")
+            throw new OfficeCommandCandidatesError({ code: OfficeCommandCandidatesErrorCode.CandidateSent })
     }
 
     private async messageOf(workspaceId: string, messageId: string): Promise<MessageTextRow> {
         const message = (
             await this.entityManager.query<Array<MessageTextRow>>(FIND_MESSAGE, [workspaceId, messageId])
         )[0]
-        if (message === undefined) throw new OfficeError({ code: OfficeErrorCode.MessageNotFound })
-        if (message.author_kind !== "human") throw new OfficeError({ code: OfficeErrorCode.MessageNotHuman })
+        if (message === undefined)
+            throw new OfficeCommandCandidatesError({ code: OfficeCommandCandidatesErrorCode.MessageNotFound })
+        if (message.author_kind !== "human")
+            throw new OfficeCommandCandidatesError({ code: OfficeCommandCandidatesErrorCode.MessageNotHuman })
         return message
     }
 
@@ -245,7 +259,7 @@ export class OfficeCommandService {
         try {
             return { ok: true, choice: await this.reader.proposeCommands({ workspaceId, locale }, input) }
         } catch (cause) {
-            this.logger.error(OfficeLogEvent.CommandReadFailed, cause, { workspaceId })
+            this.logger.error(OfficeCommandCandidatesLogEvent.CommandReadFailed, cause, { workspaceId })
             return { ok: false, error: failureDetail(cause) }
         }
     }
@@ -290,7 +304,7 @@ export class OfficeCommandService {
     }
 
     private missingCandidate(): never {
-        throw new OfficeError({ code: OfficeErrorCode.CandidateNotFound })
+        throw new OfficeCommandCandidatesError({ code: OfficeCommandCandidatesErrorCode.CandidateNotFound })
     }
 
     private async recordEvidence(ctx: WorkContext, module: string, command: string, messageId: string): Promise<void> {
@@ -303,7 +317,7 @@ export class OfficeCommandService {
                 evidence: messageId,
             })
         } catch (cause) {
-            this.logger.error(OfficeLogEvent.EvidenceFailed, cause, { workspaceId: ctx.workspaceId })
+            this.logger.error(OfficeCommandCandidatesLogEvent.EvidenceFailed, cause, { workspaceId: ctx.workspaceId })
         }
     }
 
@@ -312,12 +326,14 @@ export class OfficeCommandService {
         const row = (
             await this.entityManager.query<Array<CandidateView>>(FIND_CANDIDATE, [workspaceId, candidateId])
         )[0]
-        if (row === undefined) throw new OfficeError({ code: OfficeErrorCode.CandidateNotFound })
-        if (row.status === "cancelled") throw new OfficeError({ code: OfficeErrorCode.CandidateCancelled })
+        if (row === undefined)
+            throw new OfficeCommandCandidatesError({ code: OfficeCommandCandidatesErrorCode.CandidateNotFound })
+        if (row.status === "cancelled")
+            throw new OfficeCommandCandidatesError({ code: OfficeCommandCandidatesErrorCode.CandidateCancelled })
         if (row.status === "sent" && row.work_item_id !== null) {
             return { workItemId: row.work_item_id, module: row.module, created: false }
         }
-        throw new OfficeError({ code: OfficeErrorCode.CandidateInProgress })
+        throw new OfficeCommandCandidatesError({ code: OfficeCommandCandidatesErrorCode.CandidateInProgress })
     }
 
     private async send(ctx: WorkContext, claimed: CandidateView, input: SendCommandInput): Promise<CommandResult> {
