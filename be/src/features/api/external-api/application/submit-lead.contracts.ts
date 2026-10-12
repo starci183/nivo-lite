@@ -1,0 +1,33 @@
+import type { LeadStage } from "@modules/domain/public-api"
+
+/** What handing over a customer takes, as the caller sent it. */
+export interface SubmitLeadRequest {
+    /** The Authorization header as sent. */
+    readonly authorization: string | undefined
+    /** The customer's name. */
+    readonly name: string
+    /** The phone number. */
+    readonly phone?: string
+    /** The email address. */
+    readonly email?: string
+    /** The company. */
+    readonly company?: string
+    /** What the customer needs. */
+    readonly need?: string
+    /** The channel the customer came through. */
+    readonly channel?: string
+    /** The caller's own id of the customer: a repeat with the same id is one customer. */
+    readonly externalId?: string
+    /** A note for the customer's history. */
+    readonly note?: string
+    /** The stage the caller asks for; an empty string means none. */
+    readonly stage?: LeadStage | ""
+}
+
+/** What handing over a customer answers: queued, or unchanged for a repeated external id. */
+export interface SubmitLeadResult {
+    /** The customer already known by phone, email or name, or null until the hand-off creates one. */
+    readonly leadId: string | null
+    /** `accepted` when the hand-off was queued, `unchanged` when the same external id was already handed over. */
+    readonly status: "accepted" | "unchanged"
+}

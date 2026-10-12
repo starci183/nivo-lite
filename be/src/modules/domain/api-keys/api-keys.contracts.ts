@@ -12,6 +12,9 @@ export const API_KEY_SCOPES = [
 /** One scope of a key. */
 export type ApiScope = (typeof API_KEY_SCOPES)[number]
 
+/** The value of an `Authorization` request header, absent when the caller sent none. */
+export type BearerHeader = string | undefined
+
 /** What a verified key stands for: it acts for exactly one workspace. */
 export interface ApiPrincipal {
     /** The key id. */

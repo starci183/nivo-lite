@@ -18,38 +18,26 @@ WHERE workspace_id = $1 AND contact_name = $2 AND channel = $3
 ORDER BY created_at
 LIMIT 1`
 
-/** Records one customer handed over by a key, once per dedupe key; a repeat answers no row ($1 workspace, $2 name, $3 contact, $4 text, $5 source, $6 event id, $7 dedupe key). */
-export const INSERT_INBOUND_LEAD = sql`INSERT INTO public.inbound_events
-    (workspace_id, channel, kind, origin, sender_name, sender_contact, body, amount_vnd, external_ref, event_id, dedupe_key)
-VALUES ($1, 'manual', 'lead', 'live', $2, $3, $4, NULL, $5, $6, $7)
-ON CONFLICT (workspace_id, dedupe_key) DO NOTHING
-RETURNING id`
-
-/** Counts a repeated delivery of the same customer and answers the customer it belongs to ($1 workspace, $2 dedupe key). */
-export const BUMP_INBOUND_DUPLICATE = sql`UPDATE public.inbound_events
-SET duplicate_count = duplicate_count + 1, last_duplicate_at = now()
-WHERE workspace_id = $1 AND dedupe_key = $2
-RETURNING lead_id`
-
-/** Appends one evidence line ($1 workspace, $2 customer or null, $3 kind, $4 actor, $5 summary, $6 evidence). */
-export const INSERT_EVIDENCE = sql`INSERT INTO public.events (workspace_id, lead_id, kind, actor, summary, evidence)
-VALUES ($1, $2, $3, $4, $5, $6)`
+/**
+ * Records one accepted request in the ledger, once per dedupe key; a repeat only counts. The dedupe key is the prefix and the
+ * suffix, or the prefix and a fresh id when the suffix is empty. Answers the request, the customer a processed hand-over created
+ * and whether this call wrote the row ($1 workspace, $2 key, $3 kind, $4 dedupe prefix, $5 dedupe suffix or empty, $6 body json).
+ */
+export const INSERT_REQUEST = sql`INSERT INTO public.public_api (workspace_id, key_id, kind, dedupe_key, payload)
+VALUES ($1, $2, $3, $4::text || COALESCE(NULLIF($5::text, ''), gen_random_uuid()::text), $6::jsonb)
+ON CONFLICT (workspace_id, dedupe_key) DO UPDATE SET duplicates = public.public_api.duplicates + 1
+RETURNING id, lead_id, (xmax = 0) AS inserted`
 
 /** A customer conversation of a workspace by id ($1 workspace, $2 conversation). */
 export const SELECT_CONVERSATION = sql`SELECT id, lead_id FROM public.agent_conversations
-WHERE workspace_id = $1 AND kind = 'customer' AND id = $2`
+WHERE workspace_id = $1 AND kind = 'customer' AND id = $2
+LIMIT 1`
 
 /** The latest customer conversation of a customer ($1 workspace, $2 customer). */
 export const SELECT_CONVERSATION_OF_LEAD = sql`SELECT id, lead_id FROM public.agent_conversations
 WHERE workspace_id = $1 AND kind = 'customer' AND lead_id = $2
 ORDER BY created_at DESC
 LIMIT 1`
-
-/** Writes a text knowledge source with status queued, to be indexed by its job ($1 workspace, $2 topic, $3 tags, $4 visibility, $5 title, $6 content, $7 source). */
-export const INSERT_KNOWLEDGE_SOURCE = sql`INSERT INTO public.knowledge_sources
-    (workspace_id, kind, topic, tags, visibility, title, content, status, progress, origin)
-VALUES ($1, 'text', $2, $3, $4, $5, $6, 'queued', 0, $7)
-RETURNING id`
 
 /** The customers of a workspace, newest first, optionally of one stage ($1 workspace, $2 stage or null, $3 limit). */
 export const LIST_LEADS = sql`SELECT id, contact_name, company, channel, need, stage, phone, email,

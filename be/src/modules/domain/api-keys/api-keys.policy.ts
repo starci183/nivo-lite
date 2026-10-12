@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
 import { ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
-import type { ApiKeyAuthAnswer, ApiPrincipal, ApiScope } from "./api-keys.contracts"
+import type { ApiKeyAuthAnswer, BearerHeader, ApiPrincipal, ApiScope } from "./api-keys.contracts"
 import { ApiKeysErrorCode } from "./errors/api-keys.error"
 
 /** Requests per minute per key. */
@@ -32,7 +32,7 @@ export const buildKey = (entropy: Uint8Array): { key: string; prefix: string; ha
 }
 
 /** The key out of an `Authorization: Bearer <key>` header, or undefined when the header names no API key. */
-export const bearerKey = (authorization: string | undefined): string | undefined => {
+export const bearerKey = (authorization: BearerHeader): string | undefined => {
     const key = authorization?.match(/^Bearer\s+(\S+)$/i)?.[1]
     return key?.startsWith(KEY_PREFIX) ? key : undefined
 }

@@ -268,6 +268,25 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"api_keys": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"id": string,"key_hash": string,"key_prefix": string,"last_used_at": string | null,"name": string,"revoked_at": string | null,"scopes": (string)[],"workspace_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"key_hash": string,"key_prefix": string,"last_used_at"?: string | null,"name": string,"revoked_at"?: string | null,"scopes"?: (string)[],"workspace_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"key_hash"?: string,"key_prefix"?: string,"last_used_at"?: string | null,"name"?: string,"revoked_at"?: string | null,"scopes"?: (string)[],"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "api_keys_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"api_rate_limits": {
                   Row: {
                     "hits": number,"key_id": string,"window_start": string
@@ -283,7 +302,7 @@ isOneToOne: false
       foreignKeyName: "api_rate_limits_key_id_fkey"
       columns: ["key_id"]
 isOneToOne: false
-      referencedRelation: "workspace_api_keys"
+      referencedRelation: "api_keys"
       referencedColumns: ["id"]
     }
                   ]
@@ -2821,6 +2840,39 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"public_api": {
+                  Row: {
+                    "created_at": string,"dedupe_key": string,"duplicates": number,"id": string,"key_id": string,"kind": string,"lead_id": string | null,"payload": NonNullable<Json>,"processed_at": string | null,"workspace_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"dedupe_key": string,"duplicates"?: number,"id"?: string,"key_id": string,"kind": string,"lead_id"?: string | null,"payload": NonNullable<Json>,"processed_at"?: string | null,"workspace_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"dedupe_key"?: string,"duplicates"?: number,"id"?: string,"key_id"?: string,"kind"?: string,"lead_id"?: string | null,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "public_api_key_id_fkey"
+      columns: ["key_id"]
+isOneToOne: false
+      referencedRelation: "api_keys"
+      referencedColumns: ["id"]
+    },
+                    {
+      foreignKeyName: "public_api_lead_id_fkey"
+      columns: ["lead_id"]
+isOneToOne: false
+      referencedRelation: "leads"
+      referencedColumns: ["id"]
+    },
+                    {
+      foreignKeyName: "public_api_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"queue": {
                   Row: {
                     "created_at": string,"id": string,"payload": NonNullable<Json>,"queue": string,"sent_at": string | null
@@ -3437,25 +3489,6 @@ isOneToOne: false
       referencedColumns: ["id"]
     },{
       foreignKeyName: "work_items_workspace_id_fkey"
-      columns: ["workspace_id"]
-isOneToOne: false
-      referencedRelation: "workspaces"
-      referencedColumns: ["id"]
-    }
-                  ]
-                },"workspace_api_keys": {
-                  Row: {
-                    "created_at": string,"created_by": string | null,"id": string,"key_hash": string,"key_prefix": string,"last_used_at": string | null,"name": string,"revoked_at": string | null,"scopes": (string)[],"workspace_id": string
-                  }
-                  Insert: {
-                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"key_hash": string,"key_prefix": string,"last_used_at"?: string | null,"name": string,"revoked_at"?: string | null,"scopes"?: (string)[],"workspace_id": string
-                  }
-                  Update: {
-                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"key_hash"?: string,"key_prefix"?: string,"last_used_at"?: string | null,"name"?: string,"revoked_at"?: string | null,"scopes"?: (string)[],"workspace_id"?: string
-                  }
-                  Relationships: [
-                    {
-      foreignKeyName: "workspace_api_keys_workspace_id_fkey"
       columns: ["workspace_id"]
 isOneToOne: false
       referencedRelation: "workspaces"

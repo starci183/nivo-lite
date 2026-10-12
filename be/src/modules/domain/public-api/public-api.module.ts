@@ -2,7 +2,10 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { PublicApiQueueModule } from "@modules/queues/public-api"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./public-api.module-definition"
-import { PublicApiService } from "./public-api.service"
+import { PublicEventsService } from "./public-events.service"
+import { PublicKnowledgeService } from "./public-knowledge.service"
+import { PublicLeadsService } from "./public-leads.service"
+import { PublicMessagesService } from "./public-messages.service"
 
 @Module({})
 /** The public-api capability over the primary Supabase PostgreSQL connection; an accepted request enqueues its follow-up work. */
@@ -13,8 +16,14 @@ export class PublicApiModule extends ConfigurableModuleClass {
         return {
             ...base,
             imports: [...(base.imports ?? []), PublicApiQueueModule],
-            providers: [...(base.providers ?? []), PublicApiService],
-            exports: [PublicApiService],
+            providers: [
+                ...(base.providers ?? []),
+                PublicEventsService,
+                PublicKnowledgeService,
+                PublicLeadsService,
+                PublicMessagesService,
+            ],
+            exports: [PublicEventsService, PublicKnowledgeService, PublicLeadsService, PublicMessagesService],
         }
     }
 }

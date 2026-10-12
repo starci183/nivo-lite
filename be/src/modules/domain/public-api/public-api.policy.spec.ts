@@ -3,12 +3,15 @@ import {
     SOURCE_CHARS_MAX,
     checkContent,
     cleanTags,
+    clampLimit,
     contactParts,
     eventsSince,
-    leadDedupeKey,
-    leadEventId,
-    messageDedupeKey,
+    dedupePrefix,
+    leadFacts,
+    messageDedupeSuffix,
     normaliseContact,
+    trimmed,
+    visibilityOf,
 } from "./public-api.policy"
 
 const NOW = new Date("2026-10-12T10:00:00.000Z")
@@ -41,22 +44,26 @@ describe("public-api policy", () => {
         })
     })
 
-    describe("lead keys", () => {
-        it("names the event after the key and the caller's external id, or a fresh id without one", () => {
-            expect(leadEventId("key-1", "crm-9", "fresh")).toBe("api:key-1:crm-9")
-            expect(leadEventId("key-1", "", "fresh")).toBe("api:key-1:fresh")
-            expect(leadDedupeKey("api:key-1:crm-9")).toBe("manual:lead:api:key-1:crm-9")
+    describe("dedupePrefix", () => {
+        it("names the kind of request and the key that sent it", () => {
+            expect(dedupePrefix("lead", "key-1")).toBe("lead:key-1:")
+            expect(dedupePrefix("message", "key-2")).toBe("message:key-2:")
         })
     })
 
-    describe("messageDedupeKey", () => {
-        it("is the same for the same key, idempotency key and conversation and differs otherwise", () => {
-            const key = messageDedupeKey("key-1", "idem-1", "conv-1")
+    describe("messageDedupeSuffix", () => {
+        it("is the same for the same idempotency key and conversation and differs otherwise", () => {
+            const suffix = messageDedupeSuffix("idem-1", "conv-1")
 
-            expect(key).toMatch(/^api:message:key-1:[0-9a-f]{24}$/)
-            expect(messageDedupeKey("key-1", "idem-1", "conv-1")).toBe(key)
-            expect(messageDedupeKey("key-1", "idem-2", "conv-1")).not.toBe(key)
-            expect(messageDedupeKey("key-1", "idem-1", "conv-2")).not.toBe(key)
+            expect(suffix).toMatch(/^[0-9a-f]{24}$/)
+            expect(messageDedupeSuffix(" idem-1 ", "conv-1")).toBe(suffix)
+            expect(messageDedupeSuffix("idem-2", "conv-1")).not.toBe(suffix)
+            expect(messageDedupeSuffix("idem-1", "conv-2")).not.toBe(suffix)
+        })
+
+        it("is empty without an idempotency key", () => {
+            expect(messageDedupeSuffix(undefined, "conv-1")).toBe("")
+            expect(messageDedupeSuffix("   ", "conv-1")).toBe("")
         })
     })
 
@@ -70,7 +77,10 @@ describe("public-api policy", () => {
         })
 
         it("refuses a time that is not one", () => {
-            expect(eventsSince("yesterday", NOW)).toMatchObject({ kind: "refused", code: PublicApiErrorCode.SinceInvalid })
+            expect(eventsSince("yesterday", NOW)).toMatchObject({
+                kind: "refused",
+                code: PublicApiErrorCode.SinceInvalid,
+            })
         })
     })
 
@@ -92,6 +102,79 @@ describe("public-api policy", () => {
                 code: PublicApiErrorCode.ContentTooLong,
                 params: { max: SOURCE_CHARS_MAX },
             })
+        })
+    })
+
+    describe("clampLimit", () => {
+        it("keeps a number inside the bounds, clamps one outside and falls back for the rest", () => {
+            expect(clampLimit("20", 50, 200)).toBe(20)
+            expect(clampLimit("9999", 50, 200)).toBe(200)
+            expect(clampLimit("-5", 50, 200)).toBe(1)
+            expect(clampLimit("abc", 50, 200)).toBe(50)
+            expect(clampLimit("0", 50, 200)).toBe(50)
+            expect(clampLimit(undefined, 100, 500)).toBe(100)
+        })
+    })
+
+    describe("leadFacts", () => {
+        it("makes every absent text empty, defaults the channel to the API and drops an empty stage", () => {
+            expect(leadFacts({ authorization: undefined, name: "A", stage: "" })).toEqual({
+                name: "A",
+                phone: "",
+                email: "",
+                company: "",
+                need: "",
+                channel: "API",
+                externalId: "",
+                note: "",
+                stage: null,
+            })
+        })
+
+        it("keeps what the caller sent", () => {
+            expect(
+                leadFacts({
+                    authorization: undefined,
+                    name: "A",
+                    phone: "1",
+                    email: "e",
+                    company: "c",
+                    need: "n",
+                    channel: "Zalo",
+                    externalId: "x",
+                    note: "t",
+                    stage: "won",
+                }),
+            ).toEqual({
+                name: "A",
+                phone: "1",
+                email: "e",
+                company: "c",
+                need: "n",
+                channel: "Zalo",
+                externalId: "x",
+                note: "t",
+                stage: "won",
+            })
+        })
+    })
+
+    describe("visibilityOf", () => {
+        it("is public only when the caller says public", () => {
+            const base = { authorization: undefined, title: "t", content: "c" }
+
+            expect(visibilityOf({ ...base, visibility: "public" })).toBe("public")
+            expect(visibilityOf({ ...base, visibility: "secret" })).toBe("internal")
+            expect(visibilityOf(base)).toBe("internal")
+        })
+    })
+
+    describe("trimmed", () => {
+        it("trims a string, reads a number as its digits and leaves anything else alone", () => {
+            expect(trimmed("  a b ")).toBe("a b")
+            expect(trimmed(901234567)).toBe("901234567")
+            expect(trimmed(true)).toBe(true)
+            expect(trimmed(undefined)).toBeUndefined()
         })
     })
 })
