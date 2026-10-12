@@ -14,6 +14,8 @@ export enum PublicReason {
     Health = "health",
     /** A webhook whose signature is verified before its domain intake runs. */
     SignedWebhook = "signed-webhook",
+    /** A public page the visitor acts on without an account, bounded by an unguessable link token or the rate limit. */
+    PublicForm = "public-form",
 }
 
 /** The metadata `@Public` attaches to a door. */
