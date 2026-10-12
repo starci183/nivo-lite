@@ -15,6 +15,6 @@ export type {
     RegistryCommand,
     RegistryGate,
 } from "./catalog.types"
-export { MODULE_REGISTRY } from "./catalog.registry"
+export { ACTION_MODULE, MODULE_REGISTRY, actionDef } from "./catalog.registry"
 export { agentTypeName, pickCopy, pickCopyList } from "./catalog.copy"
 export type { CopyLocale } from "./catalog.copy"

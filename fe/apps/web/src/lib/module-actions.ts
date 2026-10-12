@@ -258,3 +258,20 @@ export const chooseOperatingMode = async (installationId: string, mode: Operatin
 
 /** Switch an agent live or paused. */
 export const chooseLive = async (installationId: string, on: boolean): Promise<DbOutcome<true>> => toDb(await setModuleLive(installationId, on));
+
+/* ------------------------------------------------------------------ setup chat (one outcome vocabulary) */
+
+const valueOf = <T>(outcome: Outcome<T>): DbOutcome<T> => (outcome.ok ? dbOk(outcome.data) : dbFailure("unavailable", outcome.error));
+
+/** One owner message of the setup chat; answers the session, the chat and the cards as they are after the turn. */
+export const postSetupMessage = async (setupSessionId: string, text: string) => valueOf(await sendSetupMessage(setupSessionId, text));
+
+/** The owner decides one confirm card of the setup chat. */
+export const decideCard = async (writeId: string, change: WriteDecision) => valueOf(await decideSetupWrite(writeId, change));
+
+/** The owner confirms, reopens or edits one gate of the draft. */
+export const changeGate = async (setupSessionId: string, gateKey: string, change: { action: "confirm" | "reopen" | "edit"; evidence?: string }) =>
+  valueOf(await setGate(setupSessionId, gateKey, change));
+
+/** The owner applies the draft as the next version. */
+export const applyDraft = async (installationId: string) => valueOf(await applySetup(installationId));

@@ -5,11 +5,11 @@
  */
 import type { Locale } from "@/i18n/core";
 import {
-  ACTION_KEYS, MODULE_CATEGORIES, MODULE_KEYS, MODULE_REGISTRY, isActionKey, isModuleKey,
+  ACTION_KEYS, ACTION_MODULE, MODULE_CATEGORIES, MODULE_KEYS, MODULE_REGISTRY, actionDef, isActionKey, isModuleKey,
   type ActionKey, type Bilingual, type ModuleCategory, type ModuleCategoryKey, type ModuleDef, type ModuleKey, type RegistryAction, type RegistryCommand, type RegistryGate,
 } from "@/modules/catalog";
 
-export { ACTION_KEYS, MODULE_CATEGORIES, MODULE_KEYS, MODULE_REGISTRY, isActionKey, isModuleKey };
+export { ACTION_KEYS, ACTION_MODULE, MODULE_CATEGORIES, MODULE_KEYS, MODULE_REGISTRY, actionDef, isActionKey, isModuleKey };
 export type { ActionKey, Bilingual, ModuleCategory, ModuleCategoryKey, ModuleDef, ModuleKey, RegistryAction, RegistryCommand, RegistryGate };
 
 
@@ -30,15 +30,6 @@ export const moduleShortName = (key: ModuleKey, locale: Locale): string => pick(
 export const modulesByCategory = (): ReadonlyArray<{ readonly category: ModuleCategory; readonly modules: ReadonlyArray<ModuleDef> }> =>
   MODULE_CATEGORIES.map((category) => ({ category, modules: listModules().filter((m) => m.category === category.key) })).filter((g) => g.modules.length > 0);
 
-/** Which module owns each authority action (its department). */
-export const ACTION_MODULE: Readonly<Record<ActionKey, ModuleKey>> = Object.fromEntries(
-  listModules().flatMap((m) => m.authorityActions.map((a) => [a.action, m.key] as const)),
-) as Record<ActionKey, ModuleKey>;
-export const actionDef = (action: ActionKey): RegistryAction => {
-  const found = MODULE_REGISTRY[ACTION_MODULE[action]].authorityActions.find((a) => a.action === action);
-  if (!found) throw new Error(`unknown action ${action}`);
-  return found;
-};
 
 /** Modules whose agent talks to customers: only public knowledge may reach their OpenClaw workspace. */
 export const audienceOf = (key: ModuleKey): "customer" | "internal" => MODULE_REGISTRY[key].audience;
