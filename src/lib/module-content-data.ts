@@ -2,6 +2,7 @@ import "server-only";
 import { getSession } from "./session";
 import { supabaseServer } from "./supabase/server";
 import type { Cadence, ContentItem, ContentSettings, MediaRef, Pillar } from "./module-content-shared";
+import { getContentFigures, type ContentFigures } from "./workbench-content";
 import { listCadence, listItems, listPillars, loadSettings } from "./module-content-store";
 
 /** Everything the content workbench shows, read with the signed-in member's own session (RLS decides what they may see). */
@@ -23,6 +24,8 @@ export type ContentWorkbenchData = {
   /** storage path (or "video:<id>") -> short-lived URL to show it and to download it */
   urls: Record<string, { view: string; download: string }>;
   lastPlan: { month: string; ideas: number; ms: number | null; createdAt: string } | null;
+  /** The ribbon's four figures; null when they could not be read (the ribbon then fails in place, the rest still renders). */
+  figures: ContentFigures | null;
 };
 
 const SIGN_SECONDS = 3600;
@@ -31,11 +34,12 @@ export const getContentWorkbench = async (): Promise<ContentWorkbenchData> => {
   const session = await getSession();
   const ws = session.workspace.id;
   const db = await supabaseServer();
-  const [items, pillars, cadence, settings, planRes, videoRes, libRes] = await Promise.all([
+  const [items, pillars, cadence, settings, planRes, videoRes, libRes, figures] = await Promise.all([
     listItems(db, ws), listPillars(db, ws), listCadence(db, ws), loadSettings(db, ws),
     db.from("content_plans").select("month, idea_count, ai_ms, created_at").eq("workspace_id", ws).eq("status", "done").order("created_at", { ascending: false }).limit(1).maybeSingle(),
     db.from("video_renders").select("id, spec, output_path, duration_ms, created_at").eq("workspace_id", ws).eq("status", "done").order("created_at", { ascending: false }).limit(10),
     db.storage.from("media").list(ws, { limit: 30, sortBy: { column: "created_at", order: "desc" } }),
+    getContentFigures(db, ws).catch((e: unknown) => { console.error("content figures failed", e instanceof Error ? e.message : e); return null; }),
   ]);
 
   const library: Array<MediaRef> = (libRes.data ?? []).filter((f) => f.name && /\.(jpe?g|png|webp|mp4|mov|webm)$/i.test(f.name)).map((f) => ({ kind: "media" as const, path: `${ws}/${f.name}`, name: f.name.replace(/^[0-9a-f-]{36}-/i, "") }));
@@ -66,6 +70,7 @@ export const getContentWorkbench = async (): Promise<ContentWorkbenchData> => {
     items, pillars, cadence, settings,
     queue: items.filter((i) => i.status === "waiting_approval").map((i) => ({ itemId: i.id, workItemId: i.work_item_id })),
     library, videos, urls,
+    figures,
     lastPlan: plan ? { month: plan.month, ideas: plan.idea_count, ms: plan.ai_ms, createdAt: plan.created_at } : null,
   };
 };

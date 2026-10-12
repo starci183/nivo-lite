@@ -8,6 +8,10 @@ import { modulesCore } from "@/i18n/dict/modulesCore";
 import { moduleDef } from "@/lib/module-registry";
 import { isModuleKey } from "@/lib/modules-shared";
 import { AccountingWorkbenchLoading } from "@/features/workbench-accounting/loading";
+import { ContentWorkbenchLoading } from "@/features/module-content/loading";
+import { HiringWorkbenchLoading } from "@/features/module-hiring/loading";
+import { ShiftsWorkbenchLoading } from "@/features/module-shifts/loading";
+import { VideoWorkbenchLoading } from "@/features/module-video/loading";
 import { ChatbotWorkbenchLoading } from "@/features/workbench-chatbot/loading";
 import { SalesWorkbenchLoading } from "@/features/workbench-sales/loading";
 
@@ -19,6 +23,10 @@ const LOADINGS: Readonly<Record<string, ComponentType>> = {
   chatbot: ChatbotWorkbenchLoading,
   sales: SalesWorkbenchLoading,
   accounting: AccountingWorkbenchLoading,
+  content: ContentWorkbenchLoading,
+  hiring: HiringWorkbenchLoading,
+  shifts: ShiftsWorkbenchLoading,
+  video: VideoWorkbenchLoading,
 };
 
 /** STATE-8: the workbench slot while it loads - the module's own frame, or (a module not on the frame yet) its card with the content as a skeleton. */
