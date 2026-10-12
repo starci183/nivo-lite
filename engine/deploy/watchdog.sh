@@ -5,9 +5,9 @@
 #   - the engine cannot reach 127.0.0.1:18789 from inside its own container, or
 #   - the engine container is not running / not healthy, or
 #   - the openclaw container was (re)started after the engine started.
-# It also watches the BullMQ job system (check_jobs below): the redis container (started again when it is down), the failed-job backlog
-# (JOBS_FAILED_ALERT, default 20) and the Postgres outbox relay (rows unrelayed for more than OUTBOX_STALE_SECONDS, default 300, read from the
-# engine /healthz JSON). Those are ALERT lines in the same log, at most one per kind every 30 minutes; they never restart the engine.
+# It also watches the background jobs (check_jobs below), from the engine /healthz JSON (jobs.stats = job_stats() in Postgres, refreshed every
+# 10 s): jobs failed in the last 24 h (JOBS_FAILED_ALERT, default 20) and the oldest job still queued (JOBS_STALE_SECONDS, default 300).
+# Those are ALERT lines in the same log, at most one per kind every 30 minutes; they never restart the engine.
 # Touches nothing else: not the edge, not n8n, not other compose projects. Log: ~/nivo-engine/watchdog.log (rotated at 512 KB, 3 files).
 set -u
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -28,10 +28,9 @@ if [ -f "$LOG" ] && [ "$(stat -c %s "$LOG" 2>/dev/null || echo 0)" -gt 524288 ];
   mv -f "$LOG.2" "$LOG.3" 2>/dev/null; mv -f "$LOG.1" "$LOG.2" 2>/dev/null; mv -f "$LOG" "$LOG.1"
 fi
 
-REDIS=nivo-engine-redis-1
 env_val() { grep -m1 "^$1=" "$DEPLOY/.env" 2>/dev/null | cut -d= -f2- | tr -d "\"'\r"; }
 FAILED_MAX=$(env_val JOBS_FAILED_ALERT); FAILED_MAX=${FAILED_MAX:-20}
-OUTBOX_MAX=$(env_val OUTBOX_STALE_SECONDS); OUTBOX_MAX=${OUTBOX_MAX:-300}
+STALE_MAX=$(env_val JOBS_STALE_SECONDS); STALE_MAX=${STALE_MAX:-300}
 ALERT_EVERY=1800
 
 # alert <kind> <message>: one ALERT line per kind every ALERT_EVERY seconds (the log is the alert channel today; ship it wherever you page from).
@@ -43,30 +42,15 @@ alert() {
 }
 
 check_jobs() {
-  docker compose --env-file "$DEPLOY/.env" -f "$DEPLOY/docker-compose.yml" config --services 2>/dev/null | grep -qx redis || return 0   # release without Redis yet
-  local rstate; rstate=$(docker inspect -f '{{.State.Status}}' "$REDIS" 2>/dev/null || echo missing)
-  if [ "$rstate" != "running" ]; then
-    alert redis-down "redis container is $rstate; starting it"
-    (cd "$DEPLOY" && docker compose --env-file .env up -d redis) >> "$LOG" 2>&1 || log "redis start FAILED"
-    return 0
-  fi
-  if [ "$(docker exec "$REDIS" redis-cli ping 2>/dev/null | tr -d '\r')" != "PONG" ]; then
-    alert redis-ping "redis container runs but does not answer PING"; return 0
-  fi
-  # Failed jobs: BullMQ keeps them in the sorted set bull:<queue>:failed.
-  local failed=0 key n
-  for key in $(docker exec "$REDIS" redis-cli --scan --pattern 'bull:*:failed' 2>/dev/null | tr -d '\r'); do
-    n=$(docker exec "$REDIS" redis-cli zcard "$key" 2>/dev/null | tr -d '\r'); failed=$((failed + ${n:-0}))
-  done
-  [ "$failed" -gt "$FAILED_MAX" ] && alert failed-jobs "$failed failed BullMQ jobs (limit $FAILED_MAX): docs/OPERATIONS-JOBS.md, 'jobs.sh failed'"
-  # Outbox relay lag, from the engine /healthz JSON: any numeric field named like oldest*Age*/Seconds under outbox (see docs/OPERATIONS-JOBS.md).
-  local lag
-  lag=$(docker exec "$ENGINE" node -e "
+  # "<failed24h> <oldestQueuedAgeSeconds>" from /healthz, or "-1 -1" when the engine does not answer (the recreate logic below handles that).
+  local out failed age
+  out=$(docker exec "$ENGINE" node -e "
     fetch('http://127.0.0.1:'+(process.env.ENGINE_PORT||8787)+'/healthz',{signal:AbortSignal.timeout(4000)}).then(r=>r.json()).then(j=>{
-      const o=j.outbox||(j.jobs&&j.jobs.outbox)||{};let v=-1;
-      for(const [k,x] of Object.entries(o)) if(/oldest|lag|age/i.test(k)&&typeof x==='number'&&x>v) v=x;
-      console.log(v);}).catch(()=>console.log(-1))" 2>/dev/null | tr -d '\r')
-  [ "${lag:--1}" -gt "$OUTBOX_MAX" ] 2>/dev/null && alert outbox-stale "outbox rows unrelayed for ${lag}s (limit ${OUTBOX_MAX}s): is the relay running and Redis reachable?"
+      const s=(j.jobs&&j.jobs.stats)||{};console.log((s.checkedAt?s.failed24h:-1)+' '+(s.checkedAt?s.oldestQueuedAgeSeconds:-1));
+    }).catch(()=>console.log('-1 -1'))" 2>/dev/null | tr -d '\r')
+  read -r failed age <<<"${out:--1 -1}"
+  [ "${failed:--1}" -gt "$FAILED_MAX" ] 2>/dev/null && alert failed-jobs "$failed jobs failed in 24 h (limit $FAILED_MAX): docs/OPERATIONS-JOBS.md, './jobs.sh failed'"
+  [ "${age:--1}" -gt "$STALE_MAX" ] 2>/dev/null && alert jobs-stale "a job has waited ${age}s (limit ${STALE_MAX}s): is the engine consuming? './jobs.sh open'"
   return 0
 }
 

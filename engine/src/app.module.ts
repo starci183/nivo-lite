@@ -13,8 +13,8 @@ import { TtsService } from "./features/video-render/tts/tts.service";
 import { VideoRenderHandler } from "./features/video-render/video-render.handler";
 import { VIDEO_OPTIONS, type VideoOptions } from "./features/video-render/video.config";
 import { ToolsController } from "./features/tools/tools.controller";
-import { BullmqModule } from "./platform/bullmq/bullmq.module";
-import type { BullmqOptions } from "./platform/bullmq/bullmq.config";
+import { JobsModule } from "./platform/pgmq/jobs.module";
+import type { JobsOptions } from "./platform/pgmq/jobs.config";
 import { HTTP_OPTIONS, type HttpOptions } from "./platform/config/http.config";
 import { NivoModule } from "./platform/nivo/nivo.module";
 import type { NivoOptions } from "./platform/nivo/nivo.config";
@@ -29,8 +29,8 @@ import { SupabaseModule, type SupabaseOptions } from "./platform/supabase/supaba
 export type AppOptions = {
   readonly supabase: SupabaseOptions;
   readonly queue: QueueOptions;
-  /** BullMQ background jobs (docs/JOBS.md); off when REDIS_URL is not set. */
-  readonly bullmq: BullmqOptions;
+  /** Background jobs on Supabase Queues (pgmq, docs/JOBS.md). */
+  readonly jobs: JobsOptions;
   readonly nivo: NivoOptions;
   readonly openclaw: OpenclawOptions;
   readonly n8n: N8nOptions;
@@ -48,7 +48,7 @@ export class AppModule {
   static register(o: AppOptions): DynamicModule {
     return {
       module: AppModule,
-      imports: [SupabaseModule.register(o.supabase), NivoModule.register(o.nivo), QueueModule.register(o.queue), BullmqModule.register(o.bullmq), OpenclawModule.register(o.openclaw), KnowledgeJobsModule.register(o.knowledge)],
+      imports: [SupabaseModule.register(o.supabase), NivoModule.register(o.nivo), QueueModule.register(o.queue), JobsModule.register(o.jobs), OpenclawModule.register(o.openclaw), KnowledgeJobsModule.register(o.knowledge)],
       controllers: [HealthController, ToolsController],
       providers: [
         { provide: HTTP_OPTIONS, useValue: o.http },

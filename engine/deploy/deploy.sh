@@ -57,8 +57,7 @@ remote "cd '$DEPLOY_PATH/deploy' && docker compose --env-file .env config -q"
 remote "cd '$DEPLOY_PATH/deploy' && docker compose --env-file .env up -d --build --remove-orphans"
 remote "cd '$DEPLOY_PATH/deploy' && docker compose --env-file .env ps"
 
-echo "==> waiting for redis (healthy) and the engine (/readyz: engine_jobs poll + Redis PING)"
-remote "cd '$DEPLOY_PATH/deploy' && for i in \$(seq 1 30); do s=\$(docker inspect -f '{{.State.Health.Status}}' \$(docker compose --env-file .env ps -q redis) 2>/dev/null || echo missing); [ \"\$s\" = healthy ] && break; sleep 2; done; echo \"redis: \$s\"; [ \"\$s\" = healthy ]"
+echo "==> waiting for the engine (/readyz: engine_jobs poll + pgmq reachable)"
 remote "cd '$DEPLOY_PATH/deploy' && for i in \$(seq 1 30); do docker compose --env-file .env exec -T engine node -e \"fetch('http://127.0.0.1:8787/readyz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\" && { echo 'engine ready'; exit 0; }; sleep 3; done; echo 'engine NOT ready:' >&2; docker compose --env-file .env logs --tail 60 engine >&2; exit 1"
 
 echo "==> done. Check: https://engine.<your domain>/healthz  (and the status card in Settings > Processor)"

@@ -1,6 +1,7 @@
 "use client"
 
 import type { SupabaseClient } from "@supabase/supabase-js"
+import { KNOWLEDGE_UPLOAD_BUCKET } from "../jobs/contracts"
 import { supabaseBrowser } from "../supabase/browser"
 import type { ModuleKey } from "../modules-shared"
 import type { KnowledgeSource, SourceKind, SourceStatus, Visibility } from "./shared"
@@ -12,7 +13,7 @@ import type { KnowledgeSource, SourceKind, SourceStatus, Visibility } from "./sh
  *   retrySource     knowledge_retry_source: put a failed source back on the queue.
  *   useLiveSources  (live.ts) keeps lists in step with knowledge_sources through realtime.
  */
-export const UPLOAD_BUCKET = "knowledge-uploads"
+export const UPLOAD_BUCKET = KNOWLEDGE_UPLOAD_BUCKET
 
 export type EnqueueMeta = {
   readonly topic: string | null

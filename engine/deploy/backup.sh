@@ -2,8 +2,7 @@
 # Backup of the engine stack state, run ON THE VPS from engine/deploy (cron-friendly):
 #   BACKUP_DIR=/var/backups/nivo-engine ./backup.sh
 # Writes, with the date in the name: a pg_dump of the n8n database and tarballs of the n8n, OpenClaw and Caddy volumes.
-# Redis (BullMQ) is deliberately NOT backed up: the Postgres outbox is the source of truth for every knowledge job, the relay re-sends
-# unrelayed rows and handlers are idempotent, so a lost redis-data volume costs nothing but a re-send (docs/OPERATIONS-JOBS.md).
+# The job queues (pgmq) live in Supabase Postgres and are covered by its backups; the engine keeps no job state on this machine.
 # It keeps the last KEEP_DAYS days (default 14). It does NOT copy .env (keep that in your password manager) and it does NOT move the
 # files off this machine: copy BACKUP_DIR to storage in another failure domain (rclone, another VPS, object storage).
 set -euo pipefail

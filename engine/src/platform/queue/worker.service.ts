@@ -5,7 +5,7 @@ import type { QueueOptions } from "./queue.config";
 
 type Running = { readonly job: EngineJob; readonly abort: AbortController; readonly done: Promise<void> };
 
-export type WorkerSnapshot = { readonly workerId: string; readonly inflight: number; readonly lastPollOk: boolean; readonly lastPollAt: string | null; readonly stopping: boolean };
+export type WorkerSnapshot = { readonly enabled: boolean; readonly workerId: string; readonly inflight: number; readonly lastPollOk: boolean; readonly lastPollAt: string | null; readonly stopping: boolean };
 
 /**
  * The worker loop: claim due jobs (`for update skip locked` in SQL), run each handler with a heartbeat that keeps its lease alive,
@@ -33,10 +33,14 @@ export class WorkerService implements OnApplicationBootstrap, BeforeApplicationS
   }
 
   snapshot(): WorkerSnapshot {
-    return { workerId: this.options.workerId, inflight: this.running.size, lastPollOk: this.lastPollOk, lastPollAt: this.lastPollAt, stopping: this.stopping };
+    return { enabled: this.options.enabled, workerId: this.options.workerId, inflight: this.running.size, lastPollOk: this.lastPollOk, lastPollAt: this.lastPollAt, stopping: this.stopping };
   }
 
   onApplicationBootstrap(): void {
+    if (!this.options.enabled) {
+      this.log.warn(`ENGINE_WORKER_ENABLED=0: the engine_jobs worker is off (kinds ${[...this.handlers.keys()].join(", ")} are not claimed)`);
+      return;
+    }
     this.log.log(`worker ${this.options.workerId} up; kinds: ${[...this.handlers.keys()].join(", ")}`);
     void this.presence();
     this.presenceTimer = setInterval(() => void this.presence(), 10_000);

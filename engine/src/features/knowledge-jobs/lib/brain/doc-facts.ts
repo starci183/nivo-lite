@@ -2,8 +2,8 @@
 // filed as a PROPOSAL (document trust 75, never auto-applied), what a changed document contributed before is withdrawn first, active facts
 // left without evidence get a retire proposal, progress (windows_done) is saved after every window, and the same text with the same prompt
 // version is never read twice. What changed for the job runner:
-//  - no claim / drain / time budget: BullMQ runs one knowledge.facts job per source at a time, and a retry resumes from windows_done;
-//  - a model failure or an unreadable answer throws FactsRetry (BullMQ retries with its backoff) instead of re-queueing for the next page load;
+//  - no claim / drain / time budget: the queue runs one knowledge.facts job per source at a time, and a retry resumes from windows_done;
+//  - a model failure or an unreadable answer throws FactsRetry (the queue retries with its backoff) instead of re-queueing for the next page load;
 //  - no credits throws FactsBlocked after saving the record as blocked_credits.
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";

@@ -7,7 +7,7 @@ import { AppModule, type AppOptions } from "./app.module";
 import { parseVideoConfig } from "./features/video-render/video.config";
 import { parseKnowledgeJobsConfig } from "./features/knowledge-jobs/knowledge-jobs.config";
 import { parseN8nConfig } from "./features/n8n-emit/n8n.config";
-import { parseBullmqConfig } from "./platform/bullmq/bullmq.config";
+import { parseJobsConfig } from "./platform/pgmq/jobs.config";
 import { ConfigError, EnvSource } from "./platform/config/env.source";
 import { parseHttpConfig } from "./platform/config/http.config";
 import { parseNivoConfig } from "./platform/nivo/nivo.config";
@@ -27,7 +27,7 @@ const version = (): string => {
 const parseOptions = (env: EnvSource): AppOptions => ({
   supabase: parseSupabaseConfig(env),
   queue: parseQueueConfig(env, version()),
-  bullmq: parseBullmqConfig(env),
+  jobs: parseJobsConfig(env),
   nivo: parseNivoConfig(env),
   openclaw: parseOpenclawConfig(env),
   n8n: parseN8nConfig(env),
@@ -48,7 +48,7 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule.register(options), { logger: ["log", "warn", "error"] });
   app.enableShutdownHooks();
   await app.listen(options.http.port, options.http.host);
-  log.log(`engine ${options.queue.version} listening on ${options.http.host}:${options.http.port}; OpenClaw ${options.openclaw.gateway ? "configured" : "NOT configured (chat.turn uses the direct fallback)"}; BullMQ jobs ${options.bullmq.redisUrl ? "on" : "OFF (REDIS_URL not set: jobs wait in job_outbox)"}`);
+  log.log(`engine ${options.queue.version} listening on ${options.http.host}:${options.http.port}; OpenClaw ${options.openclaw.gateway ? "configured" : "NOT configured (chat.turn uses the direct fallback)"}; pgmq jobs ${options.jobs.enabled ? "on" : "OFF (JOBS_ENABLED=0: jobs wait in their queue)"}; engine_jobs worker ${options.queue.enabled ? "on" : "OFF (ENGINE_WORKER_ENABLED=0)"}`);
 }
 
 void bootstrap();

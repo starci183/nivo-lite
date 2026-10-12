@@ -1,22 +1,22 @@
-import { DynamicModule, Inject, Logger, Module, OnModuleInit, Optional } from "@nestjs/common";
+import { DynamicModule, Logger, Module, OnModuleInit } from "@nestjs/common";
+import { JobRegistry, type JobContext, type JobHandler } from "../../platform/pgmq";
 import { FactsModel } from "./facts-model.service";
-import { JOB_REGISTRY, KNOWLEDGE_JOBS, type JobRegistry } from "./job-registry.port";
 import { KNOWLEDGE_JOBS_OPTIONS, type KnowledgeJobsOptions } from "./knowledge-jobs.config";
 import { KnowledgeJobsService } from "./knowledge-jobs.service";
 
 /**
- * Heavy knowledge work as BullMQ jobs (queue 'knowledge'):
+ * Heavy knowledge work as background jobs (pgmq queue 'knowledge', docs/JOBS.md):
  *   knowledge.index   { sourceId, workspaceId }   read (file in storage | link | Drive | text) -> chunk + embed -> enqueue knowledge.facts
  *   knowledge.facts   { sourceId, workspaceId }   read facts window by window into brain_facts (proposals, conflicts) -> ready
  *   knowledge.reembed { workspaceId, model? }     re-embed chunks made by another model
- * Registers one handler per name with the platform's worker registry (JOB_REGISTRY). Needs the global SUPABASE client; the OpenClaw gateway and
- * the agent sync are looked up lazily for knowledge.facts.
+ * Registers one JobHandler per name with the platform's JobRegistry (global JobsModule). Needs the global SUPABASE client; the OpenClaw
+ * gateway and the agent sync are looked up lazily for knowledge.facts.
  */
 @Module({})
 export class KnowledgeJobsModule implements OnModuleInit {
   private readonly log = new Logger(KnowledgeJobsModule.name);
 
-  constructor(private readonly jobs: KnowledgeJobsService, @Optional() @Inject(JOB_REGISTRY) private readonly registry?: JobRegistry) {}
+  constructor(private readonly jobs: KnowledgeJobsService, private readonly registry: JobRegistry) {}
 
   static register(options: KnowledgeJobsOptions): DynamicModule {
     return {
@@ -27,13 +27,12 @@ export class KnowledgeJobsModule implements OnModuleInit {
   }
 
   onModuleInit(): void {
-    if (!this.registry) {
-      this.log.warn("no BullMQ job registry (JOB_REGISTRY): knowledge.index / knowledge.facts / knowledge.reembed are not consumed by this engine");
-      return;
-    }
-    this.registry.register(KNOWLEDGE_JOBS.index, (job) => this.jobs.index(job));
-    this.registry.register(KNOWLEDGE_JOBS.facts, (job) => this.jobs.facts(job));
-    this.registry.register(KNOWLEDGE_JOBS.reembed, (job) => this.jobs.reembed(job));
-    this.log.log(`registered ${Object.values(KNOWLEDGE_JOBS).join(", ")}`);
+    const handlers: [JobHandler<"knowledge.index">, JobHandler<"knowledge.facts">, JobHandler<"knowledge.reembed">] = [
+      { name: "knowledge.index", handle: (ctx: JobContext<"knowledge.index">) => this.jobs.index(ctx) },
+      { name: "knowledge.facts", handle: (ctx: JobContext<"knowledge.facts">) => this.jobs.facts(ctx) },
+      { name: "knowledge.reembed", handle: (ctx: JobContext<"knowledge.reembed">) => this.jobs.reembed(ctx) },
+    ];
+    for (const h of handlers) this.registry.register(h);
+    this.log.log(`registered ${handlers.map((h) => h.name).join(", ")}`);
   }
 }

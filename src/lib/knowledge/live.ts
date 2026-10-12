@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { supabaseBrowser } from "../supabase/browser"
 import { LIVE_COLUMNS, sourceFromRow, type LiveRow } from "./queue"
-import { isInFlight, type KnowledgeSource } from "./shared"
+import { IN_FLIGHT_STATUSES, isInFlight, type KnowledgeSource } from "./shared"
 
 const byNewest = (a: KnowledgeSource, b: KnowledgeSource): number => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0)
 
@@ -83,7 +83,7 @@ export const useInFlight = (workspaceId: string, seed: ReadonlyArray<InFlight>):
     })
     const reload = async () => {
       const { data } = await sb.from("knowledge_sources").select("id, status, progress").eq("workspace_id", workspaceId)
-        .in("status", ["queued", "reading", "indexing", "extracting_facts"])
+        .in("status", IN_FLIGHT_STATUSES)
       for (const r of (data ?? []) as Array<LiveRow>) apply(r)
     }
     const channel = sb.channel(`knowledge-progress-${workspaceId}`)

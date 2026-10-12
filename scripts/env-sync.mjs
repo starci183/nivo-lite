@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Pushes secrets.env to the GitHub environment "production":
-//   ENGINE_ENV  the [engine] block (the VPS docker stack's .env) + REDIS_URL (default redis://redis:6379) and the app keys the jobs need
+//   ENGINE_ENV  the [engine] block (the VPS docker stack's .env) + the app keys the knowledge jobs need
 //   WEB_ENV     the server-side [app] keys (+ ENGINE_SHARED_SECRET), NEXT_PUBLIC_SITE_URL forced to https://nivo.vn (the web container's runtime env_file)
 //   WEB_NEXT_PUBLIC_SUPABASE_URL / _ANON_KEY / _DEMO_LOGIN  build args baked into the client bundle (public values, kept as secrets for one place to manage)
 // Usage: node scripts/env-sync.mjs            -> updates the secrets (needs gh logged in)
@@ -27,11 +27,11 @@ if (!app.length) throw new Error("no [app] block found in secrets.env");
 
 const kv = (line) => [line.slice(0, line.indexOf("=")), line.slice(line.indexOf("=") + 1).replace(/^["']|["']$/g, "")];
 
-// The knowledge job handlers (BullMQ workers on the VPS) need the same keys the web app uses to read and embed documents. Values that
+// The knowledge job handlers (the engine on the VPS, consuming the pgmq queues in Supabase) need the same keys the web app uses to read and embed documents. Values that
 // live in [app] are inherited when the [engine] block does not set them, so each secret is kept in ONE place. Only the mapping is here.
 const engineMap = new Map(engineBlock.map(kv));
 const appMap0 = new Map(app.map(kv));
-const ENGINE_DEFAULTS = { REDIS_URL: "redis://redis:6379", EMBEDDING_MODEL: "qwen/qwen3-embedding-8b", EMBEDDING_BASE_URL: "https://openrouter.ai/api/v1" };
+const ENGINE_DEFAULTS = { EMBEDDING_MODEL: "qwen/qwen3-embedding-8b", EMBEDDING_BASE_URL: "https://openrouter.ai/api/v1" };
 const ENGINE_FROM_APP = {
   CHANNEL_TOKEN_KEY: ["CHANNEL_TOKEN_KEY"],
   GOOGLE_OAUTH_CLIENT_ID: ["GOOGLE_OAUTH_CLIENT_ID", "SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID"],
@@ -47,7 +47,7 @@ for (const [k, sources] of Object.entries(ENGINE_FROM_APP)) {
   if (found) engineMap.set(k, found);
 }
 for (const [k, v] of Object.entries(ENGINE_DEFAULTS)) if (!engineMap.get(k)) engineMap.set(k, v);
-const ENGINE_REQUIRED = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "ENGINE_SHARED_SECRET", "REDIS_URL", "OPENROUTER_API_KEY", "CHANNEL_TOKEN_KEY", "GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET"];
+const ENGINE_REQUIRED = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "ENGINE_SHARED_SECRET", "OPENROUTER_API_KEY", "CHANNEL_TOKEN_KEY", "GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET"];
 const missing = ENGINE_REQUIRED.filter((k) => !engineMap.get(k));
 if (missing.length) console.warn(`[env-sync] WARNING: ENGINE_ENV has no value for: ${missing.join(", ")} (names only; the knowledge jobs need them)`);
 const engine = [...engineMap].filter(([, v]) => v !== "").map(([k, v]) => `${k}=${v}`);

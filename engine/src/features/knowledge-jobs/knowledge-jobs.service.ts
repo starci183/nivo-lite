@@ -1,9 +1,8 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { UnrecoverableError } from "bullmq";
 import { SUPABASE } from "../../platform/supabase/supabase.module";
 import { FactsModel } from "./facts-model.service";
-import { KNOWLEDGE_JOBS, KNOWLEDGE_QUEUE, type QueueJob } from "./job-registry.port";
+import { BlockedCreditsError, JobProducer, KNOWLEDGE_UPLOAD_BUCKET, PermanentJobError, isUnrecoverable, type JobContext, type JobName, type JobPayloads, type SourceStatus } from "../../platform/pgmq";
 import { KNOWLEDGE_JOBS_OPTIONS, type KnowledgeJobsOptions } from "./knowledge-jobs.config";
 import { extractDocument, FactsBlocked, FactsRetry, markExtractionFailed } from "./lib/brain/doc-facts";
 import { resolveGapsForDocument } from "./lib/brain/gaps";
@@ -17,15 +16,12 @@ import { blockedBy } from "./lib/usage";
 
 type Db = SupabaseClient;
 
-export type SourceStatus = "pending" | "queued" | "reading" | "indexing" | "extracting_facts" | "ready" | "failed" | "blocked_credits";
-
 type SourceRow = {
   id: string; workspace_id: string; module: string | null; kind: "text" | "faq" | "file" | "url"; topic: string | null; visibility: "public" | "internal";
   title: string; content: string; status: SourceStatus; error: string | null; chunk_count: number; storage_path: string | null; source_url: string | null;
   created_by: string | null; updated_at: string;
 };
 
-export const UPLOAD_BUCKET = "knowledge-uploads";
 /** The bucket's own limit (job_outbox migration: file_size_limit 12582912). */
 const MAX_UPLOAD_BYTES = 12_582_912;
 /** Above this many passages a document is a BULK embedding: it stops when the workspace has no credits left (src/lib/knowledge/index.ts). */
@@ -57,12 +53,12 @@ const isRetryable = (e: unknown): boolean => {
   return name === "AbortError" || name === "TimeoutError" || (e instanceof TypeError && /fetch/i.test(e.message)) || (e as { retryable?: boolean }).retryable === true;
 };
 
-const isLastAttempt = (job: QueueJob): boolean => job.opts?.attempts !== undefined && job.attemptsMade + 1 >= job.opts.attempts;
+const isLastAttempt = (job: JobContext): boolean => job.isFinalAttempt;
 
-const payloadOf = (job: QueueJob): { sourceId: string; workspaceId: string } => {
-  const d = (job.data ?? {}) as Record<string, unknown>;
+const payloadOf = (job: JobContext<"knowledge.index" | "knowledge.facts">): { sourceId: string; workspaceId: string } => {
+  const d = (job.payload ?? {}) as Record<string, unknown>;
   if (typeof d.sourceId !== "string" || !UUID.test(d.sourceId) || typeof d.workspaceId !== "string" || !UUID.test(d.workspaceId)) {
-    throw new UnrecoverableError(`${job.name}: payload needs sourceId and workspaceId (uuid)`);
+    throw new PermanentJobError(`${job.name}: payload needs sourceId and workspaceId (uuid)`);
   }
   return { sourceId: d.sourceId, workspaceId: d.workspaceId };
 };
@@ -79,6 +75,7 @@ export class KnowledgeJobsService {
     @Inject(SUPABASE) private readonly db: Db,
     @Inject(KNOWLEDGE_JOBS_OPTIONS) private readonly options: KnowledgeJobsOptions,
     private readonly model: FactsModel,
+    private readonly producer: JobProducer,
   ) {}
 
   /* ------------------------------------------------------------------ shared */
@@ -99,9 +96,9 @@ export class KnowledgeJobsService {
     return this.patch(src, { progress: Math.max(0, Math.min(100, Math.round(progress))) }).catch(() => undefined);
   }
 
-  private async enqueue(workspaceId: string, name: string, payload: Record<string, unknown>, dedupe: string): Promise<void> {
-    const { error } = await this.db.rpc("job_enqueue", { p_workspace: workspaceId, p_queue: KNOWLEDGE_QUEUE, p_name: name, p_payload: payload, p_dedupe: dedupe });
-    if (error) throw Object.assign(new Error(`job_enqueue ${name}: ${error.message}`), { retryable: true });
+  /** Chained jobs go through the platform producer (job_enqueue: outbox row + pgmq message, deduplicated on `dedupe`). */
+  private async enqueue<N extends JobName>(workspaceId: string, name: N, payload: JobPayloads[N], dedupe: string): Promise<void> {
+    await this.producer.enqueue(name, payload, dedupe, workspaceId);
   }
 
   /** The workspace's OpenClaw agents carry knowledge in their files: resync them (enqueueWorkspaceSync of the web). Best effort. */
@@ -112,7 +109,7 @@ export class KnowledgeJobsService {
 
   /* ------------------------------------------------------------------ knowledge.index */
 
-  async index(job: QueueJob): Promise<void> {
+  async index(job: JobContext<"knowledge.index">): Promise<void> {
     const { sourceId, workspaceId } = payloadOf(job);
     const src = await this.load(sourceId, workspaceId);
     if (!src) return; // deleted meanwhile
@@ -130,19 +127,19 @@ export class KnowledgeJobsService {
       await this.patch(src, { status: "indexing", content, title: src.title, progress: 20 });
       await this.chunkAndEmbed(src);
     } catch (e) {
-      if (e instanceof UnrecoverableError) throw e;
+      if (isUnrecoverable(e)) throw e;
       const retry = isRetryable(e);
       if (retry && !isLastAttempt(job)) {
-        this.log.warn(`knowledge.index ${sourceId}: ${msg(e)} (attempt ${job.attemptsMade + 1}, will retry)`);
+        this.log.warn(`knowledge.index ${sourceId}: ${msg(e)} (attempt ${job.attempt}, will retry)`);
         throw e instanceof Error ? e : new Error(msg(e));
       }
       const reason = (retry ? `Không đọc được nguồn sau nhiều lần thử: ${msg(e)}` : msg(e)).slice(0, 400);
       await this.patch(src, { status: "failed", error: reason }).catch((x: unknown) => this.log.error(`knowledge.index ${sourceId}: could not mark failed: ${msg(x)}`));
-      throw new UnrecoverableError(reason);
+      throw new PermanentJobError(reason);
     }
 
     // Indexed: the facts job is enqueued (idempotent per index job: a retried index job finds its own outbox row), THEN the status moves.
-    await this.enqueue(workspaceId, KNOWLEDGE_JOBS.facts, { sourceId, workspaceId }, `knowledge.facts:${sourceId}:${job.id ?? Date.now()}`);
+    await this.enqueue(workspaceId, "knowledge.facts", { sourceId, workspaceId }, `knowledge.facts:${sourceId}:${job.id}`);
     await this.patch(src, { status: "extracting_facts", progress: 85 });
   }
 
@@ -159,7 +156,7 @@ export class KnowledgeJobsService {
       const kindByName = fileTextKind(name);
       // A known extension decides; a name without one is sniffed after the download; any other extension is refused before downloading.
       if (!kindByName && /\.[a-z0-9]+$/i.test(name)) throw new PermanentSourceError("Chỉ nhận .txt, .md, .csv, .pdf, .docx, .xlsx hoặc .pptx.");
-      const { data, error } = await this.db.storage.from(UPLOAD_BUCKET).download(src.storage_path);
+      const { data, error } = await this.db.storage.from(KNOWLEDGE_UPLOAD_BUCKET).download(src.storage_path);
       if (error || !data) {
         const m = error?.message ?? "no data";
         const status = Number((error as { statusCode?: unknown; status?: unknown } | null)?.statusCode ?? (error as { status?: unknown } | null)?.status);
@@ -222,7 +219,7 @@ export class KnowledgeJobsService {
     if (noCredits) {
       await this.patch(src, { status: "blocked_credits", error: NO_CREDITS_INDEX, chunk_count: pieces.length, progress: 80 });
       await this.syncAgents(src.workspace_id);
-      throw new UnrecoverableError("no credits for a bulk embedding");
+      throw new BlockedCreditsError("no credits for a bulk embedding");
     }
     const note = vectors ? null : "Chưa tạo được vector ngữ nghĩa; vẫn tìm được theo từ khóa.";
     await this.patch(src, { error: note, chunk_count: pieces.length, progress: 80 });
@@ -246,7 +243,7 @@ export class KnowledgeJobsService {
 
   /* ------------------------------------------------------------------ knowledge.facts */
 
-  async facts(job: QueueJob): Promise<void> {
+  async facts(job: JobContext<"knowledge.facts">): Promise<void> {
     const { sourceId, workspaceId } = payloadOf(job);
     const src = await this.load(sourceId, workspaceId);
     if (!src) return;
@@ -265,7 +262,7 @@ export class KnowledgeJobsService {
     } catch (e) {
       if (e instanceof FactsBlocked) {
         await this.patch(src, { status: "blocked_credits", error: NO_CREDITS_FACTS });
-        throw new UnrecoverableError("no credits for brain work");
+        throw new BlockedCreditsError("no credits for brain work");
       }
       const retry = e instanceof FactsRetry || isRetryable(e);
       if (retry && !isLastAttempt(job)) throw e instanceof Error ? e : new Error(msg(e));
@@ -279,15 +276,15 @@ export class KnowledgeJobsService {
   /* ------------------------------------------------------------------ knowledge.reembed */
 
   /** reembedStale of the web (src/lib/knowledge/reembed.ts): chunks of another model (or none) get vectors of the current model, metered, credits first. */
-  async reembed(job: QueueJob): Promise<void> {
-    const d = (job.data ?? {}) as Record<string, unknown>;
+  async reembed(job: JobContext<"knowledge.reembed">): Promise<void> {
+    const d = (job.payload ?? {}) as Record<string, unknown>;
     const ws = d.workspaceId;
-    if (typeof ws !== "string" || !UUID.test(ws)) throw new UnrecoverableError("knowledge.reembed: payload needs workspaceId (uuid)");
+    if (typeof ws !== "string" || !UUID.test(ws)) throw new PermanentJobError("knowledge.reembed: payload needs workspaceId (uuid)");
     const settings = this.options.embedding;
     if (!settings.apiKey) return;
     const model = settings.model;
     if (typeof d.model === "string" && d.model && d.model !== model) {
-      throw new UnrecoverableError(`knowledge.reembed: asked for ${d.model} but the engine embeds with ${model}`);
+      throw new PermanentJobError(`knowledge.reembed: asked for ${d.model} but the engine embeds with ${model}`);
     }
     const stale = `embedding_model.is.null,embedding.is.null,embedding_model.neq."${model.replace(/"/g, "")}"`;
     let embedded = 0;
@@ -301,7 +298,7 @@ export class KnowledgeJobsService {
       const chunks = (data ?? []) as Array<{ id: string; content: string }>;
       if (chunks.length === 0) return;
       const vectors = await embedTexts(settings, { db: this.db, workspaceId: ws, module: "knowledge" }, chunks.map((c) => c.content), { timeoutMs: 30_000 });
-      if (!vectors) throw new Error("embedding provider unavailable"); // BullMQ backoff replaces the web's 5-minute pause
+      if (!vectors) throw new Error("embedding provider unavailable"); // the queue backoff replaces the web's 5-minute pause
       for (let i = 0; i < chunks.length; i += 8) {
         await Promise.all(chunks.slice(i, i + 8).map(async (c, j) => {
           const { error: e } = await this.db.from("knowledge_chunks").update({ embedding: toVector(vectors[i + j] as Array<number>), embedding_model: model }).eq("id", c.id).eq("workspace_id", ws);
@@ -312,6 +309,6 @@ export class KnowledgeJobsService {
       if (chunks.length < REEMBED_BATCH) return;
     }
     // Still more: hand over to a follow-up job so one job never holds a worker for too long.
-    await this.enqueue(ws, KNOWLEDGE_JOBS.reembed, { workspaceId: ws, model }, `knowledge.reembed:${ws}:${job.id ?? Date.now()}:next`);
+    await this.enqueue(ws, "knowledge.reembed", { workspaceId: ws, model }, `knowledge.reembed:${ws}:${job.id}:next`);
   }
 }

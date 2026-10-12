@@ -12,7 +12,6 @@
     "pretypecheck": "node scripts/gen-module-registry.mjs",
     "typecheck": "tsc --noEmit",
     "dev:stack": "node engine/dev/stack.mjs",
-    "dev:stack:down": "node engine/dev/stack.mjs --down",
     "db:start": "node scripts/with-secrets.mjs supabase start",
     "db:stop": "supabase stop",
     "db:reset": "node scripts/with-secrets.mjs supabase db reset",

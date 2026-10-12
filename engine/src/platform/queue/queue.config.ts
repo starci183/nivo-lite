@@ -2,6 +2,8 @@ import { hostname } from "node:os";
 import type { EnvSource } from "../config/env.source";
 
 export type QueueOptions = {
+  /** ENGINE_WORKER_ENABLED=0: the engine_jobs worker claims nothing (local runs that must not call OpenClaw or channel APIs). */
+  readonly enabled: boolean;
   readonly workerId: string;
   readonly version: string;
   readonly pollMs: number;
@@ -11,6 +13,7 @@ export type QueueOptions = {
 };
 
 export const parseQueueConfig = (env: EnvSource, version: string): QueueOptions => ({
+  enabled: env.bool("ENGINE_WORKER_ENABLED", true),
   workerId: env.optional("ENGINE_WORKER_ID") ?? `${hostname()}-${process.pid}`,
   version,
   pollMs: env.int("ENGINE_POLL_MS", 2000, { min: 200, max: 60_000 }),

@@ -1,13 +1,12 @@
-// Local dev stack for the engine + BullMQ job system.   npm run dev:stack   (from the repo root)
-//   1. Redis in docker (container nivo-dev-redis, 127.0.0.1:56379, AOF on, named volume nivo-dev-redis).
-//   2. The engine in watch mode (tsc --watch + node --watch dist/main.js) against the LOCAL Supabase stack.
+// Local dev stack for the engine and its background jobs.   npm run dev:stack   (from the repo root)
+// The engine runs in watch mode (tsc --watch + node --watch dist/main.js) against the LOCAL Supabase stack, whose Postgres also holds the job
+// queues (pgmq, supabase/migrations/20261025110000_pgmq_transport.sql): nothing else to start.
 // The engine env is generated from the local env file (secrets.env at the repo root, or NIVO_SECRETS=<path>): the Supabase URL and
 // service role come from NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY (npm run db:start prints them). Nothing is written to disk
-// and no value is printed.
-//   node engine/dev/stack.mjs            start everything (Ctrl+C stops the engine; Redis keeps running)
+// and no value is printed. ENGINE_WORKER_ENABLED / JOBS_ENABLED from the file (or the shell) are passed through, so a local run can keep
+// the old engine_jobs worker (OpenClaw, channel health checks) off.
+//   node engine/dev/stack.mjs            start the engine (Ctrl+C stops it)
 //   node engine/dev/stack.mjs --env      print the generated variable NAMES only
-//   node engine/dev/stack.mjs --down     stop and remove the Redis container (data volume is kept)
-//   node engine/dev/stack.mjs --redis    only make sure Redis is up
 import { execFileSync, spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -15,28 +14,7 @@ import { fileURLToPath } from "node:url";
 
 const engineDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 const repoDir = join(engineDir, "..");
-const REDIS_NAME = "nivo-dev-redis";
-const REDIS_PORT = process.env.DEV_REDIS_PORT || "56379";
 const arg = (f) => process.argv.includes(f);
-const docker = (...a) => execFileSync("docker", a, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
-
-if (arg("--down")) {
-  try { docker("rm", "-f", REDIS_NAME); console.log(`[dev:stack] ${REDIS_NAME} removed (volume ${REDIS_NAME} kept)`); } catch { console.log("[dev:stack] nothing to remove"); }
-  process.exit(0);
-}
-
-function ensureRedis() {
-  let state = "";
-  try { state = docker("inspect", "-f", "{{.State.Status}}", REDIS_NAME); } catch { /* not created yet */ }
-  if (state === "running") return;
-  if (state) docker("start", REDIS_NAME);
-  else docker("run", "-d", "--name", REDIS_NAME, "--restart", "unless-stopped", "-p", `127.0.0.1:${REDIS_PORT}:6379`, "-v", `${REDIS_NAME}:/data`, "redis:7-alpine", "redis-server", "--appendonly", "yes");
-  for (let i = 0; i < 20; i++) {
-    try { if (docker("exec", REDIS_NAME, "redis-cli", "ping") === "PONG") return; } catch { /* starting */ }
-    execFileSync(process.execPath, ["-e", "setTimeout(()=>{},500)"]);
-  }
-  throw new Error("redis did not answer PING");
-}
 
 function engineEnv() {
   const file = process.env.NIVO_SECRETS || join(repoDir, "secrets.env");
@@ -57,9 +35,10 @@ function engineEnv() {
     // At least 32 chars; must equal the web app's value when you run both. A fixed dev-only default keeps restarts stable.
     ENGINE_SHARED_SECRET: f.ENGINE_SHARED_SECRET || "dev-only-engine-shared-secret-0123456789abcdef",
     ENGINE_WORKER_ID: "dev-1",
-    ENGINE_PORT: f.DEV_ENGINE_PORT || "8787",
+    ENGINE_PORT: process.env.DEV_ENGINE_PORT || f.DEV_ENGINE_PORT || "8787",
     ENGINE_HOST: "127.0.0.1",
-    REDIS_URL: `redis://127.0.0.1:${REDIS_PORT}`,
+    ENGINE_WORKER_ENABLED: process.env.ENGINE_WORKER_ENABLED ?? f.ENGINE_WORKER_ENABLED,
+    JOBS_ENABLED: process.env.JOBS_ENABLED ?? f.JOBS_ENABLED,
     OPENROUTER_API_KEY: pick("OPENROUTER_API_KEY", "DEEPSEEK_API_KEY"),
     EMBEDDING_API_KEY: pick("EMBEDDING_API_KEY"),
     EMBEDDING_MODEL: pick("EMBEDDING_MODEL"),
@@ -71,9 +50,6 @@ function engineEnv() {
   return Object.fromEntries(Object.entries(env).filter(([, v]) => v));
 }
 
-ensureRedis();
-console.log(`[dev:stack] redis up on 127.0.0.1:${REDIS_PORT}`);
-if (arg("--redis")) process.exit(0);
 const env = engineEnv();
 if (arg("--env")) { console.log(Object.keys(env).join("\n")); process.exit(0); }
 

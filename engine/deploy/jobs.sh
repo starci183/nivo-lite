@@ -1,50 +1,38 @@
 #!/usr/bin/env bash
-# Operator helper for the BullMQ job system, run ON THE VPS from engine/deploy (~/nivo-engine/deploy). Reads go through redis-cli in the
-# redis container; retry/drain use the BullMQ client already inside the engine image (REDIS_URL comes from the engine's own env).
-#   ./jobs.sh queues                 queues found in Redis with their counts
-#   ./jobs.sh failed [queue] [N]     the last N (default 20) failed jobs: id, name, attempts, failedReason (never the payload)
-#   ./jobs.sh retry <queue>          move every failed job of the queue back to waiting
-#   ./jobs.sh drain <queue>          delete the waiting and delayed jobs of the queue (active ones finish; failed ones stay)
-#   ./jobs.sh clean-failed <queue>   delete the failed jobs of the queue
-#   ./jobs.sh ping                   redis PING + persistence settings
-# Jobs are idempotent and the Postgres outbox is the source of truth: retry and drain are always safe (docs/OPERATIONS-JOBS.md).
+# Operator helper for the background jobs on Supabase Queues (pgmq), run ON THE VPS from engine/deploy (~/nivo-engine/deploy). Everything
+# goes through the engine container's own Supabase client (SUPABASE_URL + service role from its env; nothing is printed but results).
+#   ./jobs.sh stats                  per queue depth and oldest age, jobs running, failed in 24 h, oldest queued outbox row (job_stats)
+#   ./jobs.sh failed [N]             the last N (default 20) failed jobs: outbox id, name, attempts, last_error (never the payload)
+#   ./jobs.sh open [N]               the oldest N (default 20) queued/running jobs
+#   ./jobs.sh retry <outbox-id>      send one failed job again (job_requeue: new message, attempts reset)
+#   ./jobs.sh retry-failed [hours]   send again every job that failed in the last <hours> (default 24)
+# Jobs are idempotent and the outbox row is the record of every job: retry is always safe (docs/OPERATIONS-JOBS.md).
+# The same queries run in the Supabase SQL editor: select * from job_stats(); select * from pgmq.metrics('knowledge'); select * from pgmq.a_knowledge;
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
-ENV=(--env-file .env)
-rc() { docker compose "${ENV[@]}" exec -T redis redis-cli "$@" | tr -d '\r'; }
-engine_node() { docker compose "${ENV[@]}" exec -T engine node -e "$1" "${@:2}"; }
-queues() { rc --scan --pattern 'bull:*:meta' | sed -E 's/^bull:(.*):meta$/\1/' | sort -u; }
+engine_node() { docker compose --env-file .env exec -T engine node -e "$1" "${@:2}"; }
 
-cmd="${1:-queues}"; q="${2:-}"
+cmd="${1:-stats}"
 case "$cmd" in
-  ping) rc ping; rc config get appendonly; rc config get save ;;
-  queues)
-    for name in $(queues); do
-      printf '%-32s waiting=%s active=%s delayed=%s failed=%s completed=%s\n' "$name" \
-        "$(rc llen "bull:$name:wait")" "$(rc llen "bull:$name:active")" "$(rc zcard "bull:$name:delayed")" "$(rc zcard "bull:$name:failed")" "$(rc zcard "bull:$name:completed")"
-    done ;;
-  failed)
-    n="${3:-20}"
-    names="${q:-$(queues)}"
-    for name in $names; do
-      echo "== $name (newest $n failed)"
-      for id in $(rc zrevrange "bull:$name:failed" 0 "$((n - 1))"); do
-        rc hmget "bull:$name:$id" name attemptsMade failedReason | paste -sd'|' | sed "s/^/job $id | /"
-      done
-    done ;;
-  retry|drain|clean-failed)
-    [ -n "$q" ] || { echo "usage: $0 $cmd <queue>   (queues: $(queues | paste -sd' '))" >&2; exit 2; }
-    engine_node '
-      const { Queue } = require("bullmq"); const IORedis = require("ioredis");
-      const [op, name] = process.argv.slice(1);
-      const conn = new IORedis(process.env.REDIS_URL, { maxRetriesPerRequest: null });
-      const queue = new Queue(name, { connection: conn });
-      (async () => {
-        if (op === "retry") await queue.retryJobs({ state: "failed" });
-        else if (op === "drain") await queue.drain(true);
-        else await queue.clean(0, 100000, "failed");
-        console.log(op + " " + name + " done", JSON.stringify(await queue.getJobCounts()));
-        await queue.close(); conn.disconnect();
-      })().catch((e) => { console.error(e.message); process.exit(1); });' "$cmd" "$q" ;;
-  *) sed -n '2,12p' "$0"; exit 2 ;;
+  stats|failed|open|retry|retry-failed) ;;
+  *) sed -n '2,10p' "$0"; exit 2 ;;
 esac
+engine_node '
+  const { createClient } = require("@supabase/supabase-js");
+  const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+  const [op, arg] = process.argv.slice(1);
+  const die = (e) => { console.error(e.message || e); process.exit(1); };
+  const rows = (r) => { if (r.error) die(r.error); for (const x of r.data) console.log(Object.values(x).map((v) => v ?? "").join(" | ")); };
+  (async () => {
+    if (op === "stats") { const r = await db.rpc("job_stats"); if (r.error) die(r.error); console.log(JSON.stringify(r.data, null, 2)); }
+    else if (op === "failed") rows(await db.from("job_outbox").select("id, name, attempts, finished_at, last_error").eq("state", "failed").order("finished_at", { ascending: false }).limit(Number(arg) || 20));
+    else if (op === "open") rows(await db.from("job_outbox").select("id, name, state, attempts, created_at, last_error").in("state", ["queued", "running"]).order("created_at").limit(Number(arg) || 20));
+    else if (op === "retry") { if (!arg) die("usage: jobs.sh retry <outbox-id>"); const r = await db.rpc("job_requeue", { p_outbox: arg }); if (r.error) die(r.error); console.log(r.data === null ? "not a failed job" : "requeued as message " + r.data); }
+    else {
+      const since = new Date(Date.now() - (Number(arg) || 24) * 3600e3).toISOString();
+      const f = await db.from("job_outbox").select("id").eq("state", "failed").gte("finished_at", since);
+      if (f.error) die(f.error);
+      let n = 0; for (const { id } of f.data) { const r = await db.rpc("job_requeue", { p_outbox: id }); if (!r.error && r.data !== null) n++; }
+      console.log("requeued " + n + " of " + f.data.length);
+    }
+  })().catch(die);' "$cmd" "${2:-}"

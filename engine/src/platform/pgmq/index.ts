@@ -1,10 +1,6 @@
 export * from "./contracts";
-export { BullmqModule } from "./bullmq.module";
-export { parseBullmqConfig, type BullmqOptions } from "./bullmq.config";
-export { ATTEMPTS, BACKOFF_MS } from "./bullmq.policy";
-export { BlockedCreditsError, PermanentJobError, isUnrecoverable, type BullJobHandler, type JobContext } from "./bullmq.types";
+export { JobsModule } from "./jobs.module";
+export { parseJobsConfig, type JobsOptions } from "./jobs.config";
+export { ATTEMPTS, BACKOFF_MS, BlockedCreditsError, PermanentJobError, UnrecoverableJobError, isUnrecoverable, type JobContext, type JobHandler } from "./jobs.types";
 export { JobProducer } from "./job-producer.service";
-export { JobRegistry } from "./job-registry.service";
-export { OutboxRelayService } from "./outbox-relay.service";
-export { QueueTransport } from "./queue-transport.service";
-export { RedisConnection } from "./redis.connection";
+export { JobRegistry, type JobsSnapshot, type JobsStats } from "./job-registry.service";
