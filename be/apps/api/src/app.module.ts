@@ -27,6 +27,19 @@ import { I18nModule } from "@modules/platform/i18n"
 import { LoggingModule } from "@modules/platform/logging"
 import { JOBS_ERROR_KINDS, JOBS_MESSAGES, JobsModule } from "@modules/platform/jobs"
 import { QueueModule } from "@modules/platform/queue"
+import { CONTENT_MESSAGES, ContentModule } from "@modules/domain/content"
+import { CONTENT_ITEMS_ERROR_KINDS, CONTENT_ITEMS_MESSAGES, ContentItemsModule } from "@modules/domain/content-items"
+import { ContentSettingsModule } from "@modules/domain/content-settings"
+import { VIDEO_ERROR_KINDS, VIDEO_MESSAGES, VideoModule } from "@modules/domain/video"
+import { VideoProjectVersionsModule } from "@modules/domain/video-project-versions"
+import { VideoProjectsModule } from "@modules/domain/video-projects"
+import { VIDEO_RENDERS_ERROR_KINDS, VIDEO_RENDERS_MESSAGES, VideoRendersModule } from "@modules/domain/video-renders"
+import { FFMPEG_ERROR_KINDS, FFMPEG_MESSAGES, FfmpegModule } from "@modules/integrations/ffmpeg"
+import { TTS_ERROR_KINDS, TTS_MESSAGES, TtsModule } from "@modules/integrations/tts"
+import { CONTENT_TICK_EVERY_MS, CONTENT_TICK_QUEUE, CONTENT_TICK_SCHEDULER } from "@modules/queues/content-tick"
+import { RendersHttpModule } from "@features/api/renders"
+import { PublishContentQueueModule } from "@features/jobs/publish-content"
+import { RenderVideoQueueModule } from "@features/jobs/render-video"
 import type { ApiOptions } from "./api.options"
 
 @Module({})
@@ -37,12 +50,25 @@ export class AppModule {
         const verifyAccessToken = createSupabaseAccessTokenVerifier(options.supabase)
         return {
             module: AppModule,
+            global: true,
+            exports: [SUPABASE_ADMIN_CLIENT, SUPABASE_ACCESS_TOKEN_VERIFIER],
             imports: [
                 ClockModule.register({ isGlobal: true }),
                 LoggingModule.register({ isGlobal: true }),
                 I18nModule.register({
                     isGlobal: true,
-                    bundles: [ERRORS_MESSAGES, HTTP_SECURITY_MESSAGES, IDENTITY_MESSAGES, JOBS_MESSAGES],
+                    bundles: [
+                        ERRORS_MESSAGES,
+                        HTTP_SECURITY_MESSAGES,
+                        IDENTITY_MESSAGES,
+                        JOBS_MESSAGES,
+                        FFMPEG_MESSAGES,
+                        TTS_MESSAGES,
+                        VIDEO_MESSAGES,
+                        VIDEO_RENDERS_MESSAGES,
+                        CONTENT_MESSAGES,
+                        CONTENT_ITEMS_MESSAGES,
+                    ],
                 }),
                 ErrorsModule.register({
                     isGlobal: true,
@@ -53,6 +79,11 @@ export class AppModule {
                         JOBS_ERROR_KINDS,
                         IDENTITY_ERROR_KINDS,
                         SUPABASE_ERROR_KINDS,
+                        FFMPEG_ERROR_KINDS,
+                        TTS_ERROR_KINDS,
+                        VIDEO_ERROR_KINDS,
+                        VIDEO_RENDERS_ERROR_KINDS,
+                        CONTENT_ITEMS_ERROR_KINDS,
                     ],
                 }),
                 CqrsModule.register({ isGlobal: true }),
@@ -67,7 +98,9 @@ export class AppModule {
                 QueueModule.register({
                     isGlobal: true,
                     connections: [PRIMARY_ENTITY_MANAGER],
-                    schedulers: [],
+                    schedulers: [
+                        { queue: CONTENT_TICK_QUEUE, id: CONTENT_TICK_SCHEDULER, everyMs: CONTENT_TICK_EVERY_MS },
+                    ],
                     ...options.queue,
                 }),
                 JobsModule.register({
@@ -75,6 +108,18 @@ export class AppModule {
                     connection: PRIMARY_ENTITY_MANAGER,
                     ...options.jobs,
                 }),
+                FfmpegModule.register({ isGlobal: true, ...options.ffmpeg }),
+                TtsModule.register({ isGlobal: true, ...options.tts }),
+                VideoRendersModule.register({ isGlobal: true }),
+                VideoProjectsModule.register({ isGlobal: true }),
+                VideoProjectVersionsModule.register({ isGlobal: true }),
+                VideoModule.register({ isGlobal: true, ...options.video }),
+                ContentItemsModule.register({ isGlobal: true }),
+                ContentSettingsModule.register({ isGlobal: true }),
+                ContentModule.register({ isGlobal: true }),
+                RenderVideoQueueModule,
+                PublishContentQueueModule,
+                RendersHttpModule,
                 IdentityModule.register({ isGlobal: true, verifyAccessToken }),
                 LivenessModule.register({ isGlobal: true }),
                 SystemHealthHttpModule,

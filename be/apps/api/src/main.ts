@@ -6,7 +6,10 @@ import { parseHttpSecurityConfig, RequestValidationService } from "@modules/plat
 import { createJsonLogger, LoggingLogEvent } from "@modules/platform/logging"
 import { parseJobsConfig } from "@modules/platform/jobs"
 import { parseQueueConfig } from "@modules/platform/queue"
+import { parseVideoConfig } from "@modules/domain/video"
 import { parseSupabaseConfig } from "@modules/integrations/supabase"
+import { parseFfmpegConfig } from "@modules/integrations/ffmpeg"
+import { parseTtsConfig } from "@modules/integrations/tts"
 import { AppModule } from "./app.module"
 import type { ApiOptions } from "./api.options"
 
@@ -24,6 +27,9 @@ const bootstrap = async (): Promise<void> => {
         supabase: parseSupabaseConfig(env),
         queue: parseQueueConfig(env),
         jobs: parseJobsConfig(env),
+        ffmpeg: parseFfmpegConfig(env),
+        tts: parseTtsConfig(env),
+        video: parseVideoConfig(env),
     }
     const app = await NestFactory.create(AppModule.register(options), { rawBody: true })
     app.enableCors({ origin: [...options.httpSecurity.allowedOrigins] })
