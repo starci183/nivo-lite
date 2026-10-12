@@ -43,6 +43,7 @@ import {
   WalletIcon,
   WindowIcon,
   XMarkIcon,
+  TrashIcon,
   ArrowLeftIcon,
   EllipsisHorizontalIcon } from
 "@heroicons/react/24/outline";
@@ -92,6 +93,7 @@ import {
   UserPlusIcon as UserPlusSolidIcon,
   WalletIcon as WalletSolidIcon,
   WindowIcon as WindowSolidIcon,
+  TrashIcon as TrashSolidIcon,
   XMarkIcon as XMarkSolidIcon } from
 "@heroicons/react/16/solid";
 import type { IconUsage } from "@starci/grammar/common";
@@ -123,7 +125,7 @@ export type IconName =
 "home" | "explore" | "community" | "league" | "review" |
 "light" | "dark" | "locale" | "google" | "github" |
 "search" | "cart" | "notification" | "account" | "saved" | "blog" | "talents" | "jobs" | "practice" |
-"overview" | "brain" | "apps" | "agentos" | "servers" | "domains" | "wallet" | "support" | "sidebar" | "copy" | "copied";
+"overview" | "brain" | "apps" | "agentos" | "servers" | "domains" | "wallet" | "support" | "sidebar" | "copy" | "copied" | "trash";
 
 /**
  * The meaning-to-glyph map. The only file in the repository that names a Heroicon.
@@ -236,6 +238,7 @@ export const ICON_SOURCES: Record<IconName, GlyphCuts> = {
   sidebar: cuts(SidebarSimpleIcon, SidebarSimpleIcon),
   copy: cuts(DocumentDuplicateIcon, DocumentDuplicateIcon),
   copied: cuts(CheckIcon, CheckIcon),
+  trash: cuts(TrashIcon, TrashSolidIcon),
   google: cuts(GoogleMark, GoogleMark),
   github: cuts(GithubMark, GithubMark)
 };

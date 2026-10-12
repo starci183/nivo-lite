@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useRef, useState, type ClipboardEvent } from "react"
-import { Alert, Badge, Button, ButtonGroup, ComboBox, Disclosure, Drawer, FileDropzone, Input, List, ListItem, ListRow, SegmentedControl, Select, SurfaceListCard, Tabs, Text, Textarea } from "@starci/grammar/common"
+import { Alert, Badge, Button, ButtonGroup, ComboBox, Disclosure, Drawer, FileDropzone, IconButton, Input, List, ListItem, ListRow, SegmentedControl, Select, SurfaceListCard, Tabs, Text, Textarea } from "@starci/grammar/common"
+import { nivoIconSource } from "@/ui"
 import { useT } from "@/i18n/client"
 import { knowledge } from "@/i18n/dict/knowledge"
 import { CreditsAlert } from "@/features/brain/CreditsAlert"
@@ -478,6 +479,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
       <div className={STACK_CLASS}>
         <Tabs
           label={t("addTitle")}
+          variant="secondary"
           selectedKey={mode}
           items={[{ id: "files", label: t("tabFiles") }, { id: "write", label: t("tabWrite") }, { id: "faq", label: t("tabFaq") }]}
           onSelect={pickMode}
@@ -505,7 +507,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
                     />
                   </div>
                   <div className={LINK_ACTION_CLASS}>
-                    <Button variant="ghost" size="sm" isDisabled={busy} onPress={() => removeRow(r.id)}>{t("linkRemove")}</Button>
+                    <IconButton source={nivoIconSource("trash", "leading")} label={t("linkRemoveLabel")} variant="danger-soft" isDisabled={busy} onPress={() => removeRow(r.id)} />
                   </div>
                 </div>
               ))}
