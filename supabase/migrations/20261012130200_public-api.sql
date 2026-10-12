@@ -4,6 +4,7 @@
 --                         rate limit foreign key follow the rename; the key authentication function is re-created over the new name.
 --   public.public_api     one row per request the public API accepted (a customer, a message, a knowledge source): the body waits
 --                         here for the job that carries it out, and the unique dedupe key makes a repeat one request.
+--   public_api queue      the pgmq queue the ledger rows travel on.
 --   app_be grants         api_keys (admission, key management), the tables the API only reads, and the authentication function.
 -- Forward only. Policies are named <table>_<role>_<action>; each policy is dropped first so the file may run twice.
 
@@ -36,6 +37,9 @@ begin
 end $$;
 revoke execute on function public.api_key_auth(text) from public, anon, authenticated;
 grant execute on function public.api_key_auth(text) to app_be;
+
+-- The queue that carries accepted requests to their jobs.
+select pgmq.create('public_api');
 
 create table if not exists public.public_api (
     id uuid primary key default gen_random_uuid(),
