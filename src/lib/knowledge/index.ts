@@ -14,10 +14,11 @@ import { linkError, linkErrorCode, LINK_ERROR, resolveLink } from "./drive";
 import { fetchFile } from "./drive-api";
 import { driveGrantOf, withDriveToken } from "./drive-grant";
 import { sniffTextKind, textFromBytes } from "./extract";
-import { embeddingModel, embedText, embedTexts, toVector } from "./embed";
+import { embeddingModel, embedTexts, toVector } from "./embed";
 import { blockedBy, withUsage } from "../usage";
 import { drainBrainWork, onSourceDeleted, queueExtraction } from "../brain/doc-facts";
 import { recall, recallBlock } from "../brain/recall";
+import { lensFor, lensPassages, lensSources } from "./lens";
 import {
   KNOWLEDGE_SUGGESTIONS, MAX_SOURCE_CHARS, SOURCE_KINDS, suggestionTopic, suggestionsFor,
   type AddSourceInput, type Audience, type Citation, type KnowledgeChunk, type KnowledgeModule, type KnowledgeSource, type NivoItem, type NivoKind, type Passage, type Visibility,
@@ -296,25 +297,10 @@ export const reindexSource = async (id: string, content?: string): Promise<Knowl
 
 /* ------------------------------------------------------------------ retrieval */
 
-type MatchRow = { layer: "nivo" | "business"; id: string; source_id: string | null; module: string | null; kind: string; title: string; content: string; score: number; visibility: Visibility; topic: string | null };
-
-const matchWith = async (db: Db, a: { workspaceId: string; module: ModuleKey; query: string; limit: number; audience: Audience }): Promise<Array<Passage>> => {
-  const vector = a.query.trim() ? await withUsage({ workspaceId: a.workspaceId }, () => embedText(a.query)) : null;
-  const { data, error } = await db.rpc("match_knowledge", {
-    p_workspace: a.workspaceId, p_module: a.module, p_query_embedding: vector ? toVector(vector) : null, p_query: a.query, p_limit: a.limit, p_audience: a.audience,
-    // Only vectors made by this same model are compared with the query vector (see 20261021100000_embedding_model.sql).
-    p_query_model: vector ? embeddingModel() : null,
-  });
-  if (error) { console.error("match_knowledge failed:", error.message); return []; }
-  return ((data ?? []) as Array<MatchRow>).map((r) => ({
-    layer: r.layer, id: r.id, sourceId: r.source_id, module: r.module, kind: r.kind, title: r.title, content: r.content, score: r.score, visibility: r.visibility, topic: r.topic,
-  }));
-};
-
 /** Hybrid search over both layers for the signed-in workspace. `audience: "customer"` returns only public business passages. */
 export const searchKnowledge = async (module: ModuleKey, query: string, limit = 8, audience: Audience = "internal"): Promise<Array<Passage>> => {
   const { db, ws } = await ctx();
-  return matchWith(db, { workspaceId: ws, module, query, limit, audience });
+  return lensPassages(lensFor(ws, module, { audience }), query, limit, db);
 };
 
 /* ------------------------------------------------------------------ NIVO base knowledge */
@@ -395,7 +381,9 @@ const activeContextOf = async (db: Db, workspaceId: string, module: ModuleKey, v
  * Safe when everything is empty: the result is then a short note that no knowledge is available. Pass `db` from a webhook (no session).
  */
 export const buildAgentContext = async (a: { workspaceId: string; module: ModuleKey; query: string; audience?: Audience; db?: Db; limit?: number; scope?: "full" | "dynamic" }): Promise<{ system: string; citations: Array<Citation> }> => {
-  const audience: Audience = a.audience ?? "internal";
+  // The lens decides what this agent reads; a caller can only narrow it (a customer-facing reply passes audience "customer").
+  const lens = lensFor(a.workspaceId, a.module, { audience: a.audience });
+  const audience: Audience = lens.audience;
   const viaSession = !a.db;
   const db = (a.db ?? ((await supabaseServer()) as unknown as Db));
   // "dynamic" = only what changes per question (retrieved passages): the base rules and the active context version already live in the agent's synced OpenClaw workspace.
@@ -406,9 +394,9 @@ export const buildAgentContext = async (a: { workspaceId: string; module: Module
     const [base, version, passages, brain] = await Promise.all([
       dynamicOnly ? Promise.resolve([] as Array<NivoItem>) : nivoBase(db, a.module, NIVO_BASE_KINDS),
       dynamicOnly ? Promise.resolve(null) : activeContextOf(db, a.workspaceId, a.module, viaSession).catch(() => null),
-      matchWith(db, { workspaceId: a.workspaceId, module: a.module, query: a.query, limit: a.limit ?? 8, audience }),
+      lensPassages(lens, a.query, a.limit ?? 8, db),
       // The shared brain through this agent's view (facts; data hub rows for internal agents). Never blocks the turn.
-      recall(db, a.workspaceId, { module: a.module, audience, query: a.query }).catch((e: unknown) => {
+      recall(db, lens, { query: a.query }).catch((e: unknown) => {
         console.error("brain recall failed:", e instanceof Error ? e.message : String(e));
         return null;
       }),
@@ -503,9 +491,9 @@ export const openSuggestions = async (
 export const businessKnowledgeBrief = async (module: ModuleKey, message: string): Promise<{ text: string; sourceCount: number; notApplicable: Array<string> }> => {
   const { db, ws } = await ctx();
   const [sources, states, passages] = await Promise.all([
-    db.from("knowledge_sources").select("title, topic, kind, visibility, content, status").eq("workspace_id", ws).in("status", ["ready"]).or(`module.is.null,module.eq.${module}`).order("created_at", { ascending: false }).limit(40),
+    lensSources(lensFor(ws, module), 200, db).then((rows) => ({ data: rows.reverse().slice(0, 40) })), // newest 40, through the lens
     listSuggestionStates(),
-    matchWith(db, { workspaceId: ws, module, query: message, limit: 6, audience: "internal" }),
+    lensPassages(lensFor(ws, module), message, 6, db),
   ]);
   const list = (sources.data ?? []) as Array<{ title: string; topic: string | null; kind: string; visibility: Visibility; content: string }>;
   const notApplicable = KNOWLEDGE_SUGGESTIONS.filter((s) => states[s.key]).map((s) => `${s.topic_en} (gates: ${s.gates.join(", ")})`);

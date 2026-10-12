@@ -1,8 +1,8 @@
 import "server-only"
 import type { SupabaseClient } from "@supabase/supabase-js"
-import { factsForView, searchFacts } from "./facts"
+import { lensFacts, type Lens } from "../knowledge/lens"
 import { lessonsForModule } from "./lessons"
-import { factLine, type Audience, type Fact, type Lesson } from "./shared"
+import { factLine, type Fact, type Lesson } from "./shared"
 
 /**
  * Recall: what one agent should know for one question, with a citation for every line.
@@ -49,12 +49,13 @@ export const recallRecords = async (db: Db, ws: string, module: string, query: s
     .map((r) => ({ id: r.id, entity: r.entity, title: r.title, occurredAt: r.occurred_at, data: r.data ?? {}, connectionId: r.connection_id }))
 }
 
-export const recall = async (db: Db, ws: string, a: { module: string; audience: Audience; query: string; factLimit?: number; recordLimit?: number }): Promise<Recall> => {
-  const [view, records] = await Promise.all([
-    factsForView(db, ws, a.audience, a.module),
-    a.audience === "internal" ? recallRecords(db, ws, a.module, a.query, a.recordLimit ?? 6) : Promise.resolve([]),
+/** Facts come through the lens (the one place that decides what an agent may see); data hub rows only for an internal lens. */
+export const recall = async (db: Db, lens: Lens, a: { query: string; factLimit?: number; recordLimit?: number }): Promise<Recall> => {
+  const [facts, records] = await Promise.all([
+    lensFacts(lens, a.query, a.factLimit ?? 8, db),
+    lens.audience === "internal" ? recallRecords(db, lens.workspaceId, lens.module, a.query, a.recordLimit ?? 6) : Promise.resolve([]),
   ])
-  return { facts: searchFacts(view, a.query, a.factLimit ?? 8), records }
+  return { facts, records }
 }
 
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
@@ -75,8 +76,8 @@ export const recallBlock = (r: Recall): string => {
 }
 
 /** The standing part of an agent's memory, for its synced workspace (AGENTS.md): every fact in its view and its approved lessons. */
-export const standingMemory = async (db: Db, ws: string, module: string, audience: Audience, budget = 6000): Promise<string> => {
-  const [facts, lessons] = await Promise.all([factsForView(db, ws, audience, module), lessonsForModule(db, ws, module)])
+export const standingMemory = async (db: Db, lens: Lens, budget = 6000): Promise<string> => {
+  const [facts, lessons] = await Promise.all([lensFacts(lens, undefined, undefined, db), lessonsForModule(db, lens.workspaceId, lens.module)])
   const sections: Array<string> = []
   if (facts.length) {
     const lines: Array<string> = []
