@@ -160,7 +160,7 @@ The business owner is testing you. Behave exactly as you would with a customer. 
 
 export const designModule = async (description: string) =>
   completeJson<{ name: string; handle: string; role: string; instructions: string }>([
-    { role: "system", content: `${NIVO} Turn the owner's description into an AI module (agent) definition. JSON {"name","handle" (lowercase, a-z0-9-, max 16),"role" (max 6 words),"instructions" (4-6 imperative sentences, include what needs human approval)}. The name, role and instructions values:${await langRule()}` },
+    { role: "system", content: `${NIVO} Turn the owner's description into an AI agent definition. JSON {"name","handle" (lowercase, a-z0-9-, max 16),"role" (max 6 words),"instructions" (4-6 imperative sentences, include what needs human approval)}. The name, role and instructions values:${await langRule()}` },
     { role: "user", content: description },
   ], SETUP);
 

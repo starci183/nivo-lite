@@ -1,6 +1,6 @@
 import { defineDict } from "../core";
 
-/** Copy for the shifts workbench (/m/shifts/workbench): week schedule, requests, setup, quick import and "Lịch của tôi". Vietnamese is the product language. */
+/** Copy for the shifts workbench (/agents/shifts/workbench): week schedule, requests, setup, quick import and "Lịch của tôi". Vietnamese is the product language. */
 export const shifts = defineDict({
   en: {
     loadFailTitle: "Shifts could not be loaded", loadFailBody: "The data may not be ready yet. Try again in a moment.", errTitle: "That did not work",

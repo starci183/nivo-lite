@@ -9,6 +9,13 @@ const nextConfig: NextConfig = {
     serverActions: { bodySizeLimit: "12mb" },
     optimizePackageImports: ["@heroui/react"],
   },
+  // The catalogue moved from /m to /agents ("modules" are now "agents" to the user). Old links, bookmarks and stored hrefs keep working.
+  async redirects() {
+    return [
+      { source: "/m", destination: "/agents", permanent: true },
+      { source: "/m/:path*", destination: "/agents/:path*", permanent: true },
+    ];
+  },
   // The VPS container build (Dockerfile.web) sets NEXT_OUTPUT=standalone; the Netlify build leaves it unset and is unchanged.
   ...(process.env.NEXT_OUTPUT === "standalone" ? { output: "standalone" as const } : {}),
 };

@@ -16,7 +16,7 @@ import type { Outcome } from "@/lib/types";
 const run = async <T>(fn: () => Promise<T>): Promise<Outcome<T>> => {
   try {
     const data = await fn();
-    revalidatePath("/m/inventory/workbench");
+    revalidatePath("/agents/inventory/workbench");
     return { ok: true, data };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };

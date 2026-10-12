@@ -1,6 +1,6 @@
 import { defineDict } from "../core";
 
-/** Copy for the Content workbench (/m/content/workbench): calendar, list, editor, approvals, balance and settings. Channel names live in resources/content/channels.json. */
+/** Copy for the Content workbench (/agents/content/workbench): calendar, list, editor, approvals, balance and settings. Channel names live in resources/content/channels.json. */
 export const content = defineDict({
   en: {
     metricsAria: "Content figures",
@@ -178,7 +178,7 @@ export const content = defineDict({
     cadenceSave: "Save rhythm",
     dayShort: "Mon,Tue,Wed,Thu,Fri,Sat,Sun",
     settingsBrand: "Brand voice",
-    settingsBrandBody: "NIVO already reads the tone you confirmed in the module setup. Add anything specific to posts here.",
+    settingsBrandBody: "NIVO already reads the tone you confirmed in the agent setup. Add anything specific to posts here.",
     brandVoice: "How the posts should sound",
     brandAvoid: "Never say",
     brandCta: "Usual call to action",
@@ -374,7 +374,7 @@ export const content = defineDict({
     cadenceSave: "Lưu tần suất",
     dayShort: "T2,T3,T4,T5,T6,T7,CN",
     settingsBrand: "Giọng thương hiệu",
-    settingsBrandBody: "NIVO đã đọc giọng điệu bạn xác nhận lúc thiết lập module. Thêm ở đây những điều riêng cho bài đăng.",
+    settingsBrandBody: "NIVO đã đọc giọng điệu bạn xác nhận lúc thiết lập agent. Thêm ở đây những điều riêng cho bài đăng.",
     brandVoice: "Bài đăng nên nghe như thế nào",
     brandAvoid: "Không bao giờ nói",
     brandCta: "Lời kêu gọi quen thuộc",

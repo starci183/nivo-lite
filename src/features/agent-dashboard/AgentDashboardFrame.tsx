@@ -14,7 +14,7 @@ import { FRAME_CLASS_NAME, HEAD_CLASS_NAME, PANEL_CLASS_NAME, SIDE_COLUMN_CLASS_
 import { ConnectionsRegion, DoneRegion, KnowledgeRegion, WaitingRegion } from "./regions";
 
 /**
- * AGENT DASHBOARD FRAME - the one page anatomy of every agent's workbench (/m/<module>/workbench). It composes @starci/grammar only.
+ * AGENT DASHBOARD FRAME - the one page anatomy of every agent's workbench (/agents/<module>/workbench). It composes @starci/grammar only.
  * Regions, top to bottom:
  *
  *   1. A SectionHeader (the trail is ModuleChrome's, never repeated here): the agent's name, its mode badge (assist / autopilot) and the page command (`command`).
@@ -31,7 +31,7 @@ import { ConnectionsRegion, DoneRegion, KnowledgeRegion, WaitingRegion } from ".
  *   - client view: `<AgentDashboardFrame module data={dashboard} figures={[4 DescriptionListStatItem]} tabs={[{ id, label, content }]} initialTab={tab} />`.
  *     The module keeps all its own panels as the `content` of its tabs.
  *   - loading.tsx entry (features/module-workbench/loading.tsx): a client component returning the same frame with `isLoading`, the module's real
- *     figure terms and tab labels and no `data`; register it in LOADINGS there. Failure of the whole route is app/(console)/m/[module]/workbench/error.tsx
+ *     figure terms and tab labels and no `data`; register it in LOADINGS there. Failure of the whole route is app/(console)/agents/[module]/workbench/error.tsx
  *     (RouteError); a failed region fails in place (`Region.ok === false`), a failed ribbon through `figuresFailed`.
  *
  * Props:
@@ -112,7 +112,7 @@ export const AgentDashboardFrame = ({
   return (
     <div className={FRAME_CLASS_NAME}>
       <div className={HEAD_CLASS_NAME}>
-        {/* The trail (Tổng quan > Module > <module>) and the module heading belong to ModuleChrome above the frame: one trail per page. */}
+        {/* The trail (Tổng quan > Agent > <module>) and the agent heading belong to ModuleChrome above the frame: one trail per page. */}
         <SectionHeader
           level={2}
           title={heading}

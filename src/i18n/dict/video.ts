@@ -1,6 +1,6 @@
 import { defineDict } from "../core";
 
-/** Copy for the Tạo video workbench (/m/video/workbench). Plain Vietnamese; goal names come from resources/video/templates/goals. */
+/** Copy for the Tạo video workbench (/agents/video/workbench). Plain Vietnamese; goal names come from resources/video/templates/goals. */
 export const video = defineDict({
   en: {
     eyebrow: "Video maker",

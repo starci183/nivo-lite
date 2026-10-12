@@ -1,6 +1,6 @@
 import { defineDict } from "../core";
 
-/** Copy for the Sales workbench (/m/sales/workbench): header figures and its five surfaces. Action, reason and field labels live in the governance dict. */
+/** Copy for the Sales workbench (/agents/sales/workbench): header figures and its five surfaces. Action, reason and field labels live in the governance dict. */
 export const workbenchSales = defineDict({
   en: {
     metricOpen: "Open opportunities",

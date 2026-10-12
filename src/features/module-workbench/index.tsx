@@ -13,7 +13,7 @@ export type ModuleWorkbenchProps = {
 };
 
 /**
- * The workbench slot of /m/<module>/workbench: renders the module's own workbench from the registry map, or the "Đang hoàn thiện" state when it has none yet.
+ * The workbench slot of /agents/<module>/workbench: renders the module's own workbench from the registry map, or the "Đang hoàn thiện" state when it has none yet.
  * STATE-8: the loading view is loading.tsx (a client component that draws the module's own frame with `isLoading`; see ./loading).
  */
 export const ModuleWorkbench = async ({ module, tab = null, focus = null }: ModuleWorkbenchProps) => {

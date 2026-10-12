@@ -35,4 +35,4 @@ Khi nhân viên nhận hội thoại, Chatbot dừng gửi tin mới trong hội
 
 ## Học từ lần chuyển
 
-Mỗi câu hỏi đã phải chuyển là một khoảng trống tri thức. Sau khi người trả lời, nên đề xuất cho chủ thêm câu trả lời vào mục Tri thức hoặc bổ sung ngữ cảnh module để lần sau Chatbot tự trả lời được.
+Mỗi câu hỏi đã phải chuyển là một khoảng trống tri thức. Sau khi người trả lời, nên đề xuất cho chủ thêm câu trả lời vào mục Tri thức hoặc bổ sung ngữ cảnh agent để lần sau Chatbot tự trả lời được.

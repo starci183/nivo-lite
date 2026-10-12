@@ -88,7 +88,7 @@ const publishSchedule: Performer = {
     const open = shifts.filter((s) => !s.staffId);
     if (open.length) await notifyManagers({ ...c, db }, "gap", `Còn ${open.length} ca trống tuần ${weekLabel(week)}: ${open.slice(0, 4).map((s) => shiftLine(setup, s)).join("; ")}${open.length > 4 ? "…" : ""}. Nhân viên có thể đăng ký ở mục Lịch của tôi.`, { scheduleId });
     await logEvidence(db, c.ws, { work_item_id: item.id, kind: "shifts.published", actor: by.name, summary: `Đã đăng lịch tuần ${weekLabel(week)}: ${sent} người nhận, ${jobs} việc nhắc đã xếp lịch`, evidence: JSON.stringify({ schedule_id: scheduleId, shifts: shifts.length, open: open.length }) });
-    return { summary: `Đã đăng lịch tuần ${weekLabel(week)}: ${sent} nhân viên đã nhận lịch, ${jobs} việc nhắc đã xếp.`, evidence: "captured", href: "/m/shifts/workbench", detail: `Bản ${String(sched.version)}` };
+    return { summary: `Đã đăng lịch tuần ${weekLabel(week)}: ${sent} nhân viên đã nhận lịch, ${jobs} việc nhắc đã xếp.`, evidence: "captured", href: "/agents/shifts/workbench", detail: `Bản ${String(sched.version)}` };
   },
   onReject: async (c, _item, p) => {
     await logEvidence(c.db, c.ws, { kind: "shifts.publish_declined", actor: c.actor, summary: `Chủ chưa đồng ý đăng lịch tuần ${f(p, "week_start")}; bản nháp vẫn còn để sửa.` });
@@ -124,7 +124,7 @@ const approveSwap: Performer = {
     if (toP) await notifyStaff({ ...c, db }, toP, "swap", `Bạn đã nhận ca: ${line}${fromP ? ` (thay ${fromP.name})` : ""}.`, { shiftId: fresh.shift.id, workItemId: item.id });
     if (fromP) await notifyStaff({ ...c, db }, fromP, "swap", `Yêu cầu đổi ca ${line} đã được duyệt: ${toP?.name ?? "người khác"} sẽ làm ca này.`, { shiftId: fresh.shift.id, workItemId: item.id });
     await logEvidence(db, c.ws, { work_item_id: item.id, kind: "shifts.swap_approved", actor: by.name, summary: `Duyệt ${kind === "claim" ? "nhận ca trống" : "đổi ca"}: ${line} → ${toP?.name ?? "—"}`, evidence: fresh.reasons.join(" ") || "Trong quy tắc" });
-    return { summary: `Đã duyệt ${kind === "claim" ? "nhận ca trống" : "đổi ca"}: ${line} giờ do ${toP?.name ?? "—"} làm.`, evidence: "captured", href: "/m/shifts/workbench" };
+    return { summary: `Đã duyệt ${kind === "claim" ? "nhận ca trống" : "đổi ca"}: ${line} giờ do ${toP?.name ?? "—"} làm.`, evidence: "captured", href: "/agents/shifts/workbench" };
   },
   onReject: async (c, _item, p, by) => {
     const db = supabaseAdmin();
@@ -169,7 +169,7 @@ const approveLeave: Performer = {
       await notifyManagers({ ...c, db }, "gap", `${person?.name ?? "Một nhân viên"} nghỉ nên có ${hit.length} ca thành ca trống: ${parts.join("; ")}.`, { workItemId: item.id });
     }
     await logEvidence(db, c.ws, { work_item_id: item.id, kind: "shifts.leave_approved", actor: by.name, summary: `Duyệt nghỉ cho ${person?.name ?? "—"} (${from}${from === to ? "" : ` → ${to}`}), ${hit.length} ca thành ca trống`, evidence: leaveId });
-    return { summary: `Đã duyệt nghỉ cho ${person?.name ?? "—"}; ${hit.length} ca trở thành ca trống.`, evidence: "captured", href: "/m/shifts/workbench" };
+    return { summary: `Đã duyệt nghỉ cho ${person?.name ?? "—"}; ${hit.length} ca trở thành ca trống.`, evidence: "captured", href: "/agents/shifts/workbench" };
   },
   onReject: async (c, item, p, by) => {
     const db = supabaseAdmin();

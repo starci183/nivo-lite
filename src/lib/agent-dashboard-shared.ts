@@ -63,5 +63,5 @@ export const workbenchHref = (module: ModuleKey, opts: { readonly tab?: string; 
   if (opts.tab) q.set("tab", opts.tab);
   if (opts.focus) q.set("focus", opts.focus);
   const qs = q.toString();
-  return `/m/${module}/workbench${qs ? `?${qs}` : ""}`;
+  return `/agents/${module}/workbench${qs ? `?${qs}` : ""}`;
 };

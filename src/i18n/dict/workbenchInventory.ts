@@ -1,6 +1,6 @@
 import { defineDict } from "../core";
 
-/** Copy of the Inventory agent dashboard (/m/inventory/workbench): the four figures of the ribbon, the failure state and the tab labels the loading view repeats. */
+/** Copy of the Inventory agent dashboard (/agents/inventory/workbench): the four figures of the ribbon, the failure state and the tab labels the loading view repeats. */
 export const workbenchInventory = defineDict({
   en: {
     metricReorder: "Items below reorder point",

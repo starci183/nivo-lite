@@ -13,7 +13,7 @@ export type AccountingWorkbenchProps = {
   readonly tab?: string | null;
 };
 
-/** Accounting workbench slot of /m/accounting/workbench: the agent dashboard frame around the four Accounting surfaces. */
+/** Accounting workbench slot of /agents/accounting/workbench: the agent dashboard frame around the four Accounting surfaces. */
 const Workbench = async ({ tab = null }: AccountingWorkbenchProps = {}) => {
   const t = await getT(workbenchAccounting);
   // Every waiting accounting item is a "question": a "Chờ bạn" row opens the Questions tab, where the existing decide UI renders it.

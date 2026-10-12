@@ -10,4 +10,4 @@ export const STATUS_TONE: Record<ShownStatus, "neutral" | "accent" | "success" |
 
 export const TAB_ROUTES = ["setup", "workbench", "settings"] as const;
 export type ModuleTab = (typeof TAB_ROUTES)[number];
-export const tabHref = (module: ModuleKey, tab: ModuleTab): string => (tab === "setup" ? `/m/${module}` : `/m/${module}/${tab}`);
+export const tabHref = (module: ModuleKey, tab: ModuleTab): string => (tab === "setup" ? `/agents/${module}` : `/agents/${module}/${tab}`);

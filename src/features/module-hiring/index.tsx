@@ -15,7 +15,7 @@ export type HiringWorkbenchProps = {
 };
 
 /**
- * Connected Hiring workbench (/m/hiring/workbench): the agent dashboard frame around the six Hiring surfaces. Reads with the signed-in manager's own client
+ * Connected Hiring workbench (/agents/hiring/workbench): the agent dashboard frame around the six Hiring surfaces. Reads with the signed-in manager's own client
  * and still renders if the tables are not ready. A non-manager gets the access notice alone: candidate files are personal data, so the frame's lists are not read for them.
  */
 const WorkbenchHiring = async ({ tab = null }: HiringWorkbenchProps = {}) => {

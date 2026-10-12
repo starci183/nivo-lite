@@ -12,8 +12,8 @@ export type LeadGenWorkbenchProps = {
 };
 
 /**
- * Workbench slot of /m/lead_gen/workbench: the agent dashboard frame around the four Lead Gen areas.
- * A failed read throws to the route's RouteError (app/(console)/m/[module]/workbench/error.tsx); the STATE-8 loading view is ./loading.
+ * Workbench slot of /agents/lead_gen/workbench: the agent dashboard frame around the four Lead Gen areas.
+ * A failed read throws to the route's RouteError (app/(console)/agents/[module]/workbench/error.tsx); the STATE-8 loading view is ./loading.
  * A waiting row of the frame opens the Comments tab on that item.
  */
 const WorkbenchLeadGen = async ({ tab = null, focus = null }: LeadGenWorkbenchProps = {}) => {

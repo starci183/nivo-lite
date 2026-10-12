@@ -23,7 +23,7 @@ import type { WorkItem } from "./flow-types";
  * Texts to candidates are always sent from inside a performer, i.e. after the gate let the item through.
  */
 export const hiringCtx = (ws: string, db: Db = hdb()): EngineCtx => ({ db, ws, actor: "NIVO", locale: "vi" });
-const href = (candidateId: string) => `/m/hiring/workbench?tab=candidates&c=${candidateId}`;
+const href = (candidateId: string) => `/agents/hiring/workbench?tab=candidates&c=${candidateId}`;
 
 const company = async (db: Db, ws: string): Promise<string> => ((await db.from("workspaces").select("name").eq("id", ws).maybeSingle()).data as { name: string } | null)?.name ?? "";
 const contactOf = (c: Pick<CandidateRow, "email" | "phone">): string => c.email || c.phone;

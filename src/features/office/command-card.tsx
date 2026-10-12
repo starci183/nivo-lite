@@ -19,7 +19,7 @@ export const commandAnchor = (candidateId: string): string => `command-${candida
 export const acceptsCommands = (agent: Agent | undefined): boolean => !!agent && agent.status === "active" && acceptsOf(agent.module as ModuleKey).length > 0
 
 /** Where a work item lives: the receiving department's workbench, focused on it. */
-export const workItemHref = (module: string, workItemId: string): string => `/m/${module}/workbench?focus=${workItemId}`
+export const workItemHref = (module: string, workItemId: string): string => `/agents/${module}/workbench?focus=${workItemId}`
 
 /** Props for {@link CommandCard}. */
 export type CommandCardProps = {

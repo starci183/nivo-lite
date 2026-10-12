@@ -97,11 +97,11 @@ export const GUIDE_PAGES: ReadonlyArray<GuidePage> = [
     keywords: ["bo nao", "second brain", "su that", "mau thuan", "agent nho", "ghi nho", "doi gia", "gia moi", "agent biet gi", "bai hoc", "brain", "memory"],
   },
   {
-    id: "modules", path: "/m", managerOnly: true,
-    title: { vi: "Module", en: "Modules" },
+    id: "modules", path: "/agents", managerOnly: true,
+    title: { vi: "Agent", en: "Agents" },
     what: { vi: "Cài và cấu hình các agent: Chatbot, Bán hàng, Kế toán, Đặt lịch, Kho, Tuyển dụng…", en: "Install and set up agents: Chatbot, Sales, Accounting, Booking, Inventory, Hiring…" },
-    steps: { vi: ["Mở Module", "Chọn module cần dùng và bấm Cài", "Làm theo các bước thiết lập"], en: ["Open Modules", "Pick a module and install it", "Follow the setup steps"] },
-    keywords: ["module", "cai dat agent", "cai chatbot", "chatbot", "ban hang", "ke toan", "dat lich", "kho", "tuyen dung", "agent"],
+    steps: { vi: ["Mở Agent", "Chọn agent cần dùng và bấm Cài", "Làm theo các bước thiết lập"], en: ["Open Agents", "Pick an agent and install it", "Follow the setup steps"] },
+    keywords: ["module", "modules", "agents", "cai dat agent", "cai chatbot", "chatbot", "ban hang", "ke toan", "dat lich", "kho", "tuyen dung", "agent"],
   },
   {
     id: "team", path: "/team", managerOnly: true, target: "team.invite",

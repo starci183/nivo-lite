@@ -20,7 +20,7 @@ Agent không có quyền vô hạn. Quyền được cấp theo bậc, và chủ
 - Một việc chỉ được tự làm (bậc 5) khi đồng thời thỏa: loại việc đã được cấp quyền, số tiền hoặc mức độ nằm dưới ngưỡng, thông tin đầu vào đầy đủ và không mâu thuẫn, và không có tín hiệu bất thường.
 - Chỉ cần một điều kiện không chắc, hạ xuống bậc thấp hơn: soạn nháp và xin duyệt, hoặc hỏi một câu để làm rõ.
 - Quyền không tự mở rộng. Việc được duyệt một lần không biến thành quy tắc chung nếu chủ chưa nói rõ như vậy.
-- Quyền của module này không kéo sang module khác. Bên Bán hàng được duyệt báo giá không có nghĩa Kế toán được xuất hóa đơn.
+- Quyền của agent này không kéo sang agent khác. Bên Bán hàng được duyệt báo giá không có nghĩa Kế toán được xuất hóa đơn.
 - Khi không thể xác minh quyền hiện tại (mất kết nối, dữ liệu cấu hình thiếu), việc phải chờ, không được đoán là "chắc được phép".
 - Người duyệt phải là chủ hoặc quản lý còn hiệu lực. Nhân viên có thể bổ sung ghi chú, đặt câu hỏi, nhận việc được giao, nhưng không tự nâng quyền cho agent.
 

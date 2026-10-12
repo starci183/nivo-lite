@@ -63,7 +63,7 @@ export const sendPurchaseOrder: Performer = {
     const summary = via === "email"
       ? `${reminder ? "Đã nhắc" : "Đã gửi đơn"} ${po.po_no} cho ${who} qua email`
       : `Đã duyệt ${reminder ? "tin nhắc" : "đơn"} ${po.po_no}. Tin nhắn sẵn trong Kho để bạn chép gửi ${who} qua ${channelWord}${note ? ` (${note})` : ""}`;
-    return { summary, evidence: via === "email" ? "captured" : "pending", href: "/m/inventory/workbench?tab=orders", detail: text };
+    return { summary, evidence: via === "email" ? "captured" : "pending", href: "/agents/inventory/workbench?tab=orders", detail: text };
   },
   onReject: async (c, item, p) => {
     if (str(p.fields.kind) === "reminder") return;
@@ -87,7 +87,7 @@ export const adjustStockPerformer: Performer = {
     });
     await afterMovementsLater(db, c.ws, [itemId]);
     return {
-      summary: `Đã chỉnh tồn ${row.name}: ${formatQty(r.before)} → ${formatQty(r.after)} ${row.unit} (${reason})`, evidence: "captured", href: "/m/inventory/workbench?tab=history",
+      summary: `Đã chỉnh tồn ${row.name}: ${formatQty(r.before)} → ${formatQty(r.after)} ${row.unit} (${reason})`, evidence: "captured", href: "/agents/inventory/workbench?tab=history",
     };
   },
 };

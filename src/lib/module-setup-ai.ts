@@ -77,7 +77,7 @@ export const runSetupTurn = async (input: SetupTurnInput): Promise<SetupTurnResu
     "Setup checklist (gates). Every gate must end up confirmed by the owner:",
     gateLines,
     "",
-    nivoSetup ? "NIVO's own knowledge for this module (what a complete setup must contain, and the limits of what the AI may do). Use it to decide what to ask and how concrete the answer must be:\n" + nivoSetup : "",
+    nivoSetup ? "NIVO's own knowledge for this agent (what a complete setup must contain, and the limits of what the AI may do). Use it to decide what to ask and how concrete the answer must be:\n" + nivoSetup : "",
     "",
     business.text,
     "",

@@ -100,7 +100,7 @@ const speakAsDepartmentAgents = async (
   const { data } = await (await supabaseServer()).from("work_items").select("id, department").in("id", ids)
   const departmentOf = new Map(((data ?? []) as Array<{ id: string; department: string }>).map((w) => [w.id, w.department]))
   const agentOf = new Map<string, Agent>(agents.filter((a) => a.status === "active").map((a) => [a.module, a]))
-  // The work item's department is where its workbench lives: command mirror lines link to /m/<department>/workbench?focus=<id>.
+  // The work item's department is where its workbench lives: command mirror lines link to /agents/<department>/workbench?focus=<id>.
   const workItemModules = Object.fromEntries(departmentOf)
   const thread = messages.map((m): Message => {
     const agent = m.agent_id === null && m.author_kind === "system" && m.author_name !== COMMAND_LINE_AUTHOR && m.work_item_id ? agentOf.get(departmentOf.get(m.work_item_id) ?? "") : undefined

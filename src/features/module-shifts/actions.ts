@@ -28,7 +28,7 @@ const run = async <T>(fn: () => Promise<T>): Promise<Outcome<T>> => {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 };
-const refresh = () => revalidatePath("/m/shifts", "layout");
+const refresh = () => revalidatePath("/agents/shifts", "layout");
 
 /** Reload for the client after any change (and for week navigation): the whole manager bench for one week. */
 export async function loadBenchAction(monday: string): Promise<Outcome<BenchData>> {

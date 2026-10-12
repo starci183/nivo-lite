@@ -102,7 +102,7 @@ export const updateKnowledge = async (id: string, patch: Partial<Pick<AddSourceI
 export const askKnowledge = async (question: string, module: ModuleKey, audience: Audience): Promise<Outcome<Array<Passage>>> =>
   run(async () => {
     await getCurrentMember();
-    if (!isModuleKey(module)) throw new Error("Unknown module");
+    if (!isModuleKey(module)) throw new Error("Unknown agent");
     const q = question.trim().slice(0, 500);
     if (!q) return [];
     return searchKnowledge(module, q, 8, audience === "customer" ? "customer" : "internal");

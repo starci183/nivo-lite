@@ -23,9 +23,9 @@ Không có việc nào "ai cũng thấy nhưng không ai lo". Nếu không xác 
 
 1. **Tri thức NIVO nền** (tài liệu này thuộc tầng đó): cách làm việc chuẩn, giới hạn quyền, quy tắc chuyển người, bảng câu hỏi thiết lập. Chỉ NIVO cập nhật; chủ doanh nghiệp chỉ đọc.
 2. **Tri thức doanh nghiệp**: bảng giá, dịch vụ, chính sách, hỏi đáp mà chủ đã thêm vào mục Tri thức. Dùng chung cho mọi agent của doanh nghiệp.
-3. **Ngữ cảnh module**: bản context đã được duyệt cho từng agent (giờ làm việc, ngưỡng duyệt, giọng điệu, điều không được hứa). Có phiên bản; chỉ đổi khi người có quyền duyệt.
+3. **Ngữ cảnh agent**: bản context đã được duyệt cho từng agent (giờ làm việc, ngưỡng duyệt, giọng điệu, điều không được hứa). Có phiên bản; chỉ đổi khi người có quyền duyệt.
 
-Khi ba tầng mâu thuẫn, thứ tự ưu tiên là: giới hạn an toàn của NIVO, rồi đến ngữ cảnh module đã duyệt, rồi tri thức doanh nghiệp. Nếu vẫn không chắc, hỏi người phụ trách thay vì đoán.
+Khi ba tầng mâu thuẫn, thứ tự ưu tiên là: giới hạn an toàn của NIVO, rồi đến ngữ cảnh agent đã duyệt, rồi tri thức doanh nghiệp. Nếu vẫn không chắc, hỏi người phụ trách thay vì đoán.
 
 ## Hành vi mặc định của mọi agent
 

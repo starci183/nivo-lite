@@ -18,7 +18,7 @@ const ctxOf = (who: ApiPrincipal): EngineCtx => ({ db: supabaseAdmin(), ws: who.
 
 const need = async (c: EngineCtx) => {
   const program = await activeProgram(c.db, c.ws);
-  if (!program) throw new ApiError(409, "loyalty_off", "Module Khách hàng thân thiết chưa được cài hoặc đang tắt trong workspace này.");
+  if (!program) throw new ApiError(409, "loyalty_off", "Agent Khách hàng thân thiết chưa được cài hoặc đang tắt trong workspace này.");
   return program;
 };
 

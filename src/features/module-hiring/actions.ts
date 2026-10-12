@@ -184,12 +184,12 @@ export async function linkStaffAction(candidateId: string): Promise<Result<{ sta
     let positionIds: Array<string> = [];
     if (names.length) {
       const pos = await db.from("shifts_positions").select("id, name").eq("workspace_id", c.ws).eq("active", true);
-      if (pos.error && pos.error.code === "42P01") throw new HiringError("Chưa bật module Lịch & ca làm nên chưa tạo được hồ sơ nhân viên.");
+      if (pos.error && pos.error.code === "42P01") throw new HiringError("Chưa bật agent Lịch & ca làm nên chưa tạo được hồ sơ nhân viên.");
       const hit = ((pos.data ?? []) as Array<{ id: string; name: string }>).find((p) => names.some((n) => n.trim().toLowerCase() === p.name.trim().toLowerCase()));
       if (hit) positionIds = [hit.id];
     }
     const ins = await db.from("shifts_staff").insert({ workspace_id: c.ws, name: cand.name, phone: cand.phone || null, position_ids: positionIds, active: true }).select("id").single();
-    if (ins.error) throw new HiringError(ins.error.code === "42P01" ? "Chưa bật module Lịch & ca làm nên chưa tạo được hồ sơ nhân viên." : ins.error.message);
+    if (ins.error) throw new HiringError(ins.error.code === "42P01" ? "Chưa bật agent Lịch & ca làm nên chưa tạo được hồ sơ nhân viên." : ins.error.message);
     const staffId = (ins.data as { id: string }).id;
     await db.from("hiring_candidates").update({ staff_id: staffId }).eq("id", candidateId).eq("workspace_id", c.ws);
     await logCandidate(db, c.ws, candidateId, "staff_linked", c.name, "Tạo hồ sơ nhân viên trong Lịch & ca làm");

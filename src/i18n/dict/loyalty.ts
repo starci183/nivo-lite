@@ -1,6 +1,6 @@
 import { defineDict } from "../core";
 
-/** Copy for the loyalty module ("Khách hàng thân thiết"): the workbench (/m/loyalty/workbench) and the programme settings card. */
+/** Copy for the loyalty module ("Khách hàng thân thiết"): the workbench (/agents/loyalty/workbench) and the programme settings card. */
 export const loyalty = defineDict({
   en: {
     // header figures
@@ -70,7 +70,7 @@ export const loyalty = defineDict({
     publicTitle: "Points check page",
     publicBody: "Customers open this link and enter their phone to see points, tier and rewards. Share it on your menu, receipt or page.",
     publicOn: "The page is on.",
-    publicOff: "The page is off. Turn it on in the module settings.",
+    publicOff: "The page is off. Turn it on in the agent settings.",
     copiedNote: "Link copied.",
 
     // members
@@ -353,7 +353,7 @@ export const loyalty = defineDict({
     publicTitle: "Trang tra cứu điểm",
     publicBody: "Khách mở đường dẫn này, nhập số điện thoại để xem điểm, hạng và quà. Bạn có thể dán vào menu, hóa đơn hoặc trang của cửa hàng.",
     publicOn: "Trang đang bật.",
-    publicOff: "Trang đang tắt. Hãy bật trong phần cài đặt của module.",
+    publicOff: "Trang đang tắt. Hãy bật trong phần cài đặt của agent.",
     copiedNote: "Đã chép đường dẫn.",
 
     membersTitle: "Thành viên",

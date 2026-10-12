@@ -27,7 +27,7 @@ export const publishVideoPerformer: Performer = {
       work_item_id: item.id, kind: "video.approved", actor: by.name, summary: `${by.name} duyệt video «${p.title}»`,
       evidence: `Bản dựng ${p.render_id ?? ""}. Video đã sẵn sàng để tải và gửi; NIVO không tự đăng lên mạng xã hội.`,
     });
-    return { summary: `Đã duyệt video «${p.title}». Bạn tải về hoặc gửi đi được rồi; NIVO không tự đăng.`, evidence: "reviewed", href: "/m/video/workbench" };
+    return { summary: `Đã duyệt video «${p.title}». Bạn tải về hoặc gửi đi được rồi; NIVO không tự đăng.`, evidence: "reviewed", href: "/agents/video/workbench" };
   },
 };
 
@@ -37,6 +37,6 @@ export const renderDraftPerformer: Performer = {
     const projectId = field(item, "project_id");
     if (!projectId) throw new Error("Thiếu mã video.");
     const view = await renderProject(vctx(c, by.name), projectId);
-    return { summary: `Đã đưa video «${view.title}» vào hàng dựng.`, evidence: "captured", href: "/m/video/workbench", detail: view.render?.id ?? null };
+    return { summary: `Đã đưa video «${view.title}» vào hàng dựng.`, evidence: "captured", href: "/agents/video/workbench", detail: view.render?.id ?? null };
   },
 };

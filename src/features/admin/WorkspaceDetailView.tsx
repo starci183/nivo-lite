@@ -65,7 +65,7 @@ export const WorkspaceDetailView = ({ data, now }: { readonly data: WorkspaceDet
           ))}
         </SurfaceListCard>
 
-        <SurfaceListCard label="Modules" headingLevel={2} empty={<None>No module installed.</None>}>
+        <SurfaceListCard label="Agents" headingLevel={2} empty={<None>No agent installed.</None>}>
           {data.modules.map((m) => (
             <ListItem key={m.id} className={ROW_CLASS}>
               <div className={ROW_MAIN_CLASS}>

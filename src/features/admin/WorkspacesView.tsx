@@ -23,7 +23,7 @@ const COLUMNS: ReadonlyArray<DataTableColumn> = [
   { id: "plan", label: "Plan" },
   { id: "created", label: "Created" },
   { id: "members", label: "Members", align: "end" },
-  { id: "modules", label: "Modules" },
+  { id: "modules", label: "Agents" },
   { id: "connections", label: "Connections" },
   { id: "lastMessage", label: "Last customer msg" },
   { id: "messages", label: "Msgs 7d", align: "end" },
@@ -106,7 +106,7 @@ export const WorkspacesView = ({ items, filter, q, now }: WorkspacesViewProps) =
 
   return (
     <>
-      <SectionHeader level={1} eyebrow="Workspaces" title={`${items.length} customer businesses`} description="Billing, modules, connections and activity per workspace. Click a name for the full overview." />
+      <SectionHeader level={1} eyebrow="Workspaces" title={`${items.length} customer businesses`} description="Billing, agents, connections and activity per workspace. Click a name for the full overview." />
       <div className={FILTERS_CLASS}>
         <Form label="Search workspaces" action="/admin" method="get">
           <div className={SEARCH_FORM_CLASS}>

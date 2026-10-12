@@ -34,7 +34,7 @@ export const publishPerformer: Performer = {
     const { error } = await c.db.from("content_items").update({ status: "approved", approved_by: by.name, approved_at: at, variants, work_item_id: item.id }).eq("id", id).eq("workspace_id", c.ws);
     if (error) throw new Error(error.message);
     await addEvidence(c.db, c.ws, id, { kind: "approved", by: by.name, text: `${by.name} đã duyệt bài (quyết định ${item.id}).` });
-    return { summary: `Đã duyệt bài: ${post.title}`, evidence: "reviewed", lead_id: null, detail: p.draft ?? null, href: "/m/content/workbench?tab=queue" };
+    return { summary: `Đã duyệt bài: ${post.title}`, evidence: "reviewed", lead_id: null, detail: p.draft ?? null, href: "/agents/content/workbench?tab=queue" };
   },
   onReject: async (c, item, _p, by) => {
     const id = fieldOf(item, "content_item_id");

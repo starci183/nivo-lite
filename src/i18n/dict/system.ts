@@ -3,8 +3,8 @@ import { defineDict } from "../core";
 /** Messages and audit summaries written by the system into the Office and the history (stored as data). */
 export const system = defineDict({
   en: {
-    bought: "{user} bought the {module} module. {agent} (@{handle}) joined the Office.",
-    boughtEvent: "Bought {module} module · agent {agent}",
+    bought: "{user} bought the {module} agent. {agent} (@{handle}) joined the Office.",
+    boughtEvent: "Bought {module} agent · agent {agent}",
     updatedSetup: "Updated setup of {agent}",
     capturedFrom: "Lead captured from {channel}",
     newLead: "New lead: {name} ({company}) via {channel}.",
@@ -89,7 +89,7 @@ export const system = defineDict({
     stillMissing: "Still missing: {fields}. Add them and NIVO continues.",
     chooseCandidate: "Choose the invoice that matches this payment so NIVO can continue.",
     duplicateBlocked: "Duplicate blocked (time {n})",
-    recordOnly: "Decision recorded: {action}. This module has no automatic step for it yet.",
+    recordOnly: "Decision recorded: {action}. This agent has no automatic step for it yet.",
     workDuplicate: "This work already exists; NIVO did not do it twice",
     chatHandoff: "Lead handed to Sales AI · {verdict}",
     verdictAuto: "automatic, within your policy",
@@ -156,8 +156,8 @@ export const system = defineDict({
     staffNotFoundOrInactive: "This staff member is not active in the workspace",
   },
   vi: {
-    bought: "{user} đã mua module {module}. {agent} (@{handle}) đã vào Office.",
-    boughtEvent: "Đã mua module {module} · agent {agent}",
+    bought: "{user} đã mua agent {module}. {agent} (@{handle}) đã vào Office.",
+    boughtEvent: "Đã mua agent {module} · agent {agent}",
     updatedSetup: "Đã cập nhật thiết lập của {agent}",
     capturedFrom: "Ghi nhận khách hàng từ {channel}",
     newLead: "Khách hàng mới: {name} ({company}) qua {channel}.",
@@ -242,7 +242,7 @@ export const system = defineDict({
     stillMissing: "Còn thiếu: {fields}. Bạn bổ sung rồi NIVO sẽ tiếp tục.",
     chooseCandidate: "Chọn hóa đơn khớp với khoản thanh toán để NIVO tiếp tục.",
     duplicateBlocked: "Trùng lặp — NIVO đã bỏ qua (lần {n})",
-    recordOnly: "Đã ghi nhận quyết định: {action}. Module này chưa có bước tự động cho việc này.",
+    recordOnly: "Đã ghi nhận quyết định: {action}. Agent này chưa có bước tự động cho việc này.",
     workDuplicate: "Việc này đã có — NIVO không làm trùng",
     chatHandoff: "Đã chuyển lead cho Sales AI · {verdict}",
     verdictAuto: "tự động theo chính sách",

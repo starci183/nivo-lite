@@ -39,7 +39,7 @@ const DESTINATIONS: ReadonlyArray<Destination> = [
   { key: "authority", label: "navAuthority", route: "/authority", icon: "password", group: "operate" },
   { key: "decisions", label: "navDecisions", route: "/decisions", icon: "saved", group: "operate" },
   { key: "automations", label: "navAutomations", route: "/automations", icon: "agentos", group: "operate", managerOnly: true },
-  { key: "modules", label: "navModules", route: "/m", icon: "apps", group: "setup" },
+  { key: "modules", label: "navModules", route: "/agents", icon: "apps", group: "setup" },
   { key: "team", label: "navTeam", route: "/team", icon: "talents", group: "setup", managerOnly: true },
   { key: "connections", label: "navConnections", route: "/connections", icon: "servers", group: "setup", managerOnly: true },
   { key: "credits", label: "navCredits", route: "/billing", icon: "wallet", group: "setup", managerOnly: true },
@@ -81,7 +81,7 @@ export const ConsoleShell = ({ workspaceName, userName, email, avatarUrl, data, 
   const chatbot = data.agents.find((a) => a.module === "chatbot");
   const newEntries: ReadonlyArray<DropdownMenuEntry> = [
     { id: "new-lead", label: t("newLead"), href: "/leads?new=1" },
-    { id: "add-module", label: t("addModule"), href: "/m" },
+    { id: "add-module", label: t("addModule"), href: "/agents" },
     chatbot
       ? { id: "test-chatbot", label: t("testChatbot"), href: `/modules/${chatbot.id}/chat` }
       : { id: "buy-chatbot", label: t("buyChatbot"), href: "/modules/new?module=chatbot" },

@@ -94,7 +94,7 @@ const refuse = async (c: EngineCtx, i: SendCommandInput, refused: CommandRefusal
  * existing item (`created: false`) and posts nothing.
  */
 export const sendCommand = async (c: EngineCtx, i: SendCommandInput): Promise<CommandResult> => {
-  if (!isModuleKey(i.to)) return refuse(c, i, "unknown_module", `no module ${i.to}`);
+  if (!isModuleKey(i.to)) return refuse(c, i, "unknown_module", `no agent ${i.to}`);
   const accepted = commandOf(i.to, i.command);
   if (!accepted) return refuse(c, i, "unknown_command", `${i.to} does not accept ${i.command}`);
   const sender = await resolveSender(c, i.from);

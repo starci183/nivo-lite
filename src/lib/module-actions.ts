@@ -45,7 +45,7 @@ const refresh = () => revalidatePath("/", "layout");
 /** Install a module: its installation, its agent (reused when the workspace already has one), its default authority rules, the first setup session and the OpenClaw sync. Any module of the registry. */
 export const installModule = async (moduleKey: ModuleKey): Promise<Outcome<{ moduleKey: ModuleKey }>> =>
   run(async () => {
-    if (!isModuleKey(moduleKey)) throw new Error("Unknown module");
+    if (!isModuleKey(moduleKey)) throw new Error("Unknown agent");
     await requireManager();
     const session = await getSession();
     const db = await supabaseServer();

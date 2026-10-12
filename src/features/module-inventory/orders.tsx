@@ -87,7 +87,7 @@ const PoDrawer = ({ po, data, onClose }: { readonly po: PoView; readonly data: I
                 <Input id={`rc-c-${l.id}`} name={`rc-${l.id}`} label="Đơn giá thực" variant="secondary" value={recv[i]?.unitCost ?? ""} onValueChange={(v) => setRecvLine(i, "unitCost", v)} />
               </div>
             ))}
-            <Input id="rc-invoice" name="invoice" label="Số hoá đơn của nhà cung cấp (không bắt buộc)" hint="Có hoá đơn thì NIVO chuyển khoản phải trả cho Kế toán nếu bạn dùng module Kế toán." variant="secondary" value={invoiceNo} onValueChange={setInvoiceNo} />
+            <Input id="rc-invoice" name="invoice" label="Số hoá đơn của nhà cung cấp (không bắt buộc)" hint="Có hoá đơn thì NIVO chuyển khoản phải trả cho Kế toán nếu bạn dùng agent Kế toán." variant="secondary" value={invoiceNo} onValueChange={setInvoiceNo} />
           </>
         ) : (
           po.lines.map((l) => <Text key={l.id} size="sm">{l.name}: đặt {formatQty(l.qtyOrdered)}, nhận {formatQty(l.qtyReceived)} {l.unit} · {formatMoney(l.unitCost)}</Text>)

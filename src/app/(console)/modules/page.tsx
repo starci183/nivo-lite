@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-/** Moved: the module catalogue is /m. */
-const ModulesPage = () => redirect("/m");
+/** Moved: the module catalogue is /agents. */
+const ModulesPage = () => redirect("/agents");
 
 export default ModulesPage;

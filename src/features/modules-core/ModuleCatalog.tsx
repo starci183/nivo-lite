@@ -21,7 +21,7 @@ type ModuleCatalogProps = {
   readonly isLoading?: boolean;
 };
 
-/** /m: every module of the registry as a card, grouped by category. Install creates the module, its agent and the first setup session, then opens it. */
+/** /agents: every module of the registry as a card, grouped by category. Install creates the module, its agent and the first setup session, then opens it. */
 export const ModuleCatalog = ({ installations, canInstall, isLoading = false }: ModuleCatalogProps) => {
   const t = useT(modulesCore);
   const ts = useT(shell);
@@ -37,7 +37,7 @@ export const ModuleCatalog = ({ installations, canInstall, isLoading = false }: 
     startTransition(async () => {
       const result = await installModule(key);
       if (!result.ok) { setError(result.error); setBusy(null); return; }
-      router.push(`/m/${key}`);
+      router.push(`/agents/${key}`);
     });
   };
 
@@ -81,7 +81,7 @@ export const ModuleCatalog = ({ installations, canInstall, isLoading = false }: 
                         {isLoading ? (
                           <Button variant="secondary" isSkeleton>{t("openModule")}</Button>
                         ) : installation !== null ? (
-                          <Button variant="secondary" href={`/m/${key}`}>{t("openModule")}</Button>
+                          <Button variant="secondary" href={`/agents/${key}`}>{t("openModule")}</Button>
                         ) : canInstall ? (
                           <Button variant="primary" isPending={busy === key} isDisabled={busy !== null} onPress={() => onInstall(key)}>{t("install")}</Button>
                         ) : null}

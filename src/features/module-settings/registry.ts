@@ -3,7 +3,7 @@ import type { Installation } from "@/lib/modules-shared";
 import { LoyaltyProgramExtras } from "@/features/module-loyalty/ProgramSettings";
 import { ChatbotReplyExtras } from "./extras/ChatbotReplyExtras";
 
-/** What a module's own settings extra receives (rendered under the common settings cards of /m/<module>/settings). */
+/** What a module's own settings extra receives (rendered under the common settings cards of /agents/<module>/settings). */
 export type SettingsExtraProps = { readonly installation: Installation; readonly canEdit: boolean };
 
 /**

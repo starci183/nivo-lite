@@ -56,14 +56,14 @@ export const ModuleChrome = ({ current, moduleKey, installations, canSetup, isLo
         rail={
         <nav aria-label={t("navLabel")} className={RAIL_CLASS_NAME}>
           <div className={RAIL_HEAD_CLASS_NAME}>
-            <TextAction href="/m" size="sm" appearance="muted">{t("allModules")}</TextAction>
+            <TextAction href="/agents" size="sm" appearance="muted">{t("allModules")}</TextAction>
           </div>
           {siblings.map(({ key: k, installation }) => {
             const isCurrent = k === key;
             return (
               <TextAction
                 key={k}
-                href={`/m/${k}`}
+                href={`/agents/${k}`}
                 appearance="route"
                 isCurrent={isCurrent}
                 startContent={<IconTile source={nivoIconSource("apps", "leading")} artwork={<Image src={moduleDef(k).mascot} alt="" aspect="square" fit="contain" plate="none" />} />}
@@ -80,7 +80,7 @@ export const ModuleChrome = ({ current, moduleKey, installations, canSetup, isLo
         primary={
         <div className={MAIN_CLASS_NAME}>
           <div className={HEAD_CLASS_NAME}>
-            <Breadcrumbs label={ts("crumbLabel")} items={[{ id: "home", label: ts("crumbHome"), href: "/dashboard" }, { id: "modules", label: t("catalogTitle"), href: "/m" }, { id: "module", label: pick(def.name, locale) }]} />
+            <Breadcrumbs label={ts("crumbLabel")} items={[{ id: "home", label: ts("crumbHome"), href: "/dashboard" }, { id: "modules", label: t("catalogTitle"), href: "/agents" }, { id: "module", label: pick(def.name, locale) }]} />
           </div>
           <header className={HEADER_CLASS_NAME}>
             <IconTile size="md" source={nivoIconSource("apps", "leading")} artwork={<Image src={def.mascot} alt="" aspect="square" fit="contain" plate="none" />} />

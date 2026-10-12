@@ -9,7 +9,7 @@ import { shell } from "@/i18n/dict/shell";
 const ModuleFrameError = ({ reset }: { readonly reset: () => void }) => {
   const t = useT(modulesCore);
   const ts = useT(shell);
-  return <RouteError crumbs={[{ id: "home", label: ts("crumbHome"), href: "/dashboard" }, { id: "modules", label: t("catalogTitle"), href: "/m" }]} title={t("catalogTitle")} onRetry={reset} />;
+  return <RouteError crumbs={[{ id: "home", label: ts("crumbHome"), href: "/dashboard" }, { id: "modules", label: t("catalogTitle"), href: "/agents" }]} title={t("catalogTitle")} onRetry={reset} />;
 };
 
 export default ModuleFrameError;

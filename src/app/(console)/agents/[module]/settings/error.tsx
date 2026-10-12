@@ -17,7 +17,7 @@ const SettingsError = ({ reset }: { readonly reset: () => void }) => {
   const name = isModuleKey(module) ? pick(moduleDef(module).name, locale) : t("catalogTitle");
   return (
     <RouteError
-      crumbs={[{ id: "home", label: ts("crumbHome"), href: "/dashboard" }, { id: "modules", label: t("catalogTitle"), href: "/m" }, { id: "module", label: name }]}
+      crumbs={[{ id: "home", label: ts("crumbHome"), href: "/dashboard" }, { id: "modules", label: t("catalogTitle"), href: "/agents" }, { id: "module", label: name }]}
       title={t("tabSettings")}
       onRetry={reset}
     />

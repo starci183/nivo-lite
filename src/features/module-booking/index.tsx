@@ -15,7 +15,7 @@ export type BookingWorkbenchProps = {
   readonly tab?: string | null;
 };
 
-/** /m/booking/workbench: the agent dashboard frame around the calendar by resource, today's list, waiting list, statistics and the setup of services, resources and policy. */
+/** /agents/booking/workbench: the agent dashboard frame around the calendar by resource, today's list, waiting list, statistics and the setup of services, resources and policy. */
 const WorkbenchBooking = async ({ tab = null }: BookingWorkbenchProps = {}) => {
   const t = await getT(workbenchBooking);
   // A waiting booking item is a request to decide on the calendar (the "Lịch" tab lists the requested bookings first).

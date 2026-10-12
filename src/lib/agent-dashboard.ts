@@ -24,7 +24,7 @@ import { getInstallation, type ModuleKey } from "./modules-core";
  *
  *   agent        the module's installed agent: name and operating mode (assist / autopilot).
  *   waiting      "Chờ bạn": work items of this module in waiting_decision, oldest first. Each links to opts.decisionHref(item),
- *                default /m/<module>/workbench?focus=<work item id> (a workbench reads ?tab= and ?focus=; see workbenchHref).
+ *                default /agents/<module>/workbench?focus=<work item id> (a workbench reads ?tab= and ?focus=; see workbenchHref).
  *   done         "Đã tự làm 7 ngày": work items of this module finished by policy (decided_path "auto") in the last 7 days.
  *   connections  "Kết nối": the connections bound to the agent in agent_connections, with their status and the agent's access.
  *   knowledge    "Tri thức": the agent's lens counts (what it can read) and, if the knowledge_gaps table exists, its open gaps.

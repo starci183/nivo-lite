@@ -10,7 +10,7 @@ import {
 } from "./module-loyalty-shared";
 
 /**
- * What the loyalty workbench (/m/loyalty/workbench) and the settings card read. Server only: it uses the service role, scoped to the signed-in member's workspace
+ * What the loyalty workbench (/agents/loyalty/workbench) and the settings card read. Server only: it uses the service role, scoped to the signed-in member's workspace
  * (the loyalty tables are readable by members and writable only by the server).
  */
 export type LoyaltyStats = {

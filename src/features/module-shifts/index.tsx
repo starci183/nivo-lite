@@ -17,7 +17,7 @@ export type ShiftsWorkbenchProps = {
 };
 
 /**
- * Workbench slot of /m/shifts/workbench: "Lịch & ca làm". Owners and managers get the agent dashboard frame (four figures, waiting, done, connections,
+ * Workbench slot of /agents/shifts/workbench: "Lịch & ca làm". Owners and managers get the agent dashboard frame (four figures, waiting, done, connections,
  * knowledge) around the bench's tabs; staff get their own schedule alone, without the workspace-wide figures.
  */
 const WorkbenchShifts = async ({ tab = null }: ShiftsWorkbenchProps = {}) => {

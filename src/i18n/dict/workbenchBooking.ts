@@ -1,6 +1,6 @@
 import { defineDict } from "../core";
 
-/** Copy of the Booking agent dashboard (/m/booking/workbench): the four figures of the ribbon, the failure state and the tab labels the loading view repeats. */
+/** Copy of the Booking agent dashboard (/agents/booking/workbench): the four figures of the ribbon, the failure state and the tab labels the loading view repeats. */
 export const workbenchBooking = defineDict({
   en: {
     metricToday: "Bookings today",

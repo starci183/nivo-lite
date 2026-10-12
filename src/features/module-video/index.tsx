@@ -17,7 +17,7 @@ export type VideoWorkbenchProps = {
   readonly tab?: string | null;
 };
 
-/** The "Tạo video" workbench (/m/video/workbench): the agent dashboard frame around the library of the workspace's videos and the brand kit; the wizard that makes a video takes the page over. */
+/** The "Tạo video" workbench (/agents/video/workbench): the agent dashboard frame around the library of the workspace's videos and the brand kit; the wizard that makes a video takes the page over. */
 const WorkbenchVideo = async ({ tab = null }: VideoWorkbenchProps = {}) => {
   const t = await getT(video);
   const tf = await getT(workbenchFigures);

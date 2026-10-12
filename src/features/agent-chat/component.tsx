@@ -254,7 +254,7 @@ export const AgentChatBase = (props: AgentChatBaseProps) => {
       label={ts("crumbLabel")}
       items={[
         { id: "home", label: ts("crumbHome"), href: "/dashboard" },
-        { id: "modules", label: tm("catalogTitle"), href: "/m" },
+        { id: "modules", label: tm("catalogTitle"), href: "/agents" },
         props.isLoading ? { id: "agent", label: "", isSkeleton: true as const } : { id: "agent", label: props.agentName },
       ]}
     />

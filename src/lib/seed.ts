@@ -96,7 +96,7 @@ const EN: Copy = {
   draftA: "Hello, I'm NIVO's sales assistant. Thank you for sharing that your sales team loses follow-ups after the first call. We'd like to propose a 30-minute session to understand your current process: Thursday 10:00 or Friday 15:00 this week. Please let me know which slot suits you.",
   draftD: "Hello, thank you for being referred to NIVO. We'd like to propose a 30-minute session on Tuesday at 14:00 to look at how your customer care team currently handles delivery complaints.",
   ev: {
-    salesIncluded: "Sales module included with the workspace", accIncluded: "Accounting module included with the workspace",
+    salesIncluded: "Sales agent included with the workspace", accIncluded: "Accounting agent included with the workspace",
     capturedFrom: (ch) => `Lead captured from ${ch}`, owner: (who, next) => `Owner: ${who} · Next action: ${next}`,
     lostEvidence: "Customer needs a full CRM migration within two weeks; outside current scope. Revisit in Q1.",
     contextBrief: "Context brief created", approvedSent: (name, ch) => `Approved and sent to ${name} via ${ch}`,
@@ -179,7 +179,7 @@ const VI: Copy = {
   draftA: "Chào anh/chị, em là trợ lý kinh doanh của NIVO. Cảm ơn anh/chị đã chia sẻ về việc đội sales bị sót follow-up sau cuộc gọi đầu. Bên em xin đề xuất một buổi trao đổi 30 phút để hiểu rõ quy trình hiện tại: thứ Năm 10:00 hoặc thứ Sáu 15:00 tuần này. Anh/chị chọn giúp em khung giờ phù hợp nhé.",
   draftD: "Chào anh/chị, cảm ơn anh/chị đã được giới thiệu tới NIVO. Bên em đề xuất buổi trao đổi 30 phút vào thứ Ba 14:00 để cùng xem cách đội chăm sóc khách hàng đang xử lý khiếu nại giao hàng.",
   ev: {
-    salesIncluded: "Module Sales có sẵn trong workspace", accIncluded: "Module Accounting có sẵn trong workspace",
+    salesIncluded: "Agent Sales có sẵn trong workspace", accIncluded: "Agent Accounting có sẵn trong workspace",
     capturedFrom: (ch) => `Đã ghi nhận khách hàng từ ${ch}`, owner: (who, next) => `Người phụ trách: ${who} · Bước tiếp theo: ${next}`,
     lostEvidence: "Khách cần chuyển toàn bộ sang CRM mới trong hai tuần; nằm ngoài phạm vi hiện tại. Xem lại vào quý 1.",
     contextBrief: "Đã tạo bản tóm tắt bối cảnh", approvedSent: (name, ch) => `Đã duyệt và gửi cho ${name} qua ${ch}`,

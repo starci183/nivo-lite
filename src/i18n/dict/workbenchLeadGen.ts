@@ -1,6 +1,6 @@
 import { defineDict } from "../core";
 
-/** Copy for the Lead Gen workbench (/m/lead_gen/workbench): new leads, sources, comments, handoffs to Sales. Vietnamese is the product language. */
+/** Copy for the Lead Gen workbench (/agents/lead_gen/workbench): new leads, sources, comments, handoffs to Sales. Vietnamese is the product language. */
 export const workbenchLeadGen = defineDict({
   en: {
     figNewToday: "New leads today",

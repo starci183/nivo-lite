@@ -13,7 +13,7 @@ export type ContentWorkbenchProps = {
   readonly tab?: string | null;
 };
 
-/** Connected Content workbench (/m/content/workbench): the agent dashboard frame around the five Content surfaces. Reads with the member's session and still renders if the tables are not ready. */
+/** Connected Content workbench (/agents/content/workbench): the agent dashboard frame around the five Content surfaces. Reads with the member's session and still renders if the tables are not ready. */
 const WorkbenchContent = async ({ tab = null }: ContentWorkbenchProps = {}) => {
   const t = await getT(content);
   // Every waiting content item is a post to approve: a "Chờ bạn" row opens the Approvals tab, where the existing decide UI renders it.

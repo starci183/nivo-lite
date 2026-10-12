@@ -141,7 +141,7 @@ export const InfoPanel = ({ avatarUrl, agents, people, staff = [], pending, exce
               </div>
             )
           })}
-          <Button variant="outline" size="sm" width="fill" href="/m">{t("addAgent")}</Button>
+          <Button variant="outline" size="sm" width="fill" href="/agents">{t("addAgent")}</Button>
         </section>
 
         <section className={INFO_SECTION_CLASS_NAME} aria-label={t("tasksTitle")}>

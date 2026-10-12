@@ -35,8 +35,8 @@ export const confirmOfficeCommand = async (candidateId: string): Promise<Outcome
       await c.db.from("office_command_candidates").update({ status: "pending", decided_at: null, refusal_detail: detail }).eq("id", claimed.id);
     };
     if (!isModuleKey(claimed.module)) {
-      await release(`no module ${claimed.module}`);
-      throw new Error(`no module ${claimed.module}`);
+      await release(`no agent ${claimed.module}`);
+      throw new Error(`no agent ${claimed.module}`);
     }
     // from "owner": the receiver's gate decides. The default dedupe key makes the same command about the same subject one piece of work.
     let result: Awaited<ReturnType<typeof sendCommand>>;

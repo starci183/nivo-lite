@@ -13,7 +13,7 @@ const ModuleLayout = async ({ children, params }: ModuleLayoutProps) => {
   const { module } = await params;
   if (!isModuleKey(module)) notFound();
   const [session, installation, installations] = await Promise.all([getSession(), getInstallation(module), listInstallations()]);
-  if (!installation) redirect("/m");
+  if (!installation) redirect("/agents");
   return (
     <ModuleChrome current={installation} moduleKey={module} installations={installations} canSetup={isManagerRole(session.member.role)}>
       {children}

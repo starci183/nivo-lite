@@ -76,8 +76,8 @@ export const connectionWizard = defineDict({
     purpose_outbound_chat: "Sends its messages through here",
     purpose_bank_feed: "Reads the incoming transactions",
     purpose_lead_source: "Receives the leads of your lead ads",
-    agentHint: "Tick the agents that work through this connection. You can change this later in the module Settings.",
-    agentNone: "There is no agent for this connection yet. Create one in Modules, then tick it in the module Settings.",
+    agentHint: "Tick the agents that work through this connection. You can change this later in the agent Settings.",
+    agentNone: "There is no agent for this connection yet. Create one in Agents, then tick it in the agent Settings.",
     agentSaved: "Saved. The connection is ready.",
 
     pendingBadge: "Unfinished",
@@ -181,8 +181,8 @@ export const connectionWizard = defineDict({
     purpose_outbound_chat: "Gửi tin của mình qua kênh này",
     purpose_bank_feed: "Đọc các giao dịch đi vào",
     purpose_lead_source: "Nhận lead từ quảng cáo biểu mẫu của bạn",
-    agentHint: "Tick những agent làm việc qua kết nối này. Bạn đổi lại được trong Cài đặt của module.",
-    agentNone: "Chưa có agent cho kết nối này. Hãy tạo trong Module, rồi tick trong Cài đặt của module.",
+    agentHint: "Tick những agent làm việc qua kết nối này. Bạn đổi lại được trong Cài đặt của agent.",
+    agentNone: "Chưa có agent cho kết nối này. Hãy tạo trong Agent, rồi tick trong Cài đặt của agent.",
     agentSaved: "Đã lưu. Kết nối đã sẵn sàng.",
 
     pendingBadge: "Chưa hoàn tất",

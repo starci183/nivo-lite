@@ -51,7 +51,7 @@ Workbench là server component không nhận props, ví dụ `src/features/modul
   "order": 40,                        // thứ tự hiển thị
   "name": { "vi": "Lịch & ca làm", "en": "Shifts and schedules" },
   "short_name": { "vi": "Lịch ca AI", "en": "Shifts AI" },   // tên phòng ban trong Quyền hạn, hoạt động
-  "description": { "vi": "...", "en": "..." },               // một đoạn trên thẻ ở /m
+  "description": { "vi": "...", "en": "..." },               // một đoạn trên thẻ ở /agents
   "points": { "vi": ["...", "...", "..."], "en": ["...", "...", "..."] },
   "purpose": "a shift-scheduling assistant that ...",        // tiếng Anh, một dòng, đưa vào prompt chat thiết lập
   "icon": "review",                   // tên trong IconName của src/ui (generator kiểm tra)

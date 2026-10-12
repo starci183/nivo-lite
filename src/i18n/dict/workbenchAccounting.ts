@@ -1,6 +1,6 @@
 import { defineDict } from "../core";
 
-/** Copy for the Accounting workbench (/m/accounting/workbench): period overview, evidence, questions, ledger. */
+/** Copy for the Accounting workbench (/agents/accounting/workbench): period overview, evidence, questions, ledger. */
 export const workbenchAccounting = defineDict({
   en: {
     tabOverview: "Period overview",

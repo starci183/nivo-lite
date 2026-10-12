@@ -5,7 +5,7 @@ version: 1
 ---
 # Bảng câu hỏi thiết lập Bán hàng
 
-Module Bán hàng chỉ nên chạy khi sáu mục dưới đây đã có thông tin được chủ xác nhận. Kiểm tra trước trong Tri thức doanh nghiệp: bảng giá và chính sách thường đã trả lời một phần, khi đó tóm tắt lại để chủ xác nhận thay vì hỏi từ đầu.
+Agent Bán hàng chỉ nên chạy khi sáu mục dưới đây đã có thông tin được chủ xác nhận. Kiểm tra trước trong Tri thức doanh nghiệp: bảng giá và chính sách thường đã trả lời một phần, khi đó tóm tắt lại để chủ xác nhận thay vì hỏi từ đầu.
 
 ## offer_pricing — Gói bán và quy tắc giá (nếu có bán cho khách)
 Áp dụng khi doanh nghiệp bán sản phẩm hoặc dịch vụ cho khách bên ngoài. Nếu giá luôn báo riêng theo từng khách, hỏi cách báo giá thay vì bảng giá; nếu chủ nói không áp dụng, ghi nhận và coi như đã đủ.
