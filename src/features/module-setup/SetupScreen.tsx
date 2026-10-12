@@ -6,7 +6,8 @@ import { Alert, Badge, Button, ChatBubble, ChatBubbleSkeletons, ChatWorkspace, D
 import { useLocale, useT } from "@/i18n/client";
 import { intlLocale, TIME_ZONE } from "@/i18n/core";
 import { moduleSetup } from "@/i18n/dict/moduleSetup";
-import { applySetup, sendSetupMessage, setGate } from "@/lib/module-actions";
+import { applySetup, decideSetupWrite, sendSetupMessage, setGate } from "@/lib/module-actions";
+import type { SetupWrite, WriteDecision } from "@/lib/module-setup-writes";
 import {
   MODULE_GATES, allGatesConfirmed, gateEntry, gateHint, gateLabel, snapshotOf,
   type ContextVersion, type GateStatus, type Installation, type ModuleKey, type SetupMessage, type SetupRevision, type SetupSession,
@@ -14,6 +15,7 @@ import {
 import type { UnmetRequirement } from "@/lib/module-requirements";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { SetupKnowledge } from "./SetupKnowledge";
+import { SetupWriteCard } from "./SetupWriteCard";
 import * as c from "./classNames";
 
 type SetupScreenProps = {
@@ -27,6 +29,8 @@ type SetupScreenProps = {
   readonly initialVersions: ReadonlyArray<ContextVersion>;
   /** Requirements of the module (module.json requires) the workspace does not meet yet: a soft notice, never a block. */
   readonly unmetRequirements?: ReadonlyArray<UnmetRequirement>;
+  /** The confirm cards of the chat: facts for the Second Brain and authority rules NIVO proposed from the owner's answers. */
+  readonly initialWrites?: ReadonlyArray<SetupWrite>;
   /** STATE-8: the same tab while its data loads - card labels and gate names stay; the chat, draft, gate states and versions are skeletons. */
   readonly isLoading?: boolean;
 };
@@ -44,7 +48,7 @@ const mergeMessages = (current: ReadonlyArray<SetupMessage>, incoming: ReadonlyA
 };
 
 /** The Setup tab: private chat with NIVO on the left, the draft, gate checklist and versions on the right. */
-export const SetupScreen = ({ installation, moduleKey, initialSession, initialRevisions, initialMessages, initialVersions, unmetRequirements = [], isLoading = false }: SetupScreenProps) => {
+export const SetupScreen = ({ installation, moduleKey, initialSession, initialRevisions, initialMessages, initialVersions, unmetRequirements = [], initialWrites = [], isLoading = false }: SetupScreenProps) => {
   const t = useT(moduleSetup);
   const locale = useLocale();
   const router = useRouter();
@@ -52,6 +56,7 @@ export const SetupScreen = ({ installation, moduleKey, initialSession, initialRe
   const [revisions, setRevisions] = useState<ReadonlyArray<SetupRevision>>(initialRevisions);
   const [messages, setMessages] = useState<Array<SetupMessage>>([...initialMessages]);
   const [versions, setVersions] = useState<ReadonlyArray<ContextVersion>>(initialVersions);
+  const [writes, setWrites] = useState<Array<SetupWrite>>([...initialWrites]);
   const [text, setText] = useState("");
   const [chatError, setChatError] = useState<string | undefined>();
   const [isSending, startSending] = useTransition();
@@ -66,7 +71,7 @@ export const SetupScreen = ({ installation, moduleKey, initialSession, initialRe
   const gates = MODULE_GATES[moduleKey];
 
   // A new draft session (after an apply) arrives through the server: follow it.
-  useEffect(() => { setSession(initialSession ?? LOADING_SESSION); setRevisions(initialRevisions); setMessages([...initialMessages]); setVersions(initialVersions); }, [initialSession, initialRevisions, initialMessages, initialVersions]);
+  useEffect(() => { setSession(initialSession ?? LOADING_SESSION); setRevisions(initialRevisions); setMessages([...initialMessages]); setVersions(initialVersions); setWrites([...initialWrites]); }, [initialSession, initialRevisions, initialMessages, initialVersions, initialWrites]);
 
   // Realtime: NIVO's replies and the owner's other tabs.
   useEffect(() => {
@@ -98,8 +103,17 @@ export const SetupScreen = ({ installation, moduleKey, initialSession, initialRe
       if (!result.ok) { setChatError(result.error); return; }
       setSession(result.data.session);
       setMessages((cur) => mergeMessages(cur, result.data.messages));
+      setWrites(result.data.writes);
     });
   }, [text, isSending, session.id]);
+
+  /** The owner confirms, edits or dismisses one card; the error (if any) shows on the card. */
+  const onDecideWrite = useCallback(async (id: string, change: WriteDecision): Promise<string | undefined> => {
+    const result = await decideSetupWrite(id, change);
+    if (!result.ok) return result.error;
+    setWrites((cur) => cur.map((w) => (w.id === id ? result.data : w)));
+    return undefined;
+  }, []);
 
   const onGate = (key: string, action: "confirm" | "reopen" | "edit", evidence?: string) => {
     setGateError(undefined);
@@ -143,6 +157,20 @@ export const SetupScreen = ({ installation, moduleKey, initialSession, initialRe
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [revisions, messages, versions, session.id, locale, t]);
+  // The cards of an owner's message sit under NIVO's reply to it (the next assistant message).
+  const cardsAfter = useMemo(() => {
+    const out = new Map<string, Array<SetupWrite>>();
+    const sorted = [...messages].sort(byTime);
+    sorted.forEach((m, i) => {
+      if (m.role !== "user") return;
+      const mine = writes.filter((w) => w.sourceMessageId === m.id);
+      if (mine.length === 0) return;
+      const reply = sorted.slice(i + 1).find((x) => x.role === "assistant");
+      const at = reply ?? m;
+      out.set(at.id, [...(out.get(at.id) ?? []), ...mine]);
+    });
+    return out;
+  }, [messages, writes]);
   const stamp = (iso: string) => new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "medium", timeStyle: "short", timeZone: TIME_ZONE }).format(new Date(iso));
 
   return (
@@ -164,11 +192,17 @@ export const SetupScreen = ({ installation, moduleKey, initialSession, initialRe
                 {!isLoading && messages.length === 0 ? <EmptyNotice message={t("emptyTitle")} description={t("emptyBody")} /> : null}
                 {groups.map((g) => (
                   <Fragment key={g.id}>
-                    {g.messages.map((m) => (
-                      <ChatBubble key={m.id} side={m.role === "user" ? "outgoing" : "incoming"} author={m.role === "user" ? m.author || t("you") : t("nivo")}>
-                        {m.body}
-                      </ChatBubble>
-                    ))}
+                    {g.messages.map((m) => {
+                      const cards = cardsAfter.get(m.id) ?? [];
+                      return (
+                        <ChatBubble
+                          key={m.id} side={m.role === "user" ? "outgoing" : "incoming"} author={m.role === "user" ? m.author || t("you") : t("nivo")}
+                          footer={cards.length > 0 ? <div className={c.WRITES_CLASS_NAME}>{cards.map((w) => <SetupWriteCard key={w.id} write={w} onDecide={onDecideWrite} />)}</div> : undefined}
+                        >
+                          {m.body}
+                        </ChatBubble>
+                      );
+                    })}
                     {g.divider !== null ? <Divider label={g.divider} /> : null}
                   </Fragment>
                 ))}

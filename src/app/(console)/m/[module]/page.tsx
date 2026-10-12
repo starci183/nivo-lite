@@ -34,6 +34,7 @@ const SetupPage = async ({ params }: SetupPageProps) => {
       initialMessages={state.data.messages}
       initialVersions={versions}
       unmetRequirements={unmet}
+      initialWrites={state.data.writes}
     />
   );
 };

@@ -76,35 +76,90 @@
       "label_vi": "Gói bán và quy tắc giá",
       "label_en": "Offer and pricing rules",
       "hint_vi": "Bạn bán gì, bảng giá, mức giảm tối đa.",
-      "hint_en": "What you sell, price list, maximum discount."
+      "hint_en": "What you sell, price list, maximum discount.",
+      "writes": [
+        {
+          "kind": "fact",
+          "subjectType": "product",
+          "attributeLabel": "Giá",
+          "scope": "public"
+        },
+        {
+          "kind": "fact",
+          "subjectType": "policy",
+          "attributeLabel": "Mức giảm giá tối đa",
+          "scope": "restricted"
+        }
+      ]
     },
     {
       "key": "qualification",
       "label_vi": "Tiêu chí khách tiềm năng",
       "label_en": "Qualification criteria",
       "hint_vi": "Khách thế nào là đáng theo đuổi, thế nào thì bỏ qua.",
-      "hint_en": "Which leads are worth pursuing and which to drop."
+      "hint_en": "Which leads are worth pursuing and which to drop.",
+      "writes": [
+        {
+          "kind": "fact",
+          "subjectType": "policy",
+          "attributeLabel": "Tiêu chí khách tiềm năng",
+          "scope": "restricted"
+        }
+      ]
     },
     {
       "key": "followup_cadence",
       "label_vi": "Nhịp theo dõi",
       "label_en": "Follow-up cadence",
       "hint_vi": "Bao lâu theo dõi một lần, tối đa mấy lần.",
-      "hint_en": "How often to follow up and how many times at most."
+      "hint_en": "How often to follow up and how many times at most.",
+      "writes": [
+        {
+          "kind": "fact",
+          "subjectType": "policy",
+          "attributeLabel": "Nhịp follow-up",
+          "scope": "restricted"
+        },
+        {
+          "kind": "rule",
+          "action": "send_follow_up",
+          "field": "mode"
+        }
+      ]
     },
     {
       "key": "approval_thresholds",
       "label_vi": "Ngưỡng cần duyệt",
       "label_en": "Approval thresholds",
       "hint_vi": "Báo giá hoặc đơn từ bao nhiêu tiền thì cần bạn duyệt.",
-      "hint_en": "Quote or order amounts above which you must approve."
+      "hint_en": "Quote or order amounts above which you must approve.",
+      "writes": [
+        {
+          "kind": "rule",
+          "action": "confirm_order",
+          "field": "limit_vnd"
+        },
+        {
+          "kind": "rule",
+          "action": "send_quote",
+          "field": "mode"
+        }
+      ]
     },
     {
       "key": "handoff_accounting",
       "label_vi": "Chuyển sang Kế toán",
       "label_en": "Handoff to accounting",
       "hint_vi": "Khi nào đơn đã chốt và cần những thông tin gì để xuất hóa đơn.",
-      "hint_en": "When a deal counts as won and what accounting needs to invoice."
+      "hint_en": "When a deal counts as won and what accounting needs to invoice.",
+      "writes": [
+        {
+          "kind": "fact",
+          "subjectType": "policy",
+          "attributeLabel": "Khi nào đơn được tính là thành công",
+          "scope": "restricted"
+        }
+      ]
     },
     {
       "key": "tone",

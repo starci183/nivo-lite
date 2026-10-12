@@ -22,6 +22,8 @@ const categories = readJson(join(modulesDir, "_categories.json"));
 const categoryKeys = new Set(categories.map((c) => c.key));
 const bilingual = (v, where) => { if (!v || typeof v.vi !== "string" || typeof v.en !== "string" || !v.vi || !v.en) fail(`${where}: needs non-empty vi and en`); };
 const LOC = ["vi", "en"];
+const SUBJECT_TYPES = ["business", "product", "service", "policy", "customer", "person", "supplier", "place", "other"];
+const SCOPES = ["public", "internal", "restricted"];
 
 const dirs = readdirSync(modulesDir).filter((n) => !n.startsWith("_") && statSync(join(modulesDir, n)).isDirectory());
 const defs = dirs.map((dir) => {
@@ -63,6 +65,18 @@ const defs = dirs.map((dir) => {
     for (const f of ["key", "label_vi", "label_en", "hint_vi", "hint_en"]) if (typeof g[f] !== "string" || !g[f]) fail(`${at}: gate ${g.key ?? "?"} needs ${f}`);
     if (gateKeys.has(g.key)) fail(`${at}: duplicate gate ${g.key}`);
     gateKeys.add(g.key);
+    // writes: what the setup chat extracts from the owner's answer to this gate (a Second Brain fact or an authority rule field).
+    if (g.writes !== undefined && !Array.isArray(g.writes)) fail(`${at}: gate ${g.key} writes must be an array`);
+    for (const w of g.writes ?? []) {
+      if (w.kind === "fact") {
+        if (!SUBJECT_TYPES.includes(w.subjectType)) fail(`${at}: gate ${g.key} fact write: subjectType must be one of ${SUBJECT_TYPES.join(", ")}`);
+        if (typeof w.attributeLabel !== "string" || !w.attributeLabel) fail(`${at}: gate ${g.key} fact write needs attributeLabel`);
+        if (!SCOPES.includes(w.scope)) fail(`${at}: gate ${g.key} fact write: scope must be public | internal | restricted`);
+      } else if (w.kind === "rule") {
+        if (!m.authority_actions.some((a) => a.action === w.action)) fail(`${at}: gate ${g.key} rule write: action "${w.action}" is not an authority action of ${m.key}`);
+        if (!["mode", "limit_vnd"].includes(w.field)) fail(`${at}: gate ${g.key} rule write: field must be mode | limit_vnd`);
+      } else fail(`${at}: gate ${g.key} write kind must be fact | rule`);
+    }
   }
   if (!Array.isArray(m.authority_actions) || !m.authority_actions.length) fail(`${at}: authority_actions must be a non-empty array`);
   for (const a of m.authority_actions) {
@@ -141,7 +155,10 @@ export type BilingualList = { readonly vi: ReadonlyArray<string>; readonly en: R
 export type ModuleStatus = "stable" | "early";
 export type ModuleAudience = "customer" | "internal";
 export type ModuleCategoryKey = ${categories.map((c) => JSON.stringify(c.key)).join(" | ")};
-export type RegistryGate = { readonly key: string; readonly label_vi: string; readonly label_en: string; readonly hint_vi: string; readonly hint_en: string };
+export type GateWrite =
+  | { readonly kind: "fact"; readonly subjectType: "business" | "product" | "service" | "policy" | "customer" | "person" | "supplier" | "place" | "other"; readonly attributeLabel: string; readonly scope: "public" | "internal" | "restricted" }
+  | { readonly kind: "rule"; readonly action: ActionKey; readonly field: "mode" | "limit_vnd" };
+export type RegistryGate = { readonly key: string; readonly label_vi: string; readonly label_en: string; readonly hint_vi: string; readonly hint_en: string; readonly writes?: ReadonlyArray<GateWrite> };
 export type RegistryAction = {
   readonly action: ActionKey; readonly label: Bilingual; readonly mode: "auto" | "ask" | "never"; readonly limitVnd: number | null;
   readonly requiredFields: ReadonlyArray<string>; readonly amountLimit: boolean; readonly maxMode: "ask" | "never" | null; readonly note: string; readonly next: ReadonlyArray<ActionKey>;

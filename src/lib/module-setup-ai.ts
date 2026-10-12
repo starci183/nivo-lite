@@ -4,6 +4,7 @@ import { usageScope } from "./usage";
 import type { Locale } from "@/i18n/core";
 import { businessKnowledgeBrief, setupKnowledgeText } from "./knowledge/index";
 import { moduleDef } from "./module-registry";
+import { sanitizeWrites, writeSpecLines, type OpenGap, type ProposedWrite } from "./module-setup-writes";
 import { MODULE_GATES, gateEntry, type DraftSnapshot, type GateEvidence, type ModuleKey, type SetupFact } from "./modules-shared";
 
 /** One turn of the setup chat as the model sees it. */
@@ -15,6 +16,8 @@ export type SetupTurnInput = {
   /** Earlier messages, oldest first (the new user message is NOT included). */
   history: Array<{ role: "user" | "assistant"; body: string }>;
   message: string;
+  /** Customer questions the module's agent could not answer (open knowledge gaps), most asked first; empty when there are none. */
+  gaps?: ReadonlyArray<OpenGap>;
 };
 
 /** What the model returns for one turn. */
@@ -23,6 +26,8 @@ export type SetupTurnResult = {
   summary?: string;
   facts: SetupFact[];
   gates: Record<string, { status: "proposed"; evidence: string }>;
+  /** Structured writes the owner's answer implies (Second Brain facts, authority rules): each becomes a confirm card. Nothing is written yet. */
+  writes: ProposedWrite[];
 };
 
 /** What the module is, for the setup prompt: from the registry (module.json purpose). */
@@ -57,6 +62,9 @@ export const runSetupTurn = async (input: SetupTurnInput): Promise<SetupTurnResu
     setupKnowledgeText(moduleKey).catch(() => ""),
     businessKnowledgeBrief(moduleKey, input.message).catch(() => ({ text: "", sourceCount: 0, notApplicable: [] as Array<string> })),
   ]);
+  const gaps = input.gaps ?? [];
+  const specs = writeSpecLines(moduleKey);
+  const gapLines = gaps.map((g) => `- [${g.id}] asked ${g.count}x: "${g.question.slice(0, 200)}"${g.topic ? ` | likely subject: ${g.topic}` : ""}${g.attributeGuess ? ` | likely attribute: ${g.attributeGuess}` : ""}`).join("\n");
   const factLines = input.draft.facts.map((f) => `- ${f.key}: ${f.text}`).join("\n") || "(none yet)";
 
   const system = [
@@ -72,6 +80,9 @@ export const runSetupTurn = async (input: SetupTurnInput): Promise<SetupTurnResu
     nivoSetup ? "NIVO's own knowledge for this module (what a complete setup must contain, and the limits of what the AI may do). Use it to decide what to ask and how concrete the answer must be:\n" + nivoSetup : "",
     "",
     business.text,
+    "",
+    specs.length ? "What each gate can write for real (Second Brain facts and the agent's authority). The owner confirms every write on a card before it happens:\n" + specs.join("\n") : "",
+    gapLines ? "Customers asked these questions and the agent had no answer (open knowledge gaps). Ask the owner about them:\n" + gapLines : "",
     "",
     "Facts already noted:",
     factLines,
@@ -89,7 +100,17 @@ export const runSetupTurn = async (input: SetupTurnInput): Promise<SetupTurnResu
     "- \"summary\": 1-3 sentences describing the business, updated with new information.",
     "- \"reply\": max 80 words. Briefly acknowledge the answer, then ask ONE question about the next missing or unclear gate (use its hint to ask concretely; pick the item that blocks the most). If every gate has evidence, say what is left to confirm on the right and that once all are confirmed they should review and press \"Áp dụng\" (\"Apply\" in English).",
     "",
-    "Return ONLY a JSON object: {\"reply\": string, \"summary\": string, \"facts\": [{\"key\": string, \"text\": string}], \"gates\": {\"<gateKey>\": {\"status\": \"proposed\", \"evidence\": string}}}",
+    specs.length ? [
+      "- \"writes\": for every concrete value the owner gave THIS turn that matches a line of the writes list above, add one write. Use only gates, attributes and actions from that list, copy the attribute label exactly, never invent a value, and skip anything vague.",
+      "  Fact: {\"gate\": <gateKey>, \"kind\": \"fact\", \"subject\": <what it is about, e.g. the product or business name>, \"attribute\": <attribute label from the list>, \"value\": <the value in the owner's words, prices and hours exact>}",
+      "  Rule: {\"gate\": <gateKey>, \"kind\": \"rule\", \"action\": <action from the list>, \"mode\": \"auto\"|\"ask\"|\"never\"} for a mode field, or {..., \"limit_vnd\": <integer VND, 20 triệu = 20000000>} for a limit field. \"Never\" / \"always ask me\" / \"under X you may do it alone\" are rules.",
+    ].join("\n") : "",
+    gaps.length ? [
+      "- Open customer questions: once the checklist has no missing item ask the owner about the most asked one; before that raise one only if it relates to what is being discussed. Still ONE question per reply.",
+      "  When the owner answers one, add a write {\"gate\": \"gap\", \"kind\": \"fact\", \"gap\": <id in brackets>, \"subject\": ..., \"attribute\": ..., \"value\": <the answer>}.",
+    ].join("\n") : "",
+    "",
+    "Return ONLY a JSON object: {\"reply\": string, \"summary\": string, \"facts\": [{\"key\": string, \"text\": string}], \"gates\": {\"<gateKey>\": {\"status\": \"proposed\", \"evidence\": string}}" + (specs.length || gaps.length ? ", \"writes\": [ ... ]" : "") + "}",
     "Valid gate keys: " + gates.map((g) => g.key).join(", "),
   ].join("\n");
 
@@ -105,7 +126,7 @@ export const runSetupTurn = async (input: SetupTurnInput): Promise<SetupTurnResu
     ],
   });
   const parsed = parseLoose(raw);
-  if (!isObject(parsed)) return { reply: raw || (locale === "vi" ? "Bạn kể thêm giúp mình nhé." : "Please tell me a bit more."), facts: [], gates: {} };
+  if (!isObject(parsed)) return { reply: raw || (locale === "vi" ? "Bạn kể thêm giúp mình nhé." : "Please tell me a bit more."), facts: [], gates: {}, writes: [] };
 
   const validKeys = new Set(gates.map((g) => g.key));
   const outGates: SetupTurnResult["gates"] = {};
@@ -127,7 +148,7 @@ export const runSetupTurn = async (input: SetupTurnInput): Promise<SetupTurnResu
   }
   const summary = clean(parsed.summary, 600);
   const reply = clean(parsed.reply, 1500) || (locale === "vi" ? "Mình đã ghi lại. Bạn kể thêm nhé." : "Noted. Tell me more.");
-  return { reply, ...(summary ? { summary } : {}), facts, gates: outGates };
+  return { reply, ...(summary ? { summary } : {}), facts, gates: outGates, writes: sanitizeWrites(moduleKey, parsed.writes, gaps) };
 };
 
 /** Merge a turn into the draft and the gate evidence. Confirmed gates are never overwritten by the model: the owner reopens them. */
