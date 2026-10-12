@@ -1,0 +1,29 @@
+import { sql } from "@modules/platform/database"
+
+/** The connection a delivery arrived on, when it is of the provider and not disconnected ($1 connection id, $2 provider). */
+export const FIND_INTAKE_CONNECTION = sql`SELECT id, workspace_id, status
+FROM public.connections
+WHERE id = $1 AND provider = $2 AND status <> 'disconnected'
+LIMIT 1`
+
+/** Marks a connection as failing with the reason the owner reads ($1 connection id, $2 reason). */
+export const MARK_CONNECTION_ERROR = sql`UPDATE public.connections
+SET status = 'error', last_error = $2, updated_at = now()
+WHERE id = $1`
+
+/** The connection works: pending or failing becomes connected, and the first event is kept for the wizard's check ($1 connection id, $2 first event). */
+export const MARK_CONNECTION_RECEIVED = sql`UPDATE public.connections
+SET last_event_at = now(),
+    updated_at = now(),
+    status = CASE WHEN status IN ('pending', 'error') THEN 'connected' ELSE status END,
+    last_error = CASE WHEN status IN ('pending', 'error') THEN NULL ELSE last_error END,
+    first_event = COALESCE(first_event, $2::jsonb)
+WHERE id = $1`
+
+/** Records the OA the owner authorized and clears an error status ($1 connection id, $2 meta patch). */
+export const APPLY_ZALO_AUTHORIZATION = sql`UPDATE public.connections
+SET public_meta = public_meta || $2::jsonb,
+    status = CASE WHEN status = 'error' THEN 'connected' ELSE status END,
+    last_error = NULL,
+    updated_at = now()
+WHERE id = $1`
