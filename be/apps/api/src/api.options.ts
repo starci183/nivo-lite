@@ -15,7 +15,7 @@ export interface ApiOptions {
     readonly database: DatabaseConnectionOptions
     /** Supabase Auth, Storage and token-verification configuration. */
     readonly supabase: SupabaseOptions
-    /** How the queue relay and the pgmq workers run. */
+    /** How the pgmq workers run. */
     readonly queue: QueueConfig
     /** Who this worker is and how long a job claim lasts. */
     readonly jobs: JobsConfig

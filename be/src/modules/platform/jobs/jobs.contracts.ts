@@ -2,7 +2,7 @@
 export interface ClaimedJob {
     /** The id of the job row. */
     readonly jobId: string
-    /** The kind of the job: the queue its processor consumes. */
+    /** The kind of the job: the job name its processor runs, or the queue it consumes when it takes every job of the queue. */
     readonly kind: string
     /** The fencing token of this claim; the claim bumped it, so an older worker holds a smaller one. */
     readonly fencingToken: number
@@ -16,7 +16,7 @@ export interface ClaimedJob {
 export interface ClaimParams {
     /** The kind of the job. */
     readonly kind: string
-    /** The key of the delivery: the BullMQ job id. A second claim of the same key bumps the token of the same row. */
+    /** The key of the delivery: the outbox id of the job, stable across its retries. A second claim of the same key bumps the token of the same row. */
     readonly jobKey: string
     /** The payload to store on the first claim. */
     readonly payload: object

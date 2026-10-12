@@ -1,4 +1,3 @@
-import type { EntityManager } from "typeorm"
 import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
 import type { QueueOptions } from "./queue.options"
@@ -17,9 +16,6 @@ export const QUEUE_WORKER_REGISTRY: unique symbol = Symbol("platform.queue.worke
 /** Token of the pgmq port. */
 export const QUEUE_TRANSPORT: unique symbol = Symbol("platform.queue.transport")
 
-/** Token of the entity managers of the connections whose outbox the relay reads, in the order the options name them. */
-export const QUEUE_RELAY_MANAGERS: unique symbol = Symbol("platform.queue.relay-managers")
-
 /** Injects the options of the queues. Parameter type: QueueOptions. */
 export const InjectQueueOptions = (): TypedParameterDecorator<QueueOptions> => injector<QueueOptions>(QUEUE_OPTIONS)
 
@@ -33,7 +29,3 @@ export const InjectQueueWorkerRegistry = (): TypedParameterDecorator<QueueWorker
 /** Injects the pgmq port. Parameter type: QueueTransport. */
 export const InjectQueueTransport = (): TypedParameterDecorator<QueueTransport> =>
     injector<QueueTransport>(QUEUE_TRANSPORT)
-
-/** Injects the entity managers the relay reads the outbox of. Parameter type: ReadonlyArray<EntityManager>. */
-export const InjectQueueRelayManagers = (): TypedParameterDecorator<ReadonlyArray<EntityManager>> =>
-    injector<ReadonlyArray<EntityManager>>(QUEUE_RELAY_MANAGERS)

@@ -18,7 +18,7 @@ const isFencedOut = (cause: unknown): boolean => cause instanceof JobsError && c
  * The runner of fenced jobs: it subscribes each registered processor to its queue and, for every delivery, claims the job (bumping the
  * fencing token), calls the processor and settles the job through the guarded writes. A `JobFencedOut` means a newer worker owns the
  * job: this worker stops with no further effect and the delivery is acknowledged. Any other failure marks the job failed and is
- * rethrown, so BullMQ retries the delivery and the next claim bumps the token again.
+ * rethrown, so the queue retries the delivery and the next claim bumps the token again.
  */
 export class JobRunnerService implements JobProcessorRegistry {
     constructor(
@@ -28,15 +28,21 @@ export class JobRunnerService implements JobProcessorRegistry {
         @InjectLogger() private readonly logger: Logger,
     ) {}
 
-    /** Subscribes the processor to its queue. */
+    /** Subscribes the processor to its queue and job. */
     add(processor: FencedProcessor): void {
-        this.queues.add({ queue: processor.queue, handle: (delivery) => this.run(processor, delivery) })
+        this.queues.add({
+            queue: processor.queue,
+            job: processor.job,
+            concurrency: processor.concurrency,
+            handle: (delivery) => this.run(processor, delivery),
+            failed: (delivery, cause) => processor.onFailed(delivery, cause),
+        })
     }
 
     /** Runs one delivery of the processor's queue. */
     async run(processor: FencedProcessor, delivery: QueueDelivery): Promise<void> {
         const job = await this.claims.claim({
-            kind: processor.queue,
+            kind: processor.job ?? processor.queue,
             jobKey: delivery.id,
             payload: delivery.payload,
             workerId: this.options.workerId,
