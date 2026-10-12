@@ -28,6 +28,7 @@ export const NAMESPACES = [
     "googleWizard",
     "governance",
     "guide",
+    "guideMap",
     "inbox",
     "invite",
     "knowledge",
