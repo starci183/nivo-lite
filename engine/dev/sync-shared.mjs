@@ -9,7 +9,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const engine = join(dirname(fileURLToPath(import.meta.url)), "..");
-const web = join(engine, "..", "src", "lib");
+const web = join(engine, "..", "fe", "apps", "web", "src", "lib");
 const out = join(engine, "src", "features", "knowledge-jobs", "lib");
 
 /** web path (under src/lib) -> engine path (under knowledge-jobs/lib). Same relative layout, so the files' own imports resolve unchanged. */

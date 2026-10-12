@@ -11,13 +11,9 @@ on:
   push:
     branches: [main]
     paths:
-      - "src/**"
-      - "public/**"
-      - "resources/**"
+      - "fe/apps/web/**"
       - "package.json"
       - "package-lock.json"
-      - "next.config.*"
-      - "Dockerfile.web"
       - ".dockerignore"
       - "web-deploy/**"
       - ".github/workflows/web-deploy.yml"
@@ -43,7 +39,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: Dockerfile.web
+          file: fe/apps/web/Dockerfile
           load: true
           tags: nivo-web:${{ github.sha }}
           build-args: |

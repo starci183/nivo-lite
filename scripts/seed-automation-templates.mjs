@@ -7,7 +7,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), "..", "resources", "automation-templates");
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "..", "fe", "apps", "web", "resources", "automation-templates");
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!url || !key) {
@@ -16,8 +16,8 @@ if (!url || !key) {
 }
 
 // Module keys come from the registry (resources/modules/<key>/module.json), not a hard-coded list.
-const MODULES = readdirSync(resolve(dirname(fileURLToPath(import.meta.url)), "..", "resources", "modules"), { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name);
-const n8nRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "resources", "n8n-templates");
+const MODULES = readdirSync(resolve(dirname(fileURLToPath(import.meta.url)), "..", "fe", "apps", "web", "resources", "modules"), { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name);
+const n8nRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "fe", "apps", "web", "resources", "n8n-templates");
 const files = [
   ...readdirSync(root).filter((f) => f.endsWith(".json")).map((f) => ({ dir: root, f, expected: f })),
   ...readdirSync(n8nRoot).filter((f) => f.endsWith(".meta.json")).map((f) => ({ dir: n8nRoot, f, expected: f.replace(/\.meta\.json$/, ".json").replace(/\.json$/, "") + ".json" })),

@@ -1,7 +1,9 @@
 # nivo-lite on Netlify (standalone Next.js app; the Next.js runtime is declared below so Git builds and CLI builds match).
+# The repository is a monorepo: the web app is the workspace fe/apps/web. Netlify installs at the root and builds that workspace.
 [build]
-  command = "npm run build"
-  publish = ".next"
+  base = "."
+  command = "npm run build -w @nivo-lite/web"
+  publish = "fe/apps/web/.next"
 
 [build.environment]
   NODE_VERSION = "22"

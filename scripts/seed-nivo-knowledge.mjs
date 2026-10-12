@@ -6,7 +6,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), "..", "resources", "nivo-knowledge");
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "..", "fe", "apps", "web", "resources", "nivo-knowledge");
 // The module folders come from the registry (resources/modules/<key>/module.json knowledge_folder); "core" is shared by every module.
 const modulesDir = join(dirname(root), "modules");
 const MODULES = ["core", ...readdirSync(modulesDir).filter((n) => !n.startsWith("_") && statSync(join(modulesDir, n)).isDirectory()).map((n) => JSON.parse(readFileSync(join(modulesDir, n, "module.json"), "utf8")).knowledge_folder)];

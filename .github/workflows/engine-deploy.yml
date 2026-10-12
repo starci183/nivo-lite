@@ -1,6 +1,6 @@
 # Redeploys the engine stack (engine + OpenClaw + n8n) on the VPS with Docker Compose. Background jobs run on Supabase Queues (pgmq).
 # Runs on a push to main that changes engine/, supabase/migrations/ (the job RPCs the engine calls) or the shared knowledge code
-# (src/lib/knowledge/pure/), or by hand (Actions > Deploy engine > Run workflow).
+# (fe/apps/web/src/lib/knowledge/pure/), or by hand (Actions > Deploy engine > Run workflow).
 # Everything comes from the GitHub environment "production":
 #   vars    VPS_HOST, VPS_USER
 #   secrets VPS_SSH_KEY (CI-only deploy key), VPS_KNOWN_HOSTS (pinned host keys), ENGINE_ENV (the whole deploy/.env file)
@@ -16,7 +16,7 @@ on:
     paths:
       - "engine/**"
       - "supabase/migrations/**"
-      - "src/lib/knowledge/pure/**"
+      - "fe/apps/web/src/lib/knowledge/pure/**"
       - ".github/workflows/engine-deploy.yml"
   workflow_dispatch:
 

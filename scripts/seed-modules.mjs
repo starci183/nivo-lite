@@ -7,7 +7,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), "..", "resources", "modules");
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "..", "fe", "apps", "web", "resources", "modules");
 const dirs = readdirSync(root).filter((n) => !n.startsWith("_") && statSync(join(root, n)).isDirectory());
 const mods = dirs.map((d) => JSON.parse(readFileSync(join(root, d, "module.json"), "utf8"))).sort((a, b) => a.order - b.order);
 

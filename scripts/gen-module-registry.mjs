@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Build-time module registry: reads resources/modules/<key>/module.json and writes src/lib/module-registry.generated.ts
+// Build-time module registry: reads resources/modules/<key>/module.json and writes fe/apps/web/src/lib/module-registry.generated.ts
 // (typed, pure data, no runtime file reads, shared by client and server). Runs from postinstall, predev, prebuild and pretypecheck.
 // Run by hand after editing a module.json:  npm run gen:modules
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
@@ -7,14 +7,15 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const modulesDir = join(root, "resources", "modules");
-const knowledgeDir = join(root, "resources", "nivo-knowledge");
-const out = join(root, "src", "lib", "module-registry.generated.ts");
+const web = join(root, "fe", "apps", "web");
+const modulesDir = join(web, "resources", "modules");
+const knowledgeDir = join(web, "resources", "nivo-knowledge");
+const out = join(web, "src", "lib", "module-registry.generated.ts");
 
 const fail = (msg) => { console.error(`gen-module-registry: ${msg}`); process.exit(1); };
 const readJson = (file) => { try { return JSON.parse(readFileSync(file, "utf8")); } catch (e) { return fail(`${file}: ${e.message}`); } };
 
-const iconSrc = readFileSync(join(root, "src", "ui", "leaves", "Icon", "index.tsx"), "utf8");
+const iconSrc = readFileSync(join(web, "src", "ui", "leaves", "Icon", "index.tsx"), "utf8");
 const iconBlock = iconSrc.match(/export type IconName =([\s\S]*?);\r?\n/)?.[1] ?? "";
 const ICONS = new Set([...iconBlock.matchAll(/"([A-Za-z0-9]+)"/g)].map((m) => m[1]));
 
@@ -39,7 +40,7 @@ const defs = dirs.map((dir) => {
   if (typeof m.purpose !== "string" || !m.purpose) fail(`${at}: purpose (English, one line for the setup prompt) is required`);
   if (!ICONS.has(m.icon)) fail(`${at}: icon "${m.icon}" is not an IconName of src/ui`);
   if (typeof m.glyph !== "string") fail(`${at}: glyph (svg path) is required`);
-  if (!existsSync(join(root, "public", m.mascot))) fail(`${at}: mascot ${m.mascot} not found in public/`);
+  if (!existsSync(join(web, "public", m.mascot))) fail(`${at}: mascot ${m.mascot} not found in public/`);
   if (!categoryKeys.has(m.category)) fail(`${at}: unknown category "${m.category}"`);
   if (!["stable", "early"].includes(m.status)) fail(`${at}: status must be stable | early`);
   if (!["customer", "internal"].includes(m.audience)) fail(`${at}: audience must be customer | internal`);
@@ -189,4 +190,4 @@ export const REGISTRY_MODULE_LABELS = ${lit(labels.module)} as const; // module_
 export const REGISTRY_ACTION_LABELS = ${lit(labels.action)} as const; // action_<action>: "Xuất hóa đơn"
 `;
 writeFileSync(out, src);
-console.log(`gen-module-registry: ${list.length} modules, ${seenActions.size} actions -> src/lib/module-registry.generated.ts`);
+console.log(`gen-module-registry: ${list.length} modules, ${seenActions.size} actions -> fe/apps/web/src/lib/module-registry.generated.ts`);

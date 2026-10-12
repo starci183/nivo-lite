@@ -8,8 +8,8 @@ The console overview is at /dashboard; "/" is the public landing.
 ## Owner feedback (verbatim intent)
 - "chat mà ở dưới này thì ai biết" — in the current Office the composer sits far below the approval cards and banners; nobody
   finds the chat. → The chat must be THE page: conversation fills the viewport, composer always pinned and visible.
-- "NIVO sẽ giống Zalo" — target: `design-refs/office-zalo-target.webp` (study it with the Read tool); current problem:
-  `design-refs/office-current-problem.webp`.
+- "NIVO sẽ giống Zalo" — target: `.starciwork/brand/assets/refs/office-zalo-target.webp` (study it with the Read tool); current problem:
+  `.starciwork/brand/assets/refs/office-current-problem.webp`.
 - "UX UI dễ xài, friendly" — simpler, warmer, obvious next step on every page, fewer walls of cards.
 - Avatars: people = Google-style initials (or photo). Use ONLY `PersonAvatar` / `AgentAvatar` from
   "@/components/avatar/PersonAvatar" (replace every @nivo/ui `Avatar` and grammar `Avatar` in your files).

@@ -17,7 +17,7 @@ const args = new Set(process.argv.slice(2));
 const dryRun = args.has("--dry-run");
 const local = args.has("--local");
 const container = process.env.N8N_CONTAINER || "nivo-engine-n8n-1";
-const dir = join(dirname(fileURLToPath(import.meta.url)), "..", "resources", "n8n-templates");
+const dir = join(dirname(fileURLToPath(import.meta.url)), "..", "fe", "apps", "web", "resources", "n8n-templates");
 
 const expand = (p) => (p && p.startsWith("~") ? join(homedir(), p.slice(1)) : p);
 
