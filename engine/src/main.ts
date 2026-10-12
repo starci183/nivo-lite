@@ -5,6 +5,7 @@ import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { AppModule, type AppOptions } from "./app.module";
 import { parseVideoConfig } from "./features/video-render/video.config";
+import { parseKnowledgeJobsConfig } from "./features/knowledge-jobs/knowledge-jobs.config";
 import { parseN8nConfig } from "./features/n8n-emit/n8n.config";
 import { parseBullmqConfig } from "./platform/bullmq/bullmq.config";
 import { ConfigError, EnvSource } from "./platform/config/env.source";
@@ -32,6 +33,7 @@ const parseOptions = (env: EnvSource): AppOptions => ({
   n8n: parseN8nConfig(env),
   http: parseHttpConfig(env),
   video: parseVideoConfig(env),
+  knowledge: parseKnowledgeJobsConfig(env),
 });
 
 async function bootstrap(): Promise<void> {
