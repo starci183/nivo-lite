@@ -21,4 +21,6 @@ export interface SupabaseOptions {
     readonly url: string
     /** The service-role credential, held only by the back-end integration. */
     readonly serviceRoleKey: Secret
+    /** The publishable key, used only to ask Auth to email a sign-in link; without it that email is not sent. */
+    readonly anonKey?: Secret
 }

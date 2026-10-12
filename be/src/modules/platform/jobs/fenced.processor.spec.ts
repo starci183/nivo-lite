@@ -28,4 +28,23 @@ describe("FencedProcessor", () => {
         expect(processor.queue).toBe("mail")
         expect(processor.processed).toEqual([claimedJob])
     })
+
+    it("takes every job of its queue and the app default concurrency unless it says otherwise", () => {
+        const processor = new MailProcessor()
+
+        expect([processor.job, processor.concurrency]).toEqual([undefined, undefined])
+    })
+
+    it("does nothing when a job ends as failed, unless the processor writes the failure", async () => {
+        const delivery = {
+            id: "k-1",
+            queue: "mail",
+            job: "mail",
+            payload: {},
+            attempt: 4,
+            signal: new AbortController().signal,
+        }
+
+        await expect(new MailProcessor().onFailed(delivery, new Error("gave up"))).resolves.toBeUndefined()
+    })
 })
