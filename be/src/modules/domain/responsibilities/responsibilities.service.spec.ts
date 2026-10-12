@@ -3,6 +3,7 @@ import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@s
 import { isTransactionManager } from "@starci/jest-preset/entity-manager"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { EventsService } from "@modules/domain/events"
+import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG, REQUEST_LOCALE } from "@modules/platform/i18n"
@@ -24,7 +25,7 @@ const addOf = builder<AddResponsibilityParams>({
     owner: "human",
     nextAction: "Email the contract",
     dueAt: "2026-10-20T00:00:00.000Z",
-    actor: { userId: "user-1", displayName: "Linh" },
+    userId: "user-1",
     acceptLanguage: "en",
 })
 
@@ -35,7 +36,7 @@ const assignOf = builder<AssignResponsibilityParams>({
     nextAction: "Call back",
     dueAt: null,
     title: null,
-    actor: { userId: "user-1", displayName: "Linh" },
+    userId: "user-1",
     acceptLanguage: "en",
 })
 
@@ -68,6 +69,15 @@ const build = async (entityManager: MockEntityManager) => {
     messages.get.mockImplementation((key, params) => `${key}:${JSON.stringify(params)}`)
     const requestLocale = mock<RequestLocale>()
     requestLocale.of.mockReturnValue("en")
+    const members = mock<WorkspaceMembersService>()
+    members.require.mockResolvedValue({
+        userId: "user-1",
+        workspaceId: "ws-1",
+        role: "owner",
+        staffId: null,
+        displayName: "Linh",
+        status: "active",
+    })
     const events = mock<EventsService>()
     events.record.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
@@ -77,10 +87,11 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: MESSAGE_CATALOG, useValue: messages },
             { provide: REQUEST_LOCALE, useValue: requestLocale },
             { provide: CLOCK, useValue: new FakeClock("2026-10-12T03:00:00.000Z") },
+            { provide: WorkspaceMembersService, useValue: members },
             { provide: EventsService, useValue: events },
         ],
     }).compile()
-    return { responsibilities: moduleRef.get(ResponsibilitiesService), events, requestLocale }
+    return { members, responsibilities: moduleRef.get(ResponsibilitiesService), events, requestLocale }
 }
 
 describe("ResponsibilitiesService", () => {

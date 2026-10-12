@@ -1,5 +1,3 @@
-import type { ResponsibilityActor } from "@modules/domain/responsibilities"
-
 /** What reassigning a responsibility takes. */
 export interface AssignResponsibilityRequest {
     /** The responsibility to change. */
@@ -12,10 +10,8 @@ export interface AssignResponsibilityRequest {
     readonly dueAt: string | null
     /** A new title, when the person changes it; null keeps the current one. */
     readonly title: string | null
-    /** The workspace the caller acts in, established by the workspace guard. */
+    /** The workspace the caller acts in, named in X-Workspace-Id; the domain service proves the caller membership in it. */
     readonly workspaceId: string
-    /** The caller in that workspace; the evidence log shows the name. */
-    readonly actor: ResponsibilityActor
     /** The `Accept-Language` header of the request; the evidence lines use the language it names. */
     readonly acceptLanguage: string | undefined
 }

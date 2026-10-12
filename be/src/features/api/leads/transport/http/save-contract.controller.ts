@@ -1,8 +1,7 @@
 import { Body, Controller, Headers, Post } from "@nestjs/common"
 import type { CommandBus } from "@nestjs/cqrs"
-import { CurrentMember, WorkspaceRoles } from "@modules/domain/workspaces"
-import type { WorkspaceMember } from "@modules/domain/workspaces"
 import { CurrentPrincipal } from "@modules/domain/identity"
+import { WorkspaceId } from "@modules/domain/workspace-members"
 import { InjectCommandBus } from "@modules/platform/cqrs"
 import type { Principal } from "@modules/platform/cqrs"
 import { SaveContractCommand } from "../../application/save-contract.command"
@@ -17,16 +16,15 @@ export class SaveContractController {
 
     /** Adds or edits a recurring sales contract, for any active member of the workspace. */
     @Post()
-    @WorkspaceRoles()
     async saveContract(
         @CurrentPrincipal() principal: Principal,
-        @CurrentMember() member: WorkspaceMember,
+        @WorkspaceId() workspaceId: string,
         @Body() input: SaveContractRequest,
         @Headers("accept-language") acceptLanguage: string | undefined,
     ): Promise<SaveContractResponse> {
         const result = await this.commandBus.execute(
             new SaveContractCommand({
-                request: toSaveContractRequest(member, input, acceptLanguage),
+                request: toSaveContractRequest(workspaceId, input, acceptLanguage),
                 principal,
             }),
         )

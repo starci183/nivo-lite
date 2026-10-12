@@ -1,14 +1,6 @@
 /** One stage of the journey of a lead, in order; the last two close it. */
 export type LeadStage = "new" | "qualified" | "proposal" | "won" | "lost"
 
-/** Who acts: the member of the workspace the guard admitted. */
-export interface LeadActor {
-    /** The Auth user. */
-    readonly userId: string
-    /** The name the evidence log shows. */
-    readonly displayName: string
-}
-
 /** What recording an outcome takes: the lead, its new stage and the evidence behind it. */
 export interface RecordOutcomeParams {
     /** The workspace the lead belongs to. */
@@ -19,8 +11,8 @@ export interface RecordOutcomeParams {
     readonly stage: LeadStage
     /** Why: the evidence the person wrote; may be empty. */
     readonly evidence: string
-    /** The member who records it. */
-    readonly actor: LeadActor
+    /** The signed-in caller; the workspace members service proves the membership and names the actor. */
+    readonly userId: string
     /** The `Accept-Language` header of the request; the lines written to the log use the language it names. */
     readonly acceptLanguage: string | undefined
 }

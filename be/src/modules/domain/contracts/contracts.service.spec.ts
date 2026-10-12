@@ -3,6 +3,7 @@ import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-
 import { isTransactionManager } from "@starci/jest-preset/entity-manager"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { EventsService } from "@modules/domain/events"
+import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG, REQUEST_LOCALE } from "@modules/platform/i18n"
 import type { MessageCatalog, RequestLocale } from "@modules/platform/i18n"
@@ -22,7 +23,7 @@ const paramsOf = builder<SaveContractParams>({
     amountVnd: 5_000_000,
     status: "active",
     note: "",
-    actor: { userId: "user-1", displayName: "Linh" },
+    userId: "user-1",
     acceptLanguage: "en",
 })
 
@@ -45,6 +46,15 @@ const build = async (entityManager: MockEntityManager) => {
     messages.get.mockImplementation((key, params) => `${key}:${JSON.stringify(params)}`)
     const requestLocale = mock<RequestLocale>()
     requestLocale.of.mockReturnValue("en")
+    const members = mock<WorkspaceMembersService>()
+    members.require.mockResolvedValue({
+        userId: "user-1",
+        workspaceId: "ws-1",
+        role: "owner",
+        staffId: null,
+        displayName: "Linh",
+        status: "active",
+    })
     const events = mock<EventsService>()
     events.record.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
@@ -53,10 +63,11 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: MESSAGE_CATALOG, useValue: messages },
             { provide: REQUEST_LOCALE, useValue: requestLocale },
+            { provide: WorkspaceMembersService, useValue: members },
             { provide: EventsService, useValue: events },
         ],
     }).compile()
-    return { contracts: moduleRef.get(ContractsService), events, requestLocale }
+    return { members, contracts: moduleRef.get(ContractsService), events, requestLocale }
 }
 
 describe("ContractsService", () => {

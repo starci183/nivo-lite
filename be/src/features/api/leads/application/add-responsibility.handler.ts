@@ -17,6 +17,9 @@ export class AddResponsibilityHandler extends ICQRSHandler<AddResponsibilityComm
     }
 
     protected override process(command: AddResponsibilityCommand): Promise<AddResponsibilityResult> {
-        return this.responsibilitiesService.addResponsibility(command.params.request)
+        return this.responsibilitiesService.addResponsibility({
+            ...command.params.request,
+            userId: command.params.principal.id,
+        })
     }
 }

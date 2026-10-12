@@ -3,6 +3,7 @@ import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-
 import { isTransactionManager } from "@starci/jest-preset/entity-manager"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { EventsService } from "@modules/domain/events"
+import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { MessagesService } from "@modules/domain/messages"
 import { ResponsibilitiesService } from "@modules/domain/responsibilities"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -18,7 +19,7 @@ const paramsOf = builder<RecordOutcomeParams>({
     leadId: "lead-1",
     stage: "proposal",
     evidence: "Sent the quote",
-    actor: { userId: "user-1", displayName: "Linh" },
+    userId: "user-1",
     acceptLanguage: "en",
 })
 
@@ -37,6 +38,15 @@ const build = async (entityManager: MockEntityManager) => {
     messages.get.mockImplementation((key, params) => `${key}:${JSON.stringify(params)}`)
     const requestLocale = mock<RequestLocale>()
     requestLocale.of.mockReturnValue("en")
+    const members = mock<WorkspaceMembersService>()
+    members.require.mockResolvedValue({
+        userId: "user-1",
+        workspaceId: "ws-1",
+        role: "owner",
+        staffId: null,
+        displayName: "Linh",
+        status: "active",
+    })
     const events = mock<EventsService>()
     events.record.mockResolvedValue(undefined)
     const teamChat = mock<MessagesService>()
@@ -49,12 +59,13 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: MESSAGE_CATALOG, useValue: messages },
             { provide: REQUEST_LOCALE, useValue: requestLocale },
+            { provide: WorkspaceMembersService, useValue: members },
             { provide: EventsService, useValue: events },
             { provide: MessagesService, useValue: teamChat },
             { provide: ResponsibilitiesService, useValue: responsibilities },
         ],
     }).compile()
-    return { leads: moduleRef.get(LeadsService), events, teamChat, responsibilities, requestLocale }
+    return { members, leads: moduleRef.get(LeadsService), events, teamChat, responsibilities, requestLocale }
 }
 
 describe("LeadsService", () => {

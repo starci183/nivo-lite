@@ -17,6 +17,9 @@ export class AssignResponsibilityHandler extends ICQRSHandler<AssignResponsibili
     }
 
     protected override process(command: AssignResponsibilityCommand): Promise<AssignResponsibilityResult> {
-        return this.responsibilitiesService.assignResponsibility(command.params.request)
+        return this.responsibilitiesService.assignResponsibility({
+            ...command.params.request,
+            userId: command.params.principal.id,
+        })
     }
 }

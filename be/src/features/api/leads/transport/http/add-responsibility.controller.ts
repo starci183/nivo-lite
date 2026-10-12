@@ -1,8 +1,7 @@
 import { Body, Controller, Headers, Param, ParseUUIDPipe, Post } from "@nestjs/common"
 import type { CommandBus } from "@nestjs/cqrs"
-import { CurrentMember, WorkspaceRoles } from "@modules/domain/workspaces"
-import type { WorkspaceMember } from "@modules/domain/workspaces"
 import { CurrentPrincipal } from "@modules/domain/identity"
+import { WorkspaceId } from "@modules/domain/workspace-members"
 import { InjectCommandBus } from "@modules/platform/cqrs"
 import type { Principal } from "@modules/platform/cqrs"
 import { AddResponsibilityCommand } from "../../application/add-responsibility.command"
@@ -17,17 +16,16 @@ export class AddResponsibilityController {
 
     /** Adds the next responsibility of a lead, for any active member of the workspace. */
     @Post(":leadId/responsibilities")
-    @WorkspaceRoles()
     async addResponsibility(
         @CurrentPrincipal() principal: Principal,
-        @CurrentMember() member: WorkspaceMember,
+        @WorkspaceId() workspaceId: string,
         @Param("leadId", ParseUUIDPipe) leadId: string,
         @Body() input: AddResponsibilityRequest,
         @Headers("accept-language") acceptLanguage: string | undefined,
     ): Promise<AddResponsibilityResponse> {
         const result = await this.commandBus.execute(
             new AddResponsibilityCommand({
-                request: toAddResponsibilityRequest(member, leadId, input, acceptLanguage),
+                request: toAddResponsibilityRequest(workspaceId, leadId, input, acceptLanguage),
                 principal,
             }),
         )

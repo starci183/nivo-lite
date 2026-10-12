@@ -17,6 +17,6 @@ export class RecordOutcomeHandler extends ICQRSHandler<RecordOutcomeCommand, Rec
     }
 
     protected override process(command: RecordOutcomeCommand): Promise<RecordOutcomeResult> {
-        return this.leadsService.recordOutcome(command.params.request)
+        return this.leadsService.recordOutcome({ ...command.params.request, userId: command.params.principal.id })
     }
 }

@@ -17,6 +17,6 @@ export class SaveContractHandler extends ICQRSHandler<SaveContractCommand, SaveC
     }
 
     protected override process(command: SaveContractCommand): Promise<SaveContractResult> {
-        return this.contractsService.saveContract(command.params.request)
+        return this.contractsService.saveContract({ ...command.params.request, userId: command.params.principal.id })
     }
 }

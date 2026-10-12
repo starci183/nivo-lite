@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
+import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { MessagesService } from "@modules/domain/messages"
 import { ResponsibilitiesService } from "@modules/domain/responsibilities"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -23,6 +24,7 @@ export class LeadsService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectMessageCatalog() private readonly messages: MessageCatalog,
         @InjectRequestLocale() private readonly requestLocale: RequestLocale,
+        private readonly members: WorkspaceMembersService,
         private readonly events: EventsService,
         private readonly teamChat: MessagesService,
         private readonly responsibilities: ResponsibilitiesService,
@@ -32,7 +34,8 @@ export class LeadsService {
      * Records the outcome of the journey of a lead: the stage, the evidence line and the team-chat line are written in one
      * transaction. A won deal is handed to the workspace Accounting agent as the next responsibility, when there is one.
      */
-    recordOutcome(params: RecordOutcomeParams): Promise<RecordedOutcome> {
+    async recordOutcome(params: RecordOutcomeParams): Promise<RecordedOutcome> {
+        const member = await this.members.require(params.userId, params.workspaceId)
         const locale = this.requestLocale.of(params.acceptLanguage)
         return this.entityManager.transaction(async (tx) => {
             const [lead] = await tx.query<Array<StagedLead>>(UPDATE_LEAD_STAGE, [
@@ -49,7 +52,7 @@ export class LeadsService {
                     workspaceId: params.workspaceId,
                     leadId: params.leadId,
                     kind: OUTCOME_KIND,
-                    actor: params.actor.displayName,
+                    actor: member.displayName,
                     summary: this.messages.get("leads.stage-event", { stage }, locale),
                     evidence: params.evidence === "" ? null : params.evidence,
                 },

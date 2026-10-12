@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
+import { WorkspaceMembersService } from "@modules/domain/workspace-members"
+import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -18,7 +20,6 @@ import type {
     AddResponsibilityParams,
     AssignResponsibilityParams,
     HandToAccountingParams,
-    ResponsibilityActor,
     ResponsibilityResult,
 } from "./responsibilities.contracts"
 import { agentToLookUp, resolveOwner } from "./responsibility-owner.policy"
@@ -70,13 +71,15 @@ export class ResponsibilitiesService {
         @InjectMessageCatalog() private readonly messages: MessageCatalog,
         @InjectRequestLocale() private readonly requestLocale: RequestLocale,
         @InjectClock() private readonly clock: Clock,
+        private readonly members: WorkspaceMembersService,
         private readonly events: EventsService,
     ) {}
 
     /** Adds the next responsibility of a lead (keeps the loop going after an outcome) and logs who owns it. */
-    addResponsibility(params: AddResponsibilityParams): Promise<ResponsibilityResult> {
+    async addResponsibility(params: AddResponsibilityParams): Promise<ResponsibilityResult> {
+        const member = await this.members.require(params.userId, params.workspaceId)
         return this.entityManager.transaction(async (tx) => {
-            const owner = await this.ownerOf(tx, params.workspaceId, params.owner, params.actor)
+            const owner = await this.ownerOf(tx, params.workspaceId, params.owner, member)
             const [row] = await tx.query<Array<StepRow>>(INSERT_RESPONSIBILITY, [
                 params.workspaceId,
                 params.leadId,
@@ -89,15 +92,16 @@ export class ResponsibilitiesService {
                     params: { id: params.leadId },
                 })
             }
-            await this.logOwner(tx, params.workspaceId, row, params.actor, this.requestLocale.of(params.acceptLanguage))
+            await this.logOwner(tx, params.workspaceId, row, member, this.requestLocale.of(params.acceptLanguage))
             return toResult(row)
         })
     }
 
     /** Changes the owner, next action and due date of a responsibility (and its title when given) and logs who owns it now. */
-    assignResponsibility(params: AssignResponsibilityParams): Promise<ResponsibilityResult> {
+    async assignResponsibility(params: AssignResponsibilityParams): Promise<ResponsibilityResult> {
+        const member = await this.members.require(params.userId, params.workspaceId)
         return this.entityManager.transaction(async (tx) => {
-            const owner = await this.ownerOf(tx, params.workspaceId, params.owner, params.actor)
+            const owner = await this.ownerOf(tx, params.workspaceId, params.owner, member)
             const [row] = await tx.query<Array<StepRow>>(UPDATE_RESPONSIBILITY, [
                 params.workspaceId,
                 params.responsibilityId,
@@ -110,7 +114,7 @@ export class ResponsibilitiesService {
                     params: { id: params.responsibilityId },
                 })
             }
-            await this.logOwner(tx, params.workspaceId, row, params.actor, this.requestLocale.of(params.acceptLanguage))
+            await this.logOwner(tx, params.workspaceId, row, member, this.requestLocale.of(params.acceptLanguage))
             return toResult(row)
         })
     }
@@ -150,7 +154,7 @@ export class ResponsibilitiesService {
         tx: EntityManager,
         workspaceId: string,
         owner: string,
-        actor: ResponsibilityActor,
+        actor: WorkspaceMember,
     ): Promise<ResolvedOwner> {
         const agentId = agentToLookUp(owner)
         const [agent] = agentId === null ? [] : await tx.query<Array<OwnerAgentRow>>(FIND_AGENT, [workspaceId, agentId])
@@ -165,7 +169,7 @@ export class ResponsibilitiesService {
         tx: EntityManager,
         workspaceId: string,
         row: StepRow,
-        actor: ResponsibilityActor,
+        actor: WorkspaceMember,
         locale: Locale,
     ): Promise<void> {
         return this.events.record(

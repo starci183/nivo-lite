@@ -4,14 +4,6 @@ import type { Locale } from "@modules/platform/i18n"
 /** The owner value that means the signed-in person; any other value is the id of an agent of the workspace. */
 export const HUMAN_OWNER = "human"
 
-/** Who acts: the member of the workspace the guard admitted. */
-export interface ResponsibilityActor {
-    /** The Auth user. */
-    readonly userId: string
-    /** The name the evidence log shows. */
-    readonly displayName: string
-}
-
 /** One step of a lead journey as a person or an agent owns it. */
 export interface ResponsibilityResult {
     /** The responsibility id. */
@@ -48,8 +40,8 @@ export interface AddResponsibilityParams {
     readonly nextAction: string
     /** When it is due, ISO 8601; null for no date. */
     readonly dueAt: string | null
-    /** The member who adds it. */
-    readonly actor: ResponsibilityActor
+    /** The signed-in caller; the workspace members service proves the membership and names the actor. */
+    readonly userId: string
     /** The `Accept-Language` header of the request; the evidence line is written in the language it names. */
     readonly acceptLanguage: string | undefined
 }
@@ -68,8 +60,8 @@ export interface AssignResponsibilityParams {
     readonly dueAt: string | null
     /** A new title, when the person changes it; null keeps the current one. */
     readonly title: string | null
-    /** The member who reassigns it. */
-    readonly actor: ResponsibilityActor
+    /** The signed-in caller; the workspace members service proves the membership and names the actor. */
+    readonly userId: string
     /** The `Accept-Language` header of the request; the evidence line is written in the language it names. */
     readonly acceptLanguage: string | undefined
 }

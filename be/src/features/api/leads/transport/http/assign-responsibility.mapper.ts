@@ -1,4 +1,3 @@
-import type { WorkspaceMember } from "@modules/domain/workspaces"
 import type {
     AssignResponsibilityRequest,
     AssignResponsibilityResult,
@@ -6,9 +5,9 @@ import type {
 import type { AssignResponsibilityRequest as AssignResponsibilityHttpRequest } from "./dto/assign-responsibility.request"
 import type { AssignResponsibilityResponse } from "./dto/assign-responsibility.response"
 
-/** Maps the HTTP request, the path id, the admitted member and the request language to the command request. */
+/** Maps the HTTP request, the path id, the workspace and the request language to the command request. */
 export const toAssignResponsibilityRequest = (
-    member: WorkspaceMember,
+    workspaceId: string,
     responsibilityId: string,
     input: AssignResponsibilityHttpRequest,
     acceptLanguage: string | undefined,
@@ -18,8 +17,7 @@ export const toAssignResponsibilityRequest = (
     nextAction: input.nextAction,
     dueAt: input.dueAt,
     title: input.title,
-    workspaceId: member.workspaceId,
-    actor: { userId: member.userId, displayName: member.displayName },
+    workspaceId,
     acceptLanguage,
 })
 

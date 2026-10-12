@@ -1,14 +1,6 @@
 /** The statuses a recurring sales contract can hold. */
 export const CONTRACT_STATUSES = ["active", "ended", "cancelled"] as const
 
-/** Who acts: the member of the workspace the guard admitted. */
-export interface ContractActor {
-    /** The Auth user. */
-    readonly userId: string
-    /** The name the evidence log shows. */
-    readonly displayName: string
-}
-
 /** What a sales contract is saved from; dates are YYYY-MM-DD and the amount is whole dong. */
 export interface SaveContractParams {
     /** The workspace the contract belongs to. */
@@ -31,8 +23,8 @@ export interface SaveContractParams {
     readonly status: string
     /** A free note. */
     readonly note: string
-    /** The member who saves it. */
-    readonly actor: ContractActor
+    /** The signed-in caller; the workspace members service proves the membership and names the actor. */
+    readonly userId: string
     /** The `Accept-Language` header of the request; the evidence line is written in the language it names. */
     readonly acceptLanguage: string | undefined
 }

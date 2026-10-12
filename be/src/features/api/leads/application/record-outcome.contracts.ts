@@ -1,5 +1,3 @@
-import type { LeadActor } from "@modules/domain/leads"
-
 /** What recording an outcome takes: the lead, the stage the journey moved to and the evidence behind it. */
 export interface RecordOutcomeRequest {
     /** The lead whose stage changes. */
@@ -8,10 +6,8 @@ export interface RecordOutcomeRequest {
     readonly stage: "new" | "qualified" | "proposal" | "won" | "lost"
     /** Why: the evidence the person wrote; may be empty. */
     readonly evidence: string
-    /** The workspace the caller acts in, established by the workspace guard. */
+    /** The workspace the caller acts in, named in X-Workspace-Id; the domain service proves the caller membership in it. */
     readonly workspaceId: string
-    /** The caller in that workspace; the evidence log shows the name. */
-    readonly actor: LeadActor
     /** The `Accept-Language` header of the request; the evidence lines use the language it names. */
     readonly acceptLanguage: string | undefined
 }

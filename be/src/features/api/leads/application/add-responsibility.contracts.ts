@@ -1,5 +1,3 @@
-import type { ResponsibilityActor } from "@modules/domain/responsibilities"
-
 /** What adding the next responsibility of a lead takes. */
 export interface AddResponsibilityRequest {
     /** The lead the step belongs to. */
@@ -12,10 +10,8 @@ export interface AddResponsibilityRequest {
     readonly nextAction: string
     /** When it is due, ISO 8601; null for no date. */
     readonly dueAt: string | null
-    /** The workspace the caller acts in, established by the workspace guard. */
+    /** The workspace the caller acts in, named in X-Workspace-Id; the domain service proves the caller membership in it. */
     readonly workspaceId: string
-    /** The caller in that workspace; the evidence log shows the name. */
-    readonly actor: ResponsibilityActor
     /** The `Accept-Language` header of the request; the evidence lines use the language it names. */
     readonly acceptLanguage: string | undefined
 }

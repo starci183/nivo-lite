@@ -1,11 +1,10 @@
-import type { WorkspaceMember } from "@modules/domain/workspaces"
 import type { RecordOutcomeRequest, RecordOutcomeResult } from "../../application/record-outcome.contracts"
 import type { RecordOutcomeRequest as RecordOutcomeHttpRequest } from "./dto/record-outcome.request"
 import type { RecordOutcomeResponse } from "./dto/record-outcome.response"
 
-/** Maps the HTTP request, the path id, the admitted member and the request language to the command request. */
+/** Maps the HTTP request, the path id, the workspace and the request language to the command request. */
 export const toRecordOutcomeRequest = (
-    member: WorkspaceMember,
+    workspaceId: string,
     leadId: string,
     input: RecordOutcomeHttpRequest,
     acceptLanguage: string | undefined,
@@ -13,8 +12,7 @@ export const toRecordOutcomeRequest = (
     leadId,
     stage: input.stage,
     evidence: input.evidence,
-    workspaceId: member.workspaceId,
-    actor: { userId: member.userId, displayName: member.displayName },
+    workspaceId,
     acceptLanguage,
 })
 

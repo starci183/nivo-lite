@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
+import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog, InjectRequestLocale } from "@modules/platform/i18n"
 import type { MessageCatalog, RequestLocale } from "@modules/platform/i18n"
@@ -22,6 +23,7 @@ export class ContractsService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectMessageCatalog() private readonly messages: MessageCatalog,
         @InjectRequestLocale() private readonly requestLocale: RequestLocale,
+        private readonly members: WorkspaceMembersService,
         private readonly events: EventsService,
     ) {}
 
@@ -29,7 +31,8 @@ export class ContractsService {
      * Adds or edits a recurring contract (the renewal automation reads these). The contract is judged first; a linked lead
      * must belong to the workspace (a lead of another workspace answers no row); an edit changes only the workspace own row. The write and its evidence line share one transaction.
      */
-    saveContract(params: SaveContractParams): Promise<ContractResult> {
+    async saveContract(params: SaveContractParams): Promise<ContractResult> {
+        const member = await this.members.require(params.userId, params.workspaceId)
         return this.entityManager.transaction(async (tx) => {
             const verdict = checkContract(params)
             if (verdict.kind === "refused") throw new ContractsError({ code: verdict.code, params: verdict.params })
@@ -60,10 +63,10 @@ export class ContractsService {
                     workspaceId: params.workspaceId,
                     leadId: params.leadId,
                     kind: created ? "contract.created" : "contract.updated",
-                    actor: params.actor.displayName,
+                    actor: member.displayName,
                     summary: this.messages.get(
                         created ? "contracts.created" : "contracts.updated",
-                        { who: params.actor.displayName, customer: contract.customerName },
+                        { who: member.displayName, customer: contract.customerName },
                         this.requestLocale.of(params.acceptLanguage),
                     ),
                     evidence: `${contract.startsOn} → ${contract.endsOn}`,

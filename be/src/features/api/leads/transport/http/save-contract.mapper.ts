@@ -1,11 +1,10 @@
-import type { WorkspaceMember } from "@modules/domain/workspaces"
 import type { SaveContractRequest, SaveContractResult } from "../../application/save-contract.contracts"
 import type { SaveContractRequest as SaveContractHttpRequest } from "./dto/save-contract.request"
 import type { SaveContractResponse } from "./dto/save-contract.response"
 
-/** Maps the HTTP request, the admitted member and the request language to the command request. */
+/** Maps the HTTP request, the workspace and the request language to the command request. */
 export const toSaveContractRequest = (
-    member: WorkspaceMember,
+    workspaceId: string,
     input: SaveContractHttpRequest,
     acceptLanguage: string | undefined,
 ): SaveContractRequest => ({
@@ -18,8 +17,7 @@ export const toSaveContractRequest = (
     amountVnd: input.amountVnd,
     status: input.status,
     note: input.note,
-    workspaceId: member.workspaceId,
-    actor: { userId: member.userId, displayName: member.displayName },
+    workspaceId,
     acceptLanguage,
 })
 

@@ -1,5 +1,3 @@
-import type { ContractActor } from "@modules/domain/contracts"
-
 /** What saving a recurring contract takes; dates are YYYY-MM-DD and the amount is whole dong. */
 export interface SaveContractRequest {
     /** The contract to edit; null adds a new one. */
@@ -20,10 +18,8 @@ export interface SaveContractRequest {
     readonly status: string
     /** A free note. */
     readonly note: string
-    /** The workspace the caller acts in, established by the workspace guard. */
+    /** The workspace the caller acts in, named in X-Workspace-Id; the domain service proves the caller membership in it. */
     readonly workspaceId: string
-    /** The caller in that workspace; the evidence log shows the name. */
-    readonly actor: ContractActor
     /** The `Accept-Language` header of the request; the evidence lines use the language it names. */
     readonly acceptLanguage: string | undefined
 }
