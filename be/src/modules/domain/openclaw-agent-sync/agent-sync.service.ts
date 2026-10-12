@@ -9,9 +9,8 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
-import { InjectAgentsQueue } from "@modules/queues/agents"
+import { InjectAgentsQueue, isSyncAgentsPayload } from "@modules/queues/agents"
 import type { AgentsQueue } from "@modules/queues/agents"
-import type { SyncAgentsPayload } from "@modules/queues/agents"
 import { INTERNAL_AGENT_MODULE, INTERNAL_AGENT_NAME, INTERNAL_FILES, scopeOf, syncErrorOf } from "./agent-sync.policy"
 import type { OptionalSyncOutcome, SyncOutcome, SyncRequest } from "./openclaw-agent-sync.contracts"
 import { InjectInstallations, processorFromSettings, AgentBundleService, PauseClient } from "@modules/domain/agents"
@@ -75,7 +74,8 @@ export class AgentSyncService {
      * Works one sync job: an installation is synced now; a workspace (business knowledge changed, it is shared by the modules) or
      * everything on OpenClaw (the scheduler tick) is fanned out into one job per installation. Answers how many it handled.
      */
-    async process(payload: SyncAgentsPayload): Promise<number> {
+    async process(payload: object): Promise<number> {
+        if (!isSyncAgentsPayload(payload)) return 0
         const scope = scopeOf(payload)
         if (scope === null) return 0
         if (scope.kind === "installation") {

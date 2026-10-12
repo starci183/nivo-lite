@@ -142,6 +142,14 @@ describe("GenerationRunnerService", () => {
         expect(usage.record).not.toHaveBeenCalled()
     })
 
+    it("drops a payload of another shape", async () => {
+        const em = mockEntityManager()
+        const { runner } = await build(em)
+
+        await expect(runner.run({ orderId: "o1" })).resolves.toBe("dropped")
+        expect(em.query).not.toHaveBeenCalled()
+    })
+
     it("drops a generation that is gone or no longer waiting", async () => {
         const gone = await build(mockEntityManager({ query: [FIND_GENERATION, []] }))
         const ended = await build(mockEntityManager({ query: [FIND_GENERATION, [{ ...ROW, status: "cancelled" }]] }))

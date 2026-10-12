@@ -189,6 +189,13 @@ describe("AgentSyncService", () => {
             await expect(service.process({ workspaceId: WORKSPACE, installationId: "i1" })).resolves.toBe(0)
         })
 
+        it("handles nothing for a payload of another shape", async () => {
+            const { service, installations } = await build()
+
+            await expect(service.process({ force: "yes" })).resolves.toBe(0)
+            expect(installations.byId).not.toHaveBeenCalled()
+        })
+
         it("ignores a payload that names an installation without its workspace", async () => {
             const { service, installations } = await build()
 

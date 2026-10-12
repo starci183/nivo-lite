@@ -7,7 +7,7 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import type { GenerateWithAgentPayload } from "@modules/queues/agents"
+import { isGenerateWithAgentPayload } from "@modules/queues/agents"
 import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
 import type { GenerationRunStatus, QueuedGeneration, TurnAttempt } from "./ai-generations.contracts"
 import { InjectUsage } from "./ai-generations.decorators"
@@ -38,7 +38,8 @@ export class GenerationRunnerService {
     ) {}
 
     /** Runs the generation the job names; the row's own workspace is the tenant, whatever else the payload says. */
-    async run(payload: GenerateWithAgentPayload): Promise<GenerationRunStatus> {
+    async run(payload: object): Promise<GenerationRunStatus> {
+        if (!isGenerateWithAgentPayload(payload)) return "dropped"
         const [row] = await this.entityManager.query<Array<GenerationRow>>(FIND_GENERATION, [
             payload.generationId,
             payload.workspaceId,
