@@ -11,6 +11,7 @@ export const CONSOLE_ROUTES = {
     decisions: "/decisions",
     privacy: "/privacy",
     terms: "/terms",
+    modules: "/modules",
     newChatbot: "/modules/new?module=chatbot",
 } as const
 
