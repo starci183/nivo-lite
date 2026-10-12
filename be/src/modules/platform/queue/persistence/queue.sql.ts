@@ -1,28 +1,29 @@
 import { sql } from "@modules/platform/database"
 
-/** Writes one job in the outbox, already sent: the pgmq send runs in the same transaction ($1 queue, $2 payload, $3 instant). */
-export const INSERT_QUEUE_ROW = sql`INSERT INTO public.queue (queue, payload, created_at, sent_at)
-    VALUES ($1, $2::jsonb, $3, $3)
-    RETURNING id, queue, payload`
+/**
+ * Writes the outbox row of a job and sends its pgmq message on the connection of the caller's transaction, idempotent on the dedupe
+ * key ($1 workspace or null, $2 queue, $3 job, $4 payload, $5 dedupe key, or null for a fresh `<job>:<uuid>`); an existing key
+ * answers its row and sends nothing.
+ */
+export const JOB_ENQUEUE = sql`SELECT public.job_enqueue($1::uuid, $2, $3, $4::jsonb, COALESCE($5::text, $3 || ':' || gen_random_uuid()::text)) AS id`
 
-/** Locks and reads the oldest rows that wait ($1 batch size); a second relay skips the rows this one holds. */
-export const SELECT_WAITING_ROWS = sql`SELECT id, queue, payload FROM public.queue
-    WHERE sent_at IS NULL ORDER BY created_at, id LIMIT $1 FOR UPDATE SKIP LOCKED`
+/**
+ * Reads at most $3 messages of the queue $1 and hides them from other readers for $2 seconds; a message whose workspace already runs
+ * $4 jobs is deferred a few seconds and not returned (job_slots keeps the per-workspace count across every app replica).
+ */
+export const JOB_READ = sql`SELECT msg_id, attempt, message FROM public.job_read($1, $2, $3, $4) LIMIT $3`
 
-/** Marks the rows as sent to pgmq ($1 ids, $2 instant). */
-export const MARK_ROWS_SENT = sql`UPDATE public.queue SET sent_at = $2 WHERE id = ANY($1::uuid[])`
+/** Keeps a running message hidden for $3 more seconds and its workspace slot leased as long ($1 queue, $2 message id). */
+export const JOB_TOUCH = sql`SELECT public.job_touch($1, $2::bigint, $3) AS touched`
 
-/** Sends one message to a pgmq queue on the connection of the caller's transaction ($1 queue, $2 message). */
-export const PGMQ_SEND = sql`SELECT pgmq.send($1, $2::jsonb) AS msg_id`
+/** Done: deletes the message, frees the slot and closes the outbox row ($1 queue, $2 message id). */
+export const JOB_ACK = sql`SELECT public.job_ack($1, $2::bigint) AS acked`
 
-/** Reads at most $3 messages of the queue $1 and hides them from other readers for $2 seconds (the visibility timeout). */
-export const PGMQ_READ = sql`SELECT msg_id, read_ct, message FROM pgmq.read($1, $2, $3) LIMIT $3`
+/** Retry later: the message is visible again after $3 seconds and the slot is freed meanwhile ($1 queue, $2 message id, $4 reason). */
+export const JOB_FAIL = sql`SELECT public.job_fail($1, $2::bigint, $3, $4) AS failed`
 
-/** Moves a handled message to the archive of its queue ($1 queue, $2 message id). */
-export const PGMQ_ARCHIVE = sql`SELECT pgmq.archive($1, $2::bigint) AS archived`
-
-/** Makes a failed message visible again after $3 seconds: the backoff of its next attempt ($1 queue, $2 message id). */
-export const PGMQ_SET_VT = sql`SELECT msg_id FROM pgmq.set_vt($1, $2::bigint, $3) LIMIT 1`
+/** Failed for good: moves the message to the archive of its queue and keeps the reason on the outbox row ($1 queue, $2 message id, $3 reason). */
+export const JOB_ARCHIVE = sql`SELECT public.job_archive($1, $2::bigint, $3) AS archived`
 
 /** Creates or replaces the pg_cron job $1 that sends the message $4 to the queue $3 on the schedule $2. */
 export const CRON_SCHEDULE = sql`SELECT cron.schedule($1, $2, format('SELECT pgmq.send(%L, %L::jsonb)', $3::text, $4::text)) AS job_id`
