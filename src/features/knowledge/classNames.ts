@@ -19,7 +19,7 @@ export const ITEM_CLASS = cn("flex", "min-w-0", "flex-wrap", "items-center", "ju
 export const SOURCE_ROW_CLASS = cn("flex", "min-w-0", "flex-wrap", "items-center", "justify-between", "gap-x-4", "gap-y-2", "border-b", "border-separator", "px-4", "py-3", "last:border-b-0")
 export const ITEM_MAIN_CLASS = cn("flex", "min-w-0", "flex-1", "basis-64", "flex-col", "gap-1")
 /** One link row: the field takes the width, its remove button sits at the end. */
-export const LINK_ROW_CLASS = cn("flex", "min-w-0", "items-start", "gap-2")
+export const LINK_ROW_CLASS = cn("flex", "min-w-0", "items-center", "gap-2")
 export const LINK_FIELD_CLASS = cn("min-w-0", "flex-1")
 /** Disclosure trigger copy: the title, then the one-line summary under it. */
 export const OPTIONS_TITLE_CLASS = cn("flex", "min-w-0", "flex-col", "gap-1", "text-left")

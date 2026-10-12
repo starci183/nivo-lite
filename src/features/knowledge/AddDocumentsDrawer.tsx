@@ -365,7 +365,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
     setBusy(true)
     setError(null)
     // Links still sitting in the textarea join the queue first (a Drive folder expands into its files).
-    const typed = parseLinks(links).filter((u) => !items.some((x) => x.kind === "link" && x.name === u))
+    const typed = parseLinks(links).filter((u) => /^https?:\/\//i.test(u)).filter((u) => !items.some((x) => x.kind === "link" && x.name === u))
     const typedItems = typed.length > 0 ? await expand(typed) : []
     if (typedItems.length > 0) { setItems((cur) => [...cur, ...typedItems]); setRows([newRow()]); setRowErrors({}) }
     // A folder row that failed earlier (no grant yet, ...) is expanded again now.
