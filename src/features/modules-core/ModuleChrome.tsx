@@ -2,8 +2,8 @@
 
 import type { ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Badge, Breadcrumbs, Heading, IconTile, Image, PageContainer, PrimaryRailLayout, Text, TextAction } from "@starci/grammar/common";
-import { nivoIconSource, RouteTabs } from "@/ui";
+import { Badge, Breadcrumbs, Heading, IconTile, Image, PageContainer, PrimaryRailLayout, Tabs, Text, TextAction } from "@starci/grammar/common";
+import { nivoIconSource } from "@/ui";
 import { useLocale, useT } from "@/i18n/client";
 import { modulesCore } from "@/i18n/dict/modulesCore";
 import { shell } from "@/i18n/dict/shell";
@@ -111,9 +111,10 @@ export const ModuleChrome = ({ current, moduleKey, installations, canSetup, isLo
               </div>
             </div>
           </header>
-          <RouteTabs
-            props={{ label: t("tabsLabel"), selectedKey: selected, tabs: tabs.map((tab) => ({ id: tab, label: tabLabel[tab] })) }}
-            on={{ select: (id) => router.push(tabHref(key, id as ModuleTab, current?.id ?? null)) }}
+          <Tabs
+            variant="primary" label={t("tabsLabel")} selectedKey={selected} inset="none" labelVisibility="always"
+            items={tabs.map((tab) => ({ id: tab, label: tabLabel[tab] }))}
+            onSelect={(id) => router.push(tabHref(key, id as ModuleTab, current?.id ?? null))}
           />
           {children}
         </div>
