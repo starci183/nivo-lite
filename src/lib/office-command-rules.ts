@@ -36,6 +36,8 @@ export type OrderRef = { readonly id: string; readonly orderNo: string; readonly
 
 /** The model's raw choice, after parsing (nothing validated yet). */
 export type CommandChoice = {
+  /** "command" when the owner asks the agent to DO something, "question" for a question or small talk (answered as chat, never a card). */
+  readonly intent: "command" | "question";
   readonly command: string | null;
   readonly subjectId: string | null;
   readonly leadId: string | null;
@@ -123,7 +125,7 @@ export const readCommandChoice = (raw: string): CommandChoice | null => {
       else if (typeof v === "string" && v.trim()) fields[k] = v.trim();
     }
   }
-  return { command: str(o.command), subjectId: str(o.subject_id), leadId: str(o.lead_id), fields };
+  return { intent: o.intent === "question" ? "question" : "command", command: str(o.command), subjectId: str(o.subject_id), leadId: str(o.lead_id), fields };
 };
 
 const ID_KEYS = ["subject_id", "lead_id"] as const;

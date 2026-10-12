@@ -51,8 +51,8 @@ ${accepts.map((a) => `- ${a.command}: ${a.description.en} / ${a.description.vi};
 References the message names (the ONLY ids you may use):
 customers: ${JSON.stringify(refs.leads.map((l) => ({ id: l.id, name: l.name })))}
 orders: ${JSON.stringify(refs.orders.map((o) => ({ id: o.id, order_no: o.orderNo, lead_id: o.leadId })))}
-Return ONLY JSON {"command": string|null, "subject_id": string|null, "lead_id": string|null, "fields": {"<key>": string|number}}.
-"command" is null when the message does not ask for any command in the list (a question, small talk, something the agent does not accept). Never invent an id: use null when the reference is not in the lists above. "fields" holds ONLY the needed keys other than subject_id and lead_id, taken from the message.`,
+Return ONLY JSON {"intent": "command"|"question", "command": string|null, "subject_id": string|null, "lead_id": string|null, "fields": {"<key>": string|number}}.
+"intent" is "question" when the owner asks something, reports something or makes small talk rather than telling the agent to DO a task; then "command" is null. "command" is also null when the owner asks for a task the agent does not accept. Never invent an id: use null when the reference is not in the lists above. "fields" holds ONLY the needed keys other than subject_id and lead_id, taken from the message.`,
     },
     { role: "user" as const, content: text },
   ];
@@ -67,7 +67,7 @@ type ProposeInput = { readonly message: Message; readonly agent: Agent; readonly
 
 /**
  * Turns the manager's message into a candidate, or into a NIVO reply. Returns the NIVO messages to show (empty when a card was created, since
- * the card is the answer), or null when this agent accepts no commands at all (the caller then chats with it as before).
+ * the card is the answer), or null when this agent accepts no commands at all or the message is a question (the caller then chats as before).
  */
 export const proposeOfficeCommand = async (c: EngineCtx, i: ProposeInput): Promise<Array<Message> | null> => {
   if (!isModuleKey(i.agent.module)) return null;
@@ -93,7 +93,10 @@ export const proposeOfficeCommand = async (c: EngineCtx, i: ProposeInput): Promi
     return nivo(t("cmdReadFailed", { ...names, error: e instanceof Error ? e.message : String(e) }));
   }
 
-  const res = resolveCandidate(readCommandChoice(raw), accepts, refs);
+  const choice = readCommandChoice(raw);
+  // A question is not a command: the caller answers it as the agent chat did before (owner ruling 2026-10-12).
+  if (choice?.intent === "question") return null;
+  const res = resolveCandidate(choice, accepts, refs);
   if (res.kind === "unmapped") return nivo(t("cmdUnmapped", names));
   if (res.kind === "missing") {
     const need = res.missing.map((k) => (k === "subject_id" ? needOf(t, res.accepted.subjectType) : k === "lead_id" ? t("cmdNeedLead") : t("cmdNeedOther", { field: k }))).join(", ");
