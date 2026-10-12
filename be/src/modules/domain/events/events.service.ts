@@ -11,6 +11,14 @@ export class EventsService {
 
     /** Appends one line to the workspace's evidence log. */
     async record(entry: EventEntry): Promise<void> {
-        await this.entityManager.query(INSERT_EVENT, [entry.workspaceId, entry.kind, entry.actor, entry.summary])
+        await this.entityManager.query(INSERT_EVENT, [
+            entry.workspaceId,
+            entry.kind,
+            entry.actor,
+            entry.summary,
+            entry.leadId ?? null,
+            entry.workItemId ?? null,
+            entry.evidence ?? null,
+        ])
     }
 }
