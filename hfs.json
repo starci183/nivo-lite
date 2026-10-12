@@ -26,7 +26,8 @@
         }
       ],
       "reads": ["supabase/types/"],
-      "patterns": ["webhooks", "queue", "fenced-job"]
+      "patterns": ["webhooks", "queue", "fenced-job"],
+      "optionalSlots": ["repo.docs"]
     },
     "fe": {
       "apps": [{ "name": "web", "kind": "next" }],

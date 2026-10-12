@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
-import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { builder, mock } from "@starci/jest-preset"
+import { ApiKeysService } from "@modules/domain/api-keys"
 import { LoyaltyCampaignsService } from "@modules/domain/loyalty-campaigns"
 import type { Segment } from "@modules/domain/loyalty-campaigns"
 import { LoyaltyCustomersService } from "@modules/domain/loyalty-customers"
@@ -9,23 +10,12 @@ import { LoyaltyProgramsService } from "@modules/domain/loyalty-programs"
 import type { LoyaltyProgram } from "@modules/domain/loyalty-programs"
 import { LoyaltyRewardsService } from "@modules/domain/loyalty-rewards"
 import type { LoyaltyReward } from "@modules/domain/loyalty-rewards"
-import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LoyaltyErrorCode } from "./errors/loyalty.error"
 import { LoyaltyApiService } from "./loyalty-api.service"
 import { LoyaltyEarningService } from "./loyalty-earning.service"
 import { LoyaltyRedemptionService } from "./loyalty-redemption.service"
-import { AUTHENTICATE_API_KEY } from "./persistence/loyalty.sql"
-import { hashApiKey } from "./policies/api-key.policy"
-import type { ApiKeyAuth } from "./policies/api-key.policy"
 
-const AUTH: ApiKeyAuth = {
-    id: "key-12345678",
-    workspace_id: "ws-1",
-    name: "Till",
-    scopes: ["loyalty:read", "loyalty:write"],
-    revoked: false,
-    hits: 1,
-}
+const PRINCIPAL = { keyId: "key-12345678", workspaceId: "ws-1", name: "Till", scopes: ["loyalty:read", "loyalty:write"] }
 const HEADER = "Bearer nvk_secret"
 const program: LoyaltyProgram = {
     workspaceId: "ws-1",
@@ -93,7 +83,6 @@ const REWARD: LoyaltyReward = {
 const SEGMENT: Segment = { tiers: [], inactiveDays: 0, birthdayThisMonth: false, minSpendVnd: 0 }
 
 interface Options {
-    auth?: ApiKeyAuth | null
     program?: LoyaltyProgram | null
     customer?: typeof CUSTOMER | null
     member?: LoyaltyMember | null
@@ -102,9 +91,8 @@ interface Options {
 }
 
 const build = async (options: Options = {}) => {
-    const em = mockEntityManager({
-        query: [AUTHENTICATE_API_KEY, [{ auth: options.auth === undefined ? AUTH : options.auth }]],
-    })
+    const keys = mock<ApiKeysService>()
+    keys.authenticate.mockResolvedValue(PRINCIPAL)
     const programs = mock<LoyaltyProgramsService>()
     programs.findActive.mockResolvedValue(options.program === undefined ? program : options.program)
     const customers = mock<LoyaltyCustomersService>()
@@ -124,7 +112,7 @@ const build = async (options: Options = {}) => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             LoyaltyApiService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: fakeTransaction(em).em },
+            { provide: ApiKeysService, useValue: keys },
             { provide: LoyaltyProgramsService, useValue: programs },
             { provide: LoyaltyCustomersService, useValue: customers },
             { provide: LoyaltyLedgerService, useValue: ledger },
@@ -134,39 +122,17 @@ const build = async (options: Options = {}) => {
             { provide: LoyaltyCampaignsService, useValue: campaigns },
         ],
     }).compile()
-    return { service: moduleRef.get(LoyaltyApiService), em, earning, redemption, campaigns }
+    return { service: moduleRef.get(LoyaltyApiService), keys, earning, redemption, campaigns }
 }
 
 describe("LoyaltyApiService", () => {
     describe("the key", () => {
-        it("is looked up by the hash of the bearer key", async () => {
-            const { service, em } = await build()
+        it("is checked for the scope of the call with the header the till sent", async () => {
+            const { service, keys } = await build()
 
             await service.members({ authorization: HEADER, phone: "", limit: 10 })
 
-            expect(em.query).toHaveBeenCalledWith(AUTHENTICATE_API_KEY, [hashApiKey("nvk_secret")])
-        })
-
-        it("is refused when it is unknown, revoked, over its rate or without the scope", async () => {
-            const unknown = await build({ auth: null })
-            const revoked = await build({ auth: { ...AUTH, revoked: true } })
-            const busy = await build({ auth: { ...AUTH, hits: 61 } })
-            const narrow = await build({ auth: { ...AUTH, scopes: ["loyalty:read"] } })
-            const call = { authorization: HEADER, name: "", brief: "", segment: SEGMENT }
-
-            await expect(unknown.service.promo(call)).rejects.toMatchObject({ code: LoyaltyErrorCode.KeyInvalid })
-            await expect(revoked.service.promo(call)).rejects.toMatchObject({ code: LoyaltyErrorCode.KeyRevoked })
-            await expect(busy.service.promo(call)).rejects.toMatchObject({ code: LoyaltyErrorCode.KeyRateLimited })
-            await expect(narrow.service.promo(call)).rejects.toMatchObject({ code: LoyaltyErrorCode.ScopeMissing })
-        })
-
-        it("is refused when the database answers no row at all", async () => {
-            const { service, em } = await build()
-            em.query.mockResolvedValueOnce([])
-
-            await expect(service.members({ authorization: HEADER, phone: "", limit: 10 })).rejects.toMatchObject({
-                code: LoyaltyErrorCode.KeyInvalid,
-            })
+            expect(keys.authenticate).toHaveBeenCalledWith("loyalty:read", HEADER)
         })
 
         it("is refused when the programme is off", async () => {

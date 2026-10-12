@@ -1,11 +1,9 @@
-@import "../ui/styles.css";
 @import "tailwindcss";
 @import "@heroui/styles/css";
 @import "@starci/grammar/common.css";
-@import "../ui/leaves/NivoGrammar/nivo.css";
-@import "./brand.css";
+@import "../modules/brand/brand.css";
 
-/* Grammar renderers ship in node_modules; Tailwind must scan them. (src/ui is scanned with the app.) */
+/* Grammar renderers ship in node_modules; Tailwind must scan them. (src/components is scanned with the app.) */
 @source "../../node_modules/@starci/grammar/dist";
 
 @custom-variant dark (&:where(.dark, .dark *));

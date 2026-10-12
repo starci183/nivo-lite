@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
+import { ApiKeysService } from "@modules/domain/api-keys"
 import { LoyaltyCampaignsService } from "@modules/domain/loyalty-campaigns"
 import type { CampaignDraft } from "@modules/domain/loyalty-campaigns"
 import { LoyaltyCustomersService, toLoyaltyPhone } from "@modules/domain/loyalty-customers"
@@ -8,7 +8,6 @@ import type { LoyaltyMember } from "@modules/domain/loyalty-ledger"
 import { LoyaltyProgramsService, tierOf } from "@modules/domain/loyalty-programs"
 import type { LoyaltyConfig } from "@modules/domain/loyalty-programs"
 import { LoyaltyRewardsService } from "@modules/domain/loyalty-rewards"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { LoyaltyError, LoyaltyErrorCode } from "./errors/loyalty.error"
 import { LoyaltyEarningService } from "./loyalty-earning.service"
 import { LoyaltyRedemptionService } from "./loyalty-redemption.service"
@@ -22,38 +21,16 @@ import type {
     ApiRedeemParams,
     ApiRedeemResult,
 } from "./loyalty.contracts"
-import { AUTHENTICATE_API_KEY } from "./persistence/loyalty.sql"
-import { bearerKey, hashApiKey, verdictOf } from "./policies/api-key.policy"
-import type { ApiKeyAuth, KeyVerdict } from "./policies/api-key.policy"
 
 const DEFAULT_LIMIT = 50
 
-const VERDICT_ERRORS: Readonly<Record<KeyVerdict, LoyaltyErrorCode>> = {
-    ok: LoyaltyErrorCode.KeyInvalid,
-    invalid: LoyaltyErrorCode.KeyInvalid,
-    revoked: LoyaltyErrorCode.KeyRevoked,
-    rate_limited: LoyaltyErrorCode.KeyRateLimited,
-    scope_missing: LoyaltyErrorCode.ScopeMissing,
-}
-
-/** The workspace an API key acts for. */
-interface ApiPrincipal {
-    /** The key id. */
-    readonly keyId: string
-    /** The workspace. */
-    readonly workspaceId: string
-    /** The name of the key. */
-    readonly name: string
-}
-
 @Injectable()
 /**
- * The loyalty endpoints for a till that is not part of NIVO's own sales flow (scopes loyalty:read and loyalty:write). The key is checked
- * here until the api-key capability of the public API takes it over.
+ * The loyalty endpoints for a till that is not part of NIVO's own sales flow (scopes loyalty:read and loyalty:write).
  */
 export class LoyaltyApiService {
     constructor(
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly keys: ApiKeysService,
         private readonly programs: LoyaltyProgramsService,
         private readonly customers: LoyaltyCustomersService,
         private readonly ledger: LoyaltyLedgerService,
@@ -65,7 +42,7 @@ export class LoyaltyApiService {
 
     /** One customer by phone, or the newest customers. */
     async members(params: ApiMembersParams): Promise<ApiMembersResult> {
-        const principal = await this.authenticate(params.authorization, "loyalty:read")
+        const principal = await this.keys.authenticate("loyalty:read", params.authorization)
         const config = await this.activeConfig(principal.workspaceId)
         const wanted = params.phone ?? ""
         if (wanted === "") {
@@ -82,7 +59,7 @@ export class LoyaltyApiService {
 
     /** Points for a sale the shop made outside NIVO; the receipt id makes a repeated report harmless. */
     async award(params: ApiAwardParams): Promise<ApiAwardResult> {
-        const principal = await this.authenticate(params.authorization, "loyalty:write")
+        const principal = await this.keys.authenticate("loyalty:write", params.authorization)
         const config = await this.activeConfig(principal.workspaceId)
         const phone = this.phoneOf(params.phone)
         const amount = Math.round(params.amountVnd)
@@ -105,7 +82,7 @@ export class LoyaltyApiService {
 
     /** A reward for a customer named by phone or id. */
     async redeem(params: ApiRedeemParams): Promise<ApiRedeemResult> {
-        const principal = await this.authenticate(params.authorization, "loyalty:write")
+        const principal = await this.keys.authenticate("loyalty:write", params.authorization)
         const config = await this.activeConfig(principal.workspaceId)
         if (params.phone === "" && params.customerId === "")
             throw new LoyaltyError({ code: LoyaltyErrorCode.ContactRequired })
@@ -133,7 +110,7 @@ export class LoyaltyApiService {
 
     /** The draft of a promotion to a segment; it waits for the owner and nothing is sent. */
     async promo(params: ApiPromoParams): Promise<CampaignDraft> {
-        const principal = await this.authenticate(params.authorization, "loyalty:write")
+        const principal = await this.keys.authenticate("loyalty:write", params.authorization)
         await this.activeConfig(principal.workspaceId)
         return this.campaigns.create({
             workspaceId: principal.workspaceId,
@@ -142,17 +119,6 @@ export class LoyaltyApiService {
             brief: params.brief,
             createdBy: `api:${principal.name}`,
         })
-    }
-
-    private async authenticate(header: string, scope: string): Promise<ApiPrincipal> {
-        const key = bearerKey(header)
-        const [row] = await this.entityManager.query<Array<{ auth: ApiKeyAuth | null }>>(AUTHENTICATE_API_KEY, [
-            hashApiKey(key),
-        ])
-        const auth = row === undefined ? null : row.auth
-        const verdict = verdictOf(key, auth, scope)
-        if (auth === null || verdict !== "ok") throw new LoyaltyError({ code: VERDICT_ERRORS[verdict] })
-        return { keyId: auth.id, workspaceId: auth.workspace_id, name: auth.name }
     }
 
     private async activeConfig(workspaceId: string): Promise<LoyaltyConfig> {

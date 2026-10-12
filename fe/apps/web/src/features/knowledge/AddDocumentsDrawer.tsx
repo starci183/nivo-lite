@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ClipboardEvent } from "react"
 import { Alert, Badge, Button, ComboBox, Drawer, FileDropzone, IconButton, Input, List, ListItem, ListRow, SegmentedControl, Select, SurfaceAccordionCard, SurfaceListCard, Tabs, Text, Textarea } from "@starci/grammar/common"
-import { nivoIconSource } from "@/ui"
+import { nivoIconSource } from "@/components/leaves/Icon"
 import { useT } from "@/i18n/client"
 import { knowledge } from "@/i18n/dict/knowledge"
 import { disconnectDriveGrant, driveGrantStatus, listDriveFolder, listPickedFolder, startDriveGrant } from "@/lib/knowledge/actions"

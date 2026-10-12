@@ -25,14 +25,6 @@ export enum LoyaltyErrorCode {
     ProgramOff = "LOYALTY_PROGRAM_OFF",
     /** No switched-on programme has the slug. */
     PageNotFound = "LOYALTY_PAGE_NOT_FOUND",
-    /** The API key is missing or does not exist. */
-    KeyInvalid = "LOYALTY_KEY_INVALID",
-    /** The API key was revoked. */
-    KeyRevoked = "LOYALTY_KEY_REVOKED",
-    /** The API key is over its requests per minute. */
-    KeyRateLimited = "LOYALTY_KEY_RATE_LIMITED",
-    /** The API key does not carry the scope the call needs. */
-    ScopeMissing = "LOYALTY_SCOPE_MISSING",
 }
 
 /** How each loyalty code travels. */
@@ -48,10 +40,6 @@ export const LOYALTY_ERROR_KINDS: Record<LoyaltyErrorCode, ErrorKind> = {
     [LoyaltyErrorCode.CustomerNotCreated]: "invalid",
     [LoyaltyErrorCode.ProgramOff]: "conflict",
     [LoyaltyErrorCode.PageNotFound]: "not-found",
-    [LoyaltyErrorCode.KeyInvalid]: "unauthenticated",
-    [LoyaltyErrorCode.KeyRevoked]: "unauthenticated",
-    [LoyaltyErrorCode.KeyRateLimited]: "rate-limited",
-    [LoyaltyErrorCode.ScopeMissing]: "forbidden",
 }
 
 /** The one error class of the loyalty capability. */

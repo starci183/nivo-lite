@@ -2,7 +2,7 @@
 
 Backend chạy trên VPS, làm những việc mà serverless (Netlify) không làm được: **công việc agent chạy lâu qua OpenClaw**, **tích hợp n8n** và **hàng đợi công việc bền vững**.
 
-Ứng dụng Next.js (thư mục gốc của repo) vẫn là **mặt phẳng điều khiển**: giao diện, cổng thẩm quyền (authority gate), bằng chứng (evidence). Engine chỉ là **người làm việc**. Engine **không bao giờ** gửi tin tới khách (Telegram, website...): nó chỉ *đề xuất* câu trả lời, ứng dụng quyết định.
+Ứng dụng Next.js (thư mục gốc của repo) vẫn là **mặt phẳng điều khiển**: giao diện, cổng thẩm quyền (authority gate), bằng chứng (evidence). Engine chỉ là **người làm việc**. Engine **không bao giờ** gửi tin tới khách (Telegram, website...): nó chỉ _đề xuất_ câu trả lời, ứng dụng quyết định.
 
 ```
  Khách ──Telegram/Web──▶ Next.js (customer-turn.ts)
@@ -19,7 +19,7 @@ Backend chạy trên VPS, làm những việc mà serverless (Netlify) không l�
 
 ## Chọn công nghệ và lý do
 
-- **NestJS tối giản** (không GraphQL, không Keycloak). Chuẩn backend của StarCi (`starci-academy-backend/.claude/knowledge`: `coding-reference.yaml`, `architecture-rules.yaml`) quy định mọi dịch vụ dùng Next.js/NestJS và *không cho thay framework*, nên không dùng Node thuần dù nhỏ hơn.
+- **NestJS tối giản** (không GraphQL, không Keycloak). Chuẩn backend của StarCi (`starci-academy-backend/.claude/knowledge`: `coding-reference.yaml`, `architecture-rules.yaml`) quy định mọi dịch vụ dùng Next.js/NestJS và _không cho thay framework_, nên không dùng Node thuần dù nhỏ hơn.
 - Áp dụng phần nhẹ của chuẩn: một nơi duy nhất đọc môi trường (`EnvSource`), mỗi năng lực có `*.config.ts` + options, module nhận options qua `register()`, cấu hình được kiểm tra **trước** khi mở cổng hay chạy worker, vòng lặp nền là một transport riêng (`platform/queue`), liveness và readiness tách nhau. Không dùng CQRS, saga, outbox vì chưa có ranh giới thật cần chúng (REF-SCOPE-2).
 - **Hàng đợi nằm trong Postgres** (Supabase) chứ không thêm Redis/BullMQ: ứng dụng và pg_cron đều enqueue được bằng SQL, một nguồn sự thật, không thêm dịch vụ phải vận hành. Job nền mới (tài liệu) dùng Supabase Queues (pgmq) trong cùng Postgres.
 
@@ -50,12 +50,12 @@ cd engine && npm run build && node dev/e2e.mjs
 
 ## Các loại job
 
-| kind | payload | việc làm |
-| --- | --- | --- |
-| `chat.turn` | `conversation_id, message_id, event_id, agent_id` | Lấy ngữ cảnh từ app, chạy một lượt khách qua OpenClaw, gửi **câu trả lời đề xuất** về app. Lỗi/timeout/gateway chết: báo app trả lời bằng model trực tiếp, job được đánh dấu `path=direct_fallback`. |
-| `connection.health` | `silentAfterHours?` | Đánh dấu kết nối đang lỗi (`error`) hoặc im lặng quá lâu (mặc định 72 giờ) vào `connections.public_meta.health`. Không đổi `status`. pg_cron enqueue mỗi 15 phút. Có `TODO(office)` để đăng thông báo vào Office. |
-| `openclaw.sync_agent` | `installation_id` | Dựng lại **bản sao OpenClaw** của một agent từ Supabase (nguồn gốc): `AGENTS.md`, `SOUL.md`, `knowledge/*.md` trong workspace `workspace-<agentId>`, đăng ký trong `openclaw.json` (`agents.list`), ghi trạng thái vào `openclaw_agent_sync`. Xem mục bên dưới. |
-| `n8n.emit` | `event, data, urls?` | POST sự kiện NIVO có chữ ký HMAC tới webhook của workspace (hoặc `N8N_DEFAULT_WEBHOOK_URL`). Header: `x-nivo-event`, `x-nivo-delivery` (= id job, để bên nhận chống trùng), `x-nivo-timestamp`, `x-nivo-signature`. Chặn SSRF: đích phải phân giải ra địa chỉ công khai, trừ host trong `N8N_ALLOWED_HOSTS`. |
+| kind                  | payload                                           | việc làm                                                                                                                                                                                                                                                                                                     |
+| --------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `chat.turn`           | `conversation_id, message_id, event_id, agent_id` | Lấy ngữ cảnh từ app, chạy một lượt khách qua OpenClaw, gửi **câu trả lời đề xuất** về app. Lỗi/timeout/gateway chết: báo app trả lời bằng model trực tiếp, job được đánh dấu `path=direct_fallback`.                                                                                                         |
+| `connection.health`   | `silentAfterHours?`                               | Đánh dấu kết nối đang lỗi (`error`) hoặc im lặng quá lâu (mặc định 72 giờ) vào `connections.public_meta.health`. Không đổi `status`. pg_cron enqueue mỗi 15 phút. Có `TODO(office)` để đăng thông báo vào Office.                                                                                            |
+| `openclaw.sync_agent` | `installation_id`                                 | Dựng lại **bản sao OpenClaw** của một agent từ Supabase (nguồn gốc): `AGENTS.md`, `SOUL.md`, `knowledge/*.md` trong workspace `workspace-<agentId>`, đăng ký trong `openclaw.json` (`agents.list`), ghi trạng thái vào `openclaw_agent_sync`. Xem mục bên dưới.                                              |
+| `n8n.emit`            | `event, data, urls?`                              | POST sự kiện NIVO có chữ ký HMAC tới webhook của workspace (hoặc `N8N_DEFAULT_WEBHOOK_URL`). Header: `x-nivo-event`, `x-nivo-delivery` (= id job, để bên nhận chống trùng), `x-nivo-timestamp`, `x-nivo-signature`. Chặn SSRF: đích phải phân giải ra địa chỉ công khai, trừ host trong `N8N_ALLOWED_HOSTS`. |
 
 Thêm job mới: viết một class `implements JobHandler` (`kind` + `run(job, signal)`), đưa vào `JOB_HANDLERS` ở `app.module.ts`. Handler phải chạy lại an toàn (lease có thể hết hạn giữa chừng).
 
@@ -75,14 +75,14 @@ Không còn gọi model trực tiếp ở đâu trong app (`src/lib/deepseek.ts`
 
 - **Khách chat** (`chat.turn`): OpenClaw lỗi, quá thời gian chờ (cài đặt từng installation `openclawTimeoutSec`, mặc định 25 giây) hoặc engine chết (bộ quét `/api/engine/sweep` do pg_cron + pg_net gọi mỗi phút; job xếp hàng quá 30 giây hoặc chạy quá hạn bị huỷ nguyên tử) thì **không có chữ AI nào**: khách nhận tin nhắn giữ chỗ cố định của chủ (mặc định "Dạ em đã nhận tin, nhân viên sẽ phản hồi anh/chị sớm ạ", sửa trong cài đặt module, tối đa một lần mỗi giờ mỗi hội thoại) và một việc chuyển giao hiện ở Office, bằng chứng `fallback: openclaw_unavailable`.
 - **Mọi chữ khác** (chat thiết lập, chat chủ, Office, phân loại lead, bản nháp tự động): job `openclaw.generate { generation_id }`. App ghi hàng `ai_generations`, xếp job, thăm dò hàng đến khi engine gọi lại `generate.result` (HMAC). Chạy một lượt một lần trên agent "nivo" riêng của workspace (không persona, không công cụ). Kết quả cho job đã huỷ bị bỏ. Hết hạn mức hoặc OpenClaw bận thì giao diện hiện "NIVO đang bận, thử lại sau ít phút".
-- **Watchdog** (`deploy/watchdog.sh`, cron mỗi phút do CI cài): engine ở chung network namespace với openclaw nên khi openclaw khởi động lại, engine mất mạng; watchdog tạo lại *chỉ* dịch vụ engine.
+- **Watchdog** (`deploy/watchdog.sh`, cron mỗi phút do CI cài): engine ở chung network namespace với openclaw nên khi openclaw khởi động lại, engine mất mạng; watchdog tạo lại _chỉ_ dịch vụ engine.
 - **Chi phí và tốc độ**: model `openrouter/deepseek/deepseek-v4-flash` được tắt reasoning qua `params.extra_body`; DeepSeek tự cache tiền tố lặp lại (usage có `cached_tokens`, ghi vào `ai_generations.usage` và việc đo dùng AI).
 
 ## Chat.turn: mỗi quyết định thiết kế
 
-- **Ngữ cảnh do app dựng**, engine gọi `POST /api/engine/context` thay vì chép logic `buildAgentContext` sang engine. Lý do: lọc *chỉ tri thức công khai* cho khách, quyền hạn chủ doanh nghiệp (`authorityBrief`) và phiên bản ngữ cảnh đã duyệt là ranh giới bảo mật; hai bản sao sẽ lệch nhau. Đổi lại mỗi lượt có thêm một request nội bộ.
+- **Ngữ cảnh do app dựng**, engine gọi `POST /api/engine/context` thay vì chép logic `buildAgentContext` sang engine. Lý do: lọc _chỉ tri thức công khai_ cho khách, quyền hạn chủ doanh nghiệp (`authorityBrief`) và phiên bản ngữ cảnh đã duyệt là ranh giới bảo mật; hai bản sao sẽ lệch nhau. Đổi lại mỗi lượt có thêm một request nội bộ.
 - **Một agent OpenClaw cho mỗi workspace + module**: `ws-<8 ký tự đầu workspace id>-chatbot`. `sessionKey = agent:<agentId>:<conversation id>`. Mỗi lượt gửi cả ngữ cảnh lẫn bản ghi hội thoại (session có thể mới, hoặc đã được bộ xử lý kia trả lời).
-- **Engine chỉ đề xuất.** Câu trả lời là JSON theo cùng hợp đồng với `customerChat` (reply, lead, needs_human, order, payment_claim). App đọc nó bằng `readProposedReply`, rồi đi qua *đúng* đường đã có (`applyCustomerOut`): cổng thẩm quyền, evidence, gửi kênh. Trả lời không phải JSON thì **không bao giờ** gửi nguyên văn cho khách: nó trở thành đề xuất chờ chủ duyệt, khách nhận câu giữ chỗ cố định.
+- **Engine chỉ đề xuất.** Câu trả lời là JSON theo cùng hợp đồng với `customerChat` (reply, lead, needs_human, order, payment_claim). App đọc nó bằng `readProposedReply`, rồi đi qua _đúng_ đường đã có (`applyCustomerOut`): cổng thẩm quyền, evidence, gửi kênh. Trả lời không phải JSON thì **không bao giờ** gửi nguyên văn cho khách: nó trở thành đề xuất chờ chủ duyệt, khách nhận câu giữ chỗ cố định.
 - **Idempotent**: callback ghi `channel_receipts('engine', 'chat.turn:<job>')` nên gọi lại không tạo hai câu trả lời. Hội thoại đã được người tiếp quản thì không có trả lời AI.
 - **Fallback**: app chỉ enqueue khi có nhịp tim worker trong 90 giây; engine không chạy thì khách được trả lời ngay như cũ. Lượt đã vào hàng đợi mà OpenClaw lỗi thì engine gọi `chat.fallback` và app tự trả lời.
 
@@ -98,7 +98,7 @@ OpenClaw gọi engine bằng HTTP nội bộ với bearer token **ngắn hạn, 
 
 ## Bảo mật
 
-- `ENGINE_SHARED_SECRET` (32+ ký tự) ký HMAC-SHA256 `<timestamp>.<body>` cho mọi lời gọi engine → app (lệch quá 5 phút bị từ chối). Khoá token công cụ và khoá ký n8n được *dẫn xuất* từ nó, khoá n8n riêng cho từng workspace.
+- `ENGINE_SHARED_SECRET` (32+ ký tự) ký HMAC-SHA256 `<timestamp>.<body>` cho mọi lời gọi engine → app (lệch quá 5 phút bị từ chối). Khoá token công cụ và khoá ký n8n được _dẫn xuất_ từ nó, khoá n8n riêng cho từng workspace.
 - Engine dùng service-role key của Supabase: chỉ đặt trên VPS, không vào image, không vào log. Lỗi cấu hình chỉ nêu tên biến, không nêu giá trị.
 - `/healthz` (liveness, chỉ phụ thuộc tiến trình; kèm `jobs.stats` = `job_stats()`: độ sâu hàng đợi, job chờ lâu nhất `oldestQueuedAgeSeconds`, số job lỗi 24 giờ `failed24h`, lấy từ bộ đệm 10 giây) và `/readyz` (lần poll `engine_jobs` gần nhất chạm được DB, và pgmq trả lời) là hai thứ khác nhau.
 - Job nền thứ hai: Supabase Queues (pgmq) trong Postgres của Supabase (`src/platform/pgmq/`; `job_outbox` + `pgmq.send` trong cùng giao dịch, engine poll bằng `job_read`). Kiến trúc, hợp đồng job và cách thêm job: `docs/JOBS.md` ở gốc repo. Hàng đợi `engine_jobs` vẫn phục vụ OpenClaw như cũ (`ENGINE_WORKER_ENABLED=0` tắt nó khi chạy thử tại máy).

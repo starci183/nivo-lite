@@ -1,6 +1,6 @@
 "use client"
 
-import { RouteError } from "@/components/state/RouteError"
+import { RouteError } from "@/components/blocks/RouteError"
 import { knowledgeTrail } from "@/features/knowledge/trail"
 import { useT } from "@/i18n/client"
 import { knowledge } from "@/i18n/dict/knowledge"

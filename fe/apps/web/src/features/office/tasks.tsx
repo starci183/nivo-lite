@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"
-import { TileIcon } from "@/ui"
+import { TileIcon } from "@/components/composites/TileIcon"
 import { Badge, Button, EmptyNotice, Select, SurfaceListCard, Text } from "@starci/grammar/common"
 import { useLocale, useT } from "@/i18n/client"
 import { office } from "@/i18n/dict/office"
