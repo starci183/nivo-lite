@@ -6,7 +6,7 @@ import { Badge, Icon, IconTile, Link, Switch, SurfaceCard, Text, TextAction } fr
 import { useLocale, useT } from "@/i18n/client"
 import { automations as dict } from "@/i18n/dict/automations"
 import type { AutomationCardView } from "@/lib/automation-shared"
-import { nivoIconSource } from "@/ui"
+import { nivoIconSource } from "@/components/leaves/Icon"
 import { ACTIONS_CLASS, CARD_FOOT_CLASS, CARD_STACK_CLASS, CARD_TEXT_CLASS, CARD_TOP_CLASS } from "./classNames"
 import { iconFor, loc, startsConnection, statusOf, switchLocked, type CardStatus } from "./helpers"
 

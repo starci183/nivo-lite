@@ -1,7 +1,7 @@
 "use client";
 
 import { Badge, EmptyNotice, Heading, HorizontalScrollRegion, ListBox, SearchField, SegmentedControl, Text } from "@starci/grammar/common";
-import { PersonAvatar } from "@/components/avatar/PersonAvatar";
+import { PersonAvatar } from "@/components/leaves/PersonAvatar"
 import { useLocale, useT } from "@/i18n/client";
 import { workbenchChatbot } from "@/i18n/dict/workbenchChatbot";
 import { dayKey, listTime } from "@/features/office/format";

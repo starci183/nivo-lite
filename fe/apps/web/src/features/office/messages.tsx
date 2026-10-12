@@ -2,8 +2,9 @@
 
 import { useState } from "react"
 import { Avatar, Badge, Button, ButtonGroup, ChatBubble, Divider, Text } from "@starci/grammar/common"
-import { AgentAvatar, PersonAvatar } from "@/components/avatar/PersonAvatar"
-import { NivoLogo } from "@/components/brand/NivoLogo"
+import { AgentAvatar } from "@/components/blocks/AgentAvatar"
+import { PersonAvatar } from "@/components/leaves/PersonAvatar"
+import { BrandLogo } from "@/components/blocks/BrandLogo"
 import { useLocale, useT } from "@/i18n/client"
 import { office } from "@/i18n/dict/office"
 import type { Agent, Message } from "@/lib/types"
@@ -38,7 +39,7 @@ export const isNivoMessage = (message: Message): boolean => message.author_kind 
 
 /** The avatar of NIVO Core: Grammar `Avatar` with the NIVO mark as its fallback (the Avatar owns the round frame). */
 export const NivoAvatar = ({ isDecorative = false }: { readonly isDecorative?: boolean }) => (
-  <Avatar name="NIVO" size="sm" isDecorative={isDecorative} fallback={<NivoLogo variant="mark" height={16} />} />
+  <Avatar name="NIVO" size="sm" isDecorative={isDecorative} fallback={<BrandLogo variant="mark" height={16} />} />
 )
 
 /** Props for {@link MessageRow}. */

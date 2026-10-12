@@ -1,5 +1,5 @@
 import { Button, NavLandmark, TextAction, TopBar } from "@starci/grammar/common";
-import { NivoLogo } from "@/components/brand/NivoLogo";
+import { BrandLogo } from "@/components/blocks/BrandLogo"
 import { LocaleSwitch } from "@/i18n/LocaleSwitch";
 import { landing } from "@/i18n/dict/landing";
 import { getT } from "@/i18n/server";
@@ -30,7 +30,7 @@ export const LandingNav = async ({ anchorBase = "" }: { readonly anchorBase?: st
       brand={
         // Unstyled home link around the approved logo raster; the anchor only carries the destination and its name.
         <a href="/" aria-label={t("homeLabel")}>
-          <NivoLogo variant="full" height={36} />
+          <BrandLogo variant="full" height={36} />
         </a>
       }
       navigation={

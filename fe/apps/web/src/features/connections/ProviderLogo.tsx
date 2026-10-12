@@ -4,7 +4,7 @@ import { IconTile, Image } from "@starci/grammar/common"
 import type { Connection, Provider } from "@/lib/channels"
 import { PROVIDER_LOGO } from "@/lib/connection-providers"
 import { bankLogo } from "@/lib/vn-banks"
-import { nivoIconSource } from "@/ui"
+import { nivoIconSource } from "@/components/leaves/Icon"
 import { BANK_FRAME_CLASS, PROVIDER_LOGO_CLASS } from "./classNames"
 
 /** The provider's own mark in a neutral tile (outgoing email, which has no brand, keeps the envelope glyph). Decorative: the name sits beside it. */
