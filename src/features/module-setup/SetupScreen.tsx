@@ -11,6 +11,7 @@ import {
   MODULE_GATES, allGatesConfirmed, gateEntry, gateHint, gateLabel, snapshotOf,
   type ContextVersion, type GateStatus, type Installation, type ModuleKey, type SetupMessage, type SetupRevision, type SetupSession,
 } from "@/lib/modules-shared";
+import type { UnmetRequirement } from "@/lib/module-requirements";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { SetupKnowledge } from "./SetupKnowledge";
 import * as c from "./classNames";
@@ -24,6 +25,8 @@ type SetupScreenProps = {
   readonly initialRevisions: ReadonlyArray<SetupRevision>;
   readonly initialMessages: ReadonlyArray<SetupMessage>;
   readonly initialVersions: ReadonlyArray<ContextVersion>;
+  /** Requirements of the module (module.json requires) the workspace does not meet yet: a soft notice, never a block. */
+  readonly unmetRequirements?: ReadonlyArray<UnmetRequirement>;
   /** STATE-8: the same tab while its data loads - card labels and gate names stay; the chat, draft, gate states and versions are skeletons. */
   readonly isLoading?: boolean;
 };
@@ -41,7 +44,7 @@ const mergeMessages = (current: ReadonlyArray<SetupMessage>, incoming: ReadonlyA
 };
 
 /** The Setup tab: private chat with NIVO on the left, the draft, gate checklist and versions on the right. */
-export const SetupScreen = ({ installation, moduleKey, initialSession, initialRevisions, initialMessages, initialVersions, isLoading = false }: SetupScreenProps) => {
+export const SetupScreen = ({ installation, moduleKey, initialSession, initialRevisions, initialMessages, initialVersions, unmetRequirements = [], isLoading = false }: SetupScreenProps) => {
   const t = useT(moduleSetup);
   const locale = useLocale();
   const router = useRouter();
@@ -197,6 +200,16 @@ export const SetupScreen = ({ installation, moduleKey, initialSession, initialRe
       </FillViewport>
 
       <div className={c.SIDE_CLASS_NAME}>
+        {unmetRequirements.length > 0 ? (
+          <Alert
+            title={t("requirementsTitle")}
+            description={`${t("requirementsBody")} ${unmetRequirements.map((r) => (locale === "en" ? r.label.en : r.label.vi)).join("; ")}.`}
+            tone="cautionary"
+            appearance="soft"
+            action={{ label: t("requirementsFix"), onAction: () => router.push(unmetRequirements[0].href) }}
+          />
+        ) : null}
+
         <SurfaceCard label={t("draftTitle")} headingLevel={2}>
           <div className={c.STACK_CLASS_NAME}>
             {isLoading ? <Skeleton shape="text" lines={3} /> : session.draft.summary ? <Text size="sm">{session.draft.summary}</Text> : <Text size="sm" tone="muted">{t("draftEmpty")}</Text>}
