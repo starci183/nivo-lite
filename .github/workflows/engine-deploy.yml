@@ -1,8 +1,12 @@
-# Redeploys the engine stack (engine + OpenClaw + n8n) on the VPS with Docker Compose.
-# Runs on a push to main that changes engine/, or by hand (Actions > Deploy engine > Run workflow).
+# Redeploys the engine stack (engine + OpenClaw + n8n + Redis for the BullMQ job system) on the VPS with Docker Compose.
+# Runs on a push to main that changes engine/, supabase/migrations/ (the outbox tables the relay reads) or the shared knowledge code
+# (src/lib/knowledge/pure/), or by hand (Actions > Deploy engine > Run workflow).
 # Everything comes from the GitHub environment "production":
 #   vars    VPS_HOST, VPS_USER
 #   secrets VPS_SSH_KEY (CI-only deploy key), VPS_KNOWN_HOSTS (pinned host keys), ENGINE_ENV (the whole deploy/.env file)
+# ENGINE_ENV must carry REDIS_URL and the knowledge-handler keys (docs/OPERATIONS-JOBS.md); node scripts/env-sync.mjs pushes it.
+# Rollback: the previous source folder is kept as ~/nivo-engine.prev; an unhealthy deploy restores it and rebuilds (docker layer cache makes that quick).
+# Redis data lives in the compose volume "redis-data" (AOF). A deploy never removes volumes (no "down -v", no volume prune).
 # This workflow only touches ~/nivo-engine and the "nivo-engine" compose project.
 name: Deploy engine
 
@@ -11,6 +15,8 @@ on:
     branches: [main]
     paths:
       - "engine/**"
+      - "supabase/migrations/**"
+      - "src/lib/knowledge/pure/**"
       - ".github/workflows/engine-deploy.yml"
   workflow_dispatch:
 
@@ -31,6 +37,14 @@ jobs:
         run: |
           npm ci --no-audit --no-fund
           npm run build
+
+      - name: Compose guard (redis service with a persistent volume)
+        working-directory: engine/deploy
+        run: |
+          # Placeholders are enough to render the file; nothing is started and no secret is involved.
+          export SUPABASE_URL=x SUPABASE_SERVICE_ROLE_KEY=x NIVO_BASE_URL=x ENGINE_SHARED_SECRET=x OPENCLAW_GATEWAY_TOKEN=x N8N_DB_PASSWORD=x N8N_ENCRYPTION_KEY=x
+          docker compose config --services | grep -qx redis || { echo "docker-compose.yml has no redis service"; exit 1; }
+          docker compose config | awk '/^  redis:/{f=1;next} /^  [a-z0-9-]+:/{f=0} f' | grep -q 'type: volume' || { echo "redis has no named volume: its AOF would be lost on every recreate"; exit 1; }
 
       - name: SSH setup
         env:
@@ -56,34 +70,58 @@ jobs:
         run: |
           tar --exclude=node_modules --exclude=dist --exclude=.env -czf - engine \
             | ssh vps 'set -e; rm -rf ~/nivo-engine.new; mkdir -p ~/nivo-engine.new; tar -xzf - -C ~/nivo-engine.new'
+          grep -q '^REDIS_URL=' <<<"$ENGINE_ENV" || echo "::warning::ENGINE_ENV has no REDIS_URL: run node scripts/env-sync.mjs"
           printf '%s\n' "$ENGINE_ENV" | ssh vps 'umask 077; cat > ~/nivo-engine.new/engine/deploy/.env'
 
-      - name: Swap and restart
+      - name: Swap, restart, health check, roll back if unhealthy
         run: |
           ssh vps 'bash -s' <<'EOF'
-          set -euo pipefail
+          set -uo pipefail
           rm -rf ~/nivo-engine.prev
           [ -d ~/nivo-engine ] && mv ~/nivo-engine ~/nivo-engine.prev
           mv ~/nivo-engine.new/engine ~/nivo-engine && rmdir ~/nivo-engine.new
-          cd ~/nivo-engine/deploy
-          docker compose --env-file .env build engine
-          docker compose --env-file .env up -d --remove-orphans
-          docker image prune -f >/dev/null
-          # Watchdog for the network_mode coupling (engine lives in the openclaw network namespace): every minute from the nivo user crontab, installed idempotently.
-          chmod +x ~/nivo-engine/deploy/watchdog.sh
-          { crontab -l 2>/dev/null | grep -v "nivo-engine-watchdog" || true; echo "* * * * * $HOME/nivo-engine/deploy/watchdog.sh # nivo-engine-watchdog"; } | crontab -
-          EOF
 
-      - name: Health check
-        run: |
-          ssh vps 'bash -s' <<'EOF'
-          set -euo pipefail
-          cd ~/nivo-engine/deploy
-          for i in $(seq 1 30); do
-            state=$(docker inspect -f '{{.State.Health.Status}}' nivo-engine-engine-1 2>/dev/null || echo missing)
-            [ "$state" = healthy ] && { echo "engine healthy"; docker compose ps --format 'table {{.Service}}\t{{.Status}}'; exit 0; }
-            sleep 5
-          done
-          echo "engine not healthy (last: $state)"; docker compose ps; docker compose logs --tail 80 engine openclaw
+          # Healthy = engine container healthy AND redis answers PONG AND /readyz is 200 (readyz carries the Redis and BullMQ probe).
+          wait_healthy() {
+            local state=missing
+            cd "$1/deploy" || return 1
+            for _ in $(seq 1 36); do
+              state=$(docker inspect -f '{{.State.Health.Status}}' nivo-engine-engine-1 2>/dev/null || echo missing)
+              if [ "$state" = healthy ] \
+                && { ! docker compose config --services | grep -qx redis || [ "$(docker compose --env-file .env exec -T redis redis-cli ping 2>/dev/null | tr -d '\r')" = PONG ]; } \
+                && docker exec nivo-engine-engine-1 node -e "fetch('http://127.0.0.1:'+(process.env.ENGINE_PORT||8787)+'/readyz',{signal:AbortSignal.timeout(4000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" >/dev/null 2>&1; then
+                return 0
+              fi
+              sleep 5
+            done
+            echo "engine not healthy (last container state: $state)"; return 1
+          }
+          start() {
+            cd "$1/deploy" || return 1
+            docker compose --env-file .env config -q || return 1
+            docker compose --env-file .env build engine || return 1
+            # Redis first so the engine's BullMQ connection finds it; its data volume is untouched.
+            if docker compose config --services | grep -qx redis; then docker compose --env-file .env up -d redis || return 1; fi
+            docker compose --env-file .env up -d --remove-orphans
+          }
+
+          if start ~/nivo-engine && wait_healthy ~/nivo-engine; then
+            echo "engine healthy"; docker compose --env-file .env ps --format 'table {{.Service}}\t{{.Status}}'
+            docker image prune -f >/dev/null
+            # Watchdog: keeps the network_mode coupling (engine lives in the openclaw network namespace) and checks Redis + the BullMQ backlog.
+            # Every minute from the nivo user crontab, installed idempotently.
+            chmod +x ~/nivo-engine/deploy/*.sh
+            { crontab -l 2>/dev/null | grep -v "nivo-engine-watchdog" || true; echo "* * * * * $HOME/nivo-engine/deploy/watchdog.sh # nivo-engine-watchdog"; } | crontab -
+            exit 0
+          fi
+
+          (cd ~/nivo-engine/deploy && docker compose --env-file .env logs --tail 80 engine redis openclaw) 2>/dev/null || true
+          if [ -d ~/nivo-engine.prev ]; then
+            echo "ROLLING BACK to the previous release (~/nivo-engine.prev)"
+            rm -rf ~/nivo-engine.failed; mv ~/nivo-engine ~/nivo-engine.failed; mv ~/nivo-engine.prev ~/nivo-engine
+            if start ~/nivo-engine && wait_healthy ~/nivo-engine; then echo "rollback healthy"; else echo "ROLLBACK ALSO UNHEALTHY"; fi
+          else
+            echo "no previous release to roll back to"
+          fi
           exit 1
           EOF

@@ -20,12 +20,35 @@ for (const line of text.split(/\r?\n/)) {
   if (head) current = head[1];
   else if (current && /^[A-Z0-9_]+=/.test(line)) (sections[current] ||= []).push(line);
 }
-const engine = sections.engine ?? [];
-if (!engine.length) throw new Error("no [engine] block found in secrets.env");
+const engineBlock = sections.engine ?? [];
+if (!engineBlock.length) throw new Error("no [engine] block found in secrets.env");
 const app = sections.app ?? [];
 if (!app.length) throw new Error("no [app] block found in secrets.env");
 
 const kv = (line) => [line.slice(0, line.indexOf("=")), line.slice(line.indexOf("=") + 1).replace(/^["']|["']$/g, "")];
+
+// The knowledge job handlers (BullMQ workers on the VPS) need the same keys the web app uses to read and embed documents. Values that
+// live in [app] are inherited when the [engine] block does not set them, so each secret is kept in ONE place. Only the mapping is here.
+const engineMap = new Map(engineBlock.map(kv));
+const appMap0 = new Map(app.map(kv));
+const ENGINE_DEFAULTS = { REDIS_URL: "redis://redis:6379", EMBEDDING_MODEL: "qwen/qwen3-embedding-8b", EMBEDDING_BASE_URL: "https://openrouter.ai/api/v1" };
+const ENGINE_FROM_APP = {
+  CHANNEL_TOKEN_KEY: ["CHANNEL_TOKEN_KEY"],
+  GOOGLE_OAUTH_CLIENT_ID: ["GOOGLE_OAUTH_CLIENT_ID", "SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID"],
+  GOOGLE_OAUTH_CLIENT_SECRET: ["GOOGLE_OAUTH_CLIENT_SECRET", "SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET"],
+  EMBEDDING_API_KEY: ["EMBEDDING_API_KEY"],
+  OPENROUTER_API_KEY: ["OPENROUTER_API_KEY", "DEEPSEEK_API_KEY"], // the app's DEEPSEEK_API_KEY is an OpenRouter key
+};
+for (const [k, v] of Object.entries(ENGINE_DEFAULTS)) if (!engineMap.get(k)) engineMap.set(k, v);
+for (const [k, sources] of Object.entries(ENGINE_FROM_APP)) {
+  if (engineMap.get(k)) continue;
+  const found = sources.map((n) => appMap0.get(n)).find(Boolean);
+  if (found) engineMap.set(k, found);
+}
+const ENGINE_REQUIRED = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "ENGINE_SHARED_SECRET", "REDIS_URL", "OPENROUTER_API_KEY", "CHANNEL_TOKEN_KEY", "GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET"];
+const missing = ENGINE_REQUIRED.filter((k) => !engineMap.get(k));
+if (missing.length) console.warn(`[env-sync] WARNING: ENGINE_ENV has no value for: ${missing.join(", ")} (names only; the knowledge jobs need them)`);
+const engine = [...engineMap].filter(([, v]) => v !== "").map(([k, v]) => `${k}=${v}`);
 const appMap = new Map(app.map(kv));
 
 // The engine runs the BullMQ background jobs (docs/JOBS.md): it needs Redis (the compose service "redis" unless the [engine] block says
