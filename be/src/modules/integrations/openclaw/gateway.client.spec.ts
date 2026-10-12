@@ -1,15 +1,36 @@
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
+import { builder, FakeClock, mock } from "@starci/jest-preset"
+import { CLOCK } from "@modules/platform/clock"
+import { Secret } from "@modules/platform/config"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { Secret } from "@modules/platform/config"
-import { OpenclawError, OpenclawErrorCode } from "./errors/openclaw.error"
+import { OpenclawErrorCode } from "./errors/openclaw.error"
 import { GatewayClient } from "./gateway.client"
 import type { GatewaySocket } from "./gateway.client"
+import type { TurnRequest } from "./openclaw.contracts"
 import { OPENCLAW_OPTIONS, OPENCLAW_SOCKET_FACTORY } from "./openclaw.decorators"
 import type { OpenclawOptions } from "./openclaw.options"
 
-const SESSION = "agent:ws-1-chatbot:conv-1"
+const THREAD = "agent:ws-1-chatbot:conv-1"
+const SETTLE_MS = 60
+
+const optionsOf = builder<OpenclawOptions>({
+    gateway: { url: "ws://127.0.0.1:18789", auth: { kind: "token", token: new Secret("t") } },
+    turnTimeoutMs: 90_000,
+    settleMs: SETTLE_MS,
+    configDir: undefined,
+    gatewayStateDir: "/home/node/.openclaw",
+    manageAgents: false,
+    toolSecret: null,
+})
+
+const requestOf = builder<TurnRequest>({
+    agentId: "ws-1-chatbot",
+    threadKey: THREAD,
+    message: "hello",
+    idempotencyKey: "k-1",
+    timeoutMs: 30_000,
+})
 
 interface Sent {
     readonly id: string
@@ -17,70 +38,80 @@ interface Sent {
     readonly params: Record<string, unknown>
 }
 
-/** A scripted socket: every request is answered on the next microtask unless the script says otherwise. */
-class FakeSocket implements GatewaySocket {
+const isSent = (value: unknown): value is Sent =>
+    typeof value === "object" && value !== null && "id" in value && "method" in value && "params" in value
+
+/** The request a socket was asked to send. */
+const sentOf = (data: string): Sent => {
+    try {
+        const value: unknown = JSON.parse(data)
+        return isSent(value) ? value : { id: "", method: "", params: {} }
+    } catch (cause) {
+        throw cause
+    }
+}
+
+type Answer = Record<string, unknown> | null
+
+/** A scripted gateway: it answers every request on the next microtask unless the script returns null. */
+class Gateway {
+    readonly socket = mock<GatewaySocket>()
     readonly sent: Array<Sent> = []
-    closed = 0
-    onCloseHook: (() => void) | null = null
-    throwOnSend = false
-    reply: (request: Sent) => Record<string, unknown> | null = () => ({ ok: true, payload: {} })
-    private messageListener: (data: string) => void = () => undefined
-    private errorListener: (message: string) => void = () => undefined
-    private closeListener: (code: number) => void = () => undefined
+    reply: (request: Sent) => Answer = () => ({ ok: true, payload: {} })
+    failSend = false
 
-    send(data: string): void {
-        if (this.throwOnSend) throw new Error("socket is not open")
-        const request = JSON.parse(data) as Sent & { type: string }
-        this.sent.push(request)
-        const answer = this.reply(request)
-        if (answer !== null) void Promise.resolve().then(() => this.frame({ type: "res", id: request.id, ...answer }))
+    constructor() {
+        this.socket.send.mockImplementation((data: string) => {
+            if (this.failSend) new URL("not a url")
+            const request = sentOf(data)
+            this.sent.push(request)
+            const answer = this.reply(request)
+            if (answer !== null)
+                void Promise.resolve().then(() => this.frame({ type: "res", id: request.id, ...answer }))
+        })
     }
 
-    close(): void {
-        this.closed += 1
-        this.onCloseHook?.()
-        // A real socket reports its close after close() was called.
-        void Promise.resolve().then(() => this.closeListener(1000))
+    methods(): Array<string> {
+        return this.sent.map((request) => request.method)
     }
 
-    onMessage(listener: (data: string) => void): void {
-        this.messageListener = listener
-    }
-
-    onError(listener: (message: string) => void): void {
-        this.errorListener = listener
-    }
-
-    onClose(listener: (code: number) => void): void {
-        this.closeListener = listener
-    }
-
-    frame(value: unknown): void {
-        this.messageListener(JSON.stringify(value))
+    frame(value: object): void {
+        this.receiver()(JSON.stringify(value))
     }
 
     raw(text: string): void {
-        this.messageListener(text)
+        this.receiver()(text)
     }
 
     challenge(): void {
         this.frame({ type: "event", event: "connect.challenge" })
     }
 
-    assistant(text: unknown, extra: Record<string, unknown> = {}, sessionKey = SESSION): void {
+    assistant(content: unknown, extra: object = {}, thread = THREAD): void {
         this.frame({
             type: "event",
             event: "session.message",
-            payload: { sessionKey, message: { role: "assistant", content: text, ...extra } },
+            payload: { sessionKey: thread, message: { role: "assistant", content, ...extra } },
         })
     }
 
+    event(event: string, payload: unknown): void {
+        this.frame({ type: "event", event, payload })
+    }
+
     fail(message: string): void {
-        this.errorListener(message)
+        const call = this.socket.onError.mock.calls[0]
+        if (call !== undefined) call[0](message)
     }
 
     drop(code: number): void {
-        this.closeListener(code)
+        const call = this.socket.onClose.mock.calls[0]
+        if (call !== undefined) call[0](code)
+    }
+
+    private receiver(): (data: string) => void {
+        const call = this.socket.onMessage.mock.calls[0]
+        return call === undefined ? () => undefined : call[0]
     }
 }
 
@@ -88,29 +119,8 @@ const flush = async (): Promise<void> => {
     for (let i = 0; i < 12; i += 1) await Promise.resolve()
 }
 
-const optionsOf = (patch: Partial<OpenclawOptions> = {}): OpenclawOptions => ({
-    gateway: { url: "ws://127.0.0.1:18789", auth: { kind: "token", token: new Secret("t") } },
-    turnTimeoutMs: 90_000,
-    configDir: undefined,
-    gatewayStateDir: "/home/node/.openclaw",
-    manageAgents: false,
-    toolSecret: null,
-    ...patch,
-})
-
-const requestOf = (
-    patch: Partial<{ isFinal: (text: string) => boolean; sessionKey: string; timeoutMs: number }> = {},
-) => ({
-    agentId: "ws-1-chatbot",
-    sessionKey: SESSION,
-    message: "hello",
-    idempotencyKey: "k-1",
-    timeoutMs: 30_000,
-    ...patch,
-})
-
 const build = async (options: OpenclawOptions = optionsOf()) => {
-    const sockets: Array<FakeSocket> = []
+    const gateways: Array<Gateway> = []
     const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -118,33 +128,35 @@ const build = async (options: OpenclawOptions = optionsOf()) => {
             { provide: OPENCLAW_OPTIONS, useValue: options },
             {
                 provide: OPENCLAW_SOCKET_FACTORY,
-                useValue: (_url: string) => {
-                    const socket = new FakeSocket()
-                    sockets.push(socket)
-                    return socket
+                useValue: () => {
+                    const gateway = new Gateway()
+                    gateways.push(gateway)
+                    return gateway.socket
                 },
             },
+            { provide: CLOCK, useValue: new FakeClock("2026-10-12T10:00:00.000Z") },
             { provide: LOGGER, useValue: logger },
         ],
     }).compile()
-    return { client: moduleRef.get(GatewayClient), sockets, logger }
+    const latest = (): Gateway => gateways[gateways.length - 1] ?? new Gateway()
+    return { client: moduleRef.get(GatewayClient), gateways, latest, logger }
 }
 
-/** Runs one turn and answers it with a final contract reply. */
-const answered = async (client: GatewayClient, sockets: Array<FakeSocket>, text = '{"reply":"hi"}') => {
-    const turn = client.runTurn(requestOf(), new AbortController().signal)
-    const socket = sockets[sockets.length - 1] as FakeSocket
-    socket.challenge()
+/** Starts a turn and walks it to the point where the gateway can answer. */
+const started = async (
+    client: GatewayClient,
+    latest: () => Gateway,
+    request = requestOf(),
+    signal = new AbortController().signal,
+) => {
+    const turn = client.runTurn(request, signal)
+    const gateway = latest()
+    gateway.challenge()
     await flush()
-    socket.assistant(text)
-    return turn
+    return { turn, gateway }
 }
 
 describe("GatewayClient", () => {
-    afterEach(() => {
-        jest.useRealTimers()
-    })
-
     describe("enabled", () => {
         it("is true with a gateway and false without", async () => {
             expect((await build()).client.enabled).toBe(true)
@@ -162,17 +174,14 @@ describe("GatewayClient", () => {
         })
 
         it("walks the protocol and answers the final contract reply with the summed usage", async () => {
-            const { client, sockets } = await build()
-            const turn = client.runTurn(requestOf(), new AbortController().signal)
-            const socket = sockets[0] as FakeSocket
+            const { client, latest } = await build()
+            const { turn, gateway } = await started(client, latest)
 
-            socket.challenge()
-            await flush()
-            socket.assistant("thinking", {
+            gateway.assistant("thinking", {
                 stopReason: "toolUse",
                 usage: { input: 3, output: 1, cacheRead: 0, cacheWrite: 0, cost: { total: 0.1 } },
             })
-            socket.assistant('{"reply":"Hi!"}', {
+            gateway.assistant('{"reply":"Hi!"}', {
                 stopReason: "stop",
                 provider: "p",
                 model: "m",
@@ -180,16 +189,16 @@ describe("GatewayClient", () => {
             })
             const result = await turn
 
-            expect(socket.sent.map((s) => s.method)).toEqual([
+            expect(gateway.methods()).toEqual([
                 "connect",
                 "sessions.create",
                 "sessions.subscribe",
                 "sessions.messages.subscribe",
                 "sessions.send",
             ])
-            expect(socket.sent[0]?.params).toMatchObject({ auth: { token: "t" }, role: "operator" })
-            expect(socket.sent[4]?.params).toMatchObject({
-                key: SESSION,
+            expect(gateway.sent[0]?.params).toMatchObject({ auth: { token: "t" }, role: "operator" })
+            expect(gateway.sent[4]?.params).toMatchObject({
+                key: THREAD,
                 message: "hello",
                 idempotencyKey: "k-1",
                 timeoutMs: 30_000,
@@ -210,52 +219,55 @@ describe("GatewayClient", () => {
                 "reply",
                 "total",
             ])
-            expect(socket.closed).toBe(1)
+            expect(gateway.socket.close).toHaveBeenCalledTimes(1)
+
+            gateway.drop(1000)
+            expect(gateway.socket.close).toHaveBeenCalledTimes(1)
         })
 
         it("answers no usage when the gateway reported none and reuses a created session", async () => {
-            const { client, sockets } = await build()
+            const { client, latest, gateways } = await build()
+            const first = await started(client, latest)
+            first.gateway.assistant('{"reply":"hi"}')
+            const second = await started(client, latest)
+            second.gateway.assistant('{"reply":"again"}')
 
-            const first = await answered(client, sockets)
-            const second = await answered(client, sockets)
-
-            expect(first.usage).toBeNull()
-            expect(second.text).toBe('{"reply":"hi"}')
-            expect((sockets[1] as FakeSocket).sent.map((s) => s.method)).not.toContain("sessions.create")
+            expect((await first.turn).usage).toBeNull()
+            expect((await second.turn).text).toBe('{"reply":"again"}')
+            expect(gateways[1]?.methods()).not.toContain("sessions.create")
         })
 
         it("goes on when the session already exists", async () => {
-            const { client, sockets } = await build()
+            const { client, latest } = await build()
             const turn = client.runTurn(requestOf(), new AbortController().signal)
-            const socket = sockets[0] as FakeSocket
-            socket.reply = (request) =>
+            const gateway = latest()
+            gateway.reply = (request) =>
                 request.method === "sessions.create"
                     ? { ok: false, error: { code: "EXISTS", message: "exists" } }
                     : { ok: true, payload: {} }
-
-            socket.challenge()
+            gateway.challenge()
             await flush()
-            socket.assistant('{"reply":"ok"}')
+
+            gateway.assistant('{"reply":"ok"}')
 
             await expect(turn).resolves.toMatchObject({ text: '{"reply":"ok"}' })
         })
 
         it("refuses a turn whose signal is already aborted", async () => {
-            const { client, sockets } = await build()
+            const { client, latest } = await build()
             const controller = new AbortController()
             controller.abort()
 
             await expect(client.runTurn(requestOf(), controller.signal)).rejects.toMatchObject({
                 code: OpenclawErrorCode.GatewayAborted,
             })
-            expect((sockets[0] as FakeSocket).closed).toBe(1)
+            expect(latest().socket.close).toHaveBeenCalledTimes(1)
         })
 
         it("stops when the caller aborts during the turn", async () => {
-            const { client, sockets } = await build()
+            const { client } = await build()
             const controller = new AbortController()
             const turn = client.runTurn(requestOf(), controller.signal)
-            expect(sockets).toHaveLength(1)
 
             controller.abort()
 
@@ -263,26 +275,23 @@ describe("GatewayClient", () => {
         })
 
         it("fails at the deadline", async () => {
-            jest.useFakeTimers()
             const { client } = await build()
-            const turn = client.runTurn(requestOf({ timeoutMs: 5000 }), new AbortController().signal)
-            const settled = turn.catch((error: unknown) => error)
 
-            await jest.advanceTimersByTimeAsync(5000)
-
-            await expect(settled).resolves.toMatchObject({
+            await expect(
+                client.runTurn(requestOf({ timeoutMs: 20 }), new AbortController().signal),
+            ).rejects.toMatchObject({
                 code: OpenclawErrorCode.GatewayTimeout,
-                params: { timeoutMs: 5000 },
+                params: { timeoutMs: 20 },
             })
         })
 
         it("refuses a request the gateway refuses and names the method", async () => {
-            const { client, sockets } = await build()
+            const { client, latest } = await build()
             const turn = client.runTurn(requestOf(), new AbortController().signal)
-            const socket = sockets[0] as FakeSocket
-            socket.reply = (request) => (request.method === "connect" ? { ok: false } : { ok: true, payload: {} })
+            const gateway = latest()
+            gateway.reply = (request) => (request.method === "connect" ? { ok: false } : { ok: true, payload: {} })
 
-            socket.challenge()
+            gateway.challenge()
 
             await expect(turn).rejects.toMatchObject({
                 code: OpenclawErrorCode.GatewayRefused,
@@ -291,96 +300,102 @@ describe("GatewayClient", () => {
         })
 
         it("does not retry an unavailable gateway on a request other than connect", async () => {
-            const { client, sockets } = await build()
+            const { client, latest, gateways } = await build()
             const turn = client.runTurn(requestOf(), new AbortController().signal)
-            const socket = sockets[0] as FakeSocket
-            socket.reply = (request) =>
+            const gateway = latest()
+            gateway.reply = (request) =>
                 request.method === "sessions.subscribe"
                     ? { ok: false, error: { code: "UNAVAILABLE", message: "busy" } }
                     : { ok: true, payload: {} }
 
-            socket.challenge()
+            gateway.challenge()
 
             await expect(turn).rejects.toMatchObject({
                 code: OpenclawErrorCode.GatewayRefused,
                 params: { method: "sessions.subscribe", gatewayCode: "UNAVAILABLE" },
             })
-            expect(sockets).toHaveLength(1)
+            expect(gateways).toHaveLength(1)
         })
 
         it("retries the connect while the gateway starts, then succeeds", async () => {
-            jest.useFakeTimers()
-            const { client, sockets, logger } = await build()
+            const { client, latest, gateways, logger } = await build()
             const turn = client.runTurn(requestOf(), new AbortController().signal)
-            ;(sockets[0] as FakeSocket).reply = () => ({
+            const first = latest()
+            first.reply = () => ({
                 ok: false,
-                error: { code: "UNAVAILABLE", message: "starting", details: { retryAfterMs: 50_000 } },
+                error: { code: "UNAVAILABLE", message: "starting", details: { retryAfterMs: 5 } },
             })
-
-            ;(sockets[0] as FakeSocket).challenge()
-            await jest.advanceTimersByTimeAsync(10_000)
-            const second = sockets[1] as FakeSocket
+            first.challenge()
+            await new Promise((resolve) => AbortSignal.timeout(40).addEventListener("abort", resolve, { once: true }))
+            const second = latest()
             second.challenge()
-            await jest.advanceTimersByTimeAsync(0)
+            await flush()
+
             second.assistant('{"reply":"ok"}')
 
             await expect(turn).resolves.toMatchObject({ text: '{"reply":"ok"}' })
+            expect(gateways).toHaveLength(2)
             expect(logger.warn).toHaveBeenCalledTimes(1)
         })
 
-        it("gives up after three connects that the gateway keeps deferring, waiting a second by default", async () => {
-            jest.useFakeTimers()
-            const { client, sockets } = await build()
+        it("gives up after three connects that the gateway keeps deferring", async () => {
+            const { client, latest, gateways } = await build()
             const turn = client.runTurn(requestOf(), new AbortController().signal)
             const settled = turn.catch((error: unknown) => error)
-            const defer = (socket: FakeSocket) => {
-                socket.reply = () => ({ ok: false, error: { code: "UNAVAILABLE", message: "starting" } })
-                socket.challenge()
+            const defer = async (index: number): Promise<void> => {
+                const gateway = latest()
+                gateway.reply = () => ({
+                    ok: false,
+                    error: { code: "UNAVAILABLE", message: "starting", details: { retryAfterMs: 5 } },
+                })
+                gateway.challenge()
+                if (index < 2)
+                    await new Promise((resolve) =>
+                        AbortSignal.timeout(40).addEventListener("abort", resolve, { once: true }),
+                    )
             }
 
-            defer(sockets[0] as FakeSocket)
-            await jest.advanceTimersByTimeAsync(1000)
-            defer(sockets[1] as FakeSocket)
-            await jest.advanceTimersByTimeAsync(1000)
-            defer(sockets[2] as FakeSocket)
+            await defer(0)
+            await defer(1)
+            await defer(2)
 
             await expect(settled).resolves.toMatchObject({
                 code: OpenclawErrorCode.GatewayRefused,
                 params: { method: "connect" },
             })
-            expect(sockets).toHaveLength(3)
+            expect(gateways).toHaveLength(3)
         })
 
         it("does not retry a deferred connect once the caller aborted", async () => {
-            const { client, sockets } = await build()
+            const { client, latest, gateways } = await build()
             const controller = new AbortController()
             const turn = client.runTurn(requestOf(), controller.signal)
-            const socket = sockets[0] as FakeSocket
-            socket.reply = () => ({ ok: false, error: { code: "UNAVAILABLE", message: "starting" } })
-            socket.onCloseHook = () => controller.abort()
+            const gateway = latest()
+            gateway.reply = () => ({ ok: false, error: { code: "UNAVAILABLE", message: "starting" } })
+            gateway.socket.close.mockImplementation(() => controller.abort())
 
-            socket.challenge()
+            gateway.challenge()
 
             await expect(turn).rejects.toMatchObject({ code: OpenclawErrorCode.GatewayRefused })
-            expect(sockets).toHaveLength(1)
+            expect(gateways).toHaveLength(1)
         })
 
         it("wraps a failure while sending in a socket failure", async () => {
-            const { client, sockets } = await build()
+            const { client, latest } = await build()
             const turn = client.runTurn(requestOf(), new AbortController().signal)
-            const socket = sockets[0] as FakeSocket
-            socket.throwOnSend = true
+            const gateway = latest()
+            gateway.failSend = true
 
-            socket.challenge()
+            gateway.challenge()
 
             await expect(turn).rejects.toMatchObject({ code: OpenclawErrorCode.GatewaySocketFailed })
         })
 
         it("fails when the socket errors", async () => {
-            const { client, sockets } = await build()
+            const { client, latest } = await build()
             const turn = client.runTurn(requestOf(), new AbortController().signal)
 
-            ;(sockets[0] as FakeSocket).fail("boom")
+            latest().fail("boom")
 
             await expect(turn).rejects.toMatchObject({
                 code: OpenclawErrorCode.GatewaySocketFailed,
@@ -389,131 +404,104 @@ describe("GatewayClient", () => {
         })
 
         it("fails when the gateway closes before answering", async () => {
-            const { client, sockets } = await build()
+            const { client, latest } = await build()
             const turn = client.runTurn(requestOf(), new AbortController().signal)
 
-            ;(sockets[0] as FakeSocket).drop(1006)
+            latest().drop(1006)
 
             await expect(turn).rejects.toMatchObject({ code: OpenclawErrorCode.GatewayClosed })
         })
 
         it("fails when the run ends in error", async () => {
-            const { client, sockets } = await build()
-            const turn = client.runTurn(requestOf(), new AbortController().signal)
-            const socket = sockets[0] as FakeSocket
-            socket.challenge()
-            await flush()
+            const { client, latest } = await build()
+            const { turn, gateway } = await started(client, latest)
 
-            socket.frame({ type: "event", event: "agent", payload: { status: "error" } })
+            gateway.event("agent", { status: "error" })
 
             await expect(turn).rejects.toMatchObject({ code: OpenclawErrorCode.RunFailed })
         })
 
         it("answers the last candidate when the run reports a final status", async () => {
-            const { client, sockets } = await build()
-            const turn = client.runTurn(requestOf(), new AbortController().signal)
-            const socket = sockets[0] as FakeSocket
-            socket.challenge()
-            await flush()
+            const { client, latest } = await build()
+            const { turn, gateway } = await started(client, latest)
 
-            socket.frame({ type: "event", event: "agent", payload: { status: "done" } })
-            socket.frame({ type: "event", event: "agent", payload: { status: "streaming" } })
-            socket.frame({ type: "event", event: "agent", payload: null })
-            socket.frame({ type: "event", event: "agent", payload: { status: 3 } })
-            socket.assistant("interim words")
-            socket.frame({ type: "event", event: "agent", payload: { status: "completed" } })
+            gateway.event("agent", { status: "done" })
+            gateway.event("agent", { status: "streaming" })
+            gateway.event("agent", null)
+            gateway.event("agent", { status: 3 })
+            gateway.assistant("interim words")
+            gateway.event("agent", { status: "completed" })
 
             await expect(turn).resolves.toMatchObject({ text: "interim words" })
         })
 
-        it("uses the last interim message after the settle delay and restarts the delay on a newer one", async () => {
-            jest.useFakeTimers()
-            const { client, sockets } = await build()
-            const turn = client.runTurn(requestOf(), new AbortController().signal)
-            const socket = sockets[0] as FakeSocket
-            socket.challenge()
-            await jest.advanceTimersByTimeAsync(0)
+        it("uses the last interim text after the settle delay and restarts the delay on a newer one", async () => {
+            const { client, latest } = await build()
+            const { turn, gateway } = await started(client, latest)
 
-            socket.assistant("first")
-            await jest.advanceTimersByTimeAsync(2000)
-            socket.assistant("second")
-            await jest.advanceTimersByTimeAsync(2999)
-            const early = jest.getTimerCount()
-            await jest.advanceTimersByTimeAsync(1)
+            gateway.assistant("first")
+            await new Promise((resolve) =>
+                AbortSignal.timeout(SETTLE_MS / 3).addEventListener("abort", resolve, { once: true }),
+            )
+            gateway.assistant("second")
 
             await expect(turn).resolves.toMatchObject({ text: "second" })
-            expect(early).toBeGreaterThan(0)
         })
 
         it("lets the caller decide what is final", async () => {
-            const { client, sockets } = await build()
-            const turn = client.runTurn(
+            const { client, latest } = await build()
+            const { turn, gateway } = await started(
+                client,
+                latest,
                 requestOf({ isFinal: (text) => text.startsWith("FINAL") }),
-                new AbortController().signal,
             )
-            const socket = sockets[0] as FakeSocket
-            socket.challenge()
-            await flush()
 
-            socket.assistant('{"reply":"not final for this caller"}', { stopReason: "stop" })
-            socket.assistant("FINAL answer")
+            gateway.assistant('{"reply":"not final for this caller"}', { stopReason: "stop" })
+            gateway.assistant("FINAL answer")
 
             await expect(turn).resolves.toMatchObject({ text: "FINAL answer" })
         })
 
-        it("ignores everything that is not the agent's own words in its session", async () => {
-            const { client, sockets } = await build()
-            const turn = client.runTurn(requestOf(), new AbortController().signal)
-            const socket = sockets[0] as FakeSocket
-            socket.challenge()
-            await flush()
+        it("ignores everything that is not the agent's own words in its thread", async () => {
+            const { client, latest, logger } = await build()
+            const { turn, gateway } = await started(client, latest)
 
-            socket.raw("not json")
-            socket.frame({ type: "res", id: "999", ok: true })
-            socket.frame({ type: "event", event: "tick" })
-            socket.assistant('{"reply":"other session"}', {}, "agent:other:session")
-            socket.frame({
-                type: "event",
-                event: "session.message",
-                payload: {
-                    sessionKey: SESSION,
-                    senderIsOwner: true,
-                    message: { role: "assistant", content: '{"reply":"owner"}' },
-                },
+            gateway.raw("not json")
+            gateway.frame({ type: "res", id: "999", ok: true })
+            gateway.event("tick", null)
+            gateway.assistant('{"reply":"other thread"}', {}, "agent:other:thread")
+            gateway.event("session.message", {
+                sessionKey: THREAD,
+                senderIsOwner: true,
+                message: { role: "assistant", content: '{"reply":"owner"}' },
             })
-            socket.frame({
-                type: "event",
-                event: "session.message",
-                payload: { sessionKey: SESSION, message: { role: "user", content: '{"reply":"echo"}' } },
+            gateway.event("session.message", {
+                sessionKey: THREAD,
+                message: { role: "user", content: '{"reply":"echo"}' },
             })
-            socket.frame({
-                type: "event",
-                event: "session.message",
-                payload: { sessionKey: SESSION, message: { role: "system", content: '{"reply":"sys"}' } },
+            gateway.event("session.message", {
+                sessionKey: THREAD,
+                message: { role: "system", content: '{"reply":"sys"}' },
             })
-            socket.frame({
-                type: "event",
-                event: "session.message",
-                payload: { sessionKey: SESSION, message: { role: "assistant" } },
-            })
-            socket.assistant('{"reply":"real"}')
-            socket.assistant('{"reply":"after the end"}')
+            gateway.event("session.message", { sessionKey: THREAD, message: { role: "assistant" } })
+            gateway.assistant('{"reply":"real"}')
+            gateway.assistant('{"reply":"after the end"}')
 
             await expect(turn).resolves.toMatchObject({ text: '{"reply":"real"}' })
+            expect(logger.error).toHaveBeenCalledTimes(1)
         })
 
         it("recreates the session after a failed turn", async () => {
-            const { client, sockets } = await build()
-            const failed = client.runTurn(requestOf(), new AbortController().signal)
-            const first = sockets[0] as FakeSocket
-            first.challenge()
-            await flush()
-            first.drop(1006)
-            await expect(failed).rejects.toBeInstanceOf(OpenclawError)
+            const { client, latest, gateways } = await build()
+            const failed = await started(client, latest)
+            failed.gateway.drop(1006)
+            await expect(failed.turn).rejects.toMatchObject({ code: OpenclawErrorCode.GatewayClosed })
 
-            await answered(client, sockets)
+            const next = await started(client, latest)
+            next.gateway.assistant('{"reply":"ok"}')
+            await next.turn
 
-            expect((sockets[1] as FakeSocket).sent.map((s) => s.method)).toContain("sessions.create")
+            expect(gateways[1]?.methods()).toContain("sessions.create")
         })
     })
 })

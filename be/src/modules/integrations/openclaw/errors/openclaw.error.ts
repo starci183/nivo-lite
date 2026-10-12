@@ -3,12 +3,14 @@ import type { ErrorKind } from "@modules/platform/errors"
 
 /** Codes of the OpenClaw integration. */
 export enum OpenclawErrorCode {
-    /** The gateway address is not a ws or wss URL. */
+    /** A configuration value is out of range or not a ws or wss address. */
     ConfigInvalid = "OPENCLAW_CONFIG_INVALID",
     /** No gateway is configured: a chat turn takes the fallback path. */
     GatewayNotConfigured = "OPENCLAW_GATEWAY_NOT_CONFIGURED",
     /** The gateway refused a request; the method and the gateway code ride in the params. */
     GatewayRefused = "OPENCLAW_GATEWAY_REFUSED",
+    /** The gateway is still starting and asked to retry the connect later; `retryAfterMs` rides in the params. */
+    GatewayDeferred = "OPENCLAW_GATEWAY_DEFERRED",
     /** The gateway did not answer within the turn deadline. */
     GatewayTimeout = "OPENCLAW_GATEWAY_TIMEOUT",
     /** The turn was aborted by its caller. */
@@ -32,6 +34,7 @@ export const OPENCLAW_ERROR_KINDS: Record<OpenclawErrorCode, ErrorKind> = {
     [OpenclawErrorCode.ConfigInvalid]: "internal",
     [OpenclawErrorCode.GatewayNotConfigured]: "unavailable",
     [OpenclawErrorCode.GatewayRefused]: "unavailable",
+    [OpenclawErrorCode.GatewayDeferred]: "unavailable",
     [OpenclawErrorCode.GatewayTimeout]: "unavailable",
     [OpenclawErrorCode.GatewayAborted]: "unavailable",
     [OpenclawErrorCode.GatewayClosed]: "unavailable",

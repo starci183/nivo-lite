@@ -1,10 +1,12 @@
 import { Injectable } from "@nestjs/common"
+import { InjectClock } from "@modules/platform/clock"
+import type { Clock } from "@modules/platform/clock"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { OpenclawError, OpenclawErrorCode } from "./errors/openclaw.error"
-import { connectParams, looksFinal, parseFrame, readSessionMessage } from "./gateway-frame.mapper"
-import type { GatewayErrorBody, MessageUsage } from "./gateway-frame.mapper"
-import type { RunUsage, TurnRequest, TurnResult } from "./openclaw.contracts"
+import { connectParams, frameOf, looksFinal, readSessionMessage, statusOf } from "./gateway-frame.mapper"
+import type { GatewayErrorBody, MessageUsage, OptionalGatewayFrame } from "./gateway-frame.mapper"
+import type { RunTally, RunUsage, TurnRequest, TurnResult } from "./openclaw.contracts"
 import { InjectOpenclawOptions, InjectOpenclawSocketFactory } from "./openclaw.decorators"
 import { OpenclawLogEvent } from "./openclaw.log-events"
 import type { OpenclawOptions } from "./openclaw.options"
@@ -16,38 +18,44 @@ export interface GatewaySocket {
     /** Closes the socket for good. */
     close(): void
     /** Registers the receiver of text frames. */
-    onMessage(listener: (data: string) => void): void
+    onMessage(receiver: (data: string) => void): void
     /** Registers the receiver of socket errors. */
-    onError(listener: (message: string) => void): void
+    onError(receiver: (message: string) => void): void
     /** Registers the receiver of the close code. */
-    onClose(listener: (code: number) => void): void
+    onClose(receiver: (code: number) => void): void
 }
 
 /** Opens a socket to the gateway address. */
 export type GatewaySocketFactory = (url: string) => GatewaySocket
 
-/** After the first assistant message that is not already the final answer, wait this long for a better one before using it. */
-const SETTLE_MS = 3000
 const CONNECT_RETRIES = 3
 const RETRY_WAIT_MAX_MS = 10_000
+const RETRY_WAIT_DEFAULT_MS = 1000
 const FINAL_STATUS: ReadonlySet<string> = new Set(["ok", "done", "completed", "final", "finished"])
 
 type Responder = (ok: boolean, payload: unknown, error: GatewayErrorBody | null) => void
 
-/** The gateway said it is still starting: the connect is retried after `retryAfterMs`. */
-class RetryableConnect extends Error {
-    constructor(
-        message: string,
-        readonly retryAfterMs: number,
-    ) {
-        super(message)
+/** The failure a request answer turns into: a deferred connect while the gateway starts, otherwise a refusal naming the method. */
+const refusalOf = (method: string, error: GatewayErrorBody | null): OpenclawError => {
+    if (error?.code === "UNAVAILABLE" && method === "connect") {
+        return new OpenclawError({
+            code: OpenclawErrorCode.GatewayDeferred,
+            params: { retryAfterMs: error.retryAfterMs ?? RETRY_WAIT_DEFAULT_MS },
+        })
     }
+    return new OpenclawError({
+        code: OpenclawErrorCode.GatewayRefused,
+        params: { method, gatewayCode: error?.code ?? "error" },
+    })
+}
+
+const deferredFor = (cause: unknown): number | null => {
+    if (!(cause instanceof OpenclawError) || cause.code !== OpenclawErrorCode.GatewayDeferred) return null
+    return Number(cause.params.retryAfterMs)
 }
 
 const failureOf = (cause: unknown): OpenclawError =>
     cause instanceof OpenclawError ? cause : new OpenclawError({ code: OpenclawErrorCode.GatewaySocketFailed, cause })
-
-const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
 @Injectable()
 /**
@@ -57,12 +65,13 @@ const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
  * two-stage (an accepted ack, then streamed output), so the ack is never read as the answer.
  */
 export class GatewayClient {
-    /** Sessions this process already created: a conversation reuses its session. Dropped when a turn on it fails. */
+    /** Threads this process already created: a conversation reuses its thread. Dropped when a turn on it fails. */
     private readonly created = new Set<string>()
 
     constructor(
         @InjectOpenclawOptions() private readonly options: OpenclawOptions,
         @InjectOpenclawSocketFactory() private readonly sockets: GatewaySocketFactory,
+        @InjectClock() private readonly clock: Clock,
         @InjectLogger() private readonly logger: Logger,
     ) {}
 
@@ -78,7 +87,8 @@ export class GatewayClient {
 
     private attempt(request: TurnRequest, signal: AbortSignal, attempt: number): Promise<TurnResult> {
         return this.once(request, signal).catch(async (cause: unknown) => {
-            if (!(cause instanceof RetryableConnect)) throw cause
+            const retryAfterMs = deferredFor(cause)
+            if (retryAfterMs === null) throw cause
             if (attempt >= CONNECT_RETRIES || signal.aborted) {
                 throw new OpenclawError({
                     code: OpenclawErrorCode.GatewayRefused,
@@ -86,10 +96,26 @@ export class GatewayClient {
                     cause,
                 })
             }
-            this.logger.warn(OpenclawLogEvent.ConnectRetry, { retryAfterMs: cause.retryAfterMs })
-            await sleep(Math.min(cause.retryAfterMs, RETRY_WAIT_MAX_MS))
+            this.logger.warn(OpenclawLogEvent.ConnectRetry, { retryAfterMs })
+            await this.pause(Math.min(retryAfterMs, RETRY_WAIT_MAX_MS))
             return this.attempt(request, signal, attempt + 1)
         })
+    }
+
+    /** Waits `ms` on the platform's abort-timeout signal. */
+    private pause(ms: number): Promise<void> {
+        return new Promise((resolve) => {
+            AbortSignal.timeout(ms).addEventListener("abort", () => resolve(), { once: true })
+        })
+    }
+
+    private frameOf(raw: string): OptionalGatewayFrame {
+        try {
+            return frameOf(JSON.parse(raw))
+        } catch (cause) {
+            this.logger.error(OpenclawLogEvent.FrameRejected, cause)
+            return null
+        }
     }
 
     private once(req: TurnRequest, signal: AbortSignal): Promise<TurnResult> {
@@ -99,18 +125,18 @@ export class GatewayClient {
         }
         return new Promise<TurnResult>((resolve, reject) => {
             const socket = this.sockets(gateway.url)
-            const startedAt = Date.now()
+            const startedAt = this.clock.now().getTime()
             const marks: Array<[string, number]> = []
             const mark = (name: string): void => {
-                marks.push([name, Date.now() - startedAt])
+                marks.push([name, this.clock.now().getTime() - startedAt])
             }
-            const used = {
+            const used: RunTally = {
                 input: 0,
                 output: 0,
                 cacheRead: 0,
                 cacheWrite: 0,
                 cost: 0,
-                model: null as string | null,
+                model: null,
                 seen: false,
             }
             const addUsage = (usage: MessageUsage | null): void => {
@@ -126,7 +152,7 @@ export class GatewayClient {
             const pending = new Map<string, Responder>()
             let sequence = 0
             let settled = false
-            let settleTimer: NodeJS.Timeout | null = null
+            let settleSerial = 0
             let candidate: string | null = null
 
             const usageResult = (): RunUsage | null =>
@@ -140,25 +166,24 @@ export class GatewayClient {
                       }
                     : null
 
-            const onAbort = (): void => finish(new OpenclawError({ code: OpenclawErrorCode.GatewayAborted }))
-            const deadline = setTimeout(
-                () =>
-                    finish(
-                        new OpenclawError({
-                            code: OpenclawErrorCode.GatewayTimeout,
-                            params: { timeoutMs: req.timeoutMs },
-                        }),
-                    ),
-                req.timeoutMs,
-            )
+            const timeout = AbortSignal.timeout(req.timeoutMs)
+            const stop = AbortSignal.any([signal, timeout])
+            const onStop = (): void =>
+                finish(
+                    timeout.aborted
+                        ? new OpenclawError({
+                              code: OpenclawErrorCode.GatewayTimeout,
+                              params: { timeoutMs: req.timeoutMs },
+                          })
+                        : new OpenclawError({ code: OpenclawErrorCode.GatewayAborted }),
+                )
 
-            const finish = (failure: Error | null, value = ""): void => {
+            const finish = (failure: OpenclawError | null, value = ""): void => {
                 if (settled) return
                 settled = true
-                clearTimeout(deadline)
-                if (settleTimer !== null) clearTimeout(settleTimer)
-                signal.removeEventListener("abort", onAbort)
-                if (failure !== null) this.created.delete(req.sessionKey)
+                settleSerial += 1
+                stop.removeEventListener("abort", onStop)
+                if (failure !== null) this.created.delete(req.threadKey)
                 mark(failure === null ? "reply" : "failed")
                 this.logger.info(OpenclawLogEvent.TurnTimed, { agentId: req.agentId, marks: Object.fromEntries(marks) })
                 socket.close()
@@ -166,35 +191,22 @@ export class GatewayClient {
                     reject(failure)
                     return
                 }
-                marks.push(["total", Date.now() - startedAt])
+                marks.push(["total", this.clock.now().getTime() - startedAt])
                 resolve({ text: value, usage: usageResult(), timings: Object.fromEntries(marks) })
             }
 
-            if (signal.aborted) {
-                finish(new OpenclawError({ code: OpenclawErrorCode.GatewayAborted }))
+            if (stop.aborted) {
+                onStop()
                 return
             }
-            signal.addEventListener("abort", onAbort, { once: true })
+            stop.addEventListener("abort", onStop, { once: true })
 
             /** Sends a request and waits for its `res`. */
             const request = (method: string, params: Record<string, unknown>): Promise<unknown> =>
                 new Promise((ok, fail) => {
                     sequence += 1
                     const id = String(sequence)
-                    pending.set(id, (good, payload, error) => {
-                        if (good) {
-                            ok(payload)
-                            return
-                        }
-                        fail(
-                            error?.code === "UNAVAILABLE" && method === "connect"
-                                ? new RetryableConnect(error.message, error.retryAfterMs ?? 1000)
-                                : new OpenclawError({
-                                      code: OpenclawErrorCode.GatewayRefused,
-                                      params: { method, gatewayCode: error?.code ?? "error" },
-                                  }),
-                        )
-                    })
+                    pending.set(id, (good, payload, error) => (good ? ok(payload) : fail(refusalOf(method, error))))
                     socket.send(JSON.stringify({ type: "req", id, method, params }))
                 })
 
@@ -203,20 +215,20 @@ export class GatewayClient {
                 mark("connect")
                 // sessions.send only talks into an existing session, so create it first. An existing session is fine; any other
                 // refusal shows up again, with its real reason, on sessions.send below.
-                if (!this.created.has(req.sessionKey)) {
-                    await request("sessions.create", { key: req.sessionKey, agentId: req.agentId }).catch(
+                if (!this.created.has(req.threadKey)) {
+                    await request("sessions.create", { key: req.threadKey, agentId: req.agentId }).catch(
                         (cause: unknown) => {
-                            this.logger.warn(OpenclawLogEvent.SessionCreateSkipped, { reason: String(cause) })
+                            this.logger.warn(OpenclawLogEvent.SessionCreateSkipped, { code: failureOf(cause).code })
                         },
                     )
-                    this.created.add(req.sessionKey)
+                    this.created.add(req.threadKey)
                     mark("create")
                 }
                 await request("sessions.subscribe", {})
-                await request("sessions.messages.subscribe", { key: req.sessionKey, agentId: req.agentId })
+                await request("sessions.messages.subscribe", { key: req.threadKey, agentId: req.agentId })
                 mark("subscribe")
                 await request("sessions.send", {
-                    key: req.sessionKey,
+                    key: req.threadKey,
                     agentId: req.agentId,
                     message: req.message,
                     thinking: "off",
@@ -227,8 +239,21 @@ export class GatewayClient {
                 mark("send_ack")
             }
 
+            /** After a non-final text, waits for a better one; a newer text restarts the wait. */
+            const settleOn = (reply: string): void => {
+                settleSerial += 1
+                const serial = settleSerial
+                AbortSignal.timeout(this.options.settleMs).addEventListener(
+                    "abort",
+                    () => {
+                        if (serial === settleSerial) finish(null, reply)
+                    },
+                    { once: true },
+                )
+            }
+
             socket.onMessage((data) => {
-                const frame = parseFrame(data)
+                const frame = this.frameOf(data)
                 if (frame === null || settled) return
                 if (frame.type === "res") {
                     pending.get(frame.id)?.(frame.ok, frame.payload, frame.error)
@@ -236,23 +261,20 @@ export class GatewayClient {
                     return
                 }
                 if (frame.event === "connect.challenge") {
-                    startTurn().catch((cause: unknown) =>
-                        finish(cause instanceof RetryableConnect ? cause : failureOf(cause)),
-                    )
+                    startTurn().catch((cause: unknown) => finish(failureOf(cause)))
                     return
                 }
                 if (frame.event === "agent") {
-                    const payload = frame.payload as { status?: unknown } | null
-                    const status = typeof payload?.status === "string" ? payload.status : null
+                    const status = statusOf(frame.payload)
                     if (status === "error") finish(new OpenclawError({ code: OpenclawErrorCode.RunFailed }))
                     else if (status !== null && FINAL_STATUS.has(status) && candidate !== null) finish(null, candidate)
                     return
                 }
                 if (frame.event !== "session.message") return
                 const message = readSessionMessage(frame.payload)
-                // Only the agent's own words in this session; the customer message echoed back is not a reply.
+                // Only the agent's own words in this thread; the customer message echoed back is not a reply.
                 if (
-                    message.sessionKey !== req.sessionKey ||
+                    message.threadKey !== req.threadKey ||
                     message.fromOwner ||
                     message.role === "user" ||
                     message.role === "system" ||
@@ -264,12 +286,8 @@ export class GatewayClient {
                 const reply: string = message.text
                 candidate = reply
                 const isFinal = req.isFinal ?? ((text: string) => looksFinal(text) || message.stopReason === "stop")
-                if (isFinal(reply)) {
-                    finish(null, reply)
-                    return
-                }
-                if (settleTimer !== null) clearTimeout(settleTimer)
-                settleTimer = setTimeout(() => finish(null, reply), SETTLE_MS)
+                if (isFinal(reply)) finish(null, reply)
+                else settleOn(reply)
             })
             socket.onError((message) =>
                 finish(new OpenclawError({ code: OpenclawErrorCode.GatewaySocketFailed, params: { reason: message } })),

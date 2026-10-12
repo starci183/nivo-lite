@@ -1,18 +1,28 @@
 import { createHash } from "node:crypto"
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmdirSync, rmSync, writeFileSync } from "node:fs"
-import { dirname, join, normalize, sep } from "node:path"
+import { posix } from "node:path"
 import { Injectable } from "@nestjs/common"
+import { InjectLogger } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
 import { OpenclawError, OpenclawErrorCode } from "./errors/openclaw.error"
-import type { FileMeta, SyncFile } from "./openclaw.contracts"
+import type { FileMeta, SyncFile, WorkspaceWriteResult } from "./openclaw.contracts"
+import { InjectOpenclawFiles } from "./openclaw.decorators"
+import { OpenclawLogEvent } from "./openclaw.log-events"
+import type { OpenclawFiles } from "./openclaw-files.port"
 
 /** The list of files this writer owns inside a workspace. Anything else there (memory/, files the agent wrote itself) is never touched. */
 const MANIFEST = ".nivo-managed.json"
+const FILE_MODE = 0o644
 
 const shaOf = (text: string): string => createHash("sha256").update(text).digest("hex")
 
 @Injectable()
 /** Writes one agent bundle into its OpenClaw workspace, one way: every file through temp and rename, stale managed files removed. */
 export class WorkspaceWriterService {
+    constructor(
+        @InjectOpenclawFiles() private readonly files: OpenclawFiles,
+        @InjectLogger() private readonly logger: Logger,
+    ) {}
+
     /** One hash over every file (path and content), independent of order: an equal hash is an equal workspace. */
     contentHash(files: ReadonlyArray<SyncFile>): string {
         const hash = createHash("sha256")
@@ -35,83 +45,55 @@ export class WorkspaceWriterService {
     matches(root: string, files: ReadonlyArray<SyncFile>): boolean {
         const wanted = new Set(files.map((file) => file.path))
         if (this.managedOf(root).some((path) => !wanted.has(path))) return false
-        return files.every((file) => {
-            try {
-                return readFileSync(this.safe(root, file.path), "utf8") === file.content
-            } catch {
-                return false
-            }
-        })
+        return files.every((file) => this.files.readText(this.safe(root, file.path)) === file.content)
     }
 
     /** Writes the bundle: changed files only, then removes the managed files the bundle no longer has and records the manifest. */
-    write(root: string, files: ReadonlyArray<SyncFile>): { readonly written: number; readonly removed: number } {
-        mkdirSync(root, { recursive: true })
-        let written = 0
-        for (const file of files) {
-            const target = this.safe(root, file.path)
-            if (this.readText(target) === file.content) continue
-            this.atomicWrite(target, file.content)
-            written += 1
-        }
+    write(root: string, files: ReadonlyArray<SyncFile>): WorkspaceWriteResult {
+        const changed = files.filter((file) => this.files.readText(this.safe(root, file.path)) !== file.content)
+        for (const file of changed) this.files.writeText(this.safe(root, file.path), file.content, FILE_MODE)
         const wanted = new Set(files.map((file) => file.path))
-        let removed = 0
-        for (const old of this.managedOf(root)) {
-            if (wanted.has(old)) continue
-            const target = this.safe(root, old)
-            rmSync(target, { force: true })
-            this.prune(root, dirname(target))
-            removed += 1
+        const stale = this.managedOf(root).filter((path) => !wanted.has(path))
+        for (const path of stale) {
+            const target = this.safe(root, path)
+            this.files.remove(target)
+            this.prune(root, posix.dirname(target))
         }
-        this.atomicWrite(join(root, MANIFEST), JSON.stringify(files.map((file) => file.path).sort(), null, 2))
-        return { written, removed }
+        const manifest = JSON.stringify(files.map((file) => file.path).sort(), null, 2)
+        this.files.writeText(posix.join(root, MANIFEST), manifest, FILE_MODE)
+        return { written: changed.length, removed: stale.length }
     }
 
     /** A path of the bundle must stay inside the workspace: relative, no "..", never the manifest. */
     private safe(root: string, relative: string): string {
-        const clean = normalize(relative)
+        const clean = posix.normalize(relative)
         const unsafe =
             relative === "" ||
+            relative.includes("\\") ||
             clean.startsWith("..") ||
-            clean.startsWith(sep) ||
+            clean.startsWith("/") ||
             /^[a-z]:/iu.test(clean) ||
             clean === MANIFEST ||
-            clean.includes(`..${sep}`)
+            clean.includes("../")
         if (unsafe) throw new OpenclawError({ code: OpenclawErrorCode.WorkspacePathUnsafe, params: { path: relative } })
-        return join(root, clean)
+        return posix.join(root, clean)
     }
 
-    private readText(file: string): string | null {
-        try {
-            return readFileSync(file, "utf8")
-        } catch {
-            return null
-        }
-    }
-
-    private atomicWrite(file: string, content: string): void {
-        mkdirSync(dirname(file), { recursive: true })
-        const temp = `${file}.${process.pid}.tmp`
-        writeFileSync(temp, content, { mode: 0o644 })
-        renameSync(temp, file)
-    }
-
-    private managedOf(root: string): Array<string> {
-        const text = this.readText(join(root, MANIFEST))
+    private managedOf(root: string): ReadonlyArray<string> {
+        const text = this.files.readText(posix.join(root, MANIFEST))
         if (text === null) return []
         try {
             const value: unknown = JSON.parse(text)
             return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []
-        } catch {
+        } catch (cause) {
+            this.logger.error(OpenclawLogEvent.ManifestUnreadable, cause)
             return []
         }
     }
 
-    private prune(root: string, start: string): void {
-        let dir = start
-        while (dir.length > root.length && existsSync(dir) && readdirSync(dir).length === 0) {
-            rmdirSync(dir)
-            dir = dirname(dir)
+    private prune(root: string, directory: string): void {
+        if (directory.length > root.length && this.files.removeDirectoryIfEmpty(directory)) {
+            this.prune(root, posix.dirname(directory))
         }
     }
 }

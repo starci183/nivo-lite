@@ -6,6 +6,7 @@ export const OPENCLAW_MESSAGES: MessageBundle = {
         "errors.OPENCLAW_CONFIG_INVALID": "Cấu hình OpenClaw không hợp lệ: {{key}}.",
         "errors.OPENCLAW_GATEWAY_NOT_CONFIGURED": "OpenClaw chưa được cấu hình.",
         "errors.OPENCLAW_GATEWAY_REFUSED": "OpenClaw từ chối yêu cầu {{method}}.",
+        "errors.OPENCLAW_GATEWAY_DEFERRED": "OpenClaw đang khởi động, thử kết nối lại sau {{retryAfterMs}} ms.",
         "errors.OPENCLAW_GATEWAY_TIMEOUT": "OpenClaw không trả lời trong {{timeoutMs}} ms.",
         "errors.OPENCLAW_GATEWAY_ABORTED": "Lượt chat đã bị hủy.",
         "errors.OPENCLAW_GATEWAY_CLOSED": "OpenClaw đóng kết nối trước khi trả lời.",
@@ -19,6 +20,8 @@ export const OPENCLAW_MESSAGES: MessageBundle = {
         "errors.OPENCLAW_CONFIG_INVALID": "The OpenClaw configuration is invalid: {{key}}.",
         "errors.OPENCLAW_GATEWAY_NOT_CONFIGURED": "OpenClaw is not configured.",
         "errors.OPENCLAW_GATEWAY_REFUSED": "OpenClaw refused the {{method}} request.",
+        "errors.OPENCLAW_GATEWAY_DEFERRED":
+            "OpenClaw is still starting; the connect is retried after {{retryAfterMs}} ms.",
         "errors.OPENCLAW_GATEWAY_TIMEOUT": "OpenClaw did not answer within {{timeoutMs}} ms.",
         "errors.OPENCLAW_GATEWAY_ABORTED": "The chat turn was aborted.",
         "errors.OPENCLAW_GATEWAY_CLOSED": "OpenClaw closed the connection before it answered.",

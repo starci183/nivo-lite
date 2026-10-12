@@ -18,6 +18,8 @@ export interface OpenclawOptions {
     readonly gateway: OpenclawGatewayOptions | null
     /** How long one turn may take, ms. */
     readonly turnTimeoutMs: number
+    /** After a first assistant text that is not final, how long to wait for a better one, ms. */
+    readonly settleMs: number
     /** The directory with openclaw.json and the agent workspaces, as this process sees the shared volume. */
     readonly configDir: string | undefined
     /** The same directory as the gateway sees it: the workspace paths written into openclaw.json use this one. */

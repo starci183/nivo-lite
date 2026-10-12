@@ -1,26 +1,31 @@
 import { Secret } from "@modules/platform/config"
-import { connectParams, looksFinal, parseFrame, PROTOCOL_VERSION, readSessionMessage } from "./gateway-frame.mapper"
+import {
+    connectParams,
+    frameOf,
+    looksFinal,
+    PROTOCOL_VERSION,
+    readSessionMessage,
+    statusOf,
+} from "./gateway-frame.mapper"
 
 describe("gateway frame mapper", () => {
-    describe("parseFrame", () => {
+    describe("frameOf", () => {
         it("reads an event", () => {
-            expect(parseFrame('{"type":"event","event":"agent","payload":{"status":"ok"}}')).toEqual({
+            expect(frameOf({ type: "event", event: "agent", payload: { status: "ok" } })).toEqual({
                 type: "event",
                 event: "agent",
                 payload: { status: "ok" },
             })
         })
 
-        it("reads a response with a string id and its error body", () => {
+        it("reads a response with its error body", () => {
             expect(
-                parseFrame(
-                    JSON.stringify({
-                        type: "res",
-                        id: "7",
-                        ok: false,
-                        error: { code: "UNAVAILABLE", message: "starting", details: { retryAfterMs: 2500 } },
-                    }),
-                ),
+                frameOf({
+                    type: "res",
+                    id: "7",
+                    ok: false,
+                    error: { code: "UNAVAILABLE", message: "starting", details: { retryAfterMs: 2500 } },
+                }),
             ).toEqual({
                 type: "res",
                 id: "7",
@@ -31,32 +36,32 @@ describe("gateway frame mapper", () => {
         })
 
         it("reads a response with a numeric id, defaults an unnamed error and ignores a non-numeric retry hint", () => {
-            expect(parseFrame('{"type":"res","id":3,"ok":true,"payload":{"a":1}}')).toEqual({
+            expect(frameOf({ type: "res", id: 3, ok: true, payload: { a: 1 } })).toEqual({
                 type: "res",
                 id: "3",
                 ok: true,
                 payload: { a: 1 },
                 error: null,
             })
-            expect(parseFrame('{"type":"res","id":"4","error":{"details":{"retryAfterMs":"soon"}}}')).toEqual({
+            expect(frameOf({ type: "res", id: "4", error: { details: { retryAfterMs: "soon" } } })).toEqual({
                 type: "res",
                 id: "4",
                 ok: false,
                 payload: undefined,
                 error: { code: "UNKNOWN", message: "", retryAfterMs: null },
             })
-            expect(parseFrame('{"type":"res","id":"5","error":{"code":"X","message":"m"}}')).toMatchObject({
+            expect(frameOf({ type: "res", id: "5", error: { code: "X", message: "m" } })).toMatchObject({
                 error: { code: "X", message: "m", retryAfterMs: null },
             })
         })
 
-        it("refuses text that is not a frame", () => {
-            expect(parseFrame("not json")).toBeNull()
-            expect(parseFrame("[1]")).toBeNull()
-            expect(parseFrame("null")).toBeNull()
-            expect(parseFrame('{"type":"event"}')).toBeNull()
-            expect(parseFrame('{"type":"res","id":true}')).toBeNull()
-            expect(parseFrame('{"type":"other"}')).toBeNull()
+        it("refuses a value that is not a frame", () => {
+            expect(frameOf("text")).toBeNull()
+            expect(frameOf([1])).toBeNull()
+            expect(frameOf(null)).toBeNull()
+            expect(frameOf({ type: "event" })).toBeNull()
+            expect(frameOf({ type: "res", id: true })).toBeNull()
+            expect(frameOf({ type: "other" })).toBeNull()
         })
     })
 
@@ -94,7 +99,7 @@ describe("gateway frame mapper", () => {
                     },
                 }),
             ).toEqual({
-                sessionKey: "agent:a:c",
+                threadKey: "agent:a:c",
                 role: "assistant",
                 fromOwner: false,
                 text: "Hello\nthere",
@@ -105,7 +110,7 @@ describe("gateway frame mapper", () => {
 
         it("reads a plain string message under the `key` alias and flags the owner", () => {
             expect(readSessionMessage({ key: "k", senderIsOwner: true, message: "  hi  " })).toEqual({
-                sessionKey: "k",
+                threadKey: "k",
                 role: null,
                 fromOwner: true,
                 text: "hi",
@@ -129,7 +134,7 @@ describe("gateway frame mapper", () => {
         })
 
         it("answers an empty message for anything that carries no text", () => {
-            const empty = { sessionKey: null, role: null, fromOwner: false, text: null, stopReason: null, usage: null }
+            const empty = { threadKey: null, role: null, fromOwner: false, text: null, stopReason: null, usage: null }
             expect(readSessionMessage(null)).toEqual(empty)
             expect(readSessionMessage([])).toEqual(empty)
             expect(readSessionMessage({ message: "   " })).toEqual(empty)
@@ -137,6 +142,14 @@ describe("gateway frame mapper", () => {
             expect(readSessionMessage({ message: 5 })).toEqual(empty)
             expect(readSessionMessage({ message: { other: 1 } })).toEqual(empty)
             expect(readSessionMessage({ message: { usage: "x" } })).toEqual(empty)
+        })
+    })
+
+    describe("statusOf", () => {
+        it("reads the status of an agent event and nothing else", () => {
+            expect(statusOf({ status: "done" })).toBe("done")
+            expect(statusOf({ status: 3 })).toBeNull()
+            expect(statusOf(null)).toBeNull()
         })
     })
 

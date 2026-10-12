@@ -1,122 +1,114 @@
-import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs"
-import { join } from "node:path"
+import { posix } from "node:path"
 import { Injectable } from "@nestjs/common"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { OpenclawError, OpenclawErrorCode } from "./errors/openclaw.error"
-import type { WorkspaceDirs } from "./openclaw.contracts"
-import { InjectOpenclawOptions } from "./openclaw.decorators"
+import { agentListOf, agentsOf, hasDefaultAgent, isAgentEntry, isJsonObject } from "./json.mapper"
+import type { AgentEntry, OptionalJsonObject, OptionalWorkspaceDirs, WorkspaceDirs } from "./openclaw.contracts"
+import { InjectOpenclawFiles, InjectOpenclawOptions } from "./openclaw.decorators"
 import { OpenclawLogEvent } from "./openclaw.log-events"
 import type { OpenclawOptions } from "./openclaw.options"
+import type { OpenclawFiles } from "./openclaw-files.port"
 
-interface AgentEntry {
-    readonly id: string
-    readonly name?: string
-    readonly workspace?: string
-    readonly default?: boolean
-    readonly [key: string]: unknown
-}
-
-/** One OpenClaw agent per workspace and module: `ws-<first 8 hex of the workspace id>-<module>`. The agent is the tenant boundary on the OpenClaw side. */
-export const agentIdFor = (workspaceId: string, module: string): string =>
-    `ws-${workspaceId.replace(/-/gu, "").slice(0, 8)}-${module.replace(/[^a-z0-9]/giu, "").toLowerCase()}`
-
-/** The session key inside that agent, in the `agent:<agentId>:<key>` form the gateway uses. */
-export const sessionKeyFor = (agentId: string, conversationId: string): string => `agent:${agentId}:${conversationId}`
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-    typeof value === "object" && value !== null && !Array.isArray(value)
+const CONFIG_FILE = "openclaw.json"
+const CONFIG_MODE = 0o600
 
 @Injectable()
 /**
  * Keeps the agents the sync registers in OpenClaw's own config. The schema of OpenClaw 2026.7.1 is `agents.list[]`
  * (`{ id, name, workspace, tools, skills }`); the gateway watches openclaw.json and hot-applies `agents.*` without a restart.
- * Writes are atomic (temp file and rename), only happen when the entry changed, and never touch any other key: whatever OpenClaw or
- * an operator put in the file stays. A customer-facing agent is registered with the `minimal` tool profile (session_status only):
- * it has no shell, no file and no web tools, so a customer message can never become a command on the host.
+ * Writes are atomic, only happen when the entry changed, and never touch any other key: whatever OpenClaw or an operator put in
+ * the file stays. A customer-facing agent is registered with the `minimal` tool profile (session_status only): it has no shell, no
+ * file and no web tools, so a customer message can never become a command on the host.
  */
 export class AgentRegistryService {
     constructor(
         @InjectOpenclawOptions() private readonly options: OpenclawOptions,
+        @InjectOpenclawFiles() private readonly files: OpenclawFiles,
         @InjectLogger() private readonly logger: Logger,
     ) {}
 
     /** Where the agent's workspace lives on the shared volume (this process) and in the gateway's own view; null without a config directory. */
-    workspaceDirs(agentId: string): WorkspaceDirs | null {
-        if (this.options.configDir === undefined) return null
-        return {
-            local: join(this.options.configDir, `workspace-${agentId}`),
-            gateway: `${this.options.gatewayStateDir}/workspace-${agentId}`,
-        }
+    workspaceDirs(agentId: string): OptionalWorkspaceDirs {
+        const configDir = this.options.configDir
+        return configDir === undefined ? null : this.dirsIn(configDir, agentId)
     }
 
     /** True when the agent is in openclaw.json with the expected workspace. */
     has(agentId: string): boolean {
-        try {
-            const dirs = this.workspaceDirs(agentId)
-            return (
-                dirs !== null &&
-                this.entriesOf(this.read()).some((e) => e.id === agentId && e.workspace === dirs.gateway)
-            )
-        } catch {
-            return false
-        }
+        const configDir = this.options.configDir
+        const config = configDir === undefined ? null : this.readConfig(configDir)
+        if (configDir === undefined || config === null) return false
+        const { gateway } = this.dirsIn(configDir, agentId)
+        return agentListOf(config).some(
+            (entry) => isAgentEntry(entry) && entry.id === agentId && entry.workspace === gateway,
+        )
     }
 
     /** True when the entry in openclaw.json is exactly what `register` would write. */
     isCurrent(agentId: string, name: string): boolean {
-        try {
-            const dirs = this.workspaceDirs(agentId)
-            const entry = dirs === null ? undefined : this.entriesOf(this.read()).find((e) => e.id === agentId)
-            if (entry === undefined || dirs === null) return false
-            return JSON.stringify(entry) === JSON.stringify({ ...entry, ...this.wanted(agentId, name, dirs.gateway) })
-        } catch {
-            return false
-        }
+        const configDir = this.options.configDir
+        const config = configDir === undefined ? null : this.readConfig(configDir)
+        if (configDir === undefined || config === null) return false
+        const entry = agentListOf(config).find((candidate) => isAgentEntry(candidate) && candidate.id === agentId)
+        return (
+            isAgentEntry(entry) &&
+            this.sameEntry(entry, this.wanted(agentId, name, this.dirsIn(configDir, agentId).gateway))
+        )
     }
 
     /** Registers (or corrects) the agent entry. Answers true when openclaw.json was rewritten, so the gateway reloads it. */
     register(agentId: string, name: string): boolean {
-        const file = this.file()
-        const dirs = this.workspaceDirs(agentId)
-        if (!this.options.manageAgents || file === null || dirs === null) {
+        const configDir = this.options.configDir
+        if (!this.options.manageAgents || configDir === undefined) {
             throw new OpenclawError({ code: OpenclawErrorCode.RegistrationOff })
         }
-        const config = this.read()
-        const agents = isRecord(config.agents) ? config.agents : {}
-        const list = this.entriesOf(config)
-        const wanted = this.wanted(agentId, name, dirs.gateway)
-        const at = list.findIndex((e) => e.id === agentId)
+        const config = this.readConfig(configDir)
+        if (config === null) {
+            throw new OpenclawError({ code: OpenclawErrorCode.ConfigInvalid, params: { key: CONFIG_FILE } })
+        }
+        const list = agentListOf(config)
+        const wanted = this.wanted(agentId, name, this.dirsIn(configDir, agentId).gateway)
+        const at = list.findIndex((entry) => isAgentEntry(entry) && entry.id === agentId)
         const current = list[at]
-        if (current !== undefined && JSON.stringify(current) === JSON.stringify({ ...current, ...wanted })) return false
+        if (isAgentEntry(current) && this.sameEntry(current, wanted)) return false
         const updated =
-            current === undefined ? [...list, wanted] : list.map((e, i) => (i === at ? { ...e, ...wanted } : e))
+            at < 0
+                ? [...list, wanted]
+                : list.map((entry, index) => (index === at && isAgentEntry(entry) ? { ...entry, ...wanted } : entry))
         // Once agents.list exists the first entry (or the one marked default) is the default agent: keep the implicit "main" as it was.
-        const next =
-            updated.some((e) => e.default === true) || updated.some((e) => e.id === "main")
-                ? updated
-                : [{ id: "main", default: true }, ...updated]
-        const temp = `${file}.${process.pid}.tmp`
-        writeFileSync(temp, JSON.stringify({ ...config, agents: { ...agents, list: next } }, null, 2), { mode: 0o600 })
-        renameSync(temp, file)
+        const next = hasDefaultAgent(updated) ? updated : [{ id: "main", default: true }, ...updated]
+        this.files.writeText(
+            posix.join(configDir, CONFIG_FILE),
+            JSON.stringify({ ...config, agents: { ...agentsOf(config), list: next } }, null, 2),
+            CONFIG_MODE,
+        )
         this.logger.info(OpenclawLogEvent.AgentRegistered, { agentId })
         return true
     }
 
-    private file(): string | null {
-        return this.options.configDir === undefined ? null : join(this.options.configDir, "openclaw.json")
+    private dirsIn(configDir: string, agentId: string): WorkspaceDirs {
+        return {
+            local: posix.join(configDir, `workspace-${agentId}`),
+            gateway: `${this.options.gatewayStateDir}/workspace-${agentId}`,
+        }
     }
 
-    private read(): Record<string, unknown> {
-        const file = this.file()
-        if (file === null || !existsSync(file)) return {}
-        const parsed: unknown = JSON.parse(readFileSync(file, "utf8"))
-        return isRecord(parsed) ? parsed : {}
+    /** The parsed document: empty when there is no file, null when it exists but is not readable JSON. */
+    private readConfig(configDir: string): OptionalJsonObject {
+        const text = this.files.readText(posix.join(configDir, CONFIG_FILE))
+        if (text === null) return {}
+        try {
+            const value: unknown = JSON.parse(text)
+            return isJsonObject(value) ? value : {}
+        } catch (cause) {
+            this.logger.error(OpenclawLogEvent.ConfigUnreadable, cause)
+            return null
+        }
     }
 
-    private entriesOf(config: Record<string, unknown>): Array<AgentEntry> {
-        const agents = isRecord(config.agents) ? config.agents : {}
-        return Array.isArray(agents.list) ? (agents.list as Array<AgentEntry>) : []
+    private sameEntry(entry: AgentEntry, wanted: AgentEntry): boolean {
+        return JSON.stringify(entry) === JSON.stringify({ ...entry, ...wanted })
     }
 
     /** The entry this process wants. bootstrapMaxChars: AGENTS.md (rules, context, knowledge, contract) is longer than the 20000 default and would lose its tail, the reply contract. */

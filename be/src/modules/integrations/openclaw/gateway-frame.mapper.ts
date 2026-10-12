@@ -34,6 +34,9 @@ export type GatewayFrame =
       }
     | { readonly type: "event"; readonly event: string; readonly payload: unknown }
 
+/** A frame or nothing. */
+export type OptionalGatewayFrame = GatewayFrame | null
+
 /** What one assistant message cost: provider usage as OpenClaw normalises it, plus who served it. */
 export interface MessageUsage {
     /** Input tokens. */
@@ -52,8 +55,8 @@ export interface MessageUsage {
 
 /** One `session.message` event narrowed to what a turn reads. */
 export interface SessionMessage {
-    /** The session the message belongs to. */
-    readonly sessionKey: string | null
+    /** The thread the message belongs to. */
+    readonly threadKey: string | null
     /** The role: user, assistant, system. */
     readonly role: string | null
     /** True when the owner sent it, so it is not a reply. */
@@ -84,14 +87,8 @@ const errorOf = (value: unknown): GatewayErrorBody | null => {
     }
 }
 
-/** Parses one text frame; null when it is not JSON or not a frame this client understands. */
-export const parseFrame = (raw: string): GatewayFrame | null => {
-    let value: unknown
-    try {
-        value = JSON.parse(raw)
-    } catch {
-        return null
-    }
+/** Reads one decoded JSON value as a frame; null when it is not a frame this client understands. */
+export const frameOf = (value: unknown): OptionalGatewayFrame => {
     if (!isRecord(value)) return null
     if (value.type === "event" && typeof value.event === "string") {
         return { type: "event", event: value.event, payload: value.payload }
@@ -118,6 +115,11 @@ export const connectParams = (auth: OpenclawAuth, platform: string): Record<stri
     scopes: [...SCOPES],
 })
 
+const qualifiedModel = (provider: string | null, model: string | null): string | null => {
+    if (model === null) return null
+    return provider === null ? model : `${provider}/${model}`
+}
+
 const usageOf = (message: unknown): MessageUsage | null => {
     if (!isRecord(message) || !isRecord(message.usage)) return null
     const usage = message.usage
@@ -129,7 +131,7 @@ const usageOf = (message: unknown): MessageUsage | null => {
         cacheRead: numberOf(usage.cacheRead),
         cacheWrite: numberOf(usage.cacheWrite),
         cost: isRecord(usage.cost) ? numberOf(usage.cost.total) : 0,
-        model: model === null ? null : provider === null ? model : `${provider}/${model}`,
+        model: qualifiedModel(provider, model),
     }
 }
 
@@ -152,12 +154,12 @@ const textOf = (value: unknown): string | null => {
 /** Narrows a `session.message` payload: `{ sessionKey, senderIsOwner?, message }`, the message being a string or an object. */
 export const readSessionMessage = (payload: unknown): SessionMessage => {
     if (!isRecord(payload)) {
-        return { sessionKey: null, role: null, fromOwner: false, text: null, stopReason: null, usage: null }
+        return { threadKey: null, role: null, fromOwner: false, text: null, stopReason: null, usage: null }
     }
     const message = payload.message
     const body = isRecord(message) ? message : null
     return {
-        sessionKey: stringOf(payload.sessionKey) ?? stringOf(payload.key),
+        threadKey: stringOf(payload.sessionKey) ?? stringOf(payload.key),
         role: body === null ? null : stringOf(body.role),
         fromOwner: payload.senderIsOwner === true,
         text: textOf(message),
@@ -168,3 +170,7 @@ export const readSessionMessage = (payload: unknown): SessionMessage => {
 
 /** True for the contract answer: a JSON object with a `reply`; anything else may be an interim message of a tool-using run. */
 export const looksFinal = (text: string): boolean => /\{[\s\S]*"reply"\s*:/u.test(text)
+
+/** The run status an `agent` event carries; null when there is none. */
+export const statusOf = (payload: unknown): string | null =>
+    isRecord(payload) && typeof payload.status === "string" ? payload.status : null
