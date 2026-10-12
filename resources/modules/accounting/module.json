@@ -76,14 +76,30 @@
       "label_vi": "Phạm vi công việc",
       "label_en": "Scope",
       "hint_vi": "Kế toán AI làm những việc gì: hóa đơn, đối soát, nhắc nợ...",
-      "hint_en": "What the accounting agent covers: invoices, reconciliation, reminders..."
+      "hint_en": "What the accounting agent covers: invoices, reconciliation, reminders...",
+      "writes": [
+        {
+          "kind": "fact",
+          "subjectType": "policy",
+          "attributeLabel": "Phạm vi kế toán AI",
+          "scope": "restricted"
+        }
+      ]
     },
     {
       "key": "currency_tax",
       "label_vi": "Tiền tệ và thuế",
       "label_en": "Currency and tax",
       "hint_vi": "Đơn vị tiền, thuế GTGT, quy tắc làm tròn.",
-      "hint_en": "Currency, VAT rate, rounding rules."
+      "hint_en": "Currency, VAT rate, rounding rules.",
+      "writes": [
+        {
+          "kind": "fact",
+          "subjectType": "policy",
+          "attributeLabel": "Thuế VAT và làm tròn",
+          "scope": "internal"
+        }
+      ]
     },
     {
       "key": "source_evidence",
@@ -97,21 +113,54 @@
       "label_vi": "Chính sách duyệt và ngưỡng",
       "label_en": "Approval policy and thresholds",
       "hint_vi": "Số tiền nào AI tự làm, số nào cần bạn duyệt.",
-      "hint_en": "Amounts the AI handles alone and amounts you approve."
+      "hint_en": "Amounts the AI handles alone and amounts you approve.",
+      "writes": [
+        {
+          "kind": "rule",
+          "action": "issue_invoice",
+          "field": "limit_vnd"
+        },
+        {
+          "kind": "rule",
+          "action": "reconcile_payment",
+          "field": "limit_vnd"
+        }
+      ]
     },
     {
       "key": "evidence_requirements",
       "label_vi": "Yêu cầu chứng từ",
       "label_en": "Evidence requirements",
       "hint_vi": "Cần những chứng từ nào trước khi xuất hóa đơn hoặc ghi nhận thanh toán.",
-      "hint_en": "Documents required before invoicing or recording a payment."
+      "hint_en": "Documents required before invoicing or recording a payment.",
+      "writes": [
+        {
+          "kind": "fact",
+          "subjectType": "policy",
+          "attributeLabel": "Chứng từ bắt buộc",
+          "scope": "restricted"
+        }
+      ]
     },
     {
       "key": "prohibited_actions",
       "label_vi": "Việc không được làm",
       "label_en": "Prohibited actions",
       "hint_vi": "Những thao tác tuyệt đối không tự làm (hoàn tiền, hủy hóa đơn...).",
-      "hint_en": "Actions it must never take alone (refunds, voiding invoices...)."
+      "hint_en": "Actions it must never take alone (refunds, voiding invoices...).",
+      "writes": [
+        {
+          "kind": "fact",
+          "subjectType": "policy",
+          "attributeLabel": "Việc kế toán AI không được tự làm",
+          "scope": "restricted"
+        },
+        {
+          "kind": "rule",
+          "action": "send_email",
+          "field": "mode"
+        }
+      ]
     }
   ],
   "authority_actions": [

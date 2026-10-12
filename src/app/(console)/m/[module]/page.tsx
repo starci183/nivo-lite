@@ -32,6 +32,7 @@ const SetupPage = async ({ params }: SetupPageProps) => {
       initialRevisions={state.data.revisions}
       initialMessages={state.data.messages}
       initialVersions={versions}
+      initialWrites={state.data.writes}
     />
   );
 };

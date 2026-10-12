@@ -80,21 +80,45 @@
       "label_vi": "Thông tin doanh nghiệp",
       "label_en": "Business identity",
       "hint_vi": "Tên, bạn làm nghề gì, phục vụ ai, ở đâu.",
-      "hint_en": "Name, what you do, who you serve, where."
+      "hint_en": "Name, what you do, who you serve, where.",
+      "writes": [
+        {
+          "kind": "fact",
+          "subjectType": "business",
+          "attributeLabel": "Giới thiệu",
+          "scope": "public"
+        }
+      ]
     },
     {
       "key": "products",
       "label_vi": "Sản phẩm và giá",
       "label_en": "Products and prices",
       "hint_vi": "Dịch vụ/sản phẩm chính và mức giá hoặc cách báo giá.",
-      "hint_en": "Main products or services and their prices or how you quote."
+      "hint_en": "Main products or services and their prices or how you quote.",
+      "writes": [
+        {
+          "kind": "fact",
+          "subjectType": "product",
+          "attributeLabel": "Giá",
+          "scope": "public"
+        }
+      ]
     },
     {
       "key": "support_scope",
       "label_vi": "Phạm vi hỗ trợ",
       "label_en": "Support scope",
       "hint_vi": "Chatbot được trả lời những gì và không trả lời những gì.",
-      "hint_en": "What the chatbot may answer and what it must leave alone."
+      "hint_en": "What the chatbot may answer and what it must leave alone.",
+      "writes": [
+        {
+          "kind": "fact",
+          "subjectType": "policy",
+          "attributeLabel": "Phạm vi trả lời của chatbot",
+          "scope": "restricted"
+        }
+      ]
     },
     {
       "key": "channels",
@@ -108,28 +132,65 @@
       "label_vi": "Giờ làm việc và thời gian phản hồi",
       "label_en": "Hours and response time",
       "hint_vi": "Giờ làm việc và bao lâu thì người thật trả lời.",
-      "hint_en": "Opening hours and how fast a person follows up."
+      "hint_en": "Opening hours and how fast a person follows up.",
+      "writes": [
+        {
+          "kind": "fact",
+          "subjectType": "business",
+          "attributeLabel": "Giờ làm việc",
+          "scope": "public"
+        },
+        {
+          "kind": "fact",
+          "subjectType": "business",
+          "attributeLabel": "Thời gian phản hồi của nhân viên",
+          "scope": "internal"
+        }
+      ]
     },
     {
       "key": "handoff",
       "label_vi": "Khi nào chuyển cho người",
       "label_en": "Handoff rules",
       "hint_vi": "Tình huống nào bot phải chuyển cho nhân viên và chuyển cho ai.",
-      "hint_en": "When the bot must hand over to a person, and to whom."
+      "hint_en": "When the bot must hand over to a person, and to whom.",
+      "writes": [
+        {
+          "kind": "rule",
+          "action": "handoff_lead",
+          "field": "mode"
+        }
+      ]
     },
     {
       "key": "prohibited",
       "label_vi": "Điều không được hứa",
       "label_en": "Prohibited commitments",
       "hint_vi": "Giá, lịch, bảo hành, hoàn tiền... bot không được tự cam kết.",
-      "hint_en": "Price, schedule, warranty, refunds... the bot must never promise."
+      "hint_en": "Price, schedule, warranty, refunds... the bot must never promise.",
+      "writes": [
+        {
+          "kind": "fact",
+          "subjectType": "policy",
+          "attributeLabel": "Điều chatbot không được hứa",
+          "scope": "restricted"
+        }
+      ]
     },
     {
       "key": "tone",
       "label_vi": "Giọng điệu",
       "label_en": "Tone",
       "hint_vi": "Cách xưng hô và phong cách trả lời.",
-      "hint_en": "How it addresses people and the style of its answers."
+      "hint_en": "How it addresses people and the style of its answers.",
+      "writes": [
+        {
+          "kind": "fact",
+          "subjectType": "policy",
+          "attributeLabel": "Giọng điệu trả lời",
+          "scope": "restricted"
+        }
+      ]
     }
   ],
   "authority_actions": [

@@ -7,6 +7,9 @@ import { moduleSetup } from "@/i18n/dict/moduleSetup";
 import { modulesCore } from "@/i18n/dict/modulesCore";
 import { enqueueAgentSync } from "./engine-queue";
 import { mergeSetupTurn, runSetupTurn } from "./module-setup-ai";
+import type { SetupWrite, WriteDecision } from "./module-setup-writes";
+import { decideWrite, loadWrites, openGapsFor, storeWrites } from "./module-setup-writes-server";
+import { engineCtx } from "./flow-ctx";
 import { withUsage } from "./usage";
 import {
   INSTALLATION_SELECT, getInstallation, toInstallation, toSession, toVersion, type InstallationRow,
@@ -61,6 +64,8 @@ export type SetupState = {
   revisions: Array<SetupRevision>;
   /** The whole chat across every revision, oldest first. */
   messages: Array<SetupMessage>;
+  /** The confirm cards of the chat (Second Brain facts and authority rules NIVO proposed from the owner's answers). */
+  writes: Array<SetupWrite>;
 };
 
 /** Everything the Setup tab needs: the draft session (created on first open) and the full chat history of the installation. */
@@ -83,14 +88,15 @@ export const loadSetup = async (moduleKey: ModuleKey): Promise<Outcome<SetupStat
     const latest = rows.at(-1) ?? null;
     if (latest && latest.status === "draft") {
       const messages = ((chatRows.data ?? []) as unknown as Array<MessageRow & { session?: unknown }>).map(({ session: _s, ...m }) => toMessage(m));
-      return { installation, session: toSession(latest), revisions: rows.map((r) => ({ id: r.id, revision: r.revision, status: r.status })) as Array<SetupRevision>, messages };
+      const writes = await loadWrites(db, session.workspace.id, rows.map((r) => r.id));
+      return { installation, session: toSession(latest), revisions: rows.map((r) => ({ id: r.id, revision: r.revision, status: r.status })) as Array<SetupRevision>, messages, writes };
     }
     // No open draft yet (first visit, or the last revision was applied): create it, then read again.
     const draft = await ensureDraftSession(db, session.workspace.id, installation, await getLocale());
     const sessions = await db.from("module_setup_sessions").select("id, revision, status").eq("installation_id", installation.id).order("revision");
     fail(sessions.error);
     const revisions = (sessions.data ?? []) as Array<SetupRevision>;
-    return { installation, session: draft, revisions, messages: await listInstallationMessages(db, revisions.map((r) => r.id)) };
+    return { installation, session: draft, revisions, messages: await listInstallationMessages(db, revisions.map((r) => r.id)), writes: await loadWrites(db, session.workspace.id, revisions.map((r) => r.id)) };
   });
 
 /** The chat of several revisions at once, oldest first (RLS keeps it owner/manager-only). */
@@ -115,7 +121,7 @@ export const listSetupChat = async (setupSessionId: string): Promise<Outcome<Arr
   });
 
 /** One owner message: ONE model call, merged into the draft; NIVO's reply is stored as the next chat message. */
-export const sendSetupMessage = async (setupSessionId: string, text: string): Promise<Outcome<{ session: SetupSession; messages: Array<SetupMessage> }>> =>
+export const sendSetupMessage = async (setupSessionId: string, text: string): Promise<Outcome<{ session: SetupSession; messages: Array<SetupMessage>; writes: Array<SetupWrite> }>> =>
   run(async () => {
     const member = await requireManager();
     const body = text.trim().slice(0, 4000);
@@ -132,19 +138,45 @@ export const sendSetupMessage = async (setupSessionId: string, text: string): Pr
     const installation = await loadInstallation(db, draftSession.installationId);
     const history = await listSetupMessages(db, setupSessionId);
 
-    const inserted = await db.from("module_setup_messages").insert({ workspace_id: ws, setup_session_id: setupSessionId, role: "user", author: member.displayName, body });
+    const inserted = await db.from("module_setup_messages").insert({ workspace_id: ws, setup_session_id: setupSessionId, role: "user", author: member.displayName, body }).select("id").single();
     fail(inserted.error);
+    if (!inserted.data) throw new Error("Not found");
 
+    // The customer questions the agent could not answer yet (knowledge gaps) are part of what the chat asks about.
+    const gaps = await openGapsFor(db, ws, installation.moduleKey);
     const turn = await withUsage({ workspaceId: ws }, () => runSetupTurn({
       moduleKey: installation.moduleKey, locale, draft: draftSession.draft, gates: draftSession.gateEvidence,
-      history: history.map((m) => ({ role: m.role, body: m.body })), message: body,
+      history: history.map((m) => ({ role: m.role, body: m.body })), message: body, gaps,
     }));
     const merged = mergeSetupTurn(draftSession.draft, draftSession.gateEvidence, turn);
     const updated = await db.from("module_setup_sessions").update({ draft_snapshot: merged.draft, gate_evidence: merged.gates }).eq("id", setupSessionId).select().single();
     fail(updated.error);
     const reply = await db.from("module_setup_messages").insert({ workspace_id: ws, setup_session_id: setupSessionId, role: "assistant", author: "NIVO", body: turn.reply });
     fail(reply.error);
-    return { session: toSession(updated.data), messages: await listSetupMessages(db, setupSessionId) };
+    // What the owner said becomes confirm cards (facts for the Second Brain, authority rules); nothing is written until they confirm.
+    await storeWrites(db, ws, setupSessionId, inserted.data.id as string, turn.writes);
+    const writes = await loadWrites(db, ws, [setupSessionId]);
+    return { session: toSession(updated.data), messages: await listSetupMessages(db, setupSessionId), writes };
+  });
+
+/**
+ * The owner confirms (optionally edited) or rejects one card of the setup chat. Confirming performs the write: a Second Brain fact (source
+ * owner, evidence = the setup message) or an authority rule, through the same code the Brain and Authority pages use.
+ */
+export const decideSetupWrite = async (writeId: string, change: WriteDecision): Promise<Outcome<SetupWrite>> =>
+  run(async () => {
+    await requireManager();
+    const c = await engineCtx();
+    const row = await c.db.from("module_setup_writes").select("setup_session_id").eq("id", writeId).maybeSingle();
+    fail(row.error);
+    if (!row.data) throw new Error("Not found");
+    const sessionRow = await c.db.from("module_setup_sessions").select("installation_id").eq("id", row.data.setup_session_id).single();
+    fail(sessionRow.error);
+    if (!sessionRow.data) throw new Error("Not found");
+    const installation = await loadInstallation(c.db, sessionRow.data.installation_id);
+    const written = await decideWrite(c.db, c, installation.moduleKey, c.locale, writeId, change);
+    refresh();
+    return written;
   });
 
 /** Confirm, reopen or edit one gate of the draft. Editing sets the owner's own wording and confirms it. */
