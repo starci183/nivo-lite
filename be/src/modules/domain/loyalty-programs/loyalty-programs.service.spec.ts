@@ -49,6 +49,16 @@ describe("LoyaltyProgramsService", () => {
         })
     })
 
+    describe("configOf", () => {
+        it("answers the rules of the programme, or the defaults when the workspace has none", async () => {
+            const found = await build(mockEntityManager({ query: [SELECT_PROGRAM, [ROW]] }))
+            const none = await build(mockEntityManager({ query: [SELECT_PROGRAM, []] }))
+
+            await expect(found.configOf("ws-1")).resolves.toEqual(DEFAULT_CONFIG)
+            await expect(none.configOf("ws-1")).resolves.toBe(DEFAULT_CONFIG)
+        })
+    })
+
     describe("findBySlug", () => {
         it("answers the switched-on programme of the slug, or null", async () => {
             const found = await build(mockEntityManager({ query: [SELECT_PROGRAM_BY_SLUG, [ROW]] }))

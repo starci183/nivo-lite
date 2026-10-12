@@ -3,7 +3,7 @@ import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@s
 import type { StubsOf } from "@starci/jest-preset/entity-manager"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { BookingAccessService } from "./booking-access.service"
+import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { BookingDeskService } from "./booking-desk.service"
 import { BookingModelService } from "./booking-model.service"
 import { BookingRemindersService } from "@modules/domain/booking-reminders"
@@ -91,9 +91,15 @@ const build = async <
     spans: ReadonlyArray<TakenSpan> = [],
 ) => {
     const tx = fakeTransaction(mockEntityManager(stubs))
-    const access = mock<BookingAccessService>()
-    access.requireMember.mockResolvedValue(undefined)
-    access.requireManager.mockResolvedValue(undefined)
+    const access = mock<WorkspaceMembersService>()
+    access.require.mockResolvedValue({
+        userId: USER,
+        workspaceId: WORKSPACE,
+        role: "owner",
+        staffId: null,
+        displayName: "Owner",
+        status: "active",
+    })
     const models = mock<BookingModelService>()
     models.model.mockResolvedValue(model)
     models.settings.mockResolvedValue(model.settings)
@@ -109,7 +115,7 @@ const build = async <
             BookingDeskService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
-            { provide: BookingAccessService, useValue: access },
+            { provide: WorkspaceMembersService, useValue: access },
             { provide: BookingModelService, useValue: models },
             { provide: BookingReservationService, useValue: reservation },
             { provide: BookingRemindersService, useValue: reminders },
@@ -125,7 +131,7 @@ describe("BookingDeskService", () => {
 
             await expect(service.add(USER, addOf())).resolves.toEqual({ ok: true, reason: null, id: "b-new" })
 
-            expect(access.requireManager).toHaveBeenCalledWith(WORKSPACE, USER)
+            expect(access.require).toHaveBeenCalledWith(USER, WORKSPACE, ["owner", "manager"])
             expect(reservation.reserve).toHaveBeenCalledWith({
                 manager: expect.anything(),
                 force: false,

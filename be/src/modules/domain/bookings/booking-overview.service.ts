@@ -3,7 +3,7 @@ import type { EntityManager } from "typeorm"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { BookingAccessService } from "./booking-access.service"
+import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { BookingModelService } from "./booking-model.service"
 import type { BookingOverview, OverviewParams } from "./bookings.contracts"
 import {
@@ -27,13 +27,13 @@ export class BookingOverviewService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
-        private readonly access: BookingAccessService,
+        private readonly members: WorkspaceMembersService,
         private readonly models: BookingModelService,
     ) {}
 
     /** The ribbon figures (today, this week, the last 30 days) and the statistics of a date range. */
     async overview(userId: string, params: OverviewParams): Promise<BookingOverview> {
-        await this.access.requireMember(params.workspaceId, userId)
+        await this.members.require(userId, params.workspaceId)
         const model = await this.models.model(params.workspaceId)
         const timeZone = model.settings.timezone
         const nowMs = this.clock.now().getTime()

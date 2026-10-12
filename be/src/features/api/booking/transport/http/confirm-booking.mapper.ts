@@ -9,7 +9,4 @@ export const toConfirmBookingRequest = (params: ConfirmBookingParamsRequest): Co
 })
 
 /** Maps the confirm-booking result to the HTTP answer. */
-export const toConfirmBookingResponse = (result: ConfirmBookingResult): ConfirmBookingResponse => ({
-    status: result.status,
-    feeDue: result.feeDue,
-})
+export const toConfirmBookingResponse = (result: ConfirmBookingResult): ConfirmBookingResponse => result

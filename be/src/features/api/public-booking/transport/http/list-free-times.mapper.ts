@@ -9,6 +9,4 @@ export const toListFreeTimesRequest = (
 ): ListFreeTimesRequest => ({ slug: params.slug, service: query.service, date: query.date, party: query.party })
 
 /** Maps the list-free-times result to the HTTP answer. */
-export const toListFreeTimesResponse = (result: ListFreeTimesResult): ListFreeTimesResponse => ({
-    times: [...result.times],
-})
+export const toListFreeTimesResponse = (result: ListFreeTimesResult): ListFreeTimesResponse => result

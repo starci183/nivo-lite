@@ -9,7 +9,4 @@ export const toCancelBookingRequest = (params: CancelBookingParamsRequest): Canc
 })
 
 /** Maps the cancel-booking result to the HTTP answer. */
-export const toCancelBookingResponse = (result: CancelBookingResult): CancelBookingResponse => ({
-    status: result.status,
-    feeDue: result.feeDue,
-})
+export const toCancelBookingResponse = (result: CancelBookingResult): CancelBookingResponse => result

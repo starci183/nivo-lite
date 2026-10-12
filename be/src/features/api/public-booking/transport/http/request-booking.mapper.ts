@@ -20,12 +20,4 @@ export const toRequestBookingRequest = (
 })
 
 /** Maps the request-booking result to the HTTP answer. */
-export const toRequestBookingResponse = (result: RequestBookingResult): RequestBookingResponse => ({
-    ok: result.ok,
-    state: result.state,
-    code: result.code,
-    serviceName: result.serviceName,
-    startIso: result.startIso,
-    alternatives: [...result.alternatives],
-    bookingId: result.bookingId,
-})
+export const toRequestBookingResponse = (result: RequestBookingResult): RequestBookingResponse => result

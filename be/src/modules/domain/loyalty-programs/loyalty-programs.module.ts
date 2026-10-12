@@ -6,7 +6,7 @@ import { LoyaltyProgramsService } from "./loyalty-programs.service"
 @Module({})
 /** The loyalty programs capability: the rules of each workspace's programme, read by the capabilities that apply them. */
 export class LoyaltyProgramsModule extends ConfigurableModuleClass {
-    /** Registers the capability for the capabilities that import it. */
+    /** Registers the capability once in the API app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
         return {

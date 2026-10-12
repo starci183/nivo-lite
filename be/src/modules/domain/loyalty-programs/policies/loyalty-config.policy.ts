@@ -1,4 +1,11 @@
-import type { LoyaltyCategoryRule, LoyaltyConfig, LoyaltyTier } from "../loyalty-programs.contracts"
+import type {
+    LoyaltyCategoryRule,
+    LoyaltyConfig,
+    LoyaltyTier,
+    NextTierMatch,
+    TierKey,
+    TierMatch,
+} from "../loyalty-programs.contracts"
 
 const TIERS_MAX = 8
 const CATEGORIES_MAX = 12
@@ -44,7 +51,7 @@ const slugOf = (name: string): string =>
     name
         .normalize("NFD")
         .replace(/\p{M}/gu, "")
-        .replace(/đ/giu, "d")
+        .replace(/\u0111/giu, "d")
         .toLowerCase()
         .replace(/[^a-z0-9]+/gu, "-")
         .replace(/^-+|-+$/gu, "")
@@ -128,22 +135,19 @@ export const resolveConfig = (saved: unknown): LoyaltyConfig => {
 }
 
 /** The highest tier whose threshold the lifetime spend reaches, or null when the programme has no tiers. */
-export const tierFor = (config: LoyaltyConfig, lifetimeSpendVnd: number): LoyaltyTier | null =>
+export const tierFor = (config: LoyaltyConfig, lifetimeSpendVnd: number): TierMatch =>
     config.tiers.filter((tier) => lifetimeSpendVnd >= tier.minSpendVnd).at(-1) ?? null
 
 /** The tier with a key, or null. */
-export const tierOf = (config: LoyaltyConfig, key: string | null): LoyaltyTier | null =>
+export const tierOf = (config: LoyaltyConfig, key: TierKey): TierMatch =>
     config.tiers.find((tier) => tier.key === key) ?? null
 
 /** The position of a tier on the ladder, -1 when the key is unknown or empty. */
-export const tierRank = (config: LoyaltyConfig, key: string | null): number =>
+export const tierRank = (config: LoyaltyConfig, key: TierKey): number =>
     config.tiers.findIndex((tier) => tier.key === key)
 
 /** The next tier above the spend, with the spend still missing, or null at the top. */
-export const nextTier = (
-    config: LoyaltyConfig,
-    lifetimeSpendVnd: number,
-): { readonly tier: LoyaltyTier; readonly missingVnd: number } | null => {
+export const nextTier = (config: LoyaltyConfig, lifetimeSpendVnd: number): NextTierMatch => {
     const next = config.tiers.find((tier) => tier.minSpendVnd > lifetimeSpendVnd)
     return next === undefined ? null : { tier: next, missingVnd: next.minSpendVnd - lifetimeSpendVnd }
 }

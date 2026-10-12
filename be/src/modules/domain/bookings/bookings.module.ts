@@ -1,7 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { BookingRemindersModule } from "@modules/domain/booking-reminders"
-import { BookingAccessService } from "./booking-access.service"
 import { BookingDeskService } from "./booking-desk.service"
 import { BookingModelService } from "./booking-model.service"
 import { BookingOverviewService } from "./booking-overview.service"
@@ -20,7 +19,6 @@ export class BookingsModule extends ConfigurableModuleClass {
             imports: [...(base.imports ?? []), BookingRemindersModule.register({})],
             providers: [
                 ...(base.providers ?? []),
-                BookingAccessService,
                 BookingModelService,
                 BookingReservationService,
                 BookingPublicService,

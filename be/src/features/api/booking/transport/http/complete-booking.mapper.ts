@@ -9,7 +9,4 @@ export const toCompleteBookingRequest = (params: CompleteBookingParamsRequest): 
 })
 
 /** Maps the complete-booking result to the HTTP answer. */
-export const toCompleteBookingResponse = (result: CompleteBookingResult): CompleteBookingResponse => ({
-    status: result.status,
-    feeDue: result.feeDue,
-})
+export const toCompleteBookingResponse = (result: CompleteBookingResult): CompleteBookingResponse => result

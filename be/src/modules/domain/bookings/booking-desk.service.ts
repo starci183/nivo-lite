@@ -3,7 +3,7 @@ import type { EntityManager } from "typeorm"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { BookingAccessService } from "./booking-access.service"
+import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { BookingModelService } from "./booking-model.service"
 import { BookingRemindersService } from "@modules/domain/booking-reminders"
 import { BookingReservationService } from "./booking-reservation.service"
@@ -52,7 +52,7 @@ export class BookingDeskService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
-        private readonly access: BookingAccessService,
+        private readonly members: WorkspaceMembersService,
         private readonly models: BookingModelService,
         private readonly reservation: BookingReservationService,
         private readonly reminders: BookingRemindersService,
@@ -60,7 +60,7 @@ export class BookingDeskService {
 
     /** Adds a booking by hand: held and confirmed at once. An empty resource picks a free one; a taken place is refused unless forced. */
     async add(userId: string, params: AddBookingParams): Promise<DeskPlacement> {
-        await this.access.requireManager(params.workspaceId, userId)
+        await this.members.require(userId, params.workspaceId, ["owner", "manager"])
         const name = params.name.trim()
         if (params.serviceId === "") return refusal("service_required")
         if (name === "") return refusal("name_required")
@@ -122,7 +122,7 @@ export class BookingDeskService {
 
     /** Moves a booking to another time or resource; a taken place is refused unless forced. */
     async move(userId: string, params: MoveBookingParams): Promise<DeskPlacement> {
-        await this.access.requireManager(params.workspaceId, userId)
+        await this.members.require(userId, params.workspaceId, ["owner", "manager"])
         const settings = await this.models.settings(params.workspaceId)
         const startMs = Date.parse(params.startAt)
         const nowMs = this.clock.now().getTime()
@@ -157,7 +157,7 @@ export class BookingDeskService {
 
     /** Confirms a requested booking and plans its reminders; a booking that is not a request stays as it is. */
     async confirm(userId: string, ref: BookingRef): Promise<StatusChange> {
-        await this.access.requireManager(ref.workspaceId, userId)
+        await this.members.require(userId, ref.workspaceId, ["owner", "manager"])
         const settings = await this.models.settings(ref.workspaceId)
         const nowMs = this.clock.now().getTime()
         return this.entityManager.transaction(async (manager) => {
@@ -178,7 +178,7 @@ export class BookingDeskService {
 
     /** Records that the customer arrived. */
     async checkIn(userId: string, ref: BookingRef): Promise<StatusChange> {
-        await this.access.requireManager(ref.workspaceId, userId)
+        await this.members.require(userId, ref.workspaceId, ["owner", "manager"])
         const nowMs = this.clock.now().getTime()
         return this.entityManager.transaction(async (manager) => {
             await this.lockActive(manager, ref)
@@ -189,7 +189,7 @@ export class BookingDeskService {
 
     /** Marks a booking done and stops its reminders. */
     async done(userId: string, ref: BookingRef): Promise<StatusChange> {
-        await this.access.requireManager(ref.workspaceId, userId)
+        await this.members.require(userId, ref.workspaceId, ["owner", "manager"])
         const nowMs = this.clock.now().getTime()
         return this.entityManager.transaction(async (manager) => {
             await this.lockActive(manager, ref)
@@ -201,7 +201,7 @@ export class BookingDeskService {
 
     /** Records that the customer did not come and stops the reminders; a fee is due when the policy has one. */
     async noShow(userId: string, ref: BookingRef): Promise<StatusChange> {
-        await this.access.requireManager(ref.workspaceId, userId)
+        await this.members.require(userId, ref.workspaceId, ["owner", "manager"])
         const settings = await this.models.settings(ref.workspaceId)
         const nowMs = this.clock.now().getTime()
         return this.entityManager.transaction(async (manager) => {
@@ -214,7 +214,7 @@ export class BookingDeskService {
 
     /** Cancels a booking, frees its place and stops its reminders. */
     async cancel(userId: string, ref: BookingRef): Promise<StatusChange> {
-        await this.access.requireManager(ref.workspaceId, userId)
+        await this.members.require(userId, ref.workspaceId, ["owner", "manager"])
         const nowMs = this.clock.now().getTime()
         return this.entityManager.transaction(async (manager) => {
             await this.lockActive(manager, ref)

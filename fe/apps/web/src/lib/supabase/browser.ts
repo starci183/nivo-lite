@@ -1,5 +1,6 @@
-"use client";
-import { createBrowserClient } from "@supabase/ssr";
-import { publicConfig } from "../config";
+"use client"
+import type { SupabaseClient } from "@supabase/supabase-js"
+import { createBrowserDbClient } from "@/modules/db/browser"
 
-export const supabaseBrowser = () => createBrowserClient(publicConfig.supabaseUrl, publicConfig.supabaseAnonKey);
+/** Shim for Wave 3: the browser client now comes from modules/db; the untyped shape older callers use stays. */
+export const supabaseBrowser = (): SupabaseClient => createBrowserDbClient() as unknown as SupabaseClient

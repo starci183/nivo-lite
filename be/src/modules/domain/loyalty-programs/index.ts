@@ -1,4 +1,11 @@
-export type { LoyaltyConfig, LoyaltyProgram, LoyaltyTier } from "./loyalty-programs.contracts"
+export type {
+    LoyaltyCategoryRule,
+    LoyaltyConfig,
+    LoyaltyProgram,
+    LoyaltyTier,
+    NextTier,
+    TierMatch,
+} from "./loyalty-programs.contracts"
 export { LoyaltyProgramsModule } from "./loyalty-programs.module"
 export { LoyaltyProgramsService } from "./loyalty-programs.service"
 export { nextTier, tierFor, tierOf, tierRank } from "./policies/loyalty-config.policy"

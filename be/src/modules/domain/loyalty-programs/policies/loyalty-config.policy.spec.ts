@@ -67,10 +67,10 @@ describe("loyalty-config.policy", () => {
         })
 
         it("names a tier and builds its key from the name when the owner left them out", () => {
-            const config = resolveConfig({ tiers: [{ name: "Đồng Vàng" }, {}, 5] })
+            const config = resolveConfig({ tiers: [{ name: "Año Gold" }, {}, 5] })
 
-            expect(config.tiers.map((tier) => tier.name)).toEqual(["Đồng Vàng", "Tier 2", "Tier 3"])
-            expect(config.tiers.map((tier) => tier.key)).toEqual(["dong-vang", "tier-2", "tier-3"])
+            expect(config.tiers.map((tier) => tier.name)).toEqual(["Año Gold", "Tier 2", "Tier 3"])
+            expect(config.tiers.map((tier) => tier.key)).toEqual(["ano-gold", "tier-2", "tier-3"])
         })
 
         it("uses the default ladder for an empty list and at most eight tiers", () => {

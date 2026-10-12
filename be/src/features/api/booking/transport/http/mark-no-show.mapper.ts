@@ -9,7 +9,4 @@ export const toMarkNoShowRequest = (params: MarkNoShowParamsRequest): MarkNoShow
 })
 
 /** Maps the mark-no-show result to the HTTP answer. */
-export const toMarkNoShowResponse = (result: MarkNoShowResult): MarkNoShowResponse => ({
-    status: result.status,
-    feeDue: result.feeDue,
-})
+export const toMarkNoShowResponse = (result: MarkNoShowResult): MarkNoShowResponse => result

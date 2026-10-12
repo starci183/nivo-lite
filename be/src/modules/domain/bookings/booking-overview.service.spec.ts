@@ -3,7 +3,7 @@ import { FakeClock, builder, mock, mockEntityManager } from "@starci/jest-preset
 import type { StubsOf } from "@starci/jest-preset/entity-manager"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { BookingAccessService } from "./booking-access.service"
+import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { BookingModelService } from "./booking-model.service"
 import { BookingOverviewService } from "./booking-overview.service"
 import type { BookingModel } from "./bookings.contracts"
@@ -37,8 +37,15 @@ const build = async <
     model: BookingModel = modelOf(),
 ) => {
     const entityManager = mockEntityManager(stubs)
-    const access = mock<BookingAccessService>()
-    access.requireMember.mockResolvedValue(undefined)
+    const access = mock<WorkspaceMembersService>()
+    access.require.mockResolvedValue({
+        userId: USER,
+        workspaceId: WORKSPACE,
+        role: "owner",
+        staffId: null,
+        displayName: "Owner",
+        status: "active",
+    })
     const models = mock<BookingModelService>()
     models.model.mockResolvedValue(model)
     const moduleRef = await Test.createTestingModule({
@@ -46,7 +53,7 @@ const build = async <
             BookingOverviewService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
-            { provide: BookingAccessService, useValue: access },
+            { provide: WorkspaceMembersService, useValue: access },
             { provide: BookingModelService, useValue: models },
         ],
     }).compile()
@@ -101,7 +108,7 @@ describe("BookingOverviewService", () => {
                 installationId: "inst-1",
             })
 
-            expect(access.requireMember).toHaveBeenCalledWith(WORKSPACE, USER)
+            expect(access.require).toHaveBeenCalledWith(USER, WORKSPACE)
             expect(result.figures).toEqual({
                 bookingsToday: 1,
                 noShowPct30d: 25,

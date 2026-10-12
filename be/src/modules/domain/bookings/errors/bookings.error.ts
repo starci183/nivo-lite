@@ -3,8 +3,6 @@ import type { ErrorKind } from "@modules/platform/errors"
 
 /** Codes of the booking capability. */
 export enum BookingsErrorCode {
-    /** The caller is not an active member of the workspace, or not a manager where a manager is needed. */
-    Forbidden = "BOOKINGS_FORBIDDEN",
     /** No published booking page has the slug. */
     PageNotFound = "BOOKINGS_PAGE_NOT_FOUND",
     /** The workspace has no booking with the id. */
@@ -17,7 +15,6 @@ export enum BookingsErrorCode {
 
 /** How each booking code travels. */
 export const BOOKINGS_ERROR_KINDS: Record<BookingsErrorCode, ErrorKind> = {
-    [BookingsErrorCode.Forbidden]: "forbidden",
     [BookingsErrorCode.PageNotFound]: "not-found",
     [BookingsErrorCode.NotFound]: "not-found",
     [BookingsErrorCode.NotChangeable]: "conflict",

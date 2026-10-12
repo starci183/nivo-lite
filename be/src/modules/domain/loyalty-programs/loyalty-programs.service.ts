@@ -1,13 +1,14 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { LoyaltyProgram } from "./loyalty-programs.contracts"
+import type { LoyaltyConfig, ProgramMatch } from "./loyalty-programs.contracts"
 import {
     SELECT_MODULE_STATUS,
     SELECT_PROGRAM,
     SELECT_PROGRAM_BY_SLUG,
     SELECT_SHOP_NAME,
 } from "./persistence/loyalty-programs.sql"
+import { DEFAULT_CONFIG } from "./policies/loyalty-config.policy"
 import { toProgram } from "./persistence/loyalty-programs.rows"
 import type { ProgramRow } from "./persistence/loyalty-programs.rows"
 
@@ -17,19 +18,25 @@ export class LoyaltyProgramsService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** The programme of a workspace, or null when it never created one. */
-    async find(workspaceId: string): Promise<LoyaltyProgram | null> {
+    async find(workspaceId: string): Promise<ProgramMatch> {
         const [row] = await this.entityManager.query<Array<ProgramRow>>(SELECT_PROGRAM, [workspaceId])
         return row === undefined ? null : toProgram(row)
     }
 
     /** The switched-on programme that owns a public slug, or null. */
-    async findBySlug(slug: string): Promise<LoyaltyProgram | null> {
+    async findBySlug(slug: string): Promise<ProgramMatch> {
         const [row] = await this.entityManager.query<Array<ProgramRow>>(SELECT_PROGRAM_BY_SLUG, [slug])
         return row === undefined ? null : toProgram(row)
     }
 
+    /** The rules a workspace runs under: its programme, or the defaults before it created one. */
+    async configOf(workspaceId: string): Promise<LoyaltyConfig> {
+        const program = await this.find(workspaceId)
+        return program === null ? DEFAULT_CONFIG : program.config
+    }
+
     /** The programme when the module is installed and not paused and the owner switched the programme on, else null. */
-    async findActive(workspaceId: string): Promise<LoyaltyProgram | null> {
+    async findActive(workspaceId: string): Promise<ProgramMatch> {
         const [installation] = await this.entityManager.query<Array<{ status: string }>>(SELECT_MODULE_STATUS, [
             workspaceId,
         ])

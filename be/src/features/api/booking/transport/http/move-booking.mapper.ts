@@ -15,8 +15,4 @@ export const toMoveBookingRequest = (
 })
 
 /** Maps the move-booking result to the HTTP answer. */
-export const toMoveBookingResponse = (result: MoveBookingResult): MoveBookingResponse => ({
-    ok: result.ok,
-    reason: result.reason,
-    id: result.id,
-})
+export const toMoveBookingResponse = (result: MoveBookingResult): MoveBookingResponse => result

@@ -9,7 +9,4 @@ export const toCheckInBookingRequest = (params: CheckInBookingParamsRequest): Ch
 })
 
 /** Maps the check-in-booking result to the HTTP answer. */
-export const toCheckInBookingResponse = (result: CheckInBookingResult): CheckInBookingResponse => ({
-    status: result.status,
-    feeDue: result.feeDue,
-})
+export const toCheckInBookingResponse = (result: CheckInBookingResult): CheckInBookingResponse => result

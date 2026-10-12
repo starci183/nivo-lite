@@ -20,8 +20,4 @@ export const toAddBookingRequest = (
 })
 
 /** Maps the add-booking result to the HTTP answer. */
-export const toAddBookingResponse = (result: AddBookingResult): AddBookingResponse => ({
-    ok: result.ok,
-    reason: result.reason,
-    id: result.id,
-})
+export const toAddBookingResponse = (result: AddBookingResult): AddBookingResponse => result
