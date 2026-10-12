@@ -7,3 +7,4 @@ export const APP_ROUTES = {
 } as const
 
 export { safeNextPath } from "./safe-next-path"
+export { LEADS_ROUTES, leadPath, newLeadPath } from "./leads-routes"
