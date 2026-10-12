@@ -22,7 +22,7 @@ export const LegalPage = async ({ build }: { readonly build: (locale: Locale) =>
       <main className={LEGAL_MAIN}>
         <PageContainer measure="reading">
           <div className={LEGAL_STACK}>
-            <Alert tone="cautionary">{doc.draft}</Alert>
+            <Alert tone="cautionary" title={doc.draft} />
             <SectionHeader level={1} title={doc.title} description={doc.intro} />
             {doc.sections.map((s) => (
               <section key={s.id} id={s.id} className={LEGAL_SECTION} aria-label={s.title}>
