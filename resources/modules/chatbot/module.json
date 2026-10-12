@@ -164,6 +164,7 @@
   ],
   "connection_providers": [
     "telegram",
-    "zalo_oa"
+    "zalo_oa",
+    "meta"
   ]
 }

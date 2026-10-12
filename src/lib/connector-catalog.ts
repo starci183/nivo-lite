@@ -54,6 +54,7 @@ export const CATALOG: ReadonlyArray<CatalogEntry> = [
   real("casso", "payments", { vi: "Giao dịch tiền vào qua Casso", en: "Incoming transfers through Casso" }, ["accounting"], ["casso", "ngân hàng", "bank"], 60, "wallet"),
   real("telegram", "chat", { vi: "Tin nhắn khách gửi bot của bạn", en: "Messages customers send your bot" }, ["chatbot", "sales"], ["telegram", "bot", "tele"], 95, "community"),
   real("zalo_oa", "chat", { vi: "Tin nhắn Zalo Official Account", en: "Zalo Official Account messages" }, ["chatbot", "sales"], ["zalo", "oa", "official account"], 98, "community"),
+  real("meta", "chat", { vi: "Tin nhắn, bình luận Page Facebook và Instagram; lead từ quảng cáo biểu mẫu", en: "Facebook Page and Instagram messages, comments; lead-ad leads" }, ["chatbot", "sales"], ["facebook", "messenger", "fanpage", "fb", "instagram", "ig", "direct", "meta", "lead ads", "quảng cáo"], 97, "community"),
   real("telegram_user", "chat", { vi: "Tin nhắn các cuộc trò chuyện bạn chọn (chỉ đọc)", en: "Messages of the chats you pick (read only)" }, ["any"], ["telegram", "cá nhân", "personal"], 55, "community"),
   real("database", "data", { vi: "Khách hàng, đơn hàng, sản phẩm từ database của bạn", en: "Customers, orders and products from your database" }, ["any"], ["database", "postgres", "mysql", "sql server", "csdl"], 65, "servers"),
   real("openapi", "data", { vi: "Dữ liệu từ API của bạn; agent gọi API bạn cho phép", en: "Data from your API; agents call the endpoints you allow" }, ["any"], ["api", "swagger", "openapi", "rest", "backend"], 62, "code"),
@@ -63,8 +64,6 @@ export const CATALOG: ReadonlyArray<CatalogEntry> = [
   real("google", "productivity", { vi: "Ghi đơn hàng vào Google Sheets", en: "Write orders into Google Sheets" }, ["sales"], ["google", "sheets", "trang tính"], 80, "apps"),
   real("webhook", "automation", { vi: "Gửi sự kiện tới n8n, Make, Zapier", en: "Send events to n8n, Make, Zapier" }, ["any"], ["webhook", "n8n", "make", "zapier"], 50, "trigger"),
 
-  soon("facebook", "Facebook Messenger", "chat", { vi: "Tin nhắn fanpage cho Chatbot trả lời.", en: "Fanpage messages for the Chatbot to answer." }, { vi: "Tin nhắn fanpage", en: "Fanpage messages" }, ["chatbot", "sales"], ["facebook", "messenger", "fanpage", "fb"], 97, "community"),
-  soon("instagram", "Instagram", "chat", { vi: "Tin nhắn Instagram Direct cho Chatbot.", en: "Instagram Direct messages for the Chatbot." }, { vi: "Tin nhắn Instagram", en: "Instagram messages" }, ["chatbot", "sales"], ["instagram", "ig", "direct"], 70, "community"),
   soon("tiktok_chat", "TikTok", "chat", { vi: "Tin nhắn TikTok cho Chatbot.", en: "TikTok messages for the Chatbot." }, { vi: "Tin nhắn TikTok", en: "TikTok messages" }, ["chatbot"], ["tiktok"], 60, "community"),
   soon("shopee", "Shopee", "commerce", { vi: "Đơn hàng, sản phẩm và tin nhắn người mua trên Shopee.", en: "Shopee orders, products and buyer chat." }, { vi: "Đơn, sản phẩm, chat người mua", en: "Orders, products, buyer chat" }, ["sales", "accounting"], ["shopee", "sàn", "tmđt"], 96, "cart"),
   soon("tiktok_shop", "TikTok Shop", "commerce", { vi: "Đơn hàng và sản phẩm TikTok Shop.", en: "TikTok Shop orders and products." }, { vi: "Đơn và sản phẩm", en: "Orders and products" }, ["sales", "accounting"], ["tiktok shop", "sàn"], 88, "cart"),

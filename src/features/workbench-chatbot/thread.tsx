@@ -7,7 +7,7 @@ import { PersonAvatar } from "@/components/avatar/PersonAvatar";
 import { useLocale, useT } from "@/i18n/client";
 import { workbenchChatbot } from "@/i18n/dict/workbenchChatbot";
 import { dayKey, dayLabel, formatTime } from "@/features/office/format";
-import type { WbMessage, WbThread } from "@/lib/workbench-chatbot";
+import type { WbChannel, WbMessage, WbThread } from "@/lib/workbench-chatbot";
 import {
   CENTER_CLASS_NAME, CHIPS_CLASS_NAME, COMPOSER_CLASS_NAME, COMPOSER_FIELD_CLASS_NAME,
   COMPOSER_ROW_CLASS_NAME, HEAD_CLASS_NAME, HEAD_TEXT_CLASS_NAME, PHONE_ONLY_CLASS_NAME, THREAD_SCROLL_CLASS_NAME,
@@ -16,21 +16,21 @@ import { StateChips } from "./list";
 
 type Translate = ReturnType<typeof useT<typeof workbenchChatbot.en>>;
 
-const Delivery = ({ message, channel, t }: { readonly message: WbMessage; readonly channel: "telegram" | "zalo" | "website"; readonly t: Translate }) => {
+const Delivery = ({ message, channel, t }: { readonly message: WbMessage; readonly channel: WbChannel; readonly t: Translate }) => {
   if (message.delivery === "failed") {
     const reason = message.deliveryError ? t(`err_${message.deliveryError}` as Parameters<Translate>[0]) : null
     return (
       <Text size="xs" weight="medium" tone="accent" live="polite">
-        {channel === "zalo" ? t("deliveryFailedZalo") : t("deliveryFailed")}{reason && reason !== `err_${message.deliveryError}` ? ` · ${t("deliveryWhy", { reason })}` : ""}
+        {channel === "zalo" ? t("deliveryFailedZalo") : channel === "facebook" || channel === "instagram" ? t("deliveryFailedMeta") : t("deliveryFailed")}{reason && reason !== `err_${message.deliveryError}` ? ` · ${t("deliveryWhy", { reason })}` : ""}
       </Text>
     )
   }
-  if (message.delivery === "sent") return <Text size="xs" tone="muted">{channel === "telegram" ? t("deliverySent") : channel === "zalo" ? t("deliverySentZalo") : t("deliveryWebsite")}</Text>;
+  if (message.delivery === "sent") return <Text size="xs" tone="muted">{channel === "telegram" ? t("deliverySent") : channel === "zalo" ? t("deliverySentZalo") : channel === "facebook" || channel === "instagram" ? t("deliverySentMeta") : t("deliveryWebsite")}</Text>;
   return null;
 };
 
 const Bubble = ({ message, customerName, channel, locale, t }: {
-  readonly message: WbMessage; readonly customerName: string; readonly channel: "telegram" | "zalo" | "website";
+  readonly message: WbMessage; readonly customerName: string; readonly channel: WbChannel;
   readonly locale: ReturnType<typeof useLocale>; readonly t: Translate;
 }) => {
   const out = message.role === "agent";
@@ -111,7 +111,7 @@ export const ThreadPane = (props: {
         <div className={HEAD_TEXT_CLASS_NAME}>
           <Heading level={2}>{name}</Heading>
           <span className={CHIPS_CLASS_NAME}>
-            <Badge tone="neutral">{conv.channel === "telegram" ? t("channelTelegram") : conv.channel === "zalo" ? t("channelZalo") : t("channelWebsite")}</Badge>
+            <Badge tone="neutral">{conv.channel === "telegram" ? t("channelTelegram") : conv.channel === "zalo" ? t("channelZalo") : conv.channel === "facebook" ? t("channelFacebook") : conv.channel === "instagram" ? t("channelInstagram") : t("channelWebsite")}</Badge>
             <StateChips conversation={conv} />
           </span>
         </div>
@@ -149,7 +149,7 @@ export const ThreadPane = (props: {
                 {t("send")}
               </Button>
             </div>
-            <Text size="xs" tone="muted">{t(conv.channel === "telegram" ? "composerHintTelegram" : conv.channel === "zalo" ? "composerHintZalo" : "composerHintWebsite", { name: props.userName })}</Text>
+            <Text size="xs" tone="muted">{t(conv.channel === "telegram" ? "composerHintTelegram" : conv.channel === "zalo" ? "composerHintZalo" : conv.channel === "facebook" || conv.channel === "instagram" ? "composerHintMeta" : "composerHintWebsite", { name: props.userName })}</Text>
           </>
         ) : (
           <Text size="sm" tone="muted">{conv.handledBy ? t("composerLockedOther", { name: conv.handledBy }) : t("composerLocked")}</Text>

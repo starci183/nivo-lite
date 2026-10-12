@@ -4,7 +4,7 @@
  * `feedCredit` (src/lib/connection-events.ts). Labels that sit on the provider's own screen (field names, option names) are written
  * exactly as the provider prints them and are not translated; only the explanations carry {vi, en}.
  */
-export type Provider = "telegram" | "sepay" | "zalo_oa" | "payos" | "casso" | "webhook" | "google" | "smtp" | "openapi" | "database" | "csv_import" | "imap" | "telegram_user";
+export type Provider = "telegram" | "sepay" | "zalo_oa" | "payos" | "casso" | "webhook" | "google" | "smtp" | "openapi" | "database" | "csv_import" | "imap" | "telegram_user" | "meta";
 export type Environment = "test" | "live";
 export type L = { readonly vi: string; readonly en: string };
 export type Locale = keyof L;
@@ -26,7 +26,7 @@ export type VerifyHelp = { readonly intro: L; readonly steps: ReadonlyArray<L>; 
 
 export type ProviderDef = {
   readonly id: Provider;
-  readonly kind: "money" | "telegram" | "zalo" | "webhook" | "google" | "email" | "data";
+  readonly kind: "money" | "telegram" | "zalo" | "meta" | "webhook" | "google" | "email" | "data";
   readonly title: L;
   /** The provider's own brand name, as in "Mở trang X" and "Làm theo trên X". */
   readonly brand: string;
@@ -203,6 +203,11 @@ export const PROVIDERS: Readonly<Record<Provider, ProviderDef>> = {
       ] },
     ],
   },
+  meta: {
+    id: "meta", kind: "meta", title: { vi: "Facebook & Instagram", en: "Facebook & Instagram" }, brand: "Meta", module: "chatbot", earlyAccess: true,
+    blurb: { vi: "Khách nhắn hoặc bình luận trên Page Facebook và Instagram của bạn; agent trả lời, và lead từ quảng cáo biểu mẫu về thẳng NIVO.", en: "Customers message or comment on your Facebook Page and Instagram account; agents answer, and lead-ad leads land straight in NIVO." },
+    environments: ["live"], needsBank: false, dashboard: { live: "https://developers.facebook.com/apps" }, credentials: [], verify: {}, guide: [],
+  },
   webhook: {
     id: "webhook", kind: "webhook", title: { vi: "n8n / Webhook", en: "n8n / Webhook" }, brand: "n8n",
     blurb: { vi: "NIVO gửi sự kiện (khách mới, chốt đơn, nhận tiền...) tới n8n, Make, Zapier hoặc bất kỳ địa chỉ nào bạn chọn.", en: "NIVO sends events (new customer, order, payment...) to n8n, Make, Zapier or any address you choose." },
@@ -226,13 +231,13 @@ export const PROVIDERS: Readonly<Record<Provider, ProviderDef>> = {
 };
 
 /** Order the providers appear on the Connections page. */
-export const PROVIDER_ORDER: ReadonlyArray<Provider> = ["sepay", "payos", "casso", "telegram", "zalo_oa", "google", "smtp"];
+export const PROVIDER_ORDER: ReadonlyArray<Provider> = ["sepay", "payos", "casso", "telegram", "zalo_oa", "meta", "google", "smtp"];
 
 /** The Connections page groups providers by what they bring in; order inside a group is the display order. */
 export type ProviderGroup = "money" | "chat" | "data" | "tools";
 export const PROVIDER_GROUPS: ReadonlyArray<{ readonly id: ProviderGroup; readonly providers: ReadonlyArray<Provider> }> = [
   { id: "money", providers: ["sepay", "payos", "casso"] },
-  { id: "chat", providers: ["telegram", "zalo_oa"] },
+  { id: "chat", providers: ["telegram", "zalo_oa", "meta"] },
   { id: "data", providers: ["database", "openapi", "csv_import", "imap", "telegram_user"] },
   { id: "tools", providers: ["google", "smtp"] },
 ];
@@ -244,6 +249,7 @@ export const PROVIDER_LOGO: Readonly<Partial<Record<Provider, string>>> = {
   casso: "/logos/providers/casso.svg",
   telegram: "/logos/providers/telegram.svg",
   zalo_oa: "/logos/providers/zalo.svg",
+  meta: "/logos/providers/meta.svg",
   google: "/logos/providers/googlesheets.svg",
   webhook: "/logos/providers/n8n.svg",
   // NIVO's own connector artwork (public/logos/connectors): the data sources have no brand of their own.

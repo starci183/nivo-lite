@@ -21,6 +21,7 @@ import { SmtpWizard } from "./wizard/SmtpWizard"
 import { purposeFor } from "@/lib/connection-access"
 import { TelegramWizard } from "./wizard/TelegramWizard"
 import { WebhookWizard } from "./wizard/WebhookWizard"
+import { MetaWizard } from "./wizard/MetaWizard"
 import { ZaloWizard } from "./wizard/ZaloWizard"
 import { DataWizard } from "./wizard/data"
 
@@ -34,6 +35,9 @@ export type ConnectionsBoardProps = {
   /** Zalo OAuth just returned for this connection: open its wizard at the check step. */
   readonly zaloResumeId?: string
   readonly zaloReturned?: string
+  /** The Facebook login just returned for this connection: open its wizard at the Page choice (or with the reason it failed). */
+  readonly metaResumeId?: string
+  readonly metaReturned?: string
   /** The signed-in person's email: the default recipient of the SMTP test message. */
   readonly ownerEmail: string
   /** The provider groups to show (default: all). */
@@ -49,14 +53,14 @@ export type ConnectionsBoardProps = {
 type Open = { readonly provider: Provider; readonly resumeId?: string } | null
 
 const GROUP_TITLE: Record<ProviderGroup, "groupMoney" | "groupChat" | "groupData" | "groupTools"> = { money: "groupMoney", chat: "groupChat", data: "groupData", tools: "groupTools" }
-const RESUMABLE: ReadonlySet<string> = new Set(["money", "zalo", "data"])
+const RESUMABLE: ReadonlySet<string> = new Set(["money", "zalo", "meta", "data"])
 
 /**
  * The Connections board. One focal point (the first connection that needs attention, with the page's only filled action), then the
  * providers grouped by what they bring in: connected providers as their own list, the rest in one compact "Not connected" list per
  * group. Every wizard opens in one Drawer, so the lists stay where they are.
  */
-export const ConnectionsBoard = ({ items, agentNames, agents, localOnly, zaloResumeId, zaloReturned, ownerEmail, groups = PROVIDER_GROUPS, isEmbedded = false, canManage = false, isLoading = false }: ConnectionsBoardProps) => {
+export const ConnectionsBoard = ({ items, agentNames, agents, localOnly, zaloResumeId, zaloReturned, metaResumeId, metaReturned, ownerEmail, groups = PROVIDER_GROUPS, isEmbedded = false, canManage = false, isLoading = false }: ConnectionsBoardProps) => {
   const t = useT(dict)
   const tw = useT(connectionWizard)
   const locale = useLocale()
@@ -65,6 +69,7 @@ export const ConnectionsBoard = ({ items, agentNames, agents, localOnly, zaloRes
   const connect = params.get("connect")
   const [open, setOpen] = useState<Open>(
     zaloResumeId ? { provider: "zalo_oa", resumeId: zaloResumeId }
+    : metaResumeId ? { provider: "meta", resumeId: metaResumeId }
     : params.get("google") ? { provider: "google" }
     : connect && connect in PROVIDERS ? { provider: connect as Provider }
     : null,
@@ -236,6 +241,7 @@ export const ConnectionsBoard = ({ items, agentNames, agents, localOnly, zaloRes
         {open && def?.kind === "telegram" ? <TelegramWizard agents={eligible} onClose={close} /> : null}
         {open && def?.kind === "data" ? <DataWizard key={open.resumeId ?? "new"} provider={open.provider} agents={agents} {...(open.resumeId ? { resumeId: open.resumeId } : {})} onClose={close} /> : null}
         {open && def?.kind === "zalo" ? <ZaloWizard key={open.resumeId ?? "new"} resumeId={open.resumeId} returned={zaloReturned} agents={eligible} onClose={close} /> : null}
+        {open && def?.kind === "meta" ? <MetaWizard key={open.resumeId ?? "new"} resumeId={open.resumeId} returned={metaReturned} agents={eligible} onClose={close} /> : null}
         {open && def?.kind === "webhook" ? <WebhookWizard onClose={close} /> : null}
         {open && def?.kind === "google" ? <GoogleWizard onClose={close} /> : null}
         {open && def?.kind === "email" ? <SmtpWizard ownerEmail={ownerEmail} hasDefault={providerItems.some((c) => c.status === "connected" && c.isDefault)} onClose={close} /> : null}

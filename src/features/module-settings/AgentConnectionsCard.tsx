@@ -74,7 +74,7 @@ export const AgentConnectionsCard = ({ agentId, options, canEdit }: AgentConnect
             <div key={o.id} className={ACTIONS_CLASS_NAME}>
               <Select
                 label={o.label}
-                description={<><StatusBadge status={o.status} />{o.purpose === "inbound_chat" || o.purpose === "outbound_chat" || o.purpose === "bank_feed" ? <Text size="xs" tone="muted">{t(`purpose_${o.purpose}`)}</Text> : null}</>}
+                description={<><StatusBadge status={o.status} />{o.purpose === "inbound_chat" || o.purpose === "outbound_chat" || o.purpose === "bank_feed" || o.purpose === "lead_source" ? <Text size="xs" tone="muted">{t(`purpose_${o.purpose}`)}</Text> : null}</>}
                 options={levelOptions.map((l) => ({ ...l, isDisabled: o.status === "disconnected" && l.id !== NONE }))}
                 value={accessOf(o) ?? NONE}
                 onValueChange={(v) => pick(o, v)}

@@ -8,7 +8,7 @@ export type ReasonCode = "routine" | "missing_data" | "over_authority" | "unclea
 export type WorkStatus = "queued" | "done" | "waiting_decision" | "rejected" | "failed";
 export type EvidenceState = "pending" | "captured" | "reviewed" | "verified" | "customer_confirmed";
 export type Origin = "live" | "simulated";
-export type InboundChannel = "website" | "telegram" | "facebook" | "zalo" | "email" | "phone" | "bank" | "manual";
+export type InboundChannel = "website" | "telegram" | "facebook" | "instagram" | "zalo" | "email" | "phone" | "bank" | "manual";
 export type InboundKind = "message" | "lead" | "order" | "invoice" | "payment";
 
 export type Authority = { workspace_id: string; goal_revenue_vnd: number | null; goal_new_customers: number | null;

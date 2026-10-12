@@ -14,7 +14,7 @@ export const DEFAULT_ACCESS: Access = "ask";
 export const isAccess = (v: unknown): v is Access => v === "read" || v === "ask" || v === "auto";
 
 /** How an agent uses a connection (stored on the grant). */
-export type Purpose = "inbound_chat" | "outbound_chat" | "bank_feed" | "data_source" | "tool";
+export type Purpose = "inbound_chat" | "outbound_chat" | "bank_feed" | "data_source" | "tool" | "lead_source";
 
 /** module:provider -> purpose. A pair that is not listed cannot be granted (the picker shows it disabled with the reason). */
 const PURPOSE: Readonly<Record<string, Purpose>> = {
@@ -25,6 +25,12 @@ const PURPOSE: Readonly<Record<string, Purpose>> = {
   "booking:zalo_oa": "inbound_chat",
   "loyalty:telegram": "inbound_chat",
   "loyalty:zalo_oa": "inbound_chat",
+  // Facebook Pages + Instagram (meta): DMs, comments and mentions reach the same front doors; lead ads (leadgen) go to the lead sources.
+  "chatbot:meta": "inbound_chat",
+  "booking:meta": "inbound_chat",
+  "loyalty:meta": "inbound_chat",
+  "lead_gen:meta": "lead_source",
+  "sales:meta": "lead_source",
   // Shifts speaks to staff only through the connections bound to it; none bound = Office only.
   "shifts:telegram": "outbound_chat",
   "shifts:zalo_oa": "outbound_chat",

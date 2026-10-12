@@ -2,6 +2,7 @@ import "server-only";
 import { resolveBotToken } from "./channels";
 import type { Db } from "./core";
 import { tgCall } from "./telegram-api";
+import { deliverMeta } from "./meta";
 import { deliverZalo } from "./zalo";
 
 /** Telegram sends. The token is always explicit: the workspace's own bot (see resolveBotToken), never a global. */
@@ -18,6 +19,7 @@ export const deliverToChannel = async (db: Db, conversationId: string, text: str
   const { data } = await db.from("agent_conversations").select("channel, external_id, workspace_id, connection_id").eq("id", conversationId).maybeSingle();
   const conv = data as { channel: string | null; external_id: string | null; workspace_id: string; connection_id: string | null } | null;
   if (conv?.channel === "zalo") return deliverZalo(db, { id: conversationId, workspace_id: conv.workspace_id, connection_id: conv.connection_id, external_id: conv.external_id }, text);
+  if (conv?.channel === "facebook" || conv?.channel === "instagram") return deliverMeta(db, { id: conversationId, workspace_id: conv.workspace_id, channel: conv.channel, connection_id: conv.connection_id, external_id: conv.external_id }, text);
   if (conv?.channel !== "telegram" || !conv.external_id) return false;
   // "/start" archives a conversation as `<chat_id>:<timestamp>`: it is still the same Telegram chat.
   const chatId = conv.external_id.split(":")[0];
