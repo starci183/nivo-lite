@@ -1,4 +1,4 @@
-import type { OptionalWorkItemCursor } from "./decisions.contracts"
+import type { OptionalWorkItemCursor } from "./decisions-views.contracts"
 
 /** The biggest page of work items one call returns. */
 export const WORK_ITEM_PAGE_MAX = 100

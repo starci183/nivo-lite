@@ -1,4 +1,4 @@
-import type { AuthorityPatch, OptionalAuthorityProfile } from "./decisions.contracts"
+import type { AuthorityPatch, OptionalAuthorityProfile } from "./decisions-views.contracts"
 
 /** The authority sheet as it is written: every field present. */
 export interface AuthorityFields {

@@ -2,11 +2,13 @@ import type {
     AuthorityRule,
     GateInput,
     GateVerdict,
+    OptionalAuthorityRule,
     Proposal,
     ProposalFieldValue,
     ReasonCode,
     RuleMode,
 } from "./decisions.contracts"
+import type { OptionalNumber, OptionalOperatingMode } from "./decisions-views.contracts"
 
 /** The confidence below which the engine treats its own result as unclear. */
 export const MIN_CONFIDENCE = 0.6
@@ -15,17 +17,18 @@ export const MIN_CONFIDENCE = 0.6
  * Limit semantics: `limit_vnd` is the amount the action runs by itself strictly BELOW. `amount >= limit_vnd` asks a person
  * (over_authority); a missing limit means no amount limit, a missing amount never exceeds a limit.
  */
-export const isOverLimit = (limitVnd: number | null | undefined, amountVnd: number | null | undefined): boolean =>
+export const isOverLimit = (limitVnd: OptionalNumber, amountVnd: OptionalNumber): boolean =>
     typeof limitVnd === "number" && typeof amountVnd === "number" && amountVnd >= limitVnd
 
 /**
  * Assist mode is a gate, not a rewrite of the owner's rules: while a module's operating mode is "assist", every "auto" rule
  * of that module behaves as "ask". "never" and limits stay untouched; autopilot, or no installation, applies the rule as set.
  */
-export const applyOperatingMode = <R extends { readonly mode: RuleMode }>(
-    rule: R | null,
-    operatingMode: string | null | undefined,
-): R | null => (rule !== null && operatingMode === "assist" && rule.mode === "auto" ? { ...rule, mode: "ask" } : rule)
+export const applyOperatingMode = (
+    rule: OptionalAuthorityRule,
+    operatingMode: OptionalOperatingMode,
+): OptionalAuthorityRule =>
+    rule !== null && operatingMode === "assist" && rule.mode === "auto" ? { ...rule, mode: "ask" } : rule
 
 const isEmpty = (value: ProposalFieldValue | undefined): boolean =>
     value === null || value === undefined || (typeof value === "string" && value.trim() === "")
@@ -35,10 +38,8 @@ const fieldValue = (proposal: Proposal, field: string): ProposalFieldValue | und
     field === "amount_vnd" ? (proposal.amount_vnd ?? proposal.fields.amount_vnd) : proposal.fields[field]
 
 /** The required fields of the rule that the proposal does not have yet. */
-export const missingFields = (
-    rule: Pick<AuthorityRule, "required_fields"> | null,
-    proposal: Proposal,
-): ReadonlyArray<string> => (rule?.required_fields ?? []).filter((field) => isEmpty(fieldValue(proposal, field)))
+export const missingFields = (rule: OptionalAuthorityRule, proposal: Proposal): ReadonlyArray<string> =>
+    (rule?.required_fields ?? []).filter((field) => isEmpty(fieldValue(proposal, field)))
 
 const withCap = (rule: AuthorityRule | null, cap: RuleMode | null): AuthorityRule | null =>
     rule !== null && rule.mode === "auto" && cap !== null ? { ...rule, mode: cap } : rule

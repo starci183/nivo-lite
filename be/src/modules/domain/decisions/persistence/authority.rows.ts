@@ -1,4 +1,4 @@
-import type { AuthorityProfile, AuthorityRuleRecord, RuleMode } from "../decisions.contracts"
+import type { RuleMode } from "../decisions.contracts"
 
 /** public.authority as the prompts read it. */
 export interface AuthorityRow {
@@ -11,9 +11,6 @@ export interface AuthorityRow {
     /** What the agent must always ask about first. */
     limits_note: string
 }
-
-/** public.authority as the Authority page reads it: bigint and timestamp columns arrive converted by the query. */
-export type AuthorityProfileRow = AuthorityProfile
 
 /** public.authority_rules as the gate reads it; the bigint limit arrives converted to a number. */
 export interface RuleRow {
@@ -30,9 +27,6 @@ export interface RuleRow {
     /** Fields that must be present. */
     required_fields: Array<string>
 }
-
-/** public.authority_rules as the Authority page lists and writes it. */
-export type RuleRecordRow = AuthorityRuleRecord
 
 /** The operating mode of an installed module. */
 export interface OperatingModeRow {

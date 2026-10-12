@@ -7,12 +7,12 @@ import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import type { NewResponsibility, OptionalAgentIdentity, WorkContext } from "./decisions.contracts"
+import type { OptionalAgentIdentity, ResponsibilityRecord, WorkContext } from "./decisions.contracts"
+import type { NewResponsibility, ResponsibilityListing } from "./decisions-views.contracts"
 import { AGENT_DIRECTORY } from "./decisions.decorators"
 import type { AgentDirectory } from "./decisions.port"
 import { DecisionsErrorCode } from "./errors/decisions.error"
 import { EvidenceService } from "./evidence.service"
-import type { ResponsibilityListingRow, ResponsibilityRow } from "./persistence/responsibilities.rows"
 import {
     FIND_AGENT_NAME,
     FIND_LEAD_NAME,
@@ -25,7 +25,7 @@ import { ResponsibilitiesService } from "./responsibilities.service"
 
 const ctx: WorkContext = { workspaceId: "ws-1", actor: "An", locale: "en" }
 
-const rowOf = builder<ResponsibilityRow>({
+const rowOf = builder<ResponsibilityRecord>({
     id: "resp-1",
     workspace_id: "ws-1",
     lead_id: "lead-1",
@@ -164,7 +164,7 @@ describe("ResponsibilitiesService", () => {
 
     describe("list", () => {
         it("lists the workspace's responsibilities for a member", async () => {
-            const listing: ResponsibilityListingRow = { ...rowOf(), contact_name: "Binh" }
+            const listing: ResponsibilityListing = { ...rowOf(), contact_name: "Binh" }
             const em = mockEntityManager({ query: [LIST_RESPONSIBILITIES, [listing]] })
             const { service, members } = await build(em)
 

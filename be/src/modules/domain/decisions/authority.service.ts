@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { OptionalAuthority, OptionalAuthorityRule, WorkContext } from "./decisions.contracts"
+import type { OptionalId } from "./decisions-views.contracts"
 import { applyOperatingMode } from "./gate.policy"
 import type { AuthorityRow, OperatingModeRow, RuleRow } from "./persistence/authority.rows"
 import { FIND_AUTHORITY, FIND_OPERATING_MODE, FIND_RULE } from "./persistence/authority.sql"
@@ -22,7 +23,7 @@ export class AuthorityService {
      * answers "ask". The rule is per module type; the operating mode is the handling instance's own, and a module with no
      * installation runs as autopilot.
      */
-    async ruleFor(ctx: WorkContext, action: string, installationId: string | null): Promise<OptionalAuthorityRule> {
+    async ruleFor(ctx: WorkContext, action: string, installationId: OptionalId): Promise<OptionalAuthorityRule> {
         const rule = (await this.entityManager.query<Array<RuleRow>>(FIND_RULE, [ctx.workspaceId, action]))[0]
         if (rule === undefined || rule.mode !== "auto") return rule ?? null
         const installed = (

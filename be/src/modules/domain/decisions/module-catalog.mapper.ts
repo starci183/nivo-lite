@@ -1,5 +1,6 @@
 import type { AcceptedCommand, ActionEntry, ModuleEntry } from "./decisions.contracts"
-import type { ActionRow, JsonValue, ModuleRow } from "./persistence/module-catalog.rows"
+import type { JsonValue } from "./decisions-views.contracts"
+import type { ActionRow, ModuleRow } from "./persistence/module-catalog.rows"
 
 type Json = JsonValue
 

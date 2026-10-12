@@ -2,18 +2,25 @@ import type { Locale } from "@modules/platform/i18n"
 
 /** What a rule of the owner's authority says about an action: run alone, ask a person, or never. */
 export type RuleMode = "auto" | "ask" | "never"
+
 /** Why the gate decided what it decided. */
 export type ReasonCode = "routine" | "missing_data" | "over_authority" | "unclear_outcome" | "not_allowed"
+
 /** Where a work item stands. */
 export type WorkStatus = "queued" | "done" | "waiting_decision" | "rejected" | "failed"
+
 /** How much evidence backs the result of a work item. */
 export type EvidenceState = "pending" | "captured" | "reviewed" | "verified" | "customer_confirmed"
+
 /** Whether the input was real or simulated. */
 export type Origin = "live" | "simulated"
+
 /** How the item was decided: by policy alone or by a person. */
 export type DecidedPath = "auto" | "human"
+
 /** What a decision outcome was. */
 export type DecisionOutcome = "auto_done" | "approved" | "edited" | "rejected"
+
 /** Who decides: a policy, the owner or a staff member. */
 export type DeciderKind = "policy" | "owner" | "staff"
 
@@ -270,19 +277,9 @@ export interface WorkPerformer {
     /** Builds the proposal of an item; may call the model once. */
     prepare(ctx: WorkContext, item: WorkItem): Promise<Prepared>
     /** Does the work once the gate or a person allowed it. */
-    perform(
-        ctx: WorkContext,
-        item: WorkItem,
-        proposal: Proposal,
-        by: Decider | { readonly name: string },
-    ): Promise<Performed>
+    perform(ctx: WorkContext, item: WorkItem, proposal: Proposal, by: PerformedBy): Promise<Performed>
     /** Undoes what `prepare` set up when a person rejects the item. */
-    onReject?(
-        ctx: WorkContext,
-        item: WorkItem,
-        proposal: Proposal,
-        by: Decider | { readonly name: string },
-    ): Promise<void>
+    onReject?(ctx: WorkContext, item: WorkItem, proposal: Proposal, by: PerformedBy): Promise<void>
 }
 
 /** A command a module accepts from other agents, as its definition declares it. */
@@ -296,7 +293,7 @@ export interface AcceptedCommand {
     /** Payload keys it requires. */
     readonly requiredFields: ReadonlyArray<string>
     /** What it does, in both languages. */
-    readonly description: { readonly vi: string; readonly en: string }
+    readonly description: Bilingual
 }
 
 /** The part of a module definition the engine reads. */
@@ -308,7 +305,7 @@ export interface ModuleEntry {
     /** True when a workspace may install several agents of the type. */
     readonly multiInstance: boolean
     /** The full name in both languages. */
-    readonly name: { readonly vi: string; readonly en: string }
+    readonly name: Bilingual
     /** The commands the module accepts. */
     readonly accepts: ReadonlyArray<AcceptedCommand>
 }
@@ -324,7 +321,7 @@ export interface ActionEntry {
     /** The actions queued after it is done. */
     readonly next: ReadonlyArray<string>
     /** The label in both languages. */
-    readonly label: { readonly vi: string; readonly en: string }
+    readonly label: Bilingual
 }
 
 /** The refusal reasons of the command bus. */
@@ -401,6 +398,7 @@ export interface OfficeLineInput {
 
 /** The kind of input a channel delivered. */
 export type InboundKind = "message" | "lead" | "order" | "payment"
+
 /** Where an input stands. */
 export type InboundStatus = "received" | "processed" | "needs_decision" | "failed"
 
@@ -444,6 +442,7 @@ export interface InboundEventRecord {
 
 /** Where a responsibility stands. */
 export type ResponsibilityStatus = "open" | "waiting_approval" | "done"
+
 /** Who owns a responsibility. */
 export type ResponsibilityOwnerKind = "human" | "agent"
 
@@ -517,14 +516,19 @@ export interface DecisionEntry {
 
 /** The owner's authority, or null before the workspace has one. */
 export type OptionalAuthority = Authority | null
+
 /** The rule of one action, or null when the owner granted none. */
 export type OptionalAuthorityRule = AuthorityRule | null
+
 /** A module of the registry, or null when no such module exists. */
 export type OptionalModuleEntry = ModuleEntry | null
+
 /** An authority action of the registry, or null when no such action exists. */
 export type OptionalActionEntry = ActionEntry | null
+
 /** A work item, or null when none matches. */
 export type OptionalWorkItem = WorkItem | null
+
 /** A performer, or null when the action has none. */
 export type OptionalWorkPerformer = WorkPerformer | null
 
@@ -535,121 +539,23 @@ export interface AgentIdentity {
     /** The display name. */
     readonly name: string
 }
+
 /** An agent identity, or null when the department has no agent. */
 export type OptionalAgentIdentity = AgentIdentity | null
 
-/** The position after which the next page of work items starts (keyset on created_at, id). */
-export interface WorkItemCursor {
-    /** The `created_at` of the last item of the previous page. */
-    readonly createdAt: string
-    /** The id of the last item of the previous page. */
-    readonly id: string
-}
-/** A cursor, or null for the first page. */
-export type OptionalWorkItemCursor = WorkItemCursor | null
-
-/** What a work-item listing asks for. */
-export interface ListWorkItemsQuery {
-    /** Only these statuses; an empty list means every status. */
-    readonly statuses: ReadonlyArray<WorkStatus>
-    /** Where the page starts; null for the first page. */
-    readonly after: OptionalWorkItemCursor
-    /** The page size; clamped to 1..100. */
-    readonly limit: number
+/** A text in both languages. */
+export interface Bilingual {
+    /** The Vietnamese text. */
+    readonly vi: string
+    /** The English text. */
+    readonly en: string
 }
 
-/** One page of work items, newest first. */
-export interface WorkItemPage {
-    /** The items of the page. */
-    readonly items: ReadonlyArray<WorkItem>
-    /** The cursor of the next page; null on the last one. */
-    readonly next: OptionalWorkItemCursor
+/** Somebody who acts on an item, by name. */
+export interface ActorRef {
+    /** The display name. */
+    readonly name: string
 }
 
-/** The whole authority sheet the Authority page edits. */
-export interface AuthorityProfile extends Authority {
-    /** The monthly revenue goal, VND. */
-    readonly goal_revenue_vnd: number | null
-    /** The new-customer goal. */
-    readonly goal_new_customers: number | null
-    /** The first-reply goal, minutes. */
-    readonly goal_first_reply_minutes: number | null
-    /** Free note on the goals. */
-    readonly goal_note: string
-    /** Who saved it last. */
-    readonly updated_by: string | null
-    /** When it was saved last. */
-    readonly updated_at: string
-}
-/** The authority sheet, or null before the workspace has one. */
-export type OptionalAuthorityProfile = AuthorityProfile | null
-
-/** A stored rule with its workspace and note, as the Authority page lists it. */
-export interface AuthorityRuleRecord extends AuthorityRule {
-    /** The workspace. */
-    readonly workspace_id: string
-    /** A note on the rule. */
-    readonly note: string
-    /** When it was saved last. */
-    readonly updated_at: string
-}
-
-/** What the Authority page reads: the sheet and every stored rule. */
-export interface AuthoritySheet {
-    /** The goals and house rules, null before the workspace has any. */
-    readonly profile: OptionalAuthorityProfile
-    /** Every stored rule. */
-    readonly rules: ReadonlyArray<AuthorityRuleRecord>
-}
-
-/** The fields of the authority sheet a manager changes; omitted fields stay as they are. */
-export interface AuthorityPatch {
-    /** The business policies. */
-    readonly policies?: string
-    /** How replies are written. */
-    readonly reply_style?: string
-    /** The brand voice. */
-    readonly brand_voice?: string
-    /** What the agent must always ask about first. */
-    readonly limits_note?: string
-    /** The monthly revenue goal, VND. */
-    readonly goal_revenue_vnd?: number | null
-    /** The new-customer goal. */
-    readonly goal_new_customers?: number | null
-    /** The first-reply goal, minutes. */
-    readonly goal_first_reply_minutes?: number | null
-    /** Free note on the goals. */
-    readonly goal_note?: string
-}
-
-/** One rule a manager saves. */
-export interface RuleChange {
-    /** The action key; its module is the one the registry gives. */
-    readonly action: string
-    /** The mode. */
-    readonly mode: RuleMode
-    /** The action runs alone strictly below this amount, VND; null means no limit. */
-    readonly limit_vnd: number | null
-    /** Fields that must be present. */
-    readonly required_fields: ReadonlyArray<string>
-}
-
-/** What creating a responsibility takes. */
-export interface NewResponsibility {
-    /** The customer. */
-    readonly lead_id: string
-    /** What it is. */
-    readonly title: string
-    /** `human`, or the id of the owning agent. */
-    readonly owner: string
-    /** The next step. */
-    readonly next_action: string
-    /** When it is due; null for no date. */
-    readonly due_at: string | null
-}
-
-/** A responsibility with the name of its customer, as the Responsibilities page lists it. */
-export interface ResponsibilityListing extends ResponsibilityRecord {
-    /** The customer's name. */
-    readonly contact_name: string
-}
+/** Whoever performs or rejects an item: a person who decided, or any named actor. */
+export type PerformedBy = Decider | ActorRef

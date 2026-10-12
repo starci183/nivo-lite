@@ -4,13 +4,8 @@ import { Test } from "@nestjs/testing"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import type {
-    AuthorityProfile,
-    AuthorityRuleRecord,
-    ListWorkItemsQuery,
-    RuleChange,
-    WorkItem,
-} from "./decisions.contracts"
+import type { WorkItem } from "./decisions.contracts"
+import type { AuthorityProfile, AuthorityRuleRecord, ListWorkItemsQuery, RuleChange } from "./decisions-views.contracts"
 import { DecisionsService } from "./decisions.service"
 import { DecisionsErrorCode } from "./errors/decisions.error"
 import { EvidenceService } from "./evidence.service"

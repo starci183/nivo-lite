@@ -1,6 +1,6 @@
 import { builder } from "@starci/jest-preset"
 import { mergeAuthority } from "./authority.policy"
-import type { AuthorityProfile } from "./decisions.contracts"
+import type { AuthorityProfile } from "./decisions-views.contracts"
 
 const profileOf = builder<AuthorityProfile>({
     policies: "P",

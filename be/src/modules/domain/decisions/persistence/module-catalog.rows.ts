@@ -1,7 +1,5 @@
 import type { RuleMode } from "../decisions.contracts"
-
-/** A JSON value as a jsonb column answers it. */
-export type JsonValue = string | number | boolean | null | { [key: string]: JsonValue | undefined } | JsonValue[]
+import type { JsonValue } from "../decisions-views.contracts"
 
 /** public.modules as the catalog reads it. */
 export interface ModuleRow {

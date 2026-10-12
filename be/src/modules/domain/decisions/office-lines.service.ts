@@ -40,8 +40,8 @@ export class OfficeLinesService {
         ])
     }
 
-    private async speaker(ctx: WorkContext, line: OfficeLineInput): Promise<OptionalAgentIdentity> {
-        if (line.dept === undefined || line.command === true) return null
+    private speaker(ctx: WorkContext, line: OfficeLineInput): Promise<OptionalAgentIdentity> {
+        if (line.dept === undefined || line.command === true) return Promise.resolve(null)
         return this.agents.agentOfDepartment(ctx.workspaceId, line.dept, line.installation_id ?? null)
     }
 }

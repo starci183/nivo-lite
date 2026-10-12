@@ -4,6 +4,7 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember, WorkspaceRole } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { mergeAuthority } from "./authority.policy"
+import type { WorkContext, WorkItem } from "./decisions.contracts"
 import type {
     AuthorityPatch,
     AuthorityProfile,
@@ -11,14 +12,11 @@ import type {
     AuthoritySheet,
     ListWorkItemsQuery,
     RuleChange,
-    WorkContext,
-    WorkItem,
     WorkItemPage,
-} from "./decisions.contracts"
+} from "./decisions-views.contracts"
 import { DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
 import { EvidenceService } from "./evidence.service"
 import { clampPageSize, splitPage } from "./paging.policy"
-import type { AuthorityProfileRow, RuleRecordRow } from "./persistence/authority.rows"
 import { FIND_AUTHORITY_PROFILE, LIST_RULES, UPSERT_AUTHORITY, UPSERT_RULE } from "./persistence/authority.sql"
 import type { WorkItemViewRow } from "./persistence/work-item-views.rows"
 import { FIND_WORK_ITEM_VIEW, LIST_WORK_ITEMS } from "./persistence/work-item-views.sql"
@@ -67,10 +65,8 @@ export class DecisionsService {
     /** The goals, house rules and every rule of the workspace; owner and manager only. */
     async readAuthority(principalId: string, workspaceId: string): Promise<AuthoritySheet> {
         await this.members.require(principalId, workspaceId, MANAGERS)
-        const profile = await this.entityManager.query<Array<AuthorityProfileRow>>(FIND_AUTHORITY_PROFILE, [
-            workspaceId,
-        ])
-        const rules = await this.entityManager.query<Array<RuleRecordRow>>(LIST_RULES, [workspaceId])
+        const profile = await this.entityManager.query<Array<AuthorityProfile>>(FIND_AUTHORITY_PROFILE, [workspaceId])
+        const rules = await this.entityManager.query<Array<AuthorityRuleRecord>>(LIST_RULES, [workspaceId])
         return { profile: profile[0] ?? null, rules }
     }
 
@@ -78,11 +74,11 @@ export class DecisionsService {
     async updateAuthority(principalId: string, workspaceId: string, patch: AuthorityPatch): Promise<AuthorityProfile> {
         const member = await this.members.require(principalId, workspaceId, MANAGERS)
         const current = (
-            await this.entityManager.query<Array<AuthorityProfileRow>>(FIND_AUTHORITY_PROFILE, [workspaceId])
+            await this.entityManager.query<Array<AuthorityProfile>>(FIND_AUTHORITY_PROFILE, [workspaceId])
         )[0]
         const next = mergeAuthority(current ?? null, patch)
         const saved = (
-            await this.entityManager.query<Array<AuthorityProfileRow>>(UPSERT_AUTHORITY, [
+            await this.entityManager.query<Array<AuthorityProfile>>(UPSERT_AUTHORITY, [
                 workspaceId,
                 next.policies,
                 next.reply_style,
@@ -104,7 +100,7 @@ export class DecisionsService {
     async saveRule(principalId: string, workspaceId: string, change: RuleChange): Promise<AuthorityRuleRecord> {
         const member = await this.members.require(principalId, workspaceId, MANAGERS)
         const saved = (
-            await this.entityManager.query<Array<RuleRecordRow>>(UPSERT_RULE, [
+            await this.entityManager.query<Array<AuthorityRuleRecord>>(UPSERT_RULE, [
                 workspaceId,
                 change.action,
                 change.mode,

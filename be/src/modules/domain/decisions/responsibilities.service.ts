@@ -6,23 +6,13 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import type {
-    NewResponsibility,
-    ResponsibilityListing,
-    ResponsibilityRecord,
-    ResponsibilityStatus,
-    WorkContext,
-} from "./decisions.contracts"
+import type { ResponsibilityRecord, ResponsibilityStatus, WorkContext } from "./decisions.contracts"
+import type { NewResponsibility, ResponsibilityListing } from "./decisions-views.contracts"
 import { InjectAgentDirectory } from "./decisions.decorators"
 import type { AgentDirectory } from "./decisions.port"
 import { DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
 import { EvidenceService } from "./evidence.service"
-import type {
-    AgentNameRow,
-    LeadNameRow,
-    ResponsibilityListingRow,
-    ResponsibilityRow,
-} from "./persistence/responsibilities.rows"
+import type { AgentNameRow, LeadNameRow } from "./persistence/responsibilities.rows"
 import {
     FIND_AGENT_NAME,
     FIND_LEAD_NAME,
@@ -52,7 +42,7 @@ export class ResponsibilitiesService {
      */
     async ensureFor(ctx: WorkContext, leadId: string): Promise<ResponsibilityRecord> {
         const open = (
-            await this.entityManager.query<Array<ResponsibilityRow>>(FIND_OPEN_RESPONSIBILITY, [
+            await this.entityManager.query<Array<ResponsibilityRecord>>(FIND_OPEN_RESPONSIBILITY, [
                 ctx.workspaceId,
                 leadId,
             ])
@@ -77,7 +67,7 @@ export class ResponsibilitiesService {
     /** The workspace's responsibilities with their customer, open ones first. */
     async list(principalId: string, workspaceId: string): Promise<ReadonlyArray<ResponsibilityListing>> {
         await this.members.require(principalId, workspaceId)
-        return this.entityManager.query<Array<ResponsibilityListingRow>>(LIST_RESPONSIBILITIES, [workspaceId])
+        return this.entityManager.query<Array<ResponsibilityListing>>(LIST_RESPONSIBILITIES, [workspaceId])
     }
 
     /** Adds a responsibility for a customer of the workspace, owned by the caller or by one of the workspace's agents. */
@@ -106,7 +96,7 @@ export class ResponsibilitiesService {
     ): Promise<ResponsibilityRecord> {
         await this.members.require(principalId, workspaceId)
         const row = (
-            await this.entityManager.query<Array<ResponsibilityRow>>(UPDATE_RESPONSIBILITY_STATUS, [
+            await this.entityManager.query<Array<ResponsibilityRecord>>(UPDATE_RESPONSIBILITY_STATUS, [
                 workspaceId,
                 responsibilityId,
                 status,
@@ -129,7 +119,7 @@ export class ResponsibilitiesService {
     ): Promise<ResponsibilityRecord> {
         const ownerAgentId = input.owner === "human" ? null : input.owner
         const row = (
-            await this.entityManager.query<Array<ResponsibilityRow>>(INSERT_RESPONSIBILITY, [
+            await this.entityManager.query<Array<ResponsibilityRecord>>(INSERT_RESPONSIBILITY, [
                 workspaceId,
                 input.lead_id,
                 input.title,

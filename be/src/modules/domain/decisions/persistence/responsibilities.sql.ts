@@ -43,10 +43,16 @@ export const LIST_RESPONSIBILITIES = sql`
     ORDER BY (r.status = 'done') ASC, r.created_at DESC, r.id DESC
     LIMIT 200`
 
-/** Moves a responsibility of the workspace to a status. */
+/** Moves a responsibility of the workspace to a status and answers it. */
 export const UPDATE_RESPONSIBILITY_STATUS = sql`
-    UPDATE public.responsibilities r
-    SET status = $3
-    WHERE r.workspace_id = $1 AND r.id = $2
-    RETURNING r.id, r.workspace_id, r.lead_id, r.title, r.owner_kind, r.owner_agent_id, r.owner_name, r.next_action,
-              to_json(r.due_at) #>> '{}' AS due_at, r.status, to_json(r.created_at) #>> '{}' AS created_at`
+    WITH changed AS (
+        UPDATE public.responsibilities r
+        SET status = $3
+        WHERE r.workspace_id = $1 AND r.id = $2
+        RETURNING r.id, r.workspace_id, r.lead_id, r.title, r.owner_kind, r.owner_agent_id, r.owner_name, r.next_action,
+                  r.due_at, r.status, r.created_at
+    )
+    SELECT c.id, c.workspace_id, c.lead_id, c.title, c.owner_kind, c.owner_agent_id, c.owner_name, c.next_action,
+           to_json(c.due_at) #>> '{}' AS due_at, c.status, to_json(c.created_at) #>> '{}' AS created_at
+    FROM changed c
+    LIMIT 1`

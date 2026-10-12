@@ -1,4 +1,5 @@
 import type { OptionalAgentIdentity } from "./decisions.contracts"
+import type { OptionalId } from "./decisions-views.contracts"
 
 /** The one door to the agents capability: which agent speaks for a department. The app root binds it. */
 export interface AgentDirectory {
@@ -9,6 +10,6 @@ export interface AgentDirectory {
     agentOfDepartment(
         workspaceId: string,
         department: string,
-        installationId: string | null,
+        installationId: OptionalId,
     ): Promise<OptionalAgentIdentity>
 }

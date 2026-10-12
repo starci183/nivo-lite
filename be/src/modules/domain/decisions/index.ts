@@ -1,15 +1,56 @@
 export { DECISIONS_ERROR_KINDS, DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
 export { DECISIONS_MESSAGES } from "./messages/decisions.messages"
-export type * from "./decisions.contracts"
+export type {
+    AcceptedCommand,
+    ActionEntry,
+    ActorRef,
+    AgentIdentity,
+    Authority,
+    AuthorityRule,
+    CommandResult,
+    Decider,
+    DecisionEntry,
+    EvidenceEntry,
+    InboundEventRecord,
+    ModuleEntry,
+    OfficeLineInput,
+    Origin,
+    PerformedBy,
+    Performed,
+    Prepared,
+    Proposal,
+    ReasonCode,
+    ResponsibilityRecord,
+    SendCommandInput,
+    SubjectType,
+    WorkContext,
+    WorkEdits,
+    WorkItem,
+    WorkPerformer,
+    WorkResult,
+    WorkSpec,
+    WorkStatus,
+} from "./decisions.contracts"
+export type {
+    AuthorityPatch,
+    AuthorityProfile,
+    AuthorityRuleRecord,
+    AuthoritySheet,
+    ListWorkItemsQuery,
+    NewResponsibility,
+    ResponsibilityListing,
+    RuleChange,
+    WorkItemCursor,
+    WorkItemPage,
+} from "./decisions-views.contracts"
 export { AGENT_DIRECTORY, InjectAgentDirectory } from "./decisions.decorators"
 export { DecisionsModule } from "./decisions.module"
 export type { DecisionsOptions } from "./decisions.options"
 export type { AgentDirectory } from "./decisions.port"
-export { DecisionsService } from "./decisions.service"
 export { AuthorityService } from "./authority.service"
 export { CommandBusService } from "./command-bus.service"
+export { DecisionsService } from "./decisions.service"
 export { EvidenceService } from "./evidence.service"
-export { applyOperatingMode, evaluateGate, isOverLimit, missingFields, MIN_CONFIDENCE } from "./gate.policy"
 export { ModuleCatalogService } from "./module-catalog.service"
 export { OfficeLinesService } from "./office-lines.service"
 export { ResponsibilitiesService } from "./responsibilities.service"
