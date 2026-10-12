@@ -8,6 +8,9 @@ import { runWork, type EngineCtx } from "@/lib/engine";
 import { drainAfter, engineCtx } from "@/lib/flow-ctx";
 import type { Invoice, Order, WorkItem } from "@/lib/flow-types";
 import { deciderOf, requireDecide } from "@/lib/permissions";
+import { emitEvent } from "@/lib/outbound-events";
+import { CONTRACT_STATUSES, isContractStatus, isIsoDay, type Contract, type ContractInput } from "@/lib/sales-contracts-shared";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { Outcome } from "@/lib/types";
 
 /* Sales workbench commands. Every command goes through the same engine and gate as the rest of NIVO. */
@@ -108,5 +111,68 @@ export async function handoffToAccounting(orderId: string): Promise<Outcome<{ st
     drainAfter(c, 3);
     refresh();
     return { status: item.status };
+  });
+}
+
+/**
+ * "Mark shipped": the order was handed to a carrier. Records shipped_at, carrier and tracking code once and announces `order.shipped`, which the
+ * "Báo giao hàng" automation (when switched on) turns into a message to the customer through the authority gate. Any signed-in member may do it.
+ */
+export async function markOrderShipped(orderId: string, input: { readonly carrier: string; readonly trackingCode: string }): Promise<Outcome<{ orderNo: string }>> {
+  return run(async () => {
+    const c = await engineCtx();
+    const carrier = input.carrier.trim().slice(0, 80);
+    const trackingCode = input.trackingCode.trim().slice(0, 80);
+    if (!carrier) throw new Error(W(c)("errCarrier"));
+    if (!trackingCode) throw new Error(W(c)("errTracking"));
+    const { data: orderRow, error } = await c.db.from("orders").select("*").eq("id", orderId).eq("workspace_id", c.ws).maybeSingle();
+    if (error) throw new Error(error.message);
+    const order = orderRow as Order | null;
+    if (!order) throw new Error(W(c)("errNotFound"));
+    if (!["confirmed", "invoiced", "paid"].includes(order.status)) throw new Error(W(c)("errNotShippable"));
+    if (order.shipped_at) throw new Error(W(c)("errAlreadyShipped"));
+    const shippedAt = new Date().toISOString();
+    const upd = await c.db.from("orders").update({ shipped_at: shippedAt, carrier, tracking_code: trackingCode }).eq("id", order.id).eq("workspace_id", c.ws).is("shipped_at", null).select("id");
+    if (upd.error) throw new Error(upd.error.message);
+    if (!upd.data?.length) throw new Error(W(c)("errAlreadyShipped"));
+    await logEvidence(c.db, c.ws, { lead_id: order.lead_id, kind: "order.shipped", actor: c.actor, summary: W(c)("evShipped", { who: c.actor, no: order.order_no, carrier }), evidence: trackingCode });
+    await emitEvent(c.ws, "order.shipped", { order_id: order.id, order_no: order.order_no, lead_id: order.lead_id, carrier, tracking_code: trackingCode, shipped_at: shippedAt }, `order.shipped:${order.id}`);
+    refresh();
+    return { orderNo: order.order_no };
+  });
+}
+
+const dayOrThrow = (c: EngineCtx, v: string): string => {
+  const d = v.trim();
+  if (!isIsoDay(d)) throw new Error(W(c)("errDate"));
+  return d;
+};
+
+/** Add or edit a recurring contract (the renewal automation reads these). Any signed-in member may; an edit changes only this workspace's own row. */
+export async function saveContract(input: ContractInput): Promise<Outcome<Contract>> {
+  return run(async () => {
+    const c = await engineCtx();
+    const customerName = input.customerName.trim().slice(0, 120);
+    if (!customerName) throw new Error(W(c)("errContractCustomer"));
+    const startsOn = dayOrThrow(c, input.startsOn);
+    const endsOn = dayOrThrow(c, input.endsOn);
+    if (endsOn < startsOn) throw new Error(W(c)("errContractDates"));
+    if (!isContractStatus(input.status)) throw new Error(W(c)("errContractStatus", { list: CONTRACT_STATUSES.join(", ") }));
+    if (input.amountVnd !== null && (!Number.isFinite(input.amountVnd) || input.amountVnd < 0)) throw new Error(W(c)("errContractAmount"));
+    const db = supabaseAdmin();
+    if (input.leadId) {
+      const lead = await db.from("leads").select("id").eq("id", input.leadId).eq("workspace_id", c.ws).maybeSingle();
+      if (!lead.data) throw new Error(W(c)("errNotFound"));
+    }
+    const row = { lead_id: input.leadId, customer_name: customerName, plan: input.plan.trim().slice(0, 120), starts_on: startsOn, ends_on: endsOn, amount_vnd: input.amountVnd, status: input.status, note: input.note.trim().slice(0, 500), updated_at: new Date().toISOString() };
+    const q = input.id
+      ? db.from("contracts").update(row).eq("id", input.id).eq("workspace_id", c.ws)
+      : db.from("contracts").insert({ ...row, workspace_id: c.ws });
+    const { data, error } = await q.select("*").maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error(W(c)("errNotFound"));
+    await logEvidence(c.db, c.ws, { lead_id: input.leadId, kind: input.id ? "contract.updated" : "contract.created", actor: c.actor, summary: W(c)(input.id ? "evContractUpdated" : "evContractCreated", { who: c.actor, customer: customerName }), evidence: `${startsOn} → ${endsOn}` });
+    refresh();
+    return data as Contract;
   });
 }

@@ -10,6 +10,7 @@ import type { HandoffRow } from "@/lib/workbench-sales";
 import { handoffToAccounting } from "./actions";
 import { CHIPS_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME } from "./classNames";
 import { formatDate, formatVnd } from "./format";
+import { ShipDrawer } from "./ship";
 
 const INVOICE_TONE: Record<string, BadgeTone> = { draft: "neutral", issued: "accent", paid: "success", void: "danger" };
 
@@ -23,6 +24,7 @@ const HandoffItem = ({ row }: { readonly row: HandoffRow }) => {
   const [isPending, startTransition] = useTransition();
   const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [shipping, setShipping] = useState(false);
 
   const isFailed = row.work?.status === "failed" && !row.invoice;
   const canRun = row.orderId !== null && row.orderStatus === "confirmed" && !row.invoice && (row.canHandoff || isFailed);
@@ -67,6 +69,9 @@ const HandoffItem = ({ row }: { readonly row: HandoffRow }) => {
         <Text size="sm" tone="muted" overflow="clamp-2">{[row.orderNo, row.items].filter(Boolean).join(" · ")}</Text>
         <Text size="sm" weight="semibold">{formatVnd(row.invoice?.amountVnd ?? row.amountVnd, locale)}</Text>
         {row.invoice ? <Text size="xs" tone="muted">{t("invoiceLine", { no: row.invoice.no })}</Text> : null}
+        {row.shippedAt ? (
+          <Text size="sm" weight="medium">{t("shippedLine", { carrier: row.carrier ?? "—", code: row.trackingCode ?? "—", date: formatDate(row.shippedAt, locale) })}</Text>
+        ) : null}
         {workText ? <Text size="sm" weight="medium">{workText}</Text> : null}
         {isFailed && row.work?.error ? (
           <Alert tone="negative" urgency="polite" title={t("errorLabel")} description={row.work.error} />
@@ -75,10 +80,14 @@ const HandoffItem = ({ row }: { readonly row: HandoffRow }) => {
         {note ? <Text size="sm" weight="medium" live="polite">{note}</Text> : null}
         {error ? <Text size="sm" live="assertive">{error}</Text> : null}
       </div>
-      {canRun ? (
+      {canRun || row.canShip ? (
         <div className={ROW_ACTIONS_CLASS_NAME}>
-          <Button variant="primary" size="sm" isPending={isPending} isDisabled={isPending} onPress={run}>{isFailed ? t("handoffRetry") : t("handoff")}</Button>
+          {canRun ? <Button variant="primary" size="sm" isPending={isPending} isDisabled={isPending} onPress={run}>{isFailed ? t("handoffRetry") : t("handoff")}</Button> : null}
+          {row.canShip ? <Button variant="outline" size="sm" onPress={() => setShipping(true)}>{t("shipAction")}</Button> : null}
         </div>
+      ) : null}
+      {shipping && row.orderId ? (
+        <ShipDrawer isOpen orderId={row.orderId} orderNo={row.orderNo} customer={row.customer} onClose={(m) => { setShipping(false); if (m) setNote(m); }} />
       ) : null}
     </li>
   );

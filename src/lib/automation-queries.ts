@@ -100,16 +100,27 @@ export const loadCapabilities = async (db: Db, ws: string, known?: ActiveContext
     db.from("knowledge_sources").select("title, content").eq("workspace_id", ws).limit(60),
     db.from("invoices").select("id", { count: "exact", head: true }).eq("workspace_id", ws).not("due_at", "is", null),
   ]);
-  return capabilitiesFrom(ctx, (knowledge.data ?? []) as Array<{ title: string; content: string }>, dueInvoices.count ?? 0);
+  return capabilitiesFrom(ctx, (knowledge.data ?? []) as Array<{ title: string; content: string }>, dueInvoices.count ?? 0, await salesDataFacts(db, ws));
 };
 
 /** The capabilities from rows already read: the active contexts, the knowledge sources and how many invoices carry a due date. */
-const capabilitiesFrom = (ctx: ActiveContexts, knowledge: ReadonlyArray<{ title: string; content: string }>, dueInvoices: number): ReadonlySet<Capability> => {
+/** What the Sales data itself shows: a shop with a contract on record has recurring contracts; one that has shipped an order has delivery. */
+const salesDataFacts = async (db: Db, ws: string): Promise<{ contracts: number; shipped: number }> => {
+  const [contracts, shipped] = await Promise.all([
+    db.from("contracts").select("id", { count: "exact", head: true }).eq("workspace_id", ws),
+    db.from("orders").select("id", { count: "exact", head: true }).eq("workspace_id", ws).not("shipped_at", "is", null),
+  ]);
+  return { contracts: contracts.count ?? 0, shipped: shipped.count ?? 0 };
+};
+
+const capabilitiesFrom = (ctx: ActiveContexts, knowledge: ReadonlyArray<{ title: string; content: string }>, dueInvoices: number, sales: { contracts: number; shipped: number } = { contracts: 0, shipped: 0 }): ReadonlySet<Capability> => {
   const text = [ctx.text, ...knowledge.map((k) => `${k.title}\n${k.content.slice(0, 3000)}`)].join("\n");
   const has = new Set<Capability>();
   for (const [cap, re] of Object.entries(CAPABILITY_PATTERNS)) if (affirms(text, re)) has.add(cap as Capability);
   if (ctx.installed.includes("booking")) has.add("has_appointments"); // the booking module IS the capability
   if (affirms(text, DUE_PATTERN) || dueInvoices > 0) has.add("has_due_dates");
+  if (sales.contracts > 0) has.add("has_recurring_contracts");
+  if (sales.shipped > 0) has.add("has_delivery");
   if (parseHours(ctx.hoursText) || text.split("\n").some((l) => /giờ (làm việc|mở cửa)|mở cửa|opening hours|business hours/i.test(l) && parseHours(l))) has.add("has_opening_hours");
   return has;
 };
@@ -258,7 +269,7 @@ export const loadAutomations = async (db: Db, ws: string): Promise<{ cards: Arra
   const raw = await automationsRaw(db, ws);
   const ctx = contextsFrom(raw.installations);
   const shopFull = shopContextFrom(raw.workspace_name, raw.authority, ctx);
-  const facts = factsFrom(ctx, capabilitiesFrom(ctx, raw.knowledge, raw.due_invoices), raw.connections, raw.chat_agents);
+  const facts = factsFrom(ctx, capabilitiesFrom(ctx, raw.knowledge, raw.due_invoices, await salesDataFacts(db, ws)), raw.connections, raw.chat_agents);
   const google = googleCardFromRow(raw.google);
   const pipelines = { data: raw.pipelines };
   const runRows = { data: raw.runs };

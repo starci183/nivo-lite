@@ -24,7 +24,9 @@ export type InboundEvent = { id: string; workspace_id: string; channel: InboundC
   /** the channel's own event id (Telegram `tg:<chat>:<msg>`, bank connection `vietcombank:<id>`), null for legacy rows */
   event_id?: string | null };
 export type Order = { id: string; workspace_id: string; lead_id: string | null; order_no: string; items: string; amount_vnd: number | null;
-  status: "draft" | "confirmed" | "invoiced" | "paid" | "cancelled"; origin: Origin; confirmed_by: string | null; confirmed_at: string | null; created_at: string };
+  status: "draft" | "confirmed" | "invoiced" | "paid" | "cancelled"; origin: Origin; confirmed_by: string | null; confirmed_at: string | null; created_at: string;
+  /** Shipping state, set once by the sales workbench action "mark shipped" (event order.shipped). */
+  shipped_at?: string | null; carrier?: string | null; tracking_code?: string | null };
 export type Invoice = { id: string; workspace_id: string; order_id: string | null; lead_id: string | null; invoice_no: string; amount_vnd: number;
   due_at: string | null; status: "draft" | "issued" | "paid" | "void"; origin: Origin; issued_by: string | null; issued_at: string | null; paid_at: string | null; created_at: string };
 export type Transaction = { id: string; workspace_id: string; channel: "bank" | "cash" | "card" | "ewallet"; amount_vnd: number; reference: string | null;
