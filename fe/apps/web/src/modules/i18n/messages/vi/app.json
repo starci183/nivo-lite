@@ -9,5 +9,11 @@
   "notFoundText": "Trang này không tồn tại hoặc bạn không còn quyền truy cập.",
   "notFoundHome": "Về tổng quan",
   "globalErrorTitle": "NIVO OS chưa thể khởi động",
-  "globalErrorText": "Một lỗi bất ngờ đã dừng trang. Hãy thử lại sau giây lát."
+  "globalErrorText": "Một lỗi bất ngờ đã dừng trang. Hãy thử lại sau giây lát.",
+  "homeDescription": "Con người dẫn dắt. AI vận hành. Hệ thống học hỏi. Một chủ doanh nghiệp, một bước tiếp theo và bằng chứng cho mỗi khách hàng.",
+  "localeLabel": "Ngôn ngữ",
+  "localeViShort": "VI",
+  "localeEnShort": "EN",
+  "localeViName": "Tiếng Việt",
+  "localeEnName": "English"
 }

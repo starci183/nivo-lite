@@ -14,7 +14,14 @@ import type { JobClaims } from "./jobs.port"
 import { JobRunnerService } from "./job-runner.service"
 
 const options: JobsOptions = { connection: "primary", workerId: "w-1", leaseMs: 60000 }
-const delivery: QueueDelivery = { id: "k-1", queue: "mail", payload: { id: "m-1" }, attempt: 1 }
+const delivery: QueueDelivery = {
+    id: "k-1",
+    queue: "mail",
+    job: "mail.send",
+    payload: { id: "m-1" },
+    attempt: 1,
+    signal: new AbortController().signal,
+}
 const job: ClaimedJob = { jobId: "j-1", kind: "mail", fencingToken: 2, currentStep: null, payload: { id: "m-1" } }
 const fenced = (): JobsError => new JobsError({ code: JobsErrorCode.FencedOut, params: { jobId: "j-1", token: 2 } })
 
@@ -37,7 +44,7 @@ const build = async () => {
         claims,
         queues,
         logger,
-        processor: mock<FencedProcessor>({ queue: "mail" }),
+        processor: mock<FencedProcessor>({ queue: "mail", job: undefined, concurrency: undefined }),
     }
 }
 
@@ -52,7 +59,21 @@ describe("JobRunnerService", () => {
             await handler?.handle(delivery)
 
             expect(handler?.queue).toBe("mail")
+            expect(handler?.job).toBeUndefined()
             expect(processor.process).toHaveBeenCalledWith(job)
+        })
+
+        it("subscribes a processor of one job under that job and its concurrency, and hands its failure to the processor", async () => {
+            const { runner, queues } = await build()
+            const processor = mock<FencedProcessor>({ queue: "mail", job: "mail.send", concurrency: 2 })
+            const cause = new Error("gave up")
+            runner.add(processor)
+            const handler = queues.add.mock.calls[0]?.[0]
+
+            await handler?.failed?.(delivery, cause)
+
+            expect(handler).toMatchObject({ queue: "mail", job: "mail.send", concurrency: 2 })
+            expect(processor.onFailed).toHaveBeenCalledWith(delivery, cause)
         })
     })
 
@@ -73,6 +94,16 @@ describe("JobRunnerService", () => {
             expect(processor.process).toHaveBeenCalledWith(job)
             expect(claims.complete).toHaveBeenCalledWith({ jobId: "j-1", expectedFencingToken: 2 })
             expect(claims.fail).not.toHaveBeenCalled()
+        })
+
+        it("claims a processor of one job under the job name as the kind", async () => {
+            const { runner, claims } = await build()
+            claims.claim.mockResolvedValue(job)
+            const processor = mock<FencedProcessor>({ queue: "mail", job: "mail.send" })
+
+            await runner.run(processor, delivery)
+
+            expect(claims.claim).toHaveBeenCalledWith(expect.objectContaining({ kind: "mail.send" }))
         })
 
         it("does nothing when the job is done or another worker holds a live claim", async () => {
@@ -96,7 +127,7 @@ describe("JobRunnerService", () => {
             expect(claims.fail).not.toHaveBeenCalled()
         })
 
-        it("marks the job failed under its token and rethrows when the processor throws, so BullMQ retries", async () => {
+        it("marks the job failed under its token and rethrows when the processor throws, so the queue retries", async () => {
             const { runner, claims, logger, processor } = await build()
             claims.claim.mockResolvedValue(job)
             const failure = new Error("provider down")

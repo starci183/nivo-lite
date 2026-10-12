@@ -1,12 +1,14 @@
-import type { Metadata } from "next";
-import { Landing } from "@/features/landing";
+import type { Metadata } from "next"
+import { getTranslations } from "next-intl/server"
+import { Landing } from "@/features/landing"
 
-export const metadata: Metadata = {
-  title: "NIVO OS",
-  description: "Human Leads. AI Operates. System Learns. One owner, one next step and evidence for every customer.",
-};
+/** The document title and description of the landing page. */
+export const generateMetadata = async (): Promise<Metadata> => {
+    const t = await getTranslations("app")
+    return { title: t("title"), description: t("homeDescription") }
+}
 
 /** Public landing page (default route). */
-const HomePage = () => <Landing />;
+const Page = () => <Landing />
 
-export default HomePage;
+export default Page
