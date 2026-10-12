@@ -3,6 +3,7 @@ import { getSession } from "./session";
 import { supabaseServer } from "./supabase/server";
 import { isManagerRole } from "./members-shared";
 import { ensureSettings, hdb, publicJobUrl, siteUrl } from "./module-hiring-core";
+import { getHiringFigures, type HiringFigures } from "./workbench-hiring";
 import type { CandidateRow, InterviewRow, JobRow, OfferRow, SettingsRow } from "./module-hiring-shared";
 
 /** One person who can interview, with the weekly windows they said they are free (Vietnam time, minutes from midnight). */
@@ -19,6 +20,8 @@ export type HiringWorkbenchData = {
   readonly onboarding: ReadonlyArray<OnboardingRow>;
   readonly members: ReadonlyArray<MemberView>;
   readonly waitingApprovals: number;
+  /** The ribbon's four figures; null when they could not be read (the ribbon then fails in place, the rest still renders). */
+  readonly figures: HiringFigures | null;
   readonly meUserId: string;
 };
 
@@ -40,6 +43,7 @@ export const getHiringWorkbench = async (): Promise<HiringWorkbenchData | null> 
     db.from("hiring_availability").select("member_user_id, weekday, start_min, end_min").eq("workspace_id", ws),
     db.from("work_items").select("id", { count: "exact", head: true }).eq("workspace_id", ws).eq("department", "hiring").eq("status", "waiting_decision"),
   ]);
+  const figures = await getHiringFigures(db, ws).catch((e: unknown) => { console.error("hiring figures failed", e instanceof Error ? e.message : e); return null; });
   const st = (settings.data ?? null) as SettingsRow | null;
   const avail = (av.data ?? []) as Array<{ member_user_id: string; weekday: number; start_min: number; end_min: number }>;
   return {
@@ -56,6 +60,7 @@ export const getHiringWorkbench = async (): Promise<HiringWorkbenchData | null> 
       windows: avail.filter((a) => a.member_user_id === m.user_id).map(({ weekday, start_min, end_min }) => ({ weekday, start_min, end_min })),
     })),
     waitingApprovals: waiting.count ?? 0,
+    figures,
     meUserId: session.userId,
   };
 };
