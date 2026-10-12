@@ -15,14 +15,14 @@ const isSignedIn = async (): Promise<boolean> => {
   }
 };
 
-/** Top bar (Grammar `TopBar`, the page banner): logo, in-page anchors, language switch and sign-in / try actions. */
-export const LandingNav = async () => {
+/** Top bar (Grammar `TopBar`, the page banner; `anchorBase` "/" lets other pages reach the landing anchors): logo, in-page anchors, language switch and sign-in / try actions. */
+export const LandingNav = async ({ anchorBase = "" }: { readonly anchorBase?: string } = {}) => {
   const [t, signedIn] = await Promise.all([getT(landing), isSignedIn()]);
   const links = [
-    { href: "#product", label: t("navProduct") },
-    { href: "#how", label: t("navHow") },
-    { href: "#founding", label: t("navFounding") },
-    { href: "#faq", label: t("navFaq") },
+    { href: `${anchorBase}#product`, label: t("navProduct") },
+    { href: `${anchorBase}#how`, label: t("navHow") },
+    { href: `${anchorBase}#founding`, label: t("navFounding") },
+    { href: `${anchorBase}#faq`, label: t("navFaq") },
   ];
   return (
     <TopBar

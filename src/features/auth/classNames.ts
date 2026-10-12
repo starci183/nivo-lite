@@ -34,3 +34,6 @@ export const AUTH_ACTIONS_CLASS_NAME = cn("flex", "w-full", "flex-col", "gap-3")
 export const AUTH_LOCALE_CLASS_NAME = cn("absolute", "right-4", "top-4", "z-10", "lg:right-8", "lg:top-6");
 /** Centred text actions under a form (GAP-2 case-3). */
 export const AUTH_CENTER_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "justify-center", "gap-2");
+
+/** Privacy and terms links under the auth card. */
+export const AUTH_LEGAL_CLASS_NAME = cn("flex", "flex-wrap", "justify-center", "gap-x-4", "gap-y-1", "pt-4");

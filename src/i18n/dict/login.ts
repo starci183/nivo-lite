@@ -4,6 +4,9 @@ import { defineDict } from "../core";
 export const login = defineDict({
   en: {
     aboutLabel: "About NIVO OS",
+    legalLabel: "Legal",
+    privacyLink: "Privacy policy",
+    termsLink: "Terms of service",
     headline: "One owner, one next action, evidence for every customer.",
     tagline: "Human Leads. AI Operates. System Learns.",
     pointCapture: "Capture every lead with context",
@@ -31,6 +34,9 @@ export const login = defineDict({
   },
   vi: {
     aboutLabel: "Giới thiệu NIVO OS",
+    legalLabel: "Pháp lý",
+    privacyLink: "Chính sách quyền riêng tư",
+    termsLink: "Điều khoản sử dụng",
     headline: "Mỗi khách hàng một người phụ trách, một bước tiếp theo, có bằng chứng.",
     tagline: "Human Leads. AI Operates. System Learns.",
     pointCapture: "Ghi nhận mọi khách hàng kèm ngữ cảnh",

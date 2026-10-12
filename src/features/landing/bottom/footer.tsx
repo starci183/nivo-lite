@@ -5,14 +5,14 @@ import { NivoLogo } from "@/components/brand/NivoLogo";
 import { LANDING_OFFER } from "../offer";
 import { FOOT_BRAND, FOOT_LEGAL } from "./classNames";
 
-type LinkKey = "linkTry" | "linkProduct" | "linkFounding" | "linkPrinciples" | "linkFaq" | "linkSignIn" | "linkStart" | "linkTerms";
+type LinkKey = "linkTry" | "linkProduct" | "linkFounding" | "linkPrinciples" | "linkFaq" | "linkSignIn" | "linkStart" | "linkTerms" | "linkPrivacy" | "linkTos";
 type Column = { readonly title: "colProduct" | "colCompany" | "colSupport"; readonly links: ReadonlyArray<readonly [LinkKey, string]> };
 
 /** Only real destinations: in-page anchors and the sign-in page. No placeholder pages. */
 const COLUMNS: ReadonlyArray<Column> = [
   { title: "colProduct", links: [["linkTry", LANDING_OFFER.ctaHref], ["linkProduct", "#product"], ["linkFounding", "#founding"]] },
   { title: "colCompany", links: [["linkPrinciples", "#commitment"], ["linkFaq", "#faq"], ["linkSignIn", LANDING_OFFER.ctaHref]] },
-  { title: "colSupport", links: [["linkFaq", "#faq"], ["linkStart", LANDING_OFFER.ctaHref], ["linkTerms", "#faq"]] },
+  { title: "colSupport", links: [["linkFaq", "#faq"], ["linkStart", LANDING_OFFER.ctaHref], ["linkTerms", "#faq"], ["linkPrivacy", "/privacy"], ["linkTos", "/terms"]] },
 ];
 
 /**
@@ -20,7 +20,7 @@ const COLUMNS: ReadonlyArray<Column> = [
  * unconfirmed details flagged. The decorative notch, nested bordered boxes and the oversized logo watermark carried
  * no information and were removed (DISCIPLINE-1).
  */
-export const LandingFooter = async () => {
+export const LandingFooter = async ({ anchorBase = "" }: { readonly anchorBase?: string } = {}) => {
   const t = await getT(landingBottom);
   return (
     <Footer
@@ -28,7 +28,7 @@ export const LandingFooter = async () => {
       brand={
         <div className={FOOT_BRAND}>
           {/* Unstyled home link around the approved logo raster. */}
-          <a href="#top" aria-label={t("footerHome")}>
+          <a href={`${anchorBase}#top`} aria-label={t("footerHome")}>
             <NivoLogo variant="full" height={40} />
           </a>
           <Text size="sm" tone="muted">
@@ -42,7 +42,7 @@ export const LandingFooter = async () => {
       groups={COLUMNS.map((col) => ({
         id: col.title,
         label: t(col.title),
-        links: col.links.map(([key, href]) => ({ id: `${col.title}-${key}`, label: t(key), href })),
+        links: col.links.map(([key, href]) => ({ id: `${col.title}-${key}`, label: t(key), href: href.startsWith("#") ? `${anchorBase}${href}` : href })),
       }))}
       legal={
         <div className={FOOT_LEGAL}>
@@ -51,7 +51,6 @@ export const LandingFooter = async () => {
             {t("footerLegal")}
           </Text>
           <Text size="xs">{t("footerLegalNote")}</Text>
-          <Text size="xs">{t("footerPolicies")}</Text>
         </div>
       }
     />

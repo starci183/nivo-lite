@@ -6,7 +6,7 @@ import { useT } from "@/i18n/client";
 import { login } from "@/i18n/dict/login";
 import { FoundingOffer } from "@/components/promo/FoundingOffer";
 import { NivoLogo } from "@/components/brand/NivoLogo";
-import { Heading, Image, IncludedMark, List, ListItem, Region, SurfaceCard, SurfaceCopyGroup, Text } from "@starci/grammar/common";
+import { Heading, Image, IncludedMark, List, ListItem, Region, SurfaceCard, SurfaceCopyGroup, Text, TextAction } from "@starci/grammar/common";
 import {
   AUTH_ART_BAND_CLASS_NAME,
   AUTH_BRAND_CARD_CLASS_NAME,
@@ -22,6 +22,7 @@ import {
   AUTH_POINTS_CLASS_NAME,
   AUTH_POINT_CLASS_NAME,
   AUTH_STACK_CLASS_NAME,
+  AUTH_LEGAL_CLASS_NAME,
 } from "./classNames";
 
 const POINTS = [
@@ -83,6 +84,10 @@ export const AuthShell = ({ label, title, text, children }: AuthShellProps) => {
               {children}
             </div>
           </SurfaceCard>
+          <nav aria-label={t("legalLabel")} className={AUTH_LEGAL_CLASS_NAME}>
+            <TextAction href="/privacy" size="sm">{t("privacyLink")}</TextAction>
+            <TextAction href="/terms" size="sm">{t("termsLink")}</TextAction>
+          </nav>
         </div>
       </section>
     </main>
