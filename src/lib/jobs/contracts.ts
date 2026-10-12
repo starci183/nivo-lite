@@ -38,9 +38,15 @@ export const isJobName = (v: string): v is JobName => Object.prototype.hasOwnPro
 
 /**
  * The dedupe key (= BullMQ jobId) of a job: `<name>:<subject>` plus an optional suffix for a deliberate re-run (`:retry:<ms>`).
- * The same key enqueued twice is one job. BullMQ forbids ':' only in custom ids that look like numbers, so these are safe.
+ * The same key enqueued twice is one job (job_outbox.dedupe_key is unique).
  */
 export const dedupeKey = (name: JobName, subject: string, suffix?: string): string => `${name}:${subject}${suffix ? `:${suffix}` : ""}`;
+
+/**
+ * The BullMQ jobId of an outbox row: its dedupe key with ':' replaced by '|' (BullMQ rejects custom ids with ':' unless they have exactly
+ * three parts). Deterministic, so relaying the same row twice still adds one job.
+ */
+export const bullmqJobId = (dedupe: string): string => dedupe.replace(/:/g, "|");
 
 /** knowledge_sources.status, in lifecycle order (pending = written by the old synchronous path). */
 export const SOURCE_STATUSES = ["pending", "queued", "reading", "indexing", "extracting_facts", "ready", "failed", "blocked_credits"] as const;
