@@ -20,7 +20,7 @@ export class ApiKeysService {
      * Admits a public API request: the bearer key must exist, work, stay inside its minute budget and carry `scope`. The lookup,
      * the rate hit and the last-use stamp are one statement.
      */
-    async authenticate(scope: ApiScope, authorization = ""): Promise<ApiPrincipal> {
+    async authenticate(scope: ApiScope, authorization: string = ""): Promise<ApiPrincipal> {
         const key = bearerKey(authorization)
         if (key === undefined) throw new ApiKeysError({ code: ApiKeysErrorCode.Unauthorized })
         const [row] = await this.entityManager.query<Array<{ auth: ApiKeyAuthAnswer | null }>>(API_KEY_AUTH, [

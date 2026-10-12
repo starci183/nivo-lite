@@ -65,34 +65,42 @@ const revokeSchema = {
     },
 }
 
-/** Creates a key for a workspace the caller manages; the secret is built and hashed in the database and answered once. */
-export const writeApiKeys = async (input: unknown): Promise<DbOutcome<CreatedApiKey>> => {
+type KeyFunction = "api_key_create" | "api_key_revoke"
+
+/** Runs one key function as the signed-in person, keeps the answer only when `accepts` recognises its shape and refreshes the page. */
+const runKeyFunction = async <T>(
+    name: KeyFunction,
+    args: { readonly p_workspace: string; readonly p_name?: string; readonly p_key?: string },
+    accepts: (value: unknown) => value is T,
+): Promise<DbOutcome<T>> => {
     const principal = await getPrincipal()
     if (principal.kind !== "ok") return dbFailure("refused", "principal")
+    const db = await createServerDbClient()
+    const answered = toOutcome(
+        name === "api_key_create"
+            ? await db.rpc("api_key_create", { p_workspace: args.p_workspace, p_name: args.p_name ?? "" })
+            : await db.rpc("api_key_revoke", { p_workspace: args.p_workspace, p_key: args.p_key ?? "" }),
+    )
+    if (answered.kind !== "ok") return answered
+    if (!accepts(answered.value)) return dbFailure("unavailable", "api-keys-shape")
+    revalidatePath("/developers")
+    return dbOk(answered.value)
+}
+
+/** Creates a key for a workspace the caller manages; the secret is built and hashed in the database and answered once. */
+export const writeApiKeys = async (input: unknown): Promise<DbOutcome<CreatedApiKey>> => {
     const parsed = createSchema.safeParse(input)
     if (!parsed.success) return dbFailure("invalid", "api-keys-input")
-    const db = await createServerDbClient()
-    const created = toOutcome(
-        await db.rpc("api_key_create", { p_workspace: parsed.data.workspaceId, p_name: parsed.data.name }),
+    return runKeyFunction(
+        "api_key_create",
+        { p_workspace: parsed.data.workspaceId, p_name: parsed.data.name },
+        isCreated,
     )
-    if (created.kind !== "ok") return created
-    if (!isCreated(created.value)) return dbFailure("unavailable", "api-keys-shape")
-    revalidatePath("/developers")
-    return dbOk(created.value)
 }
 
 /** Revokes a working key of a workspace the caller manages: it stops working at once. */
 export const writeApiKeyRevocation = async (input: unknown): Promise<DbOutcome<ApiKeyView>> => {
-    const principal = await getPrincipal()
-    if (principal.kind !== "ok") return dbFailure("refused", "principal")
     const parsed = revokeSchema.safeParse(input)
     if (!parsed.success) return dbFailure("invalid", "api-keys-input")
-    const db = await createServerDbClient()
-    const revoked = toOutcome(
-        await db.rpc("api_key_revoke", { p_workspace: parsed.data.workspaceId, p_key: parsed.data.keyId }),
-    )
-    if (revoked.kind !== "ok") return revoked
-    if (!isView(revoked.value)) return dbFailure("unavailable", "api-keys-shape")
-    revalidatePath("/developers")
-    return dbOk(revoked.value)
+    return runKeyFunction("api_key_revoke", { p_workspace: parsed.data.workspaceId, p_key: parsed.data.keyId }, isView)
 }
