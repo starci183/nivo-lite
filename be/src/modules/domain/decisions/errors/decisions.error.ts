@@ -21,6 +21,8 @@ export enum DecisionsErrorCode {
     StillMissing = "DECISIONS_STILL_MISSING",
     /** The person approved but has not chosen among the candidates yet. */
     ChooseCandidate = "DECISIONS_CHOOSE_CANDIDATE",
+    /** Approving this action needs the written basis of the person, and it is too short or absent. */
+    BasisRequired = "DECISIONS_BASIS_REQUIRED",
 }
 
 /** How each decisions code travels. */
@@ -34,6 +36,7 @@ export const DECISIONS_ERROR_KINDS: Record<DecisionsErrorCode, ErrorKind> = {
     [DecisionsErrorCode.WorkFailed]: "internal",
     [DecisionsErrorCode.StillMissing]: "invalid",
     [DecisionsErrorCode.ChooseCandidate]: "invalid",
+    [DecisionsErrorCode.BasisRequired]: "invalid",
 }
 
 /** The one error class of the decisions capability. */

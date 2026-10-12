@@ -12,6 +12,9 @@ export const DECISIONS_MESSAGES: MessageBundle = {
         "errors.DECISIONS_WORK_FAILED": "Không thể hoàn thành công việc: {{reason}}",
         "errors.DECISIONS_STILL_MISSING": "Còn thiếu: {{fields}}. Bạn bổ sung rồi NIVO sẽ tiếp tục.",
         "errors.DECISIONS_CHOOSE_CANDIDATE": "Chọn hóa đơn khớp với khoản thanh toán để NIVO tiếp tục.",
+        "errors.DECISIONS_BASIS_REQUIRED":
+            "Chỉ được ghi nhận đã thanh toán khi có căn cứ xác nhận (ít nhất {{n}} ký tự).",
+        "decision.basisNote": "Căn cứ: {{basis}}",
         "engine.failed": "{{dept}} chưa hoàn thành “{{action}}”: {{error}}",
         "engine.ask": "{{dept}} cần bạn quyết định · {{reason}}: {{summary}}",
         "engine.auto": "{{dept}} đã tự hoàn thành: {{summary}}",
@@ -53,6 +56,9 @@ export const DECISIONS_MESSAGES: MessageBundle = {
         "errors.DECISIONS_WORK_FAILED": "The work could not be done: {{reason}}",
         "errors.DECISIONS_STILL_MISSING": "Still missing: {{fields}}. Add them and NIVO continues.",
         "errors.DECISIONS_CHOOSE_CANDIDATE": "Choose the invoice that matches this payment so NIVO can continue.",
+        "errors.DECISIONS_BASIS_REQUIRED":
+            "A payment can only be marked paid with a written basis (at least {{n}} characters).",
+        "decision.basisNote": "Basis: {{basis}}",
         "engine.failed": "{{dept}} could not finish “{{action}}”: {{error}}",
         "engine.ask": "{{dept}} needs your decision · {{reason}}: {{summary}}",
         "engine.auto": "{{dept}} completed: {{summary}}",
