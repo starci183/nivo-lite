@@ -36,33 +36,23 @@ const ENGINE_FROM_APP = {
   CHANNEL_TOKEN_KEY: ["CHANNEL_TOKEN_KEY"],
   GOOGLE_OAUTH_CLIENT_ID: ["GOOGLE_OAUTH_CLIENT_ID", "SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID"],
   GOOGLE_OAUTH_CLIENT_SECRET: ["GOOGLE_OAUTH_CLIENT_SECRET", "SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET"],
+  EMBEDDING_MODEL: ["EMBEDDING_MODEL"],
+  EMBEDDING_BASE_URL: ["EMBEDDING_BASE_URL"],
   EMBEDDING_API_KEY: ["EMBEDDING_API_KEY"],
   OPENROUTER_API_KEY: ["OPENROUTER_API_KEY", "DEEPSEEK_API_KEY"], // the app's DEEPSEEK_API_KEY is an OpenRouter key
 };
-for (const [k, v] of Object.entries(ENGINE_DEFAULTS)) if (!engineMap.get(k)) engineMap.set(k, v);
 for (const [k, sources] of Object.entries(ENGINE_FROM_APP)) {
   if (engineMap.get(k)) continue;
   const found = sources.map((n) => appMap0.get(n)).find(Boolean);
   if (found) engineMap.set(k, found);
 }
+for (const [k, v] of Object.entries(ENGINE_DEFAULTS)) if (!engineMap.get(k)) engineMap.set(k, v);
 const ENGINE_REQUIRED = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "ENGINE_SHARED_SECRET", "REDIS_URL", "OPENROUTER_API_KEY", "CHANNEL_TOKEN_KEY", "GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET"];
 const missing = ENGINE_REQUIRED.filter((k) => !engineMap.get(k));
 if (missing.length) console.warn(`[env-sync] WARNING: ENGINE_ENV has no value for: ${missing.join(", ")} (names only; the knowledge jobs need them)`);
 const engine = [...engineMap].filter(([, v]) => v !== "").map(([k, v]) => `${k}=${v}`);
 const appMap = new Map(app.map(kv));
 
-// The engine runs the BullMQ background jobs (docs/JOBS.md): it needs Redis (the compose service "redis" unless the [engine] block says
-// otherwise) and the app keys the knowledge jobs use. Each is taken from the [app] block only when the [engine] block does not set it.
-const engineKeys = new Set(engine.map((l) => kv(l)[0]));
-if (!engineKeys.has("REDIS_URL")) engine.push("REDIS_URL=redis://redis:6379");
-for (const k of ["CHANNEL_TOKEN_KEY", "EMBEDDING_MODEL", "EMBEDDING_BASE_URL", "EMBEDDING_API_KEY"]) {
-  if (!engineKeys.has(k) && appMap.get(k)) engine.push(`${k}=${appMap.get(k)}`);
-}
-// Google OAuth (Drive reads with the stored grant): the app's GOOGLE_OAUTH_* or, as for WEB_ENV below, the Supabase Google client.
-const googleId = appMap.get("GOOGLE_OAUTH_CLIENT_ID") || appMap.get("SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID");
-const googleSecret = appMap.get("GOOGLE_OAUTH_CLIENT_SECRET") || appMap.get("SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET");
-if (!engineKeys.has("GOOGLE_OAUTH_CLIENT_ID") && googleId) engine.push(`GOOGLE_OAUTH_CLIENT_ID=${googleId}`);
-if (!engineKeys.has("GOOGLE_OAUTH_CLIENT_SECRET") && googleSecret) engine.push(`GOOGLE_OAUTH_CLIENT_SECRET=${googleSecret}`);
 // Google OAuth keys are Supabase CLI config, not read by the app: do not ship them to the web host.
 const WEB_SKIP = /^SUPABASE_AUTH_EXTERNAL_/;
 const quote = (v) => (/[$#\s"]|\\/.test(v) && !v.includes("'") ? `'${v}'` : v);
