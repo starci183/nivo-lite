@@ -1,5 +1,5 @@
 # Caddy gets and renews the TLS certificates (Let's Encrypt) for both names. DNS A/AAAA records for n8n.<domain> and
-# engine.<domain> must point at the VPS BEFORE the first start, and ports 80/443 must be reachable (the HTTP-01 challenge).
+# api.<domain> must point at the VPS BEFORE the first start, and ports 80/443 must be reachable (the HTTP-01 challenge).
 {
 	email {$ACME_EMAIL}
 }
@@ -21,8 +21,8 @@ n8n.{$DOMAIN} {
 	}
 }
 
-# engine: only the health probes are public (uptime monitors). The tool bridge (/tools/*) is internal and never published.
-# The engine shares the network namespace of the openclaw container, so it is reached as openclaw:8787.
+# engine.<domain> (the legacy host name of the api): only the health probes are public (uptime monitors). The tool bridge (/tools/*) is internal and never published.
+# The api shares the network namespace of the openclaw container, so it is reached as openclaw:8787.
 engine.{$DOMAIN} {
 	@probes path /healthz /readyz
 	handle @probes {

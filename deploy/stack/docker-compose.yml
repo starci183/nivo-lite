@@ -1,17 +1,18 @@
-# NIVO engine stack for ONE Ubuntu VPS: caddy (TLS, the only public door) + engine + openclaw + n8n (+ its own postgres).
-# Read deploy/README.md first. Run from this folder:  docker compose --env-file .env up -d --build
+# NIVO stack for ONE Ubuntu VPS: the api + openclaw + n8n (+ its own postgres), and an optional caddy (TLS).
+# Read be/docs/runbooks/vps-stack.md first. Run from this folder:  API_TAG=<tag> docker compose --env-file .env up -d
 #
 # Network layout (this is deliberate):
 #   caddy      publishes 80/443. Everything else is private to the compose network.
 #   openclaw   OpenClaw gateway, raw WebSocket on 18789. Published ONLY on 127.0.0.1 (reach it with an SSH tunnel for its Control UI).
-#   engine     network_mode: service:openclaw  -> it shares openclaw network namespace, so it reaches the gateway on 127.0.0.1:18789.
+#   api        network_mode: service:openclaw  -> it shares openclaw network namespace, so it reaches the gateway on 127.0.0.1:18789.
 #              That is not a convenience: the gateway honours the scopes a client declares ONLY for a loopback peer using a shared
 #              secret (docs/OPENCLAW-GATEWAY-PROTOCOL.md in nivo-backend). From any other address the scopes are cleared and
-#              sessions.send is refused. Consequences: the engine listens inside openclaw namespace (caddy reaches it as openclaw:8787),
-#              and recreating openclaw recreates the engine too (compose does this for you).
+#              sessions.send is refused. Consequences: the api listens inside openclaw namespace (caddy reaches it as openclaw:8787),
+#              and recreating openclaw recreates the api too (compose does this for you).
 #   n8n        behind caddy at n8n.<domain>; talks to its own postgres (n8n-db).
-# Background jobs (docs/JOBS.md) run on Supabase Queues (pgmq) in the app's Supabase Postgres: no queue service in this stack.
+# Background jobs (be/docs/guides/jobs.md) run on Supabase Queues (pgmq) in the app's Supabase Postgres: no queue service in this stack.
 
+# The project name stays nivo-engine on purpose: compose prefixes the volume names with it (openclaw-data, n8n-db, ...), and renaming it would orphan them.
 name: nivo-engine
 
 x-logging: &logging
@@ -21,7 +22,7 @@ x-logging: &logging
 services:
   caddy:
     # Optional public door. Off by default (profile "public"): on a host where another ingress already owns 80/443
-    # (the Traefik edge in deploy/edge) the stack runs without it; the engine needs no inbound port at all.
+    # (the Traefik edge in deploy/edge) the stack runs without it; the api needs no inbound port at all.
     profiles: ["public"]
     image: caddy:2-alpine
     restart: unless-stopped
@@ -44,7 +45,7 @@ services:
 
   openclaw-init:
     # Writes the gateway settings the stack relies on into openclaw.json before the gateway starts (idempotent merge: other
-    # keys, agents and plugins OpenClaw or an operator added are kept). Loopback bind + token auth: only the engine, which
+    # keys, agents and plugins OpenClaw or an operator added are kept). Loopback bind + token auth: only the api, which
     # shares the gateway's network namespace, can reach it.
     image: ${OPENCLAW_IMAGE:-ghcr.io/openclaw/openclaw}:${OPENCLAW_TAG:-2026.7.1}
     restart: "no"
@@ -53,7 +54,7 @@ services:
       - |
         const fs = require("fs"), p = "/home/node/.openclaw/openclaw.json";
         let c = {}; try { c = JSON.parse(fs.readFileSync(p, "utf8")); } catch {}
-        c.agents = c.agents || {}; c.agents.defaults = { ...(c.agents.defaults || {}), skipBootstrap: true }; // the engine writes each agent workspace itself (openclaw.sync_agent): no first-run ritual
+        c.agents = c.agents || {}; c.agents.defaults = { ...(c.agents.defaults || {}), skipBootstrap: true }; // the api writes each agent workspace itself (openclaw.sync_agent): no first-run ritual
         c.session = { ...(c.session || {}), maintenance: { ...((c.session || {}).maintenance || {}), mode: "enforce", pruneAfter: "7d", maxEntries: 400, maxDiskBytes: "400mb" } };
         c.gateway = { ...(c.gateway || {}), mode: "local", bind: "loopback", port: 18789,
           auth: { ...((c.gateway || {}).auth || {}), mode: "token", token: process.env.OPENCLAW_GATEWAY_TOKEN } };
@@ -79,7 +80,7 @@ services:
     image: ${OPENCLAW_IMAGE:-ghcr.io/openclaw/openclaw}:${OPENCLAW_TAG:-2026.7.1}
     restart: unless-stopped
     environment:
-      # Gateway credential: the engine presents the same value (OPENCLAW_GATEWAY_TOKEN below).
+      # Gateway credential: the api presents the same value (OPENCLAW_GATEWAY_TOKEN below).
       OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:?set OPENCLAW_GATEWAY_TOKEN in .env}
       # Model provider keys: set whichever provider your OpenClaw agents are configured for (empty ones are ignored).
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
@@ -88,68 +89,49 @@ services:
     depends_on:
       openclaw-init:
         condition: service_completed_successfully
-    # The engine lives in this network namespace, so its port is published here. Bind to the Docker bridge address
-    # (ENGINE_BIND=172.29.0.1) to let the Traefik edge reach it; the edge only routes the exact path /healthz.
+    # The api lives in this network namespace, so its port is published here. Bind to the Docker bridge address
+    # (API_BIND=172.29.0.1) to let the Traefik edge reach it; the edge routes api.nivo.vn and every /api/ path of the product hosts.
     ports:
-      - "${ENGINE_BIND:-127.0.0.1}:8787:8787"
+      - "${API_BIND:-${ENGINE_BIND:-127.0.0.1}}:8787:8787"
     volumes:
       - openclaw-data:/home/node/.openclaw
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:18789/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:18789/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 60s
     logging: *logging
 
-  engine:
-    build:
-      context: ..
-      dockerfile: Dockerfile
-    image: nivo-engine:${ENGINE_VERSION:-latest}
+  api:
+    # The Nest api (be/apps/api) replaced the engine at the lite cutover. The image is built on the GitHub runner (api-deploy.yml) and loaded
+    # with docker load, so the VPS only runs it. It keeps the engine's place in the stack: same network namespace as OpenClaw, same port.
+    image: nivo-api:${API_TAG:?set API_TAG (the deploy workflow does)}
     restart: unless-stopped
     network_mode: "service:openclaw"
     depends_on:
       openclaw:
         condition: service_healthy
+    # api.env is the runtime environment of the api only (PRIMARY_DB_URL, SUPABASE_*, HTTP_SECURITY_*, the provider and queue keys): the
+    # stack .env (n8n encryption key, database password, ...) never reaches this container. The values below are the stack facts.
+    env_file: api.env
     environment:
-      SUPABASE_URL: ${SUPABASE_URL:?set SUPABASE_URL in .env}
-      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?set SUPABASE_SERVICE_ROLE_KEY in .env}
-      NIVO_BASE_URL: ${NIVO_BASE_URL:?set NIVO_BASE_URL in .env}
-      ENGINE_SHARED_SECRET: ${ENGINE_SHARED_SECRET:?set ENGINE_SHARED_SECRET in .env}
-      ENGINE_WORKER_ID: ${ENGINE_WORKER_ID:-vps-1}
-      ENGINE_HOST: 0.0.0.0
-      ENGINE_PORT: "8787"
-      ENGINE_CONCURRENCY: ${ENGINE_CONCURRENCY:-4}
-      ENGINE_POLL_MS: ${ENGINE_POLL_MS:-1000}
-      ENGINE_LEASE_SECONDS: ${ENGINE_LEASE_SECONDS:-60}
-      ENGINE_SHUTDOWN_GRACE_MS: ${ENGINE_SHUTDOWN_GRACE_MS:-30000}
+      PORT: "8787"
       OPENCLAW_GATEWAY_URL: ws://127.0.0.1:18789
       OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}
-      OPENCLAW_TURN_TIMEOUT_MS: ${OPENCLAW_TURN_TIMEOUT_MS:-90000}
-      OPENCLAW_MANAGE_AGENTS: ${OPENCLAW_MANAGE_AGENTS:-1}
       OPENCLAW_CONFIG_DIR: /openclaw-state
       OPENCLAW_GATEWAY_STATE_DIR: /home/node/.openclaw
-      N8N_DEFAULT_WEBHOOK_URL: ${N8N_DEFAULT_WEBHOOK_URL:-}
       N8N_ALLOWED_HOSTS: ${N8N_ALLOWED_HOSTS:-n8n}
-      VIDEO_TTS_PROVIDER: ${VIDEO_TTS_PROVIDER:-edge}
-      VIDEO_MAX_SECONDS: ${VIDEO_MAX_SECONDS:-90}
-      VIDEO_FFMPEG_THREADS: ${VIDEO_FFMPEG_THREADS:-4}
-      # Background jobs (pgmq in Supabase, docs/JOBS.md) and what the knowledge jobs need (embeddings, Drive reads, encrypted channel tokens).
-      JOBS_ENABLED: ${JOBS_ENABLED:-1}
-      JOBS_CONCURRENCY: ${JOBS_CONCURRENCY:-4}
-      JOBS_WORKSPACE_CONCURRENCY: ${JOBS_WORKSPACE_CONCURRENCY:-2}
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
-      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
-      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-}
-      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-}
-      CHANNEL_TOKEN_KEY: ${CHANNEL_TOKEN_KEY:-}
-      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
-      GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
     volumes:
       - openclaw-data:/openclaw-state
-      - video-cache:/var/cache/nivo-video # Vietnamese voiceover clips by text hash: re-rendering the same script costs no TTS call
-    stop_grace_period: 45s # longer than ENGINE_SHUTDOWN_GRACE_MS so running jobs can finish or be handed back
+      - video-cache:/var/cache/nivo-video # voiceover clips by text hash: re-rendering the same script costs no TTS call
+    stop_grace_period: 45s # running jobs finish or are handed back before the container stops
     logging: *logging
 
   n8n-db:

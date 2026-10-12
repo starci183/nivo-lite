@@ -27,6 +27,7 @@ Write-Host "nivo-lite secrets -> $file" -ForegroundColor Cyan
 Set-Secret "DEEPSEEK_API_KEY" "DeepSeek API key"
 Set-Secret "SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID" "Google OAuth client ID" $false
 Set-Secret "SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET" "Google OAuth client secret"
+Set-Secret "PRIMARY_DB_URL" "api database URL (role app_be, with its password)"
 
 [System.IO.File]::WriteAllLines($file, $lines, (New-Object System.Text.UTF8Encoding($false)))
 Write-Host "Saved. Restart Supabase (npm run db:stop; npm run db:start) and the dev server so the new values load." -ForegroundColor Cyan
