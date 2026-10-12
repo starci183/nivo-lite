@@ -3,7 +3,6 @@ import { defineDict } from "../core";
 /** Copy for the Accounting workbench (/m/accounting/workbench): period overview, evidence, questions, ledger. */
 export const workbenchAccounting = defineDict({
   en: {
-    tabsLabel: "Accounting views",
     tabOverview: "Period overview",
     tabEvidence: "Evidence",
     tabQuestions: "Questions to answer",
@@ -32,6 +31,8 @@ export const workbenchAccounting = defineDict({
     mUnmatched: "Money in, not matched",
     mUnmatchedHint: "Received in this period, no invoice confirmed",
     mUnmatchedSource: "bank credits and manual entries",
+    mAgeing: "Receivable ageing, 0 / 30 / 60 days",
+    mAgeingHint: "Open invoices: up to 30 · 31 to 60 · over 60 days old",
     mWaiting: "Waiting for your decision",
     mWaitingHint: "Right now, whatever the period",
     mWaitingSource: "accounting work waiting for you",
@@ -165,7 +166,6 @@ export const workbenchAccounting = defineDict({
     adjustLogAmount: "Correction added: {note} (amount should be {amount} VND)",
   },
   vi: {
-    tabsLabel: "Các màn hình Kế toán",
     tabOverview: "Tổng quan kỳ",
     tabEvidence: "Chứng từ",
     tabQuestions: "Câu hỏi cần trả lời",
@@ -194,6 +194,8 @@ export const workbenchAccounting = defineDict({
     mUnmatched: "Tiền về chưa khớp",
     mUnmatchedHint: "Nhận trong kỳ, chưa xác nhận hóa đơn nào",
     mUnmatchedSource: "tiền vào ngân hàng và ghi nhận thủ công",
+    mAgeing: "Tuổi nợ phải thu 0 / 30 / 60 ngày",
+    mAgeingHint: "Hóa đơn còn mở: đến 30 · 31 đến 60 · quá 60 ngày",
     mWaiting: "Chờ bạn quyết định",
     mWaitingHint: "Tại thời điểm này, không theo kỳ",
     mWaitingSource: "việc Kế toán đang chờ bạn",

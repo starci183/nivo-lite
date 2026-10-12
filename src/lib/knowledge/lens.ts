@@ -138,3 +138,34 @@ export const lensPassagesText = async (lens: Lens, query: string, limit = 5, db?
     layer: r.layer, id: r.id, sourceId: r.source_id, module: r.module, kind: r.kind, title: r.title, content: r.content, score: r.score, visibility: r.visibility, topic: r.topic,
   }));
 };
+
+/* ------------------------------------------------------------------ summary (for the agent dashboard) */
+
+/** What a lens can read, counted: the documents by visibility and the brain facts by scope. `internal` counts are 0 for a customer lens (it cannot read them). */
+export type LensCounts = {
+  readonly audience: Audience;
+  readonly documents: { readonly public: number; readonly internal: number };
+  readonly facts: { readonly public: number; readonly internal: number; readonly restricted: number };
+};
+
+const countSources = async (client: Db, lens: Lens, visibility: Visibility): Promise<number> => {
+  const { count, error } = await client.from("knowledge_sources").select("id", { count: "exact", head: true })
+    .eq("workspace_id", lens.workspaceId).eq("status", "ready").eq("visibility", visibility).or(`module.is.null,module.eq.${lens.module}`);
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+};
+
+/**
+ * Count what the lens may read (same rule as lensSources / lensFacts: ready documents of all modules or this one, the facts in force for this
+ * audience and module). Counts only, no text. Throws when the documents cannot be counted; the caller shows the region as failed.
+ */
+export const lensCounts = async (lens: Lens, db?: Db): Promise<LensCounts> => {
+  const client = await dbOf(db);
+  const [pub, internal, facts] = await Promise.all([
+    countSources(client, lens, "public"),
+    lens.audience === "internal" ? countSources(client, lens, "internal") : Promise.resolve(0),
+    lensFacts(lens, undefined, undefined, client).catch(() => [] as Array<Fact>),
+  ]);
+  const byScope = (scope: Fact["scope"]): number => facts.filter((f) => f.scope === scope).length;
+  return { audience: lens.audience, documents: { public: pub, internal }, facts: { public: byScope("public"), internal: byScope("internal"), restricted: byScope("restricted") } };
+};

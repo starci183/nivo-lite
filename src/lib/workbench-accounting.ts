@@ -29,6 +29,13 @@ export type PeriodOverview = {
   unmatched: Measure;
   weeks: WeekBar[];
 };
+/**
+ * Receivable ageing: every open invoice (issued, not paid, not void) by how old it is. The age counts from the due date when the invoice has
+ * one, else from the day it was issued; one that is not due yet is in the first bucket. Each bucket is a Measure (live and simulated never added).
+ *   d0   0 to 30 days     d30   31 to 60 days     d60   more than 60 days
+ */
+export type AgeingKey = "d0" | "d30" | "d60";
+export type Ageing = Record<AgeingKey, Measure>;
 export type WaitingFigure = { count: OriginSplit; knownVnd: number; unknownAmount: number };
 
 export type MatchState = "matched" | "unclear" | "unmatched";
@@ -70,6 +77,7 @@ export type QuestionRow = { item: WorkItemView; group: QuestionGroup };
 export type AccountingWorkbench = {
   now: string;
   periods: Record<PeriodKey, PeriodOverview>;
+  ageing: Ageing;
   waiting: WaitingFigure;
   credits: CreditRow[];
   invoices: InvoiceRow[];
@@ -88,6 +96,9 @@ export type AccountingWorkbench = {
 
 const OFFSET = 7 * 3_600_000;
 const DAY = 86_400_000;
+/** Ageing bucket edges in days: 0-30, 31-60, over 60. */
+const AGEING_FIRST_DAYS = 30;
+const AGEING_SECOND_DAYS = 60;
 
 /** Start of the Vietnamese calendar month `back` months before the one containing `now`. */
 const monthStart = (now: Date, back: number): number => {
@@ -231,6 +242,15 @@ export const getAccountingWorkbench = async (): Promise<AccountingWorkbench> => 
     return { key, fromIso: new Date(from).toISOString(), toIso: new Date(to).toISOString(), income, receivable, unmatched, weeks: [...bars.values()] };
   };
 
+  /* ---- receivable ageing (all open invoices, whatever the period) */
+  const ageing: Ageing = { d0: emptyMeasure(), d30: emptyMeasure(), d60: emptyMeasure() };
+  for (const i of invoicesDb) {
+    if (i.status !== "issued") continue;
+    const since = ms(i.due_at ?? i.issued_at ?? i.created_at);
+    const days = Number.isFinite(since) ? Math.floor((now.getTime() - since) / DAY) : 0;
+    addTo(ageing[days > AGEING_SECOND_DAYS ? "d60" : days > AGEING_FIRST_DAYS ? "d30" : "d0"], i.origin, i.amount_vnd);
+  }
+
   /* ---- evidence */
   const credits: CreditRow[] = txsDb.slice(0, 200).map((t) => {
     const matched = t.status === "matched" && !!t.invoice_id;
@@ -318,6 +338,7 @@ export const getAccountingWorkbench = async (): Promise<AccountingWorkbench> => 
   return {
     now: now.toISOString(),
     periods: { this: buildPeriod("this"), last: buildPeriod("last") },
+    ageing,
     waiting, credits, invoices, ordersWithoutInvoice, questions, staff, ownerName: c.session.member.displayName,
     ledger: ledger.slice(0, 400), canAdjust: adjustmentsReady && (c.session.member.role === "owner" || c.session.member.role === "manager"),
     adjustmentsReady, excludedTest,
