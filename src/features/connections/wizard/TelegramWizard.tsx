@@ -96,8 +96,8 @@ export const TelegramWizard = ({ agents, onClose }: TelegramWizardProps) => {
       ) : null}
       {step === "agent" ? (
         <>
-          <Text size="sm" weight="semibold">{t("agentTitleChatbot")}</Text>
-          <AgentStep agents={agents} value={agentIds} onValue={setAgentIds} isDisabled={isPending} />
+          <Text size="sm" weight="semibold">{t("agentTitleChannel")}</Text>
+          <AgentStep agents={agents} value={agentIds} onValue={setAgentIds} isDisabled={isPending} provider="telegram" />
         </>
       ) : null}
       {error ? <Alert tone="negative" title={error} /> : null}

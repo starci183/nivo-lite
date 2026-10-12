@@ -4,6 +4,7 @@ import { system } from "@/i18n/dict/system";
 import { governance } from "@/i18n/dict/governance";
 import * as ai from "./deepseek";
 import { withUsage } from "./usage";
+import { startOutboundChat } from "./agent-outbound";
 import { deliverToChannel } from "./telegram";
 import { conversationAccess } from "./channels";
 import type { Access } from "./connection-access";
@@ -148,6 +149,10 @@ const deliver = async (c: EngineCtx, lead: Lead, text: string): Promise<{ summar
     }
     return { summary: tr(c)("deliveredWebsite", { name: lead.contact_name }), real: true };
   }
+  // No conversation to answer in: the sales agent may start one on a connection it is bound to for outbound_chat (platform limits in agent-outbound.ts).
+  const sales = await agentFor(c, "sales");
+  const started = sales ? await startOutboundChat(c.db, c.ws, sales.id, lead.id, text).catch(() => null) : null;
+  if (started) return { summary: tr(c)("deliveredTelegram", { name: lead.contact_name }), real: true };
   return { summary: tr(c)("simulatedDelivery", { channel: lead.channel }), real: false };
 };
 

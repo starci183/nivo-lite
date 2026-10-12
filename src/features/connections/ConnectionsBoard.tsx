@@ -18,6 +18,7 @@ import type { AgentOption } from "./wizard/AgentStep"
 import { GoogleWizard } from "./wizard/GoogleWizard"
 import { MoneyWizard } from "./wizard/MoneyWizard"
 import { SmtpWizard } from "./wizard/SmtpWizard"
+import { purposeFor } from "@/lib/connection-access"
 import { TelegramWizard } from "./wizard/TelegramWizard"
 import { WebhookWizard } from "./wizard/WebhookWizard"
 import { ZaloWizard } from "./wizard/ZaloWizard"
@@ -95,7 +96,8 @@ export const ConnectionsBoard = ({ items, agentNames, agents, localOnly, zaloRes
   const first = attention[0]
 
   const def = open ? PROVIDERS[open.provider] : null
-  const eligible = def ? agents.filter((a) => a.module === def.module) : []
+  // Every agent whose module may use this provider (purposeFor): chatbot, booking, loyalty, sales and shifts for Telegram/Zalo, accounting for bank feeds.
+  const eligible = def && def.module !== null && open ? agents.filter((a) => purposeFor(a.module, open.provider) !== null) : []
   const providerItems = open ? items.filter((c) => c.provider === open.provider) : []
 
   return (

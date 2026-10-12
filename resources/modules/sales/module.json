@@ -186,6 +186,7 @@
     }
   ],
   "connection_providers": [
-    "telegram"
+    "telegram",
+    "zalo_oa"
   ]
 }

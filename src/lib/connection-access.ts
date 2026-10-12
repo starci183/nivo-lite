@@ -20,6 +20,14 @@ export type Purpose = "inbound_chat" | "outbound_chat" | "bank_feed" | "data_sou
 const PURPOSE: Readonly<Record<string, Purpose>> = {
   "chatbot:telegram": "inbound_chat",
   "chatbot:zalo_oa": "inbound_chat",
+  // Booking and Loyalty can also listen on a chat connection (the chatbot stays the front door and hands over by intent: lib/agent-bindings routeInbound).
+  "booking:telegram": "inbound_chat",
+  "booking:zalo_oa": "inbound_chat",
+  "loyalty:telegram": "inbound_chat",
+  "loyalty:zalo_oa": "inbound_chat",
+  // Shifts speaks to staff only through the connections bound to it; none bound = Office only.
+  "shifts:telegram": "outbound_chat",
+  "shifts:zalo_oa": "outbound_chat",
   "sales:telegram": "outbound_chat",
   "sales:zalo_oa": "outbound_chat",
   "accounting:sepay": "bank_feed",
@@ -29,6 +37,9 @@ const PURPOSE: Readonly<Record<string, Purpose>> = {
 
 /** Data connectors every agent may read from (a database, an API, an import, a mailbox, a personal Telegram). */
 const DATA_PROVIDERS: ReadonlySet<string> = new Set(["database", "openapi", "csv_import", "imap", "telegram_user"]);
+
+/** True for the providers every agent may read from (data connectors), whatever its module. */
+export const isDataProvider = (provider: string): boolean => DATA_PROVIDERS.has(provider);
 
 /** The purpose a grant of `provider` to an agent of `module` has, or null when that agent cannot use that provider. */
 export const purposeFor = (module: string, provider: string): Purpose | null => {

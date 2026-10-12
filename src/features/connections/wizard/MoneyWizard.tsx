@@ -219,7 +219,7 @@ export const MoneyWizard = ({ provider, resumeId, agents, onClose }: MoneyWizard
         <>
           {skipped && !received ? <Alert tone="informative" title={t("skipNote")} /> : null}
           <Text size="sm" weight="semibold">{t("agentTitleAccounting")}</Text>
-          <AgentStep agents={agents} value={agentIds} onValue={setAgentIds} isDisabled={isPending} />
+          <AgentStep agents={agents} value={agentIds} onValue={setAgentIds} isDisabled={isPending} provider={provider} />
         </>
       ) : null}
 

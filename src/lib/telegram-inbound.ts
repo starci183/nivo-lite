@@ -5,6 +5,7 @@ import { translator } from "@/i18n/core";
 import { system } from "@/i18n/dict/system";
 import { publicConfig } from "./config";
 import { ingest } from "./core";
+import { INBOUND_MODULES } from "./agent-bindings";
 import { customerTurn } from "./customer-turn";
 import { withUsage } from "./usage";
 import { emitEvent } from "./outbound-events";
@@ -12,7 +13,7 @@ import { telegramSend, telegramTyping } from "./telegram";
 import type { Agent, AgentConversation } from "./types";
 
 /**
- * Inbound Telegram update -> a customer turn of the workspace's Chatbot AI (same path as the website chat): the AI replies in
+ * Inbound Telegram update -> a customer turn of the connection's front-door agent, normally the Chatbot AI (same path as the website chat): the AI replies in
  * Telegram, the lead is handed to Sales AI through the gate, anything outside the owner's authority waits in Office.
  * Shared by the per-workspace route (/api/telegram/<connectionId>) and the legacy env route (/api/telegram); each verifies its own
  * secret first and passes the workspace and the bot token to answer with. No user session: service-role client scoped to `workspaceId`.
@@ -80,8 +81,9 @@ export const handleTelegramUpdate = async (update: TgUpdate, { workspaceId: ws, 
   }
 
   try {
-    const agentQuery = db.from("agents").select("*").eq("workspace_id", ws).eq("module", "chatbot");
-    const { data: agents } = await (agentId ? agentQuery.eq("id", agentId) : agentQuery.order("created_at")).limit(1);
+    // agentId is the connection's front-door agent (lib/agent-bindings routeInbound); the legacy env route has none and uses the first chatbot.
+    const agentQuery = db.from("agents").select("*").eq("workspace_id", ws);
+    const { data: agents } = await (agentId ? agentQuery.eq("id", agentId).in("module", [...INBOUND_MODULES]) : agentQuery.eq("module", "chatbot").order("created_at")).limit(1);
     const agent = (agents?.[0] ?? null) as Agent | null;
     if (!agent) {
       await telegramSend(botToken, chatId, SORRY);
@@ -101,6 +103,10 @@ export const handleTelegramUpdate = async (update: TgUpdate, { workspaceId: ws, 
       }).select().single();
       if (created.error) throw new Error(created.error.message);
       conv = created.data as AgentConversation;
+    } else if (connectionId && conv.agent_id !== agent.id) {
+      // The bindings changed since this chat began: it follows the connection's current front door.
+      await db.from("agent_conversations").update({ agent_id: agent.id }).eq("id", conv.id);
+      conv = { ...conv, agent_id: agent.id };
     }
 
     // "/start" opens the chat: greet like the website widget does, no AI call.

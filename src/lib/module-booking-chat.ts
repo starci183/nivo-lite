@@ -1,5 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { handoversOf } from "./agent-bindings";
 import { logEvidence } from "./core";
 import { runWork, type EngineCtx } from "./engine";
 import { addDays, localDate, zonedMs } from "./module-booking-availability";
@@ -174,8 +175,11 @@ export const handleBookingReply = async (db: SupabaseClient, job: { readonly id:
     const convId = String(job.payload.conversation_id ?? "");
     const conv = ((await db.from("agent_conversations").select("*").eq("id", convId).eq("workspace_id", job.workspace_id).maybeSingle()).data ?? null) as AgentConversation | null;
     if (!conv || conv.handled_by) return null;
-    const agent = ((await db.from("agents").select("module").eq("id", conv.agent_id).maybeSingle()).data ?? null) as { module: string } | null;
-    if (agent?.module !== "booking") return null; // only a booking agent may book
+    const agent = ((await db.from("agents").select("id, module").eq("id", conv.agent_id).maybeSingle()).data ?? null) as { id: string; module: string } | null;
+    // Only a booking agent may book: the conversation's own agent, or the Booking agent bound inbound to the connection the chat came in on
+    // (the chatbot is the front door and hands over by intent; see lib/agent-bindings).
+    if (!agent) return null;
+    if (agent.module !== "booking" && !(await handoversOf(conv.connection_id ?? null, agent)).some((h) => h.module === "booking")) return null;
     const c: EngineCtx = { db, ws: job.workspace_id, actor: "OpenClaw", locale: "vi" };
     const out = await applyBookingRequest(c, conv, req, job.id);
     await logEvidence(db, job.workspace_id, { lead_id: conv.lead_id, kind: "booking.chat_request", actor: "OpenClaw", summary: `Yêu cầu đặt lịch từ chat: ${req.intent} → ${out.state}`, evidence: job.id });

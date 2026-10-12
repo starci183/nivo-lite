@@ -195,8 +195,8 @@ export const ZaloWizard = ({ resumeId, returned, agents, onClose }: ZaloWizardPr
       {step === "agent" ? (
         <>
           {!received ? <Alert tone="informative" title={t("zaloSkipNote")} /> : null}
-          <Text size="sm" weight="semibold">{t("agentTitleChatbot")}</Text>
-          <AgentStep agents={agents} value={agentIds} onValue={setAgentIds} isDisabled={isPending} />
+          <Text size="sm" weight="semibold">{t("agentTitleChannel")}</Text>
+          <AgentStep agents={agents} value={agentIds} onValue={setAgentIds} isDisabled={isPending} provider="zalo_oa" />
         </>
       ) : null}
 

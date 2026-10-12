@@ -121,6 +121,11 @@ export const SettingsScreen = ({ installation, moduleKey, isLoading = false, can
           <AgentConnectionsCard agentId={installation.agentId} options={connectionOptions} selected={selectedConnections} canEdit={canGrant} />
         ) : null}
 
+        {/* Shifts speaks to staff only through the Telegram/Zalo connections bound to its agent; with none, shift notices stay in Office. */}
+        {moduleKey === "shifts" && !isLoading && installation !== null && !connectionOptions.some((o) => o.status !== "disconnected" && (o.access ?? null) !== null)
+          ? <Alert tone="informative" title={t("shiftsBindChannel")} />
+          : null}
+
         {installation !== null ? <ModuleAutomations moduleKey={installation.moduleKey} canEdit={canEdit} /> : null}
 
         {installation !== null ? <ProcessorCard installation={installation} canEdit={canEdit} /> : null}

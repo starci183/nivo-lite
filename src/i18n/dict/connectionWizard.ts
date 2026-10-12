@@ -71,6 +71,10 @@ export const connectionWizard = defineDict({
 
     agentTitleAccounting: "Attach to the Accounting agent",
     agentTitleChatbot: "Attach to the Chatbot agent",
+    agentTitleChannel: "Attach to the agents that use this channel",
+    purpose_inbound_chat: "Listens and answers customers here",
+    purpose_outbound_chat: "Sends its messages through here",
+    purpose_bank_feed: "Reads the incoming transactions",
     agentHint: "Tick the agents that work through this connection. You can change this later in the module Settings.",
     agentNone: "There is no agent for this connection yet. Create one in Modules, then tick it in the module Settings.",
     agentSaved: "Saved. The connection is ready.",
@@ -171,6 +175,10 @@ export const connectionWizard = defineDict({
 
     agentTitleAccounting: "Gắn vào agent Kế toán",
     agentTitleChatbot: "Gắn vào agent Chatbot",
+    agentTitleChannel: "Gắn vào các agent dùng kênh này",
+    purpose_inbound_chat: "Nghe và trả lời khách qua kênh này",
+    purpose_outbound_chat: "Gửi tin của mình qua kênh này",
+    purpose_bank_feed: "Đọc các giao dịch đi vào",
     agentHint: "Tick những agent làm việc qua kết nối này. Bạn đổi lại được trong Cài đặt của module.",
     agentNone: "Chưa có agent cho kết nối này. Hãy tạo trong Module, rồi tick trong Cài đặt của module.",
     agentSaved: "Đã lưu. Kết nối đã sẵn sàng.",

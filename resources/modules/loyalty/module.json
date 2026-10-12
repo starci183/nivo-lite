@@ -186,5 +186,8 @@
       "max_mode": "ask"
     }
   ],
-  "connection_providers": []
+  "connection_providers": [
+    "telegram",
+    "zalo_oa"
+  ]
 }

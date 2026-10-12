@@ -52,7 +52,8 @@ const REPLY_CONTRACTS: Partial<Record<ModuleKey, string>> = {
   chatbot: REPLY_CONTRACT,
   booking: `${REPLY_CONTRACT}
 ${BOOKING_REPLY_ADDENDUM}`, // booking lane: the same customer contract plus the structured booking_request (handled by src/lib/module-booking-chat.ts)
-  loyalty: LOYALTY_REPLY_CONTRACT, // loyalty lane: points, tier and redeem request (src/lib/module-loyalty-chat.ts)
+  loyalty: `${REPLY_CONTRACT}
+${LOYALTY_REPLY_CONTRACT}`, // loyalty lane: the same customer contract plus points, tier and redeem request (src/lib/module-loyalty-chat.ts); the loyalty agent can be a connection's front door
   hiring: HIRING_REPLY_CONTRACT, // hiring lane: fairness contract of the internal agent (the chat intake clause sits inside REPLY_CONTRACT)
 };
 
