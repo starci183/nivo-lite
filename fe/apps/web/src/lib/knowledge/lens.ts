@@ -82,7 +82,7 @@ export const lensPassages = async (lens: Lens, query: string, limit = 8, db?: Db
   const vector = query.trim() ? await withUsage({ workspaceId: lens.workspaceId }, () => embedText(query)) : null;
   const { data, error } = await client.rpc("match_knowledge", {
     p_workspace: lens.workspaceId, p_module: lens.module, p_query_embedding: vector ? toVector(vector) : null, p_query: query, p_limit: limit, p_audience: lens.audience,
-    // Only vectors made by this same model are compared with the query vector (see 20261021100000_embedding_model.sql).
+    // Only vectors made by this same model are compared with the query vector (see 20261012100900_embedding-model.sql).
     p_query_model: vector ? embeddingModel() : null, p_installation: lens.installationId,
   });
   if (error) { console.error("match_knowledge failed:", error.message); return []; }

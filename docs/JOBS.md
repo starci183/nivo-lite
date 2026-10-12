@@ -44,8 +44,8 @@ Where things live:
 
 | Piece | File |
 | --- | --- |
-| Outbox table, knowledge RPCs, bucket, realtime | `supabase/migrations/20261025100000_job_outbox.sql` |
-| pgmq queue, job RPCs, slots, enqueue without relay | `supabase/migrations/20261025110000_pgmq_transport.sql` |
+| Outbox table, knowledge RPCs, bucket, realtime | `supabase/migrations/20261012102200_job-outbox.sql` |
+| pgmq queue, job RPCs, slots, enqueue without relay | `supabase/migrations/20261012102300_pgmq-transport.sql` |
 | Job contracts (the source) | `src/lib/jobs/contracts.ts` |
 | Job contracts (engine copy, GENERATED) | `engine/src/platform/pgmq/contracts.ts` (`node engine/dev/sync-shared.mjs`) |
 | Consumer, policy, producer | `engine/src/platform/pgmq/` (`JobsModule`: `JobRegistry`, `JobProducer`, `JobHandler`) |

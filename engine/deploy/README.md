@@ -71,7 +71,7 @@ Lần đầu `deploy.sh` sẽ dừng ở bước kiểm tra `.env`: tạo `.env`
 2. **OpenClaw**: cấu hình nhà cung cấp model và tạo agent. Control UI qua tunnel: `ssh -L 18789:127.0.0.1:18789 deploy@<ip>` rồi mở `http://127.0.0.1:18789`. Engine dùng agent `ws-<8 ký tự đầu workspace id>-chatbot` cho mỗi workspace (hoặc bật `OPENCLAW_MANAGE_AGENTS=1` sau khi xác minh schema).
 3. **Ứng dụng Next (Netlify)**: đặt biến `ENGINE_SHARED_SECRET` **cùng giá trị** rồi deploy lại.
 4. **Kiểm tra**: `curl https://engine.<domain>/healthz` trả `{"status":"ok",...}`. Trong Settings của module Chatbot, thẻ **Bộ xử lý** hiển thị nhịp tim; chọn *OpenClaw (máy chủ riêng)* và gửi một tin thử.
-5. `docker compose --env-file .env logs -f engine` để xem job chạy. Dòng `pgmq consumer up` nghĩa là job nền (đọc tài liệu, embedding...) đã chạy; `curl .../readyz` phải có `"pgmq":"ok"` (cần áp migration `20261025110000_pgmq_transport.sql` lên Supabase trước). Kiến trúc và vận hành: `docs/JOBS.md`.
+5. `docker compose --env-file .env logs -f engine` để xem job chạy. Dòng `pgmq consumer up` nghĩa là job nền (đọc tài liệu, embedding...) đã chạy; `curl .../readyz` phải có `"pgmq":"ok"` (cần áp migration `20261012102300_pgmq-transport.sql` lên Supabase trước). Kiến trúc và vận hành: `docs/JOBS.md`.
 
 Nếu engine ngừng, ứng dụng tự trả lời bằng bộ xử lý mặc định (không có nhịp tim trong 90 giây), nên khách không phải chờ.
 

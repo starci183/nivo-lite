@@ -43,7 +43,7 @@ The old `executions` and approval cards keep working. They link to work items, s
 
 ## (b) Data model: new additive migration
 
-File: `supabase/migrations/20260930120000_nivo_operating_flow.sql` (additive only; the existing migration is not touched). Push with `supabase db push` to the cloud project.
+File: `supabase/migrations/20260930120000_nivo-operating-flow.sql` (additive only; the existing migration is not touched). Push with `supabase db push` to the cloud project.
 
 ```sql
 -- NIVO operating flow: authority -> inputs -> AI departments -> auto or ask -> governance. Additive only.
@@ -389,7 +389,7 @@ The brand and agent briefs still say "Humans approve everything that leaves the 
 
 | Lane | Owns |
 |---|---|
-| **L1 Core** | `supabase/migrations/20260930120000_nivo_operating_flow.sql`, `src/lib/**` (all, including `actions.ts`, `deepseek.ts`, `seed.ts`, `session.ts`, new `flow-*.ts`, `policy.ts`, `core.ts`, `engine.ts`), `src/i18n/dict/system.ts`, **new** `src/i18n/dict/governance.ts` (shared labels) |
+| **L1 Core** | `supabase/migrations/20260930120000_nivo-operating-flow.sql`, `src/lib/**` (all, including `actions.ts`, `deepseek.ts`, `seed.ts`, `session.ts`, new `flow-*.ts`, `policy.ts`, `core.ts`, `engine.ts`), `src/i18n/dict/system.ts`, **new** `src/i18n/dict/governance.ts` (shared labels) |
 | **L2 Authority + Inbox** | `src/app/(console)/authority/**`, `src/app/(console)/inbox/**`, `src/features/authority/**`, `src/features/inbox/**`, dicts `authority.ts`, `inbox.ts` |
 | **L3 Office** | `src/app/(console)/chat/**`, `src/features/office/**`, dict `office.ts` |
 | **L4 Governance** | `src/app/(console)/dashboard/**`, `src/features/overview/**`, `src/app/(console)/decisions/**`, `src/features/decisions/**`, `src/features/shell/**`, `src/app/(console)/layout.tsx`, dicts `overview.ts`, `shell.ts`, `decisions.ts` |
@@ -503,7 +503,7 @@ Common header for every lane (prepend it):
 > You own the migration and `src/lib/**`, plus dicts `system.ts` and the new `governance.ts`.
 > STEP 0, first and fast: create `src/lib/flow-types.ts` exactly as in FLOW-PLAN §e, `src/i18n/dict/governance.ts` with all keys, and `src/lib/flow-queries.ts` / `src/lib/flow-actions.ts` with the exact signatures, bodies throwing `new Error("not implemented")`. Run tsc so other lanes can compile.
 > Then:
-> (1) `supabase/migrations/20260930120000_nivo_operating_flow.sql` exactly per §b. Additive only; apply locally with `npx supabase migration up` (not reset).
+> (1) `supabase/migrations/20260930120000_nivo-operating-flow.sql` exactly per §b. Additive only; apply locally with `npx supabase migration up` (not reset).
 > (2) `src/lib/policy.ts`: pure `evaluateGate`, `DEFAULT_RULES`, `FLOW_NEXT` per §c. Add a tiny self-check script `scripts/policy-check.mjs` or inline asserts covering all 5 reasons, priorApproval and humanApproved. L1 also owns this script.
 > (3) `src/lib/core.ts`: `normaliseContact` (VN phone → `84…` digits, lowercased email); `dedupeKey(channel, kind, contact|name, external_ref ?? sha1(normalised body)[:16], yyyy-mm-dd)`; `ingest()` (insert into `inbound_events` on conflict do nothing; on duplicate, increment `duplicate_count` and log `core.duplicate_blocked`); `matchLead`; `logDecision`; `logEvidence` (events with `work_item_id`).
 > (4) `src/lib/engine.ts`: `runWork`, `resumeWork` (guarded status transition), `continueChain`, `runQueued`, and the performers exactly as in §c, including the honest labels on simulated delivery. Keep inline LLM calls to at most one per request; queue the rest and drain with `after()` from `next/server`.
@@ -592,7 +592,7 @@ Report: `uat-report.json`, with pass/fail per check, the run tag, and one `.webm
 ---
 
 ### Critical files for implementation
-- D:/starci-lanes/prototype/apps/prototype/supabase/migrations/20260930120000_nivo_operating_flow.sql (new)
+- D:/starci-lanes/prototype/apps/prototype/supabase/migrations/20260930120000_nivo-operating-flow.sql (new)
 - D:/starci-lanes/prototype/apps/prototype/src/lib/actions.ts (wire `captureLead`, `draftExecution`, `decideExecution`, `recordOutcome` and `sendAgentMessage` into the engine; plus new `src/lib/policy.ts`, `core.ts`, `engine.ts`, `flow-types.ts`, `flow-actions.ts`, `flow-queries.ts`, `flow-seed.ts`)
 - D:/starci-lanes/prototype/apps/prototype/src/lib/deepseek.ts
 - D:/starci-lanes/prototype/apps/prototype/src/features/office/index.tsx (optimistic send, exception cards, realtime `work_items`)

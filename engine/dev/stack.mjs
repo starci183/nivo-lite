@@ -1,6 +1,6 @@
 // Local dev stack for the engine and its background jobs.   npm run dev:stack   (from the repo root)
 // The engine runs in watch mode (tsc --watch + node --watch dist/main.js) against the LOCAL Supabase stack, whose Postgres also holds the job
-// queues (pgmq, supabase/migrations/20261025110000_pgmq_transport.sql): nothing else to start.
+// queues (pgmq, supabase/migrations/20261012102300_pgmq-transport.sql): nothing else to start.
 // The engine env is generated from the local env file (secrets.env at the repo root, or NIVO_SECRETS=<path>): the Supabase URL and
 // service role come from NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY (npm run db:start prints them). Nothing is written to disk
 // and no value is printed. ENGINE_WORKER_ENABLED / JOBS_ENABLED from the file (or the shell) are passed through, so a local run can keep

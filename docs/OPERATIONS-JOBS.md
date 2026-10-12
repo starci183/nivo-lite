@@ -11,8 +11,8 @@ retries or archives each message. There is no queue service to run: Supabase hol
 The engine ships through `.github/workflows/engine-deploy.yml` (environment `production`), on push to `main` touching `engine/**`,
 `supabase/migrations/**` or `src/lib/knowledge/pure/**`, or by hand (Actions > Deploy engine > Run workflow).
 
-Order matters once: **apply the migrations to Supabase before the engine deploy** (`20261025100000_job_outbox.sql`, then
-`20261025110000_pgmq_transport.sql`, which enables `pgmq` and creates the queue `knowledge`). An engine without the job RPCs is not ready
+Order matters once: **apply the migrations to Supabase before the engine deploy** (`20261012102200_job-outbox.sql`, then
+`20261012102300_pgmq-transport.sql`, which enables `pgmq` and creates the queue `knowledge`). An engine without the job RPCs is not ready
 (`/readyz` 503) and the deploy rolls back.
 
 What the workflow does, in order:
