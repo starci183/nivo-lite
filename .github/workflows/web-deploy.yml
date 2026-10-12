@@ -1,22 +1,17 @@
-# Builds the Next.js app image on the GitHub runner (the VPS only runs it) and ships it to the NIVO VPS: docker save | gzip | ssh docker load.
-# Netlify keeps deploying the same push as the hot fallback. Triggered by changes to the app, or by hand (Actions > Deploy web).
+# Builds the Next.js app image (fe/apps/web/Dockerfile, context = the repository root) on the GitHub runner (the VPS only runs it) and
+# ships it to the NIVO VPS: docker save | gzip | ssh docker load.
+# Lite cutover: this workflow runs by hand only (Actions > Deploy web > Run workflow), LAST in the order edge -> api -> web
+# (be/docs/runbooks/cutover.md). It has no push trigger, so merging the conversion branch deploys nothing by itself; once the cutover
+# is done a push trigger on the release branch can be restored here.
 # Environment "production":
 #   vars    VPS_HOST, VPS_USER
 #   secrets VPS_SSH_KEY, VPS_KNOWN_HOSTS (as for the engine), WEB_ENV (runtime env file), WEB_NEXT_PUBLIC_SUPABASE_URL,
 #           WEB_NEXT_PUBLIC_SUPABASE_ANON_KEY, WEB_NEXT_PUBLIC_DEMO_LOGIN (build args). All pushed by: node scripts/env-sync.mjs
+#   vars    NEXT_PUBLIC_API_URL (optional, default https://api.nivo.vn): the host the browser calls with the user access token
 # Only ~/nivo-web and the "nivo-web" compose project are touched.
 name: Deploy web
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "fe/apps/web/**"
-      - "package.json"
-      - "package-lock.json"
-      - ".dockerignore"
-      - "web-deploy/**"
-      - ".github/workflows/web-deploy.yml"
   workflow_dispatch:
 
 concurrency:
@@ -46,6 +41,7 @@ jobs:
             NEXT_PUBLIC_SUPABASE_URL=${{ secrets.WEB_NEXT_PUBLIC_SUPABASE_URL }}
             NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.WEB_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
             NEXT_PUBLIC_SITE_URL=https://nivo.vn
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'https://api.nivo.vn' }}
             NEXT_PUBLIC_DEMO_LOGIN=${{ secrets.WEB_NEXT_PUBLIC_DEMO_LOGIN }}
             NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ secrets.WEB_NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
             NEXT_PUBLIC_GOOGLE_PICKER_API_KEY=${{ secrets.WEB_NEXT_PUBLIC_GOOGLE_PICKER_API_KEY }}
@@ -78,7 +74,7 @@ jobs:
         run: |
           ssh vps 'mkdir -p ~/nivo-web'
           docker save "nivo-web:$TAG" | gzip | ssh vps 'gunzip | docker load'
-          scp web-deploy/docker-compose.yml web-deploy/remote-deploy.sh vps:nivo-web/
+          scp deploy/web/docker-compose.yml deploy/web/remote-deploy.sh vps:nivo-web/
           printf '%s\n' "$WEB_ENV" | ssh vps 'umask 077; cat > ~/nivo-web/.env'
 
       - name: Start, health-check, roll back if unhealthy

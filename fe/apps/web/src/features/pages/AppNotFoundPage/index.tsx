@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { APP_ROUTES } from "@/modules/routes"
 import { AppNotFoundPageBase } from "./component"
@@ -15,4 +16,10 @@ export const AppNotFoundPage = async () => {
             }}
         />
     )
+}
+
+/** The document title of the not-found page. */
+export const appNotFoundMetadata = async (): Promise<Metadata> => {
+    const t = await getTranslations("app")
+    return { title: t("notFoundTitle") }
 }

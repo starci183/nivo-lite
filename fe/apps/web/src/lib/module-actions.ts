@@ -17,7 +17,7 @@ import { requireManager } from "./permissions";
 import { getSession } from "./session";
 import type { Outcome } from "./types";
 import { readSessionMessages, readSetupCard, readSetupSession, readSetupState } from "@/modules/db";
-import type { DbOutcome } from "@/modules/db";
+import type { DbOutcome } from "@/modules/db/outcome";
 import { writeApplySetup } from "@/modules/db/module-setup/write-apply-setup";
 import { writeDraftSession } from "@/modules/db/module-setup/write-draft-session";
 import { writeGate } from "@/modules/db/module-setup/write-gate";

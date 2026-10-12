@@ -1,29 +1,21 @@
-import "server-only"
-
-import { apiUrl } from "@/modules/config"
-import { createServerDbClient } from "@/modules/db/server"
-import { dbFailure, dbOk } from "@/modules/db/outcome"
-import type { DbFailureKind, DbOutcome } from "@/modules/db/outcome"
+import { API_TIMEOUT_MS, apiUrl } from "@/modules/config"
+import type { ApiFault, Outcome } from "./outcome"
 
 /** HTTP methods the back end api serves to the web app. */
 type ApiMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
 
 /** One request to the back end api. */
 export interface ApiRequest {
+    readonly path: string
+    /** The signed-in user's access token; the api verifies it, the web app never holds a service key. */
+    readonly token: string
+    /** The reader's locale, sent as the request language so the api answers in the language of the page. */
+    readonly locale: string
     readonly method?: ApiMethod
     /** A JSON body; omitted for reads. */
     readonly body?: unknown
     /** Query-string pairs; undefined values are dropped. */
     readonly query?: Readonly<Record<string, string | number | boolean | undefined>>
-    /** Extra headers such as the active workspace. */
-    readonly headers?: Readonly<Record<string, string>>
-}
-
-const kindOfStatus = (status: number): DbFailureKind => {
-    if (status === 401 || status === 403) return "refused"
-    if (status === 404) return "not-found"
-    if (status === 400 || status === 409 || status === 422) return "invalid"
-    return "unavailable"
 }
 
 const withQuery = (path: string, query: ApiRequest["query"]): string => {
@@ -34,35 +26,59 @@ const withQuery = (path: string, query: ApiRequest["query"]): string => {
     return pairs.length === 0 ? path : `${path}?${new URLSearchParams(pairs).toString()}`
 }
 
-const readBody = async <T>(response: Response): Promise<DbOutcome<T>> => {
-    if (response.status === 204) return dbOk(undefined as T)
+const faultOf = (status: number, body: unknown): ApiFault => {
+    const entries = typeof body === "object" && body !== null ? Object.entries(body) : []
+    const field = (name: string): string | undefined => {
+        const value = entries.find(([key]) => key === name)?.[1]
+        return typeof value === "string" ? value : undefined
+    }
+    const message = field("message")
+    return { code: field("code") ?? String(status), ...(message === undefined ? {} : { message }) }
+}
+
+const outcomeOfStatus = (status: number, body: unknown): Outcome<never> => {
+    const fault = faultOf(status, body)
+    if (status === 401 || status === 403) return { kind: "refused", status, fault }
+    if (status === 404) return { kind: "not-found", fault }
+    if (status === 400 || status === 409 || status === 422) return { kind: "invalid", issues: [], fault }
+    return { kind: "unavailable", fault, retryable: status >= 500 }
+}
+
+/** The failure body the back end answers (`{ code, kind, message, params }`); an unreadable body yields no fields. */
+const failureBodyOf = async (response: Response): Promise<unknown> => {
+    const text = await response.text()
     try {
-        return dbOk((await response.json()) as T)
+        return JSON.parse(text)
     } catch {
-        return dbFailure("unavailable", "body")
+        return text
     }
 }
 
-/** Calls the back end api with the signed-in user's access token; the api verifies it, the web app never holds a service key. */
-export const apiRequest = async <T>(path: string, request: ApiRequest = {}): Promise<DbOutcome<T>> => {
-    const client = await createServerDbClient()
-    const session = await client.auth.getSession()
-    const token = session.data.session?.access_token
-    if (token === undefined) return dbFailure("refused", "no-session")
+/**
+ * The one `fetch` of the web app. A reader or a client hook passes the decoder of its response text (empty for a 204), so the shape is
+ * checked where it enters instead of being asserted; the token is an argument and never kept here.
+ */
+export const request = async <T>(
+    input: ApiRequest,
+    decode: (body: string) => Outcome<T>,
+    signal?: AbortSignal,
+): Promise<Outcome<T>> => {
+    const timeout = AbortSignal.timeout(API_TIMEOUT_MS)
     try {
-        const response = await fetch(`${apiUrl()}${withQuery(path, request.query)}`, {
-            method: request.method ?? "GET",
+        const response = await fetch(`${apiUrl()}${withQuery(input.path, input.query)}`, {
+            method: input.method ?? "GET",
             cache: "no-store",
+            signal: signal === undefined ? timeout : AbortSignal.any([signal, timeout]),
             headers: {
-                ...request.headers,
-                authorization: `Bearer ${token}`,
-                ...(request.body === undefined ? {} : { "content-type": "application/json" }),
+                "accept-language": input.locale,
+                authorization: `Bearer ${input.token}`,
+                ...(input.body === undefined ? {} : { "content-type": "application/json" }),
             },
-            ...(request.body === undefined ? {} : { body: JSON.stringify(request.body) }),
+            ...(input.body === undefined ? {} : { body: JSON.stringify(input.body) }),
         })
-        if (!response.ok) return dbFailure(kindOfStatus(response.status), String(response.status))
-        return await readBody<T>(response)
+        if (!response.ok) return outcomeOfStatus(response.status, await failureBodyOf(response))
+        return decode(await response.text())
     } catch {
-        return dbFailure("unavailable", "transport")
+        return { kind: "unavailable", fault: { code: "transport" }, retryable: true }
     }
 }
