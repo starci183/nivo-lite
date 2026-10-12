@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import { Alert, Badge, Button, ComboBox, Drawer, FileDropzone, Input, List, ListItem, ListRow, SegmentedControl, Select, SurfaceListCard, Text, Textarea } from "@starci/grammar/common"
+import { useEffect, useRef, useState, type ClipboardEvent } from "react"
+import { Alert, Badge, Button, ButtonGroup, ComboBox, Disclosure, Drawer, FileDropzone, Input, List, ListItem, ListRow, SegmentedControl, Select, SurfaceListCard, Tabs, Text, Textarea } from "@starci/grammar/common"
 import { useT } from "@/i18n/client"
 import { knowledge } from "@/i18n/dict/knowledge"
 import { CreditsAlert } from "@/features/brain/CreditsAlert"
@@ -14,7 +14,7 @@ import type { Visibility } from "@/lib/knowledge/shared"
 import { MODULE_KEYS, type ModuleKey } from "@/lib/modules-shared"
 import { driveReturn, savePending, takePending } from "./driveReturn"
 import { pickerConfigured, pickFromDrive, type PickedDoc } from "./picker"
-import { FAQ_ROW_CLASS, FORM_GRID_CLASS, LIST_CLASS, ROW_WRAP_CLASS, STACK_CLASS } from "./classNames"
+import { FAQ_ROW_CLASS, LINK_FIELD_CLASS, LINK_ROW_CLASS, LIST_CLASS, OPTIONS_TITLE_CLASS, ROW_WRAP_CLASS, STACK_CLASS } from "./classNames"
 
 type Mode = "files" | "write" | "faq"
 type ItemStatus = "waiting" | "indexing" | "ready" | "failed"
@@ -70,6 +70,14 @@ const sizeLabel = (bytes: number): string => (bytes >= 1_000_000 ? `${(bytes / 1
 let counter = 0
 const nextId = (): string => `item-${Date.now()}-${counter++}`
 
+/** One input of the links list. */
+type LinkRow = { readonly id: string; readonly value: string }
+const newRow = (value = ""): LinkRow => ({ id: nextId(), value })
+const rowsFrom = (text: string): Array<LinkRow> => { const urls = parseLinks(text); return urls.length > 0 ? urls.map((u) => newRow(u)) : [newRow()] }
+/** Pasted text with newlines, spaces or commas between the links -> distinct links. */
+const splitUrls = (text: string): Array<string> => parseLinks(text.trim().split(/[\s,]+/).join("\n"))
+const linkInputId = (id: string): string => `k-link-${id}`
+
 /**
  * "Thêm tài liệu": add many files and links in one go (default tab), or write a note / Q&A pair.
  * Visibility, module, topic and tags are chosen once for the whole batch. Items are processed two at a time.
@@ -78,7 +86,11 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
   const t = useT(knowledge)
   const [mode, setMode] = useState<Mode>(preset ? "write" : "files")
   const [items, setItems] = useState<ReadonlyArray<Item>>([])
-  const [links, setLinks] = useState("")
+  const [rows, setRows] = useState<ReadonlyArray<LinkRow>>(() => [newRow()])
+  const [rowErrors, setRowErrors] = useState<Record<string, string>>({})
+  const [focusRow, setFocusRow] = useState<string | null>(null)
+  /** Set once the primary was pressed with nothing to add: the empty inputs then say what is missing. */
+  const [tried, setTried] = useState(false)
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
   const [pairs, setPairs] = useState([{ q: "", a: "" }])
@@ -99,6 +111,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
   const [picking, setPicking] = useState(false)
   const showPicker = pickerConfigured()
   grantRef.current = grant
+  const links = rows.map((r) => r.value).join("\n")
 
   const loadGrant = async (): Promise<Grant | null> => {
     const r = await driveGrantStatus()
@@ -114,7 +127,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
     const pending = takePending()
     if (back) setDriveAnswer({ ok: back.result === "ok", reason: back.reason })
     if (pending) {
-      setLinks(pending.links); setTopic((cur) => cur || pending.topic); setTags(pending.tags)
+      setRows(rowsFrom(pending.links)); setTopic((cur) => cur || pending.topic); setTags(pending.tags)
       setVisibility(pending.visibility); setModule(MODULE_KEYS.find((k) => k === pending.module) ?? "all")
     }
   }, [])
@@ -124,6 +137,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
     if (preset && preset.nonce !== seenPreset.current) {
       seenPreset.current = preset.nonce
       setMode("write")
+      setTried(false)
       setTopic(preset.topic)
       setVisibility(preset.visibility ?? "internal")
     }
@@ -153,6 +167,49 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
     if (!e || e.status === "queued" || e.status === "running") return t("extReading")
     if (e.status === "done") return e.factsProposed > 0 ? t("extDone", { n: e.factsProposed }) : t("extNone")
     return e.status === "blocked_credits" ? t("extBlocked") : t("extFailed")
+  }
+
+  // "+ Add link" focuses the row it added (the grammar Input forwards no ref, so it is found by its id).
+  useEffect(() => {
+    if (focusRow === null) return
+    document.getElementById(linkInputId(focusRow))?.focus()
+    setFocusRow(null)
+  }, [focusRow])
+
+  /** Why a link cannot be added, or null: not a link, or a Drive folder without the Drive grant. */
+  const linkProblem = (value: string): string | null => {
+    const v = value.trim()
+    if (!v) return null
+    const target = resolveLink(v)
+    if (target.kind === "invalid") return t("errBadLink")
+    if (target.kind !== "drive-folder") return null
+    const g = grantRef.current
+    if (!g || g.state === "connected") return null
+    return t(g.state === "lost" ? "errGrantLost" : "errNeedGrant")
+  }
+  const dropError = (id: string) => setRowErrors((cur) => { const { [id]: _gone, ...rest } = cur; return rest })
+  const validateRow = (id: string) => {
+    const problem = linkProblem(rows.find((r) => r.id === id)?.value ?? "")
+    if (problem) setRowErrors((cur) => ({ ...cur, [id]: problem }))
+    else dropError(id)
+  }
+  const setRowValue = (id: string, value: string) => { setRows((cur) => cur.map((r) => (r.id === id ? { ...r, value } : r))); dropError(id) }
+  const addRow = () => { const row = newRow(); setRows((cur) => [...cur, row]); setFocusRow(row.id) }
+  const removeRow = (id: string) => { setRows((cur) => (cur.length > 1 ? cur.filter((r) => r.id !== id) : [newRow()])); dropError(id) }
+  /** Several links pasted into one row: one row per link (the row itself is replaced when it was empty). */
+  const pasteRow = (id: string, e: ClipboardEvent<HTMLElement>) => {
+    const urls = splitUrls(e.clipboardData.getData("text"))
+    if (urls.length < 2) return
+    e.preventDefault()
+    setRows((cur) => {
+      const i = cur.findIndex((r) => r.id === id)
+      if (i < 0) return cur
+      const others = new Set(cur.filter((r) => r.id !== id).map((r) => r.value.trim()))
+      const added = urls.filter((u) => !others.has(u)).map((u) => newRow(u))
+      const here = cur[i] as LinkRow
+      return [...cur.slice(0, i), ...(here.value.trim() ? [here] : []), ...added, ...cur.slice(i + 1)]
+    })
+    dropError(id)
   }
 
   const patch = (id: string, change: Partial<Item>) => setItems((cur) => cur.map((x) => (x.id === id ? { ...x, ...change } : x)))
@@ -195,7 +252,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
   const queueLinks = async (): Promise<void> => {
     const urls = parseLinks(links)
     if (urls.length === 0) return
-    setLinks("")
+    setRows([newRow()]); setRowErrors({})
     setReading(true)
     const known = new Set(items.filter((x) => x.kind === "link").map((x) => x.name))
     const fresh = await expand(urls.filter((u) => !known.has(u)))
@@ -310,7 +367,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
     // Links still sitting in the textarea join the queue first (a Drive folder expands into its files).
     const typed = parseLinks(links).filter((u) => !items.some((x) => x.kind === "link" && x.name === u))
     const typedItems = typed.length > 0 ? await expand(typed) : []
-    if (typedItems.length > 0) { setItems((cur) => [...cur, ...typedItems]); setLinks("") }
+    if (typedItems.length > 0) { setItems((cur) => [...cur, ...typedItems]); setRows([newRow()]); setRowErrors({}) }
     // A folder row that failed earlier (no grant yet, ...) is expanded again now.
     const queue: Array<Item> = []
     for (const x of items.filter(canRetry)) {
@@ -350,7 +407,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
   }
 
   const reset = () => {
-    setItems([]); setLinks(""); setTitle(""); setContent(""); setPairs([{ q: "", a: "" }]); setError(null); setDoneCount(0)
+    setItems([]); setRows([newRow()]); setRowErrors({}); setTried(false); setTitle(""); setContent(""); setPairs([{ q: "", a: "" }]); setError(null); setDoneCount(0)
   }
 
   const close = () => {
@@ -367,8 +424,50 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
     ? t(driveAnswer.reason === "denied" ? "driveErrDenied" : driveAnswer.reason === "scope" ? "driveErrScope" : driveAnswer.reason === "unavailable" ? "driveErrUnavailable" : "driveErrGeneric")
     : null
   const noteBody = mode === "faq" ? faqToText(pairs) : content
-  const canSubmit = mode === "files" ? pendingCount > 0 : title.trim().length > 0 && noteBody.trim().length > 0
-  const submitLabel = busy ? t("saving") : mode === "files" ? t(hasFailed ? "submitRetry" : "submitFiles", { count: pendingCount }) : t("save")
+  const noDocs = tried && mode === "files" && pendingCount === 0
+  const noTitle = tried && mode !== "files" && title.trim().length === 0
+  const noContent = tried && mode !== "files" && noteBody.trim().length === 0
+  const submitLabel = busy ? t("saving") : mode === "files" ? (pendingCount > 0 ? t(hasFailed ? "submitRetry" : "submitFiles", { count: pendingCount }) : t("submitEmpty")) : t("save")
+  /** Pressed with nothing to add: no disabled button, the empty input says what is missing. */
+  const submit = () => {
+    if (mode === "files" ? pendingCount === 0 : title.trim().length === 0 || noteBody.trim().length === 0) { setTried(true); return }
+    setTried(false)
+    void (mode === "files" ? runBatch() : runNote())
+  }
+  const pickMode = (key: string) => { if (busy) return; setMode(key === "write" ? "write" : key === "faq" ? "faq" : "files"); setTried(false) }
+
+  const optionsSummary = [visibility === "public" ? t("visPublicShort") : t("visInternalShort"), module === "all" ? t("moduleAll") : t(`module_${module}`), topic.trim() || null].filter(Boolean).join(" · ")
+
+  const options = (
+    <Disclosure
+      headingLevel={3}
+      title={
+        <span className={OPTIONS_TITLE_CLASS}>
+          <Text as="span" weight="medium">{t("optionsTitle")}</Text>
+          <Text as="span" size="sm" tone="muted">{optionsSummary}</Text>
+        </span>
+      }
+    >
+      <div className={STACK_CLASS}>
+        <ComboBox
+          id="k-topic" name="topic" label={t("fieldTopic")} description={t("fieldTopicHint")} variant="secondary" allowsCustomValue menuTrigger="focus"
+          options={topics.map((x) => ({ id: x, label: x }))} inputValue={topic} isDisabled={busy}
+          onInputChange={(v) => setTopic(v.slice(0, 80))} onValueChange={(v) => { if (v !== null) setTopic(v) }}
+        />
+        <Input id="k-tags" name="tags" label={t("fieldTags")} hint={t("fieldTagsHint")} variant="secondary" isDisabled={busy} value={tags} onValueChange={setTags} />
+        <SegmentedControl
+          label={t("fieldVisibility")} description={t(visibility === "public" ? "visPublicDesc" : "visInternalDesc")} width="fill" isDisabled={busy} value={visibility}
+          options={[{ value: "internal", label: t("visInternalShort") }, { value: "public", label: t("visPublicShort") }]}
+          onValueChange={(v) => setVisibility(v === "public" ? "public" : "internal")}
+        />
+        <Select
+          label={t("fieldModule")} variant="secondary" value={module} isDisabled={busy}
+          options={[{ id: "all", label: t("moduleAll") }, ...MODULE_KEYS.map((k) => ({ id: k, label: t(`module_${k}`) }))]}
+          onValueChange={(v) => setModule(MODULE_KEYS.find((k) => k === v) ?? "all")}
+        />
+      </div>
+    </Disclosure>
+  )
 
   return (
     <Drawer
@@ -381,20 +480,18 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
       isDismissable={!busy && !picking}
       isKeyboardDismissDisabled={busy || picking}
       footer={(closeDrawer) => (
-        <>
-          <Button variant="primary" isPending={busy} isDisabled={!canSubmit} onPress={() => { void (mode === "files" ? runBatch() : runNote()) }}>{submitLabel}</Button>
+        <ButtonGroup label={t("addTitle")}>
           <Button variant="ghost" isDisabled={busy} onPress={() => { closeDrawer() }}>{t("addCancel")}</Button>
-        </>
+          <Button variant="primary" isPending={busy} isDisabled={busy} onPress={submit}>{submitLabel}</Button>
+        </ButtonGroup>
       )}
     >
       <div className={STACK_CLASS}>
-        <SegmentedControl
+        <Tabs
           label={t("addTitle")}
-          isLabelHidden
-          isDisabled={busy}
-          value={mode}
-          options={[{ value: "files", label: t("tabFiles") }, { value: "write", label: t("tabWrite") }, { value: "faq", label: t("tabFaq") }]}
-          onValueChange={(v) => setMode(v === "write" ? "write" : v === "faq" ? "faq" : "files")}
+          selectedKey={mode}
+          items={[{ id: "files", label: t("tabFiles") }, { id: "write", label: t("tabWrite") }, { id: "faq", label: t("tabFaq") }]}
+          onSelect={pickMode}
         />
 
         {mode === "files" ? (
@@ -402,13 +499,32 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
             <FileDropzone
               id="k-files" name="files" label={t("filesDrop")} isLabelHidden prompt={t("filesDrop")} description={t("filesHint")}
               multiple hideFileList accept={ACCEPT} isDisabled={busy} onFilesChange={addFiles}
+              {...(noDocs ? { isInvalid: true, errorMessage: t("hintNoDocs") } : {})}
             />
-            <Textarea id="k-links" name="links" label={t("linksField")} description={t("linksHint")} variant="secondary" rows={4} value={links} isDisabled={busy} onValueChange={setLinks} />
-            <div className={ROW_WRAP_CLASS}>
+            <div className={STACK_CLASS}>
+              <Text weight="medium">{t("linksField")}</Text>
+              <Text size="sm" tone="muted">{t("linksHint")}</Text>
+              {rows.map((r, i) => (
+                <div key={r.id} className={LINK_ROW_CLASS}>
+                  <div className={LINK_FIELD_CLASS} onBlur={() => validateRow(r.id)} onPaste={(e) => pasteRow(r.id, e)}>
+                    <Input
+                      id={linkInputId(r.id)} name={`link-${i}`} label={t("linkRowN", { n: i + 1 })} placeholder={t("linkPlaceholder")} variant="secondary"
+                      value={r.value} isDisabled={busy} onValueChange={(v) => setRowValue(r.id, v)}
+                      {...(rowErrors[r.id] ? { isError: true, errorMessage: rowErrors[r.id] } : {})}
+                    />
+                  </div>
+                  <Button variant="ghost" size="sm" isDisabled={busy} onPress={() => removeRow(r.id)}>{t("linkRemove")}</Button>
+                </div>
+              ))}
+              <div className={ROW_WRAP_CLASS}>
+                <Button variant="secondary" size="sm" isDisabled={busy} onPress={addRow}>{t("linkAdd")}</Button>
+              </div>
+            </div>
+            <ButtonGroup label={t("linksField")}>
               <Button variant="secondary" size="sm" isDisabled={busy || reading || parseLinks(links).length === 0} onPress={() => { void queueLinks() }}>{t("linksQueue")}</Button>
               {showPicker ? <Button variant="secondary" size="sm" isPending={picking} isDisabled={busy || reading} onPress={() => { void pickDrive() }}>{t("pickerButton")}</Button> : null}
-              {reading ? <Text size="sm" tone="muted">{t("folderReading")}</Text> : null}
-            </div>
+            </ButtonGroup>
+            {reading ? <Text size="sm" tone="muted">{t("folderReading")}</Text> : null}
             {showPicker ? <Text size="sm" tone="muted">{t("pickerHint")}</Text> : null}
             {grant?.state === "connected" ? (
               <div className={ROW_WRAP_CLASS}>
@@ -443,9 +559,9 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
           </div>
         ) : (
           <div className={STACK_CLASS}>
-            <Input id="k-title" name="title" label={t("fieldTitle")} hint={t("fieldTitleHint")} variant="secondary" isRequired isDisabled={busy} value={title} onValueChange={setTitle} />
+            <Input id="k-title" name="title" label={t("fieldTitle")} hint={t("fieldTitleHint")} variant="secondary" isRequired isDisabled={busy} value={title} onValueChange={setTitle} {...(noTitle ? { isError: true, errorMessage: t("hintNeedTitle") } : {})} />
             {mode === "write" ? (
-              <Textarea id="k-content" name="content" label={t("fieldContent")} description={t("fieldContentHint")} variant="secondary" rows={9} value={content} isDisabled={busy} onValueChange={setContent} />
+              <Textarea id="k-content" name="content" label={t("fieldContent")} description={t("fieldContentHint")} variant="secondary" rows={9} value={content} isDisabled={busy} onValueChange={setContent} {...(noContent ? { isInvalid: true, errorMessage: t("hintNeedContent") } : {})} />
             ) : (
               <div className={STACK_CLASS}>
                 <List label={t("tabFaq")} className={LIST_CLASS}>
@@ -463,24 +579,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
           </div>
         )}
 
-        <div className={FORM_GRID_CLASS}>
-          <ComboBox
-            id="k-topic" name="topic" label={t("fieldTopic")} description={t("fieldTopicHint")} variant="secondary" allowsCustomValue menuTrigger="focus"
-            options={topics.map((x) => ({ id: x, label: x }))} inputValue={topic} isDisabled={busy}
-            onInputChange={(v) => setTopic(v.slice(0, 80))} onValueChange={(v) => { if (v !== null) setTopic(v) }}
-          />
-          <Input id="k-tags" name="tags" label={t("fieldTags")} variant="secondary" isDisabled={busy} value={tags} onValueChange={setTags} />
-          <Select
-            label={t("fieldVisibility")} variant="secondary" value={visibility} isDisabled={busy}
-            options={[{ id: "internal", label: t("visInternal") }, { id: "public", label: t("visPublic") }]}
-            onValueChange={(v) => setVisibility(v === "public" ? "public" : "internal")}
-          />
-          <Select
-            label={t("fieldModule")} variant="secondary" value={module} isDisabled={busy}
-            options={[{ id: "all", label: t("moduleAll") }, ...MODULE_KEYS.map((k) => ({ id: k, label: t(`module_${k}`) }))]}
-            onValueChange={(v) => setModule(MODULE_KEYS.find((k) => k === v) ?? "all")}
-          />
-        </div>
+        {options}
 
         {error !== null ? <Alert title={t("saveFailed")} description={error} tone="negative" /> : null}
       </div>

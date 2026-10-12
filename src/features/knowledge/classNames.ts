@@ -18,7 +18,11 @@ export const ITEM_CLASS = cn("flex", "min-w-0", "flex-wrap", "items-center", "ju
 /** One source row inside the Grammar list card: BOUNDARY-2 case-1 (its own trailing seam, the last drops it) with the PADDING-4 inline / PADDING-3 block band inset. */
 export const SOURCE_ROW_CLASS = cn("flex", "min-w-0", "flex-wrap", "items-center", "justify-between", "gap-x-4", "gap-y-2", "border-b", "border-separator", "px-4", "py-3", "last:border-b-0")
 export const ITEM_MAIN_CLASS = cn("flex", "min-w-0", "flex-1", "basis-64", "flex-col", "gap-1")
-export const FORM_GRID_CLASS = cn("grid", "grid-cols-1", "gap-4", "md:grid-cols-2")
+/** One link row: the field takes the width, its remove button sits at the end. */
+export const LINK_ROW_CLASS = cn("flex", "min-w-0", "items-start", "gap-2")
+export const LINK_FIELD_CLASS = cn("min-w-0", "flex-1")
+/** Disclosure trigger copy: the title, then the one-line summary under it. */
+export const OPTIONS_TITLE_CLASS = cn("flex", "min-w-0", "flex-col", "gap-1", "text-left")
 /** One question-and-answer pair row (GAP-3 between its fields). */
 export const FAQ_ROW_CLASS = cn("grid", "grid-cols-1", "gap-3", "py-3", "first:pt-0", "last:pb-0")
 export const SUGGEST_ITEM_CLASS = cn("flex", "min-w-0", "flex-col", "gap-2", "py-3", "first:pt-0", "last:pb-0")
