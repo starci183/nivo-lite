@@ -1,0 +1,146 @@
+import { Injectable } from "@nestjs/common"
+import type { EntityManager } from "typeorm"
+import { WorkspaceMembersService } from "@modules/domain/workspace-members"
+import { InjectClock } from "@modules/platform/clock"
+import type { Clock } from "@modules/platform/clock"
+import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectMessageCatalog } from "@modules/platform/i18n"
+import type { MessageCatalog } from "@modules/platform/i18n"
+import type {
+    NewResponsibility,
+    ResponsibilityListing,
+    ResponsibilityRecord,
+    ResponsibilityStatus,
+    WorkContext,
+} from "./decisions.contracts"
+import { InjectAgentDirectory } from "./decisions.decorators"
+import type { AgentDirectory } from "./decisions.port"
+import { DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
+import { EvidenceService } from "./evidence.service"
+import type {
+    AgentNameRow,
+    LeadNameRow,
+    ResponsibilityListingRow,
+    ResponsibilityRow,
+} from "./persistence/responsibilities.rows"
+import {
+    FIND_AGENT_NAME,
+    FIND_LEAD_NAME,
+    FIND_OPEN_RESPONSIBILITY,
+    INSERT_RESPONSIBILITY,
+    LIST_RESPONSIBILITIES,
+    UPDATE_RESPONSIBILITY_STATUS,
+} from "./persistence/responsibilities.sql"
+
+const DAY_MS = 86_400_000
+
+@Injectable()
+/** What somebody owes a customer: the follow-up every new customer gets and the board the Responsibilities page shows. */
+export class ResponsibilitiesService {
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        @InjectClock() private readonly clock: Clock,
+        @InjectMessageCatalog() private readonly catalog: MessageCatalog,
+        @InjectAgentDirectory() private readonly agents: AgentDirectory,
+        private readonly members: WorkspaceMembersService,
+        private readonly evidence: EvidenceService,
+    ) {}
+
+    /**
+     * The customer's open responsibility, created when there is none: owned by the workspace's Sales agent, or by the actor
+     * when there is no agent, due in a day.
+     */
+    async ensureFor(ctx: WorkContext, leadId: string): Promise<ResponsibilityRecord> {
+        const open = (
+            await this.entityManager.query<Array<ResponsibilityRow>>(FIND_OPEN_RESPONSIBILITY, [
+                ctx.workspaceId,
+                leadId,
+            ])
+        )[0]
+        if (open !== undefined) return open
+        const lead = (await this.entityManager.query<Array<LeadNameRow>>(FIND_LEAD_NAME, [ctx.workspaceId, leadId]))[0]
+        if (lead === undefined) throw new DecisionsError({ code: DecisionsErrorCode.NotFound })
+        const sales = await this.agents.agentOfDepartment(ctx.workspaceId, "sales", null)
+        return this.insert(
+            ctx.workspaceId,
+            {
+                lead_id: leadId,
+                title: this.catalog.get("responsibility.title", { name: lead.contact_name }, ctx.locale),
+                owner: sales?.id ?? "human",
+                next_action: this.catalog.get("responsibility.next", {}, ctx.locale),
+                due_at: new Date(this.clock.now().getTime() + DAY_MS).toISOString(),
+            },
+            sales?.name ?? ctx.actor,
+        )
+    }
+
+    /** The workspace's responsibilities with their customer, open ones first. */
+    async list(principalId: string, workspaceId: string): Promise<ReadonlyArray<ResponsibilityListing>> {
+        await this.members.require(principalId, workspaceId)
+        return this.entityManager.query<Array<ResponsibilityListingRow>>(LIST_RESPONSIBILITIES, [workspaceId])
+    }
+
+    /** Adds a responsibility for a customer of the workspace, owned by the caller or by one of the workspace's agents. */
+    async create(principalId: string, workspaceId: string, input: NewResponsibility): Promise<ResponsibilityRecord> {
+        const member = await this.members.require(principalId, workspaceId)
+        const agent = input.owner === "human" ? null : await this.agentOf(workspaceId, input.owner)
+        const created = await this.insert(workspaceId, input, agent?.name ?? member.displayName)
+        await this.evidence.log(
+            { workspaceId, actor: member.displayName, locale: "en" },
+            {
+                lead_id: input.lead_id,
+                kind: "responsibility.assigned",
+                actor: member.displayName,
+                summary: `${created.owner_name}: ${created.next_action}`,
+            },
+        )
+        return created
+    }
+
+    /** Moves one of the workspace's responsibilities to a status. */
+    async updateStatus(
+        principalId: string,
+        workspaceId: string,
+        responsibilityId: string,
+        status: ResponsibilityStatus,
+    ): Promise<ResponsibilityRecord> {
+        await this.members.require(principalId, workspaceId)
+        const row = (
+            await this.entityManager.query<Array<ResponsibilityRow>>(UPDATE_RESPONSIBILITY_STATUS, [
+                workspaceId,
+                responsibilityId,
+                status,
+            ])
+        )[0]
+        if (row === undefined) throw new DecisionsError({ code: DecisionsErrorCode.NotFound })
+        return row
+    }
+
+    private async agentOf(workspaceId: string, agentId: string): Promise<AgentNameRow> {
+        const agent = (await this.entityManager.query<Array<AgentNameRow>>(FIND_AGENT_NAME, [workspaceId, agentId]))[0]
+        if (agent === undefined) throw new DecisionsError({ code: DecisionsErrorCode.NotFound })
+        return agent
+    }
+
+    private async insert(
+        workspaceId: string,
+        input: NewResponsibility,
+        ownerName: string,
+    ): Promise<ResponsibilityRecord> {
+        const ownerAgentId = input.owner === "human" ? null : input.owner
+        const row = (
+            await this.entityManager.query<Array<ResponsibilityRow>>(INSERT_RESPONSIBILITY, [
+                workspaceId,
+                input.lead_id,
+                input.title,
+                ownerAgentId === null ? "human" : "agent",
+                ownerAgentId,
+                ownerName,
+                input.next_action,
+                input.due_at,
+            ])
+        )[0]
+        if (row === undefined) throw new DecisionsError({ code: DecisionsErrorCode.NotFound })
+        return row
+    }
+}
