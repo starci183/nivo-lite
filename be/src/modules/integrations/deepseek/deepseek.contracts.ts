@@ -254,3 +254,61 @@ export interface CallMeta {
     /** The usage module. */
     readonly module: string
 }
+
+/** One command of the agent the owner's message may map to. */
+export interface CommandOption {
+    /** The command key. */
+    readonly command: string
+    /** What it does, in both languages. */
+    readonly description: { readonly vi: string; readonly en: string }
+    /** The kind of record it is about. */
+    readonly subjectType: string
+    /** The payload keys it needs. */
+    readonly requiredFields: ReadonlyArray<string>
+}
+
+/** A customer the message names; the only customer ids the model may use. */
+export interface CustomerReference {
+    /** The customer id. */
+    readonly id: string
+    /** The customer's name. */
+    readonly name: string
+}
+
+/** An order the message names; the only order ids the model may use. */
+export interface OrderReference {
+    /** The order id. */
+    readonly id: string
+    /** The order number as people write it. */
+    readonly order_no: string
+    /** The customer it belongs to, or null. */
+    readonly lead_id: string | null
+}
+
+/** What the command proposal prompt is built from. */
+export interface CommandProposalInput {
+    /** The display name of the agent the message is for. */
+    readonly agentName: string
+    /** The commands that agent accepts. */
+    readonly options: ReadonlyArray<CommandOption>
+    /** The customers the message names. */
+    readonly customers: ReadonlyArray<CustomerReference>
+    /** The orders the message names. */
+    readonly orders: ReadonlyArray<OrderReference>
+    /** The owner's message. */
+    readonly text: string
+}
+
+/** The model's raw reading of an owner's message; nothing in it is validated yet. */
+export interface ProposedCommand {
+    /** `command` when the owner asks the agent to do something, `question` for a question or small talk. */
+    readonly intent: "command" | "question"
+    /** The command key, or null when nothing maps. */
+    readonly command: string | null
+    /** The record the command is about, or null. */
+    readonly subject_id: string | null
+    /** The customer, or null. */
+    readonly lead_id: string | null
+    /** The other required keys taken from the message. */
+    readonly fields: Readonly<Record<string, string | number>>
+}

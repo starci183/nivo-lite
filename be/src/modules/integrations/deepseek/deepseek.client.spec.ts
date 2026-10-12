@@ -214,6 +214,30 @@ describe("DeepseekClient", () => {
         })
     })
 
+    describe("command proposal", () => {
+        it("reads an owner message into a command under its own usage kind", async () => {
+            const { client, generator } = await build()
+            generator.generate.mockResolvedValue('{"intent":"command","command":"issue_receipt","subject_id":"o-1"}')
+
+            await expect(
+                client.proposeCommands(scope, {
+                    agentName: "Accounting",
+                    options: [],
+                    customers: [],
+                    orders: [],
+                    text: "go",
+                }),
+            ).resolves.toMatchObject({ intent: "command", command: "issue_receipt", subject_id: "o-1", fields: {} })
+
+            expect(generator.generate.mock.calls[0]?.[0]).toMatchObject({
+                purpose: "office:office_command",
+                json: true,
+                kind: "office_command",
+                module: "office",
+            })
+        })
+    })
+
     describe("json parsing", () => {
         it("reads a fenced answer and an object inside prose", async () => {
             const { client, generator } = await build()

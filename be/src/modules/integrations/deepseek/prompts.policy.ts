@@ -1,5 +1,5 @@
 import type { Locale } from "@modules/platform/i18n"
-import type { AgentInput, AuthorityInput, ChatMessage, ChatTurn } from "./deepseek.contracts"
+import type { AgentInput, AuthorityInput, ChatMessage, ChatTurn, CommandProposalInput } from "./deepseek.contracts"
 
 /** The authority or nothing. */
 export type OptionalAuthorityInput = AuthorityInput | null
@@ -37,3 +37,18 @@ Approval rule: ${agent.approval_rule === undefined || agent.approval_rule === ""
 /** A chat as prompt messages: the customer speaks as the user, the agent as the assistant. */
 export const toMessages = (turns: ReadonlyArray<ChatTurn>): ReadonlyArray<ChatMessage> =>
     turns.map((turn) => ({ role: turn.role === "user" ? "user" : "assistant", content: turn.body }))
+
+/** The prompt that reads one owner message into at most one command of one agent; the model only picks, the caller validates. */
+export const commandProposalPrompt = (input: CommandProposalInput): ReadonlyArray<ChatMessage> => [
+    {
+        role: "system",
+        content: `You turn ONE message from a business owner into at most ONE command for the agent "${input.agentName}". Pick ONLY from this list (command key, what it does, the keys it needs):
+${input.options.map((option) => `- ${option.command}: ${option.description.en} / ${option.description.vi}; subject=${option.subjectType}; needs ${option.requiredFields.join(", ") || "nothing"}`).join("\n")}
+References the message names (the ONLY ids you may use):
+customers: ${JSON.stringify(input.customers.map(({ id, name }) => ({ id, name })))}
+orders: ${JSON.stringify(input.orders.map(({ id, order_no, lead_id }) => ({ id, order_no, lead_id })))}
+Return ONLY JSON {"intent": "command"|"question", "command": string|null, "subject_id": string|null, "lead_id": string|null, "fields": {"<key>": string|number}}.
+"intent" is "question" when the owner asks something, reports something or makes small talk rather than telling the agent to DO a task; then "command" is null. "command" is also null when the owner asks for a task the agent does not accept. Never invent an id: use null when the reference is not in the lists above. "fields" holds ONLY the needed keys other than subject_id and lead_id, taken from the message.`,
+    },
+    { role: "user", content: input.text },
+]

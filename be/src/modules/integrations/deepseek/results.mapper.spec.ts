@@ -3,6 +3,7 @@ import {
     classificationOf,
     designedModuleOf,
     extractedOrderOf,
+    proposedCommandOf,
     responsibilityOf,
 } from "./results.mapper"
 
@@ -135,6 +136,37 @@ describe("results mapper", () => {
                 understood: true,
             })
             expect(authorityChangeOf({ understood: false }).understood).toBe(false)
+        })
+    })
+
+    describe("proposedCommandOf", () => {
+        it("reads a command with trimmed ids and only text or numeric fields", () => {
+            expect(
+                proposedCommandOf({
+                    intent: "command",
+                    command: " issue_receipt ",
+                    subject_id: "o-1",
+                    lead_id: "  ",
+                    fields: { amount: 5, note: " hi ", blank: " ", bad: Number.NaN, nested: { a: 1 } },
+                }),
+            ).toEqual({
+                intent: "command",
+                command: "issue_receipt",
+                subject_id: "o-1",
+                lead_id: null,
+                fields: { amount: 5, note: "hi" },
+            })
+        })
+
+        it("reads a question and defaults an empty answer to an empty command", () => {
+            expect(proposedCommandOf({ intent: "question", command: "x" }).intent).toBe("question")
+            expect(proposedCommandOf({})).toEqual({
+                intent: "command",
+                command: null,
+                subject_id: null,
+                lead_id: null,
+                fields: {},
+            })
         })
     })
 })

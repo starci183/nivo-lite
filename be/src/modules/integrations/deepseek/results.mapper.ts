@@ -5,6 +5,7 @@ import type {
     Classification,
     DesignedModule,
     ExtractedOrder,
+    ProposedCommand,
     ProposedResponsibility,
 } from "./deepseek.contracts"
 import {
@@ -89,4 +90,26 @@ export const authorityChangeOf = (record: JsonRecord): AuthorityChange => ({
         .map(ruleChangeOf)
         .filter((rule) => rule.action !== ""),
     understood: record["understood"] !== false,
+})
+
+const scalarFields = (record: JsonRecord): Readonly<Record<string, string | number>> =>
+    Object.fromEntries(
+        Object.entries(record).flatMap(([key, value]): Array<[string, string | number]> => {
+            if (typeof value === "number" && Number.isFinite(value)) return [[key, value]]
+            return typeof value === "string" && value.trim() !== "" ? [[key, value.trim()]] : []
+        }),
+    )
+
+const trimmedMember = (record: JsonRecord, key: string): string | null => {
+    const value = optionalStringMember(record, key)?.trim() ?? ""
+    return value === "" ? null : value
+}
+
+/** Reads the model's choice of command: ids and names are trimmed, blank means null, only text and finite numbers survive in `fields`. */
+export const proposedCommandOf = (record: JsonRecord): ProposedCommand => ({
+    intent: record["intent"] === "question" ? "question" : "command",
+    command: trimmedMember(record, "command"),
+    subject_id: trimmedMember(record, "subject_id"),
+    lead_id: trimmedMember(record, "lead_id"),
+    fields: scalarFields(recordMember(record, "fields")),
 })

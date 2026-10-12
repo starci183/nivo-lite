@@ -10,11 +10,13 @@ import type {
     ChatMessage,
     ChatTurn,
     Classification,
+    CommandProposalInput,
     DeepseekScope,
     DesignedModule,
     ExtractedOrder,
     LeadInput,
     OptionalAgentInput,
+    ProposedCommand,
     ProposedResponsibility,
 } from "./deepseek.contracts"
 import { InjectDeepseekOptions, InjectDeepseekTextGenerator } from "./deepseek.decorators"
@@ -24,16 +26,18 @@ import type { TextGenerator } from "./deepseek.port"
 import { DeepseekError, DeepseekErrorCode } from "./errors/deepseek.error"
 import { embeddedObject, isJsonRecord, unfenced } from "./json.mapper"
 import type { JsonRecord, OptionalJsonRecord } from "./json.mapper"
-import { langFor, NIVO, personaOf, toMessages } from "./prompts.policy"
+import { commandProposalPrompt, langFor, NIVO, personaOf, toMessages } from "./prompts.policy"
 import {
     authorityChangeOf,
     classificationOf,
     designedModuleOf,
     extractedOrderOf,
+    proposedCommandOf,
     responsibilityOf,
 } from "./results.mapper"
 
 const OWNER_CHAT: CallMeta = { kind: "owner_chat", module: "office" }
+const OFFICE_COMMAND: CallMeta = { kind: "office_command", module: "office" }
 const SETUP: CallMeta = { kind: "setup", module: "setup" }
 const SALES: CallMeta = { kind: "engine", module: "sales" }
 const ACCOUNTING: CallMeta = { kind: "engine", module: "accounting" }
@@ -260,6 +264,12 @@ Current rules: ${currentRules}`,
             OWNER_CHAT,
         )
         return authorityChangeOf(answer)
+    }
+
+    /** Reads the owner's Office message into at most one command of one agent: the model only picks, the caller validates what it returned. */
+    async proposeCommands(scope: DeepseekScope, input: CommandProposalInput): Promise<ProposedCommand> {
+        const answer = await this.completeJson(scope, commandProposalPrompt(input), OFFICE_COMMAND)
+        return proposedCommandOf(answer)
     }
 
     private phrase(key: string, locale: Locale): string {

@@ -1,4 +1,4 @@
-import { authorityBrief, langFor, NIVO, personaOf, toMessages } from "./prompts.policy"
+import { authorityBrief, commandProposalPrompt, langFor, NIVO, personaOf, toMessages } from "./prompts.policy"
 
 describe("prompts policy", () => {
     it("asks for the language of the reader", () => {
@@ -79,5 +79,33 @@ describe("prompts policy", () => {
             { role: "user", content: "Hi" },
             { role: "assistant", content: "Hello" },
         ])
+    })
+
+    describe("commandProposalPrompt", () => {
+        const option = {
+            command: "issue_receipt",
+            description: { vi: "xuat phieu thu", en: "issue a receipt" },
+            subjectType: "order",
+            requiredFields: ["amount"],
+        }
+
+        it("lists the commands, the offered references and the owner's text", () => {
+            const [system, user] = commandProposalPrompt({
+                agentName: "Accounting",
+                options: [option, { ...option, command: "ping", requiredFields: [] }],
+                customers: [{ id: "l-1", name: "Lan" }],
+                orders: [{ id: "o-1", order_no: "DH-1", lead_id: null }],
+                text: "receipt for DH-1",
+            })
+
+            expect(system?.content).toContain('for the agent "Accounting"')
+            expect(system?.content).toContain(
+                "- issue_receipt: issue a receipt / xuat phieu thu; subject=order; needs amount",
+            )
+            expect(system?.content).toContain("needs nothing")
+            expect(system?.content).toContain('customers: [{"id":"l-1","name":"Lan"}]')
+            expect(system?.content).toContain('orders: [{"id":"o-1","order_no":"DH-1","lead_id":null}]')
+            expect(user).toEqual({ role: "user", content: "receipt for DH-1" })
+        })
     })
 })
