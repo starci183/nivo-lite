@@ -7,7 +7,7 @@ import { factLine, type Fact } from "../brain/shared";
 import { supabaseServer } from "../supabase/server";
 import { withUsage } from "../usage";
 import { embeddingModel, embedText, toVector } from "./embed";
-import type { Audience, Passage, Visibility } from "./shared";
+import { READABLE_STATUSES, type Audience, type Passage, type Visibility } from "./shared";
 
 /**
  * THE LENS: the one place that decides what an agent may read of the business knowledge (documents AND the second brain).
@@ -69,11 +69,11 @@ export const lensPassages = async (lens: Lens, query: string, limit = 8, db?: Db
 
 export type LensSource = { id: string; title: string; topic: string | null; kind: string; visibility: Visibility; content: string; module: string | null; created_at: string; updated_at: string };
 
-/** The whole documents the lens may read (ready ones, oldest first), for a synced workspace or a standing brand context; use lensPassages for a question. */
+/** The whole documents the lens may read (indexed ones: ready or extracting_facts, oldest first), for a synced workspace or a standing brand context; use lensPassages for a question. */
 export const lensSources = async (lens: Lens, limit = 200, db?: Db): Promise<Array<LensSource>> => {
   const client = await dbOf(db);
   let q = client.from("knowledge_sources").select("id, title, topic, kind, visibility, content, module, created_at, updated_at")
-    .eq("workspace_id", lens.workspaceId).eq("status", "ready").or(`module.is.null,module.eq.${lens.module}`);
+    .eq("workspace_id", lens.workspaceId).in("status", READABLE_STATUSES).or(`module.is.null,module.eq.${lens.module}`);
   if (lens.audience === "customer") q = q.eq("visibility", "public");
   const { data, error } = await q.order("created_at").limit(limit);
   if (error) throw new Error(error.message);
@@ -150,13 +150,13 @@ export type LensCounts = {
 
 const countSources = async (client: Db, lens: Lens, visibility: Visibility): Promise<number> => {
   const { count, error } = await client.from("knowledge_sources").select("id", { count: "exact", head: true })
-    .eq("workspace_id", lens.workspaceId).eq("status", "ready").eq("visibility", visibility).or(`module.is.null,module.eq.${lens.module}`);
+    .eq("workspace_id", lens.workspaceId).in("status", READABLE_STATUSES).eq("visibility", visibility).or(`module.is.null,module.eq.${lens.module}`);
   if (error) throw new Error(error.message);
   return count ?? 0;
 };
 
 /**
- * Count what the lens may read (same rule as lensSources / lensFacts: ready documents of all modules or this one, the facts in force for this
+ * Count what the lens may read (same rule as lensSources / lensFacts: indexed documents (ready or extracting_facts) of all modules or this one, the facts in force for this
  * audience and module). Counts only, no text. Throws when the documents cannot be counted; the caller shows the region as failed.
  */
 export const lensCounts = async (lens: Lens, db?: Db): Promise<LensCounts> => {
