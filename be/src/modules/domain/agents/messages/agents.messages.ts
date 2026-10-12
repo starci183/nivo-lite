@@ -22,14 +22,10 @@ const REPLY_CONTRACT_VI = REPLY_CONTRACT_EN.replace(
 /** Display text of the agents codes and the texts the agents capability writes for people and models, Vietnamese and English. */
 export const AGENTS_MESSAGES: MessageBundle = {
     vi: {
-        "errors.AGENTS_GENERATION_FAILED": "{{message}}",
         "errors.AGENTS_INSTALLATION_NOT_FOUND": "Không tìm thấy agent này trong không gian làm việc.",
         "errors.AGENTS_AGENT_NOT_FOUND": "Không tìm thấy agent.",
         "errors.AGENTS_HANDLE_TAKEN": "Tên gọi @{{handle}} đã có agent khác dùng.",
-        "errors.AGENTS_BINDING_TARGET_NOT_FOUND": "Agent hoặc kết nối không thuộc không gian làm việc này.",
-        "errors.AGENTS_WORKSPACE_UNAVAILABLE": "Chưa cấu hình thư mục ghi workspace của agent.",
         "errors.AGENTS_NOT_CREATED": "Không tạo được agent.",
-        "generation.busy": "NIVO đang bận, thử lại sau ít phút.",
         "bundle.title": "# {{name}} (module {{module}})",
         "bundle.syncNote": "Bản này do NIVO OS đồng bộ một chiều từ Supabase. KHÔNG sửa tay: lần đồng bộ sau sẽ ghi đè.",
         "bundle.defaultAgentName": "{{module}} agent",
@@ -69,14 +65,10 @@ export const AGENTS_MESSAGES: MessageBundle = {
         "bundle.replyContract": REPLY_CONTRACT_VI,
     },
     en: {
-        "errors.AGENTS_GENERATION_FAILED": "{{message}}",
         "errors.AGENTS_INSTALLATION_NOT_FOUND": "This agent was not found in the workspace.",
         "errors.AGENTS_AGENT_NOT_FOUND": "The agent was not found.",
         "errors.AGENTS_HANDLE_TAKEN": "Another agent already uses the handle @{{handle}}.",
-        "errors.AGENTS_BINDING_TARGET_NOT_FOUND": "The agent or the connection is not in this workspace.",
-        "errors.AGENTS_WORKSPACE_UNAVAILABLE": "The agent workspace directory is not configured.",
         "errors.AGENTS_NOT_CREATED": "The agent could not be created.",
-        "generation.busy": "NIVO is busy, please try again in a few minutes.",
         "bundle.title": "# {{name}} (module {{module}})",
         "bundle.syncNote":
             "This copy is synced one way from Supabase by NIVO OS. Do NOT edit by hand: the next sync overwrites it.",

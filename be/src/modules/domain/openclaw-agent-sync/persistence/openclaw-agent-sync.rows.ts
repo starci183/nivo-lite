@@ -5,9 +5,3 @@ export interface SyncStateRow {
     /** ok or error. */
     status: string
 }
-
-/** The newest check of the syncs of a workspace. */
-export interface SyncCheckRow {
-    /** The newest checked_at, or null when no sync ran. */
-    checked_at: string | null
-}

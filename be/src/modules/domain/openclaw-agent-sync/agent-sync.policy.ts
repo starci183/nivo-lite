@@ -1,5 +1,6 @@
 import type { SyncAgentsPayload } from "@modules/queues/agents"
-import type { OptionalSyncScope, SyncFileList } from "./agents.contracts"
+import type { SyncFile } from "@modules/integrations/openclaw"
+import type { OptionalSyncScope } from "./openclaw-agent-sync.contracts"
 
 /** The scope a sync job works on: the installation, else the workspace, else everything on OpenClaw (the empty tick). */
 export const scopeOf = (payload: SyncAgentsPayload): OptionalSyncScope => {
@@ -27,7 +28,7 @@ export const INTERNAL_AGENT_NAME = "NIVO"
 export const INTERNAL_AGENT_MODULE = "nivo"
 
 /** The files of the internal agent workspace. */
-export const INTERNAL_FILES: SyncFileList = [
+export const INTERNAL_FILES: ReadonlyArray<SyncFile> = [
     {
         path: "AGENTS.md",
         content: [

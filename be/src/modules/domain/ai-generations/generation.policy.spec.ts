@@ -1,5 +1,5 @@
 import { builder } from "@starci/jest-preset"
-import type { GenerateParams, GenerationInput } from "./agents.contracts"
+import type { GenerateParams, GenerationInput } from "./ai-generations.contracts"
 import {
     DEFAULT_TIMEOUT_MS,
     clampTimeout,
@@ -109,6 +109,7 @@ describe("generation policy", () => {
 
             expect(verdictOf({ ...base, status: "done", text: "t" })).toEqual({
                 kind: "done",
+                text: "t",
                 progress: { ...base, status: "done", text: "t" },
             })
             expect(verdictOf({ ...base, status: "done", text: null })).toBeNull()

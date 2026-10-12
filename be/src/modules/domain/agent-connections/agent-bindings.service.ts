@@ -19,9 +19,10 @@ import type {
     ConnectionsForOptions,
     InboundRoute,
     ModuleRef,
+    OptionalConnectionId,
     PurposeSelector,
-} from "./agents.contracts"
-import { AgentsError, AgentsErrorCode } from "./errors/agents.error"
+} from "./agent-connections.contracts"
+import { AgentConnectionsError, AgentConnectionsErrorCode } from "./errors/agent-connections.error"
 import type { BindingKeyRow, BoundAgentRow, BoundConnectionRow } from "./persistence/agent-connections.rows"
 import {
     DELETE_BINDING,
@@ -80,7 +81,7 @@ export class AgentBindingsService {
     }
 
     /** The agents a conversation's own agent can hand over to; none for a conversation without a connection (website chat). */
-    async handoversOf(connectionId: string | null, agent: ModuleRef): Promise<ReadonlyArray<BoundAgent>> {
+    async handoversOf(connectionId: OptionalConnectionId, agent: ModuleRef): Promise<ReadonlyArray<BoundAgent>> {
         if (connectionId === null) return []
         const bound = await this.agentsFor(connectionId, "inbound_chat", { acting: true, modules: INBOUND_MODULES })
         return handoversFrom(bound, agent.module)
@@ -97,8 +98,8 @@ export class AgentBindingsService {
             grant.access,
         ])
         if (rows.length === 0) {
-            throw new AgentsError({
-                code: AgentsErrorCode.BindingTargetNotFound,
+            throw new AgentConnectionsError({
+                code: AgentConnectionsErrorCode.TargetNotFound,
                 params: { agentId: grant.agentId, connectionId: grant.connectionId },
             })
         }

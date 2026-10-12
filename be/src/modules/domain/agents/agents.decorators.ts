@@ -1,6 +1,6 @@
 import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
-import type { InstallationDirectory, KnowledgeLens, ModuleProfiles, UsageGate } from "./agents.port"
+import type { InstallationDirectory, KnowledgeLens, ModuleProfiles } from "./agents.port"
 import type { AgentsOptions } from "./agents.options"
 
 /** Token of the agents options, exported so a spec can provide it. */
@@ -15,9 +15,6 @@ export const AGENTS_KNOWLEDGE: unique symbol = Symbol("domain.agents.knowledge")
 /** Token of the module definitions port (modules lane). */
 export const AGENTS_MODULES: unique symbol = Symbol("domain.agents.modules")
 
-/** Token of the plan allowance and usage meter port (billing lane). */
-export const AGENTS_USAGE: unique symbol = Symbol("domain.agents.usage")
-
 /** Injects the agents options. Parameter type: AgentsOptions. */
 export const InjectAgentsOptions = (): TypedParameterDecorator<AgentsOptions> => injector<AgentsOptions>(AGENTS_OPTIONS)
 
@@ -31,6 +28,3 @@ export const InjectKnowledge = (): TypedParameterDecorator<KnowledgeLens> => inj
 /** Injects the module definitions port. Parameter type: ModuleProfiles. */
 export const InjectModuleProfiles = (): TypedParameterDecorator<ModuleProfiles> =>
     injector<ModuleProfiles>(AGENTS_MODULES)
-
-/** Injects the usage port. Parameter type: UsageGate. */
-export const InjectUsage = (): TypedParameterDecorator<UsageGate> => injector<UsageGate>(AGENTS_USAGE)

@@ -16,6 +16,14 @@ export type {
     WorkspaceDirs,
     WorkspaceWriteResult,
 } from "./openclaw.contracts"
+export {
+    InjectOpenclawAgentRegistry,
+    InjectOpenclawGateway,
+    InjectOpenclawWorkspaceWriter,
+    OPENCLAW_AGENT_REGISTRY,
+    OPENCLAW_GATEWAY,
+    OPENCLAW_WORKSPACE_WRITER,
+} from "./openclaw.decorators"
 export { OpenclawModule } from "./openclaw.module"
 export type { OpenclawOptions } from "./openclaw.options"
 export { ToolTokenService } from "./tool-token.service"

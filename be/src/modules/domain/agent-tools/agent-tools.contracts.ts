@@ -94,10 +94,10 @@ export interface ApprovalResult {
 export type OptionalLeadId = string | null
 
 /** The claims of a tool token: its job and an expiry in unix seconds. */
-export interface ToolClaims extends ToolContext {
+export interface TokenClaims extends ToolContext {
     /** Expiry, unix seconds. */
     readonly exp: number
 }
 
 /** The claims of a valid token, or null. */
-export type OptionalToolClaims = ToolClaims | null
+export type OptionalToolClaims = TokenClaims | null

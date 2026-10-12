@@ -1,5 +1,4 @@
-import type { Locale } from "@modules/platform/i18n"
-import type { Audience, GenerationUsage, LensCounts, OptionalOpenGaps } from "./agents.contracts"
+import type { Audience, LensCounts, OptionalId, OptionalOpenGaps, OptionalText } from "./agents.contracts"
 
 /** A module installation (an agent instance) as the agents capability needs it. Owned by the modules lane (module_installations). */
 export interface Installation {
@@ -71,7 +70,7 @@ export interface InstallationDirectory {
     /** The installation that owns an agent. */
     ofAgent(workspaceId: string, agentId: string): Promise<OptionalInstallation>
     /** Up to `limit` installations that run on OpenClaw (settings processor is not "nivo"), of one workspace or of all when null. */
-    onOpenclaw(workspaceId: string | null, limit: number): Promise<ReadonlyArray<InstallationRef>>
+    onOpenclaw(workspaceId: OptionalId, limit: number): Promise<ReadonlyArray<InstallationRef>>
     /** The context version with that id, flattened. */
     contextVersionOf(versionId: string): Promise<OptionalContextVersion>
 }
@@ -113,15 +112,15 @@ export interface KnowledgeLens {
     sourcesFor(
         workspaceId: string,
         module: string,
-        installationId: string | null,
+        installationId: OptionalId,
         limit: number,
     ): Promise<ReadonlyArray<KnowledgeDocument>>
     /** The standing memory of the shared brain seen through the lens, as markdown ("" when the brain has none). */
-    memoryFor(workspaceId: string, module: string, installationId: string | null): Promise<string>
+    memoryFor(workspaceId: string, module: string, installationId: OptionalId): Promise<string>
     /** The authority, escalation and tone rules of the module folders, module before core. */
     baseRulesOf(folders: ReadonlyArray<string>): Promise<ReadonlyArray<BaseRule>>
     /** Document and fact counts by visibility. */
-    countsFor(workspaceId: string, module: string, installationId: string | null): Promise<LensCounts>
+    countsFor(workspaceId: string, module: string, installationId: OptionalId): Promise<LensCounts>
     /** Up to `limit` open gaps of the module, most asked first; null when the gaps are not kept. */
     openGapsOf(workspaceId: string, module: string, limit: number): Promise<OptionalOpenGaps>
 }
@@ -132,45 +131,11 @@ export interface KnowledgeLens {
  */
 export interface ModuleProfiles {
     /** The knowledge folder of a module key, or null when the key is not a module. */
-    knowledgeFolderOf(module: string): string | null
+    knowledgeFolderOf(module: string): OptionalText
     /** The reply contract of the module given the base customer contract: the base itself (chatbot), the base with the module addendum (booking, loyalty), its own contract (hiring) or null. */
-    replyContractOf(module: string, base: string): string | null
+    replyContractOf(module: string, base: string): OptionalText
     /** The chat-intake clause of the hiring application that the base contract embeds ("" when none). */
     applicationClause(): string
     /** The JSON member of the hiring application that the base contract embeds ("" when none). */
     applicationShape(): string
-}
-
-/** What the plan allowance says about a workspace that is over it. */
-export interface QuotaBlock {
-    /** The sentence to show the person, in the asked language. */
-    readonly message: string
-}
-
-/** A quota block, or null when the workspace is within its allowance. */
-export type OptionalQuotaBlock = QuotaBlock | null
-
-/** One metered generation. */
-export interface UsageRecord {
-    /** The workspace. */
-    readonly workspaceId: string
-    /** The usage kind. */
-    readonly kind: string
-    /** The usage module. */
-    readonly module: string
-    /** What the run cost, or null. */
-    readonly usage: GenerationUsage | null
-    /** The length of the generated text. */
-    readonly completionChars: number
-}
-
-/**
- * The plan allowance and the usage meter. The billing lane (L09) implements it over domain/usage; the app root binds it to the
- * token `AGENTS_USAGE`.
- */
-export interface UsageGate {
-    /** The block when the workspace has used its allowance for the kind. */
-    blockedBy(workspaceId: string, kind: string, locale: Locale): Promise<OptionalQuotaBlock>
-    /** Meters one finished generation. */
-    record(entry: UsageRecord): Promise<void>
 }

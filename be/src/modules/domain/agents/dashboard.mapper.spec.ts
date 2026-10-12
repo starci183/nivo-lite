@@ -1,5 +1,6 @@
 import { builder } from "@starci/jest-preset"
-import type { BoundConnection, LensCounts } from "./agents.contracts"
+import type { BoundConnection } from "@modules/domain/agent-connections"
+import type { LensCounts } from "./agents.contracts"
 import type { Installation } from "./agents.port"
 import { agentIdOf, agentOf, clip, connectionItemsOf, itemOf, knowledgeOf, totalOf } from "./dashboard.mapper"
 import type { DashboardItemRow } from "./persistence/dashboard.rows"

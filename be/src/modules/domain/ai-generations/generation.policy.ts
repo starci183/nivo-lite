@@ -1,13 +1,13 @@
+import type { RunUsage } from "@modules/integrations/openclaw"
 import type {
     GenMessage,
     GenerateParams,
     GenerationInput,
     GenerationProgress,
-    GenerationUsage,
     PollVerdict,
     QueuedGeneration,
     ResponseFormat,
-} from "./agents.contracts"
+} from "./ai-generations.contracts"
 import type { GenerationProgressRow, GenerationRow } from "./persistence/ai-generations.rows"
 
 /** The deadline of a caller that names none, ms. */
@@ -58,7 +58,7 @@ export const inputOf = (value: unknown): GenerationInput => {
 }
 
 /** Reads the usage a run reported; null when it is not the usage shape. */
-export const usageOf = (value: unknown): GenerationUsage | null => {
+export const usageOf = (value: unknown): RunUsage | null => {
     if (!isRecord(value)) return null
     const { prompt_tokens, completion_tokens, cached_tokens, cost, model } = value
     if (!isNumber(prompt_tokens) || !isNumber(completion_tokens) || !isNumber(cached_tokens) || !isNumber(cost)) {
@@ -100,7 +100,7 @@ export const queuedOf = (row: GenerationRow): QueuedGeneration => ({
 
 /** What a poll of the row means: done with text, failed, or still waiting (null). */
 export const verdictOf = (progress: GenerationProgress): PollVerdict | null => {
-    if (progress.status === "done" && progress.text !== null) return { kind: "done", progress }
+    if (progress.status === "done" && progress.text !== null) return { kind: "done", text: progress.text, progress }
     if (progress.status === "error" || progress.status === "cancelled") return { kind: "failed" }
     return null
 }

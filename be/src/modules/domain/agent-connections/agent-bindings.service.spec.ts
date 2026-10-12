@@ -4,7 +4,7 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AgentBindingsService } from "./agent-bindings.service"
-import { AgentsErrorCode } from "./errors/agents.error"
+import { AgentConnectionsErrorCode } from "./errors/agent-connections.error"
 import {
     DELETE_BINDING,
     LIST_AGENTS_OF_CONNECTION,
@@ -157,7 +157,7 @@ describe("AgentBindingsService", () => {
             const { service } = await build(mockEntityManager({ query: [UPSERT_BINDING, []] }))
 
             await expect(service.grant("u1", grant)).rejects.toMatchObject({
-                code: AgentsErrorCode.BindingTargetNotFound,
+                code: AgentConnectionsErrorCode.TargetNotFound,
                 params: { agentId: "a1", connectionId: "c1" },
             })
         })

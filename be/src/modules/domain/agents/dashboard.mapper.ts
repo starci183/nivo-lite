@@ -1,5 +1,5 @@
+import type { BoundConnection } from "@modules/domain/agent-connections"
 import type {
-    BoundConnection,
     DashboardAgent,
     OptionalId,
     ConnectionItem,

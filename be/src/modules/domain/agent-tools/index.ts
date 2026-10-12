@@ -40,7 +40,7 @@ export type {
     OptionalLeadId,
     ToolArgs,
     OptionalToolClaims,
-    ToolClaims,
+    TokenClaims,
     ToolContext,
     ToolManifestEntry,
 } from "./agent-tools.contracts"

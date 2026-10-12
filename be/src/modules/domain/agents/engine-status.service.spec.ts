@@ -1,23 +1,27 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { AgentRegistryService, GatewayClient } from "@modules/integrations/openclaw"
+import { OPENCLAW_AGENT_REGISTRY, OPENCLAW_GATEWAY } from "@modules/integrations/openclaw"
+import type { AgentRegistryService, GatewayClient } from "@modules/integrations/openclaw"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AGENTS_INSTALLATIONS, AGENTS_OPTIONS } from "./agents.decorators"
 import type { AgentsOptions } from "./agents.options"
 import type { Installation, InstallationDirectory } from "./agents.port"
 import { EngineStatusService } from "./engine-status.service"
-import { FIND_LAST_SYNC_CHECK } from "./persistence/openclaw-agent-sync.sql"
+import { FIND_LAST_SYNC_CHECK } from "./persistence/sync-check.sql"
 
-const OPTIONS: Omit<AgentsOptions, "ports"> = { generationPollMs: 1, reloadSettleMs: 1, syncFreshMs: 600_000 }
+const OPTIONS: Omit<AgentsOptions, "ports"> = { syncFreshMs: 600_000 }
 
-const build = async (setup: {
+/** What a spec sets up around the service. */
+interface Setup {
     enabled: boolean
     dirs: boolean
     checkedAt?: string | null
     installation?: Installation | null
-}) => {
+}
+
+const build = async (setup: Setup) => {
     const gateway = mock<GatewayClient>({})
     Object.defineProperty(gateway, "enabled", { value: setup.enabled })
     const registry = mock<AgentRegistryService>({
@@ -35,8 +39,8 @@ const build = async (setup: {
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: CLOCK, useValue: new FakeClock("2026-10-12T10:00:00.000Z") },
             { provide: AGENTS_INSTALLATIONS, useValue: installations },
-            { provide: GatewayClient, useValue: gateway },
-            { provide: AgentRegistryService, useValue: registry },
+            { provide: OPENCLAW_GATEWAY, useValue: gateway },
+            { provide: OPENCLAW_AGENT_REGISTRY, useValue: registry },
             { provide: WorkspaceMembersService, useValue: members },
         ],
     }).compile()

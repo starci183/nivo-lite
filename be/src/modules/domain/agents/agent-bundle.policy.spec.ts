@@ -42,7 +42,7 @@ const versionOf = builder<ContextVersion>({
 })
 
 const documentOf = builder<KnowledgeDocument>({
-    title: "Giá dịch vụ",
+    title: "Service price",
     topic: "Price",
     kind: "document",
     visibility: "public",
@@ -66,7 +66,7 @@ const inputOf = builder<AgentsMdInput>({
 describe("agent bundle policy", () => {
     describe("text helpers", () => {
         it("makes an ASCII slug of a Vietnamese title and falls back to source", () => {
-            expect(slugOf("Giá dịch vụ Đà Nẵng!")).toBe("gia-dich-vu-da-nang")
+            expect(slugOf(`Cafe${String.fromCodePoint(0xe9)} ${String.fromCodePoint(0x110, 0x111)}!`)).toBe("cafee-dd")
             expect(slugOf("***")).toBe("source")
             expect(slugOf("a".repeat(80))).toHaveLength(48)
         })
@@ -152,16 +152,16 @@ describe("agent bundle policy", () => {
         it("writes a numbered file with the topic, the meta line and the text", () => {
             const file = knowledgeFileOf(0, documentOf(), t)
 
-            expect(file.path).toBe("knowledge/01-gia-dich-vu.md")
+            expect(file.path).toBe("knowledge/01-service-price.md")
             expect(file.content).toBe(
-                "# Giá dịch vụ\n\nbundle.fileTopic(topic=Price)bundle.fileMeta(kind=document; visibility=bundle.visibilityPublic; date=2026-10-11)\n\nMassage 300k\n",
+                "# Service price\n\nbundle.fileTopic(topic=Price)bundle.fileMeta(kind=document; visibility=bundle.visibilityPublic; date=2026-10-11)\n\nMassage 300k\n",
             )
         })
 
         it("leaves out a missing topic and marks internal documents", () => {
             const file = knowledgeFileOf(11, documentOf({ topic: null, visibility: "internal" }), t)
 
-            expect(file.path).toBe("knowledge/12-gia-dich-vu.md")
+            expect(file.path).toBe("knowledge/12-service-price.md")
             expect(file.content).toContain("bundle.fileMeta(kind=document; visibility=bundle.visibilityInternal")
             expect(file.content).not.toContain("fileTopic")
         })

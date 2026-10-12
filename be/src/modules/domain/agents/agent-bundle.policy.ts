@@ -1,8 +1,8 @@
+import type { SyncFile } from "@modules/integrations/openclaw"
 import type {
     AgentPersona,
     AgentsMdInput,
     BaseRuleText,
-    BundleFile,
     OptionalContextVersionText,
     TextOf,
     ToolListing,
@@ -17,14 +17,16 @@ const RULE_MAX = 900
 export const INLINE_KNOWLEDGE_MAX = 6000
 
 const SLUG_MAX = 48
+const COMBINING_MARKS = new RegExp(`[${String.fromCodePoint(0x300)}-${String.fromCodePoint(0x36f)}]`, "gu")
+const D_STROKE = new RegExp(String.fromCodePoint(0x111), "giu")
 const SETUP_BLOCK = /\n*### NIVO setup[\s\S]*?### end NIVO setup\s*/gu
 
 /** The file name part of a title: ASCII lower case words joined by dashes. */
 export const slugOf = (title: string): string => {
     const slug = title
         .normalize("NFD")
-        .replace(/[̀-ͯ]/gu, "")
-        .replace(/đ/giu, "d")
+        .replace(COMBINING_MARKS, "")
+        .replace(D_STROKE, "d")
         .toLowerCase()
         .replace(/[^a-z0-9]+/gu, "-")
         .replace(/^-+|-+$/gu, "")
@@ -89,7 +91,7 @@ export const appliedContextOf = (version: ContextVersion | null, t: TextOf): Opt
     version === null ? null : { version: version.version, text: contextTextOf(version, t) }
 
 /** One knowledge file of the bundle. */
-export const knowledgeFileOf = (index: number, document: KnowledgeDocument, t: TextOf): BundleFile => {
+export const knowledgeFileOf = (index: number, document: KnowledgeDocument, t: TextOf): SyncFile => {
     const visibility = document.visibility === "public" ? "bundle.visibilityPublic" : "bundle.visibilityInternal"
     const topic = document.topic === null ? "" : t("bundle.fileTopic", { topic: document.topic })
     const meta = t("bundle.fileMeta", {

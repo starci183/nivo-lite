@@ -1,7 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { AgentRegistryService, GatewayClient } from "@modules/integrations/openclaw"
+import { InjectOpenclawAgentRegistry, InjectOpenclawGateway } from "@modules/integrations/openclaw"
+import type { AgentRegistryService, GatewayClient } from "@modules/integrations/openclaw"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -10,8 +11,8 @@ import { InjectAgentsOptions, InjectInstallations } from "./agents.decorators"
 import type { AgentsOptions } from "./agents.options"
 import type { InstallationDirectory } from "./agents.port"
 import { isFresh, processorFromSettings } from "./engine-status.policy"
-import type { SyncCheckRow } from "./persistence/openclaw-agent-sync.rows"
-import { FIND_LAST_SYNC_CHECK } from "./persistence/openclaw-agent-sync.sql"
+import type { SyncCheckRow } from "./persistence/sync-check.rows"
+import { FIND_LAST_SYNC_CHECK } from "./persistence/sync-check.sql"
 
 /** Any agent id works for the probe: only whether a config directory is set matters. */
 const PROBE_AGENT = "probe"
@@ -28,8 +29,8 @@ export class EngineStatusService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
         @InjectInstallations() private readonly installations: InstallationDirectory,
-        private readonly gateway: GatewayClient,
-        private readonly registry: AgentRegistryService,
+        @InjectOpenclawGateway() private readonly gateway: GatewayClient,
+        @InjectOpenclawAgentRegistry() private readonly registry: AgentRegistryService,
         private readonly members: WorkspaceMembersService,
     ) {}
 

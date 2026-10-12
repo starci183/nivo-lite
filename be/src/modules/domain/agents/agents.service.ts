@@ -1,17 +1,17 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import type { BoundConnection } from "@modules/domain/agent-connections"
 import { WorkspaceMembersService, isManagerRole } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { AgentBindingsService } from "./agent-bindings.service"
+import { AgentBindingsService } from "@modules/domain/agent-connections"
 import type {
     AgentDashboardData,
     AgentSummary,
     AgentTexts,
-    BoundConnection,
     DashboardQuery,
     DoneData,
     KnowledgeData,
@@ -73,11 +73,7 @@ export class AgentsService {
     ) {}
 
     /** The agents of the workspace, oldest first, optionally of one module. */
-    async list(
-        userId: string,
-        workspaceId: string,
-        module: string | null = null,
-    ): Promise<ReadonlyArray<AgentSummary>> {
+    async list(userId: string, workspaceId: string, module: OptionalId = null): Promise<ReadonlyArray<AgentSummary>> {
         await this.members.require(userId, workspaceId)
         const rows = await this.entityManager.query<Array<AgentRow>>(LIST_AGENTS, [workspaceId, module])
         return rows.map(summaryOf)
@@ -90,7 +86,7 @@ export class AgentsService {
     async agentOfDepartment(
         workspaceId: string,
         department: string,
-        installationId: string | null,
+        installationId: OptionalId,
     ): Promise<OptionalAgentRef> {
         const installation = installationId === null ? null : await this.installations.byId(workspaceId, installationId)
         const instanceAgent = agentIdOf(installation)
@@ -147,23 +143,40 @@ export class AgentsService {
     /** Renames an agent; a manager only. */
     async rename(userId: string, workspaceId: string, agentId: string, name: string): Promise<void> {
         await this.members.require(userId, workspaceId, GOVERNORS)
-        await this.expectOne(RENAME_AGENT, [agentId, workspaceId, name], agentId)
+        this.expectChanged(
+            await this.entityManager.query<Array<IdRow>>(RENAME_AGENT, [agentId, workspaceId, name]),
+            agentId,
+        )
     }
 
     /** Pauses or resumes an agent; a manager only. */
     async setStatus(userId: string, workspaceId: string, agentId: string, active: boolean): Promise<void> {
         await this.members.require(userId, workspaceId, GOVERNORS)
-        await this.expectOne(SET_AGENT_STATUS, [agentId, workspaceId, active ? "active" : "paused"], agentId)
+        this.expectChanged(
+            await this.entityManager.query<Array<IdRow>>(SET_AGENT_STATUS, [
+                agentId,
+                workspaceId,
+                active ? "active" : "paused",
+            ]),
+            agentId,
+        )
     }
 
     /** Replaces the free texts of an agent (the setup chat applies a context version this way); a manager only. */
     async setTexts(userId: string, workspaceId: string, agentId: string, texts: AgentTexts): Promise<void> {
         await this.members.require(userId, workspaceId, GOVERNORS)
-        await this.expectOne(SET_AGENT_TEXTS, [agentId, workspaceId, texts.instructions, texts.knowledge], agentId)
+        this.expectChanged(
+            await this.entityManager.query<Array<IdRow>>(SET_AGENT_TEXTS, [
+                agentId,
+                workspaceId,
+                texts.instructions,
+                texts.knowledge,
+            ]),
+            agentId,
+        )
     }
 
-    private async expectOne(statement: string, params: ReadonlyArray<string>, agentId: string): Promise<void> {
-        const rows = await this.entityManager.query<Array<IdRow>>(statement, [...params])
+    private expectChanged(rows: ReadonlyArray<IdRow>, agentId: string): void {
         if (rows.length === 0) throw new AgentsError({ code: AgentsErrorCode.AgentNotFound, params: { id: agentId } })
     }
 
@@ -206,8 +219,8 @@ export class AgentsService {
         return { count: totalOf(rows), items: rows.map(itemOf) }
     }
 
-    private async connectionsOf(agentId: OptionalId): Promise<ReadonlyArray<BoundConnection>> {
-        return agentId === null ? [] : this.bindings.connectionsFor(agentId, DASHBOARD_PURPOSES)
+    private connectionsOf(agentId: OptionalId): Promise<ReadonlyArray<BoundConnection>> {
+        return agentId === null ? Promise.resolve([]) : this.bindings.connectionsFor(agentId, DASHBOARD_PURPOSES)
     }
 
     private async knowledgeOf(

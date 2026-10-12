@@ -1,5 +1,5 @@
 import { builder } from "@starci/jest-preset"
-import type { BoundAgent } from "./agents.contracts"
+import type { BoundAgent } from "./agent-connections.contracts"
 import {
     boundAgentsOf,
     boundConnectionsOf,

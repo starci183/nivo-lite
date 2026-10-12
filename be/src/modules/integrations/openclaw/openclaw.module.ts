@@ -4,7 +4,14 @@ import { AgentRegistryService } from "./agent-registry.service"
 import { GatewayClient } from "./gateway.client"
 import { createGatewaySocket } from "./gateway-socket.client"
 import { NodeFilesClient } from "./node-files.client"
-import { OPENCLAW_FILES, OPENCLAW_OPTIONS, OPENCLAW_SOCKET_FACTORY } from "./openclaw.decorators"
+import {
+    OPENCLAW_AGENT_REGISTRY,
+    OPENCLAW_FILES,
+    OPENCLAW_GATEWAY,
+    OPENCLAW_OPTIONS,
+    OPENCLAW_SOCKET_FACTORY,
+    OPENCLAW_WORKSPACE_WRITER,
+} from "./openclaw.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./openclaw.module-definition"
 import { ToolTokenService } from "./tool-token.service"
 import { WorkspaceWriterService } from "./workspace-writer.service"
@@ -27,8 +34,19 @@ export class OpenclawModule extends ConfigurableModuleClass {
                 AgentRegistryService,
                 WorkspaceWriterService,
                 ToolTokenService,
+                { provide: OPENCLAW_GATEWAY, useExisting: GatewayClient },
+                { provide: OPENCLAW_AGENT_REGISTRY, useExisting: AgentRegistryService },
+                { provide: OPENCLAW_WORKSPACE_WRITER, useExisting: WorkspaceWriterService },
             ],
-            exports: [GatewayClient, AgentRegistryService, WorkspaceWriterService, ToolTokenService],
+            exports: [
+                GatewayClient,
+                AgentRegistryService,
+                WorkspaceWriterService,
+                ToolTokenService,
+                OPENCLAW_GATEWAY,
+                OPENCLAW_AGENT_REGISTRY,
+                OPENCLAW_WORKSPACE_WRITER,
+            ],
         }
     }
 }

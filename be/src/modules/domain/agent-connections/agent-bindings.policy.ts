@@ -7,7 +7,7 @@ import type {
     InboundRoute,
     Purpose,
     PurposeSelector,
-} from "./agents.contracts"
+} from "./agent-connections.contracts"
 import type { BoundAgentRow, BoundConnectionRow } from "./persistence/agent-connections.rows"
 
 /**
