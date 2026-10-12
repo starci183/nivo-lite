@@ -39,7 +39,7 @@ import {
 import { I18nModule } from "@modules/platform/i18n"
 import { LoggingModule } from "@modules/platform/logging"
 import { JOBS_ERROR_KINDS, JOBS_MESSAGES, JobsModule } from "@modules/platform/jobs"
-import { QueueModule } from "@modules/platform/queue"
+import { QUEUE_ERROR_KINDS, QUEUE_MESSAGES, QueueModule } from "@modules/platform/queue"
 import type { ApiOptions } from "./api.options"
 
 @Module({})
@@ -60,6 +60,7 @@ export class AppModule {
                         HTTP_SECURITY_MESSAGES,
                         IDENTITY_MESSAGES,
                         JOBS_MESSAGES,
+                        QUEUE_MESSAGES,
                         WORKSPACE_INVITES_MESSAGES,
                         WORKSPACE_MEMBERS_MESSAGES,
                         WORKSPACES_MESSAGES,
@@ -72,6 +73,7 @@ export class AppModule {
                         DATABASE_ERROR_KINDS,
                         HTTP_SECURITY_ERROR_KINDS,
                         JOBS_ERROR_KINDS,
+                        QUEUE_ERROR_KINDS,
                         IDENTITY_ERROR_KINDS,
                         SUPABASE_ERROR_KINDS,
                         WORKSPACE_INVITES_ERROR_KINDS,
@@ -90,7 +92,6 @@ export class AppModule {
                 }),
                 QueueModule.register({
                     isGlobal: true,
-                    connections: [PRIMARY_ENTITY_MANAGER],
                     schedulers: [],
                     ...options.queue,
                 }),

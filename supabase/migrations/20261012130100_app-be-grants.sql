@@ -3,12 +3,13 @@
 -- are named <table>_app_be_<action>; their predicate only asserts the tenant key exists because the back end proves
 -- membership itself (WorkspaceMembersService.require) before any workspace-scoped statement. Append-only logs get
 -- select and insert only, catalogs the back end only reads get select, and the platform tables (queue, jobs) keep
--- the grants of be-platform. cron_targets and engine_workers stay out of reach.
+-- the grants of be-platform; job_outbox and job_slots stay closed because only the job_* functions touch them, and
+-- cron_targets and engine_workers stay out of reach.
 
 grant usage, select on all sequences in schema public to app_be;
 
--- The policies the web roles use are not all scoped `to authenticated`, so Postgres evaluates them for app_be too and
--- they call these helpers. Without execute the whole statement fails with permission denied; with it they resolve
+-- A policy written for the web roles that is not scoped `to authenticated` is evaluated for app_be too, and
+-- it calls these helpers. Without execute the whole statement fails with permission denied; with it they resolve
 -- to false for app_be, which has no auth.uid(), and only the app_be policies below decide.
 grant execute on function public.is_manager(uuid), public.is_member(uuid), public.member_role(uuid),
     public.my_staff_id(uuid), public.owns_workspace(uuid) to app_be;
@@ -522,15 +523,13 @@ drop policy if exists "email_messages_app_be_delete" on public.email_messages;
 create policy "email_messages_app_be_delete" on public.email_messages for delete to app_be using (workspace_id is not null);
 
 alter table public.engine_jobs enable row level security;
-grant select, insert, update, delete on table public.engine_jobs to app_be;
+grant select, insert, update on table public.engine_jobs to app_be;
 drop policy if exists "engine_jobs_app_be_select" on public.engine_jobs;
 create policy "engine_jobs_app_be_select" on public.engine_jobs for select to app_be using (workspace_id is not null);
 drop policy if exists "engine_jobs_app_be_insert" on public.engine_jobs;
 create policy "engine_jobs_app_be_insert" on public.engine_jobs for insert to app_be with check (workspace_id is not null);
 drop policy if exists "engine_jobs_app_be_update" on public.engine_jobs;
 create policy "engine_jobs_app_be_update" on public.engine_jobs for update to app_be using (workspace_id is not null) with check (workspace_id is not null);
-drop policy if exists "engine_jobs_app_be_delete" on public.engine_jobs;
-create policy "engine_jobs_app_be_delete" on public.engine_jobs for delete to app_be using (workspace_id is not null);
 
 alter table public.events enable row level security;
 grant select, insert on table public.events to app_be;
@@ -786,28 +785,6 @@ drop policy if exists "invoices_app_be_update" on public.invoices;
 create policy "invoices_app_be_update" on public.invoices for update to app_be using (workspace_id is not null) with check (workspace_id is not null);
 drop policy if exists "invoices_app_be_delete" on public.invoices;
 create policy "invoices_app_be_delete" on public.invoices for delete to app_be using (workspace_id is not null);
-
-alter table public.job_outbox enable row level security;
-grant select, insert, update, delete on table public.job_outbox to app_be;
-drop policy if exists "job_outbox_app_be_select" on public.job_outbox;
-create policy "job_outbox_app_be_select" on public.job_outbox for select to app_be using (workspace_id is not null);
-drop policy if exists "job_outbox_app_be_insert" on public.job_outbox;
-create policy "job_outbox_app_be_insert" on public.job_outbox for insert to app_be with check (workspace_id is not null);
-drop policy if exists "job_outbox_app_be_update" on public.job_outbox;
-create policy "job_outbox_app_be_update" on public.job_outbox for update to app_be using (workspace_id is not null) with check (workspace_id is not null);
-drop policy if exists "job_outbox_app_be_delete" on public.job_outbox;
-create policy "job_outbox_app_be_delete" on public.job_outbox for delete to app_be using (workspace_id is not null);
-
-alter table public.job_slots enable row level security;
-grant select, insert, update, delete on table public.job_slots to app_be;
-drop policy if exists "job_slots_app_be_select" on public.job_slots;
-create policy "job_slots_app_be_select" on public.job_slots for select to app_be using (workspace_id is not null);
-drop policy if exists "job_slots_app_be_insert" on public.job_slots;
-create policy "job_slots_app_be_insert" on public.job_slots for insert to app_be with check (workspace_id is not null);
-drop policy if exists "job_slots_app_be_update" on public.job_slots;
-create policy "job_slots_app_be_update" on public.job_slots for update to app_be using (workspace_id is not null) with check (workspace_id is not null);
-drop policy if exists "job_slots_app_be_delete" on public.job_slots;
-create policy "job_slots_app_be_delete" on public.job_slots for delete to app_be using (workspace_id is not null);
 
 alter table public.knowledge_chunks enable row level security;
 grant select, insert, update, delete on table public.knowledge_chunks to app_be;
