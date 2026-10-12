@@ -12,7 +12,11 @@ export class WorkspacesModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), { provide: WORKSPACES_OPTIONS, useValue: options }, WorkspacesService],
+            providers: [
+                ...(base.providers ?? []),
+                { provide: WORKSPACES_OPTIONS, useValue: options },
+                WorkspacesService,
+            ],
             exports: [WorkspacesService],
         }
     }

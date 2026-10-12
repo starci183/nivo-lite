@@ -16,6 +16,10 @@ export class RevokeInviteHandler extends ICQRSHandler<RevokeInviteCommand, void>
     }
 
     protected override process(command: RevokeInviteCommand): Promise<void> {
-        return this.invites.revoke(command.params.principal.id, command.params.request.workspaceId, command.params.request.inviteId)
+        return this.invites.revoke(
+            command.params.principal.id,
+            command.params.request.workspaceId,
+            command.params.request.inviteId,
+        )
     }
 }

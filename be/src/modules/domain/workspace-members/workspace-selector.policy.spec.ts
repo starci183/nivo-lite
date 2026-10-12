@@ -9,7 +9,10 @@ describe("selectWorkspace", () => {
         expect(selectWorkspace(WORKSPACE.toUpperCase())).toSucceedWith(WORKSPACE.toUpperCase())
     })
 
-    it.each([undefined, "", "not-a-uuid", [WORKSPACE]])("refuses a header that names no usable workspace (%s)", (header) => {
-        expect(selectWorkspace(header)).toBeRefused(WorkspaceMembersErrorCode.WorkspaceRequired)
-    })
+    it.each([undefined, "", "not-a-uuid", [WORKSPACE]])(
+        "refuses a header that names no usable workspace (%s)",
+        (header) => {
+            expect(selectWorkspace(header)).toBeRefused(WorkspaceMembersErrorCode.WorkspaceRequired)
+        },
+    )
 })

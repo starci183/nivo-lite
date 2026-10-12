@@ -1,13 +1,13 @@
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { SUPABASE_AUTH, SupabaseErrorCode } from "@modules/integrations/supabase"
-import type { SupabaseAuthService } from "@modules/integrations/supabase"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ok, refused } from "@modules/platform/primitives"
 import { WorkspaceMembersErrorCode } from "./errors/workspace-members.error"
 import type { MemberRow } from "./persistence/workspace-members.rows"
 import { FIND_MEMBER, LIST_MEMBERS, UPSERT_MEMBER } from "./persistence/workspace-members.sql"
+import type { AccountDirectory } from "./workspace-members.contracts"
+import { ACCOUNT_DIRECTORY } from "./workspace-members.port"
 import { WorkspaceMembersService } from "./workspace-members.service"
 
 const rowOf = builder<MemberRow>({
@@ -28,12 +28,12 @@ const accountOf = () => ({
 })
 
 const build = async (entityManager: MockEntityManager) => {
-    const auth = mock<SupabaseAuthService>()
+    const auth = mock<AccountDirectory>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkspaceMembersService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
-            { provide: SUPABASE_AUTH, useValue: auth },
+            { provide: ACCOUNT_DIRECTORY, useValue: auth },
         ],
     }).compile()
     return { service: moduleRef.get(WorkspaceMembersService), auth }
@@ -121,7 +121,7 @@ describe("WorkspaceMembersService", () => {
                 ],
             })
             const { service, auth } = await build(em)
-            auth.accountOf.mockResolvedValue(refused(SupabaseErrorCode.AccountNotFound))
+            auth.accountOf.mockResolvedValue(refused("ACCOUNT_NOT_FOUND"))
 
             await expect(service.list("user-1", "ws-1")).resolves.toMatchObject([{ email: "", lastSignInAt: null }])
         })

@@ -1,5 +1,5 @@
-/** How an invitation reached the person: a new account invite email, a sign-in link, or not at all (copy the link). */
-export type InviteDelivery = "invited" | "existing" | "none"
+/** How an invitation left Auth: a new account invite email, a sign-in link, or not at all (copy the link). */
+export type InviteSent = "invited" | "existing" | "none"
 
 /** One Supabase Auth account as the domains need it. */
 export interface AuthAccount {

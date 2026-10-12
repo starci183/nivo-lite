@@ -20,7 +20,7 @@ export interface ApiOptions {
     /** Whether a person with no workspace may create a free one. */
     readonly workspaces: WorkspacesOptions
     /** Invitation links and how long they stay valid. */
-    readonly workspaceInvites: WorkspaceInvitesOptions
+    readonly workspaceInvites: Omit<WorkspaceInvitesOptions, "delivery">
     /** How the queue relay and the pgmq workers run. */
     readonly queue: QueueConfig
     /** Who this worker is and how long a job claim lasts. */

@@ -1,3 +1,5 @@
+import type { Outcome } from "@modules/platform/primitives"
+
 /** Workspace roles: owner and manager govern; staff operate. */
 export type WorkspaceRole = "owner" | "manager" | "staff"
 
@@ -45,4 +47,20 @@ export interface DecisionItem {
     readonly assigneeKind?: string | null
     /** The assigned staff id. */
     readonly assigneeId?: string | null
+}
+
+/** The part of an Auth account the workspace pages need. */
+export interface DirectoryAccount {
+    /** The account email, empty when the account has none. */
+    readonly email: string
+    /** The last sign-in instant, ISO 8601; null when unknown. */
+    readonly lastSignInAt: string | null
+    /** The name from the profile, else the email local part. */
+    readonly displayName: string
+}
+
+/** Where the capability reads accounts from; the composition root binds it to the identity provider. */
+export interface AccountDirectory {
+    /** The account of one Auth user, or a refusal when none has that id. */
+    accountOf(userId: string): Promise<Outcome<DirectoryAccount, string>>
 }

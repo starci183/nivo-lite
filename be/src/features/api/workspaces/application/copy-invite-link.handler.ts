@@ -17,6 +17,10 @@ export class CopyInviteLinkHandler extends ICQRSHandler<CopyInviteLinkCommand, I
     }
 
     protected override process(command: CopyInviteLinkCommand): Promise<InviteResult> {
-        return this.invites.copyLink(command.params.principal.id, command.params.request.workspaceId, command.params.request.inviteId)
+        return this.invites.copyLink(
+            command.params.principal.id,
+            command.params.request.workspaceId,
+            command.params.request.inviteId,
+        )
     }
 }

@@ -2,7 +2,6 @@ import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
 import type { SupabaseAdminClient, SupabasePublicClient } from "./supabase.client"
 import type { VerifySupabaseAccessToken } from "./supabase.options"
-import type { SupabaseAuthService } from "./supabase-auth.service"
 
 /** Token of the integration's Auth and Storage administrator. */
 export const SUPABASE_ADMIN_CLIENT: unique symbol = Symbol("integrations.supabase.admin-client")
@@ -24,7 +23,3 @@ export const InjectSupabasePublicClient = (): TypedParameterDecorator<SupabasePu
 /** Injects the access-token verifier. Parameter type: VerifySupabaseAccessToken. */
 export const InjectSupabaseAccessTokenVerifier = (): TypedParameterDecorator<VerifySupabaseAccessToken> =>
     injector<VerifySupabaseAccessToken>(SUPABASE_ACCESS_TOKEN_VERIFIER)
-
-/** Injects the Auth service. Parameter type: SupabaseAuthService. */
-export const InjectSupabaseAuth = (): TypedParameterDecorator<SupabaseAuthService> =>
-    injector<SupabaseAuthService>(SUPABASE_AUTH)

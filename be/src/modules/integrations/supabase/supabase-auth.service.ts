@@ -5,7 +5,7 @@ import { ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
 import { SupabaseErrorCode } from "./errors/supabase.error"
 import type { SupabaseAdminClient, SupabasePublicClient } from "./supabase.client"
-import type { AuthAccount, InviteDelivery } from "./supabase.contracts"
+import type { AuthAccount, InviteSent } from "./supabase.contracts"
 import { InjectSupabaseAdminClient, InjectSupabasePublicClient } from "./supabase.decorators"
 import { SupabaseLogEvent } from "./supabase.log-events"
 
@@ -39,7 +39,7 @@ export class SupabaseAuthService {
      * Emails the invitation: a new person gets an account invite, a known person a sign-in link, and when neither can be
      * sent the delivery is `none` and the caller shows the link to copy. Never throws.
      */
-    async deliverInvite(email: string, redirectTo: string): Promise<InviteDelivery> {
+    async deliverInvite(email: string, redirectTo: string): Promise<InviteSent> {
         try {
             const invited = await this.admin.auth.inviteUserByEmail(email, { redirectTo })
             if (invited.error === null) return "invited"

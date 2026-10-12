@@ -1,10 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { MemberListing } from "@modules/domain/workspace-members"
-import { InjectSupabaseAuth } from "@modules/integrations/supabase"
-import type { SupabaseAuthService } from "@modules/integrations/supabase"
+import { InjectAccountDirectory, WorkspaceMembersService } from "@modules/domain/workspace-members"
+import type { AccountDirectory, MemberListing } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -34,12 +32,14 @@ import {
 import type {
     AcceptedInvite,
     InviteAcceptor,
+    InviteDeliveryPort,
     InvitePreview,
     InviteRequest,
     InviteResult,
     InviteState,
     PendingInvite,
 } from "./workspace-invites.contracts"
+import { InjectInviteDelivery } from "./workspace-invites.delivery"
 import type { WorkspaceInvitesOptions } from "./workspace-invites.options"
 import { InjectWorkspaceInvitesOptions } from "./workspace-invites.port"
 
@@ -53,7 +53,8 @@ export class WorkspaceInvitesService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
         @InjectWorkspaceInvitesOptions() private readonly options: WorkspaceInvitesOptions,
-        @InjectSupabaseAuth() private readonly auth: SupabaseAuthService,
+        @InjectAccountDirectory() private readonly accounts: AccountDirectory,
+        @InjectInviteDelivery() private readonly delivery: InviteDeliveryPort,
         private readonly members: WorkspaceMembersService,
         private readonly events: EventsService,
     ) {}
@@ -100,7 +101,7 @@ export class WorkspaceInvitesService {
                 this.expiry(now),
             ])
         })
-        const delivery = await this.auth.deliverInvite(email, this.redirectOf(minted.token))
+        const delivery = await this.delivery.deliverInvite(email, this.redirectOf(minted.token))
         await this.events.record({
             workspaceId,
             kind: "member.invited",
@@ -114,7 +115,7 @@ export class WorkspaceInvitesService {
     async resend(userId: string, workspaceId: string, inviteId: string): Promise<InviteResult> {
         const actor = await this.members.require(userId, workspaceId, MANAGERS)
         const { invite, token } = await this.rotate(workspaceId, inviteId)
-        const delivery = await this.auth.deliverInvite(invite.email, this.redirectOf(token))
+        const delivery = await this.delivery.deliverInvite(invite.email, this.redirectOf(token))
         await this.events.record({
             workspaceId,
             kind: "member.invite_resent",
@@ -150,10 +151,7 @@ export class WorkspaceInvitesService {
 
     /** What the person sees before accepting; a token that matches nothing is refused. */
     async preview(token: string): Promise<InvitePreview> {
-        const [row] = await this.entityManager.query<Array<InvitePreviewRow>>(PREVIEW_INVITE, [
-            token,
-            this.clock.now(),
-        ])
+        const [row] = await this.entityManager.query<Array<InvitePreviewRow>>(PREVIEW_INVITE, [token, this.clock.now()])
         if (row === undefined) throw new WorkspaceInvitesError({ code: WorkspaceInvitesErrorCode.Invalid })
         return {
             workspaceName: row.workspace_name,
@@ -171,7 +169,7 @@ export class WorkspaceInvitesService {
             judgeInvite(row === undefined ? undefined : toInviteState(row), acceptor.email ?? "", this.clock.now()),
             WorkspaceInvitesError,
         )
-        const account = await this.auth.accountOf(acceptor.id)
+        const account = await this.accounts.accountOf(acceptor.id)
         const displayName = account.kind === "ok" ? account.value.displayName : "Member"
         await this.members.join({
             workspaceId: invite.workspaceId,

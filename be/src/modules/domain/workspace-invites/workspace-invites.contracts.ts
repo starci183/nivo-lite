@@ -1,4 +1,11 @@
-import type { InviteDelivery } from "@modules/integrations/supabase"
+/** How an invitation reached the person: a new account invite email, a sign-in link, or not at all (copy the link). */
+export type InviteDelivery = "invited" | "existing" | "none"
+
+/** Where invitations are delivered; the composition root binds it to the identity provider. */
+export interface InviteDeliveryPort {
+    /** Emails the invitation and answers how it reached the person; never throws. */
+    deliverInvite(email: string, redirectTo: string): Promise<InviteDelivery>
+}
 
 /** What an owner or manager asks to invite. */
 export interface InviteRequest {

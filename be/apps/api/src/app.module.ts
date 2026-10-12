@@ -6,6 +6,7 @@ import { WorkspacesHttpModule } from "@features/api/workspaces"
 import { AuthGuard, IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } from "@modules/domain/identity"
 import {
     SUPABASE_ACCESS_TOKEN_VERIFIER,
+    SUPABASE_AUTH,
     SUPABASE_ERROR_KINDS,
     SupabaseModule,
     createSupabaseAccessTokenVerifier,
@@ -101,9 +102,13 @@ export class AppModule {
                 SupabaseModule.register({ isGlobal: true, ...options.supabase }),
                 IdentityModule.register({ isGlobal: true, verifyAccessToken }),
                 EventsModule.register({ isGlobal: true }),
-                WorkspaceMembersModule.register({ isGlobal: true }),
+                WorkspaceMembersModule.register({ isGlobal: true, accounts: SUPABASE_AUTH }),
                 WorkspacesModule.register({ isGlobal: true, ...options.workspaces }),
-                WorkspaceInvitesModule.register({ isGlobal: true, ...options.workspaceInvites }),
+                WorkspaceInvitesModule.register({
+                    isGlobal: true,
+                    delivery: SUPABASE_AUTH,
+                    ...options.workspaceInvites,
+                }),
                 LivenessModule.register({ isGlobal: true }),
                 SystemHealthHttpModule,
                 WorkspacesHttpModule,

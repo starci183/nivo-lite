@@ -59,8 +59,6 @@ describe("judgeInvite", () => {
     })
 
     it("refuses a different signed-in address", () => {
-        expect(judgeInvite(inviteOf(), "other@example.test", now)).toBeRefused(
-            WorkspaceInvitesErrorCode.EmailMismatch,
-        )
+        expect(judgeInvite(inviteOf(), "other@example.test", now)).toBeRefused(WorkspaceInvitesErrorCode.EmailMismatch)
     })
 })

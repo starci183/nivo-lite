@@ -17,6 +17,10 @@ export class CreateInviteHandler extends ICQRSHandler<CreateInviteCommand, Invit
     }
 
     protected override process(command: CreateInviteCommand): Promise<InviteResult> {
-        return this.invites.create(command.params.principal.id, command.params.request.workspaceId, command.params.request)
+        return this.invites.create(
+            command.params.principal.id,
+            command.params.request.workspaceId,
+            command.params.request,
+        )
     }
 }

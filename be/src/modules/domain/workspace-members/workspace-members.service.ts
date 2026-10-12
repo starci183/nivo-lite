@@ -1,14 +1,19 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectSupabaseAuth } from "@modules/integrations/supabase"
-import type { SupabaseAuthService } from "@modules/integrations/supabase"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { refused, unwrapOutcome } from "@modules/platform/primitives"
 import { WorkspaceMembersError, WorkspaceMembersErrorCode } from "./errors/workspace-members.error"
 import type { MemberRow } from "./persistence/workspace-members.rows"
 import { FIND_MEMBER, LIST_MEMBERS, UPSERT_MEMBER } from "./persistence/workspace-members.sql"
 import { admitMember, isManagerRole } from "./role.policy"
-import type { JoinEntry, MemberListing, WorkspaceMember, WorkspaceRole } from "./workspace-members.contracts"
+import type {
+    AccountDirectory,
+    JoinEntry,
+    MemberListing,
+    WorkspaceMember,
+    WorkspaceRole,
+} from "./workspace-members.contracts"
+import { InjectAccountDirectory } from "./workspace-members.port"
 
 const toMember = (row: MemberRow): WorkspaceMember => ({
     userId: row.user_id,
@@ -24,7 +29,7 @@ const toMember = (row: MemberRow): WorkspaceMember => ({
 export class WorkspaceMembersService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
-        @InjectSupabaseAuth() private readonly auth: SupabaseAuthService,
+        @InjectAccountDirectory() private readonly accounts: AccountDirectory,
     ) {}
 
     /**
@@ -49,7 +54,7 @@ export class WorkspaceMembersService {
         const showContact = isManagerRole(viewer.role)
         return Promise.all(
             rows.map(async (row) => {
-                const account = showContact ? await this.auth.accountOf(row.user_id) : undefined
+                const account = showContact ? await this.accounts.accountOf(row.user_id) : undefined
                 const known = account?.kind === "ok" ? account.value : undefined
                 return { ...toMember(row), email: known?.email ?? "", lastSignInAt: known?.lastSignInAt ?? null }
             }),

@@ -17,6 +17,10 @@ export class ResendInviteHandler extends ICQRSHandler<ResendInviteCommand, Invit
     }
 
     protected override process(command: ResendInviteCommand): Promise<InviteResult> {
-        return this.invites.resend(command.params.principal.id, command.params.request.workspaceId, command.params.request.inviteId)
+        return this.invites.resend(
+            command.params.principal.id,
+            command.params.request.workspaceId,
+            command.params.request.inviteId,
+        )
     }
 }

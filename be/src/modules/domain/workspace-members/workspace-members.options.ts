@@ -1,2 +1,7 @@
-/** The workspace-members capability takes no options; the app root decides whether it is global. */
-export type WorkspaceMembersOptions = Record<never, never>
+import type { InjectionToken } from "@nestjs/common"
+
+/** What the workspace-members capability needs from the composition root. */
+export interface WorkspaceMembersOptions {
+    /** The provider token of the account directory (an `AccountDirectory`) in the app. */
+    readonly accounts: InjectionToken
+}
