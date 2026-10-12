@@ -41,7 +41,9 @@ export type WorkItem = { id: string; workspace_id: string; department: Departmen
   chain_id: string | null; depth: number; status: WorkStatus;
   decided_path: "auto" | "human" | null; reason: ReasonCode | null; reasons: string[]; missing_fields: string[];
   proposal: Proposal; result: { summary: string; href?: string } | null; error: string | null; evidence_state: EvidenceState;
-  assigned_staff_id: string | null; execution_id: string | null; origin: Origin; created_at: string; updated_at: string; completed_at: string | null };
+  assigned_staff_id: string | null; execution_id: string | null; origin: Origin; created_at: string; updated_at: string; completed_at: string | null;
+  /** the agent instance that handles it (one branch's Chatbot); set by the database (resolve_installation) when the writer does not say */
+  installation_id?: string | null };
 export type WorkItemView = WorkItem & {
   lead: { id: string; contact_name: string; company: string; channel: string } | null;
   assignedStaffName: string | null;

@@ -13,6 +13,8 @@ import { supabaseAdmin } from "./supabase/admin";
  *                    booked time counts confirmed, rescheduled and done bookings times their party size (the same rule as the Stats tab).
  *                    Null when no resource has open hours.
  *   depositsPending  bookings that are not cancelled, done or no-show whose deposit is still due (deposit_status "due"), with their total.
+ *
+ * With `installationId` (one Booking agent per branch) every figure counts that instance's bookings only (bookings.installation_id).
  */
 export type BookingFigures = {
   readonly bookingsToday: number;
@@ -25,7 +27,7 @@ export type BookingFigures = {
 
 type Row = Pick<BookingRow, "start_at" | "end_at" | "status" | "party_size" | "resource_id">;
 
-export const loadBookingFigures = async (ws: string): Promise<BookingFigures> => {
+export const loadBookingFigures = async (ws: string, installationId: string | null = null): Promise<BookingFigures> => {
   const db = supabaseAdmin();
   const model = await loadModel(ws);
   const tz = model.settings.timezone;
@@ -40,11 +42,16 @@ export const loadBookingFigures = async (ws: string): Promise<BookingFigures> =>
   const since30 = nowMs - 30 * 86_400_000;
   const iso = (ms: number) => new Date(ms).toISOString();
 
-  const [week, past, deposits] = await Promise.all([
-    db.from("bookings").select("start_at, end_at, status, party_size, resource_id").eq("workspace_id", ws).gte("start_at", iso(weekStart)).lt("start_at", iso(weekEnd)).limit(5000),
-    db.from("bookings").select("status").eq("workspace_id", ws).in("status", ["done", "no_show"]).gte("start_at", iso(since30)).lt("start_at", iso(nowMs)).limit(5000),
-    db.from("bookings").select("deposit_vnd").eq("workspace_id", ws).eq("deposit_status", "due").in("status", ["requested", "confirmed", "rescheduled"]).limit(5000),
-  ]);
+  // One instance's bookings when an installation is given; otherwise every booking of the workspace.
+  let weekQ = db.from("bookings").select("start_at, end_at, status, party_size, resource_id").eq("workspace_id", ws).gte("start_at", iso(weekStart)).lt("start_at", iso(weekEnd));
+  let pastQ = db.from("bookings").select("status").eq("workspace_id", ws).in("status", ["done", "no_show"]).gte("start_at", iso(since30)).lt("start_at", iso(nowMs));
+  let depositQ = db.from("bookings").select("deposit_vnd").eq("workspace_id", ws).eq("deposit_status", "due").in("status", ["requested", "confirmed", "rescheduled"]);
+  if (installationId) {
+    weekQ = weekQ.eq("installation_id", installationId);
+    pastQ = pastQ.eq("installation_id", installationId);
+    depositQ = depositQ.eq("installation_id", installationId);
+  }
+  const [week, past, deposits] = await Promise.all([weekQ.limit(5000), pastQ.limit(5000), depositQ.limit(5000)]);
   if (week.error) throw new Error(week.error.message);
   if (past.error) throw new Error(past.error.message);
   if (deposits.error) throw new Error(deposits.error.message);

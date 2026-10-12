@@ -113,15 +113,25 @@ const waitingConversationId = (w: Pick<WorkItem, "subject_id" | "proposal">): st
   return typeof f === "string" ? f : w.subject_id;
 };
 
-const chatbotAgentIds = async (c: Ctx): Promise<Array<string>> =>
-  (((await c.db.from("agents").select("id").eq("workspace_id", c.ws).eq("module", "chatbot")).data ?? []) as Array<{ id: string }>).map((a) => a.id);
+/**
+ * The Chatbot agents whose conversations a workbench shows: one instance's own agent (several Chatbots, one per branch or Fanpage), else
+ * every Chatbot agent of the workspace (the single-instance case, and legacy agents that predate installations).
+ */
+const chatbotAgentIds = async (c: Ctx, installationId: string | null): Promise<Array<string>> => {
+  if (installationId) {
+    const siblings = ((await c.db.from("module_installations").select("id, agent_id").eq("workspace_id", c.ws).eq("module_key", "chatbot")).data ?? []) as Array<{ id: string; agent_id: string | null }>;
+    const own = siblings.find((i) => i.id === installationId);
+    if (own && siblings.length > 1) return own.agent_id ? [own.agent_id] : [];
+  }
+  return (((await c.db.from("agents").select("id").eq("workspace_id", c.ws).eq("module", "chatbot")).data ?? []) as Array<{ id: string }>).map((a) => a.id);
+};
 
-/** Customer conversations of the workspace's Chatbot, newest activity first, with the header metrics. */
-export async function loadChatbotOverview(): Promise<WbOverview> {
+/** Customer conversations of one Chatbot instance (or of the workspace's Chatbot), newest activity first, with the header metrics. */
+export async function loadChatbotOverview(installationId: string | null = null): Promise<WbOverview> {
   const c = await engineCtx();
   const now = Date.now();
   const nowIso = new Date(now).toISOString();
-  const agentIds = await chatbotAgentIds(c);
+  const agentIds = await chatbotAgentIds(c, installationId);
   const empty: WbOverview = { workspaceId: c.ws, nowIso, conversations: [], metrics: { today: 0, waiting: 0, p50FirstResponseMin: null, sample: 0, leadsCaptured7d: 0 } };
   if (!agentIds.length) return empty;
 

@@ -87,6 +87,8 @@ create unique index if not exists brain_facts_one_active on public.brain_facts
 /**
  * The instance of `p_module` in `p_ws` that a row belongs to, and how it was found (recorded in the event log by the command bus):
  *   conversation  the conversation's own instance (its agent), when it is of this type
+ *   connection    the instance of this type whose agent is bound to the connection the conversation came in on (the Chatbot of the Q1
+ *                 Fanpage hands a booking to the Booking agent bound to that same Fanpage)
  *   lead          the instance that captured the lead, when it is of this type; else the lead's latest conversation with an instance of this type
  *   chain         an earlier work item of the same chain handled by an instance of this type
  *   single        the only instance of the type
@@ -110,6 +112,12 @@ begin
     select i.id into found from public.agent_conversations c join public.module_installations i on i.id = c.installation_id
      where c.id = p_conversation and c.workspace_id = p_ws and i.module_key = p_module;
     if found is not null then return query select found, 'conversation'::text; return; end if;
+    select i.id into found from public.agent_conversations c
+      join public.agent_connections ac on ac.connection_id = c.connection_id
+      join public.module_installations i on i.agent_id = ac.agent_id
+     where c.id = p_conversation and c.workspace_id = p_ws and c.connection_id is not null and i.module_key = p_module
+     order by i.created_at limit 1;
+    if found is not null then return query select found, 'connection'::text; return; end if;
   end if;
   if p_lead is not null then
     select i.id into found from public.leads l join public.module_installations i on i.id = l.installation_id

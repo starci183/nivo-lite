@@ -1,5 +1,5 @@
 import "server-only";
-import { isModuleKey, commandOf, moduleName, type ModuleKey } from "./module-registry";
+import { isModuleKey, isMultiInstance, commandOf, moduleName, type ModuleKey } from "./module-registry";
 import { logEvidence } from "./core";
 import { postOffice, runWork, type EngineCtx } from "./engine";
 import {
@@ -21,6 +21,11 @@ import type { FlowAction, Origin, Proposal, WorkItem } from "./flow-types";
  *  - credit-safe: no LLM talks to another LLM. The only model call is the receiver's own prepare step, the same one a human trigger would
  *    cause, and a refused command makes none.
  *
+ * Instances: a command is addressed to a module TYPE. For a multi-instance receiver (several Chatbots, one per branch; several Booking agents)
+ * the bus resolves WHICH instance from the chain: the conversation's own instance, else the one bound to the conversation's connection, else the lead's, else an earlier item of the chain, else
+ * the type's only instance, else the first one (resolve_installation in the database). The work item carries installation_id and the
+ * `command.sent` event records the instance and how it was chosen, so a "first" fallback is visible in the log.
+ *
  * Office mirror: every accepted command posts one system line ("@Kế toán ← Bán hàng: xuất phiếu thu cho đơn #123") linked to the work
  * item, as a `messages` row (author_kind system, author COMMAND_LINE_AUTHOR). It is written, not generated.
  */
@@ -39,6 +44,8 @@ export type SendCommandInput = {
   parentId?: string | null;
   /** why, in one line: kept in the event log, not in the Office */
   reason: string;
+  /** the receiving instance when the sender knows it; otherwise it is resolved from the chain (see "Instances" above) */
+  installationId?: string | null;
   dedupeKey?: string;
   origin?: Origin;
   inboundEventId?: string | null;
@@ -63,7 +70,12 @@ const resolveSender = async (c: EngineCtx, from: CommandSender): Promise<Sender 
   if (!/^[0-9a-f-]{36}$/i.test(from)) return null;
   const agent = ((await c.db.from("agents").select("name, module").eq("workspace_id", c.ws).eq("id", from).maybeSingle()).data ?? null) as { name: string; module: string } | null;
   if (!agent) return null;
-  return { label: isModuleKey(agent.module) ? moduleName(agent.module, c.locale) : agent.name, module: isModuleKey(agent.module) ? agent.module : null };
+  if (!isModuleKey(agent.module)) return { label: agent.name, module: null };
+  // An instance of a multi-instance type speaks with its instance name ("Chatbot AI – Chi nhánh Q1").
+  const inst = isMultiInstance(agent.module)
+    ? (((await c.db.from("module_installations").select("name").eq("workspace_id", c.ws).eq("agent_id", from).maybeSingle()).data ?? null) as { name: string } | null)
+    : null;
+  return { label: instanceLabel(moduleName(agent.module, c.locale), inst?.name ?? null), module: agent.module };
 };
 
 /** A readable label of the subject for the Office line (the order number, the customer's name, the invoice number); null when it cannot be read. */
@@ -87,6 +99,34 @@ const refuse = async (c: EngineCtx, i: SendCommandInput, refused: CommandRefusal
   await logEvidence(c.db, c.ws, { kind: "command.refused", actor: "NIVO", summary: `${i.from} → ${i.to}.${i.command}: ${refused}`, evidence: detail }).catch(() => {});
   return { ok: false, refused, detail, ...(missing ? { missing } : {}) };
 };
+
+/** "<type> – <instance>" when the instance has its own name, else the type's name. */
+const instanceLabel = (typeName: string, instanceName: string | null): string =>
+  instanceName && instanceName.trim().toLowerCase() !== typeName.trim().toLowerCase() ? `${typeName} – ${instanceName}` : typeName;
+
+type InstanceChoice = { readonly id: string; readonly via: "given" | "conversation" | "connection" | "lead" | "chain" | "single" | "first"; readonly name: string | null };
+
+/** Which instance of a multi-instance receiver handles a command (null for a single-instance type: the database fills it). Never throws. */
+const receivingInstance = async (
+  c: EngineCtx, i: SendCommandInput, at: { conversationId: string | null; leadId: string | null; chainId: string | null },
+): Promise<InstanceChoice | null> => {
+  if (!isMultiInstance(i.to)) return null;
+  try {
+    if (i.installationId) {
+      const row = ((await c.db.from("module_installations").select("id, name").eq("workspace_id", c.ws).eq("module_key", i.to).eq("id", i.installationId).maybeSingle()).data ?? null) as { id: string; name: string } | null;
+      if (row) return { id: row.id, via: "given", name: row.name };
+    }
+    const { data } = await c.db.rpc("resolve_installation", { p_ws: c.ws, p_module: i.to, p_conversation: at.conversationId, p_lead: at.leadId, p_chain: at.chainId });
+    const hit = ((data ?? []) as Array<{ installation_id: string; via: InstanceChoice["via"] }>)[0];
+    if (!hit) return null;
+    const named = ((await c.db.from("module_installations").select("name").eq("id", hit.installation_id).maybeSingle()).data ?? null) as { name: string } | null;
+    return { id: hit.installation_id, via: hit.via, name: named?.name ?? null };
+  } catch {
+    return null; // the database trigger still attributes the item
+  }
+};
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Send one command to a module. Validates the contract, the depth and the cycle rule, then creates the receiver's work item through
@@ -125,20 +165,29 @@ export const sendCommand = async (c: EngineCtx, i: SendCommandInput): Promise<Co
     if (((await q).count ?? 0) > 0) return refuse(c, i, "cycle", `${i.command} on ${subjectType}:${subjectId ?? "none"} already ran in chain ${chainId}`);
   }
 
+  // A multi-instance receiver: the instance from the chain (conversation > lead > chain > single > first), recorded in the event below.
+  const convField = fields.conversation_id;
+  const conversationId = typeof convField === "string" && UUID.test(convField) ? convField : subjectType === "conversation" ? subjectId : null;
+  const instance = await receivingInstance(c, i, { conversationId, leadId, chainId });
+
   let created = false;
   const item = await runWork(c, {
     action: accepted.action as FlowAction, subject_type: subjectType as WorkItem["subject_type"], subject_id: subjectId, lead_id: leadId,
     inbound_event_id: i.inboundEventId ?? null, parent_id: i.parentId ?? null, dedupeKey, origin: i.origin ?? "live",
     seed: { ...(i.seed ?? {}), fields: { ...(i.seed?.fields ?? {}), ...fields } as Proposal["fields"] },
-    queue: i.queue, preset: i.preset, noChain: i.noChain, forceAsk: i.forceAsk ?? undefined, chainId, depth,
+    queue: i.queue, preset: i.preset, noChain: i.noChain, forceAsk: i.forceAsk ?? undefined, chainId, depth, installationId: instance?.id ?? null,
     onInserted: async (row) => {
       created = true;
       const subject = subjectPhrase(locale, subjectType, await subjectLabel(c, subjectType, subjectId));
       await postOffice(c, {
-        command: true, body: mirrorText({ locale, toName: moduleName(i.to, c.locale), fromName: sender.label, what: accepted.description[locale], subject }),
+        command: true, body: mirrorText({ locale, toName: instanceLabel(moduleName(i.to, c.locale), instance?.name ?? null), fromName: sender.label, what: accepted.description[locale], subject }),
         lead_id: row.lead_id, work_item_id: row.id,
       }).catch(() => {});
-      await logEvidence(c.db, c.ws, { lead_id: row.lead_id, work_item_id: row.id, kind: "command.sent", actor: sender.label, summary: `${i.to}.${i.command}`, evidence: i.reason }).catch(() => {});
+      const to = instance ? `${i.to}[${instance.name ?? instance.id}]` : i.to;
+      await logEvidence(c.db, c.ws, {
+        lead_id: row.lead_id, work_item_id: row.id, kind: "command.sent", actor: sender.label, summary: `${to}.${i.command}`,
+        evidence: instance ? `${i.reason} · instance ${instance.id} (${instance.via})` : i.reason,
+      }).catch(() => {});
     },
   });
   return { ok: true, item, created, chainId: item.chain_id, depth: item.depth ?? depth };

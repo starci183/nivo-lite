@@ -57,6 +57,8 @@ export type WorkSpec = {
   /** the command chain this item joins and its depth (sendCommand sets both); a new item without one starts its own chain at depth 0 */
   chainId?: string | null;
   depth?: number;
+  /** the agent instance that handles it; omitted = the database resolves it (conversation > lead > chain > the type's only or first instance) */
+  installationId?: string | null;
   /** called once, only when this call really inserted the row, before the gate runs (the command bus posts its Office mirror here) */
   onInserted?: (row: WorkItem) => Promise<void>;
 };
@@ -88,17 +90,33 @@ const once = <T>(c: EngineCtx, key: string, fn: () => Promise<T>): Promise<T> =>
 export const loadAuthority = (c: EngineCtx) =>
   once(c, "authority", async () => ((await c.db.from("authority").select("*").eq("workspace_id", c.ws).maybeSingle()).data ?? null) as Authority | null);
 
-/** The rule for an action, with the department's operating mode applied (assist downgrades "auto" to "ask"; no installation = autopilot). */
-const loadRule = async (c: EngineCtx, action: FlowAction) => {
+/**
+ * The rule for an action, with the operating mode applied (assist downgrades "auto" to "ask"; no installation = autopilot). The rule is per
+ * TYPE (shared by every instance); the operating mode is the handling instance's own (one branch's Chatbot may assist while another runs).
+ */
+const loadRule = async (c: EngineCtx, action: FlowAction, installationId: string | null = null) => {
   const rule = ((await c.db.from("authority_rules").select("*").eq("workspace_id", c.ws).eq("action", action).maybeSingle()).data ?? null) as AuthorityRule | null;
   if (!rule || rule.mode !== "auto") return rule;
-  const inst = await c.db.from("module_installations").select("operating_mode").eq("workspace_id", c.ws).eq("module_key", ACTION_DEPARTMENT[action]).limit(1);
+  const q = c.db.from("module_installations").select("operating_mode").eq("workspace_id", c.ws).eq("module_key", ACTION_DEPARTMENT[action]);
+  const inst = await (installationId ? q.eq("id", installationId) : q.order("created_at")).limit(1);
   return applyOperatingMode(rule, ((inst.data ?? [])[0] as { operating_mode?: string } | undefined)?.operating_mode);
 };
 
 const agentFor = (c: EngineCtx, d: Department) =>
   once(c, `agent:${d}`, async () =>
     (((await c.db.from("agents").select("*").eq("workspace_id", c.ws).eq("module", d).eq("status", "active").order("created_at").limit(1)).data ?? [])[0] ?? null) as Agent | null);
+
+/** The agent of one instance (memoised per ctx); null when the instance has no agent. */
+const agentOfInstallation = (c: EngineCtx, installationId: string) =>
+  once(c, `inst-agent:${installationId}`, async () => {
+    const inst = ((await c.db.from("module_installations").select("agent_id").eq("workspace_id", c.ws).eq("id", installationId).maybeSingle()).data ?? null) as { agent_id: string | null } | null;
+    if (!inst?.agent_id) return null;
+    return ((await c.db.from("agents").select("*").eq("id", inst.agent_id).maybeSingle()).data ?? null) as Agent | null;
+  });
+
+/** The agent that speaks for a department on an item: the item's own instance when it has one (Chatbot – Q1), else the department's first active agent. */
+const deptAgent = async (c: EngineCtx, d: Department, installationId?: string | null): Promise<Agent | null> =>
+  (installationId ? await agentOfInstallation(c, installationId).catch(() => null) : null) ?? agentFor(c, d);
 
 const brief = async (c: EngineCtx) => ai.authorityBrief(await loadAuthority(c));
 
@@ -123,8 +141,8 @@ const agentInput = (a: Agent): ai.AgentInput => ({ name: a.name, handle: a.handl
  * One short line in the Office thread, linked to the work item. It speaks as the department's own agent (Sales, Accounting,
  * Chatbot) when that agent is installed; without one it stays a NIVO Core line (agent_id null, author "NIVO").
  */
-export const postOffice = async (c: EngineCtx, m: { body: string; lead_id: string | null; work_item_id: string | null; dept?: Department; command?: boolean }) => {
-  const agent = m.dept && !m.command ? await agentFor(c, m.dept).catch(() => null) : null;
+export const postOffice = async (c: EngineCtx, m: { body: string; lead_id: string | null; work_item_id: string | null; dept?: Department; command?: boolean; installation_id?: string | null }) => {
+  const agent = m.dept && !m.command ? await deptAgent(c, m.dept, m.installation_id).catch(() => null) : null;
   // A command mirror line is always a NIVO system line, never the receiving agent speaking.
   const author = m.command
     ? { author_kind: "system", author_name: COMMAND_LINE_AUTHOR, agent_id: null }
@@ -677,7 +695,7 @@ const fail = async (c: EngineCtx, item: WorkItem, e: unknown): Promise<WorkItem>
   const msg = e instanceof Error ? e.message : String(e);
   const failed = await patchItem(c, item.id, { status: "failed", error: msg.slice(0, 500) }).catch(() => ({ ...item, status: "failed" as const, error: msg }));
   await logEvidence(c.db, c.ws, { lead_id: item.lead_id, work_item_id: item.id, kind: "work.failed", actor: "NIVO", summary: tr(c)("failedMsg", { dept: deptLabel(c, item.department), action: gl(c, `action_${item.action}`), error: msg }) }).catch(() => {});
-  await postOffice(c, { dept: item.department, body: tr(c)("failedMsg", { dept: deptLabel(c, item.department), action: gl(c, `action_${item.action}`), error: msg }), lead_id: item.lead_id, work_item_id: item.id }).catch(() => {});
+  await postOffice(c, { dept: item.department, body: tr(c)("failedMsg", { dept: deptLabel(c, item.department), action: gl(c, `action_${item.action}`), error: msg }), lead_id: item.lead_id, work_item_id: item.id, installation_id: item.installation_id }).catch(() => {});
   await setInbound(c, item.inbound_event_id, { status: "failed" }).catch(() => {});
   return failed;
 };
@@ -709,7 +727,7 @@ const askHuman = async (c: EngineCtx, item: WorkItem, proposal: Proposal, v: Gat
   const overLimit = v.reasons.includes("over_authority") ? limitNote(c, rule, proposal) : null;
   const evidence = [v.missing.length ? fieldLabels(c, v.missing) : null, overLimit].filter(Boolean).join(" · ") || null;
   await logEvidence(c.db, c.ws, { lead_id: waiting.lead_id, work_item_id: waiting.id, kind: "work.asked", actor: deptLabel(c, waiting.department), summary: `${reasonLabel}: ${proposal.summary}`, evidence });
-  await postOffice(c, { dept: waiting.department, body: tr(c)("askMsg", { dept: deptLabel(c, waiting.department), reason: reasonLabel, summary: proposal.summary }), lead_id: waiting.lead_id, work_item_id: waiting.id });
+  await postOffice(c, { dept: waiting.department, body: tr(c)("askMsg", { dept: deptLabel(c, waiting.department), reason: reasonLabel, summary: proposal.summary }), lead_id: waiting.lead_id, work_item_id: waiting.id, installation_id: waiting.installation_id });
   await setInbound(c, waiting.inbound_event_id, { status: "needs_decision", ...(waiting.lead_id ? { lead_id: waiting.lead_id } : {}) });
   return waiting;
 };
@@ -727,14 +745,14 @@ const finish = async (c: EngineCtx, item: WorkItem, proposal: Proposal, f: Finis
   if (f.path === "auto") {
     await logDecision(c.db, c.ws, { work_item_id: done.id, lead_id: done.lead_id, department: done.department, action: done.action, decided_by: "NIVO", decider_kind: "policy", outcome: "auto_done", reason: "routine", note: res.summary });
     await logEvidence(c.db, c.ws, { lead_id: done.lead_id, work_item_id: done.id, kind: "work.auto_done", actor: dept, summary: res.summary, evidence: res.detail ?? null });
-    await postOffice(c, { dept: done.department, body: tr(c)("autoMsg", { dept, summary: res.summary }), lead_id: done.lead_id, work_item_id: done.id });
+    await postOffice(c, { dept: done.department, body: tr(c)("autoMsg", { dept, summary: res.summary }), lead_id: done.lead_id, work_item_id: done.id, installation_id: done.installation_id });
   } else {
     await logDecision(c.db, c.ws, {
       work_item_id: done.id, lead_id: done.lead_id, department: done.department, action: done.action, decided_by: f.by.name,
       decider_kind: f.by.kind, outcome: f.outcome, reason: item.reason, note: f.note ?? res.summary, before: f.before ?? null, after: proposal,
     });
     await logEvidence(c.db, c.ws, { lead_id: done.lead_id, work_item_id: done.id, kind: "work.resumed", actor: f.by.name, summary: res.summary, evidence: res.detail ?? null });
-    await postOffice(c, { dept: done.department, body: tr(c)("resumedMsg", { user: f.by.name, summary: res.summary }), lead_id: done.lead_id, work_item_id: done.id });
+    await postOffice(c, { dept: done.department, body: tr(c)("resumedMsg", { user: f.by.name, summary: res.summary }), lead_id: done.lead_id, work_item_id: done.id, installation_id: done.installation_id });
     await emitEvent(c.ws, "decision.made", { work_item_id: done.id, action: done.action, department: done.department, outcome: f.outcome, decided_by: f.by.name, lead_id: done.lead_id, summary: res.summary }, `decision.made:${done.id}:${f.outcome}`);
   }
   await setInbound(c, done.inbound_event_id, { status: "processed", ...(done.lead_id ? { lead_id: done.lead_id } : {}) });
@@ -764,7 +782,7 @@ const outboundAccess = async (c: EngineCtx, item: WorkItem, proposal: Proposal):
   if (!convId) return "auto";
   const { connectionId, grants } = await conversationAccess(convId);
   if (!connectionId || grants.length === 0) return "auto";
-  const own = await agentFor(c, item.department);
+  const own = await deptAgent(c, item.department, item.installation_id);
   const mine = own ? grants.find((g) => g.agentId === own.id) : undefined;
   if (mine) return mine.access;
   return grants.reduce<Access>((best, g) => (ACCESS_RANK[g.access] > ACCESS_RANK[best] ? g.access : best), "read");
@@ -779,7 +797,7 @@ const processItem = async (c: EngineCtx, claimed: WorkItem, o: ProcessOpts = {})
       proposal = prep.proposal;
       item = await patchItem(c, item.id, { proposal, ...(prep.patch ?? {}) });
     }
-    const rule = await loadRule(c, item.action);
+    const rule = await loadRule(c, item.action, item.installation_id ?? null);
     let v = evaluateGate({ department: item.department, action: item.action, rule, proposal });
     if (o.forceAsk) v = { verdict: "ask", reason: o.forceAsk, reasons: [o.forceAsk, ...v.reasons.filter((r) => r !== o.forceAsk && r !== "routine")], missing: v.missing };
     // Agent access: a message that would leave through a connection the agent may only read, or must ask for, waits for a person.
@@ -803,6 +821,7 @@ export const runWork = async (c: EngineCtx, spec: WorkSpec): Promise<WorkItem> =
     id, chain_id: spec.chainId ?? id, depth: spec.depth ?? 0, workspace_id: c.ws, department: ACTION_DEPARTMENT[spec.action], action: spec.action, subject_type: spec.subject_type, subject_id: spec.subject_id ?? null,
     lead_id: spec.lead_id ?? null, inbound_event_id: spec.inbound_event_id ?? null, parent_id: spec.parent_id ?? null, dedupe_key: spec.dedupeKey,
     status: "queued", proposal: { summary: "", fields: {}, ...(spec.seed ?? {}) }, origin: spec.origin,
+    ...(spec.installationId ? { installation_id: spec.installationId } : {}),
   }, { onConflict: "workspace_id,dedupe_key", ignoreDuplicates: true }).select();
   if (ins.error) throw new Error(ins.error.message);
   const row = (ins.data ?? [])[0] as WorkItem | undefined;
@@ -914,7 +933,7 @@ export const resumeWork = async (
       const rejected = await patchItem(c, item.id, { status: "rejected", decided_path: "human", proposal: merged, completed_at: now(), result: { summary: tr(c)("rejectedResult") } });
       await logDecision(c.db, c.ws, { work_item_id: item.id, lead_id: item.lead_id, department: item.department, action: item.action, decided_by: by.name, decider_kind: by.kind, outcome: "rejected", reason: item.reason, note: note ?? null, before, after: merged });
       await logEvidence(c.db, c.ws, { lead_id: item.lead_id, work_item_id: item.id, kind: "work.rejected", actor: by.name, summary: tr(c)("rejectedWork", { user: by.name, summary: before.summary }), evidence: note ?? null });
-      await postOffice(c, { dept: item.department, body: tr(c)("rejectedWork", { user: by.name, summary: before.summary }), lead_id: item.lead_id, work_item_id: item.id });
+      await postOffice(c, { dept: item.department, body: tr(c)("rejectedWork", { user: by.name, summary: before.summary }), lead_id: item.lead_id, work_item_id: item.id, installation_id: item.installation_id });
       await setInbound(c, item.inbound_event_id, { status: "processed" });
       await emitEvent(c.ws, "decision.made", { work_item_id: item.id, action: item.action, department: item.department, outcome: "rejected", decided_by: by.name, lead_id: item.lead_id, summary: before.summary }, `decision.made:${item.id}:rejected`);
       return rejected;
@@ -930,7 +949,7 @@ export const resumeWork = async (
     merged.outcome = "clear";
     if (typeof merged.confidence === "number" && merged.confidence < 1) merged.confidence = 1;
   }
-  const rule = await loadRule(c, item.action);
+  const rule = await loadRule(c, item.action, item.installation_id ?? null);
   // humanApproved covers THIS item only (its own action, department and amount): see "Approval scope" above.
   const v = evaluateGate({ department: item.department, action: item.action, rule, proposal: merged, humanApproved: true });
   const blocking = v.reasons.filter((r) => r === "missing_data" || r === "unclear_outcome");

@@ -29,9 +29,9 @@ export const replyTimeoutSec = (settings: Record<string, unknown> | null | undef
   return Number.isFinite(n) && n >= 5 && n <= 120 ? Math.round(n) : DEFAULT_REPLY_TIMEOUT_SEC;
 };
 
-/** The processor of one module of a workspace (the installation's settings; "nivo" when it has none or cannot be read). */
+/** The processor of one module of a workspace (its first installation's settings; "nivo" when it has none or cannot be read). Per instance: processorFromSettings(installation.settings). */
 export const processorOf = async (db: SupabaseClient, workspaceId: string, moduleKey: ModuleKey): Promise<Processor> => {
-  const { data } = await db.from("module_installations").select("settings").eq("workspace_id", workspaceId).eq("module_key", moduleKey).maybeSingle();
+  const { data } = await db.from("module_installations").select("settings").eq("workspace_id", workspaceId).eq("module_key", moduleKey).order("created_at").limit(1).maybeSingle();
   return processorFromSettings((data as { settings: Record<string, unknown> | null } | null)?.settings);
 };
 
