@@ -71,13 +71,13 @@ Lần đầu `deploy.sh` sẽ dừng ở bước kiểm tra `.env`: tạo `.env`
 2. **OpenClaw**: cấu hình nhà cung cấp model và tạo agent. Control UI qua tunnel: `ssh -L 18789:127.0.0.1:18789 deploy@<ip>` rồi mở `http://127.0.0.1:18789`. Engine dùng agent `ws-<8 ký tự đầu workspace id>-chatbot` cho mỗi workspace (hoặc bật `OPENCLAW_MANAGE_AGENTS=1` sau khi xác minh schema).
 3. **Ứng dụng Next (Netlify)**: đặt biến `ENGINE_SHARED_SECRET` **cùng giá trị** rồi deploy lại.
 4. **Kiểm tra**: `curl https://engine.<domain>/healthz` trả `{"status":"ok",...}`. Trong Settings của module Chatbot, thẻ **Bộ xử lý** hiển thị nhịp tim; chọn *OpenClaw (máy chủ riêng)* và gửi một tin thử.
-5. `docker compose --env-file .env logs -f engine` để xem job chạy.
+5. `docker compose --env-file .env logs -f engine` để xem job chạy. Dòng `pgmq consumer up` nghĩa là job nền (đọc tài liệu, embedding...) đã chạy; `curl .../readyz` phải có `"pgmq":"ok"` (cần áp migration `20261025110000_pgmq_transport.sql` lên Supabase trước). Kiến trúc và vận hành: `docs/JOBS.md`.
 
 Nếu engine ngừng, ứng dụng tự trả lời bằng bộ xử lý mặc định (không có nhịp tim trong 90 giây), nên khách không phải chờ.
 
 ## 6. Sao lưu
 
-Dữ liệu trạng thái nằm trong 5 volume: `n8n-db` (Postgres của n8n), `n8n-data`, `openclaw-data` (cấu hình, agent, phiên), `caddy-data` (chứng chỉ), `caddy-config`. Hàng đợi `engine_jobs` nằm ở Supabase (đã nằm trong sao lưu của Supabase). Engine không có trạng thái cục bộ.
+Dữ liệu trạng thái nằm trong các volume: `n8n-db` (Postgres của n8n), `n8n-data`, `openclaw-data` (cấu hình, agent, phiên), `caddy-data` (chứng chỉ), `caddy-config`. Hàng đợi job nền (pgmq, `job_outbox`) và hàng đợi `engine_jobs` đều nằm ở Supabase (đã nằm trong sao lưu của Supabase). Engine không có trạng thái cục bộ.
 
 ```bash
 cd /opt/nivo-engine/deploy
@@ -103,3 +103,5 @@ Cùng một VPS không phải bản sao lưu độc lập: **chép `BACKUP_DIR` 
 | Caddy không xin được chứng chỉ | DNS chưa trỏ đúng, cổng 80/443 bị chặn |
 | `/api/engine/*` trả 401 | `ENGINE_SHARED_SECRET` hai bên khác nhau, hoặc đồng hồ VPS lệch hơn 5 phút (`timedatectl`) |
 | Job `failed` | `select kind, status, error from engine_jobs order by created_at desc limit 20;` |
+| Tài liệu đứng ở "Đang chờ" | `/healthz` → `jobs.stats.oldestQueuedAgeSeconds` lớn: engine không tiêu thụ (`JOBS_ENABLED`, `/readyz`); `./jobs.sh open` hoặc `select name, state, attempts, last_error from job_outbox where state in ('queued','running');` |
+| Job nền lỗi (pgmq) | `/healthz` → `jobs.stats.failed24h`; chi tiết: `./jobs.sh failed`, gửi lại: `./jobs.sh retry <outbox id>` (xem `docs/OPERATIONS-JOBS.md`) |

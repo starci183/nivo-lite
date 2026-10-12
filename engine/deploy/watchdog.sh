@@ -5,6 +5,9 @@
 #   - the engine cannot reach 127.0.0.1:18789 from inside its own container, or
 #   - the engine container is not running / not healthy, or
 #   - the openclaw container was (re)started after the engine started.
+# It also watches the background jobs (check_jobs below), from the engine /healthz JSON (jobs.stats = job_stats() in Postgres, refreshed every
+# 10 s): jobs failed in the last 24 h (JOBS_FAILED_ALERT, default 20) and the oldest job still queued (JOBS_STALE_SECONDS, default 300).
+# Those are ALERT lines in the same log, at most one per kind every 30 minutes; they never restart the engine.
 # Touches nothing else: not the edge, not n8n, not other compose projects. Log: ~/nivo-engine/watchdog.log (rotated at 512 KB, 3 files).
 set -u
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -25,8 +28,35 @@ if [ -f "$LOG" ] && [ "$(stat -c %s "$LOG" 2>/dev/null || echo 0)" -gt 524288 ];
   mv -f "$LOG.2" "$LOG.3" 2>/dev/null; mv -f "$LOG.1" "$LOG.2" 2>/dev/null; mv -f "$LOG" "$LOG.1"
 fi
 
+env_val() { grep -m1 "^$1=" "$DEPLOY/.env" 2>/dev/null | cut -d= -f2- | tr -d "\"'\r"; }
+FAILED_MAX=$(env_val JOBS_FAILED_ALERT); FAILED_MAX=${FAILED_MAX:-20}
+STALE_MAX=$(env_val JOBS_STALE_SECONDS); STALE_MAX=${STALE_MAX:-300}
+ALERT_EVERY=1800
+
+# alert <kind> <message>: one ALERT line per kind every ALERT_EVERY seconds (the log is the alert channel today; ship it wherever you page from).
+alert() {
+  local f="$ROOT/.watchdog.alert.$1" now last
+  now=$(date +%s); last=$(cat "$f" 2>/dev/null || echo 0)
+  [ $((now - last)) -lt "$ALERT_EVERY" ] && return 0
+  echo "$now" > "$f"; log "ALERT $1: $2"
+}
+
+check_jobs() {
+  # "<failed24h> <oldestQueuedAgeSeconds>" from /healthz, or "-1 -1" when the engine does not answer (the recreate logic below handles that).
+  local out failed age
+  out=$(docker exec "$ENGINE" node -e "
+    fetch('http://127.0.0.1:'+(process.env.ENGINE_PORT||8787)+'/healthz',{signal:AbortSignal.timeout(4000)}).then(r=>r.json()).then(j=>{
+      const s=(j.jobs&&j.jobs.stats)||{};console.log((s.checkedAt?s.failed24h:-1)+' '+(s.checkedAt?s.oldestQueuedAgeSeconds:-1));
+    }).catch(()=>console.log('-1 -1'))" 2>/dev/null | tr -d '\r')
+  read -r failed age <<<"${out:--1 -1}"
+  [ "${failed:--1}" -gt "$FAILED_MAX" ] 2>/dev/null && alert failed-jobs "$failed jobs failed in 24 h (limit $FAILED_MAX): docs/OPERATIONS-JOBS.md, './jobs.sh failed'"
+  [ "${age:--1}" -gt "$STALE_MAX" ] 2>/dev/null && alert jobs-stale "a job has waited ${age}s (limit ${STALE_MAX}s): is the engine consuming? './jobs.sh open'"
+  return 0
+}
+
 # Nothing to do until both containers exist (first deploy, or compose is mid-update).
 docker inspect "$ENGINE" "$OPENCLAW" >/dev/null 2>&1 || exit 0
+check_jobs
 
 reason=""
 state=$(docker inspect -f '{{.State.Status}}' "$ENGINE" 2>/dev/null || echo missing)

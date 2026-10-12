@@ -21,7 +21,7 @@ Backend chạy trên VPS, làm những việc mà serverless (Netlify) không l�
 
 - **NestJS tối giản** (không GraphQL, không Keycloak). Chuẩn backend của StarCi (`starci-academy-backend/.claude/knowledge`: `coding-reference.yaml`, `architecture-rules.yaml`) quy định mọi dịch vụ dùng Next.js/NestJS và *không cho thay framework*, nên không dùng Node thuần dù nhỏ hơn.
 - Áp dụng phần nhẹ của chuẩn: một nơi duy nhất đọc môi trường (`EnvSource`), mỗi năng lực có `*.config.ts` + options, module nhận options qua `register()`, cấu hình được kiểm tra **trước** khi mở cổng hay chạy worker, vòng lặp nền là một transport riêng (`platform/queue`), liveness và readiness tách nhau. Không dùng CQRS, saga, outbox vì chưa có ranh giới thật cần chúng (REF-SCOPE-2).
-- **Hàng đợi nằm trong Postgres** (Supabase) chứ không thêm Redis/BullMQ: ứng dụng và pg_cron đều enqueue được bằng SQL, một nguồn sự thật, không thêm dịch vụ phải vận hành.
+- **Hàng đợi nằm trong Postgres** (Supabase) chứ không thêm Redis/BullMQ: ứng dụng và pg_cron đều enqueue được bằng SQL, một nguồn sự thật, không thêm dịch vụ phải vận hành. Job nền mới (tài liệu) dùng Supabase Queues (pgmq) trong cùng Postgres.
 
 ## Chạy tại máy
 
@@ -100,7 +100,8 @@ OpenClaw gọi engine bằng HTTP nội bộ với bearer token **ngắn hạn, 
 
 - `ENGINE_SHARED_SECRET` (32+ ký tự) ký HMAC-SHA256 `<timestamp>.<body>` cho mọi lời gọi engine → app (lệch quá 5 phút bị từ chối). Khoá token công cụ và khoá ký n8n được *dẫn xuất* từ nó, khoá n8n riêng cho từng workspace.
 - Engine dùng service-role key của Supabase: chỉ đặt trên VPS, không vào image, không vào log. Lỗi cấu hình chỉ nêu tên biến, không nêu giá trị.
-- `/healthz` (liveness, chỉ phụ thuộc tiến trình) và `/readyz` (lần poll hàng đợi gần nhất chạm được DB) là hai thứ khác nhau.
+- `/healthz` (liveness, chỉ phụ thuộc tiến trình; kèm `jobs.stats` = `job_stats()`: độ sâu hàng đợi, job chờ lâu nhất `oldestQueuedAgeSeconds`, số job lỗi 24 giờ `failed24h`, lấy từ bộ đệm 10 giây) và `/readyz` (lần poll `engine_jobs` gần nhất chạm được DB, và pgmq trả lời) là hai thứ khác nhau.
+- Job nền thứ hai: Supabase Queues (pgmq) trong Postgres của Supabase (`src/platform/pgmq/`; `job_outbox` + `pgmq.send` trong cùng giao dịch, engine poll bằng `job_read`). Kiến trúc, hợp đồng job và cách thêm job: `docs/JOBS.md` ở gốc repo. Hàng đợi `engine_jobs` vẫn phục vụ OpenClaw như cũ (`ENGINE_WORKER_ENABLED=0` tắt nó khi chạy thử tại máy).
 
 ## Chưa xác minh với OpenClaw thật (làm ở lần deploy đầu)
 

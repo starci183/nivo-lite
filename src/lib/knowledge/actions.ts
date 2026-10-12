@@ -2,20 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 import { requireRole, getCurrentMember } from "../members";
-import { drainBrainWork, extractionsOf } from "../brain/doc-facts";
-import type { ExtractionInfo } from "../brain/shared";
 import { getSession } from "../session";
 import { googleConfigured } from "../google";
 import { safeReturnTo } from "../google-sheets-core";
 import { linkError, LINK_ERROR, resolveLink } from "./drive";
-import { fetchFile, listFolder, type DriveFile } from "./drive-api";
+import { listFolder, type DriveFile } from "./drive-api";
 import { disconnectDrive, driveAuthUrl, driveGrantOf, withDriveToken, type DriveGrant } from "./drive-grant";
-import { fileTextKind, textFromBytes } from "./extract";
 import type { ModuleKey } from "../modules-shared";
 import { isModuleKey } from "../modules-shared";
 import type { Outcome } from "../types";
 import {
-  addSource, afterResponse, deleteSource, reindexSource, searchKnowledge, setSuggestionState, updateSource,
+  deleteSource, reindexSource, searchKnowledge, setSuggestionState, updateSource,
   type AddSourceInput, type Audience, type KnowledgeSource, type Passage, type SuggestionState,
 } from "./index";
 
@@ -28,51 +25,6 @@ const run = async <T>(fn: () => Promise<T>): Promise<Outcome<T>> => {
 };
 const refresh = () => revalidatePath("/knowledge", "layout");
 const managers = () => requireRole(["owner", "manager"]);
-
-/** Add a source (text, FAQ, file contents or a link) and index it. Owner and manager only. */
-export const addKnowledge = async (input: AddSourceInput): Promise<Outcome<KnowledgeSource>> =>
-  run(async () => {
-    await managers();
-    const source = await addSource(input);
-    refresh();
-    return source;
-  });
-
-const MAX_UPLOAD_BYTES = 10_000_000;
-
-/**
- * Batch flow, one file per call: read the text of a .txt / .md / .csv / .pdf / .docx / .xlsx / .pptx upload, then create and index the source
- * through the same path as addKnowledge. FormData: file, visibility, module, topic, tags (comma separated).
- */
-export const addKnowledgeFile = async (form: FormData): Promise<Outcome<KnowledgeSource>> =>
-  run(async () => {
-    await managers();
-    const file = form.get("file");
-    if (!(file instanceof File)) throw new Error("Thiếu tệp.");
-    const kind = fileTextKind(file.name);
-    if (!kind) throw new Error("Chỉ nhận .txt, .md, .csv, .pdf, .docx, .xlsx hoặc .pptx.");
-    if (file.size > MAX_UPLOAD_BYTES) throw new Error("Tệp quá lớn (tối đa 10 MB).");
-    const content = await textFromBytes(kind, new Uint8Array(await file.arrayBuffer()));
-    const mod = String(form.get("module") ?? "");
-    const source = await addSource({
-      kind: "file", title: file.name.replace(/^.*[\\/]/, "").replace(/\.[^.]+$/, ""), content,
-      topic: String(form.get("topic") ?? "") || null,
-      tags: String(form.get("tags") ?? "").split(",").map((x) => x.trim()).filter(Boolean),
-      module: isModuleKey(mod) ? mod : null, visibility: form.get("visibility") === "public" ? "public" : "internal",
-      installationId: String(form.get("installation") ?? "") || null,
-    });
-    refresh();
-    return source;
-  });
-
-/** Batch flow, one link per call: Google Docs/Sheets/Slides/Drive share links become public export URLs, then it is indexed like any link. */
-export const addKnowledgeLink = async (url: string, meta: Omit<AddSourceInput, "kind" | "title" | "content">): Promise<Outcome<KnowledgeSource>> =>
-  run(async () => {
-    await managers();
-    const source = await addSource({ ...meta, kind: "url", title: "", content: url });
-    refresh();
-    return source;
-  });
 
 export const deleteKnowledge = async (id: string): Promise<Outcome<null>> =>
   run(async () => {
@@ -117,19 +69,6 @@ export const decideSuggestion = async (key: string, state: SuggestionState | nul
     refresh();
     revalidatePath("/", "layout");
     return null;
-  });
-
-/**
- * Progress of reading facts out of documents, for the Add documents drawer ("Đang đọc sự thật…" / "Đã đề xuất N sự thật"). Asking also gives
- * work that is still waiting a push: it runs after this response, bounded, and never blocks the poll.
- */
-export const pollExtractions = async (sourceIds: Array<string>): Promise<Outcome<Array<ExtractionInfo>>> =>
-  run(async () => {
-    await managers();
-    const ws = (await getSession()).workspace.id;
-    const list = await extractionsOf(ws, sourceIds.slice(0, 50));
-    if (list.some((x) => x.status === "queued" || x.status === "running")) afterResponse(() => drainBrainWork(ws));
-    return list;
   });
 
 /* ------------------------------------------------------------------ Google Drive grant (private files and folders) */
@@ -184,7 +123,7 @@ export const listDriveFolder = async (url: string): Promise<Outcome<{ name: stri
  * stored, logged or returned. A 401 from Google means it expired: the row asks the owner to pick again.
  */
 const pickerToken = (v: unknown): string => {
-  if (typeof v !== "string" || v.length < 20 || v.length > 4096 || !/^[w.~+/=-]+$/.test(v)) throw linkError(LINK_ERROR.tokenExpired, "Phiên Google Drive đã hết hạn. Hãy chọn lại.");
+  if (typeof v !== "string" || v.length < 20 || v.length > 4096 || !/^[\w.~+/=-]+$/.test(v)) throw linkError(LINK_ERROR.tokenExpired, "Phiên Google Drive đã hết hạn. Hãy chọn lại.");
   return v;
 };
 const expired = (e: unknown): never => {
@@ -208,25 +147,4 @@ export const listPickedFolder = async (folderId: string, token: string): Promise
       if (status === 403 || status === 404) return { name: "", files: [], truncated: false, empty: true };
       return expired(e);
     }
-  });
-
-/** One picked Drive file: exported (Docs, Sheets, Slides) or downloaded (alt=media), then indexed like an uploaded file. */
-export const addKnowledgePickedFile = async (fileId: string, token: string, meta: Omit<AddSourceInput, "kind" | "title" | "content">): Promise<Outcome<KnowledgeSource>> =>
-  run(async () => {
-    await managers();
-    const t = pickerToken(token);
-    const file = await fetchFile(t, fileId).catch(expired);
-    const source = await addSource({ ...meta, kind: "file", title: file.name.replace(/.[^.]+$/, ""), content: file.text });
-    refresh();
-    return source;
-  });
-
-/** One Drive file of an expanded folder: read with the grant, then indexed through the same path as an uploaded file. */
-export const addKnowledgeDriveFile = async (fileId: string, meta: Omit<AddSourceInput, "kind" | "title" | "content">): Promise<Outcome<KnowledgeSource>> =>
-  run(async () => {
-    const member = await managers();
-    const file = await withDriveToken(member.workspaceId, (token) => fetchFile(token, fileId));
-    const source = await addSource({ ...meta, kind: "file", title: file.name.replace(/\.[^.]+$/, ""), content: file.text });
-    refresh();
-    return source;
   });

@@ -11,6 +11,7 @@
     "start": "node scripts/with-secrets.mjs next start -p 3100",
     "pretypecheck": "node scripts/gen-module-registry.mjs",
     "typecheck": "tsc --noEmit",
+    "dev:stack": "node engine/dev/stack.mjs",
     "db:start": "node scripts/with-secrets.mjs supabase start",
     "db:stop": "supabase stop",
     "db:reset": "node scripts/with-secrets.mjs supabase db reset",

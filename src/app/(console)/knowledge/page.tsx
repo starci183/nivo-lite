@@ -38,7 +38,7 @@ const Page = async ({ searchParams }: { readonly searchParams: Promise<{ module?
     const instances = multi.map((i) => ({ id: i.id, moduleKey: i.moduleKey, label: `${moduleName(i.moduleKey, locale)} – ${i.name}` }))
     return (
       <KnowledgeView
-        sources={sources} topics={topics} canWrite={canWrite} initialModule={initial} instances={instances} askModule={isModuleKey(module) ? module : installed[0] ?? MODULE_KEYS[0]}
+        sources={sources} topics={topics} canWrite={canWrite} workspaceId={session.workspace.id} initialModule={initial} instances={instances} askModule={isModuleKey(module) ? module : installed[0] ?? MODULE_KEYS[0]}
         suggestions={suggestions.map((s) => ({ key: s.key, topic: s.topic, hint: s.hint, visibility: s.visibility }))} skipped={skipped}
       />
     )

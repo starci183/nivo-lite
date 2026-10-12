@@ -38,11 +38,11 @@ const Page = async () => {
     ])
     // Waiting background work (re-embedding after a model change, facts of documents still queued) runs AFTER the response, bounded; the page never waits for it.
     if (canWrite) after(async () => { await reembedStale(db, ws); await drainBrainWork(ws) })
-    const documents = sources.map((s) => ({ id: s.id, title: s.title, topic: s.topic, status: s.status, chunkCount: s.chunkCount }))
+    const documents = sources.map((s) => ({ id: s.id, title: s.title, topic: s.topic, status: s.status, chunkCount: s.chunkCount, progress: s.progress }))
     // Staff read the brain through their own reach: restricted facts stay with owners and managers.
     const visible = canWrite ? facts : facts.filter((f) => f.scope !== "restricted")
     return (
-      <BrainView facts={visible} documents={documents} lessons={lessons} lenses={lenses} extractions={extractions} gaps={gaps} gapsOpen={gapsOpen} canWrite={canWrite} business={session.workspace.name} />
+      <BrainView facts={visible} documents={documents} lessons={lessons} lenses={lenses} extractions={extractions} gaps={gaps} gapsOpen={gapsOpen} canWrite={canWrite} workspaceId={ws} business={session.workspace.name} />
     )
   } catch (e) {
     unstable_rethrow(e) // Next signals (redirect, notFound, dynamic usage) pass through unlogged

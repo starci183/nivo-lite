@@ -10,6 +10,7 @@
 #              sessions.send is refused. Consequences: the engine listens inside openclaw namespace (caddy reaches it as openclaw:8787),
 #              and recreating openclaw recreates the engine too (compose does this for you).
 #   n8n        behind caddy at n8n.<domain>; talks to its own postgres (n8n-db).
+# Background jobs (docs/JOBS.md) run on Supabase Queues (pgmq) in the app's Supabase Postgres: no queue service in this stack.
 
 name: nivo-engine
 
@@ -134,6 +135,17 @@ services:
       VIDEO_TTS_PROVIDER: ${VIDEO_TTS_PROVIDER:-edge}
       VIDEO_MAX_SECONDS: ${VIDEO_MAX_SECONDS:-90}
       VIDEO_FFMPEG_THREADS: ${VIDEO_FFMPEG_THREADS:-4}
+      # Background jobs (pgmq in Supabase, docs/JOBS.md) and what the knowledge jobs need (embeddings, Drive reads, encrypted channel tokens).
+      JOBS_ENABLED: ${JOBS_ENABLED:-1}
+      JOBS_CONCURRENCY: ${JOBS_CONCURRENCY:-4}
+      JOBS_WORKSPACE_CONCURRENCY: ${JOBS_WORKSPACE_CONCURRENCY:-2}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-}
+      CHANNEL_TOKEN_KEY: ${CHANNEL_TOKEN_KEY:-}
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
     volumes:
       - openclaw-data:/openclaw-state
       - video-cache:/var/cache/nivo-video # Vietnamese voiceover clips by text hash: re-rendering the same script costs no TTS call
