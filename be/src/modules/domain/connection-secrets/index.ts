@@ -1,7 +1,7 @@
 export { parseConnectionSecretsConfig } from "./connection-secrets.config"
 export { ConnectionSecretsModule } from "./connection-secrets.module"
 export { ConnectionSecretsService } from "./connection-secrets.service"
-export { CONNECTION_SECRETS_ERROR_KINDS } from "./errors/connection-secrets.error"
+export { CONNECTION_SECRETS_ERROR_KINDS, ConnectionSecretsErrorCode } from "./errors/connection-secrets.error"
 export { CONNECTION_SECRETS_MESSAGES } from "./messages/connection-secrets.messages"
 export { randomSecret, safeEqual } from "./secret-cipher.policy"
 export type { ConnectionSecret } from "./connection-secrets.contracts"

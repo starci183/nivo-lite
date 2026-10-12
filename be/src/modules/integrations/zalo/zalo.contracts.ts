@@ -8,6 +8,20 @@ export interface ZaloTokens {
     readonly expiresInSeconds: number
 }
 
+/** One party of a Zalo event. */
+export interface ZaloParty {
+    /** The party's Zalo id. */
+    readonly id?: string
+}
+
+/** The message of a Zalo event. */
+export interface ZaloMessage {
+    /** Zalo's id of the message. */
+    readonly msg_id?: string
+    /** What the customer wrote. */
+    readonly text?: string
+}
+
 /** The event Zalo posts to the webhook of an OA; only the fields the intake reads. */
 export interface ZaloEvent {
     /** The app the event was sent for. */
@@ -17,11 +31,11 @@ export interface ZaloEvent {
     /** The event time. */
     readonly timestamp?: string | number
     /** Who wrote. */
-    readonly sender?: { readonly id?: string }
+    readonly sender?: ZaloParty
     /** The OA that received it. */
-    readonly recipient?: { readonly id?: string }
+    readonly recipient?: ZaloParty
     /** The message the customer wrote. */
-    readonly message?: { readonly msg_id?: string; readonly text?: string }
+    readonly message?: ZaloMessage
 }
 
 /** Why a consultation message could not be delivered, in terms the workbench can show. */

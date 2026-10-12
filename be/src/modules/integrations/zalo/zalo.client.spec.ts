@@ -115,11 +115,11 @@ describe("ZaloClient", () => {
     })
 
     describe("sendCsText", () => {
-        it("sends the text to the user with the access token header and answers the message id", async () => {
+        it("sends the text to the user with the access token header", async () => {
             const { client, http } = await build()
             http.request.mockResolvedValue({ status: 200, body: { error: 0, data: { message_id: "m-1" } } })
 
-            await expect(client.sendCsText("access", "user-1", "Hello")).resolves.toBe("m-1")
+            await expect(client.sendCsText("access", "user-1", "Hello")).resolves.toBeUndefined()
 
             expect(http.request).toHaveBeenCalledWith({
                 method: "POST",
@@ -128,13 +128,6 @@ describe("ZaloClient", () => {
                 body: { recipient: { user_id: "user-1" }, message: { text: "Hello" } },
                 timeoutMs: 5000,
             })
-        })
-
-        it("answers null when Zalo accepted the message without an id", async () => {
-            const { client, http } = await build()
-            http.request.mockResolvedValue({ status: 200, body: {} })
-
-            await expect(client.sendCsText("access", "user-1", "Hello")).resolves.toBeNull()
         })
 
         it("carries the numeric error of a refusal Zalo answered with HTTP 200", async () => {
@@ -182,20 +175,24 @@ describe("ZaloClient", () => {
             )
         })
 
-        it("falls back to the alias and then to null when Zalo gives no usable name", async () => {
+        it("falls back to the alias and then to an empty text when Zalo gives no usable name", async () => {
             const { client, http } = await build()
             http.request.mockResolvedValueOnce({ status: 200, body: { data: { user_alias: "Lan" } } })
             http.request.mockResolvedValueOnce({ status: 200, body: { data: { display_name: "  " } } })
+            http.request.mockResolvedValueOnce({ status: 200, body: { data: {} } })
+            http.request.mockResolvedValueOnce({ status: 200, body: {} })
 
             await expect(client.userDisplayName("access", "user-1")).resolves.toBe("Lan")
-            await expect(client.userDisplayName("access", "user-1")).resolves.toBeNull()
+            await expect(client.userDisplayName("access", "user-1")).resolves.toBe("")
+            await expect(client.userDisplayName("access", "user-1")).resolves.toBe("")
+            await expect(client.userDisplayName("access", "user-1")).resolves.toBe("")
         })
 
-        it("answers null instead of failing when the lookup fails", async () => {
+        it("fails like any other call when the lookup fails", async () => {
             const { client, http } = await build()
             http.request.mockRejectedValue(new Error("down"))
 
-            await expect(client.userDisplayName("access", "user-1")).resolves.toBeNull()
+            await expect(client.userDisplayName("access", "user-1")).rejects.toMatchObject({ code: ZaloErrorCode.Unavailable })
         })
     })
 })

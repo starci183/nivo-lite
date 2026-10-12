@@ -47,24 +47,20 @@ export class ZaloClient {
         return this.tokenCall(appSecret, { refresh_token: refreshToken, app_id: appId, grant_type: "refresh_token" })
     }
 
-    /** Sends a consultation (CS) text message to one user and answers the message id Zalo gave, when it gave one. */
-    async sendCsText(accessToken: string, userId: string, text: string): Promise<string | null> {
-        const data = await this.apiCall(accessToken, "POST", "/v3.0/oa/message/cs", {
-            recipient: { user_id: userId },
-            message: { text },
-        })
-        return typeof data.message_id === "string" ? data.message_id : null
+    /** Sends a consultation (CS) text message to one user; a refusal is a ZaloError carrying Zalo's numeric error. */
+    async sendCsText(accessToken: string, userId: string, text: string): Promise<void> {
+        await this.apiCall(accessToken, "POST", "/v3.0/oa/message/cs", { recipient: { user_id: userId }, message: { text } })
     }
 
-    /** The customer's display name, or null when Zalo will not say: the name only labels the conversation. */
-    async userDisplayName(accessToken: string, userId: string): Promise<string | null> {
+    /** The customer's display name, or an empty text when Zalo does not say: the name only labels the conversation. */
+    async userDisplayName(accessToken: string, userId: string): Promise<string> {
         const data = await this.apiCall(
             accessToken,
             "GET",
             `/v3.0/oa/user/detail?data=${encodeURIComponent(JSON.stringify({ user_id: userId }))}`,
-        ).catch((): Record<string, unknown> => ({}))
+        )
         const name = data.display_name ?? data.user_alias
-        return typeof name === "string" && name.trim() ? name.trim() : null
+        return typeof name === "string" ? name.trim() : ""
     }
 
     private async tokenCall(secret: string, form: Record<string, string>): Promise<ZaloTokens> {

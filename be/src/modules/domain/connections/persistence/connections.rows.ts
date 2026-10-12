@@ -1,4 +1,9 @@
-import type { Database } from "../../../../../../supabase/types/database.types"
-
 /** A connection as FIND_INTAKE_CONNECTION selects it. */
-export type IntakeConnectionRow = Pick<Database["public"]["Tables"]["connections"]["Row"], "id" | "workspace_id" | "status">
+export interface IntakeConnectionRow {
+    /** The connection id. */
+    readonly id: string
+    /** The workspace the connection belongs to. */
+    readonly workspace_id: string
+    /** The connection status. */
+    readonly status: string
+}
