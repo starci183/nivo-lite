@@ -24,3 +24,10 @@ export const CARD_FOOT_CLASS_NAME = cn("mt-auto", "flex", "items-center", "justi
 
 /** Breadcrumb trail above the page heading: one heading block (GAP-2). */
 export const HEAD_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-2");
+
+/** Catalogue toolbar: search and category select on one row from sm, status chips and the result count under them. */
+export const TOOLBAR_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-3");
+export const TOOLBAR_ROW_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-3", "sm:flex-row", "sm:items-end");
+export const TOOLBAR_SEARCH_CLASS_NAME = cn("min-w-0", "flex-1");
+export const TOOLBAR_SELECT_CLASS_NAME = cn("w-full", "sm:w-56", "sm:shrink-0");
+export const TOOLBAR_META_CLASS_NAME = cn("flex", "min-w-0", "flex-wrap", "items-center", "justify-between", "gap-3");
