@@ -14,7 +14,7 @@ import type { Visibility } from "@/lib/knowledge/shared"
 import { MODULE_KEYS, type ModuleKey } from "@/lib/modules-shared"
 import { driveReturn, savePending, takePending } from "./driveReturn"
 import { pickerConfigured, pickFromDrive, type PickedDoc } from "./picker"
-import { FAQ_ROW_CLASS, LINK_FIELD_CLASS, LINK_ROW_CLASS, LIST_CLASS, OPTIONS_TITLE_CLASS, ROW_WRAP_CLASS, STACK_CLASS } from "./classNames"
+import { FAQ_ROW_CLASS, LINK_ACTION_CLASS, LINK_FIELD_CLASS, LINK_ROW_CLASS, LIST_CLASS, ROW_WRAP_CLASS, STACK_CLASS } from "./classNames"
 
 type Mode = "files" | "write" | "faq"
 type ItemStatus = "waiting" | "indexing" | "ready" | "failed"
@@ -76,7 +76,6 @@ const newRow = (value = ""): LinkRow => ({ id: nextId(), value })
 const rowsFrom = (text: string): Array<LinkRow> => { const urls = parseLinks(text); return urls.length > 0 ? urls.map((u) => newRow(u)) : [newRow()] }
 /** Pasted text with newlines, spaces or commas between the links -> distinct links. */
 const splitUrls = (text: string): Array<string> => parseLinks(text.trim().split(/[\s,]+/).join("\n"))
-const linkInputId = (id: string): string => `k-link-${id}`
 
 /**
  * "Thêm tài liệu": add many files and links in one go (default tab), or write a note / Q&A pair.
@@ -169,13 +168,6 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
     return e.status === "blocked_credits" ? t("extBlocked") : t("extFailed")
   }
 
-  // "+ Add link" focuses the row it added (the grammar Input forwards no ref, so it is found by its id).
-  useEffect(() => {
-    if (focusRow === null) return
-    document.getElementById(linkInputId(focusRow))?.focus()
-    setFocusRow(null)
-  }, [focusRow])
-
   /** Why a link cannot be added, or null: not a link, or a Drive folder without the Drive grant. */
   const linkProblem = (value: string): string | null => {
     const v = value.trim()
@@ -197,7 +189,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
   const addRow = () => { const row = newRow(); setRows((cur) => [...cur, row]); setFocusRow(row.id) }
   const removeRow = (id: string) => { setRows((cur) => (cur.length > 1 ? cur.filter((r) => r.id !== id) : [newRow()])); dropError(id) }
   /** Several links pasted into one row: one row per link (the row itself is replaced when it was empty). */
-  const pasteRow = (id: string, e: ClipboardEvent<HTMLElement>) => {
+  const pasteRow = (id: string, e: ClipboardEvent<HTMLInputElement>) => {
     const urls = splitUrls(e.clipboardData.getData("text"))
     if (urls.length < 2) return
     e.preventDefault()
@@ -441,12 +433,8 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
   const options = (
     <Disclosure
       headingLevel={3}
-      title={
-        <span className={OPTIONS_TITLE_CLASS}>
-          <Text as="span" weight="medium">{t("optionsTitle")}</Text>
-          <Text as="span" size="sm" tone="muted">{optionsSummary}</Text>
-        </span>
-      }
+      title={t("optionsTitle")}
+      summary={optionsSummary}
     >
       <div className={STACK_CLASS}>
         <ComboBox
@@ -507,14 +495,17 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
               <Text size="sm" tone="muted">{t("linksHint")}</Text>
               {rows.map((r, i) => (
                 <div key={r.id} className={LINK_ROW_CLASS}>
-                  <div className={LINK_FIELD_CLASS} onBlur={() => validateRow(r.id)} onPaste={(e) => pasteRow(r.id, e)}>
+                  <div className={LINK_FIELD_CLASS}>
                     <Input
-                      id={linkInputId(r.id)} name={`link-${i}`} label={t("linkRowN", { n: i + 1 })} placeholder={t("linkPlaceholder")} variant="secondary"
+                      id={`k-link-${r.id}`} name={`link-${i}`} label={t("linkRowN", { n: i + 1 })} isLabelHidden placeholder={t("linkPlaceholder")} variant="secondary"
                       value={r.value} isDisabled={busy} onValueChange={(v) => setRowValue(r.id, v)}
+                      onBlur={() => validateRow(r.id)} onPaste={(e) => pasteRow(r.id, e)} autoFocus={r.id === focusRow}
                       {...(rowErrors[r.id] ? { isError: true, errorMessage: rowErrors[r.id] } : {})}
                     />
                   </div>
-                  <Button variant="ghost" size="sm" isDisabled={busy} onPress={() => removeRow(r.id)}>{t("linkRemove")}</Button>
+                  <div className={LINK_ACTION_CLASS}>
+                    <Button variant="ghost" size="sm" isDisabled={busy} onPress={() => removeRow(r.id)}>{t("linkRemove")}</Button>
+                  </div>
                 </div>
               ))}
               <div className={ROW_WRAP_CLASS}>
