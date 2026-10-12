@@ -21,6 +21,8 @@ import { emitEvent } from "./outbound-events";
 import { insertHumanMessage, relayStaffAnswer } from "./staff-relay";
 import { access } from "@/i18n/dict/access";
 import { deciderOf, requireDecide, requireManager } from "./permissions";
+import { isManagerRole } from "./members-shared";
+import { proposeOfficeCommand } from "./office-command";
 import type { WorkItem } from "./flow-types";
 import { noteIntent, proposeContextNote } from "./context-notes";
 import { knowledgeBrief } from "./knowledge/runtime";
@@ -445,6 +447,16 @@ export const sendTeamMessage = async (body: string): Promise<Outcome<Message[]>>
       const waitingBrief = `${t("waitingBrief")}\n${waiting.map((w) => `- [${gov(c)(`reason_${w.reason ?? "routine"}`)}] ${gov(c)(`dept_${w.department}`)} · ${gov(c)(`action_${w.action}`)}: ${w.proposal?.summary ?? ""}`).join("\n") || t("noWaiting")}`;
       const brief = ai.authorityBrief(await loadAuthority(c));
       const note = noteIntent(body);
+      // Owner / manager mentioning exactly ONE agent: read the message into a command candidate (one metered call) and show the confirm card.
+      // A staff mention never creates a command: it stays a mention below. Null means this agent accepts no commands, so it chats as before.
+      if (isManagerRole(member.role) && !note && handles.length === 1 && agents.length === 1) {
+        const proposed = await proposeOfficeCommand(c, { message: mine, agent: agents[0], body, author: member.displayName }).catch((): null => null);
+        if (proposed) {
+          out.push(...proposed);
+          revalidatePath("/chat");
+          return out;
+        }
+      }
       for (const a of agents) {
         // "@Chatbot ghi nhớ: ..." is a note for the agent's context: proposed in its draft (always a proposal; a manager approves it in Setup).
         if (note) {

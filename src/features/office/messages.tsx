@@ -7,6 +7,7 @@ import { NivoLogo } from "@/components/brand/NivoLogo"
 import { useLocale, useT } from "@/i18n/client"
 import { office } from "@/i18n/dict/office"
 import type { Agent, Message } from "@/lib/types"
+import { COMMAND_LINE_AUTHOR } from "@/lib/agent-command-rules"
 import { AVATAR_SLOT_CLASS_NAME, DAY_CLASS_NAME, NOTICE_CLASS_NAME, ROW_FIRST_CLASS_NAME } from "./classNames"
 import { formatTime } from "./format"
 
@@ -52,11 +53,13 @@ export type MessageRowProps = {
   readonly isContinuation: boolean
   /** True for the last bubble of a group from one author: it carries the send time. */
   readonly isGroupEnd?: boolean
+  /** Where a command mirror line leads: the receiving department's workbench, focused on the work item. Null when it cannot be told. */
+  readonly workItemHref?: string | null
   readonly onReply: (handle: string) => void
 }
 
 /** One chat message (person, agent or me) as a Grammar ChatBubble, or a centred system notice. */
-export const MessageRow = ({ message, agent, isMine, leadName, isContinuation, isGroupEnd = true, onReply }: MessageRowProps) => {
+export const MessageRow = ({ message, agent, isMine, leadName, isContinuation, isGroupEnd = true, workItemHref = null, onReply }: MessageRowProps) => {
   const t = useT(office)
   const locale = useLocale()
   const [isCopied, setIsCopied] = useState(false)
@@ -72,6 +75,20 @@ export const MessageRow = ({ message, agent, isMine, leadName, isContinuation, i
   }
 
   const isNivo = isNivoMessage(message)
+  // A command mirror line ("@Kế toán ← Chủ shop: xuất phiếu thu cho đơn #DH-1") is a system line, never a bubble from NIVO Core or an agent.
+  const isCommandLine = message.author_kind === "system" && message.author_name === COMMAND_LINE_AUTHOR
+
+  if (isCommandLine) {
+    return (
+      <div className={NOTICE_CLASS_NAME} data-testid="msg-command-line">
+        <Text size="sm" tone="muted">{message.body}</Text>
+        {workItemHref ? <Button variant="ghost" size="sm" href={workItemHref}>{t("cmdOpenWork")}</Button> : null}
+        {message.lead_id ? (
+          <Button variant="ghost" size="sm" href={`/leads/${message.lead_id}`}>{t("noticeLead", { name: leadName ?? t("leadFallback") })}</Button>
+        ) : null}
+      </div>
+    )
+  }
 
   if (message.author_kind === "system" && !isNivo) {
     return (

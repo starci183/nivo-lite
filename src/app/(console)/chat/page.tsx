@@ -9,6 +9,7 @@ import { getSession } from "@/lib/session"
 import { supabaseServer } from "@/lib/supabase/server"
 import type { Agent, Message } from "@/lib/types"
 import { COMMAND_LINE_AUTHOR } from "@/lib/agent-command-rules"
+import { listCommandCandidates } from "@/lib/office-command"
 
 /** Always render fresh: messages and approvals change constantly. */
 export const dynamic = "force-dynamic"
@@ -48,7 +49,9 @@ const ChatPage = async () => {
         listStaff().catch((): Staff[] => []),
         listMembers().catch(() => []),
       ])
-  const thread = await speakAsDepartmentAgents(messages, agents)
+  const { thread, workItemModules } = await speakAsDepartmentAgents(messages, agents)
+  // Command cards (owner / manager only: RLS returns nothing for staff, and nothing before the table exists).
+  const candidates = await listCommandCandidates(await supabaseServer()).catch(() => [])
   const exceptions = exceptionRows.filter((i) => !i.hasApprovalCard)
   const decidedExceptions = recentItems.filter((i) => !i.hasApprovalCard && i.decided_path === "human").slice(0, 12)
   const pendingDecisions = governance?.pendingDecisions ?? pending.length + exceptions.length
@@ -75,6 +78,8 @@ const ChatPage = async () => {
       tasks={responsibilities}
       customers={customers}
       leadNames={leadNames}
+      candidates={candidates}
+      workItemModules={workItemModules}
       nowIso={nowIso}
     />
   )
@@ -86,16 +91,22 @@ export default ChatPage
  * Lines the engine wrote as "NIVO" before work-item lines spoke as their department's agent: each one tied to a work item is shown
  * as that department's installed agent (Sales, Accounting, Chatbot). Anything else stays a NIVO Core line.
  */
-const speakAsDepartmentAgents = async (messages: ReadonlyArray<Message>, agents: ReadonlyArray<Agent>): Promise<ReadonlyArray<Message>> => {
+const speakAsDepartmentAgents = async (
+  messages: ReadonlyArray<Message>,
+  agents: ReadonlyArray<Agent>,
+): Promise<{ thread: ReadonlyArray<Message>; workItemModules: Record<string, string> }> => {
   const ids = [...new Set(messages.filter((m) => m.agent_id === null && m.author_kind === "system" && m.work_item_id).map((m) => m.work_item_id as string))]
-  if (ids.length === 0) return messages
+  if (ids.length === 0) return { thread: messages, workItemModules: {} }
   const { data } = await (await supabaseServer()).from("work_items").select("id, department").in("id", ids)
   const departmentOf = new Map(((data ?? []) as Array<{ id: string; department: string }>).map((w) => [w.id, w.department]))
   const agentOf = new Map<string, Agent>(agents.filter((a) => a.status === "active").map((a) => [a.module, a]))
-  return messages.map((m) => {
+  // The work item's department is where its workbench lives: command mirror lines link to /m/<department>/workbench?focus=<id>.
+  const workItemModules = Object.fromEntries(departmentOf)
+  const thread = messages.map((m): Message => {
     const agent = m.agent_id === null && m.author_kind === "system" && m.author_name !== COMMAND_LINE_AUTHOR && m.work_item_id ? agentOf.get(departmentOf.get(m.work_item_id) ?? "") : undefined
     return agent ? { ...m, author_kind: "agent", author_name: agent.name, agent_id: agent.id } : m
   })
+  return { thread, workItemModules }
 }
 
 /** OpenClaw writes the text (setup chat, Office replies, classification), so these screens may wait longer than the platform default. */
