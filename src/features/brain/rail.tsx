@@ -3,11 +3,21 @@
 import { Badge, Button, ListRow, StaticStateRow, SurfaceListCard } from "@starci/grammar/common"
 import { useT } from "@/i18n/client"
 import { brain } from "@/i18n/dict/brain"
+import type { KnowledgeGap } from "@/lib/brain/gaps-shared"
 import { keyOf, visibleTo, type Fact, type Scope, type SubjectType } from "@/lib/brain/shared"
 import { SIDE_CLASS } from "./classNames"
+import { KnowledgeGapsCard } from "./gaps"
 import type { Lens, T } from "./shared"
 
-export type StarterPreset = { readonly subjectType: SubjectType; readonly subjectLabel: string; readonly attributeLabel: string; readonly scope: Scope }
+export type StarterPreset = {
+  readonly subjectType: SubjectType
+  readonly subjectLabel: string
+  readonly attributeLabel: string
+  readonly scope: Scope
+  /** A knowledge gap this fact answers: the question stays in view in the form, and the gap is marked answered on save. */
+  readonly gapId?: string
+  readonly question?: string
+}
 
 type Starter = { key: string; title: string; hint: string; preset: StarterPreset; /** Shown only while an agent of this module is active; omitted = always. */ module?: string }
 
@@ -65,13 +75,15 @@ export type BrainRailProps = {
   readonly onLens: (module: string | null) => void
   readonly business: string
   readonly canWrite: boolean
+  /** Questions customers asked that the brain could not answer (owners and managers only). */
+  readonly gaps?: ReadonlyArray<KnowledgeGap>
   /** STATE-8: each list card shows its three skeleton rows. */
   readonly isLoading?: boolean
   readonly onStart: (preset: StarterPreset) => void
 }
 
 /** The side of Bộ não: who sees what (the lens), what is worth adding, and how the brain learns. */
-export const BrainRail = ({ facts, lenses, lens, onLens, business, canWrite, onStart, isLoading = false }: BrainRailProps) => {
+export const BrainRail = ({ facts, lenses, lens, onLens, business, canWrite, onStart, gaps = [], isLoading = false }: BrainRailProps) => {
   const t = useT(brain)
   const active = facts.filter((f) => f.status === "active")
   const have = new Set(active.map((f) => f.attribute))
@@ -107,6 +119,8 @@ export const BrainRail = ({ facts, lenses, lens, onLens, business, canWrite, onS
           )
         })}
       </SurfaceListCard>
+
+      {canWrite ? <KnowledgeGapsCard gaps={gaps} lenses={lenses} business={business} isLoading={isLoading} /> : null}
 
       {canWrite ? (
         <SurfaceListCard label={t("startTitle")} headingLevel={2} fact={isLoading ? t("startHint") : missing.length ? t("startHint") : t("startAllDone")} isLoading={isLoading}>

@@ -8,6 +8,7 @@ import { brain } from "@/i18n/dict/brain"
 import { saveFact } from "@/lib/brain/actions"
 import { SUBJECT_TYPES, type Fact, type Scope, type SubjectType } from "@/lib/brain/shared"
 import { FORM_CLASS, FORM_ROW_CLASS } from "./classNames"
+import type { StarterPreset } from "./rail"
 import { typeLabel, type Lens } from "./shared"
 
 /** Props for {@link FactDrawer}. */
@@ -17,7 +18,7 @@ export type FactDrawerProps = {
   readonly editing: Fact | null
   readonly lenses: ReadonlyArray<Lens>
   /** Prefilled answers for a new fact (a "Nên bổ sung" suggestion). */
-  readonly preset?: { readonly subjectType: SubjectType; readonly subjectLabel: string; readonly attributeLabel: string; readonly scope: Scope }
+  readonly preset?: StarterPreset
   readonly onClose: (message?: string) => void
 }
 
@@ -45,7 +46,7 @@ export const FactDrawer = ({ isOpen, editing, lenses, preset, onClose }: FactDra
   const submit = () => startTransition(async () => {
     setError(null)
     const r = await saveFact({
-      ...f, validFrom: f.validFrom ? new Date(f.validFrom).toISOString() : null, validTo: f.validTo ? new Date(f.validTo).toISOString() : null,
+      ...f, gapId: preset?.gapId ?? null, validFrom: f.validFrom ? new Date(f.validFrom).toISOString() : null, validTo: f.validTo ? new Date(f.validTo).toISOString() : null,
     })
     if (!r.ok) return setError(r.error)
     router.refresh()
@@ -73,7 +74,7 @@ export const FactDrawer = ({ isOpen, editing, lenses, preset, onClose }: FactDra
               <Input id="brain-attribute" name="attribute" label={t("fAttribute")} hint={t("fAttributeHint")} variant="secondary" value={f.attributeLabel} onValueChange={(v) => set("attributeLabel", v)} isRequired />
             </>
           )}
-          <Textarea id="brain-value" label={editing ? `${t("fValue")} (${editing.value})` : t("fValue")} variant="secondary" rows={2} value={f.value} onValueChange={(v) => set("value", v)} />
+          <Textarea id="brain-value" label={editing ? `${t("fValue")} (${editing.value})` : t("fValue")} description={preset?.question ? t("gapAnswerFor", { question: preset.question }) : undefined} variant="secondary" rows={2} value={f.value} onValueChange={(v) => set("value", v)} />
           <RadioGroup label={t("fScope")} value={f.scope} onValueChange={(v) => set("scope", (v === "public" || v === "restricted" ? v : "internal") as Scope)}
             options={[
               { value: "public", label: t("scopePublic"), description: t("scopePublicHint") },

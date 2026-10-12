@@ -44,6 +44,7 @@ import {
   WindowIcon,
   XMarkIcon,
   ArrowLeftIcon,
+  TrashIcon,
   EllipsisHorizontalIcon } from
 "@heroicons/react/24/outline";
 import { BrainIcon } from "@starci/heroicons/24/outline";
@@ -53,6 +54,7 @@ import {
   ArrowPathIcon as ArrowPathSolidIcon,
   ArrowRightIcon as ArrowRightSolidIcon,
   ArrowLeftIcon as ArrowLeftSolidIcon,
+  TrashIcon as TrashSolidIcon,
   EllipsisHorizontalIcon as EllipsisHorizontalSolidIcon,
   ArrowRightEndOnRectangleIcon as ArrowRightEndOnRectangleSolidIcon,
   BellIcon as BellSolidIcon,
@@ -119,7 +121,7 @@ import { GithubMark, GoogleMark } from "./product-brands";
 export type IconName =
 "brand" | "streak" | "credit" | "reward" | "course" |
 "email" | "password" | "revealPassword" | "hidePassword" | "code" |
-"complete" | "pending" | "signIn" | "signUp" | "close" | "next" | "back" | "more" | "trigger" | "disclosure" | "retry" | "send" |
+"complete" | "pending" | "signIn" | "signUp" | "close" | "trash" | "next" | "back" | "more" | "trigger" | "disclosure" | "retry" | "send" |
 "home" | "explore" | "community" | "league" | "review" |
 "light" | "dark" | "locale" | "google" | "github" |
 "search" | "cart" | "notification" | "account" | "saved" | "blog" | "talents" | "jobs" | "practice" |
@@ -201,6 +203,7 @@ export const ICON_SOURCES: Record<IconName, GlyphCuts> = {
   signIn: cuts(ArrowRightStartOnRectangleIcon, ArrowRightEndOnRectangleSolidIcon),
   signUp: cuts(UserPlusIcon, UserPlusSolidIcon),
   close: cuts(XMarkIcon, XMarkSolidIcon),
+  trash: cuts(TrashIcon, TrashSolidIcon),
   next: cuts(ArrowRightIcon, ArrowRightSolidIcon),
   brain: cuts(BrainIcon, BrainSolidIcon),
   back: cuts(ArrowLeftIcon, ArrowLeftSolidIcon),
