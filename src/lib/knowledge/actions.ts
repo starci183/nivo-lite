@@ -41,7 +41,7 @@ export const addKnowledge = async (input: AddSourceInput): Promise<Outcome<Knowl
 const MAX_UPLOAD_BYTES = 10_000_000;
 
 /**
- * Batch flow, one file per call: read the text of a .txt / .md / .csv / .pdf / .docx upload, then create and index the source
+ * Batch flow, one file per call: read the text of a .txt / .md / .csv / .pdf / .docx / .xlsx / .pptx upload, then create and index the source
  * through the same path as addKnowledge. FormData: file, visibility, module, topic, tags (comma separated).
  */
 export const addKnowledgeFile = async (form: FormData): Promise<Outcome<KnowledgeSource>> =>
@@ -50,7 +50,7 @@ export const addKnowledgeFile = async (form: FormData): Promise<Outcome<Knowledg
     const file = form.get("file");
     if (!(file instanceof File)) throw new Error("Thiếu tệp.");
     const kind = fileTextKind(file.name);
-    if (!kind) throw new Error("Chỉ nhận .txt, .md, .csv, .pdf hoặc .docx.");
+    if (!kind) throw new Error("Chỉ nhận .txt, .md, .csv, .pdf, .docx, .xlsx hoặc .pptx.");
     if (file.size > MAX_UPLOAD_BYTES) throw new Error("Tệp quá lớn (tối đa 10 MB).");
     const content = await textFromBytes(kind, new Uint8Array(await file.arrayBuffer()));
     const mod = String(form.get("module") ?? "");

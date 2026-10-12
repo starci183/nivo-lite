@@ -9,6 +9,7 @@ import { CreditsAlert } from "@/features/brain/CreditsAlert"
 import { extractionSettled, type ExtractionInfo } from "@/lib/brain/shared"
 import { addKnowledge, addKnowledgeDriveFile, addKnowledgeFile, addKnowledgeLink, addKnowledgePickedFile, disconnectDriveGrant, driveGrantStatus, listDriveFolder, listPickedFolder, pollExtractions, startDriveGrant } from "@/lib/knowledge/actions"
 import { faqToText } from "@/lib/knowledge/chunk"
+import { isZipName, readZip } from "@/lib/knowledge/zip"
 import { driveReadMode, isGoogleDriveLink, LINK_ERROR, linkErrorCode, MAX_FOLDER_FILES, parseLinks, resolveLink } from "@/lib/knowledge/drive"
 import type { DriveGrant } from "@/lib/knowledge/drive-grant"
 import type { Visibility } from "@/lib/knowledge/shared"
@@ -30,6 +31,8 @@ type Item = {
   readonly topic?: string
   /** The folder it came from. */
   readonly origin?: string
+  /** The origin is a ZIP (and the folders inside it), not a Drive folder. */
+  readonly fromZip?: boolean
   readonly name: string
   readonly size?: number
   readonly file?: File
@@ -53,17 +56,17 @@ export type AddDocumentsDrawerProps = {
   readonly preset?: AddPreset | null
 }
 
-const FILE_TYPES = /\.(txt|md|markdown|csv|pdf|docx)$/i
+const FILE_TYPES = /\.(txt|md|markdown|csv|pdf|docx|xlsx|pptx)$/i
 const MAX_FILE_BYTES = 10_000_000
 const CONCURRENCY = 2
-const ACCEPT = ".txt,.md,.markdown,.csv,.pdf,.docx,text/plain,text/markdown,text/csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+const ACCEPT = ".txt,.md,.markdown,.csv,.pdf,.docx,.xlsx,.pptx,.zip,text/plain,text/markdown,text/csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/zip,application/x-zip-compressed"
 const STATUS_TONE: Record<ItemStatus, "neutral" | "warning" | "success" | "danger"> = { waiting: "neutral", indexing: "warning", ready: "success", failed: "danger" }
 
 const NEED_GRANT = `${LINK_ERROR.needGrant}: `
 const GRANT_LOST = `${LINK_ERROR.grantLost}: `
 type Grant = DriveGrant & { readonly configured: boolean }
 const isFolderLink = (url: string): boolean => resolveLink(url).kind === "drive-folder"
-const NO_RETRY = new Set(["errBadType", "errTooBig", "errBadLink", "errEmptyFolder", "errDriveType", "errPickerFolder"])
+const NO_RETRY = new Set(["errBadType", "errTooBig", "errBadLink", "errEmptyFolder", "errDriveType", "errPickerFolder", "errNestedZip", "errZipBad", "errZipTooBig", "errZipTotal", "errZipBomb", "errZipEmpty"])
 const canRetry = (x: { readonly status: ItemStatus; readonly error?: string }): boolean =>
   x.status === "waiting" || (x.status === "failed" && !NO_RETRY.has(x.error ?? "") && linkErrorCode(x.error ?? "") !== LINK_ERROR.tokenExpired)
 
@@ -106,6 +109,10 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
   const [grant, setGrant] = useState<Grant | null>(null)
   const [reading, setReading] = useState(false)
   const [truncated, setTruncated] = useState(false)
+  const [zipTruncated, setZipTruncated] = useState(false)
+  const [zipBusy, setZipBusy] = useState(false)
+  const [zipSkips, setZipSkips] = useState<ReadonlyArray<{ readonly name: string; readonly count: number }>>([])
+  const zipSeen = useRef<Set<string>>(new Set())
   const [driveAnswer, setDriveAnswer] = useState<{ readonly ok: boolean; readonly reason: string | null } | null>(null)
   const grantRef = useRef<Grant | null>(null)
   const pickerToken = useRef<string | null>(null)
@@ -208,7 +215,37 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
 
   const patch = (id: string, change: Partial<Item>) => setItems((cur) => cur.map((x) => (x.id === id ? { ...x, ...change } : x)))
 
-  const addFiles = (files: Array<File>) => {
+  /** Each ZIP expands into one row per readable document (origin = zip + folders, topic = top-level folder); unreadable entries only count toward one summary line. */
+  const addZips = async (zips: ReadonlyArray<File>): Promise<void> => {
+    setReading(true)
+    setZipBusy(true)
+    try {
+      for (const z of zips) {
+        const key = `${z.name}:${z.size}`
+        if (zipSeen.current.has(key)) continue
+        zipSeen.current.add(key)
+        const res = await readZip(z, MAX_FOLDER_FILES)
+        if (res.abort) { setItems((cur) => [...cur, { id: nextId(), kind: "file", name: z.name, size: z.size, status: "failed", error: res.abort }]); continue }
+        if (res.truncated) setZipTruncated(true)
+        if (res.skipped > 0) setZipSkips((cur) => [...cur, { name: z.name, count: res.skipped }])
+        const rows: Array<Item> = res.rows.map((r) => ({
+          id: nextId(), kind: "file", name: r.path, size: r.size, ...(r.file ? { file: r.file } : {}), origin: r.dir ? `${z.name} / ${r.dir}` : z.name, fromZip: true,
+          ...(r.topic ? { topic: r.topic } : {}), status: r.error ? "failed" : "waiting", ...(r.error ? { error: r.error } : {}),
+        }))
+        if (rows.length === 0 && res.skipped === 0) rows.push({ id: nextId(), kind: "file", name: z.name, size: z.size, status: "failed", error: "errZipEmpty" })
+        setItems((cur) => [...cur, ...rows])
+      }
+    } finally {
+      setZipBusy(false)
+      setReading(false)
+    }
+  }
+
+  const addFiles = (all: Array<File>) => {
+    const zips = all.filter((f) => isZipName(f.name))
+    const files = all.filter((f) => !isZipName(f.name))
+    if (zips.length > 0) void addZips(zips)
+    if (files.length === 0) return
     setItems((cur) => {
       const fresh: Array<Item> = []
       for (const f of files) {
@@ -222,6 +259,15 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
 
   /** Pasted links -> queue rows. A Drive folder becomes one row per file (recursive, see drive-api.ts); without the grant its row fails with "Cần cấp quyền Google Drive". */
   const expand = async (urls: ReadonlyArray<string>): Promise<Array<Item>> => {
+    setReading(true)
+    try {
+      return await expandLinks(urls)
+    } finally {
+      setReading(false)
+    }
+  }
+
+  const expandLinks = async (urls: ReadonlyArray<string>): Promise<Array<Item>> => {
     const out: Array<Item> = []
     for (const u of urls) {
       const target = resolveLink(u)
@@ -301,7 +347,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
 
   const message = (raw: string): string => {
     switch (raw) {
-      case "errBadType": case "errTooBig": case "errBadLink": case "errEmptyFolder": case "errDriveType": case "errPickerFolder": return t(raw)
+      case "errBadType": case "errTooBig": case "errBadLink": case "errEmptyFolder": case "errDriveType": case "errPickerFolder": case "errNestedZip": case "errZipBad": case "errZipTooBig": case "errZipTotal": case "errZipBomb": case "errZipEmpty": return t(raw)
       default: {
         const code = linkErrorCode(raw)
         return code === LINK_ERROR.notPublic ? t("errNotPublic") : code === LINK_ERROR.folder ? t("errFolder") : code === LINK_ERROR.unsupported ? t("errUnsupported")
@@ -322,7 +368,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
         form.set("file", item.file)
         form.set("visibility", m.visibility)
         form.set("module", m.module ?? "")
-        form.set("topic", m.topic ?? "")
+        form.set("topic", m.topic ?? item.topic ?? "")
         form.set("tags", m.tags.join(","))
         result = await addKnowledgeFile(form)
       } else if (item.kind === "drive" && item.driveId && item.viaPicker) {
@@ -389,7 +435,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
   }
 
   const reset = () => {
-    setItems([]); setRows([newRow()]); setRowErrors({}); setTried(false); setTitle(""); setContent(""); setPairs([{ q: "", a: "" }]); setError(null); setDoneCount(0)
+    setItems([]); setRows([newRow()]); setRowErrors({}); setTried(false); setTitle(""); setContent(""); setPairs([{ q: "", a: "" }]); setError(null); setDoneCount(0); setZipTruncated(false); setZipSkips([]); zipSeen.current = new Set()
   }
 
   const close = () => {
@@ -528,7 +574,7 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
                 <Button variant="ghost" size="sm" isDisabled={busy} onPress={addRow}>{t("linkAdd")}</Button>
               </div>
             </div>
-            {reading ? <Text size="sm" tone="muted">{t("folderReading")}</Text> : null}
+            {reading ? <Text size="sm" tone="muted">{t(zipBusy ? "zipReading" : "folderReading")}</Text> : null}
             {grant?.state === "connected" ? (
               <div className={ROW_WRAP_CLASS}>
                 <Text size="sm" tone="muted">{t("driveConnected", { email: grant.email || "Google" })}</Text>
@@ -544,13 +590,15 @@ export const AddDocumentsDrawer = ({ isOpen, onClose, onAdded, topics = [], pres
             ) : null}
             {driveReason ? <Alert tone="negative" title={driveReason} /> : null}
             {truncated ? <Alert tone="cautionary" appearance="soft" title={t("folderTruncated", { count: MAX_FOLDER_FILES })} /> : null}
+            {zipTruncated ? <Alert tone="cautionary" appearance="soft" title={t("zipTruncated", { count: MAX_FOLDER_FILES })} /> : null}
+            {zipSkips.map((z, i) => <Text key={`${z.name}-${i}`} size="sm" tone="muted">{t("zipSkipped", { name: z.name, count: z.count })}</Text>)}
             {items.length > 0 ? (
               <SurfaceListCard label={t("queueTitle")} headingLevel={3} fact={t("queueCount", { count: items.length })}>
                 {items.map((x) => (
                   <ListRow
                     key={x.id}
                     title={x.name}
-                    description={x.status === "failed" && x.error ? message(x.error) : [t(x.kind === "file" ? "itemFile" : x.kind === "drive" ? "itemDrive" : isFolderLink(x.name) ? "itemFolder" : "itemLink"), x.origin ? t("folderFrom", { name: x.origin }) : null, x.size ? sizeLabel(x.size) : null, x.status === "ready" ? factsNote(x.sourceId) : null].filter(Boolean).join(" · ")}
+                    description={x.status === "failed" && x.error ? message(x.error) : [t(x.kind === "file" ? "itemFile" : x.kind === "drive" ? "itemDrive" : isFolderLink(x.name) ? "itemFolder" : "itemLink"), x.origin ? t(x.fromZip ? "zipFrom" : "folderFrom", { name: x.origin }) : null, x.size ? sizeLabel(x.size) : null, x.status === "ready" ? factsNote(x.sourceId) : null].filter(Boolean).join(" · ")}
                     badges={<Badge isDot tone={STATUS_TONE[x.status]}>{t(`item${x.status[0]?.toUpperCase()}${x.status.slice(1)}` as "itemWaiting")}</Badge>}
                     actions={x.status === "waiting" || x.status === "failed" ? <Button variant="ghost" size="sm" isDisabled={busy} onPress={() => setItems((cur) => cur.filter((y) => y.id !== x.id))}>{t("itemRemove")}</Button> : undefined}
                   />

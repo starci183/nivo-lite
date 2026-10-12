@@ -62,8 +62,8 @@ export const driveReadMode = (mimeType: string, name: string): DriveReadMode | n
   if (mimeType === DRIVE_MIME.sheet) return "sheet";
   if (mimeType === DRIVE_MIME.slides) return "slides";
   if (mimeType.startsWith("application/vnd.google-apps.")) return null;
-  if (/\.(pdf|docx|txt|md|markdown|csv)$/i.test(name)) return "media";
-  return /^(application\/pdf|text\/(plain|markdown|csv)|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document)$/.test(mimeType) ? "media" : null;
+  if (/\.(pdf|docx|xlsx|pptx|txt|md|markdown|csv)$/i.test(name)) return "media";
+  return /^(application\/pdf|text\/(plain|markdown|csv)|application\/vnd\.openxmlformats-officedocument\.(wordprocessingml.document|spreadsheetml.sheet|presentationml.presentation))$/.test(mimeType) ? "media" : null;
 };
 
 /** One pasted link -> what to fetch. Plain pages are returned unchanged (tracking params aside). */
