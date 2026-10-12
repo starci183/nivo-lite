@@ -22,9 +22,8 @@ import {
     ROTATE_INVITE,
 } from "./persistence/workspace-invites.sql"
 import type { InviteDeliveryPort } from "./workspace-invites.contracts"
-import { INVITE_DELIVERY } from "./workspace-invites.delivery"
 import type { WorkspaceInvitesOptions } from "./workspace-invites.options"
-import { WORKSPACE_INVITES_OPTIONS } from "./workspace-invites.port"
+import { INVITE_DELIVERY, WORKSPACE_INVITES_OPTIONS } from "./workspace-invites.port"
 import { WorkspaceInvitesService } from "./workspace-invites.service"
 
 const NOW = "2026-10-12T00:00:00.000Z"

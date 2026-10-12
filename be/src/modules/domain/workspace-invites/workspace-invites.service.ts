@@ -39,9 +39,8 @@ import type {
     InviteState,
     PendingInvite,
 } from "./workspace-invites.contracts"
-import { InjectInviteDelivery } from "./workspace-invites.delivery"
 import type { WorkspaceInvitesOptions } from "./workspace-invites.options"
-import { InjectWorkspaceInvitesOptions } from "./workspace-invites.port"
+import { InjectInviteDelivery, InjectWorkspaceInvitesOptions } from "./workspace-invites.port"
 
 const DAY_MS = 86_400_000
 const MANAGERS = ["owner", "manager"] as const
