@@ -1,4 +1,5 @@
-import type { Database } from "../../../../../../supabase/types/database.types"
-
-/** One generated row of public.authority_actions. */
-export type AuthorityActionsRow = Database["public"]["Tables"]["authority_actions"]["Row"]
+/** One row of public.authority_actions as the sync reads it back. */
+export interface AuthorityActionsRow {
+    /** The action key. */
+    readonly action: string
+}

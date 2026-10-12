@@ -1,4 +1,5 @@
-import type { Database } from "../../../../../../supabase/types/database.types"
-
-/** One generated row of public.modules. */
-export type ModulesRow = Database["public"]["Tables"]["modules"]["Row"]
+/** One row of public.modules as the sync reads it back. */
+export interface ModulesRow {
+    /** The module key. */
+    readonly key: string
+}
