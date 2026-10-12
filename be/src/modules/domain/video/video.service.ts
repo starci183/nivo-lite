@@ -82,7 +82,7 @@ export class VideoService {
                 createdBy: principalId,
             })
             await this.projects.startRender(manager, { projectId: project.id, renderId, spec })
-            await this.queue.enqueueRenderVideo({ renderId }, manager)
+            await this.queue.enqueueRenderVideo({ renderId, workspaceId: project.workspaceId }, manager)
             return { renderId, projectId: project.id }
         })
     }

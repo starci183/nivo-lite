@@ -96,7 +96,7 @@ describe("VideoService", () => {
                 spec,
             })
             expect(outbox.jobsOf(VIDEO_RENDER_QUEUE)).toEqual([
-                { queue: VIDEO_RENDER_QUEUE, payload: { renderId: "render-1" } },
+                { queue: VIDEO_RENDER_QUEUE, payload: { renderId: "render-1", workspaceId: WORKSPACE } },
             ])
             expect(outbox.allInTransaction).toBe(true)
             expect(tx.commits).toBe(1)

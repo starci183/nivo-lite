@@ -10,6 +10,8 @@ export const VIDEO_RENDER_QUEUE = "video_render"
 export interface RenderVideoPayload {
     /** The `video_renders` row waiting to be rendered. */
     readonly renderId: string
+    /** The workspace of the render: the queue limits how many renders of one workspace run at once. */
+    readonly workspaceId: string
 }
 
 /** True when a job payload is the payload of a render-video job. */
@@ -23,6 +25,8 @@ export class VideoRenderQueue {
 
     /** Enqueues the render of a new `video_renders` row in the caller's transaction: the job exists exactly when the row commits. */
     enqueueRenderVideo(payload: RenderVideoPayload, tx: EntityManager): Promise<void> {
-        return this.outbox.write(tx, VIDEO_RENDER_QUEUE, payload)
+        return this.outbox.write(tx, VIDEO_RENDER_QUEUE, payload, {
+            dedupeKey: `${VIDEO_RENDER_QUEUE}:${payload.renderId}`,
+        })
     }
 }
