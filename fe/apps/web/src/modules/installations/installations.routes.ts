@@ -1,5 +1,8 @@
 import type { ModuleKey } from "@/modules/catalog"
 
+/** The agents area: the catalogue of agents. */
+export const AGENTS_ROUTE = "/agents"
+
 /** A tab of one agent instance. */
 export type AgentTab = "setup" | "workbench" | "settings"
 
@@ -13,10 +16,10 @@ export const agentHref = (
     tab: AgentTab = "setup",
     query?: string,
 ): string => {
-    const base = installationId ? `/agents/${module}/${installationId}` : `/agents/${module}`
+    const base = installationId ? `${AGENTS_ROUTE}/${module}/${installationId}` : `${AGENTS_ROUTE}/${module}`
     const path = tab === "setup" ? base : `${base}/${tab}`
     return query ? `${path}?${query}` : path
 }
 
 /** The list of the instances of a type (/agents/<type>?list=1): shown even when there is only one, so adding a new one is always reachable. */
-export const agentListHref = (module: ModuleKey): string => `/agents/${module}?list=1`
+export const agentListHref = (module: ModuleKey): string => `${AGENTS_ROUTE}/${module}?list=1`

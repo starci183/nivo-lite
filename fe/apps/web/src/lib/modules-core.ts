@@ -3,6 +3,7 @@ import { cache } from "react";
 import { getSession } from "./session";
 import { isModuleKey, type ModuleKey } from "./module-registry";
 import { readActiveContext, readContextVersions, readInstallations } from "@/modules/db";
+export { toSession, toVersion } from "@/modules/db";
 import { instancesOf, type ContextVersion, type Installation } from "@/modules/installations";
 
 /**
@@ -51,5 +52,3 @@ export const listContextVersions = async (installationId: string): Promise<Array
   return [...outcome.value];
 };
 
-/** Compat for the readers of raw rows (context notes); the mappers live in modules/db. */
-export { toSession, toVersion } from "@/modules/db/module-setup/module-setup.mapper";

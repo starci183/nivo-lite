@@ -12,22 +12,15 @@ import { decideWrite, loadWrites, openGapsFor, storeWrites } from "./module-setu
 import { engineCtx } from "./flow-ctx";
 import { withUsage } from "./usage";
 import { getInstallationById } from "./modules-core";
-import { isModuleKey, type Installation, type ModuleKey, type OperatingMode, type SetupMessage, type SetupRevision, type SetupSession } from "./modules-shared";
+import { agentHref, isModuleKey, type Installation, type ModuleKey, type OperatingMode, type SetupMessage, type SetupRevision, type SetupSession } from "./modules-shared";
 import { requireManager } from "./permissions";
 import { getSession } from "./session";
 import type { Outcome } from "./types";
-import { readSessionMessages, readSetupCard, readSetupSession, readSetupState } from "@/modules/db";
-import type { DbOutcome } from "@/modules/db/outcome";
-import { writeApplySetup } from "@/modules/db/module-setup/write-apply-setup";
-import { writeDraftSession } from "@/modules/db/module-setup/write-draft-session";
-import { writeGate } from "@/modules/db/module-setup/write-gate";
-import { writeSetupMessage } from "@/modules/db/module-setup/write-setup-message";
-import { writeSetupTurn } from "@/modules/db/module-setup/write-setup-turn";
-import { writeInstallModule } from "@/modules/db/modules/write-install-module";
-import { writeModuleLive } from "@/modules/db/modules/write-module-live";
-import { writeOperatingMode } from "@/modules/db/modules/write-operating-mode";
-import { writeRenameAgent } from "@/modules/db/modules/write-rename-agent";
-import { writeRenameInstance } from "@/modules/db/modules/write-rename-instance";
+import type { DbOutcome } from "@/modules/db";
+import {
+  dbFailure, dbOk, readSessionMessages, readSetupCard, readSetupSession, readSetupState, writeApplySetup, writeDraftSession, writeGate, writeInstallModule,
+  writeModuleLive, writeOperatingMode, writeRenameAgent, writeRenameInstance, writeSetupMessage, writeSetupTurn,
+} from "@/modules/db";
 
 /**
  * The server actions of the agent catalogue, the setup chat and the settings tab. The database is reached only through modules/db
@@ -77,6 +70,13 @@ export const installModule = async (moduleKey: ModuleKey): Promise<Outcome<{ mod
     refresh();
     return { moduleKey, installationId: result.installationId };
   });
+
+/** Install an agent from the catalogue and answer the page to open (the refusal code carries the text the screen shows). */
+export const installAgent = async (moduleKey: string): Promise<DbOutcome<string>> => {
+  if (!isModuleKey(moduleKey)) return dbFailure("invalid", "module");
+  const installed = await installModule(moduleKey);
+  return installed.ok ? dbOk(agentHref(moduleKey, null)) : dbFailure("unavailable", installed.error);
+};
 
 /**
  * Add another instance of a multi-instance type (one Chatbot per branch, brand or Fanpage): a new installation with its own agent, setup
