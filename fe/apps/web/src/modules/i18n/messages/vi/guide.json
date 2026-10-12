@@ -1,0 +1,23 @@
+{
+  "open": "Mở trợ lý NIVO",
+  "close": "Đóng trợ lý",
+  "title": "Trợ lý NIVO",
+  "subtitle": "Chỉ đường trong NIVO",
+  "here": "Bạn đang ở: {page}",
+  "greeting": "Anh/chị muốn làm gì trên NIVO? Cứ hỏi bằng lời thường, em chỉ đường cho.",
+  "placeholder": "Hỏi cách làm một việc trên NIVO",
+  "questionLabel": "Câu hỏi",
+  "send": "Hỏi",
+  "thinking": "Đang tìm…",
+  "steps": "Các bước",
+  "aiNote": "Do AI trả lời. Hãy xem lại trang trước khi làm.",
+  "restart": "Hỏi lại từ đầu",
+  "suggestSepay": "Báo khi có tiền về tài khoản",
+  "suggestTelegram": "Cho bot trả lời khách",
+  "suggestTeam": "Mời nhân viên vào làm",
+  "suggestKnowledge": "Dạy AI bảng giá của tôi",
+  "suggestLeads": "Thêm khách hàng mới",
+  "suggestOffice": "Duyệt việc AI đề xuất",
+  "suggestAccount": "Đổi mật khẩu",
+  "failed": "Trợ lý chưa trả lời được. Thử lại sau giây lát."
+}
