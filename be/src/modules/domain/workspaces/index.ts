@@ -1,0 +1,7 @@
+export { WORKSPACES_ERROR_KINDS } from "./errors/workspaces.error"
+export { WORKSPACES_MESSAGES } from "./messages/workspaces.messages"
+export type { CreatedWorkspace, WorkspaceMembership } from "./workspaces.contracts"
+export { parseWorkspacesConfig } from "./workspaces.config"
+export type { WorkspacesOptions } from "./workspaces.options"
+export { WorkspacesModule } from "./workspaces.module"
+export { WorkspacesService } from "./workspaces.service"

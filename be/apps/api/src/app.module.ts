@@ -2,15 +2,28 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
 import { SystemHealthHttpModule } from "@features/api/system-health"
+import { WorkspacesHttpModule } from "@features/api/workspaces"
 import { AuthGuard, IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } from "@modules/domain/identity"
 import {
     SUPABASE_ACCESS_TOKEN_VERIFIER,
-    SUPABASE_ADMIN_CLIENT,
+    SUPABASE_AUTH,
     SUPABASE_ERROR_KINDS,
+    SupabaseModule,
     createSupabaseAccessTokenVerifier,
-    createSupabaseAdminClient,
 } from "@modules/integrations/supabase"
 import { LivenessModule } from "@modules/domain/liveness"
+import { EventsModule } from "@modules/domain/events"
+import {
+    WORKSPACE_INVITES_ERROR_KINDS,
+    WORKSPACE_INVITES_MESSAGES,
+    WorkspaceInvitesModule,
+} from "@modules/domain/workspace-invites"
+import {
+    WORKSPACE_MEMBERS_ERROR_KINDS,
+    WORKSPACE_MEMBERS_MESSAGES,
+    WorkspaceMembersModule,
+} from "@modules/domain/workspace-members"
+import { WORKSPACES_ERROR_KINDS, WORKSPACES_MESSAGES, WorkspacesModule } from "@modules/domain/workspaces"
 import { ClockModule } from "@modules/platform/clock"
 import { CONFIG_ERROR_KINDS } from "@modules/platform/config"
 import { CqrsModule } from "@modules/platform/cqrs"
@@ -48,6 +61,9 @@ export class AppModule {
                         IDENTITY_MESSAGES,
                         JOBS_MESSAGES,
                         QUEUE_MESSAGES,
+                        WORKSPACE_INVITES_MESSAGES,
+                        WORKSPACE_MEMBERS_MESSAGES,
+                        WORKSPACES_MESSAGES,
                     ],
                 }),
                 ErrorsModule.register({
@@ -60,6 +76,9 @@ export class AppModule {
                         QUEUE_ERROR_KINDS,
                         IDENTITY_ERROR_KINDS,
                         SUPABASE_ERROR_KINDS,
+                        WORKSPACE_INVITES_ERROR_KINDS,
+                        WORKSPACE_MEMBERS_ERROR_KINDS,
+                        WORKSPACES_ERROR_KINDS,
                     ],
                 }),
                 CqrsModule.register({ isGlobal: true }),
@@ -81,15 +100,21 @@ export class AppModule {
                     connection: PRIMARY_ENTITY_MANAGER,
                     ...options.jobs,
                 }),
+                SupabaseModule.register({ isGlobal: true, ...options.supabase }),
                 IdentityModule.register({ isGlobal: true, verifyAccessToken }),
+                EventsModule.register({ isGlobal: true }),
+                WorkspaceMembersModule.register({ isGlobal: true, accounts: SUPABASE_AUTH }),
+                WorkspacesModule.register({ isGlobal: true, ...options.workspaces }),
+                WorkspaceInvitesModule.register({
+                    isGlobal: true,
+                    delivery: SUPABASE_AUTH,
+                    ...options.workspaceInvites,
+                }),
                 LivenessModule.register({ isGlobal: true }),
                 SystemHealthHttpModule,
+                WorkspacesHttpModule,
             ],
             providers: [
-                {
-                    provide: SUPABASE_ADMIN_CLIENT,
-                    useValue: createSupabaseAdminClient(options.supabase),
-                },
                 { provide: SUPABASE_ACCESS_TOKEN_VERIFIER, useValue: verifyAccessToken },
                 { provide: APP_FILTER, useClass: ErrorsFilter },
                 { provide: APP_GUARD, useClass: RateLimitGuard },
