@@ -1,13 +1,13 @@
 /**
- * The module registry, typed access. The data comes from resources/modules/<key>/module.json through the build-time generator
- * (scripts/gen-module-registry.mjs -> module-registry.generated.ts), so client and server read the same constants and nothing reads
- * the file system at runtime. Pure: safe in client components. Every hard-coded "chatbot | sales | accounting" check goes through here.
+ * The module registry, typed access. The data is the catalogue mirror in modules/catalog (the typed catalogue of the back end is the
+ * source, served by GET /modules), so client and server read the same constants and nothing reads the file system at runtime.
+ * Pure: safe in client components. Every hard-coded "chatbot | sales | accounting" check goes through here.
  */
 import type { Locale } from "@/i18n/core";
 import {
   ACTION_KEYS, MODULE_CATEGORIES, MODULE_KEYS, MODULE_REGISTRY,
   type ActionKey, type Bilingual, type ModuleCategory, type ModuleCategoryKey, type ModuleDef, type ModuleKey, type RegistryAction, type RegistryCommand, type RegistryGate,
-} from "./module-registry.generated";
+} from "@/modules/catalog";
 
 export { ACTION_KEYS, MODULE_CATEGORIES, MODULE_KEYS, MODULE_REGISTRY };
 export type { ActionKey, Bilingual, ModuleCategory, ModuleCategoryKey, ModuleDef, ModuleKey, RegistryAction, RegistryCommand, RegistryGate };

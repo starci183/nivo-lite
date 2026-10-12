@@ -87,5 +87,4 @@ engine/dist/
 # The ONE secrets file and SSH keys live at the repo root for convenience. NEVER commit them.
 /secrets.env
 /.secrets/
-fe/apps/web/src/lib/module-registry.generated.ts
 scripts/.render-check.mjs
