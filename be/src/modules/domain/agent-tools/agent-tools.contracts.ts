@@ -4,6 +4,9 @@ export interface ToolArgs {
     readonly [key: string]: unknown
 }
 
+/** The value of an Authorization header, or undefined when the request has none. */
+export type OptionalAuthorization = string | undefined
+
 /** The JSON object a tool answers with. */
 export interface JsonResult {
     /** Any member. */

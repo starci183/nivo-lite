@@ -44,3 +44,13 @@ export type SyncScope =
 
 /** A sync scope, or null when the payload names an installation without its workspace. */
 export type OptionalSyncScope = SyncScope | null
+
+/** What a signed-in owner asks to sync: the optional parts default to the whole workspace and not forced. */
+export interface SyncAsk {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The one installation; the whole workspace when absent. */
+    readonly installationId?: string
+    /** Also sync an installation that is not on OpenClaw yet; false when absent. */
+    readonly force?: boolean
+}

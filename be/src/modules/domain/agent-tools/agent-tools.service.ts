@@ -1,6 +1,12 @@
 import { Injectable } from "@nestjs/common"
 import { EventsService } from "@modules/domain/events"
-import type { JsonResult, ToolArgs, ToolContext, ToolManifestEntry } from "./agent-tools.contracts"
+import type {
+    JsonResult,
+    OptionalAuthorization,
+    ToolArgs,
+    ToolContext,
+    ToolManifestEntry,
+} from "./agent-tools.contracts"
 import {
     InjectApprovalRequester,
     InjectBookingTools,
@@ -21,6 +27,7 @@ import type {
 } from "./agent-tools.port"
 import { AgentToolsError, AgentToolsErrorCode } from "./errors/agent-tools.error"
 import { approvalOf, handoffReasonOf, leadOf, queryOf } from "./tool-args.policy"
+import { bearerTokenOf } from "./tool-bearer.policy"
 import { isBookingTool, isToolName, TOOL_MANIFEST } from "./tool-manifest.policy"
 import type { ToolName } from "./tool-manifest.policy"
 
@@ -61,6 +68,11 @@ export class AgentToolsService {
         return TOOL_MANIFEST
     }
 
+    /** The tools OpenClaw may call, answered the way a door awaits them. */
+    async describeTools(): Promise<ReadonlyArray<ToolManifestEntry>> {
+        return this.manifest()
+    }
+
     /** Runs one tool for the job named by the token. */
     async runTool(token: string, tool: string, args: ToolArgs): Promise<JsonResult> {
         const claims = this.tokens.verify(token)
@@ -74,6 +86,11 @@ export class AgentToolsService {
             conversationId: claims.conversationId,
         }
         return await this.dispatch(ctx, tool, args)
+    }
+
+    /** Runs one tool for the job named by the bearer token of an Authorization header; a missing or foreign header is a refused token. */
+    runBearerTool(authorization: OptionalAuthorization, tool: string, args: ToolArgs): Promise<JsonResult> {
+        return this.runTool(bearerTokenOf(authorization), tool, args)
     }
 
     private dispatch(ctx: ToolContext, tool: ToolName, args: ToolArgs): Promise<JsonResult> {

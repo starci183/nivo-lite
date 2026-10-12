@@ -183,10 +183,24 @@ describe("AgentSyncService", () => {
         it("queues the sync for an owner or manager of the workspace", async () => {
             const { service, queue, members } = await build()
 
-            await service.requestFor("u1", { workspaceId: "w1", installationId: "i1", force: false })
+            await service.requestFor("u1", { workspaceId: "w1", installationId: "i1", force: true })
 
             expect(members.require).toHaveBeenCalledWith("u1", "w1", ["owner", "manager"])
-            expect(queue.enqueueSyncAgents).toHaveBeenCalledTimes(1)
+            expect(queue.enqueueSyncAgents).toHaveBeenCalledWith(
+                { workspaceId: "w1", installationId: "i1", force: true, requestedAt: Date.parse(AT) },
+                expect.anything(),
+            )
+        })
+
+        it("syncs the whole workspace, not forced, when the ask names neither", async () => {
+            const { service, queue } = await build()
+
+            await service.requestFor("u1", { workspaceId: "w1" })
+
+            expect(queue.enqueueSyncAgents).toHaveBeenCalledWith(
+                { workspaceId: "w1", force: false, requestedAt: Date.parse(AT) },
+                expect.anything(),
+            )
         })
 
         it("queues nothing for someone who may not", async () => {
@@ -194,9 +208,7 @@ describe("AgentSyncService", () => {
             const refusal = new Error("not a manager")
             members.require.mockRejectedValue(refusal)
 
-            await expect(
-                service.requestFor("u1", { workspaceId: "w1", installationId: null, force: false }),
-            ).rejects.toBe(refusal)
+            await expect(service.requestFor("u1", { workspaceId: "w1" })).rejects.toBe(refusal)
             expect(queue.enqueueSyncAgents).not.toHaveBeenCalled()
         })
     })

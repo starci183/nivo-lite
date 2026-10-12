@@ -37,6 +37,7 @@ export type {
     KnowledgePassages,
     LeadDraft,
     LeadWriteResult,
+    OptionalAuthorization,
     OptionalLeadId,
     ToolArgs,
     OptionalToolClaims,

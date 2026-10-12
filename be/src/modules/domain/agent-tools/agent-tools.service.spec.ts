@@ -101,6 +101,30 @@ describe("AgentToolsService", () => {
 
             expect(service.manifest()).toBe(TOOL_MANIFEST)
         })
+
+        it("answers the manifest to a door that awaits it", async () => {
+            const { service } = await build()
+
+            await expect(service.describeTools()).resolves.toBe(TOOL_MANIFEST)
+        })
+    })
+
+    describe("runBearerTool", () => {
+        it("runs the tool for the job the bearer token names", async () => {
+            const { service } = await build()
+
+            const result = await service.runBearerTool("Bearer good", "handoff.to_person", {})
+
+            expect(result).toEqual({ status: "handed_to_person" })
+        })
+
+        it("refuses a call with no bearer token", async () => {
+            const { service } = await build(null)
+
+            const error = await rejectionOf(service.runBearerTool(undefined, "knowledge.search", { query: "x" }))
+
+            expect(error).toMatchObject({ code: AgentToolsErrorCode.TokenInvalid })
+        })
     })
 
     describe("runTool", () => {

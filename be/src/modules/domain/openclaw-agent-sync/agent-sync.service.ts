@@ -13,7 +13,7 @@ import { eachInOrder } from "@modules/platform/primitives"
 import { InjectAgentsQueue, isSyncAgentsPayload } from "@modules/queues/agents"
 import type { AgentsQueue } from "@modules/queues/agents"
 import { INTERNAL_AGENT_MODULE, INTERNAL_AGENT_NAME, INTERNAL_FILES, scopeOf, syncErrorOf } from "./agent-sync.policy"
-import type { OptionalSyncOutcome, SyncOutcome, SyncRequest } from "./openclaw-agent-sync.contracts"
+import type { OptionalSyncOutcome, SyncAsk, SyncOutcome, SyncRequest } from "./openclaw-agent-sync.contracts"
 import { InjectInstallations, processorFromSettings, AgentBundleService, PauseClient } from "@modules/domain/agents"
 import type { AgentBundle } from "@modules/domain/agents"
 import { InjectSyncOptions } from "./openclaw-agent-sync.decorators"
@@ -76,9 +76,13 @@ export class AgentSyncService {
     }
 
     /** Queues a sync on behalf of a signed-in owner or manager of the workspace the request names. */
-    async requestFor(userId: string, request: SyncRequest): Promise<void> {
-        await this.members.require(userId, request.workspaceId, GOVERNORS)
-        await this.requestNow(request)
+    async requestFor(userId: string, ask: SyncAsk): Promise<void> {
+        await this.members.require(userId, ask.workspaceId, GOVERNORS)
+        await this.requestNow({
+            workspaceId: ask.workspaceId,
+            installationId: ask.installationId ?? null,
+            force: ask.force ?? false,
+        })
     }
 
     /**
