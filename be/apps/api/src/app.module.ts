@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
+import { ModulesHttpModule } from "@features/api/modules"
 import { SystemHealthHttpModule } from "@features/api/system-health"
 import { AuthGuard, IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } from "@modules/domain/identity"
 import {
@@ -11,6 +12,14 @@ import {
     createSupabaseAdminClient,
 } from "@modules/integrations/supabase"
 import { LivenessModule } from "@modules/domain/liveness"
+import { AuthorityActionsModule } from "@modules/domain/authority-actions"
+import {
+    MODULE_CATALOG,
+    MODULE_CATEGORIES,
+    MODULES_ERROR_KINDS,
+    MODULES_MESSAGES,
+    ModulesModule,
+} from "@modules/domain/modules"
 import { ClockModule } from "@modules/platform/clock"
 import { CONFIG_ERROR_KINDS } from "@modules/platform/config"
 import { CqrsModule } from "@modules/platform/cqrs"
@@ -42,7 +51,13 @@ export class AppModule {
                 LoggingModule.register({ isGlobal: true }),
                 I18nModule.register({
                     isGlobal: true,
-                    bundles: [ERRORS_MESSAGES, HTTP_SECURITY_MESSAGES, IDENTITY_MESSAGES, JOBS_MESSAGES],
+                    bundles: [
+                        ERRORS_MESSAGES,
+                        HTTP_SECURITY_MESSAGES,
+                        IDENTITY_MESSAGES,
+                        JOBS_MESSAGES,
+                        MODULES_MESSAGES,
+                    ],
                 }),
                 ErrorsModule.register({
                     isGlobal: true,
@@ -52,6 +67,7 @@ export class AppModule {
                         HTTP_SECURITY_ERROR_KINDS,
                         JOBS_ERROR_KINDS,
                         IDENTITY_ERROR_KINDS,
+                        MODULES_ERROR_KINDS,
                         SUPABASE_ERROR_KINDS,
                     ],
                 }),
@@ -77,6 +93,9 @@ export class AppModule {
                 }),
                 IdentityModule.register({ isGlobal: true, verifyAccessToken }),
                 LivenessModule.register({ isGlobal: true }),
+                AuthorityActionsModule.register({ isGlobal: true }),
+                ModulesModule.register({ isGlobal: true, categories: MODULE_CATEGORIES, catalog: MODULE_CATALOG }),
+                ModulesHttpModule,
                 SystemHealthHttpModule,
             ],
             providers: [
