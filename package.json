@@ -61,6 +61,8 @@
     "start:api": "node be/dist/apps/api/src/main.js",
     "cli": "node be/dist/apps/cli/src/main.js",
     "migrate": "node be/dist/apps/cli/src/main.js migrate run",
+    "seed:automations": "node be/dist/apps/cli/src/main.js seed-automations run",
+    "n8n:sync": "node be/dist/apps/cli/src/main.js sync-n8n run",
     "start:web": "npm run start -w @nivo-lite/web",
     "docker:build": "npm run docker:build:api && npm run docker:build:cli",
     "docker:build:api": "docker build -f be/apps/api/Dockerfile -t nivo-lite/api:dev .",

@@ -1,0 +1,60 @@
+{
+  "position": 15,
+  "key": "delivery_notice",
+  "version": 1,
+  "pack": "delivery",
+  "executor": "implemented",
+  "moduleKey": "sales",
+  "icon": "truck",
+  "name": {
+    "vi": "Báo giao hàng",
+    "en": "Delivery notice"
+  },
+  "description": {
+    "vi": "Đơn vừa giao cho đơn vị vận chuyển, NIVO nhắn khách tên hãng và mã vận đơn để khách theo dõi.",
+    "en": "When an order is handed to the carrier, NIVO tells the customer the carrier and tracking code."
+  },
+  "trigger": {
+    "kind": "event",
+    "event": "order.shipped",
+    "line": {
+      "vi": "Khi bạn đánh dấu một đơn đã giao cho vận chuyển",
+      "en": "When you mark an order as handed to the carrier"
+    }
+  },
+  "requires": {
+    "modules": [
+      "sales"
+    ],
+    "channels": [
+      "customer_chat"
+    ],
+    "connections": [],
+    "capabilities": [
+      "has_delivery"
+    ]
+  },
+  "settings": [],
+  "contentMode": "fixed",
+  "guardrails": [
+    {
+      "vi": "Không bịa giá, giờ, địa chỉ hay chính sách chưa có trong thông tin cửa hàng.",
+      "en": "Never invent prices, hours, addresses or policies that are not in the shop information."
+    }
+  ],
+  "variables": [
+    "ten_khach",
+    "ten_shop",
+    "ma_phieu",
+    "hang_van_chuyen",
+    "ma_van_don"
+  ],
+  "defaultBody": {
+    "vi": "Chào {ten_khach}, đơn {ma_phieu} của bạn tại {ten_shop} đã được giao cho {hang_van_chuyen}. Mã vận đơn: {ma_van_don}. Bạn có thể dùng mã này để theo dõi hành trình nhé!",
+    "en": "Hi {ten_khach}, your order {ma_phieu} from {ten_shop} is with {hang_van_chuyen}. Tracking code: {ma_van_don}."
+  },
+  "authority": {
+    "action": "send_care"
+  },
+  "defaults": {}
+}
