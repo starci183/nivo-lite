@@ -1,0 +1,9 @@
+schema: work/workspace@1
+id: nivo-lite
+project: nivo-lite
+description: The Work records of NIVO, one StarCi lite app with its back end in be/ and its front end in fe/.
+repositories:
+  - role: be
+    name: be
+  - role: fe
+    name: fe
