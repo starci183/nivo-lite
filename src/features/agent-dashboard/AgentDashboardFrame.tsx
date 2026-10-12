@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Alert, Badge, Breadcrumbs, Button, DescriptionList, SectionHeader, SurfaceCard, SurfaceListCard, Tabs, type DescriptionListStatItem } from "@starci/grammar/common";
+import { Alert, Badge, Button, DescriptionList, SectionHeader, SurfaceCard, SurfaceListCard, Tabs, type DescriptionListStatItem } from "@starci/grammar/common";
 import { useRouter } from "next/navigation";
 import { useLocale, useT } from "@/i18n/client";
 import { agentDashboard } from "@/i18n/dict/agentDashboard";
@@ -17,7 +17,7 @@ import { ConnectionsRegion, DoneRegion, KnowledgeRegion, WaitingRegion } from ".
  * AGENT DASHBOARD FRAME - the one page anatomy of every agent's workbench (/m/<module>/workbench). It composes @starci/grammar only.
  * Regions, top to bottom:
  *
- *   1. Breadcrumbs, then a SectionHeader: the agent's name, its mode badge (assist / autopilot) and the page command (`command`).
+ *   1. A SectionHeader (the trail is ModuleChrome's, never repeated here): the agent's name, its mode badge (assist / autopilot) and the page command (`command`).
  *   2. The ribbon (`figures`): a plain SurfaceCard with a DescriptionList stat-strip of 4 figures chosen per agent.
  *   3. "Chờ bạn"            data.waiting      the decisions of this module that wait for a person, each linking to the decision.
  *   4. "Đã tự làm 7 ngày"   data.done         count and the last items.
@@ -112,15 +112,7 @@ export const AgentDashboardFrame = ({
   return (
     <div className={FRAME_CLASS_NAME}>
       <div className={HEAD_CLASS_NAME}>
-        <Breadcrumbs
-          label={ts("crumbLabel")}
-          items={[
-            { id: "home", label: ts("crumbHome"), href: "/dashboard" },
-            { id: "modules", label: tc("catalogTitle"), href: "/m" },
-            { id: "module", label: moduleName, href: `/m/${module}` },
-            { id: "workbench", label: tc("tabWorkbench") },
-          ]}
-        />
+        {/* The trail (Tổng quan > Module > <module>) and the module heading belong to ModuleChrome above the frame: one trail per page. */}
         <SectionHeader
           level={2}
           title={heading}

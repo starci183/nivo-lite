@@ -7,7 +7,7 @@ import { useLocale, useT } from "@/i18n/client";
 import { agentDashboard } from "@/i18n/dict/agentDashboard";
 import type { ConnectionItem, DashboardItem, DoneData, KnowledgeData, Region, WaitingData } from "@/lib/agent-dashboard-shared";
 import type { ModuleKey } from "@/lib/modules-shared";
-import { FOOT_CLASS_NAME } from "./classNames";
+import { FOOT_CLASS_NAME, LABEL_END_CLASS_NAME } from "./classNames";
 import { formatWhen } from "./format";
 
 type RegionProps<T> = { readonly region: Region<T> | undefined; readonly isLoading: boolean };
@@ -59,9 +59,13 @@ export const DoneRegion = ({ region, isLoading, module }: RegionProps<DoneData> 
   return (
     <SurfaceListCard
       label={label}
-      labelEnd={<Badge tone="success" isDot>{t("doneCount", { n: count })}</Badge>}
+      labelEnd={
+        <div className={LABEL_END_CLASS_NAME}>
+          <Badge tone="success" isDot>{t("doneCount", { n: count })}</Badge>
+          <TextAction size="sm" href={`/decisions?kind=policy&dept=${module}`}>{t("doneLog")}</TextAction>
+        </div>
+      }
       empty={<EmptyNotice message={t("doneEmpty")} description={t("doneEmptyBody")} />}
-      footer={<TextAction size="sm" href={`/decisions?kind=policy&dept=${module}`}>{t("doneLog")}</TextAction>}
     >
       {items.map((item) => (
         <ListRow
@@ -85,8 +89,8 @@ export const ConnectionsRegion = ({ region, isLoading }: RegionProps<ReadonlyArr
   return (
     <SurfaceListCard
       label={label}
+      labelEnd={<TextAction size="sm" href="/connections">{t("connManage")}</TextAction>}
       empty={<EmptyNotice message={t("connEmpty")} description={t("connEmptyBody")} />}
-      footer={<TextAction size="sm" href="/connections">{t("connManage")}</TextAction>}
     >
       {region.data.map((c) => (
         <ListRow
@@ -119,12 +123,8 @@ export const KnowledgeRegion = ({ region, isLoading, gaps: gapsSlot }: RegionPro
     <>
       <SurfaceListCard
         label={label}
-        footer={
-          <div className={FOOT_CLASS_NAME}>
-            <Text size="sm" tone="muted">{isInternal ? t("knowAudienceInternal") : t("knowAudienceCustomer")}</Text>
-            <TextAction size="sm" href="/knowledge">{t("knowOpen")}</TextAction>
-          </div>
-        }
+        labelEnd={<TextAction size="sm" href="/knowledge">{t("knowOpen")}</TextAction>}
+        footer={<Text size="sm" tone="muted">{isInternal ? t("knowAudienceInternal") : t("knowAudienceCustomer")}</Text>}
       >
         <ListRow title={t("knowPublic")} description={t("knowCounts", { docs: k.documents.public, facts: k.facts.public })} />
         <ListRow
@@ -139,9 +139,15 @@ export const KnowledgeRegion = ({ region, isLoading, gaps: gapsSlot }: RegionPro
       {gapsSlot !== undefined ? gapsSlot : gaps ? (
         <SurfaceListCard
           label={t("gapsTitle")}
-          labelEnd={gaps.openCount > 0 ? <Badge tone="warning" isDot>{String(gaps.openCount)}</Badge> : undefined}
+          labelEnd={
+            gaps.openCount > 0 ? (
+              <div className={LABEL_END_CLASS_NAME}>
+                <Badge tone="warning" isDot>{String(gaps.openCount)}</Badge>
+                <TextAction size="sm" href="/knowledge">{t("gapsOpen")}</TextAction>
+              </div>
+            ) : undefined
+          }
           empty={<EmptyNotice message={t("gapsEmpty")} description={t("gapsEmptyBody")} />}
-          footer={gaps.openCount > 0 ? <TextAction size="sm" href="/knowledge">{t("gapsOpen")}</TextAction> : undefined}
         >
           {gaps.items.map((g) => (
             <ListRow
