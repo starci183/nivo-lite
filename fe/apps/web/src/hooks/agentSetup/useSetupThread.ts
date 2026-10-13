@@ -1,4 +1,4 @@
-import type { SetupWrite } from "@/lib/module-setup-writes"
+import type { SetupWrite } from "@/modules/types"
 import type { ContextVersion, SetupMessage, SetupRevision } from "@/modules/installations"
 import { byTime } from "./agentSetup.shared"
 

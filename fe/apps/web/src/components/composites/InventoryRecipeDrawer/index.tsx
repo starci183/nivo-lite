@@ -1,5 +1,4 @@
 import { InventoryPick } from "@/components/leaves/InventoryPick"
-import { InventorySelect } from "@/components/leaves/InventorySelect"
 import { InventoryField } from "@/components/leaves/InventoryField"
 import { InventoryNotices } from "@/components/leaves/InventoryNotices"
 import { Button, Drawer, Text } from "@starci/grammar/common"

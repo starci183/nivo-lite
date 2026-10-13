@@ -1,10 +1,9 @@
 import { isDataConnector } from "@/hooks/connection-access"
 import { PROVIDERS } from "@/hooks/connection-providers"
-import { bankName } from "@/lib/vn-banks"
 import type { Connection, Provider, RowAlert, RowDialog, RowMenuSection, RowPrimary } from "@/modules/types"
 
 /** A catalog reader as the row builders receive it: a key and the values of its placeholders. */
-export type Translate = (key: string, values?: Record<string, string | number>) => string
+export type RowTranslate = (key: string, values?: Record<string, string | number>) => string
 
 /** The command a row is running (only its own control shows pending). */
 export type RowBusy = "check" | "test" | "google" | "keys" | "disconnect" | "remove" | "sync" | null
@@ -32,7 +31,7 @@ export const canReopen = (provider: Provider): boolean => RESUMABLE_KINDS.has(PR
 const join = (parts: ReadonlyArray<string | undefined>): string => parts.filter(Boolean).join(" · ")
 
 /** The facts line of a connection: what identifies it on the provider's side (account, mailbox, bank, Page, OA). */
-export const factsOf = (c: Connection, t: Translate): string => {
+export const connectionFactsOf = (c: Connection, t: RowTranslate, bankName: (code: string) => string): string => {
     if (isDataConnector(c.provider)) return join([c.meta.account, c.meta.email, c.meta.host, c.meta.summary])
     switch (c.provider) {
         case "smtp":
@@ -64,7 +63,7 @@ export const factsOf = (c: Connection, t: Translate): string => {
 }
 
 /** The one visible action of a row: what the connection's state asks for next, or null when nothing does. */
-export const primaryOf = (c: Connection, canManage: boolean, busy: RowBusy, t: Translate): RowPrimary | null => {
+export const primaryOf = (c: Connection, canManage: boolean, busy: RowBusy, t: RowTranslate): RowPrimary | null => {
     const settled = c.status !== "disconnected" && c.status !== "pending"
     const broken = c.status === "error"
     const reconnects = c.provider === "zalo_oa" || c.provider === "meta"
@@ -93,7 +92,7 @@ export const primaryOf = (c: Connection, canManage: boolean, busy: RowBusy, t: T
 }
 
 /** The menu of a row: the commands that edit it first, the destructive one last; empty for a viewer who cannot manage. */
-export const menuOf = (c: Connection, canManage: boolean, t: Translate): ReadonlyArray<RowMenuSection> => {
+export const menuOf = (c: Connection, canManage: boolean, t: RowTranslate): ReadonlyArray<RowMenuSection> => {
     if (!canManage) return []
     const live = c.status !== "disconnected"
     const settled = live && c.status !== "pending"
@@ -117,7 +116,7 @@ export const dialogOf = (
     c: Connection,
     confirm: RowConfirm,
     busy: RowBusy,
-    t: Translate,
+    t: RowTranslate,
 ): RowDialog => ({
     isOpen: confirm === kind,
     title: t(`${kind}Title`, { name: c.name }),
@@ -128,7 +127,11 @@ export const dialogOf = (
 })
 
 /** The alerts inside a row: a connection nobody uses yet, and the last error of a live one. */
-export const alertsOf = (c: Connection, agentNames: ReadonlyArray<string>, t: Translate): ReadonlyArray<RowAlert> => {
+export const alertsOf = (
+    c: Connection,
+    agentNames: ReadonlyArray<string>,
+    t: RowTranslate,
+): ReadonlyArray<RowAlert> => {
     const live = c.status !== "disconnected"
     const needsAgent = live && c.status !== "pending" && usesAgents(c.provider) && agentNames.length === 0
     const hint = isBankFeed(c.provider) ? t("noAgentHintBank") : t("noAgentHint")
@@ -141,7 +144,7 @@ export const alertsOf = (c: Connection, agentNames: ReadonlyArray<string>, t: Tr
 }
 
 /** The muted notes of a row: Telegram on a local site, Zalo's reply window. */
-export const notesOf = (c: Connection, localOnly: boolean, t: Translate): ReadonlyArray<string> => {
+export const notesOf = (c: Connection, localOnly: boolean, t: RowTranslate): ReadonlyArray<string> => {
     const live = c.status !== "disconnected"
     return [
         ...(c.provider === "telegram" && live && localOnly ? [t("localNote")] : []),

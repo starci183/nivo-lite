@@ -8,24 +8,39 @@ export interface ConnectionSecretsRow {
 
 /** The columns the service reads of a connection. */
 export interface ConnectionSelectRow {
+    /** The connection id. */
     readonly id: string
+    /** The workspace that owns the connection. */
     readonly workspace_id: string
+    /** The provider key stored for the connection. */
     readonly provider: string
+    /** The name the owner gave the connection. */
     readonly name: string
+    /** Non-secret facts stored as JSON. */
     readonly public_meta: unknown
+    /** Where the connection is in its life. */
     readonly status: string
+    /** The last failure shown to the owner, or null. */
     readonly last_error: string | null
+    /** Test or live, or null when the row predates the column. */
     readonly environment: string | null
+    /** Whether this SMTP connection is the workspace default, or null. */
     readonly is_default: boolean | null
+    /** When the last event arrived, ISO 8601, or null. */
     readonly last_event_at: string | null
+    /** The first accepted event as JSON, or null. */
     readonly first_event: unknown
+    /** Who created the connection, or null. */
     readonly created_by: string | null
+    /** When the connection was created, ISO 8601. */
     readonly created_at: string
 }
 
 /** The member columns authorisation reads. */
 export interface MemberRow {
+    /** The role the member holds in the workspace. */
     readonly role: string
+    /** The name shown in audit trails. */
     readonly display_name: string
 }
 

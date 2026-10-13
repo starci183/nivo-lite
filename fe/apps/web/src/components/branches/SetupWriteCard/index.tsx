@@ -1,7 +1,7 @@
 import { useState } from "react"
-import type { Scope } from "@/lib/brain/shared"
-import type { RuleMode } from "@/lib/flow-types"
-import type { Resolution, SetupWrite, WriteDecision } from "@/lib/module-setup-writes"
+import { FACT_SCOPES } from "@/modules/types"
+import type { FactScope, FlowRuleMode } from "@/modules/types"
+import type { SetupResolution, SetupWrite, SetupWriteDecision } from "@/modules/types"
 import { SetupWriteView } from "@/components/leaves/SetupWriteView"
 import type { SetupWriteDecided, SetupWriteInstance, SetupWriteWords } from "@/modules/types"
 
@@ -9,10 +9,10 @@ import type { SetupWriteDecided, SetupWriteInstance, SetupWriteWords } from "@/m
 type Draft = {
     readonly isEditing: boolean
     readonly value: string
-    readonly scope: Scope
-    readonly mode: RuleMode
+    readonly scope: FactScope
+    readonly mode: FlowRuleMode
     readonly limit: number | null
-    readonly resolution: Resolution
+    readonly resolution: SetupResolution
     readonly situation: string
     /** Shared by every instance of the type unless the owner keeps it for this one. */
     readonly onlyThis: boolean
@@ -25,13 +25,12 @@ type SetupWriteCardProps = {
     /** The card is being settled: its commands wait. */
     readonly isBusy: boolean
     /** Sends the decision of the owner. */
-    readonly onDecide: (id: string, change: WriteDecision) => void
+    readonly onDecide: (id: string, change: SetupWriteDecision) => void
     readonly instance: SetupWriteInstance | null
 }
 
-const MODES: ReadonlyArray<RuleMode> = ["auto", "ask", "never"]
-const RESOLUTIONS: ReadonlyArray<Resolution> = ["replace", "keep", "both"]
-const SCOPES: ReadonlyArray<Scope> = ["public", "internal", "restricted"]
+const MODES: ReadonlyArray<FlowRuleMode> = ["auto", "ask", "never"]
+const RESOLUTIONS: ReadonlyArray<SetupResolution> = ["replace", "keep", "both"]
 const FOR_ALL = "all"
 const FOR_THIS = "this"
 
@@ -99,7 +98,7 @@ export const SetupWriteCard = (props: SetupWriteCardProps) => {
     const [draft, setDraft] = useState<Draft>(startOf(write))
     const patch = (change: Partial<Draft>) => setDraft((current) => ({ ...current, ...change }))
     const rules = write.kind === "rule" ? words.actionRules(write.payload.action) : null
-    const decide = (change: WriteDecision) => props.onDecide(write.id, change)
+    const decide = (change: SetupWriteDecision) => props.onDecide(write.id, change)
     // The value in force is the shared one: a value kept for this instance only sits beside it and never conflicts with it.
     const isConflict =
         write.kind === "fact" &&
@@ -139,7 +138,7 @@ export const SetupWriteCard = (props: SetupWriteCardProps) => {
                     value: draft.value,
                     scopeLabel: words.scope,
                     scope: draft.scope,
-                    scopeOptions: SCOPES.map((scope) => ({ value: scope, label: words.scopeLabel(scope) })),
+                    scopeOptions: FACT_SCOPES.map((scope) => ({ value: scope, label: words.scopeLabel(scope) })),
                     forLabel: words.forLabel,
                     forValue: draft.onlyThis ? FOR_THIS : FOR_ALL,
                     forOptions:
@@ -181,7 +180,7 @@ export const SetupWriteCard = (props: SetupWriteCardProps) => {
             }}
             on={{
                 value: (value) => patch({ value }),
-                scope: (value) => patch({ scope: SCOPES.find((scope) => scope === value) ?? "internal" }),
+                scope: (value) => patch({ scope: FACT_SCOPES.find((scope) => scope === value) ?? "internal" }),
                 forWho: (value) => patch({ onlyThis: value === FOR_THIS }),
                 mode: (value) => patch({ mode: MODES.find((mode) => mode === value) ?? "ask" }),
                 limit: (value) => patch({ limit: Number.isFinite(value) ? value : null }),

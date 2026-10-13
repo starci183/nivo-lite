@@ -1,5 +1,5 @@
 import type { BadgeTone } from "@starci/grammar/common"
-import type { DecisionRow, EvidenceState } from "@/lib/flow-types"
+import type { FlowDecisionRow, FlowEvidenceState } from "@/modules/types"
 import { agentHref } from "@/modules/installations"
 import type { AttentionKind, LeadStageId } from "@/modules/types"
 
@@ -18,7 +18,7 @@ export const ATTENTION_TONES: Readonly<Record<AttentionKind, BadgeTone>> = {
 }
 
 /** The badge tone of how much evidence backs something NIVO did. */
-export const EVIDENCE_TONES: Readonly<Record<EvidenceState, BadgeTone>> = {
+export const EVIDENCE_TONES: Readonly<Record<FlowEvidenceState, BadgeTone>> = {
     pending: "warning",
     captured: "neutral",
     reviewed: "accent",
@@ -27,7 +27,7 @@ export const EVIDENCE_TONES: Readonly<Record<EvidenceState, BadgeTone>> = {
 }
 
 /** The badge tone of how a decision was made. */
-export const OUTCOME_TONES: Readonly<Record<DecisionRow["outcome"], BadgeTone>> = {
+export const OUTCOME_TONES: Readonly<Record<FlowDecisionRow["outcome"], BadgeTone>> = {
     auto_done: "success",
     approved: "accent",
     edited: "warning",

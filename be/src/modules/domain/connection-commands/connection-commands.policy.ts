@@ -9,12 +9,19 @@ import type { WebhookConnectionsService } from "@modules/domain/webhook-connecti
 
 /** The capabilities a command can reach. */
 export interface CommandServices {
+    /** Connections a command can read or ask for. */
     readonly connections: ConnectionsService
+    /** Grants a command can set. */
     readonly grants: ConnectionGrantsService
+    /** Channel connections a command can check, resume or reveal. */
     readonly channels: ChannelConnectionsService
+    /** Webhook connections a command can reveal, test or finish. */
     readonly webhooks: WebhookConnectionsService
+    /** Google connections a command can authorize or resume. */
     readonly google: GoogleConnectionsService
+    /** Meta connections a command can authorize or resume. */
     readonly meta: MetaConnectionsService
+    /** Disconnect and delete for a connection. */
     readonly lifecycle: ConnectionLifecycleService
 }
 
@@ -55,6 +62,11 @@ interface Wish {
     readonly access?: Level
 }
 
+/** The access level of a wish, present only when the caller picked one. */
+interface WishAccess {
+    readonly access?: Level
+}
+
 /** A list of wishes: each entry is a bare id or an object with the id and an optional level. */
 const wishesOf = (input: Input, listKey: string, idKey: string): ReadonlyArray<Wish> => {
     const list = input[listKey]
@@ -67,8 +79,7 @@ const wishesOf = (input: Input, listKey: string, idKey: string): ReadonlyArray<W
     })
 }
 
-const withAccess = (wish: Wish): { readonly access?: Level } =>
-    wish.access === undefined ? {} : { access: wish.access }
+const withAccess = (wish: Wish): WishAccess => (wish.access === undefined ? {} : { access: wish.access })
 
 const eventsOf = (input: Input): ReadonlyArray<string> => {
     const events = input.events

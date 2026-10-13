@@ -30,6 +30,7 @@ const initialsOf = (name: string): string => {
     return (first + last).toLocaleUpperCase("vi")
 }
 
+/** Displays a person's avatar with their initials as the fallback. */
 export const PersonAvatar = (props: PersonAvatarProps) => (
     <Avatar
         name={props.name}

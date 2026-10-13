@@ -16,7 +16,7 @@ import {
 import { Fragment } from "react"
 import { SetupWriteCard } from "@/components/branches/SetupWriteCard"
 import { SlotView } from "@/components/composites/SlotView"
-import type { SetupWrite, WriteDecision } from "@/lib/module-setup-writes"
+import type { SetupWrite, SetupWriteDecision } from "@/modules/types"
 import type { DataSlot, SetupWriteInstance, SetupWriteWords, SlotLabels } from "@/modules/types"
 import { CHAT_BAND, COMPOSER, COMPOSER_FIELD, COMPOSER_ROW, SENDING, THREAD, WRITES } from "./classNames"
 
@@ -67,7 +67,7 @@ export interface AgentSetupChatBaseProps {
     readonly on: {
         readonly text: (value: string) => void
         readonly send: () => void
-        readonly decide: (id: string, change: WriteDecision) => void
+        readonly decide: (id: string, change: SetupWriteDecision) => void
         readonly retry: () => void
     }
 }
