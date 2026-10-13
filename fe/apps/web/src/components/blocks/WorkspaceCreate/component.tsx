@@ -23,31 +23,35 @@ export interface WorkspaceCreateBaseProps {
 }
 
 /** Draws the form that names a new workspace. */
-export const WorkspaceCreateBase = (props: WorkspaceCreateBaseProps) => (
-    <SurfaceCard ariaLabel={props.props.title} measure="form">
-        <Form label={props.props.title} onSubmit={props.on.submit} isPending={props.props.isPending}>
-            <div className={STACK_CLASS_NAME}>
-                <Input
-                    id="workspace-name"
-                    name="name"
-                    label={props.props.nameLabel}
-                    hint={props.props.nameHint}
-                    variant="secondary"
-                    isRequired
-                    isDisabled={props.props.isPending}
-                    value={props.props.name}
-                    onValueChange={props.on.setName}
-                />
-                <FormNotice failTitle={props.props.failTitle} error={props.props.error} />
-                <div className={ACTIONS_CLASS_NAME}>
-                    <Button type="submit" variant="primary" size="lg" isPending={props.props.isPending}>
-                        {props.props.submitLabel}
-                    </Button>
-                    <Button variant="ghost" href={props.props.cancelHref} isDisabled={props.props.isPending}>
-                        {props.props.cancelLabel}
-                    </Button>
+export const WorkspaceCreateBase = (props: WorkspaceCreateBaseProps) => {
+    const { props: form, on } = props
+
+    return (
+        <SurfaceCard ariaLabel={form.title} measure="form">
+            <Form label={form.title} onSubmit={on.submit} isPending={form.isPending}>
+                <div className={STACK_CLASS_NAME}>
+                    <Input
+                        id="workspace-name"
+                        name="name"
+                        label={form.nameLabel}
+                        hint={form.nameHint}
+                        variant="secondary"
+                        isRequired
+                        isDisabled={form.isPending}
+                        value={form.name}
+                        onValueChange={on.setName}
+                    />
+                    <FormNotice failTitle={form.failTitle} error={form.error} />
+                    <div className={ACTIONS_CLASS_NAME}>
+                        <Button type="submit" variant="primary" size="lg" isPending={form.isPending}>
+                            {form.submitLabel}
+                        </Button>
+                        <Button variant="ghost" href={form.cancelHref} isDisabled={form.isPending}>
+                            {form.cancelLabel}
+                        </Button>
+                    </div>
                 </div>
-            </div>
-        </Form>
-    </SurfaceCard>
-)
+            </Form>
+        </SurfaceCard>
+    )
+}

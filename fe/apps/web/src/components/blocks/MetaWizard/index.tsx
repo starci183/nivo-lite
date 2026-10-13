@@ -7,6 +7,12 @@ import { META_STEPS, metaCheckLines, useMetaWizard } from "@/hooks/meta-wizard"
 import type { AgentOption } from "@/modules/types"
 import { MetaWizardBase } from "./component"
 
+/** How the Meta test ended for the all-good sentence. */
+type MetaTestVerdict = "ok" | "failed"
+
+/** The all-good sentence is only for a check that passed; a failure keeps its own verdict. */
+const metaTestVerdict = (ok: boolean): MetaTestVerdict => (ok ? "ok" : "failed")
+
 /** What the board hands the Meta wizard. */
 interface MetaWizardProps {
     /** Continue this unfinished connection instead of creating a new one. */
@@ -70,7 +76,7 @@ export const MetaWizard = (props: MetaWizardProps) => {
                               page: tm("pageLine", { page: check.pageName }),
                               instagram:
                                   check.igUsername === "" ? tm("noIgLine") : tm("igLine", { handle: check.igUsername }),
-                              allGood: check.ok ? tm("testAllGood") : null,
+                              verdict: metaTestVerdict(check.ok),
                           },
                 lines: check === null ? [] : metaCheckLines(check, tm),
                 received: firstEvent === null ? null : tm("testReceived", { name: firstEvent.content || "Meta" }),
@@ -98,6 +104,7 @@ export const MetaWizard = (props: MetaWizardProps) => {
                     testRepair: tm("testRepair"),
                     testWorking: tm("testWorking"),
                     testWaiting: tm("testWaiting"),
+                    testAllGood: tm("testAllGood"),
                     testSkipNote: tm("testSkipNote"),
                 },
             }}

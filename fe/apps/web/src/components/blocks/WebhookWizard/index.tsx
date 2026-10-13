@@ -2,9 +2,8 @@
 
 import { useTranslations } from "next-intl"
 import { useCopyLabels } from "@/hooks/connection-wizard"
-import { useWebhookWizard, WEBHOOK_STEPS } from "@/hooks/webhook-wizard"
-import { WEBHOOK_EVENTS } from "@/lib/webhook-shared"
-import type { WebhookEvent } from "@/lib/webhook-shared"
+import { useWebhookWizard, WEBHOOK_EVENTS, WEBHOOK_STEPS } from "@/hooks/webhook-wizard"
+import type { WebhookEvent } from "@/hooks/webhook-wizard"
 import type { WebhookTestVerdict } from "@/modules/types"
 import { WebhookWizardBase } from "./component"
 

@@ -3,7 +3,7 @@
 import { useFormatter, useTranslations } from "next-intl"
 import { digitsOnly } from "@/hooks/loyalty"
 import { errorKeyOf, usePublicLoyalty } from "@/hooks/publicLoyalty"
-import { useQueryPublicLoyaltyPageSwr } from "@/hooks/swr/api/graphql"
+import { useQueryPublicLoyaltyPageSwr } from "@/hooks/swr"
 import { LoyaltyCheckFormBase } from "./component"
 import type { LoyaltyCheckResult } from "./component"
 

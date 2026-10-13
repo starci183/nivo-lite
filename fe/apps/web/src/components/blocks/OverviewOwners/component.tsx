@@ -1,8 +1,11 @@
+import { useMemo } from "react"
+import type { ComponentProps } from "react"
 import {
     Badge,
     Button,
     EmptyNotice,
     ListRow,
+    Region,
     SectionHeader,
     SurfaceCard,
     SurfaceListCard,
@@ -73,99 +76,115 @@ interface OverviewOwnersBaseProps {
     }
 }
 
+const tilePropsOf = (row: OverviewOwnersRow): ComponentProps<typeof TileIcon>["props"] => ({
+    icon: row.icon,
+    signal: row.isOverdue ? "attention" : "none",
+})
+
 /** The open work grouped by owner: a header per owner, then one row per responsibility, or an empty notice. */
-export const OverviewOwnersBase = (props: OverviewOwnersBaseProps) => (
-    <div className={MAIN_CLASS_NAME}>
-        <SectionHeader level={2} title={props.props.title} description={props.props.description} />
-        {props.props.groups.length === 0 ? (
-            <SurfaceCard ariaLabel={props.props.listLabel}>
-                <EmptyNotice
-                    message={props.props.emptyMessage}
-                    description={props.props.emptyDescription}
-                    actionLabel={props.props.emptyActionLabel}
-                    actionVariant="secondary"
-                    onAction={props.on.openEmptyAction}
-                />
-            </SurfaceCard>
-        ) : (
-            <div className={GROUPS_CLASS_NAME}>
-                {props.props.groups.map((group) => (
-                    <section key={group.key} className={SECTION_CLASS_NAME} aria-label={group.ariaLabel}>
-                        <div className={SECTION_HEAD_CLASS_NAME}>
-                            <div className={OWNER_MARK_CLASS_NAME}>
-                                {group.glyph === null ? (
-                                    <PersonAvatar name={group.name} size="md" />
-                                ) : (
-                                    <AgentMark glyph={group.glyph} label={group.name} module={group.module} size="md" />
-                                )}
-                                <div className={OWNER_TEXT_CLASS_NAME}>
-                                    <Text weight="semibold" overflow="truncate">
-                                        {group.name}
-                                    </Text>
-                                    <Text size="sm" tone="muted" overflow="truncate">
-                                        {group.roleText}
-                                    </Text>
-                                </div>
-                            </div>
-                            <Text size="sm" tone="muted">
-                                {group.countText}
-                            </Text>
-                        </div>
-                        <SurfaceListCard ariaLabel={group.cardsLabel}>
-                            {group.rows.map((row) => (
-                                <ListRow
-                                    key={row.id}
-                                    leading={
-                                        <TileIcon
-                                            props={{ icon: row.icon, signal: row.isOverdue ? "attention" : "none" }}
+export const OverviewOwnersBase = (props: OverviewOwnersBaseProps) => {
+    const groups = useMemo(
+        () =>
+            props.props.groups.map((group) => ({
+                ...group,
+                rows: group.rows.map((row) => ({ ...row, tileProps: tilePropsOf(row) })),
+            })),
+        [props.props.groups],
+    )
+    return (
+        <div className={MAIN_CLASS_NAME}>
+            <SectionHeader level={2} title={props.props.title} description={props.props.description} />
+            {props.props.groups.length === 0 ? (
+                <SurfaceCard ariaLabel={props.props.listLabel}>
+                    <EmptyNotice
+                        message={props.props.emptyMessage}
+                        description={props.props.emptyDescription}
+                        actionLabel={props.props.emptyActionLabel}
+                        actionVariant="secondary"
+                        onAction={props.on.openEmptyAction}
+                    />
+                </SurfaceCard>
+            ) : (
+                <div className={GROUPS_CLASS_NAME}>
+                    {groups.map((group) => (
+                        <Region key={group.key} className={SECTION_CLASS_NAME} label={group.ariaLabel}>
+                            <div className={SECTION_HEAD_CLASS_NAME}>
+                                <div className={OWNER_MARK_CLASS_NAME}>
+                                    {group.glyph === null ? (
+                                        <PersonAvatar name={group.name} size="md" />
+                                    ) : (
+                                        <AgentMark
+                                            glyph={group.glyph}
+                                            label={group.name}
+                                            module={group.module}
+                                            size="md"
                                         />
-                                    }
-                                    title={row.title}
-                                    badges={
-                                        <Badge tone={row.statusTone} isDot>
-                                            {row.statusLabel}
-                                        </Badge>
-                                    }
-                                    description={row.customer}
-                                    actions={
-                                        <>
-                                            {row.canDraft ? (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    isPending={props.props.isDrafting}
-                                                    onPress={() => props.on.draft(row.id)}
-                                                >
-                                                    {props.props.draftLabel}
-                                                </Button>
-                                            ) : null}
-                                            <Button variant="outline" href={row.openHref}>
-                                                {row.openLabel}
-                                            </Button>
-                                        </>
-                                    }
-                                >
-                                    <div className={META_CLASS_NAME}>
-                                        <Text size="xs" tone="muted">
-                                            {row.ownerText}
+                                    )}
+                                    <div className={OWNER_TEXT_CLASS_NAME}>
+                                        <Text weight="semibold" overflow="truncate">
+                                            {group.name}
                                         </Text>
-                                        {row.dueText === null ? null : (
-                                            <Text
-                                                size="xs"
-                                                tone={row.isOverdue ? "accent" : "muted"}
-                                                weight={row.isOverdue ? "semibold" : "normal"}
-                                            >
-                                                {row.dueText}
-                                            </Text>
-                                        )}
+                                        <Text size="sm" tone="muted" overflow="truncate">
+                                            {group.roleText}
+                                        </Text>
                                     </div>
-                                    {row.nextText === null ? null : <Text size="sm">{row.nextText}</Text>}
-                                </ListRow>
-                            ))}
-                        </SurfaceListCard>
-                    </section>
-                ))}
-            </div>
-        )}
-    </div>
-)
+                                </div>
+                                <Text size="sm" tone="muted">
+                                    {group.countText}
+                                </Text>
+                            </div>
+                            <SurfaceListCard ariaLabel={group.cardsLabel}>
+                                {group.rows.map((row) => (
+                                    <ListRow
+                                        key={row.id}
+                                        leading={<TileIcon props={row.tileProps} />}
+                                        title={row.title}
+                                        badges={
+                                            <Badge tone={row.statusTone} isDot>
+                                                {row.statusLabel}
+                                            </Badge>
+                                        }
+                                        description={row.customer}
+                                        actions={
+                                            <>
+                                                {row.canDraft ? (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        isPending={props.props.isDrafting}
+                                                        onPress={() => props.on.draft(row.id)}
+                                                    >
+                                                        {props.props.draftLabel}
+                                                    </Button>
+                                                ) : null}
+                                                <Button variant="outline" href={row.openHref}>
+                                                    {row.openLabel}
+                                                </Button>
+                                            </>
+                                        }
+                                    >
+                                        <div className={META_CLASS_NAME}>
+                                            <Text size="xs" tone="muted">
+                                                {row.ownerText}
+                                            </Text>
+                                            {row.dueText === null ? null : (
+                                                <Text
+                                                    size="xs"
+                                                    tone={row.isOverdue ? "accent" : "muted"}
+                                                    weight={row.isOverdue ? "semibold" : "normal"}
+                                                >
+                                                    {row.dueText}
+                                                </Text>
+                                            )}
+                                        </div>
+                                        {row.nextText === null ? null : <Text size="sm">{row.nextText}</Text>}
+                                    </ListRow>
+                                ))}
+                            </SurfaceListCard>
+                        </Region>
+                    ))}
+                </div>
+            )}
+        </div>
+    )
+}

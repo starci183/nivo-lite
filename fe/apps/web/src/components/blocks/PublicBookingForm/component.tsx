@@ -83,6 +83,64 @@ export interface PublicBookingFormBaseProps {
     }
 }
 
+interface PublicBookingAlternativesProps {
+    readonly alternatives: ReadonlyArray<PublicBookingAlternative>
+    readonly label: string
+    readonly onPick: PublicBookingFormBaseProps["on"]["pickAlternative"]
+}
+
+const PublicBookingAlternatives = ({ alternatives, label, onPick }: PublicBookingAlternativesProps) => {
+    if (alternatives.length === 0) return null
+    return (
+        <>
+            <Text size="sm" tone="muted">
+                {label}
+            </Text>
+            <div className={ROW_CLASS}>
+                {alternatives.map((alternative) => (
+                    <Button
+                        key={alternative.value}
+                        size="sm"
+                        variant="outline"
+                        onPress={() => onPick(alternative.value, alternative.date)}
+                    >
+                        {alternative.label}
+                    </Button>
+                ))}
+            </div>
+        </>
+    )
+}
+
+type PublicBookingTimesProps = Pick<PublicBookingFormBaseProps["props"], "times" | "labels" | "fields"> &
+    Pick<PublicBookingFormBaseProps, "on">
+
+const PublicBookingTimes = ({ times, labels, fields, on }: PublicBookingTimesProps) => {
+    if (times === null || times.length === 0) {
+        return (
+            <Text size="sm" tone="muted" live="polite">
+                {times === null ? labels.finding : labels.noTimes}
+            </Text>
+        )
+    }
+    return (
+        <RadioGroup
+            label={labels.pickTime}
+            name="start"
+            variant="secondary"
+            orientation="horizontal"
+            options={times.map((time) => ({ value: time.value, label: time.label }))}
+            value={fields.start === "" ? null : fields.start}
+            onValueChange={(start) => on.change({ start })}
+        />
+    )
+}
+
+/** Retains the bot trap's native tab order while Common Input has no tabIndex prop. */
+const keepHoneypotOutOfTabOrder = (node: HTMLDivElement | null) => {
+    node?.querySelector("input")?.setAttribute("tabindex", "-1")
+}
+
 /** Draws the customer's side of the booking page: service, day and time, then name and phone. No account, no login. */
 export const PublicBookingFormBase = (props: PublicBookingFormBaseProps) => {
     const { props: p, on } = props
@@ -92,25 +150,11 @@ export const PublicBookingFormBase = (props: PublicBookingFormBaseProps) => {
                 <div className={STACK_CLASS}>
                     <Heading level={2}>{p.done.title}</Heading>
                     <Text live="polite">{p.done.message}</Text>
-                    {p.done.alternatives.length === 0 ? null : (
-                        <>
-                            <Text size="sm" tone="muted">
-                                {p.labels.alternatives}
-                            </Text>
-                            <div className={ROW_CLASS}>
-                                {p.done.alternatives.map((alternative) => (
-                                    <Button
-                                        key={alternative.value}
-                                        size="sm"
-                                        variant="outline"
-                                        onPress={() => on.pickAlternative(alternative.value, alternative.date)}
-                                    >
-                                        {alternative.label}
-                                    </Button>
-                                ))}
-                            </div>
-                        </>
-                    )}
+                    <PublicBookingAlternatives
+                        alternatives={p.done.alternatives}
+                        label={p.labels.alternatives}
+                        onPick={on.pickAlternative}
+                    />
                     <div className={ROW_CLASS}>
                         <TextAction size="sm" onPress={on.again}>
                             {p.labels.again}
@@ -120,11 +164,8 @@ export const PublicBookingFormBase = (props: PublicBookingFormBaseProps) => {
             </SurfaceCard>
         )
     }
-    const ready =
-        p.fields.start !== "" &&
-        p.fields.name.trim() !== "" &&
-        p.fields.phone.trim() !== "" &&
-        p.fields.serviceId !== ""
+    const { start, name, phone, serviceId } = p.fields
+    const ready = start !== "" && name.trim() !== "" && phone.trim() !== "" && serviceId !== ""
     return (
         <Form label={p.formLabel} isPending={p.isBusy} validationBehavior="aria" onSubmit={on.submit}>
             <div className={FORM_CLASS}>
@@ -162,25 +203,7 @@ export const PublicBookingFormBase = (props: PublicBookingFormBaseProps) => {
                                 onValueChange={(date) => on.change({ date })}
                             />
                         </HorizontalScrollRegion>
-                        {p.times === null ? (
-                            <Text size="sm" tone="muted" live="polite">
-                                {p.labels.finding}
-                            </Text>
-                        ) : p.times.length === 0 ? (
-                            <Text size="sm" tone="muted" live="polite">
-                                {p.labels.noTimes}
-                            </Text>
-                        ) : (
-                            <RadioGroup
-                                label={p.labels.pickTime}
-                                name="start"
-                                variant="secondary"
-                                orientation="horizontal"
-                                options={p.times.map((time) => ({ value: time.value, label: time.label }))}
-                                value={p.fields.start === "" ? null : p.fields.start}
-                                onValueChange={(start) => on.change({ start })}
-                            />
-                        )}
+                        <PublicBookingTimes times={p.times} labels={p.labels} fields={p.fields} on={on} />
                     </div>
                 </SurfaceCard>
 
@@ -234,17 +257,15 @@ export const PublicBookingFormBase = (props: PublicBookingFormBaseProps) => {
                             value={p.fields.note}
                             onValueChange={(note) => on.change({ note })}
                         />
-                        {/* grammar gap: no Common honeypot field; the bot trap stays a raw, visually hidden input. */}
-                        <div aria-hidden className={HONEYPOT_CLASS}>
-                            <label>
-                                {p.labels.website}
-                                <input
-                                    tabIndex={-1}
-                                    autoComplete="off"
-                                    value={p.fields.website}
-                                    onChange={(event) => on.change({ website: event.target.value })}
-                                />
-                            </label>
+                        <div aria-hidden className={HONEYPOT_CLASS} ref={keepHoneypotOutOfTabOrder}>
+                            <Input
+                                id="booking-public-website"
+                                name=""
+                                label={p.labels.website}
+                                kind="text"
+                                value={p.fields.website}
+                                onValueChange={(website) => on.change({ website })}
+                            />
                         </div>
                     </div>
                 </SurfaceCard>
@@ -252,25 +273,11 @@ export const PublicBookingFormBase = (props: PublicBookingFormBaseProps) => {
                 {p.failure === undefined ? null : (
                     <div className={STACK_CLASS}>
                         <Alert tone="negative" title={p.failure.message} />
-                        {p.failure.alternatives.length === 0 ? null : (
-                            <>
-                                <Text size="sm" tone="muted">
-                                    {p.labels.alternatives}
-                                </Text>
-                                <div className={ROW_CLASS}>
-                                    {p.failure.alternatives.map((alternative) => (
-                                        <Button
-                                            key={alternative.value}
-                                            size="sm"
-                                            variant="outline"
-                                            onPress={() => on.pickAlternative(alternative.value, alternative.date)}
-                                        >
-                                            {alternative.label}
-                                        </Button>
-                                    ))}
-                                </div>
-                            </>
-                        )}
+                        <PublicBookingAlternatives
+                            alternatives={p.failure.alternatives}
+                            label={p.labels.alternatives}
+                            onPick={on.pickAlternative}
+                        />
                     </div>
                 )}
 

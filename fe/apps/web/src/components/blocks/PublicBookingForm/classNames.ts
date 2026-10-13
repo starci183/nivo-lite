@@ -6,6 +6,5 @@ export const FORM_CLASS = cn("flex", "min-w-0", "flex-col", "gap-4")
 export const STACK_CLASS = cn("flex", "min-w-0", "flex-col", "gap-3")
 /** A line of peer buttons that wraps (GAP-2 case-3). */
 export const ROW_CLASS = cn("flex", "flex-wrap", "items-center", "gap-2")
-// grammar gap: no Common honeypot field; the bot trap stays a raw input, visually hidden and aria-hidden.
 /** Hidden from people, present for bots. */
 export const HONEYPOT_CLASS = cn("sr-only")
