@@ -1,6 +1,6 @@
-import { SourceDetail } from "@/features/knowledge/SourceDetail"
+import { KnowledgeSourceLoadingPage } from "@/features/pages/KnowledgeSourcePage"
 
-/** STATE-8: the source page itself, with no data yet - trail and card labels real, title, facts and passages as skeletons. */
-const SourceLoading = () => <SourceDetail isLoading source={null} chunks={[]} canWrite={false} />
+/** The document page itself, with no data yet. */
+const Loading = () => <KnowledgeSourceLoadingPage />
 
-export default SourceLoading
+export default Loading

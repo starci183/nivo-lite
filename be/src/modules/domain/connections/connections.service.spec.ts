@@ -1,203 +1,595 @@
-import { mockEntityManager } from "@starci/jest-preset"
+import { randomBytes } from "node:crypto"
+import { fakeTransaction, mockEntityManager } from "@starci/jest-preset"
+import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { Secret } from "@modules/platform/config"
+import { decryptSecret, encryptSecret } from "./connection-cipher.policy"
+import type { ConnectionActor } from "./connections.contracts"
+import { MODULE_OPTIONS_TOKEN } from "./connections.module-definition"
 import { ConnectionsService } from "./connections.service"
 import { ConnectionsErrorCode } from "./errors/connections.error"
+import type { ConnectionSelectRow } from "./persistence/connections.rows"
 import {
-    APPLY_ZALO_AUTHORIZATION,
-    FIND_INTAKE_CONNECTION,
-    LIST_HEALTH_BATCH,
-    MARK_CONNECTION_ERROR,
-    MARK_CONNECTION_HEALTH,
-    MARK_CONNECTION_RECEIVED,
-    SETTLE_WIZARD,
+    DELETE_CONNECTION,
+    DELETE_SECRET,
+    FIND_ACTIVE_MEMBER,
+    FIND_CONNECTION,
+    FIND_CONNECTION_AGENT_IDS,
+    FIND_CONNECTIONS_BY_IDS,
+    FIND_LIVE_BY_META,
+    FIND_SECRET,
+    INSERT_CONNECTION,
+    INSERT_CONNECTOR_INTEREST,
+    INSERT_SECRET,
+    LIST_CONNECTIONS,
+    LIST_CONNECTIONS_BY_PROVIDER,
+    PATCH_CONNECTION,
+    RECORD_EVENT,
+    UPSERT_SECRET,
 } from "./persistence/connections.sql"
 
-const build = async (
-    found: ReadonlyArray<unknown> = [{ id: "c-1", workspace_id: "ws-1", status: "connected" }],
-    batch: ReadonlyArray<unknown> = [],
-) => {
-    const em = mockEntityManager({
-        query: [
-            [FIND_INTAKE_CONNECTION, found],
-            [MARK_CONNECTION_ERROR, []],
-            [MARK_CONNECTION_RECEIVED, []],
-            [APPLY_ZALO_AUTHORIZATION, []],
-            [LIST_HEALTH_BATCH, batch],
-            [MARK_CONNECTION_HEALTH, []],
-            [SETTLE_WIZARD, []],
-        ],
-    })
+const KEY = randomBytes(32)
+const actor: ConnectionActor = { principalId: "user-1", workspaceId: "ws-1" }
+const ROW: ConnectionSelectRow = {
+    id: "c1",
+    workspace_id: "ws-1",
+    provider: "sepay",
+    name: "Bank",
+    public_meta: {},
+    status: "pending",
+    last_error: null,
+    environment: "live",
+    is_default: false,
+    last_event_at: null,
+    first_event: null,
+    created_by: "user-1",
+    created_at: "2026-10-01T00:00:00.000Z",
+}
+const OWNER = [FIND_ACTIVE_MEMBER, [{ role: "owner", display_name: "Lan" }]] as const
+
+const build = async (entityManager: MockEntityManager, key: Buffer = KEY) => {
     const moduleRef = await Test.createTestingModule({
-        providers: [ConnectionsService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],
+        providers: [
+            ConnectionsService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            {
+                provide: MODULE_OPTIONS_TOKEN,
+                useValue: { channelTokenKey: new Secret(key.toString("base64")), publicSiteUrl: undefined },
+            },
+        ],
     }).compile()
-    return { service: moduleRef.get(ConnectionsService), em }
+    return moduleRef.get(ConnectionsService)
 }
 
 describe("ConnectionsService", () => {
-    describe("intakeOf", () => {
-        it("answers the connection of the provider with its workspace and status", async () => {
-            const { service, em } = await build()
+    it("refuses to start with a key that is not 32 bytes", async () => {
+        await expect(build(mockEntityManager(), randomBytes(8))).rejects.toMatchObject({
+            code: ConnectionsErrorCode.KeyInvalid,
+        })
+    })
 
-            await expect(service.intakeOf("c-1", "telegram")).resolves.toEqual({
-                kind: "ok",
-                value: { id: "c-1", workspaceId: "ws-1", status: "connected" },
-            })
-            expect(em.query).toHaveBeenCalledWith(FIND_INTAKE_CONNECTION, ["c-1", "telegram"])
+    describe("addresses", () => {
+        it("uses the local site origin by default and trims every trailing slash", async () => {
+            expect((await build(mockEntityManager())).siteBase()).toBe("http://localhost:3100")
+
+            const moduleRef = await Test.createTestingModule({
+                providers: [
+                    ConnectionsService,
+                    { provide: PRIMARY_ENTITY_MANAGER, useValue: mockEntityManager() },
+                    {
+                        provide: MODULE_OPTIONS_TOKEN,
+                        useValue: {
+                            channelTokenKey: new Secret(KEY.toString("base64")),
+                            publicSiteUrl: "https://nivo.vn/app///",
+                        },
+                    },
+                ],
+            }).compile()
+
+            expect(moduleRef.get(ConnectionsService).siteBase()).toBe("https://nivo.vn/app")
         })
 
-        it("reads through the transaction manager it is given", async () => {
-            const { service } = await build([])
-            const inside = mockEntityManager({
-                query: [FIND_INTAKE_CONNECTION, [{ id: "c-2", workspace_id: "ws-1", status: "pending" }]],
-            })
+        it("builds the webhook address of a connection and the public origin from the site url", async () => {
+            const moduleRef = await Test.createTestingModule({
+                providers: [
+                    ConnectionsService,
+                    { provide: PRIMARY_ENTITY_MANAGER, useValue: mockEntityManager() },
+                    {
+                        provide: MODULE_OPTIONS_TOKEN,
+                        useValue: {
+                            channelTokenKey: new Secret(KEY.toString("base64")),
+                            publicSiteUrl: "https://nivo.vn/app",
+                        },
+                    },
+                ],
+            }).compile()
+            const service = moduleRef.get(ConnectionsService)
 
-            await expect(service.intakeOf("c-2", "zalo_oa", inside)).resolves.toMatchObject({ kind: "ok" })
-            expect(inside.query).toHaveBeenCalledTimes(1)
+            expect(service.webhookUrl("telegram", "c1")).toBe("https://nivo.vn/app/api/telegram/c1")
+            expect(service.webhookUrl("sepay", "c1", "https://other.test")).toBe(
+                "https://other.test/api/connections/sepay/c1",
+            )
+            expect(service.publicOrigin()).toBe("https://nivo.vn")
+            expect((await build(mockEntityManager())).publicOrigin()).toBeNull()
         })
 
-        it("refuses a connection that is missing, disconnected or of another provider", async () => {
-            const { service } = await build([])
+        it.each([
+            {
+                name: "uses the API url for providers when both public urls are configured",
+                options: {
+                    publicSiteUrl: "https://app.example.com/site/",
+                    publicApiUrl: "https://api.example.com/v1/",
+                },
+                webhook: "https://api.example.com/v1/api/telegram/c1",
+                origin: "https://api.example.com",
+                site: "https://app.example.com/site",
+            },
+            {
+                name: "uses the site url for providers when the API url is absent",
+                options: { publicSiteUrl: "https://app.example.com/site/" },
+                webhook: "https://app.example.com/site/api/telegram/c1",
+                origin: "https://app.example.com",
+                site: "https://app.example.com/site",
+            },
+            {
+                name: "keeps the local browser destination when only the API url is configured",
+                options: { publicSiteUrl: undefined, publicApiUrl: "https://api.example.com/v1/" },
+                webhook: "https://api.example.com/v1/api/telegram/c1",
+                origin: "https://api.example.com",
+                site: "http://localhost:3100",
+            },
+            {
+                name: "uses local defaults when neither public url is configured",
+                options: { publicSiteUrl: undefined },
+                webhook: "http://localhost:3100/api/telegram/c1",
+                origin: null,
+                site: "http://localhost:3100",
+            },
+            {
+                name: "keeps an empty API url instead of falling back to the site url",
+                options: { publicSiteUrl: "https://app.example.com/site/", publicApiUrl: "" },
+                webhook: "/api/telegram/c1",
+                origin: null,
+                site: "https://app.example.com/site",
+            },
+        ])("$name", async ({ options, webhook, origin, site }) => {
+            const moduleRef = await Test.createTestingModule({
+                providers: [
+                    ConnectionsService,
+                    { provide: PRIMARY_ENTITY_MANAGER, useValue: mockEntityManager() },
+                    {
+                        provide: MODULE_OPTIONS_TOKEN,
+                        useValue: { channelTokenKey: new Secret(KEY.toString("base64")), ...options },
+                    },
+                ],
+            }).compile()
+            const service = moduleRef.get(ConnectionsService)
 
-            await expect(service.intakeOf("c-1", "telegram")).resolves.toEqual({
-                kind: "refused",
-                code: ConnectionsErrorCode.NotFound,
-                params: undefined,
+            expect(service.webhookUrl("telegram", "c1")).toBe(webhook)
+            expect(service.webhookUrl("telegram", "c1", undefined)).toBe(webhook)
+            expect(service.webhookUrl("sepay", "c1", "https://override.example.com/")).toBe(
+                "https://override.example.com/api/connections/sepay/c1",
+            )
+            expect(service.publicOrigin()).toBe(origin)
+            expect(service.siteBase()).toBe(site)
+        })
+    })
+
+    describe("authorize", () => {
+        it("answers the member holding one of the roles", async () => {
+            const em = mockEntityManager({ query: [OWNER] })
+
+            await expect((await build(em)).authorize(actor, ["owner"])).resolves.toEqual({
+                role: "owner",
+                displayName: "Lan",
+            })
+            expect(em.query).toHaveBeenCalledWith(FIND_ACTIVE_MEMBER, ["ws-1", "user-1"])
+        })
+
+        it("refuses a caller who is not an active member", async () => {
+            const em = mockEntityManager({ query: [FIND_ACTIVE_MEMBER, []] })
+
+            await expect((await build(em)).authorize(actor, ["owner"])).rejects.toMatchObject({
+                code: ConnectionsErrorCode.Forbidden,
+            })
+        })
+
+        it("refuses a member whose role is not listed", async () => {
+            const em = mockEntityManager({ query: [FIND_ACTIVE_MEMBER, [{ role: "staff", display_name: "Minh" }]] })
+
+            await expect((await build(em)).authorize(actor, ["owner", "manager"])).rejects.toMatchObject({
+                code: ConnectionsErrorCode.Forbidden,
             })
         })
     })
 
-    describe("writes", () => {
-        it("marks a connection failing with its reason", async () => {
-            const { service, em } = await build()
+    describe("find, get, findMany, list, listByProvider", () => {
+        it("finds a connection of the workspace or null", async () => {
+            const em = mockEntityManager({
+                query: [
+                    [FIND_CONNECTION, [ROW]],
+                    [FIND_CONNECTION, []],
+                ],
+            })
+            const service = await build(em)
 
-            await service.markFailing("c-1", "Reconnect")
-
-            expect(em.query).toHaveBeenCalledWith(MARK_CONNECTION_ERROR, ["c-1", "Reconnect"])
+            await expect(service.find("ws-1", "c1")).resolves.toMatchObject({ id: "c1", workspaceId: "ws-1" })
+            await expect(service.find("ws-1", "c9")).resolves.toBeNull()
+            expect(em.query).toHaveBeenCalledWith(FIND_CONNECTION, ["ws-1", "c9"])
         })
 
-        it("records the first event through the transaction manager", async () => {
-            const { service, em } = await build()
-            const inside = mockEntityManager({ query: [MARK_CONNECTION_RECEIVED, []] })
+        it("finds through the manager it is handed", async () => {
+            const manager = mockEntityManager({ query: [FIND_CONNECTION, [ROW]] })
 
-            await service.markReceived("c-1", { amount: 0, content: "Minh", at: "2026-10-12T10:00:00.000Z", text: "Hi" }, inside)
+            await expect((await build(mockEntityManager())).find("ws-1", "c1", manager)).resolves.toMatchObject({
+                id: "c1",
+            })
+        })
 
-            expect(inside.query).toHaveBeenCalledWith(MARK_CONNECTION_RECEIVED, [
-                "c-1",
-                '{"amount":0,"content":"Minh","at":"2026-10-12T10:00:00.000Z","text":"Hi"}',
+        it("gets a connection, and answers not found for a missing one", async () => {
+            const em = mockEntityManager({
+                query: [
+                    [FIND_CONNECTION, [ROW]],
+                    [FIND_CONNECTION, []],
+                ],
+            })
+            const service = await build(em)
+
+            await expect(service.get("ws-1", "c1")).resolves.toMatchObject({ id: "c1" })
+            await expect(service.get("ws-1", "c9")).rejects.toMatchObject({
+                code: ConnectionsErrorCode.NotFound,
+                params: { id: "c9" },
+            })
+        })
+
+        it("finds several by id", async () => {
+            const em = mockEntityManager({ query: [FIND_CONNECTIONS_BY_IDS, [ROW]] })
+
+            await expect((await build(em)).findMany("ws-1", ["c1", "c2"])).resolves.toHaveLength(1)
+            expect(em.query).toHaveBeenCalledWith(FIND_CONNECTIONS_BY_IDS, ["ws-1", ["c1", "c2"]])
+        })
+
+        it("lists the workspace connections", async () => {
+            const em = mockEntityManager({ query: [LIST_CONNECTIONS, [ROW, ROW]] })
+
+            await expect((await build(em)).list("ws-1")).resolves.toHaveLength(2)
+        })
+
+        it("lists one provider with or without the disconnected", async () => {
+            const em = mockEntityManager({ query: [LIST_CONNECTIONS_BY_PROVIDER, [ROW]] })
+            const service = await build(em)
+
+            await expect(service.listByProvider("ws-1", "sepay", { includeDisconnected: true })).resolves.toHaveLength(
+                1,
+            )
+            expect(em.query).toHaveBeenCalledWith(LIST_CONNECTIONS_BY_PROVIDER, ["ws-1", "sepay", true])
+        })
+    })
+
+    describe("findLiveByMeta", () => {
+        it("answers the live owner of a public fact, or null", async () => {
+            const em = mockEntityManager({
+                query: [[FIND_LIVE_BY_META, [{ id: "c9", workspace_id: "ws-9" }]]],
+            })
+            const none = mockEntityManager({ query: [FIND_LIVE_BY_META, []] })
+
+            await expect((await build(em)).findLiveByMeta("telegram", "bot_id", "42")).resolves.toEqual({
+                id: "c9",
+                workspaceId: "ws-9",
+            })
+            expect(em.query).toHaveBeenCalledWith(FIND_LIVE_BY_META, ["telegram", "bot_id", "42"])
+            await expect((await build(none)).findLiveByMeta("meta", "page_id", "1")).resolves.toBeNull()
+        })
+    })
+
+    describe("agentIds", () => {
+        it("returns the attached agent ids in row order, or an empty list", async () => {
+            const em = mockEntityManager({
+                query: [
+                    [FIND_CONNECTION_AGENT_IDS, [{ agent_id: "agent-2" }, { agent_id: "agent-1" }]],
+                    [FIND_CONNECTION_AGENT_IDS, []],
+                ],
+            })
+            const service = await build(em)
+
+            await expect(service.agentIds("ws-1", "c1")).resolves.toEqual(["agent-2", "agent-1"])
+            await expect(service.agentIds("ws-1", "c9")).resolves.toEqual([])
+            expect(em.query.mock.calls).toEqual([
+                [FIND_CONNECTION_AGENT_IDS, ["ws-1", "c1"]],
+                [FIND_CONNECTION_AGENT_IDS, ["ws-1", "c9"]],
             ])
+        })
+    })
+
+    describe("create", () => {
+        const input = {
+            workspaceId: "ws-1",
+            createdBy: "user-1",
+            provider: "telegram" as const,
+            name: "  Shop bot ",
+            status: "connected" as const,
+            environment: "live" as const,
+            meta: { bot_id: "7" },
+            secret: { plain: "token", webhookSecret: "hook" },
+        }
+
+        it("writes the row and the sealed secret in one transaction", async () => {
+            const tx = fakeTransaction(
+                mockEntityManager({
+                    query: [
+                        [INSERT_CONNECTION, [{ id: "c1" }]],
+                        [INSERT_SECRET, []],
+                    ],
+                }),
+            )
+
+            await expect((await build(tx.em)).create(input)).resolves.toBe("c1")
+
+            expect(tx.em.query).toHaveBeenCalledWith(INSERT_CONNECTION, [
+                "ws-1",
+                "telegram",
+                "Shop bot",
+                "connected",
+                "live",
+                "user-1",
+                '{"bot_id":"7"}',
+            ])
+            const sealed = tx.em.query.mock.calls.find(([text]) => text === INSERT_SECRET)?.[1] as Array<string>
+            expect(sealed[0]).toBe("c1")
+            expect(decryptSecret(KEY, sealed[1] ?? "")).toBe("token")
+            expect(sealed[2]).toBe("hook")
+            expect(tx.commits).toBe(1)
+        })
+
+        it("rolls the row back when the secret cannot be stored", async () => {
+            const tx = fakeTransaction(
+                mockEntityManager({
+                    query: [
+                        [INSERT_CONNECTION, [{ id: "c1" }]],
+                        [INSERT_SECRET, []],
+                    ],
+                }),
+            )
+            tx.em.query.mockImplementation(async (text: string) => {
+                if (text === INSERT_SECRET) throw new Error("secret failed")
+                return [{ id: "c1" }]
+            })
+
+            await expect((await build(tx.em)).create(input)).rejects.toThrow("secret failed")
+            expect(tx.rollbacks).toBe(1)
+        })
+
+        it("joins the transaction of the caller when one is handed in", async () => {
+            const manager = mockEntityManager({
+                query: [
+                    [INSERT_CONNECTION, [{ id: "c2" }]],
+                    [INSERT_SECRET, []],
+                ],
+            })
+            const em = mockEntityManager()
+
+            await expect((await build(em)).create(input, manager)).resolves.toBe("c2")
             expect(em.query).not.toHaveBeenCalled()
         })
 
-        it("applies a Zalo authorization with or without the OA id", async () => {
-            const { service, em } = await build()
+        it("refuses a name that is too short and writes nothing", async () => {
+            const em = mockEntityManager()
 
-            await service.applyZaloAuthorization("c-1", "oa-9")
-            await service.applyZaloAuthorization("c-1")
-
-            expect(em.query).toHaveBeenNthCalledWith(1, APPLY_ZALO_AUTHORIZATION, ["c-1", '{"authorized":true,"oa_id":"oa-9"}'])
-            expect(em.query).toHaveBeenNthCalledWith(2, APPLY_ZALO_AUTHORIZATION, ["c-1", '{"authorized":true}'])
+            await expect((await build(em)).create({ ...input, name: " a " })).rejects.toMatchObject({
+                code: ConnectionsErrorCode.NameInvalid,
+            })
         })
 
-        it("settles a wizard command under its connection and ticket", async () => {
-            const { service, em } = await build()
+        it("fails when the insert answers no row", async () => {
+            const tx = fakeTransaction(mockEntityManager({ query: [INSERT_CONNECTION, []] }))
 
-            await service.settleWizard("c-1", "ticket-1", {
-                command: "begin",
-                state: "done",
-                url: "https://oauth.zaloapp.com/authorize",
-                code: "",
-                oaSecretSaved: false,
+            await expect((await build(tx.em)).create(input)).rejects.toMatchObject({
+                code: ConnectionsErrorCode.NotFound,
             })
-
-            expect(em.query).toHaveBeenCalledWith(SETTLE_WIZARD, [
-                "c-1",
-                "ticket-1",
-                '{"wizard":{"ticket":"ticket-1","command":"begin","state":"done","url":"https://oauth.zaloapp.com/authorize","code":""}}',
-            ])
-        })
-
-        it("includes the saved OA secret fact in a successful wizard settlement", async () => {
-            const { service, em } = await build()
-
-            await service.settleWizard("c-1", "ticket-2", {
-                command: "oa",
-                state: "done",
-                url: "",
-                code: "",
-                oaSecretSaved: true,
-            })
-
-            expect(em.query).toHaveBeenCalledWith(SETTLE_WIZARD, [
-                "c-1",
-                "ticket-2",
-                '{"oa_secret_saved":true,"wizard":{"ticket":"ticket-2","command":"oa","state":"done","url":"","code":""}}',
-            ])
-        })
-
-        it("records the refusal code in a failed wizard settlement", async () => {
-            const { service, em } = await build()
-
-            await service.settleWizard("c-1", "ticket-3", {
-                command: "app",
-                state: "failed",
-                url: "",
-                code: "CHANNELS_SECRET_UNREADABLE",
-                oaSecretSaved: false,
-            })
-
-            expect(em.query).toHaveBeenCalledWith(SETTLE_WIZARD, [
-                "c-1",
-                "ticket-3",
-                '{"wizard":{"ticket":"ticket-3","command":"app","state":"failed","url":"","code":"CHANNELS_SECRET_UNREADABLE"}}',
-            ])
         })
     })
 
-    describe("health", () => {
-        const row = {
-            id: "c-1",
-            workspace_id: "ws-1",
-            provider: "telegram",
-            name: "Bot",
-            status: "connected",
-            last_error: "",
-            last_event_at: "2026-10-10 10:00:00+00",
-            created_at: "2026-10-01 10:00:00+00",
-            health: "ok",
-        }
+    describe("patch", () => {
+        it("changes the given fields", async () => {
+            const em = mockEntityManager({ query: [PATCH_CONNECTION, [{ id: "c1" }]] })
 
-        it("reads a page of connections after an id, from the start when none is given", async () => {
-            const { service, em } = await build([], [row])
+            await (
+                await build(em)
+            ).patch("ws-1", "c1", {
+                name: " New ",
+                status: "error",
+                environment: "test",
+                meta: { a: "b" },
+                lastError: null,
+            })
 
-            await expect(service.healthBatch("", 100)).resolves.toEqual([
-                {
-                    id: "c-1",
-                    workspaceId: "ws-1",
-                    provider: "telegram",
-                    name: "Bot",
-                    status: "connected",
-                    lastError: "",
-                    lastEventAt: "2026-10-10 10:00:00+00",
-                    createdAt: "2026-10-01 10:00:00+00",
-                    health: "ok",
-                },
+            expect(em.query).toHaveBeenCalledWith(PATCH_CONNECTION, [
+                "ws-1",
+                "c1",
+                "New",
+                "error",
+                "test",
+                '{"a":"b"}',
+                true,
+                null,
             ])
-            await service.healthBatch("c-1", 100)
-
-            expect(em.query).toHaveBeenNthCalledWith(1, LIST_HEALTH_BATCH, ["00000000-0000-0000-0000-000000000000", 100])
-            expect(em.query).toHaveBeenNthCalledWith(2, LIST_HEALTH_BATCH, ["c-1", 100])
         })
 
-        it("records the verdict in the public facts", async () => {
-            const { service, em } = await build()
+        it("leaves every absent field alone", async () => {
+            const em = mockEntityManager({ query: [PATCH_CONNECTION, [{ id: "c1" }]] })
 
-            await service.markHealth("c-1", { state: "silent", reason: "no event for 80h", checkedAt: "2026-10-12T10:00:00.000Z" })
+            await (await build(em)).patch("ws-1", "c1", {})
 
-            expect(em.query).toHaveBeenCalledWith(MARK_CONNECTION_HEALTH, [
-                "c-1",
-                '{"state":"silent","reason":"no event for 80h","checked_at":"2026-10-12T10:00:00.000Z"}',
+            expect(em.query).toHaveBeenCalledWith(PATCH_CONNECTION, ["ws-1", "c1", null, null, null, null, false, null])
+        })
+
+        it("refuses a name that is too short", async () => {
+            await expect((await build(mockEntityManager())).patch("ws-1", "c1", { name: "x" })).rejects.toMatchObject({
+                code: ConnectionsErrorCode.NameInvalid,
+            })
+        })
+
+        it("answers not found for a connection of another workspace", async () => {
+            const em = mockEntityManager({ query: [PATCH_CONNECTION, []] })
+
+            await expect((await build(em)).patch("ws-1", "c9", { status: "connected" })).rejects.toMatchObject({
+                code: ConnectionsErrorCode.NotFound,
+            })
+        })
+    })
+
+    describe("secrets", () => {
+        it("opens the stored secret", async () => {
+            const em = mockEntityManager({
+                query: [FIND_SECRET, [{ ciphertext: encryptSecret(KEY, "token"), webhook_secret: "hook" }]],
+            })
+
+            await expect((await build(em)).readSecret("c1")).resolves.toEqual({ plain: "token", webhookSecret: "hook" })
+        })
+
+        it("answers null when there is no secret", async () => {
+            const em = mockEntityManager({ query: [FIND_SECRET, []] })
+
+            await expect((await build(em)).readSecret("c1")).resolves.toBeNull()
+        })
+
+        it("answers null when the secret cannot be opened with the current key", async () => {
+            const em = mockEntityManager({
+                query: [FIND_SECRET, [{ ciphertext: encryptSecret(randomBytes(32), "token"), webhook_secret: "hook" }]],
+            })
+
+            await expect((await build(em)).readSecret("c1")).resolves.toBeNull()
+        })
+
+        it("stores a sealed credential and replaces the webhook secret when one is given", async () => {
+            const em = mockEntityManager({ query: [UPSERT_SECRET, []] })
+
+            await (await build(em)).writeSecret("c1", "token", "hook")
+
+            const args = em.query.mock.calls[0]?.[1] as Array<unknown>
+            expect(decryptSecret(KEY, String(args[1]))).toBe("token")
+            expect([args[0], args[2], args[3]]).toEqual(["c1", "hook", true])
+        })
+
+        it("keeps the webhook secret when none is given", async () => {
+            const em = mockEntityManager({ query: [UPSERT_SECRET, []] })
+
+            await (await build(em)).writeSecret("c1", "token")
+
+            const args = em.query.mock.calls[0]?.[1] as Array<unknown>
+            expect(String(args[2])).toMatch(/^[0-9a-f]{64}$/)
+            expect(args[3]).toBe(false)
+        })
+
+        it("wipes the secret", async () => {
+            const em = mockEntityManager({ query: [DELETE_SECRET, []] })
+
+            await (await build(em)).wipeSecret("c1")
+
+            expect(em.query).toHaveBeenCalledWith(DELETE_SECRET, ["c1"])
+        })
+    })
+
+    describe("remove", () => {
+        it("deletes a connection of the workspace", async () => {
+            const em = mockEntityManager({ query: [DELETE_CONNECTION, [{ id: "c1" }]] })
+
+            await expect((await build(em)).remove("ws-1", "c1")).resolves.toBeUndefined()
+            expect(em.query).toHaveBeenCalledWith(DELETE_CONNECTION, ["ws-1", "c1"])
+        })
+
+        it("answers not found for a connection that is not there", async () => {
+            const em = mockEntityManager({ query: [DELETE_CONNECTION, []] })
+
+            await expect((await build(em)).remove("ws-1", "c9")).rejects.toMatchObject({
+                code: ConnectionsErrorCode.NotFound,
+            })
+        })
+    })
+
+    describe("recordEvent", () => {
+        it("records the event with the amount rounded and answers the name and environment", async () => {
+            const em = mockEntityManager({ query: [RECORD_EVENT, [{ name: "Bank", environment: "test" }]] })
+
+            await expect(
+                (await build(em)).recordEvent("c1", {
+                    amount: 100.4,
+                    content: "hi",
+                    at: "2026-10-12T01:00:00.000Z",
+                    text: "t",
+                }),
+            ).resolves.toEqual({ name: "Bank", environment: "test" })
+
+            expect(em.query).toHaveBeenCalledWith(RECORD_EVENT, [
+                "c1",
+                "2026-10-12T01:00:00.000Z",
+                '{"amount":100,"content":"hi","at":"2026-10-12T01:00:00.000Z","text":"t"}',
             ])
+        })
+
+        it("answers a live connection and leaves the text out when there is none", async () => {
+            const em = mockEntityManager({ query: [RECORD_EVENT, [{ name: "Bank", environment: "live" }]] })
+
+            await expect(
+                (await build(em)).recordEvent("c1", { amount: 5, content: "hi", at: "2026-10-12T01:00:00.000Z" }),
+            ).resolves.toEqual({ name: "Bank", environment: "live" })
+            expect(em.query.mock.calls[0]?.[1]).toEqual([
+                "c1",
+                "2026-10-12T01:00:00.000Z",
+                '{"amount":5,"content":"hi","at":"2026-10-12T01:00:00.000Z"}',
+            ])
+        })
+
+        it("answers null for a connection that does not exist", async () => {
+            const em = mockEntityManager({ query: [RECORD_EVENT, []] })
+
+            await expect(
+                (await build(em)).recordEvent("c9", { amount: 5, content: "hi", at: "2026-10-12T01:00:00.000Z" }),
+            ).resolves.toBeNull()
+        })
+    })
+
+    describe("firstEvent", () => {
+        it("answers the status and first event to a manager", async () => {
+            const first = { amount: 5, content: "hi", at: "2026-10-12T01:00:00.000Z" }
+            const em = mockEntityManager({
+                query: [
+                    [FIND_ACTIVE_MEMBER, [{ role: "manager", display_name: "Lan" }]],
+                    [FIND_CONNECTION, [{ ...ROW, first_event: first, status: "connected" }]],
+                ],
+            })
+
+            await expect((await build(em)).firstEvent(actor, "c1")).resolves.toEqual({
+                status: "connected",
+                firstEvent: first,
+            })
+        })
+
+        it("refuses a member who is neither owner nor manager", async () => {
+            const em = mockEntityManager({ query: [FIND_ACTIVE_MEMBER, [{ role: "staff", display_name: "Minh" }]] })
+
+            await expect((await build(em)).firstEvent(actor, "c1")).rejects.toMatchObject({
+                code: ConnectionsErrorCode.Forbidden,
+            })
+        })
+    })
+
+    describe("wantConnector", () => {
+        it("records interest in a planned connector once", async () => {
+            const em = mockEntityManager({ query: [OWNER, [INSERT_CONNECTOR_INTEREST, []]] })
+
+            await expect((await build(em)).wantConnector(actor, "shopee")).resolves.toBeUndefined()
+            expect(em.query).toHaveBeenCalledWith(INSERT_CONNECTOR_INTEREST, ["ws-1", "shopee", "user-1"])
+        })
+
+        it("refuses a connector that is not planned", async () => {
+            const em = mockEntityManager({ query: [OWNER] })
+
+            await expect((await build(em)).wantConnector(actor, "sepay")).rejects.toMatchObject({
+                code: ConnectionsErrorCode.ConnectorNotFound,
+                params: { id: "sepay" },
+            })
         })
     })
 })

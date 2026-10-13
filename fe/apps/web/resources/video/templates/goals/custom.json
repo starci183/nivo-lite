@@ -2,7 +2,10 @@
   "goal": "custom",
   "order": 6,
   "label": { "vi": "Tuỳ chỉnh", "en": "Custom" },
-  "hint": { "vi": "Bạn tự nói video này để làm gì, NIVO soạn theo.", "en": "Say what the video is for and NIVO writes to it." },
+  "hint": {
+    "vi": "Bạn tự nói video này để làm gì, NIVO soạn theo.",
+    "en": "Say what the video is for and NIVO writes to it."
+  },
   "default_seconds": 30,
   "default_aspect": "9:16",
   "music": "sunny-pop",

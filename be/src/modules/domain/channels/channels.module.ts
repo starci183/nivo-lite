@@ -18,8 +18,24 @@ export class ChannelsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), ZaloCredentialsService, ChannelSenderRegistryService, ChannelDeliveryService, ConnectionHealthService, TelegramProofService, ZaloProofService, ZaloWizardService, { provide: CHANNEL_SENDER_REGISTRY, useExisting: ChannelSenderRegistryService }],
-            exports: [ZaloCredentialsService, ZaloWizardService, ChannelDeliveryService, ConnectionHealthService, CHANNEL_SENDER_REGISTRY],
+            providers: [
+                ...(base.providers ?? []),
+                ZaloCredentialsService,
+                ChannelSenderRegistryService,
+                ChannelDeliveryService,
+                ConnectionHealthService,
+                TelegramProofService,
+                ZaloProofService,
+                ZaloWizardService,
+                { provide: CHANNEL_SENDER_REGISTRY, useExisting: ChannelSenderRegistryService },
+            ],
+            exports: [
+                ZaloCredentialsService,
+                ZaloWizardService,
+                ChannelDeliveryService,
+                ConnectionHealthService,
+                CHANNEL_SENDER_REGISTRY,
+            ],
         }
     }
 }

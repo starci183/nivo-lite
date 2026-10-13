@@ -1,3 +1,11 @@
+import type { DocumentsOptions } from "@modules/integrations/documents"
+import type { LlmOptions } from "@modules/integrations/llm"
+import type { ChannelSetupOptions } from "@modules/integrations/channel-setup"
+import type { ConnectionsOptions } from "@modules/domain/connections"
+import type { GoogleOptions } from "@modules/integrations/google"
+import type { MetaOptions } from "@modules/integrations/meta"
+import type { WebhookConnectionsOptions } from "@modules/domain/webhook-connections"
+import type { WebhookDeliveryOptions } from "@modules/integrations/webhook-delivery"
 import type { N8nOptions } from "@modules/integrations/n8n"
 import type { TemplateFilesOptions } from "@modules/integrations/template-files"
 import type { DeepseekOptions } from "@modules/integrations/deepseek"
@@ -31,6 +39,10 @@ export interface ApiOptions {
     readonly database: DatabaseConnectionOptions
     /** Supabase Auth, Storage and token-verification configuration. */
     readonly supabase: SupabaseOptions
+    /** The embeddings and chat models, and the keys that reach them. */
+    readonly llm: LlmOptions
+    /** The Google Drive reader and the readers of office files and PDFs. */
+    readonly documents: DocumentsOptions
     /** Whether a person with no workspace may create a free one. */
     readonly workspaces: WorkspacesOptions
     /** Invitation links and how long they stay valid. */
@@ -57,6 +69,18 @@ export interface ApiOptions {
     readonly queue: QueueConfig
     /** Who this worker is and how long a job claim lasts. */
     readonly jobs: JobsConfig
+    /** The channel token key that seals provider credentials, and the public site address. */
+    readonly connections: ConnectionsOptions
+    /** The signing key behind outgoing webhooks. */
+    readonly webhookConnections: WebhookConnectionsOptions
+    /** Google OAuth and Sheets. */
+    readonly google: GoogleOptions
+    /** Meta (Facebook Pages and Instagram). */
+    readonly meta: MetaOptions
+    /** The provider calls a connection wizard makes while connecting a channel. */
+    readonly channelSetup: ChannelSetupOptions
+    /** Deliveries to tenant-supplied webhook addresses. */
+    readonly webhookDelivery: WebhookDeliveryOptions
     /** The signing secret and the webhook base of the shared n8n workflows. */
     readonly n8n: N8nOptions
     /** The folder of the automation definition files. */

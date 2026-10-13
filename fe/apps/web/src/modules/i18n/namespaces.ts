@@ -1,4 +1,4 @@
-/** Every message catalog namespace: one `messages/<locale>/<namespace>.json` per entry, loaded together by the request config. */
+/** Every message catalog namespace: top-level key of `messages/<locale>.json`. */
 export const NAMESPACES = [
     "access",
     "admin",

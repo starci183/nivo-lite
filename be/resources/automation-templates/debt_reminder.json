@@ -23,16 +23,10 @@
     }
   },
   "requires": {
-    "modules": [
-      "accounting"
-    ],
-    "channels": [
-      "customer_chat"
-    ],
+    "modules": ["accounting"],
+    "channels": ["customer_chat"],
     "connections": [],
-    "capabilities": [
-      "has_due_dates"
-    ]
+    "capabilities": ["has_due_dates"]
   },
   "settings": [
     {
@@ -61,12 +55,7 @@
       "en": "Never invent prices, hours, addresses or policies that are not in the shop information."
     }
   ],
-  "variables": [
-    "ten_khach",
-    "ten_shop",
-    "so_tien",
-    "ma_phieu"
-  ],
+  "variables": ["ten_khach", "ten_shop", "so_tien", "ma_phieu"],
   "defaultBody": {
     "vi": "Chào {ten_khach}, {ten_shop} xin nhắc nhẹ khoản {so_tien} (mã {ma_phieu}) đã đến hạn. Nếu bạn đã chuyển rồi, bạn bỏ qua tin này giúp mình nhé.",
     "en": "Hi {ten_khach}, a gentle reminder from {ten_shop}: {so_tien} (ref {ma_phieu}) is due. If you already paid, please ignore this."

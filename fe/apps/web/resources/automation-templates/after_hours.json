@@ -22,16 +22,10 @@
     }
   },
   "requires": {
-    "modules": [
-      "chatbot"
-    ],
-    "channels": [
-      "customer_chat"
-    ],
+    "modules": ["chatbot"],
+    "channels": ["customer_chat"],
     "connections": [],
-    "capabilities": [
-      "has_opening_hours"
-    ]
+    "capabilities": ["has_opening_hours"]
   },
   "settings": [
     {
@@ -66,11 +60,7 @@
       "en": "Never invent prices, hours, addresses or policies that are not in the shop information."
     }
   ],
-  "variables": [
-    "ten_khach",
-    "ten_shop",
-    "gio_mo_cua"
-  ],
+  "variables": ["ten_khach", "ten_shop", "gio_mo_cua"],
   "defaultBody": {
     "vi": "Cảm ơn bạn đã nhắn cho {ten_shop}. Hiện shop đã ngoài giờ làm việc ({gio_mo_cua}), bên mình sẽ gọi lại cho bạn vào sáng mai nhé!",
     "en": "Thanks for writing to {ten_shop}. We are closed now ({gio_mo_cua}); someone will call you back tomorrow morning."

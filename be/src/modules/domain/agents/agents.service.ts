@@ -16,6 +16,7 @@ import type {
     DoneData,
     KnowledgeData,
     NewAgent,
+    OptionalAgentProfile,
     OptionalAgentRef,
     OptionalId,
     Region,
@@ -23,7 +24,7 @@ import type {
 } from "./agents.contracts"
 import { InjectInstallations, InjectKnowledge } from "./agents.decorators"
 import { AgentsLogEvent } from "./agents.log-events"
-import { refOf, summaryOf } from "./agents.mapper"
+import { firstProfileOf, refOf, summaryOf } from "./agents.mapper"
 import type { InstallationDirectory, KnowledgeLens, OptionalInstallation } from "./agents.port"
 import {
     GAP_LIMIT,
@@ -40,6 +41,7 @@ import { AgentsError, AgentsErrorCode } from "./errors/agents.error"
 import type { AgentRow, IdRow } from "./persistence/agents.rows"
 import {
     FIND_ACTIVE_AGENT,
+    FIND_AGENT,
     FIND_FIRST_ACTIVE_AGENT,
     INSERT_AGENT,
     LIST_AGENTS,
@@ -95,6 +97,18 @@ export class AgentsService {
                 ? await this.entityManager.query<Array<AgentRow>>(FIND_FIRST_ACTIVE_AGENT, [workspaceId, department])
                 : await this.entityManager.query<Array<AgentRow>>(FIND_ACTIVE_AGENT, [instanceAgent, workspaceId])
         return row === undefined ? null : refOf(row)
+    }
+
+    /** The profile of one agent of the workspace, whatever its status; null when there is none. */
+    async profileOf(workspaceId: string, agentId: string): Promise<OptionalAgentProfile> {
+        return firstProfileOf(await this.entityManager.query<Array<AgentRow>>(FIND_AGENT, [agentId, workspaceId]))
+    }
+
+    /** The profile of the active agent that speaks for a department; null when it has none. */
+    async profileOfDepartment(workspaceId: string, department: string): Promise<OptionalAgentProfile> {
+        return firstProfileOf(
+            await this.entityManager.query<Array<AgentRow>>(FIND_FIRST_ACTIVE_AGENT, [workspaceId, department]),
+        )
     }
 
     /** The common regions of one module's agent dashboard. Every region is read on its own and fails on its own. */

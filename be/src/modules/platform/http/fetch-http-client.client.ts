@@ -1,23 +1,30 @@
 import { Injectable } from "@nestjs/common"
-import { isRecord } from "@modules/platform/primitives"
 import { HttpError, HttpErrorCode } from "./errors/http.error"
 import type { HttpClient, HttpRequest, HttpResponse } from "./http.port"
 
 @Injectable()
 /** The HttpClient adapter over the global `fetch`; the only place outside a spec that calls it. */
 export class FetchHttpClient implements HttpClient {
-    /** Sends `request` with its deadline and reads the body: parsed JSON, or the raw bytes when the request asks for them. */
+    /** Sends `request` with its deadline and reads the body as the request asks: parsed JSON, text or raw bytes. */
     async request(request: HttpRequest): Promise<HttpResponse> {
         const deadline = AbortSignal.timeout(request.timeoutMs)
         const signal = request.signal ? AbortSignal.any([deadline, request.signal]) : deadline
         const response = await this.send(request, signal)
-        if (request.read === "bytes")
+        const answer = { status: response.status, headers: this.headersOf(response), url: response.url }
+        if (request.read === "bytes") {
             return {
-                status: response.status,
+                ...answer,
                 body: await this.received(response.arrayBuffer().then((bytes) => Buffer.from(bytes))),
             }
+        }
         const text = await this.received(response.text())
-        return { status: response.status, body: text === "" ? undefined : this.parse(text) }
+        if (request.read === "text") return { ...answer, body: text }
+        return { ...answer, body: text === "" ? undefined : this.parse(text) }
+    }
+
+    /** The headers as a plain map with lower-case names. */
+    private headersOf(response: Response): Record<string, string> {
+        return Object.fromEntries(response.headers.entries())
     }
 
     /** The body as it arrives; a deadline or a cut while it streams is the same HttpError as one before the headers. */
@@ -31,7 +38,7 @@ export class FetchHttpClient implements HttpClient {
 
     private failure(cause: unknown): HttpError {
         // The deadline rejects with a DOMException from the runtime's own realm: compare its name, never its prototype chain.
-        const timedOut = isRecord(cause) && cause.name === "TimeoutError"
+        const timedOut = typeof cause === "object" && cause !== null && "name" in cause && cause.name === "TimeoutError"
         return new HttpError({ code: timedOut ? HttpErrorCode.Timeout : HttpErrorCode.Network, cause })
     }
 

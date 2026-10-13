@@ -1,5 +1,12 @@
 import { Badge, Disclosure, Heading, List, ListItem, Region, Text, TextAction } from "@starci/grammar/common"
-import { FACTS_CLASS, PRESERVE_LINES_CLASS, ROWS_CLASS, RUN_HEAD_CLASS, RUN_ROW_CLASS, SECTION_CLASS } from "./classNames"
+import {
+    FACTS_CLASS,
+    PRESERVE_LINES_CLASS,
+    ROWS_CLASS,
+    RUN_HEAD_CLASS,
+    RUN_ROW_CLASS,
+    SECTION_CLASS,
+} from "./classNames"
 
 /** The tone of a run badge. */
 type RunTone = "success" | "neutral" | "warning" | "danger"

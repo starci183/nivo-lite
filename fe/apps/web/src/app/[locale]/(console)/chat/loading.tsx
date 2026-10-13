@@ -5,27 +5,27 @@ import { OfficeMessenger } from "@/features/office/messenger"
  * three skeleton messages. The client messenger is rendered directly: the server wrapper only adds the team and the deciders.
  */
 const ChatLoading = () => (
-  <OfficeMessenger
-    isLoading
-    workspaceId=""
-    workspaceName=""
-    userName=""
-    avatarUrl={null}
-    initialMessages={[]}
-    agents={[]}
-    pending={[]}
-    decided={[]}
-    exceptions={[]}
-    decidedExceptions={[]}
-    staff={[]}
-    people={[]}
-    deciders={{}}
-    pendingDecisions={0}
-    tasks={[]}
-    customers={[]}
-    leadNames={{}}
-    nowIso=""
-  />
+    <OfficeMessenger
+        isLoading
+        workspaceId=""
+        workspaceName=""
+        userName=""
+        avatarUrl={null}
+        initialMessages={[]}
+        agents={[]}
+        pending={[]}
+        decided={[]}
+        exceptions={[]}
+        decidedExceptions={[]}
+        staff={[]}
+        people={[]}
+        deciders={{}}
+        pendingDecisions={0}
+        tasks={[]}
+        customers={[]}
+        leadNames={{}}
+        nowIso=""
+    />
 )
 
 export default ChatLoading

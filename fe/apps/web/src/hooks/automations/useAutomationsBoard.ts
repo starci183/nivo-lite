@@ -36,7 +36,9 @@ export const useAutomationsBoard = (
     const [notice, setNotice] = useState<string | undefined>(undefined)
     const isNested = input.layout === "module"
 
-    const scoped = data.cards.filter((card) => (input.moduleKey ? automationScopeOf(card.def) === input.moduleKey : true))
+    const scoped = data.cards.filter((card) =>
+        input.moduleKey ? automationScopeOf(card.def) === input.moduleKey : true,
+    )
     const visible = visibleAutomations(scoped)
     const shown = visible.filter((card) => matchesAutomationFilter(card, filter))
     const current = visible.find((card) => card.key === selected) ?? null
@@ -44,7 +46,8 @@ export const useAutomationsBoard = (
     const detail = useAutomationDetail(current, command, data.setFailure)
 
     useEffect(() => {
-        if (selected) document.getElementById("automation-detail")?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+        if (selected)
+            document.getElementById("automation-detail")?.scrollIntoView({ behavior: "smooth", block: "nearest" })
     }, [selected])
 
     const change = (key: string, patch: AutomationPatch) =>
@@ -85,7 +88,8 @@ export const useAutomationsBoard = (
         void change(card.key, { enabled: next })
     }
 
-    const saveBody = async (): Promise<boolean> => (current === null ? false : change(current.key, { body: detail.form.body }))
+    const saveBody = async (): Promise<boolean> =>
+        current === null ? false : change(current.key, { body: detail.form.body })
 
     const enable = async () => {
         if (current === null || !(await saveBody())) return

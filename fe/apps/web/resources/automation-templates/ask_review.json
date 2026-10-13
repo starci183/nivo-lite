@@ -22,12 +22,8 @@
     }
   },
   "requires": {
-    "modules": [
-      "sales"
-    ],
-    "channels": [
-      "customer_chat"
-    ],
+    "modules": ["sales"],
+    "channels": ["customer_chat"],
     "connections": [],
     "capabilities": []
   },
@@ -58,10 +54,7 @@
       "en": "Never invent prices, hours, addresses or policies that are not in the shop information."
     }
   ],
-  "variables": [
-    "ten_khach",
-    "ten_shop"
-  ],
+  "variables": ["ten_khach", "ten_shop"],
   "defaultBody": {
     "vi": "Chào {ten_khach}, cảm ơn bạn đã dùng dịch vụ của {ten_shop}. Bạn thấy trải nghiệm thế nào ạ? Một lời nhận xét ngắn của bạn giúp shop rất nhiều!",
     "en": "Hi {ten_khach}, thank you for choosing {ten_shop}. How was your experience? A short note helps us a lot!"

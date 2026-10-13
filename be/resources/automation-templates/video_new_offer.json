@@ -23,9 +23,7 @@
     }
   },
   "requires": {
-    "modules": [
-      "video"
-    ],
+    "modules": ["video"],
     "channels": [],
     "connections": [],
     "capabilities": []

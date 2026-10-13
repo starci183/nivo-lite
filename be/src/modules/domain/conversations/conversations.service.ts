@@ -12,7 +12,7 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { ChatTurnQueue } from "@modules/queues/chat-turn"
-import type { FrontAgent, TelegramInbound, ZaloInbound } from "./conversations.contracts"
+import type { FrontAgent, MetaInbound, TelegramInbound, ZaloInbound } from "./conversations.contracts"
 import type { FrontAgentRow } from "./persistence/conversations.rows"
 import { FIND_FRONT_AGENT } from "./persistence/conversations.sql"
 
@@ -59,7 +59,14 @@ export class ConversationsService {
         const channelEventId = `tg:${inbound.chatId}:${inbound.messageId}`
         const agent = await this.frontAgentOf(connectionId, manager)
         if (agent === undefined) {
-            await this.keepUnrouted(connection.value, "telegram", inbound.visitor, inbound.text, `tg:${connectionId}:${inbound.chatId}:${inbound.messageId}`, manager)
+            await this.keepUnrouted(
+                connection.value,
+                "telegram",
+                inbound.visitor,
+                inbound.text,
+                `tg:${connectionId}:${inbound.chatId}:${inbound.messageId}`,
+                manager,
+            )
             return
         }
         const meeting: Meeting = {
@@ -91,7 +98,9 @@ export class ConversationsService {
         if (connection.kind !== "ok" || (await this.isOtherApp(connectionId, inbound.appId))) return
         const workspaceId = connection.value.workspaceId
         const known = await this.conversations.find(workspaceId, "zalo", connectionId, inbound.userId, manager)
-        const visitor = (known.kind === "ok" ? known.value.visitorName : null) ?? this.catalog.get("conversations.zaloGuest", {}, LOCALE)
+        const visitor =
+            (known.kind === "ok" ? known.value.visitorName : null) ??
+            this.catalog.get("conversations.zaloGuest", {}, LOCALE)
         await this.connections.markReceived(
             connectionId,
             { amount: 0, content: visitor, at: this.clock.now().toISOString(), text: inbound.text.slice(0, 160) },
@@ -99,7 +108,14 @@ export class ConversationsService {
         )
         const agent = await this.frontAgentOf(connectionId, manager)
         if (agent === undefined) {
-            await this.keepUnrouted(connection.value, "zalo", visitor, inbound.text, `zalo:${connectionId}:${inbound.messageId}`, manager)
+            await this.keepUnrouted(
+                connection.value,
+                "zalo",
+                visitor,
+                inbound.text,
+                `zalo:${connectionId}:${inbound.messageId}`,
+                manager,
+            )
             return
         }
         await this.hear(
@@ -112,6 +128,39 @@ export class ConversationsService {
                 agent,
                 text: inbound.text,
                 channelEventId: `zalo:${inbound.messageId}`,
+            },
+            manager,
+        )
+    }
+
+    /** One Facebook or Instagram direct message: answered by the front-door agent of the connection, or only stored when none is bound. */
+    async acceptMeta(connectionId: string, inbound: MetaInbound, manager: EntityManager): Promise<void> {
+        const connection = await this.connections.intakeOf(connectionId, "meta", manager)
+        if (connection.kind !== "ok") return
+        const visitor = inbound.visitor ?? this.catalog.get(`conversations.${inbound.platform}Guest`, {}, LOCALE)
+        const agent = await this.frontAgentOf(connectionId, manager)
+        const eventId = `meta:${inbound.eventId}`
+        if (agent === undefined) {
+            await this.keepUnrouted(
+                connection.value,
+                inbound.platform,
+                visitor,
+                inbound.text,
+                `${eventId}:${connectionId}`,
+                manager,
+            )
+            return
+        }
+        await this.hear(
+            {
+                workspaceId: connection.value.workspaceId,
+                connectionId,
+                channel: inbound.platform,
+                customerId: inbound.personId,
+                visitor,
+                agent,
+                text: inbound.text,
+                channelEventId: eventId,
             },
             manager,
         )
@@ -140,14 +189,30 @@ export class ConversationsService {
         const greeting = meeting.agent.greeting.trim() || this.catalog.get("conversations.fallbackGreeting", {}, LOCALE)
         const messageId = await this.messages.storeGreeting(meeting.workspaceId, conversation.id, greeting, manager)
         await this.chatTurns.enqueueChatTurn(
-            { kind: "deliver", workspaceId: meeting.workspaceId, conversationId: conversation.id, messageId, channelEventId, lookupName: false },
+            {
+                kind: "deliver",
+                workspaceId: meeting.workspaceId,
+                conversationId: conversation.id,
+                messageId,
+                channelEventId,
+                lookupName: false,
+            },
             manager,
         )
     }
 
     /** The customer conversation on this connection: opened on the first message and followed to the current front door of the connection. */
-    private async meet(meeting: Meeting, manager: EntityManager): Promise<{ readonly conversation: ConversationRef; readonly created: boolean }> {
-        const found = await this.conversations.find(meeting.workspaceId, meeting.channel, meeting.connectionId, meeting.customerId, manager)
+    private async meet(
+        meeting: Meeting,
+        manager: EntityManager,
+    ): Promise<{ readonly conversation: ConversationRef; readonly created: boolean }> {
+        const found = await this.conversations.find(
+            meeting.workspaceId,
+            meeting.channel,
+            meeting.connectionId,
+            meeting.customerId,
+            manager,
+        )
         if (found.kind !== "ok") {
             const opened = await this.conversations.open(
                 {
@@ -175,7 +240,13 @@ export class ConversationsService {
         eventId: string,
         manager: EntityManager,
     ): Promise<void> {
-        await this.inboundEvents.keepUnrouted(manager, { workspaceId: connection.workspaceId, channel, sender, body, eventId })
+        await this.inboundEvents.keepUnrouted(manager, {
+            workspaceId: connection.workspaceId,
+            channel,
+            sender,
+            body,
+            eventId,
+        })
     }
 
     private async isOtherApp(connectionId: string, appId: string): Promise<boolean> {

@@ -64,7 +64,12 @@ export interface DetailInput {
     readonly errorText: string | undefined
 }
 
-const fieldOf = (def: FieldDef, card: AutomationCardView, values: AutomationValues, ctx: DetailContext): SettingFieldView => {
+const fieldOf = (
+    def: FieldDef,
+    card: AutomationCardView,
+    values: AutomationValues,
+    ctx: DetailContext,
+): SettingFieldView => {
     const base = {
         key: def.key,
         id: `automation-${card.key}-${def.key}`,

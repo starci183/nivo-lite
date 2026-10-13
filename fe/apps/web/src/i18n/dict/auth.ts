@@ -1,9 +1,9 @@
-import en from "@/modules/i18n/messages/en/auth.json"
-import vi from "@/modules/i18n/messages/vi/auth.json"
+import allEn from "@/modules/i18n/messages/en.json"
+import allVi from "@/modules/i18n/messages/vi.json"
 import { defineDict } from "../core"
 
 /** Sign-up, e-mail confirmation, forgot / reset password and the shared auth error copy. */
-export const auth = defineDict("auth", { en, vi })
+export const auth = defineDict("auth", { en: allEn["auth"], vi: allVi["auth"] })
 
 /** Error codes the auth server actions return; each maps to one `err*` key. */
 export type AuthErrorCode =

@@ -11,7 +11,11 @@ export class ChannelReceiptsService {
 
     /** True when a holding line already went out in the conversation since the given moment. */
     async heldSince(workspaceId: string, conversationId: string, since: Date): Promise<boolean> {
-        const rows = await this.entityManager.query<Array<HoldingReceiptRow>>(FIND_RECENT_HOLDING, [workspaceId, `${conversationId}:%`, since])
+        const rows = await this.entityManager.query<Array<HoldingReceiptRow>>(FIND_RECENT_HOLDING, [
+            workspaceId,
+            `${conversationId}:%`,
+            since,
+        ])
         return rows.length > 0
     }
 

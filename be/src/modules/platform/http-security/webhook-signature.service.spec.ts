@@ -178,7 +178,13 @@ describe("WebhookSignatureService", () => {
     })
 
     describe("verify with a scope", () => {
-        const scoped = { provider: "zalo", scope: "connection-1", rawBody: BODY, signature: "mac", timestamp: undefined }
+        const scoped = {
+            provider: "zalo",
+            scope: "connection-1",
+            rawBody: BODY,
+            signature: "mac",
+            timestamp: undefined,
+        }
 
         it("accepts a delivery the registered proof accepts and hands the proof the scope and the exact bytes", async () => {
             const prove = jest.fn().mockResolvedValue(true)

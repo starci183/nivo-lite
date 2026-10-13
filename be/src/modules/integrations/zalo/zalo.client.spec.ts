@@ -13,11 +13,7 @@ const options: ZaloOptions = { oauthBase: "https://oauth.test", apiBase: "https:
 const build = async () => {
     const http = mock<HttpClient>()
     const moduleRef = await Test.createTestingModule({
-        providers: [
-            ZaloClient,
-            { provide: HTTP_CLIENT, useValue: http },
-            { provide: ZALO_OPTIONS, useValue: options },
-        ],
+        providers: [ZaloClient, { provide: HTTP_CLIENT, useValue: http }, { provide: ZALO_OPTIONS, useValue: options }],
     }).compile()
     return { client: moduleRef.get(ZaloClient), http }
 }
@@ -192,7 +188,9 @@ describe("ZaloClient", () => {
             const { client, http } = await build()
             http.request.mockRejectedValue(new Error("down"))
 
-            await expect(client.userDisplayName("access", "user-1")).rejects.toMatchObject({ code: ZaloErrorCode.Unavailable })
+            await expect(client.userDisplayName("access", "user-1")).rejects.toMatchObject({
+                code: ZaloErrorCode.Unavailable,
+            })
         })
     })
 })

@@ -9,6 +9,8 @@ export enum SupabaseErrorCode {
     ProviderUnavailable = "SUPABASE_PROVIDER_UNAVAILABLE",
     /** Auth has no account with the requested id. */
     AccountNotFound = "SUPABASE_ACCOUNT_NOT_FOUND",
+    /** Storage has no object at the requested path. */
+    ObjectNotFound = "SUPABASE_OBJECT_NOT_FOUND",
 }
 
 /** How each Supabase integration code travels. */
@@ -16,6 +18,7 @@ export const SUPABASE_ERROR_KINDS: Record<SupabaseErrorCode, ErrorKind> = {
     [SupabaseErrorCode.AccessTokenInvalid]: "unauthenticated",
     [SupabaseErrorCode.ProviderUnavailable]: "unavailable",
     [SupabaseErrorCode.AccountNotFound]: "not-found",
+    [SupabaseErrorCode.ObjectNotFound]: "not-found",
 }
 
 /** The one error class of the Supabase integration. */

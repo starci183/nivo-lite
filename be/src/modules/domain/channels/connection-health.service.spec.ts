@@ -43,38 +43,57 @@ describe("ConnectionHealthService", () => {
     describe("checkFromJob", () => {
         it("uses the payload silence horizon for the queued check", async () => {
             const { service, connections, logger } = await build()
-            connections.healthBatch.mockResolvedValue([
-                connection({ lastEventAt: "2026-10-12T07:00:00.000Z" }),
-            ])
+            connections.healthBatch.mockResolvedValue([connection({ lastEventAt: "2026-10-12T07:00:00.000Z" })])
 
-            await expect(service.checkFromJob({ silentAfterHours: 2 })).resolves.toEqual({ checked: 1, ok: 0, silent: 1, failing: 0, changed: 1 })
+            await expect(service.checkFromJob({ silentAfterHours: 2 })).resolves.toEqual({
+                checked: 1,
+                ok: 0,
+                silent: 1,
+                failing: 0,
+                changed: 1,
+            })
 
             expect(connections.healthBatch.mock.calls).toEqual([["", 200]])
             expect(connections.markHealth.mock.calls).toEqual([
                 ["c-1", { state: "silent", reason: "no event for 3h", checkedAt: NOW }],
             ])
             expect(logger.warn.mock.calls).toEqual([
-                ["channels.connection.unhealthy", { workspaceId: "ws-1", connectionId: "c-1", provider: "telegram", state: "silent" }],
+                [
+                    "channels.connection.unhealthy",
+                    { workspaceId: "ws-1", connectionId: "c-1", provider: "telegram", state: "silent" },
+                ],
             ])
         })
 
-        it.each([undefined, null, "tick", [], {}, { silentAfterHours: "2" }])("uses the default 72-hour horizon for another payload: %p", async (payload) => {
-            const { service, connections, logger } = await build()
-            connections.healthBatch.mockResolvedValue([
-                connection({ id: "c-recent", lastEventAt: "2026-10-09T10:00:00.000Z" }),
-                connection({ id: "c-old", lastEventAt: "2026-10-09T09:00:00.000Z" }),
-            ])
+        it.each([undefined, null, "tick", [], {}, { silentAfterHours: "2" }])(
+            "uses the default 72-hour horizon for another payload: %p",
+            async (payload) => {
+                const { service, connections, logger } = await build()
+                connections.healthBatch.mockResolvedValue([
+                    connection({ id: "c-recent", lastEventAt: "2026-10-09T10:00:00.000Z" }),
+                    connection({ id: "c-old", lastEventAt: "2026-10-09T09:00:00.000Z" }),
+                ])
 
-            await expect(service.checkFromJob(payload)).resolves.toEqual({ checked: 2, ok: 1, silent: 1, failing: 0, changed: 1 })
+                await expect(service.checkFromJob(payload)).resolves.toEqual({
+                    checked: 2,
+                    ok: 1,
+                    silent: 1,
+                    failing: 0,
+                    changed: 1,
+                })
 
-            expect(connections.healthBatch.mock.calls).toEqual([["", 200]])
-            expect(connections.markHealth.mock.calls).toEqual([
-                ["c-old", { state: "silent", reason: "no event for 73h", checkedAt: NOW }],
-            ])
-            expect(logger.warn.mock.calls).toEqual([
-                ["channels.connection.unhealthy", { workspaceId: "ws-1", connectionId: "c-old", provider: "telegram", state: "silent" }],
-            ])
-        })
+                expect(connections.healthBatch.mock.calls).toEqual([["", 200]])
+                expect(connections.markHealth.mock.calls).toEqual([
+                    ["c-old", { state: "silent", reason: "no event for 73h", checkedAt: NOW }],
+                ])
+                expect(logger.warn.mock.calls).toEqual([
+                    [
+                        "channels.connection.unhealthy",
+                        { workspaceId: "ws-1", connectionId: "c-old", provider: "telegram", state: "silent" },
+                    ],
+                ])
+            },
+        )
     })
 
     it("answers an empty tally when the first page has no connections", async () => {

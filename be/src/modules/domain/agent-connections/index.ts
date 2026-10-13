@@ -6,7 +6,7 @@ export {
 export { AGENT_CONNECTIONS_MESSAGES } from "./messages/agent-connections.messages"
 export { AgentBindingsService } from "./agent-bindings.service"
 export { AgentConnectionsModule } from "./agent-connections.module"
-export { INBOUND_MODULES } from "./agent-bindings.policy"
+export { INBOUND_MODULES, PURPOSES } from "./agent-bindings.policy"
 export type {
     Access,
     AgentsForOptions,

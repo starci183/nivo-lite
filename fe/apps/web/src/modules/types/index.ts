@@ -57,6 +57,70 @@ export type {
     BookingWaitView,
 } from "./booking"
 export type { ConsoleIconName, ConsoleNavItem, ConsolePending, ConsoleWorkspace } from "./console"
+export type {
+    Access,
+    AgentOption,
+    Connection,
+    ConnectionCheck,
+    ConnectionGrant,
+    ConnectionStatus,
+    ConnectorAudience,
+    ConnectorCategory,
+    ConnectorGlyph,
+    ConnectorStatus,
+    Environment,
+    FirstEvent,
+    FirstEventState,
+    GoogleConsent,
+    MetaCheckSummary,
+    Provider,
+    ProviderGroup,
+    ProviderGroupId,
+    ProviderKind,
+    Purpose,
+    SepayKeys,
+    WebhookTestVerdict,
+} from "./connections"
+export type {
+    AccessAgentView,
+    AccessView,
+    RowAlert,
+    RowCopyLabels,
+    RowDialog,
+    RowMenuSection,
+    RowNote,
+    RowPrimary,
+    RowView,
+    RowSmtpView,
+} from "./connection-row"
+export type {
+    AgentChoice,
+    AgentStepView,
+    CopyLabels,
+    GuideField,
+    GuideScreen,
+    MoneyProvider,
+    NoteTone,
+    ProviderKeysResult,
+    SmtpAccountView,
+    SmtpGuideView,
+    SmtpOption,
+    SmtpText,
+    TelegramConnected,
+    VerifyHelpView,
+    WebhookView,
+    WizardConnection,
+    WizardNote,
+    ZaloAuthorizeUrl,
+    ZaloWizardConnection,
+} from "./connection-wizard"
+export type {
+    MetaAppObject,
+    MetaAuthorization,
+    MetaCheck,
+    MetaPageOption,
+    MetaWizardConnection,
+} from "./connection-wizard"
 export type { DataSlot, SlotLabels } from "./slot"
 export type {
     InventorySay,
@@ -141,3 +205,27 @@ export type {
     LeadScore,
     LeadSourceKind,
 } from "./leadgen"
+export { FACT_SUBJECT_TYPES } from "./brain"
+export type {
+    BrainEvidence,
+    BrainExtraction,
+    BrainFact,
+    BrainGap,
+    BrainLens,
+    BrainLesson,
+    FactSource,
+    FactState,
+    FactScope,
+    FactSubjectType,
+} from "./brain"
+export type {
+    DocumentPassage,
+    KnowledgeDocument,
+    KnowledgeDocumentDetail,
+    NivoEntry,
+    NivoItemKind,
+    DocumentKind,
+    DocumentStatus,
+    IdeaDecision,
+    DocumentVisibility,
+} from "./knowledge"

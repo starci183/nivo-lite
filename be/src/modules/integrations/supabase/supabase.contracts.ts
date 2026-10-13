@@ -1,6 +1,27 @@
 /** How an invitation left Auth: a new account invite email, a sign-in link, or not at all (copy the link). */
 export type InviteSent = "invited" | "existing" | "none"
 
+/** An address a browser may upload one object to once, without holding a credential. */
+export interface SignedUpload {
+    /** The object path the upload lands at. */
+    readonly path: string
+    /** The one-time token of the upload. */
+    readonly token: string
+    /** The signed address to PUT the object to. */
+    readonly signedUrl: string
+}
+
+/** Why Storage refused: the object is not there, or the provider could not be reached (the values of the matching SupabaseErrorCode members). */
+export type StorageFailureCode = "SUPABASE_OBJECT_NOT_FOUND" | "SUPABASE_PROVIDER_UNAVAILABLE"
+
+/** One stored object read back. */
+export interface StoredObject {
+    /** The bytes. */
+    readonly bytes: Uint8Array
+    /** The content type Storage recorded. */
+    readonly contentType: string
+}
+
 /** One Supabase Auth account as the domains need it. */
 export interface AuthAccount {
     /** The Auth user identifier. */

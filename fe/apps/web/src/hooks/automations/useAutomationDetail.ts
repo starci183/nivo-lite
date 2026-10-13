@@ -7,7 +7,10 @@ import type { AutomationValues } from "@/modules/automations"
 type ProposalNote = "proposal" | "fallback"
 
 /** Runs a command of the back end for the open card and answers how it ended. */
-export type CommandAction = (kind: "propose_body" | "run_now", templateKey: string) => Promise<DbOutcome<AutomationCommandView>>
+export type CommandAction = (
+    kind: "propose_body" | "run_now",
+    templateKey: string,
+) => Promise<DbOutcome<AutomationCommandView>>
 
 /** What the open card edits: its settings and its wording. */
 interface DetailForm {
@@ -79,7 +82,11 @@ export const useAutomationDetail = (
                 if (outcome.value.status === "failed" || proposal === null) {
                     return onFailure(failureOf(outcome.value.faultCode))
                 }
-                setForm((previous) => ({ ...previous, body: proposal.body, note: proposal.generated ? "proposal" : "fallback" }))
+                setForm((previous) => ({
+                    ...previous,
+                    body: proposal.body,
+                    note: proposal.generated ? "proposal" : "fallback",
+                }))
             })
         },
         [command, key, onFailure],
@@ -99,7 +106,8 @@ export const useAutomationDetail = (
     return {
         form,
         work,
-        changeValue: (name, value) => setForm((previous) => ({ ...previous, isSaved: false, values: { ...previous.values, [name]: value } })),
+        changeValue: (name, value) =>
+            setForm((previous) => ({ ...previous, isSaved: false, values: { ...previous.values, [name]: value } })),
         markSaved: (saved) => setForm((previous) => ({ ...previous, isSaved: saved })),
         editBody: (value) => setForm((previous) => ({ ...previous, body: value, note: null })),
         compose,

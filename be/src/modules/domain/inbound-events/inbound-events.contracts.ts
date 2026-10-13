@@ -1,3 +1,4 @@
+import type { InboundEventRow } from "./persistence/inbound-events.rows"
 import type { EntityManager } from "typeorm"
 
 /** A customer message no agent is bound to answer. */
@@ -43,4 +44,38 @@ export interface BankPaymentRecorded {
     readonly duplicate: boolean
     /** The id of the event the credit is, or an empty text when a repeat's event can no longer be read. */
     readonly inboundEventId: string
+}
+
+/** Where an inbound event stands. */
+export type EventStatus = "received" | "processed" | "needs_decision" | "failed"
+
+/** A status to set, or null to keep the current one. */
+export type OptionalEventStatus = EventStatus | null
+
+/** An id, or null when there is none. */
+export type OptionalLeadRef = string | null
+
+/** An inbound event, or null when the workspace has no such event. */
+export type OptionalInboundEvent = InboundEventRow | null
+
+/** An input a channel delivered, as the engine records it. */
+export interface InboundInput {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The channel key. */
+    readonly channel: string
+    /** `message`, `lead`, `order` or `payment`. */
+    readonly kind: string
+    /** Real or simulated. */
+    readonly origin: EventOrigin
+    /** The sender's name, or null. */
+    readonly senderName: string | null
+    /** The sender's phone or email, or null. */
+    readonly senderContact: string | null
+    /** The text. */
+    readonly body: string
+    /** The external reference, or null. */
+    readonly externalRef: string | null
+    /** The channel's own event id: the idempotency key. */
+    readonly eventId: string
 }

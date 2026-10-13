@@ -77,3 +77,21 @@ export interface TurnConversation extends ConversationTarget {
     /** The agent that speaks. */
     readonly agent: TurnAgent
 }
+
+/** The latest customer conversation of a lead. */
+export interface LeadConversation {
+    /** The conversation id. */
+    readonly id: string
+    /** The agent that speaks in it. */
+    readonly agentId: string
+    /** The channel key. */
+    readonly channel: string
+    /** The customer's name. */
+    readonly visitorName: string | null
+}
+
+/** A channel key to narrow a search to, or null for any channel. */
+export type OptionalChannel = string | null
+
+/** A lead's conversation, or null when the customer never talked to an agent. */
+export type OptionalLeadConversation = LeadConversation | null

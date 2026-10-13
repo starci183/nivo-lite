@@ -82,11 +82,20 @@ export class ZaloCredentialsService {
     /** Starts an authorization: stores the PKCE verifier with a one-time nonce and answers the permission page. */
     async beginAuthorization(workspaceId: string, connectionId: string): Promise<ZaloAuthorization> {
         const loaded = await this.requireOf(workspaceId, connectionId)
-        const pkce = { verifier: newVerifier(), nonce: randomSecret(), exp: this.clock.now().getTime() + AUTHORIZATION_TTL_MS }
+        const pkce = {
+            verifier: newVerifier(),
+            nonce: randomSecret(),
+            exp: this.clock.now().getTime() + AUTHORIZATION_TTL_MS,
+        }
         await this.save(connectionId, { ...loaded.secret, pkce })
         const callbackUrl = this.callbackUrl()
         return {
-            url: this.zalo.authorizeUrl(loaded.secret.appId, callbackUrl, pkce.verifier, `${connectionId}.${pkce.nonce}`),
+            url: this.zalo.authorizeUrl(
+                loaded.secret.appId,
+                callbackUrl,
+                pkce.verifier,
+                `${connectionId}.${pkce.nonce}`,
+            ),
             callbackUrl,
         }
     }
@@ -100,7 +109,12 @@ export class ZaloCredentialsService {
             throw new ChannelsError({ code: ChannelsErrorCode.ZaloStateRejected })
         }
         if (this.clock.now().getTime() > pkce.exp) throw new ChannelsError({ code: ChannelsErrorCode.ZaloStateExpired })
-        const tokens = await this.zalo.exchangeCode(loaded.secret.appId, loaded.secret.appSecret, input.code, pkce.verifier)
+        const tokens = await this.zalo.exchangeCode(
+            loaded.secret.appId,
+            loaded.secret.appSecret,
+            input.code,
+            pkce.verifier,
+        )
         await this.save(connectionId, this.withTokens(loaded.secret, tokens.accessToken, tokens.refreshToken), {
             expiresAt: new Date(this.clock.now().getTime() + tokens.expiresInSeconds * 1000),
         })
@@ -115,11 +129,15 @@ export class ZaloCredentialsService {
     async completeFromJob(payload: unknown): Promise<void> {
         if (!isZaloAuthorizationPayload(payload)) return
         const { workspaceId, state, code, oaId } = payload
-        await this.completeAuthorization(workspaceId, { state, code, ...(oaId === null ? {} : { oaId }) }).catch(async (cause: unknown) => {
-            if (!(cause instanceof ChannelsError) && !isZaloRefusal(cause)) throw cause
-            this.logger.error(ChannelsLogEvent.ZaloAuthorizationRefused, cause, { connectionId: state.split(".")[0] ?? "" })
-            await this.connections.markFailing(state.split(".")[0] ?? "", ZALO_AUTHORIZATION_FAILED_REASON)
-        })
+        await this.completeAuthorization(workspaceId, { state, code, ...(oaId === null ? {} : { oaId }) }).catch(
+            async (cause: unknown) => {
+                if (!(cause instanceof ChannelsError) && !isZaloRefusal(cause)) throw cause
+                this.logger.error(ChannelsLogEvent.ZaloAuthorizationRefused, cause, {
+                    connectionId: state.split(".")[0] ?? "",
+                })
+                await this.connections.markFailing(state.split(".")[0] ?? "", ZALO_AUTHORIZATION_FAILED_REASON)
+            },
+        )
     }
 
     /** Renews what the tick of a queued job asks for: its own horizon when the payload carries one, else seven hours. */
@@ -132,7 +150,8 @@ export class ZaloCredentialsService {
         const current = await this.require(connectionId)
         const fresh = this.freshToken(current, wish)
         if (fresh !== undefined) return fresh
-        if (current.secret.refreshToken === undefined) throw new ChannelsError({ code: ChannelsErrorCode.ZaloNotAuthorized })
+        if (current.secret.refreshToken === undefined)
+            throw new ChannelsError({ code: ChannelsErrorCode.ZaloNotAuthorized })
         const now = this.clock.now()
         if (!(await this.secrets.takeLease(connectionId, new Date(now.getTime() + LEASE_MS), now))) {
             return this.afterLostLease(connectionId, wish)
@@ -162,7 +181,11 @@ export class ZaloCredentialsService {
         return { refreshed, failed }
     }
 
-    private async save(connectionId: string, secret: ZaloSecret, options: { readonly expiresAt?: Date } = {}): Promise<void> {
+    private async save(
+        connectionId: string,
+        secret: ZaloSecret,
+        options: { readonly expiresAt?: Date } = {},
+    ): Promise<void> {
         await this.secrets.save(connectionId, this.secrets.seal(JSON.stringify(secret)), options.expiresAt)
     }
 
@@ -176,11 +199,13 @@ export class ZaloCredentialsService {
         }
         const refreshToken = again.secret.refreshToken
         if (refreshToken === undefined) throw new ChannelsError({ code: ChannelsErrorCode.ZaloNotAuthorized })
-        const tokens = await this.zalo.refreshTokens(again.secret.appId, again.secret.appSecret, refreshToken).catch(async (cause: unknown) => {
-            // Zalo answered and said no: the refresh token is used up, expired or revoked. Only a new authorization fixes that.
-            if (isZaloRefusal(cause)) await this.connections.markFailing(connectionId, ZALO_RECONNECT_REASON)
-            throw cause
-        })
+        const tokens = await this.zalo
+            .refreshTokens(again.secret.appId, again.secret.appSecret, refreshToken)
+            .catch(async (cause: unknown) => {
+                // Zalo answered and said no: the refresh token is used up, expired or revoked. Only a new authorization fixes that.
+                if (isZaloRefusal(cause)) await this.connections.markFailing(connectionId, ZALO_RECONNECT_REASON)
+                throw cause
+            })
         const next = this.withTokens(again.secret, tokens.accessToken, tokens.refreshToken)
         const expiresAt = new Date(this.clock.now().getTime() + tokens.expiresInSeconds * 1000)
         // The old refresh token is gone the moment Zalo answers: a failed save would lose the connection, so try twice.

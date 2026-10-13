@@ -1,24 +1,24 @@
 /** One row of `engine_jobs` as the worker sees it after a claim. */
 export type EngineJob = {
-  readonly id: string;
-  readonly workspace_id: string | null;
-  readonly kind: string;
-  readonly payload: Record<string, unknown>;
-  readonly attempts: number;
-  readonly max_attempts: number;
-  readonly locked_until: string | null;
-  readonly created_at?: string;
-};
+    readonly id: string
+    readonly workspace_id: string | null
+    readonly kind: string
+    readonly payload: Record<string, unknown>
+    readonly attempts: number
+    readonly max_attempts: number
+    readonly locked_until: string | null
+    readonly created_at?: string
+}
 
 /** What a handler stores as the job result. */
-export type JobResult = Record<string, unknown>;
+export type JobResult = Record<string, unknown>
 
 /** A handler for one job kind. It must be safe to run twice for the same job (a lease can expire mid-run). */
 export interface JobHandler {
-  readonly kind: string;
-  /** At most this many jobs of this kind run at once, and they do NOT use up the shared ENGINE_CONCURRENCY slots (a long render must not starve chat turns). */
-  readonly maxConcurrent?: number;
-  run(job: EngineJob, signal: AbortSignal): Promise<JobResult>;
+    readonly kind: string
+    /** At most this many jobs of this kind run at once, and they do NOT use up the shared ENGINE_CONCURRENCY slots (a long render must not starve chat turns). */
+    readonly maxConcurrent?: number
+    run(job: EngineJob, signal: AbortSignal): Promise<JobResult>
 }
 
 /** Fail the job without retries (bad payload, a 4xx that will not change). */
@@ -26,10 +26,13 @@ export class PermanentJobError extends Error {}
 
 /** Fail this attempt and retry after `seconds` instead of the default backoff. */
 export class RetryJobError extends Error {
-  constructor(message: string, readonly seconds: number) {
-    super(message);
-  }
+    constructor(
+        message: string,
+        readonly seconds: number,
+    ) {
+        super(message)
+    }
 }
 
-export const JOB_HANDLERS = Symbol("JOB_HANDLERS");
-export const QUEUE_OPTIONS = Symbol("QUEUE_OPTIONS");
+export const JOB_HANDLERS = Symbol("JOB_HANDLERS")
+export const QUEUE_OPTIONS = Symbol("QUEUE_OPTIONS")

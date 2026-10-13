@@ -29,3 +29,9 @@ export interface CreatedRow {
     /** The new workspace. */
     id: string
 }
+
+/** The one column FIND_WORKSPACE_NAME selects. */
+export interface WorkspaceNameRow {
+    /** The workspace name. */
+    name: string
+}

@@ -12,6 +12,7 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { ResponsibilitiesError, ResponsibilitiesErrorCode } from "./errors/responsibilities.error"
 import type {
     NewResponsibility,
+    OptionalResponsibility,
     ResponsibilityListing,
     ResponsibilityRecord,
     ResponsibilityScope,
@@ -22,8 +23,10 @@ import {
     FIND_AGENT_NAME,
     FIND_LEAD_NAME,
     FIND_OPEN_RESPONSIBILITY,
+    FIND_RESPONSIBILITY,
     INSERT_RESPONSIBILITY,
     LIST_RESPONSIBILITIES,
+    UPDATE_RESPONSIBILITY_NEXT_ACTION,
     UPDATE_RESPONSIBILITY_STATUS,
 } from "./persistence/responsibility-journal.sql"
 
@@ -115,6 +118,29 @@ export class ResponsibilityJournalService {
             scope.workspaceId,
             responsibilityId,
             "waiting_approval",
+        ])
+    }
+
+    /** One responsibility of the workspace, or null when there is none with that id. */
+    async find(workspaceId: string, responsibilityId: string): Promise<OptionalResponsibility> {
+        const rows = await this.entityManager.query<Array<ResponsibilityRecord>>(FIND_RESPONSIBILITY, [
+            workspaceId,
+            responsibilityId,
+        ])
+        return rows[0] ?? null
+    }
+
+    /** Moves a responsibility to a status on the engine's behalf; the engine already proved who may act. */
+    async setStatus(scope: ResponsibilityScope, responsibilityId: string, status: ResponsibilityStatus): Promise<void> {
+        await this.entityManager.query(UPDATE_RESPONSIBILITY_STATUS, [scope.workspaceId, responsibilityId, status])
+    }
+
+    /** Sets the next step of a responsibility. */
+    async setNextAction(scope: ResponsibilityScope, responsibilityId: string, nextAction: string): Promise<void> {
+        await this.entityManager.query(UPDATE_RESPONSIBILITY_NEXT_ACTION, [
+            scope.workspaceId,
+            responsibilityId,
+            nextAction,
         ])
     }
 

@@ -4,13 +4,14 @@ import { InjectJobProcessorRegistry } from "@modules/platform/jobs"
 import type { JobProcessorRegistry } from "@modules/platform/jobs"
 import { OperationsJobsModule } from "../../operations-jobs.module"
 import { DeductOrderProcessor } from "./deduct-order.processor"
+import { HiringTickProcessor } from "./hiring-tick.processor"
 import { InventoryCommandProcessor } from "./inventory-command.processor"
 import { ReplenishStockProcessor } from "./replenish-stock.processor"
 import { ShiftsCommandProcessor } from "./shifts-command.processor"
 
 @Module({
     imports: [OperationsJobsModule],
-    providers: [DeductOrderProcessor, ReplenishStockProcessor, InventoryCommandProcessor, ShiftsCommandProcessor],
+    providers: [DeductOrderProcessor, ReplenishStockProcessor, InventoryCommandProcessor, ShiftsCommandProcessor, HiringTickProcessor],
 })
 /** The queue transport of the operations jobs: registers their processors with the job runner, which an api or worker app composes. */
 export class OperationsJobsQueueModule implements OnModuleInit {
@@ -20,6 +21,7 @@ export class OperationsJobsQueueModule implements OnModuleInit {
         private readonly replenish: ReplenishStockProcessor,
         private readonly inventoryCommand: InventoryCommandProcessor,
         private readonly shiftsCommand: ShiftsCommandProcessor,
+        private readonly hiringTick: HiringTickProcessor,
     ) {}
 
     /** Hands the processors to the registry. */
@@ -28,5 +30,6 @@ export class OperationsJobsQueueModule implements OnModuleInit {
         this.registry.add(this.replenish)
         this.registry.add(this.inventoryCommand)
         this.registry.add(this.shiftsCommand)
+        this.registry.add(this.hiringTick)
     }
 }

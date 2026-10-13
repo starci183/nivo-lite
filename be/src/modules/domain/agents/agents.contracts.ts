@@ -339,3 +339,24 @@ export interface InstallationSettings {
 
 /** Settings, or nothing when the installation has none. */
 export type OptionalSettings = InstallationSettings | null | undefined
+
+/** What an agent's prompt needs to speak as it. */
+export interface AgentProfile {
+    /** The agent. */
+    readonly id: string
+    /** The display name. */
+    readonly name: string
+    /** The @handle. */
+    readonly handle: string
+    /** The one-line role. */
+    readonly role: string
+    /** The owner's instructions. */
+    readonly instructions: string
+    /** The owner's business notes. */
+    readonly knowledge: string
+    /** The approval rule. */
+    readonly approval_rule: string
+}
+
+/** An agent profile, or null when none matches. */
+export type OptionalAgentProfile = AgentProfile | null

@@ -1,14 +1,10 @@
 "use client"
 
-import { RouteError } from "@/components/blocks/RouteError"
-import { knowledgeTrail } from "@/features/knowledge/trail"
-import { useT } from "@/i18n/client"
-import { knowledge } from "@/i18n/dict/knowledge"
+import { KnowledgeErrorPage } from "@/features/pages/KnowledgeErrorPage"
 
-/** STATE-8 case-4: the NIVO knowledge page keeps its trail and heading when the data fails. */
-const NivoError = ({ reset }: { readonly reset: () => void }) => {
-  const t = useT(knowledge)
-  return <RouteError crumbs={knowledgeTrail({ brain: t("crumbBrain"), docs: t("title") }, t("nivoTitle"))} title={t("nivoTitle")} message={t("loadFailBody")} onRetry={reset} />
-}
+type ErrorProps = { readonly reset: () => void }
 
-export default NivoError
+/** The base knowledge route's error boundary slot. */
+const ErrorBoundary = (props: ErrorProps) => <KnowledgeErrorPage current="nivo" onRetry={props.reset} />
+
+export default ErrorBoundary

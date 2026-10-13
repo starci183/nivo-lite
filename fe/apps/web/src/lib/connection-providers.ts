@@ -1,269 +1,154 @@
 /**
- * Client-safe registry of the connection providers and the guided steps that mirror each provider's own screens.
- * A new bank/payment provider is DATA here plus one webhook route (src/app/api/connections/<id>/[connectionId]/route.ts) that feeds
- * `feedCredit` (src/lib/connection-events.ts). Labels that sit on the provider's own screen (field names, option names) are written
- * exactly as the provider prints them and are not translated; only the explanations carry {vi, en}.
+ * Compatibility view of the connection provider registry for the lanes that still read the old `{ vi, en }` shapes (agent dashboard,
+ * channels, data hub, the provider wizards). The registry itself is data in `hooks/connection-providers` and
+ * `hooks/connection-guides`; every word is a key of the `connections` catalog, and this file reads that catalog (both languages)
+ * to rebuild the old shapes. Wave 3 deletes it when the last importer reads the registry and the catalog directly.
  */
-export type Provider = "telegram" | "sepay" | "zalo_oa" | "payos" | "casso" | "webhook" | "google" | "smtp" | "openapi" | "database" | "csv_import" | "imap" | "telegram_user" | "meta";
-export type Environment = "test" | "live";
-export type L = { readonly vi: string; readonly en: string };
-export type Locale = keyof L;
+import { GUIDES, guideKey, VERIFY, verifyKey } from "@/hooks/connection-guides"
+import type { GuideItemDef } from "@/hooks/connection-guides"
+import { PROVIDER_GROUPS as GROUPS, PROVIDERS as REGISTRY, providerKey } from "@/hooks/connection-providers"
+import allEn from "@/modules/i18n/messages/en.json"
+import allVi from "@/modules/i18n/messages/vi.json"
+import type { Environment, Provider, ProviderGroupId, ProviderKind } from "@/modules/types"
 
-/** What the wizard knows, to fill into copy values. */
-export type GuideContext = { readonly name: string; readonly webhookUrl: string; readonly apiKey: string; readonly bank: string; readonly account: string; readonly callbackUrl?: string };
-export type Token = "webhookName" | "webhookUrl" | "apiKey" | "callbackUrl";
+export type { Environment, Provider }
+export type { GuideContext, Token } from "@/hooks/connection-guides"
+export { fill, tokenValue } from "@/hooks/connection-guides"
+export { PROVIDER_LOGO } from "@/hooks/connection-providers"
+
+/** A text in both languages. */
+export type L = { readonly vi: string; readonly en: string }
+
+/** The languages of the product. */
+export type Locale = keyof L
 
 /** One line of a provider screen: copy a value, make a choice, switch something on, paste a provider value into NIVO, or a plain note. */
 export type GuideItem =
-  | { readonly kind: "copy"; readonly label: string; readonly token: Token; readonly secret?: boolean }
-  | { readonly kind: "choose"; readonly label: string; readonly option: string }
-  | { readonly kind: "switch"; readonly label: string; readonly state: L }
-  | { readonly kind: "paste"; readonly label: string; readonly field: string; readonly secret?: boolean; readonly hint?: L }
-  | { readonly kind: "note"; readonly text: L };
+    | {
+          readonly kind: "copy"
+          readonly label: string
+          readonly token: "webhookName" | "webhookUrl" | "apiKey" | "callbackUrl"
+          readonly secret?: boolean
+      }
+    | { readonly kind: "choose"; readonly label: string; readonly option: string }
+    | { readonly kind: "switch"; readonly label: string; readonly state: L }
+    | {
+          readonly kind: "paste"
+          readonly label: string
+          readonly field: string
+          readonly secret?: boolean
+          readonly hint?: L
+      }
+    | { readonly kind: "note"; readonly text: L }
 
-export type GuideStep = { readonly id: string; readonly title: string; readonly items: ReadonlyArray<GuideItem> };
-export type VerifyHelp = { readonly intro: L; readonly steps: ReadonlyArray<L>; readonly url?: string };
+/** One screen of the provider guide: its title as the provider prints it and its lines. */
+export type GuideStep = { readonly id: string; readonly title: string; readonly items: ReadonlyArray<GuideItem> }
 
+/** How the owner proves the connection works: an intro, the steps and an optional link. */
+export type VerifyHelp = { readonly intro: L; readonly steps: ReadonlyArray<L>; readonly url?: string }
+
+/** One provider with its copy in both languages (the old shape of the registry). */
 export type ProviderDef = {
-  readonly id: Provider;
-  readonly kind: "money" | "telegram" | "zalo" | "meta" | "webhook" | "google" | "email" | "data";
-  readonly title: L;
-  /** The provider's own brand name, as in "Mở trang X" and "Làm theo trên X". */
-  readonly brand: string;
-  readonly blurb: L;
-  readonly module: "accounting" | "chatbot" | null;
-  /** True when the docs could not be fully confirmed: shown as "Thử nghiệm sớm". */
-  readonly earlyAccess?: boolean;
-  readonly environments: ReadonlyArray<Environment>;
-  /** Said honestly in the environment step when the provider has no test mode. */
-  readonly noTestNote?: L;
-  readonly needsBank: boolean;
-  readonly dashboard: Partial<Record<Environment, string>>;
-  readonly guide: ReadonlyArray<GuideStep>;
-  /** Provider values NIVO needs (pasted by the owner in the guide) and stores encrypted. */
-  readonly credentials: ReadonlyArray<string>;
-  /** After saving credentials NIVO asks this provider to confirm the webhook URL itself. */
-  readonly confirmsWebhook?: boolean;
-  readonly verify: Partial<Record<Environment, VerifyHelp>>;
-};
+    readonly id: Provider
+    readonly kind: ProviderKind
+    readonly title: L
+    readonly brand: string
+    readonly blurb: L
+    readonly module: "accounting" | "chatbot" | null
+    readonly earlyAccess?: boolean
+    readonly environments: ReadonlyArray<Environment>
+    readonly noTestNote?: L
+    readonly needsBank: boolean
+    readonly dashboard: Partial<Record<Environment, string>>
+    readonly guide: ReadonlyArray<GuideStep>
+    readonly credentials: ReadonlyArray<string>
+    readonly confirmsWebhook?: boolean
+    readonly verify: Partial<Record<Environment, VerifyHelp>>
+}
 
-const SMALL_TRANSFER: L = {
-  vi: "Chuyển một khoản nhỏ, ví dụ 2.000đ, vào đúng tài khoản {bank} · {account} từ một ngân hàng hoặc ví khác.",
-  en: "Transfer a small amount, for example 2,000 VND, into the account {bank} · {account} from another bank or wallet.",
-};
+const catalogs: Readonly<Record<Locale, Readonly<Record<string, string>>>> = {
+    vi: allVi.connections,
+    en: allEn.connections,
+}
+const word = (locale: Locale, key: string): string => catalogs[locale][key] ?? key
+const both = (key: string): L => ({ vi: word("vi", key), en: word("en", key) })
 
-export const PROVIDERS: Readonly<Record<Provider, ProviderDef>> = {
+const itemOf = (provider: Provider, step: string, index: number, item: GuideItemDef): GuideItem => {
+    const key = (part: "label" | "option" | "state" | "hint" | "text") => guideKey(provider, step, index, part)
+    switch (item.kind) {
+        case "copy":
+            return {
+                kind: "copy",
+                label: word("vi", key("label")),
+                token: item.token,
+                ...(item.secret ? { secret: true } : {}),
+            }
+        case "choose":
+            return { kind: "choose", label: word("vi", key("label")), option: word("vi", key("option")) }
+        case "switch":
+            return { kind: "switch", label: word("vi", key("label")), state: both(key("state")) }
+        case "paste":
+            return {
+                kind: "paste",
+                label: word("vi", key("label")),
+                field: item.field,
+                ...(item.secret ? { secret: true } : {}),
+                ...(item.hasHint ? { hint: both(key("hint")) } : {}),
+            }
+        default:
+            return { kind: "note", text: both(key("text")) }
+    }
+}
 
-  openapi: {
-    id: "openapi", kind: "data", title: { vi: "API của bạn (Swagger / OpenAPI)", en: "Your API (Swagger / OpenAPI)" }, brand: "OpenAPI",
-    blurb: { vi: "Dán link Swagger: NIVO kéo dữ liệu từ các API bạn chọn, và agent được gọi những API bạn cho phép.", en: "Paste a Swagger link: NIVO pulls data from the endpoints you pick, and agents may call the ones you allow." },
-    module: null, environments: ["live"], needsBank: false, dashboard: {}, credentials: [], verify: {}, guide: [],
-  },
-  database: {
-    id: "database", kind: "data", title: { vi: "Cơ sở dữ liệu doanh nghiệp", en: "Business database" }, brand: "Database",
-    blurb: { vi: "PostgreSQL, MySQL hoặc SQL Server, chỉ đọc: chọn bảng khách hàng, đơn hàng, sản phẩm để NIVO đồng bộ.", en: "PostgreSQL, MySQL or SQL Server, read only: pick the customer, order and product tables NIVO syncs." },
-    module: null, environments: ["live"], needsBank: false, dashboard: {}, credentials: [], verify: {}, guide: [],
-  },
-  csv_import: {
-    id: "csv_import", kind: "data", title: { vi: "Nhập Excel / CSV", en: "Excel / CSV import" }, brand: "Excel",
-    blurb: { vi: "Tải lên file Excel hoặc CSV danh sách khách, đơn hàng, sản phẩm; ghép cột một lần, tải lại để cập nhật.", en: "Upload an Excel or CSV list of customers, orders or products; map the columns once, upload again to update." },
-    module: null, environments: ["live"], needsBank: false, dashboard: {}, credentials: [], verify: {}, guide: [],
-  },
-  imap: {
-    id: "imap", kind: "data", title: { vi: "Hộp thư email (IMAP)", en: "Mailbox (IMAP)" }, brand: "IMAP",
-    blurb: { vi: "Đọc email đến của hộp thư bạn chọn (chỉ đọc) để agent nắm yêu cầu, đơn hàng và hóa đơn gửi qua email.", en: "Reads incoming mail of the mailbox you choose (read only) so agents see requests, orders and invoices sent by email." },
-    module: null, environments: ["live"], needsBank: false, dashboard: {}, credentials: [], verify: {}, guide: [],
-  },
-  telegram_user: {
-    id: "telegram_user", kind: "data", title: { vi: "Telegram cá nhân", en: "Personal Telegram" }, brand: "Telegram", earlyAccess: true,
-    blurb: { vi: "Đọc tin nhắn của những cuộc trò chuyện bạn chọn trên tài khoản Telegram cá nhân. Chỉ đọc, ngắt bất cứ lúc nào.", en: "Reads the chats you pick on a personal Telegram account. Read only, disconnect any time." },
-    module: null, environments: ["live"], needsBank: false, dashboard: {}, credentials: [], verify: {}, guide: [],
-  },
-  sepay: {
-    id: "sepay", kind: "money", title: { vi: "Nguồn tiền về (SePay)", en: "Bank feed (SePay)" }, brand: "SePay",
-    blurb: { vi: "Tiền vào tài khoản ngân hàng của bạn được báo cho agent Kế toán để đối soát.", en: "Money arriving in your bank account reaches the Accounting agent for matching." },
-    module: "accounting", environments: ["test", "live"], needsBank: true,
-    dashboard: { test: "https://my.sepay.vn/testmode/webhook", live: "https://my.sepay.vn/webhook" },
-    credentials: [],
-    guide: [
-      { id: "basic", title: "Cơ bản", items: [
-        { kind: "copy", label: "Tên webhook", token: "webhookName" },
-        { kind: "copy", label: "URL nhận webhook", token: "webhookUrl" },
-        { kind: "choose", label: "Loại giao dịch", option: "Tiền vào" },
-        { kind: "choose", label: "Định dạng dữ liệu", option: "JSON" },
-        { kind: "switch", label: "Tự động gửi lại khi server trả lỗi", state: { vi: "bật", en: "turn on" } },
-      ] },
-      { id: "account", title: "Tài khoản", items: [
-        { kind: "choose", label: "Tài khoản ngân hàng", option: "{bank} · {account}" },
-      ] },
-      { id: "security", title: "Bảo mật", items: [
-        { kind: "choose", label: "Kiểu xác thực", option: "API Key" },
-        { kind: "copy", label: "API Key", token: "apiKey", secret: true },
-        { kind: "note", text: { vi: "Các bước còn lại để mặc định, rồi bấm Lưu.", en: "Leave the remaining steps as they are, then press Save." } },
-      ] },
-    ],
-    verify: {
-      test: {
-        url: "https://my.sepay.vn/testmode/webhook",
-        intro: { vi: "Tiền trong chế độ thử nghiệm không phải tiền thật.", en: "Money in test mode is not real." },
-        steps: [
-          { vi: "Trên SePay, bật công tắc Test Mode ở góc trên bên phải.", en: "On SePay, turn on the Test Mode switch at the top right." },
-          { vi: "Vào Giao dịch và bấm Mô phỏng giao dịch.", en: "Open Transactions and press Simulate transaction." },
-          { vi: "Chọn đúng tài khoản {bank} · {account}, nhập 2.000đ rồi tạo giao dịch.", en: "Pick the account {bank} · {account}, enter 2,000 and create the transaction." },
-        ],
-      },
-      live: { intro: { vi: "Một giao dịch thật nhỏ là cách chắc chắn nhất để biết kết nối chạy.", en: "A small real transfer is the surest way to know it works." }, steps: [SMALL_TRANSFER] },
-    },
-  },
-  payos: {
-    id: "payos", kind: "money", title: { vi: "Thanh toán qua payOS", en: "payOS payments" }, brand: "payOS", earlyAccess: true,
-    blurb: { vi: "Đơn đã thanh toán qua payOS được báo cho agent Kế toán để đối soát.", en: "Orders paid through payOS reach the Accounting agent for matching." },
-    module: "accounting", environments: ["live"], needsBank: false,
-    noTestNote: { vi: "payOS không có chế độ thử nghiệm riêng mà NIVO biết được, nên chỉ có thể kết nối Chính thức. Hãy thử bằng một khoản nhỏ.", en: "NIVO knows of no separate test mode in payOS, so only Live is available. Try it with a small amount." },
-    dashboard: { live: "https://my.payos.vn" },
-    credentials: ["clientId", "apiKey", "checksumKey"],
-    confirmsWebhook: true,
-    guide: [
-      { id: "channel", title: "Kênh thanh toán", items: [
-        { kind: "choose", label: "Menu", option: "Kênh thanh toán" },
-        { kind: "choose", label: "Nút", option: "Tạo kênh thanh toán" },
-        { kind: "note", text: { vi: "Đặt tên và chọn tài khoản ngân hàng nhận tiền của bạn trên payOS, rồi tạo kênh.", en: "Name it and pick the bank account that receives your money on payOS, then create the channel." } },
-      ] },
-      { id: "keys", title: "Khóa của kênh", items: [
-        { kind: "paste", label: "Client ID", field: "clientId" },
-        { kind: "paste", label: "API Key", field: "apiKey", secret: true },
-        { kind: "paste", label: "Checksum Key", field: "checksumKey", secret: true },
-      ] },
-      { id: "webhook", title: "Webhook", items: [
-        { kind: "copy", label: "Webhook URL", token: "webhookUrl" },
-        { kind: "note", text: { vi: "NIVO sẽ nhờ payOS xác nhận địa chỉ này khi bạn bấm Lưu khóa. Nếu kênh có ô Webhook URL, bạn cũng có thể dán vào đó.", en: "NIVO asks payOS to confirm this address when you press Save keys. If the channel has a Webhook URL box you can paste it there too." } },
-      ] },
-    ],
-    verify: { live: { intro: { vi: "Một đơn thật nhỏ là cách chắc chắn nhất để biết kết nối chạy.", en: "A small real order is the surest way to know it works." }, steps: [
-      { vi: "Tạo một link thanh toán nhỏ, ví dụ 2.000đ, trên payOS.", en: "Create a small payment link, for example 2,000 VND, on payOS." },
-      { vi: "Thanh toán link đó bằng ứng dụng ngân hàng.", en: "Pay that link with your banking app." },
-    ] } },
-  },
-  casso: {
-    id: "casso", kind: "money", title: { vi: "Nguồn tiền về (Casso)", en: "Bank feed (Casso)" }, brand: "Casso",
-    blurb: { vi: "Tiền vào tài khoản ngân hàng được Casso báo cho agent Kế toán để đối soát.", en: "Money arriving in your bank account is relayed by Casso to the Accounting agent for matching." },
-    module: "accounting", environments: ["live"], needsBank: true,
-    noTestNote: { vi: "Casso không có chế độ thử nghiệm riêng mà NIVO biết được, nên chỉ có thể kết nối Chính thức. Hãy thử bằng một khoản chuyển nhỏ.", en: "NIVO knows of no separate test mode in Casso, so only Live is available. Try it with a small transfer." },
-    dashboard: { live: "https://casso.vn" },
-    credentials: ["secureKey"],
-    guide: [
-      { id: "add", title: "Kết nối > Tích hợp", items: [
-        { kind: "choose", label: "Nút", option: "Thêm tích hợp" },
-        { kind: "choose", label: "Ứng dụng", option: "Webhook V2" },
-        { kind: "choose", label: "1. Chọn ngân hàng", option: "{bank} · {account}" },
-        { kind: "choose", label: "Nút", option: "Tiếp tục" },
-      ] },
-      { id: "setup", title: "Thiết lập", items: [
-        { kind: "copy", label: "Webhook URL", token: "webhookUrl" },
-        { kind: "paste", label: "Key bảo mật", field: "secureKey", secret: true, hint: { vi: "Casso tự tạo khóa này. Sao chép từ Casso và dán vào đây.", en: "Casso generates this key. Copy it from Casso and paste it here." } },
-        { kind: "note", text: { vi: "Bấm Lưu trên Casso để hoàn tất tích hợp.", en: "Press Save on Casso to finish the integration." } },
-      ] },
-    ],
-    verify: { live: { intro: { vi: "Một giao dịch thật nhỏ là cách chắc chắn nhất để biết kết nối chạy.", en: "A small real transfer is the surest way to know it works." }, steps: [SMALL_TRANSFER] } },
-  },
-  telegram: {
-    id: "telegram", kind: "telegram", title: { vi: "Bot Telegram", en: "Telegram bot" }, brand: "Telegram",
-    blurb: { vi: "Khách nhắn cho bot của chính bạn; agent Chatbot sẽ trả lời họ.", en: "Customers message your own bot; the Chatbot agent answers them." },
-    module: "chatbot", environments: ["live"], needsBank: false, dashboard: { live: "https://t.me/BotFather" }, credentials: ["token"], verify: {},
-    guide: [
-      { id: "botfather", title: "BotFather", items: [
-        { kind: "note", text: { vi: "Mở Telegram, tìm @BotFather (tài khoản chính thức, có dấu tích xanh).", en: "Open Telegram and search for @BotFather (the official account with the blue tick)." } },
-        { kind: "choose", label: "Gửi tin nhắn", option: "/newbot" },
-        { kind: "note", text: { vi: "Đặt tên và username cho bot của cửa hàng (username phải kết thúc bằng bot).", en: "Give your shop's bot a name and a username (the username must end in bot)." } },
-        { kind: "note", text: { vi: "BotFather gửi lại một dãy token dài dạng 123456:ABC-DEF... Hãy sao chép toàn bộ.", en: "BotFather replies with a long token like 123456:ABC-DEF... Copy all of it." } },
-      ] },
-    ],
-  },
-  zalo_oa: {
-    id: "zalo_oa", kind: "zalo", title: { vi: "Zalo OA", en: "Zalo OA" }, brand: "Zalo", module: "chatbot", earlyAccess: true,
-    blurb: { vi: "Khách nhắn cho Zalo Official Account của cửa hàng; agent Chatbot trả lời họ.", en: "Customers message your shop's Zalo Official Account; the Chatbot agent answers them." },
-    environments: ["live"], needsBank: false, dashboard: { live: "https://developers.zalo.me/apps" }, credentials: [], verify: {},
-    guide: [
-      { id: "app", title: "Tạo ứng dụng", items: [
-        { kind: "note", text: { vi: "Vào developers.zalo.me, đăng nhập bằng tài khoản Zalo quản trị OA của cửa hàng, rồi tạo một ứng dụng mới.", en: "Open developers.zalo.me, sign in with the Zalo account that administers your shop's OA, and create a new app." } },
-        { kind: "choose", label: "Nút", option: "Tạo ứng dụng" },
-        { kind: "note", text: { vi: "Sao chép App ID và Khóa bí mật của ứng dụng (App Secret) ở trang Cài đặt chung rồi dán vào NIVO.", en: "Copy the App ID and the app's secret key (App Secret) from the general settings and paste them into NIVO." } },
-      ] },
-      { id: "link", title: "Official Account", items: [
-        { kind: "choose", label: "Menu", option: "Official Account" },
-        { kind: "note", text: { vi: "Liên kết đúng Official Account của cửa hàng với ứng dụng này (tài khoản của bạn phải là quản trị viên OA).", en: "Link your shop's Official Account to this app (your account must be an administrator of the OA)." } },
-        { kind: "copy", label: "Official Account Callback URL", token: "callbackUrl" },
-        { kind: "note", text: { vi: "Mục Quyền: xin các quyền quản lý tin nhắn, thông tin người quan tâm và gửi tin tư vấn.", en: "Under Permissions, request message management, follower information and consultation messages." } },
-      ] },
-      { id: "webhook", title: "Webhook", items: [
-        { kind: "copy", label: "Webhook URL", token: "webhookUrl" },
-        { kind: "switch", label: "Sự kiện: Người dùng gửi tin nhắn văn bản (user_send_text)", state: { vi: "bật", en: "turn on" } },
-        { kind: "switch", label: "Sự kiện: Quan tâm OA (follow)", state: { vi: "bật", en: "turn on" } },
-        { kind: "paste", label: "OA Secret Key", field: "oaSecret", secret: true, hint: { vi: "Zalo hiển thị khóa này ở trang Webhook. NIVO dùng nó để kiểm tra mỗi tin Zalo gửi tới là thật.", en: "Zalo shows this key on the Webhook page. NIVO uses it to check that every message Zalo sends is genuine." } },
-      ] },
-    ],
-  },
-  meta: {
-    id: "meta", kind: "meta", title: { vi: "Facebook & Instagram", en: "Facebook & Instagram" }, brand: "Meta", module: "chatbot", earlyAccess: true,
-    blurb: { vi: "Khách nhắn hoặc bình luận trên Page Facebook và Instagram của bạn; agent trả lời, và lead từ quảng cáo biểu mẫu về thẳng NIVO.", en: "Customers message or comment on your Facebook Page and Instagram account; agents answer, and lead-ad leads land straight in NIVO." },
-    environments: ["live"], needsBank: false, dashboard: { live: "https://developers.facebook.com/apps" }, credentials: [], verify: {}, guide: [],
-  },
-  webhook: {
-    id: "webhook", kind: "webhook", title: { vi: "n8n / Webhook", en: "n8n / Webhook" }, brand: "n8n",
-    blurb: { vi: "NIVO gửi sự kiện (khách mới, chốt đơn, nhận tiền...) tới n8n, Make, Zapier hoặc bất kỳ địa chỉ nào bạn chọn.", en: "NIVO sends events (new customer, order, payment...) to n8n, Make, Zapier or any address you choose." },
-    module: null, environments: ["live"], needsBank: false, dashboard: { live: "https://n8n.io" }, credentials: [], verify: {},
-    guide: [
-      { id: "n8n", title: "n8n", items: [
-        { kind: "note", text: { vi: "Trong n8n, thêm node Webhook: Method POST, rồi sao chép Production URL.", en: "In n8n add a Webhook node: Method POST, then copy the Production URL." } },
-      ] },
-    ],
-  },
-  google: {
-    id: "google", kind: "google", title: { vi: "Google (Sheets)", en: "Google (Sheets)" }, brand: "Google",
-    blurb: { vi: "Kết nối tài khoản Google để NIVO ghi đơn hàng vào bảng tính của bạn.", en: "Connect your Google account so NIVO can record orders in your spreadsheet." },
-    module: null, environments: ["live"], needsBank: false, dashboard: { live: "https://sheets.google.com" }, credentials: [], verify: {}, guide: [],
-  },
-  smtp: {
-    id: "smtp", kind: "email", title: { vi: "Email gửi đi", en: "Outgoing email" }, brand: "SMTP",
-    blurb: { vi: "Gửi báo cáo, biên nhận và nhắc công nợ bằng chính email của cửa hàng bạn.", en: "Send reports, receipts and payment reminders from your own shop email." },
-    module: null, environments: ["live"], needsBank: false, dashboard: {}, credentials: [], verify: {}, guide: [],
-  },
-};
+const guideOf = (provider: Provider): ReadonlyArray<GuideStep> =>
+    (GUIDES[provider] ?? []).map((step) => ({
+        id: step.id,
+        title: word("vi", guideKey(provider, step.id, null, "title")),
+        items: step.items.map((item, index) => itemOf(provider, step.id, index, item)),
+    }))
 
-/** Order the providers appear on the Connections page. */
-export const PROVIDER_ORDER: ReadonlyArray<Provider> = ["sepay", "payos", "casso", "telegram", "zalo_oa", "meta", "google", "smtp"];
+const verifyOf = (provider: Provider): Partial<Record<Environment, VerifyHelp>> => {
+    const help: Partial<Record<Environment, VerifyHelp>> = {}
+    for (const environment of ["test", "live"] as const) {
+        const def = VERIFY[provider]?.[environment]
+        if (def === undefined) continue
+        help[environment] = {
+            intro: both(verifyKey(provider, environment, null)),
+            steps: Array.from({ length: def.steps }, (_, index) => both(verifyKey(provider, environment, index))),
+            ...(def.url === undefined ? {} : { url: def.url }),
+        }
+    }
+    return help
+}
+
+const definitionOf = (provider: Provider): ProviderDef => {
+    const def = REGISTRY[provider]
+    return {
+        id: def.id,
+        kind: def.kind,
+        title: both(providerKey(provider, "title")),
+        brand: def.brand,
+        blurb: both(providerKey(provider, "blurb")),
+        module: def.module,
+        ...(def.earlyAccess ? { earlyAccess: true } : {}),
+        environments: def.environments,
+        ...(def.hasNoTestNote ? { noTestNote: both(providerKey(provider, "noTest")) } : {}),
+        needsBank: def.needsBank,
+        dashboard: def.dashboard,
+        guide: guideOf(provider),
+        credentials: def.credentials,
+        ...(def.confirmsWebhook ? { confirmsWebhook: true } : {}),
+        verify: verifyOf(provider),
+    }
+}
+
+/** Every provider with its titles, blurbs and guide copy in both languages, rebuilt from the registry and the catalog. */
+export const PROVIDERS: Readonly<Record<Provider, ProviderDef>> = Object.fromEntries(
+    (Object.keys(REGISTRY) as ReadonlyArray<Provider>).map((provider) => [provider, definitionOf(provider)]),
+) as Record<Provider, ProviderDef>
 
 /** The Connections page groups providers by what they bring in; order inside a group is the display order. */
-export type ProviderGroup = "money" | "chat" | "data" | "tools";
-export const PROVIDER_GROUPS: ReadonlyArray<{ readonly id: ProviderGroup; readonly providers: ReadonlyArray<Provider> }> = [
-  { id: "money", providers: ["sepay", "payos", "casso"] },
-  { id: "chat", providers: ["telegram", "zalo_oa", "meta"] },
-  { id: "data", providers: ["database", "openapi", "csv_import", "imap", "telegram_user"] },
-  { id: "tools", providers: ["google", "smtp"] },
-];
-
-/** The provider's own mark (public/logos/providers). Outgoing email has none: it is the shop's own mailbox. */
-export const PROVIDER_LOGO: Readonly<Partial<Record<Provider, string>>> = {
-  sepay: "/logos/providers/sepay.png",
-  payos: "/logos/providers/payos.svg",
-  casso: "/logos/providers/casso.svg",
-  telegram: "/logos/providers/telegram.svg",
-  zalo_oa: "/logos/providers/zalo.svg",
-  meta: "/logos/providers/meta.svg",
-  google: "/logos/providers/googlesheets.svg",
-  webhook: "/logos/providers/n8n.svg",
-  // NIVO's own connector artwork (public/logos/connectors): the data sources have no brand of their own.
-  database: "/logos/connectors/database.svg",
-  openapi: "/logos/connectors/openapi.svg",
-  csv_import: "/logos/connectors/csv_import.svg",
-  imap: "/logos/connectors/imap.svg",
-  telegram_user: "/logos/connectors/telegram_user.svg",
-  smtp: "/logos/connectors/smtp.svg",
-};
-
-/** Replace {name} {bank} {account} in a guide or help string. */
-export const fill = (s: string, ctx: Pick<GuideContext, "bank" | "account" | "name">): string =>
-  s.replace(/\{(bank|account|name)\}/g, (_, k: "bank" | "account" | "name") => ctx[k]);
-
-export const tokenValue = (t: Token, ctx: GuideContext): string =>
-  t === "webhookName" ? `NIVO · ${ctx.name}` : t === "webhookUrl" ? ctx.webhookUrl : t === "callbackUrl" ? (ctx.callbackUrl ?? "") : ctx.apiKey;
+export const PROVIDER_GROUPS: ReadonlyArray<{
+    readonly id: ProviderGroupId
+    readonly providers: ReadonlyArray<Provider>
+}> = GROUPS.map((group) => ({ ...group }))

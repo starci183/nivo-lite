@@ -72,9 +72,15 @@ export const classifySmtpFailure = (error: unknown): MailError => {
     if (shape.code === "EENVELOPE" || /recipient|user unknown|mailbox unavailable|no such user/iu.test(text)) {
         const senderWords = /sender|from|send as|not (owned|allowed|permitted)|5\.7\.60|not authenticated|relay/iu
         const recipientWords = /recipient|user unknown/iu
-        return fail(senderWords.test(text) && !recipientWords.test(text) ? MailErrorCode.Sender : MailErrorCode.Recipient)
+        return fail(
+            senderWords.test(text) && !recipientWords.test(text) ? MailErrorCode.Sender : MailErrorCode.Recipient,
+        )
     }
-    if (/sender|send as|not (owned|allowed|permitted) |5\.7\.60|553|relay access denied|domain.*not verified|not verified/iu.test(text)) {
+    if (
+        /sender|send as|not (owned|allowed|permitted) |5\.7\.60|553|relay access denied|domain.*not verified|not verified/iu.test(
+            text,
+        )
+    ) {
         return fail(MailErrorCode.Sender)
     }
     if (/rate|limit|quota|too many|exceeded|4\.2\.1|452/iu.test(text)) return fail(MailErrorCode.Limit)
