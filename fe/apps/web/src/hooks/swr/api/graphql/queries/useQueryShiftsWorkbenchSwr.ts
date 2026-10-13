@@ -1,4 +1,4 @@
-import useSWR from "swr"
+import { useKeyedQuerySwr } from "@/hooks/reuseables"
 import { queryShiftsWorkbench } from "@/modules/api/graphql/queries/query-shifts-workbench"
 import type { QueryShiftsWorkbenchRequest } from "@/modules/api/graphql/queries/query-shifts-workbench"
 
@@ -7,8 +7,9 @@ export const QUERY_SHIFTS_WORKBENCH_SWR_KEY = "QUERY_SHIFTS_WORKBENCH_SWR"
 
 /** The `shiftsWorkbench` query through SWR; `undefined` suspends the read. */
 export const useQueryShiftsWorkbenchSwr = (request: QueryShiftsWorkbenchRequest | undefined) =>
-    useSWR(request === undefined ? null : [QUERY_SHIFTS_WORKBENCH_SWR_KEY, request], async ([, req]) => {
-        const result = await queryShiftsWorkbench({ request: req })
-        if (!result.data) throw new Error("shiftsWorkbench answered no data")
-        return result.data.shiftsWorkbench
-    })
+    useKeyedQuerySwr(
+        QUERY_SHIFTS_WORKBENCH_SWR_KEY,
+        request,
+        (input) => queryShiftsWorkbench({ request: input }),
+        (data) => data.shiftsWorkbench,
+    )

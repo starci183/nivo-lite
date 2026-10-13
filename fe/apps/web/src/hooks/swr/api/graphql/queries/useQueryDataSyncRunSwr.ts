@@ -8,11 +8,13 @@ export const QUERY_DATA_SYNC_RUN_SWR_KEY = "QUERY_DATA_SYNC_RUN_SWR"
 /** How often a running sync is asked about again, in milliseconds. */
 const POLL_MS = 2000
 
-/** Called when a poll returns a sync run. */
-type DataSyncRunSwrOptions = { readonly onSuccess?: (run: DataSyncRunType) => void }
+/** The callbacks of {@link useQueryDataSyncRunSwr}. */
+interface DataSyncRunOptions {
+    readonly onSuccess?: (run: DataSyncRunType) => void
+}
 
 /** One sync run of a data connection, asked about every two seconds until it is no longer running. `undefined` pauses it. */
-export const useQueryDataSyncRunSwr = (runId: string | undefined, options?: DataSyncRunSwrOptions) =>
+export const useQueryDataSyncRunSwr = (runId: string | undefined, options?: DataSyncRunOptions) =>
     useSWR(
         runId === undefined ? null : ([QUERY_DATA_SYNC_RUN_SWR_KEY, runId] as const),
         async ([, id]) => {
