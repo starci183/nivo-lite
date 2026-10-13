@@ -2,7 +2,7 @@ import { Field, ID, InputType } from "@nestjs/graphql"
 import { Transform } from "class-transformer"
 import { IsIn, IsOptional, IsString, IsUUID, MaxLength } from "class-validator"
 import { ACCESS_LEVELS } from "@modules/domain/connection-grants"
-import type { Access } from "@modules/domain/connection-grants"
+import type { Access } from "@modules/domain/agent-connections"
 
 @InputType()
 /** The bounded arguments of setConnectionGrant. */

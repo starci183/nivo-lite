@@ -993,6 +993,12 @@ input ArchiveVideoProjectInput {
   projectId: ID!
 }
 
+input AskGuideInput {
+  history: [GuideTurnInput!]!
+  path: String!
+  question: String!
+}
+
 input AskKnowledgeInput {
   audience: String!
   module: String!
@@ -1060,6 +1066,10 @@ type AuthorityRuleType {
 type AuthoritySheetType {
   profile: AuthorityProfileType
   rules: [AuthorityRuleType!]!
+}
+
+input AuthorizeDriveInput {
+  returnTo: String!
 }
 
 input AuthorizeGoogleInput {
@@ -1226,6 +1236,7 @@ type BillingPlanType {
   listed: Boolean!
   nameEn: String!
   nameVi: String!
+  packs: [BillingPlanTierType!]!
   perSeat: Boolean!
   period: String!
   priceAnnualVnd: Float
@@ -2224,6 +2235,12 @@ type CreditModuleUsageType {
   tokens: Float!
 }
 
+type CreditPackPurchaseType {
+  credits: Float!
+  priceVnd: Float!
+  purchasedAt: String!
+}
+
 type CreditPackType {
   code: String!
   credits: Float!
@@ -2691,6 +2708,10 @@ type DraftLowStockType {
   low: Int!
 }
 
+type DriveAuthorizeUrlType {
+  url: String!
+}
+
 type DriveFileType {
   id: ID!
   mimeType: String!
@@ -2704,6 +2725,11 @@ type DriveFolderType {
   files: [DriveFileType!]!
   name: String!
   truncated: Boolean!
+}
+
+type DriveGrantType {
+  email: String!
+  state: String!
 }
 
 input DriveLinkedFolderInput {
@@ -2851,6 +2877,16 @@ input GrantAgentConnectionInput {
 input GrantWishInput {
   access: String
   agentId: ID!
+}
+
+type GuideAskedType {
+  generationId: ID!
+  status: String!
+}
+
+input GuideTurnInput {
+  role: String!
+  text: String!
 }
 
 input HandoffToAccountingInput {
@@ -4488,8 +4524,10 @@ type Mutation {
   approveLeadGenComment(input: ApproveLeadGenCommentInput!): LeadGenCommentStatusType!
   approveVideoProject(input: ApproveVideoProjectInput!): VideoProjectType!
   archiveVideoProject(input: ArchiveVideoProjectInput!): VideoProjectType!
+  askGuide(input: AskGuideInput!): GuideAskedType!
   assignResponsibility(input: AssignResponsibilityInput!): LeadResponsibilityType!
   assignWorkItem(input: AssignWorkItemInput!): WorkItemType!
+  authorizeDrive(input: AuthorizeDriveInput!): DriveAuthorizeUrlType!
   authorizeGoogle(input: AuthorizeGoogleInput!): AuthorizeUrlType!
   authorizeMeta(input: AuthorizeMetaInput!): MetaAuthorizationType!
   authorizeZalo(input: AuthorizeZaloInput!): ZaloAuthorizationType!
@@ -4536,6 +4574,7 @@ type Mutation {
   deleteInventoryRecipe(input: InventoryRecipeRefInput!): Boolean!
   deleteKnowledgeSource(input: DeleteKnowledgeSourceInput!): Boolean!
   disconnectConnection(input: DisconnectConnectionInput!): Boolean!
+  disconnectDrive: Boolean!
   dismissContextNote(input: DismissContextNoteInput!): Boolean!
   dismissKnowledgeGap(input: DismissKnowledgeGapInput!): Boolean!
   draftInventoryLowStock: DraftLowStockType!
@@ -4690,6 +4729,7 @@ type Mutation {
   shareVideoProject(input: ShareVideoProjectInput!): VideoShareType!
   simulateInbound(input: SimulateInboundInput!): SimulateInboundType!
   startAgentChatConversation(input: StartAgentChatConversationInput!): CreatedAgentChatConversationType!
+  startFirstWorkspace: StartFirstWorkspaceType!
   startMoneyConnection(input: StartMoneyConnectionInput!): WizardConnectionType!
   startSmtpConnection(input: StartSmtpConnectionInput!): SmtpConnectionType!
   startTelegramLogin(input: StartTelegramLoginInput!): TelegramLoginStartedType!
@@ -4724,6 +4764,7 @@ type Mutation {
 }
 
 type MyAccountType {
+  avatarUrl: String
   email: String!
   name: String!
   providers: [String!]!
@@ -5278,6 +5319,7 @@ type Query {
   contentWorkbench: ContentWorkbenchType!
   contextNotes(input: ContextNotesInput!): [ContextNoteType!]!
   creditPacks: [CreditPackType!]!
+  creditPacksBought: [CreditPackPurchaseType!]!
   creditQuotaStatus: CreditQuotaStatusType
   creditRecentCostUsd(input: CreditRecentCostInput!): Float!
   creditTopupLots: [CreditTopupLotType!]!
@@ -5285,6 +5327,7 @@ type Query {
   dashboard: DashboardType!
   dataSyncRun(input: DataSyncRunInput!): DataSyncRunType!
   decisionHistory(input: ListDecisionHistoryInput!): [DecisionRecordType!]!
+  driveGrant: DriveGrantType!
   driveLinkedFolder(input: DriveLinkedFolderInput!): DriveFolderType!
   drivePickedFolder(input: DrivePickedFolderInput!): PickedFolderType!
   foundingMember: Boolean!
@@ -7040,6 +7083,10 @@ input StartAgentChatConversationInput {
   agentId: ID!
   kind: String!
   visitorName: String = null
+}
+
+type StartFirstWorkspaceType {
+  id: ID
 }
 
 input StartMoneyConnectionInput {

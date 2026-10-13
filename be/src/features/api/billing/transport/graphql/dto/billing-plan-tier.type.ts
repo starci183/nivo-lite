@@ -1,13 +1,13 @@
 import { Field, Float, ObjectType } from "@nestjs/graphql"
 
 @ObjectType()
-/** One usage tier of a plan: a monthly credit allowance and the price of it. */
+/** A per-seat credit level (Team) or an add-on credit pack of a plan, with its own price. */
 export class BillingPlanTierType {
-    /** The credits a month; per seat on a per-seat plan. */
+    /** The credits: a month of one seat for a level, the credits a pack adds. */
     @Field(() => Float)
     creditsPerMonth!: number
 
-    /** The price of a month in VND; per seat on a per-seat plan. */
+    /** The price in VND: a month of one seat for a level, the pack's own price for a pack. */
     @Field(() => Float)
     priceVnd!: number
 

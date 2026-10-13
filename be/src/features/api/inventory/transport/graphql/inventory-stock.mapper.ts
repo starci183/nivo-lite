@@ -1,26 +1,13 @@
-import type { AdjustStockOutput, StockTakeOutput, TransferStockOutput } from "@modules/domain/inventory"
-import type { AdjustInventoryStockRequest } from "../../application/adjust-inventory-stock.contracts"
+import type { StockTakeOutput, TransferStockOutput } from "@modules/domain/inventory"
 import type { TakeInventoryStockRequest } from "../../application/take-inventory-stock.contracts"
 import type { TransferInventoryStockRequest } from "../../application/transfer-inventory-stock.contracts"
-import type { AdjustInventoryStockInput } from "./dto/adjust-inventory-stock.input"
-import type { AdjustStockType } from "./dto/adjust-stock.type"
 import type { TakeInventoryStockInput } from "./dto/take-inventory-stock.input"
 import type { TakeStockType } from "./dto/take-stock.type"
 import type { TransferInventoryStockInput } from "./dto/transfer-inventory-stock.input"
 import type { TransferStockType } from "./dto/transfer-stock.type"
 
 /** Maps the GraphQL input to the stock adjustment request of the workspace it names. */
-export const toAdjustInventoryStockRequest = (
-    workspaceId: string,
-    input: AdjustInventoryStockInput,
-): AdjustInventoryStockRequest => ({
-    workspaceId,
-    itemId: input.itemId,
-    reason: input.reason,
-    ...(input.locationId === undefined || input.locationId === null ? {} : { locationId: input.locationId }),
-    ...(input.delta === undefined || input.delta === null ? {} : { delta: input.delta }),
-    ...(input.counted === undefined || input.counted === null ? {} : { counted: input.counted }),
-})
+export { toAdjustInventoryStockRequest } from "@modules/domain/inventory"
 
 /** Maps the GraphQL input to the stock take request of the workspace it names. */
 export const toTakeInventoryStockRequest = (
@@ -35,12 +22,7 @@ export const toTransferInventoryStockRequest = (
 ): TransferInventoryStockRequest => ({ workspaceId, ...input })
 
 /** Maps the adjustment outcome to the GraphQL type. */
-export const toAdjustStockType = (result: AdjustStockOutput): AdjustStockType => ({
-    state: result.state,
-    before: result.before ?? null,
-    after: result.after ?? null,
-    workItemId: result.workItemId ?? null,
-})
+export { toAdjustStockType } from "@modules/domain/inventory"
 
 /** Maps the stock take outcome to the GraphQL type. */
 export const toTakeStockType = (result: StockTakeOutput): TakeStockType => ({
