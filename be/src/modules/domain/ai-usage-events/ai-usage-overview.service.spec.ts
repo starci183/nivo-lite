@@ -1,49 +1,45 @@
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
+import { builder, mock } from "@starci/jest-preset"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import type { QuotaStatus, UsageSummary } from "./ai-usage-events.contracts"
 import { AiUsageEventsService } from "./ai-usage-events.service"
 import { AiUsageOverviewService } from "./ai-usage-overview.service"
 
+const USER = "user-1"
+const WORKSPACE = "ws-1"
+
 const MEMBER: WorkspaceMember = {
-    userId: "user-1",
-    workspaceId: "ws-1",
-    role: "manager",
+    userId: USER,
+    workspaceId: WORKSPACE,
+    role: "owner",
     staffId: null,
-    displayName: "An",
+    displayName: "Owner",
     status: "active",
 }
 
-const QUOTA: QuotaStatus = {
+const statusOf = builder<QuotaStatus>({
     periodStart: "2026-10-01",
-    messagesUsed: 2,
-    tokensUsed: 30,
-    costUsd: 0.1,
+    messagesUsed: 80,
+    tokensUsed: 1000,
+    costUsd: 0.4,
     messagesLimit: 100,
-    tokensLimit: 1000,
-    fallbackReply: null,
-    creditsUsed: 4,
-    creditsLimit: 20,
-    creditsCarried: 0,
-    topupBalance: 1,
+    tokensLimit: 10000,
+    fallbackReply: "Vui l\u00f2ng ch\u1edd",
+    creditsUsed: 100,
+    creditsLimit: 200,
+    creditsCarried: 20,
+    topupBalance: 50,
     messagesExceeded: false,
     tokensExceeded: false,
     creditsExceeded: false,
-    ratio: 0.2,
-    level: "ok",
-}
-
-const SUMMARY: UsageSummary = {
-    status: QUOTA,
-    byModule: [{ module: "chat", calls: 2, tokens: 30, costUsd: 0.1, credits: 4 }],
-    daily: [{ day: "2026-10-13", tokens: 30, credits: 4 }],
-}
+    ratio: 0.8,
+    level: "warn",
+})
 
 const build = async () => {
     const usage = mock<AiUsageEventsService>()
-    const members = mock<WorkspaceMembersService>()
-    members.require.mockResolvedValue(MEMBER)
+    const members = mock<WorkspaceMembersService>({ require: jest.fn(() => Promise.resolve(MEMBER)) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             AiUsageOverviewService,
@@ -51,31 +47,50 @@ const build = async () => {
             { provide: WorkspaceMembersService, useValue: members },
         ],
     }).compile()
-    return { overview: moduleRef.get(AiUsageOverviewService), usage, members }
+    return { service: moduleRef.get(AiUsageOverviewService), usage, members }
 }
 
 describe("AiUsageOverviewService", () => {
-    it("returns the current quota for any active member", async () => {
-        const { overview, usage, members } = await build()
-        usage.readQuotaStatus.mockResolvedValue(QUOTA)
+    describe("quotaStatus", () => {
+        it("answers the month's quota to any active member", async () => {
+            const { service, usage, members } = await build()
+            usage.readQuotaStatus.mockResolvedValue(statusOf())
 
-        await expect(overview.quotaStatus("user-1", "ws-1")).resolves.toEqual(QUOTA)
-        expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
+            await expect(service.quotaStatus(USER, WORKSPACE)).resolves.toEqual(statusOf())
+
+            expect(members.require).toHaveBeenCalledWith(USER, WORKSPACE)
+        })
+
+        it("reads nothing for someone who is not a member", async () => {
+            const { service, usage, members } = await build()
+            const refusal = new Error("not a member")
+            members.require.mockRejectedValue(refusal)
+
+            await expect(service.quotaStatus(USER, WORKSPACE)).rejects.toBe(refusal)
+            expect(usage.readQuotaStatus).not.toHaveBeenCalled()
+        })
     })
 
-    it("returns the billing summary for an owner or manager", async () => {
-        const { overview, usage, members } = await build()
-        usage.usageSummary.mockResolvedValue(SUMMARY)
+    describe("usageSummary", () => {
+        it("answers the summary to an owner or a manager only", async () => {
+            const { service, usage, members } = await build()
+            const summary: UsageSummary = { status: null, byModule: [], daily: [] }
+            usage.usageSummary.mockResolvedValue(summary)
 
-        await expect(overview.usageSummary("user-1", "ws-1")).resolves.toEqual(SUMMARY)
-        expect(members.require).toHaveBeenCalledWith("user-1", "ws-1", ["owner", "manager"])
+            await expect(service.usageSummary(USER, WORKSPACE)).resolves.toEqual(summary)
+
+            expect(members.require).toHaveBeenCalledWith(USER, WORKSPACE, ["owner", "manager"])
+        })
     })
 
-    it("returns the recent model cost for any active member", async () => {
-        const { overview, usage } = await build()
-        usage.recentCostUsd.mockResolvedValue(1.25)
+    describe("recentCostUsd", () => {
+        it("answers the cost since the chosen day", async () => {
+            const { service, usage } = await build()
+            usage.recentCostUsd.mockResolvedValue(1.25)
 
-        await expect(overview.recentCostUsd("user-1", "ws-1", "2026-10-01")).resolves.toBe(1.25)
-        expect(usage.recentCostUsd).toHaveBeenCalledWith("ws-1", "2026-10-01")
+            await expect(service.recentCostUsd(USER, WORKSPACE, "2026-10-01")).resolves.toBe(1.25)
+
+            expect(usage.recentCostUsd).toHaveBeenCalledWith(WORKSPACE, "2026-10-01")
+        })
     })
 })

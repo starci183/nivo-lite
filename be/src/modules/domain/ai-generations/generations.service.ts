@@ -33,7 +33,15 @@ import type { UsageGate } from "./ai-generations.port"
 import { EngineStatusService } from "@modules/domain/agents"
 import { AiGenerationsError, AiGenerationsErrorCode } from "./errors/ai-generations.error"
 import { isRequestableKind } from "./request-kind.policy"
-import { clampTimeout, inputJsonOf, inputOf, isRecord, progressOf, purposeOf, verdictOf } from "./generation.policy"
+import {
+    clampTimeout,
+    inputJsonOf,
+    inputOf,
+    isPlainObject,
+    progressOf,
+    purposeOf,
+    verdictOf,
+} from "./generation.policy"
 import type {
     GenerationProgressRow,
     GenerationStateRow,
@@ -158,7 +166,7 @@ export class GenerationsService {
             [id, workspaceId],
         )
         if (row === undefined) return null
-        const record = (value: unknown): Record<string, unknown> => (isRecord(value) ? value : {})
+        const record = (value: unknown): Record<string, unknown> => (isPlainObject(value) ? value : {})
         const progress = progressOf(row)
         return {
             id: row.id,

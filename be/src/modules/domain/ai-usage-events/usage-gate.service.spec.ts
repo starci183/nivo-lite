@@ -1,22 +1,21 @@
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
-import type { GenerationUsageRecord } from "@modules/domain/ai-generations"
+import { builder, mock } from "@starci/jest-preset"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import type { QuotaStatus } from "./ai-usage-events.contracts"
 import { AiUsageEventsService } from "./ai-usage-events.service"
 import { UsageGateService } from "./usage-gate.service"
 
-const BLOCKED: QuotaStatus = {
+const statusOf = builder<QuotaStatus>({
     periodStart: "2026-10-01",
     messagesUsed: 100,
-    tokensUsed: 30,
-    costUsd: 0.1,
+    tokensUsed: 1000,
+    costUsd: 0.4,
     messagesLimit: 100,
-    tokensLimit: 1000,
-    fallbackReply: null,
-    creditsUsed: 20,
-    creditsLimit: 20,
+    tokensLimit: 10000,
+    fallbackReply: "",
+    creditsUsed: 200,
+    creditsLimit: 200,
     creditsCarried: 0,
     topupBalance: 0,
     messagesExceeded: true,
@@ -24,26 +23,13 @@ const BLOCKED: QuotaStatus = {
     creditsExceeded: true,
     ratio: 1,
     level: "exceeded",
-}
-
-const ENTRY: GenerationUsageRecord = {
-    workspaceId: "ws-1",
-    kind: "chat_reply",
-    module: "chat",
-    usage: {
-        prompt_tokens: 10,
-        completion_tokens: 4,
-        cached_tokens: 0,
-        cost: 0.02,
-        model: "openclaw/writer",
-    },
-    completionChars: 20,
-}
+})
 
 const build = async () => {
-    const usage = mock<AiUsageEventsService>()
-    const catalog = mock<MessageCatalog>()
-    catalog.get.mockReturnValue("Allowance used")
+    const usage = mock<AiUsageEventsService>({ record: jest.fn(() => Promise.resolve()) })
+    const catalog = mock<MessageCatalog>({
+        get: jest.fn((...[key, , locale]: Parameters<MessageCatalog["get"]>) => `${key}:${locale}`),
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             UsageGateService,
@@ -51,50 +37,75 @@ const build = async () => {
             { provide: MESSAGE_CATALOG, useValue: catalog },
         ],
     }).compile()
-    return { gate: moduleRef.get(UsageGateService), usage, catalog }
+    return { gate: moduleRef.get(UsageGateService), usage }
 }
 
 describe("UsageGateService", () => {
-    it("returns no block when the allowance still has room", async () => {
-        const { gate, usage } = await build()
-        usage.blockedBy.mockResolvedValue(null)
+    describe("blockedBy", () => {
+        it("answers the exceeded sentence in the asked language when the allowance is used up", async () => {
+            const { gate, usage } = await build()
+            usage.blockedBy.mockResolvedValue(statusOf())
 
-        await expect(gate.blockedBy("ws-1", "chat_reply", "en")).resolves.toBeNull()
-        expect(usage.blockedBy).toHaveBeenCalledWith("ws-1", "chat_reply", false)
-    })
+            await expect(gate.blockedBy("ws-1", "relay", "en")).resolves.toEqual({ message: "usage.exceeded:en" })
 
-    it("returns the catalog sentence when the allowance is used up", async () => {
-        const { gate, usage, catalog } = await build()
-        usage.blockedBy.mockResolvedValue(BLOCKED)
-
-        await expect(gate.blockedBy("ws-1", "unknown-kind", "vi")).resolves.toEqual({ message: "Allowance used" })
-        expect(usage.blockedBy).toHaveBeenCalledWith("ws-1", "engine", false)
-        expect(catalog.get).toHaveBeenCalledWith("usage.exceeded", {}, "vi")
-    })
-
-    it("meters provider figures and books openclaw when the run names no model", async () => {
-        const { gate, usage } = await build()
-        usage.record.mockResolvedValue(undefined)
-
-        await expect(gate.record(ENTRY)).resolves.toBeUndefined()
-        await expect(gate.record({ ...ENTRY, usage: null, completionChars: 8 })).resolves.toBeUndefined()
-        expect(usage.record).toHaveBeenNthCalledWith(1, {
-            workspaceId: "ws-1",
-            kind: "chat_reply",
-            module: "chat",
-            model: "openclaw/writer",
-            usage: { prompt_tokens: 10, completion_tokens: 4, total_tokens: 14, cost: 0.02 },
-            promptChars: 0,
-            completionChars: 20,
+            expect(usage.blockedBy).toHaveBeenCalledWith("ws-1", "relay", false)
         })
-        expect(usage.record).toHaveBeenNthCalledWith(2, {
-            workspaceId: "ws-1",
-            kind: "chat_reply",
-            module: "chat",
-            model: "openclaw",
-            usage: null,
-            promptChars: 0,
-            completionChars: 8,
+
+        it("answers no block within the allowance, booking an unknown kind as engine work", async () => {
+            const { gate, usage } = await build()
+            usage.blockedBy.mockResolvedValue(null)
+
+            await expect(gate.blockedBy("ws-1", "mystery", "vi")).resolves.toBeNull()
+
+            expect(usage.blockedBy).toHaveBeenCalledWith("ws-1", "engine", false)
+        })
+    })
+
+    describe("record", () => {
+        it("meters a run with its model, its tokens summed and its cost", async () => {
+            const { gate, usage } = await build()
+
+            await gate.record({
+                workspaceId: "ws-1",
+                kind: "relay",
+                module: "office",
+                usage: { prompt_tokens: 10, completion_tokens: 5, cached_tokens: 0, cost: 0.1, model: "m" },
+                completionChars: 42,
+            })
+
+            expect(usage.record.mock.calls).toEqual([
+                [
+                    {
+                        workspaceId: "ws-1",
+                        kind: "relay",
+                        module: "office",
+                        model: "m",
+                        usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15, cost: 0.1 },
+                        promptChars: 0,
+                        completionChars: 42,
+                    },
+                ],
+            ])
+        })
+
+        it("meters a run that reported nothing under the default model with no usage", async () => {
+            const { gate, usage } = await build()
+
+            await gate.record({ workspaceId: "ws-1", kind: "brain", module: "brain", usage: null, completionChars: 3 })
+
+            expect(usage.record.mock.calls).toEqual([
+                [
+                    {
+                        workspaceId: "ws-1",
+                        kind: "brain",
+                        module: "brain",
+                        model: "openclaw",
+                        usage: null,
+                        promptChars: 0,
+                        completionChars: 3,
+                    },
+                ],
+            ])
         })
     })
 })

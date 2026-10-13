@@ -15,7 +15,6 @@ import type { Logger } from "@modules/platform/logging"
 import { AutomationEngineService } from "./automation-engine.service"
 import { AutomationExtensionsService } from "./automation-extensions.service"
 import type { AutomationOffice, AutomationText } from "./automation-ports.contracts"
-import { AUTOMATION_OFFICE, AUTOMATION_TEXT } from "./automations.decorators"
 import { AutomationShopService } from "./automation-shop.service"
 import {
     PATTERNS,
@@ -26,6 +25,7 @@ import {
     buildShop,
     buildTemplate,
 } from "@tests/fixtures/builders/automations.builder"
+import { AUTOMATION_OFFICE, AUTOMATION_TEXT } from "./automations.decorators"
 import { AutomationsLogEvent } from "./automations.log-events"
 import { AutomationsService } from "./automations.service"
 import { AutomationsErrorCode } from "./errors/automations.error"
@@ -50,7 +50,7 @@ const message = (): TemplateDefinition =>
         contentMode: "fixed",
     })
 
-const build = async (def: TemplateDefinition = message(), withText = false) => {
+const build = async (def: TemplateDefinition = message()) => {
     const clock = new FakeClock(NOW)
     const catalog = mock<MessageCatalog>()
     catalog.get.mockImplementation((key, params) => `${key}${JSON.stringify(params)}`)
@@ -58,7 +58,7 @@ const build = async (def: TemplateDefinition = message(), withText = false) => {
     const office = mock<AutomationOffice>()
     office.logEvidence.mockResolvedValue()
     const text = mock<AutomationText>()
-    if (!withText) text.generate.mockResolvedValue(null)
+    text.generate.mockResolvedValue(null)
     const templates = mock<AutomationTemplatesService>()
     templates.templateOf.mockResolvedValue(def)
     templates.listTemplates.mockResolvedValue([def])
@@ -103,20 +103,8 @@ const build = async (def: TemplateDefinition = message(), withText = false) => {
             { provide: AutomationEngineService, useValue: engine },
         ],
     }).compile()
-    return {
-        service: moduleRef.get(AutomationsService),
-        logger,
-        office,
-        text,
-        templates,
-        pipelines,
-        runs,
-        shop,
-        members,
-        extensions,
-        n8nRuns,
-        engine,
-    }
+    const service = moduleRef.get(AutomationsService)
+    return { service, logger, office, text, templates, pipelines, runs, shop, members, extensions, n8nRuns, engine }
 }
 
 describe("AutomationsService", () => {
@@ -382,7 +370,7 @@ describe("AutomationsService", () => {
 
     describe("proposeBody", () => {
         it("uses the text the model wrote when it keeps the blanks and is plain", async () => {
-            const { service, text } = await build(message(), true)
+            const { service, text } = await build()
             text.generate.mockResolvedValue('"Chao {ten_khach}, rat vui duoc phuc vu"')
 
             await expect(service.proposeBody("u-1", "ws-1", "thank_payment")).resolves.toEqual({
@@ -396,14 +384,12 @@ describe("AutomationsService", () => {
             )
         })
 
-        it("gives the standard wording when no model is bound, none answered or the text is not usable", async () => {
-            const bare = await build()
-            const silent = await build(message(), true)
-            silent.text.generate.mockResolvedValue(null)
-            const dropped = await build(message(), true)
+        it("gives the standard wording when the model answers nothing or the text is not usable", async () => {
+            const silent = await build()
+            const dropped = await build()
             dropped.text.generate.mockResolvedValue("no blank here")
 
-            for (const { service } of [bare, silent, dropped]) {
+            for (const { service } of [silent, dropped]) {
                 await expect(service.proposeBody("u-1", "ws-1", "thank_payment")).resolves.toEqual({
                     body: BODY,
                     generated: false,
@@ -458,6 +444,7 @@ describe("AutomationsService", () => {
                 expect.objectContaining({ config: {}, data: { period: "2026-09" } }),
             )
         })
+
         it("refuses a template that cannot be run on demand", async () => {
             const notN8n = await build()
             const notScheduled = await build(

@@ -12,5 +12,10 @@ export interface AppCommand {
     readonly input: Readonly<Record<string, unknown>>
 }
 
-/** What a finished command leaves for the web app to read. */
-export type AppCommandResult = Readonly<Record<string, unknown>>
+/** What a finished command leaves for the web app to read: named fields the kind defines, stored as JSON. */
+export interface AppCommandResult {
+    readonly [field: string]: unknown
+}
+
+/** The command `begin` claimed, or null when it is unknown or already settled and nothing should run. */
+export type OptionalAppCommand = AppCommand | null

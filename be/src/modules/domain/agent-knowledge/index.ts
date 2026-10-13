@@ -1,0 +1,7 @@
+export { AgentKnowledgeModule } from "./agent-knowledge.module"
+export { AgentKnowledgeLensService } from "./agent-knowledge-lens.service"
+export { KnowledgeGapNotesService } from "./knowledge-gap-notes.service"
+export { KnowledgeRecallService } from "./knowledge-recall.service"
+export { KnowledgeSearchToolService } from "./knowledge-search-tool.service"
+export { ModuleProfilesService } from "./module-profiles.service"
+export { viewOf } from "./knowledge-view.policy"

@@ -122,6 +122,22 @@ export class AgentBindingsService {
         }
     }
 
+    /** Writes a grant the caller already proved and planned, inside its transaction (the connection grants editor). */
+    async writeGrant(grant: BindingGrant, manager: EntityManager = this.entityManager): Promise<void> {
+        await manager.query(UPSERT_BINDING, [
+            grant.agentId,
+            grant.connectionId,
+            grant.workspaceId,
+            grant.purpose,
+            grant.access,
+        ])
+    }
+
+    /** Removes a grant the caller already proved and planned, inside its transaction (the connection grants editor). */
+    async removeGrant(target: BindingTarget, manager: EntityManager = this.entityManager): Promise<void> {
+        await manager.query(DELETE_BINDING, [target.agentId, target.connectionId, target.workspaceId])
+    }
+
     /** Removes the grant of a connection to an agent; a manager only. */
     async revoke(userId: string, target: BindingTarget): Promise<void> {
         await this.members.require(userId, target.workspaceId, GOVERNORS)
