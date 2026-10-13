@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
+import { AgentAccessLogModule } from "@modules/domain/agent-access-log"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./connection-grants.module-definition"
 import { ConnectionGrantsService } from "./connection-grants.service"
 
@@ -11,6 +12,7 @@ export class ConnectionGrantsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
+            imports: [...(base.imports ?? []), AgentAccessLogModule.register({})],
             providers: [...(base.providers ?? []), ConnectionGrantsService],
             exports: [ConnectionGrantsService],
         }

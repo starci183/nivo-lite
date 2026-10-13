@@ -85,22 +85,13 @@ const build = async (
 const invalid = (field: string) =>
     new ConnectionsError({ code: ConnectionsErrorCode.CommandInvalid, params: { field } })
 
-const agents = () =>
-    mockEntityManager({
-        query: [
-            [FIND_WORKSPACE_OWNER, [{ user_id: "owner-1" }]],
-            [
-                LIST_WORKSPACE_AGENTS,
-                [
-                    { id: "chat-1", module: "chatbot" },
-                    { id: "bank-1", module: "accounting" },
-                    { id: "unknown-1", module: "unknown" },
-                    { id: "booking-1", module: "booking" },
-                    { id: "chat-2", module: "chatbot" },
-                ],
-            ],
-        ],
-    })
+const AGENT_ROWS = [
+    { id: "chat-1", module: "chatbot" },
+    { id: "bank-1", module: "accounting" },
+    { id: "unknown-1", module: "unknown" },
+    { id: "booking-1", module: "booking" },
+    { id: "chat-2", module: "chatbot" },
+]
 
 describe("ChannelProvisioningService", () => {
     it.each<ProvisionFlags>([{}, { workspace: "" }, { workspace: "not-a-uuid" }, { workspace: `${WORKSPACE}extra` }])(
@@ -228,7 +219,15 @@ describe("ChannelProvisioningService", () => {
     })
 
     it("binds only the agents whose modules can use Telegram, preserving their order", async () => {
-        const { service, entityManager, grants, print } = await build({}, agents())
+        const { service, entityManager, grants, print } = await build(
+            {},
+            mockEntityManager({
+                query: [
+                    [FIND_WORKSPACE_OWNER, [{ user_id: "owner-1" }]],
+                    [LIST_WORKSPACE_AGENTS, AGENT_ROWS],
+                ],
+            }),
+        )
 
         await service.run("telegram", { workspace: WORKSPACE, bind: true })
 
@@ -246,7 +245,15 @@ describe("ChannelProvisioningService", () => {
     })
 
     it("uses the supplied SePay name and environment and binds only accounting agents", async () => {
-        const { service, entityManager, channels, grants, print } = await build({}, agents())
+        const { service, entityManager, channels, grants, print } = await build(
+            {},
+            mockEntityManager({
+                query: [
+                    [FIND_WORKSPACE_OWNER, [{ user_id: "owner-1" }]],
+                    [LIST_WORKSPACE_AGENTS, AGENT_ROWS],
+                ],
+            }),
+        )
 
         await service.run("sepay", {
             workspace: WORKSPACE,

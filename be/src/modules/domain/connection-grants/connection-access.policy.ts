@@ -1,8 +1,4 @@
-/** What an agent may do through one connection. */
-export type Access = "read" | "ask" | "auto"
-
-/** How an agent uses a connection (stored on the grant). */
-export type Purpose = "inbound_chat" | "outbound_chat" | "bank_feed" | "data_source" | "tool" | "lead_source"
+import type { Access, Purpose } from "@modules/domain/agent-connections"
 
 /** Lowest to highest. A new grant starts at `ask`; `auto` is never a default. */
 export const ACCESS_LEVELS: ReadonlyArray<Access> = ["read", "ask", "auto"]

@@ -18,15 +18,21 @@ export interface ConnectionCommand {
 
 /** A command that worked: what the capability answered (`true` when it answered nothing). */
 export interface CommandSucceeded {
+    /** Always true: tells the browser to read `value` rather than an error. */
     readonly ok: true
+    /** What the capability answered, handed to the browser as is. */
     readonly value: unknown
 }
 
 /** A command that failed: the stable code of the failure, how it travels and its text parameters. */
 export interface CommandFailed {
+    /** Always false: tells the browser to read the error fields instead of a value. */
     readonly ok: false
+    /** How the failure travels (invalid, forbidden, conflict, internal and so on), which picks how the browser shows it. */
     readonly kind: ErrorKind
+    /** The stable failure code the browser looks its message up by. */
     readonly code: string
+    /** The values the localized message interpolates. */
     readonly params: ErrorParams
 }
 

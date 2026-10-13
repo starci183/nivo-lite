@@ -15,7 +15,7 @@ import { CLOCK } from "@modules/platform/clock"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ChannelDeliveryService } from "./channel-delivery.service"
-import { ChannelSenderRegistryService } from "./channel-sender-registry.service"
+import type { ChannelSenderRegistry } from "./channels.contracts"
 import { CHANNEL_SENDER_REGISTRY } from "./channels.decorators"
 import { ChannelsError, ChannelsErrorCode } from "./errors/channels.error"
 import { ZaloCredentialsService } from "./zalo-credentials.service"
@@ -54,7 +54,7 @@ const build = async (found: ConversationTarget | null = target(), lastCustomerAt
     const logger = mock<Logger>()
     const secrets = mock<ConnectionSecretsService>()
     const credentials = mock<ZaloCredentialsService>()
-    const senders = new ChannelSenderRegistryService()
+    const senders = mock<ChannelSenderRegistry>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             ChannelDeliveryService,
@@ -142,7 +142,7 @@ describe("ChannelDeliveryService", () => {
         it("hands the reply to the sender registered for the channel", async () => {
             const { service, senders } = await build(target({ channel: "facebook" }))
             const send = jest.fn().mockResolvedValue(true)
-            senders.add({ channels: ["facebook"], send })
+            senders.get.mockReturnValue({ channels: ["facebook"], send })
 
             await expect(service.deliver(request)).resolves.toEqual({ delivered: true, failure: null })
 
@@ -151,7 +151,7 @@ describe("ChannelDeliveryService", () => {
 
         it("reports a refusal of the registered sender", async () => {
             const { service, senders, messages } = await build(target({ channel: "facebook" }))
-            senders.add({ channels: ["facebook"], send: () => Promise.resolve(false) })
+            senders.get.mockReturnValue({ channels: ["facebook"], send: () => Promise.resolve(false) })
 
             await expect(service.deliver(request)).resolves.toEqual({ delivered: false, failure: null })
             expect(messages.markDelivery).toHaveBeenCalledWith("msg-1", false, undefined)

@@ -19,3 +19,11 @@ export interface ConnectionIdRow {
     /** The connection id. */
     readonly connection_id: string
 }
+
+/** The sealed credential of a connection, as FIND_STORED_SECRET selects it. */
+export interface StoredSecretRow {
+    /** The sealed credential. */
+    readonly ciphertext: string
+    /** The random secret of the connection's own webhook. */
+    readonly webhook_secret: string
+}

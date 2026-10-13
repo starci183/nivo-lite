@@ -5,7 +5,7 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectQueueOutbox } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
 import { KNOWLEDGE_QUEUE, KnowledgeJob, knowledgeDedupeKey } from "@modules/queues/knowledge"
-import type { CommandResult, MaybeCommand, MaybeCommandState } from "./brain-commands.contracts"
+import type { BrainCommandResult, MaybeCommand, MaybeCommandState } from "./brain-commands.contracts"
 import type { BrainCommandRow, CommandIdRow, CommandStateRow } from "./persistence/brain-commands.rows"
 import {
     BEGIN_COMMAND,
@@ -77,7 +77,7 @@ export class BrainCommandsService {
     }
 
     /** Closes the command as done with what it produced. */
-    async finish(workspaceId: string, id: string, result: CommandResult): Promise<void> {
+    async finish(workspaceId: string, id: string, result: BrainCommandResult): Promise<void> {
         await this.entityManager.query(FINISH_COMMAND, [workspaceId, id, JSON.stringify(result)])
     }
 

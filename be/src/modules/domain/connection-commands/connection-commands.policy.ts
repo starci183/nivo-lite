@@ -9,12 +9,19 @@ import type { WebhookConnectionsService } from "@modules/domain/webhook-connecti
 
 /** The capabilities a command can reach. */
 export interface CommandServices {
+    /** Creates, reads and checks connections; also authorises the actor. */
     readonly connections: ConnectionsService
+    /** Sets and revokes which agents may use a connection. */
     readonly grants: ConnectionGrantsService
+    /** Probes and binds messaging channel connections. */
     readonly channels: ChannelConnectionsService
+    /** Manages the events an outgoing webhook connection delivers. */
     readonly webhooks: WebhookConnectionsService
+    /** Runs Google sign-in and sheet provisioning for a connection. */
     readonly google: GoogleConnectionsService
+    /** Runs Meta (Facebook, Instagram) sign-in and page subscriptions. */
     readonly meta: MetaConnectionsService
+    /** Disconnects and deletes connections, releasing what they hold. */
     readonly lifecycle: ConnectionLifecycleService
 }
 
@@ -67,8 +74,7 @@ const wishesOf = (input: Input, listKey: string, idKey: string): ReadonlyArray<W
     })
 }
 
-const withAccess = (wish: Wish): { readonly access?: Level } =>
-    wish.access === undefined ? {} : { access: wish.access }
+const withAccess = (wish: Wish): Pick<Wish, "access"> => (wish.access === undefined ? {} : { access: wish.access })
 
 const eventsOf = (input: Input): ReadonlyArray<string> => {
     const events = input.events
