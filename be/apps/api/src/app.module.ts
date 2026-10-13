@@ -1,13 +1,28 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
+import { KnowledgeHttpModule } from "@features/api/knowledge"
+import { IndexKnowledgeSourceQueueModule } from "@features/jobs/index-knowledge-source"
+import { ReembedKnowledgeQueueModule } from "@features/jobs/reembed-knowledge"
 import { SystemHealthHttpModule } from "@features/api/system-health"
 import { WorkspacesHttpModule } from "@features/api/workspaces"
 import { AuthGuard, IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } from "@modules/domain/identity"
+import { KnowledgeChunksModule } from "@modules/domain/knowledge-chunks"
+import { KNOWLEDGE_ERROR_KINDS, KNOWLEDGE_MESSAGES, KnowledgeModule } from "@modules/domain/knowledge"
+import type { DriveAccessSource } from "@modules/domain/knowledge"
+import {
+    KNOWLEDGE_SOURCES_ERROR_KINDS,
+    KNOWLEDGE_SOURCES_MESSAGES,
+    KnowledgeSourcesModule,
+} from "@modules/domain/knowledge-sources"
+import { NivoKnowledgeModule } from "@modules/domain/nivo-knowledge"
+import { DOCUMENTS_ERROR_KINDS, DOCUMENTS_MESSAGES, DocumentsModule } from "@modules/integrations/documents"
+import { LlmModule } from "@modules/integrations/llm"
 import {
     SUPABASE_ACCESS_TOKEN_VERIFIER,
     SUPABASE_AUTH,
     SUPABASE_ERROR_KINDS,
+    SUPABASE_STORAGE,
     SupabaseModule,
     createSupabaseAccessTokenVerifier,
 } from "@modules/integrations/supabase"
@@ -36,11 +51,15 @@ import {
     OriginGuard,
     RateLimitGuard,
 } from "@modules/platform/http-security"
+import { HTTP_ERROR_KINDS, HTTP_MESSAGES, HttpModule } from "@modules/platform/http"
 import { I18nModule } from "@modules/platform/i18n"
 import { LoggingModule } from "@modules/platform/logging"
 import { JOBS_ERROR_KINDS, JOBS_MESSAGES, JobsModule } from "@modules/platform/jobs"
 import { QUEUE_ERROR_KINDS, QUEUE_MESSAGES, QueueModule } from "@modules/platform/queue"
 import type { ApiOptions } from "./api.options"
+
+/** Until a connection capability provides the Google Drive access of a workspace, no workspace has any. */
+const NO_DRIVE_ACCESS: DriveAccessSource = { forWorkspace: () => null }
 
 @Module({})
 /** Composition root of the API: every capability is registered once and the three guards run in a fixed order. */
@@ -56,10 +75,14 @@ export class AppModule {
                 I18nModule.register({
                     isGlobal: true,
                     bundles: [
+                        DOCUMENTS_MESSAGES,
                         ERRORS_MESSAGES,
+                        HTTP_MESSAGES,
                         HTTP_SECURITY_MESSAGES,
                         IDENTITY_MESSAGES,
                         JOBS_MESSAGES,
+                        KNOWLEDGE_MESSAGES,
+                        KNOWLEDGE_SOURCES_MESSAGES,
                         QUEUE_MESSAGES,
                         WORKSPACE_INVITES_MESSAGES,
                         WORKSPACE_MEMBERS_MESSAGES,
@@ -71,8 +94,12 @@ export class AppModule {
                     kinds: [
                         CONFIG_ERROR_KINDS,
                         DATABASE_ERROR_KINDS,
+                        DOCUMENTS_ERROR_KINDS,
+                        HTTP_ERROR_KINDS,
                         HTTP_SECURITY_ERROR_KINDS,
                         JOBS_ERROR_KINDS,
+                        KNOWLEDGE_ERROR_KINDS,
+                        KNOWLEDGE_SOURCES_ERROR_KINDS,
                         QUEUE_ERROR_KINDS,
                         IDENTITY_ERROR_KINDS,
                         SUPABASE_ERROR_KINDS,
@@ -111,8 +138,18 @@ export class AppModule {
                     ...options.workspaceInvites,
                 }),
                 LivenessModule.register({ isGlobal: true }),
+                HttpModule.register({ isGlobal: true }),
+                LlmModule.register({ isGlobal: true, ...options.llm }),
+                DocumentsModule.register({ isGlobal: true, ...options.documents }),
+                KnowledgeSourcesModule.register({ isGlobal: true, storage: SUPABASE_STORAGE }),
+                KnowledgeChunksModule.register({ isGlobal: true }),
+                NivoKnowledgeModule.register({ isGlobal: true }),
+                KnowledgeModule.register({ isGlobal: true, driveAccess: NO_DRIVE_ACCESS }),
                 SystemHealthHttpModule,
                 WorkspacesHttpModule,
+                KnowledgeHttpModule,
+                IndexKnowledgeSourceQueueModule,
+                ReembedKnowledgeQueueModule,
             ],
             providers: [
                 { provide: SUPABASE_ACCESS_TOKEN_VERIFIER, useValue: verifyAccessToken },

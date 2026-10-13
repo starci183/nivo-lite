@@ -1,3 +1,5 @@
+import type { DocumentsOptions } from "@modules/integrations/documents"
+import type { LlmOptions } from "@modules/integrations/llm"
 import type { SupabaseOptions } from "@modules/integrations/supabase"
 import type { ServerOptions } from "@modules/platform/config"
 import type { DatabaseConnectionOptions } from "@modules/platform/database"
@@ -17,6 +19,10 @@ export interface ApiOptions {
     readonly database: DatabaseConnectionOptions
     /** Supabase Auth, Storage and token-verification configuration. */
     readonly supabase: SupabaseOptions
+    /** The embeddings and chat models, and the keys that reach them. */
+    readonly llm: LlmOptions
+    /** The Google Drive reader and the readers of office files and PDFs. */
+    readonly documents: DocumentsOptions
     /** Whether a person with no workspace may create a free one. */
     readonly workspaces: WorkspacesOptions
     /** Invitation links and how long they stay valid. */
