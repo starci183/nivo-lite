@@ -2,8 +2,8 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { WorkspacesError, WorkspacesErrorCode } from "./errors/workspaces.error"
-import type { CreatedRow, MembershipRow } from "./persistence/workspaces.rows"
-import { INSERT_FREE_WORKSPACE, LIST_MEMBERSHIPS } from "./persistence/workspaces.sql"
+import type { CreatedRow, MembershipRow, WorkspaceNameRow } from "./persistence/workspaces.rows"
+import { FIND_WORKSPACE_NAME, INSERT_FREE_WORKSPACE, LIST_MEMBERSHIPS } from "./persistence/workspaces.sql"
 import type { CreatedWorkspace, WorkspaceMembership } from "./workspaces.contracts"
 import type { WorkspacesOptions } from "./workspaces.options"
 import { InjectWorkspacesOptions } from "./workspaces.port"
@@ -15,6 +15,12 @@ export class WorkspacesService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectWorkspacesOptions() private readonly options: WorkspacesOptions,
     ) {}
+
+    /** The name of a workspace, or an empty text when there is no such workspace. */
+    async nameOf(workspaceId: string): Promise<string> {
+        const [row] = await this.entityManager.query<Array<WorkspaceNameRow>>(FIND_WORKSPACE_NAME, [workspaceId])
+        return row?.name ?? ""
+    }
 
     /** Every workspace the person belongs to, with their membership in it, oldest first. */
     async memberships(userId: string): Promise<ReadonlyArray<WorkspaceMembership>> {

@@ -7,16 +7,22 @@ import type {
     ConversationRef,
     ConversationTarget,
     OpenConversation,
+    OptionalChannel,
+    OptionalLeadConversation,
     TurnConversation,
 } from "./agent-conversations.contracts"
 import { AgentConversationsError, AgentConversationsErrorCode } from "./errors/agent-conversations.error"
 import type {
     ConversationRefRow,
     ConversationTargetRow,
+    LeadConversationRow,
     TurnConversationRow,
 } from "./persistence/agent-conversations.rows"
 import {
     ARCHIVE_CONVERSATION,
+    ATTACH_CONVERSATION_LEAD,
+    HAND_CONVERSATION_TO_PERSON,
+    FIND_LATEST_LEAD_CONVERSATION,
     FIND_CONVERSATION,
     FIND_CONVERSATION_TARGET,
     FIND_TURN_CONVERSATION,
@@ -101,6 +107,34 @@ export class AgentConversationsService {
     /** Names the customer of the conversation after the channel told who they are. */
     async rename(conversationId: string, name: string): Promise<void> {
         await this.entityManager.query(UPDATE_VISITOR_NAME, [conversationId, name])
+    }
+
+    /** The latest customer conversation of a lead, optionally only on one channel; null when there is none. */
+    async latestOfLead(
+        workspaceId: string,
+        leadId: string,
+        channel: OptionalChannel,
+    ): Promise<OptionalLeadConversation> {
+        const row = (
+            await this.entityManager.query<Array<LeadConversationRow>>(FIND_LATEST_LEAD_CONVERSATION, [
+                workspaceId,
+                leadId,
+                channel,
+            ])
+        )[0]
+        return row === undefined
+            ? null
+            : { id: row.id, agentId: row.agent_id, channel: row.channel, visitorName: row.visitor_name }
+    }
+
+    /** A person holds the conversation from now on: the AI stays quiet until they hand it back. */
+    async handToPerson(workspaceId: string, conversationId: string, holder: string): Promise<void> {
+        await this.entityManager.query(HAND_CONVERSATION_TO_PERSON, [workspaceId, conversationId, holder])
+    }
+
+    /** Ties a conversation to the lead the customer became. */
+    async attachLead(workspaceId: string, conversationId: string, leadId: string): Promise<void> {
+        await this.entityManager.query(ATTACH_CONVERSATION_LEAD, [workspaceId, conversationId, leadId])
     }
 
     /** Where the replies of the conversation go, or a refusal when it does not exist. */

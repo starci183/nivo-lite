@@ -2,13 +2,7 @@ import { createHash } from "node:crypto"
 import { ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
 import { PublicApiErrorCode } from "./errors/public-api.error"
-import type {
-    AcceptKnowledgeParams,
-    AcceptLeadParams,
-    ContactParts,
-    LeadFacts,
-    RequestKind,
-} from "./public-api.contracts"
+import type { AcceptKnowledgeParams, AcceptLeadParams, LeadFacts, RequestKind } from "./public-api.contracts"
 
 /** Characters of the text of one knowledge source. */
 export const SOURCE_CHARS_MAX = 120_000
@@ -19,26 +13,7 @@ export const TAGS_MAX = 12
 /** The window of events read when the caller names none: one day. */
 const EVENTS_DEFAULT_WINDOW_MS = 86_400_000
 
-/** Normalises a contact: a Vietnamese phone becomes `84` digits, an email is lowercased; null when empty. */
-export const normaliseContact = (raw: string | null | undefined): string | null => {
-    const value = (raw ?? "").trim()
-    if (value === "") return null
-    if (value.includes("@")) return value.toLowerCase()
-    let digits = value.replace(/\D/g, "")
-    if (digits === "") return null
-    if (digits.startsWith("0")) digits = `84${digits.slice(1)}`
-    else if (!digits.startsWith("84") && digits.length === 9) digits = `84${digits}`
-    return digits
-}
-
-/** Splits a contact into the phone and the email it holds, both normalised. */
-export const contactParts = (raw: string | null): ContactParts => {
-    const contact = normaliseContact(raw)
-    return {
-        phone: contact !== null && !contact.includes("@") ? contact : null,
-        email: contact !== null && contact.includes("@") ? contact : null,
-    }
-}
+export { contactParts, normaliseContact } from "@modules/domain/leads"
 
 /** The first part of the dedupe key of a request: its kind and the key that sent it. */
 export const dedupePrefix = (kind: RequestKind, keyId: string): string => `${kind}:${keyId}:`

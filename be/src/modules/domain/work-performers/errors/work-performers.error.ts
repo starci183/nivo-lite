@@ -1,0 +1,22 @@
+import { DomainError } from "@modules/platform/errors"
+import type { ErrorKind } from "@modules/platform/errors"
+
+/** Codes of the work-performers capability. */
+export enum WorkPerformersErrorCode {
+    /** The item names no record to act on. */
+    SubjectMissing = "WORK_PERFORMERS_SUBJECT_MISSING",
+    /** The order is gone or was cancelled. */
+    OrderUnavailable = "WORK_PERFORMERS_ORDER_UNAVAILABLE",
+    /** The customer email could not be sent. */
+    EmailNotSent = "WORK_PERFORMERS_EMAIL_NOT_SENT",
+}
+
+/** How each work-performers code travels. */
+export const WORK_PERFORMERS_ERROR_KINDS: Record<WorkPerformersErrorCode, ErrorKind> = {
+    [WorkPerformersErrorCode.SubjectMissing]: "invalid",
+    [WorkPerformersErrorCode.OrderUnavailable]: "not-found",
+    [WorkPerformersErrorCode.EmailNotSent]: "unavailable",
+}
+
+/** The one error class of the work-performers capability. */
+export class WorkPerformersError extends DomainError<WorkPerformersErrorCode> {}

@@ -79,6 +79,17 @@ export class AgentMessagesService {
         return rows.length > 0
     }
 
+    /** Stores a message the company sends on its own (not a reply to a customer message) and answers its id. */
+    async storeAgentMessage(workspaceId: string, conversationId: string, body: string): Promise<string> {
+        return this.required(
+            await this.entityManager.query<Array<MessageIdRow>>(INSERT_GREETING_MESSAGE, [
+                workspaceId,
+                conversationId,
+                body,
+            ]),
+        )
+    }
+
     /** Writes a line the workbench shows between the messages; it is never sent to the customer. */
     async storeLine(workspaceId: string, conversationId: string, body: string): Promise<void> {
         await this.entityManager.query(INSERT_SYSTEM_LINE, [workspaceId, conversationId, body])

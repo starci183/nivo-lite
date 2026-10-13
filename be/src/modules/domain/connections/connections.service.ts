@@ -302,7 +302,9 @@ export class ConnectionsService {
         provider: string,
         manager: EntityManager = this.entityManager,
     ): Promise<Outcome<IntakeConnection, ConnectionsErrorCode>> {
-        const row = (await manager.query<Array<IntakeConnectionRow>>(FIND_INTAKE_CONNECTION, [connectionId, provider]))[0]
+        const row = (
+            await manager.query<Array<IntakeConnectionRow>>(FIND_INTAKE_CONNECTION, [connectionId, provider])
+        )[0]
         if (row === undefined) return refused(ConnectionsErrorCode.NotFound)
         return ok({ id: row.id, workspaceId: row.workspace_id, status: row.status })
     }
@@ -319,12 +321,18 @@ export class ConnectionsService {
 
     /** The owner authorized the Zalo OA: its id joins the public facts and an error status clears. */
     async applyZaloAuthorization(connectionId: string, oaId?: string): Promise<void> {
-        await this.entityManager.query(APPLY_ZALO_AUTHORIZATION, [connectionId, JSON.stringify(oaId === undefined ? { authorized: true } : { authorized: true, oa_id: oaId })])
+        await this.entityManager.query(APPLY_ZALO_AUTHORIZATION, [
+            connectionId,
+            JSON.stringify(oaId === undefined ? { authorized: true } : { authorized: true, oa_id: oaId }),
+        ])
     }
 
     /** A page of the connections the health check judges, in id order, after the given id (empty for the first page). */
     async healthBatch(afterId: string, size: number): Promise<ReadonlyArray<HealthCandidate>> {
-        const rows = await this.entityManager.query<Array<HealthCandidateRow>>(LIST_HEALTH_BATCH, [afterId === "" ? NIL_UUID : afterId, size])
+        const rows = await this.entityManager.query<Array<HealthCandidateRow>>(LIST_HEALTH_BATCH, [
+            afterId === "" ? NIL_UUID : afterId,
+            size,
+        ])
         return rows.map((row) => ({
             id: row.id,
             workspaceId: row.workspace_id,
@@ -348,7 +356,13 @@ export class ConnectionsService {
 
     /** Writes the result of a wizard job next to its ticket; a newer ticket on the row means the owner moved on and nothing is written. */
     async settleWizard(connectionId: string, ticket: string, settlement: WizardSettlement): Promise<void> {
-        const wizard = { ticket, command: settlement.command, state: settlement.state, url: settlement.url, code: settlement.code }
+        const wizard = {
+            ticket,
+            command: settlement.command,
+            state: settlement.state,
+            url: settlement.url,
+            code: settlement.code,
+        }
         const facts = settlement.oaSecretSaved ? { oa_secret_saved: true, wizard } : { wizard }
         await this.entityManager.query(SETTLE_WIZARD, [connectionId, ticket, JSON.stringify(facts)])
     }

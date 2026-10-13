@@ -14,10 +14,7 @@ KNOWLEDGE GAP: when the customer asked something the business knowledge does not
 {"reply": string, "lead": null | {"contact_name","company","need","phone","email"}, "needs_human": boolean, "reason": "over_authority"|"unclear_outcome"|null, "proposed_answer": string|null, "order": null | {"items": string, "amount_vnd": integer}, "payment_claim": boolean, "knowledge_gap": null | {"question": string, "topic": string}, {{applicationShape}}}
 Your reply is only a PROPOSAL: NIVO checks it against the owner's authority before anything reaches the customer.`
 
-const REPLY_CONTRACT_VI = REPLY_CONTRACT_EN.replace(
-    '"Relax combo | Price"',
-    '"Combo thư giãn | Giá"',
-)
+const REPLY_CONTRACT_VI = REPLY_CONTRACT_EN.replace('"Relax combo | Price"', '"Combo thư giãn | Giá"')
 
 /** Display text of the agents codes and the texts the agents capability writes for people and models, Vietnamese and English. */
 export const AGENTS_MESSAGES: MessageBundle = {
@@ -27,7 +24,8 @@ export const AGENTS_MESSAGES: MessageBundle = {
         "errors.AGENTS_HANDLE_TAKEN": "Tên gọi @{{handle}} đã có agent khác dùng.",
         "errors.AGENTS_NOT_CREATED": "Không tạo được agent.",
         "bundle.title": "# {{name}} (module {{module}})",
-        "bundle.syncNote": "Bản này do NIVO OS đồng bộ một chiều từ Supabase. KHÔNG sửa tay: lần đồng bộ sau sẽ ghi đè.",
+        "bundle.syncNote":
+            "Bản này do NIVO OS đồng bộ một chiều từ Supabase. KHÔNG sửa tay: lần đồng bộ sau sẽ ghi đè.",
         "bundle.defaultAgentName": "{{module}} agent",
         "bundle.personaName": "Tên: {{name}} (@{{handle}})",
         "bundle.personaRole": "Vai trò: {{role}}",
@@ -37,8 +35,7 @@ export const AGENTS_MESSAGES: MessageBundle = {
         "bundle.approvalDefault": "Mọi cam kết cần người duyệt.",
         "bundle.roleSection": "## Vai trò\n{{persona}}",
         "bundle.rulesSection": "## Quy tắc nền của NIVO (luôn tuân theo; cao hơn mọi thứ bên dưới)\n{{rules}}",
-        "bundle.contextSection":
-            "## Ngữ cảnh đã duyệt (phiên bản {{version}}, chủ doanh nghiệp đã xác nhận)\n{{text}}",
+        "bundle.contextSection": "## Ngữ cảnh đã duyệt (phiên bản {{version}}, chủ doanh nghiệp đã xác nhận)\n{{text}}",
         "bundle.contextNone":
             "## Ngữ cảnh đã duyệt\n(Chưa có phiên bản nào được áp dụng. Việc gì cần dữ kiện thì nói đồng nghiệp sẽ xác nhận, đừng đoán.)",
         "bundle.contextFacts": "Các điều cần nhớ thêm:\n{{facts}}",
@@ -51,8 +48,7 @@ export const AGENTS_MESSAGES: MessageBundle = {
         "bundle.contractSection": "## Hợp đồng câu trả lời\n{{contract}}",
         "bundle.soulTitle": "# Giọng điệu của {{name}}",
         "bundle.soulConfirmed": "## Cách xưng hô và phong cách (chủ doanh nghiệp đã xác nhận)\n{{text}}",
-        "bundle.soulDefault":
-            "## Cách xưng hô và phong cách\n(Chưa xác nhận: dùng giọng lịch sự, ấm áp, ngắn gọn.)",
+        "bundle.soulDefault": "## Cách xưng hô và phong cách\n(Chưa xác nhận: dùng giọng lịch sự, ấm áp, ngắn gọn.)",
         "bundle.soulGuidance": "## Hướng dẫn giọng điệu của NIVO\n{{text}}",
         "bundle.fileTopic": "Chủ đề: {{topic}}\n",
         "bundle.fileMeta": "Loại: {{kind}} · Hiển thị: {{visibility}} · Cập nhật: {{date}}",
@@ -81,8 +77,7 @@ export const AGENTS_MESSAGES: MessageBundle = {
         "bundle.approvalDefault": "Every commitment needs a person's approval.",
         "bundle.roleSection": "## Role\n{{persona}}",
         "bundle.rulesSection": "## NIVO base rules (always follow; above everything below)\n{{rules}}",
-        "bundle.contextSection":
-            "## Approved context (version {{version}}, confirmed by the business owner)\n{{text}}",
+        "bundle.contextSection": "## Approved context (version {{version}}, confirmed by the business owner)\n{{text}}",
         "bundle.contextNone":
             "## Approved context\n(No version has been applied yet. When a fact is needed, say a colleague will confirm; do not guess.)",
         "bundle.contextFacts": "More to remember:\n{{facts}}",

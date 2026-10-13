@@ -56,3 +56,15 @@ export const UPDATE_RESPONSIBILITY_STATUS = sql`
            to_json(c.due_at) #>> '{}' AS due_at, c.status, to_json(c.created_at) #>> '{}' AS created_at
     FROM changed c
     LIMIT 1`
+
+/** One responsibility of the workspace ($1 workspace, $2 responsibility). */
+export const FIND_RESPONSIBILITY = sql`
+    SELECT r.id, r.workspace_id, r.lead_id, r.title, r.owner_kind, r.owner_agent_id, r.owner_name, r.next_action,
+           to_json(r.due_at) #>> '{}' AS due_at, r.status, to_json(r.created_at) #>> '{}' AS created_at
+    FROM public.responsibilities r
+    WHERE r.workspace_id = $1 AND r.id = $2
+    LIMIT 1`
+
+/** Sets the next step of a responsibility of the workspace ($1 workspace, $2 responsibility, $3 text). */
+export const UPDATE_RESPONSIBILITY_NEXT_ACTION = sql`
+    UPDATE public.responsibilities SET next_action = $3 WHERE workspace_id = $1 AND id = $2`

@@ -69,9 +69,27 @@ import {
     PaymentOrdersModule,
 } from "@modules/domain/payment-orders"
 import { CREDITS_ERROR_KINDS, CREDITS_MESSAGES, CreditsModule } from "@modules/domain/credits"
-import { AiUsageEventsModule } from "@modules/domain/ai-usage-events"
+import { AI_USAGE_EVENTS_MESSAGES, AiUsageEventsModule, UsageGateService } from "@modules/domain/ai-usage-events"
 import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
 import { WorkspacesHttpModule } from "@features/api/workspaces"
+import {
+    EMAIL_MESSAGES_ERROR_KINDS,
+    EMAIL_MESSAGES_MESSAGES,
+    EmailMessagesModule,
+} from "@modules/domain/email-messages"
+import { INVOICES_ERROR_KINDS, INVOICES_MESSAGES, InvoicesModule } from "@modules/domain/invoices"
+import { ORDERS_ERROR_KINDS, ORDERS_MESSAGES, OrdersModule } from "@modules/domain/orders"
+import { TRANSACTIONS_ERROR_KINDS, TRANSACTIONS_MESSAGES, TransactionsModule } from "@modules/domain/transactions"
+import {
+    ConversationLeadsService,
+    HandoffToolService,
+    InboundStatusService,
+    LeadWriterService,
+    OutboundAccessService,
+    WORK_PERFORMERS_ERROR_KINDS,
+    WORK_PERFORMERS_MESSAGES,
+    WorkPerformersModule,
+} from "@modules/domain/work-performers"
 import {
     AGENT_CONNECTIONS_ERROR_KINDS,
     AGENT_CONNECTIONS_MESSAGES,
@@ -82,10 +100,7 @@ import {
     AGENT_TOOLS_MESSAGES,
     AgentToolsModule,
     UnboundBookingToolsService,
-    UnboundConversationLeadsService,
-    UnboundHandoffToolService,
     UnboundKnowledgeSearchService,
-    UnboundLeadWriterService,
 } from "@modules/domain/agent-tools"
 import {
     AGENTS_ERROR_KINDS,
@@ -103,7 +118,6 @@ import {
     AI_GENERATIONS_POLL_MS,
     AiGenerationsModule,
     TextGeneratorService,
-    UnboundUsageGateService,
 } from "@modules/domain/ai-generations"
 import { AUTHORITY_ERROR_KINDS, AUTHORITY_MESSAGES } from "@modules/domain/authority"
 import { AUTHORITY_RULES_ERROR_KINDS, AUTHORITY_RULES_MESSAGES } from "@modules/domain/authority-rules"
@@ -113,9 +127,7 @@ import {
     DECISIONS_MESSAGES,
     DecisionsModule,
     UnboundDecisionEventsService,
-    UnboundInboundEventStatusService,
     UnboundLeadGenFlowService,
-    UnboundOutboundAccessGateService,
     UnboundPaymentReceiptsService,
 } from "@modules/domain/decisions"
 import { EXECUTIONS_ERROR_KINDS, EXECUTIONS_MESSAGES } from "@modules/domain/executions"
@@ -353,6 +365,12 @@ export class AppModule {
                         AGENT_TOOLS_MESSAGES,
                         AGENTS_MESSAGES,
                         AI_GENERATIONS_MESSAGES,
+                        AI_USAGE_EVENTS_MESSAGES,
+                        EMAIL_MESSAGES_MESSAGES,
+                        INVOICES_MESSAGES,
+                        ORDERS_MESSAGES,
+                        TRANSACTIONS_MESSAGES,
+                        WORK_PERFORMERS_MESSAGES,
                         API_KEYS_MESSAGES,
                         AUTHORITY_MESSAGES,
                         AUTHORITY_RULES_MESSAGES,
@@ -426,6 +444,11 @@ export class AppModule {
                         AGENT_TOOLS_ERROR_KINDS,
                         AGENTS_ERROR_KINDS,
                         AI_GENERATIONS_ERROR_KINDS,
+                        EMAIL_MESSAGES_ERROR_KINDS,
+                        INVOICES_ERROR_KINDS,
+                        ORDERS_ERROR_KINDS,
+                        TRANSACTIONS_ERROR_KINDS,
+                        WORK_PERFORMERS_ERROR_KINDS,
                         API_KEYS_ERROR_KINDS,
                         AUTHORITY_ERROR_KINDS,
                         AUTHORITY_RULES_ERROR_KINDS,
@@ -594,7 +617,7 @@ export class AppModule {
                 AgentConnectionsModule.register({ isGlobal: true }),
                 AiGenerationsModule.register({
                     isGlobal: true,
-                    usage: UnboundUsageGateService,
+                    usage: UsageGateService,
                     pollMs: AI_GENERATIONS_POLL_MS,
                 }),
                 OpenclawAgentSyncModule.register({ isGlobal: true, reloadSettleMs: OPENCLAW_RELOAD_SETTLE_MS }),
@@ -602,11 +625,11 @@ export class AppModule {
                     isGlobal: true,
                     ports: {
                         knowledgeSearch: UnboundKnowledgeSearchService,
-                        leadWriter: UnboundLeadWriterService,
+                        leadWriter: LeadWriterService,
                         bookingTools: UnboundBookingToolsService,
                         approvalRequester: ApprovalRequesterService,
-                        handoffTool: UnboundHandoffToolService,
-                        conversationLeads: UnboundConversationLeadsService,
+                        handoffTool: HandoffToolService,
+                        conversationLeads: ConversationLeadsService,
                         toolTokens: ToolTokenService,
                     },
                 }),
@@ -614,13 +637,18 @@ export class AppModule {
                     isGlobal: true,
                     ports: {
                         agentDirectory: AgentsService,
-                        inboundEventStatus: UnboundInboundEventStatusService,
+                        inboundEventStatus: InboundStatusService,
                         decisionEvents: UnboundDecisionEventsService,
                         paymentReceipts: UnboundPaymentReceiptsService,
                         leadGenFlow: UnboundLeadGenFlowService,
-                        outboundAccessGate: UnboundOutboundAccessGateService,
+                        outboundAccessGate: OutboundAccessService,
                     },
                 }),
+                OrdersModule.register({ isGlobal: true }),
+                InvoicesModule.register({ isGlobal: true }),
+                TransactionsModule.register({ isGlobal: true }),
+                EmailMessagesModule.register({ isGlobal: true }),
+                WorkPerformersModule.register({ isGlobal: true, writer: DeepseekClient }),
                 OfficeCommandCandidatesModule.register({ isGlobal: true, reader: DeepseekClient }),
                 SyncAgentsQueueModule,
                 GenerateWithAgentQueueModule,

@@ -55,3 +55,15 @@ export interface TurnConversationRow extends ConversationTargetRow {
     /** The agent's greeting. */
     readonly agent_greeting: string
 }
+
+/** The latest customer conversation of a lead. */
+export interface LeadConversationRow {
+    /** The conversation id. */
+    id: string
+    /** The agent that speaks in it. */
+    agent_id: string
+    /** The channel key. */
+    channel: string
+    /** The customer's name. */
+    visitor_name: string | null
+}
