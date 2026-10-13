@@ -2,7 +2,7 @@ import { useCallback } from "react"
 import { useTranslations } from "next-intl"
 import { mutate } from "swr"
 import { useQueryPaymentOrderSwr } from "@/hooks/swr"
-import { useCreditsCheckoutStore } from "@/hooks/zustand/creditsCheckout/store"
+import { useCreditsCheckoutStore } from "@/hooks/zustand/creditsCheckout"
 import type { PayOrder } from "@/modules/types"
 
 /** Resolves the drawer slot from the chosen purchase and backend payment instructions. */

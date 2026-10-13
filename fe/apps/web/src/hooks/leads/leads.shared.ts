@@ -97,14 +97,17 @@ export const ageOf = (iso: string, nowIso: string): { readonly unit: AgeUnit; re
 }
 
 /** The lead record every lead read carries, with the stage narrowed to a known one (an unknown stage reads as new). */
-export const leadRecordOf = (lead: LeadRecordType): LeadRecord => ({
-    id: lead.id,
-    contact_name: lead.contactName,
-    company: lead.company,
-    channel: lead.channel,
-    need: lead.need,
-    stage: STAGE_ORDER.find((stage) => stage === lead.stage) ?? "new",
-    context_summary: lead.contextSummary ?? null,
-    origin: lead.origin ?? null,
-    created_at: lead.createdAt,
-})
+export const leadRecordOf = (lead: LeadRecordType): LeadRecord => {
+    const { id, company, channel, need } = lead
+    return {
+        id,
+        contact_name: lead.contactName,
+        company,
+        channel,
+        need,
+        stage: STAGE_ORDER.find((stage) => stage === lead.stage) ?? "new",
+        context_summary: lead.contextSummary ?? null,
+        origin: lead.origin ?? null,
+        created_at: lead.createdAt,
+    }
+}

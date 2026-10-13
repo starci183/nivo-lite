@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useAuthUser } from "@/hooks/auth"
-import { useQueryInvitePreviewSwr } from "@/hooks/swr/api/graphql/queries/useQueryInvitePreviewSwr"
+import { useQueryInvitePreviewSwr } from "@/hooks/swr"
 import { AUTH_ROUTES, invitePath, loginPath, signupPath } from "@/modules/routes"
 
 /** What the visitor can do with the invitation: wait, nothing (unusable link), sign in, switch account, or accept. */

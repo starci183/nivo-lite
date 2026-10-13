@@ -1,5 +1,5 @@
 import { useTranslations } from "next-intl"
-import { useMutateRequestContentMonthPlanSwr } from "@/hooks/swr/api/graphql/mutations/useMutateRequestContentMonthPlanSwr"
+import { useMutateRequestContentMonthPlanSwr } from "@/hooks/swr"
 import { useContentAiJob } from "./useContentAiJob"
 
 /** Requests a month plan and polls until the saved ideas or a terminal failure are available. */

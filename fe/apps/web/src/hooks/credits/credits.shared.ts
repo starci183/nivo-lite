@@ -1,9 +1,9 @@
 import { forecastRunout } from "@/modules/utils"
 import { dayjs } from "@/modules/dayjs"
-import { CREDITS_PER_USD } from "@/lib/usage-shared"
 import type {
     BillingPlanType,
     BillingWorkspaceType,
+    CreditPackPurchaseType,
     CreditPackType,
     CreditQuotaStatusType,
     CreditTopupLotType,
@@ -12,6 +12,9 @@ import type {
 /** Plain data of the credits page, and the pure functions that compute it from the rows the page read. */
 
 import type { CreditsData, PlanView } from "@/modules/types"
+
+/** A credit is 0.00113 USD of model token cost (billing_config.credit_usd_value in the database): the forecast converts dollars with it. */
+const CREDIT_USD_VALUE = 0.00113
 
 /** The workspace columns the page reads. */
 type WorkspaceFacts = Pick<BillingWorkspaceType, "status" | "planCode" | "paidUntil">
@@ -27,6 +30,8 @@ interface CreditsInput {
     readonly packs: ReadonlyArray<CreditPackType>
     readonly status: CreditQuotaStatusType | null
     readonly lots: ReadonlyArray<CreditTopupLotType>
+    /** The add-on packs paid for this month. */
+    readonly bought: ReadonlyArray<CreditPackPurchaseType>
     /** The model cost in USD of the last 7 days. */
     readonly last7CostUsd: number
     /** Today, YYYY-MM-DD (product calendar). */
@@ -86,7 +91,7 @@ export const creditsDataOf = (input: CreditsInput): CreditsData => {
                 ? null
                 : forecastRunout({
                       remaining: limit - used,
-                      last7Credits: input.last7CostUsd * CREDITS_PER_USD,
+                      last7Credits: Math.ceil(input.last7CostUsd / CREDIT_USD_VALUE),
                       today: input.today,
                   }),
         packs: input.packs.map((pack) => ({
@@ -95,6 +100,8 @@ export const creditsDataOf = (input: CreditsInput): CreditsData => {
             price: pack.priceVnd,
         })),
         plans: views,
+        addOns: (input.current?.packs ?? []).map((pack) => ({ credits: pack.creditsPerMonth, price: pack.priceVnd })),
+        packsBought: input.bought.reduce((total, purchase) => total + purchase.credits, 0),
         next: next ? { plan: next } : null,
         contact: next ? null : { plan: views.find((view) => view.isCustom) ?? null, href: input.contactHref },
         orders: [],

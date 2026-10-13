@@ -1,6 +1,5 @@
+export { DB_DEFAULT_PORT, DB_ENGINES } from "@/modules/utils"
 export {
-    DB_DEFAULT_PORT,
-    DB_ENGINES,
     DB_ENTITIES,
     DB_MAX_COLUMNS,
     DB_MAX_ROWS,

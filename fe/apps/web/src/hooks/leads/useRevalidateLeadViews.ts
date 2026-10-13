@@ -1,13 +1,15 @@
 import { useCallback } from "react"
 import { useSWRConfig } from "swr"
-import { QUERY_AGENT_DASHBOARD_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryAgentDashboardSwr"
-import { QUERY_LEAD_BOARD_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryLeadBoardSwr"
-import { QUERY_LEAD_FLOW_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryLeadFlowSwr"
-import { QUERY_LEAD_GEN_WORKBENCH_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryLeadGenWorkbenchSwr"
-import { QUERY_LEAD_JOURNEY_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryLeadJourneySwr"
-import { QUERY_LEAD_WAIT_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryLeadWaitSwr"
-import { QUERY_PROMO_CHATBOT_STATE_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryPromoChatbotStateSwr"
-import { QUERY_SALES_WORKBENCH_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQuerySalesWorkbenchSwr"
+import {
+    QUERY_AGENT_DASHBOARD_SWR_KEY,
+    QUERY_LEAD_BOARD_SWR_KEY,
+    QUERY_LEAD_FLOW_SWR_KEY,
+    QUERY_LEAD_GEN_WORKBENCH_SWR_KEY,
+    QUERY_LEAD_JOURNEY_SWR_KEY,
+    QUERY_LEAD_WAIT_SWR_KEY,
+    QUERY_PROMO_CHATBOT_STATE_SWR_KEY,
+    QUERY_SALES_WORKBENCH_SWR_KEY,
+} from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 
 const LEAD_VIEW_KEYS: ReadonlyArray<string> = [

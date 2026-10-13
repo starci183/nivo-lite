@@ -15,6 +15,7 @@ export const EMPTY_LOYALTY_BOARD: LoyaltyBoardType = {
     figures: { activeMembers: 0, atRisk: 0, members: 0, pointsIssued30d: 0, pointsRedeemed30d: 0, redemptions30d: 0 },
     members: [],
     nowIso: "1970-01-01T00:00:00.000Z",
+    program: null,
     rewards: [],
     stats: {
         active90d: 0,
