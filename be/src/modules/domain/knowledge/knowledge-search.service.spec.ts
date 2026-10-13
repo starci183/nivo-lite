@@ -47,7 +47,7 @@ describe("KnowledgeSearchService", () => {
             query: [
                 [SELECT_MODULE_AUDIENCE, [{ audience }]],
                 [MATCH_KNOWLEDGE, [row("business")]],
-            ],
+            ] as const,
         })
 
         it("lets any member try a question and returns the passages the lens allows", async () => {

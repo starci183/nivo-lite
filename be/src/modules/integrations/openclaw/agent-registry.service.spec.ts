@@ -179,7 +179,7 @@ describe("AgentRegistryService", () => {
 
     describe("has and isCurrent", () => {
         it("sees a registered agent and nothing before", async () => {
-            const { registry, disk } = await build()
+            const { registry } = await build()
             expect(registry.has(AGENT)).toBe(false)
             expect(registry.isCurrent(AGENT, "Bot")).toBe(false)
 

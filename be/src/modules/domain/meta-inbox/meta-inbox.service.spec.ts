@@ -27,7 +27,7 @@ const AT = "2026-10-12T03:00:00.000Z"
 const OWNER = { id: "connection-1", workspaceId: "workspace-1" }
 
 /** A parsed event whose text field was omitted at runtime, which the type marks as present. */
-const isDmEvent = (value: Record<string, unknown>): value is MetaEvent => value.kind === "dm"
+const isDmEvent = (value: object): value is MetaEvent => "kind" in value && value.kind === "dm"
 
 /** Drops `text` so deliver normalises an omitted field to an empty string. */
 const omitText = (value: MetaEvent): MetaEvent => {

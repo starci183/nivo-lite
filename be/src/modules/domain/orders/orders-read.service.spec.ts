@@ -4,7 +4,7 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { OrdersReadService } from "./orders-read.service"
 import { OrdersService } from "./orders.service"
-import type { SalesOrderRow } from "./persistence/orders.rows"
+import type { SalesOrderListRow, SalesOrderRow } from "./persistence/orders.rows"
 
 const MEMBER: WorkspaceMember = {
     userId: "user-1",
@@ -32,6 +32,8 @@ const ORDER: SalesOrderRow = {
     carrier: null,
     tracking_code: null,
 }
+
+const LISTED: SalesOrderListRow = { ...ORDER, contact_name: null, company: null }
 
 const VIEW = {
     id: "order-1",
@@ -82,7 +84,7 @@ describe("OrdersReadService", () => {
 
     it("lists the newest orders as views", async () => {
         const { service, orders } = await build()
-        orders.list.mockResolvedValue([ORDER])
+        orders.list.mockResolvedValue([LISTED])
 
         await expect(service.list("user-1", "ws-1")).resolves.toEqual([VIEW])
         expect(orders.list).toHaveBeenCalledWith("ws-1")

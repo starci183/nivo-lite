@@ -6,7 +6,7 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
-import { DECISIONS_QUEUE, DecisionsJob } from "@modules/queues/decisions"
+import { DECISIONS_QUEUE } from "@modules/queues/decisions"
 import { LeadGenCommentService } from "./leadgen-comment.service"
 import { FIND_LEADGEN_COMMENT_JOB } from "./persistence/leadgen-comment.sql"
 
