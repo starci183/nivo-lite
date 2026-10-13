@@ -11,3 +11,6 @@ export const AUTOMATION_TICK_SCHEDULER = {
     id: "automation-tick",
     everyMs: 60_000,
 } as const
+
+/** The job of one command from the screen (its payload is `{ commandId }`, the row of `automation_commands`): write the shop's own wording of a template, or run a scheduled workflow now. */
+export const AUTOMATION_COMMAND_JOB = "automation.command"

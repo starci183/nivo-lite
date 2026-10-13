@@ -1,1 +1,6 @@
-export { AUTOMATION_QUEUE, AUTOMATION_TICK_JOB, AUTOMATION_TICK_SCHEDULER } from "./automation.contracts"
+export {
+    AUTOMATION_COMMAND_JOB,
+    AUTOMATION_QUEUE,
+    AUTOMATION_TICK_JOB,
+    AUTOMATION_TICK_SCHEDULER,
+} from "./automation.contracts"

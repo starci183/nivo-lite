@@ -5,6 +5,7 @@ import { AutomationsHttpModule } from "@features/api/automations"
 import { FlowsHttpModule } from "@features/api/flows"
 import { N8nPipelinesHttpModule } from "@features/api/n8n-pipelines"
 import { EmitN8nEventQueueModule } from "@features/jobs/emit-n8n-event"
+import { RunAutomationCommandQueueModule } from "@features/jobs/run-automation-command"
 import { RunAutomationTickQueueModule } from "@features/jobs/run-automation-tick"
 import { LeadsHttpModule } from "@features/api/leads"
 import { AdminHttpModule } from "@features/api/admin"
@@ -22,6 +23,7 @@ import {
     createSupabaseAccessTokenVerifier,
 } from "@modules/integrations/supabase"
 import { AUTOMATIONS_ERROR_KINDS, AUTOMATIONS_MESSAGES, AutomationsModule } from "@modules/domain/automations"
+import { AutomationCommandsModule } from "@modules/domain/automation-commands"
 import { AutomationPortsModule } from "@modules/domain/automation-ports"
 import {
     AUTOMATION_PIPELINES_ERROR_KINDS,
@@ -230,6 +232,7 @@ export class AppModule {
                 AutomationRunsModule.register({ isGlobal: true }),
                 N8nRunsModule.register({ isGlobal: true }),
                 AutomationsModule.register({ isGlobal: true }),
+                AutomationCommandsModule.register({ isGlobal: true }),
                 FlowsModule.register({ isGlobal: true }),
                 FfmpegModule.register({ isGlobal: true, ...options.ffmpeg }),
                 TtsModule.register({ isGlobal: true, ...options.tts }),
@@ -261,6 +264,7 @@ export class AppModule {
                 N8nPipelinesHttpModule,
                 EmitN8nEventQueueModule,
                 RunAutomationTickQueueModule,
+                RunAutomationCommandQueueModule,
                 AdminHttpModule,
             ],
             providers: [
