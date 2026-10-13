@@ -10,6 +10,7 @@
     "lint": "starci app lint --workspace ."
   },
   "dependencies": {
+    "@apollo/client": "4.3.1",
     "@dicebear/core": "^10.4.0",
     "@dicebear/styles": "^10.4.0",
     "@heroicons/react": "^2.2.0",
@@ -21,8 +22,10 @@
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.57.0",
     "@xyflow/react": "12.11.6",
+    "axios": "1.20.0",
     "fflate": "0.8.3",
     "framer-motion": "^13.1.0",
+    "graphql": "16.14.2",
     "imapflow": "^2.4.0",
     "mailparser": "^3.9.38",
     "mammoth": "^1.13.0",
@@ -38,6 +41,7 @@
     "react-dom": "19.2.3",
     "read-excel-file": "^9.3.12",
     "server-only": "^0.0.1",
+    "swr": "2.5.1",
     "telegram": "^2.26.22",
     "unpdf": "^1.8.1",
     "yaml": "^2.9.1"
