@@ -13,7 +13,7 @@ export { readSetupCard, readSetupCards } from "./module-setup/read-setup-cards"
 export { readSetupMessage } from "./module-setup/read-setup-message"
 export { readSetupSession } from "./module-setup/read-setup-session"
 export { readSetupState } from "./module-setup/read-setup-state"
-export { toSession, toVersion } from "./module-setup/module-setup.mapper"
+export { toSession } from "./module-setup/module-setup.mapper"
 export type { SetupCardRow } from "./module-setup/module-setup.mapper"
 export { writeApplySetup } from "./module-setup/write-apply-setup"
 export { writeCloseCard } from "./module-setup/write-close-card"
@@ -51,16 +51,8 @@ export { readLead } from "./leads/read-lead"
 export { readLeadFlow } from "./leads/read-lead-flow"
 export { readLeadBoard } from "./leads/read-leads"
 export { readAccountingWorkbench } from "./accounting/read-accounting-workbench"
-export { readChatbotOverview } from "./chatbot/read-chatbot-overview"
-export { readChatbotThread } from "./chatbot/read-chatbot-thread"
-export { readChatbotGaps } from "./chatbot/read-chatbot-gaps"
 export { readAgent, readAgents, readInstanceNames } from "./overview/read-agents"
-export {
-    readLeadDetail,
-    readLeads,
-    readOpenResponsibilities,
-    readResponsibilities,
-} from "./overview/read-leads"
+export { readLeadDetail, readLeads, readOpenResponsibilities, readResponsibilities } from "./overview/read-leads"
 export { readMessages } from "./overview/read-feed"
 export { readOfficePayload } from "./pagedata/read-page-data"
 export type { OfficePayload } from "./pagedata/pagedata.mapper"
