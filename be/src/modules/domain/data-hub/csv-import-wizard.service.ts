@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import type { EntityManager } from "typeorm"
 import { ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionActor } from "@modules/domain/connections"
 import { InjectTable } from "@modules/integrations/data-sources"
@@ -7,6 +8,8 @@ import type { DataRecordInput } from "./data-hub.contracts"
 import { CSV_COPY } from "./messages/csv-import.messages"
 import { DataHubService } from "./data-hub.service"
 import { DataRecordsService } from "@modules/domain/data-records"
+import { DataSyncRunsService } from "@modules/domain/data-sync-runs"
+import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { CSV_MAX_DOCUMENT_FILES } from "./csv-import.contracts"
 import type {
     CsvConfig,
@@ -60,9 +63,11 @@ interface CommitInput {
 /** The wizard operations of the Excel, CSV and document imports: preview a source, import it, read a saved import back. */
 export class CsvImportWizardService {
     constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly hub: DataHubService,
         private readonly connections: ConnectionsService,
         private readonly records: DataRecordsService,
+        private readonly runs: DataSyncRunsService,
         @InjectTable() private readonly table: TableClient,
     ) {}
 
@@ -240,6 +245,7 @@ export class CsvImportWizardService {
         } else {
             await this.hub.own(workspaceId, connectionId, PROVIDER)
         }
+        const run = await this.entityManager.transaction((tx) => this.runs.open(tx, workspaceId, connectionId, "upload"))
         try {
             const updated = created
                 ? 0
@@ -259,9 +265,11 @@ export class CsvImportWizardService {
                 summary,
                 file: label,
             })
+            if (run !== null) await this.runs.finish(run.id, "ok", written, null)
             return { connectionId, added: written - updated, updated, skipped: input.skipped, total, summary }
         } catch (cause) {
             if (created) await this.hub.remove(workspaceId, connectionId)
+            else if (run !== null) await this.runs.finish(run.id, "failed", 0, String(cause).slice(0, 500))
             throw cause
         }
     }

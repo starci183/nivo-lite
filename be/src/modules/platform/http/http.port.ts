@@ -17,6 +17,8 @@ export interface HttpRequest {
     readonly bytes?: Buffer
     /** How the answer body is read: parsed as JSON (default), kept as text (a string, empty when the answer had none) or kept as raw bytes (a Buffer). */
     readonly read?: "json" | "text" | "bytes"
+    /** `manual` answers a redirect as it is (status and `location` header) instead of following it; the default follows. */
+    readonly redirect?: "follow" | "manual"
     /** How long to wait for the answer before the call fails as a timeout. */
     readonly timeoutMs: number
     /** Cancels the call when aborted. */

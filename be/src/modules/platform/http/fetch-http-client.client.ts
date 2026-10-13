@@ -48,6 +48,7 @@ export class FetchHttpClient implements HttpClient {
                 method: request.method,
                 headers: { ...this.contentTypeOf(request), ...request.headers },
                 body: this.bodyOf(request),
+                redirect: request.redirect ?? "follow",
                 signal,
             })
         } catch (cause) {
