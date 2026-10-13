@@ -3,8 +3,6 @@ import { extname, join } from "node:path"
 import { Injectable } from "@nestjs/common"
 import type { OnApplicationBootstrap } from "@nestjs/common"
 import { VideoRendersService } from "@modules/domain/video-renders"
-import { InjectSupabaseAdminClient } from "@modules/integrations/supabase"
-import type { SupabaseAdminClient } from "@modules/integrations/supabase"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectLogger } from "@modules/platform/logging"
@@ -14,7 +12,8 @@ import { isRenderVideoPayload } from "@modules/queues/video-render"
 import { VideoError, VideoErrorCode } from "./errors/video.error"
 import { RendererService } from "./renderer.service"
 import type { RenderStage } from "./renderer.service"
-import { InjectVideoOptions } from "./video.decorators"
+import { InjectVideoAssets, InjectVideoOptions } from "./video.decorators"
+import type { VideoAssets } from "./video.contracts"
 import { VideoLogEvent } from "./video.log-events"
 import type { VideoOptions } from "./video.options"
 import { VideoService } from "./video.service"
@@ -54,7 +53,7 @@ export class VideoRenderService implements OnApplicationBootstrap {
         private readonly video: VideoService,
         private readonly renders: VideoRendersService,
         private readonly renderer: RendererService,
-        @InjectSupabaseAdminClient() private readonly supabase: SupabaseAdminClient,
+        @InjectVideoAssets() private readonly assets: VideoAssets,
         @InjectClock() private readonly clock: Clock,
         @InjectLogger() private readonly logger: Logger,
     ) {}
@@ -178,7 +177,7 @@ export class VideoRenderService implements OnApplicationBootstrap {
 
     /** The bytes of one asset of the media bucket; an unreadable or oversized asset is a rejected render. */
     private async download(path: string): Promise<Buffer> {
-        const { data, error } = await this.supabase.storage.from(MEDIA_BUCKET).download(path)
+        const { data, error } = await this.assets.download(MEDIA_BUCKET, path)
         if (error !== null) {
             throw new VideoError({
                 code: VideoErrorCode.RenderRejected,
@@ -197,9 +196,7 @@ export class VideoRenderService implements OnApplicationBootstrap {
 
     /** Writes one file of the render into the videos bucket, replacing an earlier attempt. */
     private async upload(path: string, body: Buffer, contentType: string): Promise<void> {
-        const { error } = await this.supabase.storage
-            .from(VIDEOS_BUCKET)
-            .upload(path, body, { contentType, upsert: true })
+        const { error } = await this.assets.upload(VIDEOS_BUCKET, path, body, contentType)
         if (error !== null) throw new VideoError({ code: VideoErrorCode.StorageFailed, params: { path }, cause: error })
     }
 }
