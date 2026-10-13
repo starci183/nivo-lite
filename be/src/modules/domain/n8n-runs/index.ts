@@ -6,6 +6,7 @@ export { N8nDataService } from "./n8n-data.service"
 export { N8nRunsModule } from "./n8n-runs.module"
 export { N8nRunsService } from "./n8n-runs.service"
 export type {
+    CustomerEmail,
     DaySummary,
     MailOutcome,
     MonthLedger,
@@ -14,4 +15,5 @@ export type {
     N8nEmailAnswer,
     N8nMailer,
     OverdueInvoices,
+    OwnerEmail,
 } from "./n8n-runs.contracts"

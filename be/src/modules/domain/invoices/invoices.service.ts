@@ -5,7 +5,7 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InvoicesError, InvoicesErrorCode } from "./errors/invoices.error"
 import { INVOICE_NUMBER_ATTEMPTS, dueAtOf, invoicePrefixOf, nextInvoiceNumber } from "./invoice-number.policy"
-import type { IssuedInvoice, NewInvoice, OptionalInvoice } from "./invoices.contracts"
+import type { ClaimableState, IssuedInvoice, NewInvoice, OptionalInvoice } from "./invoices.contracts"
 import type {
     InvoiceAccountingRow,
     InvoiceListingRow,
@@ -18,6 +18,7 @@ import { LIST_LEAD_INVOICES, LIST_WORKBENCH_INVOICES } from "./persistence/invoi
 import {
     FIND_INVOICE,
     FIND_INVOICE_OF_ORDER,
+    FIND_LATEST_LEAD_INVOICE,
     INSERT_INVOICE,
     LAST_INVOICE_NUMBER,
     LIST_ACCOUNTING_INVOICES,
@@ -37,6 +38,16 @@ export class InvoicesService {
     /** The invoice of the workspace, or null when there is none with that id. */
     async find(workspaceId: string, invoiceId: string): Promise<OptionalInvoice> {
         const rows = await this.entityManager.query<Array<InvoiceRow>>(FIND_INVOICE, [workspaceId, invoiceId])
+        return rows[0] ?? null
+    }
+
+    /** The customer's newest open ("issued") or paid invoice, or null. */
+    async latestOfLead(workspaceId: string, leadId: string, status: ClaimableState): Promise<OptionalInvoice> {
+        const rows = await this.entityManager.query<Array<InvoiceRow>>(FIND_LATEST_LEAD_INVOICE, [
+            workspaceId,
+            leadId,
+            status,
+        ])
         return rows[0] ?? null
     }
 

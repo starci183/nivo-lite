@@ -39,7 +39,13 @@ import { ReplenishStockQueueModule } from "@features/jobs/replenish-stock"
 import { HiringTickQueueModule } from "@features/jobs/hiring-tick"
 import { RunShiftsAlertsQueueModule } from "@features/jobs/run-shifts-alerts"
 import { AgentsService } from "@modules/domain/agents"
-import { UnboundBookingToolsService, UnboundKnowledgeSearchService } from "@modules/domain/agent-tools"
+import {
+    AgentKnowledgeLensService,
+    KnowledgeSearchToolService,
+    ModuleProfilesService,
+} from "@modules/domain/agent-knowledge"
+import { CustomerOutcomesService, CustomerTurnRuntimeService } from "@modules/domain/customer-turns"
+import { InstallationDirectoryService } from "@modules/domain/modules"
 import {
     ApprovalRequesterService,
     UnboundDecisionEventsService,
@@ -48,6 +54,7 @@ import {
 } from "@modules/domain/decisions"
 import { LeadReadService } from "@modules/domain/leads"
 import {
+    BookingToolsService,
     ConversationLeadsService,
     HandoffToolService,
     InboundStatusService,
@@ -150,11 +157,24 @@ export interface ApiOptions {
     readonly video: VideoOptions
 }
 
+/**
+ * The ports G19 plugs in: the installations, knowledge lens and module profiles the agents capability reads, and the AI step and
+ * outcome handler of every customer chat turn.
+ */
+export const G19_PORTS = {
+    agents: {
+        installations: InstallationDirectoryService,
+        knowledge: AgentKnowledgeLensService,
+        modules: ModuleProfilesService,
+    },
+    chatTurn: { runtime: CustomerTurnRuntimeService, outcomes: CustomerOutcomesService },
+}
+
 /** The ports the agent-tools capability reaches the rest of the app through. */
 export const AGENT_TOOLS_PORTS = {
-    knowledgeSearch: UnboundKnowledgeSearchService,
+    knowledgeSearch: KnowledgeSearchToolService,
     leadWriter: LeadWriterService,
-    bookingTools: UnboundBookingToolsService,
+    bookingTools: BookingToolsService,
     approvalRequester: ApprovalRequesterService,
     handoffTool: HandoffToolService,
     conversationLeads: ConversationLeadsService,

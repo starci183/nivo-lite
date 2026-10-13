@@ -10,7 +10,19 @@ export type EmailVia = "workspace" | "platform" | "none"
 export type SendEmailStatus = "sent" | "failed" | "no_smtp" | "blocked" | "rate_limited"
 
 /** Why a send did not go out, in terms a caller can branch on. */
-export type SendEmailFailure = "no_smtp" | "gate" | "rate" | "recipient" | "mail"
+export type SendEmailFailure = "no_smtp" | "gate" | "rate" | "recipient" | "attachment" | "mail"
+
+/** A file attached to an email, as a caller hands it over. */
+export interface EmailAttachment {
+    /** The file name; characters a mail client may misread are replaced. */
+    readonly filename: string
+    /** The content, as text or base64. */
+    readonly content: string
+    /** The media type, when known. */
+    readonly contentType?: string
+    /** How the content is encoded; utf8 by default. */
+    readonly encoding?: "base64" | "utf8"
+}
 
 /** A sender to narrow a count to, or null for any. */
 export type OptionalVia = EmailVia | null
@@ -37,6 +49,8 @@ export interface SendEmailInput {
     readonly audience?: EmailAudience
     /** Customer-facing mail: the work item whose gate approved this send. */
     readonly workItemId?: string
+    /** Files to attach: at most three, 2 MB together. */
+    readonly attachments?: ReadonlyArray<EmailAttachment>
 }
 
 /** What a send answered. */
@@ -67,8 +81,8 @@ export interface EmailRecord {
     readonly subject: string
     /** What the email is for. */
     readonly purpose: string
-    /** How it ended. */
-    readonly status: SendEmailStatus
+    /** How it ended, or that it waits for the owner's decision. */
+    readonly status: SendEmailStatus | "waiting_decision"
     /** The sender used. */
     readonly via: EmailVia
     /** The mail server's id of the message. */

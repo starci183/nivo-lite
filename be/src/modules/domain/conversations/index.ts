@@ -5,3 +5,11 @@ export { CONVERSATIONS_ERROR_KINDS } from "./errors/conversations.error"
 export { CONVERSATIONS_MESSAGES } from "./messages/conversations.messages"
 export { readTelegramUpdate } from "./telegram-update.policy"
 export { readZaloEvent } from "./zalo-event.policy"
+export type {
+    CustomerTurn,
+    ChatTurnProposal,
+    ChatTurnRuntime,
+    CustomerOutcomes,
+    RuntimeAnswer,
+    TurnVerdict,
+} from "./conversations.contracts"

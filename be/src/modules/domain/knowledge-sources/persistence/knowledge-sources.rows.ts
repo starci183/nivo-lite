@@ -103,3 +103,31 @@ export interface SourceListRow {
     /** The text; present on a single-document read. */
     readonly content?: string
 }
+
+/** An indexed document an agent's view may read, with its text. */
+export interface ReadableSourceRow {
+    /** The source id. */
+    readonly id: string
+    /** The title. */
+    readonly title: string
+    /** The topic, or null. */
+    readonly topic: string | null
+    /** The kind of source. */
+    readonly kind: string
+    /** public or internal. */
+    readonly visibility: string
+    /** The text. */
+    readonly content: string | null
+    /** The module it is for; null = every module. */
+    readonly module: string | null
+    /** The instance it is kept for; null = every instance. */
+    readonly installation_id: string | null
+    /** Last change, ISO text. */
+    readonly updated_at: string
+}
+
+/** A count. */
+export interface ReadableCountRow {
+    /** How many. */
+    readonly count: number
+}
