@@ -3,7 +3,7 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 export type Database = {
-  
+
   "graphql_public": {
           Tables: {
             [_ in never]: never
@@ -499,7 +499,20 @@ isOneToOne: false
                     "definition"?: NonNullable<Json>,"executor"?: string,"key"?: string,"module_key"?: string | null,"pack"?: string,"position"?: number,"updated_at"?: string,"version"?: number
                   }
                   Relationships: [
-                    
+
+                  ]
+                },"billing_config": {
+                  Row: {
+                    "key": string,"note": string,"value": number
+                  }
+                  Insert: {
+                    "key": string,"note"?: string,"value": number
+                  }
+                  Update: {
+                    "key"?: string,"note"?: string,"value"?: number
+                  }
+                  Relationships: [
+
                   ]
                 },"billing_events": {
                   Row: {
@@ -581,7 +594,7 @@ isOneToOne: false
                     "hits"?: number,"key"?: string,"window_start"?: string
                   }
                   Relationships: [
-                    
+
                   ]
                 },"booking_reminders": {
                   Row: {
@@ -1194,7 +1207,7 @@ isOneToOne: false
                     "active"?: boolean,"code"?: string,"credits"?: number,"price_vnd"?: number,"sort"?: number
                   }
                   Relationships: [
-                    
+
                   ]
                 },"credit_topup_draws": {
                   Row: {
@@ -1251,7 +1264,7 @@ isOneToOne: false
                     "name"?: string,"secret"?: string,"updated_at"?: string,"url"?: string
                   }
                   Relationships: [
-                    
+
                   ]
                 },"data_records": {
                   Row: {
@@ -1389,7 +1402,7 @@ isOneToOne: false
                     "info"?: NonNullable<Json>,"kinds"?: (string)[],"last_heartbeat_at"?: string,"started_at"?: string,"version"?: string,"worker_id"?: string
                   }
                   Relationships: [
-                    
+
                   ]
                 },"events": {
                   Row: {
@@ -1470,7 +1483,7 @@ isOneToOne: false
                     "created_at"?: string,"id"?: never,"ip_hash"?: string,"kind"?: string,"workspace_id"?: string | null
                   }
                   Relationships: [
-                    
+
                   ]
                 },"hiring_availability": {
                   Row: {
@@ -2070,7 +2083,7 @@ isOneToOne: false
                     "lease_until"?: string,"msg_id"?: number,"queue"?: string,"workspace_id"?: string
                   }
                   Relationships: [
-                    
+
                   ]
                 },"jobs": {
                   Row: {
@@ -2083,7 +2096,7 @@ isOneToOne: false
                     "claimed_by"?: string | null,"created_at"?: string,"current_step"?: string | null,"error"?: string | null,"fencing_token"?: number,"id"?: string,"job_key"?: string,"kind"?: string,"lease_expires_at"?: string | null,"payload"?: NonNullable<Json>,"status"?: string,"updated_at"?: string
                   }
                   Relationships: [
-                    
+
                   ]
                 },"knowledge_chunks": {
                   Row: {
@@ -2563,7 +2576,7 @@ isOneToOne: false
                     "delivery_id"?: string,"id"?: string,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"provider"?: string,"received_at"?: string
                   }
                   Relationships: [
-                    
+
                   ]
                 },"meta_threads": {
                   Row: {
@@ -2763,7 +2776,7 @@ isOneToOne: false
                     "audience"?: string,"category"?: string,"default_operating_mode"?: string,"definition"?: NonNullable<Json>,"key"?: string,"knowledge_folder"?: string,"multi_instance"?: boolean,"sort_order"?: number,"status"?: string,"updated_at"?: string,"workbench"?: string | null
                   }
                   Relationships: [
-                    
+
                   ]
                 },"n8n_pipelines": {
                   Row: {
@@ -2795,7 +2808,7 @@ isOneToOne: false
                     "key"?: string,"value"?: string
                   }
                   Relationships: [
-                    
+
                   ]
                 },"n8n_runs": {
                   Row: {
@@ -2827,7 +2840,7 @@ isOneToOne: false
                     "body"?: string,"embedding"?: string | null,"embedding_model"?: string | null,"fts"?: never,"id"?: string,"kind"?: string,"module"?: string,"slug"?: string,"title"?: string,"updated_at"?: string,"version"?: number
                   }
                   Relationships: [
-                    
+
                   ]
                 },"office_command_candidates": {
                   Row: {
@@ -3002,7 +3015,7 @@ isOneToOne: false
                     "active"?: boolean,"ai_credits_per_month"?: number | null,"ai_messages_per_month"?: number | null,"ai_tokens_per_month"?: number | null,"annual_discount_pct"?: number | null,"code"?: string,"credits_rollover"?: boolean,"features"?: NonNullable<Json>,"individual"?: boolean,"is_custom"?: boolean,"listed"?: boolean,"name_en"?: string,"name_vi"?: string,"per_seat"?: boolean,"period"?: string,"price_annual_vnd"?: number | null,"price_vnd"?: number,"promo_months"?: number | null,"promo_price_vnd"?: number | null,"seats"?: number,"sort"?: number,"storage_gb"?: number | null
                   }
                   Relationships: [
-                    
+
                   ]
                 },"platform_admins": {
                   Row: {
@@ -3015,7 +3028,7 @@ isOneToOne: false
                     "created_at"?: string,"email"?: string
                   }
                   Relationships: [
-                    
+
                   ]
                 },"platform_audit": {
                   Row: {
@@ -3047,7 +3060,7 @@ isOneToOne: false
                     "enabled"?: boolean,"key"?: string
                   }
                   Relationships: [
-                    
+
                   ]
                 },"public_api": {
                   Row: {
@@ -3091,7 +3104,7 @@ isOneToOne: false
                     "created_at"?: string,"id"?: string,"payload"?: NonNullable<Json>,"queue"?: string,"sent_at"?: string | null
                   }
                   Relationships: [
-                    
+
                   ]
                 },"responsibilities": {
                   Row: {
@@ -3515,7 +3528,7 @@ isOneToOne: false
                     "delivery_id"?: string,"id"?: string,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"provider"?: string,"received_at"?: string
                   }
                   Relationships: [
-                    
+
                   ]
                 },"transactions": {
                   Row: {
@@ -3795,7 +3808,7 @@ isOneToOne: false
                     "delivery_id"?: string,"id"?: string,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"provider"?: string,"received_at"?: string
                   }
                   Relationships: [
-                    
+
                   ]
                 },"zalo_wizard_drafts": {
                   Row: {
@@ -3976,6 +3989,9 @@ isOneToOne: false
                            },
 "create_free_workspace":
 { Args: { "p_name": string }; Returns: string
+                           },
+"credit_usd_value":
+{ Args: Record<PropertyKey, never>; Returns: number
                            },
 "dashboard_data":
 { Args: { "founding_from": string,"founding_to": string,"since7": string,"ws": string }; Returns: Json
@@ -4675,11 +4691,11 @@ export type CompositeTypes<
 export const Constants = {
   "graphql_public": {
           Enums: {
-            
+
           }
         },"public": {
           Enums: {
-            
+
           }
         }
 } as const
