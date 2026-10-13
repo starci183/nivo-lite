@@ -108,6 +108,15 @@ import {
     AccountingAdjustmentsModule,
 } from "@modules/domain/accounting-adjustments"
 import { WorkspacesGraphqlModule, WorkspacesHttpModule } from "@features/api/workspaces"
+import { InboxGraphqlModule } from "@features/api/inbox"
+import { AgentChatGraphqlModule } from "@features/api/agentchat"
+import { InboxSimulationGraphqlModule } from "@features/api/inbox-simulation"
+import { AGENT_CHAT_ERROR_KINDS, AGENT_CHAT_MESSAGES, AgentChatModule } from "@modules/domain/agent-chat"
+import {
+    INBOX_SIMULATION_ERROR_KINDS,
+    INBOX_SIMULATION_MESSAGES,
+    InboxSimulationModule,
+} from "@modules/domain/inbox-simulation"
 import { OperationsJobsQueueModule } from "@features/jobs/operations-jobs"
 import { AccountGraphqlModule } from "@features/api/account"
 import { ShellGraphqlModule } from "@features/api/shell"
@@ -449,6 +458,8 @@ export class AppModule {
                         AGENT_CONVERSATIONS_MESSAGES,
                         AGENT_MESSAGES_MESSAGES,
                         BILLING_MESSAGES,
+                        AGENT_CHAT_MESSAGES,
+                        INBOX_SIMULATION_MESSAGES,
                         ACCOUNTING_ADJUSTMENTS_MESSAGES,
                         PAYMENT_ORDER_REQUESTS_MESSAGES,
                         CREDITS_MESSAGES,
@@ -541,6 +552,8 @@ export class AppModule {
                         AGENT_CONVERSATIONS_ERROR_KINDS,
                         AGENT_MESSAGES_ERROR_KINDS,
                         BILLING_ERROR_KINDS,
+                        AGENT_CHAT_ERROR_KINDS,
+                        INBOX_SIMULATION_ERROR_KINDS,
                         ACCOUNTING_ADJUSTMENTS_ERROR_KINDS,
                         PAYMENT_ORDER_REQUESTS_ERROR_KINDS,
                         CREDITS_ERROR_KINDS,
@@ -831,6 +844,11 @@ export class AppModule {
                 AccountGraphqlModule,
                 ShellGraphqlModule,
                 ConnectionsGraphqlModule,
+                InboxGraphqlModule,
+                AgentChatGraphqlModule,
+                InboxSimulationGraphqlModule,
+                InboxSimulationModule.register({ isGlobal: true }),
+                AgentChatModule.register({ isGlobal: true }),
                 KnowledgeGraphqlModule,
                 EvidenceGraphqlModule,
                 ExtractKnowledgeFactsQueueModule,

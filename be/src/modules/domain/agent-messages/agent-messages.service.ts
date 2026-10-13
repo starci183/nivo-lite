@@ -3,9 +3,21 @@ import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
-import type { ApprovedMessageId, StoredMessage, StoredReply, TranscriptLine } from "./agent-messages.contracts"
+import type {
+    AgentThreadMessage,
+    ApprovedMessageId,
+    StoredMessage,
+    StoredReply,
+    TranscriptLine,
+} from "./agent-messages.contracts"
 import { AgentMessagesError, AgentMessagesErrorCode } from "./errors/agent-messages.error"
-import type { LastMessageRow, MessageIdRow, StoredMessageRow, TranscriptRow } from "./persistence/agent-messages.rows"
+import type {
+    ChatMessageRow,
+    LastMessageRow,
+    MessageIdRow,
+    StoredMessageRow,
+    TranscriptRow,
+} from "./persistence/agent-messages.rows"
 import {
     FIND_AGENT_REPLY,
     FIND_LAST_CUSTOMER_MESSAGE,
@@ -17,12 +29,38 @@ import {
     INSERT_SYSTEM_LINE,
     LIST_TRANSCRIPT,
     MARK_MESSAGE_DELIVERY,
+    LIST_CHAT_MESSAGES,
 } from "./persistence/agent-messages.sql"
 
 @Injectable()
 /** The messages of a conversation between a customer and an agent; the only writer of agent_messages. */
 export class AgentMessagesService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+
+    /** The bounded thread in a workspace the caller has proven. */
+    async listChat(workspaceId: string, conversationId: string): Promise<ReadonlyArray<AgentThreadMessage>> {
+        const rows = await this.entityManager.query<Array<ChatMessageRow>>(LIST_CHAT_MESSAGES, [
+            workspaceId,
+            conversationId,
+        ])
+        return rows.map((row) => ({
+            id: row.id,
+            role: row.role === "user" || row.role === "system" ? row.role : "agent",
+            body: row.body,
+            createdAt: new Date(row.created_at).toISOString(),
+        }))
+    }
+
+    /** Stores a person's customer reply in the transaction that queues its delivery. */
+    async storeHuman(
+        workspaceId: string,
+        conversationId: string,
+        body: string,
+        authorName: string,
+        manager: EntityManager,
+    ): Promise<string> {
+        return this.storeHumanMessage(workspaceId, conversationId, body, authorName, manager)
+    }
 
     /** Stores what the customer wrote and answers the message id. */
     async storeCustomer(

@@ -1,5 +1,8 @@
 import { sql } from "@modules/platform/database"
 
+/** Reads one job's authoritative state through the backend-only function ($1 workspace, $2 queue, $3 dedupe key). */
+export const JOB_STATUS = sql`SELECT id, state, attempts FROM public.job_status($1::uuid, $2::text, $3::text) LIMIT 1`
+
 /**
  * Writes the outbox row of a job and sends its pgmq message on the connection of the caller's transaction, idempotent on the dedupe
  * key ($1 workspace or null, $2 queue, $3 job, $4 payload, $5 dedupe key, or null for a fresh `<job>:<uuid>`); an existing key

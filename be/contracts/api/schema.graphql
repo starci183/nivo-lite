@@ -627,6 +627,66 @@ type AgentAckType {
   ok: Boolean!
 }
 
+type AgentChatConversationType {
+  channel: String!
+  createdAt: String!
+  handledBy: String
+  id: ID!
+  kind: String!
+  leadId: ID
+  visitorName: String
+}
+
+input AgentChatConversationsInput {
+  agentId: ID!
+}
+
+type AgentChatHolderType {
+  conversationId: ID!
+  handledBy: String
+}
+
+type AgentChatMessageType {
+  body: String!
+  createdAt: String!
+  id: ID!
+  role: String!
+}
+
+input AgentChatMessagesInput {
+  conversationId: ID!
+}
+
+input AgentChatPageInput {
+  agentId: ID!
+  welcome: Boolean! = false
+}
+
+type AgentChatPageType {
+  handle: String!
+  hasCustomerChannel: Boolean!
+  id: ID!
+  isActive: Boolean!
+  module: String!
+  name: String!
+  role: String!
+  showWelcome: Boolean!
+  workspaceId: ID!
+}
+
+input AgentChatTurnStatusInput {
+  id: ID!
+}
+
+type AgentChatTurnStatusType {
+  conversationId: ID!
+  errorCode: String
+  id: ID!
+  jobId: ID!
+  resultMessageId: ID
+  status: String!
+}
+
 type AgentCommandResultType {
   chainId: ID
   created: Boolean
@@ -1558,6 +1618,10 @@ type CreateWorkspaceType {
   id: ID!
 }
 
+type CreatedAgentChatConversationType {
+  id: ID!
+}
+
 type CreatedApiKeyType {
   item: ApiKeyType!
   key: String!
@@ -2023,6 +2087,39 @@ input GrantAgentConnectionInput {
 input GrantWishInput {
   access: String
   agentId: ID!
+}
+
+type InboundEventType {
+  amountVnd: Float
+  body: String!
+  channel: String!
+  createdAt: String!
+  duplicateCount: Int!
+  eventId: String
+  externalRef: String
+  id: ID!
+  kind: String!
+  leadId: ID
+  origin: String!
+  senderContact: String
+  senderName: String
+  status: String!
+}
+
+input InboundEventsInput {
+  limit: Int! = 40
+}
+
+input InboundSimulationStatusInput {
+  id: ID!
+}
+
+type InboundSimulationStatusType {
+  errorCode: String
+  event: SimulationEventType!
+  id: ID!
+  status: String!
+  workItem: SimulationWorkItemType
 }
 
 type InvitePreviewType {
@@ -2840,6 +2937,7 @@ type Mutation {
   saveLoyaltyReward(input: SaveLoyaltyRewardInput!): LoyaltyRewardType!
   saveProviderKeys(input: SaveProviderKeysInput!): ProviderKeysResultType!
   saveZaloOaSecret(input: SaveZaloOaSecretInput!): ZaloWizardConnectionType!
+  sendAgentChatMessage(input: SendAgentChatMessageInput!): QueuedAgentChatTurnType!
   sendAgentCommand(input: SendAgentCommandInput!): AgentCommandResultType!
   setAgentConnections(input: SetAgentConnectionsInput!): Boolean!
   setAgentStatus(input: SetAgentStatusInput!): AgentAckType!
@@ -2849,10 +2947,13 @@ type Mutation {
   setConnectionGrant(input: SetConnectionGrantInput!): Boolean!
   setKnowledgeSuggestionState(input: SetKnowledgeSuggestionStateInput!): Boolean!
   setMemberStatus(input: SetMemberStatusInput!): Boolean!
+  simulateInbound(input: SimulateInboundInput!): SimulateInboundType!
+  startAgentChatConversation(input: StartAgentChatConversationInput!): CreatedAgentChatConversationType!
   startMoneyConnection(input: StartMoneyConnectionInput!): WizardConnectionType!
   startWebhookConnection(input: StartWebhookConnectionInput!): WebhookViewType!
   startZaloConnection(input: StartZaloConnectionInput!): ZaloWizardConnectionType!
   syncLoyaltyMembers: SyncLoyaltyMembersType!
+  takeOverAgentChatConversation(input: TakeOverAgentChatConversationInput!): AgentChatHolderType!
   testWebhookConnection(input: TestWebhookConnectionInput!): WebhookTestResultType!
   updateAuthority(input: UpdateAuthorityInput!): AuthorityProfileType!
   updateAutomationPipeline(input: UpdateAutomationPipelineInput!): AutomationCardType!
@@ -3167,6 +3268,10 @@ type Query {
   adminSession: AdminSessionType!
   adminWorkspace(input: AdminWorkspaceInput!): AdminWorkspaceDetailType!
   adminWorkspaces(input: AdminWorkspacesInput!): AdminWorkspaceListType!
+  agentChatConversations(input: AgentChatConversationsInput!): [AgentChatConversationType!]!
+  agentChatMessages(input: AgentChatMessagesInput!): [AgentChatMessageType!]!
+  agentChatPage(input: AgentChatPageInput!): AgentChatPageType!
+  agentChatTurnStatus(input: AgentChatTurnStatusInput!): AgentChatTurnStatusType!
   agentConnections(input: AgentIdInput!): [AgentConnectionType!]!
   agentDashboard(input: AgentDashboardInput!): AgentDashboardType!
   agentEngineStatus: AgentEngineStatusType!
@@ -3206,6 +3311,8 @@ type Query {
   drivePickedFolder(input: DrivePickedFolderInput!): PickedFolderType!
   foundingMember: Boolean!
   googleConnectionState: GoogleStateType!
+  inboundEvents(input: InboundEventsInput!): [InboundEventType!]!
+  inboundSimulationStatus(input: InboundSimulationStatusInput!): InboundSimulationStatusType!
   invitePreview(input: InviteTokenInput!): InvitePreviewType!
   knowledgeSource(input: KnowledgeSourceInput!): KnowledgeSourceDetailType!
   knowledgeSources(input: KnowledgeSourcesInput!): [KnowledgeSourceType!]!
@@ -3248,6 +3355,12 @@ type Query {
   workspaceShell(input: ShellWindowInput!): WorkspaceShellType!
   workspaceStaff: [StaffOptionType!]!
   zaloConnection(input: GetZaloConnectionInput!): ZaloWizardConnectionType!
+}
+
+type QueuedAgentChatTurnType {
+  conversationId: ID!
+  id: ID!
+  status: String!
 }
 
 input ReadLeadGenCommentStatusInput {
@@ -3647,6 +3760,11 @@ type SavedFactType {
   outcome: String!
 }
 
+input SendAgentChatMessageInput {
+  body: String!
+  conversationId: ID!
+}
+
 input SendAgentCommandInput {
   command: String!
   fields: [FieldValueInput!]
@@ -3738,6 +3856,39 @@ type ShopContextType {
   tone: String!
 }
 
+input SimulateInboundInput {
+  amountVnd: Float
+  body: String
+  channel: String!
+  eventId: String
+  externalRef: String
+  items: String
+  kind: String!
+  senderContact: String
+  senderName: String!
+}
+
+type SimulateInboundType {
+  duplicate: Boolean!
+  id: ID!
+  status: String!
+}
+
+type SimulationEventType {
+  amountVnd: Float
+  duplicateCount: Int!
+  eventId: String!
+  id: ID!
+  leadId: ID
+  status: String!
+}
+
+type SimulationWorkItemType {
+  department: String!
+  id: ID!
+  status: String!
+}
+
 type SourceRefType {
   id: ID!
 }
@@ -3746,6 +3897,12 @@ type StaffOptionType {
   id: ID!
   name: String!
   role: String!
+}
+
+input StartAgentChatConversationInput {
+  agentId: ID!
+  kind: String!
+  visitorName: String = null
 }
 
 input StartMoneyConnectionInput {
@@ -3779,6 +3936,12 @@ type SuggestionDecisionType {
 type SyncLoyaltyMembersType {
   created: Int!
   linked: Int!
+}
+
+input TakeOverAgentChatConversationInput {
+  conversationId: ID!
+  line: String! = ""
+  take: Boolean!
 }
 
 type TelegramConnectedType {

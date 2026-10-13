@@ -56,6 +56,10 @@ export const MARK_MESSAGE_DELIVERY = sql`UPDATE public.agent_messages
 SET delivery_status = $2, delivery_error = $3
 WHERE id = $1`
 
+/** The bounded thread in its proven workspace ($1 workspace, $2 conversation). */
+export const LIST_CHAT_MESSAGES = sql`SELECT id, role, body, created_at::text FROM public.agent_messages
+WHERE workspace_id = $1::uuid AND conversation_id = $2::uuid ORDER BY created_at, id LIMIT 300`
+
 /** Stores a human reply; an approved answer uses its work item id so retries reuse one message ($1 id or null, $2 workspace, $3 conversation, $4 body, $5 member name). */
 export const INSERT_HUMAN_MESSAGE = sql`INSERT INTO public.agent_messages (id, workspace_id, conversation_id, role, body, author_kind, author_name)
 VALUES (COALESCE($1::uuid, gen_random_uuid()), $2::uuid, $3::uuid, 'agent', $4, 'human', $5)

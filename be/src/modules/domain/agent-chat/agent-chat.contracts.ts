@@ -1,0 +1,115 @@
+import type { ChatConversation } from "@modules/domain/agent-conversations"
+import type { AgentThreadMessage } from "@modules/domain/agent-messages"
+
+/** The workspace selected by the caller and proved by the service. */
+export interface AgentChatScope {
+    /** The workspace id. */
+    readonly workspaceId: string
+}
+
+/** The agent whose page or history the caller opens. */
+export interface AgentChatAgentRequest extends AgentChatScope {
+    /** The agent in the selected workspace. */
+    readonly agentId: string
+}
+
+/** The page's bounded arguments. */
+export interface AgentChatPageRequest extends AgentChatAgentRequest {
+    /** Whether to evaluate the welcome banner. */
+    readonly welcome: boolean
+}
+
+/** An existing thread in the selected workspace. */
+export interface AgentChatConversationRequest extends AgentChatScope {
+    /** The conversation id. */
+    readonly conversationId: string
+}
+
+/** Values opening a test or simulated customer chat. */
+export interface StartAgentChatRequest extends AgentChatAgentRequest {
+    /** Test or customer. */
+    readonly kind: "test" | "customer"
+    /** Visitor name, or null for the default. */
+    readonly visitorName: string | null
+}
+
+/** The text whose work is queued atomically with its storage. */
+export interface SendAgentChatRequest extends AgentChatConversationRequest {
+    /** The message body, bounded to 4000 characters. */
+    readonly body: string
+}
+
+/** A person taking a chat over or handing it back to the agent. */
+export interface TakeOverAgentChatRequest extends AgentChatConversationRequest {
+    /** True to take over, false to return to the agent. */
+    readonly take: boolean
+    /** A system line to record; {user} becomes the caller's display name. */
+    readonly line: string
+}
+
+/** The stored message whose queued turn is being followed. */
+export interface AgentChatTurnStatusRequest extends AgentChatScope {
+    /** The submitted message id. */
+    readonly id: string
+}
+
+/** The metadata AgentChatPage needs. */
+export interface AgentChatPageData {
+    /** The agent id. */
+    readonly id: string
+    /** The agent's module. */
+    readonly module: string
+    /** The agent display name. */
+    readonly name: string
+    /** Its mention handle. */
+    readonly handle: string
+    /** Its role line. */
+    readonly role: string
+    /** Whether the agent is active. */
+    readonly isActive: boolean
+    /** Whether the page offers the customer simulation. */
+    readonly hasCustomerChannel: boolean
+    /** The workspace selected by the caller. */
+    readonly workspaceId: string
+    /** Whether this arrival qualifies for the campaign welcome banner. */
+    readonly showWelcome: boolean
+}
+
+/** The immediately accepted chat work, identified by its stored message. */
+export interface QueuedAgentChatTurn {
+    /** The stored message id used to poll status. */
+    readonly id: string
+    /** The thread to refresh when the job completes. */
+    readonly conversationId: string
+    /** Work has been durably queued. */
+    readonly status: "queued"
+}
+
+/** The holder written by a takeover command. */
+export interface AgentChatHolder {
+    /** The affected conversation. */
+    readonly conversationId: string
+    /** A person's display name, or null when the AI holds it. */
+    readonly handledBy: string | null
+}
+
+/** Authoritative state of a queued chat turn or human delivery. */
+export interface AgentChatTurnStatus {
+    /** The submitted message id. */
+    readonly id: string
+    /** The queue's stable job id. */
+    readonly jobId: string
+    /** The conversation to refresh. */
+    readonly conversationId: string
+    /** Queued, running, succeeded or failed. */
+    readonly status: "queued" | "running" | "succeeded" | "failed"
+    /** The stored agent answer, or null before it is written. */
+    readonly resultMessageId: string | null
+    /** A stable failure code, or null. */
+    readonly errorCode: string | null
+}
+
+/** The agent history list. */
+export type AgentChatConversations = ReadonlyArray<ChatConversation>
+/** The messages displayed by the thread. */
+export type AgentChatMessages = ReadonlyArray<AgentThreadMessage>

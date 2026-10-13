@@ -96,6 +96,39 @@ export type OptionalChannel = string | null
 /** A lead's conversation, or null when the customer never talked to an agent. */
 export type OptionalLeadConversation = LeadConversation | null
 
+/** A conversation in the agent chat history. */
+export interface ChatConversation {
+    /** The conversation id. */
+    readonly id: string
+    /** The chat mode. */
+    readonly kind: "test" | "customer"
+    /** The customer channel. */
+    readonly channel: string
+    /** The visitor name, when supplied. */
+    readonly visitorName: string | null
+    /** The captured lead, when any. */
+    readonly leadId: string | null
+    /** The person holding the conversation, when any. */
+    readonly handledBy: string | null
+    /** When the conversation opened, ISO 8601. */
+    readonly createdAt: string
+}
+
+/** The bounded values opening an agent chat. */
+export interface OpenChatConversation {
+    /** The proven workspace. */
+    readonly workspaceId: string
+    /** The agent in that workspace. */
+    readonly agentId: string
+    /** Test or simulated customer. */
+    readonly kind: "test" | "customer"
+    /** The visitor name, or null for the default. */
+    readonly visitorName: string | null
+}
+
+/** A person's display name, or null while the agent holds the conversation. */
+export type ChatHolder = string | null
+
 /** The customer conversation a member may hold or reply in. */
 export interface HumanConversation extends ConversationTarget {
     /** The customer linked to the conversation. */

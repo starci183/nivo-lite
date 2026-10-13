@@ -23,7 +23,7 @@ export class ConversationsModule extends ConfigurableModuleClass {
                 ChatTurnService,
                 { provide: CHAT_TURN_EXTENSIONS, useExisting: ChatTurnExtensionsService },
             ],
-            exports: [CHAT_TURN_EXTENSIONS, ConversationsService, ChatTurnService],
+            exports: [CHAT_TURN_EXTENSIONS, ConversationsService, ChatTurnService, ChatTurnModule],
         }
     }
 }
