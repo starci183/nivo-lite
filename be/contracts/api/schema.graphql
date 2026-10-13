@@ -1,9 +1,106 @@
+type AgentChatConversationType {
+  channel: String!
+  createdAt: String!
+  handledBy: String
+  id: ID!
+  kind: String!
+  leadId: ID
+  visitorName: String
+}
+
+input AgentChatConversationsInput {
+  agentId: ID!
+}
+
+type AgentChatHolderType {
+  conversationId: ID!
+  handledBy: String
+}
+
+type AgentChatMessageType {
+  body: String!
+  createdAt: String!
+  id: ID!
+  role: String!
+}
+
+input AgentChatMessagesInput {
+  conversationId: ID!
+}
+
+input AgentChatPageInput {
+  agentId: ID!
+  welcome: Boolean! = false
+}
+
+type AgentChatPageType {
+  handle: String!
+  hasCustomerChannel: Boolean!
+  id: ID!
+  isActive: Boolean!
+  module: String!
+  name: String!
+  role: String!
+  showWelcome: Boolean!
+  workspaceId: ID!
+}
+
+input AgentChatTurnStatusInput {
+  id: ID!
+}
+
+type AgentChatTurnStatusType {
+  conversationId: ID!
+  errorCode: String
+  id: ID!
+  jobId: ID!
+  resultMessageId: ID
+  status: String!
+}
+
 input CreateWorkspaceInput {
   name: String!
 }
 
 type CreateWorkspaceType {
   id: ID!
+}
+
+type CreatedAgentChatConversationType {
+  id: ID!
+}
+
+type InboundEventType {
+  amountVnd: Float
+  body: String!
+  channel: String!
+  createdAt: String!
+  duplicateCount: Int!
+  eventId: String
+  externalRef: String
+  id: ID!
+  kind: String!
+  leadId: ID
+  origin: String!
+  senderContact: String
+  senderName: String
+  status: String!
+}
+
+input InboundEventsInput {
+  limit: Int! = 40
+}
+
+input InboundSimulationStatusInput {
+  id: ID!
+}
+
+type InboundSimulationStatusType {
+  errorCode: String
+  event: SimulationEventType!
+  id: ID!
+  status: String!
+  workItem: SimulationWorkItemType
 }
 
 type MemberType {
@@ -22,10 +119,76 @@ type MembershipType {
 
 type Mutation {
   createWorkspace(input: CreateWorkspaceInput!): CreateWorkspaceType!
+  sendAgentChatMessage(input: SendAgentChatMessageInput!): QueuedAgentChatTurnType!
+  simulateInbound(input: SimulateInboundInput!): SimulateInboundType!
+  startAgentChatConversation(input: StartAgentChatConversationInput!): CreatedAgentChatConversationType!
+  takeOverAgentChatConversation(input: TakeOverAgentChatConversationInput!): AgentChatHolderType!
 }
 
 type Query {
+  agentChatConversations(input: AgentChatConversationsInput!): [AgentChatConversationType!]!
+  agentChatMessages(input: AgentChatMessagesInput!): [AgentChatMessageType!]!
+  agentChatPage(input: AgentChatPageInput!): AgentChatPageType!
+  agentChatTurnStatus(input: AgentChatTurnStatusInput!): AgentChatTurnStatusType!
+  inboundEvents(input: InboundEventsInput!): [InboundEventType!]!
+  inboundSimulationStatus(input: InboundSimulationStatusInput!): InboundSimulationStatusType!
   myWorkspaces: [MembershipType!]!
+}
+
+type QueuedAgentChatTurnType {
+  conversationId: ID!
+  id: ID!
+  status: String!
+}
+
+input SendAgentChatMessageInput {
+  body: String!
+  conversationId: ID!
+}
+
+input SimulateInboundInput {
+  amountVnd: Float
+  body: String
+  channel: String!
+  eventId: String
+  externalRef: String
+  items: String
+  kind: String!
+  senderContact: String
+  senderName: String!
+}
+
+type SimulateInboundType {
+  duplicate: Boolean!
+  id: ID!
+  status: String!
+}
+
+type SimulationEventType {
+  amountVnd: Float
+  duplicateCount: Int!
+  eventId: String!
+  id: ID!
+  leadId: ID
+  status: String!
+}
+
+type SimulationWorkItemType {
+  department: String!
+  id: ID!
+  status: String!
+}
+
+input StartAgentChatConversationInput {
+  agentId: ID!
+  kind: String!
+  visitorName: String = null
+}
+
+input TakeOverAgentChatConversationInput {
+  conversationId: ID!
+  line: String! = ""
+  take: Boolean!
 }
 
 type WorkspaceType {

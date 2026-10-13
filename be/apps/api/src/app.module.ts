@@ -1,4 +1,4 @@
-import { Global, Module } from "@nestjs/common"
+import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
 import { ExtractKnowledgeFactsQueueModule } from "@features/jobs/extract-knowledge-facts"
@@ -76,6 +76,15 @@ import { CREDITS_ERROR_KINDS, CREDITS_MESSAGES, CreditsModule } from "@modules/d
 import { AI_USAGE_EVENTS_MESSAGES, AiUsageEventsModule, UsageGateService } from "@modules/domain/ai-usage-events"
 import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
 import { WorkspacesGraphqlModule, WorkspacesHttpModule } from "@features/api/workspaces"
+import { InboxGraphqlModule } from "@features/api/inbox"
+import { AgentChatGraphqlModule } from "@features/api/agentchat"
+import { InboxSimulationGraphqlModule } from "@features/api/inbox-simulation"
+import { AGENT_CHAT_ERROR_KINDS, AGENT_CHAT_MESSAGES, AgentChatModule } from "@modules/domain/agent-chat"
+import {
+    INBOX_SIMULATION_ERROR_KINDS,
+    INBOX_SIMULATION_MESSAGES,
+    InboxSimulationModule,
+} from "@modules/domain/inbox-simulation"
 import {
     EMAIL_MESSAGES_ERROR_KINDS,
     EMAIL_MESSAGES_MESSAGES,
@@ -359,14 +368,6 @@ const NO_CORRECTIONS: CorrectionSource = { recent: () => Promise.resolve([]) }
 
 const NO_DRIVE_ACCESS: DriveAccessSource = { forWorkspace: () => null }
 
-@Global()
-@Module({
-    providers: [{ provide: VIDEO_ASSETS, useExisting: SUPABASE_STORAGE }],
-    exports: [VIDEO_ASSETS],
-})
-/** Binds the file store the render job uses to the Supabase storage integration. */
-class VideoAssetsBindingModule {}
-
 @Module({})
 /** Composition root of the API: every capability is registered once and the three guards run in a fixed order. */
 export class AppModule {
@@ -375,6 +376,8 @@ export class AppModule {
         const verifyAccessToken = createSupabaseAccessTokenVerifier(options.supabase)
         return {
             module: AppModule,
+            global: true,
+            exports: [VIDEO_ASSETS],
             imports: [
                 ClockModule.register({ isGlobal: true }),
                 LoggingModule.register({ isGlobal: true }),
@@ -424,6 +427,8 @@ export class AppModule {
                         BILLING_MESSAGES,
                         CREDITS_MESSAGES,
                         INBOUND_EVENTS_MESSAGES,
+                        AGENT_CHAT_MESSAGES,
+                        INBOX_SIMULATION_MESSAGES,
                         PAYMENT_ORDERS_MESSAGES,
                         CHANNELS_MESSAGES,
                         CONNECTION_SECRETS_MESSAGES,
@@ -509,6 +514,8 @@ export class AppModule {
                         BILLING_ERROR_KINDS,
                         CREDITS_ERROR_KINDS,
                         INBOUND_EVENTS_ERROR_KINDS,
+                        AGENT_CHAT_ERROR_KINDS,
+                        INBOX_SIMULATION_ERROR_KINDS,
                         PAYMENT_ORDERS_ERROR_KINDS,
                         CHANNELS_ERROR_KINDS,
                         CONNECTION_SECRETS_ERROR_KINDS,
@@ -567,11 +574,7 @@ export class AppModule {
                     ],
                     ...options.queue,
                 }),
-                JobsModule.register({
-                    isGlobal: true,
-                    connection: PRIMARY_ENTITY_MANAGER,
-                    ...options.jobs,
-                }),
+                JobsModule.register({ isGlobal: true, connection: PRIMARY_ENTITY_MANAGER, ...options.jobs }),
                 SupabaseModule.register({ isGlobal: true, ...options.supabase }),
                 IdentityModule.register({ isGlobal: true, verifyAccessToken }),
                 ContractsModule.register({ isGlobal: true }),
@@ -628,7 +631,6 @@ export class AppModule {
                 VideoRendersModule.register({ isGlobal: true }),
                 VideoProjectsModule.register({ isGlobal: true }),
                 VideoProjectVersionsModule.register({ isGlobal: true }),
-                VideoAssetsBindingModule,
                 VideoModule.register({ isGlobal: true, ...options.video }),
                 ContentItemsModule.register({ isGlobal: true }),
                 ContentSettingsModule.register({ isGlobal: true }),
@@ -715,10 +717,7 @@ export class AppModule {
                 SyncAgentsQueueModule,
                 GenerateWithAgentQueueModule,
                 RunDecisionsQueueModule,
-                AgentsHttpModule,
-                AgentToolsHttpModule,
-                DecisionsHttpModule,
-                OfficeHttpModule,
+                ...[AgentsHttpModule, AgentToolsHttpModule, DecisionsHttpModule, OfficeHttpModule],
                 ModulesModule.register({ isGlobal: true, categories: MODULE_CATEGORIES, catalog: MODULE_CATALOG }),
                 ModulesHttpModule,
                 ApiKeysModule.register({ isGlobal: true }),
@@ -737,9 +736,7 @@ export class AppModule {
                 SepayHttpModule,
                 SepayFeedHttpModule,
                 VietcombankHttpModule,
-                TelegramHttpModule,
-                ZaloHttpModule,
-                RunChatTurnQueueModule,
+                ...[TelegramHttpModule, ZaloHttpModule, RunChatTurnQueueModule],
                 CheckConnectionHealthQueueModule,
                 CompleteZaloAuthorizationQueueModule,
                 RefreshZaloTokensQueueModule,
@@ -754,13 +751,14 @@ export class AppModule {
                 LoyaltyCampaignsModule.register({ isGlobal: true }),
                 LoyaltyOtpsModule.register({ isGlobal: true, pepper: options.supabase.serviceRoleKey.reveal() }),
                 LoyaltyModule.register({ isGlobal: true, delivery: { deliver: () => Promise.resolve(false) } }),
-                PublicBookingHttpModule,
-                BookingHttpModule,
+                ...[PublicBookingHttpModule, BookingHttpModule],
                 PublicLoyaltyHttpModule,
                 LoyaltyHttpModule,
                 LoyaltyTillHttpModule,
-                WorkspacesHttpModule,
-                WorkspacesGraphqlModule,
+                ...[WorkspacesHttpModule, WorkspacesGraphqlModule],
+                ...[InboxGraphqlModule, AgentChatGraphqlModule, InboxSimulationGraphqlModule],
+                InboxSimulationModule.register({ isGlobal: true }),
+                AgentChatModule.register({ isGlobal: true }),
                 ExtractKnowledgeFactsQueueModule,
                 RunBrainCommandQueueModule,
                 IndexKnowledgeSourceQueueModule,
@@ -776,6 +774,7 @@ export class AppModule {
                 AdminHttpModule,
             ],
             providers: [
+                { provide: VIDEO_ASSETS, useExisting: SUPABASE_STORAGE },
                 { provide: SUPABASE_ACCESS_TOKEN_VERIFIER, useValue: verifyAccessToken },
                 { provide: APP_FILTER, useClass: ErrorsFilter },
                 { provide: APP_GUARD, useClass: RateLimitGuard },
