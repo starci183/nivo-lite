@@ -42,8 +42,7 @@ export const SELECT_REMINDER_ON = sql`SELECT EXISTS (
  * The live assigned shifts of a workspace between two days, with whether the person checked in, was reminded and was reported as a
  * no-show ($1 workspace, $2 first day, $3 last day).
  */
-export const SELECT_ALERT_SHIFTS = sql`SELECT s.id, s.schedule_id, s.shift_date::text AS shift_date, s.start_time::text AS start_time, s.end_time::text AS end_time,
-    s.position_id, s.staff_id, s.status,
+export const SELECT_ALERT_SHIFTS = sql`SELECT s.id, s.schedule_id, s.shift_date, s.start_time, s.end_time, s.position_id, s.staff_id, s.status,
     EXISTS (SELECT 1 FROM public.shifts_attendance a WHERE a.shift_id = s.id) AS checked_in,
     EXISTS (SELECT 1 FROM public.shifts_notifications n
             WHERE n.shift_id = s.id AND n.staff_id = s.staff_id AND n.kind = 'reminder') AS reminded,
@@ -56,8 +55,7 @@ ORDER BY s.shift_date, s.start_time
 LIMIT 2000`
 
 /** One live assigned shift with its alert flags ($1 workspace, $2 shift). */
-export const SELECT_ALERT_SHIFT = sql`SELECT s.id, s.schedule_id, s.shift_date::text AS shift_date, s.start_time::text AS start_time, s.end_time::text AS end_time,
-    s.position_id, s.staff_id, s.status,
+export const SELECT_ALERT_SHIFT = sql`SELECT s.id, s.schedule_id, s.shift_date, s.start_time, s.end_time, s.position_id, s.staff_id, s.status,
     EXISTS (SELECT 1 FROM public.shifts_attendance a WHERE a.shift_id = s.id) AS checked_in,
     EXISTS (SELECT 1 FROM public.shifts_notifications n
             WHERE n.shift_id = s.id AND n.staff_id = s.staff_id AND n.kind = 'reminder') AS reminded,
@@ -91,8 +89,7 @@ export const SELECT_PAYROLL_DONE = sql`SELECT EXISTS (
 ) AS done`
 
 /** The published, assigned shifts of a month with whether the person checked in ($1 workspace, $2 first day, $3 last day). */
-export const SELECT_MONTH_SHIFTS = sql`SELECT s.id, s.schedule_id, s.shift_date::text AS shift_date, s.start_time::text AS start_time, s.end_time::text AS end_time,
-    s.position_id, s.staff_id, s.status,
+export const SELECT_MONTH_SHIFTS = sql`SELECT s.id, s.schedule_id, s.shift_date, s.start_time, s.end_time, s.position_id, s.staff_id, s.status,
     EXISTS (SELECT 1 FROM public.shifts_attendance a WHERE a.shift_id = s.id) AS checked_in,
     false AS reminded, false AS alerted
 FROM public.shifts_shifts s
