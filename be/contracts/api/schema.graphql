@@ -1,3 +1,7 @@
+type AcceptInviteType {
+  workspaceId: ID!
+}
+
 type AdminActivityType {
   lastCustomerMessageAt: String
   messages7d: Int!
@@ -553,6 +557,11 @@ type BodyProposalType {
   generated: Boolean!
 }
 
+input ChangeMemberRoleInput {
+  role: String!
+  userId: ID!
+}
+
 input CreateAgentInput {
   handle: String!
   instructions: String!
@@ -563,6 +572,12 @@ input CreateAgentInput {
 
 input CreateApiKeyInput {
   name: String!
+}
+
+input CreateInviteInput {
+  email: String!
+  role: String!
+  staffId: ID
 }
 
 input CreateResponsibilityInput {
@@ -815,6 +830,15 @@ input DecideWorkItemInput {
   workItemId: ID!
 }
 
+type DeviceSessionType {
+  createdAt: String
+  id: ID!
+  ip: String
+  isCurrent: Boolean!
+  lastActiveAt: String
+  userAgent: String
+}
+
 input EmitAutomationEventInput {
   data: JsonObject!
   dedupe: String!
@@ -840,6 +864,28 @@ input GrantAgentConnectionInput {
   purpose: String!
 }
 
+type InvitePreviewType {
+  email: String!
+  role: String!
+  staffName: String
+  state: String!
+  workspaceName: String!
+}
+
+input InviteRefInput {
+  inviteId: ID!
+}
+
+type InviteResultType {
+  delivery: String!
+  email: String!
+  link: String!
+}
+
+input InviteTokenInput {
+  token: String!
+}
+
 scalar JsonObject
 
 input ListAgentsInput {
@@ -860,6 +906,21 @@ input ListWorkItemsInput {
 type LocalizedTextType {
   en: String!
   vi: String!
+}
+
+type MemberListingType {
+  displayName: String!
+  email: String!
+  lastSignInAt: String
+  role: String!
+  staffId: ID
+  status: String!
+  userId: ID!
+  workspaceId: ID!
+}
+
+input MemberRefInput {
+  userId: ID!
 }
 
 type MemberType {
@@ -988,14 +1049,18 @@ type ModulesCatalogType {
 }
 
 type Mutation {
+  acceptInvite(input: InviteTokenInput!): AcceptInviteType!
   adminExtendSubscription(input: AdminExtendSubscriptionInput!): AdminSubscriptionExtendedType!
   adminResendWorkspaceInvite(input: AdminResendWorkspaceInviteInput!): AdminInviteResentType!
   adminSetWorkspacePlan(input: AdminSetWorkspacePlanInput!): AdminPlanSetType!
   adminSetWorkspaceStatus(input: AdminSetWorkspaceStatusInput!): AdminStatusSetType!
   cancelOfficeCommand(input: OfficeCandidateIdInput!): OfficeAckType!
+  changeMemberRole(input: ChangeMemberRoleInput!): Boolean!
   confirmOfficeCommand(input: OfficeCandidateIdInput!): OfficeConfirmResultType!
+  copyInviteLink(input: InviteRefInput!): InviteResultType!
   createAgent(input: CreateAgentInput!): AgentSummaryType!
   createApiKey(input: CreateApiKeyInput!): CreatedApiKeyType!
+  createInvite(input: CreateInviteInput!): InviteResultType!
   createResponsibility(input: CreateResponsibilityInput!): ResponsibilityType!
   createWorkspace(input: CreateWorkspaceInput!): CreateWorkspaceType!
   decideExecution(input: DecideExecutionInput!): ApprovalExecutionType!
@@ -1004,19 +1069,32 @@ type Mutation {
   grantAgentConnection(input: GrantAgentConnectionInput!): AgentAckType!
   proposeAutomationBody(input: TemplateKeyInput!): BodyProposalType!
   proposeOfficeCommand(input: ProposeOfficeCommandInput!): OfficeProposeOutcomeType!
+  removeMember(input: MemberRefInput!): Boolean!
   renameAgent(input: RenameAgentInput!): AgentAckType!
   requestAgentSync(input: RequestAgentSyncInput!): AgentAckType!
+  resendInvite(input: InviteRefInput!): InviteResultType!
   revokeAgentConnection(input: RevokeAgentConnectionInput!): AgentAckType!
   revokeApiKey(input: RevokeApiKeyInput!): ApiKeyType!
+  revokeInvite(input: InviteRefInput!): Boolean!
+  revokeSession(input: RevokeSessionInput!): Boolean!
   runAutomationNow(input: TemplateKeyInput!): Boolean!
   runFlow(input: RunFlowInput!): RunFlowType!
   saveAuthorityRule(input: SaveAuthorityRuleInput!): AuthorityRuleType!
   sendAgentCommand(input: SendAgentCommandInput!): AgentCommandResultType!
   setAgentStatus(input: SetAgentStatusInput!): AgentAckType!
   setAgentTexts(input: SetAgentTextsInput!): AgentAckType!
+  setMemberStatus(input: SetMemberStatusInput!): Boolean!
   updateAuthority(input: UpdateAuthorityInput!): AuthorityProfileType!
   updateAutomationPipeline(input: UpdateAutomationPipelineInput!): AutomationCardType!
+  updateProfile(input: UpdateProfileInput!): Boolean!
   updateResponsibilityStatus(input: UpdateResponsibilityStatusInput!): ResponsibilityType!
+}
+
+type MyAccountType {
+  email: String!
+  name: String!
+  providers: [String!]!
+  sessions: [DeviceSessionType!]!
 }
 
 input NewResponsibilityInput {
@@ -1113,6 +1191,15 @@ type OfficeThreadCursorType {
   id: ID!
 }
 
+type PendingInviteType {
+  createdAt: String!
+  email: String!
+  expiresAt: String!
+  id: ID!
+  role: String!
+  staffId: ID
+}
+
 type PreviewSampleType {
   neutral: JsonObject!
   variables: JsonObject!
@@ -1154,8 +1241,10 @@ type Query {
   automationSuggestions(input: AutomationSuggestionsInput!): [AutomationSuggestionType!]!
   automations: AutomationsOverviewType!
   dashboard: DashboardType!
+  invitePreview(input: InviteTokenInput!): InvitePreviewType!
   moduleDefinition(input: ModuleKeyInput!): ModuleDefinitionType!
   modulesCatalog: ModulesCatalogType!
+  myAccount: MyAccountType!
   myWorkspaces: [MembershipType!]!
   officeCommandCandidates: [OfficeCandidateType!]!
   officeDecidedApprovals: [OfficeApprovalType!]!
@@ -1164,6 +1253,10 @@ type Query {
   responsibilities: [ResponsibilityListingType!]!
   workItem(input: WorkItemIdInput!): WorkItemType!
   workItems(input: ListWorkItemsInput!): WorkItemPageType!
+  workspaceInvites: [PendingInviteType!]!
+  workspaceMembers: [MemberListingType!]!
+  workspaceShell(input: ShellWindowInput!): WorkspaceShellType!
+  workspaceStaff: [StaffOptionType!]!
 }
 
 input RenameAgentInput {
@@ -1214,6 +1307,10 @@ input RevokeApiKeyInput {
   keyId: ID!
 }
 
+input RevokeSessionInput {
+  sessionId: ID!
+}
+
 input RunFlowInput {
   kind: String!
   payload: JsonObject!
@@ -1253,10 +1350,49 @@ input SetAgentTextsInput {
   texts: AgentTextsInput!
 }
 
+input SetMemberStatusInput {
+  status: String!
+  userId: ID!
+}
+
+type ShellAgentType {
+  id: ID!
+  module: String!
+  name: String!
+  status: String!
+}
+
+type ShellApprovalType {
+  contactName: String
+  draft: String!
+  id: ID!
+  leadId: ID
+  nextAction: String
+}
+
+type ShellExceptionType {
+  contactName: String
+  error: String
+  id: ID!
+  leadId: ID
+  summary: String
+}
+
+input ShellWindowInput {
+  foundingFrom: String!
+  foundingTo: String!
+}
+
 type ShopContextType {
   hours: String!
   shop: String!
   tone: String!
+}
+
+type StaffOptionType {
+  id: ID!
+  name: String!
+  role: String!
 }
 
 type TemplateAuthorityType {
@@ -1341,6 +1477,10 @@ input UpdateAutomationPipelineInput {
   values: JsonObject
 }
 
+input UpdateProfileInput {
+  name: String!
+}
+
 input UpdateResponsibilityStatusInput {
   responsibilityId: ID!
   status: String!
@@ -1405,6 +1545,17 @@ type WorkItemType {
 type WorkResultType {
   href: String
   summary: String!
+}
+
+type WorkspaceShellType {
+  agents: [ShellAgentType!]!
+  approvals: [ShellApprovalType!]!
+  exceptions: [ShellExceptionType!]!
+  hasChatbot: Boolean!
+  isFoundingMember: Boolean!
+  leadCount: Int!
+  openResponsibilityCount: Int!
+  pendingDecisions: Int!
 }
 
 type WorkspaceType {

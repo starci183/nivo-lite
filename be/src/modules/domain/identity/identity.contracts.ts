@@ -20,6 +20,8 @@ export enum PublicReason {
     ToolToken = "tool-token",
     /** A published catalog page (booking page, loyalty check) read without a session; always rate limited. */
     CatalogRead = "catalog-read",
+    /** The preview of an invitation link, read before the invited person signs in; always rate limited. */
+    InviteLink = "invite-link",
 }
 
 /** The metadata `@Public` attaches to a door. */

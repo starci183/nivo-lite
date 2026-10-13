@@ -10,6 +10,8 @@ export interface SupabasePrincipal {
     readonly email?: string
     /** Supabase's authenticated role, required by the verifier. */
     readonly role: "authenticated"
+    /** The Auth session of the token from the verified `session_id` claim, when present. */
+    readonly sessionId?: string
 }
 
 /** Verifies one bearer token and returns only claims that passed every cryptographic and semantic check. */

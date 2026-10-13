@@ -16,7 +16,7 @@ export interface WorkspaceMember {
     /** The name Office and the decision history show. */
     readonly displayName: string
     /** A disabled member keeps the row but loses access. */
-    readonly status: "active" | "disabled"
+    readonly status: MemberStatus
 }
 
 /** A member as the team page lists them. */
@@ -25,6 +25,35 @@ export interface MemberListing extends WorkspaceMember {
     readonly email: string
     /** The last sign-in, ISO 8601; null when unknown or the viewer is staff. */
     readonly lastSignInAt: string | null
+}
+
+/** Whether a member can sign in to the workspace. */
+export type MemberStatus = "active" | "disabled"
+
+/** What a change to another member's seat is judged by, besides who asks and who is changed. */
+export interface SeatRule {
+    /** The role the member would get, for a role change. */
+    readonly nextRole?: WorkspaceRole
+    /** True for disable and remove, which are never allowed on one's own account. */
+    readonly forbidSelf: boolean
+}
+
+/** The asker's seat and the seat being changed, both proven. */
+export interface SeatPair {
+    /** The person asking. */
+    readonly actor: WorkspaceMember
+    /** The member being changed. */
+    readonly target: WorkspaceMember
+}
+
+/** An active staff row a member can be linked to. */
+export interface StaffOption {
+    /** The staff id. */
+    readonly id: string
+    /** The staff name. */
+    readonly name: string
+    /** The staff role label. */
+    readonly role: string
 }
 
 /** What makes a person a member: the workspace, the account and the role it grants. */

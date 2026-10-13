@@ -1,4 +1,4 @@
-// migrations-sha256: 6eed894e9dc7e87544e241b5a75e32a0ff5280e9c9d4468edf85c6037d58b417
+// migrations-sha256: 4b8b944dd20fe3c67722de37fdafacc5f2f388a9a3e6622b1992845eb9e7dc73
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -3909,6 +3909,19 @@ isOneToOne: false
 "automations_data":
 { Args: { "ws": string }; Returns: Json
                            },
+"be_account_providers":
+{ Args: { "p_user": string }; Returns: {
+              "provider": string
+            }[]
+                           },
+"be_account_sessions":
+{ Args: { "p_user": string }; Returns: {
+              "created_at": string,"id": string,"ip": string,"last_active_at": string,"user_agent": string
+            }[]
+                           },
+"be_revoke_session":
+{ Args: { "p_session": string,"p_user": string }; Returns: boolean
+                           },
 "booking_peak_load":
 { Args: { "p_block_end": string,"p_exclude": string,"p_resource": string,"p_start": string }; Returns: number
                            },
@@ -4266,6 +4279,11 @@ isOneToOne: false
                            },
 "job_stats":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"job_status":
+{ Args: { "p_dedupe_key": string,"p_name": string,"p_queue": string,"p_workspace_id": string }; Returns: {
+              "id": string,"state": string
+            }[]
                            },
 "job_touch":
 { Args: { "p_msg_id": number,"p_queue": string,"p_vt": number }; Returns: boolean
