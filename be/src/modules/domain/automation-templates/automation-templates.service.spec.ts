@@ -1,5 +1,9 @@
+import { Test } from "@nestjs/testing"
 import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { CLOCK } from "@modules/platform/clock"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { TEMPLATE_CATALOG } from "./automation-templates.templates"
 import { AutomationTemplatesLogEvent } from "./automation-templates.log-events"
@@ -30,10 +34,18 @@ const definitionOf = (key: string, position: number) => ({
     defaults: {},
 })
 
-const build = (em: MockEntityManager) => {
+const build = async (em: MockEntityManager) => {
     const clock = new FakeClock("2026-10-12T10:00:00.000Z")
     const logger = mock<Logger>()
-    return { catalog: new AutomationTemplatesService(em, clock, logger), clock, logger }
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            AutomationTemplatesService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            { provide: CLOCK, useValue: clock },
+            { provide: LOGGER, useValue: logger },
+        ],
+    }).compile()
+    return { catalog: moduleRef.get(AutomationTemplatesService), clock, logger }
 }
 
 describe("AutomationTemplatesService", () => {
@@ -42,7 +54,7 @@ describe("AutomationTemplatesService", () => {
             const em = mockEntityManager({
                 query: [SELECT_TEMPLATES, [{ key: "a_one", definition: definitionOf("a_one", 1) }]],
             })
-            const { catalog, clock } = build(em)
+            const { catalog, clock } = await build(em)
 
             const first = await catalog.listTemplates()
             clock.advance(59_000)
@@ -57,7 +69,7 @@ describe("AutomationTemplatesService", () => {
             const em = mockEntityManager({
                 query: [SELECT_TEMPLATES, [{ key: "a_one", definition: definitionOf("a_one", 1) }]],
             })
-            const { catalog, clock } = build(em)
+            const { catalog, clock } = await build(em)
 
             await catalog.listTemplates()
             clock.advance(60_000)
@@ -68,7 +80,7 @@ describe("AutomationTemplatesService", () => {
 
         it("refuses a stored definition that is not a template", async () => {
             const em = mockEntityManager({ query: [SELECT_TEMPLATES, [{ key: "bad", definition: {} }]] })
-            const { catalog } = build(em)
+            const { catalog } = await build(em)
 
             await expect(catalog.listTemplates()).rejects.toMatchObject({
                 code: AutomationTemplatesErrorCode.DefinitionInvalid,
@@ -81,7 +93,7 @@ describe("AutomationTemplatesService", () => {
             const em = mockEntityManager({
                 query: [SELECT_TEMPLATES, [{ key: "a_one", definition: definitionOf("a_one", 1) }]],
             })
-            const { catalog } = build(em)
+            const { catalog } = await build(em)
 
             await expect(catalog.templateOf("a_one")).resolves.toMatchObject({ key: "a_one" })
             await expect(catalog.templateOf("missing")).rejects.toMatchObject({
@@ -100,7 +112,7 @@ describe("AutomationTemplatesService", () => {
                     ],
                 }),
             )
-            const { catalog } = build(tx.em)
+            const { catalog } = await build(tx.em)
             await catalog.listTemplates()
 
             await expect(catalog.syncCatalog([definitionOf("a_one", 1), definitionOf("a_two", 2)])).resolves.toEqual([
@@ -124,7 +136,7 @@ describe("AutomationTemplatesService", () => {
 
         it("writes nothing when one definition is invalid", async () => {
             const tx = fakeTransaction(mockEntityManager())
-            const { catalog } = build(tx.em)
+            const { catalog } = await build(tx.em)
 
             await expect(catalog.syncCatalog([definitionOf("a_one", 1), { key: "a_two" }])).rejects.toMatchObject({
                 code: AutomationTemplatesErrorCode.DefinitionInvalid,
@@ -137,7 +149,7 @@ describe("AutomationTemplatesService", () => {
     describe("syncFromCatalog", () => {
         it("writes every template of the TypeScript catalogue and logs the keys", async () => {
             const tx = fakeTransaction(mockEntityManager({ query: [UPSERT_TEMPLATE, [{ key: "k" }]] }))
-            const { catalog, logger } = build(tx.em)
+            const { catalog, logger } = await build(tx.em)
 
             const keys = await catalog.syncFromCatalog()
 

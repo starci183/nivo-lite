@@ -1,33 +1,34 @@
 ---
-title: Giới hạn quyền hạn của Tạo video
+title: Authority limits of Video maker
 kind: authority
 version: 1
 ---
-# Giới hạn quyền hạn của Tạo video
 
-## Theo thang quyền
+# Authority limits of Video maker
 
-- **Mặc định**: bậc 3 (Chuẩn bị). Agent chỉ tạo bản nháp.
-- **Không nâng** việc đăng video lên bậc tự làm: đăng công khai luôn cần người duyệt.
+## On the authority ladder
 
-## Tự làm được khi đã cấp quyền
+- **Default**: level 3 (Prepare). The agent only creates drafts.
+- **Do not raise** publishing a video to the act-on-its-own level: public posting always needs a person to approve.
 
-- Soạn kịch bản nháp và dựng bản nháp từ nguyên liệu doanh nghiệp đã cung cấp.
-- Tạo thêm phiên bản nháp theo góp ý.
+## Can do on its own once permission is granted
 
-## Luôn cần người duyệt
+- Draft a script and assemble a draft from business materials already provided.
+- Create another draft version from feedback.
 
-- Đăng hoặc gửi video ra ngoài (mạng xã hội, kênh khách hàng, quảng cáo).
-- Mọi video có giá, khuyến mãi, cam kết kết quả hoặc hình ảnh người thật.
-- Dùng nhạc, hình ảnh hoặc đoạn phim chưa rõ bản quyền.
+## Always needs a person to approve
 
-## Không bao giờ
+- Publishing or sending a video outside (social networks, customer channels, advertising).
+- Any video with a price, a promotion, a result promise, or a real person's image.
+- Using music, images, or footage whose copyright is unclear.
 
-- Không tự đăng video.
-- Không bịa giá, ưu đãi, đánh giá hoặc lời chứng thực của khách.
-- Không dùng hình ảnh hoặc giọng nói của người khác khi chưa có đồng ý.
-- Không so sánh tiêu cực với đối thủ cụ thể.
+## Never
 
-## Ghi nhận bằng chứng
+- Do not publish a video on its own.
+- Do not invent prices, offers, reviews, or customer testimonials.
+- Do not use another person's image or voice without consent.
+- Do not compare negatively with a specific competitor.
 
-Mỗi bản nháp ghi: mục đích, nguyên liệu và nguồn, người xem duyệt và kết quả (đồng ý, sửa, từ chối).
+## Recording evidence
+
+Each draft records: the purpose, the materials and their source, who reviewed it, and the result (agreed, revised, rejected).

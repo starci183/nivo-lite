@@ -1,6 +1,8 @@
+import { Test } from "@nestjs/testing"
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { AutomationRunsService } from "@modules/domain/automation-runs"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AutomationScansService } from "./automation-scans.service"
 import { buildPipelineRow, buildTemplate } from "@tests/fixtures/builders/automations.builder"
 import type { LoadedPipeline } from "./automations.contracts"
@@ -21,16 +23,23 @@ const loaded = (key: string, config: LoadedPipeline["config"] = {}): LoadedPipel
     config,
 })
 
-const build = (em: MockEntityManager) => {
+const build = async (em: MockEntityManager) => {
     const runs = mock<AutomationRunsService>()
     runs.priorRuns.mockResolvedValue([])
-    return { scans: new AutomationScansService(em, runs), runs }
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            AutomationScansService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            { provide: AutomationRunsService, useValue: runs },
+        ],
+    }).compile()
+    return { scans: moduleRef.get(AutomationScansService), runs }
 }
 
 describe("AutomationScansService", () => {
     describe("planScan", () => {
         it("plans the day report once its time has passed", async () => {
-            const { scans } = build(mockEntityManager())
+            const { scans } = await build(mockEntityManager())
 
             await expect(scans.planScan(loaded("daily_report", { time: "08:00" }), NOW, 8)).resolves.toEqual({
                 runs: [{ dedupe: "daily:2026-10-12", triggerRef: "2026-10-12", payload: { day: "2026-10-12" } }],
@@ -43,7 +52,7 @@ describe("AutomationScansService", () => {
         })
 
         it("plans nothing for a template with no scan", async () => {
-            const { scans } = build(mockEntityManager())
+            const { scans } = await build(mockEntityManager())
 
             await expect(scans.planScan(loaded("thank_payment"), NOW, 8)).resolves.toEqual({ runs: [], events: [] })
         })
@@ -66,7 +75,7 @@ describe("AutomationScansService", () => {
                     [SELECT_LEADS_WITH_CHAT, [{ lead_id: "l-1" }]],
                 ],
             })
-            const { scans, runs } = build(em)
+            const { scans, runs } = await build(em)
 
             const plan = await scans.planScan(loaded("nurture_leads", { afterHours: 24, maxFollowUps: 2 }), NOW, 8)
 
@@ -74,7 +83,7 @@ describe("AutomationScansService", () => {
             expect(runs.priorRuns).toHaveBeenCalledWith("p-1", ["l-1", "l-2"])
             expect(em.query).toHaveBeenCalledWith(SELECT_SCAN_LEADS, [
                 "ws-1",
-                expect.any(String),
+                "2026-09-12T10:00:00.000Z",
                 ["new", "qualified", "proposal"],
                 null,
                 200,
@@ -89,16 +98,22 @@ describe("AutomationScansService", () => {
                     [SELECT_LEADS_WITH_CHAT, [{ lead_id: "l-1" }]],
                 ],
             })
-            const { scans } = build(em)
+            const { scans } = await build(em)
 
             const plan = await scans.planScan(loaded("win_back", { afterDays: 7 }), NOW, 8)
 
             expect(plan.runs.map((run) => run.dedupe)).toEqual(["winback:l-1:2026-10"])
-            expect(em.query).toHaveBeenCalledWith(SELECT_SCAN_LEADS, ["ws-1", expect.any(String), null, "lost", 200])
+            expect(em.query).toHaveBeenCalledWith(SELECT_SCAN_LEADS, [
+                "ws-1",
+                "2025-10-12T10:00:00.000Z",
+                null,
+                "lost",
+                200,
+            ])
         })
 
         it("plans nothing when no lead is in range", async () => {
-            const { scans, runs } = build(mockEntityManager({ query: [SELECT_SCAN_LEADS, []] }))
+            const { scans, runs } = await build(mockEntityManager({ query: [SELECT_SCAN_LEADS, []] }))
 
             await expect(scans.planScan(loaded("nurture_leads"), NOW, 8)).resolves.toEqual({ runs: [], events: [] })
 
@@ -129,7 +144,7 @@ describe("AutomationScansService", () => {
                     [SELECT_LEADS_WITH_CHAT, [{ lead_id: "l-1" }]],
                 ],
             })
-            const { scans, runs } = build(em)
+            const { scans, runs } = await build(em)
 
             const plan = await scans.planScan(loaded("debt_reminder", { afterDays: 3 }), NOW, 8)
 
@@ -145,7 +160,7 @@ describe("AutomationScansService", () => {
 
         it("reads no chat when no invoice names a customer", async () => {
             const em = mockEntityManager({ query: [SELECT_DEBT_INVOICES, [invoice("i-2", null, null)]] })
-            const { scans } = build(em)
+            const { scans } = await build(em)
 
             await expect(scans.planScan(loaded("debt_reminder", { afterDays: 3 }), NOW, 8)).resolves.toEqual({
                 runs: [],
@@ -168,7 +183,7 @@ describe("AutomationScansService", () => {
                     ],
                 ],
             })
-            const { scans, runs } = build(em)
+            const { scans, runs } = await build(em)
             runs.priorRuns.mockResolvedValue([
                 {
                     trigger_ref: "c-2",
@@ -186,7 +201,7 @@ describe("AutomationScansService", () => {
         })
 
         it("plans nothing when no contract ends soon", async () => {
-            const { scans, runs } = build(mockEntityManager({ query: [SELECT_EXPIRING_CONTRACTS, []] }))
+            const { scans, runs } = await build(mockEntityManager({ query: [SELECT_EXPIRING_CONTRACTS, []] }))
 
             await expect(scans.planScan(loaded("contract_renewal"), NOW, 8)).resolves.toEqual({ runs: [], events: [] })
 
