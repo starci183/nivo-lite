@@ -22,7 +22,7 @@ const serve = async (commandId: string): Promise<DbOutcome<InviteResultItem>> =>
 export const writeInviteCreate = async (workspaceId: string, input: unknown): Promise<DbOutcome<InviteResultItem>> => {
     const principal = await getPrincipal()
     if (principal.kind !== "ok") return dbFailure("refused", "principal")
-    const parsed = inviteInputSchema.safeParse({ ...(typeof input === "object" ? input : {}), workspaceId })
+    const parsed = inviteInputSchema.safeParse(workspaceId, input)
     if (!parsed.success) return dbFailure("invalid", "invite-input")
     const client = await createServerDbClient()
     const { data, error } = await client.rpc("request_invite_command", {

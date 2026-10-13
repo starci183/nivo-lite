@@ -58,6 +58,31 @@ const emailsOf = async (client: Client, ids: ReadonlyArray<string>): Promise<Rea
     return error === null ? new Map(data.map((row) => [row.id, row.email])) : new Map()
 }
 
+/** The SePay transfers matched to the orders of a workspace, newest first. */
+const transfersOf = async (client: Client, orderIds: ReadonlyArray<string>) =>
+    orderIds.length === 0
+        ? dbOk([])
+        : toOutcome(
+              await client
+                  .from("sepay_transactions")
+                  .select("sepay_id, transfer_amount, content, status, received_at")
+                  .in("matched_order_id", [...orderIds])
+                  .order("received_at", { ascending: false })
+                  .limit(30),
+          )
+
+/** The names of the workspaces the health rows mention. */
+const namesOf = async (client: Client, ids: ReadonlyArray<string>) =>
+    ids.length === 0
+        ? dbOk([])
+        : toOutcome(
+              await client
+                  .from("workspaces")
+                  .select("id, name")
+                  .in("id", [...ids])
+                  .limit(500),
+          )
+
 /** Asks who the platform admin is; anyone else is refused. */
 export const readAdminSession = async (): Promise<DbOutcome<AdminSession>> => requireAdmin(await createServerDbClient())
 
@@ -202,19 +227,11 @@ export const readAdminWorkspace = async (workspaceId: string): Promise<DbOutcome
     }
     if (stats.error !== null) return rpcFailure(stats.error)
     if (quota.error !== null) return rpcFailure(quota.error)
-    const transfers =
-        orders.data.length === 0
-            ? { data: [], error: null }
-            : await client
-                  .from("sepay_transactions")
-                  .select("sepay_id, transfer_amount, content, status, received_at")
-                  .in(
-                      "matched_order_id",
-                      orders.data.map((order) => order.id),
-                  )
-                  .order("received_at", { ascending: false })
-                  .limit(30)
-    if (transfers.error !== null) return dbFailure("unavailable", "admin-detail")
+    const transfers = await transfersOf(
+        client,
+        orders.data.map((order) => order.id),
+    )
+    if (transfers.kind !== "ok") return transfers
     const emails = await emailsOf(client, [workspace.owner_id, ...members.data.map((member) => member.user_id)])
     await audit(client, "view.workspace", workspaceId)
     const credits = isRecord(quota.data) ? quota.data : null
@@ -224,7 +241,7 @@ export const readAdminWorkspace = async (workspaceId: string): Promise<DbOutcome
             members: members.data,
             invites: invites.data,
             orders: orders.data,
-            transfers: transfers.data,
+            transfers: transfers.value,
             billingEvents: events.data,
             installs: installs.data,
             versions: versions.data,
@@ -301,11 +318,8 @@ export const readAdminHealth = async (): Promise<DbOutcome<AdminHealth>> => {
         errors: errors.data,
         audits: audits.data,
     })
-    const names =
-        referenced.length === 0
-            ? { data: [], error: null }
-            : await client.from("workspaces").select("id, name").in("id", referenced).limit(500)
-    if (names.error !== null) return dbFailure("unavailable", "admin-health")
+    const names = await namesOf(client, referenced)
+    if (names.kind !== "ok") return names
     return dbOk(
         healthOf({
             signups: signups.data.map((row) => ({ day: row.day, signups: row.signups })),
@@ -314,7 +328,7 @@ export const readAdminHealth = async (): Promise<DbOutcome<AdminHealth>> => {
             errors: errors.data,
             recentErrors: recent.data,
             audits: audits.data,
-            names: names.data,
+            names: names.value,
         }),
     )
 }

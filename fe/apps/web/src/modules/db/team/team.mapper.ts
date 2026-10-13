@@ -210,15 +210,15 @@ export interface InviteInput {
 
 /** Bounds the invitation a person typed before it reaches a function. */
 export const inviteInputSchema = {
-    safeParse: (input: unknown): Parsed<InviteInput> => {
-        if (!isRecord(input) || !isId(input.workspaceId) || typeof input.email !== "string") return { success: false }
+    safeParse: (workspaceId: unknown, input: unknown): Parsed<InviteInput> => {
+        if (!isId(workspaceId) || !isRecord(input) || typeof input.email !== "string") return { success: false }
         const email = input.email.trim()
         if (email === "" || email.length > 254) return { success: false }
         if (input.role !== "manager" && input.role !== "staff") return { success: false }
         if (input.staffId !== null && !isId(input.staffId)) return { success: false }
         return {
             success: true,
-            data: { workspaceId: input.workspaceId, email, role: input.role, staffId: input.staffId },
+            data: { workspaceId, email, role: input.role, staffId: input.staffId },
         }
     },
 }

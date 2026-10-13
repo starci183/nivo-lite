@@ -7,6 +7,7 @@ import { dbFailure, dbOk } from "../outcome"
 import type { DbOutcome } from "../outcome"
 import { rpcFailure } from "../rpc-failure"
 import { createServerDbClient } from "../server"
+import { renderProjectSchema } from "./video.mapper"
 
 /** What the back end answers when a render is queued. */
 export interface RenderQueuedItem {
@@ -21,9 +22,10 @@ export interface RenderQueuedItem {
 export const writeRenderVideo = async (projectId: string): Promise<DbOutcome<RenderQueuedItem>> => {
     const principal = await getPrincipal()
     if (principal.kind !== "ok") return dbFailure("refused", "principal")
-    if (!/^[0-9a-f-]{36}$/iu.test(projectId)) return dbFailure("invalid", "render-input")
+    const parsed = renderProjectSchema.safeParse(projectId)
+    if (!parsed.success) return dbFailure("invalid", "render-input")
     const client = await createServerDbClient()
-    const { data, error } = await client.rpc("request_video_render", { p_project: projectId })
+    const { data, error } = await client.rpc("request_video_render", { p_project: parsed.data })
     if (error !== null) return rpcFailure(error)
     const answer = await awaitCommand(data)
     if (answer.kind !== "ok") return answer

@@ -109,3 +109,59 @@ export const responsibilityOf = (value: unknown): ResponsibilityItem | null => {
         status,
     }
 }
+
+type Parsed<T> = { readonly success: true; readonly data: T } | { readonly success: false }
+
+/** Bounds the stage change a person asked for. */
+export const outcomeInputSchema = {
+    safeParse: (
+        workspaceId: string,
+        leadId: string,
+        stage: string,
+        evidence: string,
+    ): Parsed<{
+        readonly workspaceId: string
+        readonly leadId: string
+        readonly stage: string
+        readonly evidence: string
+    }> =>
+        isRowId(workspaceId) && isRowId(leadId) && isStageName(stage) && evidence.length <= 2000
+            ? { success: true, data: { workspaceId, leadId, stage, evidence } }
+            : { success: false },
+}
+
+/** The step to add, already bounded. */
+export interface AddStepInput {
+    readonly workspaceId: string
+    readonly leadId: string
+    readonly title: string
+    readonly step: StepInput
+}
+
+/** Bounds the step a person adds to a lead. */
+export const addStepSchema = {
+    safeParse: (workspaceId: string, leadId: string, title: string, input: unknown): Parsed<AddStepInput> => {
+        const step = stepInputOf(input)
+        const name = title.trim()
+        return isRowId(workspaceId) && isRowId(leadId) && step !== null && name !== "" && name.length <= 200
+            ? { success: true, data: { workspaceId, leadId, title: name, step } }
+            : { success: false }
+    },
+}
+
+/** The step change, already bounded. */
+export interface AssignStepInput {
+    readonly workspaceId: string
+    readonly responsibilityId: string
+    readonly step: StepInput
+}
+
+/** Bounds the change a person makes to a step. */
+export const assignStepSchema = {
+    safeParse: (workspaceId: string, responsibilityId: string, input: unknown): Parsed<AssignStepInput> => {
+        const step = stepInputOf(input)
+        return isRowId(workspaceId) && isRowId(responsibilityId) && step !== null
+            ? { success: true, data: { workspaceId, responsibilityId, step } }
+            : { success: false }
+    },
+}
