@@ -29,7 +29,7 @@ describe("OfficeLinesService", () => {
         const em = mockEntityManager({ query: [INSERT_MESSAGE, []] })
         const { service, directory } = await build(em, { id: "agent-1", name: "Sales Agent" })
 
-        await service.post(ctx, lineOf({ dept: "sales", installation_id: "inst-1" }))
+        await expect(service.post(ctx, lineOf({ dept: "sales", installation_id: "inst-1" }))).resolves.toBeUndefined()
 
         expect(directory.agentOfDepartment).toHaveBeenCalledWith("ws-1", "sales", "inst-1")
         expect(em.query).toHaveBeenCalledWith(INSERT_MESSAGE, [
@@ -46,7 +46,7 @@ describe("OfficeLinesService", () => {
     it("asks for the department's first agent when no instance is named", async () => {
         const { service, directory } = await build(mockEntityManager({ query: [INSERT_MESSAGE, []] }), null)
 
-        await service.post(ctx, lineOf({ dept: "sales" }))
+        await expect(service.post(ctx, lineOf({ dept: "sales" }))).resolves.toBeUndefined()
 
         expect(directory.agentOfDepartment).toHaveBeenCalledWith("ws-1", "sales", null)
     })
@@ -55,7 +55,7 @@ describe("OfficeLinesService", () => {
         const em = mockEntityManager({ query: [INSERT_MESSAGE, []] })
         const { service } = await build(em, null)
 
-        await service.post(ctx, lineOf({ dept: "sales" }))
+        await expect(service.post(ctx, lineOf({ dept: "sales" }))).resolves.toBeUndefined()
 
         expect(em.query).toHaveBeenCalledWith(INSERT_MESSAGE, [
             "ws-1",
@@ -72,7 +72,7 @@ describe("OfficeLinesService", () => {
         const em = mockEntityManager({ query: [INSERT_MESSAGE, []] })
         const { service, directory } = await build(em, { id: "agent-1", name: "Sales Agent" })
 
-        await service.post(ctx, lineOf({ lead_id: null, work_item_id: null }))
+        await expect(service.post(ctx, lineOf({ lead_id: null, work_item_id: null }))).resolves.toBeUndefined()
 
         expect(directory.agentOfDepartment).not.toHaveBeenCalled()
         expect(em.query).toHaveBeenCalledWith(INSERT_MESSAGE, [
@@ -90,7 +90,7 @@ describe("OfficeLinesService", () => {
         const em = mockEntityManager({ query: [INSERT_MESSAGE, []] })
         const { service, directory } = await build(em, { id: "agent-1", name: "Sales Agent" })
 
-        await service.post(ctx, lineOf({ dept: "sales", command: true }))
+        await expect(service.post(ctx, lineOf({ dept: "sales", command: true }))).resolves.toBeUndefined()
 
         expect(directory.agentOfDepartment).not.toHaveBeenCalled()
         expect(em.query).toHaveBeenCalledWith(INSERT_MESSAGE, [
