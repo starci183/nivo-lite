@@ -165,14 +165,7 @@ export type {
     RunRowView,
     SettingFieldView,
 } from "./automations"
-export type {
-    DeciderKind,
-    DecisionFilter,
-    DecisionKind,
-    DecisionOutcome,
-    DecisionRecord,
-    GateReason,
-} from "./decisions"
+export type { DeciderKind, DecisionKind, DecisionOutcome, DecisionRecord, GateReason } from "./decisions"
 export type {
     AttentionKind,
     AttentionRow,
@@ -222,3 +215,32 @@ export type {
     IdeaDecision,
     DocumentVisibility,
 } from "./knowledge"
+export type {
+    OfficeApprovalView,
+    OfficeAvatarView,
+    OfficeBodyPart,
+    OfficeChatRowView,
+    OfficeCommandView,
+    OfficeExceptionView,
+    OfficeInfoView,
+    OfficeJumpRowView,
+    OfficeListView,
+    OfficeMemberRowView,
+    OfficeMentionView,
+    OfficeMessageView,
+    OfficeMissingField,
+    OfficeOutboxView,
+    OfficeTaskView,
+    OfficeText,
+    OfficeThreadItem,
+    OfficeWorkDecision,
+} from "./office"
+export type {
+    OfficeComposerProps,
+    OfficeConversationsProps,
+    OfficeInfoPanelProps,
+    OfficeTasksProps,
+    OfficeThreadProps,
+} from "./office-slots"
+
+export type { SetupWriteDecided, SetupWriteInstance, SetupWriteProposal, SetupWriteWords } from "./setup-write"
