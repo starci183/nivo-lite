@@ -4,6 +4,23 @@ import { APP_FILTER, APP_GUARD } from "@nestjs/core"
 import { ExternalApiHttpModule } from "@features/api/external-api"
 import { SystemHealthHttpModule } from "@features/api/system-health"
 import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
+import { CassoHttpModule } from "@features/webhooks/casso"
+import { PayosHttpModule } from "@features/webhooks/payos"
+import { SepayHttpModule } from "@features/webhooks/sepay"
+import { VietcombankHttpModule } from "@features/webhooks/vietcombank"
+import { ReconcileBankCreditQueueModule } from "@features/jobs/reconcile-bank-credit"
+import { BILLING_ERROR_KINDS, BILLING_MESSAGES, BillingModule } from "@modules/domain/billing"
+import {
+    INBOUND_EVENTS_ERROR_KINDS,
+    INBOUND_EVENTS_MESSAGES,
+    InboundEventsModule,
+} from "@modules/domain/inbound-events"
+import {
+    PAYMENT_ORDERS_ERROR_KINDS,
+    PAYMENT_ORDERS_MESSAGES,
+    PaymentOrdersModule,
+} from "@modules/domain/payment-orders"
+import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
 import { WorkspacesHttpModule } from "@features/api/workspaces"
 import { AuthGuard, IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } from "@modules/domain/identity"
 import {
@@ -60,6 +77,9 @@ export class AppModule {
                     isGlobal: true,
                     bundles: [
                         API_KEYS_MESSAGES,
+                        BILLING_MESSAGES,
+                        INBOUND_EVENTS_MESSAGES,
+                        PAYMENT_ORDERS_MESSAGES,
                         ERRORS_MESSAGES,
                         HTTP_SECURITY_MESSAGES,
                         IDENTITY_MESSAGES,
@@ -75,6 +95,9 @@ export class AppModule {
                     isGlobal: true,
                     kinds: [
                         API_KEYS_ERROR_KINDS,
+                        BILLING_ERROR_KINDS,
+                        INBOUND_EVENTS_ERROR_KINDS,
+                        PAYMENT_ORDERS_ERROR_KINDS,
                         CONFIG_ERROR_KINDS,
                         DATABASE_ERROR_KINDS,
                         HTTP_SECURITY_ERROR_KINDS,
@@ -120,6 +143,15 @@ export class AppModule {
                 LivenessModule.register({ isGlobal: true }),
                 ApiKeysModule.register({ isGlobal: true }),
                 PublicApiModule.register({ isGlobal: true }),
+                PaymentOrdersModule.register({ isGlobal: true }),
+                InboundEventsModule.register({ isGlobal: true }),
+                BillingModule.register({ isGlobal: true, ...options.billing }),
+                SepayTransactionsModule.register({ isGlobal: true }),
+                ReconcileBankCreditQueueModule,
+                CassoHttpModule,
+                PayosHttpModule,
+                SepayHttpModule,
+                VietcombankHttpModule,
                 ExternalApiHttpModule,
                 SystemHealthHttpModule,
                 WorkspacesHttpModule,

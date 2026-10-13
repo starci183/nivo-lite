@@ -1,3 +1,4 @@
+import { parseBillingConfig } from "@modules/domain/billing"
 import { NestFactory } from "@nestjs/core"
 import type { NestExpressApplication } from "@nestjs/platform-express"
 import { SystemClockService } from "@modules/platform/clock"
@@ -30,6 +31,7 @@ const bootstrap = async (): Promise<void> => {
         supabase: parseSupabaseConfig(env),
         workspaces: parseWorkspacesConfig(env),
         workspaceInvites: parseWorkspaceInvitesConfig(env),
+        billing: parseBillingConfig(env),
         queue: parseQueueConfig(env),
         jobs: parseJobsConfig(env),
     }
