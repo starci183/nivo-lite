@@ -1,3 +1,4 @@
+import type { ChatBookingRequest } from "@modules/domain/work-performers"
 /** A job application the chat captured: a job, a person, a contact and a clear consent; Hiring validates it again. */
 export interface ChatApplicationProposal {
     /** The code of the job in the open jobs block. */
@@ -63,6 +64,8 @@ export interface ReplyFindings {
     readonly application: ChatApplicationProposal | null
     /** The loyalty reward the customer asked to redeem, or null. */
     readonly loyaltyRewardKey: string | null
+    /** The appointment request the reply named (book, change, cancel, ask what is free, wait), or null. */
+    readonly bookingRequest: ChatBookingRequest | null
 }
 
 /** One proposed customer reply as the model returned it, read and bounded. */
@@ -137,4 +140,12 @@ export interface OrderRequest {
     readonly channel: CustomerChannel
     /** The customer, when known. */
     readonly leadId: string | null
+}
+
+/** What the booking and loyalty parts of a turn came to: the reply that replaces the chat's own, or null, and the lines to show. */
+export interface ModuleOutcome {
+    /** The reply, or null to keep the chat's own. */
+    readonly reply: string | null
+    /** The lines the workbench shows. */
+    readonly lines: ReadonlyArray<string>
 }

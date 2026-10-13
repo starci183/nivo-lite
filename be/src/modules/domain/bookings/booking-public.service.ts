@@ -12,7 +12,6 @@ import type {
     BookingModel,
     BookingPlacement,
     BookingPlacementParams,
-    OptionalCancellableBooking,
     PublicBookCode,
     PublicBookParams,
     PublicBookResult,
@@ -24,6 +23,8 @@ import type {
     WorkspaceBookingCatalog,
     WorkspaceTimesParams,
 } from "./bookings.contracts"
+import type { OptionalCancellableBooking } from "./booking-chat.contracts"
+import { cancellableOf } from "./policies/cancellable.policy"
 import { BookingsError, BookingsErrorCode } from "./errors/bookings.error"
 import { SELECT_BOOKING_BY_KEY, SELECT_NEXT_CANCELLABLE_BOOKING } from "./persistence/booking-write.sql"
 import { SELECT_PAGE_BY_SLUG } from "./persistence/booking-model.sql"
@@ -210,15 +211,7 @@ export class BookingPublicService {
             normalised,
             bookingIsoOf(nowMs),
         ])
-        return row === undefined
-            ? null
-            : {
-                  id: row.id,
-                  leadId: row.lead_id,
-                  startIso: bookingIsoOf(row.start_ms),
-                  serviceName: row.service_name,
-                  customerName: row.customer_name,
-              }
+        return cancellableOf(row)
     }
 
     private async published(slug: string): Promise<PageRow> {
@@ -258,6 +251,8 @@ export class BookingPublicService {
             depositStatus,
             note: args.request.note.trim().slice(0, 400),
             idempotencyKey: args.key,
+            conversationId: args.request.conversationId ?? null,
+            leadId: args.request.leadId ?? null,
         }
         const confirmed = model.settings.autoConfirm
         const first: ReserveOutcome = check.ok

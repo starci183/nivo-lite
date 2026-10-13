@@ -39,6 +39,9 @@ export const CUSTOMER_TURNS_MESSAGES: MessageBundle = {
         "customerTurns.channel.facebook": "Facebook Messenger",
         "customerTurns.channel.instagram": "Instagram",
         "customerTurns.channel.zalo": "Zalo",
+        "customerTurns.bookingEvidence": "Yêu cầu đặt lịch từ chat: {{intent}} → {{state}}",
+        "customerTurns.redeemBlocked": "{{name}} xin đổi \"{{reward}}\" nhưng chưa đổi được ({{reason}})",
+        "customerTurns.redeemAsked": "Đã chuyển yêu cầu đổi quà \"{{reward}}\" của {{name}} ({{cost}} điểm)",
     },
     en: {
         "customerTurns.replySummary": "Answer the customer: {{question}}",
@@ -75,5 +78,8 @@ export const CUSTOMER_TURNS_MESSAGES: MessageBundle = {
         "customerTurns.channel.facebook": "Facebook Messenger",
         "customerTurns.channel.instagram": "Instagram",
         "customerTurns.channel.zalo": "Zalo",
+        "customerTurns.bookingEvidence": "Booking request from the chat: {{intent}} → {{state}}",
+        "customerTurns.redeemBlocked": "{{name}} asked to redeem \"{{reward}}\" but cannot yet ({{reason}})",
+        "customerTurns.redeemAsked": "Passed on the request of {{name}} to redeem \"{{reward}}\" ({{cost}} points)",
     },
 }

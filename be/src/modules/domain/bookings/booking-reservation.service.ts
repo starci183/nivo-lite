@@ -48,6 +48,10 @@ export interface NewBooking {
     readonly conflictNote: string
     /** The key that makes a repeated request harmless, or null. */
     readonly idempotencyKey: string | null
+    /** The chat the booking was asked in, so its notices are answered there; none for a page or a desk booking. */
+    readonly conversationId?: string | null
+    /** The customer lead of that chat, when known. */
+    readonly leadId?: string | null
 }
 
 /** A booking to reserve. */
@@ -134,6 +138,8 @@ export class BookingReservationService {
             booking.note,
             booking.conflictNote,
             booking.idempotencyKey,
+            booking.conversationId ?? null,
+            booking.leadId ?? null,
         ])
         if (row === undefined) throw new BookingsError({ code: BookingsErrorCode.NotCreated })
         return { kind: "reserved", id: row.id }
