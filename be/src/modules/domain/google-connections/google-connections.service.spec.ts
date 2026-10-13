@@ -5,6 +5,8 @@ import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connecti
 import { DRIVE_PURPOSE, GOOGLE_CLIENT, GoogleError, GoogleErrorCode } from "@modules/integrations/google"
 import type { GoogleClient, GoogleTokenSet, OAuthState, SheetConfig, SheetEventIn } from "@modules/integrations/google"
 import { CLOCK } from "@modules/platform/clock"
+import { LOGGER } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
 import { GoogleConnectionsService } from "./google-connections.service"
 import { GoogleConnectionsError, GoogleConnectionsErrorCode } from "./errors/google-connections.error"
 import type { GoogleCallbackInput } from "./google-connections.contracts"
@@ -21,6 +23,7 @@ const tokens: GoogleTokenSet = {
     scope: null,
 }
 const stored = { access_token: "access-old", refresh_token: "refresh-old", expires_at: EXPIRES }
+const issued = { access_token: "access-new", refresh_token: "refresh-new", expires_at: EXPIRES }
 const event: SheetEventIn = { event: "order.confirmed", data: { code: "O-1" }, occurredAt: NOW.toISOString() }
 const sheet = { spreadsheetId: "sheet-1", spreadsheetUrl: "https://docs.google.com/spreadsheets/d/sheet-1/edit" }
 
@@ -77,6 +80,7 @@ const build = async () => {
             { provide: ConnectionsService, useValue: connections },
             { provide: GOOGLE_CLIENT, useValue: google },
             { provide: CLOCK, useValue: clock },
+            { provide: LOGGER, useValue: mock<Logger>() },
         ],
     }).compile()
     return { service: moduleRef.get(GoogleConnectionsService), connections, google, clock }
@@ -144,7 +148,7 @@ describe("GoogleConnectionsService", () => {
         it("returns a state failure when verification returns null or throws", async () => {
             const { service, connections, google } = await build()
             google.verify.mockReturnValueOnce(null).mockImplementationOnce(() => {
-                throw new Error("invalid signature")
+                throw refused({ reason: "invalid signature" })
             })
 
             await expect(service.complete(callback({ state: undefined }))).resolves.toEqual(location("error", "state"))
@@ -171,20 +175,14 @@ describe("GoogleConnectionsService", () => {
         })
 
         it.each([
-            ["access_denied", "denied"],
-            ["invalid_client", "unavailable"],
-            ["unexpected_refusal", "failed"],
-        ])("maps Google's callback error %s to %s", async (error, reason) => {
+            { error: "access_denied", code: "consent-code", reason: "denied" },
+            { error: "invalid_client", code: "consent-code", reason: "unavailable" },
+            { error: "unexpected_refusal", code: "consent-code", reason: "failed" },
+            { error: undefined, code: undefined, reason: "failed" },
+        ])("maps an unsuccessful callback: %j", async ({ error, code, reason }) => {
             const { service, google } = await build()
 
-            await expect(service.complete(callback({ error }))).resolves.toEqual(location("error", reason))
-            expect(google.exchangeCode).not.toHaveBeenCalled()
-        })
-
-        it("returns failed when Google sent no code", async () => {
-            const { service, google } = await build()
-
-            await expect(service.complete(callback({ code: undefined }))).resolves.toEqual(location("error", "failed"))
+            await expect(service.complete(callback({ error, code }))).resolves.toEqual(location("error", reason))
             expect(google.exchangeCode).not.toHaveBeenCalled()
         })
 
@@ -204,10 +202,7 @@ describe("GoogleConnectionsService", () => {
                 lastError: null,
                 meta: { email: "shop@example.test", sheet_id: "existing-sheet" },
             })
-            expect(connections.writeSecret).toHaveBeenCalledWith(
-                "c1",
-                JSON.stringify({ access_token: "access-new", refresh_token: "refresh-new", expires_at: EXPIRES }),
-            )
+            expect(connections.writeSecret).toHaveBeenCalledWith("c1", JSON.stringify(issued))
             expect(connections.readSecret).not.toHaveBeenCalled()
             expect(connections.create).not.toHaveBeenCalled()
         })
@@ -242,54 +237,29 @@ describe("GoogleConnectionsService", () => {
             expect(connections.create).not.toHaveBeenCalled()
         })
 
-        it("creates a new row when another Google account consents", async () => {
+        it.each([
+            { email: "new@example.test", accounts: [record()], name: "Google - new@example.test" },
+            { email: null, accounts: [], name: "Google" },
+        ])("creates a new account named $name", async ({ email, accounts, name }) => {
             const { service, connections, google } = await build()
-            google.accountEmail.mockResolvedValue("new@example.test")
+            connections.listByProvider.mockResolvedValue(accounts)
+            google.accountEmail.mockResolvedValue(email)
 
             await expect(service.complete(callback())).resolves.toEqual(location("ok"))
             expect(connections.create).toHaveBeenCalledWith({
                 workspaceId: "ws-1",
                 createdBy: "owner-1",
                 provider: "google",
-                name: "Google - new@example.test",
+                name,
                 status: "connected",
                 environment: "live",
-                meta: { email: "new@example.test" },
+                meta: { email: email ?? "" },
                 secret: {
-                    plain: JSON.stringify({
-                        access_token: "access-new",
-                        refresh_token: "refresh-new",
-                        expires_at: EXPIRES,
-                    }),
+                    plain: JSON.stringify(issued),
                     webhookSecret: expect.stringMatching(/^[0-9a-f]{64}$/u),
                 },
             })
             expect(connections.patch).not.toHaveBeenCalled()
-        })
-
-        it("names an anonymous new account Google and stores a blank email", async () => {
-            const { service, connections, google } = await build()
-            connections.listByProvider.mockResolvedValue([])
-            google.accountEmail.mockResolvedValue(null)
-
-            await expect(service.complete(callback())).resolves.toEqual(location("ok"))
-            expect(connections.create).toHaveBeenCalledWith({
-                workspaceId: "ws-1",
-                createdBy: "owner-1",
-                provider: "google",
-                name: "Google",
-                status: "connected",
-                environment: "live",
-                meta: { email: "" },
-                secret: {
-                    plain: JSON.stringify({
-                        access_token: "access-new",
-                        refresh_token: "refresh-new",
-                        expires_at: EXPIRES,
-                    }),
-                    webhookSecret: expect.stringMatching(/^[0-9a-f]{64}$/u),
-                },
-            })
         })
 
         it.each<Readonly<Record<string, string>>>([{ email: "old@example.test", extra: "kept" }, { extra: "kept" }])(
@@ -399,39 +369,31 @@ describe("GoogleConnectionsService", () => {
             })
         })
 
-        it("creates a pending row then marks the newly loaded row refused", async () => {
-            const { service, connections } = await build()
-            connections.listByProvider.mockResolvedValueOnce([]).mockResolvedValueOnce([record({ status: "pending" })])
+        it.each([{ rows: [record({ status: "pending" })] }, { rows: [] }])(
+            "records refused consent after creating a pending row: %j",
+            async ({ rows }) => {
+                const { service, connections } = await build()
+                connections.listByProvider.mockResolvedValueOnce([]).mockResolvedValueOnce(rows)
 
-            await expect(service.complete(callback({ error: "invalid_client" }))).resolves.toEqual(
-                location("error", "unavailable"),
-            )
-            expect(connections.create).toHaveBeenCalledWith({
-                workspaceId: "ws-1",
-                createdBy: "owner-1",
-                provider: "google",
-                name: "Google",
-                status: "pending",
-                environment: "live",
-                meta: {},
-                secret: { plain: "{}", webhookSecret: expect.stringMatching(/^[0-9a-f]{64}$/u) },
-            })
-            expect(connections.patch).toHaveBeenCalledWith("ws-1", "c1", {
-                status: "error",
-                lastError: "consent:invalid_client",
-            })
-        })
-
-        it("still returns the refusal when the created row cannot be loaded", async () => {
-            const { service, connections } = await build()
-            connections.listByProvider.mockResolvedValue([])
-
-            await expect(service.complete(callback({ error: "invalid_client" }))).resolves.toEqual(
-                location("error", "unavailable"),
-            )
-            expect(connections.create).toHaveBeenCalledTimes(1)
-            expect(connections.patch).not.toHaveBeenCalled()
-        })
+                await expect(service.complete(callback({ error: "invalid_client" }))).resolves.toEqual(
+                    location("error", "unavailable"),
+                )
+                expect(connections.create).toHaveBeenCalledWith({
+                    workspaceId: "ws-1",
+                    createdBy: "owner-1",
+                    provider: "google",
+                    name: "Google",
+                    status: "pending",
+                    environment: "live",
+                    meta: {},
+                    secret: { plain: "{}", webhookSecret: expect.stringMatching(/^[0-9a-f]{64}$/u) },
+                })
+                expect(connections.create).toHaveBeenCalledTimes(1)
+                expect(connections.patch.mock.calls).toEqual(
+                    rows.length === 0 ? [] : [["ws-1", "c1", { status: "error", lastError: "consent:invalid_client" }]],
+                )
+            },
+        )
 
         it("swallows persistence failures for callback and thrown consent refusals", async () => {
             const { service, connections, google } = await build()
@@ -567,10 +529,7 @@ describe("GoogleConnectionsService", () => {
 
             await expect(service.runSheetEvent("ws-1", {}, event)).resolves.toEqual({ evidence: "Recorded O-1" })
             expect(google.refreshAccessToken).toHaveBeenCalledWith("refresh-old")
-            expect(connections.writeSecret).toHaveBeenCalledWith(
-                "c1",
-                JSON.stringify({ access_token: "access-new", refresh_token: "refresh-new", expires_at: EXPIRES }),
-            )
+            expect(connections.writeSecret).toHaveBeenCalledWith("c1", JSON.stringify(issued))
             expect(google.applyEvent).toHaveBeenCalledWith("access-new", {}, event)
         })
 
@@ -605,26 +564,18 @@ describe("GoogleConnectionsService", () => {
             expect(connections.readSecret).toHaveBeenCalledTimes(2)
         })
 
-        it.each([new Error("sheet down"), refused({ status: 403 }), refused()])(
-            "propagates a sheet failure without retrying: %s",
-            async (error) => {
-                const { service, google } = await build()
-                google.applyEvent.mockRejectedValue(error)
-
-                await expect(service.runSheetEvent("ws-1", {}, event)).rejects.toBe(error)
-                expect(google.applyEvent).toHaveBeenCalledTimes(1)
-                expect(google.refreshAccessToken).not.toHaveBeenCalled()
-            },
-        )
-
-        it("propagates a second 401 instead of retrying indefinitely", async () => {
+        it.each([
+            { error: new Error("sheet down"), attempts: 1, refreshes: 0 },
+            { error: refused({ status: 403 }), attempts: 1, refreshes: 0 },
+            { error: refused(), attempts: 1, refreshes: 0 },
+            { error: refused({ status: 401 }), attempts: 2, refreshes: 1 },
+        ])("propagates a sheet failure with bounded attempts: %j", async ({ error, attempts, refreshes }) => {
             const { service, google } = await build()
-            const error = refused({ status: 401 })
             google.applyEvent.mockRejectedValue(error)
 
             await expect(service.runSheetEvent("ws-1", {}, event)).rejects.toBe(error)
-            expect(google.applyEvent).toHaveBeenCalledTimes(2)
-            expect(google.refreshAccessToken).toHaveBeenCalledTimes(1)
+            expect(google.applyEvent).toHaveBeenCalledTimes(attempts)
+            expect(google.refreshAccessToken).toHaveBeenCalledTimes(refreshes)
         })
 
         it("marks a revoked refresh token as invalid_grant and reports the connection lost", async () => {

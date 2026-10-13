@@ -1,13 +1,15 @@
 import { Test } from "@nestjs/testing"
-import { fakeInbox, mock } from "@starci/jest-preset"
+import { mock } from "@starci/jest-preset"
 import { DecisionJobsService } from "@modules/domain/decisions"
-import { InboxSimulationWorkerService } from "@modules/domain/inbox-simulation"
+import { InboxSimulationWorkerService as SimulationWorkerService } from "@modules/domain/inbox-simulation"
 import type {
     ConfirmCommandPayload,
     DecideExecutionPayload,
     DecideWorkPayload,
     DecisionsJobScope,
     ProposeCommandPayload,
+    RunWorkPayload,
+    SimulateInboundPayload,
 } from "@modules/queues/decisions"
 import { DecisionsQueueService } from "./decisions-queue.service"
 import { OfficeCommandService } from "./office-command.service"
@@ -29,6 +31,13 @@ const EXECUTION: DecideExecutionPayload = {
 }
 const PROPOSAL: ProposeCommandPayload = { ...SCOPE, messageId: "message-1" }
 const CONFIRMATION: ConfirmCommandPayload = { ...SCOPE, locale: "en", candidateId: "candidate-1" }
+const RUN: RunWorkPayload = { ...SCOPE, intent: "retry", workItemId: "work-1", requestId: "request-1" }
+const SIMULATION: SimulateInboundPayload = {
+    ...SCOPE,
+    kind: "simulate_inbound",
+    inboundEventId: "event-1",
+    items: "2 combos",
+}
 
 const build = async () => {
     const decisions = mock<DecisionJobsService>({
@@ -39,18 +48,40 @@ const build = async () => {
         propose: jest.fn().mockResolvedValue({ kind: "chat" }),
         confirm: jest.fn().mockResolvedValue({ workItemId: "confirmed-work-1", module: "sales", created: true }),
     })
+    const simulator = mock<SimulationWorkerService>({ run: jest.fn().mockResolvedValue(undefined) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             DecisionsQueueService,
             { provide: DecisionJobsService, useValue: decisions },
             { provide: OfficeCommandService, useValue: commands },
-            { provide: InboxSimulationWorkerService, useValue: fakeInbox() },
+            { provide: SimulationWorkerService, useValue: simulator },
         ],
     }).compile()
-    return { service: moduleRef.get(DecisionsQueueService), decisions, commands }
+    return { service: moduleRef.get(DecisionsQueueService), decisions, commands, simulator }
 }
 
 describe("DecisionsQueueService", () => {
+    it("runs a retry or handoff of a work item on the decision jobs service", async () => {
+        const { service, decisions, simulator } = await build()
+        decisions.runWork.mockResolvedValue(undefined)
+
+        await service.handle(RUN)
+
+        expect(decisions.runWork.mock.calls).toEqual([[RUN]])
+        expect(simulator.run.mock.calls).toEqual([])
+        expect(decisions.decideWork.mock.calls).toEqual([])
+    })
+
+    it("hands a simulated inbound message to the inbox simulator", async () => {
+        const { service, decisions, commands, simulator } = await build()
+
+        await service.handle(SIMULATION)
+
+        expect(simulator.run.mock.calls).toEqual([[SIMULATION]])
+        expect(decisions.decideWork.mock.calls).toEqual([])
+        expect(commands.propose.mock.calls).toEqual([])
+    })
+
     it("passes the entire work decision to the decision jobs service", async () => {
         const { service, decisions, commands } = await build()
 
