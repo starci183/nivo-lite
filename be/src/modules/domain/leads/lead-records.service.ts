@@ -16,6 +16,7 @@ import {
     FILL_LEAD_CONTACT,
     FIND_LEAD,
     FIND_LEAD_NAMES,
+    HAND_OVER_LEAD_NEED,
     INSERT_LEAD,
     MARK_LEAD_WON,
     MATCH_LEAD,
@@ -94,6 +95,11 @@ export class LeadRecordsService {
         manager: EntityManager = this.entityManager,
     ): Promise<void> {
         await manager.query(REPLACE_LEAD_CONTEXT, [workspaceId, leadId, summary])
+    }
+
+    /** Writes the package a lead goes to Sales with as its need, and as its brief when it has none. */
+    async handOver(workspaceId: string, leadId: string, need: string): Promise<void> {
+        await this.entityManager.query(HAND_OVER_LEAD_NEED, [workspaceId, leadId, need])
     }
 
     /** A confirmed order won the deal, unless it was lost. */

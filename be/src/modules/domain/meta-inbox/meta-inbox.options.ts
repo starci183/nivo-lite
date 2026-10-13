@@ -1,2 +1,7 @@
-/** The meta-inbox capability takes no options; the app root decides whether it is global. */
-export type MetaInboxOptions = Record<never, never>
+import type { InjectionToken } from "@nestjs/common"
+
+/** What the meta-inbox capability needs from the app root. */
+export interface MetaInboxOptions {
+    /** The provider token of the Meta event taker (a `MetaEventTaker`): the lead generation flow's intake. */
+    readonly taker: InjectionToken
+}
