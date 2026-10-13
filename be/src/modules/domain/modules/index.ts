@@ -1,0 +1,7 @@
+export type { ModuleDefinition, ModulesCatalog } from "./modules.contracts"
+export { MODULES_ERROR_KINDS } from "./errors/modules.error"
+export { MODULES_MESSAGES } from "./messages/modules.messages"
+export { MODULE_CATEGORIES } from "./categories.contracts"
+export { MODULE_CATALOG } from "./modules.catalog.contracts"
+export { ModulesModule } from "./modules.module"
+export { ModulesService } from "./modules.service"

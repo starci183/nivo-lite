@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
+import { ModulesHttpModule } from "@features/api/modules"
 import { ExternalApiHttpModule } from "@features/api/external-api"
 import { SystemHealthHttpModule } from "@features/api/system-health"
 import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
@@ -31,6 +32,14 @@ import {
     createSupabaseAccessTokenVerifier,
 } from "@modules/integrations/supabase"
 import { LivenessModule } from "@modules/domain/liveness"
+import { AuthorityActionsModule } from "@modules/domain/authority-actions"
+import {
+    MODULE_CATALOG,
+    MODULE_CATEGORIES,
+    MODULES_ERROR_KINDS,
+    MODULES_MESSAGES,
+    ModulesModule,
+} from "@modules/domain/modules"
 import { PUBLIC_API_ERROR_KINDS, PUBLIC_API_MESSAGES, PublicApiModule } from "@modules/domain/public-api"
 import { EventsModule } from "@modules/domain/events"
 import {
@@ -84,6 +93,7 @@ export class AppModule {
                         HTTP_SECURITY_MESSAGES,
                         IDENTITY_MESSAGES,
                         JOBS_MESSAGES,
+                        MODULES_MESSAGES,
                         PUBLIC_API_MESSAGES,
                         QUEUE_MESSAGES,
                         WORKSPACE_INVITES_MESSAGES,
@@ -104,6 +114,7 @@ export class AppModule {
                         JOBS_ERROR_KINDS,
                         QUEUE_ERROR_KINDS,
                         IDENTITY_ERROR_KINDS,
+                        MODULES_ERROR_KINDS,
                         PUBLIC_API_ERROR_KINDS,
                         SUPABASE_ERROR_KINDS,
                         WORKSPACE_INVITES_ERROR_KINDS,
@@ -141,6 +152,9 @@ export class AppModule {
                     ...options.workspaceInvites,
                 }),
                 LivenessModule.register({ isGlobal: true }),
+                AuthorityActionsModule.register({ isGlobal: true }),
+                ModulesModule.register({ isGlobal: true, categories: MODULE_CATEGORIES, catalog: MODULE_CATALOG }),
+                ModulesHttpModule,
                 ApiKeysModule.register({ isGlobal: true }),
                 PublicApiModule.register({ isGlobal: true }),
                 PaymentOrdersModule.register({ isGlobal: true }),
