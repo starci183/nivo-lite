@@ -44,7 +44,6 @@ export { readAccountingWorkbench } from "./accounting/read-accounting-workbench"
 export { readChatbotOverview } from "./chatbot/read-chatbot-overview"
 export { readChatbotThread } from "./chatbot/read-chatbot-thread"
 export { readChatbotGaps } from "./chatbot/read-chatbot-gaps"
-export type { DbOutcome } from "./outcome"
 export { readAgent, readAgents, readInstanceNames } from "./overview/read-agents"
 export {
     readLeadDetail,
