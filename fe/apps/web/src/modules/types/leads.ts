@@ -1,14 +1,14 @@
 /** The stages of a lead journey, in order; the last two close it. */
-export type LeadStage = "new" | "qualified" | "proposal" | "won" | "lost"
+export type LeadStageId = "new" | "qualified" | "proposal" | "won" | "lost"
 
 /** Who owns a step of a lead journey. */
 export type OwnerKind = "human" | "agent"
 
 /** Where a step of a lead journey stands. */
-export type ResponsibilityStatus = "open" | "waiting_approval" | "done"
+export type StepStatus = "open" | "waiting_approval" | "done"
 
 /** Where an agent draft stands. */
-export type ExecutionStatus = "pending_approval" | "approved" | "rejected"
+export type DraftStatus = "pending_approval" | "approved" | "rejected"
 
 /** Plain data of one lead as the Leads screens read it. */
 export interface LeadRecord {
@@ -17,7 +17,7 @@ export interface LeadRecord {
     readonly company: string
     readonly channel: string
     readonly need: string
-    readonly stage: LeadStage
+    readonly stage: LeadStageId
     /** The AI-prepared brief; null until one is prepared. */
     readonly context_summary: string | null
     /** `live`, `simulated` or null for a lead recorded before origins existed. */
@@ -41,18 +41,19 @@ export interface ResponsibilityRecord {
     readonly owner_name: string
     readonly next_action: string
     readonly due_at: string | null
-    readonly status: ResponsibilityStatus
+    readonly status: StepStatus
     readonly created_at: string
 }
 
 /** One draft an agent wrote for a step, waiting for or past a decision. */
 export interface ExecutionRecord {
     readonly id: string
+    readonly workspace_id: string
     readonly responsibility_id: string
     readonly agent_id: string | null
     readonly kind: string
     readonly draft: string
-    readonly status: ExecutionStatus
+    readonly status: DraftStatus
     readonly decided_by: string | null
     readonly decided_at: string | null
     readonly work_item_id: string | null
@@ -80,7 +81,7 @@ export interface AgentRecord {
 }
 
 /** Everything the lead page reads about one lead. */
-export interface LeadDetail {
+export interface LeadJourney {
     readonly lead: LeadRecord
     readonly responsibilities: ReadonlyArray<ResponsibilityRecord>
     readonly executions: ReadonlyArray<ExecutionRecord>
@@ -95,9 +96,5 @@ export type LeadPrimaryAction =
     | { readonly kind: "propose" }
     | { readonly kind: "none" }
 
-/** One step of the lead journey with whether real data says it is done. */
-export interface JourneyStep {
-    readonly id: string
-    readonly label: string
-    readonly isDone: boolean
-}
+/** The icon names the lead timeline and brief use. */
+export type LeadIcon = "account" | "brain" | "complete" | "close" | "pending" | "review" | "send" | "notification"

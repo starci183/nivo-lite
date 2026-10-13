@@ -1,42 +1,17 @@
 export type {
-    LeadGenComment,
-    LeadGenHandoff,
-    LeadGenLead,
-    LeadGenMetrics,
-    LeadGenSource,
-    LeadGenWorkbenchData,
-    LeadOrigin,
-    LeadPlatform,
-    LeadScore,
-    LeadSourceKind,
-} from "./leadgen"
-export type {
     AgentRecord,
     EventRecord,
     ExecutionRecord,
-    ExecutionStatus,
-    JourneyStep,
-    LeadDetail,
+    DraftStatus,
+    LeadJourney,
+    LeadIcon,
     LeadListItem,
     LeadPrimaryAction,
     LeadRecord,
-    LeadStage,
+    LeadStageId,
     OwnerKind,
     ResponsibilityRecord,
-    ResponsibilityStatus,
+    StepStatus,
 } from "./leads"
-export type {
-    AttentionKind,
-    AttentionRow,
-    AutoActivity,
-    Contract,
-    ContractInput,
-    ContractStatus,
-    HandoffRow,
-    SalesConversion,
-    SalesDeal,
-    SalesDecision,
-    SalesMetrics,
-    SalesWorkbenchData,
-} from "./sales"
 export type { ConsoleIconName, ConsoleNavItem, ConsolePending, ConsoleWorkspace } from "./console"
+export type { DataSlot, SlotLabels } from "./slot"
