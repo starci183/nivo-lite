@@ -1,19 +1,24 @@
-import all from "@/modules/i18n/messages/vi.json"
-
-const messages = all.app
+import { createTranslator } from "next-intl"
 import { DEFAULT_LOCALE } from "@/modules/i18n"
+import messages from "@/modules/i18n/messages/vi.json"
 import { AppGlobalErrorPageBase } from "./component"
 
-type AppGlobalErrorPageProps = { readonly onRetry: () => void }
+/** The provider-free translator of the last-resort boundary: the default catalog, read directly. */
+const t = createTranslator({ locale: DEFAULT_LOCALE, messages, namespace: "app" })
+
+/** What the root layout's global error boundary hands the page: the way to try again. */
+interface AppGlobalErrorPageProps {
+    readonly onRetry: () => void
+}
 
 /** The provider-free last-resort boundary reads the default catalog directly. */
 export const AppGlobalErrorPage = (props: AppGlobalErrorPageProps) => (
     <AppGlobalErrorPageBase
         props={{
             lang: DEFAULT_LOCALE,
-            title: messages.globalErrorTitle,
-            text: messages.globalErrorText,
-            retryLabel: messages.retry,
+            title: t("globalErrorTitle"),
+            text: t("globalErrorText"),
+            retryLabel: t("retry"),
         }}
         on={{ retry: props.onRetry }}
     />

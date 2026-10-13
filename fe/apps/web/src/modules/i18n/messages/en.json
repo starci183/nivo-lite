@@ -347,6 +347,7 @@
     "notFoundText": "This page does not exist or you no longer have access to it.",
     "notFoundHome": "Back to overview",
     "globalErrorTitle": "NIVO OS could not start",
+    "globalErrorText": "An unexpected error stopped the page. Try again in a moment.",
     "homeDescription": "Human Leads. AI Operates. System Learns. One owner, one next step and evidence for every customer."
   },
   "approval": {
