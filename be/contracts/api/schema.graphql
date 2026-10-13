@@ -523,6 +523,22 @@ type AuthoritySheetType {
   rules: [AuthorityRuleType!]!
 }
 
+input AuthorizeGoogleInput {
+  returnTo: String!
+}
+
+input AuthorizeMetaInput {
+  connectionId: ID
+}
+
+type AuthorizeUrlType {
+  url: String!
+}
+
+input AuthorizeZaloInput {
+  connectionId: ID!
+}
+
 type AutomationCardType {
   basedOnContext: Int
   body: String
@@ -544,6 +560,12 @@ type AutomationCardType {
   runCount: Int!
   sheetUrl: String
   trust: TrustType!
+}
+
+type AutomationGoogleAccountType {
+  email: String!
+  id: ID!
+  status: String!
 }
 
 type AutomationRunType {
@@ -592,6 +614,68 @@ type BodyProposalType {
 input ChangeMemberRoleInput {
   role: String!
   userId: ID!
+}
+
+input CheckConnectionInput {
+  connectionId: ID!
+}
+
+input CheckMetaInput {
+  connectionId: ID!
+  repair: Boolean!
+}
+
+input ChooseMetaPageInput {
+  connectionId: ID!
+  pageId: String!
+}
+
+input ConnectTelegramInput {
+  name: String!
+  token: String!
+}
+
+type ConnectionAgentType {
+  id: ID!
+  module: String!
+  name: String!
+  status: String!
+}
+
+type ConnectionCheckType {
+  lastError: String
+  localOnly: Boolean!
+  pending: Int!
+  provider: String!
+  webhookOk: Boolean!
+}
+
+type ConnectionGrantType {
+  access: String!
+  agentId: ID!
+}
+
+type ConnectionType {
+  agentIds: [ID!]!
+  createdAt: String!
+  createdBy: ID
+  environment: String!
+  firstEvent: FirstEventType
+  grants: [ConnectionGrantType!]!
+  id: ID!
+  isDefault: Boolean!
+  lastError: String
+  lastEventAt: String
+  meta: StringMap!
+  name: String!
+  provider: String!
+  status: String!
+  workspaceId: ID!
+}
+
+input ConnectionWishInput {
+  access: String
+  connectionId: ID!
 }
 
 input CreateAgentInput {
@@ -877,6 +961,10 @@ type DecisionRecordType {
   work_item_id: ID
 }
 
+input DeleteConnectionInput {
+  connectionId: ID!
+}
+
 type DeviceSessionType {
   createdAt: String
   id: ID!
@@ -884,6 +972,10 @@ type DeviceSessionType {
   isCurrent: Boolean!
   lastActiveAt: String
   userAgent: String
+}
+
+input DisconnectConnectionInput {
+  connectionId: ID!
 }
 
 input EmitAutomationEventInput {
@@ -898,10 +990,46 @@ input FieldValueInput {
   text: String
 }
 
+input FinishWebhookConnectionInput {
+  connectionId: ID!
+}
+
+type FirstEventStateType {
+  firstEvent: FirstEventType
+  status: String!
+}
+
+type FirstEventType {
+  amount: Float!
+  at: String!
+  content: String!
+  text: String
+}
+
+input GetConnectionFirstEventInput {
+  connectionId: ID!
+}
+
+input GetMetaConnectionInput {
+  connectionId: ID!
+}
+
+input GetMoneyConnectionInput {
+  connectionId: ID!
+}
+
+input GetZaloConnectionInput {
+  connectionId: ID!
+}
+
 type GoogleAccountType {
   email: String!
   id: ID!
   status: String!
+}
+
+type GoogleStateType {
+  configured: Boolean!
 }
 
 input GrantAgentConnectionInput {
@@ -909,6 +1037,11 @@ input GrantAgentConnectionInput {
   agentId: ID!
   connectionId: ID!
   purpose: String!
+}
+
+input GrantWishInput {
+  access: String
+  agentId: ID!
 }
 
 type InvitePreviewType {
@@ -988,6 +1121,65 @@ type MemberType {
 type MembershipType {
   member: MemberType!
   workspace: WorkspaceType!
+}
+
+type MetaAppObjectType {
+  callbackUrl: String!
+  fields: [String!]!
+  missing: [String!]!
+  urlMatches: Boolean!
+}
+
+type MetaAuthorizationType {
+  connectionId: ID!
+  url: String!
+}
+
+type MetaCheckType {
+  appInstagram: MetaAppObjectType
+  appKnown: Boolean!
+  appPage: MetaAppObjectType
+  igUsername: String!
+  localOnly: Boolean!
+  ok: Boolean!
+  pageId: String!
+  pageName: String!
+  pageSubscription: MetaPageSubscriptionType!
+  redirectUri: String!
+  repaired: Boolean!
+  tokenOk: Boolean!
+  verifyTokenSet: Boolean!
+  wantInstagram: [String!]!
+  wantPage: [String!]!
+  webhookUrl: String!
+}
+
+type MetaPageOptionType {
+  category: String!
+  id: ID!
+  igId: String!
+  igUsername: String!
+  name: String!
+}
+
+type MetaPageSubscriptionType {
+  fields: [String!]!
+  missing: [String!]!
+  subscribed: Boolean!
+}
+
+type MetaWizardConnectionType {
+  agentIds: [ID!]!
+  configured: Boolean!
+  firstEvent: FirstEventType
+  id: ID!
+  igId: String!
+  igUsername: String!
+  name: String!
+  pageId: String!
+  pageName: String!
+  pages: [MetaPageOptionType!]!
+  status: String!
 }
 
 type MissingRequirementType {
@@ -1107,9 +1299,16 @@ type Mutation {
   adminResendWorkspaceInvite(input: AdminResendWorkspaceInviteInput!): AdminInviteResentType!
   adminSetWorkspacePlan(input: AdminSetWorkspacePlanInput!): AdminPlanSetType!
   adminSetWorkspaceStatus(input: AdminSetWorkspaceStatusInput!): AdminStatusSetType!
+  authorizeGoogle(input: AuthorizeGoogleInput!): AuthorizeUrlType!
+  authorizeMeta(input: AuthorizeMetaInput!): MetaAuthorizationType!
+  authorizeZalo(input: AuthorizeZaloInput!): ZaloAuthorizationType!
   cancelOfficeCommand(input: OfficeCandidateIdInput!): OfficeAckType!
   changeMemberRole(input: ChangeMemberRoleInput!): Boolean!
+  checkConnection(input: CheckConnectionInput!): ConnectionCheckType!
+  checkMeta(input: CheckMetaInput!): MetaCheckType!
+  chooseMetaPage(input: ChooseMetaPageInput!): MetaWizardConnectionType!
   confirmOfficeCommand(input: OfficeCandidateIdInput!): OfficeConfirmResultType!
+  connectTelegram(input: ConnectTelegramInput!): TelegramConnectedType!
   copyInviteLink(input: InviteRefInput!): InviteResultType!
   createAgent(input: CreateAgentInput!): AgentSummaryType!
   createApiKey(input: CreateApiKeyInput!): CreatedApiKeyType!
@@ -1118,7 +1317,10 @@ type Mutation {
   createWorkspace(input: CreateWorkspaceInput!): CreateWorkspaceType!
   decideExecution(input: DecideExecutionInput!): ApprovalExecutionType!
   decideWorkItem(input: DecideWorkItemInput!): WorkItemType!
+  deleteConnection(input: DeleteConnectionInput!): Boolean!
+  disconnectConnection(input: DisconnectConnectionInput!): Boolean!
   emitAutomationEvent(input: EmitAutomationEventInput!): Boolean!
+  finishWebhookConnection(input: FinishWebhookConnectionInput!): Boolean!
   grantAgentConnection(input: GrantAgentConnectionInput!): AgentAckType!
   postOfficeMessage(input: PostOfficeMessageInput!): OfficeMessageType!
   proposeAutomationBody(input: TemplateKeyInput!): BodyProposalType!
@@ -1128,6 +1330,9 @@ type Mutation {
   requestAgentGeneration(input: RequestAgentGenerationInput!): AgentGenerationRequestedType!
   requestAgentSync(input: RequestAgentSyncInput!): AgentAckType!
   resendInvite(input: InviteRefInput!): InviteResultType!
+  returnZaloAuthorization(input: ReturnZaloAuthorizationInput!): ZaloWizardConnectionType!
+  revealSepayKey(input: RevealSepayKeyInput!): SepayKeyType!
+  revealWebhookConnection(input: RevealWebhookConnectionInput!): WebhookViewType!
   revokeAgentConnection(input: RevokeAgentConnectionInput!): AgentAckType!
   revokeApiKey(input: RevokeApiKeyInput!): ApiKeyType!
   revokeInvite(input: InviteRefInput!): Boolean!
@@ -1135,14 +1340,26 @@ type Mutation {
   runAutomationNow(input: TemplateKeyInput!): Boolean!
   runFlow(input: RunFlowInput!): RunFlowType!
   saveAuthorityRule(input: SaveAuthorityRuleInput!): AuthorityRuleType!
+  saveProviderKeys(input: SaveProviderKeysInput!): ProviderKeysResultType!
+  saveZaloOaSecret(input: SaveZaloOaSecretInput!): ZaloWizardConnectionType!
   sendAgentCommand(input: SendAgentCommandInput!): AgentCommandResultType!
+  setAgentConnections(input: SetAgentConnectionsInput!): Boolean!
   setAgentStatus(input: SetAgentStatusInput!): AgentAckType!
   setAgentTexts(input: SetAgentTextsInput!): AgentAckType!
+  setConnectionAgents(input: SetConnectionAgentsInput!): Boolean!
+  setConnectionGrant(input: SetConnectionGrantInput!): Boolean!
   setMemberStatus(input: SetMemberStatusInput!): Boolean!
+  startMoneyConnection(input: StartMoneyConnectionInput!): WizardConnectionType!
+  startWebhookConnection(input: StartWebhookConnectionInput!): WebhookViewType!
+  startZaloConnection(input: StartZaloConnectionInput!): ZaloWizardConnectionType!
+  testWebhookConnection(input: TestWebhookConnectionInput!): WebhookTestResultType!
   updateAuthority(input: UpdateAuthorityInput!): AuthorityProfileType!
   updateAutomationPipeline(input: UpdateAutomationPipelineInput!): AutomationCardType!
+  updateMoneyConnection(input: UpdateMoneyConnectionInput!): WizardConnectionType!
   updateProfile(input: UpdateProfileInput!): Boolean!
   updateResponsibilityStatus(input: UpdateResponsibilityStatusInput!): ResponsibilityType!
+  updateWebhookEvents(input: UpdateWebhookEventsInput!): WebhookEventsType!
+  wantConnector(input: WantConnectorInput!): Boolean!
 }
 
 type MyAccountType {
@@ -1284,6 +1501,18 @@ input ProposeOfficeCommandInput {
   messageId: ID!
 }
 
+input ProviderKeysInput {
+  apiKey: String
+  checksumKey: String
+  clientId: String
+  secureKey: String
+}
+
+type ProviderKeysResultType {
+  confirmed: Boolean!
+  localOnly: Boolean!
+}
+
 type Query {
   adminHealth: AdminHealthType!
   adminSession: AdminSessionType!
@@ -1296,15 +1525,22 @@ type Query {
   agents(input: ListAgentsInput!): [AgentSummaryType!]!
   apiKeys: [ApiKeyType!]!
   authority: AuthoritySheetType!
-  automationGoogleAccounts: [GoogleAccountType!]!
+  automationGoogleAccounts: [AutomationGoogleAccountType!]!
   automationRuns(input: AutomationRunsInput!): [AutomationRunType!]!
   automationSuggestions(input: AutomationSuggestionsInput!): [AutomationSuggestionType!]!
   automations: AutomationsOverviewType!
+  connectionAgents: [ConnectionAgentType!]!
+  connectionFirstEvent(input: GetConnectionFirstEventInput!): FirstEventStateType!
+  connections: [ConnectionType!]!
   dashboard: DashboardType!
   decisionHistory(input: ListDecisionHistoryInput!): [DecisionRecordType!]!
+  googleAccounts: [GoogleAccountType!]!
+  googleConnectionState: GoogleStateType!
   invitePreview(input: InviteTokenInput!): InvitePreviewType!
+  metaConnection(input: GetMetaConnectionInput!): MetaWizardConnectionType!
   moduleDefinition(input: ModuleKeyInput!): ModuleDefinitionType!
   modulesCatalog: ModulesCatalogType!
+  moneyConnection(input: GetMoneyConnectionInput!): WizardConnectionType!
   myAccount: MyAccountType!
   myWorkspaces: [MembershipType!]!
   officeCommandCandidates: [OfficeCandidateType!]!
@@ -1318,6 +1554,7 @@ type Query {
   workspaceMembers: [MemberListingType!]!
   workspaceShell(input: ShellWindowInput!): WorkspaceShellType!
   workspaceStaff: [StaffOptionType!]!
+  zaloConnection(input: GetZaloConnectionInput!): ZaloWizardConnectionType!
 }
 
 input RenameAgentInput {
@@ -1368,6 +1605,20 @@ type ResponsibilityType {
   workspace_id: ID!
 }
 
+input ReturnZaloAuthorizationInput {
+  code: String!
+  oaId: String
+  state: String!
+}
+
+input RevealSepayKeyInput {
+  connectionId: ID!
+}
+
+input RevealWebhookConnectionInput {
+  connectionId: ID!
+}
+
 input RevokeAgentConnectionInput {
   agentId: ID!
   connectionId: ID!
@@ -1400,6 +1651,16 @@ input SaveAuthorityRuleInput {
   change: AuthorityRuleChangeInput!
 }
 
+input SaveProviderKeysInput {
+  connectionId: ID!
+  values: ProviderKeysInput!
+}
+
+input SaveZaloOaSecretInput {
+  connectionId: ID!
+  oaSecret: String!
+}
+
 input SendAgentCommandInput {
   command: String!
   fields: [FieldValueInput!]
@@ -1410,6 +1671,16 @@ input SendAgentCommandInput {
   to: String!
 }
 
+type SepayKeyType {
+  apiKey: String!
+  webhookUrl: String!
+}
+
+input SetAgentConnectionsInput {
+  agentId: ID!
+  connections: [ConnectionWishInput!]!
+}
+
 input SetAgentStatusInput {
   active: Boolean!
   agentId: ID!
@@ -1418,6 +1689,17 @@ input SetAgentStatusInput {
 input SetAgentTextsInput {
   agentId: ID!
   texts: AgentTextsInput!
+}
+
+input SetConnectionAgentsInput {
+  agents: [GrantWishInput!]!
+  connectionId: ID!
+}
+
+input SetConnectionGrantInput {
+  access: String
+  agentId: ID!
+  connectionId: ID!
 }
 
 input SetMemberStatusInput {
@@ -1463,6 +1745,34 @@ type StaffOptionType {
   id: ID!
   name: String!
   role: String!
+}
+
+input StartMoneyConnectionInput {
+  accountNumber: String!
+  bankCode: String!
+  environment: String!
+  holder: String!
+  name: String!
+  provider: String!
+}
+
+input StartWebhookConnectionInput {
+  events: [String!]!
+  name: String!
+  url: String!
+}
+
+input StartZaloConnectionInput {
+  appId: String!
+  appSecret: String!
+  name: String!
+}
+
+scalar StringMap
+
+type TelegramConnectedType {
+  connection: ConnectionType!
+  webhookRegistered: Boolean!
 }
 
 type TemplateAuthorityType {
@@ -1527,6 +1837,10 @@ type TemplateTriggerType {
   line: LocalizedTextType!
 }
 
+input TestWebhookConnectionInput {
+  connectionId: ID!
+}
+
 type TrustType {
   autoSend: Boolean!
   offered: Boolean!
@@ -1547,6 +1861,16 @@ input UpdateAutomationPipelineInput {
   values: JsonObject
 }
 
+input UpdateMoneyConnectionInput {
+  accountNumber: String!
+  apiKey: String
+  bankCode: String!
+  connectionId: ID!
+  environment: String!
+  holder: String!
+  name: String!
+}
+
 input UpdateProfileInput {
   name: String!
 }
@@ -1554,6 +1878,50 @@ input UpdateProfileInput {
 input UpdateResponsibilityStatusInput {
   responsibilityId: ID!
   status: String!
+}
+
+input UpdateWebhookEventsInput {
+  connectionId: ID!
+  events: [String!]!
+}
+
+input WantConnectorInput {
+  connectorId: String!
+}
+
+type WebhookEventsType {
+  events: [String!]!
+}
+
+type WebhookTestResultType {
+  durationMs: Int!
+  error: String
+  ok: Boolean!
+  status: Int
+}
+
+type WebhookViewType {
+  events: [String!]!
+  host: String!
+  id: ID!
+  name: String!
+  signingSecret: String!
+}
+
+type WizardConnectionType {
+  account: String!
+  agentIds: [ID!]!
+  apiKey: String!
+  bankCode: String!
+  credentialsSaved: Boolean!
+  environment: String!
+  firstEvent: FirstEventType
+  holder: String!
+  id: ID!
+  name: String!
+  provider: String!
+  status: String!
+  webhookUrl: String!
 }
 
 input WorkEditsInput {
@@ -1635,4 +2003,22 @@ type WorkspaceType {
   name: String!
   ownerId: ID!
   status: String!
+}
+
+type ZaloAuthorizationType {
+  callbackUrl: String!
+  url: String!
+}
+
+type ZaloWizardConnectionType {
+  agentIds: [ID!]!
+  authorized: Boolean!
+  callbackUrl: String!
+  firstEvent: FirstEventType
+  id: ID!
+  name: String!
+  oaId: String!
+  oaSecretSaved: Boolean!
+  status: String!
+  webhookUrl: String!
 }
