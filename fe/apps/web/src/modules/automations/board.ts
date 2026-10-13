@@ -1,5 +1,12 @@
-import type { AutomationCardView, AutomationRunView, ShopContext } from "@/lib/automation-shared"
-import type { AutomationsBoardView, AutomationsLanguage, AutomationsTranslator } from "@/modules/types"
+import type {
+    AutomationCardView,
+    AutomationRunView,
+    AutomationsBoardView,
+    AutomationsLanguage,
+    AutomationsTranslator,
+    PreviewSample,
+    ShopContext,
+} from "@/modules/types"
 import { automationCardOf, automationEmptyText, automationFilterLabel } from "./cards"
 import type { CardContext } from "./cards"
 import { automationDetailOf } from "./detail"
@@ -23,8 +30,10 @@ export interface BoardInput {
     readonly accounts: CardContext["accounts"]
     readonly runs: ReadonlyArray<AutomationRunView>
     readonly shop: ShopContext
+    /** The sample values and neutral words of the message previews. */
+    readonly sample: PreviewSample
     /** The open card with what the owner edits on it; absent while none is open. */
-    readonly open: Omit<DetailInput, "card" | "runs" | "shop" | "isBusy" | "isNested" | "errorText"> | null
+    readonly open: Omit<DetailInput, "card" | "runs" | "shop" | "sample" | "isBusy" | "isNested" | "errorText"> | null
     readonly current: AutomationCardView | null
     /** Why the last action was refused, already in words. */
     readonly errorText: string | undefined
@@ -46,6 +55,7 @@ export const automationBoardOf = (input: BoardInput): AutomationsBoardView => {
                       card: current,
                       runs: input.runs.filter((run) => run.templateKey === current.key),
                       shop: input.shop,
+                      sample: input.sample,
                       isBusy: input.busyKey === current.key,
                       isNested: input.isNested,
                       errorText: input.errorText,

@@ -1,10 +1,7 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { useBrainCommand } from "@/hooks/brain"
-import type { CommandActions } from "@/hooks/knowledge"
-import { writeCommandWait } from "@/modules/db/knowledge/write-command-wait"
-import { writeCommand } from "@/modules/db/knowledge/write-command"
+import { useBrainBoard, useBrainCommand } from "@/hooks/brain"
 import { KNOWLEDGE_ROUTES } from "@/modules/routes"
 import type { KnowledgeRowView } from "@/components/composites/KnowledgeRows"
 import type { BrainGap } from "@/modules/types"
@@ -12,20 +9,16 @@ import { BrainGapsBase } from "./component"
 
 /** Props for the connected unanswered questions. */
 interface BrainGapsProps {
-    readonly workspaceId: string
-    readonly gaps: ReadonlyArray<BrainGap>
-    /** True while the page loads: the heading stays and the list is skeleton rows. */
-    readonly isLoading?: boolean
+    /** The questions a page already holds (the chatbot workbench); without it the block reads the Second Brain itself. */
+    readonly gaps?: ReadonlyArray<BrainGap>
 }
-
-const ACTIONS: CommandActions = { write: writeCommand, wait: writeCommandWait }
 
 /** The connected unanswered questions: opens the fact form through the address, or dismisses a question. */
 export const BrainGaps = (props: BrainGapsProps) => {
     const t = useTranslations("brain")
     const format = useFormatter()
-    const command = useBrainCommand(props.workspaceId, ACTIONS)
-    const note = command.note
+    const command = useBrainCommand()
+    const board = useBrainBoard()
     const rowOf = (gap: BrainGap): KnowledgeRowView => {
         const when = format.dateTime(new Date(gap.lastSeenAt), { dateStyle: "medium" })
         return {
@@ -47,6 +40,7 @@ export const BrainGaps = (props: BrainGapsProps) => {
             ],
         }
     }
+    if (props.gaps === undefined && !board.canWrite) return null
     return (
         <BrainGapsBase
             props={{
@@ -56,12 +50,10 @@ export const BrainGaps = (props: BrainGapsProps) => {
                         title: t("gapsTitle"),
                         description: t("gapsIntro"),
                         failTitle: t("loadFailed"),
-                        error: note?.tone === "negative" ? t(note.text) : undefined,
-                        notice: note?.tone === "affirmative" ? note.text : undefined,
                     },
                     label: t("gapsTitle"),
-                    rows: props.gaps.map(rowOf),
-                    isLoading: props.isLoading ?? false,
+                    rows: (props.gaps ?? board.gaps).map(rowOf),
+                    isLoading: props.gaps === undefined && board.isLoading,
                     isPending: command.isPending,
                     emptyTitle: t("gapsEmpty"),
                 },

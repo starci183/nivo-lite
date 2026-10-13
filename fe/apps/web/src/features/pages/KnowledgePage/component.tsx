@@ -4,16 +4,9 @@ import { KnowledgeAsk } from "@/components/blocks/KnowledgeAsk"
 import { KnowledgeLibrary } from "@/components/blocks/KnowledgeLibrary"
 import { KnowledgeSuggestions } from "@/components/blocks/KnowledgeSuggestions"
 import { PageHeading } from "@/components/composites/PageHeading"
-import type { AddPreset, InstanceOption } from "@/hooks/knowledge"
+import type { AddPreset } from "@/hooks/knowledge"
 import type { ModuleKey } from "@/modules/catalog"
-import type { KnowledgeDocument, IdeaDecision } from "@/modules/types"
 import { PAGE_CLASS_NAME, TOOLBAR_CLASS_NAME } from "./classNames"
-
-/** One idea, by the key its words are stored under. */
-interface IdeaView {
-    readonly key: string
-    readonly state?: IdeaDecision
-}
 
 /** Copy and values the documents page supplies. */
 export interface KnowledgePageBaseProps {
@@ -29,20 +22,11 @@ export interface KnowledgePageBaseProps {
         readonly nivoLabel: string
         readonly nivoHref: string
         readonly readOnlyNote: string
-        readonly workspaceId: string
-        readonly canWrite: boolean
-        readonly sources: ReadonlyArray<KnowledgeDocument>
         readonly module: ModuleKey | "all"
-        readonly askModule: ModuleKey
-        readonly instances: ReadonlyArray<InstanceOption>
-        readonly open: ReadonlyArray<IdeaView>
-        readonly skipped: ReadonlyArray<IdeaView>
         /** Whether the address asks for the add drawer to be open, and what it was opened from. */
         readonly isAddOpen: boolean
         readonly addKey: string
         readonly addPreset: AddPreset | null
-        /** The same page while its data loads: headings and labels stay, documents and ideas are skeleton rows. */
-        readonly isLoading: boolean
     }
 }
 
@@ -65,40 +49,16 @@ export const KnowledgePageBase = (props: KnowledgePageBaseProps) => (
                 <Text>
                     <TextAction href={props.props.nivoHref}>{props.props.nivoLabel}</TextAction>
                 </Text>
-                {props.props.canWrite ? (
-                    <KnowledgeAdd
-                        key={props.props.addKey}
-                        workspaceId={props.props.workspaceId}
-                        instances={props.props.instances}
-                        isOpen={props.props.isAddOpen}
-                        preset={props.props.addPreset}
-                    />
-                ) : (
-                    <Text size="sm" tone="muted">
-                        {props.props.readOnlyNote}
-                    </Text>
-                )}
-            </div>
-            <KnowledgeLibrary
-                workspaceId={props.props.workspaceId}
-                sources={props.props.sources}
-                canWrite={props.props.canWrite}
-                module={props.props.module}
-                isLoading={props.props.isLoading}
-            />
-            <KnowledgeAsk
-                workspaceId={props.props.workspaceId}
-                module={props.props.askModule}
-                isLoading={props.props.isLoading}
-            />
-            {props.props.canWrite ? (
-                <KnowledgeSuggestions
-                    workspaceId={props.props.workspaceId}
-                    open={props.props.open}
-                    skipped={props.props.skipped}
-                    isLoading={props.props.isLoading}
+                <KnowledgeAdd
+                    key={props.props.addKey}
+                    readOnlyNote={props.props.readOnlyNote}
+                    isOpen={props.props.isAddOpen}
+                    preset={props.props.addPreset}
                 />
-            ) : null}
+            </div>
+            <KnowledgeLibrary module={props.props.module} />
+            <KnowledgeAsk module={props.props.module} />
+            <KnowledgeSuggestions />
         </div>
     </PageContainer>
 )

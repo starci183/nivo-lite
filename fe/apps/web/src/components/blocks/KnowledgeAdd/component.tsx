@@ -1,4 +1,4 @@
-import { Button, Drawer, SegmentedControl } from "@starci/grammar/common"
+import { Button, Drawer, SegmentedControl, Text } from "@starci/grammar/common"
 import { AddFilesPanel } from "@/components/composites/AddFilesPanel"
 import type { LinkRowView, QueueRowView } from "@/components/composites/AddFilesPanel"
 import { AddNotePanel } from "@/components/composites/AddNotePanel"
@@ -62,6 +62,8 @@ interface OptionsView {
 /** Copy, values and state the connected drawer supplies. */
 export interface KnowledgeAddBaseProps {
     readonly props: {
+        /** Set when the member may only read: the words replace the button and the drawer. */
+        readonly readOnlyNote?: string
         readonly buttonLabel: string
         readonly title: string
         readonly description: string
@@ -104,71 +106,76 @@ export interface KnowledgeAddBaseProps {
 }
 
 /** Draws the button and the drawer that adds documents: files and links, a written note, or questions with answers. */
-export const KnowledgeAddBase = (props: KnowledgeAddBaseProps) => (
-    <>
-        <Button variant="primary" onPress={props.on.open}>
-            {props.props.buttonLabel}
-        </Button>
-        <Drawer
-            isOpen={props.props.isOpen}
-            onOpenChange={(open) => {
-                if (!open) props.on.close()
-            }}
-            title={props.props.title}
-            description={props.props.description}
-            closeLabel={props.props.closeLabel}
-            placement="right"
-            footer={
-                <DrawerFooter
-                    cancelLabel={props.props.cancelLabel}
-                    submitLabel={props.props.submitLabel}
-                    isPending={props.props.isBusy}
-                    onCancel={props.on.close}
-                    onSubmit={props.on.submit}
-                />
-            }
-        >
-            <div className={DRAWER_BODY_CLASS_NAME}>
-                <SegmentedControl
-                    label={props.props.modeLabel}
-                    isLabelHidden
-                    options={props.props.modeOptions.map((one) => ({ value: one.id, label: one.label }))}
-                    value={props.props.mode}
-                    isDisabled={props.props.isBusy}
-                    onValueChange={props.on.setMode}
-                />
-                {props.props.mode === "files" ? (
-                    <AddFilesPanel
-                        {...props.props.files}
-                        isBusy={props.props.isBusy}
-                        onFiles={props.on.addFiles}
-                        onLink={props.on.setLink}
-                        onCheckLink={props.on.checkLink}
-                        onAddLink={props.on.addLink}
-                        onRemoveLink={props.on.removeLink}
-                        onRemoveItem={props.on.removeItem}
+export const KnowledgeAddBase = (props: KnowledgeAddBaseProps) =>
+    props.props.readOnlyNote !== undefined ? (
+        <Text size="sm" tone="muted">
+            {props.props.readOnlyNote}
+        </Text>
+    ) : (
+        <>
+            <Button variant="primary" onPress={props.on.open}>
+                {props.props.buttonLabel}
+            </Button>
+            <Drawer
+                isOpen={props.props.isOpen}
+                onOpenChange={(open) => {
+                    if (!open) props.on.close()
+                }}
+                title={props.props.title}
+                description={props.props.description}
+                closeLabel={props.props.closeLabel}
+                placement="right"
+                footer={
+                    <DrawerFooter
+                        cancelLabel={props.props.cancelLabel}
+                        submitLabel={props.props.submitLabel}
+                        isPending={props.props.isBusy}
+                        onCancel={props.on.close}
+                        onSubmit={props.on.submit}
                     />
-                ) : (
-                    <AddNotePanel
-                        {...props.props.note}
-                        isBusy={props.props.isBusy}
-                        onTitle={props.on.setTitle}
-                        onContent={props.on.setContent}
-                        onPair={props.on.setPair}
-                        onAddPair={props.on.addPair}
-                        onRemovePair={props.on.removePair}
+                }
+            >
+                <div className={DRAWER_BODY_CLASS_NAME}>
+                    <SegmentedControl
+                        label={props.props.modeLabel}
+                        isLabelHidden
+                        options={props.props.modeOptions.map((one) => ({ value: one.id, label: one.label }))}
+                        value={props.props.mode}
+                        isDisabled={props.props.isBusy}
+                        onValueChange={props.on.setMode}
                     />
-                )}
-                <AddOptionsPanel
-                    {...props.props.options}
-                    isBusy={props.props.isBusy}
-                    onTopic={props.on.setTopic}
-                    onTags={props.on.setTags}
-                    onModule={props.on.setModule}
-                    onVisibility={props.on.setVisibility}
-                />
-                <FormNotice failTitle={props.props.failTitle} error={props.props.error} done={props.props.notice} />
-            </div>
-        </Drawer>
-    </>
-)
+                    {props.props.mode === "files" ? (
+                        <AddFilesPanel
+                            {...props.props.files}
+                            isBusy={props.props.isBusy}
+                            onFiles={props.on.addFiles}
+                            onLink={props.on.setLink}
+                            onCheckLink={props.on.checkLink}
+                            onAddLink={props.on.addLink}
+                            onRemoveLink={props.on.removeLink}
+                            onRemoveItem={props.on.removeItem}
+                        />
+                    ) : (
+                        <AddNotePanel
+                            {...props.props.note}
+                            isBusy={props.props.isBusy}
+                            onTitle={props.on.setTitle}
+                            onContent={props.on.setContent}
+                            onPair={props.on.setPair}
+                            onAddPair={props.on.addPair}
+                            onRemovePair={props.on.removePair}
+                        />
+                    )}
+                    <AddOptionsPanel
+                        {...props.props.options}
+                        isBusy={props.props.isBusy}
+                        onTopic={props.on.setTopic}
+                        onTags={props.on.setTags}
+                        onModule={props.on.setModule}
+                        onVisibility={props.on.setVisibility}
+                    />
+                    <FormNotice failTitle={props.props.failTitle} error={props.props.error} done={props.props.notice} />
+                </div>
+            </Drawer>
+        </>
+    )
