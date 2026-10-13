@@ -52,6 +52,7 @@
   "code_start_invalid": "Please choose a time.",
   "code_service_unavailable": "This service no longer takes bookings.",
   "code_no_resource": "No person or room fits, please choose another time.",
+  "code_not_found": "This booking page is no longer available.",
   "close": "Close",
   "dismiss": "Hide",
   "none": "None",

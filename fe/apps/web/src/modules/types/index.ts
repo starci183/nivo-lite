@@ -46,15 +46,22 @@ export type {
 } from "./chatbot"
 export type {
     BookingAction,
+    BookingAddInput,
     BookingBoard,
     BookingFiguresView,
     BookingHoursView,
+    BookingMoveInput,
+    BookingPlacement,
     BookingResourceView,
     BookingServiceView,
     BookingSettingsView,
     BookingStatsView,
     BookingView,
     BookingWaitView,
+    PublicBookingAnswer,
+    PublicBookingInput,
+    PublicBookingPage,
+    PublicBookingService,
 } from "./booking"
 export type { ConsoleIconName, ConsoleNavItem, ConsolePending, ConsoleWorkspace } from "./console"
 export type { DataSlot, SlotLabels } from "./slot"

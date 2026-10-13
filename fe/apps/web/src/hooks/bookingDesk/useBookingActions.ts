@@ -21,6 +21,7 @@ export const useBookingActions = (workspaceId: string, actions: BookingDeskActio
         notice,
         isBusy,
         dismiss: () => setNotice(null),
+        announce: (code: string, tone: DeskNotice["tone"] = "affirmative") => setNotice({ tone, code }),
         act: (id: string, action: BookingAction, done: () => void) =>
             startTransition(async () => {
                 const answer = await actions.act(workspaceId, id, action)
