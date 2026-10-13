@@ -1,10 +1,30 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
+import { ChannelsHttpModule } from "@features/api/channels"
+import { CheckConnectionHealthQueueModule } from "@features/jobs/check-connection-health"
+import { RefreshZaloTokensQueueModule } from "@features/jobs/refresh-zalo-tokens"
+import { RunChatTurnQueueModule } from "@features/jobs/run-chat-turn"
+import { TelegramHttpModule } from "@features/webhooks/telegram"
+import { ZaloHttpModule } from "@features/webhooks/zalo"
 import { ExternalApiHttpModule } from "@features/api/external-api"
 import { SystemHealthHttpModule } from "@features/api/system-health"
 import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
 import { WorkspacesHttpModule } from "@features/api/workspaces"
+import { AGENT_CONVERSATIONS_ERROR_KINDS, AGENT_CONVERSATIONS_MESSAGES, AgentConversationsModule } from "@modules/domain/agent-conversations"
+import { AGENT_MESSAGES_ERROR_KINDS, AGENT_MESSAGES_MESSAGES, AgentMessagesModule } from "@modules/domain/agent-messages"
+import { CHANNELS_ERROR_KINDS, CHANNELS_MESSAGES, ChannelsModule } from "@modules/domain/channels"
+import { ChannelReceiptsModule } from "@modules/domain/channel-receipts"
+import {
+    CONNECTION_SECRETS_ERROR_KINDS,
+    CONNECTION_SECRETS_MESSAGES,
+    ConnectionSecretsModule,
+} from "@modules/domain/connection-secrets"
+import { CONNECTIONS_ERROR_KINDS, CONNECTIONS_MESSAGES, ConnectionsModule } from "@modules/domain/connections"
+import { CONVERSATIONS_ERROR_KINDS, CONVERSATIONS_MESSAGES, ConversationsModule } from "@modules/domain/conversations"
+import { InboundEventsModule } from "@modules/domain/inbound-events"
+import { TelegramInboxModule } from "@modules/domain/telegram-inbox"
+import { ZaloInboxModule } from "@modules/domain/zalo-inbox"
 import { AuthGuard, IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } from "@modules/domain/identity"
 import {
     SUPABASE_ACCESS_TOKEN_VERIFIER,
@@ -13,6 +33,12 @@ import {
     SupabaseModule,
     createSupabaseAccessTokenVerifier,
 } from "@modules/integrations/supabase"
+import { HttpModule, HTTP_ERROR_KINDS, HTTP_MESSAGES } from "@modules/platform/http"
+import { MAIL_ERROR_KINDS, MAIL_MESSAGES, MailModule } from "@modules/integrations/mail"
+import { TELEGRAM_ERROR_KINDS, TELEGRAM_MESSAGES, TelegramModule } from "@modules/integrations/telegram"
+import { ZALO_ERROR_KINDS, ZALO_MESSAGES, ZaloModule } from "@modules/integrations/zalo"
+import { CONNECTION_HEALTH_SCHEDULER } from "@modules/queues/connection-health"
+import { ZALO_REFRESH_SCHEDULER } from "@modules/queues/zalo-refresh"
 import { LivenessModule } from "@modules/domain/liveness"
 import { PUBLIC_API_ERROR_KINDS, PUBLIC_API_MESSAGES, PublicApiModule } from "@modules/domain/public-api"
 import { EventsModule } from "@modules/domain/events"
@@ -59,7 +85,17 @@ export class AppModule {
                 I18nModule.register({
                     isGlobal: true,
                     bundles: [
+                        AGENT_CONVERSATIONS_MESSAGES,
+                        AGENT_MESSAGES_MESSAGES,
                         API_KEYS_MESSAGES,
+                        CHANNELS_MESSAGES,
+                        CONNECTION_SECRETS_MESSAGES,
+                        CONNECTIONS_MESSAGES,
+                        CONVERSATIONS_MESSAGES,
+                        HTTP_MESSAGES,
+                        MAIL_MESSAGES,
+                        TELEGRAM_MESSAGES,
+                        ZALO_MESSAGES,
                         ERRORS_MESSAGES,
                         HTTP_SECURITY_MESSAGES,
                         IDENTITY_MESSAGES,
@@ -74,7 +110,17 @@ export class AppModule {
                 ErrorsModule.register({
                     isGlobal: true,
                     kinds: [
+                        AGENT_CONVERSATIONS_ERROR_KINDS,
+                        AGENT_MESSAGES_ERROR_KINDS,
                         API_KEYS_ERROR_KINDS,
+                        CHANNELS_ERROR_KINDS,
+                        CONNECTION_SECRETS_ERROR_KINDS,
+                        CONNECTIONS_ERROR_KINDS,
+                        CONVERSATIONS_ERROR_KINDS,
+                        HTTP_ERROR_KINDS,
+                        MAIL_ERROR_KINDS,
+                        TELEGRAM_ERROR_KINDS,
+                        ZALO_ERROR_KINDS,
                         CONFIG_ERROR_KINDS,
                         DATABASE_ERROR_KINDS,
                         HTTP_SECURITY_ERROR_KINDS,
@@ -99,7 +145,7 @@ export class AppModule {
                 }),
                 QueueModule.register({
                     isGlobal: true,
-                    schedulers: [],
+                    schedulers: [CONNECTION_HEALTH_SCHEDULER, ZALO_REFRESH_SCHEDULER],
                     ...options.queue,
                 }),
                 JobsModule.register({
@@ -117,9 +163,29 @@ export class AppModule {
                     delivery: SUPABASE_AUTH,
                     ...options.workspaceInvites,
                 }),
+                HttpModule.register({ isGlobal: true }),
+                TelegramModule.register({ isGlobal: true, ...options.telegram }),
+                ZaloModule.register({ isGlobal: true, ...options.zalo }),
+                MailModule.register({ isGlobal: true, ...options.mail }),
+                ConnectionsModule.register({ isGlobal: true }),
+                ConnectionSecretsModule.register({ isGlobal: true, ...options.connectionSecrets }),
+                AgentConversationsModule.register({ isGlobal: true }),
+                AgentMessagesModule.register({ isGlobal: true }),
+                ChannelReceiptsModule.register({ isGlobal: true }),
+                InboundEventsModule.register({ isGlobal: true }),
+                ChannelsModule.register({ isGlobal: true, ...options.channels }),
+                ConversationsModule.register({ isGlobal: true }),
+                TelegramInboxModule.register({ isGlobal: true }),
+                ZaloInboxModule.register({ isGlobal: true }),
                 LivenessModule.register({ isGlobal: true }),
                 ApiKeysModule.register({ isGlobal: true }),
                 PublicApiModule.register({ isGlobal: true }),
+                ChannelsHttpModule,
+                TelegramHttpModule,
+                ZaloHttpModule,
+                RunChatTurnQueueModule,
+                CheckConnectionHealthQueueModule,
+                RefreshZaloTokensQueueModule,
                 ExternalApiHttpModule,
                 SystemHealthHttpModule,
                 WorkspacesHttpModule,
