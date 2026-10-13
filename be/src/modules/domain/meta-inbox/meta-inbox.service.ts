@@ -12,6 +12,8 @@ import { eachInOrder, isRecord, parseJsonText } from "@modules/platform/primitiv
 import { InjectQueueOutbox } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
 import { isMetaInboundJob, META_INBOUND_QUEUE } from "./meta-inbox.contracts"
+import { InjectMetaEventTaker } from "./meta-inbox.decorators"
+import type { MetaEventTaker } from "./meta-inbox.port"
 import type { DeliverySignature, MetaInboundJob, RawDelivery } from "./meta-inbox.contracts"
 import { MetaInboxError, MetaInboxErrorCode } from "./errors/meta-inbox.error"
 import { COMPLETE_META_INBOX, INSERT_META_INBOX } from "./persistence/meta-inbox.sql"
@@ -31,6 +33,7 @@ export class MetaInboxService {
         private readonly conversations: ConversationsService,
         private readonly threads: MetaThreadsService,
         private readonly comments: MetaCommentsService,
+        @InjectMetaEventTaker() private readonly taker: MetaEventTaker,
     ) {}
 
     /** Verifies and records the delivery; a delivery that carries no event of ours is acknowledged and dropped. */
@@ -54,9 +57,14 @@ export class MetaInboxService {
         })
     }
 
-    /** Delivers the event a claimed job carries; a payload that is not a queued Meta event is left alone. */
+    /**
+     * Delivers the event a claimed job carries: the taker (the lead generation flow) first, else the chatbot front door; a payload that
+     * is not a queued Meta event is left alone.
+     */
     async deliverPayload(payload: object): Promise<void> {
-        if (isMetaInboundJob(payload)) await this.deliver(payload)
+        if (!isMetaInboundJob(payload)) return
+        if (await this.taker.take(payload)) return
+        await this.deliver(payload)
     }
 
     /**

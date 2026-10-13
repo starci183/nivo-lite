@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationSetDefaultSmtpArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { SetDefaultSmtpMutation, SetDefaultSmtpMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `setDefaultSmtp` mutation. */
-export type MutateSetDefaultSmtpRequest = MutationSetDefaultSmtpArgs["input"]
+export type MutateSetDefaultSmtpRequest = WireInput<SetDefaultSmtpMutationVariables["input"]>
 
 /** The response of the `setDefaultSmtp` mutation. */
-type MutateSetDefaultSmtpResponse = Pick<Mutation, "setDefaultSmtp">
+type MutateSetDefaultSmtpResponse = SetDefaultSmtpMutation
 
 const mutation1: TypedDocumentNode<MutateSetDefaultSmtpResponse, InputVariables<MutateSetDefaultSmtpRequest>> = gql`
     mutation SetDefaultSmtp($input: SetDefaultSmtpInput!) {

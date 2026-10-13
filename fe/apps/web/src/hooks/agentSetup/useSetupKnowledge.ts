@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { useQueryKnowledgeSourcesSwr } from "@/hooks/swr/api/graphql/queries/useQueryKnowledgeSourcesSwr"
+import { useQueryKnowledgeSourcesSwr } from "@/hooks/swr"
 import type { ModuleKey } from "@/modules/catalog"
 
 /** How many sources the knowledge of a module holds. */

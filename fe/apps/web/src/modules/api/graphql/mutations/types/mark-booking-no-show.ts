@@ -1,7 +1,5 @@
-import type { Mutation, MutationMarkBookingNoShowArgs } from "../../__generated__/schema"
+import type { MarkBookingNoShowMutationVariables } from "../../__generated__/graphql"
+import type { WireInput } from "../../types"
 
 /** The input of the `markBookingNoShow` mutation. */
-export type MutateMarkBookingNoShowRequest = MutationMarkBookingNoShowArgs["input"]
-
-/** The response of the `markBookingNoShow` mutation. */
-export type MutateMarkBookingNoShowResponse = Pick<Mutation, "markBookingNoShow">
+export type MutateMarkBookingNoShowRequest = WireInput<MarkBookingNoShowMutationVariables["input"]>

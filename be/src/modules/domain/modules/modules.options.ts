@@ -6,4 +6,6 @@ export interface ModulesOptions {
     readonly categories: ReadonlyArray<ModuleCategory>
     /** The modules of the catalogue. */
     readonly catalog: ReadonlyArray<ModuleDefinition>
+    /** Only the catalogue and its mirror in the database (the cli seed): none of the installed-agent lifecycle. */
+    readonly catalogOnly?: boolean
 }

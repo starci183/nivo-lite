@@ -5,9 +5,11 @@ import { useSettledGraphQL } from "@/hooks/connection-wizard"
 import type { Settled } from "@/hooks/connection-wizard"
 import { wizardConnectionOf } from "@/hooks/connection-wire"
 import { useConnectionsRefresh } from "@/hooks/connections"
-import { useMutateSaveProviderKeysSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSaveProviderKeysSwr"
-import { useMutateStartMoneyConnectionSwr } from "@/hooks/swr/api/graphql/mutations/useMutateStartMoneyConnectionSwr"
-import { useMutateUpdateMoneyConnectionSwr } from "@/hooks/swr/api/graphql/mutations/useMutateUpdateMoneyConnectionSwr"
+import {
+    useMutateSaveProviderKeysSwr,
+    useMutateStartMoneyConnectionSwr,
+    useMutateUpdateMoneyConnectionSwr,
+} from "@/hooks/swr"
 import type { MutateSaveProviderKeysRequest } from "@/modules/api/graphql/mutations/mutation-save-provider-keys"
 import type { MoneyProvider, ProviderKeysResult, WizardConnection } from "@/modules/types"
 import type { AccountForm } from "./money-wizard.shared"

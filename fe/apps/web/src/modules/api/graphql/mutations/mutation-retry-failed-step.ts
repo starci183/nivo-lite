@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationRetryFailedStepArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { RetryFailedStepMutation, RetryFailedStepMutationVariables } from "../__generated__/graphql"
 
 /** Generated input of the retryFailedStep mutation. */
-export type MutateRetryFailedStepRequest = MutationRetryFailedStepArgs["input"]
+export type MutateRetryFailedStepRequest = WireInput<RetryFailedStepMutationVariables["input"]>
 
 /** Generated response of the retryFailedStep mutation. */
-type MutateRetryFailedStepResponse = Pick<Mutation, "retryFailedStep">
+type MutateRetryFailedStepResponse = RetryFailedStepMutation
 
 type Document = TypedDocumentNode<MutateRetryFailedStepResponse, InputVariables<MutateRetryFailedStepRequest>>
 

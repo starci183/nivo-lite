@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryHiringCandidateDetailArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { HiringCandidateDetailQuery, HiringCandidateDetailQueryVariables } from "../__generated__/graphql"
 
 /** The input of the `hiringCandidateDetail` query. */
-export type QueryHiringCandidateDetailRequest = QueryHiringCandidateDetailArgs["input"]
+export type QueryHiringCandidateDetailRequest = WireInput<HiringCandidateDetailQueryVariables["input"]>
 
 /** The response of the `hiringCandidateDetail` query. */
-type QueryHiringCandidateDetailResponse = Pick<Query, "hiringCandidateDetail">
+type QueryHiringCandidateDetailResponse = HiringCandidateDetailQuery
 
 const query1: TypedDocumentNode<
     QueryHiringCandidateDetailResponse,

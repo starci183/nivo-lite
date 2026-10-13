@@ -1,5 +1,5 @@
 import { mutateMarkVideoPublished } from "@/modules/api/graphql/mutations/mutation-mark-video-published"
-import { useGraphQLMutationSwr } from "@/hooks/reuseables/useGraphQLMutationSwr"
+import { useGraphQLMutationSwr } from "@/hooks/reuseables"
 
 /** The SWR key of the markVideoPublished mutation. */
 export const MUTATE_MARK_VIDEO_PUBLISHED_SWR_KEY = "MUTATE_MARK_VIDEO_PUBLISHED_SWR"

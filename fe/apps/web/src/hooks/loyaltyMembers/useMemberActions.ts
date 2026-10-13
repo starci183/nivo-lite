@@ -4,14 +4,14 @@ import { useTranslations } from "next-intl"
 import { useRef, useState, useTransition } from "react"
 import { useSWRConfig } from "swr"
 import {
-    isQueryLoyaltyBoardSwrKey,
-    isQueryLoyaltyMemberSwrKey,
+    QUERY_LOYALTY_BOARD_SWR_KEY,
+    QUERY_LOYALTY_MEMBER_SWR_KEY,
     useMutateAdjustLoyaltyPointsSwr,
     useMutateRedeemLoyaltyRewardSwr,
     useMutateUpdateLoyaltyMemberSwr,
-} from "@/hooks/swr/api/graphql"
+} from "@/hooks/swr"
+import { matchesSwrKey, newIdempotencyToken } from "@/modules/utils"
 import { useGraphQLWithToast } from "@/modules/toast"
-import { newToken } from "./loyaltyMembers.shared"
 
 /** The outcome line shown under a reward after a redemption. */
 export interface ActionNote {
@@ -34,15 +34,15 @@ export const useMemberActions = (customerId: string) => {
     const updateMember = useMutateUpdateLoyaltyMemberSwr()
     const adjustPoints = useMutateAdjustLoyaltyPointsSwr()
     const redeemReward = useMutateRedeemLoyaltyRewardSwr()
-    const adjustToken = useRef(newToken())
-    const redeemToken = useRef(newToken())
+    const adjustToken = useRef(newIdempotencyToken())
+    const redeemToken = useRef(newIdempotencyToken())
     const [isPending, startTransition] = useTransition()
     const [busyReward, setBusyReward] = useState<string | null>(null)
     const [adjustNote, setAdjustNote] = useState<string | null>(null)
     const [redeemNote, setRedeemNote] = useState<ActionNote | null>(null)
     const refresh = () => {
-        void mutate(isQueryLoyaltyBoardSwrKey)
-        void mutate(isQueryLoyaltyMemberSwrKey)
+        void mutate(matchesSwrKey(QUERY_LOYALTY_BOARD_SWR_KEY))
+        void mutate(matchesSwrKey(QUERY_LOYALTY_MEMBER_SWR_KEY))
     }
     return {
         isPending,
@@ -70,7 +70,7 @@ export const useMemberActions = (customerId: string) => {
                     { showSuccessToast: false },
                 )
                 if (answer === undefined) return
-                adjustToken.current = newToken()
+                adjustToken.current = newIdempotencyToken()
                 setAdjustNote(answer.posted ? t("adjustDone") : t("adjustWaiting"))
                 onDone()
                 refresh()
@@ -86,7 +86,7 @@ export const useMemberActions = (customerId: string) => {
                 )
                 setBusyReward(null)
                 if (answer === undefined) return
-                redeemToken.current = newToken()
+                redeemToken.current = newIdempotencyToken()
                 setRedeemNote({
                     id: rewardId,
                     text: answer.posted ? t("redeemDone", { code: answer.code }) : t("redeemWaiting"),

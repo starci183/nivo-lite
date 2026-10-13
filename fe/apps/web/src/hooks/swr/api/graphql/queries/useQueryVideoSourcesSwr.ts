@@ -1,5 +1,5 @@
 import { queryVideoSources } from "@/modules/api/graphql/queries/query-video-sources"
-import { useWorkspaceQuerySwr } from "@/hooks/reuseables/useWorkspaceQuerySwr"
+import { useWorkspaceQuerySwr } from "@/hooks/reuseables"
 
 /** The SWR key of the videoSources query. */
 export const QUERY_VIDEO_SOURCES_SWR_KEY = "QUERY_VIDEO_SOURCES_SWR"

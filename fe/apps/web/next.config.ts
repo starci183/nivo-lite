@@ -25,8 +25,8 @@ const nextConfig: NextConfig = {
     async rewrites() {
         return [{ source: "/auth/confirm", destination: "/auth/callback" }]
     },
-    // The VPS container build (Dockerfile.web) sets NEXT_OUTPUT=standalone; the Netlify build leaves it unset and is unchanged.
-    ...(process.env.NEXT_OUTPUT === "standalone" ? { output: "standalone" as const } : {}),
+    // The runtime stage of the Dockerfile ships the standalone output.
+    output: "standalone",
 }
 
 export default withNextIntl(nextConfig)

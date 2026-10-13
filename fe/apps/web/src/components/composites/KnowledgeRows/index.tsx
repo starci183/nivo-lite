@@ -1,10 +1,10 @@
 import type { ReactNode } from "react"
 import { Alert, Region, SectionHeader, Text } from "@starci/grammar/common"
 import { HEAD_CLASS_NAME, SECTION_CLASS_NAME, TITLE_CLASS_NAME } from "./classNames"
-import { ActionList, Rows } from "./rows"
-import type { RowActionView, RowsProps } from "./rows"
+import { ActionList, Rows } from "./component"
+import type { RowActionView, RowsProps } from "./component"
 
-export type { KnowledgeRowView, RowActionView, RowPartView } from "./rows"
+export type { KnowledgeRowView, RowActionView, RowPartView } from "./component"
 
 /** The heading of a section and how its last command went. */
 interface SectionView {

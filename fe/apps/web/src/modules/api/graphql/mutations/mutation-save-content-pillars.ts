@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationSaveContentPillarsArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { SaveContentPillarsMutation, SaveContentPillarsMutationVariables } from "../__generated__/graphql"
 
 /** The generated input of saveContentPillars. */
-export type MutateSaveContentPillarsRequest = MutationSaveContentPillarsArgs["input"]
+type MutateSaveContentPillarsRequest = WireInput<SaveContentPillarsMutationVariables["input"]>
 
 /** The generated response of saveContentPillars. */
-type MutateSaveContentPillarsResponse = Pick<Mutation, "saveContentPillars">
+type MutateSaveContentPillarsResponse = SaveContentPillarsMutation
 
 type Document = TypedDocumentNode<MutateSaveContentPillarsResponse, InputVariables<MutateSaveContentPillarsRequest>>
 

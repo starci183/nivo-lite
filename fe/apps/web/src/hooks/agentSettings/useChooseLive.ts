@@ -1,6 +1,6 @@
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
-import { useMutateSetModuleLiveSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSetModuleLiveSwr"
+import { useMutateSetModuleLiveSwr } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useRefreshInstallation } from "./useRefreshInstallation"
 

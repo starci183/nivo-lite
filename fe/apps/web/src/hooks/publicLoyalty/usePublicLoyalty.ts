@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useMutateRequestLoyaltyCodeSwr, useMutateVerifyLoyaltyCodeSwr } from "@/hooks/swr/api/graphql"
+import { useMutateRequestLoyaltyCodeSwr, useMutateVerifyLoyaltyCodeSwr } from "@/hooks/swr"
 import { refusalOf } from "./publicLoyalty.shared"
 import type { PublicLoyaltyFailure, PublicLoyaltyPoints, PublicLoyaltyStep } from "./publicLoyalty.shared"
 

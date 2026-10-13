@@ -1,7 +1,5 @@
 import { useMemo } from "react"
-import { useQueryContentConfigurationSwr } from "@/hooks/swr/api/graphql/queries/useQueryContentConfigurationSwr"
-import { useQueryContentMediaSwr } from "@/hooks/swr/api/graphql/queries/useQueryContentMediaSwr"
-import { useQueryContentWorkbenchSwr } from "@/hooks/swr/api/graphql/queries/useQueryContentWorkbenchSwr"
+import { useQueryContentConfigurationSwr, useQueryContentMediaSwr, useQueryContentWorkbenchSwr } from "@/hooks/swr"
 import { contentWorkbenchView } from "@/modules/content"
 
 /** Loads the content workbench in the browser, including the media needed by the editor. */

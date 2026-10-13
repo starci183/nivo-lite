@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationSettleWonDealArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { SettleWonDealMutation, SettleWonDealMutationVariables } from "../__generated__/graphql"
 
 /** Generated input of the settleWonDeal mutation. */
-export type MutateSettleWonDealRequest = MutationSettleWonDealArgs["input"]
+export type MutateSettleWonDealRequest = WireInput<SettleWonDealMutationVariables["input"]>
 
 /** Generated response of the settleWonDeal mutation. */
-type MutateSettleWonDealResponse = Pick<Mutation, "settleWonDeal">
+type MutateSettleWonDealResponse = SettleWonDealMutation
 
 type Document = TypedDocumentNode<MutateSettleWonDealResponse, InputVariables<MutateSettleWonDealRequest>>
 

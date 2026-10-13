@@ -1,6 +1,8 @@
-import { useQueryOfficeCommandCandidatesSwr } from "@/hooks/swr/api/graphql/queries/useQueryOfficeCommandCandidatesSwr"
-import { useQueryOfficeDecidedApprovalsSwr } from "@/hooks/swr/api/graphql/queries/useQueryOfficeDecidedApprovalsSwr"
-import { useQueryOfficePendingApprovalsSwr } from "@/hooks/swr/api/graphql/queries/useQueryOfficePendingApprovalsSwr"
+import {
+    useQueryOfficeCommandCandidatesSwr,
+    useQueryOfficeDecidedApprovalsSwr,
+    useQueryOfficePendingApprovalsSwr,
+} from "@/hooks/swr"
 import { OFFICE_POLL_MS, toOfficeApproval, toOfficeCandidate } from "@/modules/office"
 
 const LIVE = { refreshInterval: OFFICE_POLL_MS }

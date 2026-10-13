@@ -1,8 +1,9 @@
+import type { RemoveBookingResourceMutation } from "../__generated__/graphql"
 import { gql } from "@apollo/client"
 import type { DocumentNode } from "graphql"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, MutateParams } from "../types"
-import type { MutateRemoveBookingResourceRequest, MutateRemoveBookingResourceResponse } from "./types/remove-booking-resource"
+import type { MutateRemoveBookingResourceRequest } from "./types/remove-booking-resource"
 
 const mutation1 = gql`
     mutation RemoveBookingResource($input: RemoveBookingResourceInput!) {
@@ -12,7 +13,7 @@ const mutation1 = gql`
     }
 `
 
-export enum MutationRemoveBookingResource {
+enum MutationRemoveBookingResource {
     Mutation1 = "mutation1",
 }
 
@@ -21,12 +22,19 @@ const mutationMap: Record<MutationRemoveBookingResource, DocumentNode> = {
 }
 
 /** Apollo params for {@link mutateRemoveBookingResource}. */
-export type MutationRemoveBookingResourceParams = MutateParams<MutationRemoveBookingResource, MutateRemoveBookingResourceRequest>
+type MutationRemoveBookingResourceParams = MutateParams<
+    MutationRemoveBookingResource,
+    MutateRemoveBookingResourceRequest
+>
 
 /** Removes a booking resource. */
-export const mutateRemoveBookingResource = async ({ mutation = MutationRemoveBookingResource.Mutation1, request, signal }: MutationRemoveBookingResourceParams) => {
+export const mutateRemoveBookingResource = async ({
+    mutation = MutationRemoveBookingResource.Mutation1,
+    request,
+    signal,
+}: MutationRemoveBookingResourceParams) => {
     const apollo = createAuthApolloClient({ signal })
-    return apollo.mutate<MutateRemoveBookingResourceResponse, InputVariables<MutateRemoveBookingResourceRequest>>({
+    return apollo.mutate<RemoveBookingResourceMutation, InputVariables<MutateRemoveBookingResourceRequest>>({
         mutation: mutationMap[mutation],
         variables: { input: request },
     })

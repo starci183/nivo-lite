@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryChatbotThreadArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { ChatbotThreadQuery, ChatbotThreadQueryVariables } from "../__generated__/graphql"
 
 /** The input of the `chatbotThread` query. */
-type QueryChatbotThreadRequest = QueryChatbotThreadArgs["input"]
+type QueryChatbotThreadRequest = WireInput<ChatbotThreadQueryVariables["input"]>
 
 /** The response of the `chatbotThread` query. */
-type QueryChatbotThreadResponse = Pick<Query, "chatbotThread">
+type QueryChatbotThreadResponse = ChatbotThreadQuery
 
 type Document = TypedDocumentNode<QueryChatbotThreadResponse, InputVariables<QueryChatbotThreadRequest>>
 

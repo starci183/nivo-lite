@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationApproveLeadGenCommentArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { ApproveLeadGenCommentMutation, ApproveLeadGenCommentMutationVariables } from "../__generated__/graphql"
 
 /** Approving a public comment uses only generated GraphQL input and output types. */
-export type MutateApproveLeadGenCommentRequest = MutationApproveLeadGenCommentArgs["input"]
+export type MutateApproveLeadGenCommentRequest = WireInput<ApproveLeadGenCommentMutationVariables["input"]>
 
 /** The MutateApproveLeadGenCommentResponse of this operation, straight from the generated schema. */
-type MutateApproveLeadGenCommentResponse = Pick<Mutation, "approveLeadGenComment">
+type MutateApproveLeadGenCommentResponse = ApproveLeadGenCommentMutation
 
 type Document = TypedDocumentNode<
     MutateApproveLeadGenCommentResponse,

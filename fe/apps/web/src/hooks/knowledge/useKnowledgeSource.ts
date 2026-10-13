@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import { isNotFoundFailure } from "@/modules/api"
-import { useQueryKnowledgeSourceSwr } from "@/hooks/swr/api/graphql/queries/useQueryKnowledgeSourceSwr"
+import { useQueryKnowledgeSourceSwr } from "@/hooks/swr"
 import { toDocumentPassage, toKnowledgeDocumentDetail } from "@/modules/documents"
 import type { DocumentPassage, KnowledgeDocumentDetail } from "@/modules/types"
 

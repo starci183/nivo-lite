@@ -2,10 +2,10 @@ import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
-import type { Query } from "../__generated__/schema"
+import type { ShiftsMineQuery } from "../__generated__/graphql"
 
 /** The response of the `shiftsMine` query. */
-type QueryShiftsMineResponse = Pick<Query, "shiftsMine">
+type QueryShiftsMineResponse = ShiftsMineQuery
 
 const query1: TypedDocumentNode<QueryShiftsMineResponse> = gql`
     query ShiftsMine {

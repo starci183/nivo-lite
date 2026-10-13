@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryInboundSimulationStatusArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { InboundSimulationStatusQuery, InboundSimulationStatusQueryVariables } from "../__generated__/graphql"
 
 /** The generated input of the simulator status query. */
-type QueryInboundSimulationStatusRequest = QueryInboundSimulationStatusArgs["input"]
+type QueryInboundSimulationStatusRequest = WireInput<InboundSimulationStatusQueryVariables["input"]>
 
 /** The generated selection returned by the simulator status query. */
-type QueryInboundSimulationStatusResponse = Pick<Query, "inboundSimulationStatus">
+type QueryInboundSimulationStatusResponse = InboundSimulationStatusQuery
 
 type Document = TypedDocumentNode<
     QueryInboundSimulationStatusResponse,

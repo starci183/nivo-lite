@@ -1,13 +1,9 @@
 import useSWR from "swr"
-import { queryLoyaltyMember } from "@/modules/api/graphql/queries"
+import { queryLoyaltyMember } from "@/modules/api/graphql/queries/query-loyalty-member"
 import type { QueryLoyaltyMemberRequest } from "@/modules/api/graphql/queries/types/loyalty-member"
 
-/** The SWR key of the `loyaltyMember` query; mutations that change it match it with {@link isQueryLoyaltyMemberSwrKey}. */
+/** The SWR key of the `loyaltyMember` query. */
 export const QUERY_LOYALTY_MEMBER_SWR_KEY = "QUERY_LOYALTY_MEMBER_SWR"
-
-/** Matches every key of `loyaltyMember` (the plain key and the argument tuples), for SWR mutate revalidation. */
-export const isQueryLoyaltyMemberSwrKey = (key: unknown): boolean =>
-    key === QUERY_LOYALTY_MEMBER_SWR_KEY || (Array.isArray(key) && key[0] === QUERY_LOYALTY_MEMBER_SWR_KEY)
 
 /** One loyalty member with the ledger timeline and the rewards they can redeem now. */
 export const useQueryLoyaltyMemberSwr = (request: QueryLoyaltyMemberRequest | null) =>

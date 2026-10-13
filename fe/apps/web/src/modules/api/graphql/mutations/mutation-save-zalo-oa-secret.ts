@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationSaveZaloOaSecretArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { SaveZaloOaSecretMutation, SaveZaloOaSecretMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `saveZaloOaSecret` mutation. */
-export type MutateSaveZaloOaSecretRequest = MutationSaveZaloOaSecretArgs["input"]
+export type MutateSaveZaloOaSecretRequest = WireInput<SaveZaloOaSecretMutationVariables["input"]>
 
 /** The response of the `saveZaloOaSecret` mutation. */
-type MutateSaveZaloOaSecretResponse = Pick<Mutation, "saveZaloOaSecret">
+type MutateSaveZaloOaSecretResponse = SaveZaloOaSecretMutation
 
 const mutation1: TypedDocumentNode<MutateSaveZaloOaSecretResponse, InputVariables<MutateSaveZaloOaSecretRequest>> = gql`
     mutation SaveZaloOaSecret($input: SaveZaloOaSecretInput!) {

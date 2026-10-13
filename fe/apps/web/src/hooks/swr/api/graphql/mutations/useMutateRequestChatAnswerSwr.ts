@@ -1,5 +1,5 @@
 import { mutateRequestChatAnswer } from "@/modules/api/graphql/mutations/mutation-request-chat-answer"
-import { useGraphQLMutationSwr } from "@/hooks/reuseables/useGraphQLMutationSwr"
+import { useGraphQLMutationSwr } from "@/hooks/reuseables"
 
 /** The SWR key of the requestChatAnswer mutation. */
 export const MUTATE_REQUEST_CHAT_ANSWER_SWR_KEY = "MUTATE_REQUEST_CHAT_ANSWER_SWR"

@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationSendSmtpTestArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { SendSmtpTestMutation, SendSmtpTestMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `sendSmtpTest` mutation. */
-export type MutateSendSmtpTestRequest = MutationSendSmtpTestArgs["input"]
+export type MutateSendSmtpTestRequest = WireInput<SendSmtpTestMutationVariables["input"]>
 
 /** The response of the `sendSmtpTest` mutation. */
-type MutateSendSmtpTestResponse = Pick<Mutation, "sendSmtpTest">
+type MutateSendSmtpTestResponse = SendSmtpTestMutation
 
 const mutation1: TypedDocumentNode<MutateSendSmtpTestResponse, InputVariables<MutateSendSmtpTestRequest>> = gql`
     mutation SendSmtpTest($input: SendSmtpTestInput!) {

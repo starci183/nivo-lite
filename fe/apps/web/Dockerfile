@@ -9,7 +9,6 @@
 # NEXT_PUBLIC_* values are published to every browser by design, so they are the one kind of build argument; every server-only
 # variable is supplied at run time (env_file). It follows the image canon (knowledge/hfs/docker.md) and diverges from it nowhere.
 # No secret is built in: credentials are mounted at run time and .dockerignore keeps them out of the build context.
-# The standalone output is switched on here with NEXT_OUTPUT=standalone until next.config.ts sets it unconditionally.
 
 FROM node:22.14.0-alpine3.21 AS manifests
 WORKDIR /app
@@ -36,13 +35,13 @@ ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
     NEXT_PUBLIC_GOOGLE_CLIENT_ID=$NEXT_PUBLIC_GOOGLE_CLIENT_ID \
     NEXT_PUBLIC_GOOGLE_PICKER_API_KEY=$NEXT_PUBLIC_GOOGLE_PICKER_API_KEY \
     NEXT_PUBLIC_GOOGLE_APP_ID=$NEXT_PUBLIC_GOOGLE_APP_ID \
-    NEXT_OUTPUT=standalone \
     NEXT_TELEMETRY_DISABLED=1
 COPY --from=manifests /app ./
 RUN npm ci --ignore-scripts
 
 COPY turbo.json ./
 COPY scripts scripts
+COPY be/contracts be/contracts
 COPY supabase/types supabase/types
 COPY supabase/migrations supabase/migrations
 COPY fe/tsconfig.json fe/tsconfig.json

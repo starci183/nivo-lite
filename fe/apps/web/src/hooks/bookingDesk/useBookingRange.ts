@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useQueryBookingBoardSwr } from "@/hooks/swr/api/graphql"
+import { useQueryBookingBoardSwr } from "@/hooks/swr"
 import { shiftDate, weekStartOf } from "@/modules/i18n"
 import { toBookingBoard } from "@/hooks/bookingBoard"
 

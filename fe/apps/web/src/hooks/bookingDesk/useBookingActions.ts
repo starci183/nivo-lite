@@ -4,13 +4,14 @@ import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
 import { useSWRConfig } from "swr"
 import {
-    isQueryBookingBoardSwrKey,
+    QUERY_BOOKING_BOARD_SWR_KEY,
     useMutateCancelBookingSwr,
     useMutateCheckInBookingSwr,
     useMutateCompleteBookingSwr,
     useMutateConfirmBookingSwr,
     useMutateMarkBookingNoShowSwr,
-} from "@/hooks/swr/api/graphql"
+} from "@/hooks/swr"
+import { matchesSwrKey } from "@/modules/utils"
 import { useGraphQLWithToast } from "@/modules/toast"
 import type { BookingAction } from "@/modules/types"
 import { NOTICE_OF_ACTION } from "./bookingDesk.shared"
@@ -49,7 +50,7 @@ export const useBookingActions = (onChanged: () => void) => {
                 })
                 if (answer === undefined) return
                 finish()
-                void mutate(isQueryBookingBoardSwrKey)
+                void mutate(matchesSwrKey(QUERY_BOOKING_BOARD_SWR_KEY))
                 onChanged()
             }),
     }

@@ -7,6 +7,7 @@ const CARE_ADDRESS =
 const AUTHORITY_MONEY = '(null for anything not mentioned; "300 triệu" = 300000000)'
 const AUTHORITY_HINTS =
     '"tự gửi / tự làm / cứ làm" = auto; "hỏi tôi trước" = ask; "không được / không bao giờ" = never. "đơn trên 20 triệu thì hỏi tôi" = confirm_order with limit_vnd 20000000 and mode null. "hóa đơn" = issue_invoice, "đối soát / thanh toán" = reconcile_payment, "follow-up / theo dõi" = send_follow_up, "báo giá" = send_quote.'
+const LEAD_VOICE = "Write warm, brief, natural Vietnamese; address the person as anh/chị unless they showed otherwise."
 const ORDER_MONEY = '"1,5 triệu" = 1500000.'
 
 /** Display text of the prompt library: its error and the Vietnamese phrases the prompts quote to the model. */
@@ -19,6 +20,7 @@ export const DEEPSEEK_MESSAGES: MessageBundle = {
         "prompts.authorityMoney": AUTHORITY_MONEY,
         "prompts.authorityHints": AUTHORITY_HINTS,
         "prompts.orderMoney": ORDER_MONEY,
+        "prompts.leadVoice": LEAD_VOICE,
     },
     en: {
         "errors.DEEPSEEK_JSON_NOT_RETURNED": "The model did not return JSON.",
@@ -28,5 +30,6 @@ export const DEEPSEEK_MESSAGES: MessageBundle = {
         "prompts.authorityMoney": AUTHORITY_MONEY,
         "prompts.authorityHints": AUTHORITY_HINTS,
         "prompts.orderMoney": ORDER_MONEY,
+        "prompts.leadVoice": LEAD_VOICE,
     },
 }

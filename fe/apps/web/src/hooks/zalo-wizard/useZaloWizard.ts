@@ -1,9 +1,9 @@
 import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
-import { allAgentIds } from "@/hooks/connection-wizard"
+import { allAgentIds, resumeNoteOf, useAdoptOnce } from "@/hooks/connection-wizard"
 import { zaloWizardOf } from "@/hooks/connection-wire"
 import { useFirstEvent, useSetConnectionAgents } from "@/hooks/connections"
-import { useQueryZaloConnectionSwr } from "@/hooks/swr/api/graphql/queries/useQueryZaloConnectionSwr"
+import { useQueryZaloConnectionSwr } from "@/hooks/swr"
 import type { AgentOption, WizardNote, ZaloWizardConnection } from "@/modules/types"
 import { canSaveOaSecret, ZALO_STEPS, zaloFailureOf, zaloStartStepOf } from "./zalo-wizard.shared"
 import type { ZaloFields } from "./zalo-wizard.shared"
@@ -35,22 +35,19 @@ export const useZaloWizard = (input: ZaloWizardInput) => {
     const [note, setNote] = useState<WizardNote | null>(null)
     const [isPending, startTransition] = useTransition()
     const resume = useQueryZaloConnectionSwr(input.resumeId, { revalidateOnFocus: false, shouldRetryOnError: false })
-    const step = ZALO_STEPS[index] ?? "app"
-    const watch = useFirstEvent({ connectionId: conn === null ? null : conn.id, isActive: step === "verify" })
-    const firstEvent = watch.event ?? (conn === null ? null : conn.firstEvent)
-    const resumeFailure = resume.error instanceof Error ? resume.error.message : undefined
-    const [adopted, setAdopted] = useState<typeof resume.data>(undefined)
 
     // The stored connection arrives once: adopt it while rendering (derived state), not from an effect.
-    if (resume.data !== undefined && resume.data !== adopted) {
-        const stored = zaloWizardOf(resume.data)
+    useAdoptOnce(resume.data, (data) => {
+        const stored = zaloWizardOf(data)
         const failure = zaloFailureOf(input.returned, tw)
-        setAdopted(resume.data)
         setConn(stored)
         if (stored.agentIds.length > 0) setAgentIds(stored.agentIds)
         if (failure !== null) setNote({ tone: "negative", text: failure })
         setIndex(zaloStartStepOf(stored, failure !== null))
-    }
+    })
+    const step = ZALO_STEPS[index] ?? "app"
+    const watch = useFirstEvent({ connectionId: conn === null ? null : conn.id, isActive: step === "verify" })
+    const firstEvent = watch.event ?? (conn === null ? null : conn.firstEvent)
 
     const go = (to: number) => {
         setNote(null)
@@ -103,7 +100,7 @@ export const useZaloWizard = (input: ZaloWizardInput) => {
         step,
         fields,
         conn,
-        note: note ?? (resumeFailure === undefined ? null : ({ tone: "negative", text: resumeFailure } as const)),
+        note: resumeNoteOf(note, resume.error),
         isPending,
         isLoading: input.resumeId !== undefined && resume.data === undefined && resume.error === undefined,
         firstEvent,

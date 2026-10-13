@@ -1,4 +1,4 @@
-import { useQueryLeadFlowSwr } from "@/hooks/swr/api/graphql/queries/useQueryLeadFlowSwr"
+import { useQueryLeadFlowSwr } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 
 /** The work flow of one lead (steps, decisions, orders, invoices, transactions) read through the shared SWR cache; `undefined` pauses it. */

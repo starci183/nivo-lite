@@ -1,13 +1,13 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationDecideSetupCardArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { DecideSetupCardMutation, DecideSetupCardMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `decideSetupCard` mutation. */
-export type MutateDecideSetupCardRequest = MutationDecideSetupCardArgs["input"]
+export type MutateDecideSetupCardRequest = WireInput<DecideSetupCardMutationVariables["input"]>
 
-type MutateDecideSetupCardResponse = Pick<Mutation, "decideSetupCard">
+type MutateDecideSetupCardResponse = DecideSetupCardMutation
 
 const mutation1: TypedDocumentNode<MutateDecideSetupCardResponse, InputVariables<MutateDecideSetupCardRequest>> = gql`
     mutation DecideSetupCard($input: DecideSetupCardInput!) {

@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationTransitionContentItemArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { TransitionContentItemMutation, TransitionContentItemMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `transitionContentItem` mutation. */
-type MutateTransitionContentItemRequest = MutationTransitionContentItemArgs["input"]
+type MutateTransitionContentItemRequest = WireInput<TransitionContentItemMutationVariables["input"]>
 
 /** The generated payload of the `transitionContentItem` mutation. */
-type MutateTransitionContentItemResponse = Pick<Mutation, "transitionContentItem">
+type MutateTransitionContentItemResponse = TransitionContentItemMutation
 
 type Document = TypedDocumentNode<
     MutateTransitionContentItemResponse,

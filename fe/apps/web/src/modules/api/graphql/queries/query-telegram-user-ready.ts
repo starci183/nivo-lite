@@ -2,10 +2,10 @@ import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
-import type { Query } from "../__generated__/schema"
+import type { TelegramUserReadyQuery } from "../__generated__/graphql"
 
 /** The response of the `telegramUserReady` query. */
-type QueryTelegramUserReadyResponse = Pick<Query, "telegramUserReady">
+type QueryTelegramUserReadyResponse = TelegramUserReadyQuery
 
 const query1: TypedDocumentNode<QueryTelegramUserReadyResponse> = gql`
     query TelegramUserReady {

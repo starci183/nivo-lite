@@ -2,9 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
-import { useMutateCreateApiKeySwr } from "@/hooks/swr/api/graphql/mutations/useMutateCreateApiKeySwr"
-import { useMutateRevokeApiKeySwr } from "@/hooks/swr/api/graphql/mutations/useMutateRevokeApiKeySwr"
-import { useQueryApiKeysSwr } from "@/hooks/swr/api/graphql/queries/useQueryApiKeysSwr"
+import { useMutateCreateApiKeySwr, useMutateRevokeApiKeySwr, useQueryApiKeysSwr } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { useGraphQLWithToast } from "@/modules/toast"
 

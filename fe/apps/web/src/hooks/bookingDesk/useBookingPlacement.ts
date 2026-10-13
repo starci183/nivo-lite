@@ -3,7 +3,8 @@
 import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
 import { useSWRConfig } from "swr"
-import { isQueryBookingBoardSwrKey, useMutateAddBookingSwr, useMutateMoveBookingSwr } from "@/hooks/swr/api/graphql"
+import { QUERY_BOOKING_BOARD_SWR_KEY, useMutateAddBookingSwr, useMutateMoveBookingSwr } from "@/hooks/swr"
+import { matchesSwrKey } from "@/modules/utils"
 import { graphQLErrorCode } from "@/modules/api"
 import { wallInstant } from "@/modules/i18n"
 import { toast } from "@/modules/toast"
@@ -62,10 +63,9 @@ export const useBookingPlacement = (timezone: string, onPlaced: (kind: Placement
 
     const submit = () => {
         if (draft === null || fields === null) return
-        const current = draft
         startTransition(async () => {
             try {
-                if (current.kind === "add") {
+                if (draft.kind === "add") {
                     await add.trigger({
                         serviceId: fields.serviceId,
                         date: fields.date,
@@ -79,7 +79,7 @@ export const useBookingPlacement = (timezone: string, onPlaced: (kind: Placement
                     })
                 } else {
                     await move.trigger({
-                        id: current.id,
+                        id: draft.id,
                         startAt: new Date(wallInstant(fields.date, fields.time, timezone)).toISOString(),
                         resourceId: fields.resourceId,
                         force: fields.force,
@@ -91,11 +91,11 @@ export const useBookingPlacement = (timezone: string, onPlaced: (kind: Placement
                 return
             }
             toast.success(tToast("successTitle"), {
-                description: t(current.kind === "add" ? "did_add" : "did_move"),
+                description: t(draft.kind === "add" ? "did_add" : "did_move"),
             })
-            const kind = current.kind
+            const kind = draft.kind
             close()
-            void mutate(isQueryBookingBoardSwrKey)
+            void mutate(matchesSwrKey(QUERY_BOOKING_BOARD_SWR_KEY))
             onPlaced(kind)
         })
     }

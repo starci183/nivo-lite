@@ -2,10 +2,12 @@
 
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
-import { useMutateCopyInviteLinkSwr } from "@/hooks/swr/api/graphql/mutations/useMutateCopyInviteLinkSwr"
-import { useMutateCreateInviteSwr } from "@/hooks/swr/api/graphql/mutations/useMutateCreateInviteSwr"
-import { useMutateResendInviteSwr } from "@/hooks/swr/api/graphql/mutations/useMutateResendInviteSwr"
-import { useMutateRevokeInviteSwr } from "@/hooks/swr/api/graphql/mutations/useMutateRevokeInviteSwr"
+import {
+    useMutateCopyInviteLinkSwr,
+    useMutateCreateInviteSwr,
+    useMutateResendInviteSwr,
+    useMutateRevokeInviteSwr,
+} from "@/hooks/swr"
 import { toast, useGraphQLWithToast } from "@/modules/toast"
 import { inviteSentOf, refreshTeam } from "./team.shared"
 import type { InviteSentView } from "./team.shared"

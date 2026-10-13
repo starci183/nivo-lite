@@ -1,5 +1,5 @@
 import { mutateResendInvite } from "@/modules/api/graphql/mutations/mutation-resend-invite"
-import { useGraphQLMutationSwr } from "@/hooks/reuseables/useGraphQLMutationSwr"
+import { useGraphQLMutationSwr } from "@/hooks/reuseables"
 
 /** The SWR key of the resendInvite mutation. */
 export const MUTATE_RESEND_INVITE_SWR_KEY = "MUTATE_RESEND_INVITE_SWR"

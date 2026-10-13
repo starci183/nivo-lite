@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createNoAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationApplyToHiringJobArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { ApplyToHiringJobMutation, ApplyToHiringJobMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `applyToHiringJob` mutation. */
-export type MutateApplyToHiringJobRequest = MutationApplyToHiringJobArgs["input"]
+export type MutateApplyToHiringJobRequest = WireInput<ApplyToHiringJobMutationVariables["input"]>
 
 /** The response of the `applyToHiringJob` mutation. */
-type MutateApplyToHiringJobResponse = Pick<Mutation, "applyToHiringJob">
+type MutateApplyToHiringJobResponse = ApplyToHiringJobMutation
 
 const mutation1: TypedDocumentNode<MutateApplyToHiringJobResponse, InputVariables<MutateApplyToHiringJobRequest>> = gql`
     mutation ApplyToHiringJob($input: ApplyToHiringJobInput!) {

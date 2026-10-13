@@ -1,5 +1,5 @@
 import { useTranslations } from "next-intl"
-import { useMutateRequestContentQuickDraftSwr } from "@/hooks/swr/api/graphql/mutations/useMutateRequestContentQuickDraftSwr"
+import { useMutateRequestContentQuickDraftSwr } from "@/hooks/swr"
 import type { ContentAiStatusType } from "@/modules/api"
 import { useContentAiJob } from "./useContentAiJob"
 

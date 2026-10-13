@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationRequestDataSyncArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { RequestDataSyncMutation, RequestDataSyncMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `requestDataSync` mutation. */
-export type MutateRequestDataSyncRequest = MutationRequestDataSyncArgs["input"]
+export type MutateRequestDataSyncRequest = WireInput<RequestDataSyncMutationVariables["input"]>
 
 /** The response of the `requestDataSync` mutation. */
-type MutateRequestDataSyncResponse = Pick<Mutation, "requestDataSync">
+type MutateRequestDataSyncResponse = RequestDataSyncMutation
 
 const mutation1: TypedDocumentNode<MutateRequestDataSyncResponse, InputVariables<MutateRequestDataSyncRequest>> = gql`
     mutation RequestDataSync($input: RequestDataSyncInput!) {

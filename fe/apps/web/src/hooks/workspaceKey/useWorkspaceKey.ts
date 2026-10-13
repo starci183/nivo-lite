@@ -1,4 +1,4 @@
-import { useAppSelector } from "@/redux/hooks"
+import { useAppSelector } from "@/redux"
 
 /**
  * The SWR key of a read scoped to the active workspace: `[name, workspaceId, ...rest]`, so a switch of workspace reads

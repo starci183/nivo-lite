@@ -1,6 +1,6 @@
 import type { SWRConfiguration } from "swr"
 import { queryContentAiStatus } from "@/modules/api/graphql/queries/query-content-ai-status"
-import { useWorkspaceQuerySwr } from "@/hooks/reuseables/useWorkspaceQuerySwr"
+import { useWorkspaceQuerySwr } from "@/hooks/reuseables"
 import type { ContentAiStatusType } from "@/modules/api"
 
 /** The SWR key of the contentAiStatus query. */

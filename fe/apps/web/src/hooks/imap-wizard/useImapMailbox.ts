@@ -1,6 +1,6 @@
 "use client"
 
-import { useQueryLoadImapConnectionSwr } from "@/hooks/swr/api/graphql/queries/useQueryLoadImapConnectionSwr"
+import { useQueryLoadImapConnectionSwr } from "@/hooks/swr"
 import { securityOf } from "./imap-wizard.shared"
 import type { ImapMailbox } from "./imap-wizard.shared"
 

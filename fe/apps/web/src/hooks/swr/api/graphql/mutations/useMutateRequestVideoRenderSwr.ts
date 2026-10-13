@@ -1,5 +1,5 @@
 import { mutateRequestVideoRender } from "@/modules/api/graphql/mutations/mutation-request-video-render"
-import { useGraphQLMutationSwr } from "@/hooks/reuseables/useGraphQLMutationSwr"
+import { useGraphQLMutationSwr } from "@/hooks/reuseables"
 
 /** The SWR key of the requestVideoRender mutation. */
 export const MUTATE_REQUEST_VIDEO_RENDER_SWR_KEY = "MUTATE_REQUEST_VIDEO_RENDER_SWR"

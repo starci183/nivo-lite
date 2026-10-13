@@ -1,14 +1,17 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationDismissKnowledgeGapArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type {
+    ChatbotDismissKnowledgeGapMutation,
+    ChatbotDismissKnowledgeGapMutationVariables,
+} from "../__generated__/graphql"
 
 /** The input of the `dismissKnowledgeGap` mutation. */
-type MutateChatbotDismissKnowledgeGapRequest = MutationDismissKnowledgeGapArgs["input"]
+type MutateChatbotDismissKnowledgeGapRequest = WireInput<ChatbotDismissKnowledgeGapMutationVariables["input"]>
 
 /** The response of the `dismissKnowledgeGap` mutation. */
-type MutateChatbotDismissKnowledgeGapResponse = Pick<Mutation, "dismissKnowledgeGap">
+type MutateChatbotDismissKnowledgeGapResponse = ChatbotDismissKnowledgeGapMutation
 
 type Document = TypedDocumentNode<
     MutateChatbotDismissKnowledgeGapResponse,

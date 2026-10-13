@@ -1,9 +1,11 @@
 import { useState } from "react"
 import { mutate } from "swr"
-import { QUERY_KNOWLEDGE_SOURCES_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryKnowledgeSourcesSwr"
-import { QUERY_KNOWLEDGE_SUGGESTIONS_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryKnowledgeSuggestionsSwr"
-import { useMutateRetryKnowledgeSourceSwr } from "@/hooks/swr/api/graphql/mutations/useMutateRetryKnowledgeSourceSwr"
-import { useMutateSetKnowledgeSuggestionStateSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSetKnowledgeSuggestionStateSwr"
+import {
+    QUERY_KNOWLEDGE_SOURCES_SWR_KEY,
+    QUERY_KNOWLEDGE_SUGGESTIONS_SWR_KEY,
+    useMutateRetryKnowledgeSourceSwr,
+    useMutateSetKnowledgeSuggestionStateSwr,
+} from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import type { IdeaDecision } from "@/modules/types"
 

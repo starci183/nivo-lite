@@ -1,5 +1,5 @@
 import type { SWRConfiguration } from "swr"
-import { useGraphqlQuerySwr } from "@/hooks/reuseables/useGraphqlQuerySwr"
+import { useGraphqlQuerySwr } from "@/hooks/reuseables"
 import { queryAgentConnections } from "@/modules/api/graphql/queries/query-agent-connections"
 import type { QueryAgentConnectionsRequest } from "@/modules/api/graphql/queries/query-agent-connections"
 

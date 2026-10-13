@@ -1,8 +1,9 @@
+import type { SaveBookingServiceMutation } from "../__generated__/graphql"
 import { gql } from "@apollo/client"
 import type { DocumentNode } from "graphql"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, MutateParams } from "../types"
-import type { MutateSaveBookingServiceRequest, MutateSaveBookingServiceResponse } from "./types/save-booking-service"
+import type { MutateSaveBookingServiceRequest } from "./types/save-booking-service"
 
 const mutation1 = gql`
     mutation SaveBookingService($input: SaveBookingServiceInput!) {
@@ -12,7 +13,7 @@ const mutation1 = gql`
     }
 `
 
-export enum MutationSaveBookingService {
+enum MutationSaveBookingService {
     Mutation1 = "mutation1",
 }
 
@@ -21,12 +22,16 @@ const mutationMap: Record<MutationSaveBookingService, DocumentNode> = {
 }
 
 /** Apollo params for {@link mutateSaveBookingService}. */
-export type MutationSaveBookingServiceParams = MutateParams<MutationSaveBookingService, MutateSaveBookingServiceRequest>
+type MutationSaveBookingServiceParams = MutateParams<MutationSaveBookingService, MutateSaveBookingServiceRequest>
 
 /** Creates or updates a booking service (id null creates). */
-export const mutateSaveBookingService = async ({ mutation = MutationSaveBookingService.Mutation1, request, signal }: MutationSaveBookingServiceParams) => {
+export const mutateSaveBookingService = async ({
+    mutation = MutationSaveBookingService.Mutation1,
+    request,
+    signal,
+}: MutationSaveBookingServiceParams) => {
     const apollo = createAuthApolloClient({ signal })
-    return apollo.mutate<MutateSaveBookingServiceResponse, InputVariables<MutateSaveBookingServiceRequest>>({
+    return apollo.mutate<SaveBookingServiceMutation, InputVariables<MutateSaveBookingServiceRequest>>({
         mutation: mutationMap[mutation],
         variables: { input: request },
     })

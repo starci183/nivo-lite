@@ -1,14 +1,17 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationReturnZaloAuthorizationArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type {
+    ReturnZaloAuthorizationMutation,
+    ReturnZaloAuthorizationMutationVariables,
+} from "../__generated__/graphql"
 
 /** The input of the `returnZaloAuthorization` mutation. */
-export type MutateReturnZaloAuthorizationRequest = MutationReturnZaloAuthorizationArgs["input"]
+export type MutateReturnZaloAuthorizationRequest = WireInput<ReturnZaloAuthorizationMutationVariables["input"]>
 
 /** The response of the `returnZaloAuthorization` mutation. */
-type MutateReturnZaloAuthorizationResponse = Pick<Mutation, "returnZaloAuthorization">
+type MutateReturnZaloAuthorizationResponse = ReturnZaloAuthorizationMutation
 
 const mutation1: TypedDocumentNode<
     MutateReturnZaloAuthorizationResponse,

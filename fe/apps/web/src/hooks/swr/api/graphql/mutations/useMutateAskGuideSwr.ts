@@ -1,5 +1,5 @@
 import { mutateAskGuide } from "@/modules/api/graphql/mutations/mutation-ask-guide"
-import { useGraphQLMutationSwr } from "@/hooks/reuseables/useGraphQLMutationSwr"
+import { useGraphQLMutationSwr } from "@/hooks/reuseables"
 
 /** The SWR key of the askGuide mutation. */
 const MUTATE_ASK_GUIDE_SWR_KEY = "MUTATE_ASK_GUIDE_SWR"

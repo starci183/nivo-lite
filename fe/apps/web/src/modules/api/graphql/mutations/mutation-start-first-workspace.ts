@@ -2,10 +2,10 @@ import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { MutateParams } from "../types"
-import type { Mutation } from "../__generated__/schema"
+import type { StartFirstWorkspaceMutation } from "../__generated__/graphql"
 
 /** The generated response of startFirstWorkspace. */
-type MutateStartFirstWorkspaceResponse = Pick<Mutation, "startFirstWorkspace">
+type MutateStartFirstWorkspaceResponse = StartFirstWorkspaceMutation
 
 type Document = TypedDocumentNode<MutateStartFirstWorkspaceResponse>
 

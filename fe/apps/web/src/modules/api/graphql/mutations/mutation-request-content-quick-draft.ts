@@ -1,14 +1,17 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationRequestContentQuickDraftArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type {
+    RequestContentQuickDraftMutation,
+    RequestContentQuickDraftMutationVariables,
+} from "../__generated__/graphql"
 
 /** Generated input of the `requestContentQuickDraft` mutation. */
-type MutateRequestContentQuickDraftRequest = MutationRequestContentQuickDraftArgs["input"]
+type MutateRequestContentQuickDraftRequest = WireInput<RequestContentQuickDraftMutationVariables["input"]>
 
 /** Generated response of the `requestContentQuickDraft` mutation. */
-type MutateRequestContentQuickDraftResponse = Pick<Mutation, "requestContentQuickDraft">
+type MutateRequestContentQuickDraftResponse = RequestContentQuickDraftMutation
 
 type Document = TypedDocumentNode<
     MutateRequestContentQuickDraftResponse,

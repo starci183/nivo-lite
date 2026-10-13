@@ -1,4 +1,4 @@
-import { useQueryChatbotThreadSwr } from "@/hooks/swr/api/graphql/queries/useQueryChatbotThreadSwr"
+import { useQueryChatbotThreadSwr } from "@/hooks/swr"
 import { threadOf } from "@/hooks/chatbotWire"
 
 /** The selected conversation only; changing the selection never displays a previous thread. */

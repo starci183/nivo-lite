@@ -1,7 +1,5 @@
-import type { Mutation, MutationSaveBookingPublicPageArgs } from "../../__generated__/schema"
+import type { SaveBookingPublicPageMutationVariables } from "../../__generated__/graphql"
+import type { WireInput } from "../../types"
 
 /** The input of the `saveBookingPublicPage` mutation. */
-export type MutateSaveBookingPublicPageRequest = MutationSaveBookingPublicPageArgs["input"]
-
-/** The response of the `saveBookingPublicPage` mutation. */
-export type MutateSaveBookingPublicPageResponse = Pick<Mutation, "saveBookingPublicPage">
+export type MutateSaveBookingPublicPageRequest = WireInput<SaveBookingPublicPageMutationVariables["input"]>

@@ -20,7 +20,7 @@ export interface DecisionsPorts {
     readonly paymentReceipts: Type<PaymentReceipts>
     /** Names the customer of a lead (the leads capability), reused as it is registered. */
     readonly leadDirectory: Type<LeadDirectory>
-    /** Continues the lead generation flow after an item (the leads lane). */
+    /** Continues the lead generation flow after an item (the lead-flows capability, a global provider the port reuses). */
     readonly leadGenFlow: Type<LeadGenFlow>
     /** Reads the access of an agent on a connection (the connections lane). */
     readonly outboundAccessGate: Type<OutboundAccessGate>

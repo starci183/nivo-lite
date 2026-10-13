@@ -1,10 +1,10 @@
+import type { GraphQLResponse } from "@/modules/types"
 import { createServerClient } from "@supabase/ssr"
 import type { CookieOptions } from "@supabase/ssr"
 import type { EmailOtpType, SupabaseClient } from "@supabase/supabase-js"
 import type { NextRequest, NextResponse } from "next/server"
 import { sessionCookieOptions, supabaseAnonKey, supabaseUrl } from "@/modules/config"
 import { authFailure, authOk, failureOf } from "./outcome"
-import type { AuthOutcome } from "./outcome"
 
 /**
  * The cookies of one server request, as the caller hands them in (`await cookies()` of a route handler or a server component).
@@ -51,7 +51,7 @@ const requestAuthClient = (request: NextRequest, response: NextResponse): Supaba
     })
 
 /** Verifies the access token of a client (signature and expiry) through `getClaims()`; a token without a subject is refused. */
-const verifySession = async (client: SupabaseClient): Promise<AuthOutcome<true>> => {
+const verifySession = async (client: SupabaseClient): Promise<GraphQLResponse<true>> => {
     const { data, error } = await client.auth.getClaims()
     const failed = failureOf<true>(error)
     if (failed !== undefined) return failed
@@ -59,7 +59,7 @@ const verifySession = async (client: SupabaseClient): Promise<AuthOutcome<true>>
 }
 
 /** Refreshes the proxy cookies through `getClaims()` and answers whether the session is a verified one. */
-export const refreshSession = async (request: NextRequest, response: NextResponse): Promise<AuthOutcome<true>> =>
+export const refreshSession = async (request: NextRequest, response: NextResponse): Promise<GraphQLResponse<true>> =>
     verifySession(requestAuthClient(request, response))
 
 const EMAIL_LINK_TYPES: ReadonlyArray<EmailOtpType> = [
@@ -74,7 +74,7 @@ const EMAIL_LINK_TYPES: ReadonlyArray<EmailOtpType> = [
 const emailLinkTypeOf = (value: string): EmailOtpType | undefined => EMAIL_LINK_TYPES.find((type) => type === value)
 
 /** Exchanges the one-time PKCE code; the session cookies are written into the jar. */
-export const exchangeAuthCode = async (jar: SessionCookieJar, code: string): Promise<AuthOutcome<true>> => {
+export const exchangeAuthCode = async (jar: SessionCookieJar, code: string): Promise<GraphQLResponse<true>> => {
     const { error } = await cookieAuthClient(jar).auth.exchangeCodeForSession(code)
     return failureOf(error) ?? authOk(true)
 }
@@ -84,7 +84,7 @@ export const verifyEmailLink = async (
     jar: SessionCookieJar,
     type: string,
     tokenHash: string,
-): Promise<AuthOutcome<true>> => {
+): Promise<GraphQLResponse<true>> => {
     const linkType = emailLinkTypeOf(type)
     if (linkType === undefined) return authFailure("invalid", "link-type")
     const { error } = await cookieAuthClient(jar).auth.verifyOtp({ type: linkType, token_hash: tokenHash })

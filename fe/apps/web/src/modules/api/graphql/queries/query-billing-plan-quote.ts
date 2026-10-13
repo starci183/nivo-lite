@@ -1,12 +1,12 @@
 import { gql, type TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryBillingPlanQuoteArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { BillingPlanQuoteQuery, BillingPlanQuoteQueryVariables } from "../__generated__/graphql"
 
 /** The plan selection to price. */
-export type QueryBillingPlanQuoteRequest = QueryBillingPlanQuoteArgs["input"]
+export type QueryBillingPlanQuoteRequest = WireInput<BillingPlanQuoteQueryVariables["input"]>
 
-type QueryBillingPlanQuoteResponse = Pick<Query, "billingPlanQuote">
+type QueryBillingPlanQuoteResponse = BillingPlanQuoteQuery
 
 type QueryBillingPlanQuoteParams = QueryParams<QueryBillingPlanQuote, QueryBillingPlanQuoteRequest> & {
     request: QueryBillingPlanQuoteRequest

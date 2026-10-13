@@ -4,6 +4,7 @@ export { INSTAGRAM_FIELDS, PAGE_FIELDS } from "./meta.contracts"
 export type {
     AppObject,
     MetaEvent,
+    MetaLead,
     MetaPageAccess,
     MetaPageChoice,
     MetaSubscriptionStatus,
@@ -15,3 +16,4 @@ export type { MetaClient } from "./meta.client"
 export { MetaModule } from "./meta.module"
 export type { MetaOptions } from "./meta.options"
 export { META_MESSAGES } from "./messages/meta.messages"
+export { checkPrivateReply } from "./meta-window.policy"

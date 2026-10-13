@@ -2,9 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
-import { useMutateChangeMemberRoleSwr } from "@/hooks/swr/api/graphql/mutations/useMutateChangeMemberRoleSwr"
-import { useMutateRemoveMemberSwr } from "@/hooks/swr/api/graphql/mutations/useMutateRemoveMemberSwr"
-import { useMutateSetMemberStatusSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSetMemberStatusSwr"
+import { useMutateChangeMemberRoleSwr, useMutateRemoveMemberSwr, useMutateSetMemberStatusSwr } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { refreshTeam } from "./team.shared"
 import type { TeamRole } from "./team.shared"

@@ -2,9 +2,9 @@ import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
-import type { Query } from "../__generated__/schema"
+import type { AuthorityQuery } from "../__generated__/graphql"
 
-type QueryAuthorityResponse = Pick<Query, "authority">
+type QueryAuthorityResponse = AuthorityQuery
 
 const query1: TypedDocumentNode<QueryAuthorityResponse, Record<string, never>> = gql`
     query Authority {

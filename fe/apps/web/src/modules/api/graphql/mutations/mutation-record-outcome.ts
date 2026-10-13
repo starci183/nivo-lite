@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationRecordOutcomeArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { RecordOutcomeMutation, RecordOutcomeMutationVariables } from "../__generated__/graphql"
 
 /** Generated input of the recordOutcome mutation. */
-export type MutateRecordOutcomeRequest = MutationRecordOutcomeArgs["input"]
+export type MutateRecordOutcomeRequest = WireInput<RecordOutcomeMutationVariables["input"]>
 
 /** Generated response of the recordOutcome mutation. */
-type MutateRecordOutcomeResponse = Pick<Mutation, "recordOutcome">
+type MutateRecordOutcomeResponse = RecordOutcomeMutation
 
 type Document = TypedDocumentNode<MutateRecordOutcomeResponse, InputVariables<MutateRecordOutcomeRequest>>
 

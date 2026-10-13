@@ -1,14 +1,17 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationAdminExtendSubscriptionArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type {
+    AdminExtendSubscriptionMutation,
+    AdminExtendSubscriptionMutationVariables,
+} from "../__generated__/graphql"
 
 /** The input of the `adminExtendSubscription` mutation. */
-export type MutateAdminExtendSubscriptionRequest = MutationAdminExtendSubscriptionArgs["input"]
+export type MutateAdminExtendSubscriptionRequest = WireInput<AdminExtendSubscriptionMutationVariables["input"]>
 
 /** The response of the `adminExtendSubscription` mutation. */
-type MutateAdminExtendSubscriptionResponse = Pick<Mutation, "adminExtendSubscription">
+type MutateAdminExtendSubscriptionResponse = AdminExtendSubscriptionMutation
 
 const mutation1: TypedDocumentNode<
     MutateAdminExtendSubscriptionResponse,

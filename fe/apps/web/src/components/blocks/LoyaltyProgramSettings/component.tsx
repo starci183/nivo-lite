@@ -12,8 +12,8 @@ import type {
     ProgramTextField,
     TierTextField,
 } from "@/hooks/loyaltyProgramFields"
-import type { ProgramCopy, TierErrorView } from "./types"
 import { ACTIONS_CLASS_NAME, FIELD_PAIR_CLASS_NAME, FIELD_TRIPLE_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
+import type { ProgramCopy, TierErrorView } from "@/modules/types"
 
 /** Props for {@link LoyaltyProgramSettingsBase}. */
 export interface LoyaltyProgramSettingsBaseProps {

@@ -1,7 +1,5 @@
-import type { Query, QueryLoyaltyCampaignArgs } from "../../__generated__/schema"
+import type { LoyaltyCampaignQueryVariables } from "../../__generated__/graphql"
+import type { WireInput } from "../../types"
 
 /** The input of the `loyaltyCampaign` query. */
-export type QueryLoyaltyCampaignRequest = QueryLoyaltyCampaignArgs["input"]
-
-/** The response of the `loyaltyCampaign` query. */
-export type QueryLoyaltyCampaignResponse = Pick<Query, "loyaltyCampaign">
+export type QueryLoyaltyCampaignRequest = WireInput<LoyaltyCampaignQueryVariables["input"]>

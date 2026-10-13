@@ -1,8 +1,9 @@
+import type { RemoveLoyaltyRewardMutation } from "../__generated__/graphql"
 import { gql } from "@apollo/client"
 import type { DocumentNode } from "graphql"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, MutateParams } from "../types"
-import type { MutateRemoveLoyaltyRewardRequest, MutateRemoveLoyaltyRewardResponse } from "./types/remove-loyalty-reward"
+import type { MutateRemoveLoyaltyRewardRequest } from "./types/remove-loyalty-reward"
 
 const mutation1 = gql`
     mutation RemoveLoyaltyReward($input: RemoveLoyaltyRewardInput!) {
@@ -12,7 +13,7 @@ const mutation1 = gql`
     }
 `
 
-export enum MutationRemoveLoyaltyReward {
+enum MutationRemoveLoyaltyReward {
     Mutation1 = "mutation1",
 }
 
@@ -21,12 +22,16 @@ const mutationMap: Record<MutationRemoveLoyaltyReward, DocumentNode> = {
 }
 
 /** Apollo params for {@link mutateRemoveLoyaltyReward}. */
-export type MutationRemoveLoyaltyRewardParams = MutateParams<MutationRemoveLoyaltyReward, MutateRemoveLoyaltyRewardRequest>
+type MutationRemoveLoyaltyRewardParams = MutateParams<MutationRemoveLoyaltyReward, MutateRemoveLoyaltyRewardRequest>
 
 /** Removes one reward of the catalogue. */
-export const mutateRemoveLoyaltyReward = async ({ mutation = MutationRemoveLoyaltyReward.Mutation1, request, signal }: MutationRemoveLoyaltyRewardParams) => {
+export const mutateRemoveLoyaltyReward = async ({
+    mutation = MutationRemoveLoyaltyReward.Mutation1,
+    request,
+    signal,
+}: MutationRemoveLoyaltyRewardParams) => {
     const apollo = createAuthApolloClient({ signal })
-    return apollo.mutate<MutateRemoveLoyaltyRewardResponse, InputVariables<MutateRemoveLoyaltyRewardRequest>>({
+    return apollo.mutate<RemoveLoyaltyRewardMutation, InputVariables<MutateRemoveLoyaltyRewardRequest>>({
         mutation: mutationMap[mutation],
         variables: { input: request },
     })

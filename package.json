@@ -54,6 +54,7 @@
     "@types/express": "4.17.25",
     "@types/jest": "29.5.14",
     "@types/mailparser": "3.9.0",
+    "@types/mssql": "12.3.0",
     "@types/node": "22.20.4",
     "@types/nodemailer": "8.0.2",
     "@types/papaparse": "5.5.2",
@@ -108,5 +109,13 @@
     "db:types": "npm run contract:emit",
     "db:lint": "starci app check --fast",
     "contract:emit": "starci app emit"
+  },
+  "overrides": {
+    "axios": "1.15.2",
+    "dayjs": "1.11.21",
+    "@xyflow/react": {
+      "zustand": "5.0.12"
+    },
+    "zod": "4.4.3"
   }
 }

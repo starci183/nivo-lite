@@ -3,7 +3,7 @@
 import { useBookingBoard } from "@/hooks/bookingBoard"
 import { useFormatter, useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
-import { useMutateRemoveBookingExceptionSwr, useMutateSaveBookingExceptionSwr } from "@/hooks/swr/api/graphql"
+import { useMutateRemoveBookingExceptionSwr, useMutateSaveBookingExceptionSwr } from "@/hooks/swr"
 import { useBookingSetupSave } from "@/hooks/bookingSetup"
 import { BookingExceptionsBase } from "./component"
 import type { ExceptionFields } from "./component"

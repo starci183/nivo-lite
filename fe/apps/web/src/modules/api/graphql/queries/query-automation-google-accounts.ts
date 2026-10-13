@@ -2,10 +2,10 @@ import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
-import type { Query } from "../__generated__/schema"
+import type { AutomationGoogleAccountsQuery } from "../__generated__/graphql"
 
 /** The response of the `automationGoogleAccounts` query: the typed payload straight from the back end contract. */
-type QueryAutomationGoogleAccountsResponse = Pick<Query, "automationGoogleAccounts">
+type QueryAutomationGoogleAccountsResponse = AutomationGoogleAccountsQuery
 
 const query1: TypedDocumentNode<QueryAutomationGoogleAccountsResponse> = gql`
     query AutomationGoogleAccounts {

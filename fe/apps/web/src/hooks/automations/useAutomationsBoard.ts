@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useMutateAuthorizeGoogleSwr } from "@/hooks/swr/api/graphql/mutations/useMutateAuthorizeGoogleSwr"
+import { useMutateAuthorizeGoogleSwr } from "@/hooks/swr"
 import {
     automationBoardOf,
     automationFiltersFor,

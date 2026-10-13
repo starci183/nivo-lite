@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { useQueryListTelegramChatsSwr } from "@/hooks/swr/api/graphql/queries/useQueryListTelegramChatsSwr"
+import { useQueryListTelegramChatsSwr } from "@/hooks/swr"
 import { chatKindOf } from "./telegram-user-wizard.shared"
 import type { ChatChoice, TelegramInitial } from "./telegram-user-wizard.shared"
 

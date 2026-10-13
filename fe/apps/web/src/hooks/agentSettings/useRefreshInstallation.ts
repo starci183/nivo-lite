@@ -1,7 +1,6 @@
 import { useCallback } from "react"
 import { mutate } from "swr"
-import { QUERY_MODULE_INSTALLATIONS_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryModuleInstallationsSwr"
-import { QUERY_SETUP_STATE_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQuerySetupStateSwr"
+import { QUERY_MODULE_INSTALLATIONS_SWR_KEY, QUERY_SETUP_STATE_SWR_KEY } from "@/hooks/swr"
 
 const KEYS: ReadonlyArray<string> = [QUERY_MODULE_INSTALLATIONS_SWR_KEY, QUERY_SETUP_STATE_SWR_KEY]
 

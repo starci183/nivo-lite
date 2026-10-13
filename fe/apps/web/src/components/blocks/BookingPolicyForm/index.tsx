@@ -3,7 +3,7 @@
 import { useBookingBoard } from "@/hooks/bookingBoard"
 import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
-import { useMutateSaveBookingPolicySwr } from "@/hooks/swr/api/graphql"
+import { useMutateSaveBookingPolicySwr } from "@/hooks/swr"
 import { useBookingSetupSave } from "@/hooks/bookingSetup"
 import { BookingPolicyFormBase } from "./component"
 

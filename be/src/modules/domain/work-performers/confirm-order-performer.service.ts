@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { AgentsService } from "@modules/domain/agents"
+import { BusinessEventsService } from "@modules/domain/automations"
 import { EvidenceService } from "@modules/domain/decisions"
 import type {
     Performed,
@@ -35,6 +36,7 @@ export class ConfirmOrderPerformerService implements WorkPerformer {
         private readonly responsibilities: ResponsibilityJournalService,
         @InjectPromptWriter() private readonly deepseek: PromptWriter,
         private readonly evidence: EvidenceService,
+        private readonly events: BusinessEventsService,
     ) {}
 
     /** Drafts the order of the input (reading it with one model call only when the channel gave no amount) and finds its customer. */
@@ -191,6 +193,7 @@ export class ConfirmOrderPerformerService implements WorkPerformer {
             origin: item.origin,
         })
         await this.responsibilities.ensureFor(ctx, lead.id)
+        await this.events.leadCreated(ctx.workspaceId, lead, item.origin)
         await this.evidence.log(ctx, {
             lead_id: lead.id,
             work_item_id: item.id,

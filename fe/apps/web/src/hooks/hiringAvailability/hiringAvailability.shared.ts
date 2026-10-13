@@ -1,5 +1,5 @@
 import type { HiringMemberView } from "@/hooks/hiringWire"
-import type { HiringAvailabilityWindowInput } from "@/modules/api"
+import type { HiringAvailabilityWindowRequest } from "@/modules/api"
 import { wallClockText } from "@/modules/i18n"
 
 /** The weekdays of the availability form, Monday first (0 is Sunday). */
@@ -19,8 +19,8 @@ const minutesOf = (text: string): number | null => {
 }
 
 /** "09:00-12:00, 14:00-17:00" as windows of a weekday; null when a part is not a time range. */
-export const parseWindows = (weekday: number, text: string): Array<HiringAvailabilityWindowInput> | null => {
-    const windows: Array<HiringAvailabilityWindowInput> = []
+export const parseWindows = (weekday: number, text: string): Array<HiringAvailabilityWindowRequest> | null => {
+    const windows: Array<HiringAvailabilityWindowRequest> = []
     for (const part of text
         .split(",")
         .map((entry) => entry.trim())

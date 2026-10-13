@@ -1,13 +1,13 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryOfficeMessagesArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { OfficeMessagesQuery, OfficeMessagesQueryVariables } from "../__generated__/graphql"
 
 /** The input of the `officeMessages` query. */
-export type QueryOfficeMessagesRequest = QueryOfficeMessagesArgs["input"]
+export type QueryOfficeMessagesRequest = WireInput<OfficeMessagesQueryVariables["input"]>
 
-type QueryOfficeMessagesResponse = Pick<Query, "officeMessages">
+type QueryOfficeMessagesResponse = OfficeMessagesQuery
 
 const query1: TypedDocumentNode<QueryOfficeMessagesResponse, InputVariables<QueryOfficeMessagesRequest>> = gql`
     query OfficeMessages($input: ListOfficeMessagesInput!) {

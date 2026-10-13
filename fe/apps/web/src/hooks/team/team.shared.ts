@@ -1,7 +1,9 @@
 import { mutate } from "swr"
-import { QUERY_WORKSPACE_INVITES_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryWorkspaceInvitesSwr"
-import { QUERY_WORKSPACE_MEMBERS_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryWorkspaceMembersSwr"
-import { QUERY_WORKSPACE_STAFF_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryWorkspaceStaffSwr"
+import {
+    QUERY_WORKSPACE_INVITES_SWR_KEY,
+    QUERY_WORKSPACE_MEMBERS_SWR_KEY,
+    QUERY_WORKSPACE_STAFF_SWR_KEY,
+} from "@/hooks/swr"
 
 /** One member as the back end lists them. */
 interface MemberListing {
