@@ -79,6 +79,16 @@ describe("AgentMessagesService", () => {
         })
     })
 
+    describe("replyExists", () => {
+        it("tells whether a reply to the customer message is already stored", async () => {
+            const stored = await build({ [FIND_AGENT_REPLY]: [{ id: "r-0", body: "Old", delivery_status: null }] })
+            const none = await build()
+
+            await expect(stored.service.replyExists("conv-1", "msg-1")).resolves.toBe(true)
+            await expect(none.service.replyExists("conv-1", "msg-1")).resolves.toBe(false)
+        })
+    })
+
     describe("storeLine", () => {
         it("writes a system line", async () => {
             const { service, em } = await build()

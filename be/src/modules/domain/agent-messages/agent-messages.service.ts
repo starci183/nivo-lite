@@ -42,6 +42,12 @@ export class AgentMessagesService {
         return { id: existing.id, body: existing.body, sent: existing.delivery_status === "sent" }
     }
 
+    /** True when the agent already stored a reply to the customer message, which makes a new attempt a retry. */
+    async replyExists(conversationId: string, inReplyTo: string): Promise<boolean> {
+        const rows = await this.entityManager.query<Array<StoredMessageRow>>(FIND_AGENT_REPLY, [conversationId, inReplyTo])
+        return rows.length > 0
+    }
+
     /** Writes a line the workbench shows between the messages; it is never sent to the customer. */
     async storeLine(workspaceId: string, conversationId: string, body: string): Promise<void> {
         await this.entityManager.query(INSERT_SYSTEM_LINE, [workspaceId, conversationId, body])
