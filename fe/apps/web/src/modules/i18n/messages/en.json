@@ -2449,7 +2449,10 @@
     "sampleText": "Hello, here is our quote...",
     "sampleTitle": "Price list",
     "sampleContent": "3 month plan: ...",
-    "sampleTopic": "Price"
+    "sampleTopic": "Price",
+    "keysRefused": "You are not allowed to manage this shop's API keys.",
+    "createFailed": "The key could not be created. The name needs at least 2 characters and a shop may have 20 active keys.",
+    "revokeFailed": "This key could not be revoked. Try again."
   },
   "email": {
     "err_auth": "Wrong username or password. Check the address and the password you pasted.",
@@ -6912,7 +6915,18 @@
     "notSent": "Not sent",
     "actionFailed": "That did not work",
     "emptyReply": "Write a reply first.",
-    "takeOverFirst": "Take over the conversation before replying."
+    "takeOverFirst": "Take over the conversation before replying.",
+    "replyQueued": "Reply queued for delivery.",
+    "replySent": "Reply delivered.",
+    "replyFailed": "The reply could not be delivered.",
+    "answerQueued": "Answer decision queued.",
+    "answerSent": "Answer delivered to the customer.",
+    "answerDeclined": "Marked as not answered.",
+    "answerFailed": "The answer could not be delivered.",
+    "handlingTakenOver": "You are now handling this conversation.",
+    "handlingReleased": "The conversation was handed back to the AI.",
+    "replyTooLong": "Keep the reply within 4,000 characters.",
+    "answerTooLong": "Keep the answer within 4,000 characters."
   },
   "workbenchFigures": {
     "shWeek": "Shifts this week",
@@ -7286,7 +7300,15 @@
     "stage_qualified": "qualified",
     "stage_proposal": "proposal",
     "stage_won": "won",
-    "stage_lost": "lost"
+    "stage_lost": "lost",
+    "retry": "Retry",
+    "commentQueued": "Public reply approval queued.",
+    "commentApproved": "Public reply posted.",
+    "commentFailed": "The public reply could not be posted.",
+    "commentInvalid": "Choose a valid comment.",
+    "draftRequired": "Enter a public reply.",
+    "draftTooLong": "Keep the public reply within 4,000 characters.",
+    "statusReadFailed": "We could not read the reply status. Retry the check."
   },
   "workbenchSales": {
     "metricOpen": "Open opportunities",

@@ -2449,7 +2449,10 @@
     "sampleText": "Chào anh, bên em gửi báo giá...",
     "sampleTitle": "Bảng giá",
     "sampleContent": "Gói 3 tháng: ...",
-    "sampleTopic": "Giá"
+    "sampleTopic": "Giá",
+    "keysRefused": "Bạn không có quyền quản lý khoá API của shop này.",
+    "createFailed": "Chưa tạo được khoá. Tên khoá cần ít nhất 2 ký tự và mỗi shop có tối đa 20 khoá đang dùng.",
+    "revokeFailed": "Chưa thu hồi được khoá này. Hãy thử lại."
   },
   "email": {
     "err_auth": "Sai tên đăng nhập hoặc mật khẩu. Kiểm tra lại địa chỉ email và mật khẩu bạn đã dán.",
@@ -6912,7 +6915,18 @@
     "notSent": "Chưa gửi được",
     "actionFailed": "Chưa thực hiện được",
     "emptyReply": "Hãy nhập câu trả lời trước.",
-    "takeOverFirst": "Hãy tiếp quản hội thoại trước khi trả lời."
+    "takeOverFirst": "Hãy tiếp quản hội thoại trước khi trả lời.",
+    "replyQueued": "Đã đưa câu trả lời vào hàng đợi gửi.",
+    "replySent": "Đã gửi câu trả lời.",
+    "replyFailed": "Không gửi được câu trả lời.",
+    "answerQueued": "Đã đưa quyết định trả lời vào hàng đợi.",
+    "answerSent": "Đã gửi câu trả lời cho khách hàng.",
+    "answerDeclined": "Đã đánh dấu không trả lời.",
+    "answerFailed": "Không gửi được câu trả lời cho khách hàng.",
+    "handlingTakenOver": "Bạn đang tiếp quản hội thoại này.",
+    "handlingReleased": "Đã giao lại hội thoại cho AI.",
+    "replyTooLong": "Câu trả lời không được vượt quá 4.000 ký tự.",
+    "answerTooLong": "Câu trả lời không được vượt quá 4.000 ký tự."
   },
   "workbenchFigures": {
     "shWeek": "Ca tuần này",
@@ -7286,7 +7300,15 @@
     "stage_qualified": "đã lọc",
     "stage_proposal": "báo giá",
     "stage_won": "thắng",
-    "stage_lost": "mất"
+    "stage_lost": "mất",
+    "retry": "Thử lại",
+    "commentQueued": "Đã xếp hàng duyệt câu trả lời công khai.",
+    "commentApproved": "Đã đăng câu trả lời công khai.",
+    "commentFailed": "Không thể đăng câu trả lời công khai.",
+    "commentInvalid": "Chọn bình luận hợp lệ.",
+    "draftRequired": "Nhập câu trả lời công khai.",
+    "draftTooLong": "Câu trả lời công khai tối đa 4.000 ký tự.",
+    "statusReadFailed": "Không thể đọc trạng thái câu trả lời. Thử kiểm tra lại."
   },
   "workbenchSales": {
     "metricOpen": "Cơ hội đang mở",
