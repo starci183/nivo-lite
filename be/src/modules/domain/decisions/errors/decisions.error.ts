@@ -17,6 +17,8 @@ export enum DecisionsErrorCode {
     CommandRefused = "DECISIONS_COMMAND_REFUSED",
     /** The authority action is not in the registry. */
     UnknownAction = "DECISIONS_UNKNOWN_ACTION",
+    /** The action can never run by itself, so its rule may not be "auto". */
+    ModeCapped = "DECISIONS_MODE_CAPPED",
     /** The work item is not waiting for a decision any more. */
     NotWaiting = "DECISIONS_NOT_WAITING",
     /** A page request is malformed. */
@@ -44,6 +46,7 @@ export const DECISIONS_ERROR_KINDS: Record<DecisionsErrorCode, ErrorKind> = {
     [DecisionsErrorCode.NotAllowed]: "forbidden",
     [DecisionsErrorCode.CommandRefused]: "invalid",
     [DecisionsErrorCode.UnknownAction]: "invalid",
+    [DecisionsErrorCode.ModeCapped]: "invalid",
     [DecisionsErrorCode.NotWaiting]: "conflict",
     [DecisionsErrorCode.PageInvalid]: "invalid",
     [DecisionsErrorCode.WorkFailed]: "internal",

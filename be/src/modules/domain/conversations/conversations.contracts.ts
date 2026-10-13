@@ -52,7 +52,7 @@ export interface FrontAgent {
 }
 
 /** One customer turn as the runtime and the outcome handler see it. */
-export interface ChatTurn {
+export interface CustomerTurn {
     /** The conversation. */
     readonly conversation: TurnConversation
     /** The stored customer message this turn answers. */
@@ -88,7 +88,7 @@ export type RuntimeAnswer = ChatTurnProposal | string
 /** The AI step of a turn; the openclaw adapter implements it. */
 export interface ChatTurnRuntime {
     /** Proposes the reply, or answers a text naming why it cannot (unavailable, too slow, refused). */
-    propose(turn: ChatTurn): Promise<RuntimeAnswer>
+    propose(turn: CustomerTurn): Promise<RuntimeAnswer>
 }
 
 /** What the outcome handler decided about a proposed reply. */
@@ -104,9 +104,9 @@ export interface TurnVerdict {
 /** Everything a turn starts besides the reply (hand-off of the lead, order, payment check, hiring, loyalty, waiting items); the owners of those flows implement it. */
 export interface CustomerOutcomes {
     /** Interprets the proposal through the authority gate and answers what leaves. It must be idempotent per `turn.channelEventId`. */
-    settle(turn: ChatTurn, proposal: ChatTurnProposal): Promise<TurnVerdict>
+    settle(turn: CustomerTurn, proposal: ChatTurnProposal): Promise<TurnVerdict>
     /** The AI could not answer: hands the question to a person and answers the lines to show. */
-    holdOver(turn: ChatTurn, reason: string): Promise<ReadonlyArray<string>>
+    holdOver(turn: CustomerTurn, reason: string): Promise<ReadonlyArray<string>>
 }
 
 /** A registered AI step, or none. */
@@ -115,12 +115,8 @@ export type RegisteredRuntime = ChatTurnRuntime | undefined
 /** A registered outcome handler, or none. */
 export type RegisteredOutcomes = CustomerOutcomes | undefined
 
-/** Where the owners of the AI step and of the outcomes plug into the turn. */
+/** Where the AI step and the outcome handler the app root plugged in are read from. */
 export interface ChatTurnExtensions {
-    /** Registers the AI step; a later registration replaces an earlier one. */
-    useRuntime(runtime: ChatTurnRuntime): void
-    /** Registers the outcome handler; a later registration replaces an earlier one. */
-    useOutcomes(outcomes: CustomerOutcomes): void
     /** The registered AI step, or undefined. */
     runtime(): RegisteredRuntime
     /** The registered outcome handler, or undefined. */

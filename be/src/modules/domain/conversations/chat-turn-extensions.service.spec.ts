@@ -1,25 +1,23 @@
+import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { ChatTurnExtensionsService } from "./chat-turn-extensions.service"
 import type { ChatTurnRuntime, CustomerOutcomes } from "./conversations.contracts"
+import { CHAT_TURN_OUTCOMES, CHAT_TURN_RUNTIME } from "./conversations.decorators"
 
 describe("ChatTurnExtensionsService", () => {
-    it("has neither the AI step nor the outcome handler until an owner registers them", () => {
-        const extensions = new ChatTurnExtensionsService()
-
-        expect(extensions.runtime()).toBeUndefined()
-        expect(extensions.outcomes()).toBeUndefined()
-    })
-
-    it("answers what was registered and lets a later registration replace it", () => {
-        const extensions = new ChatTurnExtensionsService()
-        const second = mock<ChatTurnRuntime>()
+    it("answers what the app root plugged in", async () => {
+        const runtime = mock<ChatTurnRuntime>()
         const outcomes = mock<CustomerOutcomes>()
+        const moduleRef = await Test.createTestingModule({
+            providers: [
+                ChatTurnExtensionsService,
+                { provide: CHAT_TURN_RUNTIME, useValue: runtime },
+                { provide: CHAT_TURN_OUTCOMES, useValue: outcomes },
+            ],
+        }).compile()
+        const extensions = moduleRef.get(ChatTurnExtensionsService)
 
-        extensions.useRuntime(mock<ChatTurnRuntime>())
-        extensions.useRuntime(second)
-        extensions.useOutcomes(outcomes)
-
-        expect(extensions.runtime()).toBe(second)
+        expect(extensions.runtime()).toBe(runtime)
         expect(extensions.outcomes()).toBe(outcomes)
     })
 })

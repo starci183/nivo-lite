@@ -12,10 +12,15 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import type { ChatTurnPayload } from "@modules/queues/chat-turn"
-import { ChatTurnExtensionsService } from "./chat-turn-extensions.service"
 import { ChatTurnService } from "./chat-turn.service"
 import { CHAT_TURN_EXTENSIONS } from "./conversations.decorators"
-import type { ChatTurn, ChatTurnProposal, ChatTurnRuntime, CustomerOutcomes } from "./conversations.contracts"
+import type {
+    CustomerTurn,
+    ChatTurnExtensions,
+    ChatTurnProposal,
+    ChatTurnRuntime,
+    CustomerOutcomes,
+} from "./conversations.contracts"
 import { FIND_HOLDING_SETTING } from "./persistence/conversations.sql"
 
 const NOW = Date.parse("2026-10-12T10:00:00.000Z")
@@ -54,6 +59,29 @@ interface Setup {
     readonly name?: string
 }
 
+/** What the spec plugs into a turn, and when. */
+interface Plugged {
+    /** The AI step, once plugged. */
+    runtime?: ChatTurnRuntime
+    /** The outcome handler, once plugged. */
+    outcomes?: CustomerOutcomes
+}
+
+/** The extensions a spec can plug a runtime and an outcome handler into at any point, like the app root does at start. */
+const pluggable = () => {
+    const plugged: Plugged = {}
+    return {
+        runtime: () => plugged.runtime,
+        outcomes: () => plugged.outcomes,
+        useRuntime: (runtime: ChatTurnRuntime) => {
+            plugged.runtime = runtime
+        },
+        useOutcomes: (outcomes: CustomerOutcomes) => {
+            plugged.outcomes = outcomes
+        },
+    }
+}
+
 const build = async (setup: Setup = {}) => {
     const em = mockEntityManager({ query: [FIND_HOLDING_SETTING, setup.setting ?? []] })
     const conversations = mock<AgentConversationsService>()
@@ -83,15 +111,15 @@ const build = async (setup: Setup = {}) => {
     delivery.showTyping.mockResolvedValue(undefined)
     delivery.customerName.mockResolvedValue(setup.name ?? "")
     const logger = mock<Logger>()
-    const extensions = new ChatTurnExtensionsService()
+    const extensions = pluggable()
     const catalog: MessageCatalog = { get: (key) => `<${key}>` }
     const moduleRef = await Test.createTestingModule({
         providers: [
             ChatTurnService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
-            { provide: MESSAGE_CATALOG, useValue: catalog },
-            { provide: CHAT_TURN_EXTENSIONS, useValue: extensions },
+            { provide: MESSAGE_CATALOG, useValue: mock<MessageCatalog>(catalog) },
+            { provide: CHAT_TURN_EXTENSIONS, useValue: mock<ChatTurnExtensions>(extensions) },
             { provide: LOGGER, useValue: logger },
             { provide: AgentConversationsService, useValue: conversations },
             { provide: AgentMessagesService, useValue: messages },
@@ -247,7 +275,7 @@ describe("ChatTurnService", () => {
                 body: "Price?",
                 channelEventId: "tg:555:9",
                 transcript: [{ role: "user", body: "Price?" }],
-            } satisfies ChatTurn)
+            } satisfies CustomerTurn)
             expect(messages.storeReply).toHaveBeenCalledWith("ws-1", "conv-1", "Tea is 50k", "msg-1")
             expect(delivery.deliver).toHaveBeenCalledWith({
                 conversationId: "conv-1",

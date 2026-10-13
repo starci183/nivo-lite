@@ -10,6 +10,16 @@ export interface PackRow {
     readonly sort: number
 }
 
+/** One add-on pack purchase, with numeric columns cast to float8. */
+export interface PackPurchaseRow {
+    /** Credits added. */
+    readonly credits: number
+    /** The price paid in VND. */
+    readonly price_vnd: number
+    /** When it was paid. */
+    readonly purchased_at: string
+}
+
 /** One top-up lot, with numeric columns cast to float8. */
 export interface TopupLotRow {
     /** Credits purchased. */

@@ -2,15 +2,15 @@ import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { AuthorityService } from "@modules/domain/authority"
+import { AuthorityActionsService } from "@modules/domain/authority-actions"
+import type { AuthorityActionRecord } from "@modules/domain/authority-actions"
 import type { AuthorityProfile } from "@modules/domain/authority"
 import { InvoicesService } from "@modules/domain/invoices"
-import { StaffService } from "@modules/domain/staff"
 import { TransactionsService } from "@modules/domain/transactions"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import type { AuthorityRuleRecord, RuleChange } from "@modules/domain/authority-rules"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
-import { WorkItemsService } from "@modules/domain/work-items"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { WorkItem } from "./decisions.contracts"
 import type { ListWorkItemsQuery } from "./decisions-views.contracts"
@@ -97,6 +97,18 @@ const changeOf = builder<RuleChange>({
     note: null,
 })
 
+const actionOf = builder<AuthorityActionRecord>({
+    action: "confirm_order",
+    module_key: "sales",
+    sort_order: 1,
+    default_mode: "ask",
+    default_limit_vnd: null,
+    default_required_fields: [],
+    amount_limit: true,
+    max_mode: null,
+    label: { vi: "Xac nhan don", en: "Confirm order" },
+})
+
 const queryOf = builder<ListWorkItemsQuery>({ statuses: ["waiting_decision"], action: null, after: null, limit: 2 })
 
 const build = async (entityManager: MockEntityManager) => {
@@ -104,6 +116,11 @@ const build = async (entityManager: MockEntityManager) => {
     const evidence = mock<EvidenceService>({ log: jest.fn().mockResolvedValue(undefined) })
     const authority = mock<AuthorityService>({ profileOf: jest.fn(), save: jest.fn() })
     const rules = mock<AuthorityRulesService>({ list: jest.fn(), save: jest.fn() })
+    const actions = mock<AuthorityActionsService>({
+        list: jest
+            .fn()
+            .mockResolvedValue([actionOf(), actionOf({ action: "send_care", module_key: "chatbot", max_mode: "ask" })]),
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             DecisionsService,
@@ -112,8 +129,7 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: EvidenceService, useValue: evidence },
             { provide: AuthorityService, useValue: authority },
             { provide: AuthorityRulesService, useValue: rules },
-            { provide: WorkItemsService, useValue: mock<WorkItemsService>() },
-            { provide: StaffService, useValue: mock<StaffService>() },
+            { provide: AuthorityActionsService, useValue: actions },
             { provide: InvoicesService, useValue: mock<InvoicesService>() },
             { provide: TransactionsService, useValue: mock<TransactionsService>() },
         ],
@@ -222,6 +238,37 @@ describe("DecisionsService", () => {
                 { workspaceId: "ws-1", actor: "An", locale: "en" },
                 { kind: "authority.rule_updated", actor: "An", summary: "sales.confirm_order -> ask" },
             )
+        })
+
+        it("refuses an action outside the registry", async () => {
+            const { service, rules } = await build(mockEntityManager())
+
+            await expect(
+                service.saveRule("user-1", "ws-1", changeOf({ action: "launch_rocket" })),
+            ).rejects.toMatchObject({ code: DecisionsErrorCode.UnknownAction, params: { action: "launch_rocket" } })
+            expect(rules.save).not.toHaveBeenCalled()
+        })
+
+        it("refuses an action filed under another department", async () => {
+            const { service, rules } = await build(mockEntityManager())
+
+            await expect(
+                service.saveRule("user-1", "ws-1", changeOf({ department: "accounting" })),
+            ).rejects.toMatchObject({ code: DecisionsErrorCode.UnknownAction })
+            expect(rules.save).not.toHaveBeenCalled()
+        })
+
+        it("refuses auto for an action that can never run by itself, and allows ask", async () => {
+            const { service, rules } = await build(mockEntityManager())
+            rules.save.mockResolvedValue(ruleOf())
+            const capped = changeOf({ action: "send_care", department: "chatbot" })
+
+            await expect(service.saveRule("user-1", "ws-1", { ...capped, mode: "auto" })).rejects.toMatchObject({
+                code: DecisionsErrorCode.ModeCapped,
+                params: { action: "send_care" },
+            })
+            await expect(service.saveRule("user-1", "ws-1", capped)).resolves.toEqual(ruleOf())
+            expect(rules.save).toHaveBeenCalledTimes(1)
         })
     })
 })

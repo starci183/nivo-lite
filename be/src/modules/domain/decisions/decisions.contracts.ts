@@ -21,7 +21,6 @@ export type {
     ReasonCode,
     SubjectType,
     WorkItem,
-    WorkResult,
     WorkStatus,
 } from "@modules/domain/work-items"
 
@@ -371,7 +370,7 @@ export interface ActorRef {
 export type PerformedBy = Decider | ActorRef
 
 export type { AuthorityRule, RuleMode }
-export type { Authority, OptionalAuthority } from "@modules/domain/authority"
+export type { Authority } from "@modules/domain/authority"
 export type { OptionalAuthorityRule } from "@modules/domain/authority-rules"
-export type { AgentIdentity, OfficeLineInput, OptionalAgentIdentity } from "@modules/domain/messages"
+export type { OptionalAgentIdentity } from "@modules/domain/messages"
 export type { ResponsibilityRecord, ResponsibilityStatus } from "@modules/domain/responsibilities"

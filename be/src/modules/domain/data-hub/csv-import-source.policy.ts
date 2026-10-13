@@ -1,7 +1,7 @@
 import { TABLE_MAX_BYTES, TABLE_MAX_ROWS } from "@modules/integrations/data-sources"
 import type { CsvDecodedFile, CsvGridRows, CsvUploadedFile } from "./csv-import.contracts"
 import { CSV_COPY } from "./messages/csv-import.messages"
-import { invalid, isRecord } from "./csv-import-config.policy"
+import { invalid, isPlainObject } from "./csv-import-config.policy"
 
 /** An uploaded file's name and bytes; null when it is missing or empty. A file over ten megabytes (decoded) is refused. */
 export const decodeUpload = (file: CsvUploadedFile | null | undefined): CsvDecodedFile | null => {
@@ -22,7 +22,7 @@ export const pastedText = (raw: string | null | undefined): string => {
 
 /** The typed grid ({headers, rows}) cleaned and bounded; a refusal when no column has a name. */
 export const gridOf = (raw: unknown): CsvGridRows => {
-    const grid = isRecord(raw) ? raw : {}
+    const grid = isPlainObject(raw) ? raw : {}
     const headers = Array.isArray(grid.headers) ? grid.headers.map((header) => cellOf(header, 120)) : []
     const rows = Array.isArray(grid.rows)
         ? grid.rows
