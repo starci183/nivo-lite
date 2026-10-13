@@ -1,8 +1,13 @@
-import { useState, useTransition } from "react"
+import { useState } from "react"
+import { mutate } from "swr"
+import { QUERY_KNOWLEDGE_SOURCE_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryKnowledgeSourceSwr"
+import { QUERY_KNOWLEDGE_SOURCES_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryKnowledgeSourcesSwr"
+import { useMutateDeleteKnowledgeSourceSwr } from "@/hooks/swr/api/graphql/mutations/useMutateDeleteKnowledgeSourceSwr"
+import { useMutateReindexKnowledgeSourceSwr } from "@/hooks/swr/api/graphql/mutations/useMutateReindexKnowledgeSourceSwr"
+import { useMutateUpdateKnowledgeSourceSwr } from "@/hooks/swr/api/graphql/mutations/useMutateUpdateKnowledgeSourceSwr"
 import { navigation } from "@/modules/i18n"
-import { commandErrorKey, runCommand } from "@/modules/documents"
-import type { CommandActions, CommandCall } from "@/modules/documents"
 import { KNOWLEDGE_ROUTES } from "@/modules/routes"
+import { useGraphQLWithToast } from "@/modules/toast"
 
 /** What a document page can do to the document. */
 export type SourceAction = "reindex" | "visibility" | "delete"
@@ -11,41 +16,54 @@ export type SourceAction = "reindex" | "visibility" | "delete"
 interface SourceCommands {
     /** The action being carried out, or null. */
     readonly busy: SourceAction | null
-    /** The catalog key of why the last action failed. */
-    readonly errorKey: string | null
     readonly reindex: () => void
     readonly setVisibility: (visibility: "public" | "internal") => void
     readonly remove: () => void
 }
 
-/** Reading a document again, changing who may read it and deleting it: each is a command the back end carries out; the page reads again after. */
-export const useSourceCommands = (workspaceId: string, sourceId: string, actions: CommandActions): SourceCommands => {
+const revalidateDocuments = () =>
+    mutate(
+        (key) =>
+            Array.isArray(key) &&
+            (key[0] === QUERY_KNOWLEDGE_SOURCE_SWR_KEY || key[0] === QUERY_KNOWLEDGE_SOURCES_SWR_KEY),
+    )
+
+/** Reading a document again, changing who may read it and deleting it; each failure is toasted, the lists revalidate. */
+export const useSourceCommands = (sourceId: string): SourceCommands => {
     const router = navigation.useRouter()
+    const runGraphQL = useGraphQLWithToast()
+    const { trigger: reindexSource } = useMutateReindexKnowledgeSourceSwr()
+    const { trigger: updateSource } = useMutateUpdateKnowledgeSourceSwr()
+    const { trigger: deleteSource } = useMutateDeleteKnowledgeSourceSwr()
     const [busy, setBusy] = useState<SourceAction | null>(null)
-    const [errorKey, setErrorKey] = useState<string | null>(null)
-    const [, startTransition] = useTransition()
-    const act = (action: SourceAction, request: CommandCall, done: () => void) => {
-        setErrorKey(null)
+    const act = (action: SourceAction, run: () => Promise<unknown>, done: () => void) => {
         setBusy(action)
-        startTransition(async () => {
-            const settled = await runCommand(actions, request)
+        void runGraphQL(run, { showSuccessToast: false }).then(async (result) => {
             setBusy(null)
-            if (settled.isDone) done()
-            else setErrorKey(commandErrorKey(settled.code))
+            if (result === undefined) return
+            await revalidateDocuments()
+            done()
         })
     }
     return {
         busy,
-        errorKey,
         reindex: () =>
-            act("reindex", { workspaceId, kind: "source.reindex", payload: { sourceId } }, () => router.refresh()),
+            act(
+                "reindex",
+                () => reindexSource({ sourceId }),
+                () => undefined,
+            ),
         setVisibility: (visibility) =>
-            act("visibility", { workspaceId, kind: "source.update", payload: { sourceId, visibility } }, () =>
-                router.refresh(),
+            act(
+                "visibility",
+                () => updateSource({ sourceId, visibility }),
+                () => undefined,
             ),
         remove: () =>
-            act("delete", { workspaceId, kind: "source.delete", payload: { sourceId } }, () =>
-                router.push(KNOWLEDGE_ROUTES.library),
+            act(
+                "delete",
+                () => deleteSource({ id: sourceId }),
+                () => router.push(KNOWLEDGE_ROUTES.library),
             ),
     }
 }

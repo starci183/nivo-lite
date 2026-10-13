@@ -1,6 +1,7 @@
 import { useState, useTransition } from "react"
-import { AGENT_MODULES, commandErrorKey, passagesOf, runCommand } from "@/modules/documents"
-import type { AgentModule, CommandActions, RetrievedPassage } from "@/modules/documents"
+import { queryAskKnowledge } from "@/modules/api/graphql/queries/query-ask-knowledge"
+import { AGENT_MODULES, toRetrievedPassage } from "@/modules/documents"
+import type { AgentModule, RetrievedPassage } from "@/modules/documents"
 
 /** Who the answer is for: customers see public passages only. */
 export type AskAudience = "customer" | "internal"
@@ -8,12 +9,12 @@ export type AskAudience = "customer" | "internal"
 /** What the "try a question" panel gives its block. */
 interface AskKnowledge {
     readonly question: string
-    readonly module: AgentModule
+    readonly module: AgentModule | undefined
     readonly audience: AskAudience
     /** Null until a question was asked. */
     readonly results: ReadonlyArray<RetrievedPassage> | null
-    /** The catalog key of why the last question failed. */
-    readonly errorKey: string | null
+    /** The server-localized message of why the last question failed. */
+    readonly error: string | null
     readonly isPending: boolean
     readonly setQuestion: (value: string) => void
     readonly setModule: (value: string | null) => void
@@ -22,29 +23,26 @@ interface AskKnowledge {
 }
 
 /** The "try a question" panel: asks the back end what an agent would retrieve, as a customer or as the business. */
-export const useAskKnowledge = (
-    workspaceId: string,
-    initialModule: AgentModule,
-    actions: CommandActions,
-): AskKnowledge => {
+export const useAskKnowledge = (initialModule: AgentModule | undefined): AskKnowledge => {
     const [question, setQuestion] = useState("")
-    const [module, setModule] = useState<AgentModule>(initialModule)
+    const [chosen, setChosen] = useState<AgentModule | undefined>()
+    const module = chosen ?? initialModule
     const [audience, setAudience] = useState<AskAudience>("customer")
     const [results, setResults] = useState<ReadonlyArray<RetrievedPassage> | null>(null)
-    const [errorKey, setErrorKey] = useState<string | null>(null)
+    const [error, setError] = useState<string | null>(null)
     const [isPending, startTransition] = useTransition()
     const ask = () => {
         const text = question.trim().slice(0, 500)
-        if (text === "") return
-        setErrorKey(null)
+        if (text === "" || module === undefined) return
+        setError(null)
         startTransition(async () => {
-            const settled = await runCommand(actions, {
-                workspaceId,
-                kind: "knowledge.ask",
-                payload: { question: text, module, audience },
-            })
-            if (settled.isDone) setResults(passagesOf(settled.result))
-            else setErrorKey(commandErrorKey(settled.code))
+            try {
+                const result = await queryAskKnowledge({ request: { question: text, module, audience } })
+                setResults((result.data?.askKnowledge ?? []).map(toRetrievedPassage))
+            } catch (failure) {
+                setResults(null)
+                setError(failure instanceof Error ? failure.message : null)
+            }
         })
     }
     return {
@@ -52,10 +50,12 @@ export const useAskKnowledge = (
         module,
         audience,
         results,
-        errorKey,
+        error,
         isPending,
         setQuestion,
-        setModule: (value) => setModule(AGENT_MODULES.find((key) => key === value) ?? module),
+        setModule: (value) => {
+            setChosen(AGENT_MODULES.find((key) => key === value) ?? module)
+        },
         setAudience: (value) => setAudience(value === "internal" ? "internal" : "customer"),
         ask,
     }

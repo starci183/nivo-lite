@@ -1,4 +1,5 @@
 import { Alert, EmptyNotice, PrimaryRailLayout } from "@starci/grammar/common"
+import { AutomationsForbidden } from "@/components/composites/AutomationsForbidden"
 import { AutomationAccountPicker } from "@/components/composites/AutomationAccountPicker"
 import { AutomationCard, AutomationCardSkeleton } from "@/components/composites/AutomationCard"
 import { AutomationDetailFrame } from "@/components/composites/AutomationDetailFrame"
@@ -22,12 +23,26 @@ export interface AutomationsBoardLabels {
     readonly select: string
 }
 
+/** Why the board shows a notice instead of the cards. */
+export type AutomationsBoardNotice =
+    | {
+          readonly kind: "forbidden"
+          readonly title: string
+          readonly body: string
+          readonly backLabel: string
+          readonly backHref: string
+          /** True when the board is the whole page (the notice then carries its back link). */
+          readonly isPage: boolean
+      }
+    | { readonly kind: "failed"; readonly title: string }
+
 /** Props for {@link AutomationsBoardBase}. */
 export interface AutomationsBoardBaseProps {
     readonly props: {
         readonly slot: DataSlot<AutomationsBoardView>
         /** "page": filters and a grid with the detail beside it. "module": one module's cards as a compact list, detail below. */
         readonly layout: "page" | "module"
+        readonly notice?: AutomationsBoardNotice | undefined
         readonly labels: AutomationsBoardLabels
     }
     readonly on: {
@@ -58,9 +73,22 @@ const PLACEHOLDER: AutomationsBoardView = {
 
 /** The cards, their filters, the detail and the hidden list. Shared by the automations page and the module settings card. */
 export const AutomationsBoardBase = (props: AutomationsBoardBaseProps) => {
-    const { layout, labels, slot } = props.props
+    const { layout, labels, slot, notice } = props.props
     const { on } = props
     const isNested = layout === "module"
+    if (notice?.kind === "forbidden")
+        return notice.isPage ? (
+            <AutomationsForbidden
+                bare
+                title={notice.title}
+                body={notice.body}
+                backLabel={notice.backLabel}
+                backHref={notice.backHref}
+            />
+        ) : (
+            <Alert tone="negative" title={notice.title} />
+        )
+    if (notice?.kind === "failed") return <Alert tone="negative" title={notice.title} />
     return (
         <SlotView slot={slot} placeholder={PLACEHOLDER} labels={labels.slot}>
             {(view, isSkeleton) => {

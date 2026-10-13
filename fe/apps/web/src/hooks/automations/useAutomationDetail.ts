@@ -1,16 +1,17 @@
+"use client"
+
+import { useTranslations } from "next-intl"
 import { useCallback, useState } from "react"
-import type { AutomationCardView, ConfigValue } from "@/lib/automation-shared"
-import type { AutomationCommandView, DbFailure, DbOutcome } from "@/modules/db"
+import { mutate } from "swr"
+import { QUERY_AUTOMATIONS_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryAutomationsSwr"
+import { useMutateProposeAutomationBodySwr } from "@/hooks/swr/api/graphql/mutations/useMutateProposeAutomationBodySwr"
+import { useMutateRunAutomationNowSwr } from "@/hooks/swr/api/graphql/mutations/useMutateRunAutomationNowSwr"
+import { toast, useGraphQLWithToast } from "@/modules/toast"
 import type { AutomationValues } from "@/modules/automations"
+import type { AutomationCardView, ConfigValue } from "@/modules/types"
 
 /** How the proposal came out: written by the model, or the standard wording. */
 type ProposalNote = "proposal" | "fallback"
-
-/** Runs a command of the back end for the open card and answers how it ended. */
-export type CommandAction = (
-    kind: "propose_body" | "run_now",
-    templateKey: string,
-) => Promise<DbOutcome<AutomationCommandView>>
 
 /** What the open card edits: its settings and its wording. */
 interface DetailForm {
@@ -50,17 +51,16 @@ const formOf = (card: AutomationCardView | null): DetailForm => ({
 
 const IDLE: DetailWork = { isComposing: false, isStarting: false, isStarted: false }
 
-const failureOf = (code: string | null): DbFailure => ({ kind: "unavailable", code: code ?? "command-failed" })
-
 /**
- * The local state of the detail of the open card. It starts over when another card opens. The proposal and the run are commands the
- * back end runs: the action answers once the job wrote its result on the command row.
+ * The local state of the detail of the open card. It starts over when another card opens. The proposal is one synchronous
+ * mutation; the run is queued by a mutation and lands in the run history, which the overview query polls until it settles.
+ * Every outcome is toasted.
  */
-export const useAutomationDetail = (
-    card: AutomationCardView | null,
-    command: CommandAction,
-    onFailure: (failure: DbFailure) => void,
-): AutomationDetailState => {
+export const useAutomationDetail = (card: AutomationCardView | null): AutomationDetailState => {
+    const t = useTranslations("automations")
+    const runGraphQL = useGraphQLWithToast()
+    const propose = useMutateProposeAutomationBodySwr()
+    const runNow = useMutateRunAutomationNowSwr()
     const key = card?.key ?? null
     const [form, setForm] = useState<DetailForm>(() => formOf(card))
     const [work, setWork] = useState<DetailWork>(IDLE)
@@ -75,33 +75,34 @@ export const useAutomationDetail = (
             const target = forKey ?? key
             if (target === null) return
             setWork((previous) => ({ ...previous, isComposing: true }))
-            void command("propose_body", target).then((outcome) => {
-                setWork((previous) => ({ ...previous, isComposing: false }))
-                if (outcome.kind !== "ok") return onFailure(outcome)
-                const { proposal } = outcome.value
-                if (outcome.value.status === "failed" || proposal === null) {
-                    return onFailure(failureOf(outcome.value.faultCode))
-                }
-                setForm((previous) => ({
-                    ...previous,
-                    body: proposal.body,
-                    note: proposal.generated ? "proposal" : "fallback",
-                }))
-            })
+            void runGraphQL(() => propose.trigger({ templateKey: target }), { showSuccessToast: false }).then(
+                (proposal) => {
+                    setWork((previous) => ({ ...previous, isComposing: false }))
+                    if (proposal === undefined) return
+                    setForm((previous) => ({
+                        ...previous,
+                        body: proposal.body,
+                        note: proposal.generated ? "proposal" : "fallback",
+                    }))
+                    toast.success(t("messageTitle"), {
+                        description: t(proposal.generated ? "proposalNote" : "fallbackNote"),
+                    })
+                },
+            )
         },
-        [command, key, onFailure],
+        [runGraphQL, propose, key, t],
     )
 
     const startRun = useCallback(() => {
         if (key === null) return
         setWork((previous) => ({ ...previous, isStarting: true, isStarted: false }))
-        void command("run_now", key).then((outcome) => {
-            setWork((previous) => ({ ...previous, isStarting: false }))
-            if (outcome.kind !== "ok") return onFailure(outcome)
-            if (outcome.value.status === "failed") return onFailure(failureOf(outcome.value.faultCode))
-            setWork((previous) => ({ ...previous, isStarted: true }))
-        })
-    }, [command, key, onFailure])
+        void runGraphQL(() => runNow.trigger({ templateKey: key }), { successMessage: t("runNowStarted") }).then(
+            (queued) => {
+                setWork((previous) => ({ ...previous, isStarting: false, isStarted: queued === true }))
+                if (queued === true) void mutate(QUERY_AUTOMATIONS_SWR_KEY)
+            },
+        )
+    }, [runGraphQL, runNow, key, t])
 
     return {
         form,
