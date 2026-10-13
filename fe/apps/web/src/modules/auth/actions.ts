@@ -1,3 +1,5 @@
+import { createClient } from "@supabase/supabase-js"
+import { supabaseAnonKey, supabaseUrl } from "@/modules/config"
 import { APP_ROUTES, AUTH_ROUTES, safeNext } from "@/modules/routes"
 import { isRateLimited, parseEmailRequest, parsePassword, parseSignUp } from "./auth.mapper"
 import { authClient } from "./client"
@@ -119,4 +121,56 @@ export const endSession = async (): Promise<AuthOutcome<true>> => {
     const { error } = await authClient().auth.signOut()
     if (error === null || error.status === 401) return authOk(true)
     return authFailure("unavailable", error.code ?? "sign-out")
+}
+
+/** The current password and the one it becomes. */
+export interface PasswordChange {
+    readonly current: string
+    readonly next: string
+}
+
+/** Sends the confirmation link for a new sign-in address; the address changes only after the link is opened. */
+export const changeEmail = async (email: string): Promise<AuthOutcome<true>> => {
+    const parsed = parseEmailRequest({ email })
+    if (parsed === undefined) return authFailure("invalid", "email-input")
+    const client = authClient()
+    const { data } = await client.auth.getSession()
+    if (data.session === null) return authFailure("refused", "session")
+    if (parsed.email === data.session.user.email?.toLowerCase()) return authFailure("invalid", "email-same")
+    const { error } = await client.auth.updateUser(
+        { email: parsed.email },
+        { emailRedirectTo: confirmUrl(window.location.origin, APP_ROUTES.account) },
+    )
+    return failureOf(error) ?? authOk(true)
+}
+
+/**
+ * Changes the password. The current one is verified on a throwaway client (the browser session is untouched) that is closed
+ * again so it never shows up in the device list; then the new one is set.
+ */
+export const changePassword = async (input: PasswordChange): Promise<AuthOutcome<true>> => {
+    const client = authClient()
+    const { data } = await client.auth.getSession()
+    const email = data.session?.user.email
+    if (data.session === null) return authFailure("refused", "session")
+    if (email === undefined || email === "") return authFailure("invalid", "no-password")
+    const parsed = parsePassword({ password: input.next })
+    if (parsed === undefined || input.current === "" || input.current.length > 256) {
+        return authFailure("invalid", "password-input")
+    }
+    const probe = createClient(supabaseUrl(), supabaseAnonKey(), {
+        auth: { persistSession: false, autoRefreshToken: false },
+    })
+    const verified = await probe.auth.signInWithPassword({ email, password: input.current })
+    await probe.auth.signOut()
+    if (verified.error !== null) return authFailure("refused", "wrong-current")
+    const { error } = await client.auth.updateUser({ password: parsed })
+    return failureOf(error) ?? authOk(true)
+}
+
+/** Signs the account out of every other device and keeps this one. */
+export const signOutOthers = async (): Promise<AuthOutcome<true>> => {
+    const { error } = await authClient().auth.signOut({ scope: "others" })
+    if (error === null) return authOk(true)
+    return authFailure(error.status === 401 ? "refused" : "unavailable", error.code ?? "sign-out-others")
 }

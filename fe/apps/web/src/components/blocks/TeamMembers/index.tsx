@@ -1,25 +1,12 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { useState, useTransition } from "react"
+import { useState } from "react"
 import type { DataTableColumn, DropdownMenuEntry } from "@starci/grammar/common"
-import { ROLE_KEYS, canManageMember, roleChoices, teamErrorKey } from "@/hooks/team"
-import type { TeamMemberView, TeamRole } from "@/hooks/team"
-import { navigation } from "@/modules/i18n"
-import { writeMemberRole } from "@/modules/db/team/write-member-role"
-import { writeMemberStatus } from "@/modules/db/team/write-member-status"
-import { writeRemoveMember } from "@/modules/db/team/write-remove-member"
+import { useMember } from "@/hooks/member"
+import { ROLE_KEYS, isTeamManager, canManageMember, roleChoices, useMemberCommands, useTeam } from "@/hooks/team"
+import type { TeamMemberView } from "@/hooks/team"
 import { TeamMembersBase } from "./component"
-
-/** Props for the connected members table. */
-interface TeamMembersProps {
-    readonly workspaceId: string
-    readonly selfId: string
-    readonly selfRole: TeamRole
-    readonly members: ReadonlyArray<TeamMemberView>
-    /** True while the page loads: the heading and column headers stay, the body is skeleton rows. */
-    readonly isLoading?: boolean
-}
 
 /** A remove or a disable waiting for the person's yes. */
 interface Asking {
@@ -27,65 +14,62 @@ interface Asking {
     readonly kind: "remove" | "disable"
 }
 
-/** The connected members table: change a role, disable or enable access, remove (after a yes), through Server Actions under RLS. */
-export const TeamMembers = (props: TeamMembersProps) => {
+/** The connected members table: change a role, disable or enable access, remove (after a yes), through the back end GraphQL API (outcome toasted). */
+export const TeamMembers = () => {
     const t = useTranslations("team")
     const format = useFormatter()
-    const router = navigation.useRouter()
-    const [isPending, startTransition] = useTransition()
-    const [error, setError] = useState<string>()
+    const member = useMember()
+    const selfRole = member?.role ?? "staff"
+    const selfId = member?.userId ?? ""
+    const isAllowed = member !== null && isTeamManager(member.role)
+    const { views, isLoading } = useTeam(member?.workspaceId ?? "", isAllowed)
+    const commands = useMemberCommands()
     const [asking, setAsking] = useState<Asking>()
 
-    const run = (job: () => Promise<{ readonly kind: string; readonly code?: string }>) => {
-        setError(undefined)
-        startTransition(async () => {
-            const result = await job()
-            setAsking(undefined)
-            if (result.kind === "ok") return router.refresh()
-            setError(t(teamErrorKey(result.code ?? "")))
-        })
+    const run = async (job: () => Promise<boolean>) => {
+        await job()
+        setAsking(undefined)
     }
-    const command = (member: TeamMemberView) => ({ workspaceId: props.workspaceId, userId: member.userId })
 
-    const entriesFor = (member: TeamMemberView): ReadonlyArray<DropdownMenuEntry> => {
+    const entriesFor = (row: TeamMemberView): ReadonlyArray<DropdownMenuEntry> => {
         const sections: DropdownMenuEntry[] = [
             {
                 kind: "section",
                 id: "role",
                 label: t("colRole"),
-                items: roleChoices(props.selfRole).map((role) => ({ id: `role:${role}`, label: t(ROLE_KEYS[role]) })),
+                items: roleChoices(selfRole).map((role) => ({ id: `role:${role}`, label: t(ROLE_KEYS[role]) })),
                 selection: {
                     mode: "single",
-                    selectedIds: [`role:${member.role}`],
+                    selectedIds: [`role:${row.role}`],
                     onChange: (ids) => {
-                        const role = roleChoices(props.selfRole).find((choice) => `role:${choice}` === ids[0])
-                        if (role !== undefined && role !== member.role)
-                            run(() => writeMemberRole({ ...command(member), role }))
+                        const role = roleChoices(selfRole).find((choice) => `role:${choice}` === ids[0])
+                        if (role !== undefined && role !== row.role)
+                            void run(() => commands.changeRole(row.userId, role))
                     },
                 },
             },
         ]
-        if (member.userId !== props.selfId) {
+        if (row.userId !== selfId) {
             sections.push({
                 kind: "section",
                 id: "access",
                 items: [
-                    member.isActive
+                    row.isActive
                         ? {
                               id: "disable",
                               label: t("actionDisable"),
-                              onAction: () => setAsking({ userId: member.userId, kind: "disable" }),
+                              onAction: () => setAsking({ userId: row.userId, kind: "disable" }),
                           }
                         : {
                               id: "enable",
                               label: t("actionEnable"),
-                              onAction: () => run(() => writeMemberStatus({ ...command(member), status: "active" })),
+                              onAction: () => void run(() => commands.setStatus(row.userId, "active")),
                           },
                     {
                         id: "remove",
                         label: t("actionRemove"),
                         tone: "negative",
-                        onAction: () => setAsking({ userId: member.userId, kind: "remove" }),
+                        onAction: () => setAsking({ userId: row.userId, kind: "remove" }),
                     },
                 ],
             })
@@ -100,8 +84,7 @@ export const TeamMembers = (props: TeamMembersProps) => {
         { id: "lastSignIn", label: t("colLastSignIn") },
         { id: "actions", label: t("colActions"), align: "end" },
     ]
-    const isLoading = props.isLoading ?? false
-    const target = props.members.find((member) => member.userId === asking?.userId)
+    const target = views.members.find((row) => row.userId === asking?.userId)
     const confirmOf = () => {
         if (asking === undefined || target === undefined) return undefined
         if (asking.kind === "remove") {
@@ -118,11 +101,12 @@ export const TeamMembers = (props: TeamMembersProps) => {
         }
     }
 
+    if (!isAllowed) return null
     return (
         <TeamMembersBase
             props={{
                 title: t("membersTitle"),
-                description: isLoading ? undefined : t("membersDesc", { count: props.members.length }),
+                description: isLoading ? undefined : t("membersDesc", { count: views.members.length }),
                 failTitle: t("errGeneric"),
                 youLabel: t("you"),
                 activeLabel: t("statusActive"),
@@ -130,37 +114,33 @@ export const TeamMembers = (props: TeamMembersProps) => {
                 actionsLabel: t("colActions"),
                 cancelLabel: t("confirmNo"),
                 columns,
-                rows: props.members.map((member) => ({
-                    id: member.userId,
-                    name: member.displayName,
-                    email: member.email,
-                    isYou: member.userId === props.selfId,
-                    staffNote: member.staffName === null ? undefined : t("linkedStaff", { name: member.staffName }),
-                    roleLabel: t(ROLE_KEYS[member.role]),
-                    isActive: member.isActive,
+                rows: views.members.map((row) => ({
+                    id: row.userId,
+                    name: row.displayName,
+                    email: row.email,
+                    isYou: row.userId === selfId,
+                    staffNote: row.staffName === null ? undefined : t("linkedStaff", { name: row.staffName }),
+                    roleLabel: t(ROLE_KEYS[row.role]),
+                    isActive: row.isActive,
                     lastSignIn:
-                        member.lastSignInAt === null
+                        row.lastSignInAt === null
                             ? t("neverSignedIn")
-                            : format.dateTime(new Date(member.lastSignInAt), {
-                                  dateStyle: "medium",
-                                  timeStyle: "short",
-                              }),
-                    menuLabel: t("rowMore", { name: member.displayName }),
-                    entries: canManageMember(props.selfRole, member) ? entriesFor(member) : [],
+                            : format.dateTime(new Date(row.lastSignInAt), { dateStyle: "medium", timeStyle: "short" }),
+                    menuLabel: t("rowMore", { name: row.displayName }),
+                    entries: canManageMember(selfRole, row) ? entriesFor(row) : [],
                 })),
                 isSkeleton: isLoading,
-                isPending,
-                error,
+                isPending: commands.isPending,
                 confirm: confirmOf(),
             }}
             on={{
                 cancelConfirm: () => setAsking(undefined),
                 confirm: () => {
                     if (target === undefined || asking === undefined) return
-                    run(() =>
+                    void run(() =>
                         asking.kind === "remove"
-                            ? writeRemoveMember(command(target))
-                            : writeMemberStatus({ ...command(target), status: "disabled" }),
+                            ? commands.remove(target.userId)
+                            : commands.setStatus(target.userId, "disabled"),
                     )
                 },
             }}

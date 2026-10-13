@@ -3296,6 +3296,7 @@
     "usedTitle": "Lời mời này đã được dùng",
     "usedBody": "Nếu là bạn, chỉ cần đăng nhập.",
     "goSignIn": "Đến trang đăng nhập",
+    "joined": "Bạn đã tham gia không gian làm việc.",
     "failed": "Không tham gia được. Hãy thử lại."
   },
   "knowledge": {
@@ -6101,6 +6102,10 @@
     "inviteLinkLabel": "Link mời cho {email}",
     "inviteResent": "Đã gửi lại lời mời tới {email}.",
     "inviteRevoked": "Đã thu hồi lời mời.",
+    "roleChanged": "Đã cập nhật vai trò.",
+    "memberEnabled": "Đã bật quyền truy cập.",
+    "memberDisabled": "Đã tắt quyền truy cập.",
+    "memberRemoved": "Đã xóa thành viên.",
     "formTitle": "Mời thêm người",
     "formDesc": "Họ nhận email có link để tham gia. Bạn cũng có thể sao chép link và tự gửi.",
     "fieldEmail": "Email công việc",

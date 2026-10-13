@@ -3,13 +3,13 @@
 import { useTranslations } from "next-intl"
 import { navigation } from "@/modules/i18n"
 import { useState } from "react"
-import { useConsoleNav } from "@/hooks/console"
+import { useConsoleNav, useConsoleShell } from "@/hooks/console"
 import { ConsoleCompactNavigationBase } from "./component"
 
-/** The role and the real count the compact bar needs. */
+/** The role and the workspace the compact bar reads its count for. */
 type ConsoleCompactNavigationProps = {
     readonly role: "owner" | "manager" | "staff"
-    readonly pendingCount: number
+    readonly workspaceId: string
 }
 
 /** The compact bar keeps these three destinations; the rest sit behind "More" (the wide rail shows everything). */
@@ -19,7 +19,8 @@ const PHONE_TABS = new Set(["chat", "overview", "leads"])
 export const ConsoleCompactNavigation = (props: ConsoleCompactNavigationProps) => {
     const t = useTranslations("shell")
     const router = navigation.useRouter()
-    const items = useConsoleNav(props.role, props.pendingCount)
+    const { pendingCount } = useConsoleShell(props.workspaceId)
+    const items = useConsoleNav(props.role, pendingCount)
     const [isMoreOpen, setMoreOpen] = useState(false)
     return (
         <ConsoleCompactNavigationBase

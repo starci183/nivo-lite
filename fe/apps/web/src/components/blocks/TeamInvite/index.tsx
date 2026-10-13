@@ -1,47 +1,36 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useState, useTransition } from "react"
-import { NO_STAFF, ROLE_KEYS, outcomeErrorKey, useInviteCommands } from "@/hooks/team"
-import type { InviteSentView, StaffChoiceView } from "@/hooks/team"
-import { navigation } from "@/modules/i18n"
+import { useState } from "react"
+import { NO_STAFF, ROLE_KEYS, isTeamManager, useInviteCommands, useTeam } from "@/hooks/team"
+import type { InviteSentView } from "@/hooks/team"
+import { useInviteForm } from "@/hooks/rhf"
+import { useMember } from "@/hooks/member"
 import { TeamInviteBase } from "./component"
 
-/** Props for the connected invite form. */
-interface TeamInviteProps {
-    readonly workspaceId: string
-    /** Active staff rows nobody is linked to yet. */
-    readonly staffChoices: ReadonlyArray<StaffChoiceView>
-    /** True while the page loads: the form keeps its labels and shows skeletons. */
-    readonly isLoading?: boolean
-}
-
-/** The connected invite form: sends the invitation through the back end api and shows the copyable link. */
-export const TeamInvite = (props: TeamInviteProps) => {
+/** The connected invite form: sends the invitation through the back end GraphQL API (outcome toasted) and shows the copyable link. */
+export const TeamInvite = () => {
     const t = useTranslations("team")
-    const router = navigation.useRouter()
-    const commands = useInviteCommands(props.workspaceId)
-    const [isPending, startTransition] = useTransition()
-    const [email, setEmail] = useState("")
-    const [role, setRole] = useState<"manager" | "staff">("staff")
-    const [staffId, setStaffId] = useState(NO_STAFF)
-    const [error, setError] = useState<string>()
+    const member = useMember()
+    const isAllowed = member !== null && isTeamManager(member.role)
+    const { views, isLoading } = useTeam(member?.workspaceId ?? "", isAllowed)
+    const commands = useInviteCommands()
+    const form = useInviteForm()
     const [sent, setSent] = useState<InviteSentView>()
     const [isCopied, setCopied] = useState(false)
 
-    const submit = () => {
-        setError(undefined)
+    const submit = form.handleSubmit(async (values) => {
         setSent(undefined)
         setCopied(false)
-        startTransition(async () => {
-            const result = await commands.create({ email, role, staffId: staffId === NO_STAFF ? null : staffId })
-            if (result.kind !== "ok") return setError(t(outcomeErrorKey(result)))
-            setSent(result.value)
-            setEmail("")
-            setStaffId(NO_STAFF)
-            router.refresh()
+        const result = await commands.create({
+            email: values.email,
+            role: values.role,
+            staffId: values.staffId === NO_STAFF ? null : values.staffId,
         })
-    }
+        if (result === undefined) return
+        setSent(result)
+        form.reset({ ...form.getValues(), email: "", staffId: NO_STAFF })
+    })
 
     const sentText = (view: InviteSentView): string => {
         if (view.delivery === "invited") return t("sentEmail", { email: view.email })
@@ -49,6 +38,7 @@ export const TeamInvite = (props: TeamInviteProps) => {
         return t("sentNoEmail", { email: view.email })
     }
 
+    if (!isAllowed) return null
     return (
         <TeamInviteBase
             props={{
@@ -66,18 +56,18 @@ export const TeamInvite = (props: TeamInviteProps) => {
                 ],
                 staffOptions: [
                     { id: NO_STAFF, label: t("staffNone") },
-                    ...props.staffChoices.map((staff) => ({
+                    ...views.staffChoices.map((staff) => ({
                         id: staff.id,
                         label:
                             staff.role === "" ? staff.name : t("staffOption", { name: staff.name, role: staff.role }),
                     })),
                 ],
-                email,
-                role,
-                staffId,
-                isPending,
-                isSkeleton: props.isLoading ?? false,
-                error,
+                email: form.watch("email"),
+                role: form.watch("role"),
+                staffId: form.watch("staffId"),
+                isPending: commands.isPending,
+                isSkeleton: isLoading,
+                error: form.formState.errors.email?.message,
                 sent:
                     sent === undefined
                         ? undefined
@@ -91,12 +81,12 @@ export const TeamInvite = (props: TeamInviteProps) => {
                           },
             }}
             on={{
-                setEmail,
+                setEmail: (value) => form.setValue("email", value, { shouldValidate: form.formState.isSubmitted }),
                 setRole: (value) => {
-                    if (value === "manager" || value === "staff") setRole(value)
+                    if (value === "manager" || value === "staff") form.setValue("role", value)
                 },
-                setStaffId: (value) => setStaffId(value ?? NO_STAFF),
-                submit,
+                setStaffId: (value) => form.setValue("staffId", value ?? NO_STAFF),
+                submit: () => void submit(),
                 copied: () => setCopied(true),
             }}
         />

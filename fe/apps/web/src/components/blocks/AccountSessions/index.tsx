@@ -1,45 +1,27 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useState, useTransition } from "react"
-import type { SessionRowView } from "@/hooks/account"
-import { writeRevokeSession } from "@/modules/db/account/write-revoke-session"
-import { writeSignOutOthers } from "@/modules/db/account/write-sign-out-others"
-import { writeSignOut } from "@/modules/db/auth/write-sign-out"
+import { useState } from "react"
+import { useAccountCommands, useAccountSessions, useSignOutOthers } from "@/hooks/account"
+import { useAuthActions } from "@/hooks/auth"
 import { navigation } from "@/modules/i18n"
 import { APP_ROUTES } from "@/modules/routes"
 import { AccountSessionsBase } from "./component"
 
-/** Props for the connected sessions section. */
-interface AccountSessionsProps {
-    /** The devices signed in, current one first, already formatted for the locale. */
-    readonly rows: ReadonlyArray<SessionRowView>
-    /** True when the device list could not be read. */
-    readonly isFailed: boolean
-    /** True while the page loads: the labels stay and the rows are skeletons. */
-    readonly isLoading?: boolean
-}
-
 /** The connected sessions section: signs one other device out, signs all the others out, or ends this session. */
-export const AccountSessions = (props: AccountSessionsProps) => {
+export const AccountSessions = () => {
+    const auth = useAuthActions()
     const t = useTranslations("account")
     const router = navigation.useRouter()
+    const { rows, isFailed, isLoading } = useAccountSessions()
+    const { revokeSession } = useAccountCommands()
+    const others = useSignOutOthers()
     const [busy, setBusy] = useState<string>()
-    const [error, setError] = useState<string>()
-    const [done, setDone] = useState<string>()
-    const [, startTransition] = useTransition()
 
-    const run = (key: string, task: () => Promise<{ readonly kind: string }>, text: string, after: () => void) => {
+    const run = async (key: string, task: () => Promise<unknown>) => {
         setBusy(key)
-        setError(undefined)
-        setDone(undefined)
-        startTransition(async () => {
-            const result = await task()
-            setBusy(undefined)
-            if (result.kind !== "ok") return setError(t("unknownError"))
-            setDone(text)
-            after()
-        })
+        await task()
+        setBusy(undefined)
     }
 
     return (
@@ -54,24 +36,20 @@ export const AccountSessions = (props: AccountSessionsProps) => {
                 noOthersLabel: t("noOthers"),
                 failedTitle: t("sessionsFailed"),
                 failTitle: t("failTitle"),
-                rows: props.rows,
-                isFailed: props.isFailed,
-                isSkeleton: props.isLoading ?? false,
-                hasOthers: props.isLoading === true || props.rows.some((row) => !row.isCurrent),
+                rows,
+                isFailed,
+                isSkeleton: isLoading,
+                hasOthers: isLoading || rows.some((row) => !row.isCurrent),
                 busy,
-                error,
-                done,
             }}
             on={{
-                revoke: (id) =>
-                    run(
-                        id,
-                        () => writeRevokeSession(id),
-                        t("sessionRevoked"),
-                        () => router.refresh(),
-                    ),
-                signOutOthers: () => run("others", writeSignOutOthers, t("othersDone"), () => router.refresh()),
-                signOutThis: () => run("this", writeSignOut, t("signOutThis"), () => router.replace(APP_ROUTES.login)),
+                revoke: (id) => void run(id, () => revokeSession(id)),
+                signOutOthers: () => void run("others", others.run),
+                signOutThis: () =>
+                    void run("this", async () => {
+                        const outcome = await auth.endSession()
+                        if (outcome.kind === "ok") router.replace(APP_ROUTES.login)
+                    }),
             }}
         />
     )

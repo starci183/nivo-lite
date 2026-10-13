@@ -2,12 +2,12 @@ import { createSlice } from "@reduxjs/toolkit"
 import type { PayloadAction } from "@reduxjs/toolkit"
 
 /** The app-wide workspace selection. */
-export interface WorkspaceState {
+export interface WorkspaceSliceState {
     /** The workspace the person works in; the GraphQL client sends it as `X-Workspace-Id`. */
     activeWorkspaceId: string | undefined
 }
 
-const initialState: WorkspaceState = { activeWorkspaceId: undefined }
+const initialState: WorkspaceSliceState = { activeWorkspaceId: undefined }
 
 const workspaceSlice = createSlice({
     name: "workspace",

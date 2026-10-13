@@ -1,4 +1,7 @@
 export {
+    changeEmail,
+    changePassword,
+    signOutOthers,
     requestPasswordReset,
     resendConfirmation,
     signInWithPassword,
@@ -9,3 +12,4 @@ export {
 } from "./actions"
 export { authClient } from "./client"
 export { sessionAccessToken, renewSessionToken, subscribeToAuthChange } from "./session"
+export type { PasswordChange } from "./actions"
