@@ -1,13 +1,29 @@
-import type { Database } from "../../../../../../supabase/types/database.types"
-
-type Tables = Database["public"]["Tables"]
-
 /** One connection joined with its secret row. */
-export type ConnectionSecretRow = Pick<Tables["connections"]["Row"], "workspace_id" | "status" | "provider"> &
-    Pick<Tables["connection_secrets"]["Row"], "ciphertext" | "webhook_secret">
+export interface ConnectionSecretRow {
+    /** The workspace the connection belongs to. */
+    readonly workspace_id: string
+    /** The connection status. */
+    readonly status: string
+    /** The provider of the connection. */
+    readonly provider: string
+    /** The encrypted credential. */
+    readonly ciphertext: string
+    /** The per-connection webhook secret. */
+    readonly webhook_secret: string
+}
 
 /** The facts of a connection the bank feed reads before it records a credit. */
-export type ConnectionStateRow = Pick<Tables["connections"]["Row"], "name" | "environment" | "status">
+export interface ConnectionStateRow {
+    /** The connection name. */
+    readonly name: string
+    /** The environment the connection runs in. */
+    readonly environment: string
+    /** The connection status. */
+    readonly status: string
+}
 
 /** An agent id. */
-export type AgentIdRow = Pick<Tables["agents"]["Row"], "id">
+export interface AgentIdRow {
+    /** The agent id. */
+    readonly id: string
+}
