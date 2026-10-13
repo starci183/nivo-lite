@@ -8,6 +8,8 @@ import { parseJobsConfig } from "@modules/platform/jobs"
 import { parseQueueConfig } from "@modules/platform/queue"
 import { parseWorkspaceInvitesConfig } from "@modules/domain/workspace-invites"
 import { parseWorkspacesConfig } from "@modules/domain/workspaces"
+import { parseN8nConfig } from "@modules/integrations/n8n"
+import { parseTemplateFilesConfig } from "@modules/integrations/template-files"
 import { parseSupabaseConfig } from "@modules/integrations/supabase"
 import { AppModule } from "./app.module"
 import type { ApiOptions } from "./api.options"
@@ -28,6 +30,8 @@ const bootstrap = async (): Promise<void> => {
         workspaceInvites: parseWorkspaceInvitesConfig(env),
         queue: parseQueueConfig(env),
         jobs: parseJobsConfig(env),
+        n8n: parseN8nConfig(env),
+        templateFiles: parseTemplateFilesConfig(env),
     }
     const app = await NestFactory.create(AppModule.register(options), { rawBody: true })
     app.enableCors({ origin: [...options.httpSecurity.allowedOrigins] })

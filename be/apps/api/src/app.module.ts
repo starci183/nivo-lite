@@ -1,6 +1,11 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
+import { AutomationsHttpModule } from "@features/api/automations"
+import { FlowsHttpModule } from "@features/api/flows"
+import { N8nPipelinesHttpModule } from "@features/api/n8n-pipelines"
+import { EmitN8nEventQueueModule } from "@features/jobs/emit-n8n-event"
+import { RunAutomationTickQueueModule } from "@features/jobs/run-automation-tick"
 import { SystemHealthHttpModule } from "@features/api/system-health"
 import { WorkspacesHttpModule } from "@features/api/workspaces"
 import { AuthGuard, IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } from "@modules/domain/identity"
@@ -11,6 +16,21 @@ import {
     SupabaseModule,
     createSupabaseAccessTokenVerifier,
 } from "@modules/integrations/supabase"
+import { AUTOMATIONS_ERROR_KINDS, AUTOMATIONS_MESSAGES, AutomationsModule } from "@modules/domain/automations"
+import { AutomationPortsModule } from "@modules/domain/automation-ports"
+import {
+    AUTOMATION_PIPELINES_ERROR_KINDS,
+    AUTOMATION_PIPELINES_MESSAGES,
+    AutomationPipelinesModule,
+} from "@modules/domain/automation-pipelines"
+import { AUTOMATION_RUNS_MESSAGES, AutomationRunsModule } from "@modules/domain/automation-runs"
+import {
+    AUTOMATION_TEMPLATES_ERROR_KINDS,
+    AUTOMATION_TEMPLATES_MESSAGES,
+    AutomationTemplatesModule,
+} from "@modules/domain/automation-templates"
+import { FlowsModule } from "@modules/domain/flows"
+import { N8N_RUNS_ERROR_KINDS, N8N_RUNS_MESSAGES, N8nRunsModule } from "@modules/domain/n8n-runs"
 import { LivenessModule } from "@modules/domain/liveness"
 import { EventsModule } from "@modules/domain/events"
 import {
@@ -24,6 +44,9 @@ import {
     WorkspaceMembersModule,
 } from "@modules/domain/workspace-members"
 import { WORKSPACES_ERROR_KINDS, WORKSPACES_MESSAGES, WorkspacesModule } from "@modules/domain/workspaces"
+import { N8N_ERROR_KINDS, N8nModule } from "@modules/integrations/n8n"
+import { TEMPLATE_FILES_ERROR_KINDS, TemplateFilesModule } from "@modules/integrations/template-files"
+import { AUTOMATION_TICK_SCHEDULER } from "@modules/queues/automation"
 import { ClockModule } from "@modules/platform/clock"
 import { CONFIG_ERROR_KINDS } from "@modules/platform/config"
 import { CqrsModule } from "@modules/platform/cqrs"
@@ -36,6 +59,7 @@ import {
     OriginGuard,
     RateLimitGuard,
 } from "@modules/platform/http-security"
+import { HTTP_ERROR_KINDS, HTTP_MESSAGES, HttpModule } from "@modules/platform/http"
 import { I18nModule } from "@modules/platform/i18n"
 import { LoggingModule } from "@modules/platform/logging"
 import { JOBS_ERROR_KINDS, JOBS_MESSAGES, JobsModule } from "@modules/platform/jobs"
@@ -56,10 +80,16 @@ export class AppModule {
                 I18nModule.register({
                     isGlobal: true,
                     bundles: [
+                        AUTOMATION_PIPELINES_MESSAGES,
+                        AUTOMATION_RUNS_MESSAGES,
+                        AUTOMATION_TEMPLATES_MESSAGES,
+                        AUTOMATIONS_MESSAGES,
                         ERRORS_MESSAGES,
+                        HTTP_MESSAGES,
                         HTTP_SECURITY_MESSAGES,
                         IDENTITY_MESSAGES,
                         JOBS_MESSAGES,
+                        N8N_RUNS_MESSAGES,
                         QUEUE_MESSAGES,
                         WORKSPACE_INVITES_MESSAGES,
                         WORKSPACE_MEMBERS_MESSAGES,
@@ -69,13 +99,20 @@ export class AppModule {
                 ErrorsModule.register({
                     isGlobal: true,
                     kinds: [
+                        AUTOMATION_PIPELINES_ERROR_KINDS,
+                        AUTOMATION_TEMPLATES_ERROR_KINDS,
+                        AUTOMATIONS_ERROR_KINDS,
                         CONFIG_ERROR_KINDS,
                         DATABASE_ERROR_KINDS,
                         HTTP_SECURITY_ERROR_KINDS,
+                        HTTP_ERROR_KINDS,
                         JOBS_ERROR_KINDS,
+                        N8N_ERROR_KINDS,
+                        N8N_RUNS_ERROR_KINDS,
                         QUEUE_ERROR_KINDS,
                         IDENTITY_ERROR_KINDS,
                         SUPABASE_ERROR_KINDS,
+                        TEMPLATE_FILES_ERROR_KINDS,
                         WORKSPACE_INVITES_ERROR_KINDS,
                         WORKSPACE_MEMBERS_ERROR_KINDS,
                         WORKSPACES_ERROR_KINDS,
@@ -92,7 +129,7 @@ export class AppModule {
                 }),
                 QueueModule.register({
                     isGlobal: true,
-                    schedulers: [],
+                    schedulers: [AUTOMATION_TICK_SCHEDULER],
                     ...options.queue,
                 }),
                 JobsModule.register({
@@ -110,9 +147,24 @@ export class AppModule {
                     delivery: SUPABASE_AUTH,
                     ...options.workspaceInvites,
                 }),
+                HttpModule.register({ isGlobal: true }),
+                N8nModule.register({ isGlobal: true, ...options.n8n }),
+                TemplateFilesModule.register({ isGlobal: true, ...options.templateFiles }),
+                AutomationPortsModule.register({ isGlobal: true }),
+                AutomationTemplatesModule.register({ isGlobal: true }),
+                AutomationPipelinesModule.register({ isGlobal: true }),
+                AutomationRunsModule.register({ isGlobal: true }),
+                N8nRunsModule.register({ isGlobal: true }),
+                AutomationsModule.register({ isGlobal: true }),
+                FlowsModule.register({ isGlobal: true }),
                 LivenessModule.register({ isGlobal: true }),
                 SystemHealthHttpModule,
                 WorkspacesHttpModule,
+                AutomationsHttpModule,
+                FlowsHttpModule,
+                N8nPipelinesHttpModule,
+                EmitN8nEventQueueModule,
+                RunAutomationTickQueueModule,
             ],
             providers: [
                 { provide: SUPABASE_ACCESS_TOKEN_VERIFIER, useValue: verifyAccessToken },

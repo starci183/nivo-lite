@@ -77,6 +77,6 @@ export const parseTemplateDefinition = (raw: unknown): TemplateDefinition => {
     const key = isRecord(raw) && typeof raw.key === "string" ? raw.key : ""
     throw new AutomationTemplatesError({
         code: AutomationTemplatesErrorCode.DefinitionInvalid,
-        params: { key: key || "?", field: badFieldOf(raw) ?? "key" },
+        params: { key: key || "?", field: String(badFieldOf(raw)) },
     })
 }

@@ -1,6 +1,9 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { CliModule } from "@features/cli"
+import { AutomationTemplatesModule } from "@modules/domain/automation-templates"
+import { N8nHostModule } from "@modules/integrations/n8n-host"
+import { TemplateFilesModule } from "@modules/integrations/template-files"
 import { ClockModule } from "@modules/platform/clock"
 import { DatabaseModule } from "@modules/platform/database"
 import { LoggingModule } from "@modules/platform/logging"
@@ -23,6 +26,9 @@ export class AppModule {
                     isGlobal: true,
                     connections: options.connections,
                 }),
+                TemplateFilesModule.register({ isGlobal: true, ...options.templateFiles }),
+                AutomationTemplatesModule.register({ isGlobal: true }),
+                N8nHostModule.register({ isGlobal: true, ...options.n8nHost }),
                 CliModule,
             ],
         }

@@ -1,3 +1,5 @@
+import type { N8nOptions } from "@modules/integrations/n8n"
+import type { TemplateFilesOptions } from "@modules/integrations/template-files"
 import type { SupabaseOptions } from "@modules/integrations/supabase"
 import type { ServerOptions } from "@modules/platform/config"
 import type { DatabaseConnectionOptions } from "@modules/platform/database"
@@ -25,4 +27,8 @@ export interface ApiOptions {
     readonly queue: QueueConfig
     /** Who this worker is and how long a job claim lasts. */
     readonly jobs: JobsConfig
+    /** The signing secret and the webhook base of the shared n8n workflows. */
+    readonly n8n: N8nOptions
+    /** The folder of the automation definition files. */
+    readonly templateFiles: TemplateFilesOptions
 }

@@ -1,16 +1,6 @@
 /** The state of one run. */
 export type RunStatus = "queued" | "running" | "done" | "skipped" | "waiting_approval" | "failed"
 
-/** Every run state, in the order the screen lists them. */
-export const RUN_STATUSES: ReadonlyArray<RunStatus> = [
-    "queued",
-    "running",
-    "done",
-    "skipped",
-    "waiting_approval",
-    "failed",
-]
-
 /** What a trigger carried: a run is executed (and retried) from it. */
 export interface RunPayload {
     /** Any value the trigger carried, by name. */
@@ -54,8 +44,8 @@ export interface RunRow {
     readonly trigger_ref: string
     /** How it stands. */
     readonly status: RunStatus
-    /** The steps. */
-    readonly steps: ReadonlyArray<RunStep>
+    /** The steps; null before the first one is recorded. */
+    readonly steps: ReadonlyArray<RunStep> | null
     /** Why it did this. */
     readonly evidence: string | null
     /** The error. */
