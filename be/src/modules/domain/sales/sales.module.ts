@@ -1,6 +1,5 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
-import { DecisionsQueueModule } from "@modules/queues/decisions"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./sales.module-definition"
 import { SalesDecisionsService } from "./sales-decisions.service"
 import { SalesShipmentsService } from "./sales-shipments.service"
@@ -15,7 +14,6 @@ export class SalesModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            imports: [...(base.imports ?? []), DecisionsQueueModule],
             providers: [
                 ...(base.providers ?? []),
                 SalesDecisionsService,

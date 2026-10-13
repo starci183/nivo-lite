@@ -45,6 +45,20 @@ export interface NewResponsibility {
     readonly due_at: string | null
 }
 
+/** A follow-up for a named person, opened on the system's behalf: its title is how an open duplicate is recognised. */
+export interface NamedFollowUp {
+    /** The customer. */
+    readonly leadId: string
+    /** What it is; an open responsibility of the customer with the same title means it is already open. */
+    readonly title: string
+    /** The display name of the person who owns it. */
+    readonly ownerName: string
+    /** The next step. */
+    readonly nextAction: string
+    /** When it is due, ISO 8601. */
+    readonly dueAt: string
+}
+
 /** A responsibility with the name of its customer, as the Responsibilities page lists it. */
 export interface ResponsibilityListing extends ResponsibilityRecord {
     /** The customer's name. */

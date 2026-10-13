@@ -1,20 +1,22 @@
-import { Inject, Injectable } from "@nestjs/common"
-import { randomUUID } from "node:crypto"
+import { Injectable } from "@nestjs/common"
 import {
     ConnectionsError,
     ConnectionsErrorCode,
     ConnectionsService,
     cleanConnectionName,
-    randomSecret,
 } from "@modules/domain/connections"
+import { randomSecret } from "@modules/domain/connection-secrets"
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
 import { InjectWebhookDeliveryClient, WebhookDeliveryError } from "@modules/integrations/webhook-delivery"
 import type { WebhookDeliveryClient } from "@modules/integrations/webhook-delivery"
 import { InjectClock } from "@modules/platform/clock"
+import { InjectIds } from "@modules/platform/ids"
+import type { Ids } from "@modules/platform/ids"
+import { parseJsonText } from "@modules/platform/primitives"
 import type { Clock } from "@modules/platform/clock"
 import { WebhookConnectionsError, WebhookConnectionsErrorCode } from "./errors/webhook-connections.error"
 import type { StartWebhookInput, WebhookEvent, WebhookTestResult, WebhookView } from "./webhook-connections.contracts"
-import { MODULE_OPTIONS_TOKEN } from "./webhook-connections.module-definition"
+import { InjectWebhookConnectionsOptions } from "./webhook-connections.decorators"
 import type { WebhookConnectionsOptions } from "./webhook-connections.options"
 import { eventsOf, pickEvents, signDelivery, workspaceSigningSecret } from "./webhook-signing.policy"
 
@@ -33,7 +35,8 @@ export class WebhookConnectionsService {
         private readonly connections: ConnectionsService,
         @InjectWebhookDeliveryClient() private readonly delivery: WebhookDeliveryClient,
         @InjectClock() private readonly clock: Clock,
-        @Inject(MODULE_OPTIONS_TOKEN) private readonly options: WebhookConnectionsOptions,
+        @InjectIds() private readonly ids: Ids,
+        @InjectWebhookConnectionsOptions() private readonly options: WebhookConnectionsOptions,
     ) {}
 
     /** Creates the connection as PENDING and returns the signing secret to copy. */
@@ -93,7 +96,7 @@ export class WebhookConnectionsService {
         const target = await this.target(url)
         const key = this.requireSigning(actor.workspaceId)
         const now = this.clock.now()
-        const id = randomUUID()
+        const id = this.ids.next()
         const body = JSON.stringify({
             id,
             event: "lead.created",
@@ -176,7 +179,8 @@ export class WebhookConnectionsService {
 
     private async urlOf(connectionId: string): Promise<string> {
         const secret = await this.connections.readSecret(connectionId)
-        const parsed: unknown = secret === null ? null : JSON.parse(secret.plain)
+        const read = secret === null ? null : parseJsonText(secret.plain)
+        const parsed = read?.ok ? read.value : null
         const url = typeof parsed === "object" && parsed !== null && "url" in parsed ? parsed.url : null
         if (typeof url !== "string" || url === "") {
             throw new WebhookConnectionsError({ code: WebhookConnectionsErrorCode.NoUrl })
