@@ -82,6 +82,8 @@ import { WorkspacesGraphqlModule, WorkspacesHttpModule } from "@features/api/wor
 import { OperationsJobsQueueModule } from "@features/jobs/operations-jobs"
 import { AccountGraphqlModule } from "@features/api/account"
 import { ShellGraphqlModule } from "@features/api/shell"
+import { KnowledgeGraphqlModule } from "@features/api/knowledge"
+import { EvidenceGraphqlModule } from "@features/api/evidence"
 import {
     EMAIL_MESSAGES_ERROR_KINDS,
     EMAIL_MESSAGES_MESSAGES,
@@ -193,6 +195,7 @@ import { BRAIN_FACTS_ERROR_KINDS, BRAIN_FACTS_MESSAGES, BrainFactsModule } from 
 import { BRAIN_LESSONS_ERROR_KINDS, BRAIN_LESSONS_MESSAGES, BrainLessonsModule } from "@modules/domain/brain-lessons"
 import { KnowledgeChunksModule } from "@modules/domain/knowledge-chunks"
 import { KnowledgeGapsModule } from "@modules/domain/knowledge-gaps"
+import { KnowledgeSuggestionStateModule } from "@modules/domain/knowledge-suggestion-state"
 import { KNOWLEDGE_ERROR_KINDS, KNOWLEDGE_MESSAGES, KnowledgeModule } from "@modules/domain/knowledge"
 import {
     KNOWLEDGE_SOURCES_ERROR_KINDS,
@@ -648,6 +651,7 @@ export class AppModule {
                 DocumentsModule.register({ isGlobal: true, ...options.documents }),
                 KnowledgeSourcesModule.register({ isGlobal: true, storage: SUPABASE_OBJECTS }),
                 KnowledgeChunksModule.register({ isGlobal: true }),
+                KnowledgeSuggestionStateModule.register({ isGlobal: true }),
                 NivoKnowledgeModule.register({
                     isGlobal: true,
                     folders: [CORE_FOLDER, ...MODULE_CATALOG.map((module) => module.knowledgeFolder)],
@@ -773,6 +777,8 @@ export class AppModule {
                 AccountGraphqlModule,
                 ShellGraphqlModule,
                 ConnectionsGraphqlModule,
+                KnowledgeGraphqlModule,
+                EvidenceGraphqlModule,
                 ExtractKnowledgeFactsQueueModule,
                 RunBrainCommandQueueModule,
                 IndexKnowledgeSourceQueueModule,

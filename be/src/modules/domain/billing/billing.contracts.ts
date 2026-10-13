@@ -170,3 +170,17 @@ export interface IncomingCredit {
     /** The bank name to show when the connection has no name. */
     readonly fallbackBankName: string
 }
+
+/** Money an owner or manager knows arrived, entered by hand. */
+export interface ManualCredit {
+    /** Whole dong, greater than zero. */
+    readonly amount: number
+    /** The day the money arrived, yyyy-mm-dd. */
+    readonly date: string
+    /** What the transfer said. */
+    readonly content: string
+    /** A note, when the person added one. */
+    readonly note?: string
+    /** The payer, when the person named one. */
+    readonly payer?: string
+}

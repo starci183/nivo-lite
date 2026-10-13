@@ -2,10 +2,11 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
-import type { NivoItemInput, NivoUnembedded, NivoVectorWrite, NivoWriteResult } from "./nivo-knowledge.contracts"
-import type { RemovedNivoRow, UnembeddedNivoRow, UpsertedNivoRow } from "./persistence/nivo-knowledge.rows"
+import type { NivoEntry, NivoItemInput, NivoUnembedded, NivoVectorWrite, NivoWriteResult } from "./nivo-knowledge.contracts"
+import type { NivoEntryRow, RemovedNivoRow, UnembeddedNivoRow, UpsertedNivoRow } from "./persistence/nivo-knowledge.rows"
 import {
     DELETE_STALE_NIVO_ITEMS,
+    LIST_NIVO_ITEMS,
     SELECT_NIVO_UNEMBEDDED,
     UPDATE_NIVO_VECTORS,
     UPSERT_NIVO_ITEM,
@@ -39,6 +40,21 @@ export class NivoKnowledgeService {
             })
             return counts
         })
+    }
+
+    /** Every item of the base knowledge, for the Knowledge page; any signed-in person may read it. */
+    async list(): Promise<ReadonlyArray<NivoEntry>> {
+        const rows = await this.entityManager.query<Array<NivoEntryRow>>(LIST_NIVO_ITEMS)
+        return rows.map((row) => ({
+            id: row.id,
+            module: row.module,
+            slug: row.slug,
+            title: row.title,
+            body: row.body,
+            kind: row.kind,
+            version: row.version,
+            updatedAt: new Date(row.updated_at).toISOString(),
+        }))
     }
 
     /** Removes the items whose slug is not given, so the table mirrors the folder; answers how many went. */

@@ -1,0 +1,58 @@
+import { Module } from "@nestjs/common"
+import { KnowledgeSourcesHandler } from "./application/knowledge-sources.handler"
+import { KnowledgeSourceHandler } from "./application/knowledge-source.handler"
+import { NivoKnowledgeHandler } from "./application/nivo-knowledge.handler"
+import { KnowledgeSuggestionsHandler } from "./application/knowledge-suggestions.handler"
+import { AskKnowledgeHandler } from "./application/ask-knowledge.handler"
+import { DriveLinkedFolderHandler } from "./application/drive-linked-folder.handler"
+import { DrivePickedFolderHandler } from "./application/drive-picked-folder.handler"
+import { EnqueueKnowledgeSourceHandler } from "./application/enqueue-knowledge-source.handler"
+import { RetryKnowledgeSourceHandler } from "./application/retry-knowledge-source.handler"
+import { ReindexKnowledgeSourceHandler } from "./application/reindex-knowledge-source.handler"
+import { UpdateKnowledgeSourceHandler } from "./application/update-knowledge-source.handler"
+import { DeleteKnowledgeSourceHandler } from "./application/delete-knowledge-source.handler"
+import { SetKnowledgeSuggestionStateHandler } from "./application/set-knowledge-suggestion-state.handler"
+import { CreateKnowledgeUploadHandler } from "./application/create-knowledge-upload.handler"
+import { ReembedKnowledgeHandler } from "./application/reembed-knowledge.handler"
+import { GetBrainHandler } from "./application/get-brain.handler"
+import { SaveBrainFactHandler } from "./application/save-brain-fact.handler"
+import { DecideBrainFactHandler } from "./application/decide-brain-fact.handler"
+import { KeepCurrentBrainFactHandler } from "./application/keep-current-brain-fact.handler"
+import { SaveBrainLessonHandler } from "./application/save-brain-lesson.handler"
+import { DecideBrainLessonHandler } from "./application/decide-brain-lesson.handler"
+import { DismissKnowledgeGapHandler } from "./application/dismiss-knowledge-gap.handler"
+import { MaintainBrainHandler } from "./application/maintain-brain.handler"
+import { RequestLessonMiningHandler } from "./application/request-lesson-mining.handler"
+import { LessonMiningStatusHandler } from "./application/lesson-mining-status.handler"
+
+@Module({
+    providers: [
+        KnowledgeSourcesHandler,
+        KnowledgeSourceHandler,
+        NivoKnowledgeHandler,
+        KnowledgeSuggestionsHandler,
+        AskKnowledgeHandler,
+        DriveLinkedFolderHandler,
+        DrivePickedFolderHandler,
+        EnqueueKnowledgeSourceHandler,
+        RetryKnowledgeSourceHandler,
+        ReindexKnowledgeSourceHandler,
+        UpdateKnowledgeSourceHandler,
+        DeleteKnowledgeSourceHandler,
+        SetKnowledgeSuggestionStateHandler,
+        CreateKnowledgeUploadHandler,
+        ReembedKnowledgeHandler,
+        GetBrainHandler,
+        SaveBrainFactHandler,
+        DecideBrainFactHandler,
+        KeepCurrentBrainFactHandler,
+        SaveBrainLessonHandler,
+        DecideBrainLessonHandler,
+        DismissKnowledgeGapHandler,
+        MaintainBrainHandler,
+        RequestLessonMiningHandler,
+        LessonMiningStatusHandler,
+    ],
+})
+/** The knowledge feature: the handlers of its application. */
+export class KnowledgeApiModule {}

@@ -475,6 +475,12 @@ type ApprovalExecutionType {
   work_item_id: ID
 }
 
+input AskKnowledgeInput {
+  audience: String!
+  module: String!
+  question: String!
+}
+
 input AuthorityPatchInput {
   brand_voice: String
   goal_first_reply_minutes: Int
@@ -611,6 +617,84 @@ type BodyProposalType {
   generated: Boolean!
 }
 
+type BrainCommandRefType {
+  id: ID!
+}
+
+type BrainEvidenceType {
+  at: String
+  kind: String!
+  label: String!
+  quote: String
+  ref: String!
+}
+
+type BrainExtractionType {
+  sourceId: ID!
+  status: String!
+}
+
+type BrainFactType {
+  attribute: String!
+  attributeLabel: String!
+  decidedAt: String
+  decidedBy: String
+  evidence: [BrainEvidenceType!]!
+  id: ID!
+  installationId: ID
+  modules: [String!]!
+  proposalKind: String!
+  proposedAt: String!
+  proposedBy: String!
+  scope: String!
+  sourceKind: String!
+  status: String!
+  subjectKey: String!
+  subjectLabel: String!
+  subjectType: String!
+  trust: Int!
+  unit: String
+  validFrom: String
+  validTo: String
+  value: String!
+}
+
+type BrainGapType {
+  attributeGuess: String
+  count: Int!
+  id: ID!
+  lastSeenAt: String!
+  module: String!
+  question: String!
+  reopenedCount: Int!
+  topic: String
+}
+
+type BrainLensType {
+  audience: String!
+  module: String!
+  name: String!
+}
+
+type BrainLessonType {
+  appliesWhen: String!
+  body: String!
+  evidence: [BrainEvidenceType!]!
+  id: ID!
+  module: String
+  status: String!
+  title: String!
+}
+
+type BrainType {
+  extractions: [BrainExtractionType!]!
+  facts: [BrainFactType!]!
+  gaps: [BrainGapType!]!
+  gapsOpen: Int!
+  lenses: [BrainLensType!]!
+  lessons: [BrainLessonType!]!
+}
+
 input ChangeMemberRoleInput {
   role: String!
   userId: ID!
@@ -694,6 +778,10 @@ input CreateInviteInput {
   email: String!
   role: String!
   staffId: ID
+}
+
+input CreateKnowledgeUploadInput {
+  filename: String!
 }
 
 input CreateResponsibilityInput {
@@ -932,6 +1020,18 @@ type DashboardWebsiteLeadType {
   id: ID!
 }
 
+input DecideBrainFactInput {
+  action: String!
+  id: ID!
+  note: String
+  situation: String
+}
+
+input DecideBrainLessonInput {
+  action: String!
+  id: ID!
+}
+
 input DecideExecutionInput {
   decision: String!
   editedDraft: String
@@ -965,6 +1065,10 @@ input DeleteConnectionInput {
   connectionId: ID!
 }
 
+input DeleteKnowledgeSourceInput {
+  id: ID!
+}
+
 type DeviceSessionType {
   createdAt: String
   id: ID!
@@ -978,10 +1082,59 @@ input DisconnectConnectionInput {
   connectionId: ID!
 }
 
+input DismissKnowledgeGapInput {
+  id: ID!
+}
+
+type DocumentPassageType {
+  content: String!
+  hasEmbedding: Boolean!
+  id: ID!
+  order: Int!
+}
+
+type DriveFileType {
+  id: ID!
+  mimeType: String!
+  modifiedTime: String
+  name: String!
+  path: String!
+  size: Float
+}
+
+type DriveFolderType {
+  files: [DriveFileType!]!
+  name: String!
+  truncated: Boolean!
+}
+
+input DriveLinkedFolderInput {
+  url: String!
+}
+
+input DrivePickedFolderInput {
+  folderId: String!
+  token: String!
+}
+
 input EmitAutomationEventInput {
   data: JsonObject!
   dedupe: String!
   event: String!
+}
+
+input EnqueueKnowledgeSourceInput {
+  content: String
+  installationId: ID
+  kind: String!
+  module: String
+  origin: String
+  storagePath: String
+  tags: [String!]
+  title: String!
+  topic: String
+  url: String
+  visibility: String
 }
 
 input FieldValueInput {
@@ -1062,6 +1215,81 @@ input InviteTokenInput {
 
 scalar JsonObject
 
+input KeepCurrentBrainFactInput {
+  attribute: String!
+  installationId: ID
+  subjectKey: String!
+}
+
+type KnowledgeSourceDetailType {
+  chunks: [DocumentPassageType!]!
+  source: KnowledgeSourceTextType!
+}
+
+input KnowledgeSourceInput {
+  id: ID!
+}
+
+type KnowledgeSourceTextType {
+  chunkCount: Int!
+  content: String!
+  createdAt: String!
+  error: String
+  id: ID!
+  installationId: ID
+  kind: String!
+  module: String
+  progress: Int!
+  status: String!
+  tags: [String!]!
+  title: String!
+  topic: String
+  updatedAt: String!
+  visibility: String!
+  workspaceId: ID!
+}
+
+type KnowledgeSourceType {
+  chunkCount: Int!
+  createdAt: String!
+  error: String
+  id: ID!
+  installationId: ID
+  kind: String!
+  module: String
+  progress: Int!
+  status: String!
+  tags: [String!]!
+  title: String!
+  topic: String
+  updatedAt: String!
+  visibility: String!
+  workspaceId: ID!
+}
+
+input KnowledgeSourcesInput {
+  module: String
+}
+
+type KnowledgeSuggestionContextType {
+  businessType: String
+  decisions: [SuggestionDecisionType!]!
+}
+
+input LessonMiningStatusInput {
+  id: ID!
+}
+
+type LessonMiningStatusType {
+  corrections: Int
+  errorCode: String
+  id: ID!
+  newCases: Int
+  proposed: Int
+  reason: String
+  status: String!
+}
+
 input ListAgentsInput {
   module: String
 }
@@ -1086,6 +1314,10 @@ input ListWorkItemsInput {
 type LocalizedTextType {
   en: String!
   vi: String!
+}
+
+type ManualEvidenceType {
+  duplicate: Boolean!
 }
 
 type MemberListingType {
@@ -1307,23 +1539,36 @@ type Mutation {
   createAgent(input: CreateAgentInput!): AgentSummaryType!
   createApiKey(input: CreateApiKeyInput!): CreatedApiKeyType!
   createInvite(input: CreateInviteInput!): InviteResultType!
+  createKnowledgeUpload(input: CreateKnowledgeUploadInput!): UploadAddressType!
   createResponsibility(input: CreateResponsibilityInput!): ResponsibilityType!
   createWorkspace(input: CreateWorkspaceInput!): CreateWorkspaceType!
+  decideBrainFact(input: DecideBrainFactInput!): BrainFactType!
+  decideBrainLesson(input: DecideBrainLessonInput!): BrainLessonType!
   decideExecution(input: DecideExecutionInput!): ApprovalExecutionType!
   decideWorkItem(input: DecideWorkItemInput!): WorkItemType!
   deleteConnection(input: DeleteConnectionInput!): Boolean!
+  deleteKnowledgeSource(input: DeleteKnowledgeSourceInput!): Boolean!
   disconnectConnection(input: DisconnectConnectionInput!): Boolean!
+  dismissKnowledgeGap(input: DismissKnowledgeGapInput!): Boolean!
   emitAutomationEvent(input: EmitAutomationEventInput!): Boolean!
+  enqueueKnowledgeSource(input: EnqueueKnowledgeSourceInput!): SourceRefType!
   finishWebhookConnection(input: FinishWebhookConnectionInput!): Boolean!
   grantAgentConnection(input: GrantAgentConnectionInput!): AgentAckType!
+  keepCurrentBrainFact(input: KeepCurrentBrainFactInput!): Int!
+  maintainBrain: Boolean!
   postOfficeMessage(input: PostOfficeMessageInput!): OfficeMessageType!
   proposeAutomationBody(input: TemplateKeyInput!): BodyProposalType!
   proposeOfficeCommand(input: ProposeOfficeCommandInput!): OfficeProposeOutcomeType!
+  recordManualEvidence(input: RecordManualEvidenceInput!): ManualEvidenceType!
+  reembedKnowledge: Boolean!
+  reindexKnowledgeSource(input: ReindexKnowledgeSourceInput!): SourceRefType!
   removeMember(input: MemberRefInput!): Boolean!
   renameAgent(input: RenameAgentInput!): AgentAckType!
   requestAgentGeneration(input: RequestAgentGenerationInput!): AgentGenerationRequestedType!
   requestAgentSync(input: RequestAgentSyncInput!): AgentAckType!
+  requestLessonMining(input: RequestLessonMiningInput!): BrainCommandRefType!
   resendInvite(input: InviteRefInput!): InviteResultType!
+  retryKnowledgeSource(input: RetryKnowledgeSourceInput!): SourceRefType!
   returnZaloAuthorization(input: ReturnZaloAuthorizationInput!): ZaloWizardConnectionType!
   revealSepayKey(input: RevealSepayKeyInput!): SepayKeyType!
   revealWebhookConnection(input: RevealWebhookConnectionInput!): WebhookViewType!
@@ -1334,6 +1579,8 @@ type Mutation {
   runAutomationNow(input: TemplateKeyInput!): Boolean!
   runFlow(input: RunFlowInput!): RunFlowType!
   saveAuthorityRule(input: SaveAuthorityRuleInput!): AuthorityRuleType!
+  saveBrainFact(input: SaveBrainFactInput!): SavedFactType!
+  saveBrainLesson(input: SaveBrainLessonInput!): BrainLessonType!
   saveProviderKeys(input: SaveProviderKeysInput!): ProviderKeysResultType!
   saveZaloOaSecret(input: SaveZaloOaSecretInput!): ZaloWizardConnectionType!
   sendAgentCommand(input: SendAgentCommandInput!): AgentCommandResultType!
@@ -1342,6 +1589,7 @@ type Mutation {
   setAgentTexts(input: SetAgentTextsInput!): AgentAckType!
   setConnectionAgents(input: SetConnectionAgentsInput!): Boolean!
   setConnectionGrant(input: SetConnectionGrantInput!): Boolean!
+  setKnowledgeSuggestionState(input: SetKnowledgeSuggestionStateInput!): Boolean!
   setMemberStatus(input: SetMemberStatusInput!): Boolean!
   startMoneyConnection(input: StartMoneyConnectionInput!): WizardConnectionType!
   startWebhookConnection(input: StartWebhookConnectionInput!): WebhookViewType!
@@ -1349,6 +1597,7 @@ type Mutation {
   testWebhookConnection(input: TestWebhookConnectionInput!): WebhookTestResultType!
   updateAuthority(input: UpdateAuthorityInput!): AuthorityProfileType!
   updateAutomationPipeline(input: UpdateAutomationPipelineInput!): AutomationCardType!
+  updateKnowledgeSource(input: UpdateKnowledgeSourceInput!): Boolean!
   updateMoneyConnection(input: UpdateMoneyConnectionInput!): WizardConnectionType!
   updateProfile(input: UpdateProfileInput!): Boolean!
   updateResponsibilityStatus(input: UpdateResponsibilityStatusInput!): ResponsibilityType!
@@ -1369,6 +1618,17 @@ input NewResponsibilityInput {
   next_action: String!
   owner: String!
   title: String!
+}
+
+type NivoEntryType {
+  body: String!
+  id: ID!
+  kind: String!
+  module: String!
+  slug: String!
+  title: String!
+  updatedAt: String!
+  version: Int!
 }
 
 type OfficeAckType {
@@ -1466,6 +1726,13 @@ type PendingInviteType {
   staffId: ID
 }
 
+type PickedFolderType {
+  empty: Boolean!
+  files: [DriveFileType!]!
+  name: String!
+  truncated: Boolean!
+}
+
 input PostOfficeMessageInput {
   body: String!
 }
@@ -1518,24 +1785,33 @@ type Query {
   agentGenerationStatus(input: AgentGenerationIdInput!): AgentGenerationStatusType!
   agents(input: ListAgentsInput!): [AgentSummaryType!]!
   apiKeys: [ApiKeyType!]!
+  askKnowledge(input: AskKnowledgeInput!): [RetrievedPassageType!]!
   authority: AuthoritySheetType!
   automationGoogleAccounts: [AutomationGoogleAccountType!]!
   automationRuns(input: AutomationRunsInput!): [AutomationRunType!]!
   automationSuggestions(input: AutomationSuggestionsInput!): [AutomationSuggestionType!]!
   automations: AutomationsOverviewType!
+  brain: BrainType!
   connectionAgents: [ConnectionAgentType!]!
   connectionFirstEvent(input: GetConnectionFirstEventInput!): FirstEventStateType!
   connections: [ConnectionType!]!
   dashboard: DashboardType!
   decisionHistory(input: ListDecisionHistoryInput!): [DecisionRecordType!]!
+  driveLinkedFolder(input: DriveLinkedFolderInput!): DriveFolderType!
+  drivePickedFolder(input: DrivePickedFolderInput!): PickedFolderType!
   googleConnectionState: GoogleStateType!
   invitePreview(input: InviteTokenInput!): InvitePreviewType!
+  knowledgeSource(input: KnowledgeSourceInput!): KnowledgeSourceDetailType!
+  knowledgeSources(input: KnowledgeSourcesInput!): [KnowledgeSourceType!]!
+  knowledgeSuggestions: KnowledgeSuggestionContextType!
+  lessonMiningStatus(input: LessonMiningStatusInput!): LessonMiningStatusType!
   metaConnection(input: GetMetaConnectionInput!): MetaWizardConnectionType!
   moduleDefinition(input: ModuleKeyInput!): ModuleDefinitionType!
   modulesCatalog: ModulesCatalogType!
   moneyConnection(input: GetMoneyConnectionInput!): WizardConnectionType!
   myAccount: MyAccountType!
   myWorkspaces: [MembershipType!]!
+  nivoKnowledge: [NivoEntryType!]!
   officeCommandCandidates: [OfficeCandidateType!]!
   officeDecidedApprovals: [OfficeApprovalType!]!
   officeMessages(input: ListOfficeMessagesInput!): OfficeMessagePageType!
@@ -1548,6 +1824,19 @@ type Query {
   workspaceShell(input: ShellWindowInput!): WorkspaceShellType!
   workspaceStaff: [StaffOptionType!]!
   zaloConnection(input: GetZaloConnectionInput!): ZaloWizardConnectionType!
+}
+
+input RecordManualEvidenceInput {
+  amount: Float!
+  content: String!
+  date: String!
+  note: String
+  payer: String
+}
+
+input ReindexKnowledgeSourceInput {
+  content: String
+  sourceId: ID!
 }
 
 input RenameAgentInput {
@@ -1567,6 +1856,10 @@ input RequestAgentGenerationInput {
 input RequestAgentSyncInput {
   force: Boolean
   installationId: ID
+}
+
+input RequestLessonMiningInput {
+  module: String!
 }
 
 type ResponsibilityListingType {
@@ -1596,6 +1889,23 @@ type ResponsibilityType {
   status: String!
   title: String!
   workspace_id: ID!
+}
+
+type RetrievedPassageType {
+  content: String!
+  id: ID!
+  kind: String!
+  layer: String!
+  module: String
+  score: Float!
+  sourceId: ID
+  title: String!
+  topic: String
+  visibility: String!
+}
+
+input RetryKnowledgeSourceInput {
+  id: ID!
 }
 
 input ReturnZaloAuthorizationInput {
@@ -1644,6 +1954,26 @@ input SaveAuthorityRuleInput {
   change: AuthorityRuleChangeInput!
 }
 
+input SaveBrainFactInput {
+  attributeLabel: String!
+  gapId: ID
+  modules: [String!]!
+  note: String
+  scope: String!
+  subjectLabel: String!
+  subjectType: String!
+  validFrom: String
+  validTo: String
+  value: String!
+}
+
+input SaveBrainLessonInput {
+  appliesWhen: String
+  body: String!
+  module: String
+  title: String!
+}
+
 input SaveProviderKeysInput {
   connectionId: ID!
   values: ProviderKeysInput!
@@ -1652,6 +1982,11 @@ input SaveProviderKeysInput {
 input SaveZaloOaSecretInput {
   connectionId: ID!
   oaSecret: String!
+}
+
+type SavedFactType {
+  fact: BrainFactType!
+  outcome: String!
 }
 
 input SendAgentCommandInput {
@@ -1695,6 +2030,11 @@ input SetConnectionGrantInput {
   connectionId: ID!
 }
 
+input SetKnowledgeSuggestionStateInput {
+  key: String!
+  state: String
+}
+
 input SetMemberStatusInput {
   status: String!
   userId: ID!
@@ -1734,6 +2074,10 @@ type ShopContextType {
   tone: String!
 }
 
+type SourceRefType {
+  id: ID!
+}
+
 type StaffOptionType {
   id: ID!
   name: String!
@@ -1762,6 +2106,11 @@ input StartZaloConnectionInput {
 }
 
 scalar StringMap
+
+type SuggestionDecisionType {
+  key: String!
+  state: String!
+}
 
 type TelegramConnectedType {
   connection: ConnectionType!
@@ -1854,6 +2203,15 @@ input UpdateAutomationPipelineInput {
   values: JsonObject
 }
 
+input UpdateKnowledgeSourceInput {
+  module: String
+  sourceId: ID!
+  tags: [String!]
+  title: String
+  topic: String
+  visibility: String
+}
+
 input UpdateMoneyConnectionInput {
   accountNumber: String!
   apiKey: String
@@ -1876,6 +2234,12 @@ input UpdateResponsibilityStatusInput {
 input UpdateWebhookEventsInput {
   connectionId: ID!
   events: [String!]!
+}
+
+type UploadAddressType {
+  path: String!
+  signedUrl: String!
+  token: String!
 }
 
 input WantConnectorInput {
