@@ -28,7 +28,7 @@ export const useShiftsRequestCommands = (): ShiftsRequestCommands => {
         async (workItemId: string, decision: "approved" | "rejected"): Promise<boolean> => {
             const result = await run(() => deciding.trigger({ workItemId, decision }), { showSuccessToast: false })
             if (result === undefined) return false
-            toast.success(tToast("successTitle"), { description: result.result?.summary ?? result.proposal.summary })
+            toast.success(tToast("successTitle"), { description: tToast("defaultSuccess") })
             await refreshShifts()
             return true
         },

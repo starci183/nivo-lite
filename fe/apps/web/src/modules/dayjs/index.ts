@@ -7,3 +7,5 @@ dayjs.extend(relativeTime)
 
 /** The one dayjs instance of the app (date math and parsing only; display goes through the next-intl formatter). */
 export { dayjs }
+
+export { productCalendarDay } from "./product-calendar"

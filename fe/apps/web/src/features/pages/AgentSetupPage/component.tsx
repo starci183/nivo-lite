@@ -1,20 +1,21 @@
-import { EmptyNotice } from "@starci/grammar/common"
-import { AgentSetup } from "@/components/blocks/AgentSetup"
-import type { ComponentProps } from "react"
+import { AgentSetupChat } from "@/components/blocks/AgentSetupChat"
+import { AgentSetupSide } from "@/components/blocks/AgentSetupSide"
+import { GRID } from "./classNames"
 
-/** The Setup tab, or the notice that only owners and managers set an agent up. */
+/** The Setup tab of an agent: the type and the instance of the url. */
 export interface AgentSetupPageBaseProps {
     readonly props: {
-        /** The notice shown instead of the setup; empty when the person may set the agent up. */
-        readonly forbidden: string
-        readonly setup: ComponentProps<typeof AgentSetup>
+        readonly module: string
+        readonly installationId: string
+        /** The short name of the type, for the cards that say whether a fact is for the whole type or for this instance. */
+        readonly typeName: string
     }
 }
 
-/** Draws the Setup tab of an agent for an owner or a manager, the notice for anyone else. */
-export const AgentSetupPageBase = (props: AgentSetupPageBaseProps) =>
-    props.props.forbidden === "" ? (
-        <AgentSetup {...props.props.setup} />
-    ) : (
-        <EmptyNotice message={props.props.forbidden} />
-    )
+/** Draws the Setup tab of an agent: the private chat with NIVO beside the draft, the checklist, the knowledge and the versions. */
+export const AgentSetupPageBase = (props: AgentSetupPageBaseProps) => (
+    <div className={GRID}>
+        <AgentSetupChat installationId={props.props.installationId} typeName={props.props.typeName} />
+        <AgentSetupSide module={props.props.module} installationId={props.props.installationId} />
+    </div>
+)

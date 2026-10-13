@@ -1,15 +1,17 @@
-import { navigation } from "@/modules/i18n"
-import { getLocale } from "next-intl/server"
-import { isModuleKey } from "@/modules/catalog"
-import { AGENTS_ROUTE, agentHref } from "@/modules/installations"
+import { AgentSetupPage } from "@/features/pages/AgentSetupPage"
+
+/** The document title of the setup tab. */
+export { agentSetupMetadata as generateMetadata } from "@/features/pages/AgentSetupPage"
 
 type PageProps = { readonly params: Promise<{ module: string; installation: string }> }
 
-/** The setup alias of an instance lives at the url of the instance itself. */
+/** OpenClaw writes the text of the setup chat, so this screen may wait longer than the platform default. */
+export const maxDuration = 60
+
+/** The setup alias of an instance shows the instance itself. */
 const Page = async (props: PageProps) => {
     const { module, installation } = await props.params
-    const locale = (await getLocale()) === "en" ? "en" : "vi"
-    return navigation.redirect({ href: isModuleKey(module) ? agentHref(module, installation) : AGENTS_ROUTE, locale })
+    return <AgentSetupPage module={module} installationId={installation} />
 }
 
 export default Page
