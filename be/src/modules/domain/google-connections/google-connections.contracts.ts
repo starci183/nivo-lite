@@ -1,3 +1,5 @@
+import type { ConnectionActor, ConnectionRecord, Provider } from "@modules/domain/connections"
+
 /** One Google account a workspace connected. */
 export interface GoogleConnectionAccount {
     /** The id of the connection. */
@@ -42,14 +44,78 @@ export interface OrdersSheet {
     readonly spreadsheetUrl: string
 }
 
-/** Where the browser goes to give Google consent. */
-export interface GoogleConsentStart {
-    /** The Google consent page, carrying the signed state the callback checks. */
+/** Where the Google Drive read grant of a workspace stands: never given, working, or revoked. */
+export type DriveGrantState = "none" | "connected" | "lost"
+
+/** The Google Drive read grant of a workspace. */
+export interface DriveGrant {
+    /** Whether it was given, works, or was revoked. */
+    readonly state: DriveGrantState
+    /** The Google account that gave it, blank when none or Google never said. */
+    readonly email: string
+}
+
+/** A consent to start: the Google page the browser must go to. */
+export interface ConsentStart {
+    /** The Google consent url. */
     readonly url: string
 }
 
-/** Whether the Google connection can be offered on this deployment. */
-export interface GoogleAvailability {
-    /** True when Google OAuth credentials are configured; the console hides the connect button otherwise. */
+/** Whether Google can be used on this deployment. */
+export interface GoogleSetup {
+    /** True when an OAuth client and a site url are configured. */
     readonly configured: boolean
+}
+
+/** What a consent start signs into its state. */
+export interface ConsentRequest {
+    /** The person starting it, in their workspace. */
+    readonly actor: ConnectionActor
+    /** The same-site path to come back to. */
+    readonly returnTo: string
+    /** The scopes to ask for. */
+    readonly scope: string
+    /** The purpose of the grant, absent for the Sheets connection. */
+    readonly purpose?: string
+}
+
+/** A consent to store on a connection: the tokens Google answered and how the row is named. */
+export interface TokenSave {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The person who gave the consent. */
+    readonly userId: string
+    /** The existing connection to update, or null to create one. */
+    readonly row: MaybeConnection
+    /** The provider of a new row. */
+    readonly provider: Provider
+    /** The name of the connection. */
+    readonly name: string
+    /** The public facts of the connection. */
+    readonly meta: Readonly<Record<string, string>>
+    /** The tokens to seal. */
+    readonly tokens: StoredGoogleTokens
+}
+
+/** A connection, or none. */
+export type MaybeConnection = ConnectionRecord | null
+
+/** A refresh token, or none. */
+export type MaybeRefreshToken = string | null
+
+/** Answers an access token; `force` refreshes it even while the stored one is still good. */
+export type TokenSource = (force: boolean) => Promise<string>
+
+/** Work done with an access token. */
+export type TokenWork<T> = (token: string) => Promise<T>
+
+/** True when a failure means the access token was refused and a fresh one is worth one retry. */
+export type TokenRejected = (error: unknown) => boolean
+
+/** How a valid access token is obtained for one connection. */
+export interface TokenRequest {
+    /** The connection whose tokens are used. */
+    readonly row: ConnectionRecord
+    /** True to refresh even when the stored token is still good. */
+    readonly force: boolean
 }
