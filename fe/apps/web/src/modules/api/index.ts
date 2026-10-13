@@ -1,3 +1,30 @@
 export { isNotFoundFailure, isUnauthenticatedFailure } from "./graphql/failure"
 export type { GraphQLResponse } from "./graphql/types"
-export type { DashboardType } from "./graphql/__generated__/schema"
+export type {
+    AgentDashboardInput,
+    AgentDashboardItemType,
+    AgentDashboardType,
+    DashboardType,
+    DecideSalesDraftInput,
+    DecideSalesWorkItemInput,
+    HandoffToAccountingInput,
+    LeadActionQueuedType,
+    LeadActionStatusType,
+    LeadFlowDecisionType,
+    LeadFlowInvoiceType,
+    LeadFlowOrderType,
+    LeadFlowTransactionType,
+    LeadFlowType,
+    LeadFlowWorkItemType,
+    LeadGenCommentStatusType,
+    LeadGenMetricsType,
+    LeadJourneyType,
+    LeadRecordType,
+    MarkOrderShippedInput,
+    RetryFailedStepInput,
+    SalesActionType,
+    SalesWorkEditsInput,
+    SalesWorkbenchType,
+    SaveContractInput,
+    StopFailedStepInput,
+} from "./graphql/__generated__/schema"
