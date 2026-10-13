@@ -122,7 +122,12 @@ export const SalesPipelineBase = (props: SalesPipelineBaseProps) => {
                                             {deal.facts}
                                         </Text>
                                         <div className={ROW_ACTIONS_CLASS_NAME}>
-                                            <Button variant="tertiary" size="sm" onPress={() => on.move(deal.leadId)}>
+                                            <Button
+                                                variant="tertiary"
+                                                size="sm"
+                                                isDisabled={p.isPending}
+                                                onPress={() => on.move(deal.leadId)}
+                                            >
                                                 {p.moveLabel}
                                             </Button>
                                         </div>

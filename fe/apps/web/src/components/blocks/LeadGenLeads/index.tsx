@@ -1,28 +1,29 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { SCORE_TONES } from "@/hooks/leadgen"
-import type { LeadGenLead } from "@/modules/types"
+import { SCORE_TONES, useLeadGenWorkbench } from "@/hooks/leadgen"
 import { LeadGenLeadsBase } from "./component"
 
-/** The prospects of the Lead Gen workbench and how many more there are. */
+/** The agent the workbench is read for. */
 interface LeadGenLeadsProps {
-    readonly rows: ReadonlyArray<LeadGenLead>
-    readonly hidden: number
+    readonly installationId: string | null
 }
 
 /** The prospects tab: the words of each row are resolved here. */
 export const LeadGenLeads = (props: LeadGenLeadsProps) => {
     const t = useTranslations("workbenchLeadGen")
     const format = useFormatter()
+    const { data } = useLeadGenWorkbench(props.installationId)
+    const hidden = data?.leadsHidden ?? 0
+    if (data === undefined) return null
     return (
         <LeadGenLeadsBase
             props={{
                 label: t("leadsLabel"),
                 emptyTitle: t("leadsEmptyTitle"),
                 emptyBody: t("leadsEmptyBody"),
-                hiddenText: props.hidden > 0 ? t("leadsHidden", { n: props.hidden }) : null,
-                rows: props.rows.map((row) => ({
+                hiddenText: hidden > 0 ? t("leadsHidden", { n: hidden }) : null,
+                rows: (data?.leads ?? []).map((row) => ({
                     id: row.id,
                     name: row.name,
                     href: row.href,
@@ -40,7 +41,7 @@ export const LeadGenLeads = (props: LeadGenLeadsProps) => {
                         kind: t(`kind_${row.origin.kind}`),
                     }),
                     scoreLabel: row.score ? t(`score_${row.score}`) : t("score_none"),
-                    scoreTone: row.score ? SCORE_TONES[row.score] : "neutral",
+                    scoreTone: row.score ? (SCORE_TONES[row.score] ?? "neutral") : "neutral",
                 })),
             }}
         />

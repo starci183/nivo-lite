@@ -28,6 +28,7 @@ export interface LeadGenCommentsBaseProps {
         readonly cancelLabel: string
         readonly saveApproveLabel: string
         readonly busyId: string | null
+        readonly isBusy: boolean
     }
     readonly on: {
         readonly edit: (id: string) => void
@@ -56,7 +57,7 @@ export const LeadGenCommentsBase = (props: LeadGenCommentsBaseProps) => {
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        isDisabled={p.busyId !== null}
+                                        isDisabled={p.isBusy}
                                         onPress={() => on.edit(row.id)}
                                     >
                                         {p.editLabel}
@@ -65,7 +66,7 @@ export const LeadGenCommentsBase = (props: LeadGenCommentsBaseProps) => {
                                         variant="primary"
                                         size="sm"
                                         isPending={isBusy}
-                                        isDisabled={p.busyId !== null || !row.draft}
+                                        isDisabled={p.isBusy || !row.draft}
                                         onPress={() => on.approve(row.id, false)}
                                     >
                                         {p.approveLabel}
@@ -85,14 +86,14 @@ export const LeadGenCommentsBase = (props: LeadGenCommentsBaseProps) => {
                                         variant="secondary"
                                         rows={3}
                                         value={row.draftValue}
-                                        isDisabled={isBusy}
+                                        isDisabled={p.isBusy}
                                         onValueChange={(value) => on.draft(row.id, value)}
                                     />
                                     <div className={ACTIONS_CLASS_NAME}>
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            isDisabled={isBusy}
+                                            isDisabled={p.isBusy}
                                             onPress={() => on.cancel(row.id)}
                                         >
                                             {p.cancelLabel}
@@ -101,7 +102,7 @@ export const LeadGenCommentsBase = (props: LeadGenCommentsBaseProps) => {
                                             variant="primary"
                                             size="sm"
                                             isPending={isBusy}
-                                            isDisabled={isBusy || !row.draftValue.trim()}
+                                            isDisabled={p.isBusy}
                                             onPress={() => on.approve(row.id, true)}
                                         >
                                             {p.saveApproveLabel}

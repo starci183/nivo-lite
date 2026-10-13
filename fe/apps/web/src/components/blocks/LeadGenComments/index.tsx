@@ -2,48 +2,35 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
-import { useBusyRow } from "@/hooks/workbench"
-import { writeApproveComment } from "@/modules/db/leadgen/write-lead-gen-actions"
-import type { LeadGenComment } from "@/modules/types"
+import { useApproveLeadGenComment, useLeadGenWorkbench } from "@/hooks/leadgen"
+import { useLeadGenCommentForm } from "@/hooks/rhf"
 import { LeadGenCommentsBase } from "./component"
 
-/** The comments waiting for a decision. */
+/** The agent the workbench is read for. */
 interface LeadGenCommentsProps {
-    readonly rows: ReadonlyArray<LeadGenComment>
+    readonly installationId: string | null
 }
 
-/** The comments tab: which reply is being edited and the approval live here, the drawing in the pure half. */
+/** Edits one public reply and queues its approval through GraphQL. */
 export const LeadGenComments = (props: LeadGenCommentsProps) => {
     const t = useTranslations("workbenchLeadGen")
     const format = useFormatter()
-    const {
-        router,
-        isPending,
-        startTransition,
-        busyKey: busyId,
-        setBusyKey: setBusyId,
-        errors,
-        setErrors,
-    } = useBusyRow()
-    const [editing, setEditing] = useState<Readonly<Record<string, string>>>({})
+    const { data } = useLeadGenWorkbench(props.installationId)
+    const rows = data?.comments ?? []
+    const { approve: approveComment, isApproving, busyId, errors, statusError } = useApproveLeadGenComment()
+    const [editingId, setEditingId] = useState<string | null>(null)
+    const form = useLeadGenCommentForm()
+    const draft = form.watch("draft")
 
     const approve = (id: string, edited: boolean) => {
-        setErrors((previous) => ({ ...previous, [id]: "" }))
-        setBusyId(id)
-        startTransition(async () => {
-            const result = await writeApproveComment({ workItemId: id, draft: edited ? (editing[id] ?? null) : null })
-            if (result.kind === "ok") router.refresh()
-            else
-                setErrors((previous) => ({
-                    ...previous,
-                    [id]: t("actionFailed", { error: result.kind === "unavailable" ? result.code : result.kind }),
-                }))
-            setBusyId(null)
-        })
+        if (edited) {
+            void form.handleSubmit(async (values) => {
+                if (await approveComment(id, values.draft)) setEditingId(null)
+            })()
+        } else void approveComment(id)
     }
-    const without = (id: string): Readonly<Record<string, string>> =>
-        Object.fromEntries(Object.entries(editing).filter(([key]) => key !== id))
 
+    if (data === undefined) return null
     return (
         <LeadGenCommentsBase
             props={{
@@ -56,8 +43,9 @@ export const LeadGenComments = (props: LeadGenCommentsProps) => {
                 approveLabel: t("approve"),
                 cancelLabel: t("cancel"),
                 saveApproveLabel: t("saveApprove"),
-                busyId: isPending ? busyId : null,
-                rows: props.rows.map((row) => ({
+                busyId,
+                isBusy: isApproving,
+                rows: rows.map((row) => ({
                     id: row.workItemId,
                     title: row.author ? t("commentFrom", { name: row.author }) : t("commentAnonymous"),
                     description: [
@@ -74,19 +62,21 @@ export const LeadGenComments = (props: LeadGenCommentsProps) => {
                     sourceLabel: t("sourceBadge", { platform: t(`platform_${row.platform}`), kind: t("kind_comment") }),
                     comment: row.comment,
                     draft: row.draft,
-                    isEditing: editing[row.workItemId] !== undefined,
-                    draftValue: editing[row.workItemId] ?? row.draft,
-                    error: errors[row.workItemId] ? errors[row.workItemId] : null,
+                    isEditing: editingId === row.workItemId,
+                    draftValue: editingId === row.workItemId ? draft : row.draft,
+                    error:
+                        (editingId === row.workItemId ? form.formState.errors.draft?.message : undefined) ||
+                        errors[row.workItemId] ||
+                        (busyId === row.workItemId ? statusError : null),
                 })),
             }}
             on={{
-                edit: (id) =>
-                    setEditing((previous) => ({
-                        ...previous,
-                        [id]: props.rows.find((row) => row.workItemId === id)?.draft ?? "",
-                    })),
-                cancel: (id) => setEditing(without(id)),
-                draft: (id, value) => setEditing((previous) => ({ ...previous, [id]: value })),
+                edit: (id) => {
+                    form.reset({ draft: rows.find((row) => row.workItemId === id)?.draft ?? "" })
+                    setEditingId(id)
+                },
+                cancel: () => setEditingId(null),
+                draft: (_id, value) => form.setValue("draft", value, { shouldValidate: form.formState.isSubmitted }),
                 approve,
             }}
         />
