@@ -70,7 +70,11 @@ import { SepayFeedHttpModule } from "@features/webhooks/sepay-feed"
 import { VietcombankHttpModule } from "@features/webhooks/vietcombank"
 import { ReconcileBankCreditQueueModule } from "@features/jobs/reconcile-bank-credit"
 import { CreatePaymentOrderQueueModule } from "@features/jobs/create-payment-order"
-import { PaymentOrderRequestsModule } from "@modules/domain/payment-order-requests"
+import {
+    PAYMENT_ORDER_REQUESTS_ERROR_KINDS,
+    PAYMENT_ORDER_REQUESTS_MESSAGES,
+    PaymentOrderRequestsModule,
+} from "@modules/domain/payment-order-requests"
 import { BILLING_ERROR_KINDS, BILLING_MESSAGES, BillingModule } from "@modules/domain/billing"
 import {
     INBOUND_EVENTS_ERROR_KINDS,
@@ -85,6 +89,18 @@ import {
 import { CREDITS_ERROR_KINDS, CREDITS_MESSAGES, CreditsModule } from "@modules/domain/credits"
 import { AI_USAGE_EVENTS_MESSAGES, AiUsageEventsModule, UsageGateService } from "@modules/domain/ai-usage-events"
 import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
+import { OrdersGraphqlModule } from "@features/api/orders"
+import { BillingGraphqlModule } from "@features/api/billing"
+import { CreditsGraphqlModule } from "@features/api/credits"
+import { AccountingGraphqlModule } from "@features/api/accounting"
+import { AdjustmentsGraphqlModule } from "@features/api/adjustments"
+import { AccountingModule } from "@modules/domain/accounting"
+import { StaffModule } from "@modules/domain/staff"
+import {
+    ACCOUNTING_ADJUSTMENTS_ERROR_KINDS,
+    ACCOUNTING_ADJUSTMENTS_MESSAGES,
+    AccountingAdjustmentsModule,
+} from "@modules/domain/accounting-adjustments"
 import { WorkspacesGraphqlModule, WorkspacesHttpModule } from "@features/api/workspaces"
 import { OperationsJobsQueueModule } from "@features/jobs/operations-jobs"
 import { AccountGraphqlModule } from "@features/api/account"
@@ -427,6 +443,8 @@ export class AppModule {
                         AGENT_CONVERSATIONS_MESSAGES,
                         AGENT_MESSAGES_MESSAGES,
                         BILLING_MESSAGES,
+                        ACCOUNTING_ADJUSTMENTS_MESSAGES,
+                        PAYMENT_ORDER_REQUESTS_MESSAGES,
                         CREDITS_MESSAGES,
                         INBOUND_EVENTS_MESSAGES,
                         PAYMENT_ORDERS_MESSAGES,
@@ -517,6 +535,8 @@ export class AppModule {
                         AGENT_CONVERSATIONS_ERROR_KINDS,
                         AGENT_MESSAGES_ERROR_KINDS,
                         BILLING_ERROR_KINDS,
+                        ACCOUNTING_ADJUSTMENTS_ERROR_KINDS,
+                        PAYMENT_ORDER_REQUESTS_ERROR_KINDS,
                         CREDITS_ERROR_KINDS,
                         INBOUND_EVENTS_ERROR_KINDS,
                         PAYMENT_ORDERS_ERROR_KINDS,
@@ -720,6 +740,12 @@ export class AppModule {
                     },
                 }),
                 OrdersModule.register({ isGlobal: true }),
+                OrdersGraphqlModule,
+                StaffModule.register({ isGlobal: true }),
+                AccountingAdjustmentsModule.register({ isGlobal: true }),
+                AccountingModule.register({ isGlobal: true }),
+                AccountingGraphqlModule,
+                AdjustmentsGraphqlModule,
                 InvoicesModule.register({ isGlobal: true }),
                 TransactionsModule.register({ isGlobal: true }),
                 EmailMessagesModule.register({ isGlobal: true }),
@@ -743,9 +769,11 @@ export class AppModule {
                 PublicApiModule.register({ isGlobal: true }),
                 PaymentOrdersModule.register({ isGlobal: true }),
                 BillingModule.register({ isGlobal: true, ...options.billing }),
+                BillingGraphqlModule,
                 SepayTransactionsModule.register({ isGlobal: true }),
                 AiUsageEventsModule.register({ isGlobal: true }),
                 CreditsModule.register({ isGlobal: true }),
+                CreditsGraphqlModule,
                 ApplyBookingStatusQueueModule,
                 PaymentOrderRequestsModule.register({ isGlobal: true }),
                 ReconcileBankCreditQueueModule,

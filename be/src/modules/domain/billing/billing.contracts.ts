@@ -56,6 +56,16 @@ export interface WorkspaceBilling {
     readonly paidUntil: string | null
 }
 
+/** Billing state of one workspace with the caller's active membership. */
+export interface BillingWorkspace extends WorkspaceBilling {
+    /** The workspace id. */
+    readonly id: string
+    /** The workspace name. */
+    readonly name: string
+    /** The caller's role in the workspace. */
+    readonly role: string
+}
+
 /** The workspace a renewal asks for. */
 export interface RenewalParams {
     /** The workspace to renew. */
@@ -170,6 +180,39 @@ export interface IncomingCredit {
     /** The bank name to show when the connection has no name. */
     readonly fallbackBankName: string
 }
+
+/** Frozen top-up and upgrade figures exposed with a payment order. */
+export interface BillingPaymentDetails {
+    /** Frozen credits figure; null when this order does not carry it. */
+    readonly credits: number | null
+    /** Frozen from figure; null when this order does not carry it. */
+    readonly from: string | null
+    /** Frozen to figure; null when this order does not carry it. */
+    readonly to: string | null
+    /** Frozen fromPrice figure; null when this order does not carry it. */
+    readonly fromPrice: number | null
+    /** Frozen toPrice figure; null when this order does not carry it. */
+    readonly toPrice: number | null
+    /** Frozen credit figure; null when this order does not carry it. */
+    readonly credit: number | null
+    /** Frozen daysLeft figure; null when this order does not carry it. */
+    readonly daysLeft: number | null
+    /** Frozen paidUntil figure; null when this order does not carry it. */
+    readonly paidUntil: string | null
+}
+
+/** A payment order normalized for the customer payment screen. */
+export interface BillingPaymentOrder extends Omit<PaymentOrder, "detail"> {
+    /** Frozen sale details. */
+    readonly detail: BillingPaymentDetails
+    /** Backend computed VietQR image URL. */
+    readonly qrUrl: string
+    /** Public receiving account details. */
+    readonly bank: BankAccountOptions
+}
+
+/** A normalized payment order, or null when the scoped order does not exist. */
+export type BillingPaymentOrderLookup = BillingPaymentOrder | null
 
 /** Money an owner or manager knows arrived, entered by hand. */
 export interface ManualCredit {

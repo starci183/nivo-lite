@@ -3,7 +3,8 @@ import type { EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { DecisionEntry, EvidenceEntry, WorkContext } from "./decisions.contracts"
-import { INSERT_DECISION } from "./persistence/decision-log.sql"
+import type { AccountingDecisionRow } from "./persistence/decision-log.rows"
+import { INSERT_DECISION, LIST_ACCOUNTING_DECISIONS } from "./persistence/decision-log.sql"
 
 const jsonOrNull = (value: object | null | undefined): string | null =>
     value === null || value === undefined ? null : JSON.stringify(value)
@@ -15,6 +16,11 @@ export class EvidenceService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly events: EventsService,
     ) {}
+
+    /** The newest accounting decisions' lineage for the accounting book. */
+    listAccounting(workspaceId: string, limit: number = 500): Promise<Array<AccountingDecisionRow>> {
+        return this.entityManager.query<Array<AccountingDecisionRow>>(LIST_ACCOUNTING_DECISIONS, [workspaceId, limit])
+    }
 
     /** Appends one line to the workspace's evidence log; the events capability is its only writer. */
     async log(ctx: WorkContext, entry: EvidenceEntry): Promise<void> {

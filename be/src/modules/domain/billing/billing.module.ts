@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { BankCreditModule } from "@modules/queues/bank-credit"
 import { BankFeedService } from "./bank-feed.service"
+import { BillingReadService } from "./billing-read.service"
 import { BillingService } from "./billing.service"
 import { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./billing.module-definition"
 import { ConnectionSecretsService } from "./connection-secrets.service"
@@ -18,11 +19,12 @@ export class BillingModule extends ConfigurableModuleClass {
             providers: [
                 ...(base.providers ?? []),
                 BillingService,
+                BillingReadService,
                 PaymentProofService,
                 ConnectionSecretsService,
                 BankFeedService,
             ],
-            exports: [MODULE_OPTIONS_TOKEN, BillingService, PaymentProofService, BankFeedService],
+            exports: [MODULE_OPTIONS_TOKEN, BillingService, BillingReadService, PaymentProofService, BankFeedService],
         }
     }
 }

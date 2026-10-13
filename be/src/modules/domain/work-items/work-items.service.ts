@@ -3,12 +3,13 @@ import type { EntityManager } from "typeorm"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { ClosedClaimRow, WorkItemRow } from "./persistence/work-items.rows"
+import type { AccountingWorkRow, ClosedClaimRow, WorkItemRow } from "./persistence/work-items.rows"
 import {
     ATTACH_WORK_ITEM_EXECUTION,
     CLAIM_WORK_ITEM,
     FIND_WORK_ITEM_BY_DEDUPE,
     INSERT_WORK_ITEM,
+    LIST_ACCOUNTING_WORK_ITEMS,
     MARK_WORK_ITEM_DONE,
     MARK_WORK_ITEM_FAILED,
     MARK_WORK_ITEM_REJECTED,
@@ -40,6 +41,11 @@ export class WorkItemsService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
     ) {}
+
+    /** The newest accounting work items' lineage for the accounting book. */
+    listAccounting(workspaceId: string, limit: number = 500): Promise<Array<AccountingWorkRow>> {
+        return this.entityManager.query<Array<AccountingWorkRow>>(LIST_ACCOUNTING_WORK_ITEMS, [workspaceId, limit])
+    }
 
     /** Inserts a queued item; null when the dedupe key of the workspace is already used. The id comes from the database. */
     async insert(item: NewWorkItem): Promise<OptionalWorkItem> {

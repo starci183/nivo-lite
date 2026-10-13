@@ -1,5 +1,5 @@
 /** A JSON column as the driver answers it. */
-export type JsonColumn = string | number | boolean | null | { [key: string]: JsonColumn } | Array<JsonColumn>
+export type JsonColumnRow = string | number | boolean | null | { [key: string]: JsonColumnRow } | Array<JsonColumnRow>
 
 /** One plan as the catalogue statements answer it; the money columns are cast to float8 in SQL so the driver answers numbers. */
 export interface PlanRow {
@@ -12,7 +12,7 @@ export interface PlanRow {
     /** The seats the plan includes. */
     readonly seats: number
     /** The feature lists, a { vi, en } object when well formed. */
-    readonly features: JsonColumn
+    readonly features: JsonColumnRow
     /** The order of the catalogue. */
     readonly sort: number
     /** A contract plan. */
@@ -39,4 +39,14 @@ export interface WorkspaceBillingRow {
     readonly plan_code: string | null
     /** The end of the paid period, or null. */
     readonly paid_until: string | null
+}
+
+/** Billing state selected together with the caller's active membership. */
+export interface BillingWorkspaceRow extends WorkspaceBillingRow {
+    /** The workspace id. */
+    readonly id: string
+    /** The workspace name. */
+    readonly name: string
+    /** The caller's membership role. */
+    readonly role: string
 }

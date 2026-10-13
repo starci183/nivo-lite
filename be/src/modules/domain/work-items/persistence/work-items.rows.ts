@@ -74,3 +74,19 @@ export interface ClosedClaimRow {
     /** The input behind it, when there is one. */
     inbound_event_id: string | null
 }
+
+/** The accounting work item's lineage in the accounting book. */
+export interface AccountingWorkRow {
+    /** The item id. */
+    readonly id: string
+    /** The action key. */
+    readonly action: string
+    /** The work status. */
+    readonly status: WorkStatus
+    /** The type of record it is about. */
+    readonly subject_type: SubjectType
+    /** The record it is about. */
+    readonly subject_id: string | null
+    /** When the item was written, ISO text. */
+    readonly created_at: string
+}

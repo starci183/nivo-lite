@@ -15,6 +15,21 @@ FROM public.plans
 WHERE code = $1 AND active
 LIMIT 1`
 
+/** The caller's active billing workspaces, newest first ($1 user). */
+export const SELECT_BILLING_WORKSPACES = sql`SELECT w.id, w.name, w.status, w.plan_code, w.paid_until, m.role
+FROM public.workspace_members m
+JOIN public.workspaces w ON w.id = m.workspace_id
+WHERE m.user_id = $1 AND m.status = 'active'
+ORDER BY w.created_at DESC
+LIMIT 200`
+
+/** One caller's active billing workspace ($1 user, $2 workspace). */
+export const SELECT_BILLING_WORKSPACE = sql`SELECT w.id, w.name, w.status, w.plan_code, w.paid_until, m.role
+FROM public.workspace_members m
+JOIN public.workspaces w ON w.id = m.workspace_id
+WHERE m.user_id = $1 AND w.id = $2 AND m.status = 'active'
+LIMIT 1`
+
 /** The role of an active member of a workspace ($1 workspace, $2 user). */
 export const SELECT_MEMBER_ROLE = sql`SELECT role
 FROM public.workspace_members

@@ -17,6 +17,24 @@ LEFT JOIN public.leads l ON l.id = i.lead_id
 WHERE i.workspace_id = $1::uuid AND i.status = 'issued'
 ORDER BY i.created_at DESC LIMIT $2::int`
 
+/** The newest invoices with their dates, orders and customers for accounting ($1 workspace, $2 how many). */
+export const LIST_ACCOUNTING_INVOICES = sql`
+    SELECT i.id, i.workspace_id, i.order_id, i.lead_id, i.invoice_no, i.amount_vnd::float8 AS amount_vnd,
+           i.status, i.origin, i.issued_by, to_json(i.paid_at) #>> '{}' AS paid_at,
+           to_json(i.issued_at) #>> '{}' AS issued_at, to_json(i.due_at) #>> '{}' AS due_at,
+           to_json(i.created_at) #>> '{}' AS created_at,
+           CASE WHEN o.id IS NULL THEN NULL ELSE jsonb_build_object(
+               'order_no', o.order_no, 'items', o.items, 'amount_vnd', o.amount_vnd::float8, 'status', o.status
+           ) END AS "order",
+           CASE WHEN l.id IS NULL THEN NULL ELSE jsonb_build_object(
+               'contact_name', l.contact_name, 'company', l.company
+           ) END AS lead
+    FROM public.invoices i
+    LEFT JOIN public.orders o ON o.id = i.order_id AND o.workspace_id = i.workspace_id
+    LEFT JOIN public.leads l ON l.id = i.lead_id AND l.workspace_id = i.workspace_id
+    WHERE i.workspace_id = $1::uuid
+    ORDER BY i.created_at DESC, i.id DESC LIMIT $2::int`
+
 /** The highest invoice number that starts with the prefix ($1 workspace, $2 prefix). */
 export const LAST_INVOICE_NUMBER = sql`SELECT max(invoice_no) AS invoice_no
 FROM public.invoices WHERE workspace_id = $1::uuid AND invoice_no LIKE $2 || '%'`
