@@ -1,9 +1,142 @@
+input AuthorizeGoogleInput {
+  returnTo: String!
+}
+
+input AuthorizeMetaInput {
+  connectionId: ID
+}
+
+type AuthorizeUrlType {
+  url: String!
+}
+
+input AuthorizeZaloInput {
+  connectionId: ID!
+}
+
+input CheckConnectionInput {
+  connectionId: ID!
+}
+
+input CheckMetaInput {
+  connectionId: ID!
+  repair: Boolean!
+}
+
+input ChooseMetaPageInput {
+  connectionId: ID!
+  pageId: String!
+}
+
+input ConnectTelegramInput {
+  name: String!
+  token: String!
+}
+
+type ConnectionAgentType {
+  id: ID!
+  module: String!
+  name: String!
+  status: String!
+}
+
+type ConnectionCheckType {
+  lastError: String
+  localOnly: Boolean!
+  pending: Int!
+  provider: String!
+  webhookOk: Boolean!
+}
+
+type ConnectionGrantType {
+  access: String!
+  agentId: ID!
+}
+
+type ConnectionType {
+  agentIds: [ID!]!
+  createdAt: String!
+  createdBy: ID
+  environment: String!
+  firstEvent: FirstEventType
+  grants: [ConnectionGrantType!]!
+  id: ID!
+  isDefault: Boolean!
+  lastError: String
+  lastEventAt: String
+  meta: StringMap!
+  name: String!
+  provider: String!
+  status: String!
+  workspaceId: ID!
+}
+
+input ConnectionWishInput {
+  access: String
+  connectionId: ID!
+}
+
 input CreateWorkspaceInput {
   name: String!
 }
 
 type CreateWorkspaceType {
   id: ID!
+}
+
+input DeleteConnectionInput {
+  connectionId: ID!
+}
+
+input DisconnectConnectionInput {
+  connectionId: ID!
+}
+
+input FinishWebhookConnectionInput {
+  connectionId: ID!
+}
+
+type FirstEventStateType {
+  firstEvent: FirstEventType
+  status: String!
+}
+
+type FirstEventType {
+  amount: Float!
+  at: String!
+  content: String!
+  text: String
+}
+
+input GetConnectionFirstEventInput {
+  connectionId: ID!
+}
+
+input GetMetaConnectionInput {
+  connectionId: ID!
+}
+
+input GetMoneyConnectionInput {
+  connectionId: ID!
+}
+
+input GetZaloConnectionInput {
+  connectionId: ID!
+}
+
+type GoogleAccountType {
+  email: String!
+  id: ID!
+  status: String!
+}
+
+type GoogleStateType {
+  configured: Boolean!
+}
+
+input GrantWishInput {
+  access: String
+  agentId: ID!
 }
 
 type MemberType {
@@ -20,12 +153,247 @@ type MembershipType {
   workspace: WorkspaceType!
 }
 
+type MetaAppObjectType {
+  callbackUrl: String!
+  fields: [String!]!
+  missing: [String!]!
+  urlMatches: Boolean!
+}
+
+type MetaAuthorizationType {
+  connectionId: ID!
+  url: String!
+}
+
+type MetaCheckType {
+  appInstagram: MetaAppObjectType
+  appKnown: Boolean!
+  appPage: MetaAppObjectType
+  igUsername: String!
+  localOnly: Boolean!
+  ok: Boolean!
+  pageId: String!
+  pageName: String!
+  pageSubscription: MetaPageSubscriptionType!
+  redirectUri: String!
+  repaired: Boolean!
+  tokenOk: Boolean!
+  verifyTokenSet: Boolean!
+  wantInstagram: [String!]!
+  wantPage: [String!]!
+  webhookUrl: String!
+}
+
+type MetaPageOptionType {
+  category: String!
+  id: ID!
+  igId: String!
+  igUsername: String!
+  name: String!
+}
+
+type MetaPageSubscriptionType {
+  fields: [String!]!
+  missing: [String!]!
+  subscribed: Boolean!
+}
+
+type MetaWizardConnectionType {
+  agentIds: [ID!]!
+  configured: Boolean!
+  firstEvent: FirstEventType
+  id: ID!
+  igId: String!
+  igUsername: String!
+  name: String!
+  pageId: String!
+  pageName: String!
+  pages: [MetaPageOptionType!]!
+  status: String!
+}
+
 type Mutation {
+  authorizeGoogle(input: AuthorizeGoogleInput!): AuthorizeUrlType!
+  authorizeMeta(input: AuthorizeMetaInput!): MetaAuthorizationType!
+  authorizeZalo(input: AuthorizeZaloInput!): ZaloAuthorizationType!
+  checkConnection(input: CheckConnectionInput!): ConnectionCheckType!
+  checkMeta(input: CheckMetaInput!): MetaCheckType!
+  chooseMetaPage(input: ChooseMetaPageInput!): MetaWizardConnectionType!
+  connectTelegram(input: ConnectTelegramInput!): TelegramConnectedType!
   createWorkspace(input: CreateWorkspaceInput!): CreateWorkspaceType!
+  deleteConnection(input: DeleteConnectionInput!): Boolean!
+  disconnectConnection(input: DisconnectConnectionInput!): Boolean!
+  finishWebhookConnection(input: FinishWebhookConnectionInput!): Boolean!
+  returnZaloAuthorization(input: ReturnZaloAuthorizationInput!): ZaloWizardConnectionType!
+  revealSepayKey(input: RevealSepayKeyInput!): SepayKeyType!
+  revealWebhookConnection(input: RevealWebhookConnectionInput!): WebhookViewType!
+  saveProviderKeys(input: SaveProviderKeysInput!): ProviderKeysResultType!
+  saveZaloOaSecret(input: SaveZaloOaSecretInput!): ZaloWizardConnectionType!
+  setAgentConnections(input: SetAgentConnectionsInput!): Boolean!
+  setConnectionAgents(input: SetConnectionAgentsInput!): Boolean!
+  setConnectionGrant(input: SetConnectionGrantInput!): Boolean!
+  startMoneyConnection(input: StartMoneyConnectionInput!): WizardConnectionType!
+  startWebhookConnection(input: StartWebhookConnectionInput!): WebhookViewType!
+  startZaloConnection(input: StartZaloConnectionInput!): ZaloWizardConnectionType!
+  testWebhookConnection(input: TestWebhookConnectionInput!): WebhookTestResultType!
+  updateMoneyConnection(input: UpdateMoneyConnectionInput!): WizardConnectionType!
+  updateWebhookEvents(input: UpdateWebhookEventsInput!): WebhookEventsType!
+  wantConnector(input: WantConnectorInput!): Boolean!
+}
+
+input ProviderKeysInput {
+  apiKey: String
+  checksumKey: String
+  clientId: String
+  secureKey: String
+}
+
+type ProviderKeysResultType {
+  confirmed: Boolean!
+  localOnly: Boolean!
 }
 
 type Query {
+  connectionAgents: [ConnectionAgentType!]!
+  connectionFirstEvent(input: GetConnectionFirstEventInput!): FirstEventStateType!
+  connections: [ConnectionType!]!
+  googleAccounts: [GoogleAccountType!]!
+  googleConnectionState: GoogleStateType!
+  metaConnection(input: GetMetaConnectionInput!): MetaWizardConnectionType!
+  moneyConnection(input: GetMoneyConnectionInput!): WizardConnectionType!
   myWorkspaces: [MembershipType!]!
+  zaloConnection(input: GetZaloConnectionInput!): ZaloWizardConnectionType!
+}
+
+input ReturnZaloAuthorizationInput {
+  code: String!
+  oaId: String
+  state: String!
+}
+
+input RevealSepayKeyInput {
+  connectionId: ID!
+}
+
+input RevealWebhookConnectionInput {
+  connectionId: ID!
+}
+
+input SaveProviderKeysInput {
+  connectionId: ID!
+  values: ProviderKeysInput!
+}
+
+input SaveZaloOaSecretInput {
+  connectionId: ID!
+  oaSecret: String!
+}
+
+type SepayKeyType {
+  apiKey: String!
+  webhookUrl: String!
+}
+
+input SetAgentConnectionsInput {
+  agentId: ID!
+  connections: [ConnectionWishInput!]!
+}
+
+input SetConnectionAgentsInput {
+  agents: [GrantWishInput!]!
+  connectionId: ID!
+}
+
+input SetConnectionGrantInput {
+  access: String
+  agentId: ID!
+  connectionId: ID!
+}
+
+input StartMoneyConnectionInput {
+  accountNumber: String!
+  bankCode: String!
+  environment: String!
+  holder: String!
+  name: String!
+  provider: String!
+}
+
+input StartWebhookConnectionInput {
+  events: [String!]!
+  name: String!
+  url: String!
+}
+
+input StartZaloConnectionInput {
+  appId: String!
+  appSecret: String!
+  name: String!
+}
+
+scalar StringMap
+
+type TelegramConnectedType {
+  connection: ConnectionType!
+  webhookRegistered: Boolean!
+}
+
+input TestWebhookConnectionInput {
+  connectionId: ID!
+}
+
+input UpdateMoneyConnectionInput {
+  accountNumber: String!
+  apiKey: String
+  bankCode: String!
+  connectionId: ID!
+  environment: String!
+  holder: String!
+  name: String!
+}
+
+input UpdateWebhookEventsInput {
+  connectionId: ID!
+  events: [String!]!
+}
+
+input WantConnectorInput {
+  connectorId: String!
+}
+
+type WebhookEventsType {
+  events: [String!]!
+}
+
+type WebhookTestResultType {
+  durationMs: Int!
+  error: String
+  ok: Boolean!
+  status: Int
+}
+
+type WebhookViewType {
+  events: [String!]!
+  host: String!
+  id: ID!
+  name: String!
+  signingSecret: String!
+}
+
+type WizardConnectionType {
+  account: String!
+  agentIds: [ID!]!
+  apiKey: String!
+  bankCode: String!
+  credentialsSaved: Boolean!
+  environment: String!
+  firstEvent: FirstEventType
+  holder: String!
+  id: ID!
+  name: String!
+  provider: String!
+  status: String!
+  webhookUrl: String!
 }
 
 type WorkspaceType {
@@ -35,4 +403,22 @@ type WorkspaceType {
   name: String!
   ownerId: ID!
   status: String!
+}
+
+type ZaloAuthorizationType {
+  callbackUrl: String!
+  url: String!
+}
+
+type ZaloWizardConnectionType {
+  agentIds: [ID!]!
+  authorized: Boolean!
+  callbackUrl: String!
+  firstEvent: FirstEventType
+  id: ID!
+  name: String!
+  oaId: String!
+  oaSecretSaved: Boolean!
+  status: String!
+  webhookUrl: String!
 }

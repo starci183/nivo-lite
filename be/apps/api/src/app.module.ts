@@ -333,6 +333,7 @@ import {
 } from "@modules/integrations/webhook-delivery"
 import { GoogleConnectionsHttpModule } from "@features/api/google-connections"
 import { MetaConnectionsHttpModule } from "@features/api/meta-connections"
+import { ConnectionsGraphqlModule } from "@features/api/connections"
 import { CONTENT_MESSAGES, ContentModule } from "@modules/domain/content"
 import { CONTENT_ITEMS_ERROR_KINDS, CONTENT_ITEMS_MESSAGES, ContentItemsModule } from "@modules/domain/content-items"
 import { ContentSettingsModule } from "@modules/domain/content-settings"
@@ -353,12 +354,10 @@ import { ConnectionCommandsQueueModule } from "@features/jobs/connection-command
 import { RequestRenderQueueModule } from "@features/jobs/request-render"
 import type { ApiOptions } from "./api.options"
 
-/** Until a connection capability provides the Google Drive access of a workspace, no workspace has any. */
 /** Until the decisions capability provides the corrections of the owner, the brain has none to study. */
 const NO_CORRECTIONS: CorrectionSource = { recent: () => Promise.resolve([]) }
-
+/** Until a connection capability provides the Google Drive access of a workspace, no workspace has any. */
 const NO_DRIVE_ACCESS: DriveAccessSource = { forWorkspace: () => null }
-
 @Global()
 @Module({
     providers: [{ provide: VIDEO_ASSETS, useExisting: SUPABASE_STORAGE }],
@@ -761,6 +760,7 @@ export class AppModule {
                 LoyaltyTillHttpModule,
                 WorkspacesHttpModule,
                 WorkspacesGraphqlModule,
+                ConnectionsGraphqlModule,
                 ExtractKnowledgeFactsQueueModule,
                 RunBrainCommandQueueModule,
                 IndexKnowledgeSourceQueueModule,
