@@ -1,16 +1,13 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryAdminWorkspacesArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { AdminWorkspacesQuery, AdminWorkspacesQueryVariables } from "../__generated__/graphql"
 
 /** The variables of the `adminWorkspaces` query. */
-export type QueryAdminWorkspacesRequest = QueryAdminWorkspacesArgs["input"]
+export type QueryAdminWorkspacesRequest = WireInput<AdminWorkspacesQueryVariables["input"]>
 
-/** The response of the `adminWorkspaces` query: the typed payload straight from the back end contract. */
-export type QueryAdminWorkspacesResponse = Pick<Query, "adminWorkspaces">
-
-const query1: TypedDocumentNode<QueryAdminWorkspacesResponse, InputVariables<QueryAdminWorkspacesRequest>> = gql`
+const query1: TypedDocumentNode<AdminWorkspacesQuery, InputVariables<QueryAdminWorkspacesRequest>> = gql`
     query AdminWorkspaces($input: AdminWorkspacesInput!) {
         adminWorkspaces(input: $input) {
             total
@@ -59,7 +56,7 @@ enum QueryAdminWorkspaces {
 
 const queryMap: Record<
     QueryAdminWorkspaces,
-    TypedDocumentNode<QueryAdminWorkspacesResponse, InputVariables<QueryAdminWorkspacesRequest>>
+    TypedDocumentNode<AdminWorkspacesQuery, InputVariables<QueryAdminWorkspacesRequest>>
 > = {
     [QueryAdminWorkspaces.Query1]: query1,
 }

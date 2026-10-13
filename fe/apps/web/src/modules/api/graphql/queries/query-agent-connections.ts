@@ -1,13 +1,13 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryAgentConnectionsArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { AgentConnectionsQuery, AgentConnectionsQueryVariables } from "../__generated__/graphql"
 
 /** The input of the `agentConnections` query. */
-export type QueryAgentConnectionsRequest = QueryAgentConnectionsArgs["input"]
+export type QueryAgentConnectionsRequest = WireInput<AgentConnectionsQueryVariables["input"]>
 
-type QueryAgentConnectionsResponse = Pick<Query, "agentConnections">
+type QueryAgentConnectionsResponse = AgentConnectionsQuery
 
 const query1: TypedDocumentNode<QueryAgentConnectionsResponse, InputVariables<QueryAgentConnectionsRequest>> = gql`
     query AgentConnections($input: AgentIdInput!) {

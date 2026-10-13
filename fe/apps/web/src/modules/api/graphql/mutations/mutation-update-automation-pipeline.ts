@@ -1,14 +1,17 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationUpdateAutomationPipelineArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type {
+    UpdateAutomationPipelineMutation,
+    UpdateAutomationPipelineMutationVariables,
+} from "../__generated__/graphql"
 
 /** The input of the `updateAutomationPipeline` mutation. */
-export type MutateUpdateAutomationPipelineRequest = MutationUpdateAutomationPipelineArgs["input"]
+export type MutateUpdateAutomationPipelineRequest = WireInput<UpdateAutomationPipelineMutationVariables["input"]>
 
 /** The response of the `updateAutomationPipeline` mutation. */
-type MutateUpdateAutomationPipelineResponse = Pick<Mutation, "updateAutomationPipeline">
+type MutateUpdateAutomationPipelineResponse = UpdateAutomationPipelineMutation
 
 const mutation1: TypedDocumentNode<
     MutateUpdateAutomationPipelineResponse,

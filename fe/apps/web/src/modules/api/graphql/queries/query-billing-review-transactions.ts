@@ -1,10 +1,10 @@
 import { gql, type TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryBillingReviewTransactionsArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { BillingReviewTransactionsQuery, BillingReviewTransactionsQueryVariables } from "../__generated__/graphql"
 
-type QueryBillingReviewTransactionsRequest = QueryBillingReviewTransactionsArgs["input"]
-type QueryBillingReviewTransactionsResponse = Pick<Query, "billingReviewTransactions">
+type QueryBillingReviewTransactionsRequest = WireInput<BillingReviewTransactionsQueryVariables["input"]>
+type QueryBillingReviewTransactionsResponse = BillingReviewTransactionsQuery
 
 type QueryBillingReviewTransactionsParams = QueryParams<
     QueryBillingReviewTransactions,

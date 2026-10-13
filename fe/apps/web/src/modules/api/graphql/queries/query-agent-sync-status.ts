@@ -1,13 +1,13 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryAgentSyncStatusArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { AgentSyncStatusQuery, AgentSyncStatusQueryVariables } from "../__generated__/graphql"
 
 /** The input of the `agentSyncStatus` query. */
-export type QueryAgentSyncStatusRequest = QueryAgentSyncStatusArgs["input"]
+export type QueryAgentSyncStatusRequest = WireInput<AgentSyncStatusQueryVariables["input"]>
 
-type QueryAgentSyncStatusResponse = Pick<Query, "agentSyncStatus">
+type QueryAgentSyncStatusResponse = AgentSyncStatusQuery
 
 const query1: TypedDocumentNode<QueryAgentSyncStatusResponse, InputVariables<QueryAgentSyncStatusRequest>> = gql`
     query AgentSyncStatus($input: ModuleInstallationIdInput!) {

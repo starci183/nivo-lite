@@ -1,7 +1,5 @@
-import type { Mutation, MutationRemoveBookingWaitlistEntryArgs } from "../../__generated__/schema"
+import type { RemoveBookingWaitlistEntryMutationVariables } from "../../__generated__/graphql"
+import type { WireInput } from "../../types"
 
 /** The input of the `removeBookingWaitlistEntry` mutation. */
-export type MutateRemoveBookingWaitlistEntryRequest = MutationRemoveBookingWaitlistEntryArgs["input"]
-
-/** The response of the `removeBookingWaitlistEntry` mutation. */
-export type MutateRemoveBookingWaitlistEntryResponse = Pick<Mutation, "removeBookingWaitlistEntry">
+export type MutateRemoveBookingWaitlistEntryRequest = WireInput<RemoveBookingWaitlistEntryMutationVariables["input"]>

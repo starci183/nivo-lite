@@ -2,10 +2,10 @@ import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
-import type { Query } from "../__generated__/schema"
+import type { AutomationsQuery } from "../__generated__/graphql"
 
 /** The response of the `automations` query: the typed payload straight from the back end contract. */
-type QueryAutomationsResponse = Pick<Query, "automations">
+type QueryAutomationsResponse = AutomationsQuery
 
 /** The fields of one template card, spread into the gallery query. */
 const automationCardFields = gql`
