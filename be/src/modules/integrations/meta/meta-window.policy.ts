@@ -5,13 +5,20 @@ import {
     PRIVATE_REPLY_WINDOW_MS,
     STANDARD_WINDOW_MS,
 } from "./meta.contracts"
-import type { MessageTag, MetaPlatform, PrivateReplyVerdict, RateLimiter, WindowVerdict } from "./meta.contracts"
+import type {
+    MessageTag,
+    MetaPlatform,
+    OptionalInstant,
+    PrivateReplyVerdict,
+    RateLimiter,
+    WindowVerdict,
+} from "./meta.contracts"
 
 /**
  * May the Page message this person now? Only inside 24 hours of their last message; outside it only when HUMAN_AGENT was passed
  * explicitly (and then up to 7 days). No known inbound message means no window at all.
  */
-export const checkMessagingWindow = (lastUserAt: number | null, now: number, tag?: MessageTag): WindowVerdict => {
+export const checkMessagingWindow = (lastUserAt: OptionalInstant, now: number, tag?: MessageTag): WindowVerdict => {
     if (lastUserAt === null) return { ok: false, reason: "no_user_message" }
     const age = now - lastUserAt
     if (age <= STANDARD_WINDOW_MS) return { ok: true, via: "standard" }
@@ -25,7 +32,7 @@ export const checkMessagingWindow = (lastUserAt: number | null, now: number, tag
 
 /** May a private reply to this comment be sent now? Once per comment and only within 7 days of it. */
 export const checkPrivateReply = (
-    commentAt: number | null,
+    commentAt: OptionalInstant,
     alreadyReplied: boolean,
     now: number,
 ): PrivateReplyVerdict => {
@@ -40,7 +47,7 @@ const fits = (platform: MetaPlatform, text: string): boolean =>
         : Buffer.byteLength(text, "utf8") <= INSTAGRAM_MAX_BYTES
 
 /** Splits a long text into messages the platform accepts, at a paragraph, line or space when it can. */
-export const chunkText = (platform: MetaPlatform, text: string): Array<string> => {
+export const chunkMessage = (platform: MetaPlatform, text: string): Array<string> => {
     const out: Array<string> = []
     let rest = text.trim()
     while (rest.length > 0) {

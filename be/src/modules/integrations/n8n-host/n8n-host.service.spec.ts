@@ -5,7 +5,6 @@ import type { Logger } from "@modules/platform/logging"
 import { N8nHostErrorCode } from "./errors/n8n-host.error"
 import type { HostCommand, N8nHostShell } from "./n8n-host.contracts"
 import { N8N_HOST_OPTIONS, N8N_HOST_SHELL } from "./n8n-host.decorators"
-import type { N8nHostOptions } from "./n8n-host.options"
 import { N8nHostLogEvent } from "./n8n-host.log-events"
 import { N8nHostService } from "./n8n-host.service"
 
@@ -13,14 +12,6 @@ const FILES = [
     { name: "Daily", nodes: [] },
     { name: "Debt", nodes: [] },
 ]
-
-const OPTIONS: N8nHostOptions = {
-    host: undefined,
-    user: "nivo",
-    keyPath: "/k",
-    knownHostsPath: undefined,
-    container: "n8n-1",
-}
 
 const build = async (listings: ReadonlyArray<string>, files: ReadonlyArray<unknown> = FILES) => {
     const commands: Array<HostCommand> = []
@@ -38,7 +29,16 @@ const build = async (listings: ReadonlyArray<string>, files: ReadonlyArray<unkno
         providers: [
             N8nHostService,
             { provide: N8N_HOST_SHELL, useValue: shell },
-            { provide: N8N_HOST_OPTIONS, useValue: OPTIONS },
+            {
+                provide: N8N_HOST_OPTIONS,
+                useValue: {
+                    host: undefined,
+                    user: "nivo",
+                    keyPath: "/k",
+                    knownHostsPath: undefined,
+                    container: "n8n-1",
+                },
+            },
             { provide: LOGGER, useValue: logger },
         ],
     }).compile()

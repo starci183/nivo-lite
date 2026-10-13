@@ -12,9 +12,10 @@ const MANIFEST = `${ROOT}/.nivo-managed.json`
 const AGENTS = { path: "AGENTS.md", content: "# Agent\n" }
 const PRICES = { path: "knowledge/01-prices.md", content: "# Prices\n" }
 
-const build = async () => {
+/** A disk in memory: the files port over a map of path to text; a folder is empty when no path lies under it. */
+const memoryFiles = () => {
     const store = new Map<string, string>()
-    const files = mock<OpenclawFiles>({
+    const files: Partial<OpenclawFiles> = {
         readText: jest.fn((path: string) => store.get(path) ?? null),
         writeText: jest.fn((path: string, content: string) => {
             store.set(path, content)
@@ -25,7 +26,13 @@ const build = async () => {
         removeDirectoryIfEmpty: jest.fn(
             (directory: string) => ![...store.keys()].some((path) => path.startsWith(`${directory}/`)),
         ),
-    })
+    }
+    return { files, store }
+}
+
+const build = async () => {
+    const disk = memoryFiles()
+    const files = mock<OpenclawFiles>(disk.files)
     const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -34,7 +41,7 @@ const build = async () => {
             { provide: LOGGER, useValue: logger },
         ],
     }).compile()
-    return { writer: moduleRef.get(WorkspaceWriterService), disk: { files, store }, logger }
+    return { writer: moduleRef.get(WorkspaceWriterService), disk, logger }
 }
 
 describe("WorkspaceWriterService", () => {

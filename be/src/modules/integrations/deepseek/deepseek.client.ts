@@ -22,7 +22,7 @@ import type {
 import { InjectDeepseekOptions, InjectDeepseekTextGenerator } from "./deepseek.decorators"
 import { DeepseekLogEvent } from "./deepseek.log-events"
 import type { DeepseekOptions } from "./deepseek.options"
-import type { TextGenerator } from "./deepseek.port"
+import type { DeepseekTextGenerator } from "./deepseek.port"
 import { DeepseekError, DeepseekErrorCode } from "./errors/deepseek.error"
 import { embeddedObject, isJsonRecord, unfenced } from "./json.mapper"
 import type { JsonRecord, OptionalJsonRecord } from "./json.mapper"
@@ -52,7 +52,7 @@ const JSON_AGAIN = "Answer again with ONLY the JSON object described above. No p
 export class DeepseekClient {
     constructor(
         @InjectDeepseekOptions() private readonly options: DeepseekOptions,
-        @InjectDeepseekTextGenerator() private readonly generator: TextGenerator,
+        @InjectDeepseekTextGenerator() private readonly generator: DeepseekTextGenerator,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         @InjectLogger() private readonly logger: Logger,
     ) {}

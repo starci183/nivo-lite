@@ -8,12 +8,12 @@ const PREVIEW_CELL = 80
 export const DATABASE_CURSOR = "__nivo_cursor"
 
 /** True for a plain object. */
-export const isRecord = (value: unknown): value is Record<string, unknown> =>
+export const isPlainObject = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null && !Array.isArray(value)
 
 /** A driver answer as rows; anything else is no rows. */
 export const toRows = (value: unknown): ReadonlyArray<DatabaseRow> =>
-    Array.isArray(value) ? value.filter(isRecord) : []
+    Array.isArray(value) ? value.filter(isPlainObject) : []
 
 const cut = (text: string): string => (text.length > MAX_TEXT ? `${text.slice(0, MAX_TEXT)}...` : text)
 
