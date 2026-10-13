@@ -36,6 +36,13 @@ export const FIND_OPEN_RESPONSIBILITY = sql`
     ORDER BY r.created_at DESC, r.id DESC
     LIMIT 1`
 
+/** The open responsibility of a customer of the workspace with exactly this title ($1 workspace, $2 lead, $3 title). */
+export const FIND_OPEN_TITLED_RESPONSIBILITY = sql`
+    SELECT r.id
+    FROM public.responsibilities r
+    WHERE r.workspace_id = $1 AND r.lead_id = $2 AND r.title = $3 AND r.status <> 'done'
+    LIMIT 1`
+
 /** The name of a customer of the workspace. */
 export const FIND_LEAD_NAME = sql`
     SELECT l.contact_name

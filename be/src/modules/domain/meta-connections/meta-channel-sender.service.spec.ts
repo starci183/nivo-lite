@@ -1,12 +1,14 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { ConversationTarget } from "@modules/domain/agent-conversations"
+import { CHANNEL_SENDER_REGISTRY } from "@modules/domain/channels"
 import type { ChannelSenderRegistry } from "@modules/domain/channels"
-import { CHANNEL_SENDER_REGISTRY } from "@modules/domain/channels/channels.decorators"
 import { ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord } from "@modules/domain/connections"
 import { META_CLIENT } from "@modules/integrations/meta"
 import type { MetaClient, SendResult } from "@modules/integrations/meta"
+import { LOGGER } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
 import { MetaChannelSender } from "./meta-channel-sender.service"
 
 const target = (overrides: Partial<ConversationTarget> = {}): ConversationTarget => ({
@@ -45,15 +47,17 @@ const build = async () => {
     connections.readSecret.mockResolvedValue(seal(pageSecret))
     const meta = mock<MetaClient>()
     meta.deliverMessage.mockResolvedValue({ ok: true, ids: ["message-1"] })
+    const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             MetaChannelSender,
             { provide: CHANNEL_SENDER_REGISTRY, useValue: registry },
             { provide: ConnectionsService, useValue: connections },
             { provide: META_CLIENT, useValue: meta },
+            { provide: LOGGER, useValue: logger },
         ],
     }).compile()
-    return { service: moduleRef.get(MetaChannelSender), registry, connections, meta, moduleRef }
+    return { service: moduleRef.get(MetaChannelSender), registry, connections, meta, logger, moduleRef }
 }
 
 describe("MetaChannelSender", () => {

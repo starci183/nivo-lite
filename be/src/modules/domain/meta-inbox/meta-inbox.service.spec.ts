@@ -1,23 +1,21 @@
-import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
 import { isTransactionManager } from "@starci/jest-preset/entity-manager"
 import { Test } from "@nestjs/testing"
 import { ConnectionsService } from "@modules/domain/connections"
 import { ConversationsService } from "@modules/domain/conversations"
+import { MetaCommentsService } from "@modules/domain/meta-comments"
+import { MetaThreadsService } from "@modules/domain/meta-threads"
 import { META_CLIENT } from "@modules/integrations/meta"
 import type { MetaClient, MetaEvent } from "@modules/integrations/meta"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
-import type { QueueOutbox } from "@modules/platform/queue"
 import { MetaInboxError, MetaInboxErrorCode } from "./errors/meta-inbox.error"
 import { META_INBOUND_QUEUE } from "./meta-inbox.contracts"
+import { META_EVENT_TAKER } from "./meta-inbox.decorators"
+import type { MetaEventTaker } from "./meta-inbox.port"
 import type { MetaInboundJob } from "./meta-inbox.contracts"
 import { MetaInboxService } from "./meta-inbox.service"
-import {
-    COMPLETE_META_INBOX,
-    INSERT_META_INBOX,
-    NOTE_META_COMMENT,
-    TOUCH_META_THREAD,
-} from "./persistence/meta-inbox.sql"
+import { COMPLETE_META_INBOX, INSERT_META_INBOX } from "./persistence/meta-inbox.sql"
 
 const BODY = { object: "page", entry: [{ id: "page-1" }] }
 const RAW_BODY = Buffer.from(JSON.stringify(BODY))
@@ -54,8 +52,6 @@ const build = async (events: ReadonlyArray<MetaEvent> = [], claimed = [{ id: "in
             query: [
                 [INSERT_META_INBOX, claimed],
                 [COMPLETE_META_INBOX, []],
-                [TOUCH_META_THREAD, []],
-                [NOTE_META_COMMENT, []],
             ],
         }),
     )
@@ -64,8 +60,15 @@ const build = async (events: ReadonlyArray<MetaEvent> = [], claimed = [{ id: "in
     const meta = mock<MetaClient>()
     meta.verifyDelivery.mockReturnValue(true)
     meta.parse.mockReturnValue([...events])
-    const outbox = mock<QueueOutbox>()
+    const outbox = recordingQueueOutbox()
+    const write = jest.spyOn(outbox, "write")
     const conversations = mock<ConversationsService>()
+    const threads = mock<MetaThreadsService>()
+    threads.touch.mockResolvedValue(undefined)
+    const comments = mock<MetaCommentsService>()
+    comments.note.mockResolvedValue(undefined)
+    const taker = mock<MetaEventTaker>()
+    taker.take.mockResolvedValue(false)
     const moduleRef = await Test.createTestingModule({
         providers: [
             MetaInboxService,
@@ -74,9 +77,23 @@ const build = async (events: ReadonlyArray<MetaEvent> = [], claimed = [{ id: "in
             { provide: QUEUE_OUTBOX, useValue: outbox },
             { provide: ConnectionsService, useValue: connections },
             { provide: ConversationsService, useValue: conversations },
+            { provide: MetaThreadsService, useValue: threads },
+            { provide: MetaCommentsService, useValue: comments },
+            { provide: META_EVENT_TAKER, useValue: taker },
         ],
     }).compile()
-    return { service: moduleRef.get(MetaInboxService), tx, meta, connections, outbox, conversations }
+    return {
+        service: moduleRef.get(MetaInboxService),
+        tx,
+        meta,
+        connections,
+        outbox,
+        write,
+        conversations,
+        threads,
+        comments,
+        taker,
+    }
 }
 
 describe("MetaInboxService", () => {
@@ -129,7 +146,7 @@ describe("MetaInboxService", () => {
         await expect(service.accept(malformed, SIGNATURE)).resolves.toBeUndefined()
 
         expect(meta.verifyDelivery).toHaveBeenCalledWith(SIGNATURE, malformed)
-        expect(meta.parse).toHaveBeenCalledWith(null)
+        expect(meta.parse).not.toHaveBeenCalled()
         expect(tx.outcomes).toEqual([])
     })
 
@@ -142,7 +159,7 @@ describe("MetaInboxService", () => {
         expect(tx.em.query.mock.calls).toEqual([[INSERT_META_INBOX, ["meta", DELIVERY_ID, JSON.stringify(BODY)]]])
         expect(connections.findLiveByMeta).not.toHaveBeenCalled()
         expect(connections.recordEvent).not.toHaveBeenCalled()
-        expect(outbox.write).not.toHaveBeenCalled()
+        expect(outbox.jobs).toEqual([])
     })
 
     it("opens Facebook and Instagram message windows and queues each event in the claiming transaction", async () => {
@@ -158,7 +175,7 @@ describe("MetaInboxService", () => {
             text: null,
             event_key: "postback:button-1",
         })
-        const { service, tx, connections, outbox } = await build([dm, postback])
+        const { service, tx, connections, write, threads } = await build([dm, postback])
 
         await expect(service.accept(RAW_BODY, SIGNATURE)).resolves.toBeUndefined()
 
@@ -172,15 +189,17 @@ describe("MetaInboxService", () => {
         ])
         expect(tx.em.query.mock.calls).toEqual([
             [INSERT_META_INBOX, ["meta", DELIVERY_ID, JSON.stringify(BODY)]],
-            [TOUCH_META_THREAD, ["connection-1", "facebook", "person-1", AT]],
-            [TOUCH_META_THREAD, ["connection-1", "instagram", "ig-person-1", AT]],
             [COMPLETE_META_INBOX, ["inbox-1"]],
+        ])
+        expect(threads.touch.mock.calls).toEqual([
+            [{ connectionId: "connection-1", platform: "facebook", userId: "person-1", at: AT }, manager],
+            [{ connectionId: "connection-1", platform: "instagram", userId: "ig-person-1", at: AT }, manager],
         ])
         expect(connections.recordEvent.mock.calls).toEqual([
             ["connection-1", { amount: 0, content: "Lan", at: AT, text: "x".repeat(160) }],
             ["connection-1", { amount: 0, content: "postback", at: AT, text: "" }],
         ])
-        expect(outbox.write.mock.calls).toEqual([
+        expect(write.mock.calls).toEqual([
             [
                 manager,
                 META_INBOUND_QUEUE,
@@ -206,7 +225,7 @@ describe("MetaInboxService", () => {
             comment_id: "comment-2",
             event_key: "mention:2",
         })
-        const { service, tx, connections, outbox } = await build([comment, mention])
+        const { service, tx, connections, write, comments } = await build([comment, mention])
 
         await service.accept(RAW_BODY, SIGNATURE)
 
@@ -215,15 +234,17 @@ describe("MetaInboxService", () => {
         expect(manager).not.toBe(tx.em)
         expect(tx.em.query.mock.calls).toEqual([
             [INSERT_META_INBOX, ["meta", DELIVERY_ID, JSON.stringify(BODY)]],
-            [NOTE_META_COMMENT, ["connection-1", "comment-1", "facebook", AT]],
-            [NOTE_META_COMMENT, ["connection-1", "comment-2", "instagram", AT]],
             [COMPLETE_META_INBOX, ["inbox-1"]],
+        ])
+        expect(comments.note.mock.calls).toEqual([
+            [{ connectionId: "connection-1", commentId: "comment-1", platform: "facebook", at: AT }, manager],
+            [{ connectionId: "connection-1", commentId: "comment-2", platform: "instagram", at: AT }, manager],
         ])
         expect(connections.recordEvent.mock.calls).toEqual([
             ["connection-1", { amount: 0, content: "Lan", at: AT, text: "Hello" }],
             ["connection-1", { amount: 0, content: "Lan", at: AT, text: "Hello" }],
         ])
-        expect(outbox.write.mock.calls).toEqual([
+        expect(write.mock.calls).toEqual([
             [
                 manager,
                 META_INBOUND_QUEUE,
@@ -247,7 +268,7 @@ describe("MetaInboxService", () => {
             event({ kind: "mention", event_key: "mention:missing-id" }),
             event({ kind: "leadgen", event_key: "leadgen:lead-1" }),
         ]
-        const { service, tx, connections, outbox } = await build(events)
+        const { service, tx, connections, write } = await build(events)
 
         await service.accept(RAW_BODY, SIGNATURE)
 
@@ -261,7 +282,7 @@ describe("MetaInboxService", () => {
         expect(connections.recordEvent.mock.calls).toEqual(
             events.map(() => ["connection-1", { amount: 0, content: "Lan", at: AT, text: "Hello" }]),
         )
-        expect(outbox.write.mock.calls).toEqual(
+        expect(write.mock.calls).toEqual(
             events.map((item) => [
                 manager,
                 META_INBOUND_QUEUE,
@@ -295,23 +316,20 @@ describe("MetaInboxService", () => {
             [COMPLETE_META_INBOX, ["inbox-1"]],
         ])
         expect(connections.recordEvent).not.toHaveBeenCalled()
-        expect(outbox.write).not.toHaveBeenCalled()
+        expect(outbox.jobs).toEqual([])
         expect(tx.commits).toBe(1)
     })
 
     it("rolls back the claimed delivery when a queued write fails", async () => {
         const { service, tx, outbox } = await build([event()])
         const failure = new Error("queue unavailable")
-        outbox.write.mockRejectedValue(failure)
+        outbox.failNext("write", failure)
 
         await expect(service.accept(RAW_BODY, SIGNATURE)).rejects.toBe(failure)
 
         expect(tx.rollbacks).toBe(1)
         expect(tx.commits).toBe(0)
-        expect(tx.em.query.mock.calls).toEqual([
-            [INSERT_META_INBOX, ["meta", DELIVERY_ID, JSON.stringify(BODY)]],
-            [TOUCH_META_THREAD, ["connection-1", "facebook", "person-1", AT]],
-        ])
+        expect(tx.em.query.mock.calls).toEqual([[INSERT_META_INBOX, ["meta", DELIVERY_ID, JSON.stringify(BODY)]]])
     })
 
     describe("deliver", () => {
@@ -362,7 +380,7 @@ describe("MetaInboxService", () => {
             expect(tx.em.transaction).toHaveBeenCalledTimes(1)
             expect(tx.em.query).not.toHaveBeenCalled()
             expect(connections.findLiveByMeta).not.toHaveBeenCalled()
-            expect(outbox.write).not.toHaveBeenCalled()
+            expect(outbox.jobs).toEqual([])
         })
 
         it.each([
@@ -387,7 +405,8 @@ describe("MetaInboxService", () => {
 
         it("normalizes omitted runtime text before handing the DM to conversations", async () => {
             const { service, tx, conversations } = await build()
-            const incompleteEvent = { ...event(), text: undefined } as unknown as MetaEvent
+            const incompleteEvent = event()
+            Reflect.deleteProperty(incompleteEvent, "text")
 
             await service.deliver({
                 connectionId: "connection-1",
@@ -406,6 +425,37 @@ describe("MetaInboxService", () => {
                 ],
             ])
             expect(tx.commits).toBe(1)
+        })
+
+        it("delivers the event a claimed job payload carries", async () => {
+            const { service, conversations } = await build()
+
+            await service.deliverPayload({ connectionId: "connection-1", workspaceId: "workspace-1", event: event() })
+
+            expect(conversations.acceptMeta.mock.calls[0]?.slice(0, 2)).toEqual([
+                "connection-1",
+                { platform: "facebook", personId: "person-1", visitor: "Lan", text: "Hello", eventId: "dm:message-1" },
+            ])
+        })
+
+        it("leaves an event the taker took to the taker", async () => {
+            const { service, conversations, taker } = await build()
+            taker.take.mockResolvedValue(true)
+            const job = { connectionId: "connection-1", workspaceId: "workspace-1", event: event() }
+
+            await service.deliverPayload(job)
+
+            expect(taker.take).toHaveBeenCalledWith(job)
+            expect(conversations.acceptMeta).not.toHaveBeenCalled()
+        })
+
+        it("leaves a claimed job payload that is not a queued Meta event alone", async () => {
+            const { service, tx, conversations } = await build()
+
+            await expect(service.deliverPayload({ connectionId: "connection-1" })).resolves.toBeUndefined()
+
+            expect(conversations.acceptMeta).not.toHaveBeenCalled()
+            expect(tx.em.transaction).not.toHaveBeenCalled()
         })
 
         it("rolls back and propagates a failure from the conversation", async () => {

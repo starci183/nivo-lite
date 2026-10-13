@@ -13,6 +13,7 @@ import { ModulesService } from "./modules.service"
 import { SetupCardsService } from "./setup-cards.service"
 import { SetupChatService } from "./setup-chat.service"
 import { SetupTurnService } from "./setup-turn.service"
+import { WorkspaceSetupService } from "./workspace-setup.service"
 
 @Module({})
 /**
@@ -23,6 +24,9 @@ export class ModulesModule extends ConfigurableModuleClass {
     /** Registers the capability once per app with the catalogue the app root names. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
+        if (options.catalogOnly === true) {
+            return { ...base, providers: [...(base.providers ?? []), ModulesService], exports: [ModulesService] }
+        }
         const providers = [
             ModulesService,
             ModuleInstallService,
@@ -30,6 +34,7 @@ export class ModulesModule extends ConfigurableModuleClass {
             SetupChatService,
             SetupCardsService,
             SetupTurnService,
+            WorkspaceSetupService,
         ]
         const tables = [
             ModuleInstallationsModule.register({}),

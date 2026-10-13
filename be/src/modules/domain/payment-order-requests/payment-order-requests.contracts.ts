@@ -2,7 +2,7 @@
 export const PAYMENT_ORDER_REQUEST_QUEUE = "payment_order_requested"
 
 /** What a member asked to pay. */
-export type PaymentOrderRequestKind = "plan" | "renew" | "topup" | "upgrade"
+export type PaymentOrderRequestKind = "plan" | "renew" | "topup" | "upgrade" | "credit_pack"
 
 /** An authenticated manager's request to create a payment order. */
 export interface PaymentOrderRequestParams {

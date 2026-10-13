@@ -1,10 +1,9 @@
 import { Test } from "@nestjs/testing"
-import { mock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import { SetupSessionsService } from "@modules/domain/module-setup-sessions"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ContextNotesService } from "./context-notes.service"
 import { ModuleContextNotesErrorCode } from "./errors/module-context-notes.error"
@@ -35,12 +34,11 @@ const build = async () => {
     const members = mock<WorkspaceMembersService>()
     members.require.mockResolvedValue(MEMBER)
     const sessions = mock<SetupSessionsService>()
-    const clock: Clock = { now: () => new Date("2026-10-13T02:00:00.000Z") }
     const moduleRef = await Test.createTestingModule({
         providers: [
             ContextNotesService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
-            { provide: CLOCK, useValue: clock },
+            { provide: CLOCK, useValue: new FakeClock("2026-10-13T02:00:00.000Z") },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: SetupSessionsService, useValue: sessions },
         ],
