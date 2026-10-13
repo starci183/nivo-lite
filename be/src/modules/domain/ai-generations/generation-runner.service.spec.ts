@@ -5,10 +5,11 @@ import { OPENCLAW_GATEWAY } from "@modules/integrations/openclaw"
 import type { GatewayClient, TurnResult } from "@modules/integrations/openclaw"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { JOB_CLAIMS } from "@modules/platform/jobs"
+import type { JobClaims } from "@modules/platform/jobs"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
-import { JOB_CLAIMS, type JobClaims } from "@modules/platform/jobs"
 import { AI_GENERATIONS_COMPLETION, AI_GENERATIONS_USAGE } from "./ai-generations.decorators"
 import { AiGenerationsLogEvent } from "./ai-generations.log-events"
 import type { GenerationCompletion, UsageGate } from "./ai-generations.port"
@@ -50,10 +51,9 @@ const build = async (entityManager: MockEntityManager, setup: Setup = {}) => {
         }),
     })
     const usage = mock<UsageGate>({ record: jest.fn(() => Promise.resolve()) })
+    const logger = mock<Logger>()
     const claims = mock<JobClaims>()
     const completion = mock<GenerationCompletion>()
-    completion.completeGeneration.mockResolvedValue(undefined)
-    const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             GenerationRunnerService,
@@ -67,10 +67,37 @@ const build = async (entityManager: MockEntityManager, setup: Setup = {}) => {
             { provide: AI_GENERATIONS_COMPLETION, useValue: completion },
         ],
     }).compile()
-    return { runner: moduleRef.get(GenerationRunnerService), gateway, sync, usage, logger }
+    return { runner: moduleRef.get(GenerationRunnerService), gateway, sync, usage, logger, claims, completion }
 }
 
 describe("GenerationRunnerService", () => {
+    it("fences the finished job at the apply step before handing the generation to its application", async () => {
+        const em = mockEntityManager({
+            query: [
+                [FIND_GENERATION, [ROW]],
+                [START_GENERATION, []],
+                [FINISH_GENERATION, [{ usage_kind: "relay", module: "office" }]],
+            ],
+        })
+        const { runner, claims, completion } = await build(em)
+        const job = { jobId: "job-1", kind: "generate", fencingToken: 4, currentStep: null, payload: PAYLOAD }
+
+        await expect(runner.runJob(job)).resolves.toBeUndefined()
+
+        expect(claims.advance.mock.calls).toEqual([[{ jobId: "job-1", expectedFencingToken: 4, step: "apply-result" }]])
+        expect(completion.completeGeneration.mock.calls).toEqual([["w1", "g1"]])
+    })
+
+    it("acknowledges a job of another shape without fencing or completing anything", async () => {
+        const { runner, claims, completion } = await build(mockEntityManager())
+        const job = { jobId: "job-2", kind: "generate", fencingToken: 1, currentStep: null, payload: { other: true } }
+
+        await expect(runner.runJob(job)).resolves.toBeUndefined()
+
+        expect(claims.advance).not.toHaveBeenCalled()
+        expect(completion.completeGeneration).not.toHaveBeenCalled()
+    })
+
     it("runs the prompt on the internal agent, writes the text and meters it", async () => {
         const em = mockEntityManager({
             query: [

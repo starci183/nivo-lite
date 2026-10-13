@@ -1,10 +1,11 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
-import type { MockEntityManager } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import type { MockEntityManager } from "@starci/jest-preset"
 import type { RunResult } from "@modules/domain/automation-runs"
 import { AutomationMessagesService } from "./automation-messages.service"
+import { AUTOMATION_OFFICE, AUTOMATION_OWNER_CHAT, AUTOMATION_RECORDS } from "./automations.decorators"
 import { AutomationOperationsExecutorsService } from "./automation-operations-executors.service"
 import type {
     AutomationOffice,
@@ -14,7 +15,6 @@ import type {
     ExecutorMap,
     ExecutorPayload,
 } from "./automation-ports.contracts"
-import { AUTOMATION_OFFICE, AUTOMATION_OWNER_CHAT, AUTOMATION_RECORDS } from "./automations.decorators"
 import { buildPipelineRow, buildShop, buildTemplate } from "@tests/fixtures/builders/automations.builder"
 import { SELECT_CONTRACT, SELECT_DAY_FIGURES, SELECT_ORDER } from "./persistence/automation-readers.sql"
 import type { LeadReadRow } from "./persistence/automations.rows"
@@ -56,14 +56,13 @@ const runner =
     (key: string, ctx: ExecutorContext, payload: ExecutorPayload): Promise<RunResult> =>
         executors[key]?.(ctx, payload) ?? Promise.reject(new TypeError(`no executor for ${key}`))
 
-const build = async (em: MockEntityManager = mockEntityManager(), ownerChat = true) => {
-    const clock = new FakeClock(NOW)
+const build = async (em: MockEntityManager = mockEntityManager()) => {
     const office = mock<AutomationOffice>()
     office.openFollowUp.mockResolvedValue(true)
     const records = mock<AutomationRecords>()
     records.createLead.mockResolvedValue("l-new")
     const chat = mock<AutomationOwnerChat>()
-    chat.sendToOwner.mockResolvedValue(ownerChat)
+    chat.sendToOwner.mockResolvedValue(true)
     const messages = mock<AutomationMessagesService>()
     messages.say.mockImplementation((key, params) => `${key}${JSON.stringify(params ?? {})}`)
     messages.actorOf.mockReturnValue("actor")
@@ -80,7 +79,7 @@ const build = async (em: MockEntityManager = mockEntityManager(), ownerChat = tr
         providers: [
             AutomationOperationsExecutorsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
-            { provide: CLOCK, useValue: clock },
+            { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: AUTOMATION_OFFICE, useValue: office },
             { provide: AUTOMATION_RECORDS, useValue: records },
             { provide: AUTOMATION_OWNER_CHAT, useValue: chat },
@@ -150,22 +149,18 @@ describe("AutomationOperationsExecutorsService", () => {
             expect(result.steps[1]).toEqual({ label: "report.chatSent{}", status: "done" })
         })
 
-        it("says the chat was skipped when it cannot be reached or is not bound", async () => {
+        it("says the chat was skipped when it cannot be reached", async () => {
             const em = mockEntityManager({ query: [SELECT_DAY_FIGURES, [figures]] })
             const unreachable = await build(em)
             unreachable.chat.sendToOwner.mockResolvedValue(false)
-            const unbound = await build(em, false)
 
-            const first = await unreachable.run("daily_report", context({ toOwnerChat: true }), {})
-            const second = await unbound.run("daily_report", context({ toOwnerChat: true }), {})
+            const result = await unreachable.run("daily_report", context({ toOwnerChat: true }), {})
 
-            for (const result of [first, second]) {
-                expect(result.steps[1]).toEqual({
-                    label: "report.chatSkipped{}",
-                    status: "skipped",
-                    detail: "report.chatSkippedDetail{}",
-                })
-            }
+            expect(result.steps[1]).toEqual({
+                label: "report.chatSkipped{}",
+                status: "skipped",
+                detail: "report.chatSkippedDetail{}",
+            })
         })
     })
 
@@ -279,9 +274,7 @@ describe("AutomationOperationsExecutorsService", () => {
 
         it("lets the owner switch the question off, and follows up on the end date when it is sooner", async () => {
             const { run, messages, office } = await build(
-                mockEntityManager({
-                    query: [SELECT_CONTRACT, [{ ...CONTRACT, ends_on: "2026-10-13", plan: "  " }]],
-                }),
+                mockEntityManager({ query: [SELECT_CONTRACT, [{ ...CONTRACT, ends_on: "2026-10-13", plan: "  " }]] }),
             )
 
             await run("contract_renewal", context({ alwaysAsk: false }), { contract_id: "c-1" })

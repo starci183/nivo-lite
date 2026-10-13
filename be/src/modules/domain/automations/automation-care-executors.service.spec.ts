@@ -1,14 +1,14 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
-import type { MockEntityManager } from "@starci/jest-preset"
-import { AutomationRunsService } from "@modules/domain/automation-runs"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import type { MockEntityManager } from "@starci/jest-preset"
+import { AutomationRunsService } from "@modules/domain/automation-runs"
 import type { RunResult } from "@modules/domain/automation-runs"
 import { AutomationCareExecutorsService } from "./automation-care-executors.service"
 import { AutomationMessagesService } from "./automation-messages.service"
-import type { AutomationOffice, ExecutorContext, ExecutorMap, ExecutorPayload } from "./automation-ports.contracts"
 import { AUTOMATION_OFFICE } from "./automations.decorators"
+import type { AutomationOffice, ExecutorContext, ExecutorMap, ExecutorPayload } from "./automation-ports.contracts"
 import { buildPipelineRow, buildShop, buildTemplate } from "@tests/fixtures/builders/automations.builder"
 import { SELECT_BUILT_IN_CARE, SELECT_CONVERSATION } from "./persistence/automation-readers.sql"
 import type { LeadReadRow } from "./persistence/automations.rows"
@@ -43,7 +43,6 @@ const runner =
         executors[key]?.(ctx, payload) ?? Promise.reject(new TypeError(`no executor for ${key}`))
 
 const build = async (em: MockEntityManager = mockEntityManager()) => {
-    const clock = new FakeClock(NOW)
     const office = mock<AutomationOffice>()
     const runs = mock<AutomationRunsService>()
     const messages = mock<AutomationMessagesService>()
@@ -65,7 +64,7 @@ const build = async (em: MockEntityManager = mockEntityManager()) => {
         providers: [
             AutomationCareExecutorsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
-            { provide: CLOCK, useValue: clock },
+            { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: AUTOMATION_OFFICE, useValue: office },
             { provide: AutomationRunsService, useValue: runs },
             { provide: AutomationMessagesService, useValue: messages },

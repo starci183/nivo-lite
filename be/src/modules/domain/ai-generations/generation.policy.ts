@@ -19,7 +19,7 @@ const PURPOSE_MAX = 60
 const FAILURE_MAX = 200
 
 /** Accepts persisted JSON objects while rejecting arrays and null. */
-export const isRecord = (value: unknown): value is Record<string, unknown> =>
+export const isPlainObject = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null && !Array.isArray(value)
 
 const isNumber = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value)
@@ -43,7 +43,7 @@ export const inputJsonOf = (params: GenerateParams, timeoutMs: number): string =
     JSON.stringify({ messages: params.messages, response_format: params.responseFormat, timeout_ms: timeoutMs })
 
 const isMessage = (value: unknown): value is GenMessage =>
-    isRecord(value) &&
+    isPlainObject(value) &&
     (value.role === "system" || value.role === "user" || value.role === "assistant") &&
     typeof value.content === "string"
 
@@ -51,7 +51,7 @@ const formatOf = (value: unknown): ResponseFormat => (value === "json" ? "json" 
 
 /** Reads the stored input back; a member that is missing or malformed takes its default. */
 export const inputOf = (value: unknown): GenerationInput => {
-    const input = isRecord(value) ? value : {}
+    const input = isPlainObject(value) ? value : {}
     return {
         messages: Array.isArray(input.messages) ? input.messages.filter(isMessage) : [],
         responseFormat: formatOf(input.response_format),
@@ -61,7 +61,7 @@ export const inputOf = (value: unknown): GenerationInput => {
 
 /** Reads the usage a run reported; null when it is not the usage shape. */
 export const usageOf = (value: unknown): RunUsage | null => {
-    if (!isRecord(value)) return null
+    if (!isPlainObject(value)) return null
     const { prompt_tokens, completion_tokens, cached_tokens, cost, model } = value
     if (!isNumber(prompt_tokens) || !isNumber(completion_tokens) || !isNumber(cached_tokens) || !isNumber(cost)) {
         return null
@@ -77,14 +77,14 @@ export const usageOf = (value: unknown): RunUsage | null => {
 
 /** Reads the marks a run reported: only the numeric ones. */
 export const timingsOf = (value: unknown): Readonly<Record<string, number>> =>
-    isRecord(value)
+    isPlainObject(value)
         ? Object.fromEntries(Object.entries(value).filter((entry): entry is [string, number] => isNumber(entry[1])))
         : {}
 
 /** The row a caller polls, as the progress it shows. */
 export const progressOf = (row: GenerationProgressRow): GenerationProgress => ({
     status: row.status,
-    text: isRecord(row.output) && typeof row.output.text === "string" ? row.output.text : null,
+    text: isPlainObject(row.output) && typeof row.output.text === "string" ? row.output.text : null,
     usage: usageOf(row.usage),
     timings: timingsOf(row.timings),
 })

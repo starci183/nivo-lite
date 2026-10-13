@@ -1,6 +1,8 @@
-import type { Access, Purpose } from "@modules/domain/connection-grants"
+/** What an agent may do through one connection. */
+export type Access = "read" | "ask" | "auto"
 
-export type { Access, Purpose }
+/** How an agent uses a connection (stored on the grant). */
+export type Purpose = "inbound_chat" | "outbound_chat" | "bank_feed" | "data_source" | "tool" | "lead_source"
 
 /** One purpose or several. */
 export type PurposeSelector = Purpose | ReadonlyArray<Purpose>

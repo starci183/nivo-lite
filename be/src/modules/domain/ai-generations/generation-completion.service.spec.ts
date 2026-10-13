@@ -2,12 +2,9 @@ import { Test } from "@nestjs/testing"
 import { GenerationCompletionService } from "./generation-completion.service"
 
 describe("GenerationCompletionService", () => {
-    it("finishes a generic text with no further domain effect", async () => {
-        const moduleRef = await Test.createTestingModule({
-            providers: [GenerationCompletionService],
-        }).compile()
-        const service = moduleRef.get(GenerationCompletionService)
+    it("has no further effect for a generic generated text", async () => {
+        const moduleRef = await Test.createTestingModule({ providers: [GenerationCompletionService] }).compile()
 
-        await expect(service.completeGeneration()).resolves.toBeUndefined()
+        await expect(moduleRef.get(GenerationCompletionService).completeGeneration()).resolves.toBeUndefined()
     })
 })

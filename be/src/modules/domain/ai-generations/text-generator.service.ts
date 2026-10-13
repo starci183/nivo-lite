@@ -1,10 +1,10 @@
 import { Injectable } from "@nestjs/common"
-import type { TextGenerator, TextRequest } from "@modules/integrations/deepseek"
+import type { DeepseekTextGenerator, TextRequest } from "@modules/integrations/deepseek"
 import { GenerationsService } from "./generations.service"
 
 @Injectable()
 /** The text door the prompt library generates through: every prompt becomes a generation row that OpenClaw runs. */
-export class TextGeneratorService implements TextGenerator {
+export class TextGeneratorService implements DeepseekTextGenerator {
     constructor(private readonly generations: GenerationsService) {}
 
     /** Writes the text of a prompt, or fails with the sentence to show when the model cannot answer. */

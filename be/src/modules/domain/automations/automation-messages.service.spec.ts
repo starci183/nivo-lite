@@ -1,9 +1,9 @@
 import { Test } from "@nestjs/testing"
 import { mock, mockEntityManager } from "@starci/jest-preset"
-import type { MockEntityManager } from "@starci/jest-preset"
-import { MESSAGE_CATALOG } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { MESSAGE_CATALOG } from "@modules/platform/i18n"
+import type { MockEntityManager } from "@starci/jest-preset"
+import type { MessageCatalog } from "@modules/platform/i18n"
 import type { Composition } from "./automation-messages.contracts"
 import { AutomationMessagesService } from "./automation-messages.service"
 import type {
@@ -13,8 +13,8 @@ import type {
     ExecutorContext,
     GateOutcome,
 } from "./automation-ports.contracts"
-import { AUTOMATION_GATE, AUTOMATION_OFFICE, AUTOMATION_TEXT } from "./automations.decorators"
 import { buildPipelineRow, buildShop, buildTemplate } from "@tests/fixtures/builders/automations.builder"
+import { AUTOMATION_GATE, AUTOMATION_OFFICE, AUTOMATION_TEXT } from "./automations.decorators"
 import { AutomationsErrorCode } from "./errors/automations.error"
 import { SELECT_FIRST_STAFF, SELECT_LATEST_CONVERSATION, SELECT_LEAD } from "./persistence/automation-readers.sql"
 import type { LeadReadRow } from "./persistence/automations.rows"
@@ -63,7 +63,7 @@ const context = (overrides: Partial<ExecutorContext> = {}): ExecutorContext => (
     ...overrides,
 })
 
-const build = async (em: MockEntityManager = mockEntityManager(), withText = false) => {
+const build = async (em: MockEntityManager = mockEntityManager()) => {
     const catalog = mock<MessageCatalog>()
     catalog.get.mockImplementation((key, params) => {
         if (key === "automations.pattern.negative") return "bad|terrible"
@@ -74,7 +74,7 @@ const build = async (em: MockEntityManager = mockEntityManager(), withText = fal
     gate.submit.mockResolvedValue(outcome())
     const office = mock<AutomationOffice>()
     const text = mock<AutomationText>()
-    if (!withText) text.generate.mockResolvedValue(null)
+    text.generate.mockResolvedValue(null)
     const moduleRef = await Test.createTestingModule({
         providers: [
             AutomationMessagesService,
@@ -85,7 +85,8 @@ const build = async (em: MockEntityManager = mockEntityManager(), withText = fal
             { provide: AUTOMATION_TEXT, useValue: text },
         ],
     }).compile()
-    return { service: moduleRef.get(AutomationMessagesService), gate, office, text }
+    const service = moduleRef.get(AutomationMessagesService)
+    return { service, gate, office, text }
 }
 
 describe("AutomationMessagesService", () => {
@@ -267,7 +268,7 @@ describe("AutomationMessagesService", () => {
             const perCase = context({ def: buildTemplate({ contentMode: "ai_per_case" }) })
 
             it("uses the text the model wrote when it is plain and complete", async () => {
-                const { service, gate, text } = await build(mockEntityManager(), true)
+                const { service, gate, text } = await build()
                 text.generate.mockResolvedValue('  "Chao An, cam on ban"  ')
 
                 const result = await service.composeAndSend(perCase, composition())
@@ -280,7 +281,7 @@ describe("AutomationMessagesService", () => {
             })
 
             it("keeps the filled wording when the model answers nothing, or something it should not", async () => {
-                const { service, gate, text } = await build(mockEntityManager(), true)
+                const { service, gate, text } = await build()
                 text.generate.mockResolvedValueOnce(null)
                 text.generate.mockResolvedValueOnce("Chao {ten_khach} con thieu")
 
@@ -297,8 +298,8 @@ describe("AutomationMessagesService", () => {
                 )
             })
 
-            it("fills the wording when no model is bound", async () => {
-                const { service, gate } = await build(mockEntityManager(), false)
+            it("fills the wording when the model answers nothing", async () => {
+                const { service, gate } = await build()
 
                 await service.composeAndSend(perCase, composition())
 
@@ -377,7 +378,7 @@ describe("AutomationMessagesService", () => {
 
     describe("isNegative", () => {
         it("is no for an empty feedback, yes for a keyword, and asks the model otherwise", async () => {
-            const { service, text } = await build(mockEntityManager(), true)
+            const { service, text } = await build()
             text.generate
                 .mockResolvedValueOnce("negative")
                 .mockResolvedValueOnce("POSITIVE")
@@ -397,7 +398,7 @@ describe("AutomationMessagesService", () => {
             })
         })
 
-        it("is no on any doubt when no model is bound", async () => {
+        it("is no on any doubt when the model answers nothing", async () => {
             const { service } = await build()
 
             await expect(service.isNegative("hmm not sure", "ws-1")).resolves.toBe(false)
