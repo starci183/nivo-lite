@@ -6,6 +6,7 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
+import { isConnectionHealthPayload } from "@modules/queues/connection-health"
 import type { HealthSummary, HealthTally } from "./channels.contracts"
 import { ChannelsLogEvent } from "./channels.log-events"
 import { judgeConnection } from "./connection-health.policy"
@@ -32,6 +33,11 @@ export class ConnectionHealthService {
         const tally: HealthTally = { checked: 0, ok: 0, silent: 0, failing: 0, changed: 0 }
         await this.page("", silentAfterHours, tally)
         return { ...tally }
+    }
+
+    /** Runs the check a queued job asks for: its own silence horizon when the payload carries one, else the default. */
+    checkFromJob(payload: unknown): Promise<HealthSummary> {
+        return isConnectionHealthPayload(payload) ? this.checkAll(payload.silentAfterHours) : this.checkAll()
     }
 
     private async page(afterId: string, silentAfterHours: number, tally: HealthTally): Promise<void> {

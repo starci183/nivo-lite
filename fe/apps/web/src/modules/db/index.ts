@@ -6,7 +6,7 @@ export { readPostAuthPath } from "./auth/read-post-auth-path"
 export { readRequestOrigin } from "./auth/read-request-origin"
 export { readInvitePreview } from "./invite/read-invite-preview"
 export { dbFailure, dbOk } from "./outcome"
-export type { DbOutcome } from "./outcome"
+export type { DbFailure, DbOutcome } from "./outcome"
 export { getPrincipal } from "./principal"
 export { readAccount } from "./account/read-account"
 export { readApiKeys } from "./developers/read-api-keys"
@@ -78,6 +78,9 @@ export { readDashboardPayload, readOfficePayload } from "./pagedata/read-page-da
 export type { DashboardPayload, OfficePayload } from "./pagedata/pagedata.mapper"
 export { overviewFactsFrom } from "./overview/overview.mapper"
 export type { OverviewFacts } from "./overview/overview.mapper"
+export { readAutomations } from "./automations/read-automations"
+export type { GoogleAccount } from "./automations/automations.view"
+export type { AutomationCommandView } from "./automations/write-automation-command"
 export {
     readBillingWorkspace,
     readBillingWorkspaces,

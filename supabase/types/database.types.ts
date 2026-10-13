@@ -1,4 +1,4 @@
-// migrations-sha256: 86545ef09d624fdbe19130efc02ffa304a820bb4c5d922d30049d86a15d95230
+// migrations-sha256: 3430247256fc29786a6b00e29108af8ba5a7d9953430c692bba8b5b69862e9b7
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -419,6 +419,25 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"automation_commands": {
+                  Row: {
+                    "created_at": string,"created_by": string,"fault_code": string | null,"finished_at": string | null,"id": string,"kind": string,"result": Json | null,"status": string,"template_key": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"created_by": string,"fault_code"?: string | null,"finished_at"?: string | null,"id"?: string,"kind": string,"result"?: Json | null,"status"?: string,"template_key": string,"workspace_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string,"fault_code"?: string | null,"finished_at"?: string | null,"id"?: string,"kind"?: string,"result"?: Json | null,"status"?: string,"template_key"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "automation_commands_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"automation_pipelines": {
                   Row: {
                     "approval_streak": number,"auto_send": boolean,"based_on_context": number | null,"body": string | null,"body_version": number,"config": NonNullable<Json>,"created_at": string,"created_by": string | null,"dismissed": boolean,"enabled": boolean,"id": string,"module_key": string | null,"name": string,"template_key": string,"template_version": number,"trust_offered_at": string | null,"updated_at": string,"workspace_id": string
@@ -471,13 +490,13 @@ isOneToOne: false
                   ]
                 },"automation_templates": {
                   Row: {
-                    "definition": NonNullable<Json>,"executor": string,"key": string,"module_key": string | null,"pack": string,"updated_at": string,"version": number
+                    "definition": NonNullable<Json>,"executor": string,"key": string,"module_key": string | null,"pack": string,"position": number,"updated_at": string,"version": number
                   }
                   Insert: {
-                    "definition": NonNullable<Json>,"executor"?: string,"key": string,"module_key"?: string | null,"pack"?: string,"updated_at"?: string,"version"?: number
+                    "definition": NonNullable<Json>,"executor"?: string,"key": string,"module_key"?: string | null,"pack"?: string,"position"?: number,"updated_at"?: string,"version"?: number
                   }
                   Update: {
-                    "definition"?: NonNullable<Json>,"executor"?: string,"key"?: string,"module_key"?: string | null,"pack"?: string,"updated_at"?: string,"version"?: number
+                    "definition"?: NonNullable<Json>,"executor"?: string,"key"?: string,"module_key"?: string | null,"pack"?: string,"position"?: number,"updated_at"?: string,"version"?: number
                   }
                   Relationships: [
                     
@@ -3833,8 +3852,8 @@ isOneToOne: false
 "assign_lead_responsibility":
 { Args: { "p_due"?: string,"p_locale"?: string,"p_next_action": string,"p_owner": string,"p_responsibility": string,"p_title"?: string,"p_workspace": string }; Returns: Json
                            },
-"automation_tick":
-{ Args: Record<PropertyKey, never>; Returns: boolean
+"automation_command_enqueue":
+{ Args: { "p_kind": string,"p_template": string,"p_workspace": string }; Returns: string
                            },
 "automations_data":
 { Args: { "ws": string }; Returns: Json
@@ -4129,12 +4148,6 @@ isOneToOne: false
                            },
 "my_staff_id":
 { Args: { "ws": string }; Returns: string
-                           },
-"n8n_schedule_pipelines":
-{ Args: Record<PropertyKey, never>; Returns: number
-                           },
-"n8n_start_run":
-{ Args: { "p_api_base"?: string,"p_data"?: Json,"p_dedupe"?: string,"p_force"?: boolean,"p_key": string,"p_workspace": string }; Returns: string
                            },
 "office_data":
 { Args: { "since7": string,"ws": string }; Returns: Json

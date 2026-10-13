@@ -76,5 +76,7 @@
   "takenOverNotice": "You took over. The AI stays quiet until you give the conversation back.",
   "staffPlaceholder": "Reply as staff",
   "handoffNotice": "Lead handed to Sales AI.",
-  "handoffGate": "See this customer's work flow →"
+  "handoffGate": "See this customer's work flow →",
+  "emptyMessage": "Write a message first.",
+  "notSentReason": "The message could not be sent. Try again."
 }
