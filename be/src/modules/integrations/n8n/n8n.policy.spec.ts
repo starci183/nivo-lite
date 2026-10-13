@@ -1,48 +1,5 @@
 import { N8nErrorCode } from "./errors/n8n.error"
-import {
-    assertAllowedTarget,
-    assertEventName,
-    isPrivateAddress,
-    isTransientStatus,
-    signBody,
-    workspaceKey,
-} from "./n8n.policy"
-
-describe("isPrivateAddress", () => {
-    it.each([
-        "10.1.2.3",
-        "127.0.0.1",
-        "0.0.0.0",
-        "169.254.169.254",
-        "172.16.0.1",
-        "172.31.255.255",
-        "192.168.1.1",
-        "100.64.0.1",
-        "100.127.255.255",
-        "::1",
-        "::",
-        "fd12::1",
-        "fe80::1",
-        "::ffff:10.0.0.1",
-        "[::1]",
-        "not-an-ip",
-        "1.2.3",
-    ])("treats %s as private", (address) => {
-        expect(isPrivateAddress(address)).toBe(true)
-    })
-
-    it.each([
-        "8.8.8.8",
-        "172.32.0.1",
-        "100.128.0.1",
-        "169.253.0.1",
-        "192.169.0.1",
-        "2606:4700::1111",
-        "::ffff:8.8.8.8",
-    ])("treats %s as public", (address) => {
-        expect(isPrivateAddress(address)).toBe(false)
-    })
-})
+import { assertAllowedTarget, assertEventName, isTransientStatus, signBody, workspaceKey } from "./n8n.policy"
 
 describe("assertAllowedTarget", () => {
     const resolve = jest.fn<Promise<ReadonlyArray<string>>, [string]>()

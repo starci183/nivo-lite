@@ -19,24 +19,24 @@ const signed = (value: string): string => {
     return `${body}.${createHmac("sha256", key).update(body).digest("base64url")}`
 }
 
-const DEFAULT_OPTIONS: OpenclawOptions = {
-    gateway: null,
-    turnTimeoutMs: 90_000,
-    settleMs: 3000,
-    configDir: undefined,
-    gatewayStateDir: "/home/node/.openclaw",
-    manageAgents: false,
-    toolSecret: null,
-}
-
 const build = async (toolSecret: Secret | null = new Secret(SECRET)) => {
     const clock = new FakeClock("2026-10-12T10:00:00.000Z")
     const logger = mock<Logger>()
-    const options = builder<OpenclawOptions>(DEFAULT_OPTIONS)({ toolSecret })
     const moduleRef = await Test.createTestingModule({
         providers: [
             ToolTokenService,
-            { provide: OPENCLAW_OPTIONS, useValue: options },
+            {
+                provide: OPENCLAW_OPTIONS,
+                useValue: builder<OpenclawOptions>({
+                    gateway: null,
+                    turnTimeoutMs: 90_000,
+                    settleMs: 3000,
+                    configDir: undefined,
+                    gatewayStateDir: "/home/node/.openclaw",
+                    manageAgents: false,
+                    toolSecret: null,
+                })({ toolSecret }),
+            },
             { provide: CLOCK, useValue: clock },
             { provide: LOGGER, useValue: logger },
         ],

@@ -6,7 +6,7 @@ import { Secret } from "@modules/platform/config"
 import { HttpSecurityError, HttpSecurityErrorCode } from "./errors/http-security.error"
 import { HTTP_SECURITY_OPTIONS, WEBHOOK_PROOF_REGISTRY } from "./http-security.decorators"
 import type { HttpSecurityOptions } from "./http-security.options"
-import type { WebhookProof, WebhookProofRegistry } from "./webhook-proof.port"
+import type { WebhookProofRegistry } from "./webhook-proof.port"
 import { WebhookSignatureService } from "./webhook-signature.service"
 
 const NOW = "2026-10-02T03:00:00.000Z"
@@ -23,18 +23,12 @@ const OPTIONS: HttpSecurityOptions = {
 const sign = (timestamp: string, body: Buffer, secret = SECRET): string =>
     `sha256=${createHmac("sha256", secret).update(`${timestamp}.`).update(body).digest("hex")}`
 
-const build = async (proofs: ReadonlyArray<WebhookProof> = []) => {
-    const registry = mock<WebhookProofRegistry>()
-    const byProvider = new Map(proofs.map((proof) => [proof.provider, proof]))
-    registry.prove.mockImplementation((provider, request) => {
-        const proof = byProvider.get(provider)
-        if (proof === undefined) {
-            return Promise.reject(
-                new HttpSecurityError({ code: HttpSecurityErrorCode.WebhookProviderUnknown, params: { provider } }),
-            )
-        }
-        return proof.prove(request)
-    })
+/** The registry answer when no proof is registered for the provider. */
+const unknownProvider: WebhookProofRegistry["prove"] = (provider) =>
+    Promise.reject(new HttpSecurityError({ code: HttpSecurityErrorCode.WebhookProviderUnknown, params: { provider } }))
+
+const build = async (prove: WebhookProofRegistry["prove"] = unknownProvider) => {
+    const registry = mock<WebhookProofRegistry>({ prove })
     const moduleRef = await Test.createTestingModule({
         providers: [
             WebhookSignatureService,
@@ -195,12 +189,13 @@ describe("WebhookSignatureService", () => {
         }
 
         it("accepts a delivery the registered proof accepts and hands the proof the scope and the exact bytes", async () => {
-            const prove = jest.fn().mockResolvedValue(true)
-            const service = await build([{ provider: "zalo", prove }])
+            const prove = jest.fn<Promise<boolean>, Parameters<WebhookProofRegistry["prove"]>>()
+            prove.mockResolvedValue(true)
+            const service = await build(prove)
 
             await expect(service.verify(scoped)).resolves.toBeUndefined()
 
-            expect(prove).toHaveBeenCalledWith({
+            expect(prove).toHaveBeenCalledWith("zalo", {
                 scope: "connection-1",
                 rawBody: BODY,
                 signature: "mac",
@@ -209,7 +204,7 @@ describe("WebhookSignatureService", () => {
         })
 
         it("refuses a delivery the registered proof rejects", async () => {
-            const service = await build([{ provider: "zalo", prove: () => Promise.resolve(false) }])
+            const service = await build(() => Promise.resolve(false))
 
             await expect(service.verify(scoped)).rejects.toMatchObject({
                 code: HttpSecurityErrorCode.WebhookSignatureInvalid,

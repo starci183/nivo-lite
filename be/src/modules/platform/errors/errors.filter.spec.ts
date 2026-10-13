@@ -56,7 +56,7 @@ describe("ErrorsFilter", () => {
 
         expect(filter.catch(failure, host)).toBeUndefined()
 
-        expect(errors.describe).toHaveBeenCalledWith(failure)
+        expect(errors.describe).toHaveBeenCalledWith(failure, expect.objectContaining({ scope: "http" }))
         expect(requestLocale.of).toHaveBeenCalledWith("en-US,en;q=0.9")
         expect(errors.text).toHaveBeenCalledWith("ORDER_NOT_FOUND", { orderId: "order-1" }, "en")
         expect(response.status).toHaveBeenCalledWith(404)

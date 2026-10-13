@@ -5,6 +5,7 @@ import type { DataSource } from "typeorm"
 import { DATABASE_OPTIONS } from "./database.port"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./database.module-definition"
 import { MigrationRunnerService } from "./migration-runner.service"
+import { appPgTypes } from "./pg-types.policy"
 import { PRIMARY_CONNECTION } from "./primary.connection"
 import { PRIMARY_ENTITY_MANAGER } from "./primary.decorators"
 import { SeedRunnerService } from "./seed-runner.service"
@@ -46,6 +47,7 @@ export class DatabaseModule extends ConfigurableModuleClass {
                         schema: connection.schema,
                         synchronize: false,
                         retryAttempts: 2,
+                        extra: { types: appPgTypes() },
                     }),
                 ),
             ],

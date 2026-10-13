@@ -1,13 +1,13 @@
 import { GraphQLError } from "graphql"
 import type { GraphQLFormattedError } from "graphql"
-import type { ErrorDescription } from "./errors.contracts"
+import type { ErrorDescription, FailureSite } from "./errors.contracts"
 import type { ErrorsService } from "./errors.service"
 
-const describeGraphqlFailure = (errors: ErrorsService, error: unknown): ErrorDescription => {
+const describeGraphqlFailure = (errors: ErrorsService, error: unknown, site: FailureSite): ErrorDescription => {
     if (error instanceof GraphQLError) {
-        return error.originalError ? errors.describe(error.originalError) : errors.describeInvalidOperation()
+        return error.originalError ? errors.describe(error.originalError, site) : errors.describeInvalidOperation()
     }
-    return errors.describe(error)
+    return errors.describe(error, site)
 }
 
 /**
@@ -20,7 +20,9 @@ export const formatGraphqlError = (
     formatted: GraphQLFormattedError,
     error: unknown,
 ): GraphQLFormattedError => {
-    const description = describeGraphqlFailure(errors, error)
+    const operation = formatted.path?.map(String).join(".")
+    const site: FailureSite = { scope: "graphql", context: operation === undefined ? {} : { operation } }
+    const description = describeGraphqlFailure(errors, error, site)
     return {
         message: description.code,
         locations: formatted.locations,
