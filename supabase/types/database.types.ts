@@ -2208,13 +2208,6 @@ isOneToOne: false
                   }
                   Relationships: [
                     {
-      foreignKeyName: "loyalty_commands_created_by_fkey"
-      columns: ["created_by"]
-isOneToOne: false
-      referencedRelation: "users"
-      referencedColumns: ["id"]
-    },
-                    {
       foreignKeyName: "loyalty_commands_workspace_id_fkey"
       columns: ["workspace_id"]
 isOneToOne: false
