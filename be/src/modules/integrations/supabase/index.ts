@@ -3,6 +3,7 @@ export type { SignedUpload, StorageFailureCode, StoredObject } from "./supabase.
 export {
     InjectSupabaseStorage,
     SUPABASE_ACCESS_TOKEN_VERIFIER,
+    SUPABASE_ACCOUNTS,
     SUPABASE_AUTH,
     SUPABASE_STORAGE,
 } from "./supabase.decorators"

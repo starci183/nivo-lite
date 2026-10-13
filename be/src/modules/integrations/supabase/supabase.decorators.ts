@@ -31,3 +31,6 @@ export const InjectSupabasePublicClient = (): TypedParameterDecorator<SupabasePu
 /** Injects the access-token verifier. Parameter type: VerifySupabaseAccessToken. */
 export const InjectSupabaseAccessTokenVerifier = (): TypedParameterDecorator<VerifySupabaseAccessToken> =>
     injector<VerifySupabaseAccessToken>(SUPABASE_ACCESS_TOKEN_VERIFIER)
+
+/** Token of the account administration the operator commands use. */
+export const SUPABASE_ACCOUNTS: unique symbol = Symbol("integrations.supabase.accounts")

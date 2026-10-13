@@ -1,10 +1,14 @@
-import type { Metadata } from "next";
-import type { ReactNode } from "react";
+import type { ReactNode } from "react"
+import { AdminLayout } from "@/features/layouts/AdminLayout"
 
-export const metadata: Metadata = { title: "NIVO team console", robots: { index: false, follow: false } };
-export const dynamic = "force-dynamic";
+export { adminLayoutMetadata as generateMetadata } from "@/features/layouts/AdminLayout"
 
-/** The team console. Access is checked by every page and action (requirePlatformAdmin), not here: layouts do not re-run on navigation. */
-const AdminLayout = ({ children }: { readonly children: ReactNode }) => children;
+/** The console is read per request under the admin token, never prerendered. */
+export const dynamic = "force-dynamic"
 
-export default AdminLayout;
+type LayoutProps = { readonly children: ReactNode }
+
+/** The team console: the frame checks the platform admin, every page reads under the same token. */
+const Layout = (props: LayoutProps) => <AdminLayout>{props.children}</AdminLayout>
+
+export default Layout
