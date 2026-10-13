@@ -1,5 +1,5 @@
 import type { SWRConfiguration } from "swr"
-import { useGraphqlQuerySwr } from "@/hooks/reuseables/useGraphqlQuerySwr"
+import { useGraphqlQuerySwr } from "@/hooks/reuseables"
 import { queryAgentSyncStatus } from "@/modules/api/graphql/queries/query-agent-sync-status"
 import type { QueryAgentSyncStatusRequest } from "@/modules/api/graphql/queries/query-agent-sync-status"
 

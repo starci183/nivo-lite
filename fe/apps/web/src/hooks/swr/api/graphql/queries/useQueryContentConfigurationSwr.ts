@@ -1,5 +1,5 @@
 import { queryContentConfiguration } from "@/modules/api/graphql/queries/query-content-configuration"
-import { useWorkspaceQuerySwr } from "@/hooks/reuseables/useWorkspaceQuerySwr"
+import { useWorkspaceQuerySwr } from "@/hooks/reuseables"
 
 /** The SWR key of the contentConfiguration query. */
 export const QUERY_CONTENT_CONFIGURATION_SWR_KEY = "QUERY_CONTENT_CONFIGURATION_SWR"

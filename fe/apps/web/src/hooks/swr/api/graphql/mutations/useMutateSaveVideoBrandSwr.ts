@@ -1,5 +1,5 @@
 import { mutateSaveVideoBrand } from "@/modules/api/graphql/mutations/mutation-save-video-brand"
-import { useGraphQLMutationSwr } from "@/hooks/reuseables/useGraphQLMutationSwr"
+import { useGraphQLMutationSwr } from "@/hooks/reuseables"
 
 /** The SWR key of the saveVideoBrand mutation. */
 export const MUTATE_SAVE_VIDEO_BRAND_SWR_KEY = "MUTATE_SAVE_VIDEO_BRAND_SWR"

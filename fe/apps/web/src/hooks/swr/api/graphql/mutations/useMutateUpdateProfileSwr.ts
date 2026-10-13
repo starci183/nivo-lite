@@ -1,5 +1,5 @@
 import { mutateUpdateProfile } from "@/modules/api/graphql/mutations/mutation-update-profile"
-import { useGraphQLMutationSwr } from "@/hooks/reuseables/useGraphQLMutationSwr"
+import { useGraphQLMutationSwr } from "@/hooks/reuseables"
 
 /** The SWR key of the updateProfile mutation. */
 export const MUTATE_UPDATE_PROFILE_SWR_KEY = "MUTATE_UPDATE_PROFILE_SWR"
