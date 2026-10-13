@@ -30,9 +30,10 @@ import {
     startsOf,
 } from "./render-plan.policy"
 import type { VoiceClip } from "./render-plan.policy"
-import { InjectVideoOptions } from "./video.decorators"
+import type { VideoAssets } from "./video.contracts"
+import { InjectVideoAssets, InjectVideoOptions } from "./video.decorators"
 import type { VideoOptions } from "./video.options"
-import { aspectSize, MUSIC_TRACKS } from "./video-spec.policy"
+import { aspectSize, MEDIA_BUCKET, MUSIC_TRACKS, musicObjectPath } from "./video-spec.policy"
 import type { VideoSpec } from "./video-spec.policy"
 
 /** What the renderer is doing, for the progress bar. */
@@ -144,6 +145,7 @@ const voiceoverKind = (requested: number, clips: ReadonlyArray<VoiceClip | null>
 export class RendererService {
     constructor(
         @InjectVideoOptions() private readonly options: VideoOptions,
+        @InjectVideoAssets() private readonly assets: VideoAssets,
         @InjectFfmpeg() private readonly ffmpeg: Ffmpeg,
         @InjectTts() private readonly tts: Tts,
         @InjectClock() private readonly clock: Clock,
@@ -209,7 +211,7 @@ export class RendererService {
                 crossfades,
                 total,
                 threads: this.options.ffmpegThreads,
-                fontsDir: join(this.options.assetsDir, "fonts"),
+                fontsDir: this.options.fontsDir,
                 output: videoFile,
             })
             await this.ffmpeg.run("ffmpeg", args, {
@@ -316,18 +318,20 @@ export class RendererService {
         return files
     }
 
-    /** The bundled file of the track the spec names, null for none; a track whose file is missing is a rejected render. */
-    private async musicFileOf(spec: VideoSpec): Promise<string | null> {
+    /** The track the spec names, downloaded from the media bucket into the work directory; null for none, and a track the bucket does not hold is a rejected render. */
+    private async musicFileOf(spec: VideoSpec, workDir: string): Promise<string | null> {
         const track = MUSIC_TRACKS.find((candidate) => candidate.id === spec.music?.track)
         if (track === undefined) return null
-        const file = join(this.options.assetsDir, "music", `${track.id}.mp3`)
-        await stat(file).catch((cause: unknown) => {
-            throw new VideoError({
+        const missing = (cause?: unknown): VideoError =>
+            new VideoError({
                 code: VideoErrorCode.RenderRejected,
                 params: { reason: `music_missing: ${track.id}` },
                 cause,
             })
-        })
+        const { data, error } = await this.assets.download(MEDIA_BUCKET, musicObjectPath(track.id))
+        if (error !== null) throw missing(error)
+        const file = join(workDir, `music-${track.id}.mp3`)
+        await writeFile(file, Buffer.from(await data.arrayBuffer()))
         return file
     }
 
@@ -339,7 +343,7 @@ export class RendererService {
         total: number,
     ): Promise<MixedAudio> {
         const { spec, workDir, signal } = input
-        const musicFile = await this.musicFileOf(spec)
+        const musicFile = await this.musicFileOf(spec, workDir)
         const voices = clips.flatMap((clip, index) =>
             clip === null ? [] : [{ file: clip.file, start: valueAt(starts, index) }],
         )

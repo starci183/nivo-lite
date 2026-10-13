@@ -2,6 +2,7 @@ import {
     aspectSize,
     estimateSceneSeconds,
     mediaPathOf,
+    musicObjectPath,
     normaliseColor,
     validateVideoSpec,
     VIDEO_MAX_SCENES,
@@ -25,6 +26,12 @@ const validSpec = {
     ],
     brand: { name: "Shop" },
 }
+
+describe("musicObjectPath", () => {
+    it("puts a bed under the music folder of the media bucket", () => {
+        expect(musicObjectPath("calm-glow")).toBe("music/calm-glow.mp3")
+    })
+})
 
 describe("normaliseColor", () => {
     it.each([

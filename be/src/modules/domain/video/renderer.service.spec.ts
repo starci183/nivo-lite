@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises"
+import { mkdtemp, readFile, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { FakeClock, builder, mock } from "@starci/jest-preset"
@@ -9,6 +9,7 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { VideoErrorCode } from "./errors/video.error"
 import { RendererService } from "./renderer.service"
 import type { RenderInput } from "./renderer.service"
+import type { VideoAssets } from "./video.contracts"
 import type { VideoOptions } from "./video.options"
 import type { Scene, VideoSpec } from "./video-spec.policy"
 
@@ -39,10 +40,15 @@ const specOf = builder<VideoSpec>({
 
 const build = async (maxSeconds = 90) => {
     const root = await mkdtemp(join(tmpdir(), "nivo-render-spec-"))
-    const assetsDir = join(root, "assets")
-    await mkdir(join(assetsDir, "music"), { recursive: true })
-    await writeFile(join(assetsDir, "music", "calm-glow.mp3"), "music")
-    const options: VideoOptions = { assetsDir, workDir: join(root, "work"), maxSeconds, ffmpegThreads: 2 }
+    const assets = mock<VideoAssets>()
+    assets.download.mockImplementation((_bucket, path) =>
+        Promise.resolve(
+            path === "music/calm-glow.mp3"
+                ? { data: new Blob(["music"]), error: null }
+                : { data: null, error: new Error("Object not found") },
+        ),
+    )
+    const options: VideoOptions = { fontsDir: join(root, "fonts"), workDir: join(root, "work"), maxSeconds, ffmpegThreads: 2 }
     const ffmpeg = mock<Ffmpeg>()
     ffmpeg.run.mockImplementation(async (_tool, args, run) => {
         const output = args[args.length - 1] ?? ""
@@ -55,7 +61,7 @@ const build = async (maxSeconds = 90) => {
     tts.clip.mockResolvedValue({ file: "clip.mp3", cached: false, provider: "edge" })
     const catalog = mock<MessageCatalog>()
     catalog.get.mockReturnValue("min|kg")
-    const renderer = new RendererService(options, ffmpeg, tts, new FakeClock("2026-10-12T00:00:00.000Z"), catalog)
+    const renderer = new RendererService(options, assets, ffmpeg, tts, new FakeClock("2026-10-12T00:00:00.000Z"), catalog)
     const progress: Array<string> = []
     const inputOf = (spec: VideoSpec, overrides: Partial<RenderInput> = {}): RenderInput => ({
         spec,
@@ -69,12 +75,12 @@ const build = async (maxSeconds = 90) => {
         onProgress: (stage, percent) => progress.push(`${stage}:${percent}`),
         ...overrides,
     })
-    return { renderer, ffmpeg, tts, inputOf, progress, options }
+    return { renderer, ffmpeg, tts, assets, inputOf, progress, options }
 }
 
 describe("RendererService", () => {
     it("renders a spoken scene, a picture, a gradient card and a logo with music into an MP4 and a poster", async () => {
-        const { renderer, ffmpeg, tts, inputOf, progress, options } = await build()
+        const { renderer, ffmpeg, tts, assets, inputOf, progress, options } = await build()
         const spec = specOf({
             music: { track: "calm-glow", volume: 0.5 },
             brand: { name: "Shop", primary: "#16a34a", secondary: "#0f172a", logo: LOGO },
@@ -89,6 +95,8 @@ describe("RendererService", () => {
         const output = await renderer.render(inputOf(spec))
 
         expect(output).toMatchObject({ durationMs: 2000, sizeBytes: 5 })
+        expect(assets.download).toHaveBeenCalledWith("media", "music/calm-glow.mp3")
+        expect(await readFile(join(options.workDir, "render-1", "music-calm-glow.mp3"), "utf8")).toBe("music")
         expect(output.videoFile.endsWith("out.mp4")).toBe(true)
         expect(output.posterFile.endsWith("poster.jpg")).toBe(true)
         expect(output.meta).toMatchObject({
@@ -222,9 +230,8 @@ describe("RendererService", () => {
         })
     })
 
-    it("rejects a track that is not bundled", async () => {
-        const { renderer, inputOf, options } = await build()
-        await writeFile(join(options.assetsDir, "music", "calm-glow.mp3"), "")
+    it("rejects a track the media bucket does not hold", async () => {
+        const { renderer, inputOf } = await build()
         const spec = specOf({ music: { track: "bold-beat", volume: 0.5 } })
 
         await expect(renderer.render(inputOf(spec))).rejects.toMatchObject({

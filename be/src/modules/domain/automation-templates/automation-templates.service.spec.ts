@@ -1,7 +1,7 @@
 import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import type { TemplateFiles } from "@modules/integrations/template-files"
 import type { Logger } from "@modules/platform/logging"
+import { TEMPLATE_CATALOG } from "./automation-templates.templates"
 import { AutomationTemplatesLogEvent } from "./automation-templates.log-events"
 import { AutomationTemplatesService } from "./automation-templates.service"
 import { AutomationTemplatesErrorCode } from "./errors/automation-templates.error"
@@ -32,9 +32,8 @@ const definitionOf = (key: string, position: number) => ({
 
 const build = (em: MockEntityManager) => {
     const clock = new FakeClock("2026-10-12T10:00:00.000Z")
-    const files = mock<TemplateFiles>()
     const logger = mock<Logger>()
-    return { catalog: new AutomationTemplatesService(em, clock, files, logger), clock, files, logger }
+    return { catalog: new AutomationTemplatesService(em, clock, logger), clock, logger }
 }
 
 describe("AutomationTemplatesService", () => {
@@ -135,17 +134,18 @@ describe("AutomationTemplatesService", () => {
         })
     })
 
-    describe("syncFromFiles", () => {
-        it("writes the definitions of the files and logs the keys", async () => {
+    describe("syncFromCatalog", () => {
+        it("writes every template of the TypeScript catalogue and logs the keys", async () => {
             const tx = fakeTransaction(mockEntityManager({ query: [UPSERT_TEMPLATE, [{ key: "k" }]] }))
-            const { catalog, files, logger } = build(tx.em)
-            files.readDefinitions.mockResolvedValue([definitionOf("a_one", 1)])
+            const { catalog, logger } = build(tx.em)
 
-            await expect(catalog.syncFromFiles()).resolves.toEqual(["a_one"])
+            const keys = await catalog.syncFromCatalog()
 
+            expect(keys).toEqual(TEMPLATE_CATALOG.map((template) => template.key))
+            expect(new Set(keys).size).toBe(keys.length)
             expect(logger.info).toHaveBeenCalledWith(AutomationTemplatesLogEvent.CatalogSynced, {
-                count: 1,
-                keys: ["a_one"],
+                count: keys.length,
+                keys,
             })
         })
     })

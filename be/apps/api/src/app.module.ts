@@ -272,7 +272,6 @@ import {
 } from "@modules/domain/workspace-members"
 import { WORKSPACES_ERROR_KINDS, WORKSPACES_MESSAGES, WorkspacesModule } from "@modules/domain/workspaces"
 import { N8N_ERROR_KINDS, N8nModule } from "@modules/integrations/n8n"
-import { TEMPLATE_FILES_ERROR_KINDS, TemplateFilesModule } from "@modules/integrations/template-files"
 import { AUTOMATION_TICK_SCHEDULER } from "@modules/queues/automation"
 import { ClockModule } from "@modules/platform/clock"
 import { CONFIG_ERROR_KINDS } from "@modules/platform/config"
@@ -537,7 +536,6 @@ export class AppModule {
                         NIVO_KNOWLEDGE_ERROR_KINDS,
                         PUBLIC_API_ERROR_KINDS,
                         SUPABASE_ERROR_KINDS,
-                        TEMPLATE_FILES_ERROR_KINDS,
                         BOOKINGS_ERROR_KINDS,
                         LOYALTY_CAMPAIGNS_ERROR_KINDS,
                         LOYALTY_ERROR_KINDS,
@@ -604,7 +602,6 @@ export class AppModule {
                 HttpModule.register({ isGlobal: true }),
                 GraphqlModule.register({ isGlobal: true }),
                 N8nModule.register({ isGlobal: true, ...options.n8n }),
-                TemplateFilesModule.register({ isGlobal: true, ...options.templateFiles }),
                 AutomationPortsModule.register({ isGlobal: true }),
                 AutomationTemplatesModule.register({ isGlobal: true }),
                 AutomationPipelinesModule.register({ isGlobal: true }),

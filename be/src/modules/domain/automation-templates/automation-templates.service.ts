@@ -2,13 +2,12 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { InjectTemplateFiles } from "@modules/integrations/template-files"
-import type { TemplateFiles } from "@modules/integrations/template-files"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import type { TemplateDefinition } from "./automation-templates.contracts"
+import { TEMPLATE_CATALOG } from "./automation-templates.templates"
 import { AutomationTemplatesLogEvent } from "./automation-templates.log-events"
 import { AutomationTemplatesError, AutomationTemplatesErrorCode } from "./errors/automation-templates.error"
 import type { AutomationTemplatesRow } from "./persistence/automation-templates.rows"
@@ -24,14 +23,13 @@ interface CachedCatalog {
 }
 
 @Injectable()
-/** The catalogue of ready-made automations, kept in public.automation_templates and synced from the definition files by the cli. */
+/** The catalogue of ready-made automations, kept in public.automation_templates and synced from the TypeScript catalogue by the cli. */
 export class AutomationTemplatesService {
     private cached: CachedCatalog | undefined
 
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
-        @InjectTemplateFiles() private readonly files: TemplateFiles,
         @InjectLogger() private readonly logger: Logger,
     ) {}
 
@@ -73,9 +71,9 @@ export class AutomationTemplatesService {
         return templates.map((template) => template.key)
     }
 
-    /** Reads the definition files of the resources folder, writes the catalogue and logs the keys. */
-    async syncFromFiles(): Promise<ReadonlyArray<string>> {
-        const keys = await this.syncCatalog(await this.files.readDefinitions())
+    /** Writes the TypeScript catalogue into the table and logs the keys. */
+    async syncFromCatalog(): Promise<ReadonlyArray<string>> {
+        const keys = await this.syncCatalog(TEMPLATE_CATALOG)
         this.logger.info(AutomationTemplatesLogEvent.CatalogSynced, { count: keys.length, keys })
         return keys
     }

@@ -38,7 +38,7 @@ export const MOTIONS = ["zoom-in", "zoom-out", "pan-left", "pan-right", "none"] 
 /** One of the image motions. */
 export type Motion = (typeof MOTIONS)[number]
 
-/** Royalty-free tracks synthesised for NIVO (CC0, see be/assets/video/music/LICENSE.md). */
+/** Royalty-free tracks synthesised for NIVO (CC0, uploaded to the media bucket by `cli seed-media upload`, see be/src/assets/media-seed/music/LICENSE.md). */
 export const MUSIC_TRACKS = [
     { id: "sunny-pop", bpm: 112 },
     { id: "calm-glow", bpm: 72 },
@@ -47,6 +47,12 @@ export const MUSIC_TRACKS = [
 
 /** The id of one bundled music track. */
 export type MusicTrackId = (typeof MUSIC_TRACKS)[number]["id"]
+
+/** The folder of the music beds in the media bucket; `cli seed-media upload` writes them there, the renderer reads them. */
+export const MUSIC_FOLDER = "music"
+
+/** The object path of a music bed in the media bucket. */
+export const musicObjectPath = (track: string): string => `${MUSIC_FOLDER}/${track}.mp3`
 
 /** The voices the text to speech offers. */
 export const TTS_VOICES = ["vi-VN-HoaiMyNeural", "vi-VN-NamMinhNeural"] as const
