@@ -144,3 +144,12 @@ grant execute on function public.request_execution_decision(uuid, uuid, text, te
 grant execute on function public.request_office_propose(uuid, uuid, text) to authenticated;
 grant execute on function public.request_office_confirm(uuid, uuid, text) to authenticated;
 grant execute on function public.request_agent_sync(uuid, uuid, boolean) to authenticated;
+
+-- The two pg_cron jobs below belonged to the engine process: the sweep called the Next route /api/engine/sweep (deleted: Next serves no API),
+-- and the agent sync queued an engine_jobs row. The back end now runs the agent sync from its own scheduler (agents queue, every 5 minutes).
+do $$
+begin
+  if exists (select 1 from pg_extension where extname = 'pg_cron') then
+    perform cron.unschedule(jobid) from cron.job where jobname in ('engine-sweep', 'engine-openclaw-agent-sync');
+  end if;
+end $$;
