@@ -222,3 +222,13 @@ export type {
     IdeaDecision,
     DocumentVisibility,
 } from "./knowledge"
+export type {
+    DbColumnInfo,
+    DbEngine,
+    DbEntity,
+    DbPreviewRows,
+    DbSavedConnection,
+    DbTableInfo,
+    DbTableMapping,
+    DbTarget,
+} from "./database-wizard"
