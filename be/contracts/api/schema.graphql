@@ -730,8 +730,25 @@ type AgentCommandResultType {
   refused: String
 }
 
+type AgentConnectionCandidateType {
+  access: String
+  accountMasked: String
+  botUsername: String
+  id: ID!
+  name: String!
+  provider: String!
+  purpose: String!
+  status: String!
+}
+
+input AgentConnectionCandidatesInput {
+  agentId: ID!
+}
+
 type AgentConnectionType {
   access: String!
+  accountMasked: String
+  botUsername: String
   id: ID!
   name: String!
   provider: String!
@@ -747,6 +764,8 @@ type AgentDashboardAgentType {
 
 type AgentDashboardConnectionType {
   access: String!
+  accountMasked: String
+  botUsername: String
   id: ID!
   name: String!
   provider: String!
@@ -801,6 +820,7 @@ type AgentDashboardItemType {
   action: String!
   at: String!
   customer: String!
+  decisionHref: String!
   id: ID!
   leadId: ID
   resultHref: String
@@ -1668,7 +1688,9 @@ type ConnectionGrantType {
 }
 
 type ConnectionType {
+  accountMasked: String
   agentIds: [ID!]!
+  botUsername: String
   createdAt: String!
   createdBy: ID
   environment: String!
@@ -1997,6 +2019,21 @@ type ContentWorkbenchType {
   workspaceId: ID!
 }
 
+type ContextNoteType {
+  authorName: String!
+  authorRole: String!
+  body: String!
+  createdAt: String!
+  id: ID!
+  installationId: ID!
+  source: String!
+  status: String!
+}
+
+input ContextNotesInput {
+  installationId: ID!
+}
+
 type ContextVersionType {
   appliedAt: String!
   appliedBy: String!
@@ -2283,9 +2320,9 @@ type DashboardFirstEventType {
 
 type DashboardGovernanceDecisionType {
   createdAt: String!
-  deciderKind: String!
+  deciderKind: GovernanceDeciderKind!
   leadId: ID
-  outcome: String!
+  outcome: GovernanceDecisionOutcome!
   workItemId: ID
 }
 
@@ -2345,12 +2382,12 @@ type DashboardGovernanceWorkType {
   contact: String
   createdAt: String!
   customer: String
-  decidedPath: String
+  decidedPath: GovernanceDecidedPath
   department: String!
   id: ID!
   leadId: ID
-  reason: String
-  status: String!
+  reason: GovernanceWorkReason
+  status: GovernanceWorkStatus!
   summary: String
   updatedAt: String!
 }
@@ -2562,6 +2599,10 @@ input DisconnectConnectionInput {
   connectionId: ID!
 }
 
+input DismissContextNoteInput {
+  noteId: ID!
+}
+
 input DismissKnowledgeGapInput {
   id: ID!
 }
@@ -2710,6 +2751,40 @@ input GetZaloConnectionInput {
 
 type GoogleStateType {
   configured: Boolean!
+}
+
+enum GovernanceDecidedPath {
+  Auto
+  Human
+}
+
+enum GovernanceDeciderKind {
+  Owner
+  Policy
+  Staff
+}
+
+enum GovernanceDecisionOutcome {
+  Approved
+  AutoDone
+  Edited
+  Rejected
+}
+
+enum GovernanceWorkReason {
+  MissingData
+  NotAllowed
+  OverAuthority
+  Routine
+  UnclearOutcome
+}
+
+enum GovernanceWorkStatus {
+  Done
+  Failed
+  Queued
+  Rejected
+  WaitingDecision
 }
 
 input GrantAgentConnectionInput {
@@ -3063,6 +3138,10 @@ input InstallModuleInput {
   moduleKey: String!
   name: String = null
   newInstance: Boolean = false
+}
+
+input InstanceOfRecordInput {
+  recordId: ID!
 }
 
 type InventoryItemType {
@@ -4396,6 +4475,7 @@ type Mutation {
   deleteInventoryRecipe(input: InventoryRecipeRefInput!): Boolean!
   deleteKnowledgeSource(input: DeleteKnowledgeSourceInput!): Boolean!
   disconnectConnection(input: DisconnectConnectionInput!): Boolean!
+  dismissContextNote(input: DismissContextNoteInput!): Boolean!
   dismissKnowledgeGap(input: DismissKnowledgeGapInput!): Boolean!
   draftInventoryLowStock: DraftLowStockType!
   draftLeadExecution(input: DraftLeadExecutionInput!): LeadActionQueuedType!
@@ -4603,6 +4683,10 @@ type NivoEntryType {
   title: String!
   updatedAt: String!
   version: Int!
+}
+
+input NivoKnowledgeCountInput {
+  module: String!
 }
 
 type OfficeAckType {
@@ -5050,6 +5134,7 @@ type Query {
   agentChatMessages(input: AgentChatMessagesInput!): [AgentChatMessageType!]!
   agentChatPage(input: AgentChatPageInput!): AgentChatPageType!
   agentChatTurnStatus(input: AgentChatTurnStatusInput!): AgentChatTurnStatusType!
+  agentConnectionCandidates(input: AgentConnectionCandidatesInput!): [AgentConnectionCandidateType!]!
   agentConnections(input: AgentIdInput!): [AgentConnectionType!]!
   agentDashboard(input: AgentDashboardInput!): AgentDashboardType!
   agentEngineStatus: AgentEngineStatusType!
@@ -5091,6 +5176,7 @@ type Query {
   contentMediaLibrary(input: ContentMediaLibraryInput!): [ContentMediaRefType!]!
   contentRecentTitles(input: GetRecentTitlesInput!): [String!]!
   contentWorkbench: ContentWorkbenchType!
+  contextNotes(input: ContextNotesInput!): [ContextNoteType!]!
   creditPacks: [CreditPackType!]!
   creditQuotaStatus: CreditQuotaStatusType
   creditRecentCostUsd(input: CreditRecentCostInput!): Float!
@@ -5107,6 +5193,7 @@ type Query {
   hiringWorkbench: HiringBenchType!
   inboundEvents(input: InboundEventsInput!): [InboundEventType!]!
   inboundSimulationStatus(input: InboundSimulationStatusInput!): InboundSimulationStatusType!
+  instanceOfRecord(input: InstanceOfRecordInput!): ID
   inventoryTemplates: [InventoryTemplateType!]!
   inventoryWorkbench: InventoryWorkbenchType!
   invitePreview(input: InviteTokenInput!): InvitePreviewType!
@@ -5140,8 +5227,10 @@ type Query {
   modulesCatalog: ModulesCatalogType!
   moneyConnection(input: GetMoneyConnectionInput!): WizardConnectionType!
   myAccount: MyAccountType!
+  myWorkspaceRole: WorkspaceRole!
   myWorkspaces: [MembershipType!]!
   nivoKnowledge: [NivoEntryType!]!
+  nivoKnowledgeCount(input: NivoKnowledgeCountInput!): Int!
   officeCommandCandidates: [OfficeCandidateType!]!
   officeDecidedApprovals: [OfficeApprovalType!]!
   officeMessages(input: ListOfficeMessagesInput!): OfficeMessagePageType!
@@ -7437,6 +7526,12 @@ type WorkItemType {
 type WorkResultType {
   href: String
   summary: String!
+}
+
+enum WorkspaceRole {
+  Manager
+  Owner
+  Staff
 }
 
 type WorkspaceShellType {
