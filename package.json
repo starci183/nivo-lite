@@ -108,5 +108,13 @@
     "db:types": "npm run contract:emit",
     "db:lint": "starci app check --fast",
     "contract:emit": "starci app emit"
+  },
+  "overrides": {
+    "axios": "1.15.2",
+    "dayjs": "1.11.21",
+    "@xyflow/react": {
+      "zustand": "5.0.12"
+    },
+    "zod": "4.4.3"
   }
 }
