@@ -1,4 +1,4 @@
-// migrations-sha256: 4b8b944dd20fe3c67722de37fdafacc5f2f388a9a3e6622b1992845eb9e7dc73
+// migrations-sha256: 4fe9ba42bfff051cbaa27cb912b3863fa085be7a5cdc99508f9fc03fd42967ae
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -2179,6 +2179,25 @@ isOneToOne: false
                   Relationships: [
                     {
       foreignKeyName: "knowledge_suggestion_state_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"lead_actions": {
+                  Row: {
+                    "action": string,"created_at": string,"error_code": string | null,"fencing_token": number | null,"id": string,"input": NonNullable<Json>,"job_id": string | null,"locale": string,"requested_by": string,"result": Json | null,"status": string,"updated_at": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "action": string,"created_at"?: string,"error_code"?: string | null,"fencing_token"?: number | null,"id"?: string,"input": NonNullable<Json>,"job_id"?: string | null,"locale": string,"requested_by": string,"result"?: Json | null,"status"?: string,"updated_at"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "action"?: string,"created_at"?: string,"error_code"?: string | null,"fencing_token"?: number | null,"id"?: string,"input"?: NonNullable<Json>,"job_id"?: string | null,"locale"?: string,"requested_by"?: string,"result"?: Json | null,"status"?: string,"updated_at"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "lead_action_runs_workspace_id_fkey"
       columns: ["workspace_id"]
 isOneToOne: false
       referencedRelation: "workspaces"
