@@ -26,6 +26,11 @@ export const DECISIONS_MESSAGES: MessageBundle = {
         "errors.DECISIONS_BASIS_REQUIRED":
             "Chỉ được ghi nhận đã thanh toán khi có căn cứ xác nhận (ít nhất {{n}} ký tự).",
         "decision.basisNote": "Căn cứ: {{basis}}",
+        "errors.DECISIONS_HOLD_NOTE_REQUIRED": "Cần ghi chú vì sao chưa đủ căn cứ.",
+        "errors.DECISIONS_STAFF_NOT_FOUND": "Không tìm thấy nhân viên này.",
+        "decision.holdEvidence": "Chưa đủ căn cứ, giữ lại: {{note}}",
+        "decision.assigned": "→ {{name}}",
+        "decision.unassigned": "→ —",
         "engine.failed": "{{dept}} chưa hoàn thành “{{action}}”: {{error}}",
         "engine.ask": "{{dept}} cần bạn quyết định · {{reason}}: {{summary}}",
         "engine.auto": "{{dept}} đã tự hoàn thành: {{summary}}",
@@ -82,6 +87,11 @@ export const DECISIONS_MESSAGES: MessageBundle = {
         "errors.DECISIONS_BASIS_REQUIRED":
             "A payment can only be marked paid with a written basis (at least {{n}} characters).",
         "decision.basisNote": "Basis: {{basis}}",
+        "errors.DECISIONS_HOLD_NOTE_REQUIRED": "A note is required to keep this waiting.",
+        "errors.DECISIONS_STAFF_NOT_FOUND": "That staff member was not found.",
+        "decision.holdEvidence": "Not enough basis yet, still waiting: {{note}}",
+        "decision.assigned": "→ {{name}}",
+        "decision.unassigned": "→ —",
         "engine.failed": "{{dept}} could not finish “{{action}}”: {{error}}",
         "engine.ask": "{{dept}} needs your decision · {{reason}}: {{summary}}",
         "engine.auto": "{{dept}} completed: {{summary}}",

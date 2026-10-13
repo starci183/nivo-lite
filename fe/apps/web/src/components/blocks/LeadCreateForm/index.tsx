@@ -1,49 +1,39 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useState, useTransition } from "react"
+import { useEffect } from "react"
+import { useWatch } from "react-hook-form"
+import { useCreateLead } from "@/hooks/leads"
+import { useLeadCreateForm } from "@/hooks/rhf"
 import { navigation } from "@/modules/i18n"
-import { writeCreateLead } from "@/modules/db/leads/write-lead-actions"
 import { LEADS_ROUTES, leadPath } from "@/modules/routes"
 import { LeadCreateFormBase } from "./component"
-import type { LeadFormValues } from "./component"
 
-type Errors = Partial<Record<keyof LeadFormValues, string>>
+const CHANNEL_KEYS = [
+    "channelZalo",
+    "channelWebsiteChat",
+    "channelWebsiteForm",
+    "channelPhone",
+    "channelEmail",
+    "channelReferral",
+] as const
 
-const EMPTY: LeadFormValues = { contact_name: "", company: "", channel: "", need: "" }
-
-/** The channel names the form offers, by catalog key. */
-interface LeadCreateFormProps {
-    readonly channelKeys: ReadonlyArray<string>
-}
-
-/** Captures a lead by hand; the engine adds context and an owner before the lead page opens. */
-export const LeadCreateForm = (props: LeadCreateFormProps) => {
+/** Captures a lead and polls its queued preparation before opening the journey. */
+export const LeadCreateForm = () => {
     const t = useTranslations("leads")
     const router = navigation.useRouter()
-    const [isPending, startTransition] = useTransition()
-    const [values, setValues] = useState<LeadFormValues>(EMPTY)
-    const [errors, setErrors] = useState<Errors>({})
-    const [failure, setFailure] = useState<string | null>(null)
-
-    const validate = (): Errors => ({
-        ...(values.contact_name.trim().length < 2 ? { contact_name: t("errContact") } : {}),
-        ...(values.company.trim().length < 2 ? { company: t("errCompany") } : {}),
-        ...(values.channel === "" ? { channel: t("errChannel") } : {}),
-        ...(values.need.trim().length < 5 ? { need: t("errNeed") } : {}),
+    const form = useLeadCreateForm()
+    const values = useWatch({ control: form.control })
+    const action = useCreateLead()
+    const isPending = action.isPending
+    const failure = action.error
+    const errors = Object.fromEntries(Object.entries(form.formState.errors).map(([key, error]) => [key, error.message]))
+    useEffect(() => {
+        if (action.result?.leadId) router.push(leadPath(action.result.leadId))
+    }, [action.result?.leadId, router])
+    const submit = form.handleSubmit(async (input) => {
+        await action.create(input)
     })
-
-    const submit = () => {
-        const found = validate()
-        setErrors(found)
-        setFailure(null)
-        if (Object.keys(found).length > 0) return
-        startTransition(async () => {
-            const result = await writeCreateLead(values)
-            if (result.kind === "ok") router.push(leadPath(result.value.leadId))
-            else setFailure(result.kind === "unavailable" ? result.code : t("formFailTitle"))
-        })
-    }
 
     return (
         <LeadCreateFormBase
@@ -57,7 +47,7 @@ export const LeadCreateForm = (props: LeadCreateFormProps) => {
                 channelLabel: t("formChannel"),
                 channelHint: t("formChannelHint"),
                 channelPlaceholder: t("formChannelPlaceholder"),
-                channelOptions: props.channelKeys.map((key) => ({ id: t(key), label: t(key) })),
+                channelOptions: CHANNEL_KEYS.map((key) => ({ id: t(key), label: t(key) })),
                 afterNote: t("formAfter"),
                 needLabel: t("formNeed"),
                 needHint: t("formNeedHint"),
@@ -65,14 +55,22 @@ export const LeadCreateForm = (props: LeadCreateFormProps) => {
                 submitLabel: t("formSubmit"),
                 pendingText: isPending ? t("formPending") : "",
                 failTitle: t("formFailTitle"),
-                values,
+                values: {
+                    contact_name: values.contact_name ?? "",
+                    company: values.company ?? "",
+                    channel: values.channel ?? "",
+                    need: values.need ?? "",
+                },
                 errors,
                 failure,
                 isPending,
             }}
             on={{
-                change: (field, value) => setValues((previous) => ({ ...previous, [field]: value })),
-                submit,
+                change: (field, value) =>
+                    form.setValue(field, value, { shouldDirty: true, shouldValidate: form.formState.isSubmitted }),
+                submit: () => {
+                    void submit()
+                },
                 cancel: () => router.replace(LEADS_ROUTES.leads),
             }}
         />

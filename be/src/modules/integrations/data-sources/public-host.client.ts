@@ -1,12 +1,12 @@
 import { lookup } from "node:dns/promises"
 import { isIP } from "node:net"
 import { Injectable } from "@nestjs/common"
-import { isPrivateAddress, isWellFormedHost } from "@modules/integrations/mail"
 import { InjectHttpClient } from "@modules/platform/http"
-import type { HttpClient, HttpRequest } from "@modules/platform/http"
+import type { HttpClient, HttpRequest, HttpResponse } from "@modules/platform/http"
 import { InjectDataSourcesOptions } from "./data-sources.decorators"
 import type { DataSourcesOptions } from "./data-sources.options"
 import { DataSourcesError, DataSourcesErrorCode } from "./errors/data-sources.error"
+import { isPrivateAddress, isWellFormedHost } from "./public-host.policy"
 import { PUBLIC_HOST_TEXT } from "./messages/public-host.messages"
 
 /** The address a connection is opened to: connect to THIS address, not the name, so the answer cannot change between check and use. */
@@ -47,6 +47,8 @@ export interface PublicSendInit extends PublicGetInit {
     readonly bytes?: Buffer
 }
 
+/** How many redirects a request follows, each checked before it is requested. */
+const MAX_REDIRECTS = 3
 const DEFAULT_TIMEOUT_MS = 15_000
 const DEFAULT_MAX_BYTES = 5_000_000
 
@@ -70,7 +72,7 @@ export class PublicHostClient {
         if (family === 0 && !isWellFormedHost(bare)) {
             throw new DataSourcesError({ code: DataSourcesErrorCode.HostInvalid })
         }
-        const answers = family === 0 ? await lookup(bare, { all: true }).catch(() => []) : [{ address: bare, family }]
+        const answers = family === 0 ? await this.lookupAll(bare) : [{ address: bare, family }]
         const first = answers[0]
         if (first === undefined) {
             throw new DataSourcesError({ code: DataSourcesErrorCode.HostUnknown, params: { host: bare } })
@@ -86,17 +88,39 @@ export class PublicHostClient {
         return this.send("GET", rawUrl, init)
     }
 
-    /** Sends a request (GET, POST...) to a public http(s) URL with the same host checks, time limit and size cap as `get`. */
-    async send(method: HttpRequest["method"], rawUrl: string, init: PublicSendInit = {}): Promise<PublicResponse> {
-        const url = new URL(rawUrl)
+    /** Sends a request (GET, POST...) to a public http(s) URL with a time limit and a size cap; every hop of a redirect (at most 3) is resolved and checked before it is requested. */
+    send(method: HttpRequest["method"], rawUrl: string, init: PublicSendInit = {}): Promise<PublicResponse> {
+        return this.follow(method, new URL(rawUrl), new URL(rawUrl).origin, init, 0)
+    }
+
+    private async follow(
+        method: HttpRequest["method"],
+        url: URL,
+        origin: string,
+        init: PublicSendInit,
+        hop: number,
+    ): Promise<PublicResponse> {
+        if (hop > MAX_REDIRECTS) {
+            throw new DataSourcesError({
+                code: DataSourcesErrorCode.Rejected,
+                params: { detail: PUBLIC_HOST_TEXT.tooManyRedirects },
+            })
+        }
+        const answer = await this.hop(method, url, url.origin === origin ? init : { timeoutMs: init.timeoutMs })
+        const location = answer.headers?.location
+        if (answer.status < 300 || answer.status >= 400 || location === undefined) return this.checked(answer, init)
+        return this.follow(method, new URL(location, url), origin, init, hop + 1)
+    }
+
+    private async hop(method: HttpRequest["method"], url: URL, init: PublicSendInit): Promise<HttpResponse> {
         if (url.protocol !== "https:" && url.protocol !== "http:") {
             throw new DataSourcesError({
                 code: DataSourcesErrorCode.Rejected,
                 params: { detail: PUBLIC_HOST_TEXT.schemeOnly },
             })
         }
-        await this.resolve(url.hostname)
-        const answer = await this.http
+        const pin = await this.resolve(url.hostname)
+        return this.http
             .request({
                 method,
                 url: url.toString(),
@@ -105,6 +129,8 @@ export class PublicHostClient {
                 ...(init.form !== undefined ? { form: init.form } : {}),
                 ...(init.bytes !== undefined ? { bytes: init.bytes } : {}),
                 read: "text",
+                redirect: "manual",
+                pin: { address: pin.address, family: pin.family },
                 timeoutMs: init.timeoutMs ?? DEFAULT_TIMEOUT_MS,
             })
             .catch((cause: unknown) => {
@@ -114,7 +140,9 @@ export class PublicHostClient {
                     cause,
                 })
             })
-        if (answer.url !== undefined) await this.resolve(new URL(answer.url).hostname)
+    }
+
+    private checked(answer: HttpResponse, init: PublicSendInit): PublicResponse {
         const text = typeof answer.body === "string" ? answer.body : ""
         const max = init.maxBytes ?? DEFAULT_MAX_BYTES
         if (Buffer.byteLength(text) > max) {
@@ -124,5 +152,14 @@ export class PublicHostClient {
             })
         }
         return { status: answer.status, headers: answer.headers ?? {}, text }
+    }
+
+    private lookupAll(host: string): Promise<ReadonlyArray<{ address: string; family: number }>> {
+        return lookup(host, { all: true }).then(
+            (records) => records,
+            (cause: unknown) => {
+                throw new DataSourcesError({ code: DataSourcesErrorCode.HostUnknown, params: { host }, cause })
+            },
+        )
     }
 }

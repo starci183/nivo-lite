@@ -1,4 +1,4 @@
-import { Alert, Badge, Button, SurfaceCard, Text } from "@starci/grammar/common"
+import { Badge, Button, SurfaceCard, Text } from "@starci/grammar/common"
 import { ACTIONS, STACK } from "./classNames"
 
 /** Copy and state of the sync card of an agent. */
@@ -11,9 +11,6 @@ export interface AgentSyncCardBaseProps {
         readonly isResyncDisabled: boolean
         readonly isQueuing: boolean
         readonly help: string
-        readonly noteTone: "idle" | "saved" | "refused"
-        readonly noteTitle: string
-        readonly noteText: string
     }
     readonly on: { readonly resync: () => void }
 }
@@ -39,13 +36,6 @@ export const AgentSyncCardBase = (props: AgentSyncCardBaseProps) => (
             <Text size="xs" tone="muted">
                 {props.props.help}
             </Text>
-            {props.props.noteTone === "idle" ? null : (
-                <Alert
-                    title={props.props.noteTitle}
-                    description={props.props.noteTone === "saved" ? undefined : props.props.noteText}
-                    tone={props.props.noteTone === "saved" ? "affirmative" : "negative"}
-                />
-            )}
         </div>
     </SurfaceCard>
 )

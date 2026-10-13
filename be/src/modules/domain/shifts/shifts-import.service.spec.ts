@@ -229,4 +229,32 @@ describe("ShiftsImportService", () => {
             ])
         })
     })
+
+    describe("previewImport", () => {
+        it("returns the parsed rows and the unreadable lines without writing", async () => {
+            const em = mockEntityManager()
+            const { service, words } = await build(em)
+
+            await expect(
+                service.previewImport("user-1", "ws-1", {
+                    positions: "Baker",
+                    staff: "An; Baker; 30k; 40",
+                    coverage: "not a coverage line",
+                }),
+            ).resolves.toEqual({
+                positions: ["Baker"],
+                staff: [{ name: "An", positions: ["Baker"], wage: 30000, maxWeek: 40 }],
+                blocks: [],
+                errors: [
+                    text("shifts.import.line", {
+                        line: 1,
+                        reason: text("shifts.import.coverage-format", { subject: "" }),
+                    }),
+                ],
+            })
+
+            expect(words.text).toHaveBeenCalled()
+            expect(em.query).not.toHaveBeenCalled()
+        })
+    })
 })

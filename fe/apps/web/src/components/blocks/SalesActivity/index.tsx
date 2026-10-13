@@ -2,19 +2,16 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { EVIDENCE_TONES } from "@/hooks/sales"
-import type { AutoActivity } from "@/modules/types"
+import { useSalesWorkbench } from "@/hooks/salesworkbench"
 import { SalesActivityBase } from "./component"
 
-/** What NIVO did by policy. */
-interface SalesActivityProps {
-    readonly rows: ReadonlyArray<AutoActivity>
-}
-
 /** The activity surface: routine work done by policy with the evidence behind it. */
-export const SalesActivity = (props: SalesActivityProps) => {
+export const SalesActivity = () => {
     const t = useTranslations("workbenchSales")
     const g = useTranslations("governance")
     const format = useFormatter()
+    const { data } = useSalesWorkbench()
+    if (data === null) return null
     return (
         <SalesActivityBase
             props={{
@@ -22,7 +19,7 @@ export const SalesActivity = (props: SalesActivityProps) => {
                 intro: t("activityIntro"),
                 emptyTitle: t("activityEmptyTitle"),
                 emptyBody: t("activityEmptyBody"),
-                rows: props.rows.map((row) => ({
+                rows: (data?.activity ?? []).map((row) => ({
                     id: row.id,
                     action: g(`action_${row.action}`),
                     evidenceLabel: t(`evidence_${row.evidenceState}`),

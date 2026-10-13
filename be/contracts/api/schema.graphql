@@ -1007,6 +1007,11 @@ input AssignResponsibilityInput {
   title: String = null
 }
 
+input AssignWorkItemInput {
+  staffId: ID
+  workItemId: ID!
+}
+
 input AuthorityPatchInput {
   brand_voice: String
   goal_first_reply_minutes: Int
@@ -3072,6 +3077,11 @@ type HiringWindowType {
   weekday: Int!
 }
 
+input HoldWorkItemInput {
+  note: String!
+  workItemId: ID!
+}
+
 type ImapConnectionType {
   agentIds: [ID!]!
   email: String!
@@ -4429,6 +4439,7 @@ type Mutation {
   approveVideoProject(input: ApproveVideoProjectInput!): VideoProjectType!
   archiveVideoProject(input: ArchiveVideoProjectInput!): VideoProjectType!
   assignResponsibility(input: AssignResponsibilityInput!): LeadResponsibilityType!
+  assignWorkItem(input: AssignWorkItemInput!): WorkItemType!
   authorizeGoogle(input: AuthorizeGoogleInput!): AuthorizeUrlType!
   authorizeMeta(input: AuthorizeMetaInput!): MetaAuthorizationType!
   authorizeZalo(input: AuthorizeZaloInput!): ZaloAuthorizationType!
@@ -4488,6 +4499,7 @@ type Mutation {
   generateHiringAd(input: HiringJobRefInput!): GenerateAdType!
   grantAgentConnection(input: GrantAgentConnectionInput!): AgentAckType!
   handoffToAccounting(input: HandoffToAccountingInput!): SalesActionType!
+  holdWorkItem(input: HoldWorkItemInput!): WorkItemType!
   importInventoryPaste(input: ImportInventoryPasteInput!): ImportPasteType!
   installModule(input: InstallModuleInput!): ModuleInstallResultType!
   keepCurrentBrainFact(input: KeepCurrentBrainFactInput!): Int!
@@ -4506,7 +4518,7 @@ type Mutation {
   proposeAutomationBody(input: TemplateKeyInput!): BodyProposalType!
   proposeOfficeCommand(input: ProposeOfficeCommandInput!): OfficeProposeOutcomeType!
   proposeShiftsWeek(input: ProposeShiftsWeekInput!): ProposeWeekType!
-  reassignShiftsShift(input: ReassignShiftsShiftInput!): Boolean!
+  reassignShiftsShift(input: ReassignShiftsShiftInput!): ReassignShiftsShiftType!
   receiveInventoryPo(input: ReceiveInventoryPoInput!): ReceivePoType!
   recordManualEvidence(input: RecordManualEvidenceInput!): ManualEvidenceType!
   recordOutcome(input: RecordOutcomeInput!): RecordOutcomeType!
@@ -4634,6 +4646,7 @@ type Mutation {
   startZaloConnection(input: StartZaloConnectionInput!): ZaloWizardConnectionType!
   stopFailedStep(input: StopFailedStepInput!): StopFailedStepType!
   submitContentForApproval(input: SubmitContentForApprovalInput!): SubmitContentForApprovalType!
+  submitLoyaltyCampaign(input: LoyaltyCampaignInput!): SubmitLoyaltyCampaignType!
   submitShiftsAvailability(input: SaveShiftsAvailabilityInput!): ShiftsRefType!
   submitTelegramCode(input: SubmitTelegramCodeInput!): TelegramLoginStageType!
   submitTelegramPassword(input: SubmitTelegramPasswordInput!): TelegramLoginStageType!
@@ -4898,6 +4911,36 @@ type PreviewSampleType {
   variables: JsonObject!
 }
 
+type PreviewShiftsBlockType {
+  end: String!
+  ideal: Int!
+  min: Int!
+  peak: Boolean!
+  position: String!
+  start: String!
+  weekday: Int!
+}
+
+input PreviewShiftsImportInput {
+  coverage: String!
+  positions: String!
+  staff: String!
+}
+
+type PreviewShiftsImportType {
+  blocks: [PreviewShiftsBlockType!]!
+  errors: [String!]!
+  positions: [String!]!
+  staff: [PreviewShiftsStaffType!]!
+}
+
+type PreviewShiftsStaffType {
+  maxWeek: Float
+  name: String!
+  positions: [String!]!
+  wage: Float!
+}
+
 type PromoChatbotStateType {
   agentId: ID
   handle: String
@@ -4945,6 +4988,8 @@ input ProposeShiftsWeekInput {
 
 type ProposeWeekType {
   costVnd: Float!
+  iterations: Int!
+  ms: Int!
   open: Int!
   scheduleId: ID!
   shifts: Int!
@@ -5241,6 +5286,7 @@ type Query {
   paymentOrders: [BillingPaymentOrderType!]!
   previewCsvSource(input: PreviewCsvSourceInput!): CsvPreviewType!
   previewDatabaseTable(input: PreviewDatabaseTableInput!): DatabasePreviewType!
+  previewShiftsImport(input: PreviewShiftsImportInput!): PreviewShiftsImportType!
   promoChatbotState: PromoChatbotStateType!
   promoState: PromoStateType!
   publicBookingPage(input: PublicBookingPageInput!): PublicBookingPageType!
@@ -5297,6 +5343,10 @@ input ReadLeadGenWorkbenchInput {
 input ReassignShiftsShiftInput {
   shiftId: ID!
   staffId: ID
+}
+
+type ReassignShiftsShiftType {
+  warnings: [String!]!
 }
 
 input ReceiveInventoryPoInput {
@@ -6957,6 +7007,12 @@ input SubmitContentForApprovalInput {
 
 type SubmitContentForApprovalType {
   id: ID!
+  status: String!
+  workItemId: ID!
+}
+
+type SubmitLoyaltyCampaignType {
+  campaignId: ID!
   status: String!
   workItemId: ID!
 }

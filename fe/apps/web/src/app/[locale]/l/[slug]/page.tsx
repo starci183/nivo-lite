@@ -1,27 +1,13 @@
-import type { Metadata } from "next"
-import { notFound } from "next/navigation"
-import { CheckForm } from "@/features/module-loyalty/public/CheckForm"
-import { CANVAS_CLASS_NAME } from "@/features/module-loyalty/public/classNames"
-import { programBySlug, shopNameOf } from "@/lib/module-loyalty-core"
-import { supabaseAdmin } from "@/lib/supabase/admin"
+import { PublicLoyaltyPage } from "@/features/pages/PublicLoyaltyPage"
 
-type PageProps = { readonly params: Promise<{ slug: string }> }
+export { publicLoyaltyMetadata as generateMetadata } from "@/features/pages/PublicLoyaltyPage"
 
-export const metadata: Metadata = { title: "Điểm thân thiết", robots: { index: false, follow: false } }
+/** Rendered per request: the shell reads the slug of the URL. */
 export const dynamic = "force-dynamic"
 
-/** Public points check of one shop. Reachable without an account (the proxy lists /l as public); it shows nothing about anyone until the code sent to their own chat is typed. */
-const PublicLoyaltyPage = async ({ params }: PageProps) => {
-    const { slug } = await params
-    const db = supabaseAdmin()
-    const program = await programBySlug(db, slug.toLowerCase()).catch(() => null)
-    if (!program) notFound()
-    const shop = program.name || (await shopNameOf(db, program.workspaceId))
-    return (
-        <main className={CANVAS_CLASS_NAME}>
-            <CheckForm slug={program.slug} shop={shop} />
-        </main>
-    )
-}
+type PageProps = Parameters<typeof PublicLoyaltyPage>[0]
 
-export default PublicLoyaltyPage
+/** Public points check of one shop. */
+const Page = (props: PageProps) => <PublicLoyaltyPage params={props.params} />
+
+export default Page

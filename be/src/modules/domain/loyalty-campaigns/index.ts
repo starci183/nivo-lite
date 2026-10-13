@@ -1,5 +1,15 @@
-export { LOYALTY_CAMPAIGNS_ERROR_KINDS } from "./errors/loyalty-campaigns.error"
-export type { CampaignDraft, LoyaltyCampaignView, Segment, SegmentPreview } from "./loyalty-campaigns.contracts"
+export {
+    LOYALTY_CAMPAIGNS_ERROR_KINDS,
+    LoyaltyCampaignsError,
+    LoyaltyCampaignsErrorCode,
+} from "./errors/loyalty-campaigns.error"
+export type {
+    CampaignDraft,
+    CampaignSubmission,
+    LoyaltyCampaignView,
+    Segment,
+    SegmentPreview,
+} from "./loyalty-campaigns.contracts"
 export { LoyaltyCampaignDraftsService } from "./loyalty-campaign-drafts.service"
 export { LoyaltyCampaignsModule } from "./loyalty-campaigns.module"
 export { LoyaltyCampaignsService } from "./loyalty-campaigns.service"

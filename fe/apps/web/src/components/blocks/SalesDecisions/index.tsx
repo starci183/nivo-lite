@@ -1,26 +1,22 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { useEffect, useState, useTransition } from "react"
+import { useEffect, useState } from "react"
 import { splitBasis } from "@/hooks/decisions"
 import { canDecideItem, useMember } from "@/hooks/member"
-import { ageParts, decisionAnchor, isStale, KNOWN_FIELDS, OUTCOME_TONES } from "@/hooks/sales"
-import { EMPTY_TYPED, editsOf, fieldKey } from "@/hooks/salesdecisions"
-import type { TypedDecisionValues } from "@/hooks/salesdecisions"
+import { useSalesDecisionForm } from "@/hooks/rhf"
+import { ageParts, decisionAnchor, isStale, KNOWN_FIELDS, OUTCOME_TONES, useSalesActions } from "@/hooks/sales"
+import { editsOf, fieldKey } from "@/hooks/salesdecisions"
+import { useSalesWorkbench } from "@/hooks/salesworkbench"
 import type { DecisionRow } from "@/lib/flow-types"
-import { navigation } from "@/modules/i18n"
-import { writeDecideDraft, writeDecideWorkItem } from "@/modules/db/sales/write-sales-actions"
 import { leadPath } from "@/modules/routes"
 import type { SalesDecision } from "@/modules/types"
 import { SalesDecisionsBase } from "./component"
 import type { DecidedView } from "./component"
 import type { DecisionRowView } from "@/components/composites/SalesDecisionRow"
 
-/** The decisions waiting, those already made and the one to highlight. */
+/** The decision to highlight. */
 interface SalesDecisionsProps {
-    readonly pending: ReadonlyArray<SalesDecision>
-    readonly decided: ReadonlyArray<DecisionRow>
-    readonly nowIso: string
     /** The decision to scroll to and highlight (set when opened from the Attention surface). */
     readonly focusId: string | null
 }
@@ -32,13 +28,16 @@ export const SalesDecisions = (props: SalesDecisionsProps) => {
     const t = useTranslations("workbenchSales")
     const g = useTranslations("governance")
     const format = useFormatter()
-    const router = navigation.useRouter()
     const me = useMember()
-    const [isPending, startTransition] = useTransition()
+    const actions = useSalesActions()
+    const { data, nowIso } = useSalesWorkbench()
+    const pending = data?.decisions ?? []
+    const decided = data?.decided ?? []
+    const decisionForm = useSalesDecisionForm()
     const [busy, setBusy] = useState<{ readonly id: string; readonly decision: Decision } | null>(null)
-    const [typed, setTyped] = useState<TypedDecisionValues>(EMPTY_TYPED)
+    const { typed } = decisionForm
     const [errors, setErrors] = useState<Readonly<Record<string, string>>>({})
-    const active = isPending ? busy : null
+    const active = actions.isMutating ? busy : null
 
     useEffect(() => {
         if (props.focusId === null) return
@@ -47,32 +46,40 @@ export const SalesDecisions = (props: SalesDecisionsProps) => {
 
     const fieldLabel = (name: string): string =>
         KNOWN_FIELDS.some((known) => known === name) ? g(`field_${name}`) : name
-    const decide = (id: string, decision: Decision) => {
-        const item = props.pending.find((candidate) => candidate.id === id)
+    const decide = async (id: string, decision: Decision) => {
+        const item = pending.find((candidate) => candidate.id === id)
         if (item === undefined) return
+        if (decision === "approved") {
+            const error = decisionForm.validateDecision(item)
+            if (error !== undefined) {
+                setErrors((previous) => ({ ...previous, [id]: error }))
+                return
+            }
+            if (!(await decisionForm.validateForm(item))) {
+                setErrors((previous) => ({ ...previous, [id]: t("salesDecisionInvalid") }))
+                return
+            }
+        }
         setErrors((previous) => ({ ...previous, [id]: "" }))
         setBusy({ id, decision })
-        startTransition(async () => {
-            const draft = (typed.drafts[id] ?? item.draft).trim()
-            const edited = decision === "approved" && typed.editing[id] && draft !== item.draft ? draft : undefined
-            const result =
-                item.source === "execution" && item.executionId
-                    ? await writeDecideDraft({ id: item.executionId, decision, editedDraft: edited })
-                    : await writeDecideWorkItem({
-                          id: item.id,
-                          decision,
-                          edits: decision === "approved" ? editsOf(item, typed) : undefined,
-                      })
-            if (result.kind === "ok") {
-                setTyped((previous) => ({ ...previous, editing: { ...previous.editing, [id]: false } }))
-                router.refresh()
-            } else
-                setErrors((previous) => ({
-                    ...previous,
-                    [id]: t("actionFailed", { error: result.kind === "unavailable" ? result.code : result.kind }),
-                }))
+        const draft = (typed.drafts[id] ?? item.draft).trim()
+        const edited = decision === "approved" && typed.editing[id] && draft !== item.draft ? draft : undefined
+        const result =
+            item.source === "execution" && item.executionId
+                ? await actions.decideDraft({ id: item.executionId, decision, editedDraft: edited })
+                : await actions.decideWorkItem({
+                      id: item.id,
+                      decision,
+                      edits: decision === "approved" ? editsOf(item, typed) : undefined,
+                  })
+        if (result !== undefined) decisionForm.finish(id)
+        else {
+            setErrors((previous) => ({
+                ...previous,
+                [id]: t("loadFailedBody"),
+            }))
             setBusy(null)
-        })
+        }
     }
 
     const amountLineOf = (item: SalesDecision, isEditing: boolean): string | null => {
@@ -82,7 +89,7 @@ export const SalesDecisions = (props: SalesDecisionsProps) => {
     }
     const rowOf = (item: SalesDecision): DecisionRowView => {
         const isEditing = typed.editing[item.id] ?? false
-        const age = ageParts(item.createdAt, props.nowIso)
+        const age = ageParts(item.createdAt, nowIso)
         const amountMissing = item.missing.includes("amount_vnd")
         const isIncomplete = item.missing.some((name) => !(typed.values[fieldKey(item.id, name)] ?? "").trim())
         const mine = active?.id === item.id ? active.decision : null
@@ -92,7 +99,7 @@ export const SalesDecisions = (props: SalesDecisionsProps) => {
             isFocused: props.focusId === item.id,
             badge: item.reason ? g(`reason_${item.reason}`) : t("kind_decision"),
             age: age.unit === "now" ? t("ageNow") : t(`age_${age.unit}`, { n: age.n }),
-            isStale: isStale(item.createdAt, props.nowIso),
+            isStale: isStale(item.createdAt, nowIso),
             customer: item.customer,
             leadHref: item.leadId === null ? null : leadPath(item.leadId),
             actionLabel: item.action === "follow_up" ? g("action_send_follow_up") : g(`action_${item.action}`),
@@ -113,10 +120,10 @@ export const SalesDecisions = (props: SalesDecisionsProps) => {
             amountValue: typed.amounts[item.id] ?? (item.amountVnd !== null ? String(item.amountVnd) : ""),
             showAmountField: isEditing && item.hasAmount && !amountMissing,
             canEdit: item.draft !== "" || item.hasAmount,
-            isBusy: active !== null,
+            isBusy: actions.isMutating,
             isApproveBusy: mine === "approved",
             isRejectBusy: mine === "rejected",
-            isApproveDisabled: active !== null || isIncomplete,
+            isApproveDisabled: actions.isMutating || isIncomplete,
             editLabel: isEditing ? t("editDone") : t("edit"),
             error: errors[item.id] ? errors[item.id] : null,
         }
@@ -144,6 +151,7 @@ export const SalesDecisions = (props: SalesDecisionsProps) => {
         }
     }
 
+    if (data === null) return null
     return (
         <SalesDecisionsBase
             props={{
@@ -154,8 +162,8 @@ export const SalesDecisions = (props: SalesDecisionsProps) => {
                 decidedBody: t("decidedBody"),
                 decidedEmptyTitle: t("decidedEmptyTitle"),
                 decidedEmptyBody: t("decidedEmptyBody"),
-                pending: props.pending.map(rowOf),
-                decided: props.decided.map(decidedOf),
+                pending: pending.map(rowOf),
+                decided: decided.map(decidedOf),
                 rowLabels: {
                     draftLabel: t("draftLabel"),
                     waitingManager: t("waitingManager"),
@@ -165,20 +173,10 @@ export const SalesDecisions = (props: SalesDecisionsProps) => {
                 },
             }}
             on={{
-                field: (id, name, value) =>
-                    setTyped((previous) => ({
-                        ...previous,
-                        values: { ...previous.values, [fieldKey(id, name)]: value },
-                    })),
-                draft: (id, value) =>
-                    setTyped((previous) => ({ ...previous, drafts: { ...previous.drafts, [id]: value } })),
-                amount: (id, value) =>
-                    setTyped((previous) => ({ ...previous, amounts: { ...previous.amounts, [id]: value } })),
-                toggleEdit: (id) =>
-                    setTyped((previous) => ({
-                        ...previous,
-                        editing: { ...previous.editing, [id]: !previous.editing[id] },
-                    })),
+                field: decisionForm.field,
+                draft: decisionForm.draft,
+                amount: decisionForm.amount,
+                toggleEdit: decisionForm.toggleEdit,
                 decide,
             }}
         />

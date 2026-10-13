@@ -15,6 +15,8 @@ import { BookingAgendaRow } from "@/components/composites/BookingAgendaRow"
 import type { BookingAgendaRowView } from "@/components/composites/BookingAgendaRow"
 import { BookingDetailDialog } from "@/components/composites/BookingDetailDialog"
 import type { BookingDetailDialogProps } from "@/components/composites/BookingDetailDialog"
+import { BookingPlacementDialog } from "@/components/composites/BookingPlacementDialog"
+import type { BookingPlacementDialogProps } from "@/components/composites/BookingPlacementDialog"
 import { LEGEND_CLASS, STACK_CLASS, TOOLBAR_CLASS } from "./classNames"
 
 /** The agenda of one day. */
@@ -29,6 +31,7 @@ export interface BookingDeskBaseProps {
     readonly props: {
         readonly label: string
         readonly legend: ReadonlyArray<{ readonly text: string; readonly tone: BadgeTone }>
+        readonly add?: { readonly label: string; readonly isDisabled: boolean }
         readonly nav?: {
             readonly prevLabel: string
             readonly nextLabel: string
@@ -49,8 +52,13 @@ export interface BookingDeskBaseProps {
         readonly isPending: boolean
         readonly detail?: Omit<BookingDetailDialogProps, "onAction" | "onClose">
         readonly cancel?: { readonly title: string; readonly confirmLabel: string; readonly keepLabel: string }
+        readonly placement?: Omit<BookingPlacementDialogProps, "onChange" | "onSubmit" | "onClose">
     }
     readonly on: {
+        readonly add: () => void
+        readonly placementChange: BookingPlacementDialogProps["onChange"]
+        readonly placementSubmit: () => void
+        readonly placementClose: () => void
         readonly prev: () => void
         readonly next: () => void
         readonly thisWeek: () => void
@@ -78,6 +86,13 @@ export const BookingDeskBase = (props: BookingDeskBaseProps) => {
                     </Badge>
                 ))}
             </div>
+            {p.add === undefined ? null : (
+                <div className={TOOLBAR_CLASS}>
+                    <Button size="sm" variant="primary" isDisabled={p.add.isDisabled} onPress={on.add}>
+                        {p.add.label}
+                    </Button>
+                </div>
+            )}
             {p.nav === undefined ? null : (
                 <div className={TOOLBAR_CLASS}>
                     <Button size="sm" variant="outline" isDisabled={p.isPending} onPress={on.prev}>
@@ -140,6 +155,14 @@ export const BookingDeskBase = (props: BookingDeskBaseProps) => {
             )}
             {p.detail === undefined ? null : (
                 <BookingDetailDialog {...p.detail} onAction={on.detailAction} onClose={on.closeDetail} />
+            )}
+            {p.placement === undefined ? null : (
+                <BookingPlacementDialog
+                    {...p.placement}
+                    onChange={on.placementChange}
+                    onSubmit={on.placementSubmit}
+                    onClose={on.placementClose}
+                />
             )}
             {p.cancel === undefined ? null : (
                 <AlertDialog

@@ -3,7 +3,6 @@
 import { useTranslations } from "next-intl"
 import { providerKey } from "@/hooks/connection-providers"
 import { SMTP_STEPS, useSmtpView, useSmtpWizard } from "@/hooks/smtp-wizard"
-import { sendSmtpTest, startSmtpConnection } from "@/lib/email-actions"
 import { SmtpWizardBase } from "./component"
 
 /** What the board hands the outgoing-email wizard. */
@@ -24,7 +23,6 @@ export const SmtpWizard = (props: SmtpWizardProps) => {
         ownerEmail: props.ownerEmail,
         hasDefault: props.hasDefault,
         onClose: props.onClose,
-        actions: { start: startSmtpConnection, sendTest: sendSmtpTest },
     })
     const view = useSmtpView({
         preset: wizard.preset,

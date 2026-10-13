@@ -1,28 +1,19 @@
 import type { ConnectionRecord, SyncSchedule } from "@modules/domain/connections"
-import type { DataConnection, DataProvider, DataSyncRun, DataSyncRunState, DataSyncTrigger } from "./data-hub.contracts"
-import type { DataSyncRunRow } from "./persistence/data-hub.rows"
+import type { DataConnection, DataProvider } from "./data-hub.contracts"
 
-/** A connection record and its schedule as a data connection; the caller has checked the provider. */
-export const toDataConnection = (record: ConnectionRecord, schedule: SyncSchedule): DataConnection => ({
+/** A connection record, its data provider (the caller checked it) and its schedule as a data connection. */
+export const toDataConnection = (
+    record: ConnectionRecord,
+    provider: DataProvider,
+    schedule: SyncSchedule,
+): DataConnection => ({
     id: record.id,
     workspaceId: record.workspaceId,
-    provider: record.provider as DataProvider,
+    provider,
     name: record.name,
     status: record.status,
     lastError: record.lastError,
     meta: record.meta,
     everyMinutes: schedule.everyMinutes,
     lastSyncAt: schedule.lastSyncAt,
-})
-
-/** A stored sync run as the capability answers it. */
-export const toDataSyncRun = (row: DataSyncRunRow): DataSyncRun => ({
-    id: row.id,
-    connectionId: row.connection_id,
-    trigger: row.trigger as DataSyncTrigger,
-    state: row.status as DataSyncRunState,
-    rows: row.rows_upserted,
-    error: row.error,
-    startedAt: row.started_at,
-    finishedAt: row.finished_at,
 })
