@@ -1,5 +1,5 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { InventoryWorkbenchService } from "@modules/domain/inventory"
+import { InventoryImportService } from "@modules/domain/inventory"
 import type { InventoryTemplateInfo } from "@modules/domain/inventory"
 import { ICQRSHandler } from "@modules/platform/cqrs"
 import { InjectLogger } from "@modules/platform/logging"
@@ -14,12 +14,12 @@ export class InventoryTemplatesHandler extends ICQRSHandler<
 > {
     constructor(
         @InjectLogger() logger: Logger,
-        private readonly workbench: InventoryWorkbenchService,
+        private readonly imports: InventoryImportService,
     ) {
         super(logger)
     }
 
     protected override process(): Promise<ReadonlyArray<InventoryTemplateInfo>> {
-        return Promise.resolve(this.workbench.templates())
+        return this.imports.listTemplates()
     }
 }

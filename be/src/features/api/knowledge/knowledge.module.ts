@@ -25,6 +25,9 @@ import { DismissKnowledgeGapHandler } from "./application/dismiss-knowledge-gap.
 import { MaintainBrainHandler } from "./application/maintain-brain.handler"
 import { RequestLessonMiningHandler } from "./application/request-lesson-mining.handler"
 import { LessonMiningStatusHandler } from "./application/lesson-mining-status.handler"
+import { AuthorizeDriveHandler } from "./application/authorize-drive.handler"
+import { DisconnectDriveHandler } from "./application/disconnect-drive.handler"
+import { GetDriveGrantHandler } from "./application/get-drive-grant.handler"
 
 @Module({
     providers: [
@@ -54,6 +57,9 @@ import { LessonMiningStatusHandler } from "./application/lesson-mining-status.ha
         MaintainBrainHandler,
         RequestLessonMiningHandler,
         LessonMiningStatusHandler,
+        AuthorizeDriveHandler,
+        DisconnectDriveHandler,
+        GetDriveGrantHandler,
     ],
 })
 /** The knowledge feature: the handlers of its application. */

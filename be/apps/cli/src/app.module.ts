@@ -5,10 +5,14 @@ import type { DynamicModule } from "@nestjs/common"
 import { CliModule } from "@features/cli"
 import { ChannelConnectionsModule } from "@modules/domain/channel-connections"
 import { ChannelProvisioningModule } from "@modules/domain/channel-provisioning"
+import { AgentConnectionsModule } from "@modules/domain/agent-connections"
 import { ConnectionGrantsModule } from "@modules/domain/connection-grants"
+import { ConnectionSecretsModule } from "@modules/domain/connection-secrets"
 import { ConnectionsModule } from "@modules/domain/connections"
 import { AutomationTemplatesModule } from "@modules/domain/automation-templates"
 import { N8nHostModule } from "@modules/integrations/n8n-host"
+import { EventsModule } from "@modules/domain/events"
+import { StaffModule } from "@modules/domain/staff"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import { WorkspacesModule } from "@modules/domain/workspaces"
 import { SepaySimulationModule } from "@modules/domain/sepay-simulation"
@@ -55,6 +59,8 @@ export class AppModule {
                 N8nHostModule.register({ isGlobal: true, ...options.n8nHost }),
                 SupabaseModule.register({ isGlobal: true, ...options.supabase }),
                 VideoMusicModule.register({ isGlobal: true, store: SUPABASE_STORAGE }),
+                EventsModule.register({ isGlobal: true }),
+                StaffModule.register({ isGlobal: true }),
                 WorkspaceMembersModule.register({ isGlobal: true, accounts: SUPABASE_AUTH }),
                 WorkspacesModule.register({ isGlobal: true, allowFreeWorkspace: true }),
                 WorkspaceSeedModule.register({
@@ -64,13 +70,23 @@ export class AppModule {
                     print: (line) => process.stdout.write(`${line}\n`),
                 }),
                 AuthorityActionsModule.register({ isGlobal: true }),
+                ConnectionSecretsModule.register({
+                    isGlobal: true,
+                    tokenKey: options.channelConnections.channelTokenKey,
+                }),
                 ConnectionsModule.register({ isGlobal: true, ...options.channelConnections }),
+                AgentConnectionsModule.register({ isGlobal: true }),
                 ConnectionGrantsModule.register({ isGlobal: true }),
                 ChannelSetupModule.register({ isGlobal: true, ...options.channelSetup }),
                 ChannelConnectionsModule.register({ isGlobal: true }),
                 ChannelProvisioningModule.register({ isGlobal: true, ...options.channelProvisioning }),
                 SepaySimulationModule.register({ isGlobal: true, ...options.sepaySimulation }),
-                ModulesModule.register({ isGlobal: true, categories: MODULE_CATEGORIES, catalog: MODULE_CATALOG }),
+                ModulesModule.register({
+                    isGlobal: true,
+                    categories: MODULE_CATEGORIES,
+                    catalog: MODULE_CATALOG,
+                    catalogOnly: true,
+                }),
                 CliModule,
             ],
         }

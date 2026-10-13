@@ -5,6 +5,7 @@ import type { MyAccountType } from "./dto/my-account.type"
 export const toMyAccountType = (result: AccountOverview): MyAccountType => ({
     name: result.name,
     email: result.email,
+    avatarUrl: result.avatarUrl,
     providers: [...result.providers],
     sessions: result.sessions.map((session) => ({ ...session })),
 })

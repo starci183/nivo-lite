@@ -5,7 +5,6 @@ import { ICQRSHandler } from "@modules/platform/cqrs"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ApplyInventoryStarterCommand } from "./apply-inventory-starter.command"
-import { starterOf } from "./support/starter"
 
 @CommandHandler(ApplyInventoryStarterCommand)
 /** Load one starter set of suppliers, items and recipes. */
@@ -18,10 +17,10 @@ export class ApplyInventoryStarterHandler extends ICQRSHandler<ApplyInventorySta
     }
 
     protected override process(command: ApplyInventoryStarterCommand): Promise<ApplyStarterOutput> {
-        return this.imports.applyStarter(
+        return this.imports.applyStarterKey(
             command.params.principal.id,
             command.params.request.workspaceId,
-            starterOf(command.params.request.key),
+            command.params.request.key,
         )
     }
 }

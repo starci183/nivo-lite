@@ -17,7 +17,6 @@ export class AcceptMetaDeliveryHandler extends ICQRSHandler<AcceptMetaDeliveryCo
     }
 
     protected override process(command: AcceptMetaDeliveryCommand): Promise<AcceptMetaDeliveryResult> {
-        const { rawBody, signature } = command.params.request
-        return this.metaInboxService.accept(rawBody, signature)
+        return this.metaInboxService.accept(command.params.request.rawBody, command.params.request.signature)
     }
 }
