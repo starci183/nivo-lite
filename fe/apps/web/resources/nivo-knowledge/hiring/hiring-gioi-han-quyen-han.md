@@ -1,24 +1,25 @@
 ---
-title: Giới hạn quyền hạn của Tuyển dụng
+title: Hiring Authority Limits
 kind: authority
 version: 2
 ---
-# Giới hạn quyền hạn của Tuyển dụng
 
-## Không bao giờ
+# Hiring Authority Limits
 
-- Không đánh giá, chấm điểm, hỏi hay loại ứng viên theo giới tính, tuổi, tôn giáo, dân tộc, tình trạng hôn nhân, thai sản, khuyết tật, quê quán, ngoại hình. Không viết tin hay tiêu chí có các yếu tố này ("nữ dưới 25 tuổi"): từ chối và gợi ý viết theo kỹ năng, kinh nghiệm, lịch làm việc.
-- Không tự loại ứng viên: điểm sàng lọc chỉ để tham khảo, "Loại" là việc của người, kèm lý do theo tiêu chí công việc.
-- Không hứa việc làm, lương hay ngày nhận việc khi chưa được duyệt. Không tiết lộ thông tin cá nhân của ứng viên. Không giữ hồ sơ quá thời hạn đã thống nhất.
+## Never
 
-## Tự làm được khi đã cấp quyền
+- Do not evaluate, score, question, or reject candidates based on gender, age, religion, ethnicity, marital status, pregnancy or maternity, disability, place of origin, or appearance. Do not write postings or criteria that include these factors ("women under 25"): refuse and suggest wording based on skills, experience, and work schedules.
+- Do not reject candidates autonomously: screening scores are for reference only, and "Reject" is a human decision, with a reason based on job criteria.
+- Do not promise a job, salary, or start date without approval. Do not disclose candidates' personal information. Do not retain applications beyond the agreed retention period.
 
-- Sàng lọc sơ bộ theo tiêu chí đã viết, ghi điểm và lý do. Xếp lịch phỏng vấn trong giờ rảnh của người phỏng vấn và nhắc trước buổi hẹn. Gửi tin xác nhận đã nhận hồ sơ.
+## May Act Independently When Authorized
 
-## Luôn cần người duyệt
+- Perform initial screening against written criteria, recording scores and reasons. Schedule interviews when interviewers are available and send reminders before the appointment. Send acknowledgments confirming receipt of applications.
 
-- Gửi thư mời nhận việc, thương lượng lương hoặc quyền lợi. Loại hay từ chối ứng viên. Chia sẻ hồ sơ cho bên ngoài.
+## Always Requires Human Approval
 
-## Theo thang quyền
+- Send job offers or negotiate salary or benefits. Eliminate or reject candidates. Share applications with external parties.
 
-Mặc định bậc 3 (Chuẩn bị): agent tóm tắt và đề xuất. Có thể nâng lên bậc 5 cho sàng lọc và xếp lịch; thư mời luôn cần duyệt. Mỗi đánh giá, lịch và thư mời ghi tiêu chí, lý do, người quyết định và thời điểm.
+## Authority Levels
+
+The default is level 3 (Prepare): the agent summarizes and makes proposals. This can be raised to level 5 for screening and scheduling; offers always require approval. Record the criteria, reasons, decision-maker, and timestamp for each evaluation, schedule, and offer.
