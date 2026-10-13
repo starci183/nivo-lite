@@ -286,7 +286,18 @@
     "handoffNotice": "Lead handed to Sales AI.",
     "handoffGate": "See this customer's work flow →",
     "emptyMessage": "Write a message first.",
-    "notSentReason": "The message could not be sent. Try again."
+    "notSentReason": "The message could not be sent. Try again.",
+    "conversationStarted": "Conversation started",
+    "messageQueued": "Message queued",
+    "replyReady": "Reply ready",
+    "turnFailed": "The agent could not finish its reply. Try again.",
+    "deliveryFailed": "The message could not be delivered. Try again.",
+    "deliverySucceeded": "Message delivered",
+    "takeoverSucceeded": "Conversation taken over",
+    "returnSucceeded": "Conversation returned to AI",
+    "messageTooLong": "Use 4,000 characters or fewer.",
+    "visitorNameTooLong": "Use 80 characters or fewer.",
+    "loadingFailed": "The chat could not be loaded."
   },
   "agentDashboard": {
     "modeAssist": "Assist mode",
@@ -387,7 +398,9 @@
     "approveSend": "Approve & send",
     "reject": "Reject",
     "openLead": "Open lead",
-    "stillWaiting": "The draft is still waiting for a decision."
+    "stillWaiting": "The draft is still waiting for a decision.",
+    "decisionApproved": "Draft approved and sent",
+    "decisionRejected": "Draft rejected"
   },
   "auth": {
     "emailLabel": "Email",
@@ -501,7 +514,10 @@
     "readOnlyBody": "Only the owner and managers can change authority. You can read it here.",
     "loading": "Loading authority",
     "loadFailTitle": "Could not load authority",
-    "loadFailBody": "The authority settings are not available yet. Try again in a moment."
+    "loadFailBody": "The authority settings are not available yet. Try again in a moment.",
+    "errNumber": "Enter a whole number, zero or more.",
+    "staffReadOnly": "Staff are listed here. Adding or deactivating staff is not available yet.",
+    "staffInvitePerson": "Invite {name} as a member"
   },
   "automations": {
     "crumbLabel": "Breadcrumb",
@@ -534,7 +550,6 @@
     "missingLine": "Not available yet: needs {items}",
     "googleUnavailable": "Waiting for NIVO to switch on the Google integration",
     "googleLost": "Google connection lost. Connect again",
-    "connectGoogle": "Connect Google",
     "connectWebhook": "Set up a webhook",
     "openSheet": "Open the spreadsheet",
     "googleAccount": "Google account",
@@ -546,6 +561,8 @@
     "settingsTitle": "Settings",
     "save": "Save",
     "saved": "Saved.",
+    "toastOn": "Switched on.",
+    "toastOff": "Switched off.",
     "messageTitle": "The message",
     "messageHelp": "The wording below is what NIVO uses. Check it, change it if you like, then save.",
     "messageLabel": "Message to the customer",
@@ -596,48 +613,7 @@
     "moduleEmpty": "No automation fits this agent yet.",
     "loading": "Loading...",
     "loadFailed": "Could not load automations.",
-    "retry": "Try again",
-    "workspaceChip": "Workspace",
-    "missingModule": "the {name} module",
-    "missingChannelCustomerChat": "a customer chat channel (website, Telegram or Zalo)",
-    "missingConnectionGoogle": "a Google connection",
-    "missingConnectionWebhook": "an n8n / webhook connection",
-    "missingConnectionSmtp": "outgoing email",
-    "missingCapabilityHasOpeningHours": "opening hours in the shop information",
-    "missingCapabilityHasDeposits": "a deposit policy",
-    "missingCapabilityHasDueDates": "payment terms",
-    "missingCapabilityHasAppointments": "appointments",
-    "missingCapabilitySellsOnline": "online marketplace sales",
-    "missingCapabilityHasRecurringContracts": "recurring contracts",
-    "missingCapabilityHasDelivery": "delivery",
-    "patternHasDeposits": "đặt cọc|tiền cọc|cọc trước|deposit",
-    "patternHasAppointments": "đặt lịch|lịch hẹn|hẹn lịch|appointment|booking",
-    "patternSellsOnline": "shopee|lazada|tiktok ?shop|tiki\\b|sàn thương mại",
-    "patternHasRecurringContracts": "hợp đồng|gia hạn|định kỳ|subscription|thuê bao",
-    "patternHasDelivery": "giao hàng|vận chuyển|giao tận nơi|\\bship\\b|freight",
-    "patternDue": "hạn thanh toán|thanh toán sau|công nợ|trả chậm|payment terms|net ?\\d+|\\d+ ngày.{0,20}thanh toán|thanh toán.{0,20}\\d+ ngày",
-    "patternHoursline": "giờ (làm việc|mở cửa)|mở cửa|opening hours|business hours",
-    "patternNegation": "(không|chưa|chẳng|\\bko\\b|\\bno\\b|without)",
-    "auditEnabled": "Switched on the automation: {name}",
-    "auditDisabled": "Switched off the automation: {name}",
-    "auditBodysaved": "Approved the automation message: {name}",
-    "auditStreak": "{count} approvals in a row without edits.",
-    "auditAutosendgranted": "The owner allowed \"{name}\" to send by itself",
-    "auditAutosenddeclined": "The owner did not allow \"{name}\" to send by itself yet",
-    "faultAutomationsComingSoon": "This template is coming soon.",
-    "faultAutomationsRequirementMissing": "It cannot be switched on yet: a requirement of this template is missing.",
-    "faultAutomationsNoMessage": "This template sends no message to a customer, so it has no wording.",
-    "faultAutomationsBodyTooShort": "The wording is too short.",
-    "faultAutomationsBodyUnknownVariable": "The wording uses a blank this template does not offer.",
-    "faultAutomationsGoogleNotUsed": "This automation does not use Google.",
-    "faultAutomationsGoogleAccountUnknown": "This Google account was not found.",
-    "faultAutomationsTrustNotOffered": "Sending by itself has not been offered yet.",
-    "faultAutomationsNothingToChange": "There is nothing to save.",
-    "faultAutomationsPipelineOff": "Switch this automation on first.",
-    "faultAutomationsRunNowUnavailable": "This template cannot be run on demand.",
-    "faultAutomationsNotSaved": "This automation could not be saved.",
-    "faultRefused": "Only the owner and managers can change the automations.",
-    "faultGeneric": "That did not work. Try again in a few minutes."
+    "retry": "Try again"
   },
   "billing": {
     "allWorkspaces": "All workspaces",
@@ -783,6 +759,7 @@
     "mineNotEnough": "Only {n} corrections so far. At least 3 are needed to see a pattern.",
     "mineDone": "{n} lessons proposed from {c} corrections ({k} kept as test cases).",
     "mineUnavailable": "The model could not answer now. Try again in a few minutes.",
+    "mineFailed": "The study of your edits did not finish. Try again in a few minutes.",
     "addLesson": "Add lesson",
     "lTitle": "Lesson",
     "lBody": "What to do",
@@ -1664,8 +1641,14 @@
     "stepImport": "Import",
     "stepAgent": "Attach to an agent",
     "fieldName": "Import name",
+    "nameTooShort": "Name this import (at least 2 characters).",
     "fieldNameHint": "For example Customers 2026. You can create as many imports as you need.",
     "fieldEntity": "What the rows are",
+    "starterCustomer": "Full name|Phone|Email|Address",
+    "starterOrder": "Order no.|Customer|Date|Total",
+    "starterProduct": "SKU|Product name|Price|Stock",
+    "starterTransaction": "Ref|Date|Description|Amount",
+    "starterOther": "ID|Name|Note",
     "entityCustomer": "Customers",
     "entityOrder": "Orders",
     "entityProduct": "Products",
@@ -1806,7 +1789,16 @@
     "every_1440": "Every 24 hours",
     "saved": "Saved.",
     "agentTitle": "Which agents may read this data",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "needName": "Name this connection.",
+    "needHost": "Enter the server address.",
+    "badPort": "The port must be from 1 to 65535.",
+    "needDatabase": "Enter the database name.",
+    "needUser": "Enter the user name.",
+    "needPassword": "Enter this user's password.",
+    "engine_postgres": "PostgreSQL",
+    "engine_mysql": "MySQL",
+    "engine_mssql": "SQL Server"
   },
   "connectorImap": {
     "stepAccount": "Mailbox and sign-in",
@@ -1845,6 +1837,11 @@
     "testOk": "Signed in. Found {n} folders.",
     "testNeeded": "Check the connection to continue.",
     "testStale": "The settings changed. Check the connection again.",
+    "errName": "Enter a connection name.",
+    "errEmail": "Enter the mailbox address.",
+    "errHost": "The server address is not valid.",
+    "errPort": "The port must be between 1 and 65535.",
+    "errPassword": "Enter the mailbox app password.",
     "foldersTitle": "Folders to read",
     "foldersHint": "INBOX is ticked by default. Pick other folders if you want them too.",
     "sinceTitle": "How far back on the first sync",
@@ -1933,7 +1930,9 @@
     "testOk": "Status {status}, found {n} items.",
     "testFields": "Fields in the first item: {fields}.",
     "saveAndContinue": "Save and continue",
-    "agentTitle": "Agents that may use this API"
+    "agentTitle": "Agents that may use this API",
+    "baseUrlInvalid": "The base URL must start with http:// or https://.",
+    "authNameRequired": "Enter the header or parameter name of the API key."
   },
   "connectorTelegramUser": {
     "stepConsent": "Name and consent",
@@ -1989,7 +1988,13 @@
     "schedule60": "Every hour",
     "scheduleHint": "Each run reads at most 200 new messages per chat.",
     "save": "Save",
-    "agentTitle": "Agents that may read these messages"
+    "agentTitle": "Agents that may read these messages",
+    "errName": "Give the connection a name.",
+    "errConsent": "Please agree to the commitment.",
+    "errPhone": "The phone number is not valid.",
+    "errCode": "The code has 4 to 8 digits.",
+    "errPassword": "Enter the two-step password.",
+    "loading": "Loading."
   },
   "content": {
     "tabCalendar": "Calendar",
@@ -2449,7 +2454,10 @@
     "sampleText": "Hello, here is our quote...",
     "sampleTitle": "Price list",
     "sampleContent": "3 month plan: ...",
-    "sampleTopic": "Price"
+    "sampleTopic": "Price",
+    "keysRefused": "You are not allowed to manage this shop's API keys.",
+    "createFailed": "The key could not be created. The name needs at least 2 characters and a shop may have 20 active keys.",
+    "revokeFailed": "This key could not be revoked. Try again."
   },
   "email": {
     "err_auth": "Wrong username or password. Check the address and the password you pasted.",
@@ -3273,7 +3281,13 @@
     "loadFailBody": "The inbound feed is not available yet. Try again in a moment.",
     "loading": "Loading inbound",
     "feedAria": "Received inputs",
-    "unnamed": "Unknown sender"
+    "unnamed": "Unknown sender",
+    "simulationQueued": "Input received. Processing has been queued.",
+    "simulationRunning": "Processing the input...",
+    "simulationFailed": "Processing failed. Try again.",
+    "errTooLong": "Use at most {max} characters.",
+    "errAmount": "Enter an amount from 0 to {max} VND.",
+    "errOption": "Choose a valid option."
   },
   "invite": {
     "eyebrow": "INVITATION",
@@ -4859,7 +4873,19 @@
     "k_notesApprove": "Approve and apply",
     "k_notesApproving": "Applying...",
     "k_notesApplied": "Applied as version {version}.",
-    "k_notesFailed": "Could not do that"
+    "k_notesFailed": "Could not do that",
+    "req_customer_chat": "a customer chat channel (website, Telegram or Zalo)",
+    "req_customer_messaging": "a way to message customers (Telegram or Zalo)",
+    "req_email": "outgoing email",
+    "req_calendar": "a Google connection (calendar)",
+    "req_staff_directory": "a staff list",
+    "req_social_publish": "social publishing",
+    "req_video_render": "video rendering",
+    "req_conn_google": "a Google connection",
+    "req_conn_smtp": "outgoing email",
+    "req_conn_webhook": "an n8n / webhook connection",
+    "req_conn_telegram": "a Telegram connection",
+    "req_conn_zalo_oa": "a Zalo OA connection"
   },
   "modules": {
     "eyebrow": "AI WORKFORCE",
@@ -5038,7 +5064,14 @@
     "autoHelp": "Jobs that run by themselves for this agent. Switch each one on or off.",
     "autoLoadFailed": "Could not load automations.",
     "autoRetry": "Try again",
-    "autoLoading": "Loading..."
+    "autoLoading": "Loading...",
+    "installed": "Agent installed.",
+    "instanceCreated": "New agent created.",
+    "loadFailed": "Could not load your agents.",
+    "notFound": "This agent could not be found.",
+    "loyaltyProgramTitle": "Loyalty program",
+    "loyaltyProgramText": "The program rules and members are managed on the agent's workbench.",
+    "loyaltyProgramOpen": "Open the workbench"
   },
   "office": {
     "crumbLabel": "Breadcrumb",
@@ -5248,7 +5281,11 @@
     "cmdNeedOrder": "the order (for example #DH-1)",
     "cmdNeedLead": "the customer's name",
     "cmdNeedInvoice": "the invoice",
-    "cmdNeedOther": "the {field}"
+    "cmdNeedOther": "the {field}",
+    "retry": "Try again",
+    "loadEarlier": "Show earlier messages",
+    "approvalSaved": "Decision saved",
+    "rejectionSaved": "Rejected"
   },
   "onboarding": {
     "created": "Workspace created.",
@@ -5652,7 +5689,10 @@
     "menuDraftHuman": "Drafts it for your approval",
     "open": "Open",
     "more": "More",
-    "drafting": "Drafting"
+    "drafting": "Drafting",
+    "draftQueued": "Drafting started",
+    "draftReady": "The draft is ready for your approval",
+    "draftFailed": "The draft could not be written."
   },
   "shell": {
     "navOverview": "Overview",
@@ -6929,7 +6969,18 @@
     "notSent": "Not sent",
     "actionFailed": "That did not work",
     "emptyReply": "Write a reply first.",
-    "takeOverFirst": "Take over the conversation before replying."
+    "takeOverFirst": "Take over the conversation before replying.",
+    "replyQueued": "Reply queued for delivery.",
+    "replySent": "Reply delivered.",
+    "replyFailed": "The reply could not be delivered.",
+    "answerQueued": "Answer decision queued.",
+    "answerSent": "Answer delivered to the customer.",
+    "answerDeclined": "Marked as not answered.",
+    "answerFailed": "The answer could not be delivered.",
+    "handlingTakenOver": "You are now handling this conversation.",
+    "handlingReleased": "The conversation was handed back to the AI.",
+    "replyTooLong": "Keep the reply within 4,000 characters.",
+    "answerTooLong": "Keep the answer within 4,000 characters."
   },
   "workbenchFigures": {
     "shWeek": "Shifts this week",
@@ -7303,7 +7354,15 @@
     "stage_qualified": "qualified",
     "stage_proposal": "proposal",
     "stage_won": "won",
-    "stage_lost": "lost"
+    "stage_lost": "lost",
+    "retry": "Retry",
+    "commentQueued": "Public reply approval queued.",
+    "commentApproved": "Public reply posted.",
+    "commentFailed": "The public reply could not be posted.",
+    "commentInvalid": "Choose a valid comment.",
+    "draftRequired": "Enter a public reply.",
+    "draftTooLong": "Keep the public reply within 4,000 characters.",
+    "statusReadFailed": "We could not read the reply status. Retry the check."
   },
   "workbenchSales": {
     "metricOpen": "Open opportunities",

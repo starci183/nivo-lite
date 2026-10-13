@@ -1,3 +1,4 @@
+export { toBrainExtraction, toBrainFact, toBrainGap, toBrainLens, toBrainLesson } from "./brain.mapper"
 export { adviceFor } from "./advice"
 export { reviewBoardOf } from "./board"
 export type { ReviewConflict, ReviewSingle } from "./board"

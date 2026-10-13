@@ -10,7 +10,7 @@ import { LeadGenWorkbenchPage as WorkbenchLeadGen } from "@/features/pages/LeadG
 import { SalesWorkbenchPage as WorkbenchSales } from "@/features/pages/SalesWorkbenchPage"
 import { VideoWorkbenchPage as WorkbenchVideo } from "@/features/pages/VideoWorkbenchPage"
 import WorkbenchAccounting from "@/features/workbench-accounting"
-import WorkbenchChatbot from "@/features/workbench-chatbot"
+import { ChatbotWorkbench as WorkbenchChatbot } from "@/features/pages/ChatbotWorkbench"
 
 /** The document title of the workbench tab. */
 export { agentWorkbenchMetadata as generateMetadata } from "@/features/pages/AgentWorkbenchPage"

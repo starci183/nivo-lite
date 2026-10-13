@@ -2,30 +2,44 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { useSave } from "@/hooks/modules"
-import { setHoldingMessage, setReplyTimeout } from "@/lib/module-settings-actions"
+import {
+    HOLDING_MAX,
+    REPLY_TIMEOUT_MAX,
+    REPLY_TIMEOUT_MIN,
+    useAgentInstallation,
+    useAgentRights,
+    useSaveReply,
+} from "@/hooks/agentSettings"
 import { AgentReplyCardBase } from "./component"
 
-/** The chatbot the card sets, with the values it holds now. */
+/** The chatbot the card sets. */
 type AgentReplyCardProps = {
     readonly installationId: string
-    /** The longest a customer waits before the app answers directly, in seconds. */
-    readonly timeoutSec: number
-    readonly holdingMessage: string
+    readonly module: string
 }
 
-const TIMEOUT_MIN = 5
-const TIMEOUT_MAX = 120
 const TIMEOUT_DIGITS = 3
-const HOLDING_MAX = 400
 
-/** The connected reply card of a chatbot: each of its two settings saves on its own. */
+/** The connected reply card of a chatbot: each of its two settings saves on its own. Only owners and managers see it. */
 export const AgentReplyCard = (props: AgentReplyCardProps) => {
     const t = useTranslations("modulesCore")
-    const [timeoutText, setTimeoutText] = useState(String(props.timeoutSec))
-    const [holding, setHolding] = useState(props.holdingMessage)
-    const { note, isPending, save } = useSave()
+    const { canEdit } = useAgentRights()
+    const { slot } = useAgentInstallation(props.installationId, props.module)
+    const [timeoutDraft, setTimeoutDraft] = useState<string | null>(null)
+    const [holdingDraft, setHoldingDraft] = useState<string | null>(null)
+    const { timeout: saveTimeout, holding: saveHolding, isSaving } = useSaveReply(props.installationId)
+    const savedTimeout = slot.items?.timeoutSec ?? 0
+    const savedHolding = slot.items?.holdingMessage ?? ""
+    const timeoutText = timeoutDraft ?? String(savedTimeout)
+    const holding = holdingDraft ?? savedHolding
     const timeout = Number(timeoutText)
+    const submitTimeout = async () => {
+        if (await saveTimeout(timeout)) setTimeoutDraft(null)
+    }
+    const submitHolding = async () => {
+        if (await saveHolding(holding)) setHoldingDraft(null)
+    }
+    if (!canEdit || slot.items === undefined) return null
     return (
         <AgentReplyCardBase
             props={{
@@ -35,25 +49,22 @@ export const AgentReplyCard = (props: AgentReplyCardProps) => {
                 timeout: timeoutText,
                 canSaveTimeout:
                     Number.isInteger(timeout) &&
-                    timeout >= TIMEOUT_MIN &&
-                    timeout <= TIMEOUT_MAX &&
-                    timeout !== props.timeoutSec,
+                    timeout >= REPLY_TIMEOUT_MIN &&
+                    timeout <= REPLY_TIMEOUT_MAX &&
+                    timeout !== savedTimeout,
                 holdingLabel: t("holdingLabel"),
                 holdingHint: t("holdingHint"),
                 holdingPlaceholder: t("holdingDefault"),
                 holding,
-                canSaveHolding: holding.trim() !== props.holdingMessage.trim(),
+                canSaveHolding: holding.trim() !== savedHolding.trim(),
                 saveLabel: t("timeoutSave"),
-                isPending,
-                noteTone: note.tone,
-                noteTitle: note.tone === "saved" ? t("saved") : t("notSaved"),
-                noteText: note.text,
+                isPending: isSaving,
             }}
             on={{
-                timeout: (value) => setTimeoutText(value.replace(/[^0-9]/gu, "").slice(0, TIMEOUT_DIGITS)),
-                holding: (value) => setHolding(value.slice(0, HOLDING_MAX)),
-                saveTimeout: () => save(() => setReplyTimeout(props.installationId, timeout), t("saved")),
-                saveHolding: () => save(() => setHoldingMessage(props.installationId, holding), t("saved")),
+                timeout: (value) => setTimeoutDraft(value.replace(/[^0-9]/gu, "").slice(0, TIMEOUT_DIGITS)),
+                holding: (value) => setHoldingDraft(value.slice(0, HOLDING_MAX)),
+                saveTimeout: () => void submitTimeout(),
+                saveHolding: () => void submitHolding(),
             }}
         />
     )

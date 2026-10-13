@@ -65,7 +65,6 @@ export type {
     AgentOption,
     Connection,
     ConnectionCheck,
-    ConnectionGrant,
     ConnectionStatus,
     ConnectorAudience,
     ConnectorCategory,
@@ -74,7 +73,6 @@ export type {
     Environment,
     FirstEvent,
     FirstEventState,
-    GoogleConsent,
     MetaCheckSummary,
     Provider,
     ProviderGroup,
@@ -113,10 +111,9 @@ export type {
     WebhookView,
     WizardConnection,
     WizardNote,
-    ZaloAuthorizeUrl,
     ZaloWizardConnection,
 } from "./connection-wizard"
-export type { MetaAuthorization, MetaCheck, MetaWizardConnection } from "./connection-wizard"
+export type { MetaCheck, MetaWizardConnection } from "./connection-wizard"
 export type { DataSlot, SlotLabels } from "./slot"
 export type {
     InventorySay,
@@ -157,25 +154,43 @@ export type {
 } from "./inventory-commands"
 export type {
     AccountsView,
+    AutomationCardView,
+    AutomationGateKind,
+    AutomationIconWord,
+    AutomationRunStatus,
+    AutomationRunView,
     AutomationTone,
     AutomationsBoardView,
     AutomationsLanguage,
     AutomationsTranslator,
+    Capability,
     CardView,
+    ChannelNeed,
+    ConfigValue,
+    ConnectionNeed,
+    ContentMode,
     DetailView,
+    FieldDef,
+    GateAction,
     GateView,
+    GoogleAccount,
+    L,
     MessageView,
+    Missing,
+    ModuleScope,
+    PipelineConfig,
+    PreviewSample,
+    Requires,
     RunRowView,
+    RunStep,
     SettingFieldView,
+    ShopContext,
+    TemplateDef,
+    TemplateExecutor,
+    TemplateKey,
+    TemplatePack,
 } from "./automations"
-export type {
-    DeciderKind,
-    DecisionFilter,
-    DecisionKind,
-    DecisionOutcome,
-    DecisionRecord,
-    GateReason,
-} from "./decisions"
+export type { DeciderKind, DecisionKind, DecisionOutcome, DecisionRecord, GateReason } from "./decisions"
 export type {
     AttentionKind,
     AttentionRow,
@@ -225,3 +240,42 @@ export type {
     IdeaDecision,
     DocumentVisibility,
 } from "./knowledge"
+export type {
+    OfficeApprovalView,
+    OfficeAvatarView,
+    OfficeBodyPart,
+    OfficeChatRowView,
+    OfficeCommandView,
+    OfficeExceptionView,
+    OfficeInfoView,
+    OfficeJumpRowView,
+    OfficeListView,
+    OfficeMemberRowView,
+    OfficeMentionView,
+    OfficeMessageView,
+    OfficeMissingField,
+    OfficeOutboxView,
+    OfficeTaskView,
+    OfficeText,
+    OfficeThreadItem,
+    OfficeWorkDecision,
+} from "./office"
+export type {
+    OfficeComposerProps,
+    OfficeConversationsProps,
+    OfficeInfoPanelProps,
+    OfficeTasksProps,
+    OfficeThreadProps,
+} from "./office-slots"
+
+export type { SetupWriteDecided, SetupWriteInstance, SetupWriteProposal, SetupWriteWords } from "./setup-write"
+export type {
+    DbColumnInfo,
+    DbEngine,
+    DbEntity,
+    DbPreviewRows,
+    DbSavedConnection,
+    DbTableInfo,
+    DbTableMapping,
+    DbTarget,
+} from "./database-wizard"

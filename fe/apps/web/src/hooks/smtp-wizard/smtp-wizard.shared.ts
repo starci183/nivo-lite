@@ -1,19 +1,43 @@
-import type { SmtpInput, SmtpView } from "@/lib/email-actions"
+import type { Settled } from "@/hooks/connection-wizard"
 import { modeOf, SMTP_PRESETS } from "@/lib/email/presets"
 import type { Security, SmtpPreset } from "@/lib/email/presets"
-import type { Outcome } from "@/lib/types"
 
 /** The steps of the outgoing-email wizard, in order. */
 export const SMTP_STEPS = ["provider", "guide", "account", "verify"] as const
 
-/** The commands the connected entry hands the outgoing-email wizard (lib/email-actions, owned by the email lane). */
-export interface SmtpActions {
-    readonly start: (input: SmtpInput) => Promise<Outcome<SmtpView>>
-    readonly sendTest: (
-        connectionId: string,
-        to: string,
-        makeDefault: boolean,
-    ) => Promise<Outcome<{ to: string; isDefault: boolean }>>
+/** What the wizard sends to store an outgoing-email connection. */
+export interface SmtpInput {
+    readonly preset: string
+    readonly host: string
+    readonly port: number
+    readonly security: Security
+    readonly user: string
+    readonly password: string
+    readonly fromName: string
+    readonly fromEmail: string
+    readonly replyTo: string
+}
+
+/** The stored connection the wizard keeps for its test step (never carries the password). */
+export interface SmtpView {
+    readonly id: string
+    readonly host: string
+    readonly fromEmail: string
+    readonly isDefault: boolean
+}
+
+/** What a test email answered. */
+export interface SmtpTested {
+    readonly to: string
+    readonly isDefault: boolean
+}
+
+/** The GraphQL commands of the outgoing-email wizard and its row (the active workspace travels in the request header). */
+export interface SmtpCommands {
+    readonly start: (input: SmtpInput) => Promise<Settled<SmtpView>>
+    readonly sendTest: (connectionId: string, to: string, makeDefault: boolean) => Promise<Settled<SmtpTested>>
+    readonly changePassword: (connectionId: string, password: string) => Promise<Settled<true>>
+    readonly setDefault: (connectionId: string) => Promise<Settled<true>>
 }
 
 /** Where the mailbox lives: the chosen provider and way of sending, with the connection facts they prefill and the owner may edit. */

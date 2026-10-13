@@ -1,4 +1,3 @@
-import type { AutomationCardView } from "@/lib/automation-shared"
 import { MODULE_REGISTRY } from "@/modules/catalog"
 import { AUTOMATION_ROUTES } from "@/modules/routes"
 import {
@@ -11,6 +10,7 @@ import {
 import type { AutomationFilterKey, AutomationStatus } from "./status"
 import type {
     AccountsView,
+    AutomationCardView,
     AutomationTone,
     AutomationsLanguage,
     AutomationsTranslator,

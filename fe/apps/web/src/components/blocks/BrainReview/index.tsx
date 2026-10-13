@@ -1,33 +1,18 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { SOURCE_KEY, adviceFor, reviewBoardOf, useBrainCommand } from "@/hooks/brain"
+import { SOURCE_KEY, adviceFor, reviewBoardOf, useBrainBoard, useBrainCommand } from "@/hooks/brain"
 import type { ReviewConflict, ReviewSingle } from "@/hooks/brain"
-import type { CommandActions } from "@/hooks/knowledge"
 import type { KnowledgeRowView, RowActionView, RowPartView } from "@/components/composites/KnowledgeRows"
-import { writeCommand } from "@/modules/db/knowledge/write-command"
-import { writeCommandWait } from "@/modules/db/knowledge/write-command-wait"
 import type { BrainFact } from "@/modules/types"
 import { BrainReviewBase } from "./component"
 
-/** Props for the connected review list. */
-interface BrainReviewProps {
-    readonly workspaceId: string
-    readonly facts: ReadonlyArray<BrainFact>
-    /** The moment the page was read, in milliseconds: the age of a value is judged against it. */
-    readonly nowMs: number
-    readonly canDecide: boolean
-    /** True while the page loads: the heading stays and the list is skeleton rows. */
-    readonly isLoading?: boolean
-}
-
-const ACTIONS: CommandActions = { write: writeCommand, wait: writeCommandWait }
-
 /** The connected review list: words each proposal, suggests what to do with it and sends the decision to the back end. */
-export const BrainReview = (props: BrainReviewProps) => {
+export const BrainReview = () => {
     const t = useTranslations("brain")
-    const command = useBrainCommand(props.workspaceId, ACTIONS)
-    const plan = reviewBoardOf(props.facts)
+    const command = useBrainCommand()
+    const board = useBrainBoard()
+    const plan = reviewBoardOf(board.facts)
     const byLine = (fact: BrainFact): string =>
         t("by", { who: fact.proposedBy, source: t(SOURCE_KEY[fact.sourceKind]), trust: fact.trust })
     const titleOf = (fact: BrainFact): string => `${fact.subjectLabel} · ${fact.attributeLabel}`
@@ -44,9 +29,9 @@ export const BrainReview = (props: BrainReviewProps) => {
         onPress: () => command.send("fact.decide", { id, action: "reject" }, { done: t("rejected") }),
     })
     const gated = (actions: ReadonlyArray<RowActionView>): ReadonlyArray<RowActionView> =>
-        props.canDecide ? actions : []
+        board.canWrite ? actions : []
     const singleRow = (single: ReviewSingle): KnowledgeRowView => {
-        const advice = adviceFor(single.p, single.current, props.nowMs)
+        const advice = adviceFor(single.p, single.current, board.nowMs)
         const isApply = advice.action === "apply" || advice.action === "schedule"
         const part: RowPartView = {
             id: single.p.id,
@@ -111,7 +96,6 @@ export const BrainReview = (props: BrainReviewProps) => {
             },
         ],
     })
-    const note = command.note
     return (
         <BrainReviewBase
             props={{
@@ -121,8 +105,6 @@ export const BrainReview = (props: BrainReviewProps) => {
                         title: t("tabReview"),
                         description: t("reviewEmptyBody"),
                         failTitle: t("loadFailed"),
-                        error: note?.tone === "negative" ? t(note.text) : undefined,
-                        notice: note?.tone === "affirmative" ? note.text : undefined,
                     },
                     label: t("tabReview"),
                     rows: [
@@ -130,7 +112,7 @@ export const BrainReview = (props: BrainReviewProps) => {
                         ...plan.singles.map(singleRow),
                         ...plan.retires.map(retireRow),
                     ],
-                    isLoading: props.isLoading ?? false,
+                    isLoading: board.isLoading,
                     isPending: command.isPending,
                     emptyTitle: t("reviewEmptyTitle"),
                     emptyBody: t("reviewEmptyBody"),

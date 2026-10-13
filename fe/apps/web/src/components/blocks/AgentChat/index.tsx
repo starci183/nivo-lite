@@ -1,127 +1,93 @@
 "use client"
 
-import { useAgentChat } from "@/hooks/agentChat"
+import { useTranslations } from "next-intl"
+import { useState } from "react"
+import { useAgentChat, useAgentChatCopy } from "@/hooks/agentChat"
+import { useSlotLabels } from "@/hooks/slot"
+import { moduleDef, isModuleKey } from "@/lib/module-registry"
 import { navigation } from "@/modules/i18n"
-import { PromoWelcomeBanner } from "@/components/blocks/PromoWelcomeBanner"
+import { CONSOLE_ROUTES, agentChatHref, leadHref } from "@/modules/routes"
 import { AgentChatBase } from "./component"
 import type { AgentChatTab } from "./component"
 
 export type { AgentChatTab } from "./component"
 
-/** The agent the chat talks to: plain data handed over by the server page. */
-interface AgentChatAgent {
-    readonly id: string
-    readonly module?: string
-    readonly name: string
-    readonly handle: string
-    readonly role: string
-    readonly isActive: boolean
-    readonly hasCustomerChannel: boolean
-}
-
-/** Props for {@link AgentChat}. */
+/** Route identity for the connected chat block. */
 interface AgentChatProps {
-    /** Null while the agent loads (isLoading). */
-    readonly agent: AgentChatAgent | null
-    /** The workspace whose conversations the page follows through Realtime. */
-    readonly workspaceId: string | null
+    /** Undefined renders the loading frame without starting a query. */
+    readonly agentId: string | undefined
     readonly initialTab: AgentChatTab
     readonly initialConversationId: string | null
-    /** True only for a Founding 50 member arriving with ?welcome=1. */
-    readonly showWelcome?: boolean
-    /** STATE-8: the same chat while the agent loads - the frame, labels and composer real; the agent's name, the list and the thread skeletons. */
-    readonly isLoading?: boolean
+    readonly welcome: boolean
 }
 
-const NOOP = (): void => undefined
-
-/** Connected agent chat: loads conversations, sends messages, follows Realtime inserts. Without an agent it is the loading frame. */
-export const AgentChat = (props: AgentChatProps) =>
-    props.agent === null ? (
-        <AgentChatBase
-            props={{
-                agentName: "",
-                agentHandle: "",
-                agentRole: "",
-                isAgentActive: false,
-                hasCustomerChannel: false,
-                tab: "test",
-                conversations: [],
-                messages: [],
-                hasSelection: false,
-                isLoadingList: true,
-                isSending: false,
-                isStarting: false,
-                draft: "",
-                visitorName: "",
-                error: null,
-                leadId: null,
-                isTakenOver: false,
-                isTakingOver: false,
-                isLoading: true,
-            }}
-            on={{
-                toggleTakeover: NOOP,
-                back: NOOP,
-                tab: NOOP,
-                draft: NOOP,
-                visitorName: NOOP,
-                send: NOOP,
-                start: NOOP,
-                select: NOOP,
-                openLead: NOOP,
-            }}
-        />
-    ) : (
-        <ConnectedAgentChat {...props} agent={props.agent} />
-    )
-
-/** The chat of a loaded agent: the hook owns the state, the base draws it. */
-const ConnectedAgentChat = (props: AgentChatProps & { readonly agent: AgentChatAgent }) => {
-    const { agent } = props
+/** Connected agent chat: metadata and history come from the workspace-scoped GraphQL API. */
+export const AgentChat = (props: AgentChatProps) => {
+    const t = useTranslations("agentChat")
+    const promo = useTranslations("promoAds")
     const router = navigation.useRouter()
-    const chat = useAgentChat({
-        agentId: agent.id,
-        workspaceId: props.workspaceId,
-        hasCustomerChannel: agent.hasCustomerChannel,
-        initialTab: props.initialTab,
-        initialConversationId: props.initialConversationId,
-    })
+    const slotLabels = useSlotLabels()
+    const chat = useAgentChat(props)
+    const copy = useAgentChatCopy(chat)
+    const [isWelcomeOpen, setIsWelcomeOpen] = useState(true)
+    const agent = chat.agent
+    const moduleKey = agent?.module ?? "chatbot"
+    const glyph = moduleDef(isModuleKey(moduleKey) ? moduleKey : "chatbot").glyph
+    const agentId = agent?.id ?? ""
+    const closeWelcome = () => {
+        setIsWelcomeOpen(false)
+        router.replace(agentChatHref(agentId), { scroll: false })
+    }
     return (
         <AgentChatBase
             props={{
-                ...(props.showWelcome === true ? { banner: <PromoWelcomeBanner agentId={agent.id} /> } : {}),
-                ...(agent.module === undefined ? {} : { agentModule: agent.module }),
-                setupHref: `/modules/${agent.id}`,
-                agentName: agent.name,
-                agentHandle: agent.handle,
-                agentRole: agent.role,
-                isAgentActive: agent.isActive,
-                hasCustomerChannel: agent.hasCustomerChannel,
-                tab: chat.tab,
-                conversations: chat.rows,
-                messages: chat.thread,
-                hasSelection: chat.hasSelection,
-                isLoadingList: chat.isLoadingList,
-                isSending: chat.isSending,
+                crumbLabel: copy.crumbLabel,
+                crumbs: copy.crumbs,
+                pageLabel: t("pageLabel"),
+                isLoading: agent === undefined,
+                glyph,
+                module: moduleKey,
+                railTitle: t("railTitle"),
+                newLabel: t(chat.tab === "customer" ? "newVisitor" : "newTest"),
                 isStarting: chat.isStarting,
-                draft: chat.draft,
-                visitorName: chat.visitorName,
-                error: chat.error,
-                leadId: chat.leadId,
-                isTakenOver: chat.isTakenOver,
-                isTakingOver: chat.isTakingOver,
+                railSlot: { isLoading: agent === undefined || chat.isLoadingList, items: chat.rows },
+                railLabels: slotLabels(t("railEmptyHelp")),
+                header: copy.header,
+                channelTabs: copy.channelTabs,
+                threadSlot: {
+                    isLoading: agent === undefined || chat.isLoadingThread,
+                    items: { hasSelection: chat.hasSelection },
+                },
+                threadLabels: slotLabels(t("railEmptyHelp")),
+                thread: copy.thread,
+                welcome:
+                    agent?.showWelcome === true && isWelcomeOpen
+                        ? {
+                              ariaLabel: promo("welcomeAria"),
+                              title: promo("welcomeTitle"),
+                              text: promo("welcomeText"),
+                              closeLabel: promo("welcomeClose"),
+                              testLabel: promo("welcomeTest"),
+                              testHref: agentChatHref(agentId, "customer"),
+                              officeLabel: promo("welcomeOffice"),
+                              officeHref: CONSOLE_ROUTES.chat,
+                          }
+                        : null,
+                messages: copy.messages,
+                empty: copy.empty,
+                composer: copy.composer,
             }}
             on={{
-                toggleTakeover: chat.toggleTakeover,
-                back: () => router.push("/modules"),
+                toggleTakeover: () => void chat.toggleTakeover(),
+                back: () => router.push(CONSOLE_ROUTES.modules),
                 tab: chat.changeTab,
                 draft: chat.setDraft,
                 visitorName: chat.setVisitorName,
-                send: chat.send,
-                start: chat.start,
+                send: (prompt) => void chat.send(prompt),
+                start: () => void chat.start(),
                 select: chat.select,
-                openLead: (id) => router.push(`/leads/${id}`),
+                openLead: () => router.push(leadHref(chat.leadId ?? "")),
+                closeWelcome,
             }}
         />
     )

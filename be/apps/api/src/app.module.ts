@@ -141,11 +141,6 @@ import { INVOICES_ERROR_KINDS, INVOICES_MESSAGES, InvoicesModule } from "@module
 import { ORDERS_ERROR_KINDS, ORDERS_MESSAGES, OrdersModule } from "@modules/domain/orders"
 import { TRANSACTIONS_ERROR_KINDS, TRANSACTIONS_MESSAGES, TransactionsModule } from "@modules/domain/transactions"
 import {
-    ConversationLeadsService,
-    HandoffToolService,
-    InboundStatusService,
-    LeadWriterService,
-    OutboundAccessService,
     WORK_PERFORMERS_ERROR_KINDS,
     WORK_PERFORMERS_MESSAGES,
     WorkPerformersModule,
@@ -155,13 +150,7 @@ import {
     AGENT_CONNECTIONS_MESSAGES,
     AgentConnectionsModule,
 } from "@modules/domain/agent-connections"
-import {
-    AGENT_TOOLS_ERROR_KINDS,
-    AGENT_TOOLS_MESSAGES,
-    AgentToolsModule,
-    UnboundBookingToolsService,
-    UnboundKnowledgeSearchService,
-} from "@modules/domain/agent-tools"
+import { AGENT_TOOLS_ERROR_KINDS, AGENT_TOOLS_MESSAGES, AgentToolsModule } from "@modules/domain/agent-tools"
 import {
     AGENTS_ERROR_KINDS,
     AGENTS_MESSAGES,
@@ -180,15 +169,7 @@ import {
 } from "@modules/domain/ai-generations"
 import { AUTHORITY_ERROR_KINDS, AUTHORITY_MESSAGES } from "@modules/domain/authority"
 import { AUTHORITY_RULES_ERROR_KINDS, AUTHORITY_RULES_MESSAGES } from "@modules/domain/authority-rules"
-import {
-    ApprovalRequesterService,
-    DECISIONS_ERROR_KINDS,
-    DECISIONS_MESSAGES,
-    DecisionsModule,
-    UnboundDecisionEventsService,
-    UnboundLeadGenFlowService,
-    UnboundPaymentReceiptsService,
-} from "@modules/domain/decisions"
+import { DECISIONS_ERROR_KINDS, DECISIONS_MESSAGES, DecisionsModule } from "@modules/domain/decisions"
 import { EXECUTIONS_ERROR_KINDS, EXECUTIONS_MESSAGES } from "@modules/domain/executions"
 import {
     OFFICE_COMMAND_CANDIDATES_ERROR_KINDS,
@@ -203,12 +184,7 @@ import {
 } from "@modules/domain/openclaw-agent-sync"
 import { WORK_ITEMS_ERROR_KINDS, WORK_ITEMS_MESSAGES } from "@modules/domain/work-items"
 import { DEEPSEEK_ERROR_KINDS, DEEPSEEK_MESSAGES, DeepseekClient, DeepseekModule } from "@modules/integrations/deepseek"
-import {
-    OPENCLAW_ERROR_KINDS,
-    OPENCLAW_MESSAGES,
-    OpenclawModule,
-    ToolTokenService,
-} from "@modules/integrations/openclaw"
+import { OPENCLAW_ERROR_KINDS, OPENCLAW_MESSAGES, OpenclawModule } from "@modules/integrations/openclaw"
 import { AGENTS_SYNC_SCHEDULER } from "@modules/queues/agents"
 import {
     AGENT_CONVERSATIONS_ERROR_KINDS,
@@ -228,6 +204,11 @@ import {
     ConnectionSecretsModule,
 } from "@modules/domain/connection-secrets"
 import { CONNECTIONS_ERROR_KINDS, CONNECTIONS_MESSAGES, ConnectionsModule } from "@modules/domain/connections"
+import { DATA_HUB_ERROR_KINDS, DATA_HUB_MESSAGES, DataHubModule } from "@modules/domain/data-hub"
+import { DataRecordsModule } from "@modules/domain/data-records"
+import { DataSyncRunsModule } from "@modules/domain/data-sync-runs"
+import { DATA_SOURCES_ERROR_KINDS, DataSourcesModule } from "@modules/integrations/data-sources"
+import { DATA_SYNC_SCHEDULER } from "@modules/queues/data-sync"
 import { CONVERSATIONS_ERROR_KINDS, CONVERSATIONS_MESSAGES, ConversationsModule } from "@modules/domain/conversations"
 import { TelegramInboxModule } from "@modules/domain/telegram-inbox"
 import { ZaloInboxModule } from "@modules/domain/zalo-inbox"
@@ -436,6 +417,7 @@ import { IssueInviteQueueModule } from "@features/jobs/issue-invite"
 import { RenderVideoQueueModule } from "@features/jobs/render-video"
 import { ConnectionCommandsQueueModule } from "@features/jobs/connection-commands"
 import { RequestRenderQueueModule } from "@features/jobs/request-render"
+import { AGENT_TOOLS_PORTS, DECISIONS_PORTS } from "./api.options"
 import type { ApiOptions } from "./api.options"
 @Module({})
 /** Composition root of the API: every capability is registered once and the three guards run in a fixed order. */
@@ -454,6 +436,7 @@ export class AppModule {
                         DOCUMENTS_MESSAGES,
                         CHATREPLY_MESSAGES,
                         CONNECTIONS_MESSAGES,
+                        DATA_HUB_MESSAGES,
                         CONNECTION_GRANTS_MESSAGES,
                         CHANNEL_CONNECTIONS_MESSAGES,
                         WEBHOOK_CONNECTIONS_MESSAGES,
@@ -554,6 +537,8 @@ export class AppModule {
                     isGlobal: true,
                     kinds: [
                         CONNECTIONS_ERROR_KINDS,
+                        DATA_HUB_ERROR_KINDS,
+                        DATA_SOURCES_ERROR_KINDS,
                         CHATREPLY_ERROR_KINDS,
                         CONNECTION_GRANTS_ERROR_KINDS,
                         CHANNEL_CONNECTIONS_ERROR_KINDS,
@@ -662,6 +647,7 @@ export class AppModule {
                         { queue: CONTENT_TICK_QUEUE, id: CONTENT_TICK_SCHEDULER, everyMs: CONTENT_TICK_EVERY_MS },
                         CONNECTION_HEALTH_SCHEDULER,
                         ZALO_REFRESH_SCHEDULER,
+                        DATA_SYNC_SCHEDULER,
                     ],
                     ...options.queue,
                 }),
@@ -682,6 +668,10 @@ export class AppModule {
                 }),
                 ConnectionsModule.register({ isGlobal: true, ...options.connections }),
                 ConnectionGrantsModule.register({ isGlobal: true }),
+                DataSourcesModule.register({ isGlobal: true, ...options.dataSources }),
+                DataRecordsModule.register({ isGlobal: true }),
+                DataSyncRunsModule.register({ isGlobal: true }),
+                DataHubModule.register({ isGlobal: true }),
                 ChannelConnectionsModule.register({ isGlobal: true }),
                 WebhookConnectionsModule.register({ isGlobal: true, ...options.webhookConnections }),
                 GoogleConnectionsModule.register({ isGlobal: true }),
@@ -813,29 +803,8 @@ export class AppModule {
                     completion: ContentGenerationCompletionService,
                 }),
                 OpenclawAgentSyncModule.register({ isGlobal: true, reloadSettleMs: OPENCLAW_RELOAD_SETTLE_MS }),
-                AgentToolsModule.register({
-                    isGlobal: true,
-                    ports: {
-                        knowledgeSearch: UnboundKnowledgeSearchService,
-                        leadWriter: LeadWriterService,
-                        bookingTools: UnboundBookingToolsService,
-                        approvalRequester: ApprovalRequesterService,
-                        handoffTool: HandoffToolService,
-                        conversationLeads: ConversationLeadsService,
-                        toolTokens: ToolTokenService,
-                    },
-                }),
-                DecisionsModule.register({
-                    isGlobal: true,
-                    ports: {
-                        agentDirectory: AgentsService,
-                        inboundEventStatus: InboundStatusService,
-                        decisionEvents: UnboundDecisionEventsService,
-                        paymentReceipts: UnboundPaymentReceiptsService,
-                        leadGenFlow: UnboundLeadGenFlowService,
-                        outboundAccessGate: OutboundAccessService,
-                    },
-                }),
+                AgentToolsModule.register({ isGlobal: true, ports: AGENT_TOOLS_PORTS }),
+                DecisionsModule.register({ isGlobal: true, ports: DECISIONS_PORTS }),
                 OrdersModule.register({ isGlobal: true }),
                 OrdersGraphqlModule,
                 StaffModule.register({ isGlobal: true }),

@@ -5,13 +5,15 @@ import { useState, useTransition } from "react"
 import { useSWRConfig } from "swr"
 import {
     isQueryLoyaltyBoardSwrKey,
-    isQueryWorkItemsSwrKey,
     useMutateDecideWorkItemSwr,
     useQueryWorkItemsSwr,
 } from "@/hooks/swr/api/graphql"
+import { QUERY_WORK_ITEMS_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryWorkItemsSwr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { pendingOf } from "./loyaltyPending.shared"
 import type { LoyaltyPendingItem } from "./loyaltyPending.shared"
+
+const isWorkItemsKey = (key: unknown): boolean => Array.isArray(key) && key[0] === QUERY_WORK_ITEMS_SWR_KEY
 
 /** Most waiting items one read asks for. */
 const PAGE = 100
@@ -48,7 +50,7 @@ export const useLoyaltyPending = () => {
             setBusy(null)
             if (answer === undefined) return
             setEditingId(null)
-            void mutate(isQueryWorkItemsSwrKey)
+            void mutate(isWorkItemsKey)
             void mutate(isQueryLoyaltyBoardSwrKey)
         })
 

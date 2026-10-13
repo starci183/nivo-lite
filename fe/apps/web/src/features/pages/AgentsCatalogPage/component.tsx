@@ -1,7 +1,6 @@
 import { Breadcrumbs, PageContainer, SectionHeader } from "@starci/grammar/common"
 import type { BreadcrumbItem } from "@starci/grammar/common"
 import { AgentCatalog } from "@/components/blocks/AgentCatalog"
-import type { AgentCatalogProps } from "@/components/blocks/AgentCatalog"
 import { HEAD, REGIONS } from "./classNames"
 
 /** Copy and slots of the agent catalogue page. */
@@ -12,8 +11,6 @@ export interface AgentsCatalogPageBaseProps {
         readonly eyebrow: string
         readonly title: string
         readonly description: string
-        /** What the catalogue block under the heading shows. */
-        readonly catalog: AgentCatalogProps
     }
 }
 
@@ -30,7 +27,7 @@ export const AgentsCatalogPageBase = (props: AgentsCatalogPageBaseProps) => (
                     description={props.props.description}
                 />
             </div>
-            <AgentCatalog {...props.props.catalog} />
+            <AgentCatalog />
         </div>
     </PageContainer>
 )

@@ -1,6 +1,6 @@
 import { Alert, Button, List, ListItem, Region, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
-import { ApprovalCard } from "@/features/approval-card"
+import { ApprovalCard } from "@/components/blocks/ApprovalCard"
 import type { ExecutionRecord, DataSlot, SlotLabels } from "@/modules/types"
 import {
     CARD_BODY_CLASS_NAME,

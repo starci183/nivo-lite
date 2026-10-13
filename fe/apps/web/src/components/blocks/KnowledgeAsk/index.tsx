@@ -1,27 +1,21 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { AGENT_MODULES, useAskKnowledge } from "@/hooks/knowledge"
-import type { AgentModule, CommandActions } from "@/hooks/knowledge"
-import { writeCommandWait } from "@/modules/db/knowledge/write-command-wait"
-import { writeCommand } from "@/modules/db/knowledge/write-command"
+import { AGENT_MODULES, useAskKnowledge, useAskModule } from "@/hooks/knowledge"
+import type { ModuleKey } from "@/hooks/knowledge"
 import { KnowledgeAskBase } from "./component"
 
 /** Props for the connected question panel. */
 interface KnowledgeAskProps {
-    readonly workspaceId: string
-    /** The agent the panel starts on. */
-    readonly module: AgentModule
-    /** True while the page loads: the labels stay and the inputs are skeletons. */
-    readonly isLoading?: boolean
+    /** The agent of the address; "all" starts the panel on the first installed agent. */
+    readonly module: ModuleKey | "all"
 }
-
-const ACTIONS: CommandActions = { write: writeCommand, wait: writeCommandWait }
 
 /** The connected question panel: asks the back end what an agent would retrieve and draws the passages. */
 export const KnowledgeAsk = (props: KnowledgeAskProps) => {
     const t = useTranslations("knowledge")
-    const ask = useAskKnowledge(props.workspaceId, props.module, ACTIONS)
+    const start = useAskModule(props.module)
+    const ask = useAskKnowledge(start.module)
     return (
         <KnowledgeAskBase
             props={{
@@ -39,10 +33,10 @@ export const KnowledgeAsk = (props: KnowledgeAskProps) => {
                 submitLabel: ask.isPending ? t("asking") : t("askButton"),
                 failTitle: t("askFailed"),
                 question: ask.question,
-                module: ask.module,
+                module: ask.module ?? start.module,
                 audience: ask.audience,
                 isPending: ask.isPending,
-                isSkeleton: props.isLoading ?? false,
+                isSkeleton: start.isLoading,
                 results:
                     ask.results === null
                         ? undefined
@@ -71,7 +65,7 @@ export const KnowledgeAsk = (props: KnowledgeAskProps) => {
                                   ],
                               })),
                           },
-                error: ask.errorKey === null ? undefined : t(ask.errorKey),
+                error: ask.error === null ? undefined : ask.error,
             }}
             on={{
                 setQuestion: ask.setQuestion,

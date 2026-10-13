@@ -83,7 +83,7 @@ export const matchesInboxFilter = (conversation: ChatbotConversation, filter: In
 export const filterLabelOf = (t: ChatbotTranslator, filter: InboxFilter): string => t(FILTER_KEYS[filter])
 
 /** The name of a channel. */
-export const channelLabelOf = (t: ChatbotTranslator, channel: ChatbotChannel): string => t(CHANNEL_KEYS[channel])
+export const chatChannelLabelOf = (t: ChatbotTranslator, channel: ChatbotChannel): string => t(CHANNEL_KEYS[channel])
 
 /** The line that says which channel a customer wrote from. */
 export const channelLineOf = (t: ChatbotTranslator, channel: ChatbotChannel): string => t(CHANNEL_LINE_KEYS[channel])

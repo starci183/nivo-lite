@@ -13,13 +13,8 @@ import {
 } from "@/hooks/loyaltyProgram"
 import { maskCategoryField, maskProgramField, maskTierField } from "@/hooks/loyaltyProgramFields"
 import { useLoyaltyProgramForm } from "@/hooks/rhf"
-import { useQueryLoyaltyProgramSwr } from "@/hooks/swr/api/graphql"
+import { useQueryLoyaltyBoardSwr, useQueryLoyaltyProgramSwr } from "@/hooks/swr/api/graphql"
 import { LoyaltyProgramSettingsBase } from "./component"
-
-/** What the connected programme form needs. */
-interface LoyaltyProgramSettingsProps {
-    readonly canEdit: boolean
-}
 
 /** Which of the three states the programme query is in. */
 const statusOf = (loaded: boolean, failed: boolean): "loading" | "failed" | "ready" => {
@@ -28,9 +23,10 @@ const statusOf = (loaded: boolean, failed: boolean): "loading" | "failed" | "rea
 }
 
 /** The connected programme form: the whole programme in one form with one save (outcome toasted). */
-export const LoyaltyProgramSettings = (props: LoyaltyProgramSettingsProps) => {
+export const LoyaltyProgramSettings = () => {
     const t = useTranslations("loyalty")
     const { data, error } = useQueryLoyaltyProgramSwr()
+    const board = useQueryLoyaltyBoardSwr()
     const origin = useSiteOrigin()
     const saver = useLoyaltyProgramSave()
     const form = useLoyaltyProgramForm(
@@ -50,7 +46,7 @@ export const LoyaltyProgramSettings = (props: LoyaltyProgramSettingsProps) => {
                 loadingText: t("loading"),
                 failedTitle: t("programFailed"),
                 ...(error instanceof Error ? { failedDescription: error.message } : {}),
-                canEdit: props.canEdit,
+                canEdit: board.data?.canManage === true,
                 isPending: saver.isPending,
                 values,
                 errors: {

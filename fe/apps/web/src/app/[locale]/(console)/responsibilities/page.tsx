@@ -1,36 +1,19 @@
-import { type BoardInitialFilters } from "@/features/responsibilities/board";
-import { stamp, toRowModels } from "@/features/responsibilities/format";
-import { ResponsibilitiesView } from "@/features/responsibilities/view";
-import { getLocale, getT } from "@/i18n/server";
-import { responsibilities as dict } from "@/i18n/dict/responsibilities";
-import { listAgents, listResponsibilities } from "@/lib/queries";
+import { ResponsibilitiesPage } from "@/features/pages/ResponsibilitiesPage"
 
-type PageProps = { searchParams: Promise<Record<string, string | string[] | undefined>> };
+/** The document title of this page. */
+export { responsibilitiesPageMetadata as generateMetadata } from "@/features/pages/ResponsibilitiesPage"
 
-const STATUSES = ["all", "open", "waiting_approval", "done"] as const;
-const DUES = ["any", "overdue", "today", "week", "none"] as const;
+interface PageProps {
+    readonly searchParams: Promise<{ status?: string | string[]; due?: string | string[] }>
+}
 
-const pick = <T extends string>(value: string | string[] | undefined, allowed: ReadonlyArray<T>, fallback: T): T => {
-  const single = Array.isArray(value) ? value[0] : value;
-  return allowed.find((item) => item === single) ?? fallback;
-};
+const firstOf = (value: string | string[] | undefined): string =>
+    Array.isArray(value) ? (value[0] ?? "") : (value ?? "")
 
-/** Responsibility board: every responsibility by owner, filterable by status and due. A failed load reaches error.tsx (STATE-8 case-4). */
-const Page = async ({ searchParams }: PageProps) => {
-  const params = await searchParams;
-  const [responsibilities, agents] = await Promise.all([listResponsibilities(), listAgents()]);
-  const [t, locale] = await Promise.all([getT(dict), getLocale()]);
-  const now = new Date();
-  const rows = toRowModels(responsibilities, agents, now, t);
-  const initial: BoardInitialFilters = { status: pick(params.status, STATUSES, "all"), due: pick(params.due, DUES, "any") };
-  return (
-    <ResponsibilitiesView
-      rows={rows}
-      initial={initial}
-      description={t("pageDescription", { time: stamp(now, locale) })}
-      verifiedLabel={t("verified", { time: stamp(now, locale) })}
-    />
-  );
-};
+/** The responsibilities route: `?status=open|waiting_approval|done&due=overdue|today|week|none` preselect the filters. */
+const Page = async (props: PageProps) => {
+    const query = await props.searchParams
+    return <ResponsibilitiesPage status={firstOf(query.status)} due={firstOf(query.due)} />
+}
 
-export default Page;
+export default Page

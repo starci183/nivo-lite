@@ -9,6 +9,7 @@ export const CONSOLE_ROUTES = {
     responsibilities: "/responsibilities",
     authority: "/authority",
     decisions: "/decisions",
+    team: "/team",
     privacy: "/privacy",
     terms: "/terms",
     modules: "/modules",
@@ -24,3 +25,26 @@ export const agentChatHref = (agentId: string, tab?: string): string =>
 
 /** The responsibilities board filtered by one query string such as `status=open`. */
 export const responsibilitiesHref = (query: string): string => `${CONSOLE_ROUTES.responsibilities}?${query}`
+
+/** The workbench of one module, opened on one work item. */
+export const workItemHref = (module: string, workItemId: string): string =>
+    `/agents/${module}/workbench?focus=${workItemId}`
+
+/** The team page opened on the invite form of one staff member. */
+export const teamInviteHref = (staffId: string): string => `/team?invite_staff=${encodeURIComponent(staffId)}`
+
+/** The page that lists the agents to add. */
+export const AGENTS_ROUTE = "/agents"
+
+/** The setup page of one module agent. */
+export const agentSetupHref = (agentId: string): string => `${CONSOLE_ROUTES.modules}/${agentId}`
+
+/** The work flow of one lead, where a handed-over customer chat leads. */
+export const leadFlowHref = (leadId: string): string => `${leadHref(leadId)}#flow`
+
+/** The chat page of one module agent opened on one tab and, when given, on one conversation. */
+export const agentChatConversationHref = (agentId: string, tab: string, conversationId: string | null): string => {
+    const query = new URLSearchParams({ tab })
+    if (conversationId !== null) query.set("c", conversationId)
+    return `${agentChatHref(agentId)}?${query.toString()}`
+}

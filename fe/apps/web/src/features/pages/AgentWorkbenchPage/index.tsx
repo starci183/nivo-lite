@@ -2,7 +2,6 @@ import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { notFound } from "next/navigation"
 import type { ReactNode } from "react"
-import { getInstallationById } from "@/lib/modules-core"
 import { MODULE_REGISTRY, isModuleKey } from "@/modules/catalog"
 import { agentHref } from "@/modules/installations"
 import { AgentWorkbenchPageBase } from "./component"
@@ -26,7 +25,7 @@ type AgentWorkbenchPageProps = {
 }
 
 /**
- * A workbench is a server component (it may be async). It receives the tab, the focus and the installation it is opened for; a
+ * A workbench receives the tab, the focus and the id of the installation it is opened for (it reads its own data in the browser); a
  * multi-instance type scopes its data to that installation, a single-instance type may ignore it.
  */
 export type WorkbenchComponent = (props: Record<string, unknown>) => ReactNode | Promise<ReactNode>
@@ -34,11 +33,10 @@ export type WorkbenchComponent = (props: Record<string, unknown>) => ReactNode |
 /** The workbench slot of one instance: the working screen of the module scoped to the instance, or the pending state. */
 export const AgentWorkbenchPage = async (props: AgentWorkbenchPageProps) => {
     if (!isModuleKey(props.module)) notFound()
-    const installation = await getInstallationById(props.installationId)
-    if (!installation || installation.moduleKey !== props.module) notFound()
     const key = MODULE_REGISTRY[props.module].workbench
     const Workbench = key === null ? undefined : props.workbenches[key]
-    if (Workbench !== undefined) return <Workbench tab={props.tab} focus={props.focus} installation={installation} />
+    if (Workbench !== undefined)
+        return <Workbench tab={props.tab} focus={props.focus} installationId={props.installationId} />
     const t = await getTranslations("modulesCore")
     return (
         <AgentWorkbenchPageBase
@@ -46,7 +44,7 @@ export const AgentWorkbenchPage = async (props: AgentWorkbenchPageProps) => {
                 title: t("workbenchTitle"),
                 body: t("workbenchBody"),
                 setupLabel: t("workbenchSetup"),
-                setupHref: agentHref(props.module, installation.id),
+                setupHref: agentHref(props.module, props.installationId),
             }}
         />
     )
