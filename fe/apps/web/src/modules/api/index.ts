@@ -69,6 +69,7 @@ export type {
     AgentDashboardInput,
     AgentDashboardItemType,
     AgentDashboardType,
+    AgentGenerationStatusType,
     AutomationCardType,
     AutomationGoogleAccountType,
     AutomationRunType,
