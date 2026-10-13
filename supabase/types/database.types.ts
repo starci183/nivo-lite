@@ -1,4 +1,4 @@
-// migrations-sha256: 1bc575834059f661815d403d438c7fd136bde39a4bf3285897303019c2efc2a5
+// migrations-sha256: 58c3d845dc088b94ce426d8396f9f1e3223d2e6be0a8eb78614e20dd72d70c32
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -2178,7 +2178,7 @@ isOneToOne: false
                   }
                   Relationships: [
                     {
-      foreignKeyName: "lead_action_runs_workspace_id_fkey"
+      foreignKeyName: "lead_actions_workspace_id_fkey"
       columns: ["workspace_id"]
 isOneToOne: false
       referencedRelation: "workspaces"

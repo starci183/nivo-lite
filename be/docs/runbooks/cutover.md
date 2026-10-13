@@ -53,11 +53,33 @@ engine heartbeat is older than 90 seconds. If you still prefer edge first, it wo
 
    Rows where only the name changed need nothing: the version is the key.
 
-3. Dry run, then apply: `supabase db push --dry-run`, read the list, then `supabase db push` (or the "deploy database" workflow). This applies `be-platform` (the `app_be` role, `public.queue`, `public.jobs`, grants) and every lane migration.
-4. Set the password of the api's database role once, in the SQL editor (never in a migration): `alter role app_be password '<generated>';`. Build `PRIMARY_DB_URL` from the dashboard's **Connect** panel
+3. Apply the conversion migrations, which now live in `supabase/migrations/_archive/` (the lite baseline replaced them in `supabase/migrations/`, owner ruling 2026-10-13). Push them from a scratch
+   project folder so the CLI sees them as migrations:
+
+   ```bash
+   mkdir -p ../nivo-archive/supabase/migrations && cp supabase/config.toml ../nivo-archive/supabase/ && cp supabase/migrations/_archive/*.sql ../nivo-archive/supabase/migrations/
+   (cd ../nivo-archive && supabase link --project-ref <ref> && supabase db push --dry-run && supabase db push)
+   ```
+
+   This applies `be-platform` (the `app_be` role, `public.queue`, `public.jobs`, grants) and every lane migration.
+
+4. Switch the history to the baseline. Production now holds exactly the schema of `supabase/migrations/<stamp>_lite-baseline.sql`, so it is marked applied without a run, and the archived versions leave the history:
+
+   ```bash
+   for f in supabase/migrations/_archive/*.sql; do supabase migration repair --status reverted "$(basename "$f" | cut -d_ -f1)"; done
+   supabase migration repair --status applied "$(ls supabase/migrations/*_lite-baseline.sql | xargs -n1 basename | cut -d_ -f1)"
+   supabase db push --dry-run    # lists only <stamp>_lite-baseline-standard.sql (and later migrations)
+   supabase db push
+   ```
+
+   `lite-baseline-standard` brings the privileges and policy names of a database built by the archived migrations to the baseline's standard (anon holds no table privilege, definer functions are not callable by anon, policies named `<table>_<role>_<action>`); on a database built from the baseline it changes nothing.
+
+   The local stack follows the same two steps (or `supabase db reset`).
+
+5. Set the password of the api's database role once, in the SQL editor (never in a migration): `alter role app_be password '<generated>';`. Build `PRIMARY_DB_URL` from the dashboard's **Connect** panel
    (use the session-mode pooler or the direct connection; the api keeps a connection pool, so not the transaction-mode pooler) with user `app_be` (`app_be.<project-ref>` on the pooler) and put it in `[api]` of `secrets.env`.
-5. Check the grants the api needs: connect as `app_be` (`psql "$PRIMARY_DB_URL" -c 'select count(*) from public.queue'`) and call one read of each table family a lane declared.
-6. Drain the legacy queues you are about to stop consuming: `select status, count(*) from engine_jobs group by 1;` should show nothing `queued` or `running`, and `select public.job_stats();` should show an empty or small `knowledge` queue.
+6. Check the grants the api needs: connect as `app_be` (`psql "$PRIMARY_DB_URL" -c 'select count(*) from public.queue'`) and call one read of each table family a lane declared.
+7. Drain the legacy queues you are about to stop consuming: `select status, count(*) from engine_jobs group by 1;` should show nothing `queued` or `running`, and `select public.job_stats();` should show an empty or small `knowledge` queue.
 
 ## 2. Secrets
 
