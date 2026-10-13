@@ -4,7 +4,7 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { EmailRecord, OptionalVia } from "./email-messages.contracts"
 import { EmailMessagesError, EmailMessagesErrorCode } from "./errors/email-messages.error"
 import type { EmailCountRow, EmailMessageIdRow } from "./persistence/email-messages.rows"
-import { COUNT_SENT_EMAILS, INSERT_EMAIL_MESSAGE } from "./persistence/email-messages.sql"
+import { COUNT_SENT_EMAILS, FIND_WAITING_EMAIL, INSERT_EMAIL_MESSAGE } from "./persistence/email-messages.sql"
 
 @Injectable()
 /** The log of every email attempt of a workspace: the only writer of public.email_messages. */
@@ -37,5 +37,14 @@ export class EmailMessagesService {
             via,
         ])
         return row?.n ?? 0
+    }
+
+    /** True when a customer email waiting for the decision on this work item is already written down. */
+    async isWaitingFor(workspaceId: string, workItemId: string): Promise<boolean> {
+        const rows = await this.entityManager.query<Array<EmailMessageIdRow>>(FIND_WAITING_EMAIL, [
+            workspaceId,
+            workItemId,
+        ])
+        return rows.length > 0
     }
 }

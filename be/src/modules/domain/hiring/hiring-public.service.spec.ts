@@ -7,6 +7,7 @@ import { HiringErrorCode } from "./errors/hiring.error"
 import type { HiringSettings, JobRecord } from "./hiring.contracts"
 import type { ApplyParams } from "./hiring-public.contracts"
 import { HiringCandidatesService } from "./hiring-candidates.service"
+import { HiringChatService } from "./hiring-chat.service"
 import { HiringDataService } from "./hiring-data.service"
 import { HiringPublicService } from "./hiring-public.service"
 
@@ -90,6 +91,10 @@ const build = async (job = jobOf()) => {
     data.newToken.mockResolvedValue("token-1")
     const candidates = mock<HiringCandidatesService>()
     candidates.submit.mockResolvedValue({ candidateId: "candidate-1", duplicate: false })
+    const chat = mock<HiringChatService>({
+        brief: jest.fn().mockResolvedValue("[OPEN JOBS] barista"),
+        register: jest.fn().mockResolvedValue({ ok: true, message: "stored", candidateId: "candidate-2" }),
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             HiringPublicService,
@@ -98,9 +103,10 @@ const build = async (job = jobOf()) => {
             { provide: CvStorage, useValue: storage },
             { provide: HiringDataService, useValue: data },
             { provide: HiringCandidatesService, useValue: candidates },
+            { provide: HiringChatService, useValue: chat },
         ],
     }).compile()
-    return { service: moduleRef.get(HiringPublicService), office, storage, data, candidates, job }
+    return { service: moduleRef.get(HiringPublicService), office, storage, data, candidates, chat, job }
 }
 
 describe("HiringPublicService", () => {
@@ -354,5 +360,21 @@ describe("HiringPublicService", () => {
                 ],
             ])
         })
+    })
+
+    it("hands the shop chat the open jobs and stores the application the chatbot took", async () => {
+        const { service } = await build()
+        await expect(service.chatBrief("ws-1")).resolves.toBe("[OPEN JOBS] barista")
+        await expect(
+            service.registerChatApplication("ws-1", "conv-1", {
+                job: "barista",
+                name: "Lan",
+                phone: "0900000000",
+                email: "",
+                consent: true,
+                availability: "evenings",
+                answers: [],
+            }),
+        ).resolves.toEqual({ ok: true, message: "stored", candidateId: "candidate-2" })
     })
 })
