@@ -36,55 +36,59 @@ export interface KnowledgeAskBaseProps {
 }
 
 /** Draws the panel that shows what an agent would find for a question, as a customer or as the team. */
-export const KnowledgeAskBase = (props: KnowledgeAskBaseProps) => (
-    <SurfaceCard label={props.props.title} headingLevel={2}>
-        <Form label={props.props.title} onSubmit={props.on.ask} isPending={props.props.isPending}>
-            <div className={STACK_CLASS_NAME}>
-                <Text size="sm" tone="muted">
-                    {props.props.hint}
-                </Text>
-                <Textarea
-                    id="knowledge-ask-question"
-                    name="question"
-                    label={props.props.questionLabel}
-                    variant="secondary"
-                    rows={2}
-                    maxLength={500}
-                    placeholder={props.props.placeholder}
-                    value={props.props.question}
-                    isDisabled={props.props.isPending}
-                    isSkeleton={props.props.isSkeleton}
-                    onValueChange={props.on.setQuestion}
-                />
-                <div className={CHOICES_CLASS_NAME}>
-                    <Select
-                        label={props.props.moduleLabel}
-                        name="module"
-                        options={props.props.moduleOptions}
-                        value={props.props.module}
-                        isSkeleton={props.props.isSkeleton}
-                        isDisabled={props.props.isPending}
-                        onValueChange={props.on.setModule}
+export const KnowledgeAskBase = (props: KnowledgeAskBaseProps) => {
+    const { props: panel, on } = props
+
+    return (
+        <SurfaceCard label={panel.title} headingLevel={2}>
+            <Form label={panel.title} onSubmit={on.ask} isPending={panel.isPending}>
+                <div className={STACK_CLASS_NAME}>
+                    <Text size="sm" tone="muted">
+                        {panel.hint}
+                    </Text>
+                    <Textarea
+                        id="knowledge-ask-question"
+                        name="question"
+                        label={panel.questionLabel}
+                        variant="secondary"
+                        rows={2}
+                        maxLength={500}
+                        placeholder={panel.placeholder}
+                        value={panel.question}
+                        isDisabled={panel.isPending}
+                        isSkeleton={panel.isSkeleton}
+                        onValueChange={on.setQuestion}
                     />
-                    <SegmentedControl
-                        label={props.props.audienceLabel}
-                        name="audience"
-                        options={props.props.audienceOptions.map((one) => ({ value: one.id, label: one.label }))}
-                        value={props.props.audience}
-                        isSkeleton={props.props.isSkeleton}
-                        isDisabled={props.props.isPending}
-                        onValueChange={props.on.setAudience}
+                    <div className={CHOICES_CLASS_NAME}>
+                        <Select
+                            label={panel.moduleLabel}
+                            name="module"
+                            options={panel.moduleOptions}
+                            value={panel.module}
+                            isSkeleton={panel.isSkeleton}
+                            isDisabled={panel.isPending}
+                            onValueChange={on.setModule}
+                        />
+                        <SegmentedControl
+                            label={panel.audienceLabel}
+                            name="audience"
+                            options={panel.audienceOptions.map((one) => ({ value: one.id, label: one.label }))}
+                            value={panel.audience}
+                            isSkeleton={panel.isSkeleton}
+                            isDisabled={panel.isPending}
+                            onValueChange={on.setAudience}
+                        />
+                    </div>
+                    <FormActions
+                        failTitle={panel.failTitle}
+                        error={panel.error}
+                        submitLabel={panel.submitLabel}
+                        isPending={panel.isPending}
+                        isSkeleton={panel.isSkeleton}
                     />
+                    {panel.results === undefined ? null : <KnowledgeRows {...panel.results} />}
                 </div>
-                <FormActions
-                    failTitle={props.props.failTitle}
-                    error={props.props.error}
-                    submitLabel={props.props.submitLabel}
-                    isPending={props.props.isPending}
-                    isSkeleton={props.props.isSkeleton}
-                />
-                {props.props.results === undefined ? null : <KnowledgeRows {...props.props.results} />}
-            </div>
-        </Form>
-    </SurfaceCard>
-)
+            </Form>
+        </SurfaceCard>
+    )
+}

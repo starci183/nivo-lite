@@ -1,4 +1,5 @@
 import { Button, SectionHeader } from "@starci/grammar/common"
+import { ACTIONS_CLASS_NAME } from "./classNames"
 
 /** The words and links of the overview heading. */
 interface OverviewHeaderBaseProps {
@@ -22,7 +23,7 @@ export const OverviewHeaderBase = (props: OverviewHeaderBaseProps) => (
         title={props.props.title}
         description={props.props.description}
         action={
-            <div className="flex flex-wrap items-center gap-3">
+            <div className={ACTIONS_CLASS_NAME}>
                 <Button variant="outline" href={props.props.openOfficeHref}>
                     {props.props.openOfficeLabel}
                 </Button>

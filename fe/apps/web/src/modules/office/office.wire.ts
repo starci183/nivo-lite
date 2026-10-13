@@ -76,16 +76,26 @@ interface CandidateWire {
 }
 
 /** One back end command card as the thread uses it. */
-export const toOfficeCandidate = (row: CandidateWire): OfficeCandidate => ({
-    id: row.id,
-    messageId: row.message_id,
-    module: row.module,
-    command: row.command,
-    summary: row.summary,
-    status: CANDIDATE_STATUSES.find((status) => status === row.status) ?? "cancelled",
-    refusal: row.refusal_detail ?? null,
-    workItemId: row.work_item_id ?? null,
-    shown: row.shown,
+export const toOfficeCandidate = ({
+    id,
+    message_id: messageId,
+    module,
+    command,
+    summary,
+    status: wireStatus,
+    refusal_detail: refusal,
+    work_item_id: workItemId,
+    shown,
+}: CandidateWire): OfficeCandidate => ({
+    id,
+    messageId,
+    module,
+    command,
+    summary,
+    status: CANDIDATE_STATUSES.find((status) => status === wireStatus) ?? "cancelled",
+    refusal: refusal ?? null,
+    workItemId: workItemId ?? null,
+    shown,
 })
 
 /** The wire work item of the back end `workItems` query. */
