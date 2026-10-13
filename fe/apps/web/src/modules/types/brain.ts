@@ -27,6 +27,9 @@ export const FACT_SUBJECT_TYPES: ReadonlyArray<FactSubjectType> = [
     "other",
 ]
 
+/** The scopes, from the widest audience to the narrowest. */
+export const FACT_SCOPES: ReadonlyArray<FactScope> = ["public", "internal", "restricted"]
+
 /** Where a piece of evidence came from. */
 export interface BrainEvidence {
     readonly kind: string

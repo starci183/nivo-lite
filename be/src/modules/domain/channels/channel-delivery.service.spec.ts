@@ -15,8 +15,8 @@ import { CLOCK } from "@modules/platform/clock"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ChannelDeliveryService } from "./channel-delivery.service"
-import { ChannelSenderRegistryService } from "./channel-sender-registry.service"
 import { CHANNEL_SENDER_REGISTRY } from "./channels.decorators"
+import type { ChannelSender, ChannelSenderRegistry } from "./channels.contracts"
 import { ChannelsError, ChannelsErrorCode } from "./errors/channels.error"
 import { ZaloCredentialsService } from "./zalo-credentials.service"
 
@@ -54,7 +54,12 @@ const build = async (found: ConversationTarget | null = target(), lastCustomerAt
     const logger = mock<Logger>()
     const secrets = mock<ConnectionSecretsService>()
     const credentials = mock<ZaloCredentialsService>()
-    const senders = new ChannelSenderRegistryService()
+    const senders = mock<ChannelSenderRegistry>()
+    const byChannel = new Map<string, ChannelSender>()
+    senders.add.mockImplementation((sender) => {
+        for (const channel of sender.channels) byChannel.set(channel, sender)
+    })
+    senders.get.mockImplementation((channel) => byChannel.get(channel))
     const moduleRef = await Test.createTestingModule({
         providers: [
             ChannelDeliveryService,

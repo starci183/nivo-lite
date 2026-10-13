@@ -1,4 +1,4 @@
-import type { Staff, WorkItemView } from "@/lib/flow-types"
+import type { FlowStaff, FlowWorkItemView } from "./flow"
 
 /**
  * Plain data of the Accounting workbench (read side). Everything is derived from the records the flow already keeps:
@@ -150,7 +150,7 @@ export type AccountingQuestionGroup = "unclear_payment" | "over_limit" | "missin
 
 /** One waiting accounting work item and what it is about. */
 export interface AccountingQuestion {
-    readonly item: WorkItemView
+    readonly item: FlowWorkItemView
     readonly group: AccountingQuestionGroup
 }
 
@@ -164,7 +164,7 @@ export interface AccountingWorkbenchData {
     readonly invoices: ReadonlyArray<AccountingInvoice>
     readonly ordersWithoutInvoice: ReadonlyArray<AccountingOrder>
     readonly questions: ReadonlyArray<AccountingQuestion>
-    readonly staff: ReadonlyArray<Staff>
+    readonly staff: ReadonlyArray<FlowStaff>
     readonly ownerName: string
     readonly ledger: ReadonlyArray<AccountingLedgerEntry>
     readonly canAdjust: boolean

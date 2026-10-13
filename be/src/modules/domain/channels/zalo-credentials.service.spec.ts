@@ -159,21 +159,16 @@ describe("ZaloCredentialsService", () => {
             secrets.secretOf.mockResolvedValue(stored(secretOf()))
             zalo.authorizeUrl.mockReturnValue("https://oauth.test/permission")
 
+            const callback = "https://nivo.test/connections/zalo/callback"
             const result = await service.beginAuthorization("ws-1", "c-1")
 
-            expect(result).toEqual({
-                url: "https://oauth.test/permission",
-                callbackUrl: "https://nivo.test/connections/zalo/callback",
-            })
+            expect(result).toEqual({ url: "https://oauth.test/permission", callbackUrl: callback })
             const sealed = String(secrets.save.mock.calls[0]?.[1])
             const pkce: unknown = Reflect.get(sealedJson(sealed), "pkce")
-            expect(pkce).toEqual({ verifier: expect.any(String), nonce: expect.any(String), exp: NOW + 900_000 })
-            expect(zalo.authorizeUrl).toHaveBeenCalledWith(
-                "app-1",
-                "https://nivo.test/connections/zalo/callback",
-                Reflect.get(Object(pkce), "verifier"),
-                `c-1.${Reflect.get(Object(pkce), "nonce")}`,
-            )
+            const verifier = String(Reflect.get(Object(pkce), "verifier"))
+            const nonce = String(Reflect.get(Object(pkce), "nonce"))
+            expect([verifier.length, nonce.length, Reflect.get(Object(pkce), "exp")]).toEqual([64, 64, NOW + 900_000])
+            expect(zalo.authorizeUrl).toHaveBeenCalledWith("app-1", callback, verifier, `c-1.${nonce}`)
             expect(secrets.save).toHaveBeenCalledWith("c-1", sealed, undefined)
         })
 

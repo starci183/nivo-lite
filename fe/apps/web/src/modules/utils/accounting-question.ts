@@ -1,13 +1,13 @@
 import type { FieldErrors } from "react-hook-form"
 import type { AccountingQuestionValues, AccountingQuestionCardData } from "@/modules/types"
-import type { WorkItemView } from "@/lib/flow-types"
+import type { FlowWorkItemView } from "@/modules/types"
 import type { MutateDecideWorkItemRequest } from "@/modules/api/graphql/mutations/mutation-decide-work-item"
 import { digitsToNumber, moneyOf, accountingStampOf } from "./accounting"
 import type { AccountingFormat, AccountingTranslator } from "./accounting"
 
 /** Sends the changed proposal fields in the generated decision request shape. */
 export const accountingQuestionEdits = (
-    item: WorkItemView,
+    item: FlowWorkItemView,
     values: AccountingQuestionValues,
 ): MutateDecideWorkItemRequest["edits"] => {
     const edits: NonNullable<MutateDecideWorkItemRequest["edits"]> = {
@@ -38,7 +38,7 @@ export const accountingQuestionError = (errors: FieldErrors<AccountingQuestionVa
 
 /** The status word for an open or completed accounting proposal. */
 export const accountingQuestionStatus = (
-    item: WorkItemView,
+    item: FlowWorkItemView,
     t: AccountingTranslator,
     g: AccountingTranslator,
 ): string => {
@@ -51,14 +51,14 @@ export const accountingQuestionStatus = (
 }
 
 /** The grammar tone of an accounting proposal's current status. */
-export const accountingQuestionTone = (item: WorkItemView): "danger" | "success" | "warning" => {
+export const accountingQuestionTone = (item: FlowWorkItemView): "danger" | "success" | "warning" => {
     if (item.status === "failed" || item.status === "rejected") return "danger"
     if (item.status === "waiting_decision") return "warning"
     return "success"
 }
 
 /** Starts a proposal form from the backend's current draft and amount. */
-export const accountingQuestionDefaults = (item: WorkItemView): AccountingQuestionValues => ({
+export const accountingQuestionDefaults = (item: FlowWorkItemView): AccountingQuestionValues => ({
     fields: Object.fromEntries(item.missing_fields.map((name) => [name, ""])),
     draft: item.proposal.draft ?? "",
     amount: item.proposal.amount_vnd == null ? "" : String(item.proposal.amount_vnd),
@@ -67,7 +67,7 @@ export const accountingQuestionDefaults = (item: WorkItemView): AccountingQuesti
 })
 
 interface AccountingQuestionDisplayParams {
-    readonly item: WorkItemView
+    readonly item: FlowWorkItemView
     readonly ownerName: string
     readonly values: AccountingQuestionValues
     readonly t: AccountingTranslator

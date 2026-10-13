@@ -8,9 +8,10 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
-import { AI_GENERATIONS_USAGE } from "./ai-generations.decorators"
+import { JOB_CLAIMS, type JobClaims } from "@modules/platform/jobs"
+import { AI_GENERATIONS_COMPLETION, AI_GENERATIONS_USAGE } from "./ai-generations.decorators"
 import { AiGenerationsLogEvent } from "./ai-generations.log-events"
-import type { UsageGate } from "./ai-generations.port"
+import type { GenerationCompletion, UsageGate } from "./ai-generations.port"
 import { GenerationRunnerService } from "./generation-runner.service"
 import { FAIL_GENERATION, FIND_GENERATION, FINISH_GENERATION, START_GENERATION } from "./persistence/ai-generations.sql"
 
@@ -49,6 +50,9 @@ const build = async (entityManager: MockEntityManager, setup: Setup = {}) => {
         }),
     })
     const usage = mock<UsageGate>({ record: jest.fn(() => Promise.resolve()) })
+    const claims = mock<JobClaims>()
+    const completion = mock<GenerationCompletion>()
+    completion.completeGeneration.mockResolvedValue(undefined)
     const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -59,6 +63,8 @@ const build = async (entityManager: MockEntityManager, setup: Setup = {}) => {
             { provide: AI_GENERATIONS_USAGE, useValue: usage },
             { provide: OPENCLAW_GATEWAY, useValue: gateway },
             { provide: AgentSyncService, useValue: sync },
+            { provide: JOB_CLAIMS, useValue: claims },
+            { provide: AI_GENERATIONS_COMPLETION, useValue: completion },
         ],
     }).compile()
     return { runner: moduleRef.get(GenerationRunnerService), gateway, sync, usage, logger }
