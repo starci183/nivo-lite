@@ -6,6 +6,8 @@ export interface Principal {
     readonly email?: string
     /** The authenticated provider role. */
     readonly role: "authenticated"
+    /** The Auth session the token belongs to (the `session_id` claim), when the provider issued one. */
+    readonly sessionId?: string
 }
 
 /** The params of an authenticated operation: its mapped request and verified caller. */

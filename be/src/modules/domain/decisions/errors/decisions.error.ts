@@ -3,6 +3,12 @@ import type { ErrorKind } from "@modules/platform/errors"
 
 /** Codes of the decisions capability. */
 export enum DecisionsErrorCode {
+    /** Another worker's claim still holds the queued item. */
+    WorkBusy = "DECISIONS_WORK_BUSY",
+    /** Only failed work may be retried or stopped. */
+    NotFailed = "DECISIONS_NOT_FAILED",
+    /** A concurrent caller changed the item. */
+    StateChanged = "DECISIONS_STATE_CHANGED",
     /** The record asked for does not exist in the workspace. */
     NotFound = "DECISIONS_NOT_FOUND",
     /** The caller may not decide or change this. */
@@ -27,6 +33,9 @@ export enum DecisionsErrorCode {
 
 /** How each decisions code travels. */
 export const DECISIONS_ERROR_KINDS: Record<DecisionsErrorCode, ErrorKind> = {
+    [DecisionsErrorCode.WorkBusy]: "unavailable",
+    [DecisionsErrorCode.NotFailed]: "conflict",
+    [DecisionsErrorCode.StateChanged]: "conflict",
     [DecisionsErrorCode.NotFound]: "not-found",
     [DecisionsErrorCode.NotAllowed]: "forbidden",
     [DecisionsErrorCode.CommandRefused]: "invalid",

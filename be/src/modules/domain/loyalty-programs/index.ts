@@ -1,9 +1,11 @@
 export type {
     LoyaltyCategoryRule,
     LoyaltyConfig,
+    LoyaltyEarnRules,
     LoyaltyProgram,
     LoyaltyTier,
     NextTier,
+    ProgramPatch,
     TierMatch,
 } from "./loyalty-programs.contracts"
 export { LoyaltyProgramsModule } from "./loyalty-programs.module"

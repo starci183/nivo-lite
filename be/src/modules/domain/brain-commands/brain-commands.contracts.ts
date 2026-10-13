@@ -22,3 +22,16 @@ export type CommandResult = object | null
 
 /** A command, or null when there is none. */
 export type MaybeCommand = CommandRecord | null
+
+/** Where a command stands for the person who asked: its status, what it produced and the stored code of a refusal. */
+export interface CommandState {
+    /** Where it stands. */
+    readonly status: CommandStatus
+    /** What it produced when it is done, or null. */
+    readonly result: CommandResult
+    /** The stored code of why it failed, or null. */
+    readonly errorCode: string | null
+}
+
+/** A command state, or null when the person asked no such command. */
+export type MaybeCommandState = CommandState | null

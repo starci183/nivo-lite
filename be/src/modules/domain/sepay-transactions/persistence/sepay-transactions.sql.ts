@@ -1,5 +1,13 @@
 import { sql } from "@modules/platform/database"
 
+/** Transfers needing review, scoped through their payment orders ($1 workspace, $2 requested order ids). */
+export const SELECT_REVIEW_TRANSACTIONS = sql`SELECT t.id::float8 AS id, t.status, t.transfer_amount::float8 AS transfer_amount, t.received_at, t.content
+FROM public.sepay_transactions t
+JOIN public.payment_orders o ON o.id = t.matched_order_id
+WHERE o.workspace_id = $1 AND o.id = ANY($2::uuid[]) AND t.status IN ('underpaid', 'expired', 'unmatched')
+ORDER BY t.received_at DESC
+LIMIT 50`
+
 /**
  * Claims one SePay transaction by its own id inside the delivery transaction. A new id inserts the row; an id whose earlier
  * delivery never finished (still `received`) is claimed again; a processed id answers no row, so a repeat is a no-op.

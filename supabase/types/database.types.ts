@@ -1,4 +1,4 @@
-// migrations-sha256: 5e0308e78c36cff17222c1fa779fce745a5715a7c50de2c1c3531381ecbf3c63
+// migrations-sha256: 4b8b944dd20fe3c67722de37fdafacc5f2f388a9a3e6622b1992845eb9e7dc73
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -722,13 +722,13 @@ isOneToOne: false
                   ]
                 },"bookings": {
                   Row: {
-                    "block_end_at": string,"cancel_fee_vnd": number,"cancel_reason": string | null,"cancelled_at": string | null,"checked_in_at": string | null,"conflict_note": string,"conversation_id": string | null,"created_at": string,"customer_email": string | null,"customer_name": string,"customer_phone": string | null,"deposit_status": string,"deposit_vnd": number,"done_at": string | null,"effects": Json,"end_at": string,"holds_slot": boolean,"id": string,"idempotency_key": string | null,"installation_id": string | null,"lead_id": string | null,"note": string,"order_id": string | null,"origin": string,"party_size": number,"price_vnd": number | null,"reschedule_count": number,"rescheduled_from": string | null,"resource_id": string,"service_id": string,"source_channel": string,"start_at": string,"status": string,"updated_at": string,"work_item_id": string | null,"workspace_id": string
+                    "block_end_at": string,"cancel_fee_vnd": number,"cancel_reason": string | null,"cancelled_at": string | null,"checked_in_at": string | null,"conflict_note": string,"conversation_id": string | null,"created_at": string,"customer_email": string | null,"customer_name": string,"customer_phone": string | null,"deposit_status": string,"deposit_vnd": number,"done_at": string | null,"effects": NonNullable<Json>,"end_at": string,"holds_slot": boolean,"id": string,"idempotency_key": string | null,"installation_id": string | null,"lead_id": string | null,"note": string,"order_id": string | null,"origin": string,"party_size": number,"price_vnd": number | null,"reschedule_count": number,"rescheduled_from": string | null,"resource_id": string,"service_id": string,"source_channel": string,"start_at": string,"status": string,"updated_at": string,"work_item_id": string | null,"workspace_id": string
                   }
                   Insert: {
-                    "block_end_at": string,"cancel_fee_vnd"?: number,"cancel_reason"?: string | null,"cancelled_at"?: string | null,"checked_in_at"?: string | null,"conflict_note"?: string,"conversation_id"?: string | null,"created_at"?: string,"customer_email"?: string | null,"customer_name"?: string,"customer_phone"?: string | null,"deposit_status"?: string,"deposit_vnd"?: number,"done_at"?: string | null,"effects"?: Json,"end_at": string,"holds_slot"?: boolean,"id"?: string,"idempotency_key"?: string | null,"installation_id"?: string | null,"lead_id"?: string | null,"note"?: string,"order_id"?: string | null,"origin"?: string,"party_size"?: number,"price_vnd"?: number | null,"reschedule_count"?: number,"rescheduled_from"?: string | null,"resource_id": string,"service_id": string,"source_channel"?: string,"start_at": string,"status"?: string,"updated_at"?: string,"work_item_id"?: string | null,"workspace_id": string
+                    "block_end_at": string,"cancel_fee_vnd"?: number,"cancel_reason"?: string | null,"cancelled_at"?: string | null,"checked_in_at"?: string | null,"conflict_note"?: string,"conversation_id"?: string | null,"created_at"?: string,"customer_email"?: string | null,"customer_name"?: string,"customer_phone"?: string | null,"deposit_status"?: string,"deposit_vnd"?: number,"done_at"?: string | null,"effects"?: NonNullable<Json>,"end_at": string,"holds_slot"?: boolean,"id"?: string,"idempotency_key"?: string | null,"installation_id"?: string | null,"lead_id"?: string | null,"note"?: string,"order_id"?: string | null,"origin"?: string,"party_size"?: number,"price_vnd"?: number | null,"reschedule_count"?: number,"rescheduled_from"?: string | null,"resource_id": string,"service_id": string,"source_channel"?: string,"start_at": string,"status"?: string,"updated_at"?: string,"work_item_id"?: string | null,"workspace_id": string
                   }
                   Update: {
-                    "block_end_at"?: string,"cancel_fee_vnd"?: number,"cancel_reason"?: string | null,"cancelled_at"?: string | null,"checked_in_at"?: string | null,"conflict_note"?: string,"conversation_id"?: string | null,"created_at"?: string,"customer_email"?: string | null,"customer_name"?: string,"customer_phone"?: string | null,"deposit_status"?: string,"deposit_vnd"?: number,"done_at"?: string | null,"effects"?: Json,"end_at"?: string,"holds_slot"?: boolean,"id"?: string,"idempotency_key"?: string | null,"installation_id"?: string | null,"lead_id"?: string | null,"note"?: string,"order_id"?: string | null,"origin"?: string,"party_size"?: number,"price_vnd"?: number | null,"reschedule_count"?: number,"rescheduled_from"?: string | null,"resource_id"?: string,"service_id"?: string,"source_channel"?: string,"start_at"?: string,"status"?: string,"updated_at"?: string,"work_item_id"?: string | null,"workspace_id"?: string
+                    "block_end_at"?: string,"cancel_fee_vnd"?: number,"cancel_reason"?: string | null,"cancelled_at"?: string | null,"checked_in_at"?: string | null,"conflict_note"?: string,"conversation_id"?: string | null,"created_at"?: string,"customer_email"?: string | null,"customer_name"?: string,"customer_phone"?: string | null,"deposit_status"?: string,"deposit_vnd"?: number,"done_at"?: string | null,"effects"?: NonNullable<Json>,"end_at"?: string,"holds_slot"?: boolean,"id"?: string,"idempotency_key"?: string | null,"installation_id"?: string | null,"lead_id"?: string | null,"note"?: string,"order_id"?: string | null,"origin"?: string,"party_size"?: number,"price_vnd"?: number | null,"reschedule_count"?: number,"rescheduled_from"?: string | null,"resource_id"?: string,"service_id"?: string,"source_channel"?: string,"start_at"?: string,"status"?: string,"updated_at"?: string,"work_item_id"?: string | null,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -2527,6 +2527,19 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"meta_inbox": {
+                  Row: {
+                    "delivery_id": string,"id": string,"payload": NonNullable<Json>,"processed_at": string | null,"provider": string,"received_at": string
+                  }
+                  Insert: {
+                    "delivery_id": string,"id"?: string,"payload": NonNullable<Json>,"processed_at"?: string | null,"provider": string,"received_at"?: string
+                  }
+                  Update: {
+                    "delivery_id"?: string,"id"?: string,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"provider"?: string,"received_at"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"meta_threads": {
                   Row: {
                     "connection_id": string,"last_user_at": string,"platform": string,"user_id": string
@@ -3896,6 +3909,19 @@ isOneToOne: false
 "automations_data":
 { Args: { "ws": string }; Returns: Json
                            },
+"be_account_providers":
+{ Args: { "p_user": string }; Returns: {
+              "provider": string
+            }[]
+                           },
+"be_account_sessions":
+{ Args: { "p_user": string }; Returns: {
+              "created_at": string,"id": string,"ip": string,"last_active_at": string,"user_agent": string
+            }[]
+                           },
+"be_revoke_session":
+{ Args: { "p_session": string,"p_user": string }; Returns: boolean
+                           },
 "booking_peak_load":
 { Args: { "p_block_end": string,"p_exclude": string,"p_resource": string,"p_start": string }; Returns: number
                            },
@@ -3907,6 +3933,12 @@ isOneToOne: false
                            },
 "booking_reserve":
 { Args: { "p": Json,"p_force"?: boolean }; Returns: string
+                           },
+"brain_command":
+{ Args: { "p_kind": string,"p_payload": Json,"p_workspace": string }; Returns: string
+                           },
+"brain_command_wait":
+{ Args: { "p_id": string }; Returns: Json
                            },
 "connection_command_submit":
 { Args: { "p_input": Json,"p_kind": string,"p_workspace": string }; Returns: string
@@ -4021,8 +4053,106 @@ isOneToOne: false
 "governance_rows":
 { Args: { "since7": string,"ws": string }; Returns: Json
                            },
+"hiring_application_submit":
+{ Args: { "p_consent": string,"p_fields": Json,"p_ip": string,"p_job": string,"p_lines": (string)[],"p_ws": string }; Returns: {
+              "duplicate": boolean,"id": string
+            }[]
+                           },
+"hiring_availability_save":
+{ Args: { "p_user": string,"p_windows": Json,"p_ws": string }; Returns: number
+                           },
+"hiring_candidate_link_staff":
+{ Args: { "p_id": string,"p_ws": string }; Returns: {
+              "missing": boolean,"staff_id": string
+            }[]
+                           },
+"hiring_candidate_move":
+{ Args: { "p_actor": string,"p_id": string,"p_reason": string,"p_stage": string,"p_summary": string,"p_ws": string }; Returns: boolean
+                           },
+"hiring_candidate_notes":
+{ Args: { "p_actor": string,"p_id": string,"p_notes": string,"p_summary": string,"p_ws": string }; Returns: boolean
+                           },
+"hiring_candidate_screened":
+{ Args: { "p_actor": string,"p_id": string,"p_label": string,"p_line": string,"p_reasons": Json,"p_score": number,"p_summary": string,"p_ws": string }; Returns: boolean
+                           },
+"hiring_candidates_delete":
+{ Args: { "p_ids": (string)[],"p_ws": string }; Returns: (string)[]
+                           },
+"hiring_event_log":
+{ Args: { "p_actor": string,"p_candidate": string,"p_kind": string,"p_summary": string,"p_ws": string }; Returns: undefined
+                           },
+"hiring_interview_confirm":
+{ Args: { "p_end": string,"p_line": string,"p_start": string,"p_token": string }; Returns: boolean
+                           },
+"hiring_interview_create":
+{ Args: { "p_actor": string,"p_candidate": string,"p_fields": Json,"p_job": string,"p_line": string,"p_token": string,"p_work": string,"p_ws": string }; Returns: string
+                           },
+"hiring_interview_none_fit":
+{ Args: { "p_line": string,"p_note": string,"p_token": string }; Returns: boolean
+                           },
+"hiring_interview_remind_claim":
+{ Args: { "p_id": string }; Returns: boolean
+                           },
+"hiring_interview_status":
+{ Args: { "p_actor": string,"p_id": string,"p_line": string,"p_status": string,"p_ws": string }; Returns: string
+                           },
+"hiring_job_ads":
+{ Args: { "p_ads": Json,"p_id": string,"p_ws": string }; Returns: boolean
+                           },
+"hiring_job_create":
+{ Args: { "p_fields": Json,"p_slug": string,"p_user": string,"p_ws": string }; Returns: string
+                           },
+"hiring_job_fill_check":
+{ Args: { "p_job": string,"p_ws": string }; Returns: {
+              "closed": boolean,"headcount": number,"hired": number,"title": string
+            }[]
+                           },
+"hiring_job_status":
+{ Args: { "p_id": string,"p_status": string,"p_ws": string }; Returns: boolean
+                           },
+"hiring_job_update":
+{ Args: { "p_fields": Json,"p_id": string,"p_ws": string }; Returns: boolean
+                           },
+"hiring_jobs_expire":
+{ Args: { "p_ws": string }; Returns: (string)[]
+                           },
+"hiring_new_token":
+{ Args: Record<PropertyKey, never>; Returns: string
+                           },
+"hiring_offer_answer":
+{ Args: { "p_accept": boolean,"p_actor": string,"p_items": (string)[],"p_line": string,"p_token": string }; Returns: string
+                           },
+"hiring_offer_cancel":
+{ Args: { "p_actor": string,"p_id": string,"p_line": string,"p_statuses": (string)[],"p_ws": string }; Returns: {
+              "candidate_id": string,"work_item_id": string
+            }[]
+                           },
+"hiring_offer_create":
+{ Args: { "p_candidate": string,"p_job": string,"p_terms": Json,"p_token": string,"p_user": string,"p_ws": string }; Returns: string
+                           },
+"hiring_offer_link":
+{ Args: { "p_id": string,"p_status": string,"p_work": string,"p_ws": string }; Returns: undefined
+                           },
+"hiring_offer_sent":
+{ Args: { "p_actor": string,"p_draft": string,"p_expires": string,"p_id": string,"p_line": string,"p_via": string,"p_ws": string }; Returns: boolean
+                           },
+"hiring_offers_expire":
+{ Args: { "p_line": string,"p_ws": string }; Returns: (string)[]
+                           },
+"hiring_onboarding_toggle":
+{ Args: { "p_done": boolean,"p_id": string,"p_ws": string }; Returns: boolean
+                           },
 "hiring_ops_status":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"hiring_retention_log_add":
+{ Args: { "p_candidates": number,"p_days": number,"p_files": number,"p_ws": string }; Returns: undefined
+                           },
+"hiring_settings_init":
+{ Args: { "p_slug": string,"p_ws": string }; Returns: string
+                           },
+"hiring_settings_save":
+{ Args: { "p_patch": Json,"p_ws": string }; Returns: string
                            },
 "hiring_tick":
 { Args: Record<PropertyKey, never>; Returns: boolean
@@ -4150,6 +4280,11 @@ isOneToOne: false
 "job_stats":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
+"job_status":
+{ Args: { "p_dedupe_key": string,"p_name": string,"p_queue": string,"p_workspace_id": string }; Returns: {
+              "id": string,"state": string
+            }[]
+                           },
 "job_touch":
 { Args: { "p_msg_id": number,"p_queue": string,"p_vt": number }; Returns: boolean
                            },
@@ -4158,12 +4293,6 @@ isOneToOne: false
                            },
 "knowledge_fold":
 { Args: { "t": string }; Returns: string
-                           },
-"brain_command":
-{ Args: { "p_kind": string,"p_payload": Json,"p_workspace": string }; Returns: string
-                           },
-"brain_command_wait":
-{ Args: { "p_id": string }; Returns: Json
                            },
 "knowledge_retry_source":
 { Args: { "p_source": string }; Returns: string
@@ -4208,6 +4337,9 @@ isOneToOne: false
 "payment_order_request":
 { Args: { "p_kind": string,"p_target": string,"p_workspace": string }; Returns: string
                            },
+"post_ai_usage_notice":
+{ Args: { "p_body": string,"p_level": string,"p_period": string,"p_workspace": string }; Returns: boolean
+                           },
 "post_office_notice":
 { Args: { "p_body": string,"p_workspace": string }; Returns: undefined
                            },
@@ -4216,6 +4348,9 @@ isOneToOne: false
                            },
 "read_app_command":
 { Args: { "p_id": string }; Returns: Json
+                           },
+"record_ai_usage":
+{ Args: { "p_completion": number,"p_cost": number,"p_estimated": boolean,"p_kind": string,"p_model": string,"p_module": string,"p_prompt": number,"p_workspace": string }; Returns: undefined
                            },
 "record_lead_outcome":
 { Args: { "p_evidence": string,"p_lead": string,"p_locale"?: string,"p_stage": string,"p_workspace": string }; Returns: Json

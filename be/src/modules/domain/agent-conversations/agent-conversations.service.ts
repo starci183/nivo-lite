@@ -6,17 +6,26 @@ import type { Outcome } from "@modules/platform/primitives"
 import type {
     ConversationRef,
     ConversationTarget,
+    HumanHolder,
+    OptionalHumanConversation,
     OpenConversation,
     OptionalChannel,
     OptionalLeadConversation,
     TurnConversation,
+    ChatConversation,
+    OpenChatConversation,
+    ChatHolder,
 } from "./agent-conversations.contracts"
 import { AgentConversationsError, AgentConversationsErrorCode } from "./errors/agent-conversations.error"
+import type { CustomerConversationRow } from "./persistence/customer-conversations.rows"
+import { LIST_CUSTOMER_LEAD_CONVERSATIONS } from "./persistence/customer-conversations.sql"
 import type {
     ConversationRefRow,
     ConversationTargetRow,
+    HumanConversationRow,
     LeadConversationRow,
     TurnConversationRow,
+    ChatConversationRow,
 } from "./persistence/agent-conversations.rows"
 import {
     ARCHIVE_CONVERSATION,
@@ -27,8 +36,14 @@ import {
     FIND_CONVERSATION_TARGET,
     FIND_TURN_CONVERSATION,
     INSERT_CONVERSATION,
+    LOCK_HUMAN_CONVERSATION,
     REBIND_CONVERSATION_AGENT,
+    SET_HUMAN_HANDLING,
     UPDATE_VISITOR_NAME,
+    LIST_CHAT_CONVERSATIONS,
+    LOCK_CHAT_CONVERSATION,
+    INSERT_CHAT_CONVERSATION,
+    SET_CHAT_HOLDER,
 } from "./persistence/agent-conversations.sql"
 
 const refOf = (row: ConversationRefRow): ConversationRef => ({
@@ -47,10 +62,67 @@ const targetOf = (row: ConversationTargetRow): ConversationTarget => ({
     connectionId: row.connection_id,
 })
 
+const chatOf = (row: ChatConversationRow): ChatConversation => ({
+    id: row.id,
+    kind: row.kind === "customer" ? "customer" : "test",
+    channel: row.channel,
+    visitorName: row.visitor_name,
+    leadId: row.lead_id,
+    handledBy: row.handled_by,
+    createdAt: new Date(row.created_at).toISOString(),
+})
+
 @Injectable()
 /** The conversations customers have with the workspace's agents on a channel; the only writer of agent_conversations. */
 export class AgentConversationsService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+
+    /** Lead-linked customer conversations for a workbench whose caller has already proved membership. */
+    listCustomerLeadConversations(workspaceId: string, limit: number = 200): Promise<Array<CustomerConversationRow>> {
+        return this.entityManager.query<Array<CustomerConversationRow>>(LIST_CUSTOMER_LEAD_CONVERSATIONS, [
+            workspaceId,
+            limit,
+        ])
+    }
+
+    /** The newest hundred conversations of the agent in the proven workspace. */
+    async listChat(workspaceId: string, agentId: string): Promise<ReadonlyArray<ChatConversation>> {
+        return (
+            await this.entityManager.query<Array<ChatConversationRow>>(LIST_CHAT_CONVERSATIONS, [workspaceId, agentId])
+        ).map(chatOf)
+    }
+
+    /** Opens a test or simulated customer conversation inside the caller's transaction. */
+    async openChat(input: OpenChatConversation, manager: EntityManager): Promise<ChatConversation> {
+        const [row] = await manager.query<Array<ChatConversationRow>>(INSERT_CHAT_CONVERSATION, [
+            input.workspaceId,
+            input.agentId,
+            input.kind,
+            input.visitorName,
+        ])
+        if (row === undefined) throw new AgentConversationsError({ code: AgentConversationsErrorCode.NotStored })
+        return chatOf(row)
+    }
+
+    /** Locks and proves the chat belongs to the workspace before its state changes. */
+    async lockChat(workspaceId: string, conversationId: string, manager: EntityManager): Promise<ChatConversation> {
+        const [row] = await manager.query<Array<ChatConversationRow>>(LOCK_CHAT_CONVERSATION, [
+            workspaceId,
+            conversationId,
+        ])
+        if (row === undefined) throw new AgentConversationsError({ code: AgentConversationsErrorCode.NotFound })
+        return chatOf(row)
+    }
+
+    /** Writes who holds a chat using the transaction that already locked it. */
+    async setChatHolder(
+        workspaceId: string,
+        conversationId: string,
+        holder: ChatHolder,
+        manager: EntityManager,
+    ): Promise<void> {
+        await manager.query(SET_CHAT_HOLDER, [workspaceId, conversationId, holder])
+    }
 
     /** The conversation of one customer on one connection, or a refusal when they never wrote. */
     async find(
@@ -130,6 +202,28 @@ export class AgentConversationsService {
     /** A person holds the conversation from now on: the AI stays quiet until they hand it back. */
     async handToPerson(workspaceId: string, conversationId: string, holder: string): Promise<void> {
         await this.entityManager.query(HAND_CONVERSATION_TO_PERSON, [workspaceId, conversationId, holder])
+    }
+
+    /** Locks a workspace's customer conversation in the caller's transaction, or returns null when it is absent. */
+    async lockForHuman(
+        workspaceId: string,
+        conversationId: string,
+        manager: EntityManager,
+    ): Promise<OptionalHumanConversation> {
+        const row = (
+            await manager.query<Array<HumanConversationRow>>(LOCK_HUMAN_CONVERSATION, [workspaceId, conversationId])
+        )[0]
+        return row === undefined ? null : { ...targetOf(row), leadId: row.lead_id, handledBy: row.handled_by }
+    }
+
+    /** A member takes the locked customer conversation over or hands it back to the AI. */
+    async setHumanHandling(
+        workspaceId: string,
+        conversationId: string,
+        holder: HumanHolder,
+        manager: EntityManager,
+    ): Promise<void> {
+        await manager.query(SET_HUMAN_HANDLING, [workspaceId, conversationId, holder])
     }
 
     /** Ties a conversation to the lead the customer became. */

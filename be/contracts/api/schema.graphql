@@ -1,338 +1,1613 @@
-input ApproveVideoProjectInput {
-  projectId: ID!
-}
-
-input ArchiveVideoProjectInput {
-  archived: Boolean!
-  projectId: ID!
-}
-
-type ContentActorType {
-  canManage: Boolean!
-  name: String!
+type AcceptInviteType {
   workspaceId: ID!
 }
 
-type ContentAiRequestedType {
-  id: String!
-  itemId: String
-  status: String!
+type AccountingAgeingType {
+  d0: AccountingMeasureType!
+  d30: AccountingMeasureType!
+  d60: AccountingMeasureType!
 }
 
-type ContentAiStatusType {
-  errorCode: String
-  id: String!
-  ideas: Int
-  itemId: String
-  planId: String
-  progress: Int!
-  resultId: String
-  seconds: Int
-  skippedPast: Int
-  status: String!
-  warnings: [ContentAiWarningType!]!
-}
-
-type ContentAiWarningDetailType {
-  figure: String
-  kind: String!
-  length: Int
-  max: Int
-  phrase: String
-}
-
-type ContentAiWarningType {
-  channel: String!
-  warning: ContentAiWarningDetailType!
-}
-
-type ContentAutomationFlagsType {
-  offerDraft: Boolean!
-  todayReminder: Boolean!
-  weeklySummary: Boolean!
-}
-
-type ContentAutomationMarkType {
-  key: String!
-  value: String!
-}
-
-type ContentBrandAuthorityType {
-  brandVoice: String!
-  limitsNote: String!
-  replyStyle: String!
-}
-
-type ContentBrandFactType {
-  attribute: String!
-  subject: String!
-  value: String!
-}
-
-type ContentBrandMaterialType {
-  authority: ContentBrandAuthorityType!
-  brainFacts: [ContentBrandFactType!]!
-  setup: ContentBrandSetupType!
-  shop: String!
-  sources: [ContentBrandSourceType!]!
-}
-
-type ContentBrandSettingsType {
-  automations: ContentAutomationFlagsType!
-  avoid: String!
-  brandVoice: String!
-  cta: String!
-  hashtags: [String!]!
-  marks: [ContentAutomationMarkType!]!
-  workspaceId: ID!
-}
-
-type ContentBrandSetupType {
-  audience: String!
-  channels: String!
-  claimsLimits: String!
-  facts: [String!]!
-  summary: String!
-  tone: String!
-}
-
-type ContentBrandSourceType {
-  content: String!
-  title: String!
-  topic: String
-}
-
-input ContentCadenceInput {
-  channel: String!
-  days: [Int!]!
-  postsPerWeek: Int!
-  time: String!
-}
-
-type ContentCadenceType {
-  channel: String!
-  days: [Int!]!
-  id: ID!
-  postsPerWeek: Int!
-  time: String!
-  workspaceId: ID!
-}
-
-type ContentConfigurationType {
-  cadence: [ContentCadenceType!]!
-  pillars: [ContentPillarType!]!
-  settings: ContentBrandSettingsType!
-}
-
-type ContentEvidenceType {
-  at: String!
-  by: String!
-  kind: String!
-  text: String!
-}
-
-type ContentFiguresType {
-  awaitingApproval: Int!
-  next: ContentNextPostType
-  pillars: ContentPillarCoverageType!
-  published30: Int!
-}
-
-type ContentItemIdType {
-  id: ID!
-}
-
-input ContentItemInput {
-  id: ID!
-}
-
-type ContentItemMediaType {
-  id: ID
-  kind: String!
-  name: String!
-  path: String
-  suggested: Boolean!
-}
-
-type ContentItemType {
-  approvedAt: String
-  approvedBy: String
-  brief: String!
-  channels: [String!]!
+type AccountingBookAdjustmentType {
+  correctedAmount: Float
   createdAt: String!
   createdBy: String!
-  draftedAt: String
-  evidence: [ContentEvidenceType!]!
-  hashtags: [String!]!
-  holidayKey: String
-  id: ID!
-  links: [ContentLinkType!]!
-  media: [ContentItemMediaType!]!
-  pillarId: ID
-  planId: ID
-  published: [ContentPublishedMarkType!]!
-  publishedAt: String
-  scheduledAt: String
-  source: String!
+  id: String!
+  note: String!
+  targetId: String!
+  targetType: String!
+}
+
+type AccountingBookDecisionType {
+  action: String!
+  createdAt: String!
+  decidedBy: String!
+  deciderKind: String!
+  id: String!
+  note: String
+  outcome: String!
+  workItemId: String
+}
+
+type AccountingBookInboundType {
+  body: String!
+  channel: String!
+  eventId: String
+  senderName: String
+}
+
+type AccountingBookInvoiceType {
+  amountVnd: Float!
+  createdAt: String!
+  dueAt: String
+  id: String!
+  invoiceNo: String!
+  issuedAt: String
+  issuedBy: String
+  lead: AccountingBookLeadType
+  leadId: String
+  order: AccountingBookOrderBriefType
+  orderId: String
+  origin: String!
+  paidAt: String
   status: String!
+  workspaceId: String!
+}
+
+type AccountingBookLeadType {
+  company: String
+  contactName: String
+}
+
+type AccountingBookOrderBriefType {
+  amountVnd: Float
+  items: String!
+  orderNo: String!
+  status: String!
+}
+
+type AccountingBookOrderType {
+  amountVnd: Float
+  carrier: String
+  confirmedAt: String
+  confirmedBy: String
+  createdAt: String!
+  id: String!
+  inboundEventId: String
+  items: String!
+  lead: AccountingBookLeadType
+  leadId: String
+  orderNo: String!
+  origin: String!
+  shippedAt: String
+  status: String!
+  trackingCode: String
+  workspaceId: String!
+}
+
+type AccountingBookTransactionType {
+  amountVnd: Float!
+  channel: String!
+  createdAt: String!
+  id: String!
+  inbound: AccountingBookInboundType
+  inboundEventId: String
+  invoiceId: String
+  occurredAt: String!
+  origin: String!
+  payer: String
+  reference: String
+  status: String!
+  workspaceId: String!
+}
+
+type AccountingBookType {
+  adjustments: [AccountingBookAdjustmentType!]!
+  adjustmentsReady: Boolean!
+  decisions: [AccountingBookDecisionType!]!
+  invoices: [AccountingBookInvoiceType!]!
+  orders: [AccountingBookOrderType!]!
+  transactions: [AccountingBookTransactionType!]!
+  works: [AccountingBookWorkType!]!
+}
+
+type AccountingBookWorkType {
+  action: String!
+  createdAt: String!
+  id: String!
+  status: String!
+  subjectId: String
+  subjectType: String!
+}
+
+type AccountingCandidateType {
+  amountVnd: Float!
+  id: String!
+  label: String!
+}
+
+type AccountingCreditType {
+  amount: Float!
+  id: String!
+  invoiceNo: String
+  match: String!
+  occurredAt: String!
+  origin: String!
+  payer: String
+  reference: String
+  sourceKind: String!
+}
+
+type AccountingInvoiceType {
+  amount: Float!
+  createdAt: String!
+  customer: String
+  dueAt: String
+  id: String!
+  invoiceNo: String!
+  issuedAt: String
+  orderNo: String
+  origin: String!
+  paidAt: String
+  status: String!
+}
+
+type AccountingLedgerEntryType {
+  adjustmentCount: Int!
+  amount: Float!
+  at: String!
+  description: String!
+  id: String!
+  kind: String!
+  lineage: [AccountingLineageType!]!
+  linked: String
+  origin: String!
+  status: String!
+  targetId: String!
+  targetType: String!
+}
+
+type AccountingLineageType {
+  amount: Float
+  at: String
+  detail: String
+  kind: String!
+  status: String
   title: String!
+}
+
+type AccountingMeasureType {
+  count: AccountingSplitType!
+  vnd: AccountingSplitType!
+}
+
+type AccountingOrderType {
+  amount: Float
+  createdAt: String!
+  customer: String
+  id: String!
+  items: String!
+  orderNo: String!
+  origin: String!
+}
+
+type AccountingPeriodType {
+  fromIso: String!
+  income: AccountingMeasureType!
+  key: String!
+  receivable: AccountingMeasureType!
+  toIso: String!
+  unmatched: AccountingMeasureType!
+  weeks: [AccountingWeekType!]!
+}
+
+type AccountingPeriodsType {
+  last: AccountingPeriodType!
+  this: AccountingPeriodType!
+}
+
+type AccountingProposalFieldType {
+  name: String!
+  number: Float
+  text: String
+}
+
+type AccountingProposalType {
+  amountVnd: Float
+  candidates: [AccountingCandidateType!]!
+  confidence: Float
+  draft: String
+  fields: [AccountingProposalFieldType!]!
+  outcome: String
+  summary: String!
+}
+
+type AccountingQuestionLeadType {
+  channel: String!
+  company: String!
+  contactName: String!
+  id: String!
+}
+
+type AccountingQuestionType {
+  group: String!
+  item: AccountingQuestionWorkType!
+}
+
+type AccountingQuestionWorkType {
+  action: String!
+  assignedStaffId: String
+  assignedStaffName: String
+  chainId: String
+  completedAt: String
+  createdAt: String!
+  decidedPath: String
+  department: String!
+  depth: Int!
+  error: String
+  evidenceState: String!
+  executionId: String
+  id: String!
+  inboundEventId: String
+  installationId: String
+  lead: AccountingQuestionLeadType
+  leadId: String
+  missingFields: [String!]!
+  origin: String!
+  parentId: String
+  proposal: AccountingProposalType!
+  reason: String
+  reasons: [String!]!
+  result: AccountingWorkResultType
+  status: String!
+  subjectId: String
+  subjectType: String!
   updatedAt: String!
-  variants: [ContentVariantType!]!
-  workItemId: ID
+  workspaceId: String!
+}
+
+type AccountingSplitType {
+  live: Float!
+  simulated: Float!
+}
+
+type AccountingStaffType {
+  active: Boolean!
+  createdAt: String!
+  email: String
+  id: String!
+  name: String!
+  role: String!
+  workspaceId: String!
+}
+
+type AccountingWaitingType {
+  count: AccountingSplitType!
+  knownVnd: Float!
+  unknownAmount: Int!
+}
+
+type AccountingWeekType {
+  live: Float!
+  simulated: Float!
+  startIso: String!
+}
+
+type AccountingWorkResultType {
+  href: String
+  summary: String!
+}
+
+type AccountingWorkbenchType {
+  adjustmentsReady: Boolean!
+  ageing: AccountingAgeingType!
+  canAdjust: Boolean!
+  credits: [AccountingCreditType!]!
+  excludedTest: Int!
+  invoices: [AccountingInvoiceType!]!
+  ledger: [AccountingLedgerEntryType!]!
+  now: String!
+  ordersWithoutInvoice: [AccountingOrderType!]!
+  ownerName: String!
+  periods: AccountingPeriodsType!
+  questions: [AccountingQuestionType!]!
+  staff: [AccountingStaffType!]!
+  waiting: AccountingWaitingType!
+}
+
+input AddBookingInput {
+  date: String!
+  force: Boolean!
+  name: String!
+  note: String
+  party: Int!
+  phone: String
+  resourceId: ID
+  serviceId: ID!
+  time: String!
+}
+
+type AddBookingType {
+  id: ID!
+}
+
+type AddLoyaltyPresetRewardsType {
+  added: Int!
+}
+
+input AdjustLoyaltyPointsInput {
+  customerId: ID!
+  points: Int!
+  reason: String!
+  token: String!
+}
+
+type AdjustLoyaltyPointsType {
+  posted: Boolean!
+}
+
+type AdminActivityType {
+  lastCustomerMessageAt: String
+  messages7d: Int!
+  openDecisions: Int!
+}
+
+type AdminAgentSyncType {
+  agentId: ID!
+  checkedAt: String!
+  contextVersion: Int
+  error: String
+  status: String!
+}
+
+type AdminAuditType {
+  action: String!
+  actorEmail: String!
+  createdAt: String!
+  id: ID!
+  workspaceId: ID
+}
+
+type AdminBillingEventType {
+  createdAt: String!
+  id: ID!
+  kind: String!
+}
+
+type AdminConnectionBadgeType {
+  count: Int!
+  error: Int!
+  provider: String!
+  silent: Int!
+}
+
+type AdminConnectionType {
+  environment: String!
+  health: String!
+  id: ID!
+  lastError: String
+  lastEventAt: String
+  name: String!
+  provider: String!
+  status: String!
+}
+
+type AdminCountType {
+  count: Int!
+  key: String!
+}
+
+type AdminCreditsType {
+  costUsd: Float!
+  limit: Float
+  ownLimit: Float
+  used: Float!
+}
+
+type AdminErrorType {
+  createdAt: String!
+  id: ID!
+  message: String!
+  scope: String!
+}
+
+input AdminExtendSubscriptionInput {
+  days: Int!
   workspaceId: ID!
 }
 
-input ContentItemsInput {
+type AdminHealthType {
+  audits: [AdminAuditType!]!
+  billingEvents: [AdminPlatformBillingEventType!]!
+  errorScopes: [AdminCountType!]!
+  errors: [AdminPlatformErrorType!]!
+  signups: [AdminSignupDayType!]!
+  transferCounts: [AdminCountType!]!
+  transfers: [AdminPlatformTransferType!]!
+  workspaceNames: [AdminWorkspaceNameType!]!
+}
+
+type AdminInviteResentType {
+  delivery: String!
+  email: String!
+}
+
+type AdminInviteType {
+  createdAt: String!
+  email: String!
+  expiresAt: String!
+  id: ID!
+  role: String!
+}
+
+type AdminKnowledgeKindType {
+  byStatus: [AdminCountType!]!
+  kind: String!
+}
+
+type AdminMemberType {
+  displayName: String!
+  email: String
+  role: String!
+  status: String!
+  userId: ID!
+}
+
+type AdminModuleBadgeType {
+  key: String!
+  live: Boolean!
+  status: String!
+}
+
+type AdminModuleType {
+  contextAppliedAt: String
+  contextVersion: Int
+  id: ID!
+  key: String!
+  live: Boolean!
+  operatingMode: String!
+  processor: String!
+  status: String!
+  sync: AdminAgentSyncType
+}
+
+type AdminOrderType {
+  amountVnd: Float!
+  createdAt: String!
+  id: ID!
+  orderCode: String!
+  paidAt: String
+  planCode: String!
+  status: String!
+}
+
+type AdminPlanSetType {
+  creditsLimit: Float
+  planCode: String!
+}
+
+type AdminPlatformBillingEventType {
+  createdAt: String!
+  id: ID!
+  kind: String!
+  workspaceId: ID
+}
+
+type AdminPlatformErrorType {
+  createdAt: String!
+  id: ID!
+  message: String!
+  scope: String!
+  workspaceId: ID
+}
+
+type AdminPlatformTransferType {
+  content: String
+  receivedAt: String!
+  status: String!
+  transferAmount: Float
+}
+
+input AdminResendWorkspaceInviteInput {
+  inviteId: ID!
+  workspaceId: ID!
+}
+
+type AdminSessionType {
+  email: String!
+}
+
+input AdminSetWorkspacePlanInput {
+  creditsLimit: Int = null
+  planCode: String!
+  workspaceId: ID!
+}
+
+input AdminSetWorkspaceStatusInput {
+  status: String!
+  workspaceId: ID!
+}
+
+type AdminSignupDayType {
+  day: String!
+  signups: Int!
+}
+
+type AdminStatusSetType {
+  status: String!
+}
+
+type AdminSubscriptionExtendedType {
+  paidUntil: String!
+}
+
+type AdminTransferType {
+  content: String
+  receivedAt: String!
+  sepayId: Float!
+  status: String!
+  transferAmount: Float
+}
+
+type AdminWorkspaceCountsType {
+  all: Int!
+  attention: Int!
+  idle: Int!
+  unpaid: Int!
+}
+
+type AdminWorkspaceDetailType {
+  activity: AdminActivityType!
+  billingEvents: [AdminBillingEventType!]!
+  connections: [AdminConnectionType!]!
+  credits: AdminCreditsType!
+  errors: [AdminErrorType!]!
+  invites: [AdminInviteType!]!
+  knowledge: [AdminKnowledgeKindType!]!
+  knowledgeTotal: Int!
+  members: [AdminMemberType!]!
+  modules: [AdminModuleType!]!
+  orders: [AdminOrderType!]!
+  transfers: [AdminTransferType!]!
+  workspace: AdminWorkspaceHeaderType!
+}
+
+type AdminWorkspaceHeaderType {
+  createdAt: String!
+  id: ID!
+  name: String!
+  ownerEmail: String
+  paidUntil: String
+  planCode: String
+  status: String!
+}
+
+input AdminWorkspaceInput {
+  workspaceId: ID!
+}
+
+type AdminWorkspaceItemType {
+  attention: Boolean!
+  connectionWarning: Boolean!
+  connections: [AdminConnectionBadgeType!]!
+  createdAt: String!
+  errors24h: Int!
+  id: ID!
+  idle7d: Boolean!
+  lastCustomerMessageAt: String
+  members: Int!
+  messages7d: Int!
+  modules: [AdminModuleBadgeType!]!
+  name: String!
+  openDecisions: Int!
+  ownerEmail: String
+  paidUntil: String
+  planCode: String
+  status: String!
+  unpaid: Boolean!
+}
+
+type AdminWorkspaceListType {
+  counts: AdminWorkspaceCountsType!
+  items: [AdminWorkspaceItemType!]!
+  total: Int!
+}
+
+type AdminWorkspaceNameType {
+  id: ID!
+  name: String!
+}
+
+input AdminWorkspacesInput {
+  filter: String! = "all"
+  query: String! = ""
+}
+
+type AgentAckType {
+  ok: Boolean!
+}
+
+type AgentChatConversationType {
+  channel: String!
+  createdAt: String!
+  handledBy: String
+  id: ID!
+  kind: String!
+  leadId: ID
+  visitorName: String
+}
+
+input AgentChatConversationsInput {
+  agentId: ID!
+}
+
+type AgentChatHolderType {
+  conversationId: ID!
+  handledBy: String
+}
+
+type AgentChatMessageType {
+  body: String!
+  createdAt: String!
+  id: ID!
+  role: String!
+}
+
+input AgentChatMessagesInput {
+  conversationId: ID!
+}
+
+input AgentChatPageInput {
+  agentId: ID!
+  welcome: Boolean! = false
+}
+
+type AgentChatPageType {
+  handle: String!
+  hasCustomerChannel: Boolean!
+  id: ID!
+  isActive: Boolean!
+  module: String!
+  name: String!
+  role: String!
+  showWelcome: Boolean!
+  workspaceId: ID!
+}
+
+input AgentChatTurnStatusInput {
+  id: ID!
+}
+
+type AgentChatTurnStatusType {
+  conversationId: ID!
+  errorCode: String
+  id: ID!
+  jobId: ID!
+  resultMessageId: ID
+  status: String!
+}
+
+type AgentCommandResultType {
+  chainId: ID
+  created: Boolean
+  depth: Int
+  detail: String
+  item: WorkItemType
+  missing: [String!]
+  ok: Boolean!
+  refused: String
+}
+
+type AgentConnectionType {
+  access: String!
+  id: ID!
+  name: String!
+  provider: String!
+  purpose: String!
+  status: String!
+}
+
+type AgentDashboardAgentType {
+  id: ID!
+  mode: String!
+  name: String!
+}
+
+type AgentDashboardConnectionType {
+  access: String!
+  id: ID!
+  name: String!
+  provider: String!
+  purpose: String!
+  status: String!
+}
+
+type AgentDashboardConnectionsRegionType {
+  data: [AgentDashboardConnectionType!]
+  ok: Boolean!
+}
+
+type AgentDashboardDocumentCountsType {
+  internal: Int!
+  public: Int!
+}
+
+type AgentDashboardDoneRegionType {
+  data: AgentDashboardDoneType
+  ok: Boolean!
+}
+
+type AgentDashboardDoneType {
+  count: Int!
+  items: [AgentDashboardItemType!]!
+}
+
+type AgentDashboardFactCountsType {
+  internal: Int!
+  public: Int!
+  restricted: Int!
+}
+
+type AgentDashboardGapType {
+  count: Int!
+  id: ID!
+  lastSeenAt: String!
+  question: String!
+}
+
+type AgentDashboardGapsType {
+  items: [AgentDashboardGapType!]!
+  openCount: Int!
+}
+
+input AgentDashboardInput {
+  installationId: ID
+  module: String!
+}
+
+type AgentDashboardItemType {
+  action: String!
+  at: String!
+  customer: String!
+  id: ID!
+  leadId: ID
+  resultHref: String
+  title: String!
+}
+
+type AgentDashboardKnowledgeRegionType {
+  data: AgentDashboardKnowledgeType
+  ok: Boolean!
+}
+
+type AgentDashboardKnowledgeType {
+  audience: String!
+  documents: AgentDashboardDocumentCountsType!
+  facts: AgentDashboardFactCountsType!
+  gaps: AgentDashboardGapsType
+}
+
+type AgentDashboardType {
+  agent: AgentDashboardAgentType
+  connections: AgentDashboardConnectionsRegionType!
+  done: AgentDashboardDoneRegionType!
+  knowledge: AgentDashboardKnowledgeRegionType!
+  waiting: AgentDashboardWaitingRegionType!
+}
+
+type AgentDashboardWaitingRegionType {
+  data: AgentDashboardWaitingType
+  ok: Boolean!
+}
+
+type AgentDashboardWaitingType {
+  items: [AgentDashboardItemType!]!
+  total: Int!
+}
+
+type AgentEngineStatusType {
+  gatewayConfigured: Boolean!
+  lastSyncCheckAt: String
+  syncFresh: Boolean!
+  workspaceWritable: Boolean!
+}
+
+input AgentGenMessageInput {
+  content: String!
+  role: String!
+}
+
+input AgentGenerationIdInput {
+  generationId: ID!
+}
+
+type AgentGenerationRequestedType {
+  generationId: ID
+  message: String
+  ok: Boolean!
+  reason: String
+}
+
+type AgentGenerationStatusType {
+  generationId: ID!
+  output: String
+  status: String!
+  timings: JsonObject!
+  usage: AgentGenerationUsageType
+}
+
+type AgentGenerationUsageType {
+  cached_tokens: Int!
+  completion_tokens: Int!
+  cost: Float!
+  model: String
+  prompt_tokens: Int!
+}
+
+input AgentIdInput {
+  agentId: ID!
+}
+
+type AgentSummaryType {
+  createdAt: String!
+  handle: String!
+  id: ID!
+  module: String!
+  name: String!
+  role: String!
+  status: String!
+}
+
+input AgentTextsInput {
+  instructions: String!
+  knowledge: String!
+}
+
+type ApiKeyType {
+  createdAt: String!
+  id: ID!
+  lastUsedAt: String
+  name: String!
+  prefix: String!
+  revokedAt: String
+}
+
+type ApprovalExecutionType {
+  draft: String!
+  id: ID!
+  status: String!
+  work_item_id: ID
+}
+
+input ApproveLeadGenCommentInput {
+  draft: String
+  workItemId: ID!
+}
+
+input AskKnowledgeInput {
+  audience: String!
+  module: String!
+  question: String!
+}
+
+input AuthorityPatchInput {
+  brand_voice: String
+  goal_first_reply_minutes: Int
+  goal_new_customers: Int
+  goal_note: String
+  goal_revenue_vnd: Int
+  limits_note: String
+  policies: String
+  reply_style: String
+}
+
+type AuthorityProfileType {
+  brand_voice: String!
+  goal_first_reply_minutes: Int
+  goal_new_customers: Int
+  goal_note: String!
+  goal_revenue_vnd: Float
+  limits_note: String!
+  policies: String!
+  reply_style: String!
+  updated_at: String!
+  updated_by: String
+}
+
+input AuthorityRuleChangeInput {
+  action: String!
+  limit_vnd: Int = null
+  mode: String!
+  required_fields: [String!] = []
+}
+
+type AuthorityRuleType {
+  action: String!
+  department: String!
+  id: ID!
+  limit_vnd: Float
+  mode: String!
+  note: String!
+  required_fields: [String!]!
+  updated_at: String!
+  workspace_id: ID!
+}
+
+type AuthoritySheetType {
+  profile: AuthorityProfileType
+  rules: [AuthorityRuleType!]!
+}
+
+input AuthorizeGoogleInput {
+  returnTo: String!
+}
+
+input AuthorizeMetaInput {
+  connectionId: ID
+}
+
+type AuthorizeUrlType {
+  url: String!
+}
+
+input AuthorizeZaloInput {
+  connectionId: ID!
+}
+
+type AutomationCardType {
+  basedOnContext: Int
+  body: String
+  bodyStale: Boolean!
+  bodyVersion: Int!
+  comingSoon: Boolean!
+  config: JsonObject!
+  currentContext: Int
+  def: TemplateDefinitionType!
+  dismissed: Boolean!
+  enabled: Boolean!
+  gate: String
+  google: String
+  key: String!
+  lastRunAt: String
+  missing: [MissingRequirementType!]!
+  pipelineId: ID
+  proposed: Boolean!
+  runCount: Int!
+  sheetUrl: String
+  trust: TrustType!
+}
+
+type AutomationGoogleAccountType {
+  email: String!
+  id: ID!
+  status: String!
+}
+
+type AutomationRunType {
+  createdAt: String!
+  error: String
+  evidence: String
+  finishedAt: String
+  id: ID!
+  message: String
+  pipelineId: ID!
+  status: String!
+  steps: [RunStepType!]!
+  summary: String!
+  templateKey: String!
+  triggerRef: String!
+  workItemId: ID
+}
+
+input AutomationRunsInput {
+  template: String! = ""
+}
+
+type AutomationSuggestionType {
+  key: String!
+  name: LocalizedTextType!
+  reason: LocalizedTextType!
+}
+
+input AutomationSuggestionsInput {
+  module: String! = ""
+}
+
+type AutomationsOverviewType {
+  cards: [AutomationCardType!]!
+  runs: [AutomationRunType!]!
+  sample: PreviewSampleType!
+  shop: ShopContextType!
+}
+
+type BillingBankAccountType {
+  account: String!
+  bank: String!
+  holder: String!
+}
+
+type BillingPaymentDetailsType {
+  credit: Float
+  credits: Float
+  daysLeft: Int
+  from: String
+  fromPrice: Float
+  paidUntil: String
+  to: String
+  toPrice: Float
+}
+
+type BillingPaymentOrderType {
+  amountVnd: Float!
+  bank: BillingBankAccountType!
+  createdAt: String!
+  detail: BillingPaymentDetailsType!
+  expiresAt: String!
+  id: ID!
+  kind: String!
+  orderCode: String!
+  packCode: String
+  paidAt: String
+  planCode: String!
+  qrUrl: String!
+  status: String!
+  workspaceId: ID!
+}
+
+type BillingPlanFeaturesType {
+  en: [String!]!
+  vi: [String!]!
+}
+
+input BillingPlanInput {
+  code: String!
+}
+
+type BillingPlanType {
+  aiCreditsPerMonth: Float
+  code: String!
+  features: BillingPlanFeaturesType!
+  isCustom: Boolean!
+  nameEn: String!
+  nameVi: String!
+  period: String!
+  priceVnd: Float!
+  seats: Int!
+  sort: Int!
+}
+
+type BillingReviewTransactionType {
+  content: String
+  id: Float!
+  receivedAt: String!
+  status: String!
+  transferAmount: Float!
+}
+
+input BillingReviewTransactionsInput {
+  orderIds: [ID!]!
+}
+
+type BillingWorkspaceType {
+  id: ID!
+  name: String!
+  paidUntil: String
+  planCode: String
+  role: String!
+  status: String!
+}
+
+type BodyProposalType {
+  body: String!
+  contextVersion: Int
+  generated: Boolean!
+}
+
+type BookingBoardEntryType {
+  checkedIn: Boolean!
+  conflictNote: String!
+  customer: String!
+  date: String!
+  depositStatus: String!
+  depositVnd: Float!
+  endClock: String!
+  endMin: Int!
+  endMs: Float!
+  feeVnd: Float!
+  holdsSlot: Boolean!
+  id: ID!
+  leadId: ID
+  note: String!
+  party: Int!
+  phone: String
+  priceVnd: Float
+  reschedules: Int!
+  resourceId: ID!
+  service: String!
+  serviceId: ID!
+  source: String!
+  startClock: String!
+  startMin: Int!
+  startMs: Float!
+  status: String!
+}
+
+type BookingBoardExceptionType {
+  closed: Boolean!
+  date: String!
+  end: String
+  id: ID!
+  note: String!
+  resourceId: ID
+  start: String
+}
+
+type BookingBoardHoursType {
+  end: String!
+  resourceId: ID!
+  start: String!
+  weekday: Int!
+}
+
+input BookingBoardInput {
   from: String
   to: String
 }
 
-type ContentLastPlanType {
-  createdAt: String!
-  ideas: Int!
-  month: String!
-  ms: Int
-}
-
-input ContentLinkInput {
-  label: String!
-  url: String!
-}
-
-type ContentLinkType {
-  label: String!
-  url: String!
-}
-
-input ContentMediaInput {
-  limit: Int! = 30
-  paths: [String!]! = []
-  videoIds: [ID!]! = []
-}
-
-input ContentMediaLibraryInput {
-  limit: Int! = 30
-}
-
-input ContentMediaRefInput {
-  id: String
+type BookingBoardResourceType {
+  active: Boolean!
+  capacity: Int!
+  color: String!
+  id: ID!
   kind: String!
   name: String!
-  path: String
-  suggested: Boolean
+  sort: Int!
+  staffId: ID
 }
 
-type ContentMediaRefType {
-  kind: String!
+type BookingBoardServiceType {
+  active: Boolean!
+  bufferMin: Int!
+  description: String!
+  durationMin: Int!
+  followupDays: Int
+  id: ID!
   name: String!
-  path: String!
+  priceVnd: Float
+  resourceKind: String
 }
 
-type ContentMediaType {
-  library: [ContentMediaRefType!]!
-  urls: [ContentMediaUrlType!]!
-  videos: [ContentMediaVideoType!]!
-}
-
-type ContentMediaUploadType {
-  name: String!
-  path: String!
-  signedUrl: String!
-  token: String!
-}
-
-type ContentMediaUrlType {
-  download: String!
-  key: String!
-  view: String!
-}
-
-type ContentMediaVideoType {
-  createdAt: String!
-  durationMs: Int
+type BookingBoardStaffType {
   id: ID!
   name: String!
 }
 
-type ContentNextPostType {
-  at: String!
-  title: String!
+type BookingBoardType {
+  bookings: [BookingBoardEntryType!]!
+  exceptions: [BookingBoardExceptionType!]!
+  figures: BookingFiguresType!
+  from: String!
+  hours: [BookingBoardHoursType!]!
+  nowMs: Float!
+  resources: [BookingBoardResourceType!]!
+  services: [BookingBoardServiceType!]!
+  settings: BookingSettingsType!
+  staff: [BookingBoardStaffType!]!
+  stats: BookingStatsType!
+  timezone: String!
+  to: String!
+  today: String!
+  waitlist: [BookingBoardWaitType!]!
 }
 
-type ContentPillarCoverageType {
-  covered: Int!
+type BookingBoardWaitType {
+  customer: String!
+  fromMs: Float!
+  id: ID!
+  party: Int!
+  phone: String
+  service: String!
+  status: String!
+  toMs: Float!
+}
+
+type BookingFiguresType {
+  bookingsToday: Int!
+  depositsPending: Int!
+  depositsPendingVnd: Float!
+  finished30d: Int!
+  noShowPct30d: Float
+  utilisationPct: Float
+}
+
+input BookingHoursRowInput {
+  end: String!
+  start: String!
+  weekday: Int!
+}
+
+type BookingResourceStatType {
+  bookedMin: Float!
+  name: String!
+  openMin: Float!
+  pct: Float!
+  resourceId: ID!
+}
+
+type BookingSettingsType {
+  address: String!
+  autoConfirm: Boolean!
+  cancelWindowHours: Int!
+  depositPct: Int!
+  handoffOrder: Boolean!
+  lateCancelFeePct: Int!
+  maxAdvanceDays: Int!
+  minLeadMin: Int!
+  noShowFeeVnd: Float!
+  publicEnabled: Boolean!
+  publicNote: String!
+  publicSlug: String
+  reminderHours: [Float!]!
+  slotStepMin: Int!
+  timezone: String!
+}
+
+type BookingStatsType {
+  byResource: [BookingResourceStatType!]!
+  byStatus: [BookingStatusCountType!]!
+  doneRevenueVnd: Float!
+  noShowPct: Float!
   total: Int!
 }
 
-input ContentPillarInput {
-  active: Boolean!
-  description: String!
-  id: ID
-  name: String!
-  weight: Int!
+type BookingStatusCountType {
+  count: Int!
+  status: String!
 }
 
-type ContentPillarType {
-  active: Boolean!
-  description: String!
+type BrainCommandRefType {
+  id: ID!
+}
+
+type BrainEvidenceType {
+  at: String
+  kind: String!
+  label: String!
+  quote: String
+  ref: String!
+}
+
+type BrainExtractionType {
+  sourceId: ID!
+  status: String!
+}
+
+type BrainFactType {
+  attribute: String!
+  attributeLabel: String!
+  decidedAt: String
+  decidedBy: String
+  evidence: [BrainEvidenceType!]!
+  id: ID!
+  installationId: ID
+  modules: [String!]!
+  proposalKind: String!
+  proposedAt: String!
+  proposedBy: String!
+  scope: String!
+  sourceKind: String!
+  status: String!
+  subjectKey: String!
+  subjectLabel: String!
+  subjectType: String!
+  trust: Int!
+  unit: String
+  validFrom: String
+  validTo: String
+  value: String!
+}
+
+type BrainGapType {
+  attributeGuess: String
+  count: Int!
+  id: ID!
+  lastSeenAt: String!
+  module: String!
+  question: String!
+  reopenedCount: Int!
+  topic: String
+}
+
+type BrainLensType {
+  audience: String!
+  module: String!
+  name: String!
+}
+
+type BrainLessonType {
+  appliesWhen: String!
+  body: String!
+  evidence: [BrainEvidenceType!]!
+  id: ID!
+  module: String
+  status: String!
+  title: String!
+}
+
+type BrainType {
+  extractions: [BrainExtractionType!]!
+  facts: [BrainFactType!]!
+  gaps: [BrainGapType!]!
+  gapsOpen: Int!
+  lenses: [BrainLensType!]!
+  lessons: [BrainLessonType!]!
+}
+
+input CancelBookingInput {
+  id: ID!
+}
+
+type CancelBookingType {
+  feeDue: Boolean!
+  status: String!
+}
+
+input ChangeMemberRoleInput {
+  role: String!
+  userId: ID!
+}
+
+input ChatAnswerStatusInput {
+  workItemId: ID!
+}
+
+type ChatHandlingType {
+  conversationId: ID!
+  handledBy: String
+}
+
+type ChatReplyProgressType {
+  delivery: String
+  errorCode: String
+  id: ID!
+  messageId: ID
+  status: String!
+}
+
+input ChatReplyStatusInput {
+  messageId: ID!
+}
+
+type ChatbotConversationType {
+  channel: String!
+  handledBy: String
+  id: ID!
+  lastAt: String!
+  lastRole: String
+  lastText: String!
+  leadId: ID
+  messageCount: Int!
+  name: String!
+  unanswered: Boolean!
+  waiting: Boolean!
+}
+
+type ChatbotEscalationType {
+  draft: String!
+  question: String!
+  since: String!
+  staffName: String
+  workItemId: ID!
+}
+
+type ChatbotGapsType {
+  gaps: [ChatbotKnowledgeGapType!]!
+  lenses: [ChatbotLensType!]!
+}
+
+type ChatbotKnowledgeGapType {
+  attributeGuess: String
+  count: Int!
+  exampleConversationId: ID
+  firstSeenAt: String!
+  id: ID!
+  lastSeenAt: String!
+  module: String!
+  question: String!
+  reopenedCount: Int!
+  status: String!
+  topic: String
+}
+
+type ChatbotLeadType {
+  company: String!
+  email: String
   id: ID!
   name: String!
-  sort: Int!
-  weight: Int!
-  workspaceId: ID!
+  need: String!
+  phone: String
+  stage: String!
 }
 
-type ContentPublishedMarkType {
-  at: String!
-  by: String!
-  channel: String!
-  how: String!
-  url: String!
+type ChatbotLensType {
+  audience: String!
+  module: String!
+  name: String!
 }
 
-input ContentVariantInput {
-  channel: String!
-  hashtags: [String!]!
-  note: String!
-  text: String!
+type ChatbotMessageType {
+  authorKind: String!
+  authorName: String
+  body: String!
+  createdAt: String!
+  delivery: String
+  deliveryError: String
+  id: ID!
+  role: String!
 }
 
-type ContentVariantType {
-  channel: String!
-  hashtags: [String!]!
-  note: String!
-  text: String!
+type ChatbotMetricsType {
+  leadsCaptured7d: Int!
+  p50FirstResponseMin: Float
+  sample: Int!
+  today: Int!
+  waiting: Int!
 }
 
-type ContentWorkbenchType {
-  actor: ContentActorType!
-  canManage: Boolean!
-  figures: ContentFiguresType!
-  items: [ContentItemType!]!
-  lastPlan: ContentLastPlanType
+input ChatbotOverviewInput {
+  installationId: ID
+}
+
+type ChatbotOverviewType {
+  conversations: [ChatbotConversationType!]!
+  metrics: ChatbotMetricsType!
   nowIso: String!
   workspaceId: ID!
 }
 
-input CreateContentItemInput {
-  channels: [String!]!
-  pillarId: ID
-  scheduledAt: String
-  title: String!
+input ChatbotThreadInput {
+  conversationId: ID!
 }
 
-input CreateVideoMediaUploadInput {
+type ChatbotThreadType {
+  conversation: ChatbotConversationType!
+  escalation: ChatbotEscalationType
+  externalId: String
+  handledAt: String
+  lead: ChatbotLeadType
+  messages: [ChatbotMessageType!]!
+}
+
+input CheckConnectionInput {
+  connectionId: ID!
+}
+
+input CheckInBookingInput {
+  id: ID!
+}
+
+type CheckInBookingType {
+  feeDue: Boolean!
+  status: String!
+}
+
+input CheckMetaInput {
+  connectionId: ID!
+  repair: Boolean!
+}
+
+input ChooseMetaPageInput {
+  connectionId: ID!
+  pageId: String!
+}
+
+input CompleteBookingInput {
+  id: ID!
+}
+
+type CompleteBookingType {
+  feeDue: Boolean!
+  status: String!
+}
+
+input ConfirmBookingInput {
+  id: ID!
+}
+
+type ConfirmBookingType {
+  feeDue: Boolean!
+  status: String!
+}
+
+input ConnectTelegramInput {
   name: String!
-  size: Int!
-  type: String!
+  token: String!
 }
 
-input CreateVideoProjectInput {
-  aspect: String!
-  goal: String!
-  inputs: VideoInputsInput
-  targetSeconds: Int!
-  title: String
+type ConnectionAgentType {
+  id: ID!
+  module: String!
+  name: String!
+  status: String!
+}
+
+type ConnectionCheckType {
+  lastError: String
+  localOnly: Boolean!
+  pending: Int!
+  provider: String!
+  webhookOk: Boolean!
+}
+
+type ConnectionGrantType {
+  access: String!
+  agentId: ID!
+}
+
+type ConnectionType {
+  agentIds: [ID!]!
+  createdAt: String!
+  createdBy: ID
+  environment: String!
+  firstEvent: FirstEventType
+  grants: [ConnectionGrantType!]!
+  id: ID!
+  isDefault: Boolean!
+  lastError: String
+  lastEventAt: String
+  meta: StringMap!
+  name: String!
+  provider: String!
+  status: String!
+  workspaceId: ID!
+}
+
+input ConnectionWishInput {
+  access: String
+  connectionId: ID!
+}
+
+input CreateAccountingAdjustmentInput {
+  correctedAmount: Float
+  note: String!
+  targetId: String!
+  targetType: String!
+}
+
+type CreateAccountingAdjustmentType {
+  correctedAmount: Float
+  createdAt: String!
+  createdBy: String!
+  id: String!
+  note: String!
+  targetId: String!
+  targetType: String!
+}
+
+input CreateAgentInput {
+  handle: String!
+  instructions: String!
+  module: String!
+  name: String!
+  role: String!
+}
+
+input CreateApiKeyInput {
+  name: String!
+}
+
+input CreateInviteInput {
+  email: String!
+  role: String!
+  staffId: ID
+}
+
+input CreateKnowledgeUploadInput {
+  filename: String!
+}
+
+input CreateResponsibilityInput {
+  input: NewResponsibilityInput!
 }
 
 input CreateWorkspaceInput {
@@ -343,40 +1618,1032 @@ type CreateWorkspaceType {
   id: ID!
 }
 
-input DuplicateVideoProjectInput {
-  projectId: ID!
-}
-
-input GetContentAiStatusInput {
-  id: String!
-}
-
-input GetRecentTitlesInput {
+type CreatedAgentChatConversationType {
   id: ID!
 }
 
-input GetVideoProjectInput {
-  projectId: ID!
+type CreatedApiKeyType {
+  item: ApiKeyType!
+  key: String!
 }
 
-input ListVideoProjectsInput {
-  includeArchived: Boolean
+type CreditDailyUsageType {
+  credits: Float!
+  day: String!
+  tokens: Float!
 }
 
-input MarkContentPublishedInput {
+type CreditModuleUsageType {
+  calls: Float!
+  costUsd: Float!
+  credits: Float!
+  module: String!
+  tokens: Float!
+}
+
+type CreditPackType {
+  code: String!
+  credits: Float!
+  priceVnd: Float!
+  sort: Int!
+}
+
+type CreditQuotaStatusType {
+  costUsd: Float!
+  creditsCarried: Float!
+  creditsExceeded: Boolean!
+  creditsLimit: Float
+  creditsUsed: Float!
+  fallbackReply: String
+  level: String!
+  messagesExceeded: Boolean!
+  messagesLimit: Float
+  messagesUsed: Float!
+  periodStart: String!
+  ratio: Float!
+  tokensExceeded: Boolean!
+  tokensLimit: Float
+  tokensUsed: Float!
+  topupBalance: Float!
+}
+
+input CreditRecentCostInput {
+  from: String!
+}
+
+type CreditTopupLotType {
+  credits: Float!
+  creditsRemaining: Float!
+  expiresAt: String!
+  priceVnd: Float!
+  purchasedAt: String!
+}
+
+type CreditUsageSummaryType {
+  byModule: [CreditModuleUsageType!]!
+  daily: [CreditDailyUsageType!]!
+  status: CreditQuotaStatusType
+}
+
+type DashboardAgentType {
+  approvalRule: String!
+  createdAt: String!
+  greeting: String!
+  handle: String!
+  id: ID!
+  instructions: String!
+  knowledge: String!
+  module: String!
+  name: String!
+  role: String!
+  status: String!
+}
+
+type DashboardAuthorityType {
+  goalFirstReplyMinutes: Int
+  goalNewCustomers: Int
+  goalRevenueVnd: Float
+}
+
+type DashboardDecisionType {
+  action: String!
+  createdAt: String!
+  decidedBy: String!
+  deciderKind: String!
+  department: String!
+  id: ID!
+  leadId: ID
+  leadName: String
+  note: String
+  outcome: String!
+  reason: String
+  workItemId: ID
+}
+
+type DashboardEventType {
+  actor: String!
+  createdAt: String!
+  evidence: String
+  id: ID!
+  kind: String!
+  leadId: ID
+  summary: String!
+}
+
+type DashboardExceptionLeadType {
   channel: String!
-  how: String! = ""
-  id: ID!
-  url: String! = ""
-}
-
-type MarkContentPublishedType {
-  allDone: Boolean!
+  company: String!
+  contactName: String!
   id: ID!
 }
 
-input MarkVideoPublishedInput {
-  projectId: ID!
+type DashboardExceptionType {
+  action: String!
+  assignedStaffName: String
+  contact: String
+  createdAt: String!
+  customer: String
+  department: String!
+  error: String
+  executionId: ID
+  id: ID!
+  lead: DashboardExceptionLeadType
+  leadId: ID
+  origin: String
+  reason: String
+  status: String!
+  summary: String
+}
+
+type DashboardFirstEventType {
+  at: String!
+  leadId: ID!
+}
+
+type DashboardGovernanceDecisionType {
+  createdAt: String!
+  deciderKind: String!
+  leadId: ID
+  outcome: String!
+  workItemId: ID
+}
+
+type DashboardGovernanceInvoiceType {
+  amountVnd: Float
+  id: ID!
+  invoiceNo: String
+  leadId: ID
+  orderId: ID
+  origin: String
+  status: String!
+}
+
+type DashboardGovernanceLeadType {
+  company: String
+  contactName: String
+  createdAt: String!
+  id: ID!
+  origin: String
+  stage: String!
+}
+
+type DashboardGovernanceOrderType {
+  amountVnd: Float
+  id: ID!
+  items: String
+  leadId: ID
+  orderNo: String
+  origin: String
+  status: String!
+}
+
+type DashboardGovernanceTransactionType {
+  amountVnd: Float
+  id: ID!
+  invoiceId: ID
+  origin: String
+  payer: String
+  reference: String
+  status: String!
+}
+
+type DashboardGovernanceType {
+  authority: DashboardAuthorityType
+  decisions7: [DashboardGovernanceDecisionType!]!
+  invoices: [DashboardGovernanceInvoiceType!]!
+  leads: [DashboardGovernanceLeadType!]!
+  orders: [DashboardGovernanceOrderType!]!
+  pendingWithoutWork: Int!
+  recent: [DashboardDecisionType!]!
+  transactions: [DashboardGovernanceTransactionType!]!
+  work: [DashboardGovernanceWorkType!]!
+}
+
+type DashboardGovernanceWorkType {
+  completedAt: String
+  contact: String
+  createdAt: String!
+  customer: String
+  decidedPath: String
+  department: String!
+  id: ID!
+  leadId: ID
+  reason: String
+  status: String!
+  summary: String
+  updatedAt: String!
+}
+
+type DashboardLeadType {
+  company: String
+  contactName: String
+  createdAt: String!
+  id: ID!
+  stage: String!
+}
+
+type DashboardPendingType {
+  createdAt: String!
+  id: ID!
+  leadId: ID
+  responsibilityId: ID!
+}
+
+type DashboardPromoChatbotType {
+  id: ID!
+  knowledge: String!
+}
+
+type DashboardPromoType {
+  approvedCount: Int!
+  chatbot: DashboardPromoChatbotType
+  firstEvents: [DashboardFirstEventType!]!
+  hasCustomerConversation: Boolean!
+  hasLeadConversation: Boolean!
+  hasWon: Boolean!
+  invoiceApproved: Boolean!
+  isFoundingMember: Boolean!
+  websiteLeads: [DashboardWebsiteLeadType!]!
+}
+
+type DashboardResponsibilityLeadType {
+  company: String!
+  contactName: String!
+  id: ID!
+  stage: String!
+}
+
+type DashboardResponsibilityType {
+  createdAt: String!
+  dueAt: String
+  id: ID!
+  lead: DashboardResponsibilityLeadType!
+  leadId: ID!
+  nextAction: String!
+  ownerAgentId: ID
+  ownerKind: String!
+  ownerName: String!
+  status: String!
+  title: String!
+}
+
+type DashboardType {
+  agents: [DashboardAgentType!]!
+  events: [DashboardEventType!]!
+  exceptions: [DashboardExceptionType!]!
+  governance: DashboardGovernanceType!
+  leads: [DashboardLeadType!]!
+  pending: [DashboardPendingType!]!
+  promo: DashboardPromoType!
+  responsibilities: [DashboardResponsibilityType!]!
+  since7: String!
+}
+
+type DashboardWebsiteLeadType {
+  createdAt: String!
+  id: ID!
+}
+
+input DecideBrainFactInput {
+  action: String!
+  id: ID!
+  note: String
+  situation: String
+}
+
+input DecideBrainLessonInput {
+  action: String!
+  id: ID!
+}
+
+input DecideExecutionInput {
+  decision: String!
+  editedDraft: String
+  executionId: ID!
+}
+
+input DecideWorkItemInput {
+  basis: String
+  decision: String!
+  edits: WorkEditsInput
+  note: String
+  workItemId: ID!
+}
+
+type DecisionRecordType {
+  action: String!
+  created_at: String!
+  decided_by: String!
+  decider_kind: String!
+  department: String!
+  id: ID!
+  leadName: String
+  lead_id: ID
+  note: String!
+  outcome: String!
+  reason: String
+  work_item_id: ID
+}
+
+input DeleteConnectionInput {
+  connectionId: ID!
+}
+
+input DeleteKnowledgeSourceInput {
+  id: ID!
+}
+
+type DeviceSessionType {
+  createdAt: String
+  id: ID!
+  ip: String
+  isCurrent: Boolean!
+  lastActiveAt: String
+  userAgent: String
+}
+
+input DisconnectConnectionInput {
+  connectionId: ID!
+}
+
+input DismissKnowledgeGapInput {
+  id: ID!
+}
+
+type DocumentPassageType {
+  content: String!
+  hasEmbedding: Boolean!
+  id: ID!
+  order: Int!
+}
+
+input DraftCampaignInput {
+  brief: String!
+  name: String!
+  segment: LoyaltySegmentInput!
+}
+
+type DraftCampaignType {
+  campaignId: ID!
+  draft: String!
+  id: ID!
+  recipients: Int!
+  status: String!
+}
+
+type DriveFileType {
+  id: ID!
+  mimeType: String!
+  modifiedTime: String
+  name: String!
+  path: String!
+  size: Float
+}
+
+type DriveFolderType {
+  files: [DriveFileType!]!
+  name: String!
+  truncated: Boolean!
+}
+
+input DriveLinkedFolderInput {
+  url: String!
+}
+
+input DrivePickedFolderInput {
+  folderId: String!
+  token: String!
+}
+
+input EmitAutomationEventInput {
+  data: JsonObject!
+  dedupe: String!
+  event: String!
+}
+
+input EnqueueKnowledgeSourceInput {
+  content: String
+  installationId: ID
+  kind: String!
+  module: String
+  origin: String
+  storagePath: String
+  tags: [String!]
+  title: String!
+  topic: String
+  url: String
+  visibility: String
+}
+
+input FieldValueInput {
+  name: String!
+  number: Float
+  text: String
+}
+
+input FinishWebhookConnectionInput {
+  connectionId: ID!
+}
+
+type FirstEventStateType {
+  firstEvent: FirstEventType
+  status: String!
+}
+
+type FirstEventType {
+  amount: Float!
+  at: String!
+  content: String!
+  text: String
+}
+
+input GetConnectionFirstEventInput {
+  connectionId: ID!
+}
+
+input GetMetaConnectionInput {
+  connectionId: ID!
+}
+
+input GetMoneyConnectionInput {
+  connectionId: ID!
+}
+
+input GetZaloConnectionInput {
+  connectionId: ID!
+}
+
+type GoogleStateType {
+  configured: Boolean!
+}
+
+input GrantAgentConnectionInput {
+  access: String!
+  agentId: ID!
+  connectionId: ID!
+  purpose: String!
+}
+
+input GrantWishInput {
+  access: String
+  agentId: ID!
+}
+
+type InboundEventType {
+  amountVnd: Float
+  body: String!
+  channel: String!
+  createdAt: String!
+  duplicateCount: Int!
+  eventId: String
+  externalRef: String
+  id: ID!
+  kind: String!
+  leadId: ID
+  origin: String!
+  senderContact: String
+  senderName: String
+  status: String!
+}
+
+input InboundEventsInput {
+  limit: Int! = 40
+}
+
+input InboundSimulationStatusInput {
+  id: ID!
+}
+
+type InboundSimulationStatusType {
+  errorCode: String
+  event: SimulationEventType!
+  id: ID!
+  status: String!
+  workItem: SimulationWorkItemType
+}
+
+type InvitePreviewType {
+  email: String!
+  role: String!
+  staffName: String
+  state: String!
+  workspaceName: String!
+}
+
+input InviteRefInput {
+  inviteId: ID!
+}
+
+type InviteResultType {
+  delivery: String!
+  email: String!
+  link: String!
+}
+
+input InviteTokenInput {
+  token: String!
+}
+
+scalar JsonObject
+
+input KeepCurrentBrainFactInput {
+  attribute: String!
+  installationId: ID
+  subjectKey: String!
+}
+
+type KnowledgeSourceDetailType {
+  chunks: [DocumentPassageType!]!
+  source: KnowledgeSourceTextType!
+}
+
+input KnowledgeSourceInput {
+  id: ID!
+}
+
+type KnowledgeSourceTextType {
+  chunkCount: Int!
+  content: String!
+  createdAt: String!
+  error: String
+  id: ID!
+  installationId: ID
+  kind: String!
+  module: String
+  progress: Int!
+  status: String!
+  tags: [String!]!
+  title: String!
+  topic: String
+  updatedAt: String!
+  visibility: String!
+  workspaceId: ID!
+}
+
+type KnowledgeSourceType {
+  chunkCount: Int!
+  createdAt: String!
+  error: String
+  id: ID!
+  installationId: ID
+  kind: String!
+  module: String
+  progress: Int!
+  status: String!
+  tags: [String!]!
+  title: String!
+  topic: String
+  updatedAt: String!
+  visibility: String!
+  workspaceId: ID!
+}
+
+input KnowledgeSourcesInput {
+  module: String
+}
+
+type KnowledgeSuggestionContextType {
+  businessType: String
+  decisions: [SuggestionDecisionType!]!
+}
+
+type LeadGenCommentStatusType {
+  errorCode: String
+  id: ID!
+  resultHref: String
+  status: String!
+  workStatus: String!
+}
+
+type LeadGenCommentType {
+  at: String!
+  author: String!
+  comment: String!
+  draft: String!
+  platform: String!
+  refLabel: String
+  workItemId: ID!
+}
+
+type LeadGenHandoffType {
+  at: String!
+  classify: String
+  href: String!
+  key: ID!
+  leadId: ID!
+  name: String!
+  score: String
+  stage: String!
+}
+
+type LeadGenLeadType {
+  createdAt: String!
+  href: String!
+  id: ID!
+  lastAt: String!
+  lastText: String!
+  name: String!
+  origin: LeadGenOriginType!
+  score: String
+  stage: String!
+}
+
+type LeadGenMetricsType {
+  conversionLeads: Int!
+  conversionWindowDays: Int!
+  conversionWon: Int!
+  firstReplyP50Min: Float
+  firstReplySample: Int!
+  hotWaiting: Int!
+  newToday: Int!
+}
+
+type LeadGenOriginType {
+  kind: String!
+  platform: String!
+  refId: String
+  refKind: String
+  refLabel: String
+}
+
+type LeadGenSourceType {
+  hot: Int!
+  key: String!
+  leads: Int!
+  origin: LeadGenOriginType!
+  won: Int!
+}
+
+type LeadGenWorkbenchType {
+  comments: [LeadGenCommentType!]!
+  handoffs: [LeadGenHandoffType!]!
+  leads: [LeadGenLeadType!]!
+  leadsHidden: Int!
+  metrics: LeadGenMetricsType!
+  sources: [LeadGenSourceType!]!
+}
+
+input LeadWaitInput {
+  leadId: ID!
+}
+
+type LeadWaitType {
+  hours: Int
+  replied: Boolean!
+  show: Boolean!
+}
+
+input LessonMiningStatusInput {
+  id: ID!
+}
+
+type LessonMiningStatusType {
+  corrections: Int
+  errorCode: String
+  id: ID!
+  newCases: Int
+  proposed: Int
+  reason: String
+  status: String!
+}
+
+input ListAgentsInput {
+  module: String
+}
+
+input ListDecisionHistoryInput {
+  department: String = null
+  kind: String = "all"
+  limit: Int = 50
+}
+
+input ListOfficeMessagesInput {
+  before: OfficeThreadCursorInput = null
+  limit: Int = 50
+}
+
+input ListWorkItemsInput {
+  after: WorkItemCursorInput
+  limit: Int = 50
+  statuses: [String!] = []
+}
+
+type LocalizedTextType {
+  en: String!
+  vi: String!
+}
+
+input LoyaltyBirthdayInput {
+  enabled: Boolean!
+  note: String!
+  points: Int!
+  rewardKey: String!
+}
+
+type LoyaltyBirthdayType {
+  enabled: Boolean!
+  note: String!
+  points: Int!
+  rewardKey: String!
+}
+
+type LoyaltyBlockParameterType {
+  key: String!
+  value: String!
+}
+
+type LoyaltyBoardType {
+  campaigns: [LoyaltyCampaignViewType!]!
+  canManage: Boolean!
+  config: LoyaltyConfigType!
+  figures: LoyaltyFiguresType!
+  members: [LoyaltyMemberType!]!
+  nowIso: String!
+  program: LoyaltyProgramType
+  rewards: [LoyaltyRewardType!]!
+  stats: LoyaltyStatsType!
+}
+
+input LoyaltyCampaignInput {
+  id: ID!
+}
+
+type LoyaltyCampaignViewType {
+  createdAt: String!
+  createdBy: String!
+  draft: String!
+  draftMs: Int
+  errorCode: String
+  failed: Int!
+  finishedAt: String
+  id: ID!
+  messageDraft: String!
+  name: String!
+  queued: Int!
+  recipients: Int!
+  segment: LoyaltySegmentType!
+  sent: Int!
+  skipped: Int!
+  status: String!
+  workItemId: ID
+}
+
+input LoyaltyCategoryInput {
+  label: String!
+  match: String!
+  perThousandVnd: Float!
+}
+
+type LoyaltyCategoryType {
+  label: String!
+  match: String!
+  perThousandVnd: Float!
+}
+
+input LoyaltyConfigInput {
+  birthday: LoyaltyBirthdayInput!
+  earn: LoyaltyEarnInput!
+  expiry: LoyaltyExpiryInput!
+  promo: LoyaltyPromoInput!
+  tiers: [LoyaltyTierInput!]!
+}
+
+type LoyaltyConfigType {
+  birthday: LoyaltyBirthdayType!
+  earn: LoyaltyEarnType!
+  expiry: LoyaltyExpiryType!
+  promo: LoyaltyPromoType!
+  tiers: [LoyaltyTierType!]!
+}
+
+input LoyaltyEarnInput {
+  categories: [LoyaltyCategoryInput!]!
+  minOrderVnd: Float!
+  perThousandVnd: Float!
+  perVisit: Int!
+  trigger: String!
+}
+
+type LoyaltyEarnType {
+  categories: [LoyaltyCategoryType!]!
+  minOrderVnd: Float!
+  perThousandVnd: Float!
+  perVisit: Int!
+  trigger: String!
+}
+
+type LoyaltyExpiringType {
+  firstAt: String
+  points: Float!
+}
+
+input LoyaltyExpiryInput {
+  months: Int!
+  warnDays: Int!
+}
+
+type LoyaltyExpiryType {
+  months: Int!
+  warnDays: Int!
+}
+
+type LoyaltyFiguresType {
+  activeMembers: Int!
+  atRisk: Int!
+  members: Int!
+  pointsIssued30d: Float!
+  pointsRedeemed30d: Float!
+  redemptions30d: Int!
+}
+
+type LoyaltyLedgerType {
+  amountVnd: Float
+  by: String!
+  customerId: ID!
+  evidence: String
+  expiresAt: String
+  id: ID!
+  kind: String!
+  occurredAt: String!
+  orderId: ID
+  points: Float!
+  ref: String!
+  rewardId: ID
+  workItemId: ID
+}
+
+type LoyaltyMemberDetailType {
+  expiring: LoyaltyExpiringType!
+  ledger: [LoyaltyLedgerType!]!
+  member: LoyaltyMemberType!
+  nextTier: LoyaltyNextTierType
+  rewards: [LoyaltyRewardOptionType!]!
+  tierName: String!
+}
+
+input LoyaltyMemberInput {
+  customerId: ID!
+}
+
+type LoyaltyMemberType {
+  birthday: String
+  email: String
+  id: ID!
+  joinedAt: String!
+  lastVisitAt: String
+  lifetimeSpendVnd: Float!
+  name: String!
+  note: String!
+  phone: String
+  points: Float!
+  tierKey: String
+  visits: Int!
+}
+
+type LoyaltyNextTierType {
+  missingVnd: Float!
+  tier: LoyaltyTierType!
+}
+
+type LoyaltyProgramSettingsType {
+  config: LoyaltyConfigType!
+  program: LoyaltyProgramType
+  rewards: [LoyaltyRewardType!]!
+}
+
+type LoyaltyProgramType {
+  config: LoyaltyConfigType!
+  createdAt: String!
+  enabled: Boolean!
+  name: String!
+  slug: String!
+  workspaceId: ID!
+}
+
+input LoyaltyPromoInput {
+  batch: Int!
+  hourFrom: String!
+  hourTo: String!
+  maxPerMonth: Int!
+}
+
+type LoyaltyPromoType {
+  batch: Int!
+  hourFrom: String!
+  hourTo: String!
+  maxPerMonth: Int!
+}
+
+type LoyaltyRedeemBlockType {
+  code: String!
+  params: [LoyaltyBlockParameterType!]!
+}
+
+type LoyaltyRewardOptionType {
+  block: LoyaltyRedeemBlockType
+  reward: LoyaltyRewardType!
+}
+
+type LoyaltyRewardType {
+  active: Boolean!
+  id: ID!
+  key: String!
+  kind: String!
+  minTierKey: String
+  name: String!
+  note: String!
+  perCustomerLimit: Int
+  percent: Int
+  pointsCost: Int!
+  stock: Int
+  valueVnd: Float!
+}
+
+type LoyaltySampleMemberType {
+  id: ID!
+  name: String!
+  tierKey: String
+}
+
+input LoyaltySegmentInput {
+  birthdayThisMonth: Boolean!
+  inactiveDays: Int!
+  minSpendVnd: Float!
+  tiers: [String!]!
+}
+
+type LoyaltySegmentType {
+  birthdayThisMonth: Boolean!
+  inactiveDays: Int!
+  minSpendVnd: Float!
+  tiers: [String!]!
+}
+
+type LoyaltyStatsType {
+  active90d: Int!
+  birthdaysThisMonth: Int!
+  earned30d: Float!
+  expired30d: Float!
+  members: Int!
+  pointsOutstanding: Float!
+  promosSent30d: Int!
+  redeemed30d: Float!
+  redemptions30d: Int!
+  rewardValue30d: Float!
+  spend30d: Float!
+  tierCounts: [LoyaltyTierCountType!]!
+}
+
+type LoyaltyTierCountType {
+  count: Int!
+  key: String!
+  name: String!
+}
+
+input LoyaltyTierInput {
+  benefit: String!
+  key: String!
+  minSpendVnd: Float!
+  multiplier: Float!
+  name: String!
+  winbackDays: Int!
+}
+
+type LoyaltyTierType {
+  benefit: String!
+  key: String!
+  minSpendVnd: Float!
+  multiplier: Float!
+  name: String!
+  winbackDays: Int!
+}
+
+type ManualEvidenceType {
+  duplicate: Boolean!
+}
+
+input MarkBookingNoShowInput {
+  id: ID!
+}
+
+type MarkBookingNoShowType {
+  feeDue: Boolean!
+  status: String!
+}
+
+type MemberListingType {
+  displayName: String!
+  email: String!
+  lastSignInAt: String
+  role: String!
+  staffId: ID
+  status: String!
+  userId: ID!
+  workspaceId: ID!
+}
+
+input MemberRefInput {
+  userId: ID!
 }
 
 type MemberType {
@@ -393,324 +2660,1557 @@ type MembershipType {
   workspace: WorkspaceType!
 }
 
-input MoveContentItemInput {
+type MetaAppObjectType {
+  callbackUrl: String!
+  fields: [String!]!
+  missing: [String!]!
+  urlMatches: Boolean!
+}
+
+type MetaAuthorizationType {
+  connectionId: ID!
+  url: String!
+}
+
+type MetaCheckType {
+  appInstagram: MetaAppObjectType
+  appKnown: Boolean!
+  appPage: MetaAppObjectType
+  igUsername: String!
+  localOnly: Boolean!
+  ok: Boolean!
+  pageId: String!
+  pageName: String!
+  pageSubscription: MetaPageSubscriptionType!
+  redirectUri: String!
+  repaired: Boolean!
+  tokenOk: Boolean!
+  verifyTokenSet: Boolean!
+  wantInstagram: [String!]!
+  wantPage: [String!]!
+  webhookUrl: String!
+}
+
+type MetaPageOptionType {
+  category: String!
   id: ID!
-  scheduledAt: String!
+  igId: String!
+  igUsername: String!
+  name: String!
+}
+
+type MetaPageSubscriptionType {
+  fields: [String!]!
+  missing: [String!]!
+  subscribed: Boolean!
+}
+
+type MetaWizardConnectionType {
+  agentIds: [ID!]!
+  configured: Boolean!
+  firstEvent: FirstEventType
+  id: ID!
+  igId: String!
+  igUsername: String!
+  name: String!
+  pageId: String!
+  pageName: String!
+  pages: [MetaPageOptionType!]!
+  status: String!
+}
+
+type MissingRequirementType {
+  key: String!
+  kind: String!
+  label: LocalizedTextType!
+}
+
+type ModuleAcceptedCommandType {
+  action: String!
+  command: String!
+  description: ModuleBilingualType!
+  requiredFields: [String!]!
+  subjectType: String!
+}
+
+type ModuleAgentType {
+  capabilities: ModuleBilingualListType!
+  handle: String!
+  instructions: ModuleBilingualType!
+  name: String!
+  role: ModuleBilingualType!
+  summary: ModuleBilingualType!
+}
+
+type ModuleAuthorityActionType {
+  action: String!
+  amountLimit: Boolean!
+  label: ModuleBilingualType!
+  limitVnd: Float
+  maxMode: String
+  mode: String!
+  next: [String!]!
+  note: String!
+  requiredFields: [String!]!
+}
+
+type ModuleBilingualListType {
+  en: [String!]!
+  vi: [String!]!
+}
+
+type ModuleBilingualType {
+  en: String!
+  vi: String!
+}
+
+type ModuleCategoryType {
+  key: String!
+  label: ModuleBilingualType!
+}
+
+type ModuleDefinitionType {
+  accepts: [ModuleAcceptedCommandType!]!
+  agent: ModuleAgentType!
+  audience: String!
+  authorityActions: [ModuleAuthorityActionType!]!
+  available: Boolean!
+  category: String!
+  connectionProviders: [String!]!
+  defaultOperatingMode: String!
+  description: ModuleBilingualType!
+  gates: [ModuleGateType!]!
+  glyph: String!
+  icon: String!
+  includedWithWorkspace: Boolean!
+  key: String!
+  knowledgeFolder: String!
+  mascot: String!
+  multiInstance: Boolean!
+  name: ModuleBilingualType!
+  order: Int!
+  points: ModuleBilingualListType!
+  purpose: String!
+  requires: ModuleRequirementsType!
+  settingsExtras: String
+  shortName: ModuleBilingualType!
+  status: String!
+  workbench: String
+}
+
+type ModuleGateType {
+  hint_en: String!
+  hint_vi: String!
+  key: String!
+  label_en: String!
+  label_vi: String!
+  writes: [ModuleGateWriteType!]
+}
+
+type ModuleGateWriteType {
+  action: String
+  attributeLabel: String
+  field: String
+  kind: String!
+  scope: String
+  subjectType: String
+}
+
+input ModuleKeyInput {
+  key: String!
+}
+
+type ModuleRequirementsType {
+  capabilities: [String!]!
+  connections: [String!]!
+}
+
+type ModulesCatalogType {
+  categories: [ModuleCategoryType!]!
+  modules: [ModuleDefinitionType!]!
+}
+
+input MoveBookingInput {
+  force: Boolean!
+  id: ID!
+  resourceId: ID!
+  startAt: String!
+}
+
+type MoveBookingType {
+  id: ID!
 }
 
 type Mutation {
-  applyContentCadencePresets: SavedContentRowsType!
-  applyContentPillarPresets: SavedContentRowsType!
-  approveVideoProject(input: ApproveVideoProjectInput!): VideoProjectType!
-  archiveVideoProject(input: ArchiveVideoProjectInput!): VideoProjectType!
-  createContentItem(input: CreateContentItemInput!): ContentItemType!
-  createVideoMediaUpload(input: CreateVideoMediaUploadInput!): VideoMediaUploadType!
-  createVideoProject(input: CreateVideoProjectInput!): VideoProjectType!
+  acceptInvite(input: InviteTokenInput!): AcceptInviteType!
+  addBooking(input: AddBookingInput!): AddBookingType!
+  addLoyaltyPresetRewards: AddLoyaltyPresetRewardsType!
+  adjustLoyaltyPoints(input: AdjustLoyaltyPointsInput!): AdjustLoyaltyPointsType!
+  adminExtendSubscription(input: AdminExtendSubscriptionInput!): AdminSubscriptionExtendedType!
+  adminResendWorkspaceInvite(input: AdminResendWorkspaceInviteInput!): AdminInviteResentType!
+  adminSetWorkspacePlan(input: AdminSetWorkspacePlanInput!): AdminPlanSetType!
+  adminSetWorkspaceStatus(input: AdminSetWorkspaceStatusInput!): AdminStatusSetType!
+  approveLeadGenComment(input: ApproveLeadGenCommentInput!): LeadGenCommentStatusType!
+  authorizeGoogle(input: AuthorizeGoogleInput!): AuthorizeUrlType!
+  authorizeMeta(input: AuthorizeMetaInput!): MetaAuthorizationType!
+  authorizeZalo(input: AuthorizeZaloInput!): ZaloAuthorizationType!
+  cancelBooking(input: CancelBookingInput!): CancelBookingType!
+  cancelOfficeCommand(input: OfficeCandidateIdInput!): OfficeAckType!
+  changeMemberRole(input: ChangeMemberRoleInput!): Boolean!
+  checkConnection(input: CheckConnectionInput!): ConnectionCheckType!
+  checkInBooking(input: CheckInBookingInput!): CheckInBookingType!
+  checkMeta(input: CheckMetaInput!): MetaCheckType!
+  chooseMetaPage(input: ChooseMetaPageInput!): MetaWizardConnectionType!
+  completeBooking(input: CompleteBookingInput!): CompleteBookingType!
+  confirmBooking(input: ConfirmBookingInput!): ConfirmBookingType!
+  confirmOfficeCommand(input: OfficeCandidateIdInput!): OfficeConfirmResultType!
+  connectTelegram(input: ConnectTelegramInput!): TelegramConnectedType!
+  copyInviteLink(input: InviteRefInput!): InviteResultType!
+  createAccountingAdjustment(input: CreateAccountingAdjustmentInput!): CreateAccountingAdjustmentType!
+  createAgent(input: CreateAgentInput!): AgentSummaryType!
+  createApiKey(input: CreateApiKeyInput!): CreatedApiKeyType!
+  createInvite(input: CreateInviteInput!): InviteResultType!
+  createKnowledgeUpload(input: CreateKnowledgeUploadInput!): UploadAddressType!
+  createResponsibility(input: CreateResponsibilityInput!): ResponsibilityType!
   createWorkspace(input: CreateWorkspaceInput!): CreateWorkspaceType!
-  duplicateVideoProject(input: DuplicateVideoProjectInput!): VideoProjectType!
-  markContentPublished(input: MarkContentPublishedInput!): MarkContentPublishedType!
-  markVideoPublished(input: MarkVideoPublishedInput!): VideoProjectType!
-  moveContentItem(input: MoveContentItemInput!): ContentItemType!
-  requestContentDraft(input: RequestContentDraftInput!): ContentAiRequestedType!
-  requestContentMediaUpload(input: RequestContentMediaUploadInput!): ContentMediaUploadType!
-  requestContentMonthPlan(input: RequestContentMonthPlanInput!): ContentAiRequestedType!
-  requestContentQuickDraft(input: RequestContentQuickDraftInput!): ContentAiRequestedType!
-  requestVideoRender(input: RequestVideoRenderInput!): RequestVideoRenderType!
-  requestVideoScript(input: RequestVideoScriptInput!): RequestVideoScriptType!
-  saveContentBrand(input: SaveContentBrandInput!): ContentBrandSettingsType!
-  saveContentCadence(input: SaveContentCadenceInput!): SavedContentRowsType!
-  saveContentItem(input: SaveContentItemInput!): ContentItemType!
-  saveContentPillars(input: SaveContentPillarsInput!): SavedContentRowsType!
-  saveVideoBrand(input: SaveVideoBrandInput!): VideoBrandType!
-  setContentAutomation(input: SetContentAutomationInput!): ContentBrandSettingsType!
-  shareVideoProject(input: ShareVideoProjectInput!): VideoShareType!
-  submitContentForApproval(input: SubmitContentForApprovalInput!): SubmitContentForApprovalType!
-  transitionContentItem(input: TransitionContentItemInput!): ContentItemIdType!
-  updateVideoProject(input: UpdateVideoProjectInput!): VideoProjectType!
+  decideBrainFact(input: DecideBrainFactInput!): BrainFactType!
+  decideBrainLesson(input: DecideBrainLessonInput!): BrainLessonType!
+  decideExecution(input: DecideExecutionInput!): ApprovalExecutionType!
+  decideWorkItem(input: DecideWorkItemInput!): WorkItemType!
+  deleteConnection(input: DeleteConnectionInput!): Boolean!
+  deleteKnowledgeSource(input: DeleteKnowledgeSourceInput!): Boolean!
+  disconnectConnection(input: DisconnectConnectionInput!): Boolean!
+  dismissKnowledgeGap(input: DismissKnowledgeGapInput!): Boolean!
+  draftLoyaltyCampaign(input: DraftCampaignInput!): DraftCampaignType!
+  emitAutomationEvent(input: EmitAutomationEventInput!): Boolean!
+  enqueueKnowledgeSource(input: EnqueueKnowledgeSourceInput!): SourceRefType!
+  finishWebhookConnection(input: FinishWebhookConnectionInput!): Boolean!
+  grantAgentConnection(input: GrantAgentConnectionInput!): AgentAckType!
+  keepCurrentBrainFact(input: KeepCurrentBrainFactInput!): Int!
+  maintainBrain: Boolean!
+  markBookingNoShow(input: MarkBookingNoShowInput!): MarkBookingNoShowType!
+  moveBooking(input: MoveBookingInput!): MoveBookingType!
+  postOfficeMessage(input: PostOfficeMessageInput!): OfficeMessageType!
+  previewLoyaltySegment(input: PreviewLoyaltySegmentInput!): PreviewLoyaltySegmentType!
+  proposeAutomationBody(input: TemplateKeyInput!): BodyProposalType!
+  proposeOfficeCommand(input: ProposeOfficeCommandInput!): OfficeProposeOutcomeType!
+  recordManualEvidence(input: RecordManualEvidenceInput!): ManualEvidenceType!
+  redeemLoyaltyReward(input: RedeemLoyaltyRewardInput!): RedeemLoyaltyRewardType!
+  reembedKnowledge: Boolean!
+  reindexKnowledgeSource(input: ReindexKnowledgeSourceInput!): SourceRefType!
+  removeBookingException(input: RemoveBookingExceptionInput!): RemoveBookingExceptionType!
+  removeBookingResource(input: RemoveBookingResourceInput!): RemoveBookingResourceType!
+  removeBookingService(input: RemoveBookingServiceInput!): RemoveBookingServiceType!
+  removeBookingWaitlistEntry(input: RemoveBookingWaitlistEntryInput!): RemoveBookingWaitlistEntryType!
+  removeLoyaltyReward(input: RemoveLoyaltyRewardInput!): RemoveLoyaltyRewardType!
+  removeMember(input: MemberRefInput!): Boolean!
+  renameAgent(input: RenameAgentInput!): AgentAckType!
+  requestAgentGeneration(input: RequestAgentGenerationInput!): AgentGenerationRequestedType!
+  requestAgentSync(input: RequestAgentSyncInput!): AgentAckType!
+  requestChatAnswer(input: RequestChatAnswerInput!): ChatReplyProgressType!
+  requestChatReply(input: RequestChatReplyInput!): ChatReplyProgressType!
+  requestLessonMining(input: RequestLessonMiningInput!): BrainCommandRefType!
+  requestLoyaltyCode(input: RequestLoyaltyCodeInput!): RequestLoyaltyCodeType!
+  requestPaymentOrder(input: RequestPaymentOrderInput!): RequestPaymentOrderType!
+  requestPublicBooking(input: RequestPublicBookingInput!): RequestPublicBookingType!
+  resendInvite(input: InviteRefInput!): InviteResultType!
+  retryKnowledgeSource(input: RetryKnowledgeSourceInput!): SourceRefType!
+  returnZaloAuthorization(input: ReturnZaloAuthorizationInput!): ZaloWizardConnectionType!
+  revealSepayKey(input: RevealSepayKeyInput!): SepayKeyType!
+  revealWebhookConnection(input: RevealWebhookConnectionInput!): WebhookViewType!
+  revokeAgentConnection(input: RevokeAgentConnectionInput!): AgentAckType!
+  revokeApiKey(input: RevokeApiKeyInput!): ApiKeyType!
+  revokeInvite(input: InviteRefInput!): Boolean!
+  revokeSession(input: RevokeSessionInput!): Boolean!
+  runAutomationNow(input: TemplateKeyInput!): Boolean!
+  runFlow(input: RunFlowInput!): RunFlowType!
+  saveAuthorityRule(input: SaveAuthorityRuleInput!): AuthorityRuleType!
+  saveBookingException(input: SaveBookingExceptionInput!): SaveBookingExceptionType!
+  saveBookingHours(input: SaveBookingHoursInput!): SaveBookingHoursType!
+  saveBookingPolicy(input: SaveBookingPolicyInput!): SaveBookingPolicyType!
+  saveBookingPublicPage(input: SaveBookingPublicPageInput!): SaveBookingPublicPageType!
+  saveBookingResource(input: SaveBookingResourceInput!): SaveBookingResourceType!
+  saveBookingService(input: SaveBookingServiceInput!): SaveBookingServiceType!
+  saveBrainFact(input: SaveBrainFactInput!): SavedFactType!
+  saveBrainLesson(input: SaveBrainLessonInput!): BrainLessonType!
+  saveLoyaltyProgram(input: SaveLoyaltyProgramInput!): LoyaltyProgramType!
+  saveLoyaltyReward(input: SaveLoyaltyRewardInput!): LoyaltyRewardType!
+  saveProviderKeys(input: SaveProviderKeysInput!): ProviderKeysResultType!
+  saveZaloOaSecret(input: SaveZaloOaSecretInput!): ZaloWizardConnectionType!
+  sendAgentChatMessage(input: SendAgentChatMessageInput!): QueuedAgentChatTurnType!
+  sendAgentCommand(input: SendAgentCommandInput!): AgentCommandResultType!
+  setAgentConnections(input: SetAgentConnectionsInput!): Boolean!
+  setAgentStatus(input: SetAgentStatusInput!): AgentAckType!
+  setAgentTexts(input: SetAgentTextsInput!): AgentAckType!
+  setChatHandling(input: SetChatHandlingInput!): ChatHandlingType!
+  setConnectionAgents(input: SetConnectionAgentsInput!): Boolean!
+  setConnectionGrant(input: SetConnectionGrantInput!): Boolean!
+  setKnowledgeSuggestionState(input: SetKnowledgeSuggestionStateInput!): Boolean!
+  setMemberStatus(input: SetMemberStatusInput!): Boolean!
+  simulateInbound(input: SimulateInboundInput!): SimulateInboundType!
+  startAgentChatConversation(input: StartAgentChatConversationInput!): CreatedAgentChatConversationType!
+  startMoneyConnection(input: StartMoneyConnectionInput!): WizardConnectionType!
+  startWebhookConnection(input: StartWebhookConnectionInput!): WebhookViewType!
+  startZaloConnection(input: StartZaloConnectionInput!): ZaloWizardConnectionType!
+  syncLoyaltyMembers: SyncLoyaltyMembersType!
+  takeOverAgentChatConversation(input: TakeOverAgentChatConversationInput!): AgentChatHolderType!
+  testWebhookConnection(input: TestWebhookConnectionInput!): WebhookTestResultType!
+  updateAuthority(input: UpdateAuthorityInput!): AuthorityProfileType!
+  updateAutomationPipeline(input: UpdateAutomationPipelineInput!): AutomationCardType!
+  updateKnowledgeSource(input: UpdateKnowledgeSourceInput!): Boolean!
+  updateLoyaltyMember(input: UpdateLoyaltyMemberInput!): UpdateLoyaltyMemberType!
+  updateMoneyConnection(input: UpdateMoneyConnectionInput!): WizardConnectionType!
+  updateProfile(input: UpdateProfileInput!): Boolean!
+  updateResponsibilityStatus(input: UpdateResponsibilityStatusInput!): ResponsibilityType!
+  updateWebhookEvents(input: UpdateWebhookEventsInput!): WebhookEventsType!
+  verifyLoyaltyCode(input: VerifyLoyaltyCodeInput!): VerifyLoyaltyCodeType!
+  wantConnector(input: WantConnectorInput!): Boolean!
 }
 
-type Query {
-  contentActor: ContentActorType!
-  contentAiStatus(input: GetContentAiStatusInput!): ContentAiStatusType!
-  contentBrandMaterial: ContentBrandMaterialType!
-  contentConfiguration: ContentConfigurationType!
-  contentDraftingBlocked: Boolean!
-  contentFigures: ContentFiguresType!
-  contentItem(input: ContentItemInput!): ContentItemType!
-  contentItems(input: ContentItemsInput): [ContentItemType!]!
-  contentMedia(input: ContentMediaInput!): ContentMediaType!
-  contentMediaLibrary(input: ContentMediaLibraryInput!): [ContentMediaRefType!]!
-  contentRecentTitles(input: GetRecentTitlesInput!): [String!]!
-  contentWorkbench: ContentWorkbenchType!
-  myWorkspaces: [MembershipType!]!
-  videoBrand: VideoBrandType!
-  videoFigures: VideoFiguresType!
-  videoMedia: [VideoMediaType!]!
-  videoProject(input: GetVideoProjectInput!): VideoProjectType!
-  videoProjects(input: ListVideoProjectsInput!): [VideoProjectType!]!
-  videoRenderStatus(input: VideoRenderStatusInput!): VideoRenderStatusType!
-  videoScope: VideoScopeType!
-  videoScriptStatus(input: VideoScriptStatusInput!): VideoScriptStatusType!
-  videoSources: [VideoSourceType!]!
-}
-
-input RequestContentDraftInput {
-  hint: String
-  id: String!
-}
-
-input RequestContentMediaUploadInput {
-  contentType: String!
+type MyAccountType {
+  email: String!
   name: String!
-  sizeBytes: Int!
+  providers: [String!]!
+  sessions: [DeviceSessionType!]!
 }
 
-input RequestContentMonthPlanInput {
-  month: String!
+input NewResponsibilityInput {
+  due_at: String = null
+  lead_id: ID!
+  next_action: String!
+  owner: String!
+  title: String!
 }
 
-input RequestContentQuickDraftInput {
-  channels: [String!]!
-  topic: String!
-}
-
-input RequestVideoRenderInput {
-  projectId: ID!
-}
-
-type RequestVideoRenderType {
-  id: ID!
-  projectId: ID!
-  renderId: ID!
-  status: String!
-}
-
-input RequestVideoScriptInput {
-  projectId: String!
-}
-
-type RequestVideoScriptType {
-  id: String!
-  projectId: String!
-  status: String!
-}
-
-input SaveContentBrandInput {
-  avoid: String!
-  brandVoice: String!
-  cta: String!
-  hashtags: String!
-}
-
-input SaveContentCadenceInput {
-  rows: [ContentCadenceInput!]!
-}
-
-input SaveContentItemInput {
-  brief: String
-  channels: [String!]
-  hashtags: [String!]
-  id: ID!
-  links: [ContentLinkInput!]
-  media: [ContentMediaRefInput!]
-  pillarId: ID
-  scheduledAt: String
-  title: String
-  variants: [ContentVariantInput!]
-}
-
-input SaveContentPillarsInput {
-  rows: [ContentPillarInput!]!
-}
-
-input SaveVideoBrandInput {
-  logoPath: String
-  musicTrack: String
-  primary: String!
-  secondary: String!
-  shopName: String!
-  voice: String!
-}
-
-type SavedContentRowsType {
-  count: Int!
-}
-
-input SetContentAutomationInput {
-  key: String!
-  on: Boolean!
-}
-
-input ShareVideoProjectInput {
-  projectId: ID!
-}
-
-input SubmitContentForApprovalInput {
-  id: ID!
-}
-
-type SubmitContentForApprovalType {
-  id: ID!
-  status: String!
-  workItemId: ID!
-}
-
-input TransitionContentItemInput {
+type NivoEntryType {
+  body: String!
   id: ID!
   kind: String!
-}
-
-input UpdateVideoProjectInput {
-  aspect: String
-  goal: String
-  inputs: VideoInputsInput
-  projectId: ID!
-  script: [VideoSceneInput!]
-  targetSeconds: Int
-  title: String
-}
-
-type VideoBrandType {
-  logoPath: String
-  musicTrack: String
-  primary: String!
-  secondary: String!
-  shopName: String!
-  voice: String!
-}
-
-type VideoFiguresType {
-  approved: Int!
-  credits30: Int!
-  published30: Int!
-  readyToPublish: Int!
-  rendering: Int!
-  scripting: Int!
-}
-
-input VideoInputsInput {
-  auto: Boolean!
-  media: [String!]!
-  notes: String!
-  sourceIds: [ID!]!
-}
-
-type VideoInputsType {
-  auto: Boolean!
-  media: [String!]!
-  notes: String!
-  sourceIds: [ID!]!
-}
-
-type VideoMediaType {
-  kind: String!
-  name: String!
-  path: String!
-  url: String
-}
-
-type VideoMediaUploadType {
-  path: String!
-  signedUrl: String!
-  token: String!
-}
-
-type VideoProjectType {
-  approvedAt: String
-  approvedByName: String
-  aspect: String!
-  createdAt: String!
-  goal: String!
-  id: ID!
-  inputs: VideoInputsType!
-  lastErrorCode: String
-  publishedAt: String
-  render: VideoRenderType
-  renderCount: Int!
-  script: [VideoSceneType!]!
-  scriptMs: Int
-  status: String!
-  targetSeconds: Int!
+  module: String!
+  slug: String!
   title: String!
   updatedAt: String!
   version: Int!
 }
 
-input VideoRenderStatusInput {
+type OfficeAckType {
+  ok: Boolean!
+}
+
+type OfficeApprovalType {
+  agentName: String
+  agent_id: ID
+  assignedStaffId: ID
+  channel: String!
+  created_at: String!
+  decided_at: String
+  decided_by: String
+  draft: String!
+  id: ID!
+  kind: String!
+  leadId: ID
+  leadName: String
+  nextAction: String!
+  responsibility_id: ID!
+  status: String!
+  work_item_id: ID
+}
+
+input OfficeCandidateIdInput {
+  candidateId: ID!
+}
+
+type OfficeCandidateType {
+  command: String!
+  created_at: String!
+  id: ID!
+  message_id: ID!
+  module: String!
+  payload: JsonObject!
+  refusal_detail: String
+  shown: [OfficeShownRowType!]!
+  status: String!
+  summary: String!
+  work_item_id: ID
+}
+
+type OfficeConfirmResultType {
+  created: Boolean!
+  module: String!
+  workItemId: ID!
+}
+
+type OfficeMessagePageType {
+  messages: [OfficeMessageType!]!
+  next: OfficeThreadCursorType
+}
+
+type OfficeMessageType {
+  agent_id: ID
+  author_kind: String!
+  author_name: String!
+  body: String!
+  created_at: String!
+  id: ID!
+  lead_id: ID
+  staff_id: ID
+  work_item_id: ID
+}
+
+type OfficeProposeOutcomeType {
+  body: String
+  candidate: OfficeCandidateType
+  kind: String!
+}
+
+type OfficeShownRowType {
+  key: String!
+  label: String!
+  value: String!
+}
+
+input OfficeThreadCursorInput {
+  createdAt: String!
   id: ID!
 }
 
-type VideoRenderStatusType {
-  durationMs: Int
+type OfficeThreadCursorType {
+  createdAt: String!
+  id: ID!
+}
+
+input PaymentOrderInput {
+  id: ID!
+}
+
+input PaymentOrderRequestStatusInput {
+  id: ID!
+}
+
+type PaymentOrderRequestStatusType {
   errorCode: String
   id: ID!
-  outputPath: String
-  posterPath: String
-  progress: Int!
-  sizeBytes: Float
-  stage: String
+  resultId: ID
   status: String!
 }
 
-type VideoRenderType {
-  downloadUrl: String
-  durationMs: Int
-  errorCode: String
+type PendingInviteType {
+  createdAt: String!
+  email: String!
+  expiresAt: String!
   id: ID!
-  posterUrl: String
-  progress: Int!
-  sizeBytes: Int
-  stage: String
+  role: String!
+  staffId: ID
+}
+
+type PickedFolderType {
+  empty: Boolean!
+  files: [DriveFileType!]!
+  name: String!
+  truncated: Boolean!
+}
+
+input PostOfficeMessageInput {
+  body: String!
+}
+
+input PreviewLoyaltySegmentInput {
+  segment: LoyaltySegmentInput!
+}
+
+type PreviewLoyaltySegmentType {
+  reachable: Int!
+  sample: [LoyaltySampleMemberType!]!
+  total: Int!
+}
+
+type PreviewSampleType {
+  neutral: JsonObject!
+  variables: JsonObject!
+}
+
+type PromoChatbotStateType {
+  agentId: ID
+  handle: String
+  hasChatbot: Boolean!
+  name: String
+}
+
+type PromoOnboardingStepType {
+  done: Boolean!
+  href: String!
+  key: String!
+}
+
+type PromoStateType {
+  chatbotAgentId: ID
+  hasChatbot: Boolean!
+  isFoundingMember: Boolean!
+  onboarding: [PromoOnboardingStepType!]!
+  websiteLeadStats: WebsiteLeadStatsType!
+}
+
+type ProposalCandidateType {
+  amount_vnd: Float!
+  id: ID!
+  label: String!
+}
+
+type ProposalType {
+  amount_vnd: Float
+  candidates: [ProposalCandidateType!]
+  confidence: Float
+  draft: String
+  fields: JsonObject!
+  outcome: String
+  summary: String!
+}
+
+input ProposeOfficeCommandInput {
+  messageId: ID!
+}
+
+input ProviderKeysInput {
+  apiKey: String
+  checksumKey: String
+  clientId: String
+  secureKey: String
+}
+
+type ProviderKeysResultType {
+  confirmed: Boolean!
+  localOnly: Boolean!
+}
+
+input PublicBookingPageInput {
+  slug: String!
+}
+
+type PublicBookingPageType {
+  address: String!
+  note: String!
+  services: [PublicBookingServiceType!]!
+  shop: String!
+  slug: String!
+  timezone: String!
+}
+
+type PublicBookingServiceType {
+  description: String!
+  durationMin: Int!
+  id: ID!
+  name: String!
+  priceVnd: Float
+}
+
+input PublicBookingTimesInput {
+  date: String!
+  party: Int!
+  serviceId: String!
+  slug: String!
+}
+
+type PublicBookingTimesType {
+  times: [String!]!
+}
+
+type PublicLoyaltyExpiringType {
+  firstAt: String
+  points: Int!
+}
+
+type PublicLoyaltyNextTierType {
+  missingVnd: Float!
+  tier: PublicLoyaltyTierType!
+}
+
+input PublicLoyaltyPageInput {
+  slug: String!
+}
+
+type PublicLoyaltyPageType {
+  name: String!
+  shop: String!
+  slug: String!
+}
+
+type PublicLoyaltyPointsType {
+  expiring: PublicLoyaltyExpiringType!
+  name: String!
+  nextTier: PublicLoyaltyNextTierType
+  points: Int!
+  rewards: [PublicLoyaltyRewardType!]!
+  shop: String!
+  tierName: String!
+}
+
+type PublicLoyaltyRewardType {
+  canRedeem: Boolean!
+  name: String!
+  note: String!
+  pointsCost: Int!
+}
+
+type PublicLoyaltyTierType {
+  benefit: String!
+  key: String!
+  minSpendVnd: Float!
+  multiplier: Float!
+  name: String!
+  winbackDays: Int!
+}
+
+type Query {
+  accountingBook: AccountingBookType!
+  accountingLedger: [AccountingLedgerEntryType!]!
+  accountingWorkbench: AccountingWorkbenchType!
+  adminHealth: AdminHealthType!
+  adminSession: AdminSessionType!
+  adminWorkspace(input: AdminWorkspaceInput!): AdminWorkspaceDetailType!
+  adminWorkspaces(input: AdminWorkspacesInput!): AdminWorkspaceListType!
+  agentChatConversations(input: AgentChatConversationsInput!): [AgentChatConversationType!]!
+  agentChatMessages(input: AgentChatMessagesInput!): [AgentChatMessageType!]!
+  agentChatPage(input: AgentChatPageInput!): AgentChatPageType!
+  agentChatTurnStatus(input: AgentChatTurnStatusInput!): AgentChatTurnStatusType!
+  agentConnections(input: AgentIdInput!): [AgentConnectionType!]!
+  agentDashboard(input: AgentDashboardInput!): AgentDashboardType!
+  agentEngineStatus: AgentEngineStatusType!
+  agentGenerationStatus(input: AgentGenerationIdInput!): AgentGenerationStatusType!
+  agents(input: ListAgentsInput!): [AgentSummaryType!]!
+  apiKeys: [ApiKeyType!]!
+  askKnowledge(input: AskKnowledgeInput!): [RetrievedPassageType!]!
+  authority: AuthoritySheetType!
+  automationGoogleAccounts: [AutomationGoogleAccountType!]!
+  automationRuns(input: AutomationRunsInput!): [AutomationRunType!]!
+  automationSuggestions(input: AutomationSuggestionsInput!): [AutomationSuggestionType!]!
+  automations: AutomationsOverviewType!
+  billingBankAccount: BillingBankAccountType!
+  billingPlan(input: BillingPlanInput!): BillingPlanType
+  billingPlans: [BillingPlanType!]!
+  billingReviewTransactions(input: BillingReviewTransactionsInput!): [BillingReviewTransactionType!]!
+  billingWorkspace: BillingWorkspaceType!
+  billingWorkspaces: [BillingWorkspaceType!]!
+  bookingBoard(input: BookingBoardInput): BookingBoardType!
+  brain: BrainType!
+  chatAnswerStatus(input: ChatAnswerStatusInput!): ChatReplyProgressType!
+  chatReplyStatus(input: ChatReplyStatusInput!): ChatReplyProgressType!
+  chatbotGaps: ChatbotGapsType!
+  chatbotOverview(input: ChatbotOverviewInput!): ChatbotOverviewType!
+  chatbotThread(input: ChatbotThreadInput!): ChatbotThreadType!
+  connectionAgents: [ConnectionAgentType!]!
+  connectionFirstEvent(input: GetConnectionFirstEventInput!): FirstEventStateType!
+  connections: [ConnectionType!]!
+  creditPacks: [CreditPackType!]!
+  creditQuotaStatus: CreditQuotaStatusType
+  creditRecentCostUsd(input: CreditRecentCostInput!): Float!
+  creditTopupLots: [CreditTopupLotType!]!
+  creditUsageSummary: CreditUsageSummaryType!
+  dashboard: DashboardType!
+  decisionHistory(input: ListDecisionHistoryInput!): [DecisionRecordType!]!
+  driveLinkedFolder(input: DriveLinkedFolderInput!): DriveFolderType!
+  drivePickedFolder(input: DrivePickedFolderInput!): PickedFolderType!
+  foundingMember: Boolean!
+  googleConnectionState: GoogleStateType!
+  inboundEvents(input: InboundEventsInput!): [InboundEventType!]!
+  inboundSimulationStatus(input: InboundSimulationStatusInput!): InboundSimulationStatusType!
+  invitePreview(input: InviteTokenInput!): InvitePreviewType!
+  knowledgeSource(input: KnowledgeSourceInput!): KnowledgeSourceDetailType!
+  knowledgeSources(input: KnowledgeSourcesInput!): [KnowledgeSourceType!]!
+  knowledgeSuggestions: KnowledgeSuggestionContextType!
+  leadGenCommentStatus(input: ReadLeadGenCommentStatusInput!): LeadGenCommentStatusType!
+  leadGenWorkbench(input: ReadLeadGenWorkbenchInput!): LeadGenWorkbenchType!
+  leadWait(input: LeadWaitInput!): LeadWaitType!
+  lessonMiningStatus(input: LessonMiningStatusInput!): LessonMiningStatusType!
+  loyaltyBoard: LoyaltyBoardType!
+  loyaltyCampaign(input: LoyaltyCampaignInput!): LoyaltyCampaignViewType!
+  loyaltyMember(input: LoyaltyMemberInput!): LoyaltyMemberDetailType!
+  loyaltyProgram: LoyaltyProgramSettingsType!
+  metaConnection(input: GetMetaConnectionInput!): MetaWizardConnectionType!
+  moduleDefinition(input: ModuleKeyInput!): ModuleDefinitionType!
+  modulesCatalog: ModulesCatalogType!
+  moneyConnection(input: GetMoneyConnectionInput!): WizardConnectionType!
+  myAccount: MyAccountType!
+  myWorkspaces: [MembershipType!]!
+  nivoKnowledge: [NivoEntryType!]!
+  officeCommandCandidates: [OfficeCandidateType!]!
+  officeDecidedApprovals: [OfficeApprovalType!]!
+  officeMessages(input: ListOfficeMessagesInput!): OfficeMessagePageType!
+  officePendingApprovals: [OfficeApprovalType!]!
+  openPlanPaymentOrder: BillingPaymentOrderType
+  paymentOrder(input: PaymentOrderInput!): BillingPaymentOrderType
+  paymentOrderRequestStatus(input: PaymentOrderRequestStatusInput!): PaymentOrderRequestStatusType
+  paymentOrders: [BillingPaymentOrderType!]!
+  promoChatbotState: PromoChatbotStateType!
+  promoState: PromoStateType!
+  publicBookingPage(input: PublicBookingPageInput!): PublicBookingPageType!
+  publicBookingTimes(input: PublicBookingTimesInput!): PublicBookingTimesType!
+  publicLoyaltyPage(input: PublicLoyaltyPageInput!): PublicLoyaltyPageType!
+  responsibilities: [ResponsibilityListingType!]!
+  salesOrder(input: SalesOrderInput!): SalesOrderType
+  salesOrders: [SalesOrderType!]!
+  workItem(input: WorkItemIdInput!): WorkItemType!
+  workItems(input: ListWorkItemsInput!): WorkItemPageType!
+  workspaceInvites: [PendingInviteType!]!
+  workspaceMembers: [MemberListingType!]!
+  workspaceShell(input: ShellWindowInput!): WorkspaceShellType!
+  workspaceStaff: [StaffOptionType!]!
+  zaloConnection(input: GetZaloConnectionInput!): ZaloWizardConnectionType!
+}
+
+type QueuedAgentChatTurnType {
+  conversationId: ID!
+  id: ID!
   status: String!
-  videoUrl: String
 }
 
-input VideoSceneInput {
-  caption: String!
-  id: String!
-  media: String
-  role: String!
-  visual: String!
-  voiceover: String!
+input ReadLeadGenCommentStatusInput {
+  workItemId: ID!
 }
 
-type VideoSceneType {
-  caption: String!
+input ReadLeadGenWorkbenchInput {
+  installationId: ID
+}
+
+input RecordManualEvidenceInput {
+  amount: Float!
+  content: String!
+  date: String!
+  note: String
+  payer: String
+}
+
+input RedeemLoyaltyRewardInput {
+  customerId: ID!
+  rewardId: ID!
+  token: String!
+}
+
+type RedeemLoyaltyRewardType {
+  code: String!
+  posted: Boolean!
+}
+
+input ReindexKnowledgeSourceInput {
+  content: String
+  sourceId: ID!
+}
+
+input RemoveBookingExceptionInput {
   id: ID!
-  media: String
-  role: String!
-  visual: String!
-  voiceover: String!
 }
 
-type VideoScopeType {
-  canEdit: Boolean!
+type RemoveBookingExceptionType {
+  id: ID!
+}
+
+input RemoveBookingResourceInput {
+  id: ID!
+}
+
+type RemoveBookingResourceType {
+  id: ID!
+}
+
+input RemoveBookingServiceInput {
+  id: ID!
+}
+
+type RemoveBookingServiceType {
+  id: ID!
+}
+
+input RemoveBookingWaitlistEntryInput {
+  id: ID!
+}
+
+type RemoveBookingWaitlistEntryType {
+  id: ID!
+}
+
+input RemoveLoyaltyRewardInput {
+  rewardId: ID!
+}
+
+type RemoveLoyaltyRewardType {
+  deleted: Boolean!
+}
+
+input RenameAgentInput {
+  agentId: ID!
+  name: String!
+}
+
+input RequestAgentGenerationInput {
+  kind: String!
+  messages: [AgentGenMessageInput!]!
+  module: String!
+  purpose: String!
+  responseFormat: String!
+  timeoutMs: Int
+}
+
+input RequestAgentSyncInput {
+  force: Boolean
+  installationId: ID
+}
+
+input RequestChatAnswerInput {
+  conversationId: ID!
+  locale: String! = "vi"
+  text: String
+  workItemId: ID!
+}
+
+input RequestChatReplyInput {
+  body: String!
+  conversationId: ID!
+  locale: String! = "vi"
+}
+
+input RequestLessonMiningInput {
+  module: String!
+}
+
+input RequestLoyaltyCodeInput {
+  phone: String!
+  slug: String!
+}
+
+type RequestLoyaltyCodeType {
+  code: String!
+}
+
+input RequestPaymentOrderInput {
+  kind: String!
+  target: String
+}
+
+type RequestPaymentOrderType {
+  id: ID!
+  status: String!
+}
+
+input RequestPublicBookingInput {
+  email: String
+  name: String!
+  note: String
+  party: Int!
+  phone: String!
+  serviceId: String!
+  slug: String!
+  start: String!
+  token: String!
+  website: String
+}
+
+type RequestPublicBookingType {
+  alternatives: [String!]!
+  bookingId: ID
+  code: String!
+  serviceName: String!
+  startIso: String!
+  state: String!
+}
+
+type ResponsibilityListingType {
+  contact_name: String!
+  created_at: String!
+  due_at: String
+  id: ID!
+  lead_id: ID!
+  next_action: String!
+  owner_agent_id: ID
+  owner_kind: String!
+  owner_name: String!
+  status: String!
+  title: String!
+  workspace_id: ID!
+}
+
+type ResponsibilityType {
+  created_at: String!
+  due_at: String
+  id: ID!
+  lead_id: ID!
+  next_action: String!
+  owner_agent_id: ID
+  owner_kind: String!
+  owner_name: String!
+  status: String!
+  title: String!
+  workspace_id: ID!
+}
+
+type RetrievedPassageType {
+  content: String!
+  id: ID!
+  kind: String!
+  layer: String!
+  module: String
+  score: Float!
+  sourceId: ID
+  title: String!
+  topic: String
+  visibility: String!
+}
+
+input RetryKnowledgeSourceInput {
+  id: ID!
+}
+
+input ReturnZaloAuthorizationInput {
+  code: String!
+  oaId: String
+  state: String!
+}
+
+input RevealSepayKeyInput {
+  connectionId: ID!
+}
+
+input RevealWebhookConnectionInput {
+  connectionId: ID!
+}
+
+input RevokeAgentConnectionInput {
+  agentId: ID!
+  connectionId: ID!
+}
+
+input RevokeApiKeyInput {
+  keyId: ID!
+}
+
+input RevokeSessionInput {
+  sessionId: ID!
+}
+
+input RunFlowInput {
+  kind: String!
+  payload: JsonObject!
+}
+
+type RunFlowType {
+  data: JsonObject!
+}
+
+type RunStepType {
+  detail: String
+  label: String!
+  status: String!
+}
+
+input SalesOrderInput {
+  id: ID!
+}
+
+type SalesOrderType {
+  amountVnd: Float
+  carrier: String
+  confirmedAt: String
+  confirmedBy: String
+  createdAt: String!
+  id: ID!
+  items: String!
+  leadId: ID
+  orderNo: String!
+  origin: String!
+  shippedAt: String
+  status: String!
+  trackingCode: String
   workspaceId: ID!
 }
 
-input VideoScriptStatusInput {
-  id: String!
+input SaveAuthorityRuleInput {
+  change: AuthorityRuleChangeInput!
 }
 
-type VideoScriptStatusType {
-  errorCode: String
-  id: String!
-  progress: Int!
-  projectId: String!
-  resultId: String
+input SaveBookingExceptionInput {
+  closed: Boolean!
+  date: String!
+  end: String!
+  note: String!
+  resourceId: ID
+  start: String!
+}
+
+type SaveBookingExceptionType {
+  id: ID!
+}
+
+input SaveBookingHoursInput {
+  resourceId: ID!
+  rows: [BookingHoursRowInput!]!
+}
+
+type SaveBookingHoursType {
+  id: ID!
+}
+
+input SaveBookingPolicyInput {
+  address: String!
+  autoConfirm: Boolean!
+  cancelWindowHours: Int!
+  depositPct: Int!
+  handoffOrder: Boolean!
+  lateCancelFeePct: Int!
+  maxAdvanceDays: Int!
+  minLeadMin: Int!
+  noShowFeeVnd: Int!
+  slotStepMin: Int!
+  timezone: String!
+}
+
+type SaveBookingPolicyType {
+  workspaceId: ID!
+}
+
+input SaveBookingPublicPageInput {
+  enabled: Boolean!
+  note: String!
+  slug: String!
+}
+
+type SaveBookingPublicPageType {
+  workspaceId: ID!
+}
+
+input SaveBookingResourceInput {
+  active: Boolean!
+  capacity: Int!
+  id: ID
+  kind: String!
+  name: String!
+  staffId: ID
+}
+
+type SaveBookingResourceType {
+  id: ID!
+}
+
+input SaveBookingServiceInput {
+  active: Boolean!
+  bufferMin: Int!
+  description: String!
+  durationMin: Int!
+  followupDays: Int
+  id: ID
+  name: String!
+  priceVnd: Int
+  resourceKind: String!
+}
+
+type SaveBookingServiceType {
+  id: ID!
+}
+
+input SaveBrainFactInput {
+  attributeLabel: String!
+  gapId: ID
+  modules: [String!]!
+  note: String
+  scope: String!
+  subjectLabel: String!
+  subjectType: String!
+  validFrom: String
+  validTo: String
+  value: String!
+}
+
+input SaveBrainLessonInput {
+  appliesWhen: String
+  body: String!
+  module: String
+  title: String!
+}
+
+input SaveLoyaltyProgramInput {
+  config: LoyaltyConfigInput
+  enabled: Boolean
+  name: String
+}
+
+input SaveLoyaltyRewardInput {
+  active: Boolean!
+  id: ID
+  key: String
+  kind: String!
+  minTierKey: String
+  name: String!
+  note: String!
+  perCustomerLimit: Int
+  percent: Int
+  pointsCost: Int!
+  stock: Int
+  valueVnd: Float!
+}
+
+input SaveProviderKeysInput {
+  connectionId: ID!
+  values: ProviderKeysInput!
+}
+
+input SaveZaloOaSecretInput {
+  connectionId: ID!
+  oaSecret: String!
+}
+
+type SavedFactType {
+  fact: BrainFactType!
+  outcome: String!
+}
+
+input SendAgentChatMessageInput {
+  body: String!
+  conversationId: ID!
+}
+
+input SendAgentCommandInput {
+  command: String!
+  fields: [FieldValueInput!]
+  leadId: ID
+  reason: String!
+  subjectId: ID
+  subjectType: String
+  to: String!
+}
+
+type SepayKeyType {
+  apiKey: String!
+  webhookUrl: String!
+}
+
+input SetAgentConnectionsInput {
+  agentId: ID!
+  connections: [ConnectionWishInput!]!
+}
+
+input SetAgentStatusInput {
+  active: Boolean!
+  agentId: ID!
+}
+
+input SetAgentTextsInput {
+  agentId: ID!
+  texts: AgentTextsInput!
+}
+
+input SetChatHandlingInput {
+  conversationId: ID!
+  locale: String! = "vi"
+  takeOver: Boolean!
+}
+
+input SetConnectionAgentsInput {
+  agents: [GrantWishInput!]!
+  connectionId: ID!
+}
+
+input SetConnectionGrantInput {
+  access: String
+  agentId: ID!
+  connectionId: ID!
+}
+
+input SetKnowledgeSuggestionStateInput {
+  key: String!
+  state: String
+}
+
+input SetMemberStatusInput {
+  status: String!
+  userId: ID!
+}
+
+type ShellAgentType {
+  id: ID!
+  module: String!
+  name: String!
   status: String!
 }
 
-type VideoShareType {
-  office: Boolean!
-  telegram: Boolean!
+type ShellApprovalType {
+  contactName: String
+  draft: String!
+  id: ID!
+  leadId: ID
+  nextAction: String
 }
 
-type VideoSourceType {
-  excerpt: String!
+type ShellExceptionType {
+  contactName: String
+  error: String
   id: ID!
-  title: String!
+  leadId: ID
+  summary: String
+}
+
+input ShellWindowInput {
+  foundingFrom: String!
+  foundingTo: String!
+}
+
+type ShopContextType {
+  hours: String!
+  shop: String!
+  tone: String!
+}
+
+input SimulateInboundInput {
+  amountVnd: Float
+  body: String
+  channel: String!
+  eventId: String
+  externalRef: String
+  items: String
+  kind: String!
+  senderContact: String
+  senderName: String!
+}
+
+type SimulateInboundType {
+  duplicate: Boolean!
+  id: ID!
+  status: String!
+}
+
+type SimulationEventType {
+  amountVnd: Float
+  duplicateCount: Int!
+  eventId: String!
+  id: ID!
+  leadId: ID
+  status: String!
+}
+
+type SimulationWorkItemType {
+  department: String!
+  id: ID!
+  status: String!
+}
+
+type SourceRefType {
+  id: ID!
+}
+
+type StaffOptionType {
+  id: ID!
+  name: String!
+  role: String!
+}
+
+input StartAgentChatConversationInput {
+  agentId: ID!
+  kind: String!
+  visitorName: String = null
+}
+
+input StartMoneyConnectionInput {
+  accountNumber: String!
+  bankCode: String!
+  environment: String!
+  holder: String!
+  name: String!
+  provider: String!
+}
+
+input StartWebhookConnectionInput {
+  events: [String!]!
+  name: String!
+  url: String!
+}
+
+input StartZaloConnectionInput {
+  appId: String!
+  appSecret: String!
+  name: String!
+}
+
+scalar StringMap
+
+type SuggestionDecisionType {
+  key: String!
+  state: String!
+}
+
+type SyncLoyaltyMembersType {
+  created: Int!
+  linked: Int!
+}
+
+input TakeOverAgentChatConversationInput {
+  conversationId: ID!
+  line: String! = ""
+  take: Boolean!
+}
+
+type TelegramConnectedType {
+  connection: ConnectionType!
+  webhookRegistered: Boolean!
+}
+
+type TemplateAuthorityType {
+  action: String
+  alwaysAsk: Boolean
+}
+
+type TemplateDefinitionType {
+  authority: TemplateAuthorityType!
+  contentMode: String!
+  defaultBody: LocalizedTextType
+  defaults: JsonObject!
+  description: LocalizedTextType!
+  executor: String!
+  guardrails: [LocalizedTextType!]!
+  icon: String!
+  key: String!
+  moduleKey: String
+  n8n: TemplateN8nType
+  name: LocalizedTextType!
+  pack: String!
+  position: Int!
+  requires: TemplateRequirementsType!
+  settings: [TemplateSettingType!]!
+  trigger: TemplateTriggerType!
+  variables: [String!]!
+  version: Int!
+}
+
+input TemplateKeyInput {
+  templateKey: String!
+}
+
+type TemplateN8nType {
+  audience: String!
+  data: [String!]
+  webhook: String!
+}
+
+type TemplateRequirementsType {
+  capabilities: [String!]!
+  channels: [String!]!
+  connections: [String!]!
+  modules: [String!]!
+}
+
+type TemplateSettingType {
+  hint: LocalizedTextType
+  key: String!
+  kind: String!
+  label: LocalizedTextType!
+  max: Float
+  maxLength: Int
+  min: Float
+  required: Boolean
+  suffix: LocalizedTextType
+}
+
+type TemplateTriggerType {
+  event: String!
+  kind: String!
+  line: LocalizedTextType!
+}
+
+input TestWebhookConnectionInput {
+  connectionId: ID!
+}
+
+type TrustType {
+  autoSend: Boolean!
+  offered: Boolean!
+  streak: Int!
+}
+
+input UpdateAuthorityInput {
+  patch: AuthorityPatchInput!
+}
+
+input UpdateAutomationPipelineInput {
+  autoSend: Boolean
+  body: String
+  dismissed: Boolean
+  enabled: Boolean
+  googleConnectionId: ID
+  templateKey: String!
+  values: JsonObject
+}
+
+input UpdateKnowledgeSourceInput {
+  module: String
+  sourceId: ID!
+  tags: [String!]
+  title: String
   topic: String
+  visibility: String
+}
+
+input UpdateLoyaltyMemberInput {
+  birthday: String
+  customerId: ID!
+  name: String
+  note: String
+}
+
+type UpdateLoyaltyMemberType {
+  updated: Boolean!
+}
+
+input UpdateMoneyConnectionInput {
+  accountNumber: String!
+  apiKey: String
+  bankCode: String!
+  connectionId: ID!
+  environment: String!
+  holder: String!
+  name: String!
+}
+
+input UpdateProfileInput {
+  name: String!
+}
+
+input UpdateResponsibilityStatusInput {
+  responsibilityId: ID!
+  status: String!
+}
+
+input UpdateWebhookEventsInput {
+  connectionId: ID!
+  events: [String!]!
+}
+
+type UploadAddressType {
+  path: String!
+  signedUrl: String!
+  token: String!
+}
+
+input VerifyLoyaltyCodeInput {
+  code: String!
+  phone: String!
+  slug: String!
+}
+
+type VerifyLoyaltyCodeType {
+  code: String!
+  points: PublicLoyaltyPointsType!
+}
+
+input WantConnectorInput {
+  connectorId: String!
+}
+
+type WebhookEventsType {
+  events: [String!]!
+}
+
+type WebhookTestResultType {
+  durationMs: Int!
+  error: String
+  ok: Boolean!
+  status: Int
+}
+
+type WebhookViewType {
+  events: [String!]!
+  host: String!
+  id: ID!
+  name: String!
+  signingSecret: String!
+}
+
+type WebsiteLeadStatsType {
+  afterHoursCount: Int!
+  avgWaitHours: Float
+  count: Int!
+}
+
+type WizardConnectionType {
+  account: String!
+  agentIds: [ID!]!
+  apiKey: String!
+  bankCode: String!
+  credentialsSaved: Boolean!
+  environment: String!
+  firstEvent: FirstEventType
+  holder: String!
+  id: ID!
+  name: String!
+  provider: String!
+  status: String!
+  webhookUrl: String!
+}
+
+input WorkEditsInput {
+  amount_vnd: Int
+  candidateId: ID
+  draft: String
+  fields: [FieldValueInput!]
+}
+
+input WorkItemCursorInput {
+  createdAt: String!
+  id: ID!
+}
+
+type WorkItemCursorType {
+  createdAt: String!
+  id: ID!
+}
+
+input WorkItemIdInput {
+  workItemId: ID!
+}
+
+type WorkItemPageType {
+  items: [WorkItemType!]!
+  next: WorkItemCursorType
+}
+
+type WorkItemType {
+  action: String!
+  assigned_staff_id: ID
+  chain_id: ID
+  completed_at: String
+  created_at: String!
+  decided_path: String
+  department: String!
+  depth: Int!
+  error: String
+  evidence_state: String!
+  execution_id: ID
+  id: ID!
+  inbound_event_id: ID
+  installation_id: ID
+  lead_id: ID
+  missing_fields: [String!]!
+  origin: String!
+  parent_id: ID
+  proposal: ProposalType!
+  reason: String
+  reasons: [String!]!
+  result: WorkResultType
+  status: String!
+  subject_id: ID
+  subject_type: String!
+  updated_at: String!
+  workspace_id: ID!
+}
+
+type WorkResultType {
+  href: String
+  summary: String!
+}
+
+type WorkspaceShellType {
+  agents: [ShellAgentType!]!
+  approvals: [ShellApprovalType!]!
+  exceptions: [ShellExceptionType!]!
+  hasChatbot: Boolean!
+  isFoundingMember: Boolean!
+  leadCount: Int!
+  openResponsibilityCount: Int!
+  pendingDecisions: Int!
 }
 
 type WorkspaceType {
@@ -720,4 +4220,22 @@ type WorkspaceType {
   name: String!
   ownerId: ID!
   status: String!
+}
+
+type ZaloAuthorizationType {
+  callbackUrl: String!
+  url: String!
+}
+
+type ZaloWizardConnectionType {
+  agentIds: [ID!]!
+  authorized: Boolean!
+  callbackUrl: String!
+  firstEvent: FirstEventType
+  id: ID!
+  name: String!
+  oaId: String!
+  oaSecretSaved: Boolean!
+  status: String!
+  webhookUrl: String!
 }

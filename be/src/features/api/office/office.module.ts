@@ -5,6 +5,7 @@ import { ListCommandCandidatesHandler } from "./application/list-command-candida
 import { ListDecidedApprovalsHandler } from "./application/list-decided-approvals.handler"
 import { ListPendingApprovalsHandler } from "./application/list-pending-approvals.handler"
 import { ListThreadMessagesHandler } from "./application/list-thread-messages.handler"
+import { PostOfficeMessageHandler } from "./application/post-office-message.handler"
 import { ProposeCommandHandler } from "./application/propose-command.handler"
 
 @Module({
@@ -15,6 +16,7 @@ import { ProposeCommandHandler } from "./application/propose-command.handler"
         ListDecidedApprovalsHandler,
         ListPendingApprovalsHandler,
         ListThreadMessagesHandler,
+        PostOfficeMessageHandler,
         ProposeCommandHandler,
     ],
 })

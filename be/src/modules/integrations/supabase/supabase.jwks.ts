@@ -23,6 +23,7 @@ export const createSupabaseAccessTokenVerifier = (options: SupabaseOptions): Ver
                 id: payload.sub,
                 role: AUDIENCE,
                 ...(typeof payload.email === "string" ? { email: payload.email } : {}),
+                ...(typeof payload.session_id === "string" ? { sessionId: payload.session_id } : {}),
             }
             return ok(principal)
         } catch (cause) {

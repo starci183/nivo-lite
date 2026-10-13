@@ -1,7 +1,14 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { CustomerMatch, LeadContact, MaybeText, NewLoyaltyCustomer } from "./loyalty-customers.contracts"
+import type {
+    CustomerMatch,
+    CustomerPatch,
+    LeadContact,
+    MaybeText,
+    NewLoyaltyCustomer,
+} from "./loyalty-customers.contracts"
+import { customerBirthday } from "./policies/customer-birthday.policy"
 import {
     INSERT_CUSTOMER,
     INSERT_CUSTOMERS_FROM_LEADS,
@@ -9,6 +16,7 @@ import {
     SELECT_CUSTOMER_BY_PHONE,
     SELECT_LEAD_CONTACTS,
     UPDATE_CUSTOMER_TIER,
+    UPDATE_CUSTOMER_PROFILE,
 } from "./persistence/loyalty-customers.sql"
 import { toCustomer, toLeadContact } from "./persistence/loyalty-customers.rows"
 import type { CustomerRow, LeadContactRow } from "./persistence/loyalty-customers.rows"
@@ -102,5 +110,18 @@ export class LoyaltyCustomersService {
             leads.map((lead) => lead.email),
         ])
         return created.length
+    }
+
+    /** Changes the profile fields of a customer within a workspace, without moving their points or tier. */
+    async updateProfile(workspaceId: string, customerId: string, patch: CustomerPatch): Promise<boolean> {
+        const rows = await this.entityManager.query<Array<{ id: string }>>(UPDATE_CUSTOMER_PROFILE, [
+            workspaceId,
+            customerId,
+            patch.name?.trim().slice(0, 120) || null,
+            patch.birthday !== undefined,
+            customerBirthday(patch.birthday ?? null),
+            patch.note?.trim().slice(0, 500) ?? null,
+        ])
+        return rows.length > 0
     }
 }

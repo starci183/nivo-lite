@@ -27,3 +27,18 @@ export interface TranscriptLine {
     /** What was said. */
     readonly body: string
 }
+
+/** A message the agent chat thread displays. */
+export interface AgentThreadMessage {
+    /** The message. */
+    readonly id: string
+    /** User, agent or system. */
+    readonly role: "user" | "agent" | "system"
+    /** The message text. */
+    readonly body: string
+    /** Creation instant, ISO 8601. */
+    readonly createdAt: string
+}
+
+/** The stable message id of an approved work item, or null for a newly generated id. */
+export type ApprovedMessageId = string | null

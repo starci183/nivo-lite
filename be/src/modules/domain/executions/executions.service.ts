@@ -3,10 +3,22 @@ import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import type { ExecutionSettlement, NewExecution, OptionalExecution } from "./executions.contracts"
+import type {
+    ExecutionListFilter,
+    ExecutionSettlement,
+    NewExecution,
+    OptionalExecution,
+    OptionalExecutionRecord,
+} from "./executions.contracts"
 import { ExecutionsError, ExecutionsErrorCode } from "./errors/executions.error"
-import type { ExecutionIdRow, ExecutionRow } from "./persistence/executions.rows"
-import { FIND_EXECUTION, INSERT_EXECUTION, SETTLE_EXECUTION } from "./persistence/executions.sql"
+import type { ExecutionIdRow, ExecutionRecordRow, ExecutionRow } from "./persistence/executions.rows"
+import {
+    FIND_EXECUTION,
+    FIND_EXECUTION_RECORD,
+    INSERT_EXECUTION,
+    LIST_EXECUTIONS,
+    SETTLE_EXECUTION,
+} from "./persistence/executions.sql"
 
 @Injectable()
 /** The approval cards of drafts: the only writer of public.executions. */
@@ -37,9 +49,32 @@ export class ExecutionsService {
         return rows[0] ?? null
     }
 
+    /** Reads the complete card through the row owner, inside the caller's transaction when supplied. */
+    async findRecord(
+        workspaceId: string,
+        executionId: string,
+        manager: EntityManager = this.entityManager,
+    ): Promise<OptionalExecutionRecord> {
+        const rows = await manager.query<Array<ExecutionRecordRow>>(FIND_EXECUTION_RECORD, [workspaceId, executionId])
+        return rows[0] ?? null
+    }
+
+    /** Lists the workspace's approval cards, oldest first, with a caller-provided row limit. */
+    list(workspaceId: string, filter: ExecutionListFilter): Promise<Array<ExecutionRecordRow>> {
+        return this.entityManager.query<Array<ExecutionRecordRow>>(LIST_EXECUTIONS, [
+            workspaceId,
+            filter.responsibilityIds ?? null,
+            filter.pendingLegacy ?? false,
+            filter.limit,
+        ])
+    }
+
     /** Settles a card that still waits; answers null when somebody decided it first, so a double click settles once. */
-    async settle(settlement: ExecutionSettlement): Promise<OptionalExecution> {
-        const rows = await this.entityManager.query<Array<ExecutionRow>>(SETTLE_EXECUTION, [
+    async settle(
+        settlement: ExecutionSettlement,
+        manager: EntityManager = this.entityManager,
+    ): Promise<OptionalExecution> {
+        const rows = await manager.query<Array<ExecutionRow>>(SETTLE_EXECUTION, [
             settlement.workspaceId,
             settlement.executionId,
             settlement.decision,

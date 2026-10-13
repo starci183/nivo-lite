@@ -84,3 +84,12 @@ export const MARK_READY = sql`UPDATE public.knowledge_sources SET status = 'read
 
 /** The facts stage cannot run because the workspace has no credits left ($1 id, $2 workspace, $3 code). */
 export const MARK_FACTS_BLOCKED = sql`UPDATE public.knowledge_sources SET status = 'blocked_credits', error = $3, updated_at = now() WHERE id = $1 AND workspace_id = $2`
+
+/** The documents of a workspace for the Knowledge page, newest first and without their text ($1 workspace, $2 module or null for all). */
+export const LIST_SOURCES = sql`SELECT id, workspace_id, module, installation_id, kind, topic, tags, visibility, title, status, error, chunk_count, progress, created_at, updated_at
+FROM public.knowledge_sources WHERE workspace_id = $1 AND ($2::text IS NULL OR module = $2)
+ORDER BY created_at DESC LIMIT 500`
+
+/** One document of a workspace with its text ($1 workspace, $2 id). */
+export const SELECT_SOURCE_DETAIL = sql`SELECT id, workspace_id, module, installation_id, kind, topic, tags, visibility, title, status, error, chunk_count, progress, created_at, updated_at, content
+FROM public.knowledge_sources WHERE workspace_id = $1 AND id = $2 LIMIT 1`

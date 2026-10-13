@@ -3,6 +3,7 @@ import type { MessageBundle } from "@modules/platform/i18n"
 /** Display text of the loyalty campaigns codes and the wording of a campaign draft, Vietnamese and English. */
 export const LOYALTY_CAMPAIGNS_MESSAGES: MessageBundle = {
     vi: {
+        "errors.LOYALTY_CAMPAIGNS_NOT_FOUND": "Không tìm thấy chiến dịch trong không gian làm việc này.",
         "errors.LOYALTY_CAMPAIGNS_NO_RECIPIENTS": "Không có khách nào khớp bộ lọc này.",
         "errors.LOYALTY_CAMPAIGNS_NOT_CREATED": "Chưa tạo được chiến dịch, bạn thử lại nhé.",
         "loyalty.promo.template": "Chào {ten_khach}, {{shop}} có ưu đãi dành riêng cho bạn: {{offer}}",
@@ -15,6 +16,7 @@ export const LOYALTY_CAMPAIGNS_MESSAGES: MessageBundle = {
         "loyalty.segment.minSpend": "đã chi từ {{amount}} ₫",
     },
     en: {
+        "errors.LOYALTY_CAMPAIGNS_NOT_FOUND": "The campaign was not found in this workspace.",
         "errors.LOYALTY_CAMPAIGNS_NO_RECIPIENTS": "No customer matches this filter.",
         "errors.LOYALTY_CAMPAIGNS_NOT_CREATED": "The campaign could not be created, please try again.",
         "loyalty.promo.template": "Hello {ten_khach}, {{shop}} has an offer just for you: {{offer}}",

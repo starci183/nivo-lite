@@ -15,6 +15,20 @@ export interface CreditPack {
 /** A pack, or null when none matches. */
 export type PackLookup = CreditPack | null
 
+/** One purchased top-up lot and the credits still spendable. */
+export interface CreditTopupLot {
+    /** Credits originally purchased. */
+    readonly credits: number
+    /** The price paid in VND. */
+    readonly priceVnd: number
+    /** When the credits were purchased, ISO 8601. */
+    readonly purchasedAt: string
+    /** When the credits expire, ISO 8601. */
+    readonly expiresAt: string
+    /** Credits left in this lot. */
+    readonly creditsRemaining: number
+}
+
 /** The unused value of the current plan that an upgrade deducts. */
 export interface Proration {
     /** What the buyer pays now (VND, a multiple of 1,000, never negative). */

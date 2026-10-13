@@ -6,6 +6,18 @@ export type { OptionalQuotaBlock, UsageGate, GenerationUsageRecord } from "./ai-
 export type { GenerationCompletion } from "./ai-generations.port"
 export { GenerationRunnerService } from "./generation-runner.service"
 export { GenerationsService } from "./generations.service"
+export type {
+    GenMessage,
+    GenMessageRole,
+    GenerateParams,
+    GenerationFailure,
+    GenerationFailureReason,
+    GenerationOutcome,
+    GenerationRequested,
+    GenerationStatus,
+    GenerationRunStatus,
+    GenerationSuccess,
+    ResponseFormat,
+} from "./ai-generations.contracts"
 export type { GenerationState } from "./ai-generations.contracts"
-export type { GenMessage, GenerationOutcome, ResponseFormat } from "./ai-generations.contracts"
 export { TextGeneratorService } from "./text-generator.service"

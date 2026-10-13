@@ -1,7 +1,10 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { EventsService } from "@modules/domain/events"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import type { EventOrigin } from "@modules/domain/inbound-events"
+import { WorkspaceMembersService } from "@modules/domain/workspace-members"
+import type { WorkspaceRole } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -15,6 +18,7 @@ import type { BillingOptions } from "./billing.options"
 import type {
     CassoDelivery,
     IncomingCredit,
+    ManualCredit,
     PayosDelivery,
     ProvenConnection,
     SepayFeedDelivery,
@@ -36,6 +40,9 @@ import { parseJsonObject } from "./webhook-body.policy"
 /** The locale of the lines billing writes into the shared records: the workspace owners read them in Vietnamese. */
 const RECORD_LOCALE = "vi"
 
+/** Who may enter money by hand. */
+const MANAGERS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
+
 /** One credit about to be recorded as an inbound payment event. */
 interface Booking {
     /** The workspace the credit belongs to. */
@@ -52,6 +59,8 @@ interface Booking {
     readonly bankName: string
     /** Whether the money is real. */
     readonly origin: EventOrigin
+    /** A note the person added, or undefined. */
+    readonly note?: string
 }
 
 @Injectable()
@@ -70,7 +79,44 @@ export class BankFeedService {
         private readonly proof: PaymentProofService,
         private readonly inbound: InboundEventsService,
         private readonly credits: BankCreditQueue,
+        private readonly members: WorkspaceMembersService,
+        private readonly events: EventsService,
     ) {}
+
+    /**
+     * An owner or manager enters money they know arrived. It goes through the same intake as every other credit (one inbound payment
+     * event and its reconcile job, once per day, amount and content), is labelled simulated like every manual input, and leaves a line
+     * in the evidence log. Answers whether the same evidence had already been entered.
+     */
+    async acceptManualCredit(userId: string, workspaceId: string, credit: ManualCredit): Promise<boolean> {
+        const member = await this.members.require(userId, workspaceId, MANAGERS)
+        const amount = Math.round(credit.amount)
+        return this.entityManager.transaction(async (tx) => {
+            const duplicate = await this.book(tx, {
+                workspaceId,
+                amount,
+                content: credit.content,
+                note: credit.note,
+                sender: credit.payer === undefined || credit.payer === "" ? null : credit.payer,
+                eventId: `manual:${credit.date}:${amount}:${credit.content}`,
+                bankName: this.catalog.get("billing.manualBank", {}, RECORD_LOCALE),
+                origin: "simulated",
+            })
+            if (!duplicate) {
+                await this.events.record(
+                    {
+                        workspaceId,
+                        kind: "accounting.manual_evidence",
+                        actor: member.displayName,
+                        summary: this.catalog.get("billing.manualEvidenceLog", { amount, date: credit.date }, RECORD_LOCALE),
+                        evidence: [credit.content, credit.note ?? ""].filter((part) => part !== "").join(" - "),
+                    },
+                    tx,
+                )
+            }
+            return duplicate
+        })
+    }
 
     /** The simulated Vietcombank door: one credit into the one configured workspace, always stored as simulated money. */
     async acceptSimulatedCredit(delivery: SimulatedDelivery): Promise<void> {
@@ -172,7 +218,8 @@ export class BankFeedService {
         })
     }
 
-    private async book(tx: EntityManager, booking: Booking): Promise<void> {
+    /** Records the credit and queues its reconcile job; answers whether the same credit had already been recorded. */
+    private async book(tx: EntityManager, booking: Booking): Promise<boolean> {
         const amountVnd = Math.round(booking.amount)
         const recorded = await this.inbound.recordBankPayment({
             manager: tx,
@@ -181,17 +228,21 @@ export class BankFeedService {
             sender: booking.sender,
             body: this.catalog.get(
                 "billing.bankEventBody",
-                { bank: booking.bankName, content: booking.content || "—" },
+                {
+                    bank: booking.bankName,
+                    content: [booking.content || "—", booking.note ?? ""].filter((part) => part !== "").join(" - "),
+                },
                 RECORD_LOCALE,
             ),
             amountVnd,
             externalRef: booking.content || null,
             providerRef: booking.eventId,
         })
-        if (recorded.duplicate) return
+        if (recorded.duplicate) return true
         await this.credits.enqueueBankCredit(
             { workspaceId: booking.workspaceId, inboundEventId: recorded.inboundEventId, amountVnd },
             tx,
         )
+        return false
     }
 }

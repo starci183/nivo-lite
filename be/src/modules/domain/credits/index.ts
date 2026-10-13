@@ -1,4 +1,5 @@
-export { CREDITS_ERROR_KINDS } from "./errors/credits.error"
+export { CREDITS_ERROR_KINDS, CreditsError, CreditsErrorCode } from "./errors/credits.error"
 export { CREDITS_MESSAGES } from "./messages/credits.messages"
 export { CreditsModule } from "./credits.module"
 export { CreditsService } from "./credits.service"
+export type { CreditPack, CreditTopupLot } from "./credits.contracts"

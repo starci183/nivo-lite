@@ -18,6 +18,8 @@ export const BILLING_MESSAGES: MessageBundle = {
         "errors.BILLING_CREDENTIAL_UNREADABLE":
             "Kh\u00f4ng \u0111\u1ecdc \u0111\u01b0\u1ee3c th\u00f4ng tin k\u1ebft n\u1ed1i \u0111\u00e3 l\u01b0u.",
         "billing.bankEventBody": "{{bank}} b\u00e1o c\u00f3: {{content}}",
+        "billing.manualBank": "Thủ công",
+        "billing.manualEvidenceLog": "Ghi nhận thủ công {{amount}} đ ngày {{date}}",
     },
     en: {
         "errors.BILLING_FORBIDDEN": "Only an owner or a manager can pay.",
@@ -30,5 +32,7 @@ export const BILLING_MESSAGES: MessageBundle = {
         "errors.BILLING_FEED_NOT_CONFIGURED": "The payment feed is not configured.",
         "errors.BILLING_CREDENTIAL_UNREADABLE": "The stored connection credential could not be read.",
         "billing.bankEventBody": "{{bank}} credit: {{content}}",
+        "billing.manualBank": "Manual",
+        "billing.manualEvidenceLog": "Manual evidence of {{amount}} VND dated {{date}}",
     },
 }

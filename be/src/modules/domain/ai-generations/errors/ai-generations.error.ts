@@ -11,6 +11,8 @@ export enum AiGenerationsErrorCode {
     QuotaBlocked = "AI_GENERATIONS_QUOTA_BLOCKED",
     /** Refuses queued work while the configured agent engine cannot accept it. */
     EngineUnavailable = "AI_GENERATIONS_ENGINE_UNAVAILABLE",
+    /** The text asked for is not one of the workspace. */
+    GenerationNotFound = "AI_GENERATIONS_NOT_FOUND",
 }
 
 /** How each ai-generations code travels. */
@@ -19,6 +21,7 @@ export const AI_GENERATIONS_ERROR_KINDS: Record<AiGenerationsErrorCode, ErrorKin
     [AiGenerationsErrorCode.NotCreated]: "internal",
     [AiGenerationsErrorCode.QuotaBlocked]: "forbidden",
     [AiGenerationsErrorCode.EngineUnavailable]: "unavailable",
+    [AiGenerationsErrorCode.GenerationNotFound]: "not-found",
 }
 
 /** The one error class of the ai-generations capability. */

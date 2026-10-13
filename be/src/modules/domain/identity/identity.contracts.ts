@@ -14,10 +14,14 @@ export enum PublicReason {
     Health = "health",
     /** A webhook whose signature is verified before its domain intake runs. */
     SignedWebhook = "signed-webhook",
+    /** A public page the visitor acts on without an account, bounded by an unguessable link token or the rate limit. */
+    PublicForm = "public-form",
     /** A door whose caller carries a short-lived tool token that the domain verifies (the tools OpenClaw agents call back). */
     ToolToken = "tool-token",
     /** A published catalog page (booking page, loyalty check) read without a session; always rate limited. */
     CatalogRead = "catalog-read",
+    /** The preview of an invitation link, read before the invited person signs in; always rate limited. */
+    InviteLink = "invite-link",
 }
 
 /** The metadata `@Public` attaches to a door. */

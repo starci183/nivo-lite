@@ -3,6 +3,7 @@ export type {
     ConnectTelegramInput,
     ConnectionCheck,
     MoneyProvider,
+    ProviderKeyValues,
     ProviderKeysResult,
     StartMoneyInput,
     StartZaloInput,

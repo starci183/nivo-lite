@@ -18,9 +18,12 @@ import type {
     GenerationFailureReason,
     GenerationOutcome,
     GenerationRequested,
+    GenerationEnqueued,
+    GenerationStatus,
     OptionalGenerationState,
     OptionalGenerationProgress,
     PollVerdict,
+    PreparedGenerationId,
 } from "./ai-generations.contracts"
 import { InjectAiGenerationsOptions, InjectUsage } from "./ai-generations.decorators"
 import { AiGenerationsLogEvent } from "./ai-generations.log-events"
@@ -101,7 +104,7 @@ export class GenerationsService {
         params: GenerateParams,
         context: GenerationContext = {},
         tx?: EntityManager,
-    ): Promise<GenerationRequested> {
+    ): Promise<GenerationEnqueued> {
         const locale = params.locale ?? "vi"
         const blocked = await this.usage.blockedBy(params.workspaceId, params.kind, locale)
         const availability = this.engine.availability()
@@ -110,7 +113,7 @@ export class GenerationsService {
                 code: blocked !== null ? AiGenerationsErrorCode.QuotaBlocked : AiGenerationsErrorCode.EngineUnavailable,
             })
         }
-        const enqueue = async (manager: EntityManager): Promise<GenerationRequested> => {
+        const enqueue = async (manager: EntityManager): Promise<GenerationEnqueued> => {
             const [row] = await manager.query<Array<InsertedGenerationRow>>(INSERT_GENERATION, [
                 params.workspaceId,
                 purposeOf(params.purpose),
@@ -175,6 +178,37 @@ export class GenerationsService {
         await tx.query(RECORD_GENERATION_FAILURE, [id, workspaceId, code])
     }
 
+    /** Queues a text a signed-in member asks for and answers its id at once (or why it was not queued); the text is read with `statusFor`. */
+    async requestFor(userId: string, params: GenerateParams): Promise<GenerationRequested> {
+        await this.members.require(userId, params.workspaceId)
+        const locale = params.locale ?? "vi"
+        const busy = this.catalog.get("generation.busy", {}, locale)
+        const blocked = await this.usage.blockedBy(params.workspaceId, params.kind, locale)
+        if (blocked !== null) return failure("quota", blocked.message)
+        const availability = this.engine.availability()
+        if (availability !== "ready") {
+            return failure(availability === "offline" ? "engine_offline" : "not_configured", busy)
+        }
+        const generationId = await this.enqueue(params, clampTimeout(params.timeoutMs))
+        return { ok: true, generationId }
+    }
+
+    /** Where a queued text of the workspace stands; any member may look. */
+    async statusFor(userId: string, workspaceId: string, generationId: string): Promise<GenerationStatus> {
+        await this.members.require(userId, workspaceId)
+        const progress = await this.poll(generationId, workspaceId)
+        if (progress === null) throw new AiGenerationsError({ code: AiGenerationsErrorCode.GenerationNotFound })
+        const verdict = verdictOf(progress)
+        const status = verdict?.kind === "failed" ? "failed" : progress.status
+        return {
+            generationId,
+            status: status === "done" || status === "failed" || status === "running" ? status : "queued",
+            output: progress.text,
+            usage: progress.usage,
+            timings: progress.timings,
+        }
+    }
+
     /** For callers that just want the text: the output, or an `AiGenerationsError` carrying the sentence to show. */
     async text(params: GenerateParams): Promise<string> {
         const outcome = await this.generate(params)
@@ -183,6 +217,18 @@ export class GenerationsService {
             code: AiGenerationsErrorCode.GenerationFailed,
             params: { reason: outcome.reason, message: outcome.message },
         })
+    }
+
+    /** Prepares a generation for a fenced job that will run it itself, without starting a second job or waiting for a slot. */
+    async prepare(params: GenerateParams, tx: EntityManager): Promise<PreparedGenerationId> {
+        const blocked = await this.usage.blockedBy(params.workspaceId, params.kind, params.locale ?? "vi")
+        if (blocked !== null || this.engine.availability() !== "ready") return null
+        return this.insert(params, clampTimeout(params.timeoutMs), tx)
+    }
+
+    /** Reads the progress of a generation in the workspace that requested it. */
+    progress(workspaceId: string, id: string): Promise<OptionalGenerationProgress> {
+        return this.poll(id, workspaceId)
     }
 
     private async run(params: GenerateParams, busy: string): Promise<GenerationOutcome> {
@@ -210,17 +256,22 @@ export class GenerationsService {
 
     private enqueue(params: GenerateParams, timeoutMs: number): Promise<string> {
         return this.entityManager.transaction(async (tx) => {
-            const [row] = await tx.query<Array<InsertedGenerationRow>>(INSERT_GENERATION, [
-                params.workspaceId,
-                purposeOf(params.purpose),
-                params.module,
-                params.kind,
-                inputJsonOf(params, timeoutMs),
-            ])
-            if (row === undefined) throw new AiGenerationsError({ code: AiGenerationsErrorCode.NotCreated })
-            await this.queue.enqueueGenerate({ generationId: row.id, workspaceId: params.workspaceId }, tx)
-            return row.id
+            const id = await this.insert(params, timeoutMs, tx)
+            await this.queue.enqueueGenerate({ generationId: id, workspaceId: params.workspaceId }, tx)
+            return id
         })
+    }
+
+    private async insert(params: GenerateParams, timeoutMs: number, tx: EntityManager): Promise<string> {
+        const [row] = await tx.query<Array<InsertedGenerationRow>>(INSERT_GENERATION, [
+            params.workspaceId,
+            purposeOf(params.purpose),
+            params.module,
+            params.kind,
+            inputJsonOf(params, timeoutMs),
+        ])
+        if (row === undefined) throw new AiGenerationsError({ code: AiGenerationsErrorCode.NotCreated })
+        return row.id
     }
 
     /** Looks at the row every poll interval until it has text, failed, or the deadline passed (a vanished row counts as too slow). */
