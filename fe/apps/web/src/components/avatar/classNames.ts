@@ -6,6 +6,6 @@
  */
 
 /** Positions the presence dot on the mark's corner. */
-export const MARK = "relative inline-flex shrink-0";
+export const MARK = "relative inline-flex shrink-0"
 /** Presence dot: a real "active" state, so the success token (ACCENT-5); ring on the surface face. */
-export const PRESENCE_DOT = "absolute -bottom-px -right-px size-2.5 rounded-full bg-success ring-2 ring-surface";
+export const PRESENCE_DOT = "absolute -bottom-px -right-px size-2.5 rounded-full bg-success ring-2 ring-surface"

@@ -6,4 +6,8 @@ export const APP_ROUTES = {
     authCallback: "/auth/callback",
 } as const
 
+/** The chat of one agent, optionally on a tab. */
+export const agentChatHref = (agentId: string, tab?: string): string =>
+    `/modules/${agentId}/chat${tab === undefined ? "" : `?tab=${tab}`}`
+
 export { safeNextPath } from "./safe-next-path"
