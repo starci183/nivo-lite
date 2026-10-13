@@ -63,10 +63,17 @@ export class DataHubService {
         await this.connections.setSchedule(workspaceId, id, change.everyMinutes)
     }
 
-    /** Sets how often a data connection syncs by itself (null is manual only). */
-    async setSchedule(workspaceId: string, id: string, everyMinutes: number | null): Promise<void> {
-        this.requireSchedule(everyMinutes)
-        await this.connections.setSchedule(workspaceId, id, everyMinutes)
+    /** Sets how often a data connection syncs by itself (owner); null or absent is manual only. */
+    async changeSchedule(
+        actor: ConnectionActor,
+        id: string,
+        everyMinutes: number | null | undefined,
+    ): Promise<void> {
+        await this.owner(actor)
+        await this.own(actor.workspaceId, id)
+        const minutes = everyMinutes ?? null
+        this.requireSchedule(minutes)
+        await this.connections.setSchedule(actor.workspaceId, id, minutes)
     }
 
     /** The opened credential of a connection the caller has already proved is its own; null when none is stored or it cannot be opened. */

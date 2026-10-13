@@ -5,5 +5,5 @@ import type { SetSyncScheduleInput } from "./dto/set-sync-schedule.input"
 export const toSetSyncScheduleRequest = (workspaceId: string, input: SetSyncScheduleInput): SetSyncScheduleRequest => ({
     workspaceId,
     connectionId: input.connectionId,
-    everyMinutes: input.everyMinutes ?? null,
+    everyMinutes: input.everyMinutes,
 })

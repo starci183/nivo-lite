@@ -3,10 +3,11 @@ import { isIP } from "node:net"
 import { Injectable } from "@nestjs/common"
 import { isPrivateAddress, isWellFormedHost } from "@modules/integrations/mail"
 import { InjectHttpClient } from "@modules/platform/http"
-import type { HttpClient } from "@modules/platform/http"
+import type { HttpClient, HttpRequest } from "@modules/platform/http"
 import { InjectDataSourcesOptions } from "./data-sources.decorators"
 import type { DataSourcesOptions } from "./data-sources.options"
 import { DataSourcesError, DataSourcesErrorCode } from "./errors/data-sources.error"
+import { PUBLIC_HOST_TEXT } from "./messages/public-host.messages"
 
 /** The address a connection is opened to: connect to THIS address, not the name, so the answer cannot change between check and use. */
 export interface ResolvedHost {
@@ -34,6 +35,16 @@ export interface PublicGetInit {
     readonly timeoutMs?: number
     /** The largest accepted answer in bytes. */
     readonly maxBytes?: number
+}
+
+/** What a public request may carry. */
+export interface PublicSendInit extends PublicGetInit {
+    /** A JSON-serializable body, sent as application/json. */
+    readonly json?: unknown
+    /** Form fields, sent as application/x-www-form-urlencoded. */
+    readonly form?: Readonly<Record<string, string>>
+    /** Raw bytes sent as they are (the headers name their content-type). */
+    readonly bytes?: Buffer
 }
 
 const DEFAULT_TIMEOUT_MS = 15_000
@@ -71,27 +82,35 @@ export class PublicHostClient {
     }
 
     /** GETs a public http(s) URL with a time limit and a size cap; the host is checked first and so is the address the answer came from. */
-    async get(rawUrl: string, init: PublicGetInit = {}): Promise<PublicResponse> {
+    get(rawUrl: string, init: PublicGetInit = {}): Promise<PublicResponse> {
+        return this.send("GET", rawUrl, init)
+    }
+
+    /** Sends a request (GET, POST...) to a public http(s) URL with the same host checks, time limit and size cap as `get`. */
+    async send(method: HttpRequest["method"], rawUrl: string, init: PublicSendInit = {}): Promise<PublicResponse> {
         const url = new URL(rawUrl)
         if (url.protocol !== "https:" && url.protocol !== "http:") {
             throw new DataSourcesError({
                 code: DataSourcesErrorCode.Rejected,
-                params: { detail: "Chỉ hỗ trợ địa chỉ http hoặc https." },
+                params: { detail: PUBLIC_HOST_TEXT.schemeOnly },
             })
         }
         await this.resolve(url.hostname)
         const answer = await this.http
             .request({
-                method: "GET",
+                method,
                 url: url.toString(),
                 headers: init.headers ?? {},
+                ...(init.json !== undefined ? { body: init.json } : {}),
+                ...(init.form !== undefined ? { form: init.form } : {}),
+                ...(init.bytes !== undefined ? { bytes: init.bytes } : {}),
                 read: "text",
                 timeoutMs: init.timeoutMs ?? DEFAULT_TIMEOUT_MS,
             })
             .catch((cause: unknown) => {
                 throw new DataSourcesError({
                     code: DataSourcesErrorCode.Unavailable,
-                    params: { detail: "Không kết nối được tới máy chủ. Hãy thử lại sau." },
+                    params: { detail: PUBLIC_HOST_TEXT.unreachable },
                     cause,
                 })
             })

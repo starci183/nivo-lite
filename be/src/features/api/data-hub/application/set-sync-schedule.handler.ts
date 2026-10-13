@@ -15,10 +15,11 @@ export class SetSyncScheduleHandler extends ICQRSHandler<SetSyncScheduleCommand,
         super(logger)
     }
 
-    protected override async process(command: SetSyncScheduleCommand): Promise<void> {
-        const { workspaceId, connectionId, everyMinutes } = command.params.request
-        await this.hub.owner({ principalId: command.params.principal.id, workspaceId })
-        await this.hub.own(workspaceId, connectionId)
-        await this.hub.setSchedule(workspaceId, connectionId, everyMinutes)
+    protected override process(command: SetSyncScheduleCommand): Promise<void> {
+        return this.hub.changeSchedule(
+            { principalId: command.params.principal.id, workspaceId: command.params.request.workspaceId },
+            command.params.request.connectionId,
+            command.params.request.everyMinutes,
+        )
     }
 }

@@ -2,7 +2,6 @@ import { Injectable } from "@nestjs/common"
 import { DataSyncService } from "@modules/domain/data-hub"
 import { InjectJobClaims } from "@modules/platform/jobs"
 import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
-import { isDataSyncPayload, isDataSyncTickPayload } from "@modules/queues/data-sync"
 
 @Injectable()
 /** The one effect of the job: a scheduler tick queues the due syncs, and a sync job reads the owner's system into the hub and settles its run. */
@@ -18,12 +17,11 @@ export class RunDataSyncStep implements JobStep {
      */
     async run(job: ClaimedJob): Promise<void> {
         await this.claims.advance({ jobId: job.jobId, expectedFencingToken: job.fencingToken, step: "sync" })
-        if (isDataSyncTickPayload(job.payload)) await this.sync.queueDue()
-        else if (isDataSyncPayload(job.payload)) await this.sync.run(job.payload)
+        await this.sync.process(job.payload)
     }
 
     /** Settles the run of a job that ran out of attempts, so the owner stops waiting. */
-    async abandon(payload: object): Promise<void> {
-        if (isDataSyncPayload(payload)) await this.sync.abandon(payload.runId)
+    abandon(payload: object): Promise<void> {
+        return this.sync.abandonJob(payload)
     }
 }

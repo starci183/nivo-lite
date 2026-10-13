@@ -17,3 +17,56 @@ export type { OpenApiClient } from "./openapi.client"
 export type { PublicHostClient } from "./public-host.client"
 export type { TableClient } from "./table.client"
 export type { TelegramUserClient } from "./telegram-user.client"
+export type {
+    TelegramAccount,
+    TelegramChatChoice,
+    TelegramChatKind,
+    TelegramChatRead,
+    TelegramCodeSubmission,
+    TelegramLoginSession,
+    TelegramPasswordSubmission,
+    TelegramCodeResent,
+    TelegramCodeSent,
+    TelegramLoggedIn,
+    TelegramRawMessage,
+    TelegramReadRequest,
+    TelegramSignInResult,
+} from "./telegram-user.contracts"
+export { TELEGRAM_NOT_CONFIGURED_MESSAGE, TELEGRAM_REVOKED_MESSAGE } from "./telegram-user-errors.policy"
+export { DOCUMENT_MAX_TEXT, TABLE_MAX_BYTES, TABLE_MAX_COLUMNS, TABLE_MAX_ROWS } from "./table-shapes.contracts"
+export type { GoogleDocumentText, Table, UploadedDocumentText } from "./table-shapes.contracts"
+export { DATABASE_ENGINES, DATABASE_MAX_COLUMNS, DATABASE_MAX_ROWS } from "./database-session.contracts"
+export type {
+    DatabaseEngine,
+    DatabasePreview,
+    DatabaseReader,
+    DatabaseSelection,
+    DatabaseTable,
+    DatabaseTarget,
+} from "./database-session.contracts"
+export { isUsableIdentifier } from "./database-sql.policy"
+export { OPENAPI_AUTH_TYPES, OPENAPI_METHODS, OPENAPI_PULL_ENTITIES } from "./openapi.contracts"
+export type {
+    OpenApiAnswer,
+    OpenApiAuth,
+    OpenApiAuthType,
+    OpenApiItemList,
+    OpenApiConfig,
+    OpenApiMethod,
+    OpenApiOperation,
+    OpenApiParam,
+    OpenApiPull,
+    OpenApiPullEntity,
+    OpenApiSpec,
+} from "./openapi.contracts"
+export {
+    detectItems,
+    getPath,
+    apiScalarText,
+    isApiJsonObject,
+    itemsOf,
+    parseJsonBody,
+    readApiJson,
+    suggestFromItems,
+} from "./openapi-items.policy"
+export { openApiFailure } from "./messages/openapi.messages"

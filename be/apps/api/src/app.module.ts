@@ -415,7 +415,7 @@ import { IssueInviteQueueModule } from "@features/jobs/issue-invite"
 import { RenderVideoQueueModule } from "@features/jobs/render-video"
 import { ConnectionCommandsQueueModule } from "@features/jobs/connection-commands"
 import { RequestRenderQueueModule } from "@features/jobs/request-render"
-import { AGENT_TOOLS_PORTS, DECISIONS_PORTS } from "./app.ports"
+import { AGENT_TOOLS_PORTS, DECISIONS_PORTS } from "./api.options"
 import type { ApiOptions } from "./api.options"
 @Module({})
 /** Composition root of the API: every capability is registered once and the three guards run in a fixed order. */

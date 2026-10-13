@@ -11,6 +11,7 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { DataSyncQueue } from "@modules/queues/data-sync"
+import { isDataSyncPayload, isDataSyncTickPayload } from "@modules/queues/data-sync"
 import type { DataSyncPayload } from "@modules/queues/data-sync"
 import { CsvImportSyncService } from "./csv-import-sync.service"
 import { DATA_PROVIDERS } from "./data-hub.contracts"
@@ -132,9 +133,16 @@ export class DataSyncService {
         }
     }
 
+    /** Runs what a job payload asks: a scheduler tick queues the due syncs, a sync payload runs that sync; any other payload does nothing. */
+    async process(payload: object): Promise<void> {
+        if (isDataSyncTickPayload(payload)) await this.queueDue()
+        else if (isDataSyncPayload(payload)) await this.run(payload)
+    }
+
     /** Settles the run of a job that ran out of attempts, so the owner stops waiting. */
-    abandon(runId: string): Promise<void> {
-        return this.finish(runId, "failed", 0, this.catalog.get("errors.DATA_HUB_SYNC_FAILED", {}, "vi"))
+    async abandonJob(payload: object): Promise<void> {
+        if (!isDataSyncPayload(payload)) return
+        await this.finish(payload.runId, "failed", 0, this.catalog.get("errors.DATA_HUB_SYNC_FAILED", {}, "vi"))
     }
 
     private async open(

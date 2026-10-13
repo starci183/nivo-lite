@@ -5,5 +5,5 @@ export interface SetSyncScheduleRequest {
     /** The data connection. */
     readonly connectionId: string
     /** Minutes between two scheduled syncs, 5 to 10080; null is manual only. */
-    readonly everyMinutes: number | null
+    readonly everyMinutes: number | null | undefined
 }

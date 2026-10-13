@@ -16,5 +16,5 @@ export class SetSyncScheduleInput {
     @IsInt()
     @Min(5)
     @Max(10_080)
-    everyMinutes!: number | null
+    everyMinutes!: number | null | undefined
 }

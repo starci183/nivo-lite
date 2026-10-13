@@ -1,0 +1,20 @@
+/** The owner-facing sentences of the personal Telegram wizard and sync (Vietnamese product copy). */
+export const TELEGRAM_WIZARD_TEXT = {
+    expired: "Phiên đăng nhập đã hết hạn, hãy bắt đầu lại.",
+    consent: "Hãy đọc và đồng ý với phần cam kết trước khi đăng nhập.",
+    nameRequired: "Hãy đặt tên cho kết nối.",
+    phoneInvalid: "Số điện thoại không hợp lệ. Nhập số có mã quốc gia, ví dụ +84912345678.",
+    alreadyLoggedIn: "Kết nối này đã đăng nhập.",
+    codeLength: "Mã gồm 5 chữ số, hãy nhập lại.",
+    noPendingLogin: "Không có lần đăng nhập nào đang chờ mã.",
+    passwordNotNeeded: "Tài khoản này chưa cần mật khẩu hai bước.",
+    passwordRequired: "Hãy nhập mật khẩu hai bước.",
+    notLoggedIn: "Chưa đăng nhập Telegram.",
+    scheduleInvalid: "Chu kỳ đồng bộ không hợp lệ.",
+    pickOne: "Hãy chọn ít nhất một cuộc trò chuyện.",
+    noChatsPicked: "Chưa chọn cuộc trò chuyện nào.",
+    attachment: "(tệp đính kèm)",
+    tooManyChats: (max: number): string => `Chọn tối đa ${max} cuộc trò chuyện.`,
+    summary: (count: number): string => `${count} cuộc trò chuyện`,
+    olderLeft: (count: number): string => `${count} cuộc trò chuyện còn tin cũ hơn chưa lấy, sẽ lấy tiếp ở lần sau.`,
+} as const

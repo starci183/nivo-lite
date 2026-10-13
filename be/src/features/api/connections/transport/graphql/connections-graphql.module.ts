@@ -26,6 +26,10 @@ import { SaveZaloOaSecretResolver } from "./save-zalo-oa-secret.resolver"
 import { SetAgentConnectionsResolver } from "./set-agent-connections.resolver"
 import { SetConnectionAgentsResolver } from "./set-connection-agents.resolver"
 import { SetConnectionGrantResolver } from "./set-connection-grant.resolver"
+import { StartSmtpConnectionResolver } from "./start-smtp-connection.resolver"
+import { SendSmtpTestResolver } from "./send-smtp-test.resolver"
+import { ChangeSmtpPasswordResolver } from "./change-smtp-password.resolver"
+import { SetDefaultSmtpResolver } from "./set-default-smtp.resolver"
 import { StartMoneyConnectionResolver } from "./start-money-connection.resolver"
 import { StartWebhookConnectionResolver } from "./start-webhook-connection.resolver"
 import { StartZaloConnectionResolver } from "./start-zalo-connection.resolver"
@@ -63,6 +67,10 @@ import { WantConnectorResolver } from "./want-connector.resolver"
         SetConnectionAgentsResolver,
         SetConnectionGrantResolver,
         StartMoneyConnectionResolver,
+        StartSmtpConnectionResolver,
+        SendSmtpTestResolver,
+        ChangeSmtpPasswordResolver,
+        SetDefaultSmtpResolver,
         StartWebhookConnectionResolver,
         StartZaloConnectionResolver,
         TestWebhookConnectionResolver,
