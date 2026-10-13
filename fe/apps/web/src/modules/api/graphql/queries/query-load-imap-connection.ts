@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryLoadImapConnectionArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { LoadImapConnectionQuery, LoadImapConnectionQueryVariables } from "../__generated__/graphql"
 
 /** The variables of the `loadImapConnection` query. */
-type QueryLoadImapConnectionRequest = QueryLoadImapConnectionArgs["input"]
+type QueryLoadImapConnectionRequest = WireInput<LoadImapConnectionQueryVariables["input"]>
 
 /** The response of the `loadImapConnection` query: the typed payload straight from the back end contract. */
-type QueryLoadImapConnectionResponse = Pick<Query, "loadImapConnection">
+type QueryLoadImapConnectionResponse = LoadImapConnectionQuery
 
 const query1: TypedDocumentNode<QueryLoadImapConnectionResponse, InputVariables<QueryLoadImapConnectionRequest>> = gql`
     query LoadImapConnection($input: LoadImapConnectionInput!) {

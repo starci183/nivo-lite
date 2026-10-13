@@ -1,13 +1,13 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryDecisionHistoryArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { DecisionHistoryQuery, DecisionHistoryQueryVariables } from "../__generated__/graphql"
 
 /** The input of the `decisionHistory` query. */
-export type QueryDecisionHistoryRequest = QueryDecisionHistoryArgs["input"]
+export type QueryDecisionHistoryRequest = WireInput<DecisionHistoryQueryVariables["input"]>
 
-type QueryDecisionHistoryResponse = Pick<Query, "decisionHistory">
+type QueryDecisionHistoryResponse = DecisionHistoryQuery
 
 const query1: TypedDocumentNode<QueryDecisionHistoryResponse, InputVariables<QueryDecisionHistoryRequest>> = gql`
     query DecisionHistory($input: ListDecisionHistoryInput!) {

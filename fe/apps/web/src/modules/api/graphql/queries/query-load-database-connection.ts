@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryLoadDatabaseConnectionArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { LoadDatabaseConnectionQuery, LoadDatabaseConnectionQueryVariables } from "../__generated__/graphql"
 
 /** The variables of the `loadDatabaseConnection` query. */
-type QueryLoadDatabaseConnectionRequest = QueryLoadDatabaseConnectionArgs["input"]
+type QueryLoadDatabaseConnectionRequest = WireInput<LoadDatabaseConnectionQueryVariables["input"]>
 
 /** The response of the `loadDatabaseConnection` query. */
-type QueryLoadDatabaseConnectionResponse = Pick<Query, "loadDatabaseConnection">
+type QueryLoadDatabaseConnectionResponse = LoadDatabaseConnectionQuery
 
 const query1: TypedDocumentNode<
     QueryLoadDatabaseConnectionResponse,

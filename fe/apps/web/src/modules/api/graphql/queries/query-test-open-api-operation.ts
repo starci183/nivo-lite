@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryTestOpenApiOperationArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { TestOpenApiOperationQuery, TestOpenApiOperationQueryVariables } from "../__generated__/graphql"
 
 /** The variables of the `testOpenApiOperation` query. */
-export type QueryTestOpenApiOperationRequest = QueryTestOpenApiOperationArgs["input"]
+export type QueryTestOpenApiOperationRequest = WireInput<TestOpenApiOperationQueryVariables["input"]>
 
 /** The response of the `testOpenApiOperation` query. */
-type QueryTestOpenApiOperationResponse = Pick<Query, "testOpenApiOperation">
+type QueryTestOpenApiOperationResponse = TestOpenApiOperationQuery
 
 const query1: TypedDocumentNode<
     QueryTestOpenApiOperationResponse,

@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryInboundEventsArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { InboundEventsQuery, InboundEventsQueryVariables } from "../__generated__/graphql"
 
 /** Generated variables of the inbox feed. */
-type QueryInboundEventsRequest = QueryInboundEventsArgs["input"]
+type QueryInboundEventsRequest = WireInput<InboundEventsQueryVariables["input"]>
 
 /** Generated selection returned by the inbox feed. */
-type QueryInboundEventsResponse = Pick<Query, "inboundEvents">
+type QueryInboundEventsResponse = InboundEventsQuery
 
 type Document = TypedDocumentNode<QueryInboundEventsResponse, InputVariables<QueryInboundEventsRequest>>
 

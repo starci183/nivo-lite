@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryLeadWaitArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { LeadWaitQuery, LeadWaitQueryVariables } from "../__generated__/graphql"
 
 /** The generated lead identifier accepted by the wait query. */
-type QueryLeadWaitRequest = QueryLeadWaitArgs["input"]
+type QueryLeadWaitRequest = WireInput<LeadWaitQueryVariables["input"]>
 
 /** The generated website-lead response delay query response. */
-type QueryLeadWaitResponse = Pick<Query, "leadWait">
+type QueryLeadWaitResponse = LeadWaitQuery
 
 type Document = TypedDocumentNode<QueryLeadWaitResponse, InputVariables<QueryLeadWaitRequest>>
 

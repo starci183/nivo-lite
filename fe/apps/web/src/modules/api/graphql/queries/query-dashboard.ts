@@ -2,10 +2,10 @@ import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
-import type { Query } from "../__generated__/schema"
+import type { DashboardQuery } from "../__generated__/graphql"
 
 /** The response of the `dashboard` query: the typed payload straight from the back end contract. */
-type QueryDashboardResponse = Pick<Query, "dashboard">
+type QueryDashboardResponse = DashboardQuery
 
 const query1: TypedDocumentNode<QueryDashboardResponse> = gql`
     query Dashboard {

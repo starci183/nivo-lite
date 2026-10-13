@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryLoadOpenApiConnectionArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { LoadOpenApiConnectionQuery, LoadOpenApiConnectionQueryVariables } from "../__generated__/graphql"
 
 /** The variables of the `loadOpenApiConnection` query. */
-type QueryLoadOpenApiConnectionRequest = QueryLoadOpenApiConnectionArgs["input"]
+type QueryLoadOpenApiConnectionRequest = WireInput<LoadOpenApiConnectionQueryVariables["input"]>
 
 /** The response of the `loadOpenApiConnection` query. */
-type QueryLoadOpenApiConnectionResponse = Pick<Query, "loadOpenApiConnection">
+type QueryLoadOpenApiConnectionResponse = LoadOpenApiConnectionQuery
 
 const query1: TypedDocumentNode<
     QueryLoadOpenApiConnectionResponse,

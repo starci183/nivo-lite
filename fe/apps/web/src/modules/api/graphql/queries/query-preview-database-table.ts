@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryPreviewDatabaseTableArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { PreviewDatabaseTableQuery, PreviewDatabaseTableQueryVariables } from "../__generated__/graphql"
 
 /** The variables of the `previewDatabaseTable` query. */
-type QueryPreviewDatabaseTableRequest = QueryPreviewDatabaseTableArgs["input"]
+type QueryPreviewDatabaseTableRequest = WireInput<PreviewDatabaseTableQueryVariables["input"]>
 
 /** The response of the `previewDatabaseTable` query. */
-type QueryPreviewDatabaseTableResponse = Pick<Query, "previewDatabaseTable">
+type QueryPreviewDatabaseTableResponse = PreviewDatabaseTableQuery
 
 const query1: TypedDocumentNode<
     QueryPreviewDatabaseTableResponse,

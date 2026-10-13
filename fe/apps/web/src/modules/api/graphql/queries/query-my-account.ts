@@ -2,16 +2,17 @@ import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
-import type { Query } from "../__generated__/schema"
+import type { MyAccountQuery } from "../__generated__/graphql"
 
 /** The response of the `myAccount` query: the typed payload straight from the back end contract. */
-type QueryMyAccountResponse = Pick<Query, "myAccount">
+type QueryMyAccountResponse = MyAccountQuery
 
 type Document = TypedDocumentNode<QueryMyAccountResponse, Record<string, never>>
 
 const query1: Document = gql`
     query MyAccount {
         myAccount {
+            avatarUrl
             email
             name
             providers

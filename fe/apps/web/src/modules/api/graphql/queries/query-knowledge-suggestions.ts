@@ -2,10 +2,10 @@ import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
-import type { Query } from "../__generated__/schema"
+import type { KnowledgeSuggestionsQuery } from "../__generated__/graphql"
 
 /** The response of the `knowledgeSuggestions` query: the typed payload straight from the back end contract. */
-type QueryKnowledgeSuggestionsResponse = Pick<Query, "knowledgeSuggestions">
+type QueryKnowledgeSuggestionsResponse = KnowledgeSuggestionsQuery
 
 const query1: TypedDocumentNode<QueryKnowledgeSuggestionsResponse> = gql`
     query KnowledgeSuggestions {

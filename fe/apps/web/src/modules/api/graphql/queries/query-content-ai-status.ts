@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryContentAiStatusArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { ContentAiStatusQuery, ContentAiStatusQueryVariables } from "../__generated__/graphql"
 
 /** Generated input of the content AI progress query. */
-type QueryContentAiStatusRequest = QueryContentAiStatusArgs["input"]
+type QueryContentAiStatusRequest = WireInput<ContentAiStatusQueryVariables["input"]>
 
 /** Generated response of the content AI progress query. */
-type QueryContentAiStatusResponse = Pick<Query, "contentAiStatus">
+type QueryContentAiStatusResponse = ContentAiStatusQuery
 
 type Document = TypedDocumentNode<QueryContentAiStatusResponse, InputVariables<QueryContentAiStatusRequest>>
 

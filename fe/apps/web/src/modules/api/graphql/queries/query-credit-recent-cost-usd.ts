@@ -1,10 +1,10 @@
 import { gql, type TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { QueryParams, InputVariables } from "../types"
-import type { Query, QueryCreditRecentCostUsdArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { CreditRecentCostUsdQuery, CreditRecentCostUsdQueryVariables } from "../__generated__/graphql"
 
-type QueryCreditRecentCostUsdResponse = Pick<Query, "creditRecentCostUsd">
-type QueryCreditRecentCostUsdRequest = QueryCreditRecentCostUsdArgs["input"]
+type QueryCreditRecentCostUsdResponse = CreditRecentCostUsdQuery
+type QueryCreditRecentCostUsdRequest = WireInput<CreditRecentCostUsdQueryVariables["input"]>
 
 type QueryCreditRecentCostUsdParams = QueryParams<QueryCreditRecentCostUsd, QueryCreditRecentCostUsdRequest> & {
     request: QueryCreditRecentCostUsdRequest

@@ -2,10 +2,10 @@ import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
-import type { Query } from "../__generated__/schema"
+import type { PromoChatbotStateQuery } from "../__generated__/graphql"
 
 /** The generated workspace chatbot promo query response. */
-type QueryPromoChatbotStateResponse = Pick<Query, "promoChatbotState">
+type QueryPromoChatbotStateResponse = PromoChatbotStateQuery
 
 type Document = TypedDocumentNode<QueryPromoChatbotStateResponse>
 

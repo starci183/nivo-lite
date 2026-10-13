@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryTestDatabaseArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { TestDatabaseQuery, TestDatabaseQueryVariables } from "../__generated__/graphql"
 
 /** The variables of the `testDatabase` query. */
-type QueryTestDatabaseRequest = QueryTestDatabaseArgs["input"]
+type QueryTestDatabaseRequest = WireInput<TestDatabaseQueryVariables["input"]>
 
 /** The response of the `testDatabase` query. */
-type QueryTestDatabaseResponse = Pick<Query, "testDatabase">
+type QueryTestDatabaseResponse = TestDatabaseQuery
 
 const query1: TypedDocumentNode<QueryTestDatabaseResponse, InputVariables<QueryTestDatabaseRequest>> = gql`
     query TestDatabase($input: TestDatabaseInput!) {

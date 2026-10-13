@@ -1,16 +1,13 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryLeadGenWorkbenchArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { LeadGenWorkbenchQuery, LeadGenWorkbenchQueryVariables } from "../__generated__/graphql"
 
 /** The contract emitted by the Lead Gen workbench resolver. */
-type QueryLeadGenWorkbenchRequest = QueryLeadGenWorkbenchArgs["input"]
+type QueryLeadGenWorkbenchRequest = WireInput<LeadGenWorkbenchQueryVariables["input"]>
 
-/** The QueryLeadGenWorkbenchResponse of this operation, straight from the generated schema. */
-export type QueryLeadGenWorkbenchResponse = Pick<Query, "leadGenWorkbench">
-
-type Document = TypedDocumentNode<QueryLeadGenWorkbenchResponse, InputVariables<QueryLeadGenWorkbenchRequest>>
+type Document = TypedDocumentNode<LeadGenWorkbenchQuery, InputVariables<QueryLeadGenWorkbenchRequest>>
 
 const query1: Document = gql`
     query LeadGenWorkbench($input: ReadLeadGenWorkbenchInput!) {
