@@ -2,12 +2,14 @@ import { useTranslations } from "next-intl"
 import { useRef, useState } from "react"
 import { useSWRConfig } from "swr"
 import { useAgentChatMessageForm, useAgentChatVisitorForm } from "@/hooks/rhf"
-import { useMutateSendAgentChatMessageSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSendAgentChatMessageSwr"
-import { useMutateStartAgentChatConversationSwr } from "@/hooks/swr/api/graphql/mutations/useMutateStartAgentChatConversationSwr"
-import { useMutateTakeOverAgentChatConversationSwr } from "@/hooks/swr/api/graphql/mutations/useMutateTakeOverAgentChatConversationSwr"
-import { QUERY_AGENT_CHAT_CONVERSATIONS_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryAgentChatConversationsSwr"
-import { QUERY_AGENT_CHAT_MESSAGES_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryAgentChatMessagesSwr"
-import { useQueryAgentChatTurnStatusSwr } from "@/hooks/swr/api/graphql/queries/useQueryAgentChatTurnStatusSwr"
+import {
+    useMutateSendAgentChatMessageSwr,
+    useMutateStartAgentChatConversationSwr,
+    useMutateTakeOverAgentChatConversationSwr,
+    QUERY_AGENT_CHAT_CONVERSATIONS_SWR_KEY,
+    QUERY_AGENT_CHAT_MESSAGES_SWR_KEY,
+    useQueryAgentChatTurnStatusSwr,
+} from "@/hooks/swr"
 import type { AgentChatTurnStatusType } from "@/modules/api"
 import { toast, useGraphQLWithToast } from "@/modules/toast"
 import type { AgentChatAgent, ChatTab } from "./useAgentChat"

@@ -15,7 +15,7 @@ const responseOf = (
 }
 
 /** The four figures above the inbox; empty values while the metrics are not known. */
-export const figuresOf = (
+export const chatbotFiguresOf = (
     t: ChatbotTranslator,
     metrics: ChatbotMetrics | undefined,
 ): ReadonlyArray<DescriptionListStatItem> => {

@@ -1,5 +1,6 @@
 import type { BadgeTone, DescriptionListItem } from "@starci/grammar/common"
 import type { BookingAction, BookingView } from "@/modules/types"
+import type { PlacementFields } from "./useBookingPlacement"
 
 /** What the desk tells the owner after a command: a catalog code. */
 export interface DeskNotice {
@@ -68,7 +69,7 @@ export interface DeskWords {
 const joined = (parts: ReadonlyArray<string>): string => parts.filter((part) => part !== "").join(" · ")
 
 /** One booking as the agenda draws it. */
-export const rowOf = (booking: BookingView, words: DeskWords, withActions: boolean) => ({
+export const bookingRowOf = (booking: BookingView, words: DeskWords, withActions: boolean) => ({
     id: booking.id,
     time: `${booking.startClock}-${booking.endClock}`,
     status: {
@@ -163,3 +164,33 @@ export const dayGroups = (bookings: ReadonlyArray<BookingView>) => {
     const days = [...new Set(bookings.map((booking) => booking.date))].sort()
     return days.map((day) => ({ id: day, rows: bookings.filter((booking) => booking.date === day) }))
 }
+
+/** The field labels of the add and move dialog; `kind` picks the wording of the save button. */
+export const placementLabelsOf = (say: Say, kind: "add" | "move") => ({
+    name: say("fCustomer"),
+    phone: say("fPhone"),
+    service: say("fService"),
+    date: say("fDate"),
+    time: say("fTime"),
+    resource: say("fResource"),
+    party: say("fParty"),
+    note: say("fNote"),
+    notePlaceholder: say("notePlaceholder"),
+    force: say("stackAnyway"),
+    save: say(kind === "add" ? "add" : "save"),
+    cancel: say("cancel"),
+    close: say("close"),
+})
+
+/** The fields of a new booking: the first service, today at nine, any resource, one guest. */
+export const blankPlacementOf = (serviceId: string, today: string): PlacementFields => ({
+    serviceId,
+    date: today,
+    time: "09:00",
+    resourceId: "",
+    name: "",
+    phone: "",
+    party: 1,
+    note: "",
+    force: false,
+})

@@ -1,10 +1,12 @@
 import { useCallback, useState } from "react"
 import { mutate } from "swr"
 import { useRefreshInstallation } from "@/hooks/agentSettings"
-import { useMutateApplySetupSwr } from "@/hooks/swr/api/graphql/mutations/useMutateApplySetupSwr"
-import { useMutateSetSetupGateSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSetSetupGateSwr"
-import { QUERY_SETUP_STATE_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQuerySetupStateSwr"
-import { QUERY_SETUP_VERSIONS_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQuerySetupVersionsSwr"
+import {
+    useMutateApplySetupSwr,
+    useMutateSetSetupGateSwr,
+    QUERY_SETUP_STATE_SWR_KEY,
+    QUERY_SETUP_VERSIONS_SWR_KEY,
+} from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 
 /** What a gate change asks. */

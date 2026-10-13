@@ -1,6 +1,6 @@
 "use client"
 
-import { useQueryAdminSessionSwr } from "@/hooks/swr/api/graphql/queries/useQueryAdminSessionSwr"
+import { useQueryAdminSessionSwr } from "@/hooks/swr"
 import { adminFailureOf } from "./admin.shared"
 
 /** Who the back end knows the caller as in the console: the admin e-mail, a 404 flag for everyone else, or a failure. */

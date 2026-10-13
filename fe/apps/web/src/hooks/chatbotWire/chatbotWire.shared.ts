@@ -1,5 +1,4 @@
-import type { useQueryChatbotOverviewSwr } from "@/hooks/swr/api/graphql/queries/useQueryChatbotOverviewSwr"
-import type { useQueryChatbotThreadSwr } from "@/hooks/swr/api/graphql/queries/useQueryChatbotThreadSwr"
+import type { useQueryChatbotOverviewSwr, useQueryChatbotThreadSwr } from "@/hooks/swr"
 import type { ChatbotChannel, ChatbotConversation, ChatbotOverview, ChatbotRole, ChatbotThread } from "@/modules/types"
 
 /** The overview exactly as the back end answers it. */

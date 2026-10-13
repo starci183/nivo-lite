@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { useQueryBrainSwr } from "@/hooks/swr/api/graphql/queries/useQueryBrainSwr"
+import { useQueryBrainSwr } from "@/hooks/swr"
 import { toBrainExtraction, toBrainFact, toBrainGap, toBrainLens, toBrainLesson } from "@/modules/brain"
 import type { BrainExtraction, BrainFact, BrainGap, BrainLens, BrainLesson } from "@/modules/types"
 

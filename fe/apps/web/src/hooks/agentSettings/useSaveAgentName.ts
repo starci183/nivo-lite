@@ -1,7 +1,6 @@
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
-import { useMutateRenameInstallationAgentSwr } from "@/hooks/swr/api/graphql/mutations/useMutateRenameInstallationAgentSwr"
-import { useMutateRenameModuleInstallationSwr } from "@/hooks/swr/api/graphql/mutations/useMutateRenameModuleInstallationSwr"
+import { useMutateRenameInstallationAgentSwr, useMutateRenameModuleInstallationSwr } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { AGENT_NAME_MAX } from "./agentSettings.shared"
 import { useRefreshInstallation } from "./useRefreshInstallation"
