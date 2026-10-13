@@ -109,7 +109,6 @@ export {
     QUERY_SHIFTS_WORKBENCH_SWR_KEY,
     useQueryShiftsWorkbenchSwr,
 } from "./api/graphql/queries/useQueryShiftsWorkbenchSwr"
-export { useMutateRequestAgentGenerationSwr } from "./api/graphql/mutations/useMutateRequestAgentGenerationSwr"
 export { useQueryAgentGenerationStatusSwr } from "./api/graphql/queries/useQueryAgentGenerationStatusSwr"
 export {
     QUERY_SALES_WORKBENCH_SWR_KEY,
@@ -139,3 +138,4 @@ export {
     useQueryLeadGenCommentStatusSwr,
 } from "./api/graphql/queries/useQueryLeadGenCommentStatusSwr"
 export { useQueryLoyaltyBoardSwr } from "./api/graphql/queries/useQueryLoyaltyBoardSwr"
+export { useMutateAskGuideSwr } from "./api/graphql/mutations/useMutateAskGuideSwr"

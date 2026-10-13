@@ -2864,16 +2864,10 @@
     "suggestOffice": "Duyệt việc AI đề xuất",
     "suggestAccount": "Đổi mật khẩu",
     "failed": "Trợ lý chưa trả lời được. Thử lại sau giây lát.",
-    "coreAudienceManager": "The user is an owner or manager.",
-    "coreAudienceStaff": "The user is staff: settings pages are not in their list; if they ask for one, say an owner or manager does it.",
-    "coreRulesTitle": "Rules:",
-    "coreReplyFormat": "Reply with ONLY a JSON object: {\"answer\": string (at most 60 words, in the user's language), \"steps\": string[] (0-5 short steps), \"pages\": string[] (0-3 page ids from PAGES, most relevant first)}.",
     "coreEmpty": "Anh/chị muốn làm gì trên NIVO? Em chỉ đường cho.",
     "coreManagerOnly": "Phần {title} do chủ sở hữu hoặc quản lý thiết lập. Anh/chị nhờ họ giúp nhé.",
     "coreBusy": "Em đang bận một chút, anh/chị hỏi lại sau ít phút nhé. Trong lúc chờ, anh/chị có thể mở menu bên trái để tìm trang cần dùng.",
-    "coreOpen": "Mở {title}",
-    "coreSystemIntro": "Bạn là trợ lý điều hướng của NIVO OS, phần mềm vận hành cho doanh nghiệp nhỏ Việt Nam. Bạn chỉ giúp người dùng tìm đúng trang và cách làm trong NIVO.",
-    "coreSystemStyle": "Xưng em, gọi anh/chị. Câu ngắn, rõ, không dùng dấu chấm than, không emoji."
+    "coreOpen": "Mở {title}"
   },
   "guideMap": {
     "office": {
@@ -3308,13 +3302,7 @@
         "change my password",
         "change password"
       ]
-    },
-    "rules": [
-      "Only point to page ids from the PAGES list. Never invent a page, a URL, a menu or a feature that is not in the list.",
-      "You only explain where to go and what to press. You cannot do anything for the user (no connecting, sending, deleting or paying).",
-      "If the question is not about using NIVO, say in one sentence that you only help with NIVO, and point to the closest page if there is one.",
-      "If you are not sure, say so and suggest the most likely page."
-    ]
+    }
   },
   "inbox": {
     "crumbLabel": "Đường dẫn",

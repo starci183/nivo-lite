@@ -6,6 +6,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./ai-generations.module-d
 import { DirectGenerationService } from "./direct-generation.service"
 import { GenerationRunnerService } from "./generation-runner.service"
 import { GenerationsService } from "./generations.service"
+import { GuideService } from "./guide.service"
 import { TextGeneratorService } from "./text-generator.service"
 
 @Module({})
@@ -27,8 +28,15 @@ export class AiGenerationsModule extends ConfigurableModuleClass {
                 DirectGenerationService,
                 GenerationRunnerService,
                 TextGeneratorService,
+                GuideService,
             ],
-            exports: [GenerationsService, DirectGenerationService, GenerationRunnerService, TextGeneratorService],
+            exports: [
+                GenerationsService,
+                DirectGenerationService,
+                GenerationRunnerService,
+                TextGeneratorService,
+                GuideService,
+            ],
         }
     }
 }
