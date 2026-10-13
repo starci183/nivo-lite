@@ -1,5 +1,6 @@
 # Routes of the NIVO edge (Traefik file provider; reloaded on change, no restart). Each host gets its own Let's Encrypt certificate.
 # nivo.vn / www.nivo.vn joined the `web` router at the cutover (engine/deploy/DNS-ROLLBACK.md); their DNS must point here before a certificate can be issued.
+# Lite cutover: the Nest api replaced the engine and the Next route handlers. It answers api.nivo.vn and every /api/ path of the product hosts.
 http:
   middlewares:
     secure-headers:
@@ -12,6 +13,24 @@ http:
       rule: Host(`nivo.vn`) || Host(`www.nivo.vn`) || Host(`app-vps.nivo.vn`)
       entryPoints: [websecure]
       service: web
+      middlewares: [secure-headers]
+      tls: { certResolver: le }
+    # Every /api/ path of the product hosts is the back end: provider webhooks and OAuth callbacks keep their public URLs
+    # (/api/telegram/..., /api/sepay/webhook, /api/connections/..., /api/v1/..., /api/b/...) and now land on the api, not on Next.
+    # The explicit priority makes this router win over the catch-all `web` router above; the path is forwarded unchanged.
+    api-paths:
+      rule: (Host(`nivo.vn`) || Host(`www.nivo.vn`) || Host(`app-vps.nivo.vn`)) && PathPrefix(`/api/`)
+      priority: 100
+      entryPoints: [websecure]
+      service: api
+      middlewares: [secure-headers]
+      tls: { certResolver: le }
+    # api.nivo.vn is the host the browser calls with the user access token (NEXT_PUBLIC_API_URL). Its DNS must point here before a
+    # certificate can be issued.
+    api:
+      rule: Host(`api.nivo.vn`)
+      entryPoints: [websecure]
+      service: api
       middlewares: [secure-headers]
       tls: { certResolver: le }
     # nguyentuannam.org (repo namnivo-lite): its own compose project ~/namnivo-web, reached as namnivo-web:3000 on the nivo-edge network.
@@ -27,11 +46,12 @@ http:
       service: n8n
       middlewares: [secure-headers]
       tls: { certResolver: le }
-    # Only the liveness path of the engine is public. /tools (OpenClaw's tool bridge) and everything else is a 404 (no router matches). Traefik sets X-Forwarded-Proto/Host/For itself; TLS ends here, so Proto is https.
+    # Only the liveness path of the api is public on the legacy engine host (external monitors keep working). /tools (OpenClaw's tool bridge)
+    # and everything else is a 404 (no router matches). Traefik sets X-Forwarded-Proto/Host/For itself; TLS ends here, so Proto is https.
     engine-health:
       rule: Host(`engine.nivo.vn`) && Path(`/healthz`)
       entryPoints: [websecure]
-      service: engine
+      service: api
       tls: { certResolver: le }
 
   services:
@@ -44,6 +64,8 @@ http:
     n8n:
       loadBalancer:
         servers: [{ url: "http://172.29.0.1:5678" }]
-    engine:
+    # The api lives in OpenClaw's network namespace (the gateway honours declared scopes only for a loopback peer) and publishes
+    # its port on the docker bridge address (API_BIND=172.29.0.1 in the stack's .env). It listens on 8787, the port the engine had.
+    api:
       loadBalancer:
         servers: [{ url: "http://172.29.0.1:8787" }]

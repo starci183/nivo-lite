@@ -1,7 +1,8 @@
 "use client";
 
 import { Text } from "@starci/grammar/common";
-import { AgentAvatar, PersonAvatar } from "@/components/avatar/PersonAvatar";
+import { AgentAvatar } from "@/components/blocks/AgentAvatar"
+import { PersonAvatar } from "@/components/leaves/PersonAvatar"
 import { useT } from "@/i18n/client";
 import { responsibilities } from "@/i18n/dict/responsibilities";
 import { OWNER_MARK_CLASS_NAME, OWNER_TEXT_CLASS_NAME } from "./classNames";

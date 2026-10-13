@@ -1,0 +1,10 @@
+{
+  "roleOwner": "Chủ sở hữu",
+  "roleManager": "Quản lý",
+  "roleStaff": "Nhân viên",
+  "signOut": "Đăng xuất",
+  "forbidden": "Bạn không có quyền thực hiện thao tác này. Hãy nhờ chủ sở hữu hoặc quản lý.",
+  "forbiddenDecide": "Việc này không được giao cho bạn. Chỉ người được giao, quản lý hoặc chủ sở hữu mới quyết định được.",
+  "memberDisabled": "Quyền truy cập workspace của bạn đã bị tắt.",
+  "noWorkspace": "Bạn chưa thuộc workspace nào. Hãy nhờ chủ sở hữu mời bạn."
+}

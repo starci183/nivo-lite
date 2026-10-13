@@ -1,6 +1,6 @@
 "use client";
 
-import { NivoIcon } from "@/ui";
+import { Icon as NivoIcon } from "@/components/leaves/Icon"
 import { useT } from "@/i18n/client";
 import { login } from "@/i18n/dict/login";
 import { AuthShell } from "@/features/auth/AuthShell";

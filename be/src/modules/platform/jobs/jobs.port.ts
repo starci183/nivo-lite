@@ -17,7 +17,7 @@ export interface JobClaims {
     advance(write: AdvanceWrite): Promise<void>
     /** Completes the job; throws `JobFencedOut` when the token is stale. */
     complete(write: GuardedWrite): Promise<void>
-    /** Fails the job so BullMQ can retry it; throws `JobFencedOut` when the token is stale. */
+    /** Fails the job so the queue can retry it; throws `JobFencedOut` when the token is stale. */
     fail(write: FailWrite): Promise<void>
     /** The idempotency key of one step of this claim: `<jobId>:<step>:<fencingToken>`. */
     runKey(job: ClaimedJob, step: string): RunKey

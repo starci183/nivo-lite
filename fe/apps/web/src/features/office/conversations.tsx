@@ -3,8 +3,9 @@
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { Badge, Button, IconTile, ListBox, SearchField, Text } from "@starci/grammar/common"
-import { nivoIconSource } from "@/ui"
-import { AgentAvatar, PersonAvatar } from "@/components/avatar/PersonAvatar"
+import { nivoIconSource } from "@/components/leaves/Icon"
+import { AgentAvatar } from "@/components/blocks/AgentAvatar"
+import { PersonAvatar } from "@/components/leaves/PersonAvatar"
 import { useLocale, useT } from "@/i18n/client"
 import { office } from "@/i18n/dict/office"
 import type { Agent, Message } from "@/lib/types"
@@ -129,7 +130,7 @@ export const ConversationList = ({ groupName, messages, agents, customers, pendi
                   id: agent.id,
                   label: agent.name,
                   description: isActive ? (said?.body ?? agent.role) : t("agentPreviewPaused"),
-                  leading: <AgentAvatar module={agent.module} label={agent.name} online={isActive} />,
+                  leading: <AgentAvatar module={agent.module} label={agent.name} />,
                   trailing: said ? <Text size="xs" tone="muted">{listTime(said.created_at, nowIso, locale, words)}</Text> : undefined,
                 }
               })}

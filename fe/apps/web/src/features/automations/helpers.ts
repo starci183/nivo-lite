@@ -1,4 +1,4 @@
-import type { IconName } from "@/ui"
+import type { IconName } from "@/components/leaves/Icon"
 import type { AutomationCardView, L, ModuleScope, TemplateDef } from "@/lib/automation-shared"
 import type { Locale } from "@/i18n/core"
 import { listModules } from "@/lib/module-registry"

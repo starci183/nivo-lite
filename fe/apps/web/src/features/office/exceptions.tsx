@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation"
 import { useEffect, useState, useTransition } from "react"
 import { Badge, Button, ChatBubble, Input, RadioGroup, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
-import { canDecideItem, isManager, useMember } from "@/features/shell/member-context"
+import { canDecideItem, isManager, useMember } from "@/hooks/member"
 import { useLocale, useT } from "@/i18n/client"
 import { governance } from "@/i18n/dict/governance"
 import { office } from "@/i18n/dict/office"
@@ -25,7 +25,7 @@ import {
   ROW_FIRST_CLASS_NAME,
 } from "./classNames"
 import { formatStamp, formatTime } from "./format"
-import { AgentAvatar } from "@/components/avatar/PersonAvatar"
+import { AgentAvatar } from "@/components/blocks/AgentAvatar"
 import type { Agent } from "@/lib/types"
 import { AiChip, NivoAvatar } from "./messages"
 
