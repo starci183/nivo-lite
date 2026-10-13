@@ -1,15 +1,13 @@
 "use client"
 
-import { RouteError } from "@/components/blocks/RouteError"
-import { useT } from "@/i18n/client"
-import { overview } from "@/i18n/dict/overview"
-import { shell } from "@/i18n/dict/shell"
+import { OverviewErrorPage } from "@/features/pages/OverviewErrorPage"
 
-/** STATE-8 case-4: the Overview keeps its heading when its data fails, with one Alert and a retry (it is the home page, so its trail is just itself). */
-const DashboardError = ({ reset }: { readonly reset: () => void }) => {
-  const t = useT(overview)
-  const s = useT(shell)
-  return <RouteError crumbs={[{ id: "home", label: s("crumbHome") }]} title={s("crumbHome")} message={t("loadFailed")} onRetry={reset} />
+/** What Next gives the error boundary: the retry. */
+interface ErrorBoundaryProps {
+    readonly reset: () => void
 }
 
-export default DashboardError
+/** The overview failure boundary. */
+const ErrorBoundary = (props: ErrorBoundaryProps) => <OverviewErrorPage onRetry={props.reset} />
+
+export default ErrorBoundary
