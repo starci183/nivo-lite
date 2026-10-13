@@ -16,6 +16,7 @@ import { ChannelConnectionsError, ChannelConnectionsErrorCode } from "./errors/c
 import type {
     ConnectTelegramInput,
     ConnectionCheck,
+    ProviderKeyValues,
     ProviderKeysResult,
     StartMoneyInput,
     TelegramConnected,
@@ -209,15 +210,16 @@ export class ChannelConnectionsService {
     async saveProviderKeys(
         actor: ConnectionActor,
         connectionId: string,
-        values: Readonly<Record<string, string>>,
+        values: ProviderKeyValues,
     ): Promise<ProviderKeysResult> {
         await this.connections.authorize(actor, OWNER)
         const connection = await this.connections.get(actor.workspaceId, connectionId)
         const fields = isMoneyProvider(connection.provider) ? moneyRules(connection.provider).credentials : []
         if (fields.length === 0) throw this.notFound(connection.id)
+        const given: Readonly<Record<string, string | undefined>> = { ...values }
         const stored: Record<string, string> = {}
         for (const field of fields) {
-            const value = (values[field] ?? "").trim()
+            const value = (given[field] ?? "").trim()
             if (value.length < KEY_MIN || value.length > KEY_MAX) {
                 throw new ChannelConnectionsError({ code: ChannelConnectionsErrorCode.KeysInvalid })
             }

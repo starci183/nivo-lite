@@ -74,3 +74,15 @@ VALUES ($1::uuid, $2::uuid, $3, $4) RETURNING id, kind, channel, visitor_name, l
 export const SET_CHAT_HOLDER = sql`UPDATE public.agent_conversations
 SET handled_by = $3, handled_at = CASE WHEN $3::text IS NULL THEN NULL ELSE now() END
 WHERE workspace_id = $1::uuid AND id = $2::uuid`
+
+/** Locks the workspace's customer conversation before a human reply or handling change ($1 workspace, $2 conversation). */
+export const LOCK_HUMAN_CONVERSATION = sql`SELECT id, workspace_id, channel, external_id, connection_id, lead_id, handled_by
+FROM public.agent_conversations
+WHERE workspace_id = $1::uuid AND id = $2::uuid AND kind = 'customer'
+LIMIT 1
+FOR UPDATE`
+
+/** Changes who handles the workspace's customer conversation ($1 workspace, $2 conversation, $3 holder or null). */
+export const SET_HUMAN_HANDLING = sql`UPDATE public.agent_conversations
+SET handled_by = $3::text, handled_at = CASE WHEN $3::text IS NULL THEN NULL ELSE now() END
+WHERE workspace_id = $1::uuid AND id = $2::uuid AND kind = 'customer'`

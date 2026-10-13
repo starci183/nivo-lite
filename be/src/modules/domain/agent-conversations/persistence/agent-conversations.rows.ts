@@ -85,3 +85,11 @@ export interface ChatConversationRow {
     /** Creation instant as database text. */
     readonly created_at: string
 }
+
+/** The scoped customer conversation a member locks before changing its handling. */
+export interface HumanConversationRow extends ConversationTargetRow {
+    /** The customer. */
+    readonly lead_id: string | null
+    /** Who holds the conversation. */
+    readonly handled_by: string | null
+}

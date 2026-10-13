@@ -4,6 +4,7 @@ import { AGENT_DIRECTORY } from "./office-lines.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./messages.module-definition"
 import { MessagesService } from "./messages.service"
 import { OfficeLinesService } from "./office-lines.service"
+import { TeamChatService } from "./team-chat.service"
 
 @Module({})
 /** The team chat of a workspace and the Office thread. The agent directory is bound by the app root through the options. */
@@ -18,8 +19,9 @@ export class MessagesModule extends ConfigurableModuleClass {
                 { provide: AGENT_DIRECTORY, useExisting: options.agentDirectory },
                 MessagesService,
                 OfficeLinesService,
+                TeamChatService,
             ],
-            exports: [MessagesService, OfficeLinesService],
+            exports: [MessagesService, OfficeLinesService, TeamChatService],
         }
     }
 }

@@ -67,3 +67,39 @@ export interface GeneratedIdRow {
     /** The id. */
     readonly id: string
 }
+
+/** One row of the document list; only a single-document read carries the text. */
+export interface SourceListRow {
+    /** The source id. */
+    readonly id: string
+    /** The owning workspace. */
+    readonly workspace_id: string
+    /** The module; null = every module. */
+    readonly module: string | null
+    /** The agent instance; null = every instance. */
+    readonly installation_id: string | null
+    /** text, faq, file or url. */
+    readonly kind: string
+    /** The topic label. */
+    readonly topic: string | null
+    /** The tags. */
+    readonly tags: ReadonlyArray<string>
+    /** public or internal. */
+    readonly visibility: string
+    /** The title. */
+    readonly title: string
+    /** Where the source stands. */
+    readonly status: string
+    /** A stored code or note, or null. */
+    readonly error: string | null
+    /** How many passages are stored. */
+    readonly chunk_count: number
+    /** 0-100 while a worker is on it. */
+    readonly progress: number
+    /** Creation instant. */
+    readonly created_at: string | Date
+    /** Last change. */
+    readonly updated_at: string | Date
+    /** The text; present on a single-document read. */
+    readonly content?: string
+}

@@ -4,6 +4,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./workspaces.module-defin
 import { WORKSPACES_OPTIONS } from "./workspaces.port"
 import { WorkspacePruneService } from "./workspace-prune.service"
 import { WorkspaceBillingService } from "./workspace-billing.service"
+import { WorkspaceShellService } from "./workspace-shell.service"
 import { WorkspacesService } from "./workspaces.service"
 
 @Module({})
@@ -20,8 +21,9 @@ export class WorkspacesModule extends ConfigurableModuleClass {
                 WorkspacesService,
                 WorkspaceBillingService,
                 WorkspacePruneService,
+                WorkspaceShellService,
             ],
-            exports: [WorkspacesService, WorkspaceBillingService, WorkspacePruneService],
+            exports: [WorkspacesService, WorkspaceBillingService, WorkspacePruneService, WorkspaceShellService],
         }
     }
 }

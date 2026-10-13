@@ -39,3 +39,6 @@ export interface AgentThreadMessage {
     /** Creation instant, ISO 8601. */
     readonly createdAt: string
 }
+
+/** The stable message id of an approved work item, or null for a newly generated id. */
+export type ApprovedMessageId = string | null

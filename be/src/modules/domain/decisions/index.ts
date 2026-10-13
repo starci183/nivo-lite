@@ -15,7 +15,13 @@ export type {
     WorkPerformer,
     WorkStatus,
 } from "./decisions.contracts"
-export type { AuthoritySheet, WorkItemCursor, WorkItemPage } from "./decisions-views.contracts"
+export type {
+    AuthoritySheet,
+    DecisionHistoryKind,
+    DecisionRecord,
+    WorkItemCursor,
+    WorkItemPage,
+} from "./decisions-views.contracts"
 export type { DecisionVerdict, FieldValue, WireEdits } from "./work-decision.contracts"
 export { DecisionsModule } from "./decisions.module"
 export { ApprovalRequesterService } from "./approval-requester.service"

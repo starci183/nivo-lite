@@ -1,4 +1,4 @@
-import WorkbenchInventory from "@/features/module-inventory"
+import { InventoryWorkbenchPage as WorkbenchInventory } from "@/features/pages/InventoryWorkbenchPage"
 import WorkbenchLoyalty from "@/features/module-loyalty"
 import WorkbenchHiring from "@/features/module-hiring"
 import { BookingWorkbenchPage } from "@/features/pages/BookingWorkbenchPage"

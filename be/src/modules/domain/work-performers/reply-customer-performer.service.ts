@@ -1,5 +1,13 @@
 import { Injectable } from "@nestjs/common"
-import type { Performed, Prepared, Proposal, WorkContext, WorkItem, WorkPerformer } from "@modules/domain/decisions"
+import type {
+    Performed,
+    PerformedBy,
+    Prepared,
+    Proposal,
+    WorkContext,
+    WorkItem,
+    WorkPerformer,
+} from "@modules/domain/decisions"
 import { CustomerDeliveryService } from "./customer-delivery.service"
 import { PerformerKitService } from "./performer-kit.service"
 import { leadHref, textOf } from "./performer.policy"
@@ -18,7 +26,7 @@ export class ReplyCustomerPerformerService implements WorkPerformer {
     }
 
     /** Stores the approved answer and pushes it to the channel. */
-    async perform(ctx: WorkContext, item: WorkItem, proposal: Proposal): Promise<Performed> {
+    async perform(ctx: WorkContext, item: WorkItem, proposal: Proposal, by?: PerformedBy): Promise<Performed> {
         if (item.origin === "simulated") {
             return {
                 summary: this.kit.text(ctx, "simulatedDelivery", { channel: "website" }),
@@ -31,7 +39,7 @@ export class ReplyCustomerPerformerService implements WorkPerformer {
         const conversationId = textOf(proposal.fields.conversation_id)
         const pushed =
             conversationId !== "" && proposal.draft !== undefined && proposal.draft !== ""
-                ? await this.delivery.inConversation(ctx.workspaceId, conversationId, proposal.draft)
+                ? await this.answer(ctx, item, conversationId, proposal.draft, by)
                 : false
         return {
             summary: this.kit.text(ctx, pushed ? "replyPostedTelegram" : "replyPosted"),
@@ -40,5 +48,17 @@ export class ReplyCustomerPerformerService implements WorkPerformer {
             lead_id: item.lead_id,
             detail: proposal.draft ?? null,
         }
+    }
+
+    private answer(
+        ctx: WorkContext,
+        item: WorkItem,
+        conversationId: string,
+        text: string,
+        by: PerformedBy | undefined,
+    ): Promise<boolean> {
+        return by !== undefined && "kind" in by && (by.kind === "owner" || by.kind === "staff")
+            ? this.delivery.approvedInConversation(ctx.workspaceId, conversationId, text, by.name, item.id)
+            : this.delivery.inConversation(ctx.workspaceId, conversationId, text)
     }
 }

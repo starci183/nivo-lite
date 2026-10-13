@@ -8,7 +8,7 @@ export {
     planExactly,
     purposeFor,
 } from "./connection-access.policy"
-export type { AgentGrantWish, ConnectionGrantWish } from "./connection-grants.contracts"
+export type { AgentGrantWish, ConnectionBoardEntry, ConnectionGrantWish } from "./connection-grants.contracts"
 export { ConnectionGrantsModule } from "./connection-grants.module"
 export type { ConnectionGrantsOptions } from "./connection-grants.options"
 export { ConnectionGrantsService } from "./connection-grants.service"

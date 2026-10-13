@@ -116,6 +116,43 @@ export type {
 export type { MetaAuthorization, MetaCheck, MetaWizardConnection } from "./connection-wizard"
 export type { DataSlot, SlotLabels } from "./slot"
 export type {
+    InventorySay,
+    InventoryTemplateChoice,
+    InventoryWorkbenchData,
+    ItemUnit,
+    ItemView,
+    LocationView,
+    MovementView,
+    PendingView,
+    PoLineView,
+    PoStatus,
+    PoView,
+    RecipeView,
+    StockStatus,
+    SupplierChannel,
+    SupplierView,
+} from "./inventory"
+export type {
+    AdjustInput,
+    AdjustItem,
+    CountInput,
+    DraftLowItem,
+    DraftPoInput,
+    ImportItem,
+    ItemInput,
+    NewPoInput,
+    ReceiveInput,
+    ReceiveItem,
+    RecipeInput,
+    SavedItem,
+    SendItem,
+    StarterInput,
+    StarterItem,
+    StockTakeItem,
+    SupplierInput,
+    TransferInput,
+} from "./inventory-commands"
+export type {
     AccountsView,
     AutomationTone,
     AutomationsBoardView,

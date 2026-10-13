@@ -128,3 +128,17 @@ export interface OpenChatConversation {
 
 /** A person's display name, or null while the agent holds the conversation. */
 export type ChatHolder = string | null
+
+/** The customer conversation a member may hold or reply in. */
+export interface HumanConversation extends ConversationTarget {
+    /** The customer linked to the conversation. */
+    readonly leadId: string | null
+    /** The person currently holding it, or null when the AI handles it. */
+    readonly handledBy: string | null
+}
+
+/** A scoped customer conversation, absent when it does not belong to the workspace. */
+export type OptionalHumanConversation = HumanConversation | null
+
+/** The human holder, or null when the AI handles the conversation. */
+export type HumanHolder = string | null

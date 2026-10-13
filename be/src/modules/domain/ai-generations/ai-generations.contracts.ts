@@ -128,3 +128,28 @@ export interface TurnAttempt {
     /** Why there is no text; an empty text when there is one. */
     readonly reason: string
 }
+
+/** A text that was queued: the id to poll. */
+export interface GenerationQueued {
+    /** Discriminant of the success half. */
+    readonly ok: true
+    /** The ai_generations row. */
+    readonly generationId: string
+}
+
+/** What asking for a text without waiting answered: its id, or the reason it was not queued. */
+export type GenerationRequested = GenerationQueued | GenerationFailure
+
+/** Where a queued text stands: `queued` and `running` are working, `done` carries the text, `failed` is final. */
+export interface GenerationStatus {
+    /** The ai_generations row. */
+    readonly generationId: string
+    /** `queued`, `running`, `done` or `failed`. */
+    readonly status: "queued" | "running" | "done" | "failed"
+    /** The generated text; present when done. */
+    readonly output: string | null
+    /** What the run cost; null when the gateway reported none or the text is not done. */
+    readonly usage: RunUsage | null
+    /** Milliseconds from the start of the run to each named mark. */
+    readonly timings: Readonly<Record<string, number>>
+}
