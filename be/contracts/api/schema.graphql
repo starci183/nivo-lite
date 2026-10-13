@@ -2,6 +2,30 @@ type AcceptInviteType {
   workspaceId: ID!
 }
 
+input AddShiftsDraftShiftInput {
+  date: String!
+  end: String!
+  positionId: ID!
+  scheduleId: ID!
+  staffId: ID
+  start: String!
+}
+
+input AdjustInventoryStockInput {
+  counted: Float
+  delta: Float
+  itemId: ID!
+  locationId: ID
+  reason: String!
+}
+
+type AdjustStockType {
+  after: Float
+  before: Float
+  state: String!
+  workItemId: ID
+}
+
 type AdminActivityType {
   lastCustomerMessageAt: String
   messages7d: Int!
@@ -436,6 +460,46 @@ type ApiKeyType {
   revokedAt: String
 }
 
+type ApplyImportType {
+  blocks: Int!
+  positions: Int!
+  staff: Int!
+}
+
+input ApplyInventoryStarterInput {
+  key: String!
+}
+
+type ApplyResultType {
+  duplicate: Boolean!
+}
+
+input ApplyShiftsImportInput {
+  coverage: String!
+  positions: String!
+  staff: String!
+}
+
+type ApplyStarterType {
+  items: Int!
+  recipes: Int!
+  suppliers: Int!
+}
+
+input ApplyToHiringJobInput {
+  answers: [[HiringApplyAnswerInput!]!]!
+  availability: String!
+  consent: Boolean!
+  cvName: String
+  cvPath: String
+  email: String!
+  job: String!
+  name: String!
+  phone: String!
+  website: String
+  ws: String!
+}
+
 type ApprovalExecutionType {
   draft: String!
   id: ID!
@@ -562,6 +626,10 @@ input ChangeMemberRoleInput {
   userId: ID!
 }
 
+type CheckInType {
+  at: String!
+}
+
 input CreateAgentInput {
   handle: String!
   instructions: String!
@@ -574,10 +642,33 @@ input CreateApiKeyInput {
   name: String!
 }
 
+type CreateCvUploadType {
+  path: String!
+  token: String!
+}
+
+input CreateHiringCvUploadInput {
+  fileName: String!
+  job: String!
+  ws: String!
+}
+
+input CreateInventoryPoInput {
+  expectedAt: String!
+  lines: [[CreatePoLineInput!]!]!
+  supplierId: String!
+}
+
 input CreateInviteInput {
   email: String!
   role: String!
   staffId: ID
+}
+
+input CreatePoLineInput {
+  itemId: ID!
+  qty: String!
+  unitCost: String!
 }
 
 input CreateResponsibilityInput {
@@ -822,12 +913,21 @@ input DecideExecutionInput {
   executionId: ID!
 }
 
+input DecideShiftsAvailabilityInput {
+  approve: Boolean!
+  id: ID!
+}
+
 input DecideWorkItemInput {
   basis: String
   decision: String!
   edits: WorkEditsInput
   note: String
   workItemId: ID!
+}
+
+type DeleteCandidateType {
+  files: Int!
 }
 
 type DeviceSessionType {
@@ -839,16 +939,35 @@ type DeviceSessionType {
   userAgent: String
 }
 
+type DraftLowStockType {
+  drafted: Int!
+  low: Int!
+}
+
 input EmitAutomationEventInput {
   data: JsonObject!
   dedupe: String!
   event: String!
 }
 
+type ExplainScheduleType {
+  explanation: String!
+}
+
 input FieldValueInput {
   name: String!
   number: Float
   text: String
+}
+
+type GenerateAdType {
+  attempts: Int!
+  facebook: String!
+  generatedAt: String!
+  ms: Int!
+  sanitised: Boolean!
+  topcv: String!
+  zalo: String!
 }
 
 type GoogleAccountType {
@@ -862,6 +981,447 @@ input GrantAgentConnectionInput {
   agentId: ID!
   connectionId: ID!
   purpose: String!
+}
+
+type HiringAnswerType {
+  answer: String!
+  question: String!
+  questionId: String!
+}
+
+input HiringApplyAnswerInput {
+  answer: String!
+  questionId: String!
+}
+
+input HiringAvailabilityWindowInput {
+  endMin: Int!
+  startMin: Int!
+  weekday: Int!
+}
+
+type HiringBenchType {
+  candidates: [[HiringCandidateType!]!]!
+  figures: HiringFiguresType!
+  interviews: [[HiringInterviewType!]!]!
+  jobs: [[HiringJobType!]!]!
+  meUserId: ID!
+  members: [[HiringMemberType!]!]!
+  nowIso: String!
+  offers: [[HiringOfferType!]!]!
+  onboarding: [[HiringOnboardingType!]!]!
+  origin: String!
+  settings: HiringSettingsType!
+  waitingApprovals: Int!
+}
+
+type HiringCandidateDetailType {
+  cv: HiringCvType
+  events: [[HiringEventType!]!]!
+}
+
+input HiringCandidateRefInput {
+  id: ID!
+}
+
+type HiringCandidateType {
+  answers: [[HiringAnswerType!]!]!
+  availability: String!
+  conversationId: ID
+  createdAt: String!
+  cvMime: String
+  cvName: String
+  cvPath: String
+  cvSize: Int
+  email: String!
+  id: ID!
+  jobId: ID!
+  name: String!
+  notes: String!
+  phone: String!
+  rejectedReason: String
+  score: Int
+  scoreLabel: String
+  scoreReasons: [[HiringScoreReasonType!]!]!
+  scoreSummary: String
+  screenedAt: String
+  source: String!
+  staffId: ID
+  stage: String!
+  stageChangedAt: String!
+  workspaceId: ID!
+}
+
+type HiringCvType {
+  mime: String!
+  name: String!
+  url: String!
+}
+
+type HiringEventType {
+  actor: String!
+  createdAt: String!
+  id: ID!
+  kind: String!
+  summary: String!
+}
+
+type HiringFiguresType {
+  interviewsWeek: Int!
+  offersSent: Int!
+  offersWaiting: Int!
+  openRoles: Int!
+  pipeline: Int!
+  totalRoles: Int!
+}
+
+type HiringInterviewType {
+  candidateId: ID!
+  createdAt: String!
+  durationMin: Int!
+  id: ID!
+  interviewerName: String!
+  interviewerUserId: ID
+  jobId: ID!
+  location: String!
+  mode: String!
+  note: String!
+  proposedSlots: [[HiringSlotType!]!]!
+  reminderSentAt: String
+  slotEnd: String
+  slotStart: String
+  status: String!
+  token: String!
+  workItemId: ID
+  workspaceId: ID!
+}
+
+input HiringJobQuestionInput {
+  choices: [[String!]!]
+  expectChoices: [[String!]!]
+  expectNumber: Float
+  expectYesNo: String
+  id: String
+  required: Boolean!
+  text: String!
+  type: String!
+}
+
+type HiringJobQuestionType {
+  choices: [[String!]!]!
+  expectChoices: [[String!]!]
+  expectNumber: Float
+  expectYesNo: String
+  id: String!
+  required: Boolean!
+  text: String!
+  type: String!
+}
+
+input HiringJobRefInput {
+  jobId: ID!
+}
+
+input HiringJobRequirementsInput {
+  availability: [[String!]!]!
+  experienceNote: String!
+  experienceYears: Int
+  mustHave: [[String!]!]!
+  niceToHave: [[String!]!]!
+  skills: [[String!]!]!
+}
+
+type HiringJobRequirementsType {
+  availability: [[String!]!]!
+  experienceNote: String!
+  experienceYears: Int
+  mustHave: [[String!]!]!
+  niceToHave: [[String!]!]!
+  skills: [[String!]!]!
+}
+
+type HiringJobType {
+  adVariants: JsonObject
+  channels: [[String!]!]!
+  closesAt: String
+  createdAt: String!
+  description: String!
+  employmentType: String!
+  headcount: Int!
+  id: ID!
+  location: String!
+  payMaxVnd: Float
+  payMinVnd: Float
+  payUnit: String!
+  position: String!
+  publicUrl: String
+  questions: [[HiringJobQuestionType!]!]!
+  requirements: HiringJobRequirementsType!
+  schedule: String!
+  slug: String!
+  status: String!
+  title: String!
+  updatedAt: String!
+  workspaceId: ID!
+}
+
+type HiringMemberType {
+  name: String!
+  role: String!
+  userId: ID!
+  windows: [[HiringWindowType!]!]!
+}
+
+input HiringOfferRefInput {
+  id: ID!
+}
+
+type HiringOfferTermsType {
+  note: String!
+  pay: String!
+  probation: String!
+  startDate: String!
+  title: String!
+}
+
+type HiringOfferType {
+  candidateId: ID!
+  createdAt: String!
+  draft: String!
+  expiresAt: String
+  id: ID!
+  jobId: ID!
+  respondedAt: String
+  sentAt: String
+  sentVia: String
+  status: String!
+  terms: HiringOfferTermsType!
+  token: String!
+  workItemId: ID
+  workspaceId: ID!
+}
+
+type HiringOnboardingType {
+  candidateId: ID!
+  done: Boolean!
+  doneAt: String
+  id: ID!
+  sort: Int!
+  title: String!
+}
+
+type HiringOutcomeType {
+  error: String
+  status: String!
+  summary: String!
+}
+
+type HiringScoreReasonType {
+  criterion: String!
+  note: String!
+  status: String!
+}
+
+type HiringSettingsType {
+  adTone: String!
+  applyConsentText: String!
+  autoCloseWhenFilled: Boolean!
+  notifyNewCandidate: Boolean!
+  publicSlug: String!
+  remindInterview: Boolean!
+  retentionDays: Int!
+  workspaceId: ID!
+}
+
+type HiringSlotType {
+  end: String!
+  start: String!
+}
+
+type HiringStatusType {
+  status: String!
+}
+
+input HiringTokenInput {
+  token: String!
+}
+
+type HiringWindowType {
+  endMin: Int!
+  startMin: Int!
+  weekday: Int!
+}
+
+input ImportInventoryPasteInput {
+  raw: String!
+}
+
+type ImportPasteType {
+  created: Int!
+  skipped: [[String!]!]!
+  stocked: Int!
+  updated: Int!
+}
+
+type InventoryItemType {
+  active: Boolean!
+  aliases: [[String!]!]!
+  category: String!
+  costVnd: Float!
+  id: ID!
+  levels: [[InventoryLevelType!]!]!
+  name: String!
+  onOrder: Float!
+  reorderPoint: Float!
+  reorderQty: Float!
+  sellPriceVnd: Float
+  sku: String!
+  status: String!
+  supplierId: ID
+  total: Float!
+  unit: String!
+  units: [[InventoryItemUnitType!]!]!
+}
+
+type InventoryItemUnitType {
+  factor: Float!
+  unit: String!
+}
+
+type InventoryLevelType {
+  locationId: ID!
+  qty: Float!
+}
+
+type InventoryLocationType {
+  id: ID!
+  name: String!
+}
+
+type InventoryMetricsType {
+  itemCount: Int!
+  lowCount: Int!
+  openPos: Int!
+  outCount: Int!
+  pendingCount: Int!
+  valueVnd: Float!
+}
+
+type InventoryMovementType {
+  byName: String!
+  createdAt: String!
+  evidence: String!
+  id: ID!
+  itemName: String!
+  kind: String!
+  qty: Float!
+  qtyAfter: Float!
+  reason: String!
+  refLabel: String!
+  unit: String!
+}
+
+type InventoryPendingType {
+  action: String!
+  createdAt: String!
+  draft: String
+  id: ID!
+  poId: ID
+  summary: String!
+}
+
+type InventoryPoLineType {
+  id: ID!
+  itemId: ID!
+  name: String!
+  qtyOrdered: Float!
+  qtyReceived: Float!
+  unit: String!
+  unitCost: Float!
+}
+
+input InventoryPoRefInput {
+  poId: ID!
+}
+
+type InventoryPoType {
+  channel: String
+  createdAt: String!
+  expectedAt: String
+  id: ID!
+  lines: [[InventoryPoLineType!]!]!
+  message: String!
+  poNo: String!
+  reminders: Int!
+  sendNote: String
+  sentVia: String
+  source: String!
+  status: String!
+  supplierId: ID
+  supplierName: String!
+  totalVnd: Float!
+  workItemId: ID
+}
+
+input InventoryRecipeLineInput {
+  itemId: ID!
+  qty: String!
+}
+
+type InventoryRecipeLineType {
+  itemId: ID!
+  name: String!
+  qty: Float!
+  unit: String!
+}
+
+input InventoryRecipeRefInput {
+  id: ID!
+}
+
+type InventoryRecipeType {
+  aliases: [[String!]!]!
+  id: ID!
+  lines: [[InventoryRecipeLineType!]!]!
+  name: String!
+}
+
+type InventoryRefType {
+  id: ID!
+}
+
+type InventorySupplierType {
+  channel: String!
+  contactName: String!
+  email: String!
+  id: ID!
+  leadTimeDays: Int!
+  name: String!
+  note: String!
+  paymentTerms: String!
+  phone: String!
+  zalo: String!
+}
+
+type InventoryTemplateType {
+  description: String!
+  key: String!
+  name: String!
+}
+
+type InventoryWorkbenchType {
+  canManage: Boolean!
+  defaultLocationId: ID
+  items: [[InventoryItemType!]!]!
+  locations: [[InventoryLocationType!]!]!
+  metrics: InventoryMetricsType!
+  movements: [[InventoryMovementType!]!]!
+  nowIso: String!
+  pending: [[InventoryPendingType!]!]!
+  pos: [[InventoryPoType!]!]!
+  recipes: [[InventoryRecipeType!]!]!
+  stockOuts7d: Int
+  suppliers: [[InventorySupplierType!]!]!
 }
 
 type InvitePreviewType {
@@ -887,6 +1447,10 @@ input InviteTokenInput {
 }
 
 scalar JsonObject
+
+type LinkStaffType {
+  staffId: ID!
+}
 
 input ListAgentsInput {
   module: String
@@ -1048,31 +1612,77 @@ type ModulesCatalogType {
   modules: [ModuleDefinitionType!]!
 }
 
+type MoveCandidateType {
+  stage: String!
+}
+
+input MoveHiringCandidateInput {
+  id: ID!
+  reason: String
+  stage: String!
+}
+
 type Mutation {
   acceptInvite(input: InviteTokenInput!): AcceptInviteType!
+  addShiftsAvailability(input: SaveShiftsAvailabilityInput!): ShiftsRefType!
+  addShiftsDraftShift(input: AddShiftsDraftShiftInput!): Boolean!
+  adjustInventoryStock(input: AdjustInventoryStockInput!): AdjustStockType!
   adminExtendSubscription(input: AdminExtendSubscriptionInput!): AdminSubscriptionExtendedType!
   adminResendWorkspaceInvite(input: AdminResendWorkspaceInviteInput!): AdminInviteResentType!
   adminSetWorkspacePlan(input: AdminSetWorkspacePlanInput!): AdminPlanSetType!
   adminSetWorkspaceStatus(input: AdminSetWorkspaceStatusInput!): AdminStatusSetType!
+  applyInventoryStarter(input: ApplyInventoryStarterInput!): ApplyStarterType!
+  applyShiftsImport(input: ApplyShiftsImportInput!): ApplyImportType!
+  applyToHiringJob(input: ApplyToHiringJobInput!): ApplyResultType!
+  cancelHiringOffer(input: HiringOfferRefInput!): Boolean!
+  cancelInventoryPo(input: InventoryPoRefInput!): Boolean!
   cancelOfficeCommand(input: OfficeCandidateIdInput!): OfficeAckType!
   changeMemberRole(input: ChangeMemberRoleInput!): Boolean!
+  checkInShifts(input: ShiftsShiftRefInput!): CheckInType!
   confirmOfficeCommand(input: OfficeCandidateIdInput!): OfficeConfirmResultType!
   copyInviteLink(input: InviteRefInput!): InviteResultType!
   createAgent(input: CreateAgentInput!): AgentSummaryType!
   createApiKey(input: CreateApiKeyInput!): CreatedApiKeyType!
+  createHiringCvUpload(input: CreateHiringCvUploadInput!): CreateCvUploadType!
+  createInventoryPo(input: CreateInventoryPoInput!): InventoryRefType!
   createInvite(input: CreateInviteInput!): InviteResultType!
   createResponsibility(input: CreateResponsibilityInput!): ResponsibilityType!
   createWorkspace(input: CreateWorkspaceInput!): CreateWorkspaceType!
   decideExecution(input: DecideExecutionInput!): ApprovalExecutionType!
+  decideShiftsAvailability(input: DecideShiftsAvailabilityInput!): Boolean!
   decideWorkItem(input: DecideWorkItemInput!): WorkItemType!
+  deleteHiringCandidate(input: HiringCandidateRefInput!): DeleteCandidateType!
+  deleteInventoryRecipe(input: InventoryRecipeRefInput!): Boolean!
+  draftInventoryLowStock: DraftLowStockType!
   emitAutomationEvent(input: EmitAutomationEventInput!): Boolean!
+  explainShiftsSchedule(input: ShiftsScheduleRefInput!): ExplainScheduleType!
+  generateHiringAd(input: HiringJobRefInput!): GenerateAdType!
   grantAgentConnection(input: GrantAgentConnectionInput!): AgentAckType!
+  importInventoryPaste(input: ImportInventoryPasteInput!): ImportPasteType!
+  linkHiringStaff(input: HiringCandidateRefInput!): LinkStaffType!
+  moveHiringCandidate(input: MoveHiringCandidateInput!): MoveCandidateType!
   proposeAutomationBody(input: TemplateKeyInput!): BodyProposalType!
   proposeOfficeCommand(input: ProposeOfficeCommandInput!): OfficeProposeOutcomeType!
+  proposeShiftsWeek(input: ProposeShiftsWeekInput!): ProposeWeekType!
+  reassignShiftsShift(input: ReassignShiftsShiftInput!): Boolean!
+  receiveInventoryPo(input: ReceiveInventoryPoInput!): ReceivePoType!
   removeMember(input: MemberRefInput!): Boolean!
+  removeShiftsAvailability(input: ShiftsAvailabilityRefInput!): Boolean!
+  removeShiftsCoverage(input: ShiftsCoverageRefInput!): Boolean!
+  removeShiftsDraftShift(input: ShiftsShiftRefInput!): Boolean!
+  removeShiftsPosition(input: ShiftsPositionRefInput!): Boolean!
   renameAgent(input: RenameAgentInput!): AgentAckType!
   requestAgentSync(input: RequestAgentSyncInput!): AgentAckType!
+  requestHiringInterview(input: RequestHiringInterviewInput!): HiringOutcomeType!
+  requestHiringOffer(input: RequestHiringOfferInput!): HiringOutcomeType!
+  requestInventorySend(input: RequestInventorySendInput!): RequestSendType!
+  requestShiftsLeave(input: RequestShiftsLeaveInput!): RequestStatusType!
+  requestShiftsPublish(input: ShiftsScheduleRefInput!): RequestStatusType!
+  requestShiftsSwap(input: RequestShiftsSwapInput!): RequestStatusType!
+  rescreenHiringCandidate(input: HiringCandidateRefInput!): HiringOutcomeType!
   resendInvite(input: InviteRefInput!): InviteResultType!
+  respondHiringInterview(input: RespondHiringInterviewInput!): RespondSlotType!
+  respondHiringOffer(input: RespondHiringOfferInput!): RespondOfferType!
   revokeAgentConnection(input: RevokeAgentConnectionInput!): AgentAckType!
   revokeApiKey(input: RevokeApiKeyInput!): ApiKeyType!
   revokeInvite(input: InviteRefInput!): Boolean!
@@ -1080,12 +1690,32 @@ type Mutation {
   runAutomationNow(input: TemplateKeyInput!): Boolean!
   runFlow(input: RunFlowInput!): RunFlowType!
   saveAuthorityRule(input: SaveAuthorityRuleInput!): AuthorityRuleType!
+  saveHiringAvailability(input: SaveHiringAvailabilityInput!): SaveAvailabilityType!
+  saveHiringJob(input: SaveHiringJobInput!): SaveJobType!
+  saveHiringNotes(input: SaveHiringNotesInput!): Boolean!
+  saveHiringSettings(input: SaveHiringSettingsInput!): HiringSettingsType!
+  saveInventoryItem(input: SaveInventoryItemInput!): InventoryRefType!
+  saveInventoryLocation(input: SaveInventoryLocationInput!): Boolean!
+  saveInventoryRecipe(input: SaveInventoryRecipeInput!): InventoryRefType!
+  saveInventorySupplier(input: SaveInventorySupplierInput!): InventoryRefType!
+  saveShiftsCoverage(input: SaveShiftsCoverageInput!): Boolean!
+  saveShiftsPosition(input: SaveShiftsPositionInput!): ShiftsRefType!
+  saveShiftsSettings(input: SaveShiftsSettingsInput!): Boolean!
+  saveShiftsStaff(input: SaveShiftsStaffInput!): ShiftsRefType!
   sendAgentCommand(input: SendAgentCommandInput!): AgentCommandResultType!
   setAgentStatus(input: SetAgentStatusInput!): AgentAckType!
   setAgentTexts(input: SetAgentTextsInput!): AgentAckType!
+  setHiringInterviewStatus(input: SetHiringInterviewStatusInput!): Boolean!
+  setHiringJobStatus(input: SetHiringJobStatusInput!): HiringStatusType!
+  setInventoryItemActive(input: SetInventoryItemActiveInput!): Boolean!
   setMemberStatus(input: SetMemberStatusInput!): Boolean!
+  submitShiftsAvailability(input: SaveShiftsAvailabilityInput!): ShiftsRefType!
+  takeInventoryStock(input: TakeInventoryStockInput!): TakeStockType!
+  toggleHiringOnboarding(input: ToggleHiringOnboardingInput!): Boolean!
+  transferInventoryStock(input: TransferInventoryStockInput!): TransferStockType!
   updateAuthority(input: UpdateAuthorityInput!): AuthorityProfileType!
   updateAutomationPipeline(input: UpdateAutomationPipelineInput!): AutomationCardType!
+  updateInventoryPoDraft(input: UpdateInventoryPoDraftInput!): Boolean!
   updateProfile(input: UpdateProfileInput!): Boolean!
   updateResponsibilityStatus(input: UpdateResponsibilityStatusInput!): ResponsibilityType!
 }
@@ -1191,6 +1821,18 @@ type OfficeThreadCursorType {
   id: ID!
 }
 
+type OpeningDayType {
+  close: String!
+  open: String!
+  weekday: Int!
+}
+
+input OpeningHoursInput {
+  close: String!
+  open: String!
+  weekday: Int!
+}
+
 type PendingInviteType {
   createdAt: String!
   email: String!
@@ -1225,6 +1867,99 @@ input ProposeOfficeCommandInput {
   messageId: ID!
 }
 
+input ProposeShiftsWeekInput {
+  week: String!
+}
+
+type ProposeWeekType {
+  costVnd: Float!
+  open: Int!
+  scheduleId: ID!
+  shifts: Int!
+  short: Int!
+  version: Int!
+}
+
+input PublicHiringJobInput {
+  job: String!
+  ws: String!
+}
+
+type PublicInterviewType {
+  candidateName: String!
+  durationMin: Int!
+  interviewerName: String!
+  jobTitle: String!
+  location: String!
+  mode: String!
+  note: String!
+  proposedSlots: [[PublicSlotType!]!]!
+  shop: String!
+  slotStart: String
+  status: String!
+}
+
+type PublicJobType {
+  closesAt: String
+  company: String!
+  consentText: String!
+  description: String!
+  employmentType: String!
+  headcount: Int!
+  location: String!
+  open: Boolean!
+  payMaxVnd: Float
+  payMinVnd: Float
+  payUnit: String!
+  position: String!
+  questions: [[PublicQuestionType!]!]!
+  requirements: PublicRequirementsType!
+  schedule: String!
+  status: String!
+  title: String!
+}
+
+type PublicOfferType {
+  candidateName: String!
+  expiresAt: String
+  jobTitle: String!
+  letter: String!
+  location: String!
+  shop: String!
+  status: String!
+  terms: PublicTermsType!
+}
+
+type PublicQuestionType {
+  choices: [[String!]!]!
+  id: ID!
+  required: Boolean!
+  text: String!
+  type: String!
+}
+
+type PublicRequirementsType {
+  availability: [[String!]!]!
+  experienceNote: String!
+  experienceYears: Int
+  mustHave: [[String!]!]!
+  niceToHave: [[String!]!]!
+  skills: [[String!]!]!
+}
+
+type PublicSlotType {
+  end: String!
+  start: String!
+}
+
+type PublicTermsType {
+  note: String!
+  pay: String!
+  probation: String!
+  startDate: String!
+  title: String!
+}
+
 type Query {
   adminHealth: AdminHealthType!
   adminSession: AdminSessionType!
@@ -1241,6 +1976,10 @@ type Query {
   automationSuggestions(input: AutomationSuggestionsInput!): [AutomationSuggestionType!]!
   automations: AutomationsOverviewType!
   dashboard: DashboardType!
+  hiringCandidateDetail(input: HiringCandidateRefInput!): HiringCandidateDetailType!
+  hiringWorkbench: HiringBenchType!
+  inventoryTemplates: [InventoryTemplateType!]!
+  inventoryWorkbench: InventoryWorkbenchType!
   invitePreview(input: InviteTokenInput!): InvitePreviewType!
   moduleDefinition(input: ModuleKeyInput!): ModuleDefinitionType!
   modulesCatalog: ModulesCatalogType!
@@ -1250,13 +1989,44 @@ type Query {
   officeDecidedApprovals: [OfficeApprovalType!]!
   officeMessages(input: ListOfficeMessagesInput!): OfficeMessagePageType!
   officePendingApprovals: [OfficeApprovalType!]!
+  publicHiringInterview(input: HiringTokenInput!): PublicInterviewType!
+  publicHiringJob(input: PublicHiringJobInput!): PublicJobType!
+  publicHiringOffer(input: HiringTokenInput!): PublicOfferType!
   responsibilities: [ResponsibilityListingType!]!
+  shiftsMine: ShiftsMineType!
+  shiftsWorkbench(week: String): ShiftsBenchType!
   workItem(input: WorkItemIdInput!): WorkItemType!
   workItems(input: ListWorkItemsInput!): WorkItemPageType!
   workspaceInvites: [PendingInviteType!]!
   workspaceMembers: [MemberListingType!]!
   workspaceShell(input: ShellWindowInput!): WorkspaceShellType!
   workspaceStaff: [StaffOptionType!]!
+}
+
+input ReassignShiftsShiftInput {
+  shiftId: ID!
+  staffId: ID
+}
+
+input ReceiveInventoryPoInput {
+  invoiceNo: String!
+  lines: [[ReceivePoLineInput!]!]!
+  note: String!
+  poId: ID!
+}
+
+input ReceivePoLineInput {
+  lineId: ID!
+  qty: String!
+  unitCost: String!
+}
+
+type ReceivePoType {
+  handedToAccounting: Boolean!
+  payableVnd: Float!
+  priceChanges: [[String!]!]!
+  received: Int!
+  status: String!
 }
 
 input RenameAgentInput {
@@ -1267,6 +2037,68 @@ input RenameAgentInput {
 input RequestAgentSyncInput {
   force: Boolean
   installationId: ID
+}
+
+input RequestHiringInterviewInput {
+  candidateId: ID!
+  durationMin: Int!
+  interviewerUserId: ID
+  location: String!
+  mode: String!
+}
+
+input RequestHiringOfferInput {
+  candidateId: ID!
+  note: String!
+  pay: String!
+  probation: String!
+  startDate: String!
+  title: String!
+}
+
+input RequestInventorySendInput {
+  kind: String!
+  poId: ID!
+}
+
+type RequestSendType {
+  status: String!
+}
+
+input RequestShiftsLeaveInput {
+  from: String!
+  reason: String!
+  to: String!
+}
+
+input RequestShiftsSwapInput {
+  kind: String!
+  reason: String!
+  shiftId: ID!
+  toStaffId: ID
+}
+
+type RequestStatusType {
+  status: String!
+}
+
+input RespondHiringInterviewInput {
+  start: String
+  token: String!
+}
+
+input RespondHiringOfferInput {
+  accept: Boolean!
+  token: String!
+}
+
+type RespondOfferType {
+  outcome: String!
+}
+
+type RespondSlotType {
+  outcome: String!
+  slotStart: String
 }
 
 type ResponsibilityListingType {
@@ -1330,6 +2162,145 @@ input SaveAuthorityRuleInput {
   change: AuthorityRuleChangeInput!
 }
 
+type SaveAvailabilityType {
+  saved: Int!
+}
+
+input SaveHiringAvailabilityInput {
+  memberUserId: ID!
+  windows: [[HiringAvailabilityWindowInput!]!]!
+}
+
+input SaveHiringJobInput {
+  channels: [[String!]!]
+  closesAt: String
+  description: String
+  employmentType: String
+  headcount: Int
+  id: ID
+  location: String
+  payMaxVnd: Float
+  payMinVnd: Float
+  payUnit: String
+  position: String
+  questions: [[HiringJobQuestionInput!]!]!
+  requirements: HiringJobRequirementsInput
+  schedule: String
+  title: String!
+}
+
+input SaveHiringNotesInput {
+  id: ID!
+  notes: String!
+}
+
+input SaveHiringSettingsInput {
+  adTone: String
+  applyConsentText: String
+  autoCloseWhenFilled: Boolean
+  notifyNewCandidate: Boolean
+  publicSlug: String
+  remindInterview: Boolean
+  retentionDays: Int
+}
+
+input SaveInventoryItemInput {
+  aliases: String!
+  category: String!
+  cost: String!
+  id: ID
+  name: String!
+  openingQty: String
+  reorderPoint: String!
+  reorderQty: String!
+  sell: String!
+  sku: String!
+  supplierId: String!
+  unit: String!
+  units: String!
+}
+
+input SaveInventoryLocationInput {
+  id: ID
+  name: String!
+}
+
+input SaveInventoryRecipeInput {
+  aliases: String!
+  id: ID
+  lines: [[InventoryRecipeLineInput!]!]!
+  name: String!
+}
+
+input SaveInventorySupplierInput {
+  channel: String!
+  contactName: String!
+  email: String!
+  id: ID
+  leadTime: String!
+  name: String!
+  note: String!
+  phone: String!
+  terms: String!
+  zalo: String!
+}
+
+type SaveJobType {
+  id: ID!
+  slug: String!
+}
+
+input SaveShiftsAvailabilityInput {
+  available: Boolean!
+  date: String
+  end: String!
+  note: String
+  staffId: ID
+  start: String!
+  weekday: Int
+}
+
+input SaveShiftsCoverageInput {
+  end: String!
+  id: ID
+  ideal: Int!
+  min: Int!
+  peak: Boolean!
+  positionId: ID!
+  start: String!
+  weekdays: [[Int!]!]!
+}
+
+input SaveShiftsPositionInput {
+  color: String
+  id: ID
+  name: String!
+}
+
+input SaveShiftsSettingsInput {
+  leaveNoticeDays: Int!
+  noshowMinutes: Int!
+  openingHours: [[OpeningHoursInput!]!]!
+  overtimeHoursWeek: Int!
+  remindMinutes: Int!
+  swapNoticeHours: Int!
+}
+
+input SaveShiftsStaffInput {
+  active: Boolean
+  id: ID
+  maxDay: Float
+  maxWeek: Float
+  minRest: Float
+  name: String!
+  phone: String
+  positionIds: [[ID!]!]!
+  staffRowId: ID
+  telegramChatId: String
+  wage: Float
+  zaloUserId: String
+}
+
 input SendAgentCommandInput {
   command: String!
   fields: [FieldValueInput!]
@@ -1348,6 +2319,21 @@ input SetAgentStatusInput {
 input SetAgentTextsInput {
   agentId: ID!
   texts: AgentTextsInput!
+}
+
+input SetHiringInterviewStatusInput {
+  id: ID!
+  status: String!
+}
+
+input SetHiringJobStatusInput {
+  id: ID!
+  status: String!
+}
+
+input SetInventoryItemActiveInput {
+  active: Boolean!
+  id: ID!
 }
 
 input SetMemberStatusInput {
@@ -1383,6 +2369,267 @@ input ShellWindowInput {
   foundingTo: String!
 }
 
+type ShiftLeaveType {
+  from: String!
+  staffId: ID!
+  to: String!
+}
+
+type ShiftPositionType {
+  color: String!
+  id: ID!
+  name: String!
+}
+
+type ShiftSegType {
+  date: String!
+  e: Int!
+  pos: ID!
+  s: Int!
+}
+
+type ShiftStaffType {
+  active: Boolean!
+  id: ID!
+  maxDay: Float!
+  maxWeek: Float!
+  minRest: Float!
+  name: String!
+  phone: String
+  positionIds: [[ID!]!]!
+  skills: [[String!]!]!
+  staffRowId: ID
+  telegramChatId: String
+  wage: Float!
+  zaloUserId: String
+}
+
+type ShiftType {
+  date: String!
+  end: String!
+  id: ID!
+  positionId: ID!
+  staffId: ID
+  start: String!
+  status: String!
+}
+
+type ShiftsAvailType {
+  available: Boolean!
+  date: String
+  end: String!
+  staffId: ID!
+  start: String!
+  weekday: Int
+}
+
+input ShiftsAvailabilityRefInput {
+  id: ID!
+}
+
+type ShiftsAvailabilityType {
+  available: Boolean!
+  createdAt: String!
+  date: String
+  end: String!
+  id: ID!
+  note: String!
+  staffId: ID!
+  start: String!
+  status: String!
+  weekday: Int
+}
+
+type ShiftsBenchType {
+  allAvailability: [[ShiftsAvailabilityType!]!]!
+  figures: ShiftsFiguresType
+  myProfileId: ID
+  reminderOn: Boolean!
+  requests: ShiftsRequestsType!
+  role: String!
+  setup: ShiftsSetupType!
+  staffRows: [[ShiftsStaffRowType!]!]!
+  today: String!
+  week: ShiftsWeekType!
+}
+
+type ShiftsBlockType {
+  end: String!
+  id: ID!
+  ideal: Int!
+  min: Int!
+  peak: Boolean!
+  positionId: ID!
+  start: String!
+  weekday: Int!
+}
+
+type ShiftsCheckinType {
+  checkedInAt: String!
+  shiftId: ID!
+}
+
+type ShiftsColleagueType {
+  id: ID!
+  name: String!
+  positionIds: [[ID!]!]!
+}
+
+input ShiftsCoverageRefInput {
+  id: ID!
+}
+
+type ShiftsFiguresType {
+  hoursMonth: Float!
+  leavePending: Int!
+  openGaps: Int!
+  weekFilled: Int!
+  weekHasSchedule: Boolean!
+  weekTotal: Int!
+}
+
+type ShiftsLeaveType {
+  createdAt: String!
+  from: String!
+  id: ID!
+  item: ShiftsWorkItemType
+  reason: String!
+  staffId: ID!
+  status: String!
+  to: String!
+  workItemId: ID
+}
+
+type ShiftsMineType {
+  availability: [[ShiftsAvailabilityType!]!]!
+  colleagues: [[ShiftsColleagueType!]!]!
+  leaves: [[ShiftsLeaveType!]!]!
+  myShifts: [[ShiftsMyShiftType!]!]!
+  openShifts: [[ShiftType!]!]!
+  profileId: ID
+  swaps: [[ShiftsSwapType!]!]!
+  today: String!
+}
+
+type ShiftsMyShiftType {
+  checkedIn: Boolean!
+  date: String!
+  end: String!
+  id: ID!
+  positionId: ID!
+  staffId: ID
+  start: String!
+  status: String!
+}
+
+input ShiftsPositionRefInput {
+  id: ID!
+}
+
+type ShiftsPriorType {
+  segs: [[ShiftSegType!]!]!
+  staffId: ID!
+}
+
+type ShiftsRefType {
+  id: ID!
+}
+
+type ShiftsRequestsType {
+  availability: [[ShiftsAvailabilityType!]!]!
+  leaves: [[ShiftsLeaveType!]!]!
+  swaps: [[ShiftsSwapType!]!]!
+}
+
+input ShiftsScheduleRefInput {
+  scheduleId: ID!
+}
+
+type ShiftsScheduleType {
+  costVnd: Float!
+  createdAt: String!
+  evidence: JsonObject!
+  explanation: String!
+  id: ID!
+  publishedAt: String
+  solverMs: Int
+  source: String!
+  status: String!
+  summary: JsonObject!
+  version: Int!
+  weekStart: String!
+  workItemId: ID
+}
+
+type ShiftsScheduleVersionType {
+  costVnd: Float!
+  createdAt: String!
+  id: ID!
+  publishedAt: String
+  status: String!
+  version: Int!
+}
+
+type ShiftsSettingsType {
+  leaveNoticeDays: Int!
+  noshowMinutes: Int!
+  openingHours: [[OpeningDayType!]!]!
+  overtimeHoursWeek: Int!
+  remindMinutes: Int!
+  swapNoticeHours: Int!
+}
+
+type ShiftsSetupType {
+  blocks: [[ShiftsBlockType!]!]!
+  positions: [[ShiftPositionType!]!]!
+  settings: ShiftsSettingsType!
+  staff: [[ShiftStaffType!]!]!
+}
+
+input ShiftsShiftRefInput {
+  shiftId: ID!
+}
+
+type ShiftsStaffRowType {
+  id: ID!
+  name: String!
+}
+
+type ShiftsSwapType {
+  checks: [[String!]!]!
+  createdAt: String!
+  fromStaffId: ID
+  id: ID!
+  item: ShiftsWorkItemType
+  kind: String!
+  reason: String!
+  shiftId: ID!
+  shiftLine: String!
+  status: String!
+  toStaffId: ID!
+  workItemId: ID
+}
+
+type ShiftsWeekType {
+  approvedAvail: [[ShiftsAvailType!]!]!
+  approvedLeaves: [[ShiftLeaveType!]!]!
+  checkins: [[ShiftsCheckinType!]!]!
+  current: ShiftsScheduleType
+  monday: String!
+  prior: [[ShiftsPriorType!]!]!
+  publishItem: ShiftsWorkItemType
+  shifts: [[ShiftType!]!]!
+  versions: [[ShiftsScheduleVersionType!]!]!
+}
+
+type ShiftsWorkItemType {
+  decidedPath: String
+  id: ID!
+  resultSummary: String
+  status: String!
+  summary: String!
+}
+
 type ShopContextType {
   hours: String!
   shop: String!
@@ -1393,6 +2640,21 @@ type StaffOptionType {
   id: ID!
   name: String!
   role: String!
+}
+
+input StockTakeCountInput {
+  counted: Float!
+  itemId: ID!
+}
+
+input TakeInventoryStockInput {
+  counts: [[StockTakeCountInput!]!]!
+}
+
+type TakeStockType {
+  applied: Int!
+  same: Int!
+  waiting: Int!
 }
 
 type TemplateAuthorityType {
@@ -1457,6 +2719,24 @@ type TemplateTriggerType {
   line: LocalizedTextType!
 }
 
+input ToggleHiringOnboardingInput {
+  done: Boolean!
+  id: ID!
+}
+
+input TransferInventoryStockInput {
+  fromLocationId: ID!
+  itemId: ID!
+  note: String!
+  qty: Float!
+  toLocationId: ID!
+}
+
+type TransferStockType {
+  from: Float!
+  to: Float!
+}
+
 type TrustType {
   autoSend: Boolean!
   offered: Boolean!
@@ -1475,6 +2755,19 @@ input UpdateAutomationPipelineInput {
   googleConnectionId: ID
   templateKey: String!
   values: JsonObject
+}
+
+input UpdateInventoryPoDraftInput {
+  expectedAt: String!
+  lines: [[UpdatePoLineInput!]!]!
+  poId: ID!
+  supplierId: String!
+}
+
+input UpdatePoLineInput {
+  lineId: ID!
+  qty: String!
+  unitCost: String!
 }
 
 input UpdateProfileInput {

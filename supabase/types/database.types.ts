@@ -2185,6 +2185,25 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"lead_actions": {
+                  Row: {
+                    "action": string,"created_at": string,"error_code": string | null,"fencing_token": number | null,"id": string,"input": NonNullable<Json>,"job_id": string | null,"locale": string,"requested_by": string,"result": Json | null,"status": string,"updated_at": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "action": string,"created_at"?: string,"error_code"?: string | null,"fencing_token"?: number | null,"id"?: string,"input": NonNullable<Json>,"job_id"?: string | null,"locale": string,"requested_by": string,"result"?: Json | null,"status"?: string,"updated_at"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "action"?: string,"created_at"?: string,"error_code"?: string | null,"fencing_token"?: number | null,"id"?: string,"input"?: NonNullable<Json>,"job_id"?: string | null,"locale"?: string,"requested_by"?: string,"result"?: Json | null,"status"?: string,"updated_at"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "lead_action_runs_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"lead_flows": {
                   Row: {
                     "analysis": Json | null,"answers": NonNullable<Json>,"asked": number,"closed_at": string | null,"connection_id": string | null,"contact_asked_at": string | null,"conversation_id": string | null,"created_at": string,"email": string | null,"escalated_at": string | null,"escalation_reason": string | null,"followed_up_at": string | null,"greeted_at": string | null,"handed_off_at": string | null,"id": string,"igsid": string | null,"installation_id": string | null,"last_user_at": string | null,"last_user_text": string | null,"lead_id": string | null,"name": string | null,"pending_question": number | null,"phone": string | null,"platform": string | null,"psid": string | null,"resume_state": string | null,"score": string | null,"score_reasons": NonNullable<Json>,"scored_at": string | null,"signals": NonNullable<Json>,"source": NonNullable<Json>,"state": string,"touches": NonNullable<Json>,"updated_at": string,"workspace_id": string

@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
 import { ExtractKnowledgeFactsQueueModule } from "@features/jobs/extract-knowledge-facts"
 import { RunBrainCommandQueueModule } from "@features/jobs/run-brain-command"
@@ -14,6 +13,7 @@ import { RunAutomationTickQueueModule } from "@features/jobs/run-automation-tick
 import { AgentToolsHttpModule } from "@features/api/agent-tools"
 import { AgentsGraphqlModule, AgentsHttpModule } from "@features/api/agents"
 import { ApiKeysGraphqlModule } from "@features/api/api-keys"
+import { OperationsGraphqlModule } from "@features/api/operations"
 import { OverviewGraphqlModule } from "@features/api/overview"
 import { DecisionsGraphqlModule, DecisionsHttpModule } from "@features/api/decisions"
 import { RunDecisionsQueueModule } from "@features/jobs/run-decisions"
@@ -152,7 +152,6 @@ import {
     OPENCLAW_RELOAD_SETTLE_MS,
     OpenclawAgentSyncModule,
 } from "@modules/domain/openclaw-agent-sync"
-import { RESPONSIBILITY_JOURNAL_MESSAGES } from "@modules/domain/responsibilities"
 import { WORK_ITEMS_ERROR_KINDS, WORK_ITEMS_MESSAGES } from "@modules/domain/work-items"
 import { DEEPSEEK_ERROR_KINDS, DEEPSEEK_MESSAGES, DeepseekClient, DeepseekModule } from "@modules/integrations/deepseek"
 import {
@@ -248,6 +247,7 @@ import { MessagesModule } from "@modules/domain/messages"
 import {
     RESPONSIBILITIES_ERROR_KINDS,
     RESPONSIBILITIES_MESSAGES,
+    RESPONSIBILITY_JOURNAL_MESSAGES,
     ResponsibilitiesModule,
 } from "@modules/domain/responsibilities"
 import { AiQuotaOverridesModule } from "@modules/domain/ai-quota-overrides"
@@ -360,7 +360,6 @@ import { RenderVideoQueueModule } from "@features/jobs/render-video"
 import { ConnectionCommandsQueueModule } from "@features/jobs/connection-commands"
 import { RequestRenderQueueModule } from "@features/jobs/request-render"
 import type { ApiOptions } from "./api.options"
-
 @Module({})
 /** Composition root of the API: every capability is registered once and the three guards run in a fixed order. */
 export class AppModule {
@@ -768,6 +767,7 @@ export class AppModule {
                 WorkspacesHttpModule,
                 WorkspacesGraphqlModule,
                 ApiKeysGraphqlModule,
+                OperationsGraphqlModule,
                 OverviewGraphqlModule,
                 AccountGraphqlModule,
                 ShellGraphqlModule,
