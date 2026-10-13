@@ -3,14 +3,12 @@ import { HttpSecurityError, HttpSecurityErrorCode } from "./errors/http-security
 import { WebhookProofRegistryService } from "./webhook-proof-registry.service"
 import type { WebhookProof } from "./webhook-proof.port"
 
-const proofOf = (provider: string): WebhookProof => ({ provider, prove: () => Promise.resolve(true) })
-
-const build = async () => {
-    const moduleRef = await Test.createTestingModule({
-        providers: [WebhookProofRegistryService],
-    }).compile()
+const build = async (): Promise<WebhookProofRegistryService> => {
+    const moduleRef = await Test.createTestingModule({ providers: [WebhookProofRegistryService] }).compile()
     return moduleRef.get(WebhookProofRegistryService)
 }
+
+const proofOf = (provider: string): WebhookProof => ({ provider, prove: () => Promise.resolve(true) })
 
 describe("WebhookProofRegistryService", () => {
     it("asks the proof registered for a provider with the request", async () => {

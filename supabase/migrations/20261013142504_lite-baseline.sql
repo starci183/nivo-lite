@@ -741,6 +741,25 @@ begin
 end $$;
 
 --
+-- Name: app_errors_record(text, text, text, uuid, uuid, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.app_errors_record(p_scope text, p_message text, p_stack text, p_ws uuid, p_connection uuid, p_ctx jsonb) RETURNS void
+    LANGUAGE plpgsql
+    SET search_path TO 'public'
+    AS $$
+declare
+  v_ws uuid := p_ws;
+begin
+  if v_ws is null and p_connection is not null then
+    select c.workspace_id into v_ws from public.connections c where c.id = p_connection;
+  end if;
+  insert into public.app_errors (scope, message, stack, workspace_id, ctx)
+  values (left(coalesce(p_scope, ''), 200), left(coalesce(p_message, ''), 4000), left(p_stack, 8000), v_ws, coalesce(p_ctx, '{}'::jsonb));
+end
+$$;
+
+--
 -- Name: assign_lead_responsibility(uuid, uuid, text, text, timestamp with time zone, text, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -4438,6 +4457,20 @@ CREATE FUNCTION public.shifts_reassign(p_ws uuid, p_shift uuid, p_staff uuid) RE
     AS $$
 begin
   update public.shifts_shifts set staff_id = p_staff, source = 'manual' where id = p_shift and workspace_id = p_ws;
+end
+$$;
+
+--
+-- Name: shifts_record_notice(uuid, uuid, uuid, uuid, text, text, text, text, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.shifts_record_notice(p_ws uuid, p_staff uuid, p_schedule uuid, p_shift uuid, p_kind text, p_channel text, p_status text, p_body text, p_error text) RETURNS void
+    LANGUAGE plpgsql
+    SET search_path TO 'public'
+    AS $$
+begin
+  insert into public.shifts_notifications (workspace_id, staff_id, schedule_id, shift_id, kind, channel, status, body, error)
+  values (p_ws, p_staff, p_schedule, p_shift, p_kind, p_channel, p_status, left(coalesce(p_body, ''), 4000), left(p_error, 500));
 end
 $$;
 
@@ -10615,6 +10648,12 @@ CREATE INDEX shifts_coverage_ws ON public.shifts_coverage USING btree (workspace
 CREATE INDEX shifts_leave_ws ON public.shifts_leave_requests USING btree (workspace_id, status, from_date);
 
 --
+-- Name: shifts_notifications_shift_kind; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX shifts_notifications_shift_kind ON public.shifts_notifications USING btree (shift_id, kind) WHERE (shift_id IS NOT NULL);
+
+--
 -- Name: shifts_notifications_ws; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -13487,7 +13526,7 @@ ALTER TABLE public.app_errors ENABLE ROW LEVEL SECURITY;
 -- Name: app_errors app_errors_app_be_insert; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY app_errors_app_be_insert ON public.app_errors FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
+CREATE POLICY app_errors_app_be_insert ON public.app_errors FOR INSERT TO app_be WITH CHECK ((scope IS NOT NULL));
 
 --
 -- Name: app_errors app_errors_app_be_select; Type: POLICY; Schema: public; Owner: -
@@ -18911,6 +18950,13 @@ GRANT ALL ON FUNCTION public.api_key_revoke(p_workspace uuid, p_key uuid) TO aut
 REVOKE EXECUTE ON FUNCTION public.api_rate_hit(p_key uuid) FROM PUBLIC, anon, authenticated;
 
 --
+-- Name: FUNCTION app_errors_record(p_scope text, p_message text, p_stack text, p_ws uuid, p_connection uuid, p_ctx jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE EXECUTE ON FUNCTION public.app_errors_record(p_scope text, p_message text, p_stack text, p_ws uuid, p_connection uuid, p_ctx jsonb) FROM PUBLIC, anon, authenticated;
+GRANT ALL ON FUNCTION public.app_errors_record(p_scope text, p_message text, p_stack text, p_ws uuid, p_connection uuid, p_ctx jsonb) TO app_be;
+
+--
 -- Name: FUNCTION assign_lead_responsibility(p_workspace uuid, p_responsibility uuid, p_owner text, p_next_action text, p_due timestamp with time zone, p_title text, p_locale text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -20091,6 +20137,13 @@ GRANT ALL ON FUNCTION public.shifts_publish(p_ws uuid, p_schedule uuid, p_eviden
 
 REVOKE EXECUTE ON FUNCTION public.shifts_reassign(p_ws uuid, p_shift uuid, p_staff uuid) FROM PUBLIC, anon, authenticated;
 GRANT ALL ON FUNCTION public.shifts_reassign(p_ws uuid, p_shift uuid, p_staff uuid) TO app_be;
+
+--
+-- Name: FUNCTION shifts_record_notice(p_ws uuid, p_staff uuid, p_schedule uuid, p_shift uuid, p_kind text, p_channel text, p_status text, p_body text, p_error text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE EXECUTE ON FUNCTION public.shifts_record_notice(p_ws uuid, p_staff uuid, p_schedule uuid, p_shift uuid, p_kind text, p_channel text, p_status text, p_body text, p_error text) FROM PUBLIC, anon, authenticated;
+GRANT ALL ON FUNCTION public.shifts_record_notice(p_ws uuid, p_staff uuid, p_schedule uuid, p_shift uuid, p_kind text, p_channel text, p_status text, p_body text, p_error text) TO app_be;
 
 --
 -- Name: FUNCTION shifts_record_notification(p_ws uuid, p_staff uuid, p_schedule uuid, p_shift uuid, p_kind text, p_channel text, p_status text, p_body text); Type: ACL; Schema: public; Owner: -
@@ -21554,27 +21607,39 @@ GRANT SELECT,DELETE ON TABLE public.zalo_wizard_drafts TO app_be;
 SET search_path = public, extensions;
 
 -- pgmq queues and what the back end may do with them.
+SELECT pgmq.create('agents');
 SELECT pgmq.create('automation');
 SELECT pgmq.create('bank_credit_received');
 SELECT pgmq.create('booking_status');
+SELECT pgmq.create('chat_turn');
 SELECT pgmq.create('connection_commands');
+SELECT pgmq.create('connection_health');
 SELECT pgmq.create('content_tick');
+SELECT pgmq.create('data_sync');
+SELECT pgmq.create('decisions');
 SELECT pgmq.create('hiring_tick');
+SELECT pgmq.create('inventory_order');
+SELECT pgmq.create('inventory_replenish');
 SELECT pgmq.create('invite_command');
 SELECT pgmq.create('knowledge');
 SELECT pgmq.create('lead_actions');
+SELECT pgmq.create('lead_gen');
 SELECT pgmq.create('meta_inbound');
 SELECT pgmq.create('n8n');
 SELECT pgmq.create('payment_order_requested');
 SELECT pgmq.create('public_api');
 SELECT pgmq.create('render_request');
+SELECT pgmq.create('shifts_alerts');
 SELECT pgmq.create('video_render');
 SELECT pgmq.create('zalo_authorization');
+SELECT pgmq.create('zalo_refresh');
 SELECT pgmq.create('zalo_wizard');
 grant DELETE, INSERT, SELECT, UPDATE on table pgmq.a_connection_commands to app_be;
+grant DELETE, INSERT, SELECT, UPDATE on table pgmq.a_lead_gen to app_be;
 grant DELETE, INSERT, SELECT, UPDATE on table pgmq.a_meta_inbound to app_be;
 grant DELETE, INSERT, SELECT, UPDATE on table pgmq.q_bank_credit_received to app_be;
 grant DELETE, INSERT, SELECT, UPDATE on table pgmq.q_connection_commands to app_be;
+grant DELETE, INSERT, SELECT, UPDATE on table pgmq.q_lead_gen to app_be;
 grant DELETE, INSERT, SELECT, UPDATE on table pgmq.q_meta_inbound to app_be;
 grant DELETE, INSERT, SELECT, UPDATE on table pgmq.q_payment_order_requested to app_be;
 grant INSERT, SELECT on table pgmq.a_bank_credit_received to app_be;
@@ -21701,17 +21766,17 @@ INSERT INTO public.plans (code, name_vi, name_en, price_vnd, period, seats, feat
 --
 
 INSERT INTO public.modules (key, sort_order, status, category, audience, knowledge_folder, workbench, default_operating_mode, definition, updated_at, multi_instance) VALUES
-	('sales', 20, 'stable', 'sales_customer', 'internal', 'sales', 'sales', 'assist', '{}', '2026-10-13 16:26:52.894476+00', false),
-	('accounting', 30, 'stable', 'finance', 'internal', 'accounting', 'accounting', 'assist', '{}', '2026-10-13 16:26:52.894476+00', false),
-	('shifts', 40, 'early', 'operations', 'internal', 'shifts', NULL, 'assist', '{}', '2026-10-13 16:26:52.894476+00', false),
-	('inventory', 60, 'early', 'operations', 'internal', 'inventory', NULL, 'assist', '{}', '2026-10-13 16:26:52.894476+00', false),
-	('loyalty', 70, 'early', 'sales_customer', 'customer', 'loyalty', NULL, 'assist', '{}', '2026-10-13 16:26:52.894476+00', false),
-	('video', 80, 'early', 'marketing', 'internal', 'video', NULL, 'assist', '{}', '2026-10-13 16:26:52.894476+00', false),
-	('content', 90, 'early', 'marketing', 'internal', 'content', NULL, 'assist', '{}', '2026-10-13 16:26:52.894476+00', false),
-	('hiring', 100, 'early', 'hr', 'internal', 'hiring', NULL, 'assist', '{}', '2026-10-13 16:26:52.894476+00', false),
-	('chatbot', 10, 'stable', 'sales_customer', 'customer', 'chatbot', 'chatbot', 'assist', '{}', '2026-10-13 16:26:52.894476+00', true),
-	('booking', 50, 'early', 'operations', 'customer', 'booking', NULL, 'assist', '{}', '2026-10-13 16:26:52.894476+00', true),
-	('lead_gen', 15, 'early', 'sales_customer', 'customer', 'lead_gen', 'lead_gen', 'assist', '{}', '2026-10-13 16:26:53.339214+00', true);
+	('sales', 20, 'stable', 'sales_customer', 'internal', 'sales', 'sales', 'assist', '{}', '2026-10-13 22:00:10.369993+00', false),
+	('accounting', 30, 'stable', 'finance', 'internal', 'accounting', 'accounting', 'assist', '{}', '2026-10-13 22:00:10.369993+00', false),
+	('shifts', 40, 'early', 'operations', 'internal', 'shifts', NULL, 'assist', '{}', '2026-10-13 22:00:10.369993+00', false),
+	('inventory', 60, 'early', 'operations', 'internal', 'inventory', NULL, 'assist', '{}', '2026-10-13 22:00:10.369993+00', false),
+	('loyalty', 70, 'early', 'sales_customer', 'customer', 'loyalty', NULL, 'assist', '{}', '2026-10-13 22:00:10.369993+00', false),
+	('video', 80, 'early', 'marketing', 'internal', 'video', NULL, 'assist', '{}', '2026-10-13 22:00:10.369993+00', false),
+	('content', 90, 'early', 'marketing', 'internal', 'content', NULL, 'assist', '{}', '2026-10-13 22:00:10.369993+00', false),
+	('hiring', 100, 'early', 'hr', 'internal', 'hiring', NULL, 'assist', '{}', '2026-10-13 22:00:10.369993+00', false),
+	('chatbot', 10, 'stable', 'sales_customer', 'customer', 'chatbot', 'chatbot', 'assist', '{}', '2026-10-13 22:00:10.369993+00', true),
+	('booking', 50, 'early', 'operations', 'customer', 'booking', NULL, 'assist', '{}', '2026-10-13 22:00:10.369993+00', true),
+	('lead_gen', 15, 'early', 'sales_customer', 'customer', 'lead_gen', 'lead_gen', 'assist', '{}', '2026-10-13 22:00:10.710036+00', true);
 
 --
 -- Data for Name: agents; Type: TABLE DATA; Schema: public; Owner: postgres

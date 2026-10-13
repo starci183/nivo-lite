@@ -59,6 +59,8 @@ ALTER POLICY lead_actions_app_be_delete ON public.lead_actions USING ((workspace
 ALTER POLICY lead_actions_app_be_insert ON public.lead_actions WITH CHECK ((workspace_id IS NOT NULL));
 ALTER POLICY lead_actions_app_be_select ON public.lead_actions USING ((workspace_id IS NOT NULL));
 ALTER POLICY lead_actions_app_be_update ON public.lead_actions USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
+-- The back end records an app error only with the scope it names.
+ALTER POLICY app_errors_app_be_insert ON public.app_errors WITH CHECK ((scope IS NOT NULL));
 
 -- job_read without the #variable_conflict directive (the ON CONFLICT target names the primary key) and with RETURN QUERY.
 CREATE OR REPLACE FUNCTION public.job_read(p_queue text, p_vt integer, p_qty integer, p_ws_limit integer DEFAULT 2) RETURNS TABLE(msg_id bigint, attempt integer, enqueued_at timestamp with time zone, message jsonb)

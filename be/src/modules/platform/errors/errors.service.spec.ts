@@ -7,10 +7,11 @@ import { LOGGER } from "@modules/platform/logging"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import { DomainError } from "./domain.error"
-import { ERRORS_OPTIONS } from "./errors.decorators"
+import { ERROR_REPORTER, ERRORS_OPTIONS } from "./errors.decorators"
 import { ErrorsError, ErrorsErrorCode } from "./errors/errors.error"
 import { ErrorsLogEvent } from "./errors.log-events"
 import type { ErrorKindTable } from "./errors.contracts"
+import type { ErrorReporter } from "./errors.port"
 import { ErrorsService } from "./errors.service"
 
 type CalendarsErrorCode = "CALENDARS_NOT_FOUND"
@@ -28,6 +29,7 @@ const build = async (kinds: ReadonlyArray<ErrorKindTable>) => {
             { provide: ERRORS_OPTIONS, useValue: { kinds } },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: LOGGER, useValue: logger },
+            { provide: ERROR_REPORTER, useValue: mock<ErrorReporter>({ report: () => Promise.resolve() }) },
         ],
     }).compile()
     return { errors: moduleRef.get(ErrorsService), catalog, logger }
@@ -69,7 +71,7 @@ describe("ErrorsService", () => {
                 status: 500,
                 params: {},
             })
-            expect(logger.error).toHaveBeenCalledWith(ErrorsLogEvent.Unhandled, undeclared)
+            expect(logger.error).toHaveBeenCalledWith(ErrorsLogEvent.Unhandled, undeclared, { scope: "api" })
         })
 
         it("masks any other failure and logs it", async () => {
@@ -77,7 +79,25 @@ describe("ErrorsService", () => {
             const failure = new Error("boom")
 
             expect(errors.describe(failure).code).toBe("ERRORS_INTERNAL")
-            expect(logger.error).toHaveBeenCalledWith(ErrorsLogEvent.Unhandled, failure)
+            expect(logger.error).toHaveBeenCalledWith(ErrorsLogEvent.Unhandled, failure, { scope: "api" })
+        })
+
+        it("records an unhandled failure with the reporter under the site the transport names", async () => {
+            const reporter = mock<ErrorReporter>({ report: () => Promise.resolve() })
+            const moduleRef = await Test.createTestingModule({
+                providers: [
+                    ErrorsService,
+                    { provide: ERRORS_OPTIONS, useValue: { kinds: [] } },
+                    { provide: MESSAGE_CATALOG, useValue: mock<MessageCatalog>() },
+                    { provide: LOGGER, useValue: mock<Logger>() },
+                    { provide: ERROR_REPORTER, useValue: reporter },
+                ],
+            }).compile()
+            const failure = new Error("boom")
+
+            moduleRef.get(ErrorsService).describe(failure, { scope: "http", context: { route: "/v1/hooks" } })
+
+            expect(reporter.report).toHaveBeenCalledWith("http", failure, { route: "/v1/hooks" })
         })
     })
 

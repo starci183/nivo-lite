@@ -151,9 +151,9 @@ describe("queue policy", () => {
             })
         })
 
-        it("delivers a scheduler tick under its message id, in the job of its queue, with an empty payload when it has none", () => {
+        it("delivers a scheduler tick under its queue and message id, in the job of its queue, with an empty payload when it has none", () => {
             expect(deliveryOf("sweep", { msg_id: "42", attempt: 1, message: {} }, signal)).toEqual({
-                id: "42",
+                id: "sweep:42",
                 queue: "sweep",
                 job: "sweep",
                 payload: {},

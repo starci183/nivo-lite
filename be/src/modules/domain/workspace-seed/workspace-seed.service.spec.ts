@@ -36,7 +36,7 @@ const usersPage = (count: number, prefix: string): Array<SeedAuthUser> =>
         ...(index === 0 ? {} : { email: `${prefix}${index}@x.vn` }),
     }))
 
-const build = async (change: Partial<SeedAuth> = {}, stored = "") => {
+const build = async (change: Partial<Record<keyof SeedAuth, jest.Mock>> = {}, stored = "") => {
     const auth = mock<SeedAuth>({
         listUsers: jest.fn().mockResolvedValue(noUsers),
         createUser: jest.fn().mockImplementation(created),
