@@ -1,19 +1,13 @@
-import { notFound, redirect } from "next/navigation"
-import { listInstallations } from "@/lib/modules-core"
-import { agentHref, isModuleKey } from "@/lib/modules-shared"
-import { getAgent } from "@/lib/queries"
+import { AgentIdRedirectPage } from "@/features/pages/AgentIdRedirectPage"
 
-type AgentPageProps = { params: Promise<{ agentId: string }> }
+export { agentIdRedirectMetadata as generateMetadata } from "@/features/pages/AgentIdRedirectPage"
 
-/** Moved: an agent's setup lives in its instance (/agents/<module>/<installationId>). The agent chat pages below keep working. */
-const AgentPage = async ({ params }: AgentPageProps) => {
-    const { agentId } = await params
-    const agent = await getAgent(agentId)
-    if (agent === null) notFound()
-    const own = (await listInstallations()).find((i) => i.agentId === agent.id)
-    redirect(
-        own ? agentHref(own.moduleKey, own.id) : isModuleKey(agent.module) ? agentHref(agent.module, null) : "/agents",
-    )
+/** What the route passes through: the agent id of the old url. */
+interface PageProps {
+    readonly params: Promise<{ readonly agentId: string }>
 }
 
-export default AgentPage
+/** Moved: an agent's setup lives in its instance (/agents/<module>/<installationId>). The agent chat pages below keep working. */
+const Page = async (props: PageProps) => <AgentIdRedirectPage agentId={(await props.params).agentId} />
+
+export default Page

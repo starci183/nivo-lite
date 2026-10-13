@@ -1,5 +1,7 @@
 import { ZaloCallbackPage } from "@/features/pages/ZaloCallbackPage"
 
+export { connectionsMetadata as generateMetadata } from "@/features/pages/ConnectionsPage"
+
 /** What Zalo appends to the return address. */
 interface PageProps {
     readonly searchParams: Promise<Readonly<Record<string, string | undefined>>>

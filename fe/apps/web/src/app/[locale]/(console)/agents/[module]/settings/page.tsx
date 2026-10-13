@@ -1,5 +1,7 @@
 import { AgentTypeRedirectPage } from "@/features/pages/AgentTypeRedirectPage"
 
+export { agentSettingsMetadata as generateMetadata } from "@/features/pages/AgentSettingsPage"
+
 type PageProps = {
     readonly params: Promise<{ module: string }>
     readonly searchParams: Promise<Record<string, string | string[] | undefined>>

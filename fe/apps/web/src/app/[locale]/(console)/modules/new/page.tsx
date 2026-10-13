@@ -1,12 +1,13 @@
-import { redirect } from "next/navigation"
-import { isModuleKey } from "@/lib/module-registry"
+import { ModulesRedirectPage } from "@/features/pages/ModulesRedirectPage"
 
-type NewModulePageProps = { searchParams: Promise<{ module?: string }> }
+export { agentIdRedirectMetadata as generateMetadata } from "@/features/pages/AgentIdRedirectPage"
 
-/** Moved: installing a module is the Install button of /agents. */
-const NewModulePage = async ({ searchParams }: NewModulePageProps) => {
-    const { module } = await searchParams
-    redirect(isModuleKey(module) ? `/agents/${module}` : "/agents")
+/** What the route passes through: the module the old install link named. */
+interface PageProps {
+    readonly searchParams: Promise<{ readonly module?: string }>
 }
 
-export default NewModulePage
+/** Moved: installing a module is the Install button of /agents. */
+const Page = async (props: PageProps) => <ModulesRedirectPage module={(await props.searchParams).module} />
+
+export default Page
