@@ -229,3 +229,11 @@ export interface WizardSettlement {
     /** True when the job sealed the OA Secret Key, which the wizard then shows as saved. */
     readonly oaSecretSaved: boolean
 }
+
+/** How often a data connection syncs by itself and when it last did. */
+export interface SyncSchedule {
+    /** Minutes between two scheduled syncs; null is manual only. */
+    readonly everyMinutes: number | null
+    /** When the last sync finished, ISO 8601; null when none did. */
+    readonly lastSyncAt: string | null
+}
