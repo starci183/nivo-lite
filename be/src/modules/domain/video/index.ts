@@ -1,5 +1,6 @@
 export { parseVideoConfig } from "./video.config"
 export { VIDEO_ASSETS } from "./video.decorators"
+export { MEDIA_BUCKET, MUSIC_TRACKS, musicObjectPath } from "./video-spec.policy"
 export { VIDEO_ERROR_KINDS } from "./errors/video.error"
 export { VIDEO_MESSAGES } from "./messages/video.messages"
 export { VideoModule } from "./video.module"
