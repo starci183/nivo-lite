@@ -1,6 +1,6 @@
-import { CreditsView } from "@/features/credits/component";
+import { CreditsLoadingPage } from "@/features/pages/CreditsPage"
 
-/** STATE-8: the page itself in skeleton mode (real labels, placeholder figures and three rows per list). */
-const BillingLoading = () => <CreditsView data={null} />;
+/** The credits page itself, with no data yet. */
+const Loading = () => <CreditsLoadingPage />
 
-export default BillingLoading;
+export default Loading

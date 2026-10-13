@@ -1,14 +1,25 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
+import { AGENT_DIRECTORY } from "./office-lines.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./messages.module-definition"
 import { MessagesService } from "./messages.service"
+import { OfficeLinesService } from "./office-lines.service"
 
 @Module({})
-/** The team chat of a workspace over the primary Supabase PostgreSQL connection. */
+/** The team chat of a workspace and the Office thread. The agent directory is bound by the app root through the options. */
 export class MessagesModule extends ConfigurableModuleClass {
-    /** Registers the capability once in the API app. */
+    /** Registers the capability once per app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
-        return { ...base, providers: [...(base.providers ?? []), MessagesService], exports: [MessagesService] }
+        return {
+            ...base,
+            providers: [
+                ...(base.providers ?? []),
+                { provide: AGENT_DIRECTORY, useExisting: options.agentDirectory },
+                MessagesService,
+                OfficeLinesService,
+            ],
+            exports: [MessagesService, OfficeLinesService],
+        }
     }
 }

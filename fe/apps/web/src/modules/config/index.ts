@@ -9,14 +9,13 @@ export const supabaseUrl = (): string => required("NEXT_PUBLIC_SUPABASE_URL", pr
 /** The public anonymous key; RLS remains the authority for every request. */
 export const supabaseAnonKey = (): string =>
     required("NEXT_PUBLIC_SUPABASE_ANON_KEY", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
-/** The origin of the back end api that receives the user's access token. */
-export const apiUrl = (): string => required("NEXT_PUBLIC_API_URL", process.env.NEXT_PUBLIC_API_URL)
-/** The longest an api request may take before the client aborts it. */
-export const API_TIMEOUT_MS = 15_000
+/** The origin of the public API the Developers page documents; the web app itself never calls it. */
+export const developerApiUrl = (): string =>
+    required("NEXT_PUBLIC_DEVELOPER_API_URL", process.env.NEXT_PUBLIC_DEVELOPER_API_URL)
 
 /**
  * Security attributes applied whenever the app writes a Supabase session cookie. `httpOnly` is false on purpose: the browser
- * client (realtime, auth lifecycle, the access token sent to the api) reads the session from this cookie.
+ * client (realtime, auth lifecycle, the realtime token) reads the session from this cookie.
  */
 export const sessionCookieOptions = {
     httpOnly: false,

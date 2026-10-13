@@ -1,6 +1,6 @@
 import "server-only"
 import { getTranslations } from "next-intl/server"
-import { writeRenderVideo } from "@/modules/api/video/write-render"
+import { writeRenderVideo } from "@/modules/db/video/write-render"
 import { markVideoApproved } from "@/modules/db"
 import { logEvidence } from "./core"
 import type { Performer } from "./engine"

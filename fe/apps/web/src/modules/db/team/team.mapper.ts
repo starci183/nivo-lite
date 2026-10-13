@@ -88,3 +88,154 @@ export const guardMemberCommand = (facts: GuardFacts): GuardRefusal | undefined 
     if (facts.nextRole === "owner" && facts.actorRole !== "owner") return "errNotAllowed"
     return undefined
 }
+
+/** How an invitation reached the person: a new account invite email, a sign-in link, or not at all (copy the link). */
+export type InviteDelivery = "invited" | "existing" | "none"
+
+/** One person in the workspace as the team page lists them. */
+export interface MemberItem {
+    readonly userId: string
+    readonly workspaceId: string
+    readonly role: SeatRole
+    readonly staffId: string | null
+    readonly displayName: string
+    readonly status: SeatStatus
+    /** Blank when the viewer may not see it. */
+    readonly email: string
+    /** ISO 8601; null when the person never signed in. */
+    readonly lastSignInAt: string | null
+}
+
+/** One invitation that can still be accepted. */
+export interface InviteItem {
+    readonly id: string
+    readonly email: string
+    readonly role: "manager" | "staff"
+    readonly staffId: string | null
+    /** ISO 8601. */
+    readonly createdAt: string
+    /** ISO 8601. */
+    readonly expiresAt: string
+}
+
+/** What issuing, resending or copying an invitation link answers. */
+export interface InviteResultItem {
+    readonly email: string
+    /** The link to accept; the raw token appears only here. */
+    readonly link: string
+    readonly delivery: InviteDelivery
+}
+
+/** An open invitation with whether it has run out. */
+export interface RosterInvite extends InviteItem {
+    readonly isExpired: boolean
+}
+
+/** The roster the team page draws: everyone in the workspace and the invitations still open. */
+export interface TeamRoster {
+    readonly members: ReadonlyArray<MemberItem>
+    readonly invites: ReadonlyArray<RosterInvite>
+}
+
+/** One row of `workspace_members` the roster reads. */
+export interface MemberRowShape {
+    readonly user_id: string
+    readonly workspace_id: string
+    readonly role: string
+    readonly staff_id: string | null
+    readonly display_name: string
+    readonly status: string
+}
+
+/** One row of `workspace_member_contacts`. */
+export interface ContactRowShape {
+    readonly user_id: string
+    readonly email: string
+    readonly last_sign_in_at: string | null
+}
+
+/** One row of `workspace_invites` the roster reads. */
+export interface InviteRowShape {
+    readonly id: string
+    readonly email: string
+    readonly role: string
+    readonly staff_id: string | null
+    readonly created_at: string
+    readonly expires_at: string
+}
+
+const ROLE_ORDER: Readonly<Record<string, number>> = { owner: 0, manager: 1, staff: 2 }
+
+const seatRole = (role: string): SeatRole => (role === "owner" || role === "manager" ? role : "staff")
+
+/** Joins the member rows with the contacts the viewer may see, owners first. */
+export const memberItemsOf = (
+    rows: ReadonlyArray<MemberRowShape>,
+    contacts: ReadonlyArray<ContactRowShape>,
+): ReadonlyArray<MemberItem> => {
+    const contactOf = new Map(contacts.map((contact) => [contact.user_id, contact]))
+    return [...rows]
+        .sort((left, right) => (ROLE_ORDER[left.role] ?? 2) - (ROLE_ORDER[right.role] ?? 2))
+        .map((row): MemberItem => ({
+            userId: row.user_id,
+            workspaceId: row.workspace_id,
+            role: seatRole(row.role),
+            staffId: row.staff_id,
+            displayName: row.display_name,
+            status: row.status === "active" ? "active" : "disabled",
+            email: contactOf.get(row.user_id)?.email ?? "",
+            lastSignInAt: contactOf.get(row.user_id)?.last_sign_in_at ?? null,
+        }))
+}
+
+/** Marks each open invitation with whether it has run out at `now` (a number of milliseconds). */
+export const rosterInvitesOf = (rows: ReadonlyArray<InviteRowShape>, now: number): ReadonlyArray<RosterInvite> =>
+    rows.map((row): RosterInvite => ({
+        id: row.id,
+        email: row.email,
+        role: row.role === "manager" ? "manager" : "staff",
+        staffId: row.staff_id,
+        createdAt: row.created_at,
+        expiresAt: row.expires_at,
+        isExpired: new Date(row.expires_at).getTime() < now,
+    }))
+
+/** What a person types to invite someone, already bounded. */
+export interface InviteInput {
+    readonly workspaceId: string
+    readonly email: string
+    readonly role: "manager" | "staff"
+    readonly staffId: string | null
+}
+
+/** Bounds the invitation a person typed before it reaches a function. */
+export const inviteInputSchema = {
+    safeParse: (workspaceId: unknown, input: unknown): Parsed<InviteInput> => {
+        if (!isId(workspaceId) || !isRecord(input) || typeof input.email !== "string") return { success: false }
+        const email = input.email.trim()
+        if (email === "" || email.length > 254) return { success: false }
+        if (input.role !== "manager" && input.role !== "staff") return { success: false }
+        if (input.staffId !== null && !isId(input.staffId)) return { success: false }
+        return {
+            success: true,
+            data: { workspaceId, email, role: input.role, staffId: input.staffId },
+        }
+    },
+}
+
+/** Bounds a workspace and an invitation id. */
+export const inviteRefSchema = {
+    safeParse: (
+        workspaceId: unknown,
+        inviteId: unknown,
+    ): Parsed<{ readonly workspaceId: string; readonly inviteId: string }> =>
+        isId(workspaceId) && isId(inviteId) ? { success: true, data: { workspaceId, inviteId } } : { success: false },
+}
+
+/** Reads the result of an invitation command; null when it is not the shape the job writes. */
+export const inviteResultOf = (value: Readonly<Record<string, unknown>>): InviteResultItem | null => {
+    const { email, link, delivery } = value
+    if (typeof email !== "string" || typeof link !== "string") return null
+    if (delivery !== "invited" && delivery !== "existing" && delivery !== "none") return null
+    return { email, link, delivery }
+}

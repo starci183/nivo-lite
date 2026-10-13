@@ -1,0 +1,223 @@
+/** Why the gate decided what it decided. */
+export type ReasonCode = "routine" | "missing_data" | "over_authority" | "unclear_outcome" | "not_allowed"
+
+/** Where a work item stands. */
+export type WorkStatus = "queued" | "done" | "waiting_decision" | "rejected" | "failed"
+
+/** How much evidence backs the result of a work item. */
+export type EvidenceState = "pending" | "captured" | "reviewed" | "verified" | "customer_confirmed"
+
+/** Whether the input was real or simulated. */
+export type Origin = "live" | "simulated"
+
+/** How the item was decided: by policy alone or by a person. */
+export type DecidedPath = "auto" | "human"
+
+/** The value of one field of a proposal. */
+export type ProposalFieldValue = string | number | null
+
+/** One invoice a payment may settle. */
+export interface ProposalCandidate {
+    /** The invoice id. */
+    readonly id: string
+    /** The line the owner reads. */
+    readonly label: string
+    /** The amount of the invoice, VND. */
+    readonly amount_vnd: number
+}
+
+/** What an agent proposes to do: the summary, an optional draft and the structured fields the gate and the performer read. */
+export interface Proposal {
+    /** One sentence for the owner. */
+    readonly summary: string
+    /** The text to send, when the action sends one. */
+    readonly draft?: string
+    /** The money involved, VND. */
+    readonly amount_vnd?: number | null
+    /** The structured fields of the proposal. */
+    readonly fields: Readonly<Record<string, ProposalFieldValue>>
+    /** How sure the agent is, 0..1. */
+    readonly confidence?: number
+    /** Whether the outcome is clear. */
+    readonly outcome?: "clear" | "unclear"
+    /** The invoices a payment may settle. */
+    readonly candidates?: ReadonlyArray<ProposalCandidate>
+}
+
+/** The kind of record a work item is about. */
+export type SubjectType =
+    "lead" | "order" | "invoice" | "transaction" | "conversation" | "inbound" | "purchase_order" | "stock"
+
+/** What a performer reported it did. */
+export interface WorkResult {
+    /** One sentence for the log. */
+    readonly summary: string
+    /** Where the owner can see it. */
+    readonly href?: string
+}
+
+/** One work item as the decisions capability reads and writes it. */
+export interface WorkItem {
+    /** The id. */
+    readonly id: string
+    /** The workspace. */
+    readonly workspace_id: string
+    /** The module that performs it. */
+    readonly department: string
+    /** The action key. */
+    readonly action: string
+    /** The kind of record it is about. */
+    readonly subject_type: SubjectType
+    /** The id of that record. */
+    readonly subject_id: string | null
+    /** The customer it is about. */
+    readonly lead_id: string | null
+    /** The input that started it. */
+    readonly inbound_event_id: string | null
+    /** The item that asked for it. */
+    readonly parent_id: string | null
+    /** The root of its command chain. */
+    readonly chain_id: string | null
+    /** Hops from the root. */
+    readonly depth: number
+    /** Where it stands. */
+    readonly status: WorkStatus
+    /** How it was decided. */
+    readonly decided_path: DecidedPath | null
+    /** Why the gate asked. */
+    readonly reason: ReasonCode | null
+    /** Every reason, the first one is `reason`. */
+    readonly reasons: ReadonlyArray<string>
+    /** Required fields still missing. */
+    readonly missing_fields: ReadonlyArray<string>
+    /** What the agent proposes. */
+    readonly proposal: Proposal
+    /** What was done. */
+    readonly result: WorkResult | null
+    /** The failure, when it failed. */
+    readonly error: string | null
+    /** How much evidence backs the result. */
+    readonly evidence_state: EvidenceState
+    /** The staff member it is assigned to. */
+    readonly assigned_staff_id: string | null
+    /** The legacy approval execution. */
+    readonly execution_id: string | null
+    /** Real or simulated. */
+    readonly origin: Origin
+    /** When it was created. */
+    readonly created_at: string
+    /** When it last changed. */
+    readonly updated_at: string
+    /** When it finished. */
+    readonly completed_at: string | null
+    /** The agent instance that handles it. */
+    readonly installation_id: string | null
+}
+
+/** A work item, or null when none matches. */
+export type OptionalWorkItem = WorkItem | null
+
+/** An item nobody touched for this many seconds is free to be taken over again (a worker crashed with it). */
+export const CLAIM_LEASE_SECONDS = 120
+
+/** What a new queued work item is made of. */
+export interface NewWorkItem {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The chain it joins; null starts a new chain with the item itself as its root. */
+    readonly chainId: string | null
+    /** Hops from the root of the chain. */
+    readonly depth: number
+    /** The module that performs it. */
+    readonly department: string
+    /** The action key. */
+    readonly action: string
+    /** The kind of record it is about. */
+    readonly subjectType: SubjectType
+    /** The record it is about. */
+    readonly subjectId: string | null
+    /** The customer. */
+    readonly leadId: string | null
+    /** The input that started it. */
+    readonly inboundEventId: string | null
+    /** The item that asked for it. */
+    readonly parentId: string | null
+    /** The idempotency key, unique per workspace. */
+    readonly dedupeKey: string
+    /** The first proposal. */
+    readonly proposal: Proposal
+    /** Real or simulated. */
+    readonly origin: Origin
+    /** The agent instance; null lets the database resolve it. */
+    readonly installationId: string | null
+}
+
+/** What a performer prepared, and the corrections to the item's address; a null address part keeps the stored one. */
+export interface PreparedSave {
+    /** The proposal the gate judges. */
+    readonly proposal: Proposal
+    /** The corrected kind of record. */
+    readonly subjectType: SubjectType | null
+    /** The corrected record. */
+    readonly subjectId: string | null
+    /** The corrected customer. */
+    readonly leadId: string | null
+}
+
+/** Why and for what an item waits for a person. */
+export interface WaitingMark {
+    /** The first reason. */
+    readonly reason: ReasonCode
+    /** Every reason. */
+    readonly reasons: ReadonlyArray<ReasonCode>
+    /** Required fields still missing. */
+    readonly missing: ReadonlyArray<string>
+    /** The proposal the person sees. */
+    readonly proposal: Proposal
+    /** The approval card, when the item has one. */
+    readonly executionId: string | null
+}
+
+/** How an item finished. */
+export interface DoneMark {
+    /** By policy alone or by a person; the automatic path also records the routine reason. */
+    readonly path: DecidedPath
+    /** The proposal that was performed. */
+    readonly proposal: Proposal
+    /** What the performer reported. */
+    readonly result: WorkResult
+    /** How much evidence backs it. */
+    readonly evidence: EvidenceState
+    /** The customer the performer found or created; null keeps the stored one. */
+    readonly leadId: string | null
+}
+
+/** An approval that cannot go on because data is still missing or a candidate is still to be chosen. */
+export interface StillWaitingMark {
+    /** The proposal with the person's edits. */
+    readonly proposal: Proposal
+    /** Required fields still missing. */
+    readonly missing: ReadonlyArray<string>
+    /** The blocking reason. */
+    readonly reason: ReasonCode
+    /** Every reason. */
+    readonly reasons: ReadonlyArray<ReasonCode>
+}
+
+/** A proposal as the database holds it: a legacy row may hold an empty object, so every key is optional. */
+export interface StoredProposal {
+    /** One sentence for the owner. */
+    readonly summary?: string
+    /** The text to send. */
+    readonly draft?: string
+    /** The money involved, VND. */
+    readonly amount_vnd?: number | null
+    /** The structured fields. */
+    readonly fields?: Readonly<Record<string, ProposalFieldValue>>
+    /** How sure the agent is, 0..1. */
+    readonly confidence?: number
+    /** Whether the outcome is clear. */
+    readonly outcome?: "clear" | "unclear"
+    /** The invoices a payment may settle. */
+    readonly candidates?: ReadonlyArray<ProposalCandidate>
+}
