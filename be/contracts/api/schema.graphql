@@ -275,6 +275,154 @@ input AdminWorkspacesInput {
   query: String! = ""
 }
 
+type AgentAckType {
+  ok: Boolean!
+}
+
+type AgentCommandResultType {
+  chainId: ID
+  created: Boolean
+  depth: Int
+  detail: String
+  item: WorkItemType
+  missing: [String!]
+  ok: Boolean!
+  refused: String
+}
+
+type AgentConnectionType {
+  access: String!
+  id: ID!
+  name: String!
+  provider: String!
+  purpose: String!
+  status: String!
+}
+
+type AgentDashboardAgentType {
+  id: ID!
+  mode: String!
+  name: String!
+}
+
+type AgentDashboardConnectionType {
+  access: String!
+  id: ID!
+  name: String!
+  provider: String!
+  purpose: String!
+  status: String!
+}
+
+type AgentDashboardConnectionsRegionType {
+  data: [AgentDashboardConnectionType!]
+  ok: Boolean!
+}
+
+type AgentDashboardDocumentCountsType {
+  internal: Int!
+  public: Int!
+}
+
+type AgentDashboardDoneRegionType {
+  data: AgentDashboardDoneType
+  ok: Boolean!
+}
+
+type AgentDashboardDoneType {
+  count: Int!
+  items: [AgentDashboardItemType!]!
+}
+
+type AgentDashboardFactCountsType {
+  internal: Int!
+  public: Int!
+  restricted: Int!
+}
+
+type AgentDashboardGapType {
+  count: Int!
+  id: ID!
+  lastSeenAt: String!
+  question: String!
+}
+
+type AgentDashboardGapsType {
+  items: [AgentDashboardGapType!]!
+  openCount: Int!
+}
+
+input AgentDashboardInput {
+  installationId: ID
+  module: String!
+}
+
+type AgentDashboardItemType {
+  action: String!
+  at: String!
+  customer: String!
+  id: ID!
+  leadId: ID
+  resultHref: String
+  title: String!
+}
+
+type AgentDashboardKnowledgeRegionType {
+  data: AgentDashboardKnowledgeType
+  ok: Boolean!
+}
+
+type AgentDashboardKnowledgeType {
+  audience: String!
+  documents: AgentDashboardDocumentCountsType!
+  facts: AgentDashboardFactCountsType!
+  gaps: AgentDashboardGapsType
+}
+
+type AgentDashboardType {
+  agent: AgentDashboardAgentType
+  connections: AgentDashboardConnectionsRegionType!
+  done: AgentDashboardDoneRegionType!
+  knowledge: AgentDashboardKnowledgeRegionType!
+  waiting: AgentDashboardWaitingRegionType!
+}
+
+type AgentDashboardWaitingRegionType {
+  data: AgentDashboardWaitingType
+  ok: Boolean!
+}
+
+type AgentDashboardWaitingType {
+  items: [AgentDashboardItemType!]!
+  total: Int!
+}
+
+type AgentEngineStatusType {
+  gatewayConfigured: Boolean!
+  lastSyncCheckAt: String
+  syncFresh: Boolean!
+  workspaceWritable: Boolean!
+}
+
+input AgentIdInput {
+  agentId: ID!
+}
+
+type AgentSummaryType {
+  createdAt: String!
+  handle: String!
+  id: ID!
+  module: String!
+  name: String!
+  role: String!
+  status: String!
+}
+
+input AgentTextsInput {
+  instructions: String!
+  knowledge: String!
+}
+
 type ApiKeyType {
   createdAt: String!
   id: ID!
@@ -282,6 +430,61 @@ type ApiKeyType {
   name: String!
   prefix: String!
   revokedAt: String
+}
+
+type ApprovalExecutionType {
+  draft: String!
+  id: ID!
+  status: String!
+  work_item_id: ID
+}
+
+input AuthorityPatchInput {
+  brand_voice: String
+  goal_first_reply_minutes: Int
+  goal_new_customers: Int
+  goal_note: String
+  goal_revenue_vnd: Int
+  limits_note: String
+  policies: String
+  reply_style: String
+}
+
+type AuthorityProfileType {
+  brand_voice: String!
+  goal_first_reply_minutes: Int
+  goal_new_customers: Int
+  goal_note: String!
+  goal_revenue_vnd: Float
+  limits_note: String!
+  policies: String!
+  reply_style: String!
+  updated_at: String!
+  updated_by: String
+}
+
+input AuthorityRuleChangeInput {
+  action: String!
+  limit_vnd: Int = null
+  mode: String!
+  required_fields: [String!] = []
+}
+
+type AuthorityRuleType {
+  action: String!
+  department: String!
+  id: ID!
+  limit_vnd: Float
+  mode: String!
+  note: String!
+  required_fields: [String!]!
+  updated_at: String!
+  workspace_id: ID!
+}
+
+type AuthoritySheetType {
+  profile: AuthorityProfileType
+  rules: [AuthorityRuleType!]!
 }
 
 type AutomationCardType {
@@ -350,8 +553,20 @@ type BodyProposalType {
   generated: Boolean!
 }
 
+input CreateAgentInput {
+  handle: String!
+  instructions: String!
+  module: String!
+  name: String!
+  role: String!
+}
+
 input CreateApiKeyInput {
   name: String!
+}
+
+input CreateResponsibilityInput {
+  input: NewResponsibilityInput!
 }
 
 input CreateWorkspaceInput {
@@ -586,10 +801,30 @@ type DashboardWebsiteLeadType {
   id: ID!
 }
 
+input DecideExecutionInput {
+  decision: String!
+  editedDraft: String
+  executionId: ID!
+}
+
+input DecideWorkItemInput {
+  basis: String
+  decision: String!
+  edits: WorkEditsInput
+  note: String
+  workItemId: ID!
+}
+
 input EmitAutomationEventInput {
   data: JsonObject!
   dedupe: String!
   event: String!
+}
+
+input FieldValueInput {
+  name: String!
+  number: Float
+  text: String
 }
 
 type GoogleAccountType {
@@ -598,7 +833,29 @@ type GoogleAccountType {
   status: String!
 }
 
+input GrantAgentConnectionInput {
+  access: String!
+  agentId: ID!
+  connectionId: ID!
+  purpose: String!
+}
+
 scalar JsonObject
+
+input ListAgentsInput {
+  module: String
+}
+
+input ListOfficeMessagesInput {
+  before: OfficeThreadCursorInput = null
+  limit: Int = 50
+}
+
+input ListWorkItemsInput {
+  after: WorkItemCursorInput
+  limit: Int = 50
+  statuses: [String!] = []
+}
 
 type LocalizedTextType {
   en: String!
@@ -625,19 +882,235 @@ type MissingRequirementType {
   label: LocalizedTextType!
 }
 
+type ModuleAcceptedCommandType {
+  action: String!
+  command: String!
+  description: ModuleBilingualType!
+  requiredFields: [String!]!
+  subjectType: String!
+}
+
+type ModuleAgentType {
+  capabilities: ModuleBilingualListType!
+  handle: String!
+  instructions: ModuleBilingualType!
+  name: String!
+  role: ModuleBilingualType!
+  summary: ModuleBilingualType!
+}
+
+type ModuleAuthorityActionType {
+  action: String!
+  amountLimit: Boolean!
+  label: ModuleBilingualType!
+  limitVnd: Float
+  maxMode: String
+  mode: String!
+  next: [String!]!
+  note: String!
+  requiredFields: [String!]!
+}
+
+type ModuleBilingualListType {
+  en: [String!]!
+  vi: [String!]!
+}
+
+type ModuleBilingualType {
+  en: String!
+  vi: String!
+}
+
+type ModuleCategoryType {
+  key: String!
+  label: ModuleBilingualType!
+}
+
+type ModuleDefinitionType {
+  accepts: [ModuleAcceptedCommandType!]!
+  agent: ModuleAgentType!
+  audience: String!
+  authorityActions: [ModuleAuthorityActionType!]!
+  available: Boolean!
+  category: String!
+  connectionProviders: [String!]!
+  defaultOperatingMode: String!
+  description: ModuleBilingualType!
+  gates: [ModuleGateType!]!
+  glyph: String!
+  icon: String!
+  includedWithWorkspace: Boolean!
+  key: String!
+  knowledgeFolder: String!
+  mascot: String!
+  multiInstance: Boolean!
+  name: ModuleBilingualType!
+  order: Int!
+  points: ModuleBilingualListType!
+  purpose: String!
+  requires: ModuleRequirementsType!
+  settingsExtras: String
+  shortName: ModuleBilingualType!
+  status: String!
+  workbench: String
+}
+
+type ModuleGateType {
+  hint_en: String!
+  hint_vi: String!
+  key: String!
+  label_en: String!
+  label_vi: String!
+  writes: [ModuleGateWriteType!]
+}
+
+type ModuleGateWriteType {
+  action: String
+  attributeLabel: String
+  field: String
+  kind: String!
+  scope: String
+  subjectType: String
+}
+
+input ModuleKeyInput {
+  key: String!
+}
+
+type ModuleRequirementsType {
+  capabilities: [String!]!
+  connections: [String!]!
+}
+
+type ModulesCatalogType {
+  categories: [ModuleCategoryType!]!
+  modules: [ModuleDefinitionType!]!
+}
+
 type Mutation {
   adminExtendSubscription(input: AdminExtendSubscriptionInput!): AdminSubscriptionExtendedType!
   adminResendWorkspaceInvite(input: AdminResendWorkspaceInviteInput!): AdminInviteResentType!
   adminSetWorkspacePlan(input: AdminSetWorkspacePlanInput!): AdminPlanSetType!
   adminSetWorkspaceStatus(input: AdminSetWorkspaceStatusInput!): AdminStatusSetType!
+  cancelOfficeCommand(input: OfficeCandidateIdInput!): OfficeAckType!
+  confirmOfficeCommand(input: OfficeCandidateIdInput!): OfficeConfirmResultType!
+  createAgent(input: CreateAgentInput!): AgentSummaryType!
   createApiKey(input: CreateApiKeyInput!): CreatedApiKeyType!
+  createResponsibility(input: CreateResponsibilityInput!): ResponsibilityType!
   createWorkspace(input: CreateWorkspaceInput!): CreateWorkspaceType!
+  decideExecution(input: DecideExecutionInput!): ApprovalExecutionType!
+  decideWorkItem(input: DecideWorkItemInput!): WorkItemType!
   emitAutomationEvent(input: EmitAutomationEventInput!): Boolean!
+  grantAgentConnection(input: GrantAgentConnectionInput!): AgentAckType!
   proposeAutomationBody(input: TemplateKeyInput!): BodyProposalType!
+  proposeOfficeCommand(input: ProposeOfficeCommandInput!): OfficeProposeOutcomeType!
+  renameAgent(input: RenameAgentInput!): AgentAckType!
+  requestAgentSync(input: RequestAgentSyncInput!): AgentAckType!
+  revokeAgentConnection(input: RevokeAgentConnectionInput!): AgentAckType!
   revokeApiKey(input: RevokeApiKeyInput!): ApiKeyType!
   runAutomationNow(input: TemplateKeyInput!): Boolean!
   runFlow(input: RunFlowInput!): RunFlowType!
+  saveAuthorityRule(input: SaveAuthorityRuleInput!): AuthorityRuleType!
+  sendAgentCommand(input: SendAgentCommandInput!): AgentCommandResultType!
+  setAgentStatus(input: SetAgentStatusInput!): AgentAckType!
+  setAgentTexts(input: SetAgentTextsInput!): AgentAckType!
+  updateAuthority(input: UpdateAuthorityInput!): AuthorityProfileType!
   updateAutomationPipeline(input: UpdateAutomationPipelineInput!): AutomationCardType!
+  updateResponsibilityStatus(input: UpdateResponsibilityStatusInput!): ResponsibilityType!
+}
+
+input NewResponsibilityInput {
+  due_at: String = null
+  lead_id: ID!
+  next_action: String!
+  owner: String!
+  title: String!
+}
+
+type OfficeAckType {
+  ok: Boolean!
+}
+
+type OfficeApprovalType {
+  agentName: String
+  agent_id: ID
+  assignedStaffId: ID
+  channel: String!
+  created_at: String!
+  decided_at: String
+  decided_by: String
+  draft: String!
+  id: ID!
+  kind: String!
+  leadId: ID
+  leadName: String
+  nextAction: String!
+  responsibility_id: ID!
+  status: String!
+  work_item_id: ID
+}
+
+input OfficeCandidateIdInput {
+  candidateId: ID!
+}
+
+type OfficeCandidateType {
+  command: String!
+  created_at: String!
+  id: ID!
+  message_id: ID!
+  module: String!
+  payload: JsonObject!
+  refusal_detail: String
+  shown: [OfficeShownRowType!]!
+  status: String!
+  summary: String!
+  work_item_id: ID
+}
+
+type OfficeConfirmResultType {
+  created: Boolean!
+  module: String!
+  workItemId: ID!
+}
+
+type OfficeMessagePageType {
+  messages: [OfficeMessageType!]!
+  next: OfficeThreadCursorType
+}
+
+type OfficeMessageType {
+  agent_id: ID
+  author_kind: String!
+  author_name: String!
+  body: String!
+  created_at: String!
+  id: ID!
+  lead_id: ID
+  staff_id: ID
+  work_item_id: ID
+}
+
+type OfficeProposeOutcomeType {
+  body: String
+  candidate: OfficeCandidateType
+  kind: String!
+}
+
+type OfficeShownRowType {
+  key: String!
+  label: String!
+  value: String!
+}
+
+input OfficeThreadCursorInput {
+  createdAt: String!
+  id: ID!
+}
+
+type OfficeThreadCursorType {
+  createdAt: String!
+  id: ID!
 }
 
 type PreviewSampleType {
@@ -645,18 +1118,96 @@ type PreviewSampleType {
   variables: JsonObject!
 }
 
+type ProposalCandidateType {
+  amount_vnd: Float!
+  id: ID!
+  label: String!
+}
+
+type ProposalType {
+  amount_vnd: Float
+  candidates: [ProposalCandidateType!]
+  confidence: Float
+  draft: String
+  fields: JsonObject!
+  outcome: String
+  summary: String!
+}
+
+input ProposeOfficeCommandInput {
+  messageId: ID!
+}
+
 type Query {
   adminHealth: AdminHealthType!
   adminSession: AdminSessionType!
   adminWorkspace(input: AdminWorkspaceInput!): AdminWorkspaceDetailType!
   adminWorkspaces(input: AdminWorkspacesInput!): AdminWorkspaceListType!
+  agentConnections(input: AgentIdInput!): [AgentConnectionType!]!
+  agentDashboard(input: AgentDashboardInput!): AgentDashboardType!
+  agentEngineStatus: AgentEngineStatusType!
+  agents(input: ListAgentsInput!): [AgentSummaryType!]!
   apiKeys: [ApiKeyType!]!
+  authority: AuthoritySheetType!
   automationGoogleAccounts: [GoogleAccountType!]!
   automationRuns(input: AutomationRunsInput!): [AutomationRunType!]!
   automationSuggestions(input: AutomationSuggestionsInput!): [AutomationSuggestionType!]!
   automations: AutomationsOverviewType!
   dashboard: DashboardType!
+  moduleDefinition(input: ModuleKeyInput!): ModuleDefinitionType!
+  modulesCatalog: ModulesCatalogType!
   myWorkspaces: [MembershipType!]!
+  officeCommandCandidates: [OfficeCandidateType!]!
+  officeDecidedApprovals: [OfficeApprovalType!]!
+  officeMessages(input: ListOfficeMessagesInput!): OfficeMessagePageType!
+  officePendingApprovals: [OfficeApprovalType!]!
+  responsibilities: [ResponsibilityListingType!]!
+  workItem(input: WorkItemIdInput!): WorkItemType!
+  workItems(input: ListWorkItemsInput!): WorkItemPageType!
+}
+
+input RenameAgentInput {
+  agentId: ID!
+  name: String!
+}
+
+input RequestAgentSyncInput {
+  force: Boolean
+  installationId: ID
+}
+
+type ResponsibilityListingType {
+  contact_name: String!
+  created_at: String!
+  due_at: String
+  id: ID!
+  lead_id: ID!
+  next_action: String!
+  owner_agent_id: ID
+  owner_kind: String!
+  owner_name: String!
+  status: String!
+  title: String!
+  workspace_id: ID!
+}
+
+type ResponsibilityType {
+  created_at: String!
+  due_at: String
+  id: ID!
+  lead_id: ID!
+  next_action: String!
+  owner_agent_id: ID
+  owner_kind: String!
+  owner_name: String!
+  status: String!
+  title: String!
+  workspace_id: ID!
+}
+
+input RevokeAgentConnectionInput {
+  agentId: ID!
+  connectionId: ID!
 }
 
 input RevokeApiKeyInput {
@@ -676,6 +1227,30 @@ type RunStepType {
   detail: String
   label: String!
   status: String!
+}
+
+input SaveAuthorityRuleInput {
+  change: AuthorityRuleChangeInput!
+}
+
+input SendAgentCommandInput {
+  command: String!
+  fields: [FieldValueInput!]
+  leadId: ID
+  reason: String!
+  subjectId: ID
+  subjectType: String
+  to: String!
+}
+
+input SetAgentStatusInput {
+  active: Boolean!
+  agentId: ID!
+}
+
+input SetAgentTextsInput {
+  agentId: ID!
+  texts: AgentTextsInput!
 }
 
 type ShopContextType {
@@ -752,6 +1327,10 @@ type TrustType {
   streak: Int!
 }
 
+input UpdateAuthorityInput {
+  patch: AuthorityPatchInput!
+}
+
 input UpdateAutomationPipelineInput {
   autoSend: Boolean
   body: String
@@ -760,6 +1339,72 @@ input UpdateAutomationPipelineInput {
   googleConnectionId: ID
   templateKey: String!
   values: JsonObject
+}
+
+input UpdateResponsibilityStatusInput {
+  responsibilityId: ID!
+  status: String!
+}
+
+input WorkEditsInput {
+  amount_vnd: Int
+  candidateId: ID
+  draft: String
+  fields: [FieldValueInput!]
+}
+
+input WorkItemCursorInput {
+  createdAt: String!
+  id: ID!
+}
+
+type WorkItemCursorType {
+  createdAt: String!
+  id: ID!
+}
+
+input WorkItemIdInput {
+  workItemId: ID!
+}
+
+type WorkItemPageType {
+  items: [WorkItemType!]!
+  next: WorkItemCursorType
+}
+
+type WorkItemType {
+  action: String!
+  assigned_staff_id: ID
+  chain_id: ID
+  completed_at: String
+  created_at: String!
+  decided_path: String
+  department: String!
+  depth: Int!
+  error: String
+  evidence_state: String!
+  execution_id: ID
+  id: ID!
+  inbound_event_id: ID
+  installation_id: ID
+  lead_id: ID
+  missing_fields: [String!]!
+  origin: String!
+  parent_id: ID
+  proposal: ProposalType!
+  reason: String
+  reasons: [String!]!
+  result: WorkResultType
+  status: String!
+  subject_id: ID
+  subject_type: String!
+  updated_at: String!
+  workspace_id: ID!
+}
+
+type WorkResultType {
+  href: String
+  summary: String!
 }
 
 type WorkspaceType {
