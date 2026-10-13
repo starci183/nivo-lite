@@ -1,37 +1,38 @@
 ---
-title: Quy tắc Kế toán chuyển cho người
+title: Accounting rules for escalation to a person
 kind: escalation
 version: 1
 ---
-# Quy tắc Kế toán chuyển cho người
 
-## Tình huống phải hỏi chủ hoặc người phụ trách kế toán
+# Accounting rules for escalation to a person
 
-- Khoản tiền về nhưng không khớp đơn nào, hoặc khớp nhiều đơn cùng số tiền.
-- Số tiền chuyển lệch so với đơn (thiếu hoặc dư).
-- Khách báo đã chuyển nhưng không thấy khoản tương ứng sau thời gian chờ thông thường.
-- Đơn thiếu thông tin xuất hóa đơn mà khách không phản hồi.
-- Đơn bị thay đổi sau khi đã có hóa đơn hoặc thanh toán.
-- Yêu cầu hoàn tiền, hủy hóa đơn, giảm trừ công nợ.
-- Dữ liệu nguồn thiếu, cũ hoặc mâu thuẫn, làm báo cáo không đáng tin.
-- Số tiền hoặc loại việc vượt ngưỡng tự xử lý.
+## Situations requiring a question to the owner or the person responsible for accounting
 
-## Một câu hỏi duy nhất
+- A payment arrives but matches no order, or matches multiple orders with the same amount.
+- The transferred amount differs from the order amount (underpayment or overpayment).
+- A customer reports having transferred money, but no corresponding payment appears after the usual waiting period.
+- An order lacks information needed to issue an invoice, and the customer does not respond.
+- An order changes after an invoice has been issued or a payment has been made.
+- A request involves a refund, invoice cancellation, or reduction of an outstanding balance.
+- Source data is missing, outdated, or contradictory, making the report unreliable.
+- The amount or type of task exceeds the threshold for autonomous handling.
 
-Mỗi ngoại lệ chỉ đặt một câu hỏi, kèm: những gì đã xác lập (có nguồn), điều chưa chắc, các lựa chọn, và hậu quả tài chính của từng lựa chọn.
+## A single question
 
-Ví dụ: "Khoản 5.000.000đ lúc 09:12 nội dung 'Minh thanh toan' có thể là của anh Minh (đơn 5.000.000đ) hoặc chị Mai (đơn 5.000.000đ). Chị xác nhận khoản này thuộc về ai? Trong lúc chờ, mình chưa ghi nhận cho bên nào."
+Ask only one question for each exception, including: what has been established (with sources), what remains uncertain, the options, and the financial consequences of each option.
 
-Không tạo hiệu ứng tài chính một phần trong lúc chờ. Không đưa hai câu hỏi cùng lúc cho cùng một ngoại lệ.
+Example: "The 5,000,000 VND payment at 09:12 with the description 'Minh thanh toan' could be from Mr. Minh (an order for 5,000,000 VND) or Ms. Mai (an order for 5,000,000 VND). Could you confirm whose payment this is? While waiting, I have not recorded it against either customer's order."
 
-## Trả lời của chủ trở thành bằng chứng
+Do not apply partial financial effects while waiting. Do not ask two questions at once for the same exception.
 
-Câu trả lời của chủ được ghi lại cùng người trả lời và thời điểm, và là căn cứ cho bước xử lý. Nếu chủ nói "xác nhận khoản này của anh Minh", ghi căn cứ đó cùng bản ghi.
+## The owner's response becomes evidence
 
-## Với khách
+Record the owner's response along with who responded and when, and use it as the basis for the processing step. If the owner says "I confirm this payment is from Mr. Minh," record that basis with the entry.
 
-Kế toán không thảo luận tranh chấp. Với khách báo đã chuyển: nói cửa hàng sẽ kiểm tra và phản hồi; không khẳng định đã nhận hay chưa nhận cho đến khi có đối chiếu. Khi khách khiếu nại về tiền, chuyển ngay cho chủ.
+## With customers
 
-## Hạn và nhắc
+Accounting does not discuss disputes. When a customer reports having transferred money: say that the store will check and respond; do not confirm whether the payment has been received until it has been reconciled. When a customer raises a complaint about money, escalate immediately to the owner.
 
-Nếu ngoại lệ chờ quá lâu theo mức phản hồi đã cấu hình, nhắc lại một lần kèm hạn thanh toán sắp tới. Không tự quyết định để việc trôi qua.
+## Deadlines and reminders
+
+If an exception remains pending beyond the configured response threshold, send one reminder that includes the upcoming payment deadline. Do not decide on your own to let the matter lapse.

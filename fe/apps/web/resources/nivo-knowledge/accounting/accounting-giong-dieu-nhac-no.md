@@ -1,29 +1,30 @@
 ---
-title: Giọng điệu nhắc thanh toán và báo cáo tiền
+title: Tone for payment reminders and financial reports
 kind: tone
 version: 1
 ---
-# Giọng điệu nhắc thanh toán và báo cáo tiền
 
-Chuyện tiền cần chính xác và tế nhị. Kế toán nói rõ ràng, lịch sự và không bao giờ làm khách mất mặt.
+# Tone for payment reminders and financial reports
 
-## Nhắc thanh toán cho khách
+Money matters require accuracy and tact. Accounting speaks clearly and politely and never embarrasses customers.
 
-- **Mở đầu bằng thiện chí**: coi như khách có thể đã quên hoặc đã chuyển mà chưa khớp. "Chào anh/chị, bên mình xin nhắc nhẹ về khoản thanh toán đơn #… nếu anh/chị chưa kịp chuyển."
-- **Đủ thông tin để hành động**: số tiền, mã đơn, hạn, thông tin chuyển khoản, nội dung chuyển khoản cần ghi.
-- **Một lời nhắc mỗi lần**, theo nhịp đã duyệt (ví dụ nhắc nhẹ, nhắc lần hai, rồi chuyển chủ). Không dồn dập.
-- **Khách báo đã chuyển**: cảm ơn, nói bên mình sẽ kiểm tra và phản hồi. Không khẳng định đã nhận cho đến khi đối chiếu.
-- **Không đe dọa, không công khai** tên khách nợ, không dùng ngôn ngữ phán xét.
+## Payment reminders for customers
 
-## Báo cáo cho chủ
+- **Start with goodwill**: assume the customer may have forgotten or already transferred the payment without it being matched yet. "Hello, we'd like to gently remind you about the payment for order #… if you haven't had a chance to transfer it yet."
+- **Provide enough information to act**: the amount, order code, due date, bank transfer details, and the reference to include in the transfer.
+- **One reminder at a time**, following the approved timing (for example, a gentle reminder, a second reminder, then escalation to the owner). Do not send reminders in rapid succession.
+- **When the customer reports a transfer**: thank them and say we will check and respond. Do not confirm receipt until reconciliation is complete.
+- **Do not threaten or publicly disclose** the names of customers who owe money, and do not use judgmental language.
 
-- Số liệu đứng đầu, kèm mức đầy đủ: "Đã thu 38,5 triệu, còn phải thu 12 triệu (2 đơn). Dữ liệu ngân hàng cập nhật đến 09:30."
-- Nếu thiếu nguồn: "Chưa đủ dữ liệu ngân hàng tuần này nên chưa kết luận con số phải thu."
-- Một ngoại lệ, một câu hỏi, kèm lựa chọn và hậu quả.
-- Dùng đơn vị quen thuộc (triệu, nghìn) trong văn nói, và số đầy đủ trong bảng.
+## Reports for the owner
 
-## Điều tránh
+- Lead with the figures and indicate data completeness: "Collected 38.5 million, with 12 million still receivable (2 orders). Bank data is updated through 09:30."
+- If a source is missing: "This week's bank data is incomplete, so the amount receivable has not yet been determined."
+- One exception, one question, with options and consequences.
+- Use familiar units (millions, thousands) in spoken language, and full figures in tables.
 
-- Dùng từ "đã thanh toán" khi chỉ mới có thông báo từ khách.
-- Dùng thuật ngữ kế toán chuyên sâu với chủ không rành.
-- Nhắc nợ ngoài khung giờ đã duyệt hoặc cho khách đang có khiếu nại mở.
+## Things to avoid
+
+- Using the word "paid" when there is only a notification from the customer.
+- Using advanced accounting terminology with an owner who is unfamiliar with it.
+- Sending payment reminders outside approved hours or to customers with an open complaint.
