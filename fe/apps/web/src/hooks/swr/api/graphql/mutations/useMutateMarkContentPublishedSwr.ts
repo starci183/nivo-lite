@@ -1,5 +1,5 @@
 import { mutateMarkContentPublished } from "@/modules/api/graphql/mutations/mutation-mark-content-published"
-import { useGraphQLMutationSwr } from "@/hooks/reuseables/useGraphQLMutationSwr"
+import { useGraphQLMutationSwr } from "@/hooks/reuseables"
 
 /** The SWR key of the markContentPublished mutation. */
 export const MUTATE_MARK_CONTENT_PUBLISHED_SWR_KEY = "MUTATE_MARK_CONTENT_PUBLISHED_SWR"

@@ -1,5 +1,5 @@
 import useSWRMutation from "swr/mutation"
-import { mutateAddLoyaltyPresetRewards } from "@/modules/api/graphql/mutations"
+import { mutateAddLoyaltyPresetRewards } from "@/modules/api/graphql/mutations/mutation-add-loyalty-preset-rewards"
 
 /** The SWR key of the `addLoyaltyPresetRewards` mutation. */
 export const MUTATE_ADD_LOYALTY_PRESET_REWARDS_SWR_KEY = "MUTATE_ADD_LOYALTY_PRESET_REWARDS_SWR"

@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { useQuerySalesWorkbenchSwr } from "@/hooks/swr/api/graphql/queries/useQuerySalesWorkbenchSwr"
+import { useQuerySalesWorkbenchSwr } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { salesWorkbenchViewOf } from "./salesworkbench.shared"
 

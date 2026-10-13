@@ -1,5 +1,5 @@
 import { mutateChatbotDismissKnowledgeGap } from "@/modules/api/graphql/mutations/mutation-chatbot-dismiss-knowledge-gap"
-import { useGraphQLMutationSwr } from "@/hooks/reuseables/useGraphQLMutationSwr"
+import { useGraphQLMutationSwr } from "@/hooks/reuseables"
 
 /** The SWR key of the dismissKnowledgeGap mutation. */
 export const MUTATE_CHATBOT_DISMISS_KNOWLEDGE_GAP_SWR_KEY = "MUTATE_CHATBOT_DISMISS_KNOWLEDGE_GAP_SWR"

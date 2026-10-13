@@ -3,8 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
 import { mutate } from "swr"
-import { useMutateDraftLeadExecutionSwr } from "@/hooks/swr/api/graphql/mutations/useMutateDraftLeadExecutionSwr"
-import { QUERY_DASHBOARD_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryDashboardSwr"
+import { useMutateDraftLeadExecutionSwr, QUERY_DASHBOARD_SWR_KEY } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 
 /**

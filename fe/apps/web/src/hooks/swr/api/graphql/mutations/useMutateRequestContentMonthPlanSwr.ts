@@ -1,5 +1,5 @@
 import { mutateRequestContentMonthPlan } from "@/modules/api/graphql/mutations/mutation-request-content-month-plan"
-import { useGraphQLMutationSwr } from "@/hooks/reuseables/useGraphQLMutationSwr"
+import { useGraphQLMutationSwr } from "@/hooks/reuseables"
 
 /** The SWR key of the requestContentMonthPlan mutation. */
 export const MUTATE_REQUEST_CONTENT_MONTH_PLAN_SWR_KEY = "MUTATE_REQUEST_CONTENT_MONTH_PLAN_SWR"
