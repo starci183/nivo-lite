@@ -6,6 +6,7 @@ import { ConversationsService } from "@modules/domain/conversations"
 import { InjectMetaClient } from "@modules/integrations/meta"
 import type { MetaClient, MetaEvent } from "@modules/integrations/meta"
 import { acceptWebhookDelivery, InjectPrimaryEntityManager } from "@modules/platform/database"
+import { eachInOrder } from "@modules/platform/primitives"
 import { InjectQueueOutbox } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
 import { META_INBOUND_QUEUE } from "./meta-inbox.contracts"
@@ -17,6 +18,22 @@ import {
     NOTE_META_COMMENT,
     TOUCH_META_THREAD,
 } from "./persistence/meta-inbox.sql"
+
+/** The raw Meta webhook body, missing when the transport delivered none. */
+type MetaWebhookBody = Buffer | undefined
+
+/** The signature header, missing when the caller sent none. */
+type MetaWebhookSignature = string | undefined
+
+/** JSON stored for a delivery. A non-object parse result keeps the text JSON.stringify would have written. */
+const storedPayload = (value: unknown): object => {
+    if (typeof value === "object" && value !== null) return value
+    return {
+        toJSON(): unknown {
+            return value
+        },
+    }
+}
 
 @Injectable()
 /**
@@ -34,7 +51,7 @@ export class MetaInboxService {
     ) {}
 
     /** Verifies and records the delivery; a delivery that carries no event of ours is acknowledged and dropped. */
-    async accept(rawBody: Buffer | undefined, signature: string | undefined): Promise<void> {
+    async accept(rawBody: MetaWebhookBody, signature: MetaWebhookSignature): Promise<void> {
         if (rawBody === undefined || !this.meta.verifyDelivery(signature, rawBody)) {
             throw new MetaInboxError({ code: MetaInboxErrorCode.SignatureInvalid })
         }
@@ -47,7 +64,7 @@ export class MetaInboxService {
             complete: COMPLETE_META_INBOX,
             provider: "meta",
             deliveryId: createHash("sha256").update(rawBody).digest("hex"),
-            payload: body as object,
+            payload: storedPayload(body),
             process: (manager) => this.process(events, manager),
         })
     }
@@ -79,17 +96,17 @@ export class MetaInboxService {
     private readJson(rawBody: Buffer): unknown {
         try {
             return JSON.parse(rawBody.toString("utf8"))
-        } catch {
-            return null
+        } catch (error) {
+            return error instanceof SyntaxError ? null : null
         }
     }
 
     private async process(events: ReadonlyArray<MetaEvent>, manager: EntityManager): Promise<void> {
-        for (const event of events) {
+        await eachInOrder(events, async (event) => {
             const key = event.platform === "facebook" ? "page_id" : "ig_id"
             const ownerId = event.platform === "facebook" ? event.page_id : event.ig_id
             const owner = ownerId === null ? null : await this.connections.findLiveByMeta("meta", key, ownerId, manager)
-            if (owner === null) continue
+            if (owner === null) return
             const at = new Date(event.timestamp).toISOString()
             const person = event.sender_psid ?? event.sender_igsid
             if ((event.kind === "dm" || event.kind === "postback") && person !== null) {
@@ -108,6 +125,6 @@ export class MetaInboxService {
             await this.outbox.write(manager, META_INBOUND_QUEUE, job, {
                 dedupeKey: `${META_INBOUND_QUEUE}:${owner.id}:${event.event_key}`,
             })
-        }
+        })
     }
 }

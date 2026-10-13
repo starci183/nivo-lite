@@ -1,4 +1,5 @@
-import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
+import type { RecordingQueueOutbox } from "@starci/jest-preset"
 import { isTransactionManager } from "@starci/jest-preset/entity-manager"
 import { Test } from "@nestjs/testing"
 import { ConnectionsService } from "@modules/domain/connections"
@@ -7,7 +8,6 @@ import { META_CLIENT } from "@modules/integrations/meta"
 import type { MetaClient, MetaEvent } from "@modules/integrations/meta"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
-import type { QueueOutbox } from "@modules/platform/queue"
 import { MetaInboxError, MetaInboxErrorCode } from "./errors/meta-inbox.error"
 import { META_INBOUND_QUEUE } from "./meta-inbox.contracts"
 import type { MetaInboundJob } from "./meta-inbox.contracts"
@@ -25,6 +25,16 @@ const DELIVERY_ID = "cf4757fb1d998bf973749a593b19bf7ecac5a415369525483e3dd6219ed
 const SIGNATURE = "sha256=signed-delivery"
 const AT = "2026-10-12T03:00:00.000Z"
 const OWNER = { id: "connection-1", workspaceId: "workspace-1" }
+
+/** A parsed event whose text field was omitted at runtime, which the type marks as present. */
+const isDmEvent = (value: Record<string, unknown>): value is MetaEvent => value.kind === "dm"
+
+/** Drops `text` so deliver normalises an omitted field to an empty string. */
+const omitText = (value: MetaEvent): MetaEvent => {
+    const fields: Record<string, unknown> = { ...value }
+    delete fields.text
+    return isDmEvent(fields) ? fields : value
+}
 
 const event = (overrides: Partial<MetaEvent> = {}): MetaEvent => ({
     kind: "dm",
@@ -64,7 +74,7 @@ const build = async (events: ReadonlyArray<MetaEvent> = [], claimed = [{ id: "in
     const meta = mock<MetaClient>()
     meta.verifyDelivery.mockReturnValue(true)
     meta.parse.mockReturnValue([...events])
-    const outbox = mock<QueueOutbox>()
+    const outbox: RecordingQueueOutbox = recordingQueueOutbox()
     const conversations = mock<ConversationsService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -142,7 +152,7 @@ describe("MetaInboxService", () => {
         expect(tx.em.query.mock.calls).toEqual([[INSERT_META_INBOX, ["meta", DELIVERY_ID, JSON.stringify(BODY)]]])
         expect(connections.findLiveByMeta).not.toHaveBeenCalled()
         expect(connections.recordEvent).not.toHaveBeenCalled()
-        expect(outbox.write).not.toHaveBeenCalled()
+        expect(outbox.jobs).toEqual([])
     })
 
     it("opens Facebook and Instagram message windows and queues each event in the claiming transaction", async () => {
@@ -180,19 +190,19 @@ describe("MetaInboxService", () => {
             ["connection-1", { amount: 0, content: "Lan", at: AT, text: "x".repeat(160) }],
             ["connection-1", { amount: 0, content: "postback", at: AT, text: "" }],
         ])
-        expect(outbox.write.mock.calls).toEqual([
-            [
-                manager,
-                META_INBOUND_QUEUE,
-                { connectionId: "connection-1", workspaceId: "workspace-1", event: dm },
-                { dedupeKey: "meta_inbound:connection-1:dm:message-1" },
-            ],
-            [
-                manager,
-                META_INBOUND_QUEUE,
-                { connectionId: "connection-1", workspaceId: "workspace-1", event: postback },
-                { dedupeKey: "meta_inbound:connection-1:postback:button-1" },
-            ],
+        expect(outbox.entries).toEqual([
+            {
+                tx: manager,
+                queue: META_INBOUND_QUEUE,
+                payload: { connectionId: "connection-1", workspaceId: "workspace-1", event: dm },
+                inTransaction: true,
+            },
+            {
+                tx: manager,
+                queue: META_INBOUND_QUEUE,
+                payload: { connectionId: "connection-1", workspaceId: "workspace-1", event: postback },
+                inTransaction: true,
+            },
         ])
     })
 
@@ -223,19 +233,19 @@ describe("MetaInboxService", () => {
             ["connection-1", { amount: 0, content: "Lan", at: AT, text: "Hello" }],
             ["connection-1", { amount: 0, content: "Lan", at: AT, text: "Hello" }],
         ])
-        expect(outbox.write.mock.calls).toEqual([
-            [
-                manager,
-                META_INBOUND_QUEUE,
-                { connectionId: "connection-1", workspaceId: "workspace-1", event: comment },
-                { dedupeKey: "meta_inbound:connection-1:comment:1" },
-            ],
-            [
-                manager,
-                META_INBOUND_QUEUE,
-                { connectionId: "connection-1", workspaceId: "workspace-1", event: mention },
-                { dedupeKey: "meta_inbound:connection-1:mention:2" },
-            ],
+        expect(outbox.entries).toEqual([
+            {
+                tx: manager,
+                queue: META_INBOUND_QUEUE,
+                payload: { connectionId: "connection-1", workspaceId: "workspace-1", event: comment },
+                inTransaction: true,
+            },
+            {
+                tx: manager,
+                queue: META_INBOUND_QUEUE,
+                payload: { connectionId: "connection-1", workspaceId: "workspace-1", event: mention },
+                inTransaction: true,
+            },
         ])
     })
 
@@ -261,13 +271,13 @@ describe("MetaInboxService", () => {
         expect(connections.recordEvent.mock.calls).toEqual(
             events.map(() => ["connection-1", { amount: 0, content: "Lan", at: AT, text: "Hello" }]),
         )
-        expect(outbox.write.mock.calls).toEqual(
-            events.map((item) => [
-                manager,
-                META_INBOUND_QUEUE,
-                { connectionId: "connection-1", workspaceId: "workspace-1", event: item },
-                { dedupeKey: `meta_inbound:connection-1:${item.event_key}` },
-            ]),
+        expect(outbox.entries).toEqual(
+            events.map((item) => ({
+                tx: manager,
+                queue: META_INBOUND_QUEUE,
+                payload: { connectionId: "connection-1", workspaceId: "workspace-1", event: item },
+                inTransaction: true,
+            })),
         )
     })
 
@@ -295,14 +305,14 @@ describe("MetaInboxService", () => {
             [COMPLETE_META_INBOX, ["inbox-1"]],
         ])
         expect(connections.recordEvent).not.toHaveBeenCalled()
-        expect(outbox.write).not.toHaveBeenCalled()
+        expect(outbox.jobs).toEqual([])
         expect(tx.commits).toBe(1)
     })
 
     it("rolls back the claimed delivery when a queued write fails", async () => {
         const { service, tx, outbox } = await build([event()])
         const failure = new Error("queue unavailable")
-        outbox.write.mockRejectedValue(failure)
+        outbox.failNext("write", failure)
 
         await expect(service.accept(RAW_BODY, SIGNATURE)).rejects.toBe(failure)
 
@@ -362,7 +372,7 @@ describe("MetaInboxService", () => {
             expect(tx.em.transaction).toHaveBeenCalledTimes(1)
             expect(tx.em.query).not.toHaveBeenCalled()
             expect(connections.findLiveByMeta).not.toHaveBeenCalled()
-            expect(outbox.write).not.toHaveBeenCalled()
+            expect(outbox.jobs).toEqual([])
         })
 
         it.each([
@@ -387,7 +397,7 @@ describe("MetaInboxService", () => {
 
         it("normalizes omitted runtime text before handing the DM to conversations", async () => {
             const { service, tx, conversations } = await build()
-            const incompleteEvent = { ...event(), text: undefined } as unknown as MetaEvent
+            const incompleteEvent = omitText(event())
 
             await service.deliver({
                 connectionId: "connection-1",
