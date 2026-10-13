@@ -1,4 +1,4 @@
-import { isPrivateAddress, isWellFormedHost } from "./public-host.policy"
+import { isPrivateAddress, isWellFormedHost } from "./network-address.policy"
 
 describe("isPrivateAddress", () => {
     it.each([

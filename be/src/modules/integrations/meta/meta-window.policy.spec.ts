@@ -1,6 +1,6 @@
 import { HOUR_MS, INSTAGRAM_MAX_BYTES, MESSENGER_MAX_CHARS } from "./meta.contracts"
 import { classifyGraphError } from "./meta-failure.policy"
-import { checkMessagingWindow, checkPrivateReply, chunkText, createRateLimiter } from "./meta-window.policy"
+import { checkMessagingWindow, checkPrivateReply, chunkMessage, createRateLimiter } from "./meta-window.policy"
 
 const NOW = 1_800_000_000_000
 
@@ -38,15 +38,15 @@ describe("checkPrivateReply", () => {
     })
 })
 
-describe("chunkText", () => {
+describe("chunkMessage", () => {
     it("keeps a short text whole and drops empty text", () => {
-        expect(chunkText("facebook", "  hello  ")).toEqual(["hello"])
-        expect(chunkText("facebook", "   ")).toEqual([])
+        expect(chunkMessage("facebook", "  hello  ")).toEqual(["hello"])
+        expect(chunkMessage("facebook", "   ")).toEqual([])
     })
 
     it("splits a long Messenger text at a space inside the limit", () => {
         const text = `${"word ".repeat(600)}end`
-        const chunks = chunkText("facebook", text)
+        const chunks = chunkMessage("facebook", text)
 
         expect(chunks.length).toBeGreaterThan(1)
         expect(chunks.every((chunk) => chunk.length <= MESSENGER_MAX_CHARS)).toBe(true)
@@ -55,7 +55,7 @@ describe("chunkText", () => {
 
     it("splits by bytes on Instagram and cuts a text with no break where it must", () => {
         const accented = "\u00e9".repeat(900)
-        const chunks = chunkText("instagram", accented)
+        const chunks = chunkMessage("instagram", accented)
 
         expect(chunks.length).toBeGreaterThan(1)
         expect(chunks.every((chunk) => Buffer.byteLength(chunk, "utf8") <= INSTAGRAM_MAX_BYTES)).toBe(true)

@@ -4,12 +4,13 @@ import { Injectable } from "@nestjs/common"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { HttpError, HttpErrorCode, InjectHttpClient } from "@modules/platform/http"
+import { isPrivateAddress } from "@modules/platform/primitives"
 import type { HttpClient } from "@modules/platform/http"
 import { WebhookDeliveryError, WebhookDeliveryErrorCode } from "./errors/webhook-delivery.error"
 import { InjectWebhookDeliveryOptions } from "./webhook-delivery.decorators"
 import type { WebhookPost, WebhookPostResult } from "./webhook-delivery.contracts"
 import type { WebhookDeliveryOptions } from "./webhook-delivery.options"
-import { isPrivateAddress, refusalOfText } from "./webhook-target.policy"
+import { refusalOfText } from "./webhook-target.policy"
 
 @Injectable()
 /**

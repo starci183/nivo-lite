@@ -40,7 +40,7 @@ import type { MetaApp, MetaOptions } from "./meta.options"
 import { classifyGraphError } from "./meta-failure.policy"
 import { authorizeUrl, graphUrl, isPublicSite, redirectUri, webhookUrl } from "./meta-url.policy"
 import { metaStateKey, signMetaState, verifyMetaState } from "./meta-state.policy"
-import { chunkText, createRateLimiter } from "./meta-window.policy"
+import { chunkMessage, createRateLimiter } from "./meta-window.policy"
 import { parseLead, parseWebhook, verifyChallenge, verifySignature } from "./meta-webhook.policy"
 import type { HubQuery } from "./meta-webhook.policy"
 
@@ -289,7 +289,7 @@ export class MetaClient {
     ): Promise<SendResult> {
         const refusal = this.precheck(page, platform, text)
         if (refusal) return Promise.resolve(refusal)
-        return this.sendChunks(page, recipientId, via, chunkText(platform, text), 0, [])
+        return this.sendChunks(page, recipientId, via, chunkMessage(platform, text), 0, [])
     }
 
     /** Sends the parts one after another; a refused part or a spent send slot stops the rest. */
@@ -360,7 +360,7 @@ export class MetaClient {
             method: "POST",
             body: {
                 recipient: { comment_id: commentId },
-                message: { text: chunkText(platform, text)[0] ?? text.trim() },
+                message: { text: chunkMessage(platform, text)[0] ?? text.trim() },
             },
         })
         if (!res.ok) return this.refuse(res.failure, res.detail)

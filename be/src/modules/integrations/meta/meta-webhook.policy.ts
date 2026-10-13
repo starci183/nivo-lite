@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto"
 import type { MetaEvent, MetaEventKind, MetaLead, MetaPlatform, MetaReferral } from "./meta.contracts"
 
 /** Constant-time equality of two strings (different lengths are simply unequal). */
-export const safeEqual = (a: string, b: string): boolean => {
+export const sameToken = (a: string, b: string): boolean => {
     const x = Buffer.from(a)
     const y = Buffer.from(b)
     return x.length === y.length && timingSafeEqual(x, y)
@@ -35,7 +35,7 @@ export interface HubQuery {
 export const verifyChallenge = (query: HubQuery, verifyToken: string | undefined): string | null => {
     const token = (verifyToken ?? "").trim()
     if (!token || query.challenge === undefined || query.mode !== "subscribe") return null
-    return safeEqual(query.verifyToken ?? "", token) ? query.challenge : null
+    return sameToken(query.verifyToken ?? "", token) ? query.challenge : null
 }
 
 type Obj = Record<string, unknown>

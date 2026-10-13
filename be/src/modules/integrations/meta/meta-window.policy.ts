@@ -47,7 +47,7 @@ const fits = (platform: MetaPlatform, text: string): boolean =>
         : Buffer.byteLength(text, "utf8") <= INSTAGRAM_MAX_BYTES
 
 /** Splits a long text into messages the platform accepts, at a paragraph, line or space when it can. */
-export const chunkText = (platform: MetaPlatform, text: string): Array<string> => {
+export const chunkMessage = (platform: MetaPlatform, text: string): Array<string> => {
     const out: Array<string> = []
     let rest = text.trim()
     while (rest.length > 0) {

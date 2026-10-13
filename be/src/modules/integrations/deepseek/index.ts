@@ -15,7 +15,7 @@ export type {
     TextRequest,
 } from "./deepseek.contracts"
 export { DeepseekModule } from "./deepseek.module"
-export type { TextGenerator } from "./deepseek.port"
+export type { DeepseekTextGenerator } from "./deepseek.port"
 export { authorityBrief } from "./prompts.policy"
 
 export { InjectDeepseekClient } from "./deepseek.decorators"

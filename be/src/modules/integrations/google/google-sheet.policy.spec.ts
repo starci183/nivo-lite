@@ -6,7 +6,7 @@ import {
     buildCreateBody,
     buildFormatBody,
     formatVnTime,
-    formatVnd,
+    sheetVnd,
     leadHeader,
     leadKey,
     leadsTab,
@@ -55,7 +55,7 @@ describe("formatting", () => {
     })
 
     it("formats dong and lead keys", () => {
-        expect(formatVnd(1234567.4)).toBe("1.234.567 \u20ab")
+        expect(sheetVnd(1234567.4)).toBe("1.234.567 \u20ab")
         expect(leadKey(LEAD_ID)).toBe("KH-11111111")
     })
 })
@@ -135,7 +135,7 @@ describe("applySheetEvent", () => {
         expect(api.findRow).toHaveBeenCalledWith("sheet-1", ["DH-1", ""])
         expect(api.updateCells).toHaveBeenCalledWith("sheet-1", 4, {
             F: sheetText("sheet.statusPaid"),
-            G: sheetText("sheet.paidNote", { amount: formatVnd(5000), at: "12/10/2026 11:00" }),
+            G: sheetText("sheet.paidNote", { amount: sheetVnd(5000), at: "12/10/2026 11:00" }),
         })
         expect(result.evidence).toContain("DH-1")
     })
