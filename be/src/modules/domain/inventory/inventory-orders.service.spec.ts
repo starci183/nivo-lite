@@ -428,7 +428,7 @@ describe("InventoryOrdersService", () => {
                 workspaceId: "ws-1",
                 workItemId: "work-1",
                 decision: "rejected",
-                decidedBy: "Lan",
+                decidedBy: "user-1",
             })
             expect(office.logEvidence).toHaveBeenCalledWith("ws-1", {
                 kind: "inventory.po_cancelled",

@@ -5,10 +5,9 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { InjectKnowledgeOptions } from "./knowledge.decorators"
-import type { PickedFolder } from "./knowledge.contracts"
+import { InjectDriveAccessSource } from "./knowledge.decorators"
+import type { DriveAccessSource, PickedFolder } from "./knowledge.contracts"
 import { KnowledgeLogEvent } from "./knowledge.log-events"
-import type { KnowledgeOptions } from "./knowledge.options"
 import { isPickerToken } from "./picker-token.policy"
 
 /** Who may list the Drive of a workspace for its knowledge. */
@@ -21,7 +20,7 @@ const NOT_LISTABLE: ReadonlyArray<number> = [403, 404]
 /** The Google Drive folders an owner adds to the knowledge: a pasted folder link read with the workspace grant, or a folder picked in the Google Picker. */
 export class KnowledgeDriveService {
     constructor(
-        @InjectKnowledgeOptions() private readonly options: KnowledgeOptions,
+        @InjectDriveAccessSource() private readonly driveAccess: DriveAccessSource,
         @InjectDocuments() private readonly documents: DocumentsPort,
         @InjectLogger() private readonly logger: Logger,
         private readonly members: WorkspaceMembersService,
@@ -32,7 +31,7 @@ export class KnowledgeDriveService {
         await this.members.require(userId, workspaceId, MANAGERS)
         const folderId = this.documents.driveFolderOf(url)
         if (folderId === null) throw new DocumentsError({ code: DocumentsErrorCode.NotFolder })
-        const drive = this.options.driveAccess.forWorkspace(workspaceId)
+        const drive = this.driveAccess.forWorkspace(workspaceId)
         if (drive === null) throw new DocumentsError({ code: DocumentsErrorCode.DriveGrantMissing })
         return drive.withToken((token) => this.documents.listDriveFolder(token, folderId))
     }

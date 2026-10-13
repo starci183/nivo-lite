@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { OfficeLog, TextGenerator } from "@modules/domain/module-ops"
+import { OfficeLog, ModuleTextGenerator } from "@modules/domain/module-ops"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -49,7 +49,7 @@ const build = async (entityManager: MockEntityManager) => {
     catalog.get.mockImplementation((key, params) => text(key, params))
     const office = mock<OfficeLog>()
     office.workspaceName.mockResolvedValue("Quan Cafe")
-    const generator = mock<TextGenerator>()
+    const generator = mock<ModuleTextGenerator>()
     generator.generate.mockResolvedValue({ ok: false, output: "" })
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -57,7 +57,7 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: OfficeLog, useValue: office },
-            { provide: TextGenerator, useValue: generator },
+            { provide: ModuleTextGenerator, useValue: generator },
         ],
     }).compile()
     return { service: moduleRef.get(InventoryOrderMessageService), generator }

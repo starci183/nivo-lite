@@ -1,13 +1,13 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { ApprovalGate, TextGenerator } from "@modules/domain/module-ops"
+import { ApprovalGate, ModuleTextGenerator } from "@modules/domain/module-ops"
 import type { PerformContext, PerformResult } from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { HiringError, HiringErrorCode } from "./errors/hiring.error"
-import type { GateOutcome, ScoreLabel, ScoreReason } from "./hiring.contracts"
+import type { OptionalGateOutcome, ScoreLabel, ScoreReason } from "./hiring.contracts"
 import { HiringLogEvent } from "./hiring.log-events"
 import type { RescreenOutput, RescreenParams } from "./hiring-operations.contracts"
 import { HiringDataService } from "./hiring-data.service"
@@ -57,7 +57,7 @@ export class HiringScreeningService {
         @InjectLogger() private readonly logger: Logger,
         private readonly members: WorkspaceMembersService,
         private readonly gate: ApprovalGate,
-        private readonly generator: TextGenerator,
+        private readonly generator: ModuleTextGenerator,
         private readonly data: HiringDataService,
         private readonly words: HiringTextService,
     ) {}
@@ -66,7 +66,7 @@ export class HiringScreeningService {
      * Prepares the screening of a candidate and puts it through the gate (screen_candidate): the score and the model summary are in the
      * request, the performer stores them. It never throws; null means the gate could not be asked and the candidate keeps waiting.
      */
-    async requestScreening(workspaceId: string, candidateId: string, again: boolean): Promise<GateOutcome | null> {
+    async requestScreening(workspaceId: string, candidateId: string, again: boolean): Promise<OptionalGateOutcome> {
         try {
             return await this.ask(workspaceId, candidateId, again)
         } catch (cause) {
@@ -75,7 +75,7 @@ export class HiringScreeningService {
         }
     }
 
-    private async ask(workspaceId: string, candidateId: string, again: boolean): Promise<GateOutcome | null> {
+    private async ask(workspaceId: string, candidateId: string, again: boolean): Promise<OptionalGateOutcome> {
         const candidate = await this.data.candidate(workspaceId, candidateId)
         const job = candidate === undefined ? undefined : await this.data.job(workspaceId, candidate.jobId)
         if (candidate === undefined || job === undefined) return null

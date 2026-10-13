@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { LLM } from "@modules/integrations/llm/llm.decorators"
+import { LLM } from "@modules/integrations/llm"
 import type { LlmPort, LlmUsage } from "@modules/integrations/llm"
 import { EmbeddingService } from "./embedding.service"
 import { UsageMeterService } from "./usage-meter.service"

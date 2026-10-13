@@ -184,17 +184,10 @@ describe("KnowledgeIndexingService", () => {
 
             expect(usage.blockedBy).toHaveBeenCalledWith(WS, "embedding", true)
             expect(embeddings.embed).not.toHaveBeenCalled()
-            expect(chunks.replace).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    drafts: expect.arrayContaining([{ text: expect.any(String), vector: null }]),
-                }),
-            )
-            expect(sources.blockIndexing).toHaveBeenCalledWith(
-                WS,
-                "s1",
-                StoredNote.NoCreditsForIndex,
-                expect.any(Number),
-            )
+            const drafts = chunks.replace.mock.calls[0]?.[0].drafts ?? []
+            expect(drafts.length).toBeGreaterThan(1)
+            expect(drafts.every((draft) => draft.vector === null)).toBe(true)
+            expect(sources.blockIndexing).toHaveBeenCalledWith(WS, "s1", StoredNote.NoCreditsForIndex, drafts.length)
             expect(sources.finishIndexing).not.toHaveBeenCalled()
         })
 

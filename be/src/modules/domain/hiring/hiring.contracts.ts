@@ -343,9 +343,20 @@ export interface Delivery {
 }
 
 /** The work item states a gate answer can carry. */
-export interface GateOutcome {
+export interface HiringGateOutcome {
     /** The status of the decision. */
     readonly status: string
     /** The decision that records it. */
     readonly workItemId: string
+}
+
+/** The gate answer a screening request got; null when the gate could not be asked and the candidate keeps waiting. */
+export type OptionalGateOutcome = HiringGateOutcome | null
+
+/** What deleting candidates removed, so the caller can report it. */
+export interface DeletedCandidates {
+    /** How many candidate rows were deleted. */
+    readonly candidates: number
+    /** How many stored CV files were removed from storage. */
+    readonly files: number
 }

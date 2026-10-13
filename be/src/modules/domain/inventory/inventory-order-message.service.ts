@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { OfficeLog, TextGenerator } from "@modules/domain/module-ops"
+import { OfficeLog, ModuleTextGenerator } from "@modules/domain/module-ops"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -32,7 +32,7 @@ export class InventoryOrderMessageService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         private readonly office: OfficeLog,
-        private readonly generator: TextGenerator,
+        private readonly generator: ModuleTextGenerator,
     ) {}
 
     private text(key: string, params: Record<string, string | number>): string {
