@@ -19,7 +19,6 @@ import { parseWorkspacesConfig } from "@modules/domain/workspaces"
 import { parseDocumentsConfig } from "@modules/integrations/documents"
 import { parseLlmConfig } from "@modules/integrations/llm"
 import { parseN8nConfig } from "@modules/integrations/n8n"
-import { parseTemplateFilesConfig } from "@modules/integrations/template-files"
 import { parseDeepseekConfig } from "@modules/integrations/deepseek"
 import { parseOpenclawConfig } from "@modules/integrations/openclaw"
 import { parseVideoConfig } from "@modules/domain/video"
@@ -72,7 +71,6 @@ const bootstrap = async (): Promise<void> => {
         channelSetup: parseChannelSetupConfig(env),
         webhookDelivery: parseWebhookDeliveryConfig(env),
         n8n: parseN8nConfig(env),
-        templateFiles: parseTemplateFilesConfig(env),
         ffmpeg: parseFfmpegConfig(env),
         tts: parseTtsConfig(env),
         video: parseVideoConfig(env),

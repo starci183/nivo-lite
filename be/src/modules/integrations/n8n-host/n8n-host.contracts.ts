@@ -45,12 +45,12 @@ export interface HostCommand {
 export interface N8nHostShell {
     /** Runs the command; answers its output and throws when it fails. */
     run(request: HostCommand): Promise<string>
-    /** The workflow files: the json files of the `n8n-templates` folder that are not meta files, in file-name order. */
+    /** The workflow files: the shared n8n workflows of `n8n-host.templates.ts`, in file-name order. */
     workflows(): Promise<ReadonlyArray<unknown>>
 }
 
 /** The sync of the shared workflows into the n8n container. */
 export interface N8nHost {
-    /** Imports the workflows of the resources folder, activates them and restarts n8n; answers the steps taken, or planned under a dry run. */
+    /** Imports the shared workflows, activates them and restarts n8n; answers the steps taken, or planned under a dry run. */
     sync(options: N8nSyncOptions): Promise<ReadonlyArray<N8nSyncStep>>
 }

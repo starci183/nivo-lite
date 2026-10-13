@@ -8,7 +8,6 @@ const TARGET: N8nHostOptions = {
     keyPath: "/keys/id",
     knownHostsPath: undefined,
     container: "n8n-1",
-    root: "resources",
 }
 
 describe("isWorkflowFile", () => {

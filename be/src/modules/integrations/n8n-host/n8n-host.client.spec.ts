@@ -1,9 +1,7 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
-import { tmpdir } from "node:os"
-import { join } from "node:path"
 import { N8nHostErrorCode } from "./errors/n8n-host.error"
 import { N8nHostClient } from "./n8n-host.client"
 import type { N8nHostOptions } from "./n8n-host.options"
+import { N8N_WORKFLOWS } from "./n8n-host.templates"
 
 const OPTIONS: N8nHostOptions = {
     host: undefined,
@@ -11,7 +9,6 @@ const OPTIONS: N8nHostOptions = {
     keyPath: "/keys/id",
     knownHostsPath: undefined,
     container: "n8n-1",
-    root: "resources",
 }
 
 const local = (command: string, input = "") => ({ command, input, local: true })
@@ -57,38 +54,13 @@ describe("N8nHostClient", () => {
     })
 
     describe("workflows", () => {
-        let root: string
+        it("answers the shared workflows of the templates file, each with a name and nodes", async () => {
+            const client = new N8nHostClient(OPTIONS)
 
-        beforeEach(async () => {
-            root = await mkdtemp(join(tmpdir(), "n8n-host-"))
-            await mkdir(join(root, "n8n-templates"))
-            await writeFile(join(root, "n8n-templates", "b.json"), '{"name":"B","nodes":[]}')
-            await writeFile(join(root, "n8n-templates", "a.json"), '{"name":"A","nodes":[]}')
-            await writeFile(join(root, "n8n-templates", "a.meta.json"), '{"key":"a"}')
-            await writeFile(join(root, "n8n-templates", "notes.txt"), "no")
-        })
+            const workflows = await client.workflows()
 
-        afterEach(async () => {
-            await rm(root, { recursive: true, force: true })
-        })
-
-        it("reads the workflow files in name order and leaves the meta files out", async () => {
-            const client = new N8nHostClient({ ...OPTIONS, root })
-
-            await expect(client.workflows()).resolves.toEqual([
-                { name: "A", nodes: [] },
-                { name: "B", nodes: [] },
-            ])
-        })
-
-        it("names the file that is not valid json", async () => {
-            await writeFile(join(root, "n8n-templates", "c.json"), "{broken")
-            const client = new N8nHostClient({ ...OPTIONS, root })
-
-            await expect(client.workflows()).rejects.toMatchObject({
-                code: N8nHostErrorCode.WorkflowInvalid,
-                params: { file: "c.json" },
-            })
+            expect(workflows).toBe(N8N_WORKFLOWS)
+            expect(workflows.length).toBeGreaterThan(0)
         })
     })
 })
