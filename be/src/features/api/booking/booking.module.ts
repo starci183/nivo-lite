@@ -1,3 +1,14 @@
+import { SaveBookingServiceHandler } from "./application/save-booking-service.handler"
+import { RemoveBookingServiceHandler } from "./application/remove-booking-service.handler"
+import { SaveBookingResourceHandler } from "./application/save-booking-resource.handler"
+import { RemoveBookingResourceHandler } from "./application/remove-booking-resource.handler"
+import { SaveBookingHoursHandler } from "./application/save-booking-hours.handler"
+import { SaveBookingExceptionHandler } from "./application/save-booking-exception.handler"
+import { RemoveBookingExceptionHandler } from "./application/remove-booking-exception.handler"
+import { SaveBookingPolicyHandler } from "./application/save-booking-policy.handler"
+import { SaveBookingPublicPageHandler } from "./application/save-booking-public-page.handler"
+import { RemoveBookingWaitlistEntryHandler } from "./application/remove-booking-waitlist-entry.handler"
+import { GetBookingBoardHandler } from "./application/get-booking-board.handler"
 import { Module } from "@nestjs/common"
 import { GetBookingOverviewHandler } from "./application/get-booking-overview.handler"
 import { AddBookingHandler } from "./application/add-booking.handler"
@@ -11,6 +22,17 @@ import { CancelBookingHandler } from "./application/cancel-booking.handler"
 @Module({
     providers: [
         GetBookingOverviewHandler,
+        GetBookingBoardHandler,
+        SaveBookingServiceHandler,
+        RemoveBookingServiceHandler,
+        SaveBookingResourceHandler,
+        RemoveBookingResourceHandler,
+        SaveBookingHoursHandler,
+        SaveBookingExceptionHandler,
+        RemoveBookingExceptionHandler,
+        SaveBookingPolicyHandler,
+        SaveBookingPublicPageHandler,
+        RemoveBookingWaitlistEntryHandler,
         AddBookingHandler,
         MoveBookingHandler,
         ConfirmBookingHandler,

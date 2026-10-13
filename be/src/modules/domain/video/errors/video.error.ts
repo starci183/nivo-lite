@@ -3,6 +3,10 @@ import type { ErrorKind } from "@modules/platform/errors"
 
 /** Codes of the video capability. */
 export enum VideoErrorCode {
+    /** Invalid video editor input. */
+    InputInvalid = "VIDEO_INPUT_INVALID",
+    /** Approval is required before publication or sharing. */
+    NotApproved = "VIDEO_NOT_APPROVED",
     /** No video project of the caller has the requested id (or the caller may not render it). */
     ProjectNotFound = "VIDEO_PROJECT_NOT_FOUND",
     /** The project is being scripted or still has a render waiting or running. */
@@ -17,6 +21,8 @@ export enum VideoErrorCode {
 
 /** How each video code travels. */
 export const VIDEO_ERROR_KINDS: Record<VideoErrorCode, ErrorKind> = {
+    [VideoErrorCode.InputInvalid]: "invalid",
+    [VideoErrorCode.NotApproved]: "conflict",
     [VideoErrorCode.ProjectNotFound]: "not-found",
     [VideoErrorCode.ProjectBusy]: "conflict",
     [VideoErrorCode.SpecInvalid]: "invalid",

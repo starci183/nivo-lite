@@ -19,6 +19,7 @@ import {
     INSERT_LEAD,
     MARK_LEAD_WON,
     MATCH_LEAD,
+    REPLACE_LEAD_CONTEXT,
 } from "./persistence/lead-records.sql"
 
 @Injectable()
@@ -39,7 +40,7 @@ export class LeadRecordsService {
         return lead
     }
 
-    /** The customer an input belongs to: by phone, then email, then exact name and channel when the input has no contact at all. */
+    /** Matches a customer of the same origin by phone, email, or exact name and channel when the input has no contact. */
     async match(match: LeadMatch): Promise<OptionalLeadRecord> {
         const name = match.name?.trim() ?? ""
         const rows = await this.entityManager.query<Array<LeadRecordRow>>(MATCH_LEAD, [
@@ -48,6 +49,7 @@ export class LeadRecordsService {
             match.email,
             name === "" ? null : name,
             match.channel,
+            match.origin ?? "live",
         ])
         return rows[0] ?? null
     }
@@ -82,6 +84,16 @@ export class LeadRecordsService {
             classification.stage,
             classification.contextSummary,
         ])
+    }
+
+    /** Replaces the brief after the background agent has refreshed the customer's context. */
+    async replaceContext(
+        workspaceId: string,
+        leadId: string,
+        summary: string,
+        manager: EntityManager = this.entityManager,
+    ): Promise<void> {
+        await manager.query(REPLACE_LEAD_CONTEXT, [workspaceId, leadId, summary])
     }
 
     /** A confirmed order won the deal, unless it was lost. */

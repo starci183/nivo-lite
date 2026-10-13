@@ -1,6 +1,18 @@
 import type { RunUsage } from "@modules/integrations/openclaw"
 import type { Locale } from "@modules/platform/i18n"
 
+/** Trusted application metadata stored with a queued generation. */
+export interface GenerationContext {
+    /** Context fields are interpreted only by the requesting domain capability. */
+    readonly [name: string]: unknown
+}
+
+/** A durable application result applied after text generation. */
+export interface GenerationResult {
+    /** The result fields of the owning domain capability. */
+    readonly [name: string]: unknown
+}
+
 /** Who speaks a line of a generation prompt. */
 export type GenMessageRole = "system" | "user" | "assistant"
 
@@ -34,6 +46,9 @@ export interface GenerateParams {
     /** The language of the sentence a failure carries; Vietnamese when absent. */
     readonly locale?: Locale
 }
+
+/** The generation a fenced job may run, or null when usage or engine availability requires its fallback. */
+export type PreparedGenerationId = string | null
 
 /** A generation that produced text. */
 export interface GenerationSuccess {
@@ -77,6 +92,45 @@ export interface GenerationInput {
     /** The deadline of the caller, ms. */
     readonly timeoutMs: number
 }
+
+/** A queued request returned immediately, before the agent runs. */
+export interface GenerationEnqueued {
+    /** The generation to poll. */
+    readonly id: string
+    /** The initial state. */
+    readonly status: "queued"
+}
+
+/** A workspace-scoped generation with application context and a durable result. */
+export interface GenerationState {
+    /** The generation. */
+    readonly id: string
+    /** The workspace that owns it. */
+    readonly workspaceId: string
+    /** The purpose recorded by the requesting application. */
+    readonly purpose: string
+    /** queued, running, done, error, or cancelled. */
+    readonly status: string
+    /** The generated text, once available. */
+    readonly text: string | null
+    /** A stored failure code, when available. */
+    readonly errorCode: string | null
+    /** Prompt and trusted application context. */
+    readonly input: Record<string, unknown>
+    /** Text and any application result applied by the completion step. */
+    readonly output: Record<string, unknown>
+    /** Named timing marks, in milliseconds. */
+    readonly timings: Readonly<Record<string, number>>
+    /** Creation instant. */
+    readonly createdAt: string
+    /** Completion instant, if the engine ended. */
+    readonly finishedAt: string | null
+    /** The validated prompt messages used by a retry. */
+    readonly messages: ReadonlyArray<GenMessage>
+}
+
+/** No state is returned when the generation is absent from the selected workspace. */
+export type OptionalGenerationState = GenerationState | null
 
 /** A queued generation as the runner reads it. */
 export interface QueuedGeneration {

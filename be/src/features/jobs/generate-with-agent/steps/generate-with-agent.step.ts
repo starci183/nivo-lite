@@ -17,6 +17,6 @@ export class GenerateWithAgentStep implements JobStep {
      */
     async run(job: ClaimedJob): Promise<void> {
         await this.claims.advance({ jobId: job.jobId, expectedFencingToken: job.fencingToken, step: "generate" })
-        await this.runner.run(job.payload)
+        await this.runner.runJob(job)
     }
 }

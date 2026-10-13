@@ -5,6 +5,7 @@ import type { AuthorityPatch, AuthorityProfile } from "@modules/domain/authority
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import type { AuthorityRuleRecord, RuleChange } from "@modules/domain/authority-rules"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
+import { toProposal } from "@modules/domain/work-items"
 import type { WorkspaceMember, WorkspaceRole } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { WorkContext, WorkItem } from "./decisions.contracts"
@@ -19,8 +20,8 @@ import { DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
 import { EvidenceService } from "./evidence.service"
 import { clampPageSize, splitPage } from "./paging.policy"
 import { LIST_DECISION_HISTORY } from "./persistence/decision-history.sql"
-import type { WorkItemViewRow } from "./persistence/work-item-views.rows"
-import { FIND_WORK_ITEM_VIEW, LIST_WORK_ITEMS } from "./persistence/work-item-views.sql"
+import type { AccountingWaitingWorkRow, WorkItemViewRow } from "./persistence/work-item-views.rows"
+import { FIND_WORK_ITEM_VIEW, LIST_ACCOUNTING_WAITING_WORK, LIST_WORK_ITEMS } from "./persistence/work-item-views.sql"
 
 const MANAGERS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
 
@@ -47,6 +48,20 @@ export class DecisionsService {
         private readonly rules: AuthorityRulesService,
         private readonly evidence: EvidenceService,
     ) {}
+
+    /** Waiting accounting work and the related names; any workspace member may read. */
+    async listAccountingWaiting(
+        principalId: string,
+        workspaceId: string,
+        limit: number = 500,
+    ): Promise<Array<AccountingWaitingWorkRow>> {
+        await this.members.require(principalId, workspaceId)
+        const rows = await this.entityManager.query<Array<AccountingWaitingWorkRow>>(LIST_ACCOUNTING_WAITING_WORK, [
+            workspaceId,
+            limit,
+        ])
+        return rows.map((row) => ({ ...row, proposal: toProposal(row.proposal) }))
+    }
 
     /** One page of the workspace's work items, newest first; any member may read. */
     async listWorkItems(principalId: string, workspaceId: string, query: ListWorkItemsQuery): Promise<WorkItemPage> {

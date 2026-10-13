@@ -6,11 +6,18 @@ import { PaymentOrdersService } from "@modules/domain/payment-orders"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { CreditPack, PackLookup, TopupParams, UpgradeOrder, UpgradeParams } from "./credits.contracts"
-import { toCreditPack } from "./credits.mapper"
+import type {
+    CreditPack,
+    CreditTopupLot,
+    PackLookup,
+    TopupParams,
+    UpgradeOrder,
+    UpgradeParams,
+} from "./credits.contracts"
+import { toCreditPack, toCreditTopupLot } from "./credits.mapper"
 import { CreditsError, CreditsErrorCode } from "./errors/credits.error"
-import type { PackRow } from "./persistence/credits.rows"
-import { SELECT_ACTIVE_PACKS } from "./persistence/credits.sql"
+import type { PackRow, TopupLotRow } from "./persistence/credits.rows"
+import { SELECT_ACTIVE_PACKS, SELECT_TOPUP_LOTS } from "./persistence/credits.sql"
 import { prorateUpgrade } from "./proration.policy"
 
 @Injectable()
@@ -27,6 +34,13 @@ export class CreditsService {
     async listPacks(): Promise<Array<CreditPack>> {
         const rows = await this.entityManager.query<Array<PackRow>>(SELECT_ACTIVE_PACKS)
         return rows.map(toCreditPack)
+    }
+
+    /** The latest purchased lots of a workspace, proving the caller's owner or manager role. */
+    async topupLots(userId: string, workspaceId: string): Promise<ReadonlyArray<CreditTopupLot>> {
+        await this.billing.requireManager(userId, workspaceId)
+        const rows = await this.entityManager.query<Array<TopupLotRow>>(SELECT_TOPUP_LOTS, [workspaceId])
+        return rows.map(toCreditTopupLot)
     }
 
     /** A pending top-up order for one pack (owner or manager); the same open order when it was just asked for. */

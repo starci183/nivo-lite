@@ -27,7 +27,7 @@
       ],
       "reads": ["supabase/types/"],
       "patterns": ["webhooks", "queue", "fenced-job"],
-      "optionalSlots": ["repo.docs"]
+      "optionalSlots": ["repo.docs", "be.contract.graphql"]
     },
     "fe": {
       "apps": [{ "name": "web", "kind": "next" }],

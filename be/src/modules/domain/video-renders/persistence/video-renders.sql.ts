@@ -35,3 +35,37 @@ WHERE id = $1 AND status IN ('queued', 'rendering')`
 export const FAIL_RENDER = sql`UPDATE public.video_renders
 SET status = 'failed', error = left($2, 300), finished_at = now()
 WHERE id = $1 AND status IN ('queued', 'rendering')`
+
+/** Reads public progress and output of one render inside the selected workspace ($1 workspace, $2 render). */
+export const SELECT_RENDER_STATUS = sql`SELECT id, status, progress, stage, output_path, poster_path, duration_ms, size_bytes
+FROM public.video_renders
+WHERE workspace_id = $1 AND id = $2
+LIMIT 1`
+
+/** Completed render media of the selected workspace, newest first ($1 workspace, $2 limit). */
+export const LIST_COMPLETED_RENDER_MEDIA = sql`SELECT r.id, COALESCE(p.title, r.spec #>> '{brand,name}', '') AS title,
+    r.output_path, r.duration_ms, r.created_at
+FROM public.video_renders r
+LEFT JOIN LATERAL (
+    SELECT title FROM public.video_projects
+    WHERE workspace_id = r.workspace_id AND (render_id = r.id OR r.id = ANY(render_ids))
+    ORDER BY updated_at DESC
+    LIMIT 1
+) p ON true
+WHERE r.workspace_id = $1 AND r.status = 'done' AND r.output_path IS NOT NULL
+ORDER BY r.created_at DESC, r.id DESC
+LIMIT $2`
+
+/** Completed render media selected by id inside a workspace ($1 workspace, $2 render ids). */
+export const FIND_COMPLETED_RENDER_MEDIA = sql`SELECT r.id, COALESCE(p.title, r.spec #>> '{brand,name}', '') AS title,
+    r.output_path, r.duration_ms, r.created_at
+FROM public.video_renders r
+LEFT JOIN LATERAL (
+    SELECT title FROM public.video_projects
+    WHERE workspace_id = r.workspace_id AND (render_id = r.id OR r.id = ANY(render_ids))
+    ORDER BY updated_at DESC
+    LIMIT 1
+) p ON true
+WHERE r.workspace_id = $1 AND r.status = 'done' AND r.output_path IS NOT NULL AND r.id = ANY($2::uuid[])
+ORDER BY r.created_at DESC, r.id DESC
+LIMIT 80`

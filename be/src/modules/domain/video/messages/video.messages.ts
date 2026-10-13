@@ -3,6 +3,9 @@ import type { MessageBundle } from "@modules/platform/i18n"
 /** Display text of the video codes and the texts the capability writes into rows, Vietnamese and English. */
 export const VIDEO_MESSAGES: MessageBundle = {
     vi: {
+        "video.script.generated": "Da soan kich ban {{title}} voi {{scenes}} canh.",
+        "errors.VIDEO_INPUT_INVALID": "Thong tin video khong hop le.",
+        "errors.VIDEO_NOT_APPROVED": "Video can duoc phe duyet truoc.",
         "errors.VIDEO_PROJECT_NOT_FOUND": "Kh\u00f4ng t\u00ecm th\u1ea5y video n\u00e0y.",
         "errors.VIDEO_PROJECT_BUSY":
             "Video \u0111ang \u0111\u01b0\u1ee3c so\u1ea1n ho\u1eb7c d\u1ef1ng, ch\u1edd xong r\u1ed3i d\u1ef1ng ti\u1ebfp nh\u00e9.",
@@ -15,6 +18,9 @@ export const VIDEO_MESSAGES: MessageBundle = {
         "video.render.failed": "D\u1ef1ng video kh\u00f4ng th\u00e0nh c\u00f4ng: {{reason}}",
     },
     en: {
+        "video.script.generated": "Wrote the script for {{title}} with {{scenes}} scenes.",
+        "errors.VIDEO_INPUT_INVALID": "The video input is invalid.",
+        "errors.VIDEO_NOT_APPROVED": "Approve the video first.",
         "errors.VIDEO_PROJECT_NOT_FOUND": "This video was not found.",
         "errors.VIDEO_PROJECT_BUSY": "The video is being scripted or rendered, wait until it is done.",
         "errors.VIDEO_SPEC_INVALID": "The script cannot be rendered yet: {{reason}}",

@@ -4,6 +4,9 @@ import type { ProposalFieldValue } from "./decisions.contracts"
 /** What a person decides about a waiting item. */
 export type DecisionVerdict = "approved" | "rejected"
 
+/** Why a member queued existing Sales work. */
+export type QueuedWorkIntent = "retry" | "handoff"
+
 /** A text that may be absent. */
 export type OptionalNote = string | null | undefined
 

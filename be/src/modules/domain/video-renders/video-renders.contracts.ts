@@ -39,3 +39,47 @@ export interface RenderDone {
 
 /** The answer of taking a render delivery: the render, or null when it is already settled or does not exist. */
 export type RenderClaim = ClaimedRender | null
+
+/** The progress and output a workspace member can poll without internal failure text. */
+export interface RenderStatus {
+    /** The queued render id. */
+    readonly id: string
+    /** The job state exposed to the browser. */
+    readonly status: "queued" | "running" | "succeeded" | "failed"
+    /** The completed share of the render, from zero through one hundred. */
+    readonly progress: number
+    /** The render stage code, when running. */
+    readonly stage: string | null
+    /** The finished MP4 path in the videos bucket. */
+    readonly outputPath: string | null
+    /** The finished poster path in the videos bucket. */
+    readonly posterPath: string | null
+    /** The finished video duration in milliseconds. */
+    readonly durationMs: number | null
+    /** The finished MP4 size in bytes. */
+    readonly sizeBytes: number | null
+    /** A stable failure code; internal renderer messages are never exposed. */
+    readonly errorCode: string | null
+}
+
+/** The render to read inside a member's selected workspace. */
+export interface RenderStatusSelection {
+    /** The selected workspace. */
+    readonly workspaceId: string
+    /** The queued render id. */
+    readonly id: string
+}
+
+/** A completed workspace render that content may attach to a publication. */
+export interface CompletedRenderMedia {
+    /** The render id. */
+    readonly id: string
+    /** The project title, or the brand name of a standalone render. */
+    readonly title: string
+    /** The MP4 path in the videos bucket. */
+    readonly outputPath: string
+    /** The video duration in milliseconds, when recorded. */
+    readonly durationMs: number | null
+    /** When the render was queued. */
+    readonly createdAt: string
+}

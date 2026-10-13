@@ -1,16 +1,27 @@
 import { Injectable } from "@nestjs/common"
+import type { EntityManager } from "typeorm"
+import { LeadReadService } from "@modules/domain/leads"
+import { MessagesService } from "@modules/domain/messages"
+import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
+import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ExecutionsService } from "@modules/domain/executions"
 import type { ExecutionRow } from "@modules/domain/executions"
 import { WorkspaceMembersService, canDecide } from "@modules/domain/workspace-members"
 import type { WorkspaceMember, WorkspaceRole } from "@modules/domain/workspace-members"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import type { Locale, MessageCatalog } from "@modules/platform/i18n"
+import { CLAIM_LEASE_SECONDS } from "@modules/domain/work-items"
 import { CommandBusService } from "./command-bus.service"
 import type { CommandResult, WorkContext, WorkItem } from "./decisions.contracts"
 import { DecisionsService } from "./decisions.service"
 import { DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
 import { EvidenceService } from "./evidence.service"
-import type { ExecutionDecisionRequest, WorkDecisionRequest, SendOwnerCommandRequest } from "./work-decision.contracts"
+import type {
+    ExecutionDecisionRequest,
+    WorkDecisionRequest,
+    SendOwnerCommandRequest,
+    QueuedWorkIntent,
+} from "./work-decision.contracts"
 import { BASIS_MIN_CHARS, assigneeOf, basisMissing, cleanBasis, decisionNote, deciderOf } from "./work-decision.policy"
 import { commandPayloadOf, workEditsOf } from "./work-wire.mapper"
 import { WorkEngineService } from "./work-engine.service"
@@ -32,7 +43,40 @@ export class WorkDecisionService {
         private readonly engine: WorkEngineService,
         private readonly executions: ExecutionsService,
         private readonly evidence: EvidenceService,
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly responsibilities: ResponsibilityJournalService,
+        private readonly leads: LeadReadService,
+        private readonly office: MessagesService,
     ) {}
+
+    /** Proves the caller may act on the queued item before draining the workspace's gated steps. */
+    async runQueued(
+        principalId: string,
+        workspaceId: string,
+        workItemId: string,
+        locale: Locale,
+        intent: QueuedWorkIntent,
+    ): Promise<void> {
+        const item = await this.decisions.getWorkItem(principalId, workspaceId, workItemId)
+        const member = await this.members.require(principalId, workspaceId)
+        if (intent === "retry" && !canDecide(member, assigneeOf(item)))
+            throw new DecisionsError({ code: DecisionsErrorCode.NotAllowed })
+        if (intent === "handoff" && (item.action !== "issue_invoice" || item.subject_type !== "order")) {
+            throw new DecisionsError({ code: DecisionsErrorCode.NotAllowed })
+        }
+        if (item.status !== "queued") return
+        const ctx = { workspaceId, actor: member.displayName, locale }
+        const processed = await this.engine.runQueuedItem(ctx, item.id)
+        if (processed === null) {
+            const current = await this.decisions.getWorkItem(principalId, workspaceId, item.id)
+            if (current.status === "queued")
+                throw new DecisionsError({
+                    code: DecisionsErrorCode.WorkBusy,
+                    params: { retryAfterSeconds: CLAIM_LEASE_SECONDS },
+                })
+        }
+        await this.engine.runQueued(ctx, 3)
+    }
 
     /**
      * Approves (optionally edited) or rejects a waiting work item. Owner and manager decide anything, staff only what is
@@ -56,10 +100,9 @@ export class WorkDecisionService {
     ): Promise<ExecutionRow> {
         const member = await this.members.require(principalId, workspaceId)
         const card = await this.executions.find(workspaceId, request.executionId)
-        if (card === null || card.work_item_id === null) {
-            throw new DecisionsError({ code: DecisionsErrorCode.NotFound })
-        }
+        if (card === null) throw new DecisionsError({ code: DecisionsErrorCode.NotFound })
         if (card.status !== PENDING_CARD) throw new DecisionsError({ code: DecisionsErrorCode.NotWaiting })
+        if (card.work_item_id === null) return this.decideLegacyExecution(member, workspaceId, request)
         const item = await this.decisions.getWorkItem(principalId, workspaceId, card.work_item_id)
         const editedDraft = request.editedDraft ?? null
         await this.resume(member, item, {
@@ -92,6 +135,60 @@ export class WorkDecisionService {
             command: request.command,
             payload: commandPayloadOf(request),
             reason: request.reason,
+        })
+    }
+
+    private decideLegacyExecution(
+        member: WorkspaceMember,
+        workspaceId: string,
+        request: ExecutionDecisionRequest,
+    ): Promise<ExecutionRow> {
+        if (!MANAGERS.includes(member.role)) throw new DecisionsError({ code: DecisionsErrorCode.NotAllowed })
+        const ctx: WorkContext = { workspaceId, actor: member.displayName, locale: request.locale }
+        return this.entityManager.transaction(async (tx) => {
+            const card = await this.executions.findRecord(workspaceId, request.executionId, tx)
+            if (card === null) throw new DecisionsError({ code: DecisionsErrorCode.NotFound })
+            if (card.status !== PENDING_CARD) throw new DecisionsError({ code: DecisionsErrorCode.NotWaiting })
+            if (card.work_item_id !== null) throw new DecisionsError({ code: DecisionsErrorCode.StateChanged })
+            const responsibility = await this.responsibilities.find(workspaceId, card.responsibility_id, tx)
+            if (responsibility === null) throw new DecisionsError({ code: DecisionsErrorCode.NotFound })
+            const lead = await this.leads.require(workspaceId, responsibility.lead_id)
+            const settled = await this.executions.settle(
+                {
+                    workspaceId,
+                    executionId: card.id,
+                    decision: request.decision,
+                    decidedBy: member.displayName,
+                    editedDraft: request.editedDraft ? request.editedDraft : null,
+                },
+                tx,
+            )
+            if (settled === null) throw new DecisionsError({ code: DecisionsErrorCode.NotWaiting })
+            await this.responsibilities.setStatus(
+                ctx,
+                responsibility.id,
+                request.decision === "approved" ? "done" : "open",
+                tx,
+            )
+            const params = { name: lead.contact_name, channel: lead.channel, user: member.displayName }
+            await this.evidence.log(
+                ctx,
+                {
+                    lead_id: lead.id,
+                    kind: `execution.${request.decision}`,
+                    actor: member.displayName,
+                    summary: this.catalog.get(`legacy.${request.decision}Event`, params, request.locale),
+                    evidence: request.decision === "approved" ? settled.draft : null,
+                },
+                tx,
+            )
+            await this.office.postSystem({
+                workspaceId,
+                leadId: lead.id,
+                manager: tx,
+                body: this.catalog.get(`legacy.${request.decision}Message`, params, request.locale),
+            })
+            return settled
         })
     }
 

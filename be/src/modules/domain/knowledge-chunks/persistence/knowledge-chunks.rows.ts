@@ -15,3 +15,15 @@ export interface StaleChunkRow {
     /** The text. */
     readonly content: string
 }
+
+/** One stored passage as the Knowledge page reads it. */
+export interface PassageViewRow {
+    /** The passage id. */
+    readonly id: string
+    /** The order of the passage in its source. */
+    readonly ord: number
+    /** The text. */
+    readonly content: string
+    /** Whether the passage has a vector. */
+    readonly has_embedding: boolean
+}

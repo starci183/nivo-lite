@@ -11,6 +11,22 @@ export interface SignedUpload {
     readonly signedUrl: string
 }
 
+/** One object listed in a private bucket, without its bytes. */
+export interface ListedObject {
+    /** The file name relative to the requested folder. */
+    readonly name: string
+    /** When Storage recorded the object, when known. */
+    readonly createdAt: string | null
+}
+
+/** A short-lived read address for one private object. */
+export interface SignedObjectUrl {
+    /** The object path in its bucket. */
+    readonly path: string
+    /** The address Storage signed. */
+    readonly signedUrl: string
+}
+
 /** Why Storage refused: the object is not there, or the provider could not be reached (the values of the matching SupabaseErrorCode members). */
 export type StorageFailureCode = "SUPABASE_OBJECT_NOT_FOUND" | "SUPABASE_PROVIDER_UNAVAILABLE"
 

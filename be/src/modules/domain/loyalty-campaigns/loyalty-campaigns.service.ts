@@ -7,11 +7,27 @@ import { LoyaltyProgramsService } from "@modules/domain/loyalty-programs"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import type { sql } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { LoyaltyCampaignsError, LoyaltyCampaignsErrorCode } from "./errors/loyalty-campaigns.error"
-import type { CampaignDraft, CampaignParams, Segment, SegmentPreview } from "./loyalty-campaigns.contracts"
-import { COUNT_SENT_SINCE, INSERT_CAMPAIGN } from "./persistence/loyalty-campaigns.sql"
+import type {
+    CampaignDraft,
+    CampaignParams,
+    LoyaltyCampaignView,
+    Segment,
+    SegmentPreview,
+} from "./loyalty-campaigns.contracts"
+import { loyaltyCampaignOf } from "./loyalty-campaigns.mapper"
+import type { LoyaltyCampaignRow } from "./persistence/loyalty-campaigns.rows"
+import {
+    COUNT_SENT_SINCE,
+    FAIL_CAMPAIGN_DRAFT,
+    FINISH_CAMPAIGN_DRAFT,
+    INSERT_CAMPAIGN,
+    INSERT_WAITING_CAMPAIGN,
+    LIST_CAMPAIGNS,
+} from "./persistence/loyalty-campaigns.sql"
 import { inSegment, segmentParts } from "./policies/segment.policy"
 
 const SAMPLE_SIZE = 5
@@ -47,7 +63,54 @@ export class LoyaltyCampaignsService {
     }
 
     /** Writes a campaign as a draft with the template message filled with the offer; refuses a segment nobody belongs to. */
-    async create(params: CampaignParams): Promise<CampaignDraft> {
+    create(params: CampaignParams): Promise<CampaignDraft> {
+        return this.writeDraft(params, this.entityManager, INSERT_CAMPAIGN, "draft")
+    }
+
+    /** Writes a waiting campaign in the producer's transaction; the worker may replace its safe template draft. */
+    prepare(params: CampaignParams, tx: EntityManager): Promise<CampaignDraft> {
+        return this.writeDraft(params, tx, INSERT_WAITING_CAMPAIGN, "waiting")
+    }
+
+    /** The newest campaigns and delivery counts, always inside the selected workspace. */
+    async list(workspaceId: string, limit: number = 20): Promise<ReadonlyArray<LoyaltyCampaignView>> {
+        const rows = await this.entityManager.query<Array<LoyaltyCampaignRow>>(LIST_CAMPAIGNS, [
+            workspaceId,
+            null,
+            Math.min(100, Math.max(1, limit)),
+        ])
+        return rows.map(loyaltyCampaignOf)
+    }
+
+    /** Reads one campaign for polling; ids from a different workspace disclose nothing. */
+    async get(workspaceId: string, id: string): Promise<LoyaltyCampaignView> {
+        const [row] = await this.entityManager.query<Array<LoyaltyCampaignRow>>(LIST_CAMPAIGNS, [workspaceId, id, 1])
+        if (row === undefined) throw new LoyaltyCampaignsError({ code: LoyaltyCampaignsErrorCode.NotFound })
+        return loyaltyCampaignOf(row)
+    }
+
+    /** Stores the message only if the job still holds its fencing token and the campaign is still waiting. */
+    async finishDraft(
+        tx: EntityManager,
+        workspaceId: string,
+        campaignId: string,
+        draft: string,
+        durationMs: number,
+    ): Promise<void> {
+        await tx.query(FINISH_CAMPAIGN_DRAFT, [workspaceId, campaignId, draft, durationMs])
+    }
+
+    /** The queue exhausted its retries; completed drafts and approved campaigns are left alone. */
+    async failDraft(workspaceId: string, campaignId: string): Promise<void> {
+        await this.entityManager.query(FAIL_CAMPAIGN_DRAFT, [workspaceId, campaignId])
+    }
+
+    private async writeDraft(
+        params: CampaignParams,
+        tx: EntityManager,
+        statement: ReturnType<typeof sql>,
+        status: string,
+    ): Promise<CampaignDraft> {
         const members = await this.membersOf(params.workspaceId, params.segment)
         if (members.length === 0) throw new LoyaltyCampaignsError({ code: LoyaltyCampaignsErrorCode.NoRecipients })
         const shop = await this.programs.shopName(params.workspaceId)
@@ -57,7 +120,7 @@ export class LoyaltyCampaignsService {
                 : params.brief.trim()
         const draft = this.messages.get("loyalty.promo.template", { shop, offer }, STORED_LOCALE)
         const name = (params.name.trim() === "" ? await this.defaultName(params) : params.name.trim()).slice(0, 100)
-        const [row] = await this.entityManager.query<Array<{ id: string }>>(INSERT_CAMPAIGN, [
+        const [row] = await tx.query<Array<{ id: string }>>(statement, [
             params.workspaceId,
             name,
             JSON.stringify(params.segment),
@@ -66,7 +129,7 @@ export class LoyaltyCampaignsService {
             params.createdBy,
         ])
         if (row === undefined) throw new LoyaltyCampaignsError({ code: LoyaltyCampaignsErrorCode.NotCreated })
-        return { campaignId: row.id, status: "draft", recipients: members.length, draft }
+        return { campaignId: row.id, status, recipients: members.length, draft }
     }
 
     /** How many promotions went out since an instant. */

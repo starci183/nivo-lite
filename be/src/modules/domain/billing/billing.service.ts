@@ -4,8 +4,9 @@ import { PaymentOrdersService } from "@modules/domain/payment-orders"
 import type { PaymentOrder } from "@modules/domain/payment-orders"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectBillingOptions } from "./billing.decorators"
-import type { BillingOptions } from "./billing.options"
+import type { BankAccountOptions, BillingOptions } from "./billing.options"
 import type {
+    BillingWorkspace,
     PayableOrder,
     Plan,
     PlanLookup,
@@ -13,11 +14,13 @@ import type {
     RenewalParams,
     WorkspaceLookup,
 } from "./billing.contracts"
-import { toPlan, toWorkspaceBilling } from "./billing.mapper"
+import { toBillingWorkspace, toPlan, toPlanLookup, toWorkspaceBilling } from "./billing.mapper"
 import { BillingError, BillingErrorCode } from "./errors/billing.error"
-import type { MemberRoleRow, PlanRow, WorkspaceBillingRow } from "./persistence/billing.rows"
+import type { BillingWorkspaceRow, MemberRoleRow, PlanRow, WorkspaceBillingRow } from "./persistence/billing.rows"
 import {
     SELECT_ACTIVE_PLANS,
+    SELECT_BILLING_WORKSPACE,
+    SELECT_BILLING_WORKSPACES,
     SELECT_MEMBER_ROLE,
     SELECT_PLAN,
     SELECT_WORKSPACE_BILLING,
@@ -36,16 +39,35 @@ export class BillingService {
         @InjectBillingOptions() private readonly options: BillingOptions,
     ) {}
 
+    /** The configured recipient account, available before a workspace creates a payment order. */
+    bankAccount(): Promise<BankAccountOptions> {
+        return Promise.resolve({ ...this.options.bankAccount })
+    }
+
     /** The active plans of the catalogue in display order. */
     async listPlans(): Promise<Array<Plan>> {
-        const rows = await this.entityManager.query<Array<PlanRow>>(SELECT_ACTIVE_PLANS)
-        return rows.map(toPlan)
+        return (await this.entityManager.query<Array<PlanRow>>(SELECT_ACTIVE_PLANS)).map(toPlan)
+    }
+
+    /** The caller's active workspaces and billing state; the user id is taken only from the verified principal. */
+    async workspaces(userId: string): Promise<Array<BillingWorkspace>> {
+        const rows = await this.entityManager.query<Array<BillingWorkspaceRow>>(SELECT_BILLING_WORKSPACES, [userId])
+        return rows.map(toBillingWorkspace)
+    }
+
+    /** One workspace's billing state, proving the caller's active membership through the selected row. */
+    async workspace(userId: string, workspaceId: string): Promise<BillingWorkspace> {
+        const [row] = await this.entityManager.query<Array<BillingWorkspaceRow>>(SELECT_BILLING_WORKSPACE, [
+            userId,
+            workspaceId,
+        ])
+        if (row === undefined) throw new BillingError({ code: BillingErrorCode.NotMember })
+        return toBillingWorkspace(row)
     }
 
     /** One active plan, or null when no active plan has the code. */
     async findPlan(code: string): Promise<PlanLookup> {
-        const [row] = await this.entityManager.query<Array<PlanRow>>(SELECT_PLAN, [code])
-        return row === undefined ? null : toPlan(row)
+        return toPlanLookup(await this.entityManager.query<Array<PlanRow>>(SELECT_PLAN, [code]))
     }
 
     /** One active plan; refuses a code that names none. */

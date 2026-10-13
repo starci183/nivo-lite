@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./workspace-members.module-definition"
+import { AccountSessionsService } from "./account-sessions.service"
 import { ACCOUNT_DIRECTORY } from "./workspace-members.port"
 import { WorkspaceMembersService } from "./workspace-members.service"
 
@@ -16,8 +17,9 @@ export class WorkspaceMembersModule extends ConfigurableModuleClass {
                 ...(base.providers ?? []),
                 { provide: ACCOUNT_DIRECTORY, useExisting: options.accounts },
                 WorkspaceMembersService,
+                AccountSessionsService,
             ],
-            exports: [ACCOUNT_DIRECTORY, WorkspaceMembersService],
+            exports: [ACCOUNT_DIRECTORY, WorkspaceMembersService, AccountSessionsService],
         }
     }
 }

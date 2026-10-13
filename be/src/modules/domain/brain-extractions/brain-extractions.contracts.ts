@@ -65,3 +65,11 @@ export interface ExtractionProgress {
     /** Tries that failed in a row. */
     readonly attempts: number
 }
+
+/** The reading of one document as the Second Brain page shows it. */
+export interface ExtractionState {
+    /** The document. */
+    readonly sourceId: string
+    /** Where the reading stands. */
+    readonly status: ExtractionStatus
+}

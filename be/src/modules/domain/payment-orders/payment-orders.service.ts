@@ -10,8 +10,11 @@ import { toPaymentOrder } from "./payment-orders.mapper"
 import type { OrderRow } from "./persistence/payment-orders.rows"
 import {
     INSERT_PAYMENT_ORDER,
+    SELECT_OPEN_PLAN_ORDER,
     SELECT_OPEN_TOPUP_ORDER,
     SELECT_OPEN_UPGRADE_ORDER,
+    SELECT_PAYMENT_ORDER,
+    SELECT_PAYMENT_ORDERS,
 } from "./persistence/payment-orders.sql"
 
 /** How many order codes are drawn before giving up on a collision streak. */
@@ -24,6 +27,31 @@ export class PaymentOrdersService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
     ) {}
+
+    /** The newest payment orders of a workspace; the application proves membership before calling this read. */
+    async list(workspaceId: string): Promise<Array<PaymentOrder>> {
+        const rows = await this.entityManager.query<Array<OrderRow>>(SELECT_PAYMENT_ORDERS, [workspaceId])
+        return rows.map(toPaymentOrder)
+    }
+
+    /** One workspace-scoped order; reads a lapsed pending order as expired without writing during a read. */
+    async find(workspaceId: string, orderId: string): Promise<OrderLookup> {
+        const [row] = await this.entityManager.query<Array<OrderRow>>(SELECT_PAYMENT_ORDER, [workspaceId, orderId])
+        if (row === undefined) return null
+        const order = toPaymentOrder(row)
+        return order.status === "pending" && new Date(order.expiresAt).getTime() < this.clock.now().getTime()
+            ? { ...order, status: "expired" }
+            : order
+    }
+
+    /** The newest plan order of a workspace that can still be paid. */
+    async findOpenPlan(workspaceId: string): Promise<OrderLookup> {
+        const [row] = await this.entityManager.query<Array<OrderRow>>(SELECT_OPEN_PLAN_ORDER, [
+            workspaceId,
+            this.clock.now(),
+        ])
+        return row === undefined ? null : toPaymentOrder(row)
+    }
 
     /** Writes a pending payment order, drawing a new order code when the drawn one is taken. */
     async create(order: NewOrder): Promise<PaymentOrder> {

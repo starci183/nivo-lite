@@ -1,5 +1,32 @@
 import { sql } from "@modules/platform/database"
 
+/** The oldest open steps of the workspace, in the lead board's selection order. */
+export const LIST_BOARD_RESPONSIBILITIES = sql`
+    SELECT id, workspace_id, lead_id, title, owner_kind, owner_agent_id, owner_name, next_action,
+           to_json(due_at) #>> '{}' AS due_at, status, to_json(created_at) #>> '{}' AS created_at
+    FROM public.responsibilities
+    WHERE workspace_id = $1 AND status <> 'done'
+    ORDER BY created_at ASC, id ASC
+    LIMIT 1000`
+
+/** The customer's steps, oldest first, strictly within the workspace. */
+export const LIST_LEAD_RESPONSIBILITIES = sql`
+    SELECT id, workspace_id, lead_id, title, owner_kind, owner_agent_id, owner_name, next_action,
+           to_json(due_at) #>> '{}' AS due_at, status, to_json(created_at) #>> '{}' AS created_at
+    FROM public.responsibilities
+    WHERE workspace_id = $1 AND lead_id = $2
+    ORDER BY created_at ASC, id ASC
+    LIMIT 200`
+
+/** The open follow-ups of the workspace, earliest due first. */
+export const LIST_OPEN_RESPONSIBILITIES = sql`
+    SELECT id, workspace_id, lead_id, title, owner_kind, owner_agent_id, owner_name, next_action,
+           to_json(due_at) #>> '{}' AS due_at, status, to_json(created_at) #>> '{}' AS created_at
+    FROM public.responsibilities
+    WHERE workspace_id = $1 AND status <> 'done'
+    ORDER BY due_at ASC NULLS LAST, created_at ASC, id ASC
+    LIMIT 500`
+
 /** The open (not done) responsibility of a customer, newest first. */
 export const FIND_OPEN_RESPONSIBILITY = sql`
     SELECT r.id, r.workspace_id, r.lead_id, r.title, r.owner_kind, r.owner_agent_id, r.owner_name, r.next_action,

@@ -41,7 +41,7 @@ export class CustomerDeliveryService {
         by: PerformedBy,
         kind: string,
     ): Promise<Performed> {
-        const sent = await this.toCustomer(ctx, customer, text)
+        const sent = await this.toCustomer(ctx, customer, text, item.origin)
         await this.evidence.log(ctx, {
             lead_id: customer.id,
             work_item_id: item.id,
@@ -59,8 +59,16 @@ export class CustomerDeliveryService {
         }
     }
 
-    /** Delivers a message to the customer in their latest conversation. */
-    async toCustomer(ctx: WorkContext, customer: DeliveryCustomer, text: string): Promise<CustomerDelivery> {
+    /** Records simulation honestly; live work delivers in the customer's latest conversation. */
+    async toCustomer(
+        ctx: WorkContext,
+        customer: DeliveryCustomer,
+        text: string,
+        origin: string = "live",
+    ): Promise<CustomerDelivery> {
+        if (origin === "simulated") {
+            return { summary: this.kit.text(ctx, "simulatedDelivery", { channel: customer.channel }), real: false }
+        }
         const conversation = await this.conversations.latestOfLead(ctx.workspaceId, customer.id, null)
         if (conversation === null) {
             return { summary: this.kit.text(ctx, "simulatedDelivery", { channel: customer.channel }), real: false }
@@ -78,6 +86,34 @@ export class CustomerDeliveryService {
         const messageId = await this.messages.storeAgentMessage(workspaceId, conversationId, text)
         const target = await this.conversations.targetOf(conversationId)
         if (target.kind !== "ok" || target.value.channel === WEBSITE_CHANNEL) return false
+        return (await this.channels.deliver({ conversationId, messageId, text })).delivered
+    }
+
+    /** Stores the approved answer once with the deciding member's name and records its real delivery outcome. */
+    async approvedInConversation(
+        workspaceId: string,
+        conversationId: string,
+        text: string,
+        memberName: string,
+        workItemId: string,
+    ): Promise<boolean> {
+        const target = await this.conversations.targetOf(conversationId)
+        if (target.kind !== "ok" || target.value.workspaceId !== workspaceId) return false
+        const messageId = await this.messages.storeHumanMessage(
+            workspaceId,
+            conversationId,
+            text,
+            memberName,
+            undefined,
+            workItemId,
+        )
+        const message = await this.messages.find(messageId, conversationId)
+        if (message.kind === "ok" && message.value.deliveryStatus === "sent")
+            return target.value.channel !== WEBSITE_CHANNEL
+        if (target.value.channel === WEBSITE_CHANNEL) {
+            await this.messages.markDelivery(messageId, true)
+            return false
+        }
         return (await this.channels.deliver({ conversationId, messageId, text })).delivered
     }
 }

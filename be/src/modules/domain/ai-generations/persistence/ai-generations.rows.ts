@@ -41,3 +41,13 @@ export interface FinishedGenerationRow {
     /** The usage module. */
     module: string
 }
+
+/** Full generation state used by application completion steps. */
+export interface GenerationStateRow extends GenerationRow, GenerationProgressRow {
+    /** The stored engine or application failure. */
+    error: string | null
+    /** Creation instant. */
+    created_at: string | Date
+    /** Completion instant. */
+    finished_at: string | Date | null
+}

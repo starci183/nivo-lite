@@ -1,5 +1,32 @@
 import { sql } from "@modules/platform/database"
 
+/** The newest work items for the Sales workbench ($1 workspace, $2 limit). */
+export const LIST_WORKBENCH_ITEMS = sql`SELECT * FROM public.work_items WHERE workspace_id = $1::uuid
+ORDER BY created_at DESC, id DESC LIMIT $2::int`
+
+/** The chronological steps in a customer's journey ($1 workspace, $2 customer). */
+export const LIST_LEAD_ITEMS = sql`SELECT * FROM public.work_items WHERE workspace_id = $1::uuid AND lead_id = $2::uuid
+ORDER BY created_at, id LIMIT 500`
+
+/** Reopens a failed or rejected step without touching a concurrent transition ($1 workspace, $2 item, $3 allowed states). */
+export const RETRY_WORK_ITEM = sql`WITH changed AS (
+UPDATE public.work_items SET status = 'queued', error = NULL, reason = NULL, reasons = '{}', completed_at = NULL, updated_at = created_at
+WHERE workspace_id = $1::uuid AND id = $2::uuid AND status = ANY($3::text[]) RETURNING *
+) SELECT * FROM changed`
+
+/** Stops a failed item once ($1 workspace, $2 item, $3 instant). */
+export const STOP_FAILED_WORK_ITEM = sql`WITH changed AS (
+UPDATE public.work_items SET status = 'rejected', completed_at = $3::timestamptz, updated_at = $3::timestamptz
+WHERE workspace_id = $1::uuid AND id = $2::uuid AND status = 'failed' RETURNING *
+) SELECT * FROM changed`
+
+/** The newest accounting items' lineage ($1 workspace, $2 how many). */
+export const LIST_ACCOUNTING_WORK_ITEMS = sql`
+    SELECT id, action, status, subject_type, subject_id, to_json(created_at) #>> '{}' AS created_at
+    FROM public.work_items
+    WHERE workspace_id = $1::uuid AND department = 'accounting'
+    ORDER BY created_at DESC, id DESC LIMIT $2::int`
+
 /**
  * Inserts one queued work item and answers it; a second insert with the same dedupe key of the workspace answers nothing
  * ($1 workspace, $2 chain or null for a new chain, $3 depth, $4 department, $5 action, $6 subject type, $7 subject, $8 lead,
@@ -154,3 +181,16 @@ export const SETTLE_WAITING_CLAIMS = sql`
         RETURNING id, inbound_event_id
     )
     SELECT id, inbound_event_id FROM changed`
+
+/** The oldest available queued step belonging to this inbound input only ($1 workspace, $2 event, $3 now, $4 lease seconds). */
+export const NEXT_INBOUND_QUEUED_WORK_ITEM = sql`SELECT * FROM public.work_items
+WHERE workspace_id = $1::uuid AND inbound_event_id = $2::uuid AND status = 'queued' AND reason IS NULL
+    AND (updated_at = created_at OR updated_at < $3::timestamptz - make_interval(secs => $4::int))
+ORDER BY created_at ASC, id ASC LIMIT 1`
+
+/** Every pending, failed and decision-waiting step of the inbound input, including lease-held work ($1 workspace, $2 event). */
+export const READ_INBOUND_WORK_STATE = sql`SELECT
+    (COUNT(*) FILTER (WHERE status = 'queued'))::int AS queued,
+    (COUNT(*) FILTER (WHERE status = 'failed'))::int AS failed,
+    (COUNT(*) FILTER (WHERE status = 'waiting_decision'))::int AS waiting
+FROM public.work_items WHERE workspace_id = $1::uuid AND inbound_event_id = $2::uuid`

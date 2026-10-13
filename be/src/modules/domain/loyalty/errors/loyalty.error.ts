@@ -3,6 +3,20 @@ import type { ErrorKind } from "@modules/platform/errors"
 
 /** Codes of the loyalty capability. */
 export enum LoyaltyErrorCode {
+    /** A birthday must be a real date between 1900 and today. */
+    BirthdayInvalid = "LOYALTY_BIRTHDAY_INVALID",
+    /** Public code requests exceeded the programme limit. */
+    CodeBusy = "LOYALTY_CODE_BUSY",
+    /** The typed public code is wrong or expired. */
+    CodeWrong = "LOYALTY_CODE_WRONG",
+    /** A programme could not be created or saved. */
+    ProgramNotSaved = "LOYALTY_PROGRAM_NOT_SAVED",
+    /** A catalogue entry was submitted without a display name. */
+    RewardNameRequired = "LOYALTY_REWARD_NAME_REQUIRED",
+    /** The reward must cost at least one point. */
+    RewardPointsInvalid = "LOYALTY_REWARD_POINTS_INVALID",
+    /** A reward could not be created or saved. */
+    RewardNotSaved = "LOYALTY_REWARD_NOT_SAVED",
     /** The workspace has no customer with the id. */
     MemberNotFound = "LOYALTY_MEMBER_NOT_FOUND",
     /** The reward is not in the catalogue of the workspace. */
@@ -29,6 +43,13 @@ export enum LoyaltyErrorCode {
 
 /** How each loyalty code travels. */
 export const LOYALTY_ERROR_KINDS: Record<LoyaltyErrorCode, ErrorKind> = {
+    [LoyaltyErrorCode.BirthdayInvalid]: "invalid",
+    [LoyaltyErrorCode.CodeBusy]: "conflict",
+    [LoyaltyErrorCode.CodeWrong]: "invalid",
+    [LoyaltyErrorCode.ProgramNotSaved]: "conflict",
+    [LoyaltyErrorCode.RewardNameRequired]: "invalid",
+    [LoyaltyErrorCode.RewardPointsInvalid]: "invalid",
+    [LoyaltyErrorCode.RewardNotSaved]: "conflict",
     [LoyaltyErrorCode.MemberNotFound]: "not-found",
     [LoyaltyErrorCode.RewardNotFound]: "not-found",
     [LoyaltyErrorCode.NotRedeemable]: "invalid",

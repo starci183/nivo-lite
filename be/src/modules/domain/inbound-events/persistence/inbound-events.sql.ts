@@ -1,5 +1,14 @@
 import { sql } from "@modules/platform/database"
 
+/** Lists a bounded workspace feed, newest first with a deterministic tie break ($1 workspace, $2 limit). */
+export const LIST_INBOUND_EVENTS = sql`SELECT id, workspace_id, channel, kind, origin, sender_name, sender_contact, body,
+amount_vnd::float8 AS amount_vnd, external_ref, event_id, lead_id, status, duplicate_count,
+to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at
+FROM public.inbound_events
+WHERE workspace_id = $1::uuid
+ORDER BY created_at DESC, id DESC
+LIMIT $2::int`
+
 /**
  * Records one bank credit as an inbound payment event, once per workspace and event key: a repeat answers no row
  * ($1 workspace, $2 origin, $3 payer, $4 text, $5 amount, $6 transfer content, $7 event id, $8 dedupe key).
