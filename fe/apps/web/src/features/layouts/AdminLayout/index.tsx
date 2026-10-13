@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getTranslations } from "next-intl/server"
 import type { ReactNode } from "react"
-import { readAdminSession } from "@/modules/api"
+import { readAdminSession } from "@/modules/db"
 import { AdminLayoutBase } from "./component"
 
 /** What the admin route hands the layout: the routed page. */
@@ -20,7 +20,7 @@ export const adminLayoutMetadata = async (): Promise<Metadata> => {
 export const AdminLayout = async (props: AdminLayoutProps) => {
     const t = await getTranslations("admin")
     const session = await readAdminSession()
-    if (session.kind === "unavailable") throw new Error(`admin: session ${session.fault.code}`)
+    if (session.kind === "unavailable") throw new Error(`admin: session ${session.code}`)
     if (session.kind !== "ok") notFound()
     return (
         <AdminLayoutBase props={{ title: t("consoleTitle"), email: session.value.email }}>

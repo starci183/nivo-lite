@@ -13,7 +13,8 @@ export class JudgeConnectionsStep implements JobStep {
 
     /** Records the step with the token this worker holds FIRST; then judges, which writes a verdict only when it changed. */
     async run(job: ClaimedJob): Promise<void> {
-        await this.claims.advance({ jobId: job.jobId, expectedFencingToken: job.fencingToken, step: "judge" })
+        const recorded = this.claims.advance({ jobId: job.jobId, expectedFencingToken: job.fencingToken, step: "judge" })
+        await recorded
         await this.health.checkFromJob(job.payload)
     }
 }

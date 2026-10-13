@@ -59,5 +59,5 @@ export type WorkspaceErrorKey = "errName" | "errSignupDisabled" | "errGeneric"
 /** The sentence that explains a failure code of creating a workspace. */
 export const workspaceErrorKey = (code: string): WorkspaceErrorKey => {
     if (code === "WORKSPACES_SIGNUP_DISABLED") return "errSignupDisabled"
-    return code === "400" ? "errName" : "errGeneric"
+    return code === "WORKSPACES_NAME_INVALID" ? "errName" : "errGeneric"
 }

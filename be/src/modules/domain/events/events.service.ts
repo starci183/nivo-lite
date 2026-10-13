@@ -17,6 +17,7 @@ export class EventsService {
             entry.actor,
             entry.summary,
             entry.leadId ?? null,
+            entry.workItemId ?? null,
             entry.evidence ?? null,
         ])
     }

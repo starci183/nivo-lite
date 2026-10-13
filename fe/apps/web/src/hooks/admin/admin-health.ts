@@ -1,4 +1,4 @@
-import type { AdminHealth } from "@/modules/api"
+import type { AdminHealth } from "@/modules/db/admin/admin.mapper"
 import { adminWorkspacePath } from "@/modules/routes"
 import { badgeOf, flowTone } from "./admin.shared"
 import type { AdminCardView, AdminFormat, AdminRowView, AdminText } from "./admin.shared"

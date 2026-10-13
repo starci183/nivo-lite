@@ -1,0 +1,28 @@
+import { Module } from "@nestjs/common"
+import type { DynamicModule } from "@nestjs/common"
+import { BankCreditModule } from "@modules/queues/bank-credit"
+import { BankFeedService } from "./bank-feed.service"
+import { BillingService } from "./billing.service"
+import { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./billing.module-definition"
+import { ConnectionSecretsService } from "./connection-secrets.service"
+import { PaymentProofService } from "./payment-proof.service"
+@Module({})
+/** The billing capability over the primary Supabase connection: plans, payment orders, SePay settlement and the payment feeds. */
+export class BillingModule extends ConfigurableModuleClass {
+    /** Registers the capability once in the API app. */
+    static register(options: typeof OPTIONS_TYPE): DynamicModule {
+        const base = super.register(options)
+        return {
+            ...base,
+            imports: [...(base.imports ?? []), BankCreditModule],
+            providers: [
+                ...(base.providers ?? []),
+                BillingService,
+                PaymentProofService,
+                ConnectionSecretsService,
+                BankFeedService,
+            ],
+            exports: [MODULE_OPTIONS_TOKEN, BillingService, PaymentProofService, BankFeedService],
+        }
+    }
+}
