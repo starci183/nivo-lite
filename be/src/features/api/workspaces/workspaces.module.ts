@@ -12,6 +12,7 @@ import { PreviewInviteHandler } from "./application/preview-invite.handler"
 import { RemoveMemberHandler } from "./application/remove-member.handler"
 import { ResendInviteHandler } from "./application/resend-invite.handler"
 import { RevokeInviteHandler } from "./application/revoke-invite.handler"
+import { SaveStaffHandler } from "./application/save-staff.handler"
 import { SetMemberStatusHandler } from "./application/set-member-status.handler"
 
 @Module({
@@ -29,6 +30,7 @@ import { SetMemberStatusHandler } from "./application/set-member-status.handler"
         RemoveMemberHandler,
         ResendInviteHandler,
         RevokeInviteHandler,
+        SaveStaffHandler,
         SetMemberStatusHandler,
     ],
 })

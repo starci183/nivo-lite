@@ -1,14 +1,15 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
+import { StaffService } from "@modules/domain/staff"
+import type { StaffWrite } from "@modules/domain/staff"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { refused, unwrapOutcome } from "@modules/platform/primitives"
 import { WorkspaceMembersError, WorkspaceMembersErrorCode } from "./errors/workspace-members.error"
-import type { MemberRow, StaffRow } from "./persistence/workspace-members.rows"
+import type { MemberRow } from "./persistence/workspace-members.rows"
 import {
     DELETE_MEMBER,
     FIND_MEMBER,
-    LIST_ACTIVE_STAFF,
     LIST_MEMBERS,
     RENAME_MEMBER_EVERYWHERE,
     UPDATE_MEMBER_ROLE,
@@ -50,6 +51,7 @@ export class WorkspaceMembersService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectAccountDirectory() private readonly accounts: AccountDirectory,
         private readonly events: EventsService,
+        private readonly staff: StaffService,
     ) {}
 
     /**
@@ -67,6 +69,13 @@ export class WorkspaceMembersService {
         return unwrapOutcome(outcome, WorkspaceMembersError)
     }
 
+    /** Adds or replaces a staff row. Owner and manager only. */
+    async saveStaff(userId: string, input: StaffWrite): Promise<StaffOption> {
+        await this.require(userId, input.workspaceId, MANAGERS)
+        const saved = await this.staff.save(input)
+        return { id: saved.id, name: saved.name, role: saved.role, email: saved.email, active: saved.active }
+    }
+
     /** Everyone in the caller's workspace, owners first; emails and sign-ins are blank for staff callers. */
     async list(userId: string, workspaceId: string): Promise<ReadonlyArray<MemberListing>> {
         const viewer = await this.require(userId, workspaceId)
@@ -81,10 +90,17 @@ export class WorkspaceMembersService {
         )
     }
 
-    /** The active staff rows of the caller's workspace a member can be linked to. */
+    /** Every staff row of the caller's workspace, active first, with email and whether they are active. */
     async listStaff(userId: string, workspaceId: string): Promise<ReadonlyArray<StaffOption>> {
         await this.require(userId, workspaceId)
-        return this.entityManager.query<Array<StaffRow>>(LIST_ACTIVE_STAFF, [workspaceId])
+        const rows = await this.staff.list(workspaceId)
+        return rows.map((row) => ({
+            id: row.id,
+            name: row.name,
+            role: row.role,
+            email: row.email,
+            active: row.active,
+        }))
     }
 
     /** Changes a member's role: an owner grants any role, a manager only manager or staff. */
