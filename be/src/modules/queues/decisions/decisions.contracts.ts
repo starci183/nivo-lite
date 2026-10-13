@@ -17,6 +17,34 @@ export enum DecisionsJob {
     ConfirmCommand = "office.confirm-command",
     /** An owner-created simulated inbound event follows the same department work engine as live inputs. */
     SimulateInbound = "inbox.simulate-inbound",
+    /** The scheduler tick that drains the queued chain steps of every workspace through the policy gate. */
+    DrainWork = "decisions.drain-work",
+}
+
+/** One minute in milliseconds. */
+const MINUTE_MS = 60_000
+
+/** The recurring task the app root adds to the queue options: the shape of a platform queue scheduler. */
+export interface DecisionsSchedulerDefinition {
+    /** The queue the ticks go to. */
+    readonly queue: string
+    /** The job name of every tick. */
+    readonly job: string
+    /** The stable id of the scheduler: the pg_cron job name. */
+    readonly id: string
+    /** The interval between two ticks, in milliseconds. */
+    readonly everyMs: number
+}
+
+/**
+ * Every minute pg_cron enqueues one empty drain tick: the chain steps a finished item queued (classify, follow-up, invoice, care)
+ * are taken through the gate in the background, as the web app used to do after each response. The app root adds it to the queue options.
+ */
+export const DECISIONS_DRAIN_SCHEDULER: DecisionsSchedulerDefinition = {
+    queue: DECISIONS_QUEUE,
+    job: DecisionsJob.DrainWork,
+    id: "decisions-drain-work",
+    everyMs: MINUTE_MS,
 }
 
 /** A queued Sales step to process, plus the identity of this retry. */
