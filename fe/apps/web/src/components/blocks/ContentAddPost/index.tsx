@@ -8,46 +8,52 @@ import {
     toInstant,
     useContentCommand,
     useContentFocus,
-    type ContentChannel,
-    type Pillar,
+    useContentItemActions,
+    useContentData,
 } from "@/hooks/content"
-import { writeCreateItem } from "@/modules/db/content/write-items"
+import { useContentAddPostForm } from "@/hooks/rhf"
 import { ContentAddPostBase } from "./component"
 
-/** Props of {@link ContentAddPost}. */
-export interface ContentAddPostProps {
-    /** The themes to choose from. */
-    readonly pillars: ReadonlyArray<Pillar>
-}
-
 /** "Add a post": a manual idea with an optional date, theme and channels, then opened in the editor. */
-export const ContentAddPost = (props: ContentAddPostProps) => {
+export const ContentAddPost = () => {
+    const data = useContentData()
+    const pillars = data.pillars.filter((pillar) => pillar.active)
     const t = useTranslations("content")
     const command = useContentCommand()
     const focus = useContentFocus()
+    const actions = useContentItemActions()
+    const form = useContentAddPostForm()
     const [isOpen, setOpen] = useState(false)
-    const [title, setTitle] = useState("")
-    const [date, setDate] = useState("")
-    const [time, setTime] = useState("19:30")
-    const [pillarId, setPillarId] = useState<string | null>(null)
-    const [channels, setChannels] = useState<ReadonlyArray<ContentChannel>>(["facebook"])
-    const run = () => {
-        const at = toInstant(date, time, "19:30")
-        if (at === "date_invalid" || at === "time_invalid") {
-            command.say("error", t(at === "date_invalid" ? "dateInvalid" : "timeInvalid"))
-            return
-        }
-        command.run(
-            "add",
-            () => writeCreateItem({ title, scheduledAt: at, channels, pillarId }),
-            (done) => {
-                if (done.kind !== "ok") return
-                setOpen(false)
-                setTitle("")
-                focus.open(done.value.id)
-            },
-        )
-    }
+    const { title, date, time, pillarId, channels } = form.watch()
+    const run = form.handleSubmit(
+        (values) => {
+            const at = toInstant(values.date, values.time, "19:30")
+            if (at === "date_invalid" || at === "time_invalid") {
+                command.say("error", t(at === "date_invalid" ? "dateInvalid" : "timeInvalid"))
+                return
+            }
+            command.run(
+                "add",
+                () =>
+                    actions.create({
+                        title: values.title,
+                        scheduledAt: at,
+                        channels: values.channels,
+                        pillarId: values.pillarId,
+                    }),
+                (done) => {
+                    if (done.kind !== "ok") return
+                    setOpen(false)
+                    form.reset()
+                    if ("value" in done) focus.open(done.value.id)
+                },
+            )
+        },
+        (errors) => {
+            const message = Object.values(errors).find((error) => error?.message)?.message
+            if (message) command.say("error", message)
+        },
+    )
     return (
         <ContentAddPostBase
             props={{
@@ -59,22 +65,25 @@ export const ContentAddPost = (props: ContentAddPostProps) => {
                 pillarId,
                 channels,
                 channelOptions: CHANNEL_RULES.map((rule) => ({ value: rule.key, label: rule.label })),
-                pillarOptions: [
-                    { id: "", label: t("noPillar") },
-                    ...props.pillars.map((p) => ({ id: p.id, label: p.name })),
-                ],
+                pillarOptions: [{ id: "", label: t("noPillar") }, ...pillars.map((p) => ({ id: p.id, label: p.name }))],
                 isPending: command.isPending,
                 note: command.note,
             }}
             on={{
                 open: () => setOpen(true),
                 close: () => setOpen(false),
-                title: setTitle,
-                date: setDate,
-                time: setTime,
-                pillar: setPillarId,
-                channels: (values) => setChannels(CONTENT_CHANNELS.filter((c) => values.includes(c))),
-                run,
+                title: (value) => form.setValue("title", value),
+                date: (value) => form.setValue("date", value),
+                time: (value) => form.setValue("time", value),
+                pillar: (value) => form.setValue("pillarId", value || null),
+                channels: (values) =>
+                    form.setValue(
+                        "channels",
+                        CONTENT_CHANNELS.filter((c) => values.includes(c)),
+                    ),
+                run: () => {
+                    void run()
+                },
                 dismissNote: command.dismiss,
             }}
         />

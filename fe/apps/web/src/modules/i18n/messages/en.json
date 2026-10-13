@@ -1091,6 +1091,7 @@
     "maintainAction": "Update now"
   },
   "common": {
+    "loading": "Loading...",
     "open": "Open",
     "openLead": "Open lead",
     "openOffice": "Open in Office",
@@ -2270,7 +2271,8 @@
     "promptDraftRecent": "Recent posts (do not repeat):\n{lines}",
     "promptDraftLibrary": "IMAGES IN THE LIBRARY (pick at most 2 that fit, write their numbers in \"media\"):\n{lines}",
     "promptDraftNoLibrary": "The library has no images: set \"media\" to [].",
-    "err_ai_quota": "The AI allowance for this period is used up. See the Usage page."
+    "err_ai_quota": "The AI allowance for this period is used up. See the Usage page.",
+    "aiQueued": "Queued. NIVO will notify you when the result is ready."
   },
   "credits": {
     "crumbLabel": "Breadcrumb",
@@ -2449,7 +2451,10 @@
     "sampleText": "Hello, here is our quote...",
     "sampleTitle": "Price list",
     "sampleContent": "3 month plan: ...",
-    "sampleTopic": "Price"
+    "sampleTopic": "Price",
+    "keysRefused": "You are not allowed to manage this shop's API keys.",
+    "createFailed": "The key could not be created. The name needs at least 2 characters and a shop may have 20 active keys.",
+    "revokeFailed": "This key could not be revoked. Try again."
   },
   "email": {
     "err_auth": "Wrong username or password. Check the address and the password you pasted.",

@@ -1,14 +1,10 @@
 "use client"
 
+import { useVideoProjectData, editorHref, useVideoRelease, useVideoFailure } from "@/hooks/video"
 import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
-import { editorHref, useVideoFailure } from "@/hooks/video"
-import type { ProjectView } from "@/hooks/video"
 import { navigation } from "@/modules/i18n"
-import { approveVideoProject, shareVideoProject } from "@/modules/db/video/write-approval"
-import { markVideoPublished } from "@/modules/db/video/write-project"
-import { VideoResultStepBase } from "./component"
-import type { VideoResultBadge } from "./component"
+import { VideoResultStepBase, type VideoResultBadge } from "./component"
 
 /** The command that is running now. */
 type ResultBusy = "approve" | "share" | "posted"
@@ -19,9 +15,12 @@ interface ResultMessage {
     readonly text: string
 }
 
+/** What the page tells the step. */
 interface VideoResultStepProps {
-    readonly project: ProjectView
-    readonly canEdit: boolean
+    /** The step named in the address. */
+    readonly tab: string | null
+    /** The video named in the address, or the new-video command. */
+    readonly focus: string | null
 }
 
 const shapeOf = (aspect: string): "portrait" | "square" | "landscape" => {
@@ -31,12 +30,14 @@ const shapeOf = (aspect: string): "portrait" | "square" | "landscape" => {
 
 /** Step five of the wizard: the finished video, its approval, download, share and the owner's own posting. */
 export const VideoResultStep = (props: VideoResultStepProps) => {
+    const editor = useVideoProjectData(props)
     const t = useTranslations("video")
     const format = useFormatter()
     const failure = useVideoFailure()
+    const actions = useVideoRelease()
     const router = navigation.useRouter()
     const pathname = navigation.usePathname()
-    const { project } = props
+    const { project } = editor
     const [busy, setBusy] = useState<ResultBusy | null>(null)
     const [message, setMessage] = useState<ResultMessage | null>(null)
     const render = project.render
@@ -45,29 +46,23 @@ export const VideoResultStep = (props: VideoResultStepProps) => {
     const run = async (name: ResultBusy, work: () => Promise<ResultMessage | null>) => {
         setBusy(name)
         setMessage(await work())
-        router.refresh()
         setBusy(null)
     }
-    const failed = (code: string): ResultMessage => ({
-        tone: "negative",
-        text: t("actionFailed", { error: failure(code) }),
-    })
-
     const approve = () =>
         run("approve", async () => {
-            const done = await approveVideoProject(project.id)
-            return done.kind === "ok" ? null : failed(done.code)
+            await actions.approve(project.id)
+            return null
         })
     const share = () =>
         run("share", async () => {
-            const done = await shareVideoProject(project.id)
-            if (done.kind !== "ok") return failed(done.code)
-            return { tone: "informative", text: done.value.telegram ? t("sharedTelegram") : t("shared") }
+            const done = await actions.share(project.id)
+            if (done === undefined) return null
+            return { tone: "informative", text: done.telegram ? t("sharedTelegram") : t("shared") }
         })
     const posted = () =>
         run("posted", async () => {
-            const done = await markVideoPublished(project.id)
-            return done.kind === "ok" ? { tone: "informative", text: t("postedNote") } : failed(done.code)
+            const done = await actions.publish(project.id)
+            return done !== undefined ? { tone: "informative", text: t("postedNote") } : null
         })
 
     const badges: ReadonlyArray<VideoResultBadge> = [
@@ -115,7 +110,7 @@ export const VideoResultStep = (props: VideoResultStepProps) => {
                 videoUrl: render?.videoUrl ?? null,
                 posterUrl: render?.posterUrl ?? null,
                 failedTitle: render?.status === "failed" ? t("renderFailed") : null,
-                failedDetail: render?.error ?? null,
+                failedDetail: render?.error ? failure(render.error) : null,
                 waitingLabel: t("status_rendering"),
                 badges,
                 approveHeading: approved ? t("status_approved") : t("approve"),
@@ -123,7 +118,7 @@ export const VideoResultStep = (props: VideoResultStepProps) => {
                 approveLabel: t("approve"),
                 showApprove: !approved,
                 approving: busy === "approve",
-                approveDisabled: !props.canEdit || project.status !== "ready",
+                approveDisabled: !editor.canEdit || project.status !== "ready",
                 downloadLabel: t("download"),
                 downloadUrl: approved ? (render?.downloadUrl ?? null) : null,
                 shareLabel: t("share"),
@@ -139,8 +134,8 @@ export const VideoResultStep = (props: VideoResultStepProps) => {
                 editLabel: t("editAgain"),
                 lockedNote: approved ? t("approvedLocked") : null,
                 rerenderLabel: t("rerender"),
-                canEdit: props.canEdit,
-                rerenderDisabled: !props.canEdit || project.status === "rendering",
+                canEdit: editor.canEdit,
+                rerenderDisabled: !editor.canEdit || project.status === "rendering",
                 message,
             }}
             on={{

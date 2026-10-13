@@ -1091,6 +1091,7 @@
     "maintainAction": "Cập nhật ngay"
   },
   "common": {
+    "loading": "Đang tải...",
     "open": "Mở",
     "openLead": "Mở khách hàng",
     "openOffice": "Mở trong Office",
@@ -2270,7 +2271,8 @@
     "promptDraftRecent": "Các bài gần đây (đừng lặp ý):\n{lines}",
     "promptDraftLibrary": "ẢNH TRONG THƯ VIỆN (chọn tối đa 2 cái hợp nội dung, ghi số thứ tự vào \"media\"):\n{lines}",
     "promptDraftNoLibrary": "Thư viện chưa có ảnh: để \"media\" là [].",
-    "err_ai_quota": "Đã hết lượt dùng AI trong kỳ này. Xem trang Mức dùng."
+    "err_ai_quota": "Đã hết lượt dùng AI trong kỳ này. Xem trang Mức dùng.",
+    "aiQueued": "Đã xếp hàng. NIVO sẽ báo khi có kết quả."
   },
   "credits": {
     "crumbLabel": "Đường dẫn",
@@ -2449,7 +2451,10 @@
     "sampleText": "Chào anh, bên em gửi báo giá...",
     "sampleTitle": "Bảng giá",
     "sampleContent": "Gói 3 tháng: ...",
-    "sampleTopic": "Giá"
+    "sampleTopic": "Giá",
+    "keysRefused": "Bạn không có quyền quản lý khoá API của shop này.",
+    "createFailed": "Chưa tạo được khoá. Tên khoá cần ít nhất 2 ký tự và mỗi shop có tối đa 20 khoá đang dùng.",
+    "revokeFailed": "Chưa thu hồi được khoá này. Hãy thử lại."
   },
   "email": {
     "err_auth": "Sai tên đăng nhập hoặc mật khẩu. Kiểm tra lại địa chỉ email và mật khẩu bạn đã dán.",
