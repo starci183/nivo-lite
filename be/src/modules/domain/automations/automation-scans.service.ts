@@ -11,7 +11,7 @@ import {
     SELECT_SCAN_LEADS,
 } from "./persistence/automation-readers.sql"
 import type { DebtInvoiceRow, LeadActivityRow, ScanLeadRow } from "./persistence/automations.rows"
-import { instantOf, isoOf } from "./policies/format.policy"
+import { instantOf, automationIsoOf } from "./policies/format.policy"
 import {
     NO_SCAN,
     contractWindow,
@@ -83,7 +83,7 @@ export class AutomationScansService {
         return {
             runs: planLeadScan(
                 kind,
-                leads.map((lead) => ({ id: lead.id, stage: lead.stage, createdAt: isoOf(lead.created_at) })),
+                leads.map((lead) => ({ id: lead.id, stage: lead.stage, createdAt: automationIsoOf(lead.created_at) })),
                 activity,
                 withChat,
                 priorRunsOf(prior),
@@ -116,7 +116,7 @@ export class AutomationScansService {
                     invoiceNo: invoice.invoice_no,
                     amountVnd: Number(invoice.amount_vnd),
                     leadId: invoice.lead_id,
-                    dueAt: isoOf(invoice.due_at ?? now),
+                    dueAt: automationIsoOf(invoice.due_at ?? now),
                 })),
                 withChat,
                 priorRunsOf(prior),

@@ -11,7 +11,7 @@ import type {
 } from "./billing.contracts"
 import { isCassoAuthentic } from "./casso.policy"
 import { sameText, sha256Hex } from "./channel-secret.policy"
-import { ConnectionSecretsService } from "./connection-secrets.service"
+import { PaymentSecretsService } from "./payment-secrets.service"
 import { BillingError, BillingErrorCode } from "./errors/billing.error"
 import { isPayosAuthentic, isPayosSample, payosBodyOf } from "./payos.policy"
 import { isValidApiKey, presentedApiKey } from "./sepay.policy"
@@ -29,7 +29,7 @@ const unauthorized = (cause?: unknown): BillingError =>
 export class PaymentProofService {
     constructor(
         @InjectBillingOptions() private readonly options: BillingOptions,
-        private readonly secrets: ConnectionSecretsService,
+        private readonly secrets: PaymentSecretsService,
     ) {}
 
     /** NIVO's own billing feed from SePay: `Authorization: Apikey <SEPAY_WEBHOOK_API_KEY>`. */

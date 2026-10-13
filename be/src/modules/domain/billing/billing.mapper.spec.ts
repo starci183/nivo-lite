@@ -61,7 +61,12 @@ describe("billing mapper", () => {
     describe("toWorkspaceBilling", () => {
         it("maps a paid period to ISO text", () => {
             expect(
-                toWorkspaceBilling({ ...NO_TIER, status: "active", plan_code: "starter", paid_until: "2026-11-01T00:00:00+00:00" }),
+                toWorkspaceBilling({
+                    ...NO_TIER,
+                    status: "active",
+                    plan_code: "starter",
+                    paid_until: "2026-11-01T00:00:00+00:00",
+                }),
             ).toEqual({
                 status: "active",
                 planCode: "starter",
@@ -74,7 +79,9 @@ describe("billing mapper", () => {
         })
 
         it("keeps the null period of an unpaid workspace", () => {
-            expect(toWorkspaceBilling({ ...NO_TIER, status: "pending_payment", plan_code: null, paid_until: null })).toEqual({
+            expect(
+                toWorkspaceBilling({ ...NO_TIER, status: "pending_payment", plan_code: null, paid_until: null }),
+            ).toEqual({
                 status: "pending_payment",
                 planCode: null,
                 paidUntil: null,

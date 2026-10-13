@@ -39,7 +39,7 @@ import {
     normalisePhone,
     planInputOf,
 } from "./policies/booking-rules.policy"
-import { isoOf, zonedMs } from "./policies/zoned-time.policy"
+import { bookingIsoOf, zonedMs } from "./policies/zoned-time.policy"
 
 const MINUTE_MS = 60_000
 const DAY_MS = 86_400_000
@@ -163,7 +163,7 @@ export class BookingDeskService {
         return this.entityManager.transaction(async (manager) => {
             const booking = await this.lock(manager, ref)
             if (booking.status !== "requested") return { status: booking.status, feeDue: false }
-            await manager.query(CONFIRM_BOOKING, [ref.workspaceId, ref.id, isoOf(nowMs)])
+            await manager.query(CONFIRM_BOOKING, [ref.workspaceId, ref.id, bookingIsoOf(nowMs)])
             await this.reminders.schedule({
                 manager,
                 workspaceId: ref.workspaceId,
@@ -182,7 +182,7 @@ export class BookingDeskService {
         const nowMs = this.clock.now().getTime()
         return this.entityManager.transaction(async (manager) => {
             await this.lockActive(manager, ref)
-            await manager.query(CHECK_IN_BOOKING, [ref.workspaceId, ref.id, isoOf(nowMs)])
+            await manager.query(CHECK_IN_BOOKING, [ref.workspaceId, ref.id, bookingIsoOf(nowMs)])
             return { status: "confirmed", feeDue: false }
         })
     }
@@ -193,7 +193,7 @@ export class BookingDeskService {
         const nowMs = this.clock.now().getTime()
         return this.entityManager.transaction(async (manager) => {
             await this.lockActive(manager, ref)
-            await manager.query(FINISH_BOOKING, [ref.workspaceId, ref.id, isoOf(nowMs)])
+            await manager.query(FINISH_BOOKING, [ref.workspaceId, ref.id, bookingIsoOf(nowMs)])
             await this.reminders.cancel(manager, ref.id, "booking_done")
             return { status: "done", feeDue: false }
         })
@@ -206,7 +206,7 @@ export class BookingDeskService {
         const nowMs = this.clock.now().getTime()
         return this.entityManager.transaction(async (manager) => {
             await this.lockActive(manager, ref)
-            await manager.query(MARK_NO_SHOW, [ref.workspaceId, ref.id, isoOf(nowMs)])
+            await manager.query(MARK_NO_SHOW, [ref.workspaceId, ref.id, bookingIsoOf(nowMs)])
             await this.reminders.cancel(manager, ref.id, "no_show")
             return { status: "no_show", feeDue: settings.noShowFeeVnd > 0 }
         })
@@ -218,7 +218,7 @@ export class BookingDeskService {
         const nowMs = this.clock.now().getTime()
         return this.entityManager.transaction(async (manager) => {
             await this.lockActive(manager, ref)
-            await manager.query(CANCEL_BOOKING, [ref.workspaceId, ref.id, isoOf(nowMs), "owner_cancelled"])
+            await manager.query(CANCEL_BOOKING, [ref.workspaceId, ref.id, bookingIsoOf(nowMs), "owner_cancelled"])
             await this.reminders.cancel(manager, ref.id, "owner_cancelled")
             return { status: "cancelled", feeDue: false }
         })

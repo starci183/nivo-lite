@@ -129,7 +129,7 @@ export interface AutomationGate {
 }
 
 /** One request to write text. */
-export interface TextRequest {
+export interface AutomationTextRequest {
     /** The workspace the usage is billed to. */
     readonly workspaceId: string
     /** What the text is for. */
@@ -146,7 +146,7 @@ export type GeneratedText = string | null
 /** The one place automations ask a model to write text. */
 export interface AutomationText {
     /** Writes the text, or answers none when the model is unavailable. */
-    generate(request: TextRequest): Promise<GeneratedText>
+    generate(request: AutomationTextRequest): Promise<GeneratedText>
 }
 
 /** The owner's own chat. */

@@ -1,4 +1,4 @@
-import type { ZaloPkce, ZaloSecret } from "@modules/integrations/channel-setup"
+import type { ZaloSetupPkce, ZaloSetupSecret } from "@modules/integrations/channel-setup"
 import { parseJsonText } from "@modules/platform/primitives"
 
 type Json = Readonly<Record<string, unknown>>
@@ -7,7 +7,7 @@ const isJson = (value: unknown): value is Json => typeof value === "object" && v
 
 const textOf = (value: unknown): string | undefined => (typeof value === "string" ? value : undefined)
 
-const pkceOf = (value: unknown): ZaloPkce | undefined => {
+const pkceOf = (value: unknown): ZaloSetupPkce | undefined => {
     if (!isJson(value)) return undefined
     const { verifier, nonce, exp } = value
     return typeof verifier === "string" && typeof nonce === "string" && typeof exp === "number"
@@ -16,7 +16,7 @@ const pkceOf = (value: unknown): ZaloPkce | undefined => {
 }
 
 /** The Zalo credential kept in a sealed secret, or null when the text is not one (a corrupt or foreign secret). */
-export const parseZaloSecret = (plain: string): ZaloSecret | null => {
+export const parseZaloSecret = (plain: string): ZaloSetupSecret | null => {
     const read = parseJsonText(plain)
     if (!read.ok) return null
     const parsed = read.value
@@ -37,7 +37,7 @@ export const parseZaloSecret = (plain: string): ZaloSecret | null => {
 }
 
 /** True when the credential holds a refresh token that has not expired at `now`. */
-export const hasLiveTokens = (secret: ZaloSecret, now: number): boolean => {
+export const hasLiveTokens = (secret: ZaloSetupSecret, now: number): boolean => {
     if (!secret.refreshToken) return false
     if (!secret.refreshExpiresAt) return true
     const expires = Date.parse(secret.refreshExpiresAt)

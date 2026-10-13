@@ -171,7 +171,6 @@ export interface PlanOrderParams {
     readonly selection?: PlanSelectionInput
 }
 
-
 /** An order together with what the customer needs to pay it. */
 export interface PayableOrder {
     /** The order. */

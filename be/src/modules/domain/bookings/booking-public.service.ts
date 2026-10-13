@@ -34,7 +34,7 @@ import {
     normalisePhone,
     planInputOf,
 } from "./policies/booking-rules.policy"
-import { addDays, zonedMs, isoOf } from "./policies/zoned-time.policy"
+import { addDays, zonedMs, bookingIsoOf } from "./policies/zoned-time.policy"
 
 const MINUTE_MS = 60_000
 const DAY_MS = 86_400_000
@@ -107,7 +107,7 @@ export class BookingPublicService {
         const plan = planInputOf(model, service, taken, this.clock.now().getTime(), clampParty(request.party))
         const times = findSlots(plan, fromMs, toMs)
             .slice(0, SLOTS_MAX)
-            .map((slot) => isoOf(slot.startMs))
+            .map((slot) => bookingIsoOf(slot.startMs))
         return { times: [...new Set(times)] }
     }
 
@@ -151,17 +151,17 @@ export class BookingPublicService {
             }),
         )
         if (placement.kind === "no_resource")
-            return this.answer("no_resource", "failed", false, service.name, isoOf(startMs), [], null)
+            return this.answer("no_resource", "failed", false, service.name, bookingIsoOf(startMs), [], null)
         const alternatives = placement.free
             ? []
-            : nearestSlots(plan, startMs, ALTERNATIVES, ALTERNATIVE_SPAN_DAYS).map((slot) => isoOf(slot.startMs))
+            : nearestSlots(plan, startMs, ALTERNATIVES, ALTERNATIVE_SPAN_DAYS).map((slot) => bookingIsoOf(slot.startMs))
         const code = this.codeFor(placement.free, model.settings.autoConfirm)
         return this.answer(
             code,
             code === "confirmed" ? "confirmed" : "waiting",
             true,
             service.name,
-            isoOf(startMs),
+            bookingIsoOf(startMs),
             alternatives,
             placement.id,
         )
@@ -254,13 +254,13 @@ export class BookingPublicService {
 
     private repeatedAnswer(row: KeyedBookingRow, serviceName: string, startMs: number): PublicBookResult {
         if (row.status === "confirmed")
-            return this.answer("confirmed", "confirmed", true, serviceName, isoOf(startMs), [], row.id)
+            return this.answer("confirmed", "confirmed", true, serviceName, bookingIsoOf(startMs), [], row.id)
         return this.answer(
             row.holds_slot ? "received_free" : "received_taken",
             "waiting",
             true,
             serviceName,
-            isoOf(startMs),
+            bookingIsoOf(startMs),
             [],
             row.id,
         )

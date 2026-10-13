@@ -7,7 +7,7 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { BILLING_OPTIONS } from "./billing.decorators"
 import type { BillingOptions } from "./billing.options"
-import { ConnectionSecretsService } from "./connection-secrets.service"
+import { PaymentSecretsService } from "./payment-secrets.service"
 import { SELECT_CONNECTION_SECRET } from "./persistence/bank-feed.sql"
 
 const KEY = randomBytes(32).toString("base64")
@@ -32,13 +32,13 @@ const build = async (rows: Array<object>, options: Partial<BillingOptions> = {})
     const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
-            ConnectionSecretsService,
+            PaymentSecretsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: BILLING_OPTIONS, useValue: builder<BillingOptions>(OPTIONS)(options) },
             { provide: LOGGER, useValue: logger },
         ],
     }).compile()
-    return { secrets: moduleRef.get(ConnectionSecretsService), em, logger }
+    return { secrets: moduleRef.get(PaymentSecretsService), em, logger }
 }
 
 const row = (over: Record<string, unknown> = {}) => ({
@@ -50,7 +50,7 @@ const row = (over: Record<string, unknown> = {}) => ({
     ...over,
 })
 
-describe("ConnectionSecretsService", () => {
+describe("PaymentSecretsService", () => {
     it("answers the workspace, the decrypted credential and the webhook secret of a connection of the provider", async () => {
         const { secrets, em } = await build([row()])
 
