@@ -2,6 +2,8 @@ import { Module } from "@nestjs/common"
 import { BillingBankAccountResolver } from "./billing-bank-account.resolver"
 import { BillingApiModule } from "../../billing.module"
 import { BillingPlansResolver } from "./billing-plans.resolver"
+import { BillingPlanQuoteResolver } from "./billing-plan-quote.resolver"
+import { BillingStorageResolver } from "./billing-storage.resolver"
 import { BillingPlanResolver } from "./billing-plan.resolver"
 import { BillingWorkspacesResolver } from "./billing-workspaces.resolver"
 import { BillingWorkspaceResolver } from "./billing-workspace.resolver"
@@ -17,6 +19,8 @@ import { PaymentOrderRequestStatusResolver } from "./payment-order-request-statu
     providers: [
         BillingBankAccountResolver,
         BillingPlansResolver,
+        BillingPlanQuoteResolver,
+        BillingStorageResolver,
         BillingPlanResolver,
         BillingWorkspacesResolver,
         BillingWorkspaceResolver,

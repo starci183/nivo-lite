@@ -13,6 +13,10 @@ const query1: TypedDocumentNode<QueryBillingWorkspaceResponse> = gql`
             status
             planCode
             paidUntil
+            tierCredits
+            seatCount
+            billingCycle
+            billedMonthlyVnd
             role
         }
     }

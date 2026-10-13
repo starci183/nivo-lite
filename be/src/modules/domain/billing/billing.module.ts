@@ -6,6 +6,7 @@ import { BillingReadService } from "./billing-read.service"
 import { BillingService } from "./billing.service"
 import { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./billing.module-definition"
 import { ConnectionSecretsService } from "./connection-secrets.service"
+import { EntitlementsService } from "./entitlements.service"
 import { PaymentProofService } from "./payment-proof.service"
 @Module({})
 /** The billing capability over the primary Supabase connection: plans, payment orders, SePay settlement and the payment feeds. */
@@ -20,11 +21,19 @@ export class BillingModule extends ConfigurableModuleClass {
                 ...(base.providers ?? []),
                 BillingService,
                 BillingReadService,
+                EntitlementsService,
                 PaymentProofService,
                 ConnectionSecretsService,
                 BankFeedService,
             ],
-            exports: [MODULE_OPTIONS_TOKEN, BillingService, BillingReadService, PaymentProofService, BankFeedService],
+            exports: [
+                MODULE_OPTIONS_TOKEN,
+                BillingService,
+                BillingReadService,
+                EntitlementsService,
+                PaymentProofService,
+                BankFeedService,
+            ],
         }
     }
 }

@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { EntitlementsService } from "@modules/domain/billing"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
@@ -67,6 +68,7 @@ export class KnowledgeSourcesService {
         @InjectLogger() private readonly logger: Logger,
         private readonly members: WorkspaceMembersService,
         private readonly queue: KnowledgeQueue,
+        private readonly entitlements: EntitlementsService,
     ) {}
 
     /** The documents of a workspace, newest first and without their text; any member may read them. */
@@ -164,6 +166,7 @@ export class KnowledgeSourcesService {
         await this.members.require(userId, workspaceId, MANAGERS)
         if (filename.trim() === "")
             throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.FileNameRequired })
+        await this.entitlements.requireStorageFor(workspaceId, 0)
         const ids = await this.entityManager.query<Array<GeneratedIdRow>>(SELECT_NEW_ID)
         const path = ids.map((row) => `${workspaceId}/${row.id}/${safeFileName(filename)}`).join("")
         const signed = await this.storage.signedUpload(KNOWLEDGE_UPLOAD_BUCKET, path)

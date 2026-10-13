@@ -1,6 +1,7 @@
 import { PaymentOrderRequestsError, PaymentOrderRequestsErrorCode } from "./errors/payment-order-requests.error"
 import type {
     PaymentOrderRequestParams,
+    RequestSelection,
     PaymentOrderRequestStatus,
     PaymentOrderRequestKind,
 } from "./payment-order-requests.contracts"
@@ -19,6 +20,22 @@ export const targetOf = (params: PaymentOrderRequestParams): string | null => {
         throw new PaymentOrderRequestsError({ code: PaymentOrderRequestsErrorCode.Invalid })
     }
     return params.target
+}
+
+/** The cycle, usage tier and seats of a plan request, bounded; a request of another kind carries none of them. */
+export const selectionOf = (
+    params: PaymentOrderRequestParams,
+): RequestSelection => {
+    if (params.kind !== "plan") return { cycle: null, tierCredits: null, seats: null }
+    const cycle = params.cycle ?? "monthly"
+    const tierCredits = params.tierCredits ?? null
+    const seats = params.seats ?? null
+    const valid =
+        (cycle === "monthly" || cycle === "annual") &&
+        (tierCredits === null || (Number.isInteger(tierCredits) && tierCredits > 0)) &&
+        (seats === null || (Number.isInteger(seats) && seats >= 1 && seats <= 1000))
+    if (!valid) throw new PaymentOrderRequestsError({ code: PaymentOrderRequestsErrorCode.Invalid })
+    return { cycle, tierCredits, seats }
 }
 
 const REQUEST_STATUSES: Readonly<Record<RequestStatusRow["status"], PaymentOrderRequestStatus["status"]>> = {

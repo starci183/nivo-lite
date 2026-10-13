@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from "react"
 import { useQueryBillingWorkspaceSwr } from "@/hooks/swr"
-import { useQueryBillingPlansSwr } from "@/hooks/swr"
+import { useCatalogWithCurrent } from "@/hooks/billing"
 import { useQueryCreditPacksSwr } from "@/hooks/swr"
 import { useQueryCreditQuotaStatusSwr } from "@/hooks/swr"
 import { useQueryCreditTopupLotsSwr } from "@/hooks/swr"
@@ -22,7 +22,7 @@ export const useCreditsData = (contactHref: string) => {
     const today = productCalendarDay(now)
     const since = productCalendarDay(now, -LAST_DAYS)
     const workspace = useQueryBillingWorkspaceSwr(workspaceId)
-    const plans = useQueryBillingPlansSwr()
+    const catalog = useCatalogWithCurrent(workspace.data?.planCode)
     const packs = useQueryCreditPacksSwr()
     const quota = useQueryCreditQuotaStatusSwr(workspaceId)
     const canBuy = workspace.data?.role === "owner" || workspace.data?.role === "manager"
@@ -37,17 +37,17 @@ export const useCreditsData = (contactHref: string) => {
     const refresh = useCallback(async () => {
         await Promise.all([
             workspace.mutate(),
-            plans.mutate(),
+            catalog.refresh(),
             packs.mutate(),
             quota.mutate(),
             recent.mutate(),
             ...(canBuy ? [lots.mutate()] : []),
         ])
-    }, [workspace, plans, packs, quota, recent, lots, canBuy])
+    }, [workspace, catalog, packs, quota, recent, lots, canBuy])
 
-    const error = workspace.error || plans.error || packs.error || quota.error || recent.error || (canBuy && lots.error)
+    const error = workspace.error || catalog.error || packs.error || quota.error || recent.error || (canBuy && lots.error)
     const workspaceData = workspace.data
-    const planData = plans.data
+    const planData = catalog.plans
     const packData = packs.data
     const quotaData = quota.data
     const recentData = recent.data
@@ -57,6 +57,7 @@ export const useCreditsData = (contactHref: string) => {
         workspaceId !== undefined &&
         workspaceData &&
         planData &&
+        !catalog.isCurrentLoading &&
         packData &&
         quotaData !== undefined &&
         recentData !== undefined &&
@@ -68,6 +69,7 @@ export const useCreditsData = (contactHref: string) => {
             canBuy,
             workspace: workspaceData,
             plans: planData,
+            current: catalog.current ?? null,
             packs: packData,
             status: quotaData,
             lots: canBuy ? (lotData ?? []) : [],

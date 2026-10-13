@@ -1,8 +1,8 @@
 import { sql } from "@modules/platform/database"
 
-/** Inserts an authorized manager's request ($1 workspace, $2 caller, $3 kind, $4 target). */
-export const INSERT_REQUEST = sql`INSERT INTO public.payment_order_requests (workspace_id, requested_by, kind, target)
-VALUES ($1, $2, $3, $4)
+/** Inserts an authorized manager's request ($1 workspace, $2 caller, $3 kind, $4 target, $5 cycle, $6 usage tier, $7 seats). */
+export const INSERT_REQUEST = sql`INSERT INTO public.payment_order_requests (workspace_id, requested_by, kind, target, cycle, tier_credits, seats)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING id`
 
 /** Enqueues the existing fenced job inside the request transaction ($1 workspace, $2 queue, $3 request). */
@@ -16,7 +16,7 @@ WHERE r.id = $1 AND r.workspace_id = $2 AND r.requested_by = $3
 LIMIT 1`
 
 /** One request of a workspace by its id ($1 request, $2 workspace). */
-export const SELECT_REQUEST = sql`SELECT id, workspace_id, requested_by, kind, target, status
+export const SELECT_REQUEST = sql`SELECT id, workspace_id, requested_by, kind, target, cycle, tier_credits::float8 AS tier_credits, seats, status
 FROM public.payment_order_requests
 WHERE id = $1 AND workspace_id = $2
 LIMIT 1`

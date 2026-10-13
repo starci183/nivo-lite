@@ -5,6 +5,7 @@ import { useState } from "react"
 import { NO_STAFF, ROLE_KEYS, isTeamManager, useInviteCommands, useTeam } from "@/hooks/team"
 import type { InviteSentView } from "@/hooks/team"
 import { useInviteForm } from "@/hooks/rhf"
+import { useIndividualPlan } from "@/hooks/billing"
 import { useMember } from "@/hooks/member"
 import { TeamInviteBase } from "./component"
 
@@ -12,7 +13,8 @@ import { TeamInviteBase } from "./component"
 export const TeamInvite = () => {
     const t = useTranslations("team")
     const member = useMember()
-    const isAllowed = member !== null && isTeamManager(member.role)
+    const isIndividual = useIndividualPlan(member?.workspaceId)
+    const isAllowed = member !== null && isTeamManager(member.role) && !isIndividual
     const { views, isLoading } = useTeam(member?.workspaceId ?? "", isAllowed)
     const commands = useInviteCommands()
     const form = useInviteForm()

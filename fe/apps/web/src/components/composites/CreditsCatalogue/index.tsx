@@ -25,7 +25,6 @@ export const CreditsCatalogue = (props: CreditsCatalogueProps) => {
               id: String(index),
               title: copy.loading,
               description: copy.loading,
-              discount: "",
               pending: false,
               disabled: true,
               target: { kind: "topup" as const, packCode: "", credits: 0 },
@@ -36,8 +35,8 @@ export const CreditsCatalogue = (props: CreditsCatalogueProps) => {
         props: {
             title: pack.title,
             description: pack.description,
-            badge: pack.discount,
-            badgeTone: "success" as const,
+            badge: "",
+            badgeTone: "neutral" as const,
             isSkeleton: copy.isSkeleton,
             purchase:
                 copy.canBuy || copy.isSkeleton

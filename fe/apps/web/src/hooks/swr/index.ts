@@ -10,6 +10,8 @@ export {
 } from "./api/graphql/queries/useQueryAgentDashboardSwr"
 export { useQueryBillingPlansSwr } from "./api/graphql/queries/useQueryBillingPlansSwr"
 export { useQueryBillingPlanSwr } from "./api/graphql/queries/useQueryBillingPlanSwr"
+export { useQueryBillingPlanQuotesSwr } from "./api/graphql/queries/useQueryBillingPlanQuotesSwr"
+export { useQueryBillingStorageSwr } from "./api/graphql/queries/useQueryBillingStorageSwr"
 export { useQueryBillingReviewTransactionsSwr } from "./api/graphql/queries/useQueryBillingReviewTransactionsSwr"
 export { useQueryBillingWorkspacesSwr } from "./api/graphql/queries/useQueryBillingWorkspacesSwr"
 export { useQueryBillingWorkspaceSwr } from "./api/graphql/queries/useQueryBillingWorkspaceSwr"

@@ -12,7 +12,7 @@ import type {
     RequestOutcome,
 } from "./payment-order-requests.contracts"
 import { PaymentOrderRequestsError, PaymentOrderRequestsErrorCode } from "./errors/payment-order-requests.error"
-import { targetOf, toRequestStatus } from "./payment-order-requests.policy"
+import { selectionOf, targetOf, toRequestStatus } from "./payment-order-requests.policy"
 import type { InsertedRequestRow, RequestRow, RequestStatusRow } from "./persistence/payment-order-requests.rows"
 import {
     ENQUEUE_REQUEST,
@@ -39,6 +39,7 @@ export class PaymentOrderRequestsService {
     async request(userId: string, params: PaymentOrderRequestParams): Promise<QueuedPaymentOrderRequest> {
         await this.billing.requireManager(userId, params.workspaceId)
         const target = targetOf(params)
+        const selection = selectionOf(params)
         await this.requireTarget(params.kind, target)
         return this.entityManager.transaction(async (manager) => {
             const [row] = await manager.query<Array<InsertedRequestRow>>(INSERT_REQUEST, [
@@ -46,6 +47,9 @@ export class PaymentOrderRequestsService {
                 userId,
                 params.kind,
                 target,
+                selection.cycle,
+                selection.tierCredits,
+                selection.seats,
             ])
             if (row === undefined) {
                 throw new PaymentOrderRequestsError({ code: PaymentOrderRequestsErrorCode.NotCreated })
@@ -114,7 +118,17 @@ export class PaymentOrderRequestsService {
         const target = request.target ?? ""
         switch (request.kind) {
             case "plan":
-                return (await this.billing.orderPlan(userId, { workspaceId, planCode: target })).order.id
+                return (
+                    await this.billing.orderPlan(userId, {
+                        workspaceId,
+                        planCode: target,
+                        selection: {
+                            cycle: request.cycle ?? "monthly",
+                            tierCredits: request.tier_credits,
+                            seats: request.seats ?? 1,
+                        },
+                    })
+                ).order.id
             case "renew":
                 return (await this.billing.renew(userId, { workspaceId })).order.id
             case "topup":

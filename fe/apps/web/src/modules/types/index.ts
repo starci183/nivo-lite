@@ -312,7 +312,6 @@ export type {
     PayOrder,
     PayTarget,
     PlanView,
-    UpgradeReason,
 } from "./credits"
 export type {
     AccountingQuestionValues,

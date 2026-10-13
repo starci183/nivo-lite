@@ -26,6 +26,19 @@ const query1: TypedDocumentNode<QueryBillingPlanResponse, InputVariables<QueryBi
             sort
             aiCreditsPerMonth
             isCustom
+            priceAnnualVnd
+            annualDiscountPct
+            promoPriceVnd
+            promoMonths
+            storageGb
+            individual
+            perSeat
+            listed
+            tiers {
+                creditsPerMonth
+                priceVnd
+                perSeat
+            }
         }
     }
 `

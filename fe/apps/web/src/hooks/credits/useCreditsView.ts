@@ -1,4 +1,5 @@
 import { useFormatter, useLocale, useTranslations } from "next-intl"
+import { workspaceBillingPath } from "@/modules/routes"
 import type { CreditsData, CreditsOverviewView, PlanView } from "@/modules/types"
 
 /** Resolves every locale-sensitive label before the pure credits drawing. */
@@ -12,6 +13,10 @@ export const useCreditsView = (data: CreditsData | null, busy: string | null) =>
     const day = (value: string) => formatter.dateTime(new Date(value), { dateStyle: "medium" })
     const name = (plan: PlanView) => (locale === "vi" ? plan.nameVi : plan.nameEn)
     const allowance = (plan: PlanView) => (plan.credits === null ? "∞" : credit(plan.credits))
+    const planPrice = (plan: PlanView) =>
+        plan.isCustom
+            ? t("planPriceContract")
+            : t(plan.perSeat ? "planPriceSeat" : "planPriceMonth", { price: money(plan.price) })
     const labels = {
         balance: t("balanceLabel"),
         topups: t("topupTitle"),
@@ -20,6 +25,8 @@ export const useCreditsView = (data: CreditsData | null, busy: string | null) =>
         plans: t("allPlans"),
         plansLabel: t("allPlansLabel"),
         buy: t("buy"),
+        plansCta: t("plansCta"),
+        plansHref: data ? workspaceBillingPath(data.workspaceId) : "",
         loading: t("loading"),
         emptyPacks: t("packsEmpty"),
     }
@@ -58,20 +65,10 @@ export const useCreditsView = (data: CreditsData | null, busy: string | null) =>
         carried = data.carried > 0 ? t("creditUnit", { n: credit(data.carried) }) : t("none")
         if (data.next) {
             const next = data.next.plan
-            const reason = data.next.reason
-            let reasonText = t("reasonPlain")
-            if (reason.kind === "topups")
-                reasonText = t("reasonTopups", {
-                    credits: credit(reason.credits),
-                    plan: name(next),
-                    saving: money(reason.saving),
-                })
-            if (reason.kind === "cheaper") reasonText = t("reasonCheaper", { pct: reason.pct })
             upgrade = {
                 name: name(next),
-                line: t("planLine", { credits: allowance(next), per: money(next.perCredit), seats: next.seats }),
+                line: t("planLine", { credits: allowance(next), storage: next.storageGb ?? 0 }),
                 price: t("priceLine", { price: money(next.price) }),
-                reason: reasonText,
                 action: t("upgradeCta", { plan: name(next) }),
                 pending: busy === next.code,
                 disabled: busy !== null && busy !== next.code,
@@ -107,8 +104,7 @@ export const useCreditsView = (data: CreditsData | null, busy: string | null) =>
             data?.packs.map((pack) => ({
                 id: pack.code,
                 title: t("packTitle", { credits: credit(pack.credits) }),
-                description: t("packLine", { price: money(pack.price), per: money(pack.perCredit) }),
-                discount: pack.discountPct > 0 ? t("packDiscount", { pct: pack.discountPct }) : "",
+                description: t("packLine", { price: money(pack.price) }),
                 pending: busy === pack.code,
                 disabled: busy !== null && busy !== pack.code,
                 target: { kind: "topup" as const, packCode: pack.code, credits: pack.credits },
@@ -119,12 +115,9 @@ export const useCreditsView = (data: CreditsData | null, busy: string | null) =>
             data?.plans.map((plan) => ({
                 id: plan.code,
                 title: name(plan),
-                description: t("planRow", {
-                    price: money(plan.price),
-                    credits: allowance(plan),
-                    per: money(plan.perCredit),
-                    seats: plan.seats,
-                }),
+                description: plan.isCustom
+                    ? t("planRowContract")
+                    : t("planRow", { price: planPrice(plan), credits: allowance(plan), who: t(plan.perSeat ? "whoTeam" : "whoOne") }),
                 badge: plan.code === data.plan?.code ? t("currentPlan") : "",
             })) ?? [],
     }

@@ -1,6 +1,7 @@
 import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
+import { EntitlementsService } from "@modules/domain/billing"
 import { EventsService } from "@modules/domain/events"
 import { ACCOUNT_DIRECTORY, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { AccountDirectory, MemberListing, WorkspaceMember } from "@modules/domain/workspace-members"
@@ -88,6 +89,7 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: INVITE_DELIVERY, useValue: delivery },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: EventsService, useValue: events },
+            { provide: EntitlementsService, useValue: mock<EntitlementsService>() },
         ],
     }).compile()
     return { service: moduleRef.get(WorkspaceInvitesService), members, events, accounts, delivery }

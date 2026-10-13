@@ -11,6 +11,8 @@ interface CreditsUpgradeProps {
         readonly title: string
         readonly plansLabel: string
         readonly plansTitle: string
+        readonly plansCta: string
+        readonly plansHref: string
         readonly loading: string
         readonly isSkeleton: boolean
     }
@@ -46,7 +48,6 @@ export const CreditsUpgrade = (props: CreditsUpgradeProps) => {
                         </Text>
                         <Text weight="semibold">{upgrade.price}</Text>
                     </div>
-                    <Text>{upgrade.reason}</Text>
                     {copy.view.canBuy ? (
                         <div>
                             <Button
@@ -111,6 +112,11 @@ export const CreditsUpgrade = (props: CreditsUpgradeProps) => {
                         <CreditsListRow key={row.id} props={row.props} />
                     ))}
                 </SurfaceListCard>
+                {copy.view.canBuy && !copy.isSkeleton ? (
+                    <Button variant="outline" size="sm" href={copy.plansHref}>
+                        {copy.plansCta}
+                    </Button>
+                ) : null}
             </Disclosure>
         </div>
     )

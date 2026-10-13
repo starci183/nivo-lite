@@ -13,8 +13,8 @@ export const UPDATE_PAID_UNTIL = sql`UPDATE public.workspaces SET paid_until = $
 /** Sets the billing status ($1 id, $2 status). */
 export const UPDATE_STATUS = sql`UPDATE public.workspaces SET status = $2 WHERE id = $1`
 
-/** Moves a workspace to a plan ($1 id, $2 code). */
-export const UPDATE_PLAN = sql`UPDATE public.workspaces SET plan_code = $2 WHERE id = $1`
+/** Moves a workspace to a plan ($1 id, $2 code); a usage tier and seats bought on the old plan do not follow. */
+export const UPDATE_PLAN = sql`UPDATE public.workspaces SET plan_code = $2, tier_credits = NULL, seat_count = NULL WHERE id = $1`
 
 /** An active plan by code ($1). */
 export const FIND_ACTIVE_PLAN = sql`

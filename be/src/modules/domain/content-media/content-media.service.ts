@@ -3,6 +3,7 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { NEW_CONTENT_MEDIA_UPLOAD_ID } from "./persistence/content-media.sql"
 import type { ContentMediaUploadIdRow } from "./persistence/content-media.rows"
 import { Injectable } from "@nestjs/common"
+import { EntitlementsService } from "@modules/domain/billing"
 import { VideoRendersService } from "@modules/domain/video-renders"
 import type { CompletedRenderMedia } from "@modules/domain/video-renders"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -41,6 +42,7 @@ export class ContentMediaService {
         @InjectContentMediaStorage() private readonly storage: SupabaseObjectsPort,
         private readonly members: WorkspaceMembersService,
         private readonly renders: VideoRendersService,
+        private readonly entitlements: EntitlementsService,
     ) {}
 
     /** Lists workspace media, newest first, for an active workspace member. */
@@ -108,6 +110,7 @@ export class ContentMediaService {
     async requestUpload(userId: string, workspaceId: string, file: MediaFile): Promise<ContentMediaUpload> {
         await this.members.require(userId, workspaceId, ["owner", "manager"])
         if (!isAcceptedMedia(file)) throw new ContentMediaError({ code: ContentMediaErrorCode.UploadInvalid })
+        await this.entitlements.requireStorageFor(workspaceId, file.sizeBytes)
         const [allocated] = await this.entityManager.query<Array<ContentMediaUploadIdRow>>(NEW_CONTENT_MEDIA_UPLOAD_ID)
         if (allocated === undefined) throw new ContentMediaError({ code: ContentMediaErrorCode.StorageUnavailable })
         const path = buildContentMediaPath(workspaceId, file.name, allocated.id)
