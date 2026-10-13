@@ -1,10 +1,13 @@
-import type { AdminHealth } from "@/modules/db/admin/admin.mapper"
+"use client"
+
+import { useMemo } from "react"
 import { adminWorkspacePath } from "@/modules/routes"
 import { badgeOf, flowTone } from "./admin.shared"
-import type { AdminCardView, AdminFormat, AdminRowView, AdminText } from "./admin.shared"
+import type { AdminCardView, AdminFormat, AdminPlatformHealth, AdminRowView, AdminText } from "./admin.shared"
+import { useAdminFormat } from "./useAdminFormat"
 
 /** The most characters of a raw error text a row shows. */
-const ERROR_CLIP = 400
+const HEALTH_ERROR_CLIP = 400
 
 /** How many of the newest transfers the billing card lists. */
 const TRANSFERS_SHOWN = 10
@@ -14,15 +17,20 @@ const ID_SHOWN = 8
 
 /** The link to a workspace, or the muted word for an event that belongs to the platform. */
 const workspaceRef = (
-    id: string | null,
+    id: string | null | undefined,
     names: ReadonlyMap<string, string>,
     text: AdminText,
 ): Pick<AdminRowView, "link" | "note"> =>
-    id === null
+    typeof id !== "string"
         ? { note: text("platform") }
         : { link: { label: names.get(id) ?? id.slice(0, ID_SHOWN), href: adminWorkspacePath(id) } }
 
-const billingRows = (health: AdminHealth, format: AdminFormat, text: AdminText, names: ReadonlyMap<string, string>) => {
+const billingRows = (
+    health: AdminPlatformHealth,
+    format: AdminFormat,
+    text: AdminText,
+    names: ReadonlyMap<string, string>,
+) => {
     const summary: ReadonlyArray<AdminRowView> =
         health.transfers.length === 0 && health.billingEvents.length === 0
             ? []
@@ -60,8 +68,8 @@ const billingRows = (health: AdminHealth, format: AdminFormat, text: AdminText, 
 }
 
 /** The list cards of the platform health page, in reading order. */
-export const healthCards = (
-    health: AdminHealth,
+const healthCards = (
+    health: AdminPlatformHealth,
     format: AdminFormat,
     text: AdminText,
 ): ReadonlyArray<AdminCardView> => {
@@ -111,11 +119,19 @@ export const healthCards = (
                 id: entry.id,
                 title: entry.scope,
                 lines: [],
-                mono: entry.message.slice(0, ERROR_CLIP),
+                mono: entry.message.slice(0, HEALTH_ERROR_CLIP),
                 badges: [],
                 ...workspaceRef(entry.workspaceId, names, text),
                 note: format.dateTime(entry.createdAt),
             })),
         },
     ]
+}
+
+/** The list cards of the platform health page, worded and formatted in the reader's locale. */
+export const useAdminHealthCards = (
+    source: AdminPlatformHealth | undefined,
+): ReadonlyArray<AdminCardView> | undefined => {
+    const { text, format } = useAdminFormat()
+    return useMemo(() => (source === undefined ? undefined : healthCards(source, format, text)), [source, format, text])
 }

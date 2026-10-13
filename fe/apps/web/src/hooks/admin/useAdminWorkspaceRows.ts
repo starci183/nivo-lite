@@ -1,28 +1,10 @@
-import type { AdminWorkspaceItem } from "@/modules/db/admin/admin.mapper"
+"use client"
+
+import { useMemo } from "react"
 import { adminWorkspacePath } from "@/modules/routes"
 import { billingTone, healthTone, moduleTone } from "./admin.shared"
-import type { AdminBadgeView, AdminFormat, AdminText } from "./admin.shared"
-
-/** One workspace of the list, already worded and formatted for its table row. */
-export interface AdminWorkspaceRowView {
-    readonly id: string
-    readonly name: string
-    readonly href: string
-    readonly needsAttention: boolean
-    readonly ownerEmail: string
-    readonly status: string
-    readonly statusTone: AdminBadgeView["tone"]
-    readonly paidUntil: string | null
-    readonly plan: string
-    readonly created: string
-    readonly members: number
-    readonly modules: ReadonlyArray<AdminBadgeView>
-    readonly connections: ReadonlyArray<AdminBadgeView>
-    readonly connectionWarnings: ReadonlyArray<AdminBadgeView>
-    readonly lastMessage: string
-    readonly messages7d: number
-    readonly openDecisions: number
-}
+import type { AdminBadgeView, AdminFormat, AdminText, AdminWorkspaceItem, AdminWorkspaceRowView } from "./admin.shared"
+import { useAdminFormat } from "./useAdminFormat"
 
 const warningOf = (provider: string, error: number, silent: number, text: AdminText): AdminBadgeView => ({
     id: `warn-${provider}`,
@@ -39,7 +21,7 @@ const warningOf = (provider: string, error: number, silent: number, text: AdminT
 })
 
 /** Words and formats the workspaces the back end returned into table rows. */
-export const workspaceRows = (
+const workspaceRows = (
     items: ReadonlyArray<AdminWorkspaceItem>,
     format: AdminFormat,
     text: AdminText,
@@ -52,7 +34,7 @@ export const workspaceRows = (
         ownerEmail: item.ownerEmail ?? text("empty"),
         status: item.status,
         statusTone: billingTone(item.status),
-        paidUntil: item.paidUntil === null ? null : text("paidUntil", { date: format.date(item.paidUntil) }),
+        paidUntil: typeof item.paidUntil === "string" ? text("paidUntil", { date: format.date(item.paidUntil) }) : null,
         plan: item.planCode ?? text("empty"),
         created: format.date(item.createdAt),
         members: item.members,
@@ -74,3 +56,14 @@ export const workspaceRows = (
         messages7d: item.messages7d,
         openDecisions: item.openDecisions,
     }))
+
+/** The workspaces of the list worded and formatted into table rows in the reader's locale. */
+export const useAdminWorkspaceRows = (
+    source: ReadonlyArray<AdminWorkspaceItem> | undefined,
+): ReadonlyArray<AdminWorkspaceRowView> | undefined => {
+    const { text, format } = useAdminFormat()
+    return useMemo(
+        () => (source === undefined ? undefined : workspaceRows(source, format, text)),
+        [source, format, text],
+    )
+}

@@ -1,6 +1,16 @@
-import type { AdminWorkspaceDetail } from "@/modules/db/admin/admin.mapper"
+"use client"
+
+import { useMemo } from "react"
 import { badgeOf, flowTone, healthTone, moduleTone } from "./admin.shared"
-import type { AdminBadgeView, AdminCardView, AdminFormat, AdminRowView, AdminText } from "./admin.shared"
+import type {
+    AdminBadgeView,
+    AdminCardView,
+    AdminFormat,
+    AdminRowView,
+    AdminText,
+    AdminWorkspaceDetail,
+} from "./admin.shared"
+import { useAdminFormat } from "./useAdminFormat"
 
 /** The most characters of a raw error text a row shows. */
 const ERROR_CLIP = 300
@@ -44,14 +54,14 @@ const moduleRows = (detail: AdminWorkspaceDetail, format: AdminFormat, text: Adm
     detail.modules.map((entry): AdminRowView => {
         const { sync } = entry
         const context =
-            entry.contextVersion === null
-                ? text("contextNone")
-                : text("contextApplied", {
+            typeof entry.contextVersion === "number"
+                ? text("contextApplied", {
                       version: entry.contextVersion,
                       date: format.date(entry.contextAppliedAt),
                   })
+                : text("contextNone")
         const syncLine =
-            sync === null
+            sync == null
                 ? []
                 : [
                       text("syncLine", {
@@ -62,7 +72,7 @@ const moduleRows = (detail: AdminWorkspaceDetail, format: AdminFormat, text: Adm
                       }),
                   ]
         const syncBadge =
-            sync === null
+            sync == null
                 ? []
                 : [
                       badgeOf(
@@ -97,15 +107,15 @@ const connectionRows = (
                 provider: entry.provider,
                 environment: entry.environment,
                 event:
-                    entry.lastEventAt === null
-                        ? text("never")
-                        : text("connectionEvent", {
+                    typeof entry.lastEventAt === "string"
+                        ? text("connectionEvent", {
                               ago: format.ago(entry.lastEventAt),
                               at: format.dateTime(entry.lastEventAt),
-                          }),
+                          })
+                        : text("never"),
             }),
         ],
-        ...(entry.lastError === null ? {} : { mono: entry.lastError }),
+        ...(typeof entry.lastError === "string" ? { mono: entry.lastError } : {}),
         badges: [
             badgeOf("status", entry.status, "neutral"),
             badgeOf("health", entry.health, healthTone(entry.health), true),
@@ -121,9 +131,7 @@ const knowledgeRows = (detail: AdminWorkspaceDetail): ReadonlyArray<AdminRowView
         id: entry.kind,
         title: entry.kind,
         lines: [],
-        badges: Object.entries(entry.byStatus).map(([status, count]) =>
-            badgeOf(status, `${status} ${count}`, knowledgeTone(status)),
-        ),
+        badges: entry.byStatus.map(({ key, count }) => badgeOf(key, `${key} ${count}`, knowledgeTone(key))),
     }))
 
 const orderRows = (detail: AdminWorkspaceDetail, format: AdminFormat, text: AdminText): ReadonlyArray<AdminRowView> =>
@@ -133,9 +141,9 @@ const orderRows = (detail: AdminWorkspaceDetail, format: AdminFormat, text: Admi
             id: order.id,
             title: `${order.orderCode} · ${order.planCode}`,
             lines: [
-                order.paidAt === null
-                    ? text("orderDetail", values)
-                    : text("orderDetailPaid", { ...values, paid: format.dateTime(order.paidAt) }),
+                typeof order.paidAt === "string"
+                    ? text("orderDetailPaid", { ...values, paid: format.dateTime(order.paidAt) })
+                    : text("orderDetail", values),
             ],
             badges: [badgeOf("status", order.status, flowTone(order.status))],
         }
@@ -172,7 +180,7 @@ const errorRows = (detail: AdminWorkspaceDetail, format: AdminFormat): ReadonlyA
     }))
 
 /** The list cards under the overview of one workspace, in reading order. */
-export const detailCards = (
+const detailCards = (
     detail: AdminWorkspaceDetail,
     format: AdminFormat,
     text: AdminText,
@@ -185,3 +193,11 @@ export const detailCards = (
     card("transfers", text("cardTransfers"), text("noTransfers"), paymentRows(detail, format, text)),
     card("errors", text("cardErrors"), text("noErrors"), errorRows(detail, format)),
 ]
+
+/** The list cards under the overview of one workspace, worded and formatted in the reader's locale. */
+export const useAdminDetailCards = (
+    source: AdminWorkspaceDetail | undefined,
+): ReadonlyArray<AdminCardView> | undefined => {
+    const { text, format } = useAdminFormat()
+    return useMemo(() => (source === undefined ? undefined : detailCards(source, format, text)), [source, format, text])
+}
