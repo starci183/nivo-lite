@@ -40,6 +40,7 @@ export { useMutateCopyInviteLinkSwr, useMutateCreateAccountingAdjustmentSwr, use
 export { useMutateCreateContentItemSwr, useMutateCreateHiringCvUploadSwr, useMutateCreateInventoryPoSwr } from "./api"
 export { useMutateCreateInviteSwr, useMutateCreateKnowledgeUploadSwr, useMutateCreateLeadSwr } from "./api"
 export { useMutateCreateVideoMediaUploadSwr, useMutateCreateVideoProjectSwr } from "./api"
+export { useMutateStartFirstWorkspaceSwr } from "./api"
 export { useMutateCreateWorkspaceSwr, useMutateDecideBrainFactSwr, useMutateDecideBrainLessonSwr } from "./api"
 export { useMutateDecideExecutionSwr, useMutateDecideSalesDraftSwr, useMutateDecideSalesWorkItemSwr } from "./api"
 export { useMutateDecideSetupCardSwr, useMutateDecideShiftsAvailabilitySwr, useMutateDecideWorkItemSwr } from "./api"
