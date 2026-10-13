@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationAcceptInviteArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { AcceptInviteMutation, AcceptInviteMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `acceptInvite` mutation. */
-type MutateAcceptInviteRequest = MutationAcceptInviteArgs["input"]
+type MutateAcceptInviteRequest = WireInput<AcceptInviteMutationVariables["input"]>
 
 /** The response of the `acceptInvite` mutation: the typed payload straight from the back end contract. */
-type MutateAcceptInviteResponse = Pick<Mutation, "acceptInvite">
+type MutateAcceptInviteResponse = AcceptInviteMutation
 
 type Document = TypedDocumentNode<MutateAcceptInviteResponse, InputVariables<MutateAcceptInviteRequest>>
 

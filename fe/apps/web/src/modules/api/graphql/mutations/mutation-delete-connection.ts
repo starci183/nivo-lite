@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationDeleteConnectionArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { DeleteConnectionMutation, DeleteConnectionMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `deleteConnection` mutation. */
-export type MutateDeleteConnectionRequest = MutationDeleteConnectionArgs["input"]
+type MutateDeleteConnectionRequest = WireInput<DeleteConnectionMutationVariables["input"]>
 
 /** The response of the `deleteConnection` mutation. */
-type MutateDeleteConnectionResponse = Pick<Mutation, "deleteConnection">
+type MutateDeleteConnectionResponse = DeleteConnectionMutation
 
 const mutation1: TypedDocumentNode<MutateDeleteConnectionResponse, InputVariables<MutateDeleteConnectionRequest>> = gql`
     mutation DeleteConnection($input: DeleteConnectionInput!) {

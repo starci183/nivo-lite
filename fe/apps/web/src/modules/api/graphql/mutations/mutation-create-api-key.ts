@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationCreateApiKeyArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { CreateApiKeyMutation, CreateApiKeyMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `createApiKey` mutation. */
-export type MutateCreateApiKeyRequest = MutationCreateApiKeyArgs["input"]
+export type MutateCreateApiKeyRequest = WireInput<CreateApiKeyMutationVariables["input"]>
 
 /** The response of the `createApiKey` mutation. */
-type MutateCreateApiKeyResponse = Pick<Mutation, "createApiKey">
+type MutateCreateApiKeyResponse = CreateApiKeyMutation
 
 const mutation1: TypedDocumentNode<MutateCreateApiKeyResponse, InputVariables<MutateCreateApiKeyRequest>> = gql`
     mutation CreateApiKey($input: CreateApiKeyInput!) {

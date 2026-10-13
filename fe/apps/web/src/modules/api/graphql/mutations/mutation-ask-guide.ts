@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationAskGuideArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { AskGuideMutation, AskGuideMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `askGuide` mutation. */
-type MutateAskGuideRequest = MutationAskGuideArgs["input"]
+type MutateAskGuideRequest = WireInput<AskGuideMutationVariables["input"]>
 
 /** The response of the `askGuide` mutation. */
-type MutateAskGuideResponse = Pick<Mutation, "askGuide">
+type MutateAskGuideResponse = AskGuideMutation
 
 type Document = TypedDocumentNode<MutateAskGuideResponse, InputVariables<MutateAskGuideRequest>>
 

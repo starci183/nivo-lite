@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationAdminSetWorkspacePlanArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { AdminSetWorkspacePlanMutation, AdminSetWorkspacePlanMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `adminSetWorkspacePlan` mutation. */
-export type MutateAdminSetWorkspacePlanRequest = MutationAdminSetWorkspacePlanArgs["input"]
+export type MutateAdminSetWorkspacePlanRequest = WireInput<AdminSetWorkspacePlanMutationVariables["input"]>
 
 /** The response of the `adminSetWorkspacePlan` mutation. */
-type MutateAdminSetWorkspacePlanResponse = Pick<Mutation, "adminSetWorkspacePlan">
+type MutateAdminSetWorkspacePlanResponse = AdminSetWorkspacePlanMutation
 
 const mutation1: TypedDocumentNode<
     MutateAdminSetWorkspacePlanResponse,

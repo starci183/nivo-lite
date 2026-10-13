@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationChangeSmtpPasswordArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { ChangeSmtpPasswordMutation, ChangeSmtpPasswordMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `changeSmtpPassword` mutation. */
-export type MutateChangeSmtpPasswordRequest = MutationChangeSmtpPasswordArgs["input"]
+type MutateChangeSmtpPasswordRequest = WireInput<ChangeSmtpPasswordMutationVariables["input"]>
 
 /** The response of the `changeSmtpPassword` mutation. */
-type MutateChangeSmtpPasswordResponse = Pick<Mutation, "changeSmtpPassword">
+type MutateChangeSmtpPasswordResponse = ChangeSmtpPasswordMutation
 
 const mutation1: TypedDocumentNode<
     MutateChangeSmtpPasswordResponse,
