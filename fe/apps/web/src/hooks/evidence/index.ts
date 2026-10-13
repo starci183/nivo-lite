@@ -1,1 +1,0 @@
-export { useRecordManualEvidence } from "./useRecordManualEvidence"
