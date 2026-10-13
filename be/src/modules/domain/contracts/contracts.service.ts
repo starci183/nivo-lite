@@ -9,7 +9,7 @@ import { checkContract } from "./contract.policy"
 import type { ContractResult, SaveContractParams } from "./contracts.contracts"
 import { ContractsError, ContractsErrorCode } from "./errors/contracts.error"
 import type { ContractsRow } from "./persistence/contracts.rows"
-import { INSERT_CONTRACT, LIST_CONTRACTS, UPDATE_CONTRACT } from "./persistence/contracts.sql"
+import { ATTACH_CONTRACT_LEAD, INSERT_CONTRACT, LIST_CONTRACTS, UPDATE_CONTRACT } from "./persistence/contracts.sql"
 
 type SavedContract = Pick<
     ContractsRow,
@@ -42,6 +42,11 @@ export class ContractsService {
             status: row.status,
             note: row.note,
         }))
+    }
+
+    /** Links a customer to a contract that was typed in by name only, on the system's behalf; a contract that has a lead keeps it. */
+    async attachLead(workspaceId: string, contractId: string, leadId: string): Promise<void> {
+        await this.entityManager.query(ATTACH_CONTRACT_LEAD, [workspaceId, contractId, leadId])
     }
 
     /**

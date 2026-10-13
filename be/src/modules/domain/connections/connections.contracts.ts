@@ -7,6 +7,7 @@ export type Provider =
     | "casso"
     | "webhook"
     | "google"
+    | "google_drive"
     | "smtp"
     | "openapi"
     | "database"

@@ -14,4 +14,6 @@ export enum WorkEngineLogEvent {
     SubjectLabelUnreadable = "decisions.subject_label_unreadable",
     /** The receiving instance of a command could not be resolved; the database trigger still attributes the item. */
     InstanceUnresolved = "decisions.instance_unresolved",
+    /** The background drain of one workspace's queued steps failed; the other workspaces still ran. */
+    DrainFailed = "decisions.drain_failed",
 }

@@ -21,6 +21,7 @@ export const EMAIL_MESSAGES_MESSAGES: MessageBundle = {
         "email.test_body":
             "Đây là email thử từ NIVO cho {{shop}}.\n\nNếu bạn đọc được thư này, email gửi đi đã hoạt động và NIVO có thể gửi báo cáo, biên nhận thay bạn.",
         "email.test_footer": "Email này được gửi bởi {{shop}}.",
+        "email.notice_footer": "Email này được gửi bởi {{shop}}.",
     },
     en: {
         "errors.EMAIL_MESSAGES_NOT_RECORDED": "The email attempt could not be recorded.",
@@ -42,5 +43,6 @@ export const EMAIL_MESSAGES_MESSAGES: MessageBundle = {
         "email.test_body":
             "This is a test email from NIVO for {{shop}}.\n\nIf you can read it, your outgoing email works and NIVO can send reports and receipts for you.",
         "email.test_footer": "This email was sent by {{shop}}.",
+        "email.notice_footer": "This email was sent by {{shop}}.",
     },
 }

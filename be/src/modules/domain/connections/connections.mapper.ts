@@ -10,6 +10,7 @@ const PROVIDERS: Readonly<Record<Provider, true>> = {
     casso: true,
     webhook: true,
     google: true,
+    google_drive: true,
     smtp: true,
     openapi: true,
     database: true,
