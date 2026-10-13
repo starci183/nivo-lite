@@ -1,16 +1,19 @@
-import type { AdminWorkspaceDetail } from "@/modules/db/admin/admin.mapper"
+"use client"
+
+import { useMemo } from "react"
 import { billingTone } from "./admin.shared"
-import type { AdminFactView, AdminFormat, AdminText } from "./admin.shared"
+import type { AdminFactView, AdminFormat, AdminText, AdminWorkspaceDetail } from "./admin.shared"
+import { useAdminFormat } from "./useAdminFormat"
 
 /** The overview terms of a workspace: billing on one side, activity on the other. */
-export const detailFacts = (
+const detailFacts = (
     detail: AdminWorkspaceDetail,
     format: AdminFormat,
     text: AdminText,
 ): { readonly billing: ReadonlyArray<AdminFactView>; readonly activity: ReadonlyArray<AdminFactView> } => {
     const { workspace, credits, activity } = detail
     const used = format.count(Math.round(credits.used))
-    const limit = credits.limit === null ? text("creditsNoLimit") : format.count(credits.limit)
+    const limit = typeof credits.limit === "number" ? format.count(credits.limit) : text("creditsNoLimit")
     return {
         billing: [
             { id: "status", term: text("factStatus"), value: workspace.status, tone: billingTone(workspace.status) },
@@ -35,4 +38,10 @@ export const detailFacts = (
             { id: "knowledge", term: text("factKnowledge"), value: String(detail.knowledgeTotal) },
         ],
     }
+}
+
+/** The billing and activity facts of a workspace overview, worded and formatted in the reader's locale. */
+export const useAdminDetailFacts = (detail: AdminWorkspaceDetail | undefined) => {
+    const { text, format } = useAdminFormat()
+    return useMemo(() => (detail === undefined ? undefined : detailFacts(detail, format, text)), [detail, format, text])
 }

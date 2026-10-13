@@ -1,5 +1,6 @@
 import { PageContainer, Text, TopBar } from "@starci/grammar/common"
 import type { ReactNode } from "react"
+import { AdminAccount } from "@/components/blocks/AdminAccount"
 import { AdminNavigation } from "@/components/blocks/AdminNavigation"
 import { PAGE_CLASS_NAME } from "./classNames"
 
@@ -7,7 +8,6 @@ import { PAGE_CLASS_NAME } from "./classNames"
 export interface AdminLayoutBaseProps {
     readonly props: {
         readonly title: string
-        readonly email: string
     }
     readonly children: ReactNode
 }
@@ -19,11 +19,7 @@ export const AdminLayoutBase = (props: AdminLayoutBaseProps) => (
             position="static"
             brand={<Text weight="semibold">{props.props.title}</Text>}
             navigation={<AdminNavigation />}
-            actions={
-                <Text size="sm" tone="muted">
-                    {props.props.email}
-                </Text>
-            }
+            actions={<AdminAccount />}
         />
         <PageContainer measure="full">
             <div className={PAGE_CLASS_NAME}>{props.children}</div>

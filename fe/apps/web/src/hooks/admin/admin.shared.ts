@@ -1,14 +1,40 @@
 import type { BadgeTone } from "@starci/grammar/common"
+import { isNotFoundFailure } from "@/modules/api"
+import type { QueryAdminHealthResponse } from "@/modules/api/graphql/queries/query-admin-health"
+import type { QueryAdminWorkspaceResponse } from "@/modules/api/graphql/queries/query-admin-workspace"
+import type { QueryAdminWorkspacesResponse } from "@/modules/api/graphql/queries/query-admin-workspaces"
+
+/** One customer workspace as the list shows it. */
+export type AdminWorkspaceItem = QueryAdminWorkspacesResponse["adminWorkspaces"]["items"][number]
+
+/** The full read-only overview of one workspace. */
+export type AdminWorkspaceDetail = QueryAdminWorkspaceResponse["adminWorkspace"]
+
+/** The platform health page. */
+export type AdminPlatformHealth = QueryAdminHealthResponse["adminHealth"]
+
+/** The filtered list with the size of every filter. */
+export type AdminWorkspaceList = QueryAdminWorkspacesResponse["adminWorkspaces"]
+
+/** The list filters of the console. */
+export type AdminWorkspaceFilter = "all" | "attention" | "unpaid" | "idle"
+
+/** The billing status a support action can set. */
+export type AdminSupportStatus = "active" | "past_due"
+
+/** True when a filter name the address carried is one the list knows. */
+export const isAdminWorkspaceFilter = (value: unknown): value is AdminWorkspaceFilter =>
+    value === "all" || value === "attention" || value === "unpaid" || value === "idle"
 
 /** Looks a message up by key in the admin catalog; the page supplies it from the server translator. */
 export type AdminText = (key: string, values?: Readonly<Record<string, string | number>>) => string
 
 /** Dates, ages and money in the reader's locale; the page builds it from the server formatter. */
 export interface AdminFormat {
-    readonly date: (iso: string | null) => string
-    readonly dateTime: (iso: string | null) => string
-    readonly ago: (iso: string | null) => string
-    readonly vnd: (amount: number | null) => string
+    readonly date: (iso: string | null | undefined) => string
+    readonly dateTime: (iso: string | null | undefined) => string
+    readonly ago: (iso: string | null | undefined) => string
+    readonly vnd: (amount: number | null | undefined) => string
     readonly usd: (amount: number) => string
     readonly count: (value: number) => string
 }
@@ -135,7 +161,39 @@ export const badgeOf = (id: string, label: string, tone: BadgeTone, isDot = fals
     isDot,
 })
 
-/** What a support action came to, without the transport behind it. */
-export type AdminReply =
-    | { readonly kind: "ok"; readonly isUndelivered: boolean }
-    | { readonly kind: "failed"; readonly message: string | undefined }
+/** What a failed console read comes to: the console does not exist for the caller, or a failure worth showing. */
+export interface AdminFailure {
+    /** The back end answered not-found: the page draws a 404. */
+    readonly isMissing: boolean
+    /** The (server-localized) failure text; none while the read has not failed or the answer was not-found. */
+    readonly message?: string
+    /** The failure itself, for a route error boundary. */
+    readonly error?: Error
+}
+
+/** Sorts the error of an SWR read into a 404, a message, or nothing. */
+export const adminFailureOf = (error: unknown): AdminFailure => {
+    if (isNotFoundFailure(error)) return { isMissing: true }
+    return error instanceof Error ? { isMissing: false, message: error.message, error } : { isMissing: false }
+}
+
+/** One workspace of the list, already worded and formatted for its table row. */
+export interface AdminWorkspaceRowView {
+    readonly id: string
+    readonly name: string
+    readonly href: string
+    readonly needsAttention: boolean
+    readonly ownerEmail: string
+    readonly status: string
+    readonly statusTone: AdminBadgeView["tone"]
+    readonly paidUntil: string | null
+    readonly plan: string
+    readonly created: string
+    readonly members: number
+    readonly modules: ReadonlyArray<AdminBadgeView>
+    readonly connections: ReadonlyArray<AdminBadgeView>
+    readonly connectionWarnings: ReadonlyArray<AdminBadgeView>
+    readonly lastMessage: string
+    readonly messages7d: number
+    readonly openDecisions: number
+}

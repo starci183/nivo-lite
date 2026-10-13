@@ -1,5 +1,4 @@
 import { AlertDialog, Button, Input, Select, SurfaceCard, Text } from "@starci/grammar/common"
-import { FormNotice } from "@/components/composites/FormNotice"
 import type { AdminInviteRef } from "@/hooks/admin"
 import { ACTIONS_CLASS_NAME, ACTION_ROW_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
 
@@ -26,10 +25,11 @@ export interface AdminSupportActionsBaseProps {
         readonly setPlanLabel: string
         readonly confirmLabel: string
         readonly cancelLabel: string
-        readonly failTitle: string
         readonly days: string
         readonly plan: string | null
         readonly credits: string
+        /** False until the workspace the card acts on has been read. */
+        readonly isReady: boolean
         readonly isDaysValid: boolean
         readonly isCreditsValid: boolean
         readonly isActive: boolean
@@ -39,8 +39,6 @@ export interface AdminSupportActionsBaseProps {
         /** The confirmation question, or undefined while no action waits for a yes. */
         readonly question?: string
         readonly isQuestionDangerous: boolean
-        readonly error?: string
-        readonly done?: string
     }
     readonly on: {
         readonly setDays: (value: string) => void
@@ -95,93 +93,95 @@ const Action = (props: ActionProps) => (
 )
 
 /** Draws the support actions of one workspace; each one asks for a confirmation in a dialog first. */
-export const AdminSupportActionsBase = (props: AdminSupportActionsBaseProps) => (
-    <SurfaceCard label={props.props.title} headingLevel={2}>
-        <div className={STACK_CLASS_NAME}>
-            <div className={ACTIONS_CLASS_NAME}>
-                <div className={ACTION_ROW_CLASS_NAME}>
-                    <Field
-                        id="extend-days"
-                        name="days"
-                        label={props.props.extendLabel}
-                        value={props.props.days}
-                        error={props.props.isDaysValid ? undefined : props.props.extendInvalid}
-                        onChange={props.on.setDays}
-                    />
-                    <Action
-                        label={props.props.extendButton}
-                        variant="secondary"
-                        isDisabled={!props.props.isDaysValid || props.props.isPending}
-                        onPress={props.on.askExtend}
-                    />
-                </div>
-                <div className={ACTION_ROW_CLASS_NAME}>
-                    <Action
-                        label={props.props.markActiveLabel}
-                        variant="secondary"
-                        isDisabled={props.props.isActive || props.props.isPending}
-                        onPress={props.on.askActive}
-                    />
-                    <Action
-                        label={props.props.markPastDueLabel}
-                        variant="danger-soft"
-                        isDisabled={props.props.isPastDue || props.props.isPending}
-                        onPress={props.on.askPastDue}
-                    />
-                </div>
-                <div className={ACTION_ROW_CLASS_NAME}>
-                    <Select
-                        label={props.props.planLabel}
-                        options={props.props.planOptions}
-                        value={props.props.plan}
-                        onValueChange={props.on.setPlan}
-                    />
-                    <Field
-                        id="admin-credits"
-                        name="credits"
-                        label={props.props.creditsLabel}
-                        value={props.props.credits}
-                        error={props.props.isCreditsValid ? undefined : props.props.creditsInvalid}
-                        onChange={props.on.setCredits}
-                    />
-                    <Action
-                        label={props.props.setPlanLabel}
-                        variant="secondary"
-                        isDisabled={props.props.plan === null || !props.props.isCreditsValid || props.props.isPending}
-                        onPress={props.on.askPlan}
-                    />
-                </div>
-                {props.props.invites.length > 0 ? (
+export const AdminSupportActionsBase = (props: AdminSupportActionsBaseProps) =>
+    props.props.isReady ? (
+        <SurfaceCard label={props.props.title} headingLevel={2}>
+            <div className={STACK_CLASS_NAME}>
+                <div className={ACTIONS_CLASS_NAME}>
                     <div className={ACTION_ROW_CLASS_NAME}>
-                        {props.props.invites.map((invite) => (
-                            <Action
-                                key={invite.id}
-                                label={invite.label}
-                                variant="outline"
-                                isDisabled={props.props.isPending}
-                                onPress={() => props.on.askInvite(invite.id)}
-                            />
-                        ))}
+                        <Field
+                            id="extend-days"
+                            name="days"
+                            label={props.props.extendLabel}
+                            value={props.props.days}
+                            error={props.props.isDaysValid ? undefined : props.props.extendInvalid}
+                            onChange={props.on.setDays}
+                        />
+                        <Action
+                            label={props.props.extendButton}
+                            variant="secondary"
+                            isDisabled={!props.props.isDaysValid || props.props.isPending}
+                            onPress={props.on.askExtend}
+                        />
                     </div>
-                ) : null}
+                    <div className={ACTION_ROW_CLASS_NAME}>
+                        <Action
+                            label={props.props.markActiveLabel}
+                            variant="secondary"
+                            isDisabled={props.props.isActive || props.props.isPending}
+                            onPress={props.on.askActive}
+                        />
+                        <Action
+                            label={props.props.markPastDueLabel}
+                            variant="danger-soft"
+                            isDisabled={props.props.isPastDue || props.props.isPending}
+                            onPress={props.on.askPastDue}
+                        />
+                    </div>
+                    <div className={ACTION_ROW_CLASS_NAME}>
+                        <Select
+                            label={props.props.planLabel}
+                            options={props.props.planOptions}
+                            value={props.props.plan}
+                            onValueChange={props.on.setPlan}
+                        />
+                        <Field
+                            id="admin-credits"
+                            name="credits"
+                            label={props.props.creditsLabel}
+                            value={props.props.credits}
+                            error={props.props.isCreditsValid ? undefined : props.props.creditsInvalid}
+                            onChange={props.on.setCredits}
+                        />
+                        <Action
+                            label={props.props.setPlanLabel}
+                            variant="secondary"
+                            isDisabled={
+                                props.props.plan === null || !props.props.isCreditsValid || props.props.isPending
+                            }
+                            onPress={props.on.askPlan}
+                        />
+                    </div>
+                    {props.props.invites.length > 0 ? (
+                        <div className={ACTION_ROW_CLASS_NAME}>
+                            {props.props.invites.map((invite) => (
+                                <Action
+                                    key={invite.id}
+                                    label={invite.label}
+                                    variant="outline"
+                                    isDisabled={props.props.isPending}
+                                    onPress={() => props.on.askInvite(invite.id)}
+                                />
+                            ))}
+                        </div>
+                    ) : null}
+                </div>
+                <Text size="sm" tone="muted">
+                    {props.props.hint}
+                </Text>
+                <AlertDialog
+                    isOpen={props.props.question !== undefined}
+                    onOpenChange={(open) => {
+                        if (!open) props.on.dismiss()
+                    }}
+                    title={props.props.question ?? ""}
+                    tone={props.props.isQuestionDangerous ? "negative" : "informative"}
+                    confirmLabel={props.props.confirmLabel}
+                    cancelLabel={props.props.cancelLabel}
+                    isConfirmPending={props.props.isPending}
+                    onConfirm={props.on.confirm}
+                    onCancel={props.on.dismiss}
+                />
             </div>
-            <Text size="sm" tone="muted">
-                {props.props.hint}
-            </Text>
-            <AlertDialog
-                isOpen={props.props.question !== undefined}
-                onOpenChange={(open) => {
-                    if (!open) props.on.dismiss()
-                }}
-                title={props.props.question ?? ""}
-                tone={props.props.isQuestionDangerous ? "negative" : "informative"}
-                confirmLabel={props.props.confirmLabel}
-                cancelLabel={props.props.cancelLabel}
-                isConfirmPending={props.props.isPending}
-                onConfirm={props.on.confirm}
-                onCancel={props.on.dismiss}
-            />
-            <FormNotice failTitle={props.props.failTitle} error={props.props.error} done={props.props.done} />
-        </div>
-    </SurfaceCard>
-)
+        </SurfaceCard>
+    ) : null
