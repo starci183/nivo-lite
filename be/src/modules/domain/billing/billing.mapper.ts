@@ -37,7 +37,8 @@ export const toPlan = (row: PlanRow, tiers: ReadonlyArray<PlanTierRow>): Plan =>
     individual: row.individual,
     perSeat: row.per_seat,
     listed: row.listed,
-    tiers: tiers.filter((tier) => tier.plan_code === row.code).map(toPlanTier),
+    tiers: tiers.filter((tier) => tier.plan_code === row.code && tier.per_seat).map(toPlanTier),
+    packs: tiers.filter((tier) => tier.plan_code === row.code && !tier.per_seat).map(toPlanTier),
 })
 
 /** Maps the billing columns of a workspace, its paid period as ISO text. */

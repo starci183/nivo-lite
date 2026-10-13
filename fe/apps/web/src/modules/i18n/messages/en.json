@@ -759,7 +759,12 @@
     "storageTitle": "Storage",
     "storageUsed": "{used} of {quota} used",
     "storageUsedOnly": "{used} used",
-    "tierSelected": "Selected: {credits} credits a month"
+    "tierSelected": "Selected: {credits} credits a month",
+    "packsTitle": "Buy more credits",
+    "packsFact": "Optional · added to this month's credits · you can buy again any time",
+    "packsRow": "{credits} extra credits",
+    "packsBuy": "Buy",
+    "packsEmpty": "No credit packs are on sale for your plan."
   },
   "brain": {
     "crumbLabel": "Breadcrumb",
@@ -2389,6 +2394,12 @@
     "creditUnit": "{n} credit",
     "topupTitle": "Top up credits",
     "topupFact": "Used when the month's credits run out · valid for 12 months",
+    "addOnTitle": "Buy more credits",
+    "addOnFact": "Added to this month's credits · you can buy again any time",
+    "termPacks": "Extra credits bought this month",
+    "payPack": "Pay for {credits} extra credits",
+    "paidPack": "{credits} extra credits were added to this month's credits.",
+    "orderPack": "Extra credits {credits}",
     "packTitle": "{credits} credits",
     "packLine": "{price}",
     "buy": "Buy",

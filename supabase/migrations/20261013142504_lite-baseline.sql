@@ -529,19 +529,24 @@ CREATE FUNCTION public.ai_credit_period(p_workspace uuid, p_period date) RETURNS
            (p_period + interval '1 month')::date as nd
   ), u as (
     select
-      coalesce(sum(e.cost_usd) filter (where (e.created_at at time zone 'Asia/Ho_Chi_Minh')::date >= p.d), 0) as cost,
-      coalesce(sum(e.cost_usd) filter (where (e.created_at at time zone 'Asia/Ho_Chi_Minh')::date < p.d), 0) as prev_cost
+      coalesce(sum(ceil(e.cost_usd / public.credit_usd_value())) filter (where (e.created_at at time zone 'Asia/Ho_Chi_Minh')::date >= p.d), 0) as cost,
+      coalesce(sum(ceil(e.cost_usd / public.credit_usd_value())) filter (where (e.created_at at time zone 'Asia/Ho_Chi_Minh')::date < p.d), 0) as prev_cost
     from public.ai_usage_events e, p
     where e.workspace_id = p_workspace and e.kind <> 'guide'
       and (e.created_at at time zone 'Asia/Ho_Chi_Minh')::date >= p.pd
       and (e.created_at at time zone 'Asia/Ho_Chi_Minh')::date < p.nd
+  ), k as (
+    select coalesce(sum(x.credits), 0) as credits
+    from public.credit_pack_purchases x, p
+    where x.workspace_id = p_workspace and x.period = p.d
   ), b as (
     select
       p.d, p.pd, w.created_at, o.credits_limit as own_limit, pl.credits_rollover,
       coalesce(
         o.credits_limit,
-        case when w.tier_credits is not null then w.tier_credits * greatest(coalesce(w.seat_count, 1), 1) end,
-        pl.ai_credits_per_month
+        case when pl.per_seat
+             then coalesce(w.tier_credits, pl.ai_credits_per_month) * greatest(coalesce(w.seat_count, 1), 1)
+             else pl.ai_credits_per_month end
       ) as base
     from p
     left join public.workspaces w on w.id = p_workspace
@@ -555,13 +560,13 @@ CREATE FUNCTION public.ai_credit_period(p_workspace uuid, p_period date) RETURNS
         then greatest(0, least(
           b.base::numeric,
           b.base::numeric * least(1, (b.d - greatest(b.pd, (b.created_at at time zone 'Asia/Ho_Chi_Minh')::date))::numeric / (b.d - b.pd))
-            - (select u.prev_cost from u) * 250))
+            - (select u.prev_cost from u)))
         else 0
       end as carry
     from b
   )
-  select round(u.cost * 250, 2), c.base, c.carry,
-         case when c.base is null then null else floor(c.base + c.carry)::bigint end
+  select u.cost, c.base, c.carry,
+         case when c.base is null then null else floor(c.base + c.carry + (select k.credits from k))::bigint end
   from c cross join u;
 $$;
 
@@ -1182,6 +1187,17 @@ begin
   insert into public.workspaces (owner_id, name, status) values (v_uid, v_name, 'active') returning id into v_id;
   return v_id;
 end;
+$$;
+
+--
+-- Name: credit_usd_value(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.credit_usd_value() RETURNS numeric
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  select value from public.billing_config where key = 'credit_usd_value';
 $$;
 
 --
@@ -4040,6 +4056,22 @@ begin
     return 'underpaid';
   end if;
 
+  if o.kind = 'credit_pack' then
+    lot_credits := (o.detail ->> 'credits')::bigint;
+    if lot_credits is null or lot_credits <= 0 then
+      insert into public.billing_events (workspace_id, kind, data)
+        values (o.workspace_id, 'credit_pack_invalid', jsonb_build_object('order_code', o.order_code, 'amount', p_amount, 'sepay_id', p_sepay_id));
+      return 'unmatched';
+    end if;
+    update public.payment_orders set status = 'paid', paid_at = ts, sepay_transaction_id = p_sepay_id where id = o.id;
+    insert into public.credit_pack_purchases (workspace_id, order_id, credits, price_vnd, period, purchased_at)
+      values (o.workspace_id, o.id, lot_credits, o.amount_vnd, date_trunc('month', ts at time zone 'Asia/Ho_Chi_Minh')::date, ts)
+      on conflict (order_id) do nothing;
+    insert into public.billing_events (workspace_id, kind, data)
+      values (o.workspace_id, 'paid', jsonb_build_object('order_code', o.order_code, 'amount', p_amount, 'kind', 'credit_pack', 'credits', lot_credits, 'sepay_id', p_sepay_id));
+    return 'paid';
+  end if;
+
   if o.kind = 'topup' then
     lot_credits := coalesce((o.detail ->> 'credits')::bigint, (select k.credits from public.credit_packs k where k.code = o.pack_code));
     if lot_credits is null or lot_credits <= 0 then
@@ -4071,7 +4103,7 @@ begin
     update public.workspaces
       set status = 'active', plan_code = o.plan_code,
           paid_until = base + case cycle when 'annual' then interval '1 year' else interval '1 month' end,
-          tier_credits = nullif((o.detail ->> 'tierCredits')::bigint, 0),
+          tier_credits = case when p.per_seat then nullif((o.detail ->> 'tierCredits')::bigint, 0) else null end,
           seat_count = case when p.per_seat then nullif((o.detail ->> 'seats')::int, 0) else null end,
           billing_cycle = cycle,
           billed_monthly_vnd = coalesce((o.detail ->> 'listMonthlyVnd')::bigint, p.price_vnd)
@@ -5451,6 +5483,16 @@ CREATE TABLE public.automation_templates (
 );
 
 --
+-- Name: billing_config; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.billing_config (
+    key text NOT NULL,
+    value numeric NOT NULL,
+    note text DEFAULT ''::text NOT NULL
+);
+
+--
 -- Name: billing_events; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -6017,6 +6059,22 @@ CREATE TABLE public.contracts (
     CONSTRAINT contracts_amount_vnd_check CHECK (((amount_vnd IS NULL) OR (amount_vnd >= 0))),
     CONSTRAINT contracts_check CHECK ((ends_on >= starts_on)),
     CONSTRAINT contracts_status_check CHECK ((status = ANY (ARRAY['active'::text, 'ended'::text, 'cancelled'::text])))
+);
+
+--
+-- Name: credit_pack_purchases; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.credit_pack_purchases (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    workspace_id uuid NOT NULL,
+    order_id uuid NOT NULL,
+    credits bigint NOT NULL,
+    price_vnd bigint NOT NULL,
+    period date NOT NULL,
+    purchased_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT credit_pack_purchases_credits_check CHECK ((credits > 0)),
+    CONSTRAINT credit_pack_purchases_price_vnd_check CHECK ((price_vnd >= 0))
 );
 
 --
@@ -7432,7 +7490,7 @@ CREATE TABLE public.payment_order_requests (
     tier_credits bigint,
     seats integer,
     CONSTRAINT payment_order_requests_cycle_check CHECK (((cycle IS NULL) OR (cycle = ANY (ARRAY['monthly'::text, 'annual'::text])))),
-    CONSTRAINT payment_order_requests_kind_check CHECK ((kind = ANY (ARRAY['plan'::text, 'renew'::text, 'topup'::text, 'upgrade'::text]))),
+    CONSTRAINT payment_order_requests_kind_check CHECK ((kind = ANY (ARRAY['plan'::text, 'renew'::text, 'topup'::text, 'upgrade'::text, 'credit_pack'::text]))),
     CONSTRAINT payment_order_requests_seats_check CHECK (((seats IS NULL) OR ((seats >= 1) AND (seats <= 1000)))),
     CONSTRAINT payment_order_requests_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'done'::text, 'failed'::text]))),
     CONSTRAINT payment_order_requests_target_check CHECK (((target IS NULL) OR (target ~ '^[a-z0-9_-]{1,40}$'::text))),
@@ -7459,7 +7517,7 @@ CREATE TABLE public.payment_orders (
     pack_code text,
     detail jsonb DEFAULT '{}'::jsonb NOT NULL,
     CONSTRAINT payment_orders_amount_vnd_check CHECK ((amount_vnd >= 0)),
-    CONSTRAINT payment_orders_kind_check CHECK ((kind = ANY (ARRAY['plan'::text, 'upgrade'::text, 'topup'::text]))),
+    CONSTRAINT payment_orders_kind_check CHECK ((kind = ANY (ARRAY['plan'::text, 'upgrade'::text, 'topup'::text, 'credit_pack'::text]))),
     CONSTRAINT payment_orders_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'paid'::text, 'expired'::text, 'cancelled'::text])))
 );
 
@@ -8301,6 +8359,13 @@ ALTER TABLE ONLY public.automation_templates
     ADD CONSTRAINT automation_templates_pkey PRIMARY KEY (key);
 
 --
+-- Name: billing_config billing_config_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.billing_config
+    ADD CONSTRAINT billing_config_pkey PRIMARY KEY (key);
+
+--
 -- Name: billing_events billing_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8530,6 +8595,20 @@ ALTER TABLE ONLY public.content_settings
 
 ALTER TABLE ONLY public.contracts
     ADD CONSTRAINT contracts_pkey PRIMARY KEY (id);
+
+--
+-- Name: credit_pack_purchases credit_pack_purchases_order_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.credit_pack_purchases
+    ADD CONSTRAINT credit_pack_purchases_order_id_key UNIQUE (order_id);
+
+--
+-- Name: credit_pack_purchases credit_pack_purchases_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.credit_pack_purchases
+    ADD CONSTRAINT credit_pack_purchases_pkey PRIMARY KEY (id);
 
 --
 -- Name: credit_packs credit_packs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -9892,6 +9971,12 @@ CREATE INDEX content_plans_ws ON public.content_plans USING btree (workspace_id,
 --
 
 CREATE INDEX contracts_ws_end ON public.contracts USING btree (workspace_id, status, ends_on);
+
+--
+-- Name: credit_pack_purchases_period; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX credit_pack_purchases_period ON public.credit_pack_purchases USING btree (workspace_id, period);
 
 --
 -- Name: credit_topups_open; Type: INDEX; Schema: public; Owner: -
@@ -11389,6 +11474,20 @@ ALTER TABLE ONLY public.contracts
 
 ALTER TABLE ONLY public.contracts
     ADD CONSTRAINT contracts_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+--
+-- Name: credit_pack_purchases credit_pack_purchases_order_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.credit_pack_purchases
+    ADD CONSTRAINT credit_pack_purchases_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.payment_orders(id);
+
+--
+-- Name: credit_pack_purchases credit_pack_purchases_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.credit_pack_purchases
+    ADD CONSTRAINT credit_pack_purchases_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
 --
 -- Name: credit_topup_draws credit_topup_draws_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -13673,6 +13772,18 @@ CREATE POLICY automation_templates_app_be_update ON public.automation_templates 
 CREATE POLICY automation_templates_authenticated_select ON public.automation_templates FOR SELECT TO authenticated USING ((( SELECT auth.uid() AS uid) IS NOT NULL));
 
 --
+-- Name: billing_config; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.billing_config ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: billing_config billing_config_app_be_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY billing_config_app_be_select ON public.billing_config FOR SELECT TO app_be USING ((key IS NOT NULL));
+
+--
 -- Name: billing_events; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -14685,6 +14796,24 @@ CREATE POLICY contracts_member_select ON public.contracts FOR SELECT TO authenti
 --
 
 CREATE POLICY contracts_member_update ON public.contracts FOR UPDATE TO authenticated USING (public.is_member(workspace_id)) WITH CHECK (public.is_member(workspace_id));
+
+--
+-- Name: credit_pack_purchases; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.credit_pack_purchases ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: credit_pack_purchases credit_pack_purchases_app_be_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY credit_pack_purchases_app_be_select ON public.credit_pack_purchases FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
+
+--
+-- Name: credit_pack_purchases credit_pack_purchases_manager_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY credit_pack_purchases_manager_select ON public.credit_pack_purchases FOR SELECT TO authenticated USING (public.is_manager(workspace_id));
 
 --
 -- Name: credit_packs; Type: ROW SECURITY; Schema: public; Owner: -
@@ -18454,6 +18583,7 @@ REVOKE ALL ON TABLE public.automation_commands FROM anon, authenticated;
 REVOKE ALL ON TABLE public.automation_pipelines FROM anon, authenticated;
 REVOKE ALL ON TABLE public.automation_runs FROM anon, authenticated;
 REVOKE ALL ON TABLE public.automation_templates FROM anon, authenticated;
+REVOKE ALL ON TABLE public.billing_config FROM anon, authenticated;
 REVOKE ALL ON TABLE public.billing_events FROM anon, authenticated;
 REVOKE ALL ON TABLE public.booking_exceptions FROM anon, authenticated;
 REVOKE ALL ON TABLE public.booking_hours FROM anon, authenticated;
@@ -18481,6 +18611,7 @@ REVOKE ALL ON TABLE public.content_pillars FROM anon, authenticated;
 REVOKE ALL ON TABLE public.content_plans FROM anon, authenticated;
 REVOKE ALL ON TABLE public.content_settings FROM anon, authenticated;
 REVOKE ALL ON TABLE public.contracts FROM anon, authenticated;
+REVOKE ALL ON TABLE public.credit_pack_purchases FROM anon, authenticated;
 REVOKE ALL ON TABLE public.credit_packs FROM anon, authenticated;
 REVOKE ALL ON TABLE public.credit_topup_draws FROM anon, authenticated;
 REVOKE ALL ON TABLE public.credit_topups FROM anon, authenticated;
@@ -18913,6 +19044,13 @@ GRANT ALL ON FUNCTION public.content_settings_touch() TO authenticated;
 
 REVOKE EXECUTE ON FUNCTION public.create_free_workspace(p_name text) FROM PUBLIC, anon, authenticated;
 GRANT ALL ON FUNCTION public.create_free_workspace(p_name text) TO authenticated;
+
+--
+-- Name: FUNCTION credit_usd_value(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE EXECUTE ON FUNCTION public.credit_usd_value() FROM PUBLIC, anon, authenticated;
+GRANT ALL ON FUNCTION public.credit_usd_value() TO app_be;
 
 --
 -- Name: FUNCTION dashboard_data(ws uuid, since7 timestamp with time zone, founding_from timestamp with time zone, founding_to timestamp with time zone); Type: ACL; Schema: public; Owner: -
@@ -20372,6 +20510,13 @@ GRANT SELECT ON TABLE public.automation_templates TO authenticated;
 GRANT SELECT,INSERT,UPDATE ON TABLE public.automation_templates TO app_be;
 
 --
+-- Name: TABLE billing_config; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.billing_config TO authenticated;
+GRANT SELECT ON TABLE public.billing_config TO app_be;
+
+--
 -- Name: TABLE billing_events; Type: ACL; Schema: public; Owner: -
 --
 
@@ -20574,6 +20719,13 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.content_settings TO app_be;
 
 GRANT SELECT,INSERT,UPDATE ON TABLE public.contracts TO authenticated;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.contracts TO app_be;
+
+--
+-- Name: TABLE credit_pack_purchases; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.credit_pack_purchases TO authenticated;
+GRANT SELECT ON TABLE public.credit_pack_purchases TO app_be;
 
 --
 -- Name: TABLE credit_packs; Type: ACL; Schema: public; Owner: -
@@ -21526,15 +21678,15 @@ $$;
 --
 
 INSERT INTO public.plans (code, name_vi, name_en, price_vnd, period, seats, features, sort, active, ai_messages_per_month, ai_tokens_per_month, ai_credits_per_month, is_custom, credits_rollover, price_annual_vnd, annual_discount_pct, promo_price_vnd, promo_months, storage_gb, listed, individual, per_seat) VALUES
+	('start', 'Start', 'Start', 490000, 'month', 1, '{"en": ["Connectors", "Workspace agents for custom workflows", "Extended memory", "Always-on automation agents", "Finance and data tools"], "vi": ["Kết nối (connectors)", "Workspace agent cho quy trình tùy chỉnh", "Bộ nhớ mở rộng", "Agent tự động chạy liên tục", "Công cụ tài chính và dữ liệu"]}', 1, true, NULL, NULL, 10000, false, false, 4998000, 15, 245000, 3, 10, true, true, false),
+	('pro', 'Pro', 'Pro', 990000, 'month', 1, '{"en": ["Everything in Start", "Higher rate limits", "Deep research (set your own usage)", "Maximum memory"], "vi": ["Mọi thứ trong Start", "Giới hạn sử dụng cao hơn", "Nghiên cứu chuyên sâu (tự đặt mức dùng)", "Bộ nhớ tối đa"]}', 2, true, NULL, NULL, 20000, false, true, 10098000, 15, 792000, 3, 20, true, true, false),
+	('max', 'Max', 'Max', 4990000, 'month', 1, '{"en": ["Everything in Pro", "Much higher usage", "1080p video", "Priority access", "End-to-end automation agents", "Early access to new features", "Deep research at scale"], "vi": ["Mọi thứ trong Pro", "Mức sử dụng cao hơn nhiều", "Video 1080p", "Truy cập ưu tiên", "Agent tự động từ đầu đến cuối", "Truy cập sớm tính năng mới", "Nghiên cứu chuyên sâu quy mô lớn"]}', 3, true, NULL, NULL, 100000, false, true, 50898000, 15, NULL, NULL, 100, true, true, false),
 	('growth', 'Tăng trưởng', 'Growth', 2490000, 'month', 10, '{"en": ["Up to 10 members", "Chatbot + sales AI + accounting AI", "Owner, manager and staff roles"], "vi": ["Tối đa 10 thành viên", "Chatbot + AI bán hàng + AI kế toán", "Phân quyền chủ sở hữu, quản lý, nhân viên"]}', 2, false, 6000, 12000000, NULL, false, false, NULL, NULL, NULL, NULL, NULL, true, false, false),
 	('pro_v1', 'Pro', 'Pro', 1499000, 'month', 10, '{"en": ["6,918 AI credits a month (20% bonus)", "Unused credits roll over to next month", "Up to 10 members", "Chatbot, sales AI and accounting AI"], "vi": ["6.918 credit AI mỗi tháng (tặng thêm 20%)", "Credit chưa dùng được cộng sang tháng sau", "Tối đa 10 thành viên", "Chatbot, AI bán hàng và AI kế toán"]}', 102, true, NULL, NULL, 6918, false, true, NULL, NULL, NULL, NULL, NULL, false, false, false),
 	('max_v1', 'Max', 'Max', 4999000, 'month', 30, '{"en": ["24,034 AI credits a month (25% bonus)", "Unused credits roll over to next month", "Every NIVO module"], "vi": ["24.034 credit AI mỗi tháng (tặng thêm 25%)", "Credit chưa dùng được cộng sang tháng sau", "Mọi module của NIVO"]}', 103, true, NULL, NULL, 24034, false, true, NULL, NULL, NULL, NULL, NULL, false, false, false),
 	('starter', 'Starter', 'Starter', 299000, 'month', 3, '{"en": ["1,150 AI credits a month", "Up to 3 members", "Chatbot and sales AI"], "vi": ["1.150 credit AI mỗi tháng", "Tối đa 3 thành viên", "Chatbot và AI bán hàng"]}', 101, true, NULL, NULL, 1150, false, false, NULL, NULL, NULL, NULL, NULL, false, false, false),
-	('start', 'Start', 'Start', 490000, 'month', 1, '{"en": ["Connectors", "Workspace agents for custom workflows", "Extended memory", "Always-on automation agents", "Finance and data tools"], "vi": ["Kết nối (connectors)", "Workspace agent cho quy trình tùy chỉnh", "Bộ nhớ mở rộng", "Agent tự động chạy liên tục", "Công cụ tài chính và dữ liệu"]}', 1, true, NULL, NULL, 4000, false, false, 4998000, 15, 245000, 3, 10, true, true, false),
-	('pro', 'Pro', 'Pro', 990000, 'month', 1, '{"en": ["Everything in Start", "Higher rate limits", "Deep research (set your own usage)", "Maximum memory"], "vi": ["Mọi thứ trong Start", "Giới hạn sử dụng cao hơn", "Nghiên cứu chuyên sâu (tự đặt mức dùng)", "Bộ nhớ tối đa"]}', 2, true, NULL, NULL, 8000, false, true, 10098000, 15, 792000, 3, 20, true, true, false),
-	('max', 'Max', 'Max', 4990000, 'month', 1, '{"en": ["Everything in Pro", "Much higher usage", "1080p video", "Priority access", "End-to-end automation agents", "Early access to new features", "Deep research at scale"], "vi": ["Mọi thứ trong Pro", "Mức sử dụng cao hơn nhiều", "Video 1080p", "Truy cập ưu tiên", "Agent tự động từ đầu đến cuối", "Truy cập sớm tính năng mới", "Nghiên cứu chuyên sâu quy mô lớn"]}', 3, true, NULL, NULL, 40000, false, true, 50898000, 15, NULL, NULL, 100, true, true, false),
-	('team', 'Team', 'Team', 400000, 'month', 1000, '{"en": ["Seat management and RBAC", "Custom data storage", "Central billing and admin", "Mixed seat types in one team"], "vi": ["Quản lý ghế và phân quyền (RBAC)", "Lưu trữ dữ liệu tùy chỉnh", "Thanh toán và quản trị tập trung", "Nhiều loại ghế trong cùng một nhóm"]}', 4, true, NULL, NULL, 4000, false, false, NULL, NULL, NULL, NULL, NULL, true, false, true),
-	('enterprise', 'Enterprise', 'Enterprise', 0, 'month', 1000, '{"en": ["Seats and usage by contract", "Spend limits per user and organisation", "Usage analytics and spend control", "Data-retention controls", "Dedicated onboarding"], "vi": ["Số ghế và mức dùng theo hợp đồng", "Giới hạn chi tiêu theo người dùng và tổ chức", "Phân tích sử dụng và kiểm soát chi tiêu", "Kiểm soát lưu giữ dữ liệu", "Hỗ trợ triển khai riêng"]}', 5, true, NULL, NULL, 40000, true, false, NULL, NULL, NULL, NULL, NULL, true, false, false);
+	('enterprise', 'Enterprise', 'Enterprise', 0, 'month', 1000, '{"en": ["Seats and usage by contract", "Spend limits per user and organisation", "Usage analytics and spend control", "Data-retention controls", "Dedicated onboarding"], "vi": ["Số ghế và mức dùng theo hợp đồng", "Giới hạn chi tiêu theo người dùng và tổ chức", "Phân tích sử dụng và kiểm soát chi tiêu", "Kiểm soát lưu giữ dữ liệu", "Hỗ trợ triển khai riêng"]}', 5, true, NULL, NULL, 100000, true, false, NULL, NULL, NULL, NULL, NULL, true, false, false),
+	('team', 'Team', 'Team', 400000, 'month', 1000, '{"en": ["Seat management and RBAC", "Custom data storage", "Central billing and admin", "Mixed seat types in one team"], "vi": ["Quản lý ghế và phân quyền (RBAC)", "Lưu trữ dữ liệu tùy chỉnh", "Thanh toán và quản trị tập trung", "Nhiều loại ghế trong cùng một nhóm"]}', 4, true, NULL, NULL, 8000, false, false, NULL, NULL, NULL, NULL, NULL, true, false, true);
 
 --
 -- Data for Name: workspaces; Type: TABLE DATA; Schema: public; Owner: postgres
@@ -21549,17 +21701,17 @@ INSERT INTO public.plans (code, name_vi, name_en, price_vnd, period, seats, feat
 --
 
 INSERT INTO public.modules (key, sort_order, status, category, audience, knowledge_folder, workbench, default_operating_mode, definition, updated_at, multi_instance) VALUES
-	('sales', 20, 'stable', 'sales_customer', 'internal', 'sales', 'sales', 'assist', '{}', '2026-10-13 14:16:45.007666+00', false),
-	('accounting', 30, 'stable', 'finance', 'internal', 'accounting', 'accounting', 'assist', '{}', '2026-10-13 14:16:45.007666+00', false),
-	('shifts', 40, 'early', 'operations', 'internal', 'shifts', NULL, 'assist', '{}', '2026-10-13 14:16:45.007666+00', false),
-	('inventory', 60, 'early', 'operations', 'internal', 'inventory', NULL, 'assist', '{}', '2026-10-13 14:16:45.007666+00', false),
-	('loyalty', 70, 'early', 'sales_customer', 'customer', 'loyalty', NULL, 'assist', '{}', '2026-10-13 14:16:45.007666+00', false),
-	('video', 80, 'early', 'marketing', 'internal', 'video', NULL, 'assist', '{}', '2026-10-13 14:16:45.007666+00', false),
-	('content', 90, 'early', 'marketing', 'internal', 'content', NULL, 'assist', '{}', '2026-10-13 14:16:45.007666+00', false),
-	('hiring', 100, 'early', 'hr', 'internal', 'hiring', NULL, 'assist', '{}', '2026-10-13 14:16:45.007666+00', false),
-	('chatbot', 10, 'stable', 'sales_customer', 'customer', 'chatbot', 'chatbot', 'assist', '{}', '2026-10-13 14:16:45.007666+00', true),
-	('booking', 50, 'early', 'operations', 'customer', 'booking', NULL, 'assist', '{}', '2026-10-13 14:16:45.007666+00', true),
-	('lead_gen', 15, 'early', 'sales_customer', 'customer', 'lead_gen', 'lead_gen', 'assist', '{}', '2026-10-13 14:16:45.516071+00', true);
+	('sales', 20, 'stable', 'sales_customer', 'internal', 'sales', 'sales', 'assist', '{}', '2026-10-13 15:01:48.316616+00', false),
+	('accounting', 30, 'stable', 'finance', 'internal', 'accounting', 'accounting', 'assist', '{}', '2026-10-13 15:01:48.316616+00', false),
+	('shifts', 40, 'early', 'operations', 'internal', 'shifts', NULL, 'assist', '{}', '2026-10-13 15:01:48.316616+00', false),
+	('inventory', 60, 'early', 'operations', 'internal', 'inventory', NULL, 'assist', '{}', '2026-10-13 15:01:48.316616+00', false),
+	('loyalty', 70, 'early', 'sales_customer', 'customer', 'loyalty', NULL, 'assist', '{}', '2026-10-13 15:01:48.316616+00', false),
+	('video', 80, 'early', 'marketing', 'internal', 'video', NULL, 'assist', '{}', '2026-10-13 15:01:48.316616+00', false),
+	('content', 90, 'early', 'marketing', 'internal', 'content', NULL, 'assist', '{}', '2026-10-13 15:01:48.316616+00', false),
+	('hiring', 100, 'early', 'hr', 'internal', 'hiring', NULL, 'assist', '{}', '2026-10-13 15:01:48.316616+00', false),
+	('chatbot', 10, 'stable', 'sales_customer', 'customer', 'chatbot', 'chatbot', 'assist', '{}', '2026-10-13 15:01:48.316616+00', true),
+	('booking', 50, 'early', 'operations', 'customer', 'booking', NULL, 'assist', '{}', '2026-10-13 15:01:48.316616+00', true),
+	('lead_gen', 15, 'early', 'sales_customer', 'customer', 'lead_gen', 'lead_gen', 'assist', '{}', '2026-10-13 15:01:49.323818+00', true);
 
 --
 -- Data for Name: agents; Type: TABLE DATA; Schema: public; Owner: postgres
@@ -21695,6 +21847,16 @@ INSERT INTO public.authority_actions (action, module_key, sort_order, default_mo
 --
 -- Data for Name: automation_templates; Type: TABLE DATA; Schema: public; Owner: postgres
 --
+
+--
+-- Data for Name: billing_config; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+INSERT INTO public.billing_config (key, value, note) VALUES
+	('credit_usd_value', 0.00113, 'USD of model token cost that one credit is worth (= 1/885). THE definition of a credit: credits = ceil(cost_usd / this) per call.'),
+	('exchange_rate_vnd_per_usd', 26000, 'Input of credit_usd_value (documentation): VND per USD.'),
+	('target_margin', 0.40, 'Input of credit_usd_value (documentation): gross margin kept on token cost at the lowest revenue per included credit.'),
+	('min_revenue_vnd_per_credit', 49, 'Input of credit_usd_value (documentation): the lowest plan price / included credits, Start 490,000 / 10,000. Not shown to customers.');
 
 --
 -- Data for Name: billing_events; Type: TABLE DATA; Schema: public; Owner: postgres
@@ -21842,11 +22004,15 @@ INSERT INTO public.credit_packs (code, credits, price_vnd, sort, active) VALUES
 	('credits_10000', 10000, 2690000, 3, true);
 
 --
--- Data for Name: credit_topup_draws; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: payment_orders; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 --
--- Data for Name: payment_orders; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: credit_pack_purchases; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+--
+-- Data for Name: credit_topup_draws; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 --
@@ -22118,20 +22284,20 @@ INSERT INTO public.plan_usage_tiers (plan_code, credits_per_month, price_vnd, pe
 	('max', 85000, 8500000, false, 3),
 	('max', 110000, 11000000, false, 4),
 	('max', 170000, 17000000, false, 5),
-	('team', 4000, 400000, true, 1),
-	('team', 8000, 800000, true, 2),
-	('team', 12000, 1200000, true, 3),
-	('team', 16000, 1600000, true, 4),
-	('team', 20000, 2000000, true, 5),
-	('team', 40000, 4000000, true, 6),
-	('team', 63000, 6300000, true, 7),
-	('team', 85000, 8500000, true, 8),
-	('team', 110000, 11000000, true, 9),
-	('team', 170000, 17000000, true, 10),
-	('team', 230000, 23000000, true, 11),
-	('team', 350000, 35000000, true, 12),
-	('team', 480000, 48000000, true, 13),
-	('team', 800000, 80000000, true, 14);
+	('team', 8000, 400000, true, 1),
+	('team', 16000, 800000, true, 2),
+	('team', 24000, 1200000, true, 3),
+	('team', 32000, 1600000, true, 4),
+	('team', 40000, 2000000, true, 5),
+	('team', 80000, 4000000, true, 6),
+	('team', 126000, 6300000, true, 7),
+	('team', 170000, 8500000, true, 8),
+	('team', 220000, 11000000, true, 9),
+	('team', 340000, 17000000, true, 10),
+	('team', 460000, 23000000, true, 11),
+	('team', 700000, 35000000, true, 12),
+	('team', 960000, 48000000, true, 13),
+	('team', 1600000, 80000000, true, 14);
 
 --
 -- Data for Name: platform_admins; Type: TABLE DATA; Schema: public; Owner: postgres

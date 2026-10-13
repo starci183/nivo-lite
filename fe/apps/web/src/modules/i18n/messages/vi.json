@@ -759,7 +759,12 @@
     "storageTitle": "Dung lượng lưu trữ",
     "storageUsed": "Đã dùng {used} / {quota}",
     "storageUsedOnly": "Đã dùng {used}",
-    "tierSelected": "Đã chọn: {credits} credit mỗi tháng"
+    "tierSelected": "Đã chọn: {credits} credit mỗi tháng",
+    "packsTitle": "Mua thêm credit",
+    "packsFact": "Tùy chọn · cộng vào credit của tháng này · mua lại bất cứ lúc nào",
+    "packsRow": "{credits} credit mua thêm",
+    "packsBuy": "Mua",
+    "packsEmpty": "Gói hiện tại chưa có gói credit mua thêm."
   },
   "brain": {
     "crumbLabel": "Đường dẫn",
@@ -2389,6 +2394,12 @@
     "creditUnit": "{n} credit",
     "topupTitle": "Nạp thêm credit",
     "topupFact": "Dùng khi hết credit tháng · hạn 12 tháng",
+    "addOnTitle": "Mua thêm credit",
+    "addOnFact": "Cộng vào credit của tháng này · mua lại bất cứ lúc nào",
+    "termPacks": "Credit mua thêm trong tháng",
+    "payPack": "Thanh toán {credits} credit mua thêm",
+    "paidPack": "Đã cộng {credits} credit mua thêm vào credit của tháng này.",
+    "orderPack": "Credit mua thêm {credits}",
     "packTitle": "{credits} credit",
     "packLine": "{price}",
     "buy": "Mua",

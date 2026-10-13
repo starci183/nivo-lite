@@ -3,12 +3,12 @@ import { useQueryBillingWorkspaceSwr } from "@/hooks/swr"
 import { useCatalogWithCurrent } from "@/hooks/billing"
 import { useQueryCreditPacksSwr } from "@/hooks/swr"
 import { useQueryCreditQuotaStatusSwr } from "@/hooks/swr"
-import { useQueryCreditTopupLotsSwr } from "@/hooks/swr"
 import { useQueryCreditRecentCostUsdSwr } from "@/hooks/swr"
 import { useRequireActiveWorkspace } from "@/hooks/workspaces"
 import { productCalendarDay } from "@/modules/dayjs"
 import { navigation } from "@/modules/i18n"
 import { creditsDataOf } from "./credits.shared"
+import { useCreditsLedger } from "./useCreditsLedger"
 import type { CreditsData } from "@/modules/types"
 import { workspaceBillingPath } from "@/modules/routes"
 
@@ -26,7 +26,7 @@ export const useCreditsData = (contactHref: string) => {
     const packs = useQueryCreditPacksSwr()
     const quota = useQueryCreditQuotaStatusSwr(workspaceId)
     const canBuy = workspace.data?.role === "owner" || workspace.data?.role === "manager"
-    const lots = useQueryCreditTopupLotsSwr(workspaceId, canBuy)
+    const ledger = useCreditsLedger(workspaceId, canBuy)
     const recent = useQueryCreditRecentCostUsdSwr(workspaceId, since)
     const isUnpaid = workspace.data?.status === "pending_payment" || workspace.data?.status === "cancelled"
 
@@ -41,17 +41,16 @@ export const useCreditsData = (contactHref: string) => {
             packs.mutate(),
             quota.mutate(),
             recent.mutate(),
-            ...(canBuy ? [lots.mutate()] : []),
+            ledger.refresh(),
         ])
-    }, [workspace, catalog, packs, quota, recent, lots, canBuy])
+    }, [workspace, catalog, packs, quota, recent, ledger])
 
-    const error = workspace.error || catalog.error || packs.error || quota.error || recent.error || (canBuy && lots.error)
+    const error = workspace.error || catalog.error || packs.error || quota.error || recent.error || ledger.error
     const workspaceData = workspace.data
     const planData = catalog.plans
     const packData = packs.data
     const quotaData = quota.data
     const recentData = recent.data
-    const lotData = lots.data
     let data: CreditsData | null = null
     if (
         workspaceId !== undefined &&
@@ -61,7 +60,7 @@ export const useCreditsData = (contactHref: string) => {
         packData &&
         quotaData !== undefined &&
         recentData !== undefined &&
-        (!canBuy || lotData !== undefined) &&
+        ledger.isReady &&
         !isUnpaid
     ) {
         data = creditsDataOf({
@@ -72,7 +71,8 @@ export const useCreditsData = (contactHref: string) => {
             current: catalog.current ?? null,
             packs: packData,
             status: quotaData,
-            lots: canBuy ? (lotData ?? []) : [],
+            lots: canBuy ? (ledger.lots ?? []) : [],
+            bought: ledger.bought ?? [],
             last7CostUsd: recentData,
             today,
             now,

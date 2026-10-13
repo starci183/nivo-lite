@@ -32,10 +32,11 @@ const CURRENT: Plan = {
     storageGb: null,
     individual: false,
     perSeat: false,
-    listed: true,
+    listed: false,
     tiers: [],
+    packs: [],
 }
-const TARGET: Plan = { ...CURRENT, code: "growth", priceVnd: 1990000, sort: 2 }
+const TARGET: Plan = { ...CURRENT, code: "growth", priceVnd: 1990000, sort: 2, listed: true }
 const WORKSPACE: WorkspaceBilling = {
     status: "active",
     planCode: "starter",

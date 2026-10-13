@@ -19,10 +19,11 @@ export const useCreditsOrder = (workspaceId: string | undefined) => {
             current.sequence = sequence
             open(workspaceId, next)
             queuedId.current = undefined
-            const queued = await request({
-                kind: next.kind,
-                target: next.kind === "topup" ? next.packCode : next.planCode,
-            })
+            const queued = await request(
+                next.kind === "credit_pack"
+                    ? { kind: "credit_pack", target: String(next.credits) }
+                    : { kind: next.kind, target: next.kind === "topup" ? next.packCode : next.planCode },
+            )
             const latest = invocation.current
             if (!latest.live || latest.workspaceId !== workspaceId || latest.sequence !== sequence) return
             if (queued === undefined) close()
@@ -59,6 +60,9 @@ export const useCreditsOrder = (workspaceId: string | undefined) => {
         update(matching ? orderId : undefined, pending, failed ? t("errGeneric") : null)
     }, [target, orderId, isRequesting, status, error, update, t, workspaceId])
     let busy: string | null = null
-    if (checkoutPending && target) busy = target.kind === "topup" ? target.packCode : target.planCode
+    if (checkoutPending && target) {
+        if (target.kind === "credit_pack") busy = `pack-${target.credits}`
+        else busy = target.kind === "topup" ? target.packCode : target.planCode
+    }
     return { begin, busy }
 }

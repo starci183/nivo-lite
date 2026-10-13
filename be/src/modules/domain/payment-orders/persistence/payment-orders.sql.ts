@@ -16,6 +16,13 @@ WHERE workspace_id = $1 AND kind = 'topup' AND status = 'pending' AND pack_code 
 ORDER BY created_at DESC
 LIMIT 1`
 
+/** The newest pending, unexpired add-on pack order of a workspace for one pack and amount ($1 workspace, $2 credits, $3 amount, $4 now). */
+export const SELECT_OPEN_CREDIT_PACK_ORDER = sql`SELECT id, workspace_id, plan_code, amount_vnd::float8 AS amount_vnd, order_code, status, expires_at, paid_at, created_at, kind, pack_code, detail
+FROM public.payment_orders
+WHERE workspace_id = $1 AND kind = 'credit_pack' AND status = 'pending' AND detail ->> 'credits' = $2 AND amount_vnd = $3 AND expires_at > $4
+ORDER BY created_at DESC
+LIMIT 1`
+
 /** The newest payment orders of a workspace ($1 workspace). */
 export const SELECT_PAYMENT_ORDERS = sql`SELECT id, workspace_id, plan_code, amount_vnd::float8 AS amount_vnd, order_code, status, expires_at, paid_at, created_at, kind, pack_code, detail
 FROM public.payment_orders

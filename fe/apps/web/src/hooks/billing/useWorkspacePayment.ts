@@ -63,11 +63,15 @@ export const useWorkspacePayment = (selectors: WorkspacePaymentSelectors) => {
 
     const regenerate = () => {
         if (!planCode || plan.data?.isCustom) return
-        if (selectors.renewing && payment?.kind !== "plan") {
+        if (selectors.renewing && payment?.kind !== "plan" && payment?.kind !== "credit_pack") {
             void requesting.request({ kind: "renew" })
             return
         }
         const detail = payment?.detail
+        if (payment?.kind === "credit_pack" && detail?.credits != null) {
+            void requesting.request({ kind: "credit_pack", target: String(detail.credits) })
+            return
+        }
         void requesting.request({
             kind: "plan",
             target: planCode,
@@ -77,19 +81,9 @@ export const useWorkspacePayment = (selectors: WorkspacePaymentSelectors) => {
         })
     }
     const left = expiresAt ? Math.max(0, dayjs(expiresAt).diff(now)) : undefined
-    const error =
-        workspaces.error ??
-        order.error ??
-        openOrder.error ??
-        history.error ??
-        plan.error ??
-        requesting.error
+    const error = workspaces.error ?? order.error ?? openOrder.error ?? history.error ?? plan.error ?? requesting.error
     const loading =
-        workspaces.isLoading ||
-        order.isLoading ||
-        openOrder.isLoading ||
-        history.isLoading ||
-        plan.isLoading
+        workspaces.isLoading || order.isLoading || openOrder.isLoading || history.isLoading || plan.isLoading
     return {
         workspace,
         payment,

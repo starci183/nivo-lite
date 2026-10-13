@@ -19,8 +19,8 @@ export const useCreditsView = (data: CreditsData | null, busy: string | null) =>
             : t(plan.perSeat ? "planPriceSeat" : "planPriceMonth", { price: money(plan.price) })
     const labels = {
         balance: t("balanceLabel"),
-        topups: t("topupTitle"),
-        topupFact: t("topupFact"),
+        topups: data && data.addOns.length > 0 ? t("addOnTitle") : t("topupTitle"),
+        topupFact: data && data.addOns.length > 0 ? t("addOnFact") : t("topupFact"),
         upgrade: t("upgradeTitle"),
         plans: t("allPlans"),
         plansLabel: t("allPlansLabel"),
@@ -95,20 +95,31 @@ export const useCreditsView = (data: CreditsData | null, busy: string | null) =>
             meterLabel: t("meterLabel"),
             meterValue: t("meterValue", { used: credit(data?.used ?? 0), limit: credit(data?.limit ?? 0) }),
             details: [
-                { id: "topup", term: t("termTopup"), value: topupText },
+                ...(data && data.addOns.length > 0
+                    ? [{ id: "packs", term: t("termPacks"), value: t("creditUnit", { n: credit(data.packsBought) }) }]
+                    : [{ id: "topup", term: t("termTopup"), value: topupText }]),
                 { id: "forecast", term: t("termForecast"), value: forecast },
                 { id: "carried", term: t("termCarried"), value: carried },
             ],
         },
         packs:
-            data?.packs.map((pack) => ({
-                id: pack.code,
-                title: t("packTitle", { credits: credit(pack.credits) }),
-                description: t("packLine", { price: money(pack.price) }),
-                pending: busy === pack.code,
-                disabled: busy !== null && busy !== pack.code,
-                target: { kind: "topup" as const, packCode: pack.code, credits: pack.credits },
-            })) ?? [],
+            data && data.addOns.length > 0
+                ? data.addOns.map((pack) => ({
+                      id: `pack-${pack.credits}`,
+                      title: t("packTitle", { credits: credit(pack.credits) }),
+                      description: t("packLine", { price: money(pack.price) }),
+                      pending: busy === `pack-${pack.credits}`,
+                      disabled: busy !== null && busy !== `pack-${pack.credits}`,
+                      target: { kind: "credit_pack" as const, credits: pack.credits },
+                  }))
+                : (data?.packs.map((pack) => ({
+                      id: pack.code,
+                      title: t("packTitle", { credits: credit(pack.credits) }),
+                      description: t("packLine", { price: money(pack.price) }),
+                      pending: busy === pack.code,
+                      disabled: busy !== null && busy !== pack.code,
+                      target: { kind: "topup" as const, packCode: pack.code, credits: pack.credits },
+                  })) ?? []),
         upgrade,
         contact,
         plans:
@@ -117,7 +128,11 @@ export const useCreditsView = (data: CreditsData | null, busy: string | null) =>
                 title: name(plan),
                 description: plan.isCustom
                     ? t("planRowContract")
-                    : t("planRow", { price: planPrice(plan), credits: allowance(plan), who: t(plan.perSeat ? "whoTeam" : "whoOne") }),
+                    : t("planRow", {
+                          price: planPrice(plan),
+                          credits: allowance(plan),
+                          who: t(plan.perSeat ? "whoTeam" : "whoOne"),
+                      }),
                 badge: plan.code === data.plan?.code ? t("currentPlan") : "",
             })) ?? [],
     }
