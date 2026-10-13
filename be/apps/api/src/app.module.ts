@@ -343,6 +343,7 @@ import { FFMPEG_ERROR_KINDS, FFMPEG_MESSAGES, FfmpegModule } from "@modules/inte
 import { TTS_ERROR_KINDS, TTS_MESSAGES, TtsModule } from "@modules/integrations/tts"
 import { CONTENT_TICK_EVERY_MS, CONTENT_TICK_QUEUE, CONTENT_TICK_SCHEDULER } from "@modules/queues/content-tick"
 import { RendersHttpModule } from "@features/api/renders"
+import { ApplyBookingStatusQueueModule } from "@features/jobs/apply-booking-status"
 import { PublishContentQueueModule } from "@features/jobs/publish-content"
 import { AcceptMetaEventQueueModule } from "@features/jobs/accept-meta-event"
 import { IssueInviteQueueModule } from "@features/jobs/issue-invite"
@@ -732,6 +733,7 @@ export class AppModule {
                 SepayTransactionsModule.register({ isGlobal: true }),
                 AiUsageEventsModule.register({ isGlobal: true }),
                 CreditsModule.register({ isGlobal: true }),
+                ApplyBookingStatusQueueModule,
                 PaymentOrderRequestsModule.register({ isGlobal: true }),
                 ReconcileBankCreditQueueModule,
                 CreatePaymentOrderQueueModule,
@@ -756,11 +758,7 @@ export class AppModule {
                 LoyaltyLedgerModule.register({ isGlobal: true }),
                 LoyaltyCampaignsModule.register({ isGlobal: true }),
                 LoyaltyOtpsModule.register({ isGlobal: true, pepper: options.supabase.serviceRoleKey.reveal() }),
-                LoyaltyModule.register({
-                    isGlobal: true,
-                    // Until the chat lanes provide the channel adapters nothing delivers a code, so the public points check cannot unlock yet.
-                    delivery: { deliver: () => Promise.resolve(false) },
-                }),
+                LoyaltyModule.register({ isGlobal: true, delivery: { deliver: () => Promise.resolve(false) } }),
                 PublicBookingHttpModule,
                 BookingHttpModule,
                 PublicLoyaltyHttpModule,

@@ -48,3 +48,12 @@ export const INSERT_INPUT_EVENT = sql`INSERT INTO public.inbound_events (workspa
 VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8::bigint, $9, $10, $11)
 ON CONFLICT (workspace_id, dedupe_key) DO NOTHING
 RETURNING id`
+
+/** Hands a finished sale to the order chain as an inbound order, once per sale ($1 workspace, $2 origin, $3 customer, $4 contact, $5 body, $6 amount, $7 sale ref, $8 lead or null); answers a row only when it was new. */
+export const INSERT_ORDER_HANDOFF = sql`WITH created AS (
+    INSERT INTO public.inbound_events (workspace_id, channel, kind, origin, sender_name, sender_contact, body, amount_vnd, external_ref, dedupe_key, lead_id)
+    VALUES ($1, 'manual', 'order', $2, $3, $4, $5, $6, $7, 'order:' || $7, $8)
+    ON CONFLICT (workspace_id, dedupe_key) DO NOTHING
+    RETURNING id
+)
+SELECT id FROM created`

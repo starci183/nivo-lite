@@ -100,7 +100,6 @@ export type {
     GuideField,
     GuideScreen,
     MoneyProvider,
-    NoteTone,
     ProviderKeysResult,
     SmtpAccountView,
     SmtpGuideView,
@@ -114,13 +113,7 @@ export type {
     ZaloAuthorizeUrl,
     ZaloWizardConnection,
 } from "./connection-wizard"
-export type {
-    MetaAppObject,
-    MetaAuthorization,
-    MetaCheck,
-    MetaPageOption,
-    MetaWizardConnection,
-} from "./connection-wizard"
+export type { MetaAuthorization, MetaCheck, MetaWizardConnection } from "./connection-wizard"
 export type { DataSlot, SlotLabels } from "./slot"
 export type {
     AccountsView,
