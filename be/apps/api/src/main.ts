@@ -16,6 +16,8 @@ import { parseZaloConfig } from "@modules/integrations/zalo"
 import { parsePlatformAdminConfig } from "@modules/domain/platform-admin"
 import { parseWorkspaceInvitesConfig } from "@modules/domain/workspace-invites"
 import { parseWorkspacesConfig } from "@modules/domain/workspaces"
+import { parseDeepseekConfig } from "@modules/integrations/deepseek"
+import { parseOpenclawConfig } from "@modules/integrations/openclaw"
 import { parseVideoConfig } from "@modules/domain/video"
 import { parseFfmpegConfig } from "@modules/integrations/ffmpeg"
 import { parseSupabaseConfig } from "@modules/integrations/supabase"
@@ -42,6 +44,8 @@ const bootstrap = async (): Promise<void> => {
         workspaces: parseWorkspacesConfig(env),
         workspaceInvites: parseWorkspaceInvitesConfig(env),
         billing: parseBillingConfig(env),
+        openclaw: parseOpenclawConfig(env),
+        deepseek: parseDeepseekConfig(env),
         connectionSecrets: parseConnectionSecretsConfig(env),
         channels: parseChannelsConfig(env),
         telegram: parseTelegramConfig(env),

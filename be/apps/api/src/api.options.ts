@@ -1,3 +1,5 @@
+import type { DeepseekOptions } from "@modules/integrations/deepseek"
+import type { OpenclawOptions } from "@modules/integrations/openclaw"
 import type { VideoOptions } from "@modules/domain/video"
 import type { SupabaseOptions } from "@modules/integrations/supabase"
 import type { BillingOptions } from "@modules/domain/billing"
@@ -33,6 +35,10 @@ export interface ApiOptions {
     readonly workspaceInvites: Omit<WorkspaceInvitesOptions, "delivery">
     /** The payment feeds: keys, bank account and the credential key. */
     readonly billing: BillingOptions
+    /** The OpenClaw gateway and the agent workspaces. */
+    readonly openclaw: OpenclawOptions
+    /** The prompt library tunables. */
+    readonly deepseek: DeepseekOptions
     /** The key that seals the credentials of the connections. */
     readonly connectionSecrets: ConnectionSecretsOptions
     /** The public origin of the web app, for provider return addresses. */
