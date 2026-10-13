@@ -6,10 +6,11 @@ export const WEBHOOK_EVENTS = [
     "payment.received",
     "handoff.requested",
     "decision.made",
-] as const
+] as const satisfies ReadonlyArray<WebhookEvent>
 
-/** One of the outgoing events. */
-export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number]
+/** One of the outgoing events: the name a subscriber filters on and the delivery carries. */
+export type WebhookEvent =
+    "lead.created" | "deal.won" | "order.confirmed" | "payment.received" | "handoff.requested" | "decision.made"
 
 /** What starting a webhook connection takes. */
 export interface StartWebhookInput {

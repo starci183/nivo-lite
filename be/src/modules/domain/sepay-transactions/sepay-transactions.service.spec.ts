@@ -1,11 +1,12 @@
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
-import { PaymentProofService } from "@modules/domain/billing"
+import { PaymentProofService, parseJsonObject } from "@modules/domain/billing"
 import type { SepayDelivery } from "@modules/domain/billing"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import {
     COMPLETE_SEPAY_TRANSACTION,
     INSERT_SEPAY_TRANSACTION,
+    SELECT_REVIEW_TRANSACTIONS,
     SETTLE_PAYMENT_ORDER,
     UPDATE_SEPAY_RESULT,
 } from "./persistence/sepay-transactions.sql"
@@ -46,6 +47,43 @@ const CLAIMED = [INSERT_SEPAY_TRANSACTION, [{ id: "row-1" }]] as const
 const COMPLETED = [COMPLETE_SEPAY_TRANSACTION, [{ id: "row-1" }]] as const
 
 describe("SepayTransactionsService", () => {
+    describe("review", () => {
+        it("reads nothing for no orders", async () => {
+            const { settlement, tx } = await build([])
+
+            await expect(settlement.review("ws-1", [])).resolves.toEqual([])
+            expect(tx.em.query).not.toHaveBeenCalled()
+        })
+
+        it("maps the transfers of the workspace orders with an ISO receipt time", async () => {
+            const { settlement, tx } = await build([
+                [
+                    SELECT_REVIEW_TRANSACTIONS,
+                    [
+                        {
+                            id: 9001,
+                            status: "underpaid",
+                            transfer_amount: 500000,
+                            received_at: "2026-10-13T09:00:00+07:00",
+                            content: null,
+                        },
+                    ],
+                ],
+            ])
+
+            await expect(settlement.review("ws-1", ["order-1"])).resolves.toEqual([
+                {
+                    id: 9001,
+                    status: "underpaid",
+                    transferAmount: 500000,
+                    receivedAt: "2026-10-13T02:00:00.000Z",
+                    content: null,
+                },
+            ])
+            expect(tx.em.query).toHaveBeenCalledWith(SELECT_REVIEW_TRANSACTIONS, ["ws-1", ["order-1"]])
+        })
+    })
+
     describe("acceptSepayDelivery", () => {
         it("proves the key, claims the transaction, settles the order the transfer names and completes it in one transaction", async () => {
             const { settlement, tx, proof } = await build([
@@ -74,14 +112,15 @@ describe("SepayTransactionsService", () => {
             expect(tx.em.query).toHaveBeenCalledWith(COMPLETE_SEPAY_TRANSACTION, ["row-1"])
         })
 
-        it("touches nothing when the key is refused", async () => {
+        it("touches nothing when the delivery is refused at the door", async () => {
             const { settlement, tx, proof } = await build([])
-            const refusal = "refused"
             proof.verifyBillingKey.mockImplementation(() => {
-                throw refusal
+                parseJsonObject(undefined)
             })
 
-            await expect(settlement.acceptSepayDelivery(credit())).rejects.toBe(refusal)
+            await expect(settlement.acceptSepayDelivery(credit())).rejects.toMatchObject({
+                code: "BILLING_WEBHOOK_INVALID",
+            })
 
             expect(tx.outcomes).toEqual([])
             expect(tx.em.query).not.toHaveBeenCalled()
@@ -129,7 +168,12 @@ describe("SepayTransactionsService", () => {
 
             await settlement.acceptSepayDelivery(credit())
 
-            expect(tx.em.query).toHaveBeenCalledWith(UPDATE_SEPAY_RESULT, [9001, outcome, 990000, expect.any(String)])
+            expect(tx.em.query).toHaveBeenCalledWith(UPDATE_SEPAY_RESULT, [
+                9001,
+                outcome,
+                990000,
+                "nivo 8f3k2 chuyen tien",
+            ])
         })
 
         it("lists a second transfer for an order that is already paid for review as unmatched", async () => {
@@ -146,7 +190,7 @@ describe("SepayTransactionsService", () => {
                 9001,
                 "unmatched",
                 990000,
-                expect.any(String),
+                "nivo 8f3k2 chuyen tien",
             ])
         })
 
@@ -173,7 +217,12 @@ describe("SepayTransactionsService", () => {
             await settlement.acceptSepayDelivery(credit({ transferType: "out" }))
 
             expect(tx.em.query).not.toHaveBeenCalledWith(SETTLE_PAYMENT_ORDER, expect.anything())
-            expect(tx.em.query).toHaveBeenCalledWith(UPDATE_SEPAY_RESULT, [9001, "ignored", 990000, expect.any(String)])
+            expect(tx.em.query).toHaveBeenCalledWith(UPDATE_SEPAY_RESULT, [
+                9001,
+                "ignored",
+                990000,
+                "nivo 8f3k2 chuyen tien",
+            ])
         })
 
         it("settles nothing for an amount it cannot read and stores no amount", async () => {
@@ -182,7 +231,12 @@ describe("SepayTransactionsService", () => {
             await settlement.acceptSepayDelivery(credit({ transferAmount: "lots" }))
 
             expect(tx.em.query).not.toHaveBeenCalledWith(SETTLE_PAYMENT_ORDER, expect.anything())
-            expect(tx.em.query).toHaveBeenCalledWith(UPDATE_SEPAY_RESULT, [9001, "unmatched", null, expect.any(String)])
+            expect(tx.em.query).toHaveBeenCalledWith(UPDATE_SEPAY_RESULT, [
+                9001,
+                "unmatched",
+                null,
+                "nivo 8f3k2 chuyen tien",
+            ])
         })
 
         it("treats a settlement that answers no row as unmatched", async () => {
@@ -199,7 +253,7 @@ describe("SepayTransactionsService", () => {
                 9001,
                 "unmatched",
                 990000,
-                expect.any(String),
+                "nivo 8f3k2 chuyen tien",
             ])
         })
 

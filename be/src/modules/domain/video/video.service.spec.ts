@@ -1,6 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { builder, fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
-import type { RecordingQueueOutbox } from "@starci/jest-preset"
+import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { VideoProjectsService } from "@modules/domain/video-projects"
 import { VideoProjectVersionsService } from "@modules/domain/video-project-versions"
@@ -8,9 +7,8 @@ import { VideoRendersService } from "@modules/domain/video-renders"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import { QUEUE_OUTBOX } from "@modules/platform/queue"
-import { VIDEO_RENDER_QUEUE, VideoRenderQueue } from "@modules/queues/video-render"
-import { VideoErrorCode } from "./errors/video.error"
+import { VideoRenderQueue } from "@modules/queues/video-render"
+import { VideoError, VideoErrorCode } from "./errors/video.error"
 import { VideoService } from "./video.service"
 
 const WORKSPACE = "0a1b2c3d-0a1b-4c3d-8a1b-0a1b2c3d4e5f"
@@ -43,29 +41,28 @@ const build = async () => {
     const versions = mock<VideoProjectVersionsService>()
     const renders = mock<VideoRendersService>()
     const catalog = mock<MessageCatalog>()
-    const outbox: RecordingQueueOutbox = recordingQueueOutbox()
+    const queue = mock<VideoRenderQueue>()
     catalog.get.mockImplementation((key, params) => `${key}:${JSON.stringify(params)}`)
     renders.open.mockResolvedValue("render-1")
     const moduleRef = await Test.createTestingModule({
         providers: [
             VideoService,
-            VideoRenderQueue,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: VideoProjectsService, useValue: projects },
             { provide: VideoProjectVersionsService, useValue: versions },
             { provide: VideoRendersService, useValue: renders },
             { provide: MESSAGE_CATALOG, useValue: catalog },
-            { provide: QUEUE_OUTBOX, useValue: outbox },
+            { provide: VideoRenderQueue, useValue: queue },
         ],
     }).compile()
-    return { video: moduleRef.get(VideoService), tx, members, projects, versions, renders, outbox }
+    return { video: moduleRef.get(VideoService), tx, members, projects, versions, renders, queue }
 }
 
 describe("VideoService", () => {
     describe("requestRender", () => {
         it("writes the render, its version, the project's new status and the job in one transaction", async () => {
-            const { video, tx, projects, versions, renders, outbox } = await build()
+            const { video, tx, projects, versions, renders, queue } = await build()
             projects.forRender.mockResolvedValue(projectOf())
 
             await expect(video.requestRender("person-1", "project-1")).resolves.toEqual({
@@ -95,15 +92,16 @@ describe("VideoService", () => {
                 renderId: "render-1",
                 spec,
             })
-            expect(outbox.jobsOf(VIDEO_RENDER_QUEUE)).toEqual([
-                { queue: VIDEO_RENDER_QUEUE, payload: { renderId: "render-1", workspaceId: WORKSPACE } },
-            ])
-            expect(outbox.allInTransaction).toBe(true)
+            const manager = renders.open.mock.calls[0]?.[0]
+            expect(queue.enqueueRenderVideo).toHaveBeenCalledWith(
+                { renderId: "render-1", workspaceId: WORKSPACE },
+                manager,
+            )
             expect(tx.commits).toBe(1)
         })
 
         it("refuses a project that does not exist", async () => {
-            const { video, projects, renders, outbox } = await build()
+            const { video, projects, renders, queue } = await build()
             projects.forRender.mockResolvedValue(null)
 
             await expect(video.requestRender("person-1", "project-1")).rejects.toMatchObject({
@@ -112,20 +110,20 @@ describe("VideoService", () => {
             })
 
             expect(renders.open).not.toHaveBeenCalled()
-            expect(outbox.jobs).toEqual([])
+            expect(queue.enqueueRenderVideo).not.toHaveBeenCalled()
         })
 
         it("refuses anyone who does not manage the workspace", async () => {
-            const { video, projects, members, renders, outbox } = await build()
+            const { video, projects, members, renders, queue } = await build()
             projects.forRender.mockResolvedValue(projectOf())
-            const refusal = new Error("not a manager")
+            const refusal = new VideoError({ code: VideoErrorCode.NotApproved })
             members.require.mockRejectedValue(refusal)
 
             await expect(video.requestRender("person-1", "project-1")).rejects.toBe(refusal)
 
             expect(members.require).toHaveBeenCalledWith("person-1", WORKSPACE, ["owner", "manager"])
             expect(renders.open).not.toHaveBeenCalled()
-            expect(outbox.jobs).toEqual([])
+            expect(queue.enqueueRenderVideo).not.toHaveBeenCalled()
         })
 
         it.each([
@@ -133,13 +131,13 @@ describe("VideoService", () => {
             ["a render waiting", projectOf({ renderStatus: "queued" })],
             ["a render running", projectOf({ renderStatus: "rendering" })],
         ])("refuses %s", async (_label, found) => {
-            const { video, projects, outbox } = await build()
+            const { video, projects, queue } = await build()
             projects.forRender.mockResolvedValue(found)
 
             await expect(video.requestRender("person-1", "project-1")).rejects.toMatchObject({
                 code: VideoErrorCode.ProjectBusy,
             })
-            expect(outbox.jobs).toEqual([])
+            expect(queue.enqueueRenderVideo).not.toHaveBeenCalled()
         })
 
         it("renders again a project whose last render ended", async () => {
@@ -185,7 +183,7 @@ describe("VideoService", () => {
         })
 
         it("refuses a script that makes no valid spec", async () => {
-            const { video, projects, renders, outbox } = await build()
+            const { video, projects, renders, queue } = await build()
             projects.forRender.mockResolvedValue(projectOf({ script: [] }))
 
             await expect(video.requestRender("person-1", "project-1")).rejects.toMatchObject({
@@ -193,28 +191,28 @@ describe("VideoService", () => {
                 params: { reason: "scenes: at least one scene is required" },
             })
             expect(renders.open).not.toHaveBeenCalled()
-            expect(outbox.jobs).toEqual([])
+            expect(queue.enqueueRenderVideo).not.toHaveBeenCalled()
         })
 
         it("writes nothing when the workspace has the most renders open", async () => {
-            const { video, tx, projects, versions, renders, outbox } = await build()
+            const { video, tx, projects, versions, renders, queue } = await build()
             projects.forRender.mockResolvedValue(projectOf())
-            const full = new Error("too many")
+            const full = new VideoError({ code: VideoErrorCode.ProjectBusy, params: { projectId: "project-1" } })
             renders.open.mockRejectedValue(full)
 
             await expect(video.requestRender("person-1", "project-1")).rejects.toBe(full)
 
             expect(versions.record).not.toHaveBeenCalled()
             expect(projects.startRender).not.toHaveBeenCalled()
-            expect(outbox.jobs).toEqual([])
+            expect(queue.enqueueRenderVideo).not.toHaveBeenCalled()
             expect(tx.rollbacks).toBe(1)
         })
 
         it("rolls everything back when the job cannot be enqueued", async () => {
-            const { video, tx, projects, outbox } = await build()
+            const { video, tx, projects, queue } = await build()
             projects.forRender.mockResolvedValue(projectOf())
-            const failure = new Error("queue missing")
-            outbox.failNext("write", failure)
+            const failure = new VideoError({ code: VideoErrorCode.StorageFailed, params: { path: "queue" } })
+            queue.enqueueRenderVideo.mockRejectedValue(failure)
 
             await expect(video.requestRender("person-1", "project-1")).rejects.toBe(failure)
 

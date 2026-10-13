@@ -1,15 +1,20 @@
 import { mkdtemp, readFile, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { Test } from "@nestjs/testing"
 import { FakeClock, builder, mock } from "@starci/jest-preset"
+import { FFMPEG } from "@modules/integrations/ffmpeg"
 import type { Ffmpeg } from "@modules/integrations/ffmpeg"
-import { TtsError, TtsErrorCode } from "@modules/integrations/tts"
+import { TTS, TtsError, TtsErrorCode } from "@modules/integrations/tts"
 import type { Tts } from "@modules/integrations/tts"
+import { CLOCK } from "@modules/platform/clock"
+import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { VideoErrorCode } from "./errors/video.error"
 import { RendererService } from "./renderer.service"
 import type { RenderInput } from "./renderer.service"
 import type { VideoAssets } from "./video.contracts"
+import { VIDEO_ASSETS, VIDEO_OPTIONS } from "./video.decorators"
 import type { VideoOptions } from "./video.options"
 import type { Scene, VideoSpec } from "./video-spec.policy"
 
@@ -48,7 +53,12 @@ const build = async (maxSeconds = 90) => {
                 : { data: null, error: new Error("Object not found") },
         ),
     )
-    const options: VideoOptions = { fontsDir: join(root, "fonts"), workDir: join(root, "work"), maxSeconds, ffmpegThreads: 2 }
+    const options: VideoOptions = {
+        fontsDir: join(root, "fonts"),
+        workDir: join(root, "work"),
+        maxSeconds,
+        ffmpegThreads: 2,
+    }
     const ffmpeg = mock<Ffmpeg>()
     ffmpeg.run.mockImplementation(async (_tool, args, run) => {
         const output = args[args.length - 1] ?? ""
@@ -61,7 +71,18 @@ const build = async (maxSeconds = 90) => {
     tts.clip.mockResolvedValue({ file: "clip.mp3", cached: false, provider: "edge" })
     const catalog = mock<MessageCatalog>()
     catalog.get.mockReturnValue("min|kg")
-    const renderer = new RendererService(options, assets, ffmpeg, tts, new FakeClock("2026-10-12T00:00:00.000Z"), catalog)
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            RendererService,
+            { provide: VIDEO_OPTIONS, useValue: options },
+            { provide: VIDEO_ASSETS, useValue: assets },
+            { provide: FFMPEG, useValue: ffmpeg },
+            { provide: TTS, useValue: tts },
+            { provide: CLOCK, useValue: new FakeClock("2026-10-12T00:00:00.000Z") },
+            { provide: MESSAGE_CATALOG, useValue: catalog },
+        ],
+    }).compile()
+    const renderer = moduleRef.get(RendererService)
     const progress: Array<string> = []
     const inputOf = (spec: VideoSpec, overrides: Partial<RenderInput> = {}): RenderInput => ({
         spec,

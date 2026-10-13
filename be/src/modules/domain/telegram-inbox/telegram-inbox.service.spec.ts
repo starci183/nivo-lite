@@ -25,7 +25,7 @@ const build = async (claimed: ReadonlyArray<{ id: string }>) => {
     )
     const conversations = mock<ConversationsService>()
     conversations.acceptTelegram.mockResolvedValue(undefined)
-    const catalog: MessageCatalog = { get: (key) => key }
+    const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => key) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             TelegramInboxService,

@@ -9,15 +9,17 @@ describe("VideoProjectVersionsService", () => {
             const moduleRef = await Test.createTestingModule({ providers: [VideoProjectVersionsService] }).compile()
             const manager = mockEntityManager({ query: [INSERT_PROJECT_VERSION, []] })
 
-            await moduleRef.get(VideoProjectVersionsService).record(manager, {
-                projectId: "project-1",
-                workspaceId: "workspace-1",
-                version: 3,
-                script: "[]",
-                spec: '{"version":1}',
-                renderId: "render-1",
-                createdBy: "person-1",
-            })
+            await expect(
+                moduleRef.get(VideoProjectVersionsService).record(manager, {
+                    projectId: "project-1",
+                    workspaceId: "workspace-1",
+                    version: 3,
+                    script: "[]",
+                    spec: '{"version":1}',
+                    renderId: "render-1",
+                    createdBy: "person-1",
+                }),
+            ).resolves.toBeUndefined()
 
             expect(manager.query).toHaveBeenCalledWith(INSERT_PROJECT_VERSION, [
                 "project-1",
