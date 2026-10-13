@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { EventsService } from "@modules/domain/events"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ApiKeysService } from "./api-keys.service"
@@ -14,6 +15,7 @@ const build = async (entityManager: MockEntityManager) => {
             ApiKeysService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: CLOCK, useValue: new FakeClock("2026-10-12T10:00:20.000Z") },
+            { provide: EventsService, useValue: mock<EventsService>() },
         ],
     }).compile()
     return moduleRef.get(ApiKeysService)
