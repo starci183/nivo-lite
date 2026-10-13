@@ -5,7 +5,9 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { AccountingWorkRow, ClosedClaimRow, WorkItemRow } from "./persistence/work-items.rows"
 import {
+    ASSIGN_WORK_ITEM,
     ATTACH_WORK_ITEM_EXECUTION,
+    HOLD_WORK_ITEM,
     CLAIM_WORK_ITEM,
     FIND_WORK_ITEM_BY_DEDUPE,
     INSERT_WORK_ITEM,
@@ -40,6 +42,9 @@ import type {
 } from "./work-items.contracts"
 import type { InboundWorkState } from "./inbound-work-state.contracts"
 import { requireWorkItem, toWorkItem } from "./work-items.mapper"
+
+/** The staff member an item is given to, or null when the assignment is cleared. */
+type AssignedStaff = string | null
 
 @Injectable()
 /** The work items of a workspace: the only writer of public.work_items. */
@@ -202,6 +207,28 @@ export class WorkItemsService {
                 this.now(),
             ]),
         )
+    }
+
+    /** Stores a hold note on an item that is still waiting. False when it is no longer waiting. */
+    async hold(workspaceId: string, id: string, proposal: Proposal): Promise<boolean> {
+        const rows = await this.entityManager.query<Array<{ id: string }>>(HOLD_WORK_ITEM, [
+            workspaceId,
+            id,
+            JSON.stringify(proposal),
+            this.now(),
+        ])
+        return rows[0] !== undefined
+    }
+
+    /** Assigns an item to a staff member, or clears the assignment. False when the item is not in the workspace. */
+    async assign(workspaceId: string, id: string, staffId: AssignedStaff): Promise<boolean> {
+        const rows = await this.entityManager.query<Array<{ id: string }>>(ASSIGN_WORK_ITEM, [
+            workspaceId,
+            id,
+            staffId,
+            this.now(),
+        ])
+        return rows[0] !== undefined
     }
 
     /** Links the approval card that decided an item to it. */

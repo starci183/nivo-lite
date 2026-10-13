@@ -3,7 +3,9 @@ import { DecisionsApiModule } from "../../decisions.module"
 import { AuthorityResolver } from "./authority.resolver"
 import { CreateResponsibilityResolver } from "./create-responsibility.resolver"
 import { DecideExecutionResolver } from "./decide-execution.resolver"
+import { AssignWorkItemResolver } from "./assign-work-item.resolver"
 import { DecideWorkItemResolver } from "./decide-work-item.resolver"
+import { HoldWorkItemResolver } from "./hold-work-item.resolver"
 import { DecisionHistoryResolver } from "./decision-history.resolver"
 import { ResponsibilitiesResolver } from "./responsibilities.resolver"
 import { SaveAuthorityRuleResolver } from "./save-authority-rule.resolver"
@@ -18,7 +20,9 @@ import { WorkItemsResolver } from "./work-items.resolver"
     providers: [
         WorkItemsResolver,
         WorkItemResolver,
+        AssignWorkItemResolver,
         DecideWorkItemResolver,
+        HoldWorkItemResolver,
         DecideExecutionResolver,
         SendAgentCommandResolver,
         DecisionHistoryResolver,

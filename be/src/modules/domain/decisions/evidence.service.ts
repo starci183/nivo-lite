@@ -6,7 +6,7 @@ import type { DecisionEntry, EvidenceEntry, WorkContext } from "./decisions.cont
 import type { AccountingDecisionRow } from "./persistence/decision-log.rows"
 import { INSERT_DECISION, LIST_ACCOUNTING_DECISIONS } from "./persistence/decision-log.sql"
 import { LIST_LEAD_DECISION_HISTORY } from "./persistence/decision-history.sql"
-import type { DecisionHistoryQuery, DecisionRecord } from "./decision-history.contracts"
+import type { DecisionHistoryQuery, LeadDecisionRecord } from "./decision-history.contracts"
 
 const jsonOrNull = (value: object | null | undefined): string | null =>
     value === null || value === undefined ? null : JSON.stringify(value)
@@ -20,8 +20,8 @@ export class EvidenceService {
     ) {}
 
     /** Reads a bounded decision history after the composer proved workspace membership. */
-    listDecisions(workspaceId: string, query: DecisionHistoryQuery): Promise<Array<DecisionRecord>> {
-        return this.entityManager.query<Array<DecisionRecord>>(LIST_LEAD_DECISION_HISTORY, [
+    listDecisions(workspaceId: string, query: DecisionHistoryQuery): Promise<Array<LeadDecisionRecord>> {
+        return this.entityManager.query<Array<LeadDecisionRecord>>(LIST_LEAD_DECISION_HISTORY, [
             workspaceId,
             query.leadId ?? null,
             query.humanDepartment ?? null,
