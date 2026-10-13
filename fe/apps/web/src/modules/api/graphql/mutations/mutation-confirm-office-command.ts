@@ -1,13 +1,13 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationConfirmOfficeCommandArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { ConfirmOfficeCommandMutation, ConfirmOfficeCommandMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `confirmOfficeCommand` mutation. */
-export type MutateConfirmOfficeCommandRequest = MutationConfirmOfficeCommandArgs["input"]
+export type MutateConfirmOfficeCommandRequest = WireInput<ConfirmOfficeCommandMutationVariables["input"]>
 
-type MutateConfirmOfficeCommandResponse = Pick<Mutation, "confirmOfficeCommand">
+type MutateConfirmOfficeCommandResponse = ConfirmOfficeCommandMutation
 
 const mutation1: TypedDocumentNode<
     MutateConfirmOfficeCommandResponse,

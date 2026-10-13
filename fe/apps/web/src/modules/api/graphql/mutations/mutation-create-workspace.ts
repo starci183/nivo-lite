@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationCreateWorkspaceArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { CreateWorkspaceMutation, CreateWorkspaceMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `createWorkspace` mutation. */
-export type MutateCreateWorkspaceRequest = MutationCreateWorkspaceArgs["input"]
+export type MutateCreateWorkspaceRequest = WireInput<CreateWorkspaceMutationVariables["input"]>
 
 /** The response of the `createWorkspace` mutation. */
-type MutateCreateWorkspaceResponse = Pick<Mutation, "createWorkspace">
+type MutateCreateWorkspaceResponse = CreateWorkspaceMutation
 
 const mutation1: TypedDocumentNode<MutateCreateWorkspaceResponse, InputVariables<MutateCreateWorkspaceRequest>> = gql`
     mutation CreateWorkspace($input: CreateWorkspaceInput!) {

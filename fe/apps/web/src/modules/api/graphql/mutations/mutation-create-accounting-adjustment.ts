@@ -1,12 +1,15 @@
 import { gql, type TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationCreateAccountingAdjustmentArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type {
+    CreateAccountingAdjustmentMutation,
+    CreateAccountingAdjustmentMutationVariables,
+} from "../__generated__/graphql"
 
 /** The input of the `createAccountingAdjustment` mutation. */
-export type MutateCreateAccountingAdjustmentRequest = MutationCreateAccountingAdjustmentArgs["input"]
+export type MutateCreateAccountingAdjustmentRequest = WireInput<CreateAccountingAdjustmentMutationVariables["input"]>
 
-type MutateCreateAccountingAdjustmentResponse = Pick<Mutation, "createAccountingAdjustment">
+type MutateCreateAccountingAdjustmentResponse = CreateAccountingAdjustmentMutation
 
 const mutation1: TypedDocumentNode<
     MutateCreateAccountingAdjustmentResponse,

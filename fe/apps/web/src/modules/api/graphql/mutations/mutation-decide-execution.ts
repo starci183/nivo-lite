@@ -1,13 +1,13 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationDecideExecutionArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { DecideExecutionMutation, DecideExecutionMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `decideExecution` mutation. */
-export type MutateDecideExecutionRequest = MutationDecideExecutionArgs["input"]
+export type MutateDecideExecutionRequest = WireInput<DecideExecutionMutationVariables["input"]>
 
-type MutateDecideExecutionResponse = Pick<Mutation, "decideExecution">
+type MutateDecideExecutionResponse = DecideExecutionMutation
 
 const mutation1: TypedDocumentNode<MutateDecideExecutionResponse, InputVariables<MutateDecideExecutionRequest>> = gql`
     mutation DecideExecution($input: DecideExecutionInput!) {
