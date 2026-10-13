@@ -4,6 +4,7 @@ import { AuthorityResolver } from "./authority.resolver"
 import { CreateResponsibilityResolver } from "./create-responsibility.resolver"
 import { DecideExecutionResolver } from "./decide-execution.resolver"
 import { DecideWorkItemResolver } from "./decide-work-item.resolver"
+import { DecisionHistoryResolver } from "./decision-history.resolver"
 import { ResponsibilitiesResolver } from "./responsibilities.resolver"
 import { SaveAuthorityRuleResolver } from "./save-authority-rule.resolver"
 import { SendAgentCommandResolver } from "./send-agent-command.resolver"
@@ -20,6 +21,7 @@ import { WorkItemsResolver } from "./work-items.resolver"
         DecideWorkItemResolver,
         DecideExecutionResolver,
         SendAgentCommandResolver,
+        DecisionHistoryResolver,
         AuthorityResolver,
         UpdateAuthorityResolver,
         SaveAuthorityRuleResolver,

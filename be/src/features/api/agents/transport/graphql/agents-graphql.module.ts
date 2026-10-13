@@ -3,10 +3,12 @@ import { AgentsApiModule } from "../../agents.module"
 import { AgentConnectionsResolver } from "./agent-connections.resolver"
 import { AgentDashboardResolver } from "./agent-dashboard.resolver"
 import { AgentEngineStatusResolver } from "./agent-engine-status.resolver"
+import { AgentGenerationStatusResolver } from "./agent-generation-status.resolver"
 import { AgentsResolver } from "./agents.resolver"
 import { CreateAgentResolver } from "./create-agent.resolver"
 import { GrantAgentConnectionResolver } from "./grant-agent-connection.resolver"
 import { RenameAgentResolver } from "./rename-agent.resolver"
+import { RequestAgentGenerationResolver } from "./request-agent-generation.resolver"
 import { RequestAgentSyncResolver } from "./request-agent-sync.resolver"
 import { RevokeAgentConnectionResolver } from "./revoke-agent-connection.resolver"
 import { SetAgentStatusResolver } from "./set-agent-status.resolver"
@@ -19,6 +21,8 @@ import { SetAgentTextsResolver } from "./set-agent-texts.resolver"
         AgentDashboardResolver,
         AgentEngineStatusResolver,
         AgentConnectionsResolver,
+        RequestAgentGenerationResolver,
+        AgentGenerationStatusResolver,
         CreateAgentResolver,
         RenameAgentResolver,
         SetAgentStatusResolver,

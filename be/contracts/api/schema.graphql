@@ -127,6 +127,38 @@ type AgentEngineStatusType {
   workspaceWritable: Boolean!
 }
 
+input AgentGenMessageInput {
+  content: String!
+  role: String!
+}
+
+input AgentGenerationIdInput {
+  generationId: ID!
+}
+
+type AgentGenerationRequestedType {
+  generationId: ID
+  message: String
+  ok: Boolean!
+  reason: String
+}
+
+type AgentGenerationStatusType {
+  generationId: ID!
+  output: String
+  status: String!
+  timings: JsonObject!
+  usage: AgentGenerationUsageType
+}
+
+type AgentGenerationUsageType {
+  cached_tokens: Int!
+  completion_tokens: Int!
+  cost: Float!
+  model: String
+  prompt_tokens: Int!
+}
+
 input AgentIdInput {
   agentId: ID!
 }
@@ -235,6 +267,21 @@ input DecideWorkItemInput {
   workItemId: ID!
 }
 
+type DecisionRecordType {
+  action: String!
+  created_at: String!
+  decided_by: String!
+  decider_kind: String!
+  department: String!
+  id: ID!
+  leadName: String
+  lead_id: ID
+  note: String!
+  outcome: String!
+  reason: String
+  work_item_id: ID
+}
+
 input FieldValueInput {
   name: String!
   number: Float
@@ -252,6 +299,12 @@ scalar JsonObject
 
 input ListAgentsInput {
   module: String
+}
+
+input ListDecisionHistoryInput {
+  department: String = null
+  kind: String = "all"
+  limit: Int = 50
 }
 
 input ListOfficeMessagesInput {
@@ -393,8 +446,10 @@ type Mutation {
   decideExecution(input: DecideExecutionInput!): ApprovalExecutionType!
   decideWorkItem(input: DecideWorkItemInput!): WorkItemType!
   grantAgentConnection(input: GrantAgentConnectionInput!): AgentAckType!
+  postOfficeMessage(input: PostOfficeMessageInput!): OfficeMessageType!
   proposeOfficeCommand(input: ProposeOfficeCommandInput!): OfficeProposeOutcomeType!
   renameAgent(input: RenameAgentInput!): AgentAckType!
+  requestAgentGeneration(input: RequestAgentGenerationInput!): AgentGenerationRequestedType!
   requestAgentSync(input: RequestAgentSyncInput!): AgentAckType!
   revokeAgentConnection(input: RevokeAgentConnectionInput!): AgentAckType!
   saveAuthorityRule(input: SaveAuthorityRuleInput!): AuthorityRuleType!
@@ -499,6 +554,10 @@ type OfficeThreadCursorType {
   id: ID!
 }
 
+input PostOfficeMessageInput {
+  body: String!
+}
+
 type ProposalCandidateType {
   amount_vnd: Float!
   id: ID!
@@ -523,8 +582,10 @@ type Query {
   agentConnections(input: AgentIdInput!): [AgentConnectionType!]!
   agentDashboard(input: AgentDashboardInput!): AgentDashboardType!
   agentEngineStatus: AgentEngineStatusType!
+  agentGenerationStatus(input: AgentGenerationIdInput!): AgentGenerationStatusType!
   agents(input: ListAgentsInput!): [AgentSummaryType!]!
   authority: AuthoritySheetType!
+  decisionHistory(input: ListDecisionHistoryInput!): [DecisionRecordType!]!
   moduleDefinition(input: ModuleKeyInput!): ModuleDefinitionType!
   modulesCatalog: ModulesCatalogType!
   myWorkspaces: [MembershipType!]!
@@ -540,6 +601,15 @@ type Query {
 input RenameAgentInput {
   agentId: ID!
   name: String!
+}
+
+input RequestAgentGenerationInput {
+  kind: String!
+  messages: [AgentGenMessageInput!]!
+  module: String!
+  purpose: String!
+  responseFormat: String!
+  timeoutMs: Int
 }
 
 input RequestAgentSyncInput {
