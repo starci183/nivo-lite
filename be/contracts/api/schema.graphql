@@ -335,6 +335,14 @@ type AddLoyaltyPresetRewardsType {
   added: Int!
 }
 
+input AddResponsibilityInput {
+  dueAt: String = null
+  leadId: ID!
+  nextAction: String!
+  owner: String!
+  title: String!
+}
+
 input AdjustLoyaltyPointsInput {
   customerId: ID!
   points: Int!
@@ -888,6 +896,14 @@ input AskKnowledgeInput {
   audience: String!
   module: String!
   question: String!
+}
+
+input AssignResponsibilityInput {
+  dueAt: String = null
+  nextAction: String!
+  owner: String!
+  responsibilityId: ID!
+  title: String = null
 }
 
 input AuthorityPatchInput {
@@ -1606,6 +1622,15 @@ input CreateKnowledgeUploadInput {
   filename: String!
 }
 
+input CreateLeadInput {
+  channel: String!
+  company: String!
+  contactName: String!
+  email: String
+  need: String!
+  phone: String
+}
+
 input CreateResponsibilityInput {
   input: NewResponsibilityInput!
 }
@@ -1922,6 +1947,20 @@ input DecideExecutionInput {
   executionId: ID!
 }
 
+input DecideSalesDraftInput {
+  decision: String!
+  editedDraft: String
+  id: ID!
+}
+
+input DecideSalesWorkItemInput {
+  basis: String
+  decision: String!
+  edits: SalesWorkEditsInput
+  id: ID!
+  note: String
+}
+
 input DecideWorkItemInput {
   basis: String
   decision: String!
@@ -1989,6 +2028,10 @@ type DraftCampaignType {
   id: ID!
   recipients: Int!
   status: String!
+}
+
+input DraftLeadExecutionInput {
+  responsibilityId: String!
 }
 
 type DriveFileType {
@@ -2087,6 +2130,10 @@ input GrantAgentConnectionInput {
 input GrantWishInput {
   access: String
   agentId: ID!
+}
+
+input HandoffToAccountingInput {
+  id: ID!
 }
 
 type InboundEventType {
@@ -2207,6 +2254,223 @@ type KnowledgeSuggestionContextType {
   decisions: [SuggestionDecisionType!]!
 }
 
+type LeadActionQueuedType {
+  id: String!
+  status: String!
+}
+
+type LeadActionResultType {
+  contextSummary: String
+  executionId: String
+  leadId: String
+  responsibilityId: String
+  workItemId: String
+}
+
+input LeadActionStatusInput {
+  id: String!
+}
+
+type LeadActionStatusType {
+  errorCode: String
+  id: String!
+  result: LeadActionResultType
+  status: String!
+}
+
+type LeadAgentType {
+  handle: String!
+  id: ID!
+  module: String!
+  name: String!
+  status: String!
+}
+
+type LeadBoardType {
+  channel: String!
+  company: String!
+  contactName: String!
+  contextSummary: String
+  createdAt: String!
+  id: ID!
+  installationId: ID
+  need: String!
+  nextAction: String
+  origin: String
+  ownerName: String
+  stage: String!
+}
+
+type LeadEventType {
+  actor: String!
+  createdAt: String!
+  evidence: String
+  id: ID!
+  kind: String!
+  leadId: ID
+  summary: String!
+}
+
+type LeadExecutionType {
+  agentId: ID
+  createdAt: String!
+  decidedAt: String
+  decidedBy: String
+  draft: String!
+  id: ID!
+  kind: String!
+  responsibilityId: ID!
+  status: String!
+  workItemId: ID
+  workspaceId: ID!
+}
+
+type LeadFlowCandidateType {
+  amountVnd: Float!
+  id: ID!
+  label: String!
+}
+
+type LeadFlowDecisionType {
+  action: String!
+  createdAt: String!
+  decidedBy: String!
+  deciderKind: String!
+  department: String!
+  id: ID!
+  leadId: ID
+  leadName: String
+  note: String
+  outcome: String!
+  reason: String
+  workItemId: ID
+}
+
+input LeadFlowInput {
+  leadId: String!
+}
+
+type LeadFlowInvoiceType {
+  amountVnd: Float!
+  createdAt: String!
+  dueAt: String
+  id: ID!
+  invoiceNo: String!
+  issuedAt: String
+  issuedBy: ID
+  leadId: ID
+  orderId: ID
+  origin: String!
+  paidAt: String
+  status: String!
+  workspaceId: ID!
+}
+
+type LeadFlowLeadType {
+  channel: String!
+  company: String!
+  contactName: String!
+  id: ID!
+}
+
+type LeadFlowOrderType {
+  amountVnd: Float
+  carrier: String
+  confirmedAt: String
+  confirmedBy: ID
+  createdAt: String!
+  id: ID!
+  inboundEventId: ID
+  items: String!
+  leadId: ID
+  orderNo: String!
+  origin: String!
+  shippedAt: String
+  status: String!
+  trackingCode: String
+  workspaceId: ID!
+}
+
+type LeadFlowProposalFieldType {
+  key: String!
+  kind: String!
+  numberValue: Float
+  stringValue: String
+}
+
+type LeadFlowProposalType {
+  amountVnd: Float
+  candidates: [LeadFlowCandidateType!]
+  confidence: Float
+  draft: String
+  fields: [LeadFlowProposalFieldType!]!
+  outcome: String
+  summary: String!
+}
+
+type LeadFlowResultType {
+  href: String
+  summary: String!
+}
+
+type LeadFlowTransactionType {
+  amountVnd: Float!
+  channel: String!
+  createdAt: String!
+  id: ID!
+  inboundEventId: ID
+  invoiceId: ID
+  occurredAt: String!
+  origin: String!
+  payer: String
+  reference: String
+  status: String!
+  workspaceId: ID!
+}
+
+type LeadFlowType {
+  decisions: [LeadFlowDecisionType!]!
+  invoices: [LeadFlowInvoiceType!]!
+  orders: [LeadFlowOrderType!]!
+  transactions: [LeadFlowTransactionType!]!
+  workItems: [LeadFlowWorkItemType!]!
+}
+
+type LeadFlowWorkItemType {
+  action: String!
+  assignedStaffId: ID
+  assignedStaffName: String
+  chainId: ID
+  completedAt: String
+  createdAt: String!
+  decidedBy: String
+  decidedPath: String
+  department: String!
+  depth: Int!
+  error: String
+  evidenceState: String!
+  executionId: ID
+  hasApprovalCard: Boolean!
+  href: String!
+  id: ID!
+  inboundEventId: ID
+  installationId: ID
+  lead: LeadFlowLeadType
+  leadId: ID
+  missingFields: [String!]!
+  origin: String!
+  parentId: ID
+  proposal: LeadFlowProposalType!
+  reason: String
+  reasons: [String!]!
+  result: LeadFlowResultType
+  status: String!
+  subjectId: ID
+  subjectType: String!
+  updatedAt: String!
+  workspaceId: ID!
+}
+
 type LeadGenCommentStatusType {
   errorCode: String
   id: ID!
@@ -2281,6 +2545,56 @@ type LeadGenWorkbenchType {
   leadsHidden: Int!
   metrics: LeadGenMetricsType!
   sources: [LeadGenSourceType!]!
+}
+
+input LeadJourneyInput {
+  leadId: ID!
+}
+
+type LeadJourneyResponsibilityType {
+  createdAt: String!
+  dueAt: String
+  id: ID!
+  leadId: ID!
+  nextAction: String!
+  ownerAgentId: ID
+  ownerKind: String!
+  ownerName: String!
+  status: String!
+  title: String!
+}
+
+type LeadJourneyType {
+  agents: [LeadAgentType!]!
+  events: [LeadEventType!]!
+  executions: [LeadExecutionType!]!
+  lead: LeadRecordType!
+  responsibilities: [LeadJourneyResponsibilityType!]!
+}
+
+type LeadRecordType {
+  channel: String!
+  company: String!
+  contactName: String!
+  contextSummary: String
+  createdAt: String!
+  id: ID!
+  installationId: ID
+  need: String!
+  origin: String
+  stage: String!
+}
+
+type LeadResponsibilityType {
+  dueAt: String
+  id: ID!
+  leadId: ID!
+  nextAction: String!
+  ownerAgentId: ID
+  ownerKind: String!
+  ownerName: String!
+  status: String!
+  title: String!
 }
 
 input LeadWaitInput {
@@ -2631,6 +2945,18 @@ type MarkBookingNoShowType {
   status: String!
 }
 
+input MarkOrderShippedInput {
+  carrier: String!
+  orderId: ID!
+  trackingCode: String!
+}
+
+type MarkOrderShippedType {
+  id: ID!
+  notificationId: ID!
+  orderNo: String!
+}
+
 type MemberListingType {
   displayName: String!
   email: String!
@@ -2845,12 +3171,14 @@ type Mutation {
   acceptInvite(input: InviteTokenInput!): AcceptInviteType!
   addBooking(input: AddBookingInput!): AddBookingType!
   addLoyaltyPresetRewards: AddLoyaltyPresetRewardsType!
+  addResponsibility(input: AddResponsibilityInput!): LeadResponsibilityType!
   adjustLoyaltyPoints(input: AdjustLoyaltyPointsInput!): AdjustLoyaltyPointsType!
   adminExtendSubscription(input: AdminExtendSubscriptionInput!): AdminSubscriptionExtendedType!
   adminResendWorkspaceInvite(input: AdminResendWorkspaceInviteInput!): AdminInviteResentType!
   adminSetWorkspacePlan(input: AdminSetWorkspacePlanInput!): AdminPlanSetType!
   adminSetWorkspaceStatus(input: AdminSetWorkspaceStatusInput!): AdminStatusSetType!
   approveLeadGenComment(input: ApproveLeadGenCommentInput!): LeadGenCommentStatusType!
+  assignResponsibility(input: AssignResponsibilityInput!): LeadResponsibilityType!
   authorizeGoogle(input: AuthorizeGoogleInput!): AuthorizeUrlType!
   authorizeMeta(input: AuthorizeMetaInput!): MetaAuthorizationType!
   authorizeZalo(input: AuthorizeZaloInput!): ZaloAuthorizationType!
@@ -2871,32 +3199,40 @@ type Mutation {
   createApiKey(input: CreateApiKeyInput!): CreatedApiKeyType!
   createInvite(input: CreateInviteInput!): InviteResultType!
   createKnowledgeUpload(input: CreateKnowledgeUploadInput!): UploadAddressType!
+  createLead(input: CreateLeadInput!): LeadActionQueuedType!
   createResponsibility(input: CreateResponsibilityInput!): ResponsibilityType!
   createWorkspace(input: CreateWorkspaceInput!): CreateWorkspaceType!
   decideBrainFact(input: DecideBrainFactInput!): BrainFactType!
   decideBrainLesson(input: DecideBrainLessonInput!): BrainLessonType!
   decideExecution(input: DecideExecutionInput!): ApprovalExecutionType!
+  decideSalesDraft(input: DecideSalesDraftInput!): SalesActionType!
+  decideSalesWorkItem(input: DecideSalesWorkItemInput!): SalesActionType!
   decideWorkItem(input: DecideWorkItemInput!): WorkItemType!
   deleteConnection(input: DeleteConnectionInput!): Boolean!
   deleteKnowledgeSource(input: DeleteKnowledgeSourceInput!): Boolean!
   disconnectConnection(input: DisconnectConnectionInput!): Boolean!
   dismissKnowledgeGap(input: DismissKnowledgeGapInput!): Boolean!
+  draftLeadExecution(input: DraftLeadExecutionInput!): LeadActionQueuedType!
   draftLoyaltyCampaign(input: DraftCampaignInput!): DraftCampaignType!
   emitAutomationEvent(input: EmitAutomationEventInput!): Boolean!
   enqueueKnowledgeSource(input: EnqueueKnowledgeSourceInput!): SourceRefType!
   finishWebhookConnection(input: FinishWebhookConnectionInput!): Boolean!
   grantAgentConnection(input: GrantAgentConnectionInput!): AgentAckType!
+  handoffToAccounting(input: HandoffToAccountingInput!): SalesActionType!
   keepCurrentBrainFact(input: KeepCurrentBrainFactInput!): Int!
   maintainBrain: Boolean!
   markBookingNoShow(input: MarkBookingNoShowInput!): MarkBookingNoShowType!
+  markOrderShipped(input: MarkOrderShippedInput!): MarkOrderShippedType!
   moveBooking(input: MoveBookingInput!): MoveBookingType!
   postOfficeMessage(input: PostOfficeMessageInput!): OfficeMessageType!
   previewLoyaltySegment(input: PreviewLoyaltySegmentInput!): PreviewLoyaltySegmentType!
   proposeAutomationBody(input: TemplateKeyInput!): BodyProposalType!
   proposeOfficeCommand(input: ProposeOfficeCommandInput!): OfficeProposeOutcomeType!
   recordManualEvidence(input: RecordManualEvidenceInput!): ManualEvidenceType!
+  recordOutcome(input: RecordOutcomeInput!): RecordOutcomeType!
   redeemLoyaltyReward(input: RedeemLoyaltyRewardInput!): RedeemLoyaltyRewardType!
   reembedKnowledge: Boolean!
+  refreshLeadContext(input: RefreshLeadContextInput!): LeadActionQueuedType!
   reindexKnowledgeSource(input: ReindexKnowledgeSourceInput!): SourceRefType!
   removeBookingException(input: RemoveBookingExceptionInput!): RemoveBookingExceptionType!
   removeBookingResource(input: RemoveBookingResourceInput!): RemoveBookingResourceType!
@@ -2914,6 +3250,7 @@ type Mutation {
   requestPaymentOrder(input: RequestPaymentOrderInput!): RequestPaymentOrderType!
   requestPublicBooking(input: RequestPublicBookingInput!): RequestPublicBookingType!
   resendInvite(input: InviteRefInput!): InviteResultType!
+  retryFailedStep(input: RetryFailedStepInput!): SalesActionType!
   retryKnowledgeSource(input: RetryKnowledgeSourceInput!): SourceRefType!
   returnZaloAuthorization(input: ReturnZaloAuthorizationInput!): ZaloWizardConnectionType!
   revealSepayKey(input: RevealSepayKeyInput!): SepayKeyType!
@@ -2933,6 +3270,7 @@ type Mutation {
   saveBookingService(input: SaveBookingServiceInput!): SaveBookingServiceType!
   saveBrainFact(input: SaveBrainFactInput!): SavedFactType!
   saveBrainLesson(input: SaveBrainLessonInput!): BrainLessonType!
+  saveContract(input: SaveContractInput!): SaveContractType!
   saveLoyaltyProgram(input: SaveLoyaltyProgramInput!): LoyaltyProgramType!
   saveLoyaltyReward(input: SaveLoyaltyRewardInput!): LoyaltyRewardType!
   saveProviderKeys(input: SaveProviderKeysInput!): ProviderKeysResultType!
@@ -2947,11 +3285,14 @@ type Mutation {
   setConnectionGrant(input: SetConnectionGrantInput!): Boolean!
   setKnowledgeSuggestionState(input: SetKnowledgeSuggestionStateInput!): Boolean!
   setMemberStatus(input: SetMemberStatusInput!): Boolean!
+  settleWonDeal(input: SettleWonDealInput!): LeadActionQueuedType!
   simulateInbound(input: SimulateInboundInput!): SimulateInboundType!
   startAgentChatConversation(input: StartAgentChatConversationInput!): CreatedAgentChatConversationType!
   startMoneyConnection(input: StartMoneyConnectionInput!): WizardConnectionType!
   startWebhookConnection(input: StartWebhookConnectionInput!): WebhookViewType!
   startZaloConnection(input: StartZaloConnectionInput!): ZaloWizardConnectionType!
+  stopFailedStep(input: StopFailedStepInput!): StopFailedStepType!
+  suggestLeadOwner(input: SuggestLeadOwnerInput!): LeadActionQueuedType!
   syncLoyaltyMembers: SyncLoyaltyMembersType!
   takeOverAgentChatConversation(input: TakeOverAgentChatConversationInput!): AgentChatHolderType!
   testWebhookConnection(input: TestWebhookConnectionInput!): WebhookTestResultType!
@@ -3317,8 +3658,12 @@ type Query {
   knowledgeSource(input: KnowledgeSourceInput!): KnowledgeSourceDetailType!
   knowledgeSources(input: KnowledgeSourcesInput!): [KnowledgeSourceType!]!
   knowledgeSuggestions: KnowledgeSuggestionContextType!
+  leadActionStatus(input: LeadActionStatusInput!): LeadActionStatusType!
+  leadBoard: [LeadBoardType!]!
+  leadFlow(input: LeadFlowInput!): LeadFlowType!
   leadGenCommentStatus(input: ReadLeadGenCommentStatusInput!): LeadGenCommentStatusType!
   leadGenWorkbench(input: ReadLeadGenWorkbenchInput!): LeadGenWorkbenchType!
+  leadJourney(input: LeadJourneyInput!): LeadJourneyType!
   leadWait(input: LeadWaitInput!): LeadWaitType!
   lessonMiningStatus(input: LessonMiningStatusInput!): LessonMiningStatusType!
   loyaltyBoard: LoyaltyBoardType!
@@ -3346,8 +3691,10 @@ type Query {
   publicBookingTimes(input: PublicBookingTimesInput!): PublicBookingTimesType!
   publicLoyaltyPage(input: PublicLoyaltyPageInput!): PublicLoyaltyPageType!
   responsibilities: [ResponsibilityListingType!]!
+  salesActionStatus(input: SalesActionStatusInput!): SalesActionType!
   salesOrder(input: SalesOrderInput!): SalesOrderType
   salesOrders: [SalesOrderType!]!
+  salesWorkbench: SalesWorkbenchType!
   workItem(input: WorkItemIdInput!): WorkItemType!
   workItems(input: ListWorkItemsInput!): WorkItemPageType!
   workspaceInvites: [PendingInviteType!]!
@@ -3379,6 +3726,23 @@ input RecordManualEvidenceInput {
   payer: String
 }
 
+input RecordOutcomeInput {
+  evidence: String!
+  leadId: ID!
+  stage: String!
+}
+
+type RecordOutcomeType {
+  channel: String!
+  company: String!
+  contactName: String!
+  handedToAccounting: Boolean!
+  leadId: ID!
+  need: String!
+  origin: String
+  stage: String!
+}
+
 input RedeemLoyaltyRewardInput {
   customerId: ID!
   rewardId: ID!
@@ -3388,6 +3752,10 @@ input RedeemLoyaltyRewardInput {
 type RedeemLoyaltyRewardType {
   code: String!
   posted: Boolean!
+}
+
+input RefreshLeadContextInput {
+  leadId: String!
 }
 
 input ReindexKnowledgeSourceInput {
@@ -3554,6 +3922,10 @@ type RetrievedPassageType {
   visibility: String!
 }
 
+input RetryFailedStepInput {
+  id: ID!
+}
+
 input RetryKnowledgeSourceInput {
   id: ID!
 }
@@ -3600,6 +3972,163 @@ type RunStepType {
   status: String!
 }
 
+input SalesActionStatusInput {
+  id: ID!
+}
+
+type SalesActionType {
+  errorCode: String
+  id: ID!
+  status: String!
+  workItemId: ID
+}
+
+type SalesActivityType {
+  action: String!
+  at: String!
+  customer: String
+  evidence: String
+  evidenceState: String!
+  href: String!
+  id: ID!
+  leadId: ID
+  summary: String!
+}
+
+type SalesAttentionType {
+  action: String
+  company: String!
+  customer: String!
+  decisionId: ID
+  key: String!
+  kind: String!
+  leadId: ID
+  missing: [String!]!
+  need: String!
+  owner: String
+  since: String!
+  stage: String
+  workItemId: ID
+}
+
+type SalesChoiceType {
+  id: ID!
+  name: String!
+}
+
+type SalesClosedHiddenType {
+  lost: Int!
+  won: Int!
+}
+
+type SalesConversionType {
+  leads: Int!
+  sources: [SalesSourceConversionType!]!
+  windowDays: Int!
+  won: Int!
+}
+
+type SalesDealType {
+  channel: String!
+  closedAt: String
+  closedReason: String
+  company: String!
+  createdAt: String!
+  customer: String!
+  dueAt: String
+  leadId: ID!
+  need: String!
+  nextStep: String
+  owner: String
+  stage: String!
+  valueSource: String
+  valueVnd: Float
+}
+
+type SalesDecidedType {
+  action: String!
+  createdAt: String!
+  decidedBy: String!
+  deciderKind: String!
+  department: String!
+  id: ID!
+  leadId: ID
+  leadName: String
+  note: String
+  outcome: String!
+  reason: String
+  workItemId: ID
+}
+
+type SalesDecisionType {
+  action: String!
+  amountVnd: Float
+  assignedStaffId: ID
+  assignedStaffName: String
+  createdAt: String!
+  customer: String!
+  draft: String!
+  executionId: ID
+  hasAmount: Boolean!
+  id: ID!
+  leadId: ID
+  missing: [String!]!
+  reason: String
+  source: String!
+  summary: String!
+  workItemId: ID
+}
+
+input SalesFieldValueInput {
+  name: String!
+  number: Float
+  text: String
+}
+
+type SalesHandoffInvoiceType {
+  amountVnd: Float!
+  issuedAt: String
+  no: String!
+  paidAt: String
+  status: String!
+}
+
+type SalesHandoffType {
+  amountVnd: Float
+  canHandoff: Boolean!
+  canShip: Boolean!
+  carrier: String
+  confirmedAt: String
+  customer: String!
+  invoice: SalesHandoffInvoiceType
+  items: String!
+  key: String!
+  leadId: ID
+  orderId: ID
+  orderNo: String
+  orderStatus: String!
+  shippedAt: String
+  trackingCode: String
+  work: SalesHandoffWorkType
+}
+
+type SalesHandoffWorkType {
+  error: String
+  id: ID!
+  reason: String
+  status: String!
+}
+
+type SalesMetricsType {
+  conversion: SalesConversionType!
+  openCount: Int!
+  proposalCount: Int!
+  proposalValueVnd: Float!
+  waitingCount: Int!
+  wonCount: Int!
+  wonValueVnd: Float!
+}
+
 input SalesOrderInput {
   id: ID!
 }
@@ -3619,6 +4148,46 @@ type SalesOrderType {
   status: String!
   trackingCode: String
   workspaceId: ID!
+}
+
+type SalesRecurringContractType {
+  amountVnd: Float
+  customerName: String!
+  endsOn: String!
+  id: ID!
+  leadId: ID
+  note: String!
+  plan: String!
+  startsOn: String!
+  status: String!
+}
+
+type SalesSourceConversionType {
+  leads: Int!
+  source: String!
+  won: Int!
+}
+
+input SalesWorkEditsInput {
+  amount_vnd: Float
+  candidateId: ID
+  draft: String
+  fields: [SalesFieldValueInput!]
+}
+
+type SalesWorkbenchType {
+  activity: [SalesActivityType!]!
+  attention: [SalesAttentionType!]!
+  closedHidden: SalesClosedHiddenType!
+  contracts: [SalesRecurringContractType!]!
+  deals: [SalesDealType!]!
+  decided: [SalesDecidedType!]!
+  decisions: [SalesDecisionType!]!
+  handoffs: [SalesHandoffType!]!
+  leadOptions: [SalesChoiceType!]!
+  metrics: SalesMetricsType!
+  nowIso: String!
+  staff: [SalesChoiceType!]!
 }
 
 input SaveAuthorityRuleInput {
@@ -3724,6 +4293,30 @@ input SaveBrainLessonInput {
   title: String!
 }
 
+input SaveContractInput {
+  amountVnd: Float = null
+  contractId: ID = null
+  customerName: String!
+  endsOn: String!
+  leadId: ID = null
+  note: String!
+  plan: String!
+  startsOn: String!
+  status: String!
+}
+
+type SaveContractType {
+  amountVnd: Float
+  customerName: String!
+  endsOn: String!
+  id: ID!
+  leadId: ID
+  note: String!
+  plan: String!
+  startsOn: String!
+  status: String!
+}
+
 input SaveLoyaltyProgramInput {
   config: LoyaltyConfigInput
   enabled: Boolean
@@ -3820,6 +4413,11 @@ input SetKnowledgeSuggestionStateInput {
 input SetMemberStatusInput {
   status: String!
   userId: ID!
+}
+
+input SettleWonDealInput {
+  evidence: String
+  leadId: String!
 }
 
 type ShellAgentType {
@@ -3926,7 +4524,20 @@ input StartZaloConnectionInput {
   name: String!
 }
 
+input StopFailedStepInput {
+  id: ID!
+}
+
+type StopFailedStepType {
+  id: ID!
+  status: String!
+}
+
 scalar StringMap
+
+input SuggestLeadOwnerInput {
+  leadId: String!
+}
 
 type SuggestionDecisionType {
   key: String!
