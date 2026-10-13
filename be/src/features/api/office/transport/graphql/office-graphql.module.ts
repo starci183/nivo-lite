@@ -6,6 +6,7 @@ import { OfficeCommandCandidatesResolver } from "./office-command-candidates.res
 import { OfficeDecidedApprovalsResolver } from "./office-decided-approvals.resolver"
 import { OfficeMessagesResolver } from "./office-messages.resolver"
 import { OfficePendingApprovalsResolver } from "./office-pending-approvals.resolver"
+import { PostOfficeMessageResolver } from "./post-office-message.resolver"
 import { ProposeOfficeCommandResolver } from "./propose-office-command.resolver"
 
 @Module({
@@ -15,6 +16,7 @@ import { ProposeOfficeCommandResolver } from "./propose-office-command.resolver"
         OfficePendingApprovalsResolver,
         OfficeDecidedApprovalsResolver,
         OfficeCommandCandidatesResolver,
+        PostOfficeMessageResolver,
         ProposeOfficeCommandResolver,
         ConfirmOfficeCommandResolver,
         CancelOfficeCommandResolver,

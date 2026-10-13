@@ -14,6 +14,8 @@ export type {
     GenerationFailure,
     GenerationFailureReason,
     GenerationOutcome,
+    GenerationRequested,
+    GenerationStatus,
     GenerationRunStatus,
     GenerationSuccess,
     ResponseFormat,

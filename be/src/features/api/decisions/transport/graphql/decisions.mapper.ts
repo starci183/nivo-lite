@@ -1,12 +1,13 @@
 import type { AuthorityProfile } from "@modules/domain/authority"
 import type { AuthorityRuleRecord } from "@modules/domain/authority-rules"
-import type { AuthoritySheet, CommandResult, WorkItem, WorkItemPage } from "@modules/domain/decisions"
+import type { AuthoritySheet, CommandResult, DecisionRecord, WorkItem, WorkItemPage } from "@modules/domain/decisions"
 import type { ExecutionRow } from "@modules/domain/executions"
 import type { ResponsibilityListing, ResponsibilityRecord } from "@modules/domain/responsibilities"
 import type { Locale } from "@modules/platform/i18n"
 import type { CreateResponsibilityRequest } from "../../application/create-responsibility.contracts"
 import type { DecideExecutionRequest } from "../../application/decide-execution.contracts"
 import type { DecideWorkItemRequest } from "../../application/decide-work-item.contracts"
+import type { ListDecisionHistoryRequest } from "../../application/list-decision-history.contracts"
 import type { GetWorkItemRequest } from "../../application/get-work-item.contracts"
 import type { ListResponsibilitiesRequest } from "../../application/list-responsibilities.contracts"
 import type { ListWorkItemPageRequest } from "../../application/list-work-item-page.contracts"
@@ -22,6 +23,8 @@ import type { AuthorityRuleType } from "./dto/authority-rule.type"
 import type { AuthoritySheetType } from "./dto/authority-sheet.type"
 import type { CreateResponsibilityInput } from "./dto/create-responsibility.input"
 import type { DecideExecutionInput } from "./dto/decide-execution.input"
+import type { DecisionRecordType } from "./dto/decision-record.type"
+import type { ListDecisionHistoryInput } from "./dto/list-decision-history.input"
 import type { DecideWorkItemInput } from "./dto/decide-work-item.input"
 import type { ListWorkItemsInput } from "./dto/list-work-items.input"
 import type { ResponsibilityListingType } from "./dto/responsibility-listing.type"
@@ -125,3 +128,13 @@ export const toResponsibilityType = (record: ResponsibilityRecord): Responsibili
 export const toResponsibilityListingsType = (
     result: ReadonlyArray<ResponsibilityListing>,
 ): Array<ResponsibilityListingType> => result.map((entry) => ({ ...entry }))
+
+/** Maps the history listing of the GraphQL input, with the workspace it names, to the query request. */
+export const toListDecisionHistoryRequest = (
+    workspaceId: string,
+    input: ListDecisionHistoryInput,
+): ListDecisionHistoryRequest => ({ workspaceId, ...input })
+
+/** Maps the lines of the decision log to the GraphQL type. */
+export const toDecisionRecordsType = (records: ReadonlyArray<DecisionRecord>): Array<DecisionRecordType> =>
+    records.map((record) => ({ ...record }))

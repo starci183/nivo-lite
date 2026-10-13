@@ -408,6 +408,38 @@ type AgentEngineStatusType {
   workspaceWritable: Boolean!
 }
 
+input AgentGenMessageInput {
+  content: String!
+  role: String!
+}
+
+input AgentGenerationIdInput {
+  generationId: ID!
+}
+
+type AgentGenerationRequestedType {
+  generationId: ID
+  message: String
+  ok: Boolean!
+  reason: String
+}
+
+type AgentGenerationStatusType {
+  generationId: ID!
+  output: String
+  status: String!
+  timings: JsonObject!
+  usage: AgentGenerationUsageType
+}
+
+type AgentGenerationUsageType {
+  cached_tokens: Int!
+  completion_tokens: Int!
+  cost: Float!
+  model: String
+  prompt_tokens: Int!
+}
+
 input AgentIdInput {
   agentId: ID!
 }
@@ -830,6 +862,21 @@ input DecideWorkItemInput {
   workItemId: ID!
 }
 
+type DecisionRecordType {
+  action: String!
+  created_at: String!
+  decided_by: String!
+  decider_kind: String!
+  department: String!
+  id: ID!
+  leadName: String
+  lead_id: ID
+  note: String!
+  outcome: String!
+  reason: String
+  work_item_id: ID
+}
+
 type DeviceSessionType {
   createdAt: String
   id: ID!
@@ -890,6 +937,12 @@ scalar JsonObject
 
 input ListAgentsInput {
   module: String
+}
+
+input ListDecisionHistoryInput {
+  department: String = null
+  kind: String = "all"
+  limit: Int = 50
 }
 
 input ListOfficeMessagesInput {
@@ -1067,10 +1120,12 @@ type Mutation {
   decideWorkItem(input: DecideWorkItemInput!): WorkItemType!
   emitAutomationEvent(input: EmitAutomationEventInput!): Boolean!
   grantAgentConnection(input: GrantAgentConnectionInput!): AgentAckType!
+  postOfficeMessage(input: PostOfficeMessageInput!): OfficeMessageType!
   proposeAutomationBody(input: TemplateKeyInput!): BodyProposalType!
   proposeOfficeCommand(input: ProposeOfficeCommandInput!): OfficeProposeOutcomeType!
   removeMember(input: MemberRefInput!): Boolean!
   renameAgent(input: RenameAgentInput!): AgentAckType!
+  requestAgentGeneration(input: RequestAgentGenerationInput!): AgentGenerationRequestedType!
   requestAgentSync(input: RequestAgentSyncInput!): AgentAckType!
   resendInvite(input: InviteRefInput!): InviteResultType!
   revokeAgentConnection(input: RevokeAgentConnectionInput!): AgentAckType!
@@ -1200,6 +1255,10 @@ type PendingInviteType {
   staffId: ID
 }
 
+input PostOfficeMessageInput {
+  body: String!
+}
+
 type PreviewSampleType {
   neutral: JsonObject!
   variables: JsonObject!
@@ -1233,6 +1292,7 @@ type Query {
   agentConnections(input: AgentIdInput!): [AgentConnectionType!]!
   agentDashboard(input: AgentDashboardInput!): AgentDashboardType!
   agentEngineStatus: AgentEngineStatusType!
+  agentGenerationStatus(input: AgentGenerationIdInput!): AgentGenerationStatusType!
   agents(input: ListAgentsInput!): [AgentSummaryType!]!
   apiKeys: [ApiKeyType!]!
   authority: AuthoritySheetType!
@@ -1241,6 +1301,7 @@ type Query {
   automationSuggestions(input: AutomationSuggestionsInput!): [AutomationSuggestionType!]!
   automations: AutomationsOverviewType!
   dashboard: DashboardType!
+  decisionHistory(input: ListDecisionHistoryInput!): [DecisionRecordType!]!
   invitePreview(input: InviteTokenInput!): InvitePreviewType!
   moduleDefinition(input: ModuleKeyInput!): ModuleDefinitionType!
   modulesCatalog: ModulesCatalogType!
@@ -1262,6 +1323,15 @@ type Query {
 input RenameAgentInput {
   agentId: ID!
   name: String!
+}
+
+input RequestAgentGenerationInput {
+  kind: String!
+  messages: [AgentGenMessageInput!]!
+  module: String!
+  purpose: String!
+  responseFormat: String!
+  timeoutMs: Int
 }
 
 input RequestAgentSyncInput {
