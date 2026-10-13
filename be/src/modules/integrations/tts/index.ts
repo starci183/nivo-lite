@@ -1,5 +1,5 @@
 export { parseTtsConfig } from "./tts.config"
-export { InjectTts } from "./tts.decorators"
+export { InjectTts, TTS } from "./tts.decorators"
 export { TTS_ERROR_KINDS, TtsError, TtsErrorCode } from "./errors/tts.error"
 export { TTS_MESSAGES } from "./messages/tts.messages"
 export { TtsModule } from "./tts.module"

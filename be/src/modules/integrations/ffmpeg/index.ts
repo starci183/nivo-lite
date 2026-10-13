@@ -1,5 +1,5 @@
 export { parseFfmpegConfig } from "./ffmpeg.config"
-export { InjectFfmpeg } from "./ffmpeg.decorators"
+export { FFMPEG, InjectFfmpeg } from "./ffmpeg.decorators"
 export { FFMPEG_ERROR_KINDS } from "./errors/ffmpeg.error"
 export { FFMPEG_MESSAGES } from "./messages/ffmpeg.messages"
 export { FfmpegModule } from "./ffmpeg.module"

@@ -48,7 +48,7 @@ const paramsOf = builder<EarningParams>({
     by: "api:Till",
     occurredAt: "",
 })
-const catalog: MessageCatalog = { get: (key, params) => `${key}|${Object.values(params).join("/")}` }
+const catalog = mock<MessageCatalog>({ get: (key, params) => `${key}|${Object.values(params).join("/")}` })
 
 interface Options {
     customerId?: string | null
