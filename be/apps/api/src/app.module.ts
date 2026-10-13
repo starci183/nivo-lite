@@ -61,7 +61,7 @@ import {
     PaymentOrdersModule,
 } from "@modules/domain/payment-orders"
 import { CREDITS_ERROR_KINDS, CREDITS_MESSAGES, CreditsModule } from "@modules/domain/credits"
-import { AiUsageEventsModule } from "@modules/domain/ai-usage-events"
+import { AI_USAGE_EVENTS_MESSAGES, AiUsageEventsModule, UsageGateService } from "@modules/domain/ai-usage-events"
 import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
 import { WorkspacesHttpModule } from "@features/api/workspaces"
 import {
@@ -95,7 +95,6 @@ import {
     AI_GENERATIONS_POLL_MS,
     AiGenerationsModule,
     TextGeneratorService,
-    UnboundUsageGateService,
 } from "@modules/domain/ai-generations"
 import { AUTHORITY_ERROR_KINDS, AUTHORITY_MESSAGES } from "@modules/domain/authority"
 import { AUTHORITY_RULES_ERROR_KINDS, AUTHORITY_RULES_MESSAGES } from "@modules/domain/authority-rules"
@@ -256,6 +255,7 @@ export class AppModule {
                         AGENT_TOOLS_MESSAGES,
                         AGENTS_MESSAGES,
                         AI_GENERATIONS_MESSAGES,
+                        AI_USAGE_EVENTS_MESSAGES,
                         API_KEYS_MESSAGES,
                         AUTHORITY_MESSAGES,
                         AUTHORITY_RULES_MESSAGES,
@@ -457,7 +457,7 @@ export class AppModule {
                 AgentConnectionsModule.register({ isGlobal: true }),
                 AiGenerationsModule.register({
                     isGlobal: true,
-                    usage: UnboundUsageGateService,
+                    usage: UsageGateService,
                     pollMs: AI_GENERATIONS_POLL_MS,
                 }),
                 OpenclawAgentSyncModule.register({ isGlobal: true, reloadSettleMs: OPENCLAW_RELOAD_SETTLE_MS }),
