@@ -38,7 +38,12 @@ const build = async (
     entityManager: MockEntityManager = mockEntityManager({ query: [FIND_WORKSPACE_OWNER, [{ user_id: "owner-1" }]] }),
 ) => {
     const channels = mock<ChannelConnectionsService>()
-    channels.connectTelegram.mockResolvedValue({ connection: TELEGRAM, webhookRegistered: true })
+    channels.connectTelegram.mockResolvedValue({
+        connection: TELEGRAM,
+        botUsername: "shop_bot",
+        accountMasked: null,
+        webhookRegistered: true,
+    })
     channels.startMoneyConnection.mockResolvedValue({
         id: "sepay-1",
         provider: "sepay",
@@ -163,6 +168,8 @@ describe("ChannelProvisioningService", () => {
         const { service, entityManager, channels, grants, print } = await build()
         channels.connectTelegram.mockResolvedValue({
             connection: { ...TELEGRAM, name: "Shop bot" },
+            botUsername: "shop_bot",
+            accountMasked: null,
             webhookRegistered: false,
         })
 

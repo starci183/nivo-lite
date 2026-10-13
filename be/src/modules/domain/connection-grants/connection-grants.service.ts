@@ -2,12 +2,15 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionActor, ConnectionMember } from "@modules/domain/connections"
+import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { eachInOrder } from "@modules/platform/primitives"
 import { isAccess, normaliseAccess, planExactly, purposeFor } from "./connection-access.policy"
-import type { Access, GrantChange } from "./connection-access.policy"
+import type { Access, GrantChange, RequestedGrant } from "./connection-access.policy"
 import type {
     AgentGrantWish,
     ConnectionBoardEntry,
+    ConnectionCandidate,
     ConnectionGrantEntry,
     ConnectionGrantWish,
 } from "./connection-grants.contracts"
@@ -26,8 +29,19 @@ import {
 
 const OWNER_ONLY = ["owner"] as const
 const MANAGER = ["owner", "manager"] as const
+const RECORD_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 const pairKey = (agentId: string, connectionId: string): string => `${agentId}:${connectionId}`
+
+/** A stored access word, or auto when the row holds something else. */
+const storedLevel = (value: string): Access => (isAccess(value) ? value : "auto")
+
+/** A non-secret fact, or null when the connection does not carry it. */
+const publicFact = (meta: Readonly<Record<string, string>>, key: string): string | null => {
+    const value = meta[key]
+    if (value === undefined || value.trim() === "") return null
+    return value
+}
 
 @Injectable()
 /** Which agent uses which connection, and how far (owner only, both directions), reached through the primary EntityManager. */
@@ -35,7 +49,48 @@ export class ConnectionGrantsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly connections: ConnectionsService,
+        private readonly members: WorkspaceMembersService,
     ) {}
+
+    /**
+     * Every connection this agent is allowed to use, with the access it already has (null when it has none).
+     * A disconnected connection cannot be granted, so it is left out. Any member may look.
+     */
+    async candidates(
+        userId: string,
+        workspaceId: string,
+        agentId: string,
+    ): Promise<ReadonlyArray<ConnectionCandidate>> {
+        await this.members.require(userId, workspaceId)
+        if (!RECORD_ID.test(agentId)) {
+            throw new ConnectionsError({ code: ConnectionsErrorCode.NotFound, params: { id: agentId } })
+        }
+        const [agent] = await this.entityManager.query<Array<AgentRow>>(FIND_AGENTS, [workspaceId, [agentId]])
+        if (agent === undefined) {
+            throw new ConnectionsError({ code: ConnectionsErrorCode.NotFound, params: { id: agentId } })
+        }
+        const [listed, grants] = await Promise.all([
+            this.connections.list(workspaceId),
+            this.entityManager.query<Array<GrantRow>>(FIND_AGENT_GRANTS, [workspaceId, agentId]),
+        ])
+        const accessOf = new Map(grants.map((row) => [row.connection_id, storedLevel(row.access)]))
+        return listed.flatMap((connection) => {
+            const purpose = purposeFor(agent.module, connection.provider)
+            if (purpose === null || connection.status === "disconnected") return []
+            return [
+                {
+                    id: connection.id,
+                    name: connection.name,
+                    provider: connection.provider,
+                    botUsername: publicFact(connection.meta, "bot_username"),
+                    accountMasked: publicFact(connection.meta, "account_masked"),
+                    status: connection.status,
+                    purpose,
+                    access: accessOf.get(connection.id) ?? null,
+                },
+            ]
+        })
+    }
 
     /** Every connection of the workspace with the agents that use it and how far (owner or manager). */
     async board(actor: ConnectionActor): Promise<ReadonlyArray<ConnectionBoardEntry>> {
@@ -52,7 +107,12 @@ export class ConnectionGrantsService {
                 { agentId: row.agent_id, access },
             ])
         }
-        return connections.map((connection) => ({ connection, grants: byConnection.get(connection.id) ?? [] }))
+        return connections.map((connection) => ({
+            connection,
+            botUsername: publicFact(connection.meta, "bot_username"),
+            accountMasked: publicFact(connection.meta, "account_masked"),
+            grants: byConnection.get(connection.id) ?? [],
+        }))
     }
 
     /** One agent access to one connection (null removes it). Saved at once from either picker. */
@@ -60,7 +120,7 @@ export class ConnectionGrantsService {
         actor: ConnectionActor,
         connectionId: string,
         agentId: string,
-        access: Access | null,
+        access: RequestedGrant,
     ): Promise<void> {
         const member = await this.connections.authorize(actor, OWNER_ONLY)
         await this.entityManager.transaction((tx) =>
@@ -78,7 +138,7 @@ export class ConnectionGrantsService {
         await this.entityManager.transaction(async (tx) => {
             await this.connections.get(actor.workspaceId, connectionId, tx)
             const rows = await tx.query<Array<GrantRow>>(FIND_CONNECTION_GRANTS, [actor.workspaceId, connectionId])
-            const have = new Map(rows.map((row) => [row.agent_id, row.access as Access]))
+            const have = new Map(rows.map((row) => [row.agent_id, storedLevel(row.access)]))
             const plan = planExactly(
                 have,
                 wanted.map((w) => ({ id: w.agentId, access: w.access })),
@@ -97,7 +157,7 @@ export class ConnectionGrantsService {
         const member = await this.connections.authorize(actor, OWNER_ONLY)
         await this.entityManager.transaction(async (tx) => {
             const rows = await tx.query<Array<GrantRow>>(FIND_AGENT_GRANTS, [actor.workspaceId, agentId])
-            const have = new Map(rows.map((row) => [row.connection_id, row.access as Access]))
+            const have = new Map(rows.map((row) => [row.connection_id, storedLevel(row.access)]))
             const plan = planExactly(
                 have,
                 wanted.map((w) => ({ id: w.connectionId, access: w.access })),
@@ -129,7 +189,7 @@ export class ConnectionGrantsService {
         const agentOf = new Map(agents.map((agent) => [agent.id, agent]))
         const connectionOf = new Map(connections.map((connection) => [connection.id, connection]))
         const before = new Map(current.map((row) => [pairKey(row.agent_id, row.connection_id), row.access]))
-        for (const change of changes) {
+        await eachInOrder(changes, async (change) => {
             const agent = agentOf.get(change.agentId)
             const connection = connectionOf.get(change.connectionId)
             if (agent === undefined || connection === undefined) {
@@ -139,7 +199,7 @@ export class ConnectionGrantsService {
                 })
             }
             const was = before.get(pairKey(agent.id, connection.id)) ?? null
-            if (was === change.access) continue
+            if (was === change.access) return
             if (change.access === null) {
                 await tx.query(DELETE_GRANT, [actor.workspaceId, agent.id, connection.id])
             } else {
@@ -169,6 +229,6 @@ export class ConnectionGrantsService {
                 actor.principalId,
                 member.displayName,
             ])
-        }
+        })
     }
 }

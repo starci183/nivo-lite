@@ -1,8 +1,6 @@
-/** How an agent may use a connection. */
-export type Access = "read" | "ask" | "auto"
+import type { Access, Purpose } from "@modules/domain/connection-grants"
 
-/** What an agent uses a connection for. */
-export type Purpose = "inbound_chat" | "outbound_chat" | "bank_feed" | "data_source" | "tool" | "lead_source"
+export type { Access, Purpose }
 
 /** One purpose or several. */
 export type PurposeSelector = Purpose | ReadonlyArray<Purpose>
@@ -35,6 +33,10 @@ export interface BoundConnection {
     readonly provider: string
     /** The display name. */
     readonly name: string
+    /** The bot username, when the provider has one. */
+    readonly botUsername: string | null
+    /** The masked bank account, when the connection is a bank feed. */
+    readonly accountMasked: string | null
     /** connected, error, pending or disconnected. */
     readonly status: string
     /** What the agent may do through the connection. */

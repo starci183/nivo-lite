@@ -9,7 +9,9 @@ ORDER BY a.created_at, a.id
 LIMIT 200`
 
 /** The connections an agent is bound to for any of the purposes, with the binding ($1 agent, $2 purposes). */
-export const LIST_CONNECTIONS_OF_AGENT = sql`SELECT c.id, c.provider, c.name, c.status, c.created_at, ac.access, ac.purpose
+export const LIST_CONNECTIONS_OF_AGENT = sql`SELECT c.id, c.provider, c.name, c.status, c.created_at, ac.access, ac.purpose,
+       NULLIF(btrim(c.public_meta ->> 'bot_username'), '') AS bot_username,
+       NULLIF(btrim(c.public_meta ->> 'account_masked'), '') AS account_masked
 FROM public.agent_connections ac
 JOIN public.connections c ON c.id = ac.connection_id
 WHERE ac.agent_id = $1 AND ac.purpose = ANY($2::text[])
@@ -29,7 +31,9 @@ RETURNING agent_id`
 export const DELETE_BINDING = sql`DELETE FROM public.agent_connections WHERE agent_id = $1 AND connection_id = $2 AND workspace_id = $3`
 
 /** The connections an agent of the workspace is bound to for any of the purposes ($1 agent, $2 workspace, $3 purposes). */
-export const LIST_CONNECTIONS_OF_WORKSPACE_AGENT = sql`SELECT c.id, c.provider, c.name, c.status, c.created_at, ac.access, ac.purpose
+export const LIST_CONNECTIONS_OF_WORKSPACE_AGENT = sql`SELECT c.id, c.provider, c.name, c.status, c.created_at, ac.access, ac.purpose,
+       NULLIF(btrim(c.public_meta ->> 'bot_username'), '') AS bot_username,
+       NULLIF(btrim(c.public_meta ->> 'account_masked'), '') AS account_masked
 FROM public.agent_connections ac
 JOIN public.connections c ON c.id = ac.connection_id
 WHERE ac.agent_id = $1 AND ac.workspace_id = $2 AND ac.purpose = ANY($3::text[])

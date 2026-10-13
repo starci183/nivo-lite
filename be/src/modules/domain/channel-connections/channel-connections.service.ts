@@ -5,6 +5,7 @@ import {
     ConnectionsService,
     cleanConnectionName,
     randomSecret,
+    safeEqual,
     sha256,
 } from "@modules/domain/connections"
 import type { ConnectionActor, ConnectionRecord, FirstEventState, Provider } from "@modules/domain/connections"
@@ -12,12 +13,16 @@ import { ChannelSetupError, ChannelSetupErrorCode, InjectChannelSetupClient } fr
 import type { ChannelSetupClient, ZaloSecret } from "@modules/integrations/channel-setup"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
+import { InjectLogger } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
+import { ChannelConnectionsLogEvent } from "./channel-connections.log-events"
 import { ChannelConnectionsError, ChannelConnectionsErrorCode } from "./errors/channel-connections.error"
 import type {
-    ConnectTelegramInput,
+    TelegramStart,
     ConnectionCheck,
     ProviderKeyValues,
     ProviderKeysResult,
+    SepayKeyReveal,
     StartMoneyInput,
     TelegramConnected,
     UpdateMoneyInput,
@@ -42,6 +47,13 @@ const EMPTY_CREDENTIAL = "{}"
 const KEY_MIN = 8
 const KEY_MAX = 200
 
+/** The code a caught failure carries, or unknown when it has none. */
+const codeOf = (error: unknown): string => {
+    if (typeof error === "object" && error !== null && "code" in error && typeof error.code === "string")
+        return error.code
+    return "unknown"
+}
+
 @Injectable()
 /** The connection wizards of the chat channels and money feeds: Telegram bots, SePay / payOS / Casso feeds and Zalo OA. */
 export class ChannelConnectionsService {
@@ -49,10 +61,11 @@ export class ChannelConnectionsService {
         private readonly connections: ConnectionsService,
         @InjectChannelSetupClient() private readonly setup: ChannelSetupClient,
         @InjectClock() private readonly clock: Clock,
+        @InjectLogger() private readonly logger: Logger,
     ) {}
 
     /** Validates the token with getMe, stores it sealed, then points the bot webhook at this connection's own address. */
-    async connectTelegram(actor: ConnectionActor, input: ConnectTelegramInput): Promise<TelegramConnected> {
+    async connectTelegram(actor: ConnectionActor, input: TelegramStart): Promise<TelegramConnected> {
         await this.connections.authorize(actor, OWNER)
         const name = this.requireName(input.name)
         const token = input.token.trim()
@@ -80,15 +93,20 @@ export class ChannelConnectionsService {
         if (origin !== null) {
             try {
                 await this.setup.telegramSetWebhook(token, this.connections.webhookUrl("telegram", id, origin), secret)
-            } catch {
+            } catch (error) {
                 await this.connections.patch(actor.workspaceId, id, {
                     status: "error",
                     lastError: ChannelConnectionsErrorCode.WebhookRefused,
                 })
-                throw new ChannelConnectionsError({ code: ChannelConnectionsErrorCode.WebhookRefused })
+                throw new ChannelConnectionsError({ code: ChannelConnectionsErrorCode.WebhookRefused, cause: error })
             }
         }
-        return { connection: await this.connections.get(actor.workspaceId, id), webhookRegistered: origin !== null }
+        return {
+            connection: await this.connections.get(actor.workspaceId, id),
+            botUsername: me.username.trim() === "" ? null : me.username,
+            accountMasked: null,
+            webhookRegistered: origin !== null,
+        }
     }
 
     /**
@@ -175,7 +193,7 @@ export class ChannelConnectionsService {
             if (!isSepayKey(apiKey)) {
                 throw new ChannelConnectionsError({ code: ChannelConnectionsErrorCode.ApiKeyInvalid })
             }
-            if (apiKey !== stored) await this.connections.writeSecret(current.id, apiKey, sha256(apiKey))
+            if (!safeEqual(apiKey, stored)) await this.connections.writeSecret(current.id, apiKey, sha256(apiKey))
         }
         await this.connections.patch(actor.workspaceId, current.id, { name, environment, meta })
         return this.wizardView(await this.connections.get(actor.workspaceId, current.id), apiKey, false)
@@ -192,10 +210,7 @@ export class ChannelConnectionsService {
     }
 
     /** Shows the SePay API key again (owner only) so it can be pasted into the SePay webhook settings. */
-    async revealSepayKey(
-        actor: ConnectionActor,
-        connectionId: string,
-    ): Promise<{ readonly apiKey: string; readonly webhookUrl: string }> {
+    async revealSepayKey(actor: ConnectionActor, connectionId: string): Promise<SepayKeyReveal> {
         await this.connections.authorize(actor, OWNER)
         const connection = await this.ownOf(actor, connectionId, "sepay")
         const secret = await this.connections.readSecret(connection.id)
@@ -229,13 +244,21 @@ export class ChannelConnectionsService {
         const origin = this.connections.publicOrigin()
         let confirmed = false
         if (connection.provider === "payos" && origin !== null) {
+            const clientId = stored.clientId
+            const apiKey = stored.apiKey
+            if (clientId === undefined || apiKey === undefined) {
+                throw new ChannelConnectionsError({ code: ChannelConnectionsErrorCode.KeysInvalid })
+            }
             try {
                 await this.setup.payosConfirmWebhook(
-                    { clientId: stored.clientId as string, apiKey: stored.apiKey as string },
+                    { clientId, apiKey },
                     this.connections.webhookUrl("payos", connection.id, origin),
                 )
-            } catch {
-                throw new ChannelConnectionsError({ code: ChannelConnectionsErrorCode.PayosConfirmRefused })
+            } catch (error) {
+                throw new ChannelConnectionsError({
+                    code: ChannelConnectionsErrorCode.PayosConfirmRefused,
+                    cause: error,
+                })
             }
             confirmed = true
         }
@@ -260,7 +283,14 @@ export class ChannelConnectionsService {
         if (connection.provider !== "telegram" || this.connections.publicOrigin() === null) return
         const secret = await this.connections.readSecret(connection.id)
         if (secret === null) return
-        await this.setup.telegramDeleteWebhook(secret.plain).catch(() => undefined)
+        try {
+            await this.setup.telegramDeleteWebhook(secret.plain)
+        } catch (error) {
+            this.logger.warn(ChannelConnectionsLogEvent.TelegramReleaseFailed, {
+                connectionId: connection.id,
+                code: codeOf(error),
+            })
+        }
     }
 
     /** What the wizard polls for: has the first webhook arrived. */

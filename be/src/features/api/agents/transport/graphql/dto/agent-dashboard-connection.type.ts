@@ -15,6 +15,14 @@ export class AgentDashboardConnectionType {
     @Field()
     provider!: string
 
+    /** The bot username, when the provider has one. */
+    @Field(() => String, { nullable: true })
+    botUsername!: string | null
+
+    /** The masked bank account, when the connection is a bank feed. */
+    @Field(() => String, { nullable: true })
+    accountMasked!: string | null
+
     /** `connected`, `error` or `pending`. */
     @Field()
     status!: string
