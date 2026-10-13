@@ -5,7 +5,6 @@ import type {
     SavePositionOutput,
     SaveStaffOutput,
 } from "@modules/domain/shifts"
-import type { AddShiftsAvailabilityRequest } from "../../application/add-shifts-availability.contracts"
 import type { ApplyShiftsImportRequest } from "../../application/apply-shifts-import.contracts"
 import type { CheckInShiftsRequest } from "../../application/check-in-shifts.contracts"
 import type { DecideShiftsAvailabilityRequest } from "../../application/decide-shifts-availability.contracts"
@@ -15,17 +14,13 @@ import type { RemoveShiftsPositionRequest } from "../../application/remove-shift
 import type { SaveShiftsCoverageRequest } from "../../application/save-shifts-coverage.contracts"
 import type { SaveShiftsPositionRequest } from "../../application/save-shifts-position.contracts"
 import type { SaveShiftsSettingsRequest } from "../../application/save-shifts-settings.contracts"
-import type { SaveShiftsStaffRequest } from "../../application/save-shifts-staff.contracts"
-import type { SubmitShiftsAvailabilityRequest } from "../../application/submit-shifts-availability.contracts"
 import type { ApplyShiftsImportInput } from "./dto/apply-shifts-import.input"
 import type { ApplyImportType } from "./dto/apply-import.type"
 import type { CheckInType } from "./dto/check-in.type"
 import type { DecideShiftsAvailabilityInput } from "./dto/decide-shifts-availability.input"
-import type { SaveShiftsAvailabilityInput } from "./dto/save-shifts-availability.input"
 import type { SaveShiftsCoverageInput } from "./dto/save-shifts-coverage.input"
 import type { SaveShiftsPositionInput } from "./dto/save-shifts-position.input"
 import type { SaveShiftsSettingsInput } from "./dto/save-shifts-settings.input"
-import type { SaveShiftsStaffInput } from "./dto/save-shifts-staff.input"
 import type { ShiftsAvailabilityRefInput } from "./dto/shifts-availability-ref.input"
 import type { ShiftsCoverageRefInput } from "./dto/shifts-coverage-ref.input"
 import type { ShiftsPositionRefInput } from "./dto/shifts-position-ref.input"
@@ -54,11 +49,7 @@ export const toRemoveShiftsPositionRequest = (
 ): RemoveShiftsPositionRequest => ({ workspaceId, id: input.id })
 
 /** Maps the GraphQL input to the staff save request of the workspace it names. */
-export const toSaveShiftsStaffRequest = (workspaceId: string, input: SaveShiftsStaffInput): SaveShiftsStaffRequest => ({
-    workspaceId,
-    ...input,
-    staffRowId: input.staffRowId ?? null,
-})
+export { toSaveShiftsStaffRequest } from "@modules/domain/shifts"
 
 /** Maps the GraphQL input to the coverage save request of the workspace it names. */
 export const toSaveShiftsCoverageRequest = (
@@ -78,27 +69,11 @@ export const toSaveShiftsSettingsRequest = (
     input: SaveShiftsSettingsInput,
 ): SaveShiftsSettingsRequest => ({ workspaceId, ...input })
 
-const toAvailabilityFields = (input: SaveShiftsAvailabilityInput) => ({
-    ...(input.staffId === undefined || input.staffId === null ? {} : { staffId: input.staffId }),
-    weekday: input.weekday ?? null,
-    date: input.date ?? null,
-    start: input.start,
-    end: input.end,
-    available: input.available,
-    ...(input.note === undefined || input.note === null ? {} : { note: input.note }),
-})
-
 /** Maps the GraphQL input to the manager's availability request of the workspace it names. */
-export const toAddShiftsAvailabilityRequest = (
-    workspaceId: string,
-    input: SaveShiftsAvailabilityInput,
-): AddShiftsAvailabilityRequest => ({ workspaceId, ...toAvailabilityFields(input) })
+export { toAddShiftsAvailabilityRequest } from "@modules/domain/shifts"
 
 /** Maps the GraphQL input to the member's own availability request of the workspace it names. */
-export const toSubmitShiftsAvailabilityRequest = (
-    workspaceId: string,
-    input: SaveShiftsAvailabilityInput,
-): SubmitShiftsAvailabilityRequest => ({ workspaceId, ...toAvailabilityFields(input) })
+export { toSubmitShiftsAvailabilityRequest } from "@modules/domain/shifts"
 
 /** Maps the GraphQL input to the availability removal request of the workspace it names. */
 export const toRemoveShiftsAvailabilityRequest = (

@@ -5,6 +5,7 @@ import { ChangeMemberRoleResolver } from "./change-member-role.resolver"
 import { CopyInviteLinkResolver } from "./copy-invite-link.resolver"
 import { CreateInviteResolver } from "./create-invite.resolver"
 import { CreateWorkspaceResolver } from "./create-workspace.resolver"
+import { StartFirstWorkspaceResolver } from "./start-first-workspace.resolver"
 import { InvitePreviewResolver } from "./invite-preview.resolver"
 import { MembershipsResolver } from "./memberships.resolver"
 import { MyWorkspaceRoleResolver } from "./my-workspace-role.resolver"
@@ -23,6 +24,7 @@ import { WorkspaceStaffResolver } from "./workspace-staff.resolver"
         MembershipsResolver,
         MyWorkspaceRoleResolver,
         CreateWorkspaceResolver,
+        StartFirstWorkspaceResolver,
         WorkspaceMembersResolver,
         WorkspaceInvitesResolver,
         WorkspaceStaffResolver,
