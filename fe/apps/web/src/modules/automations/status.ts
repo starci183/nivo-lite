@@ -1,6 +1,6 @@
-import type { AutomationCardView, ConfigValue, ModuleScope, TemplateDef } from "@/lib/automation-shared"
 import { MODULE_KEYS, MODULE_REGISTRY, isModuleKey } from "@/modules/catalog"
 import type { ModuleKey } from "@/modules/catalog"
+import type { AutomationCardView, ConfigValue, ModuleScope, TemplateDef } from "@/modules/types"
 
 /** A text in both languages as the definitions carry it. */
 type Localized = { readonly vi: string; readonly en: string }

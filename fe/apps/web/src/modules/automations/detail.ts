@@ -1,17 +1,21 @@
-import { SAMPLE_VARS, fillBody } from "@/lib/automation-shared"
-import type { AutomationCardView, AutomationRunView, FieldDef, ShopContext } from "@/lib/automation-shared"
 import { AUTOMATION_ROUTES } from "@/modules/routes"
 import { automationText, automationTimeParts } from "./status"
 import type { AutomationValues } from "./status"
+import { fillBody } from "./preview"
 import type {
+    AutomationCardView,
+    AutomationRunView,
     AutomationTone,
     AutomationsLanguage,
     AutomationsTranslator,
     DetailView,
+    FieldDef,
     GateView,
     MessageView,
+    PreviewSample,
     RunRowView,
     SettingFieldView,
+    ShopContext,
 } from "@/modules/types"
 
 const BODY_MAX = 600
@@ -51,6 +55,8 @@ export interface DetailInput {
     readonly card: AutomationCardView
     readonly runs: ReadonlyArray<AutomationRunView>
     readonly shop: ShopContext
+    /** The sample values and neutral words of the message preview. */
+    readonly sample: PreviewSample
     readonly values: AutomationValues
     readonly body: string
     readonly note: "proposal" | "fallback" | null
@@ -109,7 +115,11 @@ const messageOf = (input: DetailInput, ctx: DetailContext): MessageView | undefi
         saveLabel: t("saveBody"),
         composeLabel: input.isComposing ? t("composing") : t("compose"),
         previewTitle: t("previewTitle"),
-        previewText: fillBody(input.body, { ...SAMPLE_VARS, ten_shop: shop.shop, gio_mo_cua: shop.hours }),
+        previewText: fillBody(
+            input.body,
+            { ...input.sample.variables, ten_shop: shop.shop, gio_mo_cua: shop.hours },
+            input.sample.neutral,
+        ),
         ...(shop.tone === "" ? {} : { toneNote: t("previewTone", { tone: shop.tone }) }),
         isBusy: input.isBusy,
         isComposing: input.isComposing,
