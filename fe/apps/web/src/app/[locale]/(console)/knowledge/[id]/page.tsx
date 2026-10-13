@@ -1,25 +1,16 @@
-import { PageContainer, SectionHeader } from "@starci/grammar/common"
-import { SourceDetail } from "@/features/knowledge/SourceDetail"
-import { getT } from "@/i18n/server"
-import { knowledge as dict } from "@/i18n/dict/knowledge"
-import { getSource } from "@/lib/knowledge/index"
-import { isManagerRole } from "@/lib/members-shared"
-import { getSession } from "@/lib/session"
+import { KnowledgeSourcePage } from "@/features/pages/KnowledgeSourcePage"
 
-const UUID = /^[0-9a-f-]{36}$/i
+export { knowledgeSourceMetadata as generateMetadata } from "@/features/pages/KnowledgeSourcePage"
 
-const Page = async ({ params }: { readonly params: Promise<{ id: string }> }) => {
-  const { id } = await params
-  const [session, t] = await Promise.all([getSession(), getT(dict)])
-  const found = UUID.test(id) ? await getSource(id) : null
-  if (!found) {
-    return (
-      <PageContainer measure="product">
-        <SectionHeader level={1} title={t("notFoundTitle")} description={t("back")} />
-      </PageContainer>
-    )
-  }
-  return <SourceDetail source={found.source} chunks={found.chunks} canWrite={isManagerRole(session.member.role)} />
+/** What the page receives from Next. */
+interface SourceRouteProps {
+    readonly params: Promise<{ readonly id: string }>
+}
+
+/** One document: its facts, its passages as agents retrieve them and its text. */
+const Page = async ({ params }: SourceRouteProps) => {
+    const { id } = await params
+    return <KnowledgeSourcePage sourceId={id} />
 }
 
 export default Page

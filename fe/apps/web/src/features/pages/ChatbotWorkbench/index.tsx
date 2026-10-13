@@ -107,10 +107,7 @@ export const ChatbotWorkbench = async (props: ChatbotWorkbenchProps) => {
                           ],
                 tabLabel: t("title"),
                 loadFailedTitle: t("loadError"),
-                gaps:
-                    gaps?.kind === "ok"
-                        ? { gaps: gaps.value.gaps, lenses: gaps.value.lenses, business: session.workspace.name }
-                        : null,
+                gaps: gaps?.kind === "ok" ? { workspaceId: session.workspace.id, gaps: gaps.value.gaps } : null,
             }}
         />
     )
