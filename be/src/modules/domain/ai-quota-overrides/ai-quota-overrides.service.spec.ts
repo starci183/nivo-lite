@@ -18,8 +18,8 @@ describe("AiQuotaOverridesService", () => {
             ],
         }).compile()
 
-        await moduleRef.get(AiQuotaOverridesService).setCreditsLimit("ws-1", limit)
+        await expect(moduleRef.get(AiQuotaOverridesService).setCreditsLimit("ws-1", limit)).resolves.toBeUndefined()
 
-        expect(em.query).toHaveBeenCalledWith(UPSERT_CREDITS_LIMIT, ["ws-1", limit, NOW])
+        expect(em.query.mock.calls).toEqual([[UPSERT_CREDITS_LIMIT, ["ws-1", limit, NOW]]])
     })
 })

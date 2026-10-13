@@ -5,7 +5,12 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AuthorityErrorCode } from "./errors/authority.error"
 import { AuthorityService } from "./authority.service"
 import type { AuthorityProfileRow, AuthorityRow } from "./persistence/authority.rows"
-import { FIND_AUTHORITY, FIND_AUTHORITY_PROFILE, UPSERT_AUTHORITY } from "./persistence/authority.sql"
+import {
+    CREATE_AUTHORITY_IF_MISSING,
+    FIND_AUTHORITY,
+    FIND_AUTHORITY_PROFILE,
+    UPSERT_AUTHORITY,
+} from "./persistence/authority.sql"
 
 const authorityRowOf = builder<AuthorityRow>({
     policies: "Refunds in 7 days",
@@ -32,6 +37,23 @@ const build = async (entityManager: MockEntityManager) => {
 }
 
 describe("AuthorityService", () => {
+    describe("ensureSheet", () => {
+        it("answers true when it created the empty sheet", async () => {
+            const em = mockEntityManager({ query: [CREATE_AUTHORITY_IF_MISSING, [{ workspace_id: "ws-1" }]] })
+            const service = await build(em)
+
+            await expect(service.ensureSheet("ws-1")).resolves.toBe(true)
+            expect(em.query).toHaveBeenCalledWith(CREATE_AUTHORITY_IF_MISSING, ["ws-1"])
+        })
+
+        it("answers false when the workspace already has a sheet", async () => {
+            const em = mockEntityManager({ query: [CREATE_AUTHORITY_IF_MISSING, []] })
+            const service = await build(em)
+
+            await expect(service.ensureSheet("ws-1")).resolves.toBe(false)
+        })
+    })
+
     describe("load", () => {
         it("answers the house rules", async () => {
             const em = mockEntityManager({ query: [FIND_AUTHORITY, [authorityRowOf()]] })

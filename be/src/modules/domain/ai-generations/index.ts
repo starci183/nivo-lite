@@ -7,18 +7,16 @@ export type { GenerationCompletion } from "./ai-generations.port"
 export { DirectGenerationService } from "./direct-generation.service"
 export { GenerationRunnerService } from "./generation-runner.service"
 export { GenerationsService } from "./generations.service"
+export { GuideService } from "./guide.service"
 export type {
     GenMessage,
-    GenMessageRole,
-    GenerateParams,
-    GenerationFailure,
-    GenerationFailureReason,
     GenerationOutcome,
     GenerationRequested,
     GenerationStatus,
-    GenerationRunStatus,
-    GenerationSuccess,
+    GenerationEnqueued,
+    GuideAsk,
     ResponseFormat,
 } from "./ai-generations.contracts"
 export type { GenerationState } from "./ai-generations.contracts"
 export { TextGeneratorService } from "./text-generator.service"
+export { ModuleTextGeneratorService } from "./module-text-generator.service"

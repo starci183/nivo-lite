@@ -25,3 +25,9 @@ export interface AuthorityProfileRow extends AuthorityRow {
     /** ISO 8601 text. */
     updated_at: string
 }
+
+/** The authority sheet a call just created. */
+export interface CreatedAuthorityRow {
+    /** The workspace. */
+    workspace_id: string
+}

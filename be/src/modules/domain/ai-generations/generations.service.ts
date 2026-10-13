@@ -32,7 +32,16 @@ import type { AiGenerationsOptions } from "./ai-generations.options"
 import type { UsageGate } from "./ai-generations.port"
 import { EngineStatusService } from "@modules/domain/agents"
 import { AiGenerationsError, AiGenerationsErrorCode } from "./errors/ai-generations.error"
-import { clampTimeout, inputJsonOf, inputOf, isRecord, progressOf, purposeOf, verdictOf } from "./generation.policy"
+import { isRequestableKind } from "./request-kind.policy"
+import {
+    clampTimeout,
+    inputJsonOf,
+    inputOf,
+    isPlainObject,
+    progressOf,
+    purposeOf,
+    verdictOf,
+} from "./generation.policy"
 import type {
     GenerationProgressRow,
     GenerationStateRow,
@@ -107,6 +116,7 @@ export class GenerationsService {
     /** A generation a signed-in member asks for from the app: the caller must belong to the workspace the text is written for. */
     async generateFor(userId: string, params: GenerateParams): Promise<GenerationOutcome> {
         await this.members.require(userId, params.workspaceId)
+        this.requireRequestable(params)
         return this.generate(params)
     }
 
@@ -156,7 +166,7 @@ export class GenerationsService {
             [id, workspaceId],
         )
         if (row === undefined) return null
-        const record = (value: unknown): Record<string, unknown> => (isRecord(value) ? value : {})
+        const record = (value: unknown): Record<string, unknown> => (isPlainObject(value) ? value : {})
         const progress = progressOf(row)
         return {
             id: row.id,
@@ -192,10 +202,18 @@ export class GenerationsService {
     /** Queues a text a signed-in member asks for and answers its id at once (or why it was not queued); the text is read with `statusFor`. */
     async requestFor(userId: string, params: GenerateParams): Promise<GenerationRequested> {
         await this.members.require(userId, params.workspaceId)
+        this.requireRequestable(params)
         const refusal = await this.refusalOf(params)
         if (refusal !== null) return refusal
         const generationId = await this.enqueue(params, clampTimeout(params.timeoutMs))
         return { ok: true, generationId }
+    }
+
+    /** Refuses a kind the named module does not own on the generic doors (never a NIVO-paid kind such as `guide`). */
+    private requireRequestable(params: GenerateParams): void {
+        if (!isRequestableKind(params.module, params.kind)) {
+            throw new AiGenerationsError({ code: AiGenerationsErrorCode.KindNotAllowed })
+        }
     }
 
     /** Where a queued text of the workspace stands; any member may look. */

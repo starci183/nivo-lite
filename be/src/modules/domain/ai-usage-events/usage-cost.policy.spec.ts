@@ -1,4 +1,4 @@
-import { CREDITS_PER_USD, creditsOf, estimateTokens, figuresOf, priceOf } from "./usage-cost.policy"
+import { CREDIT_USD_VALUE, creditsOf, estimateTokens, figuresOf, priceOf } from "./usage-cost.policy"
 
 describe("usage cost policy", () => {
     describe("priceOf", () => {
@@ -28,10 +28,10 @@ describe("usage cost policy", () => {
 
     describe("creditsOf", () => {
         it("converts dollars at 250 credits and rounds to two decimal places", () => {
-            expect(CREDITS_PER_USD).toBe(250)
+            expect(CREDIT_USD_VALUE).toBe(0.00113)
             expect(creditsOf(0)).toBe(0)
-            expect(creditsOf(1)).toBe(250)
-            expect(creditsOf(0.123456)).toBe(30.86)
+            expect(creditsOf(1)).toBe(885)
+            expect(creditsOf(0.123456)).toBe(110)
         })
     })
 

@@ -2,7 +2,7 @@ import { mockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import type { AuthorityActionRecord } from "./authority-actions.contracts"
 import { AuthorityActionsService } from "./authority-actions.service"
-import { LIST_ACTION_KEYS, UPSERT_AUTHORITY_ACTIONS } from "./persistence/authority-actions.sql"
+import { LIST_ACTION_KEYS, LIST_AUTHORITY_ACTIONS, UPSERT_AUTHORITY_ACTIONS } from "./persistence/authority-actions.sql"
 
 const RECORD: AuthorityActionRecord = {
     action: "issue_invoice",
@@ -47,6 +47,13 @@ describe("AuthorityActionsService", () => {
                 written: 1,
                 stale: ["retired_action"],
             })
+        })
+    })
+    describe("list", () => {
+        it("reads every catalogue action through the given manager", async () => {
+            const em = mockEntityManager({ query: [[LIST_AUTHORITY_ACTIONS, [RECORD]]] })
+
+            await expect((await build()).list(em)).resolves.toEqual([RECORD])
         })
     })
 })
