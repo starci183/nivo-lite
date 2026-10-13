@@ -10,7 +10,10 @@ export type MutateExplainShiftsScheduleRequest = MutationExplainShiftsScheduleAr
 /** The response of the `explainShiftsSchedule` mutation. */
 type MutateExplainShiftsScheduleResponse = Pick<Mutation, "explainShiftsSchedule">
 
-const mutation1: TypedDocumentNode<MutateExplainShiftsScheduleResponse, InputVariables<MutateExplainShiftsScheduleRequest>> = gql`
+const mutation1: TypedDocumentNode<
+    MutateExplainShiftsScheduleResponse,
+    InputVariables<MutateExplainShiftsScheduleRequest>
+> = gql`
     mutation ExplainShiftsSchedule($input: ShiftsScheduleRefInput!) {
         explainShiftsSchedule(input: $input) {
             explanation
@@ -22,7 +25,10 @@ enum MutationExplainShiftsSchedule {
     Mutation1 = "mutation1",
 }
 
-const mutationMap: Record<MutationExplainShiftsSchedule, TypedDocumentNode<MutateExplainShiftsScheduleResponse, InputVariables<MutateExplainShiftsScheduleRequest>>> = {
+const mutationMap: Record<
+    MutationExplainShiftsSchedule,
+    TypedDocumentNode<MutateExplainShiftsScheduleResponse, InputVariables<MutateExplainShiftsScheduleRequest>>
+> = {
     [MutationExplainShiftsSchedule.Mutation1]: mutation1,
 }
 
@@ -30,7 +36,11 @@ const mutationMap: Record<MutationExplainShiftsSchedule, TypedDocumentNode<Mutat
 type MutateExplainShiftsScheduleParams = MutateParams<MutationExplainShiftsSchedule, MutateExplainShiftsScheduleRequest>
 
 /** Runs the `explainShiftsSchedule` mutation. */
-export const mutateExplainShiftsSchedule = async ({ mutation = MutationExplainShiftsSchedule.Mutation1, request, signal }: MutateExplainShiftsScheduleParams) => {
+export const mutateExplainShiftsSchedule = async ({
+    mutation = MutationExplainShiftsSchedule.Mutation1,
+    request,
+    signal,
+}: MutateExplainShiftsScheduleParams) => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.mutate({ mutation: mutationMap[mutation], variables: { input: request } })
 }

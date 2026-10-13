@@ -1,11 +1,5 @@
 import { z } from "zod"
-import type {
-    DbEngine,
-    DbEntity,
-    DbSavedConnection,
-    DbTableInfo,
-    DbTableMapping,
-} from "@/modules/types"
+import type { DbEngine, DbEntity, DbSavedConnection, DbTableInfo, DbTableMapping } from "@/modules/types"
 
 /** A table named by its schema and either of the two spellings of its name. */
 interface DbTableRef {
@@ -56,8 +50,7 @@ export const DB_SCHEDULES: ReadonlyArray<{ readonly key: string; readonly minute
 ]
 
 /** The key of a table in the picker and in messages. */
-export const dbTableKey = (table: DbTableRef): string =>
-    `${table.schema}.${table.name ?? table.table ?? ""}`
+export const dbTableKey = (table: DbTableRef): string => `${table.schema}.${table.name ?? table.table ?? ""}`
 
 /** The engine named by a string, or null. */
 export const dbEngineOf = (value: string): DbEngine | null => DB_ENGINES.find((engine) => engine === value) ?? null

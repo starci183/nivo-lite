@@ -16,7 +16,14 @@ import { ModelJsonService } from "./model-json.service"
 import { sourcePayloadOf } from "./brain-payload.policy"
 import { BrainError, BrainErrorCode } from "./errors/brain.error"
 import type { ExtractedFact } from "./extraction.policy"
-import { MAX_FACTS_PER_DOC, PROMPT_VERSION, SYSTEM_PROMPT, parseFacts, userPrompt, windowsOf } from "./extraction.policy"
+import {
+    MAX_FACTS_PER_DOC,
+    PROMPT_VERSION,
+    SYSTEM_PROMPT,
+    parseFacts,
+    userPrompt,
+    windowsOf,
+} from "./extraction.policy"
 import type { FactsOutcome } from "./brain.contracts"
 import { BrainLogEvent } from "./brain.log-events"
 
@@ -88,7 +95,8 @@ export class DocumentFactsService {
             return "skipped"
         }
         if (!same) {
-            const orphans = known === null ? [] : await this.facts.withdrawSource(workspaceId, source.id, "source changed")
+            const orphans =
+                known === null ? [] : await this.facts.withdrawSource(workspaceId, source.id, "source changed")
             await this.extractions.start({
                 workspaceId,
                 sourceId: source.id,
@@ -154,7 +162,13 @@ export class DocumentFactsService {
             throw new BrainError({ code: BrainErrorCode.ModelUnavailable })
         }
         const filed = await this.file(source, parsed.facts, MAX_FACTS_PER_DOC - state.filed)
-        const next = { ...state, done: state.done + 1, filed: state.filed + filed, attempts: 0, model: answer?.model ?? state.model }
+        const next = {
+            ...state,
+            done: state.done + 1,
+            filed: state.filed + filed,
+            attempts: 0,
+            model: answer?.model ?? state.model,
+        }
         await this.extractions.save(workspaceId, source.id, {
             status: "running",
             windowsDone: next.done,
@@ -198,7 +212,11 @@ export class DocumentFactsService {
     /** The document is read: facts that lost their evidence are proposed for retirement, the gaps it covers are answered, the source is ready. */
     private async finish(source: SourceRecord, state: Reading): Promise<FactsOutcome> {
         const workspaceId = source.workspaceId
-        await this.facts.finalizeOrphans(workspaceId, state.orphans, this.goneEvidence(source.id, source.title, "changed"))
+        await this.facts.finalizeOrphans(
+            workspaceId,
+            state.orphans,
+            this.goneEvidence(source.id, source.title, "changed"),
+        )
         await this.extractions.finish(workspaceId, source.id, state.model)
         if (source.visibility === "public") {
             try {

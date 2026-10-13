@@ -105,7 +105,9 @@ export const carryMapping = (saved: CsvConfig, table: Pick<Table, "headers" | "r
         idColumn: keep(saved.idColumn) ?? (saved.idColumn === null ? null : fresh.idColumn),
         titleColumn: keep(saved.titleColumn) ?? fresh.titleColumn,
         dateColumn: keep(saved.dateColumn) ?? (saved.dateColumn === null ? null : fresh.dateColumn),
-        kinds: Object.fromEntries(table.headers.map((header) => [header, saved.kinds[header] ?? fresh.kinds[header] ?? "text"])),
+        kinds: Object.fromEntries(
+            table.headers.map((header) => [header, saved.kinds[header] ?? fresh.kinds[header] ?? "text"]),
+        ),
         columns: table.headers,
     }
 }

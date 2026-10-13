@@ -20,22 +20,26 @@ export const inForce = (fact: Pick<FactRecord, "validFrom" | "validTo">, at: num
     (fact.validTo === null || Date.parse(fact.validTo) > at)
 
 /** One line of a fact for a prompt or a list: subject, attribute and value. */
-export const factLine = (fact: FactRecord): string =>
-    `${fact.subjectLabel} - ${fact.attributeLabel}: ${fact.value}`
+export const factLine = (fact: FactRecord): string => `${fact.subjectLabel} - ${fact.attributeLabel}: ${fact.value}`
 
 /**
  * The facts that match a question, best first: every word of the question (accents ignored) counts once when it appears in the
  * subject, the attribute or the value; the subject counts double. A workspace keeps a few hundred facts, so this runs in memory.
  */
 export const searchFacts = (facts: ReadonlyArray<FactRecord>, query: string, limit: number): Array<FactRecord> => {
-    const words = [...new Set(keyOf(query).split("-").filter((word) => word.length > 1))]
+    const words = [
+        ...new Set(
+            keyOf(query)
+                .split("-")
+                .filter((word) => word.length > 1),
+        ),
+    ]
     return facts
         .map((fact) => {
             const subject = `-${fact.subjectKey}-`
             const rest = `-${fact.attribute}-${keyOf(fact.value)}-`
             const score = words.reduce(
-                (sum, word) =>
-                    sum + (subject.includes(`-${word}-`) ? 2 : 0) + (rest.includes(`-${word}-`) ? 1 : 0),
+                (sum, word) => sum + (subject.includes(`-${word}-`) ? 2 : 0) + (rest.includes(`-${word}-`) ? 1 : 0),
                 0,
             )
             return { fact, score }

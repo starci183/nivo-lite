@@ -37,7 +37,10 @@ export class BrainExtractionsService {
 
     /** The reading of a document. */
     async get(workspaceId: string, sourceId: string): Promise<MaybeExtraction> {
-        const [row] = await this.entityManager.query<Array<BrainExtractionRow>>(SELECT_EXTRACTION, [workspaceId, sourceId])
+        const [row] = await this.entityManager.query<Array<BrainExtractionRow>>(SELECT_EXTRACTION, [
+            workspaceId,
+            sourceId,
+        ])
         return row === undefined ? null : toRecord(row)
     }
 

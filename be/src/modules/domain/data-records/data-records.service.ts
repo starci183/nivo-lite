@@ -11,7 +11,9 @@ const ID_MAX = 300
 const TITLE_MAX = 300
 
 const batchesOf = <T>(items: ReadonlyArray<T>): ReadonlyArray<ReadonlyArray<T>> =>
-    Array.from({ length: Math.ceil(items.length / BATCH) }, (_unused, index) => items.slice(index * BATCH, (index + 1) * BATCH))
+    Array.from({ length: Math.ceil(items.length / BATCH) }, (_unused, index) =>
+        items.slice(index * BATCH, (index + 1) * BATCH),
+    )
 
 @Injectable()
 /** The rows the owner's own systems put in the hub: one per connection, entity and source id, so a re-sync updates instead of duplicating. */

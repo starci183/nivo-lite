@@ -9,7 +9,18 @@ export const PULL_PAGE_SIZE = 100
 export const PULL_MAX_PAGES = 20
 
 const PAGE_PARAMS = ["page", "pageNumber", "page_number", "pageIndex", "p"]
-const LIMIT_PARAMS = ["limit", "per_page", "perPage", "pageSize", "page_size", "size", "take", "top", "count", "maxResults"]
+const LIMIT_PARAMS = [
+    "limit",
+    "per_page",
+    "perPage",
+    "pageSize",
+    "page_size",
+    "size",
+    "take",
+    "top",
+    "count",
+    "maxResults",
+]
 const OFFSET_PARAMS = ["offset", "skip", "start"]
 const NEXT_PATHS = [
     "next",
@@ -79,7 +90,11 @@ export const nextLinkOf = (body: unknown, headers: Readonly<Record<string, strin
 
 /** The stable id of an item: the owner's id field, a common id field, or a hash of the item. */
 export const idOf = (item: unknown, pull: OpenApiPull): string => {
-    if (!isApiJsonObject(item)) return createHash("sha1").update(JSON.stringify(item) ?? "").digest("hex").slice(0, 24)
+    if (!isApiJsonObject(item))
+        return createHash("sha1")
+            .update(JSON.stringify(item) ?? "")
+            .digest("hex")
+            .slice(0, 24)
     const picked = apiScalarText(getPath(item, pull.idField))
     if (picked) return picked
     for (const key of ["id", "_id", "uuid", "code", "sku"]) {

@@ -5,7 +5,14 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { toGapRecord } from "./gap-record.mapper"
 import { answers, keywordsOf, sameQuestion, splitTopic, wordSet } from "./gap-keywords.policy"
-import type { Answerer, GapInput, GapRecord, GapRecorded, GapStatus, MaybeGapRecorded } from "./knowledge-gaps.contracts"
+import type {
+    Answerer,
+    GapInput,
+    GapRecord,
+    GapRecorded,
+    GapStatus,
+    MaybeGapRecorded,
+} from "./knowledge-gaps.contracts"
 import type { KnowledgeGapRow, OpenCountRow } from "./persistence/knowledge-gaps.rows"
 import {
     ANSWER_GAP,
@@ -36,7 +43,11 @@ export class KnowledgeGapsService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** The gaps with these statuses, the most asked first. */
-    async list(workspaceId: string, statuses: ReadonlyArray<GapStatus>, limit: number): Promise<ReadonlyArray<GapRecord>> {
+    async list(
+        workspaceId: string,
+        statuses: ReadonlyArray<GapStatus>,
+        limit: number,
+    ): Promise<ReadonlyArray<GapRecord>> {
         const rows = await this.entityManager.query<Array<KnowledgeGapRow>>(SELECT_GAPS, [
             workspaceId,
             statuses,

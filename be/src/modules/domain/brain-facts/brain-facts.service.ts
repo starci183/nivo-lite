@@ -141,9 +141,9 @@ export class BrainFactsService {
             }
             return { fact, outcome: "reinforced" }
         }
-        const waiting = (await this.keyed(em, workspaceId, normal.subjectKey, normal.attribute, "proposed", scopeId)).find(
-            (proposal) => proposal.proposalKind === "set" && sameValue(proposal.value, normal.value),
-        )
+        const waiting = (
+            await this.keyed(em, workspaceId, normal.subjectKey, normal.attribute, "proposed", scopeId)
+        ).find((proposal) => proposal.proposalKind === "set" && sameValue(proposal.value, normal.value))
         const direct = input.autoApply ?? trust >= AUTO_APPLY_TRUST
         if (waiting !== undefined) {
             const fact = await this.grow(em, workspaceId, waiting, evidence, trust)
@@ -188,10 +188,24 @@ export class BrainFactsService {
             const fact = await this.fetch(tx, workspaceId, id)
             if (fact === null) throw new BrainFactsError({ code: BrainFactsErrorCode.FactNotFound })
             if (fact.status !== "proposed") throw new BrainFactsError({ code: BrainFactsErrorCode.NotProposed })
-            const [current] = await this.keyed(tx, workspaceId, fact.subjectKey, fact.attribute, "active", fact.installationId)
+            const [current] = await this.keyed(
+                tx,
+                workspaceId,
+                fact.subjectKey,
+                fact.attribute,
+                "active",
+                fact.installationId,
+            )
             const reason = note?.trim() || null
             if (fact.proposalKind === "retire") {
-                if (current !== undefined) await this.stop(tx, workspaceId, current.id, decidedBy, reason ?? "No source supports this value any more")
+                if (current !== undefined)
+                    await this.stop(
+                        tx,
+                        workspaceId,
+                        current.id,
+                        decidedBy,
+                        reason ?? "No source supports this value any more",
+                    )
                 return this.one(tx, CLOSE_RETIRE_PROPOSAL, [workspaceId, id, decidedBy, reason ?? "Stopped using"])
             }
             if (fact.validFrom !== null && Date.parse(fact.validFrom) > this.clock.now().getTime()) {
@@ -225,10 +239,17 @@ export class BrainFactsService {
     /** Chooses one of several competing proposals: it is applied and every other waiting proposal of the key is rejected. */
     async choose(workspaceId: string, id: string, decidedBy: string): Promise<FactRecord> {
         const winner = await this.get(workspaceId, id)
-        if (winner === null || winner.status !== "proposed") throw new BrainFactsError({ code: BrainFactsErrorCode.NotProposed })
+        if (winner === null || winner.status !== "proposed")
+            throw new BrainFactsError({ code: BrainFactsErrorCode.NotProposed })
         if (winner.proposalKind !== "set") throw new BrainFactsError({ code: BrainFactsErrorCode.NotAValue })
         const fact = await this.apply(workspaceId, id, decidedBy, "Chosen among several different values")
-        const others = await this.byKey(workspaceId, winner.subjectKey, winner.attribute, "proposed", winner.installationId)
+        const others = await this.byKey(
+            workspaceId,
+            winner.subjectKey,
+            winner.attribute,
+            "proposed",
+            winner.installationId,
+        )
         await eachInOrder(
             others.filter((other) => other.id !== id),
             (other) =>
@@ -236,7 +257,9 @@ export class BrainFactsService {
                     workspaceId,
                     other.id,
                     decidedBy,
-                    other.proposalKind === "retire" ? "A new value was chosen" : `Another value was chosen: ${winner.value}`,
+                    other.proposalKind === "retire"
+                        ? "A new value was chosen"
+                        : `Another value was chosen: ${winner.value}`,
                 ),
         )
         return fact
@@ -260,7 +283,8 @@ export class BrainFactsService {
     /** Keeps both values: the proposal becomes its own fact for the situation it names, and the current value stays. */
     async split(workspaceId: string, id: string, situation: string, decidedBy: string): Promise<FactRecord> {
         const proposal = await this.get(workspaceId, id)
-        if (proposal === null || proposal.status !== "proposed") throw new BrainFactsError({ code: BrainFactsErrorCode.NotProposed })
+        if (proposal === null || proposal.status !== "proposed")
+            throw new BrainFactsError({ code: BrainFactsErrorCode.NotProposed })
         if (proposal.proposalKind !== "set") throw new BrainFactsError({ code: BrainFactsErrorCode.NotAValue })
         const label = situation.trim()
         if (label === "") throw new BrainFactsError({ code: BrainFactsErrorCode.SituationRequired })
@@ -286,7 +310,13 @@ export class BrainFactsService {
 
     /** Files a proposal to stop using an active fact; one waiting proposal per fact. Answers whether one was filed. */
     async proposeRetire(workspaceId: string, active: FactRecord, why: Evidence, proposedBy: string): Promise<boolean> {
-        const waiting = await this.byKey(workspaceId, active.subjectKey, active.attribute, "proposed", active.installationId)
+        const waiting = await this.byKey(
+            workspaceId,
+            active.subjectKey,
+            active.attribute,
+            "proposed",
+            active.installationId,
+        )
         if (waiting.some((proposal) => proposal.proposalKind === "retire")) return false
         await this.entityManager.query(INSERT_FACT, [
             workspaceId,
@@ -344,7 +374,13 @@ export class BrainFactsService {
         await eachInOrder(ids, async (id) => {
             const fact = await this.get(workspaceId, id)
             if (fact === null || fact.status !== "active" || fact.evidence.length > 0) return
-            const waiting = await this.byKey(workspaceId, fact.subjectKey, fact.attribute, "proposed", fact.installationId)
+            const waiting = await this.byKey(
+                workspaceId,
+                fact.subjectKey,
+                fact.attribute,
+                "proposed",
+                fact.installationId,
+            )
             if (waiting.some((proposal) => proposal.proposalKind === "set")) return
             if (await this.proposeRetire(workspaceId, fact, why, BRAIN)) filed += 1
         })
@@ -353,10 +389,19 @@ export class BrainFactsService {
 
     /** Scheduled facts whose time has come take over and ended facts expire. */
     async maintain(workspaceId: string): Promise<MaintenanceResult> {
-        const due = (await this.entityManager.query<Array<BrainFactRow>>(SELECT_DUE_FACTS, [workspaceId])).map(toFactRecord)
+        const due = (await this.entityManager.query<Array<BrainFactRow>>(SELECT_DUE_FACTS, [workspaceId])).map(
+            toFactRecord,
+        )
         const activated: Array<FactRecord> = []
         await eachInOrder(due, async (fact) => {
-            const current = await this.keyed(this.entityManager, workspaceId, fact.subjectKey, fact.attribute, "active", fact.installationId)
+            const current = await this.keyed(
+                this.entityManager,
+                workspaceId,
+                fact.subjectKey,
+                fact.attribute,
+                "active",
+                fact.installationId,
+            )
             await eachInOrder(current, (old) => this.entityManager.query(SUPERSEDE_FACT, [workspaceId, old.id]))
             const [row] = await this.entityManager.query<Array<BrainFactRow>>(PROMOTE_FACT, [workspaceId, fact.id])
             if (row !== undefined) activated.push(toFactRecord(row))

@@ -10,7 +10,10 @@ export type MutateChangeSmtpPasswordRequest = MutationChangeSmtpPasswordArgs["in
 /** The response of the `changeSmtpPassword` mutation. */
 type MutateChangeSmtpPasswordResponse = Pick<Mutation, "changeSmtpPassword">
 
-const mutation1: TypedDocumentNode<MutateChangeSmtpPasswordResponse, InputVariables<MutateChangeSmtpPasswordRequest>> = gql`
+const mutation1: TypedDocumentNode<
+    MutateChangeSmtpPasswordResponse,
+    InputVariables<MutateChangeSmtpPasswordRequest>
+> = gql`
     mutation ChangeSmtpPassword($input: ChangeSmtpPasswordInput!) {
         changeSmtpPassword(input: $input)
     }

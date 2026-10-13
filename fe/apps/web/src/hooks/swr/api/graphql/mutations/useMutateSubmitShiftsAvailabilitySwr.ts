@@ -12,8 +12,11 @@ export const MUTATE_SUBMIT_SHIFTS_AVAILABILITY_SWR_KEY = "MUTATE_SUBMIT_SHIFTS_A
 
 /** SWR mutation for {@link mutateSubmitShiftsAvailability}: `trigger(request)` answers `submitShiftsAvailability` and rejects with the back end failure. */
 export const useMutateSubmitShiftsAvailabilitySwr = () =>
-    useSWRMutation(MUTATE_SUBMIT_SHIFTS_AVAILABILITY_SWR_KEY, async (_key: string, { arg }: SubmitShiftsAvailabilityArg) => {
-        const result = await mutateSubmitShiftsAvailability({ request: arg })
-        if (!result.data) throw new Error("submitShiftsAvailability answered no data")
-        return result.data.submitShiftsAvailability
-    })
+    useSWRMutation(
+        MUTATE_SUBMIT_SHIFTS_AVAILABILITY_SWR_KEY,
+        async (_key: string, { arg }: SubmitShiftsAvailabilityArg) => {
+            const result = await mutateSubmitShiftsAvailability({ request: arg })
+            if (!result.data) throw new Error("submitShiftsAvailability answered no data")
+            return result.data.submitShiftsAvailability
+        },
+    )

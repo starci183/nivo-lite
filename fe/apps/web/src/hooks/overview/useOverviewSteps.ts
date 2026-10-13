@@ -9,5 +9,8 @@ import { useOverviewData } from "./useOverviewData"
 export const useOverviewSteps = () => {
     const t = useTranslations("promo")
     const { dashboard } = useOverviewData()
-    return useMemo(() => (dashboard === undefined ? undefined : onboardingStepsOf(dashboard.promo, (key) => t(key))), [dashboard, t])
+    return useMemo(
+        () => (dashboard === undefined ? undefined : onboardingStepsOf(dashboard.promo, (key) => t(key))),
+        [dashboard, t],
+    )
 }

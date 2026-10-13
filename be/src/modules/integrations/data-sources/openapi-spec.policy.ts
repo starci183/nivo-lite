@@ -107,7 +107,8 @@ const authHintOf = (doc: ApiJsonObject): OpenApiAuthHint => {
         const scheme = deref(doc, raw)
         if (!scheme) continue
         const type = text(scheme.type).toLowerCase()
-        if (type === "apikey") return { type: text(scheme.in) === "query" ? "query" : "header", name: text(scheme.name) }
+        if (type === "apikey")
+            return { type: text(scheme.in) === "query" ? "query" : "header", name: text(scheme.name) }
         if (type === "basic" || (type === "http" && text(scheme.scheme).toLowerCase() === "basic")) {
             return { type: "basic", name: "" }
         }

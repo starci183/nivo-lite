@@ -1,4 +1,10 @@
-import { OPENAPI_AUTH_TYPES, OPENAPI_METHODS, OPENAPI_PULL_ENTITIES, isApiJsonObject, readApiJson } from "@modules/integrations/data-sources"
+import {
+    OPENAPI_AUTH_TYPES,
+    OPENAPI_METHODS,
+    OPENAPI_PULL_ENTITIES,
+    isApiJsonObject,
+    readApiJson,
+} from "@modules/integrations/data-sources"
 import type { OpenApiAuthDraft } from "./openapi-wizard.contracts"
 import { apiSummary } from "./messages/openapi.messages"
 import type {
@@ -33,7 +39,16 @@ const cleanOps = (raw: unknown): ReadonlyArray<OpenApiOperation> =>
         const path = clip(op.path)
         const id = clip(op.id, 80)
         if (!isMethod(method) || !path.startsWith("/") || !id) return []
-        return [{ id, method, path, summary: clip(op.summary, 120), params: cleanParams(op.params), hasBody: op.hasBody === true }]
+        return [
+            {
+                id,
+                method,
+                path,
+                summary: clip(op.summary, 120),
+                params: cleanParams(op.params),
+                hasBody: op.hasBody === true,
+            },
+        ]
     })
 
 const cleanPulls = (raw: unknown, ops: ReadonlyArray<OpenApiOperation>): ReadonlyArray<OpenApiPull> =>
@@ -58,7 +73,9 @@ export const normalizeConfig = (raw: unknown): OpenApiConfig => {
     const source = isApiJsonObject(raw) ? raw : {}
     const ops = cleanOps(source.ops)
     const known = new Set(ops.map((op) => op.id))
-    const tools = (Array.isArray(source.tools) ? source.tools : []).map((tool) => clip(tool, 80)).filter((tool) => known.has(tool))
+    const tools = (Array.isArray(source.tools) ? source.tools : [])
+        .map((tool) => clip(tool, 80))
+        .filter((tool) => known.has(tool))
     const authType = clip(source.authType)
     return {
         v: 1,
@@ -109,8 +126,13 @@ export const mergeAuth = (typed: OpenApiAuth, stored: OpenApiAuth | null): OpenA
 
 /** The credential JSON exactly as the old code stored it. */
 export const credentialOf = (config: OpenApiConfig, auth: OpenApiAuth): string =>
-    JSON.stringify({ type: config.authType, name: config.authName, value: auth.value, user: auth.user, password: auth.password })
+    JSON.stringify({
+        type: config.authType,
+        name: config.authName,
+        value: auth.value,
+        user: auth.user,
+        password: auth.password,
+    })
 
 /** Cleans the credential typed in the wizard: an unknown type is none, names are trimmed. */
-export const cleanAuth = (draft: OpenApiAuthDraft): OpenApiAuth =>
-    parseAuth(JSON.stringify(draft))
+export const cleanAuth = (draft: OpenApiAuthDraft): OpenApiAuth => parseAuth(JSON.stringify(draft))

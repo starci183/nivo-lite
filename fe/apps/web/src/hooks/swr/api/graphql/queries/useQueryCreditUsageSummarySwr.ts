@@ -9,8 +9,7 @@ export const useQueryCreditUsageSummarySwr = (workspaceId: string | undefined, e
     useSWR(
         workspaceId === undefined || !enabled ? null : [QUERY_CREDIT_USAGE_SUMMARY_SWR_KEY, workspaceId],
         async () => {
-            const result = await queryCreditUsageSummary({
-            })
+            const result = await queryCreditUsageSummary({})
             if (!result.data) throw new Error("creditUsageSummary answered no data")
             return result.data.creditUsageSummary
         },

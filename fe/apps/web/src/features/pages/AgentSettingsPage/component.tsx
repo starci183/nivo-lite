@@ -38,9 +38,7 @@ export const AgentSettingsPageBase = (props: AgentSettingsPageBaseProps) => {
                 {props.props.extrasKey === "chatbot_reply" ? (
                     <AgentReplyCard installationId={installationId} module={module} />
                 ) : null}
-                {props.props.extrasKey === "loyalty_program" ? (
-                    <LoyaltyProgramSettings />
-                ) : null}
+                {props.props.extrasKey === "loyalty_program" ? <LoyaltyProgramSettings /> : null}
             </div>
         </div>
     )

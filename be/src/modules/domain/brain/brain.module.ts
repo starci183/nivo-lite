@@ -16,8 +16,22 @@ export class BrainModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), BrainPageService, BrainService, BrainLearningService, BrainCommandRunnerService, DocumentFactsService, ModelJsonService],
-            exports: [BrainCommandRunnerService, BrainPageService, BrainService, BrainLearningService, DocumentFactsService],
+            providers: [
+                ...(base.providers ?? []),
+                BrainPageService,
+                BrainService,
+                BrainLearningService,
+                BrainCommandRunnerService,
+                DocumentFactsService,
+                ModelJsonService,
+            ],
+            exports: [
+                BrainCommandRunnerService,
+                BrainPageService,
+                BrainService,
+                BrainLearningService,
+                DocumentFactsService,
+            ],
         }
     }
 }

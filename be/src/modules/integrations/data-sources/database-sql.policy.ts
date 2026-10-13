@@ -59,7 +59,8 @@ export const buildSelect = (
     options: SelectOptions,
 ): DatabaseStatement => {
     const names = [selection.schema, selection.table, ...wantedColumns(selection)]
-    if (!names.every(isUsableIdentifier)) throw new DataSourcesError({
+    if (!names.every(isUsableIdentifier))
+        throw new DataSourcesError({
             code: DataSourcesErrorCode.Rejected,
             params: { detail: DATABASE_COPY.badName },
         })
@@ -73,11 +74,14 @@ export const buildSelect = (
     if (engine === "postgres") marker = "$1"
     else if (engine === "mysql") marker = "?"
     const where = incremental ? ` WHERE ${q(selection.updatedColumn)} >= ${marker}` : ""
-    const order = options.ordered === false ? "" : ` ORDER BY ${q(hasUpdated ? selection.updatedColumn : selection.idColumn)} ASC`
+    const order =
+        options.ordered === false ? "" : ` ORDER BY ${q(hasUpdated ? selection.updatedColumn : selection.idColumn)} ASC`
     const n = Math.max(1, Math.min(Math.floor(options.limit), DATABASE_MAX_ROWS))
     const from = ` FROM ${q(selection.schema)}.${q(selection.table)}${where}${order}`
     const sql =
-        engine === "mssql" ? `SELECT TOP (${n}) ${columns.join(", ")}${from}` : `SELECT ${columns.join(", ")}${from} LIMIT ${n}`
+        engine === "mssql"
+            ? `SELECT TOP (${n}) ${columns.join(", ")}${from}`
+            : `SELECT ${columns.join(", ")}${from} LIMIT ${n}`
     return { sql, params: incremental ? [cursor] : [] }
 }
 
@@ -107,7 +111,8 @@ export const listTables = async (session: DatabaseSession): Promise<ReadonlyArra
             table = { schema, name, columns: [] }
             tables.set(key, table)
         }
-        if (table.columns.length < MAX_COLUMNS_PER_TABLE) table.columns.push({ name: pick(row, "c"), type: pick(row, "d") })
+        if (table.columns.length < MAX_COLUMNS_PER_TABLE)
+            table.columns.push({ name: pick(row, "c"), type: pick(row, "d") })
     }
     return [...tables.values()]
 }

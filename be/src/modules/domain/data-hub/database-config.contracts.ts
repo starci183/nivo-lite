@@ -69,4 +69,5 @@ export interface DatabaseSaveDraft extends DatabaseTestDraft {
 }
 
 /** The outcome of reading JSON text: the value, or the failure that stopped it. */
-export type JsonOutcome = { readonly ok: true; readonly value: unknown } | { readonly ok: false; readonly cause: unknown }
+export type JsonOutcome =
+    { readonly ok: true; readonly value: unknown } | { readonly ok: false; readonly cause: unknown }

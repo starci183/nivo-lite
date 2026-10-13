@@ -12,11 +12,8 @@ export const MUTATE_PROPOSE_AUTOMATION_BODY_SWR_KEY = "MUTATE_PROPOSE_AUTOMATION
 
 /** SWR mutation for {@link mutateProposeAutomationBody}: `trigger({ templateKey })` answers the proposed wording. */
 export const useMutateProposeAutomationBodySwr = () =>
-    useSWRMutation(
-        MUTATE_PROPOSE_AUTOMATION_BODY_SWR_KEY,
-        async (_key: string, { arg }: ProposeAutomationBodyArg) => {
-            const result = await mutateProposeAutomationBody({ request: arg })
-            if (!result.data) throw new Error("proposeAutomationBody answered no data")
-            return result.data.proposeAutomationBody
-        },
-    )
+    useSWRMutation(MUTATE_PROPOSE_AUTOMATION_BODY_SWR_KEY, async (_key: string, { arg }: ProposeAutomationBodyArg) => {
+        const result = await mutateProposeAutomationBody({ request: arg })
+        if (!result.data) throw new Error("proposeAutomationBody answered no data")
+        return result.data.proposeAutomationBody
+    })

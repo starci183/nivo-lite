@@ -10,7 +10,10 @@ export type MutateApplyShiftsImportRequest = MutationApplyShiftsImportArgs["inpu
 /** The response of the `applyShiftsImport` mutation. */
 type MutateApplyShiftsImportResponse = Pick<Mutation, "applyShiftsImport">
 
-const mutation1: TypedDocumentNode<MutateApplyShiftsImportResponse, InputVariables<MutateApplyShiftsImportRequest>> = gql`
+const mutation1: TypedDocumentNode<
+    MutateApplyShiftsImportResponse,
+    InputVariables<MutateApplyShiftsImportRequest>
+> = gql`
     mutation ApplyShiftsImport($input: ApplyShiftsImportInput!) {
         applyShiftsImport(input: $input) {
             blocks
@@ -24,7 +27,10 @@ enum MutationApplyShiftsImport {
     Mutation1 = "mutation1",
 }
 
-const mutationMap: Record<MutationApplyShiftsImport, TypedDocumentNode<MutateApplyShiftsImportResponse, InputVariables<MutateApplyShiftsImportRequest>>> = {
+const mutationMap: Record<
+    MutationApplyShiftsImport,
+    TypedDocumentNode<MutateApplyShiftsImportResponse, InputVariables<MutateApplyShiftsImportRequest>>
+> = {
     [MutationApplyShiftsImport.Mutation1]: mutation1,
 }
 
@@ -32,7 +38,11 @@ const mutationMap: Record<MutationApplyShiftsImport, TypedDocumentNode<MutateApp
 type MutateApplyShiftsImportParams = MutateParams<MutationApplyShiftsImport, MutateApplyShiftsImportRequest>
 
 /** Runs the `applyShiftsImport` mutation. */
-export const mutateApplyShiftsImport = async ({ mutation = MutationApplyShiftsImport.Mutation1, request, signal }: MutateApplyShiftsImportParams) => {
+export const mutateApplyShiftsImport = async ({
+    mutation = MutationApplyShiftsImport.Mutation1,
+    request,
+    signal,
+}: MutateApplyShiftsImportParams) => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.mutate({ mutation: mutationMap[mutation], variables: { input: request } })
 }

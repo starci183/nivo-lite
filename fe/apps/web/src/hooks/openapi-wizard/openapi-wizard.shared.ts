@@ -10,7 +10,15 @@ export const OPEN_API_PULL_ENTITIES = ["customer", "order", "product", "transact
 /** The steps of the wizard; an existing connection skips `agent`. */
 export type OpenApiStep = "source" | "auth" | "pulls" | "tools" | "schedule" | "test" | "agent"
 /** The steps of a new connection, in order. */
-export const OPEN_API_STEPS: ReadonlyArray<OpenApiStep> = ["source", "auth", "pulls", "tools", "schedule", "test", "agent"]
+export const OPEN_API_STEPS: ReadonlyArray<OpenApiStep> = [
+    "source",
+    "auth",
+    "pulls",
+    "tools",
+    "schedule",
+    "test",
+    "agent",
+]
 /** The steps when an existing connection is edited. */
 export const OPEN_API_EDIT_STEPS: ReadonlyArray<OpenApiStep> = ["source", "auth", "pulls", "tools", "schedule", "test"]
 
@@ -36,7 +44,10 @@ const opSchema = z.object({
     summary: z.string().catch(""),
     params: z.array(paramSchema).catch([]),
     hasBody: z.boolean().catch(false),
-    suggest: z.object({ itemsPath: z.string(), idField: z.string(), titleField: z.string() }).optional().catch(undefined),
+    suggest: z
+        .object({ itemsPath: z.string(), idField: z.string(), titleField: z.string() })
+        .optional()
+        .catch(undefined),
 })
 
 const pullSchema = z.object({
@@ -80,8 +91,7 @@ const keep = <T>(schema: z.ZodType<T>, raw: ReadonlyArray<unknown>): ReadonlyArr
     })
 
 /** Narrows the `ops` DataJson of the back end into operations; anything malformed is dropped. */
-export const parseOpenApiOps = (raw: unknown): ReadonlyArray<OpenApiOp> =>
-    keep(opSchema, Array.isArray(raw) ? raw : [])
+export const parseOpenApiOps = (raw: unknown): ReadonlyArray<OpenApiOp> => keep(opSchema, Array.isArray(raw) ? raw : [])
 
 /** Narrows the `config` DataJson of the back end into a configuration; anything malformed is dropped. */
 export const parseOpenApiConfig = (raw: unknown): OpenApiConfigView => {
@@ -101,4 +111,5 @@ export const parseOpenApiConfig = (raw: unknown): OpenApiConfigView => {
 export const openApiOpLabel = (op: Pick<OpenApiOp, "method" | "path">): string => `${op.method} ${op.path}`
 
 /** A GET that can run on a schedule: no path parameter the sync cannot fill. */
-export const isOpenApiPullable = (op: OpenApiOp): boolean => op.method === "GET" && !op.params.some((p) => p.in === "path")
+export const isOpenApiPullable = (op: OpenApiOp): boolean =>
+    op.method === "GET" && !op.params.some((p) => p.in === "path")

@@ -38,8 +38,7 @@ export const readJson = (raw: string): JsonOutcome => {
 }
 
 /** The key of a table in cursors and messages. */
-export const tableKey = (table: Pick<DatabaseSelection, "schema" | "table">): string =>
-    `${table.schema}.${table.table}`
+export const tableKey = (table: Pick<DatabaseSelection, "schema" | "table">): string => `${table.schema}.${table.table}`
 
 /** The stored credential JSON as a target; a broken or incomplete one is a plain refusal. */
 export const parseTarget = (raw: string): DatabaseTarget => {
@@ -154,5 +153,4 @@ export const parseConfig = (json: string | undefined): DatabaseConfig => {
 }
 
 /** The one line shown on the connection card. */
-export const summaryOf = (engine: DatabaseEngine, tables: number): string =>
-    COPY.summary(ENGINE_LABEL[engine], tables)
+export const summaryOf = (engine: DatabaseEngine, tables: number): string => COPY.summary(ENGINE_LABEL[engine], tables)

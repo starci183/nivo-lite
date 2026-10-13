@@ -10,7 +10,10 @@ export type MutateDraftLeadExecutionRequest = MutationDraftLeadExecutionArgs["in
 /** The response of the `draftLeadExecution` mutation. */
 type MutateDraftLeadExecutionResponse = Pick<Mutation, "draftLeadExecution">
 
-const mutation1: TypedDocumentNode<MutateDraftLeadExecutionResponse, InputVariables<MutateDraftLeadExecutionRequest>> = gql`
+const mutation1: TypedDocumentNode<
+    MutateDraftLeadExecutionResponse,
+    InputVariables<MutateDraftLeadExecutionRequest>
+> = gql`
     mutation DraftLeadExecution($input: DraftLeadExecutionInput!) {
         draftLeadExecution(input: $input) {
             id

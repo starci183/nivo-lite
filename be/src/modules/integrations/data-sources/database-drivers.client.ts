@@ -43,7 +43,8 @@ export const openPostgres = async (target: DatabaseTarget, address: string): Pro
     }
     return {
         engine: "postgres",
-        query: async (sql, params) => toRows((await client.query(sql, params === undefined ? undefined : [...params])).rows),
+        query: async (sql, params) =>
+            toRows((await client.query(sql, params === undefined ? undefined : [...params])).rows),
         close: () =>
             client.end().then(
                 () => undefined,
@@ -80,7 +81,11 @@ export const openMysql = async (target: DatabaseTarget, address: string): Promis
     return {
         engine: "mysql",
         query: async (sql, params) => {
-            const [rows] = await connection.query({ sql, values: params === undefined ? [] : [...params], timeout: DATABASE_QUERY_MS })
+            const [rows] = await connection.query({
+                sql,
+                values: params === undefined ? [] : [...params],
+                timeout: DATABASE_QUERY_MS,
+            })
             return toRows(rows)
         },
         close: () =>
@@ -118,9 +123,10 @@ export const openMssql = async (target: DatabaseTarget, address: string): Promis
             ;(params ?? []).forEach((value, index) => request.input(`p${index}`, NVarChar, value))
             return toRows((await request.query(sql)).recordset)
         },
-        close: () => pool.close().then(
-            () => undefined,
-            () => undefined,
-        ),
+        close: () =>
+            pool.close().then(
+                () => undefined,
+                () => undefined,
+            ),
     }
 }

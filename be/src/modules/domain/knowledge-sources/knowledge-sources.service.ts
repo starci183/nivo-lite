@@ -30,7 +30,13 @@ import type {
 import { InjectKnowledgeStorage } from "./knowledge-sources.decorators"
 import { KnowledgeSourcesLogEvent } from "./knowledge-sources.log-events"
 import type { KnowledgeSourcesRow } from "./persistence/knowledge-sources.rows"
-import type { GeneratedIdRow, InstallationRow, SourceIdRow, SourceListRow, SourceTitleRow } from "./persistence/knowledge-sources.rows"
+import type {
+    GeneratedIdRow,
+    InstallationRow,
+    SourceIdRow,
+    SourceListRow,
+    SourceTitleRow,
+} from "./persistence/knowledge-sources.rows"
 import {
     DELETE_SOURCE,
     INSERT_SOURCE,
@@ -81,7 +87,10 @@ export class KnowledgeSourcesService {
     /** One document of a workspace with its text; any member may read it. */
     async detail(userId: string, workspaceId: string, sourceId: string): Promise<SourceDetail> {
         await this.members.require(userId, workspaceId)
-        const [row] = await this.entityManager.query<Array<SourceListRow>>(SELECT_SOURCE_DETAIL, [workspaceId, sourceId])
+        const [row] = await this.entityManager.query<Array<SourceListRow>>(SELECT_SOURCE_DETAIL, [
+            workspaceId,
+            sourceId,
+        ])
         if (row === undefined) throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
         return toSourceDetail(row)
     }

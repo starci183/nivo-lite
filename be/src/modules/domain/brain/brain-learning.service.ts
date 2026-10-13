@@ -61,7 +61,8 @@ export class BrainLearningService {
                 expected: { outcome: item.outcome, proposal: item.after, note: item.note },
             })),
         )
-        if (list.length < MIN_CORRECTIONS) return { corrections: list.length, newCases, proposed: 0, reason: "not_enough" }
+        if (list.length < MIN_CORRECTIONS)
+            return { corrections: list.length, newCases, proposed: 0, reason: "not_enough" }
         const existing = (await this.lessons.list(workspaceId, ["active", "proposed"]))
             .filter((lesson) => lesson.module === module || lesson.module === null)
             .map((lesson) => `- ${lesson.title}: ${lesson.body}`)

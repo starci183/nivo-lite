@@ -81,7 +81,9 @@ export const parseLessons = (answer: unknown): Array<ProposedLesson> => {
                 title,
                 body,
                 appliesWhen: textField(fields, "applies_when") ?? "",
-                decisions: Array.isArray(decisions) ? decisions.filter((id): id is string => typeof id === "string") : [],
+                decisions: Array.isArray(decisions)
+                    ? decisions.filter((id): id is string => typeof id === "string")
+                    : [],
             },
         ]
     })

@@ -118,7 +118,10 @@ export const ledgerRecordsOf = (
     entries.map((entry) => ({
         id: entry.id,
         title: entry.description,
-        description: [accountingStampOf(format, entry.at), entry.linked === null ? null : t("linkedTo", { ref: entry.linked })]
+        description: [
+            accountingStampOf(format, entry.at),
+            entry.linked === null ? null : t("linkedTo", { ref: entry.linked }),
+        ]
             .filter(Boolean)
             .join(" · "),
         badges: marksOf(

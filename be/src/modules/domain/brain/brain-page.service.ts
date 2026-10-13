@@ -122,7 +122,6 @@ export class BrainPageService {
         return this.commands.request(userId, workspaceId, "lessons.mine", { module })
     }
 
-
     /** How the study of an agent's corrections stands for the person who asked for it. */
     async miningState(userId: string, workspaceId: string, id: string): Promise<LessonMiningState> {
         const state = await this.commands.stateOf(userId, workspaceId, id)

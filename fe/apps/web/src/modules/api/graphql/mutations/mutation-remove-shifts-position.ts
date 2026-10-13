@@ -10,7 +10,10 @@ export type MutateRemoveShiftsPositionRequest = MutationRemoveShiftsPositionArgs
 /** The response of the `removeShiftsPosition` mutation. */
 type MutateRemoveShiftsPositionResponse = Pick<Mutation, "removeShiftsPosition">
 
-const mutation1: TypedDocumentNode<MutateRemoveShiftsPositionResponse, InputVariables<MutateRemoveShiftsPositionRequest>> = gql`
+const mutation1: TypedDocumentNode<
+    MutateRemoveShiftsPositionResponse,
+    InputVariables<MutateRemoveShiftsPositionRequest>
+> = gql`
     mutation RemoveShiftsPosition($input: ShiftsPositionRefInput!) {
         removeShiftsPosition(input: $input)
     }
@@ -20,7 +23,10 @@ enum MutationRemoveShiftsPosition {
     Mutation1 = "mutation1",
 }
 
-const mutationMap: Record<MutationRemoveShiftsPosition, TypedDocumentNode<MutateRemoveShiftsPositionResponse, InputVariables<MutateRemoveShiftsPositionRequest>>> = {
+const mutationMap: Record<
+    MutationRemoveShiftsPosition,
+    TypedDocumentNode<MutateRemoveShiftsPositionResponse, InputVariables<MutateRemoveShiftsPositionRequest>>
+> = {
     [MutationRemoveShiftsPosition.Mutation1]: mutation1,
 }
 
@@ -28,7 +34,11 @@ const mutationMap: Record<MutationRemoveShiftsPosition, TypedDocumentNode<Mutate
 type MutateRemoveShiftsPositionParams = MutateParams<MutationRemoveShiftsPosition, MutateRemoveShiftsPositionRequest>
 
 /** Runs the `removeShiftsPosition` mutation. */
-export const mutateRemoveShiftsPosition = async ({ mutation = MutationRemoveShiftsPosition.Mutation1, request, signal }: MutateRemoveShiftsPositionParams) => {
+export const mutateRemoveShiftsPosition = async ({
+    mutation = MutationRemoveShiftsPosition.Mutation1,
+    request,
+    signal,
+}: MutateRemoveShiftsPositionParams) => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.mutate({ mutation: mutationMap[mutation], variables: { input: request } })
 }

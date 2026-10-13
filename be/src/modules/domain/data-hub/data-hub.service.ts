@@ -73,11 +73,7 @@ export class DataHubService {
     }
 
     /** Sets how often a data connection syncs by itself (owner); null or absent is manual only. */
-    async changeSchedule(
-        actor: ConnectionActor,
-        id: string,
-        everyMinutes: SyncMinutes,
-    ): Promise<void> {
+    async changeSchedule(actor: ConnectionActor, id: string, everyMinutes: SyncMinutes): Promise<void> {
         await this.owner(actor)
         await this.own(actor.workspaceId, id)
         const minutes = everyMinutes ?? null

@@ -39,4 +39,7 @@ export const toSourceSummary = (row: SourceListRow): SourceSummary => ({
 })
 
 /** A source with its text, from the row the database answers. */
-export const toSourceDetail = (row: SourceListRow): SourceDetail => ({ ...toSourceSummary(row), content: row.content ?? "" })
+export const toSourceDetail = (row: SourceListRow): SourceDetail => ({
+    ...toSourceSummary(row),
+    content: row.content ?? "",
+})

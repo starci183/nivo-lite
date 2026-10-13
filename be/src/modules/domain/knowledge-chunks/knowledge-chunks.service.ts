@@ -48,7 +48,12 @@ export class KnowledgeChunksService {
     /** The stored passages of a source in order, for the Knowledge page; the caller has proven the workspace. */
     async passagesOf(workspaceId: string, sourceId: string): Promise<ReadonlyArray<PassageView>> {
         const rows = await this.entityManager.query<Array<PassageViewRow>>(LIST_PASSAGES, [workspaceId, sourceId])
-        return rows.map((row) => ({ id: row.id, order: row.ord, content: row.content, hasEmbedding: row.has_embedding }))
+        return rows.map((row) => ({
+            id: row.id,
+            order: row.ord,
+            content: row.content,
+            hasEmbedding: row.has_embedding,
+        }))
     }
 
     /** The stored passages of a source that have a vector, in order. */

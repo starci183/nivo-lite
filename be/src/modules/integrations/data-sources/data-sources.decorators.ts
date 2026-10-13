@@ -34,8 +34,7 @@ export const InjectDataSourcesOptions = (): TypedParameterDecorator<DataSourcesO
     injector<DataSourcesOptions>(DATA_SOURCES_OPTIONS)
 
 /** Injects the public-host guard. Parameter type: PublicHostClient. */
-export const InjectPublicHost = (): TypedParameterDecorator<PublicHostClient> =>
-    injector<PublicHostClient>(PUBLIC_HOST)
+export const InjectPublicHost = (): TypedParameterDecorator<PublicHostClient> => injector<PublicHostClient>(PUBLIC_HOST)
 
 /** Injects the IMAP client. Parameter type: ImapClient. */
 export const InjectImap = (): TypedParameterDecorator<ImapClient> => injector<ImapClient>(IMAP)

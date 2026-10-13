@@ -12,11 +12,8 @@ export const MUTATE_RUN_AUTOMATION_NOW_SWR_KEY = "MUTATE_RUN_AUTOMATION_NOW_SWR"
 
 /** SWR mutation for {@link mutateRunAutomationNow}: `trigger({ templateKey })` answers true once the run is queued. */
 export const useMutateRunAutomationNowSwr = () =>
-    useSWRMutation(
-        MUTATE_RUN_AUTOMATION_NOW_SWR_KEY,
-        async (_key: string, { arg }: RunAutomationNowArg) => {
-            const result = await mutateRunAutomationNow({ request: arg })
-            if (!result.data) throw new Error("runAutomationNow answered no data")
-            return result.data.runAutomationNow
-        },
-    )
+    useSWRMutation(MUTATE_RUN_AUTOMATION_NOW_SWR_KEY, async (_key: string, { arg }: RunAutomationNowArg) => {
+        const result = await mutateRunAutomationNow({ request: arg })
+        if (!result.data) throw new Error("runAutomationNow answered no data")
+        return result.data.runAutomationNow
+    })

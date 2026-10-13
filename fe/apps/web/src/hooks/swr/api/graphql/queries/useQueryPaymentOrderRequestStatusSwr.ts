@@ -11,11 +11,7 @@ class PaymentOrderRequestMissingError extends Error {
 }
 
 const retryPaymentOrderRequestStatus = (error: Error): boolean =>
-    !(
-        error instanceof PaymentOrderRequestMissingError ||
-        isForbiddenFailure(error) ||
-        isUnauthenticatedFailure(error)
-    )
+    !(error instanceof PaymentOrderRequestMissingError || isForbiddenFailure(error) || isUnauthenticatedFailure(error))
 
 /** Cache identity of paymentOrderRequestStatus. */
 export const QUERY_PAYMENT_ORDER_REQUEST_STATUS_SWR_KEY = "QUERY_PAYMENT_ORDER_REQUEST_STATUS_SWR"

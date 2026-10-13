@@ -22,7 +22,8 @@ interface PaymentEvidence {
 }
 
 /** A governance enum as the back end names it ("WaitingDecision") in the snake_case the figures compare with ("waiting_decision"). */
-const wire = (value: string | null | undefined): string => (value ?? "").replace(/([a-z])([A-Z])/g, "$1_$2").toLowerCase()
+const wire = (value: string | null | undefined): string =>
+    (value ?? "").replace(/([a-z])([A-Z])/g, "$1_$2").toLowerCase()
 
 const MINUTE_MS = 60_000
 const RECENT_LIMIT = 5
@@ -96,7 +97,9 @@ export const governanceFrom = (rows: GovernanceRows, since7: string): Governance
     const leads = rows.leads.filter((x) => !test.leads.has(x.id))
     const orders = rows.orders.filter((x) => !test.orders.has(x.id))
     const invoices = rows.invoices.filter((x) => !test.invoices.has(x.id))
-    const payments = rows.transactions.filter((x) => !has(test.invoices, x.invoiceId) && !isTestRunName(x.payer, x.reference))
+    const payments = rows.transactions.filter(
+        (x) => !has(test.invoices, x.invoiceId) && !isTestRunName(x.payer, x.reference),
+    )
     const matched = payments.filter(isEvidenced)
     const newLeads = leads.filter((x) => x.createdAt >= since7)
     const work = rows.work.filter((x) => !test.work.has(x.id))
@@ -144,9 +147,11 @@ export const governanceFrom = (rows: GovernanceRows, since7: string): Governance
                 test.work.size,
         },
         efficiency: {
-            autoDone7d: decisions.filter((d) => wire(d.deciderKind) === "policy" && wire(d.outcome) === "auto_done").length,
+            autoDone7d: decisions.filter((d) => wire(d.deciderKind) === "policy" && wire(d.outcome) === "auto_done")
+                .length,
             askedHuman7d: work.filter(
-                (x) => x.createdAt >= since7 && (wire(x.decidedPath) === "human" || wire(x.status) === "waiting_decision"),
+                (x) =>
+                    x.createdAt >= since7 && (wire(x.decidedPath) === "human" || wire(x.status) === "waiting_decision"),
             ).length,
             medianDecisionMinutes: median === null ? null : Math.round(median),
         },

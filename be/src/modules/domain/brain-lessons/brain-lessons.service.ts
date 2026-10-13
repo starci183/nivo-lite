@@ -24,7 +24,10 @@ export class BrainLessonsService {
 
     /** The lessons with these statuses (all when none is given), newest first. */
     async list(workspaceId: string, statuses?: ReadonlyArray<LessonStatus>): Promise<ReadonlyArray<LessonRecord>> {
-        const rows = await this.entityManager.query<Array<BrainLessonRow>>(SELECT_LESSONS, [workspaceId, statuses ?? null])
+        const rows = await this.entityManager.query<Array<BrainLessonRow>>(SELECT_LESSONS, [
+            workspaceId,
+            statuses ?? null,
+        ])
         return rows.map(toLessonRecord)
     }
 
@@ -43,7 +46,10 @@ export class BrainLessonsService {
         const previous =
             replaced === null
                 ? []
-                : await this.entityManager.query<Array<LessonVersionRow>>(SELECT_LESSON_VERSION, [workspaceId, replaced])
+                : await this.entityManager.query<Array<LessonVersionRow>>(SELECT_LESSON_VERSION, [
+                      workspaceId,
+                      replaced,
+                  ])
         const [row] = await this.entityManager.query<Array<BrainLessonRow>>(INSERT_LESSON, [
             workspaceId,
             input.module,
@@ -62,7 +68,12 @@ export class BrainLessonsService {
 
     /** Approves (active) or turns down (rejected) a proposal; approving a new version retires the one it replaces. */
     async decide(workspaceId: string, id: string, to: LessonVerdict, decidedBy: string): Promise<LessonRecord> {
-        const [row] = await this.entityManager.query<Array<BrainLessonRow>>(DECIDE_LESSON, [workspaceId, id, to, decidedBy])
+        const [row] = await this.entityManager.query<Array<BrainLessonRow>>(DECIDE_LESSON, [
+            workspaceId,
+            id,
+            to,
+            decidedBy,
+        ])
         if (row === undefined) throw new BrainLessonsError({ code: BrainLessonsErrorCode.NotProposed })
         if (to === "active" && row.supersedes_id !== null) {
             await this.entityManager.query(RETIRE_SUPERSEDED, [workspaceId, row.supersedes_id])

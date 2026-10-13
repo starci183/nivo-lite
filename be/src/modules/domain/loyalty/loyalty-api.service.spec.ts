@@ -15,7 +15,12 @@ import { LoyaltyApiService } from "./loyalty-api.service"
 import { LoyaltyEarningService } from "./loyalty-earning.service"
 import { LoyaltyRedemptionService } from "./loyalty-redemption.service"
 
-const PRINCIPAL = { keyId: "key-12345678", workspaceId: "ws-1", name: "Till", scopes: ["loyalty:read", "loyalty:write"] }
+const PRINCIPAL = {
+    keyId: "key-12345678",
+    workspaceId: "ws-1",
+    name: "Till",
+    scopes: ["loyalty:read", "loyalty:write"],
+}
 const HEADER = "Bearer nvk_secret"
 const program: LoyaltyProgram = {
     workspaceId: "ws-1",

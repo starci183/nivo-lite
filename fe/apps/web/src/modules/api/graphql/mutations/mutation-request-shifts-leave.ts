@@ -10,7 +10,10 @@ export type MutateRequestShiftsLeaveRequest = MutationRequestShiftsLeaveArgs["in
 /** The response of the `requestShiftsLeave` mutation. */
 type MutateRequestShiftsLeaveResponse = Pick<Mutation, "requestShiftsLeave">
 
-const mutation1: TypedDocumentNode<MutateRequestShiftsLeaveResponse, InputVariables<MutateRequestShiftsLeaveRequest>> = gql`
+const mutation1: TypedDocumentNode<
+    MutateRequestShiftsLeaveResponse,
+    InputVariables<MutateRequestShiftsLeaveRequest>
+> = gql`
     mutation RequestShiftsLeave($input: RequestShiftsLeaveInput!) {
         requestShiftsLeave(input: $input) {
             status
@@ -22,7 +25,10 @@ enum MutationRequestShiftsLeave {
     Mutation1 = "mutation1",
 }
 
-const mutationMap: Record<MutationRequestShiftsLeave, TypedDocumentNode<MutateRequestShiftsLeaveResponse, InputVariables<MutateRequestShiftsLeaveRequest>>> = {
+const mutationMap: Record<
+    MutationRequestShiftsLeave,
+    TypedDocumentNode<MutateRequestShiftsLeaveResponse, InputVariables<MutateRequestShiftsLeaveRequest>>
+> = {
     [MutationRequestShiftsLeave.Mutation1]: mutation1,
 }
 
@@ -30,7 +36,11 @@ const mutationMap: Record<MutationRequestShiftsLeave, TypedDocumentNode<MutateRe
 type MutateRequestShiftsLeaveParams = MutateParams<MutationRequestShiftsLeave, MutateRequestShiftsLeaveRequest>
 
 /** Runs the `requestShiftsLeave` mutation. */
-export const mutateRequestShiftsLeave = async ({ mutation = MutationRequestShiftsLeave.Mutation1, request, signal }: MutateRequestShiftsLeaveParams) => {
+export const mutateRequestShiftsLeave = async ({
+    mutation = MutationRequestShiftsLeave.Mutation1,
+    request,
+    signal,
+}: MutateRequestShiftsLeaveParams) => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.mutate({ mutation: mutationMap[mutation], variables: { input: request } })
 }

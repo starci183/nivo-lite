@@ -1,4 +1,14 @@
-import { Alert, Badge, Button, NumberField, SectionHeader, SegmentedControl, Select, SurfaceCard, Text } from "@starci/grammar/common"
+import {
+    Alert,
+    Badge,
+    Button,
+    NumberField,
+    SectionHeader,
+    SegmentedControl,
+    Select,
+    SurfaceCard,
+    Text,
+} from "@starci/grammar/common"
 import {
     BADGES_CLASS_NAME,
     CARD_CLASS_NAME,
@@ -68,7 +78,11 @@ export const PlanCatalog = (props: PlanCatalogProps) => {
         <div className={CATALOG_CLASS_NAME}>
             <SectionHeader level={2} title={view.title} description={view.text} />
             {view.notice ? <Alert tone="informative" title={view.notice} /> : null}
-            {view.storage ? <Text size="sm" tone="muted">{view.storage}</Text> : null}
+            {view.storage ? (
+                <Text size="sm" tone="muted">
+                    {view.storage}
+                </Text>
+            ) : null}
             <SegmentedControl
                 label={view.cycleLabel}
                 options={view.cycleOptions}
@@ -132,7 +146,12 @@ export const PlanCatalog = (props: PlanCatalogProps) => {
                                     </div>
                                     {card.action.kind === "contact" ? (
                                         <div>
-                                            <Button variant="secondary" href={card.action.href} target="_blank" rel="noopener noreferrer">
+                                            <Button
+                                                variant="secondary"
+                                                href={card.action.href}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                            >
                                                 {card.action.label}
                                             </Button>
                                         </div>

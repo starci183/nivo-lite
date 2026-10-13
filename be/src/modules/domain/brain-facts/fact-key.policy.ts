@@ -32,8 +32,7 @@ export const keyOf = (text: string): string =>
 const BILLION = /^(t\u1ef7|ty)$/
 const MILLION = /^(tri\u1ec7u|trieu|tr)$/
 const THOUSAND = /^(ngh\u00ecn|nghin|ng\u00e0n|ngan|k)$/
-const NUMBER_WITH_SCALE =
-    /(-?\d[\d.,]*)\s*(t\u1ef7|ty|tri\u1ec7u|trieu|tr|ngh\u00ecn|nghin|ng\u00e0n|ngan|k)?/
+const NUMBER_WITH_SCALE = /(-?\d[\d.,]*)\s*(t\u1ef7|ty|tri\u1ec7u|trieu|tr|ngh\u00ecn|nghin|ng\u00e0n|ngan|k)?/
 
 /** The multiplier a written scale word stands for. */
 const scaleOf = (word: string): number => {

@@ -25,7 +25,11 @@ export class FetchHttpClient implements HttpClient {
     }
 
     /** A request whose socket is opened to the pinned address; the body is read as the request asks. */
-    private async pinned(request: HttpRequest, pin: NonNullable<HttpRequest["pin"]>, signal: AbortSignal): Promise<HttpResponse> {
+    private async pinned(
+        request: HttpRequest,
+        pin: NonNullable<HttpRequest["pin"]>,
+        signal: AbortSignal,
+    ): Promise<HttpResponse> {
         const answer = await sendPinned(new URL(request.url), pin, {
             method: request.method,
             headers: { ...this.contentTypeOf(request), ...request.headers },

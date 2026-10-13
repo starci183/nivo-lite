@@ -35,10 +35,7 @@ const mutationMap: Record<
 }
 
 /** Apollo params for {@link mutateProposeAutomationBody}. */
-type MutateProposeAutomationBodyParams = MutateParams<
-    MutationProposeAutomationBody,
-    MutateProposeAutomationBodyRequest
->
+type MutateProposeAutomationBodyParams = MutateParams<MutationProposeAutomationBody, MutateProposeAutomationBodyRequest>
 
 /**
  * Proposes the shop's own wording of one template from its active context (the back end `proposeAutomationBody` mutation).

@@ -66,7 +66,10 @@ export const buildRecords = (table: Pick<Table, "headers" | "rows">, mapping: Cs
                 skipped += 1
                 return
             }
-            externalId = mapping.idColumn !== null && mapping.kinds[mapping.idColumn] === "phone" ? normalisePhone(value) || value : value
+            externalId =
+                mapping.idColumn !== null && mapping.kinds[mapping.idColumn] === "phone"
+                    ? normalisePhone(value) || value
+                    : value
         } else externalId = `row-${lineNo}`
         const titled = titleIndex >= 0 ? (row[titleIndex] ?? "").trim() : ""
         const title = titled || (idIndex >= 0 ? externalId : CSV_COPY.rowTitle(lineNo))
@@ -78,7 +81,10 @@ export const buildRecords = (table: Pick<Table, "headers" | "rows">, mapping: Cs
 }
 
 const clip = (text: string): ClippedText => {
-    const clean = text.replace(/\r\n?/gu, "\n").replace(/\u0000/gu, "").trim()
+    const clean = text
+        .replace(/\r\n?/gu, "\n")
+        .replace(/\u0000/gu, "")
+        .trim()
     return clean.length > DOCUMENT_MAX_TEXT
         ? { text: clean.slice(0, DOCUMENT_MAX_TEXT), truncated: true }
         : { text: clean, truncated: false }
@@ -88,7 +94,12 @@ const clip = (text: string): ClippedText => {
 const titleFrom = (text: string, fallback: string): string => {
     const heading = /^\s{0,3}#{1,6}\s+(.+)$/mu.exec(text)?.[1]
     const line = heading ?? text.split("\n").find((candidate) => candidate.trim() !== "")
-    return (line ?? fallback).trim().replace(/^#+\s*/u, "").slice(0, 120) || fallback
+    return (
+        (line ?? fallback)
+            .trim()
+            .replace(/^#+\s*/u, "")
+            .slice(0, 120) || fallback
+    )
 }
 
 /** One uploaded document to one hub row; the external id is the file name, so the same name replaces it. */

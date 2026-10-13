@@ -43,11 +43,7 @@ const pinnedLookup =
  * Sends one request to the pinned address: the URL keeps its host name, so the Host header and the TLS server name (SNI and certificate
  * check) stay the original, while the socket is opened to the address the caller already validated. Redirects are never followed.
  */
-export const sendPinned = (
-    url: URL,
-    pin: HttpPin,
-    init: PinnedInit,
-): Promise<PinnedAnswer> =>
+export const sendPinned = (url: URL, pin: HttpPin, init: PinnedInit): Promise<PinnedAnswer> =>
     new Promise<PinnedAnswer>((resolve, reject) => {
         const open = url.protocol === "https:" ? httpsRequest : httpRequest
         const fail = (cause: unknown, timedOut: boolean): void =>

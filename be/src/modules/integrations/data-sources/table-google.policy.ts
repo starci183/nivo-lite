@@ -17,9 +17,7 @@ const googleLink = (raw: string, kind: GoogleKind): GoogleLinkParts => {
     }
     const id = new RegExp(`^/${kind}/d/([^/]+)`, "u").exec(url.pathname)?.[1] ?? ""
     if (url.protocol !== "https:" || url.hostname !== GOOGLE_HOST || !GOOGLE_ID.test(id)) {
-        throw rejected(
-            kind === "spreadsheets" ? TABLE_COPY.sheetsLinkShape : TABLE_COPY.docsLinkShape,
-        )
+        throw rejected(kind === "spreadsheets" ? TABLE_COPY.sheetsLinkShape : TABLE_COPY.docsLinkShape)
     }
     const gid = url.searchParams.get("gid") ?? /gid=(\d+)/u.exec(url.hash)?.[1] ?? "0"
     return { id, gid: /^\d{1,20}$/u.test(gid) ? gid : "0" }

@@ -5,7 +5,9 @@ import type { DataSourcesOptions } from "./data-sources.options"
 const isDevelopmentSite = (siteUrl: string | undefined): boolean => {
     if (siteUrl === undefined || !URL.canParse(siteUrl)) return true
     const { protocol, hostname } = new URL(siteUrl)
-    return protocol !== "https:" || hostname === "localhost" || hostname === "127.0.0.1" || hostname.endsWith(".localhost")
+    return (
+        protocol !== "https:" || hostname === "localhost" || hostname === "127.0.0.1" || hostname.endsWith(".localhost")
+    )
 }
 
 /** Reads the data-sources options: a private target is allowed on a development site or by an explicit flag; Telegram is all-or-nothing. */

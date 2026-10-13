@@ -30,7 +30,11 @@ export class DatabaseClient {
     /** The first rows of one picked table, as text. */
     preview(target: DatabaseTarget, selection: DatabaseSelection): Promise<DatabasePreview> {
         return this.within(target, async (session) => {
-            const { sql } = buildSelect(session.engine, { ...selection, updatedColumn: "" }, { limit: PREVIEW_ROWS, ordered: false })
+            const { sql } = buildSelect(
+                session.engine,
+                { ...selection, updatedColumn: "" },
+                { limit: PREVIEW_ROWS, ordered: false },
+            )
             const rows = await session.query(sql)
             const columns = wantedColumns(selection)
             return { columns, rows: previewCells(columns, rows) }
