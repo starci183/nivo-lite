@@ -1,5 +1,5 @@
-import { DomainError } from "@modules/platform/errors"
 import { QueueError, QueueErrorCode } from "./errors/queue.error"
+import { DomainError } from "@modules/platform/errors"
 import type {
     QueueDelivery,
     QueueHandler,

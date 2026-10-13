@@ -32,7 +32,18 @@ import { RunZaloWizardQueueModule } from "@features/jobs/run-zalo-wizard"
 import { RunChatTurnQueueModule } from "@features/jobs/run-chat-turn"
 import { TelegramHttpModule } from "@features/webhooks/telegram"
 import { ZaloHttpModule } from "@features/webhooks/zalo"
-import { LeadsHttpModule } from "@features/api/leads"
+import { LeadsGraphqlModule, LeadsHttpModule } from "@features/api/leads"
+import { LeadQueriesGraphqlModule } from "@features/api/lead-queries"
+import { LeadActionsGraphqlModule } from "@features/api/lead-actions"
+import { LeadGenWorkbenchGraphqlModule } from "@features/api/leadgen-workbench"
+import { SalesGraphqlModule } from "@features/api/sales"
+import { SalesWorkbenchGraphqlModule } from "@features/api/sales-workbench"
+import { RunLeadActionQueueModule } from "@features/jobs/run-lead-action"
+import { LEAD_ACTIONS_ERROR_KINDS, LEAD_ACTIONS_MESSAGES, LeadActionsModule } from "@modules/domain/lead-actions"
+import { LeadGenWorkbenchModule } from "@modules/domain/leadgen-workbench"
+import { SalesModule } from "@modules/domain/sales"
+import { SalesWorkbenchModule } from "@modules/domain/sales-workbench"
+import { LeadViewsModule } from "@modules/domain/lead-views"
 import { AdminGraphqlModule, AdminHttpModule } from "@features/api/admin"
 import { ModulesGraphqlModule, ModulesHttpModule } from "@features/api/modules"
 import { OfficeGraphqlModule, OfficeHttpModule } from "@features/api/office"
@@ -458,6 +469,7 @@ export class AppModule {
                         AGENT_CONVERSATIONS_MESSAGES,
                         AGENT_MESSAGES_MESSAGES,
                         BILLING_MESSAGES,
+                        LEAD_ACTIONS_MESSAGES,
                         AGENT_CHAT_MESSAGES,
                         INBOX_SIMULATION_MESSAGES,
                         ACCOUNTING_ADJUSTMENTS_MESSAGES,
@@ -552,6 +564,7 @@ export class AppModule {
                         AGENT_CONVERSATIONS_ERROR_KINDS,
                         AGENT_MESSAGES_ERROR_KINDS,
                         BILLING_ERROR_KINDS,
+                        LEAD_ACTIONS_ERROR_KINDS,
                         AGENT_CHAT_ERROR_KINDS,
                         INBOX_SIMULATION_ERROR_KINDS,
                         ACCOUNTING_ADJUSTMENTS_ERROR_KINDS,
@@ -714,6 +727,18 @@ export class AppModule {
                 BrainModule.register({ isGlobal: true, corrections: { recent: () => Promise.resolve([]) } }),
                 BookingsModule.register({ isGlobal: true }),
                 LeadsHttpModule,
+                LeadsGraphqlModule,
+                LeadQueriesGraphqlModule,
+                LeadActionsGraphqlModule,
+                LeadGenWorkbenchGraphqlModule,
+                RunLeadActionQueueModule,
+                SalesGraphqlModule,
+                SalesWorkbenchGraphqlModule,
+                LeadActionsModule.register({ isGlobal: true }),
+                LeadViewsModule.register({ isGlobal: true }),
+                LeadGenWorkbenchModule.register({ isGlobal: true }),
+                SalesModule.register({ isGlobal: true }),
+                SalesWorkbenchModule.register({ isGlobal: true }),
                 PromoModule.register({ isGlobal: true }),
                 ChatReplyModule.register({ isGlobal: true }),
                 PromoGraphqlModule,

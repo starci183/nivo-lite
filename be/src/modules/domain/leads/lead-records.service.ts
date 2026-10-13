@@ -19,6 +19,7 @@ import {
     INSERT_LEAD,
     MARK_LEAD_WON,
     MATCH_LEAD,
+    REPLACE_LEAD_CONTEXT,
 } from "./persistence/lead-records.sql"
 
 @Injectable()
@@ -83,6 +84,16 @@ export class LeadRecordsService {
             classification.stage,
             classification.contextSummary,
         ])
+    }
+
+    /** Replaces the brief after the background agent has refreshed the customer's context. */
+    async replaceContext(
+        workspaceId: string,
+        leadId: string,
+        summary: string,
+        manager: EntityManager = this.entityManager,
+    ): Promise<void> {
+        await manager.query(REPLACE_LEAD_CONTEXT, [workspaceId, leadId, summary])
     }
 
     /** A confirmed order won the deal, unless it was lost. */

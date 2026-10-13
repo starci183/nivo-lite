@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { DeepseekClient } from "./deepseek.client"
-import { DEEPSEEK_OPTIONS, DEEPSEEK_TEXT_GENERATOR } from "./deepseek.decorators"
+import { DEEPSEEK_CLIENT, DEEPSEEK_OPTIONS, DEEPSEEK_TEXT_GENERATOR } from "./deepseek.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./deepseek.module-definition"
 
 @Module({})
@@ -18,8 +18,9 @@ export class DeepseekModule extends ConfigurableModuleClass {
                 { provide: DEEPSEEK_OPTIONS, useValue: parsed },
                 { provide: DEEPSEEK_TEXT_GENERATOR, useExisting: generator },
                 DeepseekClient,
+                { provide: DEEPSEEK_CLIENT, useExisting: DeepseekClient },
             ],
-            exports: [DeepseekClient],
+            exports: [DeepseekClient, DEEPSEEK_CLIENT],
         }
     }
 }

@@ -3,6 +3,8 @@ import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { TransactionsError, TransactionsErrorCode } from "./errors/transactions.error"
 import type { TransactionAccountingRow, TransactionRow } from "./persistence/transactions.rows"
+import type { TransactionViewRow } from "./persistence/transaction-views.rows"
+import { LIST_INVOICE_TRANSACTIONS } from "./persistence/transaction-views.sql"
 import {
     FIND_TRANSACTION,
     INSERT_TRANSACTION,
@@ -24,6 +26,12 @@ export class TransactionsService {
             transactionId,
         ])
         return rows[0] ?? null
+    }
+
+    /** The payments linked to a customer's invoices, after the composer proved workspace membership. */
+    listForInvoices(workspaceId: string, invoiceIds: ReadonlyArray<string>): Promise<Array<TransactionViewRow>> {
+        if (invoiceIds.length === 0) return Promise.resolve([])
+        return this.entityManager.query<Array<TransactionViewRow>>(LIST_INVOICE_TRANSACTIONS, [workspaceId, invoiceIds])
     }
 
     /** The newest payments and their input records for the accounting book. */

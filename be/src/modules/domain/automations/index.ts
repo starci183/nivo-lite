@@ -1,4 +1,4 @@
-export { AutomationEngineService } from "./automation-engine.service"
+export { AutomationTickService } from "./automation-tick.service"
 export type {
     AutomationGate,
     AutomationOffice,

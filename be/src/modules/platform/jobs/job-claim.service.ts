@@ -11,12 +11,21 @@ import type {
     ClaimParams,
     ClaimResult,
     FailWrite,
+    FailedJobEffect,
+    JobEffect,
     GuardedWrite,
     RunKey,
 } from "./jobs.contracts"
 import { InjectJobsManagers } from "./jobs.decorators"
 import type { JobClaims } from "./jobs.port"
-import { ADVANCE_JOB, CLAIM_JOB, COMPLETE_JOB, FAIL_JOB } from "./persistence/jobs.sql"
+import {
+    ADVANCE_JOB,
+    CLAIM_JOB,
+    COMPLETE_JOB,
+    FAIL_JOB,
+    LOCK_JOB_FENCE,
+    LOCK_FAILED_JOB_FENCE,
+} from "./persistence/jobs.sql"
 import type { ClaimedRow } from "./persistence/jobs.rows"
 
 @Injectable()
@@ -66,6 +75,31 @@ export class JobClaimService implements JobClaims {
     /** Marks the job failed under the token the caller holds, so the queue can retry it. */
     fail(write: FailWrite): Promise<void> {
         return this.guarded(FAIL_JOB, [write.jobId, write.expectedFencingToken, write.reason, this.clock.now()], write)
+    }
+
+    /** Holds the live fence across domain effects; no job-row writes may be attempted inside the callback. */
+    withFence<T>(job: ClaimedJob, work: JobEffect<T>): Promise<T> {
+        return this.writer().transaction(async (manager) => {
+            const rows = await manager.query<Array<{ id: string }>>(LOCK_JOB_FENCE, [job.jobId, job.fencingToken])
+            if (rows.length === 0) {
+                throw new JobsError({
+                    code: JobsErrorCode.FencedOut,
+                    params: { jobId: job.jobId, token: job.fencingToken },
+                })
+            }
+            return work()
+        })
+    }
+
+    /** Runs a terminal delivery effect under its latest failed claim, so it cannot overwrite a live successor. */
+    withFailedFence(jobKey: string, work: FailedJobEffect): Promise<void> {
+        return this.writer().transaction(async (manager) => {
+            const [row] = await manager.query<Array<{ id: string; fencing_token: string }>>(LOCK_FAILED_JOB_FENCE, [
+                jobKey,
+            ])
+            if (row === undefined) return
+            await work({ jobId: row.id, expectedFencingToken: Number(row.fencing_token) })
+        })
     }
 
     /** The idempotency key of one step of this claim: it includes the token, so a zombie's repeat is a different key than the live worker's. */

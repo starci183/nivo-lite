@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { WorkItemsService } from "@modules/domain/work-items"
+import type { OptionalWorkItem } from "@modules/domain/work-items"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { InjectLogger } from "@modules/platform/logging"
@@ -96,6 +97,12 @@ export class WorkEngineService {
     /** Processes up to `limit` queued chain steps, oldest first; answers how many ran. */
     runQueued(ctx: WorkContext, limit: number): Promise<number> {
         return this.drain(ctx, limit, 0)
+    }
+
+    /** Runs the requested queued item before any older workspace chain steps consume the drain budget. */
+    async runQueuedItem(ctx: WorkContext, workItemId: string): Promise<OptionalWorkItem> {
+        const claimed = await this.items.claim(ctx.workspaceId, workItemId)
+        return claimed === null ? null : this.process(ctx, claimed, {})
     }
 
     /** Processes only the queued steps of the named inbound input, bounded by the same worker batch limit. */

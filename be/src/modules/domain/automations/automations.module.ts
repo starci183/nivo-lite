@@ -9,6 +9,7 @@ import { AutomationScansService } from "./automation-scans.service"
 import { AutomationShopService } from "./automation-shop.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./automations.module-definition"
 import { AutomationsService } from "./automations.service"
+import { AutomationTickService } from "./automation-tick.service"
 
 @Module({})
 /**
@@ -31,8 +32,9 @@ export class AutomationsModule extends ConfigurableModuleClass {
                 AutomationOperationsExecutorsService,
                 AutomationEngineService,
                 AutomationsService,
+                AutomationTickService,
             ],
-            exports: [AutomationsService, AutomationEngineService, AutomationExtensionsService],
+            exports: [AutomationsService, AutomationEngineService, AutomationExtensionsService, AutomationTickService],
         }
     }
 }

@@ -45,3 +45,17 @@ export interface OrderCountRow {
     /** How many. */
     readonly n: number
 }
+
+/** An order as the Sales and Lead journey pages display it. */
+export interface OrdersWorkbenchRow extends SalesOrderRow {
+    /** When it was drafted. */
+    readonly created_at: string
+    /** When it was confirmed. */
+    readonly confirmed_at: string | null
+    /** When it was handed to the carrier. */
+    readonly shipped_at: string | null
+    /** The carrier. */
+    readonly carrier: string | null
+    /** The carrier's tracking code. */
+    readonly tracking_code: string | null
+}

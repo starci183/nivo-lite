@@ -1,5 +1,11 @@
 import { sql } from "@modules/platform/database"
 
+/** Lists the contracts of one workspace for its sales workbench ($1 workspace). */
+export const LIST_CONTRACTS = sql`SELECT id, lead_id, customer_name, plan,
+    to_char(starts_on, 'YYYY-MM-DD') AS starts_on, to_char(ends_on, 'YYYY-MM-DD') AS ends_on,
+    amount_vnd::float8 AS amount_vnd, status, note
+FROM public.contracts WHERE workspace_id = $1::uuid ORDER BY ends_on ASC, id ASC LIMIT 300`
+
 /** Writes one contract, linked to a lead of the workspace when it names one, and answers it, or answers nothing when the lead is not the workspace own ($1 workspace, $2 lead, $3 customer, $4 plan, $5 start, $6 end, $7 amount, $8 status, $9 note). */
 export const INSERT_CONTRACT = sql`WITH changed AS (
     INSERT INTO public.contracts (workspace_id, lead_id, customer_name, plan, starts_on, ends_on, amount_vnd, status, note)

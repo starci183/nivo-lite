@@ -1,9 +1,5 @@
 import { sql } from "@modules/platform/database"
 
-/** Locks a current claim while its caller performs a domain write ($1 job id, $2 expected token). */
-export const LOCK_JOB_FENCE = sql`SELECT id FROM public.jobs
-WHERE id = $1 AND fencing_token = $2 AND status = 'running' LIMIT 1 FOR UPDATE`
-
 /**
  * Claims a delivery in one statement ($1 kind, $2 job key, $3 worker, $4 lease end, $5 payload, $6 instant). A new key inserts the row
  * with token 1; an existing key is claimed again only when the job failed or its lease expired, and then the token is bumped by the
@@ -35,3 +31,9 @@ export const FAIL_JOB = sql`WITH changed AS (UPDATE public.jobs SET status = 'fa
     WHERE id = $1 AND fencing_token = $2 AND status = 'running'
        RETURNING id)
     SELECT id FROM changed`
+
+/** Locks the live job fence while its domain effects run; a replacement claim waits until the effects and progress are recorded. */
+export const LOCK_JOB_FENCE = sql`SELECT id FROM public.jobs WHERE id = $1 AND fencing_token = $2 AND status = 'running' LIMIT 1 FOR UPDATE`
+/** Locks a delivery only when its latest claim failed; a successor claim makes this return no row. */
+export const LOCK_FAILED_JOB_FENCE = sql`SELECT id, fencing_token FROM public.jobs
+    WHERE job_key = $1 AND status = 'failed' LIMIT 1 FOR UPDATE`

@@ -17,6 +17,8 @@ import type {
     ChatHolder,
 } from "./agent-conversations.contracts"
 import { AgentConversationsError, AgentConversationsErrorCode } from "./errors/agent-conversations.error"
+import type { CustomerConversationRow } from "./persistence/customer-conversations.rows"
+import { LIST_CUSTOMER_LEAD_CONVERSATIONS } from "./persistence/customer-conversations.sql"
 import type {
     ConversationRefRow,
     ConversationTargetRow,
@@ -74,6 +76,14 @@ const chatOf = (row: ChatConversationRow): ChatConversation => ({
 /** The conversations customers have with the workspace's agents on a channel; the only writer of agent_conversations. */
 export class AgentConversationsService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+
+    /** Lead-linked customer conversations for a workbench whose caller has already proved membership. */
+    listCustomerLeadConversations(workspaceId: string, limit: number = 200): Promise<Array<CustomerConversationRow>> {
+        return this.entityManager.query<Array<CustomerConversationRow>>(LIST_CUSTOMER_LEAD_CONVERSATIONS, [
+            workspaceId,
+            limit,
+        ])
+    }
 
     /** The newest hundred conversations of the agent in the proven workspace. */
     async listChat(workspaceId: string, agentId: string): Promise<ReadonlyArray<ChatConversation>> {

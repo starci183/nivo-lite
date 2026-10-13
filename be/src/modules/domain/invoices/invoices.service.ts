@@ -12,6 +12,8 @@ import type {
     InvoiceRow,
     LastInvoiceNumberRow,
 } from "./persistence/invoices.rows"
+import type { InvoiceViewRow } from "./persistence/invoice-views.rows"
+import { LIST_LEAD_INVOICES, LIST_WORKBENCH_INVOICES } from "./persistence/invoice-views.sql"
 import {
     FIND_INVOICE,
     FIND_INVOICE_OF_ORDER,
@@ -50,6 +52,16 @@ export class InvoicesService {
     /** The newest invoices and their related records for the accounting book. */
     listAccounting(workspaceId: string, limit: number = 1000): Promise<Array<InvoiceAccountingRow>> {
         return this.entityManager.query<Array<InvoiceAccountingRow>>(LIST_ACCOUNTING_INVOICES, [workspaceId, limit])
+    }
+
+    /** The invoices shown in Sales handoffs, after the caller's membership was proved by the composer. */
+    listForWorkbench(workspaceId: string): Promise<Array<InvoiceViewRow>> {
+        return this.entityManager.query<Array<InvoiceViewRow>>(LIST_WORKBENCH_INVOICES, [workspaceId, 500])
+    }
+
+    /** A customer's invoices, after the caller's membership was proved by the composer. */
+    listForLead(workspaceId: string, leadId: string): Promise<Array<InvoiceViewRow>> {
+        return this.entityManager.query<Array<InvoiceViewRow>>(LIST_LEAD_INVOICES, [workspaceId, leadId])
     }
 
     /** Issues an invoice under the next number of the month; an order that has its invoice already gets that one back. */

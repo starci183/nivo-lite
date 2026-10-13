@@ -3,6 +3,7 @@ import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./leads.module-definition"
 import { LeadRecordsService } from "./lead-records.service"
 import { LeadsService } from "./leads.service"
+import { LeadReadService } from "./lead-read.service"
 import { LeadGenWorkbenchService } from "./leadgen-workbench.service"
 import { LeadGenCommentService } from "./leadgen-comment.service"
 import { LeadGenPublicCommentService } from "./leadgen-public-comment.service"
@@ -19,11 +20,18 @@ export class LeadsModule extends ConfigurableModuleClass {
                 ...(base.providers ?? []),
                 LeadsService,
                 LeadRecordsService,
+                LeadReadService,
                 LeadGenWorkbenchService,
                 LeadGenCommentService,
                 LeadGenPublicCommentService,
             ],
-            exports: [LeadsService, LeadRecordsService, LeadGenWorkbenchService, LeadGenCommentService],
+            exports: [
+                LeadsService,
+                LeadRecordsService,
+                LeadReadService,
+                LeadGenWorkbenchService,
+                LeadGenCommentService,
+            ],
         }
     }
 }

@@ -4,9 +4,15 @@ import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { OrdersError, OrdersErrorCode } from "./errors/orders.error"
-import type { NewOrderDraft, OptionalOrder, OrderConfirmation, OrderLabel } from "./orders.contracts"
+import type {
+    NewOrderDraft,
+    OptionalOrder,
+    OrderConfirmation,
+    OrderLabel,
+    OptionalOrdersWorkbench,
+} from "./orders.contracts"
 import { ORDER_NUMBER_ATTEMPTS, orderNumberOf, orderPrefixOf } from "./order-number.policy"
-import type { OrderCountRow, SalesOrderListRow, SalesOrderRow } from "./persistence/orders.rows"
+import type { OrderCountRow, OrdersWorkbenchRow, SalesOrderListRow, SalesOrderRow } from "./persistence/orders.rows"
 import {
     CANCEL_ORDER,
     CONFIRM_ORDER,
@@ -14,8 +20,11 @@ import {
     FIND_ORDER,
     FIND_ORDER_LABELS,
     INSERT_ORDER_DRAFT,
+    LIST_LEAD_ORDERS,
     LIST_ORDERS,
+    LIST_WORKBENCH_ORDERS,
     SET_ORDER_STATUS,
+    SHIP_ORDER,
 } from "./persistence/orders.sql"
 
 @Injectable()
@@ -38,6 +47,37 @@ export class OrdersService {
             workspaceId,
             Math.min(500, Math.max(1, limit)),
         ])
+    }
+
+    /** The latest non-draft orders for the Sales workbench. */
+    listForWorkbench(workspaceId: string, limit: number = 200): Promise<Array<OrdersWorkbenchRow>> {
+        return this.entityManager.query<Array<OrdersWorkbenchRow>>(LIST_WORKBENCH_ORDERS, [
+            workspaceId,
+            Math.min(500, Math.max(1, limit)),
+        ])
+    }
+
+    /** The orders shown on a customer's journey. */
+    listForLead(workspaceId: string, leadId: string): Promise<Array<OrdersWorkbenchRow>> {
+        return this.entityManager.query<Array<OrdersWorkbenchRow>>(LIST_LEAD_ORDERS, [workspaceId, leadId])
+    }
+
+    /** Records a shipment once; null means the order was missing, ineligible or already shipped. */
+    async ship(
+        workspaceId: string,
+        orderId: string,
+        carrier: string,
+        trackingCode: string,
+        manager: EntityManager = this.entityManager,
+    ): Promise<OptionalOrdersWorkbench> {
+        const rows = await manager.query<Array<OrdersWorkbenchRow>>(SHIP_ORDER, [
+            workspaceId,
+            orderId,
+            carrier,
+            trackingCode,
+            this.clock.now().toISOString(),
+        ])
+        return rows[0] ?? null
     }
 
     /** The number and items of the given orders. */
