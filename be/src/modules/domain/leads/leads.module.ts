@@ -6,7 +6,6 @@ import { LeadsService } from "./leads.service"
 import { LeadReadService } from "./lead-read.service"
 import { LeadGenWorkbenchService } from "./leadgen-workbench.service"
 import { LeadGenCommentService } from "./leadgen-comment.service"
-import { LeadGenPublicCommentService } from "./leadgen-public-comment.service"
 
 @Module({})
 /** The journey of a lead over the primary Supabase PostgreSQL connection. */
@@ -23,7 +22,6 @@ export class LeadsModule extends ConfigurableModuleClass {
                 LeadReadService,
                 LeadGenWorkbenchService,
                 LeadGenCommentService,
-                LeadGenPublicCommentService,
             ],
             exports: [
                 LeadsService,

@@ -9,6 +9,7 @@ import { LoyaltyMembersService } from "./loyalty-members.service"
 import { LoyaltyOverviewService } from "./loyalty-overview.service"
 import { LoyaltyPromotionsService } from "./loyalty-promotions.service"
 import { LoyaltyPublicService } from "./loyalty-public.service"
+import { LoyaltyChatService } from "./loyalty-chat.service"
 import { LoyaltyRedemptionService } from "./loyalty-redemption.service"
 import { LOYALTY_CODE_DELIVERY } from "./loyalty.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./loyalty.module-definition"
@@ -34,6 +35,7 @@ export class LoyaltyModule extends ConfigurableModuleClass {
                 LoyaltySetupService,
                 LoyaltyOverviewService,
                 LoyaltyRedemptionService,
+                LoyaltyChatService,
                 LoyaltyEarningService,
                 LoyaltyMembersService,
                 LoyaltyPromotionsService,
@@ -41,6 +43,8 @@ export class LoyaltyModule extends ConfigurableModuleClass {
                 LoyaltyApiService,
             ],
             exports: [
+                LoyaltyChatService,
+                LoyaltyRedemptionService,
                 LoyaltyCampaignWorkbenchService,
                 LoyaltyBoardService,
                 LoyaltySetupService,

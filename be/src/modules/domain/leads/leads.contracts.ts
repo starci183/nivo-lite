@@ -1,5 +1,5 @@
 /** One stage of the journey of a lead, in order; the last two close it. */
-export type LeadStage = "new" | "qualified" | "proposal" | "won" | "lost"
+export type LeadJourneyStage = "new" | "qualified" | "proposal" | "won" | "lost"
 
 /** What recording an outcome takes: the lead, its new stage and the evidence behind it. */
 export interface RecordOutcomeParams {
@@ -8,7 +8,7 @@ export interface RecordOutcomeParams {
     /** The lead whose stage changes. */
     readonly leadId: string
     /** The stage the journey moved to. */
-    readonly stage: LeadStage
+    readonly stage: LeadJourneyStage
     /** Why: the evidence the person wrote; may be empty. */
     readonly evidence: string
     /** The signed-in caller; the workspace members service proves the membership and names the actor. */
