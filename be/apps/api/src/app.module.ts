@@ -79,6 +79,7 @@ import { CREDITS_ERROR_KINDS, CREDITS_MESSAGES, CreditsModule } from "@modules/d
 import { AI_USAGE_EVENTS_MESSAGES, AiUsageEventsModule, UsageGateService } from "@modules/domain/ai-usage-events"
 import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
 import { WorkspacesGraphqlModule, WorkspacesHttpModule } from "@features/api/workspaces"
+import { OperationsJobsQueueModule } from "@features/jobs/operations-jobs"
 import { AccountGraphqlModule } from "@features/api/account"
 import { ShellGraphqlModule } from "@features/api/shell"
 import {
@@ -215,6 +216,10 @@ import {
     SupabaseModule,
     createSupabaseAccessTokenVerifier,
 } from "@modules/integrations/supabase"
+import { INVENTORY_ERROR_KINDS, INVENTORY_MESSAGES, InventoryModule } from "@modules/domain/inventory"
+import { SHIFTS_ERROR_KINDS, SHIFTS_MESSAGES, ShiftsModule } from "@modules/domain/shifts"
+import { HIRING_ERROR_KINDS, HIRING_MESSAGES, HiringModule } from "@modules/domain/hiring"
+import { MODULE_OPS_ERROR_KINDS, MODULE_OPS_MESSAGES, ModuleOpsModule } from "@modules/domain/module-ops"
 import { AUTOMATIONS_ERROR_KINDS, AUTOMATIONS_MESSAGES, AutomationsModule } from "@modules/domain/automations"
 import { AutomationCommandsModule } from "@modules/domain/automation-commands"
 import { AutomationPortsModule } from "@modules/domain/automation-ports"
@@ -423,6 +428,11 @@ export class AppModule {
                         ERRORS_MESSAGES,
                         HTTP_SECURITY_MESSAGES,
                         IDENTITY_MESSAGES,
+                        INVENTORY_MESSAGES,
+                        SHIFTS_MESSAGES,
+                        HIRING_MESSAGES,
+                        JOBS_MESSAGES,
+                        MODULE_OPS_MESSAGES,
                         PLATFORM_ADMIN_MESSAGES,
                         JOBS_MESSAGES,
                         BRAIN_FACTS_MESSAGES,
@@ -518,6 +528,10 @@ export class AppModule {
                         N8N_RUNS_ERROR_KINDS,
                         QUEUE_ERROR_KINDS,
                         IDENTITY_ERROR_KINDS,
+                        INVENTORY_ERROR_KINDS,
+                        SHIFTS_ERROR_KINDS,
+                        HIRING_ERROR_KINDS,
+                        MODULE_OPS_ERROR_KINDS,
                         PLATFORM_ADMIN_ERROR_KINDS,
                         MODULES_ERROR_KINDS,
                         NIVO_KNOWLEDGE_ERROR_KINDS,
@@ -612,6 +626,10 @@ export class AppModule {
                 VideoProjectsModule.register({ isGlobal: true }),
                 VideoProjectVersionsModule.register({ isGlobal: true }),
                 VideoModule.register({ isGlobal: true, ...options.video, assets: SUPABASE_STORAGE }),
+                InventoryModule.register({ isGlobal: true }),
+                ShiftsModule.register({ isGlobal: true }),
+                HiringModule.register({ isGlobal: true, ...options.channels }),
+                OperationsJobsQueueModule,
                 ContentItemsModule.register({ isGlobal: true }),
                 ContentSettingsModule.register({ isGlobal: true }),
                 ContentModule.register({ isGlobal: true }),
@@ -624,6 +642,7 @@ export class AppModule {
                 ConnectionCommandsQueueModule,
                 RendersHttpModule,
                 LivenessModule.register({ isGlobal: true }),
+                ModuleOpsModule.register({ isGlobal: true }),
                 LlmModule.register({ isGlobal: true, ...options.llm }),
                 DocumentsModule.register({ isGlobal: true, ...options.documents }),
                 KnowledgeSourcesModule.register({ isGlobal: true, storage: SUPABASE_OBJECTS }),
