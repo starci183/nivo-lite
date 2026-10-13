@@ -1,4 +1,4 @@
-import { useQueryMyWorkspacesSwr } from "@/hooks/swr/api/graphql/queries/useQueryMyWorkspacesSwr"
+import { useQueryMyWorkspacesSwr } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { isManagerRole } from "@/lib/members-shared"
 import type { Role } from "@/lib/members-shared"

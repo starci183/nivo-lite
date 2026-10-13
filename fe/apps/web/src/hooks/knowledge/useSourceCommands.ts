@@ -1,10 +1,12 @@
 import { useState } from "react"
 import { mutate } from "swr"
-import { QUERY_KNOWLEDGE_SOURCE_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryKnowledgeSourceSwr"
-import { QUERY_KNOWLEDGE_SOURCES_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryKnowledgeSourcesSwr"
-import { useMutateDeleteKnowledgeSourceSwr } from "@/hooks/swr/api/graphql/mutations/useMutateDeleteKnowledgeSourceSwr"
-import { useMutateReindexKnowledgeSourceSwr } from "@/hooks/swr/api/graphql/mutations/useMutateReindexKnowledgeSourceSwr"
-import { useMutateUpdateKnowledgeSourceSwr } from "@/hooks/swr/api/graphql/mutations/useMutateUpdateKnowledgeSourceSwr"
+import {
+    QUERY_KNOWLEDGE_SOURCE_SWR_KEY,
+    QUERY_KNOWLEDGE_SOURCES_SWR_KEY,
+    useMutateDeleteKnowledgeSourceSwr,
+    useMutateReindexKnowledgeSourceSwr,
+    useMutateUpdateKnowledgeSourceSwr,
+} from "@/hooks/swr"
 import { navigation } from "@/modules/i18n"
 import { KNOWLEDGE_ROUTES } from "@/modules/routes"
 import { useGraphQLWithToast } from "@/modules/toast"

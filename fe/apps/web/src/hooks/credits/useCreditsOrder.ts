@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react"
 import { useTranslations } from "next-intl"
 import { useRequestPaymentOrder } from "@/hooks/billing"
-import { useCreditsCheckoutStore } from "@/hooks/zustand/creditsCheckout/store"
+import { useCreditsCheckoutStore } from "@/hooks/zustand/creditsCheckout"
 import type { PayTarget } from "@/modules/types"
 
 /** Enqueues purchases only from user events and shares progress with the payment slot. */

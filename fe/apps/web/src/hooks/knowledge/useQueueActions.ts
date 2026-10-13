@@ -1,7 +1,9 @@
 import { mutate } from "swr"
-import { QUERY_KNOWLEDGE_SOURCES_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryKnowledgeSourcesSwr"
-import { useMutateCreateKnowledgeUploadSwr } from "@/hooks/swr/api/graphql/mutations/useMutateCreateKnowledgeUploadSwr"
-import { useMutateEnqueueKnowledgeSourceSwr } from "@/hooks/swr/api/graphql/mutations/useMutateEnqueueKnowledgeSourceSwr"
+import {
+    QUERY_KNOWLEDGE_SOURCES_SWR_KEY,
+    useMutateCreateKnowledgeUploadSwr,
+    useMutateEnqueueKnowledgeSourceSwr,
+} from "@/hooks/swr"
 import { putPresigned } from "@/modules/api"
 import type { QueueActions } from "@/modules/documents"
 import { useGraphQLWithToast, useRestWithToast } from "@/modules/toast"

@@ -1,11 +1,13 @@
 import { mutate } from "swr"
 import { canDecideItem } from "@/hooks/member"
 import type { ShellMember } from "@/hooks/member"
-import { QUERY_OFFICE_COMMAND_CANDIDATES_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryOfficeCommandCandidatesSwr"
-import { QUERY_OFFICE_DECIDED_APPROVALS_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryOfficeDecidedApprovalsSwr"
-import { QUERY_OFFICE_MESSAGES_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryOfficeMessagesSwr"
-import { QUERY_OFFICE_PENDING_APPROVALS_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryOfficePendingApprovalsSwr"
-import { QUERY_WORK_ITEMS_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryWorkItemsSwr"
+import {
+    QUERY_OFFICE_COMMAND_CANDIDATES_SWR_KEY,
+    QUERY_OFFICE_DECIDED_APPROVALS_SWR_KEY,
+    QUERY_OFFICE_MESSAGES_SWR_KEY,
+    QUERY_OFFICE_PENDING_APPROVALS_SWR_KEY,
+    QUERY_WORK_ITEMS_SWR_KEY,
+} from "@/hooks/swr"
 import type {
     OfficeAgent,
     OfficeApproval,

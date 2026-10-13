@@ -1,8 +1,10 @@
 import { useTranslations } from "next-intl"
-import { useMutateAddResponsibilitySwr } from "@/hooks/swr/api/graphql/mutations/useMutateAddResponsibilitySwr"
-import { useMutateAssignResponsibilitySwr } from "@/hooks/swr/api/graphql/mutations/useMutateAssignResponsibilitySwr"
-import { useMutateRecordOutcomeSwr } from "@/hooks/swr/api/graphql/mutations/useMutateRecordOutcomeSwr"
-import { useMutateSettleWonDealSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSettleWonDealSwr"
+import {
+    useMutateAddResponsibilitySwr,
+    useMutateAssignResponsibilitySwr,
+    useMutateRecordOutcomeSwr,
+    useMutateSettleWonDealSwr,
+} from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import type { LeadStageId } from "@/modules/types"
 import { useLeadAction } from "./useLeadAction"

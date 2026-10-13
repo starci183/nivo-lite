@@ -3,9 +3,11 @@
 import { useTranslations } from "next-intl"
 import { useCallback, useRef, useState } from "react"
 import { mutate } from "swr"
-import { useMutateSimulateInboundSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSimulateInboundSwr"
-import { QUERY_INBOUND_EVENTS_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryInboundEventsSwr"
-import { useQueryInboundSimulationStatusSwr } from "@/hooks/swr/api/graphql/queries/useQueryInboundSimulationStatusSwr"
+import {
+    useMutateSimulateInboundSwr,
+    QUERY_INBOUND_EVENTS_SWR_KEY,
+    useQueryInboundSimulationStatusSwr,
+} from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import type { InboundSimulationStatusType, SimulateInboundType } from "@/modules/api"
 import type { MutateSimulateInboundRequest } from "@/modules/api/graphql/mutations/mutation-simulate-inbound"

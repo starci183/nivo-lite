@@ -1,7 +1,7 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import type { useQueryLoyaltyMemberSwr } from "@/hooks/swr/api/graphql"
+import type { useQueryLoyaltyMemberSwr } from "@/hooks/swr"
 import { blockMessageKey, isLedgerKind, ledgerTone } from "./loyaltyMembers.shared"
 import type { useMemberActions } from "./useMemberActions"
 

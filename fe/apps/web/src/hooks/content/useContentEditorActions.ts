@@ -1,9 +1,11 @@
 import { useTranslations } from "next-intl"
-import { useMutateMarkContentPublishedSwr } from "@/hooks/swr/api/graphql/mutations/useMutateMarkContentPublishedSwr"
-import { useMutateRequestContentMediaUploadSwr } from "@/hooks/swr/api/graphql/mutations/useMutateRequestContentMediaUploadSwr"
-import { useMutateSaveContentItemSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSaveContentItemSwr"
-import { useMutateSubmitContentForApprovalSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSubmitContentForApprovalSwr"
-import { useMutateTransitionContentItemSwr } from "@/hooks/swr/api/graphql/mutations/useMutateTransitionContentItemSwr"
+import {
+    useMutateMarkContentPublishedSwr,
+    useMutateRequestContentMediaUploadSwr,
+    useMutateSaveContentItemSwr,
+    useMutateSubmitContentForApprovalSwr,
+    useMutateTransitionContentItemSwr,
+} from "@/hooks/swr"
 import { putPresigned } from "@/modules/api"
 import { useGraphQLWithToast, useRestWithToast } from "@/modules/toast"
 import type { MutateSaveContentItemRequest } from "@/modules/api/graphql/mutations/mutation-save-content-item"

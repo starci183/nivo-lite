@@ -4,12 +4,14 @@ import { useTranslations } from "next-intl"
 import { useMemo } from "react"
 import { useSettledGraphQL } from "@/hooks/connection-wizard"
 import type { Settled } from "@/hooks/connection-wizard"
-import { useMutateCheckConnectionSwr } from "@/hooks/swr/api/graphql/mutations/useMutateCheckConnectionSwr"
-import { useMutateCheckMetaSwr } from "@/hooks/swr/api/graphql/mutations/useMutateCheckMetaSwr"
-import { useMutateDeleteConnectionSwr } from "@/hooks/swr/api/graphql/mutations/useMutateDeleteConnectionSwr"
-import { useMutateDisconnectConnectionSwr } from "@/hooks/swr/api/graphql/mutations/useMutateDisconnectConnectionSwr"
-import { useMutateRevealSepayKeySwr } from "@/hooks/swr/api/graphql/mutations/useMutateRevealSepayKeySwr"
-import { useMutateTestWebhookConnectionSwr } from "@/hooks/swr/api/graphql/mutations/useMutateTestWebhookConnectionSwr"
+import {
+    useMutateCheckConnectionSwr,
+    useMutateCheckMetaSwr,
+    useMutateDeleteConnectionSwr,
+    useMutateDisconnectConnectionSwr,
+    useMutateRevealSepayKeySwr,
+    useMutateTestWebhookConnectionSwr,
+} from "@/hooks/swr"
 import type { ConnectionCheck, MetaCheckSummary, SepayKeys, WebhookTestVerdict } from "@/modules/types"
 import { connectionCheckOf, metaCheckSummaryOf, webhookVerdictOf } from "@/hooks/connection-wire"
 import { useAuthorizeGoogle } from "./useAuthorizeGoogle"

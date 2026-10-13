@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { useQueryLoadDatabaseConnectionSwr } from "@/hooks/swr/api/graphql/queries/useQueryLoadDatabaseConnectionSwr"
+import { useQueryLoadDatabaseConnectionSwr } from "@/hooks/swr"
 import type { DbSavedConnection } from "@/modules/types"
 import { dbSavedOf } from "./database-wizard.shared"
 

@@ -1,4 +1,4 @@
-import { useMutateCreateLeadSwr } from "@/hooks/swr/api/graphql/mutations/useMutateCreateLeadSwr"
+import { useMutateCreateLeadSwr } from "@/hooks/swr"
 import { useLeadAction } from "./useLeadAction"
 
 /** What the new-lead form submits. */

@@ -1,6 +1,6 @@
 import { useTranslations } from "next-intl"
 import { useCallback, useRef, useState } from "react"
-import { useQueryLeadActionStatusSwr } from "@/hooks/swr/api/graphql/queries/useQueryLeadActionStatusSwr"
+import { useQueryLeadActionStatusSwr } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import type { LeadActionQueuedType, LeadActionStatusType } from "@/modules/api"
 import { useGraphQLWithToast } from "@/modules/toast"

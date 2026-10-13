@@ -2,13 +2,13 @@ import { useTranslations } from "next-intl"
 import { useCallback } from "react"
 import { useSWRConfig } from "swr"
 import { useAuthUser } from "@/hooks/auth"
-import { useMutateApproveLeadGenCommentSwr } from "@/hooks/swr/api/graphql/mutations/useMutateApproveLeadGenCommentSwr"
 import {
+    useMutateApproveLeadGenCommentSwr,
     useQueryLeadGenCommentStatusSwr,
     QUERY_LEAD_GEN_COMMENT_STATUS_SWR_KEY,
-} from "@/hooks/swr/api/graphql/queries/useQueryLeadGenCommentStatusSwr"
-import { QUERY_LEAD_GEN_WORKBENCH_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryLeadGenWorkbenchSwr"
-import { QUERY_LEAD_GEN_AGENT_DASHBOARD_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryLeadGenAgentDashboardSwr"
+    QUERY_LEAD_GEN_WORKBENCH_SWR_KEY,
+    QUERY_LEAD_GEN_AGENT_DASHBOARD_SWR_KEY,
+} from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { useLeadGenApprovalStore } from "@/hooks/zustand/leadgen"
 import type { MutateApproveLeadGenCommentRequest } from "@/modules/api/graphql/mutations/mutation-approve-lead-gen-comment"
@@ -65,21 +65,18 @@ export const useApproveLeadGenComment = () => {
 
     const approve = useCallback(
         async (request: MutateApproveLeadGenCommentRequest) => {
-            if (
-                !activeWorkspaceId ||
-                !scopeId ||
-                !useLeadGenApprovalStore.getState().claim(scopeId, request.workItemId)
-            )
+            const requestedItemId = String(request.workItemId)
+            if (!activeWorkspaceId || !scopeId || !useLeadGenApprovalStore.getState().claim(scopeId, requestedItemId))
                 return false
             const approved = await runGraphQL(() => trigger(request), { successMessage: t("commentQueued") })
             if (!approved) {
-                useLeadGenApprovalStore.getState().refused(scopeId, request.workItemId)
+                useLeadGenApprovalStore.getState().refused(scopeId, requestedItemId)
                 return false
             }
             await mutate([QUERY_LEAD_GEN_COMMENT_STATUS_SWR_KEY, activeWorkspaceId, approved.id], approved, {
                 revalidate: false,
             })
-            useLeadGenApprovalStore.getState().accepted(scopeId, request.workItemId, approved.id)
+            useLeadGenApprovalStore.getState().accepted(scopeId, requestedItemId, approved.id)
             return true
         },
         [activeWorkspaceId, scopeId, runGraphQL, trigger, t, mutate],

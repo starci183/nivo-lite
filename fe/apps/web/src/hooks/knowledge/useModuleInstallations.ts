@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { useQueryModuleInstallationsSwr } from "@/hooks/swr/api/graphql/queries/useQueryModuleInstallationsSwr"
+import { useQueryModuleInstallationsSwr } from "@/hooks/swr"
 import { toWireInstallation } from "@/modules/documents"
 
 /** The installed agents (instances) of the active workspace, in the shape the blocks know. */

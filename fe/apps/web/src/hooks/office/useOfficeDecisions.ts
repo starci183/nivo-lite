@@ -1,9 +1,11 @@
 import { useTranslations } from "next-intl"
 import { useCallback, useState } from "react"
-import { useMutateCancelOfficeCommandSwr } from "@/hooks/swr/api/graphql/mutations/useMutateCancelOfficeCommandSwr"
-import { useMutateConfirmOfficeCommandSwr } from "@/hooks/swr/api/graphql/mutations/useMutateConfirmOfficeCommandSwr"
-import { useMutateDecideExecutionSwr } from "@/hooks/swr/api/graphql/mutations/useMutateDecideExecutionSwr"
-import { useMutateDecideWorkItemSwr } from "@/hooks/swr/api/graphql/mutations/useMutateDecideWorkItemSwr"
+import {
+    useMutateCancelOfficeCommandSwr,
+    useMutateConfirmOfficeCommandSwr,
+    useMutateDecideExecutionSwr,
+    useMutateDecideWorkItemSwr,
+} from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import type { OfficeWorkDecision } from "@/modules/types"
 import { refreshOffice } from "./office.shared"

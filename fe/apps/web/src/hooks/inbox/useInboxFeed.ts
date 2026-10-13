@@ -1,7 +1,7 @@
 "use client"
 
 import { useFormatter, useNow, useTranslations } from "next-intl"
-import { useQueryInboundEventsSwr } from "@/hooks/swr/api/graphql/queries/useQueryInboundEventsSwr"
+import { useQueryInboundEventsSwr } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { bankConnectionOf } from "@/lib/bank"
 import { CONSOLE_ROUTES, leadHref } from "@/modules/routes"
