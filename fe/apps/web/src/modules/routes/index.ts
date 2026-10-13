@@ -5,7 +5,12 @@ export const APP_ROUTES = {
     dashboard: "/dashboard",
     automations: "/automations",
     chat: "/chat",
+    account: "/account",
+    workspaceNew: "/workspaces/new",
     authCallback: "/auth/callback",
 } as const
 
 export { safeNextPath } from "./safe-next-path"
+export { AUTH_ROUTES, invitePath, loginPath, loginResetPath, signupPath, workspacesPath } from "./auth-routes"
+export { ADMIN_ROUTES, adminListPath, adminWorkspacePath } from "./admin-routes"
+export { workspaceBillingPath, workspacePaymentPath } from "./workspace-routes"
