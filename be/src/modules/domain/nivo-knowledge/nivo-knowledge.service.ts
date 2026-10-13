@@ -2,9 +2,22 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
-import type { NivoEntry, NivoItemInput, NivoUnembedded, NivoVectorWrite, NivoWriteResult } from "./nivo-knowledge.contracts"
-import type { NivoEntryRow, RemovedNivoRow, UnembeddedNivoRow, UpsertedNivoRow } from "./persistence/nivo-knowledge.rows"
+import type {
+    NivoEntry,
+    NivoItemInput,
+    NivoUnembedded,
+    NivoVectorWrite,
+    NivoWriteResult,
+} from "./nivo-knowledge.contracts"
+import { CORE_FOLDER } from "./nivo-item.policy"
+import type {
+    NivoEntryRow,
+    RemovedNivoRow,
+    UnembeddedNivoRow,
+    UpsertedNivoRow,
+} from "./persistence/nivo-knowledge.rows"
 import {
+    COUNT_NIVO_FOR_MODULES,
     DELETE_STALE_NIVO_ITEMS,
     LIST_NIVO_ITEMS,
     SELECT_NIVO_UNEMBEDDED,
@@ -40,6 +53,20 @@ export class NivoKnowledgeService {
             })
             return counts
         })
+    }
+
+    /**
+     * How many base-knowledge items belong to the module, counting the shared core with it.
+     * A request for the core itself is not counted twice. Any signed-in person may read it.
+     */
+    countForModule(module: string): Promise<number> {
+        return this.countFor(module === CORE_FOLDER ? [CORE_FOLDER] : [module, CORE_FOLDER])
+    }
+
+    /** How many base-knowledge items belong to the named modules. */
+    async countFor(modules: ReadonlyArray<string>): Promise<number> {
+        const [row] = await this.entityManager.query<Array<{ count: number }>>(COUNT_NIVO_FOR_MODULES, [[...modules]])
+        return row?.count ?? 0
     }
 
     /** Every item of the base knowledge, for the Knowledge page; any signed-in person may read it. */

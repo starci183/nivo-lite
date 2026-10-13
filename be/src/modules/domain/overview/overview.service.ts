@@ -15,6 +15,8 @@ import type {
     OverviewResponsibility,
     OverviewSnapshot,
 } from "./overview.contracts"
+import { presentGovernance } from "./governance.policy"
+import type { RawGovernance } from "./governance.policy"
 import { RECENT_EVENTS, windowAt } from "./overview.policy"
 import {
     DASHBOARD_AGENTS,
@@ -63,7 +65,7 @@ export class OverviewService {
                 window.foundingFrom,
                 window.foundingTo,
             ]),
-            this.entityManager.query<Array<{ governance: OverviewGovernance }>>(DASHBOARD_GOVERNANCE, [
+            this.entityManager.query<Array<{ governance: RawGovernance }>>(DASHBOARD_GOVERNANCE, [
                 workspaceId,
                 window.since7,
             ]),
@@ -79,7 +81,7 @@ export class OverviewService {
             leads,
             pending,
             promo: promo[0]?.promo ?? EMPTY_PROMO,
-            governance: governance[0]?.governance ?? EMPTY_GOVERNANCE,
+            governance: governance[0] === undefined ? EMPTY_GOVERNANCE : presentGovernance(governance[0].governance),
             exceptions,
         }
     }

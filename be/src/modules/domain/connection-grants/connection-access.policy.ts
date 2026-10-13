@@ -38,6 +38,9 @@ const PURPOSE: Readonly<Record<string, Purpose>> = {
 /** Data connectors every agent may read from (a database, an API, an import, a mailbox, a personal Telegram). */
 const DATA_PROVIDERS: ReadonlySet<string> = new Set(["database", "openapi", "csv_import", "imap", "telegram_user"])
 
+/** The level a caller asks to store. Null removes the grant; an unknown word is stored as ask. */
+export type RequestedGrant = string | null
+
 /** One requested change: `access` null removes the agent access to the connection. */
 export interface GrantChange {
     /** The agent. */
@@ -54,17 +57,24 @@ export const isAccess = (value: unknown): value is Access => value === "read" ||
 /** True for the providers every agent may read from (data connectors), whatever its module. */
 export const isDataProvider = (provider: string): boolean => DATA_PROVIDERS.has(provider)
 
+/** The purpose a grant has, or null when that agent cannot use that provider. */
+export type PairPurpose = Purpose | null
+
 /** The purpose a grant of `provider` to an agent of `module` has, or null when that agent cannot use that provider. */
-export const purposeFor = (module: string, provider: string): Purpose | null => {
+export const purposeFor = (module: string, provider: string): PairPurpose => {
     const direct = Object.hasOwn(PURPOSE, `${module}:${provider}`) ? PURPOSE[`${module}:${provider}`] : undefined
     if (direct !== undefined) return direct
-    if (DATA_PROVIDERS.has(provider)) return provider === "openapi" ? "tool" : "data_source"
-    return null
+    if (!DATA_PROVIDERS.has(provider)) return null
+    if (provider === "openapi") return "tool"
+    return "data_source"
 }
 
 /** The level to write for a value that may be null (remove), a known level, or anything else (the default level). */
-export const normaliseAccess = (value: unknown): Access | null =>
-    value === null ? null : isAccess(value) ? value : DEFAULT_ACCESS
+export const normaliseAccess = (value: unknown): Access | null => {
+    if (value === null) return null
+    if (isAccess(value)) return value
+    return DEFAULT_ACCESS
+}
 
 /**
  * Turns "exactly these" into changes: a wanted id without a level keeps the current level (or starts at the default), a

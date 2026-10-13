@@ -25,6 +25,9 @@ WHERE embedding IS NULL OR embedding_model IS NULL OR embedding_model <> $1 ORDE
 export const UPDATE_NIVO_VECTORS = sql`UPDATE public.nivo_knowledge k SET embedding = t.embedding::extensions.vector, embedding_model = $3
 FROM unnest($1::uuid[], $2::text[]) AS t(id, embedding) WHERE k.id = t.id`
 
+/** How many items of the base knowledge belong to the given modules ($1 modules, including `core`). */
+export const COUNT_NIVO_FOR_MODULES = sql`SELECT count(*)::int AS count FROM public.nivo_knowledge WHERE module = ANY($1::text[])`
+
 /** The base knowledge of NIVO for the Knowledge page, ordered by module, kind and slug. */
 export const LIST_NIVO_ITEMS = sql`SELECT id, module, slug, title, body, kind, version, updated_at FROM public.nivo_knowledge
 ORDER BY module, kind, slug LIMIT 500`

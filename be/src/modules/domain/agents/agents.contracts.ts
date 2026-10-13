@@ -95,6 +95,8 @@ export interface DashboardItem {
     readonly leadId: string | null
     /** The href the finished work recorded as its evidence, or null. */
     readonly resultHref: string | null
+    /** The workbench link that opens this decision. */
+    readonly decisionHref: string
 }
 
 /** The decisions of the module that wait for a person: the oldest few and the total. */
@@ -121,6 +123,10 @@ export interface ConnectionItem {
     readonly name: string
     /** The provider key; the page labels it. */
     readonly provider: string
+    /** The bot username, when the provider has one. */
+    readonly botUsername: string | null
+    /** The masked bank account, when the connection is a bank feed. */
+    readonly accountMasked: string | null
     /** connected, error or pending. */
     readonly status: "connected" | "error" | "pending"
     /** What the agent may do through it. */

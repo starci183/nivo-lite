@@ -104,6 +104,12 @@ export interface RequirementFacts {
     readonly members: number
 }
 
+/** The installation that owns a record, when one of the record tables names it. */
+export interface RecordInstallation {
+    /** The owning installation, or null when the record names none. */
+    readonly installationId: string | null
+}
+
 /** An installation that runs on OpenClaw. */
 export interface OpenclawInstallation {
     /** The installation. */

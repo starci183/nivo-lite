@@ -8,6 +8,7 @@ import type {
     InstallationMode,
     InstallationRecord,
     InstallationWrite,
+    RecordInstallation,
     RequirementFacts,
 } from "@modules/domain/module-installations"
 import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
@@ -64,6 +65,16 @@ export class ModuleInstallService {
     async get(principalId: string, workspaceId: string, installationId: string): Promise<InstallationRecord> {
         await this.members.require(principalId, workspaceId)
         return this.require(workspaceId, installationId)
+    }
+
+    /** The installation that owns a record of the workspace; any member may read. Null when none says. */
+    async installationOfRecord(
+        principalId: string,
+        workspaceId: string,
+        recordId: string,
+    ): Promise<RecordInstallation> {
+        await this.members.require(principalId, workspaceId)
+        return this.installations.installationOfRecord(workspaceId, recordId)
     }
 
     /**

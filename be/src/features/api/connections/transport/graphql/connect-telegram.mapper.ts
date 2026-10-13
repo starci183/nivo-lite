@@ -12,6 +12,12 @@ export const toConnectTelegramRequest = (workspaceId: string, input: ConnectTele
 
 /** Maps the answer of connectTelegram to the GraphQL type. */
 export const toConnectTelegramType = (result: TelegramConnected): TelegramConnectedType => ({
-    connection: { ...result.connection, agentIds: [], grants: [] },
+    connection: {
+        ...result.connection,
+        botUsername: result.botUsername,
+        accountMasked: result.accountMasked,
+        agentIds: [],
+        grants: [],
+    },
     webhookRegistered: result.webhookRegistered,
 })

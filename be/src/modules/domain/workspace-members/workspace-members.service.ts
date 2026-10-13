@@ -16,7 +16,8 @@ import {
     UPDATE_MEMBER_STATUS,
     UPSERT_MEMBER,
 } from "./persistence/workspace-members.sql"
-import { admitMember, isManagerRole, judgeSeatChange } from "./role.policy"
+import { admitMember, isManagerRole, judgeSeatChange, presentedRole } from "./role.policy"
+import type { PresentedRole } from "./role.policy"
 import type {
     AccountDirectory,
     JoinEntry,
@@ -74,6 +75,12 @@ export class WorkspaceMembersService {
         await this.require(userId, input.workspaceId, MANAGERS)
         const saved = await this.staff.save(input)
         return { id: saved.id, name: saved.name, role: saved.role, email: saved.email, active: saved.active }
+    }
+
+    /** The caller's role in the workspace, named for the console; any member may read their own. */
+    async roleOf(userId: string, workspaceId: string): Promise<PresentedRole> {
+        const member = await this.require(userId, workspaceId)
+        return presentedRole(member.role)
     }
 
     /** Everyone in the caller's workspace, owners first; emails and sign-ins are blank for staff callers. */
