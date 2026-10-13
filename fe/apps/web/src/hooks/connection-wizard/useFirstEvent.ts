@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useTransition } from "react"
-import type { DbOutcome } from "@/modules/db"
+import type { Outcome } from "@/modules/api/outcome"
 import type { FirstEvent, FirstEventState } from "@/modules/types"
 import { POLL_MS } from "./connection-wizard.shared"
 
@@ -10,7 +10,7 @@ interface FirstEventWatch {
     /** False outside the step that waits. */
     readonly isActive: boolean
     /** Asks the api whether the connection received its first event (handed in by the connected entry). */
-    readonly check: (connectionId: string) => Promise<DbOutcome<FirstEventState>>
+    readonly check: (connectionId: string) => Promise<Outcome<FirstEventState>>
 }
 
 /**

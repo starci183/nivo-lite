@@ -1,6 +1,6 @@
 import { Icon } from "@starci/grammar/common"
-import { nivoIconSource } from "@/ui"
-import type { IconName } from "@/ui"
+import { nivoIconSource } from "@/components/leaves/Icon"
+import type { IconName } from "@/components/leaves/Icon"
 
 /** A NIVO glyph in the shape Grammar's in-field actions take; decorative (the action keeps its label), sized by Grammar's own icon box. */
 const glyph = (name: IconName) => {

@@ -1,6 +1,6 @@
 import { IconTile, Image } from "@starci/grammar/common"
-import { nivoIconSource } from "@/ui"
-import type { IconName } from "@/ui"
+import { nivoIconSource } from "@/components/leaves/Icon"
+import type { IconName } from "@/components/leaves/Icon"
 import { providerLogoClassNames } from "./classNames"
 
 /** What the logo draws: a provider mark in a neutral tile, or a bank wordmark. */

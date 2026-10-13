@@ -41,14 +41,14 @@ export const useTelegramWizard = (input: TelegramWizardInput) => {
             setCheck(
                 answer.kind === "ok"
                     ? checkNoteOf(answer.value, tc)
-                    : { tone: "negative", text: reasonOf(answer.code) },
+                    : { tone: "negative", text: reasonOf(answer.fault.code) },
             )
         })
 
     const connect = () =>
         startTransition(async () => {
             const answer = await input.actions.connect(form)
-            if (answer.kind !== "ok") return setError(reasonOf(answer.code))
+            if (answer.kind !== "ok") return setError(reasonOf(answer.fault.code))
             setConnectionId(answer.value.connection.id)
             go(2)
             runCheck(answer.value.connection.id)
@@ -58,7 +58,7 @@ export const useTelegramWizard = (input: TelegramWizardInput) => {
         startTransition(async () => {
             if (connectionId === null) return input.onClose(false)
             const answer = await input.actions.setAgents(connectionId, agentIds)
-            if (answer.kind !== "ok") return setError(reasonOf(answer.code))
+            if (answer.kind !== "ok") return setError(reasonOf(answer.fault.code))
             input.onClose(true)
         })
 

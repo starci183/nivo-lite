@@ -15,7 +15,7 @@ import { ConnectionCopyInput } from "@/components/composites/ConnectionCopyInput
 import { ConnectionSmtpPanel } from "@/components/composites/ConnectionSmtpPanel"
 import { ProviderLogo } from "@/components/leaves/ProviderLogo"
 import type { RowDialog, RowPrimary, RowView } from "@/modules/types"
-import { nivoIconSource } from "@/ui"
+import { nivoIconSource } from "@/components/leaves/Icon"
 import { connectionRowClassNames as classNames } from "./classNames"
 
 /** What a connection row draws and the commands the owner can give it. */

@@ -12,7 +12,8 @@ import {
 import { publicSiteUrl } from "@/lib/channels"
 import { getCurrentMember, isManagerRole } from "@/lib/members"
 import { getSession } from "@/lib/session"
-import { readAgents, readConnections } from "@/modules/db"
+import { readAgents } from "@/modules/db/connections/read-agents"
+import { readConnections } from "@/modules/db/connections/read-connections"
 import { ConnectionsPageBase } from "./component"
 import type { PageGroup, PageWords } from "./component"
 

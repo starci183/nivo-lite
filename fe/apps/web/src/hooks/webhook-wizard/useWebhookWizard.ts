@@ -31,7 +31,7 @@ export const useWebhookWizard = (input: WebhookWizardInput) => {
         startTransition(async () => {
             setError(null)
             const answer = await input.actions.start(form, events)
-            if (answer.kind !== "ok") return setError(webhookReason(answer.code))
+            if (answer.kind !== "ok") return setError(webhookReason(answer.fault.code))
             setCreated(answer.value)
             setIndex(1)
         })
@@ -41,7 +41,7 @@ export const useWebhookWizard = (input: WebhookWizardInput) => {
             if (created === null) return
             setError(null)
             const answer = await input.actions.test(created.id)
-            if (answer.kind !== "ok") return setError(testReason(answer.code))
+            if (answer.kind !== "ok") return setError(testReason(answer.fault.code))
             setTest(answer.value)
         })
 
@@ -50,7 +50,7 @@ export const useWebhookWizard = (input: WebhookWizardInput) => {
             if (created === null) return
             setError(null)
             const answer = await input.actions.finish(created.id)
-            if (answer.kind !== "ok") return setError(webhookReason(answer.code))
+            if (answer.kind !== "ok") return setError(webhookReason(answer.fault.code))
             input.onClose(true)
         })
 

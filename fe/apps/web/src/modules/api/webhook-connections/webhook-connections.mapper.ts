@@ -1,5 +1,5 @@
-import { isRecord, isUuid, keyOfCode, schemaOf } from "@/modules/db/channel-connections/channel-connections.mapper"
-import type { ChannelRequest } from "@/modules/db/channel-connections/channel-connections.mapper"
+import { isRecord, isUuid, keyOfCode, schemaOf } from "@/modules/api/channel-connections/channel-connections.mapper"
+import type { ChannelRequest } from "@/modules/api/channel-connections/channel-connections.mapper"
 
 const NAME_MAX = 120
 const URL_MAX = 2048

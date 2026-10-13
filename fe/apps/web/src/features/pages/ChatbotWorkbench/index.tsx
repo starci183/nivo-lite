@@ -4,7 +4,7 @@ import { workbenchHref } from "@/lib/agent-dashboard-shared"
 import { isManagerRole } from "@/lib/members-shared"
 import { getSession } from "@/lib/session"
 import { readChatbotGaps, readChatbotOverview, readChatbotThread } from "@/modules/db"
-import type { DbOutcome } from "@/modules/db"
+import type { Outcome } from "@/modules/api/outcome"
 import type { ChatbotMetrics, ChatbotThread } from "@/modules/types"
 import { ChatbotWorkbenchBase } from "./component"
 
@@ -29,7 +29,7 @@ const responseOf = (metrics: ChatbotMetrics, t: Translate): { readonly value: st
 
 /** The open thread, or why there is none: a missing conversation is nothing to show, anything else is a failed read. */
 const threadOf = (
-    outcome: DbOutcome<ChatbotThread> | null,
+    outcome: Outcome<ChatbotThread> | null,
 ): { readonly thread: ChatbotThread | null; readonly failed: boolean } => {
     if (outcome === null) return { thread: null, failed: false }
     if (outcome.kind === "ok") return { thread: outcome.value, failed: false }

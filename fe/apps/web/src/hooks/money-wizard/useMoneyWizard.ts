@@ -76,7 +76,7 @@ export const useMoneyWizard = (input: MoneyWizardInput) => {
                 if (answer.value.agentIds.length > 0) setAgentIds(answer.value.agentIds)
                 setNav((current) => ({ ...current, index: 2, resumed: true }))
             } else {
-                setNote({ tone: "negative", text: reasonOf(answer.code) })
+                setNote({ tone: "negative", text: reasonOf(answer.fault.code) })
                 setNav((current) => ({ ...current, resumed: true }))
             }
         })
@@ -100,7 +100,7 @@ export const useMoneyWizard = (input: MoneyWizardInput) => {
                 { ...form, name },
                 input.provider === "sepay" ? follow.apiKey : undefined,
             )
-            if (answer.kind !== "ok") return fail(answer.code)
+            if (answer.kind !== "ok") return fail(answer.fault.code)
             adopt(answer.value)
             go(to)
             setNote({ tone: "affirmative", text: tw("editSaved", { brand: def.brand }) })
@@ -111,7 +111,7 @@ export const useMoneyWizard = (input: MoneyWizardInput) => {
         if (conn !== null) return flags.accountDirty ? save(form.name, 2) : go(2)
         startTransition(async () => {
             const answer = await input.actions.start(input.provider, form)
-            if (answer.kind !== "ok") return fail(answer.code)
+            if (answer.kind !== "ok") return fail(answer.fault.code)
             adopt(answer.value)
             go(2)
         })
@@ -123,7 +123,7 @@ export const useMoneyWizard = (input: MoneyWizardInput) => {
         if (flags.keysDone) return go(3)
         startTransition(async () => {
             const answer = await input.actions.saveKeys(conn.id, follow.values)
-            if (answer.kind !== "ok") return fail(answer.code)
+            if (answer.kind !== "ok") return fail(answer.fault.code)
             setFollow((current) => ({ ...current, keysSaved: true, values: {} }))
             if (!answer.value.confirmed && def.confirmsWebhook === true)
                 setNote({ tone: "informative", text: tw("payosLocal") })
@@ -135,7 +135,7 @@ export const useMoneyWizard = (input: MoneyWizardInput) => {
         if (conn === null) return input.onClose(false)
         startTransition(async () => {
             const answer = await input.actions.setAgents(conn.id, agentIds)
-            if (answer.kind !== "ok") return fail(answer.code)
+            if (answer.kind !== "ok") return fail(answer.fault.code)
             input.onClose(true)
         })
     }

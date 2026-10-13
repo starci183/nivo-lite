@@ -1,5 +1,5 @@
-import { dbFailure, dbOk } from "@/modules/db/outcome"
-import type { DbOutcome } from "@/modules/db/outcome"
+import { apiRequest } from "../request"
+import type { Outcome } from "../outcome"
 import type { Environment, MoneyProvider } from "@/modules/types"
 
 /** One call to a channel-connections endpoint of the api: the workspace header, the verb, the path and an optional JSON body. */
@@ -174,38 +174,25 @@ export const channelSchemas = {
     zaloAuthorize: schemaOf(targetRequest("POST", "/zalo-authorize")),
 } as const
 
-/** The transport a Server Action hands in: `apiRequest` of the api module (only a write action may import it). */
-export type ApiCall = <T>(
-    path: string,
-    request: {
-        readonly method: ChannelRequest["method"]
-        readonly headers: Readonly<Record<string, string>>
-        readonly body?: unknown
-    },
-) => Promise<DbOutcome<T>>
+/** A failure that happens before the api is reached, in the vocabulary of the api. */
+export const invalid = (code: string): Outcome<never> => ({ kind: "invalid", issues: [], fault: { code } })
 
 /** A failure leaves the server as the catalog key of its sentence, so no client needs the error table. */
-export const sendRequest = async <T>(
-    call: ApiCall,
-    request: ChannelRequest,
-    keyOf: (code: string) => string,
-): Promise<DbOutcome<T>> => {
-    const outcome = await call<T>(request.path, {
+export const sendRequest = async <T>(request: ChannelRequest, keyOf: (code: string) => string): Promise<Outcome<T>> => {
+    const outcome = await apiRequest<T>(request.path, {
         method: request.method,
-        headers: { "x-workspace-id": request.workspaceId },
+        workspaceId: request.workspaceId,
         ...(request.body === undefined ? {} : { body: request.body }),
     })
-    return outcome.kind === "ok" ? outcome : dbFailure(outcome.kind, keyOf(outcome.code))
+    return outcome.kind === "ok"
+        ? outcome
+        : { ...outcome, fault: { ...outcome.fault, code: keyOf(outcome.fault.code) } }
 }
 
 /** Sends a request whose success has no body (204) and answers `true`. */
-export const sendDone = async (
-    call: ApiCall,
-    request: ChannelRequest,
-    keyOf: (code: string) => string,
-): Promise<DbOutcome<true>> => {
-    const outcome = await sendRequest<undefined>(call, request, keyOf)
-    return outcome.kind === "ok" ? dbOk(true as const) : outcome
+export const sendDone = async (request: ChannelRequest, keyOf: (code: string) => string): Promise<Outcome<true>> => {
+    const outcome = await sendRequest<undefined>(request, keyOf)
+    return outcome.kind === "ok" ? { kind: "ok", value: true as const } : outcome
 }
 
 /** The catalog keys (namespace `connections`) a write answers with when the failure happens before the api is reached. */
@@ -241,9 +228,9 @@ export const keyOfCode = (code: string, table: Readonly<Record<string, string>>)
 export const channelMessageKeyOf = (code: string): string => keyOfCode(code, ERROR_KEYS)
 
 /** Sends one channel command through the injected transport and keys a failure by its `connections` sentence. */
-export const sendChannel = <T>(call: ApiCall, request: ChannelRequest): Promise<DbOutcome<T>> =>
-    sendRequest<T>(call, request, channelMessageKeyOf)
+export const sendChannel = <T>(request: ChannelRequest): Promise<Outcome<T>> =>
+    sendRequest<T>(request, channelMessageKeyOf)
 
 /** Sends a channel command whose success has no body and answers `true`. */
-export const sendChannelDone = (call: ApiCall, request: ChannelRequest): Promise<DbOutcome<true>> =>
-    sendDone(call, request, channelMessageKeyOf)
+export const sendChannelDone = (request: ChannelRequest): Promise<Outcome<true>> =>
+    sendDone(request, channelMessageKeyOf)

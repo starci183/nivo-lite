@@ -1,5 +1,5 @@
 import type { CatalogReader } from "@/hooks/connection-wizard"
-import type { DbOutcome } from "@/modules/db"
+import type { Outcome } from "@/modules/api/outcome"
 import type { FirstEventState, ZaloAuthorizeUrl, ZaloWizardConnection } from "@/modules/types"
 
 /** The steps of the Zalo wizard, in order. */
@@ -20,12 +20,12 @@ export interface ZaloFields {
 export interface ZaloActions {
     readonly start: (
         fields: Pick<ZaloFields, "name" | "appId" | "appSecret">,
-    ) => Promise<DbOutcome<ZaloWizardConnection>>
-    readonly resume: (connectionId: string) => Promise<DbOutcome<ZaloWizardConnection>>
-    readonly saveOaSecret: (connectionId: string, oaSecret: string) => Promise<DbOutcome<true>>
-    readonly authorize: (connectionId: string) => Promise<DbOutcome<ZaloAuthorizeUrl>>
-    readonly setAgents: (connectionId: string, agents: ReadonlyArray<string>) => Promise<DbOutcome<true>>
-    readonly checkFirstEvent: (connectionId: string) => Promise<DbOutcome<FirstEventState>>
+    ) => Promise<Outcome<ZaloWizardConnection>>
+    readonly resume: (connectionId: string) => Promise<Outcome<ZaloWizardConnection>>
+    readonly saveOaSecret: (connectionId: string, oaSecret: string) => Promise<Outcome<true>>
+    readonly authorize: (connectionId: string) => Promise<Outcome<ZaloAuthorizeUrl>>
+    readonly setAgents: (connectionId: string, agents: ReadonlyArray<string>) => Promise<Outcome<true>>
+    readonly checkFirstEvent: (connectionId: string) => Promise<Outcome<FirstEventState>>
 }
 
 /** The sentence for a sign-in that did not end well, or null when it did (or there was none). */

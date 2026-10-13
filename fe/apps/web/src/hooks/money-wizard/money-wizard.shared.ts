@@ -1,7 +1,7 @@
 import type { GuideContext } from "@/hooks/connection-guides"
 import type { PROVIDERS } from "@/hooks/connection-providers"
 import { VN_BANKS } from "@/lib/vn-banks"
-import type { DbOutcome } from "@/modules/db"
+import type { Outcome } from "@/modules/api/outcome"
 import type { Environment, FirstEventState, MoneyProvider, ProviderKeysResult, WizardConnection } from "@/modules/types"
 
 /** The steps of the bank and payment wizard, in order. */
@@ -32,19 +32,19 @@ export interface FollowDraft {
 
 /** The commands the connected entry hands the bank and payment wizard (each one already knows the active workspace). */
 export interface MoneyActions {
-    readonly start: (provider: MoneyProvider, form: AccountForm) => Promise<DbOutcome<WizardConnection>>
+    readonly start: (provider: MoneyProvider, form: AccountForm) => Promise<Outcome<WizardConnection>>
     readonly update: (
         connectionId: string,
         form: AccountForm,
         apiKey: string | undefined,
-    ) => Promise<DbOutcome<WizardConnection>>
-    readonly resume: (connectionId: string) => Promise<DbOutcome<WizardConnection>>
+    ) => Promise<Outcome<WizardConnection>>
+    readonly resume: (connectionId: string) => Promise<Outcome<WizardConnection>>
     readonly saveKeys: (
         connectionId: string,
         values: Readonly<Record<string, string>>,
-    ) => Promise<DbOutcome<ProviderKeysResult>>
-    readonly setAgents: (connectionId: string, agents: ReadonlyArray<string>) => Promise<DbOutcome<true>>
-    readonly checkFirstEvent: (connectionId: string) => Promise<DbOutcome<FirstEventState>>
+    ) => Promise<Outcome<ProviderKeysResult>>
+    readonly setAgents: (connectionId: string, agents: ReadonlyArray<string>) => Promise<Outcome<true>>
+    readonly checkFirstEvent: (connectionId: string) => Promise<Outcome<FirstEventState>>
 }
 
 /** The name a provider's webhook screen shows for a connection. */
