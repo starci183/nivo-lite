@@ -1,6 +1,6 @@
-import { AgentChat } from "@/features/agent-chat";
+import { AgentChatLoadingPage } from "@/features/pages/AgentChatLoadingPage"
 
-/** STATE-8: the agent chat itself, with no data yet - the same frame, composer and labels, the agent's name, list and thread as skeletons. */
-const AgentChatLoading = () => <AgentChat isLoading agent={null} initialTab="test" initialConversationId={null} />;
+/** STATE-8: the agent chat itself, with no data yet. */
+const Loading = () => <AgentChatLoadingPage />
 
-export default AgentChatLoading;
+export default Loading
