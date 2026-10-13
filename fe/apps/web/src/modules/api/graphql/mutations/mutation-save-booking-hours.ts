@@ -1,8 +1,9 @@
+import type { SaveBookingHoursMutation } from "../__generated__/graphql"
 import { gql } from "@apollo/client"
 import type { DocumentNode } from "graphql"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, MutateParams } from "../types"
-import type { MutateSaveBookingHoursRequest, MutateSaveBookingHoursResponse } from "./types/save-booking-hours"
+import type { MutateSaveBookingHoursRequest } from "./types/save-booking-hours"
 
 const mutation1 = gql`
     mutation SaveBookingHours($input: SaveBookingHoursInput!) {
@@ -12,7 +13,7 @@ const mutation1 = gql`
     }
 `
 
-export enum MutationSaveBookingHours {
+enum MutationSaveBookingHours {
     Mutation1 = "mutation1",
 }
 
@@ -21,12 +22,16 @@ const mutationMap: Record<MutationSaveBookingHours, DocumentNode> = {
 }
 
 /** Apollo params for {@link mutateSaveBookingHours}. */
-export type MutationSaveBookingHoursParams = MutateParams<MutationSaveBookingHours, MutateSaveBookingHoursRequest>
+type MutationSaveBookingHoursParams = MutateParams<MutationSaveBookingHours, MutateSaveBookingHoursRequest>
 
 /** Replaces the weekly hours of one resource. */
-export const mutateSaveBookingHours = async ({ mutation = MutationSaveBookingHours.Mutation1, request, signal }: MutationSaveBookingHoursParams) => {
+export const mutateSaveBookingHours = async ({
+    mutation = MutationSaveBookingHours.Mutation1,
+    request,
+    signal,
+}: MutationSaveBookingHoursParams) => {
     const apollo = createAuthApolloClient({ signal })
-    return apollo.mutate<MutateSaveBookingHoursResponse, InputVariables<MutateSaveBookingHoursRequest>>({
+    return apollo.mutate<SaveBookingHoursMutation, InputVariables<MutateSaveBookingHoursRequest>>({
         mutation: mutationMap[mutation],
         variables: { input: request },
     })

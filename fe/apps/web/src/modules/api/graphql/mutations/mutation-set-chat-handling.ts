@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationSetChatHandlingArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { SetChatHandlingMutation, SetChatHandlingMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `setChatHandling` mutation. */
-type MutateSetChatHandlingRequest = MutationSetChatHandlingArgs["input"]
+type MutateSetChatHandlingRequest = WireInput<SetChatHandlingMutationVariables["input"]>
 
 /** The response of the `setChatHandling` mutation. */
-type MutateSetChatHandlingResponse = Pick<Mutation, "setChatHandling">
+type MutateSetChatHandlingResponse = SetChatHandlingMutation
 
 type Document = TypedDocumentNode<MutateSetChatHandlingResponse, InputVariables<MutateSetChatHandlingRequest>>
 

@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationSaveBrainLessonArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { SaveBrainLessonMutation, SaveBrainLessonMutationVariables } from "../__generated__/graphql"
 
 /** The response of the `saveBrainLesson` mutation: the typed payload straight from the back end contract. */
-type MutateSaveBrainLessonResponse = Pick<Mutation, "saveBrainLesson">
+type MutateSaveBrainLessonResponse = SaveBrainLessonMutation
 
 /** The input of the `saveBrainLesson` mutation. */
-export type MutateSaveBrainLessonRequest = MutationSaveBrainLessonArgs["input"]
+export type MutateSaveBrainLessonRequest = WireInput<SaveBrainLessonMutationVariables["input"]>
 
 const mutation1: TypedDocumentNode<MutateSaveBrainLessonResponse, InputVariables<MutateSaveBrainLessonRequest>> = gql`
     mutation SaveBrainLesson($input: SaveBrainLessonInput!) {

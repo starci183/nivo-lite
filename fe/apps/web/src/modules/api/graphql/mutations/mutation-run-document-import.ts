@@ -1,16 +1,19 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationRunDocumentImportArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { RunDocumentImportMutation, RunDocumentImportMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `runDocumentImport` mutation. */
-export type MutateRunDocumentImportRequest = MutationRunDocumentImportArgs["input"]
+type MutateRunDocumentImportRequest = WireInput<RunDocumentImportMutationVariables["input"]>
 
 /** The response of the `runDocumentImport` mutation. */
-type MutateRunDocumentImportResponse = Pick<Mutation, "runDocumentImport">
+type MutateRunDocumentImportResponse = RunDocumentImportMutation
 
-const mutation1: TypedDocumentNode<MutateRunDocumentImportResponse, InputVariables<MutateRunDocumentImportRequest>> = gql`
+const mutation1: TypedDocumentNode<
+    MutateRunDocumentImportResponse,
+    InputVariables<MutateRunDocumentImportRequest>
+> = gql`
     mutation RunDocumentImport($input: RunDocumentImportInput!) {
         runDocumentImport(input: $input) {
             connectionId
@@ -27,7 +30,10 @@ enum MutationRunDocumentImport {
     Mutation1 = "mutation1",
 }
 
-const mutationMap: Record<MutationRunDocumentImport, TypedDocumentNode<MutateRunDocumentImportResponse, InputVariables<MutateRunDocumentImportRequest>>> = {
+const mutationMap: Record<
+    MutationRunDocumentImport,
+    TypedDocumentNode<MutateRunDocumentImportResponse, InputVariables<MutateRunDocumentImportRequest>>
+> = {
     [MutationRunDocumentImport.Mutation1]: mutation1,
 }
 
@@ -35,7 +41,11 @@ const mutationMap: Record<MutationRunDocumentImport, TypedDocumentNode<MutateRun
 type MutateRunDocumentImportParams = MutateParams<MutationRunDocumentImport, MutateRunDocumentImportRequest>
 
 /** Imports documents (uploaded files and/or a Google Docs link) as document rows. */
-export const mutateRunDocumentImport = async ({ mutation = MutationRunDocumentImport.Mutation1, request, signal }: MutateRunDocumentImportParams) => {
+export const mutateRunDocumentImport = async ({
+    mutation = MutationRunDocumentImport.Mutation1,
+    request,
+    signal,
+}: MutateRunDocumentImportParams) => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.mutate({
         mutation: mutationMap[mutation],

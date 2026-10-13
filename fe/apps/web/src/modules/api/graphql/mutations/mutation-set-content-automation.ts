@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationSetContentAutomationArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { SetContentAutomationMutation, SetContentAutomationMutationVariables } from "../__generated__/graphql"
 
 /** The generated input of setContentAutomation. */
-export type MutateSetContentAutomationRequest = MutationSetContentAutomationArgs["input"]
+type MutateSetContentAutomationRequest = WireInput<SetContentAutomationMutationVariables["input"]>
 
 /** The generated response of setContentAutomation. */
-type MutateSetContentAutomationResponse = Pick<Mutation, "setContentAutomation">
+type MutateSetContentAutomationResponse = SetContentAutomationMutation
 
 type Document = TypedDocumentNode<MutateSetContentAutomationResponse, InputVariables<MutateSetContentAutomationRequest>>
 

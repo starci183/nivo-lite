@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationRequestVideoScriptArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { RequestVideoScriptMutation, RequestVideoScriptMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `requestVideoScript` mutation. */
-type MutateRequestVideoScriptRequest = MutationRequestVideoScriptArgs["input"]
+type MutateRequestVideoScriptRequest = WireInput<RequestVideoScriptMutationVariables["input"]>
 
 /** The generated payload of the `requestVideoScript` mutation. */
-type MutateRequestVideoScriptResponse = Pick<Mutation, "requestVideoScript">
+type MutateRequestVideoScriptResponse = RequestVideoScriptMutation
 
 type Document = TypedDocumentNode<MutateRequestVideoScriptResponse, InputVariables<MutateRequestVideoScriptRequest>>
 
