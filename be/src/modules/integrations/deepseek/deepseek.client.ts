@@ -26,6 +26,8 @@ import type { DeepseekTextGenerator } from "./deepseek.port"
 import { DeepseekError, DeepseekErrorCode } from "./errors/deepseek.error"
 import { embeddedObject, isJsonRecord, unfenced } from "./json.mapper"
 import type { JsonRecord, OptionalJsonRecord } from "./json.mapper"
+import { leadTurnPrompt } from "./lead-turn-prompt.policy"
+import type { LeadTurnInput } from "./lead-turn-prompt.policy"
 import { commandProposalPrompt, langFor, NIVO, personaOf, toMessages } from "./prompts.policy"
 import {
     authorityChangeOf,
@@ -40,6 +42,7 @@ const OWNER_CHAT: CallMeta = { kind: "owner_chat", module: "office" }
 const OFFICE_COMMAND: CallMeta = { kind: "office_command", module: "office" }
 const SETUP: CallMeta = { kind: "setup", module: "setup" }
 const SALES: CallMeta = { kind: "engine", module: "sales" }
+const LEAD_TURN: CallMeta = { kind: "chat_reply", module: "lead_gen" }
 const ACCOUNTING: CallMeta = { kind: "engine", module: "accounting" }
 const JSON_AGAIN = "Answer again with ONLY the JSON object described above. No prose, no code fences."
 
@@ -270,6 +273,11 @@ Current rules: ${currentRules}`,
     async proposeCommands(scope: DeepseekScope, input: CommandProposalInput): Promise<ProposedCommand> {
         const answer = await this.completeJson(scope, commandProposalPrompt(input), OFFICE_COMMAND)
         return proposedCommandOf(answer)
+    }
+
+    /** Lead generation: the one metered reading of a prospect's turn, as a JSON object the lead flow validates. */
+    readLeadTurn(scope: DeepseekScope, input: LeadTurnInput): Promise<JsonRecord> {
+        return this.completeJson(scope, leadTurnPrompt(input, this.phrase("leadVoice", scope.locale)), LEAD_TURN)
     }
 
     private phrase(key: string, locale: Locale): string {

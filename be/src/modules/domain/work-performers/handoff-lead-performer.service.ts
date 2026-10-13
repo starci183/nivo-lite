@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
+import { BusinessEventsService } from "@modules/domain/automations"
 import { EvidenceService } from "@modules/domain/decisions"
 import type { Performed, Prepared, Proposal, WorkContext, WorkItem, WorkPerformer } from "@modules/domain/decisions"
 import { AgentsService } from "@modules/domain/agents"
@@ -20,6 +21,7 @@ export class HandoffLeadPerformerService implements WorkPerformer {
         private readonly inbound: InboundEventsService,
         private readonly responsibilities: ResponsibilityJournalService,
         private readonly evidence: EvidenceService,
+        private readonly events: BusinessEventsService,
     ) {}
 
     /** The summary the owner reads for the handoff. */
@@ -59,8 +61,10 @@ export class HandoffLeadPerformerService implements WorkPerformer {
                 email,
                 origin: item.origin,
             }))
-        if (known === null) await this.logCapture(ctx, item, lead.id, channel, textOf(fields.transcript))
-        else if ((phone !== null && known.phone === null) || (email !== null && known.email === null)) {
+        if (known === null) {
+            await this.logCapture(ctx, item, lead.id, channel, textOf(fields.transcript))
+            await this.events.leadCreated(ctx.workspaceId, lead, item.origin)
+        } else if ((phone !== null && known.phone === null) || (email !== null && known.email === null)) {
             await this.leads.fillContact({ workspaceId: ctx.workspaceId, leadId: lead.id, phone, email })
         }
         if (item.inbound_event_id !== null)

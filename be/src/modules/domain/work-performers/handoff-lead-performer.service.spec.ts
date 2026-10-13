@@ -2,6 +2,7 @@ import { builder, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import { AgentsService } from "@modules/domain/agents"
+import { BusinessEventsService } from "@modules/domain/automations"
 import { EvidenceService } from "@modules/domain/decisions"
 import type { Proposal, WorkContext, WorkItem } from "@modules/domain/decisions"
 import { InboundEventsService } from "@modules/domain/inbound-events"
@@ -81,6 +82,7 @@ describe("HandoffLeadPerformerService", () => {
         const inbound = mock<InboundEventsService>()
         const responsibilities = mock<ResponsibilityJournalService>()
         const evidence = mock<EvidenceService>()
+        const events = mock<BusinessEventsService>()
         const moduleRef = await Test.createTestingModule({
             providers: [
                 HandoffLeadPerformerService,
@@ -91,6 +93,7 @@ describe("HandoffLeadPerformerService", () => {
                 { provide: InboundEventsService, useValue: inbound },
                 { provide: ResponsibilityJournalService, useValue: responsibilities },
                 { provide: EvidenceService, useValue: evidence },
+                { provide: BusinessEventsService, useValue: events },
             ],
         }).compile()
         return {
@@ -101,6 +104,7 @@ describe("HandoffLeadPerformerService", () => {
             inbound,
             responsibilities,
             evidence,
+            events,
         }
     }
 
@@ -114,7 +118,7 @@ describe("HandoffLeadPerformerService", () => {
 
     describe("perform", () => {
         it("captures a new customer, logs the capture and ties the input and the conversation to them", async () => {
-            const { service, leads, conversations, inbound, responsibilities, evidence } = await build()
+            const { service, leads, conversations, inbound, responsibilities, evidence, events } = await build()
 
             await expect(service.perform(ctx, itemOf(), { summary: "s", fields })).resolves.toEqual({
                 summary: "handoffDone|Lan",
@@ -151,6 +155,7 @@ describe("HandoffLeadPerformerService", () => {
             expect(inbound.mark).toHaveBeenCalledWith("ws-1", "ev-1", null, "lead-1")
             expect(conversations.attachLead).toHaveBeenCalledWith("ws-1", "conv-1", "lead-1")
             expect(responsibilities.ensureFor).toHaveBeenCalledWith(ctx, "lead-1")
+            expect(events.leadCreated).toHaveBeenCalledWith("ws-1", leadOf(), "live")
         })
 
         it("fills in the blanks of a new customer who shared little", async () => {

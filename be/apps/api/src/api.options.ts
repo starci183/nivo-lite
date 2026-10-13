@@ -41,10 +41,8 @@ import { UnboundBookingToolsService, UnboundKnowledgeSearchService } from "@modu
 import {
     ApprovalRequesterService,
     UnboundDecisionEventsService,
-    UnboundLeadGenFlowService,
     UnboundPaymentReceiptsService,
 } from "@modules/domain/decisions"
-import { LeadReadService } from "@modules/domain/leads"
 import {
     ConversationLeadsService,
     HandoffToolService,
@@ -52,6 +50,15 @@ import {
     LeadWriterService,
     OutboundAccessService,
 } from "@modules/domain/work-performers"
+import { RunLeadGenQueueModule } from "@features/jobs/run-lead-gen"
+import { LEADS_ERROR_KINDS, LEADS_MESSAGES, LeadReadService, LeadsModule } from "@modules/domain/leads"
+import {
+    LEAD_FLOWS_ERROR_KINDS,
+    LEAD_FLOWS_MESSAGES,
+    LeadFlowChainService,
+    LeadFlowsModule,
+    LeadGenIntakeService,
+} from "@modules/domain/lead-flows"
 import { ToolTokenService } from "@modules/integrations/openclaw"
 import type { DocumentsOptions } from "@modules/integrations/documents"
 import type { LlmOptions } from "@modules/integrations/llm"
@@ -166,7 +173,7 @@ export const DECISIONS_PORTS = {
     decisionEvents: UnboundDecisionEventsService,
     paymentReceipts: UnboundPaymentReceiptsService,
     leadDirectory: LeadReadService,
-    leadGenFlow: UnboundLeadGenFlowService,
+    leadGenFlow: LeadFlowChainService,
     outboundAccessGate: OutboundAccessService,
 }
 
@@ -196,6 +203,7 @@ export const API_JOB_QUEUES = [
     ApplyBookingStatusQueueModule,
     PublishContentQueueModule,
     AcceptMetaEventQueueModule,
+    RunLeadGenQueueModule,
     IssueInviteQueueModule,
     RenderVideoQueueModule,
     ConnectionCommandsQueueModule,
@@ -214,3 +222,11 @@ export const API_SCHEDULERS: ReadonlyArray<QueueSchedulerDefinition> = [
     ZALO_REFRESH_SCHEDULER,
     DATA_SYNC_SCHEDULER,
 ]
+
+/** The leads and the lead generation flow: their texts and error kinds, and the two capabilities the app root registers globally. */
+export const LEAD_LANE = {
+    messages: [LEADS_MESSAGES, LEAD_FLOWS_MESSAGES],
+    kinds: [LEADS_ERROR_KINDS, LEAD_FLOWS_ERROR_KINDS],
+    capabilities: [LeadsModule, LeadFlowsModule],
+    metaTaker: LeadGenIntakeService,
+}

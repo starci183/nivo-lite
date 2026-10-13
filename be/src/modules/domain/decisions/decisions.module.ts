@@ -64,7 +64,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 { provide: DECISION_EVENTS, useClass: options.ports.decisionEvents },
                 { provide: PAYMENT_RECEIPTS, useClass: options.ports.paymentReceipts },
                 { provide: LEAD_DIRECTORY, useExisting: options.ports.leadDirectory },
-                { provide: LEAD_GEN_FLOW, useClass: options.ports.leadGenFlow },
+                { provide: LEAD_GEN_FLOW, useExisting: options.ports.leadGenFlow },
                 { provide: OUTBOUND_ACCESS_GATE, useClass: options.ports.outboundAccessGate },
                 ApprovalRequesterService,
                 CommandBusService,
