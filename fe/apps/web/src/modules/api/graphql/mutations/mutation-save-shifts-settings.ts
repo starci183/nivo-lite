@@ -10,7 +10,10 @@ export type MutateSaveShiftsSettingsRequest = MutationSaveShiftsSettingsArgs["in
 /** The response of the `saveShiftsSettings` mutation. */
 type MutateSaveShiftsSettingsResponse = Pick<Mutation, "saveShiftsSettings">
 
-const mutation1: TypedDocumentNode<MutateSaveShiftsSettingsResponse, InputVariables<MutateSaveShiftsSettingsRequest>> = gql`
+const mutation1: TypedDocumentNode<
+    MutateSaveShiftsSettingsResponse,
+    InputVariables<MutateSaveShiftsSettingsRequest>
+> = gql`
     mutation SaveShiftsSettings($input: SaveShiftsSettingsInput!) {
         saveShiftsSettings(input: $input)
     }
@@ -20,7 +23,10 @@ enum MutationSaveShiftsSettings {
     Mutation1 = "mutation1",
 }
 
-const mutationMap: Record<MutationSaveShiftsSettings, TypedDocumentNode<MutateSaveShiftsSettingsResponse, InputVariables<MutateSaveShiftsSettingsRequest>>> = {
+const mutationMap: Record<
+    MutationSaveShiftsSettings,
+    TypedDocumentNode<MutateSaveShiftsSettingsResponse, InputVariables<MutateSaveShiftsSettingsRequest>>
+> = {
     [MutationSaveShiftsSettings.Mutation1]: mutation1,
 }
 
@@ -28,7 +34,11 @@ const mutationMap: Record<MutationSaveShiftsSettings, TypedDocumentNode<MutateSa
 type MutateSaveShiftsSettingsParams = MutateParams<MutationSaveShiftsSettings, MutateSaveShiftsSettingsRequest>
 
 /** Runs the `saveShiftsSettings` mutation. */
-export const mutateSaveShiftsSettings = async ({ mutation = MutationSaveShiftsSettings.Mutation1, request, signal }: MutateSaveShiftsSettingsParams) => {
+export const mutateSaveShiftsSettings = async ({
+    mutation = MutationSaveShiftsSettings.Mutation1,
+    request,
+    signal,
+}: MutateSaveShiftsSettingsParams) => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.mutate({ mutation: mutationMap[mutation], variables: { input: request } })
 }

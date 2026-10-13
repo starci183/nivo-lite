@@ -22,7 +22,10 @@ enum MutationSaveShiftsStaff {
     Mutation1 = "mutation1",
 }
 
-const mutationMap: Record<MutationSaveShiftsStaff, TypedDocumentNode<MutateSaveShiftsStaffResponse, InputVariables<MutateSaveShiftsStaffRequest>>> = {
+const mutationMap: Record<
+    MutationSaveShiftsStaff,
+    TypedDocumentNode<MutateSaveShiftsStaffResponse, InputVariables<MutateSaveShiftsStaffRequest>>
+> = {
     [MutationSaveShiftsStaff.Mutation1]: mutation1,
 }
 
@@ -30,7 +33,11 @@ const mutationMap: Record<MutationSaveShiftsStaff, TypedDocumentNode<MutateSaveS
 type MutateSaveShiftsStaffParams = MutateParams<MutationSaveShiftsStaff, MutateSaveShiftsStaffRequest>
 
 /** Runs the `saveShiftsStaff` mutation. */
-export const mutateSaveShiftsStaff = async ({ mutation = MutationSaveShiftsStaff.Mutation1, request, signal }: MutateSaveShiftsStaffParams) => {
+export const mutateSaveShiftsStaff = async ({
+    mutation = MutationSaveShiftsStaff.Mutation1,
+    request,
+    signal,
+}: MutateSaveShiftsStaffParams) => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.mutate({ mutation: mutationMap[mutation], variables: { input: request } })
 }

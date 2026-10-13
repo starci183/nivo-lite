@@ -27,7 +27,10 @@ enum MutationRunCsvImport {
     Mutation1 = "mutation1",
 }
 
-const mutationMap: Record<MutationRunCsvImport, TypedDocumentNode<MutateRunCsvImportResponse, InputVariables<MutateRunCsvImportRequest>>> = {
+const mutationMap: Record<
+    MutationRunCsvImport,
+    TypedDocumentNode<MutateRunCsvImportResponse, InputVariables<MutateRunCsvImportRequest>>
+> = {
     [MutationRunCsvImport.Mutation1]: mutation1,
 }
 
@@ -35,7 +38,11 @@ const mutationMap: Record<MutationRunCsvImport, TypedDocumentNode<MutateRunCsvIm
 type MutateRunCsvImportParams = MutateParams<MutationRunCsvImport, MutateRunCsvImportRequest>
 
 /** Imports a table source (file, Google Sheets link, pasted or typed rows) with the chosen mapping. */
-export const mutateRunCsvImport = async ({ mutation = MutationRunCsvImport.Mutation1, request, signal }: MutateRunCsvImportParams) => {
+export const mutateRunCsvImport = async ({
+    mutation = MutationRunCsvImport.Mutation1,
+    request,
+    signal,
+}: MutateRunCsvImportParams) => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.mutate({
         mutation: mutationMap[mutation],

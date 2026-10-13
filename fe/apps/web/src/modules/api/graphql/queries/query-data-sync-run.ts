@@ -42,7 +42,11 @@ interface QueryDataSyncRunParams extends QueryParams<QueryDataSyncRun, QueryData
 }
 
 /** How one sync run of a data connection is going. Rejects with the back end failure. */
-export const queryDataSyncRun = async ({ query = QueryDataSyncRun.Query1, request, signal }: QueryDataSyncRunParams) => {
+export const queryDataSyncRun = async ({
+    query = QueryDataSyncRun.Query1,
+    request,
+    signal,
+}: QueryDataSyncRunParams) => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],

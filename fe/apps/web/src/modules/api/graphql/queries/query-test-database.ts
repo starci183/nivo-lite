@@ -27,7 +27,10 @@ enum QueryTestDatabase {
     Query1 = "query1",
 }
 
-const queryMap: Record<QueryTestDatabase, TypedDocumentNode<QueryTestDatabaseResponse, InputVariables<QueryTestDatabaseRequest>>> = {
+const queryMap: Record<
+    QueryTestDatabase,
+    TypedDocumentNode<QueryTestDatabaseResponse, InputVariables<QueryTestDatabaseRequest>>
+> = {
     [QueryTestDatabase.Query1]: query1,
 }
 
@@ -37,7 +40,11 @@ interface QueryTestDatabaseParams extends QueryParams<QueryTestDatabase, QueryTe
 }
 
 /** Connects read only to the owner database and lists its tables. Rejects with the back end failure. */
-export const queryTestDatabase = async ({ query = QueryTestDatabase.Query1, request, signal }: QueryTestDatabaseParams) => {
+export const queryTestDatabase = async ({
+    query = QueryTestDatabase.Query1,
+    request,
+    signal,
+}: QueryTestDatabaseParams) => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],

@@ -140,7 +140,17 @@ export const ruleChanges = (
                 slice === "scope"
                     ? before.mode === after.mode && before.limit === after.limit
                     : before.required.join() === after.required.join()
-            return same ? [] : [{ department: group.department, action, mode: next.mode, limit: next.limit, required: next.required }]
+            return same
+                ? []
+                : [
+                      {
+                          department: group.department,
+                          action,
+                          mode: next.mode,
+                          limit: next.limit,
+                          required: next.required,
+                      },
+                  ]
         }),
     )
 

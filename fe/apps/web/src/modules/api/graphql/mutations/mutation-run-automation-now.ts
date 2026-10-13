@@ -10,8 +10,7 @@ export type MutateRunAutomationNowRequest = MutationRunAutomationNowArgs["input"
 /** The response of the `runAutomationNow` mutation. */
 type MutateRunAutomationNowResponse = Pick<Mutation, "runAutomationNow">
 
-const mutation1: TypedDocumentNode<MutateRunAutomationNowResponse, InputVariables<MutateRunAutomationNowRequest>> =
-    gql`
+const mutation1: TypedDocumentNode<MutateRunAutomationNowResponse, InputVariables<MutateRunAutomationNowRequest>> = gql`
     mutation RunAutomationNow($input: TemplateKeyInput!) {
         runAutomationNow(input: $input)
     }

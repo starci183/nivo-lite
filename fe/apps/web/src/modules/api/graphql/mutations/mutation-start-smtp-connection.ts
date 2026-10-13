@@ -10,7 +10,10 @@ export type MutateStartSmtpConnectionRequest = MutationStartSmtpConnectionArgs["
 /** The response of the `startSmtpConnection` mutation. */
 type MutateStartSmtpConnectionResponse = Pick<Mutation, "startSmtpConnection">
 
-const mutation1: TypedDocumentNode<MutateStartSmtpConnectionResponse, InputVariables<MutateStartSmtpConnectionRequest>> = gql`
+const mutation1: TypedDocumentNode<
+    MutateStartSmtpConnectionResponse,
+    InputVariables<MutateStartSmtpConnectionRequest>
+> = gql`
     mutation StartSmtpConnection($input: StartSmtpConnectionInput!) {
         startSmtpConnection(input: $input) {
             id
