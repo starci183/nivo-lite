@@ -1,0 +1,441 @@
+{
+  "office": {
+    "title": "Office",
+    "what": "Phòng làm việc chung: nhắn với đội và các agent AI, duyệt việc AI đề xuất.",
+    "steps": [
+      "Mở Office",
+      "Gõ @tên-agent để gọi agent",
+      "Duyệt hoặc sửa các thẻ chờ duyệt"
+    ],
+    "keywords": [
+      "office",
+      "van phong",
+      "nhan tin noi bo",
+      "chat noi bo",
+      "duyet",
+      "phe duyet",
+      "cho duyet",
+      "approve",
+      "giao viec cho ai",
+      "goi agent",
+      "@nivo",
+      "duyet viec",
+      "approve work",
+      "ai proposed"
+    ]
+  },
+  "overview": {
+    "title": "Tổng quan",
+    "what": "Bức tranh chung: kết quả, việc đang chờ, ngoại lệ cần chú ý.",
+    "steps": [
+      "Mở Tổng quan",
+      "Xem các thẻ kết quả và việc chờ"
+    ],
+    "keywords": [
+      "tong quan",
+      "dashboard",
+      "bao cao",
+      "ket qua",
+      "doanh thu",
+      "tinh hinh",
+      "overview",
+      "report"
+    ]
+  },
+  "authority": {
+    "title": "Giao quyền",
+    "what": "Đặt mục tiêu, chính sách, giọng văn và việc nào AI được tự làm, việc nào phải hỏi bạn.",
+    "steps": [
+      "Mở Giao quyền",
+      "Chọn từng việc: Tự làm, Hỏi tôi hoặc Không làm",
+      "Đặt giới hạn số tiền nếu cần",
+      "Bấm Lưu"
+    ],
+    "keywords": [
+      "giao quyen",
+      "quyen han",
+      "tu dong lam",
+      "hoi toi",
+      "chinh sach",
+      "giong van",
+      "muc tieu",
+      "gioi han tien",
+      "authority",
+      "policy"
+    ]
+  },
+  "inbox": {
+    "title": "Đầu vào",
+    "what": "Mọi thứ đi vào: tin nhắn khách, đơn, giao dịch ngân hàng, từ mọi kênh.",
+    "steps": [
+      "Mở Đầu vào",
+      "Lọc theo kênh hoặc loại"
+    ],
+    "keywords": [
+      "dau vao",
+      "inbox",
+      "tin nhan den",
+      "tin nhan khach",
+      "giao dich den",
+      "don moi",
+      "hop thu"
+    ]
+  },
+  "leads": {
+    "title": "Khách hàng",
+    "what": "Danh sách khách và cơ hội bán hàng, ai phụ trách và việc tiếp theo.",
+    "steps": [
+      "Mở Khách hàng",
+      "Bấm Tạo mới › Khách hàng mới để thêm",
+      "Mở một khách để xem lịch sử và giao việc"
+    ],
+    "keywords": [
+      "khach hang",
+      "lead",
+      "them khach",
+      "danh sach khach",
+      "co hoi ban hang",
+      "customer",
+      "crm",
+      "new customer",
+      "add a customer",
+      "add customer"
+    ]
+  },
+  "responsibilities": {
+    "title": "Trách nhiệm",
+    "what": "Ai đang chịu trách nhiệm việc gì, hạn chót và bước tiếp theo.",
+    "steps": [
+      "Mở Trách nhiệm",
+      "Lọc theo người phụ trách hoặc trạng thái"
+    ],
+    "keywords": [
+      "trach nhiem",
+      "ai lam gi",
+      "viec cua ai",
+      "han chot",
+      "phu trach",
+      "responsibility",
+      "task"
+    ]
+  },
+  "decisions": {
+    "title": "Lịch sử quyết định",
+    "what": "Nhật ký mọi quyết định: AI tự làm, người duyệt, người sửa, kèm lý do.",
+    "steps": [
+      "Mở Lịch sử quyết định",
+      "Lọc theo bộ phận hoặc người quyết định"
+    ],
+    "keywords": [
+      "lich su quyet dinh",
+      "quyet dinh",
+      "nhat ky",
+      "ai da duyet",
+      "decision",
+      "audit"
+    ]
+  },
+  "automations": {
+    "title": "Tự động hoá",
+    "what": "Quy trình tự chạy theo lịch hoặc sự kiện: nhắc nợ, báo cáo, chăm sóc khách.",
+    "steps": [
+      "Mở Tự động hoá",
+      "Chọn một mẫu có sẵn hoặc tạo mới",
+      "Bật quy trình"
+    ],
+    "keywords": [
+      "tu dong hoa",
+      "tu dong",
+      "quy trinh",
+      "lich chay",
+      "nhac no",
+      "bao cao tu dong",
+      "automation",
+      "workflow",
+      "n8n"
+    ]
+  },
+  "knowledge": {
+    "title": "Tri thức",
+    "what": "Dạy AI về doanh nghiệp: bảng giá, chính sách, câu hỏi thường gặp, tài liệu, link.",
+    "steps": [
+      "Mở Tri thức",
+      "Bấm Thêm nguồn",
+      "Dán nội dung, tải tệp hoặc dán link",
+      "Lưu để AI dùng khi trả lời"
+    ],
+    "keywords": [
+      "tri thuc",
+      "kien thuc",
+      "day ai",
+      "bang gia",
+      "price list",
+      "teach the ai",
+      "faq",
+      "cau hoi thuong gap",
+      "tai lieu",
+      "knowledge"
+    ]
+  },
+  "brain": {
+    "title": "Bộ não",
+    "what": "Những gì doanh nghiệp biết (giá, giờ mở cửa, chính sách, khách...) ở một chỗ; mỗi agent đọc theo góc nhìn riêng. Duyệt đề xuất và mâu thuẫn ở đây.",
+    "steps": [
+      "Mở Bộ não",
+      "Xem tab Cần duyệt: áp dụng hoặc từ chối theo gợi ý của NIVO",
+      "Tab Sự thật: Thêm sự thật hoặc Giá trị mới"
+    ],
+    "keywords": [
+      "bo nao",
+      "second brain",
+      "su that",
+      "mau thuan",
+      "agent nho",
+      "ghi nho",
+      "doi gia",
+      "gia moi",
+      "agent biet gi",
+      "bai hoc",
+      "brain",
+      "memory"
+    ]
+  },
+  "modules": {
+    "title": "Agent",
+    "what": "Cài và cấu hình các agent: Chatbot, Bán hàng, Kế toán, Đặt lịch, Kho, Tuyển dụng…",
+    "steps": [
+      "Mở Agent",
+      "Chọn agent cần dùng và bấm Cài",
+      "Làm theo các bước thiết lập"
+    ],
+    "keywords": [
+      "module",
+      "modules",
+      "agents",
+      "cai dat agent",
+      "cai chatbot",
+      "chatbot",
+      "ban hang",
+      "ke toan",
+      "dat lich",
+      "kho",
+      "tuyen dung",
+      "agent"
+    ]
+  },
+  "team": {
+    "title": "Đội ngũ",
+    "what": "Mời người vào workspace và chọn vai trò: Chủ sở hữu, Quản lý, Nhân viên.",
+    "steps": [
+      "Mở Đội ngũ",
+      "Bấm Mời thành viên",
+      "Nhập email và chọn vai trò",
+      "Gửi lời mời hoặc sao chép link mời"
+    ],
+    "keywords": [
+      "doi ngu",
+      "moi nhan vien",
+      "them nhan vien",
+      "moi thanh vien",
+      "phan quyen",
+      "vai tro",
+      "team",
+      "invite",
+      "invite my staff",
+      "add staff",
+      "my staff"
+    ]
+  },
+  "connections": {
+    "title": "Kết nối",
+    "what": "Nối NIVO với ngân hàng, Telegram, Zalo OA, email, Google Sheets, n8n.",
+    "steps": [
+      "Mở Kết nối",
+      "Chọn dịch vụ và bấm Thêm kết nối",
+      "Làm theo hướng dẫn từng bước"
+    ],
+    "keywords": [
+      "ket noi",
+      "tich hop",
+      "connection",
+      "integration"
+    ]
+  },
+  "connections.sepay": {
+    "title": "Kết nối SePay (tiền về)",
+    "what": "Tiền vào tài khoản ngân hàng được báo cho agent Kế toán để đối soát.",
+    "steps": [
+      "Mở Kết nối › Nguồn tiền về (SePay) › Thêm kết nối",
+      "Chọn Thử nghiệm trước, nhập ngân hàng và số tài khoản",
+      "Dán URL nhận webhook và API Key sang trang Webhook của SePay",
+      "Mô phỏng một giao dịch 2.000đ để kiểm tra"
+    ],
+    "keywords": [
+      "sepay",
+      "tien ve",
+      "bao tien ve",
+      "co tien ve",
+      "tien vao",
+      "nhan tien",
+      "chuyen khoan",
+      "ngan hang",
+      "doi soat",
+      "bank",
+      "webhook ngan hang",
+      "money arrives",
+      "payment notification",
+      "incoming money"
+    ]
+  },
+  "connections.telegram": {
+    "title": "Kết nối bot Telegram",
+    "what": "Khách nhắn bot Telegram của bạn, agent Chatbot trả lời.",
+    "steps": [
+      "Nhắn /newbot cho @BotFather để lấy token",
+      "Mở Kết nối › Bot Telegram › Thêm kết nối",
+      "Dán token, NIVO tự đăng ký webhook",
+      "Nhắn thử bot một tin"
+    ],
+    "keywords": [
+      "telegram",
+      "bot telegram",
+      "botfather",
+      "token bot",
+      "bot tra loi khach",
+      "bot answer",
+      "answer customers"
+    ]
+  },
+  "connections.zalo_oa": {
+    "title": "Kết nối Zalo OA",
+    "what": "Khách nhắn Zalo Official Account của cửa hàng, agent Chatbot trả lời.",
+    "steps": [
+      "Tạo ứng dụng ở developers.zalo.me, lấy App ID và App Secret",
+      "Mở Kết nối › Zalo OA › Thêm kết nối và dán vào",
+      "Dán Callback URL và Webhook URL sang Zalo, bật sự kiện tin nhắn",
+      "Bấm Kết nối Zalo OA để chủ OA đồng ý"
+    ],
+    "keywords": [
+      "zalo",
+      "zalo oa",
+      "official account",
+      "oa"
+    ]
+  },
+  "connections.smtp": {
+    "title": "Email gửi đi",
+    "what": "Gửi báo cáo, biên nhận, nhắc nợ bằng email của chính cửa hàng.",
+    "steps": [
+      "Mở Kết nối › Email gửi đi › Thêm kết nối",
+      "Nhập máy chủ SMTP hoặc chọn nhà cung cấp",
+      "Gửi thử một email"
+    ],
+    "keywords": [
+      "email",
+      "smtp",
+      "gui email",
+      "gmail",
+      "thu dien tu"
+    ]
+  },
+  "connections.google": {
+    "title": "Google Sheets",
+    "what": "NIVO ghi đơn hàng vào bảng tính Google của bạn.",
+    "steps": [
+      "Mở Kết nối › Google (Sheets) › Thêm kết nối",
+      "Đăng nhập Google và cho phép",
+      "Chọn bảng tính"
+    ],
+    "keywords": [
+      "google sheet",
+      "google sheets",
+      "bang tinh",
+      "excel",
+      "spreadsheet"
+    ]
+  },
+  "connections.webhook": {
+    "title": "n8n / Webhook",
+    "what": "Gửi sự kiện (khách mới, chốt đơn, nhận tiền) sang n8n, Make, Zapier.",
+    "steps": [
+      "Mở Kết nối › n8n / Webhook › Thêm kết nối",
+      "Dán URL webhook của n8n",
+      "Chọn sự kiện cần gửi và gửi thử"
+    ],
+    "keywords": [
+      "n8n",
+      "webhook",
+      "zapier",
+      "make.com",
+      "make"
+    ]
+  },
+  "developers": {
+    "title": "Nhà phát triển (API)",
+    "what": "Tạo khóa API để phần mềm khác đọc và ghi dữ liệu NIVO.",
+    "steps": [
+      "Mở Nhà phát triển",
+      "Đặt tên khóa và bấm Tạo",
+      "Sao chép khóa ngay, NIVO chỉ hiện một lần"
+    ],
+    "keywords": [
+      "api",
+      "khoa api",
+      "api key",
+      "developer",
+      "lap trinh"
+    ]
+  },
+  "billing": {
+    "title": "Credit và gói",
+    "what": "Credit AI đã dùng và còn lại, nạp thêm credit, nâng cấp gói và lịch sử thanh toán.",
+    "steps": [
+      "Mở Credit & gói",
+      "Xem credit tháng này và dự báo hết",
+      "Bấm Mua để nạp thêm hoặc Nâng cấp để đổi gói"
+    ],
+    "keywords": [
+      "thanh toan",
+      "goi cuoc",
+      "nang cap",
+      "gia han",
+      "hoa don nivo",
+      "han muc ai",
+      "billing",
+      "plan",
+      "upgrade",
+      "credit",
+      "nap them credit",
+      "het credit",
+      "top up",
+      "topup"
+    ]
+  },
+  "account": {
+    "title": "Tài khoản của bạn",
+    "what": "Đổi tên hiển thị, email, mật khẩu và đăng xuất các thiết bị khác.",
+    "steps": [
+      "Mở menu ảnh đại diện › Tài khoản",
+      "Sửa thông tin và bấm Lưu"
+    ],
+    "keywords": [
+      "tai khoan cua toi",
+      "thong tin tai khoan",
+      "doi mat khau",
+      "mat khau",
+      "ten hien thi",
+      "dang xuat",
+      "thiet bi dang nhap",
+      "my account",
+      "password",
+      "change my password",
+      "change password"
+    ]
+  },
+  "rules": [
+    "Only point to page ids from the PAGES list. Never invent a page, a URL, a menu or a feature that is not in the list.",
+    "You only explain where to go and what to press. You cannot do anything for the user (no connecting, sending, deleting or paying).",
+    "If the question is not about using NIVO, say in one sentence that you only help with NIVO, and point to the closest page if there is one.",
+    "If you are not sure, say so and suggest the most likely page."
+  ]
+}

@@ -7,6 +7,8 @@ import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import { WorkspacesModule } from "@modules/domain/workspaces"
 import { SeedSecretsFileClient, WorkspaceSeedModule } from "@modules/domain/workspace-seed"
 import { SUPABASE_ACCOUNTS, SUPABASE_AUTH, SupabaseModule } from "@modules/integrations/supabase"
+import { AuthorityActionsModule } from "@modules/domain/authority-actions"
+import { MODULE_CATALOG, MODULE_CATEGORIES, ModulesModule } from "@modules/domain/modules"
 import { ClockModule } from "@modules/platform/clock"
 import { DatabaseModule } from "@modules/platform/database"
 import { LoggingModule } from "@modules/platform/logging"
@@ -38,6 +40,8 @@ export class AppModule {
                     secrets: new SeedSecretsFileClient(join(homedir(), ".nivo-lite", "secrets.env")),
                     print: (line) => process.stdout.write(`${line}\n`),
                 }),
+                AuthorityActionsModule.register({ isGlobal: true }),
+                ModulesModule.register({ isGlobal: true, categories: MODULE_CATEGORIES, catalog: MODULE_CATALOG }),
                 CliModule,
             ],
         }

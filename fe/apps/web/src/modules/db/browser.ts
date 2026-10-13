@@ -2,8 +2,6 @@ import { createBrowserClient } from "@supabase/ssr"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Database } from "../../../../../../supabase/types/database.types"
 import { supabaseAnonKey, supabaseUrl } from "@/modules/config"
-import { dbFailure, dbOk, toOutcome } from "./outcome"
-import type { DbOutcome } from "./outcome"
 
 /** Creates the typed public client used by client-side auth lifecycle hooks and realtime. */
 export const createBrowserDbClient = (): SupabaseClient<Database> =>
@@ -15,10 +13,30 @@ export const subscribeToAuthRefresh = (refresh: () => void): (() => void) => {
     return () => listener.data.subscription.unsubscribe()
 }
 
-/** The signed-in person's access token as the browser holds it, for a call to the back end api that verifies it. */
-export const readBrowserAccessToken = async (): Promise<DbOutcome<string>> => {
-    const session = toOutcome(await createBrowserDbClient().auth.getSession())
-    if (session.kind !== "ok") return session
-    const token = session.value.session?.access_token
-    return token === undefined ? dbFailure("refused", "session") : dbOk(token)
+/** A table of the public schema, as the generated contract names it. */
+type PublicTable = keyof Database["public"]["Tables"]
+
+/** Which changes of one workspace to listen to, and what to do when one arrives. */
+export interface WorkspaceChangeSubscription {
+    readonly channel: string
+    readonly workspaceId: string
+    readonly tables: ReadonlyArray<PublicTable>
+    readonly onChange: (table: PublicTable) => void
+}
+
+/** Listens to Realtime changes of the given tables inside one workspace and returns the function that stops listening. */
+export const subscribeToWorkspaceChanges = (subscription: WorkspaceChangeSubscription): (() => void) => {
+    const client = createBrowserDbClient()
+    const channel = client.channel(subscription.channel)
+    for (const table of subscription.tables) {
+        channel.on(
+            "postgres_changes",
+            { event: "*", schema: "public", table, filter: `workspace_id=eq.${subscription.workspaceId}` },
+            () => subscription.onChange(table),
+        )
+    }
+    channel.subscribe()
+    return () => {
+        void client.removeChannel(channel)
+    }
 }

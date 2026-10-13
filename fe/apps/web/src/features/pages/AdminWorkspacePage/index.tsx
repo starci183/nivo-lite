@@ -1,9 +1,8 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { getFormatter, getLocale, getTranslations } from "next-intl/server"
+import { getFormatter, getTranslations } from "next-intl/server"
 import { adminFormat, detailCards, detailFacts } from "@/hooks/admin"
 import { readAdminWorkspace } from "@/modules/api"
-import { readApiToken } from "@/modules/db"
 import { AdminWorkspacePageBase } from "./component"
 
 /** What the route hands the page: the workspace id of the address. */
@@ -22,9 +21,7 @@ export const AdminWorkspacePage = async (props: AdminWorkspacePageProps) => {
     const t = await getTranslations("admin")
     const format = adminFormat(await getFormatter(), t, new Date())
     const { id } = await props.params
-    const token = await readApiToken()
-    if (token.kind !== "ok") notFound()
-    const detail = await readAdminWorkspace({ token: token.value, locale: await getLocale(), workspaceId: id })
+    const detail = await readAdminWorkspace(id)
     if (detail.kind === "unavailable") throw new Error(`admin: workspace ${detail.fault.code}`)
     if (detail.kind !== "ok") notFound()
     const { workspace, credits, invites } = detail.value

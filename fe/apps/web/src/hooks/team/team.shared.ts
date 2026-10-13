@@ -102,27 +102,23 @@ export const teamViews = (roster: TeamRoster, staff: ReadonlyArray<StaffChoiceVi
         [...roster.members, ...live].flatMap((row) => (row.staffId === null ? [] : [row.staffId])),
     )
     return {
-        members: roster.members.map(
-            (member): TeamMemberView => ({
-                userId: member.userId,
-                displayName: member.displayName,
-                email: member.email,
-                role: member.role,
-                isActive: member.status === "active",
-                staffName: member.staffId === null ? null : (nameOf.get(member.staffId) ?? null),
-                lastSignInAt: member.lastSignInAt,
-            }),
-        ),
-        invites: roster.invites.map(
-            (invite): TeamInviteView => ({
-                id: invite.id,
-                email: invite.email,
-                role: invite.role,
-                staffName: invite.staffId === null ? null : (nameOf.get(invite.staffId) ?? null),
-                expiresAt: invite.expiresAt,
-                isExpired: invite.isExpired,
-            }),
-        ),
+        members: roster.members.map((member): TeamMemberView => ({
+            userId: member.userId,
+            displayName: member.displayName,
+            email: member.email,
+            role: member.role,
+            isActive: member.status === "active",
+            staffName: member.staffId === null ? null : (nameOf.get(member.staffId) ?? null),
+            lastSignInAt: member.lastSignInAt,
+        })),
+        invites: roster.invites.map((invite): TeamInviteView => ({
+            id: invite.id,
+            email: invite.email,
+            role: invite.role,
+            staffName: invite.staffId === null ? null : (nameOf.get(invite.staffId) ?? null),
+            expiresAt: invite.expiresAt,
+            isExpired: invite.isExpired,
+        })),
         staffChoices: staff.filter((row) => !linked.has(row.id)),
     }
 }

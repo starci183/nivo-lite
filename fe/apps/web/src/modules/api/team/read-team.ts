@@ -1,24 +1,20 @@
 import "server-only"
 
-import { request } from "../client"
+import { decoded } from "../decode"
 import type { Outcome } from "../outcome"
+import { apiRequest } from "../request"
 import { decodeInvites, decodeMembers, withExpiry } from "./team.mapper"
 import type { TeamRoster } from "./team.mapper"
 
-/** What a roster read needs: the caller token, the page language and the workspace. */
-export interface TeamRosterQuery {
-    readonly token: string
-    readonly locale: string
-    readonly workspaceId: string
-}
-
 /** Reads the members and the open invitations of a workspace; the first failure is the outcome. */
-export const readTeamRoster = async (query: TeamRosterQuery): Promise<Outcome<TeamRoster>> => {
+export const readTeamRoster = async (workspaceId: string): Promise<Outcome<TeamRoster>> => {
     const [members, invites] = await Promise.all([
-        request({ ...query, path: "/workspaces/members" }, decodeMembers),
-        request({ ...query, path: "/workspaces/invites" }, decodeInvites),
+        apiRequest<unknown>("/workspaces/members", { workspaceId }),
+        apiRequest<unknown>("/workspaces/invites", { workspaceId }),
     ])
-    if (members.kind !== "ok") return members
-    if (invites.kind !== "ok") return invites
-    return { kind: "ok", value: { members: members.value, invites: withExpiry(invites.value, Date.now()) } }
+    const memberList = decoded(members, decodeMembers)
+    if (memberList.kind !== "ok") return memberList
+    const inviteList = decoded(invites, decodeInvites)
+    if (inviteList.kind !== "ok") return inviteList
+    return { kind: "ok", value: { members: memberList.value, invites: withExpiry(inviteList.value, Date.now()) } }
 }

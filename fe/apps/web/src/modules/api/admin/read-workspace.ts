@@ -1,19 +1,11 @@
 import "server-only"
 
-import { request } from "../client"
+import { decoded } from "../decode"
 import type { Outcome } from "../outcome"
+import { apiRequest } from "../request"
 import { decodeAdminWorkspace } from "./admin.mapper"
 import type { AdminWorkspaceDetail } from "./admin.mapper"
-import type { AdminReadInput } from "./read-session"
-
-/** Which workspace to read. */
-export interface AdminWorkspaceInput extends AdminReadInput {
-    readonly workspaceId: string
-}
 
 /** Reads the full read-only overview of one workspace. */
-export const readAdminWorkspace = (input: AdminWorkspaceInput): Promise<Outcome<AdminWorkspaceDetail>> =>
-    request(
-        { path: `/admin/workspaces/${input.workspaceId}`, token: input.token, locale: input.locale },
-        decodeAdminWorkspace,
-    )
+export const readAdminWorkspace = async (workspaceId: string): Promise<Outcome<AdminWorkspaceDetail>> =>
+    decoded(await apiRequest<unknown>(`/admin/workspaces/${encodeURIComponent(workspaceId)}`), decodeAdminWorkspace)

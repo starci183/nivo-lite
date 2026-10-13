@@ -1,10 +1,10 @@
 import type { Metadata } from "next"
-import { getLocale, getTranslations } from "next-intl/server"
+import { getTranslations } from "next-intl/server"
 import { teamViews } from "@/hooks/team"
 import { isManagerRole } from "@/lib/members-shared"
 import { getSession } from "@/lib/session"
 import { readTeamRoster } from "@/modules/api"
-import { readApiToken, readTeamStaff } from "@/modules/db"
+import { readTeamStaff } from "@/modules/db"
 import { APP_ROUTES } from "@/modules/routes"
 import { TeamPageBase } from "./component"
 import type { TeamPageBaseProps } from "./component"
@@ -59,10 +59,8 @@ export const TeamPage = async () => {
             />
         )
     }
-    const token = await readApiToken()
-    if (token.kind !== "ok") throw new Error(`team: ${token.kind} ${token.code}`)
     const [roster, staff] = await Promise.all([
-        readTeamRoster({ token: token.value, locale: await getLocale(), workspaceId: session.workspace.id }),
+        readTeamRoster(session.workspace.id),
         readTeamStaff(session.workspace.id),
     ])
     if (roster.kind !== "ok") throw new Error(`team: ${roster.kind} ${roster.fault.code}`)

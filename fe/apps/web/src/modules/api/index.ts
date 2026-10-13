@@ -1,6 +1,9 @@
-export { request } from "./client"
-export type { Outcome } from "./outcome"
-export { decodeNothing } from "./decode"
+import "server-only"
+
+export { apiRequest } from "./request"
+export type { ApiCall } from "./request"
+export type { ApiFault, ApiIssue, Outcome } from "./outcome"
+export { decoded, decodeNothing } from "./decode"
 export { decodeInviteResult } from "./team/team.mapper"
 export type { InviteResultItem, TeamRoster } from "./team/team.mapper"
 export { decodeCreatedWorkspace } from "./workspaces/workspaces.mapper"

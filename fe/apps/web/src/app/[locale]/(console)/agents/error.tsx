@@ -1,15 +1,10 @@
-"use client";
+"use client"
 
-import { RouteError } from "@/components/blocks/RouteError"
-import { useT } from "@/i18n/client";
-import { modulesCore } from "@/i18n/dict/modulesCore";
-import { shell } from "@/i18n/dict/shell";
+import { AgentsErrorPage } from "@/features/pages/AgentsErrorPage"
 
-/** STATE-8 case-4: when a module's frame fails (its installation could not load) the trail and the Modules heading stay, with one Alert and a retry. */
-const ModuleFrameError = ({ reset }: { readonly reset: () => void }) => {
-  const t = useT(modulesCore);
-  const ts = useT(shell);
-  return <RouteError crumbs={[{ id: "home", label: ts("crumbHome"), href: "/dashboard" }, { id: "modules", label: t("catalogTitle"), href: "/agents" }]} title={t("catalogTitle")} onRetry={reset} />;
-};
+type ErrorProps = { readonly reset: () => void }
 
-export default ModuleFrameError;
+/** The error boundary slot of the frame of an agent. */
+const ErrorBoundary = (props: ErrorProps) => <AgentsErrorPage scope="frame" onRetry={props.reset} />
+
+export default ErrorBoundary

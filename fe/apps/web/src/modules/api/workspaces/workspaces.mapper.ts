@@ -45,8 +45,8 @@ const isCreated = (value: unknown): value is CreatedWorkspaceItem => isRecord(va
 const decodeRaw = decodeList(isMembership)
 
 /** Reads the answer of list memberships into flat items. */
-export const decodeMemberships = (body: string): Outcome<ReadonlyArray<MembershipItem>> => {
-    const raw = decodeRaw(body)
+export const decodeMemberships = (value: unknown): Outcome<ReadonlyArray<MembershipItem>> => {
+    const raw = decodeRaw(value)
     if (raw.kind !== "ok") return raw
     return {
         kind: "ok",

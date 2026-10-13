@@ -1,4 +1,12 @@
-export { NO_STAFF, ROLE_KEYS, canManageMember, outcomeErrorKey, roleChoices, teamErrorKey, teamViews } from "./team.shared"
+export {
+    NO_STAFF,
+    ROLE_KEYS,
+    canManageMember,
+    outcomeErrorKey,
+    roleChoices,
+    teamErrorKey,
+    teamViews,
+} from "./team.shared"
 export type {
     InviteCall,
     InviteSentView,

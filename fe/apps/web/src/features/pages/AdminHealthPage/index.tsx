@@ -1,9 +1,8 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { getFormatter, getLocale, getTranslations } from "next-intl/server"
+import { getFormatter, getTranslations } from "next-intl/server"
 import { adminFormat, healthCards } from "@/hooks/admin"
 import { readAdminHealth } from "@/modules/api"
-import { readApiToken } from "@/modules/db"
 import { AdminHealthPageBase } from "./component"
 
 /** The document title of the page. */
@@ -16,9 +15,7 @@ export const adminHealthMetadata = async (): Promise<Metadata> => {
 export const AdminHealthPage = async () => {
     const t = await getTranslations("admin")
     const format = adminFormat(await getFormatter(), t, new Date())
-    const token = await readApiToken()
-    if (token.kind !== "ok") notFound()
-    const health = await readAdminHealth({ token: token.value, locale: await getLocale() })
+    const health = await readAdminHealth()
     if (health.kind === "unavailable") throw new Error(`admin: health ${health.fault.code}`)
     if (health.kind !== "ok") notFound()
     return (

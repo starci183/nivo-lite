@@ -1,11 +1,9 @@
-import { PageContainer } from "@starci/grammar/common";
-import { Overview } from "@/features/overview";
+import { OverviewPage } from "@/features/pages/OverviewPage"
+
+/** The document title of the overview. */
+export { overviewMetadata as generateMetadata } from "@/features/pages/OverviewPage"
 
 /** P01 Executive view. */
-const Page = () => (
-  <PageContainer measure="product">
-    <Overview />
-  </PageContainer>
-);
+const Page = () => <OverviewPage />
 
-export default Page;
+export default Page
