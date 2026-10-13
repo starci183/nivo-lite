@@ -1,15 +1,14 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { DocumentsError, DocumentsErrorCode } from "@modules/integrations/documents"
-import { DOCUMENTS } from "@modules/integrations/documents/documents.decorators"
-import type { DriveAccess } from "@modules/integrations/documents/documents.contracts"
-import type { DocumentsPort } from "@modules/integrations/documents"
+import { DOCUMENTS, DocumentsError, DocumentsErrorCode } from "@modules/integrations/documents"
+import type { DocumentsPort, DriveAccess } from "@modules/integrations/documents"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { KnowledgeDriveService } from "./knowledge-drive.service"
 import { KnowledgeLogEvent } from "./knowledge.log-events"
-import { KNOWLEDGE_OPTIONS } from "./knowledge.decorators"
+import { DRIVE_ACCESS_SOURCE } from "./knowledge.decorators"
+import type { DriveAccessSource } from "./knowledge.contracts"
 
 const WS = "11111111-1111-4111-8111-111111111111"
 const TOKEN = "ya29.a0AfH6SMB-xyz_123abcdefghij"
@@ -20,11 +19,13 @@ const build = async (access: DriveAccess | null = null) => {
     const documents = mock<DocumentsPort>()
     const members = mock<WorkspaceMembersService>()
     const logger = mock<Logger>()
-    const forWorkspace = jest.fn().mockReturnValue(access)
+    const driveAccess = mock<DriveAccessSource>()
+    driveAccess.forWorkspace.mockReturnValue(access)
+    const { forWorkspace } = driveAccess
     const moduleRef = await Test.createTestingModule({
         providers: [
             KnowledgeDriveService,
-            { provide: KNOWLEDGE_OPTIONS, useValue: { driveAccess: { forWorkspace } } },
+            { provide: DRIVE_ACCESS_SOURCE, useValue: driveAccess },
             { provide: DOCUMENTS, useValue: documents },
             { provide: LOGGER, useValue: logger },
             { provide: WorkspaceMembersService, useValue: members },

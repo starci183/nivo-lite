@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { builder, FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { ApprovalGate, OfficeLog, TextGenerator } from "@modules/domain/module-ops"
+import { ApprovalGate, OfficeLog, ModuleTextGenerator } from "@modules/domain/module-ops"
 import type { PerformContext } from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
@@ -209,7 +209,7 @@ const build = async (entityManager: MockEntityManager = mockEntityManager()) => 
         status: "active",
     })
     const gate = mock<ApprovalGate>()
-    const generator = mock<TextGenerator>()
+    const generator = mock<ModuleTextGenerator>()
     const office = mock<OfficeLog>()
     office.workspaceName.mockResolvedValue("Coffee Shop")
     const data = mock<HiringDataService>()
@@ -235,7 +235,7 @@ const build = async (entityManager: MockEntityManager = mockEntityManager()) => 
             { provide: CLOCK, useValue: new FakeClock("2026-10-12T00:00:00.000Z") },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: ApprovalGate, useValue: gate },
-            { provide: TextGenerator, useValue: generator },
+            { provide: ModuleTextGenerator, useValue: generator },
             { provide: OfficeLog, useValue: office },
             { provide: HiringDataService, useValue: data },
             { provide: HiringTextService, useValue: words },

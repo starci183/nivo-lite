@@ -4,7 +4,13 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LeadsErrorCode } from "./errors/leads.error"
 import { LeadRecordsService } from "./lead-records.service"
 import type { LeadRecordRow } from "./persistence/lead-records.rows"
-import { FIND_LEAD, FIND_LEAD_NAMES, INSERT_LEAD, MATCH_LEAD } from "./persistence/lead-records.sql"
+import {
+    FIND_LEAD,
+    FIND_LEAD_NAMES,
+    HAND_OVER_LEAD_NEED,
+    INSERT_LEAD,
+    MATCH_LEAD,
+} from "./persistence/lead-records.sql"
 
 const ROW: LeadRecordRow = {
     id: "lead-1",
@@ -27,6 +33,7 @@ const build = async (rows: ReadonlyArray<LeadRecordRow> = [ROW]) => {
             [MATCH_LEAD, rows],
             [INSERT_LEAD, rows],
             [FIND_LEAD_NAMES, [{ id: "lead-1", contact_name: "An" }]],
+            [HAND_OVER_LEAD_NEED, []],
         ],
     })
     const moduleRef = await Test.createTestingModule({
@@ -94,6 +101,15 @@ describe("LeadRecordsService", () => {
             null,
             "live",
         ])
+    })
+
+    it("hands over the package as the lead's need", async () => {
+        const { records, em } = await build()
+        const need = "Annual sales package"
+
+        await expect(records.handOver("ws-1", "lead-1", need)).resolves.toBeUndefined()
+
+        expect(em.query).toHaveBeenCalledWith(HAND_OVER_LEAD_NEED, ["ws-1", "lead-1", need])
     })
 
     it("answers no names when no leads were asked for", async () => {

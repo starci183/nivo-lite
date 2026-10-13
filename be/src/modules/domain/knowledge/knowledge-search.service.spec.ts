@@ -43,15 +43,13 @@ const build = async (em: MockEntityManager) => {
 
 describe("KnowledgeSearchService", () => {
     describe("ask", () => {
-        const askRows = (audience: string) => ({
-            query: [
-                [SELECT_MODULE_AUDIENCE, [{ audience }]],
-                [MATCH_KNOWLEDGE, [row("business")]],
-            ] as const,
-        })
+        const stubs = (audience: string): ReadonlyArray<readonly [string, unknown]> => [
+            [SELECT_MODULE_AUDIENCE, [{ audience }]],
+            [MATCH_KNOWLEDGE, [row("business")]],
+        ]
 
         it("lets any member try a question and returns the passages the lens allows", async () => {
-            const em = mockEntityManager(askRows("internal"))
+            const em = mockEntityManager({ query: stubs("internal") })
             const { service, members } = await build(em)
 
             const passages = await service.ask("u1", WS, {
@@ -75,7 +73,7 @@ describe("KnowledgeSearchService", () => {
         })
 
         it("shows public passages only when the customer view is asked for", async () => {
-            const em = mockEntityManager(askRows("internal"))
+            const em = mockEntityManager({ query: stubs("internal") })
             const { service } = await build(em)
 
             await service.ask("u1", WS, { question: "q", module: "chatbot", audience: "customer" })
@@ -84,7 +82,7 @@ describe("KnowledgeSearchService", () => {
         })
 
         it("shows public passages only for an agent that speaks to customers", async () => {
-            const em = mockEntityManager(askRows("customer"))
+            const em = mockEntityManager({ query: stubs("customer") })
             const { service } = await build(em)
 
             await service.ask("u1", WS, { question: "q", module: "chatbot", audience: "internal" })
@@ -101,7 +99,7 @@ describe("KnowledgeSearchService", () => {
         })
 
         it("answers nothing, and spends nothing, for an empty question", async () => {
-            const { service, embeddings } = await build(mockEntityManager(askRows("internal")))
+            const { service, embeddings } = await build(mockEntityManager({ query: stubs("internal") }))
 
             await expect(
                 service.ask("u1", WS, { question: "  ", module: "chatbot", audience: "internal" }),
@@ -121,7 +119,7 @@ describe("KnowledgeSearchService", () => {
         })
 
         it("cuts a long question", async () => {
-            const em = mockEntityManager(askRows("internal"))
+            const em = mockEntityManager({ query: stubs("internal") })
             const { service, embeddings } = await build(em)
 
             await service.ask("u1", WS, { question: "q".repeat(900), module: "chatbot", audience: "internal" })

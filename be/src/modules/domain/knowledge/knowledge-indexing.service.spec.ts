@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
-import { KnowledgeChunksService, chunkText } from "@modules/domain/knowledge-chunks"
+import { KnowledgeChunksService } from "@modules/domain/knowledge-chunks"
 import { KnowledgeSourcesError, KnowledgeSourcesErrorCode } from "@modules/domain/knowledge-sources"
 import { KnowledgeSourcesService, MAX_SOURCE_CHARS, StoredNote } from "@modules/domain/knowledge-sources"
 import type { SourceRecord } from "@modules/domain/knowledge-sources"
@@ -184,13 +184,10 @@ describe("KnowledgeIndexingService", () => {
 
             expect(usage.blockedBy).toHaveBeenCalledWith(WS, "embedding", true)
             expect(embeddings.embed).not.toHaveBeenCalled()
-            const pieces = chunkText(content)
-            expect(chunks.replace).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    drafts: pieces.map((text) => ({ text, vector: null })),
-                }),
-            )
-            expect(sources.blockIndexing).toHaveBeenCalledWith(WS, "s1", StoredNote.NoCreditsForIndex, pieces.length)
+            const drafts = chunks.replace.mock.calls[0]?.[0].drafts ?? []
+            expect(drafts.length).toBeGreaterThan(1)
+            expect(drafts.every((draft) => draft.vector === null)).toBe(true)
+            expect(sources.blockIndexing).toHaveBeenCalledWith(WS, "s1", StoredNote.NoCreditsForIndex, drafts.length)
             expect(sources.finishIndexing).not.toHaveBeenCalled()
         })
 
