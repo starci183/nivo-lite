@@ -1,4 +1,8 @@
+import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
+import { CLOCK } from "@modules/platform/clock"
+import { MESSAGE_CATALOG } from "@modules/platform/i18n"
+import { LOGGER } from "@modules/platform/logging"
 import { AutomationPipelinesService } from "@modules/domain/automation-pipelines"
 import type { PipelineRow } from "@modules/domain/automation-pipelines"
 import { AutomationRunsService } from "@modules/domain/automation-runs"
@@ -12,6 +16,7 @@ import { AutomationEngineService } from "./automation-engine.service"
 import { AutomationExtensionsService } from "./automation-extensions.service"
 import { AutomationOperationsExecutorsService } from "./automation-operations-executors.service"
 import type { AutomationOffice } from "./automation-ports.contracts"
+import { AUTOMATION_OFFICE } from "./automations.decorators"
 import { AutomationScansService } from "./automation-scans.service"
 import { AutomationShopService } from "./automation-shop.service"
 import { buildPipelineRow, buildShop, buildTemplate } from "@tests/fixtures/builders/automations.builder"
@@ -27,7 +32,7 @@ interface Setup {
     readonly templates: ReadonlyArray<TemplateDefinition>
 }
 
-const build = ({ pipelines, templates }: Setup) => {
+const build = async ({ pipelines, templates }: Setup) => {
     const clock = new FakeClock(NOW)
     const catalog = mock<MessageCatalog>()
     catalog.get.mockImplementation((key, params) => `${key}${JSON.stringify(params)}`)
@@ -54,22 +59,26 @@ const build = ({ pipelines, templates }: Setup) => {
     extensions.scan.mockResolvedValue(null)
     const n8nRuns = mock<N8nRunsService>()
     const n8nData = mock<N8nDataService>()
-    const engine = new AutomationEngineService(
-        clock,
-        catalog,
-        logger,
-        office,
-        templateService,
-        pipelineService,
-        runs,
-        shop,
-        scans,
-        care,
-        operations,
-        extensions,
-        n8nRuns,
-        n8nData,
-    )
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            AutomationEngineService,
+            { provide: CLOCK, useValue: clock },
+            { provide: MESSAGE_CATALOG, useValue: catalog },
+            { provide: LOGGER, useValue: logger },
+            { provide: AUTOMATION_OFFICE, useValue: office },
+            { provide: AutomationTemplatesService, useValue: templateService },
+            { provide: AutomationPipelinesService, useValue: pipelineService },
+            { provide: AutomationRunsService, useValue: runs },
+            { provide: AutomationShopService, useValue: shop },
+            { provide: AutomationScansService, useValue: scans },
+            { provide: AutomationCareExecutorsService, useValue: care },
+            { provide: AutomationOperationsExecutorsService, useValue: operations },
+            { provide: AutomationExtensionsService, useValue: extensions },
+            { provide: N8nRunsService, useValue: n8nRuns },
+            { provide: N8nDataService, useValue: n8nData },
+        ],
+    }).compile()
+    const engine = moduleRef.get(AutomationEngineService)
     return {
         engine,
         clock,
@@ -106,7 +115,7 @@ describe("AutomationEngineService", () => {
         }
 
         it("starts the run an event plans for a pipeline that is on, later when the plan says so", async () => {
-            const { engine, care, runs } = build(thank)
+            const { engine, care, runs } = await build(thank)
             const executor: Executor = jest.fn().mockResolvedValue(DONE)
             care.executors.mockReturnValue({ thank_payment: executor })
             const claimed: ClaimedRun = { id: "r-1", attempts: 1, payload: { x: 1 } }
@@ -130,7 +139,7 @@ describe("AutomationEngineService", () => {
         })
 
         it("records a trigger without delay at once, and does not run what was already recorded", async () => {
-            const { engine, operations, runs } = build({
+            const { engine, operations, runs } = await build({
                 pipelines: [pipeline("delivery_notice", { body: "Mine" })],
                 templates: [template("delivery_notice", { defaultBody: { vi: "Std", en: "Std" } })],
             })
@@ -144,7 +153,7 @@ describe("AutomationEngineService", () => {
         })
 
         it("uses the standard wording of the template when the owner saved none", async () => {
-            const { engine, operations, runs } = build({
+            const { engine, operations, runs } = await build({
                 pipelines: [pipeline("delivery_notice")],
                 templates: [template("delivery_notice", { defaultBody: { vi: "Std", en: "Std" } })],
             })
@@ -159,7 +168,7 @@ describe("AutomationEngineService", () => {
         })
 
         it("finds an extension's executor and ignores a template nothing executes", async () => {
-            const { engine, extensions, runs } = build(thank)
+            const { engine, extensions, runs } = await build(thank)
             extensions.executorOf.mockReturnValue(undefined)
 
             await engine.onBusinessEvent(event)
@@ -169,7 +178,7 @@ describe("AutomationEngineService", () => {
         })
 
         it("runs the executor an extension provides", async () => {
-            const { engine, extensions, runs } = build(thank)
+            const { engine, extensions, runs } = await build(thank)
             extensions.executorOf.mockReturnValue(jest.fn().mockResolvedValue(DONE))
             runs.beginRun.mockResolvedValue({ id: "r-1", attempts: 1, payload: {} })
 
@@ -179,8 +188,8 @@ describe("AutomationEngineService", () => {
         })
 
         it("does nothing when no pipeline is on, and leaves the pipelines an event does not start", async () => {
-            const none = build({ pipelines: [], templates: [] })
-            const other = build(thank)
+            const none = await build({ pipelines: [], templates: [] })
+            const other = await build(thank)
 
             await none.engine.onBusinessEvent(event)
             await other.engine.onBusinessEvent({ ...event, event: "lead.created" })
@@ -190,7 +199,7 @@ describe("AutomationEngineService", () => {
         })
 
         it("ignores a pipeline whose template is unknown or run by n8n", async () => {
-            const { engine, shop } = build({
+            const { engine, shop } = await build({
                 pipelines: [pipeline("ghost_template"), pipeline("email-daily-report")],
                 templates: [template("email-daily-report", { executor: "n8n" })],
             })
@@ -201,7 +210,7 @@ describe("AutomationEngineService", () => {
         })
 
         it("logs a failing pipeline and goes on with the others", async () => {
-            const { engine, care, runs, logger } = build({
+            const { engine, care, runs, logger } = await build({
                 pipelines: [pipeline("thank_payment"), pipeline("ask_review")],
                 templates: [template("thank_payment"), template("ask_review")],
             })
@@ -232,7 +241,7 @@ describe("AutomationEngineService", () => {
             })
 
             it("starts a run of the shared workflow with the wording and the settings", async () => {
-                const { engine, n8nData, n8nRuns } = build(receiptSetup())
+                const { engine, n8nData, n8nRuns } = await build(receiptSetup())
                 n8nData.paymentReceipt.mockResolvedValue({ dedupe: "receipt:t-1", data: { to: "a@b.c" } })
 
                 await engine.onBusinessEvent({ ...event, data: { transaction_id: "t-1", invoice_id: "i-1" } })
@@ -249,7 +258,7 @@ describe("AutomationEngineService", () => {
             })
 
             it("starts nothing when the payment has no customer address, and logs a failure", async () => {
-                const { engine, n8nData, n8nRuns, logger } = build(receiptSetup())
+                const { engine, n8nData, n8nRuns, logger } = await build(receiptSetup())
                 n8nData.paymentReceipt.mockResolvedValueOnce(null)
 
                 await engine.onBusinessEvent(event)
@@ -265,19 +274,19 @@ describe("AutomationEngineService", () => {
             })
 
             it("ignores the workflow for another event or another workflow", async () => {
-                const other = build({
+                const other = await build({
                     pipelines: [pipeline("email-daily-report")],
                     templates: [template("email-daily-report", { executor: "n8n" })],
                 })
 
                 await other.engine.onBusinessEvent(event)
-                await build(receiptSetup()).engine.onBusinessEvent({ ...event, event: "lead.created" })
+                await (await build(receiptSetup())).engine.onBusinessEvent({ ...event, event: "lead.created" })
 
                 expect(other.n8nData.paymentReceipt).not.toHaveBeenCalled()
             })
 
             it("starts the workflow without a settings body when the owner approved none, and by its key when the template names no webhook", async () => {
-                const { engine, n8nData, n8nRuns } = build({
+                const { engine, n8nData, n8nRuns } = await build({
                     pipelines: [pipeline("email-payment-receipt")],
                     templates: [
                         template("email-payment-receipt", {
@@ -309,7 +318,7 @@ describe("AutomationEngineService", () => {
             }
 
             it("checks the feedback of the last finished review request of the week", async () => {
-                const { engine, runs, care } = build(reviewSetup())
+                const { engine, runs, care } = await build(reviewSetup())
                 runs.latestDoneRun.mockResolvedValue({ id: "r-1", attempts: 0, payload: { lead_id: "l-1" } })
 
                 await engine.onBusinessEvent(reply)
@@ -330,7 +339,7 @@ describe("AutomationEngineService", () => {
             })
 
             it("leaves a request that was already alerted, none that was sent, and a reply with no lead", async () => {
-                const { engine, runs, care } = build(reviewSetup())
+                const { engine, runs, care } = await build(reviewSetup())
                 runs.latestDoneRun.mockResolvedValueOnce({
                     id: "r-1",
                     attempts: 0,
@@ -347,7 +356,7 @@ describe("AutomationEngineService", () => {
             })
 
             it("does nothing when the review automation is off", async () => {
-                const { engine, runs } = build(thank)
+                const { engine, runs } = await build(thank)
 
                 await engine.onBusinessEvent(reply)
 
@@ -373,7 +382,7 @@ describe("AutomationEngineService", () => {
         }
 
         it("ends the run that waited and moves the trust ladder", async () => {
-            const { engine, runs, pipelineService, office } = build({ pipelines: [], templates: [] })
+            const { engine, runs, pipelineService, office } = await build({ pipelines: [], templates: [] })
             runs.waitingRunsFor.mockResolvedValue([waiting])
             pipelineService.findPipelineById.mockResolvedValue(
                 buildPipelineRow({ id: "p-1", name: "Thank", approval_streak: 19 }),
@@ -400,7 +409,7 @@ describe("AutomationEngineService", () => {
         })
 
         it("skips the run when the owner refused, and notes an edit", async () => {
-            const { engine, runs, pipelineService, office } = build({ pipelines: [], templates: [] })
+            const { engine, runs, pipelineService, office } = await build({ pipelines: [], templates: [] })
             runs.waitingRunsFor.mockResolvedValue([waiting])
             pipelineService.findPipelineById.mockResolvedValue(buildPipelineRow({ id: "p-1", approval_streak: 3 }))
 
@@ -429,7 +438,7 @@ describe("AutomationEngineService", () => {
         })
 
         it("ends the run even when its pipeline is gone, and ignores a decision with no work item", async () => {
-            const { engine, runs, pipelineService } = build({ pipelines: [], templates: [] })
+            const { engine, runs, pipelineService } = await build({ pipelines: [], templates: [] })
             runs.waitingRunsFor.mockResolvedValue([waiting])
             pipelineService.findPipelineById.mockResolvedValue(null)
 
@@ -452,7 +461,7 @@ describe("AutomationEngineService", () => {
         }
 
         it("writes a run for later when the pipeline is on", async () => {
-            const { engine, care, runs, pipelineService } = build({
+            const { engine, care, runs, pipelineService } = await build({
                 pipelines: [pipeline("thank_payment")],
                 templates: [template("thank_payment")],
             })
@@ -472,7 +481,7 @@ describe("AutomationEngineService", () => {
         })
 
         it("does nothing when the pipeline is off", async () => {
-            const { engine, runs } = build({ pipelines: [], templates: [template("thank_payment")] })
+            const { engine, runs } = await build({ pipelines: [], templates: [template("thank_payment")] })
 
             await expect(engine.fireTemplate(request)).resolves.toBe(false)
 
