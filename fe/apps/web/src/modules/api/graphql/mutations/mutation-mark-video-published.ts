@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationMarkVideoPublishedArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { MarkVideoPublishedMutation, MarkVideoPublishedMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `markVideoPublished` mutation. */
-type MutateMarkVideoPublishedRequest = MutationMarkVideoPublishedArgs["input"]
+type MutateMarkVideoPublishedRequest = WireInput<MarkVideoPublishedMutationVariables["input"]>
 
 /** The generated payload of the `markVideoPublished` mutation. */
-type MutateMarkVideoPublishedResponse = Pick<Mutation, "markVideoPublished">
+type MutateMarkVideoPublishedResponse = MarkVideoPublishedMutation
 
 type Document = TypedDocumentNode<MutateMarkVideoPublishedResponse, InputVariables<MutateMarkVideoPublishedRequest>>
 

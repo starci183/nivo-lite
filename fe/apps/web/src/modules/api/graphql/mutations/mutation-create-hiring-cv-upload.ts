@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createNoAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationCreateHiringCvUploadArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { CreateHiringCvUploadMutation, CreateHiringCvUploadMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `createHiringCvUpload` mutation. */
-export type MutateCreateHiringCvUploadRequest = MutationCreateHiringCvUploadArgs["input"]
+export type MutateCreateHiringCvUploadRequest = WireInput<CreateHiringCvUploadMutationVariables["input"]>
 
 /** The response of the `createHiringCvUpload` mutation. */
-type MutateCreateHiringCvUploadResponse = Pick<Mutation, "createHiringCvUpload">
+type MutateCreateHiringCvUploadResponse = CreateHiringCvUploadMutation
 
 const mutation1: TypedDocumentNode<
     MutateCreateHiringCvUploadResponse,

@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationCreateLeadArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { CreateLeadMutation, CreateLeadMutationVariables } from "../__generated__/graphql"
 
 /** Generated input of the createLead mutation. */
-export type MutateCreateLeadRequest = MutationCreateLeadArgs["input"]
+export type MutateCreateLeadRequest = WireInput<CreateLeadMutationVariables["input"]>
 
 /** Generated response of the createLead mutation. */
-type MutateCreateLeadResponse = Pick<Mutation, "createLead">
+type MutateCreateLeadResponse = CreateLeadMutation
 
 type Document = TypedDocumentNode<MutateCreateLeadResponse, InputVariables<MutateCreateLeadRequest>>
 

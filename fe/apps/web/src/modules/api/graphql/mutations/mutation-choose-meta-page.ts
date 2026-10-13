@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationChooseMetaPageArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { ChooseMetaPageMutation, ChooseMetaPageMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `chooseMetaPage` mutation. */
-export type MutateChooseMetaPageRequest = MutationChooseMetaPageArgs["input"]
+export type MutateChooseMetaPageRequest = WireInput<ChooseMetaPageMutationVariables["input"]>
 
 /** The response of the `chooseMetaPage` mutation. */
-type MutateChooseMetaPageResponse = Pick<Mutation, "chooseMetaPage">
+type MutateChooseMetaPageResponse = ChooseMetaPageMutation
 
 const mutation1: TypedDocumentNode<MutateChooseMetaPageResponse, InputVariables<MutateChooseMetaPageRequest>> = gql`
     mutation ChooseMetaPage($input: ChooseMetaPageInput!) {

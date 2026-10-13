@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationAuthorizeGoogleArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { AuthorizeGoogleMutation, AuthorizeGoogleMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `authorizeGoogle` mutation. */
-export type MutateAuthorizeGoogleRequest = MutationAuthorizeGoogleArgs["input"]
+export type MutateAuthorizeGoogleRequest = WireInput<AuthorizeGoogleMutationVariables["input"]>
 
 /** The response of the `authorizeGoogle` mutation. */
-type MutateAuthorizeGoogleResponse = Pick<Mutation, "authorizeGoogle">
+type MutateAuthorizeGoogleResponse = AuthorizeGoogleMutation
 
 const mutation1: TypedDocumentNode<MutateAuthorizeGoogleResponse, InputVariables<MutateAuthorizeGoogleRequest>> = gql`
     mutation AuthorizeGoogle($input: AuthorizeGoogleInput!) {

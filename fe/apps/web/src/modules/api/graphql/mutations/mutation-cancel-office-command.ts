@@ -1,13 +1,13 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationCancelOfficeCommandArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { CancelOfficeCommandMutation, CancelOfficeCommandMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `cancelOfficeCommand` mutation. */
-export type MutateCancelOfficeCommandRequest = MutationCancelOfficeCommandArgs["input"]
+export type MutateCancelOfficeCommandRequest = WireInput<CancelOfficeCommandMutationVariables["input"]>
 
-type MutateCancelOfficeCommandResponse = Pick<Mutation, "cancelOfficeCommand">
+type MutateCancelOfficeCommandResponse = CancelOfficeCommandMutation
 
 const mutation1: TypedDocumentNode<
     MutateCancelOfficeCommandResponse,

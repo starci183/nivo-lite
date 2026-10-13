@@ -2,10 +2,10 @@ import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { MutateParams } from "../types"
-import type { Mutation } from "../__generated__/schema"
+import type { ApplyContentCadencePresetsMutation } from "../__generated__/graphql"
 
 /** The generated response of applyContentCadencePresets. */
-type MutateApplyContentCadencePresetsResponse = Pick<Mutation, "applyContentCadencePresets">
+type MutateApplyContentCadencePresetsResponse = ApplyContentCadencePresetsMutation
 
 type Document = TypedDocumentNode<MutateApplyContentCadencePresetsResponse>
 

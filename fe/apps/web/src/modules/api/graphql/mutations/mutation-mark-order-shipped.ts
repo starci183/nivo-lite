@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationMarkOrderShippedArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { MarkOrderShippedMutation, MarkOrderShippedMutationVariables } from "../__generated__/graphql"
 
 /** Generated input of the markOrderShipped mutation. */
-export type MutateMarkOrderShippedRequest = MutationMarkOrderShippedArgs["input"]
+export type MutateMarkOrderShippedRequest = WireInput<MarkOrderShippedMutationVariables["input"]>
 
 /** Generated response of the markOrderShipped mutation. */
-type MutateMarkOrderShippedResponse = Pick<Mutation, "markOrderShipped">
+type MutateMarkOrderShippedResponse = MarkOrderShippedMutation
 
 type Document = TypedDocumentNode<MutateMarkOrderShippedResponse, InputVariables<MutateMarkOrderShippedRequest>>
 

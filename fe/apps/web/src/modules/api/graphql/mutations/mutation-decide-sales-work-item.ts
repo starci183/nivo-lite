@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationDecideSalesWorkItemArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { DecideSalesWorkItemMutation, DecideSalesWorkItemMutationVariables } from "../__generated__/graphql"
 
 /** Generated input of the decideSalesWorkItem mutation. */
-export type MutateDecideSalesWorkItemRequest = MutationDecideSalesWorkItemArgs["input"]
+export type MutateDecideSalesWorkItemRequest = WireInput<DecideSalesWorkItemMutationVariables["input"]>
 
 /** Generated response of the decideSalesWorkItem mutation. */
-type MutateDecideSalesWorkItemResponse = Pick<Mutation, "decideSalesWorkItem">
+type MutateDecideSalesWorkItemResponse = DecideSalesWorkItemMutation
 
 type Document = TypedDocumentNode<MutateDecideSalesWorkItemResponse, InputVariables<MutateDecideSalesWorkItemRequest>>
 

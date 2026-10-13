@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationAssignResponsibilityArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { AssignResponsibilityMutation, AssignResponsibilityMutationVariables } from "../__generated__/graphql"
 
 /** Generated input of the assignResponsibility mutation. */
-export type MutateAssignResponsibilityRequest = MutationAssignResponsibilityArgs["input"]
+export type MutateAssignResponsibilityRequest = WireInput<AssignResponsibilityMutationVariables["input"]>
 
 /** Generated response of the assignResponsibility mutation. */
-type MutateAssignResponsibilityResponse = Pick<Mutation, "assignResponsibility">
+type MutateAssignResponsibilityResponse = AssignResponsibilityMutation
 
 type Document = TypedDocumentNode<MutateAssignResponsibilityResponse, InputVariables<MutateAssignResponsibilityRequest>>
 

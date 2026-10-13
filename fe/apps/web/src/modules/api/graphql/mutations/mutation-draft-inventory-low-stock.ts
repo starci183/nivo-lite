@@ -2,10 +2,10 @@ import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { MutateParams } from "../types"
-import type { Mutation } from "../__generated__/schema"
+import type { DraftInventoryLowStockMutation } from "../__generated__/graphql"
 
 /** The response of the `draftInventoryLowStock` mutation. */
-type MutateDraftInventoryLowStockResponse = Pick<Mutation, "draftInventoryLowStock">
+type MutateDraftInventoryLowStockResponse = DraftInventoryLowStockMutation
 
 const mutation1: TypedDocumentNode<MutateDraftInventoryLowStockResponse> = gql`
     mutation DraftInventoryLowStock {

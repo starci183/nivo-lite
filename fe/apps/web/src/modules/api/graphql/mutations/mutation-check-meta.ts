@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationCheckMetaArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { CheckMetaMutation, CheckMetaMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `checkMeta` mutation. */
-export type MutateCheckMetaRequest = MutationCheckMetaArgs["input"]
+export type MutateCheckMetaRequest = WireInput<CheckMetaMutationVariables["input"]>
 
 /** The response of the `checkMeta` mutation. */
-type MutateCheckMetaResponse = Pick<Mutation, "checkMeta">
+type MutateCheckMetaResponse = CheckMetaMutation
 
 const mutation1: TypedDocumentNode<MutateCheckMetaResponse, InputVariables<MutateCheckMetaRequest>> = gql`
     mutation CheckMeta($input: CheckMetaInput!) {
