@@ -1,9 +1,9 @@
 import { useTranslations } from "next-intl"
-import { useState, useTransition } from "react"
+import { useState } from "react"
 import { errorKey } from "@/modules/content"
-import { navigation } from "@/modules/i18n"
+import { useContentRefresh } from "./useContentRefresh"
 
-/** The part of a Server Action answer the runner reads: its kind and, for a failure, its code. */
+/** A local UI result; handled failures already have a GraphQL toast. */
 export interface ActionReply {
     readonly kind: string
     readonly code?: string
@@ -31,32 +31,34 @@ export interface ContentCommand {
     readonly run: <R extends ActionReply>(label: string, action: () => Promise<R>, onOk?: (done: R) => void) => void
 }
 
-/** Runs the Server Actions of a content surface in a transition and keeps their busy flag and message. */
+/** Tracks a content command and revalidates browser data when it completes. */
 export const useContentCommand = (): ContentCommand => {
     const t = useTranslations("content")
-    const router = navigation.useRouter()
-    const [isPending, startTransition] = useTransition()
+    const { refresh } = useContentRefresh()
+    const [isPending, setPending] = useState(false)
     const [busy, setBusy] = useState<string | null>(null)
     const [note, setNote] = useState<ContentNote | null>(null)
     const explain = (reply: ActionReply): string =>
         t("actionFailed", { error: t(errorKey({ kind: reply.kind, code: reply.code ?? "" })) })
     const run: ContentCommand["run"] = (label, action, onOk) => {
         setBusy(label)
+        setPending(true)
         setNote(null)
-        startTransition(async () => {
+        void (async () => {
             try {
                 const done = await action()
                 if (done.kind === "ok") {
                     onOk?.(done)
-                    router.refresh()
-                } else {
+                    await refresh()
+                } else if (done.kind !== "handled") {
                     setNote({ tone: "error", text: explain(done) })
                 }
             } catch {
                 setNote({ tone: "error", text: explain({ kind: "unavailable", code: "transport" }) })
             }
             setBusy(null)
-        })
+            setPending(false)
+        })()
     }
     return {
         isPending,

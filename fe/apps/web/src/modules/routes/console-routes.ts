@@ -9,6 +9,7 @@ export const CONSOLE_ROUTES = {
     responsibilities: "/responsibilities",
     authority: "/authority",
     decisions: "/decisions",
+    connections: "/connections",
     privacy: "/privacy",
     terms: "/terms",
     modules: "/modules",
@@ -24,3 +25,6 @@ export const agentChatHref = (agentId: string, tab?: string): string =>
 
 /** The responsibilities board filtered by one query string such as `status=open`. */
 export const responsibilitiesHref = (query: string): string => `${CONSOLE_ROUTES.responsibilities}?${query}`
+
+/** The decision log filtered to what one module did within the owner's rules. */
+export const policyLogHref = (module: string): string => `${CONSOLE_ROUTES.decisions}?kind=policy&dept=${module}`

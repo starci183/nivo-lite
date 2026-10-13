@@ -2,24 +2,18 @@ import { useTranslations } from "next-intl"
 import {
     channelRule,
     copyReadyText,
-    type ChannelWarning,
     type ContentChannel,
     type ContentItem,
     type ItemTransition,
     type MediaRef,
 } from "@/modules/content"
 import type { ActionReply, ContentCommand } from "./useContentCommand"
-import type { ContentEditorFormState, EditorSave } from "./useContentEditorForm"
+import type { ContentEditorFormState } from "@/hooks/rhf"
+import type { EditorSave } from "@/modules/content"
 
 /** An answer that may carry a value. */
 export interface ValuedReply<V> extends ActionReply {
     readonly value?: V
-}
-
-/** What a finished draft tells the editor. */
-export interface DraftDone {
-    readonly warnings: ReadonlyArray<ChannelWarning>
-    readonly seconds: number
 }
 
 /** A file that was stored for the post. */
@@ -28,14 +22,14 @@ export interface UploadedFile {
     readonly name: string
 }
 
-/** The Server Actions the editor commands run; the connected block hands them in. */
+/** The GraphQL actions the connected editor provides. */
 export interface EditorActions {
     readonly saveItem: (id: string, patch: Partial<EditorSave>) => Promise<ActionReply>
-    readonly draftItem: (id: string, hint: string) => Promise<ValuedReply<DraftDone>>
+    readonly draftItem: (id: string, hint: string) => Promise<ActionReply>
     readonly submitForApproval: (id: string) => Promise<ActionReply>
     readonly transitionItem: (id: string, kind: ItemTransition) => Promise<ActionReply>
     readonly markPublished: (id: string, channel: ContentChannel, url: string, how: string) => Promise<ActionReply>
-    readonly uploadMedia: (input: FormData) => Promise<ValuedReply<UploadedFile>>
+    readonly uploadMedia: (file: File) => Promise<ValuedReply<UploadedFile>>
 }
 
 /** What the editor needs to run its commands. */
@@ -46,8 +40,6 @@ export interface EditorCommandInput {
     readonly command: ContentCommand
     /** Closes the editor. */
     readonly onClose: () => void
-    /** Shows the findings of a fresh draft. */
-    readonly onWarnings: (warnings: ReadonlyArray<ChannelWarning>) => void
 }
 
 /** The proof typed for one channel when marking it posted. */
@@ -68,36 +60,24 @@ export interface EditorCommands {
     readonly markPosted: (channel: ContentChannel, proof: PostedProof | undefined) => void
 }
 
-const refusedDate = (body: unknown): body is "date_invalid" | "time_invalid" => typeof body === "string"
-
 /** The commands of the post editor: save, draft with AI, send for approval, status changes, upload, copy and mark posted. */
 export const useContentEditorCommands = (input: EditorCommandInput): EditorCommands => {
     const t = useTranslations("content")
     const { item, state, command, actions } = input
-    const failed = (code: string): ActionReply => ({ kind: "invalid", code })
     const saveAll = async (): Promise<ActionReply> => {
-        const body = state.build(true)
-        return refusedDate(body) ? failed(body) : actions.saveItem(item.id, body)
+        const body = await state.build(true)
+        return body === undefined ? { kind: "handled" } : actions.saveItem(item.id, body)
     }
     return {
         save: () => command.run("save", saveAll, () => command.say("ok", t("saved"))),
         draft: (hint) =>
-            command.run(
-                "draft",
-                async (): Promise<ValuedReply<DraftDone>> => {
-                    // Keep what was typed (title, date, theme) before the AI rewrites the channel texts.
-                    const body = state.build(false)
-                    if (refusedDate(body)) return failed(body)
-                    const saved = await actions.saveItem(item.id, body)
-                    return saved.kind === "ok" ? actions.draftItem(item.id, hint) : saved
-                },
-                (done) => {
-                    const summary = done.value
-                    if (summary === undefined) return
-                    input.onWarnings(summary.warnings)
-                    command.say("ok", t("draftReady", { s: summary.seconds }))
-                },
-            ),
+            command.run("draft", async (): Promise<ActionReply> => {
+                // Keep what was typed (title, date, theme) before the AI rewrites the channel texts.
+                const body = await state.build(false)
+                if (body === undefined) return { kind: "handled" }
+                const saved = await actions.saveItem(item.id, body)
+                return saved.kind === "ok" ? actions.draftItem(item.id, hint) : saved
+            }),
         submit: () =>
             command.run(
                 "submit",
@@ -119,10 +99,8 @@ export const useContentEditorCommands = (input: EditorCommandInput): EditorComma
                 },
             ),
         upload: (file) => {
-            const form = new FormData()
-            form.set("file", file)
             command.run("upload", async () => {
-                const stored = await actions.uploadMedia(form)
+                const stored = await actions.uploadMedia(file)
                 if (stored.kind !== "ok" || stored.value === undefined) return stored
                 const media = [
                     ...state.form.media,

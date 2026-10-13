@@ -62,7 +62,6 @@ export type {
     AgentOption,
     Connection,
     ConnectionCheck,
-    ConnectionGrant,
     ConnectionStatus,
     ConnectorAudience,
     ConnectorCategory,
@@ -71,7 +70,6 @@ export type {
     Environment,
     FirstEvent,
     FirstEventState,
-    GoogleConsent,
     MetaCheckSummary,
     Provider,
     ProviderGroup,
@@ -110,10 +108,9 @@ export type {
     WebhookView,
     WizardConnection,
     WizardNote,
-    ZaloAuthorizeUrl,
     ZaloWizardConnection,
 } from "./connection-wizard"
-export type { MetaAuthorization, MetaCheck, MetaWizardConnection } from "./connection-wizard"
+export type { MetaCheck, MetaWizardConnection } from "./connection-wizard"
 export type { DataSlot, SlotLabels } from "./slot"
 export type {
     InventorySay,
@@ -222,3 +219,12 @@ export type {
     IdeaDecision,
     DocumentVisibility,
 } from "./knowledge"
+export type {
+    AgentDashboardView,
+    DashboardConnection,
+    DashboardRow,
+    DashboardDone,
+    DashboardKnowledge,
+    DashboardRegion,
+    DashboardWaiting,
+} from "./agent-dashboard"

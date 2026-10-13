@@ -23,3 +23,18 @@ export const agentHref = (
 
 /** The list of the instances of a type (/agents/<type>?list=1): shown even when there is only one, so adding a new one is always reachable. */
 export const agentListHref = (module: ModuleKey): string => `${AGENTS_ROUTE}/${module}?list=1`
+
+/** Options of a workbench deep link. */
+interface WorkbenchHrefOptions {
+    readonly tab?: string
+    readonly focus?: string
+    readonly installationId?: string | null
+}
+
+/** A workbench deep link, optionally on a tab, focused on one record, or on one installed instance (`?tab=` and `?focus=`). */
+export const workbenchPath = (module: ModuleKey, opts: WorkbenchHrefOptions = {}): string => {
+    const query = new URLSearchParams()
+    if (opts.tab) query.set("tab", opts.tab)
+    if (opts.focus) query.set("focus", opts.focus)
+    return agentHref(module, opts.installationId ?? null, "workbench", query.toString())
+}
