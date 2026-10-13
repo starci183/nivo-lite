@@ -67,3 +67,21 @@ export interface LeadConversationRow {
     /** The customer's name. */
     visitor_name: string | null
 }
+
+/** A workspace-scoped agent chat history row. */
+export interface ChatConversationRow {
+    /** The conversation. */
+    readonly id: string
+    /** Test or customer. */
+    readonly kind: string
+    /** The customer channel. */
+    readonly channel: string
+    /** The visitor name. */
+    readonly visitor_name: string | null
+    /** The captured lead. */
+    readonly lead_id: string | null
+    /** The person currently holding the chat. */
+    readonly handled_by: string | null
+    /** Creation instant as database text. */
+    readonly created_at: string
+}

@@ -10,6 +10,9 @@ import type {
     OptionalChannel,
     OptionalLeadConversation,
     TurnConversation,
+    ChatConversation,
+    OpenChatConversation,
+    ChatHolder,
 } from "./agent-conversations.contracts"
 import { AgentConversationsError, AgentConversationsErrorCode } from "./errors/agent-conversations.error"
 import type {
@@ -17,6 +20,7 @@ import type {
     ConversationTargetRow,
     LeadConversationRow,
     TurnConversationRow,
+    ChatConversationRow,
 } from "./persistence/agent-conversations.rows"
 import {
     ARCHIVE_CONVERSATION,
@@ -29,6 +33,10 @@ import {
     INSERT_CONVERSATION,
     REBIND_CONVERSATION_AGENT,
     UPDATE_VISITOR_NAME,
+    LIST_CHAT_CONVERSATIONS,
+    LOCK_CHAT_CONVERSATION,
+    INSERT_CHAT_CONVERSATION,
+    SET_CHAT_HOLDER,
 } from "./persistence/agent-conversations.sql"
 
 const refOf = (row: ConversationRefRow): ConversationRef => ({
@@ -47,10 +55,59 @@ const targetOf = (row: ConversationTargetRow): ConversationTarget => ({
     connectionId: row.connection_id,
 })
 
+const chatOf = (row: ChatConversationRow): ChatConversation => ({
+    id: row.id,
+    kind: row.kind === "customer" ? "customer" : "test",
+    channel: row.channel,
+    visitorName: row.visitor_name,
+    leadId: row.lead_id,
+    handledBy: row.handled_by,
+    createdAt: new Date(row.created_at).toISOString(),
+})
+
 @Injectable()
 /** The conversations customers have with the workspace's agents on a channel; the only writer of agent_conversations. */
 export class AgentConversationsService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+
+    /** The newest hundred conversations of the agent in the proven workspace. */
+    async listChat(workspaceId: string, agentId: string): Promise<ReadonlyArray<ChatConversation>> {
+        return (
+            await this.entityManager.query<Array<ChatConversationRow>>(LIST_CHAT_CONVERSATIONS, [workspaceId, agentId])
+        ).map(chatOf)
+    }
+
+    /** Opens a test or simulated customer conversation inside the caller's transaction. */
+    async openChat(input: OpenChatConversation, manager: EntityManager): Promise<ChatConversation> {
+        const [row] = await manager.query<Array<ChatConversationRow>>(INSERT_CHAT_CONVERSATION, [
+            input.workspaceId,
+            input.agentId,
+            input.kind,
+            input.visitorName,
+        ])
+        if (row === undefined) throw new AgentConversationsError({ code: AgentConversationsErrorCode.NotStored })
+        return chatOf(row)
+    }
+
+    /** Locks and proves the chat belongs to the workspace before its state changes. */
+    async lockChat(workspaceId: string, conversationId: string, manager: EntityManager): Promise<ChatConversation> {
+        const [row] = await manager.query<Array<ChatConversationRow>>(LOCK_CHAT_CONVERSATION, [
+            workspaceId,
+            conversationId,
+        ])
+        if (row === undefined) throw new AgentConversationsError({ code: AgentConversationsErrorCode.NotFound })
+        return chatOf(row)
+    }
+
+    /** Writes who holds a chat using the transaction that already locked it. */
+    async setChatHolder(
+        workspaceId: string,
+        conversationId: string,
+        holder: ChatHolder,
+        manager: EntityManager,
+    ): Promise<void> {
+        await manager.query(SET_CHAT_HOLDER, [workspaceId, conversationId, holder])
+    }
 
     /** The conversation of one customer on one connection, or a refusal when they never wrote. */
     async find(

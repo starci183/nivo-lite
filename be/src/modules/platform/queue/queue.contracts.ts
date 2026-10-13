@@ -1,3 +1,16 @@
+/** The authoritative outbox state of a workspace job exposed through the backend status function. */
+export interface QueueJobStatus {
+    /** The stable queue outbox id. */
+    readonly id: string
+    /** Retried work is queued; only archived work is failed. */
+    readonly state: "queued" | "running" | "done" | "failed"
+    /** How many deliveries have started. */
+    readonly attempts: number
+}
+
+/** The selected job's state, or null when the workspace has no matching job. */
+export type OptionalQueueJobStatus = QueueJobStatus | null
+
 /** A recurring task: pg_cron upserts it by `id`, so every replica of an app may register it and the deployment still fires it once per interval. */
 export interface QueueSchedulerDefinition {
     /** The queue the ticks go to; its processor handles every tick like any other job. */

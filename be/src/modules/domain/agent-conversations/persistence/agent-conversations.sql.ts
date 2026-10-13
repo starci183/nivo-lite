@@ -56,3 +56,21 @@ WHERE workspace_id = $1::uuid AND id = $2::uuid`
 /** A person holds the conversation from now on: the AI stays quiet until they hand it back ($1 workspace, $2 conversation, $3 holder). */
 export const HAND_CONVERSATION_TO_PERSON = sql`UPDATE public.agent_conversations SET handled_by = $3, handled_at = now()
 WHERE workspace_id = $1::uuid AND id = $2::uuid`
+
+/** The bounded history of an agent ($1 workspace, $2 agent). */
+export const LIST_CHAT_CONVERSATIONS = sql`SELECT id, kind, channel, visitor_name, lead_id, handled_by, created_at::text
+FROM public.agent_conversations WHERE workspace_id = $1::uuid AND agent_id = $2::uuid
+ORDER BY created_at DESC, id DESC LIMIT 100`
+
+/** The scoped conversation, locked while the next message or takeover is written ($1 workspace, $2 conversation). */
+export const LOCK_CHAT_CONVERSATION = sql`SELECT id, kind, channel, visitor_name, lead_id, handled_by, created_at::text
+FROM public.agent_conversations WHERE workspace_id = $1::uuid AND id = $2::uuid LIMIT 1 FOR UPDATE`
+
+/** Opens a test or simulated website customer conversation ($1 workspace, $2 agent, $3 kind, $4 visitor). */
+export const INSERT_CHAT_CONVERSATION = sql`INSERT INTO public.agent_conversations (workspace_id, agent_id, kind, visitor_name)
+VALUES ($1::uuid, $2::uuid, $3, $4) RETURNING id, kind, channel, visitor_name, lead_id, handled_by, created_at::text`
+
+/** Takes a chat over or returns it to the agent ($1 workspace, $2 conversation, $3 holder or null). */
+export const SET_CHAT_HOLDER = sql`UPDATE public.agent_conversations
+SET handled_by = $3, handled_at = CASE WHEN $3::text IS NULL THEN NULL ELSE now() END
+WHERE workspace_id = $1::uuid AND id = $2::uuid`

@@ -39,7 +39,7 @@ export class LeadRecordsService {
         return lead
     }
 
-    /** The customer an input belongs to: by phone, then email, then exact name and channel when the input has no contact at all. */
+    /** Matches a customer of the same origin by phone, email, or exact name and channel when the input has no contact. */
     async match(match: LeadMatch): Promise<OptionalLeadRecord> {
         const name = match.name?.trim() ?? ""
         const rows = await this.entityManager.query<Array<LeadRecordRow>>(MATCH_LEAD, [
@@ -48,6 +48,7 @@ export class LeadRecordsService {
             match.email,
             name === "" ? null : name,
             match.channel,
+            match.origin ?? "live",
         ])
         return rows[0] ?? null
     }

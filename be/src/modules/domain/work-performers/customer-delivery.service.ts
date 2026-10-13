@@ -41,7 +41,7 @@ export class CustomerDeliveryService {
         by: PerformedBy,
         kind: string,
     ): Promise<Performed> {
-        const sent = await this.toCustomer(ctx, customer, text)
+        const sent = await this.toCustomer(ctx, customer, text, item.origin)
         await this.evidence.log(ctx, {
             lead_id: customer.id,
             work_item_id: item.id,
@@ -59,8 +59,16 @@ export class CustomerDeliveryService {
         }
     }
 
-    /** Delivers a message to the customer in their latest conversation. */
-    async toCustomer(ctx: WorkContext, customer: DeliveryCustomer, text: string): Promise<CustomerDelivery> {
+    /** Records simulation honestly; live work delivers in the customer's latest conversation. */
+    async toCustomer(
+        ctx: WorkContext,
+        customer: DeliveryCustomer,
+        text: string,
+        origin: string = "live",
+    ): Promise<CustomerDelivery> {
+        if (origin === "simulated") {
+            return { summary: this.kit.text(ctx, "simulatedDelivery", { channel: customer.channel }), real: false }
+        }
         const conversation = await this.conversations.latestOfLead(ctx.workspaceId, customer.id, null)
         if (conversation === null) {
             return { summary: this.kit.text(ctx, "simulatedDelivery", { channel: customer.channel }), real: false }

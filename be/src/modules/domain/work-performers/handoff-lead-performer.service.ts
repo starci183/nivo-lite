@@ -43,6 +43,7 @@ export class HandoffLeadPerformerService implements WorkPerformer {
             email,
             name: textOf(fields.contact_name),
             channel,
+            origin: item.origin,
         })
         const lead =
             known ??

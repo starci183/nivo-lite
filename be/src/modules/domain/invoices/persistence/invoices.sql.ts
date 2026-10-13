@@ -8,13 +8,13 @@ FROM public.invoices WHERE workspace_id = $1::uuid AND id = $2::uuid LIMIT 1`
 export const FIND_INVOICE_OF_ORDER = sql`SELECT id, workspace_id, order_id, lead_id, invoice_no, amount_vnd::float8 AS amount_vnd, status, origin, issued_by, paid_at::text AS paid_at
 FROM public.invoices WHERE workspace_id = $1::uuid AND order_id = $2::uuid LIMIT 1`
 
-/** The newest issued invoices of the workspace with the order number and the customer's name, the ones a payment may settle ($1 workspace, $2 how many). */
+/** The newest issued invoices of the same origin with the order and customer labels ($1 workspace, $2 how many, $3 origin). */
 export const LIST_ISSUED_INVOICES = sql`SELECT i.id, i.workspace_id, i.order_id, i.lead_id, i.invoice_no, i.amount_vnd::float8 AS amount_vnd, i.status, i.origin, i.issued_by, i.paid_at::text AS paid_at,
        o.order_no, l.contact_name
 FROM public.invoices i
 LEFT JOIN public.orders o ON o.id = i.order_id
 LEFT JOIN public.leads l ON l.id = i.lead_id
-WHERE i.workspace_id = $1::uuid AND i.status = 'issued'
+WHERE i.workspace_id = $1::uuid AND i.status = 'issued' AND COALESCE(i.origin, 'live') = $3::text
 ORDER BY i.created_at DESC LIMIT $2::int`
 
 /** The highest invoice number that starts with the prefix ($1 workspace, $2 prefix). */
@@ -27,10 +27,10 @@ VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5::bigint, $6::timestamptz, 'issued',
 ON CONFLICT DO NOTHING
 RETURNING id, workspace_id, order_id, lead_id, invoice_no, amount_vnd::float8 AS amount_vnd, status, origin, issued_by, paid_at::text AS paid_at`
 
-/** Marks an invoice paid and answers it ($1 workspace, $2 invoice, $3 payment time). */
+/** Marks an invoice of the payment's origin paid ($1 workspace, $2 invoice, $3 payment time, $4 origin). */
 export const MARK_INVOICE_PAID = sql`WITH changed AS (
     UPDATE public.invoices SET status = 'paid', paid_at = $3::timestamptz
-    WHERE workspace_id = $1::uuid AND id = $2::uuid
+    WHERE workspace_id = $1::uuid AND id = $2::uuid AND COALESCE(origin, 'live') = $4::text
     RETURNING id, workspace_id, order_id, lead_id, invoice_no, amount_vnd, status, origin, issued_by, paid_at
 )
 SELECT id, workspace_id, order_id, lead_id, invoice_no, amount_vnd::float8 AS amount_vnd, status, origin, issued_by, paid_at::text AS paid_at FROM changed`

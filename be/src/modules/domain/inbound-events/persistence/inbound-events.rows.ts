@@ -33,3 +33,11 @@ export interface InboundEventRow {
     /** Where it stands. */
     readonly status: string
 }
+
+/** A received input with feed timestamps and repeat-delivery counts. */
+export interface InboundEventFeedRow extends InboundEventRow {
+    /** How many duplicate deliveries have been blocked. */
+    readonly duplicate_count: number
+    /** When this event was first received, as ISO 8601 text. */
+    readonly created_at: string
+}

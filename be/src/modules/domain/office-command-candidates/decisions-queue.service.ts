@@ -1,10 +1,12 @@
 import { Injectable } from "@nestjs/common"
 import { DecisionJobsService } from "@modules/domain/decisions"
+import { InboxSimulationWorkerService } from "@modules/domain/inbox-simulation"
 import {
     isConfirmCommandPayload,
     isDecideExecutionPayload,
     isDecideWorkPayload,
     isProposeCommandPayload,
+    isSimulateInboundPayload,
 } from "@modules/queues/decisions"
 import { OfficeCommandService } from "./office-command.service"
 
@@ -18,10 +20,12 @@ export class DecisionsQueueService {
     constructor(
         private readonly decisions: DecisionJobsService,
         private readonly commands: OfficeCommandService,
+        private readonly simulator: InboxSimulationWorkerService,
     ) {}
 
     /** Does the work one job of the decisions queue names. */
     async handle(payload: object): Promise<void> {
+        if (isSimulateInboundPayload(payload)) return this.simulator.run(payload)
         if (isDecideWorkPayload(payload)) return this.decisions.decideWork(payload)
         if (isDecideExecutionPayload(payload)) return this.decisions.decideExecution(payload)
         if (isProposeCommandPayload(payload)) {

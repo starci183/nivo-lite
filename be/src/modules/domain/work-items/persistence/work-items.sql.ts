@@ -154,3 +154,16 @@ export const SETTLE_WAITING_CLAIMS = sql`
         RETURNING id, inbound_event_id
     )
     SELECT id, inbound_event_id FROM changed`
+
+/** The oldest available queued step belonging to this inbound input only ($1 workspace, $2 event, $3 now, $4 lease seconds). */
+export const NEXT_INBOUND_QUEUED_WORK_ITEM = sql`SELECT * FROM public.work_items
+WHERE workspace_id = $1::uuid AND inbound_event_id = $2::uuid AND status = 'queued' AND reason IS NULL
+    AND (updated_at = created_at OR updated_at < $3::timestamptz - make_interval(secs => $4::int))
+ORDER BY created_at ASC, id ASC LIMIT 1`
+
+/** Every pending, failed and decision-waiting step of the inbound input, including lease-held work ($1 workspace, $2 event). */
+export const READ_INBOUND_WORK_STATE = sql`SELECT
+    (COUNT(*) FILTER (WHERE status = 'queued'))::int AS queued,
+    (COUNT(*) FILTER (WHERE status = 'failed'))::int AS failed,
+    (COUNT(*) FILTER (WHERE status = 'waiting_decision'))::int AS waiting
+FROM public.work_items WHERE workspace_id = $1::uuid AND inbound_event_id = $2::uuid`

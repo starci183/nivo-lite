@@ -8,6 +8,7 @@ import type {
     DecideExecutionPayload,
     DecideWorkPayload,
     ProposeCommandPayload,
+    SimulateInboundPayload,
 } from "./decisions.contracts"
 
 @Injectable()
@@ -44,6 +45,14 @@ export class DecisionsQueue {
         return this.outbox.write(tx, DECISIONS_QUEUE, payload, {
             job: DecisionsJob.ConfirmCommand,
             dedupeKey: decisionsDedupeKey(DecisionsJob.ConfirmCommand, payload.candidateId),
+        })
+    }
+
+    /** Enqueues the simulator's department work in the transaction that records its inbound event. */
+    enqueueSimulateInbound(payload: SimulateInboundPayload, tx: EntityManager): Promise<void> {
+        return this.outbox.write(tx, DECISIONS_QUEUE, payload, {
+            job: DecisionsJob.SimulateInbound,
+            dedupeKey: decisionsDedupeKey(DecisionsJob.SimulateInbound, payload.inboundEventId),
         })
     }
 }

@@ -55,3 +55,11 @@ LIMIT 1`
 export const MARK_MESSAGE_DELIVERY = sql`UPDATE public.agent_messages
 SET delivery_status = $2, delivery_error = $3
 WHERE id = $1`
+
+/** The bounded thread in its proven workspace ($1 workspace, $2 conversation). */
+export const LIST_CHAT_MESSAGES = sql`SELECT id, role, body, created_at::text FROM public.agent_messages
+WHERE workspace_id = $1::uuid AND conversation_id = $2::uuid ORDER BY created_at, id LIMIT 300`
+
+/** A person's reply while they hold a customer chat ($1 workspace, $2 conversation, $3 body, $4 author name). */
+export const INSERT_HUMAN_MESSAGE = sql`INSERT INTO public.agent_messages (workspace_id, conversation_id, role, body, author_kind, author_name)
+VALUES ($1::uuid, $2::uuid, 'agent', $3, 'human', $4) RETURNING id`

@@ -1,10 +1,11 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
-import { QUEUE_OUTBOX, QUEUE_TRANSPORT, QUEUE_WORKER_REGISTRY } from "./queue.decorators"
+import { QUEUE_OUTBOX, QUEUE_STATUS, QUEUE_TRANSPORT, QUEUE_WORKER_REGISTRY } from "./queue.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./queue.module-definition"
 import { PgmqQueueTransportClient } from "./pgmq-queue-transport.client"
 import { QueueOutboxService } from "./queue-outbox.service"
 import { QueueWorkerService } from "./queue-worker.service"
+import { QueueStatusService } from "./queue-status.service"
 
 @Module({})
 /** The queues of an app over Supabase Queues (pgmq): the outbox writer, the workers and the schedulers, registered once per app over the primary connection. */
@@ -20,10 +21,12 @@ export class QueueModule extends ConfigurableModuleClass {
                 { provide: QUEUE_TRANSPORT, useExisting: PgmqQueueTransportClient },
                 QueueOutboxService,
                 QueueWorkerService,
+                QueueStatusService,
+                { provide: QUEUE_STATUS, useExisting: QueueStatusService },
                 { provide: QUEUE_OUTBOX, useExisting: QueueOutboxService },
                 { provide: QUEUE_WORKER_REGISTRY, useExisting: QueueWorkerService },
             ],
-            exports: [QUEUE_OUTBOX, QUEUE_WORKER_REGISTRY, QUEUE_TRANSPORT],
+            exports: [QUEUE_OUTBOX, QUEUE_WORKER_REGISTRY, QUEUE_TRANSPORT, QUEUE_STATUS],
         }
     }
 }

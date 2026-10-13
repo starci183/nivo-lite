@@ -99,3 +99,9 @@ export interface InboundInput {
     /** The channel's own event id: the idempotency key. */
     readonly eventId: string
 }
+
+/** A simulated input: the amount is retained so Sales and Accounting receive the same money the owner entered. */
+export interface SimulatedInboundInput extends InboundInput {
+    /** The amount in whole VND, or null when the input has none. */
+    readonly amountVnd: number | null
+}
