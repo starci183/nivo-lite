@@ -5,8 +5,8 @@ import { Secret } from "@modules/platform/config"
 import { BILLING_OPTIONS } from "./billing.decorators"
 import type { BillingOptions } from "./billing.options"
 import { sha256Hex } from "./channel-secret.policy"
-import { ConnectionSecretsService } from "./connection-secrets.service"
-import type { ConnectionSecret } from "./connection-secrets.service"
+import { PaymentSecretsService } from "./payment-secrets.service"
+import type { PaymentSecret } from "./payment-secrets.service"
 import { BillingErrorCode } from "./errors/billing.error"
 import { PaymentProofService } from "./payment-proof.service"
 
@@ -21,20 +21,20 @@ const OPTIONS: BillingOptions = {
     channelTokenKey: undefined,
 }
 
-const build = async (options: BillingOptions = OPTIONS, loaded: ConnectionSecret | null = null) => {
-    const secrets = mock<ConnectionSecretsService>()
+const build = async (options: Partial<BillingOptions> = {}, loaded: PaymentSecret | null = null) => {
+    const secrets = mock<PaymentSecretsService>()
     secrets.load.mockResolvedValue(loaded)
     const moduleRef = await Test.createTestingModule({
         providers: [
             PaymentProofService,
             { provide: BILLING_OPTIONS, useValue: builder<BillingOptions>(OPTIONS)(options) },
-            { provide: ConnectionSecretsService, useValue: secrets },
+            { provide: PaymentSecretsService, useValue: secrets },
         ],
     }).compile()
     return { proof: moduleRef.get(PaymentProofService), secrets }
 }
 
-const secretOf = (credential: object | string, webhookSecret = "hook"): ConnectionSecret => ({
+const secretOf = (credential: object | string, webhookSecret = "hook"): PaymentSecret => ({
     workspaceId: "ws-9",
     credential: typeof credential === "string" ? credential : JSON.stringify(credential),
     webhookSecret,

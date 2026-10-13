@@ -5,9 +5,7 @@ import type { ChannelSender } from "./channels.contracts"
 const senderFor = (...channels: Array<string>): ChannelSender => ({ channels, send: () => Promise.resolve(true) })
 
 const build = async () => {
-    const moduleRef = await Test.createTestingModule({
-        providers: [ChannelSenderRegistryService],
-    }).compile()
+    const moduleRef = await Test.createTestingModule({ providers: [ChannelSenderRegistryService] }).compile()
     return moduleRef.get(ChannelSenderRegistryService)
 }
 

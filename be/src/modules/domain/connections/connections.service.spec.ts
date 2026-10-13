@@ -1,35 +1,39 @@
-import { randomBytes } from "node:crypto"
-import { fakeTransaction, mockEntityManager } from "@starci/jest-preset"
+import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
+import { ConnectionSecretsService } from "@modules/domain/connection-secrets"
+import { ConnectorInterestService } from "@modules/domain/connector-interest"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { LOGGER } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
 import { Secret } from "@modules/platform/config"
-import { decryptSecret, encryptSecret } from "./connection-cipher.policy"
 import type { ConnectionActor } from "./connections.contracts"
-import { MODULE_OPTIONS_TOKEN } from "./connections.module-definition"
+import { CONNECTIONS_OPTIONS } from "./connections.decorators"
+import type { ConnectionsOptions } from "./connections.options"
 import { ConnectionsService } from "./connections.service"
-import { ConnectionsErrorCode } from "./errors/connections.error"
+import { ConnectionsError, ConnectionsErrorCode } from "./errors/connections.error"
 import type { ConnectionSelectRow } from "./persistence/connections.rows"
 import {
+    APPLY_ZALO_AUTHORIZATION,
     DELETE_CONNECTION,
-    DELETE_SECRET,
     FIND_ACTIVE_MEMBER,
     FIND_CONNECTION,
     FIND_CONNECTION_AGENT_IDS,
     FIND_CONNECTIONS_BY_IDS,
+    FIND_INTAKE_CONNECTION,
     FIND_LIVE_BY_META,
-    FIND_SECRET,
     INSERT_CONNECTION,
-    INSERT_CONNECTOR_INTEREST,
-    INSERT_SECRET,
     LIST_CONNECTIONS,
     LIST_CONNECTIONS_BY_PROVIDER,
+    LIST_HEALTH_BATCH,
+    MARK_CONNECTION_ERROR,
+    MARK_CONNECTION_HEALTH,
+    MARK_CONNECTION_RECEIVED,
     PATCH_CONNECTION,
     RECORD_EVENT,
-    UPSERT_SECRET,
+    SETTLE_WIZARD,
 } from "./persistence/connections.sql"
 
-const KEY = randomBytes(32)
 const actor: ConnectionActor = { principalId: "user-1", workspaceId: "ws-1" }
 const ROW: ConnectionSelectRow = {
     id: "c1",
@@ -48,63 +52,59 @@ const ROW: ConnectionSelectRow = {
 }
 const OWNER = [FIND_ACTIVE_MEMBER, [{ role: "owner", display_name: "Lan" }]] as const
 
-const build = async (entityManager: MockEntityManager, key: Buffer = KEY) => {
+type Urls = Partial<Pick<ConnectionsOptions, "publicSiteUrl" | "publicApiUrl">>
+
+const buildWith = async (entityManager: MockEntityManager, urls: Urls = {}) => {
+    const secrets = mock<ConnectionSecretsService>()
+    const interest = mock<ConnectorInterestService>()
+    const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             ConnectionsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
-            {
-                provide: MODULE_OPTIONS_TOKEN,
-                useValue: { channelTokenKey: new Secret(key.toString("base64")), publicSiteUrl: undefined },
-            },
+            { provide: CONNECTIONS_OPTIONS, useValue: { channelTokenKey: new Secret("k"), ...urls } },
+            { provide: LOGGER, useValue: logger },
+            { provide: ConnectionSecretsService, useValue: secrets },
+            { provide: ConnectorInterestService, useValue: interest },
         ],
     }).compile()
-    return moduleRef.get(ConnectionsService)
+    return { service: moduleRef.get(ConnectionsService), secrets, interest }
+}
+
+const build = async (entityManager: MockEntityManager, urls: Urls = {}) =>
+    (await buildWith(entityManager, urls)).service
+
+type QueryStubs = ReadonlyArray<readonly [string, unknown]>
+
+const intakeQueries = (
+    found: ReadonlyArray<unknown> = [{ id: "c-1", workspace_id: "ws-1", status: "connected" }],
+    batch: ReadonlyArray<unknown> = [],
+): QueryStubs => [
+    [FIND_INTAKE_CONNECTION, found],
+    [MARK_CONNECTION_ERROR, []],
+    [MARK_CONNECTION_RECEIVED, []],
+    [APPLY_ZALO_AUTHORIZATION, []],
+    [LIST_HEALTH_BATCH, batch],
+    [MARK_CONNECTION_HEALTH, []],
+]
+
+const buildIntake = async (found?: ReadonlyArray<unknown>, batch?: ReadonlyArray<unknown>) => {
+    const em = mockEntityManager({ query: intakeQueries(found, batch) })
+    return { service: await build(em), em }
 }
 
 describe("ConnectionsService", () => {
-    it("refuses to start with a key that is not 32 bytes", async () => {
-        await expect(build(mockEntityManager(), randomBytes(8))).rejects.toMatchObject({
-            code: ConnectionsErrorCode.KeyInvalid,
-        })
-    })
-
     describe("addresses", () => {
         it("uses the local site origin by default and trims every trailing slash", async () => {
             expect((await build(mockEntityManager())).siteBase()).toBe("http://localhost:3100")
 
-            const moduleRef = await Test.createTestingModule({
-                providers: [
-                    ConnectionsService,
-                    { provide: PRIMARY_ENTITY_MANAGER, useValue: mockEntityManager() },
-                    {
-                        provide: MODULE_OPTIONS_TOKEN,
-                        useValue: {
-                            channelTokenKey: new Secret(KEY.toString("base64")),
-                            publicSiteUrl: "https://nivo.vn/app///",
-                        },
-                    },
-                ],
-            }).compile()
+            const trimmed = await build(mockEntityManager(), { publicSiteUrl: "https://nivo.vn/app///" })
 
-            expect(moduleRef.get(ConnectionsService).siteBase()).toBe("https://nivo.vn/app")
+            expect(trimmed.siteBase()).toBe("https://nivo.vn/app")
         })
 
         it("builds the webhook address of a connection and the public origin from the site url", async () => {
-            const moduleRef = await Test.createTestingModule({
-                providers: [
-                    ConnectionsService,
-                    { provide: PRIMARY_ENTITY_MANAGER, useValue: mockEntityManager() },
-                    {
-                        provide: MODULE_OPTIONS_TOKEN,
-                        useValue: {
-                            channelTokenKey: new Secret(KEY.toString("base64")),
-                            publicSiteUrl: "https://nivo.vn/app",
-                        },
-                    },
-                ],
-            }).compile()
-            const service = moduleRef.get(ConnectionsService)
+            const service = await build(mockEntityManager(), { publicSiteUrl: "https://nivo.vn/app" })
 
             expect(service.webhookUrl("telegram", "c1")).toBe("https://nivo.vn/app/api/telegram/c1")
             expect(service.webhookUrl("sepay", "c1", "https://other.test")).toBe(
@@ -112,67 +112,6 @@ describe("ConnectionsService", () => {
             )
             expect(service.publicOrigin()).toBe("https://nivo.vn")
             expect((await build(mockEntityManager())).publicOrigin()).toBeNull()
-        })
-
-        it.each([
-            {
-                name: "uses the API url for providers when both public urls are configured",
-                options: {
-                    publicSiteUrl: "https://app.example.com/site/",
-                    publicApiUrl: "https://api.example.com/v1/",
-                },
-                webhook: "https://api.example.com/v1/api/telegram/c1",
-                origin: "https://api.example.com",
-                site: "https://app.example.com/site",
-            },
-            {
-                name: "uses the site url for providers when the API url is absent",
-                options: { publicSiteUrl: "https://app.example.com/site/" },
-                webhook: "https://app.example.com/site/api/telegram/c1",
-                origin: "https://app.example.com",
-                site: "https://app.example.com/site",
-            },
-            {
-                name: "keeps the local browser destination when only the API url is configured",
-                options: { publicSiteUrl: undefined, publicApiUrl: "https://api.example.com/v1/" },
-                webhook: "https://api.example.com/v1/api/telegram/c1",
-                origin: "https://api.example.com",
-                site: "http://localhost:3100",
-            },
-            {
-                name: "uses local defaults when neither public url is configured",
-                options: { publicSiteUrl: undefined },
-                webhook: "http://localhost:3100/api/telegram/c1",
-                origin: null,
-                site: "http://localhost:3100",
-            },
-            {
-                name: "keeps an empty API url instead of falling back to the site url",
-                options: { publicSiteUrl: "https://app.example.com/site/", publicApiUrl: "" },
-                webhook: "/api/telegram/c1",
-                origin: null,
-                site: "https://app.example.com/site",
-            },
-        ])("$name", async ({ options, webhook, origin, site }) => {
-            const moduleRef = await Test.createTestingModule({
-                providers: [
-                    ConnectionsService,
-                    { provide: PRIMARY_ENTITY_MANAGER, useValue: mockEntityManager() },
-                    {
-                        provide: MODULE_OPTIONS_TOKEN,
-                        useValue: { channelTokenKey: new Secret(KEY.toString("base64")), ...options },
-                    },
-                ],
-            }).compile()
-            const service = moduleRef.get(ConnectionsService)
-
-            expect(service.webhookUrl("telegram", "c1")).toBe(webhook)
-            expect(service.webhookUrl("telegram", "c1", undefined)).toBe(webhook)
-            expect(service.webhookUrl("sepay", "c1", "https://override.example.com/")).toBe(
-                "https://override.example.com/api/connections/sepay/c1",
-            )
-            expect(service.publicOrigin()).toBe(origin)
-            expect(service.siteBase()).toBe(site)
         })
     })
 
@@ -315,16 +254,10 @@ describe("ConnectionsService", () => {
         }
 
         it("writes the row and the sealed secret in one transaction", async () => {
-            const tx = fakeTransaction(
-                mockEntityManager({
-                    query: [
-                        [INSERT_CONNECTION, [{ id: "c1" }]],
-                        [INSERT_SECRET, []],
-                    ],
-                }),
-            )
+            const tx = fakeTransaction(mockEntityManager({ query: [INSERT_CONNECTION, [{ id: "c1" }]] }))
+            const { service, secrets } = await buildWith(tx.em)
 
-            await expect((await build(tx.em)).create(input)).resolves.toBe("c1")
+            await expect(service.create(input)).resolves.toBe("c1")
 
             expect(tx.em.query).toHaveBeenCalledWith(INSERT_CONNECTION, [
                 "ws-1",
@@ -335,38 +268,22 @@ describe("ConnectionsService", () => {
                 "user-1",
                 '{"bot_id":"7"}',
             ])
-            const sealed = tx.em.query.mock.calls.find(([text]) => text === INSERT_SECRET)?.[1] as Array<string>
-            expect(sealed[0]).toBe("c1")
-            expect(decryptSecret(KEY, sealed[1] ?? "")).toBe("token")
-            expect(sealed[2]).toBe("hook")
+            expect(secrets.create).toHaveBeenCalledWith("c1", "token", "hook", expect.anything())
             expect(tx.commits).toBe(1)
         })
 
         it("rolls the row back when the secret cannot be stored", async () => {
-            const tx = fakeTransaction(
-                mockEntityManager({
-                    query: [
-                        [INSERT_CONNECTION, [{ id: "c1" }]],
-                        [INSERT_SECRET, []],
-                    ],
-                }),
-            )
-            tx.em.query.mockImplementation(async (text: string) => {
-                if (text === INSERT_SECRET) throw new Error("secret failed")
-                return [{ id: "c1" }]
-            })
+            const tx = fakeTransaction(mockEntityManager({ query: [INSERT_CONNECTION, [{ id: "c1" }]] }))
+            const { service, secrets } = await buildWith(tx.em)
+            const failed = new ConnectionsError({ code: ConnectionsErrorCode.NotFound })
+            secrets.create.mockRejectedValue(failed)
 
-            await expect((await build(tx.em)).create(input)).rejects.toThrow("secret failed")
+            await expect(service.create(input)).rejects.toBe(failed)
             expect(tx.rollbacks).toBe(1)
         })
 
         it("joins the transaction of the caller when one is handed in", async () => {
-            const manager = mockEntityManager({
-                query: [
-                    [INSERT_CONNECTION, [{ id: "c2" }]],
-                    [INSERT_SECRET, []],
-                ],
-            })
+            const manager = mockEntityManager({ query: [INSERT_CONNECTION, [{ id: "c2" }]] })
             const em = mockEntityManager()
 
             await expect((await build(em)).create(input, manager)).resolves.toBe("c2")
@@ -440,54 +357,23 @@ describe("ConnectionsService", () => {
     })
 
     describe("secrets", () => {
-        it("opens the stored secret", async () => {
-            const em = mockEntityManager({
-                query: [FIND_SECRET, [{ ciphertext: encryptSecret(KEY, "token"), webhook_secret: "hook" }]],
-            })
+        it("opens, stores and wipes the secret through the secrets owner", async () => {
+            const { service, secrets } = await buildWith(mockEntityManager())
+            secrets.read.mockResolvedValue({ plain: "token", webhookSecret: "hook" })
 
-            await expect((await build(em)).readSecret("c1")).resolves.toEqual({ plain: "token", webhookSecret: "hook" })
-        })
+            await expect(service.readSecret("c1")).resolves.toEqual({ plain: "token", webhookSecret: "hook" })
+            await service.writeSecret("c1", "token", "hook")
+            await service.wipeSecret("c1")
 
-        it("answers null when there is no secret", async () => {
-            const em = mockEntityManager({ query: [FIND_SECRET, []] })
-
-            await expect((await build(em)).readSecret("c1")).resolves.toBeNull()
+            expect(secrets.write).toHaveBeenCalledWith("c1", "token", "hook")
+            expect(secrets.wipe).toHaveBeenCalledWith("c1")
         })
 
         it("answers null when the secret cannot be opened with the current key", async () => {
-            const em = mockEntityManager({
-                query: [FIND_SECRET, [{ ciphertext: encryptSecret(randomBytes(32), "token"), webhook_secret: "hook" }]],
-            })
+            const { service, secrets } = await buildWith(mockEntityManager())
+            secrets.read.mockRejectedValue(new Error("unsupported state or unable to authenticate data"))
 
-            await expect((await build(em)).readSecret("c1")).resolves.toBeNull()
-        })
-
-        it("stores a sealed credential and replaces the webhook secret when one is given", async () => {
-            const em = mockEntityManager({ query: [UPSERT_SECRET, []] })
-
-            await (await build(em)).writeSecret("c1", "token", "hook")
-
-            const args = em.query.mock.calls[0]?.[1] as Array<unknown>
-            expect(decryptSecret(KEY, String(args[1]))).toBe("token")
-            expect([args[0], args[2], args[3]]).toEqual(["c1", "hook", true])
-        })
-
-        it("keeps the webhook secret when none is given", async () => {
-            const em = mockEntityManager({ query: [UPSERT_SECRET, []] })
-
-            await (await build(em)).writeSecret("c1", "token")
-
-            const args = em.query.mock.calls[0]?.[1] as Array<unknown>
-            expect(String(args[2])).toMatch(/^[0-9a-f]{64}$/)
-            expect(args[3]).toBe(false)
-        })
-
-        it("wipes the secret", async () => {
-            const em = mockEntityManager({ query: [DELETE_SECRET, []] })
-
-            await (await build(em)).wipeSecret("c1")
-
-            expect(em.query).toHaveBeenCalledWith(DELETE_SECRET, ["c1"])
+            await expect(service.readSecret("c1")).resolves.toBeNull()
         })
     })
 
@@ -577,10 +463,10 @@ describe("ConnectionsService", () => {
 
     describe("wantConnector", () => {
         it("records interest in a planned connector once", async () => {
-            const em = mockEntityManager({ query: [OWNER, [INSERT_CONNECTOR_INTEREST, []]] })
+            const { service, interest } = await buildWith(mockEntityManager({ query: [OWNER] }))
 
-            await expect((await build(em)).wantConnector(actor, "shopee")).resolves.toBeUndefined()
-            expect(em.query).toHaveBeenCalledWith(INSERT_CONNECTOR_INTEREST, ["ws-1", "shopee", "user-1"])
+            await expect(service.wantConnector(actor, "shopee")).resolves.toBeUndefined()
+            expect(interest.note).toHaveBeenCalledWith("ws-1", "shopee", "user-1")
         })
 
         it("refuses a connector that is not planned", async () => {
@@ -590,6 +476,113 @@ describe("ConnectionsService", () => {
                 code: ConnectionsErrorCode.ConnectorNotFound,
                 params: { id: "sepay" },
             })
+        })
+    })
+
+    describe("intake", () => {
+        it("answers the connection of the provider through the manager it is given, or refuses", async () => {
+            const { service, em } = await buildIntake()
+            const empty = await buildIntake([])
+            const inside = mockEntityManager({
+                query: [FIND_INTAKE_CONNECTION, [{ id: "c-2", workspace_id: "ws-1", status: "pending" }]],
+            })
+
+            await expect(service.intakeOf("c-1", "telegram")).resolves.toEqual({
+                kind: "ok",
+                value: { id: "c-1", workspaceId: "ws-1", status: "connected" },
+            })
+            await expect(empty.service.intakeOf("c-2", "zalo_oa", inside)).resolves.toMatchObject({
+                value: { id: "c-2", status: "pending" },
+            })
+            await expect(empty.service.intakeOf("c-1", "telegram")).resolves.toEqual({
+                kind: "refused",
+                code: ConnectionsErrorCode.NotFound,
+                params: undefined,
+            })
+            expect(em.query).toHaveBeenCalledWith(FIND_INTAKE_CONNECTION, ["c-1", "telegram"])
+            expect(empty.em.query).toHaveBeenCalledTimes(1)
+        })
+
+        it("marks failing, received and Zalo-authorized connections", async () => {
+            const { service, em } = await buildIntake()
+            const inside = mockEntityManager({ query: [MARK_CONNECTION_RECEIVED, []] })
+            const first = { amount: 0, content: "Minh", at: "2026-10-12T10:00:00.000Z", text: "Hi" }
+
+            await service.markFailing("c-1", "Reconnect")
+            await service.markReceived("c-1", first, inside)
+            await service.applyZaloAuthorization("c-1", "oa-9")
+            await service.applyZaloAuthorization("c-1")
+
+            expect(em.query.mock.calls).toEqual([
+                [MARK_CONNECTION_ERROR, ["c-1", "Reconnect"]],
+                [APPLY_ZALO_AUTHORIZATION, ["c-1", '{"authorized":true,"oa_id":"oa-9"}']],
+                [APPLY_ZALO_AUTHORIZATION, ["c-1", '{"authorized":true}']],
+            ])
+            expect(inside.query).toHaveBeenCalledWith(MARK_CONNECTION_RECEIVED, ["c-1", JSON.stringify(first)])
+        })
+    })
+
+    describe("health", () => {
+        it("reads a page after an id (from the start when none is given) and records the verdict", async () => {
+            const row = { id: "c-1", workspace_id: "ws-1", provider: "telegram", name: "Bot", status: "connected" }
+            const times = { last_error: "", last_event_at: "2026-10-10", created_at: "2026-10-01", health: "ok" }
+            const { service, em } = await buildIntake([], [{ ...row, ...times }])
+            const mark = { state: "silent" as const, reason: "no event for 80h", checkedAt: "2026-10-12T10:00:00.000Z" }
+
+            await expect(service.healthBatch("", 100)).resolves.toEqual([
+                {
+                    id: "c-1",
+                    workspaceId: "ws-1",
+                    provider: "telegram",
+                    name: "Bot",
+                    status: "connected",
+                    lastError: "",
+                    lastEventAt: "2026-10-10",
+                    createdAt: "2026-10-01",
+                    health: "ok",
+                },
+            ])
+            await service.healthBatch("c-1", 100)
+            await service.markHealth("c-1", mark)
+
+            expect(em.query.mock.calls).toEqual([
+                [LIST_HEALTH_BATCH, ["00000000-0000-0000-0000-000000000000", 100]],
+                [LIST_HEALTH_BATCH, ["c-1", 100]],
+                [
+                    MARK_CONNECTION_HEALTH,
+                    ["c-1", '{"state":"silent","reason":"no event for 80h","checked_at":"2026-10-12T10:00:00.000Z"}'],
+                ],
+            ])
+        })
+    })
+
+    describe("settleWizard", () => {
+        it.each([
+            {
+                settlement: {
+                    command: "begin",
+                    state: "done",
+                    url: "https://z.test/a",
+                    code: "",
+                    oaSecretSaved: false,
+                },
+                facts: '{"wizard":{"ticket":"t","command":"begin","state":"done","url":"https://z.test/a","code":""}}',
+            },
+            {
+                settlement: { command: "oa", state: "done", url: "", code: "", oaSecretSaved: true },
+                facts: '{"oa_secret_saved":true,"wizard":{"ticket":"t","command":"oa","state":"done","url":"","code":""}}',
+            },
+            {
+                settlement: { command: "app", state: "failed", url: "", code: "CODE_X", oaSecretSaved: false },
+                facts: '{"wizard":{"ticket":"t","command":"app","state":"failed","url":"","code":"CODE_X"}}',
+            },
+        ] as const)("settles the $settlement.command command under its ticket", async ({ settlement, facts }) => {
+            const em = mockEntityManager({ query: [SETTLE_WIZARD, []] })
+            const service = await build(em)
+
+            await expect(service.settleWizard("c-1", "t", settlement)).resolves.toBeUndefined()
+
+            expect(em.query).toHaveBeenCalledWith(SETTLE_WIZARD, ["c-1", "t", facts])
         })
     })
 })

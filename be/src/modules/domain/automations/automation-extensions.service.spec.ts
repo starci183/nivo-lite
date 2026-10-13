@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
 import { LOGGER } from "@modules/platform/logging"
+import { mock } from "@starci/jest-preset"
 import type { Logger } from "@modules/platform/logging"
 import { AutomationExtensionsService } from "./automation-extensions.service"
 import type { AutomationExtension, ExecutorContext, ScanContext } from "./automation-ports.contracts"

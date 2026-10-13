@@ -1,33 +1,34 @@
 import { Test } from "@nestjs/testing"
-import { mock, mockEntityManager } from "@starci/jest-preset"
+import { builder, mock, mockEntityManager } from "@starci/jest-preset"
+import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import type { GenerateParams, GenerationFailure } from "./ai-generations.contracts"
+import type { GenerateParams } from "./ai-generations.contracts"
 import { AiGenerationsLogEvent } from "./ai-generations.log-events"
 import { DirectGenerationService } from "./direct-generation.service"
 import { GenerationRunnerService } from "./generation-runner.service"
 import { GenerationsService } from "./generations.service"
-import { INSERT_GENERATION } from "./persistence/ai-generations.sql"
+import { FIND_GENERATION_PROGRESS, INSERT_GENERATION } from "./persistence/ai-generations.sql"
 
-const PARAMS: GenerateParams = {
-    workspaceId: "ws-1",
-    purpose: "relay",
-    messages: [{ role: "user", content: "hello" }],
+const paramsOf = builder<GenerateParams>({
+    workspaceId: "w1",
+    purpose: "setup-chat",
+    messages: [{ role: "user", content: "hi" }],
     responseFormat: "text",
     kind: "relay",
     module: "office",
-}
+})
 
-const REFUSAL: GenerationFailure = { ok: false, reason: "quota", message: "The plan is full." }
+const BUSY = "The assistant is busy"
 
-const build = async (rows: ReadonlyArray<unknown> = []) => {
-    const entityManager = mockEntityManager({ query: [INSERT_GENERATION, rows] })
+const build = async (entityManager: MockEntityManager) => {
     const logger = mock<Logger>()
-    const generations = mock<GenerationsService>()
-    generations.refusalOf.mockResolvedValue(null)
-    generations.busyText.mockReturnValue("Try again.")
-    const runner = mock<GenerationRunnerService>()
+    const generations = mock<GenerationsService>({
+        refusalOf: jest.fn(() => Promise.resolve(null)),
+        busyText: jest.fn(() => BUSY),
+    })
+    const runner = mock<GenerationRunnerService>({ run: jest.fn(() => Promise.resolve("done" as const)) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             DirectGenerationService,
@@ -41,27 +42,65 @@ const build = async (rows: ReadonlyArray<unknown> = []) => {
 }
 
 describe("DirectGenerationService", () => {
-    it("returns a quota refusal without writing a generation", async () => {
-        const { service, generations, runner } = await build()
-        generations.refusalOf.mockResolvedValue(REFUSAL)
+    it("writes the row, runs it right here and answers its text", async () => {
+        const em = mockEntityManager({
+            query: [
+                [INSERT_GENERATION, [{ id: "g1" }]],
+                [
+                    FIND_GENERATION_PROGRESS,
+                    [{ status: "done", output: { text: "hello" }, usage: null, timings: { total_ms: 12 } }],
+                ],
+            ],
+        })
+        const { service, runner } = await build(em)
 
-        await expect(service.run(PARAMS)).resolves.toEqual(REFUSAL)
+        const outcome = await service.run(paramsOf({ timeoutMs: 1000 }))
 
-        expect(runner.run).not.toHaveBeenCalled()
+        expect(outcome).toEqual({
+            ok: true,
+            output: "hello",
+            generationId: "g1",
+            timings: { total_ms: 12 },
+            usage: null,
+        })
+        expect(em.query).toHaveBeenNthCalledWith(1, INSERT_GENERATION, [
+            "w1",
+            "setup-chat",
+            "office",
+            "relay",
+            '{"messages":[{"role":"user","content":"hi"}],"response_format":"text","timeout_ms":5000}',
+        ])
+        expect(runner.run).toHaveBeenCalledWith({ generationId: "g1", workspaceId: "w1" })
     })
 
-    it("answers the busy sentence when the insert writes no row", async () => {
-        const { service, logger, generations } = await build([])
+    it("answers the refusal of the allowance or the engine and writes nothing", async () => {
+        const { service, generations } = await build(mockEntityManager())
+        generations.refusalOf.mockResolvedValue({ ok: false, reason: "quota", message: "Over the plan" })
 
-        await expect(service.run(PARAMS)).resolves.toEqual({
-            ok: false,
-            reason: "error",
-            message: "Try again.",
-        })
+        await expect(service.run(paramsOf())).resolves.toEqual({ ok: false, reason: "quota", message: "Over the plan" })
+    })
 
-        expect(generations.busyText).toHaveBeenCalledWith(PARAMS)
-        expect(logger.error).toHaveBeenCalledWith(AiGenerationsLogEvent.GenerationFailed, expect.any(Error), {
-            purpose: "relay",
+    it("answers the busy sentence when the run left no text", async () => {
+        const em = mockEntityManager({
+            query: [
+                [INSERT_GENERATION, [{ id: "g1" }]],
+                [FIND_GENERATION_PROGRESS, [{ status: "error", output: null, usage: null, timings: {} }]],
+            ],
         })
+        const { service } = await build(em)
+
+        await expect(service.run(paramsOf())).resolves.toEqual({ ok: false, reason: "error", message: BUSY })
+    })
+
+    it("logs a failed insert and answers the busy sentence", async () => {
+        const em = mockEntityManager({ query: [INSERT_GENERATION, []] })
+        const { service, logger, runner } = await build(em)
+
+        await expect(service.run(paramsOf())).resolves.toEqual({ ok: false, reason: "error", message: BUSY })
+
+        expect(logger.error).toHaveBeenCalledWith(AiGenerationsLogEvent.GenerationFailed, expect.anything(), {
+            purpose: "setup-chat",
+        })
+        expect(runner.run).not.toHaveBeenCalled()
     })
 })
