@@ -1,3 +1,11 @@
+/** An address the connection is pinned to: the caller already validated it, so the client opens the socket there and never resolves the host name again. */
+export interface HttpPin {
+    /** The IP address to connect to. */
+    readonly address: string
+    /** The IP family of the address. */
+    readonly family: 4 | 6
+}
+
 /** The HTTP methods the client sends. */
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
 
@@ -17,6 +25,10 @@ export interface HttpRequest {
     readonly bytes?: Buffer
     /** How the answer body is read: parsed as JSON (default), kept as text (a string, empty when the answer had none) or kept as raw bytes (a Buffer). */
     readonly read?: "json" | "text" | "bytes"
+    /** Connects to this address instead of resolving the host name (the Host header and the TLS server name stay the URL's); a pinned call never follows redirects. */
+    readonly pin?: HttpPin
+    /** `manual` answers a redirect as it is (status and `location` header) instead of following it; the default follows. */
+    readonly redirect?: "follow" | "manual"
     /** How long to wait for the answer before the call fails as a timeout. */
     readonly timeoutMs: number
     /** Cancels the call when aborted. */
