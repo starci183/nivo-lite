@@ -1,6 +1,6 @@
-import { ModuleCatalog } from "@/features/modules-core/ModuleCatalog";
+import { AgentsCatalogPage } from "@/features/pages/AgentsCatalogPage"
 
-/** STATE-8: the module catalogue itself, with no installations yet - the registry's cards real, each status and action a skeleton. */
-const ModulesCatalogLoading = () => <ModuleCatalog isLoading installations={[]} canInstall={false} />;
+/** The catalogue itself while the installations load. */
+const Loading = () => <AgentsCatalogPage isLoading />
 
-export default ModulesCatalogLoading;
+export default Loading

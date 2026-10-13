@@ -6,10 +6,9 @@ Thư mục này chứa các tài nguyên của NIVO được nạp (seed) vào S
 
 ```
 resources/
-  modules/                  Registry module: <key>/module.json (tên, quyền hạn, gates, ...), _categories.json
   nivo-knowledge/           Tri thức NIVO nền, chỉ đọc với thành viên workspace
     core/                   Dùng chung cho mọi module
-    <key>/                  Một thư mục mỗi module (knowledge_folder trong module.json)
+    <key>/                  Một thư mục mỗi module (knowledgeFolder trong danh mục module của be)
       <slug>.md             Một tài liệu = một dòng trong bảng nivo_knowledge
 ```
 
@@ -25,7 +24,7 @@ Sau này có thể thêm loại tài nguyên khác theo cùng cách, ví dụ `r
 
 ## Registry module
 
-`resources/modules/<key>/module.json` là nguồn duy nhất của danh sách module. `npm run gen:modules` sinh `src/lib/module-registry.generated.ts`; `npm run seed:modules` nạp bảng `modules` và `authority_actions`. Xem `docs/ADDING-A-MODULE.md`.
+The module catalogue is typed data in `be/src/modules/domain/modules` (served by `GET /modules`); `cli seed-modules run` mirrors it into the `modules` and `authority_actions` tables. The front end reads the mirror in `src/modules/catalog`.
 
 ## Nạp vào Supabase
 
