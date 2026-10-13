@@ -123,6 +123,14 @@ export class BookingDeskService {
     /** Moves a booking to another time or resource; a taken place is refused unless forced. */
     async move(userId: string, params: MoveBookingParams): Promise<DeskPlacement> {
         await this.members.require(userId, params.workspaceId, ["owner", "manager"])
+        return this.moveApproved(params)
+    }
+
+    /**
+     * Moves a booking once the decision is taken (the owner on the calendar, or the gate on a customer's request): an empty resource keeps
+     * the booking's own; a taken place is refused unless forced.
+     */
+    async moveApproved(params: MoveBookingParams): Promise<DeskPlacement> {
         const settings = await this.models.settings(params.workspaceId)
         const startMs = Date.parse(params.startAt)
         const nowMs = this.clock.now().getTime()
@@ -134,7 +142,7 @@ export class BookingDeskService {
                 manager,
                 workspaceId: params.workspaceId,
                 bookingId: params.id,
-                resourceId: params.resourceId,
+                resourceId: params.resourceId === "" ? booking.resource_id : params.resourceId,
                 partySize: booking.party_size,
                 startMs,
                 endMs,
@@ -158,6 +166,11 @@ export class BookingDeskService {
     /** Confirms a requested booking and plans its reminders; a booking that is not a request stays as it is. */
     async confirm(userId: string, ref: BookingRef): Promise<StatusChange> {
         await this.members.require(userId, ref.workspaceId, ["owner", "manager"])
+        return this.confirmApproved(ref)
+    }
+
+    /** Confirms a requested booking once the decision is taken (the owner, or the gate); anything else stays as it is. */
+    async confirmApproved(ref: BookingRef): Promise<StatusChange> {
         const settings = await this.models.settings(ref.workspaceId)
         const nowMs = this.clock.now().getTime()
         return this.entityManager.transaction(async (manager) => {
@@ -220,6 +233,21 @@ export class BookingDeskService {
             await this.lockActive(manager, ref)
             await manager.query(CANCEL_BOOKING, [ref.workspaceId, ref.id, bookingIsoOf(nowMs), "owner_cancelled"])
             await this.reminders.cancel(manager, ref.id, "owner_cancelled")
+            return { status: "cancelled", feeDue: false }
+        })
+    }
+
+    /**
+     * Cancels a booking the gate let a customer's request through for; a booking that is already closed answers its status and changes
+     * nothing. The fee of a late cancellation and the notice to the customer follow from the status change (booking_status job).
+     */
+    cancelApproved(ref: BookingRef, reason: string): Promise<StatusChange> {
+        const nowMs = this.clock.now().getTime()
+        return this.entityManager.transaction(async (manager) => {
+            const booking = await this.lock(manager, ref)
+            if (!isActiveStatus(booking.status)) return { status: booking.status, feeDue: false }
+            await manager.query(CANCEL_BOOKING, [ref.workspaceId, ref.id, bookingIsoOf(nowMs), reason])
+            await this.reminders.cancel(manager, ref.id, "customer_cancelled")
             return { status: "cancelled", feeDue: false }
         })
     }

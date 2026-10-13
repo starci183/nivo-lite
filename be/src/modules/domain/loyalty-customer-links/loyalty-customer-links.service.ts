@@ -1,9 +1,16 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { LeadLinkSource, PushConversation, PushTarget } from "./loyalty-customer-links.contracts"
+import type {
+    ChatCustomerId,
+    ChatCustomerRef,
+    LeadLinkSource,
+    PushConversation,
+    PushTarget,
+} from "./loyalty-customer-links.contracts"
 import {
     COUNT_REACHABLE,
+    SELECT_CHAT_CUSTOMER,
     SELECT_PUSH_CONVERSATION,
     UPSERT_CHANNEL_LINKS,
     UPSERT_CONVERSATION_LINKS,
@@ -48,5 +55,20 @@ export class LoyaltyCustomerLinksService {
             customerId,
         ])
         return row ?? null
+    }
+
+    /** The member behind a chat, only through what NIVO already links to it: a stranger who types a phone number learns nothing. */
+    async customerOfChat(ref: ChatCustomerRef): Promise<ChatCustomerId> {
+        const account =
+            ref.externalId === null || ref.externalId === ""
+                ? null
+                : `${ref.channel}:${ref.externalId.replace(/:.*$/u, "")}`
+        const [row] = await this.entityManager.query<Array<{ customer_id: string }>>(SELECT_CHAT_CUSTOMER, [
+            ref.workspaceId,
+            ref.conversationId,
+            ref.leadId,
+            account,
+        ])
+        return row?.customer_id ?? null
     }
 }

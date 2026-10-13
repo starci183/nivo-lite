@@ -1,3 +1,4 @@
+import type { ChatLink } from "./booking-chat.contracts"
 import type { EntityManager } from "typeorm"
 import type { SlotCheck } from "./policies/availability.policy"
 
@@ -253,7 +254,7 @@ export interface PublicBookParams extends PublicPageParams {
     readonly website: string
 }
 /** Records a validated customer request in the workspace calendar, independent of a public page. */
-export interface WorkspaceBookParams extends Omit<PublicBookParams, "slug" | "website" | "token"> {
+export interface WorkspaceBookParams extends Omit<PublicBookParams, "slug" | "website" | "token">, Partial<ChatLink> {
     /** The workspace that receives the request. */ readonly workspaceId: string
     /** The form token, or complete trusted chat key. */ readonly token: string
     /** The channel; chat keys already include their namespace. */ readonly sourceChannel: string
@@ -284,16 +285,6 @@ export interface BookingUnplaced {
 }
 /** The result of reserving or parking a workspace booking request. */
 export type BookingPlacement = BookingPlaced | BookingUnplaced
-/** The next future booking for which a customer may ask the owner to cancel. */
-export interface CancellableBooking {
-    /** The booking to identify in the owner's decision. */ readonly id: string
-    /** The customer lead, when linked. */ readonly leadId: string | null
-    /** The future start instant, ISO 8601. */ readonly startIso: string
-    /** The service name for the owner's decision. */ readonly serviceName: string
-    /** The customer name for the owner's decision. */ readonly customerName: string
-}
-/** A next cancellable booking, or none when no future request or confirmation matches. */
-export type OptionalCancellableBooking = CancellableBooking | null
 /** How a public booking ended. */
 export type PublicBookState = "confirmed" | "waiting" | "invalid" | "failed"
 /** The word for the page to show, never prose. */

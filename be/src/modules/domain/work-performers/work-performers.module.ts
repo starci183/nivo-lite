@@ -1,6 +1,9 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { N8N_MAILER } from "@modules/domain/n8n-runs"
+import { BookingChatChangesService } from "./booking-chat-changes.service"
+import { BookingChatService } from "./booking-chat.service"
+import { BookingPerformerService } from "./booking-performer.service"
 import { BookingToolsService } from "./booking-tools.service"
 import { CarePerformerService } from "./care-performer.service"
 import { ClassifyLeadPerformerService } from "./classify-lead-performer.service"
@@ -17,6 +20,7 @@ import { IssueInvoicePerformerService } from "./issue-invoice-performer.service"
 import { PaymentInstructionsService } from "./payment-instructions.service"
 import { PerformerKitService } from "./performer-kit.service"
 import { QuotePerformerService } from "./quote-performer.service"
+import { RedeemRewardPerformerService } from "./redeem-reward-performer.service"
 import { ReconcilePaymentPerformerService } from "./reconcile-payment-performer.service"
 import { ReplyCustomerPerformerService } from "./reply-customer-performer.service"
 import { SendEmailPerformerService } from "./send-email-performer.service"
@@ -53,6 +57,10 @@ export class WorkPerformersModule extends ConfigurableModuleClass {
                 ReconcilePaymentPerformerService,
                 ReplyCustomerPerformerService,
                 SendEmailPerformerService,
+                BookingPerformerService,
+                BookingChatService,
+                BookingChatChangesService,
+                RedeemRewardPerformerService,
                 WorkPerformersRegistrarService,
                 ConversationLeadsService,
                 HandoffToolService,
@@ -63,6 +71,7 @@ export class WorkPerformersModule extends ConfigurableModuleClass {
                 { provide: N8N_MAILER, useExisting: WorkspaceMailerService },
             ],
             exports: [
+                BookingChatService,
                 BookingToolsService,
                 PerformerKitService,
                 ConversationLeadsService,

@@ -41,3 +41,22 @@ JOIN public.agent_conversations c ON c.workspace_id = l.workspace_id AND c.kind 
 WHERE l.workspace_id = $1 AND l.customer_id = $2
 ORDER BY (c.channel IN ('telegram', 'zalo')) DESC, c.created_at DESC
 LIMIT 1`
+
+/**
+ * The customer behind a chat, through what is already linked to it: the conversation, its lead, its channel account; else the customer
+ * whose phone or email is the lead's ($1 workspace, $2 conversation, $3 lead or null, $4 channel ref or null). A chat never creates one.
+ */
+export const SELECT_CHAT_CUSTOMER = sql`SELECT customer_id FROM (
+    SELECT l.customer_id, CASE l.kind WHEN 'conversation' THEN 0 WHEN 'lead' THEN 1 ELSE 2 END AS rank
+    FROM public.loyalty_customer_links l
+    WHERE l.workspace_id = $1
+      AND ((l.kind = 'conversation' AND l.ref = $2) OR (l.kind = 'lead' AND l.ref = $3) OR (l.kind = 'channel' AND l.ref = $4))
+    UNION ALL
+    SELECT c.id AS customer_id, CASE WHEN c.phone = ld.phone THEN 3 ELSE 4 END AS rank
+    FROM public.leads ld
+    JOIN public.loyalty_customers c ON c.workspace_id = ld.workspace_id
+     AND ((ld.phone IS NOT NULL AND c.phone = ld.phone) OR (ld.email IS NOT NULL AND c.email = lower(ld.email)))
+    WHERE ld.workspace_id = $1 AND ld.id = $3::uuid
+) found
+ORDER BY rank
+LIMIT 1`

@@ -16,6 +16,8 @@ import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
 import { CustomerTurnRuntimeService } from "./customer-turn-runtime.service"
+import { CustomerTurnsLogEvent } from "./customer-turns.log-events"
+import { TurnModulesService } from "./turn-modules.service"
 
 const WS = "11111111-1111-4111-8111-111111111111"
 const catalog: MessageCatalog = { get: (key: string) => key }
@@ -64,6 +66,8 @@ const build = async (
         blockedBy: jest.fn().mockResolvedValue(options.blocked === true ? { message: "over" } : null),
         record: jest.fn().mockResolvedValue(undefined),
     }
+    const modules = { briefs: jest.fn().mockResolvedValue([]) }
+    const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn() }
     const moduleRef = await Test.createTestingModule({
         providers: [
             CustomerTurnRuntimeService,
@@ -78,7 +82,7 @@ const build = async (
             },
             { provide: MESSAGE_CATALOG, useValue: mock<MessageCatalog>(catalog) },
             { provide: CLOCK, useValue: new FakeClock("2026-10-13T10:00:00.000Z") },
-            { provide: LOGGER, useValue: mock<Logger>({ info: jest.fn(), warn: jest.fn(), error: jest.fn() }) },
+            { provide: LOGGER, useValue: mock<Logger>(logger) },
             {
                 provide: AgentSyncService,
                 useValue: mock<AgentSyncService>({ syncInstallation: jest.fn(), ensureInternalAgent: jest.fn() }),
@@ -106,9 +110,10 @@ const build = async (
                     replyContractOf: (_module: string, base: string) => base,
                 }),
             },
+            { provide: TurnModulesService, useValue: mock<TurnModulesService>(modules) },
         ],
     }).compile()
-    return { runtime: moduleRef.get(CustomerTurnRuntimeService), gateway, usage }
+    return { runtime: moduleRef.get(CustomerTurnRuntimeService), gateway, usage, modules, logger }
 }
 
 describe("CustomerTurnRuntimeService", () => {
@@ -122,9 +127,18 @@ describe("CustomerTurnRuntimeService", () => {
         expect(usage.record).toHaveBeenCalledWith(expect.objectContaining({ kind: "chat_reply", module: "chatbot" }))
     })
 
-    it("answers the reason instead of a proposal when no gateway or no allowance is left", async () => {
-        await expect((await build({ enabled: false })).runtime.propose(turn)).resolves.toBe("openclaw_not_configured")
-        await expect((await build({ blocked: true })).runtime.propose(turn)).resolves.toBe("quota_exceeded")
+    it("answers the reason without reading module briefs when no gateway is configured", async () => {
+        const { runtime, modules, gateway } = await build({ enabled: false })
+        await expect(runtime.propose(turn)).resolves.toBe("openclaw_not_configured")
+        expect(modules.briefs).not.toHaveBeenCalled()
+        expect(gateway.runTurn).not.toHaveBeenCalled()
+    })
+
+    it("answers the reason without reading module briefs when no allowance is left", async () => {
+        const { runtime, modules, gateway } = await build({ blocked: true })
+        await expect(runtime.propose(turn)).resolves.toBe("quota_exceeded")
+        expect(modules.briefs).not.toHaveBeenCalled()
+        expect(gateway.runTurn).not.toHaveBeenCalled()
     })
 
     it("never sends an answer that ignored the contract: it becomes a question for a person", async () => {
@@ -134,5 +148,187 @@ describe("CustomerTurnRuntimeService", () => {
             needsHuman: true,
             proposedAnswer: "Sure, it is cheap!",
         })
+    })
+
+    it("adds every module brief to the agent's context alongside the recalled knowledge", async () => {
+        const { runtime, gateway, modules } = await build()
+        modules.briefs.mockResolvedValueOnce(["BOOKING RULES", "LOYALTY FACTS"])
+        await expect(runtime.propose(turn)).resolves.toMatchObject({ reply: "50k", needsHuman: false })
+        expect(modules.briefs).toHaveBeenCalledWith(turn.conversation)
+        const request = gateway.runTurn.mock.calls[0]?.[0]
+        expect(request?.message).toContain("KNOW")
+        expect(request?.message).toContain("BOOKING RULES")
+        expect(request?.message).toContain("LOYALTY FACTS")
+    })
+
+    it("logs unavailable module briefs and still runs the turn with the remaining context", async () => {
+        const { runtime, gateway, modules, logger, usage } = await build()
+        const cause = new Error("module facts unavailable")
+        modules.briefs.mockRejectedValueOnce(cause)
+        await expect(runtime.propose(turn)).resolves.toMatchObject({ reply: "50k", needsHuman: false })
+        expect(modules.briefs).toHaveBeenCalledWith(turn.conversation)
+        expect(logger.error).toHaveBeenCalledWith(CustomerTurnsLogEvent.ContextPartFailed, cause, {
+            workspaceId: WS,
+            part: "modules",
+        })
+        const request = gateway.runTurn.mock.calls[0]?.[0]
+        expect(request?.message).toContain("KNOW")
+        expect(usage.record).toHaveBeenCalledTimes(1)
+    })
+
+    it("preserves the booking request in the proposal's reply-contract detail", async () => {
+        const bookingRequest = {
+            intent: "reschedule",
+            service: "Haircut",
+            date: "2026-10-15",
+            time: "09:30",
+            from: "13:00",
+            to: "17:00",
+            party_size: 2,
+            contact_name: "Lan",
+            phone: "0900",
+            email: "lan@example.test",
+            note: "Window seat",
+        }
+        const { runtime, gateway } = await build({
+            text: JSON.stringify({ reply: "Let me check", needs_human: false, booking_request: bookingRequest }),
+        })
+        await expect(runtime.propose(turn)).resolves.toEqual({
+            reply: "Let me check",
+            needsHuman: false,
+            reason: "",
+            proposedAnswer: "",
+            detail: {
+                lead: null,
+                order: null,
+                payment_claim: false,
+                knowledge_gap: null,
+                application: null,
+                loyalty: null,
+                booking_request: bookingRequest,
+            },
+        })
+        expect(gateway.runTurn).toHaveBeenCalledTimes(1)
+    })
+
+    it.each([
+        { label: "missing", value: undefined },
+        { label: "null", value: null },
+        { label: "array", value: [] },
+        { label: "plain text", value: "book" },
+        { label: "missing intent", value: {} },
+        { label: "unknown intent", value: { intent: "confirm" } },
+    ])("omits a $label booking request from the proposal", async ({ value }) => {
+        const { runtime, gateway } = await build({
+            text: JSON.stringify({ reply: "Let me check", booking_request: value }),
+        })
+        await expect(runtime.propose(turn)).resolves.toMatchObject({
+            reply: "Let me check",
+            needsHuman: false,
+            detail: { booking_request: null },
+        })
+        expect(gateway.runTurn).toHaveBeenCalledTimes(1)
+    })
+
+    it.each([
+        { label: "missing", value: undefined, partySize: 1 },
+        { label: "nonfinite", value: "Infinity", partySize: 1 },
+        { label: "invalid", value: "several", partySize: 1 },
+        { label: "zero", value: 0, partySize: 1 },
+        { label: "negative", value: -2, partySize: 1 },
+        { label: "fraction below one", value: 0.9, partySize: 1 },
+        { label: "numeric string", value: "2.5", partySize: 3 },
+        { label: "above the limit", value: 201, partySize: 200 },
+    ])("bounds a $label booking party size in the proposal", async ({ value, partySize }) => {
+        const { runtime, gateway } = await build({
+            text: JSON.stringify({
+                reply: "Let me check",
+                booking_request: { intent: "availability", party_size: value },
+            }),
+        })
+        await expect(runtime.propose(turn)).resolves.toMatchObject({
+            reply: "Let me check",
+            needsHuman: false,
+            detail: {
+                booking_request: {
+                    intent: "availability",
+                    service: "",
+                    date: null,
+                    time: null,
+                    from: null,
+                    to: null,
+                    party_size: partySize,
+                    contact_name: "",
+                    phone: null,
+                    email: null,
+                    note: null,
+                },
+            },
+        })
+        expect(gateway.runTurn).toHaveBeenCalledTimes(1)
+    })
+
+    it("normalizes a short booking hour and clears invalid dates and hours", async () => {
+        const { runtime, gateway } = await build({
+            text: JSON.stringify({
+                reply: "Let me check",
+                booking_request: {
+                    intent: "waitlist",
+                    date: "2026/10/15",
+                    time: " 9:05 ",
+                    from: "24:00",
+                    to: "09:60",
+                    phone: "  ",
+                    email: "",
+                    note: " ",
+                },
+            }),
+        })
+        await expect(runtime.propose(turn)).resolves.toMatchObject({
+            detail: {
+                booking_request: {
+                    intent: "waitlist",
+                    date: null,
+                    time: "09:05",
+                    from: null,
+                    to: null,
+                    phone: null,
+                    email: null,
+                    note: null,
+                },
+            },
+        })
+        expect(gateway.runTurn).toHaveBeenCalledTimes(1)
+    })
+
+    it("trims and bounds the booking request's customer-controlled text", async () => {
+        const { runtime, gateway } = await build({
+            text: JSON.stringify({
+                reply: "Let me check",
+                booking_request: {
+                    intent: "cancel",
+                    service: ` ${"S".repeat(170)} `,
+                    date: " 2026-10-15 extra ",
+                    contact_name: ` ${"N".repeat(130)} `,
+                    phone: ` ${"1".repeat(50)} `,
+                    email: ` ${"E".repeat(260)} `,
+                    note: ` ${"T".repeat(410)} `,
+                },
+            }),
+        })
+        await expect(runtime.propose(turn)).resolves.toMatchObject({
+            detail: {
+                booking_request: {
+                    intent: "cancel",
+                    service: "S".repeat(160),
+                    date: "2026-10-15",
+                    contact_name: "N".repeat(120),
+                    phone: "1".repeat(40),
+                    email: "E".repeat(254),
+                    note: "T".repeat(400),
+                },
+            },
+        })
+        expect(gateway.runTurn).toHaveBeenCalledTimes(1)
     })
 })

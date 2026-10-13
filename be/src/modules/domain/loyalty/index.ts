@@ -1,5 +1,7 @@
 export { LOYALTY_ERROR_KINDS } from "./errors/loyalty.error"
 export { LoyaltyApiService } from "./loyalty-api.service"
+export { LoyaltyChatService } from "./loyalty-chat.service"
+export { LoyaltyRedemptionService } from "./loyalty-redemption.service"
 export { LoyaltyMembersService } from "./loyalty-members.service"
 export { LoyaltyOverviewService } from "./loyalty-overview.service"
 export { LoyaltyPromotionsService } from "./loyalty-promotions.service"

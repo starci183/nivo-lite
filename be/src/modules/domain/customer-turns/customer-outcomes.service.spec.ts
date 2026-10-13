@@ -16,6 +16,7 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
 import { CustomerOutcomesService } from "./customer-outcomes.service"
 import { StaffEscalationService } from "./staff-escalation.service"
+import { TurnModulesService } from "./turn-modules.service"
 import { TurnPurchasesService } from "./turn-purchases.service"
 
 const WS = "11111111-1111-4111-8111-111111111111"
@@ -79,12 +80,11 @@ const build = async () => {
     const settled = { lines: [], changed: false, leadId: null }
     const purchases = {
         recordOrder: jest.fn().mockResolvedValue(settled),
-        recordClaim: jest
-            .fn()
-            .mockResolvedValue({ lines: ["customerTurns.claimRecorded"], changed: true, leadId: null }),
+        recordClaim: jest.fn().mockResolvedValue(settled),
     }
     const conversations = { rename: jest.fn(), attachLead: jest.fn() }
     const gaps = { note: jest.fn().mockResolvedValue(undefined) }
+    const modules = { settle: jest.fn().mockResolvedValue({ reply: null, lines: [] }) }
     const moduleRef = await Test.createTestingModule({
         providers: [
             CustomerOutcomesService,
@@ -115,9 +115,19 @@ const build = async () => {
                 useValue: mock<StaffEscalationService>({ escalate: jest.fn().mockResolvedValue(true) }),
             },
             { provide: KnowledgeGapNotesService, useValue: mock<KnowledgeGapNotesService>(gaps) },
+            { provide: TurnModulesService, useValue: mock<TurnModulesService>(modules) },
         ],
     }).compile()
-    return { outcomes: moduleRef.get(CustomerOutcomesService), engine, bus, inbound, invoices, purchases, gaps }
+    return {
+        outcomes: moduleRef.get(CustomerOutcomesService),
+        engine,
+        bus,
+        inbound,
+        invoices,
+        purchases,
+        gaps,
+        modules,
+    }
 }
 
 describe("CustomerOutcomesService", () => {
@@ -135,14 +145,21 @@ describe("CustomerOutcomesService", () => {
         expect(verdict).toMatchObject({ reply: "Thanks!", send: true, lines: ["customerTurns.chatHandoff"] })
     })
 
-    it("takes an order only at a price written in the knowledge", async () => {
+    it("takes an order at a price written in the knowledge", async () => {
         const known = await build()
-        await known.outcomes.settle(turnOf(), proposalOf({ order: { items: "Tra sua", amount_vnd: 50_000 } }))
+        const verdict = await known.outcomes.settle(
+            turnOf(),
+            proposalOf({ order: { items: "Tra sua", amount_vnd: 50_000 } }),
+        )
         expect(known.purchases.recordOrder).toHaveBeenCalledWith(
             expect.any(Object),
             expect.any(Object),
             expect.objectContaining({ order: { items: "Tra sua", amountVnd: 50_000 } }),
         )
+        expect(verdict).toEqual({ reply: "Thanks!", send: true, lines: [] })
+    })
+
+    it("asks a person for an unknown order price and skips module requests", async () => {
         const unknown = await build()
         const verdict = await unknown.outcomes.settle(
             turnOf(),
@@ -158,10 +175,16 @@ describe("CustomerOutcomesService", () => {
             expect.any(Object),
             expect.objectContaining({ forceAsk: "over_authority" }),
         )
+        expect(unknown.modules.settle).not.toHaveBeenCalled()
     })
 
     it("answers a payment claim with fixed text and opens one check for the open invoice", async () => {
         const { outcomes, invoices, purchases } = await build()
+        purchases.recordClaim.mockResolvedValueOnce({
+            lines: ["customerTurns.claimRecorded"],
+            changed: true,
+            leadId: null,
+        })
         invoices.latestOfLead.mockResolvedValueOnce({
             id: "inv-1",
             invoice_no: "HD-01",
@@ -208,5 +231,96 @@ describe("CustomerOutcomesService", () => {
                 }),
             }),
         )
+    })
+
+    it("passes the parsed booking and loyalty findings to the turn modules", async () => {
+        const { outcomes, modules } = await build()
+        const turn = turnOf("l1")
+        const verdict = await outcomes.settle(
+            turn,
+            proposalOf({
+                booking_request: {
+                    intent: "book",
+                    service: "Haircut",
+                    date: "2026-10-15",
+                    time: "9:00",
+                    party_size: 2,
+                    contact_name: "Lan",
+                    phone: "0900",
+                },
+                loyalty: { intent: "redeem", reward_key: "tea-voucher" },
+            }),
+        )
+        expect(modules.settle).toHaveBeenCalledWith({ workspaceId: WS, actor: "OpenClaw", locale: "vi" }, turn, {
+            reply: "Thanks!",
+            needsHuman: false,
+            reason: null,
+            proposedAnswer: null,
+            lead: null,
+            order: null,
+            paymentClaim: false,
+            knowledgeGap: null,
+            application: null,
+            loyaltyRewardKey: "tea-voucher",
+            bookingRequest: {
+                intent: "book",
+                service: "Haircut",
+                date: "2026-10-15",
+                time: "09:00",
+                from: null,
+                to: null,
+                partySize: 2,
+                name: "Lan",
+                phone: "0900",
+                email: null,
+                note: null,
+            },
+        })
+        expect(verdict).toEqual({ reply: "Thanks!", send: true, lines: [] })
+    })
+
+    it("uses a module's booking reply in place of the model's reply", async () => {
+        const { outcomes, modules, engine } = await build()
+        modules.settle.mockResolvedValueOnce({ reply: "Your appointment is requested", lines: [] })
+        const verdict = await outcomes.settle(turnOf(), proposalOf({ booking_request: { intent: "book" } }))
+        expect(verdict).toEqual({ reply: "Your appointment is requested", send: true, lines: [] })
+        expect(modules.settle).toHaveBeenCalledTimes(1)
+        expect(engine.runQueued).not.toHaveBeenCalled()
+    })
+
+    it("adds a module's redemption line and drains the new work while retaining the model's reply", async () => {
+        const { outcomes, modules, engine, gaps } = await build()
+        modules.settle.mockResolvedValueOnce({ reply: null, lines: ["customerTurns.redeemAsked"] })
+        const verdict = await outcomes.settle(
+            turnOf(),
+            proposalOf({ loyalty: { intent: "redeem", reward_key: "tea-voucher" } }),
+        )
+        expect(verdict).toEqual({ reply: "Thanks!", send: true, lines: ["customerTurns.redeemAsked"] })
+        expect(engine.runQueued).toHaveBeenCalledWith({ workspaceId: WS, actor: "OpenClaw", locale: "vi" }, 2)
+        expect(gaps.note).toHaveBeenCalledWith(
+            expect.objectContaining({ signals: expect.objectContaining({ isTransaction: true }) }),
+        )
+    })
+
+    it("leaves booking and redemption for a person when the proposal needs a human answer", async () => {
+        const { outcomes, modules, engine } = await build()
+        const verdict = await outcomes.settle(
+            turnOf(),
+            proposalOf(
+                { booking_request: { intent: "book" }, loyalty: { intent: "redeem", reward_key: "tea-voucher" } },
+                { needsHuman: true, reason: "over_authority", proposedAnswer: "Please check the request" },
+            ),
+        )
+        expect(modules.settle).not.toHaveBeenCalled()
+        expect(engine.runWork).toHaveBeenCalledWith(
+            { workspaceId: WS, actor: "OpenClaw", locale: "vi" },
+            expect.objectContaining({
+                action: "reply_customer",
+                forceAsk: "over_authority",
+                dedupeKey: "reply_customer:message:m1",
+                seed: expect.objectContaining({ draft: "Please check the request" }),
+            }),
+        )
+        expect(verdict).toEqual({ reply: "Thanks!", send: true, lines: ["conversations.chatNeedsHuman"] })
     })
 })

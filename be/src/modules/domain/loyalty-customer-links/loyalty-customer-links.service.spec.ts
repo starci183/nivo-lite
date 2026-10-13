@@ -2,9 +2,11 @@ import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import type { ChatCustomerRef } from "./loyalty-customer-links.contracts"
 import { LoyaltyCustomerLinksService } from "./loyalty-customer-links.service"
 import {
     COUNT_REACHABLE,
+    SELECT_CHAT_CUSTOMER,
     SELECT_PUSH_CONVERSATION,
     UPSERT_CHANNEL_LINKS,
     UPSERT_CONVERSATION_LINKS,
@@ -80,6 +82,58 @@ describe("LoyaltyCustomerLinksService", () => {
 
             await expect(found.pushConversation("ws-1", "c1")).resolves.toEqual({ id: "v1", channel: "telegram" })
             await expect(none.pushConversation("ws-1", "c1")).resolves.toBeNull()
+        })
+    })
+
+    describe("customerOfChat", () => {
+        const refOf = (externalId: string | null): ChatCustomerRef => ({
+            workspaceId: "ws-1",
+            conversationId: "v1",
+            leadId: "l1",
+            channel: "telegram",
+            externalId,
+        })
+
+        it("finds the linked customer through the conversation, lead and channel account", async () => {
+            const manager = mockEntityManager({ query: [SELECT_CHAT_CUSTOMER, [{ customer_id: "c1" }]] })
+            const links = await build(manager)
+
+            await expect(links.customerOfChat(refOf("123:456:789"))).resolves.toBe("c1")
+            expect(manager.query).toHaveBeenCalledWith(SELECT_CHAT_CUSTOMER, ["ws-1", "v1", "l1", "telegram:123"])
+        })
+
+        it("preserves an external account without a message suffix", async () => {
+            const manager = mockEntityManager({ query: [SELECT_CHAT_CUSTOMER, [{ customer_id: "c1" }]] })
+            const links = await build(manager)
+
+            await expect(links.customerOfChat(refOf("123"))).resolves.toBe("c1")
+            expect(manager.query).toHaveBeenCalledWith(SELECT_CHAT_CUSTOMER, ["ws-1", "v1", "l1", "telegram:123"])
+        })
+
+        it("passes no channel account when the external id is null", async () => {
+            const manager = mockEntityManager({ query: [SELECT_CHAT_CUSTOMER, [{ customer_id: "c1" }]] })
+            const links = await build(manager)
+
+            await expect(links.customerOfChat(refOf(null))).resolves.toBe("c1")
+            expect(manager.query).toHaveBeenCalledWith(SELECT_CHAT_CUSTOMER, ["ws-1", "v1", "l1", null])
+        })
+
+        it("passes no channel account when the external id is empty", async () => {
+            const manager = mockEntityManager({ query: [SELECT_CHAT_CUSTOMER, [{ customer_id: "c1" }]] })
+            const links = await build(manager)
+
+            await expect(links.customerOfChat(refOf(""))).resolves.toBe("c1")
+            expect(manager.query).toHaveBeenCalledWith(SELECT_CHAT_CUSTOMER, ["ws-1", "v1", "l1", null])
+        })
+
+        it("returns null when no existing link identifies the chat", async () => {
+            const manager = mockEntityManager({ query: [SELECT_CHAT_CUSTOMER, []] })
+            const links = await build(manager)
+
+            await expect(
+                links.customerOfChat({ ...refOf("account:message"), leadId: null, channel: "zalo" }),
+            ).resolves.toBeNull()
+            expect(manager.query).toHaveBeenCalledWith(SELECT_CHAT_CUSTOMER, ["ws-1", "v1", null, "zalo:account"])
         })
     })
 })
