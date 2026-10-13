@@ -5,7 +5,7 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { VideoMusicErrorCode } from "./errors/video-music.error"
+import { VideoMusicError, VideoMusicErrorCode } from "./errors/video-music.error"
 import type { MusicStore } from "./video-music.contracts"
 import { MUSIC_STORE } from "./video-music.decorators"
 import { VideoMusicLogEvent } from "./video-music.log-events"
@@ -54,12 +54,14 @@ describe("VideoMusicService", () => {
     })
 
     it("fails with the storage error of the bed the store refused", async () => {
-        const { service, store } = await build()
-        store.upload.mockResolvedValue({ error: new Error("bucket missing") })
+        const { service, store, logger } = await build()
+        store.upload.mockResolvedValue({ error: new VideoMusicError({ code: VideoMusicErrorCode.StorageFailed }) })
 
         await expect(service.upload(dir)).rejects.toMatchObject({
             code: VideoMusicErrorCode.StorageFailed,
             params: { path: "music/sunny-pop.mp3" },
         })
+        expect(store.upload).toHaveBeenCalledTimes(1)
+        expect(logger.info).not.toHaveBeenCalled()
     })
 })

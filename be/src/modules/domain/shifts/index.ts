@@ -1,5 +1,11 @@
 export { SHIFTS_ERROR_KINDS } from "./errors/shifts.error"
 export { SHIFTS_MESSAGES } from "./messages/shifts.messages"
+export {
+    toRequestShiftsSwapRequest,
+    toSaveShiftsStaffRequest,
+    toAddShiftsAvailabilityRequest,
+    toSubmitShiftsAvailabilityRequest,
+} from "./shifts-requests.mapper"
 export { ShiftsImportService } from "./shifts-import.service"
 export { ShiftsModule } from "./shifts.module"
 export { ShiftsRequestsService } from "./shifts-requests.service"

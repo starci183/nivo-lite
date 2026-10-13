@@ -1,48 +1,272 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { GenerationsService } from "@modules/domain/ai-generations"
+import type { GenerationState } from "@modules/domain/ai-generations"
 import { EventsService } from "@modules/domain/events"
 import { VideoProjectScriptingService } from "@modules/domain/video-projects"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
+import { VideoError, VideoErrorCode } from "./errors/video.error"
+import type { VideoScriptingRow } from "./persistence/video-scripting.rows"
+import { LOCK_SCRIPT_PROJECT } from "./persistence/video-scripting.sql"
 import { VideoScriptingCompletionService } from "./video-scripting-completion.service"
+import { VIDEO_SCRIPT_RETRY } from "./video-scripting.templates"
 
-const build = async () => {
-    const clock = new FakeClock("2026-01-01T00:00:00.000Z")
-    const entityManager = mockEntityManager()
+const WS = "workspace-1"
+const NOW = "2026-10-13T09:00:00.000Z"
+const ANSWER = JSON.stringify({
+    title: "Spring  sale",
+    scenes: [
+        { caption: "Fresh", voiceover: "Hi" },
+        { caption: "Visit", voiceover: "Bye" },
+    ],
+})
+const PROMPT = [
+    { role: "system", content: "Write a script" },
+    { role: "tool", content: "dropped" },
+]
+
+const META = {
+    generation_id: "generation-1",
+    script_request_id: "generation-1",
+    attempts: 1,
+    auto_title: true,
+    started_at: "2026-10-13T08:59:58.000Z",
+}
+
+const stateOf = builder<GenerationState>({
+    id: "generation-1",
+    workspaceId: WS,
+    purpose: "video_script",
+    status: "done",
+    text: ANSWER,
+    errorCode: null,
+    input: { context: { projectId: "project-1" }, messages: PROMPT },
+    output: {},
+    timings: { total_ms: 5 },
+    createdAt: "2026-10-13T08:59:58.000Z",
+    finishedAt: NOW,
+    messages: [],
+})
+
+const projectOf = builder<VideoScriptingRow>({
+    id: "project-1",
+    title: "Draft",
+    goal: "offer",
+    aspect: "9:16",
+    target_seconds: 30,
+    status: "scripting",
+    inputs: { media: [`${WS}/a.jpg`] },
+    script_meta: META,
+    updated_at: NOW,
+    render_status: null,
+    workspace_name: "Bakery",
+    shop_name: null,
+})
+
+const build = async (state: GenerationState | null, project: VideoScriptingRow | null = projectOf()) => {
+    const tx = fakeTransaction(mockEntityManager({ query: [LOCK_SCRIPT_PROJECT, project === null ? [] : [project]] }))
     const catalog = mock<MessageCatalog>()
+    catalog.get.mockImplementation((key, params) => `${key}:${JSON.stringify(params)}`)
     const generations = mock<GenerationsService>()
+    generations.state.mockResolvedValue(state)
+    generations.request.mockResolvedValue({ id: "generation-2", status: "queued" })
     const events = mock<EventsService>()
     const projectWriter = mock<VideoProjectScriptingService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             VideoScriptingCompletionService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
-            { provide: CLOCK, useValue: clock },
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
+            { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: GenerationsService, useValue: generations },
             { provide: EventsService, useValue: events },
             { provide: VideoProjectScriptingService, useValue: projectWriter },
         ],
     }).compile()
-    return {
-        service: moduleRef.get(VideoScriptingCompletionService),
-        clock,
-        entityManager,
-        catalog,
-        generations,
-        events,
-        projectWriter,
-    }
+    return { completion: moduleRef.get(VideoScriptingCompletionService), tx, generations, events, projectWriter }
 }
 
 describe("VideoScriptingCompletionService", () => {
     describe("complete", () => {
-        it("complete has its first case written", async () => {
-            const { service } = await build()
-            expect(service.complete).toBeInstanceOf(Function)
+        it("saves the parsed scenes with the project's media, closes the request and records the event", async () => {
+            const { completion, tx, generations, events, projectWriter } = await build(stateOf())
+
+            await expect(completion.complete(WS, "generation-1")).resolves.toBeUndefined()
+
+            const scenes = [
+                {
+                    id: "generation-1-1",
+                    role: "hook",
+                    caption: "Fresh",
+                    voiceover: "Hi",
+                    visual: "",
+                    media: `${WS}/a.jpg`,
+                },
+                {
+                    id: "generation-1-2",
+                    role: "cta",
+                    caption: "Visit",
+                    voiceover: "Bye",
+                    visual: "",
+                    media: `${WS}/a.jpg`,
+                },
+            ]
+            const manager = projectWriter.finish.mock.calls[0]?.[0]
+            expect(projectWriter.finish).toHaveBeenCalledWith(manager, {
+                workspaceId: WS,
+                projectId: "project-1",
+                generationId: "generation-1",
+                script: JSON.stringify(scenes),
+                durationMs: 2000,
+                title: "Spring sale",
+                meta: JSON.stringify({ ...META, timings: { total_ms: 5 }, finished_at: NOW }),
+            })
+            expect(generations.recordResult).toHaveBeenCalledWith(
+                WS,
+                "generation-1",
+                { projectId: "project-1" },
+                manager,
+            )
+            expect(events.record).toHaveBeenCalledWith(
+                {
+                    workspaceId: WS,
+                    kind: "video.script_generated",
+                    actor: "OpenClaw",
+                    summary: 'video.script.generated:{"title":"Spring sale","scenes":2}',
+                    evidence: "1. Fresh\n2. Visit",
+                },
+                manager,
+            )
+            expect(tx.commits).toBe(1)
+        })
+
+        it("keeps the project title when the owner typed it", async () => {
+            const { completion, projectWriter } = await build(
+                stateOf(),
+                projectOf({ script_meta: { ...META, auto_title: false } }),
+            )
+
+            await completion.complete(WS, "generation-1")
+
+            expect(projectWriter.finish.mock.calls[0]?.[1]).toMatchObject({ title: null })
+        })
+
+        it.each([
+            ["a generation that is gone", null],
+            ["another purpose", stateOf({ purpose: "content_post" })],
+            ["a generation with no project", stateOf({ input: {} })],
+            ["a generation still running", stateOf({ status: "running" })],
+            ["a queued generation", stateOf({ status: "queued" })],
+        ])("ignores %s", async (_label, state) => {
+            const { completion, tx, projectWriter } = await build(state)
+
+            await expect(completion.complete(WS, "generation-1")).resolves.toBeUndefined()
+            expect(tx.outcomes).toEqual([])
+            expect(projectWriter.finish).not.toHaveBeenCalled()
+        })
+
+        it.each([
+            ["a project that is gone", null],
+            ["a project no longer scripting", projectOf({ status: "draft" })],
+            [
+                "a project another generation owns",
+                projectOf({ script_meta: { ...META, generation_id: "generation-9" } }),
+            ],
+            ["a project with no request", projectOf({ script_meta: { generation_id: "generation-1" } })],
+        ])("writes nothing for %s", async (_label, project) => {
+            const { completion, tx, projectWriter, generations } = await build(stateOf(), project)
+
+            await completion.complete(WS, "generation-1")
+
+            expect(projectWriter.finish).not.toHaveBeenCalled()
+            expect(projectWriter.fail).not.toHaveBeenCalled()
+            expect(generations.recordFailure).not.toHaveBeenCalled()
+            expect(tx.commits).toBe(1)
+        })
+
+        it("records the failure of a generation that ended without text", async () => {
+            const { completion, projectWriter, generations } = await build(stateOf({ status: "error", text: null }))
+
+            await completion.complete(WS, "generation-1")
+
+            const manager = projectWriter.fail.mock.calls[0]?.[0]
+            expect(projectWriter.fail).toHaveBeenCalledWith(manager, {
+                workspaceId: WS,
+                projectId: "project-1",
+                generationId: "generation-1",
+                code: "code:VIDEO_SCRIPT_FAILED",
+                meta: JSON.stringify({ ...META, finished_at: NOW }),
+            })
+            expect(generations.recordFailure).toHaveBeenCalledWith(WS, "generation-1", "VIDEO_SCRIPT_FAILED", manager)
+            expect(projectWriter.finish).not.toHaveBeenCalled()
+        })
+
+        it("asks once more for valid JSON after a malformed first answer", async () => {
+            const { completion, generations, projectWriter } = await build(stateOf({ text: "no json here" }))
+
+            await completion.complete(WS, "generation-1")
+
+            const manager = projectWriter.start.mock.calls[0]?.[0]
+            expect(generations.request).toHaveBeenCalledWith(
+                {
+                    workspaceId: WS,
+                    purpose: "video_script",
+                    module: "video",
+                    kind: "engine",
+                    responseFormat: "json",
+                    timeoutMs: 110_000,
+                    messages: [
+                        { role: "system", content: "Write a script" },
+                        { role: "user", content: VIDEO_SCRIPT_RETRY },
+                    ],
+                },
+                { projectId: "project-1", requestId: "generation-1" },
+                manager,
+            )
+            expect(projectWriter.start).toHaveBeenCalledWith(
+                manager,
+                WS,
+                "project-1",
+                JSON.stringify({ ...META, generation_id: "generation-2", attempts: 2 }),
+            )
+            expect(projectWriter.fail).not.toHaveBeenCalled()
+        })
+
+        it("fails a second malformed answer as a format error", async () => {
+            const meta = { ...META, generation_id: "generation-2", attempts: 2 }
+            const { completion, generations, projectWriter } = await build(
+                stateOf({ id: "generation-2", text: "{}" }),
+                projectOf({ script_meta: meta }),
+            )
+
+            await completion.complete(WS, "generation-2")
+
+            expect(generations.request).not.toHaveBeenCalled()
+            expect(projectWriter.fail.mock.calls[0]?.[1]).toEqual({
+                workspaceId: WS,
+                projectId: "project-1",
+                generationId: "generation-2",
+                code: "code:VIDEO_SCRIPT_FORMAT",
+                meta: JSON.stringify({ ...meta, finished_at: NOW }),
+            })
+            expect(generations.recordFailure.mock.calls[0]?.slice(0, 3)).toEqual([
+                WS,
+                "generation-1",
+                "VIDEO_SCRIPT_FORMAT",
+            ])
+        })
+
+        it("rolls back when the correction cannot be queued for another reason", async () => {
+            const { completion, tx, generations, projectWriter } = await build(stateOf({ text: "no json here" }))
+            const failure = new VideoError({ code: VideoErrorCode.StorageFailed, params: { path: "queue" } })
+            generations.request.mockRejectedValue(failure)
+
+            await expect(completion.complete(WS, "generation-1")).rejects.toBe(failure)
+            expect(projectWriter.start).not.toHaveBeenCalled()
+            expect(tx.rollbacks).toBe(1)
         })
     })
 })

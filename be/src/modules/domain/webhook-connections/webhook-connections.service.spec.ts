@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, mock } from "@starci/jest-preset"
+import { FakeClock, fakeIds, mock } from "@starci/jest-preset"
 import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
 import {
@@ -10,26 +10,17 @@ import {
 import type { WebhookDeliveryClient } from "@modules/integrations/webhook-delivery"
 import { CLOCK } from "@modules/platform/clock"
 import { Secret } from "@modules/platform/config"
+import { IDS } from "@modules/platform/ids"
 import { WebhookConnectionsError, WebhookConnectionsErrorCode } from "./errors/webhook-connections.error"
 import { WebhookConnectionsService } from "./webhook-connections.service"
-import { MODULE_OPTIONS_TOKEN } from "./webhook-connections.module-definition"
-import type { WebhookConnectionsOptions } from "./webhook-connections.options"
-
-jest.mock("node:crypto", () => ({
-    ...jest.requireActual<typeof import("node:crypto")>("node:crypto"),
-    randomUUID: jest.fn(() => "00000000-0000-4000-8000-000000000001"),
-}))
-
-jest.mock("@modules/domain/connections", () => ({
-    ...jest.requireActual<typeof import("@modules/domain/connections")>("@modules/domain/connections"),
-    randomSecret: jest.fn(() => "0909090909090909090909090909090909090909090909090909090909090909"),
-}))
+import { WEBHOOK_CONNECTIONS_OPTIONS } from "./webhook-connections.decorators"
 
 const ACTOR: ConnectionActor = { principalId: "owner-1", workspaceId: "ws-1" }
 const NOW = new Date("2026-10-13T03:00:00.000Z")
 const TARGET = "https://receiver.test:8443/events?source=nivo"
 const KEY = "c6ff2de63fff411ecf7eaa80a82004d260c263e185c58732596c9b28c11db340"
-const OPTIONS: WebhookConnectionsOptions = { engineSharedSecret: new Secret("engine-secret") }
+const SECRET = new Secret("engine-secret")
+const GENERATED_SECRET = /^[0-9a-f]{64}$/
 const INPUT = { name: "  Lead feed  ", url: TARGET, events: ["lead.created", "deal.won", "lead.created", "unknown"] }
 const BODY =
     '{"id":"00000000-0000-4000-8000-000000000001","event":"lead.created","workspace_id":"ws-1","occurred_at":"2026-10-13T03:00:00.000Z","data":{"test":true,"lead_id":"00000000-0000-0000-0000-000000000000","name":"NIVO test","phone":"0900000000","need":"NIVO sample event"}}'
@@ -51,7 +42,8 @@ const record = (overrides: Partial<ConnectionRecord> = {}): ConnectionRecord => 
     ...overrides,
 })
 
-const build = async (options: WebhookConnectionsOptions = OPTIONS, origin: string | null = "https://nivo.vn") => {
+const build = async (signing = true, origin: string | null = "https://nivo.vn") => {
+    const options = { engineSharedSecret: signing ? SECRET : undefined }
     const connections = mock<ConnectionsService>()
     connections.authorize.mockResolvedValue({ role: "owner", displayName: "Lan" })
     connections.publicOrigin.mockReturnValue(origin)
@@ -68,7 +60,8 @@ const build = async (options: WebhookConnectionsOptions = OPTIONS, origin: strin
             { provide: ConnectionsService, useValue: connections },
             { provide: WEBHOOK_DELIVERY_CLIENT, useValue: delivery },
             { provide: CLOCK, useValue: clock },
-            { provide: MODULE_OPTIONS_TOKEN, useValue: options },
+            { provide: IDS, useValue: fakeIds() },
+            { provide: WEBHOOK_CONNECTIONS_OPTIONS, useValue: options },
         ],
     }).compile()
     return { service: moduleRef.get(WebhookConnectionsService), connections, delivery, clock }
@@ -98,13 +91,13 @@ describe("WebhookConnectionsService", () => {
                 meta: { host: "receiver.test:8443", events: "lead.created,deal.won" },
                 secret: {
                     plain: '{"url":"https://receiver.test:8443/events?source=nivo"}',
-                    webhookSecret: "0909090909090909090909090909090909090909090909090909090909090909",
+                    webhookSecret: expect.stringMatching(GENERATED_SECRET),
                 },
             })
         })
 
         it("permits local targets when the deployment has no public origin and stores the resolved URL", async () => {
-            const { service, connections, delivery } = await build(OPTIONS, null)
+            const { service, connections, delivery } = await build(true, null)
             delivery.resolveTarget.mockResolvedValue(new URL("http://localhost:5678/webhook"))
 
             await expect(service.start(ACTOR, { ...INPUT, url: "http://localhost:5678/webhook" })).resolves.toEqual({
@@ -125,7 +118,7 @@ describe("WebhookConnectionsService", () => {
                 meta: { host: "localhost:5678", events: "lead.created,deal.won" },
                 secret: {
                     plain: '{"url":"http://localhost:5678/webhook"}',
-                    webhookSecret: "0909090909090909090909090909090909090909090909090909090909090909",
+                    webhookSecret: expect.stringMatching(GENERATED_SECRET),
                 },
             })
         })
@@ -154,7 +147,7 @@ describe("WebhookConnectionsService", () => {
         )
 
         it("refuses to store a target when outgoing signing is unavailable", async () => {
-            const { service, connections } = await build({ engineSharedSecret: undefined })
+            const { service, connections } = await build(false)
 
             await expect(service.start(ACTOR, INPUT)).rejects.toEqual(
                 new WebhookConnectionsError({ code: WebhookConnectionsErrorCode.SigningUnavailable }),
@@ -337,17 +330,19 @@ describe("WebhookConnectionsService", () => {
             },
         )
 
-        it("propagates malformed sealed JSON before resolving or delivering", async () => {
+        it("refuses malformed sealed JSON before resolving or delivering", async () => {
             const { service, connections, delivery } = await build()
             connections.readSecret.mockResolvedValue({ plain: "not JSON", webhookSecret: "stored-secret" })
 
-            await expect(service.test(ACTOR, "c1")).rejects.toBeInstanceOf(SyntaxError)
+            await expect(service.test(ACTOR, "c1")).rejects.toEqual(
+                new WebhookConnectionsError({ code: WebhookConnectionsErrorCode.NoUrl }),
+            )
             expect(delivery.resolveTarget).not.toHaveBeenCalled()
             expect(delivery.post).not.toHaveBeenCalled()
         })
 
         it("requires a signing configuration before delivering", async () => {
-            const { service, connections, delivery } = await build({ engineSharedSecret: undefined })
+            const { service, connections, delivery } = await build(false)
 
             await expect(service.test(ACTOR, "c1")).rejects.toEqual(
                 new WebhookConnectionsError({ code: WebhookConnectionsErrorCode.SigningUnavailable }),

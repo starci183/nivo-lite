@@ -1,7 +1,7 @@
 import { mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { WORK_PERFORMER_REGISTRY } from "@modules/domain/decisions"
-import type { WorkPerformerRegistry } from "@modules/domain/decisions"
+import type { WorkPerformer, WorkPerformerRegistry } from "@modules/domain/decisions"
 import { CarePerformerService } from "./care-performer.service"
 import { ClassifyLeadPerformerService } from "./classify-lead-performer.service"
 import { ConfirmOrderPerformerService } from "./confirm-order-performer.service"
@@ -44,17 +44,34 @@ describe("WorkPerformersRegistrarService", () => {
             ],
         }).compile()
 
-        expect(moduleRef.get(WorkPerformersRegistrarService).onModuleInit()).toBeUndefined()
+        const registered = new Map<string, WorkPerformer>()
+        registry.add.mockImplementation((action, performer) => {
+            registered.set(action, performer)
+        })
 
-        expect(registry.add).toHaveBeenNthCalledWith(1, "handoff_lead", handoff)
-        expect(registry.add).toHaveBeenNthCalledWith(2, "classify_lead", classify)
-        expect(registry.add).toHaveBeenNthCalledWith(3, "send_follow_up", followUp)
-        expect(registry.add).toHaveBeenNthCalledWith(4, "send_quote", quote)
-        expect(registry.add).toHaveBeenNthCalledWith(5, "send_care", care)
-        expect(registry.add).toHaveBeenNthCalledWith(6, "confirm_order", order)
-        expect(registry.add).toHaveBeenNthCalledWith(7, "issue_invoice", invoice)
-        expect(registry.add).toHaveBeenNthCalledWith(8, "reconcile_payment", payment)
-        expect(registry.add).toHaveBeenNthCalledWith(9, "reply_customer", reply)
-        expect(registry.add).toHaveBeenNthCalledWith(10, "send_email", email)
+        moduleRef.get(WorkPerformersRegistrarService).onModuleInit()
+
+        expect([...registered.keys()]).toEqual([
+            "handoff_lead",
+            "classify_lead",
+            "send_follow_up",
+            "send_quote",
+            "send_care",
+            "confirm_order",
+            "issue_invoice",
+            "reconcile_payment",
+            "reply_customer",
+            "send_email",
+        ])
+        expect(registered.get("handoff_lead")).toBe(handoff)
+        expect(registered.get("classify_lead")).toBe(classify)
+        expect(registered.get("send_follow_up")).toBe(followUp)
+        expect(registered.get("send_quote")).toBe(quote)
+        expect(registered.get("send_care")).toBe(care)
+        expect(registered.get("confirm_order")).toBe(order)
+        expect(registered.get("issue_invoice")).toBe(invoice)
+        expect(registered.get("reconcile_payment")).toBe(payment)
+        expect(registered.get("reply_customer")).toBe(reply)
+        expect(registered.get("send_email")).toBe(email)
     })
 })
