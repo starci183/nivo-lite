@@ -36,9 +36,7 @@ describe("automations mapper", () => {
     })
 
     it("preserves false settings and empty wording", () => {
-        expect(
-            toPatchRequest({ enabled: false, dismissed: false, values: {}, body: "", autoSend: false }),
-        ).toEqual({
+        expect(toPatchRequest({ enabled: false, dismissed: false, values: {}, body: "", autoSend: false })).toEqual({
             enabled: false,
             dismissed: false,
             values: {},

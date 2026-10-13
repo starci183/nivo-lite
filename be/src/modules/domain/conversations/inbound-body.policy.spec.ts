@@ -8,7 +8,10 @@ describe("inbound-body policy", () => {
 
         it("refuses missing bytes, text that is not JSON and JSON that is not an object", () => {
             expect(readJsonObject()).toMatchObject({ kind: "refused" })
-            expect(readJsonObject(Buffer.from("not json"))).toMatchObject({ kind: "refused", params: { reason: expect.stringContaining("SyntaxError") } })
+            expect(readJsonObject(Buffer.from("not json"))).toMatchObject({
+                kind: "refused",
+                params: { reason: expect.stringContaining("SyntaxError") },
+            })
             expect(readJsonObject(Buffer.from("[1]"))).toMatchObject({ kind: "refused" })
             expect(readJsonObject(Buffer.from("null"))).toMatchObject({ kind: "refused" })
             expect(readJsonObject(Buffer.from('"text"'))).toMatchObject({ kind: "refused" })

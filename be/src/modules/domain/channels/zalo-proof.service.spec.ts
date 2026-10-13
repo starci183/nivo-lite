@@ -14,7 +14,14 @@ const build = (found: boolean) => {
     const credentials = mock<ZaloCredentialsService>()
     credentials.load.mockResolvedValue(
         found
-            ? { kind: "ok", value: { secret: { appId: "app-1", appSecret: "s", oaSecret: "oa-secret" }, expiresAt: null, workspaceId: "ws-1" } }
+            ? {
+                  kind: "ok",
+                  value: {
+                      secret: { appId: "app-1", appSecret: "s", oaSecret: "oa-secret" },
+                      expiresAt: null,
+                      workspaceId: "ws-1",
+                  },
+              }
             : { kind: "refused", code: ChannelsErrorCode.ConnectionNotFound },
     )
     const registry = mock<WebhookProofRegistry>()
@@ -22,7 +29,12 @@ const build = (found: boolean) => {
     return { proof: new ZaloProofService(registry, logger, credentials), registry, credentials, logger }
 }
 
-const request = (scope: string, rawBody: Buffer | undefined, signature: string) => ({ scope, rawBody, signature, timestamp: undefined })
+const request = (scope: string, rawBody: Buffer | undefined, signature: string) => ({
+    scope,
+    rawBody,
+    signature,
+    timestamp: undefined,
+})
 
 describe("ZaloProofService", () => {
     it("registers itself for the zalo door when the module starts", () => {
@@ -55,7 +67,10 @@ describe("ZaloProofService", () => {
             const { proof, logger } = build(true)
 
             await expect(proof.prove(request(CONNECTION, Buffer.from("not json"), MAC))).resolves.toBe(false)
-            expect(logger.warn).toHaveBeenCalledWith("channels.proof.body-unreadable", expect.objectContaining({ connectionId: CONNECTION }))
+            expect(logger.warn).toHaveBeenCalledWith(
+                "channels.proof.body-unreadable",
+                expect.objectContaining({ connectionId: CONNECTION }),
+            )
         })
     })
 })

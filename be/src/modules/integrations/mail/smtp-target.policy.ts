@@ -15,7 +15,12 @@ export const isPrivateAddress = (address: string): boolean => {
     }
     const parts = bare.split(".").map(Number)
     const [first, second] = parts
-    if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part)) || first === undefined || second === undefined) {
+    if (
+        parts.length !== 4 ||
+        parts.some((part) => !Number.isInteger(part)) ||
+        first === undefined ||
+        second === undefined
+    ) {
         return true
     }
     return (

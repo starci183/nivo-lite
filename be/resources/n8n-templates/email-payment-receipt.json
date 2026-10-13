@@ -12,10 +12,7 @@
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [
-        0,
-        0
-      ],
+      "position": [0, 0],
       "webhookId": "nivo-email-payment-receipt"
     },
     {
@@ -26,10 +23,7 @@
       "name": "Prepare emails",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        440,
-        0
-      ]
+      "position": [440, 0]
     },
     {
       "parameters": {
@@ -58,10 +52,7 @@
       "name": "Has email to send",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [
-        660,
-        0
-      ]
+      "position": [660, 0]
     },
     {
       "parameters": {
@@ -94,10 +85,7 @@
       "name": "Send via NIVO",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        880,
-        -80
-      ]
+      "position": [880, -80]
     },
     {
       "parameters": {
@@ -107,10 +95,7 @@
       "name": "Collect results",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        1100,
-        0
-      ]
+      "position": [1100, 0]
     },
     {
       "parameters": {
@@ -141,10 +126,7 @@
       "name": "Report to NIVO",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        1320,
-        0
-      ]
+      "position": [1320, 0]
     }
   ],
   "connections": {

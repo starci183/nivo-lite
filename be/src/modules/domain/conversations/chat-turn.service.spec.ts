@@ -70,7 +70,9 @@ const build = async (setup: Setup = {}) => {
             : { kind: "ok", value: { id: "msg-1", role: "user", body: "Price?", deliveryStatus: null } },
     )
     messages.transcript.mockResolvedValue([{ role: "user", body: "Price?" }])
-    messages.storeReply.mockImplementation((_ws, _conv, body) => Promise.resolve({ id: "reply-1", body, sent: setup.sent === true }))
+    messages.storeReply.mockImplementation((_ws, _conv, body) =>
+        Promise.resolve({ id: "reply-1", body, sent: setup.sent === true }),
+    )
     messages.storeLine.mockResolvedValue(undefined)
     messages.replyExists.mockResolvedValue(setup.retry === true)
     const receipts = mock<ChannelReceiptsService>()
@@ -97,10 +99,26 @@ const build = async (setup: Setup = {}) => {
             { provide: ChannelDeliveryService, useValue: delivery },
         ],
     }).compile()
-    return { service: moduleRef.get(ChatTurnService), em, conversations, messages, receipts, delivery, logger, extensions }
+    return {
+        service: moduleRef.get(ChatTurnService),
+        em,
+        conversations,
+        messages,
+        receipts,
+        delivery,
+        logger,
+        extensions,
+    }
 }
 
-const turnPayload: ChatTurnPayload = { kind: "turn", workspaceId: "ws-1", conversationId: "conv-1", messageId: "msg-1", channelEventId: "tg:555:9", lookupName: false }
+const turnPayload: ChatTurnPayload = {
+    kind: "turn",
+    workspaceId: "ws-1",
+    conversationId: "conv-1",
+    messageId: "msg-1",
+    channelEventId: "tg:555:9",
+    lookupName: false,
+}
 
 const proposal = (patch: Partial<ChatTurnProposal> = {}): ChatTurnProposal => ({
     reply: "Tea is 50k",
@@ -111,7 +129,9 @@ const proposal = (patch: Partial<ChatTurnProposal> = {}): ChatTurnProposal => ({
     ...patch,
 })
 
-const runtimeAnswering = (answer: ChatTurnProposal | string): ChatTurnRuntime => ({ propose: () => Promise.resolve(answer) })
+const runtimeAnswering = (answer: ChatTurnProposal | string): ChatTurnRuntime => ({
+    propose: () => Promise.resolve(answer),
+})
 
 describe("ChatTurnService", () => {
     describe("runFromJob", () => {
@@ -124,23 +144,32 @@ describe("ChatTurnService", () => {
             expect(conversations.turnOf.mock.calls).toEqual([["conv-1"]])
             expect(messages.find.mock.calls).toEqual([["msg-1", "conv-1"]])
             expect(messages.storeReply.mock.calls).toEqual([["ws-1", "conv-1", "Tea is 50k", "msg-1"]])
-            expect(delivery.deliver.mock.calls).toEqual([[{ conversationId: "conv-1", messageId: "reply-1", text: "Tea is 50k" }]])
+            expect(delivery.deliver.mock.calls).toEqual([
+                [{ conversationId: "conv-1", messageId: "reply-1", text: "Tea is 50k" }],
+            ])
         })
 
-        it.each([undefined, null, false, 42, "turn", [], {}, { ...turnPayload, kind: "other" }, { ...turnPayload, lookupName: "false" }])(
-            "ignores a payload that is not a chat turn: %p",
-            async (payload) => {
-                const { service, conversations, messages, delivery, logger } = await build()
+        it.each([
+            undefined,
+            null,
+            false,
+            42,
+            "turn",
+            [],
+            {},
+            { ...turnPayload, kind: "other" },
+            { ...turnPayload, lookupName: "false" },
+        ])("ignores a payload that is not a chat turn: %p", async (payload) => {
+            const { service, conversations, messages, delivery, logger } = await build()
 
-                await service.runFromJob(payload)
+            await service.runFromJob(payload)
 
-                expect(conversations.turnOf.mock.calls).toEqual([])
-                expect(messages.find.mock.calls).toEqual([])
-                expect(messages.storeReply.mock.calls).toEqual([])
-                expect(delivery.deliver.mock.calls).toEqual([])
-                expect(logger.warn.mock.calls).toEqual([])
-            },
-        )
+            expect(conversations.turnOf.mock.calls).toEqual([])
+            expect(messages.find.mock.calls).toEqual([])
+            expect(messages.storeReply.mock.calls).toEqual([])
+            expect(delivery.deliver.mock.calls).toEqual([])
+            expect(logger.warn.mock.calls).toEqual([])
+        })
     })
 
     describe("run a deliver job", () => {
@@ -148,17 +177,27 @@ describe("ChatTurnService", () => {
 
         it("pushes the stored message to the customer", async () => {
             const { service, messages, delivery } = await build()
-            messages.find.mockResolvedValue({ kind: "ok", value: { id: "greet-1", role: "agent", body: "Welcome!", deliveryStatus: null } })
+            messages.find.mockResolvedValue({
+                kind: "ok",
+                value: { id: "greet-1", role: "agent", body: "Welcome!", deliveryStatus: null },
+            })
 
             await service.run(deliverPayload)
 
-            expect(delivery.deliver).toHaveBeenCalledWith({ conversationId: "conv-1", messageId: "greet-1", text: "Welcome!" })
+            expect(delivery.deliver).toHaveBeenCalledWith({
+                conversationId: "conv-1",
+                messageId: "greet-1",
+                text: "Welcome!",
+            })
         })
 
         it("does nothing for a message that is gone or already sent", async () => {
             const gone = await build({ message: false })
             const sent = await build()
-            sent.messages.find.mockResolvedValue({ kind: "ok", value: { id: "greet-1", role: "agent", body: "Welcome!", deliveryStatus: "sent" } })
+            sent.messages.find.mockResolvedValue({
+                kind: "ok",
+                value: { id: "greet-1", role: "agent", body: "Welcome!", deliveryStatus: "sent" },
+            })
 
             await gone.service.run(deliverPayload)
             await sent.service.run(deliverPayload)
@@ -176,7 +215,9 @@ describe("ChatTurnService", () => {
             await noConversation.service.run(turnPayload)
             await noMessage.service.run(turnPayload)
 
-            expect(noConversation.logger.warn).toHaveBeenCalledWith("conversations.turn.target-gone", { conversationId: "conv-1" })
+            expect(noConversation.logger.warn).toHaveBeenCalledWith("conversations.turn.target-gone", {
+                conversationId: "conv-1",
+            })
             expect(noMessage.delivery.showTyping).not.toHaveBeenCalled()
         })
 
@@ -208,7 +249,11 @@ describe("ChatTurnService", () => {
                 transcript: [{ role: "user", body: "Price?" }],
             } satisfies ChatTurn)
             expect(messages.storeReply).toHaveBeenCalledWith("ws-1", "conv-1", "Tea is 50k", "msg-1")
-            expect(delivery.deliver).toHaveBeenCalledWith({ conversationId: "conv-1", messageId: "reply-1", text: "Tea is 50k" })
+            expect(delivery.deliver).toHaveBeenCalledWith({
+                conversationId: "conv-1",
+                messageId: "reply-1",
+                text: "Tea is 50k",
+            })
         })
 
         it("names a customer just met and keeps the name on the turn", async () => {
@@ -219,7 +264,9 @@ describe("ChatTurnService", () => {
             await service.run({ ...turnPayload, lookupName: true })
 
             expect(conversations.rename).toHaveBeenCalledWith("conv-1", "Minh Tran")
-            expect(propose).toHaveBeenCalledWith(expect.objectContaining({ conversation: conversation({ visitorName: "Minh Tran" }) }))
+            expect(propose).toHaveBeenCalledWith(
+                expect.objectContaining({ conversation: conversation({ visitorName: "Minh Tran" }) }),
+            )
         })
 
         it("keeps the stored name when the channel will not say one", async () => {
@@ -250,7 +297,11 @@ describe("ChatTurnService", () => {
             await service.run(turnPayload)
 
             expect(outcomes.settle).toHaveBeenCalledWith(expect.objectContaining({ messageId: "msg-1" }), proposal())
-            expect(delivery.deliver).toHaveBeenCalledWith({ conversationId: "conv-1", messageId: "reply-1", text: "Fixed price 55k" })
+            expect(delivery.deliver).toHaveBeenCalledWith({
+                conversationId: "conv-1",
+                messageId: "reply-1",
+                text: "Fixed price 55k",
+            })
             expect(messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "Lead handed to Sales")
         })
 
@@ -286,7 +337,11 @@ describe("ChatTurnService", () => {
 
             expect(receipts.heldSince).toHaveBeenCalledWith("ws-1", "conv-1", new Date(NOW - 3_600_000))
             expect(messages.storeReply).toHaveBeenCalledWith("ws-1", "conv-1", "<conversations.holdingReply>", "msg-1")
-            expect(delivery.deliver).toHaveBeenCalledWith({ conversationId: "conv-1", messageId: "reply-1", text: "<conversations.holdingReply>" })
+            expect(delivery.deliver).toHaveBeenCalledWith({
+                conversationId: "conv-1",
+                messageId: "reply-1",
+                text: "<conversations.holdingReply>",
+            })
             expect(receipts.rememberHolding).toHaveBeenCalledWith("ws-1", "conv-1", new Date(NOW))
             expect(messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "<conversations.chatUnavailable>")
         })
@@ -301,8 +356,18 @@ describe("ChatTurnService", () => {
             await unset.service.run(turnPayload)
 
             expect(custom.messages.storeReply).toHaveBeenCalledWith("ws-1", "conv-1", "x".repeat(400), "msg-1")
-            expect(blank.messages.storeReply).toHaveBeenCalledWith("ws-1", "conv-1", "<conversations.holdingReply>", "msg-1")
-            expect(unset.messages.storeReply).toHaveBeenCalledWith("ws-1", "conv-1", "<conversations.holdingReply>", "msg-1")
+            expect(blank.messages.storeReply).toHaveBeenCalledWith(
+                "ws-1",
+                "conv-1",
+                "<conversations.holdingReply>",
+                "msg-1",
+            )
+            expect(unset.messages.storeReply).toHaveBeenCalledWith(
+                "ws-1",
+                "conv-1",
+                "<conversations.holdingReply>",
+                "msg-1",
+            )
         })
 
         it("does not repeat the holding line within the hour, but still hands the question over", async () => {
@@ -313,7 +378,10 @@ describe("ChatTurnService", () => {
 
             await service.run(turnPayload)
 
-            expect(outcomes.holdOver).toHaveBeenCalledWith(expect.objectContaining({ messageId: "msg-1" }), "openclaw_unavailable")
+            expect(outcomes.holdOver).toHaveBeenCalledWith(
+                expect.objectContaining({ messageId: "msg-1" }),
+                "openclaw_unavailable",
+            )
             expect(delivery.deliver).not.toHaveBeenCalled()
             expect(receipts.rememberHolding).not.toHaveBeenCalled()
             expect(messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "Handed to Lan")
@@ -334,8 +402,12 @@ describe("ChatTurnService", () => {
 
             await service.run(turnPayload)
 
-            expect(logger.error).toHaveBeenCalledWith("conversations.runtime.failed", failure, { conversationId: "conv-1" })
-            expect(delivery.deliver).toHaveBeenCalledWith(expect.objectContaining({ text: "<conversations.holdingReply>" }))
+            expect(logger.error).toHaveBeenCalledWith("conversations.runtime.failed", failure, {
+                conversationId: "conv-1",
+            })
+            expect(delivery.deliver).toHaveBeenCalledWith(
+                expect.objectContaining({ text: "<conversations.holdingReply>" }),
+            )
         })
 
         it("falls back with the reason the AI step gives when it says it cannot answer", async () => {
@@ -348,7 +420,9 @@ describe("ChatTurnService", () => {
             await service.run(turnPayload)
 
             expect(outcomes.holdOver).toHaveBeenCalledWith(expect.anything(), "too_slow")
-            expect(delivery.deliver).toHaveBeenCalledWith(expect.objectContaining({ text: "<conversations.holdingReply>" }))
+            expect(delivery.deliver).toHaveBeenCalledWith(
+                expect.objectContaining({ text: "<conversations.holdingReply>" }),
+            )
         })
     })
 })

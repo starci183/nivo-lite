@@ -32,20 +32,28 @@ export const missingFor = (def: TemplateDef, facts: ShopFacts, labels: Requireme
         .map((key): Missing => ({ kind: "module", key, label: labels.module(key), href: newModulePath(key) })),
     ...def.requires.channels
         .filter((key) => key === "customer_chat" && !facts.hasChat)
-        .map((key): Missing => ({ kind: "channel", key, label: labels.channel(key), href: AUTOMATION_ROUTES.connections })),
+        .map((key): Missing => ({
+            kind: "channel",
+            key,
+            label: labels.channel(key),
+            href: AUTOMATION_ROUTES.connections,
+        })),
     ...def.requires.connections
         .filter((key) => !facts.connections.some((connection) => connection.provider === key))
-        .map(
-            (key): Missing => ({
-                kind: "connection",
-                key,
-                label: labels.connection(key),
-                href: CONNECTION_HREF[key] ?? AUTOMATION_ROUTES.connections,
-            }),
-        ),
+        .map((key): Missing => ({
+            kind: "connection",
+            key,
+            label: labels.connection(key),
+            href: CONNECTION_HREF[key] ?? AUTOMATION_ROUTES.connections,
+        })),
     ...def.requires.capabilities
         .filter((key) => !facts.capabilities.has(key))
-        .map((key): Missing => ({ kind: "capability", key, label: labels.capability(key), href: AUTOMATION_ROUTES.knowledge })),
+        .map((key): Missing => ({
+            kind: "capability",
+            key,
+            label: labels.capability(key),
+            href: AUTOMATION_ROUTES.knowledge,
+        })),
 ]
 
 const summaryOf = (steps: NonNullable<RunRow["steps"]>, status: string): string => {
@@ -63,7 +71,11 @@ export const runViewOf = (row: RunRow, templateKey: string): AutomationRunView =
         status: row.status,
         triggerRef: row.trigger_ref,
         summary: summaryOf(steps, row.status),
-        steps: steps.map(({ label, status, detail }) => ({ label, status, ...(detail === undefined ? {} : { detail }) })),
+        steps: steps.map(({ label, status, detail }) => ({
+            label,
+            status,
+            ...(detail === undefined ? {} : { detail }),
+        })),
         evidence: row.evidence,
         error: row.error,
         createdAt: row.created_at,
@@ -97,7 +109,9 @@ export interface CardInputs {
 
 type GoogleState = NonNullable<AutomationCardView["google"]>
 
-const googleOf = (google: OverviewRows["google"]): { readonly state: GoogleState; readonly sheetUrl: string | null } => {
+const googleOf = (
+    google: OverviewRows["google"],
+): { readonly state: GoogleState; readonly sheetUrl: string | null } => {
     if (google === null || google.status === "pending") return { state: "missing", sheetUrl: null }
     const sheetUrl = google.public_meta?.sheet_url || null
     if (google.status === "error") {

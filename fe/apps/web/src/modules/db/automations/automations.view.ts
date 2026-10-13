@@ -1,4 +1,11 @@
-import type { AutomationCardView, AutomationRunView, Capability, L, ShopContext, TemplateDef } from "@/lib/automation-shared"
+import type {
+    AutomationCardView,
+    AutomationRunView,
+    Capability,
+    L,
+    ShopContext,
+    TemplateDef,
+} from "@/lib/automation-shared"
 import { MODULE_REGISTRY, isModuleKey } from "@/modules/catalog"
 import { buildCards, runViewsOf } from "./automations.cards"
 import type { RequirementLabels } from "./automations.cards"
@@ -54,7 +61,8 @@ const both = (languages: AutomationsLanguages, key: string, values?: Readonly<Re
     en: languages.en(key, values),
 })
 
-const moduleName = (key: string, locale: "vi" | "en"): string => (isModuleKey(key) ? MODULE_REGISTRY[key].name[locale] : key)
+const moduleName = (key: string, locale: "vi" | "en"): string =>
+    isModuleKey(key) ? MODULE_REGISTRY[key].name[locale] : key
 
 /** The language data that reads a shop, compiled from the Vietnamese messages. */
 export const patternsFrom = (texts: AutomationsTexts): ShopPatterns => ({

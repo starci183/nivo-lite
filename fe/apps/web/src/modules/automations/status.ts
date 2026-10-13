@@ -100,10 +100,13 @@ export const hiddenAutomations = (cards: ReadonlyArray<AutomationCardView>): Arr
 export type AutomationValues = Record<string, ConfigValue>
 
 /** The module a filter chip names, or null for the chips that are not a module. */
-export const moduleOfAutomationFilter = (filter: AutomationFilterKey): ModuleKey | null => (isModuleKey(filter) ? filter : null)
+export const moduleOfAutomationFilter = (filter: AutomationFilterKey): ModuleKey | null =>
+    isModuleKey(filter) ? filter : null
 
 /** The hours and minutes of a `HH:MM` setting. */
-export const automationTimeParts = (value: ConfigValue | undefined): { readonly hour: number; readonly minute: number } => {
+export const automationTimeParts = (
+    value: ConfigValue | undefined,
+): { readonly hour: number; readonly minute: number } => {
     const [hour, minute] = String(value ?? "00:00")
         .split(":")
         .map(Number)

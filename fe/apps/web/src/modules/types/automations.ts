@@ -54,7 +54,12 @@ export interface CardView {
 }
 
 /** One setting of a template as the form edits it. */
-export type SettingFieldView = { readonly key: string; readonly id: string; readonly label: string; readonly description?: string } & (
+export type SettingFieldView = {
+    readonly key: string
+    readonly id: string
+    readonly label: string
+    readonly description?: string
+} & (
     | { readonly kind: "number"; readonly min: number; readonly max: number; readonly value: number }
     | { readonly kind: "time"; readonly hour: number; readonly minute: number }
     | { readonly kind: "toggle"; readonly isOn: boolean }

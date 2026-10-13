@@ -20,7 +20,10 @@ const createTransport = mockCreateTransport
 
 const PUBLIC: MailOptions = { allowPrivateHosts: false, platform: null, helloName: "nivo.test" }
 const DEV: MailOptions = { ...PUBLIC, allowPrivateHosts: true }
-const WITH_PLATFORM: MailOptions = { ...PUBLIC, platform: { url: new Secret("smtp://platform"), from: "NIVO <no-reply@nivo.test>" } }
+const WITH_PLATFORM: MailOptions = {
+    ...PUBLIC,
+    platform: { url: new Secret("smtp://platform"), from: "NIVO <no-reply@nivo.test>" },
+}
 
 const config: SmtpConfig = {
     host: "smtp.example.com",
@@ -210,7 +213,10 @@ describe("MailClient", () => {
             const client = await build(WITH_PLATFORM)
 
             await expect(
-                client.sendThroughPlatform({ ...message, attachments: [{ filename: "a.txt", content: Buffer.from("x") }] }),
+                client.sendThroughPlatform({
+                    ...message,
+                    attachments: [{ filename: "a.txt", content: Buffer.from("x") }],
+                }),
             ).resolves.toEqual({ messageId: "<id-5>" })
 
             expect(createTransport).toHaveBeenCalledWith("smtp://platform")
@@ -243,7 +249,9 @@ describe("MailClient", () => {
             const { sendMail, close } = transportAnswering({ messageId: "<notice-1>" })
             const client = await build(WITH_PLATFORM)
 
-            await expect(client.sendNoticeThroughPlatform("owner@example.com", notice)).resolves.toEqual({ messageId: "<notice-1>" })
+            await expect(client.sendNoticeThroughPlatform("owner@example.com", notice)).resolves.toEqual({
+                messageId: "<notice-1>",
+            })
 
             expect(createTransport.mock.calls).toEqual([["smtp://platform"]])
             expect(sendMail.mock.calls).toEqual([
@@ -272,7 +280,9 @@ describe("MailClient", () => {
         it("rejects when the platform sender is not configured", async () => {
             const client = await build(PUBLIC)
 
-            await expect(client.sendNoticeThroughPlatform("owner@example.com", notice)).rejects.toMatchObject({ code: MailErrorCode.NotConfigured })
+            await expect(client.sendNoticeThroughPlatform("owner@example.com", notice)).rejects.toMatchObject({
+                code: MailErrorCode.NotConfigured,
+            })
             expect(createTransport.mock.calls).toEqual([])
         })
     })

@@ -176,7 +176,9 @@ export interface HistoryRow {
 
 /** The history of a post, newest first. */
 export const historyRows = (evidence: ReadonlyArray<EvidenceLine>): Array<HistoryRow> =>
-    [...evidence].reverse().map((e, i) => ({ id: `${e.at}-${i}`, text: e.text, at: e.at, timeLabel: dateTimeText(e.at) }))
+    [...evidence]
+        .reverse()
+        .map((e, i) => ({ id: `${e.at}-${i}`, text: e.text, at: e.at, timeLabel: dateTimeText(e.at) }))
 
 /** The text of one channel of a waiting post. */
 export interface QuoteView {

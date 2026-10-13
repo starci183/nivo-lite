@@ -17,7 +17,12 @@
   },
   "requires": { "modules": ["accounting"], "channels": [], "connections": ["smtp"], "capabilities": [] },
   "settings": [
-    { "key": "accountant_email", "kind": "email", "required": true, "label": { "vi": "Email kế toán", "en": "Accountant email" } },
+    {
+      "key": "accountant_email",
+      "kind": "email",
+      "required": true,
+      "label": { "vi": "Email kế toán", "en": "Accountant email" }
+    },
     { "key": "time", "kind": "time", "label": { "vi": "Gửi lúc", "en": "Send at" } },
     { "key": "subject", "kind": "text", "label": { "vi": "Tiêu đề email", "en": "Email subject" } },
     { "key": "body", "kind": "textarea", "label": { "vi": "Nội dung email", "en": "Email body" } }

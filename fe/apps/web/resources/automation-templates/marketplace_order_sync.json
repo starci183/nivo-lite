@@ -22,16 +22,10 @@
     }
   },
   "requires": {
-    "modules": [
-      "sales"
-    ],
+    "modules": ["sales"],
     "channels": [],
-    "connections": [
-      "webhook"
-    ],
-    "capabilities": [
-      "sells_online"
-    ]
+    "connections": ["webhook"],
+    "capabilities": ["sells_online"]
   },
   "settings": [],
   "contentMode": "none",

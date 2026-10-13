@@ -79,7 +79,12 @@ export const ContentMonthGrid = (props: ContentMonthGridProps) => (
                             props.onDrop(day)
                         }}
                     >
-                        <Text as="span" size="xs" weight={today ? "semibold" : "normal"} tone={today ? "accent" : "muted"}>
+                        <Text
+                            as="span"
+                            size="xs"
+                            weight={today ? "semibold" : "normal"}
+                            tone={today ? "accent" : "muted"}
+                        >
                             {day}
                         </Text>
                         {shown.map((post) => (

@@ -129,9 +129,7 @@ const toggle = (card: AutomationCardView, work: Working, enabled: boolean, conte
         enabled,
         dismissed: false,
         config: resolveConfig(card.def, work.config),
-        ...(standard === null
-            ? {}
-            : { body: standard.vi, body_version: 1, based_on_context: context.contextVersion }),
+        ...(standard === null ? {} : { body: standard.vi, body_version: 1, based_on_context: context.contextVersion }),
     }
     return null
 }
@@ -145,7 +143,8 @@ export const planChange = (card: AutomationCardView, patch: PipelinePatch, conte
     const work: Working = { change: {}, audits: [], config: card.config, body: card.body }
     const steps: ReadonlyArray<() => string | null> = [
         () => (patch.dismissed === undefined ? null : (dismiss(work, patch.dismissed), null)),
-        () => (patch.googleConnectionId === undefined ? null : moveAccount(card, work, patch.googleConnectionId, context)),
+        () =>
+            patch.googleConnectionId === undefined ? null : moveAccount(card, work, patch.googleConnectionId, context),
         () => (patch.values === undefined && patch.body === undefined ? null : save(card, work, patch, context)),
         () => (patch.autoSend === undefined ? null : answerTrust(card, work, patch.autoSend)),
         () => (patch.enabled === undefined ? null : toggle(card, work, patch.enabled, context)),

@@ -22,7 +22,9 @@ export class WebhookProofRegistryService implements WebhookProofRegistry {
     prove(provider: string, request: WebhookProofRequest): Promise<boolean> {
         const proof = this.proofs.get(provider)
         if (proof === undefined) {
-            return Promise.reject(new HttpSecurityError({ code: HttpSecurityErrorCode.WebhookProviderUnknown, params: { provider } }))
+            return Promise.reject(
+                new HttpSecurityError({ code: HttpSecurityErrorCode.WebhookProviderUnknown, params: { provider } }),
+            )
         }
         return proof.prove(request)
     }

@@ -8,7 +8,6 @@ import type { CommandRow } from "./automation-commands.contracts"
 import { commandIdOf } from "./policies/command.policy"
 import { SELECT_QUEUED_COMMAND, SETTLE_COMMAND } from "./persistence/automation-commands.sql"
 
-
 @Injectable()
 /**
  * The commands a manager's screen queues for the back end: the shop's own wording proposed with a model, a scheduled workflow run now.
@@ -45,7 +44,12 @@ export class AutomationCommandsService {
         return { body: proposal.body, generated: proposal.generated }
     }
 
-    private async settle(id: string, status: "done" | "failed", result: object | null, fault: string | null): Promise<void> {
+    private async settle(
+        id: string,
+        status: "done" | "failed",
+        result: object | null,
+        fault: string | null,
+    ): Promise<void> {
         await this.entityManager.query(SETTLE_COMMAND, [
             id,
             status,

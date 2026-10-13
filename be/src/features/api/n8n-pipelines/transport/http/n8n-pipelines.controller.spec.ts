@@ -101,9 +101,7 @@ describe("N8nPipelinesController", () => {
             })
 
             expect(queryBus.execute).toHaveBeenCalledTimes(1)
-            expect(queryBus.execute).toHaveBeenCalledWith(
-                new FetchOverdueInvoicesQuery({ request: { authorization } }),
-            )
+            expect(queryBus.execute).toHaveBeenCalledWith(new FetchOverdueInvoicesQuery({ request: { authorization } }))
         })
 
         it("dispatches the month ledger query and returns the CSV details", async () => {

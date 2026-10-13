@@ -98,9 +98,7 @@ describe("AutomationsController", () => {
         ]
         queryBus.execute.mockResolvedValue(suggestions)
 
-        await expect(controller.suggestions(PRINCIPAL, "ws-1", { module: "sales" })).resolves.toEqual(
-            suggestions,
-        )
+        await expect(controller.suggestions(PRINCIPAL, "ws-1", { module: "sales" })).resolves.toEqual(suggestions)
 
         expect(queryBus.execute).toHaveBeenCalledTimes(1)
         expect(queryBus.execute).toHaveBeenCalledWith(
@@ -204,9 +202,7 @@ describe("AutomationsController", () => {
         const proposal = { body: "Thank you, {customer}", generated: true, contextVersion: 2 }
         commandBus.execute.mockResolvedValue(proposal)
 
-        await expect(controller.proposeBody(PRINCIPAL, "ws-1", { key: "thank_payment" })).resolves.toEqual(
-            proposal,
-        )
+        await expect(controller.proposeBody(PRINCIPAL, "ws-1", { key: "thank_payment" })).resolves.toEqual(proposal)
 
         expect(commandBus.execute).toHaveBeenCalledTimes(1)
         expect(commandBus.execute).toHaveBeenCalledWith(

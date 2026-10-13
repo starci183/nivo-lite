@@ -165,7 +165,6 @@ export const downloadNameOf = (title: string): string => {
     return `${stem === "" ? "video" : stem}.mp4`
 }
 
-
 type RenderParsed = { readonly success: true; readonly data: string } | { readonly success: false }
 
 /** Bounds the id of the project a person asks to render. */

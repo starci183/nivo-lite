@@ -64,7 +64,13 @@ export const contextsFrom = (installations: ReadonlyArray<InstallationRow>): Act
         const gateHours = snapshot.gates?.hours_sla?.evidence
         if (gateHours && hoursText === "") hoursText = gateHours
     }
-    return { installed: installations.map((row) => row.module_key), versions, text: parts.join("\n"), hoursText, operatingModes }
+    return {
+        installed: installations.map((row) => row.module_key),
+        versions,
+        text: parts.join("\n"),
+        hoursText,
+        operatingModes,
+    }
 }
 
 const hoursLineOf = (text: string, patterns: ShopPatterns): string | undefined =>
@@ -90,8 +96,15 @@ const affirms = (text: string, pattern: RegExp, negation: RegExp): boolean =>
     text.split(/[\n.;]/).some((line) => pattern.test(line) && !negation.test(line))
 
 /** What the shop has, derived from its active contexts, its knowledge and its data. */
-export const capabilitiesFrom = (rows: OverviewRows, contexts: ActiveContexts, patterns: ShopPatterns): ReadonlySet<Capability> => {
-    const text = [contexts.text, ...rows.knowledge.map((source) => `${source.title}\n${source.content.slice(0, 3000)}`)].join("\n")
+export const capabilitiesFrom = (
+    rows: OverviewRows,
+    contexts: ActiveContexts,
+    patterns: ShopPatterns,
+): ReadonlySet<Capability> => {
+    const text = [
+        contexts.text,
+        ...rows.knowledge.map((source) => `${source.title}\n${source.content.slice(0, 3000)}`),
+    ].join("\n")
     const has = new Set<Capability>()
     for (const capability of PATTERN_CAPABILITIES) {
         if (affirms(text, patterns.capabilities[capability], patterns.negation)) has.add(capability)
@@ -105,7 +118,11 @@ export const capabilitiesFrom = (rows: OverviewRows, contexts: ActiveContexts, p
 }
 
 /** The facts the requirements of a template are checked against. */
-export const factsFrom = (rows: OverviewRows, contexts: ActiveContexts, capabilities: ReadonlySet<Capability>): ShopFacts => ({
+export const factsFrom = (
+    rows: OverviewRows,
+    contexts: ActiveContexts,
+    capabilities: ReadonlySet<Capability>,
+): ShopFacts => ({
     installed: contexts.installed,
     capabilities,
     connections: rows.connections,
@@ -113,12 +130,16 @@ export const factsFrom = (rows: OverviewRows, contexts: ActiveContexts, capabili
         rows.chat_agents > 0 ||
         rows.connections.some(
             (connection) =>
-                (connection.provider === "telegram" || connection.provider === "zalo_oa") && connection.status !== "pending",
+                (connection.provider === "telegram" || connection.provider === "zalo_oa") &&
+                connection.status !== "pending",
         ),
 })
 
 /** The context version a template's body is written from: its module's active version, or the highest of the installed modules. */
-export const contextVersionFor = (moduleKey: string | null, versions: Readonly<Record<string, number>>): number | null => {
+export const contextVersionFor = (
+    moduleKey: string | null,
+    versions: Readonly<Record<string, number>>,
+): number | null => {
     if (moduleKey !== null) return versions[moduleKey] ?? null
     const all = Object.values(versions)
     return all.length > 0 ? Math.max(...all) : null

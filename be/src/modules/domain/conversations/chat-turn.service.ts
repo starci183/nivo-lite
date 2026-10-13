@@ -131,18 +131,34 @@ export class ChatTurnService {
             await this.sendReply(turn, await this.holdingText(turn.conversation))
             await this.receipts.rememberHolding(turn.conversation.workspaceId, turn.conversation.id, this.clock.now())
         }
-        await this.writeLines(turn.conversation, [this.catalog.get("conversations.chatUnavailable", {}, LOCALE), ...lines])
+        await this.writeLines(turn.conversation, [
+            this.catalog.get("conversations.chatUnavailable", {}, LOCALE),
+            ...lines,
+        ])
     }
 
     /** Stores the reply to the customer message once and pushes it to the channel unless a previous attempt already did. */
     private async sendReply(turn: ChatTurn, text: string): Promise<void> {
-        const stored = await this.messages.storeReply(turn.conversation.workspaceId, turn.conversation.id, text, turn.messageId)
-        if (!stored.sent) await this.delivery.deliver({ conversationId: turn.conversation.id, messageId: stored.id, text: stored.body })
+        const stored = await this.messages.storeReply(
+            turn.conversation.workspaceId,
+            turn.conversation.id,
+            text,
+            turn.messageId,
+        )
+        if (!stored.sent)
+            await this.delivery.deliver({
+                conversationId: turn.conversation.id,
+                messageId: stored.id,
+                text: stored.body,
+            })
     }
 
     /** The owner own words (module settings), else the default holding line. */
     private async holdingText(conversation: TurnConversation): Promise<string> {
-        const rows = await this.entityManager.query<Array<HoldingSettingRow>>(FIND_HOLDING_SETTING, [conversation.workspaceId, conversation.agent.id])
+        const rows = await this.entityManager.query<Array<HoldingSettingRow>>(FIND_HOLDING_SETTING, [
+            conversation.workspaceId,
+            conversation.agent.id,
+        ])
         const custom = rows[0]?.holding_message?.trim() ?? ""
         return custom === "" ? this.catalog.get("conversations.holdingReply", {}, LOCALE) : custom.slice(0, HOLDING_MAX)
     }

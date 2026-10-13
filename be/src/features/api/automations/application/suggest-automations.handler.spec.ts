@@ -24,7 +24,10 @@ const build = () => {
 describe("SuggestAutomationsHandler", () => {
     it.each(["sales", ""])("returns suggestions with module filter '%s'", async (moduleKey) => {
         const { handler, automations, logger } = build()
-        const message = new SuggestAutomationsQuery({ principal: PRINCIPAL, request: { workspaceId: "ws-1", moduleKey } })
+        const message = new SuggestAutomationsQuery({
+            principal: PRINCIPAL,
+            request: { workspaceId: "ws-1", moduleKey },
+        })
         automations.suggestFor.mockResolvedValue(SUGGESTIONS)
 
         await expect(handler.execute(message)).resolves.toBe(SUGGESTIONS)

@@ -23,16 +23,10 @@
     }
   },
   "requires": {
-    "modules": [
-      "booking"
-    ],
-    "channels": [
-      "customer_chat"
-    ],
+    "modules": ["booking"],
+    "channels": ["customer_chat"],
     "connections": [],
-    "capabilities": [
-      "has_appointments"
-    ]
+    "capabilities": ["has_appointments"]
   },
   "settings": [
     {
@@ -71,14 +65,7 @@
       "en": "Never invent prices, hours, addresses or policies that are not in the shop information."
     }
   ],
-  "variables": [
-    "ten_khach",
-    "ten_shop",
-    "dich_vu",
-    "gio_hen",
-    "nguoi_lam",
-    "dia_chi"
-  ],
+  "variables": ["ten_khach", "ten_shop", "dich_vu", "gio_hen", "nguoi_lam", "dia_chi"],
   "defaultBody": {
     "vi": "Chào {ten_khach}, {ten_shop} nhắc bạn có lịch {dich_vu} lúc {gio_hen}. Bạn nhắn lại nếu cần đổi giờ nhé.",
     "en": "Hi {ten_khach}, a reminder from {ten_shop}: {dich_vu} at {gio_hen}."

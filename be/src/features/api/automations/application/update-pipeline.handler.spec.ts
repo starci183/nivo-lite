@@ -67,6 +67,8 @@ describe("UpdatePipelineHandler", () => {
 
         expect(automations.update).toHaveBeenCalledWith("u-1", "ws-1", "thank_payment", PATCH)
         expect(logger.error).toHaveBeenCalledTimes(1)
-        expect(logger.error).toHaveBeenCalledWith("cqrs.operation.failed", failure, { operation: "UpdatePipelineHandler" })
+        expect(logger.error).toHaveBeenCalledWith("cqrs.operation.failed", failure, {
+            operation: "UpdatePipelineHandler",
+        })
     })
 })

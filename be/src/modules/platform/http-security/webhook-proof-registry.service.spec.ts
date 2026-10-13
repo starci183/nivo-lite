@@ -29,6 +29,8 @@ describe("WebhookProofRegistryService", () => {
         registry.add(proofOf("zalo"))
 
         expect(() => registry.add(proofOf("zalo"))).toThrow(HttpSecurityError)
-        expect(() => registry.add(proofOf("zalo"))).toThrow(expect.objectContaining({ code: HttpSecurityErrorCode.WebhookProviderUnknown }))
+        expect(() => registry.add(proofOf("zalo"))).toThrow(
+            expect.objectContaining({ code: HttpSecurityErrorCode.WebhookProviderUnknown }),
+        )
     })
 })

@@ -77,7 +77,12 @@ export const AutomationMessage = (props: AutomationMessageProps) => (
         </div>
         <div className={ACTIONS_CLASS}>
             {props.enableLabel === undefined ? null : (
-                <Button variant="primary" isPending={props.isBusy} isDisabled={!props.canEnable} onPress={props.onEnable}>
+                <Button
+                    variant="primary"
+                    isPending={props.isBusy}
+                    isDisabled={!props.canEnable}
+                    onPress={props.onEnable}
+                >
                     {props.enableLabel}
                 </Button>
             )}

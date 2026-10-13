@@ -1,8 +1,8 @@
-import "server-only";
-import { connectionsFor } from "./agent-bindings";
-import { resolveBotToken } from "./channels";
-import type { Db } from "./core";
-import { deliverToChannel, telegramSend } from "./telegram";
+import "server-only"
+import { connectionsFor } from "./agent-bindings"
+import { resolveBotToken } from "./channels"
+import type { Db } from "./core"
+import { deliverToChannel, telegramSend } from "./telegram"
 
 /**
  * An agent speaking first on a channel it is bound to (`outbound_chat`), for a customer who has no conversation to answer in.
@@ -16,29 +16,52 @@ import { deliverToChannel, telegramSend } from "./telegram";
  * Returns the channel that really accepted the message, or null (the caller keeps today's behaviour).
  */
 export const startOutboundChat = async (
-  db: Db, ws: string, agentId: string, leadId: string, text: string,
+    db: Db,
+    ws: string,
+    agentId: string,
+    leadId: string,
+    text: string,
 ): Promise<{ readonly via: "telegram" | "zalo"; readonly connectionId: string } | null> => {
-  const conns = await connectionsFor(agentId, "outbound_chat", { acting: true, connectedOnly: true, providers: ["telegram", "zalo_oa"] }).catch(() => []);
-  for (const conn of conns) {
-    const via = conn.provider === "zalo_oa" ? "zalo" : "telegram";
-    const { data } = await db.from("agent_conversations").select("id").eq("workspace_id", ws).eq("lead_id", leadId).eq("kind", "customer").eq("connection_id", conn.id).order("created_at", { ascending: false }).limit(1);
-    const convId = (data as Array<{ id: string }> | null)?.[0]?.id;
-    if (convId) {
-      if (await deliverToChannel(db, convId, text)) return { via, connectionId: conn.id };
-      continue;
+    const conns = await connectionsFor(agentId, "outbound_chat", {
+        acting: true,
+        connectedOnly: true,
+        providers: ["telegram", "zalo_oa"],
+    }).catch(() => [])
+    for (const conn of conns) {
+        const via = conn.provider === "zalo_oa" ? "zalo" : "telegram"
+        const { data } = await db
+            .from("agent_conversations")
+            .select("id")
+            .eq("workspace_id", ws)
+            .eq("lead_id", leadId)
+            .eq("kind", "customer")
+            .eq("connection_id", conn.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+        const convId = (data as Array<{ id: string }> | null)?.[0]?.id
+        if (convId) {
+            if (await deliverToChannel(db, convId, text)) return { via, connectionId: conn.id }
+            continue
+        }
+        if (via !== "telegram") continue
+        const ev = await db
+            .from("inbound_events")
+            .select("event_id")
+            .eq("workspace_id", ws)
+            .eq("lead_id", leadId)
+            .like("event_id", `tg:${conn.id}:%`)
+            .order("created_at", { ascending: false })
+            .limit(1)
+        const chatId = (ev.data as Array<{ event_id: string | null }> | null)?.[0]?.event_id?.split(":")[2]
+        if (!chatId || !/^-?\d+$/.test(chatId)) continue
+        try {
+            const token = await resolveBotToken(ws, conn.id)
+            if (!token) continue
+            await telegramSend(token, chatId, text)
+            return { via, connectionId: conn.id }
+        } catch (e) {
+            console.error("telegram outbound failed", e instanceof Error ? e.message : e)
+        }
     }
-    if (via !== "telegram") continue;
-    const ev = await db.from("inbound_events").select("event_id").eq("workspace_id", ws).eq("lead_id", leadId).like("event_id", `tg:${conn.id}:%`).order("created_at", { ascending: false }).limit(1);
-    const chatId = (ev.data as Array<{ event_id: string | null }> | null)?.[0]?.event_id?.split(":")[2];
-    if (!chatId || !/^-?\d+$/.test(chatId)) continue;
-    try {
-      const token = await resolveBotToken(ws, conn.id);
-      if (!token) continue;
-      await telegramSend(token, chatId, text);
-      return { via, connectionId: conn.id };
-    } catch (e) {
-      console.error("telegram outbound failed", e instanceof Error ? e.message : e);
-    }
-  }
-  return null;
-};
+    return null
+}

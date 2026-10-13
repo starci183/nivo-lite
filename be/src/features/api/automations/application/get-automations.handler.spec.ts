@@ -41,6 +41,8 @@ describe("GetAutomationsHandler", () => {
 
         expect(automations.overview).toHaveBeenCalledWith("u-1", "ws-1")
         expect(logger.error).toHaveBeenCalledTimes(1)
-        expect(logger.error).toHaveBeenCalledWith("cqrs.operation.failed", failure, { operation: "GetAutomationsHandler" })
+        expect(logger.error).toHaveBeenCalledWith("cqrs.operation.failed", failure, {
+            operation: "GetAutomationsHandler",
+        })
     })
 })

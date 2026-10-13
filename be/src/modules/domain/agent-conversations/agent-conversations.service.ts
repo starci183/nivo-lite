@@ -3,9 +3,18 @@ import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
-import type { ConversationRef, ConversationTarget, OpenConversation, TurnConversation } from "./agent-conversations.contracts"
+import type {
+    ConversationRef,
+    ConversationTarget,
+    OpenConversation,
+    TurnConversation,
+} from "./agent-conversations.contracts"
 import { AgentConversationsError, AgentConversationsErrorCode } from "./errors/agent-conversations.error"
-import type { ConversationRefRow, ConversationTargetRow, TurnConversationRow } from "./persistence/agent-conversations.rows"
+import type {
+    ConversationRefRow,
+    ConversationTargetRow,
+    TurnConversationRow,
+} from "./persistence/agent-conversations.rows"
 import {
     ARCHIVE_CONVERSATION,
     FIND_CONVERSATION,
@@ -45,7 +54,14 @@ export class AgentConversationsService {
         customerId: string,
         manager: EntityManager = this.entityManager,
     ): Promise<Outcome<ConversationRef, AgentConversationsErrorCode>> {
-        const row = (await manager.query<Array<ConversationRefRow>>(FIND_CONVERSATION, [workspaceId, channel, connectionId, customerId]))[0]
+        const row = (
+            await manager.query<Array<ConversationRefRow>>(FIND_CONVERSATION, [
+                workspaceId,
+                channel,
+                connectionId,
+                customerId,
+            ])
+        )[0]
         return row === undefined ? refused(AgentConversationsErrorCode.NotFound) : ok(refOf(row))
     }
 
@@ -89,13 +105,17 @@ export class AgentConversationsService {
 
     /** Where the replies of the conversation go, or a refusal when it does not exist. */
     async targetOf(conversationId: string): Promise<Outcome<ConversationTarget, AgentConversationsErrorCode>> {
-        const row = (await this.entityManager.query<Array<ConversationTargetRow>>(FIND_CONVERSATION_TARGET, [conversationId]))[0]
+        const row = (
+            await this.entityManager.query<Array<ConversationTargetRow>>(FIND_CONVERSATION_TARGET, [conversationId])
+        )[0]
         return row === undefined ? refused(AgentConversationsErrorCode.NotFound) : ok(targetOf(row))
     }
 
     /** The conversation a turn answers, with the agent that speaks in it, or a refusal when it does not exist. */
     async turnOf(conversationId: string): Promise<Outcome<TurnConversation, AgentConversationsErrorCode>> {
-        const row = (await this.entityManager.query<Array<TurnConversationRow>>(FIND_TURN_CONVERSATION, [conversationId]))[0]
+        const row = (
+            await this.entityManager.query<Array<TurnConversationRow>>(FIND_TURN_CONVERSATION, [conversationId])
+        )[0]
         if (row === undefined) return refused(AgentConversationsErrorCode.NotFound)
         return ok({
             ...targetOf(row),
