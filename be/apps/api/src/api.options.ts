@@ -1,3 +1,29 @@
+import {
+    AGENTS_SYNC_FRESH_MS,
+    AgentsService,
+    UnboundInstallationsService,
+    UnboundKnowledgeLensService,
+    UnboundModuleProfilesService,
+} from "@modules/domain/agents"
+import type { AgentsOptions } from "@modules/domain/agents"
+import { UnboundBookingToolsService, UnboundKnowledgeSearchService } from "@modules/domain/agent-tools"
+import type { AgentToolsModule } from "@modules/domain/agent-tools"
+import {
+    ApprovalRequesterService,
+    UnboundDecisionEventsService,
+    UnboundLeadGenFlowService,
+    UnboundPaymentReceiptsService,
+} from "@modules/domain/decisions"
+import type { DecisionsModule } from "@modules/domain/decisions"
+import {
+    ConversationLeadsService,
+    HandoffToolService,
+    InboundStatusService,
+    LeadWriterService,
+    OutboundAccessService,
+} from "@modules/domain/work-performers"
+import { ToolTokenService } from "@modules/integrations/openclaw"
+
 import type { DocumentsOptions } from "@modules/integrations/documents"
 import type { LlmOptions } from "@modules/integrations/llm"
 import type { ChannelSetupOptions } from "@modules/integrations/channel-setup"
@@ -88,4 +114,51 @@ export interface ApiOptions {
     readonly tts: TtsOptions
     /** Where the video renderer finds its assets and how it runs ffmpeg. */
     readonly video: VideoOptions
+}
+
+/** The static port bindings consumed by the agent tools registration. */
+interface ApiAgentToolsCompositionOptions {
+    /** The classes and tokens implementing every agent tool port. */
+    readonly ports: Parameters<typeof AgentToolsModule.register>[0]["ports"]
+}
+
+/** The static port bindings consumed by the decisions registration. */
+interface ApiDecisionsCompositionOptions {
+    /** The classes and tokens implementing every decisions port. */
+    readonly ports: Parameters<typeof DecisionsModule.register>[0]["ports"]
+}
+
+/** Binds the agents' directories and sets the existing sync freshness. */
+export const AGENTS_COMPOSITION_OPTIONS: AgentsOptions = {
+    ports: {
+        installations: UnboundInstallationsService,
+        knowledge: UnboundKnowledgeLensService,
+        modules: UnboundModuleProfilesService,
+    },
+    syncFreshMs: AGENTS_SYNC_FRESH_MS,
+}
+
+/** Binds the tools to their knowledge, booking, approval and conversation owners. */
+export const AGENT_TOOLS_COMPOSITION_OPTIONS: ApiAgentToolsCompositionOptions = {
+    ports: {
+        knowledgeSearch: UnboundKnowledgeSearchService,
+        leadWriter: LeadWriterService,
+        bookingTools: UnboundBookingToolsService,
+        approvalRequester: ApprovalRequesterService,
+        handoffTool: HandoffToolService,
+        conversationLeads: ConversationLeadsService,
+        toolTokens: ToolTokenService,
+    },
+}
+
+/** Binds decisions to the directory, inbox, events, payments and outbound access owners. */
+export const DECISIONS_COMPOSITION_OPTIONS: ApiDecisionsCompositionOptions = {
+    ports: {
+        agentDirectory: AgentsService,
+        inboundEventStatus: InboundStatusService,
+        decisionEvents: UnboundDecisionEventsService,
+        paymentReceipts: UnboundPaymentReceiptsService,
+        leadGenFlow: UnboundLeadGenFlowService,
+        outboundAccessGate: OutboundAccessService,
+    },
 }
