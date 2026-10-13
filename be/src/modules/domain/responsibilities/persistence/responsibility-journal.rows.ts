@@ -11,3 +11,9 @@ export interface AgentNameRow {
     /** The agent name. */
     name: string
 }
+
+/** The id of a responsibility. */
+export interface ResponsibilityIdRow {
+    /** The responsibility id. */
+    id: string
+}

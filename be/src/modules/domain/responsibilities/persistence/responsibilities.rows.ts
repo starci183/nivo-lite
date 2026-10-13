@@ -1,29 +1,29 @@
 /** public.responsibilities as the statements select it: the due date as ISO text. */
 export interface ResponsibilitiesRow {
-    /** Primary key of the responsibility. */
+    /** The responsibility row id. */
     readonly id: string
-    /** The lead this responsibility is attached to. */
+    /** The lead this follow-up belongs to. */
     readonly lead_id: string
-    /** Short name shown on the board. */
+    /** The short label shown on the follow-up card. */
     readonly title: string
-    /** Whether a person or an agent owns the next step. */
+    /** Whether a person or an agent owns the follow-up. */
     readonly owner_kind: string
-    /** The agent that owns it, when the owner is an agent; otherwise none. */
+    /** The owning agent when an agent owns it; null for a human owner. */
     readonly owner_agent_id: string | null
-    /** Display name of whoever owns the next step. */
+    /** The owner's display name, kept so the card renders without a join. */
     readonly owner_name: string
-    /** What should happen next. */
+    /** The next step the owner has to take. */
     readonly next_action: string
-    /** When it is due, as ISO text, or null when no due date is set. */
+    /** When the next step is due, ISO text; null when it has no deadline. */
     readonly due_at: string | null
-    /** Whether the responsibility is still open, waiting, or finished. */
+    /** The stored lifecycle status of the follow-up. */
     readonly status: string
 }
 
 /** public.agents as the owner lookups select it. */
 export interface AgentsRow {
-    /** Primary key of the agent. */
+    /** The agent row id an owner_agent_id points at. */
     readonly id: string
-    /** Name shown beside the responsibilities this agent owns. */
+    /** The agent's display name, copied into owner_name. */
     readonly name: string
 }

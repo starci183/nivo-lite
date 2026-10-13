@@ -24,3 +24,9 @@ export const isMetaInboundJob = (value: unknown): value is MetaInboundJob =>
     "event" in value &&
     typeof value.event === "object" &&
     value.event !== null
+
+/** The raw request body the signature is computed over; undefined when the transport kept none, which is refused. */
+export type RawDelivery = Buffer | undefined
+
+/** The `X-Hub-Signature-256` header of a delivery; undefined when Meta sent none, which is refused. */
+export type DeliverySignature = string | undefined
