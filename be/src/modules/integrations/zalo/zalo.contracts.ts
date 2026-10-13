@@ -40,9 +40,4 @@ export interface ZaloEvent {
 
 /** Why a consultation message could not be delivered, in terms the workbench can show. */
 export type ZaloFailure =
-    | "zalo_window_expired"
-    | "zalo_unfollowed"
-    | "zalo_night_hours"
-    | "zalo_token"
-    | "zalo_not_connected"
-    | "zalo_error"
+    "zalo_window_expired" | "zalo_unfollowed" | "zalo_night_hours" | "zalo_token" | "zalo_not_connected" | "zalo_error"

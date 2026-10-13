@@ -18,7 +18,12 @@ export const ContentEditorHistory = (props: ContentEditorHistoryProps) => (
         ) : (
             <Timeline
                 label={props.t("evidenceTitle")}
-                items={props.rows.map((row) => ({ id: row.id, title: row.text, dateTime: row.at, timeLabel: row.timeLabel }))}
+                items={props.rows.map((row) => ({
+                    id: row.id,
+                    title: row.text,
+                    dateTime: row.at,
+                    timeLabel: row.timeLabel,
+                }))}
             />
         )}
     </>

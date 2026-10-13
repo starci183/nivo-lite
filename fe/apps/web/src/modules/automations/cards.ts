@@ -9,7 +9,13 @@ import {
     startsAutomationConnection,
 } from "./status"
 import type { AutomationFilterKey, AutomationStatus } from "./status"
-import type { AccountsView, AutomationTone, AutomationsLanguage, AutomationsTranslator, CardView } from "@/modules/types"
+import type {
+    AccountsView,
+    AutomationTone,
+    AutomationsLanguage,
+    AutomationsTranslator,
+    CardView,
+} from "@/modules/types"
 
 const TONE: Record<AutomationStatus, AutomationTone> = {
     running: "success",

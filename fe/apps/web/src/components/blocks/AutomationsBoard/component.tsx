@@ -65,7 +65,10 @@ export const AutomationsBoardBase = (props: AutomationsBoardBaseProps) => {
         <SlotView slot={slot} placeholder={PLACEHOLDER} labels={labels.slot}>
             {(view, isSkeleton) => {
                 const collection = (
-                    <div className={collectionClass(isNested, view.detail !== undefined)} aria-busy={isSkeleton || undefined}>
+                    <div
+                        className={collectionClass(isNested, view.detail !== undefined)}
+                        aria-busy={isSkeleton || undefined}
+                    >
                         {isSkeleton
                             ? SKELETONS.map((index) => (
                                   <AutomationCardSkeleton
@@ -106,7 +109,11 @@ export const AutomationsBoardBase = (props: AutomationsBoardBaseProps) => {
                             onDismiss={on.dismiss}
                         >
                             <div className={SECTIONS_CLASS}>
-                                <AutomationSettings {...open.settings} onChange={on.changeSetting} onSave={on.saveSettings} />
+                                <AutomationSettings
+                                    {...open.settings}
+                                    onChange={on.changeSetting}
+                                    onSave={on.saveSettings}
+                                />
                                 {open.message === undefined ? null : (
                                     <AutomationMessage
                                         {...open.message}
@@ -130,9 +137,7 @@ export const AutomationsBoardBase = (props: AutomationsBoardBaseProps) => {
                     )
                 return (
                     <>
-                        {isNested ? null : (
-                            <AutomationFilters {...view.filters} onChange={on.setFilter} />
-                        )}
+                        {isNested ? null : <AutomationFilters {...view.filters} onChange={on.setFilter} />}
                         {view.errorAlert === undefined ? null : (
                             <Alert
                                 title={view.errorAlert.title}

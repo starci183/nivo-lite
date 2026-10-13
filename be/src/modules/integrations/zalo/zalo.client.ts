@@ -49,7 +49,10 @@ export class ZaloClient {
 
     /** Sends a consultation (CS) text message to one user; a refusal is a ZaloError carrying Zalo's numeric error. */
     async sendCsText(accessToken: string, userId: string, text: string): Promise<void> {
-        await this.apiCall(accessToken, "POST", "/v3.0/oa/message/cs", { recipient: { user_id: userId }, message: { text } })
+        await this.apiCall(accessToken, "POST", "/v3.0/oa/message/cs", {
+            recipient: { user_id: userId },
+            message: { text },
+        })
     }
 
     /** The customer's display name, or an empty text when Zalo does not say: the name only labels the conversation. */

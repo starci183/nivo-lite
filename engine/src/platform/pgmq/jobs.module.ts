@@ -1,7 +1,7 @@
-import { DynamicModule, Global, Module } from "@nestjs/common";
-import { JOBS_OPTIONS, type JobsOptions } from "./jobs.config";
-import { JobProducer } from "./job-producer.service";
-import { JobRegistry } from "./job-registry.service";
+import { DynamicModule, Global, Module } from "@nestjs/common"
+import { JOBS_OPTIONS, type JobsOptions } from "./jobs.config"
+import { JobProducer } from "./job-producer.service"
+import { JobRegistry } from "./job-registry.service"
 
 /**
  * Background jobs on Supabase Queues (pgmq, docs/JOBS.md): the consumer registry that feature modules register their handlers in, and the
@@ -11,11 +11,11 @@ import { JobRegistry } from "./job-registry.service";
 @Global()
 @Module({})
 export class JobsModule {
-  static register(options: JobsOptions): DynamicModule {
-    return {
-      module: JobsModule,
-      providers: [{ provide: JOBS_OPTIONS, useValue: options }, JobProducer, JobRegistry],
-      exports: [JOBS_OPTIONS, JobProducer, JobRegistry],
-    };
-  }
+    static register(options: JobsOptions): DynamicModule {
+        return {
+            module: JobsModule,
+            providers: [{ provide: JOBS_OPTIONS, useValue: options }, JobProducer, JobRegistry],
+            exports: [JOBS_OPTIONS, JobProducer, JobRegistry],
+        }
+    }
 }

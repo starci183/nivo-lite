@@ -8,7 +8,7 @@ export type SignedUploadOutcome = Outcome<SignedUpload, StorageFailureCode>
 export type StoredObjectOutcome = Outcome<StoredObject, StorageFailureCode>
 
 /** The Storage door of the back end: upload addresses for browsers and object reads for workers. */
-export interface SupabaseStoragePort {
+export interface SupabaseObjectsPort {
     /** A one-time address a browser PUTs one object to at `path` of `bucket`. */
     signedUpload(bucket: string, path: string): Promise<SignedUploadOutcome>
     /** The bytes and content type of the object at `path` of `bucket`. */

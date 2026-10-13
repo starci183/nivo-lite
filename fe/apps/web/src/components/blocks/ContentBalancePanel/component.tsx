@@ -44,12 +44,7 @@ export const ContentBalancePanelBase = (props: ContentBalancePanelBaseProps) => 
     const { t } = props.props
     return (
         <div className={PANEL_CLASS_NAME}>
-            <ContentMonthBar
-                title={props.props.monthTitle}
-                t={t}
-                onShift={props.on.shift}
-                onToday={props.on.today}
-            />
+            <ContentMonthBar title={props.props.monthTitle} t={t} onShift={props.on.shift} onToday={props.on.today} />
             <SectionHeader level={2} title={props.props.title} description={t("balanceBody")} />
             <SurfaceListCard ariaLabel={t("balanceTitle")} empty={<EmptyNotice message={t("balanceEmpty")} />}>
                 {props.props.themes.map((row) => (

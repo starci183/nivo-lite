@@ -5,12 +5,14 @@ import {
     SUPABASE_ACCOUNTS,
     SUPABASE_ADMIN_CLIENT,
     SUPABASE_AUTH,
+    SUPABASE_OBJECTS,
     SUPABASE_PUBLIC_CLIENT,
     SUPABASE_STORAGE,
 } from "./supabase.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./supabase.module-definition"
 import { SupabaseAccountsService } from "./supabase-accounts.service"
 import { SupabaseAuthService } from "./supabase-auth.service"
+import { SupabaseObjectsService } from "./supabase-objects.service"
 import { SupabaseStorageService } from "./supabase-storage.service"
 
 @Module({})
@@ -26,10 +28,11 @@ export class SupabaseModule extends ConfigurableModuleClass {
                 { provide: SUPABASE_ADMIN_CLIENT, useValue: createSupabaseAdminClient(options) },
                 { provide: SUPABASE_PUBLIC_CLIENT, useValue: createSupabasePublicClient(options) },
                 { provide: SUPABASE_AUTH, useClass: SupabaseAuthService },
-                { provide: SUPABASE_STORAGE, useClass: SupabaseStorageService },
+                { provide: SUPABASE_OBJECTS, useClass: SupabaseObjectsService },
                 { provide: SUPABASE_ACCOUNTS, useClass: SupabaseAccountsService },
+                { provide: SUPABASE_STORAGE, useClass: SupabaseStorageService },
             ],
-            exports: [SUPABASE_ADMIN_CLIENT, SUPABASE_AUTH, SUPABASE_STORAGE, SUPABASE_ACCOUNTS],
+            exports: [SUPABASE_ADMIN_CLIENT, SUPABASE_AUTH, SUPABASE_ACCOUNTS, SUPABASE_STORAGE, SUPABASE_OBJECTS],
         }
     }
 }

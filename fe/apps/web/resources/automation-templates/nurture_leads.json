@@ -22,12 +22,8 @@
     }
   },
   "requires": {
-    "modules": [
-      "sales"
-    ],
-    "channels": [
-      "customer_chat"
-    ],
+    "modules": ["sales"],
+    "channels": ["customer_chat"],
     "connections": [],
     "capabilities": []
   },
@@ -76,11 +72,7 @@
       "en": "Short, gentle, never pushy."
     }
   ],
-  "variables": [
-    "ten_khach",
-    "ten_shop",
-    "nhu_cau"
-  ],
+  "variables": ["ten_khach", "ten_shop", "nhu_cau"],
   "defaultBody": {
     "vi": "Chào {ten_khach}, bên {ten_shop} muốn hỏi bạn đã cân nhắc xong chưa ạ? Nếu cần thêm thông tin về {nhu_cau}, bạn nhắn lại giúp mình nhé.",
     "en": "Hi {ten_khach}, {ten_shop} wanted to check whether you have decided. If you need more information about {nhu_cau}, just reply."

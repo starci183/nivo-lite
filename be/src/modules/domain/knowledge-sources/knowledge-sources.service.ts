@@ -8,7 +8,7 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { unwrapOutcome } from "@modules/platform/primitives"
-import type { SupabaseStoragePort } from "@modules/integrations/supabase"
+import type { SupabaseObjectsPort } from "@modules/integrations/supabase"
 import { KnowledgeQueue } from "@modules/queues/knowledge"
 import { KnowledgeSourcesError, KnowledgeSourcesErrorCode } from "./errors/knowledge-sources.error"
 import { KNOWLEDGE_UPLOAD_BUCKET, STORAGE_OBJECT_MISSING } from "./knowledge-sources.contracts"
@@ -59,7 +59,7 @@ export class KnowledgeSourcesService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
-        @InjectKnowledgeStorage() private readonly storage: SupabaseStoragePort,
+        @InjectKnowledgeStorage() private readonly storage: SupabaseObjectsPort,
         @InjectLogger() private readonly logger: Logger,
         private readonly members: WorkspaceMembersService,
         private readonly queue: KnowledgeQueue,

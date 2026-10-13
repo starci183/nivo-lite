@@ -64,13 +64,17 @@ export class ChannelDeliveryService {
 
     /** The customer's name on the channel, or an empty text when the channel will not say (only Zalo is asked). The name only labels the conversation. */
     customerName(target: ConversationTarget): Promise<string> {
-        if (target.channel !== "zalo" || target.externalId === null || target.connectionId === null) return Promise.resolve("")
+        if (target.channel !== "zalo" || target.externalId === null || target.connectionId === null)
+            return Promise.resolve("")
         const userId = customerIdOf(target.externalId)
         return this.credentials
             .accessToken(target.connectionId)
             .then((token) => this.zalo.userDisplayName(token, userId))
             .catch((cause: unknown) => {
-                this.logger.error(ChannelsLogEvent.DeliveryFailed, cause, { conversationId: target.id, channel: "zalo" })
+                this.logger.error(ChannelsLogEvent.DeliveryFailed, cause, {
+                    conversationId: target.id,
+                    channel: "zalo",
+                })
                 return ""
             })
     }
@@ -86,7 +90,8 @@ export class ChannelDeliveryService {
     private async sendTelegram(target: ConversationTarget, externalId: string, text: string): Promise<DeliveryResult> {
         if (target.connectionId === null) return NOT_DELIVERED
         const token = await this.secrets.botToken(target.workspaceId, target.connectionId)
-        if (token.kind !== "ok") return this.failed(target, new ChannelsError({ code: ChannelsErrorCode.ConnectionNotFound }))
+        if (token.kind !== "ok")
+            return this.failed(target, new ChannelsError({ code: ChannelsErrorCode.ConnectionNotFound }))
         return this.telegram.sendMessage(token.value, customerIdOf(externalId), text).then(
             () => DELIVERED,
             (cause: unknown) => this.failed(target, cause),
@@ -94,7 +99,8 @@ export class ChannelDeliveryService {
     }
 
     private async sendZalo(target: ConversationTarget, text: string): Promise<DeliveryResult> {
-        if (target.connectionId === null || target.externalId === null) return { delivered: false, failure: "zalo_not_connected" }
+        if (target.connectionId === null || target.externalId === null)
+            return { delivered: false, failure: "zalo_not_connected" }
         const last = await this.messages.lastCustomerAt(target.id)
         if (last.kind === "ok" && this.clock.now().getTime() - last.value.getTime() > ZALO_FREE_WINDOW_MS) {
             return { delivered: false, failure: "zalo_window_expired" }
@@ -103,7 +109,10 @@ export class ChannelDeliveryService {
             () => DELIVERED,
             (cause: unknown) => {
                 if (cause instanceof ChannelsError && cause.code === ChannelsErrorCode.ZaloRefreshBusy) throw cause
-                this.logger.error(ChannelsLogEvent.DeliveryFailed, cause, { conversationId: target.id, channel: "zalo" })
+                this.logger.error(ChannelsLogEvent.DeliveryFailed, cause, {
+                    conversationId: target.id,
+                    channel: "zalo",
+                })
                 return { delivered: false, failure: zaloFailureOf(cause) }
             },
         )
@@ -119,7 +128,10 @@ export class ChannelDeliveryService {
     }
 
     private failed(target: ConversationTarget, cause: unknown): DeliveryResult {
-        this.logger.error(ChannelsLogEvent.DeliveryFailed, cause, { conversationId: target.id, channel: target.channel })
+        this.logger.error(ChannelsLogEvent.DeliveryFailed, cause, {
+            conversationId: target.id,
+            channel: target.channel,
+        })
         return NOT_DELIVERED
     }
 }

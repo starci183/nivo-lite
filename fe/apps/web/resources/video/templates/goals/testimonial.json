@@ -2,7 +2,10 @@
   "goal": "testimonial",
   "order": 3,
   "label": { "vi": "Phản hồi khách", "en": "Customer feedback" },
-  "hint": { "vi": "Kể lại lời khách thật nói về bạn. Chỉ dùng phản hồi thật.", "en": "Retell what real customers said. Real feedback only." },
+  "hint": {
+    "vi": "Kể lại lời khách thật nói về bạn. Chỉ dùng phản hồi thật.",
+    "en": "Retell what real customers said. Real feedback only."
+  },
   "default_seconds": 30,
   "default_aspect": "9:16",
   "music": "sunny-pop",

@@ -22,7 +22,16 @@ export const ZaloCallbackPage = async (props: ZaloCallbackPageProps) => {
     const go = (href: string) => navigation.redirect({ href, locale })
     const state = props.state ?? ""
     if (props.code === undefined || state === "") return go(connectionsHref("denied"))
-    const queued = await writeZaloAuthorizationReturn({ state, code: props.code, ...(props.oaId === undefined ? {} : { oaId: props.oaId }) })
+    const queued = await writeZaloAuthorizationReturn({
+        state,
+        code: props.code,
+        ...(props.oaId === undefined ? {} : { oaId: props.oaId }),
+    })
     if (queued.kind === "ok") return go(connectionsHref("ok", queued.value))
-    return go(connectionsHref(queued.kind === "refused" || queued.kind === "invalid" ? "denied" : "failed", state.split(".")[0]))
+    return go(
+        connectionsHref(
+            queued.kind === "refused" || queued.kind === "invalid" ? "denied" : "failed",
+            state.split(".")[0],
+        ),
+    )
 }

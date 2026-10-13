@@ -14,12 +14,13 @@
   "trigger": {
     "kind": "event",
     "event": "payment.received",
-    "line": { "vi": "Khi nhận được một khoản thanh toán của khách có email", "en": "When a payment arrives from a customer with an email" }
+    "line": {
+      "vi": "Khi nhận được một khoản thanh toán của khách có email",
+      "en": "When a payment arrives from a customer with an email"
+    }
   },
   "requires": { "modules": ["accounting"], "channels": [], "connections": ["smtp"], "capabilities": [] },
-  "settings": [
-    { "key": "subject", "kind": "text", "label": { "vi": "Tiêu đề email", "en": "Email subject" } }
-  ],
+  "settings": [{ "key": "subject", "kind": "text", "label": { "vi": "Tiêu đề email", "en": "Email subject" } }],
   "contentMode": "fixed",
   "guardrails": [
     { "vi": "Chỉ nêu số tiền, mã phiếu và ngày có thật.", "en": "Only the real amount, reference and date." },

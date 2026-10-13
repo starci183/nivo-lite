@@ -23,16 +23,10 @@
     }
   },
   "requires": {
-    "modules": [
-      "sales"
-    ],
-    "channels": [
-      "customer_chat"
-    ],
+    "modules": ["sales"],
+    "channels": ["customer_chat"],
     "connections": [],
-    "capabilities": [
-      "has_delivery"
-    ]
+    "capabilities": ["has_delivery"]
   },
   "settings": [],
   "contentMode": "fixed",
@@ -42,13 +36,7 @@
       "en": "Never invent prices, hours, addresses or policies that are not in the shop information."
     }
   ],
-  "variables": [
-    "ten_khach",
-    "ten_shop",
-    "ma_phieu",
-    "hang_van_chuyen",
-    "ma_van_don"
-  ],
+  "variables": ["ten_khach", "ten_shop", "ma_phieu", "hang_van_chuyen", "ma_van_don"],
   "defaultBody": {
     "vi": "Chào {ten_khach}, đơn {ma_phieu} của bạn tại {ten_shop} đã được giao cho {hang_van_chuyen}. Mã vận đơn: {ma_van_don}. Bạn có thể dùng mã này để theo dõi hành trình nhé!",
     "en": "Hi {ten_khach}, your order {ma_phieu} from {ten_shop} is with {hang_van_chuyen}. Tracking code: {ma_van_don}."

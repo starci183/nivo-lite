@@ -7,8 +7,8 @@
 import { GUIDES, guideKey, VERIFY, verifyKey } from "@/hooks/connection-guides"
 import type { GuideItemDef } from "@/hooks/connection-guides"
 import { PROVIDER_GROUPS as GROUPS, PROVIDERS as REGISTRY, providerKey } from "@/hooks/connection-providers"
-import en from "@/modules/i18n/messages/en/connections.json"
-import vi from "@/modules/i18n/messages/vi/connections.json"
+import allEn from "@/modules/i18n/messages/en.json"
+import allVi from "@/modules/i18n/messages/vi.json"
 import type { Environment, Provider, ProviderGroupId, ProviderKind } from "@/modules/types"
 
 export type { Environment, Provider }
@@ -66,7 +66,10 @@ export type ProviderDef = {
     readonly verify: Partial<Record<Environment, VerifyHelp>>
 }
 
-const catalogs: Readonly<Record<Locale, Readonly<Record<string, string>>>> = { vi, en }
+const catalogs: Readonly<Record<Locale, Readonly<Record<string, string>>>> = {
+    vi: allVi.connections,
+    en: allEn.connections,
+}
 const word = (locale: Locale, key: string): string => catalogs[locale][key] ?? key
 const both = (key: string): L => ({ vi: word("vi", key), en: word("en", key) })
 

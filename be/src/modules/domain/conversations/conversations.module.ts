@@ -16,7 +16,13 @@ export class ConversationsModule extends ConfigurableModuleClass {
         return {
             ...base,
             imports: [...(base.imports ?? []), ChatTurnModule],
-            providers: [...(base.providers ?? []), ChatTurnExtensionsService, ConversationsService, ChatTurnService, { provide: CHAT_TURN_EXTENSIONS, useExisting: ChatTurnExtensionsService }],
+            providers: [
+                ...(base.providers ?? []),
+                ChatTurnExtensionsService,
+                ConversationsService,
+                ChatTurnService,
+                { provide: CHAT_TURN_EXTENSIONS, useExisting: ChatTurnExtensionsService },
+            ],
             exports: [CHAT_TURN_EXTENSIONS, ConversationsService, ChatTurnService],
         }
     }

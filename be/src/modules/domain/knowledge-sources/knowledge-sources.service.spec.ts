@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing"
 import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { SupabaseStoragePort } from "@modules/integrations/supabase"
+import type { SupabaseObjectsPort } from "@modules/integrations/supabase"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
@@ -43,7 +43,7 @@ const inputOf = builder<AddSourceInput>({ kind: "text", title: "Hours", content:
 const build = async (em: MockEntityManager) => {
     const members = mock<WorkspaceMembersService>()
     const queue = mock<KnowledgeQueue>()
-    const storage = mock<SupabaseStoragePort>()
+    const storage = mock<SupabaseObjectsPort>()
     const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [

@@ -23,16 +23,10 @@
     }
   },
   "requires": {
-    "modules": [
-      "sales"
-    ],
-    "channels": [
-      "customer_chat"
-    ],
+    "modules": ["sales"],
+    "channels": ["customer_chat"],
     "connections": [],
-    "capabilities": [
-      "has_recurring_contracts"
-    ]
+    "capabilities": ["has_recurring_contracts"]
   },
   "settings": [
     {
@@ -77,12 +71,7 @@
       "en": "Never invent prices, hours, addresses or policies that are not in the shop information."
     }
   ],
-  "variables": [
-    "ten_khach",
-    "ten_shop",
-    "ten_goi",
-    "ngay_het_han"
-  ],
+  "variables": ["ten_khach", "ten_shop", "ten_goi", "ngay_het_han"],
   "defaultBody": {
     "vi": "Chào {ten_khach}, hợp đồng {ten_goi} của bạn với {ten_shop} sẽ hết hạn vào {ngay_het_han}. Bạn có muốn gia hạn để tiếp tục không ạ?",
     "en": "Hi {ten_khach}, your contract {ten_goi} with {ten_shop} ends on {ngay_het_han}. Would you like to renew?"

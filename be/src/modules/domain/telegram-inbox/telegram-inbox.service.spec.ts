@@ -8,7 +8,10 @@ import { COMPLETE_TELEGRAM_INBOX, INSERT_TELEGRAM_INBOX } from "./persistence/te
 import { TelegramInboxService } from "./telegram-inbox.service"
 
 const BODY = Buffer.from(
-    JSON.stringify({ update_id: 77, message: { message_id: 9, chat: { id: 555 }, text: "Hello", from: { first_name: "Minh" } } }),
+    JSON.stringify({
+        update_id: 77,
+        message: { message_id: 9, chat: { id: 555 }, text: "Hello", from: { first_name: "Minh" } },
+    }),
 )
 
 const build = async (claimed: ReadonlyArray<{ id: string }>) => {
@@ -58,7 +61,10 @@ describe("TelegramInboxService", () => {
         it("labels a photo with the localized text in brackets", async () => {
             const { inbox, conversations } = await build([{ id: "inbox-1" }])
             const photo = Buffer.from(
-                JSON.stringify({ update_id: 78, message: { message_id: 10, chat: { id: 555 }, photo: [{}], caption: "Paid" } }),
+                JSON.stringify({
+                    update_id: 78,
+                    message: { message_id: 10, chat: { id: 555 }, photo: [{}], caption: "Paid" },
+                }),
             )
 
             await inbox.acceptTelegramDelivery("c-1", photo)
@@ -82,7 +88,10 @@ describe("TelegramInboxService", () => {
         it("acknowledges an update the chat does not answer without claiming it", async () => {
             const { inbox, tx, conversations } = await build([{ id: "inbox-1" }])
 
-            await inbox.acceptTelegramDelivery("c-1", Buffer.from(JSON.stringify({ update_id: 79, edited_message: {} })))
+            await inbox.acceptTelegramDelivery(
+                "c-1",
+                Buffer.from(JSON.stringify({ update_id: 79, edited_message: {} })),
+            )
 
             expect(tx.em.query).not.toHaveBeenCalled()
             expect(conversations.acceptTelegram).not.toHaveBeenCalled()

@@ -101,7 +101,9 @@ export const AgentSettingsPageBase = (props: AgentSettingsPageBaseProps) => {
                         seeAllLabel={props.props.automationsTexts.seeAll}
                         seeAllHref={props.props.automationsHref}
                         help={props.props.automationsTexts.help}
-                        {...(props.props.automationsFailed ? { failureTitle: props.props.automationsTexts.failure } : {})}
+                        {...(props.props.automationsFailed
+                            ? { failureTitle: props.props.automationsTexts.failure }
+                            : {})}
                     >
                         {props.props.automations === undefined ? null : (
                             <AutomationsBoard

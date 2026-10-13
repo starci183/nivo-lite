@@ -63,7 +63,14 @@ export const ContentQueuePanelBase = (props: ContentQueuePanelBaseProps) => {
                         <ListRow
                             key={item.id}
                             title={item.title}
-                            description={<ContentPostFacts post={item} showBrief={false} showPillar={false} noPillar={t("noPillar")} />}
+                            description={
+                                <ContentPostFacts
+                                    post={item}
+                                    showBrief={false}
+                                    showPillar={false}
+                                    noPillar={t("noPillar")}
+                                />
+                            }
                             badges={<ContentChannelBadges labels={item.channels} />}
                             actions={
                                 <Button variant="primary" size="sm" onPress={() => props.on.open(item.id)}>

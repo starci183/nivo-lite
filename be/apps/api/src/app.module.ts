@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common"
+import { Global, Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
 import { ExtractKnowledgeFactsQueueModule } from "@features/jobs/extract-knowledge-facts"
@@ -56,6 +56,7 @@ import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules
 import { CassoHttpModule } from "@features/webhooks/casso"
 import { PayosHttpModule } from "@features/webhooks/payos"
 import { SepayHttpModule } from "@features/webhooks/sepay"
+import { SepayFeedHttpModule } from "@features/webhooks/sepay-feed"
 import { VietcombankHttpModule } from "@features/webhooks/vietcombank"
 import { ReconcileBankCreditQueueModule } from "@features/jobs/reconcile-bank-credit"
 import { CreatePaymentOrderQueueModule } from "@features/jobs/create-payment-order"
@@ -206,6 +207,7 @@ import {
     SUPABASE_ACCESS_TOKEN_VERIFIER,
     SUPABASE_AUTH,
     SUPABASE_ERROR_KINDS,
+    SUPABASE_OBJECTS,
     SUPABASE_STORAGE,
     SupabaseModule,
     createSupabaseAccessTokenVerifier,
@@ -334,7 +336,7 @@ import { MetaConnectionsHttpModule } from "@features/api/meta-connections"
 import { CONTENT_MESSAGES, ContentModule } from "@modules/domain/content"
 import { CONTENT_ITEMS_ERROR_KINDS, CONTENT_ITEMS_MESSAGES, ContentItemsModule } from "@modules/domain/content-items"
 import { ContentSettingsModule } from "@modules/domain/content-settings"
-import { VIDEO_ERROR_KINDS, VIDEO_MESSAGES, VideoModule } from "@modules/domain/video"
+import { VIDEO_ASSETS, VIDEO_ERROR_KINDS, VIDEO_MESSAGES, VideoModule } from "@modules/domain/video"
 import { VideoProjectVersionsModule } from "@modules/domain/video-project-versions"
 import { VideoProjectsModule } from "@modules/domain/video-projects"
 import { VIDEO_RENDERS_ERROR_KINDS, VIDEO_RENDERS_MESSAGES, VideoRendersModule } from "@modules/domain/video-renders"
@@ -355,6 +357,14 @@ import type { ApiOptions } from "./api.options"
 const NO_CORRECTIONS: CorrectionSource = { recent: () => Promise.resolve([]) }
 
 const NO_DRIVE_ACCESS: DriveAccessSource = { forWorkspace: () => null }
+
+@Global()
+@Module({
+    providers: [{ provide: VIDEO_ASSETS, useExisting: SUPABASE_STORAGE }],
+    exports: [VIDEO_ASSETS],
+})
+/** Binds the file store the render job uses to the Supabase storage integration. */
+class VideoAssetsBindingModule {}
 
 @Module({})
 /** Composition root of the API: every capability is registered once and the three guards run in a fixed order. */
@@ -624,6 +634,7 @@ export class AppModule {
                 VideoRendersModule.register({ isGlobal: true }),
                 VideoProjectsModule.register({ isGlobal: true }),
                 VideoProjectVersionsModule.register({ isGlobal: true }),
+                VideoAssetsBindingModule,
                 VideoModule.register({ isGlobal: true, ...options.video }),
                 ContentItemsModule.register({ isGlobal: true }),
                 ContentSettingsModule.register({ isGlobal: true }),
@@ -640,7 +651,7 @@ export class AppModule {
                 HttpModule.register({ isGlobal: true }),
                 LlmModule.register({ isGlobal: true, ...options.llm }),
                 DocumentsModule.register({ isGlobal: true, ...options.documents }),
-                KnowledgeSourcesModule.register({ isGlobal: true, storage: SUPABASE_STORAGE }),
+                KnowledgeSourcesModule.register({ isGlobal: true, storage: SUPABASE_OBJECTS }),
                 KnowledgeChunksModule.register({ isGlobal: true }),
                 NivoKnowledgeModule.register({
                     isGlobal: true,
@@ -730,6 +741,7 @@ export class AppModule {
                 CassoHttpModule,
                 PayosHttpModule,
                 SepayHttpModule,
+                SepayFeedHttpModule,
                 VietcombankHttpModule,
                 TelegramHttpModule,
                 ZaloHttpModule,
