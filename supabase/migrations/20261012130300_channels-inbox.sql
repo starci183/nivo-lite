@@ -67,3 +67,14 @@ alter table public.agent_messages add column in_reply_to uuid references public.
 create unique index agent_messages_one_reply_per_message_key
 on public.agent_messages (conversation_id, in_reply_to)
 where role = 'agent' and in_reply_to is not null;
+
+-- The two recurring channel tasks now run as be queue schedulers (refresh-zalo-tokens every 6 hours, check-connection-health every 15
+-- minutes), so the pg_cron entries that called the Next route and the engine are dropped. Where pg_cron is missing this does nothing.
+do $$
+begin
+    if exists (select 1 from pg_extension where extname = 'pg_cron') then
+        perform cron.unschedule(jobid) from cron.job where jobname in ('zalo-refresh', 'engine-connection-health');
+    end if;
+exception when others then
+    raise notice 'could not unschedule the old channel jobs (%)', sqlerrm;
+end $$;
