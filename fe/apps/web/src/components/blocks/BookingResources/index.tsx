@@ -2,22 +2,21 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
+import { useSWRConfig } from "swr"
 import { WEEK, hoursLineOf, parseWeek } from "@/hooks/bookingSetup"
 import {
-    writeBookingCatalogRemoval,
-    writeBookingHours,
-    writeBookingResource,
-} from "@/modules/db/booking/write-booking-catalog"
-import { navigation } from "@/modules/i18n"
+    isQueryBookingBoardSwrKey,
+    useMutateRemoveBookingResourceSwr,
+    useMutateSaveBookingHoursSwr,
+    useMutateSaveBookingResourceSwr,
+} from "@/hooks/swr/api/graphql"
+import { useGraphQLWithToast } from "@/modules/toast"
 import type { BookingBoard } from "@/modules/types"
 import { BookingResourcesBase } from "./component"
 import type { ResourceFields } from "./component"
 
-const { useRouter } = navigation
-
 /** What the setup tab hands the connected people and rooms list. */
 interface BookingResourcesProps {
-    readonly workspaceId: string
     readonly board: BookingBoard
 }
 
@@ -34,7 +33,11 @@ const BLANK: ResourceFields = { name: "", kind: "staff", capacity: 1, active: tr
 export const BookingResources = (props: BookingResourcesProps) => {
     const t = useTranslations("workbenchBooking")
     const format = useFormatter()
-    const router = useRouter()
+    const withToast = useGraphQLWithToast()
+    const { mutate } = useSWRConfig()
+    const saveResource = useMutateSaveBookingResourceSwr()
+    const saveResourceHours = useMutateSaveBookingHoursSwr()
+    const removeResource = useMutateRemoveBookingResourceSwr()
     const { board } = props
     const [draft, setDraft] = useState<Draft | null>(null)
     const [removeId, setRemoveId] = useState<string | null>(null)
@@ -43,26 +46,25 @@ export const BookingResources = (props: BookingResourcesProps) => {
     const removing = board.resources.find((resource) => resource.id === removeId)
     const weekdayName = (day: number) =>
         format.dateTime(new Date(Date.UTC(2024, 0, day)), { weekday: "short", timeZone: "UTC" })
-    const after = (ok: boolean, close: () => void) => {
-        setNotice({ ok, text: t(ok ? "saved" : "failed") })
-        if (!ok) return
-        close()
-        router.refresh()
-    }
     const save = () => {
         if (draft === null) return
         const { fields } = draft
         startTransition(async () => {
-            const answer = await writeBookingResource({
-                workspaceId: props.workspaceId,
-                id: draft.id,
-                name: fields.name,
-                kind: fields.kind,
-                capacity: fields.capacity,
-                active: fields.active,
-                staffId: fields.staffId === "none" ? null : fields.staffId,
-            })
-            after(answer.kind === "ok", () => setDraft(null))
+            const answer = await withToast(
+                () =>
+                    saveResource.trigger({
+                        id: draft.id,
+                        name: fields.name,
+                        kind: fields.kind,
+                        capacity: fields.capacity,
+                        active: fields.active,
+                        staffId: fields.staffId === "none" ? null : fields.staffId,
+                    }),
+                { successMessage: t("saved") },
+            )
+            if (answer === undefined) return
+            setDraft(null)
+            void mutate(isQueryBookingBoardSwrKey)
         })
     }
     const saveHours = () => {
@@ -72,8 +74,11 @@ export const BookingResources = (props: BookingResourcesProps) => {
             return setNotice({ ok: false, text: t("hoursInvalid", { day: weekdayName(week.badWeekday) }) })
         const resourceId = draft.id
         startTransition(async () => {
-            const answer = await writeBookingHours(props.workspaceId, resourceId, week.rows)
-            after(answer.kind === "ok", () => undefined)
+            const answer = await withToast(() => saveResourceHours.trigger({ resourceId, rows: week.rows }), {
+                successMessage: t("saved"),
+            })
+            if (answer === undefined) return
+            void mutate(isQueryBookingBoardSwrKey)
         })
     }
     return (
@@ -174,12 +179,12 @@ export const BookingResources = (props: BookingResourcesProps) => {
                 confirmRemove: () => {
                     if (removeId === null) return
                     startTransition(async () => {
-                        const answer = await writeBookingCatalogRemoval(
-                            props.workspaceId,
-                            removeId,
-                            "booking_resources",
-                        )
-                        after(answer.kind === "ok", () => setRemoveId(null))
+                        const answer = await withToast(() => removeResource.trigger({ id: removeId }), {
+                            successMessage: t("saved"),
+                        })
+                        if (answer === undefined) return
+                        setRemoveId(null)
+                        void mutate(isQueryBookingBoardSwrKey)
                     })
                 },
                 cancelRemove: () => setRemoveId(null),

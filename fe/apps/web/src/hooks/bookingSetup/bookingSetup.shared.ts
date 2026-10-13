@@ -42,7 +42,7 @@ export const parseHoursLine = (
 /** The windows of the seven typed lines, or the weekday whose line cannot be read. */
 export const parseWeek = (
     lines: ReadonlyArray<string>,
-): { readonly rows: ReadonlyArray<HoursWindow> } | { readonly badWeekday: number } => {
+): { readonly rows: Array<HoursWindow> } | { readonly badWeekday: number } => {
     const rows: Array<HoursWindow> = []
     for (const weekday of WEEK) {
         const parsed = parseHoursLine(lines[weekday - 1] ?? "")

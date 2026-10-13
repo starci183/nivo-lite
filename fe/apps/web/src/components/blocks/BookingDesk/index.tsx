@@ -4,43 +4,41 @@ import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
 import {
     BOOKING_STATUS_TONE,
+    MOVE_ACTION,
     actionsOf,
     dayGroups,
     detailOf,
     rowOf,
     useBookingActions,
+    useBookingPlacement,
     useBookingRange,
 } from "@/hooks/bookingDesk"
-import { writeBookingRange } from "@/modules/db/booking/write-booking-range"
-import { writeBookingStatus } from "@/modules/db/booking/write-booking-status"
-import { navigation, shiftDate } from "@/modules/i18n"
-import type { BookingBoard } from "@/modules/types"
+import type { PlacementFields } from "@/hooks/bookingDesk"
+import { AUTO_RESOURCE } from "@/components/composites/BookingPlacementDialog"
+import { shiftDate } from "@/modules/i18n"
 import { BookingDeskBase } from "./component"
 
-const { useRouter } = navigation
-
-/** What the page hands the connected desk. */
+/** What the workbench hands the connected desk. */
 interface BookingDeskProps {
-    readonly workspaceId: string
-    readonly initial: BookingBoard
     /** The week list (calendar tab) or only today (today tab). */
     readonly mode: "week" | "today"
 }
 
-/** The connected desk: the agenda of a week or of today, with the owner's commands on each booking. */
+/** The connected desk: the agenda of a week or of today, with the owner's commands on each booking. The board comes from the `bookingBoard` query through SWR. */
 export const BookingDesk = (props: BookingDeskProps) => {
     const t = useTranslations("workbenchBooking")
     const format = useFormatter()
-    const router = useRouter()
-    const range = useBookingRange(props.workspaceId, props.initial, writeBookingRange)
-    const desk = useBookingActions(props.workspaceId, { act: writeBookingStatus }, () => {
+    const range = useBookingRange()
+    const desk = useBookingActions(range.reload)
+    const place = useBookingPlacement(range.board?.timezone ?? "", () => {
+        setOpenId(null)
         range.reload()
-        router.refresh()
     })
     const [openId, setOpenId] = useState<string | null>(null)
     const [cancelId, setCancelId] = useState<string | null>(null)
     const [showCancelled, setShowCancelled] = useState(false)
     const { board } = range
+    if (board === undefined) return null
     const isToday = props.mode === "today"
     const words = {
         say: t,
@@ -60,6 +58,40 @@ export const BookingDesk = (props: BookingDeskProps) => {
     )
     const open = board.bookings.find((booking) => booking.id === openId)
     const cancelling = board.bookings.find((booking) => booking.id === cancelId)
+    const activeServices = board.services.filter((service) => service.active)
+    const blank: PlacementFields = {
+        serviceId: activeServices[0]?.id ?? "",
+        date: board.today,
+        time: "09:00",
+        resourceId: "",
+        name: "",
+        phone: "",
+        party: 1,
+        note: "",
+        force: false,
+    }
+    const openAdd = () => {
+        if (activeServices.length === 0) return desk.announce("addNoServices", "negative")
+        place.open({ kind: "add" }, blank)
+    }
+    const openMove = (id: string) => {
+        const booking = board.bookings.find((candidate) => candidate.id === id)
+        if (booking === undefined) return
+        place.open(
+            { kind: "move", id },
+            {
+                ...blank,
+                serviceId: booking.serviceId,
+                date: booking.date,
+                time: booking.startClock,
+                resourceId: booking.resourceId,
+            },
+        )
+    }
+    const resourceOptions = board.resources
+        .filter((resource) => resource.active)
+        .map((resource) => ({ id: resource.id, label: resource.name }))
+    const anchor = range.anchor === "" ? board.today : range.anchor
     const act = (id: string, action: string) => {
         const booking = board.bookings.find((candidate) => candidate.id === id)
         const chosen = booking && actionsOf(booking.status, booking.checkedIn).find((candidate) => candidate === action)
@@ -71,10 +103,10 @@ export const BookingDesk = (props: BookingDeskProps) => {
         nextLabel: t("next"),
         thisWeekLabel: t("today"),
         dateLabel: t("pickDate"),
-        date: range.anchor,
+        date: anchor,
         showCancelledLabel: t("showCancelled"),
         showCancelled,
-        rangeText: `${dayText(board.from)} - ${dayText(board.to)}${range.isLoading ? ` · ${t("loadingRange")}` : ""}`,
+        rangeText: `${dayText(board.from)} - ${dayText(board.to)}${range.isValidating ? ` · ${t("loadingRange")}` : ""}`,
     }
     return (
         <BookingDeskBase
@@ -84,6 +116,7 @@ export const BookingDesk = (props: BookingDeskProps) => {
                     text: t(`status_${status}`),
                     tone,
                 })),
+                add: { label: t("addBooking"), isDisabled: place.isBusy },
                 ...(isToday ? {} : { nav }),
                 ...(desk.notice === null
                     ? {}
@@ -103,8 +136,43 @@ export const BookingDesk = (props: BookingDeskProps) => {
                     title: t(isToday ? "todayEmptyTitle" : "emptyWeekTitle"),
                     body: t(isToday ? "todayEmptyBody" : "emptyWeekBody"),
                 },
-                isPending: desk.isBusy || range.isLoading,
+                isPending: desk.isBusy || place.isBusy || range.isValidating,
                 ...(open === undefined ? {} : { detail: { ...detailOf(open, words), isPending: desk.isBusy } }),
+                ...(place.draft === null || place.fields === null
+                    ? {}
+                    : {
+                          placement: {
+                              mode: place.draft.kind,
+                              title: t(place.draft.kind === "add" ? "addBooking" : "moveTitle"),
+                              fields: place.fields,
+                              serviceOptions: activeServices.map((service) => ({
+                                  id: service.id,
+                                  label: service.name,
+                              })),
+                              resourceOptions:
+                                  place.draft.kind === "add"
+                                      ? [{ id: AUTO_RESOURCE, label: t("autoResource") }, ...resourceOptions]
+                                      : resourceOptions,
+                              labels: {
+                                  name: t("fCustomer"),
+                                  phone: t("fPhone"),
+                                  service: t("fService"),
+                                  date: t("fDate"),
+                                  time: t("fTime"),
+                                  resource: t("fResource"),
+                                  party: t("fParty"),
+                                  note: t("fNote"),
+                                  notePlaceholder: t("notePlaceholder"),
+                                  force: t("stackAnyway"),
+                                  save: t(place.draft.kind === "add" ? "add" : "save"),
+                                  cancel: t("cancel"),
+                                  close: t("close"),
+                              },
+                              ...(place.reason === null ? {} : { refusal: t(`reason_${place.reason}`) }),
+                              canForce: place.canForce,
+                              isPending: place.isBusy,
+                          },
+                      }),
                 ...(cancelling === undefined
                     ? {}
                     : {
@@ -118,8 +186,12 @@ export const BookingDesk = (props: BookingDeskProps) => {
                       }),
             }}
             on={{
-                prev: () => range.goto(shiftDate(range.anchor, -7)),
-                next: () => range.goto(shiftDate(range.anchor, 7)),
+                add: openAdd,
+                placementChange: place.change,
+                placementSubmit: place.submit,
+                placementClose: place.close,
+                prev: () => range.goto(shiftDate(anchor, -7)),
+                next: () => range.goto(shiftDate(anchor, 7)),
                 thisWeek: () => range.goto(board.today),
                 pickDate: range.goto,
                 toggleCancelled: setShowCancelled,
@@ -134,7 +206,11 @@ export const BookingDesk = (props: BookingDeskProps) => {
                     })
                 },
                 keepBooking: () => setCancelId(null),
-                detailAction: (action) => open !== undefined && act(open.id, action),
+                detailAction: (action) => {
+                    if (open === undefined) return
+                    if (action === MOVE_ACTION) openMove(open.id)
+                    else act(open.id, action)
+                },
                 closeDetail: () => setOpenId(null),
             }}
         />

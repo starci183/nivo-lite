@@ -55,6 +55,9 @@ export type {
     BookingStatsView,
     BookingView,
     BookingWaitView,
+    PublicBookingAnswer,
+    PublicBookingPage,
+    PublicBookingService,
 } from "./booking"
 export type { ConsoleIconName, ConsoleNavItem, ConsolePending, ConsoleWorkspace } from "./console"
 export type {

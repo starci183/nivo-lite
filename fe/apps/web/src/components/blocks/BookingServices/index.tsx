@@ -2,17 +2,19 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
-import { writeBookingCatalogRemoval, writeBookingService } from "@/modules/db/booking/write-booking-catalog"
-import { navigation } from "@/modules/i18n"
+import { useSWRConfig } from "swr"
+import {
+    isQueryBookingBoardSwrKey,
+    useMutateRemoveBookingServiceSwr,
+    useMutateSaveBookingServiceSwr,
+} from "@/hooks/swr/api/graphql"
+import { useGraphQLWithToast } from "@/modules/toast"
 import type { BookingServiceView } from "@/modules/types"
 import { BookingServicesBase } from "./component"
 import type { ServiceFields } from "./component"
 
-const { useRouter } = navigation
-
 /** What the setup tab hands the connected services list. */
 interface BookingServicesProps {
-    readonly workspaceId: string
     readonly services: ReadonlyArray<BookingServiceView>
 }
 
@@ -42,42 +44,47 @@ const digits = (value: string): number | null => {
 export const BookingServices = (props: BookingServicesProps) => {
     const t = useTranslations("workbenchBooking")
     const format = useFormatter()
-    const router = useRouter()
+    const withToast = useGraphQLWithToast()
+    const { mutate } = useSWRConfig()
+    const saveService = useMutateSaveBookingServiceSwr()
+    const removeService = useMutateRemoveBookingServiceSwr()
     const [draft, setDraft] = useState<Draft | null>(null)
     const [removeId, setRemoveId] = useState<string | null>(null)
-    const [saved, setSaved] = useState<boolean | null>(null)
     const [isPending, startTransition] = useTransition()
     const removing = props.services.find((service) => service.id === removeId)
-    const after = (ok: boolean, close: () => void) => {
-        setSaved(ok)
-        if (!ok) return
-        close()
-        router.refresh()
-    }
     const save = () => {
         if (draft === null) return
         const { fields } = draft
         startTransition(async () => {
-            const answer = await writeBookingService({
-                workspaceId: props.workspaceId,
-                id: draft.id,
-                name: fields.name,
-                description: fields.description,
-                durationMin: fields.durationMin,
-                bufferMin: fields.bufferMin,
-                priceVnd: digits(fields.price),
-                resourceKind: fields.resourceKind,
-                followupDays: digits(fields.followup),
-                active: fields.active,
-            })
-            after(answer.kind === "ok", () => setDraft(null))
+            const answer = await withToast(
+                () =>
+                    saveService.trigger({
+                        id: draft.id,
+                        name: fields.name,
+                        description: fields.description,
+                        durationMin: fields.durationMin,
+                        bufferMin: fields.bufferMin,
+                        priceVnd: digits(fields.price),
+                        resourceKind: fields.resourceKind,
+                        followupDays: digits(fields.followup),
+                        active: fields.active,
+                    }),
+                { successMessage: t("saved") },
+            )
+            if (answer === undefined) return
+            setDraft(null)
+            void mutate(isQueryBookingBoardSwrKey)
         })
     }
     const remove = () => {
         if (removeId === null) return
         startTransition(async () => {
-            const answer = await writeBookingCatalogRemoval(props.workspaceId, removeId, "booking_services")
-            after(answer.kind === "ok", () => setRemoveId(null))
+            const answer = await withToast(() => removeService.trigger({ id: removeId }), {
+                successMessage: t("saved"),
+            })
+            if (answer === undefined) return
+            setRemoveId(null)
+            void mutate(isQueryBookingBoardSwrKey)
         })
     }
     return (
@@ -142,9 +149,6 @@ export const BookingServices = (props: BookingServicesProps) => {
                           },
                       }),
                 isPending,
-                ...(saved === null
-                    ? {}
-                    : { notice: { tone: saved ? "affirmative" : "negative", text: t(saved ? "saved" : "failed") } }),
             }}
             on={{
                 add: () => setDraft({ id: null, fields: BLANK }),

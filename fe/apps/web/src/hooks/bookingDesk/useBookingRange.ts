@@ -1,43 +1,33 @@
-import { useState, useTransition } from "react"
+"use client"
+
+import { useState } from "react"
+import { useQueryBookingBoardSwr } from "@/hooks/swr/api/graphql"
 import { shiftDate, weekStartOf } from "@/modules/i18n"
-import type { BookingBoard } from "@/modules/types"
+import { toBookingBoard } from "./bookingDesk.adapter"
 
-/** The server action that reads the board of another week. */
-export type ReadBookingRange = (
-    workspaceId: string,
-    from: string,
-    to: string,
-) => Promise<{ readonly kind: "ok"; readonly value: BookingBoard } | { readonly kind: string }>
+/** One week of the desk, in local dates; `null` asks the back end for the week of today. */
+interface Week {
+    readonly from: string
+    readonly to: string
+}
 
-/** The board of the week the owner is looking at, and the moves between weeks; each week is read on demand. */
-export const useBookingRange = (workspaceId: string, initial: BookingBoard, read: ReadBookingRange) => {
-    const [board, setBoard] = useState(initial)
-    const [anchor, setAnchor] = useState(initial.today)
-    const [failed, setFailed] = useState(false)
-    const [seen, setSeen] = useState(initial)
-    const [isLoading, startTransition] = useTransition()
-
-    if (seen !== initial) {
-        setSeen(initial)
-        if (initial.from === board.from) setBoard(initial)
-    }
-
-    const load = (from: string) =>
-        startTransition(async () => {
-            const answer = await read(workspaceId, from, shiftDate(from, 6))
-            if (answer.kind === "ok" && "value" in answer) setBoard(answer.value)
-            setFailed(answer.kind !== "ok")
-        })
-
+/** The board of the week the owner is looking at, and the moves between weeks; SWR owns caching and keeps the last week while the next loads. */
+export const useBookingRange = () => {
+    const [week, setWeek] = useState<Week | null>(null)
+    const [anchor, setAnchor] = useState<string | null>(null)
+    const { data, error, isValidating, mutate } = useQueryBookingBoardSwr(week ?? {}, { keepPreviousData: true })
+    const board = data === undefined ? undefined : toBookingBoard(data)
     return {
         board,
-        anchor,
-        failed,
-        isLoading,
+        anchor: anchor ?? board?.today ?? "",
+        failed: error !== undefined,
+        isLoading: board === undefined,
+        isValidating,
         goto: (date: string) => {
             setAnchor(date)
-            if (weekStartOf(date) !== board.from) load(weekStartOf(date))
+            const from = weekStartOf(date)
+            if (from !== board?.from) setWeek({ from, to: shiftDate(from, 6) })
         },
-        reload: () => load(board.from),
+        reload: () => mutate(),
     }
 }

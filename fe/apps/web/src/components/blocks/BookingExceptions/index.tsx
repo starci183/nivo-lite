@@ -2,17 +2,19 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
-import { writeBookingException, writeBookingExceptionRemoval } from "@/modules/db/booking/write-booking-catalog"
-import { navigation } from "@/modules/i18n"
+import { useSWRConfig } from "swr"
+import {
+    isQueryBookingBoardSwrKey,
+    useMutateRemoveBookingExceptionSwr,
+    useMutateSaveBookingExceptionSwr,
+} from "@/hooks/swr/api/graphql"
+import { useGraphQLWithToast } from "@/modules/toast"
 import type { BookingBoard } from "@/modules/types"
 import { BookingExceptionsBase } from "./component"
 import type { ExceptionFields } from "./component"
 
-const { useRouter } = navigation
-
 /** What the setup tab hands the connected days-off list. */
 interface BookingExceptionsProps {
-    readonly workspaceId: string
     readonly board: BookingBoard
 }
 
@@ -20,7 +22,10 @@ interface BookingExceptionsProps {
 export const BookingExceptions = (props: BookingExceptionsProps) => {
     const t = useTranslations("workbenchBooking")
     const format = useFormatter()
-    const router = useRouter()
+    const withToast = useGraphQLWithToast()
+    const { mutate } = useSWRConfig()
+    const saveException = useMutateSaveBookingExceptionSwr()
+    const removeException = useMutateRemoveBookingExceptionSwr()
     const { board } = props
     const [fields, setFields] = useState<ExceptionFields>({
         resourceId: "all",
@@ -30,14 +35,9 @@ export const BookingExceptions = (props: BookingExceptionsProps) => {
         end: "12:00",
         note: "",
     })
-    const [saved, setSaved] = useState<boolean | null>(null)
     const [isPending, startTransition] = useTransition()
     const nameOf = (id: string | null) =>
         id === null ? t("exceptionWhole") : (board.resources.find((resource) => resource.id === id)?.name ?? "")
-    const finish = (ok: boolean) => {
-        setSaved(ok)
-        if (ok) router.refresh()
-    }
     return (
         <BookingExceptionsBase
             props={{
@@ -69,29 +69,33 @@ export const BookingExceptions = (props: BookingExceptionsProps) => {
                 endLabel: t("exceptionCloses"),
                 addLabel: t("add"),
                 isPending,
-                ...(saved === null
-                    ? {}
-                    : { notice: { tone: saved ? "affirmative" : "negative", text: t(saved ? "saved" : "failed") } }),
             }}
             on={{
                 change: (patch) => setFields({ ...fields, ...patch }),
                 add: () =>
                     startTransition(async () => {
-                        const answer = await writeBookingException({
-                            workspaceId: props.workspaceId,
-                            resourceId: fields.resourceId === "all" ? null : fields.resourceId,
-                            date: fields.date,
-                            closed: fields.closed,
-                            start: fields.start,
-                            end: fields.end,
-                            note: fields.note,
-                        })
-                        finish(answer.kind === "ok")
+                        const answer = await withToast(
+                            () =>
+                                saveException.trigger({
+                                    resourceId: fields.resourceId === "all" ? null : fields.resourceId,
+                                    date: fields.date,
+                                    closed: fields.closed,
+                                    start: fields.start,
+                                    end: fields.end,
+                                    note: fields.note,
+                                }),
+                            { successMessage: t("saved") },
+                        )
+                        if (answer === undefined) return
+                        void mutate(isQueryBookingBoardSwrKey)
                     }),
                 remove: (id) =>
                     startTransition(async () => {
-                        const answer = await writeBookingExceptionRemoval(props.workspaceId, id)
-                        finish(answer.kind === "ok")
+                        const answer = await withToast(() => removeException.trigger({ id }), {
+                            successMessage: t("saved"),
+                        })
+                        if (answer === undefined) return
+                        void mutate(isQueryBookingBoardSwrKey)
                     }),
             }}
         />

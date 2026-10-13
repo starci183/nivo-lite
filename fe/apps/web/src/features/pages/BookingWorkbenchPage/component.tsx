@@ -7,18 +7,16 @@ import { BookingPublicPageForm } from "@/components/blocks/BookingPublicPageForm
 import { BookingResources } from "@/components/blocks/BookingResources"
 import { BookingServices } from "@/components/blocks/BookingServices"
 import { BookingStats } from "@/components/blocks/BookingStats"
+import { AgentDashboardFrame } from "@/components/blocks/AgentDashboardFrame"
 import { BookingWaitlist } from "@/components/blocks/BookingWaitlist"
-import { AgentDashboardFrame } from "@/features/agent-dashboard"
-import type { AgentDashboardData } from "@/lib/agent-dashboard-shared"
 import type { BookingBoard } from "@/modules/types"
 import { SETUP_CLASS } from "./classNames"
 
 /** Props for {@link BookingWorkbenchPageBase}. */
 export interface BookingWorkbenchPageBaseProps {
     readonly props: {
-        readonly workspaceId: string
         readonly board: BookingBoard
-        readonly dashboard: AgentDashboardData
+        readonly installationId: string
         readonly initialTab: string | null
         readonly figures: ReadonlyArray<DescriptionListStatItem>
         readonly tabs: {
@@ -36,7 +34,7 @@ export interface BookingWorkbenchPageBaseProps {
 /** Props for {@link BookingWorkbenchFailedBase}. */
 export interface BookingWorkbenchFailedBaseProps {
     readonly props: {
-        readonly dashboard: AgentDashboardData
+        readonly installationId: string
         readonly tabLabel: string
         readonly loadFailed: { readonly title: string; readonly body: string }
     }
@@ -51,26 +49,24 @@ export const BookingWorkbenchPageBase = (props: BookingWorkbenchPageBaseProps) =
     return (
         <AgentDashboardFrame
             module="booking"
-            data={p.dashboard}
+            installationId={p.installationId}
             initialTab={p.initialTab}
             figures={p.figures}
             tabs={[
                 {
                     id: "calendar",
                     label: withCount(p.tabs.calendar, p.waitingRequests),
-                    content: <BookingDesk workspaceId={p.workspaceId} initial={board} mode="week" />,
+                    content: <BookingDesk mode="week" />,
                 },
                 {
                     id: "today",
                     label: p.tabs.today,
-                    content: <BookingDesk key={board.nowMs} workspaceId={p.workspaceId} initial={board} mode="today" />,
+                    content: <BookingDesk mode="today" />,
                 },
                 {
                     id: "waitlist",
                     label: withCount(p.tabs.waitlist, p.waitingCount),
-                    content: (
-                        <BookingWaitlist workspaceId={p.workspaceId} timezone={board.timezone} items={board.waitlist} />
-                    ),
+                    content: <BookingWaitlist timezone={board.timezone} items={board.waitlist} />,
                 },
                 {
                     id: "stats",
@@ -82,11 +78,11 @@ export const BookingWorkbenchPageBase = (props: BookingWorkbenchPageBaseProps) =
                     label: p.tabs.setup,
                     content: (
                         <div className={SETUP_CLASS}>
-                            <BookingServices workspaceId={p.workspaceId} services={board.services} />
-                            <BookingResources workspaceId={p.workspaceId} board={board} />
-                            <BookingExceptions workspaceId={p.workspaceId} board={board} />
-                            <BookingPolicyForm workspaceId={p.workspaceId} settings={board.settings} />
-                            <BookingPublicPageForm workspaceId={p.workspaceId} settings={board.settings} />
+                            <BookingServices services={board.services} />
+                            <BookingResources board={board} />
+                            <BookingExceptions board={board} />
+                            <BookingPolicyForm settings={board.settings} />
+                            <BookingPublicPageForm settings={board.settings} />
                         </div>
                     ),
                 },
@@ -99,7 +95,7 @@ export const BookingWorkbenchPageBase = (props: BookingWorkbenchPageBaseProps) =
 export const BookingWorkbenchFailedBase = (props: BookingWorkbenchFailedBaseProps) => (
     <AgentDashboardFrame
         module="booking"
-        data={props.props.dashboard}
+        installationId={props.props.installationId}
         figures={[]}
         figuresFailed
         tabs={[

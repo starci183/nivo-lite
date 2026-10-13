@@ -2,16 +2,14 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { useTransition } from "react"
-import { writeBookingWaitRemoval } from "@/modules/db/booking/write-booking-catalog"
-import { navigation } from "@/modules/i18n"
+import { useSWRConfig } from "swr"
+import { isQueryBookingBoardSwrKey, useMutateRemoveBookingWaitlistEntrySwr } from "@/hooks/swr/api/graphql"
+import { useGraphQLWithToast } from "@/modules/toast"
 import type { BookingWaitView } from "@/modules/types"
 import { BookingWaitlistBase } from "./component"
 
-const { useRouter } = navigation
-
-/** What the page hands the connected waiting list. */
+/** What the workbench hands the connected waiting list. */
 interface BookingWaitlistProps {
-    readonly workspaceId: string
     readonly timezone: string
     readonly items: ReadonlyArray<BookingWaitView>
 }
@@ -20,7 +18,9 @@ interface BookingWaitlistProps {
 export const BookingWaitlist = (props: BookingWaitlistProps) => {
     const t = useTranslations("workbenchBooking")
     const format = useFormatter()
-    const router = useRouter()
+    const withToast = useGraphQLWithToast()
+    const { mutate } = useSWRConfig()
+    const remove = useMutateRemoveBookingWaitlistEntrySwr()
     const [isPending, startTransition] = useTransition()
     const when = (ms: number) =>
         format.dateTime(new Date(ms), {
@@ -63,8 +63,11 @@ export const BookingWaitlist = (props: BookingWaitlistProps) => {
             on={{
                 remove: (id) =>
                     startTransition(async () => {
-                        const answer = await writeBookingWaitRemoval(props.workspaceId, id)
-                        if (answer.kind === "ok") router.refresh()
+                        const answer = await withToast(() => remove.trigger({ id }), {
+                            successMessage: t("saved"),
+                        })
+                        if (answer === undefined) return
+                        void mutate(isQueryBookingBoardSwrKey)
                     }),
             }}
         />

@@ -95,7 +95,6 @@ export {
 } from "./credits/read-credits"
 export type { CreditPack, QuotaSnapshot, TopupLot, UsageSummary } from "./credits/credits.mapper"
 export { readDecisions } from "./decisions/read-decisions"
-export { readBookingBoard } from "./booking/read-booking-board"
 export { readInboundEvents } from "./inbox/read-inbound-events"
 export type { InboundEventRow } from "./inbox/read-inbound-events"
 export { readInventoryWorkbench } from "./inventory/read-inventory-workbench"
