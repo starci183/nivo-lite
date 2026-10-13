@@ -4061,7 +4061,18 @@
     "flowDueOn": "hạn {date}",
     "flowPaidOn": "đã trả {date}",
     "flowUnmatchedRef": "Mã {ref}",
-    "flowDecidedBy": "{name} · {time}"
+    "flowDecidedBy": "{name} · {time}",
+    "actionQueued": "Đã xếp hàng xử lý khách hàng.",
+    "actionCompleted": "Đã xử lý khách hàng.",
+    "actionFailed": "Chưa thể xử lý khách hàng. Vui lòng thử lại.",
+    "changesSaved": "Đã lưu thay đổi.",
+    "outcomeRecorded": "Đã ghi nhận kết quả.",
+    "errStepTitle": "Nhập tiêu đề bước tiếp theo.",
+    "errStepOwner": "Chọn người phụ trách.",
+    "errStepNext": "Nhập việc tiếp theo.",
+    "errStepDue": "Chọn ngày hợp lệ.",
+    "errOutcomeEvidence": "Nhập bằng chứng cho kết quả này.",
+    "errDraft": "Nhập nội dung tin nhắn."
   },
   "leads": {
     "crumbHome": "Tổng quan",
@@ -7504,6 +7515,13 @@
     "errContractStatus": "Trạng thái phải là một trong: {list}.",
     "errContractAmount": "Giá trị phải từ 0 trở lên.",
     "evContractCreated": "{who} thêm hợp đồng cho {customer}",
-    "evContractUpdated": "{who} cập nhật hợp đồng của {customer}"
+    "evContractUpdated": "{who} cập nhật hợp đồng của {customer}",
+    "formTextTooLong": "Nhập tối đa {n} ký tự.",
+    "salesActionQueued": "Đã xếp hàng thao tác bán hàng.",
+    "salesActionCompleted": "Đã hoàn thành thao tác bán hàng.",
+    "salesActionFailed": "Thao tác bán hàng thất bại ({code}).",
+    "salesActionStopped": "Đã dừng bước bán hàng.",
+    "salesDecisionInvalid": "Điền các trường bắt buộc cho quyết định.",
+    "salesAmountInvalid": "Nhập số tiền hợp lệ."
   }
 }
