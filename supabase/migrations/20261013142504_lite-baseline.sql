@@ -21701,17 +21701,17 @@ INSERT INTO public.plans (code, name_vi, name_en, price_vnd, period, seats, feat
 --
 
 INSERT INTO public.modules (key, sort_order, status, category, audience, knowledge_folder, workbench, default_operating_mode, definition, updated_at, multi_instance) VALUES
-	('sales', 20, 'stable', 'sales_customer', 'internal', 'sales', 'sales', 'assist', '{}', '2026-10-13 15:01:48.316616+00', false),
-	('accounting', 30, 'stable', 'finance', 'internal', 'accounting', 'accounting', 'assist', '{}', '2026-10-13 15:01:48.316616+00', false),
-	('shifts', 40, 'early', 'operations', 'internal', 'shifts', NULL, 'assist', '{}', '2026-10-13 15:01:48.316616+00', false),
-	('inventory', 60, 'early', 'operations', 'internal', 'inventory', NULL, 'assist', '{}', '2026-10-13 15:01:48.316616+00', false),
-	('loyalty', 70, 'early', 'sales_customer', 'customer', 'loyalty', NULL, 'assist', '{}', '2026-10-13 15:01:48.316616+00', false),
-	('video', 80, 'early', 'marketing', 'internal', 'video', NULL, 'assist', '{}', '2026-10-13 15:01:48.316616+00', false),
-	('content', 90, 'early', 'marketing', 'internal', 'content', NULL, 'assist', '{}', '2026-10-13 15:01:48.316616+00', false),
-	('hiring', 100, 'early', 'hr', 'internal', 'hiring', NULL, 'assist', '{}', '2026-10-13 15:01:48.316616+00', false),
-	('chatbot', 10, 'stable', 'sales_customer', 'customer', 'chatbot', 'chatbot', 'assist', '{}', '2026-10-13 15:01:48.316616+00', true),
-	('booking', 50, 'early', 'operations', 'customer', 'booking', NULL, 'assist', '{}', '2026-10-13 15:01:48.316616+00', true),
-	('lead_gen', 15, 'early', 'sales_customer', 'customer', 'lead_gen', 'lead_gen', 'assist', '{}', '2026-10-13 15:01:49.323818+00', true);
+	('sales', 20, 'stable', 'sales_customer', 'internal', 'sales', 'sales', 'assist', '{}', '2026-10-13 16:26:52.894476+00', false),
+	('accounting', 30, 'stable', 'finance', 'internal', 'accounting', 'accounting', 'assist', '{}', '2026-10-13 16:26:52.894476+00', false),
+	('shifts', 40, 'early', 'operations', 'internal', 'shifts', NULL, 'assist', '{}', '2026-10-13 16:26:52.894476+00', false),
+	('inventory', 60, 'early', 'operations', 'internal', 'inventory', NULL, 'assist', '{}', '2026-10-13 16:26:52.894476+00', false),
+	('loyalty', 70, 'early', 'sales_customer', 'customer', 'loyalty', NULL, 'assist', '{}', '2026-10-13 16:26:52.894476+00', false),
+	('video', 80, 'early', 'marketing', 'internal', 'video', NULL, 'assist', '{}', '2026-10-13 16:26:52.894476+00', false),
+	('content', 90, 'early', 'marketing', 'internal', 'content', NULL, 'assist', '{}', '2026-10-13 16:26:52.894476+00', false),
+	('hiring', 100, 'early', 'hr', 'internal', 'hiring', NULL, 'assist', '{}', '2026-10-13 16:26:52.894476+00', false),
+	('chatbot', 10, 'stable', 'sales_customer', 'customer', 'chatbot', 'chatbot', 'assist', '{}', '2026-10-13 16:26:52.894476+00', true),
+	('booking', 50, 'early', 'operations', 'customer', 'booking', NULL, 'assist', '{}', '2026-10-13 16:26:52.894476+00', true),
+	('lead_gen', 15, 'early', 'sales_customer', 'customer', 'lead_gen', 'lead_gen', 'assist', '{}', '2026-10-13 16:26:53.339214+00', true);
 
 --
 -- Data for Name: agents; Type: TABLE DATA; Schema: public; Owner: postgres
