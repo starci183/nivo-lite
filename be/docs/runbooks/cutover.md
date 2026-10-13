@@ -54,10 +54,16 @@ engine heartbeat is older than 90 seconds. If you still prefer edge first, it wo
    Rows where only the name changed need nothing: the version is the key.
 
 3. Apply the conversion migrations, which now live in `supabase/migrations/_archive/` (the lite baseline replaced them in `supabase/migrations/`, owner ruling 2026-10-13). Push them from a scratch
-   project folder so the CLI sees them as migrations:
+   project folder so the CLI sees them as migrations. The archive keeps each migration production already ran under the name it has on `origin/main`; the copy puts every file back under its
+   lite name (the restamp map of step 2), which is the version the repaired history now holds:
 
    ```bash
-   mkdir -p ../nivo-archive/supabase/migrations && cp supabase/config.toml ../nivo-archive/supabase/ && cp supabase/migrations/_archive/*.sql ../nivo-archive/supabase/migrations/
+   mkdir -p ../nivo-archive/supabase/migrations && cp supabase/config.toml ../nivo-archive/supabase/
+   for f in supabase/migrations/_archive/*.sql; do
+     n=$(basename "$f")
+     lite=$(awk -F'|' -v o="$n" '{gsub(/ /,"",$2); gsub(/ /,"",$3)} $2 == o {print $3}' be/docs/runbooks/migration-restamp.md)
+     cp "$f" "../nivo-archive/supabase/migrations/${lite:-$n}"
+   done
    (cd ../nivo-archive && supabase link --project-ref <ref> && supabase db push --dry-run && supabase db push)
    ```
 
@@ -66,7 +72,7 @@ engine heartbeat is older than 90 seconds. If you still prefer edge first, it wo
 4. Switch the history to the baseline. Production now holds exactly the schema of `supabase/migrations/<stamp>_lite-baseline.sql`, so it is marked applied without a run, and the archived versions leave the history:
 
    ```bash
-   for f in supabase/migrations/_archive/*.sql; do supabase migration repair --status reverted "$(basename "$f" | cut -d_ -f1)"; done
+   for f in ../nivo-archive/supabase/migrations/*.sql; do supabase migration repair --status reverted "$(basename "$f" | cut -d_ -f1)"; done
    supabase migration repair --status applied "$(ls supabase/migrations/*_lite-baseline.sql | xargs -n1 basename | cut -d_ -f1)"
    supabase db push --dry-run    # lists only <stamp>_lite-baseline-standard.sql (and later migrations)
    supabase db push
