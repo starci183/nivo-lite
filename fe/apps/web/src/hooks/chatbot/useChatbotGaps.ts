@@ -1,7 +1,12 @@
 import { useFormatter, useTranslations } from "next-intl"
 import { useCallback } from "react"
 import { useSWRConfig } from "swr"
-import { useMutateChatbotDismissKnowledgeGapSwr, QUERY_CHATBOT_GAPS_SWR_KEY, useQueryChatbotGapsSwr } from "@/hooks/swr"
+import {
+    QUERY_AGENT_DASHBOARD_SWR_KEY,
+    QUERY_CHATBOT_GAPS_SWR_KEY,
+    useMutateChatbotDismissKnowledgeGapSwr,
+    useQueryChatbotGapsSwr,
+} from "@/hooks/swr"
 import { KNOWLEDGE_ROUTES } from "@/modules/routes"
 import { useGraphQLWithToast } from "@/modules/toast"
 
@@ -47,8 +52,7 @@ export const useChatbotGaps = (workspaceId: string | undefined, isManager: boole
             await Promise.allSettled([
                 mutate([QUERY_CHATBOT_GAPS_SWR_KEY, workspaceId]),
                 mutate(
-                    (key) =>
-                        Array.isArray(key) && key[0] === "QUERY_CHATBOT_AGENT_DASHBOARD_SWR" && key[1] === workspaceId,
+                    (key) => Array.isArray(key) && key[0] === QUERY_AGENT_DASHBOARD_SWR_KEY && key[1] === workspaceId,
                 ),
             ])
         },

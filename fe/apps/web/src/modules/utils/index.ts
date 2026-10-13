@@ -1,5 +1,4 @@
 export { accountingWorkbenchOf } from "./accounting-workbench.mapper"
-export { agentDashboardOf } from "./agent-dashboard.mapper"
 export { forecastRunout } from "./credits"
 export {
     dayOf,

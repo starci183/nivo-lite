@@ -1,6 +1,6 @@
 import type { BadgeTone } from "@starci/grammar/common"
 import type { DecisionRow, EvidenceState } from "@/lib/flow-types"
-import { workbenchHref } from "@/lib/agent-dashboard-shared"
+import { agentHref } from "@/modules/installations"
 import type { AttentionKind, LeadStageId } from "@/modules/types"
 
 const MIN = 60_000
@@ -74,7 +74,7 @@ export const salesTabOf = (key: string | null | undefined): SalesTab | null =>
 
 /** The Decisions tab opened on one pending decision (a link, so the page keys on it and the tab opens at the row). */
 export const decisionHref = (decisionId: string): string =>
-    workbenchHref("sales", { tab: "decisions", focus: decisionId })
+    agentHref("sales", null, "workbench", new URLSearchParams({ tab: "decisions", focus: decisionId }).toString())
 
 /** DOM id of one pending decision, so the Attention surface can jump to it. */
 export const decisionAnchor = (id: string): string => `sales-decision-${id}`

@@ -1,25 +1,30 @@
+import { getTranslations } from "next-intl/server"
 import { ContentWorkbenchPageBase } from "./component"
-import type { ContentWorkbenchTab } from "./component"
 
 /** Address inputs passed by the route to the content workbench. */
 interface ContentWorkbenchPageProps {
     readonly tab?: string | null
     readonly focus?: string | null
     readonly installationId?: string | null
-    readonly installation?: { readonly id: string }
 }
 
-const TABS: ReadonlyArray<ContentWorkbenchTab> = ["calendar", "list", "queue", "balance", "settings"]
-
-/** Server shell of the content workbench; every block below it reads its own data in the browser through GraphQL hooks. */
-const ContentWorkbenchPage = (props: ContentWorkbenchPageProps) => (
-    <ContentWorkbenchPageBase
-        props={{
-            installationId: props.installation?.id ?? props.installationId ?? null,
-            tab: TABS.find((entry) => entry === props.tab) ?? "calendar",
-            focus: props.focus ?? null,
-        }}
-    />
-)
-
-export default ContentWorkbenchPage
+/** Server shell of the content workbench: words the tabs and hands the ids; every block below it reads its own data in the browser. */
+export const ContentWorkbenchPage = async (props: ContentWorkbenchPageProps) => {
+    const t = await getTranslations("content")
+    return (
+        <ContentWorkbenchPageBase
+            props={{
+                installationId: props.installationId ?? null,
+                initialTab: props.tab ?? null,
+                focus: props.focus ?? null,
+                tabs: {
+                    calendar: t("tabCalendar"),
+                    list: t("tabList"),
+                    queue: t("tabQueue"),
+                    balance: t("tabBalance"),
+                    settings: t("tabSettings"),
+                },
+            }}
+        />
+    )
+}

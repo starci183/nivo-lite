@@ -16,6 +16,8 @@ export const useSalesWorkbench = () => {
         data,
         nowIso: data?.nowIso ?? NOT_READ_ISO,
         isLoading: query.isLoading,
+        /** The read failed. */
+        isFailed: query.error !== undefined,
         retry: () => {
             void query.mutate()
         },

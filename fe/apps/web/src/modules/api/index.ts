@@ -4,7 +4,6 @@ export type {
     AdminHealthQuery,
     AdminWorkspaceQuery,
     AdminWorkspacesQuery,
-    LeadGenAgentDashboardQuery,
     LoadOpenApiConnectionQuery,
     LeadGenWorkbenchQuery,
 } from "./graphql/__generated__/graphql"
@@ -70,7 +69,6 @@ export type {
     PublicSlotType,
 } from "./graphql/index"
 export type {
-    AgentDashboardRequest,
     DecideSalesDraftRequest,
     DecideSalesWorkItemRequest,
     HandoffToAccountingRequest,
@@ -86,8 +84,6 @@ export type {
     AccountingQuestionWorkType,
     AccountingWorkbenchType,
     AgentChatTurnStatusType,
-    AgentDashboardItemType,
-    AgentDashboardType,
     AgentGenerationStatusType,
     AutomationCardType,
     AutomationGoogleAccountType,

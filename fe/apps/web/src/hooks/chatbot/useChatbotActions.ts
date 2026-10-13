@@ -2,12 +2,13 @@ import { useLocale, useTranslations } from "next-intl"
 import { useCallback } from "react"
 import { useSWRConfig } from "swr"
 import {
+    QUERY_AGENT_DASHBOARD_SWR_KEY,
+    QUERY_CHAT_ANSWER_STATUS_SWR_KEY,
+    QUERY_CHAT_REPLY_STATUS_SWR_KEY,
     useMutateRequestChatAnswerSwr,
     useMutateRequestChatReplySwr,
     useMutateSetChatHandlingSwr,
-    QUERY_CHAT_ANSWER_STATUS_SWR_KEY,
     useQueryChatAnswerStatusSwr,
-    QUERY_CHAT_REPLY_STATUS_SWR_KEY,
     useQueryChatReplyStatusSwr,
 } from "@/hooks/swr"
 import { CHATBOT_IDLE, useChatbotStore } from "@/hooks/zustand/chatbot"
@@ -19,7 +20,7 @@ const REFRESHED_KEYS: ReadonlyArray<unknown> = [
     "QUERY_CHATBOT_OVERVIEW_SWR",
     "QUERY_CHATBOT_THREAD_SWR",
     "QUERY_CHATBOT_GAPS_SWR",
-    "QUERY_CHATBOT_AGENT_DASHBOARD_SWR",
+    QUERY_AGENT_DASHBOARD_SWR_KEY,
 ]
 
 /** What the status poll reports about a queued delivery. */

@@ -15,5 +15,6 @@ export {
     salesTabOf,
     stageToneOf,
     vietnamDay,
+    type SalesTab,
 } from "./sales.shared"
 export { useSalesActions } from "./useSalesActions"

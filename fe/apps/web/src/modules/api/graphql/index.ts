@@ -6,7 +6,6 @@ import type {
     CreditPacksBoughtQuery,
     AccountingWorkbenchQuery,
     AgentChatTurnStatusQuery,
-    AgentDashboardQuery,
     ApproveVideoProjectMutation,
     AskKnowledgeQuery,
     AutomationGoogleAccountsQuery,
@@ -74,7 +73,6 @@ import type {
     HiringJobQuestionInput,
     SaveHiringJobInput,
     SaveHiringSettingsInput,
-    AgentDashboardInput,
     DecideSalesDraftInput,
     DecideSalesWorkItemInput,
     HandoffToAccountingInput,
@@ -101,10 +99,6 @@ export type AccountingQuestionWorkType = AccountingWorkbenchQuery["accountingWor
 export type AccountingWorkbenchType = AccountingWorkbenchQuery["accountingWorkbench"]
 /** The `AgentChatTurnStatusType` object of the back end contract, as the operations of this app select it. */
 export type AgentChatTurnStatusType = AgentChatTurnStatusQuery["agentChatTurnStatus"]
-/** The `AgentDashboardItemType` object of the back end contract, as the operations of this app select it. */
-export type AgentDashboardItemType = NonNullable<AgentDashboardQuery["agentDashboard"]["done"]["data"]>["items"][number]
-/** The `AgentDashboardType` object of the back end contract, as the operations of this app select it. */
-export type AgentDashboardType = AgentDashboardQuery["agentDashboard"]
 /** The `AutomationCardType` object of the back end contract, as the operations of this app select it. */
 export type AutomationCardType = UpdateAutomationPipelineMutation["updateAutomationPipeline"]
 /** The `AutomationGoogleAccountType` object of the back end contract, as the operations of this app select it. */
@@ -369,8 +363,6 @@ export type HiringJobQuestionRequest = WireInput<HiringJobQuestionInput>
 export type SaveHiringJobRequest = WireInput<SaveHiringJobInput>
 /** The `SaveHiringSettingsInput` of the back end contract as callers build it, optional keys optional. */
 export type SaveHiringSettingsRequest = WireInput<SaveHiringSettingsInput>
-/** The `AgentDashboardInput` of the back end contract as callers build it, optional keys optional. */
-export type AgentDashboardRequest = WireInput<AgentDashboardInput>
 /** The `DecideSalesDraftInput` of the back end contract as callers build it, optional keys optional. */
 export type DecideSalesDraftRequest = WireInput<DecideSalesDraftInput>
 /** The `DecideSalesWorkItemInput` of the back end contract as callers build it, optional keys optional. */

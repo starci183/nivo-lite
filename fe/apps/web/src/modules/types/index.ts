@@ -224,15 +224,6 @@ export type {
     DocumentVisibility,
 } from "./knowledge"
 export type {
-    AgentDashboardView,
-    DashboardConnection,
-    DashboardRow,
-    DashboardDone,
-    DashboardKnowledge,
-    DashboardRegion,
-    DashboardWaiting,
-} from "./agent-dashboard"
-export type {
     ShiftsAvailRowView,
     ShiftsAvailView,
     ShiftsBenchView,
@@ -297,6 +288,5 @@ export type {
     AccountingQuestionCardView,
     AccountingQuestionsView,
 } from "./accounting-question-card"
-export type { AccountingDashboardView, AccountingDashboardSectionView } from "./accounting-dashboard"
 export type { ProgramCopy, TierErrorView } from "./loyalty-program"
 export type { GraphQLResponse } from "./outcome"

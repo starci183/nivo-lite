@@ -9,10 +9,9 @@ interface ShiftsWorkbenchPageProps {
     readonly installationId?: string
 }
 
-/** The Shifts workbench slot: a server shell that words the tabs and ribbon terms, then draws the frame around the connected tab blocks. */
+/** The Shifts workbench slot: a server shell that words the tabs, then draws the frame around the connected tab blocks. */
 export const ShiftsWorkbenchPage = async (props: ShiftsWorkbenchPageProps) => {
     const t = await getTranslations("shifts")
-    const tf = await getTranslations("workbenchFigures")
     return (
         <ShiftsWorkbenchPageBase
             props={{
@@ -25,7 +24,6 @@ export const ShiftsWorkbenchPage = async (props: ShiftsWorkbenchPageProps) => {
                     quick: t("tabQuick"),
                     mine: t("tabMine"),
                 },
-                terms: [tf("shWeek"), tf("shGaps"), tf("shLeave"), tf("shHours")],
             }}
         />
     )

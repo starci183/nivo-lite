@@ -1,15 +1,6 @@
 import type { ReactNode } from "react"
-import {
-    Alert,
-    Badge,
-    Button,
-    DescriptionList,
-    SectionHeader,
-    SurfaceCard,
-    SurfaceListCard,
-    Tabs,
-} from "@starci/grammar/common"
-import type { BadgeTone, DescriptionListStatItem } from "@starci/grammar/common"
+import { Badge, Button, SectionHeader, SurfaceListCard, Tabs } from "@starci/grammar/common"
+import type { BadgeTone } from "@starci/grammar/common"
 import { ConnectionsRegion } from "@/components/composites/ConnectionsRegion"
 import type { ConnectionsRegionProps } from "@/components/composites/ConnectionsRegion"
 import { DoneRegion } from "@/components/composites/DoneRegion"
@@ -40,6 +31,10 @@ const tabPanelId = (id: string): string => `agent-dashboard-panel-${id}`
 interface AgentDashboardFrameSlots {
     /** The module's own page command under the heading; null for none. */
     readonly command: ReactNode
+    /** The module's own figures block (the ribbon under the heading); null for none. */
+    readonly ribbon: ReactNode
+    /** The module's own waiting card in place of the built-in one; null draws the dashboard's waiting region. */
+    readonly waiting: ReactNode
     /** The module's own gaps card after the regions; null for none. */
     readonly gaps: ReactNode
     /** The content of the open area; null shows the skeleton card while `hasPlaceholder`. */
@@ -53,16 +48,11 @@ export interface AgentDashboardFrameBaseProps {
         readonly title: string
         /** The agent is not known yet: the heading and the regions are skeletons. */
         readonly isHeadLoading: boolean
-        /** The module's own figures are not known yet. */
-        readonly isFiguresLoading: boolean
         /** The module's own tab content is not known yet: a tab without content shows a skeleton card. */
         readonly hasPlaceholder: boolean
         readonly mode: { readonly label: string; readonly tone: BadgeTone } | null
         /** The default page command, "Talk to the agent"; null while there is no agent or a module brings its own. */
         readonly chat: { readonly label: string; readonly href: string } | null
-        readonly ribbonAria: string
-        readonly figures: ReadonlyArray<DescriptionListStatItem>
-        readonly figuresFailed: boolean
         readonly failure: RegionFailure
         readonly waiting: WaitingRegionProps["view"]
         readonly waitingFailed: boolean
@@ -116,32 +106,18 @@ export const AgentDashboardFrameBase = (props: AgentDashboardFrameBaseProps) => 
             </div>
             {props.state.command === null ? null : <div className={COMMAND_CLASS_NAME}>{props.state.command}</div>}
 
-            {view.figuresFailed ? (
-                <Alert
-                    tone="negative"
-                    title={view.failure.title}
-                    description={view.failure.description}
-                    action={{ label: view.failure.retryLabel, onAction: props.on.retry }}
-                />
-            ) : (
-                <SurfaceCard ariaLabel={view.ribbonAria}>
-                    <DescriptionList
-                        layout="stat-strip"
-                        isDivided
-                        isLoading={view.isFiguresLoading}
-                        items={view.figures}
-                    />
-                </SurfaceCard>
-            )}
+            {props.state.ribbon}
 
-            <WaitingRegion
-                label={view.waitingLabel}
-                isLoading={view.isHeadLoading}
-                isFailed={view.waitingFailed}
-                view={view.waiting}
-                failure={view.failure}
-                onRetry={props.on.retry}
-            />
+            {props.state.waiting ?? (
+                <WaitingRegion
+                    label={view.waitingLabel}
+                    isLoading={view.isHeadLoading}
+                    isFailed={view.waitingFailed}
+                    view={view.waiting}
+                    failure={view.failure}
+                    onRetry={props.on.retry}
+                />
+            )}
 
             <div className={SIDE_GRID_CLASS_NAME}>
                 <DoneRegion

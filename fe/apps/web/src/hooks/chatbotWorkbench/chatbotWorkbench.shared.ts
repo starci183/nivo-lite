@@ -1,22 +1,6 @@
 import type { DescriptionListStatItem } from "@starci/grammar/common"
 import type { ChatbotTranslator } from "@/hooks/chatbot"
-import type { AgentDashboardData } from "@/lib/agent-dashboard-shared"
 import type { ChatbotMetrics } from "@/modules/types"
-
-/** The dashboard shown when its read failed: every region fails in place. */
-export const FAILED_DASHBOARD: AgentDashboardData = {
-    agent: null,
-    waiting: { ok: false },
-    done: { ok: false },
-    connections: { ok: false },
-    knowledge: { ok: false },
-}
-
-/** The words of the failure alert: the message of a failed read, or the generic words when only a region failed. */
-export const errorOf = (failure: unknown, isRegionFailed: boolean, generic: string): string | undefined => {
-    if (failure instanceof Error) return failure.message
-    return failure || isRegionFailed ? generic : undefined
-}
 
 /** The first-reply figure: its value and the line under it. */
 const responseOf = (

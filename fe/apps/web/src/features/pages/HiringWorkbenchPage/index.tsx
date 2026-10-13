@@ -21,10 +21,6 @@ export const HiringWorkbenchPage = async (props: HiringWorkbenchPageProps) => {
                 tab: props.tab ?? null,
                 focus: props.focus ?? null,
                 labels: {
-                    roles: t("hrRoles"),
-                    pipeline: t("hrPipeline"),
-                    interviews: t("hrInterviews"),
-                    offers: t("hrOffers"),
                     jobs: t("hrTabJobs"),
                     candidates: t("hrTabCandidates"),
                     interviewsTab: t("hrTabInterviews"),
