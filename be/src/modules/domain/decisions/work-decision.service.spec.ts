@@ -7,10 +7,11 @@ import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import type { Decider, WorkItem } from "./decisions.contracts"
+import { CommandBusService } from "./command-bus.service"
 import { DecisionsService } from "./decisions.service"
 import { DecisionsErrorCode } from "./errors/decisions.error"
 import { EvidenceService } from "./evidence.service"
-import type { DecideExecutionRequest, DecideWorkRequest } from "./work-decision.contracts"
+import type { ExecutionDecisionRequest, WorkDecisionRequest } from "./work-decision.contracts"
 import { WorkDecisionService } from "./work-decision.service"
 import { WorkEngineService } from "./work-engine.service"
 
@@ -60,7 +61,7 @@ const cardOf = builder<ExecutionRow>({
     draft: "Hello",
 })
 
-const requestOf = builder<DecideWorkRequest>({
+const requestOf = builder<WorkDecisionRequest>({
     workItemId: "item-1",
     decision: "approved",
     edits: {},
@@ -69,7 +70,7 @@ const requestOf = builder<DecideWorkRequest>({
     locale: "en",
 })
 
-const cardRequestOf = builder<DecideExecutionRequest>({
+const cardRequestOf = builder<ExecutionDecisionRequest>({
     executionId: "exec-1",
     decision: "approved",
     editedDraft: null,
@@ -91,6 +92,7 @@ const build = async (setup: Setup = {}) => {
     const find = jest.fn().mockResolvedValue(setup.card === undefined ? cardOf() : setup.card)
     const settle = jest.fn().mockResolvedValue(setup.settled === undefined ? null : setup.settled)
     const log = jest.fn().mockResolvedValue(undefined)
+    const sendCommand = jest.fn().mockResolvedValue({ ok: true })
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkDecisionService,
@@ -99,13 +101,14 @@ const build = async (setup: Setup = {}) => {
                 useValue: mock<MessageCatalog>({ get: jest.fn((key: string) => `${key}()`) }),
             },
             { provide: WorkspaceMembersService, useValue: mock<WorkspaceMembersService>({ require }) },
+            { provide: CommandBusService, useValue: mock<CommandBusService>({ sendCommand }) },
             { provide: DecisionsService, useValue: mock<DecisionsService>({ getWorkItem }) },
             { provide: WorkEngineService, useValue: mock<WorkEngineService>({ resumeWork }) },
             { provide: ExecutionsService, useValue: mock<ExecutionsService>({ find, settle }) },
             { provide: EvidenceService, useValue: mock<EvidenceService>({ log }) },
         ],
     }).compile()
-    return { service: moduleRef.get(WorkDecisionService), resumeWork, find, settle, log, done }
+    return { service: moduleRef.get(WorkDecisionService), resumeWork, find, settle, log, done, sendCommand, require }
 }
 
 const owner: Decider = { name: "An", kind: "owner" }
@@ -132,6 +135,14 @@ describe("WorkDecisionService", () => {
                 "thanks",
             )
             expect(log).not.toHaveBeenCalled()
+        })
+
+        it("decides with nothing but the verdict", async () => {
+            const { service, resumeWork } = await build()
+
+            await service.decide("user-1", "ws-1", { workItemId: "item-1", decision: "approved", locale: "en" })
+
+            expect(resumeWork).toHaveBeenCalledWith(ctxOf("An"), "item-1", "approved", {}, owner, null)
         })
 
         it("lets staff decide an item assigned to them and records them as staff", async () => {
@@ -202,6 +213,32 @@ describe("WorkDecisionService", () => {
         })
     })
 
+    describe("sendCommand", () => {
+        const request = {
+            to: "sales",
+            command: "confirm_order",
+            subjectType: "order",
+            subjectId: "o-1",
+            fields: [{ name: "items", text: "tea" }],
+            reason: "owner asked",
+            locale: "en" as const,
+        }
+
+        it("sends the command as the owner after proving the manager role", async () => {
+            const { service, sendCommand, require } = await build()
+
+            expect(await service.sendCommand("user-1", "ws-1", request)).toEqual({ ok: true })
+            expect(require).toHaveBeenCalledWith("user-1", "ws-1", ["owner", "manager"])
+            expect(sendCommand).toHaveBeenCalledWith(ctxOf("An"), {
+                from: "owner",
+                to: "sales",
+                command: "confirm_order",
+                payload: { items: "tea", subject_type: "order", subject_id: "o-1" },
+                reason: "owner asked",
+            })
+        })
+    })
+
     describe("decideExecution", () => {
         it("decides the work item behind the card and settles the card", async () => {
             const settled = cardOf({ status: "approved" })
@@ -225,6 +262,18 @@ describe("WorkDecisionService", () => {
 
             expect(result).toEqual({ id: "exec-1", status: "approved", work_item_id: "item-1", draft: "Edited" })
             expect(resumeWork).toHaveBeenCalledWith(ctxOf("An"), "item-1", "approved", { draft: "Edited" }, owner, null)
+        })
+
+        it("decides a card when the request names no draft at all", async () => {
+            const { service, resumeWork } = await build()
+
+            await service.decideExecution("user-1", "ws-1", {
+                executionId: "exec-1",
+                decision: "approved",
+                locale: "en",
+            })
+
+            expect(resumeWork).toHaveBeenCalledWith(ctxOf("An"), "item-1", "approved", {}, owner, null)
         })
 
         it("answers the stored draft of a card rejected without edits", async () => {

@@ -2,16 +2,21 @@ import { Injectable } from "@nestjs/common"
 import { ExecutionsService } from "@modules/domain/executions"
 import type { ExecutionRow } from "@modules/domain/executions"
 import { WorkspaceMembersService, canDecide } from "@modules/domain/workspace-members"
-import type { WorkspaceMember } from "@modules/domain/workspace-members"
+import type { WorkspaceMember, WorkspaceRole } from "@modules/domain/workspace-members"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import type { WorkContext, WorkItem } from "./decisions.contracts"
+import { CommandBusService } from "./command-bus.service"
+import type { CommandResult, WorkContext, WorkItem } from "./decisions.contracts"
 import { DecisionsService } from "./decisions.service"
 import { DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
 import { EvidenceService } from "./evidence.service"
-import type { DecideExecutionRequest, DecideWorkRequest } from "./work-decision.contracts"
+import type { ExecutionDecisionRequest, WorkDecisionRequest, SendOwnerCommandRequest } from "./work-decision.contracts"
 import { BASIS_MIN_CHARS, assigneeOf, basisMissing, cleanBasis, decisionNote, deciderOf } from "./work-decision.policy"
+import { commandPayloadOf, workEditsOf } from "./work-wire.mapper"
 import { WorkEngineService } from "./work-engine.service"
+
+/** The roles that govern: only they command the agents. */
+const MANAGERS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
 
 /** The status of a card nobody decided yet. */
 const PENDING_CARD = "pending_approval"
@@ -23,6 +28,7 @@ export class WorkDecisionService {
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         private readonly members: WorkspaceMembersService,
         private readonly decisions: DecisionsService,
+        private readonly bus: CommandBusService,
         private readonly engine: WorkEngineService,
         private readonly executions: ExecutionsService,
         private readonly evidence: EvidenceService,
@@ -33,7 +39,7 @@ export class WorkDecisionService {
      * assigned to them. A payment reconciliation cannot be approved without a written basis, which is kept in the decision
      * note and the evidence log.
      */
-    async decide(principalId: string, workspaceId: string, request: DecideWorkRequest): Promise<WorkItem> {
+    async decide(principalId: string, workspaceId: string, request: WorkDecisionRequest): Promise<WorkItem> {
         const item = await this.decisions.getWorkItem(principalId, workspaceId, request.workItemId)
         const member = await this.members.require(principalId, workspaceId)
         return this.resume(member, item, request)
@@ -46,7 +52,7 @@ export class WorkDecisionService {
     async decideExecution(
         principalId: string,
         workspaceId: string,
-        request: DecideExecutionRequest,
+        request: ExecutionDecisionRequest,
     ): Promise<ExecutionRow> {
         const member = await this.members.require(principalId, workspaceId)
         const card = await this.executions.find(workspaceId, request.executionId)
@@ -55,13 +61,11 @@ export class WorkDecisionService {
         }
         if (card.status !== PENDING_CARD) throw new DecisionsError({ code: DecisionsErrorCode.NotWaiting })
         const item = await this.decisions.getWorkItem(principalId, workspaceId, card.work_item_id)
-        const editedDraft = request.editedDraft
+        const editedDraft = request.editedDraft ?? null
         await this.resume(member, item, {
             workItemId: item.id,
             decision: request.decision,
             edits: editedDraft === null ? {} : { draft: editedDraft },
-            note: null,
-            basis: null,
             locale: request.locale,
         })
         const settled = await this.executions.settle({
@@ -74,7 +78,24 @@ export class WorkDecisionService {
         return settled ?? { ...card, status: request.decision, draft: editedDraft ?? card.draft }
     }
 
-    private async resume(member: WorkspaceMember, item: WorkItem, request: DecideWorkRequest): Promise<WorkItem> {
+    /** Sends a command to an agent as the owner; owner and manager only. A refusal is answered, not thrown. */
+    async sendCommand(
+        principalId: string,
+        workspaceId: string,
+        request: SendOwnerCommandRequest,
+    ): Promise<CommandResult> {
+        const member = await this.members.require(principalId, workspaceId, MANAGERS)
+        const ctx: WorkContext = { workspaceId, actor: member.displayName, locale: request.locale }
+        return this.bus.sendCommand(ctx, {
+            from: "owner",
+            to: request.to,
+            command: request.command,
+            payload: commandPayloadOf(request),
+            reason: request.reason,
+        })
+    }
+
+    private async resume(member: WorkspaceMember, item: WorkItem, request: WorkDecisionRequest): Promise<WorkItem> {
         if (!canDecide(member, assigneeOf(item))) throw new DecisionsError({ code: DecisionsErrorCode.NotAllowed })
         const basis = request.decision === "approved" ? cleanBasis(request.basis) : ""
         if (request.decision === "approved" && basisMissing(item.action, basis)) {
@@ -90,7 +111,7 @@ export class WorkDecisionService {
             ctx,
             item.id,
             request.decision,
-            request.edits,
+            workEditsOf(request.edits),
             by,
             decisionNote(basisLine, request.note),
         )

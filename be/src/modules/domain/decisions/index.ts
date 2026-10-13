@@ -31,7 +31,14 @@ export type {
 } from "./decisions.contracts"
 export type { AuthoritySheet, ListWorkItemsQuery, WorkItemCursor, WorkItemPage } from "./decisions-views.contracts"
 export { OfficeLinesService } from "@modules/domain/messages"
-export type { DecideExecutionRequest, DecideWorkRequest, DecisionVerdict } from "./work-decision.contracts"
+export type {
+    DecisionVerdict,
+    ExecutionDecisionRequest,
+    FieldValue,
+    SendOwnerCommandRequest,
+    WireEdits,
+    WorkDecisionRequest,
+} from "./work-decision.contracts"
 export { DecisionsModule } from "./decisions.module"
 export type { DecisionsOptions } from "./decisions.options"
 export { CommandBusService } from "./command-bus.service"

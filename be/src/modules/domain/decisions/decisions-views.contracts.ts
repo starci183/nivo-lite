@@ -18,7 +18,7 @@ export interface ListWorkItemsQuery {
     /** Only these statuses; an empty list means every status. */
     readonly statuses: ReadonlyArray<WorkStatus>
     /** Where the page starts; null for the first page. */
-    readonly after: OptionalWorkItemCursor
+    readonly after?: OptionalWorkItemCursor
     /** The page size; clamped to 1..100. */
     readonly limit: number
 }
