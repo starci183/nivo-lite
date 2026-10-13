@@ -1,4 +1,3 @@
-import type { DbOutcome } from "@/modules/db/outcome"
 import type { EventRecord, ExecutionRecord, LeadIcon, LeadJourney, ResponsibilityRecord } from "@/modules/types"
 
 /** The bullet lines ("- text") of an AI brief. */
@@ -49,12 +48,6 @@ export const isEvidenceEvent = (event: EventRecord): boolean =>
     (event.kind === "outcome.recorded" || event.kind === "execution.approved") &&
     event.evidence !== null &&
     event.evidence !== ""
-
-/** The sentence a failed call should show: the failure code of the database function. */
-export const faultTextOf = (outcome: DbOutcome<unknown>): string => {
-    if (outcome.kind === "ok") return ""
-    return outcome.code
-}
 
 /** The drafts of a lead split into the one waiting for a decision and the earlier ones, newest first. */
 export const executionsOf = (
