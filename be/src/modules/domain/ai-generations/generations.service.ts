@@ -15,6 +15,8 @@ import type {
     GenerationFailure,
     GenerationFailureReason,
     GenerationOutcome,
+    GenerationRequested,
+    GenerationStatus,
     OptionalGenerationProgress,
     PollVerdict,
 } from "./ai-generations.contracts"
@@ -77,6 +79,37 @@ export class GenerationsService {
     async generateFor(userId: string, params: GenerateParams): Promise<GenerationOutcome> {
         await this.members.require(userId, params.workspaceId)
         return this.generate(params)
+    }
+
+    /** Queues a text a signed-in member asks for and answers its id at once (or why it was not queued); the text is read with `statusFor`. */
+    async requestFor(userId: string, params: GenerateParams): Promise<GenerationRequested> {
+        await this.members.require(userId, params.workspaceId)
+        const locale = params.locale ?? "vi"
+        const busy = this.catalog.get("generation.busy", {}, locale)
+        const blocked = await this.usage.blockedBy(params.workspaceId, params.kind, locale)
+        if (blocked !== null) return failure("quota", blocked.message)
+        const availability = this.engine.availability()
+        if (availability !== "ready") {
+            return failure(availability === "offline" ? "engine_offline" : "not_configured", busy)
+        }
+        const generationId = await this.enqueue(params, clampTimeout(params.timeoutMs))
+        return { ok: true, generationId }
+    }
+
+    /** Where a queued text of the workspace stands; any member may look. */
+    async statusFor(userId: string, workspaceId: string, generationId: string): Promise<GenerationStatus> {
+        await this.members.require(userId, workspaceId)
+        const progress = await this.poll(generationId, workspaceId)
+        if (progress === null) throw new AiGenerationsError({ code: AiGenerationsErrorCode.GenerationNotFound })
+        const verdict = verdictOf(progress)
+        const status = verdict?.kind === "failed" ? "failed" : progress.status
+        return {
+            generationId,
+            status: status === "done" || status === "failed" || status === "running" ? status : "queued",
+            output: progress.text,
+            usage: progress.usage,
+            timings: progress.timings,
+        }
     }
 
     /** For callers that just want the text: the output, or an `AiGenerationsError` carrying the sentence to show. */

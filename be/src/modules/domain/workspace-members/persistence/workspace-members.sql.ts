@@ -23,3 +23,43 @@ export const UPSERT_MEMBER = sql`
     SET role = CASE WHEN public.workspace_members.role = 'owner' THEN 'owner' ELSE excluded.role END,
         staff_id = coalesce(excluded.staff_id, public.workspace_members.staff_id),
         status = 'active'`
+
+/** Changes the role of a member; the table guard refuses to demote the last active owner. */
+export const UPDATE_MEMBER_ROLE = sql`
+    WITH changed AS (
+        UPDATE public.workspace_members SET role = $3
+        WHERE workspace_id = $1 AND user_id = $2
+        RETURNING user_id
+    )
+    SELECT user_id FROM changed LIMIT 1`
+
+/** Enables or disables a member; the table guard refuses to disable the last active owner. */
+export const UPDATE_MEMBER_STATUS = sql`
+    WITH changed AS (
+        UPDATE public.workspace_members SET status = $3
+        WHERE workspace_id = $1 AND user_id = $2
+        RETURNING user_id
+    )
+    SELECT user_id FROM changed LIMIT 1`
+
+/** Removes a member from a workspace; the table guard refuses to remove the last active owner. */
+export const DELETE_MEMBER = sql`
+    WITH changed AS (
+        DELETE FROM public.workspace_members
+        WHERE workspace_id = $1 AND user_id = $2
+        RETURNING user_id
+    )
+    SELECT user_id FROM changed LIMIT 1`
+
+/** Saves the display name a person carries in every workspace they actively belong to. */
+export const RENAME_MEMBER_EVERYWHERE = sql`
+    UPDATE public.workspace_members SET display_name = $2
+    WHERE user_id = $1 AND status = 'active'`
+
+/** The active staff rows of a workspace, by name: who a member can be linked to. */
+export const LIST_ACTIVE_STAFF = sql`
+    SELECT s.id, s.name, s.role
+    FROM public.staff s
+    WHERE s.workspace_id = $1 AND s.active
+    ORDER BY s.name ASC
+    LIMIT 500`

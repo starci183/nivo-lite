@@ -15,3 +15,13 @@ export interface MemberRow {
     /** Constrained by a CHECK in the table. */
     status: "active" | "disabled"
 }
+
+/** public.staff as the link picker selects it. */
+export interface StaffRow {
+    /** The staff id. */
+    id: string
+    /** The staff name. */
+    name: string
+    /** The staff role label. */
+    role: string
+}

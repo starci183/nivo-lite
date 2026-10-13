@@ -81,6 +81,18 @@ export interface WizardConnection {
     readonly agentIds: ReadonlyArray<string>
 }
 
+/** The keys a payOS or Casso connection stores, by name; the ones the provider does not use stay absent. */
+export interface ProviderKeyValues {
+    /** payOS client id. */
+    readonly clientId?: string | undefined
+    /** payOS API key. */
+    readonly apiKey?: string | undefined
+    /** payOS checksum key. */
+    readonly checksumKey?: string | undefined
+    /** Casso secure key. */
+    readonly secureKey?: string | undefined
+}
+
 /** What saving provider keys answers. */
 export interface ProviderKeysResult {
     /** Whether payOS confirmed the webhook address. */

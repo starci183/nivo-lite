@@ -1,9 +1,9 @@
-// migrations-sha256: 5a3df7645bad96665737dc5e5c404acb17fac8d4ee4255722f2665e8ee695017
+// migrations-sha256: 4b8b944dd20fe3c67722de37fdafacc5f2f388a9a3e6622b1992845eb9e7dc73
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 export type Database = {
-
+  
   "graphql_public": {
           Tables: {
             [_ in never]: never
@@ -499,7 +499,7 @@ isOneToOne: false
                     "definition"?: NonNullable<Json>,"executor"?: string,"key"?: string,"module_key"?: string | null,"pack"?: string,"position"?: number,"updated_at"?: string,"version"?: number
                   }
                   Relationships: [
-
+                    
                   ]
                 },"billing_events": {
                   Row: {
@@ -581,7 +581,7 @@ isOneToOne: false
                     "hits"?: number,"key"?: string,"window_start"?: string
                   }
                   Relationships: [
-
+                    
                   ]
                 },"booking_reminders": {
                   Row: {
@@ -1169,7 +1169,7 @@ isOneToOne: false
                     "active"?: boolean,"code"?: string,"credits"?: number,"price_vnd"?: number,"sort"?: number
                   }
                   Relationships: [
-
+                    
                   ]
                 },"credit_topup_draws": {
                   Row: {
@@ -1226,7 +1226,7 @@ isOneToOne: false
                     "name"?: string,"secret"?: string,"updated_at"?: string,"url"?: string
                   }
                   Relationships: [
-
+                    
                   ]
                 },"data_records": {
                   Row: {
@@ -1364,7 +1364,7 @@ isOneToOne: false
                     "info"?: NonNullable<Json>,"kinds"?: (string)[],"last_heartbeat_at"?: string,"started_at"?: string,"version"?: string,"worker_id"?: string
                   }
                   Relationships: [
-
+                    
                   ]
                 },"events": {
                   Row: {
@@ -1445,7 +1445,7 @@ isOneToOne: false
                     "created_at"?: string,"id"?: never,"ip_hash"?: string,"kind"?: string,"workspace_id"?: string | null
                   }
                   Relationships: [
-
+                    
                   ]
                 },"hiring_availability": {
                   Row: {
@@ -2064,7 +2064,7 @@ isOneToOne: false
                     "lease_until"?: string,"msg_id"?: number,"queue"?: string,"workspace_id"?: string
                   }
                   Relationships: [
-
+                    
                   ]
                 },"jobs": {
                   Row: {
@@ -2077,7 +2077,7 @@ isOneToOne: false
                     "claimed_by"?: string | null,"created_at"?: string,"current_step"?: string | null,"error"?: string | null,"fencing_token"?: number,"id"?: string,"job_key"?: string,"kind"?: string,"lease_expires_at"?: string | null,"payload"?: NonNullable<Json>,"status"?: string,"updated_at"?: string
                   }
                   Relationships: [
-
+                    
                   ]
                 },"knowledge_chunks": {
                   Row: {
@@ -2179,25 +2179,6 @@ isOneToOne: false
                   Relationships: [
                     {
       foreignKeyName: "knowledge_suggestion_state_workspace_id_fkey"
-      columns: ["workspace_id"]
-isOneToOne: false
-      referencedRelation: "workspaces"
-      referencedColumns: ["id"]
-    }
-                  ]
-                },"lead_action_runs": {
-                  Row: {
-                    "action": string,"created_at": string,"error_code": string | null,"fencing_token": number | null,"id": string,"input": NonNullable<Json>,"job_id": string | null,"locale": string,"requested_by": string,"result": Json | null,"status": string,"updated_at": string,"workspace_id": string
-                  }
-                  Insert: {
-                    "action": string,"created_at"?: string,"error_code"?: string | null,"fencing_token"?: number | null,"id"?: string,"input": NonNullable<Json>,"job_id"?: string | null,"locale": string,"requested_by": string,"result"?: Json | null,"status"?: string,"updated_at"?: string,"workspace_id": string
-                  }
-                  Update: {
-                    "action"?: string,"created_at"?: string,"error_code"?: string | null,"fencing_token"?: number | null,"id"?: string,"input"?: NonNullable<Json>,"job_id"?: string | null,"locale"?: string,"requested_by"?: string,"result"?: Json | null,"status"?: string,"updated_at"?: string,"workspace_id"?: string
-                  }
-                  Relationships: [
-                    {
-      foreignKeyName: "lead_action_runs_workspace_id_fkey"
       columns: ["workspace_id"]
 isOneToOne: false
       referencedRelation: "workspaces"
@@ -2557,7 +2538,7 @@ isOneToOne: false
                     "delivery_id"?: string,"id"?: string,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"provider"?: string,"received_at"?: string
                   }
                   Relationships: [
-
+                    
                   ]
                 },"meta_threads": {
                   Row: {
@@ -2757,7 +2738,7 @@ isOneToOne: false
                     "audience"?: string,"category"?: string,"default_operating_mode"?: string,"definition"?: NonNullable<Json>,"key"?: string,"knowledge_folder"?: string,"multi_instance"?: boolean,"sort_order"?: number,"status"?: string,"updated_at"?: string,"workbench"?: string | null
                   }
                   Relationships: [
-
+                    
                   ]
                 },"n8n_pipelines": {
                   Row: {
@@ -2789,7 +2770,7 @@ isOneToOne: false
                     "key"?: string,"value"?: string
                   }
                   Relationships: [
-
+                    
                   ]
                 },"n8n_runs": {
                   Row: {
@@ -2821,7 +2802,7 @@ isOneToOne: false
                     "body"?: string,"embedding"?: string | null,"embedding_model"?: string | null,"fts"?: never,"id"?: string,"kind"?: string,"module"?: string,"slug"?: string,"title"?: string,"updated_at"?: string,"version"?: number
                   }
                   Relationships: [
-
+                    
                   ]
                 },"office_command_candidates": {
                   Row: {
@@ -2977,7 +2958,7 @@ isOneToOne: false
                     "active"?: boolean,"ai_credits_per_month"?: number | null,"ai_messages_per_month"?: number | null,"ai_tokens_per_month"?: number | null,"code"?: string,"credits_rollover"?: boolean,"features"?: NonNullable<Json>,"is_custom"?: boolean,"name_en"?: string,"name_vi"?: string,"period"?: string,"price_vnd"?: number,"seats"?: number,"sort"?: number
                   }
                   Relationships: [
-
+                    
                   ]
                 },"platform_admins": {
                   Row: {
@@ -2990,7 +2971,7 @@ isOneToOne: false
                     "created_at"?: string,"email"?: string
                   }
                   Relationships: [
-
+                    
                   ]
                 },"platform_audit": {
                   Row: {
@@ -3022,7 +3003,7 @@ isOneToOne: false
                     "enabled"?: boolean,"key"?: string
                   }
                   Relationships: [
-
+                    
                   ]
                 },"public_api": {
                   Row: {
@@ -3066,7 +3047,7 @@ isOneToOne: false
                     "created_at"?: string,"id"?: string,"payload"?: NonNullable<Json>,"queue"?: string,"sent_at"?: string | null
                   }
                   Relationships: [
-
+                    
                   ]
                 },"responsibilities": {
                   Row: {
@@ -3509,7 +3490,7 @@ isOneToOne: false
                     "delivery_id"?: string,"id"?: string,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"provider"?: string,"received_at"?: string
                   }
                   Relationships: [
-
+                    
                   ]
                 },"transactions": {
                   Row: {
@@ -3789,7 +3770,7 @@ isOneToOne: false
                     "delivery_id"?: string,"id"?: string,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"provider"?: string,"received_at"?: string
                   }
                   Relationships: [
-
+                    
                   ]
                 },"zalo_wizard_drafts": {
                   Row: {
@@ -4641,11 +4622,11 @@ export type CompositeTypes<
 export const Constants = {
   "graphql_public": {
           Enums: {
-
+            
           }
         },"public": {
           Enums: {
-
+            
           }
         }
 } as const

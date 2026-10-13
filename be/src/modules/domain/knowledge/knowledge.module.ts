@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { EmbeddingService } from "./embedding.service"
+import { KnowledgeDocumentsService } from "./knowledge-documents.service"
 import { KnowledgeDriveService } from "./knowledge-drive.service"
 import { KnowledgeIndexingService } from "./knowledge-indexing.service"
 import { KnowledgeJobsService } from "./knowledge-jobs.service"
@@ -23,6 +24,7 @@ export class KnowledgeModule extends ConfigurableModuleClass {
                 UsageMeterService,
                 EmbeddingService,
                 SourceReaderService,
+                KnowledgeDocumentsService,
                 KnowledgeDriveService,
                 KnowledgeIndexingService,
                 KnowledgeJobsService,
@@ -32,6 +34,7 @@ export class KnowledgeModule extends ConfigurableModuleClass {
             exports: [
                 UsageMeterService,
                 EmbeddingService,
+                KnowledgeDocumentsService,
                 KnowledgeDriveService,
                 KnowledgeIndexingService,
                 KnowledgeJobsService,
