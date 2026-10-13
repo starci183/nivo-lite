@@ -5,7 +5,7 @@ import type { InputVariables, MutateParams, WireInput } from "../types"
 import type { RequestDataSyncMutation, RequestDataSyncMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `requestDataSync` mutation. */
-export type MutateRequestDataSyncRequest = WireInput<RequestDataSyncMutationVariables["input"]>
+type MutateRequestDataSyncRequest = WireInput<RequestDataSyncMutationVariables["input"]>
 
 /** The response of the `requestDataSync` mutation. */
 type MutateRequestDataSyncResponse = RequestDataSyncMutation

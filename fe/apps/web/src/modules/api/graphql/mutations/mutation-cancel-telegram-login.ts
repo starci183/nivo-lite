@@ -5,7 +5,7 @@ import type { InputVariables, MutateParams, WireInput } from "../types"
 import type { CancelTelegramLoginMutation, CancelTelegramLoginMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `cancelTelegramLogin` mutation. */
-export type MutateCancelTelegramLoginRequest = WireInput<CancelTelegramLoginMutationVariables["input"]>
+type MutateCancelTelegramLoginRequest = WireInput<CancelTelegramLoginMutationVariables["input"]>
 
 /** The response of the `cancelTelegramLogin` mutation. */
 type MutateCancelTelegramLoginResponse = CancelTelegramLoginMutation

@@ -5,7 +5,7 @@ import type { InputVariables, MutateParams, WireInput } from "../types"
 import type { RevealSepayKeyMutation, RevealSepayKeyMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `revealSepayKey` mutation. */
-export type MutateRevealSepayKeyRequest = WireInput<RevealSepayKeyMutationVariables["input"]>
+type MutateRevealSepayKeyRequest = WireInput<RevealSepayKeyMutationVariables["input"]>
 
 /** The response of the `revealSepayKey` mutation. */
 type MutateRevealSepayKeyResponse = RevealSepayKeyMutation

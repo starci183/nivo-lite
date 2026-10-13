@@ -5,7 +5,7 @@ import type { InputVariables, MutateParams, WireInput } from "../types"
 import type { TestWebhookConnectionMutation, TestWebhookConnectionMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `testWebhookConnection` mutation. */
-export type MutateTestWebhookConnectionRequest = WireInput<TestWebhookConnectionMutationVariables["input"]>
+type MutateTestWebhookConnectionRequest = WireInput<TestWebhookConnectionMutationVariables["input"]>
 
 /** The response of the `testWebhookConnection` mutation. */
 type MutateTestWebhookConnectionResponse = TestWebhookConnectionMutation

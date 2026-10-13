@@ -5,7 +5,7 @@ import type { InputVariables, MutateParams, WireInput } from "../types"
 import type { DeleteConnectionMutation, DeleteConnectionMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `deleteConnection` mutation. */
-export type MutateDeleteConnectionRequest = WireInput<DeleteConnectionMutationVariables["input"]>
+type MutateDeleteConnectionRequest = WireInput<DeleteConnectionMutationVariables["input"]>
 
 /** The response of the `deleteConnection` mutation. */
 type MutateDeleteConnectionResponse = DeleteConnectionMutation

@@ -5,7 +5,7 @@ import type { InputVariables, MutateParams, WireInput } from "../types"
 import type { RunDocumentImportMutation, RunDocumentImportMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `runDocumentImport` mutation. */
-export type MutateRunDocumentImportRequest = WireInput<RunDocumentImportMutationVariables["input"]>
+type MutateRunDocumentImportRequest = WireInput<RunDocumentImportMutationVariables["input"]>
 
 /** The response of the `runDocumentImport` mutation. */
 type MutateRunDocumentImportResponse = RunDocumentImportMutation

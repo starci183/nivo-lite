@@ -5,7 +5,7 @@ import type { InputVariables, MutateParams, WireInput } from "../types"
 import type { AuthorizeGoogleMutation, AuthorizeGoogleMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `authorizeGoogle` mutation. */
-export type MutateAuthorizeGoogleRequest = WireInput<AuthorizeGoogleMutationVariables["input"]>
+type MutateAuthorizeGoogleRequest = WireInput<AuthorizeGoogleMutationVariables["input"]>
 
 /** The response of the `authorizeGoogle` mutation. */
 type MutateAuthorizeGoogleResponse = AuthorizeGoogleMutation

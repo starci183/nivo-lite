@@ -5,7 +5,7 @@ import type { InputVariables, MutateParams, WireInput } from "../types"
 import type { RunCsvImportMutation, RunCsvImportMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `runCsvImport` mutation. */
-export type MutateRunCsvImportRequest = WireInput<RunCsvImportMutationVariables["input"]>
+type MutateRunCsvImportRequest = WireInput<RunCsvImportMutationVariables["input"]>
 
 /** The response of the `runCsvImport` mutation. */
 type MutateRunCsvImportResponse = RunCsvImportMutation

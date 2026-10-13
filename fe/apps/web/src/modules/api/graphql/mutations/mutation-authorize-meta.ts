@@ -5,7 +5,7 @@ import type { InputVariables, MutateParams, WireInput } from "../types"
 import type { AuthorizeMetaMutation, AuthorizeMetaMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `authorizeMeta` mutation. */
-export type MutateAuthorizeMetaRequest = WireInput<AuthorizeMetaMutationVariables["input"]>
+type MutateAuthorizeMetaRequest = WireInput<AuthorizeMetaMutationVariables["input"]>
 
 /** The response of the `authorizeMeta` mutation. */
 type MutateAuthorizeMetaResponse = AuthorizeMetaMutation

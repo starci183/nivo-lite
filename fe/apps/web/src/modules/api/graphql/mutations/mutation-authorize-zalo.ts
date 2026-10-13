@@ -5,7 +5,7 @@ import type { InputVariables, MutateParams, WireInput } from "../types"
 import type { AuthorizeZaloMutation, AuthorizeZaloMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `authorizeZalo` mutation. */
-export type MutateAuthorizeZaloRequest = WireInput<AuthorizeZaloMutationVariables["input"]>
+type MutateAuthorizeZaloRequest = WireInput<AuthorizeZaloMutationVariables["input"]>
 
 /** The response of the `authorizeZalo` mutation. */
 type MutateAuthorizeZaloResponse = AuthorizeZaloMutation

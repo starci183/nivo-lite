@@ -5,7 +5,7 @@ import type { InputVariables, MutateParams, WireInput } from "../types"
 import type { StartSmtpConnectionMutation, StartSmtpConnectionMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `startSmtpConnection` mutation. */
-export type MutateStartSmtpConnectionRequest = WireInput<StartSmtpConnectionMutationVariables["input"]>
+type MutateStartSmtpConnectionRequest = WireInput<StartSmtpConnectionMutationVariables["input"]>
 
 /** The response of the `startSmtpConnection` mutation. */
 type MutateStartSmtpConnectionResponse = StartSmtpConnectionMutation

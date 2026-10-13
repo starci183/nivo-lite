@@ -5,7 +5,7 @@ import type { InputVariables, MutateParams, WireInput } from "../types"
 import type { StartMoneyConnectionMutation, StartMoneyConnectionMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `startMoneyConnection` mutation. */
-export type MutateStartMoneyConnectionRequest = WireInput<StartMoneyConnectionMutationVariables["input"]>
+type MutateStartMoneyConnectionRequest = WireInput<StartMoneyConnectionMutationVariables["input"]>
 
 /** The response of the `startMoneyConnection` mutation. */
 type MutateStartMoneyConnectionResponse = StartMoneyConnectionMutation

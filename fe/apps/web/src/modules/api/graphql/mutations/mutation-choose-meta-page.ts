@@ -5,7 +5,7 @@ import type { InputVariables, MutateParams, WireInput } from "../types"
 import type { ChooseMetaPageMutation, ChooseMetaPageMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `chooseMetaPage` mutation. */
-export type MutateChooseMetaPageRequest = WireInput<ChooseMetaPageMutationVariables["input"]>
+type MutateChooseMetaPageRequest = WireInput<ChooseMetaPageMutationVariables["input"]>
 
 /** The response of the `chooseMetaPage` mutation. */
 type MutateChooseMetaPageResponse = ChooseMetaPageMutation

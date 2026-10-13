@@ -5,7 +5,7 @@ import type { InputVariables, MutateParams, WireInput } from "../types"
 import type { ChangeSmtpPasswordMutation, ChangeSmtpPasswordMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `changeSmtpPassword` mutation. */
-export type MutateChangeSmtpPasswordRequest = WireInput<ChangeSmtpPasswordMutationVariables["input"]>
+type MutateChangeSmtpPasswordRequest = WireInput<ChangeSmtpPasswordMutationVariables["input"]>
 
 /** The response of the `changeSmtpPassword` mutation. */
 type MutateChangeSmtpPasswordResponse = ChangeSmtpPasswordMutation

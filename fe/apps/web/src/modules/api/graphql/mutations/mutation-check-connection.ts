@@ -5,7 +5,7 @@ import type { InputVariables, MutateParams, WireInput } from "../types"
 import type { CheckConnectionMutation, CheckConnectionMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `checkConnection` mutation. */
-export type MutateCheckConnectionRequest = WireInput<CheckConnectionMutationVariables["input"]>
+type MutateCheckConnectionRequest = WireInput<CheckConnectionMutationVariables["input"]>
 
 /** The response of the `checkConnection` mutation. */
 type MutateCheckConnectionResponse = CheckConnectionMutation

@@ -5,7 +5,7 @@ import type { InputVariables, MutateParams, WireInput } from "../types"
 import type { SaveZaloOaSecretMutation, SaveZaloOaSecretMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `saveZaloOaSecret` mutation. */
-export type MutateSaveZaloOaSecretRequest = WireInput<SaveZaloOaSecretMutationVariables["input"]>
+type MutateSaveZaloOaSecretRequest = WireInput<SaveZaloOaSecretMutationVariables["input"]>
 
 /** The response of the `saveZaloOaSecret` mutation. */
 type MutateSaveZaloOaSecretResponse = SaveZaloOaSecretMutation

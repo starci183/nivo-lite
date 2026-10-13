@@ -5,7 +5,7 @@ import type { InputVariables, MutateParams, WireInput } from "../types"
 import type { SaveTelegramUserSetupMutation, SaveTelegramUserSetupMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `saveTelegramUserSetup` mutation. */
-export type MutateSaveTelegramUserSetupRequest = WireInput<SaveTelegramUserSetupMutationVariables["input"]>
+type MutateSaveTelegramUserSetupRequest = WireInput<SaveTelegramUserSetupMutationVariables["input"]>
 
 /** The response of the `saveTelegramUserSetup` mutation. */
 type MutateSaveTelegramUserSetupResponse = SaveTelegramUserSetupMutation
