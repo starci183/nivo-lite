@@ -1,5 +1,5 @@
-import { useStatusPollSwr } from "@/hooks/reuseables/useStatusPollSwr"
-import type { StatusPollOptions } from "@/hooks/reuseables/useStatusPollSwr"
+import { useStatusPollSwr } from "@/hooks/reuseables"
+import type { StatusPollOptions } from "@/hooks/reuseables"
 import { queryLeadGenCommentStatus } from "@/modules/api/graphql/queries/query-lead-gen-comment-status"
 
 /** The SWR key of the leadGenCommentStatus query. */

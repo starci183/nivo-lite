@@ -1,6 +1,6 @@
 import type { SWRConfiguration } from "swr"
 import { queryVideoScriptStatus } from "@/modules/api/graphql/queries/query-video-script-status"
-import { useWorkspaceQuerySwr } from "@/hooks/reuseables/useWorkspaceQuerySwr"
+import { useWorkspaceJobSwr } from "@/hooks/reuseables"
 import type { VideoScriptStatusType } from "@/modules/api"
 
 /** The SWR key of the videoScriptStatus query. */
@@ -11,13 +11,4 @@ type VideoScriptStatusCallbacks = Pick<SWRConfiguration<VideoScriptStatusType, E
 
 /** A queued script, read every two seconds until it is done. */
 export const useQueryVideoScriptStatusSwr = (id: string | undefined, callbacks: VideoScriptStatusCallbacks) =>
-    useWorkspaceQuerySwr(
-        QUERY_VIDEO_SCRIPT_STATUS_SWR_KEY,
-        id ? [id] : null,
-        ([operationId]) => queryVideoScriptStatus({ request: { id: operationId } }),
-        (data) => data.videoScriptStatus,
-        {
-            refreshInterval: (status) => (status?.status === "succeeded" || status?.status === "failed" ? 0 : 2000),
-            ...callbacks,
-        },
-    )
+    useWorkspaceJobSwr(QUERY_VIDEO_SCRIPT_STATUS_SWR_KEY, id, queryVideoScriptStatus, "videoScriptStatus", callbacks)

@@ -1,5 +1,5 @@
 import { mutateSubmitContentForApproval } from "@/modules/api/graphql/mutations/mutation-submit-content-for-approval"
-import { useGraphQLMutationSwr } from "@/hooks/reuseables/useGraphQLMutationSwr"
+import { useGraphQLMutationSwr } from "@/hooks/reuseables"
 
 /** The SWR key of the submitContentForApproval mutation. */
 export const MUTATE_SUBMIT_CONTENT_FOR_APPROVAL_SWR_KEY = "MUTATE_SUBMIT_CONTENT_FOR_APPROVAL_SWR"

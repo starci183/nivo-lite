@@ -1,5 +1,5 @@
 import useSWRMutation from "swr/mutation"
-import { mutateSyncLoyaltyMembers } from "@/modules/api/graphql/mutations"
+import { mutateSyncLoyaltyMembers } from "@/modules/api/graphql/mutations/mutation-sync-loyalty-members"
 
 /** The SWR key of the `syncLoyaltyMembers` mutation. */
 export const MUTATE_SYNC_LOYALTY_MEMBERS_SWR_KEY = "MUTATE_SYNC_LOYALTY_MEMBERS_SWR"
