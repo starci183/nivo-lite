@@ -26,6 +26,9 @@ import { DismissKnowledgeGapResolver } from "./dismiss-knowledge-gap.resolver"
 import { MaintainBrainResolver } from "./maintain-brain.resolver"
 import { RequestLessonMiningResolver } from "./request-lesson-mining.resolver"
 import { LessonMiningStatusResolver } from "./lesson-mining-status.resolver"
+import { AuthorizeDriveResolver } from "./authorize-drive.resolver"
+import { DisconnectDriveResolver } from "./disconnect-drive.resolver"
+import { GetDriveGrantResolver } from "./get-drive-grant.resolver"
 
 @Module({
     imports: [KnowledgeApiModule],
@@ -56,6 +59,9 @@ import { LessonMiningStatusResolver } from "./lesson-mining-status.resolver"
         MaintainBrainResolver,
         RequestLessonMiningResolver,
         LessonMiningStatusResolver,
+        AuthorizeDriveResolver,
+        DisconnectDriveResolver,
+        GetDriveGrantResolver,
     ],
 })
 /** The GraphQL transport of the knowledge feature. */

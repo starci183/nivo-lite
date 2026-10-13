@@ -28,3 +28,10 @@ export const UPSERT_AUTHORITY = sql`
         goal_note = excluded.goal_note, updated_by = excluded.updated_by, updated_at = now()
     RETURNING policies, reply_style, brand_voice, limits_note, goal_revenue_vnd::float8 AS goal_revenue_vnd,
               goal_new_customers, goal_first_reply_minutes, goal_note, updated_by, to_json(updated_at) #>> '{}' AS updated_at`
+
+/** Creates the empty authority sheet of a new workspace, stamped by NIVO; answers a row only when this call created it ($1 workspace). */
+export const CREATE_AUTHORITY_IF_MISSING = sql`
+    INSERT INTO public.authority (workspace_id, updated_by)
+    VALUES ($1, 'NIVO')
+    ON CONFLICT (workspace_id) DO NOTHING
+    RETURNING workspace_id`
