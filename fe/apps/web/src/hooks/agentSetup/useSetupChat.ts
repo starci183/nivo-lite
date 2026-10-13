@@ -1,9 +1,9 @@
 import { useCallback, useState } from "react"
 import { mutate } from "swr"
-import { useMutateDecideSetupCardSwr, useMutatePostSetupMessageSwr, QUERY_SETUP_STATE_SWR_KEY } from "@/hooks/swr"
-import type { WriteDecision } from "@/lib/module-setup-writes"
+import type { SetupWriteDecision } from "@/modules/types"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { toCardDecision } from "@/hooks/setupCards"
+import { useMutateDecideSetupCardSwr, useMutatePostSetupMessageSwr, QUERY_SETUP_STATE_SWR_KEY } from "@/hooks/swr"
 
 const isSetupStateKey = (key: unknown): boolean => Array.isArray(key) && key[0] === QUERY_SETUP_STATE_SWR_KEY
 
@@ -26,7 +26,7 @@ export const useSetupChat = (setupSessionId: string, isAnswering: boolean) => {
         await mutate(isSetupStateKey)
     }, [text, runGraphQL, post, setupSessionId])
     const decide = useCallback(
-        async (cardId: string, change: WriteDecision): Promise<void> => {
+        async (cardId: string, change: SetupWriteDecision): Promise<void> => {
             setDecidingId(cardId)
             await runGraphQL(() => decideCard.trigger({ cardId, change: toCardDecision(change) }), {
                 showSuccessToast: false,

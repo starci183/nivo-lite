@@ -40,3 +40,19 @@ export type ConsoleWorkspace = {
     readonly name: string
     readonly role: "owner" | "manager" | "staff"
 }
+
+/** What the console frame draws about the signed-in person and the workspace they work in. */
+export interface ConsoleSession {
+    readonly member: {
+        readonly workspaceId: string
+        readonly userId: string
+        readonly name: string
+        readonly role: "owner" | "manager" | "staff"
+        readonly staffId: string | null
+    }
+    readonly workspaceName: string
+    readonly userName: string
+    readonly email: string
+    readonly workspaces: ReadonlyArray<ConsoleWorkspace>
+    readonly currentWorkspaceId: string
+}

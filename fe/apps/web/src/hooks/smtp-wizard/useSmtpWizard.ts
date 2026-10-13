@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react"
 import { useSmtpSenderForm } from "@/hooks/rhf"
-import { modeOf, SMTP_PRESETS } from "@/lib/email/presets"
-import type { Security } from "@/lib/email/presets"
+import { modeOf, SMTP_PRESETS } from "@/modules/mail"
+import type { Security } from "@/modules/mail"
 import { choiceOf, isReadyToSave, needsPasswordOf, presetOrFirst, SMTP_STEPS, usernameOf } from "./smtp-wizard.shared"
 import type { SmtpChoice, SmtpFields, SmtpTest, SmtpView } from "./smtp-wizard.shared"
 import { useSmtpCommands } from "./useSmtpCommands"

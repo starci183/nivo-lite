@@ -1,10 +1,10 @@
-import type { DecisionRow } from "@/lib/flow-types"
+import type { FlowDecisionRow } from "@/modules/types"
 import type { SalesWorkbenchType } from "@/modules/api"
 import { isActionKey, isModuleKey } from "@/modules/catalog"
 import type { AttentionKind, LeadStageId, SalesWorkbenchData } from "@/modules/types"
 import { DEAL_STAGES } from "@/hooks/sales"
 
-const reasonOf = (value: string | null | undefined): DecisionRow["reason"] =>
+const reasonOf = (value: string | null | undefined): FlowDecisionRow["reason"] =>
     value === "routine" ||
     value === "missing_data" ||
     value === "over_authority" ||

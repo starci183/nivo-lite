@@ -1,11 +1,11 @@
 import { useMemo } from "react"
 import { slotOfSwr } from "@/hooks/slot"
-import { useQuerySetupStateSwr } from "@/hooks/swr"
-import type { SetupWrite } from "@/lib/module-setup-writes"
+import type { SetupWrite } from "@/modules/types"
 import type { SetupMessage, SetupRevision, SetupSession } from "@/modules/installations"
 import type { DataSlot } from "@/modules/types"
 import { toSetupWrite } from "@/hooks/setupCards"
 import { SETUP_POLL_MS, toSetupMessage, toSetupRevision, toSetupSession } from "./agentSetup.shared"
+import { useQuerySetupStateSwr } from "@/hooks/swr"
 
 /** The setup chat of one instance: its draft, the whole chat, the confirm cards, and whether NIVO is still answering. */
 export interface SetupStateView {

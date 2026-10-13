@@ -1,4 +1,4 @@
-import type { WorkStatus } from "@/lib/flow-types"
+import type { FlowWorkStatus } from "./flow"
 
 /** The network a lead arrived from. */
 export type LeadPlatform = "facebook" | "instagram" | "other"
@@ -60,7 +60,7 @@ export interface LeadGenHandoff {
     readonly score: LeadScore | null
     readonly at: string
     /** Status of the sales classify_lead work item; null when Sales has not been given one yet. */
-    readonly classify: WorkStatus | null
+    readonly classify: FlowWorkStatus | null
     readonly stage: string
     readonly href: string
 }

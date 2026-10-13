@@ -1,5 +1,5 @@
 import { useState, useTransition } from "react"
-import { WEBHOOK_EVENTS } from "@/lib/webhook-shared"
+import { WEBHOOK_EVENTS } from "./webhook-wizard.shared"
 import type { WebhookTestVerdict, WebhookView } from "@/modules/types"
 import { WEBHOOK_STEPS } from "./webhook-wizard.shared"
 import { useWebhookCommands } from "./useWebhookCommands"

@@ -47,7 +47,7 @@ export type {
     PublicBookingAnswer,
     PublicBookingPageData,
 } from "./booking"
-export type { ConsoleIconName, ConsoleNavItem, ConsolePending, ConsoleWorkspace } from "./console"
+export type { ConsoleIconName, ConsoleNavItem, ConsolePending, ConsoleSession, ConsoleWorkspace } from "./console"
 export type {
     Access,
     AgentOption,
@@ -171,7 +171,6 @@ export type {
     ShopContext,
     TemplateDef,
     TemplateExecutor,
-    TemplateKey,
     TemplatePack,
 } from "./automations"
 export type { DeciderKind, DecisionKind, DecisionOutcome, DecisionRecord, GateReason } from "./decisions"
@@ -199,7 +198,8 @@ export type {
     LeadScore,
     LeadSourceKind,
 } from "./leadgen"
-export { FACT_SUBJECT_TYPES } from "./brain"
+export type { FlowDecisionRow, FlowEvidenceState, FlowRuleMode, FlowWorkItemView, FlowWorkStatus } from "./flow"
+export { FACT_SCOPES, FACT_SUBJECT_TYPES } from "./brain"
 export type {
     BrainEvidence,
     BrainExtraction,
@@ -271,7 +271,18 @@ export type {
     OfficeThreadProps,
 } from "./office-slots"
 
-export type { SetupWriteDecided, SetupWriteInstance, SetupWriteProposal, SetupWriteWords } from "./setup-write"
+export type {
+    SetupFactWrite,
+    SetupResolution,
+    SetupRuleWrite,
+    SetupWrite,
+    SetupWriteDecided,
+    SetupWriteDecision,
+    SetupWriteInstance,
+    SetupWriteProposal,
+    SetupWriteStatus,
+    SetupWriteWords,
+} from "./setup-write"
 export type {
     DbEngine,
     DbEntity,

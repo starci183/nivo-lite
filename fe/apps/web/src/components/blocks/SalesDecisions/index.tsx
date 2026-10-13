@@ -8,7 +8,7 @@ import { useSalesDecisionForm } from "@/hooks/rhf"
 import { ageParts, decisionAnchor, isStale, KNOWN_FIELDS, OUTCOME_TONES, useSalesActions } from "@/hooks/sales"
 import { editsOf, fieldKey } from "@/hooks/salesdecisions"
 import { useSalesWorkbench } from "@/hooks/salesworkbench"
-import type { DecisionRow } from "@/lib/flow-types"
+import type { FlowDecisionRow } from "@/modules/types"
 import { leadPath } from "@/modules/routes"
 import type { SalesDecision } from "@/modules/types"
 import { SalesDecisionsBase } from "./component"
@@ -128,7 +128,7 @@ export const SalesDecisions = (props: SalesDecisionsProps) => {
             error: errors[item.id] ? errors[item.id] : null,
         }
     }
-    const decidedOf = (row: DecisionRow): DecidedView => {
+    const decidedOf = (row: FlowDecisionRow): DecidedView => {
         const { basis, rest } = splitBasis(row.note)
         return {
             id: row.id,

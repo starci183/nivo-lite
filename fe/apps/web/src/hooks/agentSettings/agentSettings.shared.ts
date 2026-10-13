@@ -1,4 +1,3 @@
-import { DEFAULT_REPLY_TIMEOUT_SEC } from "@/lib/engine-queue-shared"
 import type { Installation } from "@/modules/installations"
 
 /** The longest name of an agent. */
@@ -6,6 +5,9 @@ export const AGENT_NAME_MAX = 40
 
 /** The longest label of an instance. */
 export const INSTANCE_NAME_MAX = 80
+
+/** How long a customer waits for the agent by default before the app answers directly, in seconds. */
+const DEFAULT_REPLY_TIMEOUT_SEC = 25
 
 /** The shortest time a customer waits for the agent before the app answers directly, in seconds. */
 export const REPLY_TIMEOUT_MIN = 5

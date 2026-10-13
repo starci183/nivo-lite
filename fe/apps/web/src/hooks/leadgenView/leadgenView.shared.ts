@@ -1,6 +1,6 @@
 import type { BadgeTone } from "@starci/grammar/common"
 import type { useFormatter, useTranslations } from "next-intl"
-import type { WorkStatus } from "@/lib/flow-types"
+import type { FlowWorkStatus } from "@/modules/types"
 import type { LeadGenComment, LeadGenHandoff, LeadGenLead, LeadGenSource, LeadScore } from "@/modules/types"
 
 /** The translator of the Lead Gen catalog namespace. */
@@ -13,7 +13,7 @@ export type LeadGenFormat = ReturnType<typeof useFormatter>
 const SCORE_TONES: Readonly<Record<LeadScore, BadgeTone>> = { hot: "danger", warm: "warning", cold: "neutral" }
 
 /** The badge tone of where the Sales step of a handed-over lead stands. */
-const CLASSIFY_TONES: Readonly<Record<WorkStatus, BadgeTone>> = {
+const CLASSIFY_TONES: Readonly<Record<FlowWorkStatus, BadgeTone>> = {
     queued: "neutral",
     done: "success",
     waiting_decision: "warning",
