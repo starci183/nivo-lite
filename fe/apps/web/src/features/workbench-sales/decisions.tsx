@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Badge, Button, EmptyNotice, Input, SectionHeader, SurfaceCard, SurfaceListCard, Text, TextAction, Textarea, type BadgeTone } from "@starci/grammar/common";
-import { splitBasis } from "@/features/decisions/format";
+import { splitBasis } from "@/hooks/decisions";
 import { canDecideItem, useMember } from "@/hooks/member"
 import { useLocale, useT } from "@/i18n/client";
 import { governance } from "@/i18n/dict/governance";

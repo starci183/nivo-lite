@@ -78,3 +78,4 @@ export { readDashboardPayload, readOfficePayload } from "./pagedata/read-page-da
 export type { DashboardPayload, DashboardPromo, OfficePayload } from "./pagedata/pagedata.mapper"
 export { overviewFactsFrom } from "./overview/overview.mapper"
 export type { OverviewFacts } from "./overview/overview.mapper"
+export { readDecisions } from "./decisions/read-decisions"
