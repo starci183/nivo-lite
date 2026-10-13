@@ -37,7 +37,7 @@ export class SaveShiftsSettingsInput {
     overtimeHoursWeek!: number
 
     /** The opening hours by weekday; a day absent is closed. */
-    @Field(() => [[OpeningHoursInput]])
+    @Field(() => [OpeningHoursInput])
     @IsArray()
     @ArrayMaxSize(7)
     @ValidateNested({ each: true })

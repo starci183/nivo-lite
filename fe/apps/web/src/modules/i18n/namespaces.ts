@@ -30,6 +30,7 @@ export const NAMESPACES = [
     "governance",
     "guide",
     "guideMap",
+    "hiring",
     "inbox",
     "invite",
     "knowledge",

@@ -12,7 +12,7 @@ export class ReceivePoType {
     received!: number
 
     /** The lines whose price differed from the order. */
-    @Field(() => [[String]])
+    @Field(() => [String])
     priceChanges!: ReadonlyArray<string>
 
     /** The value of the goods. */

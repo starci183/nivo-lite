@@ -13,7 +13,7 @@ export class SaveHiringAvailabilityInput {
     memberUserId!: string
 
     /** The free windows. */
-    @Field(() => [[HiringAvailabilityWindowInput]])
+    @Field(() => [HiringAvailabilityWindowInput])
     @IsArray()
     @ArrayMaxSize(49)
     @ValidateNested({ each: true })

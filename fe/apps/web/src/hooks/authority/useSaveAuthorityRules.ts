@@ -20,6 +20,7 @@ export const useSaveAuthorityRules = () => {
                             trigger({
                                 change: {
                                     action: change.action,
+                                    department: change.department,
                                     mode: change.mode,
                                     limit_vnd: change.limit,
                                     required_fields: [...change.required],

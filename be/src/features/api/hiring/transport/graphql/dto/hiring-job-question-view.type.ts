@@ -20,7 +20,7 @@ export class HiringJobQuestionType {
     required!: boolean
 
     /** The offered choices of a choice question. */
-    @Field(() => [[String]])
+    @Field(() => [String])
     choices!: ReadonlyArray<string>
 
     /** The expected answer of a yes or no question. */
@@ -32,6 +32,6 @@ export class HiringJobQuestionType {
     expectNumber!: number | null
 
     /** The accepted choices of a choice question. */
-    @Field(() => [[String]], { nullable: true })
+    @Field(() => [String], { nullable: true })
     expectChoices!: ReadonlyArray<string> | null
 }

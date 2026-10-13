@@ -5,7 +5,7 @@ import { ArrayMaxSize, IsArray, IsInt, IsOptional, IsString, Max, MaxLength, Min
 /** The written requirements of a job. */
 export class HiringJobRequirementsInput {
     /** Skills the job needs. */
-    @Field(() => [[String]])
+    @Field(() => [String])
     @IsArray()
     @ArrayMaxSize(30)
     @IsString({ each: true })
@@ -26,21 +26,21 @@ export class HiringJobRequirementsInput {
     experienceNote!: string
 
     /** The days and hours the job needs. */
-    @Field(() => [[String]])
+    @Field(() => [String])
     @IsArray()
     @ArrayMaxSize(30)
     @IsString({ each: true })
     availability!: Array<string>
 
     /** Requirements a candidate must meet. */
-    @Field(() => [[String]])
+    @Field(() => [String])
     @IsArray()
     @ArrayMaxSize(30)
     @IsString({ each: true })
     mustHave!: Array<string>
 
     /** Requirements that count in a candidate's favour. */
-    @Field(() => [[String]])
+    @Field(() => [String])
     @IsArray()
     @ArrayMaxSize(30)
     @IsString({ each: true })

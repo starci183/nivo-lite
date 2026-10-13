@@ -33,7 +33,7 @@ export class ShiftsSwapType {
     status!: string
 
     /** The rule findings at decision time. */
-    @Field(() => [[String]])
+    @Field(() => [String])
     checks!: ReadonlyArray<string>
 
     /** The decision it waits on. */

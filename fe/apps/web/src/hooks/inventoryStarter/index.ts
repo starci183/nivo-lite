@@ -1,1 +1,1 @@
-export { TEMPLATE_CHOICES, starterOf } from "./inventoryStarter.shared"
+export { useInventoryTemplates } from "./useInventoryTemplates"

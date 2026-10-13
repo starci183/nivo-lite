@@ -1,20 +1,23 @@
+import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
-import type { InventoryResult } from "@/hooks/inventoryCommands"
-import { navigation } from "@/modules/i18n"
+import { mutate } from "swr"
+import { QUERY_INVENTORY_WORKBENCH_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryInventoryWorkbenchSwr"
+import { toast, useGraphQLWithToast } from "@/modules/toast"
 
 /** What one command run leaves on the screen. */
 export interface InventoryRun {
-    /** Runs a command; on success the notice is the text `onOk` returns and the server data is read again. */
-    readonly exec: <T>(command: () => Promise<InventoryResult<T>>, onOk?: (value: T) => string | undefined) => void
+    /** Runs a command; on success the notice is the text `onOk` returns and the workbench read is revalidated. */
+    readonly exec: <T>(command: () => Promise<T>, onOk?: (value: T) => string | undefined) => void
     readonly isPending: boolean
-    /** The back end sentence for a refusal, or a plain failure sentence. */
+    /** The generic failure line; the back end sentence is already toasted. */
     readonly error: string | null
     readonly notice: string | null
 }
 
-/** Runs commands of the inventory workbench with a pending flag, one error line, one notice and a refresh of the server data after a success. */
+/** Runs commands of the inventory workbench with a pending flag, one error line, one notice, toasts and a read refresh. */
 export const useInventoryRun = (): InventoryRun => {
-    const router = navigation.useRouter()
+    const t = useTranslations("toast")
+    const runGraphQL = useGraphQLWithToast()
     const [isPending, start] = useTransition()
     const [error, setError] = useState<string | null>(null)
     const [notice, setNotice] = useState<string | null>(null)
@@ -22,13 +25,15 @@ export const useInventoryRun = (): InventoryRun => {
         setError(null)
         setNotice(null)
         start(async () => {
-            const outcome = await command()
-            if (outcome.kind === "ok") {
-                setNotice(onOk?.(outcome.value) ?? null)
-                router.refresh()
+            const value = await runGraphQL(command, { showSuccessToast: false })
+            if (value === undefined) {
+                setError(t("defaultError"))
                 return
             }
-            setError(outcome.code)
+            const text = onOk?.(value) ?? null
+            setNotice(text)
+            toast.success(t("successTitle"), { description: text ?? t("defaultSuccess") })
+            await mutate(QUERY_INVENTORY_WORKBENCH_SWR_KEY)
         })
     }
     return { exec, isPending, error, notice }

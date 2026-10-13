@@ -12,11 +12,11 @@ export class ShiftStaffType {
     name!: string
 
     /** The positions this person can work. */
-    @Field(() => [[ID]])
+    @Field(() => [ID])
     positionIds!: ReadonlyArray<string>
 
     /** Free-form skills. */
-    @Field(() => [[String]])
+    @Field(() => [String])
     skills!: ReadonlyArray<string>
 
     /** The hourly wage in dong; zero when the caller may not read pay. */

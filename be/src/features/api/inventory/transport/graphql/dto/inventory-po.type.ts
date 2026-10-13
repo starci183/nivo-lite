@@ -65,6 +65,6 @@ export class InventoryPoType {
     createdAt!: string
 
     /** The lines. */
-    @Field(() => [[InventoryPoLineType]])
+    @Field(() => [InventoryPoLineType])
     lines!: ReadonlyArray<InventoryPoLineType>
 }

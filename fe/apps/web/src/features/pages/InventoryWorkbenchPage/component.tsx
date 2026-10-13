@@ -1,6 +1,6 @@
-import { EmptyNotice, SurfaceCard } from "@starci/grammar/common"
-import type { DescriptionListStatItem } from "@starci/grammar/common"
+import { AgentDashboardFrame } from "@/components/blocks/AgentDashboardFrame"
 import { InventoryCount } from "@/components/blocks/InventoryCount"
+import { InventoryFigures } from "@/components/blocks/InventoryFigures"
 import { InventoryHistory } from "@/components/blocks/InventoryHistory"
 import { InventoryImport } from "@/components/blocks/InventoryImport"
 import { InventoryOrders } from "@/components/blocks/InventoryOrders"
@@ -8,86 +8,63 @@ import { InventoryPending } from "@/components/blocks/InventoryPending"
 import { InventoryRecipes } from "@/components/blocks/InventoryRecipes"
 import { InventoryStock } from "@/components/blocks/InventoryStock"
 import { InventorySuppliers } from "@/components/blocks/InventorySuppliers"
-import { AgentDashboardFrame } from "@/features/agent-dashboard"
-import type { AgentDashboardData } from "@/lib/agent-dashboard-shared"
-import type { InventoryWorkbenchData } from "@/modules/types"
+import { PANEL_CLASS_NAME } from "./classNames"
 
-/** One tab of the workbench: its id and its label. */
-export interface InventoryTabView {
-    readonly id: string
-    readonly label: string
-}
-
-/** The words and data of the inventory workbench. */
-export interface InventoryWorkbenchBaseProps {
+/** What the server shell settled: the deep link, the installation and the words. */
+export interface InventoryWorkbenchPageBaseProps {
     readonly props: {
-        /** The frame regions (waiting, done, connections, knowledge), loaded on the server. */
-        readonly dashboard: AgentDashboardData
-        /** Null when the inventory tables could not be read: the frame then shows one failure notice. */
-        readonly data: InventoryWorkbenchData | null
-        readonly workspaceId: string
-        readonly figures: ReadonlyArray<DescriptionListStatItem>
-        readonly tabs: ReadonlyArray<InventoryTabView>
+        readonly installationId: string
         readonly initialTab: string | null
-        readonly failedTab: string
-        readonly failedTitle: string
-        readonly failedBody: string
+        readonly tabs: {
+            readonly stock: string
+            readonly orders: string
+            readonly suppliers: string
+            readonly history: string
+            readonly recipes: string
+            readonly count: string
+            readonly import: string
+        }
+        /** The four figure terms; the values are filled by the connected strip in the first tab. */
+        readonly terms: ReadonlyArray<string>
     }
 }
 
-const contentOf = (id: string, data: InventoryWorkbenchData, workspaceId: string) => {
-    if (id === "orders") {
-        return (
-            <>
-                <InventoryPending rows={data.pending} />
-                <InventoryOrders data={data} workspaceId={workspaceId} />
-            </>
-        )
-    }
-    if (id === "suppliers") return <InventorySuppliers data={data} workspaceId={workspaceId} />
-    if (id === "history") return <InventoryHistory movements={data.movements} />
-    if (id === "recipes") return <InventoryRecipes data={data} workspaceId={workspaceId} />
-    if (id === "count") return <InventoryCount data={data} workspaceId={workspaceId} />
-    if (id === "import") return <InventoryImport canManage={data.canManage} workspaceId={workspaceId} />
-    return <InventoryStock data={data} workspaceId={workspaceId} />
-}
-
-/** The Inventory workbench: the agent dashboard frame around the seven inventory surfaces as tabs. */
-export const InventoryWorkbenchBase = (props: InventoryWorkbenchBaseProps) => {
+/** Draws the Inventory workbench: the agent dashboard frame around the seven inventory surfaces, each reading its own data. */
+export const InventoryWorkbenchPageBase = (props: InventoryWorkbenchPageBaseProps) => {
     const p = props.props
-    const data = p.data
-    if (data === null) {
-        return (
-            <AgentDashboardFrame
-                module="inventory"
-                data={p.dashboard}
-                figures={[]}
-                figuresFailed
-                tabs={[
-                    {
-                        id: "stock",
-                        label: p.failedTab,
-                        content: (
-                            <SurfaceCard ariaLabel={p.failedTitle}>
-                                <EmptyNotice message={p.failedTitle} description={p.failedBody} />
-                            </SurfaceCard>
-                        ),
-                    },
-                ]}
-            />
-        )
-    }
     return (
         <AgentDashboardFrame
             module="inventory"
-            data={p.dashboard}
-            figures={p.figures}
+            installationId={p.installationId}
             initialTab={p.initialTab}
-            tabs={p.tabs.map((tab) => ({
-                id: tab.id,
-                label: tab.label,
-                content: contentOf(tab.id, data, p.workspaceId),
-            }))}
+            figures={p.terms.map((term, index) => ({ id: String(index), term, description: "-" }))}
+            tabs={[
+                {
+                    id: "stock",
+                    label: p.tabs.stock,
+                    content: (
+                        <div className={PANEL_CLASS_NAME}>
+                            <InventoryFigures />
+                            <InventoryStock />
+                        </div>
+                    ),
+                },
+                {
+                    id: "orders",
+                    label: p.tabs.orders,
+                    content: (
+                        <div className={PANEL_CLASS_NAME}>
+                            <InventoryPending />
+                            <InventoryOrders />
+                        </div>
+                    ),
+                },
+                { id: "suppliers", label: p.tabs.suppliers, content: <InventorySuppliers /> },
+                { id: "history", label: p.tabs.history, content: <InventoryHistory /> },
+                { id: "recipes", label: p.tabs.recipes, content: <InventoryRecipes /> },
+                { id: "count", label: p.tabs.count, content: <InventoryCount /> },
+                { id: "import", label: p.tabs.import, content: <InventoryImport /> },
+            ]}
         />
     )
 }

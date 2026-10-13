@@ -45,4 +45,3 @@ export { readLeadDetail, readLeads, readOpenResponsibilities, readResponsibiliti
 export { readMessages } from "./overview/read-feed"
 export { readOfficePayload } from "./pagedata/read-page-data"
 export type { OfficePayload } from "./pagedata/pagedata.mapper"
-export { readInventoryWorkbench } from "./inventory/read-inventory-workbench"

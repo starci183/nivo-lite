@@ -959,7 +959,7 @@ type ApplyStarterType {
 }
 
 input ApplyToHiringJobInput {
-  answers: [[HiringApplyAnswerInput!]!]!
+  answers: [HiringApplyAnswerInput!]!
   availability: String!
   consent: Boolean!
   cvName: String
@@ -2099,7 +2099,7 @@ input CreateHiringCvUploadInput {
 
 input CreateInventoryPoInput {
   expectedAt: String!
-  lines: [[CreatePoLineInput!]!]!
+  lines: [CreatePoLineInput!]!
   supplierId: String!
 }
 
@@ -2828,15 +2828,15 @@ input HiringAvailabilityWindowInput {
 }
 
 type HiringBenchType {
-  candidates: [[HiringCandidateType!]!]!
+  candidates: [HiringCandidateType!]!
   figures: HiringFiguresType!
-  interviews: [[HiringInterviewType!]!]!
-  jobs: [[HiringJobType!]!]!
+  interviews: [HiringInterviewType!]!
+  jobs: [HiringJobType!]!
   meUserId: ID!
-  members: [[HiringMemberType!]!]!
+  members: [HiringMemberType!]!
   nowIso: String!
-  offers: [[HiringOfferType!]!]!
-  onboarding: [[HiringOnboardingType!]!]!
+  offers: [HiringOfferType!]!
+  onboarding: [HiringOnboardingType!]!
   origin: String!
   settings: HiringSettingsType!
   waitingApprovals: Int!
@@ -2844,7 +2844,7 @@ type HiringBenchType {
 
 type HiringCandidateDetailType {
   cv: HiringCvType
-  events: [[HiringEventType!]!]!
+  events: [HiringEventType!]!
 }
 
 input HiringCandidateRefInput {
@@ -2852,7 +2852,7 @@ input HiringCandidateRefInput {
 }
 
 type HiringCandidateType {
-  answers: [[HiringAnswerType!]!]!
+  answers: [HiringAnswerType!]!
   availability: String!
   conversationId: ID
   createdAt: String!
@@ -2869,7 +2869,7 @@ type HiringCandidateType {
   rejectedReason: String
   score: Int
   scoreLabel: String
-  scoreReasons: [[HiringScoreReasonType!]!]!
+  scoreReasons: [HiringScoreReasonType!]!
   scoreSummary: String
   screenedAt: String
   source: String!
@@ -2913,7 +2913,7 @@ type HiringInterviewType {
   location: String!
   mode: String!
   note: String!
-  proposedSlots: [[HiringSlotType!]!]!
+  proposedSlots: [HiringSlotType!]!
   reminderSentAt: String
   slotEnd: String
   slotStart: String
@@ -2924,8 +2924,8 @@ type HiringInterviewType {
 }
 
 input HiringJobQuestionInput {
-  choices: [[String!]!]
-  expectChoices: [[String!]!]
+  choices: [String!]
+  expectChoices: [String!]
   expectNumber: Float
   expectYesNo: String
   id: String
@@ -2935,8 +2935,8 @@ input HiringJobQuestionInput {
 }
 
 type HiringJobQuestionType {
-  choices: [[String!]!]!
-  expectChoices: [[String!]!]
+  choices: [String!]!
+  expectChoices: [String!]
   expectNumber: Float
   expectYesNo: String
   id: String!
@@ -2950,26 +2950,26 @@ input HiringJobRefInput {
 }
 
 input HiringJobRequirementsInput {
-  availability: [[String!]!]!
+  availability: [String!]!
   experienceNote: String!
   experienceYears: Int
-  mustHave: [[String!]!]!
-  niceToHave: [[String!]!]!
-  skills: [[String!]!]!
+  mustHave: [String!]!
+  niceToHave: [String!]!
+  skills: [String!]!
 }
 
 type HiringJobRequirementsType {
-  availability: [[String!]!]!
+  availability: [String!]!
   experienceNote: String!
   experienceYears: Int
-  mustHave: [[String!]!]!
-  niceToHave: [[String!]!]!
-  skills: [[String!]!]!
+  mustHave: [String!]!
+  niceToHave: [String!]!
+  skills: [String!]!
 }
 
 type HiringJobType {
   adVariants: JsonObject
-  channels: [[String!]!]!
+  channels: [String!]!
   closesAt: String
   createdAt: String!
   description: String!
@@ -2982,7 +2982,7 @@ type HiringJobType {
   payUnit: String!
   position: String!
   publicUrl: String
-  questions: [[HiringJobQuestionType!]!]!
+  questions: [HiringJobQuestionType!]!
   requirements: HiringJobRequirementsType!
   schedule: String!
   slug: String!
@@ -2996,7 +2996,7 @@ type HiringMemberType {
   name: String!
   role: String!
   userId: ID!
-  windows: [[HiringWindowType!]!]!
+  windows: [HiringWindowType!]!
 }
 
 input HiringOfferRefInput {
@@ -3108,7 +3108,7 @@ input ImportInventoryPasteInput {
 
 type ImportPasteType {
   created: Int!
-  skipped: [[String!]!]!
+  skipped: [String!]!
   stocked: Int!
   updated: Int!
 }
@@ -3158,11 +3158,11 @@ input InstanceOfRecordInput {
 
 type InventoryItemType {
   active: Boolean!
-  aliases: [[String!]!]!
+  aliases: [String!]!
   category: String!
   costVnd: Float!
   id: ID!
-  levels: [[InventoryLevelType!]!]!
+  levels: [InventoryLevelType!]!
   name: String!
   onOrder: Float!
   reorderPoint: Float!
@@ -3173,7 +3173,7 @@ type InventoryItemType {
   supplierId: ID
   total: Float!
   unit: String!
-  units: [[InventoryItemUnitType!]!]!
+  units: [InventoryItemUnitType!]!
 }
 
 type InventoryItemUnitType {
@@ -3242,7 +3242,7 @@ type InventoryPoType {
   createdAt: String!
   expectedAt: String
   id: ID!
-  lines: [[InventoryPoLineType!]!]!
+  lines: [InventoryPoLineType!]!
   message: String!
   poNo: String!
   reminders: Int!
@@ -3273,9 +3273,9 @@ input InventoryRecipeRefInput {
 }
 
 type InventoryRecipeType {
-  aliases: [[String!]!]!
+  aliases: [String!]!
   id: ID!
-  lines: [[InventoryRecipeLineType!]!]!
+  lines: [InventoryRecipeLineType!]!
   name: String!
 }
 
@@ -3305,16 +3305,16 @@ type InventoryTemplateType {
 type InventoryWorkbenchType {
   canManage: Boolean!
   defaultLocationId: ID
-  items: [[InventoryItemType!]!]!
-  locations: [[InventoryLocationType!]!]!
+  items: [InventoryItemType!]!
+  locations: [InventoryLocationType!]!
   metrics: InventoryMetricsType!
-  movements: [[InventoryMovementType!]!]!
+  movements: [InventoryMovementType!]!
   nowIso: String!
-  pending: [[InventoryPendingType!]!]!
-  pos: [[InventoryPoType!]!]!
-  recipes: [[InventoryRecipeType!]!]!
+  pending: [InventoryPendingType!]!
+  pos: [InventoryPoType!]!
+  recipes: [InventoryRecipeType!]!
   stockOuts7d: Int
-  suppliers: [[InventorySupplierType!]!]!
+  suppliers: [InventorySupplierType!]!
 }
 
 type InvitePreviewType {
@@ -5060,7 +5060,7 @@ type PublicInterviewType {
   location: String!
   mode: String!
   note: String!
-  proposedSlots: [[PublicSlotType!]!]!
+  proposedSlots: [PublicSlotType!]!
   shop: String!
   slotStart: String
   status: String!
@@ -5079,7 +5079,7 @@ type PublicJobType {
   payMinVnd: Float
   payUnit: String!
   position: String!
-  questions: [[PublicQuestionType!]!]!
+  questions: [PublicQuestionType!]!
   requirements: PublicRequirementsType!
   schedule: String!
   status: String!
@@ -5144,7 +5144,7 @@ type PublicOfferType {
 }
 
 type PublicQuestionType {
-  choices: [[String!]!]!
+  choices: [String!]!
   id: ID!
   required: Boolean!
   text: String!
@@ -5152,12 +5152,12 @@ type PublicQuestionType {
 }
 
 type PublicRequirementsType {
-  availability: [[String!]!]!
+  availability: [String!]!
   experienceNote: String!
   experienceYears: Int
-  mustHave: [[String!]!]!
-  niceToHave: [[String!]!]!
-  skills: [[String!]!]!
+  mustHave: [String!]!
+  niceToHave: [String!]!
+  skills: [String!]!
 }
 
 type PublicSlotType {
@@ -5358,7 +5358,7 @@ type ReassignShiftsShiftType {
 
 input ReceiveInventoryPoInput {
   invoiceNo: String!
-  lines: [[ReceivePoLineInput!]!]!
+  lines: [ReceivePoLineInput!]!
   note: String!
   poId: ID!
 }
@@ -5372,7 +5372,7 @@ input ReceivePoLineInput {
 type ReceivePoType {
   handedToAccounting: Boolean!
   payableVnd: Float!
-  priceChanges: [[String!]!]!
+  priceChanges: [String!]!
   received: Int!
   status: String!
 }
@@ -6188,11 +6188,11 @@ input SaveDatabaseConnectionInput {
 
 input SaveHiringAvailabilityInput {
   memberUserId: ID!
-  windows: [[HiringAvailabilityWindowInput!]!]!
+  windows: [HiringAvailabilityWindowInput!]!
 }
 
 input SaveHiringJobInput {
-  channels: [[String!]!]
+  channels: [String!]
   closesAt: String
   description: String
   employmentType: String
@@ -6203,7 +6203,7 @@ input SaveHiringJobInput {
   payMinVnd: Float
   payUnit: String
   position: String
-  questions: [[HiringJobQuestionInput!]!]!
+  questions: [HiringJobQuestionInput!]!
   requirements: HiringJobRequirementsInput
   schedule: String
   title: String!
@@ -6267,7 +6267,7 @@ input SaveInventoryLocationInput {
 input SaveInventoryRecipeInput {
   aliases: String!
   id: ID
-  lines: [[InventoryRecipeLineInput!]!]!
+  lines: [InventoryRecipeLineInput!]!
   name: String!
 }
 
@@ -6346,7 +6346,7 @@ input SaveShiftsCoverageInput {
   peak: Boolean!
   positionId: ID!
   start: String!
-  weekdays: [[Int!]!]!
+  weekdays: [Int!]!
 }
 
 input SaveShiftsPositionInput {
@@ -6358,7 +6358,7 @@ input SaveShiftsPositionInput {
 input SaveShiftsSettingsInput {
   leaveNoticeDays: Int!
   noshowMinutes: Int!
-  openingHours: [[OpeningHoursInput!]!]!
+  openingHours: [OpeningHoursInput!]!
   overtimeHoursWeek: Int!
   remindMinutes: Int!
   swapNoticeHours: Int!
@@ -6372,7 +6372,7 @@ input SaveShiftsStaffInput {
   minRest: Float
   name: String!
   phone: String
-  positionIds: [[ID!]!]!
+  positionIds: [ID!]!
   staffRowId: ID
   telegramChatId: String
   wage: Float
@@ -6687,8 +6687,8 @@ type ShiftStaffType {
   minRest: Float!
   name: String!
   phone: String
-  positionIds: [[ID!]!]!
-  skills: [[String!]!]!
+  positionIds: [ID!]!
+  skills: [String!]!
   staffRowId: ID
   telegramChatId: String
   wage: Float!
@@ -6732,14 +6732,14 @@ type ShiftsAvailabilityType {
 }
 
 type ShiftsBenchType {
-  allAvailability: [[ShiftsAvailabilityType!]!]!
+  allAvailability: [ShiftsAvailabilityType!]!
   figures: ShiftsFiguresType
   myProfileId: ID
   reminderOn: Boolean!
   requests: ShiftsRequestsType!
   role: String!
   setup: ShiftsSetupType!
-  staffRows: [[ShiftsStaffRowType!]!]!
+  staffRows: [ShiftsStaffRowType!]!
   today: String!
   week: ShiftsWeekType!
 }
@@ -6763,7 +6763,7 @@ type ShiftsCheckinType {
 type ShiftsColleagueType {
   id: ID!
   name: String!
-  positionIds: [[ID!]!]!
+  positionIds: [ID!]!
 }
 
 input ShiftsCoverageRefInput {
@@ -6792,13 +6792,13 @@ type ShiftsLeaveType {
 }
 
 type ShiftsMineType {
-  availability: [[ShiftsAvailabilityType!]!]!
-  colleagues: [[ShiftsColleagueType!]!]!
-  leaves: [[ShiftsLeaveType!]!]!
-  myShifts: [[ShiftsMyShiftType!]!]!
-  openShifts: [[ShiftType!]!]!
+  availability: [ShiftsAvailabilityType!]!
+  colleagues: [ShiftsColleagueType!]!
+  leaves: [ShiftsLeaveType!]!
+  myShifts: [ShiftsMyShiftType!]!
+  openShifts: [ShiftType!]!
   profileId: ID
-  swaps: [[ShiftsSwapType!]!]!
+  swaps: [ShiftsSwapType!]!
   today: String!
 }
 
@@ -6818,7 +6818,7 @@ input ShiftsPositionRefInput {
 }
 
 type ShiftsPriorType {
-  segs: [[ShiftSegType!]!]!
+  segs: [ShiftSegType!]!
   staffId: ID!
 }
 
@@ -6827,9 +6827,9 @@ type ShiftsRefType {
 }
 
 type ShiftsRequestsType {
-  availability: [[ShiftsAvailabilityType!]!]!
-  leaves: [[ShiftsLeaveType!]!]!
-  swaps: [[ShiftsSwapType!]!]!
+  availability: [ShiftsAvailabilityType!]!
+  leaves: [ShiftsLeaveType!]!
+  swaps: [ShiftsSwapType!]!
 }
 
 input ShiftsScheduleRefInput {
@@ -6864,17 +6864,17 @@ type ShiftsScheduleVersionType {
 type ShiftsSettingsType {
   leaveNoticeDays: Int!
   noshowMinutes: Int!
-  openingHours: [[OpeningDayType!]!]!
+  openingHours: [OpeningDayType!]!
   overtimeHoursWeek: Int!
   remindMinutes: Int!
   swapNoticeHours: Int!
 }
 
 type ShiftsSetupType {
-  blocks: [[ShiftsBlockType!]!]!
-  positions: [[ShiftPositionType!]!]!
+  blocks: [ShiftsBlockType!]!
+  positions: [ShiftPositionType!]!
   settings: ShiftsSettingsType!
-  staff: [[ShiftStaffType!]!]!
+  staff: [ShiftStaffType!]!
 }
 
 input ShiftsShiftRefInput {
@@ -6887,7 +6887,7 @@ type ShiftsStaffRowType {
 }
 
 type ShiftsSwapType {
-  checks: [[String!]!]!
+  checks: [String!]!
   createdAt: String!
   fromStaffId: ID
   id: ID!
@@ -6902,15 +6902,15 @@ type ShiftsSwapType {
 }
 
 type ShiftsWeekType {
-  approvedAvail: [[ShiftsAvailType!]!]!
-  approvedLeaves: [[ShiftLeaveType!]!]!
-  checkins: [[ShiftsCheckinType!]!]!
+  approvedAvail: [ShiftsAvailType!]!
+  approvedLeaves: [ShiftLeaveType!]!
+  checkins: [ShiftsCheckinType!]!
   current: ShiftsScheduleType
   monday: String!
-  prior: [[ShiftsPriorType!]!]!
+  prior: [ShiftsPriorType!]!
   publishItem: ShiftsWorkItemType
-  shifts: [[ShiftType!]!]!
-  versions: [[ShiftsScheduleVersionType!]!]!
+  shifts: [ShiftType!]!
+  versions: [ShiftsScheduleVersionType!]!
 }
 
 type ShiftsWorkItemType {
@@ -7087,7 +7087,7 @@ type SyncLoyaltyMembersType {
 }
 
 input TakeInventoryStockInput {
-  counts: [[StockTakeCountInput!]!]!
+  counts: [StockTakeCountInput!]!
 }
 
 input TakeOverAgentChatConversationInput {
@@ -7292,7 +7292,7 @@ input UpdateAutomationPipelineInput {
 
 input UpdateInventoryPoDraftInput {
   expectedAt: String!
-  lines: [[UpdatePoLineInput!]!]!
+  lines: [UpdatePoLineInput!]!
   poId: ID!
   supplierId: String!
 }

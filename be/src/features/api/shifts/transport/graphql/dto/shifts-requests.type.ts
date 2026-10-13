@@ -7,14 +7,14 @@ import { ShiftsAvailabilityType } from "./shifts-availability.type"
 /** The requests of the workbench. */
 export class ShiftsRequestsType {
     /** The leave requests. */
-    @Field(() => [[ShiftsLeaveType]])
+    @Field(() => [ShiftsLeaveType])
     leaves!: ReadonlyArray<ShiftsLeaveType>
 
     /** The swap and claim requests. */
-    @Field(() => [[ShiftsSwapType]])
+    @Field(() => [ShiftsSwapType])
     swaps!: ReadonlyArray<ShiftsSwapType>
 
     /** The availability statements. */
-    @Field(() => [[ShiftsAvailabilityType]])
+    @Field(() => [ShiftsAvailabilityType])
     availability!: ReadonlyArray<ShiftsAvailabilityType>
 }

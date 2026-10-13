@@ -24,7 +24,7 @@ export class SaveShiftsCoverageInput {
     id?: string
 
     /** The weekdays covered (0 Monday to 6 Sunday). */
-    @Field(() => [[Int]])
+    @Field(() => [Int])
     @IsArray()
     @ArrayMinSize(1)
     @ArrayMaxSize(7)

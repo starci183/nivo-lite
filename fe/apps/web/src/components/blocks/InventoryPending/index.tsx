@@ -1,31 +1,24 @@
 "use client"
 
+import { useInventoryBoard } from "@/hooks/inventoryBoard"
 import { useTranslations } from "next-intl"
 import { useInventoryDecisions, useInventoryRun } from "@/hooks/inventory"
-import { writeApproveWork, writeRejectWork } from "@/modules/db/inventory/write-inventory-decisions"
-import type { PendingView } from "@/modules/types"
 import { InventoryPendingBase } from "./component"
 
-/** The decisions that wait for the owner. */
-interface InventoryPendingProps {
-    readonly rows: ReadonlyArray<PendingView>
-}
-
-const DECISIONS = { approveWork: writeApproveWork, rejectWork: writeRejectWork }
-
 /** The waiting decisions: the owner approves or rejects each one here. */
-export const InventoryPending = (props: InventoryPendingProps) => {
+export const InventoryPending = () => {
+    const board = useInventoryBoard()
     const t = useTranslations("workbenchInventory")
-    const decisions = useInventoryDecisions(DECISIONS)
+    const decisions = useInventoryDecisions()
     const run = useInventoryRun()
     return (
         <InventoryPendingBase
             props={{
                 title: t("pendingTitle"),
                 description: t("pendingHint"),
-                count: props.rows.length,
+                count: board.pending.length,
                 rejectLabel: t("reject"),
-                rows: props.rows.map((row) => ({
+                rows: board.pending.map((row) => ({
                     id: row.id,
                     summary: row.summary,
                     draft: row.draft,

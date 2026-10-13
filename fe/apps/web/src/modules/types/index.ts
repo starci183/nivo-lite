@@ -238,6 +238,26 @@ export type {
     DocumentVisibility,
 } from "./knowledge"
 export type {
+    ShiftsAvailRowView,
+    ShiftsAvailView,
+    ShiftsBenchView,
+    ShiftsBlockView,
+    ShiftsFiguresView,
+    ShiftsLeaveRowView,
+    ShiftsLeaveSpanView,
+    ShiftsMineView,
+    ShiftsPositionView,
+    ShiftsScheduleView,
+    ShiftsSegView,
+    ShiftsSettingsView,
+    ShiftsSetupView,
+    ShiftsShiftView,
+    ShiftsStaffView,
+    ShiftsSwapRowView,
+    ShiftsWeekView,
+    ShiftsWorkItemView,
+} from "./shifts"
+export type {
     OfficeApprovalView,
     OfficeAvatarView,
     OfficeBodyPart,

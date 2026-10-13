@@ -103,7 +103,7 @@ export class SaveHiringJobInput {
     requirements?: HiringJobRequirementsInput
 
     /** The questions applicants answer. */
-    @Field(() => [[HiringJobQuestionInput]])
+    @Field(() => [HiringJobQuestionInput])
     @IsArray()
     @ArrayMaxSize(30)
     @ValidateNested({ each: true })
@@ -111,7 +111,7 @@ export class SaveHiringJobInput {
     questions!: Array<HiringJobQuestionInput>
 
     /** The channels the job takes applications from. */
-    @Field(() => [[String]], { nullable: true })
+    @Field(() => [String], { nullable: true })
     @IsOptional()
     @IsArray()
     @ArrayMaxSize(10)

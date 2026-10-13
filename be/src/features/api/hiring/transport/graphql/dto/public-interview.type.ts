@@ -45,6 +45,6 @@ export class PublicInterviewType {
     note!: string
 
     /** The offered times. */
-    @Field(() => [[PublicSlotType]])
+    @Field(() => [PublicSlotType])
     proposedSlots!: ReadonlyArray<PublicSlotType>
 }

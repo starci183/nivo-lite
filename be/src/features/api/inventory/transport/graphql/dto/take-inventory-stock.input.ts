@@ -7,7 +7,7 @@ import { StockTakeCountInput } from "./stock-take-count.input"
 /** The bounded arguments that apply a stock count. */
 export class TakeInventoryStockInput {
     /** The counted items. */
-    @Field(() => [[StockTakeCountInput]])
+    @Field(() => [StockTakeCountInput])
     @IsArray()
     @ArrayMaxSize(500)
     @ValidateNested({ each: true })

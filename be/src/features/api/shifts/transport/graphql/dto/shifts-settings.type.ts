@@ -5,7 +5,7 @@ import { OpeningDayType } from "./opening-day.type"
 /** The rules and hours of the shop. */
 export class ShiftsSettingsType {
     /** The opening hours by weekday; a closed day is absent. */
-    @Field(() => [[OpeningDayType]])
+    @Field(() => [OpeningDayType])
     openingHours!: ReadonlyArray<OpeningDayType>
 
     /** Hours of notice a swap needs before the shift. */
