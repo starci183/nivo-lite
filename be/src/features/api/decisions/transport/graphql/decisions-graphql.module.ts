@@ -1,0 +1,32 @@
+import { Module } from "@nestjs/common"
+import { DecisionsApiModule } from "../../decisions.module"
+import { AuthorityResolver } from "./authority.resolver"
+import { CreateResponsibilityResolver } from "./create-responsibility.resolver"
+import { DecideExecutionResolver } from "./decide-execution.resolver"
+import { DecideWorkItemResolver } from "./decide-work-item.resolver"
+import { ResponsibilitiesResolver } from "./responsibilities.resolver"
+import { SaveAuthorityRuleResolver } from "./save-authority-rule.resolver"
+import { SendAgentCommandResolver } from "./send-agent-command.resolver"
+import { UpdateAuthorityResolver } from "./update-authority.resolver"
+import { UpdateResponsibilityStatusResolver } from "./update-responsibility-status.resolver"
+import { WorkItemResolver } from "./work-item.resolver"
+import { WorkItemsResolver } from "./work-items.resolver"
+
+@Module({
+    imports: [DecisionsApiModule],
+    providers: [
+        WorkItemsResolver,
+        WorkItemResolver,
+        DecideWorkItemResolver,
+        DecideExecutionResolver,
+        SendAgentCommandResolver,
+        AuthorityResolver,
+        UpdateAuthorityResolver,
+        SaveAuthorityRuleResolver,
+        ResponsibilitiesResolver,
+        CreateResponsibilityResolver,
+        UpdateResponsibilityStatusResolver,
+    ],
+})
+/** The GraphQL transport of the decisions feature. */
+export class DecisionsGraphqlModule {}

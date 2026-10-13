@@ -58,7 +58,7 @@ const has = async (dir: string, name: string): Promise<boolean> => (await readdi
 
 const build = async () => {
     const root = await mkdtemp(join(tmpdir(), "nivo-render-job-spec-"))
-    const options: VideoOptions = { assetsDir: "assets", workDir: join(root, "work"), maxSeconds: 90, ffmpegThreads: 2 }
+    const options: VideoOptions = { fontsDir: "fonts", workDir: join(root, "work"), maxSeconds: 90, ffmpegThreads: 2 }
     const video = mock<VideoService>()
     const renders = mock<VideoRendersService>()
     const renderer = mock<RendererService>()

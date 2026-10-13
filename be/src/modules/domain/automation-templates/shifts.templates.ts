@@ -1,0 +1,142 @@
+import type { TemplateDefinition } from "./automation-templates.contracts"
+import { text } from "./policies/catalog-text.policy"
+
+/** The shifts templates the engine runs itself, in file-name order. */
+export const SHIFTS_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
+    {
+        position: 25,
+        key: "shifts_leave_gap",
+        version: 1,
+        pack: "core",
+        executor: "implemented",
+        moduleKey: "shifts",
+        icon: "calendar",
+        name: text("automationTemplates.shifts_leave_gap.name"),
+        description: text("automationTemplates.shifts_leave_gap.description"),
+        trigger: {
+            kind: "event",
+            event: "leave.requested",
+            line: text("automationTemplates.shifts_leave_gap.line"),
+        },
+        requires: {
+            modules: ["shifts"],
+            channels: [],
+            connections: [],
+            capabilities: [],
+        },
+        settings: [],
+        contentMode: "none",
+        guardrails: [
+            text("automationTemplates.shifts_leave_gap.guardrails.0"),
+        ],
+        variables: [],
+        defaultBody: null,
+        authority: {
+            action: null,
+        },
+        defaults: {},
+    },
+    {
+        position: 26,
+        key: "shifts_month_close",
+        version: 1,
+        pack: "core",
+        executor: "implemented",
+        moduleKey: "shifts",
+        icon: "ledger",
+        name: text("automationTemplates.shifts_month_close.name"),
+        description: text("automationTemplates.shifts_month_close.description"),
+        trigger: {
+            kind: "schedule",
+            event: "schedule.monthly",
+            line: text("automationTemplates.shifts_month_close.line"),
+        },
+        requires: {
+            modules: ["shifts"],
+            channels: [],
+            connections: [],
+            capabilities: [],
+        },
+        settings: [
+            {
+                key: "day",
+                kind: "number",
+                min: 1,
+                max: 28,
+                label: text("automationTemplates.shifts_month_close.settings.day.label"),
+            },
+            {
+                key: "time",
+                kind: "time",
+                label: text("automationTemplates.shifts_month_close.settings.time.label"),
+            },
+        ],
+        contentMode: "none",
+        guardrails: [
+            text("automationTemplates.shifts_month_close.guardrails.0"),
+        ],
+        variables: [],
+        defaultBody: null,
+        authority: {
+            action: null,
+        },
+        defaults: {
+            day: 1,
+            time: "09:00",
+        },
+    },
+    {
+        position: 24,
+        key: "shifts_shift_reminder",
+        version: 1,
+        pack: "core",
+        executor: "implemented",
+        moduleKey: "shifts",
+        icon: "calendar",
+        name: text("automationTemplates.shifts_shift_reminder.name"),
+        description: text("automationTemplates.shifts_shift_reminder.description"),
+        trigger: {
+            kind: "event",
+            event: "shift.upcoming",
+            line: text("automationTemplates.shifts_shift_reminder.line"),
+        },
+        requires: {
+            modules: ["shifts"],
+            channels: [],
+            connections: [],
+            capabilities: [],
+        },
+        settings: [
+            {
+                key: "beforeMinutes",
+                kind: "number",
+                min: 10,
+                max: 240,
+                suffix: text("automationTemplates.shifts_shift_reminder.settings.beforeMinutes.suffix"),
+                label: text("automationTemplates.shifts_shift_reminder.settings.beforeMinutes.label"),
+            },
+            {
+                key: "noShowMinutes",
+                kind: "number",
+                min: 5,
+                max: 60,
+                suffix: text("automationTemplates.shifts_shift_reminder.settings.noShowMinutes.suffix"),
+                label: text("automationTemplates.shifts_shift_reminder.settings.noShowMinutes.label"),
+                hint: text("automationTemplates.shifts_shift_reminder.settings.noShowMinutes.hint"),
+            },
+        ],
+        contentMode: "none",
+        guardrails: [
+            text("automationTemplates.shifts_shift_reminder.guardrails.0"),
+        ],
+        variables: [],
+        defaultBody: null,
+        authority: {
+            action: null,
+        },
+        defaults: {
+            beforeMinutes: 60,
+            noShowMinutes: 10,
+        },
+    },
+]

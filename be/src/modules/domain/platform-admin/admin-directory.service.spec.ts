@@ -398,7 +398,15 @@ describe("AdminDirectoryService", () => {
             ])
             expect(detail.connections[0]).toMatchObject({ environment: "live", health: "ok" })
             expect(detail.knowledgeTotal).toBe(2)
-            expect(detail.knowledge).toEqual([{ kind: "text", byStatus: { ready: 1, failed: 1 } }])
+            expect(detail.knowledge).toEqual([
+                {
+                    kind: "text",
+                    byStatus: [
+                        { key: "ready", count: 1 },
+                        { key: "failed", count: 1 },
+                    ],
+                },
+            ])
             expect(detail.activity).toEqual({ messages7d: 4, lastCustomerMessageAt: AT, openDecisions: 1 })
             expect(em.query).toHaveBeenCalledWith(LIST_TRANSFERS, [["ord-1"]])
             expect(access.audit).toHaveBeenCalledWith(ADMIN, "view.workspace", WS_A)

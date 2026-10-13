@@ -46,6 +46,26 @@ export interface BankPaymentRecorded {
     readonly inboundEventId: string
 }
 
+/** A finished sale handed to the order chain by the capability that served it. */
+export interface OrderHandoff {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** Whether the sale is live or simulated. */
+    readonly origin: string
+    /** The customer name. */
+    readonly sender: string
+    /** The customer phone or email, or null. */
+    readonly contact: string | null
+    /** What was sold, in words. */
+    readonly body: string
+    /** The price in VND. */
+    readonly amountVnd: number
+    /** The id of the sale in the capability that served it: the idempotency key. */
+    readonly ref: string
+    /** The lead of the customer, or null. */
+    readonly leadId: string | null
+}
+
 /** Where an inbound event stands. */
 export type EventStatus = "received" | "processed" | "needs_decision" | "failed"
 

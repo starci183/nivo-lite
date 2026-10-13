@@ -5,15 +5,17 @@ import { ExtractKnowledgeFactsQueueModule } from "@features/jobs/extract-knowled
 import { RunBrainCommandQueueModule } from "@features/jobs/run-brain-command"
 import { IndexKnowledgeSourceQueueModule } from "@features/jobs/index-knowledge-source"
 import { ReembedKnowledgeQueueModule } from "@features/jobs/reembed-knowledge"
-import { AutomationsHttpModule } from "@features/api/automations"
-import { FlowsHttpModule } from "@features/api/flows"
+import { AutomationsGraphqlModule, AutomationsHttpModule } from "@features/api/automations"
+import { FlowsGraphqlModule, FlowsHttpModule } from "@features/api/flows"
 import { N8nPipelinesHttpModule } from "@features/api/n8n-pipelines"
 import { EmitN8nEventQueueModule } from "@features/jobs/emit-n8n-event"
 import { RunAutomationCommandQueueModule } from "@features/jobs/run-automation-command"
 import { RunAutomationTickQueueModule } from "@features/jobs/run-automation-tick"
 import { AgentToolsHttpModule } from "@features/api/agent-tools"
-import { AgentsHttpModule } from "@features/api/agents"
-import { DecisionsHttpModule } from "@features/api/decisions"
+import { AgentsGraphqlModule, AgentsHttpModule } from "@features/api/agents"
+import { ApiKeysGraphqlModule } from "@features/api/api-keys"
+import { OverviewGraphqlModule } from "@features/api/overview"
+import { DecisionsGraphqlModule, DecisionsHttpModule } from "@features/api/decisions"
 import { RunDecisionsQueueModule } from "@features/jobs/run-decisions"
 import { GenerateWithAgentQueueModule } from "@features/jobs/generate-with-agent"
 import { SyncAgentsQueueModule } from "@features/jobs/sync-agents"
@@ -30,9 +32,9 @@ import { RunChatTurnQueueModule } from "@features/jobs/run-chat-turn"
 import { TelegramHttpModule } from "@features/webhooks/telegram"
 import { ZaloHttpModule } from "@features/webhooks/zalo"
 import { LeadsHttpModule } from "@features/api/leads"
-import { AdminHttpModule } from "@features/api/admin"
-import { ModulesHttpModule } from "@features/api/modules"
-import { OfficeHttpModule } from "@features/api/office"
+import { AdminGraphqlModule, AdminHttpModule } from "@features/api/admin"
+import { ModulesGraphqlModule, ModulesHttpModule } from "@features/api/modules"
+import { OfficeGraphqlModule, OfficeHttpModule } from "@features/api/office"
 import { ExternalApiHttpModule } from "@features/api/external-api"
 import { SystemHealthHttpModule } from "@features/api/system-health"
 import { BOOKINGS_ERROR_KINDS, BOOKINGS_MESSAGES, BookingsModule } from "@modules/domain/bookings"
@@ -53,6 +55,7 @@ import { LoyaltyProgramsModule } from "@modules/domain/loyalty-programs"
 import { LoyaltyRewardsModule } from "@modules/domain/loyalty-rewards"
 import { LOYALTY_ERROR_KINDS, LOYALTY_MESSAGES, LoyaltyModule } from "@modules/domain/loyalty"
 import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
+import { OverviewModule } from "@modules/domain/overview"
 import { CassoHttpModule } from "@features/webhooks/casso"
 import { PayosHttpModule } from "@features/webhooks/payos"
 import { SepayHttpModule } from "@features/webhooks/sepay"
@@ -75,7 +78,7 @@ import {
 import { CREDITS_ERROR_KINDS, CREDITS_MESSAGES, CreditsModule } from "@modules/domain/credits"
 import { AI_USAGE_EVENTS_MESSAGES, AiUsageEventsModule, UsageGateService } from "@modules/domain/ai-usage-events"
 import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
-import { WorkspacesHttpModule } from "@features/api/workspaces"
+import { WorkspacesGraphqlModule, WorkspacesHttpModule } from "@features/api/workspaces"
 import { OperationsJobsQueueModule } from "@features/jobs/operations-jobs"
 import {
     EMAIL_MESSAGES_ERROR_KINDS,
@@ -277,7 +280,6 @@ import {
 } from "@modules/domain/workspace-members"
 import { WORKSPACES_ERROR_KINDS, WORKSPACES_MESSAGES, WorkspacesModule } from "@modules/domain/workspaces"
 import { N8N_ERROR_KINDS, N8nModule } from "@modules/integrations/n8n"
-import { TEMPLATE_FILES_ERROR_KINDS, TemplateFilesModule } from "@modules/integrations/template-files"
 import { AUTOMATION_TICK_SCHEDULER } from "@modules/queues/automation"
 import { ClockModule } from "@modules/platform/clock"
 import { CONFIG_ERROR_KINDS } from "@modules/platform/config"
@@ -292,6 +294,7 @@ import {
     RateLimitGuard,
 } from "@modules/platform/http-security"
 import { HTTP_ERROR_KINDS, HTTP_MESSAGES, HttpModule } from "@modules/platform/http"
+import { GraphqlModule } from "@modules/platform/graphql"
 import { I18nModule } from "@modules/platform/i18n"
 import { LoggingModule } from "@modules/platform/logging"
 import { JOBS_ERROR_KINDS, JOBS_MESSAGES, JobsModule } from "@modules/platform/jobs"
@@ -349,6 +352,7 @@ import { FFMPEG_ERROR_KINDS, FFMPEG_MESSAGES, FfmpegModule } from "@modules/inte
 import { TTS_ERROR_KINDS, TTS_MESSAGES, TtsModule } from "@modules/integrations/tts"
 import { CONTENT_TICK_EVERY_MS, CONTENT_TICK_QUEUE, CONTENT_TICK_SCHEDULER } from "@modules/queues/content-tick"
 import { RendersHttpModule } from "@features/api/renders"
+import { ApplyBookingStatusQueueModule } from "@features/jobs/apply-booking-status"
 import { PublishContentQueueModule } from "@features/jobs/publish-content"
 import { AcceptMetaEventQueueModule } from "@features/jobs/accept-meta-event"
 import { IssueInviteQueueModule } from "@features/jobs/issue-invite"
@@ -364,10 +368,7 @@ const NO_CORRECTIONS: CorrectionSource = { recent: () => Promise.resolve([]) }
 const NO_DRIVE_ACCESS: DriveAccessSource = { forWorkspace: () => null }
 
 @Global()
-@Module({
-    providers: [{ provide: VIDEO_ASSETS, useExisting: SUPABASE_STORAGE }],
-    exports: [VIDEO_ASSETS],
-})
+@Module({ providers: [{ provide: VIDEO_ASSETS, useExisting: SUPABASE_STORAGE }], exports: [VIDEO_ASSETS] })
 /** Binds the file store the render job uses to the Supabase storage integration. */
 class VideoAssetsBindingModule {}
 
@@ -549,7 +550,6 @@ export class AppModule {
                         NIVO_KNOWLEDGE_ERROR_KINDS,
                         PUBLIC_API_ERROR_KINDS,
                         SUPABASE_ERROR_KINDS,
-                        TEMPLATE_FILES_ERROR_KINDS,
                         BOOKINGS_ERROR_KINDS,
                         LOYALTY_CAMPAIGNS_ERROR_KINDS,
                         LOYALTY_ERROR_KINDS,
@@ -568,14 +568,8 @@ export class AppModule {
                     ],
                 }),
                 CqrsModule.register({ isGlobal: true }),
-                HttpSecurityModule.register({
-                    isGlobal: true,
-                    ...options.httpSecurity,
-                }),
-                DatabaseModule.register({
-                    isGlobal: true,
-                    connections: [options.database],
-                }),
+                HttpSecurityModule.register({ isGlobal: true, ...options.httpSecurity }),
+                DatabaseModule.register({ isGlobal: true, connections: [options.database] }),
                 QueueModule.register({
                     isGlobal: true,
                     schedulers: [
@@ -587,11 +581,7 @@ export class AppModule {
                     ],
                     ...options.queue,
                 }),
-                JobsModule.register({
-                    isGlobal: true,
-                    connection: PRIMARY_ENTITY_MANAGER,
-                    ...options.jobs,
-                }),
+                JobsModule.register({ isGlobal: true, connection: PRIMARY_ENTITY_MANAGER, ...options.jobs }),
                 SupabaseModule.register({ isGlobal: true, ...options.supabase }),
                 IdentityModule.register({ isGlobal: true, verifyAccessToken }),
                 ContractsModule.register({ isGlobal: true }),
@@ -601,11 +591,7 @@ export class AppModule {
                 EventsModule.register({ isGlobal: true }),
                 WorkspaceMembersModule.register({ isGlobal: true, accounts: SUPABASE_AUTH }),
                 WorkspacesModule.register({ isGlobal: true, ...options.workspaces }),
-                WorkspaceInvitesModule.register({
-                    isGlobal: true,
-                    delivery: SUPABASE_AUTH,
-                    ...options.workspaceInvites,
-                }),
+                WorkspaceInvitesModule.register({ isGlobal: true, delivery: SUPABASE_AUTH, ...options.workspaceInvites }),
                 ConnectionsModule.register({ isGlobal: true, ...options.connections }),
                 ConnectionGrantsModule.register({ isGlobal: true }),
                 ChannelConnectionsModule.register({ isGlobal: true }),
@@ -620,8 +606,8 @@ export class AppModule {
                 ChannelSetupModule.register({ isGlobal: true, ...options.channelSetup }),
                 WebhookDeliveryModule.register({ isGlobal: true, ...options.webhookDelivery }),
                 HttpModule.register({ isGlobal: true }),
+                GraphqlModule.register({ isGlobal: true }),
                 N8nModule.register({ isGlobal: true, ...options.n8n }),
-                TemplateFilesModule.register({ isGlobal: true, ...options.templateFiles }),
                 AutomationPortsModule.register({ isGlobal: true }),
                 AutomationTemplatesModule.register({ isGlobal: true }),
                 AutomationPipelinesModule.register({ isGlobal: true }),
@@ -667,7 +653,6 @@ export class AppModule {
                 RendersHttpModule,
                 LivenessModule.register({ isGlobal: true }),
                 ModuleOpsModule.register({ isGlobal: true }),
-                HttpModule.register({ isGlobal: true }),
                 LlmModule.register({ isGlobal: true, ...options.llm }),
                 DocumentsModule.register({ isGlobal: true, ...options.documents }),
                 KnowledgeSourcesModule.register({ isGlobal: true, storage: SUPABASE_OBJECTS }),
@@ -742,18 +727,24 @@ export class AppModule {
                 GenerateWithAgentQueueModule,
                 RunDecisionsQueueModule,
                 AgentsHttpModule,
+                AgentsGraphqlModule,
                 AgentToolsHttpModule,
                 DecisionsHttpModule,
+                DecisionsGraphqlModule,
                 OfficeHttpModule,
+                OfficeGraphqlModule,
                 ModulesModule.register({ isGlobal: true, categories: MODULE_CATEGORIES, catalog: MODULE_CATALOG }),
                 ModulesHttpModule,
+                ModulesGraphqlModule,
                 ApiKeysModule.register({ isGlobal: true }),
+                OverviewModule.register({ isGlobal: true }),
                 PublicApiModule.register({ isGlobal: true }),
                 PaymentOrdersModule.register({ isGlobal: true }),
                 BillingModule.register({ isGlobal: true, ...options.billing }),
                 SepayTransactionsModule.register({ isGlobal: true }),
                 AiUsageEventsModule.register({ isGlobal: true }),
                 CreditsModule.register({ isGlobal: true }),
+                ApplyBookingStatusQueueModule,
                 PaymentOrderRequestsModule.register({ isGlobal: true }),
                 ReconcileBankCreditQueueModule,
                 CreatePaymentOrderQueueModule,
@@ -778,17 +769,16 @@ export class AppModule {
                 LoyaltyLedgerModule.register({ isGlobal: true }),
                 LoyaltyCampaignsModule.register({ isGlobal: true }),
                 LoyaltyOtpsModule.register({ isGlobal: true, pepper: options.supabase.serviceRoleKey.reveal() }),
-                LoyaltyModule.register({
-                    isGlobal: true,
-                    // Until the chat lanes provide the channel adapters nothing delivers a code, so the public points check cannot unlock yet.
-                    delivery: { deliver: () => Promise.resolve(false) },
-                }),
+                LoyaltyModule.register({ isGlobal: true, delivery: { deliver: () => Promise.resolve(false) } }),
                 PublicBookingHttpModule,
                 BookingHttpModule,
                 PublicLoyaltyHttpModule,
                 LoyaltyHttpModule,
                 LoyaltyTillHttpModule,
                 WorkspacesHttpModule,
+                WorkspacesGraphqlModule,
+                ApiKeysGraphqlModule,
+                OverviewGraphqlModule,
                 ExtractKnowledgeFactsQueueModule,
                 RunBrainCommandQueueModule,
                 IndexKnowledgeSourceQueueModule,
@@ -796,12 +786,15 @@ export class AppModule {
                 GoogleConnectionsHttpModule,
                 MetaConnectionsHttpModule,
                 AutomationsHttpModule,
+                AutomationsGraphqlModule,
                 FlowsHttpModule,
+                FlowsGraphqlModule,
                 N8nPipelinesHttpModule,
                 EmitN8nEventQueueModule,
                 RunAutomationTickQueueModule,
                 RunAutomationCommandQueueModule,
                 AdminHttpModule,
+                AdminGraphqlModule,
             ],
             providers: [
                 { provide: SUPABASE_ACCESS_TOKEN_VERIFIER, useValue: verifyAccessToken },

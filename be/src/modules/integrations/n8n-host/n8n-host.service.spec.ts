@@ -28,7 +28,6 @@ const build = (listings: ReadonlyArray<string>, files: ReadonlyArray<unknown> = 
         keyPath: "/k",
         knownHostsPath: undefined,
         container: "n8n-1",
-        root: "r",
     }
     const host = new N8nHostService(shell, options, logger)
     return { host, commands, logger }

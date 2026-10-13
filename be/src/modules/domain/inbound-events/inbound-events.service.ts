@@ -9,6 +9,7 @@ import type {
     BankPaymentEvent,
     BankPaymentRecorded,
     InboundInput,
+    OrderHandoff,
     OptionalEventStatus,
     OptionalLeadRef,
     OptionalInboundEvent,
@@ -18,6 +19,7 @@ import type { EventIdRow, InboundEventRow } from "./persistence/inbound-events.r
 import {
     BUMP_DUPLICATE_EVENT,
     FIND_INBOUND_EVENT,
+    INSERT_ORDER_HANDOFF,
     HOLD_EVENT_FOR_OWNER,
     INSERT_BANK_EVENT,
     INSERT_INPUT_EVENT,
@@ -115,5 +117,20 @@ export class InboundEventsService {
             this.clock.now(),
         ])
         return { duplicate: true, inboundEventId: repeated?.id ?? "" }
+    }
+
+    /** Hands a finished sale to the order chain, inside the caller's transaction; the same sale twice is one order. Answers whether it was new. */
+    async handOffOrder(order: OrderHandoff, manager: EntityManager): Promise<boolean> {
+        const rows = await manager.query<Array<{ id: string }>>(INSERT_ORDER_HANDOFF, [
+            order.workspaceId,
+            order.origin,
+            order.sender,
+            order.contact,
+            order.body,
+            order.amountVnd,
+            order.ref,
+            order.leadId,
+        ])
+        return rows.length > 0
     }
 }

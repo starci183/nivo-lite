@@ -1,3 +1,4 @@
+export type { ApiKeyView, CreatedApiKey } from "./api-keys.contracts"
 export { ApiKeysModule } from "./api-keys.module"
 export { ApiKeysService } from "./api-keys.service"
 export { API_KEYS_ERROR_KINDS } from "./errors/api-keys.error"

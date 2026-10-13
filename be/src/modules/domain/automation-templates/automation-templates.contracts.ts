@@ -63,6 +63,8 @@ export type TemplateExecutor = "implemented" | "n8n" | "definition"
 export interface TemplateN8n {
     /** The webhook path under the n8n base. */
     readonly webhook: string
+    /** The data endpoints (`GET /api/n8n/data/<name>`) the workflow reads; documentation that travels with the stored definition. */
+    readonly data?: ReadonlyArray<string>
     /** Who receives the email: the owner, or the customer through the authority gate. */
     readonly audience: "owner" | "customer"
 }

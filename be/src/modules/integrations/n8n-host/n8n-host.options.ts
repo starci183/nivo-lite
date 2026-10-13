@@ -10,6 +10,4 @@ export interface N8nHostOptions {
     readonly knownHostsPath: string | undefined
     /** The name of the n8n container. */
     readonly container: string
-    /** The resources folder; the workflows are the json files of its `n8n-templates` folder. */
-    readonly root: string
 }

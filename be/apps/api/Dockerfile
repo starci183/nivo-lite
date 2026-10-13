@@ -40,9 +40,10 @@ COPY --from=manifests /app ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
 COPY --from=build /app/be/dist be/dist
-# The fonts and music beds the video render reads (VIDEO_ASSETS_DIR).
-COPY be/assets/video be/assets/video
-ENV VIDEO_ASSETS_DIR=/app/be/assets/video
+# be/src/assets ships as it sits in the repo: the fonts the video render burns captions with (VIDEO_FONTS_DIR). The music beds are not read from
+# here: they live in the media bucket (`cli seed-media upload` writes them from src/assets/media-seed).
+COPY be/src/assets be/src/assets
+ENV VIDEO_FONTS_DIR=/app/be/src/assets/fonts
 
 USER node
 EXPOSE 3000
