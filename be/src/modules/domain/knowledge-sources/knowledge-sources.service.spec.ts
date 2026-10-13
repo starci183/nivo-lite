@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { EntitlementsService } from "@modules/domain/billing"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { SupabaseObjectsPort } from "@modules/integrations/supabase"
 import { CLOCK } from "@modules/platform/clock"
@@ -53,6 +54,7 @@ const build = async (em: MockEntityManager) => {
             { provide: KNOWLEDGE_STORAGE, useValue: storage },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: KnowledgeQueue, useValue: queue },
+            { provide: EntitlementsService, useValue: mock<EntitlementsService>() },
             { provide: LOGGER, useValue: logger },
         ],
     }).compile()

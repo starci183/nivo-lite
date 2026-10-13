@@ -25,9 +25,26 @@ const CURRENT: Plan = {
     sort: 1,
     aiCreditsPerMonth: 3000,
     isCustom: false,
+    priceAnnualVnd: null,
+    annualDiscountPct: null,
+    promoPriceVnd: null,
+    promoMonths: null,
+    storageGb: null,
+    individual: false,
+    perSeat: false,
+    listed: true,
+    tiers: [],
 }
 const TARGET: Plan = { ...CURRENT, code: "growth", priceVnd: 1990000, sort: 2 }
-const WORKSPACE: WorkspaceBilling = { status: "active", planCode: "starter", paidUntil: PAID_UNTIL }
+const WORKSPACE: WorkspaceBilling = {
+    status: "active",
+    planCode: "starter",
+    paidUntil: PAID_UNTIL,
+    tierCredits: null,
+    seatCount: null,
+    billingCycle: null,
+    billedMonthlyVnd: null,
+}
 const ORDER: PaymentOrder = {
     id: "order-1",
     workspaceId: "ws-1",
@@ -81,7 +98,7 @@ const build = async (
     const billing = mock<BillingService>()
     billing.requireManager.mockResolvedValue(undefined)
     billing.findWorkspaceBilling.mockResolvedValue(WORKSPACE)
-    billing.findPlan.mockImplementation(async (code) => (code === "starter" ? CURRENT : TARGET))
+    billing.findPlan.mockImplementation((code) => Promise.resolve(code === "starter" ? CURRENT : TARGET))
     billing.payable.mockReturnValue(PAYABLE)
     const orders = mock<PaymentOrdersService>()
     orders.findOpenTopup.mockResolvedValue(null)

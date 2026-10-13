@@ -3,6 +3,7 @@ import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectSupabaseObjects } from "@modules/integrations/supabase"
 import type { SupabaseObjectsPort } from "@modules/integrations/supabase"
+import { EntitlementsService } from "@modules/domain/billing"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { VideoError, VideoErrorCode } from "./errors/video.error"
 import { MEDIA_BUCKET, MEDIA_MAX_BYTES, VIDEOS_BUCKET } from "./video-spec.policy"
@@ -28,6 +29,7 @@ export class VideoMediaService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectSupabaseObjects() private readonly storage: SupabaseObjectsPort,
         private readonly members: WorkspaceMembersService,
+        private readonly entitlements: EntitlementsService,
     ) {}
 
     /** Lists a member's newest uploaded images and clips. */
@@ -55,6 +57,7 @@ export class VideoMediaService {
         if (!MEDIA_MIME.includes(file.type) || file.size <= 0 || file.size > MEDIA_MAX_BYTES) {
             throw new VideoError({ code: VideoErrorCode.InputInvalid })
         }
+        await this.entitlements.requireStorageFor(workspaceId, file.size)
         const filename =
             file.name
                 .normalize("NFD")

@@ -12,6 +12,12 @@ export interface RequestRow {
     readonly kind: PaymentOrderRequestKind
     /** The plan or pack code, or null for a renewal. */
     readonly target: string | null
+    /** The billing cycle asked for, or null. */
+    readonly cycle: "monthly" | "annual" | null
+    /** The usage tier asked for, or null. */
+    readonly tier_credits: number | null
+    /** The seats asked for, or null. */
+    readonly seats: number | null
     /** Where the request is, a member of the table check. */
     readonly status: "pending" | "done" | "failed"
 }

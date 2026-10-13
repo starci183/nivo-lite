@@ -34,4 +34,20 @@ export class BillingPaymentDetailsType {
     /** The unchanged end of paid period. */
     @Field(() => String, { nullable: true })
     paidUntil!: string | null
+
+    /** The cycle a plan order was sold for. */
+    @Field(() => String, { nullable: true })
+    cycle!: string | null
+
+    /** The monthly credit allowance picked on a plan order. */
+    @Field(() => Float, { nullable: true })
+    tierCredits!: number | null
+
+    /** The seats of a per-seat plan order. */
+    @Field(() => Int, { nullable: true })
+    seats!: number | null
+
+    /** The intro price was applied to this plan order. */
+    @Field(() => Boolean, { nullable: true })
+    promo!: boolean | null
 }

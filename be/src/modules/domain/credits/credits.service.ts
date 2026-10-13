@@ -75,18 +75,19 @@ export class CreditsService {
         await this.billing.requireManager(userId, params.workspaceId)
         const current = await this.requireActivePlan(params.workspaceId, ["active"])
         const target = await this.billing.findPlan(params.planCode)
-        if (target === null || current.isCustom || target.isCustom)
+        if (target === null || !target.listed || target.perSeat || current.isCustom || target.isCustom)
             throw new CreditsError({ code: CreditsErrorCode.NotUpgrade })
-        if (target.sort <= current.sort || target.priceVnd <= current.priceVnd) {
+        const workspace = await this.billing.findWorkspaceBilling(params.workspaceId)
+        const currentPrice = workspace?.billedMonthlyVnd ?? current.priceVnd
+        if (target.sort <= current.sort || target.priceVnd <= currentPrice) {
             throw new CreditsError({ code: CreditsErrorCode.NotUpgrade })
         }
-        const workspace = await this.billing.findWorkspaceBilling(params.workspaceId)
         const now = this.clock.now()
         if (workspace?.paidUntil == null || new Date(workspace.paidUntil).getTime() <= now.getTime()) {
             throw new CreditsError({ code: CreditsErrorCode.RenewFirst })
         }
         const quote = prorateUpgrade({
-            currentPrice: current.priceVnd,
+            currentPrice,
             targetPrice: target.priceVnd,
             paidUntil: workspace.paidUntil,
             now,
@@ -109,7 +110,7 @@ export class CreditsService {
             detail: {
                 from: current.code,
                 to: target.code,
-                fromPrice: current.priceVnd,
+                fromPrice: currentPrice,
                 toPrice: target.priceVnd,
                 credit: quote.credit,
                 daysLeft: quote.daysLeft,

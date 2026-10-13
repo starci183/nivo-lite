@@ -18,6 +18,9 @@ const REQUEST: RequestRow = {
     requested_by: "person-1",
     kind: "plan",
     target: "starter",
+    cycle: null,
+    tier_credits: null,
+    seats: null,
     status: "pending",
 }
 const PAYABLE: PayableOrder = {
@@ -113,7 +116,12 @@ describe("PaymentOrderRequestsService", () => {
             "ordered",
         )
 
-        expect(billing.orderPlan.mock.calls).toEqual([["person-1", { workspaceId: "ws-1", planCode: "starter" }]])
+        expect(billing.orderPlan.mock.calls).toEqual([
+            [
+                "person-1",
+                { workspaceId: "ws-1", planCode: "starter", selection: { cycle: "monthly", tierCredits: null, seats: 1 } },
+            ],
+        ])
         expect(billing.renew).not.toHaveBeenCalled()
         expect(credits.topup).not.toHaveBeenCalled()
         expect(credits.upgrade).not.toHaveBeenCalled()

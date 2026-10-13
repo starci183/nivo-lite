@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { EntitlementsService } from "@modules/domain/billing"
 import { EventsService } from "@modules/domain/events"
 import { InjectAccountDirectory, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { AccountDirectory, MemberListing } from "@modules/domain/workspace-members"
@@ -56,6 +57,7 @@ export class WorkspaceInvitesService {
         @InjectInviteDelivery() private readonly delivery: InviteDeliveryPort,
         private readonly members: WorkspaceMembersService,
         private readonly events: EventsService,
+        private readonly entitlements: EntitlementsService,
     ) {}
 
     /** The invitations of the caller's workspace that can still be accepted; owner and manager only. */
@@ -78,6 +80,7 @@ export class WorkspaceInvitesService {
     /** Issues an invitation and emails it; the token is returned once, inside the link. Owner and manager only. */
     async create(userId: string, workspaceId: string, request: InviteRequest): Promise<InviteResult> {
         const actor = await this.members.require(userId, workspaceId, MANAGERS)
+        await this.entitlements.requireRoomForInvite(workspaceId)
         const email = normaliseEmail(request.email)
         if (!isEmailAddress(email)) throw new WorkspaceInvitesError({ code: WorkspaceInvitesErrorCode.EmailInvalid })
         const people = await this.members.list(userId, workspaceId)
@@ -168,6 +171,7 @@ export class WorkspaceInvitesService {
             judgeInvite(row === undefined ? undefined : toInviteState(row), acceptor.email ?? "", this.clock.now()),
             WorkspaceInvitesError,
         )
+        await this.entitlements.requireRoomForMember(invite.workspaceId)
         const account = await this.accounts.accountOf(acceptor.id)
         const displayName = account.kind === "ok" ? account.value.displayName : "Member"
         await this.members.join({

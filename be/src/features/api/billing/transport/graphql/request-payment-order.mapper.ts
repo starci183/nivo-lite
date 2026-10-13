@@ -10,6 +10,9 @@ export const toRequestPaymentOrderRequest = (
     workspaceId,
     kind: input.kind,
     target: input.target,
+    cycle: input.cycle,
+    tierCredits: input.tierCredits,
+    seats: input.seats,
 })
 
 /** Maps the immediate queue acknowledgement to the GraphQL result. */

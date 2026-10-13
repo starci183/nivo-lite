@@ -12,12 +12,22 @@ const ROW: PlanRow = {
     sort: 1,
     ai_credits_per_month: 3000,
     is_custom: false,
+    price_annual_vnd: null,
+    annual_discount_pct: null,
+    promo_price_vnd: null,
+    promo_months: null,
+    storage_gb: null,
+    individual: false,
+    per_seat: false,
+    listed: true,
 }
+
+const NO_TIER = { tier_credits: null, seat_count: null, billing_cycle: null, billed_monthly_vnd: null } as const
 
 describe("billing mapper", () => {
     describe("toPlan", () => {
         it("maps the columns, keeping only the text lines of the feature lists", () => {
-            expect(toPlan(ROW)).toEqual({
+            expect(toPlan(ROW, [])).toEqual({
                 code: "starter",
                 nameVi: "Khoi dau",
                 nameEn: "Starter",
@@ -28,13 +38,22 @@ describe("billing mapper", () => {
                 sort: 1,
                 aiCreditsPerMonth: 3000,
                 isCustom: false,
+                priceAnnualVnd: null,
+                annualDiscountPct: null,
+                promoPriceVnd: null,
+                promoMonths: null,
+                storageGb: null,
+                individual: false,
+                perSeat: false,
+                listed: true,
+                tiers: [],
             })
         })
 
         it.each([[{}], [[1]], ["text"], [5], [{ vi: "x", en: null }]])(
             "counts the stored features %p as empty lists",
             (features) => {
-                expect(toPlan({ ...ROW, features }).features).toEqual({ vi: [], en: [] })
+                expect(toPlan({ ...ROW, features }, []).features).toEqual({ vi: [], en: [] })
             },
         )
     })
@@ -42,19 +61,27 @@ describe("billing mapper", () => {
     describe("toWorkspaceBilling", () => {
         it("maps a paid period to ISO text", () => {
             expect(
-                toWorkspaceBilling({ status: "active", plan_code: "starter", paid_until: "2026-11-01T00:00:00+00:00" }),
+                toWorkspaceBilling({ ...NO_TIER, status: "active", plan_code: "starter", paid_until: "2026-11-01T00:00:00+00:00" }),
             ).toEqual({
                 status: "active",
                 planCode: "starter",
                 paidUntil: "2026-11-01T00:00:00.000Z",
+                tierCredits: null,
+                seatCount: null,
+                billingCycle: null,
+                billedMonthlyVnd: null,
             })
         })
 
         it("keeps the null period of an unpaid workspace", () => {
-            expect(toWorkspaceBilling({ status: "pending_payment", plan_code: null, paid_until: null })).toEqual({
+            expect(toWorkspaceBilling({ ...NO_TIER, status: "pending_payment", plan_code: null, paid_until: null })).toEqual({
                 status: "pending_payment",
                 planCode: null,
                 paidUntil: null,
+                tierCredits: null,
+                seatCount: null,
+                billingCycle: null,
+                billedMonthlyVnd: null,
             })
         })
     })
