@@ -1,5 +1,19 @@
 import type { EntityManager } from "typeorm"
 
+/** A customer message no agent is bound to answer. */
+export interface UnroutedMessage {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The channel key: telegram or zalo. */
+    readonly channel: string
+    /** The name of the customer on the channel. */
+    readonly sender: string
+    /** What the customer wrote. */
+    readonly body: string
+    /** The channel's own id of the message: the idempotency key. */
+    readonly eventId: string
+}
+
 /** Whether the money of an event is real. */
 export type EventOrigin = "live" | "simulated"
 

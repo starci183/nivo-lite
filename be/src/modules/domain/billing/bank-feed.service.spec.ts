@@ -185,7 +185,7 @@ describe("BankFeedService", () => {
                     sender: null,
                     body: 'vi:billing.bankEventBody:{"bank":"My Casso","content":"NIVO8F3K2"}',
                     amountVnd: 150000,
-                    eventId: "casso:7",
+                    providerRef: "casso:7",
                 }),
             )
             expect(outbox.jobsOf(BANK_CREDIT_QUEUE).map((job) => job.payload)).toEqual([
@@ -279,7 +279,7 @@ describe("BankFeedService", () => {
 
             expect(proof.provePayos).toHaveBeenCalledWith(payosDelivery)
             expect(inbound.recordBankPayment).toHaveBeenCalledWith(
-                expect.objectContaining({ amountVnd: 50000, eventId: "payos:REF1", externalRef: "NIVO8F3K2" }),
+                expect.objectContaining({ amountVnd: 50000, providerRef: "payos:REF1", externalRef: "NIVO8F3K2" }),
             )
         })
 
@@ -329,7 +329,7 @@ describe("BankFeedService", () => {
             expect(inbound.recordBankPayment).toHaveBeenCalledWith(
                 expect.objectContaining({
                     amountVnd: 99000,
-                    eventId: "sepay:321",
+                    providerRef: "sepay:321",
                     externalRef: "NIVO8F3K2 thanh toan",
                 }),
             )

@@ -1,10 +1,18 @@
+import type { VideoOptions } from "@modules/domain/video"
 import type { SupabaseOptions } from "@modules/integrations/supabase"
 import type { BillingOptions } from "@modules/domain/billing"
+import type { FfmpegOptions } from "@modules/integrations/ffmpeg"
+import type { TtsOptions } from "@modules/integrations/tts"
 import type { ServerOptions } from "@modules/platform/config"
 import type { DatabaseConnectionOptions } from "@modules/platform/database"
+import type { ChannelsOptions } from "@modules/domain/channels"
+import type { ConnectionSecretsOptions } from "@modules/domain/connection-secrets"
 import type { PlatformAdminOptions } from "@modules/domain/platform-admin"
 import type { WorkspaceInvitesOptions } from "@modules/domain/workspace-invites"
 import type { WorkspacesOptions } from "@modules/domain/workspaces"
+import type { MailOptions } from "@modules/integrations/mail"
+import type { TelegramOptions } from "@modules/integrations/telegram"
+import type { ZaloOptions } from "@modules/integrations/zalo"
 import type { HttpSecurityOptions } from "@modules/platform/http-security"
 import type { JobsConfig } from "@modules/platform/jobs"
 import type { QueueConfig } from "@modules/platform/queue"
@@ -25,10 +33,26 @@ export interface ApiOptions {
     readonly workspaceInvites: Omit<WorkspaceInvitesOptions, "delivery">
     /** The payment feeds: keys, bank account and the credential key. */
     readonly billing: BillingOptions
+    /** The key that seals the credentials of the connections. */
+    readonly connectionSecrets: ConnectionSecretsOptions
+    /** The public origin of the web app, for provider return addresses. */
+    readonly channels: ChannelsOptions
+    /** The Telegram Bot API host. */
+    readonly telegram: TelegramOptions
+    /** The Zalo OAuth and Open API hosts. */
+    readonly zalo: ZaloOptions
+    /** Outgoing mail: the platform sender and the private-host policy. */
+    readonly mail: MailOptions
     /** The platform team that may use the console. */
     readonly platformAdmin: PlatformAdminOptions
     /** How the pgmq workers run. */
     readonly queue: QueueConfig
     /** Who this worker is and how long a job claim lasts. */
     readonly jobs: JobsConfig
+    /** How ffmpeg is run. */
+    readonly ffmpeg: FfmpegOptions
+    /** The text-to-speech provider of the video voiceover. */
+    readonly tts: TtsOptions
+    /** Where the video renderer finds its assets and how it runs ffmpeg. */
+    readonly video: VideoOptions
 }

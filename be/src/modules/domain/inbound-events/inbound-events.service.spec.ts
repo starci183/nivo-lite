@@ -4,7 +4,12 @@ import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { InboundEventsErrorCode } from "./errors/inbound-events.error"
 import { InboundEventsService } from "./inbound-events.service"
-import { BUMP_DUPLICATE_EVENT, HOLD_EVENT_FOR_OWNER, INSERT_BANK_EVENT } from "./persistence/inbound-events.sql"
+import {
+    BUMP_DUPLICATE_EVENT,
+    HOLD_EVENT_FOR_OWNER,
+    INSERT_BANK_EVENT,
+    INSERT_UNROUTED_EVENT,
+} from "./persistence/inbound-events.sql"
 
 const NOW = "2026-10-12T10:00:00.000Z"
 
@@ -81,6 +86,26 @@ describe("InboundEventsService", () => {
             await expect(events.recordBankPayment(eventOf(tx.em))).rejects.toMatchObject({
                 code: InboundEventsErrorCode.Unreadable,
             })
+        })
+    })
+
+    describe("keepUnrouted", () => {
+        it("keeps an unrouted message in the inbox under a dedupe key made of its channel and event id", async () => {
+            const { events, tx } = await build([[INSERT_UNROUTED_EVENT, []]])
+
+            await events.keepUnrouted(
+                { workspaceId: "ws-1", channel: "telegram", sender: "Minh", body: "Hello", eventId: "tg:c-1:555:9" },
+                tx.em,
+            )
+
+            expect(tx.em.query).toHaveBeenCalledWith(INSERT_UNROUTED_EVENT, [
+                "ws-1",
+                "telegram",
+                "Minh",
+                "Hello",
+                "tg:c-1:555:9",
+                "telegram:message:tg:c-1:555:9",
+            ])
         })
     })
 

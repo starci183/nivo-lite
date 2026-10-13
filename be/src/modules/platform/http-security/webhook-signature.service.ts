@@ -3,8 +3,9 @@ import { Injectable } from "@nestjs/common"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { HttpSecurityError, HttpSecurityErrorCode } from "./errors/http-security.error"
-import { InjectHttpSecurityOptions } from "./http-security.decorators"
+import { InjectHttpSecurityOptions, InjectWebhookProofRegistry } from "./http-security.decorators"
 import type { HttpSecurityOptions } from "./http-security.options"
+import type { WebhookProofRegistry } from "./webhook-proof.port"
 
 /** The exact signed material of one webhook delivery. */
 export interface WebhookDelivery {
@@ -15,6 +16,22 @@ export interface WebhookDelivery {
     /** The provider signature header, when supplied. */
     readonly signature: string | undefined
     /** The provider timestamp header used for replay protection, when supplied. */
+    readonly timestamp: string | undefined
+    /** A configured-secret delivery has no scope; naming one selects the per-scope proof overload. */
+    readonly scope?: never
+}
+
+/** A delivery whose secret belongs to a scope kept in the database (one connection of one workspace), proven by the provider's registered proof. */
+export interface ScopedWebhookDelivery {
+    /** The provider whose registered proof judges this delivery. */
+    readonly provider: string
+    /** The scope the route names, for example a connection id. */
+    readonly scope: string
+    /** The unparsed request bytes covered by the signature. */
+    readonly rawBody: Buffer | undefined
+    /** The provider signature or token header, when supplied. */
+    readonly signature: string | undefined
+    /** The provider timestamp header, when it sends one. */
     readonly timestamp: string | undefined
 }
 
@@ -30,10 +47,35 @@ export class WebhookSignatureService {
     constructor(
         @InjectHttpSecurityOptions() private readonly options: HttpSecurityOptions,
         @InjectClock() private readonly clock: Clock,
+        @InjectWebhookProofRegistry() private readonly proofs: WebhookProofRegistry,
     ) {}
 
     /** Throws unless the delivery carries a configured provider's current, constant-time-equal signature. */
-    verify(delivery: WebhookDelivery): void {
+    verify(delivery: WebhookDelivery): void
+    /** Rejects unless the provider's registered proof accepts the delivery for its scope. */
+    verify(delivery: ScopedWebhookDelivery): Promise<void>
+    verify(delivery: WebhookDelivery | ScopedWebhookDelivery): void | Promise<void> {
+        return delivery.scope === undefined ? this.verifyConfigured(delivery) : this.verifyScoped(delivery)
+    }
+
+    private async verifyScoped(delivery: ScopedWebhookDelivery): Promise<void> {
+        const proof = this.proofs.get(delivery.provider)
+        if (!proof) {
+            throw new HttpSecurityError({
+                code: HttpSecurityErrorCode.WebhookProviderUnknown,
+                params: { provider: delivery.provider },
+            })
+        }
+        const proven = await proof.prove({
+            scope: delivery.scope,
+            rawBody: delivery.rawBody,
+            signature: delivery.signature,
+            timestamp: delivery.timestamp,
+        })
+        if (!proven) throw new HttpSecurityError({ code: HttpSecurityErrorCode.WebhookSignatureInvalid })
+    }
+
+    private verifyConfigured(delivery: WebhookDelivery): void {
         const provider = this.options.webhooks[delivery.provider]
         if (!provider) {
             throw new HttpSecurityError({

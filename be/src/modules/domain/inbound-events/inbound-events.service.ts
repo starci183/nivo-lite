@@ -5,9 +5,14 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InboundEventsError, InboundEventsErrorCode } from "./errors/inbound-events.error"
 import { bankDedupeKey } from "./inbound-dedupe.policy"
-import type { BankPaymentEvent, BankPaymentRecorded } from "./inbound-events.contracts"
+import type { BankPaymentEvent, BankPaymentRecorded, UnroutedMessage } from "./inbound-events.contracts"
 import type { EventIdRow } from "./persistence/inbound-events.rows"
-import { BUMP_DUPLICATE_EVENT, HOLD_EVENT_FOR_OWNER, INSERT_BANK_EVENT } from "./persistence/inbound-events.sql"
+import {
+    BUMP_DUPLICATE_EVENT,
+    HOLD_EVENT_FOR_OWNER,
+    INSERT_BANK_EVENT,
+    INSERT_UNROUTED_EVENT,
+} from "./persistence/inbound-events.sql"
 
 @Injectable()
 /** The inbound events: the only writer of public.inbound_events. A credit is one event per workspace and provider transaction id. */
@@ -41,6 +46,18 @@ export class InboundEventsService {
         ])
         if (repeated === undefined) throw new InboundEventsError({ code: InboundEventsErrorCode.Unreadable })
         return { duplicate: true, inboundEventId: repeated.id }
+    }
+
+    /** Keeps a message nobody is bound to answer visible in the inbox; the same event twice is one row. */
+    async keepUnrouted(message: UnroutedMessage, manager: EntityManager): Promise<void> {
+        await manager.query(INSERT_UNROUTED_EVENT, [
+            message.workspaceId,
+            message.channel,
+            message.sender,
+            message.body,
+            message.eventId,
+            `${message.channel}:message:${message.eventId}`,
+        ])
     }
 
     /** Holds an inbound event for the owner's check until an agent matches it; an event already past that stage is left as it is. */
