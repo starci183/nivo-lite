@@ -2,10 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { useTranslations } from "next-intl"
-import { EMAIL_PATTERN, authErrorKey, inviteOfNext } from "@/hooks/auth"
-import { writeResendConfirmation } from "@/modules/db/auth/write-resend-confirmation"
-import { writeSignIn } from "@/modules/db/auth/write-sign-in"
-import { writeSignInOAuth } from "@/modules/db/auth/write-sign-in-oauth"
+import { EMAIL_PATTERN, authErrorKey, inviteOfNext, useAuthActions } from "@/hooks/auth"
 import { navigation } from "@/modules/i18n"
 import { AUTH_ROUTES, signupPath } from "@/modules/routes"
 import { LoginFormBase } from "./component"
@@ -37,8 +34,9 @@ const initialInfo = (notice: string | undefined, reset: string, confirmed: strin
     return notice === "confirmed" ? confirmed : undefined
 }
 
-/** The sign-in card: password and Google through Server Actions, with the friendly failure copy. */
+/** The sign-in card: password and Google through the browser Auth client, with the friendly failure copy. */
 export const LoginForm = (props: LoginFormProps) => {
+    const auth = useAuthActions()
     const t = useTranslations("login")
     const a = useTranslations("auth")
     const router = navigation.useRouter()
@@ -71,11 +69,7 @@ export const LoginForm = (props: LoginFormProps) => {
         setFieldErrors(found)
         if (Object.keys(found).length > 0) return
         startPassword(async () => {
-            const input = new FormData()
-            input.set("email", email.trim())
-            input.set("password", password)
-            if (props.next !== undefined) input.set("next", props.next)
-            const outcome = await writeSignIn(input)
+            const outcome = await auth.signInWithPassword({ email: email.trim(), password, next: props.next })
             if (outcome.kind === "ok") {
                 router.push(outcome.value.path)
                 router.refresh()
@@ -87,7 +81,7 @@ export const LoginForm = (props: LoginFormProps) => {
     const google = () => {
         setFeedback({ canResend: false })
         setGooglePending(true)
-        void writeSignInOAuth(props.next).then((outcome) => {
+        void auth.startOAuth(props.next).then((outcome) => {
             if (outcome.kind === "ok") {
                 window.location.assign(outcome.value.url)
                 return
@@ -102,7 +96,7 @@ export const LoginForm = (props: LoginFormProps) => {
             return
         }
         startResend(async () => {
-            const outcome = await writeResendConfirmation({ email, next: props.next })
+            const outcome = await auth.resendConfirmation({ email, next: props.next })
             if (outcome.kind === "ok") setFeedback({ info: t("confirmSent"), canResend: false })
             else fail(outcome.code)
         })

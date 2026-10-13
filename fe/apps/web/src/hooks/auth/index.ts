@@ -11,3 +11,5 @@ export {
     strengthKey,
 } from "./auth.shared"
 export { useResendEmail } from "./useResendEmail"
+export { useAuthUser } from "./useAuthUser"
+export { useAuthActions } from "./useAuthActions"

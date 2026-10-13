@@ -25,3 +25,13 @@ export const safeNextPath = (candidate: string | null, origin: string): string =
     }
     return `${destination.pathname}${destination.search}${destination.hash}`
 }
+
+/**
+ * A same-origin destination, or undefined when none was given or it is not safe. The root path is the "no destination" value,
+ * so it also reads as undefined.
+ */
+export const safeNext = (raw: string | null | undefined, origin: string): string | undefined => {
+    if (raw === null || raw === undefined || raw === "") return undefined
+    const path = safeNextPath(raw, origin)
+    return path === "/" ? undefined : path
+}

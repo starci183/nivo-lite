@@ -22,3 +22,16 @@ export const sessionCookieOptions = {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
 } as const
+
+/** The origin of the back end api the browser calls directly (GraphQL at `/graphql`, REST beside it). */
+const apiUrl = (): string => required("NEXT_PUBLIC_API_URL", process.env.NEXT_PUBLIC_API_URL)
+/** The GraphQL endpoint of the back end api. */
+export const graphqlUrl = (): string => `${apiUrl()}/graphql`
+
+/** Transport tuning of the GraphQL client: request timeout and the retry backoff (milliseconds, attempts). */
+export const graphqlTuning = {
+    timeoutMs: 30_000,
+    retryInitialDelayMs: 300,
+    retryMaxDelayMs: 3_000,
+    retryMaxAttempts: 3,
+} as const

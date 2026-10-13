@@ -2,7 +2,7 @@ import "server-only"
 
 import { createServerDbClient } from "../server"
 import { toOutcome } from "../outcome"
-import { safeNext } from "./auth.mapper"
+import { safeNext } from "@/modules/routes"
 
 /** Where a person with no workspace goes first: they pick a plan and open one there. */
 const ONBOARDING_PATH = "/workspaces"

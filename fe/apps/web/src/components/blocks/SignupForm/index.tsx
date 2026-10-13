@@ -10,9 +10,8 @@ import {
     passwordStrength,
     strengthKey,
     useResendEmail,
+    useAuthActions,
 } from "@/hooks/auth"
-import { writeResendConfirmation } from "@/modules/db/auth/write-resend-confirmation"
-import { writeSignUp } from "@/modules/db/auth/write-sign-up"
 import { navigation } from "@/modules/i18n"
 import { loginPath } from "@/modules/routes"
 import { SignupFormBase } from "./component"
@@ -30,6 +29,7 @@ type Errors = Partial<Record<keyof Fields, string>>
 
 /** Sign-up: name, e-mail, password with a strength hint, then the "check your email" screen. */
 export const SignupForm = (props: SignupFormProps) => {
+    const auth = useAuthActions()
     const t = useTranslations("auth")
     const router = navigation.useRouter()
     const [fields, setFields] = useState<Fields>({
@@ -42,7 +42,7 @@ export const SignupForm = (props: SignupFormProps) => {
     const [failure, setFailure] = useState<string>()
     const [sentTo, setSentTo] = useState<string | null>(null)
     const [isPending, startTransition] = useTransition()
-    const resending = useResendEmail(() => writeResendConfirmation({ email: sentTo, next: props.next }), {
+    const resending = useResendEmail(() => auth.resendConfirmation({ email: sentTo, next: props.next }), {
         sentTitle: t("resentTitle"),
         sentText: t("resentText"),
         failedTitle: t("errGeneric"),
@@ -64,7 +64,7 @@ export const SignupForm = (props: SignupFormProps) => {
         setFailure(undefined)
         if (Object.keys(found).length > 0) return
         startTransition(async () => {
-            const outcome = await writeSignUp({ ...fields, next: props.next })
+            const outcome = await auth.signUp({ ...fields, next: props.next })
             if (outcome.kind !== "ok") {
                 setFailure(t(authErrorKey(outcome.code)))
                 return

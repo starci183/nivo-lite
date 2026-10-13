@@ -2,8 +2,14 @@
 
 import { useState, useTransition } from "react"
 import { useTranslations } from "next-intl"
-import { PASSWORD_MIN_LENGTH, authErrorKey, isLinkInvalid, passwordStrength, strengthKey } from "@/hooks/auth"
-import { writePasswordUpdate } from "@/modules/db/auth/write-password-update"
+import {
+    PASSWORD_MIN_LENGTH,
+    authErrorKey,
+    isLinkInvalid,
+    passwordStrength,
+    strengthKey,
+    useAuthActions,
+} from "@/hooks/auth"
 import { navigation } from "@/modules/i18n"
 import { AUTH_ROUTES, loginResetPath } from "@/modules/routes"
 import { ResetFormBase } from "./component"
@@ -15,6 +21,7 @@ type Errors = { readonly password?: string; readonly confirm?: string }
 
 /** Reset password: new password and confirmation, or a clear "link expired" state with a way to request another. */
 export const ResetForm = (props: ResetFormProps) => {
+    const auth = useAuthActions()
     const t = useTranslations("auth")
     const router = navigation.useRouter()
     const [password, setPassword] = useState("")
@@ -31,7 +38,7 @@ export const ResetForm = (props: ResetFormProps) => {
         setFailure(undefined)
         if (Object.keys(found).length > 0) return
         startTransition(async () => {
-            const outcome = await writePasswordUpdate({ password })
+            const outcome = await auth.updatePassword({ password })
             if (outcome.kind === "ok") {
                 router.push(loginResetPath())
                 return

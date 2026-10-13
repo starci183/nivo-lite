@@ -10,7 +10,7 @@ export const APP_ROUTES = {
     authCallback: "/auth/callback",
 } as const
 
-export { safeNextPath } from "./safe-next-path"
+export { safeNext, safeNextPath } from "./safe-next-path"
 export { LEADS_ROUTES, leadPath, newLeadPath } from "./leads-routes"
 export { AUTH_ROUTES, invitePath, loginPath, loginResetPath, signupPath, workspacesPath } from "./auth-routes"
 export { ADMIN_ROUTES, adminListPath, adminWorkspacePath } from "./admin-routes"

@@ -2,8 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { useTranslations } from "next-intl"
-import { EMAIL_PATTERN, authErrorKey, useResendEmail } from "@/hooks/auth"
-import { writePasswordResetRequest } from "@/modules/db/auth/write-password-reset-request"
+import { EMAIL_PATTERN, authErrorKey, useResendEmail, useAuthActions } from "@/hooks/auth"
 import { AUTH_ROUTES } from "@/modules/routes"
 import { ForgotFormBase } from "./component"
 
@@ -12,13 +11,14 @@ type ForgotFormProps = { readonly initialEmail?: string }
 
 /** Forgot password: e-mail in, a generic "if the account exists" message out (no account enumeration). */
 export const ForgotForm = (props: ForgotFormProps) => {
+    const auth = useAuthActions()
     const t = useTranslations("auth")
     const [email, setEmail] = useState(props.initialEmail ?? "")
     const [error, setError] = useState<string>()
     const [failure, setFailure] = useState<string>()
     const [sentTo, setSentTo] = useState<string | null>(null)
     const [isPending, startTransition] = useTransition()
-    const resending = useResendEmail(() => writePasswordResetRequest({ email: sentTo }), {
+    const resending = useResendEmail(() => auth.requestPasswordReset({ email: sentTo }), {
         sentTitle: t("resentTitle"),
         sentText: t("resentText"),
         failedTitle: t("errGeneric"),
@@ -35,7 +35,7 @@ export const ForgotForm = (props: ForgotFormProps) => {
         }
         setError(undefined)
         startTransition(async () => {
-            const outcome = await writePasswordResetRequest({ email })
+            const outcome = await auth.requestPasswordReset({ email })
             if (outcome.kind === "ok") {
                 setSentTo(email.trim().toLowerCase())
                 resending.arm()
