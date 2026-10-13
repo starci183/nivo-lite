@@ -1,13 +1,13 @@
 "use client"
 
-import { RouteError } from "@/components/blocks/RouteError"
-import { useT } from "@/i18n/client"
-import { inbox } from "@/i18n/dict/inbox"
+import { InboxErrorPage } from "@/features/pages/InboxErrorPage"
 
-/** STATE-8 case-4: the Inbox keeps its trail and heading when its data fails, with one Alert and a retry. */
-const InboxError = ({ reset }: { readonly reset: () => void }) => {
-  const t = useT(inbox)
-  return <RouteError crumbs={[{ id: "home", label: t("crumbHome"), href: "/dashboard" }, { id: "inbox", label: t("title") }]} title={t("title")} message={t("loadFailBody")} onRetry={reset} />
+/** What Next gives the error boundary: the retry. */
+interface ErrorBoundaryProps {
+    readonly reset: () => void
 }
 
-export default InboxError
+/** The Inbox failure boundary. */
+const ErrorBoundary = (props: ErrorBoundaryProps) => <InboxErrorPage onRetry={props.reset} />
+
+export default ErrorBoundary

@@ -1,0 +1,103 @@
+import { Badge, Button, EmptyNotice, SectionHeader, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
+import {
+    FEED_BADGES_CLASS,
+    FEED_FOOT_CLASS,
+    FEED_HEAD_CLASS,
+    FEED_ITEM_CLASS,
+    FEED_META_CLASS,
+    FEED_SECTION_CLASS,
+    FEED_TITLE_CLASS,
+} from "./classNames"
+
+/** One received input with every word already in the reader's language. */
+export interface InboxFeedRow {
+    readonly id: string
+    readonly source: string
+    readonly kind: string
+    readonly ago: string
+    readonly origin: { readonly label: string; readonly tone: "warning" | "success" }
+    readonly status: { readonly label: string; readonly tone: "neutral" | "success" | "warning" | "danger" }
+    readonly body: string
+    /** Sender, contact, amount, reference and event lines. */
+    readonly meta: ReadonlyArray<{ readonly key: string; readonly text: string; readonly strong: boolean }>
+    readonly duplicates: string | null
+    readonly lead: { readonly href: string; readonly label: string } | null
+    readonly office: { readonly href: string; readonly label: string } | null
+}
+
+/** Props for {@link InboxFeedBase}. */
+export interface InboxFeedBaseProps {
+    readonly props: {
+        readonly ariaLabel: string
+        readonly title: string
+        readonly description: string
+        readonly refreshLabel: string
+        readonly emptyTitle: string
+        readonly emptyBody: string
+        readonly isLoading: boolean
+        readonly rows: ReadonlyArray<InboxFeedRow>
+    }
+    readonly on: { readonly refresh: () => void }
+}
+
+/** Feed of received inputs, newest first. Every row says whether it is live or simulated. */
+export const InboxFeedBase = ({ props, on }: InboxFeedBaseProps) => (
+    <section className={FEED_SECTION_CLASS} aria-label={props.ariaLabel}>
+        <SectionHeader
+            level={2}
+            title={props.title}
+            description={props.description}
+            action={
+                <Button variant="secondary" isSkeleton={props.isLoading} onPress={on.refresh}>
+                    {props.refreshLabel}
+                </Button>
+            }
+        />
+        <SurfaceListCard
+            ariaLabel={props.title}
+            isLoading={props.isLoading}
+            empty={<EmptyNotice message={props.emptyTitle} description={props.emptyBody} />}
+        >
+            {props.isLoading || props.rows.length === 0
+                ? undefined
+                : props.rows.map((row) => (
+                      <li key={row.id} className={FEED_ITEM_CLASS}>
+                          <div className={FEED_HEAD_CLASS}>
+                              <div className={FEED_TITLE_CLASS}>
+                                  <Text weight="semibold">{row.source}</Text>
+                                  <Text tone="muted" size="sm">
+                                      {row.kind}
+                                  </Text>
+                                  <Text tone="muted" size="sm">
+                                      {row.ago}
+                                  </Text>
+                              </div>
+                              <div className={FEED_BADGES_CLASS}>
+                                  <Badge tone={row.origin.tone}>{row.origin.label}</Badge>
+                                  <Badge tone={row.status.tone}>{row.status.label}</Badge>
+                              </div>
+                          </div>
+                          {row.body === "" ? null : <Text overflow="clamp-2">{row.body}</Text>}
+                          <div className={FEED_META_CLASS}>
+                              {row.meta.map((line) => (
+                                  <Text key={line.key} size="sm" tone={line.strong ? undefined : "muted"} weight={line.strong ? "medium" : undefined}>
+                                      {line.text}
+                                  </Text>
+                              ))}
+                          </div>
+                          {row.duplicates === null && row.lead === null && row.office === null ? null : (
+                              <div className={FEED_FOOT_CLASS}>
+                                  {row.duplicates === null ? null : (
+                                      <Text size="sm" tone="muted">
+                                          {row.duplicates}
+                                      </Text>
+                                  )}
+                                  {row.lead === null ? null : <TextAction href={row.lead.href}>{row.lead.label}</TextAction>}
+                                  {row.office === null ? null : <TextAction href={row.office.href}>{row.office.label}</TextAction>}
+                              </div>
+                          )}
+                      </li>
+                  ))}
+        </SurfaceListCard>
+    </section>
+)

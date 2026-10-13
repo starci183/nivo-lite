@@ -1,0 +1,47 @@
+import type { MessageBundle } from "@modules/platform/i18n"
+
+/** Display text of the loyalty codes and the notes written into the ledger, Vietnamese and English. */
+export const LOYALTY_MESSAGES: MessageBundle = {
+    vi: {
+        "errors.LOYALTY_MEMBER_NOT_FOUND": "Không tìm thấy khách này trong chương trình.",
+        "errors.LOYALTY_REWARD_NOT_FOUND": "Không tìm thấy phần quà này trong danh mục.",
+        "errors.LOYALTY_NOT_REDEEMABLE": "Khách chưa đổi được phần quà này ({{reason}}).",
+        "errors.LOYALTY_POINTS_REQUIRED": "Số điểm điều chỉnh phải khác 0.",
+        "errors.LOYALTY_REASON_REQUIRED": "Hãy ghi lý do điều chỉnh.",
+        "errors.LOYALTY_PHONE_INVALID": "Số điện thoại không phải số Việt Nam.",
+        "errors.LOYALTY_AMOUNT_INVALID": "Số tiền phải lớn hơn 0.",
+        "errors.LOYALTY_CONTACT_REQUIRED": "Cần số điện thoại hoặc mã khách.",
+        "errors.LOYALTY_CUSTOMER_NOT_CREATED": "Không tạo được khách để cộng điểm.",
+        "errors.LOYALTY_PROGRAM_OFF": "Agent Khách hàng thân thiết chưa được cài hoặc đang tắt trong workspace này.",
+        "errors.LOYALTY_PAGE_NOT_FOUND": "Trang này không còn hoạt động.",
+        "loyalty.earn.rate": "{{rate}} điểm mỗi 1.000 ₫",
+        "loyalty.earn.rateCategory": '{{rate}} điểm mỗi 1.000 ₫ (nhóm "{{label}}")',
+        "loyalty.earn.tier": "hạng {{tier}} nhân {{multiplier}}",
+        "loyalty.earn.visit": "+{{points}} điểm mỗi lượt",
+        "loyalty.redeem.evidence": 'Đổi "{{name}}" (mã {{code}})',
+        "loyalty.customer.defaultName": "Khách {{last4}}",
+        "loyalty.otp.message":
+            "Mã xác nhận xem điểm thưởng tại {{shop}} của bạn là {{code}}. Mã có hiệu lực trong 10 phút, không chia sẻ mã này cho ai.",
+    },
+    en: {
+        "errors.LOYALTY_MEMBER_NOT_FOUND": "This customer is not in the programme.",
+        "errors.LOYALTY_REWARD_NOT_FOUND": "This reward is not in the catalogue.",
+        "errors.LOYALTY_NOT_REDEEMABLE": "The customer cannot redeem this reward yet ({{reason}}).",
+        "errors.LOYALTY_POINTS_REQUIRED": "The adjustment must be more than zero points.",
+        "errors.LOYALTY_REASON_REQUIRED": "Write the reason for the adjustment.",
+        "errors.LOYALTY_PHONE_INVALID": "The phone is not a Vietnamese number.",
+        "errors.LOYALTY_AMOUNT_INVALID": "The amount must be greater than zero.",
+        "errors.LOYALTY_CONTACT_REQUIRED": "A phone or a customer id is needed.",
+        "errors.LOYALTY_CUSTOMER_NOT_CREATED": "No customer could be made for the points.",
+        "errors.LOYALTY_PROGRAM_OFF": "The loyalty agent is not installed or is off in this workspace.",
+        "errors.LOYALTY_PAGE_NOT_FOUND": "This page is no longer available.",
+        "loyalty.earn.rate": "{{rate}} points per 1,000 VND",
+        "loyalty.earn.rateCategory": '{{rate}} points per 1,000 VND (group "{{label}}")',
+        "loyalty.earn.tier": "tier {{tier}} times {{multiplier}}",
+        "loyalty.earn.visit": "+{{points}} points per visit",
+        "loyalty.redeem.evidence": 'Redeemed "{{name}}" (code {{code}})',
+        "loyalty.customer.defaultName": "Customer {{last4}}",
+        "loyalty.otp.message":
+            "Your code to view your reward points at {{shop}} is {{code}}. It is valid for 10 minutes; do not share it with anyone.",
+    },
+}
