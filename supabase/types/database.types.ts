@@ -1,4 +1,4 @@
-// migrations-sha256: 224a40a4abdd7b14b056ce1084959031f4c94cd7af320187d304e167f84a34bd
+// migrations-sha256: ceae3064fe87cb043fb834a02cb2cfb3ad3916a0c2ad7691f7389be870b2843e
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -678,13 +678,13 @@ isOneToOne: false
                   ]
                 },"bookings": {
                   Row: {
-                    "block_end_at": string,"cancel_fee_vnd": number,"cancel_reason": string | null,"cancelled_at": string | null,"checked_in_at": string | null,"conflict_note": string,"conversation_id": string | null,"created_at": string,"customer_email": string | null,"customer_name": string,"customer_phone": string | null,"deposit_status": string,"deposit_vnd": number,"done_at": string | null,"end_at": string,"holds_slot": boolean,"id": string,"idempotency_key": string | null,"installation_id": string | null,"lead_id": string | null,"note": string,"order_id": string | null,"origin": string,"party_size": number,"price_vnd": number | null,"reschedule_count": number,"rescheduled_from": string | null,"resource_id": string,"service_id": string,"source_channel": string,"start_at": string,"status": string,"updated_at": string,"work_item_id": string | null,"workspace_id": string
+                    "block_end_at": string,"cancel_fee_vnd": number,"cancel_reason": string | null,"cancelled_at": string | null,"checked_in_at": string | null,"conflict_note": string,"conversation_id": string | null,"created_at": string,"customer_email": string | null,"customer_name": string,"customer_phone": string | null,"deposit_status": string,"deposit_vnd": number,"done_at": string | null,"effects": Json,"end_at": string,"holds_slot": boolean,"id": string,"idempotency_key": string | null,"installation_id": string | null,"lead_id": string | null,"note": string,"order_id": string | null,"origin": string,"party_size": number,"price_vnd": number | null,"reschedule_count": number,"rescheduled_from": string | null,"resource_id": string,"service_id": string,"source_channel": string,"start_at": string,"status": string,"updated_at": string,"work_item_id": string | null,"workspace_id": string
                   }
                   Insert: {
-                    "block_end_at": string,"cancel_fee_vnd"?: number,"cancel_reason"?: string | null,"cancelled_at"?: string | null,"checked_in_at"?: string | null,"conflict_note"?: string,"conversation_id"?: string | null,"created_at"?: string,"customer_email"?: string | null,"customer_name"?: string,"customer_phone"?: string | null,"deposit_status"?: string,"deposit_vnd"?: number,"done_at"?: string | null,"end_at": string,"holds_slot"?: boolean,"id"?: string,"idempotency_key"?: string | null,"installation_id"?: string | null,"lead_id"?: string | null,"note"?: string,"order_id"?: string | null,"origin"?: string,"party_size"?: number,"price_vnd"?: number | null,"reschedule_count"?: number,"rescheduled_from"?: string | null,"resource_id": string,"service_id": string,"source_channel"?: string,"start_at": string,"status"?: string,"updated_at"?: string,"work_item_id"?: string | null,"workspace_id": string
+                    "block_end_at": string,"cancel_fee_vnd"?: number,"cancel_reason"?: string | null,"cancelled_at"?: string | null,"checked_in_at"?: string | null,"conflict_note"?: string,"conversation_id"?: string | null,"created_at"?: string,"customer_email"?: string | null,"customer_name"?: string,"customer_phone"?: string | null,"deposit_status"?: string,"deposit_vnd"?: number,"done_at"?: string | null,"effects"?: Json,"end_at": string,"holds_slot"?: boolean,"id"?: string,"idempotency_key"?: string | null,"installation_id"?: string | null,"lead_id"?: string | null,"note"?: string,"order_id"?: string | null,"origin"?: string,"party_size"?: number,"price_vnd"?: number | null,"reschedule_count"?: number,"rescheduled_from"?: string | null,"resource_id": string,"service_id": string,"source_channel"?: string,"start_at": string,"status"?: string,"updated_at"?: string,"work_item_id"?: string | null,"workspace_id": string
                   }
                   Update: {
-                    "block_end_at"?: string,"cancel_fee_vnd"?: number,"cancel_reason"?: string | null,"cancelled_at"?: string | null,"checked_in_at"?: string | null,"conflict_note"?: string,"conversation_id"?: string | null,"created_at"?: string,"customer_email"?: string | null,"customer_name"?: string,"customer_phone"?: string | null,"deposit_status"?: string,"deposit_vnd"?: number,"done_at"?: string | null,"end_at"?: string,"holds_slot"?: boolean,"id"?: string,"idempotency_key"?: string | null,"installation_id"?: string | null,"lead_id"?: string | null,"note"?: string,"order_id"?: string | null,"origin"?: string,"party_size"?: number,"price_vnd"?: number | null,"reschedule_count"?: number,"rescheduled_from"?: string | null,"resource_id"?: string,"service_id"?: string,"source_channel"?: string,"start_at"?: string,"status"?: string,"updated_at"?: string,"work_item_id"?: string | null,"workspace_id"?: string
+                    "block_end_at"?: string,"cancel_fee_vnd"?: number,"cancel_reason"?: string | null,"cancelled_at"?: string | null,"checked_in_at"?: string | null,"conflict_note"?: string,"conversation_id"?: string | null,"created_at"?: string,"customer_email"?: string | null,"customer_name"?: string,"customer_phone"?: string | null,"deposit_status"?: string,"deposit_vnd"?: number,"done_at"?: string | null,"effects"?: Json,"end_at"?: string,"holds_slot"?: boolean,"id"?: string,"idempotency_key"?: string | null,"installation_id"?: string | null,"lead_id"?: string | null,"note"?: string,"order_id"?: string | null,"origin"?: string,"party_size"?: number,"price_vnd"?: number | null,"reschedule_count"?: number,"rescheduled_from"?: string | null,"resource_id"?: string,"service_id"?: string,"source_channel"?: string,"start_at"?: string,"status"?: string,"updated_at"?: string,"work_item_id"?: string | null,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -3637,6 +3637,16 @@ isOneToOne: false
 "automations_data":
 { Args: { "ws": string }; Returns: Json
                            },
+"booking_check_slot":
+{ Args: { "p_lead_min"?: number,"p_max_days"?: number,"p_party": number,"p_service": string,"p_start": string,"p_ws": string }; Returns: {
+              "ok": boolean,"resource": string,"why": string
+            }[]
+                           },
+"booking_free_slots":
+{ Args: { "p_exclude"?: string,"p_from": string,"p_lead_min"?: number,"p_max_days"?: number,"p_party": number,"p_resource"?: string,"p_service": string,"p_to": string,"p_ws": string }; Returns: {
+              "s_block_end": string,"s_end": string,"s_ratio": number,"s_resource": string,"s_start": string
+            }[]
+                           },
 "booking_peak_load":
 { Args: { "p_block_end": string,"p_exclude": string,"p_resource": string,"p_start": string }; Returns: number
                            },
@@ -3649,11 +3659,22 @@ isOneToOne: false
 "booking_reserve":
 { Args: { "p": Json,"p_force"?: boolean }; Returns: string
                            },
+"booking_windows":
+{ Args: { "p_date": string,"p_resource": string,"p_tz": string,"p_ws": string }; Returns: {
+              "w_end": string,"w_start": string
+            }[]
+                           },
 "content_tick":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
 "dashboard_data":
 { Args: { "founding_from": string,"founding_to": string,"since7": string,"ws": string }; Returns: Json
+                           },
+"desk_booking_add":
+{ Args: { "p_date": string,"p_force"?: boolean,"p_name": string,"p_note": string,"p_party": number,"p_phone": string,"p_resource"?: string,"p_service": string,"p_time": string,"p_workspace": string }; Returns: Json
+                           },
+"desk_booking_move":
+{ Args: { "p_booking": string,"p_force"?: boolean,"p_resource"?: string,"p_start": string,"p_workspace": string }; Returns: Json
                            },
 "display_name_of":
 { Args: { "uid": string }; Returns: string
@@ -3850,6 +3871,15 @@ isOneToOne: false
                            },
 "promo_state":
 { Args: { "founding_from": string,"founding_to": string,"ws": string }; Returns: Json
+                           },
+"public_booking_page":
+{ Args: { "p_slug": string }; Returns: Json
+                           },
+"public_booking_request":
+{ Args: { "p_email": string,"p_name": string,"p_note": string,"p_party": number,"p_phone": string,"p_service": string,"p_slug": string,"p_start": string,"p_token": string,"p_visitor": string,"p_website": string }; Returns: Json
+                           },
+"public_booking_times":
+{ Args: { "p_date": string,"p_party": number,"p_service": string,"p_slug": string,"p_visitor": string }; Returns: Json
                            },
 "resolve_installation":
 { Args: { "p_chain"?: string,"p_conversation"?: string,"p_lead"?: string,"p_module": string,"p_ws": string }; Returns: {
