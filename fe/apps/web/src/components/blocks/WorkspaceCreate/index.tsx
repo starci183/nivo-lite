@@ -1,35 +1,32 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useState, useTransition } from "react"
-import { WORKSPACE_NAME_MAX, WORKSPACE_NAME_MIN, useCreateWorkspace, workspaceErrorKey } from "@/hooks/workspaces"
-import { writeSwitchWorkspace } from "@/modules/db/shell/write-switch-workspace"
+import { useState } from "react"
+import { useWorkspaceCreateForm } from "@/hooks/rhf"
+import { useActiveWorkspace, useCreateWorkspace } from "@/hooks/workspaces"
 import { navigation } from "@/modules/i18n"
 import { APP_ROUTES, AUTH_ROUTES } from "@/modules/routes"
 import { WorkspaceCreateBase } from "./component"
 
-/** The connected create form: makes a free workspace through the back end api, makes it the current one and lands on the Office. */
+/** The connected create form: makes a free workspace through the back end GraphQL API (validated by react-hook-form + zod, outcome toasted), makes it the active one and lands on the Office. */
 export const WorkspaceCreate = () => {
     const t = useTranslations("onboarding")
     const router = navigation.useRouter()
-    const create = useCreateWorkspace()
-    const [name, setName] = useState("")
-    const [error, setError] = useState<string>()
-    const [isPending, startTransition] = useTransition()
+    const { create, isCreating } = useCreateWorkspace()
+    const { select } = useActiveWorkspace()
+    const form = useWorkspaceCreateForm()
+    const [isNavigating, setNavigating] = useState(false)
 
-    const submit = () => {
-        setError(undefined)
-        const length = name.trim().length
-        if (length < WORKSPACE_NAME_MIN || length > WORKSPACE_NAME_MAX) return setError(t("errName"))
-        startTransition(async () => {
-            const created = await create(name)
-            if (created.kind !== "ok") return setError(t(workspaceErrorKey(created.code)))
-            await writeSwitchWorkspace(created.value.id)
-            router.push(APP_ROUTES.chat)
-            router.refresh()
-        })
-    }
+    const submit = form.handleSubmit(async (values) => {
+        const id = await create(values.name)
+        if (id === undefined) return
+        setNavigating(true)
+        select(id)
+        router.push(APP_ROUTES.chat)
+        router.refresh()
+    })
 
+    const isPending = isCreating || isNavigating
     return (
         <WorkspaceCreateBase
             props={{
@@ -40,11 +37,14 @@ export const WorkspaceCreate = () => {
                 cancelLabel: t("cancel"),
                 cancelHref: AUTH_ROUTES.workspaces,
                 failTitle: t("errGeneric"),
-                name,
+                name: form.watch("name"),
                 isPending,
-                error,
+                error: form.formState.errors.name?.message,
             }}
-            on={{ setName, submit }}
+            on={{
+                setName: (value) => form.setValue("name", value, { shouldValidate: form.formState.isSubmitted }),
+                submit: () => void submit(),
+            }}
         />
     )
 }

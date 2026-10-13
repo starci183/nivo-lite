@@ -5229,6 +5229,8 @@
     "cmdNeedOther": "{field}"
   },
   "onboarding": {
+    "created": "Đã tạo workspace.",
+    "loadFailed": "Không tải được danh sách workspace",
     "pageTitle": "Thiết lập workspace của bạn",
     "newTitle": "Tạo workspace mới",
     "cancel": "Hủy",
@@ -6120,6 +6122,14 @@
     "errNotAllowed": "Chỉ chủ sở hữu mới đổi được quyền của chủ sở hữu.",
     "errNotFound": "Thành viên hoặc lời mời này không còn tồn tại.",
     "errGeneric": "Có lỗi xảy ra. Hãy thử lại."
+  },
+  "toast": {
+    "successTitle": "Xong",
+    "errorTitle": "Đã xảy ra lỗi",
+    "unauthorizedTitle": "Chưa đăng nhập",
+    "unauthorizedDescription": "Phiên đăng nhập đã hết. Hãy đăng nhập lại để tiếp tục.",
+    "defaultSuccess": "Đã lưu.",
+    "defaultError": "Không thể hoàn tất yêu cầu. Hãy thử lại."
   },
   "video": {
     "eyebrow": "Tạo video",

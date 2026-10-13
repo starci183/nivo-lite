@@ -1,14 +1,15 @@
 "use client"
 
-import { I18nProvider, RouterProvider } from "@heroui/react"
+import { I18nProvider, RouterProvider, ToastProvider } from "@heroui/react"
 import { GrammarRoot } from "@starci/grammar/common"
 import { NextIntlClientProvider } from "next-intl"
 import { ThemeProvider, useTheme } from "next-themes"
-import { useEffect, useSyncExternalStore } from "react"
+import { useSyncExternalStore } from "react"
 import type { ReactNode } from "react"
 import { intlLocale, toLocale } from "@/i18n/core"
-import { subscribeToAuthRefresh } from "@/modules/db/browser"
+import { SideEffectsLayout } from "@/features/layouts/SideEffectsLayout"
 import { navigation } from "@/modules/i18n"
+import { ReduxProvider } from "@/redux/ReduxProvider"
 
 /** What the provider stack takes from the locale layout. */
 type ProvidersProps = {
@@ -22,13 +23,6 @@ type ProvidersProps = {
 type LayerProps = { readonly children: ReactNode }
 
 const subscribeNever = () => () => undefined
-
-/** Re-renders the server tree whenever the browser's Supabase session changes (sign-in, sign-out, token refresh). */
-const AuthRefresh = (props: LayerProps) => {
-    const router = navigation.useRouter()
-    useEffect(() => subscribeToAuthRefresh(() => router.refresh()), [router])
-    return props.children
-}
 
 /**
  * Keeps the grammar root on the resolved theme: light until after hydration so server and client agree. The mode class sits on the
@@ -58,14 +52,18 @@ const GrammarRouting = (props: LayerProps) => {
 /** The copy, theme, React Aria and auth-refresh contexts above every route. */
 export const Providers = (props: ProvidersProps) => (
     <NextIntlClientProvider locale={props.locale} messages={props.messages} timeZone={props.timeZone}>
-        <AuthRefresh>
+        <ReduxProvider>
             <I18nProvider locale={intlLocale(toLocale(props.locale))}>
                 <GrammarRouting>
                     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-                        <ThemedRoot>{props.children}</ThemedRoot>
+                        <ThemedRoot>
+                            {props.children}
+                            <ToastProvider />
+                            <SideEffectsLayout />
+                        </ThemedRoot>
                     </ThemeProvider>
                 </GrammarRouting>
             </I18nProvider>
-        </AuthRefresh>
+        </ReduxProvider>
     </NextIntlClientProvider>
 )

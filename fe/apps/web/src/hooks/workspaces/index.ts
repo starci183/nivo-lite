@@ -6,10 +6,10 @@ export {
     canBillWorkspace,
     canOpenWorkspace,
     inviteTokenOf,
-    workspaceErrorKey,
-    workspaceRoleOf,
-    workspaceStateOf,
 } from "./workspaces.shared"
-export type { WorkspaceCardView, WorkspaceState } from "./workspaces.shared"
+export type { WorkspaceState } from "./workspaces.shared"
 export { useCreateWorkspace } from "./useCreateWorkspace"
 export { useOpenWorkspace } from "./useOpenWorkspace"
+export { useActiveWorkspace } from "./useActiveWorkspace"
+export { useWorkspaceCards } from "./useWorkspaceCards"
+export type { WorkspacesStatus } from "./useWorkspaceCards"

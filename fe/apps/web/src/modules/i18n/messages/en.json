@@ -5229,6 +5229,8 @@
     "cmdNeedOther": "the {field}"
   },
   "onboarding": {
+    "created": "Workspace created.",
+    "loadFailed": "Your workspaces could not be loaded",
     "pageTitle": "Set up your workspace",
     "newTitle": "Create a new workspace",
     "cancel": "Cancel",
@@ -6120,6 +6122,14 @@
     "errNotAllowed": "Only an owner can change an owner.",
     "errNotFound": "That member or invitation no longer exists.",
     "errGeneric": "Something went wrong. Please try again."
+  },
+  "toast": {
+    "successTitle": "Done",
+    "errorTitle": "Something went wrong",
+    "unauthorizedTitle": "Not signed in",
+    "unauthorizedDescription": "Your session has ended. Sign in again to continue.",
+    "defaultSuccess": "Saved.",
+    "defaultError": "The request could not be completed. Try again."
   },
   "video": {
     "eyebrow": "Video maker",

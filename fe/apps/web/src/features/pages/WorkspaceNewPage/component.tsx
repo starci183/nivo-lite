@@ -10,7 +10,6 @@ import { STACK_CLASS_NAME } from "./classNames"
 /** Copy and values the new-workspace page supplies. */
 export interface WorkspaceNewPageBaseProps {
     readonly props: {
-        readonly email: string
         readonly title: string
         readonly description: string
     }
@@ -23,7 +22,7 @@ export const WorkspaceNewPageBase = (props: WorkspaceNewPageBaseProps) => (
         mainLabel={props.props.title}
         logo={<BrandLogo variant="full" height={44} />}
         localeSwitch={<LocaleSwitch />}
-        account={<WorkspacesAccount email={props.props.email} hasWorkspace={false} />}
+        account={<WorkspacesAccount />}
     >
         <div className={STACK_CLASS_NAME}>
             <SectionHeader level={1} title={props.props.title} description={props.props.description} />
