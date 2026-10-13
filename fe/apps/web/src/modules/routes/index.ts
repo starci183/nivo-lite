@@ -9,3 +9,4 @@ export const APP_ROUTES = {
 } as const
 
 export { safeNextPath } from "./safe-next-path"
+export { CONSOLE_ROUTES, agentChatHref, leadHref, responsibilitiesHref } from "./console-routes"
