@@ -1,11 +1,9 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useState, useTransition } from "react"
-import { useGuideSpotlight } from "@/hooks/guide"
-import { askGuide } from "@/lib/guide/actions"
-import { pageAt } from "@/lib/guide/sitemap"
-import type { GuideReply, GuideTurn } from "@/lib/guide/types"
+import { useState } from "react"
+import { useGuideConversation, useGuideSpotlight } from "@/hooks/guide"
+import { pageAt } from "@/modules/guide"
 import { navigation } from "@/modules/i18n"
 import { GuideBubbleBase } from "./component"
 
@@ -14,18 +12,7 @@ interface GuideBubbleProps {
     readonly isManager: boolean
 }
 
-/** One line of the conversation: the member question or the guide reply. */
-type GuideMessage =
-    | { readonly id: number; readonly role: "user"; readonly text: string }
-    | { readonly id: number; readonly role: "guide"; readonly reply: GuideReply }
-
 const PHONE_WIDTH = 640
-
-/** The turns the model sees, from the conversation so far. */
-const historyOf = (messages: ReadonlyArray<GuideMessage>): Array<GuideTurn> =>
-    messages.map((message) =>
-        message.role === "user" ? { role: "user", text: message.text } : { role: "guide", text: message.reply.answer },
-    )
 
 /** The guide: the conversation lives here, the drawing in the pure half. The guide shows the way only; it never acts for the user. */
 export const GuideBubble = (props: GuideBubbleProps) => {
@@ -35,27 +22,14 @@ export const GuideBubble = (props: GuideBubbleProps) => {
     const pathname = navigation.usePathname()
     const spotlight = useGuideSpotlight(pathname)
     const [isOpen, setIsOpen] = useState(false)
-    const [messages, setMessages] = useState<ReadonlyArray<GuideMessage>>([])
+    const { messages, isAsking, ask, restart } = useGuideConversation(props.isManager)
     const [question, setQuestion] = useState("")
-    const [isPending, startTransition] = useTransition()
     const here = pageAt(pathname)
 
     const send = (text: string) => {
-        const asked = text.trim()
-        if (asked === "" || isPending) return
-        const history = historyOf(messages)
-        const id = Date.now()
-        setMessages((current) => [...current, { id, role: "user", text: asked }])
+        if (text.trim() === "" || isAsking) return
         setQuestion("")
-        startTransition(async () => {
-            const reply = await askGuide({ question: asked, path: pathname, history }).catch((): GuideReply => ({
-                answer: t("failed"),
-                steps: [],
-                links: [],
-                source: "busy",
-            }))
-            setMessages((current) => [...current, { id: id + 1, role: "guide", reply }])
-        })
+        void ask(text, pathname)
     }
     const go = (messageId: number, linkId: string) => {
         const message = messages.find((entry) => entry.id === messageId)
@@ -81,7 +55,7 @@ export const GuideBubble = (props: GuideBubbleProps) => {
                 greeting: t("greeting"),
                 stepsLabel: t("steps"),
                 thinking: t("thinking"),
-                isThinking: isPending,
+                isThinking: isAsking,
                 messages: messages.map((message) =>
                     message.role === "user"
                         ? { id: message.id, isUser: true, text: message.text, steps: [], links: [], note: null }
@@ -107,7 +81,7 @@ export const GuideBubble = (props: GuideBubbleProps) => {
                 send: () => send(question),
                 ask: send,
                 go,
-                restart: () => setMessages([]),
+                restart,
             }}
         />
     )
