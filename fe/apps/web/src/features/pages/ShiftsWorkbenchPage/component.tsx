@@ -30,27 +30,25 @@ export interface ShiftsWorkbenchPageBaseProps {
             readonly quick: string
             readonly mine: string
         }
-        readonly terms: ReadonlyArray<string>
     }
 }
 
 /**
  * Draws the Shifts workbench: the agent dashboard frame around the week, requests, setup, quick import and my-schedule tabs. Every
- * tab block reads its own data; the ribbon shows the terms here and the real figures in the connected strip at the top of the first tab.
+ * tab block reads its own data; the connected figures block fills the frame ribbon.
  */
 export const ShiftsWorkbenchPageBase = (props: ShiftsWorkbenchPageBaseProps) => (
     <AgentDashboardFrame
         module="shifts"
         installationId={props.props.installationId}
         initialTab={props.props.initialTab}
-        figures={props.props.terms.map((term) => ({ id: term, term, description: "-" }))}
+        ribbon={<ShiftsFigures />}
         tabs={[
             {
                 id: "week",
                 label: props.props.tabs.week,
                 content: (
                     <div className={PANEL_CLASS_NAME}>
-                        <ShiftsFigures />
                         <ShiftsWeekBar />
                         <ShiftsWeekStats />
                         <ShiftsCoverage />

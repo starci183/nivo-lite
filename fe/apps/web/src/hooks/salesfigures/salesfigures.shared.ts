@@ -1,8 +1,6 @@
 import type { DescriptionListStatItem } from "@starci/grammar/common"
 import { SOURCE_KEYS } from "@/hooks/sales"
-import { workbenchHref } from "@/lib/agent-dashboard-shared"
-import type { AgentDashboardData, DashboardItem } from "@/lib/agent-dashboard-shared"
-import type { SalesConversion, SalesDecision, SalesMetrics } from "@/modules/types"
+import type { SalesConversion, SalesMetrics } from "@/modules/types"
 
 /** The won share as a whole percent text. */
 const percentText = (won: number, leads: number): string => `${Math.round((won / Math.max(1, leads)) * 100)}%`
@@ -58,26 +56,3 @@ export const salesFiguresOf = (metrics: SalesMetrics, words: SalesWords): Readon
         },
     ]
 }
-
-const MAX_WAITING_ROWS = 5
-const TITLE_DRAFT_CHARS = 120
-
-const rowOf = (decision: SalesDecision): DashboardItem => ({
-    id: decision.id,
-    title: decision.summary || decision.draft.slice(0, TITLE_DRAFT_CHARS) || decision.customer,
-    description: decision.customer,
-    at: decision.createdAt,
-    href: workbenchHref("sales", { tab: "decisions", focus: decision.id }),
-})
-
-/**
- * The waiting region of Sales is the Decisions list itself (work items and legacy follow-up approvals), so the frame region and the
- * Decisions tab always agree.
- */
-export const withSalesWaiting = (
-    dashboard: AgentDashboardData,
-    decisions: ReadonlyArray<SalesDecision>,
-): AgentDashboardData => ({
-    ...dashboard,
-    waiting: { ok: true, data: { total: decisions.length, items: decisions.slice(0, MAX_WAITING_ROWS).map(rowOf) } },
-})

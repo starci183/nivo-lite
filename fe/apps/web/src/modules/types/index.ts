@@ -2,14 +2,12 @@ export type {
     AgentRecord,
     EventRecord,
     ExecutionRecord,
-    DraftStatus,
     LeadJourney,
     LeadIcon,
     LeadListItem,
     LeadPrimaryAction,
     LeadRecord,
     LeadStageId,
-    OwnerKind,
     ResponsibilityRecord,
     StepStatus,
 } from "./leads"
@@ -44,17 +42,10 @@ export type {
 export type {
     BookingAction,
     BookingBoard,
-    BookingFiguresView,
     BookingHoursView,
-    BookingResourceView,
-    BookingServiceView,
-    BookingSettingsView,
-    BookingStatsView,
     BookingView,
-    BookingWaitView,
     PublicBookingAnswer,
     PublicBookingPage,
-    PublicBookingService,
 } from "./booking"
 export type { ConsoleIconName, ConsoleNavItem, ConsolePending, ConsoleWorkspace } from "./console"
 export type {
@@ -116,12 +107,9 @@ export type {
     InventorySay,
     InventoryTemplateChoice,
     InventoryWorkbenchData,
-    ItemUnit,
     ItemView,
     LocationView,
-    MovementView,
     PendingView,
-    PoLineView,
     PoStatus,
     PoView,
     RecipeView,
@@ -143,7 +131,6 @@ export type {
     RecipeInput,
     SavedItem,
     SendItem,
-    StarterInput,
     StarterItem,
     StockTakeItem,
     SupplierInput,
@@ -191,7 +178,6 @@ export type { DeciderKind, DecisionKind, DecisionOutcome, DecisionRecord, GateRe
 export type {
     AttentionKind,
     AttentionRow,
-    AutoActivity,
     SalesContract,
     SalesContractStatus,
     HandoffRow,
@@ -237,15 +223,6 @@ export type {
     IdeaDecision,
     DocumentVisibility,
 } from "./knowledge"
-export type {
-    AgentDashboardView,
-    DashboardConnection,
-    DashboardRow,
-    DashboardDone,
-    DashboardKnowledge,
-    DashboardRegion,
-    DashboardWaiting,
-} from "./agent-dashboard"
 export type {
     ShiftsAvailRowView,
     ShiftsAvailView,
@@ -296,7 +273,6 @@ export type {
 
 export type { SetupWriteDecided, SetupWriteInstance, SetupWriteProposal, SetupWriteWords } from "./setup-write"
 export type {
-    DbColumnInfo,
     DbEngine,
     DbEntity,
     DbPreviewRows,
@@ -305,18 +281,10 @@ export type {
     DbTableMapping,
     DbTarget,
 } from "./database-wizard"
-export type {
-    CreditsData,
-    CreditsOverviewView,
-    CreditsHistoryRow,
-    PayOrder,
-    PayTarget,
-    PlanView,
-} from "./credits"
+export type { CreditsData, CreditsOverviewView, CreditsHistoryRow, PayOrder, PayTarget, PlanView } from "./credits"
 export type {
     AccountingQuestionValues,
     AccountingQuestionCardData,
     AccountingQuestionCardView,
     AccountingQuestionsView,
 } from "./accounting-question-card"
-export type { AccountingDashboardView, AccountingDashboardSectionView } from "./accounting-dashboard"

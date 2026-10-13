@@ -24,8 +24,6 @@ export interface InventoryWorkbenchPageBaseProps {
             readonly count: string
             readonly import: string
         }
-        /** The four figure terms; the values are filled by the connected strip in the first tab. */
-        readonly terms: ReadonlyArray<string>
     }
 }
 
@@ -37,17 +35,12 @@ export const InventoryWorkbenchPageBase = (props: InventoryWorkbenchPageBaseProp
             module="inventory"
             installationId={p.installationId}
             initialTab={p.initialTab}
-            figures={p.terms.map((term, index) => ({ id: String(index), term, description: "-" }))}
+            ribbon={<InventoryFigures />}
             tabs={[
                 {
                     id: "stock",
                     label: p.tabs.stock,
-                    content: (
-                        <div className={PANEL_CLASS_NAME}>
-                            <InventoryFigures />
-                            <InventoryStock />
-                        </div>
-                    ),
+                    content: <InventoryStock />,
                 },
                 {
                     id: "orders",

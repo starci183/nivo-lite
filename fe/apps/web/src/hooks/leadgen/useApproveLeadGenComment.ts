@@ -2,23 +2,20 @@ import { useTranslations } from "next-intl"
 import { useCallback } from "react"
 import { useSWRConfig } from "swr"
 import { useAuthUser } from "@/hooks/auth"
-import { useMutateApproveLeadGenCommentSwr } from "@/hooks/swr/api/graphql/mutations/useMutateApproveLeadGenCommentSwr"
 import {
-    useQueryLeadGenCommentStatusSwr,
+    QUERY_AGENT_DASHBOARD_SWR_KEY,
     QUERY_LEAD_GEN_COMMENT_STATUS_SWR_KEY,
-} from "@/hooks/swr/api/graphql/queries/useQueryLeadGenCommentStatusSwr"
-import { QUERY_LEAD_GEN_WORKBENCH_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryLeadGenWorkbenchSwr"
-import { QUERY_LEAD_GEN_AGENT_DASHBOARD_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryLeadGenAgentDashboardSwr"
+    QUERY_LEAD_GEN_WORKBENCH_SWR_KEY,
+    useMutateApproveLeadGenCommentSwr,
+    useQueryLeadGenCommentStatusSwr,
+} from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { useLeadGenApprovalStore } from "@/hooks/zustand/leadgen"
 import type { MutateApproveLeadGenCommentRequest } from "@/modules/api/graphql/mutations/mutation-approve-lead-gen-comment"
 import { useGraphQLWithToast } from "@/modules/toast"
 
 /** The SWR keys whose data a finished approval changes. */
-const REFRESHED_KEYS: ReadonlyArray<unknown> = [
-    QUERY_LEAD_GEN_WORKBENCH_SWR_KEY,
-    QUERY_LEAD_GEN_AGENT_DASHBOARD_SWR_KEY,
-]
+const REFRESHED_KEYS: ReadonlyArray<unknown> = [QUERY_LEAD_GEN_WORKBENCH_SWR_KEY, QUERY_AGENT_DASHBOARD_SWR_KEY]
 
 /** What the status poll reports about an approval. */
 interface ApprovalProgress {
