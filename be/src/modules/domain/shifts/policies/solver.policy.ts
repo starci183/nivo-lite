@@ -279,17 +279,15 @@ const finish = (
     why: (kinds: ReadonlyArray<string>) => AskReason,
 ): SolveOutput => {
     const assigned = [...state].flatMap(([staffId, segs]) =>
-        [...segs]
-            .sort(byDateThenStart)
-            .map((g): Shift => ({
-                id: "",
-                date: g.date,
-                start: fromMin(g.s),
-                end: fromMin(g.e),
-                positionId: g.pos,
-                staffId,
-                status: "draft",
-            })),
+        [...segs].sort(byDateThenStart).map((g): Shift => ({
+            id: "",
+            date: g.date,
+            start: fromMin(g.s),
+            end: fromMin(g.e),
+            positionId: g.pos,
+            staffId,
+            status: "draft",
+        })),
     )
     const shortages: Array<Shortage> = []
     const asks: Array<AskCandidate> = []

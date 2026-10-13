@@ -95,6 +95,7 @@ export type {
     SupplierInput,
     TransferInput,
 } from "./inventory-commands"
+export type {
     AccountsView,
     AutomationTone,
     AutomationsBoardView,
