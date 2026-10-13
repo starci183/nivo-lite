@@ -1,8 +1,8 @@
-import { writeRenderVideo } from "@/modules/api/video/write-render"
-import type { Outcome } from "@/modules/api"
+import { writeRenderVideo } from "@/modules/db/video/write-render"
+import type { DbOutcome } from "@/modules/db/outcome"
 
 /** The error code a refused render request maps to in the video catalog (err_<code>). */
-const codeOf = (outcome: Exclude<Outcome<unknown>, { kind: "ok" }>): string => {
+const codeOf = (outcome: Exclude<DbOutcome<unknown>, { kind: "ok" }>): string => {
     if (outcome.kind === "refused") return "render-refused"
     if (outcome.kind === "not-found") return "render-project"
     return outcome.kind === "invalid" ? "render-rejected" : "render-unavailable"

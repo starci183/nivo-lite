@@ -88,6 +88,7 @@ import {
     ResponsibilitiesModule,
 } from "@modules/domain/responsibilities"
 import { AiQuotaOverridesModule } from "@modules/domain/ai-quota-overrides"
+import { AppCommandsModule } from "@modules/domain/app-commands"
 import {
     PLATFORM_ADMIN_ERROR_KINDS,
     PLATFORM_ADMIN_MESSAGES,
@@ -143,7 +144,9 @@ import { TTS_ERROR_KINDS, TTS_MESSAGES, TtsModule } from "@modules/integrations/
 import { CONTENT_TICK_EVERY_MS, CONTENT_TICK_QUEUE, CONTENT_TICK_SCHEDULER } from "@modules/queues/content-tick"
 import { RendersHttpModule } from "@features/api/renders"
 import { PublishContentQueueModule } from "@features/jobs/publish-content"
+import { IssueInviteQueueModule } from "@features/jobs/issue-invite"
 import { RenderVideoQueueModule } from "@features/jobs/render-video"
+import { RequestRenderQueueModule } from "@features/jobs/request-render"
 import type { ApiOptions } from "./api.options"
 
 @Module({})
@@ -305,7 +308,10 @@ export class AppModule {
                 ContentItemsModule.register({ isGlobal: true }),
                 ContentSettingsModule.register({ isGlobal: true }),
                 ContentModule.register({ isGlobal: true }),
+                AppCommandsModule.register({ isGlobal: true }),
+                IssueInviteQueueModule,
                 RenderVideoQueueModule,
+                RequestRenderQueueModule,
                 PublishContentQueueModule,
                 RendersHttpModule,
                 LivenessModule.register({ isGlobal: true }),

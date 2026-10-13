@@ -25,7 +25,7 @@ http:
       service: api
       middlewares: [secure-headers]
       tls: { certResolver: le }
-    # api.nivo.vn is the host the browser calls with the user access token (NEXT_PUBLIC_API_URL). Its DNS must point here before a
+    # api.nivo.vn is the host of the public API and the webhooks (the web app only shows it on the Developers page) (NEXT_PUBLIC_DEVELOPER_API_URL). Its DNS must point here before a
     # certificate can be issued.
     api:
       rule: Host(`api.nivo.vn`)

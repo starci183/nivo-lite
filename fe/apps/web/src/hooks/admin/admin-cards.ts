@@ -1,4 +1,4 @@
-import type { AdminWorkspaceDetail } from "@/modules/api"
+import type { AdminWorkspaceDetail } from "@/modules/db/admin/admin.mapper"
 import { badgeOf, flowTone, healthTone, moduleTone } from "./admin.shared"
 import type { AdminBadgeView, AdminCardView, AdminFormat, AdminRowView, AdminText } from "./admin.shared"
 
