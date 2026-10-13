@@ -22,7 +22,7 @@ const MAX_BATCHES = 50
 const EMBED_TIMEOUT_MS = 30_000
 
 @Injectable()
-/** Publishes the base knowledge of NIVO from its resource files and gives every item a vector of the model in use. */
+/** Publishes the base knowledge of NIVO from its shipped knowledge files and gives every item a vector of the model in use. */
 export class NivoSeedService {
     constructor(
         @InjectNivoKnowledgeOptions() private readonly options: NivoKnowledgeOptions,
@@ -31,9 +31,9 @@ export class NivoSeedService {
         private readonly folder: NivoFolderClient,
     ) {}
 
-    /** Reads the base knowledge folder on disk (the default one when none is named) and publishes what it holds. */
+    /** Reads the base knowledge (the shipped one when no folder is named, else that folder on disk) and publishes what it holds. */
     async seedFolder(dir: MaybeFolder): Promise<NivoSeedResult> {
-        return this.seedFiles(await this.folder.read(dir ?? this.options.dir))
+        return this.seedFiles(await this.folder.read(dir))
     }
 
     /**
@@ -47,7 +47,10 @@ export class NivoSeedService {
         const items = files.map((file) => {
             const item = unwrapOutcome(nivoItemOf(file, this.options.folders), NivoKnowledgeError)
             if (slugs.has(item.slug)) {
-                throw new NivoKnowledgeError({ code: NivoKnowledgeErrorCode.SlugDuplicate, params: { file: file.path } })
+                throw new NivoKnowledgeError({
+                    code: NivoKnowledgeErrorCode.SlugDuplicate,
+                    params: { file: file.path },
+                })
             }
             slugs.add(item.slug)
             return item

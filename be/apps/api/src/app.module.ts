@@ -751,7 +751,6 @@ export class AppModule {
                 NivoKnowledgeModule.register({
                     isGlobal: true,
                     folders: [CORE_FOLDER, ...MODULE_CATALOG.map((module) => module.knowledgeFolder)],
-                    dir: "fe/apps/web/resources/nivo-knowledge",
                 }),
                 KnowledgeModule.register({ isGlobal: true, driveAccess: { forWorkspace: () => null } }),
                 BrainFactsModule.register({ isGlobal: true }),

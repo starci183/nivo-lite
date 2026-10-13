@@ -50,7 +50,6 @@ export class AppModule {
                 NivoKnowledgeModule.register({
                     isGlobal: true,
                     folders: [CORE_FOLDER, ...MODULE_CATALOG.map((module) => module.knowledgeFolder)],
-                    dir: "fe/apps/web/resources/nivo-knowledge",
                 }),
                 AutomationTemplatesModule.register({ isGlobal: true }),
                 N8nHostModule.register({ isGlobal: true, ...options.n8nHost }),
