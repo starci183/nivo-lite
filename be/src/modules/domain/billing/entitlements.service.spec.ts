@@ -36,6 +36,7 @@ const planOf = builder<Plan>({
     perSeat: true,
     listed: true,
     tiers: [],
+    packs: [],
 })
 
 const workspaceOf = builder<WorkspaceBilling>({
