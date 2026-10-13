@@ -40,3 +40,13 @@ FROM public.leads
 WHERE workspace_id = $1 AND (phone IS NOT NULL OR email IS NOT NULL)
 ORDER BY created_at
 LIMIT 2000`
+
+/** Changes supplied profile fields ($1 workspace, $2 customer, $3 name or null, $4 birthday supplied, $5 birthday or null, $6 note or null). */
+export const UPDATE_CUSTOMER_PROFILE = sql`WITH changed AS (
+  UPDATE public.loyalty_customers
+  SET name = COALESCE($3, name), birthday = CASE WHEN $4::boolean THEN $5::date ELSE birthday END,
+      note = COALESCE($6, note), updated_at = now()
+  WHERE workspace_id = $1 AND id = $2
+  RETURNING id
+)
+SELECT id FROM changed`

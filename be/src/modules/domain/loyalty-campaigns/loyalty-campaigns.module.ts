@@ -1,6 +1,8 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { LoyaltyCampaignsService } from "./loyalty-campaigns.service"
+import { LoyaltyCampaignQueueModule } from "@modules/queues/loyalty-campaign"
+import { LoyaltyCampaignDraftsService } from "./loyalty-campaign-drafts.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./loyalty-campaigns.module-definition"
 
 @Module({})
@@ -11,8 +13,9 @@ export class LoyaltyCampaignsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), LoyaltyCampaignsService],
-            exports: [LoyaltyCampaignsService],
+            imports: [...(base.imports ?? []), LoyaltyCampaignQueueModule],
+            providers: [...(base.providers ?? []), LoyaltyCampaignsService, LoyaltyCampaignDraftsService],
+            exports: [LoyaltyCampaignsService, LoyaltyCampaignDraftsService],
         }
     }
 }

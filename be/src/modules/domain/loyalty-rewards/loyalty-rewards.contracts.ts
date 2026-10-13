@@ -55,3 +55,45 @@ export interface RedeemBlock {
 
 /** A refusal, or null when the customer may redeem. */
 export type RedeemBlockMatch = RedeemBlock | null
+
+/** A reward the owner saves, with an id when changing an existing reward. */
+export interface RewardEdit {
+    /** The existing reward, absent for a new reward. */
+    readonly id?: string
+    /** A requested stable key, absent to derive one from the name. */
+    readonly key?: string
+    /** The name shown to customers. */
+    readonly name: string
+    /** What the reward gives. */
+    readonly kind: RewardKind
+    /** The cash value in VND. */
+    readonly valueVnd: number
+    /** The percentage, or null for other kinds. */
+    readonly percent: number | null
+    /** The points needed to redeem it. */
+    readonly pointsCost: number
+    /** The available stock, or null for unlimited. */
+    readonly stock: number | null
+    /** The redemptions per customer, or null for unlimited. */
+    readonly perCustomerLimit: number | null
+    /** The lowest tier allowed, or null for any tier. */
+    readonly minTierKey: string | null
+    /** The owner's note. */
+    readonly note: string
+    /** Whether customers may redeem it. */
+    readonly active: boolean
+}
+
+/** Whether removal deleted an unused entry, found none, or paused an entry with immutable history. */
+export type RewardRemoval = "deleted" | "missing" | "retired"
+
+/** The ordered scalar parameters shared by reward insert and update statements. */
+export type RewardFields = ReadonlyArray<string | number | boolean | null>
+
+/** One starter catalogue entry with its display wording looked up from the catalog. */
+export interface RewardPreset extends Omit<RewardEdit, "name" | "note"> {
+    /** The catalog key of the default name. */
+    readonly nameKey: string
+    /** The catalog key of the default note. */
+    readonly noteKey: string
+}

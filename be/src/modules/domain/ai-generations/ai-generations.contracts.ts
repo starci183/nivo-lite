@@ -35,6 +35,9 @@ export interface GenerateParams {
     readonly locale?: Locale
 }
 
+/** The generation a fenced job may run, or null when usage or engine availability requires its fallback. */
+export type PreparedGenerationId = string | null
+
 /** A generation that produced text. */
 export interface GenerationSuccess {
     /** Discriminant of the success half. */

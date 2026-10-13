@@ -3,12 +3,16 @@ import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
 import type { JobsOptions } from "./jobs.options"
 import type { JobClaims, JobProcessorRegistry } from "./jobs.port"
+import type { JobFenceService } from "./job-fence.service"
 
 /** Token of the options of the jobs, exported so a spec can provide it. */
 export const JOBS_OPTIONS: unique symbol = Symbol("platform.jobs.options")
 
 /** Token of the JobClaims port. */
 export const JOB_CLAIMS: unique symbol = Symbol("platform.jobs.claims")
+
+/** Token of the transactional fenced writer. */
+export const JOB_FENCE: unique symbol = Symbol("platform.jobs.fence")
 
 /** Token of the registry a job module registers its processor with. */
 export const JOB_PROCESSOR_REGISTRY: unique symbol = Symbol("platform.jobs.processor-registry")
@@ -21,6 +25,9 @@ export const InjectJobsOptions = (): TypedParameterDecorator<JobsOptions> => inj
 
 /** Injects the JobClaims port. Parameter type: JobClaims. */
 export const InjectJobClaims = (): TypedParameterDecorator<JobClaims> => injector<JobClaims>(JOB_CLAIMS)
+
+/** Injects the transactional fenced writer. Parameter type: JobFenceService. */
+export const InjectJobFence = (): TypedParameterDecorator<JobFenceService> => injector<JobFenceService>(JOB_FENCE)
 
 /** Injects the processor registry. Parameter type: JobProcessorRegistry. */
 export const InjectJobProcessorRegistry = (): TypedParameterDecorator<JobProcessorRegistry> =>

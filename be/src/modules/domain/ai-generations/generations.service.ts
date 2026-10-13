@@ -17,6 +17,7 @@ import type {
     GenerationOutcome,
     OptionalGenerationProgress,
     PollVerdict,
+    PreparedGenerationId,
 } from "./ai-generations.contracts"
 import { InjectAiGenerationsOptions, InjectUsage } from "./ai-generations.decorators"
 import { AiGenerationsLogEvent } from "./ai-generations.log-events"
@@ -89,6 +90,18 @@ export class GenerationsService {
         })
     }
 
+    /** Prepares a generation for a fenced job that will run it itself, without starting a second job or waiting for a slot. */
+    async prepare(params: GenerateParams, tx: EntityManager): Promise<PreparedGenerationId> {
+        const blocked = await this.usage.blockedBy(params.workspaceId, params.kind, params.locale ?? "vi")
+        if (blocked !== null || this.engine.availability() !== "ready") return null
+        return this.insert(params, clampTimeout(params.timeoutMs), tx)
+    }
+
+    /** Reads the progress of a generation in the workspace that requested it. */
+    progress(workspaceId: string, id: string): Promise<OptionalGenerationProgress> {
+        return this.poll(id, workspaceId)
+    }
+
     private async run(params: GenerateParams, busy: string): Promise<GenerationOutcome> {
         const timeoutMs = clampTimeout(params.timeoutMs)
         const deadline = this.clock.now().getTime() + timeoutMs
@@ -114,17 +127,22 @@ export class GenerationsService {
 
     private enqueue(params: GenerateParams, timeoutMs: number): Promise<string> {
         return this.entityManager.transaction(async (tx) => {
-            const [row] = await tx.query<Array<InsertedGenerationRow>>(INSERT_GENERATION, [
-                params.workspaceId,
-                purposeOf(params.purpose),
-                params.module,
-                params.kind,
-                inputJsonOf(params, timeoutMs),
-            ])
-            if (row === undefined) throw new AiGenerationsError({ code: AiGenerationsErrorCode.NotCreated })
-            await this.queue.enqueueGenerate({ generationId: row.id, workspaceId: params.workspaceId }, tx)
-            return row.id
+            const id = await this.insert(params, timeoutMs, tx)
+            await this.queue.enqueueGenerate({ generationId: id, workspaceId: params.workspaceId }, tx)
+            return id
         })
+    }
+
+    private async insert(params: GenerateParams, timeoutMs: number, tx: EntityManager): Promise<string> {
+        const [row] = await tx.query<Array<InsertedGenerationRow>>(INSERT_GENERATION, [
+            params.workspaceId,
+            purposeOf(params.purpose),
+            params.module,
+            params.kind,
+            inputJsonOf(params, timeoutMs),
+        ])
+        if (row === undefined) throw new AiGenerationsError({ code: AiGenerationsErrorCode.NotCreated })
+        return row.id
     }
 
     /** Looks at the row every poll interval until it has text, failed, or the deadline passed (a vanished row counts as too slow). */

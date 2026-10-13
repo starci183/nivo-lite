@@ -56,6 +56,44 @@ export interface CampaignDraft {
     readonly draft: string
 }
 
+/** One campaign and its delivery counts, shown by the workbench and its status query. */
+export interface LoyaltyCampaignView {
+    /** The campaign. */
+    readonly id: string
+    /** The owner's campaign name. */
+    readonly name: string
+    /** The customers it targets. */
+    readonly segment: Segment
+    /** The generated or template message, with customer placeholders retained. */
+    readonly messageDraft: string
+    /** The message using the established campaign field name. */
+    readonly draft: string
+    /** Drafting waits in `waiting`; a finished message is `draft`. */
+    readonly status: string
+    /** The decision that authorizes sending, when one exists. */
+    readonly workItemId: string | null
+    /** The number of recipients. */
+    readonly recipients: number
+    /** Sent messages. */
+    readonly sent: number
+    /** Messages waiting for delivery. */
+    readonly queued: number
+    /** Failed deliveries. */
+    readonly failed: number
+    /** Skipped deliveries. */
+    readonly skipped: number
+    /** Time spent preparing the message, milliseconds. */
+    readonly draftMs: number | null
+    /** The person or API key that requested the campaign. */
+    readonly createdBy: string
+    /** When it was requested, ISO 8601. */
+    readonly createdAt: string
+    /** When it ended, ISO 8601. */
+    readonly finishedAt: string | null
+    /** A stable code when the campaign ended as failed. */
+    readonly errorCode: string | null
+}
+
 /** The text of one part of a segment label, to be looked up in the message catalog. */
 export interface SegmentPart {
     /** The catalog key. */
