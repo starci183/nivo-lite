@@ -1,47 +1,55 @@
 ---
-title: Bảng câu hỏi thiết lập Đặt lịch hẹn
+title: Appointment booking setup checklist
 kind: setup_checklist
 version: 1
 ---
-# Bảng câu hỏi thiết lập Đặt lịch hẹn
 
-Đặt lịch hẹn chỉ nên chạy thật khi các mục dưới đây đã có thông tin được chủ xác nhận. Trước khi hỏi, đối chiếu với Tri thức doanh nghiệp và tóm tắt lại thay vì hỏi lại điều đã có.
+# Appointment booking setup checklist
 
-## services — Dịch vụ và thời lượng
-Cần có: danh mục dịch vụ nhận đặt, thời lượng mỗi dịch vụ, giá hoặc cách báo giá.
-Đủ khi: có ít nhất các dịch vụ chính và thời lượng.
+Appointment booking should run for real only when the items below have information the owner has confirmed. Before asking, compare with Business knowledge and summarize what is already known instead of asking again.
 
-## capacity — Sức chứa và người thực hiện
-Cần có: cùng lúc nhận được bao nhiêu khách, ai hoặc phòng nào thực hiện từng dịch vụ.
-Đủ khi: có sức chứa cho từng dịch vụ chính.
+## services — Services and duration
 
-## hours_buffer — Giờ nhận lịch và khoảng nghỉ
-Cần có: khung giờ nhận lịch, khoảng nghỉ giữa hai lịch, đặt trước tối thiểu và tối đa bao lâu.
-Đủ khi: có khung giờ và quy tắc đặt trước.
+Need: the catalog of services that accept bookings, the duration of each service, and the price or how a quote is given.
+Enough when: at least the main services and their durations are present.
 
-## cancel_policy — Chính sách đổi và hủy lịch
-Cần có: đổi hoặc hủy trước bao lâu thì miễn phí, sau đó thu phí thế nào, tiền cọc nếu có.
-Đủ khi: có mốc thời gian và mức phí. Nếu không thu phí, ghi rõ.
+## capacity — Capacity and who performs the service
 
-## reminders — Cách nhắc lịch
-Cần có: nhắc trước bao lâu, qua kênh nào, nội dung mẫu, có cần khách xác nhận lại không.
-Đủ khi: có thời điểm và kênh nhắc.
+Need: how many customers can be taken at the same time, and who or which room performs each service.
+Enough when: capacity is set for each main service.
 
-## handoff — Khi nào chuyển cho người
-Cần có: tình huống phải chuyển cho nhân viên và chuyển cho ai (đoàn đông, khiếu nại, yêu cầu đặc biệt).
-Đủ khi: có ít nhất ba tình huống và người nhận.
+## hours_buffer — Booking hours and the gap between appointments
 
-## tone — Giọng điệu
-Cần có: cách xưng hô với khách và phong cách trả lời.
-Đủ khi: có cách xưng hô và một câu xác nhận mẫu.
+Need: the hours that accept bookings, the gap between two appointments, and the minimum and maximum lead time.
+Enough when: the hours and the lead-time rules are present.
 
-## Mục không áp dụng
+## cancel_policy — Reschedule and cancellation policy
 
-Nếu một mục không áp dụng cho doanh nghiệp (ví dụ chỉ có một người nên không cần quy tắc đổi ca), ghi nhận là "không áp dụng" cùng lý do, coi mục đã đủ và không hỏi lại. "Chưa rõ" không phải là "không áp dụng": ghi là cần xác nhận.
+Need: how long before the appointment a change or cancellation is free, how a fee is charged after that, and any deposit.
+Enough when: the time cutoff and the fee level are present. If no fee is charged, say so.
 
-## Cách hỏi trong chat thiết lập
+## reminders — How reminders are sent
 
-- Một mục chưa đủ mỗi lượt, ưu tiên mục ảnh hưởng tới tiền, khách hàng hoặc quyền hạn.
-- Hỏi bằng ngôn ngữ kinh doanh quen thuộc, kèm ví dụ ngắn.
-- Không điền đại khi chủ chưa rõ: đánh dấu chưa đủ.
-- Khi hoàn tất, nhắc rà lại các mục và bấm "Áp dụng".
+Need: how long before the appointment to remind, which channel, the sample wording, and whether the customer must confirm again.
+Enough when: the timing and the channel are present.
+
+## handoff — When to hand off to a person
+
+Need: situations that must go to a staff member, and who receives them (a large group, a complaint, a special request).
+Enough when: at least three situations and the recipient are present.
+
+## tone — Tone of voice
+
+Need: how to address the customer and the reply style.
+Enough when: the form of address and one sample confirmation sentence are present.
+
+## Items that do not apply
+
+If an item does not apply to the business (for example there is only one person, so no shift-swap rule is needed), record it as "does not apply" together with the reason, treat the item as complete, and do not ask again. "Not yet clear" is not "does not apply": record it as needing confirmation.
+
+## How to ask in the setup chat
+
+- One incomplete item per turn, preferring the item that affects money, the customer, or authority.
+- Ask in familiar business language, with a short example.
+- Do not fill in a guess when the owner is not sure: mark the item incomplete.
+- When finished, remind them to review the items and press "Apply".

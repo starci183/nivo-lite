@@ -1,35 +1,36 @@
 ---
-title: Giới hạn quyền hạn của Đặt lịch hẹn
+title: Authority limits of Appointment booking
 kind: authority
 version: 1
 ---
-# Giới hạn quyền hạn của Đặt lịch hẹn
 
-## Theo thang quyền
+# Authority limits of Appointment booking
 
-- **Mặc định**: bậc 3 (Chuẩn bị) cho mọi việc mới. Khi chủ cấp quyền, bậc 5 (Tự làm trong chính sách) cho việc thường lệ.
+## On the authority scale
 
-## Tự làm được khi đã cấp quyền
+- **Default**: level 3 (Prepare) for every new task. When the owner grants authority, level 5 (Act within policy) for routine work.
 
-- Xác nhận lịch hẹn khi còn chỗ theo sức chứa đã đặt và đủ thông tin liên hệ.
-- Đổi lịch trong khung đổi miễn phí của chính sách (giờ mới còn chỗ).
-- Hủy lịch ngoài khung hủy sát giờ, không có phí.
-- Gửi nhắc lịch đúng khung giờ và nội dung đã duyệt.
+## May act once authority is granted
 
-## Luôn cần người duyệt
+- Confirm an appointment when capacity remains under the set limit and the contact details are complete.
+- Reschedule inside the free-change window of the policy (the new time still has capacity).
+- Cancel an appointment outside the last-minute cancellation window, with no fee.
+- Send a reminder at the approved time and with the approved wording.
 
-- Mọi yêu cầu khi giờ khách chọn đã kín: chỉ đưa ra tối đa ba giờ trống gần nhất, còn nhận hay không do chủ quyết.
-- Hủy lịch có thu phí, miễn phí hủy ngoại lệ, hoàn tiền, giữ tiền cọc.
-- Nhận quá sức chứa, nhận ngoài giờ làm việc, nhận dịch vụ không có trong danh mục.
-- Mọi cam kết về giá, ưu đãi hoặc kết quả dịch vụ.
+## Always needs a person to approve
 
-## Không bao giờ
+- Any request when the time the customer chose is full: offer at most the three nearest open times; whether to accept is the owner's decision.
+- A cancellation that charges a fee, an exceptional fee waiver, a refund, or holding a deposit.
+- Taking more than capacity, taking a booking outside working hours, or taking a service that is not in the catalog.
+- Any promise about a price, a promotion, or the result of a service.
 
-- Không hứa khung giờ khi chưa đối chiếu lịch.
-- Không bịa giá, thời lượng hoặc chính sách đổi hủy.
-- Không tự thu hay hoàn tiền.
-- Không chia sẻ thông tin lịch của khách này cho khách khác.
+## Never
 
-## Ghi nhận bằng chứng
+- Do not promise a time slot before checking the calendar.
+- Do not invent a price, a duration, or a change-and-cancel policy.
+- Do not collect or refund money on its own.
+- Do not share one customer's appointment details with another customer.
 
-Mỗi lịch ghi: khách, dịch vụ, ngày giờ, người hoặc phòng thực hiện, ai xác nhận (agent hay người), thay đổi và lý do.
+## Record evidence
+
+Each appointment records: the customer, the service, the date and time, the person or room who performs it, who confirmed it (the agent or a person), and any change and its reason.

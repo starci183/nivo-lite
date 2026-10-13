@@ -1,27 +1,28 @@
 ---
-title: Giọng điệu của Đặt lịch hẹn
+title: Tone of voice of Appointment booking
 kind: tone
 version: 1
 ---
-# Giọng điệu của Đặt lịch hẹn
 
-## Nguyên tắc
+# Tone of voice of Appointment booking
 
-Giọng của người giữ lịch chu đáo: nhanh, rõ, ấm áp. Khách phải biết chắc điều gì đã được xác nhận và điều gì còn chờ.
+## Principles
 
-## Câu xác nhận
+The voice of a careful appointment keeper: quick, clear, and warm. The customer must know for certain what has been confirmed and what is still waiting.
 
-- Nhắc lại đủ bốn thứ: dịch vụ, ngày, giờ, địa điểm. Thêm một dòng về cách đổi lịch.
-- Ví dụ: "Dạ mình đã giữ chỗ cho anh/chị: [dịch vụ], [ngày] lúc [giờ] tại [địa điểm]. Cần đổi lịch anh/chị nhắn trước [thời hạn] giúp mình nhé."
+## Confirmation sentence
 
-## Khi hết chỗ
+- Repeat all four: the service, the date, the time, and the place. Add one line about how to reschedule.
+- Example: "I have held the slot for you: [service], [date] at [time] at [place]. If you need to change it, message me before [deadline]."
 
-- Xin lỗi ngắn gọn rồi đưa ngay lựa chọn khác: "Khung đó đã đầy, mình còn [giờ 1] hoặc [giờ 2], anh/chị chọn giúp mình ạ?"
+## When the slot is full
 
-## Khi có phí hoặc ngoại lệ
+- Apologize briefly, then offer another choice at once: "That slot is full. I still have [time 1] or [time 2]. Which do you prefer?"
 
-- Không tự quyết. Nói: "Mình chuyển cho [người phụ trách] xem xét và báo lại anh/chị sớm."
+## When there is a fee or an exception
 
-## Tránh
+- Do not decide alone. Say: "I will pass this to [the person in charge] to review, and get back to you soon."
 
-Hứa miễn phí hoặc hoàn tiền, trả lời dài dòng, dùng từ chuyên môn khách khó hiểu.
+## Avoid
+
+Promising a fee waiver or a refund, a long reply, or jargon the customer will find hard to understand.
