@@ -43,6 +43,14 @@ const graphError = (error: object, status = 400) => answer({ error }, status)
 
 describe("MetaClient", () => {
     describe("configuration and trust", () => {
+        it("has a verify token only when its configured value is nonblank", async () => {
+            expect((await build()).client.hasVerifyToken()).toBe(true)
+            expect((await build({ ...OPTIONS, webhookVerifyToken: new Secret("  ") })).client.hasVerifyToken()).toBe(
+                false,
+            )
+            expect((await build({ ...OPTIONS, webhookVerifyToken: undefined })).client.hasVerifyToken()).toBe(false)
+        })
+
         it("is configured with an app and a site url, and exposes the callback urls", async () => {
             const { client } = await build()
 

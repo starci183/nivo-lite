@@ -15,6 +15,7 @@ import {
     DELETE_SECRET,
     FIND_ACTIVE_MEMBER,
     FIND_CONNECTION,
+    FIND_CONNECTION_AGENT_IDS,
     FIND_CONNECTIONS_BY_IDS,
     FIND_LIVE_BY_META,
     FIND_SECRET,
@@ -69,6 +70,26 @@ describe("ConnectionsService", () => {
     })
 
     describe("addresses", () => {
+        it("uses the local site origin by default and trims every trailing slash", async () => {
+            expect((await build(mockEntityManager())).siteBase()).toBe("http://localhost:3100")
+
+            const moduleRef = await Test.createTestingModule({
+                providers: [
+                    ConnectionsService,
+                    { provide: PRIMARY_ENTITY_MANAGER, useValue: mockEntityManager() },
+                    {
+                        provide: MODULE_OPTIONS_TOKEN,
+                        useValue: {
+                            channelTokenKey: new Secret(KEY.toString("base64")),
+                            publicSiteUrl: "https://nivo.vn/app///",
+                        },
+                    },
+                ],
+            }).compile()
+
+            expect(moduleRef.get(ConnectionsService).siteBase()).toBe("https://nivo.vn/app")
+        })
+
         it("builds the webhook address of a connection and the public origin from the site url", async () => {
             const moduleRef = await Test.createTestingModule({
                 providers: [
@@ -198,6 +219,25 @@ describe("ConnectionsService", () => {
             })
             expect(em.query).toHaveBeenCalledWith(FIND_LIVE_BY_META, ["telegram", "bot_id", "42"])
             await expect((await build(none)).findLiveByMeta("meta", "page_id", "1")).resolves.toBeNull()
+        })
+    })
+
+    describe("agentIds", () => {
+        it("returns the attached agent ids in row order, or an empty list", async () => {
+            const em = mockEntityManager({
+                query: [
+                    [FIND_CONNECTION_AGENT_IDS, [{ agent_id: "agent-2" }, { agent_id: "agent-1" }]],
+                    [FIND_CONNECTION_AGENT_IDS, []],
+                ],
+            })
+            const service = await build(em)
+
+            await expect(service.agentIds("ws-1", "c1")).resolves.toEqual(["agent-2", "agent-1"])
+            await expect(service.agentIds("ws-1", "c9")).resolves.toEqual([])
+            expect(em.query.mock.calls).toEqual([
+                [FIND_CONNECTION_AGENT_IDS, ["ws-1", "c1"]],
+                [FIND_CONNECTION_AGENT_IDS, ["ws-1", "c9"]],
+            ])
         })
     })
 
