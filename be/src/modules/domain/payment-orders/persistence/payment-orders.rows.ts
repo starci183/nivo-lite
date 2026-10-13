@@ -1,7 +1,7 @@
 import type { OrderKind, OrderStatus } from "../payment-orders.contracts"
 
 /** A JSON column as the driver answers it. */
-export type JsonColumn = string | number | boolean | null | { [key: string]: JsonColumn } | Array<JsonColumn>
+export type JsonColumnRow = string | number | boolean | null | { [key: string]: JsonColumnRow } | Array<JsonColumnRow>
 
 /** One payment order as the order statements answer it; the amount is cast to float8 in SQL so the driver answers a number. */
 export interface OrderRow {
@@ -22,7 +22,7 @@ export interface OrderRow {
     /** The credit pack of a top-up, or null. */
     readonly pack_code: string | null
     /** What was sold. */
-    readonly detail: JsonColumn
+    readonly detail: JsonColumnRow
     /** The amount to transfer in VND. */
     readonly amount_vnd: number
     /** The status, a member of the table check. */

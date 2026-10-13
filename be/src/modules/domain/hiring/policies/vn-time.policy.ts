@@ -32,7 +32,7 @@ export interface VnClockText {
 const pad2 = (value: number): string => String(value).padStart(2, "0")
 
 /** The parts of an instant on the Vietnam clock. */
-export const vnParts = (instant: Date): VnParts => {
+export const vnClockParts = (instant: Date): VnParts => {
     const local = new Date(instant.getTime() + VN_OFFSET_MS)
     return {
         year: local.getUTCFullYear(),
@@ -49,7 +49,7 @@ export const vnInstant = (year: number, month: number, day: number, minute: numb
 
 /** The weekday, time and date text of an instant on the Vietnam clock. */
 export const vnClockText = (instant: Date): VnClockText => {
-    const parts = vnParts(instant)
+    const parts = vnClockParts(instant)
     return {
         weekday: parts.weekday,
         time: `${pad2(Math.floor(parts.minute / MINUTES_PER_HOUR))}:${pad2(parts.minute % MINUTES_PER_HOUR)}`,
@@ -64,7 +64,7 @@ export const addHours = (from: Date, hours: number): Date => new Date(from.getTi
 export const addDays = (from: Date, days: number): Date => addHours(from, days * 24)
 
 /** Any date value a database driver answers (a Date or its text) as an ISO instant. */
-export const isoOf = (value: Date | string): string => new Date(value).toISOString()
+export const hiringIsoOf = (value: Date | string): string => new Date(value).toISOString()
 
 /** The same, null stays null. */
-export const isoOrNull = (value: Date | string | null): string | null => (value === null ? null : isoOf(value))
+export const isoOrNull = (value: Date | string | null): string | null => (value === null ? null : hiringIsoOf(value))

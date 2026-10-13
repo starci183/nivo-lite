@@ -4,7 +4,7 @@ import type { ChannelSetupOptions } from "./channel-setup.options"
 const trimSlashes = (value: string): string => value.replace(/\/+$/u, "")
 
 /** A fresh PKCE code verifier. */
-export const newVerifier = (): string => randomBytes(48).toString("base64url")
+export const newZaloVerifier = (): string => randomBytes(48).toString("base64url")
 
 /** The S256 challenge of a verifier: base64url(sha256(verifier)). */
 export const challengeOf = (verifier: string): string => createHash("sha256").update(verifier).digest("base64url")

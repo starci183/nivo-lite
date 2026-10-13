@@ -1,4 +1,4 @@
-import type { InventoryTemplate } from "../inventory-templates"
+import type { InventoryTemplate } from "../inventory.templates"
 
 /** Quán cà phê & trà */
 export const CAFE_TEMPLATE: InventoryTemplate = {

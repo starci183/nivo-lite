@@ -4,8 +4,8 @@ import {
     ConnectionsErrorCode,
     ConnectionsService,
     cleanConnectionName,
-    randomSecret,
 } from "@modules/domain/connections"
+import { randomSecret } from "@modules/domain/connection-secrets"
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
 import { InjectWebhookDeliveryClient, WebhookDeliveryError } from "@modules/integrations/webhook-delivery"
 import type { WebhookDeliveryClient } from "@modules/integrations/webhook-delivery"

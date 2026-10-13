@@ -1,15 +1,15 @@
-import { addDays, addHours, isoOf, isoOrNull, vnClockText, vnInstant, vnParts } from "./vn-time.policy"
+import { addDays, addHours, hiringIsoOf, isoOrNull, vnClockText, vnInstant, vnClockParts } from "./vn-time.policy"
 
 describe("hiring Vietnam time policy", () => {
     it("reads calendar parts at the Vietnam date boundary", () => {
-        expect(vnParts(new Date("2026-12-31T17:05:00.000Z"))).toEqual({
+        expect(vnClockParts(new Date("2026-12-31T17:05:00.000Z"))).toEqual({
             year: 2027,
             month: 0,
             day: 1,
             weekday: 5,
             minute: 5,
         })
-        expect(vnParts(new Date("2026-10-13T02:30:00.000Z"))).toEqual({
+        expect(vnClockParts(new Date("2026-10-13T02:30:00.000Z"))).toEqual({
             year: 2026,
             month: 9,
             day: 13,
@@ -46,8 +46,8 @@ describe("hiring Vietnam time policy", () => {
     })
 
     it("converts driver date values to ISO text and preserves null", () => {
-        expect(isoOf(new Date("2026-10-13T02:30:00.000Z"))).toBe("2026-10-13T02:30:00.000Z")
-        expect(isoOf("2026-10-13T09:30:00+07:00")).toBe("2026-10-13T02:30:00.000Z")
+        expect(hiringIsoOf(new Date("2026-10-13T02:30:00.000Z"))).toBe("2026-10-13T02:30:00.000Z")
+        expect(hiringIsoOf("2026-10-13T09:30:00+07:00")).toBe("2026-10-13T02:30:00.000Z")
         expect(isoOrNull(null)).toBeNull()
         expect(isoOrNull("2026-10-13T09:30:00+07:00")).toBe("2026-10-13T02:30:00.000Z")
         expect(isoOrNull(new Date("2026-10-13T02:30:00.000Z"))).toBe("2026-10-13T02:30:00.000Z")

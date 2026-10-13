@@ -1,5 +1,5 @@
 export { parseChannelSetupConfig } from "./channel-setup.config"
-export type { ZaloPkce, ZaloSecret } from "./channel-setup.contracts"
+export type { ZaloSetupPkce, ZaloSetupSecret } from "./channel-setup.contracts"
 export { CHANNEL_SETUP_CLIENT, InjectChannelSetupClient } from "./channel-setup.decorators"
 export type { ChannelSetupClient } from "./channel-setup.client"
 export { ChannelSetupModule } from "./channel-setup.module"

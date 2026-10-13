@@ -43,7 +43,7 @@ export interface KnowledgeSourcesRow {
 }
 
 /** The agent instance a document may be kept for. */
-export interface InstallationRow {
+export interface KnowledgeInstallationRow {
     /** The instance id. */
     readonly id: string
     /** The module (agent type) of the instance. */

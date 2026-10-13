@@ -11,7 +11,7 @@ import { InventoryCatalogService } from "./inventory-catalog.service"
 import { InventoryImportService } from "./inventory-import.service"
 import { InventoryLocationsService } from "./inventory-locations.service"
 import { InventoryMovementsService } from "./inventory-movements.service"
-import { INVENTORY_TEMPLATES } from "./inventory-templates"
+import { INVENTORY_TEMPLATES } from "./inventory.templates"
 import { savedId } from "./policies/saved-id.policy"
 import type { IdRow } from "./policies/saved-id.policy"
 import {

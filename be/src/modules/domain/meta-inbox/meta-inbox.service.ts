@@ -3,6 +3,8 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { ConnectionsService } from "@modules/domain/connections"
 import { ConversationsService } from "@modules/domain/conversations"
+import { MetaCommentsService } from "@modules/domain/meta-comments"
+import { MetaThreadsService } from "@modules/domain/meta-threads"
 import { InjectMetaClient } from "@modules/integrations/meta"
 import type { MetaClient, MetaEvent } from "@modules/integrations/meta"
 import { acceptWebhookDelivery, InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -12,12 +14,7 @@ import type { QueueOutbox } from "@modules/platform/queue"
 import { isMetaInboundJob, META_INBOUND_QUEUE } from "./meta-inbox.contracts"
 import type { DeliverySignature, MetaInboundJob, RawDelivery } from "./meta-inbox.contracts"
 import { MetaInboxError, MetaInboxErrorCode } from "./errors/meta-inbox.error"
-import {
-    COMPLETE_META_INBOX,
-    INSERT_META_INBOX,
-    NOTE_META_COMMENT,
-    TOUCH_META_THREAD,
-} from "./persistence/meta-inbox.sql"
+import { COMPLETE_META_INBOX, INSERT_META_INBOX } from "./persistence/meta-inbox.sql"
 
 @Injectable()
 /**
@@ -32,6 +29,8 @@ export class MetaInboxService {
         @InjectQueueOutbox() private readonly outbox: QueueOutbox,
         private readonly connections: ConnectionsService,
         private readonly conversations: ConversationsService,
+        private readonly threads: MetaThreadsService,
+        private readonly comments: MetaCommentsService,
     ) {}
 
     /** Verifies and records the delivery; a delivery that carries no event of ours is acknowledged and dropped. */
@@ -96,10 +95,13 @@ export class MetaInboxService {
         const at = new Date(event.timestamp).toISOString()
         const person = event.sender_psid ?? event.sender_igsid
         if ((event.kind === "dm" || event.kind === "postback") && person !== null) {
-            await manager.query(TOUCH_META_THREAD, [owner.id, event.platform, person, at])
+            await this.threads.touch({ connectionId: owner.id, platform: event.platform, userId: person, at }, manager)
         }
         if ((event.kind === "comment" || event.kind === "mention") && event.comment_id !== null) {
-            await manager.query(NOTE_META_COMMENT, [owner.id, event.comment_id, event.platform, at])
+            await this.comments.note(
+                { connectionId: owner.id, commentId: event.comment_id, platform: event.platform, at },
+                manager,
+            )
         }
         await this.connections.recordEvent(owner.id, {
             amount: 0,

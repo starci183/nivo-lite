@@ -3,6 +3,8 @@ import { isTransactionManager } from "@starci/jest-preset/entity-manager"
 import { Test } from "@nestjs/testing"
 import { ConnectionsService } from "@modules/domain/connections"
 import { ConversationsService } from "@modules/domain/conversations"
+import { MetaCommentsService } from "@modules/domain/meta-comments"
+import { MetaThreadsService } from "@modules/domain/meta-threads"
 import { META_CLIENT } from "@modules/integrations/meta"
 import type { MetaClient, MetaEvent } from "@modules/integrations/meta"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -11,12 +13,7 @@ import { MetaInboxError, MetaInboxErrorCode } from "./errors/meta-inbox.error"
 import { META_INBOUND_QUEUE } from "./meta-inbox.contracts"
 import type { MetaInboundJob } from "./meta-inbox.contracts"
 import { MetaInboxService } from "./meta-inbox.service"
-import {
-    COMPLETE_META_INBOX,
-    INSERT_META_INBOX,
-    NOTE_META_COMMENT,
-    TOUCH_META_THREAD,
-} from "./persistence/meta-inbox.sql"
+import { COMPLETE_META_INBOX, INSERT_META_INBOX } from "./persistence/meta-inbox.sql"
 
 const BODY = { object: "page", entry: [{ id: "page-1" }] }
 const RAW_BODY = Buffer.from(JSON.stringify(BODY))
@@ -53,8 +50,6 @@ const build = async (events: ReadonlyArray<MetaEvent> = [], claimed = [{ id: "in
             query: [
                 [INSERT_META_INBOX, claimed],
                 [COMPLETE_META_INBOX, []],
-                [TOUCH_META_THREAD, []],
-                [NOTE_META_COMMENT, []],
             ],
         }),
     )
@@ -66,6 +61,10 @@ const build = async (events: ReadonlyArray<MetaEvent> = [], claimed = [{ id: "in
     const outbox = recordingQueueOutbox()
     const write = jest.spyOn(outbox, "write")
     const conversations = mock<ConversationsService>()
+    const threads = mock<MetaThreadsService>()
+    threads.touch.mockResolvedValue(undefined)
+    const comments = mock<MetaCommentsService>()
+    comments.note.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
         providers: [
             MetaInboxService,
@@ -74,9 +73,21 @@ const build = async (events: ReadonlyArray<MetaEvent> = [], claimed = [{ id: "in
             { provide: QUEUE_OUTBOX, useValue: outbox },
             { provide: ConnectionsService, useValue: connections },
             { provide: ConversationsService, useValue: conversations },
+            { provide: MetaThreadsService, useValue: threads },
+            { provide: MetaCommentsService, useValue: comments },
         ],
     }).compile()
-    return { service: moduleRef.get(MetaInboxService), tx, meta, connections, outbox, write, conversations }
+    return {
+        service: moduleRef.get(MetaInboxService),
+        tx,
+        meta,
+        connections,
+        outbox,
+        write,
+        conversations,
+        threads,
+        comments,
+    }
 }
 
 describe("MetaInboxService", () => {
@@ -129,7 +140,7 @@ describe("MetaInboxService", () => {
         await expect(service.accept(malformed, SIGNATURE)).resolves.toBeUndefined()
 
         expect(meta.verifyDelivery).toHaveBeenCalledWith(SIGNATURE, malformed)
-        expect(meta.parse).toHaveBeenCalledWith(null)
+        expect(meta.parse).not.toHaveBeenCalled()
         expect(tx.outcomes).toEqual([])
     })
 
@@ -158,7 +169,7 @@ describe("MetaInboxService", () => {
             text: null,
             event_key: "postback:button-1",
         })
-        const { service, tx, connections, write } = await build([dm, postback])
+        const { service, tx, connections, write, threads } = await build([dm, postback])
 
         await expect(service.accept(RAW_BODY, SIGNATURE)).resolves.toBeUndefined()
 
@@ -172,9 +183,11 @@ describe("MetaInboxService", () => {
         ])
         expect(tx.em.query.mock.calls).toEqual([
             [INSERT_META_INBOX, ["meta", DELIVERY_ID, JSON.stringify(BODY)]],
-            [TOUCH_META_THREAD, ["connection-1", "facebook", "person-1", AT]],
-            [TOUCH_META_THREAD, ["connection-1", "instagram", "ig-person-1", AT]],
             [COMPLETE_META_INBOX, ["inbox-1"]],
+        ])
+        expect(threads.touch.mock.calls).toEqual([
+            [{ connectionId: "connection-1", platform: "facebook", userId: "person-1", at: AT }, manager],
+            [{ connectionId: "connection-1", platform: "instagram", userId: "ig-person-1", at: AT }, manager],
         ])
         expect(connections.recordEvent.mock.calls).toEqual([
             ["connection-1", { amount: 0, content: "Lan", at: AT, text: "x".repeat(160) }],
@@ -206,7 +219,7 @@ describe("MetaInboxService", () => {
             comment_id: "comment-2",
             event_key: "mention:2",
         })
-        const { service, tx, connections, write } = await build([comment, mention])
+        const { service, tx, connections, write, comments } = await build([comment, mention])
 
         await service.accept(RAW_BODY, SIGNATURE)
 
@@ -215,9 +228,11 @@ describe("MetaInboxService", () => {
         expect(manager).not.toBe(tx.em)
         expect(tx.em.query.mock.calls).toEqual([
             [INSERT_META_INBOX, ["meta", DELIVERY_ID, JSON.stringify(BODY)]],
-            [NOTE_META_COMMENT, ["connection-1", "comment-1", "facebook", AT]],
-            [NOTE_META_COMMENT, ["connection-1", "comment-2", "instagram", AT]],
             [COMPLETE_META_INBOX, ["inbox-1"]],
+        ])
+        expect(comments.note.mock.calls).toEqual([
+            [{ connectionId: "connection-1", commentId: "comment-1", platform: "facebook", at: AT }, manager],
+            [{ connectionId: "connection-1", commentId: "comment-2", platform: "instagram", at: AT }, manager],
         ])
         expect(connections.recordEvent.mock.calls).toEqual([
             ["connection-1", { amount: 0, content: "Lan", at: AT, text: "Hello" }],
@@ -308,10 +323,7 @@ describe("MetaInboxService", () => {
 
         expect(tx.rollbacks).toBe(1)
         expect(tx.commits).toBe(0)
-        expect(tx.em.query.mock.calls).toEqual([
-            [INSERT_META_INBOX, ["meta", DELIVERY_ID, JSON.stringify(BODY)]],
-            [TOUCH_META_THREAD, ["connection-1", "facebook", "person-1", AT]],
-        ])
+        expect(tx.em.query.mock.calls).toEqual([[INSERT_META_INBOX, ["meta", DELIVERY_ID, JSON.stringify(BODY)]]])
     })
 
     describe("deliver", () => {

@@ -72,7 +72,7 @@ const refKindOf = (ad: string, form: string, post: string): LeadOrigin["refKind"
 }
 
 /** Derives source attribution from the existing capture proposal. */
-export const originOf = (fields: Fields, channelLabel: string, fallbackChannel: string): LeadOrigin => {
+export const leadOriginOf = (fields: Fields, channelLabel: string, fallbackChannel: string): LeadOrigin => {
     const label = channelLabel || fallbackChannel
     const platform = platformOf(firstText(fields, ["platform", "network"]), label, fallbackChannel)
     const kind = kindOf(

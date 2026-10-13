@@ -1,4 +1,4 @@
-import { isRecord } from "./database-values.policy"
+import { isPlainObject } from "./database-values.policy"
 import { DataSourcesError, DataSourcesErrorCode } from "./errors/data-sources.error"
 import { DATABASE_COPY } from "./messages/database.messages"
 
@@ -10,7 +10,7 @@ interface DriverFacts {
 }
 
 const factsOf = (error: unknown): DriverFacts => {
-    const source = isRecord(error) ? error : {}
+    const source = isPlainObject(error) ? error : {}
     const text = (value: unknown): string => (typeof value === "string" ? value : "")
     const numeric = (value: unknown): number => (typeof value === "number" ? value : 0)
     return {
@@ -52,7 +52,9 @@ const RULES: ReadonlyArray<Rule> = [
         test: (f) =>
             ["57014", "ER_QUERY_TIMEOUT"].includes(f.code) ||
             f.errno === 3024 ||
-            /statement timeout|canceling statement|maximum statement execution time|Query read timeout/iu.test(f.message),
+            /statement timeout|canceling statement|maximum statement execution time|Query read timeout/iu.test(
+                f.message,
+            ),
     },
     {
         unavailable: true,
@@ -75,7 +77,8 @@ const RULES: ReadonlyArray<Rule> = [
     {
         unavailable: false,
         text: DATABASE_COPY.noPermission,
-        test: (f) => f.code === "42501" || f.code === "ER_TABLEACCESS_DENIED_ERROR" || f.errno === 1142 || f.number === 229,
+        test: (f) =>
+            f.code === "42501" || f.code === "ER_TABLEACCESS_DENIED_ERROR" || f.errno === 1142 || f.number === 229,
     },
     {
         unavailable: false,

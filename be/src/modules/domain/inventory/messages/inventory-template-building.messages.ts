@@ -1,4 +1,4 @@
-import type { InventoryTemplate } from "../inventory-templates"
+import type { InventoryTemplate } from "../inventory.templates"
 
 /** Cửa hàng vật liệu xây dựng */
 export const BUILDING_TEMPLATE: InventoryTemplate = {
