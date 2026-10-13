@@ -1,7 +1,6 @@
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { readLegalSections, type LegalDocKey } from "@/hooks/legal"
-import { readSession } from "@/modules/db"
 import { LegalPageBase } from "./component"
 
 /** Which document the route serves. */
@@ -17,11 +16,10 @@ export const legalMetadata = async (doc: LegalDocKey): Promise<Metadata> => {
 
 /** The public legal document with its wording resolved on the server. */
 export const LegalPage = async (props: LegalPageProps) => {
-    const [t, session] = await Promise.all([getTranslations("legal"), readSession()])
+    const t = await getTranslations("legal")
     return (
         <LegalPageBase
             props={{
-                isSignedIn: session.kind === "ok",
                 mainLabel: t(`${props.doc}.title`),
                 title: t(`${props.doc}.title`),
                 draft: t(`${props.doc}.draft`),

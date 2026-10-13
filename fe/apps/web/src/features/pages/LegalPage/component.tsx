@@ -25,7 +25,6 @@ interface LegalPageLimitedUse {
 /** The resolved document and what the chrome needs. */
 interface LegalPageBaseProps {
     readonly props: {
-        readonly isSignedIn: boolean
         readonly mainLabel: string
         readonly title: string
         readonly draft: string
@@ -38,7 +37,7 @@ interface LegalPageBaseProps {
 /** A public legal document on the landing chrome. The wording is a draft until the owner and a lawyer approve it. */
 export const LegalPageBase = (props: LegalPageBaseProps) => (
     <WorkspaceShell
-        header={<LandingNav anchorBase="/" isSignedIn={props.props.isSignedIn} />}
+        header={<LandingNav anchorBase="/" />}
         primaryLabel={props.props.mainLabel}
         primary={
             <div className={LEGAL_MAIN}>

@@ -1,21 +1,14 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useState, useTransition } from "react"
+import { useState } from "react"
 import { PLAN_CODES, parseCredits, parseDays, useAdminCommands } from "@/hooks/admin"
-import type { AdminInviteRef, AdminReply } from "@/hooks/admin"
-import { navigation } from "@/modules/i18n"
+import { useQueryAdminWorkspaceSwr } from "@/hooks/swr/api/graphql/queries/useQueryAdminWorkspaceSwr"
 import { AdminSupportActionsBase } from "./component"
 
 /** Props for the connected support actions card. */
 interface AdminSupportActionsProps {
     readonly workspaceId: string
-    /** The billing status now on the workspace. */
-    readonly status: string
-    readonly planCode: string | null
-    /** The workspace's own monthly credit allowance; null when the plan's applies. */
-    readonly creditsLimit: number | null
-    readonly invites: ReadonlyArray<AdminInviteRef>
 }
 
 /** The action waiting for a yes in the dialog. */
@@ -25,55 +18,30 @@ type Pending =
     | { readonly kind: "invite"; readonly id: string; readonly email: string }
     | { readonly kind: "plan"; readonly code: string; readonly credits: number | null }
 
-/** The connected support actions card: extend, set status, set plan and resend an invitation, each confirmed first. */
+/** The connected support actions card: extend, set status, set plan and resend an invitation, each confirmed first and toasted. */
 export const AdminSupportActions = (props: AdminSupportActionsProps) => {
     const t = useTranslations("admin")
-    const router = navigation.useRouter()
     const commands = useAdminCommands(props.workspaceId)
-    const [isPending, startTransition] = useTransition()
+    const { data } = useQueryAdminWorkspaceSwr({ workspaceId: props.workspaceId })
     const [days, setDays] = useState("30")
-    const [plan, setPlan] = useState<string | null>(props.planCode)
-    const [credits, setCredits] = useState(props.creditsLimit === null ? "" : String(props.creditsLimit))
+    const [typedPlan, setPlan] = useState<string | null>()
+    const [typedCredits, setCredits] = useState<string>()
     const [pending, setPending] = useState<Pending | null>(null)
-    const [error, setError] = useState<string>()
-    const [done, setDone] = useState<string>()
 
+    const plan = typedPlan === undefined ? (data?.workspace.planCode ?? null) : typedPlan
+    const ownLimit = data?.credits.ownLimit
+    const credits = typedCredits ?? (typeof ownLimit === "number" ? String(ownLimit) : "")
+    const invitations = (data?.invites ?? []).map((invite) => ({ id: invite.id, email: invite.email }))
     const parsedDays = parseDays(days)
     const parsedCredits = parseCredits(credits)
 
-    const ask = (next: Pending) => {
-        setError(undefined)
-        setDone(undefined)
-        setPending(next)
-    }
-    const finish = (reply: AdminReply, message: string) => {
-        setPending(null)
-        if (reply.kind === "ok") {
-            setDone(message)
-            router.refresh()
-            return
-        }
-        setError(reply.message ?? t("failText"))
-    }
-    const confirm = () => {
+    const confirm = async () => {
         if (pending === null) return
-        startTransition(async () => {
-            if (pending.kind === "extend") {
-                finish(await commands.extend(pending.days), t("doneExtend", { days: pending.days }))
-            } else if (pending.kind === "status") {
-                finish(await commands.setStatus(pending.to), t("doneStatus", { status: pending.to }))
-            } else if (pending.kind === "plan") {
-                const message =
-                    pending.credits === null
-                        ? t("donePlan", { plan: pending.code })
-                        : t("donePlanOwn", { plan: pending.code, credits: pending.credits })
-                finish(await commands.setPlan(pending.code, pending.credits), message)
-            } else {
-                const reply = await commands.resendInvite(pending.id)
-                const isUndelivered = reply.kind === "ok" && reply.isUndelivered
-                finish(reply, t(isUndelivered ? "doneResendNone" : "doneResend", { email: pending.email }))
-            }
-        })
+        if (pending.kind === "extend") await commands.extend(pending.days)
+        else if (pending.kind === "status") await commands.setStatus(pending.to)
+        else if (pending.kind === "plan") await commands.setPlan(pending.code, pending.credits)
+        else await commands.resendInvite(pending.id, pending.email)
+        setPending(null)
     }
     const question = (() => {
         if (pending === null) return undefined
@@ -105,40 +73,38 @@ export const AdminSupportActions = (props: AdminSupportActionsProps) => {
                 setPlanLabel: t("setPlan"),
                 confirmLabel: t("confirm"),
                 cancelLabel: t("cancel"),
-                failTitle: t("failTitle"),
                 days,
                 plan,
                 credits,
                 isDaysValid: parsedDays !== undefined,
                 isCreditsValid: parsedCredits !== undefined,
-                isActive: props.status === "active",
-                isPastDue: props.status === "past_due",
-                invites: props.invites.map((invite) => ({
+                isReady: data !== undefined,
+                isActive: data?.workspace.status === "active",
+                isPastDue: data?.workspace.status === "past_due",
+                invites: invitations.map((invite) => ({
                     ...invite,
                     label: t("resendInvite", { email: invite.email }),
                 })),
-                isPending,
+                isPending: commands.isPending,
                 question,
                 isQuestionDangerous: pending?.kind === "status" && pending.to === "past_due",
-                error,
-                done,
             }}
             on={{
                 setDays,
                 setPlan,
                 setCredits,
-                askExtend: () => parsedDays !== undefined && ask({ kind: "extend", days: parsedDays }),
-                askActive: () => ask({ kind: "status", to: "active" }),
-                askPastDue: () => ask({ kind: "status", to: "past_due" }),
+                askExtend: () => parsedDays !== undefined && setPending({ kind: "extend", days: parsedDays }),
+                askActive: () => setPending({ kind: "status", to: "active" }),
+                askPastDue: () => setPending({ kind: "status", to: "past_due" }),
                 askPlan: () =>
                     plan !== null &&
                     parsedCredits !== undefined &&
-                    ask({ kind: "plan", code: plan, credits: parsedCredits }),
+                    setPending({ kind: "plan", code: plan, credits: parsedCredits }),
                 askInvite: (id) => {
-                    const invite = props.invites.find((entry) => entry.id === id)
-                    if (invite !== undefined) ask({ kind: "invite", id, email: invite.email })
+                    const invite = invitations.find((entry) => entry.id === id)
+                    if (invite !== undefined) setPending({ kind: "invite", id, email: invite.email })
                 },
-                confirm,
+                confirm: () => void confirm(),
                 dismiss: () => setPending(null),
             }}
         />

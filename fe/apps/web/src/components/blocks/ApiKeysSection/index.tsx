@@ -1,65 +1,35 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { useState, useTransition } from "react"
-import { writeApiKeyRevocation, writeApiKeys } from "@/modules/db/developers/write-api-keys"
-import { navigation } from "@/modules/i18n"
+import { useState } from "react"
+import { useApiKeys } from "@/hooks/developers"
+import { useApiKeyForm } from "@/hooks/rhf"
 import { ApiKeysSectionBase } from "./component"
 
-const { useRouter } = navigation
-
-/** One API key as the page hands it over; never the secret. */
-interface ApiKeyItem {
-    readonly id: string
-    readonly name: string
-    readonly prefix: string
-    readonly createdAt: string
-    readonly lastUsedAt: string | null
-    readonly revokedAt: string | null
-}
-
-/** Props for the connected API keys card. */
-interface ApiKeysSectionProps {
-    readonly workspaceId: string
-    readonly items: ReadonlyArray<ApiKeyItem>
-    /** True when the keys could not be read: the region fails in place. */
-    readonly loadFailed: boolean
-}
-
-/** The connected API keys card: creates a key (shown once) and revokes one through Server Actions, then refreshes the page data. */
-export const ApiKeysSection = (props: ApiKeysSectionProps) => {
+/** The connected API keys card: lists, creates (the secret is shown once) and revokes keys through the back end GraphQL API. */
+export const ApiKeysSection = () => {
     const t = useTranslations("developers")
     const format = useFormatter()
-    const router = useRouter()
-    const [name, setName] = useState("")
+    const { items, loadFailed, create, isCreating, revoke, isRevoking } = useApiKeys()
+    const form = useApiKeyForm()
     const [fresh, setFresh] = useState<string>()
-    const [createError, setCreateError] = useState<string>()
-    const [revokeError, setRevokeError] = useState<string>()
     const [revokingId, setRevokingId] = useState<string>()
-    const [isPending, startTransition] = useTransition()
+    const name = form.watch("name")
     const date = (iso: string) => format.dateTime(new Date(iso), { dateStyle: "medium", timeStyle: "short" })
-    const revoking = props.items.find((item) => item.id === revokingId)
-    const failure = (kind: string, fallback: string) => (kind === "refused" ? t("keysRefused") : fallback)
+    const revoking = items.find((item) => item.id === revokingId)
 
-    const create = () =>
-        startTransition(async () => {
-            setCreateError(undefined)
-            const created = await writeApiKeys({ workspaceId: props.workspaceId, name })
-            if (created.kind !== "ok") return setCreateError(failure(created.kind, t("createFailed")))
-            setFresh(created.value.key)
-            setName("")
-            router.refresh()
-        })
+    const submit = form.handleSubmit(async (values) => {
+        const key = await create(values.name)
+        if (key === undefined) return
+        setFresh(key)
+        form.reset()
+    })
 
-    const revoke = () =>
-        startTransition(async () => {
-            if (revokingId === undefined) return
-            setRevokeError(undefined)
-            const revoked = await writeApiKeyRevocation({ workspaceId: props.workspaceId, keyId: revokingId })
-            setRevokingId(undefined)
-            if (revoked.kind !== "ok") return setRevokeError(failure(revoked.kind, t("revokeFailed")))
-            router.refresh()
-        })
+    const confirmRevoke = async () => {
+        if (revokingId === undefined) return
+        await revoke(revokingId)
+        setRevokingId(undefined)
+    }
 
     return (
         <ApiKeysSectionBase
@@ -70,9 +40,8 @@ export const ApiKeysSection = (props: ApiKeysSectionProps) => {
                 nameHint: t("keyNameHint"),
                 nameValue: name,
                 createLabel: t("create"),
-                isCreating: isPending && revokingId === undefined,
-                isCreateDisabled: name.trim().length < 2,
-                createError,
+                isCreating,
+                isCreateDisabled: !form.formState.isValid,
                 fresh:
                     fresh === undefined
                         ? undefined
@@ -84,19 +53,20 @@ export const ApiKeysSection = (props: ApiKeysSectionProps) => {
                               copiedLabel: t("copied"),
                               doneLabel: t("newKeyDone"),
                           },
-                loadError: props.loadFailed ? { title: t("keysLoadFailed") } : undefined,
-                emptyLabel: props.items.length === 0 && !props.loadFailed ? t("keysEmpty") : undefined,
+                loadError: loadFailed ? { title: t("keysLoadFailed") } : undefined,
+                emptyLabel: items.length === 0 && !loadFailed ? t("keysEmpty") : undefined,
                 revokeLabel: t("revoke"),
-                revokeError,
-                items: props.items.map((item) => ({
+                items: items.map((item) => ({
                     id: item.id,
                     name: item.name,
                     prefixText: t("prefix", { prefix: `${item.prefix}…` }),
                     datesText: `${t("created", { date: date(item.createdAt) })} · ${
-                        item.lastUsedAt === null ? t("neverUsed") : t("lastUsed", { date: date(item.lastUsedAt) })
+                        item.lastUsedAt === null || item.lastUsedAt === undefined
+                            ? t("neverUsed")
+                            : t("lastUsed", { date: date(item.lastUsedAt) })
                     }`,
-                    statusLabel: item.revokedAt === null ? t("active") : t("revoked"),
-                    isRevoked: item.revokedAt !== null,
+                    statusLabel: item.revokedAt === null || item.revokedAt === undefined ? t("active") : t("revoked"),
+                    isRevoked: item.revokedAt !== null && item.revokedAt !== undefined,
                 })),
                 revoking:
                     revoking === undefined
@@ -105,16 +75,16 @@ export const ApiKeysSection = (props: ApiKeysSectionProps) => {
                               title: t("revokeAsk", { name: revoking.name }),
                               confirmLabel: t("revokeConfirm"),
                               cancelLabel: t("cancel"),
-                              isPending,
+                              isPending: isRevoking,
                           },
             }}
             on={{
-                changeName: setName,
-                create,
+                changeName: (value) => form.setValue("name", value, { shouldValidate: true }),
+                create: () => void submit(),
                 dismissFresh: () => setFresh(undefined),
                 askRevoke: setRevokingId,
                 cancelRevoke: () => setRevokingId(undefined),
-                confirmRevoke: revoke,
+                confirmRevoke: () => void confirmRevoke(),
             }}
         />
     )
