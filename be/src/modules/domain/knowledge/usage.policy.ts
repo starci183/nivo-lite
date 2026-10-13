@@ -1,12 +1,10 @@
+import { creditsOf } from "@modules/domain/ai-usage-events"
 import type { LlmUsage } from "@modules/integrations/llm"
 import type { QuotaStatus, UsageKind } from "./knowledge.contracts"
 import type { QuotaStatusRow } from "./persistence/usage.rows"
 
 /** The share of the allowance at which the owner is warned. */
 const WARN_AT = 0.8
-
-/** How many credits a US dollar buys. */
-const CREDITS_PER_USD = 250
 
 /** The price per million tokens of the models whose provider reports no cost. */
 interface Price {
@@ -106,9 +104,6 @@ const creditRatioOf = (used: number, limit: number | null, topup: number): numbe
     const pool = Math.max(used, limit) + topup
     return pool <= 0 ? 1 : used / pool
 }
-
-/** The credits a cost in US dollars is worth, rounded to hundredths. */
-export const creditsOf = (costUsd: number): number => Math.round(costUsd * CREDITS_PER_USD * 100) / 100
 
 /** ok, warn (80% used) or exceeded. */
 const levelOf = (exceeded: boolean, ratio: number): QuotaStatus["level"] => {

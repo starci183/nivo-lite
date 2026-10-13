@@ -1,6 +1,6 @@
 import type { Settled } from "@/hooks/connection-wizard"
-import { modeOf, SMTP_PRESETS } from "@/lib/email/presets"
-import type { Security, SmtpPreset } from "@/lib/email/presets"
+import { modeOf, SMTP_PRESETS } from "@/modules/mail"
+import type { Security, SmtpPreset } from "@/modules/mail"
 
 /** The steps of the outgoing-email wizard, in order. */
 export const SMTP_STEPS = ["provider", "guide", "account", "verify"] as const

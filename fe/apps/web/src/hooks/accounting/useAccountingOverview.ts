@@ -2,7 +2,7 @@ import type { AccountingWorkbenchData } from "@/modules/types"
 import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
 import { dayOf, moneyOf, monthOf } from "@/modules/utils"
-import { workbenchHref } from "@/lib/agent-dashboard-shared"
+import { agentHref } from "@/modules/installations"
 import type { AccountingMeasure, AccountingPeriodKey } from "@/modules/types"
 
 /** The Period overview tab: the period choice lives here, the drawing in the pure half. */
@@ -60,7 +60,7 @@ export const useAccountingOverview = (data: AccountingWorkbenchData | undefined)
                         }${t("sourceLabel")}: ${t("mWaitingSource")}`,
                     ],
                     actionLabel: waitingTotal > 0 ? t("openQuestions") : null,
-                    actionHref: waitingTotal > 0 ? workbenchHref("accounting", { tab: "questions" }) : null,
+                    actionHref: waitingTotal > 0 ? agentHref("accounting", null, "workbench", "tab=questions") : null,
                 },
             ],
             excludedNote: data.excludedTest > 0 ? t("excludedTest", { n: data.excludedTest }) : null,

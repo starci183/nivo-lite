@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { BillingOverview } from "@/components/blocks/BillingOverview"
+import { BillingCreditPacks } from "@/components/blocks/BillingCreditPacks"
 import { BillingPlans } from "@/components/blocks/BillingPlans"
 import { BrandLogo } from "@/components/blocks/BrandLogo"
 import { LocaleSwitch } from "@/components/blocks/LocaleSwitch"
@@ -32,6 +33,7 @@ export const BillingPage = async (props: BillingPageProps) => {
         >
             <BillingOverview workspaceId={props.workspaceId} />
             <BillingPlans workspaceId={props.workspaceId} contactHref={creditsContactHref()} />
+            <BillingCreditPacks workspaceId={props.workspaceId} />
         </WorkspacesFrame>
     )
 }

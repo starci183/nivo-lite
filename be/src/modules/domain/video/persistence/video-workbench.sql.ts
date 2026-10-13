@@ -24,6 +24,6 @@ count(*) FILTER (WHERE status='scripting')::int AS scripting,
 count(*) FILTER (WHERE status IN ('ready','approved'))::int AS "readyToPublish",
 count(*) FILTER (WHERE status='approved')::int AS approved,
 count(*) FILTER (WHERE status='published' AND published_at >= now()-interval '30 days')::int AS "published30",
-(SELECT round(COALESCE(sum(cost_usd),0)*250)::int FROM public.ai_usage_events WHERE workspace_id=$1 AND module='video'
+(SELECT COALESCE(sum(ceil(cost_usd / public.credit_usd_value())),0)::int FROM public.ai_usage_events WHERE workspace_id=$1 AND module='video'
 AND created_at>=now()-interval '30 days') AS "credits30"
 FROM public.video_projects WHERE workspace_id=$1`

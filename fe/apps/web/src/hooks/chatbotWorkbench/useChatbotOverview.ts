@@ -1,4 +1,4 @@
-import { useQueryChatbotOverviewSwr } from "@/hooks/swr/api/graphql/queries/useQueryChatbotOverviewSwr"
+import { useQueryChatbotOverviewSwr } from "@/hooks/swr"
 import { overviewOf } from "@/hooks/chatbotWire"
 
 /** The workspace inbox snapshot, refreshed by SWR polling. */

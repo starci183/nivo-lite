@@ -21,6 +21,10 @@ export const useCreditsHistory = () => {
             title = t("orderTopup", {
                 credits: order.detail.credits == null ? "" : formatter.number(order.detail.credits),
             })
+        if (order.kind === "credit_pack")
+            title = t("orderPack", {
+                credits: order.detail.credits == null ? "" : formatter.number(order.detail.credits),
+            })
         if (order.kind === "upgrade") title = t("orderUpgrade", { plan: name })
         let status = t("orderPending")
         let tone: CreditsHistoryRow["tone"] = "warning"

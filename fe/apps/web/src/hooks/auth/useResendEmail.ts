@@ -4,7 +4,7 @@ import type { AuthErrorKey } from "./auth.shared"
 import { useCooldown } from "./useCooldown"
 
 /** The outcome of a resend, as the caller's action reports it. */
-type ResendOutcome = { readonly kind: "ok" } | { readonly kind: string; readonly code: string }
+type ResendOutcome = { readonly success: boolean; readonly error?: string }
 
 /** The result of the last resend, before it is put into words. */
 type ResendResult = { readonly sent: true } | { readonly sent: false; readonly key: AuthErrorKey }
@@ -59,12 +59,12 @@ export const useResendEmail = (send: () => Promise<ResendOutcome>, texts: Resend
             onResend: () => {
                 startTransition(async () => {
                     const outcome = await send()
-                    if (outcome.kind === "ok") {
+                    if (outcome.success) {
                         setResult({ sent: true })
                         start()
                         return
                     }
-                    setResult({ sent: false, key: authErrorKey("code" in outcome ? outcome.code : "") })
+                    setResult({ sent: false, key: authErrorKey(outcome.error ?? "") })
                 })
             },
         },

@@ -47,6 +47,7 @@ describe("billing mapper", () => {
                 perSeat: false,
                 listed: true,
                 tiers: [],
+                packs: [],
             })
         })
 

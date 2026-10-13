@@ -8,7 +8,7 @@ import { BookingResources } from "@/components/blocks/BookingResources"
 import { BookingServices } from "@/components/blocks/BookingServices"
 import { BookingStats } from "@/components/blocks/BookingStats"
 import { BookingWaitlist } from "@/components/blocks/BookingWaitlist"
-import { SETUP_CLASS, STACK_CLASS } from "./classNames"
+import { SETUP_CLASS } from "./classNames"
 
 /** Props for {@link BookingWorkbenchPageBase}. */
 export interface BookingWorkbenchPageBaseProps {
@@ -33,17 +33,12 @@ export const BookingWorkbenchPageBase = (props: BookingWorkbenchPageBaseProps) =
             module="booking"
             installationId={p.installationId}
             initialTab={p.initialTab}
-            figures={[]}
+            ribbon={<BookingFigures />}
             tabs={[
                 {
                     id: "calendar",
                     label: p.tabs.calendar,
-                    content: (
-                        <div className={STACK_CLASS}>
-                            <BookingFigures />
-                            <BookingDesk mode="week" />
-                        </div>
-                    ),
+                    content: <BookingDesk mode="week" />,
                 },
                 { id: "today", label: p.tabs.today, content: <BookingDesk mode="today" /> },
                 { id: "waitlist", label: p.tabs.waitlist, content: <BookingWaitlist /> },

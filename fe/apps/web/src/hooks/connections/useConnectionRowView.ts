@@ -2,7 +2,7 @@ import { useTranslations } from "next-intl"
 import {
     alertsOf,
     dialogOf,
-    factsOf,
+    connectionFactsOf,
     menuOf,
     notesOf,
     primaryOf,
@@ -10,7 +10,7 @@ import {
     usesAgents,
 } from "@/hooks/connection-rows"
 import { PROVIDER_LOGO } from "@/hooks/connection-providers"
-import { bankLogo } from "@/lib/vn-banks"
+import { bankLogo, useBankName } from "@/hooks/banks"
 import type { AgentOption, Connection, RowPrimary, RowView } from "@/modules/types"
 import { rowState, statusKey, statusTone } from "./connections.shared"
 import { useAgentAccess } from "./useAgentAccess"
@@ -54,6 +54,7 @@ export const useConnectionRowView = (
 ): { readonly view: RowView; readonly on: ConnectionRowHandlers } => {
     const { connection: c } = input
     const t = useTranslations("connections")
+    const bankName = useBankName()
     const overlays = useConnectionOverlays()
     const actions = useConnectionRowActions(c)
     const setGrant = useSetConnectionGrant()
@@ -79,7 +80,7 @@ export const useConnectionRowView = (
         statusLabel: t(statusKey(c.status)),
         statusTone: statusTone(c.status),
         envLabel: c.environment === "test" ? t("envBadgeTest") : null,
-        facts: factsOf(c, t),
+        facts: connectionFactsOf(c, t, bankName),
         telegramHandle: c.provider === "telegram" ? (c.meta.bot_username ?? null) : null,
         usedBy,
         state: rowState(c.status),

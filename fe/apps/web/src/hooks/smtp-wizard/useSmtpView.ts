@@ -1,6 +1,6 @@
-import { useLocale, useTranslations } from "next-intl"
-import { modeOf, SMTP_PRESETS } from "@/lib/email/presets"
-import type { L, SmtpPreset } from "@/lib/email/presets"
+import { useTranslations } from "next-intl"
+import { modeOf, SMTP_PRESETS } from "@/modules/mail"
+import type { SmtpPreset } from "@/modules/mail"
 import type { SmtpAccountView, SmtpGuideView, SmtpOption, SmtpText } from "@/modules/types"
 import type { SmtpChoice, SmtpFields } from "./smtp-wizard.shared"
 
@@ -16,8 +16,7 @@ interface SmtpViewInput {
 /** The outgoing-email wizard's words in the reader's language: the provider lists, the chosen guide, the sender form and the fixed labels. */
 export const useSmtpView = (input: SmtpViewInput) => {
     const t = useTranslations("email")
-    const locale = useLocale()
-    const say = (text: L): string => (locale === "vi" ? text.vi : text.en)
+    const say = useTranslations("smtpPresets")
     const mode = modeOf(input.preset, input.choice.modeId)
     const security = (value: string): string => (value === "tls" ? t("secTls") : t("secStarttls"))
     const prefilled = (host: string, port: string | number, value: string): string =>
@@ -41,7 +40,7 @@ export const useSmtpView = (input: SmtpViewInput) => {
             text: say(item.text),
             link: item.link === undefined ? null : { label: say(item.link.label), url: item.link.url },
         })),
-        caution: mode.cautions.length === 0 ? null : mode.cautions.map(say).join(" "),
+        caution: mode.cautions.length === 0 ? null : mode.cautions.map((caution) => say(caution)).join(" "),
     }
     const account: SmtpAccountView = {
         values: input.fields,

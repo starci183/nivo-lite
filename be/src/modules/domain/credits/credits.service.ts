@@ -8,16 +8,18 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     CreditPack,
+    CreditPackParams,
+    CreditPackPurchase,
     CreditTopupLot,
     PackLookup,
     TopupParams,
     UpgradeOrder,
     UpgradeParams,
 } from "./credits.contracts"
-import { toCreditPack, toCreditTopupLot } from "./credits.mapper"
+import { toCreditPack, toCreditPackPurchase, toCreditTopupLot } from "./credits.mapper"
 import { CreditsError, CreditsErrorCode } from "./errors/credits.error"
-import type { PackRow, TopupLotRow } from "./persistence/credits.rows"
-import { SELECT_ACTIVE_PACKS, SELECT_TOPUP_LOTS } from "./persistence/credits.sql"
+import type { PackPurchaseRow, PackRow, TopupLotRow } from "./persistence/credits.rows"
+import { SELECT_ACTIVE_PACKS, SELECT_MONTH_PACK_PURCHASES, SELECT_TOPUP_LOTS } from "./persistence/credits.sql"
 import { prorateUpgrade } from "./proration.policy"
 
 @Injectable()
@@ -43,11 +45,46 @@ export class CreditsService {
         return rows.map(toCreditTopupLot)
     }
 
+    /** The add-on packs a workspace paid for this month, for any member. */
+    async packsBought(userId: string, workspaceId: string): Promise<ReadonlyArray<CreditPackPurchase>> {
+        await this.billing.requireMember(userId, workspaceId)
+        const rows = await this.entityManager.query<Array<PackPurchaseRow>>(SELECT_MONTH_PACK_PURCHASES, [workspaceId])
+        return rows.map(toCreditPackPurchase)
+    }
+
+    /**
+     * A pending order for one add-on pack of the workspace's plan (owner or manager); the same open order when it was just asked for.
+     * The pack adds its credits to the month it is paid in; it never changes the plan price and can be bought again.
+     */
+    async creditPack(userId: string, params: CreditPackParams): Promise<PayableOrder> {
+        await this.billing.requireManager(userId, params.workspaceId)
+        const plan = await this.requireActivePlan(params.workspaceId, ["active", "past_due"])
+        const pack = plan.packs.find((candidate) => candidate.creditsPerMonth === params.credits)
+        if (pack === undefined) throw new CreditsError({ code: CreditsErrorCode.PackNotFound })
+        const existing = await this.orders.findOpenCreditPack({
+            workspaceId: params.workspaceId,
+            target: String(pack.creditsPerMonth),
+            amountVnd: pack.priceVnd,
+        })
+        if (existing !== null) return this.billing.payable(existing)
+        const order = await this.orders.create({
+            workspaceId: params.workspaceId,
+            userId,
+            planCode: plan.code,
+            amountVnd: pack.priceVnd,
+            kind: "credit_pack",
+            packCode: null,
+            detail: { credits: pack.creditsPerMonth },
+        })
+        return this.billing.payable(order)
+    }
+
     /** A pending top-up order for one pack (owner or manager); the same open order when it was just asked for. */
     async topup(userId: string, params: TopupParams): Promise<PayableOrder> {
         await this.billing.requireManager(userId, params.workspaceId)
         const pack = await this.requirePack(params.packCode)
         const plan = await this.requireActivePlan(params.workspaceId, ["active", "past_due"])
+        if (plan.listed) throw new CreditsError({ code: CreditsErrorCode.UsePacks })
         const existing = await this.orders.findOpenTopup({
             workspaceId: params.workspaceId,
             target: pack.code,

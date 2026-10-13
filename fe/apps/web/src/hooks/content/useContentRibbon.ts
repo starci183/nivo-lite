@@ -3,13 +3,19 @@ import type { DescriptionListStatItem } from "@starci/grammar/common"
 import { PRODUCT_TIME_ZONE } from "@/modules/i18n"
 import type { ContentWorkbenchData } from "@/modules/content"
 
-/** The four figures of the workbench ribbon, formatted for the reader; empty when they could not be read. */
+/** The four figures of the workbench ribbon, formatted for the reader; only their terms while they are not read. */
 export const useContentRibbon = (
     figures: ContentWorkbenchData["figures"] | undefined,
 ): Array<DescriptionListStatItem> => {
     const t = useTranslations("workbenchFigures")
     const format = useFormatter()
-    if (!figures) return []
+    if (!figures)
+        return [
+            { id: "waiting", term: t("ctWaiting"), description: "" },
+            { id: "published", term: t("ctPublished"), description: "" },
+            { id: "next", term: t("ctNext"), description: "" },
+            { id: "pillars", term: t("ctPillars"), description: "" },
+        ]
     return [
         {
             id: "waiting",

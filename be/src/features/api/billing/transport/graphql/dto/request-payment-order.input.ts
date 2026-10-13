@@ -8,10 +8,10 @@ export class RequestPaymentOrderInput {
     /** The supported payment operation. */
     @Field(() => String)
     @IsString()
-    @IsIn(["plan", "renew", "topup", "upgrade"])
+    @IsIn(["plan", "renew", "topup", "upgrade", "credit_pack"])
     kind!: PaymentOrderRequestKind
 
-    /** An active plan or pack code; renewal does not need a target. */
+    /** An active plan or pack code, or the credits of an add-on pack; renewal does not need a target. */
     @Field(() => String, { nullable: true })
     @IsOptional()
     @IsString()
@@ -25,7 +25,7 @@ export class RequestPaymentOrderInput {
     @IsIn(["monthly", "annual"])
     cycle?: "monthly" | "annual" | null
 
-    /** The monthly credit allowance picked from the plan's usage tiers (a plan order). */
+    /** The per-seat credit level picked on a per-seat plan (a plan order). */
     @Field(() => Float, { nullable: true })
     @IsOptional()
     @IsInt()

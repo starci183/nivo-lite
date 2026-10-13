@@ -101,7 +101,7 @@ export class PaymentOrderRequestsService {
     }
 
     private async requireTarget(kind: PaymentOrderRequestParams["kind"], target: string | null): Promise<void> {
-        if (target === null) return
+        if (target === null || kind === "credit_pack") return
         if (kind !== "topup") {
             await this.billing.requirePlan(target)
             return
@@ -133,6 +133,8 @@ export class PaymentOrderRequestsService {
                 return (await this.billing.renew(userId, { workspaceId })).order.id
             case "topup":
                 return (await this.credits.topup(userId, { workspaceId, packCode: target })).order.id
+            case "credit_pack":
+                return (await this.credits.creditPack(userId, { workspaceId, credits: Number(target) })).order.id
             case "upgrade":
                 return (await this.credits.upgrade(userId, { workspaceId, planCode: target })).payable.order.id
         }

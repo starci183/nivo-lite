@@ -1232,6 +1232,7 @@ type BillingPlanType {
   listed: Boolean!
   nameEn: String!
   nameVi: String!
+  packs: [BillingPlanTierType!]!
   perSeat: Boolean!
   period: String!
   priceAnnualVnd: Float
@@ -2228,6 +2229,12 @@ type CreditModuleUsageType {
   credits: Float!
   module: String!
   tokens: Float!
+}
+
+type CreditPackPurchaseType {
+  credits: Float!
+  priceVnd: Float!
+  purchasedAt: String!
 }
 
 type CreditPackType {
@@ -5295,6 +5302,7 @@ type Query {
   contentWorkbench: ContentWorkbenchType!
   contextNotes(input: ContextNotesInput!): [ContextNoteType!]!
   creditPacks: [CreditPackType!]!
+  creditPacksBought: [CreditPackPurchaseType!]!
   creditQuotaStatus: CreditQuotaStatusType
   creditRecentCostUsd(input: CreditRecentCostInput!): Float!
   creditTopupLots: [CreditTopupLotType!]!

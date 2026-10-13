@@ -1,12 +1,10 @@
-import { redirect } from "next/navigation"
-import { isModuleKey } from "@/lib/module-registry"
+import { NewModuleRedirectPage } from "@/features/pages/NewModuleRedirectPage"
 
-type NewModulePageProps = { searchParams: Promise<{ module?: string }> }
+export { newModuleRedirectMetadata as generateMetadata } from "@/features/pages/NewModuleRedirectPage"
 
-/** Moved: installing a module is the Install button of /agents. */
-const NewModulePage = async ({ searchParams }: NewModulePageProps) => {
-    const { module } = await searchParams
-    redirect(isModuleKey(module) ? `/agents/${module}` : "/agents")
-}
+type PageProps = { readonly searchParams: Promise<{ module?: string }> }
 
-export default NewModulePage
+/** The old "add a module" url: forwards to the agent type under /agents. */
+const Page = async ({ searchParams }: PageProps) => <NewModuleRedirectPage module={(await searchParams).module} />
+
+export default Page

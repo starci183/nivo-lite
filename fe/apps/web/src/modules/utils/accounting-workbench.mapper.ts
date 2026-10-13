@@ -1,7 +1,7 @@
 import { z } from "zod"
-import type { WorkItemView } from "@/lib/flow-types"
-import { workbenchHref } from "@/lib/agent-dashboard-shared"
+import type { FlowWorkItemView } from "@/modules/types"
 import { isActionKey, isModuleKey } from "@/modules/catalog"
+import { agentHref } from "@/modules/installations"
 import type {
     AccountingLedgerEntryType,
     AccountingProposalType,
@@ -40,18 +40,18 @@ const sourceKindSchema = z.enum(["vietcombank", "inbox", "manual", "other"])
 const invoiceStatusSchema = z.enum(["draft", "issued", "paid", "void"])
 const questionGroupSchema = z.enum(["unclear_payment", "over_limit", "missing_data", "other"])
 
-const departmentOf = (value: string): WorkItemView["department"] => {
+const departmentOf = (value: string): FlowWorkItemView["department"] => {
     if (!isModuleKey(value)) throw new Error("Unknown accounting question department")
     return value
 }
 
-const actionOf = (value: string): WorkItemView["action"] => {
+const actionOf = (value: string): FlowWorkItemView["action"] => {
     if (!isActionKey(value)) throw new Error("Unknown accounting question action")
     return value
 }
 
 /** Presents the generated proposal fields in the existing decision form's keyed shape. */
-const proposalOf = (proposal: AccountingProposalType): WorkItemView["proposal"] => ({
+const proposalOf = (proposal: AccountingProposalType): FlowWorkItemView["proposal"] => ({
     summary: proposal.summary,
     ...(proposal.draft == null ? {} : { draft: proposal.draft }),
     amount_vnd: proposal.amountVnd ?? null,
@@ -66,7 +66,7 @@ const proposalOf = (proposal: AccountingProposalType): WorkItemView["proposal"] 
 })
 
 /** Renames the generated question fields for the existing view model, with no financial calculations. */
-const questionItemOf = (item: AccountingQuestionWorkType): WorkItemView => ({
+const questionItemOf = (item: AccountingQuestionWorkType): FlowWorkItemView => ({
     id: item.id,
     workspace_id: item.workspaceId,
     department: departmentOf(item.department),
@@ -108,7 +108,14 @@ const questionItemOf = (item: AccountingQuestionWorkType): WorkItemView => ({
                   channel: item.lead.channel,
               },
     hasApprovalCard: false,
-    href: item.leadId ? `/leads/${item.leadId}` : workbenchHref("accounting", { tab: "questions", focus: item.id }),
+    href: item.leadId
+        ? `/leads/${item.leadId}`
+        : agentHref(
+              "accounting",
+              null,
+              "workbench",
+              new URLSearchParams({ tab: "questions", focus: item.id }).toString(),
+          ),
 })
 
 /** Normalizes optional GraphQL fields and the backend-owned status strings for the ledger presentation. */
