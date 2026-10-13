@@ -3,6 +3,7 @@ import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./ai-usage-events.module-definition"
 import { AiUsageEventsService } from "./ai-usage-events.service"
 import { AiUsageOverviewService } from "./ai-usage-overview.service"
+import { UsageGateService } from "./usage-gate.service"
 
 @Module({})
 /** The usage capability over the primary Supabase connection: model-call metering, the monthly allowance and its owner notices. */
@@ -12,8 +13,8 @@ export class AiUsageEventsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), AiUsageEventsService, AiUsageOverviewService],
-            exports: [AiUsageEventsService, AiUsageOverviewService],
+            providers: [...(base.providers ?? []), AiUsageEventsService, AiUsageOverviewService, UsageGateService],
+            exports: [AiUsageEventsService, AiUsageOverviewService, UsageGateService],
         }
     }
 }

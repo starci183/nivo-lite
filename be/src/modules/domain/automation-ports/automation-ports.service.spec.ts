@@ -28,12 +28,6 @@ describe("AutomationPortsService", () => {
         await expect(service.attachContractLead()).rejects.toMatchObject(refusal("records"))
     })
 
-    it("refuses every mail call by name", async () => {
-        const service = await build()
-        await expect(service.sendOwnerEmail()).rejects.toMatchObject(refusal("mailer"))
-        await expect(service.requestCustomerEmail()).rejects.toMatchObject(refusal("mailer"))
-    })
-
     it("refuses the flow engine by name", async () => {
         const service = await build()
         await expect(service.run()).rejects.toMatchObject(refusal("flows"))

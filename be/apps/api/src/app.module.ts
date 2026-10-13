@@ -139,8 +139,6 @@ import {
     AGENTS_SYNC_FRESH_MS,
     AgentsModule,
     AgentsService,
-    UnboundKnowledgeLensService,
-    UnboundModuleProfilesService,
 } from "@modules/domain/agents"
 import {
     AI_GENERATIONS_ERROR_KINDS,
@@ -273,7 +271,6 @@ import {
     MODULE_CATEGORIES,
     MODULES_ERROR_KINDS,
     MODULES_MESSAGES,
-    InstallationDirectoryService,
     ModulesModule,
 } from "@modules/domain/modules"
 import { PUBLIC_API_ERROR_KINDS, PUBLIC_API_MESSAGES, PublicApiModule } from "@modules/domain/public-api"
@@ -387,7 +384,15 @@ import { VIDEO_RENDERS_ERROR_KINDS, VIDEO_RENDERS_MESSAGES, VideoRendersModule }
 import { FFMPEG_ERROR_KINDS, FFMPEG_MESSAGES, FfmpegModule } from "@modules/integrations/ffmpeg"
 import { TTS_ERROR_KINDS, TTS_MESSAGES, TtsModule } from "@modules/integrations/tts"
 import { RendersGraphqlModule, RendersHttpModule } from "@features/api/renders"
-import { AGENT_TOOLS_PORTS, API_JOB_QUEUES, API_SCHEDULERS, DECISIONS_PORTS, type ApiOptions } from "./api.options"
+import { CUSTOMER_TURNS_MESSAGES, CustomerTurnsModule } from "@modules/domain/customer-turns"
+import {
+    AGENT_TOOLS_PORTS,
+    API_JOB_QUEUES,
+    API_SCHEDULERS,
+    DECISIONS_PORTS,
+    G19_PORTS,
+    type ApiOptions,
+} from "./api.options"
 @Module({}) /** Every capability is registered once and the three guards run in a fixed order. */
 export class AppModule {
     /** Builds the module from options parsed once at boot; nothing here reads the environment. */
@@ -457,6 +462,7 @@ export class AppModule {
                         CHANNELS_MESSAGES,
                         CONNECTION_SECRETS_MESSAGES,
                         CONVERSATIONS_MESSAGES,
+                        CUSTOMER_TURNS_MESSAGES,
                         MAIL_MESSAGES,
                         TELEGRAM_MESSAGES,
                         ZALO_MESSAGES,
@@ -667,7 +673,8 @@ export class AppModule {
                 ChannelReceiptsModule.register({ isGlobal: true }),
                 InboundEventsModule.register({ isGlobal: true }),
                 ChannelsModule.register({ isGlobal: true, ...options.channels }),
-                ConversationsModule.register({ isGlobal: true }),
+                ConversationsModule.register({ isGlobal: true, ...G19_PORTS.chatTurn }),
+                CustomerTurnsModule.register({ isGlobal: true }),
                 TelegramInboxModule.register({ isGlobal: true }),
                 ZaloInboxModule.register({ isGlobal: true }),
                 ZaloWizardDraftsModule.register({ isGlobal: true }),
@@ -743,15 +750,7 @@ export class AppModule {
                 AuthorityActionsModule.register({ isGlobal: true }),
                 OpenclawModule.register({ isGlobal: true, ...options.openclaw }),
                 DeepseekModule.register({ isGlobal: true, ...options.deepseek, generator: TextGeneratorService }),
-                AgentsModule.register({
-                    isGlobal: true,
-                    ports: {
-                        installations: InstallationDirectoryService,
-                        knowledge: UnboundKnowledgeLensService,
-                        modules: UnboundModuleProfilesService,
-                    },
-                    syncFreshMs: AGENTS_SYNC_FRESH_MS,
-                }),
+                AgentsModule.register({ isGlobal: true, ports: G19_PORTS.agents, syncFreshMs: AGENTS_SYNC_FRESH_MS }),
                 AgentConnectionsModule.register({ isGlobal: true }),
                 AiGenerationsModule.register({
                     isGlobal: true,
