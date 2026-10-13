@@ -1,9 +1,546 @@
+input AddBookingInput {
+  date: String!
+  force: Boolean!
+  name: String!
+  note: String
+  party: Int!
+  phone: String
+  resourceId: ID
+  serviceId: ID!
+  time: String!
+}
+
+type AddBookingType {
+  id: ID!
+}
+
+type AddLoyaltyPresetRewardsType {
+  added: Int!
+}
+
+input AdjustLoyaltyPointsInput {
+  customerId: ID!
+  points: Int!
+  reason: String!
+  token: String!
+}
+
+type AdjustLoyaltyPointsType {
+  posted: Boolean!
+}
+
+type BookingBoardEntryType {
+  checkedIn: Boolean!
+  conflictNote: String!
+  customer: String!
+  date: String!
+  depositStatus: String!
+  depositVnd: Float!
+  endClock: String!
+  endMin: Int!
+  endMs: Float!
+  feeVnd: Float!
+  holdsSlot: Boolean!
+  id: ID!
+  leadId: ID
+  note: String!
+  party: Int!
+  phone: String
+  priceVnd: Float
+  reschedules: Int!
+  resourceId: ID!
+  service: String!
+  serviceId: ID!
+  source: String!
+  startClock: String!
+  startMin: Int!
+  startMs: Float!
+  status: String!
+}
+
+type BookingBoardExceptionType {
+  closed: Boolean!
+  date: String!
+  end: String
+  id: ID!
+  note: String!
+  resourceId: ID
+  start: String
+}
+
+type BookingBoardHoursType {
+  end: String!
+  resourceId: ID!
+  start: String!
+  weekday: Int!
+}
+
+input BookingBoardInput {
+  from: String
+  to: String
+}
+
+type BookingBoardResourceType {
+  active: Boolean!
+  capacity: Int!
+  color: String!
+  id: ID!
+  kind: String!
+  name: String!
+  sort: Int!
+  staffId: ID
+}
+
+type BookingBoardServiceType {
+  active: Boolean!
+  bufferMin: Int!
+  description: String!
+  durationMin: Int!
+  followupDays: Int
+  id: ID!
+  name: String!
+  priceVnd: Float
+  resourceKind: String
+}
+
+type BookingBoardStaffType {
+  id: ID!
+  name: String!
+}
+
+type BookingBoardType {
+  bookings: [BookingBoardEntryType!]!
+  exceptions: [BookingBoardExceptionType!]!
+  figures: BookingFiguresType!
+  from: String!
+  hours: [BookingBoardHoursType!]!
+  nowMs: Float!
+  resources: [BookingBoardResourceType!]!
+  services: [BookingBoardServiceType!]!
+  settings: BookingSettingsType!
+  staff: [BookingBoardStaffType!]!
+  stats: BookingStatsType!
+  timezone: String!
+  to: String!
+  today: String!
+  waitlist: [BookingBoardWaitType!]!
+}
+
+type BookingBoardWaitType {
+  customer: String!
+  fromMs: Float!
+  id: ID!
+  party: Int!
+  phone: String
+  service: String!
+  status: String!
+  toMs: Float!
+}
+
+type BookingFiguresType {
+  bookingsToday: Int!
+  depositsPending: Int!
+  depositsPendingVnd: Float!
+  finished30d: Int!
+  noShowPct30d: Float
+  utilisationPct: Float
+}
+
+input BookingHoursRowInput {
+  end: String!
+  start: String!
+  weekday: Int!
+}
+
+type BookingResourceStatType {
+  bookedMin: Float!
+  name: String!
+  openMin: Float!
+  pct: Float!
+  resourceId: ID!
+}
+
+type BookingSettingsType {
+  address: String!
+  autoConfirm: Boolean!
+  cancelWindowHours: Int!
+  depositPct: Int!
+  handoffOrder: Boolean!
+  lateCancelFeePct: Int!
+  maxAdvanceDays: Int!
+  minLeadMin: Int!
+  noShowFeeVnd: Float!
+  publicEnabled: Boolean!
+  publicNote: String!
+  publicSlug: String
+  reminderHours: [Float!]!
+  slotStepMin: Int!
+  timezone: String!
+}
+
+type BookingStatsType {
+  byResource: [BookingResourceStatType!]!
+  byStatus: [BookingStatusCountType!]!
+  doneRevenueVnd: Float!
+  noShowPct: Float!
+  total: Int!
+}
+
+type BookingStatusCountType {
+  count: Int!
+  status: String!
+}
+
+input CancelBookingInput {
+  id: ID!
+}
+
+type CancelBookingType {
+  feeDue: Boolean!
+  status: String!
+}
+
+input CheckInBookingInput {
+  id: ID!
+}
+
+type CheckInBookingType {
+  feeDue: Boolean!
+  status: String!
+}
+
+input CompleteBookingInput {
+  id: ID!
+}
+
+type CompleteBookingType {
+  feeDue: Boolean!
+  status: String!
+}
+
+input ConfirmBookingInput {
+  id: ID!
+}
+
+type ConfirmBookingType {
+  feeDue: Boolean!
+  status: String!
+}
+
 input CreateWorkspaceInput {
   name: String!
 }
 
 type CreateWorkspaceType {
   id: ID!
+}
+
+input DraftCampaignInput {
+  brief: String!
+  name: String!
+  segment: LoyaltySegmentInput!
+}
+
+type DraftCampaignType {
+  campaignId: ID!
+  draft: String!
+  id: ID!
+  recipients: Int!
+  status: String!
+}
+
+input LoyaltyBirthdayInput {
+  enabled: Boolean!
+  note: String!
+  points: Int!
+  rewardKey: String!
+}
+
+type LoyaltyBirthdayType {
+  enabled: Boolean!
+  note: String!
+  points: Int!
+  rewardKey: String!
+}
+
+type LoyaltyBlockParameterType {
+  key: String!
+  value: String!
+}
+
+type LoyaltyBoardType {
+  campaigns: [LoyaltyCampaignViewType!]!
+  canManage: Boolean!
+  config: LoyaltyConfigType!
+  figures: LoyaltyFiguresType!
+  members: [LoyaltyMemberType!]!
+  nowIso: String!
+  program: LoyaltyProgramType
+  rewards: [LoyaltyRewardType!]!
+  stats: LoyaltyStatsType!
+}
+
+input LoyaltyCampaignInput {
+  id: ID!
+}
+
+type LoyaltyCampaignViewType {
+  createdAt: String!
+  createdBy: String!
+  draft: String!
+  draftMs: Int
+  errorCode: String
+  failed: Int!
+  finishedAt: String
+  id: ID!
+  messageDraft: String!
+  name: String!
+  queued: Int!
+  recipients: Int!
+  segment: LoyaltySegmentType!
+  sent: Int!
+  skipped: Int!
+  status: String!
+  workItemId: ID
+}
+
+input LoyaltyCategoryInput {
+  label: String!
+  match: String!
+  perThousandVnd: Float!
+}
+
+type LoyaltyCategoryType {
+  label: String!
+  match: String!
+  perThousandVnd: Float!
+}
+
+input LoyaltyConfigInput {
+  birthday: LoyaltyBirthdayInput!
+  earn: LoyaltyEarnInput!
+  expiry: LoyaltyExpiryInput!
+  promo: LoyaltyPromoInput!
+  tiers: [LoyaltyTierInput!]!
+}
+
+type LoyaltyConfigType {
+  birthday: LoyaltyBirthdayType!
+  earn: LoyaltyEarnType!
+  expiry: LoyaltyExpiryType!
+  promo: LoyaltyPromoType!
+  tiers: [LoyaltyTierType!]!
+}
+
+input LoyaltyEarnInput {
+  categories: [LoyaltyCategoryInput!]!
+  minOrderVnd: Float!
+  perThousandVnd: Float!
+  perVisit: Int!
+  trigger: String!
+}
+
+type LoyaltyEarnType {
+  categories: [LoyaltyCategoryType!]!
+  minOrderVnd: Float!
+  perThousandVnd: Float!
+  perVisit: Int!
+  trigger: String!
+}
+
+type LoyaltyExpiringType {
+  firstAt: String
+  points: Float!
+}
+
+input LoyaltyExpiryInput {
+  months: Int!
+  warnDays: Int!
+}
+
+type LoyaltyExpiryType {
+  months: Int!
+  warnDays: Int!
+}
+
+type LoyaltyFiguresType {
+  activeMembers: Int!
+  atRisk: Int!
+  members: Int!
+  pointsIssued30d: Float!
+  pointsRedeemed30d: Float!
+  redemptions30d: Int!
+}
+
+type LoyaltyLedgerType {
+  amountVnd: Float
+  by: String!
+  customerId: ID!
+  evidence: String
+  expiresAt: String
+  id: ID!
+  kind: String!
+  occurredAt: String!
+  orderId: ID
+  points: Float!
+  ref: String!
+  rewardId: ID
+  workItemId: ID
+}
+
+type LoyaltyMemberDetailType {
+  expiring: LoyaltyExpiringType!
+  ledger: [LoyaltyLedgerType!]!
+  member: LoyaltyMemberType!
+  nextTier: LoyaltyNextTierType
+  rewards: [LoyaltyRewardOptionType!]!
+  tierName: String!
+}
+
+input LoyaltyMemberInput {
+  customerId: ID!
+}
+
+type LoyaltyMemberType {
+  birthday: String
+  email: String
+  id: ID!
+  joinedAt: String!
+  lastVisitAt: String
+  lifetimeSpendVnd: Float!
+  name: String!
+  note: String!
+  phone: String
+  points: Float!
+  tierKey: String
+  visits: Int!
+}
+
+type LoyaltyNextTierType {
+  missingVnd: Float!
+  tier: LoyaltyTierType!
+}
+
+type LoyaltyProgramSettingsType {
+  config: LoyaltyConfigType!
+  program: LoyaltyProgramType
+  rewards: [LoyaltyRewardType!]!
+}
+
+type LoyaltyProgramType {
+  config: LoyaltyConfigType!
+  createdAt: String!
+  enabled: Boolean!
+  name: String!
+  slug: String!
+  workspaceId: ID!
+}
+
+input LoyaltyPromoInput {
+  batch: Int!
+  hourFrom: String!
+  hourTo: String!
+  maxPerMonth: Int!
+}
+
+type LoyaltyPromoType {
+  batch: Int!
+  hourFrom: String!
+  hourTo: String!
+  maxPerMonth: Int!
+}
+
+type LoyaltyRedeemBlockType {
+  code: String!
+  params: [LoyaltyBlockParameterType!]!
+}
+
+type LoyaltyRewardOptionType {
+  block: LoyaltyRedeemBlockType
+  reward: LoyaltyRewardType!
+}
+
+type LoyaltyRewardType {
+  active: Boolean!
+  id: ID!
+  key: String!
+  kind: String!
+  minTierKey: String
+  name: String!
+  note: String!
+  perCustomerLimit: Int
+  percent: Int
+  pointsCost: Int!
+  stock: Int
+  valueVnd: Float!
+}
+
+type LoyaltySampleMemberType {
+  id: ID!
+  name: String!
+  tierKey: String
+}
+
+input LoyaltySegmentInput {
+  birthdayThisMonth: Boolean!
+  inactiveDays: Int!
+  minSpendVnd: Float!
+  tiers: [String!]!
+}
+
+type LoyaltySegmentType {
+  birthdayThisMonth: Boolean!
+  inactiveDays: Int!
+  minSpendVnd: Float!
+  tiers: [String!]!
+}
+
+type LoyaltyStatsType {
+  active90d: Int!
+  birthdaysThisMonth: Int!
+  earned30d: Float!
+  expired30d: Float!
+  members: Int!
+  pointsOutstanding: Float!
+  promosSent30d: Int!
+  redeemed30d: Float!
+  redemptions30d: Int!
+  rewardValue30d: Float!
+  spend30d: Float!
+  tierCounts: [LoyaltyTierCountType!]!
+}
+
+type LoyaltyTierCountType {
+  count: Int!
+  key: String!
+  name: String!
+}
+
+input LoyaltyTierInput {
+  benefit: String!
+  key: String!
+  minSpendVnd: Float!
+  multiplier: Float!
+  name: String!
+  winbackDays: Int!
+}
+
+type LoyaltyTierType {
+  benefit: String!
+  key: String!
+  minSpendVnd: Float!
+  multiplier: Float!
+  name: String!
+  winbackDays: Int!
+}
+
+input MarkBookingNoShowInput {
+  id: ID!
+}
+
+type MarkBookingNoShowType {
+  feeDue: Boolean!
+  status: String!
 }
 
 type MemberType {
@@ -20,12 +557,358 @@ type MembershipType {
   workspace: WorkspaceType!
 }
 
+input MoveBookingInput {
+  force: Boolean!
+  id: ID!
+  resourceId: ID!
+  startAt: String!
+}
+
+type MoveBookingType {
+  id: ID!
+}
+
 type Mutation {
+  addBooking(input: AddBookingInput!): AddBookingType!
+  addLoyaltyPresetRewards: AddLoyaltyPresetRewardsType!
+  adjustLoyaltyPoints(input: AdjustLoyaltyPointsInput!): AdjustLoyaltyPointsType!
+  cancelBooking(input: CancelBookingInput!): CancelBookingType!
+  checkInBooking(input: CheckInBookingInput!): CheckInBookingType!
+  completeBooking(input: CompleteBookingInput!): CompleteBookingType!
+  confirmBooking(input: ConfirmBookingInput!): ConfirmBookingType!
   createWorkspace(input: CreateWorkspaceInput!): CreateWorkspaceType!
+  draftLoyaltyCampaign(input: DraftCampaignInput!): DraftCampaignType!
+  markBookingNoShow(input: MarkBookingNoShowInput!): MarkBookingNoShowType!
+  moveBooking(input: MoveBookingInput!): MoveBookingType!
+  previewLoyaltySegment(input: PreviewLoyaltySegmentInput!): PreviewLoyaltySegmentType!
+  redeemLoyaltyReward(input: RedeemLoyaltyRewardInput!): RedeemLoyaltyRewardType!
+  removeBookingException(input: RemoveBookingExceptionInput!): RemoveBookingExceptionType!
+  removeBookingResource(input: RemoveBookingResourceInput!): RemoveBookingResourceType!
+  removeBookingService(input: RemoveBookingServiceInput!): RemoveBookingServiceType!
+  removeBookingWaitlistEntry(input: RemoveBookingWaitlistEntryInput!): RemoveBookingWaitlistEntryType!
+  removeLoyaltyReward(input: RemoveLoyaltyRewardInput!): RemoveLoyaltyRewardType!
+  requestLoyaltyCode(input: RequestLoyaltyCodeInput!): RequestLoyaltyCodeType!
+  requestPublicBooking(input: RequestPublicBookingInput!): RequestPublicBookingType!
+  saveBookingException(input: SaveBookingExceptionInput!): SaveBookingExceptionType!
+  saveBookingHours(input: SaveBookingHoursInput!): SaveBookingHoursType!
+  saveBookingPolicy(input: SaveBookingPolicyInput!): SaveBookingPolicyType!
+  saveBookingPublicPage(input: SaveBookingPublicPageInput!): SaveBookingPublicPageType!
+  saveBookingResource(input: SaveBookingResourceInput!): SaveBookingResourceType!
+  saveBookingService(input: SaveBookingServiceInput!): SaveBookingServiceType!
+  saveLoyaltyProgram(input: SaveLoyaltyProgramInput!): LoyaltyProgramType!
+  saveLoyaltyReward(input: SaveLoyaltyRewardInput!): LoyaltyRewardType!
+  syncLoyaltyMembers: SyncLoyaltyMembersType!
+  updateLoyaltyMember(input: UpdateLoyaltyMemberInput!): UpdateLoyaltyMemberType!
+  verifyLoyaltyCode(input: VerifyLoyaltyCodeInput!): VerifyLoyaltyCodeType!
+}
+
+input PreviewLoyaltySegmentInput {
+  segment: LoyaltySegmentInput!
+}
+
+type PreviewLoyaltySegmentType {
+  reachable: Int!
+  sample: [LoyaltySampleMemberType!]!
+  total: Int!
+}
+
+input PublicBookingPageInput {
+  slug: String!
+}
+
+type PublicBookingPageType {
+  address: String!
+  note: String!
+  services: [PublicBookingServiceType!]!
+  shop: String!
+  slug: String!
+  timezone: String!
+}
+
+type PublicBookingServiceType {
+  description: String!
+  durationMin: Int!
+  id: ID!
+  name: String!
+  priceVnd: Float
+}
+
+input PublicBookingTimesInput {
+  date: String!
+  party: Int!
+  serviceId: String!
+  slug: String!
+}
+
+type PublicBookingTimesType {
+  times: [String!]!
+}
+
+type PublicLoyaltyExpiringType {
+  firstAt: String
+  points: Int!
+}
+
+type PublicLoyaltyNextTierType {
+  missingVnd: Float!
+  tier: PublicLoyaltyTierType!
+}
+
+input PublicLoyaltyPageInput {
+  slug: String!
+}
+
+type PublicLoyaltyPageType {
+  name: String!
+  shop: String!
+  slug: String!
+}
+
+type PublicLoyaltyPointsType {
+  expiring: PublicLoyaltyExpiringType!
+  name: String!
+  nextTier: PublicLoyaltyNextTierType
+  points: Int!
+  rewards: [PublicLoyaltyRewardType!]!
+  shop: String!
+  tierName: String!
+}
+
+type PublicLoyaltyRewardType {
+  canRedeem: Boolean!
+  name: String!
+  note: String!
+  pointsCost: Int!
+}
+
+type PublicLoyaltyTierType {
+  benefit: String!
+  key: String!
+  minSpendVnd: Float!
+  multiplier: Float!
+  name: String!
+  winbackDays: Int!
 }
 
 type Query {
+  bookingBoard(input: BookingBoardInput): BookingBoardType!
+  loyaltyBoard: LoyaltyBoardType!
+  loyaltyCampaign(input: LoyaltyCampaignInput!): LoyaltyCampaignViewType!
+  loyaltyMember(input: LoyaltyMemberInput!): LoyaltyMemberDetailType!
+  loyaltyProgram: LoyaltyProgramSettingsType!
   myWorkspaces: [MembershipType!]!
+  publicBookingPage(input: PublicBookingPageInput!): PublicBookingPageType!
+  publicBookingTimes(input: PublicBookingTimesInput!): PublicBookingTimesType!
+  publicLoyaltyPage(input: PublicLoyaltyPageInput!): PublicLoyaltyPageType!
+}
+
+input RedeemLoyaltyRewardInput {
+  customerId: ID!
+  rewardId: ID!
+  token: String!
+}
+
+type RedeemLoyaltyRewardType {
+  code: String!
+  posted: Boolean!
+}
+
+input RemoveBookingExceptionInput {
+  id: ID!
+}
+
+type RemoveBookingExceptionType {
+  id: ID!
+}
+
+input RemoveBookingResourceInput {
+  id: ID!
+}
+
+type RemoveBookingResourceType {
+  id: ID!
+}
+
+input RemoveBookingServiceInput {
+  id: ID!
+}
+
+type RemoveBookingServiceType {
+  id: ID!
+}
+
+input RemoveBookingWaitlistEntryInput {
+  id: ID!
+}
+
+type RemoveBookingWaitlistEntryType {
+  id: ID!
+}
+
+input RemoveLoyaltyRewardInput {
+  rewardId: ID!
+}
+
+type RemoveLoyaltyRewardType {
+  deleted: Boolean!
+}
+
+input RequestLoyaltyCodeInput {
+  phone: String!
+  slug: String!
+}
+
+type RequestLoyaltyCodeType {
+  code: String!
+}
+
+input RequestPublicBookingInput {
+  email: String
+  name: String!
+  note: String
+  party: Int!
+  phone: String!
+  serviceId: String!
+  slug: String!
+  start: String!
+  token: String!
+  website: String
+}
+
+type RequestPublicBookingType {
+  alternatives: [String!]!
+  bookingId: ID
+  code: String!
+  serviceName: String!
+  startIso: String!
+  state: String!
+}
+
+input SaveBookingExceptionInput {
+  closed: Boolean!
+  date: String!
+  end: String!
+  note: String!
+  resourceId: ID
+  start: String!
+}
+
+type SaveBookingExceptionType {
+  id: ID!
+}
+
+input SaveBookingHoursInput {
+  resourceId: ID!
+  rows: [BookingHoursRowInput!]!
+}
+
+type SaveBookingHoursType {
+  id: ID!
+}
+
+input SaveBookingPolicyInput {
+  address: String!
+  autoConfirm: Boolean!
+  cancelWindowHours: Int!
+  depositPct: Int!
+  handoffOrder: Boolean!
+  lateCancelFeePct: Int!
+  maxAdvanceDays: Int!
+  minLeadMin: Int!
+  noShowFeeVnd: Int!
+  slotStepMin: Int!
+  timezone: String!
+}
+
+type SaveBookingPolicyType {
+  workspaceId: ID!
+}
+
+input SaveBookingPublicPageInput {
+  enabled: Boolean!
+  note: String!
+  slug: String!
+}
+
+type SaveBookingPublicPageType {
+  workspaceId: ID!
+}
+
+input SaveBookingResourceInput {
+  active: Boolean!
+  capacity: Int!
+  id: ID
+  kind: String!
+  name: String!
+  staffId: ID
+}
+
+type SaveBookingResourceType {
+  id: ID!
+}
+
+input SaveBookingServiceInput {
+  active: Boolean!
+  bufferMin: Int!
+  description: String!
+  durationMin: Int!
+  followupDays: Int
+  id: ID
+  name: String!
+  priceVnd: Int
+  resourceKind: String!
+}
+
+type SaveBookingServiceType {
+  id: ID!
+}
+
+input SaveLoyaltyProgramInput {
+  config: LoyaltyConfigInput
+  enabled: Boolean
+  name: String
+}
+
+input SaveLoyaltyRewardInput {
+  active: Boolean!
+  id: ID
+  key: String
+  kind: String!
+  minTierKey: String
+  name: String!
+  note: String!
+  perCustomerLimit: Int
+  percent: Int
+  pointsCost: Int!
+  stock: Int
+  valueVnd: Float!
+}
+
+type SyncLoyaltyMembersType {
+  created: Int!
+  linked: Int!
+}
+
+input UpdateLoyaltyMemberInput {
+  birthday: String
+  customerId: ID!
+  name: String
+  note: String
+}
+
+type UpdateLoyaltyMemberType {
+  updated: Boolean!
+}
+
+input VerifyLoyaltyCodeInput {
+  code: String!
+  phone: String!
+  slug: String!
+}
+
+type VerifyLoyaltyCodeType {
+  code: String!
+  points: PublicLoyaltyPointsType!
 }
 
 type WorkspaceType {

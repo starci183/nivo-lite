@@ -1,4 +1,4 @@
-import { Global, Module } from "@nestjs/common"
+import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
 import { ExtractKnowledgeFactsQueueModule } from "@features/jobs/extract-knowledge-facts"
@@ -17,11 +17,12 @@ import { DecisionsHttpModule } from "@features/api/decisions"
 import { RunDecisionsQueueModule } from "@features/jobs/run-decisions"
 import { GenerateWithAgentQueueModule } from "@features/jobs/generate-with-agent"
 import { SyncAgentsQueueModule } from "@features/jobs/sync-agents"
-import { BookingHttpModule } from "@features/api/booking"
-import { LoyaltyHttpModule } from "@features/api/loyalty"
+import { DraftLoyaltyCampaignQueueModule } from "@features/jobs/draft-loyalty-campaign"
+import { BookingGraphqlModule, BookingHttpModule } from "@features/api/booking"
+import { LoyaltyGraphqlModule, LoyaltyHttpModule } from "@features/api/loyalty"
 import { LoyaltyTillHttpModule } from "@features/api/loyalty-till"
-import { PublicBookingHttpModule } from "@features/api/public-booking"
-import { PublicLoyaltyHttpModule } from "@features/api/public-loyalty"
+import { PublicBookingGraphqlModule, PublicBookingHttpModule } from "@features/api/public-booking"
+import { PublicLoyaltyGraphqlModule, PublicLoyaltyHttpModule } from "@features/api/public-loyalty"
 import { CheckConnectionHealthQueueModule } from "@features/jobs/check-connection-health"
 import { CompleteZaloAuthorizationQueueModule } from "@features/jobs/complete-zalo-authorization"
 import { RefreshZaloTokensQueueModule } from "@features/jobs/refresh-zalo-tokens"
@@ -51,7 +52,12 @@ import {
 import { LOYALTY_OTPS_ERROR_KINDS, LOYALTY_OTPS_MESSAGES, LoyaltyOtpsModule } from "@modules/domain/loyalty-otps"
 import { LoyaltyProgramsModule } from "@modules/domain/loyalty-programs"
 import { LoyaltyRewardsModule } from "@modules/domain/loyalty-rewards"
-import { LOYALTY_ERROR_KINDS, LOYALTY_MESSAGES, LoyaltyModule } from "@modules/domain/loyalty"
+import {
+    LOYALTY_ERROR_KINDS,
+    LOYALTY_MESSAGES,
+    LoyaltyCodeDeliveryService,
+    LoyaltyModule,
+} from "@modules/domain/loyalty"
 import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
 import { CassoHttpModule } from "@features/webhooks/casso"
 import { PayosHttpModule } from "@features/webhooks/payos"
@@ -359,22 +365,18 @@ const NO_CORRECTIONS: CorrectionSource = { recent: () => Promise.resolve([]) }
 
 const NO_DRIVE_ACCESS: DriveAccessSource = { forWorkspace: () => null }
 
-@Global()
-@Module({
-    providers: [{ provide: VIDEO_ASSETS, useExisting: SUPABASE_STORAGE }],
-    exports: [VIDEO_ASSETS],
-})
-/** Binds the file store the render job uses to the Supabase storage integration. */
-class VideoAssetsBindingModule {}
-
 @Module({})
 /** Composition root of the API: every capability is registered once and the three guards run in a fixed order. */
 export class AppModule {
     /** Builds the module from options parsed once at boot; nothing here reads the environment. */
     static register(options: ApiOptions): DynamicModule {
         const verifyAccessToken = createSupabaseAccessTokenVerifier(options.supabase)
+        const invites = { delivery: SUPABASE_AUTH, ...options.workspaceInvites }
+        const generations = { usage: UsageGateService, pollMs: AI_GENERATIONS_POLL_MS }
         return {
             module: AppModule,
+            global: true,
+            exports: [VIDEO_ASSETS],
             imports: [
                 ClockModule.register({ isGlobal: true }),
                 LoggingModule.register({ isGlobal: true }),
@@ -567,11 +569,7 @@ export class AppModule {
                     ],
                     ...options.queue,
                 }),
-                JobsModule.register({
-                    isGlobal: true,
-                    connection: PRIMARY_ENTITY_MANAGER,
-                    ...options.jobs,
-                }),
+                JobsModule.register({ isGlobal: true, connection: PRIMARY_ENTITY_MANAGER, ...options.jobs }),
                 SupabaseModule.register({ isGlobal: true, ...options.supabase }),
                 IdentityModule.register({ isGlobal: true, verifyAccessToken }),
                 ContractsModule.register({ isGlobal: true }),
@@ -581,11 +579,7 @@ export class AppModule {
                 EventsModule.register({ isGlobal: true }),
                 WorkspaceMembersModule.register({ isGlobal: true, accounts: SUPABASE_AUTH }),
                 WorkspacesModule.register({ isGlobal: true, ...options.workspaces }),
-                WorkspaceInvitesModule.register({
-                    isGlobal: true,
-                    delivery: SUPABASE_AUTH,
-                    ...options.workspaceInvites,
-                }),
+                WorkspaceInvitesModule.register({ isGlobal: true, ...invites }),
                 ConnectionsModule.register({ isGlobal: true, ...options.connections }),
                 ConnectionGrantsModule.register({ isGlobal: true }),
                 ChannelConnectionsModule.register({ isGlobal: true }),
@@ -628,7 +622,6 @@ export class AppModule {
                 VideoRendersModule.register({ isGlobal: true }),
                 VideoProjectsModule.register({ isGlobal: true }),
                 VideoProjectVersionsModule.register({ isGlobal: true }),
-                VideoAssetsBindingModule,
                 VideoModule.register({ isGlobal: true, ...options.video }),
                 ContentItemsModule.register({ isGlobal: true }),
                 ContentSettingsModule.register({ isGlobal: true }),
@@ -677,11 +670,7 @@ export class AppModule {
                     syncFreshMs: AGENTS_SYNC_FRESH_MS,
                 }),
                 AgentConnectionsModule.register({ isGlobal: true }),
-                AiGenerationsModule.register({
-                    isGlobal: true,
-                    usage: UsageGateService,
-                    pollMs: AI_GENERATIONS_POLL_MS,
-                }),
+                AiGenerationsModule.register({ isGlobal: true, ...generations }),
                 OpenclawAgentSyncModule.register({ isGlobal: true, reloadSettleMs: OPENCLAW_RELOAD_SETTLE_MS }),
                 AgentToolsModule.register({
                     isGlobal: true,
@@ -729,6 +718,7 @@ export class AppModule {
                 AiUsageEventsModule.register({ isGlobal: true }),
                 CreditsModule.register({ isGlobal: true }),
                 ApplyBookingStatusQueueModule,
+                DraftLoyaltyCampaignQueueModule,
                 PaymentOrderRequestsModule.register({ isGlobal: true }),
                 ReconcileBankCreditQueueModule,
                 CreatePaymentOrderQueueModule,
@@ -753,11 +743,15 @@ export class AppModule {
                 LoyaltyLedgerModule.register({ isGlobal: true }),
                 LoyaltyCampaignsModule.register({ isGlobal: true }),
                 LoyaltyOtpsModule.register({ isGlobal: true, pepper: options.supabase.serviceRoleKey.reveal() }),
-                LoyaltyModule.register({ isGlobal: true, delivery: { deliver: () => Promise.resolve(false) } }),
+                LoyaltyModule.register({ isGlobal: true, delivery: LoyaltyCodeDeliveryService }),
                 PublicBookingHttpModule,
+                PublicBookingGraphqlModule,
                 BookingHttpModule,
+                BookingGraphqlModule,
                 PublicLoyaltyHttpModule,
+                PublicLoyaltyGraphqlModule,
                 LoyaltyHttpModule,
+                LoyaltyGraphqlModule,
                 LoyaltyTillHttpModule,
                 WorkspacesHttpModule,
                 WorkspacesGraphqlModule,
@@ -776,6 +770,7 @@ export class AppModule {
                 AdminHttpModule,
             ],
             providers: [
+                { provide: VIDEO_ASSETS, useExisting: SUPABASE_STORAGE },
                 { provide: SUPABASE_ACCESS_TOKEN_VERIFIER, useValue: verifyAccessToken },
                 { provide: APP_FILTER, useClass: ErrorsFilter },
                 { provide: APP_GUARD, useClass: RateLimitGuard },
