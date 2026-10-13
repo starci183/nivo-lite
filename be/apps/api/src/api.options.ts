@@ -1,3 +1,11 @@
+import type { ChannelSetupOptions } from "@modules/integrations/channel-setup"
+import type { ConnectionsOptions } from "@modules/domain/connections"
+import type { GoogleOptions } from "@modules/integrations/google"
+import type { MetaOptions } from "@modules/integrations/meta"
+import type { WebhookConnectionsOptions } from "@modules/domain/webhook-connections"
+import type { WebhookDeliveryOptions } from "@modules/integrations/webhook-delivery"
+import type { N8nOptions } from "@modules/integrations/n8n"
+import type { TemplateFilesOptions } from "@modules/integrations/template-files"
 import type { DeepseekOptions } from "@modules/integrations/deepseek"
 import type { OpenclawOptions } from "@modules/integrations/openclaw"
 import type { VideoOptions } from "@modules/domain/video"
@@ -55,6 +63,22 @@ export interface ApiOptions {
     readonly queue: QueueConfig
     /** Who this worker is and how long a job claim lasts. */
     readonly jobs: JobsConfig
+    /** The channel token key that seals provider credentials, and the public site address. */
+    readonly connections: ConnectionsOptions
+    /** The signing key behind outgoing webhooks. */
+    readonly webhookConnections: WebhookConnectionsOptions
+    /** Google OAuth and Sheets. */
+    readonly google: GoogleOptions
+    /** Meta (Facebook Pages and Instagram). */
+    readonly meta: MetaOptions
+    /** The provider calls a connection wizard makes while connecting a channel. */
+    readonly channelSetup: ChannelSetupOptions
+    /** Deliveries to tenant-supplied webhook addresses. */
+    readonly webhookDelivery: WebhookDeliveryOptions
+    /** The signing secret and the webhook base of the shared n8n workflows. */
+    readonly n8n: N8nOptions
+    /** The folder of the automation definition files. */
+    readonly templateFiles: TemplateFilesOptions
     /** How ffmpeg is run. */
     readonly ffmpeg: FfmpegOptions
     /** The text-to-speech provider of the video voiceover. */

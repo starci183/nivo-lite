@@ -9,6 +9,8 @@ import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { eachInOrder, ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
+import { isZaloAuthorizationPayload } from "@modules/queues/zalo-authorization"
+import { isZaloRefreshPayload } from "@modules/queues/zalo-refresh"
 import { InjectChannelsOptions } from "./channels.decorators"
 import type {
     LoadedZalo,
@@ -21,7 +23,7 @@ import type {
 import { ChannelsLogEvent } from "./channels.log-events"
 import type { ChannelsOptions } from "./channels.options"
 import { ChannelsError, ChannelsErrorCode } from "./errors/channels.error"
-import { ZALO_RECONNECT_REASON } from "./messages/channels.messages"
+import { ZALO_AUTHORIZATION_FAILED_REASON, ZALO_RECONNECT_REASON } from "./messages/channels.messages"
 
 /** An access token with less than this left is renewed before use. */
 const SKEW_MS = 5 * 60_000
@@ -33,6 +35,8 @@ const REFRESH_TTL_MS = 90 * 86_400_000
 const AUTHORIZATION_TTL_MS = 15 * 60_000
 /** The address Zalo returns the owner to, relative to the web origin. */
 const CALLBACK_PATH = "/connections/zalo/callback"
+/** Seven hours: a token that ends within this time is renewed when the tick carries no horizon of its own. */
+const DEFAULT_WITHIN_MS = 7 * 3_600_000
 const DEV_SITE = "http://localhost:3100"
 
 const isZaloSecret = (value: unknown): value is ZaloSecret =>
@@ -104,6 +108,25 @@ export class ZaloCredentialsService {
         return connectionId
     }
 
+    /**
+     * Completes the authorization a queued job carries. The one-time code cannot be tried twice, so a state or a code that is refused marks the
+     * connection failing for the owner to see and ends the job; any other failure is thrown for the queue to retry.
+     */
+    async completeFromJob(payload: unknown): Promise<void> {
+        if (!isZaloAuthorizationPayload(payload)) return
+        const { workspaceId, state, code, oaId } = payload
+        await this.completeAuthorization(workspaceId, { state, code, ...(oaId === null ? {} : { oaId }) }).catch(async (cause: unknown) => {
+            if (!(cause instanceof ChannelsError) && !isZaloRefusal(cause)) throw cause
+            this.logger.error(ChannelsLogEvent.ZaloAuthorizationRefused, cause, { connectionId: state.split(".")[0] ?? "" })
+            await this.connections.markFailing(state.split(".")[0] ?? "", ZALO_AUTHORIZATION_FAILED_REASON)
+        })
+    }
+
+    /** Renews what the tick of a queued job asks for: its own horizon when the payload carries one, else seven hours. */
+    refreshFromJob(payload: unknown): Promise<ZaloRefreshSummary> {
+        return this.refreshDue(isZaloRefreshPayload(payload) ? payload.withinMs : DEFAULT_WITHIN_MS)
+    }
+
     /** A working access token: the stored one while it has more than 5 minutes left, else renewed on use. */
     async accessToken(connectionId: string, wish: TokenWish = {}): Promise<string> {
         const current = await this.require(connectionId)
@@ -161,7 +184,10 @@ export class ZaloCredentialsService {
         const next = this.withTokens(again.secret, tokens.accessToken, tokens.refreshToken)
         const expiresAt = new Date(this.clock.now().getTime() + tokens.expiresInSeconds * 1000)
         // The old refresh token is gone the moment Zalo answers: a failed save would lose the connection, so try twice.
-        await this.save(connectionId, next, { expiresAt }).catch(() => this.save(connectionId, next, { expiresAt }))
+        await this.save(connectionId, next, { expiresAt }).catch((cause: unknown) => {
+            this.logger.error(ChannelsLogEvent.ZaloSaveRetried, cause, { connectionId })
+            return this.save(connectionId, next, { expiresAt })
+        })
         return tokens.accessToken
     }
 

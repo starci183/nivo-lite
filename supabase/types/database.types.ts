@@ -1,4 +1,4 @@
-// migrations-sha256: d81d0596874e08ab33e09a52de1664e4caad965dc897123ee9a8f2e837ebbaca
+// migrations-sha256: 8e0d9bb0e705edeb354292e9003dcee283fe123dac91f6aba856207e3a44b060
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -419,6 +419,25 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"automation_commands": {
+                  Row: {
+                    "created_at": string,"created_by": string,"fault_code": string | null,"finished_at": string | null,"id": string,"kind": string,"result": Json | null,"status": string,"template_key": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"created_by": string,"fault_code"?: string | null,"finished_at"?: string | null,"id"?: string,"kind": string,"result"?: Json | null,"status"?: string,"template_key": string,"workspace_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string,"fault_code"?: string | null,"finished_at"?: string | null,"id"?: string,"kind"?: string,"result"?: Json | null,"status"?: string,"template_key"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "automation_commands_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"automation_pipelines": {
                   Row: {
                     "approval_streak": number,"auto_send": boolean,"based_on_context": number | null,"body": string | null,"body_version": number,"config": NonNullable<Json>,"created_at": string,"created_by": string | null,"dismissed": boolean,"enabled": boolean,"id": string,"module_key": string | null,"name": string,"template_key": string,"template_version": number,"trust_offered_at": string | null,"updated_at": string,"workspace_id": string
@@ -471,13 +490,13 @@ isOneToOne: false
                   ]
                 },"automation_templates": {
                   Row: {
-                    "definition": NonNullable<Json>,"executor": string,"key": string,"module_key": string | null,"pack": string,"updated_at": string,"version": number
+                    "definition": NonNullable<Json>,"executor": string,"key": string,"module_key": string | null,"pack": string,"position": number,"updated_at": string,"version": number
                   }
                   Insert: {
-                    "definition": NonNullable<Json>,"executor"?: string,"key": string,"module_key"?: string | null,"pack"?: string,"updated_at"?: string,"version"?: number
+                    "definition": NonNullable<Json>,"executor"?: string,"key": string,"module_key"?: string | null,"pack"?: string,"position"?: number,"updated_at"?: string,"version"?: number
                   }
                   Update: {
-                    "definition"?: NonNullable<Json>,"executor"?: string,"key"?: string,"module_key"?: string | null,"pack"?: string,"updated_at"?: string,"version"?: number
+                    "definition"?: NonNullable<Json>,"executor"?: string,"key"?: string,"module_key"?: string | null,"pack"?: string,"position"?: number,"updated_at"?: string,"version"?: number
                   }
                   Relationships: [
                     
@@ -703,13 +722,13 @@ isOneToOne: false
                   ]
                 },"bookings": {
                   Row: {
-                    "block_end_at": string,"cancel_fee_vnd": number,"cancel_reason": string | null,"cancelled_at": string | null,"checked_in_at": string | null,"conflict_note": string,"conversation_id": string | null,"created_at": string,"customer_email": string | null,"customer_name": string,"customer_phone": string | null,"deposit_status": string,"deposit_vnd": number,"done_at": string | null,"effects": Json,"end_at": string,"holds_slot": boolean,"id": string,"idempotency_key": string | null,"installation_id": string | null,"lead_id": string | null,"note": string,"order_id": string | null,"origin": string,"party_size": number,"price_vnd": number | null,"reschedule_count": number,"rescheduled_from": string | null,"resource_id": string,"service_id": string,"source_channel": string,"start_at": string,"status": string,"updated_at": string,"work_item_id": string | null,"workspace_id": string
+                    "block_end_at": string,"cancel_fee_vnd": number,"cancel_reason": string | null,"cancelled_at": string | null,"checked_in_at": string | null,"conflict_note": string,"conversation_id": string | null,"created_at": string,"customer_email": string | null,"customer_name": string,"customer_phone": string | null,"deposit_status": string,"deposit_vnd": number,"done_at": string | null,"end_at": string,"holds_slot": boolean,"id": string,"idempotency_key": string | null,"installation_id": string | null,"lead_id": string | null,"note": string,"order_id": string | null,"origin": string,"party_size": number,"price_vnd": number | null,"reschedule_count": number,"rescheduled_from": string | null,"resource_id": string,"service_id": string,"source_channel": string,"start_at": string,"status": string,"updated_at": string,"work_item_id": string | null,"workspace_id": string
                   }
                   Insert: {
-                    "block_end_at": string,"cancel_fee_vnd"?: number,"cancel_reason"?: string | null,"cancelled_at"?: string | null,"checked_in_at"?: string | null,"conflict_note"?: string,"conversation_id"?: string | null,"created_at"?: string,"customer_email"?: string | null,"customer_name"?: string,"customer_phone"?: string | null,"deposit_status"?: string,"deposit_vnd"?: number,"done_at"?: string | null,"effects"?: Json,"end_at": string,"holds_slot"?: boolean,"id"?: string,"idempotency_key"?: string | null,"installation_id"?: string | null,"lead_id"?: string | null,"note"?: string,"order_id"?: string | null,"origin"?: string,"party_size"?: number,"price_vnd"?: number | null,"reschedule_count"?: number,"rescheduled_from"?: string | null,"resource_id": string,"service_id": string,"source_channel"?: string,"start_at": string,"status"?: string,"updated_at"?: string,"work_item_id"?: string | null,"workspace_id": string
+                    "block_end_at": string,"cancel_fee_vnd"?: number,"cancel_reason"?: string | null,"cancelled_at"?: string | null,"checked_in_at"?: string | null,"conflict_note"?: string,"conversation_id"?: string | null,"created_at"?: string,"customer_email"?: string | null,"customer_name"?: string,"customer_phone"?: string | null,"deposit_status"?: string,"deposit_vnd"?: number,"done_at"?: string | null,"end_at": string,"holds_slot"?: boolean,"id"?: string,"idempotency_key"?: string | null,"installation_id"?: string | null,"lead_id"?: string | null,"note"?: string,"order_id"?: string | null,"origin"?: string,"party_size"?: number,"price_vnd"?: number | null,"reschedule_count"?: number,"rescheduled_from"?: string | null,"resource_id": string,"service_id": string,"source_channel"?: string,"start_at": string,"status"?: string,"updated_at"?: string,"work_item_id"?: string | null,"workspace_id": string
                   }
                   Update: {
-                    "block_end_at"?: string,"cancel_fee_vnd"?: number,"cancel_reason"?: string | null,"cancelled_at"?: string | null,"checked_in_at"?: string | null,"conflict_note"?: string,"conversation_id"?: string | null,"created_at"?: string,"customer_email"?: string | null,"customer_name"?: string,"customer_phone"?: string | null,"deposit_status"?: string,"deposit_vnd"?: number,"done_at"?: string | null,"effects"?: Json,"end_at"?: string,"holds_slot"?: boolean,"id"?: string,"idempotency_key"?: string | null,"installation_id"?: string | null,"lead_id"?: string | null,"note"?: string,"order_id"?: string | null,"origin"?: string,"party_size"?: number,"price_vnd"?: number | null,"reschedule_count"?: number,"rescheduled_from"?: string | null,"resource_id"?: string,"service_id"?: string,"source_channel"?: string,"start_at"?: string,"status"?: string,"updated_at"?: string,"work_item_id"?: string | null,"workspace_id"?: string
+                    "block_end_at"?: string,"cancel_fee_vnd"?: number,"cancel_reason"?: string | null,"cancelled_at"?: string | null,"checked_in_at"?: string | null,"conflict_note"?: string,"conversation_id"?: string | null,"created_at"?: string,"customer_email"?: string | null,"customer_name"?: string,"customer_phone"?: string | null,"deposit_status"?: string,"deposit_vnd"?: number,"done_at"?: string | null,"end_at"?: string,"holds_slot"?: boolean,"id"?: string,"idempotency_key"?: string | null,"installation_id"?: string | null,"lead_id"?: string | null,"note"?: string,"order_id"?: string | null,"origin"?: string,"party_size"?: number,"price_vnd"?: number | null,"reschedule_count"?: number,"rescheduled_from"?: string | null,"resource_id"?: string,"service_id"?: string,"source_channel"?: string,"start_at"?: string,"status"?: string,"updated_at"?: string,"work_item_id"?: string | null,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -906,6 +925,25 @@ isOneToOne: false
                   Relationships: [
                     {
       foreignKeyName: "channel_receipts_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"connection_commands": {
+                  Row: {
+                    "created_at": string,"finished_at": string | null,"id": string,"input": NonNullable<Json>,"kind": string,"outcome": Json | null,"status": string,"user_id": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"finished_at"?: string | null,"id"?: string,"input"?: NonNullable<Json>,"kind": string,"outcome"?: Json | null,"status"?: string,"user_id": string,"workspace_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"finished_at"?: string | null,"id"?: string,"input"?: NonNullable<Json>,"kind"?: string,"outcome"?: Json | null,"status"?: string,"user_id"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "connection_commands_workspace_id_fkey"
       columns: ["workspace_id"]
 isOneToOne: false
       referencedRelation: "workspaces"
@@ -1671,6 +1709,25 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"inventory_commands": {
+                  Row: {
+                    "created_at": string,"created_by": string,"error_code": string | null,"error_message": string | null,"finished_at": string | null,"id": string,"input": NonNullable<Json>,"kind": string,"result": Json | null,"status": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"created_by": string,"error_code"?: string | null,"error_message"?: string | null,"finished_at"?: string | null,"id"?: string,"input"?: NonNullable<Json>,"kind": string,"result"?: Json | null,"status"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string,"error_code"?: string | null,"error_message"?: string | null,"finished_at"?: string | null,"id"?: string,"input"?: NonNullable<Json>,"kind"?: string,"result"?: Json | null,"status"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "inventory_commands_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"inventory_items": {
                   Row: {
                     "active": boolean,"aliases": (string)[],"category": string,"cost_vnd": number,"created_at": string,"id": string,"name": string,"reorder_point": number,"reorder_qty": number,"sell_price_vnd": number | null,"sku": string,"supplier_id": string | null,"unit": string,"units": NonNullable<Json>,"updated_at": string,"workspace_id": string
@@ -2190,25 +2247,6 @@ isOneToOne: false
                   Relationships: [
                     {
       foreignKeyName: "loyalty_campaigns_workspace_id_fkey"
-      columns: ["workspace_id"]
-isOneToOne: false
-      referencedRelation: "workspaces"
-      referencedColumns: ["id"]
-    }
-                  ]
-                },"loyalty_commands": {
-                  Row: {
-                    "created_at": string,"created_by": string | null,"error_code": string | null,"finished_at": string | null,"id": string,"kind": string,"params": Json,"result": Json | null,"status": string,"workspace_id": string
-                  }
-                  Insert: {
-                    "created_at"?: string,"created_by"?: string | null,"error_code"?: string | null,"finished_at"?: string | null,"id"?: string,"kind": string,"params"?: Json,"result"?: Json | null,"status"?: string,"workspace_id": string
-                  }
-                  Update: {
-                    "created_at"?: string,"created_by"?: string | null,"error_code"?: string | null,"finished_at"?: string | null,"id"?: string,"kind"?: string,"params"?: Json,"result"?: Json | null,"status"?: string,"workspace_id"?: string
-                  }
-                  Relationships: [
-                    {
-      foreignKeyName: "loyalty_commands_workspace_id_fkey"
       columns: ["workspace_id"]
 isOneToOne: false
       referencedRelation: "workspaces"
@@ -3085,6 +3123,25 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"shifts_commands": {
+                  Row: {
+                    "created_at": string,"created_by": string,"error_code": string | null,"error_message": string | null,"finished_at": string | null,"id": string,"input": NonNullable<Json>,"kind": string,"result": Json | null,"status": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"created_by": string,"error_code"?: string | null,"error_message"?: string | null,"finished_at"?: string | null,"id"?: string,"input"?: NonNullable<Json>,"kind": string,"result"?: Json | null,"status"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string,"error_code"?: string | null,"error_message"?: string | null,"finished_at"?: string | null,"id"?: string,"input"?: NonNullable<Json>,"kind"?: string,"result"?: Json | null,"status"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "shifts_commands_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"shifts_coverage": {
                   Row: {
                     "created_at": string,"end_time": string,"id": string,"ideal_staff": number,"is_peak": boolean,"min_staff": number,"position_id": string,"start_time": string,"weekday": number,"workspace_id": string
@@ -3683,6 +3740,25 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"zalo_wizard_drafts": {
+                  Row: {
+                    "app_id": string | null,"app_secret": string | null,"connection_id": string,"created_at": string,"oa_secret": string | null
+                  }
+                  Insert: {
+                    "app_id"?: string | null,"app_secret"?: string | null,"connection_id": string,"created_at"?: string,"oa_secret"?: string | null
+                  }
+                  Update: {
+                    "app_id"?: string | null,"app_secret"?: string | null,"connection_id"?: string,"created_at"?: string,"oa_secret"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "zalo_wizard_drafts_connection_id_fkey"
+      columns: ["connection_id"]
+isOneToOne: true
+      referencedRelation: "connections"
+      referencedColumns: ["id"]
+    }
+                  ]
                 }
           }
           Views: {
@@ -3761,6 +3837,15 @@ isOneToOne: false
               "last_customer_message_at": string,"members": number,"messages_7d": number,"open_decisions": number,"workspace_id": string
             }[]
                            },
+"agent_chat_send":
+{ Args: { "p_body": string,"p_conversation": string }; Returns: string
+                           },
+"agent_chat_start":
+{ Args: { "p_agent": string,"p_kind": string,"p_visitor"?: string }; Returns: string
+                           },
+"agent_chat_take_over":
+{ Args: { "p_conversation": string,"p_line"?: string,"p_take": boolean }; Returns: string
+                           },
 "ai_credit_period":
 { Args: { "p_period": string,"p_workspace": string }; Returns: {
               "base": number,"carry": number,"credits_limit": number,"used": number
@@ -3786,21 +3871,11 @@ isOneToOne: false
 "assign_lead_responsibility":
 { Args: { "p_due"?: string,"p_locale"?: string,"p_next_action": string,"p_owner": string,"p_responsibility": string,"p_title"?: string,"p_workspace": string }; Returns: Json
                            },
-"automation_tick":
-{ Args: Record<PropertyKey, never>; Returns: boolean
+"automation_command_enqueue":
+{ Args: { "p_kind": string,"p_template": string,"p_workspace": string }; Returns: string
                            },
 "automations_data":
 { Args: { "ws": string }; Returns: Json
-                           },
-"booking_check_slot":
-{ Args: { "p_lead_min"?: number,"p_max_days"?: number,"p_party": number,"p_service": string,"p_start": string,"p_ws": string }; Returns: {
-              "ok": boolean,"resource": string,"why": string
-            }[]
-                           },
-"booking_free_slots":
-{ Args: { "p_exclude"?: string,"p_from": string,"p_lead_min"?: number,"p_max_days"?: number,"p_party": number,"p_resource"?: string,"p_service": string,"p_to": string,"p_ws": string }; Returns: {
-              "s_block_end": string,"s_end": string,"s_ratio": number,"s_resource": string,"s_start": string
-            }[]
                            },
 "booking_peak_load":
 { Args: { "p_block_end": string,"p_exclude": string,"p_resource": string,"p_start": string }; Returns: number
@@ -3814,10 +3889,11 @@ isOneToOne: false
 "booking_reserve":
 { Args: { "p": Json,"p_force"?: boolean }; Returns: string
                            },
-"booking_windows":
-{ Args: { "p_date": string,"p_resource": string,"p_tz": string,"p_ws": string }; Returns: {
-              "w_end": string,"w_start": string
-            }[]
+"connection_command_submit":
+{ Args: { "p_input": Json,"p_kind": string,"p_workspace": string }; Returns: string
+                           },
+"connection_command_take":
+{ Args: { "p_id": string }; Returns: Json
                            },
 "connection_mark_fed":
 { Args: { "p_at": string,"p_connection": string,"p_first_event": Json }; Returns: undefined
@@ -3827,12 +3903,6 @@ isOneToOne: false
                            },
 "dashboard_data":
 { Args: { "founding_from": string,"founding_to": string,"since7": string,"ws": string }; Returns: Json
-                           },
-"desk_booking_add":
-{ Args: { "p_date": string,"p_force"?: boolean,"p_name": string,"p_note": string,"p_party": number,"p_phone": string,"p_resource"?: string,"p_service": string,"p_time": string,"p_workspace": string }; Returns: Json
-                           },
-"desk_booking_move":
-{ Args: { "p_booking": string,"p_force"?: boolean,"p_resource"?: string,"p_start": string,"p_workspace": string }; Returns: Json
                            },
 "display_name_of":
 { Args: { "uid": string }; Returns: string
@@ -3938,8 +4008,85 @@ isOneToOne: false
 "hiring_tick":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"inventory_add_po_lines":
+{ Args: { "p_costs": (number)[],"p_item_ids": (string)[],"p_po": string,"p_qtys": (number)[],"p_ws": string }; Returns: undefined
+                           },
 "inventory_apply_movement":
 { Args: { "p_by": string,"p_dedupe": string,"p_delta": number,"p_evidence": string,"p_item": string,"p_kind": string,"p_loc": string,"p_reason": string,"p_ref_id": string,"p_ref_label": string,"p_ref_type": string,"p_unit_cost"?: number,"p_ws": string }; Returns: Json
+                           },
+"inventory_cancel_po":
+{ Args: { "p_po": string,"p_ws": string }; Returns: {
+              "po_no": string,"work_item_id": string
+            }[]
+                           },
+"inventory_close_receipt":
+{ Args: { "p_receipt": string,"p_total": number }; Returns: undefined
+                           },
+"inventory_command_finish":
+{ Args: { "p_code": string,"p_id": string,"p_message": string,"p_result": Json,"p_status": string }; Returns: undefined
+                           },
+"inventory_default_location":
+{ Args: { "p_name": string,"p_ws": string }; Returns: string
+                           },
+"inventory_delete_recipe":
+{ Args: { "p_id": string,"p_ws": string }; Returns: undefined
+                           },
+"inventory_discard_receipt":
+{ Args: { "p_receipt": string }; Returns: undefined
+                           },
+"inventory_edit_po_draft":
+{ Args: { "p_costs": (number)[],"p_expected": string,"p_line_ids": (string)[],"p_po": string,"p_qtys": (number)[],"p_supplier": string }; Returns: undefined
+                           },
+"inventory_import_item":
+{ Args: { "p_category": string,"p_cost": number,"p_id": string,"p_name": string,"p_reorder_point": number,"p_reorder_qty": number,"p_sell": number,"p_sku": string,"p_supplier": string,"p_unit": string,"p_ws": string }; Returns: string
+                           },
+"inventory_insert_po":
+{ Args: { "p_by": string,"p_expected": string,"p_note": string,"p_po_no": string,"p_source": string,"p_supplier": string,"p_ws": string }; Returns: string
+                           },
+"inventory_mark_po_reminded":
+{ Args: { "p_note": string,"p_po": string }; Returns: undefined
+                           },
+"inventory_mark_po_sent":
+{ Args: { "p_message": string,"p_note": string,"p_po": string,"p_via": string,"p_work_item": string }; Returns: undefined
+                           },
+"inventory_mark_po_waiting":
+{ Args: { "p_po": string,"p_work_item": string }; Returns: undefined
+                           },
+"inventory_open_receipt":
+{ Args: { "p_by": string,"p_invoice": string,"p_note": string,"p_po": string,"p_ws": string }; Returns: string
+                           },
+"inventory_receive_po_line":
+{ Args: { "p_cost": number,"p_line": string,"p_qty": number }; Returns: undefined
+                           },
+"inventory_recompute_po_total":
+{ Args: { "p_po": string }; Returns: number
+                           },
+"inventory_refuse_po":
+{ Args: { "p_note": string,"p_po": string,"p_ws": string }; Returns: undefined
+                           },
+"inventory_save_item":
+{ Args: { "p_aliases": (string)[],"p_category": string,"p_cost": number,"p_id": string,"p_name": string,"p_reorder_point": number,"p_reorder_qty": number,"p_sell": number,"p_sku": string,"p_supplier": string,"p_unit": string,"p_units": Json,"p_ws": string }; Returns: string
+                           },
+"inventory_save_location":
+{ Args: { "p_id": string,"p_name": string,"p_ws": string }; Returns: string
+                           },
+"inventory_save_recipe":
+{ Args: { "p_aliases": (string)[],"p_id": string,"p_item_ids": (string)[],"p_name": string,"p_qtys": (number)[],"p_ws": string }; Returns: string
+                           },
+"inventory_save_supplier":
+{ Args: { "p_channel": string,"p_contact": string,"p_email": string,"p_id": string,"p_lead_time": number,"p_name": string,"p_note": string,"p_phone": string,"p_terms": string,"p_ws": string,"p_zalo": string }; Returns: string
+                           },
+"inventory_set_item_active":
+{ Args: { "p_active": boolean,"p_id": string,"p_ws": string }; Returns: undefined
+                           },
+"inventory_set_po_message":
+{ Args: { "p_message": string,"p_po": string }; Returns: undefined
+                           },
+"inventory_set_po_status":
+{ Args: { "p_po": string,"p_status": string }; Returns: undefined
+                           },
+"inventory_submit":
+{ Args: { "p_input": Json,"p_kind": string,"p_workspace": string }; Returns: string
                            },
 "invite_preview":
 { Args: { "token": string }; Returns: {
@@ -4005,9 +4152,6 @@ isOneToOne: false
 "lead_step_owner":
 { Args: { "p_actor": string,"p_owner": string,"p_workspace": string }; Returns: Record<string, unknown>
                            },
-"loyalty_command_submit":
-{ Args: { "p_kind": string,"p_params": Json,"p_workspace": string }; Returns: string
-                           },
 "loyalty_post":
 { Args: { "p_amount_vnd"?: number,"p_by": string,"p_customer": string,"p_evidence"?: string,"p_expires_at"?: string,"p_invoice_id"?: string,"p_kind": string,"p_occurred_at"?: string,"p_order_id"?: string,"p_points": number,"p_ref": string,"p_reward_id"?: string,"p_work_item_id"?: string,"p_workspace": string }; Returns: string
                            },
@@ -4030,12 +4174,6 @@ isOneToOne: false
 "my_staff_id":
 { Args: { "ws": string }; Returns: string
                            },
-"n8n_schedule_pipelines":
-{ Args: Record<PropertyKey, never>; Returns: number
-                           },
-"n8n_start_run":
-{ Args: { "p_api_base"?: string,"p_data"?: Json,"p_dedupe"?: string,"p_force"?: boolean,"p_key": string,"p_workspace": string }; Returns: string
-                           },
 "office_data":
 { Args: { "since7": string,"ws": string }; Returns: Json
                            },
@@ -4050,24 +4188,6 @@ isOneToOne: false
                            },
 "promo_state":
 { Args: { "founding_from": string,"founding_to": string,"ws": string }; Returns: Json
-                           },
-"public_booking_page":
-{ Args: { "p_slug": string }; Returns: Json
-                           },
-"public_booking_request":
-{ Args: { "p_email": string,"p_name": string,"p_note": string,"p_party": number,"p_phone": string,"p_service": string,"p_slug": string,"p_start": string,"p_token": string,"p_visitor": string,"p_website": string }; Returns: Json
-                           },
-"public_booking_times":
-{ Args: { "p_date": string,"p_party": number,"p_service": string,"p_slug": string,"p_visitor": string }; Returns: Json
-                           },
-"public_loyalty_page":
-{ Args: { "p_slug": string }; Returns: Json
-                           },
-"public_loyalty_result":
-{ Args: { "p_ticket": string }; Returns: Json
-                           },
-"public_loyalty_submit":
-{ Args: { "p_code": string,"p_kind": string,"p_phone": string,"p_slug": string,"p_visitor": string }; Returns: string
                            },
 "read_app_command":
 { Args: { "p_id": string }; Returns: Json
@@ -4125,8 +4245,59 @@ isOneToOne: false
 "shell_data":
 { Args: { "founding_from": string,"founding_to": string,"ws": string }; Returns: Json
                            },
+"shifts_add_shifts":
+{ Args: { "p_dates": (string)[],"p_ends": (string)[],"p_positions": (string)[],"p_schedule": string,"p_source": string,"p_staff": (string)[],"p_starts": (string)[],"p_ws": string }; Returns: number
+                           },
+"shifts_command_finish":
+{ Args: { "p_code": string,"p_id": string,"p_message": string,"p_result": Json,"p_status": string }; Returns: undefined
+                           },
+"shifts_create_leave":
+{ Args: { "p_from": string,"p_reason": string,"p_staff": string,"p_to": string,"p_ws": string }; Returns: string
+                           },
+"shifts_create_swap":
+{ Args: { "p_from": string,"p_kind": string,"p_reason": string,"p_shift": string,"p_to": string,"p_ws": string }; Returns: string
+                           },
+"shifts_decide_leave":
+{ Args: { "p_by": string,"p_leave": string,"p_note": string,"p_status": string,"p_work": string,"p_ws": string }; Returns: (string)[]
+                           },
+"shifts_decide_swap":
+{ Args: { "p_by": string,"p_checks": Json,"p_status": string,"p_swap": string,"p_work": string,"p_ws": string }; Returns: boolean
+                           },
+"shifts_import_apply":
+{ Args: { "p_blocks": Json,"p_positions": Json,"p_staff": Json,"p_ws": string }; Returns: Json
+                           },
+"shifts_link_leave":
+{ Args: { "p_leave": string,"p_work": string,"p_ws": string }; Returns: undefined
+                           },
+"shifts_link_schedule":
+{ Args: { "p_schedule": string,"p_work": string,"p_ws": string }; Returns: undefined
+                           },
+"shifts_link_swap":
+{ Args: { "p_checks": Json,"p_swap": string,"p_work": string,"p_ws": string }; Returns: undefined
+                           },
 "shifts_my_profile":
 { Args: { "ws": string }; Returns: string
+                           },
+"shifts_publish":
+{ Args: { "p_evidence": Json,"p_schedule": string,"p_work": string,"p_ws": string }; Returns: number
+                           },
+"shifts_reassign":
+{ Args: { "p_shift": string,"p_staff": string,"p_ws": string }; Returns: undefined
+                           },
+"shifts_record_notification":
+{ Args: { "p_body": string,"p_channel": string,"p_kind": string,"p_schedule": string,"p_shift": string,"p_staff": string,"p_status": string,"p_ws": string }; Returns: undefined
+                           },
+"shifts_remove_shift":
+{ Args: { "p_shift": string,"p_ws": string }; Returns: undefined
+                           },
+"shifts_save_schedule":
+{ Args: { "p_by": string,"p_cost": number,"p_evidence": Json,"p_ms": number,"p_summary": Json,"p_week": string,"p_ws": string }; Returns: string
+                           },
+"shifts_set_explanation":
+{ Args: { "p_evidence": Json,"p_schedule": string,"p_text": string,"p_ws": string }; Returns: undefined
+                           },
+"shifts_submit":
+{ Args: { "p_input": Json,"p_kind": string,"p_workspace": string }; Returns: string
                            },
 "storage_ws_manager":
 { Args: { "p_name": string }; Returns: boolean
@@ -4163,6 +4334,15 @@ isOneToOne: false
                            },
 "zalo_refresh_tick":
 { Args: Record<PropertyKey, never>; Returns: number
+                           },
+"zalo_wizard_begin":
+{ Args: { "p_connection": string }; Returns: string
+                           },
+"zalo_wizard_oa_secret":
+{ Args: { "p_connection": string,"p_oa_secret": string }; Returns: string
+                           },
+"zalo_wizard_start":
+{ Args: { "p_app_id": string,"p_app_secret": string,"p_name": string,"p_workspace": string }; Returns: string
                            }
           }
           Enums: {

@@ -12,7 +12,7 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { ChatTurnQueue } from "@modules/queues/chat-turn"
-import type { FrontAgent, TelegramInbound, ZaloInbound } from "./conversations.contracts"
+import type { FrontAgent, MetaInbound, TelegramInbound, ZaloInbound } from "./conversations.contracts"
 import type { FrontAgentRow } from "./persistence/conversations.rows"
 import { FIND_FRONT_AGENT } from "./persistence/conversations.sql"
 
@@ -117,6 +117,32 @@ export class ConversationsService {
         )
     }
 
+    /** One Facebook or Instagram direct message: answered by the front-door agent of the connection, or only stored when none is bound. */
+    async acceptMeta(connectionId: string, inbound: MetaInbound, manager: EntityManager): Promise<void> {
+        const connection = await this.connections.intakeOf(connectionId, "meta", manager)
+        if (connection.kind !== "ok") return
+        const visitor = inbound.visitor ?? this.catalog.get(`conversations.${inbound.platform}Guest`, {}, LOCALE)
+        const agent = await this.frontAgentOf(connectionId, manager)
+        const eventId = `meta:${inbound.eventId}`
+        if (agent === undefined) {
+            await this.keepUnrouted(connection.value, inbound.platform, visitor, inbound.text, `${eventId}:${connectionId}`, manager)
+            return
+        }
+        await this.hear(
+            {
+                workspaceId: connection.value.workspaceId,
+                connectionId,
+                channel: inbound.platform,
+                customerId: inbound.personId,
+                visitor,
+                agent,
+                text: inbound.text,
+                channelEventId: eventId,
+            },
+            manager,
+        )
+    }
+
     private async hear(hearing: Hearing, manager: EntityManager): Promise<void> {
         const { conversation, created } = await this.meet(hearing, manager)
         const messageId = await this.messages.storeCustomer(hearing.workspaceId, conversation.id, hearing.text, manager)
@@ -175,7 +201,7 @@ export class ConversationsService {
         eventId: string,
         manager: EntityManager,
     ): Promise<void> {
-        await this.inboundEvents.keepUnrouted({ workspaceId: connection.workspaceId, channel, sender, body, eventId }, manager)
+        await this.inboundEvents.keepUnrouted(manager, { workspaceId: connection.workspaceId, channel, sender, body, eventId })
     }
 
     private async isOtherApp(connectionId: string, appId: string): Promise<boolean> {

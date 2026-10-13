@@ -22,6 +22,6 @@ export interface WebhookProof {
 export interface WebhookProofRegistry {
     /** Registers a proof; a second proof for the same provider is refused. */
     add(proof: WebhookProof): void
-    /** The proof of a provider, or undefined when none was registered. */
-    get(provider: string): WebhookProof | undefined
+    /** Asks the provider's registered proof; a provider with none registered is refused as unknown. */
+    prove(provider: string, request: WebhookProofRequest): Promise<boolean>
 }

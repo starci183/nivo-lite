@@ -8,6 +8,7 @@ import { ChannelDeliveryService } from "./channel-delivery.service"
 import { ConnectionHealthService } from "./connection-health.service"
 import { TelegramProofService } from "./telegram-proof.service"
 import { ZaloProofService } from "./zalo-proof.service"
+import { ZaloWizardService } from "./zalo-wizard.service"
 
 @Module({})
 /** Delivery to the customer channel, the Zalo token lifecycle, the connection health check and the webhook proofs of the messaging channels. */
@@ -17,8 +18,8 @@ export class ChannelsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), ZaloCredentialsService, ChannelSenderRegistryService, ChannelDeliveryService, ConnectionHealthService, TelegramProofService, ZaloProofService, { provide: CHANNEL_SENDER_REGISTRY, useExisting: ChannelSenderRegistryService }],
-            exports: [ZaloCredentialsService, ChannelDeliveryService, ConnectionHealthService, CHANNEL_SENDER_REGISTRY],
+            providers: [...(base.providers ?? []), ZaloCredentialsService, ChannelSenderRegistryService, ChannelDeliveryService, ConnectionHealthService, TelegramProofService, ZaloProofService, ZaloWizardService, { provide: CHANNEL_SENDER_REGISTRY, useExisting: ChannelSenderRegistryService }],
+            exports: [ZaloCredentialsService, ZaloWizardService, ChannelDeliveryService, ConnectionHealthService, CHANNEL_SENDER_REGISTRY],
         }
     }
 }

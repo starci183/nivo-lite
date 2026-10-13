@@ -7,6 +7,8 @@ export const CONVERSATIONS_MESSAGES: MessageBundle = {
         "errors.CONVERSATIONS_TURN_TARGET_MISSING": "Cuộc trò chuyện hoặc tin nhắn cần trả lời không còn tồn tại.",
         "conversations.photoSent": "Khách gửi một ảnh",
         "conversations.zaloGuest": "Khách Zalo",
+        "conversations.facebookGuest": "Khách Facebook",
+        "conversations.instagramGuest": "Khách Instagram",
         "conversations.fallbackGreeting": "Xin chào! Mình là trợ lý AI của cửa hàng. Bạn cần tư vấn gì ạ?",
         "conversations.holdingReply": "Dạ em đã ghi nhận, nhân viên sẽ phản hồi anh/chị sớm ạ",
         "conversations.chatUnavailable":
@@ -19,6 +21,8 @@ export const CONVERSATIONS_MESSAGES: MessageBundle = {
         "errors.CONVERSATIONS_TURN_TARGET_MISSING": "The conversation or the message to answer no longer exists.",
         "conversations.photoSent": "The customer sent a photo",
         "conversations.zaloGuest": "Zalo customer",
+        "conversations.facebookGuest": "Facebook customer",
+        "conversations.instagramGuest": "Instagram customer",
         "conversations.fallbackGreeting": "Hello! I am the shop's AI assistant. How can I help you?",
         "conversations.holdingReply": "We have noted your message and the team will get back to you soon",
         "conversations.chatUnavailable":

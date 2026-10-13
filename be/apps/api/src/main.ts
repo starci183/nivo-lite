@@ -16,11 +16,19 @@ import { parseZaloConfig } from "@modules/integrations/zalo"
 import { parsePlatformAdminConfig } from "@modules/domain/platform-admin"
 import { parseWorkspaceInvitesConfig } from "@modules/domain/workspace-invites"
 import { parseWorkspacesConfig } from "@modules/domain/workspaces"
+import { parseN8nConfig } from "@modules/integrations/n8n"
+import { parseTemplateFilesConfig } from "@modules/integrations/template-files"
 import { parseDeepseekConfig } from "@modules/integrations/deepseek"
 import { parseOpenclawConfig } from "@modules/integrations/openclaw"
 import { parseVideoConfig } from "@modules/domain/video"
 import { parseFfmpegConfig } from "@modules/integrations/ffmpeg"
 import { parseSupabaseConfig } from "@modules/integrations/supabase"
+import { parseConnectionsConfig } from "@modules/domain/connections"
+import { parseWebhookConnectionsConfig } from "@modules/domain/webhook-connections"
+import { parseChannelSetupConfig } from "@modules/integrations/channel-setup"
+import { parseGoogleConfig } from "@modules/integrations/google"
+import { parseMetaConfig } from "@modules/integrations/meta"
+import { parseWebhookDeliveryConfig } from "@modules/integrations/webhook-delivery"
 import { parseTtsConfig } from "@modules/integrations/tts"
 import { AppModule } from "./app.module"
 import type { ApiOptions } from "./api.options"
@@ -53,6 +61,14 @@ const bootstrap = async (): Promise<void> => {
         mail: parseMailConfig(env),
         queue: parseQueueConfig(env),
         jobs: parseJobsConfig(env),
+        connections: parseConnectionsConfig(env),
+        webhookConnections: parseWebhookConnectionsConfig(env),
+        google: parseGoogleConfig(env),
+        meta: parseMetaConfig(env),
+        channelSetup: parseChannelSetupConfig(env),
+        webhookDelivery: parseWebhookDeliveryConfig(env),
+        n8n: parseN8nConfig(env),
+        templateFiles: parseTemplateFilesConfig(env),
         ffmpeg: parseFfmpegConfig(env),
         tts: parseTtsConfig(env),
         video: parseVideoConfig(env),
