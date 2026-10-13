@@ -1,6 +1,5 @@
 import { useActiveWorkspace } from "@/hooks/workspaces"
-import { useQueryWorkspaceMembersSwr } from "@/hooks/swr/api/graphql/queries/useQueryWorkspaceMembersSwr"
-import { useQueryWorkspaceStaffSwr } from "@/hooks/swr/api/graphql/queries/useQueryWorkspaceStaffSwr"
+import { useQueryWorkspaceMembersSwr, useQueryWorkspaceStaffSwr } from "@/hooks/swr"
 import { isManager, useMember } from "@/hooks/member"
 import { slotOfSwr } from "@/hooks/slot"
 import type { DataSlot } from "@/modules/types"

@@ -17,9 +17,8 @@ import type {
     DashboardWaiting,
 } from "@/modules/types"
 import { LABEL_END_CLASS_NAME, SIDE_COLUMN_CLASS_NAME, SIDE_GRID_CLASS_NAME } from "./classNames"
-import { KnowledgeRegion } from "./KnowledgeRegion"
-import { RegionFailed } from "./shared"
-import type { RegionProps, WorkbenchRegionsView } from "./shared"
+import { KnowledgeRegion, regionFallback } from "./component"
+import type { RegionProps, WorkbenchRegionsView } from "./component"
 
 /** What the four common regions of a workbench draw. */
 interface WorkbenchRegionsProps {
@@ -34,11 +33,12 @@ const rowDescription = (item: DashboardRow, when: string): string =>
     [item.description, when].filter(Boolean).join(" · ")
 
 /** The decisions of this module that wait for a person, each linking to the decision. */
-const WaitingRegion = ({ region, isLoading, view, retry }: RegionProps<DashboardWaiting>) => {
+const WaitingRegion = (props: RegionProps<DashboardWaiting>) => {
+    const { region, view } = props
     const t = view.t
     const label = t("waitingTitle")
-    if (isLoading || !region) return <SurfaceListCard label={label} isLoading />
-    if (region.status === "failed") return <RegionFailed label={label} view={view} retry={retry} />
+    const fallback = regionFallback(props, label)
+    if (fallback || region?.status !== "ready") return fallback
     const { total, items } = region.data
     return (
         <SurfaceListCard
@@ -81,11 +81,12 @@ interface DoneRegionProps extends RegionProps<DashboardDone> {
 }
 
 /** How much the agent finished within the owner's rules over the last seven days, and the last few items. */
-const DoneRegion = ({ region, isLoading, module, view, retry }: DoneRegionProps) => {
+const DoneRegion = (props: DoneRegionProps) => {
+    const { region, module, view } = props
     const t = view.t
     const label = t("doneTitle")
-    if (isLoading || !region) return <SurfaceListCard label={label} isLoading />
-    if (region.status === "failed") return <RegionFailed label={label} view={view} retry={retry} />
+    const fallback = regionFallback(props, label)
+    if (fallback || region?.status !== "ready") return fallback
     const { count, items } = region.data
     return (
         <SurfaceListCard
@@ -124,11 +125,12 @@ const STATUS_TONE: Record<DashboardConnection["status"], BadgeTone> = {
 }
 
 /** The connections bound to this agent, their status and what the agent may do through each. */
-const ConnectionsRegion = ({ region, isLoading, view, retry }: RegionProps<ReadonlyArray<DashboardConnection>>) => {
+const ConnectionsRegion = (props: RegionProps<ReadonlyArray<DashboardConnection>>) => {
+    const { region, view } = props
     const t = view.t
     const label = t("connTitle")
-    if (isLoading || !region) return <SurfaceListCard label={label} isLoading />
-    if (region.status === "failed") return <RegionFailed label={label} view={view} retry={retry} />
+    const fallback = regionFallback(props, label)
+    if (fallback || region?.status !== "ready") return fallback
     return (
         <SurfaceListCard
             label={label}

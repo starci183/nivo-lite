@@ -3,13 +3,12 @@
 import { useBookingBoard } from "@/hooks/bookingBoard"
 import { useFormatter, useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
-import { WEEK, hoursLineOf, parseWeek } from "@/hooks/bookingSetup"
+import { WEEK, hoursLineOf, parseWeek, useBookingSetupSave } from "@/hooks/bookingSetup"
 import {
     useMutateRemoveBookingResourceSwr,
     useMutateSaveBookingHoursSwr,
     useMutateSaveBookingResourceSwr,
-} from "@/hooks/swr/api/graphql"
-import { useBookingSetupSave } from "@/hooks/bookingSetup"
+} from "@/hooks/swr"
 import { BookingResourcesBase } from "./component"
 import type { ResourceFields } from "./component"
 

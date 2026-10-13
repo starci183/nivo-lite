@@ -9,6 +9,7 @@ import type {
     GuideScreen,
     Provider,
     VerifyHelpView,
+    WizardNote,
 } from "@/modules/types"
 
 /** A catalog reader as the wizards pass it around: a key and the values of its placeholders. */
@@ -128,3 +129,20 @@ export const agentChoicesOf = (
 /** The ids of every agent, the default ticks of a new connection. */
 export const allAgentIds = (agents: ReadonlyArray<AgentOption>): ReadonlyArray<string> =>
     agents.map((agent) => agent.id)
+
+/** The part of an Apollo answer {@link answeredData} reads. */
+interface GraphQLAnswer<T> {
+    readonly data?: T | null
+}
+
+/** The data of a GraphQL answer; a missing one is a failure named after the operation. */
+export const answeredData = <T>(result: GraphQLAnswer<T>, operation: string): T => {
+    if (!result.data) throw new Error(`${operation} answered no data`)
+    return result.data
+}
+
+/** The note a wizard shows: its own, else the failure of reading the stored connection it resumes. */
+export const resumeNoteOf = (note: WizardNote | null, resumeError: unknown): WizardNote | null => {
+    if (note !== null) return note
+    return resumeError instanceof Error ? { tone: "negative", text: resumeError.message } : null
+}

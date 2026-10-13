@@ -9,7 +9,7 @@ import type { ReactNode } from "react"
 import { intlLocale, toLocale } from "@/i18n/core"
 import { SideEffectsLayout } from "@/features/layouts/SideEffectsLayout"
 import { navigation } from "@/modules/i18n"
-import { ReduxProvider } from "@/redux/ReduxProvider"
+import { ReduxProvider } from "@/redux"
 
 /** What the provider stack takes from the locale layout. */
 type ProvidersProps = {

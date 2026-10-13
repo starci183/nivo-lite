@@ -1,11 +1,7 @@
 import { useFormatter, useTranslations } from "next-intl"
 import { useCallback } from "react"
 import { useSWRConfig } from "swr"
-import { useMutateChatbotDismissKnowledgeGapSwr } from "@/hooks/swr/api/graphql/mutations/useMutateChatbotDismissKnowledgeGapSwr"
-import {
-    QUERY_CHATBOT_GAPS_SWR_KEY,
-    useQueryChatbotGapsSwr,
-} from "@/hooks/swr/api/graphql/queries/useQueryChatbotGapsSwr"
+import { useMutateChatbotDismissKnowledgeGapSwr, QUERY_CHATBOT_GAPS_SWR_KEY, useQueryChatbotGapsSwr } from "@/hooks/swr"
 import { KNOWLEDGE_ROUTES } from "@/modules/routes"
 import { useGraphQLWithToast } from "@/modules/toast"
 

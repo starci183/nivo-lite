@@ -2,10 +2,12 @@ import { useTranslations } from "next-intl"
 import { useCallback, useMemo } from "react"
 import { isDataConnector, purposeFor } from "@/hooks/connection-access"
 import { slotOfSwr } from "@/hooks/slot"
-import { useMutateGrantAgentConnectionSwr } from "@/hooks/swr/api/graphql/mutations/useMutateGrantAgentConnectionSwr"
-import { useMutateRevokeAgentConnectionSwr } from "@/hooks/swr/api/graphql/mutations/useMutateRevokeAgentConnectionSwr"
-import { useQueryAgentConnectionsSwr } from "@/hooks/swr/api/graphql/queries/useQueryAgentConnectionsSwr"
-import { useQueryConnectionsSwr } from "@/hooks/swr/api/graphql/queries/useQueryConnectionsSwr"
+import {
+    useMutateGrantAgentConnectionSwr,
+    useMutateRevokeAgentConnectionSwr,
+    useQueryAgentConnectionsSwr,
+    useQueryConnectionsSwr,
+} from "@/hooks/swr"
 import { MODULE_REGISTRY, isModuleKey } from "@/modules/catalog"
 import { useGraphQLWithToast } from "@/modules/toast"
 import type { DataSlot } from "@/modules/types"

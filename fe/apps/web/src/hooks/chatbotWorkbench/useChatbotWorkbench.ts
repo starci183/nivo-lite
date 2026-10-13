@@ -1,5 +1,5 @@
 import { useTranslations } from "next-intl"
-import { useQueryMyWorkspacesSwr } from "@/hooks/swr/api/graphql/queries/useQueryMyWorkspacesSwr"
+import { useQueryMyWorkspacesSwr } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { FAILED_DASHBOARD, errorOf, figuresOf } from "./chatbotWorkbench.shared"
 import { useChatbotDashboard } from "./useChatbotDashboard"

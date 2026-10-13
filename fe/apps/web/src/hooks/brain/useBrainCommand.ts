@@ -1,5 +1,5 @@
 import { mutate } from "swr"
-import { QUERY_BRAIN_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryBrainSwr"
+import { QUERY_BRAIN_SWR_KEY } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useBrainFactTriggers } from "./useBrainFactTriggers"
 import type { BrainFactRequests } from "./useBrainFactTriggers"

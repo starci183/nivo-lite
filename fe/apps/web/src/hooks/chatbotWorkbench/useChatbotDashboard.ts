@@ -1,4 +1,4 @@
-import { useQueryChatbotAgentDashboardSwr } from "@/hooks/swr/api/graphql/queries/useQueryChatbotAgentDashboardSwr"
+import { useQueryChatbotAgentDashboardSwr } from "@/hooks/swr"
 import type { AgentDashboardData, ConnectionItem, DashboardItem } from "@/lib/agent-dashboard-shared"
 import { agentHref } from "@/modules/installations"
 import type { ChatbotOverview } from "@/modules/types"

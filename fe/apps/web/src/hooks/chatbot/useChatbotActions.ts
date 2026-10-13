@@ -1,17 +1,15 @@
 import { useLocale, useTranslations } from "next-intl"
 import { useCallback } from "react"
 import { useSWRConfig } from "swr"
-import { useMutateRequestChatAnswerSwr } from "@/hooks/swr/api/graphql/mutations/useMutateRequestChatAnswerSwr"
-import { useMutateRequestChatReplySwr } from "@/hooks/swr/api/graphql/mutations/useMutateRequestChatReplySwr"
-import { useMutateSetChatHandlingSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSetChatHandlingSwr"
 import {
+    useMutateRequestChatAnswerSwr,
+    useMutateRequestChatReplySwr,
+    useMutateSetChatHandlingSwr,
     QUERY_CHAT_ANSWER_STATUS_SWR_KEY,
     useQueryChatAnswerStatusSwr,
-} from "@/hooks/swr/api/graphql/queries/useQueryChatAnswerStatusSwr"
-import {
     QUERY_CHAT_REPLY_STATUS_SWR_KEY,
     useQueryChatReplyStatusSwr,
-} from "@/hooks/swr/api/graphql/queries/useQueryChatReplyStatusSwr"
+} from "@/hooks/swr"
 import { CHATBOT_IDLE, useChatbotStore } from "@/hooks/zustand/chatbot"
 import { useGraphQLWithToast } from "@/modules/toast"
 import type { ChatbotTranslator } from "./chatbot.shared"

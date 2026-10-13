@@ -1,6 +1,6 @@
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
-import { useMutateSetOperatingModeSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSetOperatingModeSwr"
+import { useMutateSetOperatingModeSwr } from "@/hooks/swr"
 import type { OperatingMode } from "@/modules/installations"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useRefreshInstallation } from "./useRefreshInstallation"

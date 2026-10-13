@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useCallback, useState } from "react"
 import { mutate } from "swr"
-import { QUERY_MY_ACCOUNT_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryMyAccountSwr"
+import { QUERY_MY_ACCOUNT_SWR_KEY } from "@/hooks/swr"
 import { signOutOthers } from "@/modules/auth"
 import { toast } from "@/modules/toast"
 

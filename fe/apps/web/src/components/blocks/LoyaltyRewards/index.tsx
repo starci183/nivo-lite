@@ -1,7 +1,7 @@
 "use client"
 
 import { EMPTY_LOYALTY_BOARD, findTier } from "@/hooks/loyalty"
-import { useQueryLoyaltyBoardSwr } from "@/hooks/swr/api/graphql"
+import { useQueryLoyaltyBoardSwr } from "@/hooks/swr"
 import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
 import {

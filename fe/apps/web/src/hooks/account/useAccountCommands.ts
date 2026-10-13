@@ -3,10 +3,12 @@
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
 import { mutate } from "swr"
-import { QUERY_MY_ACCOUNT_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryMyAccountSwr"
-import { QUERY_MY_WORKSPACES_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryMyWorkspacesSwr"
-import { useMutateRevokeSessionSwr } from "@/hooks/swr/api/graphql/mutations/useMutateRevokeSessionSwr"
-import { useMutateUpdateProfileSwr } from "@/hooks/swr/api/graphql/mutations/useMutateUpdateProfileSwr"
+import {
+    QUERY_MY_ACCOUNT_SWR_KEY,
+    QUERY_MY_WORKSPACES_SWR_KEY,
+    useMutateRevokeSessionSwr,
+    useMutateUpdateProfileSwr,
+} from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 
 /**

@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import { slotOfSwr } from "@/hooks/slot"
-import { useQuerySetupVersionsSwr } from "@/hooks/swr/api/graphql/queries/useQuerySetupVersionsSwr"
+import { useQuerySetupVersionsSwr } from "@/hooks/swr"
 import type { ContextVersion } from "@/modules/installations"
 import type { DataSlot } from "@/modules/types"
 import { toContextVersion } from "./agentSetup.shared"

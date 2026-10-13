@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import { slotOfSwr } from "@/hooks/slot"
-import { useQuerySetupStateSwr } from "@/hooks/swr/api/graphql/queries/useQuerySetupStateSwr"
+import { useQuerySetupStateSwr } from "@/hooks/swr"
 import type { SetupWrite } from "@/lib/module-setup-writes"
 import type { SetupMessage, SetupRevision, SetupSession } from "@/modules/installations"
 import type { DataSlot } from "@/modules/types"

@@ -1,8 +1,7 @@
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
 import { mutate } from "swr"
-import { QUERY_AUTHORITY_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryAuthoritySwr"
-import { useMutateSaveAuthorityRuleSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSaveAuthorityRuleSwr"
+import { QUERY_AUTHORITY_SWR_KEY, useMutateSaveAuthorityRuleSwr } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import type { RuleChange } from "@/modules/authority"
 

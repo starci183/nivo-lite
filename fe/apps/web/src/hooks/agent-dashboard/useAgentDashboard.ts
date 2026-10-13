@@ -3,12 +3,11 @@ import { useTranslations } from "next-intl"
 import { isAccess } from "@/hooks/connection-access"
 import { isProvider, providerKey } from "@/hooks/connection-providers"
 import { useActiveWorkspace } from "@/hooks/workspaces"
-import { useQueryAgentDashboardSwr } from "@/hooks/swr/api/graphql/queries/useQueryAgentDashboardSwr"
-import type { AgentDashboardView, DashboardRow } from "@/modules/types"
+import { useQueryAgentDashboardSwr } from "@/hooks/swr"
+import type { AgentDashboardView, DashboardRow, Purpose } from "@/modules/types"
 import { workbenchPath } from "@/modules/installations"
 import type { AgentDashboardItemType } from "@/modules/api"
 import type { ModuleKey } from "@/modules/catalog"
-import type { Purpose } from "@/modules/types"
 
 const purposeOf = (value: string): Purpose => {
     switch (value) {

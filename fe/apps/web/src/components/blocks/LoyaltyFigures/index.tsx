@@ -1,7 +1,7 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { useQueryLoyaltyBoardSwr } from "@/hooks/swr/api/graphql"
+import { useQueryLoyaltyBoardSwr } from "@/hooks/swr"
 import { LoyaltyFiguresBase } from "./component"
 
 const stateOf = (failed: boolean, loaded: boolean): "loading" | "failed" | "ready" => {

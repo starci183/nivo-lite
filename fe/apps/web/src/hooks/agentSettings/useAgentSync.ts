@@ -1,7 +1,6 @@
 import { useTranslations } from "next-intl"
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { useMutateRequestAgentSyncSwr } from "@/hooks/swr/api/graphql/mutations/useMutateRequestAgentSyncSwr"
-import { useQueryAgentSyncStatusSwr } from "@/hooks/swr/api/graphql/queries/useQueryAgentSyncStatusSwr"
+import { useMutateRequestAgentSyncSwr, useQueryAgentSyncStatusSwr } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { SYNC_CLOCK_MS, SYNC_POLL_BUSY_MS, SYNC_POLL_IDLE_MS, UNKNOWN_SYNC, toAgentSync } from "./agentSettings.shared"
 
