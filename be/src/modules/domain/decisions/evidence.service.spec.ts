@@ -44,7 +44,7 @@ describe("EvidenceService", () => {
                 evidence: "tg:1:2",
             }
 
-            await service.log(ctx, entry)
+            await expect(service.log(ctx, entry)).resolves.toBeUndefined()
 
             expect(events.record).toHaveBeenCalledWith({
                 workspaceId: "ws-1",
@@ -60,7 +60,9 @@ describe("EvidenceService", () => {
         it("writes null for what the caller left out", async () => {
             const { service, events } = await build(mockEntityManager())
 
-            await service.log(ctx, { kind: "authority.updated", actor: "An", summary: "policies" })
+            await expect(
+                service.log(ctx, { kind: "authority.updated", actor: "An", summary: "policies" }),
+            ).resolves.toBeUndefined()
 
             expect(events.record).toHaveBeenCalledWith({
                 workspaceId: "ws-1",
@@ -80,15 +82,17 @@ describe("EvidenceService", () => {
             const { service } = await build(em)
             const proposal = { summary: "Send", fields: {} }
 
-            await service.decide(
-                ctx,
-                decisionOf({
-                    reason: "over_authority",
-                    note: "ok",
-                    before: proposal,
-                    after: { ...proposal, draft: "Hi" },
-                }),
-            )
+            await expect(
+                service.decide(
+                    ctx,
+                    decisionOf({
+                        reason: "over_authority",
+                        note: "ok",
+                        before: proposal,
+                        after: { ...proposal, draft: "Hi" },
+                    }),
+                ),
+            ).resolves.toBeUndefined()
 
             expect(em.query).toHaveBeenCalledWith(INSERT_DECISION, [
                 "ws-1",
@@ -110,7 +114,7 @@ describe("EvidenceService", () => {
             const em = mockEntityManager({ query: [INSERT_DECISION, []] })
             const { service } = await build(em)
 
-            await service.decide(ctx, decisionOf({ before: null }))
+            await expect(service.decide(ctx, decisionOf({ before: null }))).resolves.toBeUndefined()
 
             expect(em.query).toHaveBeenCalledWith(INSERT_DECISION, [
                 "ws-1",
