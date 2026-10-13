@@ -16,7 +16,7 @@ export const useSignOutOthers = () => {
         setPending(true)
         const outcome = await signOutOthers()
         setPending(false)
-        if (outcome.kind !== "ok") {
+        if (!outcome.success) {
             toast.danger(tToast("errorTitle"), { description: t("unknownError") })
             return false
         }

@@ -1,6 +1,5 @@
 export { graphQLErrorCode } from "./graphql/index"
 export { isForbiddenFailure, isNotFoundFailure, isRefusedByBackend, isUnauthenticatedFailure } from "./graphql/index"
-export type { GraphQLResponse } from "./graphql/types"
 export type {
     AdminHealthQuery,
     AdminWorkspaceQuery,
@@ -89,6 +88,7 @@ export type {
     AgentChatTurnStatusType,
     AgentDashboardItemType,
     AgentDashboardType,
+    AgentGenerationStatusType,
     AutomationCardType,
     AutomationGoogleAccountType,
     AutomationRunType,
@@ -102,6 +102,7 @@ export type {
     BrainGapType,
     BrainLensType,
     BrainLessonType,
+    CreditPackPurchaseType,
     CreditPackType,
     CreditQuotaStatusType,
     CreditTopupLotType,

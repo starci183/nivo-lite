@@ -77,7 +77,11 @@ export class BillingPlanType {
     @Field(() => Boolean)
     listed!: boolean
 
-    /** The usage tiers the plan can be bought with, smallest first. */
+    /** The per-seat credit levels of a per-seat plan (Team); empty on every other plan. */
     @Field(() => [BillingPlanTierType])
     tiers!: ReadonlyArray<BillingPlanTierType>
+
+    /** The add-on credit packs sold on top of the plan's fixed monthly allowance. */
+    @Field(() => [BillingPlanTierType])
+    packs!: ReadonlyArray<BillingPlanTierType>
 }

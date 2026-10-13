@@ -1,15 +1,3 @@
-/**
- * The client-side outcome of one GraphQL operation, in the shape the toast helpers read (`success`, `message`, optional
- * `error`, nested `data`). The back end answers the typed payload itself and reports a failure as `errors[]`; this wrapper is
- * built on the client by `toGraphQLResponse` and is never part of the wire contract.
- */
-export interface GraphQLResponse<TData = undefined> {
-    success: boolean
-    message: string
-    error?: string
-    data?: TData
-}
-
 /** Header names the clients send. */
 export enum GraphQLHeadersKey {
     /** The workspace the operation runs in. */

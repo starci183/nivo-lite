@@ -2,6 +2,8 @@
 // them (the client preset emits operation results only, so each object type is read off the operation that selects most of its fields).
 import { CombinedGraphQLErrors } from "@apollo/client"
 import type {
+    AgentGenerationStatusQuery,
+    CreditPacksBoughtQuery,
     AccountingWorkbenchQuery,
     AgentChatTurnStatusQuery,
     AgentDashboardQuery,
@@ -84,6 +86,10 @@ import type {
 } from "./__generated__/graphql"
 import type { WireInput } from "./types"
 
+/** The `AgentGenerationStatusType` object of the back end contract, as the operations of this app select it. */
+export type AgentGenerationStatusType = AgentGenerationStatusQuery["agentGenerationStatus"]
+/** The `CreditPackPurchaseType` object of the back end contract, as the operations of this app select it. */
+export type CreditPackPurchaseType = CreditPacksBoughtQuery["creditPacksBought"][number]
 /** The `AccountingLedgerEntryType` object of the back end contract, as the operations of this app select it. */
 export type AccountingLedgerEntryType = AccountingWorkbenchQuery["accountingWorkbench"]["ledger"][number]
 /** The `AccountingProposalType` object of the back end contract, as the operations of this app select it. */

@@ -299,3 +299,4 @@ export type {
 } from "./accounting-question-card"
 export type { AccountingDashboardView, AccountingDashboardSectionView } from "./accounting-dashboard"
 export type { ProgramCopy, TierErrorView } from "./loyalty-program"
+export type { GraphQLResponse } from "./outcome"

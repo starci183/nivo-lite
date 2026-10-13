@@ -18,8 +18,8 @@ export const useChangeEmail = () => {
             setError(undefined)
             const outcome = await changeEmail(email)
             setPending(false)
-            if (outcome.kind !== "ok") {
-                setError(t(accountErrorKey(outcome.code)))
+            if (!outcome.success) {
+                setError(t(accountErrorKey(outcome.error ?? "")))
                 return false
             }
             toast.success(tToast("successTitle"), { description: t("emailSent") })

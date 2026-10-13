@@ -1,8 +1,11 @@
 /** Where one payment order is. */
 export type OrderStatus = "pending" | "paid" | "expired" | "cancelled"
 
-/** Plan: first payment or renewal. Upgrade: a higher plan for the prorated difference. Topup: a pack of extra credits. */
-export type OrderKind = "plan" | "upgrade" | "topup"
+/**
+ * Plan: first payment or renewal. Upgrade: a higher plan for the prorated difference. Topup: a legacy pack of extra credits.
+ * Credit pack: an add-on pack of the plan, added to the allowance of the month it is bought in.
+ */
+export type OrderKind = "plan" | "upgrade" | "topup" | "credit_pack"
 
 /** An order, or null when none matches. */
 export type OrderLookup = PaymentOrder | null

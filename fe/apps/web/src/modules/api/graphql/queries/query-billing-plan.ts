@@ -39,6 +39,11 @@ const query1: TypedDocumentNode<QueryBillingPlanResponse, InputVariables<QueryBi
                 priceVnd
                 perSeat
             }
+            packs {
+                creditsPerMonth
+                priceVnd
+                perSeat
+            }
         }
     }
 `

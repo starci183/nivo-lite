@@ -1,5 +1,6 @@
 export * from "./mutations"
 export * from "./queries"
+export * from "./mutations/useMutateSetInventoryItemActiveSwr"
 export * from "./mutations/useMutateSetKnowledgeSuggestionStateSwr"
 export * from "./mutations/useMutateSetMemberStatusSwr"
 export * from "./mutations/useMutateSetModuleLiveSwr"

@@ -19,8 +19,8 @@ export const useChangePassword = () => {
             setError(undefined)
             const outcome = await changePassword(input)
             setPending(false)
-            if (outcome.kind !== "ok") {
-                setError(t(accountErrorKey(outcome.code)))
+            if (!outcome.success) {
+                setError(t(accountErrorKey(outcome.error ?? "")))
                 return false
             }
             toast.success(tToast("successTitle"), { description: t("passwordSaved") })

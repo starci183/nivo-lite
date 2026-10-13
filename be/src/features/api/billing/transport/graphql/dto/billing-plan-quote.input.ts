@@ -17,7 +17,7 @@ export class BillingPlanQuoteInput {
     @IsIn(["monthly", "annual"])
     cycle?: "monthly" | "annual" | null
 
-    /** The monthly credit allowance picked from the usage tiers. */
+    /** The per-seat credit level picked on a per-seat plan. */
     @Field(() => Float, { nullable: true })
     @IsOptional()
     @IsInt()

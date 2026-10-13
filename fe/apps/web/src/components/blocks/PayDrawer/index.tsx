@@ -21,9 +21,13 @@ export const PayDrawer = () => {
             maximumFractionDigits: 0,
         })
     const { phase, left } = useCreditsPaymentState(drawer.workspaceId, drawer.order, drawer.onPaid)
-    const credits = drawer.target?.kind === "topup" ? formatter.number(drawer.target.credits) : ""
-    let title = t("payTopup", { credits })
-    let paidDescription = t("paidTopup", { credits })
+    const credits =
+        drawer.target?.kind === "topup" || drawer.target?.kind === "credit_pack"
+            ? formatter.number(drawer.target.credits)
+            : ""
+    const isPack = drawer.target?.kind === "credit_pack"
+    let title = t(isPack ? "payPack" : "payTopup", { credits })
+    let paidDescription = t(isPack ? "paidPack" : "paidTopup", { credits })
     if (drawer.target?.kind === "upgrade") {
         title = t("payUpgrade", { plan: drawer.target.planName })
         paidDescription = t("paidUpgrade", { plan: drawer.target.planName })

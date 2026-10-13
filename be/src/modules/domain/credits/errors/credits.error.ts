@@ -15,6 +15,8 @@ export enum CreditsErrorCode {
     RenewFirst = "CREDITS_RENEW_FIRST",
     /** Nothing to charge: the upgrade is switched by hand. */
     ZeroAmount = "CREDITS_ZERO_AMOUNT",
+    /** The plan is sold with add-on packs, so the old top-up packs are not sold to it. */
+    UsePacks = "CREDITS_USE_PACKS",
 }
 
 /** How each credits code travels. */
@@ -25,6 +27,7 @@ export const CREDITS_ERROR_KINDS: Record<CreditsErrorCode, ErrorKind> = {
     [CreditsErrorCode.NotUpgrade]: "conflict",
     [CreditsErrorCode.RenewFirst]: "conflict",
     [CreditsErrorCode.ZeroAmount]: "conflict",
+    [CreditsErrorCode.UsePacks]: "conflict",
 }
 
 /** The one error class of the credits capability. */
