@@ -1,4 +1,4 @@
-// migrations-sha256: d38f9d77a9d710a6804619f704bec7dd429691451d7d4b12bd3955583dd365bd
+// migrations-sha256: b76497e6d2d13b7db09f3362c07970a92fed222653fb2e94387ec139624c67b1
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -3938,6 +3938,9 @@ isOneToOne: false
 "api_rate_hit":
 { Args: { "p_key": string }; Returns: number
                            },
+"app_errors_record":
+{ Args: { "p_connection": string,"p_ctx": Json,"p_message": string,"p_scope": string,"p_stack": string,"p_ws": string }; Returns: undefined
+                           },
 "assign_lead_responsibility":
 { Args: { "p_due"?: string,"p_locale"?: string,"p_next_action": string,"p_owner": string,"p_responsibility": string,"p_title"?: string,"p_workspace": string }; Returns: Json
                            },
@@ -4488,6 +4491,9 @@ isOneToOne: false
                            },
 "shifts_reassign":
 { Args: { "p_shift": string,"p_staff": string,"p_ws": string }; Returns: undefined
+                           },
+"shifts_record_notice":
+{ Args: { "p_body": string,"p_channel": string,"p_error": string,"p_kind": string,"p_schedule": string,"p_shift": string,"p_staff": string,"p_status": string,"p_ws": string }; Returns: undefined
                            },
 "shifts_record_notification":
 { Args: { "p_body": string,"p_channel": string,"p_kind": string,"p_schedule": string,"p_shift": string,"p_staff": string,"p_status": string,"p_ws": string }; Returns: undefined

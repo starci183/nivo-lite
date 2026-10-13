@@ -7,6 +7,9 @@ export interface InviteCommandPayload {
     readonly commandId: string
 }
 
+/** An invitation command read from a job payload; null when the payload names no command and the job is dropped. */
+export type OptionalInviteCommandPayload = InviteCommandPayload | null
+
 /** Reads a job payload as an invitation command; null when it names no command. */
-export const inviteCommandPayloadOf = (value: object): InviteCommandPayload | null =>
+export const inviteCommandPayloadOf = (value: object): OptionalInviteCommandPayload =>
     "commandId" in value && typeof value.commandId === "string" ? { commandId: value.commandId } : null

@@ -47,11 +47,11 @@ const messageOf = builder<QueueReadRow>({
 const failedMessage = (id: string, attempt: number): QueueReadRow =>
     messageOf({ msg_id: id, attempt, message: { name: "knowledge.index", payload: {}, outbox_id: `row-${id}` } })
 
-/** Answers the read batches in turn (then nothing); other statements answer `{}`, or reject when the statement is listed. */
-const scriptReads = (
+/** A manager whose reads answer the batches in turn (then nothing) and whose other statements answer `{}` or the failure given for them. */
+const script = (
     manager: MockEntityManager,
     batches: ReadonlyArray<ReadonlyArray<QueueReadRow>>,
-    refusing: ReadonlyArray<string> = [],
+    refusing: ReadonlyArray<string>,
 ): void => {
     const pending = [...batches]
     manager.query.mockImplementation((statement: string) => {
@@ -71,6 +71,17 @@ const build = async (manager: MockEntityManager = mockEntityManager(), options: 
         ],
     }).compile()
     return { client: moduleRef.get(PgmqQueueTransportClient), manager, logger }
+}
+
+/** The client over a scripted manager (see `script`). */
+const buildScripted = (
+    batches: ReadonlyArray<ReadonlyArray<QueueReadRow>>,
+    refusing: ReadonlyArray<string> = [],
+    options: Partial<QueueOptions> = {},
+) => {
+    const manager = mockEntityManager()
+    script(manager, batches, refusing)
+    return build(manager, options)
 }
 
 /** A handler with a failure hook that fails the deliveries whose job id is listed with the cause given for it. */
@@ -170,9 +181,7 @@ describe("PgmqQueueTransportClient", () => {
 
     describe("work", () => {
         it("reads the free slots with the visibility timeout and the workspace limit, runs the batch and acknowledges what completed", async () => {
-            const queued = mockEntityManager()
-            scriptReads(queued, [[messageOf(), messageOf({ msg_id: "2" })]])
-            const { client, manager } = await build(queued)
+            const { client, manager } = await buildScripted([[messageOf(), messageOf({ msg_id: "2" })]])
             const { handler, handle } = handlerOf()
 
             const wait = await runUntilFirstPause(client, handler)
@@ -196,9 +205,7 @@ describe("PgmqQueueTransportClient", () => {
                 code: QueueErrorCode.RetryAfter,
                 params: { seconds: 30, reason: "rate limited" },
             })
-            const queued = mockEntityManager()
-            scriptReads(queued, [[failedMessage("2", 2), failedMessage("3", 1)]])
-            const { client, manager, logger } = await build(queued)
+            const { client, manager, logger } = await buildScripted([[failedMessage("2", 2), failedMessage("3", 1)]])
             const { handler, failed } = handlerOf({ "row-2": new Error("provider down"), "row-3": asked })
 
             await runUntilFirstPause(client, handler)
@@ -216,9 +223,7 @@ describe("PgmqQueueTransportClient", () => {
 
         it("archives a job on its last attempt, even one that asked to retry, after its failure hook ran", async () => {
             const asked = new QueueError({ code: QueueErrorCode.RetryAfter, params: { seconds: 30 } })
-            const queued = mockEntityManager()
-            scriptReads(queued, [[failedMessage("4", 4)]])
-            const { client, manager, logger } = await build(queued)
+            const { client, manager, logger } = await buildScripted([[failedMessage("4", 4)]])
             const { handler, failed } = handlerOf({ "row-4": asked })
 
             await runUntilFirstPause(client, handler)
@@ -238,9 +243,7 @@ describe("PgmqQueueTransportClient", () => {
                 code: QueueErrorCode.Unrecoverable,
                 params: { reason: "blocked_credits" },
             })
-            const queued = mockEntityManager()
-            scriptReads(queued, [[failedMessage("5", 1)]])
-            const { client, manager } = await build(queued)
+            const { client, manager } = await buildScripted([[failedMessage("5", 1)]])
             const { handle } = handlerOf({ "row-5": refused })
             const handler: QueueHandler = { queue: "knowledge", handle }
 
@@ -250,9 +253,7 @@ describe("PgmqQueueTransportClient", () => {
         })
 
         it("archives the job even when its failure hook throws, and logs the hook", async () => {
-            const queued = mockEntityManager()
-            scriptReads(queued, [[failedMessage("6", 4)]])
-            const { client, manager, logger } = await build(queued)
+            const { client, manager, logger } = await buildScripted([[failedMessage("6", 4)]])
             const { handler, failed } = handlerOf({ "row-6": new Error("gave up") })
             const hook = new Error("hook broke")
             failed.mockRejectedValue(hook)
@@ -267,9 +268,7 @@ describe("PgmqQueueTransportClient", () => {
         })
 
         it("logs a read that failed and pauses before reading again", async () => {
-            const queued = mockEntityManager()
-            scriptReads(queued, [])
-            const { client, manager, logger } = await build(queued)
+            const { client, manager, logger } = await buildScripted([])
             const failure = new Error("pgmq unreachable")
             manager.query.mockRejectedValueOnce(failure)
 
@@ -279,9 +278,7 @@ describe("PgmqQueueTransportClient", () => {
         })
 
         it("logs a message it could not settle, leaving it to reappear after its visibility timeout", async () => {
-            const queued = mockEntityManager()
-            scriptReads(queued, [[messageOf()]], [JOB_ACK])
-            const { client, logger } = await build(queued)
+            const { client, logger } = await buildScripted([[messageOf()]], [JOB_ACK])
 
             await runUntilFirstPause(client, handlerOf().handler)
 
@@ -292,9 +289,10 @@ describe("PgmqQueueTransportClient", () => {
         })
 
         it("reads again as soon as a running job frees its slot when every slot is taken", async () => {
-            const queued = mockEntityManager()
-            scriptReads(queued, [[messageOf(), messageOf({ msg_id: "2" })], [messageOf({ msg_id: "3" })]])
-            const { client, manager } = await build(queued)
+            const { client, manager } = await buildScripted([
+                [messageOf(), messageOf({ msg_id: "2" })],
+                [messageOf({ msg_id: "3" })],
+            ])
             const { handler, handle } = handlerOf()
 
             const wait = await runUntilFirstPause(client, handler, 2)
@@ -305,9 +303,7 @@ describe("PgmqQueueTransportClient", () => {
         })
 
         it("does not pause after an empty read once it is closing", async () => {
-            const queued = mockEntityManager()
-            scriptReads(queued, [])
-            const { client, manager } = await build(queued)
+            const { client, manager } = await buildScripted([])
             const wait = jest.spyOn(client, "wait").mockImplementation(() => new Promise<void>(() => undefined))
             let stopped: Promise<void> = Promise.resolve()
             manager.query.mockImplementation(() => {
@@ -327,9 +323,7 @@ describe("PgmqQueueTransportClient", () => {
             afterEach(() => jest.useRealTimers())
 
             it("renews the visibility timeout every third of it and logs a renewal that failed", async () => {
-                const queued = mockEntityManager()
-                scriptReads(queued, [])
-                const { client, manager, logger } = await build(queued)
+                const { client, manager, logger } = await buildScripted([])
                 const refused = new Error("touch refused")
                 manager.query.mockImplementationOnce(() => Promise.resolve([messageOf()]))
                 manager.query.mockImplementationOnce(() => Promise.reject(refused))
@@ -359,9 +353,7 @@ describe("PgmqQueueTransportClient", () => {
             })
 
             it("aborts a delivery that outlives the shutdown grace and hands its message back at once", async () => {
-                const queued = mockEntityManager()
-                scriptReads(queued, [[messageOf()]])
-                const { client, manager, logger } = await build(queued, { shutdownGraceMs: 500 })
+                const { client, manager, logger } = await buildScripted([[messageOf()]], [], { shutdownGraceMs: 500 })
                 const handler: QueueHandler = {
                     queue: "knowledge",
                     handle: (delivery) =>

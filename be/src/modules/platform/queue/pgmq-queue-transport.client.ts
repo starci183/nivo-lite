@@ -1,6 +1,8 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectErrorReporter } from "@modules/platform/errors"
+import type { ErrorReporter } from "@modules/platform/errors"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import type { QueueDelivery, QueueHandler, QueueJob, QueueSchedulerDefinition } from "./queue.contracts"
@@ -18,6 +20,7 @@ import {
     retryAfterSecondsOf,
     secondsOf,
     tickOf,
+    workspaceOf,
 } from "./queue.policy"
 import type { QueueTransport } from "./queue-transport.port"
 import {
@@ -54,6 +57,7 @@ export class PgmqQueueTransportClient implements QueueTransport {
         @InjectQueueOptions() private readonly options: QueueOptions,
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectLogger() private readonly logger: Logger,
+        @Optional() @InjectErrorReporter() private readonly reporter?: ErrorReporter,
     ) {}
 
     /** Writes the outbox row and sends the message inside the transaction `tx`; a dedupe key that already exists sends nothing. */
@@ -203,6 +207,11 @@ export class PgmqQueueTransportClient implements QueueTransport {
         }
         if (isUnrecoverable(cause) || isExhausted(delivery.attempt)) {
             this.logger.error(QueueLogEvent.DeadLettered, cause, fields)
+            void this.reporter?.report(`job.${handler.queue}`, cause, {
+                workspaceId: workspaceOf(delivery.payload),
+                job: delivery.job,
+                attempt: delivery.attempt,
+            })
             await this.notifyFailed(handler, delivery, cause)
             await this.entityManager.query(JOB_ARCHIVE, [handler.queue, message.msg_id, reasonOf(cause)])
             return
