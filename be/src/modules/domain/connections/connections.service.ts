@@ -25,6 +25,7 @@ import type {
     ListByProviderOptions,
     Provider,
     RecordedEvent,
+    SyncSchedule,
     WizardSettlement,
 } from "./connections.contracts"
 import { toConnectionRecord } from "./connections.mapper"
@@ -37,6 +38,7 @@ import type {
     HealthCandidateRow,
     IntakeConnectionRow,
     MemberRow,
+    SyncScheduleRow,
 } from "./persistence/connections.rows"
 import {
     APPLY_ZALO_AUTHORIZATION,
@@ -45,6 +47,8 @@ import {
     FIND_ACTIVE_MEMBER,
     FIND_CONNECTION,
     FIND_CONNECTION_AGENT_IDS,
+    FIND_DEFAULT_SMTP,
+    FIND_SYNC_SCHEDULE,
     FIND_CONNECTIONS_BY_IDS,
     FIND_INTAKE_CONNECTION,
     FIND_LIVE_BY_META,
@@ -54,13 +58,18 @@ import {
     INSERT_SECRET,
     LIST_CONNECTIONS,
     LIST_CONNECTIONS_BY_PROVIDER,
+    LIST_DUE_SYNCS,
     LIST_HEALTH_BATCH,
     MARK_CONNECTION_ERROR,
     MARK_CONNECTION_HEALTH,
     MARK_CONNECTION_RECEIVED,
+    MARK_SYNC_FAILED,
+    MARK_SYNCED,
     PATCH_CONNECTION,
     RECORD_EVENT,
     UPSERT_SECRET,
+    SET_DEFAULT_SMTP,
+    SET_SYNC_SCHEDULE,
     SETTLE_WIZARD,
 } from "./persistence/connections.sql"
 
@@ -365,5 +374,49 @@ export class ConnectionsService {
         }
         const facts = settlement.oaSecretSaved ? { oa_secret_saved: true, wizard } : { wizard }
         await this.entityManager.query(SETTLE_WIZARD, [connectionId, ticket, JSON.stringify(facts)])
+    }
+
+    /** How often a connection of the workspace syncs by itself and when it last did; a missing one is a typed not-found. */
+    async scheduleOf(workspaceId: string, id: string): Promise<SyncSchedule> {
+        const [row] = await this.entityManager.query<Array<SyncScheduleRow>>(FIND_SYNC_SCHEDULE, [workspaceId, id])
+        if (row === undefined) throw new ConnectionsError({ code: ConnectionsErrorCode.NotFound, params: { id } })
+        return { everyMinutes: row.sync_every_minutes, lastSyncAt: row.last_sync_at }
+    }
+
+    /** Sets how often a connection syncs by itself (null is manual only); the first scheduled sync is due at once. */
+    async setSchedule(workspaceId: string, id: string, everyMinutes: number | null): Promise<void> {
+        const rows = await this.entityManager.query<Array<{ id: string }>>(SET_SYNC_SCHEDULE, [
+            workspaceId,
+            id,
+            everyMinutes,
+        ])
+        if (rows[0] === undefined) throw new ConnectionsError({ code: ConnectionsErrorCode.NotFound, params: { id } })
+    }
+
+    /** A sync finished: the connection works, the next sync is scheduled and the given public facts join the old ones. */
+    async markSynced(connectionId: string, facts: Readonly<Record<string, string>>): Promise<void> {
+        await this.entityManager.query(MARK_SYNCED, [connectionId, JSON.stringify(facts)])
+    }
+
+    /** A sync failed: the owner reads the reason and the retry waits at least a quarter of an hour. */
+    async markSyncFailed(connectionId: string, reason: string): Promise<void> {
+        await this.entityManager.query(MARK_SYNC_FAILED, [connectionId, reason])
+    }
+
+    /** The ids of the connections of these providers whose scheduled sync is due, soonest first. */
+    async dueForSync(providers: ReadonlyArray<Provider>, size: number): Promise<ReadonlyArray<string>> {
+        const rows = await this.entityManager.query<Array<{ id: string }>>(LIST_DUE_SYNCS, [providers, size])
+        return rows.map((row) => row.id)
+    }
+
+    /** Makes one SMTP connection the workspace default; every other one becomes a spare. */
+    async setDefaultSmtp(workspaceId: string, id: string): Promise<void> {
+        await this.entityManager.query(SET_DEFAULT_SMTP, [workspaceId, id])
+    }
+
+    /** The id of the workspace default SMTP connection, or null when it has none. */
+    async defaultSmtpId(workspaceId: string): Promise<string | null> {
+        const [row] = await this.entityManager.query<Array<{ id: string }>>(FIND_DEFAULT_SMTP, [workspaceId])
+        return row === undefined ? null : row.id
     }
 }
