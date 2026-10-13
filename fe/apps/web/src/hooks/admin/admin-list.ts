@@ -1,4 +1,4 @@
-import type { AdminWorkspaceItem } from "@/modules/api"
+import type { AdminWorkspaceItem } from "@/modules/db/admin/admin.mapper"
 import { adminWorkspacePath } from "@/modules/routes"
 import { billingTone, healthTone, moduleTone } from "./admin.shared"
 import type { AdminBadgeView, AdminFormat, AdminText } from "./admin.shared"

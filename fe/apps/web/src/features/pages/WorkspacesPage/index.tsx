@@ -2,8 +2,7 @@ import type { Metadata } from "next"
 import { getLocale, getTranslations } from "next-intl/server"
 import { workspaceRoleOf, workspaceStateOf } from "@/hooks/workspaces"
 import type { WorkspaceCardView } from "@/hooks/workspaces"
-import { readMemberships } from "@/modules/api"
-import { getPrincipal } from "@/modules/db"
+import { getPrincipal, readMemberships } from "@/modules/db"
 import { navigation } from "@/modules/i18n"
 import { loginPath } from "@/modules/routes"
 import { WorkspacesPageBase } from "./component"
@@ -26,7 +25,7 @@ export const WorkspacesPage = async (props: WorkspacesPageProps) => {
     const principal = await getPrincipal()
     if (principal.kind !== "ok") navigation.redirect({ href: loginPath(), locale })
     const memberships = await readMemberships()
-    if (memberships.kind !== "ok") throw new Error(`workspaces: ${memberships.kind} ${memberships.fault.code}`)
+    if (memberships.kind !== "ok") throw new Error(`workspaces: ${memberships.kind} ${memberships.code}`)
     const t = await getTranslations("onboarding")
     const workspaces = memberships.value
         .filter((membership) => membership.memberStatus === "active")

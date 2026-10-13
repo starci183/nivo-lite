@@ -4,8 +4,11 @@ import type { GoogleOptions } from "@modules/integrations/google"
 import type { MetaOptions } from "@modules/integrations/meta"
 import type { WebhookConnectionsOptions } from "@modules/domain/webhook-connections"
 import type { WebhookDeliveryOptions } from "@modules/integrations/webhook-delivery"
+import type { DeepseekOptions } from "@modules/integrations/deepseek"
+import type { OpenclawOptions } from "@modules/integrations/openclaw"
 import type { VideoOptions } from "@modules/domain/video"
 import type { SupabaseOptions } from "@modules/integrations/supabase"
+import type { BillingOptions } from "@modules/domain/billing"
 import type { FfmpegOptions } from "@modules/integrations/ffmpeg"
 import type { TtsOptions } from "@modules/integrations/tts"
 import type { ServerOptions } from "@modules/platform/config"
@@ -36,6 +39,12 @@ export interface ApiOptions {
     readonly workspaces: WorkspacesOptions
     /** Invitation links and how long they stay valid. */
     readonly workspaceInvites: Omit<WorkspaceInvitesOptions, "delivery">
+    /** The payment feeds: keys, bank account and the credential key. */
+    readonly billing: BillingOptions
+    /** The OpenClaw gateway and the agent workspaces. */
+    readonly openclaw: OpenclawOptions
+    /** The prompt library tunables. */
+    readonly deepseek: DeepseekOptions
     /** The key that seals the credentials of the connections. */
     readonly connectionSecrets: ConnectionSecretsOptions
     /** The public origin of the web app, for provider return addresses. */

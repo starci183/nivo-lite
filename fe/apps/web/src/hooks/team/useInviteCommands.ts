@@ -1,5 +1,6 @@
 import { useMemo } from "react"
-import type { InviteResultItem, Outcome } from "@/modules/api"
+import type { DbOutcome } from "@/modules/db/outcome"
+import type { InviteResultItem } from "@/modules/db/team/team.mapper"
 import {
     writeInviteCreate,
     writeInviteLink,
@@ -15,15 +16,15 @@ export interface InviteInput {
     readonly staffId: string | null
 }
 
-/** The calls the invitation blocks make to the back end api. */
+/** The calls the invitation blocks make to the database. */
 export interface InviteCommands {
-    readonly create: (input: InviteInput) => Promise<Outcome<InviteResultItem>>
-    readonly resend: (inviteId: string) => Promise<Outcome<InviteResultItem>>
-    readonly copyLink: (inviteId: string) => Promise<Outcome<InviteResultItem>>
-    readonly revoke: (inviteId: string) => Promise<Outcome<null>>
+    readonly create: (input: InviteInput) => Promise<DbOutcome<InviteResultItem>>
+    readonly resend: (inviteId: string) => Promise<DbOutcome<InviteResultItem>>
+    readonly copyLink: (inviteId: string) => Promise<DbOutcome<InviteResultItem>>
+    readonly revoke: (inviteId: string) => Promise<DbOutcome<null>>
 }
 
-/** The invitation commands of one workspace, run as Server Actions; the back end proves the role. */
+/** The invitation commands of one workspace, run as Server Actions; the database proves the role. */
 export const useInviteCommands = (workspaceId: string): InviteCommands =>
     useMemo<InviteCommands>(
         () => ({

@@ -1,6 +1,6 @@
-import { DecisionsView } from "@/features/decisions/component"
+import { DecisionsLoadingPage } from "@/features/pages/DecisionsPage"
 
-/** STATE-8: the decision history itself, with no data yet - the same heading and filters, the list as three skeleton rows. */
-const DecisionsLoading = () => <DecisionsView isLoading rows={[]} kind={null} dept={null} limit={100} />
+/** The decisions loading slot. */
+const Loading = () => <DecisionsLoadingPage />
 
-export default DecisionsLoading
+export default Loading

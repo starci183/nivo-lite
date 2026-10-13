@@ -3,8 +3,7 @@ import { getTranslations } from "next-intl/server"
 import { teamViews } from "@/hooks/team"
 import { isManagerRole } from "@/lib/members-shared"
 import { getSession } from "@/lib/session"
-import { readTeamRoster } from "@/modules/api"
-import { readTeamStaff } from "@/modules/db"
+import { readTeamRoster, readTeamStaff } from "@/modules/db"
 import { APP_ROUTES } from "@/modules/routes"
 import { TeamPageBase } from "./component"
 import type { TeamPageBaseProps } from "./component"
@@ -63,7 +62,7 @@ export const TeamPage = async () => {
         readTeamRoster(session.workspace.id),
         readTeamStaff(session.workspace.id),
     ])
-    if (roster.kind !== "ok") throw new Error(`team: ${roster.kind} ${roster.fault.code}`)
+    if (roster.kind !== "ok") throw new Error(`team: ${roster.kind} ${roster.code}`)
     if (staff.kind !== "ok") throw new Error(`team: ${staff.kind} ${staff.code}`)
     const views = teamViews(roster.value, staff.value)
     return <TeamPageBase props={{ ...copyOf(t), ...empty, ...views }} />

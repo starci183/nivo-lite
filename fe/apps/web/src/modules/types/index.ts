@@ -123,6 +123,14 @@ export type {
 } from "./connection-wizard"
 export type { DataSlot, SlotLabels } from "./slot"
 export type {
+    DeciderKind,
+    DecisionFilter,
+    DecisionKind,
+    DecisionOutcome,
+    DecisionRecord,
+    GateReason,
+} from "./decisions"
+export type {
     AttentionKind,
     AttentionRow,
     AutoActivity,

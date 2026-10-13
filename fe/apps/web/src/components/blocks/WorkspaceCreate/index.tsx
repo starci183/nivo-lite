@@ -23,7 +23,7 @@ export const WorkspaceCreate = () => {
         if (length < WORKSPACE_NAME_MIN || length > WORKSPACE_NAME_MAX) return setError(t("errName"))
         startTransition(async () => {
             const created = await create(name)
-            if (created.kind !== "ok") return setError(t(workspaceErrorKey(created.fault.code)))
+            if (created.kind !== "ok") return setError(t(workspaceErrorKey(created.code)))
             await writeSwitchWorkspace(created.value.id)
             router.push(APP_ROUTES.chat)
             router.refresh()

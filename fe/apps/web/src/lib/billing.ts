@@ -1,83 +1,42 @@
 import "server-only";
-import { unstable_cache } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { supabaseAdmin } from "./supabase/admin";
+import {
+  readBillingWorkspaces,
+  readOpenPlanOrder,
+  readPaymentOrder,
+  readPlan,
+  readPlans,
+  writePaymentOrderRequest,
+} from "@/modules/db";
+import type { BillingWorkspace, OrderKind, OrderStatus, PaymentOrder, Plan, WorkspaceStatus } from "@/modules/db";
 import { getAuthUser } from "./supabase/auth-user";
-import { supabaseServer } from "./supabase/server";
-import { newOrderCode } from "./sepay";
 
-export type WorkspaceStatus = "pending_payment" | "active" | "past_due" | "cancelled";
-export type OrderStatus = "pending" | "paid" | "expired" | "cancelled";
-/** plan: first payment or renewal; upgrade: switch to a higher plan for the prorated difference; topup: a pack of extra credits. */
-export type OrderKind = "plan" | "upgrade" | "topup";
-
-export type Plan = {
-  code: string;
-  name_vi: string;
-  name_en: string;
-  price_vnd: number;
-  period: "month" | "year";
-  seats: number;
-  features: { vi: string[]; en: string[] };
-  sort: number;
-  /** Monthly AI credits (null = unlimited). */
-  ai_credits_per_month: number | null;
-  /** Contract plan (Enterprise): shown, never bought in the app; NIVO assigns it in the team console. */
-  is_custom: boolean;
-};
-
-export type PaymentOrder = {
-  id: string;
-  workspace_id: string;
-  plan_code: string;
-  amount_vnd: number;
-  order_code: string;
-  status: OrderStatus;
-  expires_at: string;
-  paid_at: string | null;
-  created_at: string;
-  kind: OrderKind;
-  pack_code: string | null;
-  /** What was sold, frozen at order time (top-up: credits; upgrade: the proration inputs). */
-  detail: Record<string, unknown>;
-};
-
-export type BillingWorkspace = { id: string; name: string; status: WorkspaceStatus; plan_code: string | null; paid_until: string | null };
+/**
+ * Wave 3 shim: the billing helpers other lanes still import, now over `modules/db` (RLS reads; payment orders are asked for
+ * through the `payment_order_request` rpc and made by the back end). New code imports `@/modules/db` directly.
+ */
+export type { BillingWorkspace, OrderKind, OrderStatus, PaymentOrder, Plan, WorkspaceStatus };
 
 /** Cookie holding the workspace used last; same name as session.ts (kept literal to avoid importing the session here). */
 const WORKSPACE_COOKIE = "NIVO_WORKSPACE";
 
-/** The plan catalogue is the same for everyone and changes by migration only: cached for 5 minutes (tag "plans"). Used for display; prices that charge money are read live by `getPlan`. */
-const cachedPlans = unstable_cache(
-  async (): Promise<Array<Plan>> => {
-    const { data } = await supabaseAdmin().from("plans").select("*").eq("active", true).order("sort");
-    return (data ?? []) as Array<Plan>;
-  },
-  ["plans_active"],
-  { revalidate: 300, tags: ["plans"] },
-);
-
-export const listPlans = async (): Promise<Array<Plan>> => cachedPlans();
+export const listPlans = async (): Promise<Array<Plan>> => {
+  const plans = await readPlans();
+  return plans.kind === "ok" ? [...plans.value] : [];
+};
 
 export const getPlan = async (code: string): Promise<Plan | null> => {
-  const db = await supabaseServer();
-  const { data } = await db.from("plans").select("*").eq("code", code).eq("active", true).maybeSingle();
-  return (data as Plan | null) ?? null;
+  const plan = await readPlan(code);
+  return plan.kind === "ok" ? plan.value : null;
 };
 
 /** The signed-in user's workspaces with their billing state (RLS: only the ones they belong to). */
-export const myWorkspaces = async (): Promise<Array<BillingWorkspace & { role: string }>> => {
-  const db = await supabaseServer();
+export const myWorkspaces = async (): Promise<Array<BillingWorkspace>> => {
   const user = await getAuthUser();
   if (!user) redirect("/login");
-  // One request: memberships with their workspace embedded (RLS: only the person's own).
-  const { data } = await db.from("workspace_members").select("role, workspace:workspaces(id, name, status, plan_code, paid_until, created_at)").eq("user_id", user.id).eq("status", "active");
-  type W = BillingWorkspace & { created_at: string };
-  type Row = { role: string; workspace: W | Array<W> | null };
-  return ((data ?? []) as unknown as Array<Row>)
-    .flatMap((m) => { const w = Array.isArray(m.workspace) ? m.workspace[0] : m.workspace; return w ? [{ ...w, role: m.role }] : []; })
-    .sort((x, y) => y.created_at.localeCompare(x.created_at));
+  const workspaces = await readBillingWorkspaces(user.id);
+  return workspaces.kind === "ok" ? [...workspaces.value] : [];
 };
 
 /**
@@ -87,14 +46,13 @@ export const myWorkspaces = async (): Promise<Array<BillingWorkspace & { role: s
 export const paymentRedirectFor = (status: WorkspaceStatus | undefined | null): string | null =>
   status === "pending_payment" || status === "cancelled" ? "/workspaces/new/payment" : null;
 
-/**
- * Call from getSession (or any console route) with the current workspace id: redirects to /workspaces/new/payment when the
- * workspace is not paid yet. One cheap query; safe to call on every request.
- */
+/** Redirects to /workspaces/new/payment when the workspace is not paid yet. One cheap read; safe to call on every request. */
 export const requireActiveWorkspace = async (workspaceId: string): Promise<void> => {
-  const db = await supabaseServer();
-  const { data } = await db.from("workspaces").select("status").eq("id", workspaceId).maybeSingle<{ status: WorkspaceStatus }>();
-  const to = paymentRedirectFor(data?.status);
+  const user = await getAuthUser();
+  if (!user) redirect("/login");
+  const workspaces = await readBillingWorkspaces(user.id);
+  const status = workspaces.kind === "ok" ? workspaces.value.find((w) => w.id === workspaceId)?.status : undefined;
+  const to = paymentRedirectFor(status);
   if (to) redirect(`${to}?ws=${workspaceId}`);
 };
 
@@ -102,50 +60,22 @@ export const setWorkspaceCookie = async (workspaceId: string) => {
   (await cookies()).set(WORKSPACE_COOKIE, workspaceId, { path: "/", httpOnly: true, sameSite: "lax", maxAge: 60 * 60 * 24 * 365 });
 };
 
-/** What distinguishes an upgrade or top-up order from a plan payment; omitted = a plan payment for `plan.price_vnd`. */
-export type OrderExtras = { kind?: OrderKind; packCode?: string; amountVnd?: number; detail?: Record<string, unknown> };
-
-/** Create a pending payment order (service role: customers never write billing tables). Retries on a code collision. */
-export const createPaymentOrder = async (workspaceId: string, userId: string, plan: Plan, extras: OrderExtras = {}): Promise<PaymentOrder> => {
-  const admin = supabaseAdmin();
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const { data, error } = await admin
-      .from("payment_orders")
-      .insert({
-        workspace_id: workspaceId, created_by: userId, plan_code: plan.code, amount_vnd: extras.amountVnd ?? plan.price_vnd, order_code: newOrderCode(),
-        kind: extras.kind ?? "plan", pack_code: extras.packCode ?? null, detail: extras.detail ?? {},
-      })
-      .select()
-      .single();
-    if (!error) return data as PaymentOrder;
-    if (error.code !== "23505") throw new Error(error.message);
-  }
-  throw new Error("Could not allocate an order code");
+/** Asks for a pending payment order for the plan (the back end makes it; owner | manager only) and waits for it. */
+export const createPaymentOrder = async (workspaceId: string, _userId: string, plan: Plan): Promise<PaymentOrder> => {
+  const order = await writePaymentOrderRequest({ workspaceId, kind: "plan", target: plan.code });
+  if (order.kind !== "ok") throw new Error(`payment order: ${order.kind} ${order.code}`);
+  return order.value;
 };
 
-/** The order as the signed-in member sees it (RLS), with a lazy pending -> expired flip once its time is up. */
+/** The order as the signed-in member sees it (RLS), with a pending -> expired reading once its time is up. */
 export const readOrder = async (orderId: string): Promise<PaymentOrder | null> => {
-  const db = await supabaseServer();
-  const { data } = await db.from("payment_orders").select("*").eq("id", orderId).maybeSingle();
-  const order = data as PaymentOrder | null;
-  if (order && order.status === "pending" && new Date(order.expires_at).getTime() < Date.now()) {
-    await supabaseAdmin().from("payment_orders").update({ status: "expired" }).eq("id", order.id).eq("status", "pending");
-    return { ...order, status: "expired" };
-  }
-  return order;
+  const order = await readPaymentOrder(orderId, new Date());
+  return order.kind === "ok" ? order.value : null;
 };
 
-/** The newest plan payment (not an upgrade or a top-up) of a workspace that can still be paid (pending and not expired), if any. */
+/** The newest plan payment of a workspace that can still be paid (pending and not expired), if any. */
 export const latestOpenOrder = async (workspaceId: string): Promise<PaymentOrder | null> => {
-  const db = await supabaseServer();
-  const { data } = await db
-    .from("payment_orders")
-    .select("*")
-    .eq("workspace_id", workspaceId)
-    .eq("status", "pending")
-    .eq("kind", "plan")
-    .gt("expires_at", new Date().toISOString())
-    .order("created_at", { ascending: false })
-    .limit(1);
-  return ((data ?? [])[0] as PaymentOrder | undefined) ?? null;
+  const order = await readOpenPlanOrder(workspaceId, new Date());
+  return order.kind === "ok" ? order.value : null;
 };
+
