@@ -340,3 +340,21 @@ export interface BusinessEventInput {
     /** Unique per occurrence. */
     readonly dedupe: string
 }
+
+/** A lead another capability just created, as the `lead.created` event carries it. */
+export interface CreatedLead {
+    /** The lead. */
+    readonly id: string
+    /** The customer's name. */
+    readonly contact_name: string
+    /** The company. */
+    readonly company: string
+    /** The channel label. */
+    readonly channel: string
+    /** What the customer needs. */
+    readonly need: string
+    /** The phone, or null. */
+    readonly phone: string | null
+    /** The email, or null. */
+    readonly email: string | null
+}

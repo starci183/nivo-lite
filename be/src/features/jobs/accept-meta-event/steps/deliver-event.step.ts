@@ -4,7 +4,10 @@ import { InjectJobClaims } from "@modules/platform/jobs"
 import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
 
 @Injectable()
-/** The one effect of the job: a direct message that reached a connected Page becomes a stored customer message and a chat turn. */
+/**
+ * The one effect of the job: an event of a connected Page goes to the lead generation flow when it is the lead_gen agent's (a comment,
+ * a mention, a Lead Ads form, a prospect's message), else a direct message becomes a stored customer message and a chat turn.
+ */
 export class DeliverEventStep implements JobStep {
     constructor(
         private readonly inbox: MetaInboxService,

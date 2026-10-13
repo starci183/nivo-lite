@@ -248,7 +248,6 @@ import { MAIL_ERROR_KINDS, MAIL_MESSAGES, MailModule } from "@modules/integratio
 import { TELEGRAM_ERROR_KINDS, TELEGRAM_MESSAGES, TelegramModule } from "@modules/integrations/telegram"
 import { ZALO_ERROR_KINDS, ZALO_MESSAGES, ZaloModule } from "@modules/integrations/zalo"
 import { CONTRACTS_ERROR_KINDS, CONTRACTS_MESSAGES, ContractsModule } from "@modules/domain/contracts"
-import { LEADS_ERROR_KINDS, LEADS_MESSAGES, LeadsModule } from "@modules/domain/leads"
 import { LivenessModule } from "@modules/domain/liveness"
 import { MessagesModule } from "@modules/domain/messages"
 import {
@@ -392,6 +391,7 @@ import {
     API_SCHEDULERS,
     DECISIONS_PORTS,
     G19_PORTS,
+    LEAD_LANE,
     type ApiOptions,
 } from "./api.options"
 @Module({}) /** Every capability is registered once and the three guards run in a fixed order. */
@@ -485,7 +485,7 @@ export class AppModule {
                         LOYALTY_LEDGER_MESSAGES,
                         LOYALTY_MESSAGES,
                         LOYALTY_OTPS_MESSAGES,
-                        LEADS_MESSAGES,
+                        ...LEAD_LANE.messages,
                         RESPONSIBILITIES_MESSAGES,
                         CONTRACTS_MESSAGES,
                         MODULES_MESSAGES,
@@ -595,7 +595,7 @@ export class AppModule {
                         LOYALTY_ERROR_KINDS,
                         LOYALTY_LEDGER_ERROR_KINDS,
                         LOYALTY_OTPS_ERROR_KINDS,
-                        LEADS_ERROR_KINDS,
+                        ...LEAD_LANE.kinds,
                         CONTRACTS_ERROR_KINDS,
                         WORKSPACE_INVITES_ERROR_KINDS,
                         WORKSPACE_MEMBERS_ERROR_KINDS,
@@ -625,7 +625,7 @@ export class AppModule {
                 SupabaseModule.register({ isGlobal: true, ...options.supabase }),
                 IdentityModule.register({ isGlobal: true, verifyAccessToken }),
                 ContractsModule.register({ isGlobal: true }),
-                LeadsModule.register({ isGlobal: true }),
+                ...LEAD_LANE.capabilities.map((capability) => capability.register({ isGlobal: true })),
                 MessagesModule.register({ isGlobal: true, agentDirectory: AgentsService }),
                 ResponsibilitiesModule.register({ isGlobal: true, agentDirectory: AgentsService }),
                 EventsModule.register({ isGlobal: true }),
@@ -646,7 +646,7 @@ export class AppModule {
                 WebhookConnectionsModule.register({ isGlobal: true, ...options.webhookConnections }),
                 GoogleConnectionsModule.register({ isGlobal: true }),
                 MetaConnectionsModule.register({ isGlobal: true }),
-                MetaInboxModule.register({ isGlobal: true }),
+                MetaInboxModule.register({ isGlobal: true, taker: LEAD_LANE.metaTaker }),
                 ConnectionLifecycleModule.register({ isGlobal: true }),
                 ConnectionCommandsModule.register({ isGlobal: true }),
                 GoogleModule.register({ isGlobal: true, ...options.google }),
