@@ -15,8 +15,8 @@ export class ConnectChannelCli extends CommandRunner {
     }
 
     /** Hands the kind and the flags to the provisioning capability; a refusal fails the command. */
-    async run(passedParams: Array<string>, options: ProvisionFlags = {}): Promise<void> {
-        await this.provisioning.run(passedParams[0] ?? "", options)
+    async run([kind = ""]: Array<string>, options: ProvisionFlags = {}): Promise<void> {
+        await this.provisioning.run(kind, options)
     }
 
     /** The workspace id. */

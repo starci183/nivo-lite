@@ -1,18 +1,73 @@
+import { AGENTS_SYNC_SCHEDULER } from "@modules/queues/agents"
+import { AUTOMATION_TICK_SCHEDULER } from "@modules/queues/automation"
+import { SHIFTS_TICK_SCHEDULER } from "@modules/queues/shifts"
+import { CONNECTION_HEALTH_SCHEDULER } from "@modules/queues/connection-health"
+import { CONTENT_TICK_EVERY_MS, CONTENT_TICK_QUEUE, CONTENT_TICK_SCHEDULER } from "@modules/queues/content-tick"
+import { DATA_SYNC_SCHEDULER } from "@modules/queues/data-sync"
+import { ZALO_REFRESH_SCHEDULER } from "@modules/queues/zalo-refresh"
+import type { QueueSchedulerDefinition } from "@modules/platform/queue"
+import { RunDataSyncQueueModule } from "@features/jobs/run-data-sync"
+import { ExtractKnowledgeFactsQueueModule } from "@features/jobs/extract-knowledge-facts"
+import { RunBrainCommandQueueModule } from "@features/jobs/run-brain-command"
+import { IndexKnowledgeSourceQueueModule } from "@features/jobs/index-knowledge-source"
+import { ReembedKnowledgeQueueModule } from "@features/jobs/reembed-knowledge"
+import { EmitN8nEventQueueModule } from "@features/jobs/emit-n8n-event"
+import { RunAutomationCommandQueueModule } from "@features/jobs/run-automation-command"
+import { RunAutomationTickQueueModule } from "@features/jobs/run-automation-tick"
+import { RunDecisionsQueueModule } from "@features/jobs/run-decisions"
+import { RunSetupTurnQueueModule } from "@features/jobs/run-setup-turn"
+import { GenerateWithAgentQueueModule } from "@features/jobs/generate-with-agent"
+import { SyncAgentsQueueModule } from "@features/jobs/sync-agents"
+import { DraftLoyaltyCampaignQueueModule } from "@features/jobs/draft-loyalty-campaign"
+import { CheckConnectionHealthQueueModule } from "@features/jobs/check-connection-health"
+import { CompleteZaloAuthorizationQueueModule } from "@features/jobs/complete-zalo-authorization"
+import { RefreshZaloTokensQueueModule } from "@features/jobs/refresh-zalo-tokens"
+import { RunZaloWizardQueueModule } from "@features/jobs/run-zalo-wizard"
+import { RunChatTurnQueueModule } from "@features/jobs/run-chat-turn"
+import { RunLeadActionQueueModule } from "@features/jobs/run-lead-action"
+import { ReconcileBankCreditQueueModule } from "@features/jobs/reconcile-bank-credit"
+import { CreatePaymentOrderQueueModule } from "@features/jobs/create-payment-order"
+import { ApplyBookingStatusQueueModule } from "@features/jobs/apply-booking-status"
+import { PublishContentQueueModule } from "@features/jobs/publish-content"
+import { AcceptMetaEventQueueModule } from "@features/jobs/accept-meta-event"
+import { IssueInviteQueueModule } from "@features/jobs/issue-invite"
+import { RenderVideoQueueModule } from "@features/jobs/render-video"
+import { ConnectionCommandsQueueModule } from "@features/jobs/connection-commands"
+import { RequestRenderQueueModule } from "@features/jobs/request-render"
+import { DeductOrderQueueModule } from "@features/jobs/deduct-order"
+import { ReplenishStockQueueModule } from "@features/jobs/replenish-stock"
+import { HiringTickQueueModule } from "@features/jobs/hiring-tick"
+import { RunShiftsAlertsQueueModule } from "@features/jobs/run-shifts-alerts"
 import { AgentsService } from "@modules/domain/agents"
-import { UnboundBookingToolsService, UnboundKnowledgeSearchService } from "@modules/domain/agent-tools"
+import {
+    AgentKnowledgeLensService,
+    KnowledgeSearchToolService,
+    ModuleProfilesService,
+} from "@modules/domain/agent-knowledge"
+import { CustomerOutcomesService, CustomerTurnRuntimeService } from "@modules/domain/customer-turns"
+import { InstallationDirectoryService } from "@modules/domain/modules"
 import {
     ApprovalRequesterService,
     UnboundDecisionEventsService,
-    UnboundLeadGenFlowService,
     UnboundPaymentReceiptsService,
 } from "@modules/domain/decisions"
 import {
+    BookingToolsService,
     ConversationLeadsService,
     HandoffToolService,
     InboundStatusService,
     LeadWriterService,
     OutboundAccessService,
 } from "@modules/domain/work-performers"
+import { RunLeadGenQueueModule } from "@features/jobs/run-lead-gen"
+import { LEADS_ERROR_KINDS, LEADS_MESSAGES, LeadReadService, LeadsModule } from "@modules/domain/leads"
+import {
+    LEAD_FLOWS_ERROR_KINDS,
+    LEAD_FLOWS_MESSAGES,
+    LeadFlowChainService,
+    LeadFlowsModule,
+    LeadGenIntakeService,
+} from "@modules/domain/lead-flows"
 import { ToolTokenService } from "@modules/integrations/openclaw"
 import type { DocumentsOptions } from "@modules/integrations/documents"
 import type { LlmOptions } from "@modules/integrations/llm"
@@ -109,11 +164,24 @@ export interface ApiOptions {
     readonly video: VideoOptions
 }
 
+/**
+ * The ports G19 plugs in: the installations, knowledge lens and module profiles the agents capability reads, and the AI step and
+ * outcome handler of every customer chat turn.
+ */
+export const G19_PORTS = {
+    agents: {
+        installations: InstallationDirectoryService,
+        knowledge: AgentKnowledgeLensService,
+        modules: ModuleProfilesService,
+    },
+    chatTurn: { runtime: CustomerTurnRuntimeService, outcomes: CustomerOutcomesService },
+}
+
 /** The ports the agent-tools capability reaches the rest of the app through. */
 export const AGENT_TOOLS_PORTS = {
-    knowledgeSearch: UnboundKnowledgeSearchService,
+    knowledgeSearch: KnowledgeSearchToolService,
     leadWriter: LeadWriterService,
-    bookingTools: UnboundBookingToolsService,
+    bookingTools: BookingToolsService,
     approvalRequester: ApprovalRequesterService,
     handoffTool: HandoffToolService,
     conversationLeads: ConversationLeadsService,
@@ -126,6 +194,63 @@ export const DECISIONS_PORTS = {
     inboundEventStatus: InboundStatusService,
     decisionEvents: UnboundDecisionEventsService,
     paymentReceipts: UnboundPaymentReceiptsService,
-    leadGenFlow: UnboundLeadGenFlowService,
+    leadDirectory: LeadReadService,
+    leadGenFlow: LeadFlowChainService,
     outboundAccessGate: OutboundAccessService,
+}
+
+/** The background jobs the api runs: each queue module registers its processor with the job runner. */
+export const API_JOB_QUEUES = [
+    RunDataSyncQueueModule,
+    ExtractKnowledgeFactsQueueModule,
+    RunBrainCommandQueueModule,
+    IndexKnowledgeSourceQueueModule,
+    ReembedKnowledgeQueueModule,
+    EmitN8nEventQueueModule,
+    RunAutomationCommandQueueModule,
+    RunAutomationTickQueueModule,
+    RunDecisionsQueueModule,
+    RunSetupTurnQueueModule,
+    GenerateWithAgentQueueModule,
+    SyncAgentsQueueModule,
+    DraftLoyaltyCampaignQueueModule,
+    CheckConnectionHealthQueueModule,
+    CompleteZaloAuthorizationQueueModule,
+    RefreshZaloTokensQueueModule,
+    RunZaloWizardQueueModule,
+    RunChatTurnQueueModule,
+    RunLeadActionQueueModule,
+    ReconcileBankCreditQueueModule,
+    CreatePaymentOrderQueueModule,
+    ApplyBookingStatusQueueModule,
+    PublishContentQueueModule,
+    AcceptMetaEventQueueModule,
+    RunLeadGenQueueModule,
+    IssueInviteQueueModule,
+    RenderVideoQueueModule,
+    ConnectionCommandsQueueModule,
+    RequestRenderQueueModule,
+    DeductOrderQueueModule,
+    ReplenishStockQueueModule,
+    HiringTickQueueModule,
+    RunShiftsAlertsQueueModule,
+]
+
+/** The recurring ticks the api schedules on the queue. */
+export const API_SCHEDULERS: ReadonlyArray<QueueSchedulerDefinition> = [
+    AUTOMATION_TICK_SCHEDULER,
+    SHIFTS_TICK_SCHEDULER,
+    AGENTS_SYNC_SCHEDULER,
+    { queue: CONTENT_TICK_QUEUE, id: CONTENT_TICK_SCHEDULER, everyMs: CONTENT_TICK_EVERY_MS },
+    CONNECTION_HEALTH_SCHEDULER,
+    ZALO_REFRESH_SCHEDULER,
+    DATA_SYNC_SCHEDULER,
+]
+
+/** The leads and the lead generation flow: their texts and error kinds, and the two capabilities the app root registers globally. */
+export const LEAD_LANE = {
+    messages: [LEADS_MESSAGES, LEAD_FLOWS_MESSAGES],
+    kinds: [LEADS_ERROR_KINDS, LEAD_FLOWS_ERROR_KINDS],
+    capabilities: [LeadsModule, LeadFlowsModule],
+    metaTaker: LeadGenIntakeService,
 }

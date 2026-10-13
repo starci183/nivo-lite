@@ -1,4 +1,4 @@
-import type { Access } from "@modules/domain/connection-grants"
+import type { Access } from "@modules/domain/agent-connections"
 
 /** What setConnectionGrant takes. */
 export interface SetConnectionGrantRequest {

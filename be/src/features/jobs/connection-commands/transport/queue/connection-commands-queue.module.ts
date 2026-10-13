@@ -2,10 +2,10 @@ import { Module } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import { InjectJobProcessorRegistry } from "@modules/platform/jobs"
 import type { JobProcessorRegistry } from "@modules/platform/jobs"
-import { ConnectionCommandsModule } from "../../connection-commands.module"
+import { ConnectionCommandsJobModule } from "../../connection-commands.module"
 import { ConnectionCommandsProcessor } from "./connection-commands.processor"
 
-@Module({ imports: [ConnectionCommandsModule], providers: [ConnectionCommandsProcessor] })
+@Module({ imports: [ConnectionCommandsJobModule], providers: [ConnectionCommandsProcessor] })
 /** The queue transport of the connection-commands job: registers its processor with the job runner, which an api or worker app composes; connection_command_submit feeds it. */
 export class ConnectionCommandsQueueModule implements OnModuleInit {
     constructor(

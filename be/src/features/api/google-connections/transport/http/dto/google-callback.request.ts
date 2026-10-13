@@ -1,7 +1,7 @@
 import { IsOptional, IsString, MaxLength } from "class-validator"
 
 /** The bounded query Google redirects the browser back with. */
-export class GoogleCallbackQuery {
+export class GoogleCallbackRequest {
     /** The signed state. */
     @IsOptional()
     @IsString()

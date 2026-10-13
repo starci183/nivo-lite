@@ -17,6 +17,6 @@ export class MetaChallengeHandler extends ICQRSHandler<MetaChallengeQuery, MetaC
     }
 
     protected override process(query: MetaChallengeQuery): Promise<MetaChallengeResult> {
-        return Promise.resolve(this.metaConnectionsService.answerChallenge(query.params.request))
+        return this.metaConnectionsService.respondToChallenge(query.params.request)
     }
 }
