@@ -286,7 +286,18 @@
     "handoffNotice": "Lead handed to Sales AI.",
     "handoffGate": "See this customer's work flow →",
     "emptyMessage": "Write a message first.",
-    "notSentReason": "The message could not be sent. Try again."
+    "notSentReason": "The message could not be sent. Try again.",
+    "conversationStarted": "Conversation started",
+    "messageQueued": "Message queued",
+    "replyReady": "Reply ready",
+    "turnFailed": "The agent could not finish its reply. Try again.",
+    "deliveryFailed": "The message could not be delivered. Try again.",
+    "deliverySucceeded": "Message delivered",
+    "takeoverSucceeded": "Conversation taken over",
+    "returnSucceeded": "Conversation returned to AI",
+    "messageTooLong": "Use 4,000 characters or fewer.",
+    "visitorNameTooLong": "Use 80 characters or fewer.",
+    "loadingFailed": "The chat could not be loaded."
   },
   "agentDashboard": {
     "modeAssist": "Assist mode",
@@ -3273,7 +3284,13 @@
     "loadFailBody": "The inbound feed is not available yet. Try again in a moment.",
     "loading": "Loading inbound",
     "feedAria": "Received inputs",
-    "unnamed": "Unknown sender"
+    "unnamed": "Unknown sender",
+    "simulationQueued": "Input received. Processing has been queued.",
+    "simulationRunning": "Processing the input...",
+    "simulationFailed": "Processing failed. Try again.",
+    "errTooLong": "Use at most {max} characters.",
+    "errAmount": "Enter an amount from 0 to {max} VND.",
+    "errOption": "Choose a valid option."
   },
   "invite": {
     "eyebrow": "INVITATION",

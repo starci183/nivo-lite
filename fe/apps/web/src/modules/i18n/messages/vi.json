@@ -286,7 +286,18 @@
     "handoffNotice": "Đã chuyển lead cho Sales AI.",
     "handoffGate": "Xem dòng chảy công việc của khách này →",
     "emptyMessage": "Hãy nhập tin nhắn trước.",
-    "notSentReason": "Chưa gửi được tin nhắn. Hãy thử lại."
+    "notSentReason": "Chưa gửi được tin nhắn. Hãy thử lại.",
+    "conversationStarted": "Đã bắt đầu hội thoại",
+    "messageQueued": "Đã xếp hàng tin nhắn",
+    "replyReady": "Câu trả lời đã sẵn sàng",
+    "turnFailed": "Nhân viên AI chưa hoàn tất câu trả lời. Vui lòng thử lại.",
+    "deliveryFailed": "Chưa gửi được tin nhắn. Vui lòng thử lại.",
+    "deliverySucceeded": "Đã gửi tin nhắn",
+    "takeoverSucceeded": "Đã tiếp quản hội thoại",
+    "returnSucceeded": "Đã giao lại hội thoại cho AI",
+    "messageTooLong": "Vui lòng nhập tối đa 4.000 ký tự.",
+    "visitorNameTooLong": "Vui lòng nhập tối đa 80 ký tự.",
+    "loadingFailed": "Chưa tải được hội thoại."
   },
   "agentDashboard": {
     "modeAssist": "Chế độ hỗ trợ",
@@ -3273,7 +3284,13 @@
     "loadFailBody": "Danh sách đầu vào chưa sẵn sàng. Hãy thử lại sau ít phút.",
     "loading": "Đang tải đầu vào",
     "feedAria": "Đầu vào đã nhận",
-    "unnamed": "Người gửi chưa rõ"
+    "unnamed": "Người gửi chưa rõ",
+    "simulationQueued": "Đã nhận đầu vào và xếp hàng xử lý.",
+    "simulationRunning": "Đang xử lý đầu vào...",
+    "simulationFailed": "Xử lý thất bại. Vui lòng thử lại.",
+    "errTooLong": "Vui lòng nhập tối đa {max} ký tự.",
+    "errAmount": "Vui lòng nhập số tiền từ 0 đến {max} VND.",
+    "errOption": "Vui lòng chọn một lựa chọn hợp lệ."
   },
   "invite": {
     "eyebrow": "LỜI MỜI",
