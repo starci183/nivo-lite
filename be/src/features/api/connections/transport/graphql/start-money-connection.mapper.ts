@@ -1,6 +1,7 @@
 import type { StartMoneyConnectionRequest } from "../../application/start-money-connection.contracts"
 import type { WizardConnection } from "@modules/domain/channel-connections"
 import type { StartMoneyConnectionInput } from "./dto/start-money-connection.input"
+import { toWizardConnectionType } from "./wizard-connection.mapper"
 import type { WizardConnectionType } from "./dto/wizard-connection.type"
 
 /** Maps the GraphQL arguments of startMoneyConnection to the request. */
@@ -18,4 +19,5 @@ export const toStartMoneyConnectionRequest = (
 })
 
 /** Maps the answer of startMoneyConnection to the GraphQL type. */
-export const toStartMoneyConnectionType = (result: WizardConnection): WizardConnectionType => result
+export const toStartMoneyConnectionType = (result: WizardConnection): WizardConnectionType =>
+    toWizardConnectionType(result)
