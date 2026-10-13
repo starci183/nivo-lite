@@ -280,6 +280,7 @@ export class MetaConnectionsService {
             igId: connection.meta.ig_id ?? "",
             igUsername: connection.meta.ig_username ?? "",
             firstEvent: connection.firstEvent,
+            agentIds: await this.connections.agentIds(connection.workspaceId, connection.id),
         }
     }
 

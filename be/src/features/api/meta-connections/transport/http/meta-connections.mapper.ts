@@ -40,6 +40,7 @@ export const toResumeMetaResponse = (result: ResumeMetaResult): ResumeMetaRespon
     igId: result.igId,
     igUsername: result.igUsername,
     firstEvent: result.firstEvent,
+    agentIds: result.agentIds,
 })
 
 /** Maps the HTTP path and body to the ChooseMetaPage request. */
@@ -61,6 +62,7 @@ export const toChooseMetaPageResponse = (result: ChooseMetaPageResult): ChooseMe
     igId: result.igId,
     igUsername: result.igUsername,
     firstEvent: result.firstEvent,
+    agentIds: result.agentIds,
 })
 
 /** Maps the HTTP path and body to the CheckMeta request. */

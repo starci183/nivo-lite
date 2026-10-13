@@ -47,6 +47,8 @@ export interface MetaWizardConnection {
     readonly igUsername: string
     /** The first event the connection accepted. */
     readonly firstEvent: FirstEvent | null
+    /** The agents that use the connection. */
+    readonly agentIds: ReadonlyArray<string>
 }
 
 /** What starting the login answers. */

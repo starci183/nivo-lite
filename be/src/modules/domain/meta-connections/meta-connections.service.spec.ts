@@ -50,6 +50,7 @@ const emptyView = {
     igId: "",
     igUsername: "",
     firstEvent: null,
+    agentIds: ["agent-1"],
 }
 const appObject = (fields: ReadonlyArray<string>, overrides: Partial<AppObject> = {}): AppObject => ({
     callbackUrl: "https://nivo.vn/api/connections/meta/webhook",
@@ -76,6 +77,7 @@ const build = async () => {
     const connections = mock<ConnectionsService>()
     connections.authorize.mockResolvedValue({ role: "owner", displayName: "Lan" })
     connections.get.mockResolvedValue(record())
+    connections.agentIds.mockResolvedValue(["agent-1"])
     connections.find.mockResolvedValue(record())
     connections.create.mockResolvedValue(ID)
     connections.readSecret.mockResolvedValue(seal({}))
@@ -220,6 +222,7 @@ describe("MetaConnectionsService", () => {
                 igId: "ig-1",
                 igUsername: "shop_ig",
                 firstEvent,
+                agentIds: ["agent-1"],
             })
         })
     })

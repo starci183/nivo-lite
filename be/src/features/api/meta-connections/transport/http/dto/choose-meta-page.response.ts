@@ -46,4 +46,6 @@ export class ChooseMetaPageResponse {
     igUsername!: string
     /** The firstEvent. */
     firstEvent!: FirstEventBody | null
+    /** The agents that use the connection. */
+    agentIds!: ReadonlyArray<string>
 }
