@@ -1,0 +1,60 @@
+import { Injectable } from "@nestjs/common"
+import type { EntityManager } from "typeorm"
+import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { eachInOrder } from "@modules/platform/primitives"
+import type { NivoItemInput, NivoUnembedded, NivoVectorWrite, NivoWriteResult } from "./nivo-knowledge.contracts"
+import type { RemovedNivoRow, UnembeddedNivoRow, UpsertedNivoRow } from "./persistence/nivo-knowledge.rows"
+import {
+    DELETE_STALE_NIVO_ITEMS,
+    SELECT_NIVO_UNEMBEDDED,
+    UPDATE_NIVO_VECTORS,
+    UPSERT_NIVO_ITEM,
+} from "./persistence/nivo-knowledge.sql"
+
+/** The longest text of an item that is embedded. */
+const EMBED_CHARS = 8000
+
+@Injectable()
+/** The base knowledge of NIVO: its items are written from the resource files and given vectors. */
+export class NivoKnowledgeService {
+    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+
+    /**
+     * Inserts the new items and updates the changed ones in one transaction; an item whose text changed loses its vector, an unchanged
+     * one keeps it.
+     */
+    upsert(items: ReadonlyArray<NivoItemInput>): Promise<NivoWriteResult> {
+        return this.entityManager.transaction(async (tx) => {
+            const counts = { inserted: 0, updated: 0 }
+            await eachInOrder(items, async (item) => {
+                const [row] = await tx.query<Array<UpsertedNivoRow>>(UPSERT_NIVO_ITEM, [
+                    item.module,
+                    item.slug,
+                    item.title,
+                    item.body,
+                    item.kind,
+                ])
+                if (row?.inserted === true) counts.inserted += 1
+                else counts.updated += 1
+            })
+            return counts
+        })
+    }
+
+    /** Removes the items whose slug is not given, so the table mirrors the folder; answers how many went. */
+    async removeExcept(slugs: ReadonlyArray<string>): Promise<number> {
+        const removed = await this.entityManager.query<Array<RemovedNivoRow>>(DELETE_STALE_NIVO_ITEMS, [slugs])
+        return removed.length
+    }
+
+    /** Up to `limit` items without a vector of `model`, with the text to embed. */
+    async unembedded(model: string, limit: number): Promise<ReadonlyArray<NivoUnembedded>> {
+        const rows = await this.entityManager.query<Array<UnembeddedNivoRow>>(SELECT_NIVO_UNEMBEDDED, [model, limit])
+        return rows.map((row) => ({ id: row.id, text: `${row.title}\n\n${row.body}`.slice(0, EMBED_CHARS) }))
+    }
+
+    /** Gives items their vectors. */
+    async setVectors(write: NivoVectorWrite): Promise<void> {
+        await this.entityManager.query(UPDATE_NIVO_VECTORS, [write.ids, write.vectors, write.model])
+    }
+}
