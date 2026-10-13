@@ -28,7 +28,6 @@ export const InventoryWorkbenchPage = async (props: InventoryWorkbenchPageProps)
                     count: t("tab_count"),
                     import: t("tab_import"),
                 },
-                terms: [t("metricReorder"), t("metricAwaiting"), t("metricValue"), t("metricStockOuts")],
             }}
         />
     )
