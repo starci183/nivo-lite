@@ -1,3 +1,5 @@
+import { Test } from "@nestjs/testing"
+import { LOGGER } from "@modules/platform/logging"
 import { mock } from "@starci/jest-preset"
 import type { Logger } from "@modules/platform/logging"
 import { AutomationExtensionsService } from "./automation-extensions.service"
@@ -5,9 +7,12 @@ import type { AutomationExtension, ExecutorContext, ScanContext } from "./automa
 import { AutomationsLogEvent } from "./automations.log-events"
 import { buildPipelineRow, buildShop, buildTemplate } from "@tests/fixtures/builders/automations.builder"
 
-const build = () => {
+const build = async () => {
     const logger = mock<Logger>()
-    return { extensions: new AutomationExtensionsService(logger), logger }
+    const moduleRef = await Test.createTestingModule({
+        providers: [AutomationExtensionsService, { provide: LOGGER, useValue: logger }],
+    }).compile()
+    return { extensions: moduleRef.get(AutomationExtensionsService), logger }
 }
 
 const context: ScanContext = {
@@ -24,8 +29,8 @@ const context: ScanContext = {
 
 describe("AutomationExtensionsService", () => {
     describe("executorOf", () => {
-        it("finds the executor an extension registered for a template", () => {
-            const { extensions } = build()
+        it("finds the executor an extension registered for a template", async () => {
+            const { extensions } = await build()
             const executor = (_context: ExecutorContext) => Promise.resolve({ status: "done" as const, steps: [] })
             extensions.add({})
             extensions.add({ executors: { thank_payment: executor } })
@@ -37,7 +42,7 @@ describe("AutomationExtensionsService", () => {
 
     describe("scan", () => {
         it("lets the first extension that owns the template answer", async () => {
-            const { extensions } = build()
+            const { extensions } = await build()
             const first = jest.fn().mockResolvedValue(null)
             const owner = jest.fn().mockResolvedValue(3)
             const later = jest.fn().mockResolvedValue(9)
@@ -53,7 +58,7 @@ describe("AutomationExtensionsService", () => {
         })
 
         it("answers none when no extension owns the template", async () => {
-            const { extensions } = build()
+            const { extensions } = await build()
 
             await expect(extensions.scan(context)).resolves.toBeNull()
         })
@@ -61,7 +66,7 @@ describe("AutomationExtensionsService", () => {
 
     describe("tick", () => {
         it("adds up the work of every extension and logs a failing one without stopping the others", async () => {
-            const { extensions, logger } = build()
+            const { extensions, logger } = await build()
             const failure = new Error("boom")
             extensions.add({})
             extensions.add({ tick: () => Promise.resolve(2) })
@@ -76,7 +81,7 @@ describe("AutomationExtensionsService", () => {
 
     describe("prepareEnable", () => {
         it("passes the config through every extension that prepares it", async () => {
-            const { extensions } = build()
+            const { extensions } = await build()
             const first: AutomationExtension = {
                 prepareEnable: (_w, _u, _d, config) => Promise.resolve({ ...config, a: 1 }),
             }
@@ -97,7 +102,7 @@ describe("AutomationExtensionsService", () => {
 
     describe("googleAccounts", () => {
         it("collects the accounts of the extensions that know them", async () => {
-            const { extensions } = build()
+            const { extensions } = await build()
             const account = { id: "g-1", email: "a@b.c", status: "active" }
             extensions.add({})
             extensions.add({ googleAccounts: () => Promise.resolve([account]) })

@@ -9,15 +9,9 @@ export { GenerationRunnerService } from "./generation-runner.service"
 export { GenerationsService } from "./generations.service"
 export type {
     GenMessage,
-    GenMessageRole,
-    GenerateParams,
-    GenerationFailure,
-    GenerationFailureReason,
     GenerationOutcome,
     GenerationRequested,
     GenerationStatus,
-    GenerationRunStatus,
-    GenerationSuccess,
     ResponseFormat,
 } from "./ai-generations.contracts"
 export type { GenerationState } from "./ai-generations.contracts"

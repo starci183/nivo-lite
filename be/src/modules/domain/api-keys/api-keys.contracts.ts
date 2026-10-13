@@ -7,10 +7,17 @@ export const API_KEY_SCOPES = [
     "events:read",
     "loyalty:read",
     "loyalty:write",
-] as const
+] as const satisfies ReadonlyArray<ApiScope>
 
-/** One scope of a key. */
-export type ApiScope = (typeof API_KEY_SCOPES)[number]
+/** One scope of a key: the operation family a request needs and the key must have been granted. */
+export type ApiScope =
+    | "leads:read"
+    | "leads:write"
+    | "messages:write"
+    | "knowledge:write"
+    | "events:read"
+    | "loyalty:read"
+    | "loyalty:write"
 
 /** The value of an `Authorization` request header, absent when the caller sent none. */
 export type BearerHeader = string | undefined

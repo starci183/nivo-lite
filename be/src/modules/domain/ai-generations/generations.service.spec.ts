@@ -7,7 +7,6 @@ import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { QUEUE_OUTBOX } from "@modules/platform/queue"
 import { AGENTS_QUEUE, AGENTS_QUEUE_PRODUCER, AgentsQueue } from "@modules/queues/agents"
 import type { GenerateParams } from "./ai-generations.contracts"
 import { AI_GENERATIONS_OPTIONS, AI_GENERATIONS_USAGE } from "./ai-generations.decorators"
@@ -53,6 +52,11 @@ const build = async (setup: Setup = {}) => {
         }),
     )
     const outbox = recordingQueueOutbox()
+    const queue = mock<AgentsQueue>({
+        enqueueGenerate: jest.fn((...[payload, manager]: Parameters<AgentsQueue["enqueueGenerate"]>) =>
+            outbox.write(manager, AGENTS_QUEUE, payload),
+        ),
+    })
     const usage = mock<UsageGate>({
         blockedBy: jest.fn(() => Promise.resolve(setup.blocked === undefined ? null : { message: setup.blocked })),
     })
@@ -69,7 +73,7 @@ const build = async (setup: Setup = {}) => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             GenerationsService,
-            { provide: AGENTS_QUEUE_PRODUCER, useClass: AgentsQueue },
+            { provide: AGENTS_QUEUE_PRODUCER, useValue: queue },
             { provide: AI_GENERATIONS_OPTIONS, useValue: OPTIONS },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
             { provide: CLOCK, useValue: clock },
@@ -77,7 +81,6 @@ const build = async (setup: Setup = {}) => {
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: AI_GENERATIONS_USAGE, useValue: usage },
             { provide: EngineStatusService, useValue: engine },
-            { provide: QUEUE_OUTBOX, useValue: outbox },
             { provide: PauseClient, useValue: pause },
             { provide: WorkspaceMembersService, useValue: members },
         ],

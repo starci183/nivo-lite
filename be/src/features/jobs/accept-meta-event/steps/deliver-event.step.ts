@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { MetaInboxService, isMetaInboundJob } from "@modules/domain/meta-inbox"
+import { MetaInboxService } from "@modules/domain/meta-inbox"
 import { InjectJobClaims } from "@modules/platform/jobs"
 import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
 
@@ -17,6 +17,6 @@ export class DeliverEventStep implements JobStep {
      */
     async run(job: ClaimedJob): Promise<void> {
         await this.claims.advance({ jobId: job.jobId, expectedFencingToken: job.fencingToken, step: "deliver" })
-        if (isMetaInboundJob(job.payload)) await this.inbox.deliver(job.payload)
+        await this.inbox.deliverPayload(job.payload)
     }
 }

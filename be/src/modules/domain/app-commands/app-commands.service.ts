@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { AppCommand, AppCommandResult } from "./app-commands.contracts"
+import type { AppCommandResult, OptionalAppCommand } from "./app-commands.contracts"
 import type { AppCommandRow } from "./persistence/app-commands.rows"
 import { BEGIN_COMMAND, FAIL_COMMAND, SUCCEED_COMMAND } from "./persistence/app-commands.sql"
 
@@ -14,7 +14,7 @@ export class AppCommandsService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** Starts a command; null when it is unknown or already settled, so a repeated delivery changes nothing. */
-    async begin(commandId: string): Promise<AppCommand | null> {
+    async begin(commandId: string): Promise<OptionalAppCommand> {
         const [row] = await this.entityManager.query<Array<AppCommandRow>>(BEGIN_COMMAND, [commandId])
         if (row === undefined) return null
         return {
