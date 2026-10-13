@@ -53,6 +53,7 @@ export const NAMESPACES = [
     "responsibilities",
     "shell",
     "shifts",
+    "slot",
     "system",
     "team",
     "video",

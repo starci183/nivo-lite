@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
+import { LeadsHttpModule } from "@features/api/leads"
 import { AdminHttpModule } from "@features/api/admin"
 import { ModulesHttpModule } from "@features/api/modules"
 import { ExternalApiHttpModule } from "@features/api/external-api"
@@ -15,8 +16,16 @@ import {
     SupabaseModule,
     createSupabaseAccessTokenVerifier,
 } from "@modules/integrations/supabase"
-import { AiQuotaOverridesModule } from "@modules/domain/ai-quota-overrides"
+import { CONTRACTS_ERROR_KINDS, CONTRACTS_MESSAGES, ContractsModule } from "@modules/domain/contracts"
+import { LEADS_ERROR_KINDS, LEADS_MESSAGES, LeadsModule } from "@modules/domain/leads"
 import { LivenessModule } from "@modules/domain/liveness"
+import { MessagesModule } from "@modules/domain/messages"
+import {
+    RESPONSIBILITIES_ERROR_KINDS,
+    RESPONSIBILITIES_MESSAGES,
+    ResponsibilitiesModule,
+} from "@modules/domain/responsibilities"
+import { AiQuotaOverridesModule } from "@modules/domain/ai-quota-overrides"
 import {
     PLATFORM_ADMIN_ERROR_KINDS,
     PLATFORM_ADMIN_MESSAGES,
@@ -95,6 +104,9 @@ export class AppModule {
                         IDENTITY_MESSAGES,
                         PLATFORM_ADMIN_MESSAGES,
                         JOBS_MESSAGES,
+                        LEADS_MESSAGES,
+                        RESPONSIBILITIES_MESSAGES,
+                        CONTRACTS_MESSAGES,
                         MODULES_MESSAGES,
                         PUBLIC_API_MESSAGES,
                         QUEUE_MESSAGES,
@@ -123,6 +135,9 @@ export class AppModule {
                         MODULES_ERROR_KINDS,
                         PUBLIC_API_ERROR_KINDS,
                         SUPABASE_ERROR_KINDS,
+                        LEADS_ERROR_KINDS,
+                        RESPONSIBILITIES_ERROR_KINDS,
+                        CONTRACTS_ERROR_KINDS,
                         WORKSPACE_INVITES_ERROR_KINDS,
                         WORKSPACE_MEMBERS_ERROR_KINDS,
                         WORKSPACES_ERROR_KINDS,
@@ -156,6 +171,10 @@ export class AppModule {
                 }),
                 SupabaseModule.register({ isGlobal: true, ...options.supabase }),
                 IdentityModule.register({ isGlobal: true, verifyAccessToken }),
+                ContractsModule.register({ isGlobal: true }),
+                LeadsModule.register({ isGlobal: true }),
+                MessagesModule.register({ isGlobal: true }),
+                ResponsibilitiesModule.register({ isGlobal: true }),
                 EventsModule.register({ isGlobal: true }),
                 WorkspaceMembersModule.register({ isGlobal: true, accounts: SUPABASE_AUTH }),
                 WorkspacesModule.register({ isGlobal: true, ...options.workspaces }),
@@ -177,6 +196,7 @@ export class AppModule {
                 PublishContentQueueModule,
                 RendersHttpModule,
                 LivenessModule.register({ isGlobal: true }),
+                LeadsHttpModule,
                 PlatformAuditModule.register({ isGlobal: true }),
                 AiQuotaOverridesModule.register({ isGlobal: true }),
                 PlatformAdminModule.register({ isGlobal: true, ...options.platformAdmin }),
