@@ -43,6 +43,54 @@ import { I18nModule } from "@modules/platform/i18n"
 import { LoggingModule } from "@modules/platform/logging"
 import { JOBS_ERROR_KINDS, JOBS_MESSAGES, JobsModule } from "@modules/platform/jobs"
 import { QUEUE_ERROR_KINDS, QUEUE_MESSAGES, QueueModule } from "@modules/platform/queue"
+import { CONNECTIONS_ERROR_KINDS, CONNECTIONS_MESSAGES, ConnectionsModule } from "@modules/domain/connections"
+import {
+    CONNECTION_GRANTS_ERROR_KINDS,
+    CONNECTION_GRANTS_MESSAGES,
+    ConnectionGrantsModule,
+} from "@modules/domain/connection-grants"
+import {
+    CHANNEL_CONNECTIONS_ERROR_KINDS,
+    CHANNEL_CONNECTIONS_MESSAGES,
+    ChannelConnectionsModule,
+} from "@modules/domain/channel-connections"
+import {
+    WEBHOOK_CONNECTIONS_ERROR_KINDS,
+    WEBHOOK_CONNECTIONS_MESSAGES,
+    WebhookConnectionsModule,
+} from "@modules/domain/webhook-connections"
+import {
+    GOOGLE_CONNECTIONS_ERROR_KINDS,
+    GOOGLE_CONNECTIONS_MESSAGES,
+    GoogleConnectionsModule,
+} from "@modules/domain/google-connections"
+import {
+    META_CONNECTIONS_ERROR_KINDS,
+    META_CONNECTIONS_MESSAGES,
+    MetaConnectionsModule,
+} from "@modules/domain/meta-connections"
+import { META_INBOX_ERROR_KINDS, META_INBOX_MESSAGES, MetaInboxModule } from "@modules/domain/meta-inbox"
+import { ConnectionLifecycleModule } from "@modules/domain/connection-lifecycle"
+import { GOOGLE_ERROR_KINDS, GOOGLE_MESSAGES, GoogleModule } from "@modules/integrations/google"
+import { META_ERROR_KINDS, META_MESSAGES, MetaModule } from "@modules/integrations/meta"
+import {
+    CHANNEL_SETUP_ERROR_KINDS,
+    CHANNEL_SETUP_MESSAGES,
+    ChannelSetupModule,
+} from "@modules/integrations/channel-setup"
+import {
+    WEBHOOK_DELIVERY_ERROR_KINDS,
+    WEBHOOK_DELIVERY_MESSAGES,
+    WebhookDeliveryModule,
+} from "@modules/integrations/webhook-delivery"
+import { HTTP_ERROR_KINDS, HTTP_MESSAGES, HttpModule } from "@modules/platform/http"
+import { ConnectionsHttpModule } from "@features/api/connections"
+import { ConnectionGrantsHttpModule } from "@features/api/connection-grants"
+import { ChannelConnectionsHttpModule } from "@features/api/channel-connections"
+import { WebhookConnectionsHttpModule } from "@features/api/webhook-connections"
+import { GoogleConnectionsHttpModule } from "@features/api/google-connections"
+import { MetaConnectionsHttpModule } from "@features/api/meta-connections"
+import { ConnectionLifecycleHttpModule } from "@features/api/connection-lifecycle"
 import type { ApiOptions } from "./api.options"
 
 @Module({})
@@ -59,6 +107,18 @@ export class AppModule {
                 I18nModule.register({
                     isGlobal: true,
                     bundles: [
+                        CONNECTIONS_MESSAGES,
+                        CONNECTION_GRANTS_MESSAGES,
+                        CHANNEL_CONNECTIONS_MESSAGES,
+                        WEBHOOK_CONNECTIONS_MESSAGES,
+                        GOOGLE_CONNECTIONS_MESSAGES,
+                        META_CONNECTIONS_MESSAGES,
+                        META_INBOX_MESSAGES,
+                        GOOGLE_MESSAGES,
+                        META_MESSAGES,
+                        CHANNEL_SETUP_MESSAGES,
+                        WEBHOOK_DELIVERY_MESSAGES,
+                        HTTP_MESSAGES,
                         API_KEYS_MESSAGES,
                         ERRORS_MESSAGES,
                         HTTP_SECURITY_MESSAGES,
@@ -74,6 +134,18 @@ export class AppModule {
                 ErrorsModule.register({
                     isGlobal: true,
                     kinds: [
+                        CONNECTIONS_ERROR_KINDS,
+                        CONNECTION_GRANTS_ERROR_KINDS,
+                        CHANNEL_CONNECTIONS_ERROR_KINDS,
+                        WEBHOOK_CONNECTIONS_ERROR_KINDS,
+                        GOOGLE_CONNECTIONS_ERROR_KINDS,
+                        META_CONNECTIONS_ERROR_KINDS,
+                        META_INBOX_ERROR_KINDS,
+                        GOOGLE_ERROR_KINDS,
+                        META_ERROR_KINDS,
+                        CHANNEL_SETUP_ERROR_KINDS,
+                        WEBHOOK_DELIVERY_ERROR_KINDS,
+                        HTTP_ERROR_KINDS,
                         API_KEYS_ERROR_KINDS,
                         CONFIG_ERROR_KINDS,
                         DATABASE_ERROR_KINDS,
@@ -117,12 +189,32 @@ export class AppModule {
                     delivery: SUPABASE_AUTH,
                     ...options.workspaceInvites,
                 }),
+                ConnectionsModule.register({ isGlobal: true, ...options.connections }),
+                ConnectionGrantsModule.register({ isGlobal: true }),
+                ChannelConnectionsModule.register({ isGlobal: true }),
+                WebhookConnectionsModule.register({ isGlobal: true, ...options.webhookConnections }),
+                GoogleConnectionsModule.register({ isGlobal: true }),
+                MetaConnectionsModule.register({ isGlobal: true }),
+                MetaInboxModule.register({ isGlobal: true }),
+                ConnectionLifecycleModule.register({ isGlobal: true }),
+                GoogleModule.register({ isGlobal: true, ...options.google }),
+                MetaModule.register({ isGlobal: true, ...options.meta }),
+                ChannelSetupModule.register({ isGlobal: true, ...options.channelSetup }),
+                WebhookDeliveryModule.register({ isGlobal: true, ...options.webhookDelivery }),
+                HttpModule.register({ isGlobal: true }),
                 LivenessModule.register({ isGlobal: true }),
                 ApiKeysModule.register({ isGlobal: true }),
                 PublicApiModule.register({ isGlobal: true }),
                 ExternalApiHttpModule,
                 SystemHealthHttpModule,
                 WorkspacesHttpModule,
+                ConnectionsHttpModule,
+                ConnectionGrantsHttpModule,
+                ChannelConnectionsHttpModule,
+                WebhookConnectionsHttpModule,
+                GoogleConnectionsHttpModule,
+                MetaConnectionsHttpModule,
+                ConnectionLifecycleHttpModule,
             ],
             providers: [
                 { provide: SUPABASE_ACCESS_TOKEN_VERIFIER, useValue: verifyAccessToken },

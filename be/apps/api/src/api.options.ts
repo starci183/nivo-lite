@@ -1,3 +1,9 @@
+import type { ChannelSetupOptions } from "@modules/integrations/channel-setup"
+import type { ConnectionsOptions } from "@modules/domain/connections"
+import type { GoogleOptions } from "@modules/integrations/google"
+import type { MetaOptions } from "@modules/integrations/meta"
+import type { WebhookConnectionsOptions } from "@modules/domain/webhook-connections"
+import type { WebhookDeliveryOptions } from "@modules/integrations/webhook-delivery"
 import type { SupabaseOptions } from "@modules/integrations/supabase"
 import type { ServerOptions } from "@modules/platform/config"
 import type { DatabaseConnectionOptions } from "@modules/platform/database"
@@ -25,4 +31,16 @@ export interface ApiOptions {
     readonly queue: QueueConfig
     /** Who this worker is and how long a job claim lasts. */
     readonly jobs: JobsConfig
+    /** The channel token key that seals provider credentials, and the public site address. */
+    readonly connections: ConnectionsOptions
+    /** The signing key behind outgoing webhooks. */
+    readonly webhookConnections: WebhookConnectionsOptions
+    /** Google OAuth and Sheets. */
+    readonly google: GoogleOptions
+    /** Meta (Facebook Pages and Instagram). */
+    readonly meta: MetaOptions
+    /** The provider calls a connection wizard makes while connecting a channel. */
+    readonly channelSetup: ChannelSetupOptions
+    /** Deliveries to tenant-supplied webhook addresses. */
+    readonly webhookDelivery: WebhookDeliveryOptions
 }
