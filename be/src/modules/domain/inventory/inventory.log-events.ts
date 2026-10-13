@@ -6,4 +6,6 @@ export enum InventoryLogEvent {
     OrdersDrafted = "inventory.orders-drafted",
     /** A member command ended in an error that is not a refusal in words. */
     CommandFailed = "inventory.command-failed",
+    /** The stock-out history read failed; the workbench shows an empty figure for it. */
+    StockOutsReadFailed = "inventory.stock-outs-read-failed",
 }

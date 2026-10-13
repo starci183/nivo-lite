@@ -51,19 +51,3 @@ export interface InventoryPoLinesRow {
     /** The unit cost. */
     readonly unit_cost_vnd: number | string
 }
-
-/** The columns of public.inventory_commands the job reads. */
-export interface InventoryCommandsRow {
-    /** The command id. */
-    readonly id: string
-    /** The workspace the command acts in. */
-    readonly workspace_id: string
-    /** What the command asks for, one of the operation names. */
-    readonly kind: string
-    /** The typed input of the command as submitted. */
-    readonly input: unknown
-    /** queued, done or failed. */
-    readonly status: string
-    /** The member who submitted the command: the service runs as this person. */
-    readonly created_by: string
-}

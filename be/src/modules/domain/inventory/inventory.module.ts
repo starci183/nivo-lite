@@ -4,7 +4,6 @@ import { InventoryOrderModule } from "@modules/queues/inventory-order"
 import { InventoryReplenishModule } from "@modules/queues/inventory-replenish"
 import { InventoryAutomationService } from "./inventory-automation.service"
 import { InventoryCatalogService } from "./inventory-catalog.service"
-import { InventoryCommandService } from "./inventory-command.service"
 import { InventoryImportService } from "./inventory-import.service"
 import { InventoryDispatchService } from "./inventory-dispatch.service"
 import { InventoryLocationsService } from "./inventory-locations.service"
@@ -16,6 +15,7 @@ import { InventoryReceivingService } from "./inventory-receiving.service"
 import { InventoryReplenishService } from "./inventory-replenish.service"
 import { InventoryDeductionService } from "./inventory-deduction.service"
 import { InventoryStockService } from "./inventory-stock.service"
+import { InventoryWorkbenchService } from "./inventory-workbench.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./inventory.module-definition"
 
 @Module({})
@@ -37,17 +37,16 @@ export class InventoryModule extends ConfigurableModuleClass {
                 InventoryReplenishService,
                 InventoryReceivingService,
                 InventoryCatalogService,
-                InventoryCommandService,
                 InventoryImportService,
                 InventoryDeductionService,
                 InventoryStockService,
                 InventoryAutomationService,
                 InventoryPerformersService,
+                InventoryWorkbenchService,
             ],
             exports: [
                 InventoryAutomationService,
                 InventoryCatalogService,
-                InventoryCommandService,
                 InventoryImportService,
                 InventoryDispatchService,
                 InventoryLocationsService,
@@ -56,6 +55,7 @@ export class InventoryModule extends ConfigurableModuleClass {
                 InventoryReplenishService,
                 InventoryDeductionService,
                 InventoryStockService,
+                InventoryWorkbenchService,
             ],
         }
     }

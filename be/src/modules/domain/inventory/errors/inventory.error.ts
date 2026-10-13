@@ -59,6 +59,8 @@ export enum InventoryErrorCode {
     PoNotCancellable = "INVENTORY_PO_NOT_CANCELLABLE",
     /** The order has no message to send. */
     PoMessageEmpty = "INVENTORY_PO_MESSAGE_EMPTY",
+    /** The starter set named in the apply call does not exist. */
+    StarterUnknown = "INVENTORY_STARTER_UNKNOWN",
 }
 
 /** How each inventory code travels. */
@@ -91,6 +93,7 @@ export const INVENTORY_ERROR_KINDS: Record<InventoryErrorCode, ErrorKind> = {
     [InventoryErrorCode.ReceiptEmpty]: "invalid",
     [InventoryErrorCode.PoNotCancellable]: "conflict",
     [InventoryErrorCode.PoMessageEmpty]: "invalid",
+    [InventoryErrorCode.StarterUnknown]: "invalid",
 }
 
 /** The one error class of the inventory capability. */
