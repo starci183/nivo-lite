@@ -6,6 +6,7 @@ import { ApplyShiftsImportResolver } from "./apply-shifts-import.resolver"
 import { CheckInShiftsResolver } from "./check-in-shifts.resolver"
 import { DecideShiftsAvailabilityResolver } from "./decide-shifts-availability.resolver"
 import { ExplainShiftsScheduleResolver } from "./explain-shifts-schedule.resolver"
+import { PreviewShiftsImportResolver } from "./preview-shifts-import.resolver"
 import { ProposeShiftsWeekResolver } from "./propose-shifts-week.resolver"
 import { ReassignShiftsShiftResolver } from "./reassign-shifts-shift.resolver"
 import { RemoveShiftsAvailabilityResolver } from "./remove-shifts-availability.resolver"
@@ -32,6 +33,7 @@ import { SubmitShiftsAvailabilityResolver } from "./submit-shifts-availability.r
         CheckInShiftsResolver,
         DecideShiftsAvailabilityResolver,
         ExplainShiftsScheduleResolver,
+        PreviewShiftsImportResolver,
         ProposeShiftsWeekResolver,
         ReassignShiftsShiftResolver,
         RemoveShiftsAvailabilityResolver,

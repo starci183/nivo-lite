@@ -1,33 +1,28 @@
 "use client"
 
-import { navigation } from "@/modules/i18n"
+import { useTranslations } from "next-intl"
+import { useInstanceTabs } from "@/hooks/installations"
+import type { ModuleKey } from "@/hooks/installations"
 import { AgentTabsBase } from "./component"
 
-/** One tab with the page it opens. */
-type AgentTab = { readonly id: string; readonly label: string; readonly href: string }
-
-/** What the frame of an agent hands the tabs. */
-type AgentTabsProps = {
-    readonly label: string
-    readonly tabs: ReadonlyArray<AgentTab>
+/** What the layout hands the tabs: the type and the instance of the url. */
+interface AgentTabsProps {
+    readonly module: ModuleKey
+    readonly installationId: string
 }
-
-const FIRST_TAB = "setup"
 
 /** The connected tabs of an agent: the tab that matches the current path is selected (Setup otherwise), and a tab opens its page. */
 export const AgentTabs = (props: AgentTabsProps) => {
-    const router = navigation.useRouter()
-    const pathname = navigation.usePathname()
-    const selected = props.tabs.find((tab) => tab.id !== FIRST_TAB && pathname.endsWith(`/${tab.id}`))?.id ?? FIRST_TAB
+    const t = useTranslations("modulesCore")
+    const { tabs, selected, open } = useInstanceTabs(props.module, props.installationId)
     return (
         <AgentTabsBase
-            props={{ label: props.label, tabs: props.tabs, selected }}
-            on={{
-                select: (id) => {
-                    const target = props.tabs.find((tab) => tab.id === id)
-                    if (target !== undefined) router.push(target.href)
-                },
+            props={{
+                label: t("tabsLabel"),
+                tabs: tabs.map((tab) => ({ id: tab, label: t(`tab_${tab}`) })),
+                selected,
             }}
+            on={{ select: open }}
         />
     )
 }

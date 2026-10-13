@@ -2,25 +2,29 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { useSave } from "@/hooks/modules"
-import { chooseLive } from "@/lib/module-actions"
+import { useAgentInstallation, useAgentRights, useChooseLive } from "@/hooks/agentSettings"
 import { AgentLiveCardBase } from "./component"
 
-/** The installation the card switches, as the settings page prepared it. */
+/** The installation the card switches. */
 type AgentLiveCardProps = {
     readonly installationId: string
-    readonly isLive: boolean
-    /** A context version was applied, so the agent may go live. */
-    readonly hasVersion: boolean
-    readonly canEdit: boolean
-    readonly isLoading: boolean
+    readonly module: string
 }
 
-/** The connected live card: the switch saves at once and goes back when it is refused. */
+/** The connected live card: the switch shows at once and goes back when the server refuses it. */
 export const AgentLiveCard = (props: AgentLiveCardProps) => {
     const t = useTranslations("modulesCore")
-    const [isLive, setLive] = useState(props.isLive)
-    const { note, isPending, save } = useSave()
+    const { canEdit } = useAgentRights()
+    const { slot } = useAgentInstallation(props.installationId, props.module)
+    const [chosen, setChosen] = useState<boolean | null>(null)
+    const { choose, isSaving } = useChooseLive(props.installationId)
+    const isLive = chosen ?? slot.items?.isLive ?? false
+    const hasVersion = slot.items?.hasVersion === true
+    const change = async (next: boolean) => {
+        setChosen(next)
+        await choose(next)
+        setChosen(null)
+    }
     return (
         <AgentLiveCardBase
             props={{
@@ -29,22 +33,11 @@ export const AgentLiveCard = (props: AgentLiveCardProps) => {
                 isLive,
                 statusLabel: isLive ? t("status_live") : t("status_paused"),
                 help: t("liveHelp"),
-                blocker: !props.hasVersion && !props.isLoading ? t("liveNeedsVersion") : "",
-                isDisabled: !props.canEdit || isPending || (!props.hasVersion && !isLive),
-                isLoading: props.isLoading,
-                failure: note.tone === "refused" ? note.text : "",
-                failureTitle: t("notSaved"),
+                blocker: !hasVersion && slot.items !== undefined ? t("liveNeedsVersion") : "",
+                isDisabled: !canEdit || isSaving || (!hasVersion && !isLive),
+                isLoading: slot.items === undefined,
             }}
-            on={{
-                live: (next) => {
-                    setLive(next)
-                    save(
-                        () => chooseLive(props.installationId, next),
-                        t("saved"),
-                        () => setLive(!next),
-                    )
-                },
-            }}
+            on={{ live: (next) => void change(next) }}
         />
     )
 }

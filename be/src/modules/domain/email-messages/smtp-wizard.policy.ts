@@ -62,13 +62,8 @@ export const cleanSmtpForm = (input: SmtpFormInput): SmtpFormVerdict => {
     }
 }
 
-/** The password inside the sealed SMTP credential (a JSON object with a `password`), or null when it cannot be read. */
-export const passwordOfCredential = (credential: string): string | null => {
-    try {
-        const parsed: unknown = JSON.parse(credential)
-        const password: unknown = typeof parsed === "object" && parsed !== null ? Reflect.get(parsed, "password") : null
-        return typeof password === "string" ? password : null
-    } catch {
-        return null
-    }
+/** The password inside an opened SMTP credential (a JSON value with a `password`), or null when there is none. */
+export const passwordOfParsed = (parsed: unknown): string | null => {
+    const password: unknown = typeof parsed === "object" && parsed !== null ? Reflect.get(parsed, "password") : null
+    return typeof password === "string" ? password : null
 }

@@ -17,8 +17,9 @@ export class SendSmtpTestHandler extends ICQRSHandler<SendSmtpTestCommand, SmtpT
     }
 
     protected override process(command: SendSmtpTestCommand): Promise<SmtpTestResult> {
-        const r = command.params.request
-        const actor = { principalId: command.params.principal.id, workspaceId: r.workspaceId }
-        return this.wizard.sendTest(actor, { connectionId: r.connectionId, to: r.to, makeDefault: r.makeDefault })
+        return this.wizard.sendTest(
+            { principalId: command.params.principal.id, workspaceId: command.params.request.workspaceId },
+            command.params.request,
+        )
     }
 }

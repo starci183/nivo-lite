@@ -16,8 +16,10 @@ export class ChangeSmtpPasswordHandler extends ICQRSHandler<ChangeSmtpPasswordCo
     }
 
     protected override process(command: ChangeSmtpPasswordCommand): Promise<void> {
-        const r = command.params.request
-        const actor = { principalId: command.params.principal.id, workspaceId: r.workspaceId }
-        return this.wizard.changePassword(actor, r.connectionId, r.password)
+        return this.wizard.changePassword(
+            { principalId: command.params.principal.id, workspaceId: command.params.request.workspaceId },
+            command.params.request.connectionId,
+            command.params.request.password,
+        )
     }
 }

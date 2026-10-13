@@ -1,0 +1,80 @@
+/** How the mailbox connection is secured. */
+export type ImapSecurity = "tls" | "starttls"
+
+/** Mail providers with a known IMAP address. `other` asks for host and port. */
+export type ImapPresetId = "gmail" | "outlook" | "zoho" | "yahoo" | "other"
+
+/** One provider preset: where its IMAP server is. */
+export interface ImapPreset {
+    /** The preset id. */
+    readonly id: ImapPresetId
+    /** The IMAP server. */
+    readonly host: string
+    /** The IMAP port. */
+    readonly port: number
+}
+
+/** The steps of the mailbox wizard, in order. */
+export const IMAP_STEPS = ["account", "folders", "schedule", "agent"] as const
+
+/** One step of the mailbox wizard. */
+export type ImapStep = (typeof IMAP_STEPS)[number]
+
+/** How far back the first sync reads, in days. */
+export const IMAP_SINCE_DAYS = [7, 30, 90] as const
+
+/** The sync schedule choices: the label key and the minutes (null is manual only). */
+export const IMAP_EVERY: ReadonlyArray<{
+    readonly key: "everyManual" | "every15" | "every60" | "every360"
+    readonly minutes: number | null
+}> = [
+    { key: "everyManual", minutes: null },
+    { key: "every15", minutes: 15 },
+    { key: "every60", minutes: 60 },
+    { key: "every360", minutes: 360 },
+]
+
+/** The provider presets. */
+export const IMAP_PRESETS: ReadonlyArray<ImapPreset> = [
+    { id: "gmail", host: "imap.gmail.com", port: 993 },
+    { id: "outlook", host: "outlook.office365.com", port: 993 },
+    { id: "zoho", host: "imap.zoho.com", port: 993 },
+    { id: "yahoo", host: "imap.mail.yahoo.com", port: 993 },
+    { id: "other", host: "", port: 993 },
+]
+
+/** The usual port of a security kind. */
+export const defaultPort = (security: ImapSecurity): number => (security === "tls" ? 993 : 143)
+
+/** The preset a saved host belongs to. */
+export const presetOfHost = (host: string): ImapPresetId =>
+    IMAP_PRESETS.find((preset) => preset.host !== "" && preset.host === host)?.id ?? "other"
+
+/** A saved or typed security word as a security kind. */
+export const securityOf = (value: string): ImapSecurity => (value === "starttls" ? "starttls" : "tls")
+
+/** A saved mailbox as the wizard edits it (never the password). */
+export interface ImapMailbox {
+    /** The connection id. */
+    readonly id: string
+    /** The connection name. */
+    readonly name: string
+    /** The mailbox address. */
+    readonly email: string
+    /** The IMAP server. */
+    readonly host: string
+    /** The IMAP port. */
+    readonly port: number
+    /** The kind of security. */
+    readonly security: ImapSecurity
+    /** The login name. */
+    readonly user: string
+    /** The folders read. */
+    readonly folders: ReadonlyArray<string>
+    /** How many days back a first read goes. */
+    readonly sinceDays: number
+    /** Minutes between scheduled syncs; null is manual only. */
+    readonly syncEveryMinutes: number | null
+    /** Agents that hold a grant on this mailbox. */
+    readonly agentIds: ReadonlyArray<string>
+}

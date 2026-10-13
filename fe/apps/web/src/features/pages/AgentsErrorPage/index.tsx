@@ -1,8 +1,8 @@
 import { useLocale, useTranslations } from "next-intl"
 import { useParams } from "next/navigation"
 import { agentTypeName, isModuleKey } from "@/modules/catalog"
-import { AGENTS_ROUTE, agentHref } from "@/modules/installations"
-import { APP_ROUTES } from "@/modules/routes"
+import { agentHref } from "@/modules/installations"
+import { AGENTS_ROUTE, APP_ROUTES } from "@/modules/routes"
 import { AgentsErrorPageBase } from "./component"
 
 /** Where in the agents area the failure happened. */

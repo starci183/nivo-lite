@@ -1,6 +1,6 @@
 import { Field, InputType, Int } from "@nestjs/graphql"
 import { IsDefined, IsInt, IsOptional, IsString, Max, MaxLength, Min } from "class-validator"
-import { DataJsonScalar } from "./data-json.scalar"
+import { DataJsonScalar } from "./data-json.type"
 import { PreviewCsvSourceInput } from "./preview-csv-source.input"
 
 @InputType()

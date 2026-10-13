@@ -17,8 +17,9 @@ export class StartSmtpConnectionHandler extends ICQRSHandler<StartSmtpConnection
     }
 
     protected override process(command: StartSmtpConnectionCommand): Promise<SmtpConnectionView> {
-        const r = command.params.request
-        const actor = { principalId: command.params.principal.id, workspaceId: r.workspaceId }
-        return this.wizard.start(actor, { preset: r.preset, host: r.host, port: r.port, security: r.security, user: r.user, password: r.password, fromName: r.fromName, fromEmail: r.fromEmail, replyTo: r.replyTo })
+        return this.wizard.start(
+            { principalId: command.params.principal.id, workspaceId: command.params.request.workspaceId },
+            command.params.request,
+        )
     }
 }

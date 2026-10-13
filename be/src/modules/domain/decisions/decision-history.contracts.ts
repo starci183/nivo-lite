@@ -1,7 +1,7 @@
 import type { ReasonCode } from "@modules/domain/work-items"
 
 /** One decision in a customer's flow or the recent human Sales history. */
-export interface DecisionRecord {
+export interface LeadDecisionRecord {
     /** The decision id. */
     readonly id: string
     /** The item that was decided. */
