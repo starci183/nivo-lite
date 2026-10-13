@@ -14,6 +14,7 @@ import { RedeemRewardHandler } from "./application/redeem-reward.handler"
 import { SyncMembersHandler } from "./application/sync-members.handler"
 import { PreviewSegmentHandler } from "./application/preview-segment.handler"
 import { DraftCampaignHandler } from "./application/draft-campaign.handler"
+import { SubmitLoyaltyCampaignHandler } from "./application/submit-loyalty-campaign.handler"
 
 @Module({
     providers: [
@@ -32,6 +33,7 @@ import { DraftCampaignHandler } from "./application/draft-campaign.handler"
         SyncMembersHandler,
         PreviewSegmentHandler,
         DraftCampaignHandler,
+        SubmitLoyaltyCampaignHandler,
     ],
 })
 /** The loyalty feature: the handlers of its application. */

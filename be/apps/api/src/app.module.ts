@@ -205,7 +205,9 @@ import {
 } from "@modules/domain/connection-secrets"
 import { CONNECTIONS_ERROR_KINDS, CONNECTIONS_MESSAGES, ConnectionsModule } from "@modules/domain/connections"
 import { DATA_HUB_ERROR_KINDS, DATA_HUB_MESSAGES, DataHubModule } from "@modules/domain/data-hub"
-import { DataSourcesModule } from "@modules/integrations/data-sources"
+import { DataRecordsModule } from "@modules/domain/data-records"
+import { DataSyncRunsModule } from "@modules/domain/data-sync-runs"
+import { DATA_SOURCES_ERROR_KINDS, DataSourcesModule } from "@modules/integrations/data-sources"
 import { DATA_SYNC_SCHEDULER } from "@modules/queues/data-sync"
 import { CONVERSATIONS_ERROR_KINDS, CONVERSATIONS_MESSAGES, ConversationsModule } from "@modules/domain/conversations"
 import { TelegramInboxModule } from "@modules/domain/telegram-inbox"
@@ -536,6 +538,7 @@ export class AppModule {
                     kinds: [
                         CONNECTIONS_ERROR_KINDS,
                         DATA_HUB_ERROR_KINDS,
+                        DATA_SOURCES_ERROR_KINDS,
                         CHATREPLY_ERROR_KINDS,
                         CONNECTION_GRANTS_ERROR_KINDS,
                         CHANNEL_CONNECTIONS_ERROR_KINDS,
@@ -666,6 +669,8 @@ export class AppModule {
                 ConnectionsModule.register({ isGlobal: true, ...options.connections }),
                 ConnectionGrantsModule.register({ isGlobal: true }),
                 DataSourcesModule.register({ isGlobal: true, ...options.dataSources }),
+                DataRecordsModule.register({ isGlobal: true }),
+                DataSyncRunsModule.register({ isGlobal: true }),
                 DataHubModule.register({ isGlobal: true }),
                 ChannelConnectionsModule.register({ isGlobal: true }),
                 WebhookConnectionsModule.register({ isGlobal: true, ...options.webhookConnections }),

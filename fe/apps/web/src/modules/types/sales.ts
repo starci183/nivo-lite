@@ -136,7 +136,6 @@ export type SalesContractStatus = "active" | "ended" | "cancelled"
 /** One recurring sales contract. */
 export interface SalesContract {
     readonly id: string
-    readonly workspace_id: string
     readonly lead_id: string | null
     readonly customer_name: string
     readonly plan: string
@@ -147,8 +146,6 @@ export interface SalesContract {
     readonly amount_vnd: number | null
     readonly status: SalesContractStatus
     readonly note: string
-    readonly created_at: string
-    readonly updated_at: string
 }
 
 /** Everything the Sales workbench reads. */

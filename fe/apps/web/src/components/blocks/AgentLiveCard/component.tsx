@@ -1,4 +1,4 @@
-import { Alert, Badge, SurfaceCard, Switch, Text } from "@starci/grammar/common"
+import { Badge, SurfaceCard, Switch, Text } from "@starci/grammar/common"
 import { STACK } from "./classNames"
 
 /** Copy and state of the live card. */
@@ -13,8 +13,6 @@ export interface AgentLiveCardBaseProps {
         readonly blocker: string
         readonly isDisabled: boolean
         readonly isLoading: boolean
-        readonly failure: string
-        readonly failureTitle: string
     }
     readonly on: { readonly live: (on: boolean) => void }
 }
@@ -38,9 +36,6 @@ export const AgentLiveCardBase = (props: AgentLiveCardBaseProps) => (
                 {props.props.help}
             </Text>
             {props.props.blocker === "" ? null : <Text size="sm">{props.props.blocker}</Text>}
-            {props.props.failure === "" ? null : (
-                <Alert title={props.props.failureTitle} description={props.props.failure} tone="negative" />
-            )}
         </div>
     </SurfaceCard>
 )

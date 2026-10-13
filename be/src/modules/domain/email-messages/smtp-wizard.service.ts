@@ -4,14 +4,17 @@ import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connecti
 import { WorkspacesService } from "@modules/domain/workspaces"
 import { InjectMail, MailError, renderEmail } from "@modules/integrations/mail"
 import type { MailClient } from "@modules/integrations/mail"
+import { InjectLogger } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { isMailAddress } from "./email-address.policy"
+import { EmailMessagesLogEvent } from "./email-messages.log-events"
 import { EmailMessagesService } from "./email-messages.service"
 import { EmailMessagesError, EmailMessagesErrorCode } from "./errors/email-messages.error"
 import { smtpConfigOf } from "./smtp-config.policy"
 import type { SmtpConnectionView, SmtpFormInput, SmtpTestInput, SmtpTestResult } from "./smtp-wizard.contracts"
-import { cleanSmtpForm, cleanSmtpPassword, passwordOfCredential } from "./smtp-wizard.policy"
+import { cleanSmtpForm, cleanSmtpPassword, passwordOfParsed } from "./smtp-wizard.policy"
 
 const FALLBACK_SHOP = "NIVO"
 
@@ -21,6 +24,7 @@ export class SmtpWizardService {
     constructor(
         @InjectMail() private readonly mail: MailClient,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
+        @InjectLogger() private readonly logger: Logger,
         private readonly connections: ConnectionsService,
         private readonly log: EmailMessagesService,
         private readonly workspaces: WorkspacesService,
@@ -131,9 +135,18 @@ export class SmtpWizardService {
 
     private async passwordOf(connectionId: string): Promise<string> {
         const secret = await this.connections.readSecret(connectionId)
-        const password = secret === null ? null : passwordOfCredential(secret.plain)
+        const password = secret === null ? null : this.passwordIn(connectionId, secret.plain)
         if (password === null) throw new EmailMessagesError({ code: EmailMessagesErrorCode.SmtpPassword })
         return password
+    }
+
+    private passwordIn(connectionId: string, credential: string): string | null {
+        try {
+            return passwordOfParsed(JSON.parse(credential))
+        } catch (cause) {
+            this.logger.error(EmailMessagesLogEvent.CredentialUnreadable, cause, { connectionId })
+            return null
+        }
     }
 
     private record(

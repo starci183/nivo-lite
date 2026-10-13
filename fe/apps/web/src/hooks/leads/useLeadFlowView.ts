@@ -1,6 +1,13 @@
 import type { BadgeTone } from "@starci/grammar/common"
 import { useFormatter, useTranslations } from "next-intl"
-import type { DecisionRow, Invoice, LeadFlow, Order, Transaction, WorkItemView } from "@/lib/flow-types"
+import type {
+    LeadFlowDecisionType as DecisionRow,
+    LeadFlowInvoiceType as Invoice,
+    LeadFlowType as LeadFlow,
+    LeadFlowOrderType as Order,
+    LeadFlowTransactionType as Transaction,
+    LeadFlowWorkItemType as WorkItemView,
+} from "@/modules/api"
 
 /** One entry of the work flow card: what happened, when, how it stands and the lines that qualify it. */
 export interface FlowEntryView {
@@ -38,17 +45,17 @@ const DECISION_TONES: Tones = { rejected: "danger", auto_done: "neutral" }
 
 const toneOf = (tones: Tones, key: string, fallback: BadgeTone): BadgeTone => tones[key] ?? fallback
 
-const line = (id: string, text: string | null, strong = false) => (text ? [{ id, text, strong }] : [])
+const line = (id: string, text: string | null | undefined, strong = false) => (text ? [{ id, text, strong }] : [])
 
-const joined = (parts: ReadonlyArray<string | null>): string => parts.filter(Boolean).join(" · ")
+const joined = (parts: ReadonlyArray<string | null | undefined>): string => parts.filter(Boolean).join(" · ")
 
 /** The words and formats the work flow card needs, resolved once; the returned function turns one lead flow into its view. */
 export const useLeadFlowView = (): ((flow: LeadFlow) => FlowView) => {
     const t = useTranslations("lead")
     const g = useTranslations("governance")
     const format = useFormatter()
-    const vnd = (amount: number | null): string =>
-        amount === null ? "—" : format.number(amount, { style: "currency", currency: "VND", maximumFractionDigits: 0 })
+    const vnd = (amount: number | null | undefined): string =>
+        amount == null ? "—" : format.number(amount, { style: "currency", currency: "VND", maximumFractionDigits: 0 })
     const when = (iso: string) => ({
         iso,
         label: format.dateTime(new Date(iso), { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }),
@@ -64,16 +71,16 @@ export const useLeadFlowView = (): ((flow: LeadFlow) => FlowView) => {
                 g(`dept_${item.department}`),
                 g(`action_${item.action}`),
                 g(`status_${item.status}`),
-                item.decided_path ? g(`path_${item.decided_path}`) : null,
+                item.decidedPath ? g(`path_${item.decidedPath}`) : null,
             ]),
-            when: when(item.created_at),
+            when: when(item.createdAt),
             badge: { label: g(`status_${item.status}`), tone: toneOf(STEP_TONES, item.status, "neutral") },
             reason: item.reason ? g(`reason_${item.reason}`) : null,
             lines: [
                 ...line(
                     "evidence",
                     joined([
-                        g(`evidence_${item.evidence_state}`),
+                        g(`evidence_${item.evidenceState}`),
                         item.origin === "simulated" ? g("origin_simulated") : null,
                     ]),
                 ),
@@ -85,7 +92,7 @@ export const useLeadFlowView = (): ((flow: LeadFlow) => FlowView) => {
     }
     const orderOf = (order: Order): FlowEntryView => ({
         id: order.id,
-        head: `${order.order_no} · ${vnd(order.amount_vnd)}`,
+        head: `${order.orderNo} · ${vnd(order.amountVnd)}`,
         when: null,
         badge: { label: g(`order_${order.status}`), tone: toneOf(ORDER_TONES, order.status, "success") },
         reason: null,
@@ -93,24 +100,24 @@ export const useLeadFlowView = (): ((flow: LeadFlow) => FlowView) => {
     })
     const invoiceOf = (invoice: Invoice, orderNo: ReadonlyMap<string, string>): FlowEntryView => ({
         id: invoice.id,
-        head: `${invoice.invoice_no} · ${vnd(invoice.amount_vnd)}`,
+        head: `${invoice.invoiceNo} · ${vnd(invoice.amountVnd)}`,
         when: null,
         badge: { label: g(`invoice_${invoice.status}`), tone: toneOf(INVOICE_TONES, invoice.status, "neutral") },
         reason: null,
         lines: line(
             "meta",
             joined([
-                invoice.order_id ? (orderNo.get(invoice.order_id) ?? null) : null,
-                invoice.issued_by ? t("flowInvoiceBy", { name: invoice.issued_by }) : null,
-                invoice.due_at ? t("flowDueOn", { date: day(invoice.due_at) }) : null,
-                invoice.paid_at ? t("flowPaidOn", { date: day(invoice.paid_at) }) : null,
+                invoice.orderId ? (orderNo.get(invoice.orderId) ?? null) : null,
+                invoice.issuedBy ? t("flowInvoiceBy", { name: invoice.issuedBy }) : null,
+                invoice.dueAt ? t("flowDueOn", { date: day(invoice.dueAt) }) : null,
+                invoice.paidAt ? t("flowPaidOn", { date: day(invoice.paidAt) }) : null,
                 g("internalInvoice"),
             ]),
         ),
     })
     const paymentOf = (payment: Transaction): FlowEntryView => ({
         id: payment.id,
-        head: `${vnd(payment.amount_vnd)} · ${payment.payer ?? g("channel_bank")}`,
+        head: `${vnd(payment.amountVnd)} · ${payment.payer ?? g("channel_bank")}`,
         when: null,
         badge: { label: g(`tx_${payment.status}`), tone: toneOf(PAYMENT_TONES, payment.status, "warning") },
         reason: null,
@@ -118,7 +125,7 @@ export const useLeadFlowView = (): ((flow: LeadFlow) => FlowView) => {
             "meta",
             joined([
                 payment.reference ? t("flowUnmatchedRef", { ref: payment.reference }) : null,
-                when(payment.occurred_at).label,
+                when(payment.occurredAt).label,
             ]),
         ),
     })
@@ -132,8 +139,8 @@ export const useLeadFlowView = (): ((flow: LeadFlow) => FlowView) => {
             ...line(
                 "by",
                 t("flowDecidedBy", {
-                    name: decision.decider_kind === "policy" ? g("decider_policy") : decision.decided_by,
-                    time: when(decision.created_at).label,
+                    name: decision.deciderKind === "policy" ? g("decider_policy") : decision.decidedBy,
+                    time: when(decision.createdAt).label,
                 }),
             ),
             ...line("gate", decision.reason ? `${t("flowGate")}: ${g(`reason_${decision.reason}`)}` : null),
@@ -142,8 +149,8 @@ export const useLeadFlowView = (): ((flow: LeadFlow) => FlowView) => {
     })
 
     return (flow) => {
-        const items = [...flow.workItems].sort((a, b) => a.created_at.localeCompare(b.created_at))
-        const orderNo = new Map(flow.orders.map((order) => [order.id, order.order_no]))
+        const items = [...flow.workItems].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+        const orderNo = new Map(flow.orders.map((order) => [order.id, order.orderNo]))
         const none = t("flowNone")
         return {
             fact: t("flowFact", { count: items.length }),

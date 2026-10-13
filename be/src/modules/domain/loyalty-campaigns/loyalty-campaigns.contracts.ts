@@ -44,6 +44,16 @@ export interface CampaignParams {
     readonly createdBy: string
 }
 
+/** A drafted campaign handed to the approval flow. */
+export interface CampaignSubmission {
+    /** The campaign. */
+    readonly campaignId: string
+    /** The work item that records the decision. */
+    readonly workItemId: string
+    /** The work item status: `waiting_decision` when a person must decide. */
+    readonly status: string
+}
+
 /** A campaign written as a draft. */
 export interface CampaignDraft {
     /** The campaign id. */
@@ -68,7 +78,7 @@ export interface LoyaltyCampaignView {
     readonly messageDraft: string
     /** The message using the established campaign field name. */
     readonly draft: string
-    /** Drafting waits in `waiting`; a finished message is `draft`. */
+    /** Drafting waits in `waiting`; a finished message is `draft`; a submitted draft waits as `waiting_decision`. */
     readonly status: string
     /** The decision that authorizes sending, when one exists. */
     readonly workItemId: string | null

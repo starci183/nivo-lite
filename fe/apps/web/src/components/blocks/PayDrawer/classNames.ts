@@ -1,8 +1,5 @@
 import { cn } from "@heroui/react"
 
-/** Lines of one entry (GAP-1). */
-export const COPY_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-1")
-
 /** QR code over the transfer details (GAP-4). */
 export const PAY_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-4")
 /** QR code, its title and the countdown (GAP-4). */

@@ -1,19 +1,19 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { useState, useTransition } from "react"
-import { ageOf, STAGE_KEYS, STAGE_ORDER, useLeadCommands } from "@/hooks/leads"
-import { faultTextOf, isEvidenceEvent } from "@/hooks/leadJourney"
-import { loadingSlot, useSlotLabels } from "@/hooks/slot"
-import { navigation } from "@/modules/i18n"
+import { useState } from "react"
+import { ageOf, STAGE_KEYS, STAGE_ORDER, useLeadCommands, useLeadJourney } from "@/hooks/leads"
+import { isEvidenceEvent } from "@/hooks/leadJourney"
+import { mapSlot, useSlotLabels } from "@/hooks/slot"
+import { useWatch } from "react-hook-form"
+import { useLeadOutcomeForm } from "@/hooks/rhf"
 import type { EventRecord, LeadJourney, LeadStageId, DataSlot } from "@/modules/types"
 import { LeadOutcomeBase } from "./component"
 import type { OutcomeView } from "./component"
 
 /** The lead the card acts on and its workspace; a null detail draws the loading card. */
 interface LeadOutcomeProps {
-    readonly detail: LeadJourney | null
-    readonly workspaceId: string
+    readonly leadId?: string
 }
 
 const isStage = (value: string): value is LeadStageId => STAGE_ORDER.some((stage) => stage === value)
@@ -24,12 +24,14 @@ export const LeadOutcome = (props: LeadOutcomeProps) => {
     const tl = useTranslations("leads")
     const slotLabels = useSlotLabels()
     const format = useFormatter()
-    const router = navigation.useRouter()
-    const commands = useLeadCommands(props.workspaceId)
-    const [isPending, startTransition] = useTransition()
-    const detail = props.detail
-    const [stage, setStage] = useState<LeadStageId | null>(null)
-    const [evidence, setEvidence] = useState("")
+    const query = useLeadJourney(props.leadId)
+    const commands = useLeadCommands()
+    const isPending = commands.isMutating
+    const detail = query.detail
+    const form = useLeadOutcomeForm()
+    const values = useWatch({ control: form.control })
+    const stage = values.stage ?? null
+    const evidence = values.evidence ?? ""
     const [error, setError] = useState<string | null>(null)
     const lead = detail?.lead ?? null
     const stageLabel = (value: LeadStageId): string => tl(STAGE_KEYS[value])
@@ -79,28 +81,25 @@ export const LeadOutcome = (props: LeadOutcomeProps) => {
             recorded: recorded.map(evidenceOf),
         }
     }
-    const slot: DataSlot<OutcomeView> = detail === null ? loadingSlot() : { items: viewOf(detail) }
+    const slot: DataSlot<OutcomeView> = mapSlot(query.slot, viewOf)
 
-    const submit = () => {
+    const submit = form.handleSubmit(async (input) => {
         if (lead === null) return
         setError(null)
-        startTransition(async () => {
-            const result = await commands.recordOutcome(lead.id, stage ?? lead.stage, evidence.trim())
-            if (result.kind !== "ok") {
-                setError(faultTextOf(result))
-                return
-            }
-            setEvidence("")
-            router.refresh()
-        })
-    }
+        const result = await commands.recordOutcome(lead.id, input.stage ?? lead.stage, input.evidence)
+        if (result === undefined) {
+            setError(t("outcomeFailed"))
+            return
+        }
+        form.reset({ stage: input.stage, evidence: "" })
+    })
 
     return (
         <LeadOutcomeBase
             props={{
                 slot,
                 evidenceText: evidence,
-                error,
+                error: error ?? form.formState.errors.evidence?.message ?? null,
                 isPending,
                 labels: {
                     title: t("outcome"),
@@ -118,9 +117,11 @@ export const LeadOutcome = (props: LeadOutcomeProps) => {
                 },
             }}
             on={{
-                stage: (value) => setStage(isStage(value) ? value : null),
-                evidence: setEvidence,
-                submit,
+                stage: (value) => form.setValue("stage", isStage(value) ? value : null),
+                evidence: (value) => form.setValue("evidence", value, { shouldDirty: true }),
+                submit: () => {
+                    void submit()
+                },
             }}
         />
     )

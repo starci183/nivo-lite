@@ -5,7 +5,6 @@ import { CsvImportSyncService } from "./csv-import-sync.service"
 import { CsvImportWizardService } from "./csv-import-wizard.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./data-hub.module-definition"
 import { DataHubService } from "./data-hub.service"
-import { DataRecordsService } from "./data-records.service"
 import { DataSyncService } from "./data-sync.service"
 import { DatabaseSyncService } from "./database-sync.service"
 import { DatabaseWizardService } from "./database-wizard.service"
@@ -28,7 +27,6 @@ export class DataHubModule extends ConfigurableModuleClass {
             providers: [
                 ...(base.providers ?? []),
                 DataHubService,
-                DataRecordsService,
                 DataSyncService,
                 CsvImportWizardService,
                 CsvImportSyncService,
@@ -43,7 +41,6 @@ export class DataHubModule extends ConfigurableModuleClass {
             ],
             exports: [
                 DataHubService,
-                DataRecordsService,
                 DataSyncService,
                 CsvImportWizardService,
                 DatabaseWizardService,
