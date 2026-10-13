@@ -1,6 +1,7 @@
 export { isForbiddenFailure, isNotFoundFailure, isUnauthenticatedFailure } from "./graphql/failure"
 export type { GraphQLResponse } from "./graphql/types"
 export type {
+    AgentChatTurnStatusType,
     AutomationCardType,
     AutomationGoogleAccountType,
     AutomationRunType,
@@ -13,6 +14,7 @@ export type {
     BrainLessonType,
     DashboardType,
     DocumentPassageType,
+    InboundSimulationStatusType,
     KnowledgeSourceTextType,
     KnowledgeSourceType,
     KnowledgeSuggestionContextType,
@@ -24,6 +26,7 @@ export type {
     PreviewSampleType,
     RetrievedPassageType,
     RunStepType,
+    SimulateInboundType,
     TemplateDefinitionType,
     TemplateSettingType,
 } from "./graphql/__generated__/schema"
