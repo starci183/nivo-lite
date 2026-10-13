@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationRevealSepayKeyArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { RevealSepayKeyMutation, RevealSepayKeyMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `revealSepayKey` mutation. */
-export type MutateRevealSepayKeyRequest = MutationRevealSepayKeyArgs["input"]
+export type MutateRevealSepayKeyRequest = WireInput<RevealSepayKeyMutationVariables["input"]>
 
 /** The response of the `revealSepayKey` mutation. */
-type MutateRevealSepayKeyResponse = Pick<Mutation, "revealSepayKey">
+type MutateRevealSepayKeyResponse = RevealSepayKeyMutation
 
 const mutation1: TypedDocumentNode<MutateRevealSepayKeyResponse, InputVariables<MutateRevealSepayKeyRequest>> = gql`
     mutation RevealSepayKey($input: RevealSepayKeyInput!) {

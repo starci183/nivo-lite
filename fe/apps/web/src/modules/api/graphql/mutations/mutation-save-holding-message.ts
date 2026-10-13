@@ -1,13 +1,13 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationSaveHoldingMessageArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { SaveHoldingMessageMutation, SaveHoldingMessageMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `saveHoldingMessage` mutation. */
-export type MutateSaveHoldingMessageRequest = MutationSaveHoldingMessageArgs["input"]
+export type MutateSaveHoldingMessageRequest = WireInput<SaveHoldingMessageMutationVariables["input"]>
 
-type MutateSaveHoldingMessageResponse = Pick<Mutation, "saveHoldingMessage">
+type MutateSaveHoldingMessageResponse = SaveHoldingMessageMutation
 
 const mutation1: TypedDocumentNode<
     MutateSaveHoldingMessageResponse,

@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationRevokeSessionArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { RevokeSessionMutation, RevokeSessionMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `revokeSession` mutation. */
-type MutateRevokeSessionRequest = MutationRevokeSessionArgs["input"]
+type MutateRevokeSessionRequest = WireInput<RevokeSessionMutationVariables["input"]>
 
 /** The response of the `revokeSession` mutation: the typed payload straight from the back end contract. */
-type MutateRevokeSessionResponse = Pick<Mutation, "revokeSession">
+type MutateRevokeSessionResponse = RevokeSessionMutation
 
 type Document = TypedDocumentNode<MutateRevokeSessionResponse, InputVariables<MutateRevokeSessionRequest>>
 

@@ -1,13 +1,13 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationSaveReplyTimeoutArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { SaveReplyTimeoutMutation, SaveReplyTimeoutMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `saveReplyTimeout` mutation. */
-export type MutateSaveReplyTimeoutRequest = MutationSaveReplyTimeoutArgs["input"]
+export type MutateSaveReplyTimeoutRequest = WireInput<SaveReplyTimeoutMutationVariables["input"]>
 
-type MutateSaveReplyTimeoutResponse = Pick<Mutation, "saveReplyTimeout">
+type MutateSaveReplyTimeoutResponse = SaveReplyTimeoutMutation
 
 const mutation1: TypedDocumentNode<MutateSaveReplyTimeoutResponse, InputVariables<MutateSaveReplyTimeoutRequest>> = gql`
     mutation SaveReplyTimeout($input: SaveReplyTimeoutInput!) {

@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationSaveImapConnectionArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { SaveImapConnectionMutation, SaveImapConnectionMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `saveImapConnection` mutation. */
-export type MutateSaveImapConnectionRequest = MutationSaveImapConnectionArgs["input"]
+export type MutateSaveImapConnectionRequest = WireInput<SaveImapConnectionMutationVariables["input"]>
 
 /** The response of the `saveImapConnection` mutation. */
-type MutateSaveImapConnectionResponse = Pick<Mutation, "saveImapConnection">
+type MutateSaveImapConnectionResponse = SaveImapConnectionMutation
 
 const mutation1: TypedDocumentNode<
     MutateSaveImapConnectionResponse,
