@@ -1,4 +1,4 @@
-// migrations-sha256: cf95b7c55cf0b825e0132c6b77765ea785553c70df6a9f4bc6c825277cf213b6
+// migrations-sha256: 46e5843308aa7cd7a473774c14d8ad607195844a0a34a487f7756ddb91925612
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -3993,6 +3993,9 @@ isOneToOne: false
                            },
 "brain_command":
 { Args: { "p_kind": string,"p_payload": Json,"p_workspace": string }; Returns: string
+                           },
+"brain_command_wait":
+{ Args: { "p_id": string }; Returns: Json
                            },
 "knowledge_retry_source":
 { Args: { "p_source": string }; Returns: string

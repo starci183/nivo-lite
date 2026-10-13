@@ -114,6 +114,31 @@ end $$;
 revoke execute on function public.brain_command(uuid, text, jsonb) from public;
 grant execute on function public.brain_command(uuid, text, jsonb) to authenticated;
 
+/** Waits (up to five seconds) for the back end to close a command the caller asked for, and answers how it stands. */
+create or replace function public.brain_command_wait(p_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_row public.brain_commands;
+  v_looks int := 0;
+begin
+  loop
+    select * into v_row from public.brain_commands where id = p_id and requested_by = auth.uid();
+    if not found then
+      raise exception 'not found' using errcode = 'P0002';
+    end if;
+    exit when v_row.status in ('done', 'failed') or v_looks >= 10;
+    perform pg_sleep(0.5);
+    v_looks := v_looks + 1;
+  end loop;
+  return jsonb_build_object('status', v_row.status, 'result', v_row.result, 'errorCode', v_row.error_code);
+end $$;
+revoke execute on function public.brain_command_wait(uuid) from public;
+grant execute on function public.brain_command_wait(uuid) to authenticated;
+
 /* ------------------------------------------------------------------ realtime */
 
 do $$
