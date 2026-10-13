@@ -7,9 +7,8 @@ import { AgentReplyCard } from "@/components/blocks/AgentReplyCard"
 import { AgentSyncCard } from "@/components/blocks/AgentSyncCard"
 import { AutomationsBoard } from "@/components/blocks/AutomationsBoard"
 import { AgentAutomationsFrame } from "@/components/composites/AgentAutomationsFrame"
-import type { AutomationsData } from "@/hooks/automations"
 import { LoyaltyProgramExtras } from "@/features/module-loyalty/ProgramSettings"
-import type { ModuleScope } from "@/lib/automation-shared"
+import type { ModuleScope } from "@/modules/types"
 import type { Installation } from "@/modules/installations"
 import { COLUMN, GRID } from "./classNames"
 
@@ -33,16 +32,11 @@ export interface AgentSettingsPageBaseProps {
         readonly connectionsHref: string
         readonly automationsHref: string
         readonly automationsScope: ModuleScope | null
-        /** The automations of this agent's module, read by the page; absent while loading or when they could not be read. */
-        readonly automations?: AutomationsData
-        readonly automationsFailed: boolean
         readonly automationsTexts: {
             readonly title: string
             readonly seeAll: string
             readonly help: string
-            readonly failure: string
         }
-        readonly workspaceId?: string
         /** The extra card of the module, by its catalogue key; null when it has none. */
         readonly extrasKey: string | null
         readonly timeoutSec: number
@@ -101,18 +95,8 @@ export const AgentSettingsPageBase = (props: AgentSettingsPageBaseProps) => {
                         seeAllLabel={props.props.automationsTexts.seeAll}
                         seeAllHref={props.props.automationsHref}
                         help={props.props.automationsTexts.help}
-                        {...(props.props.automationsFailed
-                            ? { failureTitle: props.props.automationsTexts.failure }
-                            : {})}
                     >
-                        {props.props.automations === undefined ? null : (
-                            <AutomationsBoard
-                                workspaceId={props.props.workspaceId ?? ""}
-                                initial={props.props.automations}
-                                layout="module"
-                                moduleKey={props.props.automationsScope}
-                            />
-                        )}
+                        <AutomationsBoard layout="module" moduleKey={props.props.automationsScope} />
                     </AgentAutomationsFrame>
                 ) : null}
                 {installation !== null && canEdit ? <AgentSyncCard installationId={installation.id} /> : null}

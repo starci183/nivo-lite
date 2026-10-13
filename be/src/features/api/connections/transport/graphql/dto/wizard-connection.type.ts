@@ -36,6 +36,10 @@ export class WizardConnectionType {
     @Field(() => String)
     bankCode!: string
 
+    /** The human name of the bank, or the upper-cased code when the bank is not listed. */
+    @Field(() => String)
+    bank!: string
+
     /** The masked account number. */
     @Field(() => String)
     account!: string

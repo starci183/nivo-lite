@@ -1,5 +1,5 @@
 /**
- * Plain data of the Chatbot workbench (customer conversations). Everything runs as the signed-in member through RLS.
+ * Presentation data of the Chatbot inbox. Generated GraphQL payloads are normalized by the connected data hook.
  */
 
 /** The channel a customer wrote from. */

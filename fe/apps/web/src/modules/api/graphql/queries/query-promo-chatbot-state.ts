@@ -4,7 +4,7 @@ import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
 import type { Query } from "../__generated__/schema"
 
-/** Generated response of the promoChatbotState query. */
+/** The generated workspace chatbot promo query response. */
 type QueryPromoChatbotStateResponse = Pick<Query, "promoChatbotState">
 
 type Document = TypedDocumentNode<QueryPromoChatbotStateResponse>
@@ -12,9 +12,9 @@ type Document = TypedDocumentNode<QueryPromoChatbotStateResponse>
 const query1: Document = gql`
     query PromoChatbotState {
         promoChatbotState {
+            hasChatbot
             agentId
             handle
-            hasChatbot
             name
         }
     }
@@ -24,22 +24,13 @@ enum QueryPromoChatbotState {
     Query1 = "query1",
 }
 
-const queryMap: Record<QueryPromoChatbotState, Document> = {
-    [QueryPromoChatbotState.Query1]: query1,
-}
+const queryMap: Record<QueryPromoChatbotState, Document> = { [QueryPromoChatbotState.Query1]: query1 }
 
-/** Apollo parameters for the promoChatbotState query. */
-type QueryPromoChatbotStateParams = QueryParams<QueryPromoChatbotState>
-
-/** Runs the workspace-scoped promoChatbotState query through the authenticated GraphQL client. */
+/** Reads whether the workspace already owns a chatbot. */
 export const queryPromoChatbotState = async ({
     query = QueryPromoChatbotState.Query1,
     signal,
-    headers,
-}: QueryPromoChatbotStateParams = {}) => {
-    const apollo = createAuthApolloClient({ signal, headers })
-    return apollo.query({
-        query: queryMap[query],
-        fetchPolicy: "no-cache",
-    })
+}: QueryParams<QueryPromoChatbotState> = {}) => {
+    const apollo = createAuthApolloClient({ signal })
+    return apollo.query({ query: queryMap[query] })
 }

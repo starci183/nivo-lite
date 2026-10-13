@@ -115,7 +115,12 @@ export const ChatbotSidePanel = (props: ChatbotSidePanelProps) => {
                     <SectionHeader level={3} title={handling.title} />
                     <Text size="sm">{handling.text}</Text>
                     <div className={ACTIONS_CLASS_NAME}>
-                        <Button variant="outline" isPending={handling.isBusy} onPress={props.onToggleHandling}>
+                        <Button
+                            variant="outline"
+                            isPending={handling.isBusy}
+                            isDisabled={handling.isBusy}
+                            onPress={props.onToggleHandling}
+                        >
                             {handling.buttonLabel}
                         </Button>
                     </div>

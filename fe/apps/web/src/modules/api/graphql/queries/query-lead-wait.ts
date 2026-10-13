@@ -4,10 +4,10 @@ import { createAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams } from "../types"
 import type { Query, QueryLeadWaitArgs } from "../__generated__/schema"
 
-/** Generated input of the leadWait query. */
+/** The generated lead identifier accepted by the wait query. */
 type QueryLeadWaitRequest = QueryLeadWaitArgs["input"]
 
-/** Generated response of the leadWait query. */
+/** The generated website-lead response delay query response. */
 type QueryLeadWaitResponse = Pick<Query, "leadWait">
 
 type Document = TypedDocumentNode<QueryLeadWaitResponse, InputVariables<QueryLeadWaitRequest>>
@@ -15,9 +15,9 @@ type Document = TypedDocumentNode<QueryLeadWaitResponse, InputVariables<QueryLea
 const query1: Document = gql`
     query LeadWait($input: LeadWaitInput!) {
         leadWait(input: $input) {
+            show
             hours
             replied
-            show
         }
     }
 `
@@ -26,21 +26,14 @@ enum QueryLeadWait {
     Query1 = "query1",
 }
 
-const queryMap: Record<QueryLeadWait, Document> = {
-    [QueryLeadWait.Query1]: query1,
-}
+const queryMap: Record<QueryLeadWait, Document> = { [QueryLeadWait.Query1]: query1 }
 
-/** Apollo parameters for the leadWait query. */
+/** Apollo params for {@link queryLeadWait}. */
 type QueryLeadWaitParams = QueryParams<QueryLeadWait, QueryLeadWaitRequest> & { request: QueryLeadWaitRequest }
 
-/** Runs the workspace-scoped leadWait query through the authenticated GraphQL client. */
-export const queryLeadWait = async ({
-    query = QueryLeadWait.Query1,
-    request,
-    signal,
-    headers,
-}: QueryLeadWaitParams) => {
-    const apollo = createAuthApolloClient({ signal, headers })
+/** Reads factual response delay for a lead in the selected workspace. */
+export const queryLeadWait = async ({ query = QueryLeadWait.Query1, request, signal }: QueryLeadWaitParams) => {
+    const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],
         fetchPolicy: "no-cache",

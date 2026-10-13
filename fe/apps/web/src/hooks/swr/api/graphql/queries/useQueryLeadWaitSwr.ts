@@ -1,14 +1,16 @@
-import { noData, useWorkspaceArgSwr } from "@/hooks/workspaceread"
+import useSWR from "swr"
 import { queryLeadWait } from "@/modules/api/graphql/queries/query-lead-wait"
 
-/** Workspace-scoped cache identity for the leadWait query. */
+/** The SWR key of the leadWait query. */
 export const QUERY_LEAD_WAIT_SWR_KEY = "QUERY_LEAD_WAIT_SWR"
 
-/** Reads leadWait. The workspace id is part of the cache identity; `undefined` pauses the read. */
-export const useQueryLeadWaitSwr = (workspaceId: string | undefined, leadId: string | undefined) =>
-    useWorkspaceArgSwr(
-        QUERY_LEAD_WAIT_SWR_KEY,
-        workspaceId,
-        leadId,
-        async (value) => (await queryLeadWait({ request: { leadId: value } })).data?.leadWait ?? noData("leadWait"),
+/** A website lead's first-response wait, isolated by workspace and lead. */
+export const useQueryLeadWaitSwr = (workspaceId: string | undefined, leadId: string) =>
+    useSWR(
+        workspaceId === undefined || leadId === "" ? null : [QUERY_LEAD_WAIT_SWR_KEY, workspaceId, leadId],
+        async () => {
+            const result = await queryLeadWait({ request: { leadId } })
+            if (!result.data) throw new Error("leadWait answered no data")
+            return result.data.leadWait
+        },
     )

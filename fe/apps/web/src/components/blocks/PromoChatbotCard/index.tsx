@@ -1,14 +1,13 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { usePromoLeadsRow } from "@/hooks/leads"
-import { useDismissed, usePromoOffer } from "@/hooks/promo"
+import { useChatbotPromo, useDismissed, usePromoOffer } from "@/hooks/promo"
 import { PromoChatbotCardBase } from "./component"
 
 interface PromoChatbotCardProps {
     /** `row` at the top of the leads list, `card` in the Office conversation. */
     readonly variant: "row" | "card"
-    /** True when the workspace already owns a Chatbot: the promo is then never shown. The `row` variant reads it itself. */
+    /** True when the workspace already owns a Chatbot: the promo is then never shown. Left out, the card reads it itself. */
     readonly hasChatbot?: boolean
 }
 
@@ -16,10 +15,10 @@ interface PromoChatbotCardProps {
 export const PromoChatbotCard = (props: PromoChatbotCardProps) => {
     const t = useTranslations("promoAds")
     const offer = usePromoOffer()
-    const leadsRow = usePromoLeadsRow(props.variant === "row")
     const { ready, dismissed, dismiss } = useDismissed(props.variant === "row" ? "leads-chatbot" : "office-chatbot")
-    const hasChatbot = props.variant === "row" ? leadsRow.hasChatbot : (props.hasChatbot ?? true)
-    if (hasChatbot || !ready || dismissed) return null
+    const chatbot = useChatbotPromo(props.hasChatbot === undefined)
+    const hasChatbot = props.hasChatbot ?? chatbot.data?.hasChatbot
+    if (hasChatbot !== false || !ready || dismissed) return null
     const row = props.variant === "row"
     const liveLine = row ? t("leadsRowLive") : t("officeOffer")
     const plainLine = row ? t("leadsRowPlain") : null

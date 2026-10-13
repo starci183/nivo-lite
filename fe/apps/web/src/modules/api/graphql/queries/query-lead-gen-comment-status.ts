@@ -4,10 +4,10 @@ import { createAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams } from "../types"
 import type { Query, QueryLeadGenCommentStatusArgs } from "../__generated__/schema"
 
-/** Generated input of the leadGenCommentStatus query. */
+/** The workspace-scoped status lookup and its generated response. */
 type QueryLeadGenCommentStatusRequest = QueryLeadGenCommentStatusArgs["input"]
 
-/** Generated response of the leadGenCommentStatus query. */
+/** The QueryLeadGenCommentStatusResponse of this operation, straight from the generated schema. */
 type QueryLeadGenCommentStatusResponse = Pick<Query, "leadGenCommentStatus">
 
 type Document = TypedDocumentNode<QueryLeadGenCommentStatusResponse, InputVariables<QueryLeadGenCommentStatusRequest>>
@@ -15,11 +15,11 @@ type Document = TypedDocumentNode<QueryLeadGenCommentStatusResponse, InputVariab
 const query1: Document = gql`
     query LeadGenCommentStatus($input: ReadLeadGenCommentStatusInput!) {
         leadGenCommentStatus(input: $input) {
-            errorCode
             id
-            resultHref
             status
             workStatus
+            resultHref
+            errorCode
         }
     }
 `
@@ -28,23 +28,20 @@ enum QueryLeadGenCommentStatus {
     Query1 = "query1",
 }
 
-const queryMap: Record<QueryLeadGenCommentStatus, Document> = {
-    [QueryLeadGenCommentStatus.Query1]: query1,
-}
+const queryMap: Record<QueryLeadGenCommentStatus, Document> = { [QueryLeadGenCommentStatus.Query1]: query1 }
 
-/** Apollo parameters for the leadGenCommentStatus query. */
+/** Apollo params for the QueryLeadGenCommentStatus operation. */
 type QueryLeadGenCommentStatusParams = QueryParams<QueryLeadGenCommentStatus, QueryLeadGenCommentStatusRequest> & {
     request: QueryLeadGenCommentStatusRequest
 }
 
-/** Runs the workspace-scoped leadGenCommentStatus query through the authenticated GraphQL client. */
+/** Reads an approval job until the public reply succeeds or fails. */
 export const queryLeadGenCommentStatus = async ({
     query = QueryLeadGenCommentStatus.Query1,
     request,
     signal,
-    headers,
 }: QueryLeadGenCommentStatusParams) => {
-    const apollo = createAuthApolloClient({ signal, headers })
+    const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],
         fetchPolicy: "no-cache",

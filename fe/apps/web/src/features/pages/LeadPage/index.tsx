@@ -8,7 +8,7 @@ import { LeadOutcome } from "@/components/blocks/LeadOutcome"
 import { LeadPreviousSteps } from "@/components/blocks/LeadPreviousSteps"
 import { LeadResponsibility } from "@/components/blocks/LeadResponsibility"
 import { LeadWorkFlow } from "@/components/blocks/LeadWorkFlow"
-import { PromoLeadWaitNote } from "@/components/blocks/PromoLeadWaitNote"
+import { PromoLeadWait } from "@/components/blocks/PromoLeadWait"
 import { LeadPageLayout } from "@/components/composites/LeadPageLayout"
 
 interface LeadPageProps {
@@ -29,7 +29,7 @@ export const LeadPage = (props: LeadPageProps) => (
                 <LeadExecution leadId={props.leadId} />
                 <LeadWorkFlow leadId={props.leadId} />
                 <LeadHistory leadId={props.leadId} />
-                <PromoLeadWaitNote leadId={props.leadId} />
+                <PromoLeadWait leadId={props.leadId} />
             </>
         }
         rail={

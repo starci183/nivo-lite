@@ -1449,6 +1449,10 @@ type CancelBookingType {
   status: String!
 }
 
+input CancelTelegramLoginInput {
+  connectionId: ID!
+}
+
 input CardDecisionInput {
   attributeLabel: String
   decision: String!
@@ -1465,6 +1469,11 @@ input CardDecisionInput {
 input ChangeMemberRoleInput {
   role: String!
   userId: ID!
+}
+
+input ChangeSmtpPasswordInput {
+  connectionId: ID!
+  password: String!
 }
 
 input ChatAnswerStatusInput {
@@ -2168,6 +2177,35 @@ type CreditUsageSummaryType {
   status: CreditQuotaStatusType
 }
 
+type CsvImportResultType {
+  added: Int!
+  connectionId: ID!
+  skipped: Int!
+  summary: String!
+  total: Int!
+  updated: Int!
+}
+
+type CsvPreviewType {
+  delimiter: String!
+  headers: [String!]!
+  mapping: DataJson!
+  missing: [String!]!
+  sample: [[String!]!]!
+  sheet: String!
+  sheets: [String!]!
+  total: Int!
+}
+
+type CsvSavedImportType {
+  agentIds: [ID!]!
+  config: DataJson!
+  file: String!
+  name: String!
+  scheduleMinutes: Int
+  summary: String!
+}
+
 type DashboardAgentType {
   approvalRule: String!
   createdAt: String!
@@ -2385,6 +2423,53 @@ type DashboardType {
 type DashboardWebsiteLeadType {
   createdAt: String!
   id: ID!
+}
+
+scalar DataJson
+
+input DataSyncRunInput {
+  runId: ID!
+}
+
+type DataSyncRunType {
+  connectionId: ID!
+  error: String
+  finishedAt: String
+  id: ID!
+  rows: Int!
+  startedAt: String!
+  state: String!
+  trigger: String!
+}
+
+type DatabaseColumnType {
+  name: String!
+  type: String!
+}
+
+type DatabasePreviewRowType {
+  cells: [String!]!
+}
+
+type DatabasePreviewType {
+  columns: [String!]!
+  rows: [DatabasePreviewRowType!]!
+}
+
+type DatabaseTableType {
+  columns: [DatabaseColumnType!]!
+  name: String!
+  schema: String!
+}
+
+input DatabaseTargetInput {
+  database: String!
+  engine: String!
+  host: String!
+  password: String!
+  port: Int!
+  ssl: Boolean!
+  user: String!
 }
 
 input DecideBrainFactInput {
@@ -2910,6 +2995,24 @@ type HiringWindowType {
   endMin: Int!
   startMin: Int!
   weekday: Int!
+}
+
+type ImapConnectionType {
+  agentIds: [ID!]!
+  email: String!
+  folders: [String!]!
+  host: String!
+  id: ID!
+  name: String!
+  port: Int!
+  security: String!
+  sinceDays: Int!
+  syncEveryMinutes: Int
+  user: String!
+}
+
+type ImapFoldersType {
+  folders: [String!]!
 }
 
 input ImportInventoryPasteInput {
@@ -3594,6 +3697,10 @@ input ListOfficeMessagesInput {
   limit: Int = 50
 }
 
+input ListTelegramChatsInput {
+  connectionId: ID!
+}
+
 input ListVideoProjectsInput {
   includeArchived: Boolean
 }
@@ -3602,6 +3709,31 @@ input ListWorkItemsInput {
   after: WorkItemCursorInput
   limit: Int = 50
   statuses: [String!] = []
+}
+
+input LoadCsvImportInput {
+  connectionId: ID!
+}
+
+input LoadDatabaseConnectionInput {
+  connectionId: ID!
+}
+
+input LoadImapConnectionInput {
+  connectionId: ID!
+}
+
+input LoadOpenApiConnectionInput {
+  connectionId: ID!
+}
+
+input LoadOpenApiSpecInput {
+  specText: String!
+  specUrl: String!
+}
+
+input LoadTelegramUserSetupInput {
+  connectionId: ID!
 }
 
 type LocalizedTextType {
@@ -4225,7 +4357,9 @@ type Mutation {
   cancelHiringOffer(input: HiringOfferRefInput!): Boolean!
   cancelInventoryPo(input: InventoryPoRefInput!): Boolean!
   cancelOfficeCommand(input: OfficeCandidateIdInput!): OfficeAckType!
+  cancelTelegramLogin(input: CancelTelegramLoginInput!): Boolean!
   changeMemberRole(input: ChangeMemberRoleInput!): Boolean!
+  changeSmtpPassword(input: ChangeSmtpPasswordInput!): Boolean!
   checkConnection(input: CheckConnectionInput!): ConnectionCheckType!
   checkInBooking(input: CheckInBookingInput!): CheckInBookingType!
   checkInShifts(input: ShiftsShiftRefInput!): CheckInType!
@@ -4321,6 +4455,7 @@ type Mutation {
   requestContentMediaUpload(input: RequestContentMediaUploadInput!): ContentMediaUploadType!
   requestContentMonthPlan(input: RequestContentMonthPlanInput!): ContentAiRequestedType!
   requestContentQuickDraft(input: RequestContentQuickDraftInput!): ContentAiRequestedType!
+  requestDataSync(input: RequestDataSyncInput!): DataSyncRunType!
   requestHiringInterview(input: RequestHiringInterviewInput!): HiringOutcomeType!
   requestHiringOffer(input: RequestHiringOfferInput!): HiringOutcomeType!
   requestInventorySend(input: RequestInventorySendInput!): RequestSendType!
@@ -4335,6 +4470,7 @@ type Mutation {
   requestVideoScript(input: RequestVideoScriptInput!): RequestVideoScriptType!
   rescreenHiringCandidate(input: HiringCandidateRefInput!): HiringOutcomeType!
   resendInvite(input: InviteRefInput!): InviteResultType!
+  resendTelegramCode(input: ResendTelegramCodeInput!): Boolean!
   respondHiringInterview(input: RespondHiringInterviewInput!): RespondSlotType!
   respondHiringOffer(input: RespondHiringOfferInput!): RespondOfferType!
   retryFailedStep(input: RetryFailedStepInput!): SalesActionType!
@@ -4347,6 +4483,8 @@ type Mutation {
   revokeInvite(input: InviteRefInput!): Boolean!
   revokeSession(input: RevokeSessionInput!): Boolean!
   runAutomationNow(input: TemplateKeyInput!): Boolean!
+  runCsvImport(input: RunCsvImportInput!): CsvImportResultType!
+  runDocumentImport(input: RunDocumentImportInput!): CsvImportResultType!
   runFlow(input: RunFlowInput!): RunFlowType!
   saveAuthorityRule(input: SaveAuthorityRuleInput!): AuthorityRuleType!
   saveBookingException(input: SaveBookingExceptionInput!): SaveBookingExceptionType!
@@ -4362,27 +4500,32 @@ type Mutation {
   saveContentItem(input: SaveContentItemInput!): ContentItemType!
   saveContentPillars(input: SaveContentPillarsInput!): SavedContentRowsType!
   saveContract(input: SaveContractInput!): SaveContractType!
+  saveDatabaseConnection(input: SaveDatabaseConnectionInput!): ID!
   saveHiringAvailability(input: SaveHiringAvailabilityInput!): SaveAvailabilityType!
   saveHiringJob(input: SaveHiringJobInput!): SaveJobType!
   saveHiringNotes(input: SaveHiringNotesInput!): Boolean!
   saveHiringSettings(input: SaveHiringSettingsInput!): HiringSettingsType!
   saveHoldingMessage(input: SaveHoldingMessageInput!): ModuleInstallationType!
+  saveImapConnection(input: SaveImapConnectionInput!): ID!
   saveInventoryItem(input: SaveInventoryItemInput!): InventoryRefType!
   saveInventoryLocation(input: SaveInventoryLocationInput!): Boolean!
   saveInventoryRecipe(input: SaveInventoryRecipeInput!): InventoryRefType!
   saveInventorySupplier(input: SaveInventorySupplierInput!): InventoryRefType!
   saveLoyaltyProgram(input: SaveLoyaltyProgramInput!): LoyaltyProgramType!
   saveLoyaltyReward(input: SaveLoyaltyRewardInput!): LoyaltyRewardType!
+  saveOpenApiConnection(input: SaveOpenApiConnectionInput!): ID!
   saveProviderKeys(input: SaveProviderKeysInput!): ProviderKeysResultType!
   saveReplyTimeout(input: SaveReplyTimeoutInput!): ModuleInstallationType!
   saveShiftsCoverage(input: SaveShiftsCoverageInput!): Boolean!
   saveShiftsPosition(input: SaveShiftsPositionInput!): ShiftsRefType!
   saveShiftsSettings(input: SaveShiftsSettingsInput!): Boolean!
   saveShiftsStaff(input: SaveShiftsStaffInput!): ShiftsRefType!
+  saveTelegramUserSetup(input: SaveTelegramUserSetupInput!): Boolean!
   saveVideoBrand(input: SaveVideoBrandInput!): VideoBrandType!
   saveZaloOaSecret(input: SaveZaloOaSecretInput!): ZaloWizardConnectionType!
   sendAgentChatMessage(input: SendAgentChatMessageInput!): QueuedAgentChatTurnType!
   sendAgentCommand(input: SendAgentCommandInput!): AgentCommandResultType!
+  sendSmtpTest(input: SendSmtpTestInput!): SmtpTestResultType!
   setAgentConnections(input: SetAgentConnectionsInput!): Boolean!
   setAgentStatus(input: SetAgentStatusInput!): AgentAckType!
   setAgentTexts(input: SetAgentTextsInput!): AgentAckType!
@@ -4390,6 +4533,7 @@ type Mutation {
   setConnectionAgents(input: SetConnectionAgentsInput!): Boolean!
   setConnectionGrant(input: SetConnectionGrantInput!): Boolean!
   setContentAutomation(input: SetContentAutomationInput!): ContentBrandSettingsType!
+  setDefaultSmtp(input: SetDefaultSmtpInput!): Boolean!
   setHiringInterviewStatus(input: SetHiringInterviewStatusInput!): Boolean!
   setHiringJobStatus(input: SetHiringJobStatusInput!): HiringStatusType!
   setInventoryItemActive(input: SetInventoryItemActiveInput!): Boolean!
@@ -4398,16 +4542,21 @@ type Mutation {
   setModuleLive(input: SetModuleLiveInput!): ModuleInstallationType!
   setOperatingMode(input: SetOperatingModeInput!): ModuleInstallationType!
   setSetupGate(input: SetSetupGateInput!): SetupSessionType!
+  setSyncSchedule(input: SetSyncScheduleInput!): Boolean!
   settleWonDeal(input: SettleWonDealInput!): LeadActionQueuedType!
   shareVideoProject(input: ShareVideoProjectInput!): VideoShareType!
   simulateInbound(input: SimulateInboundInput!): SimulateInboundType!
   startAgentChatConversation(input: StartAgentChatConversationInput!): CreatedAgentChatConversationType!
   startMoneyConnection(input: StartMoneyConnectionInput!): WizardConnectionType!
+  startSmtpConnection(input: StartSmtpConnectionInput!): SmtpConnectionType!
+  startTelegramLogin(input: StartTelegramLoginInput!): TelegramLoginStartedType!
   startWebhookConnection(input: StartWebhookConnectionInput!): WebhookViewType!
   startZaloConnection(input: StartZaloConnectionInput!): ZaloWizardConnectionType!
   stopFailedStep(input: StopFailedStepInput!): StopFailedStepType!
   submitContentForApproval(input: SubmitContentForApprovalInput!): SubmitContentForApprovalType!
   submitShiftsAvailability(input: SaveShiftsAvailabilityInput!): ShiftsRefType!
+  submitTelegramCode(input: SubmitTelegramCodeInput!): TelegramLoginStageType!
+  submitTelegramPassword(input: SubmitTelegramPasswordInput!): TelegramLoginStageType!
   suggestLeadOwner(input: SuggestLeadOwnerInput!): LeadActionQueuedType!
   syncLoyaltyMembers: SyncLoyaltyMembersType!
   takeInventoryStock(input: TakeInventoryStockInput!): TakeStockType!
@@ -4542,6 +4691,45 @@ type OfficeThreadCursorType {
   id: ID!
 }
 
+type OpenApiAuthHintType {
+  name: String!
+  type: String!
+}
+
+input OpenApiAuthInput {
+  name: String!
+  password: String!
+  type: String!
+  user: String!
+  value: String!
+}
+
+type OpenApiConnectionType {
+  authUser: String!
+  config: DataJson!
+  hasSecret: Boolean!
+  name: String!
+  syncEveryMinutes: Int
+}
+
+type OpenApiSpecType {
+  authHint: OpenApiAuthHintType!
+  baseUrl: String!
+  ops: DataJson!
+  specUrl: String!
+  title: String!
+}
+
+type OpenApiTestType {
+  error: String
+  idField: String!
+  itemCount: Int!
+  itemsPath: String!
+  sampleKeys: [String!]!
+  status: Int!
+  titleField: String!
+}
+
 type OpeningDayType {
   close: String!
   open: String!
@@ -4592,6 +4780,23 @@ input PostOfficeMessageInput {
 input PostSetupMessageInput {
   setupSessionId: ID!
   text: String!
+}
+
+input PreviewCsvSourceInput {
+  connectionId: ID
+  entity: String
+  file: UploadedFileInput
+  grid: DataJson
+  kind: String!
+  link: String
+  sheet: String
+  text: String
+}
+
+input PreviewDatabaseTableInput {
+  connectionId: ID
+  mapping: DataJson!
+  target: DatabaseTargetInput!
 }
 
 input PreviewLoyaltySegmentInput {
@@ -4892,6 +5097,7 @@ type Query {
   creditTopupLots: [CreditTopupLotType!]!
   creditUsageSummary: CreditUsageSummaryType!
   dashboard: DashboardType!
+  dataSyncRun(input: DataSyncRunInput!): DataSyncRunType!
   decisionHistory(input: ListDecisionHistoryInput!): [DecisionRecordType!]!
   driveLinkedFolder(input: DriveLinkedFolderInput!): DriveFolderType!
   drivePickedFolder(input: DrivePickedFolderInput!): PickedFolderType!
@@ -4915,6 +5121,13 @@ type Query {
   leadJourney(input: LeadJourneyInput!): LeadJourneyType!
   leadWait(input: LeadWaitInput!): LeadWaitType!
   lessonMiningStatus(input: LessonMiningStatusInput!): LessonMiningStatusType!
+  listTelegramChats(input: ListTelegramChatsInput!): [TelegramChatChoiceType!]!
+  loadCsvImport(input: LoadCsvImportInput!): CsvSavedImportType!
+  loadDatabaseConnection(input: LoadDatabaseConnectionInput!): SavedDatabaseType!
+  loadImapConnection(input: LoadImapConnectionInput!): ImapConnectionType!
+  loadOpenApiConnection(input: LoadOpenApiConnectionInput!): OpenApiConnectionType!
+  loadOpenApiSpec(input: LoadOpenApiSpecInput!): OpenApiSpecType!
+  loadTelegramUserSetup(input: LoadTelegramUserSetupInput!): TelegramSetupStateType!
   loyaltyBoard: LoyaltyBoardType!
   loyaltyCampaign(input: LoyaltyCampaignInput!): LoyaltyCampaignViewType!
   loyaltyMember(input: LoyaltyMemberInput!): LoyaltyMemberDetailType!
@@ -4937,6 +5150,8 @@ type Query {
   paymentOrder(input: PaymentOrderInput!): BillingPaymentOrderType
   paymentOrderRequestStatus(input: PaymentOrderRequestStatusInput!): PaymentOrderRequestStatusType
   paymentOrders: [BillingPaymentOrderType!]!
+  previewCsvSource(input: PreviewCsvSourceInput!): CsvPreviewType!
+  previewDatabaseTable(input: PreviewDatabaseTableInput!): DatabasePreviewType!
   promoChatbotState: PromoChatbotStateType!
   promoState: PromoStateType!
   publicBookingPage(input: PublicBookingPageInput!): PublicBookingPageType!
@@ -4954,6 +5169,10 @@ type Query {
   setupVersions(input: ModuleInstallationIdInput!): SetupVersionsType!
   shiftsMine: ShiftsMineType!
   shiftsWorkbench(week: String): ShiftsBenchType!
+  telegramUserReady: TelegramUserReadyType!
+  testDatabase(input: TestDatabaseInput!): [DatabaseTableType!]!
+  testImapConnection(input: TestImapConnectionInput!): ImapFoldersType!
+  testOpenApiOperation(input: TestOpenApiOperationInput!): OpenApiTestType!
   videoBrand: VideoBrandType!
   videoFigures: VideoFiguresType!
   videoMedia: [VideoMediaType!]!
@@ -5159,6 +5378,10 @@ input RequestContentQuickDraftInput {
   topic: String!
 }
 
+input RequestDataSyncInput {
+  connectionId: ID!
+}
+
 input RequestHiringInterviewInput {
   candidateId: ID!
   durationMin: Int!
@@ -5268,6 +5491,10 @@ type RequestVideoScriptType {
   status: String!
 }
 
+input ResendTelegramCodeInput {
+  connectionId: ID!
+}
+
 input RespondHiringInterviewInput {
   start: String
   token: String!
@@ -5362,6 +5589,27 @@ input RevokeApiKeyInput {
 
 input RevokeSessionInput {
   sessionId: ID!
+}
+
+input RunCsvImportInput {
+  connectionId: ID
+  entity: String
+  file: UploadedFileInput
+  grid: DataJson
+  kind: String!
+  link: String
+  mapping: DataJson!
+  name: String
+  schedule: Int
+  sheet: String
+  text: String
+}
+
+input RunDocumentImportInput {
+  connectionId: ID
+  files: [UploadedFileInput!]
+  link: String
+  name: String
 }
 
 input RunFlowInput {
@@ -5756,6 +6004,14 @@ type SaveContractType {
   status: String!
 }
 
+input SaveDatabaseConnectionInput {
+  connectionId: ID
+  everyMinutes: Int
+  name: String!
+  tables: DataJson!
+  target: DatabaseTargetInput!
+}
+
 input SaveHiringAvailabilityInput {
   memberUserId: ID!
   windows: [[HiringAvailabilityWindowInput!]!]!
@@ -5797,6 +6053,20 @@ input SaveHiringSettingsInput {
 input SaveHoldingMessageInput {
   installationId: ID!
   value: String!
+}
+
+input SaveImapConnectionInput {
+  connectionId: ID
+  email: String!
+  folders: [String!]
+  host: String!
+  name: String!
+  password: String!
+  port: Int!
+  security: String!
+  sinceDays: Int
+  syncEveryMinutes: Int
+  user: String!
 }
 
 input SaveInventoryItemInput {
@@ -5866,6 +6136,14 @@ input SaveLoyaltyRewardInput {
   valueVnd: Float!
 }
 
+input SaveOpenApiConnectionInput {
+  auth: OpenApiAuthInput!
+  config: DataJson!
+  connectionId: ID
+  name: String!
+  syncEveryMinutes: Int
+}
+
 input SaveProviderKeysInput {
   connectionId: ID!
   values: ProviderKeysInput!
@@ -5927,6 +6205,13 @@ input SaveShiftsStaffInput {
   zaloUserId: String
 }
 
+input SaveTelegramUserSetupInput {
+  chats: [TelegramPickedChatInput!]!
+  connectionId: ID!
+  everyMinutes: Int
+  sinceDays: Int!
+}
+
 input SaveVideoBrandInput {
   logoPath: String
   musicTrack: String
@@ -5943,6 +6228,24 @@ input SaveZaloOaSecretInput {
 
 type SavedContentRowsType {
   count: Int!
+}
+
+type SavedDatabaseTargetType {
+  database: String!
+  engine: String!
+  host: String!
+  port: Int!
+  ssl: Boolean!
+  user: String!
+}
+
+type SavedDatabaseType {
+  agentIds: [ID!]!
+  everyMinutes: Int
+  hasPassword: Boolean!
+  name: String!
+  tables: DataJson!
+  target: SavedDatabaseTargetType!
 }
 
 type SavedFactType {
@@ -5962,6 +6265,12 @@ input SendAgentCommandInput {
   reason: String!
   subjectId: ID
   subjectType: String
+  to: String!
+}
+
+input SendSmtpTestInput {
+  connectionId: ID!
+  makeDefault: Boolean!
   to: String!
 }
 
@@ -6007,6 +6316,10 @@ input SetContentAutomationInput {
   on: Boolean!
 }
 
+input SetDefaultSmtpInput {
+  connectionId: ID!
+}
+
 input SetHiringInterviewStatusInput {
   id: ID!
   status: String!
@@ -6047,6 +6360,11 @@ input SetSetupGateInput {
   evidence: String = ""
   gateKey: String!
   setupSessionId: ID!
+}
+
+input SetSyncScheduleInput {
+  connectionId: ID!
+  everyMinutes: Int
 }
 
 input SettleWonDealInput {
@@ -6460,6 +6778,18 @@ type SimulationWorkItemType {
   status: String!
 }
 
+type SmtpConnectionType {
+  fromEmail: String!
+  host: String!
+  id: ID!
+  isDefault: Boolean!
+}
+
+type SmtpTestResultType {
+  isDefault: Boolean!
+  to: String!
+}
+
 type SourceRefType {
   id: ID!
 }
@@ -6483,6 +6813,25 @@ input StartMoneyConnectionInput {
   holder: String!
   name: String!
   provider: String!
+}
+
+input StartSmtpConnectionInput {
+  fromEmail: String!
+  fromName: String!
+  host: String!
+  password: String!
+  port: Int!
+  preset: String!
+  replyTo: String!
+  security: String!
+  user: String!
+}
+
+input StartTelegramLoginInput {
+  connectionId: ID
+  consent: Boolean!
+  name: String!
+  phone: String!
 }
 
 input StartWebhookConnectionInput {
@@ -6523,6 +6872,16 @@ type SubmitContentForApprovalType {
   workItemId: ID!
 }
 
+input SubmitTelegramCodeInput {
+  code: String!
+  connectionId: ID!
+}
+
+input SubmitTelegramPasswordInput {
+  connectionId: ID!
+  password: String!
+}
+
 input SuggestLeadOwnerInput {
   leadId: String!
 }
@@ -6553,9 +6912,55 @@ type TakeStockType {
   waiting: Int!
 }
 
+type TelegramChatChoiceType {
+  id: String!
+  kind: String!
+  title: String!
+  unread: Int!
+}
+
 type TelegramConnectedType {
   connection: ConnectionType!
   webhookRegistered: Boolean!
+}
+
+type TelegramLoginStageType {
+  stage: String!
+}
+
+type TelegramLoginStartedType {
+  connectionId: ID!
+  viaApp: Boolean!
+}
+
+input TelegramPickedChatInput {
+  id: String!
+  kind: String!
+  title: String!
+}
+
+type TelegramPickedChatType {
+  id: String!
+  kind: String!
+  title: String!
+}
+
+type TelegramSetupStateType {
+  config: TelegramUserConfigType
+  consent: Boolean!
+  everyMinutes: Int
+  name: String!
+  stage: String!
+  status: String!
+}
+
+type TelegramUserConfigType {
+  chats: [TelegramPickedChatType!]!
+  sinceDays: Int!
+}
+
+type TelegramUserReadyType {
+  configured: Boolean!
 }
 
 type TemplateAuthorityType {
@@ -6618,6 +7023,34 @@ type TemplateTriggerType {
   event: String!
   kind: String!
   line: LocalizedTextType!
+}
+
+input TestDatabaseInput {
+  connectionId: ID
+  target: DatabaseTargetInput!
+}
+
+input TestImapConnectionInput {
+  connectionId: ID
+  email: String!
+  folders: [String!]
+  host: String!
+  name: String!
+  password: String!
+  port: Int!
+  security: String!
+  sinceDays: Int
+  syncEveryMinutes: Int
+  user: String!
+}
+
+input TestOpenApiOperationInput {
+  auth: OpenApiAuthInput!
+  baseUrl: String!
+  connectionId: ID
+  fixedQuery: String!
+  itemsPath: String!
+  op: DataJson!
 }
 
 input TestWebhookConnectionInput {
@@ -6738,6 +7171,11 @@ type UploadAddressType {
   path: String!
   signedUrl: String!
   token: String!
+}
+
+input UploadedFileInput {
+  contentBase64: String!
+  name: String!
 }
 
 input VerifyLoyaltyCodeInput {
@@ -6927,6 +7365,7 @@ type WizardConnectionType {
   account: String!
   agentIds: [ID!]!
   apiKey: String!
+  bank: String!
   bankCode: String!
   credentialsSaved: Boolean!
   environment: String!

@@ -1,4 +1,5 @@
 import { useState } from "react"
+import type { MutateSaveBrainFactRequest } from "@/modules/api/graphql/mutations/mutation-save-brain-fact"
 import { dayInstant } from "@/modules/brain"
 import type { FactPreset } from "@/modules/brain"
 import type { BrainFact, FactScope, FactSubjectType } from "@/modules/types"
@@ -25,12 +26,12 @@ interface FactForm {
     /** The form is complete enough to save. */
     readonly isComplete: boolean
     /** The command payload of the form. */
-    readonly payload: (gapId: string | undefined) => Readonly<Record<string, unknown>>
+    readonly payload: (gapId: string | undefined) => MutateSaveBrainFactRequest
 }
 
-/** The fields of the fact form: a new fact, a new value for a fact in force, or a fact started from a suggestion or a customer question. */
-export const useFactForm = (editing: BrainFact | null, preset: FactPreset | undefined): FactForm => {
-    const [state, setState] = useState<FactFormState>(() => ({
+/** The fields of the fact form, started afresh whenever `formKey` changes: a new fact, a new value for a fact in force, or a fact started from a suggestion or a customer question. */
+export const useFactForm = (editing: BrainFact | null, preset: FactPreset | undefined, formKey: string): FactForm => {
+    const initial = (): FactFormState => ({
         subjectType: editing?.subjectType ?? preset?.subjectType ?? "business",
         subjectLabel: editing?.subjectLabel ?? preset?.subjectLabel ?? "",
         attributeLabel: editing?.attributeLabel ?? preset?.attributeLabel ?? "",
@@ -40,7 +41,14 @@ export const useFactForm = (editing: BrainFact | null, preset: FactPreset | unde
         validFrom: "",
         validTo: day(editing?.validTo ?? null),
         note: "",
-    }))
+    })
+    const [state, setState] = useState<FactFormState>(initial)
+    const [seenKey, setSeenKey] = useState(formKey)
+    if (seenKey !== formKey) {
+        // The form was opened for something else: start from that fact or question, not from what was typed before.
+        setSeenKey(formKey)
+        setState(initial())
+    }
     const set = <K extends keyof FactFormState>(key: K, value: FactFormState[K]) =>
         setState((now) => ({ ...now, [key]: value }))
     return {
@@ -53,7 +61,7 @@ export const useFactForm = (editing: BrainFact | null, preset: FactPreset | unde
             attributeLabel: state.attributeLabel,
             value: state.value,
             scope: state.scope,
-            modules: state.modules,
+            modules: [...state.modules],
             validFrom: dayInstant(state.validFrom),
             validTo: dayInstant(state.validTo),
             note: state.note,

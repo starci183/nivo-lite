@@ -1,13 +1,13 @@
-import { noData, useWorkspaceSwr } from "@/hooks/workspaceread"
+import useSWR from "swr"
 import { queryPromoChatbotState } from "@/modules/api/graphql/queries/query-promo-chatbot-state"
 
-/** Workspace-scoped cache identity for the promoChatbotState query. */
+/** The SWR key of the promoChatbotState query. */
 export const QUERY_PROMO_CHATBOT_STATE_SWR_KEY = "QUERY_PROMO_CHATBOT_STATE_SWR"
 
-/** Reads promoChatbotState. The workspace id is part of the cache identity; `undefined` pauses the read. */
+/** The chatbot promo facts of the workspace; idle until a workspace is selected. */
 export const useQueryPromoChatbotStateSwr = (workspaceId: string | undefined) =>
-    useWorkspaceSwr(
-        QUERY_PROMO_CHATBOT_STATE_SWR_KEY,
-        workspaceId,
-        async () => (await queryPromoChatbotState()).data?.promoChatbotState ?? noData("promoChatbotState"),
-    )
+    useSWR(workspaceId === undefined ? null : [QUERY_PROMO_CHATBOT_STATE_SWR_KEY, workspaceId], async () => {
+        const result = await queryPromoChatbotState()
+        if (!result.data) throw new Error("promoChatbotState answered no data")
+        return result.data.promoChatbotState
+    })

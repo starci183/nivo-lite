@@ -1,21 +1,21 @@
-import { leadGenTabOf } from "@/hooks/leadgen"
-import type { Installation } from "@/lib/modules-shared"
+import type { Installation } from "@/modules/installations"
 import { LeadGenWorkbenchPageBase } from "./component"
 
-/** Static route state passed to the connected browser workbench. */
+/** Route identity passed by the module chrome. */
 interface LeadGenWorkbenchPageProps {
     readonly tab?: string | null
     readonly focus?: string | null
     readonly installation?: Installation | null
 }
 
-/** The server shell: resolves the tab and the agent from the route and hands the connected workbench its state. */
+/** Lead Gen server shell; the connected block reads every workbench region through GraphQL. */
 export const LeadGenWorkbenchPage = (props: LeadGenWorkbenchPageProps) => (
     <LeadGenWorkbenchPageBase
         props={{
-            tab: leadGenTabOf(props.tab) ?? (props.focus ? "comments" : "leads"),
+            tab: props.tab ?? null,
+            focus: props.focus ?? null,
             installationId: props.installation?.id ?? null,
-            workbenchInstallationId: props.installation?.isMulti ? props.installation.id : null,
+            scopeInstallationId: props.installation?.isMulti ? props.installation.id : null,
         }}
     />
 )

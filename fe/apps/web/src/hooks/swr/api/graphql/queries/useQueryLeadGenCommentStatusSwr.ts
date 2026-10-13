@@ -1,22 +1,28 @@
-import type { SWRConfiguration } from "swr"
-import { jobPolling, noData, useWorkspaceArgSwr } from "@/hooks/workspaceread"
+import { useStatusPollSwr } from "@/hooks/reuseables/useStatusPollSwr"
+import type { StatusPollOptions } from "@/hooks/reuseables/useStatusPollSwr"
 import { queryLeadGenCommentStatus } from "@/modules/api/graphql/queries/query-lead-gen-comment-status"
 
-/** Workspace-scoped cache identity for the leadGenCommentStatus query. */
+/** The SWR key of the leadGenCommentStatus query. */
 export const QUERY_LEAD_GEN_COMMENT_STATUS_SWR_KEY = "QUERY_LEAD_GEN_COMMENT_STATUS_SWR"
 
-/** Reads leadGenCommentStatus and polls until the queued work reaches a terminal status. The workspace id is part of the cache identity; `undefined` pauses the read. */
+/** How often the public-comment approval of a work item is read again. */
+const LEAD_GEN_COMMENT_STATUS_REFRESH_MS = 2_000
+
+/** Polls the public-comment approval of a work item until it succeeds or fails. */
 export const useQueryLeadGenCommentStatusSwr = (
     workspaceId: string | undefined,
     workItemId: string | undefined,
-    options?: SWRConfiguration,
+    options: StatusPollOptions = {},
 ) =>
-    useWorkspaceArgSwr(
-        QUERY_LEAD_GEN_COMMENT_STATUS_SWR_KEY,
-        workspaceId,
-        workItemId,
-        async (value) =>
-            (await queryLeadGenCommentStatus({ request: { workItemId: value } })).data?.leadGenCommentStatus ??
-            noData("leadGenCommentStatus"),
-        jobPolling(options),
+    useStatusPollSwr(
+        workspaceId === undefined || workItemId === undefined
+            ? null
+            : [QUERY_LEAD_GEN_COMMENT_STATUS_SWR_KEY, workspaceId, workItemId],
+        async ([, , id]) => {
+            const result = await queryLeadGenCommentStatus({ request: { workItemId: id } })
+            if (!result.data) throw new Error("leadGenCommentStatus answered no data")
+            return result.data.leadGenCommentStatus
+        },
+        LEAD_GEN_COMMENT_STATUS_REFRESH_MS,
+        options,
     )

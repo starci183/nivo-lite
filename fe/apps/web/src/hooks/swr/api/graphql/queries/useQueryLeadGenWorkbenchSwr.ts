@@ -1,16 +1,17 @@
-import { noData, useWorkspaceArgSwr } from "@/hooks/workspaceread"
+import useSWR from "swr"
 import { queryLeadGenWorkbench } from "@/modules/api/graphql/queries/query-lead-gen-workbench"
-import type { QueryLeadGenWorkbenchRequest } from "@/modules/api/graphql/queries/query-lead-gen-workbench"
+import { toLeadGenWorkbenchData } from "@/modules/utils/leadgen"
 
-/** Workspace-scoped cache identity for the leadGenWorkbench query. */
+/** The SWR key of the leadGenWorkbench query. */
 export const QUERY_LEAD_GEN_WORKBENCH_SWR_KEY = "QUERY_LEAD_GEN_WORKBENCH_SWR"
 
-/** Reads leadGenWorkbench. The workspace id is part of the cache identity; `undefined` pauses the read. */
-export const useQueryLeadGenWorkbenchSwr = (workspaceId: string | undefined, request: QueryLeadGenWorkbenchRequest) =>
-    useWorkspaceArgSwr(
-        QUERY_LEAD_GEN_WORKBENCH_SWR_KEY,
-        workspaceId,
-        request,
-        async (value) =>
-            (await queryLeadGenWorkbench({ request: value })).data?.leadGenWorkbench ?? noData("leadGenWorkbench"),
+/** The prospects, sources, comments and Sales handoffs of one Lead Gen instance. */
+export const useQueryLeadGenWorkbenchSwr = (workspaceId: string | undefined, installationId: string | null) =>
+    useSWR(
+        workspaceId === undefined ? null : [QUERY_LEAD_GEN_WORKBENCH_SWR_KEY, workspaceId, installationId],
+        async () => {
+            const result = await queryLeadGenWorkbench({ request: { installationId } })
+            if (!result.data) throw new Error("leadGenWorkbench answered no data")
+            return toLeadGenWorkbenchData(result.data.leadGenWorkbench)
+        },
     )

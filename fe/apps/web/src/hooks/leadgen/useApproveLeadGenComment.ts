@@ -1,83 +1,97 @@
-"use client"
-
 import { useTranslations } from "next-intl"
-import { useCallback, useRef, useState } from "react"
-import { useRevalidateLeadViews } from "@/hooks/leads"
+import { useCallback } from "react"
+import { useSWRConfig } from "swr"
+import { useAuthUser } from "@/hooks/auth"
 import { useMutateApproveLeadGenCommentSwr } from "@/hooks/swr/api/graphql/mutations/useMutateApproveLeadGenCommentSwr"
-import { useQueryLeadGenCommentStatusSwr } from "@/hooks/swr/api/graphql/queries/useQueryLeadGenCommentStatusSwr"
+import {
+    useQueryLeadGenCommentStatusSwr,
+    QUERY_LEAD_GEN_COMMENT_STATUS_SWR_KEY,
+} from "@/hooks/swr/api/graphql/queries/useQueryLeadGenCommentStatusSwr"
+import { QUERY_LEAD_GEN_WORKBENCH_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryLeadGenWorkbenchSwr"
+import { QUERY_LEAD_GEN_AGENT_DASHBOARD_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryLeadGenAgentDashboardSwr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
-import type { LeadGenCommentStatusType } from "@/modules/api"
-import { toast, useGraphQLWithToast } from "@/modules/toast"
+import { useLeadGenApprovalStore } from "@/hooks/zustand/leadgen"
+import type { MutateApproveLeadGenCommentRequest } from "@/modules/api/graphql/mutations/mutation-approve-lead-gen-comment"
+import { useGraphQLWithToast } from "@/modules/toast"
 
-/** A reply being approved, bound to the workspace it was queued in. */
-interface ApprovalTarget {
-    readonly id: string
-    readonly workspaceId: string
+/** The SWR keys whose data a finished approval changes. */
+const REFRESHED_KEYS: ReadonlyArray<unknown> = [
+    QUERY_LEAD_GEN_WORKBENCH_SWR_KEY,
+    QUERY_LEAD_GEN_AGENT_DASHBOARD_SWR_KEY,
+]
+
+/** What the status poll reports about an approval. */
+interface ApprovalProgress {
+    readonly status: string
 }
 
-/** Queues a public reply, polls its GraphQL status, and refreshes the workbench when it finishes. */
+/** Approves a public reply, follows its job, and refreshes the affected workspace views. */
 export const useApproveLeadGenComment = () => {
     const t = useTranslations("workbenchLeadGen")
     const runGraphQL = useGraphQLWithToast()
-    const revalidate = useRevalidateLeadViews()
     const { activeWorkspaceId } = useActiveWorkspace()
+    const { data: user } = useAuthUser()
+    const scopeId = activeWorkspaceId && user ? `${activeWorkspaceId}:${user.id}` : undefined
+    const { mutate } = useSWRConfig()
     const { trigger, isMutating } = useMutateApproveLeadGenCommentSwr()
-    const [approval, setApproval] = useState<ApprovalTarget>()
-    const [pending, setPending] = useState<ApprovalTarget>()
-    const workItemId = approval?.workspaceId === activeWorkspaceId ? approval?.id : undefined
-    const pendingId = pending?.workspaceId === activeWorkspaceId ? pending?.id : undefined
-    const [errors, setErrors] = useState<Readonly<Record<string, string>>>({})
-    const finished = useRef<string | undefined>(undefined)
+    const approval = useLeadGenApprovalStore((state) => (scopeId ? state.approvals[scopeId] : undefined))
+    const workItemId = approval?.requesting ? undefined : approval?.jobId
 
-    const finish = useCallback(
-        (status: LeadGenCommentStatusType) => {
-            if (!workItemId || status.id !== workItemId || finished.current === workItemId) return
-            if (status.status !== "succeeded" && status.status !== "failed") return
-            finished.current = workItemId
-            if (status.status === "succeeded") toast.success(t("approvalSucceeded"))
-            else {
-                const message = t("approvalFailed", { error: status.errorCode ?? status.workStatus })
-                toast.danger(message)
-                setErrors((previous) => ({ ...previous, [`${activeWorkspaceId}:${workItemId}`]: message }))
-            }
-            setApproval(undefined)
-            void revalidate()
-        },
-        [activeWorkspaceId, revalidate, t, workItemId],
-    )
-    const { error: statusError } = useQueryLeadGenCommentStatusSwr(activeWorkspaceId, workItemId, {
-        onSuccess: finish,
+    const settle = (progress: ApprovalProgress) => {
+        if (!activeWorkspaceId || !scopeId || !workItemId) return
+        if (progress.status !== "succeeded" && progress.status !== "failed") return
+        const result = progress.status === "failed" ? "failed" : "succeeded"
+        if (!useLeadGenApprovalStore.getState().finish(scopeId, workItemId, result)) return
+        const message = t(result === "failed" ? "commentFailed" : "commentApproved")
+        void runGraphQL(() => (result === "failed" ? Promise.reject(new Error(message)) : Promise.resolve(progress)), {
+            successMessage: message,
+        })
+        void mutate(
+            (key: unknown) => Array.isArray(key) && key[1] === activeWorkspaceId && REFRESHED_KEYS.includes(key[0]),
+        )
+    }
+
+    const reportReadError = (error: unknown) => {
+        if (!scopeId || !workItemId) return
+        if (!useLeadGenApprovalStore.getState().reportReadError(scopeId, workItemId)) return
+        void runGraphQL(() => Promise.reject(error))
+    }
+
+    const status = useQueryLeadGenCommentStatusSwr(activeWorkspaceId, workItemId, {
+        onSuccess: settle,
+        onError: reportReadError,
     })
+    const terminal = status.data?.status === "succeeded" || status.data?.status === "failed"
 
     const approve = useCallback(
-        async (id: string, draft?: string) => {
-            if (!activeWorkspaceId || isMutating || workItemId !== undefined) return false
-            setErrors((previous) => ({ ...previous, [`${activeWorkspaceId}:${id}`]: "" }))
-            setPending({ id, workspaceId: activeWorkspaceId })
-            const queued = await runGraphQL(() => trigger({ workItemId: id, draft }), {
-                successMessage: t("approvalQueued"),
-            })
-            if (!queued) {
-                setPending(undefined)
+        async (request: MutateApproveLeadGenCommentRequest) => {
+            if (
+                !activeWorkspaceId ||
+                !scopeId ||
+                !useLeadGenApprovalStore.getState().claim(scopeId, request.workItemId)
+            )
+                return false
+            const approved = await runGraphQL(() => trigger(request), { successMessage: t("commentQueued") })
+            if (!approved) {
+                useLeadGenApprovalStore.getState().refused(scopeId, request.workItemId)
                 return false
             }
-            finished.current = undefined
-            setApproval({ id: queued.id, workspaceId: activeWorkspaceId })
-            setPending(undefined)
+            await mutate([QUERY_LEAD_GEN_COMMENT_STATUS_SWR_KEY, activeWorkspaceId, approved.id], approved, {
+                revalidate: false,
+            })
+            useLeadGenApprovalStore.getState().accepted(scopeId, request.workItemId, approved.id)
             return true
         },
-        [activeWorkspaceId, isMutating, runGraphQL, t, trigger, workItemId],
+        [activeWorkspaceId, scopeId, runGraphQL, trigger, t, mutate],
     )
 
     return {
         approve,
-        busyId: pendingId ?? workItemId ?? null,
-        isApproving: isMutating || workItemId !== undefined,
-        errors: Object.fromEntries(
-            Object.entries(errors)
-                .filter(([key]) => key.startsWith(`${activeWorkspaceId}:`))
-                .map(([key, message]) => [key.slice(`${activeWorkspaceId}:`.length), message]),
-        ),
-        statusError: statusError instanceof Error ? statusError.message : null,
+        busyId: approval?.pending ? approval.workItemId : null,
+        isApproving: isMutating || Boolean(approval?.pending),
+        statusReadError: workItemId && !terminal && status.error ? t("statusReadFailed") : null,
+        retryStatus: () => {
+            void status.mutate()
+        },
     }
 }
