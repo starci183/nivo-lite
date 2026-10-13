@@ -1,7 +1,7 @@
 import { useEffect } from "react"
 import { LocalStorage, StorageId, rememberWorkspaceCookie } from "@/modules/storage"
-import { useAppDispatch } from "@/redux/hooks"
-import { setActiveWorkspaceId } from "@/redux/slices/workspace"
+import { useAppDispatch } from "@/redux"
+import { setActiveWorkspaceId } from "@/redux"
 
 /**
  * Makes the workspace the server rendered the page for the one the GraphQL client sends, so a browser that never picked it

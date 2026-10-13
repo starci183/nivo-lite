@@ -1,5 +1,5 @@
 import { mutateCopyInviteLink } from "@/modules/api/graphql/mutations/mutation-copy-invite-link"
-import { useGraphQLMutationSwr } from "@/hooks/reuseables/useGraphQLMutationSwr"
+import { useGraphQLMutationSwr } from "@/hooks/reuseables"
 
 /** The SWR key of the copyInviteLink mutation. */
 export const MUTATE_COPY_INVITE_LINK_SWR_KEY = "MUTATE_COPY_INVITE_LINK_SWR"

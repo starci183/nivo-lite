@@ -1,5 +1,5 @@
 import { mutateSetChatHandling } from "@/modules/api/graphql/mutations/mutation-set-chat-handling"
-import { useGraphQLMutationSwr } from "@/hooks/reuseables/useGraphQLMutationSwr"
+import { useGraphQLMutationSwr } from "@/hooks/reuseables"
 
 /** The SWR key of the setChatHandling mutation. */
 export const MUTATE_SET_CHAT_HANDLING_SWR_KEY = "MUTATE_SET_CHAT_HANDLING_SWR"

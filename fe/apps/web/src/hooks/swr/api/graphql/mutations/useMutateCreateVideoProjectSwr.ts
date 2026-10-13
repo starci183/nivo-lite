@@ -1,5 +1,5 @@
 import { mutateCreateVideoProject } from "@/modules/api/graphql/mutations/mutation-create-video-project"
-import { useGraphQLMutationSwr } from "@/hooks/reuseables/useGraphQLMutationSwr"
+import { useGraphQLMutationSwr } from "@/hooks/reuseables"
 
 /** The SWR key of the createVideoProject mutation. */
 export const MUTATE_CREATE_VIDEO_PROJECT_SWR_KEY = "MUTATE_CREATE_VIDEO_PROJECT_SWR"

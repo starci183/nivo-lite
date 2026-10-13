@@ -139,3 +139,4 @@ export {
 } from "./api/graphql/queries/useQueryLeadGenCommentStatusSwr"
 export { useQueryLoyaltyBoardSwr } from "./api/graphql/queries/useQueryLoyaltyBoardSwr"
 export { useMutateAskGuideSwr } from "./api/graphql/mutations/useMutateAskGuideSwr"
+export { useMutateSaveOpenApiConnectionSwr } from "./api/graphql/mutations/useMutateSaveOpenApiConnectionSwr"

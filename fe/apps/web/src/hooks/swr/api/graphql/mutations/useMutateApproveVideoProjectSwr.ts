@@ -1,5 +1,5 @@
 import { mutateApproveVideoProject } from "@/modules/api/graphql/mutations/mutation-approve-video-project"
-import { useGraphQLMutationSwr } from "@/hooks/reuseables/useGraphQLMutationSwr"
+import { useGraphQLMutationSwr } from "@/hooks/reuseables"
 
 /** The SWR key of the approveVideoProject mutation. */
 export const MUTATE_APPROVE_VIDEO_PROJECT_SWR_KEY = "MUTATE_APPROVE_VIDEO_PROJECT_SWR"

@@ -1,5 +1,5 @@
 import { mutateCreateInvite } from "@/modules/api/graphql/mutations/mutation-create-invite"
-import { useGraphQLMutationSwr } from "@/hooks/reuseables/useGraphQLMutationSwr"
+import { useGraphQLMutationSwr } from "@/hooks/reuseables"
 
 /** The SWR key of the createInvite mutation. */
 export const MUTATE_CREATE_INVITE_SWR_KEY = "MUTATE_CREATE_INVITE_SWR"

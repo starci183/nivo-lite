@@ -1,6 +1,6 @@
 import type { SWRConfiguration } from "swr"
 import { queryVideoRenderStatus } from "@/modules/api/graphql/queries/query-video-render-status"
-import { useWorkspaceQuerySwr } from "@/hooks/reuseables/useWorkspaceQuerySwr"
+import { useWorkspaceQuerySwr } from "@/hooks/reuseables"
 import type { VideoRenderStatusType } from "@/modules/api"
 
 /** The SWR key of the videoRenderStatus query. */

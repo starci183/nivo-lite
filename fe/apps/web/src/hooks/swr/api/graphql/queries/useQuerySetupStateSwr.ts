@@ -1,5 +1,5 @@
 import type { SWRConfiguration } from "swr"
-import { useGraphqlQuerySwr } from "@/hooks/reuseables/useGraphqlQuerySwr"
+import { useGraphqlQuerySwr } from "@/hooks/reuseables"
 import { querySetupState } from "@/modules/api/graphql/queries/query-setup-state"
 import type { QuerySetupStateRequest } from "@/modules/api/graphql/queries/query-setup-state"
 
