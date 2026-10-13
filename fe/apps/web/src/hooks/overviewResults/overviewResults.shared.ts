@@ -1,5 +1,5 @@
 import type { GovFormat, GovTranslator } from "@/hooks/overviewGov"
-import type { GovernanceWithStatus, OriginSplit } from "@/lib/flow-queries"
+import type { Governance, OriginSplit } from "@/hooks/overviewFigures"
 
 /** One origin cell of a status row. */
 export interface GovCell {
@@ -56,7 +56,7 @@ const statusRowOf = (
 export const statusRowsOf = (
     t: GovTranslator,
     format: GovFormat,
-    governance: GovernanceWithStatus,
+    governance: Governance,
 ): ReadonlyArray<GovStatusRow> => {
     const s = governance.status
     const make = (id: string, key: string, split: OriginSplit, count: OriginSplit, unit: string, money: boolean) =>
@@ -82,7 +82,7 @@ export const statusRowsOf = (
 export const goalLinesOf = (
     t: GovTranslator,
     format: GovFormat,
-    governance: GovernanceWithStatus,
+    governance: Governance,
 ): ReadonlyArray<{ readonly id: string; readonly text: string; readonly isSet: boolean }> => {
     const { goals, status } = governance
     return [

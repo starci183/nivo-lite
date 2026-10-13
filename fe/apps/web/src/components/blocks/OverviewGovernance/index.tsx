@@ -1,4 +1,6 @@
-import { getFormatter, getTranslations } from "next-intl/server"
+"use client"
+
+import { useFormatter, useTranslations } from "next-intl"
 import {
     TOP_WAITING,
     departmentsOf,
@@ -7,34 +9,19 @@ import {
     historyRowsOf,
     waitingItemsOf,
 } from "@/hooks/overviewGov"
+import { useOverviewGovernance } from "@/hooks/overview"
 import { goalLinesOf, statusRowsOf } from "@/hooks/overviewResults"
-import type { GovernanceWithStatus } from "@/lib/flow-queries"
-import type { WorkItemView } from "@/lib/flow-types"
 import { CONSOLE_ROUTES } from "@/modules/routes"
 import { OverviewGovernanceBase } from "./component"
 
-/** The governance figures, or null when the flow data could not be read, and the decisions waiting for the owner. */
-interface OverviewGovernanceProps {
-    readonly governance: GovernanceWithStatus | null
-    /** Work items waiting for a decision, oldest first (test runs already removed). */
-    readonly waiting: ReadonlyArray<WorkItemView>
-}
-
-/** The five governance blocks of the overview with their copy and figures resolved on the server. */
-export const OverviewGovernance = async (props: OverviewGovernanceProps) => {
-    const [t, g, format] = await Promise.all([
-        getTranslations("overview"),
-        getTranslations("governance"),
-        getFormatter(),
-    ])
-    const governance = props.governance
-    if (governance === null) {
-        return (
-            <OverviewGovernanceBase
-                props={{ unavailable: t("govUnavailable"), resultsTitle: t("resultsTitle"), figures: null }}
-            />
-        )
-    }
+/** The five governance blocks of the overview with their copy and figures resolved in the browser. */
+export const OverviewGovernance = () => {
+    const t = useTranslations("overview")
+    const g = useTranslations("governance")
+    const format = useFormatter()
+    const data = useOverviewGovernance()
+    if (data === undefined) return null
+    const { governance } = data
     const pending = governance.pendingDecisions
     const exceptionTotal = exceptionTotalOf(governance)
     const excluded = governance.status.excludedTestRecords
@@ -77,7 +64,7 @@ export const OverviewGovernance = async (props: OverviewGovernanceProps) => {
                         chatHref: CONSOLE_ROUTES.chat,
                         none: t("waitingNone"),
                         count: pending === 1 ? t("waitingCountOne") : t("waitingCount", { n: pending }),
-                        items: pending === 0 ? [] : waitingItemsOf(g, props.waiting),
+                        items: pending === 0 ? [] : waitingItemsOf(g, data.waiting),
                         more: pending > TOP_WAITING ? t("waitingMore", { n: pending }) : null,
                         source: t("waitingSource"),
                     },

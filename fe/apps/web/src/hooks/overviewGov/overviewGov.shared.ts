@@ -1,6 +1,5 @@
 import type { useFormatter, useTranslations } from "next-intl"
-import type { GovernanceWithStatus } from "@/lib/flow-queries"
-import type { ReasonCode, WorkItemView } from "@/lib/flow-types"
+import type { Governance, ReasonCode, WaitingWork } from "@/hooks/overviewFigures"
 
 /** The translator of one catalog namespace. */
 export type GovTranslator = ReturnType<typeof useTranslations>
@@ -74,7 +73,7 @@ export const departmentsOf = (
     t: GovTranslator,
     g: GovTranslator,
     format: GovFormat,
-    governance: GovernanceWithStatus,
+    governance: Governance,
 ): ReadonlyArray<GovDepartment> =>
     governance.departments.map((department) => ({
         id: department.department,
@@ -90,21 +89,21 @@ export const departmentsOf = (
     }))
 
 /** The waiting items shown on the overview: the oldest few. */
-export const waitingItemsOf = (g: GovTranslator, waiting: ReadonlyArray<WorkItemView>): ReadonlyArray<GovWaitingItem> =>
+export const waitingItemsOf = (g: GovTranslator, waiting: ReadonlyArray<WaitingWork>): ReadonlyArray<GovWaitingItem> =>
     waiting.slice(0, TOP_WAITING).map((item) => ({
         id: item.id,
-        title: `${g(`action_${item.action}`)}${item.lead ? ` · ${item.lead.contact_name}` : ""}`,
+        title: `${g(`action_${item.action}`)}${item.leadName ? ` · ${item.leadName}` : ""}`,
         department: g(`dept_${item.department}`),
         reason: item.reason ? g(`reason_${item.reason}`) : null,
-        isSimulated: item.origin === "simulated",
-        summary: item.proposal.summary || null,
+        isSimulated: item.isSimulated,
+        summary: item.summary || null,
     }))
 
 /** The exception counts as chips, in the order the owner reads them. */
 export const exceptionChipsOf = (
     t: GovTranslator,
     g: GovTranslator,
-    governance: GovernanceWithStatus,
+    governance: Governance,
 ): ReadonlyArray<GovExceptionChip> => {
     const chips: Array<GovExceptionChip> = EXCEPTION_ORDER.filter((key) => governance.exceptions[key] > 0).map(
         (key) => ({
@@ -124,21 +123,21 @@ export const exceptionChipsOf = (
 }
 
 /** The total of all exceptions. */
-export const exceptionTotalOf = (governance: GovernanceWithStatus): number =>
+export const exceptionTotalOf = (governance: Governance): number =>
     EXCEPTION_ORDER.reduce((sum, key) => sum + governance.exceptions[key], 0) + governance.exceptions.failed
 
 /** The latest decisions of the history. */
 export const historyRowsOf = (
     g: GovTranslator,
     format: GovFormat,
-    governance: GovernanceWithStatus,
+    governance: Governance,
 ): ReadonlyArray<GovHistoryRow> =>
     governance.recentDecisions.slice(0, TOP_HISTORY).map((row) => ({
         id: row.id,
         action: g(`action_${row.action}`),
         outcome: g(`outcome_${row.outcome}`),
         outcomeTone: OUTCOME_TONES[row.outcome] ?? "danger",
-        when: whenOf(format, row.created_at),
-        exact: exactOf(format, row.created_at),
-        detail: `${g(`dept_${row.department}`)} · ${row.decider_kind === "policy" ? g("decider_policy") : row.decided_by}${row.leadName ? ` · ${row.leadName}` : ""}`,
+        when: whenOf(format, row.createdAt),
+        exact: exactOf(format, row.createdAt),
+        detail: `${g(`dept_${row.department}`)} · ${row.deciderKind === "policy" ? g("decider_policy") : row.decidedBy}${row.leadName ? ` · ${row.leadName}` : ""}`,
     }))

@@ -120,21 +120,3 @@ export const readLeadDetail = async (workspaceId: string, leadId: string): Promi
         agents: toAgents(agentRows.value),
     })
 }
-
-/** The lead behind each pending approval, newest approval first. */
-export const readPendingApprovals = cache(
-    async (workspaceId: string): Promise<DbOutcome<Array<{ readonly leadId: string | null }>>> => {
-        const client = await createServerDbClient()
-        const rows = toOutcome(
-            await client
-                .from("executions")
-                .select("id, responsibility_id, created_at, responsibility:responsibilities(lead_id)")
-                .eq("workspace_id", workspaceId)
-                .eq("status", "pending_approval")
-                .order("created_at", { ascending: false })
-                .limit(ROW_LIMIT),
-        )
-        if (rows.kind !== "ok") return rows
-        return dbOk(rows.value.map((row) => ({ leadId: row.responsibility?.lead_id ?? null })))
-    },
-)
