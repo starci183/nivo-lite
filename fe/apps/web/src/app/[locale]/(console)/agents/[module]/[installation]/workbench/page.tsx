@@ -1,7 +1,34 @@
+import type { WorkbenchComponent } from "@/features/pages/AgentWorkbenchPage"
 import { AgentWorkbenchPage } from "@/features/pages/AgentWorkbenchPage"
+import WorkbenchContent from "@/features/pages/ContentWorkbenchPage"
+import WorkbenchInventory from "@/features/module-inventory"
+import WorkbenchAccounting from "@/features/workbench-accounting"
+import WorkbenchLoyalty from "@/features/module-loyalty"
+import WorkbenchChatbot from "@/features/workbench-chatbot"
+import { VideoWorkbenchPage as WorkbenchVideo } from "@/features/pages/VideoWorkbenchPage"
+import WorkbenchHiring from "@/features/module-hiring"
+import WorkbenchSales from "@/features/workbench-sales"
+import { BookingWorkbenchPage } from "@/features/pages/BookingWorkbenchPage"
+import WorkbenchShifts from "@/features/module-shifts"
+import WorkbenchLeadGen from "@/features/module-lead-gen"
 
 /** The document title of the workbench tab. */
 export { agentWorkbenchMetadata as generateMetadata } from "@/features/pages/AgentWorkbenchPage"
+
+/** The workbench of each module, by the workbench key of its catalogue entry. A module without a line shows the pending state. */
+const WORKBENCHES: Readonly<Record<string, WorkbenchComponent>> = {
+    chatbot: WorkbenchChatbot,
+    sales: WorkbenchSales,
+    loyalty: WorkbenchLoyalty,
+    accounting: WorkbenchAccounting,
+    content: WorkbenchContent,
+    inventory: WorkbenchInventory,
+    booking: BookingWorkbenchPage,
+    video: WorkbenchVideo,
+    hiring: WorkbenchHiring,
+    shifts: WorkbenchShifts,
+    lead_gen: WorkbenchLeadGen,
+}
 
 type PageProps = {
     readonly params: Promise<{ module: string; installation: string }>
@@ -20,6 +47,7 @@ const Page = async (props: PageProps) => {
             installationId={installation}
             tab={first(query.tab)}
             focus={first(query.focus)}
+            workbenches={WORKBENCHES}
         />
     )
 }
