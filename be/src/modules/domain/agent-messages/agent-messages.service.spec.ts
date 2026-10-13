@@ -29,7 +29,7 @@ const build = async (answers: Record<string, ReadonlyArray<unknown>> = {}) => {
             [FIND_LAST_CUSTOMER_MESSAGE]: [{ created_at: "2026-10-12T10:00:00.000Z" }],
             [MARK_MESSAGE_DELIVERY]: [],
             ...answers,
-        }).map(([text, rows]) => [text, rows] as [string, unknown]),
+        }).map(([text, rows]): [string, unknown] => [text, rows]),
     })
     const moduleRef = await Test.createTestingModule({
         providers: [AgentMessagesService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],

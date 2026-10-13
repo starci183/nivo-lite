@@ -1,0 +1,97 @@
+{
+  "position": 14,
+  "key": "contract_renewal",
+  "version": 1,
+  "pack": "contracts",
+  "executor": "implemented",
+  "moduleKey": "sales",
+  "icon": "contract",
+  "name": {
+    "vi": "Nhắc gia hạn hợp đồng",
+    "en": "Contract renewal notice"
+  },
+  "description": {
+    "vi": "Báo khách và báo bạn trước khi hợp đồng định kỳ hết hạn.",
+    "en": "Notify the customer and you before a recurring contract ends."
+  },
+  "trigger": {
+    "kind": "event",
+    "event": "contract.expiring",
+    "line": {
+      "vi": "Một số ngày trước ngày hết hạn hợp đồng",
+      "en": "A number of days before a contract ends"
+    }
+  },
+  "requires": {
+    "modules": [
+      "sales"
+    ],
+    "channels": [
+      "customer_chat"
+    ],
+    "connections": [],
+    "capabilities": [
+      "has_recurring_contracts"
+    ]
+  },
+  "settings": [
+    {
+      "key": "beforeDays",
+      "kind": "number",
+      "min": 1,
+      "max": 90,
+      "suffix": {
+        "vi": "ngày",
+        "en": "days"
+      },
+      "label": {
+        "vi": "Nhắc trước",
+        "en": "Remind before"
+      },
+      "hint": {
+        "vi": "Hằng ngày NIVO báo khi còn đúng số ngày này (hoặc ít hơn) là hợp đồng hết hạn.",
+        "en": "Each day NIVO checks for contracts ending within this many days."
+      }
+    },
+    {
+      "key": "alwaysAsk",
+      "kind": "toggle",
+      "label": {
+        "vi": "Luôn chờ tôi duyệt tin gia hạn",
+        "en": "Always wait for my approval"
+      },
+      "hint": {
+        "vi": "Bật: tin gia hạn luôn chờ bạn duyệt trước khi gửi, kể cả khi bạn đã cho tự gửi.",
+        "en": "On: the renewal message always waits for you before it is sent."
+      }
+    }
+  ],
+  "contentMode": "ai_per_case",
+  "guardrails": [
+    {
+      "vi": "Không hứa kết quả, không tự cho giảm giá hay ưu đãi ngoài những gì chủ shop đã ghi.",
+      "en": "No outcome promises and no discounts beyond what the owner wrote."
+    },
+    {
+      "vi": "Không bịa giá, giờ, địa chỉ hay chính sách chưa có trong thông tin cửa hàng.",
+      "en": "Never invent prices, hours, addresses or policies that are not in the shop information."
+    }
+  ],
+  "variables": [
+    "ten_khach",
+    "ten_shop",
+    "ten_goi",
+    "ngay_het_han"
+  ],
+  "defaultBody": {
+    "vi": "Chào {ten_khach}, hợp đồng {ten_goi} của bạn với {ten_shop} sẽ hết hạn vào {ngay_het_han}. Bạn có muốn gia hạn để tiếp tục không ạ?",
+    "en": "Hi {ten_khach}, your contract {ten_goi} with {ten_shop} ends on {ngay_het_han}. Would you like to renew?"
+  },
+  "authority": {
+    "action": "send_follow_up"
+  },
+  "defaults": {
+    "beforeDays": 14,
+    "alwaysAsk": true
+  }
+}

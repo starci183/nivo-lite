@@ -6,8 +6,6 @@ export type {
     ConversationRef,
     ConversationTarget,
     LeadConversation,
-    OpenConversation,
     OptionalLeadConversation,
-    TurnAgent,
     TurnConversation,
 } from "./agent-conversations.contracts"

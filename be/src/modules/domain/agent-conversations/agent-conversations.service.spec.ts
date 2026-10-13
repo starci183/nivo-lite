@@ -43,7 +43,7 @@ const build = async (answers: Record<string, ReadonlyArray<unknown>> = {}) => {
             [FIND_CONVERSATION_TARGET]: [targetRow],
             [FIND_TURN_CONVERSATION]: [turnRow],
             ...answers,
-        }).map(([text, rows]) => [text, rows] as [string, unknown]),
+        }).map(([text, rows]): [string, unknown] => [text, rows]),
     })
     const moduleRef = await Test.createTestingModule({
         providers: [AgentConversationsService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],

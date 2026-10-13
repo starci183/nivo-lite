@@ -52,6 +52,20 @@ export interface HealthMark {
     readonly checkedAt: string
 }
 
+/** The result of a wizard job, written next to its ticket on the connection row. */
+export interface WizardSettlement {
+    /** What the job was asked to do. */
+    readonly command: string
+    /** done or failed. */
+    readonly state: "done" | "failed"
+    /** The page the owner opens next, when the command produced one; empty otherwise. */
+    readonly url: string
+    /** The code of the refusal, when it failed; empty otherwise. */
+    readonly code: string
+    /** True when the job sealed the OA Secret Key, which the wizard then shows as saved. */
+    readonly oaSecretSaved: boolean
+}
+
 /** The SMTP connection a workspace sends its mail with. */
 export interface SmtpConnection {
     /** The connection id. */
@@ -60,8 +74,8 @@ export interface SmtpConnection {
     readonly meta: Readonly<Record<string, string>>
 }
 
-/** A connection id, or null for the default one. */
-export type OptionalConnectionId = string | null
-
 /** An SMTP connection, or null when the workspace has none connected. */
 export type OptionalSmtpConnection = SmtpConnection | null
+
+/** A connection id, or null for the default one. */
+export type OptionalConnectionId = string | null

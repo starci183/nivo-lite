@@ -42,6 +42,12 @@ export const MARK_CONNECTION_HEALTH = sql`UPDATE public.connections
 SET public_meta = jsonb_set(public_meta, '{health}', $2::jsonb)
 WHERE id = $1`
 
+/** Writes the result of a wizard job next to its ticket, only while that ticket is still the latest ($1 connection id, $2 ticket, $3 facts to merge). */
+export const SETTLE_WIZARD = sql`UPDATE public.connections
+SET public_meta = public_meta || $3::jsonb,
+    updated_at = now()
+WHERE id = $1 AND public_meta -> 'wizard' ->> 'ticket' = $2`
+
 /** The SMTP connection to send a workspace's mail with: the one asked for, else the default, else the oldest connected one ($1 workspace, $2 connection or null). */
 export const FIND_SMTP_CONNECTION = sql`SELECT id, public_meta
 FROM public.connections
