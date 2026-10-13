@@ -9,22 +9,16 @@ import {
     shiftMonth,
     slotsForMonth,
     vietnamClock,
-    type ContentWorkbenchData,
+    useContentData,
 } from "@/hooks/content"
 import { ContentBalancePanelBase } from "./component"
-
-/** Props of {@link ContentBalancePanel}. */
-export interface ContentBalancePanelProps {
-    /** What the workbench read for the member. */
-    readonly data: ContentWorkbenchData
-}
 
 const percent = (share: number): number => Math.round(share * 100)
 
 /** The Balance tab: planned posts per theme against the weights, and per channel against the posting rhythm, for one month. */
-export const ContentBalancePanel = (props: ContentBalancePanelProps) => {
+export const ContentBalancePanel = () => {
+    const data = useContentData()
     const t = useTranslations("content")
-    const { data } = props
     const now = useMemo(() => new Date(data.nowIso), [data.nowIso])
     const [ym, setYm] = useState(() => {
         const here = vietnamClock(now)

@@ -1,12 +1,9 @@
 "use client"
 
+import { useVideoBrandKitData, MUSIC_TRACKS, TTS_VOICES, useVideoRelease, useVideoUpload } from "@/hooks/video"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { MUSIC_TRACKS, TTS_VOICES, uploadMediaFiles, useVideoFailure } from "@/hooks/video"
-import type { Brand, MediaItem } from "@/hooks/video"
-import { navigation } from "@/modules/i18n"
-import { saveVideoBrand } from "@/modules/db/video/write-brand"
-import { writeMediaTicket } from "@/modules/db/video/write-media"
+import { useVideoBrandForm } from "@/hooks/rhf"
 import { VideoBrandCardBase } from "./component"
 
 /** The option that means no music. */
@@ -18,58 +15,40 @@ interface BrandMessage {
     readonly text: string
 }
 
-interface VideoBrandCardProps {
-    readonly brand: Brand
-    readonly media: ReadonlyArray<MediaItem>
-    readonly canEdit: boolean
-}
-
 /** The brand kit of the workspace, used by every video: name, colours, logo, music and voice. */
-export const VideoBrandCard = (props: VideoBrandCardProps) => {
+export const VideoBrandCard = () => {
+    const kit = useVideoBrandKitData()
     const t = useTranslations("video")
-    const failure = useVideoFailure()
-    const router = navigation.useRouter()
-    const [draft, setDraft] = useState<Brand>(props.brand)
-    const [pending, setPending] = useState(false)
+    const { saveBrand } = useVideoRelease()
+    const { upload } = useVideoUpload()
+    const form = useVideoBrandForm(kit.brand)
+    const draft = form.watch()
+    const [uploading, setUploading] = useState(false)
     const [message, setMessage] = useState<BrandMessage | null>(null)
     const logoPath = draft.logoPath
-    const logo = logoPath === null ? null : props.media.find((item) => item.path === logoPath)
+    const logo = logoPath === null ? null : kit.media.find((item) => item.path === logoPath)
 
     const pickLogo = async (files: ReadonlyArray<File>) => {
         const file = files[0]
         if (file === undefined) return
-        setPending(true)
+        setUploading(true)
         setMessage(null)
-        const sent = await uploadMediaFiles([file], async (entry) => {
-            const ticket = await writeMediaTicket({ name: entry.name, type: entry.type, size: entry.size })
-            return ticket.kind === "ok" ? { ticket: ticket.value } : { code: ticket.code }
-        })
-        const failed = sent.failures[0]
-        const path = sent.paths[0]
-        if (failed !== undefined) {
-            setMessage({
-                tone: "negative",
-                text: t("uploadFailed", { name: failed.name, error: failure(failed.code) }),
-            })
-        } else if (path !== undefined) {
-            setDraft({ ...draft, logoPath: path })
-            router.refresh()
+        try {
+            const [path] = await upload([file])
+            if (path !== undefined) form.setValue("logoPath", path, { shouldDirty: true })
+        } finally {
+            setUploading(false)
         }
-        setPending(false)
     }
 
-    const save = async () => {
-        setPending(true)
+    const save = form.handleSubmit(async (values) => {
         setMessage(null)
-        const saved = await saveVideoBrand(draft)
-        if (saved.kind === "ok") {
-            setDraft(saved.value)
+        const saved = await saveBrand(values)
+        if (saved !== undefined) {
+            form.reset({ ...saved, logoPath: saved.logoPath ?? null, musicTrack: saved.musicTrack ?? null })
             setMessage({ tone: "affirmative", text: t("brandSaved") })
-        } else {
-            setMessage({ tone: "negative", text: t("actionFailed", { error: failure(saved.code) }) })
         }
-        setPending(false)
-    }
+    })
 
     return (
         <VideoBrandCardBase
@@ -102,19 +81,23 @@ export const VideoBrandCard = (props: VideoBrandCardProps) => {
                     label: t(voice.includes("Hoai") ? "voice_f" : "voice_m"),
                 })),
                 saveLabel: t("saveBrand"),
-                canEdit: props.canEdit,
-                pending,
-                message,
+                canEdit: kit.canEdit,
+                pending: uploading || form.formState.isSubmitting,
+                message: Object.values(form.formState.errors)[0]?.message
+                    ? { tone: "negative", text: Object.values(form.formState.errors)[0]?.message ?? t("err_default") }
+                    : message,
             }}
             on={{
-                shopName: (value) => setDraft({ ...draft, shopName: value }),
-                primary: (value) => setDraft({ ...draft, primary: value }),
-                secondary: (value) => setDraft({ ...draft, secondary: value }),
+                shopName: (value) => form.setValue("shopName", value, { shouldDirty: true }),
+                primary: (value) => form.setValue("primary", value, { shouldDirty: true }),
+                secondary: (value) => form.setValue("secondary", value, { shouldDirty: true }),
                 logoFiles: (files) => void pickLogo(files),
-                logoRemove: () => setDraft({ ...draft, logoPath: null }),
+                logoRemove: () => form.setValue("logoPath", null, { shouldDirty: true }),
                 music: (value) =>
-                    setDraft({ ...draft, musicTrack: value === null || value === NO_MUSIC ? null : value }),
-                voice: (value) => setDraft({ ...draft, voice: value ?? draft.voice }),
+                    form.setValue("musicTrack", value === null || value === NO_MUSIC ? null : value, {
+                        shouldDirty: true,
+                    }),
+                voice: (value) => form.setValue("voice", value ?? draft.voice, { shouldDirty: true }),
                 save: () => void save(),
             }}
         />

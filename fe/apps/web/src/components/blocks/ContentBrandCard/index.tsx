@@ -1,51 +1,41 @@
-"use client"
+﻿"use client"
 
 import { useTranslations } from "next-intl"
-import { useState } from "react"
-import { useContentCommand, type ContentSettings } from "@/hooks/content"
-import { writeSaveBrand } from "@/modules/db/content-settings/write-settings"
+import { useSaveContentBrand, useContentData } from "@/hooks/content"
+import { useContentBrandForm } from "@/hooks/rhf"
 import { ContentBrandCardBase } from "./component"
 
-/** Props of {@link ContentBrandCard}. */
-export interface ContentBrandCardProps {
-    /** The saved settings. */
-    readonly settings: ContentSettings
-    /** Whether the member may change them. */
-    readonly canManage: boolean
-}
-
-/** The brand voice of the posts: tone, words to avoid, call to action and brand hashtags. */
-export const ContentBrandCard = (props: ContentBrandCardProps) => {
+/** The brand voice form, saved through the workspace GraphQL mutation. */
+export const ContentBrandCard = () => {
+    const data = useContentData()
     const t = useTranslations("content")
-    const command = useContentCommand()
-    const [voice, setVoice] = useState(props.settings.brand_voice)
-    const [avoid, setAvoid] = useState(props.settings.avoid)
-    const [cta, setCta] = useState(props.settings.cta)
-    const [tags, setTags] = useState(props.settings.hashtags.join(" "))
+    const form = useContentBrandForm(data.settings)
+    const { save, isMutating } = useSaveContentBrand()
+    const values = form.watch()
+    const error = Object.values(form.formState.errors).find((field) => field?.message)?.message
     return (
         <ContentBrandCardBase
             props={{
                 t,
-                voice,
-                avoid,
-                cta,
-                tags,
-                canManage: props.canManage,
-                isPending: command.isPending,
-                note: command.note,
+                voice: values.brandVoice,
+                avoid: values.avoid,
+                cta: values.cta,
+                tags: values.hashtags,
+                canManage: data.canManage,
+                isPending: isMutating || form.formState.isSubmitting,
+                note: error ? { tone: "error", text: error } : null,
             }}
             on={{
-                voice: setVoice,
-                avoid: setAvoid,
-                cta: setCta,
-                tags: setTags,
-                save: () =>
-                    command.run(
-                        "save",
-                        () => writeSaveBrand({ brandVoice: voice, avoid, cta, hashtags: tags }),
-                        () => command.say("ok", t("saveDone")),
-                    ),
-                dismissNote: command.dismiss,
+                voice: (value) => form.setValue("brandVoice", value),
+                avoid: (value) => form.setValue("avoid", value),
+                cta: (value) => form.setValue("cta", value),
+                tags: (value) => form.setValue("hashtags", value),
+                save: () => {
+                    void form.handleSubmit(async (request) => {
+                        await save(request)
+                    })()
+                },
+                dismissNote: () => form.clearErrors(),
             }}
         />
     )

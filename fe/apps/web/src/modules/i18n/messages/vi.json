@@ -1149,6 +1149,7 @@
     "maintainAction": "Cập nhật ngay"
   },
   "common": {
+    "loading": "Đang tải...",
     "open": "Mở",
     "openLead": "Mở khách hàng",
     "openOffice": "Mở trong Office",
@@ -2356,7 +2357,8 @@
     "promptDraftRecent": "Các bài gần đây (đừng lặp ý):\n{lines}",
     "promptDraftLibrary": "ẢNH TRONG THƯ VIỆN (chọn tối đa 2 cái hợp nội dung, ghi số thứ tự vào \"media\"):\n{lines}",
     "promptDraftNoLibrary": "Thư viện chưa có ảnh: để \"media\" là [].",
-    "err_ai_quota": "Đã hết lượt dùng AI trong kỳ này. Xem trang Mức dùng."
+    "err_ai_quota": "Đã hết lượt dùng AI trong kỳ này. Xem trang Mức dùng.",
+    "aiQueued": "Đã xếp hàng. NIVO sẽ báo khi có kết quả."
   },
   "credits": {
     "crumbLabel": "Đường dẫn",

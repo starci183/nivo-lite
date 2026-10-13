@@ -238,6 +238,15 @@ export type {
     DocumentVisibility,
 } from "./knowledge"
 export type {
+    AgentDashboardView,
+    DashboardConnection,
+    DashboardRow,
+    DashboardDone,
+    DashboardKnowledge,
+    DashboardRegion,
+    DashboardWaiting,
+} from "./agent-dashboard"
+export type {
     ShiftsAvailRowView,
     ShiftsAvailView,
     ShiftsBenchView,

@@ -1,17 +1,17 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useState, useTransition } from "react"
-import { postView, quotes, useContentFocus, type ContentNote, type ContentWorkbenchData } from "@/hooks/content"
-import { decideWorkItem } from "@/lib/flow-actions"
-import { navigation } from "@/modules/i18n"
+import { useState } from "react"
+import {
+    postView,
+    quotes,
+    useContentFocus,
+    useContentItemActions,
+    useContentCommand,
+    type ContentNote,
+    useContentData,
+} from "@/hooks/content"
 import { ContentQueuePanelBase } from "./component"
-
-/** Props of {@link ContentQueuePanel}. */
-export interface ContentQueuePanelProps {
-    /** What the workbench read for the member. */
-    readonly data: ContentWorkbenchData
-}
 
 interface Deciding {
     readonly id: string
@@ -19,12 +19,12 @@ interface Deciding {
 }
 
 /** The Approvals tab: posts waiting for the owner (decided through the publish gate) and the approved ones ready to post. */
-export const ContentQueuePanel = (props: ContentQueuePanelProps) => {
+export const ContentQueuePanel = () => {
+    const data = useContentData()
     const t = useTranslations("content")
-    const router = navigation.useRouter()
+    const actions = useContentItemActions()
+    const command = useContentCommand()
     const focus = useContentFocus()
-    const { data } = props
-    const [isPending, startTransition] = useTransition()
     const [busy, setBusy] = useState<Deciding | null>(null)
     const [notes, setNotes] = useState<Readonly<Record<string, ContentNote>>>({})
     const decide = (id: string, decision: "approved" | "rejected") => {
@@ -32,18 +32,21 @@ export const ContentQueuePanel = (props: ContentQueuePanelProps) => {
         if (workItemId === null || workItemId === undefined) return
         setBusy({ id, decision })
         setNotes((cur) => Object.fromEntries(Object.entries(cur).filter(([key]) => key !== id)))
-        startTransition(async () => {
-            const done = await decideWorkItem(workItemId, decision).catch(() => ({
-                ok: false as const,
-                error: t("err_unknown"),
-            }))
-            const note: ContentNote = done.ok
-                ? { tone: "ok", text: t(decision === "approved" ? "queueApproved" : "queueRejected") }
-                : { tone: "error", text: t("actionFailed", { error: done.error }) }
-            setNotes((cur) => ({ ...cur, [id]: note }))
-            if (done.ok) router.refresh()
-            setBusy(null)
-        })
+        command.run(
+            "decide",
+            async () => {
+                try {
+                    return await actions.decide(workItemId, decision)
+                } finally {
+                    setBusy(null)
+                }
+            },
+            () =>
+                setNotes((cur) => ({
+                    ...cur,
+                    [id]: { tone: "ok", text: t(decision === "approved" ? "queueApproved" : "queueRejected") },
+                })),
+        )
     }
     const pillarNames = Object.fromEntries(data.pillars.map((p) => [p.id, p.name]))
     return (
@@ -59,7 +62,7 @@ export const ContentQueuePanel = (props: ContentQueuePanelProps) => {
                     })),
                 ready: data.items.filter((i) => i.status === "approved").map((i) => postView(t, i, pillarNames)),
                 canDecide: data.canManage,
-                isPending,
+                isPending: command.isPending,
                 busy,
                 notes,
             }}

@@ -2,20 +2,14 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { CONTENT_STATUSES, postView, useContentFocus, type ContentWorkbenchData } from "@/hooks/content"
+import { CONTENT_STATUSES, postView, useContentFocus, useContentData } from "@/hooks/content"
 import { ContentListPanelBase } from "./component"
 
-/** Props of {@link ContentListPanel}. */
-export interface ContentListPanelProps {
-    /** What the workbench read for the member. */
-    readonly data: ContentWorkbenchData
-}
-
 /** The List tab: every post soonest first, filtered by status; a row opens the post editor. */
-export const ContentListPanel = (props: ContentListPanelProps) => {
+export const ContentListPanel = () => {
+    const data = useContentData()
     const t = useTranslations("content")
     const focus = useContentFocus()
-    const { data } = props
     const [filter, setFilter] = useState("all")
     const pillarNames = Object.fromEntries(data.pillars.map((p) => [p.id, p.name]))
     return (

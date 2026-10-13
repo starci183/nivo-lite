@@ -32,7 +32,6 @@ import { templateOf } from "./automation-templates"
 import { INVENTORY_EXECUTORS, scanInventory } from "./module-inventory-automations"
 import { BOOKING_EXECUTORS, BOOKING_TEMPLATE_KEYS, scanBooking } from "./module-booking-automations"
 import { runBookingTick } from "./module-booking-tick"
-import { offerSources, videoNewOffer } from "./module-video-automation"
 import { runShiftsTick } from "./module-shifts-tick"
 import { SALES_EXECUTORS, scanContracts } from "./sales-automations"
 import { supabaseAdmin } from "./supabase/admin"
@@ -55,7 +54,6 @@ const EXECUTORS: Readonly<Record<string, Executor>> = {
     sheet_orders: sheetOrders,
     ...INVENTORY_EXECUTORS,
     ...BOOKING_EXECUTORS,
-    video_new_offer: videoNewOffer,
     ...LOYALTY_EXECUTORS, // module loyalty (src/lib/module-loyalty-automations.ts)
     ...SALES_EXECUTORS, // delivery_notice, contract_renewal (src/lib/sales-automations.ts)
 }
@@ -461,15 +459,6 @@ const scan = async (db: Db, l: Loaded, now: Date): Promise<number> => {
                     dedupe: `winback:${lead.id}:${month}`,
                 })
             }
-            started += 1
-        }
-        return started
-    }
-    if (def.key === "video_new_offer") {
-        // A public Ưu đãi source added after the automation was created: draft a video script (the executor never renders or publishes).
-        for (const src of await offerSources(db, ws, new Date(p.updated_at), now)) {
-            if (started >= BATCH) break
-            await trigger(db, l, `video_offer:${src.id}`, src.id, { source_id: src.id, title: src.title })
             started += 1
         }
         return started

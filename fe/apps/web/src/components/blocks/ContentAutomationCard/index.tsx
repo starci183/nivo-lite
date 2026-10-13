@@ -1,18 +1,9 @@
-"use client"
+﻿"use client"
 
 import { useTranslations } from "next-intl"
-import { useState } from "react"
-import { useContentCommand, type ContentSettings } from "@/hooks/content"
-import { writeSetAutomation } from "@/modules/db/content-settings/write-settings"
+import { useSetContentAutomation, useContentData } from "@/hooks/content"
+import { useContentAutomationForm } from "@/hooks/rhf"
 import { ContentAutomationCardBase } from "./component"
-
-/** Props of {@link ContentAutomationCard}. */
-export interface ContentAutomationCardProps {
-    /** The saved settings. */
-    readonly settings: ContentSettings
-    /** Whether the member may change them. */
-    readonly canManage: boolean
-}
 
 const COPY = [
     { key: "today_reminder", title: "autoReminder", body: "autoReminderBody" },
@@ -20,34 +11,38 @@ const COPY = [
     { key: "weekly_summary", title: "autoSummary", body: "autoSummaryBody" },
 ] as const
 
-/** The automations of the content module: switch each one on or off. */
-export const ContentAutomationCard = (props: ContentAutomationCardProps) => {
+/** The automation switches, with an optimistic value reverted when GraphQL rejects a change. */
+export const ContentAutomationCard = () => {
+    const data = useContentData()
     const t = useTranslations("content")
-    const command = useContentCommand()
-    const [on, setOn] = useState(props.settings.automations)
-    const toggle = (key: string, value: boolean) => {
-        const previous = on
-        setOn({ ...on, [key]: value })
-        command.run(
-            "automation",
-            async () => {
-                const done = await writeSetAutomation(key, value)
-                if (done.kind !== "ok") setOn(previous)
-                return done
-            },
-            () => command.say("ok", t("saveDone")),
-        )
+    const form = useContentAutomationForm(data.settings)
+    const { set, isMutating } = useSetContentAutomation()
+    const values = form.watch()
+    const toggle = (input: string, value: boolean) => {
+        const key = COPY.find((row) => row.key === input)?.key
+        if (key === undefined) return
+        const previous = form.getValues(key)
+        form.setValue(key, value)
+        void form.handleSubmit(async (request) => {
+            const saved = await set({ key, on: request[key] })
+            if (saved === undefined) form.setValue(key, previous)
+        })()
     }
     return (
         <ContentAutomationCardBase
             props={{
                 t,
-                rows: COPY.map((c) => ({ key: c.key, title: t(c.title), body: t(c.body), on: on[c.key] })),
-                canManage: props.canManage,
-                isPending: command.isPending,
-                note: command.note,
+                rows: COPY.map((row) => ({
+                    key: row.key,
+                    title: t(row.title),
+                    body: t(row.body),
+                    on: values[row.key],
+                })),
+                canManage: data.canManage,
+                isPending: isMutating || form.formState.isSubmitting,
+                note: null,
             }}
-            on={{ toggle, dismissNote: command.dismiss }}
+            on={{ toggle, dismissNote: () => form.clearErrors() }}
         />
     )
 }

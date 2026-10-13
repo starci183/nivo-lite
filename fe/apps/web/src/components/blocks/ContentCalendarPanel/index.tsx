@@ -13,17 +13,11 @@ import {
     vietnamClock,
     vnDateKey,
     postView,
+    useContentItemActions,
     type PostView,
-    type ContentWorkbenchData,
+    useContentData,
 } from "@/hooks/content"
-import { writeMoveItem } from "@/modules/db/content/write-items"
 import { ContentCalendarPanelBase } from "./component"
-
-/** Props of {@link ContentCalendarPanel}. */
-export interface ContentCalendarPanelProps {
-    /** What the workbench read for the member. */
-    readonly data: ContentWorkbenchData
-}
 
 const inMonth = (iso: string | null, y: number, m: number): boolean => {
     if (iso === null) return false
@@ -34,11 +28,12 @@ const inMonth = (iso: string | null, y: number, m: number): boolean => {
 const WEEK = 7
 
 /** The Calendar tab: month grid with drag to reschedule, agenda on phones, and the posts without a date. */
-export const ContentCalendarPanel = (props: ContentCalendarPanelProps) => {
+export const ContentCalendarPanel = () => {
+    const data = useContentData()
     const t = useTranslations("content")
     const command = useContentCommand()
+    const actions = useContentItemActions()
     const focus = useContentFocus()
-    const { data } = props
     const now = useMemo(() => new Date(data.nowIso), [data.nowIso])
     const [ym, setYm] = useState(() => {
         const here = vietnamClock(now)
@@ -73,7 +68,7 @@ export const ContentCalendarPanel = (props: ContentCalendarPanelProps) => {
         setOverKey(null)
         if (!data.canManage || item === undefined || item.status === "published") return
         const at = moveToDay(item.scheduled_at, y, m, day)
-        if (at !== item.scheduled_at) command.run("move", () => writeMoveItem(item.id, at))
+        if (at !== item.scheduled_at) command.run("move", () => actions.move(item.id, at))
     }
     return (
         <ContentCalendarPanelBase

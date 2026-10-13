@@ -1,20 +1,23 @@
 "use client"
 
-import { useFormatter, useTranslations } from "next-intl"
-import { useState } from "react"
 import {
+    useVideoProjectData,
     editorHref,
     estimateScriptSeconds,
     newScene,
     SCRIPT_MAX_SCENES,
     useVideoFailure,
-    useVideoRefresh,
+    useVideoActions,
+    useVideoScript,
     VIDEO_MAX_SECONDS,
+    type EditorStep,
+    type SceneRole,
+    type ScriptScene,
 } from "@/hooks/video"
-import type { EditorStep, MediaItem, ProjectView, SceneRole, ScriptScene } from "@/hooks/video"
+import { useFormatter, useTranslations } from "next-intl"
+import { useEffect, useState } from "react"
+import { useVideoScriptForm } from "@/hooks/rhf"
 import { navigation } from "@/modules/i18n"
-import { updateVideoProject } from "@/modules/db/video/write-project"
-import { startVideoScript } from "@/modules/db/video/write-script"
 import { VideoScriptStepBase } from "./component"
 
 /** The option that means a colour card without a file. */
@@ -26,10 +29,12 @@ const ROLE_TONE: Record<SceneRole, "accent" | "neutral" | "success"> = {
     cta: "success",
 }
 
+/** What the page tells the step. */
 interface VideoScriptStepProps {
-    readonly project: ProjectView
-    readonly media: ReadonlyArray<MediaItem>
-    readonly canEdit: boolean
+    /** The step named in the address. */
+    readonly tab: string | null
+    /** The video named in the address, or the new-video command. */
+    readonly focus: string | null
 }
 
 const swapped = (scenes: ReadonlyArray<ScriptScene>, index: number, target: number): ReadonlyArray<ScriptScene> => {
@@ -49,48 +54,52 @@ const estimateOf = (total: number, count: number): "none" | "long" | "ok" => {
 
 /** Step three of the wizard: NIVO writes the script, the owner edits it scene by scene. Moving on saves the scenes. */
 export const VideoScriptStep = (props: VideoScriptStepProps) => {
+    const editor = useVideoProjectData(props)
     const t = useTranslations("video")
     const format = useFormatter()
     const failure = useVideoFailure()
+    const { update } = useVideoActions()
+    const scriptJob = useVideoScript()
     const router = navigation.useRouter()
     const pathname = navigation.usePathname()
-    const { project } = props
-    const [scenes, setScenes] = useState<ReadonlyArray<ScriptScene>>(project.script)
-    const [dirty, setDirty] = useState(false)
-    const [pending, setPending] = useState<"write" | "save" | null>(null)
-    const [error, setError] = useState<string | null>(project.lastError)
-    const scripting = project.status === "scripting"
-    useVideoRefresh(scripting)
+    const { project } = editor
+    const form = useVideoScriptForm(project.script)
+    const scenes = form.watch("scenes")
+    const dirty = form.formState.isDirty
+    const [error, setError] = useState<string | null>(project.lastError ? failure(project.lastError) : null)
+    const scripting =
+        project.status === "scripting" ||
+        scriptJob.isMutating ||
+        (scriptJob.status !== undefined && !["succeeded", "failed"].includes(scriptJob.status.status))
+    const { reset } = form
+    useEffect(() => {
+        if (!dirty || project.status === "scripting") reset({ scenes: project.script.map((scene) => ({ ...scene })) })
+    }, [project.script, project.status, reset, dirty])
     const total = estimateScriptSeconds(scenes)
     const estimate = estimateOf(total, scenes.length)
 
     const change = (next: ReadonlyArray<ScriptScene>) => {
-        setScenes(next)
-        setDirty(true)
+        form.setValue(
+            "scenes",
+            next.map((scene) => ({ ...scene })),
+            { shouldDirty: true, shouldValidate: true },
+        )
     }
     const edit = (index: number, patch: Partial<ScriptScene>) =>
         change(scenes.map((scene, at) => (at === index ? { ...scene, ...patch } : scene)))
 
     const write = async () => {
-        setPending("write")
         setError(null)
-        const started = await startVideoScript(project.id)
-        if (started.kind !== "ok") setError(t("actionFailed", { error: failure(started.code) }))
-        router.refresh()
-        setPending(null)
+        await scriptJob.request(project.id)
     }
 
-    const go = async (step: EditorStep) => {
-        setPending("save")
-        setError(null)
-        const saved = dirty ? await updateVideoProject(project.id, { script: scenes }) : null
-        if (saved !== null && saved.kind !== "ok") {
-            setError(t("actionFailed", { error: failure(saved.code) }))
-            setPending(null)
-            return
-        }
-        router.push(`${pathname}${editorHref(project.id, step)}`)
-    }
+    const go = (step: EditorStep) =>
+        form.handleSubmit(async (values) => {
+            setError(null)
+            const saved = dirty ? await update(project.id, { script: values.scenes }) : null
+            if (saved === undefined) return
+            router.push(`${pathname}${editorHref(project.id, step)}`)
+        })()
 
     return (
         <VideoScriptStepBase
@@ -100,7 +109,7 @@ export const VideoScriptStep = (props: VideoScriptStepProps) => {
                     project.scriptMs === null
                         ? undefined
                         : t("scriptTook", { s: format.number(project.scriptMs / 1000, { maximumFractionDigits: 0 }) }),
-                writing: scripting || pending === "write",
+                writing: scripting,
                 writingLabel: t("scripting"),
                 emptyLabel: t("scriptEmpty"),
                 hasScenes: scenes.length > 0,
@@ -121,7 +130,7 @@ export const VideoScriptStep = (props: VideoScriptStepProps) => {
                 })),
                 mediaOptions: [
                     { id: NO_MEDIA, label: t("mediaNone") },
-                    ...props.media.map((item) => ({ id: item.path, label: item.name })),
+                    ...editor.media.map((item) => ({ id: item.path, label: item.name })),
                 ],
                 captionLabel: t("captionLabel"),
                 voiceLabel: t("voiceLabel"),
@@ -135,11 +144,15 @@ export const VideoScriptStep = (props: VideoScriptStepProps) => {
                 nextLabel: t("next"),
                 estimateLabel:
                     estimate === "none" ? null : t(estimate === "long" ? "tooLong" : "estimated", { n: total }),
-                canEdit: props.canEdit,
-                locked: !props.canEdit || scripting || pending === "write",
-                saving: pending === "save",
+                canEdit: editor.canEdit,
+                locked: !editor.canEdit || scripting,
+                saving: form.formState.isSubmitting,
                 canContinue: estimate === "ok",
-                error,
+                error:
+                    error ??
+                    (Object.keys(form.formState.errors).length > 0 ? t("err_default") : null) ??
+                    (scriptJob.error instanceof Error ? scriptJob.error.message : null) ??
+                    (project.lastError ? failure(project.lastError) : null),
                 dismissLabel: t("back"),
             }}
             on={{
@@ -152,7 +165,10 @@ export const VideoScriptStep = (props: VideoScriptStepProps) => {
                 add: () => change([...scenes, newScene(scenes.length > 0 ? "body" : "hook")]),
                 back: () => void go("inputs"),
                 next: () => void go("preview"),
-                dismissError: () => setError(null),
+                dismissError: () => {
+                    setError(null)
+                    form.clearErrors()
+                },
             }}
         />
     )

@@ -1,6 +1,6 @@
-import { createBrowserDbClient } from "@/modules/db/browser"
-import { MEDIA_BUCKET } from "@/modules/video"
-import type { UploadTicket } from "@/modules/video"
+import type { VideoBrandType, VideoMediaType, VideoProjectType } from "@/modules/api"
+import { ASPECTS, isGoal } from "@/modules/video"
+import type { Brand, MediaItem, ProjectStatus, ProjectView, RenderView, SceneRole } from "@/modules/video"
 
 export {
     aspectKey,
@@ -9,6 +9,8 @@ export {
     editorHref,
     estimateScriptSeconds,
     GOAL_TEMPLATES,
+    goalTemplateOf,
+    isUuid,
     MUSIC_TRACKS,
     newScene,
     SCRIPT_MAX_SCENES,
@@ -30,48 +32,74 @@ export type {
     SourceChoice,
 } from "@/modules/video"
 
-/** What a ticket request answers: a ticket, or the failure code to show. */
-export type TicketAnswer = { readonly ticket: UploadTicket } | { readonly code: string }
+const STATUSES: ReadonlyArray<ProjectStatus> = [
+    "draft",
+    "scripting",
+    "rendering",
+    "ready",
+    "approved",
+    "published",
+    "archived",
+]
+const ROLES: ReadonlyArray<SceneRole> = ["hook", "body", "cta"]
 
-/** One file that did not go up. */
-export interface UploadFailure {
-    /** The file name. */
-    readonly name: string
-    /** The failure code (err_<code> in the video catalog). */
-    readonly code: string
-}
+/** The editor's render states the generated render status maps to. */
+const RENDER_STATUS: ReadonlyMap<string, RenderView["status"]> = new Map([
+    ["done", "done"],
+    ["succeeded", "done"],
+    ["failed", "failed"],
+    ["queued", "queued"],
+])
 
-/** What an upload run produced. */
-export interface UploadResult {
-    /** Bucket paths that went up. */
-    readonly paths: ReadonlyArray<string>
-    /** One entry per file that did not. */
-    readonly failures: ReadonlyArray<UploadFailure>
-}
+const renderStatusOf = (status: string | null | undefined): RenderView["status"] =>
+    RENDER_STATUS.get(status ?? "") ?? "rendering"
 
-/**
- * Uploads files straight from the browser to the workspace media bucket. `requestTicket` is the block's own Server Action (type and size
- * are checked there); the bytes never pass through the app server. Files go up one after another.
- */
-export const uploadMediaFiles = async (
-    files: ReadonlyArray<File>,
-    requestTicket: (file: File) => Promise<TicketAnswer>,
-): Promise<UploadResult> => {
-    const browser = createBrowserDbClient()
-    const sendOne = async (file: File): Promise<string | UploadFailure> => {
-        const answer = await requestTicket(file)
-        if ("code" in answer) return { name: file.name, code: answer.code }
-        const sent = await browser.storage
-            .from(MEDIA_BUCKET)
-            .uploadToSignedUrl(answer.ticket.path, answer.ticket.token, file, { contentType: file.type })
-        return sent.error === null ? answer.ticket.path : { name: file.name, code: "upload" }
-    }
-    const results = await files.reduce<Promise<ReadonlyArray<string | UploadFailure>>>(
-        async (done, file) => [...(await done), await sendOne(file)],
-        Promise.resolve([]),
-    )
+/** Adapts the generated project payload to the editor's view model. */
+export const projectViewOf = (project: VideoProjectType): ProjectView => {
+    const render = project.render
+    const renderStatus = renderStatusOf(render?.status)
     return {
-        paths: results.filter((entry): entry is string => typeof entry === "string"),
-        failures: results.filter((entry): entry is UploadFailure => typeof entry !== "string"),
+        ...project,
+        goal: isGoal(project.goal) ? project.goal : "service",
+        aspect: ASPECTS.find((aspect) => aspect === project.aspect) ?? "9:16",
+        status: STATUSES.find((status) => status === project.status) ?? "draft",
+        scriptMs: project.scriptMs ?? null,
+        lastError: project.lastErrorCode ?? null,
+        approvedAt: project.approvedAt ?? null,
+        approvedByName: project.approvedByName ?? null,
+        publishedAt: project.publishedAt ?? null,
+        script: project.script.map((scene) => ({
+            ...scene,
+            role: ROLES.find((role) => role === scene.role) ?? "body",
+            media: scene.media ?? null,
+        })),
+        render: render
+            ? {
+                  ...render,
+                  status: renderStatus,
+                  stage: render.stage ?? null,
+                  durationMs: render.durationMs ?? null,
+                  sizeBytes: render.sizeBytes ?? null,
+                  error: render.errorCode ?? null,
+                  videoUrl: render.videoUrl ?? null,
+                  downloadUrl: render.downloadUrl ?? null,
+                  posterUrl: render.posterUrl ?? null,
+              }
+            : null,
     }
 }
+
+/** Adapts a generated media payload to the gallery's supported media kinds. */
+export const mediaItemOf = (item: VideoMediaType): MediaItem => ({
+    path: item.path,
+    name: item.name,
+    kind: item.kind === "video" ? "video" : "image",
+    url: item.url ?? null,
+})
+
+/** The brand kit as the editor holds it: the optional fields are explicit. */
+export const brandOf = (brand: VideoBrandType): Brand => ({
+    ...brand,
+    logoPath: brand.logoPath ?? null,
+    musicTrack: brand.musicTrack ?? null,
+})

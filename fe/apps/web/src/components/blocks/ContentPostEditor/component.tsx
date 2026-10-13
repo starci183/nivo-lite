@@ -7,17 +7,16 @@ import { ContentEditorPublish, type PublishProof } from "@/components/leaves/Con
 import { ContentEditorVariants, type OpenVariant } from "@/components/leaves/ContentEditorVariants"
 import { ContentStatusBadge } from "@/components/leaves/ContentStatusBadge"
 import type {
-    ContentChannel,
     ContentItem,
     ContentNote,
     ContentT,
-    EditorForm,
     ItemTransition,
     DownloadFile,
     HistoryRow,
     MediaTile,
     Pillar,
     PublishStep,
+    EditorForm,
 } from "@/hooks/content"
 import { DESCRIPTION_CLASS_NAME, FOOTER_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 

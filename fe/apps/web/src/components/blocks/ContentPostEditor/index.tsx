@@ -2,7 +2,6 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import type { PublishProof } from "@/components/leaves/ContentEditorPublish"
 import {
     CHANNEL_OPTIONS,
     CONTENT_CHANNELS,
@@ -18,38 +17,24 @@ import {
     publishSteps,
     useContentCommand,
     useContentEditorCommands,
-    useContentEditorForm,
     useContentFocus,
     warningMessage,
+    useContentEditorActions,
+    useContentFocusedItem,
+    toContentDraftWarnings,
+    useRequestContentDraft,
     type ChannelWarning,
     type ContentChannel,
-    type ContentItem,
     type ContentT,
-    type ContentWorkbenchData,
     type MediaRef,
-    type EditorActions,
 } from "@/hooks/content"
-import { writeDraftItem } from "@/modules/db/content-ai/write-draft"
-import { writeMediaUpload } from "@/modules/db/content/write-media"
-import { writeSaveItem, writeTransitionItem } from "@/modules/db/content/write-items"
-import { writeMarkPublished, writeSubmitForApproval } from "@/modules/db/content/write-publish"
+import { useContentEditorForm } from "@/hooks/rhf"
 import { ContentPostEditorBase } from "./component"
 
-/** Props of {@link ContentPostEditor}. */
-export interface ContentPostEditorProps {
-    /** The post to edit. */
-    readonly item: ContentItem
-    /** What the workbench read for the member: the lists and URLs the editor offers. */
-    readonly data: ContentWorkbenchData
-}
-
-const ACTIONS: EditorActions = {
-    saveItem: writeSaveItem,
-    draftItem: writeDraftItem,
-    submitForApproval: writeSubmitForApproval,
-    transitionItem: writeTransitionItem,
-    markPublished: writeMarkPublished,
-    uploadMedia: writeMediaUpload,
+/** What the page tells the post editor. */
+interface ContentPostEditorProps {
+    /** The post named by `?focus=` (its id, or the id of its decision). */
+    readonly focus: string | null
 }
 
 const keyOf = (index: number): string => String(index)
@@ -68,33 +53,39 @@ const warningLines = (t: ContentT, list: ReadonlyArray<ChannelWarning>): Array<s
 
 /**
  * The post editor, opened by `?focus=<post id>`: an idea or draft is editable, the rest is read-only. Once approved it shows the
- * copy-ready text, the downloads and "mark posted". Every change is saved through Server Actions; nothing is ever posted from here.
+ * copy-ready text, the downloads and "mark posted". Changes use GraphQL; AI drafts poll their queued job until it finishes.
  */
 export const ContentPostEditor = (props: ContentPostEditorProps) => {
+    const { data, item } = useContentFocusedItem(props.focus)
     const t = useTranslations("content")
     const command = useContentCommand()
     const focus = useContentFocus()
-    const state = useContentEditorForm(props.item)
-    const [tab, setTab] = useState<ContentChannel>(props.item.channels[0] ?? "facebook")
-    const [hint, setHint] = useState("")
+    const state = useContentEditorForm(item)
+    const [tab, setTab] = useState<ContentChannel>(item.channels[0] ?? "facebook")
     const [isLibraryOpen, setLibraryOpen] = useState(false)
-    const [proof, setProof] = useState<Record<string, PublishProof | undefined>>({})
     const [warnings, setWarnings] = useState<ReadonlyArray<ChannelWarning>>([])
     const [isDeleteOpen, setDeleteOpen] = useState(false)
+    const draft = useRequestContentDraft((done) => {
+        setWarnings(toContentDraftWarnings(done.warnings))
+        command.say("ok", t("draftReady", { s: done.seconds ?? 0 }))
+    })
+    const actions = useContentEditorActions(async (id, requestHint) => ({
+        kind: (await draft.request(id, requestHint)) === undefined ? "handled" : "ok",
+    }))
+    const isPending = command.isPending || draft.isPending
+    const busy = draft.isPending ? "draft" : command.busy
     const commands = useContentEditorCommands({
-        item: props.item,
-        actions: ACTIONS,
+        item: item,
+        actions,
         state,
         command,
         onClose: focus.close,
-        onWarnings: setWarnings,
     })
     const { form, patch } = state
     const withChannel = (id: string, run: (channel: ContentChannel) => void): void => {
         const found = CONTENT_CHANNELS.find((c) => c === id)
         if (found !== undefined) run(found)
     }
-    const { data, item } = props
     const active = form.channels.includes(tab) ? tab : (form.channels[0] ?? "facebook")
     const limits = channelLimits(active)
     const tile = (m: MediaRef) => mediaTile(m, data.urls)
@@ -138,12 +129,12 @@ export const ContentPostEditor = (props: ContentPostEditorProps) => {
                 scheduledText: dateTimeText(item.scheduled_at),
                 isEditable: (item.status === "idea" || item.status === "draft") && data.canManage,
                 canManage: data.canManage,
-                isPending: command.isPending,
-                busy: command.busy,
-                note: command.note,
-                hint,
+                isPending,
+                busy,
+                note: state.error === undefined ? command.note : { tone: "error", text: state.error },
+                hint: form.hint,
                 isLibraryOpen,
-                proof,
+                proof: form.proof,
                 warnings: warningLines(t, [...warnings, ...live]),
                 isDeleteOpen,
                 missingText: form.channels.some((c) => (form.variants[c]?.text ?? "").trim() === ""),
@@ -151,7 +142,10 @@ export const ContentPostEditor = (props: ContentPostEditorProps) => {
             }}
             on={{
                 close: focus.close,
-                dismissNote: command.dismiss,
+                dismissNote: () => {
+                    state.dismissError()
+                    command.dismiss()
+                },
                 patch,
                 channels: (values) => patch({ channels: CONTENT_CHANNELS.filter((c) => values.includes(c)) }),
                 tab: (id) => {
@@ -161,7 +155,7 @@ export const ContentPostEditor = (props: ContentPostEditorProps) => {
                 text: (text) => state.setVariant(active, { text }),
                 note: (note) => state.setVariant(active, { note }),
                 tags: (text) => state.setTags(active, text),
-                hint: setHint,
+                hint: (hint) => patch({ hint }),
                 toggleLibrary: () => setLibraryOpen((open) => !open),
                 attach: (key) => {
                     const found = library.find((m) => tile(m).key === key)
@@ -178,11 +172,20 @@ export const ContentPostEditor = (props: ContentPostEditorProps) => {
                 addLink: () => patch({ links: [...form.links, { url: "", label: "" }] }),
                 removeLink: (key) => patch({ links: form.links.filter((_, i) => keyOf(i) !== key) }),
                 proof: (channel, change) =>
-                    setProof((cur) => ({ ...cur, [channel]: { url: "", how: "", ...cur[channel], ...change } })),
+                    withChannel(channel, (id) =>
+                        patch({
+                            proof: { ...form.proof, [id]: { url: "", how: "", ...form.proof[id], ...change } },
+                        }),
+                    ),
                 copy: (channel) => withChannel(channel, commands.copy),
-                mark: (channel) => withChannel(channel, (c) => commands.markPosted(c, proof[c])),
+                mark: (channel) =>
+                    withChannel(channel, (id) => {
+                        void state.validateProof(id).then((valid) => {
+                            if (valid) commands.markPosted(id, form.proof[id])
+                        })
+                    }),
                 save: commands.save,
-                draft: () => commands.draft(hint),
+                draft: () => commands.draft(form.hint),
                 submit: commands.submit,
                 transition: commands.transition,
                 deleteOpen: setDeleteOpen,
