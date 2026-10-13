@@ -114,7 +114,7 @@ const web = new Map([...app].filter(([k]) => k.startsWith("NEXT_PUBLIC_")))
 if (!web.get("NEXT_PUBLIC_GOOGLE_CLIENT_ID"))
     web.set("NEXT_PUBLIC_GOOGLE_CLIENT_ID", api.get("GOOGLE_OAUTH_CLIENT_ID") ?? "")
 web.set("NEXT_PUBLIC_SITE_URL", "https://nivo.vn")
-web.set("NEXT_PUBLIC_API_URL", app.get("NEXT_PUBLIC_API_URL") || "https://api.nivo.vn")
+web.set("NEXT_PUBLIC_DEVELOPER_API_URL", app.get("NEXT_PUBLIC_DEVELOPER_API_URL") || "https://api.nivo.vn")
 const webEnv = lines(web)
 
 const buildArgs = [

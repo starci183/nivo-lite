@@ -1,0 +1,6 @@
+export { INBOUND_EVENTS_ERROR_KINDS } from "./errors/inbound-events.error"
+export { INBOUND_EVENTS_MESSAGES } from "./messages/inbound-events.messages"
+export { InboundEventsModule } from "./inbound-events.module"
+export { InboundEventsService } from "./inbound-events.service"
+export type { EventOrigin } from "./inbound-events.contracts"
+export type { UnroutedMessage } from "./inbound-events.contracts"

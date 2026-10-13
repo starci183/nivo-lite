@@ -2,7 +2,7 @@ export { QUEUE_ERROR_KINDS, QueueError, QueueErrorCode } from "./errors/queue.er
 export { QUEUE_MESSAGES } from "./messages/queue.messages"
 export { parseQueueConfig } from "./queue.config"
 export type { QueueConfig } from "./queue.config"
-export type { QueueDelivery, QueueHandler, QueueWriteOptions } from "./queue.contracts"
+export type { QueueDelivery, QueueHandler, QueueSchedulerDefinition, QueueWriteOptions } from "./queue.contracts"
 export { InjectQueueOutbox, InjectQueueWorkerRegistry, QUEUE_OUTBOX, QUEUE_WORKER_REGISTRY } from "./queue.decorators"
 export { QueueModule } from "./queue.module"
 export type { QueueOutbox, QueueWorkerRegistry } from "./queue.port"

@@ -44,6 +44,18 @@ export type {
     ChatbotRole,
     ChatbotThread,
 } from "./chatbot"
+export type {
+    BookingAction,
+    BookingBoard,
+    BookingFiguresView,
+    BookingHoursView,
+    BookingResourceView,
+    BookingServiceView,
+    BookingSettingsView,
+    BookingStatsView,
+    BookingView,
+    BookingWaitView,
+} from "./booking"
 export type { ConsoleIconName, ConsoleNavItem, ConsolePending, ConsoleWorkspace } from "./console"
 export type { DataSlot, SlotLabels } from "./slot"
 export type {
@@ -59,3 +71,36 @@ export type {
     RunRowView,
     SettingFieldView,
 } from "./automations"
+export type {
+    DeciderKind,
+    DecisionFilter,
+    DecisionKind,
+    DecisionOutcome,
+    DecisionRecord,
+    GateReason,
+} from "./decisions"
+export type {
+    AttentionKind,
+    AttentionRow,
+    AutoActivity,
+    SalesContract,
+    SalesContractStatus,
+    HandoffRow,
+    SalesConversion,
+    SalesDeal,
+    SalesDecision,
+    SalesMetrics,
+    SalesWorkbenchData,
+} from "./sales"
+export type {
+    LeadGenComment,
+    LeadGenHandoff,
+    LeadGenLead,
+    LeadGenMetrics,
+    LeadGenSource,
+    LeadGenWorkbenchData,
+    LeadOrigin,
+    LeadPlatform,
+    LeadScore,
+    LeadSourceKind,
+} from "./leadgen"

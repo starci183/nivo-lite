@@ -4,8 +4,10 @@ import { Test } from "@nestjs/testing"
 import { CLOCK } from "@modules/platform/clock"
 import { Secret } from "@modules/platform/config"
 import { HttpSecurityError, HttpSecurityErrorCode } from "./errors/http-security.error"
-import { HTTP_SECURITY_OPTIONS } from "./http-security.decorators"
+import { HTTP_SECURITY_OPTIONS, WEBHOOK_PROOF_REGISTRY } from "./http-security.decorators"
 import type { HttpSecurityOptions } from "./http-security.options"
+import { WebhookProofRegistryService } from "./webhook-proof-registry.service"
+import type { WebhookProof } from "./webhook-proof.port"
 import { WebhookSignatureService } from "./webhook-signature.service"
 
 const NOW = "2026-10-02T03:00:00.000Z"
@@ -22,10 +24,13 @@ const OPTIONS: HttpSecurityOptions = {
 const sign = (timestamp: string, body: Buffer, secret = SECRET): string =>
     `sha256=${createHmac("sha256", secret).update(`${timestamp}.`).update(body).digest("hex")}`
 
-const build = async () => {
+const build = async (proofs: ReadonlyArray<WebhookProof> = []) => {
+    const registry = new WebhookProofRegistryService()
+    for (const proof of proofs) registry.add(proof)
     const moduleRef = await Test.createTestingModule({
         providers: [
             WebhookSignatureService,
+            { provide: WEBHOOK_PROOF_REGISTRY, useValue: registry },
             { provide: HTTP_SECURITY_OPTIONS, useValue: builder<HttpSecurityOptions>(OPTIONS)() },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
         ],
@@ -169,6 +174,40 @@ describe("WebhookSignatureService", () => {
             )
 
             expect(refusal).toBe(HttpSecurityErrorCode.WebhookProviderUnknown)
+        })
+    })
+
+    describe("verify with a scope", () => {
+        const scoped = { provider: "zalo", scope: "connection-1", rawBody: BODY, signature: "mac", timestamp: undefined }
+
+        it("accepts a delivery the registered proof accepts and hands the proof the scope and the exact bytes", async () => {
+            const prove = jest.fn().mockResolvedValue(true)
+            const service = await build([{ provider: "zalo", prove }])
+
+            await expect(service.verify(scoped)).resolves.toBeUndefined()
+
+            expect(prove).toHaveBeenCalledWith({
+                scope: "connection-1",
+                rawBody: BODY,
+                signature: "mac",
+                timestamp: undefined,
+            })
+        })
+
+        it("refuses a delivery the registered proof rejects", async () => {
+            const service = await build([{ provider: "zalo", prove: () => Promise.resolve(false) }])
+
+            await expect(service.verify(scoped)).rejects.toMatchObject({
+                code: HttpSecurityErrorCode.WebhookSignatureInvalid,
+            })
+        })
+
+        it("refuses a provider with no registered proof", async () => {
+            const service = await build()
+
+            await expect(service.verify(scoped)).rejects.toMatchObject({
+                code: HttpSecurityErrorCode.WebhookProviderUnknown,
+            })
         })
     })
 })

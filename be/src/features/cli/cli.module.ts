@@ -6,6 +6,7 @@ import { SeedAutomationsModule } from "./seed-automations/seed-automations.modul
 import { SeedModulesModule } from "./seed-modules/seed-modules.module"
 import { SeedWorkspaceModule } from "./seed-workspace/seed-workspace.module"
 import { SyncN8nModule } from "./sync-n8n/sync-n8n.module"
+import { SimulateSepayModule } from "./simulate-sepay/simulate-sepay.module"
 
 @Module({
     imports: [
@@ -16,6 +17,7 @@ import { SyncN8nModule } from "./sync-n8n/sync-n8n.module"
         SeedWorkspaceModule,
         SeedAutomationsModule,
         SyncN8nModule,
+        SimulateSepayModule,
     ],
 })
 /** The cli feature root: every command group of the back end, compiled only into apps/cli. */
