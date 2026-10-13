@@ -6,11 +6,11 @@ import {
     moneyOf,
     originLabelOf,
     sourceKeyOf,
-    stampOf,
+    accountingStampOf,
     type AccountingFormat,
     type AccountingTone,
     type AccountingTranslator,
-} from "@/hooks/accounting"
+} from "@/modules/utils"
 import type { AccountingCredit, AccountingInvoice, AccountingLedgerEntry, AccountingOrder } from "@/modules/types"
 
 /** One status mark on a record row. */
@@ -118,7 +118,7 @@ export const ledgerRecordsOf = (
     entries.map((entry) => ({
         id: entry.id,
         title: entry.description,
-        description: [stampOf(format, entry.at), entry.linked === null ? null : t("linkedTo", { ref: entry.linked })]
+        description: [accountingStampOf(format, entry.at), entry.linked === null ? null : t("linkedTo", { ref: entry.linked })]
             .filter(Boolean)
             .join(" · "),
         badges: marksOf(

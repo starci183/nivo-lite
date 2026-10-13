@@ -1,4 +1,4 @@
-import { Breadcrumbs, SectionHeader } from "@starci/grammar/common"
+import { Breadcrumbs, Button, SectionHeader } from "@starci/grammar/common"
 import type { BreadcrumbItem } from "@starci/grammar/common"
 import { HEAD_CLASS_NAME } from "./classNames"
 
@@ -8,7 +8,9 @@ type PageHeadingProps = {
     readonly crumbLabel: string
     /** The trail, the current page last. */
     readonly crumbs: ReadonlyArray<BreadcrumbItem>
-    readonly eyebrow: string
+    readonly eyebrow?: string
+    readonly actionLabel?: string
+    readonly actionHref?: string
     readonly title: string
     readonly description: string
 }
@@ -17,6 +19,18 @@ type PageHeadingProps = {
 export const PageHeading = (props: PageHeadingProps) => (
     <div className={HEAD_CLASS_NAME}>
         <Breadcrumbs label={props.crumbLabel} items={props.crumbs} />
-        <SectionHeader level={1} eyebrow={props.eyebrow} title={props.title} description={props.description} />
+        <SectionHeader
+            level={1}
+            eyebrow={props.eyebrow}
+            title={props.title}
+            description={props.description}
+            action={
+                props.actionLabel ? (
+                    <Button variant="secondary" href={props.actionHref}>
+                        {props.actionLabel}
+                    </Button>
+                ) : undefined
+            }
+        />
     </div>
 )
