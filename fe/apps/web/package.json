@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start -p 3100",
     "typecheck": "tsc --noEmit",
+    "codegen": "graphql-codegen --config codegen.ts",
     "lint": "starci app lint --workspace ."
   },
   "dependencies": {
@@ -52,7 +53,7 @@
     "telegram": "^2.26.22",
     "unpdf": "^1.8.1",
     "yaml": "^2.9.1",
-    "zod": "4.4.3",
+    "zod": "4.6.7",
     "zustand": "5.0.12"
   },
   "devDependencies": {
