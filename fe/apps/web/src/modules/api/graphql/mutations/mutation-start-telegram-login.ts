@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationStartTelegramLoginArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { StartTelegramLoginMutation, StartTelegramLoginMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `startTelegramLogin` mutation. */
-export type MutateStartTelegramLoginRequest = MutationStartTelegramLoginArgs["input"]
+type MutateStartTelegramLoginRequest = WireInput<StartTelegramLoginMutationVariables["input"]>
 
 /** The response of the `startTelegramLogin` mutation. */
-type MutateStartTelegramLoginResponse = Pick<Mutation, "startTelegramLogin">
+type MutateStartTelegramLoginResponse = StartTelegramLoginMutation
 
 const mutation1: TypedDocumentNode<
     MutateStartTelegramLoginResponse,

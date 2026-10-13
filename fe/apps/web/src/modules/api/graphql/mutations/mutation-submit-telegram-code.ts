@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationSubmitTelegramCodeArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { SubmitTelegramCodeMutation, SubmitTelegramCodeMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `submitTelegramCode` mutation. */
-export type MutateSubmitTelegramCodeRequest = MutationSubmitTelegramCodeArgs["input"]
+type MutateSubmitTelegramCodeRequest = WireInput<SubmitTelegramCodeMutationVariables["input"]>
 
 /** The response of the `submitTelegramCode` mutation. */
-type MutateSubmitTelegramCodeResponse = Pick<Mutation, "submitTelegramCode">
+type MutateSubmitTelegramCodeResponse = SubmitTelegramCodeMutation
 
 const mutation1: TypedDocumentNode<
     MutateSubmitTelegramCodeResponse,

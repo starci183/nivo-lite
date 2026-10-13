@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationTransferInventoryStockArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { TransferInventoryStockMutation, TransferInventoryStockMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `transferInventoryStock` mutation. */
-export type MutateTransferInventoryStockRequest = MutationTransferInventoryStockArgs["input"]
+export type MutateTransferInventoryStockRequest = WireInput<TransferInventoryStockMutationVariables["input"]>
 
 /** The response of the `transferInventoryStock` mutation. */
-type MutateTransferInventoryStockResponse = Pick<Mutation, "transferInventoryStock">
+type MutateTransferInventoryStockResponse = TransferInventoryStockMutation
 
 const mutation1: TypedDocumentNode<
     MutateTransferInventoryStockResponse,

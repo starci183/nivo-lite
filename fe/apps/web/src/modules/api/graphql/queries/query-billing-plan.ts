@@ -1,10 +1,10 @@
 import { gql, type TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryBillingPlanArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { BillingPlanQuery, BillingPlanQueryVariables } from "../__generated__/graphql"
 
-type QueryBillingPlanRequest = QueryBillingPlanArgs["input"]
-type QueryBillingPlanResponse = Pick<Query, "billingPlan">
+type QueryBillingPlanRequest = WireInput<BillingPlanQueryVariables["input"]>
+type QueryBillingPlanResponse = BillingPlanQuery
 
 type QueryBillingPlanParams = QueryParams<QueryBillingPlan, QueryBillingPlanRequest> & {
     request: QueryBillingPlanRequest
@@ -35,6 +35,11 @@ const query1: TypedDocumentNode<QueryBillingPlanResponse, InputVariables<QueryBi
             perSeat
             listed
             tiers {
+                creditsPerMonth
+                priceVnd
+                perSeat
+            }
+            packs {
                 creditsPerMonth
                 priceVnd
                 perSeat

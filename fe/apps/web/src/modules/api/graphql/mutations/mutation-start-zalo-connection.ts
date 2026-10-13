@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationStartZaloConnectionArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { StartZaloConnectionMutation, StartZaloConnectionMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `startZaloConnection` mutation. */
-export type MutateStartZaloConnectionRequest = MutationStartZaloConnectionArgs["input"]
+type MutateStartZaloConnectionRequest = WireInput<StartZaloConnectionMutationVariables["input"]>
 
 /** The response of the `startZaloConnection` mutation. */
-type MutateStartZaloConnectionResponse = Pick<Mutation, "startZaloConnection">
+type MutateStartZaloConnectionResponse = StartZaloConnectionMutation
 
 const mutation1: TypedDocumentNode<
     MutateStartZaloConnectionResponse,

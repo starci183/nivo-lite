@@ -1,18 +1,19 @@
+import type { SyncLoyaltyMembersMutation } from "../__generated__/graphql"
 import { gql } from "@apollo/client"
 import type { DocumentNode } from "graphql"
 import { createAuthApolloClient } from "../clients"
 import type { MutateParams } from "../types"
-import type { MutateSyncLoyaltyMembersResponse } from "./types/sync-loyalty-members"
 
 const mutation1 = gql`
     mutation SyncLoyaltyMembers {
         syncLoyaltyMembers {
-            created linked
+            created
+            linked
         }
     }
 `
 
-export enum MutationSyncLoyaltyMembers {
+enum MutationSyncLoyaltyMembers {
     Mutation1 = "mutation1",
 }
 
@@ -21,10 +22,13 @@ const mutationMap: Record<MutationSyncLoyaltyMembers, DocumentNode> = {
 }
 
 /** Apollo params for {@link mutateSyncLoyaltyMembers}. */
-export type MutationSyncLoyaltyMembersParams = Omit<MutateParams<MutationSyncLoyaltyMembers, undefined>, "request">
+type MutationSyncLoyaltyMembersParams = Omit<MutateParams<MutationSyncLoyaltyMembers, undefined>, "request">
 
 /** Creates loyalty members for the customers of the workspace (no input). */
-export const mutateSyncLoyaltyMembers = async ({ mutation = MutationSyncLoyaltyMembers.Mutation1, signal }: MutationSyncLoyaltyMembersParams = {}) => {
+export const mutateSyncLoyaltyMembers = async ({
+    mutation = MutationSyncLoyaltyMembers.Mutation1,
+    signal,
+}: MutationSyncLoyaltyMembersParams = {}) => {
     const apollo = createAuthApolloClient({ signal })
-    return apollo.mutate<MutateSyncLoyaltyMembersResponse>({ mutation: mutationMap[mutation] })
+    return apollo.mutate<SyncLoyaltyMembersMutation>({ mutation: mutationMap[mutation] })
 }

@@ -1,7 +1,5 @@
-import type { Mutation, MutationSaveBookingHoursArgs } from "../../__generated__/schema"
+import type { SaveBookingHoursMutationVariables } from "../../__generated__/graphql"
+import type { WireInput } from "../../types"
 
 /** The input of the `saveBookingHours` mutation. */
-export type MutateSaveBookingHoursRequest = MutationSaveBookingHoursArgs["input"]
-
-/** The response of the `saveBookingHours` mutation. */
-export type MutateSaveBookingHoursResponse = Pick<Mutation, "saveBookingHours">
+export type MutateSaveBookingHoursRequest = WireInput<SaveBookingHoursMutationVariables["input"]>

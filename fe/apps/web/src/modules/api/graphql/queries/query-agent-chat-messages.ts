@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryAgentChatMessagesArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { AgentChatMessagesQuery, AgentChatMessagesQueryVariables } from "../__generated__/graphql"
 
 /** Generated variables of the conversation thread query. */
-type QueryAgentChatMessagesRequest = QueryAgentChatMessagesArgs["input"]
+type QueryAgentChatMessagesRequest = WireInput<AgentChatMessagesQueryVariables["input"]>
 
 /** Generated selection of the conversation thread query. */
-type QueryAgentChatMessagesResponse = Pick<Query, "agentChatMessages">
+type QueryAgentChatMessagesResponse = AgentChatMessagesQuery
 
 type Document = TypedDocumentNode<QueryAgentChatMessagesResponse, InputVariables<QueryAgentChatMessagesRequest>>
 
