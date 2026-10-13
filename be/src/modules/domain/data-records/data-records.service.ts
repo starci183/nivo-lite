@@ -1,13 +1,17 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { DataEntity, DataRecordInput } from "./data-hub.contracts"
-import type { DataCountRow } from "./persistence/data-hub.rows"
-import { COUNT_DATA_RECORDS, COUNT_EXISTING_DATA_RECORDS, UPSERT_DATA_RECORDS } from "./persistence/data-hub.sql"
+import { eachInOrder } from "@modules/platform/primitives"
+import type { DataEntity, DataRecordInput } from "./data-records.contracts"
+import type { DataCountRow } from "./persistence/data-records.rows"
+import { COUNT_DATA_RECORDS, COUNT_EXISTING_DATA_RECORDS, UPSERT_DATA_RECORDS } from "./persistence/data-records.sql"
 
 const BATCH = 500
 const ID_MAX = 300
 const TITLE_MAX = 300
+
+const batchesOf = <T>(items: ReadonlyArray<T>): ReadonlyArray<ReadonlyArray<T>> =>
+    Array.from({ length: Math.ceil(items.length / BATCH) }, (_unused, index) => items.slice(index * BATCH, (index + 1) * BATCH))
 
 @Injectable()
 /** The rows the owner's own systems put in the hub: one per connection, entity and source id, so a re-sync updates instead of duplicating. */
@@ -22,9 +26,8 @@ export class DataRecordsService {
         rows: ReadonlyArray<DataRecordInput>,
     ): Promise<number> {
         const usable = rows.filter((row) => row.externalId !== "" && String(row.externalId).length <= ID_MAX)
-        let written = 0
-        for (let from = 0; from < usable.length; from += BATCH) {
-            const chunk = usable.slice(from, from + BATCH).map((row) => ({
+        await eachInOrder(batchesOf(usable), async (batch) => {
+            const chunk = batch.map((row) => ({
                 external_id: String(row.externalId),
                 title: (row.title ?? "").slice(0, TITLE_MAX),
                 occurred_at:
@@ -39,23 +42,18 @@ export class DataRecordsService {
                 entity,
                 JSON.stringify(chunk),
             ])
-            written += chunk.length
-        }
-        return written
+        })
+        return usable.length
     }
 
     /** How many of these source ids the connection already holds for the entity (what a re-import will update). */
     async countExisting(connectionId: string, entity: DataEntity, externalIds: ReadonlyArray<string>): Promise<number> {
-        let found = 0
-        for (let from = 0; from < externalIds.length; from += BATCH) {
-            const [row] = await this.entityManager.query<Array<DataCountRow>>(COUNT_EXISTING_DATA_RECORDS, [
-                connectionId,
-                entity,
-                externalIds.slice(from, from + BATCH),
-            ])
-            found += row?.n ?? 0
-        }
-        return found
+        const counts = await Promise.all(
+            batchesOf(externalIds).map((ids) =>
+                this.entityManager.query<Array<DataCountRow>>(COUNT_EXISTING_DATA_RECORDS, [connectionId, entity, ids]),
+            ),
+        )
+        return counts.reduce((total, [row]) => total + (row?.n ?? 0), 0)
     }
 
     /** How many rows the connection holds in the hub. */

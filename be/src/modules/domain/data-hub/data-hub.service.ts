@@ -1,7 +1,14 @@
 import { Injectable } from "@nestjs/common"
 import { ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionActor, ConnectionMember } from "@modules/domain/connections"
-import type { DataConnection, DataConnectionChange, DataConnectionDraft, DataProvider } from "./data-hub.contracts"
+import type {
+    DataConnection,
+    DataConnectionChange,
+    DataConnectionDraft,
+    ProviderFilter,
+    StoredCredential,
+    SyncMinutes,
+} from "./data-hub.contracts"
 import { isDataProvider } from "./data-hub.contracts"
 import { toDataConnection } from "./data-hub.mapper"
 import { DataHubError, DataHubErrorCode } from "./errors/data-hub.error"
@@ -21,17 +28,19 @@ export class DataHubService {
     }
 
     /** One live data connection of the workspace (of the given provider when one is named); a missing, disconnected or foreign one is a typed not-found. */
-    async own(workspaceId: string, id: string, provider?: DataProvider): Promise<DataConnection> {
+    async own(workspaceId: string, id: string, provider: ProviderFilter = undefined): Promise<DataConnection> {
         const record = await this.connections.find(workspaceId, id)
+        const kind = record?.provider
         if (
             record === null ||
+            kind === undefined ||
             record.status === "disconnected" ||
-            !isDataProvider(record.provider) ||
-            (provider !== undefined && record.provider !== provider)
+            !isDataProvider(kind) ||
+            (provider !== undefined && kind !== provider)
         ) {
             throw new DataHubError({ code: DataHubErrorCode.NotFound })
         }
-        return toDataConnection(record, await this.connections.scheduleOf(workspaceId, id))
+        return toDataConnection(record, kind, await this.connections.scheduleOf(workspaceId, id))
     }
 
     /** Creates a data connection with its sealed credential and schedule; answers its id. */
@@ -67,7 +76,7 @@ export class DataHubService {
     async changeSchedule(
         actor: ConnectionActor,
         id: string,
-        everyMinutes: number | null | undefined,
+        everyMinutes: SyncMinutes,
     ): Promise<void> {
         await this.owner(actor)
         await this.own(actor.workspaceId, id)
@@ -77,7 +86,7 @@ export class DataHubService {
     }
 
     /** The opened credential of a connection the caller has already proved is its own; null when none is stored or it cannot be opened. */
-    async credentialOf(id: string): Promise<string | null> {
+    async credentialOf(id: string): Promise<StoredCredential> {
         const secret = await this.connections.readSecret(id)
         return secret === null ? null : secret.plain
     }

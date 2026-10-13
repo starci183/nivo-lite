@@ -1,7 +1,7 @@
 import { Field, ID, InputType, Int } from "@nestjs/graphql"
 import { Type } from "class-transformer"
 import { IsDefined, IsIn, IsOptional, IsString, IsUUID, MaxLength, ValidateNested } from "class-validator"
-import { DataJsonScalar } from "./data-json.scalar"
+import { DataJsonScalar } from "./data-json.type"
 import { DatabaseTargetInput } from "./database-target.input"
 
 @InputType()

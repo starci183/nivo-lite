@@ -1,6 +1,3 @@
-import type { WizardConnection } from "@modules/domain/channel-connections"
-import type { WizardConnectionType } from "./dto/wizard-connection.type"
-
 /** The display names of the Vietnamese banks a shop owner can pick, by the short code providers print. */
 const BANK_NAMES: Readonly<Record<string, string>> = {
     VCB: "Vietcombank",
@@ -40,9 +37,3 @@ export const bankNameOf = (bankCode: string): string => {
     const code = bankCode.trim().toUpperCase()
     return BANK_NAMES[code] ?? code
 }
-
-/** Maps a wizard connection of a bank or payment feed to the GraphQL type, adding the bank display name. */
-export const toWizardConnectionType = (connection: WizardConnection): WizardConnectionType => ({
-    ...connection,
-    bank: bankNameOf(connection.bankCode),
-})

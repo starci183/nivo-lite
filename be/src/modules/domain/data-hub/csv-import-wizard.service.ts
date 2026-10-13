@@ -6,7 +6,7 @@ import type { Table, TableClient } from "@modules/integrations/data-sources"
 import type { DataRecordInput } from "./data-hub.contracts"
 import { CSV_COPY } from "./messages/csv-import.messages"
 import { DataHubService } from "./data-hub.service"
-import { DataRecordsService } from "./data-records.service"
+import { DataRecordsService } from "@modules/domain/data-records"
 import { CSV_MAX_DOCUMENT_FILES } from "./csv-import.contracts"
 import type {
     CsvConfig,

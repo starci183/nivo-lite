@@ -1,5 +1,3 @@
-import { DATA_SOURCES_ERROR_KINDS } from "@modules/integrations/data-sources"
-import type { DataSourcesErrorCode } from "@modules/integrations/data-sources"
 import { DomainError } from "@modules/platform/errors"
 import type { ErrorKind } from "@modules/platform/errors"
 
@@ -15,9 +13,8 @@ export enum DataHubErrorCode {
     SyncFailed = "DATA_HUB_SYNC_FAILED",
 }
 
-/** How each data-hub code travels, with the data-sources codes it surfaces. */
-export const DATA_HUB_ERROR_KINDS: Record<DataHubErrorCode | DataSourcesErrorCode, ErrorKind> = {
-    ...DATA_SOURCES_ERROR_KINDS,
+/** How each data-hub code travels. */
+export const DATA_HUB_ERROR_KINDS: Record<DataHubErrorCode, ErrorKind> = {
     [DataHubErrorCode.NotFound]: "not-found",
     [DataHubErrorCode.Invalid]: "invalid",
     [DataHubErrorCode.ScheduleInvalid]: "invalid",

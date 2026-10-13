@@ -17,15 +17,3 @@ export interface DataSyncRunRow {
     /** When it ended, ISO 8601 text; null while it runs. */
     readonly finished_at: string | null
 }
-
-/** The id an insert answers. */
-export interface DataRunIdRow {
-    /** The run id. */
-    readonly id: string
-}
-
-/** A count of hub rows. */
-export interface DataCountRow {
-    /** How many. */
-    readonly n: number
-}
