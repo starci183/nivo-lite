@@ -25,6 +25,22 @@ export interface LeadGenFlow {
     continueAfter(ctx: WorkContext, item: WorkItem): Promise<void>
 }
 
+/** The customer a lead names, as a decision note quotes it. */
+export interface DecisionLead {
+    /** The lead id. */
+    readonly id: string
+    /** The customer's name. */
+    readonly contact_name: string
+    /** The channel label. */
+    readonly channel: string
+}
+
+/** The one door to the leads: the decision log names the customer of a settled card. The app root binds it to the leads capability. */
+export interface LeadDirectory {
+    /** One lead of the workspace; an unknown or foreign id raises the owner's not-found error. */
+    require(workspaceId: string, leadId: string): Promise<DecisionLead>
+}
+
 /** The one door to the channel connections: how far the item's agent may act on the connection the message would leave through. */
 export interface OutboundAccessGate {
     /**

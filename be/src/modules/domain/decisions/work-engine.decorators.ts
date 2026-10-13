@@ -3,6 +3,7 @@ import type { TypedParameterDecorator } from "@modules/platform/composition"
 import type {
     DecisionEvents,
     InboundEventStatus,
+    LeadDirectory,
     LeadGenFlow,
     OutboundAccessGate,
     PaymentReceipts,
@@ -19,6 +20,9 @@ export const PAYMENT_RECEIPTS: unique symbol = Symbol("domain.decisions.payment-
 
 /** Token of the lead generation flow port. */
 export const LEAD_GEN_FLOW: unique symbol = Symbol("domain.decisions.lead-gen-flow")
+
+/** Token of the lead directory port. */
+export const LEAD_DIRECTORY: unique symbol = Symbol("domain.decisions.lead-directory")
 
 /** Token of the outbound access port. */
 export const OUTBOUND_ACCESS_GATE: unique symbol = Symbol("domain.decisions.outbound-access-gate")
@@ -41,3 +45,6 @@ export const InjectLeadGenFlow = (): TypedParameterDecorator<LeadGenFlow> => inj
 /** Injects the outbound access port. Parameter type: OutboundAccessGate. */
 export const InjectOutboundAccessGate = (): TypedParameterDecorator<OutboundAccessGate> =>
     injector<OutboundAccessGate>(OUTBOUND_ACCESS_GATE)
+
+/** Injects the lead directory port. Parameter type: LeadDirectory. */
+export const InjectLeadDirectory = (): TypedParameterDecorator<LeadDirectory> => injector<LeadDirectory>(LEAD_DIRECTORY)

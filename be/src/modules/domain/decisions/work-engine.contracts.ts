@@ -201,4 +201,7 @@ export interface ProposalSeed {
 }
 
 /** The data a published decision carries. */
-export type DecisionPayload = Readonly<Record<string, unknown>>
+export interface DecisionPayload {
+    /** Any value the decision carries (work item, action, department, outcome, decider, lead, summary). */
+    readonly [name: string]: unknown
+}

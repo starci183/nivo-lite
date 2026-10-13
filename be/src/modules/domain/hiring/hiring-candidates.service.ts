@@ -7,7 +7,7 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { CvStorage } from "./cv-storage.port"
 import { HiringError, HiringErrorCode } from "./errors/hiring.error"
-import type { ApplicationSource, CandidateRecord, JobRecord } from "./hiring.contracts"
+import type { ApplicationSource, CandidateRecord, DeletedCandidates, JobRecord } from "./hiring.contracts"
 import type {
     CandidateCvOutput,
     CandidateCvParams,
@@ -235,10 +235,7 @@ export class HiringCandidatesService {
     }
 
     /** Deletes candidates with every trace: the answers, the consent, the interviews, the offers and the CV files. */
-    async deleteAll(
-        workspaceId: string,
-        candidateIds: ReadonlyArray<string>,
-    ): Promise<{ candidates: number; files: number }> {
+    async deleteAll(workspaceId: string, candidateIds: ReadonlyArray<string>): Promise<DeletedCandidates> {
         if (candidateIds.length === 0) return { candidates: 0, files: 0 }
         const [row] = await this.entityManager.query<Array<PathsRow>>(DELETE_CANDIDATES, [
             workspaceId,

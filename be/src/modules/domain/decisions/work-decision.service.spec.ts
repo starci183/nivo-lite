@@ -1,9 +1,13 @@
-import { builder, mock } from "@starci/jest-preset"
+import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { ExecutionsService } from "@modules/domain/executions"
-import type { ExecutionRow } from "@modules/domain/executions"
+import type { ExecutionRecordRow, ExecutionRow } from "@modules/domain/executions"
+import { MessagesService } from "@modules/domain/messages"
+import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
+import type { ResponsibilityRecord } from "@modules/domain/responsibilities"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import type { Decider, WorkItem } from "./decisions.contracts"
@@ -13,6 +17,8 @@ import { DecisionsErrorCode } from "./errors/decisions.error"
 import { EvidenceService } from "./evidence.service"
 import type { ExecutionDecisionRequest, WorkDecisionRequest } from "./work-decision.contracts"
 import { WorkDecisionService } from "./work-decision.service"
+import { LEAD_DIRECTORY } from "./work-engine.decorators"
+import type { LeadDirectory } from "./work-engine.port"
 import { WorkEngineService } from "./work-engine.service"
 
 const memberOf = builder<WorkspaceMember>({
@@ -77,11 +83,41 @@ const cardRequestOf = builder<ExecutionDecisionRequest>({
     locale: "en",
 })
 
+const recordOf = builder<ExecutionRecordRow>({
+    id: "exec-1",
+    status: "pending_approval",
+    work_item_id: null,
+    draft: "Hello",
+    workspace_id: "ws-1",
+    responsibility_id: "resp-1",
+    agent_id: null,
+    kind: "follow_up",
+    decided_by: null,
+    decided_at: null,
+    created_at: "2026-10-12T10:00:00.000Z",
+})
+
+const responsibilityOf = builder<ResponsibilityRecord>({
+    id: "resp-1",
+    workspace_id: "ws-1",
+    lead_id: "lead-1",
+    title: "Follow up",
+    owner_kind: "agent",
+    owner_agent_id: null,
+    owner_name: "Sales",
+    next_action: "",
+    due_at: null,
+    status: "waiting_approval",
+    created_at: "2026-10-12T10:00:00.000Z",
+})
+
 interface Setup {
     readonly member?: WorkspaceMember
     readonly item?: WorkItem
     readonly card?: ExecutionRow | null
     readonly settled?: ExecutionRow | null
+    readonly record?: ExecutionRecordRow | null
+    readonly responsibility?: ResponsibilityRecord | null
 }
 
 const build = async (setup: Setup = {}) => {
@@ -93,6 +129,17 @@ const build = async (setup: Setup = {}) => {
     const settle = jest.fn().mockResolvedValue(setup.settled === undefined ? null : setup.settled)
     const log = jest.fn().mockResolvedValue(undefined)
     const sendCommand = jest.fn().mockResolvedValue({ ok: true })
+    const findRecord = jest.fn().mockResolvedValue(setup.record === undefined ? recordOf() : setup.record)
+    const tx = fakeTransaction(mockEntityManager())
+    const responsibilities = mock<ResponsibilityJournalService>()
+    responsibilities.find.mockResolvedValue(
+        setup.responsibility === undefined ? responsibilityOf() : setup.responsibility,
+    )
+    responsibilities.setStatus.mockResolvedValue(undefined)
+    const leads = mock<LeadDirectory>()
+    leads.require.mockResolvedValue({ id: "lead-1", contact_name: "Minh", channel: "zalo" })
+    const office = mock<MessagesService>()
+    office.postSystem.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkDecisionService,
@@ -104,11 +151,27 @@ const build = async (setup: Setup = {}) => {
             { provide: CommandBusService, useValue: mock<CommandBusService>({ sendCommand }) },
             { provide: DecisionsService, useValue: mock<DecisionsService>({ getWorkItem }) },
             { provide: WorkEngineService, useValue: mock<WorkEngineService>({ resumeWork }) },
-            { provide: ExecutionsService, useValue: mock<ExecutionsService>({ find, settle }) },
+            { provide: ExecutionsService, useValue: mock<ExecutionsService>({ find, findRecord, settle }) },
             { provide: EvidenceService, useValue: mock<EvidenceService>({ log }) },
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
+            { provide: ResponsibilityJournalService, useValue: responsibilities },
+            { provide: LEAD_DIRECTORY, useValue: leads },
+            { provide: MessagesService, useValue: office },
         ],
     }).compile()
-    return { service: moduleRef.get(WorkDecisionService), resumeWork, find, settle, log, done, sendCommand, require }
+    return {
+        service: moduleRef.get(WorkDecisionService),
+        resumeWork,
+        find,
+        settle,
+        log,
+        done,
+        sendCommand,
+        require,
+        tx,
+        responsibilities,
+        office,
+    }
 }
 
 const owner: Decider = { name: "An", kind: "owner" }
@@ -284,9 +347,9 @@ describe("WorkDecisionService", () => {
             expect(result).toEqual({ id: "exec-1", status: "rejected", work_item_id: "item-1", draft: "Hello" })
         })
 
-        it("is not found when the card does not exist or has no work item", async () => {
+        it("is not found when the card does not exist or its legacy record is gone", async () => {
             const missing = await build({ card: null })
-            const legacy = await build({ card: cardOf({ work_item_id: null }) })
+            const legacy = await build({ card: cardOf({ work_item_id: null }), record: null })
 
             await expect(missing.service.decideExecution("user-1", "ws-1", cardRequestOf())).rejects.toThrow(
                 DecisionsErrorCode.NotFound,
@@ -303,6 +366,90 @@ describe("WorkDecisionService", () => {
                 DecisionsErrorCode.NotWaiting,
             )
             expect(resumeWork).not.toHaveBeenCalled()
+        })
+    })
+
+    describe("decideExecution of a legacy card", () => {
+        const legacyCard = cardOf({ work_item_id: null })
+
+        it("settles the card, closes the responsibility, logs and posts the decision in one transaction", async () => {
+            const settled = cardOf({ status: "approved", work_item_id: null, draft: "Hi Minh" })
+            const { service, tx, responsibilities, log, office, resumeWork } = await build({
+                card: legacyCard,
+                settled,
+            })
+
+            await expect(service.decideExecution("user-1", "ws-1", cardRequestOf())).resolves.toBe(settled)
+
+            expect(tx.commits).toBe(1)
+            expect(resumeWork).not.toHaveBeenCalled()
+            expect(responsibilities.setStatus).toHaveBeenCalledWith(ctxOf("An"), "resp-1", "done", expect.anything())
+            expect(log).toHaveBeenCalledWith(
+                ctxOf("An"),
+                {
+                    lead_id: "lead-1",
+                    kind: "execution.approved",
+                    actor: "An",
+                    summary: "legacy.approvedEvent()",
+                    evidence: "Hi Minh",
+                },
+                expect.anything(),
+            )
+            expect(office.postSystem).toHaveBeenCalledWith({
+                workspaceId: "ws-1",
+                leadId: "lead-1",
+                manager: expect.anything(),
+                body: "legacy.approvedMessage()",
+            })
+        })
+
+        it("reopens the responsibility of a rejected card and logs no draft", async () => {
+            const settled = cardOf({ status: "rejected", work_item_id: null })
+            const { service, responsibilities, log } = await build({ card: legacyCard, settled })
+
+            await expect(
+                service.decideExecution("user-1", "ws-1", cardRequestOf({ decision: "rejected" })),
+            ).resolves.toBe(settled)
+
+            expect(responsibilities.setStatus).toHaveBeenCalledWith(ctxOf("An"), "resp-1", "open", expect.anything())
+            expect(log).toHaveBeenCalledWith(
+                ctxOf("An"),
+                expect.objectContaining({ kind: "execution.rejected", evidence: null }),
+                expect.anything(),
+            )
+        })
+
+        it("lets only an owner or a manager decide it", async () => {
+            const { service, tx } = await build({ card: legacyCard, member: memberOf({ role: "staff" }) })
+
+            await expect(service.decideExecution("user-1", "ws-1", cardRequestOf())).rejects.toMatchObject({
+                code: DecisionsErrorCode.NotAllowed,
+            })
+            expect(tx.outcomes).toEqual([])
+        })
+
+        it.each([
+            {
+                name: "a record decided meanwhile",
+                setup: { record: recordOf({ status: "approved" }) },
+                code: DecisionsErrorCode.NotWaiting,
+            },
+            {
+                name: "a record that gained a work item",
+                setup: { record: recordOf({ work_item_id: "item-1" }) },
+                code: DecisionsErrorCode.StateChanged,
+            },
+            {
+                name: "a responsibility that is gone",
+                setup: { responsibility: null },
+                code: DecisionsErrorCode.NotFound,
+            },
+            { name: "a card nobody could settle", setup: { settled: null }, code: DecisionsErrorCode.NotWaiting },
+        ])("rolls back on $name", async ({ setup, code }) => {
+            const { service, tx } = await build({ card: legacyCard, ...setup })
+
+            await expect(service.decideExecution("user-1", "ws-1", cardRequestOf())).rejects.toMatchObject({ code })
+            expect(tx.rollbacks).toBe(1)
         })
     })
 })

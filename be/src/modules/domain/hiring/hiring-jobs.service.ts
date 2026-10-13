@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { OfficeLog, TextGenerator } from "@modules/domain/module-ops"
+import { OfficeLog, ModuleTextGenerator } from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -55,7 +55,7 @@ export class HiringJobsService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
         private readonly members: WorkspaceMembersService,
-        private readonly generator: TextGenerator,
+        private readonly generator: ModuleTextGenerator,
         private readonly data: HiringDataService,
         private readonly words: HiringTextService,
         private readonly settings: HiringSettingsService,
