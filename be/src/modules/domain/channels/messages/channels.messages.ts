@@ -3,6 +3,9 @@ import type { MessageBundle } from "@modules/platform/i18n"
 /** The reason stored on a Zalo connection whose refresh token Zalo refused: the owner reads it on Connections, in Vietnamese as the product does. */
 export const ZALO_RECONNECT_REASON = "Zalo OA cần được kết nối lại (token hết hạn hoặc bị thu hồi). Bấm Kết nối lại."
 
+/** The reason stored on a Zalo connection whose authorization could not be completed: the owner reads it on Connections. */
+export const ZALO_AUTHORIZATION_FAILED_REASON = "Không hoàn tất được việc cấp quyền Zalo. Bấm Kết nối lại để thử lại."
+
 /** Display text of the channels codes, Vietnamese and English. */
 export const CHANNELS_MESSAGES: MessageBundle = {
     vi: {

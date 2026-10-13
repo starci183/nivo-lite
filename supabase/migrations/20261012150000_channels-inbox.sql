@@ -78,3 +78,39 @@ begin
 exception when others then
     raise notice 'could not unschedule the old channel jobs (%)', sqlerrm;
 end $$;
+
+-- The owner returns from Zalo: the front end hands what Zalo sent to the database, which checks the caller manages the connection workspace and
+-- puts the job on its queue; the back end exchanges the one-time code for tokens and the connection turns connected (or failing) on its row.
+select pgmq.create('zalo_authorization');
+
+create or replace function public.zalo_authorization_return(p_state text, p_code text, p_oa_id text default null)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    v_connection uuid;
+    v_workspace uuid;
+begin
+    begin
+        v_connection := split_part(p_state, '.', 1)::uuid;
+    exception when invalid_text_representation then
+        raise exception 'the Zalo authorization state is not valid' using errcode = '23514';
+    end;
+    select workspace_id into v_workspace from public.connections where id = v_connection and provider = 'zalo_oa';
+    if v_workspace is null or not public.is_manager(v_workspace) then
+        raise exception 'only an owner or manager of the workspace connects a channel' using errcode = '42501';
+    end if;
+    perform public.job_enqueue(
+        v_workspace,
+        'zalo_authorization',
+        'complete-zalo-authorization',
+        jsonb_build_object('workspaceId', v_workspace, 'state', p_state, 'code', p_code, 'oaId', p_oa_id),
+        'zalo-authorization:' || v_connection || ':' || md5(p_state)
+    );
+    return v_connection;
+end $$;
+
+revoke execute on function public.zalo_authorization_return(text, text, text) from public, anon;
+grant execute on function public.zalo_authorization_return(text, text, text) to authenticated;

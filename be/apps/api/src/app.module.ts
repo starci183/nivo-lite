@@ -1,8 +1,8 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
-import { ChannelsHttpModule } from "@features/api/channels"
 import { CheckConnectionHealthQueueModule } from "@features/jobs/check-connection-health"
+import { CompleteZaloAuthorizationQueueModule } from "@features/jobs/complete-zalo-authorization"
 import { RefreshZaloTokensQueueModule } from "@features/jobs/refresh-zalo-tokens"
 import { RunChatTurnQueueModule } from "@features/jobs/run-chat-turn"
 import { TelegramHttpModule } from "@features/webhooks/telegram"
@@ -267,11 +267,11 @@ export class AppModule {
                 ModulesHttpModule,
                 ApiKeysModule.register({ isGlobal: true }),
                 PublicApiModule.register({ isGlobal: true }),
-                ChannelsHttpModule,
                 TelegramHttpModule,
                 ZaloHttpModule,
                 RunChatTurnQueueModule,
                 CheckConnectionHealthQueueModule,
+                CompleteZaloAuthorizationQueueModule,
                 RefreshZaloTokensQueueModule,
                 ExternalApiHttpModule,
                 SystemHealthHttpModule,

@@ -3,7 +3,6 @@ import type { DynamicModule } from "@nestjs/common"
 import { CHANNEL_SENDER_REGISTRY } from "./channels.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./channels.module-definition"
 import { ZaloCredentialsService } from "./zalo-credentials.service"
-import { ZaloAuthorizationService } from "./zalo-authorization.service"
 import { ChannelSenderRegistryService } from "./channel-sender-registry.service"
 import { ChannelDeliveryService } from "./channel-delivery.service"
 import { ConnectionHealthService } from "./connection-health.service"
@@ -18,8 +17,8 @@ export class ChannelsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), ZaloCredentialsService, ZaloAuthorizationService, ChannelSenderRegistryService, ChannelDeliveryService, ConnectionHealthService, TelegramProofService, ZaloProofService, { provide: CHANNEL_SENDER_REGISTRY, useExisting: ChannelSenderRegistryService }],
-            exports: [ZaloCredentialsService, ZaloAuthorizationService, ChannelDeliveryService, ConnectionHealthService, CHANNEL_SENDER_REGISTRY],
+            providers: [...(base.providers ?? []), ZaloCredentialsService, ChannelSenderRegistryService, ChannelDeliveryService, ConnectionHealthService, TelegramProofService, ZaloProofService, { provide: CHANNEL_SENDER_REGISTRY, useExisting: ChannelSenderRegistryService }],
+            exports: [ZaloCredentialsService, ChannelDeliveryService, ConnectionHealthService, CHANNEL_SENDER_REGISTRY],
         }
     }
 }
