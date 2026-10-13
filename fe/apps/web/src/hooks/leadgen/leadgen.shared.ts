@@ -1,6 +1,5 @@
 import type { BadgeTone, DescriptionListStatItem } from "@starci/grammar/common"
-import type { WorkStatus } from "@/lib/flow-types"
-import type { LeadGenMetrics, LeadScore } from "@/modules/types"
+import type { LeadGenMetricsType } from "@/modules/api"
 
 /** The tabs of the Lead Gen workbench. */
 export const LEADGEN_TABS = ["leads", "sources", "comments", "handoffs"] as const
@@ -13,10 +12,10 @@ export const leadGenTabOf = (key: string | null | undefined): LeadGenTab | null 
     LEADGEN_TABS.find((tab) => tab === key) ?? null
 
 /** The badge tone of each score. */
-export const SCORE_TONES: Readonly<Record<LeadScore, BadgeTone>> = { hot: "danger", warm: "warning", cold: "neutral" }
+export const SCORE_TONES: Readonly<Record<string, BadgeTone>> = { hot: "danger", warm: "warning", cold: "neutral" }
 
 /** The badge tone of where the Sales step of a handed-over lead stands. */
-export const CLASSIFY_TONES: Readonly<Record<WorkStatus, BadgeTone>> = {
+export const CLASSIFY_TONES: Readonly<Record<string, BadgeTone>> = {
     queued: "neutral",
     done: "success",
     waiting_decision: "warning",
@@ -32,18 +31,18 @@ const PERCENT = 100
 /** The words the figures need, resolved by the caller. */
 export type LeadGenWords = (key: string, values?: Record<string, string | number>) => string
 
-const firstReplyOf = (metrics: LeadGenMetrics, t: LeadGenWords): DescriptionListStatItem => ({
+const firstReplyOf = (metrics: LeadGenMetricsType, t: LeadGenWords): DescriptionListStatItem => ({
     id: "firstReply",
     term: t("figFirstReply"),
-    description: metrics.firstReplyP50Min === null ? "—" : String(metrics.firstReplyP50Min),
-    unit: metrics.firstReplyP50Min === null ? undefined : t("figFirstReplyUnit"),
+    description: metrics.firstReplyP50Min == null ? "—" : String(metrics.firstReplyP50Min),
+    unit: metrics.firstReplyP50Min == null ? undefined : t("figFirstReplyUnit"),
     meta:
-        metrics.firstReplyP50Min === null
+        metrics.firstReplyP50Min == null
             ? t("figFirstReplyNone")
             : t("figFirstReplyBasis", { n: metrics.firstReplySample }),
 })
 
-const conversionOf = (metrics: LeadGenMetrics, t: LeadGenWords): DescriptionListStatItem => ({
+const conversionOf = (metrics: LeadGenMetricsType, t: LeadGenWords): DescriptionListStatItem => ({
     id: "conversion",
     term: t("figConversion"),
     description:
@@ -61,7 +60,10 @@ const conversionOf = (metrics: LeadGenMetrics, t: LeadGenWords): DescriptionList
 })
 
 /** The four figures of the Lead Gen ribbon: new today, hot and waiting, first reply, conversion. */
-export const leadGenFiguresOf = (metrics: LeadGenMetrics, t: LeadGenWords): ReadonlyArray<DescriptionListStatItem> => [
+export const leadGenFiguresOf = (
+    metrics: LeadGenMetricsType,
+    t: LeadGenWords,
+): ReadonlyArray<DescriptionListStatItem> => [
     { id: "newToday", term: t("figNewToday"), description: String(metrics.newToday), meta: t("figNewTodayBasis") },
     {
         id: "hotWaiting",
