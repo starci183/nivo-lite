@@ -1,10 +1,15 @@
+import { Test } from "@nestjs/testing"
 import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { N8nError, N8nErrorCode } from "@modules/integrations/n8n"
+import { N8N_CLIENT, N8nError, N8nErrorCode } from "@modules/integrations/n8n"
 import type { N8nClient } from "@modules/integrations/n8n"
+import { CLOCK } from "@modules/platform/clock"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
+import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import type { N8nQueue } from "@modules/queues/n8n"
+import { N8nQueue } from "@modules/queues/n8n"
 import { N8nRunsErrorCode } from "./errors/n8n-runs.error"
 import type { N8nRunContext, StartN8nRun } from "./n8n-runs.contracts"
 import { N8nRunsLogEvent } from "./n8n-runs.log-events"
@@ -38,7 +43,7 @@ const PAYLOAD = {
     data: {},
 }
 
-const build = (em: MockEntityManager) => {
+const build = async (em: MockEntityManager) => {
     const n8n = mock<N8nClient>()
     const queue = mock<N8nQueue>()
     const catalog = mock<MessageCatalog>()
@@ -46,8 +51,18 @@ const build = (em: MockEntityManager) => {
         key === "automations.n8nCount.sent" ? "Da gui" : key === "automations.n8n.refused" ? "Bi tu choi" : key,
     )
     const logger = mock<Logger>()
-    const runs = new N8nRunsService(em, new FakeClock(NOW), catalog, logger, n8n, queue)
-    return { runs, n8n, queue, logger }
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            N8nRunsService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            { provide: CLOCK, useValue: new FakeClock(NOW) },
+            { provide: MESSAGE_CATALOG, useValue: catalog },
+            { provide: LOGGER, useValue: logger },
+            { provide: N8N_CLIENT, useValue: n8n },
+            { provide: N8nQueue, useValue: queue },
+        ],
+    }).compile()
+    return { runs: moduleRef.get(N8nRunsService), n8n, queue, logger }
 }
 
 describe("N8nRunsService", () => {
@@ -61,7 +76,7 @@ describe("N8nRunsService", () => {
                     ],
                 }),
             )
-            const { runs, queue } = build(tx.em)
+            const { runs, queue } = await build(tx.em)
 
             await expect(runs.startRun(START)).resolves.toBe(RUN_ID)
 
@@ -100,7 +115,7 @@ describe("N8nRunsService", () => {
                     ],
                 }),
             )
-            const { runs, queue } = build(tx.em)
+            const { runs, queue } = await build(tx.em)
 
             await expect(runs.startRun(START)).resolves.toBeNull()
 
@@ -108,7 +123,7 @@ describe("N8nRunsService", () => {
         })
 
         it("refuses a template key that cannot be a workflow", async () => {
-            const { runs } = build(mockEntityManager())
+            const { runs } = await build(mockEntityManager())
 
             await expect(runs.startRun({ ...START, templateKey: "Bad Key" })).rejects.toMatchObject({
                 code: N8nRunsErrorCode.TemplateKeyInvalid,
@@ -116,7 +131,7 @@ describe("N8nRunsService", () => {
         })
 
         it("refuses to start without a public base url", async () => {
-            const { runs } = build(mockEntityManager({ query: [SELECT_API_BASE, []] }))
+            const { runs } = await build(mockEntityManager({ query: [SELECT_API_BASE, []] }))
 
             await expect(runs.startRun(START)).rejects.toMatchObject({ code: N8nRunsErrorCode.ApiBaseMissing })
         })
@@ -124,7 +139,7 @@ describe("N8nRunsService", () => {
 
     describe("deliver", () => {
         it("posts the run to n8n with the instant of the delivery", async () => {
-            const { runs, n8n } = build(mockEntityManager())
+            const { runs, n8n } = await build(mockEntityManager())
 
             await runs.deliver(PAYLOAD)
 
@@ -140,7 +155,7 @@ describe("N8nRunsService", () => {
         })
 
         it("ignores a payload that is not a delivery", async () => {
-            const { runs, n8n } = build(mockEntityManager())
+            const { runs, n8n } = await build(mockEntityManager())
 
             await runs.deliver({ runId: 3 })
 
@@ -148,7 +163,7 @@ describe("N8nRunsService", () => {
         })
 
         it("rethrows a failure worth another try and an unknown error", async () => {
-            const { runs, n8n } = build(mockEntityManager())
+            const { runs, n8n } = await build(mockEntityManager())
             const transient = new N8nError({ code: N8nErrorCode.DeliveryFailed })
             n8n.deliver.mockRejectedValueOnce(transient).mockRejectedValueOnce(new TypeError("net"))
 
@@ -158,7 +173,7 @@ describe("N8nRunsService", () => {
 
         it("closes the run as failed when n8n refuses it for good", async () => {
             const em = mockEntityManager({ query: [COMPLETE_N8N_RUN, [{ id: RUN_ID }]] })
-            const { runs, n8n, logger } = build(em)
+            const { runs, n8n, logger } = await build(em)
             n8n.deliver.mockRejectedValue(new N8nError({ code: N8nErrorCode.TargetRefused }))
 
             await runs.deliver(PAYLOAD)
@@ -189,7 +204,7 @@ describe("N8nRunsService", () => {
                     [SELECT_RUN_PIPELINE, [{ config: { time: "08:00" }, body: "Hello" }]],
                 ],
             })
-            const { runs } = build(em)
+            const { runs } = await build(em)
 
             await expect(runs.verifyRun({ authorization: `Bearer ${TOKEN}`, expectedRunId: RUN_ID })).resolves.toEqual({
                 runId: RUN_ID,
@@ -200,7 +215,7 @@ describe("N8nRunsService", () => {
         })
 
         it("answers the settings alone when the pipeline has no wording or does not exist", async () => {
-            const { runs } = build(
+            const { runs } = await build(
                 mockEntityManager({
                     query: [
                         [SELECT_N8N_RUN, [stored()]],
@@ -208,7 +223,7 @@ describe("N8nRunsService", () => {
                     ],
                 }),
             )
-            const { runs: bare } = build(
+            const { runs: bare } = await build(
                 mockEntityManager({
                     query: [
                         [SELECT_N8N_RUN, [stored()]],
@@ -230,7 +245,7 @@ describe("N8nRunsService", () => {
         })
 
         it("answers none for a header that is not a bearer token or names another run", async () => {
-            const { runs } = build(mockEntityManager())
+            const { runs } = await build(mockEntityManager())
 
             await expect(runs.verifyRun({ authorization: "nope", expectedRunId: undefined })).resolves.toBeNull()
             await expect(
@@ -247,7 +262,7 @@ describe("N8nRunsService", () => {
             ["an expired token", [stored({ expires_at: "2026-10-12T09:59:59.000Z" })]],
             ["a finished run", [stored({ status: "done" })]],
         ])("answers none for %s", async (_name, rows) => {
-            const { runs } = build(mockEntityManager({ query: [SELECT_N8N_RUN, rows] }))
+            const { runs } = await build(mockEntityManager({ query: [SELECT_N8N_RUN, rows] }))
 
             await expect(
                 runs.verifyRun({ authorization: `Bearer ${TOKEN}`, expectedRunId: undefined }),
@@ -260,7 +275,7 @@ describe("N8nRunsService", () => {
 
         it("closes the run with the status, the summary and the result n8n reported", async () => {
             const em = mockEntityManager({ query: [COMPLETE_N8N_RUN, [{ id: RUN_ID }]] })
-            const { runs } = build(em)
+            const { runs } = await build(em)
 
             await runs.completeRun(run, { status: "failed", summary: "oops", result: { n: 1 } })
 
@@ -269,7 +284,7 @@ describe("N8nRunsService", () => {
 
         it("words the counters when no summary came, and knows an unnamed counter by its key", async () => {
             const em = mockEntityManager({ query: [COMPLETE_N8N_RUN, [{ id: RUN_ID }]] })
-            const { runs } = build(em)
+            const { runs } = await build(em)
 
             await runs.completeRun(run, { result: { counts: { sent: 2, other: 1 } } })
 
@@ -283,7 +298,7 @@ describe("N8nRunsService", () => {
         })
 
         it("fails when the run cannot be closed", async () => {
-            const { runs } = build(mockEntityManager({ query: [COMPLETE_N8N_RUN, []] }))
+            const { runs } = await build(mockEntityManager({ query: [COMPLETE_N8N_RUN, []] }))
 
             await expect(runs.completeRun(run, {})).rejects.toMatchObject({ code: N8nRunsErrorCode.NotClosed })
         })
@@ -292,8 +307,8 @@ describe("N8nRunsService", () => {
     describe("requireWorkflow and requireRun", () => {
         const run: N8nRunContext = { runId: RUN_ID, workspaceId: "ws-1", templateKey: "email-daily-report", config: {} }
 
-        it("answers the run of the expected workflow and refuses any other", () => {
-            const { runs } = build(mockEntityManager())
+        it("answers the run of the expected workflow and refuses any other", async () => {
+            const { runs } = await build(mockEntityManager())
 
             expect(runs.requireWorkflow(run, "email-daily-report")).toBe(run)
             expect(() => runs.requireWorkflow(run, "email-debt-reminder")).toThrow(
@@ -304,8 +319,8 @@ describe("N8nRunsService", () => {
             )
         })
 
-        it("answers the proved run and refuses none", () => {
-            const { runs } = build(mockEntityManager())
+        it("answers the proved run and refuses none", async () => {
+            const { runs } = await build(mockEntityManager())
 
             expect(runs.requireRun(run)).toBe(run)
             expect(() => runs.requireRun(null)).toThrow(

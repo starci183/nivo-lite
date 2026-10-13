@@ -1,4 +1,4 @@
-export { STAFF_ERROR_KINDS, StaffError, StaffErrorCode } from "./errors/staff.error"
+export { STAFF_ERROR_KINDS } from "./errors/staff.error"
 export { STAFF_MESSAGES } from "./messages/staff.messages"
 export { StaffModule } from "./staff.module"
 export { StaffService } from "./staff.service"

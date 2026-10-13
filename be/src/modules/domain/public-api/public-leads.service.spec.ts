@@ -1,9 +1,9 @@
 import { Test } from "@nestjs/testing"
-import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
-import type { MockEntityManager } from "@starci/jest-preset"
+import { fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
+import type { MockEntityManager, RecordingQueueOutbox } from "@starci/jest-preset"
 import { ApiKeysService } from "@modules/domain/api-keys"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { PublicApiQueue } from "@modules/queues/public-api"
+import { PUBLIC_API_QUEUE, PublicApiQueue } from "@modules/queues/public-api"
 import { PublicApiErrorCode } from "./errors/public-api.error"
 import type { AcceptLeadParams } from "./public-api.contracts"
 import { PublicLeadsService } from "./public-leads.service"
@@ -47,8 +47,10 @@ const LEAD_ROW = {
 const RECORDED = { id: "request-1", lead_id: null, inserted: true }
 
 const build = async (entityManager: MockEntityManager) => {
-    const queue = mock<PublicApiQueue>()
-    queue.enqueueRequest.mockResolvedValue(undefined)
+    const outbox: RecordingQueueOutbox = recordingQueueOutbox()
+    const queue = mock<PublicApiQueue>({
+        enqueueRequest: (payload, tx) => outbox.write(tx, PUBLIC_API_QUEUE, payload),
+    })
     const keys = mock<ApiKeysService>()
     keys.authenticate.mockResolvedValue(WHO)
     const moduleRef = await Test.createTestingModule({
@@ -59,7 +61,7 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
         ],
     }).compile()
-    return { service: moduleRef.get(PublicLeadsService), queue, keys }
+    return { service: moduleRef.get(PublicLeadsService), outbox, keys }
 }
 
 const transactionOf = (...stubs: ReadonlyArray<readonly [string, ReadonlyArray<object>]>) =>
@@ -117,7 +119,7 @@ describe("PublicLeadsService", () => {
     describe("acceptLead", () => {
         it("admits the key for leads:write, records the request and enqueues its job in one transaction and answers the known customer", async () => {
             const tx = transactionOf([MATCH_LEAD_BY_PHONE, [{ id: "lead-7" }]], [INSERT_REQUEST, [RECORDED]])
-            const { service, queue, keys } = await build(tx.em)
+            const { service, outbox, keys } = await build(tx.em)
 
             await expect(service.acceptLead(LEAD)).resolves.toEqual({ leadId: "lead-7", status: "accepted" })
 
@@ -141,10 +143,10 @@ describe("PublicLeadsService", () => {
                     source: "api:n8n",
                 }),
             ])
-            expect(queue.enqueueRequest).toHaveBeenCalledWith(
-                { requestId: "request-1", workspaceId: "workspace-1" },
-                expect.any(Object),
-            )
+            expect(outbox.jobsOf(PUBLIC_API_QUEUE)).toEqual([
+                { queue: PUBLIC_API_QUEUE, payload: { requestId: "request-1", workspaceId: "workspace-1" } },
+            ])
+            expect(outbox.allInTransaction).toBe(true)
             expect(tx.commits).toBe(1)
         })
 
@@ -218,11 +220,11 @@ describe("PublicLeadsService", () => {
                 [MATCH_LEAD_BY_PHONE, []],
                 [INSERT_REQUEST, [{ id: "request-1", lead_id: "lead-2", inserted: false }]],
             )
-            const { service, queue } = await build(tx.em)
+            const { service, outbox } = await build(tx.em)
 
             await expect(service.acceptLead(LEAD)).resolves.toEqual({ leadId: "lead-2", status: "unchanged" })
 
-            expect(queue.enqueueRequest).not.toHaveBeenCalled()
+            expect(outbox.jobs).toEqual([])
         })
 
         it("answers the matched customer for a repeat whose first delivery has no customer yet, and none when neither knows one", async () => {
@@ -243,18 +245,18 @@ describe("PublicLeadsService", () => {
 
         it("refuses when the ledger answers no row", async () => {
             const tx = transactionOf([MATCH_LEAD_BY_PHONE, []], [INSERT_REQUEST, []])
-            const { service, queue } = await build(tx.em)
+            const { service, outbox } = await build(tx.em)
 
             await expect(service.acceptLead(LEAD)).rejects.toMatchObject({ code: PublicApiErrorCode.NotWritten })
 
-            expect(queue.enqueueRequest).not.toHaveBeenCalled()
+            expect(outbox.jobs).toEqual([])
         })
 
         it("rolls the request back when its job cannot be enqueued", async () => {
             const tx = transactionOf([MATCH_LEAD_BY_PHONE, []], [INSERT_REQUEST, [RECORDED]])
-            const { service, queue } = await build(tx.em)
+            const { service, outbox } = await build(tx.em)
             const failure = new Error("queue missing")
-            queue.enqueueRequest.mockRejectedValueOnce(failure)
+            outbox.failNext("write", failure)
 
             await expect(service.acceptLead(LEAD)).rejects.toBe(failure)
 

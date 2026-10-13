@@ -1,8 +1,10 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
+import { ShiftsAlertsService } from "./shifts-alerts.service"
 import { ShiftsCoverService } from "./shifts-cover.service"
 import { ShiftsDataService } from "./shifts-data.service"
 import { ShiftsImportService } from "./shifts-import.service"
+import { ShiftsMonthCloseService } from "./shifts-month-close.service"
 import { ShiftsNotifyService } from "./shifts-notify.service"
 import { ShiftsPerformersService } from "./shifts-performers.service"
 import { ShiftsRequestsService } from "./shifts-requests.service"
@@ -32,8 +34,11 @@ export class ShiftsModule extends ConfigurableModuleClass {
                 ShiftsPerformersService,
                 ShiftsSetupService,
                 ShiftsWorkbenchService,
+                ShiftsAlertsService,
+                ShiftsMonthCloseService,
             ],
             exports: [
+                ShiftsAlertsService,
                 ShiftsScheduleService,
                 ShiftsRequestsService,
                 ShiftsImportService,

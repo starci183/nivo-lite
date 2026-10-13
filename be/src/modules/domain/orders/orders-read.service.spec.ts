@@ -1,61 +1,50 @@
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
+import { builder, mock } from "@starci/jest-preset"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { OrdersReadService } from "./orders-read.service"
 import { OrdersService } from "./orders.service"
-import type { SalesOrderListRow, SalesOrderRow } from "./persistence/orders.rows"
+import type { SalesOrderListRow } from "./persistence/orders.rows"
 
-const MEMBER: WorkspaceMember = {
-    userId: "user-1",
-    workspaceId: "ws-1",
-    role: "owner",
-    staffId: null,
-    displayName: "An",
-    status: "active",
-}
-
-const ORDER: SalesOrderRow = {
+const orderOf = builder<SalesOrderListRow>({
     id: "order-1",
     workspace_id: "ws-1",
     lead_id: "lead-1",
     inbound_event_id: null,
-    order_no: "EXT-1",
-    items: "tea",
-    amount_vnd: 1000,
-    status: "draft",
+    order_no: "DH-20261013-0001",
+    items: "2 x Tea",
+    amount_vnd: 90000,
+    status: "shipped",
     origin: "live",
-    confirmed_by: null,
-    confirmed_at: null,
-    created_at: "2026-10-13T03:00:00.000Z",
-    shipped_at: null,
-    carrier: null,
-    tracking_code: null,
-}
-
-const LISTED: SalesOrderListRow = { ...ORDER, contact_name: null, company: null }
+    confirmed_by: "Lan",
+    confirmed_at: "2026-10-13T01:30:00.000Z",
+    created_at: "2026-10-13T01:00:00.000Z",
+    shipped_at: "2026-10-13T03:00:00.000Z",
+    carrier: "GHN",
+    tracking_code: "T1",
+    contact_name: "Minh",
+    company: null,
+})
 
 const VIEW = {
     id: "order-1",
     workspaceId: "ws-1",
     leadId: "lead-1",
-    orderNo: "EXT-1",
-    items: "tea",
-    amountVnd: 1000,
-    status: "draft",
+    orderNo: "DH-20261013-0001",
+    items: "2 x Tea",
+    amountVnd: 90000,
+    status: "shipped",
     origin: "live",
-    confirmedBy: null,
-    confirmedAt: null,
-    createdAt: "2026-10-13T03:00:00.000Z",
-    shippedAt: null,
-    carrier: null,
-    trackingCode: null,
+    confirmedBy: "Lan",
+    confirmedAt: "2026-10-13T01:30:00.000Z",
+    createdAt: "2026-10-13T01:00:00.000Z",
+    shippedAt: "2026-10-13T03:00:00.000Z",
+    carrier: "GHN",
+    trackingCode: "T1",
 }
 
 const build = async () => {
     const members = mock<WorkspaceMembersService>()
     const orders = mock<OrdersService>()
-    members.require.mockResolvedValue(MEMBER)
     const moduleRef = await Test.createTestingModule({
         providers: [
             OrdersReadService,
@@ -63,30 +52,51 @@ const build = async () => {
             { provide: OrdersService, useValue: orders },
         ],
     }).compile()
-    return { service: moduleRef.get(OrdersReadService), members, orders }
+    return { reads: moduleRef.get(OrdersReadService), members, orders }
 }
 
 describe("OrdersReadService", () => {
-    it("proves membership and returns the order view", async () => {
-        const { service, members, orders } = await build()
-        orders.find.mockResolvedValue(ORDER)
+    describe("find", () => {
+        it("proves membership and answers the order view", async () => {
+            const { reads, members, orders } = await build()
+            orders.find.mockResolvedValue(orderOf())
 
-        await expect(service.find("user-1", "ws-1", "order-1")).resolves.toEqual(VIEW)
-        expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
+            await expect(reads.find("user-1", "ws-1", "order-1")).resolves.toEqual(VIEW)
+            expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
+            expect(orders.find).toHaveBeenCalledWith("ws-1", "order-1")
+        })
+
+        it("answers null for an order the workspace does not have", async () => {
+            const { reads, orders } = await build()
+            orders.find.mockResolvedValue(null)
+
+            await expect(reads.find("user-1", "ws-1", "missing")).resolves.toBeNull()
+        })
+
+        it("reads nothing when membership is refused", async () => {
+            const { reads, members, orders } = await build()
+            const refusal = "not a member"
+            members.require.mockRejectedValue(refusal)
+
+            await expect(reads.find("user-1", "ws-1", "order-1")).rejects.toBe(refusal)
+            expect(orders.find).not.toHaveBeenCalled()
+        })
     })
 
-    it("returns null when the order is missing", async () => {
-        const { service, orders } = await build()
-        orders.find.mockResolvedValue(null)
+    describe("list", () => {
+        it("maps the newest orders to views, keeping open dates null", async () => {
+            const { reads, members, orders } = await build()
+            orders.list.mockResolvedValue([
+                orderOf(),
+                orderOf({ id: "order-2", confirmed_at: null, shipped_at: null, carrier: null, tracking_code: null }),
+            ])
 
-        await expect(service.find("user-1", "ws-1", "missing")).resolves.toBeNull()
-    })
-
-    it("lists the newest orders as views", async () => {
-        const { service, orders } = await build()
-        orders.list.mockResolvedValue([LISTED])
-
-        await expect(service.list("user-1", "ws-1")).resolves.toEqual([VIEW])
-        expect(orders.list).toHaveBeenCalledWith("ws-1")
+            await expect(reads.list("user-1", "ws-1")).resolves.toEqual([
+                VIEW,
+                { ...VIEW, id: "order-2", confirmedAt: null, shippedAt: null, carrier: null, trackingCode: null },
+            ])
+            expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
+            expect(orders.list).toHaveBeenCalledWith("ws-1")
+        })
     })
 })

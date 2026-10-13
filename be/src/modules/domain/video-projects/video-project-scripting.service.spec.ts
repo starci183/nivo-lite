@@ -1,62 +1,76 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
-import { VideoProjectScriptingService } from "./video-project-scripting.service"
 import { FAIL_SCRIPT_PROJECT, FINISH_SCRIPT_PROJECT, START_SCRIPT_PROJECT } from "./persistence/video-scripting.sql"
+import { VideoProjectScriptingService } from "./video-project-scripting.service"
 
 const build = async () => {
-    const moduleRef = await Test.createTestingModule({
-        providers: [VideoProjectScriptingService],
-    }).compile()
-    return { scripting: moduleRef.get(VideoProjectScriptingService), tx: mockEntityManager() }
+    const moduleRef = await Test.createTestingModule({ providers: [VideoProjectScriptingService] }).compile()
+    return moduleRef.get(VideoProjectScriptingService)
 }
 
 describe("VideoProjectScriptingService", () => {
-    it("stores the operation metadata with the queued generation", async () => {
-        const { scripting, tx } = await build()
+    describe("start", () => {
+        it("stores the operation metadata in the caller's transaction", async () => {
+            const tx = mockEntityManager({ query: [START_SCRIPT_PROJECT, []] })
+            const service = await build()
 
-        await expect(scripting.start(tx, "ws-1", "proj-1", '{"generation_id":"gen-1"}')).resolves.toBeUndefined()
+            await expect(service.start(tx, "workspace-1", "project-1", '{"attempts":1}')).resolves.toBeUndefined()
 
-        expect(tx.query).toHaveBeenCalledWith(START_SCRIPT_PROJECT, ["ws-1", "proj-1", '{"generation_id":"gen-1"}'])
+            expect(tx.query).toHaveBeenCalledWith(START_SCRIPT_PROJECT, ["workspace-1", "project-1", '{"attempts":1}'])
+        })
     })
 
-    it("stores scenes only for the generation that owns the project", async () => {
-        const { scripting, tx } = await build()
-        const finish = {
-            workspaceId: "ws-1",
-            projectId: "proj-1",
-            generationId: "gen-1",
-            script: "[]",
-            durationMs: 15000,
-            title: "Launch",
-            meta: "{}",
-        }
+    describe("finish", () => {
+        it("stores the scenes, the timing and the automatic title of the owning generation", async () => {
+            const tx = mockEntityManager({ query: [FINISH_SCRIPT_PROJECT, []] })
+            const service = await build()
 
-        await expect(scripting.finish(tx, finish)).resolves.toBeUndefined()
+            await expect(
+                service.finish(tx, {
+                    workspaceId: "workspace-1",
+                    projectId: "project-1",
+                    generationId: "generation-1",
+                    script: "[]",
+                    durationMs: 1200,
+                    title: "Spring offer",
+                    meta: "{}",
+                }),
+            ).resolves.toBeUndefined()
 
-        expect(tx.query).toHaveBeenCalledWith(FINISH_SCRIPT_PROJECT, [
-            "ws-1",
-            "proj-1",
-            "gen-1",
-            "[]",
-            15000,
-            "Launch",
-            "{}",
-        ])
+            expect(tx.query).toHaveBeenCalledWith(FINISH_SCRIPT_PROJECT, [
+                "workspace-1",
+                "project-1",
+                "generation-1",
+                "[]",
+                1200,
+                "Spring offer",
+                "{}",
+            ])
+        })
     })
 
-    it("stores a stable failure only for the owning generation", async () => {
-        const { scripting, tx } = await build()
+    describe("fail", () => {
+        it("stores the stable failure code of the owning generation", async () => {
+            const tx = mockEntityManager({ query: [FAIL_SCRIPT_PROJECT, []] })
+            const service = await build()
 
-        await expect(
-            scripting.fail(tx, {
-                workspaceId: "ws-1",
-                projectId: "proj-1",
-                generationId: "gen-1",
-                code: "SCRIPT_FAILED",
-                meta: "{}",
-            }),
-        ).resolves.toBeUndefined()
+            await expect(
+                service.fail(tx, {
+                    workspaceId: "workspace-1",
+                    projectId: "project-1",
+                    generationId: "generation-1",
+                    code: "code:VIDEO_SCRIPT_FAILED",
+                    meta: "{}",
+                }),
+            ).resolves.toBeUndefined()
 
-        expect(tx.query).toHaveBeenCalledWith(FAIL_SCRIPT_PROJECT, ["ws-1", "proj-1", "gen-1", "SCRIPT_FAILED", "{}"])
+            expect(tx.query).toHaveBeenCalledWith(FAIL_SCRIPT_PROJECT, [
+                "workspace-1",
+                "project-1",
+                "generation-1",
+                "code:VIDEO_SCRIPT_FAILED",
+                "{}",
+            ])
+        })
     })
 })

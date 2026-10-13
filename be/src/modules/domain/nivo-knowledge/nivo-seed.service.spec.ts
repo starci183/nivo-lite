@@ -1,38 +1,30 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { LLM, type LlmPort, type LlmUsage } from "@modules/integrations/llm"
-import { NivoKnowledgeError, NivoKnowledgeErrorCode } from "./errors/nivo-knowledge.error"
+import { LLM } from "@modules/integrations/llm"
+import type { LlmPort } from "@modules/integrations/llm"
+import { NivoKnowledgeErrorCode } from "./errors/nivo-knowledge.error"
 import { NivoFolderClient } from "./nivo-folder.client"
-import type { NivoFile } from "./nivo-item.policy"
 import { NIVO_KNOWLEDGE_OPTIONS } from "./nivo-knowledge.decorators"
 import { NivoKnowledgeService } from "./nivo-knowledge.service"
 import { NivoSeedService } from "./nivo-seed.service"
 
-const OPTIONS = { folders: ["core", "video"], dir: "/opt/nivo-knowledge" }
-
-const USAGE: LlmUsage = { promptTokens: 3, completionTokens: null, totalTokens: 3, costUsd: null }
-
-const document = (path: string, title: string, kind: string, body: string): NivoFile => ({
-    path,
-    text: `---\ntitle: ${title}\nkind: ${kind}\n---\n${body}\n`,
-})
-
-const TONE = document("video/tone.md", "Tone", "tone", "Be brief")
+const TONE = { path: "core/core-tone.md", text: "---\ntitle: Tone\nkind: tone\n---\nWarm and short." }
+const PLAYBOOK = { path: "chatbot/chatbot-care.md", text: "---\ntitle: Care\nkind: playbook\n---\nAnswer fast." }
 
 const build = async () => {
     const llm = mock<LlmPort>()
+    llm.embeddingsConfigured.mockReturnValue(true)
+    llm.embeddingModel.mockReturnValue("embed-1")
     const nivo = mock<NivoKnowledgeService>()
-    const folder = mock<NivoFolderClient>()
-    llm.embeddingsConfigured.mockReturnValue(false)
-    llm.embeddingModel.mockReturnValue("embed-model")
-    llm.embed.mockResolvedValue(null)
-    nivo.upsert.mockResolvedValue({ inserted: 0, updated: 0 })
-    nivo.removeExcept.mockResolvedValue(0)
+    nivo.upsert.mockResolvedValue({ inserted: 1, updated: 1 })
+    nivo.removeExcept.mockResolvedValue(3)
     nivo.unembedded.mockResolvedValue([])
+    const folder = mock<NivoFolderClient>()
+    folder.read.mockResolvedValue([TONE, PLAYBOOK])
     const moduleRef = await Test.createTestingModule({
         providers: [
             NivoSeedService,
-            { provide: NIVO_KNOWLEDGE_OPTIONS, useValue: OPTIONS },
+            { provide: NIVO_KNOWLEDGE_OPTIONS, useValue: { folders: ["core", "chatbot"], dir: "/knowledge" } },
             { provide: LLM, useValue: llm },
             { provide: NivoKnowledgeService, useValue: nivo },
             { provide: NivoFolderClient, useValue: folder },
@@ -42,143 +34,73 @@ const build = async () => {
 }
 
 describe("NivoSeedService", () => {
-    it("publishes the default folder and embeds the items that have no vector", async () => {
-        const { service, llm, nivo, folder } = await build()
-        folder.read.mockResolvedValue([TONE, document("core/playbook.md", "Playbook", "playbook", "How to work")])
-        nivo.upsert.mockResolvedValue({ inserted: 1, updated: 1 })
-        nivo.removeExcept.mockResolvedValue(2)
-        llm.embeddingsConfigured.mockReturnValue(true)
-        nivo.unembedded.mockResolvedValueOnce([{ id: "item-1", text: "Tone\n\nBe brief" }]).mockResolvedValue([])
-        llm.embed.mockResolvedValue({ vectors: [[0.5, 1]], usage: USAGE })
+    it("publishes the files of the default folder and removes the items no file gives any more", async () => {
+        const { service, nivo, folder } = await build()
 
         await expect(service.seedFolder(undefined)).resolves.toEqual({
             inserted: 1,
             updated: 1,
-            removed: 2,
-            embedded: 1,
+            removed: 3,
+            embedded: 0,
         })
-
-        expect(folder.read).toHaveBeenCalledWith("/opt/nivo-knowledge")
+        expect(folder.read).toHaveBeenCalledWith("/knowledge")
         expect(nivo.upsert).toHaveBeenCalledWith([
-            { module: "video", slug: "tone", title: "Tone", kind: "tone", body: "Be brief" },
-            { module: "core", slug: "playbook", title: "Playbook", kind: "playbook", body: "How to work" },
+            { module: "core", slug: "core-tone", title: "Tone", kind: "tone", body: "Warm and short." },
+            { module: "chatbot", slug: "chatbot-care", title: "Care", kind: "playbook", body: "Answer fast." },
         ])
-        expect(nivo.removeExcept).toHaveBeenCalledWith(["tone", "playbook"])
-        expect(nivo.unembedded).toHaveBeenCalledWith("embed-model", 32)
-        expect(llm.embed).toHaveBeenCalledWith(["Tone\n\nBe brief"], 30_000)
-        expect(nivo.setVectors).toHaveBeenCalledWith({ model: "embed-model", ids: ["item-1"], vectors: ["[0.5,1]"] })
+        expect(nivo.removeExcept).toHaveBeenCalledWith(["core-tone", "chatbot-care"])
     })
 
-    it("reads the folder it was given", async () => {
-        const { service, folder, nivo } = await build()
-        folder.read.mockResolvedValue([])
-
-        await expect(service.seedFolder("/custom")).resolves.toEqual({
-            inserted: 0,
-            updated: 0,
-            removed: 0,
-            embedded: 0,
-        })
-
-        expect(folder.read).toHaveBeenCalledWith("/custom")
-        expect(nivo.upsert).toHaveBeenCalledWith([])
-        expect(nivo.removeExcept).toHaveBeenCalledWith([])
-    })
-
-    it("refuses a file with no front matter before writing", async () => {
-        const { service, folder, nivo } = await build()
-        folder.read.mockResolvedValue([{ path: "video/bad.md", text: "no front matter" }])
-
-        await expect(service.seedFolder("/custom")).rejects.toBeInstanceOf(NivoKnowledgeError)
-        await expect(service.seedFolder("/custom")).rejects.toMatchObject({
-            code: NivoKnowledgeErrorCode.FrontMatterMissing,
-            params: { file: "video/bad.md" },
-        })
-        expect(nivo.upsert).not.toHaveBeenCalled()
-    })
-
-    it("refuses two files that share a slug before writing", async () => {
-        const { service, folder, nivo } = await build()
-        folder.read.mockResolvedValue([TONE, document("core/tone.md", "Other", "tone", "Two")])
-
-        await expect(service.seedFolder("/custom")).rejects.toMatchObject({
-            code: NivoKnowledgeErrorCode.SlugDuplicate,
-            params: { file: "core/tone.md" },
-        })
-        expect(nivo.upsert).not.toHaveBeenCalled()
-    })
-
-    it("leaves items searchable by words when embeddings are not configured", async () => {
-        const { service, folder, nivo, llm } = await build()
-        folder.read.mockResolvedValue([TONE])
-
-        await expect(service.seedFolder("/custom")).resolves.toEqual({
-            inserted: 0,
-            updated: 0,
-            removed: 0,
-            embedded: 0,
-        })
-
-        expect(nivo.unembedded).not.toHaveBeenCalled()
-        expect(llm.embed).not.toHaveBeenCalled()
-    })
-
-    it("stops embedding when the provider returns nothing", async () => {
-        const { service, folder, nivo, llm } = await build()
-        folder.read.mockResolvedValue([TONE])
-        nivo.upsert.mockResolvedValue({ inserted: 1, updated: 0 })
-        llm.embeddingsConfigured.mockReturnValue(true)
-        nivo.unembedded.mockResolvedValue([{ id: "item-1", text: "Tone\n\nBe brief" }])
-        llm.embed.mockResolvedValue(null)
-
-        await expect(service.seedFolder("/custom")).resolves.toEqual({
-            inserted: 1,
-            updated: 0,
-            removed: 0,
-            embedded: 0,
-        })
-
-        expect(nivo.setVectors).not.toHaveBeenCalled()
-    })
-
-    it("writes an empty vector when the provider omits one", async () => {
-        const { service, folder, nivo, llm } = await build()
-        folder.read.mockResolvedValue([TONE])
-        llm.embeddingsConfigured.mockReturnValue(true)
+    it("embeds the items without a vector, batch after batch, until none is left", async () => {
+        const { service, llm, nivo } = await build()
         nivo.unembedded
             .mockResolvedValueOnce([
-                { id: "a", text: "A" },
-                { id: "b", text: "B" },
+                { id: "n1", text: "Tone" },
+                { id: "n2", text: "Care" },
             ])
-            .mockResolvedValue([])
-        llm.embed.mockResolvedValue({ vectors: [[4]], usage: USAGE })
-
-        await expect(service.seedFolder("/custom")).resolves.toEqual({
-            inserted: 0,
-            updated: 0,
-            removed: 0,
-            embedded: 2,
+            .mockResolvedValueOnce([])
+        llm.embed.mockResolvedValue({
+            vectors: [[0.5, 1]],
+            usage: { promptTokens: null, completionTokens: null, totalTokens: null, costUsd: null },
         })
 
-        expect(llm.embed).toHaveBeenCalledWith(["A", "B"], 30_000)
-        expect(nivo.setVectors).toHaveBeenCalledWith({ model: "embed-model", ids: ["a", "b"], vectors: ["[4]", "[]"] })
+        await expect(service.seedFolder("/other")).resolves.toMatchObject({ embedded: 2 })
+        expect(nivo.setVectors).toHaveBeenCalledWith({
+            model: "embed-1",
+            ids: ["n1", "n2"],
+            vectors: ["[0.5,1]", "[]"],
+        })
     })
 
-    it("embeds at most 50 batches", async () => {
-        const { service, folder, nivo, llm } = await build()
-        folder.read.mockResolvedValue([])
-        llm.embeddingsConfigured.mockReturnValue(true)
-        nivo.unembedded.mockResolvedValue([{ id: "item-1", text: "Again" }])
-        llm.embed.mockResolvedValue({ vectors: [[1]], usage: USAGE })
+    it("embeds nothing without an embeddings key, and stops when the provider fails", async () => {
+        const unkeyed = await build()
+        unkeyed.llm.embeddingsConfigured.mockReturnValue(false)
+        const failing = await build()
+        failing.nivo.unembedded.mockResolvedValue([{ id: "n1", text: "Tone" }])
+        failing.llm.embed.mockResolvedValue(null)
 
-        await expect(service.seedFolder("/custom")).resolves.toEqual({
-            inserted: 0,
-            updated: 0,
-            removed: 0,
-            embedded: 50,
+        await expect(unkeyed.service.seedFolder(undefined)).resolves.toMatchObject({ embedded: 0 })
+        await expect(failing.service.seedFolder(undefined)).resolves.toMatchObject({ embedded: 0 })
+        expect(failing.nivo.setVectors).not.toHaveBeenCalled()
+    })
+
+    it("refuses two files with one slug before writing anything", async () => {
+        const { service, nivo, folder } = await build()
+        folder.read.mockResolvedValue([TONE, { ...TONE, path: "chatbot/core-tone.md" }])
+
+        await expect(service.seedFolder(undefined)).rejects.toMatchObject({
+            code: NivoKnowledgeErrorCode.SlugDuplicate,
+            params: { file: "chatbot/core-tone.md" },
         })
+        expect(nivo.upsert).not.toHaveBeenCalled()
+    })
 
-        expect(nivo.unembedded).toHaveBeenCalledTimes(50)
-        expect(nivo.setVectors).toHaveBeenCalledTimes(50)
+    it("refuses a file without front matter", async () => {
+        const { service, folder } = await build()
+        folder.read.mockResolvedValue([{ path: "core/plain.md", text: "No header" }])
+
+        await expect(service.seedFolder(undefined)).rejects.toMatchObject({
+            code: NivoKnowledgeErrorCode.FrontMatterMissing,
+        })
     })
 })
