@@ -1,4 +1,4 @@
-import type { useMutateVerifyLoyaltyCodeSwr } from "@/hooks/swr/api/graphql"
+import type { useMutateVerifyLoyaltyCodeSwr } from "@/hooks/swr"
 
 /** The points the back end shows once the code is right. */
 export type PublicLoyaltyPoints = NonNullable<

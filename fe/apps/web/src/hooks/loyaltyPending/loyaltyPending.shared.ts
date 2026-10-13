@@ -1,4 +1,4 @@
-import type { useQueryWorkItemsSwr } from "@/hooks/swr/api/graphql"
+import type { useQueryWorkItemsSwr } from "@/hooks/swr"
 
 /** One work item as the back end lists it. */
 type WorkItem = NonNullable<ReturnType<typeof useQueryWorkItemsSwr>["data"]>["items"][number]

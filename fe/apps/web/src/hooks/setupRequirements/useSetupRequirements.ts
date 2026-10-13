@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { useQueryModuleRequirementFactsSwr } from "@/hooks/swr/api/graphql/queries/useQueryModuleRequirementFactsSwr"
+import { useQueryModuleRequirementFactsSwr } from "@/hooks/swr"
 import { MODULE_REGISTRY } from "@/modules/catalog"
 import type { ModuleKey } from "@/modules/catalog"
 import { unmetRequirementsOf } from "./setupRequirements.shared"

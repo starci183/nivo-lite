@@ -1,5 +1,6 @@
 import { REASON_CODES, figureOf, isTestRunName, medianOf, splitCount, sumOf } from "@/hooks/overviewFigures"
-import type { Governance, ReasonCode, WaitingWork } from "@/hooks/overviewFigures"
+import type { Governance, WaitingWork } from "@/hooks/overviewFigures"
+import type { ReasonCode } from "@/modules/types"
 import type { DashboardType } from "@/modules/api"
 import { MODULE_KEYS, MODULE_REGISTRY } from "@/modules/catalog"
 

@@ -1,5 +1,6 @@
 import type { useFormatter, useTranslations } from "next-intl"
-import type { Governance, ReasonCode, WaitingWork } from "@/hooks/overviewFigures"
+import type { Governance, WaitingWork } from "@/hooks/overviewFigures"
+import type { ReasonCode } from "@/modules/types"
 
 /** The translator of one catalog namespace. */
 export type GovTranslator = ReturnType<typeof useTranslations>

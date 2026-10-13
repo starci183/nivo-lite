@@ -4,11 +4,12 @@ import { useTranslations } from "next-intl"
 import { useTransition } from "react"
 import { useSWRConfig } from "swr"
 import {
-    isQueryLoyaltyBoardSwrKey,
+    QUERY_LOYALTY_BOARD_SWR_KEY,
     useMutateAddLoyaltyPresetRewardsSwr,
     useMutateRemoveLoyaltyRewardSwr,
     useMutateSaveLoyaltyRewardSwr,
-} from "@/hooks/swr/api/graphql"
+} from "@/hooks/swr"
+import { matchesSwrKey } from "@/modules/utils"
 import type { rewardInputOf } from "./loyaltyRewards.shared"
 import { toast, useGraphQLWithToast } from "@/modules/toast"
 
@@ -29,7 +30,7 @@ export const useLoyaltyRewardActions = () => {
                 const answer = await withToast(() => saveReward.trigger(input), { successMessage: t("saved") })
                 if (answer === undefined) return
                 finish()
-                void mutate(isQueryLoyaltyBoardSwrKey)
+                void mutate(matchesSwrKey(QUERY_LOYALTY_BOARD_SWR_KEY))
             }),
         remove: (rewardId: string, finish: () => void) =>
             startTransition(async () => {
@@ -38,14 +39,14 @@ export const useLoyaltyRewardActions = () => {
                 })
                 finish()
                 if (answer === undefined) return
-                void mutate(isQueryLoyaltyBoardSwrKey)
+                void mutate(matchesSwrKey(QUERY_LOYALTY_BOARD_SWR_KEY))
             }),
         preset: () =>
             startTransition(async () => {
                 const answer = await withToast(() => addPreset.trigger(), { showSuccessToast: false })
                 if (answer === undefined) return
                 toast.success(tToast("successTitle"), { description: t("presetDone", { n: answer.added }) })
-                void mutate(isQueryLoyaltyBoardSwrKey)
+                void mutate(matchesSwrKey(QUERY_LOYALTY_BOARD_SWR_KEY))
             }),
     }
 }

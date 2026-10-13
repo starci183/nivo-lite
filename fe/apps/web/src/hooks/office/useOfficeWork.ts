@@ -1,4 +1,4 @@
-import { useQueryWorkItemsSwr } from "@/hooks/swr/api/graphql/queries/useQueryWorkItemsSwr"
+import { useQueryWorkItemsSwr } from "@/hooks/swr"
 import {
     DECIDED_CARDS_SHOWN,
     DECIDED_WORK_LIMIT,

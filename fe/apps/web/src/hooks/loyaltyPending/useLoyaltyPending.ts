@@ -4,11 +4,12 @@ import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
 import { useSWRConfig } from "swr"
 import {
-    isQueryLoyaltyBoardSwrKey,
+    QUERY_LOYALTY_BOARD_SWR_KEY,
     useMutateDecideWorkItemSwr,
     useQueryWorkItemsSwr,
-} from "@/hooks/swr/api/graphql"
-import { QUERY_WORK_ITEMS_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryWorkItemsSwr"
+    QUERY_WORK_ITEMS_SWR_KEY,
+} from "@/hooks/swr"
+import { matchesSwrKey } from "@/modules/utils"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { pendingOf } from "./loyaltyPending.shared"
 import type { LoyaltyPendingItem } from "./loyaltyPending.shared"
@@ -51,7 +52,7 @@ export const useLoyaltyPending = () => {
             if (answer === undefined) return
             setEditingId(null)
             void mutate(isWorkItemsKey)
-            void mutate(isQueryLoyaltyBoardSwrKey)
+            void mutate(matchesSwrKey(QUERY_LOYALTY_BOARD_SWR_KEY))
         })
 
     return {

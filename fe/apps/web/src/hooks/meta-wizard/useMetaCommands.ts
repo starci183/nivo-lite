@@ -4,9 +4,7 @@ import { useMemo } from "react"
 import { useSettledGraphQL } from "@/hooks/connection-wizard"
 import type { Settled } from "@/hooks/connection-wizard"
 import { metaCheckOf, metaWizardOf } from "@/hooks/connection-wire"
-import { useMutateAuthorizeMetaSwr } from "@/hooks/swr/api/graphql/mutations/useMutateAuthorizeMetaSwr"
-import { useMutateCheckMetaSwr } from "@/hooks/swr/api/graphql/mutations/useMutateCheckMetaSwr"
-import { useMutateChooseMetaPageSwr } from "@/hooks/swr/api/graphql/mutations/useMutateChooseMetaPageSwr"
+import { useMutateAuthorizeMetaSwr, useMutateCheckMetaSwr, useMutateChooseMetaPageSwr } from "@/hooks/swr"
 import type { MetaCheck, MetaWizardConnection } from "@/modules/types"
 
 /** The GraphQL commands of the Meta wizard (the active workspace travels in the request header). */

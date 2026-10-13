@@ -5,11 +5,12 @@ import { useEffect, useMemo, useState } from "react"
 import { useSWRConfig } from "swr"
 import { useLoyaltyCampaignForm } from "@/hooks/rhf"
 import {
-    isQueryLoyaltyBoardSwrKey,
+    QUERY_LOYALTY_BOARD_SWR_KEY,
     useMutateDraftLoyaltyCampaignSwr,
     useQueryLoyaltyCampaignSwr,
-} from "@/hooks/swr/api/graphql"
-import { useQueryLoyaltySegmentPreviewSwr } from "@/hooks/swr/api/graphql/queries/useQueryLoyaltySegmentPreviewSwr"
+    useQueryLoyaltySegmentPreviewSwr,
+} from "@/hooks/swr"
+import { matchesSwrKey } from "@/modules/utils"
 import type { LoyaltyBoardType } from "@/modules/api"
 import { useGraphQLWithToast } from "@/modules/toast"
 import {
@@ -78,7 +79,7 @@ export const useLoyaltyPromo = (board: LoyaltyBoardType) => {
     const campaign = useQueryLoyaltyCampaignSwr(campaignId === null ? null : { id: campaignId }, {
         refreshInterval: (latest) => (latest !== undefined && !isDrafting(latest.status) ? 0 : DRAFT_POLL_MS),
         onSuccess: (data) => {
-            if (!isDrafting(data.status)) void mutate(isQueryLoyaltyBoardSwrKey)
+            if (!isDrafting(data.status)) void mutate(matchesSwrKey(QUERY_LOYALTY_BOARD_SWR_KEY))
         },
     })
     const created = campaignId === null ? null : (campaign.data ?? null)
@@ -94,7 +95,7 @@ export const useLoyaltyPromo = (board: LoyaltyBoardType) => {
         setCampaignId(result.campaignId)
         form.setValue("brief", "")
         form.setValue("name", "")
-        void mutate(isQueryLoyaltyBoardSwrKey)
+        void mutate(matchesSwrKey(QUERY_LOYALTY_BOARD_SWR_KEY))
     })
 
     return {

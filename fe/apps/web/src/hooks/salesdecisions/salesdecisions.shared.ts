@@ -1,5 +1,5 @@
 import { parseAmount } from "@/hooks/sales"
-import type { SalesWorkEditsInput } from "@/modules/api"
+import type { SalesWorkEditsRequest } from "@/modules/api"
 import type { SalesDecision } from "@/modules/types"
 
 /** What a person has typed or toggled on the pending cards, by decision id. */
@@ -17,7 +17,7 @@ export const EMPTY_TYPED: TypedDecisionValues = { editing: {}, drafts: {}, amoun
 export const fieldKey = (id: string, name: string): string => `${id}:${name}`
 
 /** The edits a person made to a pending decision (filled fields, the draft, the amount), or undefined when nothing changed. */
-export const editsOf = (item: SalesDecision, typed: TypedDecisionValues): SalesWorkEditsInput | undefined => {
+export const editsOf = (item: SalesDecision, typed: TypedDecisionValues): SalesWorkEditsRequest | undefined => {
     const fields: Record<string, string | number | null> = {}
     let amount: number | null | undefined
     let draft: string | undefined
@@ -36,7 +36,7 @@ export const editsOf = (item: SalesDecision, typed: TypedDecisionValues): SalesW
                 : undefined
         if (typedAmount !== undefined && typedAmount !== item.amountVnd) amount = typedAmount
     }
-    const edits: SalesWorkEditsInput = {
+    const edits: SalesWorkEditsRequest = {
         ...(draft === undefined ? {} : { draft }),
         ...(amount === undefined ? {} : { amount_vnd: amount }),
         ...(Object.keys(fields).length > 0

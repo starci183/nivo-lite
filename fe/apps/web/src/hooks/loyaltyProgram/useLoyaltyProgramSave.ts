@@ -3,11 +3,8 @@
 import { useTranslations } from "next-intl"
 import { useTransition } from "react"
 import { useSWRConfig } from "swr"
-import {
-    isQueryLoyaltyBoardSwrKey,
-    isQueryLoyaltyProgramSwrKey,
-    useMutateSaveLoyaltyProgramSwr,
-} from "@/hooks/swr/api/graphql"
+import { QUERY_LOYALTY_BOARD_SWR_KEY, QUERY_LOYALTY_PROGRAM_SWR_KEY, useMutateSaveLoyaltyProgramSwr } from "@/hooks/swr"
+import { matchesSwrKey } from "@/modules/utils"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { programInputOf } from "./loyaltyProgram.shared"
 import type { ProgramValues } from "./loyaltyProgram.shared"
@@ -27,8 +24,8 @@ export const useLoyaltyProgramSave = () => {
                     successMessage: t("programSaved"),
                 })
                 if (answer === undefined) return
-                void mutate(isQueryLoyaltyProgramSwrKey)
-                void mutate(isQueryLoyaltyBoardSwrKey)
+                void mutate(matchesSwrKey(QUERY_LOYALTY_PROGRAM_SWR_KEY))
+                void mutate(matchesSwrKey(QUERY_LOYALTY_BOARD_SWR_KEY))
             }),
     }
 }

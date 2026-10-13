@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react"
 import useSWRMutation from "swr/mutation"
 import { queryOfficeMessages } from "@/modules/api/graphql/queries/query-office-messages"
-import { useQueryOfficeMessagesSwr } from "@/hooks/swr/api/graphql/queries/useQueryOfficeMessagesSwr"
+import { useQueryOfficeMessagesSwr } from "@/hooks/swr"
 import { slotOfSwr } from "@/hooks/slot"
 import type { DataSlot } from "@/modules/types"
 import { OFFICE_PAGE_SIZE, OFFICE_POLL_MS, mergeMessages, toOfficeMessage } from "@/modules/office"

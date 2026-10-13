@@ -54,10 +54,6 @@ export const lastVisitOf = (
     return days === 0 ? { key: "today", n: 0 } : { key: "daysAgo", n: days }
 }
 
-/** A fresh idempotency token for one adjustment or redemption attempt. */
-export const newToken = (): string =>
-    typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : String(Date.now())
-
 /** The reasons a reward cannot be redeemed, as the back end names them. */
 const BLOCK_CODES: ReadonlyArray<string> = [
     "inactive",

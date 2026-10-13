@@ -5,7 +5,9 @@ import { useTranslations } from "next-intl"
 import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { API_KEY_NAME_MIN } from "@/hooks/developers"
+
+/** The shortest name a new API key may have. */
+const API_KEY_NAME_MIN = 2
 
 /** The values of the create API key form. */
 export interface ApiKeyValues {

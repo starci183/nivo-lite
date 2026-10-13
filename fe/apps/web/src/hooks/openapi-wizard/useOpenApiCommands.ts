@@ -1,12 +1,12 @@
 "use client"
 
 import { useMemo } from "react"
-import { useSettledGraphQL } from "@/hooks/connection-wizard"
+import { answeredData, useSettledGraphQL } from "@/hooks/connection-wizard"
 import type { Settled } from "@/hooks/connection-wizard"
 import { useConnectionsRefresh } from "@/hooks/connections"
 import { useMutateSaveOpenApiConnectionSwr } from "@/hooks/swr"
 import type { MutateSaveOpenApiConnectionRequest } from "@/modules/api/graphql/mutations/mutation-save-open-api-connection"
-import { queryLoadOpenApiSpec } from "@/modules/api/graphql/queries/query-load-open-api-document"
+import { queryLoadOpenApiSpec } from "@/modules/api/graphql/queries/query-load-open-api-specification"
 import { queryTestOpenApiOperation } from "@/modules/api/graphql/queries/query-test-open-api-operation"
 import type { QueryTestOpenApiOperationRequest } from "@/modules/api/graphql/queries/query-test-open-api-operation"
 import type { OpenApiTestType } from "@/modules/api"
@@ -45,9 +45,11 @@ export const useOpenApiCommands = (): OpenApiCommands => {
         () => ({
             loadSpec: (specUrl, specText) =>
                 settle(async () => {
-                    const result = await queryLoadOpenApiSpec({ request: { specUrl, specText } })
-                    if (!result.data) throw new Error("loadOpenApiSpec answered no data")
-                    const spec = result.data.loadOpenApiSpec
+                    const data = answeredData(
+                        await queryLoadOpenApiSpec({ request: { specUrl, specText } }),
+                        "loadOpenApiSpec",
+                    )
+                    const spec = data.loadOpenApiSpec
                     return {
                         title: spec.title,
                         baseUrl: spec.baseUrl,
@@ -59,9 +61,8 @@ export const useOpenApiCommands = (): OpenApiCommands => {
                 }),
             test: (request) =>
                 settle(async () => {
-                    const result = await queryTestOpenApiOperation({ request })
-                    if (!result.data) throw new Error("testOpenApiOperation answered no data")
-                    return result.data.testOpenApiOperation
+                    const data = answeredData(await queryTestOpenApiOperation({ request }), "testOpenApiOperation")
+                    return data.testOpenApiOperation
                 }),
             save: async (request) => {
                 const settled = await settle(() => triggerSave(request))

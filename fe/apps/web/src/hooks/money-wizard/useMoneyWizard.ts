@@ -1,10 +1,10 @@
 import { useTranslations } from "next-intl"
 import { useCallback, useState, useTransition } from "react"
 import { PROVIDERS } from "@/hooks/connection-providers"
-import { allAgentIds } from "@/hooks/connection-wizard"
+import { allAgentIds, resumeNoteOf, useAdoptOnce } from "@/hooks/connection-wizard"
 import { wizardConnectionOf } from "@/hooks/connection-wire"
 import { useFirstEvent, useSetConnectionAgents } from "@/hooks/connections"
-import { useQueryMoneyConnectionSwr } from "@/hooks/swr/api/graphql/queries/useQueryMoneyConnectionSwr"
+import { useQueryMoneyConnectionSwr } from "@/hooks/swr"
 import type { AgentOption, Environment, MoneyProvider, WizardConnection, WizardNote } from "@/modules/types"
 import { connectionNameOf, MONEY_STEPS, moneyContextOf, moneyFlagsOf, webhookNameOf } from "./money-wizard.shared"
 import type { AccountForm, FollowDraft } from "./money-wizard.shared"
@@ -66,18 +66,14 @@ export const useMoneyWizard = (input: MoneyWizardInput) => {
         setFollow((current) => ({ ...current, webhookName: webhookNameOf(stored.name), apiKey: stored.apiKey }))
     }, [])
 
-    const resumeFailure = resume.error instanceof Error ? resume.error.message : undefined
-    const [adopted, setAdopted] = useState<typeof resume.data>(undefined)
-
     // The stored connection arrives once: adopt it while rendering (derived state), not from an effect.
-    if (resume.data !== undefined && resume.data !== adopted) {
-        const stored = wizardConnectionOf(resume.data)
-        setAdopted(resume.data)
+    useAdoptOnce(resume.data, (data) => {
+        const stored = wizardConnectionOf(data)
         adopt(stored)
         setFollow((current) => ({ ...current, keysSaved: stored.credentialsSaved }))
         if (stored.agentIds.length > 0) setAgentIds(stored.agentIds)
         setNav((current) => ({ ...current, index: 2 }))
-    }
+    })
 
     const go = (to: number) => {
         setNote(null)
@@ -141,7 +137,7 @@ export const useMoneyWizard = (input: MoneyWizardInput) => {
         form,
         conn,
         follow,
-        note: note ?? (resumeFailure === undefined ? null : ({ tone: "negative", text: resumeFailure } as const)),
+        note: resumeNoteOf(note, resume.error),
         agentIds,
         isPending,
         received,

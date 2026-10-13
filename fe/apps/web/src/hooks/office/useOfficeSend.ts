@@ -1,6 +1,5 @@
 import { useCallback, useState } from "react"
-import { useMutatePostOfficeMessageSwr } from "@/hooks/swr/api/graphql/mutations/useMutatePostOfficeMessageSwr"
-import { useMutateProposeOfficeCommandSwr } from "@/hooks/swr/api/graphql/mutations/useMutateProposeOfficeCommandSwr"
+import { useMutatePostOfficeMessageSwr, useMutateProposeOfficeCommandSwr } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { bodyPartsOf } from "@/modules/office"
 import type { OfficeOutboxView } from "@/modules/types"
