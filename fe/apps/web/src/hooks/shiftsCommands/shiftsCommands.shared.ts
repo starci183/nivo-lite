@@ -1,6 +1,5 @@
 import { mutate } from "swr"
-import { QUERY_SHIFTS_MINE_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryShiftsMineSwr"
-import { QUERY_SHIFTS_WORKBENCH_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryShiftsWorkbenchSwr"
+import { QUERY_SHIFTS_MINE_SWR_KEY, QUERY_SHIFTS_WORKBENCH_SWR_KEY } from "@/hooks/swr"
 
 const SHIFTS_KEYS: ReadonlySet<string> = new Set([QUERY_SHIFTS_WORKBENCH_SWR_KEY, QUERY_SHIFTS_MINE_SWR_KEY])
 

@@ -21,6 +21,22 @@ export enum BillingErrorCode {
     FeedNotConfigured = "BILLING_FEED_NOT_CONFIGURED",
     /** A stored connection credential cannot be decrypted. */
     CredentialUnreadable = "BILLING_CREDENTIAL_UNREADABLE",
+    /** The plan is no longer sold: only the workspaces that already have it keep it. */
+    PlanNotListed = "BILLING_PLAN_NOT_LISTED",
+    /** The plan is not sold for the billing cycle asked for. */
+    CycleUnavailable = "BILLING_CYCLE_UNAVAILABLE",
+    /** The usage tier asked for does not exist on the plan. */
+    TierUnknown = "BILLING_TIER_UNKNOWN",
+    /** A per-seat plan is bought with a usage tier. */
+    TierRequired = "BILLING_TIER_REQUIRED",
+    /** The seat count is outside what the plan allows. */
+    SeatsInvalid = "BILLING_SEATS_INVALID",
+    /** The workspace is on an individual plan, which takes no other members. */
+    PlanIndividualOnly = "BILLING_PLAN_INDIVIDUAL_ONLY",
+    /** Every paid seat of the workspace is taken. */
+    SeatLimitReached = "BILLING_SEAT_LIMIT_REACHED",
+    /** The plan's storage is full. */
+    StorageQuotaExceeded = "BILLING_STORAGE_QUOTA_EXCEEDED",
 }
 
 /** How each billing code travels. */
@@ -34,6 +50,14 @@ export const BILLING_ERROR_KINDS: Record<BillingErrorCode, ErrorKind> = {
     [BillingErrorCode.WebhookInvalid]: "invalid",
     [BillingErrorCode.FeedNotConfigured]: "unavailable",
     [BillingErrorCode.CredentialUnreadable]: "internal",
+    [BillingErrorCode.PlanNotListed]: "conflict",
+    [BillingErrorCode.CycleUnavailable]: "invalid",
+    [BillingErrorCode.TierUnknown]: "invalid",
+    [BillingErrorCode.TierRequired]: "invalid",
+    [BillingErrorCode.SeatsInvalid]: "invalid",
+    [BillingErrorCode.PlanIndividualOnly]: "forbidden",
+    [BillingErrorCode.SeatLimitReached]: "conflict",
+    [BillingErrorCode.StorageQuotaExceeded]: "conflict",
 }
 
 /** The one error class of the billing capability. */

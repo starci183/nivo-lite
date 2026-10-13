@@ -12,6 +12,22 @@ export interface PaymentOrderRequestParams {
     readonly kind: PaymentOrderRequestKind
     /** The active plan or pack code; absent for a renewal. */
     readonly target?: string | null
+    /** Pay month by month or a year at once; a plan order only, monthly when absent. */
+    readonly cycle?: "monthly" | "annual" | null
+    /** The monthly allowance picked from the plan's usage tiers (per seat on Team); a plan order only. */
+    readonly tierCredits?: number | null
+    /** The seats of a per-seat plan; a plan order only. */
+    readonly seats?: number | null
+}
+
+/** The cycle, usage tier and seats a plan request carries, bounded. */
+export interface RequestSelection {
+    /** The billing cycle, or null for a request that is not a plan order. */
+    readonly cycle: string | null
+    /** The usage tier, or null. */
+    readonly tierCredits: number | null
+    /** The seats, or null. */
+    readonly seats: number | null
 }
 
 /** The immediate answer after the request and its job commit together. */

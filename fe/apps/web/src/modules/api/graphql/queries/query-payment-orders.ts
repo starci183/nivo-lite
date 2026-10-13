@@ -28,6 +28,10 @@ const query1: TypedDocumentNode<QueryPaymentOrdersResponse> = gql`
                 paidUntil
                 to
                 toPrice
+                cycle
+                tierCredits
+                seats
+                promo
             }
             qrUrl
             bank {

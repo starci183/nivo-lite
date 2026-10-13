@@ -1,4 +1,4 @@
-// migrations-sha256: bba9329e9e8da11fc92fdeda69eabc25e32de959c729d5a992fc5239831b7d31
+// migrations-sha256: 1bc575834059f661815d403d438c7fd136bde39a4bf3285897303019c2efc2a5
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -1728,25 +1728,6 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"inventory_commands": {
-                  Row: {
-                    "created_at": string,"created_by": string,"error_code": string | null,"error_message": string | null,"finished_at": string | null,"id": string,"input": NonNullable<Json>,"kind": string,"result": Json | null,"status": string,"workspace_id": string
-                  }
-                  Insert: {
-                    "created_at"?: string,"created_by": string,"error_code"?: string | null,"error_message"?: string | null,"finished_at"?: string | null,"id"?: string,"input"?: NonNullable<Json>,"kind": string,"result"?: Json | null,"status"?: string,"workspace_id": string
-                  }
-                  Update: {
-                    "created_at"?: string,"created_by"?: string,"error_code"?: string | null,"error_message"?: string | null,"finished_at"?: string | null,"id"?: string,"input"?: NonNullable<Json>,"kind"?: string,"result"?: Json | null,"status"?: string,"workspace_id"?: string
-                  }
-                  Relationships: [
-                    {
-      foreignKeyName: "inventory_commands_workspace_id_fkey"
-      columns: ["workspace_id"]
-isOneToOne: false
-      referencedRelation: "workspaces"
-      referencedColumns: ["id"]
-    }
-                  ]
                 },"inventory_items": {
                   Row: {
                     "active": boolean,"aliases": (string)[],"category": string,"cost_vnd": number,"created_at": string,"id": string,"name": string,"reorder_point": number,"reorder_qty": number,"sell_price_vnd": number | null,"sku": string,"supplier_id": string | null,"unit": string,"units": NonNullable<Json>,"updated_at": string,"workspace_id": string
@@ -2912,13 +2893,13 @@ isOneToOne: false
                   ]
                 },"payment_order_requests": {
                   Row: {
-                    "answered_at": string | null,"created_at": string,"fault": string | null,"id": string,"kind": string,"order_id": string | null,"requested_by": string,"status": string,"target": string | null,"workspace_id": string
+                    "answered_at": string | null,"created_at": string,"cycle": string | null,"fault": string | null,"id": string,"kind": string,"order_id": string | null,"requested_by": string,"seats": number | null,"status": string,"target": string | null,"tier_credits": number | null,"workspace_id": string
                   }
                   Insert: {
-                    "answered_at"?: string | null,"created_at"?: string,"fault"?: string | null,"id"?: string,"kind": string,"order_id"?: string | null,"requested_by": string,"status"?: string,"target"?: string | null,"workspace_id": string
+                    "answered_at"?: string | null,"created_at"?: string,"cycle"?: string | null,"fault"?: string | null,"id"?: string,"kind": string,"order_id"?: string | null,"requested_by": string,"seats"?: number | null,"status"?: string,"target"?: string | null,"tier_credits"?: number | null,"workspace_id": string
                   }
                   Update: {
-                    "answered_at"?: string | null,"created_at"?: string,"fault"?: string | null,"id"?: string,"kind"?: string,"order_id"?: string | null,"requested_by"?: string,"status"?: string,"target"?: string | null,"workspace_id"?: string
+                    "answered_at"?: string | null,"created_at"?: string,"cycle"?: string | null,"fault"?: string | null,"id"?: string,"kind"?: string,"order_id"?: string | null,"requested_by"?: string,"seats"?: number | null,"status"?: string,"target"?: string | null,"tier_credits"?: number | null,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -2966,15 +2947,34 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"plans": {
+                },"plan_usage_tiers": {
                   Row: {
-                    "active": boolean,"ai_credits_per_month": number | null,"ai_messages_per_month": number | null,"ai_tokens_per_month": number | null,"code": string,"credits_rollover": boolean,"features": NonNullable<Json>,"is_custom": boolean,"name_en": string,"name_vi": string,"period": string,"price_vnd": number,"seats": number,"sort": number
+                    "credits_per_month": number,"per_seat": boolean,"plan_code": string,"price_vnd": number,"sort": number
                   }
                   Insert: {
-                    "active"?: boolean,"ai_credits_per_month"?: number | null,"ai_messages_per_month"?: number | null,"ai_tokens_per_month"?: number | null,"code": string,"credits_rollover"?: boolean,"features"?: NonNullable<Json>,"is_custom"?: boolean,"name_en": string,"name_vi": string,"period": string,"price_vnd": number,"seats": number,"sort"?: number
+                    "credits_per_month": number,"per_seat"?: boolean,"plan_code": string,"price_vnd": number,"sort"?: number
                   }
                   Update: {
-                    "active"?: boolean,"ai_credits_per_month"?: number | null,"ai_messages_per_month"?: number | null,"ai_tokens_per_month"?: number | null,"code"?: string,"credits_rollover"?: boolean,"features"?: NonNullable<Json>,"is_custom"?: boolean,"name_en"?: string,"name_vi"?: string,"period"?: string,"price_vnd"?: number,"seats"?: number,"sort"?: number
+                    "credits_per_month"?: number,"per_seat"?: boolean,"plan_code"?: string,"price_vnd"?: number,"sort"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "plan_usage_tiers_plan_code_fkey"
+      columns: ["plan_code"]
+isOneToOne: false
+      referencedRelation: "plans"
+      referencedColumns: ["code"]
+    }
+                  ]
+                },"plans": {
+                  Row: {
+                    "active": boolean,"ai_credits_per_month": number | null,"ai_messages_per_month": number | null,"ai_tokens_per_month": number | null,"annual_discount_pct": number | null,"code": string,"credits_rollover": boolean,"features": NonNullable<Json>,"individual": boolean,"is_custom": boolean,"listed": boolean,"name_en": string,"name_vi": string,"per_seat": boolean,"period": string,"price_annual_vnd": number | null,"price_vnd": number,"promo_months": number | null,"promo_price_vnd": number | null,"seats": number,"sort": number,"storage_gb": number | null
+                  }
+                  Insert: {
+                    "active"?: boolean,"ai_credits_per_month"?: number | null,"ai_messages_per_month"?: number | null,"ai_tokens_per_month"?: number | null,"annual_discount_pct"?: number | null,"code": string,"credits_rollover"?: boolean,"features"?: NonNullable<Json>,"individual"?: boolean,"is_custom"?: boolean,"listed"?: boolean,"name_en": string,"name_vi": string,"per_seat"?: boolean,"period": string,"price_annual_vnd"?: number | null,"price_vnd": number,"promo_months"?: number | null,"promo_price_vnd"?: number | null,"seats": number,"sort"?: number,"storage_gb"?: number | null
+                  }
+                  Update: {
+                    "active"?: boolean,"ai_credits_per_month"?: number | null,"ai_messages_per_month"?: number | null,"ai_tokens_per_month"?: number | null,"annual_discount_pct"?: number | null,"code"?: string,"credits_rollover"?: boolean,"features"?: NonNullable<Json>,"individual"?: boolean,"is_custom"?: boolean,"listed"?: boolean,"name_en"?: string,"name_vi"?: string,"per_seat"?: boolean,"period"?: string,"price_annual_vnd"?: number | null,"price_vnd"?: number,"promo_months"?: number | null,"promo_price_vnd"?: number | null,"seats"?: number,"sort"?: number,"storage_gb"?: number | null
                   }
                   Relationships: [
                     
@@ -3168,25 +3168,6 @@ isOneToOne: false
       referencedColumns: ["id"]
     },{
       foreignKeyName: "shifts_availability_workspace_id_fkey"
-      columns: ["workspace_id"]
-isOneToOne: false
-      referencedRelation: "workspaces"
-      referencedColumns: ["id"]
-    }
-                  ]
-                },"shifts_commands": {
-                  Row: {
-                    "created_at": string,"created_by": string,"error_code": string | null,"error_message": string | null,"finished_at": string | null,"id": string,"input": NonNullable<Json>,"kind": string,"result": Json | null,"status": string,"workspace_id": string
-                  }
-                  Insert: {
-                    "created_at"?: string,"created_by": string,"error_code"?: string | null,"error_message"?: string | null,"finished_at"?: string | null,"id"?: string,"input"?: NonNullable<Json>,"kind": string,"result"?: Json | null,"status"?: string,"workspace_id": string
-                  }
-                  Update: {
-                    "created_at"?: string,"created_by"?: string,"error_code"?: string | null,"error_message"?: string | null,"finished_at"?: string | null,"id"?: string,"input"?: NonNullable<Json>,"kind"?: string,"result"?: Json | null,"status"?: string,"workspace_id"?: string
-                  }
-                  Relationships: [
-                    {
-      foreignKeyName: "shifts_commands_workspace_id_fkey"
       columns: ["workspace_id"]
 isOneToOne: false
       referencedRelation: "workspaces"
@@ -3761,13 +3742,13 @@ isOneToOne: false
                   ]
                 },"workspaces": {
                   Row: {
-                    "business_type": string | null,"created_at": string,"id": string,"name": string,"owner_id": string,"paid_until": string | null,"plan_code": string | null,"status": string
+                    "billed_monthly_vnd": number | null,"billing_cycle": string | null,"business_type": string | null,"created_at": string,"id": string,"name": string,"owner_id": string,"paid_until": string | null,"plan_code": string | null,"seat_count": number | null,"status": string,"tier_credits": number | null
                   }
                   Insert: {
-                    "business_type"?: string | null,"created_at"?: string,"id"?: string,"name": string,"owner_id": string,"paid_until"?: string | null,"plan_code"?: string | null,"status"?: string
+                    "billed_monthly_vnd"?: number | null,"billing_cycle"?: string | null,"business_type"?: string | null,"created_at"?: string,"id"?: string,"name": string,"owner_id": string,"paid_until"?: string | null,"plan_code"?: string | null,"seat_count"?: number | null,"status"?: string,"tier_credits"?: number | null
                   }
                   Update: {
-                    "business_type"?: string | null,"created_at"?: string,"id"?: string,"name"?: string,"owner_id"?: string,"paid_until"?: string | null,"plan_code"?: string | null,"status"?: string
+                    "billed_monthly_vnd"?: number | null,"billing_cycle"?: string | null,"business_type"?: string | null,"created_at"?: string,"id"?: string,"name"?: string,"owner_id"?: string,"paid_until"?: string | null,"plan_code"?: string | null,"seat_count"?: number | null,"status"?: string,"tier_credits"?: number | null
                   }
                   Relationships: [
                     {
@@ -4190,9 +4171,6 @@ isOneToOne: false
 "inventory_close_receipt":
 { Args: { "p_receipt": string,"p_total": number }; Returns: undefined
                            },
-"inventory_command_finish":
-{ Args: { "p_code": string,"p_id": string,"p_message": string,"p_result": Json,"p_status": string }; Returns: undefined
-                           },
 "inventory_default_location":
 { Args: { "p_name": string,"p_ws": string }; Returns: string
                            },
@@ -4253,9 +4231,6 @@ isOneToOne: false
 "inventory_set_po_status":
 { Args: { "p_po": string,"p_status": string }; Returns: undefined
                            },
-"inventory_submit":
-{ Args: { "p_input": Json,"p_kind": string,"p_workspace": string }; Returns: string
-                           },
 "invite_preview":
 { Args: { "token": string }; Returns: {
               "email": string,"role": string,"staff_name": string,"state": string,"workspace_name": string
@@ -4300,6 +4275,10 @@ isOneToOne: false
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
 "job_status":
+{ Args: { "p_dedupe": string,"p_queue": string,"p_workspace": string }; Returns: {
+              "attempts": number,"id": string,"state": string
+            }[]
+                           } |
 { Args: { "p_dedupe_key": string,"p_name": string,"p_queue": string,"p_workspace_id": string }; Returns: {
               "id": string,"state": string
             }[]
@@ -4424,17 +4403,23 @@ isOneToOne: false
 "shell_data":
 { Args: { "founding_from": string,"founding_to": string,"ws": string }; Returns: Json
                            },
+"shifts_add_availability":
+{ Args: { "p_available": boolean,"p_date": string,"p_decider": string,"p_end": string,"p_note": string,"p_staff": string,"p_start": string,"p_status": string,"p_weekday": number,"p_ws": string }; Returns: string
+                           },
 "shifts_add_shifts":
 { Args: { "p_dates": (string)[],"p_ends": (string)[],"p_positions": (string)[],"p_schedule": string,"p_source": string,"p_staff": (string)[],"p_starts": (string)[],"p_ws": string }; Returns: number
                            },
-"shifts_command_finish":
-{ Args: { "p_code": string,"p_id": string,"p_message": string,"p_result": Json,"p_status": string }; Returns: undefined
+"shifts_check_in":
+{ Args: { "p_shift": string,"p_staff": string,"p_ws": string }; Returns: string
                            },
 "shifts_create_leave":
 { Args: { "p_from": string,"p_reason": string,"p_staff": string,"p_to": string,"p_ws": string }; Returns: string
                            },
 "shifts_create_swap":
 { Args: { "p_from": string,"p_kind": string,"p_reason": string,"p_shift": string,"p_to": string,"p_ws": string }; Returns: string
+                           },
+"shifts_decide_availability":
+{ Args: { "p_decider": string,"p_id": string,"p_status": string,"p_ws": string }; Returns: undefined
                            },
 "shifts_decide_leave":
 { Args: { "p_by": string,"p_leave": string,"p_note": string,"p_status": string,"p_work": string,"p_ws": string }; Returns: (string)[]
@@ -4466,17 +4451,38 @@ isOneToOne: false
 "shifts_record_notification":
 { Args: { "p_body": string,"p_channel": string,"p_kind": string,"p_schedule": string,"p_shift": string,"p_staff": string,"p_status": string,"p_ws": string }; Returns: undefined
                            },
+"shifts_remove_availability":
+{ Args: { "p_id": string,"p_ws": string }; Returns: undefined
+                           },
+"shifts_remove_coverage":
+{ Args: { "p_id": string,"p_ws": string }; Returns: undefined
+                           },
+"shifts_remove_position":
+{ Args: { "p_id": string,"p_ws": string }; Returns: undefined
+                           },
 "shifts_remove_shift":
 { Args: { "p_shift": string,"p_ws": string }; Returns: undefined
+                           },
+"shifts_save_coverage":
+{ Args: { "p_end": string,"p_id": string,"p_ideal": number,"p_min": number,"p_peak": boolean,"p_position": string,"p_start": string,"p_weekdays": (number)[],"p_ws": string }; Returns: undefined
+                           },
+"shifts_save_pay":
+{ Args: { "p_staff": string,"p_wage": number,"p_ws": string }; Returns: undefined
+                           },
+"shifts_save_position":
+{ Args: { "p_color": string,"p_id": string,"p_name": string,"p_ws": string }; Returns: string
                            },
 "shifts_save_schedule":
 { Args: { "p_by": string,"p_cost": number,"p_evidence": Json,"p_ms": number,"p_summary": Json,"p_week": string,"p_ws": string }; Returns: string
                            },
+"shifts_save_settings":
+{ Args: { "p_leave": number,"p_noshow": number,"p_opening": Json,"p_overtime": number,"p_remind": number,"p_swap": number,"p_ws": string }; Returns: undefined
+                           },
+"shifts_save_staff":
+{ Args: { "p_id": string,"p_row": Json,"p_ws": string }; Returns: string
+                           },
 "shifts_set_explanation":
 { Args: { "p_evidence": Json,"p_schedule": string,"p_text": string,"p_ws": string }; Returns: undefined
-                           },
-"shifts_submit":
-{ Args: { "p_input": Json,"p_kind": string,"p_workspace": string }; Returns: string
                            },
 "storage_ws_manager":
 { Args: { "p_name": string }; Returns: boolean
@@ -4507,6 +4513,9 @@ isOneToOne: false
 { Args: { "ws": string }; Returns: {
               "created_at": string,"display_name": string,"email": string,"last_sign_in_at": string,"role": string,"staff_id": string,"status": string,"user_id": string
             }[]
+                           },
+"workspace_storage_bytes":
+{ Args: { "p_workspace": string }; Returns: number
                            },
 "zalo_authorization_return":
 { Args: { "p_code": string,"p_oa_id"?: string,"p_state": string }; Returns: string

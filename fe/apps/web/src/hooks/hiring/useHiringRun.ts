@@ -1,8 +1,7 @@
 import { useTranslations } from "next-intl"
 import { useCallback, useState } from "react"
 import { mutate } from "swr"
-import { QUERY_HIRING_CANDIDATE_DETAIL_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryHiringCandidateDetailSwr"
-import { QUERY_HIRING_WORKBENCH_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryHiringWorkbenchSwr"
+import { QUERY_HIRING_CANDIDATE_DETAIL_SWR_KEY, QUERY_HIRING_WORKBENCH_SWR_KEY } from "@/hooks/swr"
 import { toast, useGraphQLWithToast } from "@/modules/toast"
 
 /** What one command run leaves on the screen. */

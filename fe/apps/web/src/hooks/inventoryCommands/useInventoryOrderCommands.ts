@@ -1,9 +1,11 @@
 import { useMemo } from "react"
-import { useMutateCancelInventoryPoSwr } from "@/hooks/swr/api/graphql/mutations/useMutateCancelInventoryPoSwr"
-import { useMutateCreateInventoryPoSwr } from "@/hooks/swr/api/graphql/mutations/useMutateCreateInventoryPoSwr"
-import { useMutateReceiveInventoryPoSwr } from "@/hooks/swr/api/graphql/mutations/useMutateReceiveInventoryPoSwr"
-import { useMutateRequestInventorySendSwr } from "@/hooks/swr/api/graphql/mutations/useMutateRequestInventorySendSwr"
-import { useMutateUpdateInventoryPoDraftSwr } from "@/hooks/swr/api/graphql/mutations/useMutateUpdateInventoryPoDraftSwr"
+import {
+    useMutateCancelInventoryPoSwr,
+    useMutateCreateInventoryPoSwr,
+    useMutateReceiveInventoryPoSwr,
+    useMutateRequestInventorySendSwr,
+    useMutateUpdateInventoryPoDraftSwr,
+} from "@/hooks/swr"
 import type { InventoryOrderCommands } from "./inventoryCommands.shared"
 
 /** The purchase order commands of the inventory workbench through the back end GraphQL door. */

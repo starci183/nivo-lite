@@ -1,5 +1,5 @@
 import { useHiringCopy, useHiringRun } from "@/hooks/hiring"
-import { useMutateCancelHiringOfferSwr } from "@/hooks/swr/api/graphql/mutations/useMutateCancelHiringOfferSwr"
+import { useMutateCancelHiringOfferSwr } from "@/hooks/swr"
 
 /** The offers list: the copied letter link, the pending flag and the cancel command. */
 export const useHiringOffers = () => {

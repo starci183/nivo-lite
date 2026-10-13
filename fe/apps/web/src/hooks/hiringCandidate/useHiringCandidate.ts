@@ -4,7 +4,7 @@ import { CLOSED_STAGES, OPEN_INTERVIEW_STATUSES, OPEN_OFFER_STATUSES, useHiringR
 import { toCandidateDetail } from "@/hooks/hiringMap"
 import type { CandidateView, HiringWorkbenchData } from "@/hooks/hiringWire"
 import { useHiringMove } from "@/hooks/hiringPipeline"
-import { useQueryHiringCandidateDetailSwr } from "@/hooks/swr/api/graphql/queries/useQueryHiringCandidateDetailSwr"
+import { useQueryHiringCandidateDetailSwr } from "@/hooks/swr"
 import type { CandidateDialog } from "./hiringCandidate.shared"
 import { useHiringCandidateCommands } from "./useHiringCandidateCommands"
 

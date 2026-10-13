@@ -1,6 +1,6 @@
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { useMutateRespondHiringOfferSwr } from "@/hooks/swr/api/graphql/mutations/useMutateRespondHiringOfferSwr"
+import { useMutateRespondHiringOfferSwr } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import type { ReplyOutcome } from "./useHiringInterviewReply"
 

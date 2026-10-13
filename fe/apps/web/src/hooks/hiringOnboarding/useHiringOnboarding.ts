@@ -1,6 +1,5 @@
 import { useHiringRun } from "@/hooks/hiring"
-import { useMutateLinkHiringStaffSwr } from "@/hooks/swr/api/graphql/mutations/useMutateLinkHiringStaffSwr"
-import { useMutateToggleHiringOnboardingSwr } from "@/hooks/swr/api/graphql/mutations/useMutateToggleHiringOnboardingSwr"
+import { useMutateLinkHiringStaffSwr, useMutateToggleHiringOnboardingSwr } from "@/hooks/swr"
 
 /** The onboarding checklists: tick a step, and make a hired candidate a staff profile. */
 export const useHiringOnboarding = () => {

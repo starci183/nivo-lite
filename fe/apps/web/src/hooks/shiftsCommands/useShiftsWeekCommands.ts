@@ -2,10 +2,12 @@
 
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
-import { useMutateExplainShiftsScheduleSwr } from "@/hooks/swr/api/graphql/mutations/useMutateExplainShiftsScheduleSwr"
-import { useMutateProposeShiftsWeekSwr } from "@/hooks/swr/api/graphql/mutations/useMutateProposeShiftsWeekSwr"
-import { useMutateReassignShiftsShiftSwr } from "@/hooks/swr/api/graphql/mutations/useMutateReassignShiftsShiftSwr"
-import { useMutateRequestShiftsPublishSwr } from "@/hooks/swr/api/graphql/mutations/useMutateRequestShiftsPublishSwr"
+import {
+    useMutateExplainShiftsScheduleSwr,
+    useMutateProposeShiftsWeekSwr,
+    useMutateReassignShiftsShiftSwr,
+    useMutateRequestShiftsPublishSwr,
+} from "@/hooks/swr"
 import { toast, useGraphQLWithToast } from "@/modules/toast"
 import { refreshShifts } from "./shiftsCommands.shared"
 import { useShiftsSaved } from "./useShiftsSaved"

@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
-import { useMutateApplyShiftsImportSwr } from "@/hooks/swr/api/graphql/mutations/useMutateApplyShiftsImportSwr"
+import { useMutateApplyShiftsImportSwr } from "@/hooks/swr"
 import { toast, useGraphQLWithToast } from "@/modules/toast"
 import { refreshShifts } from "./shiftsCommands.shared"
 

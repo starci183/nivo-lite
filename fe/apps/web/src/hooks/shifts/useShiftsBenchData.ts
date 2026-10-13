@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { useQueryShiftsWorkbenchSwr } from "@/hooks/swr/api/graphql/queries/useQueryShiftsWorkbenchSwr"
+import { useQueryShiftsWorkbenchSwr } from "@/hooks/swr"
 import type { ShiftsBenchView, ShiftsFiguresView } from "@/modules/types"
 import { toBenchView, toFiguresView } from "./shifts.shared"
 

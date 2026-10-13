@@ -1,5 +1,6 @@
 import { PageContainer } from "@starci/grammar/common"
 import { TeamForbidden } from "@/components/blocks/TeamForbidden"
+import { TeamIndividualNotice } from "@/components/blocks/TeamIndividualNotice"
 import { TeamInvite } from "@/components/blocks/TeamInvite"
 import { TeamInvites } from "@/components/blocks/TeamInvites"
 import { TeamMembers } from "@/components/blocks/TeamMembers"
@@ -27,6 +28,7 @@ export const TeamPageBase = (props: TeamPageBaseProps) => (
             <HomePageHeading {...props.props} />
             <TeamForbidden />
             <TeamMembers />
+            <TeamIndividualNotice />
             <TeamInvites />
             <TeamInvite />
         </div>

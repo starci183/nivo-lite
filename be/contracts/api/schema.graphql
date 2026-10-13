@@ -1153,10 +1153,14 @@ type BillingBankAccountType {
 type BillingPaymentDetailsType {
   credit: Float
   credits: Float
+  cycle: String
   daysLeft: Int
   from: String
   fromPrice: Float
   paidUntil: String
+  promo: Boolean
+  seats: Int
+  tierCredits: Float
   to: String
   toPrice: Float
 }
@@ -1187,17 +1191,51 @@ input BillingPlanInput {
   code: String!
 }
 
+input BillingPlanQuoteInput {
+  cycle: String
+  planCode: String!
+  seats: Int
+  tierCredits: Float
+}
+
+type BillingPlanQuoteType {
+  amountVnd: Float!
+  creditsPerMonth: Float
+  cycle: String!
+  listMonthlyVnd: Float!
+  months: Int!
+  planCode: String!
+  promo: Boolean!
+  seats: Int!
+  tierCredits: Float
+}
+
+type BillingPlanTierType {
+  creditsPerMonth: Float!
+  perSeat: Boolean!
+  priceVnd: Float!
+}
+
 type BillingPlanType {
   aiCreditsPerMonth: Float
+  annualDiscountPct: Int
   code: String!
   features: BillingPlanFeaturesType!
+  individual: Boolean!
   isCustom: Boolean!
+  listed: Boolean!
   nameEn: String!
   nameVi: String!
+  perSeat: Boolean!
   period: String!
+  priceAnnualVnd: Float
   priceVnd: Float!
+  promoMonths: Int
+  promoPriceVnd: Float
   seats: Int!
   sort: Int!
+  storageGb: Int
+  tiers: [BillingPlanTierType!]!
 }
 
 type BillingReviewTransactionType {
@@ -1212,13 +1250,22 @@ input BillingReviewTransactionsInput {
   orderIds: [ID!]!
 }
 
+type BillingStorageType {
+  quotaBytes: Float
+  usedBytes: Float!
+}
+
 type BillingWorkspaceType {
+  billedMonthlyVnd: Float
+  billingCycle: String
   id: ID!
   name: String!
   paidUntil: String
   planCode: String
   role: String!
+  seatCount: Int
   status: String!
+  tierCredits: Float
 }
 
 type BodyProposalType {
@@ -5201,8 +5248,10 @@ type Query {
   automations: AutomationsOverviewType!
   billingBankAccount: BillingBankAccountType!
   billingPlan(input: BillingPlanInput!): BillingPlanType
+  billingPlanQuote(input: BillingPlanQuoteInput!): BillingPlanQuoteType!
   billingPlans: [BillingPlanType!]!
   billingReviewTransactions(input: BillingReviewTransactionsInput!): [BillingReviewTransactionType!]!
+  billingStorage: BillingStorageType!
   billingWorkspace: BillingWorkspaceType!
   billingWorkspaces: [BillingWorkspaceType!]!
   bookingBoard(input: BookingBoardInput): BookingBoardType!
@@ -5590,8 +5639,11 @@ type RequestLoyaltyCodeType {
 }
 
 input RequestPaymentOrderInput {
+  cycle: String
   kind: String!
+  seats: Int
   target: String
+  tierCredits: Float
 }
 
 type RequestPaymentOrderType {

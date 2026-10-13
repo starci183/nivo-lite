@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { useQueryPublicHiringInterviewSwr } from "@/hooks/swr/api/graphql/queries/useQueryPublicHiringInterviewSwr"
+import { useQueryPublicHiringInterviewSwr } from "@/hooks/swr"
 import { toPublicInterview } from "./hiringPublic.shared"
 
 /** The interview invitation of a link token, read without a session; `isMissing` when the link is not valid any more. */

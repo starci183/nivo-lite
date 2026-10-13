@@ -2,7 +2,7 @@ import { useState } from "react"
 import type { UseFormReturn } from "react-hook-form"
 import { useHiringRun } from "@/hooks/hiring"
 import type { FieldOf } from "@/hooks/hiring"
-import { useMutateRequestHiringInterviewSwr } from "@/hooks/swr/api/graphql/mutations/useMutateRequestHiringInterviewSwr"
+import { useMutateRequestHiringInterviewSwr } from "@/hooks/swr"
 import type { InterviewValues, RequestOutcomeView } from "./hiringCandidate.shared"
 
 const FIELD_OPTIONS = { shouldValidate: true }

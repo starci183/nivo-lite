@@ -1,9 +1,11 @@
 "use client"
 
 import { useCallback } from "react"
-import { useMutateAddShiftsAvailabilitySwr } from "@/hooks/swr/api/graphql/mutations/useMutateAddShiftsAvailabilitySwr"
-import { useMutateRemoveShiftsAvailabilitySwr } from "@/hooks/swr/api/graphql/mutations/useMutateRemoveShiftsAvailabilitySwr"
-import { useMutateSaveShiftsSettingsSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSaveShiftsSettingsSwr"
+import {
+    useMutateAddShiftsAvailabilitySwr,
+    useMutateRemoveShiftsAvailabilitySwr,
+    useMutateSaveShiftsSettingsSwr,
+} from "@/hooks/swr"
 import { useShiftsSaved } from "./useShiftsSaved"
 
 /** The shop rules a manager edits. */

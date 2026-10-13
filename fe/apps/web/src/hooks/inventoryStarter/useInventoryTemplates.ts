@@ -1,4 +1,4 @@
-import { useQueryInventoryTemplatesSwr } from "@/hooks/swr/api/graphql/queries/useQueryInventoryTemplatesSwr"
+import { useQueryInventoryTemplatesSwr } from "@/hooks/swr"
 import { toTemplateChoice } from "./inventoryStarter.shared"
 
 /** The starter sets a business can load, through the `inventoryTemplates` query. */

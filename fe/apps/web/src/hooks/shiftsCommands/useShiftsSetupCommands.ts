@@ -1,11 +1,13 @@
 "use client"
 
 import { useCallback } from "react"
-import { useMutateRemoveShiftsCoverageSwr } from "@/hooks/swr/api/graphql/mutations/useMutateRemoveShiftsCoverageSwr"
-import { useMutateRemoveShiftsPositionSwr } from "@/hooks/swr/api/graphql/mutations/useMutateRemoveShiftsPositionSwr"
-import { useMutateSaveShiftsCoverageSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSaveShiftsCoverageSwr"
-import { useMutateSaveShiftsPositionSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSaveShiftsPositionSwr"
-import { useMutateSaveShiftsStaffSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSaveShiftsStaffSwr"
+import {
+    useMutateRemoveShiftsCoverageSwr,
+    useMutateRemoveShiftsPositionSwr,
+    useMutateSaveShiftsCoverageSwr,
+    useMutateSaveShiftsPositionSwr,
+    useMutateSaveShiftsStaffSwr,
+} from "@/hooks/swr"
 import { useShiftsSaved } from "./useShiftsSaved"
 
 /** What a manager types for one person of the roster. */
