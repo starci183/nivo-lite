@@ -2,9 +2,4 @@ export { ConnectionsModule } from "./connections.module"
 export { ConnectionsService } from "./connections.service"
 export { CONNECTIONS_ERROR_KINDS, ConnectionsErrorCode } from "./errors/connections.error"
 export { CONNECTIONS_MESSAGES } from "./messages/connections.messages"
-export type {
-    HealthCandidate,
-    IntakeConnection,
-    OptionalSmtpConnection,
-    WizardSettlement,
-} from "./connections.contracts"
+export type { HealthCandidate, IntakeConnection, WizardSettlement } from "./connections.contracts"
