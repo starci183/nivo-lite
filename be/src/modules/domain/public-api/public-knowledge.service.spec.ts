@@ -1,10 +1,9 @@
 import { Test } from "@nestjs/testing"
-import { fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
-import type { MockEntityManager, RecordingQueueOutbox } from "@starci/jest-preset"
+import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import type { MockEntityManager } from "@starci/jest-preset"
 import { ApiKeysService } from "@modules/domain/api-keys"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { QUEUE_OUTBOX } from "@modules/platform/queue"
-import { PUBLIC_API_QUEUE, PublicApiQueue } from "@modules/queues/public-api"
+import { PublicApiQueue } from "@modules/queues/public-api"
 import { PublicApiErrorCode } from "./errors/public-api.error"
 import type { AcceptKnowledgeParams } from "./public-api.contracts"
 import { PublicKnowledgeService } from "./public-knowledge.service"
@@ -26,26 +25,26 @@ const KNOWLEDGE: AcceptKnowledgeParams = {
 const RECORDED = { id: "request-1", lead_id: null, inserted: true }
 
 const build = async (entityManager: MockEntityManager) => {
-    const outbox: RecordingQueueOutbox = recordingQueueOutbox()
+    const queue = mock<PublicApiQueue>()
+    queue.enqueueRequest.mockResolvedValue(undefined)
     const keys = mock<ApiKeysService>()
     keys.authenticate.mockResolvedValue(WHO)
     const moduleRef = await Test.createTestingModule({
         providers: [
             PublicKnowledgeService,
-            PublicApiQueue,
+            { provide: PublicApiQueue, useValue: queue },
             { provide: ApiKeysService, useValue: keys },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
-            { provide: QUEUE_OUTBOX, useValue: outbox },
         ],
     }).compile()
-    return { service: moduleRef.get(PublicKnowledgeService), outbox, keys }
+    return { service: moduleRef.get(PublicKnowledgeService), queue, keys }
 }
 
 describe("PublicKnowledgeService", () => {
     describe("acceptKnowledge", () => {
         it("admits the key for knowledge:write and records the request and its job in one transaction", async () => {
             const tx = fakeTransaction(mockEntityManager({ query: [INSERT_REQUEST, [RECORDED]] }))
-            const { service, outbox, keys } = await build(tx.em)
+            const { service, queue, keys } = await build(tx.em)
 
             await expect(service.acceptKnowledge(KNOWLEDGE)).resolves.toEqual({ id: "request-1", status: "queued" })
 
@@ -65,10 +64,11 @@ describe("PublicKnowledgeService", () => {
                     source: "api:n8n",
                 }),
             ])
-            expect(outbox.jobsOf(PUBLIC_API_QUEUE)).toEqual([
-                { queue: PUBLIC_API_QUEUE, payload: { requestId: "request-1", workspaceId: "workspace-1" } },
-            ])
-            expect(outbox.allInTransaction).toBe(true)
+            expect(queue.enqueueRequest).toHaveBeenCalledWith(
+                { requestId: "request-1", workspaceId: "workspace-1" },
+                expect.any(Object),
+            )
+            expect(tx.commits).toBe(1)
         })
 
         it("records no topic, no tags and an internal source when the caller names none", async () => {
@@ -110,13 +110,13 @@ describe("PublicKnowledgeService", () => {
 
         it("refuses when the ledger answers no row", async () => {
             const tx = fakeTransaction(mockEntityManager({ query: [INSERT_REQUEST, []] }))
-            const { service, outbox } = await build(tx.em)
+            const { service, queue } = await build(tx.em)
 
             await expect(service.acceptKnowledge(KNOWLEDGE)).rejects.toMatchObject({
                 code: PublicApiErrorCode.NotWritten,
             })
 
-            expect(outbox.jobs).toEqual([])
+            expect(queue.enqueueRequest).not.toHaveBeenCalled()
         })
 
         it("stops at a refused key before any query", async () => {

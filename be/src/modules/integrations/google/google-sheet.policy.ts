@@ -145,11 +145,12 @@ const asText = (value: unknown): string => {
 const asNumber = (value: unknown): number =>
     typeof value === "number" && Number.isFinite(value) ? value : Number(value) || 0
 
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
+
 const nameOf = (item: unknown): string => {
     if (typeof item === "string") return item
-    if (typeof item !== "object" || item === null) return ""
-    const record = item as Record<string, unknown>
-    return asText(record.name ?? record.title)
+    if (!isRecord(item)) return ""
+    return asText(item.name ?? item.title)
 }
 
 const itemsText = (value: unknown): string =>
