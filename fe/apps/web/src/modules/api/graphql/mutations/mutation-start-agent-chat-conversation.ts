@@ -1,14 +1,17 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationStartAgentChatConversationArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type {
+    StartAgentChatConversationMutation,
+    StartAgentChatConversationMutationVariables,
+} from "../__generated__/graphql"
 
 /** Generated input of the start conversation mutation. */
-export type MutateStartAgentChatConversationRequest = MutationStartAgentChatConversationArgs["input"]
+export type MutateStartAgentChatConversationRequest = WireInput<StartAgentChatConversationMutationVariables["input"]>
 
 /** Generated selection of the start conversation mutation. */
-type MutateStartAgentChatConversationResponse = Pick<Mutation, "startAgentChatConversation">
+type MutateStartAgentChatConversationResponse = StartAgentChatConversationMutation
 
 type Document = TypedDocumentNode<
     MutateStartAgentChatConversationResponse,

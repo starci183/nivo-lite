@@ -1,14 +1,17 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationSetKnowledgeSuggestionStateArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type {
+    SetKnowledgeSuggestionStateMutation,
+    SetKnowledgeSuggestionStateMutationVariables,
+} from "../__generated__/graphql"
 
 /** The response of the `setKnowledgeSuggestionState` mutation: the typed payload straight from the back end contract. */
-type MutateSetKnowledgeSuggestionStateResponse = Pick<Mutation, "setKnowledgeSuggestionState">
+type MutateSetKnowledgeSuggestionStateResponse = SetKnowledgeSuggestionStateMutation
 
 /** The input of the `setKnowledgeSuggestionState` mutation. */
-export type MutateSetKnowledgeSuggestionStateRequest = MutationSetKnowledgeSuggestionStateArgs["input"]
+export type MutateSetKnowledgeSuggestionStateRequest = WireInput<SetKnowledgeSuggestionStateMutationVariables["input"]>
 
 const mutation1: TypedDocumentNode<
     MutateSetKnowledgeSuggestionStateResponse,

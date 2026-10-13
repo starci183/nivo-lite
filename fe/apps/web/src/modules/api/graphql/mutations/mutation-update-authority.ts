@@ -1,13 +1,13 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationUpdateAuthorityArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { UpdateAuthorityMutation, UpdateAuthorityMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `updateAuthority` mutation. */
-export type MutateUpdateAuthorityRequest = MutationUpdateAuthorityArgs["input"]
+export type MutateUpdateAuthorityRequest = WireInput<UpdateAuthorityMutationVariables["input"]>
 
-type MutateUpdateAuthorityResponse = Pick<Mutation, "updateAuthority">
+type MutateUpdateAuthorityResponse = UpdateAuthorityMutation
 
 const mutation1: TypedDocumentNode<MutateUpdateAuthorityResponse, InputVariables<MutateUpdateAuthorityRequest>> = gql`
     mutation UpdateAuthority($input: UpdateAuthorityInput!) {

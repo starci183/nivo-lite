@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationUpdateProfileArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { UpdateProfileMutation, UpdateProfileMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `updateProfile` mutation. */
-type MutateUpdateProfileRequest = MutationUpdateProfileArgs["input"]
+type MutateUpdateProfileRequest = WireInput<UpdateProfileMutationVariables["input"]>
 
 /** The response of the `updateProfile` mutation: the typed payload straight from the back end contract. */
-type MutateUpdateProfileResponse = Pick<Mutation, "updateProfile">
+type MutateUpdateProfileResponse = UpdateProfileMutation
 
 type Document = TypedDocumentNode<MutateUpdateProfileResponse, InputVariables<MutateUpdateProfileRequest>>
 

@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationStartMoneyConnectionArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { StartMoneyConnectionMutation, StartMoneyConnectionMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `startMoneyConnection` mutation. */
-export type MutateStartMoneyConnectionRequest = MutationStartMoneyConnectionArgs["input"]
+export type MutateStartMoneyConnectionRequest = WireInput<StartMoneyConnectionMutationVariables["input"]>
 
 /** The response of the `startMoneyConnection` mutation. */
-type MutateStartMoneyConnectionResponse = Pick<Mutation, "startMoneyConnection">
+type MutateStartMoneyConnectionResponse = StartMoneyConnectionMutation
 
 const mutation1: TypedDocumentNode<
     MutateStartMoneyConnectionResponse,

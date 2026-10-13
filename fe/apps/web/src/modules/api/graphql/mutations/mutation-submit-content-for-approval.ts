@@ -1,14 +1,17 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationSubmitContentForApprovalArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type {
+    SubmitContentForApprovalMutation,
+    SubmitContentForApprovalMutationVariables,
+} from "../__generated__/graphql"
 
 /** The input of the `submitContentForApproval` mutation. */
-type MutateSubmitContentForApprovalRequest = MutationSubmitContentForApprovalArgs["input"]
+type MutateSubmitContentForApprovalRequest = WireInput<SubmitContentForApprovalMutationVariables["input"]>
 
 /** The generated payload of the `submitContentForApproval` mutation. */
-type MutateSubmitContentForApprovalResponse = Pick<Mutation, "submitContentForApproval">
+type MutateSubmitContentForApprovalResponse = SubmitContentForApprovalMutation
 
 type Document = TypedDocumentNode<
     MutateSubmitContentForApprovalResponse,

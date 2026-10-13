@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationStartWebhookConnectionArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { StartWebhookConnectionMutation, StartWebhookConnectionMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `startWebhookConnection` mutation. */
-export type MutateStartWebhookConnectionRequest = MutationStartWebhookConnectionArgs["input"]
+export type MutateStartWebhookConnectionRequest = WireInput<StartWebhookConnectionMutationVariables["input"]>
 
 /** The response of the `startWebhookConnection` mutation. */
-type MutateStartWebhookConnectionResponse = Pick<Mutation, "startWebhookConnection">
+type MutateStartWebhookConnectionResponse = StartWebhookConnectionMutation
 
 const mutation1: TypedDocumentNode<
     MutateStartWebhookConnectionResponse,
