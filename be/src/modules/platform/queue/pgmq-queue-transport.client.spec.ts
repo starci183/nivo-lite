@@ -47,15 +47,17 @@ const messageOf = builder<QueueReadRow>({
 const failedMessage = (id: string, attempt: number): QueueReadRow =>
     messageOf({ msg_id: id, attempt, message: { name: "knowledge.index", payload: {}, outbox_id: `row-${id}` } })
 
-/** A manager whose reads answer the batches in turn (then nothing) and whose other statements answer `{}` or the failure given for them. */
-const scripted = (batches: ReadonlyArray<ReadonlyArray<QueueReadRow>>, refusing: ReadonlyArray<string> = []) => {
-    const manager = mockEntityManager()
+/** Answers the read batches in turn (then nothing); other statements answer `{}`, or reject when the statement is listed. */
+const scriptReads = (
+    manager: MockEntityManager,
+    batches: ReadonlyArray<ReadonlyArray<QueueReadRow>>,
+    refusing: ReadonlyArray<string> = [],
+): void => {
     const pending = [...batches]
     manager.query.mockImplementation((statement: string) => {
         if (refusing.includes(statement)) return Promise.reject(new Error(`${statement} refused`))
         return Promise.resolve(statement === JOB_READ ? (pending.shift() ?? []) : [{}])
     })
-    return manager
 }
 
 const build = async (manager: MockEntityManager = mockEntityManager(), options: Partial<QueueOptions> = {}) => {
@@ -168,7 +170,9 @@ describe("PgmqQueueTransportClient", () => {
 
     describe("work", () => {
         it("reads the free slots with the visibility timeout and the workspace limit, runs the batch and acknowledges what completed", async () => {
-            const { client, manager } = await build(scripted([[messageOf(), messageOf({ msg_id: "2" })]]))
+            const queued = mockEntityManager()
+            scriptReads(queued, [[messageOf(), messageOf({ msg_id: "2" })]])
+            const { client, manager } = await build(queued)
             const { handler, handle } = handlerOf()
 
             const wait = await runUntilFirstPause(client, handler)
@@ -192,7 +196,9 @@ describe("PgmqQueueTransportClient", () => {
                 code: QueueErrorCode.RetryAfter,
                 params: { seconds: 30, reason: "rate limited" },
             })
-            const { client, manager, logger } = await build(scripted([[failedMessage("2", 2), failedMessage("3", 1)]]))
+            const queued = mockEntityManager()
+            scriptReads(queued, [[failedMessage("2", 2), failedMessage("3", 1)]])
+            const { client, manager, logger } = await build(queued)
             const { handler, failed } = handlerOf({ "row-2": new Error("provider down"), "row-3": asked })
 
             await runUntilFirstPause(client, handler)
@@ -210,7 +216,9 @@ describe("PgmqQueueTransportClient", () => {
 
         it("archives a job on its last attempt, even one that asked to retry, after its failure hook ran", async () => {
             const asked = new QueueError({ code: QueueErrorCode.RetryAfter, params: { seconds: 30 } })
-            const { client, manager, logger } = await build(scripted([[failedMessage("4", 4)]]))
+            const queued = mockEntityManager()
+            scriptReads(queued, [[failedMessage("4", 4)]])
+            const { client, manager, logger } = await build(queued)
             const { handler, failed } = handlerOf({ "row-4": asked })
 
             await runUntilFirstPause(client, handler)
@@ -230,7 +238,9 @@ describe("PgmqQueueTransportClient", () => {
                 code: QueueErrorCode.Unrecoverable,
                 params: { reason: "blocked_credits" },
             })
-            const { client, manager } = await build(scripted([[failedMessage("5", 1)]]))
+            const queued = mockEntityManager()
+            scriptReads(queued, [[failedMessage("5", 1)]])
+            const { client, manager } = await build(queued)
             const { handle } = handlerOf({ "row-5": refused })
             const handler: QueueHandler = { queue: "knowledge", handle }
 
@@ -240,7 +250,9 @@ describe("PgmqQueueTransportClient", () => {
         })
 
         it("archives the job even when its failure hook throws, and logs the hook", async () => {
-            const { client, manager, logger } = await build(scripted([[failedMessage("6", 4)]]))
+            const queued = mockEntityManager()
+            scriptReads(queued, [[failedMessage("6", 4)]])
+            const { client, manager, logger } = await build(queued)
             const { handler, failed } = handlerOf({ "row-6": new Error("gave up") })
             const hook = new Error("hook broke")
             failed.mockRejectedValue(hook)
@@ -255,7 +267,9 @@ describe("PgmqQueueTransportClient", () => {
         })
 
         it("logs a read that failed and pauses before reading again", async () => {
-            const { client, manager, logger } = await build(scripted([]))
+            const queued = mockEntityManager()
+            scriptReads(queued, [])
+            const { client, manager, logger } = await build(queued)
             const failure = new Error("pgmq unreachable")
             manager.query.mockRejectedValueOnce(failure)
 
@@ -265,7 +279,9 @@ describe("PgmqQueueTransportClient", () => {
         })
 
         it("logs a message it could not settle, leaving it to reappear after its visibility timeout", async () => {
-            const { client, logger } = await build(scripted([[messageOf()]], [JOB_ACK]))
+            const queued = mockEntityManager()
+            scriptReads(queued, [[messageOf()]], [JOB_ACK])
+            const { client, logger } = await build(queued)
 
             await runUntilFirstPause(client, handlerOf().handler)
 
@@ -276,9 +292,9 @@ describe("PgmqQueueTransportClient", () => {
         })
 
         it("reads again as soon as a running job frees its slot when every slot is taken", async () => {
-            const { client, manager } = await build(
-                scripted([[messageOf(), messageOf({ msg_id: "2" })], [messageOf({ msg_id: "3" })]]),
-            )
+            const queued = mockEntityManager()
+            scriptReads(queued, [[messageOf(), messageOf({ msg_id: "2" })], [messageOf({ msg_id: "3" })]])
+            const { client, manager } = await build(queued)
             const { handler, handle } = handlerOf()
 
             const wait = await runUntilFirstPause(client, handler, 2)
@@ -289,7 +305,9 @@ describe("PgmqQueueTransportClient", () => {
         })
 
         it("does not pause after an empty read once it is closing", async () => {
-            const { client, manager } = await build(scripted([]))
+            const queued = mockEntityManager()
+            scriptReads(queued, [])
+            const { client, manager } = await build(queued)
             const wait = jest.spyOn(client, "wait").mockImplementation(() => new Promise<void>(() => undefined))
             let stopped: Promise<void> = Promise.resolve()
             manager.query.mockImplementation(() => {
@@ -309,7 +327,9 @@ describe("PgmqQueueTransportClient", () => {
             afterEach(() => jest.useRealTimers())
 
             it("renews the visibility timeout every third of it and logs a renewal that failed", async () => {
-                const { client, manager, logger } = await build(scripted([]))
+                const queued = mockEntityManager()
+                scriptReads(queued, [])
+                const { client, manager, logger } = await build(queued)
                 const refused = new Error("touch refused")
                 manager.query.mockImplementationOnce(() => Promise.resolve([messageOf()]))
                 manager.query.mockImplementationOnce(() => Promise.reject(refused))
@@ -339,7 +359,9 @@ describe("PgmqQueueTransportClient", () => {
             })
 
             it("aborts a delivery that outlives the shutdown grace and hands its message back at once", async () => {
-                const { client, manager, logger } = await build(scripted([[messageOf()]]), { shutdownGraceMs: 500 })
+                const queued = mockEntityManager()
+                scriptReads(queued, [[messageOf()]])
+                const { client, manager, logger } = await build(queued, { shutdownGraceMs: 500 })
                 const handler: QueueHandler = {
                     queue: "knowledge",
                     handle: (delivery) =>
