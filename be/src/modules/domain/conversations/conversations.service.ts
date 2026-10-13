@@ -12,7 +12,7 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { ChatTurnQueue } from "@modules/queues/chat-turn"
-import type { FrontAgent, TelegramInbound, ZaloInbound } from "./conversations.contracts"
+import type { FrontAgent, MetaInbound, TelegramInbound, ZaloInbound } from "./conversations.contracts"
 import type { FrontAgentRow } from "./persistence/conversations.rows"
 import { FIND_FRONT_AGENT } from "./persistence/conversations.sql"
 
@@ -128,6 +128,32 @@ export class ConversationsService {
                 agent,
                 text: inbound.text,
                 channelEventId: `zalo:${inbound.messageId}`,
+            },
+            manager,
+        )
+    }
+
+    /** One Facebook or Instagram direct message: answered by the front-door agent of the connection, or only stored when none is bound. */
+    async acceptMeta(connectionId: string, inbound: MetaInbound, manager: EntityManager): Promise<void> {
+        const connection = await this.connections.intakeOf(connectionId, "meta", manager)
+        if (connection.kind !== "ok") return
+        const visitor = inbound.visitor ?? this.catalog.get(`conversations.${inbound.platform}Guest`, {}, LOCALE)
+        const agent = await this.frontAgentOf(connectionId, manager)
+        const eventId = `meta:${inbound.eventId}`
+        if (agent === undefined) {
+            await this.keepUnrouted(connection.value, inbound.platform, visitor, inbound.text, `${eventId}:${connectionId}`, manager)
+            return
+        }
+        await this.hear(
+            {
+                workspaceId: connection.value.workspaceId,
+                connectionId,
+                channel: inbound.platform,
+                customerId: inbound.personId,
+                visitor,
+                agent,
+                text: inbound.text,
+                channelEventId: eventId,
             },
             manager,
         )

@@ -1,4 +1,4 @@
-/** Client-safe facts about the outgoing webhook events (the wizard lists them; outbound-events.ts delivers them). */
+/** Client-safe facts about the outgoing webhook events (the wizard lists them; outbound-events.ts delivers them). Their plain-words names live in the `webhookWizard` catalog. */
 export const WEBHOOK_EVENTS = [
     "lead.created",
     "deal.won",
@@ -7,17 +7,9 @@ export const WEBHOOK_EVENTS = [
     "handoff.requested",
     "decision.made",
 ] as const
+/** One of the events an outgoing webhook can be sent. */
 export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number]
 
+/** Whether the value is one of the outgoing webhook events. */
 export const isWebhookEvent = (v: unknown): v is WebhookEvent =>
     typeof v === "string" && (WEBHOOK_EVENTS as ReadonlyArray<string>).includes(v)
-
-/** What each event means, in plain words. */
-export const WEBHOOK_EVENT_LABEL: Readonly<Record<WebhookEvent, { readonly vi: string; readonly en: string }>> = {
-    "lead.created": { vi: "Có khách mới", en: "A new customer" },
-    "deal.won": { vi: "Chốt được khách", en: "A deal is won" },
-    "order.confirmed": { vi: "Đơn hàng được xác nhận", en: "An order is confirmed" },
-    "payment.received": { vi: "Nhận được tiền", en: "A payment is received" },
-    "handoff.requested": { vi: "Cần người thật tiếp nhận", en: "A person is needed" },
-    "decision.made": { vi: "Chủ shop đã duyệt hoặc từ chối", en: "The owner approved or rejected something" },
-}

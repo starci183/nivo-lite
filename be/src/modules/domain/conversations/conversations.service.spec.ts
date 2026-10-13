@@ -10,6 +10,7 @@ import { CLOCK } from "@modules/platform/clock"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { ChatTurnQueue } from "@modules/queues/chat-turn"
+import type { MetaInbound } from "./conversations.contracts"
 import { ConversationsService } from "./conversations.service"
 import { FIND_FRONT_AGENT } from "./persistence/conversations.sql"
 
@@ -59,7 +60,8 @@ const build = async (setup: Setup = {}) => {
     const inboundEvents = mock<InboundEventsService>()
     inboundEvents.keepUnrouted.mockResolvedValue(undefined)
     const zalo = mock<ZaloCredentialsService>()
-    const catalog: MessageCatalog = { get: (key) => `<${key}>` }
+    const catalog = mock<MessageCatalog>()
+    catalog.get.mockImplementation((key) => `<${key}>`)
     const moduleRef = await Test.createTestingModule({
         providers: [
             ConversationsService,
@@ -82,6 +84,7 @@ const build = async (setup: Setup = {}) => {
         messages,
         inboundEvents,
         zalo,
+        catalog,
     }
 }
 
@@ -100,6 +103,15 @@ const zaloMessage = (patch: Record<string, unknown> = {}) => ({
     userId: "user-1",
     messageId: "m-1",
     text: "Hello",
+    ...patch,
+})
+
+const metaMessage = (patch: Partial<MetaInbound> = {}): MetaInbound => ({
+    platform: "facebook",
+    personId: "person-1",
+    visitor: "Minh Tran",
+    text: "Hello",
+    eventId: "event-1",
     ...patch,
 })
 
@@ -335,6 +347,151 @@ describe("ConversationsService", () => {
             await service.acceptZalo(CONNECTION, zaloMessage({ appId: "app-1" }), manager)
 
             expect(connections.markReceived).toHaveBeenCalledTimes(1)
+        })
+    })
+
+    describe("acceptMeta", () => {
+        it("ignores a delivery for a refused connection", async () => {
+            const { service, manager, connections, conversations, messages, inboundEvents, queue, catalog } =
+                await build({ connection: false })
+
+            await service.acceptMeta(CONNECTION, metaMessage(), manager)
+
+            expect(connections.intakeOf).toHaveBeenCalledWith(CONNECTION, "meta", manager)
+            expect(manager.query).not.toHaveBeenCalled()
+            expect(catalog.get).not.toHaveBeenCalled()
+            expect(conversations.find).not.toHaveBeenCalled()
+            expect(conversations.open).not.toHaveBeenCalled()
+            expect(messages.storeCustomer).not.toHaveBeenCalled()
+            expect(messages.storeGreeting).not.toHaveBeenCalled()
+            expect(inboundEvents.keepUnrouted).not.toHaveBeenCalled()
+            expect(queue.enqueueChatTurn).not.toHaveBeenCalled()
+        })
+
+        it.each(["facebook", "instagram"] as const)(
+            "keeps an unrouted %s delivery in the inbox with its connection-scoped event id",
+            async (platform) => {
+                const { service, manager, connections, conversations, messages, inboundEvents, queue, catalog } =
+                    await build({ agent: [] })
+
+                await service.acceptMeta(CONNECTION, metaMessage({ platform }), manager)
+
+                expect(connections.intakeOf).toHaveBeenCalledWith(CONNECTION, "meta", manager)
+                expect(manager.query).toHaveBeenCalledWith(FIND_FRONT_AGENT, [CONNECTION])
+                expect(inboundEvents.keepUnrouted).toHaveBeenCalledWith(manager, {
+                    workspaceId: "ws-1",
+                    channel: platform,
+                    sender: "Minh Tran",
+                    body: "Hello",
+                    eventId: "meta:event-1:c-1",
+                })
+                expect(catalog.get).not.toHaveBeenCalled()
+                expect(conversations.find).not.toHaveBeenCalled()
+                expect(conversations.open).not.toHaveBeenCalled()
+                expect(messages.storeCustomer).not.toHaveBeenCalled()
+                expect(queue.enqueueChatTurn).not.toHaveBeenCalled()
+            },
+        )
+
+        it.each(["facebook", "instagram"] as const)(
+            "opens a %s conversation for the person and stores and enqueues their message",
+            async (platform) => {
+                const { service, manager, connections, conversations, messages, inboundEvents, queue, catalog } =
+                    await build()
+
+                await service.acceptMeta(CONNECTION, metaMessage({ platform }), manager)
+
+                expect(connections.intakeOf).toHaveBeenCalledWith(CONNECTION, "meta", manager)
+                expect(manager.query).toHaveBeenCalledWith(FIND_FRONT_AGENT, [CONNECTION])
+                expect(conversations.find).toHaveBeenCalledWith("ws-1", platform, CONNECTION, "person-1", manager)
+                expect(conversations.open).toHaveBeenCalledWith(
+                    {
+                        workspaceId: "ws-1",
+                        agentId: "agent-1",
+                        channel: platform,
+                        customerId: "person-1",
+                        visitor: "Minh Tran",
+                        connectionId: CONNECTION,
+                    },
+                    manager,
+                )
+                expect(messages.storeCustomer).toHaveBeenCalledWith("ws-1", "conv-1", "Hello", manager)
+                expect(queue.enqueueChatTurn).toHaveBeenCalledWith(
+                    {
+                        kind: "turn",
+                        workspaceId: "ws-1",
+                        conversationId: "conv-1",
+                        messageId: "msg-1",
+                        channelEventId: "meta:event-1",
+                        lookupName: false,
+                    },
+                    manager,
+                )
+                expect(catalog.get).not.toHaveBeenCalled()
+                expect(inboundEvents.keepUnrouted).not.toHaveBeenCalled()
+                expect(connections.markReceived).not.toHaveBeenCalled()
+                expect(conversations.archive).not.toHaveBeenCalled()
+                expect(messages.storeGreeting).not.toHaveBeenCalled()
+            },
+        )
+
+        it.each(["facebook", "instagram"] as const)(
+            "uses the %s guest catalog line for an unnamed person with a front agent",
+            async (platform) => {
+                const { service, manager, conversations, catalog } = await build()
+
+                await service.acceptMeta(CONNECTION, metaMessage({ platform, visitor: null }), manager)
+
+                expect(catalog.get).toHaveBeenCalledWith(`conversations.${platform}Guest`, {}, "vi")
+                expect(conversations.open).toHaveBeenCalledWith(
+                    {
+                        workspaceId: "ws-1",
+                        agentId: "agent-1",
+                        channel: platform,
+                        customerId: "person-1",
+                        visitor: `<conversations.${platform}Guest>`,
+                        connectionId: CONNECTION,
+                    },
+                    manager,
+                )
+            },
+        )
+
+        it.each(["facebook", "instagram"] as const)(
+            "uses the %s guest catalog line for an unnamed unrouted person",
+            async (platform) => {
+                const { service, manager, inboundEvents, catalog } = await build({ agent: [] })
+
+                await service.acceptMeta(CONNECTION, metaMessage({ platform, visitor: null }), manager)
+
+                expect(catalog.get).toHaveBeenCalledWith(`conversations.${platform}Guest`, {}, "vi")
+                expect(inboundEvents.keepUnrouted).toHaveBeenCalledWith(manager, {
+                    workspaceId: "ws-1",
+                    channel: platform,
+                    sender: `<conversations.${platform}Guest>`,
+                    body: "Hello",
+                    eventId: "meta:event-1:c-1",
+                })
+            },
+        )
+
+        it("preserves an empty visitor name supplied by Meta", async () => {
+            const { service, manager, conversations, catalog } = await build()
+
+            await service.acceptMeta(CONNECTION, metaMessage({ visitor: "" }), manager)
+
+            expect(catalog.get).not.toHaveBeenCalled()
+            expect(conversations.open).toHaveBeenCalledWith(
+                {
+                    workspaceId: "ws-1",
+                    agentId: "agent-1",
+                    channel: "facebook",
+                    customerId: "person-1",
+                    visitor: "",
+                    connectionId: CONNECTION,
+                },
+                manager,
+            )
         })
     })
 })
