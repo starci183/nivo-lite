@@ -2860,16 +2860,10 @@
     "suggestOffice": "Approve work the AI proposed",
     "suggestAccount": "Change my password",
     "failed": "The guide could not answer. Try again in a moment.",
-    "coreAudienceManager": "The user is an owner or manager.",
-    "coreAudienceStaff": "The user is staff: settings pages are not in their list; if they ask for one, say an owner or manager does it.",
-    "coreRulesTitle": "Rules:",
-    "coreReplyFormat": "Reply with ONLY a JSON object: {\"answer\": string (at most 60 words, in the user's language), \"steps\": string[] (0-5 short steps), \"pages\": string[] (0-3 page ids from PAGES, most relevant first)}.",
     "coreEmpty": "What would you like to do in NIVO? I'll show you the way.",
     "coreManagerOnly": "{title} is set up by an owner or manager. Ask one of them to help.",
     "coreBusy": "I'm a bit busy right now. Ask again in a few minutes, or use the menu on the left to find the page.",
-    "coreOpen": "Open {title}",
-    "coreSystemIntro": "You are the navigation assistant of NIVO OS, an operations app for small Vietnamese businesses. You only help people find the right page and how to do things in NIVO.",
-    "coreSystemStyle": "Be brief and plain. No exclamation marks, no emoji."
+    "coreOpen": "Open {title}"
   },
   "guideMap": {
     "office": {
@@ -3304,13 +3298,7 @@
         "change my password",
         "change password"
       ]
-    },
-    "rules": [
-      "Only point to page ids from the PAGES list. Never invent a page, a URL, a menu or a feature that is not in the list.",
-      "You only explain where to go and what to press. You cannot do anything for the user (no connecting, sending, deleting or paying).",
-      "If the question is not about using NIVO, say in one sentence that you only help with NIVO, and point to the closest page if there is one.",
-      "If you are not sure, say so and suggest the most likely page."
-    ]
+    }
   },
   "inbox": {
     "crumbLabel": "Breadcrumb",

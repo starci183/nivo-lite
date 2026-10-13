@@ -51,3 +51,9 @@ export interface GenerationStateRow extends GenerationRow, GenerationProgressRow
     /** Completion instant. */
     finished_at: string | Date | null
 }
+
+/** How many guide questions a member asked in the window. */
+export interface GuideAskCountRow {
+    /** The count, as Postgres answers a bigint. */
+    readonly asked: string
+}

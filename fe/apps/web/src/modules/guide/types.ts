@@ -25,12 +25,6 @@ export interface GuideTurn {
     readonly text: string
 }
 
-/** One line of the prompt the guide sends to the be text door. */
-export interface GuideMessage {
-    readonly role: "system" | "user"
-    readonly content: string
-}
-
 /** The words of the guide in the reader's language: the map's text and the fixed lines of its answers. */
 export interface GuideText {
     readonly title: (pageId: string) => string
@@ -41,6 +35,4 @@ export interface GuideText {
     readonly managerOnly: (title: string) => string
     readonly busy: string
     readonly open: (title: string) => string
-    readonly systemLines: (isManager: boolean) => ReadonlyArray<string>
-    readonly replyFormat: string
 }

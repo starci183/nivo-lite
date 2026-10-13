@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import { AgentConnectionCandidatesHandler } from "./application/agent-connection-candidates.handler"
+import { AskGuideHandler } from "./application/ask-guide.handler"
 import { CreateAgentHandler } from "./application/create-agent.handler"
 import { GenerateTextHandler } from "./application/generate-text.handler"
 import { GetAgentDashboardHandler } from "./application/get-agent-dashboard.handler"
@@ -18,6 +19,7 @@ import { SetAgentTextsHandler } from "./application/set-agent-texts.handler"
 @Module({
     providers: [
         AgentConnectionCandidatesHandler,
+        AskGuideHandler,
         CreateAgentHandler,
         GenerateTextHandler,
         GetAgentDashboardHandler,
