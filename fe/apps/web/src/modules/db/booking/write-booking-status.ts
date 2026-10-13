@@ -59,7 +59,7 @@ export const writeBookingStatus = async (
                 .update({ status: "cancelled" })
                 .eq("booking_id", id)
                 .eq("workspace_id", workspaceId)
-                .eq("status", "pending")
+                .in("status", ["scheduled", "waiting"])
                 .select("id"),
         )
         if (stopped.kind !== "ok") return stopped
