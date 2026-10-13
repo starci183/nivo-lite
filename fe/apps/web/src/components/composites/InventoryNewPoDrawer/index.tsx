@@ -1,4 +1,4 @@
-import { InventoryPick } from "@/components/leaves/InventoryPick"
+import { InventoryPick } from "@/components/branches/InventoryPick"
 import { InventorySelect } from "@/components/leaves/InventorySelect"
 import { InventoryField } from "@/components/leaves/InventoryField"
 import { InventoryNotices } from "@/components/leaves/InventoryNotices"

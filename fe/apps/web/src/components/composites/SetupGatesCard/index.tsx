@@ -1,5 +1,6 @@
 import { Alert, Badge, Button, List, ListItem, Meter, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
-import { EVIDENCE, GATE, GATE_ACTIONS, GATE_HEAD, GATE_LIST, STACK } from "./classNames"
+import { GATE, GATE_ACTIONS, GATE_HEAD, GATE_LIST, STACK } from "./classNames"
+import { SetupGatesCardEvidence } from "./component"
 
 type GateTone = "neutral" | "warning" | "success"
 
@@ -104,15 +105,11 @@ export const SetupGatesCard = (props: SetupGatesCardProps) => (
                             </>
                         ) : (
                             <>
-                                {props.isLoading || gate.evidence === "" ? (
-                                    <Text size="sm" tone="muted">
-                                        {gate.hint}
-                                    </Text>
-                                ) : (
-                                    <div className={EVIDENCE}>
-                                        <Text size="sm">{gate.evidence}</Text>
-                                    </div>
-                                )}
+                                <SetupGatesCardEvidence
+                                    hint={gate.hint}
+                                    evidence={gate.evidence}
+                                    isWaiting={props.isLoading}
+                                />
                                 {props.isLoading ? null : (
                                     <div className={GATE_ACTIONS}>
                                         {gate.status === "proposed" ? (

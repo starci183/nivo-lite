@@ -1,5 +1,5 @@
 import { InventorySelect } from "@/components/leaves/InventorySelect"
-import { InventoryPoLine } from "@/components/leaves/InventoryPoLine"
+import { InventoryPoLine } from "@/components/branches/InventoryPoLine"
 import { InventoryPoActions } from "@/components/leaves/InventoryPoActions"
 import { InventoryField } from "@/components/leaves/InventoryField"
 import { InventoryNotices } from "@/components/leaves/InventoryNotices"
@@ -8,14 +8,7 @@ import type { InventorySay } from "@/modules/types"
 import { FORM_CLASS_NAME, FORM_GRID_CLASS_NAME, QUOTE_CLASS_NAME } from "./classNames"
 
 /** One order line in an edit or receive form: what it is and the two typed numbers. */
-interface PoLineFormView {
-    readonly id: string
-    readonly name: string
-    readonly hint: string
-    readonly qty: string
-    readonly cost: string
-}
-
+type PoLineFormView = Readonly<Record<"id" | "name" | "hint" | "qty" | "cost", string>>
 /** The words and state of the purchase order drawer. */
 export interface InventoryPoDrawerProps {
     readonly props: {
@@ -64,7 +57,6 @@ export interface InventoryPoDrawerProps {
         readonly close: () => void
     }
 }
-
 /** One purchase order in a drawer: edit a draft, approve a waiting message, receive goods, read a finished order. */
 export const InventoryPoDrawer = (props: InventoryPoDrawerProps) => {
     const { props: p, on } = props

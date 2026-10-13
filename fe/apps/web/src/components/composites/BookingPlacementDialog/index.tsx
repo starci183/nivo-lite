@@ -14,7 +14,7 @@ import {
 import { GRID_CLASS, STACK_CLASS } from "./classNames"
 
 /** The fields of the dialog. */
-export type BookingPlacementFields = {
+type BookingPlacementFields = {
     readonly serviceId: string
     readonly date: string
     readonly time: string
