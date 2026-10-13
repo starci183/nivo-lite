@@ -96,6 +96,11 @@ export class MetaClient {
         return this.options.app !== null && redirectUri(this.options) !== null
     }
 
+    /** True when the webhook verify token is configured. */
+    hasVerifyToken(): boolean {
+        return (this.options.webhookVerifyToken?.reveal() ?? "").trim() !== ""
+    }
+
     /** The OAuth redirect uri to register on the Meta app. */
     redirectUri(): string | null {
         return redirectUri(this.options)
