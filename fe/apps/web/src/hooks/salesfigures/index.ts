@@ -1,1 +1,1 @@
-export { salesFiguresOf, withSalesWaiting } from "./salesfigures.shared"
+export { salesFiguresOf } from "./salesfigures.shared"

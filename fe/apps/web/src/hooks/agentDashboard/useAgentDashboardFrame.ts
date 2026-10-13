@@ -1,5 +1,5 @@
 import { useFormatter, useTranslations } from "next-intl"
-import type { BadgeTone, DescriptionListStatItem } from "@starci/grammar/common"
+import type { BadgeTone } from "@starci/grammar/common"
 import { useModuleName } from "@/hooks/installations"
 import type { ModuleKey } from "@/hooks/installations"
 import { isProvider, providerKey } from "@/hooks/connection-providers"
@@ -15,13 +15,16 @@ const CONNECTION_TONE: Readonly<Record<ConnectionState, BadgeTone>> = {
     pending: "neutral",
 }
 
+/** One tab of the frame as the strip names it. */
+interface FrameTab {
+    readonly id: string
+    readonly label: string
+}
+
 /** What the frame hands the hook: the module, its instance and the pieces the module brings itself. */
 interface AgentDashboardFrameInput {
     readonly module: ModuleKey
     readonly installationId: string | null
-    readonly isLoading: boolean
-    readonly figures: ReadonlyArray<DescriptionListStatItem>
-    readonly figuresFailed: boolean
     /** The module brings its own page command: the default "Talk to the agent" is not offered. */
     readonly hasOwnCommand: boolean
     /** The module brings its own gaps card: the built-in one is not offered. */
@@ -58,10 +61,6 @@ export const useAgentDashboardFrame = (input: AgentDashboardFrameInput) => {
     const hasOwnCommand = input.hasOwnCommand
     const view = {
         isHeadLoading: isDashboardLoading,
-        isFiguresLoading: input.isLoading === true,
-        ribbonAria: t("ribbonAria"),
-        figures: input.figures,
-        figuresFailed: input.figuresFailed === true,
         failure: { title: t("regionFailed"), description: t("regionFailedText"), retryLabel: t("retry") },
         waitingLabel: t("waitingTitle"),
         waitingFailed: isFailed || dashboard.waiting.isFailed,
@@ -159,5 +158,8 @@ export const useAgentDashboardFrame = (input: AgentDashboardFrameInput) => {
         mode,
         chat: agent === null || hasOwnCommand ? null : { label: t("commandChat"), href: agentChatHref(agent.id) },
     }
-    return { head, view, tabsLabel: t("tabsLabel"), reload }
+    /** The label of a tab; the waiting tab carries the number of decisions waiting once there are any. */
+    const tabLabel = (tab: FrameTab, waitingTab: string | undefined): string =>
+        tab.id === waitingTab && dashboard.waiting.total > 0 ? `${tab.label} (${dashboard.waiting.total})` : tab.label
+    return { head, view, tabsLabel: t("tabsLabel"), tabLabel, reload }
 }

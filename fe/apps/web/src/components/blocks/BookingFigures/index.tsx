@@ -4,11 +4,6 @@ import { useFormatter, useTranslations } from "next-intl"
 import { useBookingBoard } from "@/hooks/bookingBoard"
 import { BookingFiguresBase } from "./component"
 
-const stateOf = (failed: boolean, loaded: boolean): "loading" | "failed" | "ready" => {
-    if (failed) return "failed"
-    return loaded ? "ready" : "loading"
-}
-
 /** The connected figures strip of the booking desk: bookings today, no-shows, utilisation and pending deposits. */
 export const BookingFigures = () => {
     const t = useTranslations("workbenchBooking")
@@ -26,7 +21,8 @@ export const BookingFigures = () => {
         <BookingFiguresBase
             props={{
                 label: t("tabCalendar"),
-                state: stateOf(isFailed, isLoaded),
+                isLoading: !isLoaded,
+                isFailed,
                 failedTitle: t("loadFailedTitle"),
                 failedBody: t("loadFailedBody"),
                 items: [
