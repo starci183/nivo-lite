@@ -33,6 +33,16 @@ export enum ShiftsErrorCode {
     ImportEmpty = "SHIFTS_IMPORT_EMPTY",
     /** Some lines of the quick import could not be read; nothing was changed. */
     ImportLines = "SHIFTS_IMPORT_LINES",
+    /** A name or a number of a setup write is not in bounds. */
+    SetupFieldInvalid = "SHIFTS_SETUP_FIELD_INVALID",
+    /** An availability statement needs exactly one of weekday or date and an end after the start. */
+    AvailabilityInvalid = "SHIFTS_AVAILABILITY_INVALID",
+    /** A person may only check in to their own shift. */
+    CheckinNotYours = "SHIFTS_CHECKIN_NOT_YOURS",
+    /** Check-in opens thirty minutes before the shift starts. */
+    CheckinEarly = "SHIFTS_CHECKIN_EARLY",
+    /** The shift already ended. */
+    CheckinClosed = "SHIFTS_CHECKIN_CLOSED",
 }
 
 /** How each shifts code travels. */
@@ -52,6 +62,11 @@ export const SHIFTS_ERROR_KINDS: Record<ShiftsErrorCode, ErrorKind> = {
     [ShiftsErrorCode.SwapRefused]: "conflict",
     [ShiftsErrorCode.ImportEmpty]: "invalid",
     [ShiftsErrorCode.ImportLines]: "invalid",
+    [ShiftsErrorCode.SetupFieldInvalid]: "invalid",
+    [ShiftsErrorCode.AvailabilityInvalid]: "invalid",
+    [ShiftsErrorCode.CheckinNotYours]: "conflict",
+    [ShiftsErrorCode.CheckinEarly]: "conflict",
+    [ShiftsErrorCode.CheckinClosed]: "conflict",
 }
 
 /** The one error class of the shifts capability. */

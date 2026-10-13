@@ -170,22 +170,6 @@ export interface ShiftsShiftRow {
     readonly week_start: string
 }
 
-/** The columns of public.shifts_commands the job reads. */
-export interface ShiftsCommandsRow {
-    /** The command id. */
-    readonly id: string
-    /** The workspace the command acts in. */
-    readonly workspace_id: string
-    /** What the command asks for. */
-    readonly kind: string
-    /** The typed input of the command as submitted. */
-    readonly input: unknown
-    /** queued, done or failed. */
-    readonly status: string
-    /** The member who submitted the command. */
-    readonly created_by: string
-}
-
 /** A single id column. */
 export interface ShiftsIdRow {
     /** The id. */

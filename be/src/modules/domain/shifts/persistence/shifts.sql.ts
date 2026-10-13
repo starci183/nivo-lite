@@ -103,7 +103,7 @@ WHERE s.workspace_id = $1 AND s.schedule_id = $2::uuid AND s.status = 'published
 ORDER BY s.shift_date, s.start_time
 LIMIT 1000`
 
-/** Reads the profile of the member who submitted a command ($1 workspace, $2 user). */
+/** Reads the staff profile of one member ($1 workspace, $2 user). */
 export const SELECT_PROFILE_OF_USER = sql`SELECT id FROM public.shifts_staff
 WHERE workspace_id = $1 AND active AND user_id = $2::uuid
 ORDER BY created_at
@@ -158,9 +158,3 @@ export const APPLY_IMPORT = sql`SELECT public.shifts_import_apply($1::uuid, $2::
 
 /** Records one message sent to a person as evidence ($1 workspace, $2 person, $3 schedule, $4 shift, $5 kind, $6 channel, $7 status, $8 body). */
 export const RECORD_NOTIFICATION = sql`SELECT public.shifts_record_notification($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::text, $6::text, $7::text, $8::text)`
-
-/** Reads one submitted command with its input, status and the member who submitted it ($1 command, $2 workspace). */
-export const SELECT_COMMAND = sql`SELECT id, workspace_id, kind, input, status, created_by FROM public.shifts_commands WHERE id = $1::uuid AND workspace_id = $2::uuid LIMIT 1`
-
-/** Settles a queued command once ($1 command, $2 status, $3 result json or null, $4 error code or null, $5 error sentence or null). */
-export const FINISH_COMMAND = sql`SELECT public.shifts_command_finish($1::uuid, $2::text, $3::jsonb, $4::text, $5::text)`
