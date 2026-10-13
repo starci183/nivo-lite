@@ -93,3 +93,23 @@ ORDER BY created_at DESC LIMIT 500`
 /** One document of a workspace with its text ($1 workspace, $2 id). */
 export const SELECT_SOURCE_DETAIL = sql`SELECT id, workspace_id, module, installation_id, kind, topic, tags, visibility, title, status, error, chunk_count, progress, created_at, updated_at, content
 FROM public.knowledge_sources WHERE workspace_id = $1 AND id = $2 LIMIT 1`
+
+/**
+ * The indexed documents an agent's view may read, oldest first ($1 workspace, $2 module, $3 installation or null, $4 audience, $5 limit):
+ * of every module or its own, shared by every instance or kept for its own, and public only for the customer audience.
+ */
+export const LIST_READABLE_SOURCES = sql`SELECT id, title, topic, kind, visibility, content, module, installation_id, updated_at::text AS updated_at
+FROM public.knowledge_sources
+WHERE workspace_id = $1 AND status IN ('ready', 'extracting_facts')
+    AND (module IS NULL OR module = $2)
+    AND (installation_id IS NULL OR installation_id = $3::uuid)
+    AND ($4::text = 'internal' OR visibility = 'public')
+ORDER BY created_at LIMIT $5`
+
+/** How many indexed documents of one visibility an agent's view may read ($1 workspace, $2 module, $3 installation or null, $4 visibility). */
+export const COUNT_READABLE_SOURCES = sql`SELECT count(*)::int AS count
+FROM public.knowledge_sources
+WHERE workspace_id = $1 AND status IN ('ready', 'extracting_facts')
+    AND (module IS NULL OR module = $2)
+    AND (installation_id IS NULL OR installation_id = $3::uuid)
+    AND visibility = $4`

@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
+import { N8N_MAILER } from "@modules/domain/n8n-runs"
 import { CarePerformerService } from "./care-performer.service"
 import { ClassifyLeadPerformerService } from "./classify-lead-performer.service"
 import { ConfirmOrderPerformerService } from "./confirm-order-performer.service"
@@ -21,6 +22,7 @@ import { SendEmailPerformerService } from "./send-email-performer.service"
 import { PROMPT_WRITER } from "./work-performers.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./work-performers.module-definition"
 import { WorkPerformersRegistrarService } from "./work-performers-registrar.service"
+import { WorkspaceMailerService } from "./workspace-mailer.service"
 
 @Module({})
 /**
@@ -55,6 +57,8 @@ export class WorkPerformersModule extends ConfigurableModuleClass {
                 InboundStatusService,
                 LeadWriterService,
                 OutboundAccessService,
+                WorkspaceMailerService,
+                { provide: N8N_MAILER, useExisting: WorkspaceMailerService },
             ],
             exports: [
                 PerformerKitService,
@@ -63,6 +67,8 @@ export class WorkPerformersModule extends ConfigurableModuleClass {
                 InboundStatusService,
                 LeadWriterService,
                 OutboundAccessService,
+                WorkspaceMailerService,
+                N8N_MAILER,
             ],
         }
     }

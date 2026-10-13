@@ -1,13 +1,14 @@
 import { Injectable } from "@nestjs/common"
 import { ConnectionsService } from "@modules/domain/connections"
 import { InjectMail, MailError } from "@modules/integrations/mail"
-import type { MailClient, SmtpConfig } from "@modules/integrations/mail"
+import type { MailAttachment, MailClient, SmtpConfig } from "@modules/integrations/mail"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import type { MessageCatalog } from "@modules/platform/i18n"
+import { fitsAttachmentLimit, mailAttachmentsOf } from "./attachments.policy"
 import { isMailAddress } from "./email-address.policy"
 import { EmailMessagesLogEvent } from "./email-messages.log-events"
 import { EmailMessagesService } from "./email-messages.service"
@@ -68,9 +69,13 @@ export class WorkspaceMailService {
         if (sentLastHour >= HOURLY_LIMIT) {
             return this.done(input, to, "rate_limited", "none", { failure: "rate", error: this.text("rate") })
         }
+        const files = mailAttachmentsOf(input.attachments ?? [])
+        if (!fitsAttachmentLimit(files)) {
+            return this.done(input, to, "blocked", "none", { failure: "attachment", error: this.text("attachment") })
+        }
         const smtp = await this.smtpOf(input.workspaceId, input.connectionId)
-        if (smtp !== null) return this.viaWorkspace(input, to, smtp.id, smtp.config)
-        if (audience === "owner" && this.mail.hasPlatformSender()) return this.viaPlatform(input, to)
+        if (smtp !== null) return this.viaWorkspace(input, to, smtp.id, smtp.config, files)
+        if (audience === "owner" && this.mail.hasPlatformSender()) return this.viaPlatform(input, to, files)
         return this.done(input, to, "no_smtp", "none", { failure: "no_smtp", error: this.text("no_smtp") })
     }
 
@@ -84,6 +89,7 @@ export class WorkspaceMailService {
         to: string,
         connectionId: string,
         config: SmtpConfig,
+        files: ReadonlyArray<MailAttachment>,
     ): Promise<SendEmailResult> {
         try {
             const sent = await this.mail.sendThroughSmtp(config, {
@@ -91,6 +97,7 @@ export class WorkspaceMailService {
                 subject: input.subject,
                 html: input.html,
                 text: input.text,
+                attachments: files.length === 0 ? undefined : files,
             })
             return await this.done(input, to, "sent", "workspace", { connectionId, messageId: sent.messageId })
         } catch (cause) {
@@ -102,7 +109,11 @@ export class WorkspaceMailService {
         }
     }
 
-    private async viaPlatform(input: SendEmailInput, to: string): Promise<SendEmailResult> {
+    private async viaPlatform(
+        input: SendEmailInput,
+        to: string,
+        files: ReadonlyArray<MailAttachment>,
+    ): Promise<SendEmailResult> {
         const today = await this.log.sentSince(
             input.workspaceId,
             new Date(this.clock.now().getTime() - DAY_MS),
@@ -117,6 +128,7 @@ export class WorkspaceMailService {
                 subject: input.subject,
                 html: input.html,
                 text: input.text,
+                attachments: files.length === 0 ? undefined : files,
             })
             return await this.done(input, to, "sent", "platform", { messageId: sent.messageId })
         } catch (cause) {

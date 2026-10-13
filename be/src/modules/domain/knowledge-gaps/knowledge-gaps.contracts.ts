@@ -75,3 +75,11 @@ export interface Answerer {
 
 /** What recording a question did, or null when the question has no significant word to remember it by. */
 export type MaybeGapRecorded = GapRecorded | null
+
+/** The open gaps of one agent and how many there are. */
+export interface ModuleGaps {
+    /** How many gaps of the agent are open. */
+    readonly openCount: number
+    /** The most asked few. */
+    readonly items: ReadonlyArray<GapRecord>
+}

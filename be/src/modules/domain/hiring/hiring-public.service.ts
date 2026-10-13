@@ -14,6 +14,8 @@ import type {
     PublicJobParams,
 } from "./hiring-public.contracts"
 import { HiringCandidatesService } from "./hiring-candidates.service"
+import { HiringChatService } from "./hiring-chat.service"
+import type { ChatApplication, ChatRegistration } from "./hiring-chat.service"
 import { HiringDataService } from "./hiring-data.service"
 import { slugify } from "./policies/text.policy"
 
@@ -30,7 +32,10 @@ const CV_NAME_MAX = 40
 const CV_SIZE_UNKNOWN = 0
 
 @Injectable()
-/** What the public may do without an account: read an open job, send an application with a CV, in the page of a business. */
+/**
+ * What the public may do without an account: read an open job, send an application with a CV in the page of a business, or apply in the
+ * shop chat (the chatbot gets the open jobs for its turn and hands over the application it took).
+ */
 export class HiringPublicService {
     constructor(
         @InjectClock() private readonly clock: Clock,
@@ -38,7 +43,22 @@ export class HiringPublicService {
         private readonly storage: CvStorage,
         private readonly data: HiringDataService,
         private readonly candidates: HiringCandidatesService,
+        private readonly chat: HiringChatService,
     ) {}
+
+    /** The open jobs a shop chat turn may take applications for, with the rules; empty when none is open for chat. */
+    chatBrief(workspaceId: string): Promise<string> {
+        return this.chat.brief(workspaceId)
+    }
+
+    /** Stores an application the shop chatbot took, with the consent given in the conversation; never throws. */
+    registerChatApplication(
+        workspaceId: string,
+        conversationId: string,
+        application: ChatApplication,
+    ): Promise<ChatRegistration> {
+        return this.chat.register(workspaceId, conversationId, application)
+    }
 
     private async resolve(
         request: PublicJobParams,

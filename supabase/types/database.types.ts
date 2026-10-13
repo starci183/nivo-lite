@@ -1,4 +1,4 @@
-// migrations-sha256: d38f9d77a9d710a6804619f704bec7dd429691451d7d4b12bd3955583dd365bd
+// migrations-sha256: 9d67ab86af3c2fa8bae65330f58503ca4233c0bd27a03e2ee207ef51adc2f46f
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
