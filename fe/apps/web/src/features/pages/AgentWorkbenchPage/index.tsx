@@ -21,7 +21,7 @@ type AgentWorkbenchPageProps = {
     readonly tab: string | null
     /** The `focus` of the query: the record a waiting row leads to. */
     readonly focus: string | null
-    /** The workbench of each module by the workbench key of its catalogue entry; the route owns the list of screens. */
+    /** The workbench of each module by the workbench key of its catalogue entry; the route registers them. A module without one shows the pending state. */
     readonly workbenches: Readonly<Record<string, WorkbenchComponent>>
 }
 

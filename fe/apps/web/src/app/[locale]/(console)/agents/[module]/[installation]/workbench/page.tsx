@@ -1,19 +1,24 @@
-import type { WorkbenchComponent } from "@/features/pages/AgentWorkbenchPage"
-import { AgentWorkbenchPage } from "@/features/pages/AgentWorkbenchPage"
-import WorkbenchContent from "@/features/pages/ContentWorkbenchPage"
 import WorkbenchInventory from "@/features/module-inventory"
-import WorkbenchAccounting from "@/features/workbench-accounting"
 import WorkbenchLoyalty from "@/features/module-loyalty"
-import WorkbenchChatbot from "@/features/workbench-chatbot"
-import { VideoWorkbenchPage as WorkbenchVideo } from "@/features/pages/VideoWorkbenchPage"
 import WorkbenchHiring from "@/features/module-hiring"
-import WorkbenchSales from "@/features/workbench-sales"
 import { BookingWorkbenchPage } from "@/features/pages/BookingWorkbenchPage"
 import WorkbenchShifts from "@/features/module-shifts"
-import WorkbenchLeadGen from "@/features/module-lead-gen"
+import { AgentWorkbenchPage } from "@/features/pages/AgentWorkbenchPage"
+import type { WorkbenchComponent } from "@/features/pages/AgentWorkbenchPage"
+import WorkbenchContent from "@/features/pages/ContentWorkbenchPage"
+import { LeadGenWorkbenchPage as WorkbenchLeadGen } from "@/features/pages/LeadGenWorkbenchPage"
+import { SalesWorkbenchPage as WorkbenchSales } from "@/features/pages/SalesWorkbenchPage"
+import { VideoWorkbenchPage as WorkbenchVideo } from "@/features/pages/VideoWorkbenchPage"
+import WorkbenchAccounting from "@/features/workbench-accounting"
+import WorkbenchChatbot from "@/features/workbench-chatbot"
 
 /** The document title of the workbench tab. */
 export { agentWorkbenchMetadata as generateMetadata } from "@/features/pages/AgentWorkbenchPage"
+
+type PageProps = {
+    readonly params: Promise<{ module: string; installation: string }>
+    readonly searchParams: Promise<{ tab?: string | string[]; focus?: string | string[] }>
+}
 
 /** The workbench of each module, by the workbench key of its catalogue entry. A module without a line shows the pending state. */
 const WORKBENCHES: Readonly<Record<string, WorkbenchComponent>> = {
@@ -28,11 +33,6 @@ const WORKBENCHES: Readonly<Record<string, WorkbenchComponent>> = {
     hiring: WorkbenchHiring,
     shifts: WorkbenchShifts,
     lead_gen: WorkbenchLeadGen,
-}
-
-type PageProps = {
-    readonly params: Promise<{ module: string; installation: string }>
-    readonly searchParams: Promise<{ tab?: string | string[]; focus?: string | string[] }>
 }
 
 const first = (value: string | string[] | undefined): string | null =>
