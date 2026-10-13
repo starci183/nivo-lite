@@ -16,7 +16,6 @@ import { GetMoneyConnectionHandler } from "./application/get-money-connection.ha
 import { GetZaloConnectionHandler } from "./application/get-zalo-connection.handler"
 import { ListConnectionAgentsHandler } from "./application/list-connection-agents.handler"
 import { ListConnectionsHandler } from "./application/list-connections.handler"
-import { ListGoogleAccountsHandler } from "./application/list-google-accounts.handler"
 import { ReturnZaloAuthorizationHandler } from "./application/return-zalo-authorization.handler"
 import { RevealSepayKeyHandler } from "./application/reveal-sepay-key.handler"
 import { RevealWebhookConnectionHandler } from "./application/reveal-webhook-connection.handler"
@@ -52,7 +51,6 @@ import { WantConnectorHandler } from "./application/want-connector.handler"
         GetZaloConnectionHandler,
         ListConnectionAgentsHandler,
         ListConnectionsHandler,
-        ListGoogleAccountsHandler,
         ReturnZaloAuthorizationHandler,
         RevealSepayKeyHandler,
         RevealWebhookConnectionHandler,

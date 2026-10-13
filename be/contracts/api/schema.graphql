@@ -1022,12 +1022,6 @@ input GetZaloConnectionInput {
   connectionId: ID!
 }
 
-type GoogleAccountType {
-  email: String!
-  id: ID!
-  status: String!
-}
-
 type GoogleStateType {
   configured: Boolean!
 }
@@ -1534,7 +1528,6 @@ type Query {
   connections: [ConnectionType!]!
   dashboard: DashboardType!
   decisionHistory(input: ListDecisionHistoryInput!): [DecisionRecordType!]!
-  googleAccounts: [GoogleAccountType!]!
   googleConnectionState: GoogleStateType!
   invitePreview(input: InviteTokenInput!): InvitePreviewType!
   metaConnection(input: GetMetaConnectionInput!): MetaWizardConnectionType!
