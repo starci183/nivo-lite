@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { NEXT_JOB_STATUS, jobStatusTone, useHiringFormat, useHiringSay } from "@/hooks/hiring"
+import { NEXT_JOB_STATUS, jobStatusTone, useHiringFormat, useHiringSay, useHiringWorkbench } from "@/hooks/hiring"
 import {
     APPLY_CHANNELS,
     EMPLOYMENT_TYPES,
@@ -15,12 +15,6 @@ import type { HiringWorkbenchData, JobView } from "@/hooks/hiringWire"
 import { useHiringJobForm } from "@/hooks/rhf"
 import { HiringJobsBase } from "./component"
 
-/** The workbench the tab reads and the way to the pipeline of one job. */
-interface HiringJobsProps {
-    readonly data: HiringWorkbenchData
-    readonly onOpenPipeline: (jobId: string) => void
-}
-
 /** The candidates of each job: all of them, the fresh ones and the hired ones. */
 const countsOf = (data: HiringWorkbenchData, jobId: string) => {
     const mine = data.candidates.filter((candidate) => candidate.jobId === jobId)
@@ -32,11 +26,11 @@ const countsOf = (data: HiringWorkbenchData, jobId: string) => {
 }
 
 /** The connected jobs tab: lists the job posts, runs their status commands, and holds the editor and the ad dialogs. */
-export const HiringJobs = (props: HiringJobsProps) => {
+export const HiringJobs = () => {
     const t = useTranslations("hiring")
     const say = useHiringSay()
     const format = useHiringFormat()
-    const { data } = props
+    const { board: data } = useHiringWorkbench()
     const jobs = useHiringJobs(data)
     const form = useHiringJobForm(jobs.editorJob)
     const closeEditor = () => {
@@ -111,7 +105,6 @@ export const HiringJobs = (props: HiringJobsProps) => {
                 create: jobs.create,
                 edit: jobs.edit,
                 openAd: jobs.openAd,
-                openPipeline: props.onOpenPipeline,
                 copy: jobs.copyLink,
                 transition: jobs.transition,
                 editorText: editor.setText,

@@ -25,6 +25,7 @@ interface CandidateLineView {
 export interface HiringCandidateBaseProps {
     readonly props: {
         readonly say: HiringSay
+        readonly isOpen: boolean
         readonly name: string
         readonly subtitle: string
         readonly stageLabel: string
@@ -79,6 +80,7 @@ export const HiringCandidateBase = (props: HiringCandidateBaseProps) => {
     const p = props.props
     const { say } = p
     const { on } = props
+    if (!p.isOpen) return null
     return (
         <>
             <Drawer

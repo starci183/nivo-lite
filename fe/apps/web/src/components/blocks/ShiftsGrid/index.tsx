@@ -2,18 +2,14 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { useShiftsFormat } from "@/hooks/shifts"
+import { useShiftsBenchData, useShiftsFormat } from "@/hooks/shifts"
 import { useShiftsWeekCommands } from "@/hooks/shiftsCommands"
+import { useShiftsWeekStore } from "@/hooks/zustand/shiftsWeek"
 import { useShiftsWeekModel } from "@/hooks/shiftsCoverage"
 import { isoWeekDates } from "@/hooks/shiftsTime"
-import type { ShiftsBenchView, ShiftsShiftView } from "@/modules/types"
+import type { ShiftsShiftView } from "@/modules/types"
 import { ShiftsGridBase } from "./component"
 import type { GridCellView, GridChipView, GridRowView } from "./component"
-
-/** The week whose people-by-days grid is drawn. */
-interface ShiftsGridProps {
-    readonly bench: ShiftsBenchView
-}
 
 const OPEN_ROW = "open"
 
@@ -28,16 +24,20 @@ const VIOLATION_KEYS = {
 } as const
 
 /** The schedule grid: people by days with drag or tap to reassign (a draft only), and the day list for phones. */
-export const ShiftsGrid = (props: ShiftsGridProps) => {
+export const ShiftsGrid = () => {
     const t = useTranslations("shifts")
     const format = useShiftsFormat()
     const week = useShiftsWeekCommands()
+    const selected = useShiftsWeekStore((state) => state.monday)
+    const bench = useShiftsBenchData(selected).data
     const [moves, setMoves] = useState<Readonly<Record<string, string | null>>>({})
     const [picked, setPicked] = useState<string | null>(null)
     const [over, setOver] = useState<string | null>(null)
     const [dayIndex, setDayIndex] = useState(0)
-    const model = useShiftsWeekModel(props.bench, moves)
-    const { setup, week: weekView } = props.bench
+    const model = useShiftsWeekModel(bench, moves)
+    if (bench === undefined || model === undefined || bench.week.current === null || bench.role === "staff") return null
+
+    const { setup, week: weekView } = bench
     const editable = weekView.current?.status === "draft"
     const dates = isoWeekDates(weekView.monday)
     const live = model.shifts.filter((shift) => shift.status !== "cancelled")

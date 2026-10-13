@@ -14,8 +14,9 @@ export const useHiringCandidate = (candidate: CandidateView, data: HiringWorkben
     const run = useHiringRun()
     const commands = useHiringCandidateCommands()
     const move = useHiringMove()
-    const detailRead = useQueryHiringCandidateDetailSwr({ id: candidate.id })
-    const [notes, setNotes] = useState(candidate.notes)
+    const detailRead = useQueryHiringCandidateDetailSwr(candidate.id === "" ? undefined : { id: candidate.id })
+    const [typed, setTyped] = useState<{ readonly id: string; readonly text: string } | null>(null)
+    const notes = typed !== null && typed.id === candidate.id ? typed.text : candidate.notes
     const [showCv, setShowCv] = useState(false)
     const [dialog, setDialog] = useState<CandidateDialog | null>(null)
     const detail = useMemo(
@@ -31,7 +32,7 @@ export const useHiringCandidate = (candidate: CandidateView, data: HiringWorkben
         job: data.jobs.find((job) => job.id === candidate.jobId),
         retentionDays: data.settings.retentionDays,
         notes,
-        setNotes,
+        setNotes: (text: string) => setTyped({ id: candidate.id, text }),
         showCv,
         toggleCv: () => setShowCv((current) => !current),
         dialog,

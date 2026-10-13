@@ -23,17 +23,20 @@ export const useOpenApiAuthForm = () => {
         () =>
             z
                 .object({
-                    baseUrl: z.string().trim().regex(/^https?:\/\/\S+$/iu, t("baseUrlInvalid")),
+                    baseUrl: z
+                        .string()
+                        .trim()
+                        .regex(/^https?:\/\/\S+$/iu, t("baseUrlInvalid")),
                     authType: z.enum(["none", "header", "query", "bearer", "basic"]),
                     authName: z.string(),
                     authValue: z.string(),
                     authUser: z.string(),
                     authPassword: z.string(),
                 })
-                .refine(
-                    (v) => (v.authType !== "header" && v.authType !== "query") || v.authName.trim() !== "",
-                    { path: ["authName"], message: t("authNameRequired") },
-                ),
+                .refine((v) => (v.authType !== "header" && v.authType !== "query") || v.authName.trim() !== "", {
+                    path: ["authName"],
+                    message: t("authNameRequired"),
+                }),
         [t],
     )
     return useForm<OpenApiAuthValues>({

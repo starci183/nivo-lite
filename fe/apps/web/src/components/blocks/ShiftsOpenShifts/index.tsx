@@ -2,24 +2,22 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { useShiftsFormat } from "@/hooks/shifts"
+import { useShiftsBenchData, useShiftsFormat, useShiftsMineData } from "@/hooks/shifts"
 import { useShiftsMineCommands } from "@/hooks/shiftsCommands"
-import type { ShiftsMineView, ShiftsPositionView } from "@/modules/types"
 import { ShiftsOpenShiftsBase } from "./component"
 
-/** The person's view and the positions of the shop. */
-interface ShiftsOpenShiftsProps {
-    readonly mine: ShiftsMineView
-    readonly positions: ReadonlyArray<ShiftsPositionView>
-}
-
 /** The open shifts nobody has yet, each with a button to ask for it. */
-export const ShiftsOpenShifts = (props: ShiftsOpenShiftsProps) => {
+export const ShiftsOpenShifts = () => {
     const t = useTranslations("shifts")
+    const mine = useShiftsMineData().data
+    const bench = useShiftsBenchData(null).data
     const format = useShiftsFormat()
     const commands = useShiftsMineCommands()
     const [busyId, setBusyId] = useState<string | null>(null)
-    const positionName = (id: string): string => props.positions.find((position) => position.id === id)?.name ?? ""
+    if (mine === undefined || bench === undefined || mine.profileId === null) return null
+
+    const positionName = (id: string): string =>
+        bench.setup.positions.find((position) => position.id === id)?.name ?? ""
 
     const claim = async (id: string) => {
         setBusyId(id)
@@ -34,7 +32,7 @@ export const ShiftsOpenShifts = (props: ShiftsOpenShiftsProps) => {
                 hint: t("openShiftsHint"),
                 emptyLabel: t("openNone"),
                 claimLabel: t("claim"),
-                shifts: props.mine.openShifts.map((shift) => ({
+                shifts: mine.openShifts.map((shift) => ({
                     id: shift.id,
                     title: `${format.dayFull(shift.date)} · ${shift.start}-${shift.end}`,
                     notes: [positionName(shift.positionId)],

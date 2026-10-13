@@ -38,7 +38,6 @@ export interface HiringJobsBaseProps {
         readonly create: () => void
         readonly edit: (id: string) => void
         readonly openAd: (id: string) => void
-        readonly openPipeline: (id: string) => void
         readonly copy: (id: string) => void
         readonly transition: (id: string, to: string) => void
         readonly editorText: (name: FieldOf<HiringJobValues, string>, value: string) => void
@@ -97,9 +96,6 @@ export const HiringJobsBase = (props: HiringJobsBaseProps) => {
                                         {row.copyLabel}
                                     </Button>
                                 )}
-                                <Button variant="tertiary" size="sm" onPress={() => on.openPipeline(row.id)}>
-                                    {say("jobsSeeCandidates")}
-                                </Button>
                                 <Button variant="secondary" size="sm" onPress={() => on.openAd(row.id)}>
                                     {say("jobsWriteAd")}
                                 </Button>

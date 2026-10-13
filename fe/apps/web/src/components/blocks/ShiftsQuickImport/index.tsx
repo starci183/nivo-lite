@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
+import { useShiftsBenchData } from "@/hooks/shifts"
 import { useShiftsImportCommand } from "@/hooks/shiftsCommands"
 import { ShiftsQuickImportBase } from "./component"
 import type { ImportField, ImportForm } from "./component"
@@ -11,9 +12,12 @@ const BLANK: ImportForm = { positions: "", staff: "", coverage: "" }
 /** The quick import: positions, staff and coverage typed as plain lines and created in one go by the back end. */
 export const ShiftsQuickImport = () => {
     const t = useTranslations("shifts")
+    const bench = useShiftsBenchData(null).data
     const importLines = useShiftsImportCommand()
     const [form, setForm] = useState<ImportForm>(BLANK)
     const [isBusy, setIsBusy] = useState(false)
+
+    if (bench === undefined || bench.role === "staff") return null
 
     const create = async () => {
         setIsBusy(true)

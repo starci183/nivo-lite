@@ -14,4 +14,4 @@ const schema = z.object({
 
 /** The interview request form: who interviews, how, where and for how long. */
 export const useHiringInterviewForm = (defaults: InterviewValues) =>
-    useForm<InterviewValues>({ resolver: zodResolver(schema), defaultValues: defaults, mode: "onChange" })
+    useForm<InterviewValues>({ resolver: zodResolver(schema), values: defaults, mode: "onChange" })

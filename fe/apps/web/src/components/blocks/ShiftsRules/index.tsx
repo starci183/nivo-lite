@@ -2,16 +2,10 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { useShiftsFormat } from "@/hooks/shifts"
+import { useShiftsBenchData, useShiftsFormat } from "@/hooks/shifts"
 import { useShiftsRuleCommands } from "@/hooks/shiftsCommands"
-import type { ShiftsBenchView } from "@/modules/types"
 import { ShiftsRulesBase } from "./component"
 import type { RuleField } from "./component"
-
-/** The bench whose rules and opening hours are edited. */
-interface ShiftsRulesProps {
-    readonly bench: ShiftsBenchView
-}
 
 /** The opening hours as typed: one entry per weekday, `null` for a closed day. */
 type Hours = Readonly<Record<string, { readonly open: string; readonly close: string } | null>>
@@ -21,22 +15,30 @@ const DEFAULT_OPEN = "07:00"
 const DEFAULT_CLOSE = "22:00"
 
 /** The rules of the shop (notice periods, reminders, overtime) and its opening hours by weekday. */
-export const ShiftsRules = (props: ShiftsRulesProps) => {
+export const ShiftsRules = () => {
     const t = useTranslations("shifts")
     const format = useShiftsFormat()
     const commands = useShiftsRuleCommands()
-    const { settings } = props.bench.setup
-    const [rules, setRules] = useState<Record<RuleField, number>>({
-        swap: settings.swapNoticeHours,
-        leave: settings.leaveNoticeDays,
-        remind: settings.remindMinutes,
-        noshow: settings.noshowMinutes,
-        overtime: settings.overtimeHoursWeek,
-    })
-    const [hours, setHours] = useState<Hours>(() =>
-        Object.fromEntries(WEEK.map((day) => [String(day), settings.openingHours[String(day)] ?? null])),
-    )
+    const bench = useShiftsBenchData(null).data
+    const [ruleEdits, setRuleEdits] = useState<Partial<Record<RuleField, number>>>({})
+    const [hourEdits, setHourEdits] = useState<Hours>({})
     const [isBusy, setIsBusy] = useState(false)
+    if (bench === undefined || bench.role === "staff") return null
+
+    const { settings } = bench.setup
+    const rules: Record<RuleField, number> = {
+        swap: ruleEdits.swap ?? settings.swapNoticeHours,
+        leave: ruleEdits.leave ?? settings.leaveNoticeDays,
+        remind: ruleEdits.remind ?? settings.remindMinutes,
+        noshow: ruleEdits.noshow ?? settings.noshowMinutes,
+        overtime: ruleEdits.overtime ?? settings.overtimeHoursWeek,
+    }
+    const hours: Hours = Object.fromEntries(
+        WEEK.map((day) => {
+            const key = String(day)
+            return [key, key in hourEdits ? (hourEdits[key] ?? null) : (settings.openingHours[key] ?? null)]
+        }),
+    )
 
     const save = async () => {
         setIsBusy(true)
@@ -51,7 +53,7 @@ export const ShiftsRules = (props: ShiftsRulesProps) => {
         setIsBusy(false)
     }
     const change = (day: string, next: { open: string; close: string } | null) =>
-        setHours((current) => ({ ...current, [day]: next }))
+        setHourEdits((current) => ({ ...current, [day]: next }))
 
     return (
         <ShiftsRulesBase
@@ -61,9 +63,9 @@ export const ShiftsRules = (props: ShiftsRulesProps) => {
                 hoursTitle: t("hoursTitle"),
                 closedLabel: t("closedDay"),
                 saveLabel: t("save"),
-                reminderLabel: t(props.bench.reminderOn ? "reminderOn" : "reminderOff"),
-                reminderHint: props.bench.reminderOn ? "" : t("reminderOffHint"),
-                reminderOn: props.bench.reminderOn,
+                reminderLabel: t(bench.reminderOn ? "reminderOn" : "reminderOff"),
+                reminderHint: bench.reminderOn ? "" : t("reminderOffHint"),
+                reminderOn: bench.reminderOn,
                 fields: [
                     { id: "swap", label: t("rSwap"), value: rules.swap, min: 0, max: 168 },
                     { id: "leave", label: t("rLeave"), value: rules.leave, min: 0, max: 60 },
@@ -87,7 +89,7 @@ export const ShiftsRules = (props: ShiftsRulesProps) => {
                 isBusy,
             }}
             on={{
-                rule: (field, value) => setRules((current) => ({ ...current, [field]: value })),
+                rule: (field, value) => setRuleEdits((current) => ({ ...current, [field]: value })),
                 toggle: (day, isOpen) => change(day, isOpen ? { open: DEFAULT_OPEN, close: DEFAULT_CLOSE } : null),
                 end: (day, end, value) =>
                     change(day, {

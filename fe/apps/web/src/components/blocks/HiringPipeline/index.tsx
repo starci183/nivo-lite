@@ -1,26 +1,20 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { MOVE_STAGES, scoreTone, useHiringFormat, useHiringSay } from "@/hooks/hiring"
+import { MOVE_STAGES, scoreTone, useHiringFormat, useHiringSay, useHiringWorkbench } from "@/hooks/hiring"
 import { ALL_JOBS, useHiringPipeline, useHiringReject } from "@/hooks/hiringPipeline"
 import type { PipelineLane } from "@/hooks/hiringPipeline"
-import type { CandidateView, HiringWorkbenchData } from "@/hooks/hiringWire"
+import { useHiringBenchStore } from "@/hooks/zustand/hiringBench"
+import type { CandidateView } from "@/hooks/hiringWire"
 import { HiringPipelineBase } from "./component"
 
-/** The workbench, the job being looked at and the ways to change the filter or open a candidate. */
-interface HiringPipelineProps {
-    readonly data: HiringWorkbenchData
-    readonly jobId: string
-    readonly onJob: (id: string) => void
-    readonly onOpen: (candidateId: string) => void
-}
-
 /** The connected candidates tab: the pipeline of one job (or all) and the moves between its stages. */
-export const HiringPipeline = (props: HiringPipelineProps) => {
+export const HiringPipeline = () => {
     const t = useTranslations("hiring")
     const say = useHiringSay()
     const format = useHiringFormat()
-    const { data, jobId } = props
+    const { board: data } = useHiringWorkbench()
+    const { jobId, setJobId, open } = useHiringBenchStore()
     const pipeline = useHiringPipeline(data, jobId)
     const reject = useHiringReject(pipeline.closeReject)
     const titles = new Map(data.jobs.map((job) => [job.id, job.title]))
@@ -79,8 +73,8 @@ export const HiringPipeline = (props: HiringPipelineProps) => {
                 },
             }}
             on={{
-                job: props.onJob,
-                open: props.onOpen,
+                job: setJobId,
+                open,
                 move: pipeline.moveTo,
                 dragStart: pipeline.startDrag,
                 dragEnd: pipeline.endDrag,

@@ -1,25 +1,21 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { OPEN_OFFER_STATUSES, offerStatusTone, useHiringFormat, useHiringSay } from "@/hooks/hiring"
+import { OPEN_OFFER_STATUSES, offerStatusTone, useHiringFormat, useHiringSay, useHiringWorkbench } from "@/hooks/hiring"
 import { useHiringOffers } from "@/hooks/hiringOffers"
-import type { HiringWorkbenchData, OfferView } from "@/hooks/hiringWire"
+import { useHiringBenchStore } from "@/hooks/zustand/hiringBench"
+import type { OfferView } from "@/hooks/hiringWire"
 import { CONSOLE_ROUTES } from "@/modules/routes"
 import { HiringOffersBase } from "./component"
 
-/** The workbench the tab reads and the way to open a candidate. */
-interface HiringOffersProps {
-    readonly data: HiringWorkbenchData
-    readonly onOpen: (candidateId: string) => void
-}
-
 /** The connected offers tab: every offer with where it stands, its letter link and the cancel command. */
-export const HiringOffers = (props: HiringOffersProps) => {
+export const HiringOffers = () => {
     const t = useTranslations("hiring")
     const say = useHiringSay()
     const format = useHiringFormat()
     const view = useHiringOffers()
-    const { data } = props
+    const { board: data } = useHiringWorkbench()
+    const { open } = useHiringBenchStore()
     const names = new Map(data.candidates.map((candidate) => [candidate.id, candidate.name]))
     const titles = new Map(data.jobs.map((job) => [job.id, job.title]))
     const sentOf = (offer: OfferView): string | null => {
@@ -63,7 +59,7 @@ export const HiringOffers = (props: HiringOffersProps) => {
                 error: view.error,
             }}
             on={{
-                open: props.onOpen,
+                open,
                 copy: (id) => {
                     const offer = data.offers.find((entry) => entry.id === id)
                     if (offer !== undefined) view.copyLink(id, `${data.origin}/j/thu/${offer.token}`)

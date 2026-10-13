@@ -2,15 +2,9 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { useShiftsFormat, useShiftsWhenFields } from "@/hooks/shifts"
+import { useShiftsBenchData, useShiftsFormat, useShiftsWhenFields } from "@/hooks/shifts"
 import { useShiftsRuleCommands } from "@/hooks/shiftsCommands"
-import type { ShiftsBenchView } from "@/modules/types"
 import { ShiftsAvailabilityBase } from "./component"
-
-/** The bench whose approved availability is listed and extended. */
-interface ShiftsAvailabilityProps {
-    readonly bench: ShiftsBenchView
-}
 
 /** What is typed in the availability form. */
 interface AvailabilityForm {
@@ -26,25 +20,30 @@ interface AvailabilityForm {
 const LIST_LIMIT = 40
 
 /** The availability of each person, entered by the manager: the form and the approved rows with remove. */
-export const ShiftsAvailability = (props: ShiftsAvailabilityProps) => {
+export const ShiftsAvailability = () => {
     const t = useTranslations("shifts")
     const format = useShiftsFormat()
     const commands = useShiftsRuleCommands()
-    const { staff } = props.bench.setup
+    const bench = useShiftsBenchData(null).data
+    const staff = bench?.setup.staff ?? []
     const [form, setForm] = useState<AvailabilityForm>({
         staffId: "",
         mode: "weekday",
         weekday: "0",
-        date: props.bench.today,
+        date: "",
         start: "07:00",
         end: "22:00",
         available: false,
     })
     const [isBusy, setIsBusy] = useState(false)
     const staffId = form.staffId === "" ? (staff[0]?.id ?? "") : form.staffId
+    const today = bench?.today ?? ""
+    const date = form.date === "" ? today : form.date
     const isWeekly = form.mode === "weekday"
-    const when = useShiftsWhenFields(form, props.bench.today)
-    const approved = props.bench.allAvailability.filter((row) => row.status === "approved").slice(0, LIST_LIMIT)
+    const when = useShiftsWhenFields({ ...form, date }, today)
+    if (bench === undefined || bench.role === "staff") return null
+
+    const approved = bench.allAvailability.filter((row) => row.status === "approved").slice(0, LIST_LIMIT)
 
     const run = async (job: () => Promise<boolean>): Promise<void> => {
         setIsBusy(true)
@@ -56,7 +55,7 @@ export const ShiftsAvailability = (props: ShiftsAvailabilityProps) => {
             commands.addAvailability({
                 staffId,
                 weekday: isWeekly ? Number(form.weekday) : null,
-                date: isWeekly ? null : form.date,
+                date: isWeekly ? null : date,
                 start: form.start,
                 end: form.end,
                 available: form.available,

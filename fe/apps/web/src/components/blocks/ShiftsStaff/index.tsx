@@ -2,16 +2,11 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { useShiftsFormat } from "@/hooks/shifts"
+import { useShiftsBenchData, useShiftsFormat } from "@/hooks/shifts"
 import { useShiftsSetupCommands } from "@/hooks/shiftsCommands"
-import type { ShiftsBenchView, ShiftsStaffView } from "@/modules/types"
+import type { ShiftsStaffView } from "@/modules/types"
 import { ShiftsStaffBase } from "./component"
 import type { StaffForm, StaffNumberField, StaffTextField } from "./component"
-
-/** The bench whose roster is listed and edited. */
-interface ShiftsStaffProps {
-    readonly bench: ShiftsBenchView
-}
 
 const BLANK: StaffForm = {
     id: null,
@@ -46,13 +41,16 @@ const formOf = (person: ShiftsStaffView): StaffForm => ({
 })
 
 /** The roster: who works here, what they can do, their wage and limits, and the form to add or edit one person. */
-export const ShiftsStaff = (props: ShiftsStaffProps) => {
+export const ShiftsStaff = () => {
     const t = useTranslations("shifts")
+    const bench = useShiftsBenchData(null).data
     const format = useShiftsFormat()
     const commands = useShiftsSetupCommands()
     const [form, setForm] = useState<StaffForm>(BLANK)
     const [isBusy, setIsBusy] = useState(false)
-    const { staff, positions } = props.bench.setup
+    if (bench === undefined || bench.role === "staff") return null
+
+    const { staff, positions } = bench.setup
     const positionName = (id: string): string => positions.find((position) => position.id === id)?.name ?? ""
 
     const detailOf = (person: ShiftsStaffView): string => {
@@ -105,7 +103,7 @@ export const ShiftsStaff = (props: ShiftsStaffProps) => {
                 positionOptions: positions.map((position) => ({ value: position.id, label: position.name })),
                 linkOptions: [
                     { id: NO_LINK, label: t("fLinkNone") },
-                    ...props.bench.staffRows.map((row) => ({ id: row.id, label: row.name })),
+                    ...bench.staffRows.map((row) => ({ id: row.id, label: row.name })),
                 ],
                 noLinkId: NO_LINK,
                 isBusy,

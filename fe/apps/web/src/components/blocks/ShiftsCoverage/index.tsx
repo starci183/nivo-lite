@@ -1,18 +1,13 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useShiftsFormat } from "@/hooks/shifts"
+import { useShiftsBenchData, useShiftsFormat } from "@/hooks/shifts"
+import { useShiftsWeekStore } from "@/hooks/zustand/shiftsWeek"
 import { useShiftsWeekModel } from "@/hooks/shiftsCoverage"
 import type { ShiftsCoverageCell } from "@/hooks/shiftsCoverage"
 import { isoWeekDates } from "@/hooks/shiftsTime"
-import type { ShiftsBenchView } from "@/modules/types"
 import { ShiftsCoverageBase } from "./component"
 import type { CoverageTone } from "./component"
-
-/** The week whose coverage is drawn. */
-interface ShiftsCoverageProps {
-    readonly bench: ShiftsBenchView
-}
 
 const NO_MOVES: Readonly<Record<string, string | null>> = {}
 
@@ -25,11 +20,21 @@ const TONES: Readonly<Record<ShiftsCoverageCell["status"], CoverageTone>> = {
 }
 
 /** People on duty against the minimum of every coverage block, day by day. */
-export const ShiftsCoverage = (props: ShiftsCoverageProps) => {
+export const ShiftsCoverage = () => {
     const t = useTranslations("shifts")
     const format = useShiftsFormat()
-    const model = useShiftsWeekModel(props.bench, NO_MOVES)
-    const { positions } = props.bench.setup
+    const selected = useShiftsWeekStore((state) => state.monday)
+    const bench = useShiftsBenchData(selected).data
+    const model = useShiftsWeekModel(bench, NO_MOVES)
+    if (
+        bench === undefined ||
+        model === undefined ||
+        bench.week.current === null ||
+        bench.setup.blocks.length === 0 ||
+        bench.role === "staff"
+    )
+        return null
+    const { positions } = bench.setup
     const positionName = (id: string): string => positions.find((position) => position.id === id)?.name ?? ""
     const reading = (cell: ShiftsCoverageCell): string =>
         `${cell.have}/${cell.min}${cell.ideal > cell.min ? `-${cell.ideal}` : ""} ${t(READING_KEYS[cell.status])}`
@@ -39,7 +44,7 @@ export const ShiftsCoverage = (props: ShiftsCoverageProps) => {
             props={{
                 title: t("coverageTitle"),
                 hint: t("coverageHint"),
-                days: isoWeekDates(props.bench.week.monday).map((date) => ({
+                days: isoWeekDates(bench.week.monday).map((date) => ({
                     id: date,
                     label: `${format.dayShort(date)} ${format.dayMonth(date)}`,
                     meters: model.cells

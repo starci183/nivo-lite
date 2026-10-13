@@ -1,4 +1,5 @@
 import type { BadgeTone } from "@starci/grammar/common"
+import type { HiringWorkbenchData } from "@/hooks/hiringWire"
 
 /** The names of the fields of a form whose value is of one kind (every string field, every number field...). */
 export type FieldOf<Values, Kind> = {
@@ -20,16 +21,6 @@ export const PIPELINE_STAGES: ReadonlyArray<string> = [
 export const MOVE_STAGES: ReadonlyArray<string> = PIPELINE_STAGES.filter(
     (stage) => stage !== "hired" && stage !== "offer",
 )
-
-/** The tabs of the Hiring workbench, in display order. */
-export const HIRING_TAB_IDS: ReadonlyArray<string> = [
-    "jobs",
-    "candidates",
-    "interviews",
-    "offers",
-    "onboarding",
-    "settings",
-]
 
 /** The statuses a job moves to from each status. */
 export const NEXT_JOB_STATUS: Readonly<Record<string, ReadonlyArray<string>>> = {
@@ -92,3 +83,13 @@ export const linesOf = (text: string): Array<string> =>
 
 /** Resolves a word of the `hiring` catalog; the connected block hands it to its drawing half. */
 export type HiringSay = (key: string, values?: Record<string, string | number>) => string
+
+/** The candidate a record id (`?focus=`) leads to: a candidate, or an offer or interview of one, or the work item behind them. */
+export const focusedCandidateId = (board: HiringWorkbenchData, focus: string | null): string | null => {
+    if (focus === null) return null
+    if (board.candidates.some((candidate) => candidate.id === focus)) return focus
+    const offer = board.offers.find((entry) => entry.id === focus || entry.workItemId === focus)
+    if (offer !== undefined) return offer.candidateId
+    const interview = board.interviews.find((entry) => entry.id === focus || entry.workItemId === focus)
+    return interview?.candidateId ?? null
+}

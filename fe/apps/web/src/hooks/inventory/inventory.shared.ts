@@ -144,14 +144,3 @@ export interface SupplierFormValues {
 
 /** The field names the supplier form changes one at a time. */
 export type SupplierFormField = keyof SupplierFormValues
-
-/** The tabs of the inventory workbench, in order; `?tab=` opens one of them. */
-export const INVENTORY_TAB_IDS: ReadonlyArray<string> = [
-    "stock",
-    "orders",
-    "suppliers",
-    "history",
-    "recipes",
-    "count",
-    "import",
-]

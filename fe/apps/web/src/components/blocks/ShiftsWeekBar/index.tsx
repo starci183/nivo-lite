@@ -2,18 +2,12 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { useShiftsFormat } from "@/hooks/shifts"
+import { useShiftsBenchData, useShiftsFormat } from "@/hooks/shifts"
 import { useShiftsRequestCommands, useShiftsWeekCommands } from "@/hooks/shiftsCommands"
 import { isoAddDays } from "@/hooks/shiftsTime"
-import type { ShiftsBenchView } from "@/modules/types"
+import { useShiftsWeekStore } from "@/hooks/zustand/shiftsWeek"
 import { ShiftsWeekBarBase } from "./component"
 import type { WeekBarStatusView } from "./component"
-
-/** The week on screen and the page's way to move to another one. */
-interface ShiftsWeekBarProps {
-    readonly bench: ShiftsBenchView
-    readonly onWeek: (monday: string) => void
-}
 
 /** What the bar is waiting for, so the right button shows its pending state. */
 type Busy = "propose" | "explain" | "publish" | "decide" | null
@@ -21,13 +15,18 @@ type Busy = "propose" | "explain" | "publish" | "decide" | null
 const WEEK_DAYS = 7
 
 /** The week bar: navigation, the status of the schedule, propose and publish, and the owner's decision on a waiting publish. */
-export const ShiftsWeekBar = (props: ShiftsWeekBarProps) => {
+export const ShiftsWeekBar = () => {
     const t = useTranslations("shifts")
     const format = useShiftsFormat()
+    const selected = useShiftsWeekStore((state) => state.monday)
+    const setSelected = useShiftsWeekStore((state) => state.setMonday)
+    const bench = useShiftsBenchData(selected).data
     const week = useShiftsWeekCommands()
     const requests = useShiftsRequestCommands()
     const [busy, setBusy] = useState<Busy>(null)
-    const { monday, current, publishItem } = props.bench.week
+    if (bench === undefined || bench.role === "staff") return null
+
+    const { monday, current, publishItem } = bench.week
     const isDraft = current?.status === "draft"
     const isWaiting = publishItem?.status === "waiting_decision"
 
@@ -73,6 +72,17 @@ export const ShiftsWeekBar = (props: ShiftsWeekBarProps) => {
                 isPublishing: busy === "publish",
                 isDeciding: busy === "decide",
                 isIdle: busy === null,
+                empty:
+                    current === null
+                        ? {
+                              title: t("noScheduleTitle"),
+                              body: t(
+                                  bench.setup.blocks.length > 0 && bench.setup.staff.length > 0
+                                      ? "noScheduleBody"
+                                      : "needSetup",
+                              ),
+                          }
+                        : null,
                 waiting:
                     isWaiting && publishItem !== null
                         ? {
@@ -84,9 +94,9 @@ export const ShiftsWeekBar = (props: ShiftsWeekBarProps) => {
                         : null,
             }}
             on={{
-                previous: () => props.onWeek(isoAddDays(monday, -WEEK_DAYS)),
-                next: () => props.onWeek(isoAddDays(monday, WEEK_DAYS)),
-                today: () => props.onWeek(props.bench.today),
+                previous: () => setSelected(isoAddDays(monday, -WEEK_DAYS)),
+                next: () => setSelected(isoAddDays(monday, WEEK_DAYS)),
+                today: () => setSelected(bench.today),
                 propose: () => void propose(),
                 publish: () => void publish(),
                 approve: () => void decide("approved"),

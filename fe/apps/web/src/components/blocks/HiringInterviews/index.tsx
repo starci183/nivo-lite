@@ -1,23 +1,19 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useHiringFormat, useHiringSay } from "@/hooks/hiring"
+import { useHiringFormat, useHiringSay, useHiringWorkbench } from "@/hooks/hiring"
 import { useHiringInterviews } from "@/hooks/hiringInterviews"
-import type { HiringWorkbenchData, InterviewView } from "@/hooks/hiringWire"
+import { useHiringBenchStore } from "@/hooks/zustand/hiringBench"
+import type { InterviewView } from "@/hooks/hiringWire"
 import { HiringInterviewsBase } from "./component"
 
-/** The workbench the tab reads and the way to open a candidate. */
-interface HiringInterviewsProps {
-    readonly data: HiringWorkbenchData
-    readonly onOpen: (candidateId: string) => void
-}
-
 /** The connected interviews tab: the week being looked at, the invitations waiting, and the status commands. */
-export const HiringInterviews = (props: HiringInterviewsProps) => {
+export const HiringInterviews = () => {
     const t = useTranslations("hiring")
     const say = useHiringSay()
     const format = useHiringFormat()
-    const { data } = props
+    const { board: data } = useHiringWorkbench()
+    const { open } = useHiringBenchStore()
     const view = useHiringInterviews(data)
     const names = new Map(data.candidates.map((candidate) => [candidate.id, candidate.name]))
     const titles = new Map(data.jobs.map((job) => [job.id, job.title]))
@@ -77,7 +73,7 @@ export const HiringInterviews = (props: HiringInterviewsProps) => {
                 previousWeek: view.previousWeek,
                 nextWeek: view.nextWeek,
                 thisWeek: view.thisWeek,
-                open: props.onOpen,
+                open,
                 status: view.setStatus,
                 copy: (id) => {
                     const interview = data.interviews.find((entry) => entry.id === id)

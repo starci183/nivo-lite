@@ -2,16 +2,10 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { useShiftsFormat } from "@/hooks/shifts"
+import { useShiftsBenchData, useShiftsFormat } from "@/hooks/shifts"
 import { useShiftsSetupCommands } from "@/hooks/shiftsCommands"
-import type { ShiftsSetupView } from "@/modules/types"
 import { ShiftsDemandBase } from "./component"
 import type { DemandForm } from "./component"
-
-/** The setup whose coverage blocks are listed and edited. */
-interface ShiftsDemandProps {
-    readonly setup: ShiftsSetupView
-}
 
 const INITIAL: DemandForm = {
     days: ["0", "1", "2", "3", "4"],
@@ -26,13 +20,16 @@ const INITIAL: DemandForm = {
 const WEEK = [0, 1, 2, 3, 4, 5, 6] as const
 
 /** The people needed per time block: the blocks by weekday and the form that adds blocks over several days. */
-export const ShiftsDemand = (props: ShiftsDemandProps) => {
+export const ShiftsDemand = () => {
     const t = useTranslations("shifts")
-    const format = useShiftsFormat()
-    const commands = useShiftsSetupCommands()
-    const [form, setForm] = useState<DemandForm>(INITIAL)
     const [isBusy, setIsBusy] = useState(false)
-    const { positions, blocks } = props.setup
+    const format = useShiftsFormat()
+    const [form, setForm] = useState<DemandForm>(INITIAL)
+    const bench = useShiftsBenchData(null).data
+    const commands = useShiftsSetupCommands()
+    if (bench === undefined || bench.role === "staff") return null
+
+    const { positions, blocks } = bench.setup
     const positionId = form.positionId === "" ? (positions[0]?.id ?? "") : form.positionId
     const positionName = (id: string): string => positions.find((position) => position.id === id)?.name ?? ""
 

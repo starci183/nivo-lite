@@ -1,4 +1,6 @@
-import { InventoryWorkbench } from "@/components/blocks/InventoryWorkbench"
+import { getTranslations } from "next-intl/server"
+import { notFound } from "next/navigation"
+import { InventoryWorkbenchPageBase } from "./component"
 
 /** What the agent workbench route hands the slot. */
 interface InventoryWorkbenchPageProps {
@@ -8,7 +10,26 @@ interface InventoryWorkbenchPageProps {
     readonly installationId?: string
 }
 
-/** The Inventory workbench slot: a thin server shell that mounts the connected client block. */
-export const InventoryWorkbenchPage = (props: InventoryWorkbenchPageProps) => (
-    <InventoryWorkbench initialTab={props.tab ?? null} installationId={props.installationId ?? null} />
-)
+/** The Inventory workbench slot: a thin server shell that hands the words and ids to the frame; every surface reads its own data. */
+export const InventoryWorkbenchPage = async (props: InventoryWorkbenchPageProps) => {
+    if (props.installationId === undefined) notFound()
+    const t = await getTranslations("workbenchInventory")
+    return (
+        <InventoryWorkbenchPageBase
+            props={{
+                installationId: props.installationId,
+                initialTab: props.tab ?? null,
+                tabs: {
+                    stock: t("tab_stock"),
+                    orders: t("tab_orders"),
+                    suppliers: t("tab_suppliers"),
+                    history: t("tab_history"),
+                    recipes: t("tab_recipes"),
+                    count: t("tab_count"),
+                    import: t("tab_import"),
+                },
+                terms: [t("metricReorder"), t("metricAwaiting"), t("metricValue"), t("metricStockOuts")],
+            }}
+        />
+    )
+}

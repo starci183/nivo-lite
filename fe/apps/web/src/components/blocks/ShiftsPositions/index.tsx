@@ -1,22 +1,19 @@
 "use client"
 
 import { useTranslations } from "next-intl"
+import { useShiftsBenchData } from "@/hooks/shifts"
 import { useState } from "react"
 import { useShiftsSetupCommands } from "@/hooks/shiftsCommands"
-import type { ShiftsSetupView } from "@/modules/types"
 import { ShiftsPositionsBase } from "./component"
 
-/** The setup whose positions are listed. */
-interface ShiftsPositionsProps {
-    readonly setup: ShiftsSetupView
-}
-
 /** The positions of the shop (barista, waiter, cashier): remove one, add a new one. */
-export const ShiftsPositions = (props: ShiftsPositionsProps) => {
+export const ShiftsPositions = () => {
     const t = useTranslations("shifts")
+    const bench = useShiftsBenchData(null).data
     const commands = useShiftsSetupCommands()
     const [name, setName] = useState("")
     const [isBusy, setIsBusy] = useState(false)
+    if (bench === undefined || bench.role === "staff") return null
 
     const run = async (job: () => Promise<boolean>): Promise<boolean> => {
         setIsBusy(true)
@@ -37,7 +34,7 @@ export const ShiftsPositions = (props: ShiftsPositionsProps) => {
                 nameLabel: t("posName"),
                 addLabel: t("posAdd"),
                 removeLabel: t("remove"),
-                positions: props.setup.positions.map((position) => ({
+                positions: bench.setup.positions.map((position) => ({
                     id: position.id,
                     label: position.name,
                     color: position.color,

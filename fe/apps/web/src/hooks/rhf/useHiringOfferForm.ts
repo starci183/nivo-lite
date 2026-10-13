@@ -21,5 +21,5 @@ export const useHiringOfferForm = (defaults: OfferValues) => {
             }),
         [t],
     )
-    return useForm<OfferValues>({ resolver: zodResolver(schema), defaultValues: defaults, mode: "onChange" })
+    return useForm<OfferValues>({ resolver: zodResolver(schema), values: defaults, mode: "onChange" })
 }

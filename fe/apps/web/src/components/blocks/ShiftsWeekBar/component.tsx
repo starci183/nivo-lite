@@ -1,4 +1,4 @@
-import { Alert, Badge, Button, Text } from "@starci/grammar/common"
+import { Alert, Badge, Button, EmptyNotice, Text } from "@starci/grammar/common"
 import { ACTIONS_CLASS_NAME, BAR_CLASS_NAME, NAV_CLASS_NAME, PANEL_CLASS_NAME } from "./classNames"
 
 /** The status badge of the schedule in view. */
@@ -26,6 +26,8 @@ export interface ShiftsWeekBarBaseProps {
         readonly isDeciding: boolean
         /** Nothing is running, so every button can be pressed. */
         readonly isIdle: boolean
+        /** Shown under the bar while the week has no schedule. */
+        readonly empty: { readonly title: string; readonly body: string } | null
         /** The publish request waiting for the owner, or `null`. */
         readonly waiting: {
             readonly title: string
@@ -106,6 +108,9 @@ export const ShiftsWeekBarBase = (props: ShiftsWeekBarBaseProps) => (
                     </Button>
                 </div>
             </div>
+        )}
+        {props.props.empty === null ? null : (
+            <EmptyNotice message={props.props.empty.title} description={props.props.empty.body} />
         )}
     </div>
 )

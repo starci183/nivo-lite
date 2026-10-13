@@ -2,27 +2,25 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { useShiftsFormat } from "@/hooks/shifts"
+import { useShiftsBenchData, useShiftsFormat } from "@/hooks/shifts"
 import { useShiftsRequestCommands } from "@/hooks/shiftsCommands"
-import type { ShiftsBenchView, ShiftsWorkItemView } from "@/modules/types"
+import type { ShiftsWorkItemView } from "@/modules/types"
 import { ShiftsRequestsBase } from "./component"
 import type { RequestRowView, RequestSectionView } from "./component"
-
-/** The bench whose requests are listed. */
-interface ShiftsRequestsProps {
-    readonly bench: ShiftsBenchView
-}
 
 const RECENT_LIMIT = 8
 
 /** The leave, swap and availability requests of the staff with approve and decline, through the back end GraphQL API. */
-export const ShiftsRequests = (props: ShiftsRequestsProps) => {
+export const ShiftsRequests = () => {
     const t = useTranslations("shifts")
+    const bench = useShiftsBenchData(null).data
     const format = useShiftsFormat()
     const commands = useShiftsRequestCommands()
     const [busy, setBusy] = useState(false)
-    const { staff } = props.bench.setup
-    const { leaves, swaps, availability } = props.bench.requests
+    if (bench === undefined || bench.role === "staff") return null
+
+    const { staff } = bench.setup
+    const { leaves, swaps, availability } = bench.requests
     const name = (id: string | null): string => staff.find((person) => person.id === id)?.name ?? "-"
     const span = (from: string, to: string): string =>
         to === from ? format.dayMonth(from) : `${format.dayMonth(from)} - ${format.dayMonth(to)}`

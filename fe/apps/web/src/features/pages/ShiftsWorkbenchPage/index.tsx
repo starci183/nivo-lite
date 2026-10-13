@@ -1,4 +1,5 @@
-import { ShiftsWorkbench } from "@/components/blocks/ShiftsWorkbench"
+import { getTranslations } from "next-intl/server"
+import { ShiftsWorkbenchPageBase } from "./component"
 
 /** What the agent workbench route hands the slot. */
 interface ShiftsWorkbenchPageProps {
@@ -8,7 +9,24 @@ interface ShiftsWorkbenchPageProps {
     readonly installationId?: string
 }
 
-/** The Shifts workbench slot: a thin server shell that mounts the connected client block. */
-export const ShiftsWorkbenchPage = (props: ShiftsWorkbenchPageProps) => (
-    <ShiftsWorkbench initialTab={props.tab ?? null} installationId={props.installationId ?? null} />
-)
+/** The Shifts workbench slot: a server shell that words the tabs and ribbon terms, then draws the frame around the connected tab blocks. */
+export const ShiftsWorkbenchPage = async (props: ShiftsWorkbenchPageProps) => {
+    const t = await getTranslations("shifts")
+    const tf = await getTranslations("workbenchFigures")
+    return (
+        <ShiftsWorkbenchPageBase
+            props={{
+                installationId: props.installationId ?? null,
+                initialTab: props.tab ?? null,
+                tabs: {
+                    week: t("tabWeek"),
+                    requests: t("tabRequests"),
+                    setup: t("tabSetup"),
+                    quick: t("tabQuick"),
+                    mine: t("tabMine"),
+                },
+                terms: [tf("shWeek"), tf("shGaps"), tf("shLeave"), tf("shHours")],
+            }}
+        />
+    )
+}

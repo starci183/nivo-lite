@@ -49,7 +49,10 @@ export const useImapAccountForm = (hasSavedPassword: boolean, initial: ImapAccou
                 port: z
                     .string()
                     .trim()
-                    .refine((port) => /^\d+$/u.test(port) && Number(port) >= 1 && Number(port) <= PORT_MAX, t("errPort")),
+                    .refine(
+                        (port) => /^\d+$/u.test(port) && Number(port) >= 1 && Number(port) <= PORT_MAX,
+                        t("errPort"),
+                    ),
                 security: z.enum(["tls", "starttls"]),
                 user: z.string(),
                 password: hasSavedPassword ? z.string() : z.string().min(1, t("errPassword")),

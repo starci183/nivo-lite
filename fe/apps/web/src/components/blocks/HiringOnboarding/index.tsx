@@ -1,20 +1,14 @@
 "use client"
 
-import { useHiringSay } from "@/hooks/hiring"
+import { useHiringSay, useHiringWorkbench } from "@/hooks/hiring"
 import { useHiringOnboarding } from "@/hooks/hiringOnboarding"
-import type { HiringWorkbenchData } from "@/hooks/hiringWire"
 import { HiringOnboardingBase } from "./component"
 
-/** The workbench the tab reads. */
-interface HiringOnboardingProps {
-    readonly data: HiringWorkbenchData
-}
-
 /** The connected onboarding tab: the hired people with their checklists, and the commands that tick a step or make a staff profile. */
-export const HiringOnboarding = (props: HiringOnboardingProps) => {
+export const HiringOnboarding = () => {
     const say = useHiringSay()
     const view = useHiringOnboarding()
-    const { data } = props
+    const { board: data } = useHiringWorkbench()
     const titles = new Map(data.jobs.map((job) => [job.id, job.title]))
     return (
         <HiringOnboardingBase

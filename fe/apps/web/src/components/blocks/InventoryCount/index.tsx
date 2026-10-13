@@ -1,26 +1,22 @@
 "use client"
 
+import { useInventoryBoard } from "@/hooks/inventoryBoard"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { includesText, num, useInventoryFormat, useInventoryRun } from "@/hooks/inventory"
-import type { InventoryWorkbenchData } from "@/modules/types"
 import { useInventoryStockCommands } from "@/hooks/inventoryCommands"
 import { InventoryCountBase } from "./component"
 
-/** The workbench data and the workspace. */
-interface InventoryCountProps {
-    readonly data: InventoryWorkbenchData
-}
-
 /** The stock count tab: the search text and the typed counts live here, the drawing in the pure half. */
-export const InventoryCount = (props: InventoryCountProps) => {
+export const InventoryCount = () => {
+    const board = useInventoryBoard()
     const t = useTranslations("workbenchInventory")
     const format = useInventoryFormat()
     const commands = useInventoryStockCommands()
     const run = useInventoryRun()
     const [query, setQuery] = useState("")
     const [counts, setCounts] = useState<Readonly<Record<string, string>>>({})
-    const rows = props.data.items.filter(
+    const rows = board.items.filter(
         (item) => item.active && includesText(`${item.name} ${item.sku} ${item.category}`, query),
     )
     const entered = Object.entries(counts).filter(

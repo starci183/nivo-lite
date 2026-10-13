@@ -148,3 +148,49 @@ export const toCandidateDetail = (wire: HiringCandidateDetailType): CandidateDet
     cv: wire.cv ?? null,
     events: wire.events,
 })
+
+/** The board shown while the first read runs or when it failed: nothing in it. */
+export const EMPTY_BOARD: HiringWorkbenchData = {
+    nowIso: "1970-01-01T00:00:00.000Z",
+    origin: "",
+    meUserId: "",
+    waitingApprovals: 0,
+    settings: {
+        adTone: "",
+        applyConsentText: "",
+        autoCloseWhenFilled: true,
+        notifyNewCandidate: true,
+        publicSlug: "",
+        remindInterview: true,
+        retentionDays: 90,
+        workspaceId: "",
+    },
+    figures: { interviewsWeek: 0, offersSent: 0, offersWaiting: 0, openRoles: 0, pipeline: 0, totalRoles: 0 },
+    jobs: [],
+    candidates: [],
+    interviews: [],
+    offers: [],
+    onboarding: [],
+    members: [],
+}
+
+/** The candidate the drawer holds while none is open. */
+export const NO_CANDIDATE: CandidateView = {
+    id: "",
+    jobId: "",
+    name: "",
+    phone: "",
+    email: "",
+    source: "",
+    cvPath: null,
+    answers: [],
+    availability: "",
+    score: null,
+    scoreLabel: null,
+    scoreReasons: [],
+    scoreSummary: null,
+    stage: "applied",
+    notes: "",
+    staffId: null,
+    createdAt: "1970-01-01T00:00:00.000Z",
+}

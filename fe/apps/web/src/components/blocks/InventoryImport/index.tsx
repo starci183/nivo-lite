@@ -1,5 +1,6 @@
 "use client"
 
+import { useInventoryBoard } from "@/hooks/inventoryBoard"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useInventoryRun } from "@/hooks/inventory"
@@ -7,13 +8,9 @@ import { useInventoryStockCommands } from "@/hooks/inventoryCommands"
 import { useInventoryTemplates } from "@/hooks/inventoryStarter"
 import { InventoryImportBase } from "./component"
 
-/** Whether the person may import. */
-interface InventoryImportProps {
-    readonly canManage: boolean
-}
-
 /** The import tab: the pasted text lives here, the drawing in the pure half. */
-export const InventoryImport = (props: InventoryImportProps) => {
+export const InventoryImport = () => {
+    const board = useInventoryBoard()
     const t = useTranslations("workbenchInventory")
     const commands = useInventoryStockCommands()
     const { templates } = useInventoryTemplates()
@@ -40,7 +37,7 @@ export const InventoryImport = (props: InventoryImportProps) => {
     return (
         <InventoryImportBase
             props={{
-                allowed: props.canManage,
+                allowed: board.canManage,
                 deniedTitle: t("importDeniedTitle"),
                 deniedBody: t("importDeniedBody"),
                 pasteTitle: t("importPasteTitle"),

@@ -1,5 +1,6 @@
 "use client"
 
+import { useInventoryBoard } from "@/hooks/inventoryBoard"
 import { useTranslations } from "next-intl"
 import {
     PO_LANES,
@@ -11,24 +12,19 @@ import {
     useNewPoDrawer,
 } from "@/hooks/inventory"
 import { usePoDrawer } from "@/hooks/inventoryPo"
-import type { InventoryWorkbenchData, PoView } from "@/modules/types"
+import type { PoView } from "@/modules/types"
 import { useInventoryOrderCommands } from "@/hooks/inventoryCommands"
 import { InventoryOrdersBase } from "./component"
 
-/** The workbench data. */
-interface InventoryOrdersProps {
-    readonly data: InventoryWorkbenchData
-}
-
 /** The orders tab: the drawers live in their hooks, the drawing in the pure half. */
-export const InventoryOrders = (props: InventoryOrdersProps) => {
+export const InventoryOrders = () => {
+    const board = useInventoryBoard()
     const t = useTranslations("workbenchInventory")
     const format = useInventoryFormat()
-    const { data } = props
     const commands = useInventoryOrderCommands()
     const decisions = useInventoryDecisions()
-    const poDrawer = usePoDrawer(data.suppliers, data.canManage, commands, decisions)
-    const newPoDrawer = useNewPoDrawer(data, commands)
+    const poDrawer = usePoDrawer(board.suppliers, board.canManage, commands, decisions)
+    const newPoDrawer = useNewPoDrawer(board, commands)
     const factsOf = (po: PoView): string =>
         t("orderFacts", {
             lines: po.lines.length,
@@ -39,15 +35,15 @@ export const InventoryOrders = (props: InventoryOrdersProps) => {
     return (
         <InventoryOrdersBase
             props={{
-                createLabel: data.canManage ? t("orderCreate") : null,
-                openCount: t("orderOpenCount", { n: data.metrics.openPos }),
+                createLabel: board.canManage ? t("orderCreate") : null,
+                openCount: t("orderOpenCount", { n: board.metrics.openPos }),
                 boardLabel: t("orderBoard"),
                 emptyTitle: t("orderEmptyTitle"),
                 emptyBody: t("orderEmptyBody"),
                 openLabel: t("orderOpen"),
-                hasOrders: data.pos.length > 0,
+                hasOrders: board.pos.length > 0,
                 lanes: PO_LANES.map((status) => {
-                    const cards = data.pos.filter((po) => po.status === status)
+                    const cards = board.pos.filter((po) => po.status === status)
                     return {
                         status,
                         label: t(`po_${status}`),
@@ -71,7 +67,7 @@ export const InventoryOrders = (props: InventoryOrdersProps) => {
             }}
             on={{
                 create: newPoDrawer.open,
-                open: openById(data.pos, poDrawer.open),
+                open: openById(board.pos, poDrawer.open),
                 poSupplier: poDrawer.on.supplier,
                 poExpected: poDrawer.on.expected,
                 poLine: poDrawer.on.line,

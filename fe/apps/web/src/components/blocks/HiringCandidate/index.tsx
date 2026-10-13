@@ -1,7 +1,16 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { OPEN_OFFER_STATUSES, reasonTone, scoreTone, stageTone, useHiringFormat, useHiringSay } from "@/hooks/hiring"
+import {
+    OPEN_OFFER_STATUSES,
+    focusedCandidateId,
+    reasonTone,
+    scoreTone,
+    stageTone,
+    useHiringFormat,
+    useHiringSay,
+    useHiringWorkbench,
+} from "@/hooks/hiring"
 import {
     INTERVIEW_MODES,
     interviewDefaults,
@@ -12,16 +21,15 @@ import {
     useHiringOfferRequest,
 } from "@/hooks/hiringCandidate"
 import { useHiringReject } from "@/hooks/hiringPipeline"
-import type { CandidateView, HiringWorkbenchData } from "@/hooks/hiringWire"
+import { NO_CANDIDATE } from "@/hooks/hiringMap"
+import { useHiringBenchStore } from "@/hooks/zustand/hiringBench"
 import { useHiringInterviewForm, useHiringOfferForm } from "@/hooks/rhf"
 import { HiringCandidateBase } from "./component"
 import type { HiringCandidateBaseProps } from "./component"
 
-/** The candidate to show, the workbench the rest of the file reads from, and the way to close the drawer. */
+/** The record a `?focus=` link leads to: the drawer opens on it until somebody opens another candidate or closes it. */
 interface HiringCandidateProps {
-    readonly candidate: CandidateView
-    readonly data: HiringWorkbenchData
-    readonly onClose: () => void
+    readonly focus: string | null
 }
 
 type CvState = HiringCandidateBaseProps["props"]["cv"]["state"]
@@ -34,11 +42,14 @@ const cvStateOf = (hasFile: boolean, isLoaded: boolean, hasLink: boolean): CvSta
 
 /** The connected candidate drawer: the workbench row plus the detail query (CV link, timeline), and every command on the candidate. */
 export const HiringCandidate = (props: HiringCandidateProps) => {
+    const { board: data } = useHiringWorkbench()
+    const { openId, close } = useHiringBenchStore()
+    const wanted = openId === undefined ? focusedCandidateId(data, props.focus) : openId
+    const candidate = data.candidates.find((entry) => entry.id === wanted) ?? NO_CANDIDATE
     const t = useTranslations("hiring")
     const say = useHiringSay()
     const format = useHiringFormat()
-    const { candidate, data } = props
-    const view = useHiringCandidate(candidate, data, props.onClose)
+    const view = useHiringCandidate(candidate, data, close)
     const job = view.job
     const reject = useHiringReject(view.closeDialog)
     const interview = useHiringInterviewRequest(
@@ -62,6 +73,7 @@ export const HiringCandidate = (props: HiringCandidateProps) => {
         <HiringCandidateBase
             props={{
                 say,
+                isOpen: candidate.id !== "",
                 name: candidate.name,
                 subtitle: [job?.title ?? "", format.label("source", candidate.source)]
                     .filter((part) => part !== "")
@@ -174,7 +186,7 @@ export const HiringCandidate = (props: HiringCandidateProps) => {
                 cancelOffer: view.cancelOffer,
                 remove: () => void view.remove(),
                 clear: view.clear,
-                close: props.onClose,
+                close,
                 interviewText: interview.setText,
                 interviewNumber: interview.setNumber,
                 sendInterview: interview.send,

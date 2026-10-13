@@ -1,24 +1,22 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useShiftsFormat } from "@/hooks/shifts"
+import { useShiftsBenchData, useShiftsFormat } from "@/hooks/shifts"
+import { useShiftsWeekStore } from "@/hooks/zustand/shiftsWeek"
 import { useShiftsWeekModel } from "@/hooks/shiftsCoverage"
-import type { ShiftsBenchView } from "@/modules/types"
 import { ShiftsWeekStatsBase } from "./component"
-
-/** The week whose figures and explanation are shown. */
-interface ShiftsWeekStatsProps {
-    readonly bench: ShiftsBenchView
-}
 
 const NO_MOVES: Readonly<Record<string, string | null>> = {}
 
 /** The figures of the week (wages, assigned shifts, short blocks, rule breaks) and the explanation of the schedule. */
-export const ShiftsWeekStats = (props: ShiftsWeekStatsProps) => {
+export const ShiftsWeekStats = () => {
     const t = useTranslations("shifts")
     const format = useShiftsFormat()
-    const model = useShiftsWeekModel(props.bench, NO_MOVES)
-    const { current, monday } = props.bench.week
+    const selected = useShiftsWeekStore((state) => state.monday)
+    const bench = useShiftsBenchData(selected).data
+    const model = useShiftsWeekModel(bench, NO_MOVES)
+    if (bench === undefined || model === undefined || bench.week.current === null || bench.role === "staff") return null
+    const { current, monday } = bench.week
     const open = model.shifts.filter((shift) => shift.staffId === null).length
     const short = model.cells.filter((cell) => cell.status === "short").length
     const explanation = current?.explanation.trim() ?? ""
