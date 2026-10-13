@@ -12,8 +12,8 @@ import { EmitN8nEventQueueModule } from "@features/jobs/emit-n8n-event"
 import { RunAutomationCommandQueueModule } from "@features/jobs/run-automation-command"
 import { RunAutomationTickQueueModule } from "@features/jobs/run-automation-tick"
 import { AgentToolsHttpModule } from "@features/api/agent-tools"
-import { AgentsHttpModule } from "@features/api/agents"
-import { DecisionsHttpModule } from "@features/api/decisions"
+import { AgentsGraphqlModule, AgentsHttpModule } from "@features/api/agents"
+import { DecisionsGraphqlModule, DecisionsHttpModule } from "@features/api/decisions"
 import { RunDecisionsQueueModule } from "@features/jobs/run-decisions"
 import { GenerateWithAgentQueueModule } from "@features/jobs/generate-with-agent"
 import { SyncAgentsQueueModule } from "@features/jobs/sync-agents"
@@ -31,8 +31,8 @@ import { TelegramHttpModule } from "@features/webhooks/telegram"
 import { ZaloHttpModule } from "@features/webhooks/zalo"
 import { LeadsHttpModule } from "@features/api/leads"
 import { AdminHttpModule } from "@features/api/admin"
-import { ModulesHttpModule } from "@features/api/modules"
-import { OfficeHttpModule } from "@features/api/office"
+import { ModulesGraphqlModule, ModulesHttpModule } from "@features/api/modules"
+import { OfficeGraphqlModule, OfficeHttpModule } from "@features/api/office"
 import { ExternalApiHttpModule } from "@features/api/external-api"
 import { SystemHealthHttpModule } from "@features/api/system-health"
 import { BOOKINGS_ERROR_KINDS, BOOKINGS_MESSAGES, BookingsModule } from "@modules/domain/bookings"
@@ -567,11 +567,7 @@ export class AppModule {
                     ],
                     ...options.queue,
                 }),
-                JobsModule.register({
-                    isGlobal: true,
-                    connection: PRIMARY_ENTITY_MANAGER,
-                    ...options.jobs,
-                }),
+                JobsModule.register({ isGlobal: true, connection: PRIMARY_ENTITY_MANAGER, ...options.jobs }),
                 SupabaseModule.register({ isGlobal: true, ...options.supabase }),
                 IdentityModule.register({ isGlobal: true, verifyAccessToken }),
                 ContractsModule.register({ isGlobal: true }),
@@ -716,11 +712,15 @@ export class AppModule {
                 GenerateWithAgentQueueModule,
                 RunDecisionsQueueModule,
                 AgentsHttpModule,
+                AgentsGraphqlModule,
                 AgentToolsHttpModule,
                 DecisionsHttpModule,
+                DecisionsGraphqlModule,
                 OfficeHttpModule,
+                OfficeGraphqlModule,
                 ModulesModule.register({ isGlobal: true, categories: MODULE_CATEGORIES, catalog: MODULE_CATALOG }),
                 ModulesHttpModule,
+                ModulesGraphqlModule,
                 ApiKeysModule.register({ isGlobal: true }),
                 PublicApiModule.register({ isGlobal: true }),
                 PaymentOrdersModule.register({ isGlobal: true }),
