@@ -2449,7 +2449,10 @@
     "sampleText": "Chào anh, bên em gửi báo giá...",
     "sampleTitle": "Bảng giá",
     "sampleContent": "Gói 3 tháng: ...",
-    "sampleTopic": "Giá"
+    "sampleTopic": "Giá",
+    "keysRefused": "Bạn không có quyền quản lý khoá API của shop này.",
+    "createFailed": "Chưa tạo được khoá. Tên khoá cần ít nhất 2 ký tự và mỗi shop có tối đa 20 khoá đang dùng.",
+    "revokeFailed": "Chưa thu hồi được khoá này. Hãy thử lại."
   },
   "email": {
     "err_auth": "Sai tên đăng nhập hoặc mật khẩu. Kiểm tra lại địa chỉ email và mật khẩu bạn đã dán.",
@@ -4052,7 +4055,18 @@
     "flowDueOn": "hạn {date}",
     "flowPaidOn": "đã trả {date}",
     "flowUnmatchedRef": "Mã {ref}",
-    "flowDecidedBy": "{name} · {time}"
+    "flowDecidedBy": "{name} · {time}",
+    "actionQueued": "Đã xếp hàng xử lý khách hàng.",
+    "actionCompleted": "Đã xử lý khách hàng.",
+    "actionFailed": "Chưa thể xử lý khách hàng. Vui lòng thử lại.",
+    "changesSaved": "Đã lưu thay đổi.",
+    "outcomeRecorded": "Đã ghi nhận kết quả.",
+    "errStepTitle": "Nhập tiêu đề bước tiếp theo.",
+    "errStepOwner": "Chọn người phụ trách.",
+    "errStepNext": "Nhập việc tiếp theo.",
+    "errStepDue": "Chọn ngày hợp lệ.",
+    "errOutcomeEvidence": "Nhập bằng chứng cho kết quả này.",
+    "errDraft": "Nhập nội dung tin nhắn."
   },
   "leads": {
     "crumbHome": "Tổng quan",
@@ -7286,7 +7300,12 @@
     "stage_qualified": "đã lọc",
     "stage_proposal": "báo giá",
     "stage_won": "thắng",
-    "stage_lost": "mất"
+    "stage_lost": "mất",
+    "draftRequired": "Nhập nội dung trả lời trước khi duyệt.",
+    "draftTooLong": "Nội dung trả lời tối đa 4.000 ký tự.",
+    "approvalQueued": "Đã xếp hàng đăng câu trả lời.",
+    "approvalSucceeded": "Đã đăng câu trả lời.",
+    "approvalFailed": "Không thể đăng câu trả lời ({error})."
   },
   "workbenchSales": {
     "metricOpen": "Cơ hội đang mở",
@@ -7476,6 +7495,13 @@
     "errContractStatus": "Trạng thái phải là một trong: {list}.",
     "errContractAmount": "Giá trị phải từ 0 trở lên.",
     "evContractCreated": "{who} thêm hợp đồng cho {customer}",
-    "evContractUpdated": "{who} cập nhật hợp đồng của {customer}"
+    "evContractUpdated": "{who} cập nhật hợp đồng của {customer}",
+    "formTextTooLong": "Nhập tối đa {n} ký tự.",
+    "salesActionQueued": "Đã xếp hàng thao tác bán hàng.",
+    "salesActionCompleted": "Đã hoàn thành thao tác bán hàng.",
+    "salesActionFailed": "Thao tác bán hàng thất bại ({code}).",
+    "salesActionStopped": "Đã dừng bước bán hàng.",
+    "salesDecisionInvalid": "Điền các trường bắt buộc cho quyết định.",
+    "salesAmountInvalid": "Nhập số tiền hợp lệ."
   }
 }
