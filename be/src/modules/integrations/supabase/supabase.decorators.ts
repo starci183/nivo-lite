@@ -26,3 +26,6 @@ export const InjectSupabaseAccessTokenVerifier = (): TypedParameterDecorator<Ver
 
 /** Token of the account administration the operator commands use. */
 export const SUPABASE_ACCOUNTS: unique symbol = Symbol("integrations.supabase.accounts")
+
+/** Token of the Storage service the render job reads and writes files through. */
+export const SUPABASE_STORAGE: unique symbol = Symbol("integrations.supabase.storage")

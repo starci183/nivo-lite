@@ -5,6 +5,7 @@ export {
     SUPABASE_ACCESS_TOKEN_VERIFIER,
     SUPABASE_ACCOUNTS,
     SUPABASE_AUTH,
+    SUPABASE_STORAGE,
 } from "./supabase.decorators"
 export { SUPABASE_ERROR_KINDS } from "./errors/supabase.error"
 export { createSupabaseAccessTokenVerifier } from "./supabase.jwks"
