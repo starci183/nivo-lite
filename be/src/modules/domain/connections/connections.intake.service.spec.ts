@@ -122,8 +122,11 @@ describe("ConnectionsService", () => {
             await expect(service.applyZaloAuthorization("c-1", "oa-9")).resolves.toBeUndefined()
             await expect(service.applyZaloAuthorization("c-1")).resolves.toBeUndefined()
 
-            expect(em.query).toHaveBeenNthCalledWith(1, APPLY_ZALO_AUTHORIZATION, ["c-1", '{"oa_id":"oa-9"}'])
-            expect(em.query).toHaveBeenNthCalledWith(2, APPLY_ZALO_AUTHORIZATION, ["c-1", "{}"])
+            expect(em.query).toHaveBeenNthCalledWith(1, APPLY_ZALO_AUTHORIZATION, [
+                "c-1",
+                '{"authorized":true,"oa_id":"oa-9"}',
+            ])
+            expect(em.query).toHaveBeenNthCalledWith(2, APPLY_ZALO_AUTHORIZATION, ["c-1", '{"authorized":true}'])
         })
     })
 

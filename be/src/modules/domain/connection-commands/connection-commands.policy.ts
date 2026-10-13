@@ -132,15 +132,6 @@ export const COMMANDS: Readonly<Record<string, Runner>> = {
     "money.resume": (s, a, i) => s.channels.resumeConnection(a, connectionOf(i)),
     "money.reveal-key": (s, a, i) => s.channels.revealSepayKey(a, connectionOf(i)),
     "money.provider-keys": (s, a, i) => s.channels.saveProviderKeys(a, connectionOf(i), valuesOf(i)),
-    "zalo.start": (s, a, i) =>
-        s.channels.startZaloConnection(a, {
-            name: textOf(i.name, "name", 120),
-            appId: textOf(i.appId, "appId", 100),
-            appSecret: textOf(i.appSecret, "appSecret", 200),
-        }),
-    "zalo.resume": (s, a, i) => s.channels.resumeZalo(a, connectionOf(i)),
-    "zalo.oa-secret": (s, a, i) => s.channels.saveZaloOaSecret(a, connectionOf(i), textOf(i.oaSecret, "oaSecret", 200)),
-    "zalo.authorize": (s, a, i) => s.channels.zaloAuthorizeUrl(a, connectionOf(i)),
     "webhook.start": (s, a, i) =>
         s.webhooks.start(a, { name: textOf(i.name, "name", 120), url: textOf(i.url, "url", 2048), events: eventsOf(i) }),
     "webhook.reveal": (s, a, i) => s.webhooks.reveal(a, connectionOf(i)),

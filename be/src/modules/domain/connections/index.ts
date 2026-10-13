@@ -6,7 +6,6 @@ export {
     safeEqual,
     sha256,
 } from "./connection-cipher.policy"
-export { WORKSPACE_HEADER, WorkspaceHeader } from "./connections.decorators"
 export { cleanConnectionName } from "./connection-name.policy"
 export { isLocalOnly, publicSiteUrl, webhookUrlFor } from "./connection-url.policy"
 export { connectorStatusOf, isPlannedConnector } from "./connector-catalog.policy"
@@ -33,6 +32,7 @@ export type {
     ListByProviderOptions,
     Provider,
     RecordedEvent,
+    WizardSettlement,
 } from "./connections.contracts"
 export { ConnectionsModule } from "./connections.module"
 export type { ConnectionsOptions } from "./connections.options"

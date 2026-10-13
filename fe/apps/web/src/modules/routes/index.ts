@@ -16,3 +16,4 @@ export { AUTH_ROUTES, invitePath, loginPath, loginResetPath, signupPath, workspa
 export { ADMIN_ROUTES, adminListPath, adminWorkspacePath } from "./admin-routes"
 export { workspaceBillingPath, workspacePaymentPath } from "./workspace-routes"
 export { CONSOLE_ROUTES, agentChatHref, leadHref, responsibilitiesHref } from "./console-routes"
+export { AUTOMATION_ROUTES, automationFocusPath, newModulePath } from "./automations-routes"

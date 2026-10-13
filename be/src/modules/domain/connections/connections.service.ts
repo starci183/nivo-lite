@@ -25,6 +25,7 @@ import type {
     ListByProviderOptions,
     Provider,
     RecordedEvent,
+    WizardSettlement,
 } from "./connections.contracts"
 import { toConnectionRecord } from "./connections.mapper"
 import { MODULE_OPTIONS_TOKEN } from "./connections.module-definition"
@@ -60,6 +61,7 @@ import {
     PATCH_CONNECTION,
     RECORD_EVENT,
     UPSERT_SECRET,
+    SETTLE_WIZARD,
 } from "./persistence/connections.sql"
 
 type SecretRow = Pick<ConnectionSecretsRow, "ciphertext" | "webhook_secret">
@@ -317,7 +319,7 @@ export class ConnectionsService {
 
     /** The owner authorized the Zalo OA: its id joins the public facts and an error status clears. */
     async applyZaloAuthorization(connectionId: string, oaId?: string): Promise<void> {
-        await this.entityManager.query(APPLY_ZALO_AUTHORIZATION, [connectionId, JSON.stringify(oaId === undefined ? {} : { oa_id: oaId })])
+        await this.entityManager.query(APPLY_ZALO_AUTHORIZATION, [connectionId, JSON.stringify(oaId === undefined ? { authorized: true } : { authorized: true, oa_id: oaId })])
     }
 
     /** A page of the connections the health check judges, in id order, after the given id (empty for the first page). */
@@ -342,5 +344,12 @@ export class ConnectionsService {
             connectionId,
             JSON.stringify({ state: mark.state, reason: mark.reason, checked_at: mark.checkedAt }),
         ])
+    }
+
+    /** Writes the result of a wizard job next to its ticket; a newer ticket on the row means the owner moved on and nothing is written. */
+    async settleWizard(connectionId: string, ticket: string, settlement: WizardSettlement): Promise<void> {
+        const wizard = { ticket, command: settlement.command, state: settlement.state, url: settlement.url, code: settlement.code }
+        const facts = settlement.oaSecretSaved ? { oa_secret_saved: true, wizard } : { wizard }
+        await this.entityManager.query(SETTLE_WIZARD, [connectionId, ticket, JSON.stringify(facts)])
     }
 }

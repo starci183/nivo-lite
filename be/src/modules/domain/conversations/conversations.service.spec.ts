@@ -179,16 +179,13 @@ describe("ConversationsService", () => {
 
             await service.acceptTelegram(CONNECTION, telegram(), manager)
 
-            expect(inboundEvents.keepUnrouted).toHaveBeenCalledWith(
-                {
-                    workspaceId: "ws-1",
-                    channel: "telegram",
-                    sender: "Minh Tran",
-                    body: "Hello",
-                    eventId: "tg:c-1:555:9",
-                },
-                manager,
-            )
+            expect(inboundEvents.keepUnrouted).toHaveBeenCalledWith(manager, {
+                workspaceId: "ws-1",
+                channel: "telegram",
+                sender: "Minh Tran",
+                body: "Hello",
+                eventId: "tg:c-1:555:9",
+            })
             expect(conversations.open).not.toHaveBeenCalled()
             expect(queue.enqueueChatTurn).not.toHaveBeenCalled()
         })
@@ -314,16 +311,13 @@ describe("ConversationsService", () => {
 
             await service.acceptZalo(CONNECTION, zaloMessage(), manager)
 
-            expect(inboundEvents.keepUnrouted).toHaveBeenCalledWith(
-                {
-                    workspaceId: "ws-1",
-                    channel: "zalo",
-                    sender: "<conversations.zaloGuest>",
-                    body: "Hello",
-                    eventId: "zalo:c-1:m-1",
-                },
-                manager,
-            )
+            expect(inboundEvents.keepUnrouted).toHaveBeenCalledWith(manager, {
+                workspaceId: "ws-1",
+                channel: "zalo",
+                sender: "<conversations.zaloGuest>",
+                body: "Hello",
+                eventId: "zalo:c-1:m-1",
+            })
             expect(queue.enqueueChatTurn).not.toHaveBeenCalled()
         })
 
@@ -384,16 +378,13 @@ describe("ConversationsService", () => {
 
                 expect(connections.intakeOf).toHaveBeenCalledWith(CONNECTION, "meta", manager)
                 expect(manager.query).toHaveBeenCalledWith(FIND_FRONT_AGENT, [CONNECTION])
-                expect(inboundEvents.keepUnrouted).toHaveBeenCalledWith(
-                    {
-                        workspaceId: "ws-1",
-                        channel: platform,
-                        sender: "Minh Tran",
-                        body: "Hello",
-                        eventId: "meta:event-1:c-1",
-                    },
-                    manager,
-                )
+                expect(inboundEvents.keepUnrouted).toHaveBeenCalledWith(manager, {
+                    workspaceId: "ws-1",
+                    channel: platform,
+                    sender: "Minh Tran",
+                    body: "Hello",
+                    eventId: "meta:event-1:c-1",
+                })
                 expect(catalog.get).not.toHaveBeenCalled()
                 expect(conversations.find).not.toHaveBeenCalled()
                 expect(conversations.open).not.toHaveBeenCalled()
@@ -474,16 +465,13 @@ describe("ConversationsService", () => {
                 await service.acceptMeta(CONNECTION, metaMessage({ platform, visitor: null }), manager)
 
                 expect(catalog.get).toHaveBeenCalledWith(`conversations.${platform}Guest`, {}, "vi")
-                expect(inboundEvents.keepUnrouted).toHaveBeenCalledWith(
-                    {
-                        workspaceId: "ws-1",
-                        channel: platform,
-                        sender: `<conversations.${platform}Guest>`,
-                        body: "Hello",
-                        eventId: "meta:event-1:c-1",
-                    },
-                    manager,
-                )
+                expect(inboundEvents.keepUnrouted).toHaveBeenCalledWith(manager, {
+                    workspaceId: "ws-1",
+                    channel: platform,
+                    sender: `<conversations.${platform}Guest>`,
+                    body: "Hello",
+                    eventId: "meta:event-1:c-1",
+                })
             },
         )
 

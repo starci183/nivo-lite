@@ -1,4 +1,4 @@
-export { TELEGRAM_ERROR_KINDS, TelegramErrorCode } from "./errors/telegram.error"
+export { TELEGRAM_ERROR_KINDS } from "./errors/telegram.error"
 export { TELEGRAM_MESSAGES } from "./messages/telegram.messages"
 export { parseTelegramConfig } from "./telegram.config"
 export { InjectTelegram, TELEGRAM } from "./telegram.decorators"

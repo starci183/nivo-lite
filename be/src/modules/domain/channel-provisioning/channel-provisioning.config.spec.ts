@@ -6,11 +6,10 @@ import { CHANNEL_PROVISIONING_OPTIONS } from "./channel-provisioning.decorators"
 import type { ChannelProvisioningOptions } from "./channel-provisioning.options"
 
 describe("parseChannelProvisioningConfig", () => {
-    it("leaves the Telegram and Zalo credentials absent when their variables are missing", async () => {
+    it("leaves the Telegram token absent when its variable is missing", async () => {
         const env = mock<EnvSource>()
         const print = jest.fn()
         env.has.mockReturnValue(false)
-        env.optional.mockReturnValue(undefined)
 
         const moduleRef = await Test.createTestingModule({
             providers: [
@@ -25,28 +24,21 @@ describe("parseChannelProvisioningConfig", () => {
 
         expect(moduleRef.get<ChannelProvisioningOptions>(CHANNEL_PROVISIONING_OPTIONS)).toEqual({
             telegramToken: undefined,
-            zaloAppId: undefined,
-            zaloAppSecret: undefined,
             print,
         })
-        expect(env.has).toHaveBeenCalledTimes(2)
-        expect(env.has).toHaveBeenNthCalledWith(1, "CHANNEL_BOT_TOKEN")
-        expect(env.has).toHaveBeenNthCalledWith(2, "ZALO_APP_SECRET")
-        expect(env.optional).toHaveBeenCalledTimes(1)
-        expect(env.optional).toHaveBeenCalledWith("ZALO_APP_ID")
+        expect(env.has.mock.calls).toEqual([["CHANNEL_BOT_TOKEN"]])
+        expect(env.optional).not.toHaveBeenCalled()
         expect(env.secret).not.toHaveBeenCalled()
         expect(print).not.toHaveBeenCalled()
         await moduleRef.close()
     })
 
-    it("reads the configured Telegram token and Zalo credentials without printing them", async () => {
+    it("reads only the configured Telegram token without printing it", async () => {
         const env = mock<EnvSource>()
         const print = jest.fn()
         const telegramToken = new Secret("telegram-bot-token")
-        const zaloAppSecret = new Secret("zalo-app-secret")
         env.has.mockReturnValue(true)
-        env.optional.mockReturnValue("zalo-app-id")
-        env.secret.mockReturnValueOnce(telegramToken).mockReturnValueOnce(zaloAppSecret)
+        env.secret.mockReturnValue(telegramToken)
 
         const moduleRef = await Test.createTestingModule({
             providers: [
@@ -61,18 +53,11 @@ describe("parseChannelProvisioningConfig", () => {
 
         expect(moduleRef.get<ChannelProvisioningOptions>(CHANNEL_PROVISIONING_OPTIONS)).toEqual({
             telegramToken,
-            zaloAppId: "zalo-app-id",
-            zaloAppSecret,
             print,
         })
-        expect(env.has).toHaveBeenCalledTimes(2)
-        expect(env.has).toHaveBeenNthCalledWith(1, "CHANNEL_BOT_TOKEN")
-        expect(env.has).toHaveBeenNthCalledWith(2, "ZALO_APP_SECRET")
-        expect(env.optional).toHaveBeenCalledTimes(1)
-        expect(env.optional).toHaveBeenCalledWith("ZALO_APP_ID")
-        expect(env.secret).toHaveBeenCalledTimes(2)
-        expect(env.secret).toHaveBeenNthCalledWith(1, "CHANNEL_BOT_TOKEN")
-        expect(env.secret).toHaveBeenNthCalledWith(2, "ZALO_APP_SECRET")
+        expect(env.has.mock.calls).toEqual([["CHANNEL_BOT_TOKEN"]])
+        expect(env.optional).not.toHaveBeenCalled()
+        expect(env.secret.mock.calls).toEqual([["CHANNEL_BOT_TOKEN"]])
         expect(print).not.toHaveBeenCalled()
         await moduleRef.close()
     })

@@ -12,8 +12,6 @@ import * as channelProvisioning from "./index"
 describe("ChannelProvisioningModule", () => {
     const options: ChannelProvisioningOptions = {
         telegramToken: new Secret("telegram-token"),
-        zaloAppId: "zalo-app-id",
-        zaloAppSecret: new Secret("zalo-secret"),
         print: jest.fn(),
     }
 

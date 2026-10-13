@@ -1,4 +1,4 @@
-import type { RenderedEmail } from "./mail.contracts"
+import type { EmailLayoutInput, RenderedEmail, TemplateVars } from "./mail.contracts"
 
 /** The default accent of the email layout. */
 export const NIVO_ACCENT = "#e11d48"
@@ -13,16 +13,13 @@ const escapeHtml = (text: string): string =>
     text.replace(/&/gu, "&amp;").replace(/</gu, "&lt;").replace(/>/gu, "&gt;").replace(/"/gu, "&quot;")
 
 /** Fills `{name}` or `{{name}}` from `vars` (an unknown name becomes empty); control characters never survive. */
-export const renderTemplate = (
-    template: string,
-    vars: Readonly<Record<string, string | number | null | undefined>>,
-): string =>
+export const renderTemplate = (template: string, vars: TemplateVars): string =>
     template
         .replace(/\{\{?\s*([a-z0-9_]+)\s*\}?\}/giu, (_match, name: string) => String(vars[name] ?? ""))
         .replace(CONTROL_CHARACTERS, "")
 
 /** A subject is one line. */
-export const oneLine = (text: string, max = 200): string => text.replace(/[\r\n]+/gu, " ").trim().slice(0, max)
+export const oneLine = (text: string, max: number = 200): string => text.replace(/[\r\n]+/gu, " ").trim().slice(0, max)
 
 const isBullet = (line: string): boolean => /^\s*[-•]\s+/u.test(line)
 const withoutBullet = (line: string): string => line.replace(/^\s*[-•]\s+/u, "")
@@ -59,14 +56,7 @@ const blocksOf = (text: string): ReadonlyArray<Block> =>
         .flatMap(blocksOfParagraph)
 
 /** Wraps an already rendered plain body in the shop layout; `accent` must be a #rrggbb colour, anything else falls back to the default. */
-export const renderEmail = (input: {
-    readonly shopName: string
-    readonly accent?: string
-    readonly title: string
-    readonly body: string
-    readonly footer: string
-    readonly lang: string
-}): RenderedEmail => {
+export const renderEmail = (input: EmailLayoutInput): RenderedEmail => {
     const accent = input.accent !== undefined && /^#[0-9a-f]{6}$/iu.test(input.accent) ? input.accent : NIVO_ACCENT
     const shop = escapeHtml(oneLine(input.shopName, 80))
     const body = blocksOf(input.body)

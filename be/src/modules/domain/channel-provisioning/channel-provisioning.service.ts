@@ -19,7 +19,7 @@ const invalid = (field: string): never => {
 
 @Injectable()
 /**
- * Connects a Telegram bot, a SePay feed or a Zalo OA to a workspace from the terminal, as the owner of that workspace and through the
+ * Connects a Telegram bot or a SePay feed to a workspace from the terminal, as the owner of that workspace and through the
  * same capability the console uses. Secrets come from the environment; the only secret printed is the SePay API key NIVO generates,
  * which must be pasted into SePay.
  */
@@ -43,7 +43,6 @@ export class ChannelProvisioningService {
         const actor: ConnectionActor = { principalId: owner.user_id, workspaceId }
         if (kind === "telegram") return this.telegram(actor, flags)
         if (kind === "sepay") return this.sepay(actor, flags)
-        if (kind === "zalo") return this.zalo(actor, flags)
         return invalid("kind")
     }
 
@@ -69,16 +68,6 @@ export class ChannelProvisioningService {
         })
         this.options.print(`sepay connection ${view.id}; paste into SePay: url ${view.webhookUrl}  api key ${view.apiKey}`)
         await this.bind(actor, view.id, "sepay", flags)
-    }
-
-    private async zalo(actor: ConnectionActor, flags: ProvisionFlags): Promise<void> {
-        const appId = this.options.zaloAppId ?? invalid("ZALO_APP_ID")
-        const appSecret = this.options.zaloAppSecret?.reveal() ?? invalid("ZALO_APP_SECRET")
-        const view = await this.channels.startZaloConnection(actor, { name: flags.name ?? "Zalo OA", appId, appSecret })
-        this.options.print(`zalo connection ${view.id}; webhook ${view.webhookUrl}`)
-        const authorization = await this.channels.zaloAuthorizeUrl(actor, view.id)
-        this.options.print(`open this address as the OA admin to authorize it: ${authorization.url}`)
-        await this.bind(actor, view.id, "zalo_oa", flags)
     }
 
     /** With --bind, gives every agent of the workspace that can use the provider access to the connection. */

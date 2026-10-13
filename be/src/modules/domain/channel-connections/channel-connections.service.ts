@@ -12,8 +12,6 @@ import {
     ChannelSetupError,
     ChannelSetupErrorCode,
     InjectChannelSetupClient,
-    ZALO_PKCE_TTL_MS,
-    newVerifier,
 } from "@modules/integrations/channel-setup"
 import type { ChannelSetupClient, ZaloSecret } from "@modules/integrations/channel-setup"
 import { InjectClock } from "@modules/platform/clock"
@@ -24,11 +22,9 @@ import type {
     ConnectionCheck,
     ProviderKeysResult,
     StartMoneyInput,
-    StartZaloInput,
     TelegramConnected,
     UpdateMoneyInput,
     WizardConnection,
-    ZaloWizardConnection,
 } from "./channel-connections.contracts"
 import {
     chooseEnvironment,
@@ -37,7 +33,6 @@ import {
     isMoneyProvider,
     isSepayKey,
     isTelegramToken,
-    isZaloAppId,
     maskAccount,
     moneyRules,
     squeeze,
@@ -249,66 +244,6 @@ export class ChannelConnectionsService {
         return { confirmed, localOnly: origin === null }
     }
 
-    /** Keeps the Zalo app's keys sealed as a PENDING connection so the callback and webhook addresses exist for the Zalo Developers screens. */
-    async startZaloConnection(actor: ConnectionActor, input: StartZaloInput): Promise<ZaloWizardConnection> {
-        await this.connections.authorize(actor, OWNER)
-        const name = this.requireName(input.name)
-        const appId = clean(input.appId, 40)
-        const appSecret = input.appSecret.trim()
-        if (!isZaloAppId(appId) || appSecret.length < KEY_MIN) {
-            throw new ChannelConnectionsError({ code: ChannelConnectionsErrorCode.ZaloFieldsInvalid })
-        }
-        // The OA secret key is copied later, from the Webhook screen; until then every webhook is refused (a blank key never verifies).
-        const secret: ZaloSecret = { appId, appSecret, oaSecret: "" }
-        const id = await this.connections.create({
-            workspaceId: actor.workspaceId,
-            createdBy: actor.principalId,
-            provider: "zalo_oa",
-            name,
-            status: "pending",
-            environment: "live",
-            meta: { app_id: appId },
-            secret: { plain: JSON.stringify(secret), webhookSecret: randomSecret() },
-        })
-        return this.zaloView(await this.connections.get(actor.workspaceId, id), secret)
-    }
-
-    /** The "OA Secret Key" from the Zalo app's Webhook screen: it signs every webhook, so it is what lets NIVO trust the events. */
-    async saveZaloOaSecret(actor: ConnectionActor, connectionId: string, oaSecret: string): Promise<void> {
-        await this.connections.authorize(actor, OWNER)
-        const connection = await this.ownOf(actor, connectionId, "zalo_oa")
-        const key = oaSecret.trim()
-        if (key.length < KEY_MIN || key.length > KEY_MAX) {
-            throw new ChannelConnectionsError({ code: ChannelConnectionsErrorCode.KeysInvalid })
-        }
-        const secret = await this.zaloSecretOf(connection.id)
-        await this.connections.writeSecret(connection.id, JSON.stringify({ ...secret, oaSecret: key }))
-    }
-
-    /** Continues an unfinished (or broken) Zalo connection. Keys are never returned. */
-    async resumeZalo(actor: ConnectionActor, connectionId: string): Promise<ZaloWizardConnection> {
-        await this.connections.authorize(actor, OWNER)
-        const connection = await this.ownOf(actor, connectionId, "zalo_oa")
-        return this.zaloView(connection, await this.zaloSecretOf(connection.id))
-    }
-
-    /** "Connect Zalo OA": a fresh PKCE verifier and one-time state are stored with the credential, and the Zalo permission url is returned. */
-    async zaloAuthorizeUrl(actor: ConnectionActor, connectionId: string): Promise<{ readonly url: string }> {
-        await this.connections.authorize(actor, OWNER)
-        const connection = await this.ownOf(actor, connectionId, "zalo_oa")
-        const secret = await this.zaloSecretOf(connection.id)
-        const verifier = newVerifier()
-        const nonce = randomSecret().slice(0, 32)
-        const next: ZaloSecret = {
-            ...secret,
-            pkce: { verifier, nonce, exp: this.clock.now().getTime() + ZALO_PKCE_TTL_MS },
-        }
-        const url = this.setup.zaloAuthorizeUrl(secret.appId, verifier, `${connection.id}.${nonce}`)
-        if (url === null) throw new ChannelConnectionsError({ code: ChannelConnectionsErrorCode.Failed })
-        await this.connections.writeSecret(connection.id, JSON.stringify(next))
-        return { url }
-    }
-
     /** Asks what the provider knows (Telegram: getMe + getWebhookInfo; Zalo: the stored tokens), and records the verdict on the connection. */
     async check(actor: ConnectionActor, connectionId: string): Promise<ConnectionCheck> {
         await this.connections.authorize(actor, MANAGER)
@@ -424,21 +359,6 @@ export class ChannelConnectionsService {
             account: connection.meta.account_masked ?? "",
             holder: connection.meta.account_holder ?? "",
             credentialsSaved,
-            firstEvent: connection.firstEvent,
-            agentIds: await this.connections.agentIds(connection.workspaceId, connection.id),
-        }
-    }
-
-    private async zaloView(connection: ConnectionRecord, secret: ZaloSecret): Promise<ZaloWizardConnection> {
-        return {
-            id: connection.id,
-            name: connection.name,
-            status: connection.status,
-            webhookUrl: this.connections.webhookUrl("zalo_oa", connection.id),
-            callbackUrl: this.setup.zaloCallbackUrl() ?? "",
-            authorized: Boolean(secret.refreshToken),
-            oaSecretSaved: Boolean(secret.oaSecret),
-            oaId: connection.meta.oa_id ?? "",
             firstEvent: connection.firstEvent,
             agentIds: await this.connections.agentIds(connection.workspaceId, connection.id),
         }

@@ -3,8 +3,13 @@ import { mock } from "@starci/jest-preset"
 import { ConfigurableModuleClass } from "./connection-commands.module-definition"
 import { ConnectionCommandsModule } from "./connection-commands.module"
 import { ConnectionCommandsService } from "./connection-commands.service"
+import * as publicApi from "./index"
 
 describe("ConnectionCommandsModule", () => {
+    it("exports the module and service through the public entry", () => {
+        expect(publicApi).toEqual({ ConnectionCommandsModule, ConnectionCommandsService })
+    })
+
     it.each([false, true])("registers and exports the service with isGlobal=%p", async (isGlobal) => {
         const service = mock<ConnectionCommandsService>()
         const base = ConfigurableModuleClass.register({ isGlobal })

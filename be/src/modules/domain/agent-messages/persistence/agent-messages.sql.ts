@@ -41,7 +41,8 @@ FROM (
     ORDER BY created_at DESC
     LIMIT 40
 ) recent
-ORDER BY created_at`
+ORDER BY created_at
+LIMIT 40`
 
 /** When the customer last wrote in a conversation ($1 conversation id). */
 export const FIND_LAST_CUSTOMER_MESSAGE = sql`SELECT created_at

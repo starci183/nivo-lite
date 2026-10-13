@@ -4,7 +4,7 @@ import { ChannelProvisioningService } from "./channel-provisioning.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./channel-provisioning.module-definition"
 
 @Module({})
-/** The tool that connects a Telegram bot, a SePay feed or a Zalo OA to a workspace from the terminal. */
+/** The tool that connects a Telegram bot or a SePay feed to a workspace from the terminal. */
 export class ChannelProvisioningModule extends ConfigurableModuleClass {
     /** Registers the tool once in the cli app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

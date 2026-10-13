@@ -7,6 +7,9 @@ import { ChannelConnectionsModule } from "@modules/domain/channel-connections"
 import { ChannelProvisioningModule } from "@modules/domain/channel-provisioning"
 import { ConnectionGrantsModule } from "@modules/domain/connection-grants"
 import { ConnectionsModule } from "@modules/domain/connections"
+import { AutomationTemplatesModule } from "@modules/domain/automation-templates"
+import { N8nHostModule } from "@modules/integrations/n8n-host"
+import { TemplateFilesModule } from "@modules/integrations/template-files"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import { WorkspacesModule } from "@modules/domain/workspaces"
 import { SepaySimulationModule } from "@modules/domain/sepay-simulation"
@@ -38,6 +41,9 @@ export class AppModule {
                     isGlobal: true,
                     connections: options.connections,
                 }),
+                TemplateFilesModule.register({ isGlobal: true, ...options.templateFiles }),
+                AutomationTemplatesModule.register({ isGlobal: true }),
+                N8nHostModule.register({ isGlobal: true, ...options.n8nHost }),
                 SupabaseModule.register({ isGlobal: true, ...options.supabase }),
                 WorkspaceMembersModule.register({ isGlobal: true, accounts: SUPABASE_AUTH }),
                 WorkspacesModule.register({ isGlobal: true, allowFreeWorkspace: true }),

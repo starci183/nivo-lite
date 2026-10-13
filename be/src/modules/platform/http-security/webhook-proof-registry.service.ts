@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { HttpSecurityError, HttpSecurityErrorCode } from "./errors/http-security.error"
-import type { WebhookProof, WebhookProofRegistry } from "./webhook-proof.port"
+import type { WebhookProof, WebhookProofRegistry, WebhookProofRequest } from "./webhook-proof.port"
 
 @Injectable()
 /** The proofs of the providers whose secrets are stored per scope; modules add theirs once at start. */
@@ -18,8 +18,12 @@ export class WebhookProofRegistryService implements WebhookProofRegistry {
         this.proofs.set(proof.provider, proof)
     }
 
-    /** The proof registered for the provider. */
-    get(provider: string): WebhookProof | undefined {
-        return this.proofs.get(provider)
+    /** Asks the proof registered for the provider. */
+    prove(provider: string, request: WebhookProofRequest): Promise<boolean> {
+        const proof = this.proofs.get(provider)
+        if (proof === undefined) {
+            return Promise.reject(new HttpSecurityError({ code: HttpSecurityErrorCode.WebhookProviderUnknown, params: { provider } }))
+        }
+        return proof.prove(request)
     }
 }

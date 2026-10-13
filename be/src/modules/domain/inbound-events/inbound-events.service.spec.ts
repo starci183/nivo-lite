@@ -93,10 +93,13 @@ describe("InboundEventsService", () => {
         it("keeps an unrouted message in the inbox under a dedupe key made of its channel and event id", async () => {
             const { events, tx } = await build([[INSERT_UNROUTED_EVENT, []]])
 
-            await events.keepUnrouted(
-                { workspaceId: "ws-1", channel: "telegram", sender: "Minh", body: "Hello", eventId: "tg:c-1:555:9" },
-                tx.em,
-            )
+            await events.keepUnrouted(tx.em, {
+                workspaceId: "ws-1",
+                channel: "telegram",
+                sender: "Minh",
+                body: "Hello",
+                eventId: "tg:c-1:555:9",
+            })
 
             expect(tx.em.query).toHaveBeenCalledWith(INSERT_UNROUTED_EVENT, [
                 "ws-1",

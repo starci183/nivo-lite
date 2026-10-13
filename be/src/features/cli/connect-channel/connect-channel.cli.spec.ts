@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { ChannelProvisioningService } from "@modules/domain/channel-provisioning"
+import { ConnectionsError, ConnectionsErrorCode } from "@modules/domain/connections"
 import { ConnectChannelCli } from "./connect-channel.cli"
 
 const build = async () => {
@@ -48,9 +49,9 @@ describe("ConnectChannelCli", () => {
         expect(provisioning.run.mock.calls).toEqual([["", options]])
     })
 
-    it("propagates a provisioning refusal", async () => {
+    it("propagates provisioning's refusal of the unknown Zalo kind", async () => {
         const { command, provisioning } = await build()
-        const refusal = new Error("channel refused")
+        const refusal = new ConnectionsError({ code: ConnectionsErrorCode.CommandInvalid, params: { field: "kind" } })
         const options = { workspace: "12345678-1234-1234-1234-123456789abc" }
         provisioning.run.mockRejectedValue(refusal)
 

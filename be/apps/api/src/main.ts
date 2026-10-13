@@ -16,6 +16,8 @@ import { parseZaloConfig } from "@modules/integrations/zalo"
 import { parsePlatformAdminConfig } from "@modules/domain/platform-admin"
 import { parseWorkspaceInvitesConfig } from "@modules/domain/workspace-invites"
 import { parseWorkspacesConfig } from "@modules/domain/workspaces"
+import { parseN8nConfig } from "@modules/integrations/n8n"
+import { parseTemplateFilesConfig } from "@modules/integrations/template-files"
 import { parseDeepseekConfig } from "@modules/integrations/deepseek"
 import { parseOpenclawConfig } from "@modules/integrations/openclaw"
 import { parseVideoConfig } from "@modules/domain/video"
@@ -65,6 +67,8 @@ const bootstrap = async (): Promise<void> => {
         meta: parseMetaConfig(env),
         channelSetup: parseChannelSetupConfig(env),
         webhookDelivery: parseWebhookDeliveryConfig(env),
+        n8n: parseN8nConfig(env),
+        templateFiles: parseTemplateFilesConfig(env),
         ffmpeg: parseFfmpegConfig(env),
         tts: parseTtsConfig(env),
         video: parseVideoConfig(env),

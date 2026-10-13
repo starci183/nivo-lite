@@ -41,8 +41,6 @@ const build = async (origin: string | null = "https://nivo.vn") => {
     connections.findLiveByMeta.mockResolvedValue(null)
     connections.agentIds.mockResolvedValue(["agent-1"])
     const setup = mock<ChannelSetupClient>()
-    setup.zaloCallbackUrl.mockReturnValue("https://nivo.vn/cb")
-    setup.zaloAuthorizeUrl.mockReturnValue("https://zalo.test/auth")
     const moduleRef = await Test.createTestingModule({
         providers: [
             ChannelConnectionsService,
@@ -414,133 +412,6 @@ describe("ChannelConnectionsService", () => {
         })
     })
 
-    describe("zalo", () => {
-        it("keeps the app keys sealed as a pending connection", async () => {
-            const { service, connections } = await build()
-            connections.get.mockResolvedValue(record({ provider: "zalo_oa", meta: { app_id: "123456" } }))
-
-            const view = await service.startZaloConnection(actor, {
-                name: "Zalo OA",
-                appId: " 123456 ",
-                appSecret: " secret-app ",
-            })
-
-            expect(connections.create).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    provider: "zalo_oa",
-                    status: "pending",
-                    meta: { app_id: "123456" },
-                    secret: { plain: zaloSecret(), webhookSecret: expect.stringMatching(/^[0-9a-f]{64}$/u) },
-                }),
-            )
-            expect(view).toEqual({
-                id: "c1",
-                name: "Bank",
-                status: "pending",
-                webhookUrl: "http://site/hook/zalo_oa/c1",
-                callbackUrl: "https://nivo.vn/cb",
-                authorized: false,
-                oaSecretSaved: false,
-                oaId: "",
-                firstEvent: null,
-                agentIds: ["agent-1"],
-            })
-        })
-
-        it("refuses bad app fields", async () => {
-            const { service } = await build()
-
-            await expect(
-                service.startZaloConnection(actor, { name: "Zalo", appId: "abc", appSecret: "secret-app" }),
-            ).rejects.toMatchObject({
-                code: ChannelConnectionsErrorCode.ZaloFieldsInvalid,
-            })
-            await expect(
-                service.startZaloConnection(actor, { name: "Zalo", appId: "123456", appSecret: "short" }),
-            ).rejects.toMatchObject({
-                code: ChannelConnectionsErrorCode.ZaloFieldsInvalid,
-            })
-        })
-
-        it("saves the OA secret key into the sealed credential", async () => {
-            const { service, connections } = await build()
-            connections.get.mockResolvedValue(record({ provider: "zalo_oa" }))
-            connections.readSecret.mockResolvedValue({ plain: zaloSecret(), webhookSecret: "h" })
-
-            await service.saveZaloOaSecret(actor, "c1", " oa-secret-key ")
-
-            expect(connections.writeSecret).toHaveBeenCalledWith("c1", zaloSecret({ oaSecret: "oa-secret-key" }))
-        })
-
-        it("refuses an OA key out of range, a wrong provider and a credential that cannot be read", async () => {
-            const { service, connections } = await build()
-            connections.get.mockResolvedValue(record({ provider: "zalo_oa" }))
-            connections.readSecret.mockResolvedValueOnce(null)
-            connections.readSecret.mockResolvedValueOnce({ plain: "garbage", webhookSecret: "h" })
-
-            await expect(service.saveZaloOaSecret(actor, "c1", "short")).rejects.toMatchObject({
-                code: ChannelConnectionsErrorCode.KeysInvalid,
-            })
-            await expect(service.saveZaloOaSecret(actor, "c1", "x".repeat(201))).rejects.toMatchObject({
-                code: ChannelConnectionsErrorCode.KeysInvalid,
-            })
-            await expect(service.saveZaloOaSecret(actor, "c1", "oa-secret-key")).rejects.toMatchObject({
-                code: ConnectionsErrorCode.NotFound,
-            })
-            await expect(service.resumeZalo(actor, "c1")).rejects.toMatchObject({ code: ConnectionsErrorCode.NotFound })
-            connections.get.mockResolvedValue(record({ provider: "telegram" }))
-            await expect(service.resumeZalo(actor, "c1")).rejects.toMatchObject({ code: ConnectionsErrorCode.NotFound })
-        })
-
-        it("resumes with what is known and no blank callback when the site url is missing", async () => {
-            const { service, connections, setup } = await build()
-            connections.get.mockResolvedValue(record({ provider: "zalo_oa", meta: { oa_id: "OA1" } }))
-            connections.readSecret.mockResolvedValue({
-                plain: zaloSecret({ oaSecret: "oa-secret-key", refreshToken: "rt" }),
-                webhookSecret: "h",
-            })
-            setup.zaloCallbackUrl.mockReturnValue(null)
-
-            await expect(service.resumeZalo(actor, "c1")).resolves.toMatchObject({
-                authorized: true,
-                oaSecretSaved: true,
-                oaId: "OA1",
-                callbackUrl: "",
-            })
-        })
-
-        it("starts an authorization: a fresh verifier and state are stored and the url returned", async () => {
-            const { service, connections, setup } = await build()
-            connections.get.mockResolvedValue(record({ provider: "zalo_oa" }))
-            connections.readSecret.mockResolvedValue({ plain: zaloSecret(), webhookSecret: "h" })
-
-            await expect(service.zaloAuthorizeUrl(actor, "c1")).resolves.toEqual({ url: "https://zalo.test/auth" })
-
-            const written = JSON.parse(String(connections.writeSecret.mock.calls[0]?.[1])) as {
-                pkce: { verifier: string; nonce: string; exp: number }
-            }
-            expect(written.pkce.exp).toBe(NOW.getTime() + 15 * 60_000)
-            expect(written.pkce.nonce).toHaveLength(32)
-            expect(setup.zaloAuthorizeUrl).toHaveBeenCalledWith(
-                "123456",
-                written.pkce.verifier,
-                `c1.${written.pkce.nonce}`,
-            )
-        })
-
-        it("cannot build the url without a site url and then stores nothing", async () => {
-            const { service, connections, setup } = await build()
-            connections.get.mockResolvedValue(record({ provider: "zalo_oa" }))
-            connections.readSecret.mockResolvedValue({ plain: zaloSecret(), webhookSecret: "h" })
-            setup.zaloAuthorizeUrl.mockReturnValue(null)
-
-            await expect(service.zaloAuthorizeUrl(actor, "c1")).rejects.toMatchObject({
-                code: ChannelConnectionsErrorCode.Failed,
-            })
-            expect(connections.writeSecret).not.toHaveBeenCalled()
-        })
-    })
-
     describe("check", () => {
         it("reads Telegram's view of the webhook and records the verdict", async () => {
             const { service, connections, setup } = await build()
@@ -675,6 +546,17 @@ describe("ChannelConnectionsService", () => {
                 status: "error",
                 lastError: ChannelConnectionsErrorCode.ZaloTokenRefused,
             })
+        })
+
+        it("refuses a Zalo connection whose sealed credential is missing or corrupt", async () => {
+            const { service, connections } = await build()
+            connections.get.mockResolvedValue(record({ provider: "zalo_oa" }))
+            connections.readSecret.mockResolvedValueOnce(null)
+            connections.readSecret.mockResolvedValueOnce({ plain: "garbage", webhookSecret: "h" })
+
+            await expect(service.check(actor, "c1")).rejects.toMatchObject({ code: ConnectionsErrorCode.NotFound })
+            await expect(service.check(actor, "c1")).rejects.toMatchObject({ code: ConnectionsErrorCode.NotFound })
+            expect(connections.patch).not.toHaveBeenCalled()
         })
     })
 

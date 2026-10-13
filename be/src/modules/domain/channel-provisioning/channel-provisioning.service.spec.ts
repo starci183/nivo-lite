@@ -54,19 +54,6 @@ const build = async (
         firstEvent: null,
         agentIds: [],
     })
-    channels.startZaloConnection.mockResolvedValue({
-        id: "zalo-1",
-        name: "Zalo OA",
-        status: "pending",
-        webhookUrl: "https://nivo.vn/hook/zalo_oa/zalo-1",
-        callbackUrl: "https://nivo.vn/zalo/callback",
-        authorized: false,
-        oaSecretSaved: false,
-        oaId: "",
-        firstEvent: null,
-        agentIds: [],
-    })
-    channels.zaloAuthorizeUrl.mockResolvedValue({ url: "https://zalo.test/authorize?app_id=123456" })
     const grants = mock<ConnectionGrantsService>()
     grants.setConnectionAgents.mockResolvedValue(undefined)
     const print = jest.fn()
@@ -78,8 +65,6 @@ const build = async (
                 provide: CHANNEL_PROVISIONING_OPTIONS,
                 useValue: {
                     telegramToken: new Secret(TOKEN),
-                    zaloAppId: "123456",
-                    zaloAppSecret: new Secret("zalo-app-secret"),
                     print,
                     ...overrides,
                 },
@@ -124,7 +109,6 @@ describe("ChannelProvisioningService", () => {
             expect(entityManager.query).not.toHaveBeenCalled()
             expect(channels.connectTelegram).not.toHaveBeenCalled()
             expect(channels.startMoneyConnection).not.toHaveBeenCalled()
-            expect(channels.startZaloConnection).not.toHaveBeenCalled()
             expect(grants.setConnectionAgents).not.toHaveBeenCalled()
             expect(print).not.toHaveBeenCalled()
         },
@@ -144,15 +128,14 @@ describe("ChannelProvisioningService", () => {
         expect(print).not.toHaveBeenCalled()
     })
 
-    it("refuses an unknown kind after finding the owner", async () => {
+    it.each(["unknown", "zalo"])("refuses the unknown kind %s after finding the owner", async (kind) => {
         const { service, entityManager, channels, print } = await build()
 
-        await expect(service.run("unknown", { workspace: WORKSPACE })).rejects.toEqual(invalid("kind"))
+        await expect(service.run(kind, { workspace: WORKSPACE })).rejects.toEqual(invalid("kind"))
 
         expect(entityManager.query.mock.calls).toEqual([[FIND_WORKSPACE_OWNER, [WORKSPACE]]])
         expect(channels.connectTelegram).not.toHaveBeenCalled()
         expect(channels.startMoneyConnection).not.toHaveBeenCalled()
-        expect(channels.startZaloConnection).not.toHaveBeenCalled()
         expect(print).not.toHaveBeenCalled()
     })
 
@@ -236,37 +219,6 @@ describe("ChannelProvisioningService", () => {
         expect(grants.setConnectionAgents).not.toHaveBeenCalled()
     })
 
-    it.each([
-        { field: "ZALO_APP_ID", options: { zaloAppId: undefined } },
-        { field: "ZALO_APP_SECRET", options: { zaloAppSecret: undefined } },
-    ])("refuses Zalo without $field", async ({ field, options }) => {
-        const { service, channels, grants, print } = await build(options)
-
-        await expect(service.run("zalo", { workspace: WORKSPACE, bind: true })).rejects.toEqual(invalid(field))
-
-        expect(channels.startZaloConnection).not.toHaveBeenCalled()
-        expect(channels.zaloAuthorizeUrl).not.toHaveBeenCalled()
-        expect(grants.setConnectionAgents).not.toHaveBeenCalled()
-        expect(print).not.toHaveBeenCalled()
-    })
-
-    it("starts Zalo with its default name and prints its webhook and authorization address", async () => {
-        const { service, entityManager, channels, grants, print } = await build()
-
-        await expect(service.run("zalo", { workspace: WORKSPACE })).resolves.toBeUndefined()
-
-        expect(channels.startZaloConnection.mock.calls).toEqual([
-            [ACTOR, { name: "Zalo OA", appId: "123456", appSecret: "zalo-app-secret" }],
-        ])
-        expect(channels.zaloAuthorizeUrl.mock.calls).toEqual([[ACTOR, "zalo-1"]])
-        expect(entityManager.query.mock.calls).toEqual([[FIND_WORKSPACE_OWNER, [WORKSPACE]]])
-        expect(print.mock.calls).toEqual([
-            ["zalo connection zalo-1; webhook https://nivo.vn/hook/zalo_oa/zalo-1"],
-            ["open this address as the OA admin to authorize it: https://zalo.test/authorize?app_id=123456"],
-        ])
-        expect(grants.setConnectionAgents).not.toHaveBeenCalled()
-    })
-
     it("binds only the agents whose modules can use Telegram, preserving their order", async () => {
         const { service, entityManager, grants, print } = await build({}, agents())
 
@@ -319,28 +271,6 @@ describe("ChannelProvisioningService", () => {
                 "sepay connection sepay-1; paste into SePay: url https://nivo.vn/hook/sepay/sepay-1  api key nivo-sepay-key",
             ],
             ["bound 1 agent(s)"],
-        ])
-    })
-
-    it("keeps a supplied Zalo name and binds agents using the zalo_oa provider", async () => {
-        const { service, entityManager, channels, grants, print } = await build({}, agents())
-
-        await service.run("zalo", { workspace: WORKSPACE, name: "Shop OA", bind: true })
-
-        expect(channels.startZaloConnection.mock.calls).toEqual([
-            [ACTOR, { name: "Shop OA", appId: "123456", appSecret: "zalo-app-secret" }],
-        ])
-        expect(entityManager.query.mock.calls).toEqual([
-            [FIND_WORKSPACE_OWNER, [WORKSPACE]],
-            [LIST_WORKSPACE_AGENTS, [WORKSPACE]],
-        ])
-        expect(grants.setConnectionAgents.mock.calls).toEqual([
-            [ACTOR, "zalo-1", [{ agentId: "chat-1" }, { agentId: "booking-1" }, { agentId: "chat-2" }]],
-        ])
-        expect(print.mock.calls).toEqual([
-            ["zalo connection zalo-1; webhook https://nivo.vn/hook/zalo_oa/zalo-1"],
-            ["open this address as the OA admin to authorize it: https://zalo.test/authorize?app_id=123456"],
-            ["bound 3 agent(s)"],
         ])
     })
 

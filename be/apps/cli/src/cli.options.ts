@@ -4,6 +4,10 @@ import { parseConnectionsConfig } from "@modules/domain/connections"
 import type { ConnectionsOptions } from "@modules/domain/connections"
 import { parseChannelSetupConfig } from "@modules/integrations/channel-setup"
 import type { ChannelSetupOptions } from "@modules/integrations/channel-setup"
+import { parseN8nHostConfig } from "@modules/integrations/n8n-host"
+import type { N8nHostOptions } from "@modules/integrations/n8n-host"
+import { parseTemplateFilesConfig } from "@modules/integrations/template-files"
+import type { TemplateFilesOptions } from "@modules/integrations/template-files"
 import { parseSepaySimulationConfig } from "@modules/domain/sepay-simulation"
 import type { SepaySimulationOptions } from "@modules/domain/sepay-simulation"
 import { parseSupabaseConfig } from "@modules/integrations/supabase"
@@ -19,6 +23,10 @@ const SIMULATION_TIMEOUT_MS = 15_000
 export interface CliAppOptions {
     /** The connections the built-in migrate and seed groups operate on. */
     readonly connections: ReadonlyArray<DatabaseConnectionOptions>
+    /** Where the shared n8n container runs, for `sync-n8n`. */
+    readonly n8nHost: N8nHostOptions
+    /** The folder of the automation definition files, for `seed-automations` and `sync-n8n`. */
+    readonly templateFiles: TemplateFilesOptions
     /** Supabase Auth administration, used by the demo-workspace seed. */
     readonly supabase: SupabaseOptions
     /** The simulated SePay delivery of the simulate-sepay command. */
@@ -34,6 +42,8 @@ export interface CliAppOptions {
 /** Reads the one declared connection without adding entities or TypeORM migrations, and the Supabase project. */
 export const parseCliAppOptions = (env: EnvSource): CliAppOptions => ({
     connections: [parsePrimaryDatabaseConfig(env)],
+    n8nHost: parseN8nHostConfig(env),
+    templateFiles: parseTemplateFilesConfig(env),
     supabase: parseSupabaseConfig(env),
     sepaySimulation: parseSepaySimulationConfig(
         env,

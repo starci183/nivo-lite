@@ -108,20 +108,6 @@ const routes: ReadonlyArray<Route> = [
         call: (s) => s.channels.saveProviderKeys,
     },
     {
-        kind: "zalo.start",
-        input: { name: "Shop OA", appId: "zalo-app", appSecret: "zalo-secret" },
-        args: [actor, { name: "Shop OA", appId: "zalo-app", appSecret: "zalo-secret" }],
-        call: (s) => s.channels.startZaloConnection,
-    },
-    byConnection("zalo.resume", (s) => s.channels.resumeZalo),
-    {
-        kind: "zalo.oa-secret",
-        input: { connectionId: CONNECTION, oaSecret: "oa-secret" },
-        args: [actor, CONNECTION, "oa-secret"],
-        call: (s) => s.channels.saveZaloOaSecret,
-    },
-    byConnection("zalo.authorize", (s) => s.channels.zaloAuthorizeUrl),
-    {
         kind: "webhook.start",
         input: { name: "Orders", url: "https://hooks.example.test/orders", events: ["order.created", "order.paid"] },
         args: [
@@ -225,10 +211,6 @@ const textFields: ReadonlyArray<readonly [string, string, number]> = [
     ["money.update", "accountNumber", 60],
     ["money.update", "holder", 160],
     ["money.update", "apiKey", 200],
-    ["zalo.start", "name", 120],
-    ["zalo.start", "appId", 100],
-    ["zalo.start", "appSecret", 200],
-    ["zalo.oa-secret", "oaSecret", 200],
     ["webhook.start", "name", 120],
     ["webhook.start", "url", 2048],
     ["google.authorize", "returnTo", 200],
@@ -254,10 +236,18 @@ describe("connection commands policy", () => {
         }
     })
 
-    it.each(["unknown.command", "", "toString", "constructor", "hasOwnProperty", "__proto__"])(
-        "refuses the unknown or inherited kind %s",
-        (kind) => refuses(kind, {}, "kind"),
-    )
+    it.each([
+        "unknown.command",
+        "zalo.start",
+        "zalo.resume",
+        "zalo.oa-secret",
+        "zalo.authorize",
+        "",
+        "toString",
+        "constructor",
+        "hasOwnProperty",
+        "__proto__",
+    ])("refuses the unknown or inherited kind %s", (kind) => refuses(kind, {}, "kind"))
 
     it.each([undefined, null])("turns a capability's %p answer into true", async (answer) => {
         const services = await build()
