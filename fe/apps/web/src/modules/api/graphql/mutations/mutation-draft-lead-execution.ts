@@ -1,16 +1,19 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationDraftLeadExecutionArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { DraftLeadExecutionMutation, DraftLeadExecutionMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `draftLeadExecution` mutation. */
-export type MutateDraftLeadExecutionRequest = MutationDraftLeadExecutionArgs["input"]
+export type MutateDraftLeadExecutionRequest = WireInput<DraftLeadExecutionMutationVariables["input"]>
 
 /** The response of the `draftLeadExecution` mutation. */
-type MutateDraftLeadExecutionResponse = Pick<Mutation, "draftLeadExecution">
+type MutateDraftLeadExecutionResponse = DraftLeadExecutionMutation
 
-const mutation1: TypedDocumentNode<MutateDraftLeadExecutionResponse, InputVariables<MutateDraftLeadExecutionRequest>> = gql`
+const mutation1: TypedDocumentNode<
+    MutateDraftLeadExecutionResponse,
+    InputVariables<MutateDraftLeadExecutionRequest>
+> = gql`
     mutation DraftLeadExecution($input: DraftLeadExecutionInput!) {
         draftLeadExecution(input: $input) {
             id

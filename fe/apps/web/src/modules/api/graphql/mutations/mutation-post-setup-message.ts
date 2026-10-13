@@ -1,13 +1,13 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationPostSetupMessageArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { PostSetupMessageMutation, PostSetupMessageMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `postSetupMessage` mutation. */
-export type MutatePostSetupMessageRequest = MutationPostSetupMessageArgs["input"]
+export type MutatePostSetupMessageRequest = WireInput<PostSetupMessageMutationVariables["input"]>
 
-type MutatePostSetupMessageResponse = Pick<Mutation, "postSetupMessage">
+type MutatePostSetupMessageResponse = PostSetupMessageMutation
 
 const mutation1: TypedDocumentNode<MutatePostSetupMessageResponse, InputVariables<MutatePostSetupMessageRequest>> = gql`
     mutation PostSetupMessage($input: PostSetupMessageInput!) {

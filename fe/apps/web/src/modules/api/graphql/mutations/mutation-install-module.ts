@@ -1,13 +1,13 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationInstallModuleArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { InstallModuleMutation, InstallModuleMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `installModule` mutation. */
-export type MutateInstallModuleRequest = MutationInstallModuleArgs["input"]
+export type MutateInstallModuleRequest = WireInput<InstallModuleMutationVariables["input"]>
 
-type MutateInstallModuleResponse = Pick<Mutation, "installModule">
+type MutateInstallModuleResponse = InstallModuleMutation
 
 const mutation1: TypedDocumentNode<MutateInstallModuleResponse, InputVariables<MutateInstallModuleRequest>> = gql`
     mutation InstallModule($input: InstallModuleInput!) {

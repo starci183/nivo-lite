@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationDecideBrainFactArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { DecideBrainFactMutation, DecideBrainFactMutationVariables } from "../__generated__/graphql"
 
 /** The response of the `decideBrainFact` mutation: the typed payload straight from the back end contract. */
-type MutateDecideBrainFactResponse = Pick<Mutation, "decideBrainFact">
+type MutateDecideBrainFactResponse = DecideBrainFactMutation
 
 /** The input of the `decideBrainFact` mutation. */
-export type MutateDecideBrainFactRequest = MutationDecideBrainFactArgs["input"]
+export type MutateDecideBrainFactRequest = WireInput<DecideBrainFactMutationVariables["input"]>
 
 const mutation1: TypedDocumentNode<MutateDecideBrainFactResponse, InputVariables<MutateDecideBrainFactRequest>> = gql`
     mutation DecideBrainFact($input: DecideBrainFactInput!) {

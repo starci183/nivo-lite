@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationRequestLessonMiningArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { RequestLessonMiningMutation, RequestLessonMiningMutationVariables } from "../__generated__/graphql"
 
 /** The response of the `requestLessonMining` mutation: the typed payload straight from the back end contract. */
-type MutateRequestLessonMiningResponse = Pick<Mutation, "requestLessonMining">
+type MutateRequestLessonMiningResponse = RequestLessonMiningMutation
 
 /** The input of the `requestLessonMining` mutation. */
-export type MutateRequestLessonMiningRequest = MutationRequestLessonMiningArgs["input"]
+export type MutateRequestLessonMiningRequest = WireInput<RequestLessonMiningMutationVariables["input"]>
 
 const mutation1: TypedDocumentNode<
     MutateRequestLessonMiningResponse,

@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationProposeAutomationBodyArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { ProposeAutomationBodyMutation, ProposeAutomationBodyMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `proposeAutomationBody` mutation. */
-export type MutateProposeAutomationBodyRequest = MutationProposeAutomationBodyArgs["input"]
+export type MutateProposeAutomationBodyRequest = WireInput<ProposeAutomationBodyMutationVariables["input"]>
 
 /** The response of the `proposeAutomationBody` mutation. */
-type MutateProposeAutomationBodyResponse = Pick<Mutation, "proposeAutomationBody">
+type MutateProposeAutomationBodyResponse = ProposeAutomationBodyMutation
 
 const mutation1: TypedDocumentNode<
     MutateProposeAutomationBodyResponse,
@@ -35,10 +35,7 @@ const mutationMap: Record<
 }
 
 /** Apollo params for {@link mutateProposeAutomationBody}. */
-type MutateProposeAutomationBodyParams = MutateParams<
-    MutationProposeAutomationBody,
-    MutateProposeAutomationBodyRequest
->
+type MutateProposeAutomationBodyParams = MutateParams<MutationProposeAutomationBody, MutateProposeAutomationBodyRequest>
 
 /**
  * Proposes the shop's own wording of one template from its active context (the back end `proposeAutomationBody` mutation).

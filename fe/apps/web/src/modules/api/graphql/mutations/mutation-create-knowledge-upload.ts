@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationCreateKnowledgeUploadArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { CreateKnowledgeUploadMutation, CreateKnowledgeUploadMutationVariables } from "../__generated__/graphql"
 
 /** The response of the `createKnowledgeUpload` mutation: the typed payload straight from the back end contract. */
-type MutateCreateKnowledgeUploadResponse = Pick<Mutation, "createKnowledgeUpload">
+type MutateCreateKnowledgeUploadResponse = CreateKnowledgeUploadMutation
 
 /** The input of the `createKnowledgeUpload` mutation. */
-export type MutateCreateKnowledgeUploadRequest = MutationCreateKnowledgeUploadArgs["input"]
+export type MutateCreateKnowledgeUploadRequest = WireInput<CreateKnowledgeUploadMutationVariables["input"]>
 
 const mutation1: TypedDocumentNode<
     MutateCreateKnowledgeUploadResponse,

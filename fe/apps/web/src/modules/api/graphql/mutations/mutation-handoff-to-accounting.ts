@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationHandoffToAccountingArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { HandoffToAccountingMutation, HandoffToAccountingMutationVariables } from "../__generated__/graphql"
 
 /** Generated input of the handoffToAccounting mutation. */
-export type MutateHandoffToAccountingRequest = MutationHandoffToAccountingArgs["input"]
+export type MutateHandoffToAccountingRequest = WireInput<HandoffToAccountingMutationVariables["input"]>
 
 /** Generated response of the handoffToAccounting mutation. */
-type MutateHandoffToAccountingResponse = Pick<Mutation, "handoffToAccounting">
+type MutateHandoffToAccountingResponse = HandoffToAccountingMutation
 
 type Document = TypedDocumentNode<MutateHandoffToAccountingResponse, InputVariables<MutateHandoffToAccountingRequest>>
 
