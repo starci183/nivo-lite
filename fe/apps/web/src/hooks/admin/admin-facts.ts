@@ -1,4 +1,4 @@
-import type { AdminWorkspaceDetail } from "@/modules/api"
+import type { AdminWorkspaceDetail } from "@/modules/db/admin/admin.mapper"
 import { billingTone } from "./admin.shared"
 import type { AdminFactView, AdminFormat, AdminText } from "./admin.shared"
 

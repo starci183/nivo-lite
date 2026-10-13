@@ -1,5 +1,6 @@
 import { useMemo } from "react"
-import type { AdminSupportStatus, Outcome } from "@/modules/api"
+import type { AdminSupportStatus } from "@/modules/db/admin/admin.mapper"
+import type { DbOutcome } from "@/modules/db/outcome"
 import {
     writeAdminExtend,
     writeAdminInviteResend,
@@ -16,12 +17,12 @@ export interface AdminCommands {
     readonly resendInvite: (inviteId: string) => Promise<AdminReply>
 }
 
-const replyOf = <T>(outcome: Outcome<T>, isUndelivered: (value: T) => boolean): AdminReply =>
+const replyOf = <T>(outcome: DbOutcome<T>, isUndelivered: (value: T) => boolean): AdminReply =>
     outcome.kind === "ok"
         ? { kind: "ok", isUndelivered: isUndelivered(outcome.value) }
-        : { kind: "failed", message: outcome.fault.message }
+        : { kind: "failed", message: outcome.code }
 
-/** The support actions of one workspace, run as Server Actions; the back end proves the platform admin. */
+/** The support actions of one workspace, run as Server Actions; the database proves the platform admin. */
 export const useAdminCommands = (workspaceId: string): AdminCommands =>
     useMemo<AdminCommands>(
         () => ({
