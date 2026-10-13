@@ -1,5 +1,14 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
+import * as telegram from "telegram"
+import { Api } from "telegram"
+import type { TelegramClient } from "telegram"
+import type { Entity } from "telegram/define"
+import { returnBigInt, TotalList } from "telegram/Helpers"
+import * as password from "telegram/Password"
+import * as sessions from "telegram/sessions"
+import type { StringSession } from "telegram/sessions"
+import type { Dialog } from "telegram/tl/custom/dialog"
 import { Secret } from "@modules/platform/config"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -11,172 +20,150 @@ import { TelegramUserClient } from "./telegram-user.client"
 import type { TelegramReadRequest } from "./telegram-user.contracts"
 import { TelegramUserLogEvent } from "./telegram-user.log-events"
 
-interface SavedSession {
-    save: () => string
-}
-
+/** How the fake Telegram answers the requests of a test. */
 class MockTelegram {
     mode = "ok"
     authorized = true
     destroyError: Error | undefined = undefined
     connectError: unknown = undefined
-    dialogs: Array<Record<string, unknown>> = []
-    messages: Array<Record<string, unknown>> = []
-    windows: Array<Record<string, unknown>> = []
+    dialogs: Array<Dialog> = []
+    messages: Array<Api.Message> = []
+    windows: Array<unknown> = []
     queries: Array<string> = []
     level = ""
     destroyed = false
-
-    reset(): void {
-        this.mode = "ok"
-        this.authorized = true
-        this.destroyError = undefined
-        this.connectError = undefined
-        this.dialogs = []
-        this.messages = []
-        this.windows = []
-        this.queries = []
-        this.level = ""
-        this.destroyed = false
-    }
 }
 
 const mockTg = new MockTelegram()
 
-jest.mock("telegram/extensions/Logger", () => ({ LogLevel: { NONE: "none" } }))
-jest.mock("telegram/Password", () => ({
-    computeCheck: (_pwd: unknown, password: string) => Promise.resolve(`check:${password}`),
-}))
-jest.mock("telegram/sessions", () => ({
-    StringSession: class {
-        constructor(readonly saved: string) {}
-        save(): string {
-            return "saved-session"
-        }
-    },
-}))
-jest.mock("telegram", () => {
-    class User {
-        constructor(fields: Record<string, unknown>) {
-            Object.assign(this, fields)
-        }
+const ada = (): Api.User =>
+    new Api.User({ id: returnBigInt(1), firstName: "Ada", lastName: "Lovelace", username: "ada" })
+
+const senderOf = (kind: string): Entity | undefined => {
+    if (kind === "user") return ada()
+    if (kind === "bare") return new Api.User({ id: returnBigInt(2), firstName: "", lastName: "", username: "ada" })
+    if (kind === "chat") {
+        return new Api.Chat({
+            id: returnBigInt(3),
+            title: "Shop",
+            photo: new Api.ChatPhotoEmpty(),
+            participantsCount: 2,
+            date: 1,
+            version: 1,
+        })
     }
-    class Chat {
-        constructor(fields: Record<string, unknown>) {
-            Object.assign(this, fields)
-        }
+    if (kind === "channel") {
+        return new Api.Channel({ id: returnBigInt(4), title: "News", photo: new Api.ChatPhotoEmpty(), date: 1 })
     }
-    class Channel {
-        constructor(fields: Record<string, unknown>) {
-            Object.assign(this, fields)
-        }
+    return undefined
+}
+
+interface DialogShape {
+    readonly id: string | undefined
+    readonly title?: string
+    readonly name?: string
+    readonly isUser?: boolean
+    readonly isGroup?: boolean
+    readonly unreadCount?: number
+    readonly entityKind?: string
+}
+
+/** A dialog with every field the client reads written out, so none falls back to a generated mock. */
+const dialogOf = (shape: DialogShape): Dialog =>
+    mock<Dialog>({
+        id: shape.id === undefined ? undefined : returnBigInt(shape.id),
+        title: shape.title,
+        name: shape.name,
+        isUser: shape.isUser ?? false,
+        isGroup: shape.isGroup ?? false,
+        unreadCount: shape.unreadCount ?? 0,
+        entity: shape.entityKind === undefined ? undefined : senderOf(shape.entityKind),
+    })
+
+interface MessageShape {
+    readonly id: number
+    readonly className: string
+    readonly message: string
+    readonly date: number
+    readonly out?: boolean
+    readonly senderKind?: string
+    readonly media?: Api.TypeMessageMedia
+    readonly replyToMsgId?: number
+}
+
+/** A message with every field the client reads written out. */
+const messageOf = (shape: MessageShape): Api.Message => {
+    const message = mock<Api.Message>({
+        id: shape.id,
+        message: shape.message,
+        date: shape.date,
+        out: shape.out ?? false,
+        media: shape.media,
+        sender: shape.senderKind === undefined ? undefined : senderOf(shape.senderKind),
+        replyToMsgId: shape.replyToMsgId,
+    })
+    Reflect.set(message, "className", shape.className)
+    return message
+}
+
+async function* listed(dialogs: ReadonlyArray<Dialog>): AsyncGenerator<Dialog, void, undefined> {
+    yield* await Promise.resolve(dialogs)
+}
+
+const telegramError = (errorMessage: string): Error => Object.assign(new Error(errorMessage), { errorMessage })
+
+/** The answer of the fake to one request, by the mode of the test. */
+const answerOf = (request: Api.AnyRequest): Promise<Api.AnyRequest["__response"]> => {
+    mockTg.queries.push(request.className)
+    if (mockTg.mode === "signup") return Promise.resolve(new Api.auth.AuthorizationSignUpRequired({}))
+    if (mockTg.mode === "password") return Promise.reject(telegramError("SESSION_PASSWORD_NEEDED"))
+    if (mockTg.mode === "invalid") return Promise.reject(telegramError("PHONE_CODE_INVALID"))
+    if (mockTg.mode === "down") return Promise.reject(new Error("offline"))
+    if (request instanceof Api.auth.ResendCode && mockTg.mode !== "same") {
+        return Promise.resolve(
+            new Api.auth.SentCode({ type: new Api.auth.SentCodeTypeApp({ length: 5 }), phoneCodeHash: "hash-2" }),
+        )
     }
-    class AuthorizationSignUpRequired {}
-    const senderOf = (kind: unknown): unknown => {
-        if (kind === "user") return new User({ firstName: "Ada", lastName: "Lovelace", username: "ada" })
-        if (kind === "bare") return new User({ firstName: "", lastName: "", username: "ada" })
-        if (kind === "chat") return new Chat({ title: "Shop" })
-        if (kind === "channel") return new Channel({ title: "News" })
-        return {}
-    }
-    class Query {
-        constructor(
-            readonly kind: string,
-            readonly fields: Record<string, unknown> = {},
-        ) {}
-    }
-    return {
-        Api: {
-            User,
-            Chat,
-            Channel,
-            auth: {
-                AuthorizationSignUpRequired,
-                ResendCode: class extends Query {
-                    constructor(fields: Record<string, unknown>) {
-                        super("resend", fields)
-                    }
-                },
-                SignIn: class extends Query {
-                    constructor(fields: Record<string, unknown>) {
-                        super("signin", fields)
-                    }
-                },
-                CheckPassword: class extends Query {
-                    constructor(fields: Record<string, unknown>) {
-                        super("check", fields)
-                    }
-                },
-                LogOut: class extends Query {
-                    constructor() {
-                        super("logout")
-                    }
-                },
-            },
-            account: {
-                GetPassword: class extends Query {
-                    constructor() {
-                        super("password")
-                    }
-                },
-            },
-        },
-        TelegramClient: class {
-            readonly session: SavedSession
-            constructor(
-                session: SavedSession,
-                readonly apiId: number,
-                readonly apiHash: string,
-            ) {
-                this.session = session
-            }
-            setLogLevel(level: string): void {
-                mockTg.level = level
-            }
-            connect(): Promise<void> {
-                return mockTg.connectError === undefined ? Promise.resolve() : Promise.reject(mockTg.connectError)
-            }
-            destroy(): Promise<void> {
-                mockTg.destroyed = true
-                return mockTg.destroyError === undefined ? Promise.resolve() : Promise.reject(mockTg.destroyError)
-            }
-            sendCode(): Promise<{ phoneCodeHash: string; isCodeViaApp: boolean }> {
-                return Promise.resolve({ phoneCodeHash: "hash-1", isCodeViaApp: true })
-            }
-            getMe(): Promise<InstanceType<typeof User>> {
-                return Promise.resolve(new User({ firstName: "Ada", lastName: "", username: "ada" }))
-            }
-            invoke(query: Query): Promise<unknown> {
-                mockTg.queries.push(query.kind)
-                if (mockTg.mode === "signup") return Promise.resolve(new AuthorizationSignUpRequired())
-                if (mockTg.mode === "password") return Promise.reject({ errorMessage: "SESSION_PASSWORD_NEEDED" })
-                if (mockTg.mode === "invalid") return Promise.reject({ errorMessage: "PHONE_CODE_INVALID" })
-                if (mockTg.mode === "down") return Promise.reject(new Error("offline"))
-                if (query.kind === "resend")
-                    return Promise.resolve(mockTg.mode === "same" ? {} : { phoneCodeHash: "hash-2" })
-                return Promise.resolve({})
-            }
-            checkAuthorization(): Promise<boolean> {
-                return Promise.resolve(mockTg.authorized)
-            }
-            *iterDialogs(): Generator<Record<string, unknown>> {
-                for (const dialog of mockTg.dialogs) {
-                    yield dialog.entityKind === undefined ? dialog : { ...dialog, entity: senderOf(dialog.entityKind) }
-                }
-            }
-            getMessages(_entity: unknown, window: Record<string, unknown>): Promise<Array<Record<string, unknown>>> {
-                mockTg.windows.push(window)
-                return Promise.resolve(
-                    mockTg.messages.map((message) =>
-                        message.senderKind === undefined
-                            ? message
-                            : { ...message, sender: senderOf(message.senderKind) },
-                    ),
-                )
-            }
-        },
-    }
-})
+    return Promise.resolve(new Api.auth.Authorization({ user: ada() }))
+}
+
+/** The client of one connection: it answers from the state of the running test. */
+const clientOf = (session: StringSession): TelegramClient => {
+    const state = mockTg
+    const client = mock<TelegramClient>({ session })
+    client.setLogLevel.mockImplementation((level) => {
+        state.level = level
+    })
+    client.connect.mockImplementation(() =>
+        state.connectError === undefined ? Promise.resolve(true) : Promise.reject(state.connectError),
+    )
+    client.destroy.mockImplementation(() => {
+        state.destroyed = true
+        return state.destroyError === undefined ? Promise.resolve() : Promise.reject(state.destroyError)
+    })
+    client.sendCode.mockResolvedValue({ phoneCodeHash: "hash-1", isCodeViaApp: true })
+    client.getMe.mockImplementation(() =>
+        Promise.resolve(new Api.User({ id: returnBigInt(1), firstName: "Ada", lastName: "", username: "ada" })),
+    )
+    client.invoke.mockImplementation(answerOf)
+    client.checkAuthorization.mockImplementation(() => Promise.resolve(state.authorized))
+    client.iterDialogs.mockImplementation(() =>
+        mock<ReturnType<TelegramClient["iterDialogs"]>>({
+            [Symbol.asyncIterator]: () => listed(state.dialogs),
+        }),
+    )
+    client.getMessages.mockImplementation((_entity, window) => {
+        state.windows.push(window)
+        const found = new TotalList<Api.Message>()
+        found.push(...state.messages)
+        return Promise.resolve(found)
+    })
+    return client
+}
+
+const clientSpy = jest.spyOn(telegram, "TelegramClient")
+const sessionSpy = jest.spyOn(sessions, "StringSession")
+const checkSpy = jest.spyOn(password, "computeCheck")
 
 const configured: DataSourcesOptions = {
     allowPrivateHosts: false,
@@ -207,7 +194,16 @@ const read = (partial: Partial<TelegramReadRequest> = {}): TelegramReadRequest =
 
 describe("TelegramUserClient", () => {
     beforeEach(() => {
-        mockTg.reset()
+        Object.assign(mockTg, new MockTelegram())
+        sessionSpy.mockImplementation(() => mock<StringSession>({ save: () => "saved-session" }))
+        clientSpy.mockImplementation(() => clientOf(mock<StringSession>({ save: () => "saved-session" })))
+        checkSpy.mockResolvedValue(
+            new Api.InputCheckPasswordSRP({ srpId: returnBigInt(1), A: Buffer.from("a"), M1: Buffer.from("m") }),
+        )
+    })
+
+    afterAll(() => {
+        jest.restoreAllMocks()
     })
 
     it("reports whether the deployment has credentials", async () => {
@@ -269,7 +265,7 @@ describe("TelegramUserClient", () => {
             session: "saved-session",
             account: { displayName: "Ada", username: "ada" },
         })
-        expect(mockTg.queries).toEqual(["password", "check"])
+        expect(mockTg.queries).toEqual(["account.GetPassword", "auth.CheckPassword"])
 
         mockTg.mode = "invalid"
         await expect(client.sendCode("+841234")).resolves.toBeDefined()
@@ -293,10 +289,10 @@ describe("TelegramUserClient", () => {
         const { client } = await build()
         const long = "x".repeat(130)
         mockTg.dialogs = [
-            { id: undefined, title: "skip", isUser: true, unreadCount: 0 },
-            { id: { toString: () => "10" }, title: "", name: "", isUser: true, unreadCount: 1 },
-            { id: { toString: () => "11" }, title: long, isGroup: true, unreadCount: 0 },
-            { id: { toString: () => "12" }, title: "News", isUser: false, isGroup: false, unreadCount: 3 },
+            dialogOf({ id: undefined, title: "skip", isUser: true, unreadCount: 0 }),
+            dialogOf({ id: "10", title: "", name: "", isUser: true, unreadCount: 1 }),
+            dialogOf({ id: "11", title: long, isGroup: true, unreadCount: 0 }),
+            dialogOf({ id: "12", title: "News", isUser: false, isGroup: false, unreadCount: 3 }),
         ]
 
         await expect(client.listDialogs("session-1", 20)).resolves.toEqual([
@@ -308,32 +304,32 @@ describe("TelegramUserClient", () => {
 
     it("reads new messages from a cursor or the window start and skips service or empty ones", async () => {
         const { client } = await build()
-        mockTg.dialogs = [{ id: { toString: () => "10" }, entityKind: "user", title: "Ada" }]
+        mockTg.dialogs = [dialogOf({ id: "10", entityKind: "user", title: "Ada" })]
         mockTg.messages = [
-            { id: 3, className: "MessageService", message: "", date: 1 },
-            { id: 6, className: "Message", message: "hey", date: 2, media: undefined, out: false, senderKind: "user" },
-            {
+            messageOf({ id: 3, className: "MessageService", message: "", date: 1 }),
+            messageOf({ id: 6, className: "Message", message: "hey", date: 2, out: false, senderKind: "user" }),
+            messageOf({
                 id: 7,
                 className: "Message",
                 message: "hi",
                 date: 3,
                 out: true,
                 senderKind: "user",
-                media: { className: "MessageMediaPhoto" },
+                media: new Api.MessageMediaPhoto({}),
                 replyToMsgId: 4,
-            },
-            {
+            }),
+            messageOf({
                 id: 8,
                 className: "Message",
                 message: "shop",
                 date: 4,
                 out: false,
                 senderKind: "chat",
-                media: { className: "MessageMediaEmpty" },
-            },
-            { id: 9, className: "Message", message: "news", date: 5, out: false, senderKind: "channel" },
-            { id: 10, className: "Message", message: "other", date: 6, out: false, senderKind: "other" },
-            { id: 11, className: "Message", message: "ada", date: 7, out: false, senderKind: "bare" },
+                media: new Api.MessageMediaEmpty(),
+            }),
+            messageOf({ id: 9, className: "Message", message: "news", date: 5, out: false, senderKind: "channel" }),
+            messageOf({ id: 10, className: "Message", message: "other", date: 6, out: false, senderKind: "other" }),
+            messageOf({ id: 11, className: "Message", message: "ada", date: 7, out: false, senderKind: "bare" }),
         ]
 
         await expect(client.readChats(read())).resolves.toEqual([
@@ -353,7 +349,7 @@ describe("TelegramUserClient", () => {
         ])
         expect(mockTg.windows[0]).toEqual({ reverse: true, offsetId: 4, limit: 2 })
 
-        mockTg.dialogs = [{ id: { toString: () => "10" }, entityKind: "user", title: "Ada" }]
+        mockTg.dialogs = [dialogOf({ id: "10", entityKind: "user", title: "Ada" })]
         await expect(client.readChats(read({ cursors: new Map(), chatIds: ["10", "11"] }))).resolves.toHaveLength(1)
         expect(mockTg.windows.at(-1)).toEqual({ reverse: true, offsetDate: 1_700_000_000, limit: 2 })
     })
@@ -367,7 +363,7 @@ describe("TelegramUserClient", () => {
         })
 
         mockTg.authorized = true
-        mockTg.dialogs = [{ id: { toString: () => "10" }, entity: undefined, title: "Ada" }]
+        mockTg.dialogs = [dialogOf({ id: "10", title: "Ada" })]
         await expect(client.readChats(read({ isExpired: () => true }))).resolves.toEqual([])
 
         await expect(client.logOut("")).resolves.toBeUndefined()

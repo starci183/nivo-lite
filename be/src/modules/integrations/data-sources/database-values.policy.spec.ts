@@ -1,6 +1,6 @@
 import type { DatabaseRow, DatabaseSelection } from "./database-session.contracts"
 import { DATABASE_COPY } from "./messages/database.messages"
-import { cursorOf, isRecord, plainValue, previewCells, toRecord, toRows } from "./database-values.policy"
+import { cursorOf, isPlainObject, plainValue, previewCells, toRecord, toRows } from "./database-values.policy"
 
 const selection = (partial: Partial<DatabaseSelection> = {}): DatabaseSelection => ({
     schema: "public",
@@ -13,12 +13,12 @@ const selection = (partial: Partial<DatabaseSelection> = {}): DatabaseSelection 
 })
 
 describe("database values", () => {
-    describe("isRecord and toRows", () => {
+    describe("isPlainObject and toRows", () => {
         it("keeps plain objects and drops everything else", () => {
-            expect(isRecord({ id: 1 })).toBe(true)
-            expect(isRecord([1])).toBe(false)
-            expect(isRecord(null)).toBe(false)
-            expect(isRecord("id")).toBe(false)
+            expect(isPlainObject({ id: 1 })).toBe(true)
+            expect(isPlainObject([1])).toBe(false)
+            expect(isPlainObject(null)).toBe(false)
+            expect(isPlainObject("id")).toBe(false)
 
             const row: DatabaseRow = { id: "1" }
             expect(toRows([row, ["no"], null])).toEqual([row])

@@ -37,12 +37,12 @@ const usersPage = (count: number, prefix: string): Array<SeedAuthUser> =>
     }))
 
 const build = async (change: Partial<Record<keyof SeedAuth, jest.Mock>> = {}, stored = "") => {
-    const auth: Record<keyof SeedAuth, jest.Mock> = {
+    const auth = mock<SeedAuth>({
         listUsers: jest.fn().mockResolvedValue(noUsers),
         createUser: jest.fn().mockImplementation(created),
         updateUserById: jest.fn().mockResolvedValue({ error: null }),
         ...change,
-    }
+    })
     const secrets = {
         location: "/home/op/.nivo-lite/secrets.env",
         read: jest.fn().mockResolvedValue(stored),

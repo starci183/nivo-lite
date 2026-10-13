@@ -75,6 +75,18 @@ export const NEXT_QUEUED_WORK_ITEM = sql`
     ORDER BY created_at ASC, id ASC
     LIMIT 1`
 
+/**
+ * The workspaces that have a queued chain step free to take, the one waiting longest first ($1 now, $2 lease seconds, $3 limit): the same
+ * free-to-take rule as NEXT_QUEUED_WORK_ITEM, so the background drain only visits workspaces where it will find work.
+ */
+export const LIST_WORKSPACES_WITH_QUEUED_WORK = sql`
+    SELECT workspace_id FROM public.work_items
+    WHERE status = 'queued' AND reason IS NULL
+        AND (updated_at = created_at OR updated_at < $1::timestamptz - make_interval(secs => $2::int))
+    GROUP BY workspace_id
+    ORDER BY min(created_at) ASC, workspace_id ASC
+    LIMIT $3`
+
 /** Saves what the performer prepared and the address it corrected ($1 id, $2 proposal json, $3 type, $4 subject, $5 lead, $6 now). */
 export const SAVE_PREPARED_WORK_ITEM = sql`
     WITH changed AS (
@@ -210,3 +222,9 @@ export const READ_INBOUND_WORK_STATE = sql`SELECT
     (COUNT(*) FILTER (WHERE status = 'failed'))::int AS failed,
     (COUNT(*) FILTER (WHERE status = 'waiting_decision'))::int AS waiting
 FROM public.work_items WHERE workspace_id = $1::uuid AND inbound_event_id = $2::uuid`
+
+/** The newest item of an action whose dedupe key is the base key or starts with it and a colon ($1 workspace, $2 action, $3 base key). */
+export const FIND_LATEST_WORK_ITEM_OF_KEY = sql`SELECT * FROM public.work_items
+WHERE workspace_id = $1::uuid AND action = $2
+    AND (dedupe_key = $3 OR left(dedupe_key, length($3) + 1) = $3 || ':')
+ORDER BY created_at DESC, id DESC LIMIT 1`

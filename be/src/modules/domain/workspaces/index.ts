@@ -2,6 +2,7 @@ export { WORKSPACES_ERROR_KINDS } from "./errors/workspaces.error"
 export { WORKSPACES_MESSAGES } from "./messages/workspaces.messages"
 export type {
     CreatedWorkspace,
+    FirstWorkspace,
     PruneRequest,
     ShellFacts,
     SupportStatus,

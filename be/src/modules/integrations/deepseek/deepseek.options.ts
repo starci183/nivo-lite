@@ -8,6 +8,6 @@ export interface DeepseekOptions {
 
 /** What the prompt library needs at registration: its tunables and the provider of the text door it generates through. */
 export interface DeepseekWiring extends DeepseekOptions {
-    /** Provider of the `TextGenerator` port (the generations capability). */
+    /** Provider of the `DeepseekTextGenerator` port (the generations capability). */
     readonly generator: InjectionToken
 }

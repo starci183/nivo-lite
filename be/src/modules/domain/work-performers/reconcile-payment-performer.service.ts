@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import { AutomationBusinessEventsService } from "@modules/domain/automations"
 import { DecisionsError, DecisionsErrorCode, EvidenceService } from "@modules/domain/decisions"
 import type {
     Performed,
@@ -12,6 +13,7 @@ import type {
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import type { OptionalInboundEvent } from "@modules/domain/inbound-events"
 import { InvoicesService } from "@modules/domain/invoices"
+import { LeadRecordsService } from "@modules/domain/leads"
 import type { InvoiceRow } from "@modules/domain/invoices"
 import { OrdersService } from "@modules/domain/orders"
 import { TransactionsService } from "@modules/domain/transactions"
@@ -39,6 +41,8 @@ export class ReconcilePaymentPerformerService implements WorkPerformer {
         private readonly inbound: InboundEventsService,
         private readonly workItems: WorkItemsService,
         private readonly evidence: EvidenceService,
+        private readonly leads: LeadRecordsService,
+        private readonly events: AutomationBusinessEventsService,
     ) {}
 
     /** Records the payment as unmatched when it has no transaction yet, and offers the invoices it may settle. */
@@ -113,6 +117,7 @@ export class ReconcilePaymentPerformerService implements WorkPerformer {
             evidence: [how, reference].filter((part) => part !== "").join(" · ") || null,
         })
         await this.settleClaims(ctx, item, invoice)
+        await this.publishReceived(ctx, item, invoice, proposal)
         return {
             summary,
             evidence: "verified",
@@ -120,6 +125,37 @@ export class ReconcilePaymentPerformerService implements WorkPerformer {
             lead_id: invoice.lead_id,
             detail: how === "" ? null : how,
         }
+    }
+
+    /**
+     * `payment.received` for the settled invoice: the pipelines (thank-you, review request, sheet) and webhooks listening hear it. The
+     * bank transaction rides along so the receipt pipeline keys this payment the same way the chain's own receipt does (one email).
+     */
+    private async publishReceived(
+        ctx: WorkContext,
+        item: WorkItem,
+        invoice: InvoiceRow,
+        proposal: Proposal,
+    ): Promise<void> {
+        const payer = invoice.lead_id === null ? null : await this.leads.find(ctx.workspaceId, invoice.lead_id)
+        const order = invoice.order_id === null ? null : await this.orders.find(ctx.workspaceId, invoice.order_id)
+        await this.events.publish(
+            ctx.workspaceId,
+            "payment.received",
+            {
+                invoice_id: invoice.id,
+                transaction_id: item.subject_type === "transaction" ? item.subject_id : null,
+                invoice_no: invoice.invoice_no,
+                order_id: invoice.order_id,
+                order_no: order?.order_no ?? null,
+                lead_id: invoice.lead_id,
+                customer: payer?.contact_name ?? textOf(proposal.fields.payer),
+                amount_vnd: proposal.amount_vnd ?? invoice.amount_vnd,
+                paid_at: invoice.paid_at,
+                channel: payer?.channel ?? null,
+            },
+            `payment.received:${invoice.id}`,
+        )
     }
 
     /** A rejected payment goes back to the owner's review list. */

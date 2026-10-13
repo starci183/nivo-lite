@@ -7,7 +7,7 @@ import type { Logger } from "@modules/platform/logging"
 import { DeepseekClient } from "./deepseek.client"
 import type { DeepseekScope } from "./deepseek.contracts"
 import { DEEPSEEK_OPTIONS, DEEPSEEK_TEXT_GENERATOR } from "./deepseek.decorators"
-import type { TextGenerator } from "./deepseek.port"
+import type { DeepseekTextGenerator } from "./deepseek.port"
 import { DeepseekErrorCode } from "./errors/deepseek.error"
 
 const scope: DeepseekScope = { workspaceId: "ws-1", locale: "vi" }
@@ -15,7 +15,7 @@ const lead = { contact_name: "Lan", company: "ACME", channel: "telegram", need: 
 const agent = { name: "Mai", handle: "mai", role: "Chatbot", instructions: "Be kind" }
 
 const build = async (jsonRetries = 1) => {
-    const generator = mock<TextGenerator>()
+    const generator = mock<DeepseekTextGenerator>()
     const logger = mock<Logger>()
     const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => `[${key}]`) })
     const moduleRef = await Test.createTestingModule({

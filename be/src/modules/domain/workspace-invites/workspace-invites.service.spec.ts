@@ -33,11 +33,11 @@ const LINK = `https://app.test/invite/${TOKEN}`
 const REDIRECT = `https://app.test/auth/confirm?next=${encodeURIComponent(`/invite/${TOKEN}`)}`
 const EXPIRES = new Date("2026-10-19T00:00:00.000Z")
 
-const optionsOf = builder<WorkspaceInvitesOptions>({
+const OPTIONS: WorkspaceInvitesOptions = {
     delivery: "invite-delivery",
     siteUrl: "https://app.test",
     inviteDays: 7,
-})
+}
 
 const actorOf = builder<WorkspaceMember>({
     userId: "owner-1",
@@ -47,13 +47,11 @@ const actorOf = builder<WorkspaceMember>({
     displayName: "Chu",
     status: "active",
 })
-
 const listingOf = builder<MemberListing>({
     ...actorOf(),
     email: "chu@example.test",
     lastSignInAt: null,
 })
-
 const accountOf = () => ({
     id: "user-2",
     email: "an@example.test",
@@ -84,7 +82,7 @@ const build = async (entityManager: MockEntityManager) => {
             WorkspaceInvitesService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
-            { provide: WORKSPACE_INVITES_OPTIONS, useValue: optionsOf() },
+            { provide: WORKSPACE_INVITES_OPTIONS, useValue: OPTIONS },
             { provide: ACCOUNT_DIRECTORY, useValue: accounts },
             { provide: INVITE_DELIVERY, useValue: delivery },
             { provide: WorkspaceMembersService, useValue: members },
@@ -94,15 +92,6 @@ const build = async (entityManager: MockEntityManager) => {
     }).compile()
     return { service: moduleRef.get(WorkspaceInvitesService), members, events, accounts, delivery }
 }
-
-const issuingStubs = {
-    query: [
-        [MINT_TOKEN, [{ token: TOKEN }]],
-        [REVOKE_PENDING_FOR_EMAIL, []],
-        [INSERT_INVITE, []],
-        [FIND_STAFF_INVITE, []],
-    ],
-} as const
 
 describe("WorkspaceInvitesService", () => {
     describe("listPending", () => {
@@ -133,7 +122,7 @@ describe("WorkspaceInvitesService", () => {
         })
 
         it("passes on the refusal of the membership check", async () => {
-            const em = mockEntityManager()
+            const em = mockEntityManager({})
             const { service, members } = await build(em)
             members.require.mockRejectedValue(new Error("refused"))
 
@@ -144,7 +133,16 @@ describe("WorkspaceInvitesService", () => {
 
     describe("create", () => {
         it("stores the invitation by token hash, emails it and logs the evidence", async () => {
-            const tx = fakeTransaction(mockEntityManager(issuingStubs))
+            const tx = fakeTransaction(
+                mockEntityManager({
+                    query: [
+                        [MINT_TOKEN, [{ token: TOKEN }]],
+                        [REVOKE_PENDING_FOR_EMAIL, []],
+                        [INSERT_INVITE, []],
+                        [FIND_STAFF_INVITE, []],
+                    ],
+                }),
+            )
             const { service, members, events, delivery } = await build(tx.em)
             members.list.mockResolvedValue([listingOf()])
             delivery.deliverInvite.mockResolvedValue("invited")
@@ -172,13 +170,22 @@ describe("WorkspaceInvitesService", () => {
                 workspaceId: "ws-1",
                 kind: "member.invited",
                 actor: "Chu",
-                summary: "an@example.test · staff",
+                summary: "an@example.test \u00b7 staff",
             })
             expect(tx.commits).toBe(1)
         })
 
         it("links a free staff row to the invitation", async () => {
-            const tx = fakeTransaction(mockEntityManager(issuingStubs))
+            const tx = fakeTransaction(
+                mockEntityManager({
+                    query: [
+                        [MINT_TOKEN, [{ token: TOKEN }]],
+                        [REVOKE_PENDING_FOR_EMAIL, []],
+                        [INSERT_INVITE, []],
+                        [FIND_STAFF_INVITE, []],
+                    ],
+                }),
+            )
             const { service, members, delivery } = await build(tx.em)
             members.list.mockResolvedValue([listingOf()])
             delivery.deliverInvite.mockResolvedValue("none")
@@ -196,7 +203,7 @@ describe("WorkspaceInvitesService", () => {
         })
 
         it("refuses an address that is not an email", async () => {
-            const { service, members } = await build(mockEntityManager())
+            const { service, members } = await build(mockEntityManager({}))
 
             await expect(
                 service.create("owner-1", "ws-1", { email: "not-an-email", role: "staff" }),
@@ -205,7 +212,7 @@ describe("WorkspaceInvitesService", () => {
         })
 
         it("refuses an address that already belongs to a member", async () => {
-            const { service, members } = await build(mockEntityManager())
+            const { service, members } = await build(mockEntityManager({}))
             members.list.mockResolvedValue([listingOf({ email: "AN@example.test" })])
 
             await expect(
@@ -360,16 +367,14 @@ describe("WorkspaceInvitesService", () => {
 
     describe("accept", () => {
         const acceptor = { id: "user-2", email: "an@example.test" }
-        const stubs = (row: InviteRow | undefined) =>
-            mockEntityManager({
+
+        it("joins the signed-in person to the workspace and answers its id", async () => {
+            const em = mockEntityManager({
                 query: [
-                    [FIND_INVITE_BY_TOKEN, row === undefined ? [] : [row]],
+                    [FIND_INVITE_BY_TOKEN, [inviteRowOf({ staff_id: "staff-1" })]],
                     [MARK_INVITE_ACCEPTED, []],
                 ],
             })
-
-        it("joins the signed-in person to the workspace and answers its id", async () => {
-            const em = stubs(inviteRowOf({ staff_id: "staff-1" }))
             const { service, members, events, accounts } = await build(em)
             accounts.accountOf.mockResolvedValue(ok(accountOf()))
 
@@ -393,7 +398,14 @@ describe("WorkspaceInvitesService", () => {
         })
 
         it("falls back to a generic name when Auth does not know the account", async () => {
-            const { service, members, events, accounts } = await build(stubs(inviteRowOf()))
+            const { service, members, events, accounts } = await build(
+                mockEntityManager({
+                    query: [
+                        [FIND_INVITE_BY_TOKEN, [inviteRowOf()]],
+                        [MARK_INVITE_ACCEPTED, []],
+                    ],
+                }),
+            )
             accounts.accountOf.mockResolvedValue(refused("ACCOUNT_NOT_FOUND"))
 
             await expect(service.accept(acceptor, TOKEN)).resolves.toEqual({ workspaceId: "ws-1" })
@@ -432,7 +444,14 @@ describe("WorkspaceInvitesService", () => {
             ],
             ["another address", inviteRowOf({ email: "other@example.test" }), WorkspaceInvitesErrorCode.EmailMismatch],
         ])("refuses %s and joins nobody", async (_name, row, code) => {
-            const { service, members, events } = await build(stubs(row))
+            const { service, members, events } = await build(
+                mockEntityManager({
+                    query: [
+                        [FIND_INVITE_BY_TOKEN, row === undefined ? [] : [row]],
+                        [MARK_INVITE_ACCEPTED, []],
+                    ],
+                }),
+            )
 
             await expect(service.accept(acceptor, TOKEN)).rejects.toMatchObject({ code })
 
@@ -441,7 +460,14 @@ describe("WorkspaceInvitesService", () => {
         })
 
         it("refuses a caller whose session carries no email", async () => {
-            const { service, members } = await build(stubs(inviteRowOf()))
+            const { service, members } = await build(
+                mockEntityManager({
+                    query: [
+                        [FIND_INVITE_BY_TOKEN, [inviteRowOf()]],
+                        [MARK_INVITE_ACCEPTED, []],
+                    ],
+                }),
+            )
 
             await expect(service.accept({ id: "user-2" }, TOKEN)).rejects.toMatchObject({
                 code: WorkspaceInvitesErrorCode.EmailMismatch,
@@ -450,7 +476,14 @@ describe("WorkspaceInvitesService", () => {
         })
 
         it("records an empty summary when the session carries no email but the invitation allows it", async () => {
-            const { service, events, accounts } = await build(stubs(inviteRowOf({ email: "" })))
+            const { service, events, accounts } = await build(
+                mockEntityManager({
+                    query: [
+                        [FIND_INVITE_BY_TOKEN, [inviteRowOf({ email: "" })]],
+                        [MARK_INVITE_ACCEPTED, []],
+                    ],
+                }),
+            )
             accounts.accountOf.mockResolvedValue(ok(accountOf()))
 
             await expect(service.accept({ id: "user-2" }, TOKEN)).resolves.toEqual({ workspaceId: "ws-1" })

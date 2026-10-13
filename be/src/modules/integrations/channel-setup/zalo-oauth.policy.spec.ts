@@ -1,11 +1,11 @@
 import { createHash } from "node:crypto"
-import { challengeOf, newVerifier, zaloAuthorizeUrl, zaloCallbackUrl } from "./zalo-oauth.policy"
+import { challengeOf, newZaloVerifier, zaloAuthorizeUrl, zaloCallbackUrl } from "./zalo-oauth.policy"
 
 describe("PKCE", () => {
     it("makes a fresh verifier each time and its S256 challenge", () => {
-        const verifier = newVerifier()
+        const verifier = newZaloVerifier()
 
-        expect(verifier).not.toBe(newVerifier())
+        expect(verifier).not.toBe(newZaloVerifier())
         expect(verifier.length).toBeGreaterThanOrEqual(43)
         expect(challengeOf(verifier)).toBe(createHash("sha256").update(verifier).digest("base64url"))
     })

@@ -36,6 +36,7 @@ export class AccountSessionsService {
         return {
             name: known?.displayName ?? "",
             email: known?.email ?? "",
+            avatarUrl: known?.avatarUrl ?? null,
             providers: providers.map((row) => row.provider),
             sessions: [...devices].sort((a, b) => Number(b.isCurrent) - Number(a.isCurrent)),
         }

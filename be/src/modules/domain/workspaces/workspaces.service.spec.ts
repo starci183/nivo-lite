@@ -9,8 +9,6 @@ import type { WorkspacesOptions } from "./workspaces.options"
 import { WORKSPACES_OPTIONS } from "./workspaces.port"
 import { WorkspacesService } from "./workspaces.service"
 
-const optionsOf = builder<WorkspacesOptions>({ allowFreeWorkspace: false })
-
 const rowOf = builder<MembershipRow>({
     workspace_id: "ws-1",
     user_id: "user-1",
@@ -25,12 +23,15 @@ const rowOf = builder<MembershipRow>({
     business_type: "cafe",
 })
 
-const build = async (entityManager: MockEntityManager, options: WorkspacesOptions = optionsOf()) => {
+const build = async (entityManager: MockEntityManager, overrides: Partial<WorkspacesOptions> = {}) => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkspacesService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
-            { provide: WORKSPACES_OPTIONS, useValue: options },
+            {
+                provide: WORKSPACES_OPTIONS,
+                useValue: builder<WorkspacesOptions>({ allowFreeWorkspace: false })(overrides),
+            },
         ],
     }).compile()
     return moduleRef.get(WorkspacesService)
@@ -68,7 +69,7 @@ describe("WorkspacesService", () => {
     describe("createFree", () => {
         it("creates an active workspace owned by the person where signup is allowed", async () => {
             const em = mockEntityManager({ query: [INSERT_FREE_WORKSPACE, [{ id: "ws-new" }]] })
-            const service = await build(em, optionsOf({ allowFreeWorkspace: true }))
+            const service = await build(em, { allowFreeWorkspace: true })
 
             await expect(service.createFree("user-1", "NIVO Workspace")).resolves.toEqual({ id: "ws-new" })
             expect(em.query).toHaveBeenCalledWith(INSERT_FREE_WORKSPACE, ["user-1", "NIVO Workspace"])
