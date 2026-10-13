@@ -9,9 +9,9 @@ import { INSERT_EVENT } from "./persistence/events.sql"
 export class EventsService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
-    /** Appends one line to the workspace's evidence log. */
-    async record(entry: EventEntry): Promise<void> {
-        await this.entityManager.query(INSERT_EVENT, [
+    /** Appends one line to the workspace's evidence log, inside the caller's transaction when it hands one. */
+    async record(entry: EventEntry, manager: EntityManager = this.entityManager): Promise<void> {
+        await manager.query(INSERT_EVENT, [
             entry.workspaceId,
             entry.kind,
             entry.actor,

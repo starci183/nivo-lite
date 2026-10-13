@@ -12,6 +12,6 @@ export interface EventEntry {
     readonly leadId?: string | null
     /** The work item the line belongs to, when there is one. */
     readonly workItemId?: string | null
-    /** The raw text that backs the line, when there is some. */
+    /** The evidence behind the line, when there is some. */
     readonly evidence?: string | null
 }

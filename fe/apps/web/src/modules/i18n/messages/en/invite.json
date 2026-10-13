@@ -1,8 +1,7 @@
 {
   "eyebrow": "INVITATION",
   "title": "Join {workspace}",
-  "lead": "{inviter} invited you to {workspace} as {role}.",
-  "leadNoInviter": "You were invited to {workspace} as {role}.",
+  "lead": "You were invited to {workspace} as {role}.",
   "forEmail": "This invitation is for {email}.",
   "asStaff": "You will be linked to staff member {name}.",
   "roleManager": "Manager",
@@ -24,6 +23,5 @@
   "usedTitle": "This invitation was already used",
   "usedBody": "If that was you, just sign in.",
   "goSignIn": "Go to sign in",
-  "anInviter": "An owner",
   "failed": "Could not join. Please try again."
 }

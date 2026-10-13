@@ -3,4 +3,5 @@ export { AGENT_DIRECTORY, InjectAgentDirectory } from "./office-lines.decorators
 export type { AgentDirectory } from "./office-lines.port"
 export { MessagesModule } from "./messages.module"
 export type { MessagesOptions } from "./messages.options"
+export { MessagesService } from "./messages.service"
 export { OfficeLinesService } from "./office-lines.service"

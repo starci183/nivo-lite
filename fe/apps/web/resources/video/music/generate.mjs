@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Synthesises the NIVO music beds from scratch (no samples, no third-party material), so they are CC0 by construction.
 //   node resources/video/music/generate.mjs <outDir>      -> <outDir>/<id>.wav (44.1 kHz stereo, 96 s)
-// then encode: ffmpeg -i <id>.wav -c:a libmp3lame -b:a 112k engine/assets/video/music/<id>.mp3
+// then encode: ffmpeg -i <id>.wav -c:a libmp3lame -b:a 112k be/assets/video/music/<id>.mp3
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 

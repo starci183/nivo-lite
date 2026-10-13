@@ -2,10 +2,11 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { AGENT_DIRECTORY } from "./office-lines.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./messages.module-definition"
+import { MessagesService } from "./messages.service"
 import { OfficeLinesService } from "./office-lines.service"
 
 @Module({})
-/** The Office thread. The app root provides the `AGENT_DIRECTORY` port it reads through. */
+/** The team chat of a workspace and the Office thread. The agent directory is bound by the app root through the options. */
 export class MessagesModule extends ConfigurableModuleClass {
     /** Registers the capability once per app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
@@ -15,9 +16,10 @@ export class MessagesModule extends ConfigurableModuleClass {
             providers: [
                 ...(base.providers ?? []),
                 { provide: AGENT_DIRECTORY, useExisting: options.agentDirectory },
+                MessagesService,
                 OfficeLinesService,
             ],
-            exports: [OfficeLinesService],
+            exports: [MessagesService, OfficeLinesService],
         }
     }
 }

@@ -1,6 +1,6 @@
-import { LeadsList } from "@/features/leads-list";
+import { LeadsLoadingPage } from "@/features/pages/LeadsLoadingPage"
 
-/** STATE-8: the Leads page itself, with no data yet - the same heading, filters and tabs, the list as three skeleton rows. */
-const LeadsLoading = () => <LeadsList isLoading leads={[]} nowIso="" />;
+/** The leads loading slot. */
+const Loading = () => <LeadsLoadingPage />
 
-export default LeadsLoading;
+export default Loading
