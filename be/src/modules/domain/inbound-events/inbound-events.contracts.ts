@@ -1,3 +1,4 @@
+import type { InboundEventRow } from "./persistence/inbound-events.rows"
 import type { EntityManager } from "typeorm"
 
 /** A customer message no agent is bound to answer. */
@@ -44,3 +45,15 @@ export interface BankPaymentRecorded {
     /** The id of the event the credit is, or an empty text when a repeat's event can no longer be read. */
     readonly inboundEventId: string
 }
+
+/** Where an inbound event stands. */
+export type EventStatus = "received" | "processed" | "needs_decision" | "failed"
+
+/** A status to set, or null to keep the current one. */
+export type OptionalEventStatus = EventStatus | null
+
+/** An id, or null when there is none. */
+export type OptionalId = string | null
+
+/** An inbound event, or null when the workspace has no such event. */
+export type OptionalInboundEvent = InboundEventRow | null

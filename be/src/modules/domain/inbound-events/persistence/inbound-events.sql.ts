@@ -31,3 +31,14 @@ SELECT id FROM held`
 export const INSERT_UNROUTED_EVENT = sql`INSERT INTO public.inbound_events (workspace_id, channel, kind, origin, sender_name, body, event_id, dedupe_key)
 VALUES ($1, $2, 'message', 'live', $3, $4, $5, $6)
 ON CONFLICT (workspace_id, dedupe_key) DO NOTHING`
+
+/** One inbound event of the workspace ($1 workspace, $2 event). */
+export const FIND_INBOUND_EVENT = sql`SELECT id, workspace_id, channel, kind, origin, sender_name, sender_contact, body, amount_vnd::float8 AS amount_vnd, external_ref, event_id, lead_id, status
+FROM public.inbound_events
+WHERE workspace_id = $1::uuid AND id = $2::uuid
+LIMIT 1`
+
+/** Sets where an inbound event stands and links the customer the engine found ($1 workspace, $2 event, $3 status or null to keep it, $4 lead or null to keep it). */
+export const MARK_INBOUND_EVENT = sql`UPDATE public.inbound_events
+SET status = COALESCE($3::text, status), lead_id = COALESCE($4::uuid, lead_id)
+WHERE workspace_id = $1::uuid AND id = $2::uuid`

@@ -4,3 +4,9 @@ import { sql } from "@modules/platform/database"
 export const INSERT_EVENT = sql`
     INSERT INTO public.events (workspace_id, kind, actor, summary, lead_id, work_item_id, evidence)
     VALUES ($1, $2, $3, $4, $5, $6, $7)`
+
+/** The first lines of a customer's evidence history, oldest first ($1 workspace, $2 lead, $3 how many). */
+export const LIST_LEAD_EVENTS = sql`
+    SELECT summary, evidence FROM public.events
+    WHERE workspace_id = $1::uuid AND lead_id = $2::uuid
+    ORDER BY created_at LIMIT $3::int`

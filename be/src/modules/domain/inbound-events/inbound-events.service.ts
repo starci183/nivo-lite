@@ -5,13 +5,22 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InboundEventsError, InboundEventsErrorCode } from "./errors/inbound-events.error"
 import { bankDedupeKey } from "./inbound-dedupe.policy"
-import type { BankPaymentEvent, BankPaymentRecorded, UnroutedMessage } from "./inbound-events.contracts"
-import type { EventIdRow } from "./persistence/inbound-events.rows"
+import type {
+    BankPaymentEvent,
+    BankPaymentRecorded,
+    OptionalEventStatus,
+    OptionalId,
+    OptionalInboundEvent,
+    UnroutedMessage,
+} from "./inbound-events.contracts"
+import type { EventIdRow, InboundEventRow } from "./persistence/inbound-events.rows"
 import {
     BUMP_DUPLICATE_EVENT,
+    FIND_INBOUND_EVENT,
     HOLD_EVENT_FOR_OWNER,
     INSERT_BANK_EVENT,
     INSERT_UNROUTED_EVENT,
+    MARK_INBOUND_EVENT,
 } from "./persistence/inbound-events.sql"
 
 @Injectable()
@@ -63,5 +72,16 @@ export class InboundEventsService {
     /** Holds an inbound event for the owner's check until an agent matches it; an event already past that stage is left as it is. */
     async holdForOwnerCheck(eventId: string): Promise<void> {
         await this.entityManager.query(HOLD_EVENT_FOR_OWNER, [eventId])
+    }
+
+    /** The inbound event of the workspace, or null when there is none with that id. */
+    async find(workspaceId: string, eventId: string): Promise<OptionalInboundEvent> {
+        const rows = await this.entityManager.query<Array<InboundEventRow>>(FIND_INBOUND_EVENT, [workspaceId, eventId])
+        return rows[0] ?? null
+    }
+
+    /** Sets where an event stands (null keeps it) and links the customer the engine found (null keeps it). */
+    async mark(workspaceId: string, eventId: string, status: OptionalEventStatus, leadId: OptionalId): Promise<void> {
+        await this.entityManager.query(MARK_INBOUND_EVENT, [workspaceId, eventId, status, leadId])
     }
 }

@@ -64,6 +64,7 @@ import { CREDITS_ERROR_KINDS, CREDITS_MESSAGES, CreditsModule } from "@modules/d
 import { AI_USAGE_EVENTS_MESSAGES, AiUsageEventsModule, UsageGateService } from "@modules/domain/ai-usage-events"
 import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
 import { WorkspacesHttpModule } from "@features/api/workspaces"
+import { ENGINE_ERROR_KINDS, ENGINE_MESSAGES, engineModules } from "./engine.composition"
 import {
     AGENT_CONNECTIONS_ERROR_KINDS,
     AGENT_CONNECTIONS_MESSAGES,
@@ -256,6 +257,7 @@ export class AppModule {
                         AGENTS_MESSAGES,
                         AI_GENERATIONS_MESSAGES,
                         AI_USAGE_EVENTS_MESSAGES,
+                        ...ENGINE_MESSAGES,
                         API_KEYS_MESSAGES,
                         AUTHORITY_MESSAGES,
                         AUTHORITY_RULES_MESSAGES,
@@ -316,6 +318,7 @@ export class AppModule {
                         AGENT_TOOLS_ERROR_KINDS,
                         AGENTS_ERROR_KINDS,
                         AI_GENERATIONS_ERROR_KINDS,
+                        ...ENGINE_ERROR_KINDS,
                         API_KEYS_ERROR_KINDS,
                         AUTHORITY_ERROR_KINDS,
                         AUTHORITY_RULES_ERROR_KINDS,
@@ -484,6 +487,7 @@ export class AppModule {
                         outboundAccessGate: UnboundOutboundAccessGateService,
                     },
                 }),
+                ...engineModules(),
                 OfficeCommandCandidatesModule.register({ isGlobal: true, reader: DeepseekClient }),
                 SyncAgentsQueueModule,
                 GenerateWithAgentQueueModule,

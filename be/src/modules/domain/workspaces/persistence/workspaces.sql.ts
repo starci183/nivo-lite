@@ -19,3 +19,6 @@ export const INSERT_FREE_WORKSPACE = sql`
         RETURNING id
     )
     SELECT id FROM created LIMIT 1`
+
+/** The name of one workspace ($1 workspace). */
+export const FIND_WORKSPACE_NAME = sql`SELECT name FROM public.workspaces WHERE id = $1::uuid LIMIT 1`
