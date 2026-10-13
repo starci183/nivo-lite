@@ -1,9 +1,241 @@
+input AskKnowledgeInput {
+  audience: String!
+  module: String!
+  question: String!
+}
+
+type BrainCommandRefType {
+  id: ID!
+}
+
+type BrainEvidenceType {
+  at: String
+  kind: String!
+  label: String!
+  quote: String
+  ref: String!
+}
+
+type BrainExtractionType {
+  sourceId: ID!
+  status: String!
+}
+
+type BrainFactType {
+  attribute: String!
+  attributeLabel: String!
+  decidedAt: String
+  decidedBy: String
+  evidence: [BrainEvidenceType!]!
+  id: ID!
+  installationId: ID
+  modules: [String!]!
+  proposalKind: String!
+  proposedAt: String!
+  proposedBy: String!
+  scope: String!
+  sourceKind: String!
+  status: String!
+  subjectKey: String!
+  subjectLabel: String!
+  subjectType: String!
+  trust: Int!
+  unit: String
+  validFrom: String
+  validTo: String
+  value: String!
+}
+
+type BrainGapType {
+  attributeGuess: String
+  count: Int!
+  id: ID!
+  lastSeenAt: String!
+  module: String!
+  question: String!
+  reopenedCount: Int!
+  topic: String
+}
+
+type BrainLensType {
+  audience: String!
+  module: String!
+  name: String!
+}
+
+type BrainLessonType {
+  appliesWhen: String!
+  body: String!
+  evidence: [BrainEvidenceType!]!
+  id: ID!
+  module: String
+  status: String!
+  title: String!
+}
+
+type BrainType {
+  extractions: [BrainExtractionType!]!
+  facts: [BrainFactType!]!
+  gaps: [BrainGapType!]!
+  gapsOpen: Int!
+  lenses: [BrainLensType!]!
+  lessons: [BrainLessonType!]!
+}
+
+input CreateKnowledgeUploadInput {
+  filename: String!
+}
+
 input CreateWorkspaceInput {
   name: String!
 }
 
 type CreateWorkspaceType {
   id: ID!
+}
+
+input DecideBrainFactInput {
+  action: String!
+  id: ID!
+  note: String
+  situation: String
+}
+
+input DecideBrainLessonInput {
+  action: String!
+  id: ID!
+}
+
+input DeleteKnowledgeSourceInput {
+  id: ID!
+}
+
+input DismissKnowledgeGapInput {
+  id: ID!
+}
+
+type DocumentPassageType {
+  content: String!
+  hasEmbedding: Boolean!
+  id: ID!
+  order: Int!
+}
+
+type DriveFileType {
+  id: ID!
+  mimeType: String!
+  modifiedTime: String
+  name: String!
+  path: String!
+  size: Float
+}
+
+type DriveFolderType {
+  files: [DriveFileType!]!
+  name: String!
+  truncated: Boolean!
+}
+
+input DriveLinkedFolderInput {
+  url: String!
+}
+
+input DrivePickedFolderInput {
+  folderId: String!
+  token: String!
+}
+
+input EnqueueKnowledgeSourceInput {
+  content: String
+  installationId: ID
+  kind: String!
+  module: String
+  origin: String
+  storagePath: String
+  tags: [String!]
+  title: String!
+  topic: String
+  url: String
+  visibility: String
+}
+
+input KeepCurrentBrainFactInput {
+  attribute: String!
+  installationId: ID
+  subjectKey: String!
+}
+
+type KnowledgeSourceDetailType {
+  chunks: [DocumentPassageType!]!
+  source: KnowledgeSourceTextType!
+}
+
+input KnowledgeSourceInput {
+  id: ID!
+}
+
+type KnowledgeSourceTextType {
+  chunkCount: Int!
+  content: String!
+  createdAt: String!
+  error: String
+  id: ID!
+  installationId: ID
+  kind: String!
+  module: String
+  progress: Int!
+  status: String!
+  tags: [String!]!
+  title: String!
+  topic: String
+  updatedAt: String!
+  visibility: String!
+  workspaceId: ID!
+}
+
+type KnowledgeSourceType {
+  chunkCount: Int!
+  createdAt: String!
+  error: String
+  id: ID!
+  installationId: ID
+  kind: String!
+  module: String
+  progress: Int!
+  status: String!
+  tags: [String!]!
+  title: String!
+  topic: String
+  updatedAt: String!
+  visibility: String!
+  workspaceId: ID!
+}
+
+input KnowledgeSourcesInput {
+  module: String
+}
+
+type KnowledgeSuggestionContextType {
+  businessType: String
+  decisions: [SuggestionDecisionType!]!
+}
+
+input LessonMiningStatusInput {
+  id: ID!
+}
+
+type LessonMiningStatusType {
+  corrections: Int
+  errorCode: String
+  id: ID!
+  newCases: Int
+  proposed: Int
+  reason: String
+  status: String!
+}
+
+type ManualEvidenceType {
+  duplicate: Boolean!
 }
 
 type MemberType {
@@ -21,11 +253,143 @@ type MembershipType {
 }
 
 type Mutation {
+  createKnowledgeUpload(input: CreateKnowledgeUploadInput!): UploadAddressType!
   createWorkspace(input: CreateWorkspaceInput!): CreateWorkspaceType!
+  decideBrainFact(input: DecideBrainFactInput!): BrainFactType!
+  decideBrainLesson(input: DecideBrainLessonInput!): BrainLessonType!
+  deleteKnowledgeSource(input: DeleteKnowledgeSourceInput!): Boolean!
+  dismissKnowledgeGap(input: DismissKnowledgeGapInput!): Boolean!
+  enqueueKnowledgeSource(input: EnqueueKnowledgeSourceInput!): SourceRefType!
+  keepCurrentBrainFact(input: KeepCurrentBrainFactInput!): Int!
+  maintainBrain: Boolean!
+  recordManualEvidence(input: RecordManualEvidenceInput!): ManualEvidenceType!
+  reembedKnowledge: Boolean!
+  reindexKnowledgeSource(input: ReindexKnowledgeSourceInput!): SourceRefType!
+  requestLessonMining(input: RequestLessonMiningInput!): BrainCommandRefType!
+  retryKnowledgeSource(input: RetryKnowledgeSourceInput!): SourceRefType!
+  saveBrainFact(input: SaveBrainFactInput!): SavedFactType!
+  saveBrainLesson(input: SaveBrainLessonInput!): BrainLessonType!
+  setKnowledgeSuggestionState(input: SetKnowledgeSuggestionStateInput!): Boolean!
+  updateKnowledgeSource(input: UpdateKnowledgeSourceInput!): Boolean!
+}
+
+type NivoEntryType {
+  body: String!
+  id: ID!
+  kind: String!
+  module: String!
+  slug: String!
+  title: String!
+  updatedAt: String!
+  version: Int!
+}
+
+type PickedFolderType {
+  empty: Boolean!
+  files: [DriveFileType!]!
+  name: String!
+  truncated: Boolean!
 }
 
 type Query {
+  askKnowledge(input: AskKnowledgeInput!): [RetrievedPassageType!]!
+  brain: BrainType!
+  driveLinkedFolder(input: DriveLinkedFolderInput!): DriveFolderType!
+  drivePickedFolder(input: DrivePickedFolderInput!): PickedFolderType!
+  knowledgeSource(input: KnowledgeSourceInput!): KnowledgeSourceDetailType!
+  knowledgeSources(input: KnowledgeSourcesInput!): [KnowledgeSourceType!]!
+  knowledgeSuggestions: KnowledgeSuggestionContextType!
+  lessonMiningStatus(input: LessonMiningStatusInput!): LessonMiningStatusType!
   myWorkspaces: [MembershipType!]!
+  nivoKnowledge: [NivoEntryType!]!
+}
+
+input RecordManualEvidenceInput {
+  amount: Float!
+  content: String!
+  date: String!
+  note: String
+  payer: String
+}
+
+input ReindexKnowledgeSourceInput {
+  content: String
+  sourceId: ID!
+}
+
+input RequestLessonMiningInput {
+  module: String!
+}
+
+type RetrievedPassageType {
+  content: String!
+  id: ID!
+  kind: String!
+  layer: String!
+  module: String
+  score: Float!
+  sourceId: ID
+  title: String!
+  topic: String
+  visibility: String!
+}
+
+input RetryKnowledgeSourceInput {
+  id: ID!
+}
+
+input SaveBrainFactInput {
+  attributeLabel: String!
+  gapId: ID
+  modules: [String!]!
+  note: String
+  scope: String!
+  subjectLabel: String!
+  subjectType: String!
+  validFrom: String
+  validTo: String
+  value: String!
+}
+
+input SaveBrainLessonInput {
+  appliesWhen: String
+  body: String!
+  module: String
+  title: String!
+}
+
+type SavedFactType {
+  fact: BrainFactType!
+  outcome: String!
+}
+
+input SetKnowledgeSuggestionStateInput {
+  key: String!
+  state: String
+}
+
+type SourceRefType {
+  id: ID!
+}
+
+type SuggestionDecisionType {
+  key: String!
+  state: String!
+}
+
+input UpdateKnowledgeSourceInput {
+  module: String
+  sourceId: ID!
+  tags: [String!]
+  title: String
+  topic: String
+  visibility: String
+}
+
+type UploadAddressType {
+  path: String!
+  signedUrl: String!
+  token: String!
 }
 
 type WorkspaceType {

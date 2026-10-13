@@ -76,6 +76,8 @@ import { CREDITS_ERROR_KINDS, CREDITS_MESSAGES, CreditsModule } from "@modules/d
 import { AI_USAGE_EVENTS_MESSAGES, AiUsageEventsModule, UsageGateService } from "@modules/domain/ai-usage-events"
 import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
 import { WorkspacesGraphqlModule, WorkspacesHttpModule } from "@features/api/workspaces"
+import { KnowledgeGraphqlModule } from "@features/api/knowledge"
+import { EvidenceGraphqlModule } from "@features/api/evidence"
 import {
     EMAIL_MESSAGES_ERROR_KINDS,
     EMAIL_MESSAGES_MESSAGES,
@@ -188,6 +190,7 @@ import { BRAIN_FACTS_ERROR_KINDS, BRAIN_FACTS_MESSAGES, BrainFactsModule } from 
 import { BRAIN_LESSONS_ERROR_KINDS, BRAIN_LESSONS_MESSAGES, BrainLessonsModule } from "@modules/domain/brain-lessons"
 import { KnowledgeChunksModule } from "@modules/domain/knowledge-chunks"
 import { KnowledgeGapsModule } from "@modules/domain/knowledge-gaps"
+import { KnowledgeSuggestionStateModule } from "@modules/domain/knowledge-suggestion-state"
 import { KNOWLEDGE_ERROR_KINDS, KNOWLEDGE_MESSAGES, KnowledgeModule } from "@modules/domain/knowledge"
 import type { DriveAccessSource } from "@modules/domain/knowledge"
 import {
@@ -358,6 +361,8 @@ import type { ApiOptions } from "./api.options"
 const NO_CORRECTIONS: CorrectionSource = { recent: () => Promise.resolve([]) }
 
 const NO_DRIVE_ACCESS: DriveAccessSource = { forWorkspace: () => null }
+const NIVO_DIR = "fe/apps/web/resources/nivo-knowledge"
+const NIVO_FOLDERS = [CORE_FOLDER, ...MODULE_CATALOG.map((module) => module.knowledgeFolder)]
 
 @Global()
 @Module({
@@ -567,11 +572,7 @@ export class AppModule {
                     ],
                     ...options.queue,
                 }),
-                JobsModule.register({
-                    isGlobal: true,
-                    connection: PRIMARY_ENTITY_MANAGER,
-                    ...options.jobs,
-                }),
+                JobsModule.register({ isGlobal: true, connection: PRIMARY_ENTITY_MANAGER, ...options.jobs }),
                 SupabaseModule.register({ isGlobal: true, ...options.supabase }),
                 IdentityModule.register({ isGlobal: true, verifyAccessToken }),
                 ContractsModule.register({ isGlobal: true }),
@@ -646,11 +647,8 @@ export class AppModule {
                 DocumentsModule.register({ isGlobal: true, ...options.documents }),
                 KnowledgeSourcesModule.register({ isGlobal: true, storage: SUPABASE_OBJECTS }),
                 KnowledgeChunksModule.register({ isGlobal: true }),
-                NivoKnowledgeModule.register({
-                    isGlobal: true,
-                    folders: [CORE_FOLDER, ...MODULE_CATALOG.map((module) => module.knowledgeFolder)],
-                    dir: "fe/apps/web/resources/nivo-knowledge",
-                }),
+                KnowledgeSuggestionStateModule.register({ isGlobal: true }),
+                NivoKnowledgeModule.register({ isGlobal: true, folders: NIVO_FOLDERS, dir: NIVO_DIR }),
                 KnowledgeModule.register({ isGlobal: true, driveAccess: NO_DRIVE_ACCESS }),
                 BrainFactsModule.register({ isGlobal: true }),
                 KnowledgeGapsModule.register({ isGlobal: true }),
@@ -761,6 +759,8 @@ export class AppModule {
                 LoyaltyTillHttpModule,
                 WorkspacesHttpModule,
                 WorkspacesGraphqlModule,
+                KnowledgeGraphqlModule,
+                EvidenceGraphqlModule,
                 ExtractKnowledgeFactsQueueModule,
                 RunBrainCommandQueueModule,
                 IndexKnowledgeSourceQueueModule,
