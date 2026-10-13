@@ -1,9 +1,9 @@
 import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
-import { allAgentIds } from "@/hooks/connection-wizard"
+import { allAgentIds, resumeNoteOf, useAdoptOnce } from "@/hooks/connection-wizard"
 import { metaWizardOf } from "@/hooks/connection-wire"
 import { useFirstEvent, useSetConnectionAgents } from "@/hooks/connections"
-import { useQueryMetaConnectionSwr } from "@/hooks/swr/api/graphql/queries/useQueryMetaConnectionSwr"
+import { useQueryMetaConnectionSwr } from "@/hooks/swr"
 import type { AgentOption, MetaCheck, MetaWizardConnection, WizardNote } from "@/modules/types"
 import { META_STEPS, metaFailureOf, metaStartStepOf } from "./meta-wizard.shared"
 import { useMetaCommands } from "./useMetaCommands"
@@ -39,14 +39,11 @@ export const useMetaWizard = (input: MetaWizardInput) => {
     const step = META_STEPS[index] ?? "connect"
     const watch = useFirstEvent({ connectionId: conn === null ? null : conn.id, isActive: step === "test" })
     const firstEvent = watch.event ?? (conn === null ? null : conn.firstEvent)
-    const resumeFailure = resume.error instanceof Error ? resume.error.message : undefined
-    const [adopted, setAdopted] = useState<typeof resume.data>(undefined)
 
     // The stored connection arrives once: adopt it while rendering (derived state), not from an effect.
-    if (resume.data !== undefined && resume.data !== adopted) {
-        const stored = metaWizardOf(resume.data)
+    useAdoptOnce(resume.data, (data) => {
+        const stored = metaWizardOf(data)
         const failure = metaFailureOf(input.returned, tm)
-        setAdopted(resume.data)
         setConn(stored)
         if (stored.agentIds.length > 0) setAgentIds(stored.agentIds)
         const first = stored.pages[0]
@@ -54,7 +51,7 @@ export const useMetaWizard = (input: MetaWizardInput) => {
         if (failure !== null) setNote({ tone: "negative", text: failure })
         else if (input.returned === "ok") setNote({ tone: "affirmative", text: tm("loggedIn") })
         setIndex(metaStartStepOf(stored, failure !== null))
-    }
+    })
 
     const go = (to: number) => {
         setNote(null)
@@ -106,7 +103,7 @@ export const useMetaWizard = (input: MetaWizardInput) => {
         pageId,
         agentIds,
         check,
-        note: note ?? (resumeFailure === undefined ? null : ({ tone: "negative", text: resumeFailure } as const)),
+        note: resumeNoteOf(note, resume.error),
         isPending,
         isChecking,
         isLoading: input.resumeId !== undefined && resume.data === undefined && resume.error === undefined,

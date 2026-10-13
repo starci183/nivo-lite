@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import { slotOfSwr } from "@/hooks/slot"
-import { useQueryModuleInstallationsSwr } from "@/hooks/swr/api/graphql/queries/useQueryModuleInstallationsSwr"
+import { useQueryModuleInstallationsSwr } from "@/hooks/swr"
 import type { DataSlot } from "@/modules/types"
 import type { Installation } from "@/modules/installations"
 import { toInstallations } from "./installations.shared"

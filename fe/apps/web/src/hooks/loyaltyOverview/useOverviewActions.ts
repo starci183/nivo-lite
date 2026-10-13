@@ -3,7 +3,8 @@
 import { useTranslations } from "next-intl"
 import { useState, useSyncExternalStore, useTransition } from "react"
 import { useSWRConfig } from "swr"
-import { isQueryLoyaltyBoardSwrKey, useMutateSyncLoyaltyMembersSwr } from "@/hooks/swr/api/graphql"
+import { QUERY_LOYALTY_BOARD_SWR_KEY, useMutateSyncLoyaltyMembersSwr } from "@/hooks/swr"
+import { matchesSwrKey } from "@/modules/utils"
 import { useGraphQLWithToast } from "@/modules/toast"
 
 const noSubscription = () => () => undefined
@@ -32,7 +33,7 @@ export const useOverviewActions = (slug: string) => {
                 const answer = await withToast(() => syncMembers.trigger(), { showSuccessToast: false })
                 if (answer === undefined) return
                 setSyncNote(t("syncDone", { created: answer.created, linked: answer.linked }))
-                void mutate(isQueryLoyaltyBoardSwrKey)
+                void mutate(matchesSwrKey(QUERY_LOYALTY_BOARD_SWR_KEY))
             }),
     }
 }

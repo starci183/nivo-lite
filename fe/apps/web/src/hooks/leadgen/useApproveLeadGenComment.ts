@@ -62,21 +62,18 @@ export const useApproveLeadGenComment = () => {
 
     const approve = useCallback(
         async (request: MutateApproveLeadGenCommentRequest) => {
-            if (
-                !activeWorkspaceId ||
-                !scopeId ||
-                !useLeadGenApprovalStore.getState().claim(scopeId, request.workItemId)
-            )
+            const requestedItemId = String(request.workItemId)
+            if (!activeWorkspaceId || !scopeId || !useLeadGenApprovalStore.getState().claim(scopeId, requestedItemId))
                 return false
             const approved = await runGraphQL(() => trigger(request), { successMessage: t("commentQueued") })
             if (!approved) {
-                useLeadGenApprovalStore.getState().refused(scopeId, request.workItemId)
+                useLeadGenApprovalStore.getState().refused(scopeId, requestedItemId)
                 return false
             }
             await mutate([QUERY_LEAD_GEN_COMMENT_STATUS_SWR_KEY, activeWorkspaceId, approved.id], approved, {
                 revalidate: false,
             })
-            useLeadGenApprovalStore.getState().accepted(scopeId, request.workItemId, approved.id)
+            useLeadGenApprovalStore.getState().accepted(scopeId, requestedItemId, approved.id)
             return true
         },
         [activeWorkspaceId, scopeId, runGraphQL, trigger, t, mutate],

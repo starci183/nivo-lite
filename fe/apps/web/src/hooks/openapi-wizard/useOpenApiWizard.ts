@@ -1,19 +1,20 @@
 "use client"
 
-import { useEffect, useMemo, useState, useTransition } from "react"
+import { useRef, useState, useTransition } from "react"
 import { useConnectionsRefresh, useSetConnectionAgents, useSyncNow } from "@/hooks/connections"
 import { useOpenApiAuthForm } from "@/hooks/rhf"
-import { useQueryLoadOpenApiConnectionSwr } from "@/hooks/swr/api/graphql/queries/useQueryLoadOpenApiConnectionSwr"
-import type { OpenApiTestType } from "@/modules/api/graphql/__generated__/schema"
+import { useQueryLoadOpenApiConnectionSwr } from "@/hooks/swr"
 import {
-    isOpenApiPullable,
+    EMPTY_OPEN_API_DRAFT,
     OPEN_API_EDIT_STEPS,
     OPEN_API_SCHEDULES,
     OPEN_API_STEPS,
-    parseOpenApiConfig,
+    openApiAuthOf,
+    storedOpenApiDraft,
 } from "./openapi-wizard.shared"
-import type { OpenApiOp, OpenApiPullDef } from "./openapi-wizard.shared"
+import type { OpenApiDraft, OpenApiOp, OpenApiPullDef } from "./openapi-wizard.shared"
 import { useOpenApiCommands } from "./useOpenApiCommands"
+import { useOpenApiTest } from "./useOpenApiTest"
 
 /** What the OpenAPI wizard needs from its drawer. */
 interface OpenApiWizardInput {
@@ -30,32 +31,44 @@ export const useOpenApiWizard = ({ resumeId, onClose }: OpenApiWizardInput) => {
     const refresh = useConnectionsRefresh()
     const { start: startSync } = useSyncNow()
     const authForm = useOpenApiAuthForm()
-    const saved = useQueryLoadOpenApiConnectionSwr(resumeId, { revalidateOnFocus: false, revalidateIfStale: false })
     const editing = Boolean(resumeId)
+    const hydrated = useRef(false)
 
     const [index, setIndex] = useState(0)
-    const [name, setName] = useState("")
-    const [specUrl, setSpecUrl] = useState("")
-    const [specText, setSpecText] = useState("")
-    const [loadedKey, setLoadedKey] = useState<string | null>(null)
-    const [ops, setOps] = useState<ReadonlyArray<OpenApiOp>>([])
-    const [hasSecret, setHasSecret] = useState(false)
-    const [pulls, setPulls] = useState<ReadonlyArray<OpenApiPullDef>>([])
-    const [tools, setTools] = useState<ReadonlyArray<string>>([])
-    const [schedule, setSchedule] = useState<string>("manual")
-    const [testOpId, setTestOpId] = useState<string | null>(null)
-    const [testQuery, setTestQuery] = useState("")
-    const [testing, setTesting] = useState(false)
-    const [result, setResult] = useState<OpenApiTestType | null>(null)
+    const [draft, setDraft] = useState<OpenApiDraft>(EMPTY_OPEN_API_DRAFT)
     const [connId, setConnId] = useState<string | null>(resumeId ?? null)
     const [agentIds, setAgentIds] = useState<ReadonlyArray<string>>([])
     const [error, setError] = useState<string | null>(null)
-    const [hydrated, setHydrated] = useState(false)
     const [isPending, startTransition] = useTransition()
+    const patch = (next: Partial<OpenApiDraft>) => setDraft((current) => ({ ...current, ...next }))
+
+    // Opens a saved connection once: its config, then the fresh operations of its spec link when it has one.
+    const saved = useQueryLoadOpenApiConnectionSwr(resumeId, {
+        revalidateOnFocus: false,
+        revalidateIfStale: false,
+        onSuccess: (connection) => {
+            if (hydrated.current) return
+            hydrated.current = true
+            const { config, auth, draft: stored } = storedOpenApiDraft(connection)
+            authForm.reset(auth)
+            patch(stored)
+            if (!config.specUrl) return
+            void commands.loadSpec(config.specUrl, "").then((fresh) => {
+                if (fresh.kind !== "ok") return
+                const keep = new Set([...config.pulls.map((p) => p.opId), ...config.tools])
+                patch({
+                    ops: [
+                        ...fresh.value.ops,
+                        ...config.ops.filter((o) => keep.has(o.id) && !fresh.value.ops.some((f) => f.id === o.id)),
+                    ],
+                })
+            })
+        },
+    })
 
     const steps = editing ? OPEN_API_EDIT_STEPS : OPEN_API_STEPS
     const step = steps[index] ?? "source"
-    const sourceKey = `${specUrl.trim()}|${specText.length}`
+    const sourceKey = `${draft.specUrl.trim()}|${draft.specText.length}`
     const authType = authForm.watch("authType")
 
     const go = (to: number) => {
@@ -63,127 +76,70 @@ export const useOpenApiWizard = ({ resumeId, onClose }: OpenApiWizardInput) => {
         setIndex(to)
     }
 
-    // Opens a saved connection: its config, then the fresh operations of its spec link when it has one.
-    useEffect(() => {
-        if (hydrated || !saved.data) return
-        setHydrated(true)
-        const config = parseOpenApiConfig(saved.data.config)
-        setName(saved.data.name)
-        setSpecUrl(config.specUrl)
-        authForm.reset({
-            baseUrl: config.baseUrl,
-            authType: config.authType,
-            authName: config.authName,
-            authValue: "",
-            authUser: saved.data.authUser,
-            authPassword: "",
+    const onPull = (op: OpenApiOp, pull: OpenApiPullDef | null) =>
+        setDraft((current) => {
+            const others = current.pulls.filter((p) => p.opId !== op.id)
+            return { ...current, pulls: pull ? [...others, pull] : others }
         })
-        setHasSecret(saved.data.hasSecret)
-        setOps(config.ops)
-        setPulls(config.pulls)
-        setTools(config.tools)
-        setSchedule(OPEN_API_SCHEDULES.find((s) => s.minutes === (saved.data?.syncEveryMinutes ?? null))?.id ?? "manual")
-        setLoadedKey(`${config.specUrl}|0`)
-        if (!config.specUrl) return
-        void commands.loadSpec(config.specUrl, "").then((fresh) => {
-            if (fresh.kind !== "ok") return
-            const keep = new Set([...config.pulls.map((p) => p.opId), ...config.tools])
-            setOps([
-                ...fresh.value.ops,
-                ...config.ops.filter((o) => keep.has(o.id) && !fresh.value.ops.some((f) => f.id === o.id)),
-            ])
-        })
-    }, [hydrated, saved.data, authForm, commands])
 
-    useEffect(() => {
-        if (saved.error instanceof Error) setError(saved.error.message)
-    }, [saved.error])
+    const tester = useOpenApiTest({
+        commands,
+        authForm,
+        connectionId: connId,
+        ops: draft.ops,
+        pulls: draft.pulls,
+        onPull,
+        onError: setError,
+    })
 
     const loadSpec = () =>
         startTransition(async () => {
             setError(null)
-            const answer = await commands.loadSpec(specUrl, specText)
+            const answer = await commands.loadSpec(draft.specUrl, draft.specText)
             if (answer.kind !== "ok") return setError(answer.message)
             const spec = answer.value
-            setOps(spec.ops)
-            setLoadedKey(sourceKey)
-            if (!authForm.getValues("baseUrl").trim()) authForm.setValue("baseUrl", spec.baseUrl, { shouldValidate: true })
-            if (authForm.getValues("authType") === "none" && !hasSecret) {
+            if (!authForm.getValues("baseUrl").trim())
+                authForm.setValue("baseUrl", spec.baseUrl, { shouldValidate: true })
+            if (authForm.getValues("authType") === "none" && !draft.hasSecret) {
                 authForm.setValue("authType", spec.authType, { shouldValidate: true })
                 authForm.setValue("authName", spec.authName, { shouldValidate: true })
             }
-            if (!name.trim() && spec.title) setName(spec.title)
             const ids = new Set(spec.ops.map((o) => o.id))
-            setPulls((list) => list.filter((x) => ids.has(x.opId)))
-            setTools((list) => list.filter((id) => ids.has(id)))
+            setDraft((current) => ({
+                ...current,
+                ops: spec.ops,
+                loadedKey: sourceKey,
+                name: !current.name.trim() && spec.title ? spec.title : current.name,
+                pulls: current.pulls.filter((x) => ids.has(x.opId)),
+                tools: current.tools.filter((id) => ids.has(id)),
+            }))
             go(1)
         })
-
-    const onPull = (op: OpenApiOp, pull: OpenApiPullDef | null) =>
-        setPulls((list) =>
-            pull ? [...list.filter((p) => p.opId !== op.id), pull] : list.filter((p) => p.opId !== op.id),
-        )
-
-    const authInput = () => {
-        const v = authForm.getValues()
-        return { type: v.authType, name: v.authName, value: v.authValue, user: v.authUser, password: v.authPassword }
-    }
-    const testable = useMemo(() => ops.filter(isOpenApiPullable), [ops])
-    const activeTestId = testOpId ?? pulls[0]?.opId ?? testable[0]?.id ?? null
-    const testOp = testable.find((o) => o.id === activeTestId) ?? null
-    const testPull = pulls.find((p) => p.opId === activeTestId)
-
-    const runTest = async () => {
-        if (!testOp) return
-        setTesting(true)
-        setResult(null)
-        const answer = await commands.test({
-            connectionId: connId,
-            baseUrl: authForm.getValues("baseUrl"),
-            auth: authInput(),
-            op: testOp,
-            fixedQuery: testPull ? testPull.fixedQuery : testQuery,
-            itemsPath: testPull?.itemsPath ?? "",
-        })
-        setTesting(false)
-        if (answer.kind !== "ok") return setError(answer.message)
-        setError(null)
-        setResult(answer.value)
-        const found = answer.value
-        if (testPull && found.itemCount > 0) {
-            onPull(testOp, {
-                ...testPull,
-                itemsPath: testPull.itemsPath || found.itemsPath,
-                idField: testPull.idField || found.idField,
-                titleField: testPull.titleField || found.titleField,
-            })
-        }
-    }
 
     const save = () =>
         startTransition(async () => {
             setError(null)
-            const keep = new Set([...pulls.map((p) => p.opId), ...tools])
+            const keep = new Set([...draft.pulls.map((p) => p.opId), ...draft.tools])
             const values = authForm.getValues()
             const answer = await commands.save({
                 connectionId: connId,
-                name,
-                auth: authInput(),
-                syncEveryMinutes: OPEN_API_SCHEDULES.find((s) => s.id === schedule)?.minutes ?? null,
+                name: draft.name,
+                auth: openApiAuthOf(values),
+                syncEveryMinutes: OPEN_API_SCHEDULES.find((s) => s.id === draft.schedule)?.minutes ?? null,
                 config: {
                     v: 1,
-                    specUrl: specUrl.trim(),
+                    specUrl: draft.specUrl.trim(),
                     baseUrl: values.baseUrl.trim(),
                     authType: values.authType,
                     authName: values.authName.trim(),
-                    ops: ops.filter((o) => keep.has(o.id)),
-                    pulls,
-                    tools,
+                    ops: draft.ops.filter((o) => keep.has(o.id)),
+                    pulls: draft.pulls,
+                    tools: draft.tools,
                 },
             })
             if (answer.kind !== "ok") return setError(answer.message)
             setConnId(answer.value)
-            if (pulls.length > 0) void startSync(answer.value)
+            if (draft.pulls.length > 0) void startSync(answer.value)
             if (editing) return onClose(true)
             go(index + 1)
         })
@@ -202,41 +158,38 @@ export const useOpenApiWizard = ({ resumeId, onClose }: OpenApiWizardInput) => {
         steps,
         step,
         editing,
-        error,
+        error: error ?? (saved.error instanceof Error ? saved.error.message : null),
         isPending,
-        testing,
+        testing: tester.testing,
         authForm,
         authType,
-        hasSecret,
+        hasSecret: draft.hasSecret,
         source: {
-            name,
-            specUrl,
-            specText,
-            ready: Boolean(specUrl.trim() || specText.trim()),
-            unchanged: loadedKey === sourceKey && ops.length > 0,
+            name: draft.name,
+            specUrl: draft.specUrl,
+            specText: draft.specText,
+            ready: Boolean(draft.specUrl.trim() || draft.specText.trim()),
+            unchanged: draft.loadedKey === sourceKey && draft.ops.length > 0,
         },
-        ops,
-        pulls,
-        tools,
-        schedule,
+        ops: draft.ops,
+        pulls: draft.pulls,
+        tools: draft.tools,
+        schedule: draft.schedule,
         agentIds,
         authReady: authForm.formState.isValid,
-        test: { testable, activeTestId, testOp, testPull, testQuery, result },
+        test: tester.test,
         on: {
             go,
-            setName,
-            setSpecUrl,
-            setSpecText,
+            setName: (name: string) => patch({ name }),
+            setSpecUrl: (specUrl: string) => patch({ specUrl }),
+            setSpecText: (specText: string) => patch({ specText }),
             loadSpec,
             onPull,
-            setTools,
-            setSchedule,
-            setTestOpId: (id: string | null) => {
-                setTestOpId(id)
-                setResult(null)
-            },
-            setTestQuery,
-            runTest,
+            setTools: (tools: ReadonlyArray<string>) => patch({ tools }),
+            setSchedule: (schedule: string) => patch({ schedule }),
+            setTestOpId: tester.setTestOpId,
+            setTestQuery: tester.setTestQuery,
+            runTest: tester.runTest,
             save,
             finish,
             setAgentIds,

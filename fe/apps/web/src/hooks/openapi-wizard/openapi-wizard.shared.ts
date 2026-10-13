@@ -1,4 +1,6 @@
 import { z } from "zod"
+import type { OpenApiAuthValues } from "@/hooks/rhf"
+import type { LoadOpenApiConnectionQuery } from "@/modules/api"
 
 /** The HTTP methods of an API operation. */
 export const OPEN_API_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const
@@ -10,7 +12,15 @@ export const OPEN_API_PULL_ENTITIES = ["customer", "order", "product", "transact
 /** The steps of the wizard; an existing connection skips `agent`. */
 export type OpenApiStep = "source" | "auth" | "pulls" | "tools" | "schedule" | "test" | "agent"
 /** The steps of a new connection, in order. */
-export const OPEN_API_STEPS: ReadonlyArray<OpenApiStep> = ["source", "auth", "pulls", "tools", "schedule", "test", "agent"]
+export const OPEN_API_STEPS: ReadonlyArray<OpenApiStep> = [
+    "source",
+    "auth",
+    "pulls",
+    "tools",
+    "schedule",
+    "test",
+    "agent",
+]
 /** The steps when an existing connection is edited. */
 export const OPEN_API_EDIT_STEPS: ReadonlyArray<OpenApiStep> = ["source", "auth", "pulls", "tools", "schedule", "test"]
 
@@ -36,7 +46,10 @@ const opSchema = z.object({
     summary: z.string().catch(""),
     params: z.array(paramSchema).catch([]),
     hasBody: z.boolean().catch(false),
-    suggest: z.object({ itemsPath: z.string(), idField: z.string(), titleField: z.string() }).optional().catch(undefined),
+    suggest: z
+        .object({ itemsPath: z.string(), idField: z.string(), titleField: z.string() })
+        .optional()
+        .catch(undefined),
 })
 
 const pullSchema = z.object({
@@ -80,8 +93,7 @@ const keep = <T>(schema: z.ZodType<T>, raw: ReadonlyArray<unknown>): ReadonlyArr
     })
 
 /** Narrows the `ops` DataJson of the back end into operations; anything malformed is dropped. */
-export const parseOpenApiOps = (raw: unknown): ReadonlyArray<OpenApiOp> =>
-    keep(opSchema, Array.isArray(raw) ? raw : [])
+export const parseOpenApiOps = (raw: unknown): ReadonlyArray<OpenApiOp> => keep(opSchema, Array.isArray(raw) ? raw : [])
 
 /** Narrows the `config` DataJson of the back end into a configuration; anything malformed is dropped. */
 export const parseOpenApiConfig = (raw: unknown): OpenApiConfigView => {
@@ -101,4 +113,65 @@ export const parseOpenApiConfig = (raw: unknown): OpenApiConfigView => {
 export const openApiOpLabel = (op: Pick<OpenApiOp, "method" | "path">): string => `${op.method} ${op.path}`
 
 /** A GET that can run on a schedule: no path parameter the sync cannot fill. */
-export const isOpenApiPullable = (op: OpenApiOp): boolean => op.method === "GET" && !op.params.some((p) => p.in === "path")
+export const isOpenApiPullable = (op: OpenApiOp): boolean =>
+    op.method === "GET" && !op.params.some((p) => p.in === "path")
+
+/** Everything the wizard collects before it saves: the source, the operations and what is done with them. */
+export interface OpenApiDraft {
+    readonly name: string
+    readonly specUrl: string
+    readonly specText: string
+    /** The source the operations were last read from (`specUrl|specText.length`). */
+    readonly loadedKey: string | null
+    readonly ops: ReadonlyArray<OpenApiOp>
+    readonly hasSecret: boolean
+    readonly pulls: ReadonlyArray<OpenApiPullDef>
+    readonly tools: ReadonlyArray<string>
+    readonly schedule: string
+}
+
+/** The draft of a new connection: nothing read yet, pulled on demand only. */
+export const EMPTY_OPEN_API_DRAFT: OpenApiDraft = {
+    name: "",
+    specUrl: "",
+    specText: "",
+    loadedKey: null,
+    ops: [],
+    hasSecret: false,
+    pulls: [],
+    tools: [],
+    schedule: "manual",
+}
+
+/** The auth fields of the form as the back end reads them. */
+export const openApiAuthOf = (values: OpenApiAuthValues) => ({
+    type: values.authType,
+    name: values.authName,
+    value: values.authValue,
+    user: values.authUser,
+    password: values.authPassword,
+})
+
+/** A saved connection opened for editing: its cleaned config, the auth form without secrets, and the draft it starts from. */
+export const storedOpenApiDraft = (connection: LoadOpenApiConnectionQuery["loadOpenApiConnection"]) => {
+    const config = parseOpenApiConfig(connection.config)
+    const auth: OpenApiAuthValues = {
+        baseUrl: config.baseUrl,
+        authType: config.authType,
+        authName: config.authName,
+        authValue: "",
+        authUser: connection.authUser,
+        authPassword: "",
+    }
+    const draft: Partial<OpenApiDraft> = {
+        name: connection.name,
+        specUrl: config.specUrl,
+        hasSecret: connection.hasSecret,
+        ops: config.ops,
+        pulls: config.pulls,
+        tools: config.tools,
+        schedule: OPEN_API_SCHEDULES.find((s) => s.minutes === (connection.syncEveryMinutes ?? null))?.id ?? "manual",
+        loadedKey: `${config.specUrl}|0`,
+    }
+    return { config, auth, draft }
+}
