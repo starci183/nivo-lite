@@ -1,6 +1,5 @@
-import type { BadgeTone, DescriptionListStatItem } from "@starci/grammar/common"
-import type { WorkStatus } from "@/lib/flow-types"
-import type { LeadGenMetrics, LeadScore } from "@/modules/types"
+import type { DescriptionListStatItem } from "@starci/grammar/common"
+import type { LeadGenMetrics } from "@/modules/types"
 
 /** The tabs of the Lead Gen workbench. */
 export const LEADGEN_TABS = ["leads", "sources", "comments", "handoffs"] as const
@@ -11,21 +10,6 @@ export type LeadGenTab = (typeof LEADGEN_TABS)[number]
 /** Narrows a text to a tab of the Lead Gen workbench. */
 export const leadGenTabOf = (key: string | null | undefined): LeadGenTab | null =>
     LEADGEN_TABS.find((tab) => tab === key) ?? null
-
-/** The badge tone of each score. */
-export const SCORE_TONES: Readonly<Record<LeadScore, BadgeTone>> = { hot: "danger", warm: "warning", cold: "neutral" }
-
-/** The badge tone of where the Sales step of a handed-over lead stands. */
-export const CLASSIFY_TONES: Readonly<Record<WorkStatus, BadgeTone>> = {
-    queued: "neutral",
-    done: "success",
-    waiting_decision: "warning",
-    rejected: "neutral",
-    failed: "danger",
-}
-
-/** The stages a lead can be in, as the handoff line names them. */
-export const LEAD_STAGES: ReadonlyArray<string> = ["new", "qualified", "proposal", "won", "lost"]
 
 const PERCENT = 100
 

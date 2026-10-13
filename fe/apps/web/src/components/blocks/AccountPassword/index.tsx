@@ -1,45 +1,23 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useState, useTransition } from "react"
-import { PASSWORD_MIN } from "@/hooks/account"
-import { writePassword } from "@/modules/db/account/write-password"
+import { useAccount, useChangePassword } from "@/hooks/account"
+import { usePasswordForm } from "@/hooks/rhf"
 import { AccountPasswordBase } from "./component"
 
-/** Props for the connected password card. */
-interface AccountPasswordProps {
-    /** True while the page loads: the card keeps its labels and shows skeletons. */
-    readonly isLoading?: boolean
-}
-
-/** The connected password card: checks the current password, then sets the new one through a Server Action. */
-export const AccountPassword = (props: AccountPasswordProps) => {
+/** The connected password card: checks the current password, then sets the new one through Auth (outcome toasted). */
+export const AccountPassword = () => {
     const t = useTranslations("account")
-    const [current, setCurrent] = useState("")
-    const [next, setNext] = useState("")
-    const [confirm, setConfirm] = useState("")
-    const [error, setError] = useState<string>()
-    const [done, setDone] = useState<string>()
-    const [isPending, startTransition] = useTransition()
+    const { isLoading } = useAccount()
+    const { change, isPending, error } = useChangePassword()
+    const form = usePasswordForm()
 
-    const submit = () => {
-        setError(undefined)
-        setDone(undefined)
-        if (current === "") return setError(t("errCurrent"))
-        if (next.length < PASSWORD_MIN) return setError(t("errMin"))
-        if (next !== confirm) return setError(t("errMatch"))
-        if (next === current) return setError(t("errSameAsOld"))
-        startTransition(async () => {
-            const saved = await writePassword({ current, next, confirm })
-            if (saved.kind !== "ok") {
-                if (saved.code === "wrong-current") return setError(t("errWrongCurrent"))
-                return setError(saved.code === "no-password" ? t("errNoPassword") : t("unknownError"))
-            }
-            setDone(t("passwordSaved"))
-            setCurrent("")
-            setNext("")
-            setConfirm("")
-        })
+    const submit = form.handleSubmit(async (values) => {
+        if (await change({ current: values.current, next: values.next })) form.reset()
+    })
+    const errors = form.formState.errors
+    const set = (field: "current" | "next" | "confirm") => (value: string) => {
+        form.setValue(field, value, { shouldValidate: form.formState.isSubmitted })
     }
 
     return (
@@ -52,15 +30,19 @@ export const AccountPassword = (props: AccountPasswordProps) => {
                 confirmLabel: t("confirmPassword"),
                 submitLabel: t("changePassword"),
                 failTitle: t("failTitle"),
-                current,
-                next,
-                confirm,
+                current: form.watch("current"),
+                next: form.watch("next"),
+                confirm: form.watch("confirm"),
                 isPending,
-                isLoading: props.isLoading ?? false,
-                error,
-                done,
+                isLoading,
+                error: errors.current?.message ?? errors.next?.message ?? errors.confirm?.message ?? error,
             }}
-            on={{ setCurrent, setNext, setConfirm, submit }}
+            on={{
+                setCurrent: set("current"),
+                setNext: set("next"),
+                setConfirm: set("confirm"),
+                submit: () => void submit(),
+            }}
         />
     )
 }

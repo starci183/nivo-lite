@@ -1,6 +1,5 @@
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
-import { readNivoKnowledge } from "@/modules/db"
 import { CONSOLE_ROUTES, KNOWLEDGE_ROUTES } from "@/modules/routes"
 import { KnowledgeNivoPageBase } from "./component"
 import type { KnowledgeNivoPageBaseProps } from "./component"
@@ -14,7 +13,7 @@ export const knowledgeNivoMetadata = async (): Promise<Metadata> => {
 type Translate = Awaited<ReturnType<typeof getTranslations<"knowledge">>>
 
 /** The words of the page that do not depend on its data. */
-const copyOf = (t: Translate): Omit<KnowledgeNivoPageBaseProps["props"], "items" | "isLoading"> => ({
+const copyOf = (t: Translate): KnowledgeNivoPageBaseProps["props"] => ({
     crumbLabel: t("crumbLabel"),
     crumbHome: t("crumbHome"),
     homeHref: CONSOLE_ROUTES.dashboard,
@@ -27,15 +26,14 @@ const copyOf = (t: Translate): Omit<KnowledgeNivoPageBaseProps["props"], "items"
     description: t("nivoDescription"),
 })
 
-/** The base knowledge of NIVO per module: read under RLS, read-only for every member. */
+/** The base knowledge of NIVO per module: the connected body reads it through GraphQL; read-only for every member. */
 export const KnowledgeNivoPage = async () => {
-    const [t, items] = await Promise.all([getTranslations("knowledge"), readNivoKnowledge()])
-    if (items.kind !== "ok") throw new Error(`knowledge: ${items.kind} ${items.code}`)
-    return <KnowledgeNivoPageBase props={{ ...copyOf(t), items: items.value, isLoading: false }} />
+    const t = await getTranslations("knowledge")
+    return <KnowledgeNivoPageBase props={copyOf(t)} />
 }
 
 /** The same page while its data loads. */
 export const KnowledgeNivoLoadingPage = async () => {
     const t = await getTranslations("knowledge")
-    return <KnowledgeNivoPageBase props={{ ...copyOf(t), items: [], isLoading: true }} />
+    return <KnowledgeNivoPageBase props={copyOf(t)} />
 }

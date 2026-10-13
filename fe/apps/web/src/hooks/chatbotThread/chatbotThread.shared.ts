@@ -15,6 +15,7 @@ const deliveryNoteOf = (
     message: ChatbotMessage,
     channel: ChatbotChannel,
 ): { readonly text: string; readonly tone: "accent" | "muted" } | null => {
+    if (message.delivery === null && message.authorKind === "human") return { text: t("replyQueued"), tone: "muted" }
     if (message.delivery === "sent") return { text: t(SENT_KEYS[channel]), tone: "muted" }
     if (message.delivery !== "failed") return null
     const reasonKey = message.deliveryError === null ? null : `err_${message.deliveryError}`

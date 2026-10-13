@@ -9,12 +9,11 @@ import {
     isReadyNote,
     moduleFilterOf,
     noteKeyOf,
-    useKnowledgeRealtime,
+    useKnowledgeSources,
     useLibraryCommands,
+    useWorkspaceMember,
 } from "@/hooks/knowledge"
-import type { AgentModule, LibraryActions } from "@/hooks/knowledge"
-import { writeRetrySource } from "@/modules/db/knowledge/write-retry"
-import { writeSuggestionState } from "@/modules/db/knowledge/write-suggestion"
+import type { AgentModule } from "@/hooks/knowledge"
 import { navigation } from "@/modules/i18n"
 import { KNOWLEDGE_ROUTES, knowledgeSourceHref } from "@/modules/routes"
 import type { KnowledgeRowView } from "@/components/composites/KnowledgeRows"
@@ -23,25 +22,19 @@ import { KnowledgeLibraryBase } from "./component"
 
 /** Props for the connected documents list. */
 interface KnowledgeLibraryProps {
-    readonly workspaceId: string
-    readonly sources: ReadonlyArray<KnowledgeDocument>
-    readonly canWrite: boolean
     /** The agent the list is filtered to, from the address. */
     readonly module: AgentModule | "all"
-    /** True while the page loads: the heading stays and the list is skeleton rows. */
-    readonly isLoading?: boolean
 }
 
-const ACTIONS: LibraryActions = { retry: writeRetrySource, decide: writeSuggestionState }
-
-/** The connected documents list: filters by agent through the address, follows the workers live, retries a failed document. */
+/** The connected documents list: filters by agent through the address, retries a failed document. */
 export const KnowledgeLibrary = (props: KnowledgeLibraryProps) => {
     const t = useTranslations("knowledge")
     const format = useFormatter()
     const router = navigation.useRouter()
-    const commands = useLibraryCommands(props.workspaceId, ACTIONS)
-    useKnowledgeRealtime(props.workspaceId, ["knowledge_sources"], () => router.refresh())
-    const shown = props.sources.filter((source) => props.module === "all" || source.module === props.module)
+    const commands = useLibraryCommands()
+    const member = useWorkspaceMember()
+    const { sources, isLoading } = useKnowledgeSources()
+    const shown = (sources ?? []).filter((source) => props.module === "all" || source.module === props.module)
     const rowOf = (source: KnowledgeDocument): KnowledgeRowView => {
         const parts = [
             t(`kind_${source.kind}`),
@@ -51,7 +44,7 @@ export const KnowledgeLibrary = (props: KnowledgeLibraryProps) => {
         ]
         const status = t(DOCUMENT_STATUS_KEYS[source.status])
         const canRetry =
-            props.canWrite && source.status === "failed" && source.error !== null && !isReadyNote(source.error)
+            member.canWrite && source.status === "failed" && source.error !== null && !isReadyNote(source.error)
         return {
             id: source.id,
             title: source.title,
@@ -83,11 +76,10 @@ export const KnowledgeLibrary = (props: KnowledgeLibraryProps) => {
                         title: t("listTitle"),
                         description: t("listCount", { count: shown.length }),
                         failTitle: t("detailFailed"),
-                        error: commands.isRetryFailed ? t("detailFailed") : undefined,
                     },
                     label: t("listTitle"),
                     rows: shown.map(rowOf),
-                    isLoading: props.isLoading ?? false,
+                    isLoading: isLoading || member.isLoading || sources === undefined,
                     isPending: commands.retrying.size > 0,
                     emptyTitle: t("emptyTitle"),
                     emptyBody: t("emptyBody"),

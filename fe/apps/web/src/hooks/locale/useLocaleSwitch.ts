@@ -1,7 +1,9 @@
 import { useLocale, useTranslations } from "next-intl"
 import { navigation } from "@/modules/i18n"
 import { useTransition } from "react"
-import { setLocale } from "@/i18n/actions"
+import { LOCALE_COOKIE, toLocale } from "@/i18n/core"
+
+const YEAR_SECONDS = 60 * 60 * 24 * 365
 
 /** One language the switch offers: its code, short mark and spoken name. */
 type LocaleOption = {
@@ -35,8 +37,9 @@ export const useLocaleSwitch = (): LocaleChoice => {
         isPending,
         choose: (next) => {
             if (next === locale) return
-            startTransition(async () => {
-                await setLocale(next)
+            startTransition(() => {
+                // The reader's language lives in a cookie the server reads; the URL never carries it.
+                document.cookie = `${LOCALE_COOKIE}=${toLocale(next)}; path=/; max-age=${YEAR_SECONDS}; samesite=lax`
                 router.refresh()
             })
         },

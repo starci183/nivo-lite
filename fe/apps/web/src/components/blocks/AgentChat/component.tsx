@@ -1,104 +1,77 @@
-"use client"
-
-import { useEffect, useRef, useState, type ReactNode } from "react"
-import { AgentAvatar } from "@/components/blocks/AgentAvatar"
-import { useTranslations } from "next-intl"
+import { useState } from "react"
+import { Breadcrumbs, FillViewport, Region, SurfaceCard, Tabs } from "@starci/grammar/common"
+import type { BreadcrumbItem } from "@starci/grammar/common"
+import { AgentChatComposer } from "@/components/composites/AgentChatComposer"
+import type { AgentChatComposerProps } from "@/components/composites/AgentChatComposer"
+import { AgentChatEmpty } from "@/components/composites/AgentChatEmpty"
+import type { AgentChatEmptyProps } from "@/components/composites/AgentChatEmpty"
+import { AgentChatHeader } from "@/components/composites/AgentChatHeader"
+import type { AgentChatHeaderProps } from "@/components/composites/AgentChatHeader"
+import { AgentChatMessages } from "@/components/composites/AgentChatMessages"
+import type { AgentChatMessagesProps } from "@/components/composites/AgentChatMessages"
+import { AgentChatRailHead } from "@/components/composites/AgentChatRailHead"
+import { AgentChatRailList } from "@/components/composites/AgentChatRailList"
+import type { AgentChatRailRow } from "@/components/composites/AgentChatRailList"
+import { AgentChatThread } from "@/components/composites/AgentChatThread"
+import type { AgentChatThreadProps } from "@/components/composites/AgentChatThread"
+import { PromoWelcomeBand } from "@/components/composites/PromoWelcomeBand"
+import type { PromoWelcomeBandProps } from "@/components/composites/PromoWelcomeBand"
+import { SlotView } from "@/components/composites/SlotView"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 import {
-    Alert,
-    Avatar,
-    Badge,
-    Breadcrumbs,
-    Button,
-    ChatBubble,
-    ChatBubbleSkeletons,
-    FillViewport,
-    Form,
-    Input,
-    Link,
-    ListBox,
-    SurfaceCard,
-    Tabs,
-    Text,
-    Textarea,
-} from "@starci/grammar/common"
-import {
-    BACK_CLASS_NAME,
-    FRAME_CLASS_NAME,
     CHANNEL_BAR_CLASS_NAME,
-    CHIPS_CLASS_NAME,
-    COMPOSER_CLASS_NAME,
-    COMPOSER_INPUT_CLASS_NAME,
-    COMPOSER_ROW_CLASS_NAME,
-    EMPTY_CHIPS_CLASS_NAME,
-    EMPTY_CLASS_NAME,
-    EMPTY_FIELD_CLASS_NAME,
-    HEADER_ACTIONS_CLASS_NAME,
-    HEADER_CLASS_NAME,
-    HEADER_COPY_CLASS_NAME,
+    FRAME_CLASS_NAME,
     LIST_COLUMN_CLASS_NAME,
     LIST_COLUMN_OPEN_CLASS_NAME,
-    LIST_HEAD_CLASS_NAME,
     LIST_SCROLL_CLASS_NAME,
     MAIN_CLASS_NAME,
-    NOTICE_ROW_CLASS_NAME,
-    STEP_LIST_CLASS_NAME,
-    STEP_ROW_CLASS_NAME,
-    THREAD_CLASS_NAME,
 } from "./classNames"
 
 /** Which channel the owner is looking at. */
 export type AgentChatTab = "test" | "customer"
 
-/** One resolved message row. */
-export type AgentChatMessageView = {
-    readonly id: string
-    readonly role: "user" | "agent" | "system"
-    readonly body: string
-    readonly timeLabel: string
+/** What the thread area needs to know about the open conversation. */
+interface ThreadView {
+    readonly hasSelection: boolean
 }
 
-/** One resolved row of the conversations list. */
-export type AgentChatConversationView = {
-    readonly id: string
-    readonly kind: AgentChatTab
-    readonly title: string
-    readonly kindLabel: string
-    readonly timeLabel: string
-    readonly isSelected: boolean
-    readonly hasLead: boolean
+/** The channel tabs: their label and the items, or none when the agent has no customer channel. */
+interface ChannelTabsView {
+    readonly label: string
+    readonly selectedKey: AgentChatTab
+    readonly items: ReadonlyArray<{ readonly id: string; readonly label: string }>
 }
 
 /** The data the presentational chat surface draws, already resolved. */
-export type AgentChatViewProps = {
-    /** Optional campaign banner rendered at the top of the thread (post-purchase welcome). */
-    readonly banner?: ReactNode
-    readonly agentModule?: string
-    readonly setupHref?: string
-    readonly agentName: string
-    readonly agentHandle: string
-    readonly agentRole: string
-    readonly isAgentActive: boolean
-    readonly hasCustomerChannel: boolean
-    readonly tab: AgentChatTab
-    readonly conversations: ReadonlyArray<AgentChatConversationView>
-    readonly messages: ReadonlyArray<AgentChatMessageView>
-    readonly hasSelection: boolean
-    readonly isLoadingList: boolean
-    readonly isSending: boolean
+export interface AgentChatViewProps {
+    readonly crumbLabel: string
+    readonly crumbs: ReadonlyArray<BreadcrumbItem>
+    readonly pageLabel: string
+    /** The agent is loading: the frame, the labels and the composer stay, names and rows are skeletons. */
+    readonly isLoading: boolean
+    readonly glyph: string
+    readonly module: string
+    readonly railTitle: string
+    readonly newLabel: string
     readonly isStarting: boolean
-    readonly draft: string
-    readonly visitorName: string
-    readonly error: string | null
-    readonly leadId: string | null
-    /** A human has taken the conversation over: the AI stays quiet and the composer sends as staff. */
-    readonly isTakenOver: boolean
-    readonly isTakingOver: boolean
-    /** STATE-8: the same chat while the agent and its conversations load - the frame, labels and composer stay; names, the list and the thread are skeletons. */
-    readonly isLoading?: boolean
+    readonly railSlot: DataSlot<ReadonlyArray<AgentChatRailRow>>
+    readonly railLabels: SlotLabels
+    readonly header: Omit<
+        AgentChatHeaderProps,
+        "glyph" | "module" | "onBack" | "onTakeover" | "onOpenLead" | "onToggleList"
+    >
+    readonly channelTabs: ChannelTabsView | null
+    readonly threadSlot: DataSlot<ThreadView>
+    readonly threadLabels: SlotLabels
+    readonly thread: Omit<AgentChatThreadProps, "children">
+    readonly welcome: Omit<PromoWelcomeBandProps, "onClose"> | null
+    readonly messages: Omit<AgentChatMessagesProps, "glyph" | "module" | "isSkeleton">
+    readonly empty: Omit<AgentChatEmptyProps, "glyph" | "module" | "onVisitorName" | "onPrompt" | "onStart">
+    readonly composer: Omit<AgentChatComposerProps, "onDraft" | "onPrompt" | "onSend">
 }
 
 /** What the surface asks of its owner. */
-export type AgentChatHandlers = {
+export interface AgentChatHandlers {
     readonly toggleTakeover: () => void
     readonly back: () => void
     readonly tab: (tab: AgentChatTab) => void
@@ -107,382 +80,140 @@ export type AgentChatHandlers = {
     readonly send: (prompt?: string) => void
     readonly start: () => void
     readonly select: (conversationId: string, kind: AgentChatTab) => void
-    readonly openLead: (leadId: string) => void
+    readonly openLead: () => void
+    readonly closeWelcome: () => void
 }
 
 /** Props for {@link AgentChatBase}. */
-export type AgentChatBaseProps = {
+export interface AgentChatBaseProps {
     readonly props: AgentChatViewProps
     readonly on: AgentChatHandlers
 }
 
-const CUSTOMER_PROMPTS = ["customerPrompt1", "customerPrompt2", "customerPrompt3"] as const
-const TEAM_PROMPTS = ["teamPrompt1", "teamPrompt2", "teamPrompt3"] as const
-const NEXT_STEPS = [
-    { title: "next1Title", body: "next1Body" },
-    { title: "next2Title", body: "next2Body" },
-    { title: "next3Title", body: "next3Body" },
-] as const
+const NO_ROWS: ReadonlyArray<AgentChatRailRow> = []
+const SKELETON_THREAD: ThreadView = { hasSelection: true }
 
-const Bubbles = ({ props, on }: AgentChatBaseProps) => {
-    const t = useTranslations("agentChat")
-    return (
-        <>
-            {props.messages.map((message) => {
-                if (message.role === "system") {
-                    return (
-                        <div className={NOTICE_ROW_CLASS_NAME} key={message.id}>
-                            <Text size="xs" tone="muted">
-                                {message.body}
-                            </Text>
-                        </div>
-                    )
-                }
-                const isUser = message.role === "user"
-                return (
-                    <ChatBubble
-                        key={message.id}
-                        side={isUser ? "outgoing" : "incoming"}
-                        author={isUser ? (props.tab === "test" ? t("fromYou") : t("fromVisitor")) : props.agentName}
-                        avatar={
-                            isUser ? undefined : (
-                                <AgentAvatar module={props.agentModule} size="sm" label={props.agentName} />
-                            )
-                        }
-                        meta={message.timeLabel}
-                    >
-                        {message.body}
-                    </ChatBubble>
-                )
-            })}
-            {props.isSending ? (
-                <Text size="sm" tone="muted" live="polite">
-                    {t("typing", { name: props.agentName })}
-                </Text>
-            ) : null}
-        </>
-    )
+/** The base props of the chat and the way a picked row is handled. */
+interface RailProps extends AgentChatBaseProps {
+    readonly onPick: (id: string, kind: AgentChatTab) => void
 }
 
-const EmptyThread = ({ props, on }: AgentChatBaseProps) => {
-    const t = useTranslations("agentChat")
-    const isCustomer = props.tab === "customer"
-    return (
-        <div className={EMPTY_CLASS_NAME}>
-            <AgentAvatar module={props.agentModule} size="lg" label={props.agentName} />
-            <Text weight="semibold">{t("emptyGreeting", { name: props.agentName })}</Text>
-            <Text as="p" size="sm" tone="muted">
-                {isCustomer ? t("customerEmptyHelp") : t("emptyGreetingHelp")}
-            </Text>
-            {isCustomer ? (
-                <div className={EMPTY_FIELD_CLASS_NAME}>
-                    <Input
-                        id="agent-chat-visitor"
-                        name="visitor"
-                        label={t("visitorName")}
-                        variant="secondary"
-                        value={props.visitorName}
-                        onValueChange={on.visitorName}
-                    />
-                </div>
-            ) : (
-                <div className={EMPTY_CHIPS_CLASS_NAME}>
-                    {(props.hasCustomerChannel ? CUSTOMER_PROMPTS : TEAM_PROMPTS).map((key) => (
-                        <Button
-                            key={key}
-                            variant="outline"
-                            size="sm"
-                            isDisabled={props.isSending}
-                            onPress={() => on.send(t(key))}
-                        >
-                            {t(key)}
-                        </Button>
-                    ))}
-                </div>
-            )}
-            <Button variant="primary" isPending={props.isStarting} onPress={on.start}>
-                {isCustomer ? t("startVisitor") : t("startTest")}
-            </Button>
-            {isCustomer ? (
-                <div className={STEP_LIST_CLASS_NAME}>
-                    {NEXT_STEPS.map((step, index) => (
-                        <div key={step.title} className={STEP_ROW_CLASS_NAME}>
-                            <Text weight="semibold">{String(index + 1)}</Text>
-                            <Text as="p" size="sm" tone="muted">{`${t(step.title)}. ${t(step.body)}`}</Text>
-                        </div>
-                    ))}
-                </div>
-            ) : null}
-        </div>
-    )
-}
-
-const Thread = ({ props, on }: AgentChatBaseProps) => {
-    const t = useTranslations("agentChat")
-    const endRef = useRef<HTMLDivElement>(null)
-    useEffect(() => {
-        endRef.current?.scrollIntoView({ block: "end" })
-    }, [props.messages.length, props.isSending, props.hasSelection])
-    return (
-        <div className={THREAD_CLASS_NAME} role="log" aria-label={t("messagesLabel")}>
-            {props.banner ?? null}
-            {props.isLoading ? (
-                <ChatBubbleSkeletons count={4} hasAvatar />
-            ) : props.hasSelection ? (
-                <Bubbles props={props} on={on} />
-            ) : (
-                <EmptyThread props={props} on={on} />
-            )}
-            {props.tab === "customer" && props.leadId ? (
-                <div className={NOTICE_ROW_CLASS_NAME} data-testid="handoff-notice">
-                    <Text size="xs" tone="muted">
-                        <Link href={`/leads/${props.leadId}#flow`}>{t("handoffGate")}</Link>
-                    </Text>
-                </div>
-            ) : null}
-            {props.isTakenOver ? (
-                <div className={NOTICE_ROW_CLASS_NAME} data-testid="takeover-notice">
-                    <Text size="xs" tone="muted">
-                        {t("takenOverNotice")}
-                    </Text>
-                </div>
-            ) : null}
-            <div ref={endRef} />
-        </div>
-    )
-}
-
-const Composer = ({ props, on }: AgentChatBaseProps) => {
-    const t = useTranslations("agentChat")
-    const canSend = props.draft.trim().length > 0 && !props.isSending && !props.isLoading
-    return (
-        <div className={COMPOSER_CLASS_NAME}>
-            <Form
-                label={t("composerLabel")}
-                isPending={props.isSending}
-                onSubmit={(_data, event) => {
-                    event.preventDefault()
-                    if (canSend) on.send()
-                }}
-            >
-                {props.error ? <Alert tone="negative" title={t("notSent")} description={props.error} /> : null}
-                {props.tab === "test" && props.hasSelection ? (
-                    <div className={CHIPS_CLASS_NAME}>
-                        {(props.hasCustomerChannel ? CUSTOMER_PROMPTS : TEAM_PROMPTS).map((key) => (
-                            <Button
-                                key={key}
-                                variant="outline"
-                                size="sm"
-                                isDisabled={props.isSending}
-                                onPress={() => on.send(t(key))}
-                            >
-                                {t(key)}
-                            </Button>
-                        ))}
-                    </div>
-                ) : null}
-                <div className={COMPOSER_ROW_CLASS_NAME}>
-                    {/* The Grammar Textarea owns Enter-to-send (Shift+Enter breaks the line). */}
-                    <div className={COMPOSER_INPUT_CLASS_NAME}>
-                        <Textarea
-                            id="agent-chat-message"
-                            name="message"
-                            label={t("messageLabel")}
-                            isLabelHidden
-                            variant="secondary"
-                            rows={1}
-                            isSkeleton={props.isLoading}
-                            placeholder={
-                                props.isLoading
-                                    ? t("messageLabel")
-                                    : props.isTakenOver
-                                      ? t("staffPlaceholder")
-                                      : props.tab === "customer"
-                                        ? t("widgetPlaceholder")
-                                        : t("messagePlaceholder", { name: props.agentName })
-                            }
-                            value={props.draft}
-                            onValueChange={on.draft}
-                            onSubmitShortcut={() => {
-                                if (canSend) on.send()
-                            }}
-                        />
-                    </div>
-                    <Button type="submit" variant="primary" isPending={props.isSending} isDisabled={!canSend}>
-                        {t("send")}
-                    </Button>
-                </div>
-            </Form>
-        </div>
-    )
-}
-
-type ListProps = AgentChatBaseProps & { readonly onPick: (id: string, kind: AgentChatTab) => void }
-
-const ConversationList = ({ props, on, onPick }: ListProps) => {
-    const t = useTranslations("agentChat")
-    return (
-        <>
-            <div className={LIST_HEAD_CLASS_NAME}>
-                <Text weight="semibold">{t("railTitle")}</Text>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    isDisabled={props.isLoading}
-                    isPending={props.isStarting}
-                    onPress={on.start}
-                >
-                    {props.tab === "customer" ? t("newVisitor") : t("newTest")}
-                </Button>
-            </div>
-            <div className={LIST_SCROLL_CLASS_NAME}>
-                {props.isLoading ? <ListBox label={t("railTitle")} items={[]} isLoading loadingRows={3} /> : null}
-                {!props.isLoading && !props.isLoadingList && props.conversations.length === 0 ? (
-                    <Text as="p" size="sm" tone="muted">
-                        {t("railEmptyHelp")}
-                    </Text>
-                ) : null}
-                {props.isLoading || props.conversations.length === 0 ? null : (
-                    // The Grammar ListBox owns the rows, the selected face and the keyboard model (SURFACE-4, FOCUS-2).
-                    <ListBox
-                        label={t("railTitle")}
-                        selectionMode="single"
-                        selectedIds={props.conversations.filter((item) => item.isSelected).map((item) => item.id)}
-                        onSelectionChange={(ids) => {
-                            const picked = props.conversations.find((item) => item.id === ids[0])
-                            if (picked) onPick(picked.id, picked.kind)
-                        }}
-                        items={props.conversations.map((item) => ({
-                            id: item.id,
-                            label: item.title,
-                            description: `${item.kindLabel} · ${item.timeLabel}${item.hasLead ? ` · ${t("leadCaptured")}` : ""}`,
-                            leading: <AgentAvatar module={props.agentModule} size="md" label={item.title} />,
-                        }))}
+/** The conversation rail: its head and its rows, wherever it is drawn. */
+const Rail = (props: RailProps) => (
+    <>
+        <AgentChatRailHead
+            title={props.props.railTitle}
+            newLabel={props.props.newLabel}
+            isDisabled={props.props.isLoading}
+            isStarting={props.props.isStarting}
+            onStart={props.on.start}
+        />
+        <div className={LIST_SCROLL_CLASS_NAME}>
+            <SlotView slot={props.props.railSlot} placeholder={NO_ROWS} labels={props.props.railLabels}>
+                {(rows, isSkeleton) => (
+                    <AgentChatRailList
+                        label={props.props.railTitle}
+                        rows={rows}
+                        glyph={props.props.glyph}
+                        module={props.props.module}
+                        isSkeleton={isSkeleton}
+                        onPick={props.onPick}
                     />
                 )}
-            </div>
-        </>
-    )
-}
+            </SlotView>
+        </div>
+    </>
+)
+
+/** The open conversation: its messages, or the greeting when none is open. */
+const Thread = (props: AgentChatBaseProps) => (
+    <AgentChatThread {...props.props.thread}>
+        {props.props.welcome === null ? null : (
+            <PromoWelcomeBand {...props.props.welcome} onClose={props.on.closeWelcome} />
+        )}
+        <SlotView slot={props.props.threadSlot} placeholder={SKELETON_THREAD} labels={props.props.threadLabels}>
+            {(view, isSkeleton) =>
+                view.hasSelection ? (
+                    <AgentChatMessages
+                        {...props.props.messages}
+                        glyph={props.props.glyph}
+                        module={props.props.module}
+                        isSkeleton={isSkeleton}
+                    />
+                ) : (
+                    <AgentChatEmpty
+                        {...props.props.empty}
+                        glyph={props.props.glyph}
+                        module={props.props.module}
+                        onVisitorName={props.on.visitorName}
+                        onPrompt={props.on.send}
+                        onStart={props.on.start}
+                    />
+                )
+            }
+        </SlotView>
+    </AgentChatThread>
+)
 
 /** Presentational agent chat, Zalo style: history list, then a thread that fills the page with the composer pinned at the bottom. */
-export const AgentChatBase = ({ props, on }: AgentChatBaseProps) => {
-    const t = useTranslations("agentChat")
-    const tm = useTranslations("modulesCore")
-    const ts = useTranslations("shell")
+export const AgentChatBase = (props: AgentChatBaseProps) => {
+    const view = props.props
     const [isListOpen, setIsListOpen] = useState(false)
     const onPick = (id: string, kind: AgentChatTab) => {
-        on.select(id, kind)
+        props.on.select(id, kind)
         setIsListOpen(false)
     }
     return (
         <>
-            <Breadcrumbs
-                label={ts("crumbLabel")}
-                items={[
-                    { id: "home", label: ts("crumbHome"), href: "/dashboard" },
-                    { id: "modules", label: tm("catalogTitle"), href: "/agents" },
-                    props.isLoading
-                        ? { id: "agent", label: "", isSkeleton: true as const }
-                        : { id: "agent", label: props.agentName },
-                ]}
-            />
+            <Breadcrumbs label={view.crumbLabel} items={[...view.crumbs]} />
             <FillViewport minHeight="md" bottomInset="page">
                 {/* FillViewport owns the page height below the chrome; SURFACE-2 / BOUNDARY-6: the chat is one top-level card, its
           columns are joined faces inside it. */}
-                <SurfaceCard ariaLabel={t("pageLabel")} composition="joined" height="fill">
+                <SurfaceCard ariaLabel={view.pageLabel} composition="joined" height="fill">
                     <div className={FRAME_CLASS_NAME}>
-                        <aside className={LIST_COLUMN_CLASS_NAME} aria-label={t("railTitle")}>
-                            <ConversationList props={props} on={on} onPick={onPick} />
+                        <aside className={LIST_COLUMN_CLASS_NAME} aria-label={view.railTitle}>
+                            <Rail {...props} onPick={onPick} />
                         </aside>
                         {isListOpen ? (
-                            <aside className={LIST_COLUMN_OPEN_CLASS_NAME} aria-label={t("railTitle")}>
-                                <ConversationList props={props} on={on} onPick={onPick} />
+                            <aside className={LIST_COLUMN_OPEN_CLASS_NAME} aria-label={view.railTitle}>
+                                <Rail {...props} onPick={onPick} />
                             </aside>
                         ) : null}
-                        <section
+                        <Region
                             className={MAIN_CLASS_NAME}
                             data-list={isListOpen ? "open" : "closed"}
-                            aria-label={t("pageLabel")}
+                            label={view.pageLabel}
                         >
-                            <header className={HEADER_CLASS_NAME}>
-                                <span className={BACK_CLASS_NAME}>
-                                    <Button variant="ghost" size="sm" onPress={on.back}>
-                                        {t("backModules")}
-                                    </Button>
-                                </span>
-                                {props.isLoading ? (
-                                    <Avatar name="" size="md" isSkeleton />
-                                ) : (
-                                    <AgentAvatar module={props.agentModule} size="md" label={props.agentName} />
-                                )}
-                                <div className={HEADER_COPY_CLASS_NAME}>
-                                    <Text weight="semibold" overflow="truncate" isSkeleton={props.isLoading}>
-                                        {props.agentName}
-                                    </Text>
-                                    <Text size="xs" tone="muted" overflow="truncate" isSkeleton={props.isLoading}>
-                                        {props.tab === "customer"
-                                            ? props.isTakenOver
-                                                ? t("takenOverStatus")
-                                                : t("asVisitor")
-                                            : `${props.isAgentActive ? t("statusActive") : t("statusPaused")} · ${props.agentRole}`}
-                                    </Text>
-                                </div>
-                                <div className={HEADER_ACTIONS_CLASS_NAME}>
-                                    {props.tab === "customer" ? <Badge tone="success">{t("realAiBadge")}</Badge> : null}
-                                    {props.tab === "customer" && props.hasSelection ? (
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            isPending={props.isTakingOver}
-                                            onPress={on.toggleTakeover}
-                                        >
-                                            {props.isTakenOver ? t("giveBack") : t("takeOver")}
-                                        </Button>
-                                    ) : null}
-                                    {props.leadId ? (
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onPress={() => on.openLead(props.leadId ?? "")}
-                                        >
-                                            {t("openLead")}
-                                        </Button>
-                                    ) : null}
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        isDisabled={props.isLoading}
-                                        onPress={() => setIsListOpen((open) => !open)}
-                                    >
-                                        {t("historyToggle")}
-                                    </Button>
-                                    {props.setupHref ? (
-                                        <Button variant="ghost" size="sm" href={props.setupHref}>
-                                            {t("setupLink")}
-                                        </Button>
-                                    ) : null}
-                                </div>
-                            </header>
-                            {props.hasCustomerChannel && !props.isLoading ? (
+                            <AgentChatHeader
+                                {...view.header}
+                                glyph={view.glyph}
+                                module={view.module}
+                                onBack={props.on.back}
+                                onTakeover={props.on.toggleTakeover}
+                                onOpenLead={props.on.openLead}
+                                onToggleList={() => setIsListOpen((open) => !open)}
+                            />
+                            {view.channelTabs === null ? null : (
                                 <div className={CHANNEL_BAR_CLASS_NAME}>
                                     <Tabs
                                         variant="secondary"
-                                        label={t("channelLabel")}
-                                        selectedKey={props.tab}
-                                        items={[
-                                            { id: "test", label: t("tabTest") },
-                                            { id: "customer", label: t("tabCustomer") },
-                                        ]}
-                                        onSelect={(key) => on.tab(key === "customer" ? "customer" : "test")}
+                                        label={view.channelTabs.label}
+                                        selectedKey={view.channelTabs.selectedKey}
+                                        items={[...view.channelTabs.items]}
+                                        onSelect={(key) => props.on.tab(key === "customer" ? "customer" : "test")}
                                         inset="none"
                                         labelVisibility="always"
                                     />
                                 </div>
-                            ) : null}
-                            <Thread props={props} on={on} />
-                            <Composer props={props} on={on} />
-                        </section>
+                            )}
+                            <Thread {...props} />
+                            <AgentChatComposer
+                                {...view.composer}
+                                onDraft={props.on.draft}
+                                onPrompt={props.on.send}
+                                onSend={props.on.send}
+                            />
+                        </Region>
                     </div>
                 </SurfaceCard>
             </FillViewport>

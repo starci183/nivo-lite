@@ -1,4 +1,4 @@
-import { FOUNDING_OFFER } from "@/lib/promo"
+import { FOUNDING_OFFER } from "@/modules/promo"
 
 /**
  * Commercial values shown on the landing page.
@@ -25,7 +25,7 @@ export const LANDING_ANCHORS = {
     faq: "#faq",
 } as const
 
-export { FOUNDING_OFFER, isOfferLive } from "@/lib/promo"
+export { FOUNDING_OFFER, isOfferLive } from "@/modules/promo"
 
 /** Founding 50 price: base price minus the campaign percent, rounded to the nearest thousand dong. */
 export const foundingPriceVnd = (): number =>

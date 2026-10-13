@@ -52,12 +52,3 @@ export const inviteTokenOf = (text: string): string | null => {
     if (inLink !== undefined) return inLink
     return BARE_TOKEN.test(trimmed) ? trimmed : null
 }
-
-/** The catalog keys (`onboarding` namespace) of the failure sentences of creating a workspace. */
-export type WorkspaceErrorKey = "errName" | "errSignupDisabled" | "errGeneric"
-
-/** The sentence that explains a failure code of creating a workspace. */
-export const workspaceErrorKey = (code: string): WorkspaceErrorKey => {
-    if (code === "WORKSPACES_SIGNUP_DISABLED") return "errSignupDisabled"
-    return code === "WORKSPACES_NAME_INVALID" ? "errName" : "errGeneric"
-}

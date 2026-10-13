@@ -2,6 +2,8 @@ import { createContext } from "react"
 
 /** The signed-in member as client components need it (plain data: the server enforces every rule again). */
 export type ShellMember = {
+    /** The workspace the member works in. */
+    readonly workspaceId: string
     readonly userId: string
     readonly name: string
     readonly role: "owner" | "manager" | "staff"

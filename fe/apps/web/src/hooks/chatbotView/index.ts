@@ -1,1 +1,1 @@
-export { listViewOf, sideViewOf, threadViewOf } from "./chatbotView.shared"
+export { useChatbotInbox } from "./useChatbotInbox"

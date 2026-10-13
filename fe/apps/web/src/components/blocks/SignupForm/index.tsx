@@ -3,15 +3,14 @@
 import { useState, useTransition } from "react"
 import { useTranslations } from "next-intl"
 import {
-    EMAIL_PATTERN,
-    NAME_MIN_LENGTH,
-    PASSWORD_MIN_LENGTH,
     authErrorKey,
     passwordStrength,
     strengthKey,
     useResendEmail,
     useAuthActions,
+    useRedirectWhenSignedIn,
 } from "@/hooks/auth"
+import { useSignupForm } from "@/hooks/rhf"
 import { navigation } from "@/modules/i18n"
 import { loginPath } from "@/modules/routes"
 import { SignupFormBase } from "./component"
@@ -24,21 +23,13 @@ type SignupFormProps = {
     readonly initialEmail?: string
 }
 
-type Fields = { readonly name: string; readonly email: string; readonly password: string; readonly confirm: string }
-type Errors = Partial<Record<keyof Fields, string>>
-
 /** Sign-up: name, e-mail, password with a strength hint, then the "check your email" screen. */
 export const SignupForm = (props: SignupFormProps) => {
     const auth = useAuthActions()
+    useRedirectWhenSignedIn(props.next)
     const t = useTranslations("auth")
     const router = navigation.useRouter()
-    const [fields, setFields] = useState<Fields>({
-        name: "",
-        email: props.initialEmail ?? "",
-        password: "",
-        confirm: "",
-    })
-    const [errors, setErrors] = useState<Errors>({})
+    const form = useSignupForm(props.initialEmail)
     const [failure, setFailure] = useState<string>()
     const [sentTo, setSentTo] = useState<string | null>(null)
     const [isPending, startTransition] = useTransition()
@@ -50,21 +41,14 @@ export const SignupForm = (props: SignupFormProps) => {
         resendLabel: t("resend"),
         waitLabel: (seconds) => t("resendWait", { seconds }),
     })
-    const set = (key: keyof Fields) => (value: string) => {
-        setFields((current) => ({ ...current, [key]: value }))
+    const set = (key: "name" | "email" | "password" | "confirm") => (value: string) => {
+        form.setValue(key, value, { shouldValidate: form.formState.isSubmitted })
     }
 
-    const submit = () => {
-        const found: { -readonly [key in keyof Fields]?: string } = {}
-        if (fields.name.trim().length < NAME_MIN_LENGTH) found.name = t("errName")
-        if (!EMAIL_PATTERN.test(fields.email.trim())) found.email = t("errEmail")
-        if (fields.password.length < PASSWORD_MIN_LENGTH) found.password = t("errPasswordShort")
-        if (fields.confirm !== fields.password) found.confirm = t("errPasswordMismatch")
-        setErrors(found)
+    const submit = form.handleSubmit((values) => {
         setFailure(undefined)
-        if (Object.keys(found).length > 0) return
         startTransition(async () => {
-            const outcome = await auth.signUp({ ...fields, next: props.next })
+            const outcome = await auth.signUp({ ...values, next: props.next })
             if (outcome.kind !== "ok") {
                 setFailure(t(authErrorKey(outcome.code)))
                 return
@@ -74,10 +58,13 @@ export const SignupForm = (props: SignupFormProps) => {
                 router.refresh()
                 return
             }
-            setSentTo(fields.email.trim().toLowerCase())
+            setSentTo(values.email.trim().toLowerCase())
             resending.arm()
         })
-    }
+    })
+
+    const fields = form.watch()
+    const errors = form.formState.errors
 
     const loginHref = loginPath(props.next)
     return (
@@ -104,10 +91,10 @@ export const SignupForm = (props: SignupFormProps) => {
                 email: fields.email,
                 password: fields.password,
                 confirm: fields.confirm,
-                nameError: errors.name,
-                emailError: errors.email,
-                passwordError: errors.password,
-                confirmError: errors.confirm,
+                nameError: errors.name?.message,
+                emailError: errors.email?.message,
+                passwordError: errors.password?.message,
+                confirmError: errors.confirm?.message,
                 isPending,
                 sentTitle: t("checkTitle"),
                 check: {
@@ -127,7 +114,7 @@ export const SignupForm = (props: SignupFormProps) => {
                 setEmail: set("email"),
                 setPassword: set("password"),
                 setConfirm: set("confirm"),
-                submit,
+                submit: () => void submit(),
             }}
         />
     )
