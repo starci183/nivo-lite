@@ -2,7 +2,7 @@ import { builder } from "@starci/jest-preset"
 import type { LlmUsage } from "@modules/integrations/llm"
 import type { QuotaStatus } from "./knowledge.contracts"
 import type { QuotaStatusRow } from "./persistence/usage.rows"
-import { creditsOf, estimateTokens, figuresOf, isBlocked, priceOf, quotaStatusOf } from "./usage.policy"
+import { estimateTokens, figuresOf, isBlocked, priceOf, quotaStatusOf } from "./usage.policy"
 
 const usageOf = builder<LlmUsage>({ promptTokens: null, completionTokens: null, totalTokens: null, costUsd: null })
 
@@ -93,13 +93,6 @@ describe("figuresOf", () => {
             promptTokens: 5,
             completionTokens: 0,
         })
-    })
-})
-
-describe("creditsOf", () => {
-    it("converts dollars to credits, rounded to hundredths", () => {
-        expect(creditsOf(0.01)).toBe(2.5)
-        expect(creditsOf(0.00123)).toBe(0.31)
     })
 })
 

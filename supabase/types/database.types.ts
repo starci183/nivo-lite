@@ -1,4 +1,4 @@
-// migrations-sha256: 1bc575834059f661815d403d438c7fd136bde39a4bf3285897303019c2efc2a5
+// migrations-sha256: a83948dbcf5be3232fa8122f38b2e27a7f405595f0cf51cecb4fcb61fb304d5c
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -1152,6 +1152,31 @@ isOneToOne: false
       referencedColumns: ["id"]
     },{
       foreignKeyName: "contracts_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"credit_pack_purchases": {
+                  Row: {
+                    "credits": number,"id": string,"order_id": string,"period": string,"price_vnd": number,"purchased_at": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "credits": number,"id"?: string,"order_id": string,"period": string,"price_vnd": number,"purchased_at"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "credits"?: number,"id"?: string,"order_id"?: string,"period"?: string,"price_vnd"?: number,"purchased_at"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "credit_pack_purchases_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: true
+      referencedRelation: "payment_orders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "credit_pack_purchases_workspace_id_fkey"
       columns: ["workspace_id"]
 isOneToOne: false
       referencedRelation: "workspaces"

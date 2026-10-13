@@ -10,6 +10,7 @@ import { toPaymentOrder } from "./payment-orders.mapper"
 import type { OrderRow } from "./persistence/payment-orders.rows"
 import {
     INSERT_PAYMENT_ORDER,
+    SELECT_OPEN_CREDIT_PACK_ORDER,
     SELECT_OPEN_PLAN_ORDER,
     SELECT_OPEN_TOPUP_ORDER,
     SELECT_OPEN_UPGRADE_ORDER,
@@ -82,8 +83,18 @@ export class PaymentOrdersService {
         return this.findOpen("upgrade", query)
     }
 
-    private async findOpen(kind: "topup" | "upgrade", query: OpenOrderQuery): Promise<OrderLookup> {
-        const statement = kind === "topup" ? SELECT_OPEN_TOPUP_ORDER : SELECT_OPEN_UPGRADE_ORDER
+    /** The pending, unexpired add-on pack order that already asks for exactly these credits and amount. */
+    findOpenCreditPack(query: OpenOrderQuery): Promise<OrderLookup> {
+        return this.findOpen("credit_pack", query)
+    }
+
+    private async findOpen(kind: "topup" | "upgrade" | "credit_pack", query: OpenOrderQuery): Promise<OrderLookup> {
+        const statements = {
+            topup: SELECT_OPEN_TOPUP_ORDER,
+            upgrade: SELECT_OPEN_UPGRADE_ORDER,
+            credit_pack: SELECT_OPEN_CREDIT_PACK_ORDER,
+        }
+        const statement = statements[kind]
         const [row] = await this.entityManager.query<Array<OrderRow>>(statement, [
             query.workspaceId,
             query.target,

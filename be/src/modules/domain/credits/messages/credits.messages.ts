@@ -4,6 +4,7 @@ import type { MessageBundle } from "@modules/platform/i18n"
 export const CREDITS_MESSAGES: MessageBundle = {
     vi: {
         "errors.CREDITS_PACK_NOT_FOUND": "G\u00f3i credit n\u00e0y kh\u00f4ng c\u00f2n b\u00e1n.",
+        "errors.CREDITS_USE_PACKS": "Gói hiện tại dùng gói credit mua thêm của chính gói, không dùng gói nạp cũ.",
         "errors.CREDITS_WORKSPACE_NOT_ACTIVE":
             "Workspace ch\u01b0a ho\u1ea1t \u0111\u1ed9ng n\u00ean ch\u01b0a th\u1ec3 mua th\u00eam.",
         "errors.CREDITS_PLAN_NOT_FOUND":
@@ -17,6 +18,7 @@ export const CREDITS_MESSAGES: MessageBundle = {
     },
     en: {
         "errors.CREDITS_PACK_NOT_FOUND": "This credit pack is no longer on sale.",
+        "errors.CREDITS_USE_PACKS": "Your plan uses its own add-on credit packs, not the old top-up packs.",
         "errors.CREDITS_WORKSPACE_NOT_ACTIVE": "The workspace is not active, so it cannot buy more yet.",
         "errors.CREDITS_PLAN_NOT_FOUND": "The current plan of the workspace was not found.",
         "errors.CREDITS_NOT_UPGRADE": "You can only upgrade to a higher plan.",

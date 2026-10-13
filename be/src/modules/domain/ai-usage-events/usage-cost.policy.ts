@@ -1,10 +1,13 @@
 import type { ProviderUsage, UsageFigures, UsageInput } from "./ai-usage-events.contracts"
 
 /**
- * Credits per USD of model cost: 1 credit sells for 0.01 USD (100 per USD) and the token cost is at most 40% of the sale
- * (x 2.5), a 60% gross margin on tokens at par. Mirrors round(cost_usd * 250, 2) in ai_quota_status.
+ * A credit is defined in dollars of token usage: 1 credit = 0.00113 USD of model token cost (= 1/885). Mirrors
+ * billing_config.credit_usd_value, which ai_credit_period divides by. Derived as
+ *     min revenue per included credit (49 VND = Start 490,000 / 10,000) x (1 - 0.40 target margin) / 26,000 VND per USD = 0.001131
+ * so every plan keeps a 40% gross margin on token cost. The inputs (margin, exchange rate) are only documentation: change the
+ * definition in billing_config and here together.
  */
-export const CREDITS_PER_USD = 250
+export const CREDIT_USD_VALUE = 0.00113
 
 /** USD per 1M tokens, used only when the provider returns no cost. Approximate list prices, not a contract. */
 const PRICES: ReadonlyArray<{ readonly match: string; readonly in: number; readonly out: number }> = [
@@ -24,8 +27,8 @@ export const priceOf = (model: string, promptTokens: number, completionTokens: n
 /** Rough token count when the provider sent none (Vietnamese is about 3 characters per token). */
 export const estimateTokens = (chars: number): number => Math.max(1, Math.ceil(chars / 3))
 
-/** Credits a model cost spends (two decimals, like the database). */
-export const creditsOf = (costUsd: number): number => Math.round(costUsd * CREDITS_PER_USD * 100) / 100
+/** Credits a model cost spends: tokens x the model's USD price per token (costUsd) over the USD value of a credit, rounded up like the database. */
+export const creditsOf = (costUsd: number): number => Math.ceil(costUsd / CREDIT_USD_VALUE)
 
 const countOf = (value: number | undefined): number | null =>
     typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null
