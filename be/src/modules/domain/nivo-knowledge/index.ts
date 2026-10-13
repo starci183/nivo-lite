@@ -1,3 +1,5 @@
-export type { NivoItemInput } from "./nivo-knowledge.contracts"
+export { NIVO_KNOWLEDGE_ERROR_KINDS } from "./errors/nivo-knowledge.error"
+export { NIVO_KNOWLEDGE_MESSAGES } from "./messages/nivo-knowledge.messages"
+export { CORE_FOLDER } from "./nivo-item.policy"
 export { NivoKnowledgeModule } from "./nivo-knowledge.module"
-export { NivoKnowledgeService } from "./nivo-knowledge.service"
+export { NivoSeedService } from "./nivo-seed.service"

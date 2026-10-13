@@ -122,3 +122,6 @@ export interface LessonDecision {
 
 /** What reading the facts of one document did. */
 export type FactsOutcome = "done" | "skipped" | "blocked" | "failed"
+
+/** What running one command did. */
+export type CommandOutcome = "done" | "skipped" | "failed"

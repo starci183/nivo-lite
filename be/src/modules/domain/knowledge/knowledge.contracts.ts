@@ -112,18 +112,6 @@ export interface DriveAccessSource {
     forWorkspace(workspaceId: string): MaybeDriveAccess
 }
 
-/** What publishing the base knowledge did. */
-export interface NivoSeedResult {
-    /** Items written for the first time. */
-    readonly inserted: number
-    /** Items that already existed (changed or not). */
-    readonly updated: number
-    /** Items removed because the folder no longer has them. */
-    readonly removed: number
-    /** Items given a vector. */
-    readonly embedded: number
-}
-
 /** The shape of the passages the lens may read. */
 export interface Lens {
     /** The workspace. */

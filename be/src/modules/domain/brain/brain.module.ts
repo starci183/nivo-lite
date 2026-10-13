@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
+import { BrainCommandRunnerService } from "./brain-command-runner.service"
 import { BrainLearningService } from "./brain-learning.service"
 import { BrainService } from "./brain.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./brain.module-definition"
@@ -14,8 +15,8 @@ export class BrainModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), BrainService, BrainLearningService, DocumentFactsService, ModelJsonService],
-            exports: [BrainService, BrainLearningService, DocumentFactsService],
+            providers: [...(base.providers ?? []), BrainService, BrainLearningService, BrainCommandRunnerService, DocumentFactsService, ModelJsonService],
+            exports: [BrainCommandRunnerService, BrainService, BrainLearningService, DocumentFactsService],
         }
     }
 }

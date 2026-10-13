@@ -1,4 +1,4 @@
-// migrations-sha256: 224a40a4abdd7b14b056ce1084959031f4c94cd7af320187d304e167f84a34bd
+// migrations-sha256: 52275be4a99da3c5330b5108f30ed0cf42576277abc56687553740c9b2f8c092
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -731,6 +731,25 @@ isOneToOne: false
       referencedColumns: ["id"]
     },{
       foreignKeyName: "bookings_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"brain_commands": {
+                  Row: {
+                    "created_at": string,"error_code": string | null,"finished_at": string | null,"id": string,"kind": string,"payload": NonNullable<Json>,"requested_by": string,"result": Json | null,"status": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"error_code"?: string | null,"finished_at"?: string | null,"id"?: string,"kind": string,"payload"?: NonNullable<Json>,"requested_by": string,"result"?: Json | null,"status"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"error_code"?: string | null,"finished_at"?: string | null,"id"?: string,"kind"?: string,"payload"?: NonNullable<Json>,"requested_by"?: string,"result"?: Json | null,"status"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "brain_commands_workspace_id_fkey"
       columns: ["workspace_id"]
 isOneToOne: false
       referencedRelation: "workspaces"
@@ -3810,6 +3829,9 @@ isOneToOne: false
                            },
 "knowledge_fold":
 { Args: { "t": string }; Returns: string
+                           },
+"brain_command":
+{ Args: { "p_kind": string,"p_payload": Json,"p_workspace": string }; Returns: string
                            },
 "knowledge_retry_source":
 { Args: { "p_source": string }; Returns: string

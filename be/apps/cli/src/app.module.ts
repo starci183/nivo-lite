@@ -6,6 +6,10 @@ import { CliModule } from "@features/cli"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import { WorkspacesModule } from "@modules/domain/workspaces"
 import { SeedSecretsFileClient, WorkspaceSeedModule } from "@modules/domain/workspace-seed"
+import { CORE_FOLDER, NIVO_KNOWLEDGE_MESSAGES, NivoKnowledgeModule } from "@modules/domain/nivo-knowledge"
+import { LlmModule } from "@modules/integrations/llm"
+import { HttpModule } from "@modules/platform/http"
+import { I18nModule } from "@modules/platform/i18n"
 import { SUPABASE_ACCOUNTS, SUPABASE_AUTH, SupabaseModule } from "@modules/integrations/supabase"
 import { AuthorityActionsModule } from "@modules/domain/authority-actions"
 import { MODULE_CATALOG, MODULE_CATEGORIES, ModulesModule } from "@modules/domain/modules"
@@ -30,6 +34,14 @@ export class AppModule {
                 DatabaseModule.register({
                     isGlobal: true,
                     connections: options.connections,
+                }),
+                I18nModule.register({ isGlobal: true, bundles: [NIVO_KNOWLEDGE_MESSAGES] }),
+                HttpModule.register({ isGlobal: true }),
+                LlmModule.register({ isGlobal: true, ...options.llm }),
+                NivoKnowledgeModule.register({
+                    isGlobal: true,
+                    folders: [CORE_FOLDER, ...MODULE_CATALOG.map((module) => module.knowledgeFolder)],
+                    dir: "fe/apps/web/resources/nivo-knowledge",
                 }),
                 SupabaseModule.register({ isGlobal: true, ...options.supabase }),
                 WorkspaceMembersModule.register({ isGlobal: true, accounts: SUPABASE_AUTH }),

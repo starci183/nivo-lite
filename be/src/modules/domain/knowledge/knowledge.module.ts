@@ -7,7 +7,6 @@ import { KnowledgeJobsService } from "./knowledge-jobs.service"
 import { KnowledgeReembedService } from "./knowledge-reembed.service"
 import { KnowledgeSearchService } from "./knowledge-search.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./knowledge.module-definition"
-import { NivoSeedService } from "./nivo-seed.service"
 import { SourceReaderService } from "./source-reader.service"
 import { UsageMeterService } from "./usage-meter.service"
 
@@ -29,7 +28,6 @@ export class KnowledgeModule extends ConfigurableModuleClass {
                 KnowledgeJobsService,
                 KnowledgeReembedService,
                 KnowledgeSearchService,
-                NivoSeedService,
             ],
             exports: [
                 UsageMeterService,
@@ -39,7 +37,6 @@ export class KnowledgeModule extends ConfigurableModuleClass {
                 KnowledgeJobsService,
                 KnowledgeReembedService,
                 KnowledgeSearchService,
-                NivoSeedService,
             ],
         }
     }

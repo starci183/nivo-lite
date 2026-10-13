@@ -53,3 +53,63 @@ $$;
 drop trigger if exists knowledge_sources_visibility_sync on public.knowledge_sources;
 create trigger knowledge_sources_visibility_sync after update of visibility, module on public.knowledge_sources
   for each row execute function public.knowledge_chunk_visibility_sync();
+
+-- ---------------------------------------------------------------- the brain finds what a document contributed
+-- Withdrawing a changed or deleted document looks facts up by their document evidence (evidence @> '[{"kind":"document","ref":...}]').
+create index if not exists brain_facts_evidence on public.brain_facts using gin (evidence jsonb_path_ops);
+
+-- ---------------------------------------------------------------- commands from the Second Brain and Knowledge pages
+-- The web app cannot call the back end. A page that needs the back end (the facts logic, the model, Google Drive, the withdrawal of a
+-- deleted document's facts) writes a command through brain_command(); a back end job (knowledge queue, job brain.command) carries it
+-- out as the person who asked and closes the row with a result or a stored error code, which the page reads through its own policy.
+create table if not exists public.brain_commands (
+  id uuid primary key default gen_random_uuid(),
+  workspace_id uuid not null references public.workspaces (id) on delete cascade,
+  requested_by uuid not null,
+  kind text not null check (kind in (
+    'fact.save', 'fact.decide', 'fact.keep', 'lesson.save', 'lesson.decide', 'gap.dismiss', 'brain.maintain', 'lessons.mine',
+    'source.delete', 'source.reindex', 'source.update', 'knowledge.reembed', 'knowledge.ask', 'drive.linked', 'drive.picked'
+  )),
+  payload jsonb not null default '{}'::jsonb,       -- a Drive command carries the short-lived Picker token here until the job has run
+  status text not null default 'queued' check (status in ('queued', 'running', 'done', 'failed')),
+  result jsonb,
+  error_code text,
+  created_at timestamptz not null default now(),
+  finished_at timestamptz
+);
+create index if not exists brain_commands_ws on public.brain_commands (workspace_id, created_at desc);
+alter table public.brain_commands enable row level security;
+drop policy if exists "brain_commands_authenticated_select" on public.brain_commands;
+create policy "brain_commands_authenticated_select" on public.brain_commands for select to authenticated using (requested_by = auth.uid());
+
+grant select, insert, update, delete on table public.brain_commands to app_be;
+drop policy if exists "brain_commands_app_be_select" on public.brain_commands;
+create policy "brain_commands_app_be_select" on public.brain_commands for select to app_be using (workspace_id is not null);
+drop policy if exists "brain_commands_app_be_insert" on public.brain_commands;
+create policy "brain_commands_app_be_insert" on public.brain_commands for insert to app_be with check (workspace_id is not null);
+drop policy if exists "brain_commands_app_be_update" on public.brain_commands;
+create policy "brain_commands_app_be_update" on public.brain_commands for update to app_be using (workspace_id is not null) with check (workspace_id is not null);
+drop policy if exists "brain_commands_app_be_delete" on public.brain_commands;
+create policy "brain_commands_app_be_delete" on public.brain_commands for delete to app_be using (workspace_id is not null);
+
+/** Writes a command and queues its job in one transaction. A member may ask; the job proves the role the command needs again. */
+create or replace function public.brain_command(p_workspace uuid, p_kind text, p_payload jsonb)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_id uuid;
+begin
+  if auth.uid() is null or not public.is_member(p_workspace) then
+    raise exception 'not allowed' using errcode = '42501';
+  end if;
+  insert into public.brain_commands (workspace_id, requested_by, kind, payload)
+  values (p_workspace, auth.uid(), p_kind, coalesce(p_payload, '{}'::jsonb))
+  returning id into v_id;
+  perform public.job_enqueue(p_workspace, 'knowledge', 'brain.command', jsonb_build_object('commandId', v_id, 'workspaceId', p_workspace), 'brain.command:' || v_id);
+  return v_id;
+end $$;
+revoke execute on function public.brain_command(uuid, text, jsonb) from public;
+grant execute on function public.brain_command(uuid, text, jsonb) to authenticated;

@@ -8,6 +8,10 @@ export enum BrainLogEvent {
     GapsFailed = "brain.gaps.resolve_failed",
     /** Text in a model answer looked like JSON but did not parse. */
     AnswerUnreadable = "brain.model.answer_unreadable",
+    /** A command job ended; the outcome says how. */
+    CommandRan = "brain.command.ran",
+    /** A command was refused by the services; the row carries the stored code. */
+    CommandRefused = "brain.command.refused",
     /** A job arrived with a payload of another shape and was dropped. */
     PayloadRefused = "brain.job.payload_refused",
 }
