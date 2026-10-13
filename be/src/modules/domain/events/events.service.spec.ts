@@ -16,9 +16,14 @@ describe("EventsService", () => {
         it("appends the line to the workspace evidence log", async () => {
             const em = mockEntityManager({ query: [INSERT_EVENT, []] })
 
-            await (
-                await build(em)
-            ).record({ workspaceId: "ws-1", kind: "member.invited", actor: "Chu", summary: "an@example.test" })
+            await expect(
+                (await build(em)).record({
+                    workspaceId: "ws-1",
+                    kind: "member.invited",
+                    actor: "Chu",
+                    summary: "an@example.test",
+                }),
+            ).resolves.toBeUndefined()
 
             expect(em.query).toHaveBeenCalledWith(INSERT_EVENT, [
                 "ws-1",

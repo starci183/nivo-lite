@@ -1,10 +1,9 @@
 import { Test } from "@nestjs/testing"
-import { fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
-import type { MockEntityManager, RecordingQueueOutbox } from "@starci/jest-preset"
+import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import type { MockEntityManager } from "@starci/jest-preset"
 import { ApiKeysService } from "@modules/domain/api-keys"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { QUEUE_OUTBOX } from "@modules/platform/queue"
-import { PUBLIC_API_QUEUE, PublicApiQueue } from "@modules/queues/public-api"
+import { PublicApiQueue } from "@modules/queues/public-api"
 import { PublicApiErrorCode } from "./errors/public-api.error"
 import type { AcceptMessageParams } from "./public-api.contracts"
 import { PublicMessagesService } from "./public-messages.service"
@@ -26,19 +25,19 @@ const MESSAGE: AcceptMessageParams = {
 const RECORDED = { id: "request-1", lead_id: null, inserted: true }
 
 const build = async (entityManager: MockEntityManager) => {
-    const outbox: RecordingQueueOutbox = recordingQueueOutbox()
+    const queue = mock<PublicApiQueue>()
+    queue.enqueueRequest.mockResolvedValue(undefined)
     const keys = mock<ApiKeysService>()
     keys.authenticate.mockResolvedValue(WHO)
     const moduleRef = await Test.createTestingModule({
         providers: [
             PublicMessagesService,
-            PublicApiQueue,
+            { provide: PublicApiQueue, useValue: queue },
             { provide: ApiKeysService, useValue: keys },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
-            { provide: QUEUE_OUTBOX, useValue: outbox },
         ],
     }).compile()
-    return { service: moduleRef.get(PublicMessagesService), outbox, keys }
+    return { service: moduleRef.get(PublicMessagesService), queue, keys }
 }
 
 describe("PublicMessagesService", () => {
@@ -52,7 +51,7 @@ describe("PublicMessagesService", () => {
                     ],
                 }),
             )
-            const { service, outbox, keys } = await build(tx.em)
+            const { service, queue, keys } = await build(tx.em)
 
             await expect(service.acceptMessage(MESSAGE)).resolves.toEqual({
                 conversationId: "conv-1",
@@ -75,10 +74,11 @@ describe("PublicMessagesService", () => {
                     source: "api:n8n",
                 }),
             ])
-            expect(outbox.jobsOf(PUBLIC_API_QUEUE)).toEqual([
-                { queue: PUBLIC_API_QUEUE, payload: { requestId: "request-1", workspaceId: "workspace-1" } },
-            ])
-            expect(outbox.allInTransaction).toBe(true)
+            expect(queue.enqueueRequest).toHaveBeenCalledWith(
+                { requestId: "request-1", workspaceId: "workspace-1" },
+                expect.any(Object),
+            )
+            expect(tx.commits).toBe(1)
         })
 
         it("finds the latest conversation of a customer and keys a request without an idempotency key by nothing", async () => {
@@ -120,25 +120,25 @@ describe("PublicMessagesService", () => {
                     ],
                 }),
             )
-            const { service, outbox } = await build(tx.em)
+            const { service, queue } = await build(tx.em)
 
             await expect(service.acceptMessage(MESSAGE)).resolves.toEqual({
                 conversationId: "conv-1",
                 status: "queued",
             })
 
-            expect(outbox.jobs).toEqual([])
+            expect(queue.enqueueRequest).not.toHaveBeenCalled()
         })
 
         it("refuses a conversation of another workspace and queues nothing", async () => {
             const tx = fakeTransaction(mockEntityManager({ query: [SELECT_CONVERSATION, []] }))
-            const { service, outbox } = await build(tx.em)
+            const { service, queue } = await build(tx.em)
 
             await expect(service.acceptMessage(MESSAGE)).rejects.toMatchObject({
                 code: PublicApiErrorCode.ConversationNotFound,
             })
 
-            expect(outbox.jobs).toEqual([])
+            expect(queue.enqueueRequest).not.toHaveBeenCalled()
             expect(tx.rollbacks).toBe(1)
         })
 
