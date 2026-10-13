@@ -266,3 +266,13 @@ export type {
 } from "./office-slots"
 
 export type { SetupWriteDecided, SetupWriteInstance, SetupWriteProposal, SetupWriteWords } from "./setup-write"
+export type {
+    DbColumnInfo,
+    DbEngine,
+    DbEntity,
+    DbPreviewRows,
+    DbSavedConnection,
+    DbTableInfo,
+    DbTableMapping,
+    DbTarget,
+} from "./database-wizard"

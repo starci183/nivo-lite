@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useTransition } from "react"
+import { useState } from "react"
 import {
     Alert,
     Button,
@@ -15,81 +15,85 @@ import {
 import { useT } from "@/i18n/client"
 import { connectorCsv } from "@/i18n/dict/connectorCsv"
 import { useSetConnectionAgents } from "@/hooks/connections"
-import { loadCsvImport, previewCsvSource, runCsvImport, runDocumentImport } from "@/lib/connectors/csv-import-actions"
+import {
+    MAX_FILE_BYTES,
+    NO_COLUMN,
+    SCHEDULES,
+    TABLE_ENTITIES,
+    useCsvImportCommands,
+    useCsvImportResume,
+} from "@/hooks/csv-import-wizard"
+import type {
+    CsvEntity,
+    CsvImportResult,
+    CsvMapping,
+    CsvPreview,
+    CsvSavedImport,
+    CsvSource,
+    CsvSourceArg,
+} from "@/hooks/csv-import-wizard"
+import { useCsvImportForm } from "@/hooks/rhf"
 import { AgentStep } from "../AgentStep"
 import { FIELDS_CLASS } from "../classNames"
 import { WizardFrame } from "../WizardFrame"
 import { emptyGrid, gridFromText, gridHasRows, MAX_GRID_ROWS, type Grid } from "./csv/grid"
 import { GridEditor } from "./csv/GridEditor"
 import {
-    MAX_FILE_BYTES,
-    NO_COLUMN,
-    SCHEDULES,
-    TABLE_ENTITIES,
-    type CsvEntity,
-    type CsvImportResult,
-    type CsvMapping,
-    type CsvPreview,
-    type CsvSavedImport,
-    type CsvSource,
-} from "./csv/types"
+    STARTER_KEY,
+    starterColumns,
+    DOC_STEPS,
+    ENTITY_KEY,
+    SCHEDULE_KEY,
+    SOURCES,
+    SOURCE_KEY,
+    TABLE_STEPS,
+    entityOf,
+} from "./csv/csv-options"
+import type { Note, Step } from "./csv/csv-options"
 import type { DataWizardProps } from "./types"
-
-type Step = "source" | "data" | "docs" | "map" | "import" | "agent"
-type Note = { readonly tone: "affirmative" | "negative" | "informative"; readonly text: string }
-
-const TABLE_STEPS: ReadonlyArray<Step> = ["source", "data", "map", "import", "agent"]
-const DOC_STEPS: ReadonlyArray<Step> = ["source", "docs", "import", "agent"]
-const SOURCES: ReadonlyArray<CsvSource> = ["file", "sheet", "manual", "document"]
-const DEFAULT_COLUMNS: Record<string, ReadonlyArray<string>> = {
-    customer: ["Họ tên", "SĐT", "Email", "Địa chỉ"],
-    order: ["Mã đơn", "Khách hàng", "Ngày", "Tổng tiền"],
-    product: ["Mã", "Tên sản phẩm", "Giá", "Tồn kho"],
-    transaction: ["Mã", "Ngày", "Nội dung", "Số tiền"],
-    other: ["Mã", "Tên", "Ghi chú"],
-}
-
-const SOURCE_KEY = {
-    file: ["sourceFile", "sourceFileBody"],
-    sheet: ["sourceSheet", "sourceSheetBody"],
-    manual: ["sourceManual", "sourceManualBody"],
-    document: ["sourceDocument", "sourceDocumentBody"],
-} as const
-const ENTITY_KEY = {
-    customer: "entityCustomer",
-    order: "entityOrder",
-    product: "entityProduct",
-    transaction: "entityTransaction",
-    other: "entityOther",
-} as const
-const SCHEDULE_KEY = { "": "scheduleManual", "60": "schedule60", "360": "schedule360", "1440": "schedule1440" } as const
 
 /**
  * Setup of a csv_import data connection (owner only): name and kind of rows, the source (file, Google Sheets link, typed or pasted
- * table, documents), the column mapping with a preview, the import itself, and the agents that may read it. Every file is parsed on
- * the server. With `resumeId` it adds more data to an existing import and reuses the saved mapping.
+ * table, documents), the column mapping with a preview, the import itself, and the agents that may read it. Every file is parsed by
+ * the back end over GraphQL. With `resumeId` it adds more data to an existing import and reuses the saved mapping.
  */
-export const CsvImportWizard = ({ agents, resumeId, onClose }: DataWizardProps) => {
+const savedColumns = (saved: CsvSavedImport | null, starter: (kind: keyof typeof STARTER_KEY) => string): ReadonlyArray<string> => {
+    if (saved === null) return starterColumns(starter("customer"))
+    return saved.config.columns.length ? saved.config.columns : starterColumns(starter("other"))
+}
+
+/** Props of the wizard body: the wizard props plus the saved import being resumed. */
+type CsvImportWizardBodyProps = DataWizardProps & { readonly saved: CsvSavedImport | null }
+
+const CsvImportWizardBody = ({ agents, resumeId, onClose, saved }: CsvImportWizardBodyProps) => {
     const setConnectionAgents = useSetConnectionAgents()
     const t = useT(connectorCsv)
-    const [saved, setSaved] = useState<CsvSavedImport | null>(null)
-    const [loading, setLoading] = useState(Boolean(resumeId))
-    const [source, setSource] = useState<CsvSource>("file")
-    const [name, setName] = useState("")
-    const [entity, setEntity] = useState<Exclude<CsvEntity, "document">>("customer")
+    const commands = useCsvImportCommands()
+    const form = useCsvImportForm({
+        entity: saved && saved.config.entity !== "document" ? saved.config.entity : "customer",
+        schedule: saved?.scheduleMinutes ? String(saved.scheduleMinutes) : "",
+    })
+    const [source, setSource] = useState<CsvSource>(saved?.config.source ?? "file")
+    const name = form.watch("name")
+    const schedule = form.watch("schedule")
+    const entity = entityOf(form.watch("entity"))
+    const setEntity = (value: Exclude<CsvEntity, "document">) => form.setValue("entity", value)
     const [file, setFile] = useState<File | null>(null)
-    const [link, setLink] = useState("")
+    const [link, setLink] = useState(saved?.config.link ?? "")
     const [paste, setPaste] = useState("")
-    const [grid, setGrid] = useState<Grid>(() => emptyGrid(DEFAULT_COLUMNS.customer))
+    const [grid, setGrid] = useState<Grid>(() =>
+        emptyGrid(savedColumns(saved, (kind) => t(STARTER_KEY[kind]))),
+    )
     const [docs, setDocs] = useState<ReadonlyArray<File>>([])
     const [preview, setPreview] = useState<CsvPreview | null>(null)
     const [mapping, setMapping] = useState<CsvMapping | null>(null)
-    const [schedule, setSchedule] = useState<string>("")
     const [result, setResult] = useState<CsvImportResult | null>(null)
-    const [agentIds, setAgentIds] = useState<ReadonlyArray<string>>(agents.map((a) => a.id))
+    const [agentIds, setAgentIds] = useState<ReadonlyArray<string>>(
+        saved?.agentIds.length ? saved.agentIds : agents.map((a) => a.id),
+    )
     const [note, setNote] = useState<Note | null>(null)
-    const [index, setIndex] = useState(0)
-    const [isPending, startTransition] = useTransition()
+    const [index, setIndex] = useState(saved ? 1 : 0)
+    const [isPending, setPending] = useState(false)
 
     const steps = source === "document" ? DOC_STEPS : TABLE_STEPS
     const step = steps[index]
@@ -108,35 +112,9 @@ export const CsvImportWizard = ({ agents, resumeId, onClose }: DataWizardProps) 
         setIndex(to)
     }
 
-    useEffect(() => {
-        if (!resumeId) return
-        let stop = false
-        void (async () => {
-            const r = await loadCsvImport(resumeId)
-            if (stop) return
-            if (r.ok) {
-                const c = r.data.config
-                setSaved(r.data)
-                setSource(c.source)
-                if (c.entity !== "document") setEntity(c.entity)
-                setLink(c.link ?? "")
-                setGrid(emptyGrid(c.columns.length ? c.columns : DEFAULT_COLUMNS.other))
-                setSchedule(r.data.scheduleMinutes ? String(r.data.scheduleMinutes) : "")
-                if (r.data.agentIds.length) setAgentIds(r.data.agentIds)
-                setIndex(1)
-            } else fail(r.error)
-            setLoading(false)
-        })()
-        return () => {
-            stop = true
-        }
-    }, [resumeId])
-
-    /* ---- the form data of the chosen source (the server parses everything) */
-    const sourceForm = (extra?: { sheet?: string }): FormData | null => {
-        const f = new FormData()
-        f.set("entity", entity)
-        if (connectionId) f.set("connectionId", connectionId)
+    /* ---- the chosen source as the back end reads it (it parses everything) */
+    const sourceArg = (extra?: { sheet?: string }): CsvSourceArg | null => {
+        const base = { entity, ...(connectionId ? { connectionId } : {}) }
         if (source === "file") {
             if (!file) {
                 fail(t("needFile"))
@@ -146,80 +124,79 @@ export const CsvImportWizard = ({ agents, resumeId, onClose }: DataWizardProps) 
                 fail(t("tooBig"))
                 return null
             }
-            f.set("kind", "file")
-            f.set("file", file)
-            if (extra?.sheet ?? preview?.sheet) f.set("sheet", extra?.sheet ?? preview?.sheet ?? "")
-        } else if (source === "sheet") {
+            const sheet = extra?.sheet ?? preview?.sheet
+            return { ...base, kind: "file", file, ...(sheet ? { sheet } : {}) }
+        }
+        if (source === "sheet") {
             if (!link.trim()) {
                 fail(t("needLink"))
                 return null
             }
-            f.set("kind", "sheet")
-            f.set("link", link.trim())
-        } else {
-            if (!gridHasRows(grid)) {
-                fail(t("needSheetEmpty"))
-                return null
-            }
-            f.set("kind", "grid")
-            f.set("grid", JSON.stringify({ headers: grid.headers, rows: grid.rows }))
+            return { ...base, kind: "sheet", link: link.trim() }
         }
-        return f
+        if (!gridHasRows(grid)) {
+            fail(t("needSheetEmpty"))
+            return null
+        }
+        return { ...base, kind: "grid", grid: { headers: grid.headers, rows: grid.rows } }
     }
 
-    const read = (extra?: { sheet?: string }) => {
-        const f = sourceForm(extra)
-        if (!f) return
-        startTransition(async () => {
-            const r = await previewCsvSource(f)
-            if (!r.ok) return fail(r.error)
-            setPreview(r.data)
-            setMapping(r.data.mapping)
-            go(2)
-        })
+    const read = async (extra?: { sheet?: string }) => {
+        const arg = sourceArg(extra)
+        if (!arg) return
+        setPending(true)
+        const r = await commands.preview(arg)
+        setPending(false)
+        if (r.kind !== "ok") return fail(r.message)
+        setPreview(r.value)
+        setMapping(r.value.mapping)
+        go(2)
     }
 
-    const runImport = () => {
-        startTransition(async () => {
-            let r
-            if (source === "document") {
-                const f = new FormData()
-                if (connectionId) f.set("connectionId", connectionId)
-                if (!connectionId) f.set("name", name)
-                docs.forEach((d) => f.append("files", d))
-                if (link.trim()) f.set("link", link.trim())
-                r = await runDocumentImport(f)
-            } else {
-                const f = sourceForm()
-                if (!f || !mapping) return
-                if (!connectionId) f.set("name", name)
-                f.set("mapping", JSON.stringify(mapping))
-                if (source === "sheet") f.set("schedule", schedule)
-                r = await runCsvImport(f)
+    const runImport = async () => {
+        let r
+        setPending(true)
+        if (source === "document") {
+            if (docs.reduce((sum, d) => sum + d.size, 0) > MAX_FILE_BYTES) {
+                setPending(false)
+                return fail(t("tooBig"))
             }
-            if (!r.ok) return fail(r.error)
-            setResult(r.data)
-            setNote(null)
-        })
+            r = await commands.runDocuments({
+                name,
+                ...(connectionId ? { connectionId } : {}),
+                files: docs,
+                link: link.trim(),
+            })
+        } else {
+            const arg = sourceArg()
+            if (!arg || !mapping) return setPending(false)
+            r = await commands.runImport(arg, {
+                name,
+                mapping,
+                schedule: source === "sheet" && schedule ? Number(schedule) : null,
+            })
+        }
+        setPending(false)
+        if (r.kind !== "ok") return fail(r.message)
+        setResult(r.value)
+        setNote(null)
     }
 
-    const finish = () => {
+    const finish = async () => {
         if (!result && !resumeId) return onClose(false)
         const id = result?.connectionId ?? resumeId
         if (!id) return onClose(false)
-        startTransition(async () => {
-            const r = await setConnectionAgents(id, agentIds)
-            if (r.kind !== "ok") return fail(r.message)
-            onClose(true)
-        })
+        setPending(true)
+        const r = await setConnectionAgents(id, agentIds)
+        setPending(false)
+        if (r.kind !== "ok") return fail(r.message)
+        onClose(true)
     }
 
     const chooseEntity = (v: string | null) => {
-        const e = (TABLE_ENTITIES as ReadonlyArray<string>).includes(v ?? "")
-            ? (v as Exclude<CsvEntity, "document">)
-            : "customer"
+        const e = entityOf(v ?? "")
         setEntity(e)
-        if (!resumeId && !gridHasRows(grid)) setGrid(emptyGrid(DEFAULT_COLUMNS[e]))
+        if (!resumeId && !gridHasRows(grid)) setGrid(emptyGrid(starterColumns(t(STARTER_KEY[e]))))
     }
 
     const usePaste = () => {
@@ -254,7 +231,7 @@ export const CsvImportWizard = ({ agents, resumeId, onClose }: DataWizardProps) 
         if (step === "data")
             return (
                 <>
-                    <Button variant="primary" isPending={isPending} onPress={() => read()}>
+                    <Button variant="primary" isPending={isPending} onPress={() => void read()}>
                         {isPending ? t("reading") : t("next")}
                     </Button>
                     {backOrNone}
@@ -299,7 +276,7 @@ export const CsvImportWizard = ({ agents, resumeId, onClose }: DataWizardProps) 
                 </Button>
             ) : (
                 <>
-                    <Button variant="primary" isPending={isPending} onPress={runImport}>
+                    <Button variant="primary" isPending={isPending} onPress={() => void runImport()}>
                         {isPending ? t("reading") : t("importRun")}
                     </Button>
                     {backOrNone}
@@ -308,19 +285,12 @@ export const CsvImportWizard = ({ agents, resumeId, onClose }: DataWizardProps) 
         }
         return (
             <>
-                <Button variant="primary" isPending={isPending} onPress={finish}>
+                <Button variant="primary" isPending={isPending} onPress={() => void finish()}>
                     {t("done")}
                 </Button>
             </>
         )
     })()
-
-    if (loading)
-        return (
-            <Text size="sm" tone="muted" live="polite">
-                {t("loading")}
-            </Text>
-        )
 
     const idOptions = preview
         ? [{ id: NO_COLUMN, label: t("mapRowNumber") }, ...preview.headers.map((h) => ({ id: h, label: h }))]
@@ -363,7 +333,7 @@ export const CsvImportWizard = ({ agents, resumeId, onClose }: DataWizardProps) 
                             hint={t("fieldNameHint")}
                             isDisabled={isPending}
                             value={name}
-                            onValueChange={setName}
+                            onValueChange={(v) => form.setValue("name", v, { shouldValidate: true })}
                         />
                         {source !== "document" ? (
                             <Select
@@ -493,7 +463,7 @@ export const CsvImportWizard = ({ agents, resumeId, onClose }: DataWizardProps) 
                             value={preview.sheet}
                             options={preview.sheets.map((s) => ({ id: s, label: s }))}
                             onValueChange={(v) => {
-                                if (v) read({ sheet: v })
+                                if (v) void read({ sheet: v })
                             }}
                         />
                     ) : null}
@@ -572,7 +542,7 @@ export const CsvImportWizard = ({ agents, resumeId, onClose }: DataWizardProps) 
                                 id: s ? String(s) : "",
                                 label: t(SCHEDULE_KEY[(s ? String(s) : "") as keyof typeof SCHEDULE_KEY]),
                             }))}
-                            onValueChange={(v) => setSchedule(v ?? "")}
+                            onValueChange={(v) => form.setValue("schedule", v ?? "")}
                         />
                     ) : null}
                     {result ? (
@@ -600,4 +570,26 @@ export const CsvImportWizard = ({ agents, resumeId, onClose }: DataWizardProps) 
             {note ? <Alert tone={note.tone} title={note.text} /> : null}
         </WizardFrame>
     )
+}
+
+/** Loads the saved import first when resuming, then hands it to the wizard so every field starts from it. */
+export const CsvImportWizard = (props: DataWizardProps) => {
+    const t = useT(connectorCsv)
+    const resume = useCsvImportResume(props.resumeId)
+    if (resume.isLoading)
+        return (
+            <Text size="sm" tone="muted" live="polite">
+                {t("loading")}
+            </Text>
+        )
+    if (resume.error !== undefined)
+        return (
+            <>
+                <Alert tone="negative" title={resume.error} />
+                <Button variant="ghost" onPress={() => props.onClose(false)}>
+                    {t("close")}
+                </Button>
+            </>
+        )
+    return <CsvImportWizardBody {...props} saved={resume.saved} />
 }

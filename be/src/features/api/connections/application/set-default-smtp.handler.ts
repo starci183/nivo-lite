@@ -16,8 +16,9 @@ export class SetDefaultSmtpHandler extends ICQRSHandler<SetDefaultSmtpCommand, v
     }
 
     protected override process(command: SetDefaultSmtpCommand): Promise<void> {
-        const r = command.params.request
-        const actor = { principalId: command.params.principal.id, workspaceId: r.workspaceId }
-        return this.wizard.setDefault(actor, r.connectionId)
+        return this.wizard.setDefault(
+            { principalId: command.params.principal.id, workspaceId: command.params.request.workspaceId },
+            command.params.request.connectionId,
+        )
     }
 }

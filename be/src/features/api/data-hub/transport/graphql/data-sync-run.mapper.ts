@@ -1,4 +1,4 @@
-import type { DataSyncRun } from "@modules/domain/data-hub"
+import type { DataSyncRun } from "@modules/domain/data-sync-runs"
 import type { DataSyncRunRequest } from "../../application/data-sync-run.contracts"
 import type { DataSyncRunInput } from "./dto/data-sync-run.input"
 import type { DataSyncRunType } from "./dto/data-sync-run.type"

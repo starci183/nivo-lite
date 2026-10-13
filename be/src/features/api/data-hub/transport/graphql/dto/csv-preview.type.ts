@@ -1,6 +1,6 @@
 import { Field, Int, ObjectType } from "@nestjs/graphql"
 import type { CsvMapping } from "@modules/domain/data-hub"
-import { DataJsonScalar } from "./data-json.scalar"
+import { DataJsonScalar } from "./data-json.type"
 
 @ObjectType()
 /** What reading an import source answers before anything is saved. */

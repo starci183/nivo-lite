@@ -1,7 +1,7 @@
 import { Field, ID, InputType } from "@nestjs/graphql"
 import { Type } from "class-transformer"
 import { IsIn, IsOptional, IsString, IsUUID, MaxLength, ValidateNested } from "class-validator"
-import { DataJsonScalar } from "./data-json.scalar"
+import { DataJsonScalar } from "./data-json.type"
 import { UploadedFileInput } from "./uploaded-file.input"
 
 /** The most characters pasted table text may take. */

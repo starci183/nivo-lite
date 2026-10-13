@@ -1641,8 +1641,14 @@
     "stepImport": "Import",
     "stepAgent": "Attach to an agent",
     "fieldName": "Import name",
+    "nameTooShort": "Name this import (at least 2 characters).",
     "fieldNameHint": "For example Customers 2026. You can create as many imports as you need.",
     "fieldEntity": "What the rows are",
+    "starterCustomer": "Full name|Phone|Email|Address",
+    "starterOrder": "Order no.|Customer|Date|Total",
+    "starterProduct": "SKU|Product name|Price|Stock",
+    "starterTransaction": "Ref|Date|Description|Amount",
+    "starterOther": "ID|Name|Note",
     "entityCustomer": "Customers",
     "entityOrder": "Orders",
     "entityProduct": "Products",
@@ -1783,7 +1789,16 @@
     "every_1440": "Every 24 hours",
     "saved": "Saved.",
     "agentTitle": "Which agents may read this data",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "needName": "Name this connection.",
+    "needHost": "Enter the server address.",
+    "badPort": "The port must be from 1 to 65535.",
+    "needDatabase": "Enter the database name.",
+    "needUser": "Enter the user name.",
+    "needPassword": "Enter this user's password.",
+    "engine_postgres": "PostgreSQL",
+    "engine_mysql": "MySQL",
+    "engine_mssql": "SQL Server"
   },
   "connectorImap": {
     "stepAccount": "Mailbox and sign-in",
@@ -1822,6 +1837,11 @@
     "testOk": "Signed in. Found {n} folders.",
     "testNeeded": "Check the connection to continue.",
     "testStale": "The settings changed. Check the connection again.",
+    "errName": "Enter a connection name.",
+    "errEmail": "Enter the mailbox address.",
+    "errHost": "The server address is not valid.",
+    "errPort": "The port must be between 1 and 65535.",
+    "errPassword": "Enter the mailbox app password.",
     "foldersTitle": "Folders to read",
     "foldersHint": "INBOX is ticked by default. Pick other folders if you want them too.",
     "sinceTitle": "How far back on the first sync",
@@ -1910,7 +1930,9 @@
     "testOk": "Status {status}, found {n} items.",
     "testFields": "Fields in the first item: {fields}.",
     "saveAndContinue": "Save and continue",
-    "agentTitle": "Agents that may use this API"
+    "agentTitle": "Agents that may use this API",
+    "baseUrlInvalid": "The base URL must start with http:// or https://.",
+    "authNameRequired": "Enter the header or parameter name of the API key."
   },
   "connectorTelegramUser": {
     "stepConsent": "Name and consent",
@@ -1966,7 +1988,13 @@
     "schedule60": "Every hour",
     "scheduleHint": "Each run reads at most 200 new messages per chat.",
     "save": "Save",
-    "agentTitle": "Agents that may read these messages"
+    "agentTitle": "Agents that may read these messages",
+    "errName": "Give the connection a name.",
+    "errConsent": "Please agree to the commitment.",
+    "errPhone": "The phone number is not valid.",
+    "errCode": "The code has 4 to 8 digits.",
+    "errPassword": "Enter the two-step password.",
+    "loading": "Loading."
   },
   "content": {
     "tabCalendar": "Calendar",

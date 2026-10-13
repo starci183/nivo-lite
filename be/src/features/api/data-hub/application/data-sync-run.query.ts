@@ -1,5 +1,5 @@
 import { Query } from "@nestjs/cqrs"
-import type { DataSyncRun } from "@modules/domain/data-hub"
+import type { DataSyncRun } from "@modules/domain/data-sync-runs"
 import type { ExecuteParams } from "@modules/platform/cqrs"
 import type { DataSyncRunRequest } from "./data-sync-run.contracts"
 

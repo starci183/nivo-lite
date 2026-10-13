@@ -1641,8 +1641,14 @@
     "stepImport": "Nhập dữ liệu",
     "stepAgent": "Gắn với agent",
     "fieldName": "Tên lần nhập",
+    "nameTooShort": "Hãy đặt tên cho lần nhập này (ít nhất 2 ký tự).",
     "fieldNameHint": "Ví dụ: Khách hàng 2026. Bạn có thể tạo nhiều lần nhập.",
     "fieldEntity": "Các dòng là gì",
+    "starterCustomer": "Họ tên|SĐT|Email|Địa chỉ",
+    "starterOrder": "Mã đơn|Khách hàng|Ngày|Tổng tiền",
+    "starterProduct": "Mã|Tên sản phẩm|Giá|Tồn kho",
+    "starterTransaction": "Mã|Ngày|Nội dung|Số tiền",
+    "starterOther": "Mã|Tên|Ghi chú",
     "entityCustomer": "Khách hàng",
     "entityOrder": "Đơn hàng",
     "entityProduct": "Sản phẩm",
@@ -1783,7 +1789,16 @@
     "every_1440": "Mỗi 24 giờ",
     "saved": "Đã lưu.",
     "agentTitle": "Những trợ lý nào được đọc dữ liệu này",
-    "loading": "Đang tải..."
+    "loading": "Đang tải...",
+    "needName": "Đặt tên cho kết nối.",
+    "needHost": "Nhập địa chỉ máy chủ.",
+    "badPort": "Cổng phải từ 1 đến 65535.",
+    "needDatabase": "Nhập tên cơ sở dữ liệu.",
+    "needUser": "Nhập tên người dùng.",
+    "needPassword": "Nhập mật khẩu của người dùng này.",
+    "engine_postgres": "PostgreSQL",
+    "engine_mysql": "MySQL",
+    "engine_mssql": "SQL Server"
   },
   "connectorImap": {
     "stepAccount": "Hộp thư và đăng nhập",
@@ -1822,6 +1837,11 @@
     "testOk": "Đăng nhập được. Tìm thấy {n} thư mục.",
     "testNeeded": "Hãy kiểm tra kết nối để tiếp tục.",
     "testStale": "Thông tin đã đổi. Hãy kiểm tra kết nối lại.",
+    "errName": "Nhập tên kết nối.",
+    "errEmail": "Nhập địa chỉ hộp thư.",
+    "errHost": "Địa chỉ máy chủ không hợp lệ.",
+    "errPort": "Cổng phải từ 1 đến 65535.",
+    "errPassword": "Nhập mật khẩu ứng dụng của hộp thư.",
     "foldersTitle": "Thư mục cần đọc",
     "foldersHint": "Mặc định chọn INBOX. Chọn thêm thư mục khác nếu cần.",
     "sinceTitle": "Lấy thư từ bao lâu trước ở lần đầu",
@@ -1910,7 +1930,9 @@
     "testOk": "Trạng thái {status}, tìm thấy {n} bản ghi.",
     "testFields": "Các trường của bản ghi đầu tiên: {fields}.",
     "saveAndContinue": "Lưu và tiếp tục",
-    "agentTitle": "Agent được dùng API này"
+    "agentTitle": "Agent được dùng API này",
+    "baseUrlInvalid": "Địa chỉ gốc (base URL) phải bắt đầu bằng http:// hoặc https://.",
+    "authNameRequired": "Nhập tên header hoặc tham số của khoá API."
   },
   "connectorTelegramUser": {
     "stepConsent": "Tên và đồng ý",
@@ -1966,7 +1988,13 @@
     "schedule60": "Mỗi giờ",
     "scheduleHint": "Mỗi lần đọc tối đa 200 tin mới cho mỗi cuộc trò chuyện.",
     "save": "Lưu",
-    "agentTitle": "Agent được đọc những tin nhắn này"
+    "agentTitle": "Agent được đọc những tin nhắn này",
+    "errName": "Hãy đặt tên cho kết nối.",
+    "errConsent": "Hãy đồng ý với phần cam kết.",
+    "errPhone": "Số điện thoại không hợp lệ.",
+    "errCode": "Mã gồm 4 đến 8 chữ số.",
+    "errPassword": "Hãy nhập mật khẩu hai bước.",
+    "loading": "Đang tải."
   },
   "content": {
     "tabCalendar": "Lịch",

@@ -1,11 +1,11 @@
 import { useTranslations } from "next-intl"
-import { useState, useTransition } from "react"
+import { useEffect, useState, useTransition } from "react"
 import type { RowBusy, RowConfirm } from "@/hooks/connection-rows"
 import type { Settled } from "@/hooks/connection-wizard"
 import type { Connection, RowNote, SepayKeys } from "@/modules/types"
 import { useConnectionRowCommands } from "./useConnectionRowCommands"
 import { useConnectionsRefresh } from "./useConnectionsRefresh"
-import { useLegacyConnectionCommands } from "./useLegacyConnectionCommands"
+import { useSyncNow } from "./useSyncNow"
 
 /** The state and commands of one connection row. */
 export interface ConnectionRowActions {
@@ -32,7 +32,7 @@ export const useConnectionRowActions = (connection: Connection): ConnectionRowAc
     const t = useTranslations("connections")
     const commands = useConnectionRowCommands(connection.id)
     const refresh = useConnectionsRefresh()
-    const legacy = useLegacyConnectionCommands()
+    const syncNow = useSyncNow()
     const [, startTransition] = useTransition()
     const [busy, setBusy] = useState<RowBusy>(null)
     const [note, setNote] = useState<RowNote | null>(null)
@@ -87,12 +87,7 @@ export const useConnectionRowActions = (connection: Connection): ConnectionRowAc
         if (result.kind !== "ok") return setNote({ tone: "negative", text: result.message })
         window.location.assign(result.value)
     }
-    const sync = async () => {
-        const result = await legacy.syncNow(connection.id)
-        if (!result.ok) return setNote({ tone: "negative", text: result.error })
-        setNote({ tone: "affirmative", text: t("syncDone", { rows: result.data.rows }) })
-        await refresh()
-    }
+    const sync = () => syncNow.start(connection.id)
     const showKeys = async () => {
         const result = await commands.sepayKeys()
         if (result.kind !== "ok") return setNote({ tone: "negative", text: result.message })
@@ -106,8 +101,12 @@ export const useConnectionRowActions = (connection: Connection): ConnectionRowAc
         if (result.kind !== "ok") setNote({ tone: "negative", text: result.message })
     }
 
+    useEffect(() => {
+        if (syncNow.outcome !== null) setNote(syncNow.outcome)
+    }, [syncNow.outcome])
+
     return {
-        busy,
+        busy: syncNow.isRunning ? "sync" : busy,
         note,
         keys,
         confirm,

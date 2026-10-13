@@ -23,6 +23,7 @@ export type {
     MissingRequirementType,
     ModuleInstallationType,
     NivoEntryType,
+    OpenApiTestType,
     PreviewSampleType,
     RetrievedPassageType,
     RunStepType,

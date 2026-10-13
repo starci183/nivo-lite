@@ -1,12 +1,12 @@
 import { lookup } from "node:dns/promises"
 import { isIP } from "node:net"
 import { Injectable } from "@nestjs/common"
-import { isPrivateAddress, isWellFormedHost } from "@modules/integrations/mail"
 import { InjectHttpClient } from "@modules/platform/http"
 import type { HttpClient, HttpRequest } from "@modules/platform/http"
 import { InjectDataSourcesOptions } from "./data-sources.decorators"
 import type { DataSourcesOptions } from "./data-sources.options"
 import { DataSourcesError, DataSourcesErrorCode } from "./errors/data-sources.error"
+import { isPrivateAddress, isWellFormedHost } from "./public-host.policy"
 import { PUBLIC_HOST_TEXT } from "./messages/public-host.messages"
 
 /** The address a connection is opened to: connect to THIS address, not the name, so the answer cannot change between check and use. */
@@ -70,7 +70,7 @@ export class PublicHostClient {
         if (family === 0 && !isWellFormedHost(bare)) {
             throw new DataSourcesError({ code: DataSourcesErrorCode.HostInvalid })
         }
-        const answers = family === 0 ? await lookup(bare, { all: true }).catch(() => []) : [{ address: bare, family }]
+        const answers = family === 0 ? await this.lookupAll(bare) : [{ address: bare, family }]
         const first = answers[0]
         if (first === undefined) {
             throw new DataSourcesError({ code: DataSourcesErrorCode.HostUnknown, params: { host: bare } })
@@ -124,5 +124,14 @@ export class PublicHostClient {
             })
         }
         return { status: answer.status, headers: answer.headers ?? {}, text }
+    }
+
+    private lookupAll(host: string): Promise<ReadonlyArray<{ address: string; family: number }>> {
+        return lookup(host, { all: true }).then(
+            (records) => records,
+            (cause: unknown) => {
+                throw new DataSourcesError({ code: DataSourcesErrorCode.HostUnknown, params: { host }, cause })
+            },
+        )
     }
 }
