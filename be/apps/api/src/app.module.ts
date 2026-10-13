@@ -25,6 +25,7 @@ import { PublicLoyaltyHttpModule } from "@features/api/public-loyalty"
 import { CheckConnectionHealthQueueModule } from "@features/jobs/check-connection-health"
 import { CompleteZaloAuthorizationQueueModule } from "@features/jobs/complete-zalo-authorization"
 import { RefreshZaloTokensQueueModule } from "@features/jobs/refresh-zalo-tokens"
+import { RunZaloWizardQueueModule } from "@features/jobs/run-zalo-wizard"
 import { RunChatTurnQueueModule } from "@features/jobs/run-chat-turn"
 import { TelegramHttpModule } from "@features/webhooks/telegram"
 import { ZaloHttpModule } from "@features/webhooks/zalo"
@@ -71,9 +72,27 @@ import {
     PaymentOrdersModule,
 } from "@modules/domain/payment-orders"
 import { CREDITS_ERROR_KINDS, CREDITS_MESSAGES, CreditsModule } from "@modules/domain/credits"
-import { AiUsageEventsModule } from "@modules/domain/ai-usage-events"
+import { AI_USAGE_EVENTS_MESSAGES, AiUsageEventsModule, UsageGateService } from "@modules/domain/ai-usage-events"
 import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
 import { WorkspacesHttpModule } from "@features/api/workspaces"
+import {
+    EMAIL_MESSAGES_ERROR_KINDS,
+    EMAIL_MESSAGES_MESSAGES,
+    EmailMessagesModule,
+} from "@modules/domain/email-messages"
+import { INVOICES_ERROR_KINDS, INVOICES_MESSAGES, InvoicesModule } from "@modules/domain/invoices"
+import { ORDERS_ERROR_KINDS, ORDERS_MESSAGES, OrdersModule } from "@modules/domain/orders"
+import { TRANSACTIONS_ERROR_KINDS, TRANSACTIONS_MESSAGES, TransactionsModule } from "@modules/domain/transactions"
+import {
+    ConversationLeadsService,
+    HandoffToolService,
+    InboundStatusService,
+    LeadWriterService,
+    OutboundAccessService,
+    WORK_PERFORMERS_ERROR_KINDS,
+    WORK_PERFORMERS_MESSAGES,
+    WorkPerformersModule,
+} from "@modules/domain/work-performers"
 import {
     AGENT_CONNECTIONS_ERROR_KINDS,
     AGENT_CONNECTIONS_MESSAGES,
@@ -84,10 +103,7 @@ import {
     AGENT_TOOLS_MESSAGES,
     AgentToolsModule,
     UnboundBookingToolsService,
-    UnboundConversationLeadsService,
-    UnboundHandoffToolService,
     UnboundKnowledgeSearchService,
-    UnboundLeadWriterService,
 } from "@modules/domain/agent-tools"
 import {
     AGENTS_ERROR_KINDS,
@@ -105,7 +121,6 @@ import {
     AI_GENERATIONS_POLL_MS,
     AiGenerationsModule,
     TextGeneratorService,
-    UnboundUsageGateService,
 } from "@modules/domain/ai-generations"
 import { AUTHORITY_ERROR_KINDS, AUTHORITY_MESSAGES } from "@modules/domain/authority"
 import { AUTHORITY_RULES_ERROR_KINDS, AUTHORITY_RULES_MESSAGES } from "@modules/domain/authority-rules"
@@ -115,9 +130,7 @@ import {
     DECISIONS_MESSAGES,
     DecisionsModule,
     UnboundDecisionEventsService,
-    UnboundInboundEventStatusService,
     UnboundLeadGenFlowService,
-    UnboundOutboundAccessGateService,
     UnboundPaymentReceiptsService,
 } from "@modules/domain/decisions"
 import { EXECUTIONS_ERROR_KINDS, EXECUTIONS_MESSAGES } from "@modules/domain/executions"
@@ -163,6 +176,7 @@ import { CONNECTIONS_ERROR_KINDS, CONNECTIONS_MESSAGES, ConnectionsModule } from
 import { CONVERSATIONS_ERROR_KINDS, CONVERSATIONS_MESSAGES, ConversationsModule } from "@modules/domain/conversations"
 import { TelegramInboxModule } from "@modules/domain/telegram-inbox"
 import { ZaloInboxModule } from "@modules/domain/zalo-inbox"
+import { ZaloWizardDraftsModule } from "@modules/domain/zalo-wizard-drafts"
 import { AuthGuard, IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } from "@modules/domain/identity"
 import { BRAIN_ERROR_KINDS, BRAIN_MESSAGES, BrainModule } from "@modules/domain/brain"
 import type { CorrectionSource } from "@modules/domain/brain"
@@ -275,6 +289,48 @@ import { I18nModule } from "@modules/platform/i18n"
 import { LoggingModule } from "@modules/platform/logging"
 import { JOBS_ERROR_KINDS, JOBS_MESSAGES, JobsModule } from "@modules/platform/jobs"
 import { QUEUE_ERROR_KINDS, QUEUE_MESSAGES, QueueModule } from "@modules/platform/queue"
+import {
+    CONNECTION_GRANTS_ERROR_KINDS,
+    CONNECTION_GRANTS_MESSAGES,
+    ConnectionGrantsModule,
+} from "@modules/domain/connection-grants"
+import {
+    CHANNEL_CONNECTIONS_ERROR_KINDS,
+    CHANNEL_CONNECTIONS_MESSAGES,
+    ChannelConnectionsModule,
+} from "@modules/domain/channel-connections"
+import {
+    WEBHOOK_CONNECTIONS_ERROR_KINDS,
+    WEBHOOK_CONNECTIONS_MESSAGES,
+    WebhookConnectionsModule,
+} from "@modules/domain/webhook-connections"
+import {
+    GOOGLE_CONNECTIONS_ERROR_KINDS,
+    GOOGLE_CONNECTIONS_MESSAGES,
+    GoogleConnectionsModule,
+} from "@modules/domain/google-connections"
+import {
+    META_CONNECTIONS_ERROR_KINDS,
+    META_CONNECTIONS_MESSAGES,
+    MetaConnectionsModule,
+} from "@modules/domain/meta-connections"
+import { META_INBOX_ERROR_KINDS, META_INBOX_MESSAGES, MetaInboxModule } from "@modules/domain/meta-inbox"
+import { ConnectionLifecycleModule } from "@modules/domain/connection-lifecycle"
+import { ConnectionCommandsModule } from "@modules/domain/connection-commands"
+import { GOOGLE_ERROR_KINDS, GOOGLE_MESSAGES, GoogleModule } from "@modules/integrations/google"
+import { META_ERROR_KINDS, META_MESSAGES, MetaModule } from "@modules/integrations/meta"
+import {
+    CHANNEL_SETUP_ERROR_KINDS,
+    CHANNEL_SETUP_MESSAGES,
+    ChannelSetupModule,
+} from "@modules/integrations/channel-setup"
+import {
+    WEBHOOK_DELIVERY_ERROR_KINDS,
+    WEBHOOK_DELIVERY_MESSAGES,
+    WebhookDeliveryModule,
+} from "@modules/integrations/webhook-delivery"
+import { GoogleConnectionsHttpModule } from "@features/api/google-connections"
+import { MetaConnectionsHttpModule } from "@features/api/meta-connections"
 import { CONTENT_MESSAGES, ContentModule } from "@modules/domain/content"
 import { CONTENT_ITEMS_ERROR_KINDS, CONTENT_ITEMS_MESSAGES, ContentItemsModule } from "@modules/domain/content-items"
 import { ContentSettingsModule } from "@modules/domain/content-settings"
@@ -287,8 +343,10 @@ import { TTS_ERROR_KINDS, TTS_MESSAGES, TtsModule } from "@modules/integrations/
 import { CONTENT_TICK_EVERY_MS, CONTENT_TICK_QUEUE, CONTENT_TICK_SCHEDULER } from "@modules/queues/content-tick"
 import { RendersHttpModule } from "@features/api/renders"
 import { PublishContentQueueModule } from "@features/jobs/publish-content"
+import { AcceptMetaEventQueueModule } from "@features/jobs/accept-meta-event"
 import { IssueInviteQueueModule } from "@features/jobs/issue-invite"
 import { RenderVideoQueueModule } from "@features/jobs/render-video"
+import { ConnectionCommandsQueueModule } from "@features/jobs/connection-commands"
 import { RequestRenderQueueModule } from "@features/jobs/request-render"
 import type { ApiOptions } from "./api.options"
 
@@ -313,6 +371,18 @@ export class AppModule {
                     isGlobal: true,
                     bundles: [
                         DOCUMENTS_MESSAGES,
+                        CONNECTIONS_MESSAGES,
+                        CONNECTION_GRANTS_MESSAGES,
+                        CHANNEL_CONNECTIONS_MESSAGES,
+                        WEBHOOK_CONNECTIONS_MESSAGES,
+                        GOOGLE_CONNECTIONS_MESSAGES,
+                        META_CONNECTIONS_MESSAGES,
+                        META_INBOX_MESSAGES,
+                        GOOGLE_MESSAGES,
+                        META_MESSAGES,
+                        CHANNEL_SETUP_MESSAGES,
+                        WEBHOOK_DELIVERY_MESSAGES,
+                        HTTP_MESSAGES,
                         AUTOMATION_PIPELINES_MESSAGES,
                         AUTOMATION_RUNS_MESSAGES,
                         AUTOMATION_TEMPLATES_MESSAGES,
@@ -321,6 +391,12 @@ export class AppModule {
                         AGENT_TOOLS_MESSAGES,
                         AGENTS_MESSAGES,
                         AI_GENERATIONS_MESSAGES,
+                        AI_USAGE_EVENTS_MESSAGES,
+                        EMAIL_MESSAGES_MESSAGES,
+                        INVOICES_MESSAGES,
+                        ORDERS_MESSAGES,
+                        TRANSACTIONS_MESSAGES,
+                        WORK_PERFORMERS_MESSAGES,
                         API_KEYS_MESSAGES,
                         AUTHORITY_MESSAGES,
                         AUTHORITY_RULES_MESSAGES,
@@ -340,9 +416,7 @@ export class AppModule {
                         PAYMENT_ORDERS_MESSAGES,
                         CHANNELS_MESSAGES,
                         CONNECTION_SECRETS_MESSAGES,
-                        CONNECTIONS_MESSAGES,
                         CONVERSATIONS_MESSAGES,
-                        HTTP_MESSAGES,
                         MAIL_MESSAGES,
                         TELEGRAM_MESSAGES,
                         ZALO_MESSAGES,
@@ -384,6 +458,18 @@ export class AppModule {
                 ErrorsModule.register({
                     isGlobal: true,
                     kinds: [
+                        CONNECTIONS_ERROR_KINDS,
+                        CONNECTION_GRANTS_ERROR_KINDS,
+                        CHANNEL_CONNECTIONS_ERROR_KINDS,
+                        WEBHOOK_CONNECTIONS_ERROR_KINDS,
+                        GOOGLE_CONNECTIONS_ERROR_KINDS,
+                        META_CONNECTIONS_ERROR_KINDS,
+                        META_INBOX_ERROR_KINDS,
+                        GOOGLE_ERROR_KINDS,
+                        META_ERROR_KINDS,
+                        CHANNEL_SETUP_ERROR_KINDS,
+                        WEBHOOK_DELIVERY_ERROR_KINDS,
+                        HTTP_ERROR_KINDS,
                         AUTOMATION_PIPELINES_ERROR_KINDS,
                         AUTOMATION_TEMPLATES_ERROR_KINDS,
                         AUTOMATIONS_ERROR_KINDS,
@@ -391,6 +477,11 @@ export class AppModule {
                         AGENT_TOOLS_ERROR_KINDS,
                         AGENTS_ERROR_KINDS,
                         AI_GENERATIONS_ERROR_KINDS,
+                        EMAIL_MESSAGES_ERROR_KINDS,
+                        INVOICES_ERROR_KINDS,
+                        ORDERS_ERROR_KINDS,
+                        TRANSACTIONS_ERROR_KINDS,
+                        WORK_PERFORMERS_ERROR_KINDS,
                         API_KEYS_ERROR_KINDS,
                         AUTHORITY_ERROR_KINDS,
                         AUTHORITY_RULES_ERROR_KINDS,
@@ -410,9 +501,7 @@ export class AppModule {
                         PAYMENT_ORDERS_ERROR_KINDS,
                         CHANNELS_ERROR_KINDS,
                         CONNECTION_SECRETS_ERROR_KINDS,
-                        CONNECTIONS_ERROR_KINDS,
                         CONVERSATIONS_ERROR_KINDS,
-                        HTTP_ERROR_KINDS,
                         MAIL_ERROR_KINDS,
                         TELEGRAM_ERROR_KINDS,
                         ZALO_ERROR_KINDS,
@@ -493,6 +582,19 @@ export class AppModule {
                     delivery: SUPABASE_AUTH,
                     ...options.workspaceInvites,
                 }),
+                ConnectionsModule.register({ isGlobal: true, ...options.connections }),
+                ConnectionGrantsModule.register({ isGlobal: true }),
+                ChannelConnectionsModule.register({ isGlobal: true }),
+                WebhookConnectionsModule.register({ isGlobal: true, ...options.webhookConnections }),
+                GoogleConnectionsModule.register({ isGlobal: true }),
+                MetaConnectionsModule.register({ isGlobal: true }),
+                MetaInboxModule.register({ isGlobal: true }),
+                ConnectionLifecycleModule.register({ isGlobal: true }),
+                ConnectionCommandsModule.register({ isGlobal: true }),
+                GoogleModule.register({ isGlobal: true, ...options.google }),
+                MetaModule.register({ isGlobal: true, ...options.meta }),
+                ChannelSetupModule.register({ isGlobal: true, ...options.channelSetup }),
+                WebhookDeliveryModule.register({ isGlobal: true, ...options.webhookDelivery }),
                 HttpModule.register({ isGlobal: true }),
                 N8nModule.register({ isGlobal: true, ...options.n8n }),
                 TemplateFilesModule.register({ isGlobal: true, ...options.templateFiles }),
@@ -507,7 +609,6 @@ export class AppModule {
                 TelegramModule.register({ isGlobal: true, ...options.telegram }),
                 ZaloModule.register({ isGlobal: true, ...options.zalo }),
                 MailModule.register({ isGlobal: true, ...options.mail }),
-                ConnectionsModule.register({ isGlobal: true }),
                 ConnectionSecretsModule.register({ isGlobal: true, ...options.connectionSecrets }),
                 AgentConversationsModule.register({ isGlobal: true }),
                 AgentMessagesModule.register({ isGlobal: true }),
@@ -517,6 +618,7 @@ export class AppModule {
                 ConversationsModule.register({ isGlobal: true }),
                 TelegramInboxModule.register({ isGlobal: true }),
                 ZaloInboxModule.register({ isGlobal: true }),
+                ZaloWizardDraftsModule.register({ isGlobal: true }),
                 FfmpegModule.register({ isGlobal: true, ...options.ffmpeg }),
                 TtsModule.register({ isGlobal: true, ...options.tts }),
                 VideoRendersModule.register({ isGlobal: true }),
@@ -531,6 +633,8 @@ export class AppModule {
                 RenderVideoQueueModule,
                 RequestRenderQueueModule,
                 PublishContentQueueModule,
+                AcceptMetaEventQueueModule,
+                ConnectionCommandsQueueModule,
                 RendersHttpModule,
                 LivenessModule.register({ isGlobal: true }),
                 HttpModule.register({ isGlobal: true }),
@@ -571,7 +675,7 @@ export class AppModule {
                 AgentConnectionsModule.register({ isGlobal: true }),
                 AiGenerationsModule.register({
                     isGlobal: true,
-                    usage: UnboundUsageGateService,
+                    usage: UsageGateService,
                     pollMs: AI_GENERATIONS_POLL_MS,
                 }),
                 OpenclawAgentSyncModule.register({ isGlobal: true, reloadSettleMs: OPENCLAW_RELOAD_SETTLE_MS }),
@@ -579,11 +683,11 @@ export class AppModule {
                     isGlobal: true,
                     ports: {
                         knowledgeSearch: UnboundKnowledgeSearchService,
-                        leadWriter: UnboundLeadWriterService,
+                        leadWriter: LeadWriterService,
                         bookingTools: UnboundBookingToolsService,
                         approvalRequester: ApprovalRequesterService,
-                        handoffTool: UnboundHandoffToolService,
-                        conversationLeads: UnboundConversationLeadsService,
+                        handoffTool: HandoffToolService,
+                        conversationLeads: ConversationLeadsService,
                         toolTokens: ToolTokenService,
                     },
                 }),
@@ -591,13 +695,18 @@ export class AppModule {
                     isGlobal: true,
                     ports: {
                         agentDirectory: AgentsService,
-                        inboundEventStatus: UnboundInboundEventStatusService,
+                        inboundEventStatus: InboundStatusService,
                         decisionEvents: UnboundDecisionEventsService,
                         paymentReceipts: UnboundPaymentReceiptsService,
                         leadGenFlow: UnboundLeadGenFlowService,
-                        outboundAccessGate: UnboundOutboundAccessGateService,
+                        outboundAccessGate: OutboundAccessService,
                     },
                 }),
+                OrdersModule.register({ isGlobal: true }),
+                InvoicesModule.register({ isGlobal: true }),
+                TransactionsModule.register({ isGlobal: true }),
+                EmailMessagesModule.register({ isGlobal: true }),
+                WorkPerformersModule.register({ isGlobal: true, writer: DeepseekClient }),
                 OfficeCommandCandidatesModule.register({ isGlobal: true, reader: DeepseekClient }),
                 SyncAgentsQueueModule,
                 GenerateWithAgentQueueModule,
@@ -628,6 +737,7 @@ export class AppModule {
                 CheckConnectionHealthQueueModule,
                 CompleteZaloAuthorizationQueueModule,
                 RefreshZaloTokensQueueModule,
+                RunZaloWizardQueueModule,
                 ExternalApiHttpModule,
                 SystemHealthHttpModule,
                 LoyaltyProgramsModule.register({ isGlobal: true }),
@@ -652,6 +762,8 @@ export class AppModule {
                 RunBrainCommandQueueModule,
                 IndexKnowledgeSourceQueueModule,
                 ReembedKnowledgeQueueModule,
+                GoogleConnectionsHttpModule,
+                MetaConnectionsHttpModule,
                 AutomationsHttpModule,
                 FlowsHttpModule,
                 N8nPipelinesHttpModule,

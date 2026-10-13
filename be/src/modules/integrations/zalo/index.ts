@@ -7,5 +7,5 @@ export { isZaloRefusal, isZaloTokenRejection, zaloFailureOf } from "./zalo-failu
 export { newVerifier } from "./zalo-oauth.policy"
 export { isValidZaloMac } from "./zalo-signature.policy"
 export type { ZaloClient } from "./zalo.client"
-export type { ZaloEvent, ZaloFailure, ZaloTokens } from "./zalo.contracts"
+export type { ZaloFailure } from "./zalo.contracts"
 export type { ZaloOptions } from "./zalo.options"

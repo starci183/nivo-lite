@@ -1,5 +1,11 @@
 import { parseLlmConfig } from "@modules/integrations/llm"
 import type { LlmOptions } from "@modules/integrations/llm"
+import { parseChannelProvisioningConfig } from "@modules/domain/channel-provisioning"
+import type { ChannelProvisioningOptions } from "@modules/domain/channel-provisioning"
+import { parseConnectionsConfig } from "@modules/domain/connections"
+import type { ConnectionsOptions } from "@modules/domain/connections"
+import { parseChannelSetupConfig } from "@modules/integrations/channel-setup"
+import type { ChannelSetupOptions } from "@modules/integrations/channel-setup"
 import { parseN8nHostConfig } from "@modules/integrations/n8n-host"
 import type { N8nHostOptions } from "@modules/integrations/n8n-host"
 import { parseTemplateFilesConfig } from "@modules/integrations/template-files"
@@ -29,6 +35,12 @@ export interface CliAppOptions {
     readonly llm: LlmOptions
     /** The simulated SePay delivery of the simulate-sepay command. */
     readonly sepaySimulation: SepaySimulationOptions
+    /** The credential key and the site addresses channels are connected with. */
+    readonly channelConnections: ConnectionsOptions
+    /** The provider addresses the channel set-up calls. */
+    readonly channelSetup: ChannelSetupOptions
+    /** The secrets and output of the connect-channel command. */
+    readonly channelProvisioning: ChannelProvisioningOptions
 }
 
 /** Reads the one declared connection without adding entities or TypeORM migrations, and the Supabase project. */
@@ -51,4 +63,8 @@ export const parseCliAppOptions = (env: EnvSource): CliAppOptions => ({
         },
         (line) => process.stdout.write(`${line}\n`),
     ),
+    channelConnections: parseConnectionsConfig(env),
+    channelSetup: parseChannelSetupConfig(env),
+    channelProvisioning: parseChannelProvisioningConfig(env, (line) => process.stdout.write(`${line}
+`)),
 })

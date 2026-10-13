@@ -134,3 +134,23 @@ export const REOPEN_WAITING_WORK_ITEM = sql`
         RETURNING *
     )
     SELECT * FROM changed`
+
+/** Links an approval card to the item that opened it ($1 workspace, $2 item, $3 card). */
+export const ATTACH_WORK_ITEM_EXECUTION = sql`
+    UPDATE public.work_items SET execution_id = $3::uuid
+    WHERE workspace_id = $1::uuid AND id = $2::uuid`
+
+/**
+ * Closes the customer's "I paid" checks that still wait for an invoice that has just been paid: nobody approved them, they are settled
+ * ($1 workspace, $2 the item that settled the invoice, $3 dedupe key prefix, $4 result json, $5 now). Answers the closed items.
+ */
+export const SETTLE_WAITING_CLAIMS = sql`
+    WITH changed AS (
+        UPDATE public.work_items
+        SET status = 'done', decided_path = 'auto', reason = 'routine', completed_at = $5::timestamptz, updated_at = $5::timestamptz,
+            evidence_state = 'verified', result = $4::jsonb
+        WHERE workspace_id = $1::uuid AND action = 'reconcile_payment' AND status = 'waiting_decision'
+          AND id <> $2::uuid AND dedupe_key LIKE $3 || '%'
+        RETURNING id, inbound_event_id
+    )
+    SELECT id, inbound_event_id FROM changed`

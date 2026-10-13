@@ -15,3 +15,11 @@ export interface EventEntry {
     /** The evidence behind the line, when there is some. */
     readonly evidence?: string | null
 }
+
+/** One line of a customer's history as a prompt reads it. */
+export interface EventLine {
+    /** The short sentence. */
+    readonly summary: string
+    /** The evidence behind it, or null. */
+    readonly evidence: string | null
+}

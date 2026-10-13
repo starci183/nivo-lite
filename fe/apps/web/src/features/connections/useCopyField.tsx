@@ -1,35 +1,21 @@
-"use client"
+import { useTranslations } from "next-intl"
+import { WizardCopyGlyphs } from "@/components/leaves/WizardCopyGlyphs"
 
-import { Icon } from "@starci/grammar/common"
-import { useT } from "@/i18n/client"
-import { connectionWizard } from "@/i18n/dict/connectionWizard"
-import { nivoIconSource, type IconName } from "@/components/leaves/Icon"
-
-/** A NIVO glyph in the shape Grammar's in-field actions take (`{ className }`); decorative, the action keeps its label. */
-const glyph = (name: IconName) => {
-  const Glyph = ({ className }: { readonly className?: string }) => (
-    <span className={className}><Icon source={nivoIconSource(name, "leading")} usage="leading" /></span>
-  )
-  Glyph.displayName = `Glyph(${name})`
-  return Glyph
-}
-const COPY = glyph("copy")
-const COPIED = glyph("copied")
-const REVEAL = glyph("revealPassword")
-const HIDE = glyph("hidePassword")
-
-/** The Grammar Input props that make a value copyable in place (copy glyph inside the field) and, for a secret, revealable. */
+/**
+ * The Grammar Input props that make a value copyable in place and, for a secret, revealable. Kept at this path for the developers
+ * page and the provider wizards that have not moved yet; the new surfaces use ConnectionCopyInput.
+ */
 export const useCopyField = () => {
-  const t = useT(connectionWizard)
-  return {
-    isCopyable: true,
-    copyLabel: t("copy"),
-    copiedLabel: t("copied"),
-    copyIcon: COPY,
-    copiedIcon: COPIED,
-    revealLabel: t("reveal"),
-    hideLabel: t("hide"),
-    revealIcon: REVEAL,
-    hideIcon: HIDE,
-  } as const
+    const t = useTranslations("connections")
+    return {
+        isCopyable: true,
+        copyLabel: t("copy"),
+        copiedLabel: t("copied"),
+        copyIcon: WizardCopyGlyphs.copy,
+        copiedIcon: WizardCopyGlyphs.copied,
+        revealLabel: t("reveal"),
+        hideLabel: t("hide"),
+        revealIcon: WizardCopyGlyphs.reveal,
+        hideIcon: WizardCopyGlyphs.hide,
+    } as const
 }

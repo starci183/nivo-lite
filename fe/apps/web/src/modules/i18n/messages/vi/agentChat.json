@@ -76,5 +76,7 @@
   "takenOverNotice": "Bạn đã tiếp quản. AI sẽ im lặng cho đến khi bạn trả lại hội thoại.",
   "staffPlaceholder": "Trả lời với vai nhân viên",
   "handoffNotice": "Đã chuyển lead cho Sales AI.",
-  "handoffGate": "Xem dòng chảy công việc của khách này →"
+  "handoffGate": "Xem dòng chảy công việc của khách này →",
+  "emptyMessage": "Hãy nhập tin nhắn trước.",
+  "notSentReason": "Chưa gửi được tin nhắn. Hãy thử lại."
 }

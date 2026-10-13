@@ -3,8 +3,9 @@ import type { EntityManager } from "typeorm"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { WorkItemRow } from "./persistence/work-items.rows"
+import type { ClosedClaimRow, WorkItemRow } from "./persistence/work-items.rows"
 import {
+    ATTACH_WORK_ITEM_EXECUTION,
     CLAIM_WORK_ITEM,
     FIND_WORK_ITEM_BY_DEDUPE,
     INSERT_WORK_ITEM,
@@ -16,6 +17,7 @@ import {
     NEXT_QUEUED_WORK_ITEM,
     REOPEN_WAITING_WORK_ITEM,
     SAVE_PREPARED_WORK_ITEM,
+    SETTLE_WAITING_CLAIMS,
 } from "./persistence/work-items.sql"
 import { CLAIM_LEASE_SECONDS } from "./work-items.contracts"
 import type {
@@ -132,6 +134,27 @@ export class WorkItemsService {
                 this.now(),
             ]),
         )
+    }
+
+    /** Links the approval card that decided an item to it. */
+    async attachExecution(workspaceId: string, id: string, executionId: string): Promise<void> {
+        await this.entityManager.query(ATTACH_WORK_ITEM_EXECUTION, [workspaceId, id, executionId])
+    }
+
+    /** Closes the "customer says they paid" checks still waiting for an invoice that was just paid; answers the closed items. */
+    settleClaims(
+        workspaceId: string,
+        settledBy: string,
+        dedupePrefix: string,
+        result: WorkResult,
+    ): Promise<Array<ClosedClaimRow>> {
+        return this.entityManager.query<Array<ClosedClaimRow>>(SETTLE_WAITING_CLAIMS, [
+            workspaceId,
+            settledBy,
+            dedupePrefix,
+            JSON.stringify(result),
+            this.now(),
+        ])
     }
 
     /** Closes an item as done. */

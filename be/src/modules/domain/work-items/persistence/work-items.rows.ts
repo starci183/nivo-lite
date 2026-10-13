@@ -66,3 +66,11 @@ export interface WorkItemRow {
     /** The agent instance. */
     installation_id: string | null
 }
+
+/** An item closed as settled. */
+export interface ClosedClaimRow {
+    /** The item id. */
+    id: string
+    /** The input behind it, when there is one. */
+    inbound_event_id: string | null
+}

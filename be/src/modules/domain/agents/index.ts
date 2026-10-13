@@ -31,6 +31,8 @@ export type {
     DashboardQuery,
     EngineStatus,
     NewAgent,
+    AgentProfile,
+    OptionalAgentProfile,
     OptionalAgentRef,
     Processor,
 } from "./agents.contracts"

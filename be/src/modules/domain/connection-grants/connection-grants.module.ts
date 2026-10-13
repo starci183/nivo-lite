@@ -1,0 +1,18 @@
+import { Module } from "@nestjs/common"
+import type { DynamicModule } from "@nestjs/common"
+import { ConfigurableModuleClass, OPTIONS_TYPE } from "./connection-grants.module-definition"
+import { ConnectionGrantsService } from "./connection-grants.service"
+
+@Module({})
+/** The agent access to connections, over the primary Supabase PostgreSQL connection. */
+export class ConnectionGrantsModule extends ConfigurableModuleClass {
+    /** Registers the capability once in the API app. */
+    static register(options: typeof OPTIONS_TYPE): DynamicModule {
+        const base = super.register(options)
+        return {
+            ...base,
+            providers: [...(base.providers ?? []), ConnectionGrantsService],
+            exports: [ConnectionGrantsService],
+        }
+    }
+}

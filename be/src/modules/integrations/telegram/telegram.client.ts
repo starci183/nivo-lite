@@ -3,6 +3,7 @@ import { InjectHttpClient } from "@modules/platform/http"
 import type { HttpClient } from "@modules/platform/http"
 import { isRecord } from "@modules/platform/primitives"
 import { TelegramError, TelegramErrorCode } from "./errors/telegram.error"
+import type { TelegramParams } from "./telegram.contracts"
 import { InjectTelegramOptions } from "./telegram.decorators"
 import type { TelegramOptions } from "./telegram.options"
 
@@ -15,7 +16,7 @@ export class TelegramClient {
     ) {}
 
     /** Calls one Bot API method with the bot token and returns its `result`; a refusal or a network failure is a TelegramError. */
-    async call(token: string, method: string, body: Record<string, unknown> = {}): Promise<unknown> {
+    async call(token: string, method: string, body: TelegramParams = {}): Promise<unknown> {
         const answer = await this.http
             .request({
                 method: "POST",

@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common"
+import { ConnectChannelModule } from "./connect-channel/connect-channel.module"
 import { MigrateModule } from "./migrate/migrate.module"
 import { PruneWorkspacesModule } from "./prune-workspaces/prune-workspaces.module"
 import { SeedModule } from "./seed/seed.module"
@@ -11,6 +12,7 @@ import { SimulateSepayModule } from "./simulate-sepay/simulate-sepay.module"
 
 @Module({
     imports: [
+        ConnectChannelModule,
         MigrateModule,
         PruneWorkspacesModule,
         SeedModule,

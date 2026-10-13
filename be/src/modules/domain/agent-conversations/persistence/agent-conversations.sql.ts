@@ -41,3 +41,18 @@ FROM public.agent_conversations c
 JOIN public.agents a ON a.id = c.agent_id
 WHERE c.id = $1
 LIMIT 1`
+
+/** The latest customer conversation of a lead, optionally only on one channel ($1 workspace, $2 lead, $3 channel or null). */
+export const FIND_LATEST_LEAD_CONVERSATION = sql`SELECT id, agent_id, channel, visitor_name
+FROM public.agent_conversations
+WHERE workspace_id = $1::uuid AND lead_id = $2::uuid AND kind = 'customer' AND ($3::text IS NULL OR channel = $3::text)
+ORDER BY created_at DESC
+LIMIT 1`
+
+/** Ties a conversation to the lead the customer became ($1 workspace, $2 conversation, $3 lead). */
+export const ATTACH_CONVERSATION_LEAD = sql`UPDATE public.agent_conversations SET lead_id = $3::uuid
+WHERE workspace_id = $1::uuid AND id = $2::uuid`
+
+/** A person holds the conversation from now on: the AI stays quiet until they hand it back ($1 workspace, $2 conversation, $3 holder). */
+export const HAND_CONVERSATION_TO_PERSON = sql`UPDATE public.agent_conversations SET handled_by = $3, handled_at = now()
+WHERE workspace_id = $1::uuid AND id = $2::uuid`
