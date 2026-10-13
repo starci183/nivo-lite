@@ -27,7 +27,7 @@ export interface QueueSchedulerDefinition {
 
 /** One job as a handler receives it. */
 export interface QueueDelivery {
-    /** The job id: the outbox row id of an enqueued job (stable across its retries), the pgmq message id of a scheduled tick. */
+    /** The job id: the outbox row id of an enqueued job (stable across its retries), `<queue>:<message id>` of a scheduled tick. */
     readonly id: string
     /** The queue. */
     readonly queue: string
