@@ -1,37 +1,53 @@
 import type { ReactNode } from "react"
+import { AgentDashboardFrame } from "@/components/blocks/AgentDashboardFrame"
 import { SalesActivity } from "@/components/blocks/SalesActivity"
 import { SalesAttention } from "@/components/blocks/SalesAttention"
 import { SalesContracts } from "@/components/blocks/SalesContracts"
 import { SalesDecisions } from "@/components/blocks/SalesDecisions"
+import { SalesFigures } from "@/components/blocks/SalesFigures"
 import { SalesHandoffs } from "@/components/blocks/SalesHandoffs"
 import { SalesPipeline } from "@/components/blocks/SalesPipeline"
-import { SalesWorkbench } from "@/components/blocks/SalesWorkbench"
-import { WORKBENCH_CLASS_NAME } from "./classNames"
+import { SalesWorkbenchGate } from "@/components/blocks/SalesWorkbenchGate"
+import type { SalesTab } from "@/hooks/sales"
 
-/** The resolved route state of the Sales workbench. */
+/** The resolved route state and the tab names of the Sales workbench. */
 interface SalesWorkbenchPageBaseProps {
     readonly props: {
+        /** The Sales agent instance the workbench opens for. */
+        readonly installationId: string | null
         /** The selected tab. */
         readonly tab: string
         /** The decision to highlight, if any. */
         readonly focus: string | null
+        readonly tabs: Readonly<Record<SalesTab, string>>
     }
 }
 
-/** The connected area of one tab; each reads the same workbench in the browser. */
-const areaOf = (tab: string, focus: string | null): ReactNode => {
-    if (tab === "pipeline") return <SalesPipeline />
-    if (tab === "decisions") return <SalesDecisions focusId={focus} />
-    if (tab === "handoff") return <SalesHandoffs />
-    if (tab === "contracts") return <SalesContracts />
-    if (tab === "activity") return <SalesActivity />
-    return <SalesAttention />
-}
+/** The six Sales areas in tab order, each a block that reads the workbench in the browser. */
+const AREAS: ReadonlyArray<{ readonly id: SalesTab; readonly draw: (focus: string | null) => ReactNode }> = [
+    { id: "attention", draw: () => <SalesAttention /> },
+    { id: "pipeline", draw: () => <SalesPipeline /> },
+    { id: "decisions", draw: (focus) => <SalesDecisions focusId={focus} /> },
+    { id: "handoff", draw: () => <SalesHandoffs /> },
+    { id: "contracts", draw: () => <SalesContracts /> },
+    { id: "activity", draw: () => <SalesActivity /> },
+]
 
-/** The Sales workbench: the connected frame (dashboard, figures, tab strip) and the connected area of the selected tab under it. */
-export const SalesWorkbenchPageBase = (props: SalesWorkbenchPageBaseProps) => (
-    <div className={WORKBENCH_CLASS_NAME}>
-        <SalesWorkbench tab={props.props.tab} />
-        {areaOf(props.props.tab, props.props.focus)}
-    </div>
-)
+/** The Sales workbench: the agent dashboard frame around the six Sales areas, each a block that reads the workbench in the browser. */
+export const SalesWorkbenchPageBase = (props: SalesWorkbenchPageBaseProps) => {
+    const p = props.props
+    return (
+        <AgentDashboardFrame
+            module="sales"
+            installationId={p.installationId}
+            initialTab={p.tab}
+            ribbon={<SalesFigures />}
+            waitingTab="decisions"
+            tabs={AREAS.map((area) => ({
+                id: area.id,
+                label: p.tabs[area.id],
+                content: <SalesWorkbenchGate placeholder={p.tabs[area.id]}>{area.draw(p.focus)}</SalesWorkbenchGate>,
+            }))}
+        />
+    )
+}

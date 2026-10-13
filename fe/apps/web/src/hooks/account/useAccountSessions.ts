@@ -2,7 +2,7 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { useMemo } from "react"
-import { useQueryMyAccountSwr } from "@/hooks/swr/api/graphql/queries/useQueryMyAccountSwr"
+import { useQueryMyAccountSwr } from "@/hooks/swr"
 import { parseUserAgent } from "./account.shared"
 import type { SessionRowView } from "./account.shared"
 

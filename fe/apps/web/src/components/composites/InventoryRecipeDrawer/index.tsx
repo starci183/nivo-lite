@@ -1,5 +1,4 @@
-import { InventoryPick } from "@/components/leaves/InventoryPick"
-import { InventorySelect } from "@/components/leaves/InventorySelect"
+import { InventoryPick } from "@/components/branches/InventoryPick"
 import { InventoryField } from "@/components/leaves/InventoryField"
 import { InventoryNotices } from "@/components/leaves/InventoryNotices"
 import { Button, Drawer, Text } from "@starci/grammar/common"
@@ -76,14 +75,14 @@ export const InventoryRecipeDrawer = (props: InventoryRecipeDrawerProps) => {
                 {p.lines.map((line, index) => (
                     <div key={line.key} className={LINE_ROW_CLASS_NAME}>
                         <InventoryPick
-                            selectLabel={say("recipeIngredient", { n: index + 1 })}
-                            selectHint={say("recipeIngredientHint")}
                             itemId={line.itemId}
                             options={p.items}
+                            qty={line.qty}
+                            selectLabel={say("recipeIngredient", { n: index + 1 })}
+                            selectHint={say("recipeIngredientHint")}
                             qtyId={`rl-q-${line.key}`}
                             qtyName={`rq-${line.key}`}
                             qtyLabel={say("recipeQty", { unit: line.unit })}
-                            qty={line.qty}
                             onPick={(value) => on.item(index, value)}
                             onQty={(value) => on.qty(index, value)}
                         />

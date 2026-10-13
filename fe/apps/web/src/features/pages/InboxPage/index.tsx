@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server"
 import { InboxFeed } from "@/components/blocks/InboxFeed"
 import { InboxSimulator } from "@/components/blocks/InboxSimulator"
 import { InboxPageLayout } from "@/components/composites/InboxPageLayout"
-import { BANK_CONNECTION } from "@/lib/bank"
+import { BANK_CONNECTION } from "@/hooks/banks"
 import { CONSOLE_ROUTES } from "@/modules/routes"
 
 /** The document title of the page. */

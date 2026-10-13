@@ -1,6 +1,6 @@
 "use client"
 
-import { useQueryAdminWorkspacesSwr } from "@/hooks/swr/api/graphql/queries/useQueryAdminWorkspacesSwr"
+import { useQueryAdminWorkspacesSwr } from "@/hooks/swr"
 import { adminFailureOf } from "./admin.shared"
 import type { AdminWorkspaceFilter } from "./admin.shared"
 

@@ -8,23 +8,24 @@ interface ContentEditorHistoryProps {
 }
 
 /** What happened to a post, newest first. */
-export const ContentEditorHistory = (props: ContentEditorHistoryProps) => (
-    <>
-        <SectionHeader level={3} title={props.t("evidenceTitle")} />
-        {props.rows.length === 0 ? (
-            <Text size="sm" tone="muted">
-                {props.t("evidenceEmpty")}
-            </Text>
-        ) : (
-            <Timeline
-                label={props.t("evidenceTitle")}
-                items={props.rows.map((row) => ({
-                    id: row.id,
-                    title: row.text,
-                    dateTime: row.at,
-                    timeLabel: row.timeLabel,
-                }))}
-            />
-        )}
-    </>
-)
+export const ContentEditorHistory = (props: ContentEditorHistoryProps) => {
+    const items = props.rows.map((row) => ({
+        id: row.id,
+        title: row.text,
+        dateTime: row.at,
+        timeLabel: row.timeLabel,
+    }))
+
+    return (
+        <>
+            <SectionHeader level={3} title={props.t("evidenceTitle")} />
+            {items.length > 0 ? (
+                <Timeline label={props.t("evidenceTitle")} items={items} />
+            ) : (
+                <Text size="sm" tone="muted">
+                    {props.t("evidenceEmpty")}
+                </Text>
+            )}
+        </>
+    )
+}

@@ -1,20 +1,18 @@
+import type { AdminHealthQuery, AdminWorkspaceQuery, AdminWorkspacesQuery } from "@/modules/api"
 import type { BadgeTone } from "@starci/grammar/common"
 import { isNotFoundFailure } from "@/modules/api"
-import type { QueryAdminHealthResponse } from "@/modules/api/graphql/queries/query-admin-health"
-import type { QueryAdminWorkspaceResponse } from "@/modules/api/graphql/queries/query-admin-workspace"
-import type { QueryAdminWorkspacesResponse } from "@/modules/api/graphql/queries/query-admin-workspaces"
 
 /** One customer workspace as the list shows it. */
-export type AdminWorkspaceItem = QueryAdminWorkspacesResponse["adminWorkspaces"]["items"][number]
+export type AdminWorkspaceItem = AdminWorkspacesQuery["adminWorkspaces"]["items"][number]
 
 /** The full read-only overview of one workspace. */
-export type AdminWorkspaceDetail = QueryAdminWorkspaceResponse["adminWorkspace"]
+export type AdminWorkspaceDetail = AdminWorkspaceQuery["adminWorkspace"]
 
 /** The platform health page. */
-export type AdminPlatformHealth = QueryAdminHealthResponse["adminHealth"]
+export type AdminPlatformHealth = AdminHealthQuery["adminHealth"]
 
 /** The filtered list with the size of every filter. */
-export type AdminWorkspaceList = QueryAdminWorkspacesResponse["adminWorkspaces"]
+export type AdminWorkspaceList = AdminWorkspacesQuery["adminWorkspaces"]
 
 /** The list filters of the console. */
 export type AdminWorkspaceFilter = "all" | "attention" | "unpaid" | "idle"

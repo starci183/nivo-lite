@@ -3,11 +3,12 @@ import type { IconSource, IconSourceProps, IconTileSize } from "@starci/grammar/
 
 /** What the square agent mark draws. */
 type AgentMarkProps = {
+    /** Accept legacy caller metadata while the mark renders only its visual props. */
+    readonly [metadata: string]: unknown
     /** SVG path data of the module glyph (24 by 24 grid, stroked). */
     readonly glyph: string
     /** The spoken name of the mark. */
     readonly label: string
-    readonly module: string
     readonly size?: "xs" | "sm" | "md" | "lg"
 }
 

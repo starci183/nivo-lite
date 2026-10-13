@@ -2,8 +2,8 @@ import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { notFound } from "next/navigation"
 import type { PublicBookingPageType } from "@/modules/api"
-import { queryPublicBookingPage } from "@/modules/api/graphql/queries"
-import type { PublicBookingPage as PublicBookingPageData } from "@/modules/types"
+import { queryPublicBookingPage } from "@/modules/api/graphql/queries/query-public-booking-page"
+import type { PublicBookingPageData } from "@/modules/types"
 import { PublicBookingPageBase } from "./component"
 
 /** What the route passes through: the slug in the URL. */

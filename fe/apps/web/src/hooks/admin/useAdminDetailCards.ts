@@ -121,11 +121,8 @@ const connectionRows = (
             badgeOf("health", entry.health, healthTone(entry.health), true),
         ],
     }))
-
 const KNOWLEDGE_TONES: Readonly<Record<string, AdminBadgeView["tone"]>> = { failed: "danger", ready: "success" }
-
 const knowledgeTone = (status: string): AdminBadgeView["tone"] => KNOWLEDGE_TONES[status] ?? "neutral"
-
 const knowledgeRows = (detail: AdminWorkspaceDetail): ReadonlyArray<AdminRowView> =>
     detail.knowledge.map((entry): AdminRowView => ({
         id: entry.kind,

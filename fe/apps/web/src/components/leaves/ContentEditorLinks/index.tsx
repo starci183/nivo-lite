@@ -20,6 +20,17 @@ interface ContentEditorLinksProps {
     readonly onRemove: (key: string) => void
 }
 
+interface LinkField {
+    readonly key: "url" | "label"
+    readonly name: "link" | "linklabel"
+    readonly labelKey: "linkUrl" | "linkLabel"
+}
+
+const LINK_FIELDS: ReadonlyArray<LinkField> = [
+    { key: "url", name: "link", labelKey: "linkUrl" },
+    { key: "label", name: "linklabel", labelKey: "linkLabel" },
+]
+
 /** The links of a post: a list of rows with add and remove. */
 export const ContentEditorLinks = (props: ContentEditorLinksProps) => (
     <>
@@ -27,24 +38,18 @@ export const ContentEditorLinks = (props: ContentEditorLinksProps) => (
         <div className={LINKS_CLASS_NAME}>
             {props.links.map((link) => (
                 <div key={link.key} className={LINK_ROW_CLASS_NAME}>
-                    <Input
-                        id={`ce-link-${link.key}`}
-                        name={`link-${link.key}`}
-                        label={props.t("linkUrl")}
-                        variant="secondary"
-                        value={link.url}
-                        isDisabled={!props.isEditable}
-                        onValueChange={(v) => props.onChange(link.key, { url: v })}
-                    />
-                    <Input
-                        id={`ce-linklabel-${link.key}`}
-                        name={`linklabel-${link.key}`}
-                        label={props.t("linkLabel")}
-                        variant="secondary"
-                        value={link.label}
-                        isDisabled={!props.isEditable}
-                        onValueChange={(v) => props.onChange(link.key, { label: v })}
-                    />
+                    {LINK_FIELDS.map((field) => (
+                        <Input
+                            key={field.key}
+                            id={`ce-${field.name}-${link.key}`}
+                            name={`${field.name}-${link.key}`}
+                            label={props.t(field.labelKey)}
+                            variant="secondary"
+                            value={link[field.key]}
+                            isDisabled={!props.isEditable}
+                            onValueChange={(v) => props.onChange(link.key, { [field.key]: v })}
+                        />
+                    ))}
                     {props.isEditable ? (
                         <Button variant="danger-soft" size="sm" onPress={() => props.onRemove(link.key)}>
                             {props.t("linkRemove")}
