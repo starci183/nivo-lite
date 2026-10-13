@@ -1,6 +1,8 @@
 import { Inject, Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { ok, refused } from "@modules/platform/primitives"
+import type { Outcome } from "@modules/platform/primitives"
 import { decodeChannelKey, decryptSecret, encryptSecret, randomSecret } from "./connection-cipher.policy"
 import { cleanConnectionName } from "./connection-name.policy"
 import { isPlannedConnector } from "./connector-catalog.policy"
@@ -15,7 +17,11 @@ import type {
     ConnectionRole,
     ConnectionSecret,
     CreateConnectionInput,
+    FirstEvent,
     FirstEventState,
+    HealthCandidate,
+    HealthMark,
+    IntakeConnection,
     ListByProviderOptions,
     Provider,
     RecordedEvent,
@@ -24,14 +30,22 @@ import { toConnectionRecord } from "./connections.mapper"
 import { MODULE_OPTIONS_TOKEN } from "./connections.module-definition"
 import type { ConnectionsOptions } from "./connections.options"
 import { ConnectionsError, ConnectionsErrorCode } from "./errors/connections.error"
-import type { ConnectionSecretsRow, ConnectionSelectRow, MemberRow } from "./persistence/connections.rows"
+import type {
+    ConnectionSecretsRow,
+    ConnectionSelectRow,
+    HealthCandidateRow,
+    IntakeConnectionRow,
+    MemberRow,
+} from "./persistence/connections.rows"
 import {
+    APPLY_ZALO_AUTHORIZATION,
     DELETE_CONNECTION,
     DELETE_SECRET,
     FIND_ACTIVE_MEMBER,
     FIND_CONNECTION,
     FIND_CONNECTION_AGENT_IDS,
     FIND_CONNECTIONS_BY_IDS,
+    FIND_INTAKE_CONNECTION,
     FIND_LIVE_BY_META,
     FIND_SECRET,
     INSERT_CONNECTION,
@@ -39,12 +53,19 @@ import {
     INSERT_SECRET,
     LIST_CONNECTIONS,
     LIST_CONNECTIONS_BY_PROVIDER,
+    LIST_HEALTH_BATCH,
+    MARK_CONNECTION_ERROR,
+    MARK_CONNECTION_HEALTH,
+    MARK_CONNECTION_RECEIVED,
     PATCH_CONNECTION,
     RECORD_EVENT,
     UPSERT_SECRET,
 } from "./persistence/connections.sql"
 
 type SecretRow = Pick<ConnectionSecretsRow, "ciphertext" | "webhook_secret">
+
+/** The id every real id sorts after. */
+const NIL_UUID = "00000000-0000-0000-0000-000000000000"
 
 @Injectable()
 /** The connections of a workspace and their sealed secrets, reached only through the primary EntityManager. */
@@ -271,5 +292,55 @@ export class ConnectionsService {
             throw new ConnectionsError({ code: ConnectionsErrorCode.ConnectorNotFound, params: { id: connectorId } })
         }
         await this.entityManager.query(INSERT_CONNECTOR_INTEREST, [actor.workspaceId, connectorId, actor.principalId])
+    }
+
+    /** The connection a delivery arrived on, or a refusal when it is missing, disconnected or of another provider. */
+    async intakeOf(
+        connectionId: string,
+        provider: string,
+        manager: EntityManager = this.entityManager,
+    ): Promise<Outcome<IntakeConnection, ConnectionsErrorCode>> {
+        const row = (await manager.query<Array<IntakeConnectionRow>>(FIND_INTAKE_CONNECTION, [connectionId, provider]))[0]
+        if (row === undefined) return refused(ConnectionsErrorCode.NotFound)
+        return ok({ id: row.id, workspaceId: row.workspace_id, status: row.status })
+    }
+
+    /** Marks the connection as failing with the reason the owner reads on Connections. */
+    async markFailing(connectionId: string, reason: string): Promise<void> {
+        await this.entityManager.query(MARK_CONNECTION_ERROR, [connectionId, reason])
+    }
+
+    /** The connection received its first (or any) event: it turns connected and keeps the first event for the wizard. */
+    async markReceived(connectionId: string, firstEvent: FirstEvent, manager: EntityManager): Promise<void> {
+        await manager.query(MARK_CONNECTION_RECEIVED, [connectionId, JSON.stringify(firstEvent)])
+    }
+
+    /** The owner authorized the Zalo OA: its id joins the public facts and an error status clears. */
+    async applyZaloAuthorization(connectionId: string, oaId?: string): Promise<void> {
+        await this.entityManager.query(APPLY_ZALO_AUTHORIZATION, [connectionId, JSON.stringify(oaId === undefined ? {} : { oa_id: oaId })])
+    }
+
+    /** A page of the connections the health check judges, in id order, after the given id (empty for the first page). */
+    async healthBatch(afterId: string, size: number): Promise<ReadonlyArray<HealthCandidate>> {
+        const rows = await this.entityManager.query<Array<HealthCandidateRow>>(LIST_HEALTH_BATCH, [afterId === "" ? NIL_UUID : afterId, size])
+        return rows.map((row) => ({
+            id: row.id,
+            workspaceId: row.workspace_id,
+            provider: row.provider,
+            name: row.name,
+            status: row.status,
+            lastError: row.last_error,
+            lastEventAt: row.last_event_at,
+            createdAt: row.created_at,
+            health: row.health,
+        }))
+    }
+
+    /** Records the health verdict in the public facts of the connection. */
+    async markHealth(connectionId: string, mark: HealthMark): Promise<void> {
+        await this.entityManager.query(MARK_CONNECTION_HEALTH, [
+            connectionId,
+            JSON.stringify({ state: mark.state, reason: mark.reason, checked_at: mark.checkedAt }),
+        ])
     }
 }

@@ -1,0 +1,177 @@
+"use client"
+
+import { useFormatter, useTranslations } from "next-intl"
+import { useState, useTransition } from "react"
+import { writeBookingCatalogRemoval, writeBookingService } from "@/modules/db/booking/write-booking-catalog"
+import { navigation } from "@/modules/i18n"
+import type { BookingServiceView } from "@/modules/types"
+import { BookingServicesBase } from "./component"
+import type { ServiceFields } from "./component"
+
+const { useRouter } = navigation
+
+/** What the setup tab hands the connected services list. */
+interface BookingServicesProps {
+    readonly workspaceId: string
+    readonly services: ReadonlyArray<BookingServiceView>
+}
+
+/** The form being edited: a new service has no id. */
+interface Draft {
+    readonly id: string | null
+    readonly fields: ServiceFields
+}
+
+const BLANK: ServiceFields = {
+    name: "",
+    durationMin: 30,
+    bufferMin: 0,
+    price: "",
+    resourceKind: "",
+    followup: "",
+    description: "",
+    active: true,
+}
+
+const digits = (value: string): number | null => {
+    const only = value.replace(/[^\d]/gu, "")
+    return only === "" ? null : Number(only)
+}
+
+/** The connected services list: add, edit and remove the services the shop sells by appointment. */
+export const BookingServices = (props: BookingServicesProps) => {
+    const t = useTranslations("workbenchBooking")
+    const format = useFormatter()
+    const router = useRouter()
+    const [draft, setDraft] = useState<Draft | null>(null)
+    const [removeId, setRemoveId] = useState<string | null>(null)
+    const [saved, setSaved] = useState<boolean | null>(null)
+    const [isPending, startTransition] = useTransition()
+    const removing = props.services.find((service) => service.id === removeId)
+    const after = (ok: boolean, close: () => void) => {
+        setSaved(ok)
+        if (!ok) return
+        close()
+        router.refresh()
+    }
+    const save = () => {
+        if (draft === null) return
+        const { fields } = draft
+        startTransition(async () => {
+            const answer = await writeBookingService({
+                workspaceId: props.workspaceId,
+                id: draft.id,
+                name: fields.name,
+                description: fields.description,
+                durationMin: fields.durationMin,
+                bufferMin: fields.bufferMin,
+                priceVnd: digits(fields.price),
+                resourceKind: fields.resourceKind,
+                followupDays: digits(fields.followup),
+                active: fields.active,
+            })
+            after(answer.kind === "ok", () => setDraft(null))
+        })
+    }
+    const remove = () => {
+        if (removeId === null) return
+        startTransition(async () => {
+            const answer = await writeBookingCatalogRemoval(props.workspaceId, removeId, "booking_services")
+            after(answer.kind === "ok", () => setRemoveId(null))
+        })
+    }
+    return (
+        <BookingServicesBase
+            props={{
+                title: t("servicesTitle"),
+                hint: t("servicesHint"),
+                list: {
+                    label: t("servicesTitle"),
+                    emptyText: t("servicesEmpty"),
+                    editLabel: t("edit"),
+                    removeLabel: t("remove"),
+                    rows: props.services.map((service) => ({
+                        id: service.id,
+                        title: service.name,
+                        detail: [
+                            t("minutes", { n: service.durationMin }),
+                            service.priceVnd === null
+                                ? ""
+                                : format.number(service.priceVnd, {
+                                      style: "currency",
+                                      currency: "VND",
+                                      maximumFractionDigits: 0,
+                                  }),
+                            service.resourceKind ?? "",
+                            service.active ? "" : t("servicePaused"),
+                        ]
+                            .filter((part) => part !== "")
+                            .join(" · "),
+                    })),
+                },
+                addLabel: t("serviceAdd"),
+                ...(draft === null
+                    ? {}
+                    : {
+                          form: {
+                              heading: draft.id === null ? t("serviceAdd") : draft.fields.name,
+                              fields: draft.fields,
+                              nameLabel: t("serviceName"),
+                              durationLabel: t("serviceDuration"),
+                              bufferLabel: t("serviceBuffer"),
+                              priceLabel: t("servicePrice"),
+                              pricePlaceholder: t("servicePricePlaceholder"),
+                              kindLabel: t("serviceKind"),
+                              kindPlaceholder: t("serviceKindPlaceholder"),
+                              followupLabel: t("serviceFollowup"),
+                              followupPlaceholder: t("serviceFollowupPlaceholder"),
+                              descriptionLabel: t("serviceDescription"),
+                              activeLabel: t("serviceActive"),
+                              saveLabel: t("save"),
+                              cancelLabel: t("cancel"),
+                          },
+                      }),
+                ...(removing === undefined
+                    ? {}
+                    : {
+                          removing: {
+                              title: t("serviceRemoveTitle", { name: removing.name }),
+                              description: t("serviceRemoveBody"),
+                              confirmLabel: t("remove"),
+                              cancelLabel: t("keep"),
+                          },
+                      }),
+                isPending,
+                ...(saved === null
+                    ? {}
+                    : { notice: { tone: saved ? "affirmative" : "negative", text: t(saved ? "saved" : "failed") } }),
+            }}
+            on={{
+                add: () => setDraft({ id: null, fields: BLANK }),
+                edit: (id) => {
+                    const service = props.services.find((candidate) => candidate.id === id)
+                    if (service === undefined) return
+                    setDraft({
+                        id,
+                        fields: {
+                            name: service.name,
+                            durationMin: service.durationMin,
+                            bufferMin: service.bufferMin,
+                            price: service.priceVnd === null ? "" : String(service.priceVnd),
+                            resourceKind: service.resourceKind ?? "",
+                            followup: service.followupDays === null ? "" : String(service.followupDays),
+                            description: service.description,
+                            active: service.active,
+                        },
+                    })
+                },
+                ask: setRemoveId,
+                change: (patch) => draft !== null && setDraft({ ...draft, fields: { ...draft.fields, ...patch } }),
+                save,
+                cancelForm: () => setDraft(null),
+                confirmRemove: remove,
+                cancelRemove: () => setRemoveId(null),
+            }}
+        />
+    )
+}

@@ -7,6 +7,11 @@ import { parseHttpSecurityConfig, RequestValidationService } from "@modules/plat
 import { createJsonLogger, LoggingLogEvent } from "@modules/platform/logging"
 import { parseJobsConfig } from "@modules/platform/jobs"
 import { parseQueueConfig } from "@modules/platform/queue"
+import { parseChannelsConfig } from "@modules/domain/channels"
+import { parseConnectionSecretsConfig } from "@modules/domain/connection-secrets"
+import { parseMailConfig } from "@modules/integrations/mail"
+import { parseTelegramConfig } from "@modules/integrations/telegram"
+import { parseZaloConfig } from "@modules/integrations/zalo"
 import { parsePlatformAdminConfig } from "@modules/domain/platform-admin"
 import { parseWorkspaceInvitesConfig } from "@modules/domain/workspace-invites"
 import { parseWorkspacesConfig } from "@modules/domain/workspaces"
@@ -41,6 +46,11 @@ const bootstrap = async (): Promise<void> => {
         platformAdmin: parsePlatformAdminConfig(env),
         workspaces: parseWorkspacesConfig(env),
         workspaceInvites: parseWorkspaceInvitesConfig(env),
+        connectionSecrets: parseConnectionSecretsConfig(env),
+        channels: parseChannelsConfig(env),
+        telegram: parseTelegramConfig(env),
+        zalo: parseZaloConfig(env),
+        mail: parseMailConfig(env),
         queue: parseQueueConfig(env),
         jobs: parseJobsConfig(env),
         connections: parseConnectionsConfig(env),
