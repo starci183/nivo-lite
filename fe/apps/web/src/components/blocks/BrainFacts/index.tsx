@@ -1,7 +1,7 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { SCOPE_KEY, SCOPE_TONE, SOURCE_KEY, TYPE_KEY, useBrainBoard, useBrainCommand } from "@/hooks/brain"
+import { SCOPE_KEY, SCOPE_TONE, FACT_SOURCE_KEY, TYPE_KEY, useBrainBoard, useBrainCommand } from "@/hooks/brain"
 import { KNOWLEDGE_ROUTES } from "@/modules/routes"
 import type { BrainFact } from "@/modules/types"
 import type { KnowledgeRowView } from "@/components/composites/KnowledgeRows"
@@ -32,7 +32,7 @@ export const BrainFacts = () => {
         badges: [
             { label: t(TYPE_KEY[fact.subjectType]), tone: "neutral" },
             { label: t(SCOPE_KEY[fact.scope]), tone: SCOPE_TONE[fact.scope] },
-            { label: t(SOURCE_KEY[fact.sourceKind]), tone: "neutral" },
+            { label: t(FACT_SOURCE_KEY[fact.sourceKind]), tone: "neutral" },
             ...scheduledBadge(fact),
         ],
         actions: board.canWrite

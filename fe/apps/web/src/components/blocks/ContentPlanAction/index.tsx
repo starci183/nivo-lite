@@ -21,6 +21,7 @@ export const ContentPlanAction = () => {
         await job.request(month)
     })
     const error = form.formState.errors.month?.message
+    const isPending = form.formState.isSubmitting || job.isPending
     return (
         <ContentPlanActionBase
             props={{
@@ -39,12 +40,15 @@ export const ContentPlanAction = () => {
                               month: plan.month.slice(0, 7).split("-").reverse().join("/"),
                               s: Math.round((plan.ms ?? 0) / 1000),
                           }),
-                isPending: form.formState.isSubmitting || job.isPending,
+                isPending,
                 note: error ? { tone: "error", text: error } : null,
             }}
             on={{
                 open: () => setOpen(true),
                 close: () => setOpen(false),
+                openChange: (open) => {
+                    if (!open && !isPending) setOpen(false)
+                },
                 month: (month) => form.setValue("month", month, { shouldValidate: form.formState.isSubmitted }),
                 run: () => void run(),
                 dismissNote: () => form.clearErrors(),

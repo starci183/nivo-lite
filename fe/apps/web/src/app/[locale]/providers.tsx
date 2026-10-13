@@ -6,9 +6,8 @@ import { NextIntlClientProvider } from "next-intl"
 import { ThemeProvider, useTheme } from "next-themes"
 import { useSyncExternalStore } from "react"
 import type { ReactNode } from "react"
-import { intlLocale, toLocale } from "@/i18n/core"
 import { SideEffectsLayout } from "@/features/layouts/SideEffectsLayout"
-import { navigation } from "@/modules/i18n"
+import { intlTagOf, navigation } from "@/modules/i18n"
 import { ReduxProvider } from "@/redux"
 
 /** What the provider stack takes from the locale layout. */
@@ -53,7 +52,7 @@ const GrammarRouting = (props: LayerProps) => {
 export const Providers = (props: ProvidersProps) => (
     <NextIntlClientProvider locale={props.locale} messages={props.messages} timeZone={props.timeZone}>
         <ReduxProvider>
-            <I18nProvider locale={intlLocale(toLocale(props.locale))}>
+            <I18nProvider locale={intlTagOf(props.locale)}>
                 <GrammarRouting>
                     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
                         <ThemedRoot>

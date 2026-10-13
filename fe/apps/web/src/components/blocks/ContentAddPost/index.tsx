@@ -73,6 +73,9 @@ export const ContentAddPost = () => {
             on={{
                 open: () => setOpen(true),
                 close: () => setOpen(false),
+                openChange: (open) => {
+                    if (!open && !command.isPending) setOpen(false)
+                },
                 title: (value) => form.setValue("title", value),
                 date: (value) => form.setValue("date", value),
                 time: (value) => form.setValue("time", value),

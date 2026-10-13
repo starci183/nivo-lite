@@ -1,5 +1,6 @@
-import { Alert, Button, Input, NumberField, SectionHeader, SurfaceCard, Switch } from "@starci/grammar/common"
+import { Button, Input, NumberField, Switch } from "@starci/grammar/common"
 import type { ContentNote, ContentT } from "@/hooks/content"
+import { ContentCommandNote, ContentSettingsCard } from "@/components/composites/ContentSettingsCard"
 import { ACTIONS_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 
 /** One editable theme row. */
@@ -33,89 +34,98 @@ export interface ContentPillarsCardBaseProps {
     }
 }
 
+interface PillarTextFieldProps {
+    readonly row: PillarRow
+    readonly field: "name" | "description"
+    readonly label: string
+    readonly locked: boolean
+    readonly onChange: ContentPillarsCardBaseProps["on"]["change"]
+}
+
+const PillarTextField = (props: PillarTextFieldProps) => {
+    const id = `pillar-${props.field === "name" ? "name" : "desc"}-${props.row.key}`
+    return (
+        <Input
+            id={id}
+            name={id}
+            label={props.label}
+            variant="secondary"
+            value={props.row[props.field]}
+            isDisabled={props.locked}
+            onValueChange={(value) => props.onChange(props.row.key, { [props.field]: value })}
+        />
+    )
+}
+
 /** Draws the content themes: name, what it covers, weight, in use, with add, remove, suggested themes and save. */
 export const ContentPillarsCardBase = (props: ContentPillarsCardBaseProps) => {
     const { t, canManage, isPending } = props.props
     const locked = !canManage || isPending
     return (
-        <SurfaceCard ariaLabel={t("settingsPillars")}>
-            <div className={FORM_CLASS_NAME}>
-                <SectionHeader level={2} title={t("settingsPillars")} description={t("settingsPillarsBody")} />
-                {props.props.rows.map((row) => (
-                    <div key={row.key} className={FORM_CLASS_NAME}>
-                        <Input
-                            id={`pillar-name-${row.key}`}
-                            name={`pillar-name-${row.key}`}
-                            label={t("pillarName")}
-                            variant="secondary"
-                            value={row.name}
-                            isDisabled={locked}
-                            onValueChange={(v) => props.on.change(row.key, { name: v })}
-                        />
-                        <Input
-                            id={`pillar-desc-${row.key}`}
-                            name={`pillar-desc-${row.key}`}
-                            label={t("pillarDesc")}
-                            variant="secondary"
-                            value={row.description}
-                            isDisabled={locked}
-                            onValueChange={(v) => props.on.change(row.key, { description: v })}
-                        />
-                        <NumberField
-                            variant="secondary"
-                            label={t("pillarWeight")}
-                            value={row.weight}
-                            minValue={0}
-                            maxValue={20}
-                            isDisabled={locked}
-                            onValueChange={(v) => props.on.change(row.key, { weight: v })}
-                        />
-                        <div className={ACTIONS_CLASS_NAME}>
-                            <Switch
-                                label={t("pillarActive")}
-                                isSelected={row.active}
-                                isDisabled={locked}
-                                onSelectedChange={(v) => props.on.change(row.key, { active: v })}
-                            />
-                            <Button
-                                variant="danger-soft"
-                                size="sm"
-                                isDisabled={locked}
-                                onPress={() => props.on.remove(row.key)}
-                            >
-                                {t("remove")}
-                            </Button>
-                        </div>
-                    </div>
-                ))}
-                {props.props.note ? (
-                    <Alert
-                        title={props.props.note.text}
-                        tone={props.props.note.tone === "ok" ? "affirmative" : "negative"}
-                        dismissLabel={t("close")}
-                        onDismiss={props.on.dismissNote}
+        <ContentSettingsCard title={t("settingsPillars")} description={t("settingsPillarsBody")}>
+            {props.props.rows.map((row) => (
+                <div key={row.key} className={FORM_CLASS_NAME}>
+                    <PillarTextField
+                        row={row}
+                        field="name"
+                        label={t("pillarName")}
+                        locked={locked}
+                        onChange={props.on.change}
                     />
-                ) : null}
-                <div className={ACTIONS_CLASS_NAME}>
-                    <Button variant="outline" size="sm" isDisabled={locked} onPress={props.on.add}>
-                        {t("pillarAdd")}
-                    </Button>
-                    {props.props.rows.length === 0 ? (
-                        <Button variant="secondary" size="sm" isDisabled={locked} onPress={props.on.preset}>
-                            {t("pillarPreset")}
+                    <PillarTextField
+                        row={row}
+                        field="description"
+                        label={t("pillarDesc")}
+                        locked={locked}
+                        onChange={props.on.change}
+                    />
+                    <NumberField
+                        variant="secondary"
+                        label={t("pillarWeight")}
+                        value={row.weight}
+                        minValue={0}
+                        maxValue={20}
+                        isDisabled={locked}
+                        onValueChange={(v) => props.on.change(row.key, { weight: v })}
+                    />
+                    <div className={ACTIONS_CLASS_NAME}>
+                        <Switch
+                            label={t("pillarActive")}
+                            isSelected={row.active}
+                            isDisabled={locked}
+                            onSelectedChange={(v) => props.on.change(row.key, { active: v })}
+                        />
+                        <Button
+                            variant="danger-soft"
+                            size="sm"
+                            isDisabled={locked}
+                            onPress={() => props.on.remove(row.key)}
+                        >
+                            {t("remove")}
                         </Button>
-                    ) : null}
-                    <Button
-                        variant="primary"
-                        size="sm"
-                        isPending={isPending}
-                        isDisabled={!canManage}
-                        onPress={props.on.save}
-                    >
-                        {t("pillarSave")}
-                    </Button>
+                    </div>
                 </div>
+            ))}
+            <ContentCommandNote note={props.props.note} closeLabel={t("close")} onDismiss={props.on.dismissNote} />
+            <div className={ACTIONS_CLASS_NAME}>
+                <Button variant="outline" size="sm" isDisabled={locked} onPress={props.on.add}>
+                    {t("pillarAdd")}
+                </Button>
+                {props.props.rows.length === 0 ? (
+                    <Button variant="secondary" size="sm" isDisabled={locked} onPress={props.on.preset}>
+                        {t("pillarPreset")}
+                    </Button>
+                ) : null}
+                <Button
+                    variant="primary"
+                    size="sm"
+                    onPress={props.on.save}
+                    isDisabled={!canManage}
+                    isPending={isPending}
+                >
+                    {t("pillarSave")}
+                </Button>
             </div>
-        </SurfaceCard>
+        </ContentSettingsCard>
     )
 }

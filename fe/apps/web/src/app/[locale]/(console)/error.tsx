@@ -1,15 +1,13 @@
 "use client"
 
-import { RouteError } from "@/components/blocks/RouteError"
-import { useT } from "@/i18n/client"
-import { shell } from "@/i18n/dict/shell"
+import { ConsoleErrorPage } from "@/features/pages/ConsoleErrorPage"
 
-type ConsoleErrorProps = { readonly reset: () => void }
-
-/** STATE-8 case-5, last resort: a route without its own error view keeps the shell trail and heading, with one Alert and a retry. */
-const ConsoleError = ({ reset }: ConsoleErrorProps) => {
-    const t = useT(shell)
-    return <RouteError crumbs={[{ id: "home", label: t("crumbHome") }]} title={t("crumbHome")} onRetry={reset} />
+/** What Next hands the error boundary. */
+interface ErrorProps {
+    readonly reset: () => void
 }
 
-export default ConsoleError
+/** The console's last-resort error boundary slot. */
+const ErrorBoundary = (props: ErrorProps) => <ConsoleErrorPage onRetry={props.reset} />
+
+export default ErrorBoundary

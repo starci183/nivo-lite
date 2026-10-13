@@ -1,7 +1,7 @@
 "use client"
 
 import { EMPTY_LOYALTY_BOARD, daysSince, findTier, tierTone } from "@/hooks/loyalty"
-import { useQueryLoyaltyBoardSwr } from "@/hooks/swr/api/graphql"
+import { useQueryLoyaltyBoardSwr } from "@/hooks/swr"
 import { useFormatter, useTranslations } from "next-intl"
 import { useEffect } from "react"
 import { MEMBER_SORTS, groupPhone, lastVisitOf, useMemberDetailView, useMemberList } from "@/hooks/loyaltyMembers"

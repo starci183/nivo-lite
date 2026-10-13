@@ -16,18 +16,22 @@ export interface ConnectionInterestButtonBaseProps {
 }
 
 /** A primary button, and under it the answer once there is one. */
-export const ConnectionInterestButtonBase = (props: ConnectionInterestButtonBaseProps) => (
-    <div className={classNames.stack}>
-        <div>
-            <Button
-                variant="primary"
-                isDisabled={props.props.isDisabled}
-                isPending={props.props.isPending}
-                onPress={props.on.press}
-            >
-                {props.props.label}
-            </Button>
+export const ConnectionInterestButtonBase = (props: ConnectionInterestButtonBaseProps) => {
+    const { props: command, on } = props
+
+    return (
+        <div className={classNames.stack}>
+            <div>
+                <Button
+                    variant="primary"
+                    isDisabled={command.isDisabled}
+                    isPending={command.isPending}
+                    onPress={on.press}
+                >
+                    {command.label}
+                </Button>
+            </div>
+            {command.note === undefined ? null : <Alert tone="informative" title={command.note} />}
         </div>
-        {props.props.note === undefined ? null : <Alert tone="informative" title={props.props.note} />}
-    </div>
-)
+    )
+}

@@ -1,14 +1,15 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
+import { useState } from "react"
 import { pageDays, resultKey, usePublicBooking } from "@/hooks/publicBooking"
 import { wallClockText, wallDate, wallMinutes } from "@/modules/i18n"
-import type { PublicBookingPage } from "@/modules/types"
+import type { PublicBookingPageData } from "@/modules/types"
 import { PublicBookingFormBase } from "./component"
 
 /** What the page hands the connected form. */
 interface PublicBookingFormProps {
-    readonly page: PublicBookingPage
+    readonly page: PublicBookingPageData
 }
 
 /** The connected public booking form: free times follow the service and the day through the `publicBookingTimes` query, and a send goes through `requestPublicBooking`. */
@@ -17,7 +18,7 @@ export const PublicBookingForm = (props: PublicBookingFormProps) => {
     const t = useTranslations("workbenchBooking")
     const format = useFormatter()
     const zone = page.timezone
-    const today = wallDate(Date.now(), zone)
+    const [today] = useState(() => wallDate(Date.now(), zone))
     const booking = usePublicBooking(page, today)
     const money = (value: number) =>
         format.number(value, { style: "currency", currency: "VND", maximumFractionDigits: 0 })

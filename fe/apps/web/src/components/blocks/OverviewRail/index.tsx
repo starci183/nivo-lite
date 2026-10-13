@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useOverviewRail } from "@/hooks/overview"
-import { MODULE_REGISTRY } from "@/modules/catalog"
+import { moduleGlyphOf } from "@/hooks/installations"
 import { CONSOLE_ROUTES, agentChatHref, leadHref } from "@/modules/routes"
 import type { IconName } from "@/components/leaves/Icon"
 import { OverviewRailBase } from "./component"
@@ -38,7 +38,7 @@ export const OverviewRail = () => {
                 agents: data.agents.map((agent) => ({
                     id: agent.id,
                     module: agent.module,
-                    glyph: MODULE_REGISTRY[agent.module].glyph,
+                    glyph: moduleGlyphOf(agent.module),
                     name: agent.name,
                     isActive: agent.isActive,
                     statusLabel: agent.isActive ? t("active") : t("paused"),

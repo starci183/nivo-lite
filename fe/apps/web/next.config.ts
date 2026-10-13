@@ -25,7 +25,7 @@ const nextConfig: NextConfig = {
     async rewrites() {
         return [{ source: "/auth/confirm", destination: "/auth/callback" }]
     },
-    // The web image (Dockerfile) ships the standalone server.
+    // The runtime stage of the Dockerfile ships the standalone output.
     output: "standalone",
 }
 

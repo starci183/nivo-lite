@@ -13,7 +13,7 @@ import {
 } from "@/hooks/loyaltyProgram"
 import { maskCategoryField, maskProgramField, maskTierField } from "@/hooks/loyaltyProgramFields"
 import { useLoyaltyProgramForm } from "@/hooks/rhf"
-import { useQueryLoyaltyBoardSwr, useQueryLoyaltyProgramSwr } from "@/hooks/swr/api/graphql"
+import { useQueryLoyaltyBoardSwr, useQueryLoyaltyProgramSwr } from "@/hooks/swr"
 import { LoyaltyProgramSettingsBase } from "./component"
 
 /** Which of the three states the programme query is in. */

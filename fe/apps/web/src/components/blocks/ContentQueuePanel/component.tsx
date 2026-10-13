@@ -34,6 +34,19 @@ export interface ContentQueuePanelBaseProps {
 /** Draws the posts waiting for the owner decision (the publish_post gate), then the approved ones that are ready to post. */
 export const ContentQueuePanelBase = (props: ContentQueuePanelBaseProps) => {
     const { t } = props.props
+    const readyRows = props.props.ready.map((item) => (
+        <ListRow
+            key={item.id}
+            title={item.title}
+            badges={<ContentChannelBadges labels={item.channels} />}
+            actions={
+                <Button variant="primary" size="sm" onPress={() => props.on.open(item.id)}>
+                    {t("postedTitle")}
+                </Button>
+            }
+            description={<ContentPostFacts post={item} showBrief={false} showPillar={false} noPillar={t("noPillar")} />}
+        />
+    ))
     return (
         <div className={PANEL_CLASS_NAME}>
             <Alert title={t("queueWhy")} tone="informative" />
@@ -59,26 +72,7 @@ export const ContentQueuePanelBase = (props: ContentQueuePanelBaseProps) => {
             </SurfaceListCard>
             {props.props.ready.length > 0 ? (
                 <SurfaceListCard label={t("readyTitle")} headingLevel={2}>
-                    {props.props.ready.map((item) => (
-                        <ListRow
-                            key={item.id}
-                            title={item.title}
-                            description={
-                                <ContentPostFacts
-                                    post={item}
-                                    showBrief={false}
-                                    showPillar={false}
-                                    noPillar={t("noPillar")}
-                                />
-                            }
-                            badges={<ContentChannelBadges labels={item.channels} />}
-                            actions={
-                                <Button variant="primary" size="sm" onPress={() => props.on.open(item.id)}>
-                                    {t("postedTitle")}
-                                </Button>
-                            }
-                        />
-                    ))}
+                    {readyRows}
                 </SurfaceListCard>
             ) : null}
         </div>

@@ -60,6 +60,7 @@ export const ConsoleHeader = () => {
                 logoLabel: t("brandLogo"),
                 workspaceName: session.workspaceName,
                 userName: session.userName,
+                avatarUrl: session.avatarUrl,
                 roleLabel,
                 isStaff: session.member.role === "staff",
                 isFoundingMember: shell.isFoundingMember,

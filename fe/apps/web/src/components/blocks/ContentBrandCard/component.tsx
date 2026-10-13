@@ -1,4 +1,5 @@
-import { Alert, Button, Input, SectionHeader, SurfaceCard, Textarea } from "@starci/grammar/common"
+import { Button, Input, SectionHeader, SurfaceCard, Textarea } from "@starci/grammar/common"
+import { ContentCommandNote } from "@/components/composites/ContentSettingsCard"
 import type { ContentNote, ContentT } from "@/hooks/content"
 import { ACTIONS_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 
@@ -67,14 +68,7 @@ export const ContentBrandCardBase = (props: ContentBrandCardBaseProps) => {
                     isDisabled={locked}
                     onValueChange={props.on.tags}
                 />
-                {props.props.note ? (
-                    <Alert
-                        title={props.props.note.text}
-                        tone={props.props.note.tone === "ok" ? "affirmative" : "negative"}
-                        dismissLabel={t("close")}
-                        onDismiss={props.on.dismissNote}
-                    />
-                ) : null}
+                <ContentCommandNote note={props.props.note} closeLabel={t("close")} onDismiss={props.on.dismissNote} />
                 <div className={ACTIONS_CLASS_NAME}>
                     <Button
                         variant="primary"

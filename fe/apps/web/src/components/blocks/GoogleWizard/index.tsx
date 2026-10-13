@@ -7,13 +7,29 @@ import { providerKey } from "@/hooks/connection-providers"
 import { useAuthorizeGoogle } from "@/hooks/connections"
 import { GoogleWizardBase } from "./component"
 
-/** The reasons the callback puts in the return address, with the sentence of each. */
+/** The reasons the callback puts in the return address. */
+const GOOGLE_FAILURES = ["denied", "unavailable", "state", "no_refresh"] as const
+
+/** One reason the callback puts in the return address. */
+type GoogleFailure = (typeof GOOGLE_FAILURES)[number]
+
+/** The sentence key of each known Google failure. */
 const FAILURE_KEYS = {
     denied: "failDenied",
     unavailable: "failUnavailable",
     state: "failState",
     no_refresh: "failNoRefresh",
-} as const
+} as const satisfies Record<GoogleFailure, string>
+
+/** The sentence key of a Google failure, including the generic one. */
+type GoogleFailureMessage = (typeof FAILURE_KEYS)[GoogleFailure] | "failGeneric"
+
+/** Whether the return address names one of the known Google failures. */
+const isGoogleFailure = (value: string): value is GoogleFailure => GOOGLE_FAILURES.some((key) => key === value)
+
+/** The sentence key for a Google failure, or the generic one when the reason is unknown. */
+const googleFailureMessage = (reason: string): GoogleFailureMessage =>
+    isGoogleFailure(reason) ? FAILURE_KEYS[reason] : "failGeneric"
 
 /** What the board hands the Google wizard. */
 interface GoogleWizardProps {
@@ -39,10 +55,7 @@ export const GoogleWizard = (props: GoogleWizardProps) => {
             if (answer.kind !== "ok") return setError(answer.message)
             window.location.assign(answer.value)
         })
-    const failure =
-        result === "error"
-            ? t(reason in FAILURE_KEYS ? FAILURE_KEYS[reason as keyof typeof FAILURE_KEYS] : "failGeneric")
-            : null
+    const failure = result === "error" ? t(googleFailureMessage(reason)) : null
     const steps = [t("stepConnect"), t("stepDone")]
     const index = result === "ok" ? 1 : 0
     return (

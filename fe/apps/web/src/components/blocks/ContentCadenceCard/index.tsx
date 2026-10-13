@@ -8,6 +8,7 @@ import {
     useContentData,
 } from "@/hooks/content"
 import { useContentCadenceForm } from "@/hooks/rhf"
+import { getContentSettingsError } from "@/components/composites/ContentSettingsCard"
 import { ContentCadenceCardBase, type CadenceRow } from "./component"
 
 /** The workspace posting rhythm, validated locally and saved through GraphQL. */
@@ -28,11 +29,7 @@ export const ContentCadenceCard = () => {
                 ),
         )
     const errors = form.formState.errors.rows
-    const error =
-        errors?.message ??
-        errors?.root?.message ??
-        errors?.find?.((row) => row?.time?.message)?.time?.message ??
-        (errors ? t("err_input") : undefined)
+    const error = getContentSettingsError(errors, errors?.find?.((row) => row?.time?.message)?.time?.message, t)
     return (
         <ContentCadenceCardBase
             props={{

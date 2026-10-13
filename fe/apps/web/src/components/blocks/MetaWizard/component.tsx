@@ -30,7 +30,12 @@ export interface MetaWizardBaseProps {
         readonly chosen: string | null
         readonly agentStep: AgentStepView
         /** The page and Instagram lines of the test step; null before the first check. */
-        readonly checked: { readonly page: string; readonly instagram: string; readonly allGood: string | null } | null
+        readonly checked: {
+            readonly page: string
+            readonly instagram: string
+            /** `ok` shows the all-good sentence; `failed` keeps the line-by-line reasons. */
+            readonly verdict: "ok" | "failed"
+        } | null
         readonly lines: ReadonlyArray<{
             readonly key: string
             readonly tone: WizardNote["tone"]
@@ -63,6 +68,7 @@ export interface MetaWizardBaseProps {
                 | "testRepair"
                 | "testWorking"
                 | "testWaiting"
+                | "testAllGood"
                 | "testSkipNote",
                 string
             >
@@ -193,9 +199,9 @@ export const MetaWizardBase = (props: MetaWizardBaseProps) => {
                             {view.lines.map((line) => (
                                 <Alert key={line.key} tone={line.tone} title={line.text} />
                             ))}
-                            {view.checked.allGood === null ? null : (
-                                <Alert tone="affirmative" title={view.checked.allGood} />
-                            )}
+                            {view.checked.verdict === "ok" ? (
+                                <Alert tone="affirmative" title={text.testAllGood} />
+                            ) : null}
                         </div>
                     )}
                     {view.isChecking ? (

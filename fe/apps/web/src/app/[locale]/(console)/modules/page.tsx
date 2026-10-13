@@ -1,6 +1,8 @@
-import { redirect } from "next/navigation"
+import { NewModuleRedirectPage } from "@/features/pages/NewModuleRedirectPage"
+
+export { newModuleRedirectMetadata as generateMetadata } from "@/features/pages/NewModuleRedirectPage"
 
 /** Moved: the module catalogue is /agents. */
-const ModulesPage = () => redirect("/agents")
+const Page = () => <NewModuleRedirectPage />
 
-export default ModulesPage
+export default Page

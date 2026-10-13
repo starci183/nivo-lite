@@ -22,7 +22,7 @@ export interface FilterTabView {
 }
 
 /** One decision as the list draws it. */
-export interface DecisionRowView {
+export interface DecisionsBoardRowView {
     readonly id: string
     readonly actionLabel: string
     readonly outcomeLabel: string
@@ -40,7 +40,7 @@ export interface DecisionRowView {
 
 /** What the list shows once the data is in: the rows the filters let through and the line that counts them. */
 export interface DecisionListView {
-    readonly rows: ReadonlyArray<DecisionRowView>
+    readonly rows: ReadonlyArray<DecisionsBoardRowView>
     readonly count: string
     readonly isFiltered: boolean
 }
