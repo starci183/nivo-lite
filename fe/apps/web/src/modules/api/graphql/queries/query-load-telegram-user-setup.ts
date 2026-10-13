@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryLoadTelegramUserSetupArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { LoadTelegramUserSetupQuery, LoadTelegramUserSetupQueryVariables } from "../__generated__/graphql"
 
 /** The input of the `loadTelegramUserSetup` query. */
-type QueryLoadTelegramUserSetupRequest = QueryLoadTelegramUserSetupArgs["input"]
+type QueryLoadTelegramUserSetupRequest = WireInput<LoadTelegramUserSetupQueryVariables["input"]>
 
 /** The response of the `loadTelegramUserSetup` query. */
-type QueryLoadTelegramUserSetupResponse = Pick<Query, "loadTelegramUserSetup">
+type QueryLoadTelegramUserSetupResponse = LoadTelegramUserSetupQuery
 
 const query1: TypedDocumentNode<
     QueryLoadTelegramUserSetupResponse,

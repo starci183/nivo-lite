@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryLoadOpenApiSpecArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { LoadOpenApiSpecQuery, LoadOpenApiSpecQueryVariables } from "../__generated__/graphql"
 
 /** The variables of the `loadOpenApiSpec` query. */
-export type QueryLoadOpenApiSpecRequest = QueryLoadOpenApiSpecArgs["input"]
+type QueryLoadOpenApiSpecRequest = WireInput<LoadOpenApiSpecQueryVariables["input"]>
 
 /** The response of the `loadOpenApiSpec` query. */
-type QueryLoadOpenApiSpecResponse = Pick<Query, "loadOpenApiSpec">
+type QueryLoadOpenApiSpecResponse = LoadOpenApiSpecQuery
 
 const query1: TypedDocumentNode<QueryLoadOpenApiSpecResponse, InputVariables<QueryLoadOpenApiSpecRequest>> = gql`
     query LoadOpenApiSpec($input: LoadOpenApiSpecInput!) {
@@ -29,7 +29,10 @@ enum QueryLoadOpenApiSpecKind {
     Query1 = "query1",
 }
 
-const queryMap: Record<QueryLoadOpenApiSpecKind, TypedDocumentNode<QueryLoadOpenApiSpecResponse, InputVariables<QueryLoadOpenApiSpecRequest>>> = {
+const queryMap: Record<
+    QueryLoadOpenApiSpecKind,
+    TypedDocumentNode<QueryLoadOpenApiSpecResponse, InputVariables<QueryLoadOpenApiSpecRequest>>
+> = {
     [QueryLoadOpenApiSpecKind.Query1]: query1,
 }
 
@@ -39,7 +42,11 @@ interface QueryLoadOpenApiSpecParams extends QueryParams<QueryLoadOpenApiSpecKin
 }
 
 /** Reads the operations of an API spec from a link or pasted text. Rejects with the back end failure. */
-export const queryLoadOpenApiSpec = async ({ query = QueryLoadOpenApiSpecKind.Query1, request, signal }: QueryLoadOpenApiSpecParams) => {
+export const queryLoadOpenApiSpec = async ({
+    query = QueryLoadOpenApiSpecKind.Query1,
+    request,
+    signal,
+}: QueryLoadOpenApiSpecParams) => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],

@@ -1,10 +1,10 @@
 import { gql, type TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryPaymentOrderRequestStatusArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { PaymentOrderRequestStatusQuery, PaymentOrderRequestStatusQueryVariables } from "../__generated__/graphql"
 
-type QueryPaymentOrderRequestStatusRequest = QueryPaymentOrderRequestStatusArgs["input"]
-type QueryPaymentOrderRequestStatusResponse = Pick<Query, "paymentOrderRequestStatus">
+type QueryPaymentOrderRequestStatusRequest = WireInput<PaymentOrderRequestStatusQueryVariables["input"]>
+type QueryPaymentOrderRequestStatusResponse = PaymentOrderRequestStatusQuery
 
 type QueryPaymentOrderRequestStatusParams = QueryParams<
     QueryPaymentOrderRequestStatus,

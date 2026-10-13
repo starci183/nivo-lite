@@ -1,9 +1,9 @@
 import { gql, type TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
-import type { Query } from "../__generated__/schema"
+import type { CreditTopupLotsQuery } from "../__generated__/graphql"
 
-type QueryCreditTopupLotsResponse = Pick<Query, "creditTopupLots">
+type QueryCreditTopupLotsResponse = CreditTopupLotsQuery
 
 const query1: TypedDocumentNode<QueryCreditTopupLotsResponse> = gql`
     query CreditTopupLots {

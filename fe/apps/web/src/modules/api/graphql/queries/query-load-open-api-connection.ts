@@ -1,16 +1,19 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryLoadOpenApiConnectionArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { LoadOpenApiConnectionQuery, LoadOpenApiConnectionQueryVariables } from "../__generated__/graphql"
 
 /** The variables of the `loadOpenApiConnection` query. */
-type QueryLoadOpenApiConnectionRequest = QueryLoadOpenApiConnectionArgs["input"]
+type QueryLoadOpenApiConnectionRequest = WireInput<LoadOpenApiConnectionQueryVariables["input"]>
 
 /** The response of the `loadOpenApiConnection` query. */
-type QueryLoadOpenApiConnectionResponse = Pick<Query, "loadOpenApiConnection">
+type QueryLoadOpenApiConnectionResponse = LoadOpenApiConnectionQuery
 
-const query1: TypedDocumentNode<QueryLoadOpenApiConnectionResponse, InputVariables<QueryLoadOpenApiConnectionRequest>> = gql`
+const query1: TypedDocumentNode<
+    QueryLoadOpenApiConnectionResponse,
+    InputVariables<QueryLoadOpenApiConnectionRequest>
+> = gql`
     query LoadOpenApiConnection($input: LoadOpenApiConnectionInput!) {
         loadOpenApiConnection(input: $input) {
             name
@@ -26,17 +29,27 @@ enum QueryLoadOpenApiConnectionKind {
     Query1 = "query1",
 }
 
-const queryMap: Record<QueryLoadOpenApiConnectionKind, TypedDocumentNode<QueryLoadOpenApiConnectionResponse, InputVariables<QueryLoadOpenApiConnectionRequest>>> = {
+const queryMap: Record<
+    QueryLoadOpenApiConnectionKind,
+    TypedDocumentNode<QueryLoadOpenApiConnectionResponse, InputVariables<QueryLoadOpenApiConnectionRequest>>
+> = {
     [QueryLoadOpenApiConnectionKind.Query1]: query1,
 }
 
 /** Apollo params for {@link queryLoadOpenApiConnection}. */
-interface QueryLoadOpenApiConnectionParams extends QueryParams<QueryLoadOpenApiConnectionKind, QueryLoadOpenApiConnectionRequest> {
+interface QueryLoadOpenApiConnectionParams extends QueryParams<
+    QueryLoadOpenApiConnectionKind,
+    QueryLoadOpenApiConnectionRequest
+> {
     request: QueryLoadOpenApiConnectionRequest
 }
 
 /** Reads a saved API connection for the wizard (never a secret). Rejects with the back end failure. */
-export const queryLoadOpenApiConnection = async ({ query = QueryLoadOpenApiConnectionKind.Query1, request, signal }: QueryLoadOpenApiConnectionParams) => {
+export const queryLoadOpenApiConnection = async ({
+    query = QueryLoadOpenApiConnectionKind.Query1,
+    request,
+    signal,
+}: QueryLoadOpenApiConnectionParams) => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],

@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryMoneyConnectionArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { MoneyConnectionQuery, MoneyConnectionQueryVariables } from "../__generated__/graphql"
 
 /** The variables of the `moneyConnection` query. */
-export type QueryMoneyConnectionRequest = QueryMoneyConnectionArgs["input"]
+type QueryMoneyConnectionRequest = WireInput<MoneyConnectionQueryVariables["input"]>
 
 /** The response of the `moneyConnection` query: the typed payload straight from the back end contract. */
-type QueryMoneyConnectionResponse = Pick<Query, "moneyConnection">
+type QueryMoneyConnectionResponse = MoneyConnectionQuery
 
 const query1: TypedDocumentNode<QueryMoneyConnectionResponse, InputVariables<QueryMoneyConnectionRequest>> = gql`
     query MoneyConnection($input: GetMoneyConnectionInput!) {

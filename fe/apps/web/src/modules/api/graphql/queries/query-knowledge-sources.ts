@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryKnowledgeSourcesArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { KnowledgeSourcesQuery, KnowledgeSourcesQueryVariables } from "../__generated__/graphql"
 
 /** The response of the `knowledgeSources` query: the typed payload straight from the back end contract. */
-type QueryKnowledgeSourcesResponse = Pick<Query, "knowledgeSources">
+type QueryKnowledgeSourcesResponse = KnowledgeSourcesQuery
 
 /** The input of the `knowledgeSources` query. */
-export type QueryKnowledgeSourcesRequest = QueryKnowledgeSourcesArgs["input"]
+export type QueryKnowledgeSourcesRequest = WireInput<KnowledgeSourcesQueryVariables["input"]>
 
 const query1: TypedDocumentNode<QueryKnowledgeSourcesResponse, InputVariables<QueryKnowledgeSourcesRequest>> = gql`
     query KnowledgeSources($input: KnowledgeSourcesInput!) {
