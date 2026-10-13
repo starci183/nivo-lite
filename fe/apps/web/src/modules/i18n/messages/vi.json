@@ -783,6 +783,7 @@
     "mineNotEnough": "Mới có {n} lần sửa. Cần ít nhất 3 lần để thấy quy luật.",
     "mineDone": "Đề xuất {n} bài học từ {c} lần sửa (lưu {k} ca kiểm tra).",
     "mineUnavailable": "Mô hình chưa trả lời được. Thử lại sau ít phút.",
+    "mineFailed": "Việc xem các lần sửa chưa xong. Thử lại sau ít phút.",
     "addLesson": "Thêm bài học",
     "lTitle": "Bài học",
     "lBody": "Cần làm gì",

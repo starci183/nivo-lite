@@ -783,6 +783,7 @@
     "mineNotEnough": "Only {n} corrections so far. At least 3 are needed to see a pattern.",
     "mineDone": "{n} lessons proposed from {c} corrections ({k} kept as test cases).",
     "mineUnavailable": "The model could not answer now. Try again in a few minutes.",
+    "mineFailed": "The study of your edits did not finish. Try again in a few minutes.",
     "addLesson": "Add lesson",
     "lTitle": "Lesson",
     "lBody": "What to do",
