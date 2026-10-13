@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
+import { fakeInbox, mock } from "@starci/jest-preset"
 import { DecisionJobsService } from "@modules/domain/decisions"
+import { InboxSimulationWorkerService } from "@modules/domain/inbox-simulation"
 import type {
     ConfirmCommandPayload,
     DecideExecutionPayload,
@@ -43,6 +44,7 @@ const build = async () => {
             DecisionsQueueService,
             { provide: DecisionJobsService, useValue: decisions },
             { provide: OfficeCommandService, useValue: commands },
+            { provide: InboxSimulationWorkerService, useValue: fakeInbox() },
         ],
     }).compile()
     return { service: moduleRef.get(DecisionsQueueService), decisions, commands }

@@ -1,6 +1,9 @@
+import { Test } from "@nestjs/testing"
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { Composition } from "./automation-messages.contracts"
 import { AutomationMessagesService } from "./automation-messages.service"
 import type {
@@ -10,6 +13,7 @@ import type {
     ExecutorContext,
     GateOutcome,
 } from "./automation-ports.contracts"
+import { AUTOMATION_GATE, AUTOMATION_OFFICE, AUTOMATION_TEXT } from "./automations.decorators"
 import { buildPipelineRow, buildShop, buildTemplate } from "@tests/fixtures/builders/automations.builder"
 import { AutomationsErrorCode } from "./errors/automations.error"
 import { SELECT_FIRST_STAFF, SELECT_LATEST_CONVERSATION, SELECT_LEAD } from "./persistence/automation-readers.sql"
@@ -59,7 +63,7 @@ const context = (overrides: Partial<ExecutorContext> = {}): ExecutorContext => (
     ...overrides,
 })
 
-const build = (em: MockEntityManager = mockEntityManager(), withText = false) => {
+const build = async (em: MockEntityManager = mockEntityManager(), withText = false) => {
     const catalog = mock<MessageCatalog>()
     catalog.get.mockImplementation((key, params) => {
         if (key === "automations.pattern.negative") return "bad|terrible"
@@ -70,22 +74,32 @@ const build = (em: MockEntityManager = mockEntityManager(), withText = false) =>
     gate.submit.mockResolvedValue(outcome())
     const office = mock<AutomationOffice>()
     const text = mock<AutomationText>()
-    const service = new AutomationMessagesService(em, catalog, gate, office, withText ? text : undefined)
-    return { service, gate, office, text }
+    if (!withText) text.generate.mockResolvedValue(null)
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            AutomationMessagesService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            { provide: MESSAGE_CATALOG, useValue: catalog },
+            { provide: AUTOMATION_GATE, useValue: gate },
+            { provide: AUTOMATION_OFFICE, useValue: office },
+            { provide: AUTOMATION_TEXT, useValue: text },
+        ],
+    }).compile()
+    return { service: moduleRef.get(AutomationMessagesService), gate, office, text }
 }
 
 describe("AutomationMessagesService", () => {
     describe("words", () => {
-        it("says a text of the catalog in Vietnamese and names the actor", () => {
-            const { service } = build()
+        it("says a text of the catalog in Vietnamese and names the actor", async () => {
+            const { service } = await build()
 
             expect(service.say("actor")).toBe("actor{}")
             expect(service.say("noChannel", { name: "An" })).toBe('noChannel{"name":"An"}')
             expect(service.actorOf(buildTemplate({ name: { vi: "Cam on", en: "Thanks" } }))).toBe("actor{} · Cam on")
         })
 
-        it("explains a run that did nothing", () => {
-            const { service } = build()
+        it("explains a run that did nothing", async () => {
+            const { service } = await build()
 
             expect(service.skipped("vi sao")).toEqual({
                 status: "skipped",
@@ -104,7 +118,7 @@ describe("AutomationMessagesService", () => {
                     [SELECT_FIRST_STAFF, [{ name: "Lan" }]],
                 ],
             })
-            const { service } = build(em)
+            const { service } = await build(em)
 
             await expect(service.lead("ws-1", "l-1")).resolves.toEqual(LEAD)
             await expect(service.leadOf("ws-1", "l-1")).resolves.toEqual(LEAD)
@@ -120,7 +134,7 @@ describe("AutomationMessagesService", () => {
                     [SELECT_FIRST_STAFF, []],
                 ],
             })
-            const { service } = build(em)
+            const { service } = await build(em)
 
             await expect(service.lead("ws-1", "l-1")).resolves.toBeNull()
             await expect(service.leadOf("ws-1", "")).resolves.toBeNull()
@@ -131,7 +145,7 @@ describe("AutomationMessagesService", () => {
 
     describe("composeAndSend", () => {
         it("fills the approved wording and puts it through the gate as a care message", async () => {
-            const { service, gate } = build()
+            const { service, gate } = await build()
 
             const result = await service.composeAndSend(context(), composition())
 
@@ -166,7 +180,7 @@ describe("AutomationMessagesService", () => {
         })
 
         it("sends a reply on the conversation, from the origin of the lead, with the contact it has", async () => {
-            const { service, gate } = build()
+            const { service, gate } = await build()
             const lead = { ...LEAD, phone: null, email: "an@x.vn", origin: "simulated" }
 
             await service.composeAndSend(context(), composition({ action: "reply_customer", lead }))
@@ -187,7 +201,7 @@ describe("AutomationMessagesService", () => {
         })
 
         it("lets the owner's send by itself approve the message, unless the owner must decide", async () => {
-            const { service, gate, office } = build()
+            const { service, gate, office } = await build()
             gate.submit.mockResolvedValue(outcome({ autoApproved: true, summary: null }))
             const auto = context({ pipeline: buildPipelineRow({ id: "p-1", auto_send: true }) })
 
@@ -209,7 +223,7 @@ describe("AutomationMessagesService", () => {
         })
 
         it("waits for the owner and says why", async () => {
-            const { service, gate } = build()
+            const { service, gate } = await build()
             gate.submit.mockResolvedValueOnce(outcome({ state: "waiting", reason: "rule says ask" }))
             gate.submit.mockResolvedValueOnce(outcome({ state: "waiting", reason: null }))
 
@@ -226,7 +240,7 @@ describe("AutomationMessagesService", () => {
         })
 
         it("skips a message the owner refused", async () => {
-            const { service, gate } = build()
+            const { service, gate } = await build()
             gate.submit.mockResolvedValue(outcome({ state: "rejected" }))
 
             await expect(service.composeAndSend(context(), composition())).resolves.toMatchObject({
@@ -236,7 +250,7 @@ describe("AutomationMessagesService", () => {
         })
 
         it("fails with the reason the gate gave, or a standard one", async () => {
-            const { service, gate } = build()
+            const { service, gate } = await build()
             gate.submit.mockResolvedValueOnce(outcome({ state: "failed", error: "smtp down" }))
             gate.submit.mockResolvedValueOnce(outcome({ state: "failed", error: null }))
 
@@ -253,7 +267,7 @@ describe("AutomationMessagesService", () => {
             const perCase = context({ def: buildTemplate({ contentMode: "ai_per_case" }) })
 
             it("uses the text the model wrote when it is plain and complete", async () => {
-                const { service, gate, text } = build(mockEntityManager(), true)
+                const { service, gate, text } = await build(mockEntityManager(), true)
                 text.generate.mockResolvedValue('  "Chao An, cam on ban"  ')
 
                 const result = await service.composeAndSend(perCase, composition())
@@ -266,7 +280,7 @@ describe("AutomationMessagesService", () => {
             })
 
             it("keeps the filled wording when the model answers nothing, or something it should not", async () => {
-                const { service, gate, text } = build(mockEntityManager(), true)
+                const { service, gate, text } = await build(mockEntityManager(), true)
                 text.generate.mockResolvedValueOnce(null)
                 text.generate.mockResolvedValueOnce("Chao {ten_khach} con thieu")
 
@@ -284,7 +298,7 @@ describe("AutomationMessagesService", () => {
             })
 
             it("fills the wording when no model is bound", async () => {
-                const { service, gate } = build(mockEntityManager(), false)
+                const { service, gate } = await build(mockEntityManager(), false)
 
                 await service.composeAndSend(perCase, composition())
 
@@ -297,7 +311,7 @@ describe("AutomationMessagesService", () => {
         const reply = { conversationId: "cv-1", name: "Khach", dedupe: "after:cv-1" }
 
         it("sends the wording as a reply on the conversation", async () => {
-            const { service, gate } = build()
+            const { service, gate } = await build()
 
             const result = await service.replyWithoutLead(context(), reply)
 
@@ -331,7 +345,7 @@ describe("AutomationMessagesService", () => {
         })
 
         it("has no detail when the gate gave no summary, and waits when the gate holds it", async () => {
-            const { service, gate } = build()
+            const { service, gate } = await build()
             gate.submit.mockResolvedValueOnce(outcome({ summary: null }))
             gate.submit.mockResolvedValueOnce(outcome({ state: "waiting" }))
 
@@ -347,7 +361,7 @@ describe("AutomationMessagesService", () => {
         })
 
         it("fails when the gate could not send", async () => {
-            const { service, gate } = build()
+            const { service, gate } = await build()
             gate.submit.mockResolvedValueOnce(outcome({ state: "failed", error: "down" }))
             gate.submit.mockResolvedValueOnce(outcome({ state: "rejected", error: null }))
 
@@ -363,7 +377,7 @@ describe("AutomationMessagesService", () => {
 
     describe("isNegative", () => {
         it("is no for an empty feedback, yes for a keyword, and asks the model otherwise", async () => {
-            const { service, text } = build(mockEntityManager(), true)
+            const { service, text } = await build(mockEntityManager(), true)
             text.generate
                 .mockResolvedValueOnce("negative")
                 .mockResolvedValueOnce("POSITIVE")
@@ -384,7 +398,7 @@ describe("AutomationMessagesService", () => {
         })
 
         it("is no on any doubt when no model is bound", async () => {
-            const { service } = build()
+            const { service } = await build()
 
             await expect(service.isNegative("hmm not sure", "ws-1")).resolves.toBe(false)
         })

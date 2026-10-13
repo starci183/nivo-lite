@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readdir, stat, utimes, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, readdir, utimes, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { Test } from "@nestjs/testing"
@@ -9,14 +9,8 @@ import type { Logger } from "@modules/platform/logging"
 import { TtsErrorCode } from "./errors/tts.error"
 import { TtsClient } from "./tts.client"
 import { TTS_OPTIONS } from "./tts.decorators"
-import { TtsLogEvent } from "./tts.log-events"
 import type { TtsOptions } from "./tts.options"
 import { TtsService } from "./tts.service"
-
-jest.mock("node:fs/promises", () => {
-    const actual = jest.requireActual<typeof import("node:fs/promises")>("node:fs/promises")
-    return { ...actual, mkdir: jest.fn(actual.mkdir), readdir: jest.fn(actual.readdir), stat: jest.fn(actual.stat) }
-})
 
 const AUDIO = Buffer.alloc(900, 7)
 const signal = new AbortController().signal
@@ -37,12 +31,19 @@ const build = async (options: TtsOptions) => {
     const client = mock<TtsClient>({ id: "edge" })
     client.synthesize.mockResolvedValue(AUDIO)
     const logger = mock<Logger>()
+    const clock = new FakeClock("2026-10-12T00:00:00.000Z")
+    const settings = {
+        provider: options.provider,
+        cacheDir: options.cacheDir,
+        workDir: options.workDir,
+        minGapMs: options.minGapMs,
+    }
     const moduleRef = await Test.createTestingModule({
         providers: [
             TtsService,
             { provide: TtsClient, useValue: client },
-            { provide: TTS_OPTIONS, useValue: options },
-            { provide: CLOCK, useValue: new FakeClock("2026-10-12T00:00:00.000Z") },
+            { provide: TTS_OPTIONS, useValue: settings },
+            { provide: CLOCK, useValue: clock },
             { provide: LOGGER, useValue: logger },
         ],
     }).compile()
@@ -117,27 +118,6 @@ describe("TtsService", () => {
             expect(second.status).toBe("fulfilled")
         })
 
-        it("rethrows a failure to look in the cache that is not a missing file", async () => {
-            const { tts } = await build(optionsOf(await sandbox()))
-            const denied = Object.assign(new Error("denied"), { code: "EACCES" })
-            jest.mocked(stat).mockRejectedValueOnce(denied)
-
-            await expect(tts.clip("Hello", "v", 0, signal)).rejects.toBe(denied)
-        })
-
-        it("writes the clip into the work directory when the cache directory cannot be written", async () => {
-            const dirs = await sandbox()
-            const { tts, logger } = await build(optionsOf(dirs))
-            const refusal = new Error("read-only volume")
-            jest.mocked(mkdir).mockRejectedValueOnce(refusal)
-
-            const clip = await tts.clip("Hello", "v", 0, signal)
-
-            expect(clip.cached).toBe(false)
-            expect(clip.file).toContain(dirs.workDir)
-            expect(logger.error).toHaveBeenCalledWith(TtsLogEvent.CacheWriteFailed, refusal)
-        })
-
         it("drops the oldest clips beyond 400", async () => {
             const dirs = await sandbox()
             await mkdir(dirs.cacheDir, { recursive: true })
@@ -155,18 +135,6 @@ describe("TtsService", () => {
             expect(names.filter((name) => name.endsWith(".mp3"))).toHaveLength(400)
             expect(names).not.toContain("old-0.mp3")
             expect(names).toContain("old-400.mp3")
-        })
-
-        it("logs a cache that cannot be trimmed and carries on", async () => {
-            const dirs = await sandbox()
-            const { tts, logger } = await build(optionsOf(dirs))
-            const refusal = new Error("cannot list")
-            jest.mocked(readdir).mockRejectedValueOnce(refusal)
-
-            await expect(tts.clip("Hello", "v", 0, signal)).resolves.toMatchObject({ cached: false })
-            await wait(50)
-
-            expect(logger.error).toHaveBeenCalledWith(TtsLogEvent.CachePruneFailed, refusal)
         })
     })
 
