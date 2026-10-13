@@ -1,7 +1,9 @@
+import { Test } from "@nestjs/testing"
 import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { AutomationsError, AutomationsErrorCode } from "@modules/domain/automations"
-import type { AutomationsService } from "@modules/domain/automations"
+import { AutomationsError, AutomationsErrorCode, AutomationsService } from "@modules/domain/automations"
+import { CLOCK } from "@modules/platform/clock"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { CommandRow } from "./automation-commands.contracts"
 import { AutomationCommandsService } from "./automation-commands.service"
 import { SELECT_QUEUED_COMMAND, SETTLE_COMMAND } from "./persistence/automation-commands.sql"
@@ -18,17 +20,24 @@ const RUN_NOW: CommandRow = {
 }
 const PROPOSE_BODY: CommandRow = { ...RUN_NOW, kind: "propose_body" }
 
-const build = (em: MockEntityManager) => {
+const build = async (em: MockEntityManager) => {
     const automations = mock<AutomationsService>()
-    const commands = new AutomationCommandsService(em, new FakeClock(NOW), automations)
-    return { commands, automations }
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            AutomationCommandsService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            { provide: CLOCK, useValue: new FakeClock(NOW) },
+            { provide: AutomationsService, useValue: automations },
+        ],
+    }).compile()
+    return { commands: moduleRef.get(AutomationCommandsService), automations }
 }
 
 describe("AutomationCommandsService", () => {
     describe("execute", () => {
         it("does nothing and queries nothing when the payload names no command", async () => {
             const em = mockEntityManager()
-            const { commands, automations } = build(em)
+            const { commands, automations } = await build(em)
 
             await expect(commands.execute({})).resolves.toBeUndefined()
 
@@ -39,7 +48,7 @@ describe("AutomationCommandsService", () => {
 
         it("does nothing after selecting when no queued command exists", async () => {
             const em = mockEntityManager({ query: [SELECT_QUEUED_COMMAND, []] })
-            const { commands, automations } = build(em)
+            const { commands, automations } = await build(em)
 
             await expect(commands.execute(PAYLOAD)).resolves.toBeUndefined()
 
@@ -56,7 +65,7 @@ describe("AutomationCommandsService", () => {
                     [SETTLE_COMMAND, []],
                 ],
             })
-            const { commands, automations } = build(em)
+            const { commands, automations } = await build(em)
             automations.runNow.mockResolvedValue()
 
             await expect(commands.execute(PAYLOAD)).resolves.toBeUndefined()
@@ -76,7 +85,7 @@ describe("AutomationCommandsService", () => {
                     [SETTLE_COMMAND, []],
                 ],
             })
-            const { commands, automations } = build(em)
+            const { commands, automations } = await build(em)
             automations.proposeBody.mockResolvedValue({
                 body: "Thanks for your payment.",
                 generated: true,
@@ -106,7 +115,7 @@ describe("AutomationCommandsService", () => {
                     [SETTLE_COMMAND, []],
                 ],
             })
-            const { commands, automations } = build(em)
+            const { commands, automations } = await build(em)
             const failure = new AutomationsError({ code: AutomationsErrorCode.PipelineOff })
             automations.runNow.mockRejectedValue(failure)
 
@@ -128,7 +137,7 @@ describe("AutomationCommandsService", () => {
 
         it("rethrows any other failure without settling the command", async () => {
             const em = mockEntityManager({ query: [SELECT_QUEUED_COMMAND, [PROPOSE_BODY]] })
-            const { commands, automations } = build(em)
+            const { commands, automations } = await build(em)
             const failure = new Error("proposal unavailable")
             automations.proposeBody.mockRejectedValue(failure)
 

@@ -1,6 +1,6 @@
 import { createCipheriv, randomBytes } from "node:crypto"
 import { Test } from "@nestjs/testing"
-import { mock, mockEntityManager } from "@starci/jest-preset"
+import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import { Secret } from "@modules/platform/config"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
@@ -34,7 +34,7 @@ const build = async (rows: Array<object>, options: BillingOptions = optionsWith(
         providers: [
             ConnectionSecretsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
-            { provide: BILLING_OPTIONS, useValue: options },
+            { provide: BILLING_OPTIONS, useValue: builder<BillingOptions>(optionsWith(undefined))(options) },
             { provide: LOGGER, useValue: logger },
         ],
     }).compile()
