@@ -1,7 +1,9 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
+import { BrainHttpModule } from "@features/api/brain"
 import { KnowledgeHttpModule } from "@features/api/knowledge"
+import { ExtractKnowledgeFactsQueueModule } from "@features/jobs/extract-knowledge-facts"
 import { IndexKnowledgeSourceQueueModule } from "@features/jobs/index-knowledge-source"
 import { ReembedKnowledgeQueueModule } from "@features/jobs/reembed-knowledge"
 import { AdminHttpModule } from "@features/api/admin"
@@ -11,7 +13,14 @@ import { SystemHealthHttpModule } from "@features/api/system-health"
 import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
 import { WorkspacesHttpModule } from "@features/api/workspaces"
 import { AuthGuard, IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } from "@modules/domain/identity"
+import { BRAIN_ERROR_KINDS, BRAIN_MESSAGES, BrainModule } from "@modules/domain/brain"
+import type { CorrectionSource } from "@modules/domain/brain"
+import { BrainEvalCasesModule } from "@modules/domain/brain-eval-cases"
+import { BrainExtractionsModule } from "@modules/domain/brain-extractions"
+import { BRAIN_FACTS_ERROR_KINDS, BRAIN_FACTS_MESSAGES, BrainFactsModule } from "@modules/domain/brain-facts"
+import { BRAIN_LESSONS_ERROR_KINDS, BRAIN_LESSONS_MESSAGES, BrainLessonsModule } from "@modules/domain/brain-lessons"
 import { KnowledgeChunksModule } from "@modules/domain/knowledge-chunks"
+import { KnowledgeGapsModule } from "@modules/domain/knowledge-gaps"
 import { KNOWLEDGE_ERROR_KINDS, KNOWLEDGE_MESSAGES, KnowledgeModule } from "@modules/domain/knowledge"
 import type { DriveAccessSource } from "@modules/domain/knowledge"
 import {
@@ -79,6 +88,9 @@ import { QUEUE_ERROR_KINDS, QUEUE_MESSAGES, QueueModule } from "@modules/platfor
 import type { ApiOptions } from "./api.options"
 
 /** Until a connection capability provides the Google Drive access of a workspace, no workspace has any. */
+/** Until the decisions capability provides the corrections of the owner, the brain has none to study. */
+const NO_CORRECTIONS: CorrectionSource = { recent: () => Promise.resolve([]) }
+
 const NO_DRIVE_ACCESS: DriveAccessSource = { forWorkspace: () => null }
 
 @Module({})
@@ -103,6 +115,9 @@ export class AppModule {
                         IDENTITY_MESSAGES,
                         PLATFORM_ADMIN_MESSAGES,
                         JOBS_MESSAGES,
+                        BRAIN_FACTS_MESSAGES,
+                        BRAIN_LESSONS_MESSAGES,
+                        BRAIN_MESSAGES,
                         KNOWLEDGE_MESSAGES,
                         KNOWLEDGE_SOURCES_MESSAGES,
                         MODULES_MESSAGES,
@@ -123,6 +138,9 @@ export class AppModule {
                         HTTP_ERROR_KINDS,
                         HTTP_SECURITY_ERROR_KINDS,
                         JOBS_ERROR_KINDS,
+                        BRAIN_ERROR_KINDS,
+                        BRAIN_FACTS_ERROR_KINDS,
+                        BRAIN_LESSONS_ERROR_KINDS,
                         KNOWLEDGE_ERROR_KINDS,
                         KNOWLEDGE_SOURCES_ERROR_KINDS,
                         QUEUE_ERROR_KINDS,
@@ -173,6 +191,12 @@ export class AppModule {
                 KnowledgeChunksModule.register({ isGlobal: true }),
                 NivoKnowledgeModule.register({ isGlobal: true }),
                 KnowledgeModule.register({ isGlobal: true, driveAccess: NO_DRIVE_ACCESS }),
+                BrainFactsModule.register({ isGlobal: true }),
+                KnowledgeGapsModule.register({ isGlobal: true }),
+                BrainLessonsModule.register({ isGlobal: true }),
+                BrainExtractionsModule.register({ isGlobal: true }),
+                BrainEvalCasesModule.register({ isGlobal: true }),
+                BrainModule.register({ isGlobal: true, corrections: NO_CORRECTIONS }),
                 PlatformAuditModule.register({ isGlobal: true }),
                 AiQuotaOverridesModule.register({ isGlobal: true }),
                 PlatformAdminModule.register({ isGlobal: true, ...options.platformAdmin }),
@@ -185,6 +209,8 @@ export class AppModule {
                 SystemHealthHttpModule,
                 WorkspacesHttpModule,
                 KnowledgeHttpModule,
+                BrainHttpModule,
+                ExtractKnowledgeFactsQueueModule,
                 IndexKnowledgeSourceQueueModule,
                 ReembedKnowledgeQueueModule,
                 AdminHttpModule,

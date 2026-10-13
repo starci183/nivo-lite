@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, Param, Patch, Post } from "@nestjs/common"
+import { Body, Controller, Delete, HttpCode, Param, Patch, Post } from "@nestjs/common"
 import type { CommandBus, QueryBus } from "@nestjs/cqrs"
 import { CurrentPrincipal } from "@modules/domain/identity"
 import { WorkspaceId } from "@modules/domain/workspace-members"
@@ -7,6 +7,7 @@ import type { Principal } from "@modules/platform/cqrs"
 import { AddSourceCommand } from "../../application/add-source.command"
 import { AskKnowledgeQuery } from "../../application/ask-knowledge.query"
 import { CreateUploadCommand } from "../../application/create-upload.command"
+import { DeleteSourceCommand } from "../../application/delete-source.command"
 import { ListLinkedFolderQuery } from "../../application/list-linked-folder.query"
 import { ListPickedFolderQuery } from "../../application/list-picked-folder.query"
 import { ReindexSourceCommand } from "../../application/reindex-source.command"
@@ -102,6 +103,19 @@ export class KnowledgeController {
                 request: toUpdateSourceRequest(workspaceId, params.sourceId, input),
                 principal,
             }),
+        )
+    }
+
+    /** Deletes a document and takes back the facts it contributed to the brain. */
+    @Delete("sources/:sourceId")
+    @HttpCode(204)
+    remove(
+        @CurrentPrincipal() principal: Principal,
+        @WorkspaceId() workspaceId: string,
+        @Param() params: SourceIdRequest,
+    ): Promise<void> {
+        return this.commandBus.execute(
+            new DeleteSourceCommand({ request: { workspaceId, sourceId: params.sourceId }, principal }),
         )
     }
 
