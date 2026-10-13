@@ -39,3 +39,28 @@ SELECT id, workspace_id, lead_id, inbound_event_id, order_no, items, amount_vnd:
 /** Moves an order that is past its draft to a later status ($1 workspace, $2 order, $3 status). */
 export const SET_ORDER_STATUS = sql`UPDATE public.orders SET status = $3
 WHERE workspace_id = $1::uuid AND id = $2::uuid AND status <> 'cancelled'`
+
+/** Non-draft orders newest first ($1 workspace, $2 bounded page size). */
+export const LIST_WORKBENCH_ORDERS = sql`SELECT id, workspace_id, lead_id, inbound_event_id, order_no, items,
+amount_vnd::float8 AS amount_vnd, status, origin, confirmed_by, to_json(created_at)#>>'{}' AS created_at,
+to_json(confirmed_at)#>>'{}' AS confirmed_at, to_json(shipped_at)#>>'{}' AS shipped_at, carrier, tracking_code
+FROM public.orders WHERE workspace_id = $1::uuid AND status <> 'draft'
+ORDER BY created_at DESC, id DESC LIMIT $2::int`
+
+/** The orders of one customer ($1 workspace, $2 customer). */
+export const LIST_LEAD_ORDERS = sql`SELECT id, workspace_id, lead_id, inbound_event_id, order_no, items,
+amount_vnd::float8 AS amount_vnd, status, origin, confirmed_by, to_json(created_at)#>>'{}' AS created_at,
+to_json(confirmed_at)#>>'{}' AS confirmed_at, to_json(shipped_at)#>>'{}' AS shipped_at, carrier, tracking_code
+FROM public.orders WHERE workspace_id = $1::uuid AND lead_id = $2::uuid
+ORDER BY created_at DESC, id DESC LIMIT 500`
+
+/** Records the first shipment of an eligible order ($1 workspace, $2 order, $3 carrier, $4 tracking, $5 instant). */
+export const SHIP_ORDER = sql`WITH changed AS (
+UPDATE public.orders SET carrier = $3, tracking_code = $4, shipped_at = $5::timestamptz
+WHERE workspace_id = $1::uuid AND id = $2::uuid AND status IN ('confirmed', 'invoiced', 'paid') AND shipped_at IS NULL
+RETURNING id, workspace_id, lead_id, inbound_event_id, order_no, items, amount_vnd, status, origin, confirmed_by,
+created_at, confirmed_at, shipped_at, carrier, tracking_code
+)
+SELECT id, workspace_id, lead_id, inbound_event_id, order_no, items, amount_vnd::float8 AS amount_vnd,
+status, origin, confirmed_by, to_json(created_at)#>>'{}' AS created_at, to_json(confirmed_at)#>>'{}' AS confirmed_at,
+to_json(shipped_at)#>>'{}' AS shipped_at, carrier, tracking_code FROM changed`

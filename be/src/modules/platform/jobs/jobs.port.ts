@@ -4,6 +4,8 @@ import type {
     ClaimParams,
     ClaimResult,
     FailWrite,
+    FailedJobEffect,
+    JobEffect,
     GuardedWrite,
     RunKey,
 } from "./jobs.contracts"
@@ -19,6 +21,10 @@ export interface JobClaims {
     complete(write: GuardedWrite): Promise<void>
     /** Fails the job so the queue can retry it; throws `JobFencedOut` when the token is stale. */
     fail(write: FailWrite): Promise<void>
+    /** Holds the live job fence across domain effects so a replacement claim cannot overtake them. */
+    withFence<T>(job: ClaimedJob, work: JobEffect<T>): Promise<T>
+    /** Holds a failed delivery fence only when no successor worker is live. */
+    withFailedFence(jobKey: string, work: FailedJobEffect): Promise<void>
     /** The idempotency key of one step of this claim: `<jobId>:<step>:<fencingToken>`. */
     runKey(job: ClaimedJob, step: string): RunKey
 }

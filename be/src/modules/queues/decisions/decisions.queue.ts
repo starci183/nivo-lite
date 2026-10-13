@@ -8,6 +8,7 @@ import type {
     DecideExecutionPayload,
     DecideWorkPayload,
     ProposeCommandPayload,
+    RunWorkPayload,
 } from "./decisions.contracts"
 
 @Injectable()
@@ -15,19 +16,35 @@ import type {
 export class DecisionsQueue {
     constructor(@InjectQueueOutbox() private readonly outbox: QueueOutbox) {}
 
+    /** Enqueues a fresh retry or handoff in the caller's transaction. */
+    enqueueRunWork(payload: RunWorkPayload, tx: EntityManager): Promise<void> {
+        return this.outbox.write(tx, DECISIONS_QUEUE, payload, {
+            job: DecisionsJob.RunWork,
+            dedupeKey: decisionsDedupeKey(DecisionsJob.RunWork, payload.requestId),
+        })
+    }
+
     /** Enqueues the decision of a work item in the caller's transaction. */
-    enqueueDecideWork(payload: DecideWorkPayload, tx: EntityManager): Promise<void> {
+    enqueueDecideWork(
+        payload: DecideWorkPayload,
+        tx: EntityManager,
+        attemptKey: string = payload.workItemId,
+    ): Promise<void> {
         return this.outbox.write(tx, DECISIONS_QUEUE, payload, {
             job: DecisionsJob.DecideWork,
-            dedupeKey: decisionsDedupeKey(DecisionsJob.DecideWork, payload.workItemId),
+            dedupeKey: decisionsDedupeKey(DecisionsJob.DecideWork, attemptKey),
         })
     }
 
     /** Enqueues the decision of an approval card in the caller's transaction. */
-    enqueueDecideExecution(payload: DecideExecutionPayload, tx: EntityManager): Promise<void> {
+    enqueueDecideExecution(
+        payload: DecideExecutionPayload,
+        tx: EntityManager,
+        attemptKey: string = payload.executionId,
+    ): Promise<void> {
         return this.outbox.write(tx, DECISIONS_QUEUE, payload, {
             job: DecisionsJob.DecideExecution,
-            dedupeKey: decisionsDedupeKey(DecisionsJob.DecideExecution, payload.executionId),
+            dedupeKey: decisionsDedupeKey(DecisionsJob.DecideExecution, attemptKey),
         })
     }
 

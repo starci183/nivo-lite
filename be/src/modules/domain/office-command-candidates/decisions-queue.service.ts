@@ -5,6 +5,7 @@ import {
     isDecideExecutionPayload,
     isDecideWorkPayload,
     isProposeCommandPayload,
+    isRunWorkPayload,
 } from "@modules/queues/decisions"
 import { OfficeCommandService } from "./office-command.service"
 
@@ -22,6 +23,7 @@ export class DecisionsQueueService {
 
     /** Does the work one job of the decisions queue names. */
     async handle(payload: object): Promise<void> {
+        if (isRunWorkPayload(payload)) return this.decisions.runWork(payload)
         if (isDecideWorkPayload(payload)) return this.decisions.decideWork(payload)
         if (isDecideExecutionPayload(payload)) return this.decisions.decideExecution(payload)
         if (isProposeCommandPayload(payload)) {

@@ -1,5 +1,9 @@
 import { sql } from "@modules/platform/database"
 
+/** Replaces a customer's context brief ($1 workspace, $2 lead, $3 brief). */
+export const REPLACE_LEAD_CONTEXT = sql`UPDATE public.leads SET context_summary = $3
+WHERE workspace_id = $1::uuid AND id = $2::uuid`
+
 /** One lead of the workspace ($1 workspace, $2 lead). */
 export const FIND_LEAD = sql`SELECT id, workspace_id, contact_name, company, channel, need, stage, context_summary, phone, email, origin
 FROM public.leads WHERE workspace_id = $1::uuid AND id = $2::uuid LIMIT 1`

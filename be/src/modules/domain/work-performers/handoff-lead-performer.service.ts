@@ -35,7 +35,9 @@ export class HandoffLeadPerformerService implements WorkPerformer {
     /** Finds or creates the customer, ties the input and the conversation to them and makes sure somebody owes them a follow-up. */
     async perform(ctx: WorkContext, item: WorkItem, proposal: Proposal): Promise<Performed> {
         const fields = proposal.fields
-        const { phone, email } = contactParts(textOf(fields.contact))
+        const contact = contactParts(textOf(fields.contact))
+        const phone = contactParts(textOf(fields.phone)).phone ?? contact.phone
+        const email = contactParts(textOf(fields.email)).email ?? contact.email
         const channel = textOf(fields.channel_label) === "" ? "—" : textOf(fields.channel_label)
         const known = await this.leads.match({
             workspaceId: ctx.workspaceId,

@@ -1,5 +1,6 @@
 import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
+import type { DeepseekClient } from "./deepseek.client"
 import type { DeepseekOptions } from "./deepseek.options"
 import type { TextGenerator } from "./deepseek.port"
 
@@ -16,3 +17,10 @@ export const InjectDeepseekOptions = (): TypedParameterDecorator<DeepseekOptions
 /** Injects the text generator port. Parameter type: TextGenerator. */
 export const InjectDeepseekTextGenerator = (): TypedParameterDecorator<TextGenerator> =>
     injector<TextGenerator>(DEEPSEEK_TEXT_GENERATOR)
+
+/** Token of the concrete prompt library, for callers outside the integration. */
+export const DEEPSEEK_CLIENT: unique symbol = Symbol("integrations.deepseek.client")
+
+/** Injects the prompt library through its integration-owned token. Parameter type: DeepseekClient. */
+export const InjectDeepseekClient = (): TypedParameterDecorator<DeepseekClient> =>
+    injector<DeepseekClient>(DEEPSEEK_CLIENT)

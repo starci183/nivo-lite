@@ -4,6 +4,8 @@ import { EventsService } from "@modules/domain/events"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { DecisionEntry, EvidenceEntry, WorkContext } from "./decisions.contracts"
 import { INSERT_DECISION } from "./persistence/decision-log.sql"
+import { LIST_DECISION_HISTORY } from "./persistence/decision-history.sql"
+import type { DecisionHistoryQuery, DecisionRecord } from "./decision-history.contracts"
 
 const jsonOrNull = (value: object | null | undefined): string | null =>
     value === null || value === undefined ? null : JSON.stringify(value)
@@ -16,22 +18,36 @@ export class EvidenceService {
         private readonly events: EventsService,
     ) {}
 
+    /** Reads a bounded decision history after the composer proved workspace membership. */
+    listDecisions(workspaceId: string, query: DecisionHistoryQuery): Promise<Array<DecisionRecord>> {
+        return this.entityManager.query<Array<DecisionRecord>>(LIST_DECISION_HISTORY, [
+            workspaceId,
+            query.leadId ?? null,
+            query.humanDepartment ?? null,
+            query.oldestFirst ?? false,
+            Math.min(1000, Math.max(1, Math.floor(query.limit))),
+        ])
+    }
+
     /** Appends one line to the workspace's evidence log; the events capability is its only writer. */
-    async log(ctx: WorkContext, entry: EvidenceEntry): Promise<void> {
-        await this.events.record({
-            workspaceId: ctx.workspaceId,
-            kind: entry.kind,
-            actor: entry.actor,
-            summary: entry.summary,
-            leadId: entry.lead_id ?? null,
-            workItemId: entry.work_item_id ?? null,
-            evidence: entry.evidence ?? null,
-        })
+    async log(ctx: WorkContext, entry: EvidenceEntry, manager: EntityManager = this.entityManager): Promise<void> {
+        await this.events.record(
+            {
+                workspaceId: ctx.workspaceId,
+                kind: entry.kind,
+                actor: entry.actor,
+                summary: entry.summary,
+                leadId: entry.lead_id ?? null,
+                workItemId: entry.work_item_id ?? null,
+                evidence: entry.evidence ?? null,
+            },
+            manager,
+        )
     }
 
     /** Appends one line to the decision log: who decided, how (policy or person), the outcome and why. */
-    async decide(ctx: WorkContext, entry: DecisionEntry): Promise<void> {
-        await this.entityManager.query(INSERT_DECISION, [
+    async decide(ctx: WorkContext, entry: DecisionEntry, manager: EntityManager = this.entityManager): Promise<void> {
+        await manager.query(INSERT_DECISION, [
             ctx.workspaceId,
             entry.work_item_id,
             entry.lead_id,

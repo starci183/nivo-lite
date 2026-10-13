@@ -1,5 +1,6 @@
-export { ORDERS_ERROR_KINDS } from "./errors/orders.error"
+export { ORDERS_ERROR_KINDS, OrdersError, OrdersErrorCode } from "./errors/orders.error"
 export { ORDERS_MESSAGES } from "./messages/orders.messages"
 export { OrdersModule } from "./orders.module"
 export { OrdersService } from "./orders.service"
 export type { OptionalOrder } from "./orders.contracts"
+export type { OrdersWorkbenchRow } from "./persistence/orders.rows"

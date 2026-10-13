@@ -5,6 +5,8 @@ export const DECISIONS_QUEUE = "decisions"
 
 /** The jobs of the decisions queue; the value is the job name inside the queue and the prefix of the dedupe key. */
 export enum DecisionsJob {
+    /** Drains queued Sales steps through the policy gate. */
+    RunWork = "decisions.run-work",
     /** A person approved or rejected a work item: the engine resumes the same work. */
     DecideWork = "decisions.decide-work",
     /** A person approved or rejected an approval card of a follow-up draft. */
@@ -13,6 +15,16 @@ export enum DecisionsJob {
     ProposeCommand = "office.propose-command",
     /** The owner confirmed a command card: the command bus sends it. */
     ConfirmCommand = "office.confirm-command",
+}
+
+/** A queued Sales step to process, plus the identity of this retry. */
+export interface RunWorkPayload extends DecisionsJobScope {
+    /** Retry requires decision permission; handoff starts Accounting's gated invoice action. */
+    readonly intent: "retry" | "handoff"
+    /** The step the caller may retry. */
+    readonly workItemId: string
+    /** The fresh request identity, so later retries enqueue again. */
+    readonly requestId: string
 }
 
 /** One field a person changed before approving. */
@@ -108,6 +120,15 @@ const isEdits = (value: unknown): value is QueuedEdits =>
         (value.fields === undefined || (Array.isArray(value.fields) && value.fields.every(isField))))
 
 const isOptionalText = (value: unknown): boolean => value === undefined || value === null || typeof value === "string"
+
+/** True when the value names an authorized queued work drain. */
+export const isRunWorkPayload = (value: unknown): value is RunWorkPayload =>
+    isRecord(value) &&
+    isScope(value) &&
+    typeof value.workItemId === "string" &&
+    typeof value.requestId === "string" &&
+    (value.intent === "retry" || value.intent === "handoff") &&
+    !("decision" in value)
 
 /** True when the value is the payload of a decide-work job. */
 export const isDecideWorkPayload = (value: unknown): value is DecideWorkPayload =>

@@ -1,4 +1,5 @@
 import { QueueError, QueueErrorCode } from "./errors/queue.error"
+import { DomainError } from "@modules/platform/errors"
 import type {
     QueueDelivery,
     QueueHandler,
@@ -35,6 +36,9 @@ export const isUnrecoverable = (cause: unknown): boolean =>
 
 /** The pause a handler asked for with a retry-after error, in whole seconds, or undefined for the default backoff. */
 export const retryAfterSecondsOf = (cause: unknown): number | undefined => {
+    if (cause instanceof DomainError && Number.isFinite(Number(cause.params.retryAfterSeconds))) {
+        return Math.max(0, Math.ceil(Number(cause.params.retryAfterSeconds)))
+    }
     if (!(cause instanceof QueueError) || cause.code !== QueueErrorCode.RetryAfter) return undefined
     const seconds = Number(cause.params.seconds)
     return Number.isFinite(seconds) ? Math.max(0, Math.ceil(seconds)) : undefined

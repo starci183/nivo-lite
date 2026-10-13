@@ -9,6 +9,8 @@ import {
     CLAIM_WORK_ITEM,
     FIND_WORK_ITEM_BY_DEDUPE,
     INSERT_WORK_ITEM,
+    LIST_LEAD_ITEMS,
+    LIST_WORKBENCH_ITEMS,
     MARK_WORK_ITEM_DONE,
     MARK_WORK_ITEM_FAILED,
     MARK_WORK_ITEM_REJECTED,
@@ -16,8 +18,10 @@ import {
     MARK_WORK_ITEM_WAITING,
     NEXT_QUEUED_WORK_ITEM,
     REOPEN_WAITING_WORK_ITEM,
+    RETRY_WORK_ITEM,
     SAVE_PREPARED_WORK_ITEM,
     SETTLE_WAITING_CLAIMS,
+    STOP_FAILED_WORK_ITEM,
 } from "./persistence/work-items.sql"
 import { CLAIM_LEASE_SECONDS } from "./work-items.contracts"
 import type {
@@ -40,6 +44,40 @@ export class WorkItemsService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
     ) {}
+
+    /** The newest steps shown by the Sales workbench. */
+    async listForWorkbench(workspaceId: string, limit: number = 400): Promise<Array<WorkItem>> {
+        const rows = await this.entityManager.query<Array<WorkItemRow>>(LIST_WORKBENCH_ITEMS, [
+            workspaceId,
+            Math.min(1000, Math.max(1, limit)),
+        ])
+        return rows.map(toWorkItem)
+    }
+
+    /** The chronological steps shown by one customer's journey. */
+    async listForLead(workspaceId: string, leadId: string): Promise<Array<WorkItem>> {
+        const rows = await this.entityManager.query<Array<WorkItemRow>>(LIST_LEAD_ITEMS, [workspaceId, leadId])
+        return rows.map(toWorkItem)
+    }
+
+    /** Requeues a step only while it is in one of the caller's allowed failed states. */
+    async retry(
+        workspaceId: string,
+        id: string,
+        from: ReadonlyArray<WorkItem["status"]>,
+        tx: EntityManager = this.entityManager,
+    ): Promise<OptionalWorkItem> {
+        return this.first(await tx.query<Array<WorkItemRow>>(RETRY_WORK_ITEM, [workspaceId, id, from]))
+    }
+
+    /** Permanently stops a failed step; null if another caller changed it first. */
+    async stopFailed(
+        workspaceId: string,
+        id: string,
+        manager: EntityManager = this.entityManager,
+    ): Promise<OptionalWorkItem> {
+        return this.first(await manager.query<Array<WorkItemRow>>(STOP_FAILED_WORK_ITEM, [workspaceId, id, this.now()]))
+    }
 
     /** Inserts a queued item; null when the dedupe key of the workspace is already used. The id comes from the database. */
     async insert(item: NewWorkItem): Promise<OptionalWorkItem> {

@@ -5,6 +5,9 @@ import { ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
 import type { StoredMessage, StoredReply, TranscriptLine } from "./agent-messages.contracts"
 import { AgentMessagesError, AgentMessagesErrorCode } from "./errors/agent-messages.error"
+import type { ConversationMessageRow } from "./persistence/conversation-messages.rows"
+import { LIST_CONVERSATION_MESSAGES } from "./persistence/conversation-messages.sql"
+import type { ConversationMessagesQuery } from "./conversation-messages.contracts"
 import type { LastMessageRow, MessageIdRow, StoredMessageRow, TranscriptRow } from "./persistence/agent-messages.rows"
 import {
     FIND_AGENT_REPLY,
@@ -22,6 +25,22 @@ import {
 /** The messages of a conversation between a customer and an agent; the only writer of agent_messages. */
 export class AgentMessagesService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+
+    /** Reads messages of the workspace's selected conversations after its caller's membership was proved. */
+    listForConversations(
+        workspaceId: string,
+        conversationIds: ReadonlyArray<string>,
+        query: ConversationMessagesQuery,
+    ): Promise<Array<ConversationMessageRow>> {
+        if (conversationIds.length === 0) return Promise.resolve([])
+        return this.entityManager.query<Array<ConversationMessageRow>>(LIST_CONVERSATION_MESSAGES, [
+            workspaceId,
+            conversationIds,
+            query.since ?? null,
+            query.oldestFirst ?? false,
+            query.limit,
+        ])
+    }
 
     /** Stores what the customer wrote and answers the message id. */
     async storeCustomer(

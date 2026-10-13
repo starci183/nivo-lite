@@ -7,6 +7,8 @@ import { InvoicesError, InvoicesErrorCode } from "./errors/invoices.error"
 import { INVOICE_NUMBER_ATTEMPTS, dueAtOf, invoicePrefixOf, nextInvoiceNumber } from "./invoice-number.policy"
 import type { IssuedInvoice, NewInvoice, OptionalInvoice } from "./invoices.contracts"
 import type { InvoiceListingRow, InvoiceRow, LastInvoiceNumberRow } from "./persistence/invoices.rows"
+import type { InvoiceViewRow } from "./persistence/invoice-views.rows"
+import { LIST_LEAD_INVOICES, LIST_WORKBENCH_INVOICES } from "./persistence/invoice-views.sql"
 import {
     FIND_INVOICE,
     FIND_INVOICE_OF_ORDER,
@@ -39,6 +41,16 @@ export class InvoicesService {
     /** The newest issued (unpaid) invoices, the ones an incoming payment may settle. */
     listIssued(workspaceId: string, limit: number): Promise<Array<InvoiceListingRow>> {
         return this.entityManager.query<Array<InvoiceListingRow>>(LIST_ISSUED_INVOICES, [workspaceId, limit])
+    }
+
+    /** The invoices shown in Sales handoffs, after the caller's membership was proved by the composer. */
+    listForWorkbench(workspaceId: string): Promise<Array<InvoiceViewRow>> {
+        return this.entityManager.query<Array<InvoiceViewRow>>(LIST_WORKBENCH_INVOICES, [workspaceId, 500])
+    }
+
+    /** A customer's invoices, after the caller's membership was proved by the composer. */
+    listForLead(workspaceId: string, leadId: string): Promise<Array<InvoiceViewRow>> {
+        return this.entityManager.query<Array<InvoiceViewRow>>(LIST_LEAD_INVOICES, [workspaceId, leadId])
     }
 
     /** Issues an invoice under the next number of the month; an order that has its invoice already gets that one back. */

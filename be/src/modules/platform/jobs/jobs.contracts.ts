@@ -60,3 +60,9 @@ export const isRunKey = (text: string): text is RunKey => RUN_KEY.test(text)
 
 /** What a claim answers: the claimed job, or null when the job is done or another worker holds a live claim. */
 export type ClaimResult = ClaimedJob | null
+
+/** A domain effect executed while the platform holds the live job row's fence. */
+export type JobEffect<T> = () => Promise<T>
+
+/** The terminal failure effect executed while the platform holds the failed worker's fence. */
+export type FailedJobEffect = (write: GuardedWrite) => Promise<void>
