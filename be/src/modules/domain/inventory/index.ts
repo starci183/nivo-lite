@@ -1,5 +1,6 @@
 export { INVENTORY_ERROR_KINDS } from "./errors/inventory.error"
 export { INVENTORY_MESSAGES } from "./messages/inventory.messages"
+export { toAdjustInventoryStockRequest, toAdjustStockType } from "./inventory-stock-requests.mapper"
 export { InventoryCatalogService } from "./inventory-catalog.service"
 export { InventoryImportService } from "./inventory-import.service"
 export { InventoryDispatchService } from "./inventory-dispatch.service"

@@ -17,7 +17,8 @@ import type {
 import { InventoryCatalogService } from "./inventory-catalog.service"
 import { InventoryLocationsService } from "./inventory-locations.service"
 import { InventoryMovementsService } from "./inventory-movements.service"
-import { inventoryStarterOf } from "./inventory-templates"
+import type { InventoryTemplateInfo } from "./inventory-workbench.contracts"
+import { INVENTORY_TEMPLATES, inventoryStarterOf } from "./inventory-templates"
 import { MANAGER_ROLES } from "./policies/access-roles.policy"
 import { parseItemTable, skuFromName } from "./policies/item-table.policy"
 import { channelOf } from "./policies/supplier-channel.policy"
@@ -157,6 +158,11 @@ export class InventoryImportService {
         })
         cache.set(key, id)
         return id
+    }
+
+    /** The starter sets a new shop can pick. */
+    listTemplates(): Promise<ReadonlyArray<InventoryTemplateInfo>> {
+        return Promise.resolve(INVENTORY_TEMPLATES)
     }
 
     /** Loads the starter set a key names; an unknown key is invalid. */

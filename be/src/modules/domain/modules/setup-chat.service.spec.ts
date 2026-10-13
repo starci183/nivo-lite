@@ -1,0 +1,357 @@
+import { Test } from "@nestjs/testing"
+import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { AgentsService } from "@modules/domain/agents"
+import { EventsService } from "@modules/domain/events"
+import { ContextVersionsService } from "@modules/domain/module-context-versions"
+import type { ContextVersionRecord, GateEntry, GateEvidence } from "@modules/domain/module-context-versions"
+import { InstallationRecordsService } from "@modules/domain/module-installations"
+import type { InstallationRecord } from "@modules/domain/module-installations"
+import { SetupMessagesService } from "@modules/domain/module-setup-messages"
+import type { SetupMessageRecord } from "@modules/domain/module-setup-messages"
+import { SetupSessionsService } from "@modules/domain/module-setup-sessions"
+import type { SetupSessionRecord } from "@modules/domain/module-setup-sessions"
+import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
+import { WorkspaceMembersService } from "@modules/domain/workspace-members"
+import { CLOCK } from "@modules/platform/clock"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { MESSAGE_CATALOG } from "@modules/platform/i18n"
+import type { MessageCatalog } from "@modules/platform/i18n"
+import { AGENTS_QUEUE_PRODUCER } from "@modules/queues/agents"
+import type { AgentsQueue } from "@modules/queues/agents"
+import { ACCOUNTING_MODULE } from "./accounting.contracts"
+import { ModulesErrorCode } from "./errors/modules.error"
+import { ModulesService } from "./modules.service"
+import { SetupCardsService } from "./setup-cards.service"
+import { SetupChatService } from "./setup-chat.service"
+
+const NOW = "2026-10-13T02:00:00.000Z"
+
+/** Every gate of the accounting module, confirmed by Lan. */
+const CONFIRMED: GateEvidence = Object.fromEntries(
+    ACCOUNTING_MODULE.gates.map((gate): [string, GateEntry] => [
+        gate.key,
+        { status: "confirmed", evidence: `About ${gate.key}` },
+    ]),
+)
+
+const installationOf = builder<InstallationRecord>({
+    id: "inst-1",
+    workspaceId: "ws-1",
+    moduleKey: "accounting",
+    name: "Books",
+    isMulti: true,
+    agentId: null,
+    agentName: "",
+    agentHandle: "",
+    status: "setup",
+    operatingMode: "assist",
+    liveEnabled: false,
+    activeContextVersionId: null,
+    activeVersion: null,
+    settings: {},
+    createdAt: NOW,
+})
+
+const sessionOf = builder<SetupSessionRecord>({
+    id: "s-1",
+    workspaceId: "ws-1",
+    installationId: "inst-1",
+    revision: 1,
+    status: "draft",
+    draft: { summary: "A bakery.", facts: [] },
+    gateEvidence: {},
+    createdAt: NOW,
+})
+
+const lineOf = builder<SetupMessageRecord>({
+    id: "m-1",
+    setupSessionId: "s-1",
+    role: "user",
+    author: "Lan",
+    body: "Hello",
+    createdAt: NOW,
+})
+
+const versionOf = builder<ContextVersionRecord>({
+    id: "v-1",
+    installationId: "inst-1",
+    version: 1,
+    snapshot: { summary: "A bakery.", facts: [], gates: CONFIRMED },
+    appliedBy: "Lan",
+    appliedAt: NOW,
+})
+
+const build = async () => {
+    const tx = fakeTransaction(mockEntityManager())
+    const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => `[${key}]`) })
+    const queue = mock<AgentsQueue>()
+    const installations = mock<InstallationRecordsService>()
+    installations.find.mockResolvedValue(installationOf())
+    const sessions = mock<SetupSessionsService>()
+    sessions.latest.mockResolvedValue(sessionOf())
+    sessions.find.mockResolvedValue(sessionOf())
+    const messages = mock<SetupMessagesService>()
+    const versions = mock<ContextVersionsService>()
+    const members = mock<WorkspaceMembersService>()
+    members.require.mockResolvedValue({
+        userId: "u1",
+        workspaceId: "ws-1",
+        role: "owner",
+        staffId: null,
+        displayName: "Lan",
+        status: "active",
+    })
+    const modules = mock<ModulesService>()
+    modules.find.mockResolvedValue(ACCOUNTING_MODULE)
+    const agents = mock<AgentsService>()
+    const events = mock<EventsService>()
+    const sync = mock<AgentSyncService>()
+    const cards = mock<SetupCardsService>()
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            SetupChatService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
+            { provide: CLOCK, useValue: new FakeClock(NOW) },
+            { provide: MESSAGE_CATALOG, useValue: catalog },
+            { provide: AGENTS_QUEUE_PRODUCER, useValue: queue },
+            { provide: InstallationRecordsService, useValue: installations },
+            { provide: SetupSessionsService, useValue: sessions },
+            { provide: SetupMessagesService, useValue: messages },
+            { provide: ContextVersionsService, useValue: versions },
+            { provide: WorkspaceMembersService, useValue: members },
+            { provide: ModulesService, useValue: modules },
+            { provide: AgentsService, useValue: agents },
+            { provide: EventsService, useValue: events },
+            { provide: AgentSyncService, useValue: sync },
+            { provide: SetupCardsService, useValue: cards },
+        ],
+    }).compile()
+    return {
+        service: moduleRef.get(SetupChatService),
+        tx,
+        queue,
+        installations,
+        sessions,
+        messages,
+        versions,
+        agents,
+        events,
+        sync,
+        cards,
+    }
+}
+
+describe("SetupChatService", () => {
+    describe("state", () => {
+        it("answers the open draft, the chat and whether a turn is pending", async () => {
+            const { service, sessions, messages, cards } = await build()
+            sessions.revisions.mockResolvedValue([{ id: "s-1", revision: 1, status: "draft" }])
+            messages.ofInstallation.mockResolvedValue([lineOf({ role: "assistant" }), lineOf({ id: "m-2" })])
+            cards.viewsOf.mockResolvedValue([])
+
+            await expect(service.state("u1", "ws-1", "inst-1", "en")).resolves.toEqual({
+                installation: installationOf(),
+                session: sessionOf(),
+                revisions: [{ id: "s-1", revision: 1, status: "draft" }],
+                messages: [lineOf({ role: "assistant" }), lineOf({ id: "m-2" })],
+                cards: [],
+                turnPending: true,
+            })
+        })
+
+        it("refuses an installation of another workspace", async () => {
+            const { service, installations } = await build()
+            installations.find.mockResolvedValue(null)
+
+            await expect(service.state("u1", "ws-1", "inst-1", "en")).rejects.toMatchObject({
+                code: ModulesErrorCode.InstallationNotFound,
+            })
+        })
+    })
+
+    describe("openDraft", () => {
+        it("opens the first revision with a welcome naming the instance", async () => {
+            const { service, sessions, messages } = await build()
+            sessions.latest.mockResolvedValue(null)
+            sessions.open.mockResolvedValue(sessionOf())
+
+            await expect(service.openDraft(installationOf(), "en")).resolves.toEqual(sessionOf())
+            expect(sessions.open).toHaveBeenCalledWith({
+                workspaceId: "ws-1",
+                installationId: "inst-1",
+                revision: 1,
+                draft: { summary: "", facts: [] },
+                gateEvidence: {},
+            })
+            expect(messages.post).toHaveBeenCalledWith({
+                workspaceId: "ws-1",
+                setupSessionId: "s-1",
+                role: "assistant",
+                author: "NIVO",
+                body: "[setup.welcome]",
+            })
+        })
+
+        it("opens the next revision from an applied one without a welcome", async () => {
+            const { service, sessions, messages } = await build()
+            sessions.latest.mockResolvedValue(sessionOf({ status: "applied", revision: 2, gateEvidence: CONFIRMED }))
+            sessions.open.mockResolvedValue(sessionOf({ id: "s-3", revision: 3 }))
+
+            await expect(service.openDraft(installationOf(), "en")).resolves.toMatchObject({ id: "s-3" })
+            expect(sessions.open).toHaveBeenCalledWith(
+                expect.objectContaining({ revision: 3, gateEvidence: CONFIRMED }),
+            )
+            expect(messages.post).not.toHaveBeenCalled()
+        })
+
+        it("answers the draft another call opened first", async () => {
+            const { service, sessions } = await build()
+            sessions.latest.mockResolvedValueOnce(null).mockResolvedValueOnce(sessionOf({ id: "s-other" }))
+            sessions.open.mockResolvedValue(null)
+
+            await expect(service.openDraft(installationOf(), "en")).resolves.toMatchObject({ id: "s-other" })
+        })
+    })
+
+    describe("postMessage", () => {
+        it("stores the trimmed message and queues the turn in a transaction", async () => {
+            const { service, messages, queue, tx } = await build()
+            messages.post.mockResolvedValue(lineOf({ id: "m-9" }))
+
+            await expect(service.postMessage("u1", "ws-1", "s-1", "  We open at 7  ", "vi")).resolves.toEqual(
+                lineOf({ id: "m-9" }),
+            )
+            expect(messages.post).toHaveBeenCalledWith({
+                workspaceId: "ws-1",
+                setupSessionId: "s-1",
+                role: "user",
+                author: "Lan",
+                body: "We open at 7",
+            })
+            expect(queue.enqueueSetupTurn.mock.calls[0]?.[0]).toEqual({
+                workspaceId: "ws-1",
+                messageId: "m-9",
+                setupSessionId: "s-1",
+                locale: "vi",
+            })
+            expect(tx.commits).toBe(1)
+        })
+
+        it("refuses a closed draft", async () => {
+            const { service, sessions, messages } = await build()
+            sessions.find.mockResolvedValue(sessionOf({ status: "applied" }))
+
+            await expect(service.postMessage("u1", "ws-1", "s-1", "Hi", "en")).rejects.toMatchObject({
+                code: ModulesErrorCode.SetupSessionClosed,
+            })
+            expect(messages.post).not.toHaveBeenCalled()
+        })
+    })
+
+    describe("setGate", () => {
+        it("confirms an edited gate in the words of the owner", async () => {
+            const { service, sessions } = await build()
+            sessions.save.mockImplementation((id, change) => Promise.resolve(sessionOf({ id, ...change })))
+
+            const saved = await service.setGate("u1", "ws-1", "s-1", "scope", "edit", "  Invoices only  ")
+
+            expect(saved.gateEvidence).toEqual({
+                scope: { status: "confirmed", evidence: "Invoices only", confirmed_by: "Lan", confirmed_at: NOW },
+            })
+        })
+
+        it("refuses an unknown gate, a gate without evidence and a draft closed meanwhile", async () => {
+            const { service, sessions } = await build()
+            sessions.save.mockResolvedValue(null)
+
+            await expect(service.setGate("u1", "ws-1", "s-1", "nope", "confirm", "")).rejects.toMatchObject({
+                code: ModulesErrorCode.GateUnknown,
+            })
+            await expect(service.setGate("u1", "ws-1", "s-1", "scope", "confirm", "")).rejects.toMatchObject({
+                code: ModulesErrorCode.GateEmpty,
+            })
+            await expect(service.setGate("u1", "ws-1", "s-1", "scope", "reopen", "")).rejects.toMatchObject({
+                code: ModulesErrorCode.SetupSessionClosed,
+            })
+        })
+    })
+
+    describe("apply", () => {
+        it("refuses a draft whose gates are not all confirmed", async () => {
+            const { service } = await build()
+
+            await expect(service.apply("u1", "ws-1", "inst-1", "en")).rejects.toMatchObject({
+                code: ModulesErrorCode.GatesUnconfirmed,
+            })
+        })
+
+        it("refuses a draft that says what the version in use says", async () => {
+            const { service, sessions, versions, installations } = await build()
+            sessions.latest.mockResolvedValue(sessionOf({ gateEvidence: CONFIRMED }))
+            installations.find.mockResolvedValue(installationOf({ activeContextVersionId: "v-1" }))
+            versions.latest.mockResolvedValue(versionOf())
+
+            await expect(service.apply("u1", "ws-1", "inst-1", "en")).rejects.toMatchObject({
+                code: ModulesErrorCode.SetupUnchanged,
+            })
+        })
+
+        it("applies the draft as the next version, readies the installation and opens a new draft", async () => {
+            const { service, sessions, versions, installations, events, sync } = await build()
+            sessions.latest
+                .mockResolvedValueOnce(sessionOf({ gateEvidence: CONFIRMED, draft: { summary: "New", facts: [] } }))
+                .mockResolvedValueOnce(sessionOf({ status: "applied" }))
+            sessions.open.mockResolvedValue(sessionOf({ id: "s-2", revision: 2 }))
+            versions.latest.mockResolvedValue(versionOf())
+            versions.insert.mockResolvedValue(versionOf({ id: "v-2", version: 2 }))
+
+            await expect(service.apply("u1", "ws-1", "inst-1", "en")).resolves.toBe(2)
+            expect(versions.insert).toHaveBeenCalledWith({
+                workspaceId: "ws-1",
+                installationId: "inst-1",
+                version: 2,
+                snapshot: { summary: "New", facts: [], gates: CONFIRMED },
+                appliedBy: "Lan",
+            })
+            expect(installations.activateVersion).toHaveBeenCalledWith("ws-1", "inst-1", "v-2", "ready")
+            expect(sessions.close).toHaveBeenCalledWith("s-1")
+            expect(events.record).toHaveBeenCalledWith({
+                workspaceId: "ws-1",
+                kind: "module.context_applied",
+                actor: "Lan",
+                summary: `${ACCOUNTING_MODULE.name.en} v2`,
+            })
+            expect(sync.requestNow).toHaveBeenCalledWith({
+                workspaceId: "ws-1",
+                installationId: "inst-1",
+                force: false,
+            })
+        })
+
+        it("writes the setup into the agent of a live installation and keeps its status", async () => {
+            const { service, sessions, versions, installations, agents } = await build()
+            installations.find.mockResolvedValue(installationOf({ agentId: "agent-1", status: "live" }))
+            sessions.latest.mockResolvedValue(sessionOf({ gateEvidence: CONFIRMED }))
+            versions.latest.mockResolvedValue(null)
+            versions.insert.mockResolvedValue(versionOf())
+            agents.profileOf.mockResolvedValue(null)
+
+            await expect(service.apply("u1", "ws-1", "inst-1", "en")).resolves.toBe(1)
+            expect(installations.activateVersion).toHaveBeenCalledWith("ws-1", "inst-1", "v-1", "live")
+            expect(agents.setTexts).not.toHaveBeenCalled()
+        })
+    })
+
+    describe("versionsOf", () => {
+        it("answers the versions and the one in use", async () => {
+            const { service, versions, installations } = await build()
+            installations.find.mockResolvedValue(installationOf({ activeContextVersionId: "v-1" }))
+            versions.list.mockResolvedValue([versionOf()])
+
+            await expect(service.versionsOf("u1", "ws-1", "inst-1")).resolves.toEqual({
+                versions: [versionOf()],
+                activeVersionId: "v-1",
+            })
+        })
+    })
+})

@@ -349,3 +349,14 @@ export interface GateOutcome {
     /** The decision that records it. */
     readonly workItemId: string
 }
+
+/** The gate answer a screening request got; null when the gate could not be asked and the candidate keeps waiting. */
+export type OptionalGateOutcome = GateOutcome | null
+
+/** What deleting candidates removed, so the caller can report it. */
+export interface DeletedCandidates {
+    /** How many candidate rows were deleted. */
+    readonly candidates: number
+    /** How many stored CV files were removed from storage. */
+    readonly files: number
+}

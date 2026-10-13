@@ -11,6 +11,7 @@ import { InventoryCatalogService } from "./inventory-catalog.service"
 import { InventoryImportService } from "./inventory-import.service"
 import { InventoryLocationsService } from "./inventory-locations.service"
 import { InventoryMovementsService } from "./inventory-movements.service"
+import { INVENTORY_TEMPLATES } from "./inventory-templates"
 import { savedId } from "./policies/saved-id.policy"
 import type { IdRow } from "./policies/saved-id.policy"
 import {
@@ -152,6 +153,12 @@ describe("InventoryImportService", () => {
                 second.service.importPasted("user-1", "ws-1", { raw: "SKU,Name,Supplier\nA1,Salt,Nobody" }),
             ).rejects.toMatchObject({ code: InventoryErrorCode.SupplierNotFound })
         })
+    })
+
+    it("lists the starter sets a new shop can pick", async () => {
+        const { service } = await build(mockEntityManager())
+
+        await expect(service.listTemplates()).resolves.toBe(INVENTORY_TEMPLATES)
     })
 
     describe("applyStarter", () => {

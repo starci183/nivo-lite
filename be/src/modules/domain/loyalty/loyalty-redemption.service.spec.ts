@@ -57,7 +57,7 @@ const paramsOf = builder<RedemptionParams>({
     ref: "redeem:ab12cd34",
     by: "Owner",
 })
-const catalog: MessageCatalog = { get: (key, params) => `${key}:${String(params.name)}:${String(params.code)}` }
+const catalog = mock<MessageCatalog>({ get: (key, params) => `${key}:${String(params.name)}:${String(params.code)}` })
 
 interface Options {
     member?: LoyaltyMember | null

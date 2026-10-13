@@ -73,7 +73,7 @@ const rewardOf = builder<LoyaltyReward>({
     note: "n",
     active: true,
 })
-const catalog: MessageCatalog = { get: (key, params) => `${key}|${String(params.shop)}|${String(params.code)}` }
+const catalog = mock<MessageCatalog>({ get: (key, params) => `${key}|${String(params.shop)}|${String(params.code)}` })
 
 interface Options {
     program?: LoyaltyProgram | null
@@ -108,7 +108,7 @@ const build = async (options: Options = {}) => {
     ledger.expiryEntries.mockResolvedValue([])
     const rewards = mock<LoyaltyRewardsService>()
     rewards.list.mockResolvedValue([rewardOf(), rewardOf({ id: "r2", pointsCost: 5000 })])
-    const delivery: CodeDelivery = { deliver: jest.fn().mockResolvedValue(options.delivered ?? true) }
+    const delivery = mock<CodeDelivery>({ deliver: jest.fn().mockResolvedValue(options.delivered ?? true) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             LoyaltyPublicService,

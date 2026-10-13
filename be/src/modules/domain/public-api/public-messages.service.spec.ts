@@ -3,7 +3,6 @@ import { fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "
 import type { MockEntityManager, RecordingQueueOutbox } from "@starci/jest-preset"
 import { ApiKeysService } from "@modules/domain/api-keys"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { QUEUE_OUTBOX } from "@modules/platform/queue"
 import { PUBLIC_API_QUEUE, PublicApiQueue } from "@modules/queues/public-api"
 import { PublicApiErrorCode } from "./errors/public-api.error"
 import type { AcceptMessageParams } from "./public-api.contracts"
@@ -27,15 +26,17 @@ const RECORDED = { id: "request-1", lead_id: null, inserted: true }
 
 const build = async (entityManager: MockEntityManager) => {
     const outbox: RecordingQueueOutbox = recordingQueueOutbox()
+    const queue = mock<PublicApiQueue>({
+        enqueueRequest: (payload, tx) => outbox.write(tx, PUBLIC_API_QUEUE, payload),
+    })
     const keys = mock<ApiKeysService>()
     keys.authenticate.mockResolvedValue(WHO)
     const moduleRef = await Test.createTestingModule({
         providers: [
             PublicMessagesService,
-            PublicApiQueue,
+            { provide: PublicApiQueue, useValue: queue },
             { provide: ApiKeysService, useValue: keys },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
-            { provide: QUEUE_OUTBOX, useValue: outbox },
         ],
     }).compile()
     return { service: moduleRef.get(PublicMessagesService), outbox, keys }
