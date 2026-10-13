@@ -1,7 +1,8 @@
-import { useCallback, useRef, useState } from "react"
-import { useMutateRequestAgentGenerationSwr, useQueryAgentGenerationStatusSwr } from "@/hooks/swr"
+import { useTranslations } from "next-intl"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { useMutateAskGuideSwr, useQueryAgentGenerationStatusSwr } from "@/hooks/swr"
 import type { AgentGenerationStatusType } from "@/modules/api"
-import { busyReply, guidePrompt, mapAnswer, modelAnswer } from "@/modules/guide"
+import { mapAnswer, modelAnswer } from "@/modules/guide"
 import type { GuideReply, GuideTurn } from "@/modules/guide"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useGuideText } from "./useGuideText"
@@ -11,13 +12,8 @@ type GuideConversationMessage =
     | { readonly id: number; readonly role: "user"; readonly text: string }
     | { readonly id: number; readonly role: "guide"; readonly reply: GuideReply }
 
-/** A question the model is answering: the queued text and the role it was asked for. */
-interface PendingAnswer {
-    readonly generationId: string
-    readonly isManager: boolean
-}
-
-const MODEL_TIMEOUT_MS = 25_000
+/** How long the guide waits for the model before it gives up, ms. */
+const ANSWER_TIMEOUT_MS = 60_000
 
 /** The turns the model sees, from the conversation so far. */
 const historyOf = (messages: ReadonlyArray<GuideConversationMessage>): Array<GuideTurn> =>
@@ -27,16 +23,17 @@ const historyOf = (messages: ReadonlyArray<GuideConversationMessage>): Array<Gui
 
 /**
  * The NIVO guide conversation. A question that clearly names a place is answered from the site map at once (no tokens); anything else
- * is queued on the be text door under the usage kind `guide` (paid by NIVO, never counted toward the workspace allowance) and polled
- * until the model answers.
+ * goes to the be `askGuide` door (which builds the prompt and limits each member) and its queued text is polled until the model
+ * answers, the status cannot be read, or a minute passes.
  */
 export const useGuideConversation = (isManager: boolean) => {
+    const t = useTranslations("guide")
     const text = useGuideText()
     const runGraphQL = useGraphQLWithToast()
-    const { trigger } = useMutateRequestAgentGenerationSwr()
+    const { trigger } = useMutateAskGuideSwr()
     const [messages, setMessages] = useState<ReadonlyArray<GuideConversationMessage>>([])
     const [isAsking, setIsAsking] = useState(false)
-    const [pending, setPending] = useState<PendingAnswer | null>(null)
+    const [generationId, setGenerationId] = useState<string | undefined>(undefined)
     const lastId = useRef(0)
     const nextId = useCallback(() => {
         lastId.current = Math.max(lastId.current + 1, Date.now())
@@ -48,57 +45,53 @@ export const useGuideConversation = (isManager: boolean) => {
             const id = nextId()
             setMessages((current) => [...current, { id, role: "guide", reply }])
             setIsAsking(false)
-            setPending(null)
+            setGenerationId(undefined)
         },
         [nextId],
     )
+    const fail = useCallback(() => answer({ answer: t("failed"), steps: [], links: [], source: "busy" }), [answer, t])
 
-    const settle = useCallback(
-        (generation: AgentGenerationStatusType) => {
-            const output = generation.status === "done" ? (generation.output ?? null) : null
-            answer(modelAnswer(output, pending?.isManager ?? isManager, text))
-        },
-        [answer, pending, isManager, text],
-    )
-    useQueryAgentGenerationStatusSwr(pending?.generationId, settle)
+    useQueryAgentGenerationStatusSwr(generationId, {
+        onSettled: (generation: AgentGenerationStatusType) =>
+            answer(modelAnswer(generation.status === "done" ? (generation.output ?? null) : null, isManager, text)),
+        onUnreachable: fail,
+    })
+
+    // Stop waiting (and polling) after a minute.
+    useEffect(() => {
+        if (generationId === undefined) return undefined
+        const timer = setTimeout(fail, ANSWER_TIMEOUT_MS)
+        return () => clearTimeout(timer)
+    }, [generationId, fail])
 
     const ask = useCallback(
         async (question: string, path: string) => {
             const asked = question.trim()
             if (asked === "" || isAsking) return
-            const input = { question: asked, path, history: historyOf(messages), isManager }
+            const history = historyOf(messages)
             const id = nextId()
             setMessages((current) => [...current, { id, role: "user", text: asked }])
-            const fromMap = mapAnswer(input, text)
+            const fromMap = mapAnswer({ question: asked, isManager }, text)
             if (fromMap !== null) {
                 answer(fromMap)
                 return
             }
             setIsAsking(true)
-            const queued = await runGraphQL(
-                () =>
-                    trigger({
-                        purpose: "guide",
-                        kind: "guide",
-                        module: "other",
-                        responseFormat: "json",
-                        timeoutMs: MODEL_TIMEOUT_MS,
-                        messages: guidePrompt(input, text).map((line) => ({ role: line.role, content: line.content })),
-                    }),
-                { showSuccessToast: false },
-            )
-            if (queued?.ok === true && queued.generationId !== null && queued.generationId !== undefined) {
-                setPending({ generationId: queued.generationId, isManager })
+            const queued = await runGraphQL(() => trigger({ question: asked, path, history }), {
+                showSuccessToast: false,
+            })
+            if (queued === undefined) {
+                fail()
                 return
             }
-            answer(busyReply(text))
+            setGenerationId(queued.generationId)
         },
-        [isAsking, messages, isManager, text, answer, nextId, runGraphQL, trigger],
+        [isAsking, messages, isManager, text, answer, fail, nextId, runGraphQL, trigger],
     )
 
     const restart = useCallback(() => {
         setMessages([])
-        setPending(null)
+        setGenerationId(undefined)
         setIsAsking(false)
     }, [])
 

@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, builder, fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
+import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { FakeTransaction } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -7,7 +7,8 @@ import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { AGENTS_QUEUE, AGENTS_QUEUE_PRODUCER, AgentsQueue } from "@modules/queues/agents"
+import { AGENTS_QUEUE_PRODUCER } from "@modules/queues/agents"
+import type { AgentsQueue } from "@modules/queues/agents"
 import type { GenerateParams } from "./ai-generations.contracts"
 import { AI_GENERATIONS_OPTIONS, AI_GENERATIONS_USAGE } from "./ai-generations.decorators"
 import { AiGenerationsLogEvent } from "./ai-generations.log-events"
@@ -51,12 +52,7 @@ const build = async (setup: Setup = {}) => {
             ],
         }),
     )
-    const outbox = recordingQueueOutbox()
-    const queue = mock<AgentsQueue>({
-        enqueueGenerate: jest.fn((...[payload, manager]: Parameters<AgentsQueue["enqueueGenerate"]>) =>
-            outbox.write(manager, AGENTS_QUEUE, payload),
-        ),
-    })
+    const queue = mock<AgentsQueue>({ enqueueGenerate: jest.fn(() => Promise.resolve()) })
     const usage = mock<UsageGate>({
         blockedBy: jest.fn(() => Promise.resolve(setup.blocked === undefined ? null : { message: setup.blocked })),
     })
@@ -85,7 +81,7 @@ const build = async (setup: Setup = {}) => {
             { provide: WorkspaceMembersService, useValue: members },
         ],
     }).compile()
-    return { service: moduleRef.get(GenerationsService), tx, outbox, usage, pause, logger, catalog, members }
+    return { service: moduleRef.get(GenerationsService), tx, queue, usage, pause, logger, catalog, members }
 }
 
 describe("GenerationsService", () => {
@@ -107,11 +103,35 @@ describe("GenerationsService", () => {
             await expect(service.generateFor("u1", paramsOf())).rejects.toBe(refusal)
             expect(tx.em.query).not.toHaveBeenCalled()
         })
+
+        it("refuses a NIVO-paid kind such as guide and writes nothing", async () => {
+            const { service, tx } = await build()
+
+            await expect(service.generateFor("u1", paramsOf({ kind: "guide", module: "other" }))).rejects.toMatchObject(
+                {
+                    code: AiGenerationsErrorCode.KindNotAllowed,
+                },
+            )
+            expect(tx.em.query).not.toHaveBeenCalled()
+        })
+    })
+
+    describe("requestFor", () => {
+        it("refuses a kind the named module does not own and queues nothing", async () => {
+            const { service, queue } = await build()
+
+            await expect(
+                service.requestFor("u1", paramsOf({ kind: "owner_chat", module: "sales" })),
+            ).rejects.toMatchObject({
+                code: AiGenerationsErrorCode.KindNotAllowed,
+            })
+            expect(queue.enqueueGenerate).not.toHaveBeenCalled()
+        })
     })
 
     describe("generate", () => {
         it("writes the row and its job in one transaction and answers the text once the job filled it", async () => {
-            const { service, tx, outbox, pause } = await build({ progress: [QUEUED, DONE] })
+            const { service, tx, queue, pause } = await build({ progress: [QUEUED, DONE] })
 
             const outcome = await service.generate(paramsOf({ responseFormat: "json", timeoutMs: 60_000 }))
 
@@ -129,10 +149,10 @@ describe("GenerationsService", () => {
                 "relay",
                 '{"messages":[{"role":"user","content":"hi"}],"response_format":"json","timeout_ms":60000}',
             ])
-            expect(outbox.jobsOf(AGENTS_QUEUE)).toEqual([
-                { queue: AGENTS_QUEUE, payload: { generationId: "g1", workspaceId: "w1" } },
-            ])
-            expect(outbox.allInTransaction).toBe(true)
+            expect(queue.enqueueGenerate).toHaveBeenCalledWith(
+                { generationId: "g1", workspaceId: "w1" },
+                expect.anything(),
+            )
             expect(tx.commits).toBe(1)
             expect(pause.wait).toHaveBeenCalledTimes(2)
             expect(pause.wait).toHaveBeenCalledWith(400)
@@ -210,12 +230,12 @@ describe("GenerationsService", () => {
         })
 
         it("fails with error when the insert answers no row", async () => {
-            const { service, tx, outbox } = await build()
+            const { service, tx, queue } = await build()
             tx.em.query.mockReset()
             tx.em.query.mockResolvedValueOnce([])
 
             await expect(service.generate(paramsOf())).resolves.toMatchObject({ ok: false, reason: "error" })
-            expect(outbox.jobs).toEqual([])
+            expect(queue.enqueueGenerate).not.toHaveBeenCalled()
         })
     })
 

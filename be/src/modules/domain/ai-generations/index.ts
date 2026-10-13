@@ -7,11 +7,14 @@ export type { GenerationCompletion } from "./ai-generations.port"
 export { DirectGenerationService } from "./direct-generation.service"
 export { GenerationRunnerService } from "./generation-runner.service"
 export { GenerationsService } from "./generations.service"
+export { GuideService } from "./guide.service"
 export type {
     GenMessage,
     GenerationOutcome,
     GenerationRequested,
     GenerationStatus,
+    GenerationEnqueued,
+    GuideAsk,
     ResponseFormat,
 } from "./ai-generations.contracts"
 export type { GenerationState } from "./ai-generations.contracts"
