@@ -2808,6 +2808,31 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"payment_order_requests": {
+                  Row: {
+                    "answered_at": string | null,"created_at": string,"fault": string | null,"id": string,"kind": string,"order_id": string | null,"requested_by": string,"status": string,"target": string | null,"workspace_id": string
+                  }
+                  Insert: {
+                    "answered_at"?: string | null,"created_at"?: string,"fault"?: string | null,"id"?: string,"kind": string,"order_id"?: string | null,"requested_by": string,"status"?: string,"target"?: string | null,"workspace_id": string
+                  }
+                  Update: {
+                    "answered_at"?: string | null,"created_at"?: string,"fault"?: string | null,"id"?: string,"kind"?: string,"order_id"?: string | null,"requested_by"?: string,"status"?: string,"target"?: string | null,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "payment_order_requests_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "payment_orders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "payment_order_requests_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"plans": {
                   Row: {
                     "active": boolean,"ai_credits_per_month": number | null,"ai_messages_per_month": number | null,"ai_tokens_per_month": number | null,"code": string,"credits_rollover": boolean,"features": NonNullable<Json>,"is_custom": boolean,"name_en": string,"name_vi": string,"period": string,"price_vnd": number,"seats": number,"sort": number
@@ -3865,11 +3890,20 @@ isOneToOne: false
 "session_bootstrap":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
+"payment_order_request":
+{ Args: { "p_kind": string,"p_target": string,"p_workspace": string }; Returns: string
+                           },
 "settle_credit_topups":
 { Args: { "p_force"?: boolean,"p_workspace": string }; Returns: number
                            },
 "settle_payment_order":
 { Args: { "p_amount": number,"p_order_code": string,"p_sepay_id": number }; Returns: string
+                           },
+"usage_notice_post":
+{ Args: { "p_body": string,"p_level": string,"p_period": string,"p_workspace": string }; Returns: boolean
+                           },
+"usage_quota_status":
+{ Args: { "p_workspace": string }; Returns: { credits_carried: number,credits_limit: number,credits_used: number,cost_usd: number,fallback_reply: string,messages_limit: number,messages_used: number,period_start: string,tokens_limit: number,tokens_used: number,topup_balance: number }[]
                            },
 "shell_data":
 { Args: { "founding_from": string,"founding_to": string,"ws": string }; Returns: Json

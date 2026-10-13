@@ -22,23 +22,3 @@ FROM public.payment_orders
 WHERE workspace_id = $1 AND kind = 'upgrade' AND status = 'pending' AND plan_code = $2 AND amount_vnd = $3 AND expires_at > $4
 ORDER BY created_at DESC
 LIMIT 1`
-
-/** The latest orders of a workspace, newest first ($1 workspace, $2 how many). */
-export const SELECT_RECENT_ORDERS = sql`SELECT id, workspace_id, plan_code, amount_vnd::float8 AS amount_vnd, order_code, status, expires_at, paid_at, created_at, kind, pack_code, detail
-FROM public.payment_orders
-WHERE workspace_id = $1
-ORDER BY created_at DESC
-LIMIT $2`
-
-/** One order of a workspace by its id ($1 order, $2 workspace). */
-export const SELECT_ORDER = sql`SELECT id, workspace_id, plan_code, amount_vnd::float8 AS amount_vnd, order_code, status, expires_at, paid_at, created_at, kind, pack_code, detail
-FROM public.payment_orders
-WHERE id = $1 AND workspace_id = $2
-LIMIT 1`
-
-/** The newest pending, unexpired plan order of a workspace ($1 workspace, $2 now). */
-export const SELECT_OPEN_PLAN_ORDER = sql`SELECT id, workspace_id, plan_code, amount_vnd::float8 AS amount_vnd, order_code, status, expires_at, paid_at, created_at, kind, pack_code, detail
-FROM public.payment_orders
-WHERE workspace_id = $1 AND kind = 'plan' AND status = 'pending' AND expires_at > $2
-ORDER BY created_at DESC
-LIMIT 1`

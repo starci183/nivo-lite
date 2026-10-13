@@ -6,16 +6,12 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { newOrderCode } from "./order-code.policy"
 import { PaymentOrdersError, PaymentOrdersErrorCode } from "./errors/payment-orders.error"
 import type { NewOrder, OpenOrderQuery, OrderLookup, PaymentOrder } from "./payment-orders.contracts"
-import { withLazyExpiry } from "./order-expiry.policy"
 import { toPaymentOrder } from "./payment-orders.mapper"
 import type { OrderRow } from "./persistence/payment-orders.rows"
 import {
     INSERT_PAYMENT_ORDER,
-    SELECT_OPEN_PLAN_ORDER,
     SELECT_OPEN_TOPUP_ORDER,
     SELECT_OPEN_UPGRADE_ORDER,
-    SELECT_ORDER,
-    SELECT_RECENT_ORDERS,
 } from "./persistence/payment-orders.sql"
 
 /** How many order codes are drawn before giving up on a collision streak. */
@@ -56,28 +52,6 @@ export class PaymentOrdersService {
     /** The pending, unexpired upgrade order that already asks for exactly this plan and amount. */
     findOpenUpgrade(query: OpenOrderQuery): Promise<OrderLookup> {
         return this.findOpen("upgrade", query)
-    }
-
-    /** The latest orders of a workspace, newest first; a pending order past its time shows as expired. */
-    async listRecent(workspaceId: string, limit: number): Promise<Array<PaymentOrder>> {
-        const rows = await this.entityManager.query<Array<OrderRow>>(SELECT_RECENT_ORDERS, [workspaceId, limit])
-        const now = this.clock.now()
-        return rows.map((row) => withLazyExpiry(toPaymentOrder(row), now))
-    }
-
-    /** One order of a workspace, or null; a pending order past its time shows as expired. */
-    async findById(workspaceId: string, orderId: string): Promise<OrderLookup> {
-        const [row] = await this.entityManager.query<Array<OrderRow>>(SELECT_ORDER, [orderId, workspaceId])
-        return row === undefined ? null : withLazyExpiry(toPaymentOrder(row), this.clock.now())
-    }
-
-    /** The newest pending, unexpired plan order of a workspace, or null. */
-    async findOpenPlan(workspaceId: string): Promise<OrderLookup> {
-        const [row] = await this.entityManager.query<Array<OrderRow>>(SELECT_OPEN_PLAN_ORDER, [
-            workspaceId,
-            this.clock.now(),
-        ])
-        return row === undefined ? null : toPaymentOrder(row)
     }
 
     private async findOpen(kind: "topup" | "upgrade", query: OpenOrderQuery): Promise<OrderLookup> {
