@@ -1,21 +1,21 @@
 /** public.contracts as the statements select it: days as YYYY-MM-DD text, the amount as a number. */
 export interface ContractsRow {
-    /** The contract id. */
+    /** The contract row id. */
     readonly id: string
-    /** The lead the contract belongs to, or null. */
+    /** The lead the contract was won from; null when entered without one. */
     readonly lead_id: string | null
-    /** The customer name shown on the contract. */
+    /** The customer the contract is signed with, as shown in lists. */
     readonly customer_name: string
-    /** The plan the contract covers. */
+    /** The plan or package the customer bought. */
     readonly plan: string
-    /** The first day, `YYYY-MM-DD`. */
+    /** The first day the contract is in force, YYYY-MM-DD. */
     readonly starts_on: string
-    /** The last day, `YYYY-MM-DD`. */
+    /** The last day the contract is in force, YYYY-MM-DD; renewal reminders count down to it. */
     readonly ends_on: string
-    /** The amount in VND, or null when none is set. */
+    /** The contract value in VND; null when not recorded. */
     readonly amount_vnd: number | null
-    /** The contract status. */
+    /** The stored lifecycle status, parsed into a contract status before use. */
     readonly status: string
-    /** The note kept with the contract. */
+    /** Free-text remarks kept with the contract. */
     readonly note: string
 }

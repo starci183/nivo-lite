@@ -2,6 +2,7 @@ import type { InjectionToken, Type } from "@nestjs/common"
 import type {
     DecisionEvents,
     InboundEventStatus,
+    LeadDirectory,
     LeadGenFlow,
     OutboundAccessGate,
     PaymentReceipts,
@@ -17,7 +18,9 @@ export interface DecisionsPorts {
     readonly decisionEvents: Type<DecisionEvents>
     /** Triggers the receipt of a payment (the automations lane). */
     readonly paymentReceipts: Type<PaymentReceipts>
-    /** Continues the lead generation flow after an item (the leads lane). */
+    /** Names the customer of a lead (the leads capability), reused as it is registered. */
+    readonly leadDirectory: Type<LeadDirectory>
+    /** Continues the lead generation flow after an item (the lead-flows capability, a global provider the port reuses). */
     readonly leadGenFlow: Type<LeadGenFlow>
     /** Reads the access of an agent on a connection (the connections lane). */
     readonly outboundAccessGate: Type<OutboundAccessGate>

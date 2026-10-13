@@ -26,3 +26,9 @@ export interface DataSyncRun {
 
 /** A run that may not exist: the run asked for, or null. */
 export type FoundRun = DataSyncRun | null
+
+/** The end state a run settles in: ok when it wrote its rows, failed when it stopped. */
+export type SettledRunState = "ok" | "failed"
+
+/** Why a run failed, shown to the owner; null when it succeeded. */
+export type RunFailure = string | null

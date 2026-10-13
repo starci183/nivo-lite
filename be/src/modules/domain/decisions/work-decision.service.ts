@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { LeadReadService } from "@modules/domain/leads"
 import { MessagesService } from "@modules/domain/messages"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -25,6 +24,8 @@ import type {
 import { BASIS_MIN_CHARS, assigneeOf, basisMissing, cleanBasis, decisionNote, deciderOf } from "./work-decision.policy"
 import { commandPayloadOf, workEditsOf } from "./work-wire.mapper"
 import { WorkEngineService } from "./work-engine.service"
+import { InjectLeadDirectory } from "./work-engine.decorators"
+import type { LeadDirectory } from "./work-engine.port"
 
 /** The roles that govern: only they command the agents. */
 const MANAGERS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
@@ -45,7 +46,7 @@ export class WorkDecisionService {
         private readonly evidence: EvidenceService,
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly responsibilities: ResponsibilityJournalService,
-        private readonly leads: LeadReadService,
+        @InjectLeadDirectory() private readonly leads: LeadDirectory,
         private readonly office: MessagesService,
     ) {}
 
