@@ -1,6 +1,5 @@
 import { useMemo } from "react"
-import { useQueryVideoBrandSwr } from "@/hooks/swr/api/graphql/queries/useQueryVideoBrandSwr"
-import { useQueryVideoScopeSwr } from "@/hooks/swr/api/graphql/queries/useQueryVideoScopeSwr"
+import { useQueryVideoBrandSwr, useQueryVideoScopeSwr } from "@/hooks/swr"
 import { useVideoEditorStep } from "./useVideoEditorStep"
 import type { VideoEditorAddress } from "./useVideoEditorStep"
 import { useVideoReferences } from "./useVideoReferences"

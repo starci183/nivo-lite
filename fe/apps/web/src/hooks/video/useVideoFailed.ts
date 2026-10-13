@@ -1,6 +1,4 @@
-import { useQueryVideoBrandSwr } from "@/hooks/swr/api/graphql/queries/useQueryVideoBrandSwr"
-import { useQueryVideoProjectsSwr } from "@/hooks/swr/api/graphql/queries/useQueryVideoProjectsSwr"
-import { useQueryVideoScopeSwr } from "@/hooks/swr/api/graphql/queries/useQueryVideoScopeSwr"
+import { useQueryVideoBrandSwr, useQueryVideoProjectsSwr, useQueryVideoScopeSwr } from "@/hooks/swr"
 import { useVideoEditorStep } from "./useVideoEditorStep"
 import type { VideoEditorAddress } from "./useVideoEditorStep"
 

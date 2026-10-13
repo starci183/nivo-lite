@@ -1,8 +1,10 @@
 import { useTranslations } from "next-intl"
-import { useMutateApproveVideoProjectSwr } from "@/hooks/swr/api/graphql/mutations/useMutateApproveVideoProjectSwr"
-import { useMutateMarkVideoPublishedSwr } from "@/hooks/swr/api/graphql/mutations/useMutateMarkVideoPublishedSwr"
-import { useMutateSaveVideoBrandSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSaveVideoBrandSwr"
-import { useMutateShareVideoProjectSwr } from "@/hooks/swr/api/graphql/mutations/useMutateShareVideoProjectSwr"
+import {
+    useMutateApproveVideoProjectSwr,
+    useMutateMarkVideoPublishedSwr,
+    useMutateSaveVideoBrandSwr,
+    useMutateShareVideoProjectSwr,
+} from "@/hooks/swr"
 import type { Brand } from "@/modules/video"
 import { useVideoRefresh } from "./useVideoRefresh"
 

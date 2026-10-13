@@ -1,7 +1,6 @@
 "use client"
 
-import { useQueryLoadTelegramUserSetupSwr } from "@/hooks/swr/api/graphql/queries/useQueryLoadTelegramUserSetupSwr"
-import { useQueryTelegramUserReadySwr } from "@/hooks/swr/api/graphql/queries/useQueryTelegramUserReadySwr"
+import { useQueryLoadTelegramUserSetupSwr, useQueryTelegramUserReadySwr } from "@/hooks/swr"
 import { BLANK_INITIAL, chatKindOf, sinceDaysOf } from "./telegram-user-wizard.shared"
 import type { TelegramInitial } from "./telegram-user-wizard.shared"
 

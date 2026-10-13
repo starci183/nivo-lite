@@ -1,9 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { useQueryWorkspaceInvitesSwr } from "@/hooks/swr/api/graphql/queries/useQueryWorkspaceInvitesSwr"
-import { useQueryWorkspaceMembersSwr } from "@/hooks/swr/api/graphql/queries/useQueryWorkspaceMembersSwr"
-import { useQueryWorkspaceStaffSwr } from "@/hooks/swr/api/graphql/queries/useQueryWorkspaceStaffSwr"
+import { useQueryWorkspaceInvitesSwr, useQueryWorkspaceMembersSwr, useQueryWorkspaceStaffSwr } from "@/hooks/swr"
 import { teamViews } from "./team.shared"
 import type { TeamViews } from "./team.shared"
 

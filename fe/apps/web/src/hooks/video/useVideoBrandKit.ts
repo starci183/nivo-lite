@@ -1,7 +1,5 @@
 import { useMemo } from "react"
-import { useQueryVideoBrandSwr } from "@/hooks/swr/api/graphql/queries/useQueryVideoBrandSwr"
-import { useQueryVideoMediaSwr } from "@/hooks/swr/api/graphql/queries/useQueryVideoMediaSwr"
-import { useQueryVideoScopeSwr } from "@/hooks/swr/api/graphql/queries/useQueryVideoScopeSwr"
+import { useQueryVideoBrandSwr, useQueryVideoMediaSwr, useQueryVideoScopeSwr } from "@/hooks/swr"
 import { brandOf, mediaItemOf } from "./video.shared"
 import type { Brand } from "./video.shared"
 

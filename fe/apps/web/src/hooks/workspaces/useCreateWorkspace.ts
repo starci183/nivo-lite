@@ -3,8 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
 import { mutate } from "swr"
-import { useMutateCreateWorkspaceSwr } from "@/hooks/swr/api/graphql/mutations/useMutateCreateWorkspaceSwr"
-import { QUERY_MY_WORKSPACES_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryMyWorkspacesSwr"
+import { useMutateCreateWorkspaceSwr, QUERY_MY_WORKSPACES_SWR_KEY } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 
 /**
