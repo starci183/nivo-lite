@@ -17,6 +17,6 @@ export class HiringMemberType {
     role!: string
 
     /** The free windows. */
-    @Field(() => [[HiringWindowType]])
+    @Field(() => [HiringWindowType])
     windows!: ReadonlyArray<HiringWindowType>
 }

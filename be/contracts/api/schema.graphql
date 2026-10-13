@@ -730,8 +730,25 @@ type AgentCommandResultType {
   refused: String
 }
 
+type AgentConnectionCandidateType {
+  access: String
+  accountMasked: String
+  botUsername: String
+  id: ID!
+  name: String!
+  provider: String!
+  purpose: String!
+  status: String!
+}
+
+input AgentConnectionCandidatesInput {
+  agentId: ID!
+}
+
 type AgentConnectionType {
   access: String!
+  accountMasked: String
+  botUsername: String
   id: ID!
   name: String!
   provider: String!
@@ -747,6 +764,8 @@ type AgentDashboardAgentType {
 
 type AgentDashboardConnectionType {
   access: String!
+  accountMasked: String
+  botUsername: String
   id: ID!
   name: String!
   provider: String!
@@ -801,6 +820,7 @@ type AgentDashboardItemType {
   action: String!
   at: String!
   customer: String!
+  decisionHref: String!
   id: ID!
   leadId: ID
   resultHref: String
@@ -939,7 +959,7 @@ type ApplyStarterType {
 }
 
 input ApplyToHiringJobInput {
-  answers: [[HiringApplyAnswerInput!]!]!
+  answers: [HiringApplyAnswerInput!]!
   availability: String!
   consent: Boolean!
   cvName: String
@@ -987,6 +1007,11 @@ input AssignResponsibilityInput {
   title: String = null
 }
 
+input AssignWorkItemInput {
+  staffId: ID
+  workItemId: ID!
+}
+
 input AuthorityPatchInput {
   brand_voice: String
   goal_first_reply_minutes: Int
@@ -1013,8 +1038,10 @@ type AuthorityProfileType {
 
 input AuthorityRuleChangeInput {
   action: String!
+  department: String!
   limit_vnd: Int = null
   mode: String!
+  note: String = null
   required_fields: [String!] = []
 }
 
@@ -1449,6 +1476,10 @@ type CancelBookingType {
   status: String!
 }
 
+input CancelTelegramLoginInput {
+  connectionId: ID!
+}
+
 input CardDecisionInput {
   attributeLabel: String
   decision: String!
@@ -1465,6 +1496,11 @@ input CardDecisionInput {
 input ChangeMemberRoleInput {
   role: String!
   userId: ID!
+}
+
+input ChangeSmtpPasswordInput {
+  connectionId: ID!
+  password: String!
 }
 
 input ChatAnswerStatusInput {
@@ -1659,7 +1695,9 @@ type ConnectionGrantType {
 }
 
 type ConnectionType {
+  accountMasked: String
   agentIds: [ID!]!
+  botUsername: String
   createdAt: String!
   createdBy: ID
   environment: String!
@@ -1988,6 +2026,21 @@ type ContentWorkbenchType {
   workspaceId: ID!
 }
 
+type ContextNoteType {
+  authorName: String!
+  authorRole: String!
+  body: String!
+  createdAt: String!
+  id: ID!
+  installationId: ID!
+  source: String!
+  status: String!
+}
+
+input ContextNotesInput {
+  installationId: ID!
+}
+
 type ContextVersionType {
   appliedAt: String!
   appliedBy: String!
@@ -2046,7 +2099,7 @@ input CreateHiringCvUploadInput {
 
 input CreateInventoryPoInput {
   expectedAt: String!
-  lines: [[CreatePoLineInput!]!]!
+  lines: [CreatePoLineInput!]!
   supplierId: String!
 }
 
@@ -2168,6 +2221,35 @@ type CreditUsageSummaryType {
   status: CreditQuotaStatusType
 }
 
+type CsvImportResultType {
+  added: Int!
+  connectionId: ID!
+  skipped: Int!
+  summary: String!
+  total: Int!
+  updated: Int!
+}
+
+type CsvPreviewType {
+  delimiter: String!
+  headers: [String!]!
+  mapping: DataJson!
+  missing: [String!]!
+  sample: [[String!]!]!
+  sheet: String!
+  sheets: [String!]!
+  total: Int!
+}
+
+type CsvSavedImportType {
+  agentIds: [ID!]!
+  config: DataJson!
+  file: String!
+  name: String!
+  scheduleMinutes: Int
+  summary: String!
+}
+
 type DashboardAgentType {
   approvalRule: String!
   createdAt: String!
@@ -2245,9 +2327,9 @@ type DashboardFirstEventType {
 
 type DashboardGovernanceDecisionType {
   createdAt: String!
-  deciderKind: String!
+  deciderKind: GovernanceDeciderKind!
   leadId: ID
-  outcome: String!
+  outcome: GovernanceDecisionOutcome!
   workItemId: ID
 }
 
@@ -2307,12 +2389,12 @@ type DashboardGovernanceWorkType {
   contact: String
   createdAt: String!
   customer: String
-  decidedPath: String
+  decidedPath: GovernanceDecidedPath
   department: String!
   id: ID!
   leadId: ID
-  reason: String
-  status: String!
+  reason: GovernanceWorkReason
+  status: GovernanceWorkStatus!
   summary: String
   updatedAt: String!
 }
@@ -2385,6 +2467,53 @@ type DashboardType {
 type DashboardWebsiteLeadType {
   createdAt: String!
   id: ID!
+}
+
+scalar DataJson
+
+input DataSyncRunInput {
+  runId: ID!
+}
+
+type DataSyncRunType {
+  connectionId: ID!
+  error: String
+  finishedAt: String
+  id: ID!
+  rows: Int!
+  startedAt: String!
+  state: String!
+  trigger: String!
+}
+
+type DatabaseColumnType {
+  name: String!
+  type: String!
+}
+
+type DatabasePreviewRowType {
+  cells: [String!]!
+}
+
+type DatabasePreviewType {
+  columns: [String!]!
+  rows: [DatabasePreviewRowType!]!
+}
+
+type DatabaseTableType {
+  columns: [DatabaseColumnType!]!
+  name: String!
+  schema: String!
+}
+
+input DatabaseTargetInput {
+  database: String!
+  engine: String!
+  host: String!
+  password: String!
+  port: Int!
+  ssl: Boolean!
+  user: String!
 }
 
 input DecideBrainFactInput {
@@ -2475,6 +2604,10 @@ type DeviceSessionType {
 
 input DisconnectConnectionInput {
   connectionId: ID!
+}
+
+input DismissContextNoteInput {
+  noteId: ID!
 }
 
 input DismissKnowledgeGapInput {
@@ -2627,6 +2760,40 @@ type GoogleStateType {
   configured: Boolean!
 }
 
+enum GovernanceDecidedPath {
+  Auto
+  Human
+}
+
+enum GovernanceDeciderKind {
+  Owner
+  Policy
+  Staff
+}
+
+enum GovernanceDecisionOutcome {
+  Approved
+  AutoDone
+  Edited
+  Rejected
+}
+
+enum GovernanceWorkReason {
+  MissingData
+  NotAllowed
+  OverAuthority
+  Routine
+  UnclearOutcome
+}
+
+enum GovernanceWorkStatus {
+  Done
+  Failed
+  Queued
+  Rejected
+  WaitingDecision
+}
+
 input GrantAgentConnectionInput {
   access: String!
   agentId: ID!
@@ -2661,15 +2828,15 @@ input HiringAvailabilityWindowInput {
 }
 
 type HiringBenchType {
-  candidates: [[HiringCandidateType!]!]!
+  candidates: [HiringCandidateType!]!
   figures: HiringFiguresType!
-  interviews: [[HiringInterviewType!]!]!
-  jobs: [[HiringJobType!]!]!
+  interviews: [HiringInterviewType!]!
+  jobs: [HiringJobType!]!
   meUserId: ID!
-  members: [[HiringMemberType!]!]!
+  members: [HiringMemberType!]!
   nowIso: String!
-  offers: [[HiringOfferType!]!]!
-  onboarding: [[HiringOnboardingType!]!]!
+  offers: [HiringOfferType!]!
+  onboarding: [HiringOnboardingType!]!
   origin: String!
   settings: HiringSettingsType!
   waitingApprovals: Int!
@@ -2677,7 +2844,7 @@ type HiringBenchType {
 
 type HiringCandidateDetailType {
   cv: HiringCvType
-  events: [[HiringEventType!]!]!
+  events: [HiringEventType!]!
 }
 
 input HiringCandidateRefInput {
@@ -2685,7 +2852,7 @@ input HiringCandidateRefInput {
 }
 
 type HiringCandidateType {
-  answers: [[HiringAnswerType!]!]!
+  answers: [HiringAnswerType!]!
   availability: String!
   conversationId: ID
   createdAt: String!
@@ -2702,7 +2869,7 @@ type HiringCandidateType {
   rejectedReason: String
   score: Int
   scoreLabel: String
-  scoreReasons: [[HiringScoreReasonType!]!]!
+  scoreReasons: [HiringScoreReasonType!]!
   scoreSummary: String
   screenedAt: String
   source: String!
@@ -2746,7 +2913,7 @@ type HiringInterviewType {
   location: String!
   mode: String!
   note: String!
-  proposedSlots: [[HiringSlotType!]!]!
+  proposedSlots: [HiringSlotType!]!
   reminderSentAt: String
   slotEnd: String
   slotStart: String
@@ -2757,8 +2924,8 @@ type HiringInterviewType {
 }
 
 input HiringJobQuestionInput {
-  choices: [[String!]!]
-  expectChoices: [[String!]!]
+  choices: [String!]
+  expectChoices: [String!]
   expectNumber: Float
   expectYesNo: String
   id: String
@@ -2768,8 +2935,8 @@ input HiringJobQuestionInput {
 }
 
 type HiringJobQuestionType {
-  choices: [[String!]!]!
-  expectChoices: [[String!]!]
+  choices: [String!]!
+  expectChoices: [String!]
   expectNumber: Float
   expectYesNo: String
   id: String!
@@ -2783,26 +2950,26 @@ input HiringJobRefInput {
 }
 
 input HiringJobRequirementsInput {
-  availability: [[String!]!]!
+  availability: [String!]!
   experienceNote: String!
   experienceYears: Int
-  mustHave: [[String!]!]!
-  niceToHave: [[String!]!]!
-  skills: [[String!]!]!
+  mustHave: [String!]!
+  niceToHave: [String!]!
+  skills: [String!]!
 }
 
 type HiringJobRequirementsType {
-  availability: [[String!]!]!
+  availability: [String!]!
   experienceNote: String!
   experienceYears: Int
-  mustHave: [[String!]!]!
-  niceToHave: [[String!]!]!
-  skills: [[String!]!]!
+  mustHave: [String!]!
+  niceToHave: [String!]!
+  skills: [String!]!
 }
 
 type HiringJobType {
   adVariants: JsonObject
-  channels: [[String!]!]!
+  channels: [String!]!
   closesAt: String
   createdAt: String!
   description: String!
@@ -2815,7 +2982,7 @@ type HiringJobType {
   payUnit: String!
   position: String!
   publicUrl: String
-  questions: [[HiringJobQuestionType!]!]!
+  questions: [HiringJobQuestionType!]!
   requirements: HiringJobRequirementsType!
   schedule: String!
   slug: String!
@@ -2829,7 +2996,7 @@ type HiringMemberType {
   name: String!
   role: String!
   userId: ID!
-  windows: [[HiringWindowType!]!]!
+  windows: [HiringWindowType!]!
 }
 
 input HiringOfferRefInput {
@@ -2912,13 +3079,36 @@ type HiringWindowType {
   weekday: Int!
 }
 
+input HoldWorkItemInput {
+  note: String!
+  workItemId: ID!
+}
+
+type ImapConnectionType {
+  agentIds: [ID!]!
+  email: String!
+  folders: [String!]!
+  host: String!
+  id: ID!
+  name: String!
+  port: Int!
+  security: String!
+  sinceDays: Int!
+  syncEveryMinutes: Int
+  user: String!
+}
+
+type ImapFoldersType {
+  folders: [String!]!
+}
+
 input ImportInventoryPasteInput {
   raw: String!
 }
 
 type ImportPasteType {
   created: Int!
-  skipped: [[String!]!]!
+  skipped: [String!]!
   stocked: Int!
   updated: Int!
 }
@@ -2962,13 +3152,17 @@ input InstallModuleInput {
   newInstance: Boolean = false
 }
 
+input InstanceOfRecordInput {
+  recordId: ID!
+}
+
 type InventoryItemType {
   active: Boolean!
-  aliases: [[String!]!]!
+  aliases: [String!]!
   category: String!
   costVnd: Float!
   id: ID!
-  levels: [[InventoryLevelType!]!]!
+  levels: [InventoryLevelType!]!
   name: String!
   onOrder: Float!
   reorderPoint: Float!
@@ -2979,7 +3173,7 @@ type InventoryItemType {
   supplierId: ID
   total: Float!
   unit: String!
-  units: [[InventoryItemUnitType!]!]!
+  units: [InventoryItemUnitType!]!
 }
 
 type InventoryItemUnitType {
@@ -3048,7 +3242,7 @@ type InventoryPoType {
   createdAt: String!
   expectedAt: String
   id: ID!
-  lines: [[InventoryPoLineType!]!]!
+  lines: [InventoryPoLineType!]!
   message: String!
   poNo: String!
   reminders: Int!
@@ -3079,9 +3273,9 @@ input InventoryRecipeRefInput {
 }
 
 type InventoryRecipeType {
-  aliases: [[String!]!]!
+  aliases: [String!]!
   id: ID!
-  lines: [[InventoryRecipeLineType!]!]!
+  lines: [InventoryRecipeLineType!]!
   name: String!
 }
 
@@ -3111,16 +3305,16 @@ type InventoryTemplateType {
 type InventoryWorkbenchType {
   canManage: Boolean!
   defaultLocationId: ID
-  items: [[InventoryItemType!]!]!
-  locations: [[InventoryLocationType!]!]!
+  items: [InventoryItemType!]!
+  locations: [InventoryLocationType!]!
   metrics: InventoryMetricsType!
-  movements: [[InventoryMovementType!]!]!
+  movements: [InventoryMovementType!]!
   nowIso: String!
-  pending: [[InventoryPendingType!]!]!
-  pos: [[InventoryPoType!]!]!
-  recipes: [[InventoryRecipeType!]!]!
+  pending: [InventoryPendingType!]!
+  pos: [InventoryPoType!]!
+  recipes: [InventoryRecipeType!]!
   stockOuts7d: Int
-  suppliers: [[InventorySupplierType!]!]!
+  suppliers: [InventorySupplierType!]!
 }
 
 type InvitePreviewType {
@@ -3594,14 +3788,44 @@ input ListOfficeMessagesInput {
   limit: Int = 50
 }
 
+input ListTelegramChatsInput {
+  connectionId: ID!
+}
+
 input ListVideoProjectsInput {
   includeArchived: Boolean
 }
 
 input ListWorkItemsInput {
+  action: String
   after: WorkItemCursorInput
   limit: Int = 50
   statuses: [String!] = []
+}
+
+input LoadCsvImportInput {
+  connectionId: ID!
+}
+
+input LoadDatabaseConnectionInput {
+  connectionId: ID!
+}
+
+input LoadImapConnectionInput {
+  connectionId: ID!
+}
+
+input LoadOpenApiConnectionInput {
+  connectionId: ID!
+}
+
+input LoadOpenApiSpecInput {
+  specText: String!
+  specUrl: String!
+}
+
+input LoadTelegramUserSetupInput {
+  connectionId: ID!
 }
 
 type LocalizedTextType {
@@ -4218,6 +4442,7 @@ type Mutation {
   approveVideoProject(input: ApproveVideoProjectInput!): VideoProjectType!
   archiveVideoProject(input: ArchiveVideoProjectInput!): VideoProjectType!
   assignResponsibility(input: AssignResponsibilityInput!): LeadResponsibilityType!
+  assignWorkItem(input: AssignWorkItemInput!): WorkItemType!
   authorizeGoogle(input: AuthorizeGoogleInput!): AuthorizeUrlType!
   authorizeMeta(input: AuthorizeMetaInput!): MetaAuthorizationType!
   authorizeZalo(input: AuthorizeZaloInput!): ZaloAuthorizationType!
@@ -4225,7 +4450,9 @@ type Mutation {
   cancelHiringOffer(input: HiringOfferRefInput!): Boolean!
   cancelInventoryPo(input: InventoryPoRefInput!): Boolean!
   cancelOfficeCommand(input: OfficeCandidateIdInput!): OfficeAckType!
+  cancelTelegramLogin(input: CancelTelegramLoginInput!): Boolean!
   changeMemberRole(input: ChangeMemberRoleInput!): Boolean!
+  changeSmtpPassword(input: ChangeSmtpPasswordInput!): Boolean!
   checkConnection(input: CheckConnectionInput!): ConnectionCheckType!
   checkInBooking(input: CheckInBookingInput!): CheckInBookingType!
   checkInShifts(input: ShiftsShiftRefInput!): CheckInType!
@@ -4262,6 +4489,7 @@ type Mutation {
   deleteInventoryRecipe(input: InventoryRecipeRefInput!): Boolean!
   deleteKnowledgeSource(input: DeleteKnowledgeSourceInput!): Boolean!
   disconnectConnection(input: DisconnectConnectionInput!): Boolean!
+  dismissContextNote(input: DismissContextNoteInput!): Boolean!
   dismissKnowledgeGap(input: DismissKnowledgeGapInput!): Boolean!
   draftInventoryLowStock: DraftLowStockType!
   draftLeadExecution(input: DraftLeadExecutionInput!): LeadActionQueuedType!
@@ -4274,6 +4502,7 @@ type Mutation {
   generateHiringAd(input: HiringJobRefInput!): GenerateAdType!
   grantAgentConnection(input: GrantAgentConnectionInput!): AgentAckType!
   handoffToAccounting(input: HandoffToAccountingInput!): SalesActionType!
+  holdWorkItem(input: HoldWorkItemInput!): WorkItemType!
   importInventoryPaste(input: ImportInventoryPasteInput!): ImportPasteType!
   installModule(input: InstallModuleInput!): ModuleInstallResultType!
   keepCurrentBrainFact(input: KeepCurrentBrainFactInput!): Int!
@@ -4292,7 +4521,7 @@ type Mutation {
   proposeAutomationBody(input: TemplateKeyInput!): BodyProposalType!
   proposeOfficeCommand(input: ProposeOfficeCommandInput!): OfficeProposeOutcomeType!
   proposeShiftsWeek(input: ProposeShiftsWeekInput!): ProposeWeekType!
-  reassignShiftsShift(input: ReassignShiftsShiftInput!): Boolean!
+  reassignShiftsShift(input: ReassignShiftsShiftInput!): ReassignShiftsShiftType!
   receiveInventoryPo(input: ReceiveInventoryPoInput!): ReceivePoType!
   recordManualEvidence(input: RecordManualEvidenceInput!): ManualEvidenceType!
   recordOutcome(input: RecordOutcomeInput!): RecordOutcomeType!
@@ -4321,6 +4550,7 @@ type Mutation {
   requestContentMediaUpload(input: RequestContentMediaUploadInput!): ContentMediaUploadType!
   requestContentMonthPlan(input: RequestContentMonthPlanInput!): ContentAiRequestedType!
   requestContentQuickDraft(input: RequestContentQuickDraftInput!): ContentAiRequestedType!
+  requestDataSync(input: RequestDataSyncInput!): DataSyncRunType!
   requestHiringInterview(input: RequestHiringInterviewInput!): HiringOutcomeType!
   requestHiringOffer(input: RequestHiringOfferInput!): HiringOutcomeType!
   requestInventorySend(input: RequestInventorySendInput!): RequestSendType!
@@ -4335,6 +4565,7 @@ type Mutation {
   requestVideoScript(input: RequestVideoScriptInput!): RequestVideoScriptType!
   rescreenHiringCandidate(input: HiringCandidateRefInput!): HiringOutcomeType!
   resendInvite(input: InviteRefInput!): InviteResultType!
+  resendTelegramCode(input: ResendTelegramCodeInput!): Boolean!
   respondHiringInterview(input: RespondHiringInterviewInput!): RespondSlotType!
   respondHiringOffer(input: RespondHiringOfferInput!): RespondOfferType!
   retryFailedStep(input: RetryFailedStepInput!): SalesActionType!
@@ -4347,6 +4578,8 @@ type Mutation {
   revokeInvite(input: InviteRefInput!): Boolean!
   revokeSession(input: RevokeSessionInput!): Boolean!
   runAutomationNow(input: TemplateKeyInput!): Boolean!
+  runCsvImport(input: RunCsvImportInput!): CsvImportResultType!
+  runDocumentImport(input: RunDocumentImportInput!): CsvImportResultType!
   runFlow(input: RunFlowInput!): RunFlowType!
   saveAuthorityRule(input: SaveAuthorityRuleInput!): AuthorityRuleType!
   saveBookingException(input: SaveBookingExceptionInput!): SaveBookingExceptionType!
@@ -4362,27 +4595,33 @@ type Mutation {
   saveContentItem(input: SaveContentItemInput!): ContentItemType!
   saveContentPillars(input: SaveContentPillarsInput!): SavedContentRowsType!
   saveContract(input: SaveContractInput!): SaveContractType!
+  saveDatabaseConnection(input: SaveDatabaseConnectionInput!): ID!
   saveHiringAvailability(input: SaveHiringAvailabilityInput!): SaveAvailabilityType!
   saveHiringJob(input: SaveHiringJobInput!): SaveJobType!
   saveHiringNotes(input: SaveHiringNotesInput!): Boolean!
   saveHiringSettings(input: SaveHiringSettingsInput!): HiringSettingsType!
   saveHoldingMessage(input: SaveHoldingMessageInput!): ModuleInstallationType!
+  saveImapConnection(input: SaveImapConnectionInput!): ID!
   saveInventoryItem(input: SaveInventoryItemInput!): InventoryRefType!
   saveInventoryLocation(input: SaveInventoryLocationInput!): Boolean!
   saveInventoryRecipe(input: SaveInventoryRecipeInput!): InventoryRefType!
   saveInventorySupplier(input: SaveInventorySupplierInput!): InventoryRefType!
   saveLoyaltyProgram(input: SaveLoyaltyProgramInput!): LoyaltyProgramType!
   saveLoyaltyReward(input: SaveLoyaltyRewardInput!): LoyaltyRewardType!
+  saveOpenApiConnection(input: SaveOpenApiConnectionInput!): ID!
   saveProviderKeys(input: SaveProviderKeysInput!): ProviderKeysResultType!
   saveReplyTimeout(input: SaveReplyTimeoutInput!): ModuleInstallationType!
   saveShiftsCoverage(input: SaveShiftsCoverageInput!): Boolean!
   saveShiftsPosition(input: SaveShiftsPositionInput!): ShiftsRefType!
   saveShiftsSettings(input: SaveShiftsSettingsInput!): Boolean!
   saveShiftsStaff(input: SaveShiftsStaffInput!): ShiftsRefType!
+  saveStaff(input: SaveStaffInput!): StaffOptionType!
+  saveTelegramUserSetup(input: SaveTelegramUserSetupInput!): Boolean!
   saveVideoBrand(input: SaveVideoBrandInput!): VideoBrandType!
   saveZaloOaSecret(input: SaveZaloOaSecretInput!): ZaloWizardConnectionType!
   sendAgentChatMessage(input: SendAgentChatMessageInput!): QueuedAgentChatTurnType!
   sendAgentCommand(input: SendAgentCommandInput!): AgentCommandResultType!
+  sendSmtpTest(input: SendSmtpTestInput!): SmtpTestResultType!
   setAgentConnections(input: SetAgentConnectionsInput!): Boolean!
   setAgentStatus(input: SetAgentStatusInput!): AgentAckType!
   setAgentTexts(input: SetAgentTextsInput!): AgentAckType!
@@ -4390,6 +4629,7 @@ type Mutation {
   setConnectionAgents(input: SetConnectionAgentsInput!): Boolean!
   setConnectionGrant(input: SetConnectionGrantInput!): Boolean!
   setContentAutomation(input: SetContentAutomationInput!): ContentBrandSettingsType!
+  setDefaultSmtp(input: SetDefaultSmtpInput!): Boolean!
   setHiringInterviewStatus(input: SetHiringInterviewStatusInput!): Boolean!
   setHiringJobStatus(input: SetHiringJobStatusInput!): HiringStatusType!
   setInventoryItemActive(input: SetInventoryItemActiveInput!): Boolean!
@@ -4398,16 +4638,22 @@ type Mutation {
   setModuleLive(input: SetModuleLiveInput!): ModuleInstallationType!
   setOperatingMode(input: SetOperatingModeInput!): ModuleInstallationType!
   setSetupGate(input: SetSetupGateInput!): SetupSessionType!
+  setSyncSchedule(input: SetSyncScheduleInput!): Boolean!
   settleWonDeal(input: SettleWonDealInput!): LeadActionQueuedType!
   shareVideoProject(input: ShareVideoProjectInput!): VideoShareType!
   simulateInbound(input: SimulateInboundInput!): SimulateInboundType!
   startAgentChatConversation(input: StartAgentChatConversationInput!): CreatedAgentChatConversationType!
   startMoneyConnection(input: StartMoneyConnectionInput!): WizardConnectionType!
+  startSmtpConnection(input: StartSmtpConnectionInput!): SmtpConnectionType!
+  startTelegramLogin(input: StartTelegramLoginInput!): TelegramLoginStartedType!
   startWebhookConnection(input: StartWebhookConnectionInput!): WebhookViewType!
   startZaloConnection(input: StartZaloConnectionInput!): ZaloWizardConnectionType!
   stopFailedStep(input: StopFailedStepInput!): StopFailedStepType!
   submitContentForApproval(input: SubmitContentForApprovalInput!): SubmitContentForApprovalType!
+  submitLoyaltyCampaign(input: LoyaltyCampaignInput!): SubmitLoyaltyCampaignType!
   submitShiftsAvailability(input: SaveShiftsAvailabilityInput!): ShiftsRefType!
+  submitTelegramCode(input: SubmitTelegramCodeInput!): TelegramLoginStageType!
+  submitTelegramPassword(input: SubmitTelegramPasswordInput!): TelegramLoginStageType!
   suggestLeadOwner(input: SuggestLeadOwnerInput!): LeadActionQueuedType!
   syncLoyaltyMembers: SyncLoyaltyMembersType!
   takeInventoryStock(input: TakeInventoryStockInput!): TakeStockType!
@@ -4454,6 +4700,10 @@ type NivoEntryType {
   title: String!
   updatedAt: String!
   version: Int!
+}
+
+input NivoKnowledgeCountInput {
+  module: String!
 }
 
 type OfficeAckType {
@@ -4514,8 +4764,10 @@ type OfficeMessageType {
   author_name: String!
   body: String!
   created_at: String!
+  department: String
   id: ID!
   lead_id: ID
+  lead_name: String
   staff_id: ID
   work_item_id: ID
 }
@@ -4540,6 +4792,45 @@ input OfficeThreadCursorInput {
 type OfficeThreadCursorType {
   createdAt: String!
   id: ID!
+}
+
+type OpenApiAuthHintType {
+  name: String!
+  type: String!
+}
+
+input OpenApiAuthInput {
+  name: String!
+  password: String!
+  type: String!
+  user: String!
+  value: String!
+}
+
+type OpenApiConnectionType {
+  authUser: String!
+  config: DataJson!
+  hasSecret: Boolean!
+  name: String!
+  syncEveryMinutes: Int
+}
+
+type OpenApiSpecType {
+  authHint: OpenApiAuthHintType!
+  baseUrl: String!
+  ops: DataJson!
+  specUrl: String!
+  title: String!
+}
+
+type OpenApiTestType {
+  error: String
+  idField: String!
+  itemCount: Int!
+  itemsPath: String!
+  sampleKeys: [String!]!
+  status: Int!
+  titleField: String!
 }
 
 type OpeningDayType {
@@ -4594,6 +4885,23 @@ input PostSetupMessageInput {
   text: String!
 }
 
+input PreviewCsvSourceInput {
+  connectionId: ID
+  entity: String
+  file: UploadedFileInput
+  grid: DataJson
+  kind: String!
+  link: String
+  sheet: String
+  text: String
+}
+
+input PreviewDatabaseTableInput {
+  connectionId: ID
+  mapping: DataJson!
+  target: DatabaseTargetInput!
+}
+
 input PreviewLoyaltySegmentInput {
   segment: LoyaltySegmentInput!
 }
@@ -4607,6 +4915,36 @@ type PreviewLoyaltySegmentType {
 type PreviewSampleType {
   neutral: JsonObject!
   variables: JsonObject!
+}
+
+type PreviewShiftsBlockType {
+  end: String!
+  ideal: Int!
+  min: Int!
+  peak: Boolean!
+  position: String!
+  start: String!
+  weekday: Int!
+}
+
+input PreviewShiftsImportInput {
+  coverage: String!
+  positions: String!
+  staff: String!
+}
+
+type PreviewShiftsImportType {
+  blocks: [PreviewShiftsBlockType!]!
+  errors: [String!]!
+  positions: [String!]!
+  staff: [PreviewShiftsStaffType!]!
+}
+
+type PreviewShiftsStaffType {
+  maxWeek: Float
+  name: String!
+  positions: [String!]!
+  wage: Float!
 }
 
 type PromoChatbotStateType {
@@ -4656,6 +4994,8 @@ input ProposeShiftsWeekInput {
 
 type ProposeWeekType {
   costVnd: Float!
+  iterations: Int!
+  ms: Int!
   open: Int!
   scheduleId: ID!
   shifts: Int!
@@ -4720,7 +5060,7 @@ type PublicInterviewType {
   location: String!
   mode: String!
   note: String!
-  proposedSlots: [[PublicSlotType!]!]!
+  proposedSlots: [PublicSlotType!]!
   shop: String!
   slotStart: String
   status: String!
@@ -4739,7 +5079,7 @@ type PublicJobType {
   payMinVnd: Float
   payUnit: String!
   position: String!
-  questions: [[PublicQuestionType!]!]!
+  questions: [PublicQuestionType!]!
   requirements: PublicRequirementsType!
   schedule: String!
   status: String!
@@ -4804,7 +5144,7 @@ type PublicOfferType {
 }
 
 type PublicQuestionType {
-  choices: [[String!]!]!
+  choices: [String!]!
   id: ID!
   required: Boolean!
   text: String!
@@ -4812,12 +5152,12 @@ type PublicQuestionType {
 }
 
 type PublicRequirementsType {
-  availability: [[String!]!]!
+  availability: [String!]!
   experienceNote: String!
   experienceYears: Int
-  mustHave: [[String!]!]!
-  niceToHave: [[String!]!]!
-  skills: [[String!]!]!
+  mustHave: [String!]!
+  niceToHave: [String!]!
+  skills: [String!]!
 }
 
 type PublicSlotType {
@@ -4845,6 +5185,7 @@ type Query {
   agentChatMessages(input: AgentChatMessagesInput!): [AgentChatMessageType!]!
   agentChatPage(input: AgentChatPageInput!): AgentChatPageType!
   agentChatTurnStatus(input: AgentChatTurnStatusInput!): AgentChatTurnStatusType!
+  agentConnectionCandidates(input: AgentConnectionCandidatesInput!): [AgentConnectionCandidateType!]!
   agentConnections(input: AgentIdInput!): [AgentConnectionType!]!
   agentDashboard(input: AgentDashboardInput!): AgentDashboardType!
   agentEngineStatus: AgentEngineStatusType!
@@ -4886,12 +5227,14 @@ type Query {
   contentMediaLibrary(input: ContentMediaLibraryInput!): [ContentMediaRefType!]!
   contentRecentTitles(input: GetRecentTitlesInput!): [String!]!
   contentWorkbench: ContentWorkbenchType!
+  contextNotes(input: ContextNotesInput!): [ContextNoteType!]!
   creditPacks: [CreditPackType!]!
   creditQuotaStatus: CreditQuotaStatusType
   creditRecentCostUsd(input: CreditRecentCostInput!): Float!
   creditTopupLots: [CreditTopupLotType!]!
   creditUsageSummary: CreditUsageSummaryType!
   dashboard: DashboardType!
+  dataSyncRun(input: DataSyncRunInput!): DataSyncRunType!
   decisionHistory(input: ListDecisionHistoryInput!): [DecisionRecordType!]!
   driveLinkedFolder(input: DriveLinkedFolderInput!): DriveFolderType!
   drivePickedFolder(input: DrivePickedFolderInput!): PickedFolderType!
@@ -4901,6 +5244,7 @@ type Query {
   hiringWorkbench: HiringBenchType!
   inboundEvents(input: InboundEventsInput!): [InboundEventType!]!
   inboundSimulationStatus(input: InboundSimulationStatusInput!): InboundSimulationStatusType!
+  instanceOfRecord(input: InstanceOfRecordInput!): ID
   inventoryTemplates: [InventoryTemplateType!]!
   inventoryWorkbench: InventoryWorkbenchType!
   invitePreview(input: InviteTokenInput!): InvitePreviewType!
@@ -4915,6 +5259,13 @@ type Query {
   leadJourney(input: LeadJourneyInput!): LeadJourneyType!
   leadWait(input: LeadWaitInput!): LeadWaitType!
   lessonMiningStatus(input: LessonMiningStatusInput!): LessonMiningStatusType!
+  listTelegramChats(input: ListTelegramChatsInput!): [TelegramChatChoiceType!]!
+  loadCsvImport(input: LoadCsvImportInput!): CsvSavedImportType!
+  loadDatabaseConnection(input: LoadDatabaseConnectionInput!): SavedDatabaseType!
+  loadImapConnection(input: LoadImapConnectionInput!): ImapConnectionType!
+  loadOpenApiConnection(input: LoadOpenApiConnectionInput!): OpenApiConnectionType!
+  loadOpenApiSpec(input: LoadOpenApiSpecInput!): OpenApiSpecType!
+  loadTelegramUserSetup(input: LoadTelegramUserSetupInput!): TelegramSetupStateType!
   loyaltyBoard: LoyaltyBoardType!
   loyaltyCampaign(input: LoyaltyCampaignInput!): LoyaltyCampaignViewType!
   loyaltyMember(input: LoyaltyMemberInput!): LoyaltyMemberDetailType!
@@ -4927,8 +5278,10 @@ type Query {
   modulesCatalog: ModulesCatalogType!
   moneyConnection(input: GetMoneyConnectionInput!): WizardConnectionType!
   myAccount: MyAccountType!
+  myWorkspaceRole: WorkspaceRole!
   myWorkspaces: [MembershipType!]!
   nivoKnowledge: [NivoEntryType!]!
+  nivoKnowledgeCount(input: NivoKnowledgeCountInput!): Int!
   officeCommandCandidates: [OfficeCandidateType!]!
   officeDecidedApprovals: [OfficeApprovalType!]!
   officeMessages(input: ListOfficeMessagesInput!): OfficeMessagePageType!
@@ -4937,6 +5290,9 @@ type Query {
   paymentOrder(input: PaymentOrderInput!): BillingPaymentOrderType
   paymentOrderRequestStatus(input: PaymentOrderRequestStatusInput!): PaymentOrderRequestStatusType
   paymentOrders: [BillingPaymentOrderType!]!
+  previewCsvSource(input: PreviewCsvSourceInput!): CsvPreviewType!
+  previewDatabaseTable(input: PreviewDatabaseTableInput!): DatabasePreviewType!
+  previewShiftsImport(input: PreviewShiftsImportInput!): PreviewShiftsImportType!
   promoChatbotState: PromoChatbotStateType!
   promoState: PromoStateType!
   publicBookingPage(input: PublicBookingPageInput!): PublicBookingPageType!
@@ -4945,6 +5301,7 @@ type Query {
   publicHiringJob(input: PublicHiringJobInput!): PublicJobType!
   publicHiringOffer(input: HiringTokenInput!): PublicOfferType!
   publicLoyaltyPage(input: PublicLoyaltyPageInput!): PublicLoyaltyPageType!
+  reconcileDetails(workItemId: ID!): ReconcileDetailsType!
   responsibilities: [ResponsibilityListingType!]!
   salesActionStatus(input: SalesActionStatusInput!): SalesActionType!
   salesOrder(input: SalesOrderInput!): SalesOrderType
@@ -4954,6 +5311,10 @@ type Query {
   setupVersions(input: ModuleInstallationIdInput!): SetupVersionsType!
   shiftsMine: ShiftsMineType!
   shiftsWorkbench(week: String): ShiftsBenchType!
+  telegramUserReady: TelegramUserReadyType!
+  testDatabase(input: TestDatabaseInput!): [DatabaseTableType!]!
+  testImapConnection(input: TestImapConnectionInput!): ImapFoldersType!
+  testOpenApiOperation(input: TestOpenApiOperationInput!): OpenApiTestType!
   videoBrand: VideoBrandType!
   videoFigures: VideoFiguresType!
   videoMedia: [VideoMediaType!]!
@@ -4991,9 +5352,13 @@ input ReassignShiftsShiftInput {
   staffId: ID
 }
 
+type ReassignShiftsShiftType {
+  warnings: [String!]!
+}
+
 input ReceiveInventoryPoInput {
   invoiceNo: String!
-  lines: [[ReceivePoLineInput!]!]!
+  lines: [ReceivePoLineInput!]!
   note: String!
   poId: ID!
 }
@@ -5007,9 +5372,35 @@ input ReceivePoLineInput {
 type ReceivePoType {
   handedToAccounting: Boolean!
   payableVnd: Float!
-  priceChanges: [[String!]!]!
+  priceChanges: [String!]!
   received: Int!
   status: String!
+}
+
+type ReconcileCandidateType {
+  amount_vnd: Float!
+  company: String
+  customer: String
+  due_at: String
+  id: ID!
+  invoice_no: String!
+  issued_at: String
+  order_items: String
+  order_no: String
+  order_status: String
+  status: String!
+}
+
+type ReconcileDetailsType {
+  candidates: [ReconcileCandidateType!]!
+  payment: ReconcilePaymentType!
+}
+
+type ReconcilePaymentType {
+  amount_vnd: Float
+  occurred_at: String
+  payer: String
+  reference: String
 }
 
 input RecordManualEvidenceInput {
@@ -5159,6 +5550,10 @@ input RequestContentQuickDraftInput {
   topic: String!
 }
 
+input RequestDataSyncInput {
+  connectionId: ID!
+}
+
 input RequestHiringInterviewInput {
   candidateId: ID!
   durationMin: Int!
@@ -5268,6 +5663,10 @@ type RequestVideoScriptType {
   status: String!
 }
 
+input ResendTelegramCodeInput {
+  connectionId: ID!
+}
+
 input RespondHiringInterviewInput {
   start: String
   token: String!
@@ -5288,10 +5687,12 @@ type RespondSlotType {
 }
 
 type ResponsibilityListingType {
+  company: String
   contact_name: String!
   created_at: String!
   due_at: String
   id: ID!
+  leadStage: String!
   lead_id: ID!
   next_action: String!
   owner_agent_id: ID
@@ -5362,6 +5763,27 @@ input RevokeApiKeyInput {
 
 input RevokeSessionInput {
   sessionId: ID!
+}
+
+input RunCsvImportInput {
+  connectionId: ID
+  entity: String
+  file: UploadedFileInput
+  grid: DataJson
+  kind: String!
+  link: String
+  mapping: DataJson!
+  name: String
+  schedule: Int
+  sheet: String
+  text: String
+}
+
+input RunDocumentImportInput {
+  connectionId: ID
+  files: [UploadedFileInput!]
+  link: String
+  name: String
 }
 
 input RunFlowInput {
@@ -5756,13 +6178,21 @@ type SaveContractType {
   status: String!
 }
 
+input SaveDatabaseConnectionInput {
+  connectionId: ID
+  everyMinutes: Int
+  name: String!
+  tables: DataJson!
+  target: DatabaseTargetInput!
+}
+
 input SaveHiringAvailabilityInput {
   memberUserId: ID!
-  windows: [[HiringAvailabilityWindowInput!]!]!
+  windows: [HiringAvailabilityWindowInput!]!
 }
 
 input SaveHiringJobInput {
-  channels: [[String!]!]
+  channels: [String!]
   closesAt: String
   description: String
   employmentType: String
@@ -5773,7 +6203,7 @@ input SaveHiringJobInput {
   payMinVnd: Float
   payUnit: String
   position: String
-  questions: [[HiringJobQuestionInput!]!]!
+  questions: [HiringJobQuestionInput!]!
   requirements: HiringJobRequirementsInput
   schedule: String
   title: String!
@@ -5797,6 +6227,20 @@ input SaveHiringSettingsInput {
 input SaveHoldingMessageInput {
   installationId: ID!
   value: String!
+}
+
+input SaveImapConnectionInput {
+  connectionId: ID
+  email: String!
+  folders: [String!]
+  host: String!
+  name: String!
+  password: String!
+  port: Int!
+  security: String!
+  sinceDays: Int
+  syncEveryMinutes: Int
+  user: String!
 }
 
 input SaveInventoryItemInput {
@@ -5823,7 +6267,7 @@ input SaveInventoryLocationInput {
 input SaveInventoryRecipeInput {
   aliases: String!
   id: ID
-  lines: [[InventoryRecipeLineInput!]!]!
+  lines: [InventoryRecipeLineInput!]!
   name: String!
 }
 
@@ -5866,6 +6310,14 @@ input SaveLoyaltyRewardInput {
   valueVnd: Float!
 }
 
+input SaveOpenApiConnectionInput {
+  auth: OpenApiAuthInput!
+  config: DataJson!
+  connectionId: ID
+  name: String!
+  syncEveryMinutes: Int
+}
+
 input SaveProviderKeysInput {
   connectionId: ID!
   values: ProviderKeysInput!
@@ -5894,7 +6346,7 @@ input SaveShiftsCoverageInput {
   peak: Boolean!
   positionId: ID!
   start: String!
-  weekdays: [[Int!]!]!
+  weekdays: [Int!]!
 }
 
 input SaveShiftsPositionInput {
@@ -5906,7 +6358,7 @@ input SaveShiftsPositionInput {
 input SaveShiftsSettingsInput {
   leaveNoticeDays: Int!
   noshowMinutes: Int!
-  openingHours: [[OpeningHoursInput!]!]!
+  openingHours: [OpeningHoursInput!]!
   overtimeHoursWeek: Int!
   remindMinutes: Int!
   swapNoticeHours: Int!
@@ -5920,11 +6372,26 @@ input SaveShiftsStaffInput {
   minRest: Float
   name: String!
   phone: String
-  positionIds: [[ID!]!]!
+  positionIds: [ID!]!
   staffRowId: ID
   telegramChatId: String
   wage: Float
   zaloUserId: String
+}
+
+input SaveStaffInput {
+  active: Boolean
+  email: String
+  id: ID
+  name: String!
+  role: String!
+}
+
+input SaveTelegramUserSetupInput {
+  chats: [TelegramPickedChatInput!]!
+  connectionId: ID!
+  everyMinutes: Int
+  sinceDays: Int!
 }
 
 input SaveVideoBrandInput {
@@ -5945,6 +6412,24 @@ type SavedContentRowsType {
   count: Int!
 }
 
+type SavedDatabaseTargetType {
+  database: String!
+  engine: String!
+  host: String!
+  port: Int!
+  ssl: Boolean!
+  user: String!
+}
+
+type SavedDatabaseType {
+  agentIds: [ID!]!
+  everyMinutes: Int
+  hasPassword: Boolean!
+  name: String!
+  tables: DataJson!
+  target: SavedDatabaseTargetType!
+}
+
 type SavedFactType {
   fact: BrainFactType!
   outcome: String!
@@ -5962,6 +6447,12 @@ input SendAgentCommandInput {
   reason: String!
   subjectId: ID
   subjectType: String
+  to: String!
+}
+
+input SendSmtpTestInput {
+  connectionId: ID!
+  makeDefault: Boolean!
   to: String!
 }
 
@@ -6007,6 +6498,10 @@ input SetContentAutomationInput {
   on: Boolean!
 }
 
+input SetDefaultSmtpInput {
+  connectionId: ID!
+}
+
 input SetHiringInterviewStatusInput {
   id: ID!
   status: String!
@@ -6047,6 +6542,11 @@ input SetSetupGateInput {
   evidence: String = ""
   gateKey: String!
   setupSessionId: ID!
+}
+
+input SetSyncScheduleInput {
+  connectionId: ID!
+  everyMinutes: Int
 }
 
 input SettleWonDealInput {
@@ -6187,8 +6687,8 @@ type ShiftStaffType {
   minRest: Float!
   name: String!
   phone: String
-  positionIds: [[ID!]!]!
-  skills: [[String!]!]!
+  positionIds: [ID!]!
+  skills: [String!]!
   staffRowId: ID
   telegramChatId: String
   wage: Float!
@@ -6232,14 +6732,14 @@ type ShiftsAvailabilityType {
 }
 
 type ShiftsBenchType {
-  allAvailability: [[ShiftsAvailabilityType!]!]!
+  allAvailability: [ShiftsAvailabilityType!]!
   figures: ShiftsFiguresType
   myProfileId: ID
   reminderOn: Boolean!
   requests: ShiftsRequestsType!
   role: String!
   setup: ShiftsSetupType!
-  staffRows: [[ShiftsStaffRowType!]!]!
+  staffRows: [ShiftsStaffRowType!]!
   today: String!
   week: ShiftsWeekType!
 }
@@ -6263,7 +6763,7 @@ type ShiftsCheckinType {
 type ShiftsColleagueType {
   id: ID!
   name: String!
-  positionIds: [[ID!]!]!
+  positionIds: [ID!]!
 }
 
 input ShiftsCoverageRefInput {
@@ -6292,13 +6792,13 @@ type ShiftsLeaveType {
 }
 
 type ShiftsMineType {
-  availability: [[ShiftsAvailabilityType!]!]!
-  colleagues: [[ShiftsColleagueType!]!]!
-  leaves: [[ShiftsLeaveType!]!]!
-  myShifts: [[ShiftsMyShiftType!]!]!
-  openShifts: [[ShiftType!]!]!
+  availability: [ShiftsAvailabilityType!]!
+  colleagues: [ShiftsColleagueType!]!
+  leaves: [ShiftsLeaveType!]!
+  myShifts: [ShiftsMyShiftType!]!
+  openShifts: [ShiftType!]!
   profileId: ID
-  swaps: [[ShiftsSwapType!]!]!
+  swaps: [ShiftsSwapType!]!
   today: String!
 }
 
@@ -6318,7 +6818,7 @@ input ShiftsPositionRefInput {
 }
 
 type ShiftsPriorType {
-  segs: [[ShiftSegType!]!]!
+  segs: [ShiftSegType!]!
   staffId: ID!
 }
 
@@ -6327,9 +6827,9 @@ type ShiftsRefType {
 }
 
 type ShiftsRequestsType {
-  availability: [[ShiftsAvailabilityType!]!]!
-  leaves: [[ShiftsLeaveType!]!]!
-  swaps: [[ShiftsSwapType!]!]!
+  availability: [ShiftsAvailabilityType!]!
+  leaves: [ShiftsLeaveType!]!
+  swaps: [ShiftsSwapType!]!
 }
 
 input ShiftsScheduleRefInput {
@@ -6364,17 +6864,17 @@ type ShiftsScheduleVersionType {
 type ShiftsSettingsType {
   leaveNoticeDays: Int!
   noshowMinutes: Int!
-  openingHours: [[OpeningDayType!]!]!
+  openingHours: [OpeningDayType!]!
   overtimeHoursWeek: Int!
   remindMinutes: Int!
   swapNoticeHours: Int!
 }
 
 type ShiftsSetupType {
-  blocks: [[ShiftsBlockType!]!]!
-  positions: [[ShiftPositionType!]!]!
+  blocks: [ShiftsBlockType!]!
+  positions: [ShiftPositionType!]!
   settings: ShiftsSettingsType!
-  staff: [[ShiftStaffType!]!]!
+  staff: [ShiftStaffType!]!
 }
 
 input ShiftsShiftRefInput {
@@ -6387,7 +6887,7 @@ type ShiftsStaffRowType {
 }
 
 type ShiftsSwapType {
-  checks: [[String!]!]!
+  checks: [String!]!
   createdAt: String!
   fromStaffId: ID
   id: ID!
@@ -6402,15 +6902,15 @@ type ShiftsSwapType {
 }
 
 type ShiftsWeekType {
-  approvedAvail: [[ShiftsAvailType!]!]!
-  approvedLeaves: [[ShiftLeaveType!]!]!
-  checkins: [[ShiftsCheckinType!]!]!
+  approvedAvail: [ShiftsAvailType!]!
+  approvedLeaves: [ShiftLeaveType!]!
+  checkins: [ShiftsCheckinType!]!
   current: ShiftsScheduleType
   monday: String!
-  prior: [[ShiftsPriorType!]!]!
+  prior: [ShiftsPriorType!]!
   publishItem: ShiftsWorkItemType
-  shifts: [[ShiftType!]!]!
-  versions: [[ShiftsScheduleVersionType!]!]!
+  shifts: [ShiftType!]!
+  versions: [ShiftsScheduleVersionType!]!
 }
 
 type ShiftsWorkItemType {
@@ -6460,11 +6960,25 @@ type SimulationWorkItemType {
   status: String!
 }
 
+type SmtpConnectionType {
+  fromEmail: String!
+  host: String!
+  id: ID!
+  isDefault: Boolean!
+}
+
+type SmtpTestResultType {
+  isDefault: Boolean!
+  to: String!
+}
+
 type SourceRefType {
   id: ID!
 }
 
 type StaffOptionType {
+  active: Boolean!
+  email: String
   id: ID!
   name: String!
   role: String!
@@ -6483,6 +6997,25 @@ input StartMoneyConnectionInput {
   holder: String!
   name: String!
   provider: String!
+}
+
+input StartSmtpConnectionInput {
+  fromEmail: String!
+  fromName: String!
+  host: String!
+  password: String!
+  port: Int!
+  preset: String!
+  replyTo: String!
+  security: String!
+  user: String!
+}
+
+input StartTelegramLoginInput {
+  connectionId: ID
+  consent: Boolean!
+  name: String!
+  phone: String!
 }
 
 input StartWebhookConnectionInput {
@@ -6523,6 +7056,22 @@ type SubmitContentForApprovalType {
   workItemId: ID!
 }
 
+type SubmitLoyaltyCampaignType {
+  campaignId: ID!
+  status: String!
+  workItemId: ID!
+}
+
+input SubmitTelegramCodeInput {
+  code: String!
+  connectionId: ID!
+}
+
+input SubmitTelegramPasswordInput {
+  connectionId: ID!
+  password: String!
+}
+
 input SuggestLeadOwnerInput {
   leadId: String!
 }
@@ -6538,7 +7087,7 @@ type SyncLoyaltyMembersType {
 }
 
 input TakeInventoryStockInput {
-  counts: [[StockTakeCountInput!]!]!
+  counts: [StockTakeCountInput!]!
 }
 
 input TakeOverAgentChatConversationInput {
@@ -6553,9 +7102,55 @@ type TakeStockType {
   waiting: Int!
 }
 
+type TelegramChatChoiceType {
+  id: String!
+  kind: String!
+  title: String!
+  unread: Int!
+}
+
 type TelegramConnectedType {
   connection: ConnectionType!
   webhookRegistered: Boolean!
+}
+
+type TelegramLoginStageType {
+  stage: String!
+}
+
+type TelegramLoginStartedType {
+  connectionId: ID!
+  viaApp: Boolean!
+}
+
+input TelegramPickedChatInput {
+  id: String!
+  kind: String!
+  title: String!
+}
+
+type TelegramPickedChatType {
+  id: String!
+  kind: String!
+  title: String!
+}
+
+type TelegramSetupStateType {
+  config: TelegramUserConfigType
+  consent: Boolean!
+  everyMinutes: Int
+  name: String!
+  stage: String!
+  status: String!
+}
+
+type TelegramUserConfigType {
+  chats: [TelegramPickedChatType!]!
+  sinceDays: Int!
+}
+
+type TelegramUserReadyType {
+  configured: Boolean!
 }
 
 type TemplateAuthorityType {
@@ -6620,6 +7215,34 @@ type TemplateTriggerType {
   line: LocalizedTextType!
 }
 
+input TestDatabaseInput {
+  connectionId: ID
+  target: DatabaseTargetInput!
+}
+
+input TestImapConnectionInput {
+  connectionId: ID
+  email: String!
+  folders: [String!]
+  host: String!
+  name: String!
+  password: String!
+  port: Int!
+  security: String!
+  sinceDays: Int
+  syncEveryMinutes: Int
+  user: String!
+}
+
+input TestOpenApiOperationInput {
+  auth: OpenApiAuthInput!
+  baseUrl: String!
+  connectionId: ID
+  fixedQuery: String!
+  itemsPath: String!
+  op: DataJson!
+}
+
 input TestWebhookConnectionInput {
   connectionId: ID!
 }
@@ -6669,7 +7292,7 @@ input UpdateAutomationPipelineInput {
 
 input UpdateInventoryPoDraftInput {
   expectedAt: String!
-  lines: [[UpdatePoLineInput!]!]!
+  lines: [UpdatePoLineInput!]!
   poId: ID!
   supplierId: String!
 }
@@ -6738,6 +7361,11 @@ type UploadAddressType {
   path: String!
   signedUrl: String!
   token: String!
+}
+
+input UploadedFileInput {
+  contentBase64: String!
+  name: String!
 }
 
 input VerifyLoyaltyCodeInput {
@@ -6927,6 +7555,7 @@ type WizardConnectionType {
   account: String!
   agentIds: [ID!]!
   apiKey: String!
+  bank: String!
   bankCode: String!
   credentialsSaved: Boolean!
   environment: String!
@@ -6971,7 +7600,9 @@ type WorkItemType {
   chain_id: ID
   completed_at: String
   created_at: String!
+  decidedBy: String
   decided_path: String
+  deciderName: String
   department: String!
   depth: Int!
   error: String
@@ -6998,6 +7629,12 @@ type WorkItemType {
 type WorkResultType {
   href: String
   summary: String!
+}
+
+enum WorkspaceRole {
+  Manager
+  Owner
+  Staff
 }
 
 type WorkspaceShellType {

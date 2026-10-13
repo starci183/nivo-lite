@@ -1,9 +1,10 @@
 "use client"
 
+import { useBookingBoard } from "@/hooks/bookingBoard"
 import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
-import { writeBookingPolicy } from "@/modules/db/booking/write-booking-policy"
-import type { BookingSettingsView } from "@/modules/types"
+import { useMutateSaveBookingPolicySwr } from "@/hooks/swr/api/graphql"
+import { useBookingSetupSave } from "@/hooks/bookingSetup"
 import { BookingPolicyFormBase } from "./component"
 
 /** The numeric rules of the policy, by the id the form uses. */
@@ -20,41 +21,48 @@ const RULES = [
 /** The numbers the owner edits. */
 type Numbers = Readonly<Record<(typeof RULES)[number][0], number>>
 
-/** What the setup tab hands the connected policy form. */
-interface BookingPolicyFormProps {
-    readonly workspaceId: string
-    readonly settings: BookingSettingsView
-}
+/** What the owner has typed so far; a field not touched keeps showing the saved value. */
+type Edits = Partial<Numbers & { address: string; autoConfirm: boolean; handoffOrder: boolean }>
 
 /** The connected policy form: saves the cancellation, deposit and slot rules of the workspace. */
-export const BookingPolicyForm = (props: BookingPolicyFormProps) => {
+export const BookingPolicyForm = () => {
+    const { board } = useBookingBoard()
     const t = useTranslations("workbenchBooking")
-    const { settings } = props
-    const [numbers, setNumbers] = useState<Numbers>({
-        cancelWindowHours: settings.cancelWindowHours,
-        lateCancelFeePct: settings.lateCancelFeePct,
-        noShowFeeVnd: settings.noShowFeeVnd,
-        depositPct: settings.depositPct,
-        minLeadMin: settings.minLeadMin,
-        maxAdvanceDays: settings.maxAdvanceDays,
-        slotStepMin: settings.slotStepMin,
-    })
-    const [address, setAddress] = useState(settings.address)
-    const [autoConfirm, setAutoConfirm] = useState(settings.autoConfirm)
-    const [handoff, setHandoff] = useState(settings.handoffOrder)
-    const [saved, setSaved] = useState<boolean | null>(null)
+    const persist = useBookingSetupSave()
+    const savePolicy = useMutateSaveBookingPolicySwr()
+    const settings = board.settings
+    const [edits, setEdits] = useState<Edits>({})
+    const numbers: Numbers = {
+        cancelWindowHours: edits.cancelWindowHours ?? settings.cancelWindowHours,
+        lateCancelFeePct: edits.lateCancelFeePct ?? settings.lateCancelFeePct,
+        noShowFeeVnd: edits.noShowFeeVnd ?? settings.noShowFeeVnd,
+        depositPct: edits.depositPct ?? settings.depositPct,
+        minLeadMin: edits.minLeadMin ?? settings.minLeadMin,
+        maxAdvanceDays: edits.maxAdvanceDays ?? settings.maxAdvanceDays,
+        slotStepMin: edits.slotStepMin ?? settings.slotStepMin,
+    }
+    const address = edits.address ?? settings.address
+    const autoConfirm = edits.autoConfirm ?? settings.autoConfirm
+    const handoff = edits.handoffOrder ?? settings.handoffOrder
     const [isPending, startTransition] = useTransition()
     const save = () =>
         startTransition(async () => {
-            const answer = await writeBookingPolicy({
-                workspaceId: props.workspaceId,
-                ...numbers,
-                autoConfirm,
-                handoffOrder: handoff,
-                address,
-                timezone: settings.timezone,
-            })
-            setSaved(answer.kind === "ok")
+            const answer = await persist(() =>
+                savePolicy.trigger({
+                    cancelWindowHours: Math.round(numbers.cancelWindowHours),
+                    lateCancelFeePct: Math.round(numbers.lateCancelFeePct),
+                    noShowFeeVnd: Math.round(numbers.noShowFeeVnd),
+                    depositPct: Math.round(numbers.depositPct),
+                    minLeadMin: Math.round(numbers.minLeadMin),
+                    maxAdvanceDays: Math.round(numbers.maxAdvanceDays),
+                    slotStepMin: Math.round(numbers.slotStepMin),
+                    autoConfirm,
+                    handoffOrder: handoff,
+                    address,
+                    timezone: settings.timezone,
+                }),
+            )
+            if (answer === undefined) return
         })
     return (
         <BookingPolicyFormBase
@@ -70,15 +78,12 @@ export const BookingPolicyForm = (props: BookingPolicyFormProps) => {
                 handoff,
                 saveLabel: t("policySave"),
                 isPending,
-                ...(saved === null
-                    ? {}
-                    : { notice: { tone: saved ? "affirmative" : "negative", text: t(saved ? "saved" : "failed") } }),
             }}
             on={{
-                changeRule: (id, value) => setNumbers({ ...numbers, [id]: Number.isFinite(value) ? value : 0 }),
-                changeAddress: setAddress,
-                toggleAutoConfirm: setAutoConfirm,
-                toggleHandoff: setHandoff,
+                changeRule: (id, value) => setEdits({ ...edits, [id]: Number.isFinite(value) ? value : 0 }),
+                changeAddress: (value) => setEdits({ ...edits, address: value }),
+                toggleAutoConfirm: (value) => setEdits({ ...edits, autoConfirm: value }),
+                toggleHandoff: (value) => setEdits({ ...edits, handoffOrder: value }),
                 save,
             }}
         />

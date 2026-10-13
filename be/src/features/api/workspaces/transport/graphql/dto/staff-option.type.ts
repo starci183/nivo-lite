@@ -1,7 +1,7 @@
 import { Field, ID, ObjectType } from "@nestjs/graphql"
 
 @ObjectType()
-/** An active staff row a member can be linked to. */
+/** A staff row of the workspace, active or not. */
 export class StaffOptionType {
     /** The staff id. */
     @Field(() => ID)
@@ -14,4 +14,12 @@ export class StaffOptionType {
     /** The staff role label. */
     @Field()
     role!: string
+
+    /** The contact email, when there is one. */
+    @Field(() => String, { nullable: true })
+    email!: string | null
+
+    /** Whether the person is active. */
+    @Field(() => Boolean)
+    active!: boolean
 }

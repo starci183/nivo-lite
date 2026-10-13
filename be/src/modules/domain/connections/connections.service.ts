@@ -58,7 +58,7 @@ import {
     INSERT_SECRET,
     LIST_CONNECTIONS,
     LIST_CONNECTIONS_BY_PROVIDER,
-    LIST_DUE_SYNCS,
+    CLAIM_DUE_SYNCS,
     LIST_HEALTH_BATCH,
     MARK_CONNECTION_ERROR,
     MARK_CONNECTION_HEALTH,
@@ -403,10 +403,13 @@ export class ConnectionsService {
         await this.entityManager.query(MARK_SYNC_FAILED, [connectionId, reason])
     }
 
-    /** The ids of the connections of these providers whose scheduled sync is due, soonest first. */
-    async dueForSync(providers: ReadonlyArray<Provider>, size: number): Promise<ReadonlyArray<string>> {
-        const rows = await this.entityManager.query<Array<{ id: string }>>(LIST_DUE_SYNCS, [providers, size])
-        return rows.map((row) => row.id)
+    /** Claims the connections of these providers whose scheduled sync is due, soonest first; their next sync moves half an hour on until the sync sets the real time. */
+    async claimDueSyncs(providers: ReadonlyArray<Provider>, size: number): Promise<ReadonlyArray<ConnectionOwner>> {
+        const rows = await this.entityManager.query<Array<{ id: string; workspace_id: string }>>(CLAIM_DUE_SYNCS, [
+            providers,
+            size,
+        ])
+        return rows.map((row) => ({ id: row.id, workspaceId: row.workspace_id }))
     }
 
     /** Makes one SMTP connection the workspace default; every other one becomes a spare. */

@@ -8,15 +8,15 @@ import { ShiftsSettingsType } from "./shifts-settings.type"
 /** The shop's setup: positions, people, coverage and rules. */
 export class ShiftsSetupType {
     /** The active positions. */
-    @Field(() => [[ShiftPositionType]])
+    @Field(() => [ShiftPositionType])
     positions!: ReadonlyArray<ShiftPositionType>
 
     /** Everyone ever added, active or not. */
-    @Field(() => [[ShiftStaffType]])
+    @Field(() => [ShiftStaffType])
     staff!: ReadonlyArray<ShiftStaffType>
 
     /** The coverage blocks. */
-    @Field(() => [[ShiftsBlockType]])
+    @Field(() => [ShiftsBlockType])
     blocks!: ReadonlyArray<ShiftsBlockType>
 
     /** The rules. */

@@ -11,7 +11,7 @@ import { ADD_SHIFTS, REASSIGN_SHIFT, REMOVE_SHIFT } from "./persistence/shifts.s
 import { ShiftsDataService } from "./shifts-data.service"
 import { ShiftsScheduleService } from "./shifts-schedule.service"
 import { ShiftsTextService } from "./shifts-text.service"
-import type { Setup, ShiftStaff } from "./shifts.contracts"
+import type { Env, Setup, Shift, ShiftStaff } from "./shifts.contracts"
 
 const staffOf = (overrides: Partial<ShiftStaff> = {}): ShiftStaff => ({
     id: "staff-1",
@@ -83,6 +83,14 @@ const build = async (entityManager: MockEntityManager) => {
     data.loadSetup.mockResolvedValue(setupOf())
     data.scheduleRow.mockResolvedValue(scheduleOf())
     data.shiftRow.mockResolvedValue(shiftRowOf())
+    data.scheduleShifts.mockResolvedValue([])
+    data.loadEnv.mockResolvedValue({
+        staff: new Map(),
+        avail: [],
+        leaves: [],
+        overtimeHoursWeek: 40,
+    })
+    const words = mock<ShiftsTextService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             ShiftsScheduleService,
@@ -90,12 +98,12 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: CLOCK, useValue: new FakeClock("2026-10-12T08:00:00.000Z") },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: ShiftsDataService, useValue: data },
-            { provide: ShiftsTextService, useValue: mock<ShiftsTextService>() },
+            { provide: ShiftsTextService, useValue: words },
             { provide: TextGenerator, useValue: mock<TextGenerator>() },
             { provide: ApprovalGate, useValue: mock<ApprovalGate>() },
         ],
     }).compile()
-    return { service: moduleRef.get(ShiftsScheduleService), members, data }
+    return { service: moduleRef.get(ShiftsScheduleService), members, data, words }
 }
 
 const addRequest = {
@@ -113,7 +121,9 @@ describe("ShiftsScheduleService draft edits", () => {
             const em = mockEntityManager({ query: [REASSIGN_SHIFT, []] })
             const { service, data } = await build(em)
 
-            await service.reassignShift("user-1", "ws-1", { shiftId: "shift-1", staffId: "staff-1" })
+            await expect(
+                service.reassignShift("user-1", "ws-1", { shiftId: "shift-1", staffId: "staff-1" }),
+            ).resolves.toEqual({ warnings: [] })
 
             expect(data.shiftRow.mock.calls).toEqual([["ws-1", "shift-1"]])
             expect(data.loadSetup.mock.calls).toEqual([["ws-1", false]])
@@ -124,7 +134,9 @@ describe("ShiftsScheduleService draft edits", () => {
             const em = mockEntityManager({ query: [REASSIGN_SHIFT, []] })
             const { service, data } = await build(em)
 
-            await service.reassignShift("user-1", "ws-1", { shiftId: "shift-1", staffId: null })
+            await expect(
+                service.reassignShift("user-1", "ws-1", { shiftId: "shift-1", staffId: null }),
+            ).resolves.toEqual({ warnings: [] })
 
             expect(data.loadSetup).not.toHaveBeenCalled()
             expect(em.query.mock.calls).toEqual([[REASSIGN_SHIFT, ["ws-1", "shift-1", null]]])
@@ -163,6 +175,33 @@ describe("ShiftsScheduleService draft edits", () => {
             })
 
             expect(em.query).not.toHaveBeenCalled()
+        })
+
+        it("keeps the assignment and returns the rule the person breaks", async () => {
+            const em = mockEntityManager({ query: [REASSIGN_SHIFT, []] })
+            const { service, data, words } = await build(em)
+            const placed: Shift = {
+                id: "shift-1",
+                date: "2026-10-12",
+                start: "08:00",
+                end: "10:00",
+                positionId: "other",
+                staffId: "staff-1",
+                status: "draft",
+            }
+            const env: Env = {
+                staff: new Map([["staff-1", staffOf()]]),
+                avail: [],
+                leaves: [],
+                overtimeHoursWeek: 40,
+            }
+            data.loadEnv.mockResolvedValue(env)
+            data.scheduleShifts.mockResolvedValue([placed])
+            words.findings.mockImplementation((list: ReadonlyArray<{ code: string }>) => list.map((item) => item.code))
+
+            await expect(
+                service.reassignShift("user-1", "ws-1", { shiftId: "shift-1", staffId: "staff-1" }),
+            ).resolves.toEqual({ warnings: ["position"] })
         })
     })
 

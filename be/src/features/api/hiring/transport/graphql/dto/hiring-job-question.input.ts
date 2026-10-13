@@ -28,7 +28,7 @@ export class HiringJobQuestionInput {
     required!: boolean
 
     /** The offered choices of a choice question. */
-    @Field(() => [[String]], { nullable: true })
+    @Field(() => [String], { nullable: true })
     @IsOptional()
     @IsArray()
     @ArrayMaxSize(30)
@@ -48,7 +48,7 @@ export class HiringJobQuestionInput {
     expectNumber?: number
 
     /** The accepted choices of a choice question. */
-    @Field(() => [[String]], { nullable: true })
+    @Field(() => [String], { nullable: true })
     @IsOptional()
     @IsArray()
     @ArrayMaxSize(30)

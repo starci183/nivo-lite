@@ -1,4 +1,4 @@
-import { Alert, Button, Input, SurfaceCard } from "@starci/grammar/common"
+import { Button, Input, SurfaceCard } from "@starci/grammar/common"
 import { ACTIONS, STACK } from "./classNames"
 
 /** Copy and state of the reply card of a chatbot. */
@@ -16,9 +16,6 @@ export interface AgentReplyCardBaseProps {
         readonly canSaveHolding: boolean
         readonly saveLabel: string
         readonly isPending: boolean
-        readonly noteTone: "idle" | "saved" | "refused"
-        readonly noteTitle: string
-        readonly noteText: string
     }
     readonly on: {
         readonly timeout: (value: string) => void
@@ -73,13 +70,6 @@ export const AgentReplyCardBase = (props: AgentReplyCardBaseProps) => (
                     {props.props.saveLabel}
                 </Button>
             </div>
-            {props.props.noteTone === "idle" ? null : (
-                <Alert
-                    title={props.props.noteTitle}
-                    description={props.props.noteTone === "saved" ? undefined : props.props.noteText}
-                    tone={props.props.noteTone === "saved" ? "affirmative" : "negative"}
-                />
-            )}
         </div>
     </SurfaceCard>
 )

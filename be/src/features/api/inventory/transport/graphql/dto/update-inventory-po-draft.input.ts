@@ -25,7 +25,7 @@ export class UpdateInventoryPoDraftInput {
     expectedAt!: string
 
     /** The lines to change. */
-    @Field(() => [[UpdatePoLineInput]])
+    @Field(() => [UpdatePoLineInput])
     @IsArray()
     @ArrayMaxSize(200)
     @ValidateNested({ each: true })

@@ -1,2 +1,2 @@
-export type { AutomationsData } from "./useAutomations"
 export { useAutomationsBoard } from "./useAutomationsBoard"
+export type { AutomationsBoardState } from "./useAutomationsBoard"

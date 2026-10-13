@@ -1,9 +1,12 @@
+"use client"
+
 import { useState, useTransition } from "react"
-import { SMTP_PRESETS } from "@/lib/email/presets"
+import { useSmtpSenderForm } from "@/hooks/rhf"
+import { modeOf, SMTP_PRESETS } from "@/lib/email/presets"
 import type { Security } from "@/lib/email/presets"
-import type { SmtpView } from "@/lib/email-actions"
 import { choiceOf, isReadyToSave, needsPasswordOf, presetOrFirst, SMTP_STEPS, usernameOf } from "./smtp-wizard.shared"
-import type { SmtpActions, SmtpChoice, SmtpFields, SmtpTest } from "./smtp-wizard.shared"
+import type { SmtpChoice, SmtpFields, SmtpTest, SmtpView } from "./smtp-wizard.shared"
+import { useSmtpCommands } from "./useSmtpCommands"
 
 /** What the outgoing-email wizard needs from its drawer. */
 interface SmtpWizardInput {
@@ -11,7 +14,6 @@ interface SmtpWizardInput {
     readonly ownerEmail: string
     /** The workspace already has a default sender, so this one starts as a spare. */
     readonly hasDefault: boolean
-    readonly actions: SmtpActions
     /** `changed` is true when something was saved, so the list should refresh. */
     readonly onClose: (changed: boolean) => void
 }
@@ -24,20 +26,22 @@ const FIRST_PRESET = SMTP_PRESETS[0]
  * becomes active only after one test email is really sent.
  */
 export const useSmtpWizard = (input: SmtpWizardInput) => {
+    const commands = useSmtpCommands()
     const [index, setIndex] = useState(0)
     const [choice, setChoice] = useState<SmtpChoice>(choiceOf(FIRST_PRESET, FIRST_PRESET.modes[0].id))
-    const [fields, setFields] = useState<SmtpFields>({
-        fromName: "",
-        fromEmail: "",
-        replyTo: "",
-        user: "",
-        password: "",
-    })
     const [conn, setConn] = useState<SmtpView | null>(null)
     const [test, setTest] = useState<SmtpTest>({ to: input.ownerEmail, makeDefault: !input.hasDefault, sentTo: null })
     const [error, setError] = useState<string | null>(null)
     const [isPending, startTransition] = useTransition()
     const preset = presetOrFirst(choice.presetId)
+    const mode = modeOf(preset, choice.modeId)
+    const form = useSmtpSenderForm({
+        needsPassword: needsPasswordOf(preset, choice),
+        fixedUser: mode.fixedUser,
+        userIsEmail: Boolean(mode.userIsEmail),
+    })
+    const fields: SmtpFields = form.watch()
+    const { setValue } = form
 
     const go = (to: number) => {
         setError(null)
@@ -47,7 +51,7 @@ export const useSmtpWizard = (input: SmtpWizardInput) => {
     const save = () => {
         if (conn !== null) return go(3)
         startTransition(async () => {
-            const answer = await input.actions.start({
+            const answer = await commands.start({
                 preset: preset.id,
                 host: choice.host,
                 port: Number(choice.port),
@@ -58,9 +62,9 @@ export const useSmtpWizard = (input: SmtpWizardInput) => {
                 fromEmail: fields.fromEmail,
                 replyTo: fields.replyTo,
             })
-            if (!answer.ok) return setError(answer.error)
-            setConn(answer.data)
-            setFields((current) => ({ ...current, password: "" }))
+            if (answer.kind !== "ok") return setError(answer.message)
+            setConn(answer.value)
+            setValue("password", "")
             go(3)
         })
     }
@@ -69,9 +73,9 @@ export const useSmtpWizard = (input: SmtpWizardInput) => {
         if (conn === null) return
         startTransition(async () => {
             setError(null)
-            const answer = await input.actions.sendTest(conn.id, test.to, test.makeDefault)
-            if (!answer.ok) return setError(answer.error)
-            setTest((current) => ({ ...current, sentTo: answer.data.to }))
+            const answer = await commands.sendTest(conn.id, test.to, test.makeDefault)
+            if (answer.kind !== "ok") return setError(answer.message)
+            setTest((current) => ({ ...current, sentTo: answer.value.to }))
         })
     }
 
@@ -82,7 +86,7 @@ export const useSmtpWizard = (input: SmtpWizardInput) => {
         choice,
         fields,
         isLocked: conn !== null,
-        isReady: isReadyToSave(preset, choice, fields),
+        isReady: isReadyToSave(preset, choice, fields) && form.formState.isValid,
         needsPassword: needsPasswordOf(preset, choice),
         test,
         error,
@@ -97,7 +101,8 @@ export const useSmtpWizard = (input: SmtpWizardInput) => {
             host: (host: string) => setChoice((current) => ({ ...current, host })),
             port: (port: string) => setChoice((current) => ({ ...current, port })),
             security: (security: Security) => setChoice((current) => ({ ...current, security })),
-            field: (name: keyof SmtpFields, value: string) => setFields((current) => ({ ...current, [name]: value })),
+            field: (name: keyof SmtpFields, value: string) =>
+                setValue(name, value, { shouldValidate: true, shouldDirty: true }),
             testTo: (to: string) => setTest((current) => ({ ...current, to })),
             makeDefault: (makeDefault: boolean) => setTest((current) => ({ ...current, makeDefault })),
         },

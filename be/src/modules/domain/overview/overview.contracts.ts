@@ -1,3 +1,11 @@
+import type {
+    GovernanceDecidedPath,
+    GovernanceDeciderKind,
+    GovernanceDecisionOutcome,
+    GovernanceWorkReason,
+    GovernanceWorkStatus,
+} from "./governance.policy"
+
 /** The lead a responsibility belongs to, as far as the dashboard shows it. */
 export interface OverviewResponsibilityLead {
     /** The lead id. */
@@ -241,11 +249,11 @@ export interface OverviewGovernanceWork {
     /** The department. */
     readonly department: string
     /** The work status. */
-    readonly status: string
+    readonly status: GovernanceWorkStatus
     /** The reason code, or null. */
-    readonly reason: string | null
-    /** `auto`, `human` or null. */
-    readonly decidedPath: string | null
+    readonly reason: GovernanceWorkReason | null
+    /** How it was decided, or null when it is still open. */
+    readonly decidedPath: GovernanceDecidedPath | null
     /** When it was created, ISO 8601. */
     readonly createdAt: string
     /** When it last changed, ISO 8601. */
@@ -266,10 +274,10 @@ export interface OverviewGovernanceDecision {
     readonly workItemId: string | null
     /** The lead, or null. */
     readonly leadId: string | null
-    /** `policy`, `owner` or `staff`. */
-    readonly deciderKind: string
-    /** The outcome. */
-    readonly outcome: string
+    /** Who decided. */
+    readonly deciderKind: GovernanceDeciderKind
+    /** What the decision did. */
+    readonly outcome: GovernanceDecisionOutcome
     /** When it was decided, ISO 8601. */
     readonly createdAt: string
 }

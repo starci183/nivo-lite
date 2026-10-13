@@ -46,7 +46,7 @@ export interface SeatPair {
     readonly target: WorkspaceMember
 }
 
-/** An active staff row a member can be linked to. */
+/** A staff row of the workspace. */
 export interface StaffOption {
     /** The staff id. */
     readonly id: string
@@ -54,6 +54,10 @@ export interface StaffOption {
     readonly name: string
     /** The staff role label. */
     readonly role: string
+    /** The contact email, when there is one. */
+    readonly email: string | null
+    /** Whether the person is active. */
+    readonly active: boolean
 }
 
 /** What makes a person a member: the workspace, the account and the role it grants. */

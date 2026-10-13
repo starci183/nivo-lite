@@ -28,6 +28,32 @@ export interface LastInvoiceNumberRow {
     readonly invoice_no: string | null
 }
 
+/** An invoice a reconciliation may settle, with the customer and the order. */
+export interface ReconcileInvoiceRow {
+    /** The invoice id. */
+    readonly id: string
+    /** The invoice number. */
+    readonly invoice_no: string
+    /** The amount, VND. */
+    readonly amount_vnd: number
+    /** The invoice status. */
+    readonly status: string
+    /** The customer's name. */
+    readonly customer: string | null
+    /** The customer's company. */
+    readonly company: string | null
+    /** The order number. */
+    readonly order_no: string | null
+    /** What the order contains. */
+    readonly order_items: string | null
+    /** The order status. */
+    readonly order_status: string | null
+    /** When the invoice was issued, ISO text. */
+    readonly issued_at: string | null
+    /** When the invoice is due, ISO text. */
+    readonly due_at: string | null
+}
+
 /** An issued invoice with the order number and the customer's name, as a payment is matched against it. */
 export interface InvoiceListingRow extends InvoiceRow {
     /** The order number, or null. */

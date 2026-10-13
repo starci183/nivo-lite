@@ -14,7 +14,24 @@ export { safeNext, safeNextPath } from "./safe-next-path"
 export { LEADS_ROUTES, leadPath, newLeadPath } from "./leads-routes"
 export { AUTH_ROUTES, invitePath, loginPath, loginResetPath, signupPath, workspacesPath } from "./auth-routes"
 export { ADMIN_ROUTES, adminListPath, adminWorkspacePath } from "./admin-routes"
-export { workspaceBillingPath, workspacePaymentPath } from "./workspace-routes"
-export { CONSOLE_ROUTES, agentChatHref, leadHref, policyLogHref, responsibilitiesHref } from "./console-routes"
+export {
+    creditsPath,
+    workspaceBillingPath,
+    workspacePaymentPath,
+    workspaceRenewalPaymentPath,
+} from "./workspace-routes"
+export {
+    AGENTS_ROUTE,
+    CONSOLE_ROUTES,
+    agentChatConversationHref,
+    agentChatHref,
+    agentSetupHref,
+    leadFlowHref,
+    leadHref,
+    policyLogHref,
+    responsibilitiesHref,
+    teamInviteHref,
+    workItemHref,
+} from "./console-routes"
 export { AUTOMATION_ROUTES, automationFocusPath, newModulePath } from "./automations-routes"
 export { KNOWLEDGE_ROUTES, knowledgeSourceHref } from "./knowledge-routes"

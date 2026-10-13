@@ -13,7 +13,7 @@ import { toStaffOptionsType } from "./workspace-staff.mapper"
 export class WorkspaceStaffResolver {
     constructor(@InjectQueryBus() private readonly queryBus: QueryBus) {}
 
-    /** Lists the active staff of the caller's workspace a member can be linked to. */
+    /** Lists every staff row of the caller's workspace, active first, with email and whether they are active. */
     @Query(() => [StaffOptionType], { name: "workspaceStaff" })
     async workspaceStaff(
         @CurrentPrincipal() principal: Principal,

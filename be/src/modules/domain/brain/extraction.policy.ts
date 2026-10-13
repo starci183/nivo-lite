@@ -1,5 +1,5 @@
 import { SUBJECT_TYPES, keyOf } from "@modules/domain/brain-facts"
-import type { SubjectType } from "@modules/domain/brain-facts"
+import type { BrainSubjectType } from "@modules/domain/brain-facts"
 import { chunkText } from "@modules/domain/knowledge-chunks"
 
 /** Bump when the prompt or the rules below change meaningfully: every document is then read again once. */
@@ -29,7 +29,7 @@ export const SYSTEM_PROMPT = [
     "2. subjectLabel = the specific thing the value belongs to, as the document names it (a product, a policy, the business itself). Use the SAME label for the same thing everywhere. attributeLabel = a short noun phrase (price, opening hours, warranty period). Never put the value inside a label.",
     '3. value = exactly as written, with its number format and currency ("650,000 VND", "8am-9pm", "5k"). One value per fact: a price list with many rows gives one fact per row. unit only when it is written apart from the value; otherwise omit it.',
     "4. quote = a verbatim excerpt of the text (at most 200 characters), copied character for character, that contains the value. Do not translate or tidy it.",
-    '5. validFrom = an ISO date ONLY when the text says from when the value applies; otherwise omit it. When the text gives two values for the same thing at different times, output BOTH facts, each with its own quote and its own validFrom when given. Never decide which one is right.',
+    "5. validFrom = an ISO date ONLY when the text says from when the value applies; otherwise omit it. When the text gives two values for the same thing at different times, output BOTH facts, each with its own quote and its own validFrom when given. Never decide which one is right.",
     '6. scope = "public" for what a business tells its customers (offers, prices, opening hours, address, contact, customer policies); "internal" for everything else (costs, margins, salaries, supplier terms, internal procedures, personal details). When unsure: "internal".',
     "7. Skip opinions, slogans, headings, boilerplate (footers, disclaimers, repeated page headers), vague claims and the personal data of private customers.",
     "8. The text may be messy: broken lines, tables, CSV, missing diacritics, repeated headers. Read it anyway; write the labels in the language of the document, with its correct diacritics.",
@@ -66,7 +66,7 @@ export const userPrompt = (window: WindowPrompt): string =>
 /** One fact as the model gave it, after validation. */
 export interface ExtractedFact {
     /** What it is about. */
-    readonly subjectType: SubjectType
+    readonly subjectType: BrainSubjectType
     /** The subject as the document names it. */
     readonly subjectLabel: string
     /** The attribute. */
@@ -153,7 +153,9 @@ export const parseFacts = (answer: unknown, window: string): ParsedFacts => {
         const quoteOk = fold(quote).length >= 3 && grounded.includes(fold(quote).slice(0, 60))
         // Grounded = the quote is in the text, or the value is (a number may be rewritten: spaces and dots are ignored for it).
         const folded = fold(value)
-        const valueOk = grounded.includes(folded) || (folded.replace(/ /g, "").length >= 3 && compact.includes(folded.replace(/ /g, "")))
+        const valueOk =
+            grounded.includes(folded) ||
+            (folded.replace(/ /g, "").length >= 3 && compact.includes(folded.replace(/ /g, "")))
         if (!quoteOk && !valueOk) continue
         const dedupe = `${keyOf(subjectLabel)}|${keyOf(attributeLabel)}|${folded}`
         if (seen.has(dedupe)) continue

@@ -8,13 +8,14 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ShiftsError, ShiftsErrorCode } from "./errors/shifts.error"
 import { ShiftsDataService } from "./shifts-data.service"
 import { ShiftsTextService } from "./shifts-text.service"
-import type { Shift } from "./shifts.contracts"
+import type { Env, Shift, Setup, ViolationKind } from "./shifts.contracts"
 import type {
     AddDraftShiftParams,
     ExplainScheduleOutput,
     ExplainScheduleParams,
     ProposeWeekOutput,
     ProposeWeekParams,
+    ReassignShiftOutput,
     ReassignShiftParams,
     RemoveDraftShiftParams,
     RequestOutput,
@@ -34,6 +35,10 @@ import { isDay, isTime } from "./policies/input-text.policy"
 import { money } from "./policies/labels.policy"
 import { solveWeek } from "./policies/solver.policy"
 import { mondayOf, toMin } from "./policies/time.policy"
+import { violationsOfShifts } from "./policies/work-rules.policy"
+
+/** The finding key of a work-rule break. */
+const findingCode = (kind: ViolationKind): string => (kind === "position" ? "position" : `rule-${kind}`)
 
 /** How long the solver may search, and from how many seeded starts. */
 const SOLVER_BUDGET_MS = 800
@@ -97,6 +102,8 @@ export class ShiftsScheduleService {
             open: solved.report.openCount,
             short,
             costVnd: Math.round(solved.report.costVnd),
+            ms: Math.round(solved.report.ms),
+            iterations: solved.report.iterations,
         }
         await this.describe(workspaceId, monday, output)
         return output
@@ -123,16 +130,33 @@ export class ShiftsScheduleService {
             open: shifts.filter((shift) => shift.staffId === null).length,
             short,
             costVnd: Math.round(Number(schedule.cost_vnd) || 0),
+            ms: 0,
+            iterations: 0,
         })
         return { explanation }
     }
 
-    /** Gives a draft shift to another person or opens it. */
-    async reassignShift(userId: string, workspaceId: string, request: ReassignShiftParams): Promise<void> {
+    /** Gives a draft shift to another person or opens it. A rule break is a warning, not a refusal. */
+    async reassignShift(
+        userId: string,
+        workspaceId: string,
+        request: ReassignShiftParams,
+    ): Promise<ReassignShiftOutput> {
         await this.members.require(userId, workspaceId, MANAGER_ROLES)
-        await this.requireDraftShift(workspaceId, request.shiftId)
-        if (request.staffId !== null) await this.requireStaff(workspaceId, request.staffId)
-        await this.entityManager.query(REASSIGN_SHIFT, [workspaceId, request.shiftId, request.staffId])
+        const row = await this.requireDraftShift(workspaceId, request.shiftId)
+        const staffId = request.staffId ?? null
+        if (staffId === null) {
+            await this.entityManager.query(REASSIGN_SHIFT, [workspaceId, request.shiftId, null])
+            return { warnings: [] }
+        }
+        const setup = await this.data.loadSetup(workspaceId, false)
+        if (!setup.staff.some((item) => item.id === staffId && item.active)) {
+            throw new ShiftsError({ code: ShiftsErrorCode.StaffNotFound })
+        }
+        await this.entityManager.query(REASSIGN_SHIFT, [workspaceId, request.shiftId, staffId])
+        const env = await this.data.loadEnv(workspaceId, row.week_start, setup)
+        const shifts = await this.data.scheduleShifts(workspaceId, row.schedule_id)
+        return { warnings: this.warningsOf(setup, env, shifts, request.shiftId, staffId) }
     }
 
     /** Adds a shift to a draft schedule. */
@@ -143,14 +167,15 @@ export class ShiftsScheduleService {
         if (schedule.status !== "draft") throw new ShiftsError({ code: ShiftsErrorCode.ScheduleNotDraft })
         const validTimes = isTime(request.start) && isTime(request.end) && toMin(request.end) > toMin(request.start)
         if (!isDay(request.date) || !validTimes) throw new ShiftsError({ code: ShiftsErrorCode.TimeInvalid })
-        if (request.staffId !== null) await this.requireStaff(workspaceId, request.staffId)
+        const staffId = request.staffId ?? null
+        if (staffId !== null) await this.requireStaff(workspaceId, staffId)
         const shift: Shift = {
             id: "",
             date: request.date,
             start: request.start,
             end: request.end,
             positionId: request.positionId,
-            staffId: request.staffId,
+            staffId,
             status: "draft",
         }
         await this.addShifts(workspaceId, schedule.id, [shift], "manual")
@@ -213,10 +238,31 @@ export class ShiftsScheduleService {
         ])
     }
 
-    private async requireDraftShift(workspaceId: string, shiftId: string): Promise<void> {
+    private async requireDraftShift(workspaceId: string, shiftId: string) {
         const row = await this.data.shiftRow(workspaceId, shiftId)
         if (row === undefined) throw new ShiftsError({ code: ShiftsErrorCode.ShiftNotFound })
         if (row.schedule_status !== "draft") throw new ShiftsError({ code: ShiftsErrorCode.ShiftNotEditable })
+        return row
+    }
+
+    /** The rules the reassigned shift breaks, named for the person who now holds it. */
+    private warningsOf(
+        setup: Setup,
+        env: Env,
+        shifts: ReadonlyArray<Shift>,
+        shiftId: string,
+        staffId: string,
+    ): Array<string> {
+        const person = setup.staff.find((item) => item.id === staffId)
+        const shift = shifts.find((item) => item.id === shiftId)
+        const position = setup.positions.find((item) => item.id === shift?.positionId)?.name ?? ""
+        const found = violationsOfShifts(env, shifts).get(shiftId) ?? []
+        return this.words.findings(
+            found.map((item) => ({
+                code: findingCode(item.kind),
+                params: { name: person?.name ?? "", position },
+            })),
+        )
     }
 
     private async requireStaff(workspaceId: string, staffId: string): Promise<void> {

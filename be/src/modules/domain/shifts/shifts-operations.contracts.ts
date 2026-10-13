@@ -18,6 +18,10 @@ export interface ProposeWeekOutput {
     readonly short: number
     /** The estimated wage cost in dong. */
     readonly costVnd: number
+    /** How long the solver ran, in milliseconds. */
+    readonly ms: number
+    /** How many starts the solver tried. */
+    readonly iterations: number
 }
 
 /** Writes the explanation of a schedule again. */
@@ -36,8 +40,14 @@ export interface ExplainScheduleOutput {
 export interface ReassignShiftParams {
     /** The shift. */
     readonly shiftId: string
-    /** The person, or null to open the shift. */
-    readonly staffId: string | null
+    /** The person, or null to open the shift. Absent means the same as null. */
+    readonly staffId?: string | null
+}
+
+/** What reassigning a draft shift ended in. Rule breaks are warnings; the change is kept. */
+export interface ReassignShiftOutput {
+    /** The rules the new assignment breaks, as sentences. Empty when the shift is opened or nothing breaks. */
+    readonly warnings: ReadonlyArray<string>
 }
 
 /** Adds a shift to a draft schedule. */
@@ -52,8 +62,8 @@ export interface AddDraftShiftParams {
     readonly end: string
     /** The position. */
     readonly positionId: string
-    /** The person, or null for an open shift. */
-    readonly staffId: string | null
+    /** The person, or null for an open shift. Absent means the same as null. */
+    readonly staffId?: string | null
 }
 
 /** Removes a shift from a draft schedule. */
@@ -114,4 +124,46 @@ export interface ApplyImportOutput {
     readonly staff: number
     /** The coverage blocks added. */
     readonly blocks: number
+}
+
+/** One person the quick import text describes. */
+export interface PreviewImportStaff {
+    /** The name. */
+    readonly name: string
+    /** The position names, spelled as the shop spells them. */
+    readonly positions: ReadonlyArray<string>
+    /** The hourly wage in dong. */
+    readonly wage: number
+    /** The most hours a week, or null to keep the default. */
+    readonly maxWeek: number | null
+}
+
+/** One coverage block the quick import text describes. */
+export interface PreviewImportBlock {
+    /** The weekday, 0 Monday to 6 Sunday. */
+    readonly weekday: number
+    /** The window start, HH:MM. */
+    readonly start: string
+    /** The window end, HH:MM. */
+    readonly end: string
+    /** The position name. */
+    readonly position: string
+    /** The fewest people. */
+    readonly min: number
+    /** The ideal people. */
+    readonly ideal: number
+    /** True for a peak window. */
+    readonly peak: boolean
+}
+
+/** What the quick import text would add, without writing it. */
+export interface PreviewImportOutput {
+    /** The new positions. */
+    readonly positions: ReadonlyArray<string>
+    /** The people. */
+    readonly staff: ReadonlyArray<PreviewImportStaff>
+    /** The coverage blocks, one per weekday. */
+    readonly blocks: ReadonlyArray<PreviewImportBlock>
+    /** The lines that could not be read, as sentences. */
+    readonly errors: ReadonlyArray<string>
 }

@@ -1,5 +1,5 @@
 import { SUBJECT_TYPES } from "@modules/domain/brain-facts"
-import type { Scope, SubjectType } from "@modules/domain/brain-facts"
+import type { BrainSubjectType, Scope } from "@modules/domain/brain-facts"
 import type { FactDecision, FactForm, KeepCurrentInput, LessonDecision, LessonForm } from "./brain.contracts"
 import { fieldsOf } from "./extraction.policy"
 
@@ -107,7 +107,7 @@ const SCOPES: ReadonlyArray<Scope> = ["public", "internal", "restricted"]
 
 /** The fact form of a payload. */
 const factForm = (payload: Payload): FactForm | null => {
-    const subjectType: SubjectType | undefined = oneOf(SUBJECT_TYPES, text(payload, "subjectType"))
+    const subjectType: BrainSubjectType | undefined = oneOf(SUBJECT_TYPES, text(payload, "subjectType"))
     const scope = oneOf(SCOPES, text(payload, "scope"))
     const subjectLabel = text(payload, "subjectLabel")
     const attributeLabel = text(payload, "attributeLabel")

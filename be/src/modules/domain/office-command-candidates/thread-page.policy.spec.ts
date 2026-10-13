@@ -10,6 +10,8 @@ const line = (id: string, createdAt: string): MessageView => ({
     body: "hi",
     lead_id: null,
     work_item_id: null,
+    lead_name: null,
+    department: null,
     created_at: createdAt,
 })
 

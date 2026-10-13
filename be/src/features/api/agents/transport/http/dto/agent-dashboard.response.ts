@@ -32,6 +32,8 @@ export class DashboardItemResponse {
     leadId!: string | null
     /** The href the finished work recorded as its evidence, or null. */
     resultHref!: string | null
+    /** The workbench link that opens this decision. */
+    decisionHref!: string
 }
 
 /** The decisions of the module that wait for a person. */
@@ -58,6 +60,10 @@ export class DashboardConnectionResponse {
     name!: string
     /** The provider key. */
     provider!: string
+    /** The bot username, when the provider has one. */
+    botUsername!: string | null
+    /** The masked bank account, when the connection is a bank feed. */
+    accountMasked!: string | null
     /** `connected`, `error` or `pending`. */
     status!: string
     /** What the agent may do through it. */

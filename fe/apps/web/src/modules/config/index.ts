@@ -24,7 +24,7 @@ export const sessionCookieOptions = {
 } as const
 
 /** The origin of the back end api the browser calls directly (GraphQL at `/graphql`, REST beside it). */
-const apiUrl = (): string => required("NEXT_PUBLIC_API_URL", process.env.NEXT_PUBLIC_API_URL)
+export const apiUrl = (): string => required("NEXT_PUBLIC_API_URL", process.env.NEXT_PUBLIC_API_URL)
 /** The GraphQL endpoint of the back end api. */
 export const graphqlUrl = (): string => `${apiUrl()}/graphql`
 
@@ -38,3 +38,5 @@ export const graphqlTuning = {
 
 /** The public origin of the site (providers call back to it); `undefined` when it is not set. */
 export const webSiteOrigin = (): string | undefined => process.env.NEXT_PUBLIC_SITE_URL
+
+export { creditsContactHref } from "./credits"

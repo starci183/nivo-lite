@@ -12,11 +12,8 @@ export const MUTATE_DRAFT_LEAD_EXECUTION_SWR_KEY = "MUTATE_DRAFT_LEAD_EXECUTION_
 
 /** SWR mutation for {@link mutateDraftLeadExecution}: `trigger({ responsibilityId })` answers the queued draft and rejects with the back end failure. */
 export const useMutateDraftLeadExecutionSwr = () =>
-    useSWRMutation(
-        MUTATE_DRAFT_LEAD_EXECUTION_SWR_KEY,
-        async (_key: string, { arg }: DraftLeadExecutionArg) => {
-            const result = await mutateDraftLeadExecution({ request: arg })
-            if (!result.data) throw new Error("draftLeadExecution answered no data")
-            return result.data.draftLeadExecution
-        },
-    )
+    useSWRMutation(MUTATE_DRAFT_LEAD_EXECUTION_SWR_KEY, async (_key: string, { arg }: DraftLeadExecutionArg) => {
+        const result = await mutateDraftLeadExecution({ request: arg })
+        if (!result.data) throw new Error("draftLeadExecution answered no data")
+        return result.data.draftLeadExecution
+    })

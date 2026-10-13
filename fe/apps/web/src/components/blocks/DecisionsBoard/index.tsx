@@ -6,22 +6,22 @@ import {
     DECISION_KINDS,
     KIND_KEYS,
     decisionsHref,
-    kindOf,
+    decisionKindOf,
     outcomeTone,
     splitBasis,
+    useDecisionHistory,
 } from "@/hooks/decisions"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
 import { CONSOLE_ROUTES, leadHref } from "@/modules/routes"
-import type { DataSlot, DecisionKind, DecisionRecord } from "@/modules/types"
+import type { DecisionKind, DecisionRecord } from "@/modules/types"
 import { DecisionsBoardBase } from "./component"
 import type { DecisionListView, DecisionRowView } from "./component"
 
 const ALL = "all"
 
-/** The history as the page read it, the modules it can be filtered by, and the filters it was opened with. */
+/** The modules the history can be filtered by and the filters it was opened with; the history itself is read here. */
 interface DecisionsBoardProps {
-    readonly decisions: DataSlot<ReadonlyArray<DecisionRecord>>
     /** The module keys the department tabs offer, from the catalog. */
     readonly departments: ReadonlyArray<string>
     readonly kind: DecisionKind | null
@@ -36,6 +36,7 @@ export const DecisionsBoard = (props: DecisionsBoardProps) => {
     const g = useTranslations("governance")
     const slotLabels = useSlotLabels()
     const format = useFormatter()
+    const { slot: history, reload } = useDecisionHistory(props.kind, props.department)
     const router = navigation.useRouter()
     const isFiltered = props.kind !== null || props.department !== null
     const rowOf = (row: DecisionRecord): DecisionRowView => {
@@ -88,7 +89,7 @@ export const DecisionsBoard = (props: DecisionsBoardProps) => {
                     ...props.departments.map((key) => ({ id: key, label: g(`dept_${key}`) })),
                 ],
                 listAria: t("listAria"),
-                slot: mapSlot(props.decisions, listOf),
+                slot: mapSlot(history, listOf),
                 placeholder: PLACEHOLDER,
                 slotLabels: slotLabels(isFiltered ? t("noMatchTitle") : t("emptyTitle")),
                 noMatchTitle: t("noMatchTitle"),
@@ -98,11 +99,11 @@ export const DecisionsBoard = (props: DecisionsBoardProps) => {
                 clearFilters: t("clearFilters"),
             }}
             on={{
-                kind: (key) => router.push(decisionsHref(kindOf(key), props.department)),
+                kind: (key) => router.push(decisionsHref(decisionKindOf(key), props.department)),
                 dept: (key) =>
                     router.push(decisionsHref(props.kind, props.departments.find((module) => module === key) ?? null)),
                 clear: () => router.push(CONSOLE_ROUTES.decisions),
-                retry: () => router.refresh(),
+                retry: reload,
             }}
         />
     )

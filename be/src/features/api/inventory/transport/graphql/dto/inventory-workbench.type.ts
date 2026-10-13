@@ -20,31 +20,31 @@ export class InventoryWorkbenchType {
     defaultLocationId!: string | null
 
     /** The stock locations. */
-    @Field(() => [[InventoryLocationType]])
+    @Field(() => [InventoryLocationType])
     locations!: ReadonlyArray<InventoryLocationType>
 
     /** The suppliers. */
-    @Field(() => [[InventorySupplierType]])
+    @Field(() => [InventorySupplierType])
     suppliers!: ReadonlyArray<InventorySupplierType>
 
     /** The items with their stock. */
-    @Field(() => [[InventoryItemType]])
+    @Field(() => [InventoryItemType])
     items!: ReadonlyArray<InventoryItemType>
 
     /** The recipes. */
-    @Field(() => [[InventoryRecipeType]])
+    @Field(() => [InventoryRecipeType])
     recipes!: ReadonlyArray<InventoryRecipeType>
 
     /** The purchase orders. */
-    @Field(() => [[InventoryPoType]])
+    @Field(() => [InventoryPoType])
     pos!: ReadonlyArray<InventoryPoType>
 
     /** The recent movements. */
-    @Field(() => [[InventoryMovementType]])
+    @Field(() => [InventoryMovementType])
     movements!: ReadonlyArray<InventoryMovementType>
 
     /** The decisions waiting on the owner. */
-    @Field(() => [[InventoryPendingType]])
+    @Field(() => [InventoryPendingType])
     pending!: ReadonlyArray<InventoryPendingType>
 
     /** The ribbon figures. */

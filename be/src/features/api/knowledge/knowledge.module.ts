@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import { KnowledgeSourcesHandler } from "./application/knowledge-sources.handler"
 import { KnowledgeSourceHandler } from "./application/knowledge-source.handler"
+import { NivoKnowledgeCountHandler } from "./application/nivo-knowledge-count.handler"
 import { NivoKnowledgeHandler } from "./application/nivo-knowledge.handler"
 import { KnowledgeSuggestionsHandler } from "./application/knowledge-suggestions.handler"
 import { AskKnowledgeHandler } from "./application/ask-knowledge.handler"
@@ -29,6 +30,7 @@ import { LessonMiningStatusHandler } from "./application/lesson-mining-status.ha
     providers: [
         KnowledgeSourcesHandler,
         KnowledgeSourceHandler,
+        NivoKnowledgeCountHandler,
         NivoKnowledgeHandler,
         KnowledgeSuggestionsHandler,
         AskKnowledgeHandler,

@@ -1,8 +1,8 @@
 import { InventoryWorkbenchPage as WorkbenchInventory } from "@/features/pages/InventoryWorkbenchPage"
-import WorkbenchLoyalty from "@/features/module-loyalty"
-import WorkbenchHiring from "@/features/module-hiring"
+import { LoyaltyWorkbenchPage as WorkbenchLoyalty } from "@/features/pages/LoyaltyWorkbenchPage"
+import { HiringWorkbenchPage as WorkbenchHiring } from "@/features/pages/HiringWorkbenchPage"
 import { BookingWorkbenchPage } from "@/features/pages/BookingWorkbenchPage"
-import WorkbenchShifts from "@/features/module-shifts"
+import { ShiftsWorkbenchPage as WorkbenchShifts } from "@/features/pages/ShiftsWorkbenchPage"
 import { AgentWorkbenchPage } from "@/features/pages/AgentWorkbenchPage"
 import type { WorkbenchComponent } from "@/features/pages/AgentWorkbenchPage"
 import WorkbenchContent from "@/features/pages/ContentWorkbenchPage"
@@ -10,7 +10,7 @@ import { LeadGenWorkbenchPage as WorkbenchLeadGen } from "@/features/pages/LeadG
 import { SalesWorkbenchPage as WorkbenchSales } from "@/features/pages/SalesWorkbenchPage"
 import { VideoWorkbenchPage as WorkbenchVideo } from "@/features/pages/VideoWorkbenchPage"
 import WorkbenchAccounting from "@/features/workbench-accounting"
-import WorkbenchChatbot from "@/features/workbench-chatbot"
+import { ChatbotWorkbench as WorkbenchChatbot } from "@/features/pages/ChatbotWorkbench"
 
 /** The document title of the workbench tab. */
 export { agentWorkbenchMetadata as generateMetadata } from "@/features/pages/AgentWorkbenchPage"

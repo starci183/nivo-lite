@@ -1,48 +1,57 @@
-import { useMemo } from "react"
-import type { DbOutcome } from "@/modules/db/outcome"
-import {
-    writeAddResponsibility,
-    writeAssignResponsibility,
-    writeRecordOutcome,
-} from "@/modules/db/leads/write-lead-commands"
-import type { RecordedOutcomeItem, ResponsibilityItem } from "@/modules/db/leads/lead-steps.mapper"
+import { useTranslations } from "next-intl"
+import { useMutateAddResponsibilitySwr } from "@/hooks/swr/api/graphql/mutations/useMutateAddResponsibilitySwr"
+import { useMutateAssignResponsibilitySwr } from "@/hooks/swr/api/graphql/mutations/useMutateAssignResponsibilitySwr"
+import { useMutateRecordOutcomeSwr } from "@/hooks/swr/api/graphql/mutations/useMutateRecordOutcomeSwr"
+import { useMutateSettleWonDealSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSettleWonDealSwr"
+import { useGraphQLWithToast } from "@/modules/toast"
 import type { LeadStageId } from "@/modules/types"
+import { useLeadAction } from "./useLeadAction"
+import { useRevalidateLeadViews } from "./useRevalidateLeadViews"
 
-/** What a person types to add or change the step of a lead. */
 interface StepInput {
-    /** `human` for the signed-in person, else the id of an agent. */
     readonly owner: string
     readonly nextAction: string
-    /** ISO 8601, or null for no date. */
     readonly dueAt: string | null
 }
 
-/** The calls the lead screens make to the database. */
-interface LeadCommands {
-    readonly recordOutcome: (
-        leadId: string,
-        stage: LeadStageId,
-        evidence: string,
-    ) => Promise<DbOutcome<RecordedOutcomeItem>>
-    readonly addResponsibility: (
-        leadId: string,
-        title: string,
-        input: StepInput,
-    ) => Promise<DbOutcome<ResponsibilityItem>>
-    readonly assignResponsibility: (
-        responsibilityId: string,
-        input: StepInput,
-    ) => Promise<DbOutcome<ResponsibilityItem>>
+/** Lead mutations toast their result and refresh affected views. */
+export const useLeadCommands = () => {
+    const t = useTranslations("lead")
+    const withToast = useGraphQLWithToast()
+    const outcome = useMutateRecordOutcomeSwr()
+    const add = useMutateAddResponsibilitySwr()
+    const assign = useMutateAssignResponsibilitySwr()
+    const settle = useMutateSettleWonDealSwr()
+    const settlement = useLeadAction()
+    const revalidate = useRevalidateLeadViews()
+    return {
+        isMutating: outcome.isMutating || add.isMutating || assign.isMutating || settlement.isPending,
+        recordOutcome: async (leadId: string, stage: LeadStageId, evidence: string) => {
+            const result = await withToast(() => outcome.trigger({ leadId, stage, evidence }), {
+                successMessage: t("outcomeRecorded"),
+            })
+            if (result !== undefined) await revalidate()
+            if (result !== undefined && stage === "won") {
+                await settlement.run(() => settle.trigger({ leadId, evidence }))
+            }
+            return result
+        },
+        addResponsibility: async (leadId: string, title: string, input: StepInput) => {
+            const result = await withToast(() => add.trigger({ leadId, title, ...input }), {
+                successMessage: t("changesSaved"),
+            })
+            if (result !== undefined) await revalidate()
+            return result
+        },
+        assignResponsibility: async (responsibilityId: string, input: StepInput) => {
+            const result = await withToast(() => assign.trigger({ responsibilityId, ...input }), {
+                successMessage: t("changesSaved"),
+            })
+            if (result !== undefined) await revalidate()
+            return result
+        },
+    }
 }
 
-/** The lead commands of one workspace, run as Server Actions the database function proves the membership. */
-export const useLeadCommands = (workspaceId: string): LeadCommands =>
-    useMemo<LeadCommands>(
-        () => ({
-            recordOutcome: (leadId, stage, evidence) => writeRecordOutcome(workspaceId, leadId, stage, evidence),
-            addResponsibility: (leadId, title, input) => writeAddResponsibility(workspaceId, leadId, title, input),
-            assignResponsibility: (responsibilityId, input) =>
-                writeAssignResponsibility(workspaceId, responsibilityId, input),
-        }),
-        [workspaceId],
-    )
+/** Commands shared by the persistent workbench and its pipeline panel. */
+export type LeadCommands = ReturnType<typeof useLeadCommands>

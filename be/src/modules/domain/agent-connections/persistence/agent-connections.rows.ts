@@ -30,6 +30,10 @@ export interface BoundConnectionRow {
     access: string
     /** What the agent uses the connection for. */
     purpose: string
+    /** The bot username, or null. */
+    bot_username: string | null
+    /** The masked bank account, or null. */
+    account_masked: string | null
 }
 
 /** The key a binding upsert answers. */

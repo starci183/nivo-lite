@@ -2,6 +2,7 @@ import { useMemo } from "react"
 import { useTranslations } from "next-intl"
 import { isAccess } from "@/hooks/connection-access"
 import { isProvider, providerKey } from "@/hooks/connection-providers"
+import { useActiveWorkspace } from "@/hooks/workspaces"
 import { useQueryAgentDashboardSwr } from "@/hooks/swr/api/graphql/queries/useQueryAgentDashboardSwr"
 import type { AgentDashboardView, DashboardRow } from "@/modules/types"
 import { workbenchPath } from "@/modules/installations"
@@ -30,7 +31,8 @@ const connectionStatusOf = (status: string): "connected" | "error" | "pending" =
 export const useAgentDashboard = (module: ModuleKey, installationId?: string | null) => {
     const tGovernance = useTranslations("governance")
     const tConnections = useTranslations("connections")
-    const query = useQueryAgentDashboardSwr({ module, installationId })
+    const { activeWorkspaceId } = useActiveWorkspace()
+    const query = useQueryAgentDashboardSwr(activeWorkspaceId, { module, installationId })
     const data = useMemo<AgentDashboardView | undefined>(() => {
         const dashboard = query.data
         if (!dashboard) return undefined

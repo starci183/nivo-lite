@@ -13,10 +13,10 @@ export class InventoryRecipeType {
     name!: string
 
     /** Other names. */
-    @Field(() => [[String]])
+    @Field(() => [String])
     aliases!: ReadonlyArray<string>
 
     /** The ingredients per product. */
-    @Field(() => [[InventoryRecipeLineType]])
+    @Field(() => [InventoryRecipeLineType])
     lines!: ReadonlyArray<InventoryRecipeLineType>
 }

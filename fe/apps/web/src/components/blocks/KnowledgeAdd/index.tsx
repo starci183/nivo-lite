@@ -1,9 +1,8 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { AGENT_MODULES, uploadDocument, useAddDocuments } from "@/hooks/knowledge"
-import type { AddMode, AddPreset, InstanceOption, QueueActions, QueueItem } from "@/hooks/knowledge"
-import { writeKnowledgeSource } from "@/modules/db/knowledge/write-source"
+import { AGENT_MODULES, useAddDocuments, useAddInstances, useQueueActions } from "@/hooks/knowledge"
+import type { AddMode, AddPreset, QueueItem } from "@/hooks/knowledge"
 import { navigation } from "@/modules/i18n"
 import { KNOWLEDGE_ROUTES } from "@/modules/routes"
 import { KnowledgeAddBase } from "./component"
@@ -11,9 +10,8 @@ import type { KnowledgeAddBaseProps } from "./component"
 
 /** Props for the connected add documents drawer. */
 interface KnowledgeAddProps {
-    readonly workspaceId: string
-    /** The agent instances a document may be kept for. */
-    readonly instances: ReadonlyArray<InstanceOption>
+    /** The words shown instead of the button to members who may only read. */
+    readonly readOnlyNote: string
     /** Whether the address asks for the drawer to be open. */
     readonly isOpen: boolean
     /** The idea the drawer was opened from, or null. */
@@ -44,22 +42,18 @@ const DOCUMENT_STATUS_KEYS: Readonly<
     failed: "itemFailed",
 }
 
-/** Sends bytes to the private bucket and hands a document to the job queue, as the member who is adding. */
-const actionsFor = (workspaceId: string): QueueActions => ({
-    upload: (file) => uploadDocument(workspaceId, file),
-    enqueue: async (item) => (await writeKnowledgeSource({ workspaceId, ...item })).kind === "ok",
-})
-
 /** The connected add documents drawer: opens and closes through the address, uploads files and queues links and notes. */
 export const KnowledgeAdd = (props: KnowledgeAddProps) => {
     const t = useTranslations("knowledge")
     const router = navigation.useRouter()
+    const actions = useQueueActions()
+    const { canWrite, instances } = useAddInstances()
     const add = useAddDocuments({
-        actions: actionsFor(props.workspaceId),
-        instances: props.instances,
+        actions,
+        instances,
         preset: props.preset,
         faqLabels: { question: t("faqQuestionPrefix"), answer: t("faqAnswerPrefix") },
-        onAdded: () => router.refresh(),
+        onAdded: () => undefined,
         onClose: () => router.replace(KNOWLEDGE_ROUTES.library),
     })
     const { note, options, queue } = add
@@ -93,6 +87,7 @@ export const KnowledgeAdd = (props: KnowledgeAddProps) => {
         submitLabel: submitLabel(),
         cancelLabel: t("addCancel"),
         failTitle: t("saveFailed"),
+        readOnlyNote: canWrite ? undefined : props.readOnlyNote,
         isOpen: props.isOpen,
         isBusy: add.isBusy,
         modeLabel: t("addTitle"),
@@ -150,7 +145,7 @@ export const KnowledgeAdd = (props: KnowledgeAddProps) => {
             moduleOptions: [
                 { id: "all", label: t("moduleAll") },
                 ...AGENT_MODULES.map((key) => ({ id: key, label: t(`module_${key}`) })),
-                ...props.instances.map((one) => ({ id: `inst:${one.id}`, label: one.label })),
+                ...instances.map((one) => ({ id: `inst:${one.id}`, label: one.label })),
             ],
             visibilityOptions: [
                 { id: "internal", label: t("visInternal") },

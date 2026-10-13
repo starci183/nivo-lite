@@ -1,3 +1,19 @@
+import { AgentsService } from "@modules/domain/agents"
+import { UnboundBookingToolsService, UnboundKnowledgeSearchService } from "@modules/domain/agent-tools"
+import {
+    ApprovalRequesterService,
+    UnboundDecisionEventsService,
+    UnboundLeadGenFlowService,
+    UnboundPaymentReceiptsService,
+} from "@modules/domain/decisions"
+import {
+    ConversationLeadsService,
+    HandoffToolService,
+    InboundStatusService,
+    LeadWriterService,
+    OutboundAccessService,
+} from "@modules/domain/work-performers"
+import { ToolTokenService } from "@modules/integrations/openclaw"
 import type { DocumentsOptions } from "@modules/integrations/documents"
 import type { LlmOptions } from "@modules/integrations/llm"
 import type { ChannelSetupOptions } from "@modules/integrations/channel-setup"
@@ -21,6 +37,7 @@ import type { ConnectionSecretsOptions } from "@modules/domain/connection-secret
 import type { PlatformAdminOptions } from "@modules/domain/platform-admin"
 import type { WorkspaceInvitesOptions } from "@modules/domain/workspace-invites"
 import type { WorkspacesOptions } from "@modules/domain/workspaces"
+import type { DataSourcesOptions } from "@modules/integrations/data-sources"
 import type { MailOptions } from "@modules/integrations/mail"
 import type { TelegramOptions } from "@modules/integrations/telegram"
 import type { ZaloOptions } from "@modules/integrations/zalo"
@@ -62,6 +79,8 @@ export interface ApiOptions {
     readonly zalo: ZaloOptions
     /** Outgoing mail: the platform sender and the private-host policy. */
     readonly mail: MailOptions
+    /** The owner own systems the data hub reads: the private-host policy and the personal Telegram app. */
+    readonly dataSources: DataSourcesOptions
     /** The platform team that may use the console. */
     readonly platformAdmin: PlatformAdminOptions
     /** How the pgmq workers run. */
@@ -88,4 +107,25 @@ export interface ApiOptions {
     readonly tts: TtsOptions
     /** Where the video renderer finds its assets and how it runs ffmpeg. */
     readonly video: VideoOptions
+}
+
+/** The ports the agent-tools capability reaches the rest of the app through. */
+export const AGENT_TOOLS_PORTS = {
+    knowledgeSearch: UnboundKnowledgeSearchService,
+    leadWriter: LeadWriterService,
+    bookingTools: UnboundBookingToolsService,
+    approvalRequester: ApprovalRequesterService,
+    handoffTool: HandoffToolService,
+    conversationLeads: ConversationLeadsService,
+    toolTokens: ToolTokenService,
+}
+
+/** The ports the decisions capability reaches the rest of the app through. */
+export const DECISIONS_PORTS = {
+    agentDirectory: AgentsService,
+    inboundEventStatus: InboundStatusService,
+    decisionEvents: UnboundDecisionEventsService,
+    paymentReceipts: UnboundPaymentReceiptsService,
+    leadGenFlow: UnboundLeadGenFlowService,
+    outboundAccessGate: OutboundAccessService,
 }

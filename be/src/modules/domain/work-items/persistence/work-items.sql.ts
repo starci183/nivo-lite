@@ -162,6 +162,22 @@ export const REOPEN_WAITING_WORK_ITEM = sql`
     )
     SELECT * FROM changed`
 
+/** Keeps a waiting item waiting and stores the hold note on its proposal ($1 workspace, $2 item, $3 proposal json, $4 now). */
+export const HOLD_WORK_ITEM = sql`WITH changed AS (
+UPDATE public.work_items
+SET proposal = $3::jsonb, updated_at = $4::timestamptz
+WHERE workspace_id = $1::uuid AND id = $2::uuid AND status = 'waiting_decision'
+RETURNING id)
+SELECT id FROM changed`
+
+/** Gives a waiting item to a staff member, or clears the assignment when the staff id is null ($1 workspace, $2 item, $3 staff or null, $4 now). */
+export const ASSIGN_WORK_ITEM = sql`WITH changed AS (
+UPDATE public.work_items
+SET assigned_staff_id = $3::uuid, updated_at = $4::timestamptz
+WHERE workspace_id = $1::uuid AND id = $2::uuid
+RETURNING id)
+SELECT id FROM changed`
+
 /** Links an approval card to the item that opened it ($1 workspace, $2 item, $3 card). */
 export const ATTACH_WORK_ITEM_EXECUTION = sql`
     UPDATE public.work_items SET execution_id = $3::uuid

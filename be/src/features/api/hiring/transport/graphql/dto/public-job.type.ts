@@ -70,6 +70,6 @@ export class PublicJobType {
     requirements!: PublicRequirementsType
 
     /** The questions. */
-    @Field(() => [[PublicQuestionType]])
+    @Field(() => [PublicQuestionType])
     questions!: ReadonlyArray<PublicQuestionType>
 }

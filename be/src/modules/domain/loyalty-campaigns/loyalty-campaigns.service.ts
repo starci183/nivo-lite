@@ -21,6 +21,7 @@ import type {
 import { loyaltyCampaignOf } from "./loyalty-campaigns.mapper"
 import type { LoyaltyCampaignRow } from "./persistence/loyalty-campaigns.rows"
 import {
+    ATTACH_CAMPAIGN_DECISION,
     COUNT_SENT_SINCE,
     FAIL_CAMPAIGN_DRAFT,
     FINISH_CAMPAIGN_DRAFT,
@@ -103,6 +104,22 @@ export class LoyaltyCampaignsService {
     /** The queue exhausted its retries; completed drafts and approved campaigns are left alone. */
     async failDraft(workspaceId: string, campaignId: string): Promise<void> {
         await this.entityManager.query(FAIL_CAMPAIGN_DRAFT, [workspaceId, campaignId])
+    }
+
+    /** Records the work item that decides a finished draft. A draft that moved on answers nothing. */
+    async attachDecision(
+        workspaceId: string,
+        campaignId: string,
+        workItemId: string,
+        status: string,
+    ): Promise<boolean> {
+        const rows = await this.entityManager.query<Array<{ id: string }>>(ATTACH_CAMPAIGN_DECISION, [
+            workspaceId,
+            campaignId,
+            workItemId,
+            status,
+        ])
+        return rows[0] !== undefined
     }
 
     private async writeDraft(

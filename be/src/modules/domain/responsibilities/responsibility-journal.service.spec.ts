@@ -172,7 +172,12 @@ describe("ResponsibilityJournalService", () => {
 
     describe("list", () => {
         it("lists the workspace's responsibilities for a member", async () => {
-            const listing: ResponsibilityListing = { ...rowOf(), contact_name: "Binh" }
+            const listing: ResponsibilityListing = {
+                ...rowOf(),
+                contact_name: "Binh",
+                company: "Binh Co",
+                leadStage: "new",
+            }
             const em = mockEntityManager({ query: [LIST_RESPONSIBILITIES, [listing]] })
             const { service, members } = await build(em)
 

@@ -1,29 +1,22 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { isAgentModule } from "@/hooks/knowledge"
-import type { NivoEntry } from "@/modules/types"
+import { isAgentModule, useNivoKnowledge } from "@/hooks/knowledge"
 import { KnowledgeNivoBase } from "./component"
 
-/** Props for the connected base knowledge. */
-interface KnowledgeNivoProps {
-    readonly items: ReadonlyArray<NivoEntry>
-    /** True while the page loads: the list is skeleton rows. */
-    readonly isLoading?: boolean
-}
-
 /** The connected base knowledge of NIVO: words each item for the language of the person. */
-export const KnowledgeNivo = (props: KnowledgeNivoProps) => {
+export const KnowledgeNivo = () => {
     const t = useTranslations("knowledge")
+    const { items, isLoading } = useNivoKnowledge()
     return (
         <KnowledgeNivoBase
             props={{
                 list: {
                     label: t("nivoTitle"),
-                    isLoading: props.isLoading ?? false,
+                    isLoading: isLoading || items === undefined,
                     isPending: false,
                     emptyTitle: t("nivoEmpty"),
-                    rows: props.items.map((item) => ({
+                    rows: (items ?? []).map((item) => ({
                         id: item.id,
                         title: item.title,
                         lines: [t("nivoVersion", { version: item.version }), item.body],

@@ -1,7 +1,5 @@
 import type { ModuleKey } from "@/modules/catalog"
-
-/** The agents area: the catalogue of agents. */
-export const AGENTS_ROUTE = "/agents"
+import { AGENTS_ROUTE } from "@/modules/routes"
 
 /** A tab of one agent instance. */
 export type AgentTab = "setup" | "workbench" | "settings"

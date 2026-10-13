@@ -1,6 +1,6 @@
 import type { RuleMode } from "@modules/domain/authority-rules"
 import { SUBJECT_TYPES, keyOf } from "@modules/domain/brain-facts"
-import type { Scope, SubjectType } from "@modules/domain/brain-facts"
+import type { BrainSubjectType, Scope } from "@modules/domain/brain-facts"
 import type { FactCardPayload, ProposedCardRecord } from "@modules/domain/module-setup-writes"
 import type { AuthorityActionDefinition, ModuleDefinition, ModuleGate, GateWrite } from "../modules.contracts"
 
@@ -73,7 +73,7 @@ const isObject = (value: unknown): value is Record<string, unknown> =>
 
 const clean = (value: unknown, max: number): string => (typeof value === "string" ? value.trim().slice(0, max) : "")
 
-const FACT_SUBJECTS: ReadonlyArray<SubjectType> = SUBJECT_TYPES
+const FACT_SUBJECTS: ReadonlyArray<BrainSubjectType> = SUBJECT_TYPES
 
 /** The key that makes two cards the same target: one waiting card per target. */
 export const targetKeyOf = (write: ProposedWrite): string =>

@@ -24,7 +24,6 @@ const PUBLIC_PATHS = [
     "/api/n8n",
     "/b",
     "/api/b",
-    "/api/hiring",
     "/j",
     "/l",
     "/privacy",

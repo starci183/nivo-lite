@@ -18,26 +18,26 @@ export class ShiftsMineType {
     today!: string
 
     /** Their shifts of the next two weeks. */
-    @Field(() => [[ShiftsMyShiftType]])
+    @Field(() => [ShiftsMyShiftType])
     myShifts!: ReadonlyArray<ShiftsMyShiftType>
 
     /** Open shifts they may ask for. */
-    @Field(() => [[ShiftType]])
+    @Field(() => [ShiftType])
     openShifts!: ReadonlyArray<ShiftType>
 
     /** The colleagues they may swap with. */
-    @Field(() => [[ShiftsColleagueType]])
+    @Field(() => [ShiftsColleagueType])
     colleagues!: ReadonlyArray<ShiftsColleagueType>
 
     /** Their availability statements. */
-    @Field(() => [[ShiftsAvailabilityType]])
+    @Field(() => [ShiftsAvailabilityType])
     availability!: ReadonlyArray<ShiftsAvailabilityType>
 
     /** Their leave requests. */
-    @Field(() => [[ShiftsLeaveType]])
+    @Field(() => [ShiftsLeaveType])
     leaves!: ReadonlyArray<ShiftsLeaveType>
 
     /** Their swap and claim requests. */
-    @Field(() => [[ShiftsSwapType]])
+    @Field(() => [ShiftsSwapType])
     swaps!: ReadonlyArray<ShiftsSwapType>
 }

@@ -4,7 +4,7 @@ import { Field, Int, ObjectType } from "@nestjs/graphql"
 /** The written requirements a candidate is compared with. */
 export class HiringJobRequirementsType {
     /** Skills the job needs. */
-    @Field(() => [[String]])
+    @Field(() => [String])
     skills!: ReadonlyArray<string>
 
     /** The years of experience asked, when any. */
@@ -16,14 +16,14 @@ export class HiringJobRequirementsType {
     experienceNote!: string
 
     /** The days and hours the job needs. */
-    @Field(() => [[String]])
+    @Field(() => [String])
     availability!: ReadonlyArray<string>
 
     /** Requirements a candidate must meet. */
-    @Field(() => [[String]])
+    @Field(() => [String])
     mustHave!: ReadonlyArray<string>
 
     /** Requirements that count in a candidate's favour. */
-    @Field(() => [[String]])
+    @Field(() => [String])
     niceToHave!: ReadonlyArray<string>
 }

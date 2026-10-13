@@ -248,6 +248,10 @@ export interface MessageView {
     readonly lead_id: string | null
     /** The work item it mirrors. */
     readonly work_item_id: string | null
+    /** The customer's name, when the line names one. */
+    readonly lead_name: string | null
+    /** The department of the work item the line mirrors. */
+    readonly department: string | null
     /** When it was written, ISO 8601. */
     readonly created_at: string
 }

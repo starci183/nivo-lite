@@ -14,7 +14,6 @@ export type {
     StepStatus,
 } from "./leads"
 export type {
-    AccountingAgeing,
     AccountingCredit,
     AccountingInvoice,
     AccountingInvoiceStatus,
@@ -26,12 +25,10 @@ export type {
     AccountingMeasure,
     AccountingOrder,
     AccountingOrigin,
-    AccountingPeriod,
     AccountingPeriodKey,
     AccountingQuestion,
     AccountingQuestionGroup,
     AccountingSourceKind,
-    AccountingWaiting,
     AccountingWorkbenchData,
 } from "./accounting"
 export type {
@@ -55,6 +52,9 @@ export type {
     BookingStatsView,
     BookingView,
     BookingWaitView,
+    PublicBookingAnswer,
+    PublicBookingPage,
+    PublicBookingService,
 } from "./booking"
 export type { ConsoleIconName, ConsoleNavItem, ConsolePending, ConsoleWorkspace } from "./console"
 export type {
@@ -151,25 +151,43 @@ export type {
 } from "./inventory-commands"
 export type {
     AccountsView,
+    AutomationCardView,
+    AutomationGateKind,
+    AutomationIconWord,
+    AutomationRunStatus,
+    AutomationRunView,
     AutomationTone,
     AutomationsBoardView,
     AutomationsLanguage,
     AutomationsTranslator,
+    Capability,
     CardView,
+    ChannelNeed,
+    ConfigValue,
+    ConnectionNeed,
+    ContentMode,
     DetailView,
+    FieldDef,
+    GateAction,
     GateView,
+    GoogleAccount,
+    L,
     MessageView,
+    Missing,
+    ModuleScope,
+    PipelineConfig,
+    PreviewSample,
+    Requires,
     RunRowView,
+    RunStep,
     SettingFieldView,
+    ShopContext,
+    TemplateDef,
+    TemplateExecutor,
+    TemplateKey,
+    TemplatePack,
 } from "./automations"
-export type {
-    DeciderKind,
-    DecisionFilter,
-    DecisionKind,
-    DecisionOutcome,
-    DecisionRecord,
-    GateReason,
-} from "./decisions"
+export type { DeciderKind, DecisionKind, DecisionOutcome, DecisionRecord, GateReason } from "./decisions"
 export type {
     AttentionKind,
     AttentionRow,
@@ -228,3 +246,78 @@ export type {
     DashboardRegion,
     DashboardWaiting,
 } from "./agent-dashboard"
+export type {
+    ShiftsAvailRowView,
+    ShiftsAvailView,
+    ShiftsBenchView,
+    ShiftsBlockView,
+    ShiftsFiguresView,
+    ShiftsLeaveRowView,
+    ShiftsLeaveSpanView,
+    ShiftsMineView,
+    ShiftsPositionView,
+    ShiftsScheduleView,
+    ShiftsSegView,
+    ShiftsSettingsView,
+    ShiftsSetupView,
+    ShiftsShiftView,
+    ShiftsStaffView,
+    ShiftsSwapRowView,
+    ShiftsWeekView,
+    ShiftsWorkItemView,
+} from "./shifts"
+export type {
+    OfficeApprovalView,
+    OfficeAvatarView,
+    OfficeBodyPart,
+    OfficeChatRowView,
+    OfficeCommandView,
+    OfficeExceptionView,
+    OfficeInfoView,
+    OfficeJumpRowView,
+    OfficeListView,
+    OfficeMemberRowView,
+    OfficeMentionView,
+    OfficeMessageView,
+    OfficeMissingField,
+    OfficeOutboxView,
+    OfficeTaskView,
+    OfficeText,
+    OfficeThreadItem,
+    OfficeWorkDecision,
+} from "./office"
+export type {
+    OfficeComposerProps,
+    OfficeConversationsProps,
+    OfficeInfoPanelProps,
+    OfficeTasksProps,
+    OfficeThreadProps,
+} from "./office-slots"
+
+export type { SetupWriteDecided, SetupWriteInstance, SetupWriteProposal, SetupWriteWords } from "./setup-write"
+export type {
+    DbColumnInfo,
+    DbEngine,
+    DbEntity,
+    DbPreviewRows,
+    DbSavedConnection,
+    DbTableInfo,
+    DbTableMapping,
+    DbTarget,
+} from "./database-wizard"
+export type {
+    CreditsData,
+    CreditsOverviewView,
+    CreditsHistoryRow,
+    PayOrder,
+    PayTarget,
+    PlanView,
+    UpgradeReason,
+} from "./credits"
+export type {
+    AccountingQuestionValues,
+    AccountingQuestionCardData,
+    AccountingQuestionCardView,
+    AccountingQuestionsView,
+} from "./accounting-question-card"
+export type { AccountingDashboardView, AccountingDashboardSectionView } from "./accounting-dashboard"

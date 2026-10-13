@@ -6,7 +6,9 @@ import type { ResponsibilityListing, ResponsibilityRecord } from "@modules/domai
 import type { Locale } from "@modules/platform/i18n"
 import type { CreateResponsibilityRequest } from "../../application/create-responsibility.contracts"
 import type { DecideExecutionRequest } from "../../application/decide-execution.contracts"
+import type { AssignWorkItemRequest } from "../../application/assign-work-item.contracts"
 import type { DecideWorkItemRequest } from "../../application/decide-work-item.contracts"
+import type { HoldWorkItemRequest } from "../../application/hold-work-item.contracts"
 import type { ListDecisionHistoryRequest } from "../../application/list-decision-history.contracts"
 import type { GetWorkItemRequest } from "../../application/get-work-item.contracts"
 import type { ListResponsibilitiesRequest } from "../../application/list-responsibilities.contracts"
@@ -25,7 +27,9 @@ import type { CreateResponsibilityInput } from "./dto/create-responsibility.inpu
 import type { DecideExecutionInput } from "./dto/decide-execution.input"
 import type { DecisionRecordType } from "./dto/decision-record.type"
 import type { ListDecisionHistoryInput } from "./dto/list-decision-history.input"
+import type { AssignWorkItemInput } from "./dto/assign-work-item.input"
 import type { DecideWorkItemInput } from "./dto/decide-work-item.input"
+import type { HoldWorkItemInput } from "./dto/hold-work-item.input"
 import type { ListWorkItemsInput } from "./dto/list-work-items.input"
 import type { ResponsibilityListingType } from "./dto/responsibility-listing.type"
 import type { ResponsibilityType } from "./dto/responsibility.type"
@@ -40,7 +44,10 @@ import type { WorkItemType } from "./dto/work-item.type"
 /** Maps the work item listing of the GraphQL input, with the workspace it names, to the query request. */
 export const toListWorkItemsRequest = (workspaceId: string, input: ListWorkItemsInput): ListWorkItemPageRequest => ({
     workspaceId,
-    ...input,
+    statuses: input.statuses,
+    action: input.action,
+    after: input.after,
+    limit: input.limit,
 })
 
 /** Maps the id of the GraphQL input, with the workspace it names, to the query request. */
@@ -48,6 +55,20 @@ export const toGetWorkItemRequest = (workspaceId: string, input: WorkItemIdInput
     workspaceId,
     ...input,
 })
+
+/** Maps the hold note of the GraphQL input, with the workspace and the locale, to the command request. */
+export const toHoldWorkItemRequest = (
+    workspaceId: string,
+    input: HoldWorkItemInput,
+    locale: Locale,
+): HoldWorkItemRequest => ({ workspaceId, locale, ...input })
+
+/** Maps the assignment of the GraphQL input, with the workspace and the locale, to the command request. */
+export const toAssignWorkItemRequest = (
+    workspaceId: string,
+    input: AssignWorkItemInput,
+    locale: Locale,
+): AssignWorkItemRequest => ({ workspaceId, locale, ...input })
 
 /** Maps the decision of the GraphQL input, with the workspace and the locale, to the command request. */
 export const toDecideWorkItemRequest = (

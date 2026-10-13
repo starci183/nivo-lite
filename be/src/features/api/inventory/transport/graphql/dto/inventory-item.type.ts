@@ -22,7 +22,7 @@ export class InventoryItemType {
     unit!: string
 
     /** Other units. */
-    @Field(() => [[InventoryItemUnitType]])
+    @Field(() => [InventoryItemUnitType])
     units!: ReadonlyArray<InventoryItemUnitType>
 
     /** The item group. */
@@ -50,7 +50,7 @@ export class InventoryItemType {
     supplierId!: string | null
 
     /** Other names. */
-    @Field(() => [[String]])
+    @Field(() => [String])
     aliases!: ReadonlyArray<string>
 
     /** Whether the item is in use. */
@@ -70,6 +70,6 @@ export class InventoryItemType {
     onOrder!: number
 
     /** The level at each location. */
-    @Field(() => [[InventoryLevelType]])
+    @Field(() => [InventoryLevelType])
     levels!: ReadonlyArray<InventoryLevelType>
 }

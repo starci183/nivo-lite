@@ -1,4 +1,4 @@
-import { Alert, Button, Input, SurfaceCard, Text } from "@starci/grammar/common"
+import { Button, Input, SurfaceCard, Text } from "@starci/grammar/common"
 import { AgentMark } from "../../leaves/AgentMark"
 import { ACTIONS, GROW, ROW, STACK } from "./classNames"
 
@@ -19,14 +19,11 @@ export interface AgentIdentityCardBaseProps {
         readonly isDisabled: boolean
         readonly isPending: boolean
         readonly isLoading: boolean
-        readonly noteTitle: string
-        readonly noteTone: "idle" | "saved" | "refused"
-        readonly noteText: string
     }
     readonly on: { readonly name: (value: string) => void; readonly save: () => void }
 }
 
-/** Draws the name card of an agent: its mark, the one name field and its save, and the result of the last save. */
+/** Draws the name card of an agent: its mark, the one name field and its save. */
 export const AgentIdentityCardBase = (props: AgentIdentityCardBaseProps) => (
     <SurfaceCard label={props.props.title} headingLevel={2}>
         <div className={STACK}>
@@ -65,13 +62,6 @@ export const AgentIdentityCardBase = (props: AgentIdentityCardBaseProps) => (
                     {props.props.saveLabel}
                 </Button>
             </div>
-            {props.props.noteTone === "idle" ? null : (
-                <Alert
-                    title={props.props.noteTone === "saved" ? props.props.noteText : props.props.noteTitle}
-                    description={props.props.noteTone === "saved" ? undefined : props.props.noteText}
-                    tone={props.props.noteTone === "saved" ? "affirmative" : "negative"}
-                />
-            )}
         </div>
     </SurfaceCard>
 )

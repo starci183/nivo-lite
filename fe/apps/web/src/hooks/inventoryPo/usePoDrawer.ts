@@ -70,8 +70,8 @@ export const usePoDrawer = (
             sendForApproval: whenOpen((open) =>
                 run.exec(
                     async () => {
-                        const saved = await commands.updatePoDraft(draftInputOf(open))
-                        return saved.kind === "ok" ? commands.requestSend(open.po.id, "order") : saved
+                        await commands.updatePoDraft(draftInputOf(open))
+                        return commands.requestSend(open.po.id, "order")
                     },
                     (result) => t(result.status === "done" ? "poSent" : "poSentForApproval"),
                 ),

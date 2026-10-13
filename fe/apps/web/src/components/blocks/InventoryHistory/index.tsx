@@ -1,27 +1,23 @@
 "use client"
 
+import { useInventoryBoard } from "@/hooks/inventoryBoard"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { MOVE_KINDS, MOVE_TONES, includesText } from "@/hooks/inventory"
 import { useInventoryFormat } from "@/hooks/inventory"
-import type { MovementView } from "@/modules/types"
 import { InventoryHistoryBase } from "./component"
-
-/** The movements of the history. */
-interface InventoryHistoryProps {
-    readonly movements: ReadonlyArray<MovementView>
-}
 
 const ALL = "all"
 
 /** The history tab: the search text and the movement kind live here, the drawing in the pure half. */
-export const InventoryHistory = (props: InventoryHistoryProps) => {
+export const InventoryHistory = () => {
+    const board = useInventoryBoard()
     const t = useTranslations("workbenchInventory")
     const format = useInventoryFormat()
     const [query, setQuery] = useState("")
     const [kind, setKind] = useState(ALL)
     const kindName = (value: string): string => (MOVE_KINDS.includes(value) ? t(`move_${value}`) : value)
-    const rows = props.movements.filter(
+    const rows = board.movements.filter(
         (movement) =>
             (kind === ALL || movement.kind === kind) &&
             includesText(`${movement.itemName} ${movement.reason} ${movement.refLabel ?? ""}`, query),

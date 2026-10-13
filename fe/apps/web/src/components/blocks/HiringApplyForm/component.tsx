@@ -1,0 +1,250 @@
+import {
+    Alert,
+    Button,
+    Checkbox,
+    CheckboxGroup,
+    FileDropzone,
+    Form,
+    Heading,
+    Input,
+    RadioGroup,
+    SurfaceCard,
+    Text,
+    Textarea,
+} from "@starci/grammar/common"
+import { HiringJobPost } from "@/components/composites/HiringJobPost"
+import type { HiringJobPostProps } from "@/components/composites/HiringJobPost"
+import type { FieldOf, HiringSay } from "@/hooks/hiring"
+import type { ApplyValues, PublicQuestionView } from "@/hooks/hiringPublic"
+import { CARD_CLASS_NAME, FOOT_CLASS_NAME, HONEYPOT_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
+
+/** What the connected block settled for the public job page. */
+export interface HiringApplyFormBaseProps {
+    readonly props: {
+        readonly say: HiringSay
+        readonly state: "loading" | "missing" | "ready"
+        readonly post: HiringJobPostProps["props"]
+        readonly company: string
+        readonly isOpen: boolean
+        readonly consentText: string
+        readonly questions: ReadonlyArray<PublicQuestionView>
+        readonly availabilityChoices: ReadonlyArray<string>
+        readonly values: ApplyValues
+        readonly cvAccept: string
+        readonly cvError: string | undefined
+        readonly canSubmit: boolean
+        readonly isBusy: boolean
+        readonly isFailed: boolean
+        readonly doneText: string | null
+    }
+    readonly on: {
+        readonly text: (name: FieldOf<ApplyValues, string>, value: string) => void
+        readonly flag: (name: FieldOf<ApplyValues, boolean>, value: boolean) => void
+        readonly list: (name: FieldOf<ApplyValues, Array<string>>, value: Array<string>) => void
+        readonly answer: (id: string, answer: string) => void
+        readonly cv: (file: File | null) => void
+        readonly submit: () => void
+    }
+}
+
+const questionField = (question: PublicQuestionView, props: HiringApplyFormBaseProps) => {
+    const { say, values, isBusy } = props.props
+    const answer = values.answers[question.id] ?? ""
+    const common = { label: question.text, isRequired: question.required, isDisabled: isBusy }
+    const set = (value: string) => props.on.answer(question.id, value)
+    if (question.type === "yesno") {
+        return (
+            <RadioGroup
+                key={question.id}
+                {...common}
+                variant="secondary"
+                name={`q_${question.id}`}
+                orientation="horizontal"
+                options={[
+                    { value: say("yes"), label: say("yes") },
+                    { value: say("no"), label: say("no") },
+                ]}
+                value={answer === "" ? null : answer}
+                onValueChange={set}
+            />
+        )
+    }
+    if (question.type === "choice") {
+        return (
+            <RadioGroup
+                key={question.id}
+                {...common}
+                variant="secondary"
+                name={`q_${question.id}`}
+                options={question.choices.map((choice) => ({ value: choice, label: choice }))}
+                value={answer === "" ? null : answer}
+                onValueChange={set}
+            />
+        )
+    }
+    if (question.type === "number") {
+        return (
+            <Input
+                key={question.id}
+                id={`apply-q-${question.id}`}
+                name={`q_${question.id}`}
+                {...common}
+                variant="secondary"
+                value={answer}
+                onValueChange={set}
+            />
+        )
+    }
+    return (
+        <Textarea
+            key={question.id}
+            {...common}
+            variant="secondary"
+            name={`q_${question.id}`}
+            rows={3}
+            maxLength={1000}
+            value={answer}
+            onValueChange={set}
+        />
+    )
+}
+
+/** Draws the public job page: the post, then the apply form (or a notice when the post takes no applications). */
+export const HiringApplyFormBase = (props: HiringApplyFormBaseProps) => {
+    const p = props.props
+    const { say, values, isBusy } = p
+    const { on } = props
+    if (p.state !== "ready") {
+        return (
+            <Alert
+                tone="cautionary"
+                title={say(p.state === "loading" ? "loading" : "applyMissing")}
+                description={p.state === "loading" ? undefined : say("applyMissingBody")}
+            />
+        )
+    }
+    return (
+        <div className={STACK_CLASS_NAME}>
+            <HiringJobPost props={p.post} />
+            <SurfaceCard ariaLabel={say(p.isOpen ? "applyTitle" : "applyClosed")}>
+                <div className={CARD_CLASS_NAME}>
+                    {p.isOpen ? null : <Heading level={2}>{say("applyClosed")}</Heading>}
+                    {p.isOpen ? <Heading level={2}>{say("applyTitle")}</Heading> : null}
+                    {p.isOpen ? null : <Text tone="muted">{say("applyClosedBody", { company: p.company })}</Text>}
+                    {p.isOpen && p.doneText !== null ? <Alert tone="affirmative" title={p.doneText} /> : null}
+                    {p.isOpen && p.doneText === null ? (
+                        <Form
+                            label={say("applyTitle")}
+                            validationBehavior="aria"
+                            isPending={isBusy}
+                            onSubmit={on.submit}
+                        >
+                            <div className={CARD_CLASS_NAME}>
+                                <Input
+                                    id="apply-name"
+                                    name="name"
+                                    label={say("applyName")}
+                                    variant="secondary"
+                                    isRequired
+                                    isDisabled={isBusy}
+                                    value={values.name}
+                                    onValueChange={(name) => on.text("name", name)}
+                                />
+                                <Input
+                                    id="apply-phone"
+                                    name="phone"
+                                    label={say("applyPhone")}
+                                    hint={say("applyPhoneHint")}
+                                    variant="secondary"
+                                    isRequired
+                                    isDisabled={isBusy}
+                                    value={values.phone}
+                                    onValueChange={(phone) => on.text("phone", phone)}
+                                />
+                                <Input
+                                    id="apply-email"
+                                    name="email"
+                                    kind="email"
+                                    label={say("applyEmail")}
+                                    variant="secondary"
+                                    isDisabled={isBusy}
+                                    value={values.email}
+                                    onValueChange={(email) => on.text("email", email)}
+                                />
+                                {p.availabilityChoices.length > 0 ? (
+                                    <CheckboxGroup
+                                        variant="secondary"
+                                        label={say("applyAvailability")}
+                                        name="availability"
+                                        options={p.availabilityChoices.map((choice) => ({
+                                            value: choice,
+                                            label: choice,
+                                        }))}
+                                        value={values.availability}
+                                        isDisabled={isBusy}
+                                        onValueChange={(choices) => on.list("availability", choices)}
+                                    />
+                                ) : (
+                                    <Input
+                                        id="apply-availability"
+                                        name="availability"
+                                        label={say("applyAvailabilityText")}
+                                        variant="secondary"
+                                        isDisabled={isBusy}
+                                        value={values.availabilityText}
+                                        onValueChange={(text) => on.text("availabilityText", text)}
+                                    />
+                                )}
+                                {p.questions.map((question) => questionField(question, props))}
+                                <FileDropzone
+                                    label={say("applyCv")}
+                                    name="cv"
+                                    accept={p.cvAccept}
+                                    description={say("applyCvHint")}
+                                    isDisabled={isBusy}
+                                    prompt={say("applyCvPrompt")}
+                                    errorMessage={p.cvError}
+                                    onFilesChange={(files) => on.cv(files[0] ?? null)}
+                                />
+                                <div className={HONEYPOT_CLASS_NAME} inert>
+                                    <Input
+                                        id="apply-website"
+                                        name="website"
+                                        label={say("applyWebsite")}
+                                        value={values.website}
+                                        onValueChange={(website) => on.text("website", website)}
+                                    />
+                                </div>
+                                <Checkbox
+                                    name="consent"
+                                    variant="secondary"
+                                    label={say("applyConsent")}
+                                    description={p.consentText}
+                                    isRequired
+                                    isSelected={values.consent}
+                                    isDisabled={isBusy}
+                                    onSelectedChange={(consent) => on.flag("consent", consent)}
+                                />
+                                {p.isFailed ? <Alert tone="negative" title={say("applyFailed")} /> : null}
+                                <Button
+                                    type="submit"
+                                    variant="primary"
+                                    isPending={isBusy}
+                                    isDisabled={isBusy || !p.canSubmit}
+                                >
+                                    {say("applySubmit")}
+                                </Button>
+                                <Text size="xs" tone="muted">
+                                    {say("applyPrivacy")}
+                                </Text>
+                            </div>
+                        </Form>
+                    ) : null}
+                </div>
+            </SurfaceCard>
+            <div className={FOOT_CLASS_NAME}>
+                <Text size="xs">{say("applyFoot", { company: p.company })}</Text>
+            </div>
+        </div>
+    )
+}

@@ -4,7 +4,7 @@ import type { ConnectionRecord, Environment, FirstEvent, ConnectionStatus, Provi
 export type MoneyProvider = "sepay" | "payos" | "casso"
 
 /** What starting a Telegram connection takes. */
-export interface ConnectTelegramInput {
+export interface TelegramStart {
     /** The name the owner gives the connection. */
     readonly name: string
     /** The bot token from @BotFather. */
@@ -15,8 +15,20 @@ export interface ConnectTelegramInput {
 export interface TelegramConnected {
     /** The new connection. */
     readonly connection: ConnectionRecord
+    /** The bot username, when BotFather returned one. */
+    readonly botUsername: string | null
+    /** A bank feed fact; a Telegram connection has none. */
+    readonly accountMasked: string | null
     /** False on a local site, where the webhook is registered later on the real domain. */
     readonly webhookRegistered: boolean
+}
+
+/** The SePay key and the webhook address the owner pastes into SePay. */
+export interface SepayKeyReveal {
+    /** The API key. */
+    readonly apiKey: string
+    /** The webhook address of this connection. */
+    readonly webhookUrl: string
 }
 
 /** What starting a bank or payment feed takes. */
@@ -51,7 +63,7 @@ export interface UpdateMoneyInput {
     readonly apiKey?: string | undefined
 }
 
-/** The wizard view of a bank or payment feed; the bank display name is derived from `bankCode` by the caller. */
+/** The wizard view of a bank or payment feed. */
 export interface WizardConnection {
     /** The id of the connection. */
     readonly id: string
@@ -69,6 +81,8 @@ export interface WizardConnection {
     readonly apiKey: string
     /** The bank code. */
     readonly bankCode: string
+    /** The human name of the bank, or the upper-cased code when the bank is not listed. */
+    readonly bank: string
     /** The masked account number. */
     readonly account: string
     /** The account holder. */

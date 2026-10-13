@@ -1,7 +1,19 @@
 import { Field, InputType, Int } from "@nestjs/graphql"
 import { Transform, Type } from "class-transformer"
 import type { TransformFnParams } from "class-transformer"
-import { ArrayMaxSize, IsArray, IsIn, IsInt, IsOptional, Max, Min, ValidateNested } from "class-validator"
+import {
+    ArrayMaxSize,
+    IsArray,
+    IsIn,
+    IsInt,
+    IsOptional,
+    IsString,
+    Matches,
+    Max,
+    MaxLength,
+    Min,
+    ValidateNested,
+} from "class-validator"
 import { WorkItemCursorInput } from "./work-item-cursor.input"
 
 @InputType()
@@ -14,6 +26,14 @@ export class ListWorkItemsInput {
     @ArrayMaxSize(5)
     @IsIn(["queued", "done", "waiting_decision", "rejected", "failed"], { each: true })
     statuses: Array<"queued" | "done" | "waiting_decision" | "rejected" | "failed"> = []
+
+    /** Only this action; absent means every action. */
+    @Field(() => String, { nullable: true })
+    @IsOptional()
+    @IsString()
+    @Matches(/^[a-z0-9_]+$/)
+    @MaxLength(80)
+    action?: string
 
     /** Where the page starts: the `next` cursor of the previous page. */
     @Field(() => WorkItemCursorInput, { nullable: true })

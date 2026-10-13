@@ -165,3 +165,33 @@ export interface BookingStatsView {
 
 /** An action on a booking that changes its status. */
 export type BookingAction = "confirm" | "check-in" | "done" | "no-show" | "cancel"
+
+/** A service the public booking page offers. */
+export interface PublicBookingService {
+    readonly id: string
+    readonly name: string
+    readonly description: string
+    readonly durationMin: number
+    readonly priceVnd: number | null
+}
+
+/** The public booking page of one shop. */
+export interface PublicBookingPage {
+    readonly shop: string
+    readonly slug: string
+    readonly note: string
+    readonly address: string
+    readonly timezone: string
+    readonly services: ReadonlyArray<PublicBookingService>
+}
+
+/** The answer to a visitor's request: the code is a catalog key suffix (`code_<code>` of workbenchBooking). */
+export interface PublicBookingAnswer {
+    readonly ok: boolean
+    readonly state: "confirmed" | "waiting" | "invalid" | "failed"
+    readonly code: string
+    readonly service: string
+    readonly start: string
+    readonly alternatives: ReadonlyArray<string>
+    readonly bookingId: string | null
+}

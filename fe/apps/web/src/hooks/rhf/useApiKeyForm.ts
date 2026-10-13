@@ -15,10 +15,7 @@ export interface ApiKeyValues {
 /** The create API key form: a zod schema whose message comes from the `developers` catalog, validated before the mutation runs. */
 export const useApiKeyForm = () => {
     const t = useTranslations("developers")
-    const schema = useMemo(
-        () => z.object({ name: z.string().trim().min(API_KEY_NAME_MIN, t("keyNameHint")) }),
-        [t],
-    )
+    const schema = useMemo(() => z.object({ name: z.string().trim().min(API_KEY_NAME_MIN, t("keyNameHint")) }), [t])
     return useForm<ApiKeyValues>({
         resolver: zodResolver(schema),
         defaultValues: { name: "" },

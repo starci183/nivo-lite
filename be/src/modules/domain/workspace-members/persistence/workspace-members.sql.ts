@@ -55,11 +55,3 @@ export const DELETE_MEMBER = sql`
 export const RENAME_MEMBER_EVERYWHERE = sql`
     UPDATE public.workspace_members SET display_name = $2
     WHERE user_id = $1 AND status = 'active'`
-
-/** The active staff rows of a workspace, by name: who a member can be linked to. */
-export const LIST_ACTIVE_STAFF = sql`
-    SELECT s.id, s.name, s.role
-    FROM public.staff s
-    WHERE s.workspace_id = $1 AND s.active
-    ORDER BY s.name ASC
-    LIMIT 500`

@@ -2,6 +2,7 @@ import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { EventsService } from "@modules/domain/events"
+import { StaffService } from "@modules/domain/staff"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ok, refused } from "@modules/platform/primitives"
 import { WorkspaceMembersErrorCode } from "./errors/workspace-members.error"
@@ -36,6 +37,7 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: ACCOUNT_DIRECTORY, useValue: auth },
             { provide: EventsService, useValue: mock<EventsService>() },
+            { provide: StaffService, useValue: mock<StaffService>() },
         ],
     }).compile()
     return { service: moduleRef.get(WorkspaceMembersService), auth }

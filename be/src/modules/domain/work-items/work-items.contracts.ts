@@ -44,6 +44,9 @@ export interface Proposal {
     readonly candidates?: ReadonlyArray<ProposalCandidate>
 }
 
+/** A staff id, null when the assignment is cleared, or absent when the caller omitted it. */
+export type OptionalStaffId = string | null | undefined
+
 /** The kind of record a work item is about. */
 export type SubjectType =
     | "lead"
@@ -120,6 +123,10 @@ export interface WorkItem {
     readonly completed_at: string | null
     /** The agent instance that handles it. */
     readonly installation_id: string | null
+    /** Who made the latest decision, by the name stored in the decision log. */
+    readonly decidedBy?: string | null
+    /** The display name of that latest decider. */
+    readonly deciderName?: string | null
 }
 
 /** A work item, or null when none matches. */

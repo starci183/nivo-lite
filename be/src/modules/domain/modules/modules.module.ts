@@ -3,6 +3,7 @@ import type { DynamicModule } from "@nestjs/common"
 import { ModuleContextVersionsModule } from "@modules/domain/module-context-versions"
 import { ModuleInstallationsModule } from "@modules/domain/module-installations"
 import { ModuleSetupMessagesModule } from "@modules/domain/module-setup-messages"
+import { ContextNotesModule } from "@modules/domain/module-context-notes"
 import { ModuleSetupSessionsModule } from "@modules/domain/module-setup-sessions"
 import { ModuleSetupWritesModule } from "@modules/domain/module-setup-writes"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./modules.module-definition"
@@ -34,6 +35,7 @@ export class ModulesModule extends ConfigurableModuleClass {
             ModuleInstallationsModule.register({}),
             ModuleContextVersionsModule.register({}),
             ModuleSetupSessionsModule.register({}),
+            ContextNotesModule.register({}),
             ModuleSetupMessagesModule.register({}),
             ModuleSetupWritesModule.register({}),
         ]

@@ -61,6 +61,8 @@ export class AuthorityRulesService {
                 change.mode,
                 change.limit_vnd,
                 change.required_fields,
+                change.department,
+                change.note,
             ])
         )[0]
         if (saved === undefined) {

@@ -24,27 +24,27 @@ export class HiringBenchType {
     settings!: HiringSettingsType
 
     /** Every job, newest first, with its public link. */
-    @Field(() => [[HiringJobType]])
+    @Field(() => [HiringJobType])
     jobs!: ReadonlyArray<HiringJobType>
 
     /** The newest candidates. */
-    @Field(() => [[HiringCandidateType]])
+    @Field(() => [HiringCandidateType])
     candidates!: ReadonlyArray<HiringCandidateType>
 
     /** The newest interviews. */
-    @Field(() => [[HiringInterviewType]])
+    @Field(() => [HiringInterviewType])
     interviews!: ReadonlyArray<HiringInterviewType>
 
     /** The newest offers. */
-    @Field(() => [[HiringOfferType]])
+    @Field(() => [HiringOfferType])
     offers!: ReadonlyArray<HiringOfferType>
 
     /** The onboarding steps. */
-    @Field(() => [[HiringOnboardingType]])
+    @Field(() => [HiringOnboardingType])
     onboarding!: ReadonlyArray<HiringOnboardingType>
 
     /** The members and their free windows. */
-    @Field(() => [[HiringMemberType]])
+    @Field(() => [HiringMemberType])
     members!: ReadonlyArray<HiringMemberType>
 
     /** Decisions waiting for the manager. */

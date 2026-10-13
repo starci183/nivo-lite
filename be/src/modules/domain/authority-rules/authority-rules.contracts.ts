@@ -32,14 +32,18 @@ export interface AuthorityRuleRecord extends AuthorityRule {
 
 /** One rule a manager saves. */
 export interface RuleChange {
-    /** The action key; its module is the one the registry gives. */
+    /** The action key. */
     readonly action: string
+    /** The module the action belongs to; it must match the registry. */
+    readonly department: string
     /** The mode. */
     readonly mode: RuleMode
     /** The action runs alone strictly below this amount, VND; null means no limit. */
     readonly limit_vnd: number | null
     /** Fields that must be present. */
     readonly required_fields: ReadonlyArray<string>
+    /** A note on the rule; null leaves the stored note as it is. */
+    readonly note: string | null
 }
 
 /** Whose rules a call reads: the workspace; a work context satisfies it structurally. */

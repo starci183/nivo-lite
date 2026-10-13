@@ -4,6 +4,7 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { NivoItemInput } from "./nivo-knowledge.contracts"
 import { NivoKnowledgeService } from "./nivo-knowledge.service"
 import {
+    COUNT_NIVO_FOR_MODULES,
     DELETE_STALE_NIVO_ITEMS,
     SELECT_NIVO_UNEMBEDDED,
     UPDATE_NIVO_VECTORS,
@@ -49,6 +50,24 @@ describe("NivoKnowledgeService", () => {
             const service = await build(tx.em)
 
             await expect(service.upsert([item("a")])).resolves.toEqual({ inserted: 0, updated: 1 })
+        })
+    })
+
+    describe("countFor", () => {
+        it("counts the items of the named modules", async () => {
+            const em = mockEntityManager({ query: [COUNT_NIVO_FOR_MODULES, [{ count: 4 }]] })
+            const service = await build(em)
+
+            await expect(service.countFor(["chatbot", "core"])).resolves.toBe(4)
+
+            expect(em.query).toHaveBeenCalledWith(COUNT_NIVO_FOR_MODULES, [["chatbot", "core"]])
+        })
+
+        it("answers zero when the count comes back empty", async () => {
+            const em = mockEntityManager({ query: [COUNT_NIVO_FOR_MODULES, []] })
+            const service = await build(em)
+
+            await expect(service.countFor(["core"])).resolves.toBe(0)
         })
     })
 

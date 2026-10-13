@@ -48,7 +48,7 @@ export class ApplyToHiringJobInput {
     consent!: boolean
 
     /** The answers. */
-    @Field(() => [[HiringApplyAnswerInput]])
+    @Field(() => [HiringApplyAnswerInput])
     @IsArray()
     @ArrayMaxSize(50)
     @ValidateNested({ each: true })

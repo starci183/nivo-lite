@@ -1,25 +1,19 @@
 "use client"
 
+import { useInventoryBoard } from "@/hooks/inventoryBoard"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { openById, useInventoryRun, useSupplierDrawer } from "@/hooks/inventory"
-import type { InventoryWorkbenchData, SupplierView } from "@/modules/types"
-import { useInventoryCommands } from "@/hooks/inventoryCommands"
-import { writeInventoryCommand } from "@/modules/db/inventory/write-inventory-command"
+import type { SupplierView } from "@/modules/types"
+import { useInventoryCatalogCommands } from "@/hooks/inventoryCommands"
 import { InventorySuppliersBase } from "./component"
 
-/** The workbench data and the workspace. */
-interface InventorySuppliersProps {
-    readonly data: InventoryWorkbenchData
-    readonly workspaceId: string
-}
-
 /** The suppliers tab: the typed location name lives here, the drawer in its hook, the drawing in the pure half. */
-export const InventorySuppliers = (props: InventorySuppliersProps) => {
+export const InventorySuppliers = () => {
+    const board = useInventoryBoard()
     const t = useTranslations("workbenchInventory")
     const run = useInventoryRun()
-    const { data, workspaceId } = props
-    const commands = useInventoryCommands(workspaceId, writeInventoryCommand)
+    const commands = useInventoryCatalogCommands()
     const drawer = useSupplierDrawer(commands)
     const [locationName, setLocationName] = useState("")
     const detailOf = (supplier: SupplierView): string =>
@@ -36,26 +30,26 @@ export const InventorySuppliers = (props: InventorySuppliersProps) => {
     return (
         <InventorySuppliersBase
             props={{
-                addLabel: data.canManage ? t("supplierAdd") : null,
-                editLabel: data.canManage ? t("edit") : null,
+                addLabel: board.canManage ? t("supplierAdd") : null,
+                editLabel: board.canManage ? t("edit") : null,
                 listLabel: t("supplierList"),
                 emptyTitle: t("supplierEmptyTitle"),
                 emptyBody: t("supplierEmptyBody"),
-                rows: data.suppliers.map((supplier) => ({
+                rows: board.suppliers.map((supplier) => ({
                     id: supplier.id,
                     name: supplier.name,
                     channelLabel: t(`channel_${supplier.channel}`),
                     detail: detailOf(supplier),
                     itemsText: t("supplierItems", {
-                        n: data.items.filter((item) => item.supplierId === supplier.id && item.active).length,
+                        n: board.items.filter((item) => item.supplierId === supplier.id && item.active).length,
                     }),
                 })),
                 locationsTitle: t("locationsTitle"),
                 locationsText: t("locationsText", {
-                    list: data.locations.map((location) => location.name).join(" · "),
-                    count: data.locations.length,
+                    list: board.locations.map((location) => location.name).join(" · "),
+                    count: board.locations.length,
                 }),
-                canAddLocation: data.canManage,
+                canAddLocation: board.canManage,
                 locationLabel: t("locationAdd"),
                 locationAddLabel: t("locationAddButton"),
                 locationName,
@@ -65,7 +59,7 @@ export const InventorySuppliers = (props: InventorySuppliersProps) => {
             }}
             on={{
                 add: () => drawer.open(null),
-                edit: openById(data.suppliers, drawer.open),
+                edit: openById(board.suppliers, drawer.open),
                 locationName: setLocationName,
                 addLocation: () =>
                     run.exec(

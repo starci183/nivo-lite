@@ -16,7 +16,7 @@ export class ShiftsWeekType {
     monday!: string
 
     /** Every version of the week, newest first. */
-    @Field(() => [[ShiftsScheduleVersionType]])
+    @Field(() => [ShiftsScheduleVersionType])
     versions!: ReadonlyArray<ShiftsScheduleVersionType>
 
     /** The version people work with; staff see only a published one, without summary and evidence. */
@@ -24,7 +24,7 @@ export class ShiftsWeekType {
     current!: ShiftsScheduleType | null
 
     /** The shifts of the current version. */
-    @Field(() => [[ShiftType]])
+    @Field(() => [ShiftType])
     shifts!: ReadonlyArray<ShiftType>
 
     /** The publish decision of the current version. */
@@ -32,18 +32,18 @@ export class ShiftsWeekType {
     publishItem!: ShiftsWorkItemType | null
 
     /** The check-ins of the shifts (managers only). */
-    @Field(() => [[ShiftsCheckinType]])
+    @Field(() => [ShiftsCheckinType])
     checkins!: ReadonlyArray<ShiftsCheckinType>
 
     /** Approved availability of everyone. */
-    @Field(() => [[ShiftsAvailType]])
+    @Field(() => [ShiftsAvailType])
     approvedAvail!: ReadonlyArray<ShiftsAvailType>
 
     /** Approved leave of everyone. */
-    @Field(() => [[ShiftLeaveType]])
+    @Field(() => [ShiftLeaveType])
     approvedLeaves!: ReadonlyArray<ShiftLeaveType>
 
     /** The work of the day before the week. */
-    @Field(() => [[ShiftsPriorType]])
+    @Field(() => [ShiftsPriorType])
     prior!: ReadonlyArray<ShiftsPriorType>
 }

@@ -1,35 +1,28 @@
 "use client"
 
+import { useInventoryBoard } from "@/hooks/inventoryBoard"
 import { useTranslations } from "next-intl"
 import { openById, useInventoryFormat, useRecipeDrawer } from "@/hooks/inventory"
-import type { InventoryWorkbenchData } from "@/modules/types"
-import { useInventoryCommands } from "@/hooks/inventoryCommands"
-import { writeInventoryCommand } from "@/modules/db/inventory/write-inventory-command"
+import { useInventoryCatalogCommands } from "@/hooks/inventoryCommands"
 import { InventoryRecipesBase } from "./component"
 
-/** The workbench data and the workspace. */
-interface InventoryRecipesProps {
-    readonly data: InventoryWorkbenchData
-    readonly workspaceId: string
-}
-
 /** The recipes tab: the drawer lives in its hook, the drawing in the pure half. */
-export const InventoryRecipes = (props: InventoryRecipesProps) => {
+export const InventoryRecipes = () => {
+    const board = useInventoryBoard()
     const t = useTranslations("workbenchInventory")
     const format = useInventoryFormat()
-    const { data } = props
-    const commands = useInventoryCommands(props.workspaceId, writeInventoryCommand)
-    const drawer = useRecipeDrawer(data.items, commands)
+    const commands = useInventoryCatalogCommands()
+    const drawer = useRecipeDrawer(board.items, commands)
     return (
         <InventoryRecipesBase
             props={{
-                addLabel: data.canManage ? t("recipeAdd") : null,
-                addDisabled: data.items.length === 0,
-                editLabel: data.canManage ? t("edit") : null,
+                addLabel: board.canManage ? t("recipeAdd") : null,
+                addDisabled: board.items.length === 0,
+                editLabel: board.canManage ? t("edit") : null,
                 listLabel: t("recipeList"),
                 emptyTitle: t("recipeEmptyTitle"),
                 emptyBody: t("recipeEmptyBody"),
-                rows: data.recipes.map((recipe) => ({
+                rows: board.recipes.map((recipe) => ({
                     id: recipe.id,
                     title: t("recipeRowTitle", { name: recipe.name }),
                     detail: recipe.lines
@@ -42,7 +35,7 @@ export const InventoryRecipes = (props: InventoryRecipesProps) => {
             }}
             on={{
                 add: () => drawer.open(null),
-                edit: openById(data.recipes, drawer.open),
+                edit: openById(board.recipes, drawer.open),
                 recipeName: drawer.on.name,
                 recipeAliases: drawer.on.aliases,
                 recipeItem: drawer.on.item,

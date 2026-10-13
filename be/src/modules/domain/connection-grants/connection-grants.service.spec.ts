@@ -2,6 +2,7 @@ import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
+import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ConnectionGrantsService } from "./connection-grants.service"
@@ -41,11 +42,22 @@ const build = async (em: MockEntityManager, found: ReadonlyArray<ConnectionRecor
     connections.authorize.mockResolvedValue({ role: "owner", displayName: "Lan" })
     connections.findMany.mockResolvedValue(found)
     connections.get.mockResolvedValue(connection())
+    connections.list.mockResolvedValue(found)
+    const members = mock<WorkspaceMembersService>()
+    members.require.mockResolvedValue({
+        userId: "owner-1",
+        workspaceId: "ws-1",
+        role: "owner",
+        staffId: null,
+        displayName: "Lan",
+        status: "active",
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             ConnectionGrantsService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em as MockEntityManager },
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
             { provide: ConnectionsService, useValue: connections },
+            { provide: WorkspaceMembersService, useValue: members },
         ],
     }).compile()
     return { service: moduleRef.get(ConnectionGrantsService), tx, connections }
@@ -63,6 +75,47 @@ const lookups = (grants: ReadonlyArray<{ agent_id: string; connection_id: string
     })
 
 describe("ConnectionGrantsService", () => {
+    describe("candidates", () => {
+        const agentId = "11111111-1111-4111-8111-111111111111"
+
+        it("lists every grantable connection with the access the agent already has", async () => {
+            const em = mockEntityManager({
+                query: [
+                    [FIND_AGENTS, [AGENT]],
+                    [FIND_AGENT_GRANTS, [{ agent_id: agentId, connection_id: "c1", access: "ask" }]],
+                ],
+            })
+            const { service, connections } = await build(em, [
+                connection({ id: "c1", meta: { bot_username: "shop_bot" } }),
+                connection({ id: "c2", provider: "sepay", meta: { account_masked: "****1234" } }),
+                connection({ id: "c3", status: "disconnected" }),
+            ])
+
+            await expect(service.candidates("owner-1", "ws-1", agentId)).resolves.toEqual([
+                {
+                    id: "c1",
+                    name: "Shop bot",
+                    provider: "telegram",
+                    botUsername: "shop_bot",
+                    accountMasked: null,
+                    status: "connected",
+                    purpose: "inbound_chat",
+                    access: "ask",
+                },
+            ])
+            expect(connections.list).toHaveBeenCalledWith("ws-1")
+        })
+
+        it("refuses an agent that is not in the workspace", async () => {
+            const em = mockEntityManager({ query: [FIND_AGENTS, []] })
+            const { service } = await build(em)
+
+            await expect(service.candidates("owner-1", "ws-1", agentId)).rejects.toMatchObject({
+                code: ConnectionsErrorCode.NotFound,
+            })
+        })
+    })
+
     describe("setGrant", () => {
         it("gives an agent access, writes the grant with its purpose and logs who changed what", async () => {
             const { service, tx, connections } = await build(lookups())
@@ -88,7 +141,7 @@ describe("ConnectionGrantsService", () => {
         it("starts an unknown level at ask", async () => {
             const { service, tx } = await build(lookups())
 
-            await service.setGrant(actor, "c1", "a1", "bogus" as never)
+            await service.setGrant(actor, "c1", "a1", "bogus")
 
             expect(tx.em.query).toHaveBeenCalledWith(UPSERT_GRANT, ["a1", "c1", "ws-1", "inbound_chat", "ask"])
         })

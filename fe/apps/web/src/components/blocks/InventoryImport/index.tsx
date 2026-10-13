@@ -1,23 +1,19 @@
 "use client"
 
+import { useInventoryBoard } from "@/hooks/inventoryBoard"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useInventoryRun } from "@/hooks/inventory"
-import { TEMPLATE_CHOICES, starterOf } from "@/hooks/inventoryStarter"
-import { useInventoryCommands } from "@/hooks/inventoryCommands"
-import { writeInventoryCommand } from "@/modules/db/inventory/write-inventory-command"
+import { useInventoryStockCommands } from "@/hooks/inventoryCommands"
+import { useInventoryTemplates } from "@/hooks/inventoryStarter"
 import { InventoryImportBase } from "./component"
 
-/** Whether the person may import, and the workspace. */
-interface InventoryImportProps {
-    readonly canManage: boolean
-    readonly workspaceId: string
-}
-
 /** The import tab: the pasted text lives here, the drawing in the pure half. */
-export const InventoryImport = (props: InventoryImportProps) => {
+export const InventoryImport = () => {
+    const board = useInventoryBoard()
     const t = useTranslations("workbenchInventory")
-    const commands = useInventoryCommands(props.workspaceId, writeInventoryCommand)
+    const commands = useInventoryStockCommands()
+    const { templates } = useInventoryTemplates()
     const run = useInventoryRun()
     const [text, setText] = useState("")
     const paste = () =>
@@ -33,18 +29,15 @@ export const InventoryImport = (props: InventoryImportProps) => {
                 })
             },
         )
-    const load = (key: string) => {
-        const starter = starterOf(key)
-        if (starter === null) return
+    const load = (key: string) =>
         run.exec(
-            () => commands.applyStarter(starter),
+            () => commands.applyStarter(key),
             (result) => t("starterDone", { items: result.items, suppliers: result.suppliers, recipes: result.recipes }),
         )
-    }
     return (
         <InventoryImportBase
             props={{
-                allowed: props.canManage,
+                allowed: board.canManage,
                 deniedTitle: t("importDeniedTitle"),
                 deniedBody: t("importDeniedBody"),
                 pasteTitle: t("importPasteTitle"),
@@ -56,7 +49,7 @@ export const InventoryImport = (props: InventoryImportProps) => {
                 startTitle: t("starterTitle"),
                 startFooter: t("starterFooter"),
                 loadLabel: t("starterLoad"),
-                templates: TEMPLATE_CHOICES,
+                templates,
                 isPending: run.isPending,
                 error: run.error,
                 notice: run.notice,

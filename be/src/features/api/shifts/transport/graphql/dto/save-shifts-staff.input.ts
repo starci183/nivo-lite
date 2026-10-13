@@ -28,7 +28,7 @@ export class SaveShiftsStaffInput {
     name!: string
 
     /** The positions they can work. */
-    @Field(() => [[ID]])
+    @Field(() => [ID])
     @IsArray()
     @ArrayMaxSize(30)
     @IsUUID("4", { each: true })

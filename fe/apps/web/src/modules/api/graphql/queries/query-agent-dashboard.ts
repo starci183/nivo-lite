@@ -4,10 +4,10 @@ import { createAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams } from "../types"
 import type { Query, QueryAgentDashboardArgs } from "../__generated__/schema"
 
-/** The dashboard scope accepted by the back end. */
+/** Generated input of the agentDashboard query. */
 export type QueryAgentDashboardRequest = QueryAgentDashboardArgs["input"]
 
-/** The dashboard regions returned by the back end contract. */
+/** Generated response of the agentDashboard query. */
 type QueryAgentDashboardResponse = Pick<Query, "agentDashboard">
 
 type Document = TypedDocumentNode<QueryAgentDashboardResponse, InputVariables<QueryAgentDashboardRequest>>
@@ -17,73 +17,73 @@ const query1: Document = gql`
         agentDashboard(input: $input) {
             agent {
                 id
-                name
                 mode
-            }
-            waiting {
-                ok
-                data {
-                    total
-                    items {
-                        id
-                        title
-                        action
-                        customer
-                        at
-                        leadId
-                        resultHref
-                    }
-                }
-            }
-            done {
-                ok
-                data {
-                    count
-                    items {
-                        id
-                        title
-                        action
-                        customer
-                        at
-                        leadId
-                        resultHref
-                    }
-                }
+                name
             }
             connections {
-                ok
                 data {
+                    access
                     id
                     name
                     provider
-                    status
-                    access
                     purpose
+                    status
                 }
+                ok
+            }
+            done {
+                data {
+                    count
+                    items {
+                        action
+                        at
+                        customer
+                        id
+                        leadId
+                        resultHref
+                        title
+                    }
+                }
+                ok
             }
             knowledge {
-                ok
                 data {
                     audience
                     documents {
-                        public
                         internal
+                        public
                     }
                     facts {
-                        public
                         internal
+                        public
                         restricted
                     }
                     gaps {
-                        openCount
                         items {
-                            id
-                            question
                             count
+                            id
                             lastSeenAt
+                            question
                         }
+                        openCount
                     }
                 }
+                ok
+            }
+            waiting {
+                data {
+                    items {
+                        action
+                        at
+                        customer
+                        id
+                        leadId
+                        resultHref
+                        title
+                    }
+                    total
+                }
+                ok
             }
         }
     }
@@ -93,19 +93,23 @@ enum QueryAgentDashboard {
     Query1 = "query1",
 }
 
-const queryMap: Record<QueryAgentDashboard, Document> = { [QueryAgentDashboard.Query1]: query1 }
+const queryMap: Record<QueryAgentDashboard, Document> = {
+    [QueryAgentDashboard.Query1]: query1,
+}
 
+/** Apollo parameters for the agentDashboard query. */
 type QueryAgentDashboardParams = QueryParams<QueryAgentDashboard, QueryAgentDashboardRequest> & {
     request: QueryAgentDashboardRequest
 }
 
-/** Reads the agent dashboard without moving data loading into the server page. */
+/** Runs the workspace-scoped agentDashboard query through the authenticated GraphQL client. */
 export const queryAgentDashboard = async ({
     query = QueryAgentDashboard.Query1,
     request,
     signal,
+    headers,
 }: QueryAgentDashboardParams) => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient({ signal, headers })
     return apollo.query({
         query: queryMap[query],
         fetchPolicy: "no-cache",

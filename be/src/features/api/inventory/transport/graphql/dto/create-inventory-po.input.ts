@@ -19,7 +19,7 @@ export class CreateInventoryPoInput {
     expectedAt!: string
 
     /** The ordered items. */
-    @Field(() => [[CreatePoLineInput]])
+    @Field(() => [CreatePoLineInput])
     @IsArray()
     @ArrayMaxSize(200)
     @ValidateNested({ each: true })

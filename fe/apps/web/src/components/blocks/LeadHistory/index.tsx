@@ -2,20 +2,21 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
-import { ageOf } from "@/hooks/leads"
+import { ageOf, useLeadJourney } from "@/hooks/leads"
 import { eventIconOf, eventKindKeyOf } from "@/hooks/leadJourney"
-import { loadingSlot, useSlotLabels } from "@/hooks/slot"
+import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import type { EventRecord, LeadJourney, DataSlot } from "@/modules/types"
 import { LeadHistoryBase } from "./component"
 import type { HistoryEntryView, HistoryView } from "./component"
 
 /** The lead whose history is drawn; a null detail draws the loading section. */
 interface LeadHistoryProps {
-    readonly detail: LeadJourney | null
+    readonly leadId?: string
 }
 
 /** The history section: which entries show their evidence lives here, the drawing in the pure half. */
 export const LeadHistory = (props: LeadHistoryProps) => {
+    const query = useLeadJourney(props.leadId)
     const t = useTranslations("lead")
     const slotLabels = useSlotLabels()
     const format = useFormatter()
@@ -47,7 +48,7 @@ export const LeadHistory = (props: LeadHistoryProps) => {
         const events = [...detail.events].sort((a, b) => a.created_at.localeCompare(b.created_at))
         return { meta: t("eventsCount", { count: events.length }), entries: events.map(entryOf) }
     }
-    const slot: DataSlot<HistoryView> = props.detail === null ? loadingSlot() : { items: viewOf(props.detail) }
+    const slot: DataSlot<HistoryView> = mapSlot(query.slot, viewOf)
 
     return (
         <LeadHistoryBase
