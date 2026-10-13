@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
-import { Landing } from "@/features/landing"
+import { LandingPage } from "@/features/pages/LandingPage"
 
 /** The document title and description of the landing page. */
 export const generateMetadata = async (): Promise<Metadata> => {
@@ -9,6 +9,6 @@ export const generateMetadata = async (): Promise<Metadata> => {
 }
 
 /** Public landing page (default route). */
-const Page = () => <Landing />
+const Page = () => <LandingPage />
 
 export default Page

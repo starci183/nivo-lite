@@ -9,7 +9,7 @@ import WorkbenchContent from "@/features/pages/ContentWorkbenchPage"
 import { LeadGenWorkbenchPage as WorkbenchLeadGen } from "@/features/pages/LeadGenWorkbenchPage"
 import { SalesWorkbenchPage as WorkbenchSales } from "@/features/pages/SalesWorkbenchPage"
 import { VideoWorkbenchPage as WorkbenchVideo } from "@/features/pages/VideoWorkbenchPage"
-import WorkbenchAccounting from "@/features/workbench-accounting"
+import { AccountingWorkbench as WorkbenchAccounting } from "@/features/pages/AccountingWorkbench"
 import { ChatbotWorkbench as WorkbenchChatbot } from "@/features/pages/ChatbotWorkbench"
 
 /** The document title of the workbench tab. */
