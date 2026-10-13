@@ -1,7 +1,5 @@
-import type { Query, QueryPublicBookingTimesArgs } from "../../__generated__/schema"
+import type { PublicBookingTimesQueryVariables } from "../../__generated__/graphql"
+import type { WireInput } from "../../types"
 
 /** The input of the `publicBookingTimes` query. */
-export type QueryPublicBookingTimesRequest = QueryPublicBookingTimesArgs["input"]
-
-/** The response of the `publicBookingTimes` query. */
-export type QueryPublicBookingTimesResponse = Pick<Query, "publicBookingTimes">
+export type QueryPublicBookingTimesRequest = WireInput<PublicBookingTimesQueryVariables["input"]>

@@ -45,7 +45,7 @@ export type {
     BookingHoursView,
     BookingView,
     PublicBookingAnswer,
-    PublicBookingPage,
+    PublicBookingPageData,
 } from "./booking"
 export type { ConsoleIconName, ConsoleNavItem, ConsolePending, ConsoleSession, ConsoleWorkspace } from "./console"
 export type {
@@ -299,3 +299,5 @@ export type {
     AccountingQuestionCardView,
     AccountingQuestionsView,
 } from "./accounting-question-card"
+export type { ProgramCopy, TierErrorView } from "./loyalty-program"
+export type { GraphQLResponse } from "./outcome"

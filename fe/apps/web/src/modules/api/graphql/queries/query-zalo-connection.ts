@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryZaloConnectionArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { ZaloConnectionQuery, ZaloConnectionQueryVariables } from "../__generated__/graphql"
 
 /** The variables of the `zaloConnection` query. */
-export type QueryZaloConnectionRequest = QueryZaloConnectionArgs["input"]
+type QueryZaloConnectionRequest = WireInput<ZaloConnectionQueryVariables["input"]>
 
 /** The response of the `zaloConnection` query: the typed payload straight from the back end contract. */
-type QueryZaloConnectionResponse = Pick<Query, "zaloConnection">
+type QueryZaloConnectionResponse = ZaloConnectionQuery
 
 const query1: TypedDocumentNode<QueryZaloConnectionResponse, InputVariables<QueryZaloConnectionRequest>> = gql`
     query ZaloConnection($input: GetZaloConnectionInput!) {

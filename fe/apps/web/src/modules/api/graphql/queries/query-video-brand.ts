@@ -2,10 +2,10 @@ import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
-import type { Query } from "../__generated__/schema"
+import type { VideoBrandQuery } from "../__generated__/graphql"
 
 /** The generated payload of the `videoBrand` query. */
-type QueryVideoBrandResponse = Pick<Query, "videoBrand">
+type QueryVideoBrandResponse = VideoBrandQuery
 
 type Document = TypedDocumentNode<QueryVideoBrandResponse>
 

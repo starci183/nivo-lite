@@ -6,6 +6,13 @@ export const sessionAccessToken = async (): Promise<string | undefined> => {
     return data.session?.access_token
 }
 
+/** The signed-in person of the browser session (id and e-mail), or `null` when signed out. */
+export const sessionUser = async (): Promise<{ readonly id: string; readonly email: string } | null> => {
+    const { data } = await authClient().auth.getSession()
+    const user = data.session?.user
+    return user === undefined ? null : { id: user.id, email: user.email ?? "" }
+}
+
 let inFlight: Promise<string | undefined> | undefined
 
 /** Refreshes the session and answers the new access token (`undefined` when it cannot be refreshed). Overlapping calls share one refresh. */

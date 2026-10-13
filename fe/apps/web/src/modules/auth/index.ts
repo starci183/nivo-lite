@@ -10,7 +10,6 @@ export {
     startOAuth,
     updatePassword,
 } from "./actions"
-export { authClient } from "./client"
 export { exchangeAuthCode, refreshSession, verifyEmailLink } from "./server"
-export { sessionAccessToken, renewSessionToken, subscribeToAuthChange } from "./session"
+export { sessionAccessToken, sessionUser, renewSessionToken, subscribeToAuthChange } from "./session"
 export type { PasswordChange } from "./actions"
