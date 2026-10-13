@@ -10,8 +10,13 @@ const DEFAULT_SITE = "https://nivo.vn"
 export class HiringLinksService {
     constructor(@InjectHiringOptions() private readonly options: HiringOptions) {}
 
-    private origin(): string {
+    /** The origin links are built with. */
+    siteOrigin(): string {
         return this.options.siteUrl ?? DEFAULT_SITE
+    }
+
+    private origin(): string {
+        return this.siteOrigin()
     }
 
     /** The page of a job. */

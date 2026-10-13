@@ -16,6 +16,7 @@ import { HiringScreeningService } from "./hiring-screening.service"
 import { HiringSettingsService } from "./hiring-settings.service"
 import { HiringTextService } from "./hiring-text.service"
 import { HiringTickService } from "./hiring-tick.service"
+import { HiringWorkbenchService } from "./hiring-workbench.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./hiring.module-definition"
 import { UnavailableCandidateChatService } from "./unavailable-candidate-chat.service"
 import { UnavailableCvStorageService } from "./unavailable-cv-storage.service"
@@ -46,6 +47,7 @@ export class HiringModule extends ConfigurableModuleClass {
                 HiringChatService,
                 HiringTickService,
                 HiringPerformersService,
+                HiringWorkbenchService,
             ],
             exports: [
                 CandidateChat,
@@ -59,6 +61,7 @@ export class HiringModule extends ConfigurableModuleClass {
                 HiringPublicService,
                 HiringChatService,
                 HiringTickService,
+                HiringWorkbenchService,
             ],
         }
     }
