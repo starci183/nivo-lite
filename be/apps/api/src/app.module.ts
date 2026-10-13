@@ -4,6 +4,7 @@ import { APP_FILTER, APP_GUARD } from "@nestjs/core"
 import { AgentToolsHttpModule } from "@features/api/agent-tools"
 import { AgentsHttpModule } from "@features/api/agents"
 import { DecisionsHttpModule } from "@features/api/decisions"
+import { RunDecisionsQueueModule } from "@features/jobs/run-decisions"
 import { GenerateWithAgentQueueModule } from "@features/jobs/generate-with-agent"
 import { SyncAgentsQueueModule } from "@features/jobs/sync-agents"
 import { LeadsHttpModule } from "@features/api/leads"
@@ -347,6 +348,7 @@ export class AppModule {
                 OfficeCommandCandidatesModule.register({ isGlobal: true, reader: DeepseekClient }),
                 SyncAgentsQueueModule,
                 GenerateWithAgentQueueModule,
+                RunDecisionsQueueModule,
                 AgentsHttpModule,
                 AgentToolsHttpModule,
                 DecisionsHttpModule,

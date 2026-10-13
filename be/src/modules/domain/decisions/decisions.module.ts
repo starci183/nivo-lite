@@ -7,6 +7,7 @@ import { AuthorityRulesModule } from "@modules/domain/authority-rules"
 import { MessagesModule } from "@modules/domain/messages"
 import { ResponsibilitiesModule } from "@modules/domain/responsibilities"
 import { WorkItemsModule } from "@modules/domain/work-items"
+import { DecisionJobsService } from "./decision-jobs.service"
 import { ApprovalRequesterService } from "./approval-requester.service"
 import { CommandBusService } from "./command-bus.service"
 import { CommandPlannerService } from "./command-planner.service"
@@ -63,6 +64,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 { provide: OUTBOUND_ACCESS_GATE, useClass: options.ports.outboundAccessGate },
                 ApprovalRequesterService,
                 CommandBusService,
+                DecisionJobsService,
                 CommandPlannerService,
                 DecisionsService,
                 EvidenceService,
@@ -80,6 +82,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 WORK_PERFORMER_REGISTRY,
                 ApprovalRequesterService,
                 CommandBusService,
+                DecisionJobsService,
                 DecisionsService,
                 EvidenceService,
                 ModuleCatalogService,

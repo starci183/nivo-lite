@@ -3,6 +3,7 @@ import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./office-command-candidates.module-definition"
 import { COMMAND_READER } from "./office-command-candidates.decorators"
 import { OfficeCommandService } from "./office-command.service"
+import { DecisionsQueueService } from "./decisions-queue.service"
 import { OfficeThreadService } from "./office-thread.service"
 
 @Module({})
@@ -19,10 +20,11 @@ export class OfficeCommandCandidatesModule extends ConfigurableModuleClass {
             providers: [
                 ...(base.providers ?? []),
                 { provide: COMMAND_READER, useExisting: options.reader },
+                DecisionsQueueService,
                 OfficeCommandService,
                 OfficeThreadService,
             ],
-            exports: [OfficeCommandService, OfficeThreadService],
+            exports: [DecisionsQueueService, OfficeCommandService, OfficeThreadService],
         }
     }
 }

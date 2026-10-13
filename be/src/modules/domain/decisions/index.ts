@@ -55,3 +55,4 @@ export { UnboundInboundEventStatusService } from "./unbound-inbound-event-status
 export { UnboundLeadGenFlowService } from "./unbound-lead-gen-flow.service"
 export { UnboundOutboundAccessGateService } from "./unbound-outbound-access-gate.service"
 export { UnboundPaymentReceiptsService } from "./unbound-payment-receipts.service"
+export { DecisionJobsService } from "./decision-jobs.service"

@@ -22,3 +22,4 @@ export type {
     ProposeRequest,
     ShownRow,
 } from "./office-command-candidates.contracts"
+export { DecisionsQueueService } from "./decisions-queue.service"
