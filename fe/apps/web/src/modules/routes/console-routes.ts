@@ -10,6 +10,7 @@ export const CONSOLE_ROUTES = {
     authority: "/authority",
     decisions: "/decisions",
     connections: "/connections",
+    team: "/team",
     privacy: "/privacy",
     terms: "/terms",
     modules: "/modules",
@@ -25,6 +26,16 @@ export const agentChatHref = (agentId: string, tab?: string): string =>
 
 /** The responsibilities board filtered by one query string such as `status=open`. */
 export const responsibilitiesHref = (query: string): string => `${CONSOLE_ROUTES.responsibilities}?${query}`
+
+/** The workbench of one module, opened on one work item. */
+export const workItemHref = (module: string, workItemId: string): string =>
+    `/agents/${module}/workbench?focus=${workItemId}`
+
+/** The team page opened on the invite form of one staff member. */
+export const teamInviteHref = (staffId: string): string => `/team?invite_staff=${encodeURIComponent(staffId)}`
+
+/** The page that lists the agents to add. */
+export const AGENTS_ROUTE = "/agents"
 
 /** The setup page of one module agent. */
 export const agentSetupHref = (agentId: string): string => `${CONSOLE_ROUTES.modules}/${agentId}`

@@ -1,36 +1,42 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { ALL_CATEGORIES, useCatalogView, useInstallAgent } from "@/hooks/modules"
-import { installAgent } from "@/lib/module-actions"
+import { useCatalogEntries, useInstallAgent } from "@/hooks/installations"
+import { isManager, useMember } from "@/hooks/member"
+import { ALL_CATEGORIES, useCatalogView } from "@/hooks/modules"
 import { AgentCatalogBase } from "./component"
-import type { AgentCatalogBoardCard } from "./component"
 
-/** One agent of the catalogue as the page prepared it, in the reader language. */
-type AgentCatalogItem = {
-    readonly key: string
-    readonly categoryKey: string
-    /** The name, description and points folded for matching, in both languages. */
-    readonly searchText: string
-    readonly installed: boolean
-    readonly isEarly: boolean
-    readonly card: AgentCatalogBoardCard["card"]
-}
-
-/** What the catalogue page hands the block. */
-export type AgentCatalogProps = {
-    readonly items: ReadonlyArray<AgentCatalogItem>
-    readonly categories: ReadonlyArray<{ readonly key: string; readonly label: string }>
-    /** The status is not known yet: the filters wait and the cards show skeleton statuses. */
-    readonly isLoading?: boolean
-}
-
-/** The connected agent catalogue: search, category and status filters kept in the URL, and the install that opens the new agent. */
-export const AgentCatalog = (props: AgentCatalogProps) => {
+/** The connected agent catalogue: reads the installed agents in the browser; search, category and status filters kept in the URL; install opens the new agent. */
+export const AgentCatalog = () => {
     const t = useTranslations("modulesCore")
-    const isLoading = props.isLoading === true
-    const view = useCatalogView(props.items, props.categories, isLoading)
-    const installing = useInstallAgent(installAgent)
+    const member = useMember()
+    const { entries, categories, slot } = useCatalogEntries()
+    const installing = useInstallAgent()
+    const isLoading = slot.isLoading === true
+    const items = entries.map((entry) => ({
+        key: entry.key,
+        categoryKey: entry.categoryKey,
+        installed: entry.installed,
+        isEarly: entry.isEarly,
+        searchText: entry.searchText,
+        card: {
+            name: entry.name,
+            description: entry.description,
+            points: entry.points,
+            mascot: entry.mascot,
+            isEarly: entry.isEarly,
+            earlyLabel: t("earlyBadge"),
+            earlyHint: t("earlyHint"),
+            statusLabel: t(`status_${entry.status}`),
+            statusTone: entry.statusTone,
+            isLoading,
+            openHref: entry.openHref,
+            openLabel: t("openModule"),
+            canInstall: isManager(member),
+            installLabel: t("install"),
+        },
+    }))
+    const view = useCatalogView(items, categories, isLoading)
     return (
         <AgentCatalogBase
             props={{
@@ -41,20 +47,20 @@ export const AgentCatalog = (props: AgentCatalogProps) => {
                 categoryLabel: t("filterCategory"),
                 categoryOptions: [
                     { id: ALL_CATEGORIES, label: t("filterCategoryAll") },
-                    ...props.categories.map((category) => ({ id: category.key, label: category.label })),
+                    ...categories.map((category) => ({ id: category.key, label: category.label })),
                 ],
                 category: view.filters.category,
                 statusLabel: t("filterStatus"),
                 statusOptions: view.statusKeys.map((filter) => ({ value: filter, label: t(`filterStatus_${filter}`) })),
                 status: view.filters.status,
-                resultCount: t("resultCount", { count: view.shownCount, total: props.items.length }),
+                resultCount: t("resultCount", { count: view.shownCount, total: items.length }),
                 groups: view.groups,
                 emptyTitle: t("emptyTitle"),
                 emptyHint: t("emptyHint"),
                 emptyAction: view.filters.isFiltered ? t("emptyAction") : undefined,
-                errorTitle: t("installFailed"),
-                error: installing.refusal === "" ? undefined : installing.refusal,
-                busyKey: installing.busyKey === "" ? null : installing.busyKey,
+                errorTitle: t("catalogTitle"),
+                error: slot.isError === true ? t("loadFailed") : undefined,
+                busyKey: installing.busyKey,
                 isLoading,
             }}
             on={{
@@ -62,7 +68,10 @@ export const AgentCatalog = (props: AgentCatalogProps) => {
                 category: view.filters.setCategory,
                 status: view.filters.setStatus,
                 clear: view.filters.clear,
-                install: installing.install,
+                install: (key) => {
+                    const entry = entries.find((candidate) => candidate.key === key)
+                    if (entry !== undefined) void installing.install(entry.key)
+                },
             }}
         />
     )

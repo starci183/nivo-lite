@@ -398,7 +398,9 @@
     "approveSend": "Approve & send",
     "reject": "Reject",
     "openLead": "Open lead",
-    "stillWaiting": "The draft is still waiting for a decision."
+    "stillWaiting": "The draft is still waiting for a decision.",
+    "decisionApproved": "Draft approved and sent",
+    "decisionRejected": "Draft rejected"
   },
   "auth": {
     "emailLabel": "Email",
@@ -512,7 +514,10 @@
     "readOnlyBody": "Only the owner and managers can change authority. You can read it here.",
     "loading": "Loading authority",
     "loadFailTitle": "Could not load authority",
-    "loadFailBody": "The authority settings are not available yet. Try again in a moment."
+    "loadFailBody": "The authority settings are not available yet. Try again in a moment.",
+    "errNumber": "Enter a whole number, zero or more.",
+    "staffReadOnly": "Staff are listed here. Adding or deactivating staff is not available yet.",
+    "staffInvitePerson": "Invite {name} as a member"
   },
   "automations": {
     "crumbLabel": "Breadcrumb",
@@ -4909,7 +4914,19 @@
     "k_notesApprove": "Approve and apply",
     "k_notesApproving": "Applying...",
     "k_notesApplied": "Applied as version {version}.",
-    "k_notesFailed": "Could not do that"
+    "k_notesFailed": "Could not do that",
+    "req_customer_chat": "a customer chat channel (website, Telegram or Zalo)",
+    "req_customer_messaging": "a way to message customers (Telegram or Zalo)",
+    "req_email": "outgoing email",
+    "req_calendar": "a Google connection (calendar)",
+    "req_staff_directory": "a staff list",
+    "req_social_publish": "social publishing",
+    "req_video_render": "video rendering",
+    "req_conn_google": "a Google connection",
+    "req_conn_smtp": "outgoing email",
+    "req_conn_webhook": "an n8n / webhook connection",
+    "req_conn_telegram": "a Telegram connection",
+    "req_conn_zalo_oa": "a Zalo OA connection"
   },
   "modules": {
     "eyebrow": "AI WORKFORCE",
@@ -5088,7 +5105,14 @@
     "autoHelp": "Jobs that run by themselves for this agent. Switch each one on or off.",
     "autoLoadFailed": "Could not load automations.",
     "autoRetry": "Try again",
-    "autoLoading": "Loading..."
+    "autoLoading": "Loading...",
+    "installed": "Agent installed.",
+    "instanceCreated": "New agent created.",
+    "loadFailed": "Could not load your agents.",
+    "notFound": "This agent could not be found.",
+    "loyaltyProgramTitle": "Loyalty program",
+    "loyaltyProgramText": "The program rules and members are managed on the agent's workbench.",
+    "loyaltyProgramOpen": "Open the workbench"
   },
   "office": {
     "crumbLabel": "Breadcrumb",
@@ -5298,7 +5322,11 @@
     "cmdNeedOrder": "the order (for example #DH-1)",
     "cmdNeedLead": "the customer's name",
     "cmdNeedInvoice": "the invoice",
-    "cmdNeedOther": "the {field}"
+    "cmdNeedOther": "the {field}",
+    "retry": "Try again",
+    "loadEarlier": "Show earlier messages",
+    "approvalSaved": "Decision saved",
+    "rejectionSaved": "Rejected"
   },
   "onboarding": {
     "created": "Workspace created.",
@@ -5704,7 +5732,10 @@
     "menuDraftHuman": "Drafts it for your approval",
     "open": "Open",
     "more": "More",
-    "drafting": "Drafting"
+    "drafting": "Drafting",
+    "draftQueued": "Drafting started",
+    "draftReady": "The draft is ready for your approval",
+    "draftFailed": "The draft could not be written."
   },
   "shell": {
     "navOverview": "Overview",

@@ -1,1 +1,2 @@
-export { useAgentDashboard } from "./useAgentDashboard"
+export { useAgentDashboardFrame } from "./useAgentDashboardFrame"
+export { useAgentDashboardView } from "./useAgentDashboardView"

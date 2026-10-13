@@ -1,7 +1,7 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { useAgentDashboard } from "@/hooks/agentDashboard"
+import { useAgentDashboardView } from "@/hooks/agentDashboard"
 import { decisionHref } from "@/hooks/sales"
 import { salesFiguresOf, withSalesWaiting } from "@/hooks/salesfigures"
 import { useSalesWorkbench } from "@/hooks/salesworkbench"
@@ -35,7 +35,7 @@ export const SalesWorkbench = (props: SalesWorkbenchProps) => {
     const router = navigation.useRouter()
     const pathname = navigation.usePathname()
     const workbench = useSalesWorkbench()
-    const dashboardQuery = useAgentDashboard(
+    const dashboardQuery = useAgentDashboardView(
         { module: "sales" },
         {
             decisionHref: (item) => decisionHref(item.id),

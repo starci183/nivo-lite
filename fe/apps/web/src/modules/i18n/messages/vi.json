@@ -398,7 +398,9 @@
     "approveSend": "Duyệt và gửi",
     "reject": "Từ chối",
     "openLead": "Mở khách hàng",
-    "stillWaiting": "Bản nháp vẫn đang chờ quyết định."
+    "stillWaiting": "Bản nháp vẫn đang chờ quyết định.",
+    "decisionApproved": "Đã duyệt và gửi bản nháp",
+    "decisionRejected": "Đã từ chối bản nháp"
   },
   "auth": {
     "emailLabel": "Email",
@@ -512,7 +514,10 @@
     "readOnlyBody": "Chỉ chủ sở hữu và quản lý mới sửa được Giao quyền. Bạn xem được nội dung ở đây.",
     "loading": "Đang tải phần giao quyền",
     "loadFailTitle": "Chưa tải được phần giao quyền",
-    "loadFailBody": "Cài đặt giao quyền chưa sẵn sàng. Hãy thử lại sau ít phút."
+    "loadFailBody": "Cài đặt giao quyền chưa sẵn sàng. Hãy thử lại sau ít phút.",
+    "errNumber": "Nhập một số nguyên từ 0 trở lên.",
+    "staffReadOnly": "Danh sách nhân viên. Thêm hoặc ngừng nhân viên chưa dùng được.",
+    "staffInvitePerson": "Mời {name} làm thành viên"
   },
   "automations": {
     "crumbLabel": "Đường dẫn",
@@ -4909,7 +4914,19 @@
     "k_notesApprove": "Duyệt và áp dụng",
     "k_notesApproving": "Đang áp dụng...",
     "k_notesApplied": "Đã áp dụng thành phiên bản {version}.",
-    "k_notesFailed": "Chưa làm được"
+    "k_notesFailed": "Chưa làm được",
+    "req_customer_chat": "một kênh chat với khách (website, Telegram hoặc Zalo)",
+    "req_customer_messaging": "một kênh nhắn tin cho khách (Telegram hoặc Zalo)",
+    "req_email": "Email gửi đi",
+    "req_calendar": "kết nối Google (lịch)",
+    "req_staff_directory": "danh sách nhân viên",
+    "req_social_publish": "đăng bài mạng xã hội",
+    "req_video_render": "dựng video",
+    "req_conn_google": "kết nối Google",
+    "req_conn_smtp": "Email gửi đi",
+    "req_conn_webhook": "kết nối n8n / webhook",
+    "req_conn_telegram": "kết nối Telegram",
+    "req_conn_zalo_oa": "kết nối Zalo OA"
   },
   "modules": {
     "eyebrow": "ĐỘI NGŨ AI",
@@ -5088,7 +5105,14 @@
     "autoHelp": "Những việc tự chạy cho agent này. Bạn bật hoặc tắt từng việc.",
     "autoLoadFailed": "Chưa tải được tự động hoá.",
     "autoRetry": "Thử lại",
-    "autoLoading": "Đang tải..."
+    "autoLoading": "Đang tải...",
+    "installed": "Đã cài đặt agent.",
+    "instanceCreated": "Đã tạo agent mới.",
+    "loadFailed": "Không tải được danh sách agent.",
+    "notFound": "Không tìm thấy agent này.",
+    "loyaltyProgramTitle": "Chương trình khách hàng thân thiết",
+    "loyaltyProgramText": "Quy tắc và thành viên của chương trình được quản lý trên bàn làm việc của agent.",
+    "loyaltyProgramOpen": "Mở bàn làm việc"
   },
   "office": {
     "crumbLabel": "Đường dẫn",
@@ -5298,7 +5322,11 @@
     "cmdNeedOrder": "mã đơn hàng (ví dụ #DH-1)",
     "cmdNeedLead": "tên khách hàng",
     "cmdNeedInvoice": "hóa đơn",
-    "cmdNeedOther": "{field}"
+    "cmdNeedOther": "{field}",
+    "retry": "Thử lại",
+    "loadEarlier": "Xem tin nhắn cũ hơn",
+    "approvalSaved": "Đã lưu quyết định",
+    "rejectionSaved": "Đã từ chối"
   },
   "onboarding": {
     "created": "Đã tạo workspace.",
@@ -5704,7 +5732,10 @@
     "menuDraftHuman": "Soạn bản nháp để bạn duyệt",
     "open": "Mở",
     "more": "Thêm",
-    "drafting": "Đang soạn"
+    "drafting": "Đang soạn",
+    "draftQueued": "Đã bắt đầu soạn",
+    "draftReady": "Bản nháp đã sẵn sàng để bạn duyệt",
+    "draftFailed": "Chưa soạn được bản nháp."
   },
   "shell": {
     "navOverview": "Tổng quan",

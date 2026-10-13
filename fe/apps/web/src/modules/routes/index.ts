@@ -21,6 +21,7 @@ export {
     workspaceRenewalPaymentPath,
 } from "./workspace-routes"
 export {
+    AGENTS_ROUTE,
     CONSOLE_ROUTES,
     agentChatConversationHref,
     agentChatHref,
@@ -28,6 +29,8 @@ export {
     leadFlowHref,
     leadHref,
     responsibilitiesHref,
+    teamInviteHref,
+    workItemHref,
 } from "./console-routes"
 export { AUTOMATION_ROUTES, automationFocusPath, newModulePath } from "./automations-routes"
 export { KNOWLEDGE_ROUTES, knowledgeSourceHref } from "./knowledge-routes"
