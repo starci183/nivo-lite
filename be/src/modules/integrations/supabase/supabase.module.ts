@@ -1,8 +1,9 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { createSupabaseAdminClient, createSupabasePublicClient } from "./supabase.client"
-import { SUPABASE_ADMIN_CLIENT, SUPABASE_AUTH, SUPABASE_PUBLIC_CLIENT } from "./supabase.decorators"
+import { SUPABASE_ACCOUNTS, SUPABASE_ADMIN_CLIENT, SUPABASE_AUTH, SUPABASE_PUBLIC_CLIENT } from "./supabase.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./supabase.module-definition"
+import { SupabaseAccountsService } from "./supabase-accounts.service"
 import { SupabaseAuthService } from "./supabase-auth.service"
 
 @Module({})
@@ -18,8 +19,9 @@ export class SupabaseModule extends ConfigurableModuleClass {
                 { provide: SUPABASE_ADMIN_CLIENT, useValue: createSupabaseAdminClient(options) },
                 { provide: SUPABASE_PUBLIC_CLIENT, useValue: createSupabasePublicClient(options) },
                 { provide: SUPABASE_AUTH, useClass: SupabaseAuthService },
+                { provide: SUPABASE_ACCOUNTS, useClass: SupabaseAccountsService },
             ],
-            exports: [SUPABASE_ADMIN_CLIENT, SUPABASE_AUTH],
+            exports: [SUPABASE_ADMIN_CLIENT, SUPABASE_AUTH, SUPABASE_ACCOUNTS],
         }
     }
 }

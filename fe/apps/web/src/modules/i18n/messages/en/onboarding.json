@@ -107,5 +107,7 @@
   "toWorkspace": "Open my workspace",
   "switchTitle": "Workspaces",
   "switchCurrent": "Current",
-  "switchNew": "Create a new workspace"
+  "switchNew": "Create a new workspace",
+  "joinLinkText": "Paste the invitation link you received to join a workspace.",
+  "errSignupDisabled": "Creating a workspace is not available right now. Ask the NIVO team to open one for you."
 }

@@ -1,6 +1,6 @@
-import { TeamView } from "@/features/team/view"
+import { TeamLoadingPage } from "@/features/pages/TeamPage"
 
-/** STATE-8: the Team page itself, with no data yet - the same sections and labels, members and invitations as skeleton rows. */
-const TeamLoading = () => <TeamView isLoading data={null} />
+/** The team page itself, with no data yet. */
+const Loading = () => <TeamLoadingPage />
 
-export default TeamLoading
+export default Loading

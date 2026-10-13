@@ -8,7 +8,7 @@ type SignInParse = { readonly success: true; readonly data: SignInInput } | { re
 const ADDRESS = /^[^\s@]+@([^\s@]+)$/u
 
 /** Whether the text is one local part, one `@` and a domain with a dot that has a character on each side; linear in the length. */
-const isEmail = (value: string): boolean => {
+export const isEmail = (value: string): boolean => {
     const domain = ADDRESS.exec(value)?.[1]
     if (domain === undefined) return false
     const dot = domain.indexOf(".", 1)

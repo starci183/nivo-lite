@@ -1,6 +1,7 @@
 /** Every message catalog namespace: one `messages/<locale>/<namespace>.json` per entry, loaded together by the request config. */
 export const NAMESPACES = [
     "access",
+    "admin",
     "app",
     "account",
     "agentChat",
@@ -52,6 +53,7 @@ export const NAMESPACES = [
     "responsibilities",
     "shell",
     "shifts",
+    "slot",
     "system",
     "team",
     "video",

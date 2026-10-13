@@ -136,5 +136,4 @@ Decide quickly: after step 4 the old web is still live, after step 5 only the `/
 - `fe/apps/web/next.config.ts` still sets `output: "standalone"` only when `NEXT_OUTPUT=standalone` (the Dockerfile sets it); the web lane should make it unconditional and pin `outputFileTracingRoot`.
 - The web healthcheck probes `/login`; switch it to `/health/live` once the web lane adds that route.
 - The root `package.json` has `docker:build:api` and `docker:build:cli` but no `docker:build:web` (a managed script block; `starci app sync` owns it).
-- The video assets (`engine/assets/video`: fonts, music beds) are not yet copied into the api image; add the `COPY` line to `be/apps/api/Dockerfile` when the content-video lane fixes their new home.
 - Operator scripts `deploy/stack/jobs.sh` and the job check in `watchdog.sh` read `job_stats()` and `job_outbox`; repoint them to the cli commands of the queue lane once those exist.
