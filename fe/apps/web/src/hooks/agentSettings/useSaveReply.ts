@@ -1,7 +1,6 @@
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
-import { useMutateSaveHoldingMessageSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSaveHoldingMessageSwr"
-import { useMutateSaveReplyTimeoutSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSaveReplyTimeoutSwr"
+import { useMutateSaveHoldingMessageSwr, useMutateSaveReplyTimeoutSwr } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useRefreshInstallation } from "./useRefreshInstallation"
 

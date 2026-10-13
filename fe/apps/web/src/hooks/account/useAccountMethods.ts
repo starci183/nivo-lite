@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useQueryMyAccountSwr } from "@/hooks/swr/api/graphql/queries/useQueryMyAccountSwr"
+import { useQueryMyAccountSwr } from "@/hooks/swr"
 import { METHOD_IDS } from "./account.shared"
 import type { MethodView } from "./account.shared"
 

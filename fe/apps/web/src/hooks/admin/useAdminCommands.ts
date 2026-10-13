@@ -3,13 +3,15 @@
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
 import { mutate } from "swr"
-import { useMutateAdminExtendSubscriptionSwr } from "@/hooks/swr/api/graphql/mutations/useMutateAdminExtendSubscriptionSwr"
-import { useMutateAdminResendWorkspaceInviteSwr } from "@/hooks/swr/api/graphql/mutations/useMutateAdminResendWorkspaceInviteSwr"
-import { useMutateAdminSetWorkspacePlanSwr } from "@/hooks/swr/api/graphql/mutations/useMutateAdminSetWorkspacePlanSwr"
-import { useMutateAdminSetWorkspaceStatusSwr } from "@/hooks/swr/api/graphql/mutations/useMutateAdminSetWorkspaceStatusSwr"
-import { QUERY_ADMIN_HEALTH_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryAdminHealthSwr"
-import { QUERY_ADMIN_WORKSPACE_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryAdminWorkspaceSwr"
-import { QUERY_ADMIN_WORKSPACES_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryAdminWorkspacesSwr"
+import {
+    useMutateAdminExtendSubscriptionSwr,
+    useMutateAdminResendWorkspaceInviteSwr,
+    useMutateAdminSetWorkspacePlanSwr,
+    useMutateAdminSetWorkspaceStatusSwr,
+    QUERY_ADMIN_HEALTH_SWR_KEY,
+    QUERY_ADMIN_WORKSPACE_SWR_KEY,
+    QUERY_ADMIN_WORKSPACES_SWR_KEY,
+} from "@/hooks/swr"
 import { toast, useGraphQLWithToast } from "@/modules/toast"
 import type { AdminSupportStatus } from "./admin.shared"
 
