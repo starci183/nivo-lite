@@ -1,5 +1,5 @@
 import { API_TIMEOUT_MS, apiUrl } from "@/modules/config"
-import type { Outcome } from "./outcome"
+import type { ApiFault, Outcome } from "./outcome"
 
 /** HTTP methods the back end api serves to the web app. */
 type ApiMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
@@ -11,6 +11,8 @@ export interface ApiRequest {
     readonly token: string
     /** The reader's locale, sent as the request language so the api answers in the language of the page. */
     readonly locale: string
+    /** The workspace the caller acts in, sent as X-Workspace-Id. */
+    readonly workspaceId?: string
     readonly method?: ApiMethod
     /** A JSON body; omitted for reads. */
     readonly body?: unknown
@@ -26,11 +28,32 @@ const withQuery = (path: string, query: ApiRequest["query"]): string => {
     return pairs.length === 0 ? path : `${path}?${new URLSearchParams(pairs).toString()}`
 }
 
-const outcomeOfStatus = (status: number): Outcome<never> => {
-    if (status === 401 || status === 403) return { kind: "refused", status, code: String(status) }
-    if (status === 404) return { kind: "not-found" }
-    if (status === 400 || status === 409 || status === 422) return { kind: "invalid", issues: [] }
-    return { kind: "unavailable", code: String(status), retryable: status >= 500 }
+const faultOf = (status: number, body: unknown): ApiFault => {
+    const entries = typeof body === "object" && body !== null ? Object.entries(body) : []
+    const field = (name: string): string | undefined => {
+        const value = entries.find(([key]) => key === name)?.[1]
+        return typeof value === "string" ? value : undefined
+    }
+    const message = field("message")
+    return { code: field("code") ?? String(status), ...(message === undefined ? {} : { message }) }
+}
+
+const outcomeOfStatus = (status: number, body: unknown): Outcome<never> => {
+    const fault = faultOf(status, body)
+    if (status === 401 || status === 403) return { kind: "refused", status, fault }
+    if (status === 404) return { kind: "not-found", fault }
+    if (status === 400 || status === 409 || status === 422) return { kind: "invalid", issues: [], fault }
+    return { kind: "unavailable", fault, retryable: status >= 500 }
+}
+
+/** The failure body the back end answers (`{ code, kind, message, params }`); an unreadable body yields no fields. */
+const failureBodyOf = async (response: Response): Promise<unknown> => {
+    const text = await response.text()
+    try {
+        return JSON.parse(text)
+    } catch {
+        return text
+    }
 }
 
 /**
@@ -50,15 +73,15 @@ export const request = async <T>(
             signal: signal === undefined ? timeout : AbortSignal.any([signal, timeout]),
             headers: {
                 "accept-language": input.locale,
+                ...(input.workspaceId === undefined ? {} : { "x-workspace-id": input.workspaceId }),
                 authorization: `Bearer ${input.token}`,
                 ...(input.body === undefined ? {} : { "content-type": "application/json" }),
             },
             ...(input.body === undefined ? {} : { body: JSON.stringify(input.body) }),
         })
-        if (response.status === 401 || response.status === 403) return outcomeOfStatus(response.status)
-        if (!response.ok) return outcomeOfStatus(response.status)
+        if (!response.ok) return outcomeOfStatus(response.status, await failureBodyOf(response))
         return decode(await response.text())
     } catch {
-        return { kind: "unavailable", code: "transport", retryable: true }
+        return { kind: "unavailable", fault: { code: "transport" }, retryable: true }
     }
 }

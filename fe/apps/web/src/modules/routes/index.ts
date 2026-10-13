@@ -3,6 +3,8 @@ export const APP_ROUTES = {
     home: "/",
     login: "/login",
     dashboard: "/dashboard",
+    automations: "/automations",
+    chat: "/chat",
     authCallback: "/auth/callback",
 } as const
 
@@ -11,3 +13,4 @@ export const agentChatHref = (agentId: string, tab?: string): string =>
     `/modules/${agentId}/chat${tab === undefined ? "" : `?tab=${tab}`}`
 
 export { safeNextPath } from "./safe-next-path"
+export { CONSOLE_ROUTES, agentChatHref, leadHref, responsibilitiesHref } from "./console-routes"

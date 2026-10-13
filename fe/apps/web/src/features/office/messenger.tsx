@@ -2,19 +2,8 @@
 
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react"
-import {
-    Button,
-    ChatBubbleSkeletons,
-    Drawer,
-    EmptyNotice,
-    FillViewport,
-    Heading,
-    IconButton,
-    IconTile,
-    SurfaceCard,
-    Text,
-} from "@starci/grammar/common"
-import { nivoIconSource } from "@/ui"
+import { Button, ChatBubbleSkeletons, Drawer, EmptyNotice, FillViewport, Heading, IconButton, IconTile, SurfaceCard, Text } from "@starci/grammar/common"
+import { nivoIconSource } from "@/components/leaves/Icon"
 import { useLocale, useT } from "@/i18n/client"
 import { office } from "@/i18n/dict/office"
 import { sendTeamMessage } from "@/lib/actions"
@@ -47,7 +36,7 @@ import { staffHandles } from "@/lib/staff-handle"
 import { ExceptionCard, departmentAgent, exceptionAnchor } from "./exceptions"
 import { ConversationList, type CustomerEntry } from "./conversations"
 import { InfoPanel, type OfficePerson } from "./members"
-import { isManager, useMember } from "@/features/shell/member-context"
+import { isManager, useMember } from "@/hooks/member"
 import { CommandCard, acceptsCommands, workItemHref } from "./command-card"
 import type { CommandCandidate } from "@/lib/office-command-rules"
 import { DaySeparator, MessageRow, PendingBubble } from "./messages"

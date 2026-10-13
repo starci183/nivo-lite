@@ -7,7 +7,7 @@ import { connections as dict } from "@/i18n/dict/connections"
 import type { Connection } from "@/lib/channels"
 import { CATALOG, CATEGORIES, matches, type CatalogEntry, type ConnectorAudience, type ConnectorCategory } from "@/lib/connector-catalog"
 import { PROVIDER_LOGO } from "@/lib/connection-providers"
-import { nivoIconSource } from "@/ui"
+import { nivoIconSource } from "@/components/leaves/Icon"
 import { LIBRARY_CARD_CLASS, LIBRARY_CARD_FOOT_CLASS, LIBRARY_CARD_HEAD_CLASS, LIBRARY_FILTERS_CLASS, LIBRARY_GRID_CLASS, PROVIDER_LOGO_CLASS, LIBRARY_SEARCH_CLASS, LIBRARY_SORT_CLASS, LIBRARY_TOOLBAR_CLASS } from "./classNames"
 
 /** The connector's own logo when it has one, else its category glyph. */

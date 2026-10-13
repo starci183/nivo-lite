@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Alert, AlertDialog, Badge, Button, DataTable, DropdownMenu, Region, SectionHeader, Text, type DataTableColumn, type DropdownMenuEntry } from "@starci/grammar/common"
-import { PersonAvatar } from "@/components/avatar/PersonAvatar"
+import { PersonAvatar } from "@/components/leaves/PersonAvatar"
 import { intlLocale, TIME_ZONE } from "@/i18n/core"
 import { useLocale, useT } from "@/i18n/client"
 import { team } from "@/i18n/dict/team"
