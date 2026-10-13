@@ -38,7 +38,7 @@ The API reads `PORT`, `HTTP_SECURITY_ALLOWED_ORIGINS`, `PRIMARY_DB_URL`, `PRIMAR
 
 Run it locally:
 
-1. Copy `secrets.example.env` to `~/.nivo-lite/secrets.env` (override the path with `NIVO_SECRETS`) and fill it in. It is kept outside the repository, and `scripts/set-secrets.ps1` sets the sensitive keys without echoing them.
+1. Copy the template in `.starcistacks/production/README.md` to `~/.nivo-lite/secrets.env` (override the path with `NIVO_SECRETS`) and fill it in. It is kept outside the repository, and `scripts/set-secrets.ps1` sets the sensitive keys without echoing them.
 2. Start the local Supabase stack with `npm run db:start` (it applies the migrations; copy the printed anon and service role keys into the secrets file). Local ports are the Supabase defaults plus 1000 so it runs next to other local stacks, and local email (invites, password reset) lands in its Inbucket mail catcher.
 3. Run the API with `node scripts/with-secrets.mjs npm run dev:be` and the web app with `node scripts/with-secrets.mjs npm run dev:fe` (port 3100).
 

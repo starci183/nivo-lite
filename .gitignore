@@ -74,7 +74,6 @@ node_modules/
 *.tsbuildinfo
 next-env.d.ts
 .env*
-!secrets.example.env
 supabase/.temp/
 supabase/.branches/
 .accounts-contract-ready
@@ -82,7 +81,6 @@ supabase/.branches/
 *.log
 !.env.example
 !**/.env.example
-engine/dist/
 
 # The ONE secrets file and SSH keys live at the repo root for convenience. NEVER commit them.
 /secrets.env

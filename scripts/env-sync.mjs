@@ -32,7 +32,7 @@ if (!app.size) throw new Error("no [app] block found in secrets.env")
 const apiBlock = mapOf(sections.api)
 if (!apiBlock.size)
     throw new Error(
-        "no [api] block found in secrets.env: copy it from secrets.example.env (PRIMARY_DB_URL, HTTP_SECURITY_ALLOWED_ORIGINS, ...)",
+        "no [api] block found in secrets.env: copy it from the template in .starcistacks/production/README.md (PRIMARY_DB_URL, HTTP_SECURITY_ALLOWED_ORIGINS, ...)",
     )
 
 // Keys the stack container wiring reads but the api must not see, and the other way round.

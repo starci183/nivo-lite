@@ -9,7 +9,9 @@ import { fileURLToPath } from "node:url"
 const repo = join(dirname(fileURLToPath(import.meta.url)), "..")
 const file = process.env.NIVO_SECRETS || join(repo, "secrets.env")
 if (!existsSync(file)) {
-    console.error(`[with-secrets] missing ${file}: copy secrets.example.env to secrets.env and fill it in.`)
+    console.error(
+        `[with-secrets] missing ${file}: copy the template in .starcistacks/production/README.md to secrets.env and fill it in.`,
+    )
     process.exit(1)
 }
 const env = { ...process.env }

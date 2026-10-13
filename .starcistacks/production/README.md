@@ -1,7 +1,14 @@
-# Template for secrets.env (repo root, gitignored). Copy to secrets.env and fill in. Same sections as the real file.
-# scripts/with-secrets.mjs reads secrets.env; scripts/env-sync.mjs pushes [stack] to ENGINE_ENV, [api] (+ the server-side keys of [app]) to API_ENV,
-# and the public NEXT_PUBLIC_* values of [app] to WEB_ENV and the web build args.
+# production
 
+The production environment of nivo-lite: the Supabase Cloud project, the api container on the VPS and the web container.
+
+Its secrets are kept in ONE plaintext file outside the repository, `secrets.env`, never committed: `~/.nivo-lite/secrets.env`, which `scripts/set-secrets.ps1` writes (point `NIVO_SECRETS` at it; without it the scripts read a gitignored `secrets.env` at the repository root). `scripts/with-secrets.mjs` runs a command with it loaded, `scripts/set-secrets.ps1` sets the sensitive keys without echoing them, and `scripts/env-sync.mjs` pushes its blocks to the GitHub environment `production` (`[stack]` to `ENGINE_ENV`, `[api]` plus the server-side keys of `[app]` to `API_ENV`, the public `NEXT_PUBLIC_*` values of `[app]` to `WEB_ENV` and the web build args).
+
+## Template of secrets.env
+
+Copy this block to `secrets.env` and fill it in; keep the section headers, `env-sync` reads them.
+
+```ini
 
 # ---------- [app] the web app (public values) and the server-side keys the api inherits; Supabase Cloud
 NEXT_PUBLIC_SUPABASE_URL=
@@ -102,3 +109,4 @@ CLOUDFLARE_ZONE=nivo.vn
 # ---------- [perf] optional: PERF_LOG=1 prints, per request, every Supabase call (method + path + ms), the sequential depth and a TOTAL line.
 # Set it on the server (the VPS api.env) only while measuring.
 # PERF_LOG=1
+```

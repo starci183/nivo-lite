@@ -30,7 +30,7 @@ engine heartbeat is older than 90 seconds. If you still prefer edge first, it wo
 - [ ] The web image builds: `docker build -f fe/apps/web/Dockerfile -t nivo-lite/web:dev --build-arg NEXT_PUBLIC_SUPABASE_URL=... --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=... .`
 - [ ] The hosted Supabase project signs access tokens with an **asymmetric key (ES256)**: `curl -fsS "$SUPABASE_URL/auth/v1/.well-known/jwks.json"` lists an EC key. The api verifies tokens against this JWKS and pins ES256; with only the legacy shared secret, every authenticated call is refused. Enable the JWT signing keys in the dashboard first and let the old tokens expire.
 - [ ] A backup of the database exists (Supabase point-in-time recovery enabled, or `pg_dump` taken now) and its restore is understood.
-- [ ] `secrets.env` has the new `[stack]` and `[api]` blocks (`secrets.example.env`) and `node scripts/env-sync.mjs --check` reports no missing names.
+- [ ] `secrets.env` has the new `[stack]` and `[api]` blocks (template: `.starcistacks/production/README.md`) and `node scripts/env-sync.mjs --check` reports no missing names.
 - [ ] DNS: an A record `api.nivo.vn` pointing at the VPS (DNS only, TTL 60), added in Cloudflare. The edge gets its certificate on the first request.
 - [ ] Netlify: **stop auto publishing** on the site (Site configuration > Build & deploy) so the merge does not publish a Next build there. Do not delete the site; its last good deploy is a rollback target.
 - [ ] Tag the current `main` so every rollback has a fixed point: `git tag pre-lite-cutover origin/main && git push origin pre-lite-cutover` (an owner action).
@@ -126,7 +126,7 @@ Decide quickly: after step 4 the old web is still live, after step 5 only the `/
 ## After the cutover
 
 - Restore push triggers on the deploy workflows only if you want deploys on merge again (they were removed so the conversion deploys nothing by itself).
-- Retire the engine: once nothing consumes `engine_jobs` and a week has passed, `git rm -r engine` (source, Dockerfile, `dev/`), delete the secret `ENGINE_SHARED_SECRET` and the `engine_*` rows and RPCs in a forward migration.
+- Retire the engine: its source left the tree with the lite cleanup (the `pre-lite-cutover` tag keeps it). Once nothing consumes `engine_jobs` and a week has passed, delete the secret `ENGINE_SHARED_SECRET` and the `engine_*` rows and RPCs in a forward migration.
 - Retire Netlify: delete `netlify.toml` (already removed from the tree), then the Netlify site and its build hook.
 - Remove the `[engine]` alias block from `secrets.env` and the legacy `ENGINE_BIND` from the stack env once `API_BIND` is set.
 - Update the provider-facing guide only if a public path changed (`be/docs/guides/connecting-channels.md`).

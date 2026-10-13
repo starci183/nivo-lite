@@ -4,7 +4,8 @@
   "private": true,
   "packageManager": "npm@11.6.2",
   "workspaces": [
-    "fe/apps/*"
+    "fe/apps/*",
+    "fe/packages/*"
   ],
   "dependencies": {
     "@apollo/server": "5.5.1",
