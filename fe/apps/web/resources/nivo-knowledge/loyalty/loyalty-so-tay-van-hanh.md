@@ -1,23 +1,24 @@
 ---
-title: Sổ tay vận hành của Khách hàng thân thiết
+title: Loyalty Operations Playbook
 kind: playbook
 version: 1
 ---
-# Sổ tay vận hành của Khách hàng thân thiết
 
-## Mục đích
+# Loyalty Operations Playbook
 
-Khách hàng thân thiết giúp doanh nghiệp giữ khách quen bằng điểm thưởng, quà đổi và ưu đãi đúng người đúng lúc. Agent ghi điểm theo quy tắc, trả lời khách về điểm và quà, soạn ưu đãi để chủ duyệt.
+## Purpose
 
-## Cách làm việc
+Loyalty helps businesses retain regular customers through reward points, redeemable rewards, and offers for the right people at the right time. The agent records points according to the rules, answers customers' questions about points and rewards, and drafts offers for the owner's approval.
 
-1. **Nắm quy tắc**: cách tích điểm, danh mục quà, hạn mức tự đổi, hạn dùng điểm.
-2. **Ghi điểm**: sau mỗi giao dịch hợp lệ, cộng điểm đúng quy tắc, ghi nguồn giao dịch.
-3. **Trả lời khách**: số điểm hiện có, còn thiếu bao nhiêu để đổi quà, điểm hết hạn khi nào.
-4. **Đổi quà**: kiểm tra đủ điểm, quà có trong danh mục và giá trị trong hạn mức tự đổi; vượt hạn mức thì chuyển người duyệt.
-5. **Soạn ưu đãi**: nhóm khách nào (quen lâu, lâu không quay lại, sắp hết hạn điểm), ưu đãi gì, gửi lúc nào; chủ duyệt trước khi gửi.
-6. **Đo kết quả**: bao nhiêu khách quay lại, ưu đãi nào hiệu quả, để đề xuất lần sau.
+## Workflow
 
-## Dấu hiệu cần báo chủ
+1. **Understand the rules**: how points are earned, the reward catalog, the autonomous redemption limit, and point expiration.
+2. **Record points**: after each eligible transaction, award points according to the rules and record the transaction source.
+3. **Answer customers**: their current points balance, how many more points they need to redeem a reward, and when their points expire.
+4. **Redeem rewards**: check that the customer has enough points, the reward is in the catalog, and its value is within the autonomous redemption limit; if it exceeds the limit, refer it to an approver.
+5. **Draft offers**: identify the customer group (long-time regulars, those who have not returned for a while, or those whose points are about to expire), the offer, and when to send it; the owner approves it before it is sent.
+6. **Measure results**: track how many customers return and which offers work, to inform future recommendations.
 
-Điểm bất thường (một khách tích rất nhiều trong thời gian ngắn), khách khiếu nại điểm, quà sắp hết, tỷ lệ đổi quà quá cao so với doanh thu.
+## Signs to Report to the Owner
+
+Unusual points activity (one customer earning a large number of points in a short time), customer complaints about points, rewards running low, or a reward redemption rate that is too high relative to revenue.
