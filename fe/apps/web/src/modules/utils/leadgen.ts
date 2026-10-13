@@ -1,6 +1,6 @@
 import type { AgentDashboardData, ConnectionItem, DashboardItem } from "@/lib/agent-dashboard-shared"
 import { workbenchHref } from "@/lib/agent-dashboard-shared"
-import type { WorkStatus } from "@/lib/flow-types"
+import type { FlowWorkStatus } from "@/modules/types"
 import type { QueryLeadGenAgentDashboardResponse } from "@/modules/api/graphql/queries/query-lead-gen-agent-dashboard"
 import type { QueryLeadGenWorkbenchResponse } from "@/modules/api/graphql/queries/query-lead-gen-workbench"
 import type { LeadGenWorkbenchData, LeadOrigin, LeadPlatform, LeadScore, LeadSourceKind } from "@/modules/types"
@@ -10,7 +10,7 @@ const kindOf = (value: string): LeadSourceKind =>
     value === "lead_ad" || value === "dm" || value === "comment" || value === "mention" ? value : "other"
 const scoreOf = (value: string | null | undefined): LeadScore | null =>
     value === "hot" || value === "warm" || value === "cold" ? value : null
-const workStatusOf = (value: string | null | undefined): WorkStatus | null =>
+const workStatusOf = (value: string | null | undefined): FlowWorkStatus | null =>
     value === "queued" || value === "done" || value === "waiting_decision" || value === "rejected" || value === "failed"
         ? value
         : null

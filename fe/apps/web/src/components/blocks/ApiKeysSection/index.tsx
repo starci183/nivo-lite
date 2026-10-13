@@ -1,6 +1,7 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
+import { isManager, useMember } from "@/hooks/member"
 import { useState } from "react"
 import { useApiKeys } from "@/hooks/developers"
 import { useApiKeyForm } from "@/hooks/rhf"
@@ -9,6 +10,7 @@ import { ApiKeysSectionBase } from "./component"
 /** The connected API keys card: lists, creates (the secret is shown once) and revokes keys through the back end GraphQL API. */
 export const ApiKeysSection = () => {
     const t = useTranslations("developers")
+    const member = useMember()
     const format = useFormatter()
     const { items, loadFailed, create, isCreating, revoke, isRevoking } = useApiKeys()
     const form = useApiKeyForm()
@@ -31,6 +33,7 @@ export const ApiKeysSection = () => {
         setRevokingId(undefined)
     }
 
+    if (!isManager(member)) return null
     return (
         <ApiKeysSectionBase
             props={{

@@ -1,5 +1,5 @@
 import type { Database } from "../../../../../../supabase/types/database.types"
-import type { Invoice, Order, Origin, WorkItemView } from "@/lib/flow-types"
+import type { FlowInvoice, FlowOrder, FlowOrigin, FlowWorkItemView } from "@/modules/types"
 import type { HandoffRow, LeadRecord } from "@/modules/types"
 
 type Tables = Database["public"]["Tables"]
@@ -11,27 +11,27 @@ type InvoicesRow = Tables["invoices"]["Row"]
 
 /** The rows the hand-off surface is derived from. */
 interface HandoffRows {
-    readonly invoices: ReadonlyArray<Invoice>
-    readonly items: ReadonlyArray<WorkItemView>
+    readonly invoices: ReadonlyArray<FlowInvoice>
+    readonly items: ReadonlyArray<FlowWorkItemView>
     readonly leads: ReadonlyArray<LeadRecord>
 }
 
 /** The lookups the hand-off surface shares with the rest of the workbench. */
 interface HandoffLook {
     /** The orders that are not cancelled. */
-    readonly orders: ReadonlyArray<Order>
+    readonly orders: ReadonlyArray<FlowOrder>
     readonly leadById: ReadonlyMap<string, LeadRecord>
     readonly quoteByLead: ReadonlyMap<string, number>
     readonly closedByLead: ReadonlyMap<string, { reason: string | null; at: string }>
 }
 
-const ORDER_STATUSES: ReadonlyArray<Order["status"]> = ["draft", "confirmed", "invoiced", "paid", "cancelled"]
-const INVOICE_STATUSES: ReadonlyArray<Invoice["status"]> = ["draft", "issued", "paid", "void"]
+const ORDER_STATUSES: ReadonlyArray<FlowOrder["status"]> = ["draft", "confirmed", "invoiced", "paid", "cancelled"]
+const INVOICE_STATUSES: ReadonlyArray<FlowInvoice["status"]> = ["draft", "issued", "paid", "void"]
 
-const originOf = (value: string | null): Origin => (value === "simulated" ? "simulated" : "live")
+const originOf = (value: string | null): FlowOrigin => (value === "simulated" ? "simulated" : "live")
 
 /** One order row as the workbench reads it. */
-export const toOrder = (row: OrdersRow): Order => ({
+export const toOrder = (row: OrdersRow): FlowOrder => ({
     id: row.id,
     workspace_id: row.workspace_id,
     lead_id: row.lead_id,
@@ -49,7 +49,7 @@ export const toOrder = (row: OrdersRow): Order => ({
 })
 
 /** One invoice row as the workbench reads it. */
-export const toInvoice = (row: InvoicesRow): Invoice => ({
+export const toInvoice = (row: InvoicesRow): FlowInvoice => ({
     id: row.id,
     workspace_id: row.workspace_id,
     order_id: row.order_id,
@@ -67,14 +67,14 @@ export const toInvoice = (row: InvoicesRow): Invoice => ({
 
 /** Orders and won deals with where their invoice stands. */
 export const handoffsOf = (rows: HandoffRows, look: HandoffLook): ReadonlyArray<HandoffRow> => {
-    const invoiceByOrder = new Map<string, Invoice>()
+    const invoiceByOrder = new Map<string, FlowInvoice>()
     for (const invoice of rows.invoices)
         if (invoice.order_id && invoice.status !== "void") invoiceByOrder.set(invoice.order_id, invoice)
-    const invoiceWork = new Map<string, WorkItemView>()
+    const invoiceWork = new Map<string, FlowWorkItemView>()
     for (const item of rows.items)
         if (item.action === "issue_invoice" && item.subject_id && !invoiceWork.has(item.subject_id))
             invoiceWork.set(item.subject_id, item)
-    const slim = (item: WorkItemView | undefined): HandoffRow["work"] =>
+    const slim = (item: FlowWorkItemView | undefined): HandoffRow["work"] =>
         item ? { id: item.id, status: item.status, reason: item.reason, error: item.error } : null
     const nameOf = (leadId: string | null): string => (leadId ? (look.leadById.get(leadId)?.contact_name ?? "—") : "—")
     const out: Array<HandoffRow> = look.orders.map((order) => {

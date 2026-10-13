@@ -1,4 +1,4 @@
-import type { DecisionRow, EvidenceState, FlowAction, Invoice, Order, ReasonCode, WorkItemView } from "@/lib/flow-types"
+import type { FlowDecisionRow, FlowEvidenceState, FlowInvoice, FlowOrder, ReasonCode, FlowWorkItemView } from "./flow"
 import type { LeadStageId } from "./leads"
 
 /** What needs a person on the Sales workbench. */
@@ -19,7 +19,7 @@ export interface AttentionRow {
     readonly workItemId: string | null
     /** The pending decision this row opens in the Decisions surface (work item or legacy approval card). */
     readonly decisionId: string | null
-    readonly action: FlowAction | null
+    readonly action: string | null
     /** The fields NIVO is missing (clarification). */
     readonly missing: ReadonlyArray<string>
 }
@@ -51,7 +51,7 @@ export interface SalesDecision {
     readonly executionId: string | null
     readonly leadId: string | null
     readonly customer: string
-    readonly action: FlowAction | "follow_up"
+    readonly action: string
     readonly reason: ReasonCode | null
     readonly summary: string
     readonly draft: string
@@ -73,11 +73,11 @@ export interface HandoffRow {
     readonly orderNo: string | null
     readonly items: string
     readonly amountVnd: number | null
-    readonly orderStatus: Order["status"] | "won_without_order"
+    readonly orderStatus: FlowOrder["status"] | "won_without_order"
     readonly confirmedAt: string | null
     readonly invoice: {
         readonly no: string
-        readonly status: Invoice["status"]
+        readonly status: FlowInvoice["status"]
         readonly amountVnd: number
         readonly issuedAt: string | null
         readonly paidAt: string | null
@@ -85,7 +85,7 @@ export interface HandoffRow {
     /** The accounting step for this order (invoice) when one exists. */
     readonly work: {
         readonly id: string
-        readonly status: WorkItemView["status"]
+        readonly status: FlowWorkItemView["status"]
         readonly reason: ReasonCode | null
         readonly error: string | null
     } | null
@@ -100,12 +100,12 @@ export interface HandoffRow {
 /** One thing NIVO did by policy, with the evidence behind it. */
 export interface AutoActivity {
     readonly id: string
-    readonly action: FlowAction
+    readonly action: string
     readonly leadId: string | null
     readonly customer: string | null
     readonly summary: string
     readonly at: string
-    readonly evidenceState: EvidenceState
+    readonly evidenceState: FlowEvidenceState
     readonly evidence: string | null
     readonly href: string
 }
@@ -157,7 +157,7 @@ export interface SalesWorkbenchData {
     /** Closed deals beyond the per-column limit of the board (so it can say "N more"). */
     readonly closedHidden: { readonly won: number; readonly lost: number }
     readonly decisions: ReadonlyArray<SalesDecision>
-    readonly decided: ReadonlyArray<DecisionRow>
+    readonly decided: ReadonlyArray<FlowDecisionRow>
     readonly handoffs: ReadonlyArray<HandoffRow>
     readonly activity: ReadonlyArray<AutoActivity>
     readonly staff: ReadonlyArray<{ readonly id: string; readonly name: string }>

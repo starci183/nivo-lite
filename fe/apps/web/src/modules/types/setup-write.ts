@@ -1,5 +1,5 @@
-import type { Scope } from "@/lib/brain/shared"
-import type { RuleMode } from "@/lib/flow-types"
+import type { FactScope } from "./brain"
+import type { FlowRuleMode } from "./flow"
 
 /** The instance whose chat this is, when its type allows several (one Chatbot per branch): a fact may be kept for this instance only. */
 export interface SetupWriteInstance {
@@ -44,8 +44,8 @@ export interface SetupWriteWords {
     readonly keep: string
     readonly both: string
     readonly conflictBody: (current: string) => string
-    readonly scopeLabel: (scope: Scope) => string
-    readonly modeLabel: (mode: RuleMode) => string
+    readonly scopeLabel: (scope: FactScope) => string
+    readonly modeLabel: (mode: FlowRuleMode) => string
     readonly money: (amount: number | null) => string
     readonly actionLabel: (action: string) => string
     readonly actionRules: (action: string) => SetupActionRules

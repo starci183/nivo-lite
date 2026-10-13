@@ -1,6 +1,6 @@
 import { useState } from "react"
-import type { Scope } from "@/lib/brain/shared"
-import type { RuleMode } from "@/lib/flow-types"
+import { FACT_SCOPES } from "@/modules/types"
+import type { FactScope, FlowRuleMode } from "@/modules/types"
 import type { Resolution, SetupWrite, WriteDecision } from "@/lib/module-setup-writes"
 import { SetupWriteView } from "@/components/leaves/SetupWriteView"
 import type { SetupWriteDecided, SetupWriteInstance, SetupWriteWords } from "@/modules/types"
@@ -9,8 +9,8 @@ import type { SetupWriteDecided, SetupWriteInstance, SetupWriteWords } from "@/m
 type Draft = {
     readonly isEditing: boolean
     readonly value: string
-    readonly scope: Scope
-    readonly mode: RuleMode
+    readonly scope: FactScope
+    readonly mode: FlowRuleMode
     readonly limit: number | null
     readonly resolution: Resolution
     readonly situation: string
@@ -29,9 +29,8 @@ type SetupWriteCardProps = {
     readonly instance: SetupWriteInstance | null
 }
 
-const MODES: ReadonlyArray<RuleMode> = ["auto", "ask", "never"]
+const MODES: ReadonlyArray<FlowRuleMode> = ["auto", "ask", "never"]
 const RESOLUTIONS: ReadonlyArray<Resolution> = ["replace", "keep", "both"]
-const SCOPES: ReadonlyArray<Scope> = ["public", "internal", "restricted"]
 const FOR_ALL = "all"
 const FOR_THIS = "this"
 
@@ -139,7 +138,7 @@ export const SetupWriteCard = (props: SetupWriteCardProps) => {
                     value: draft.value,
                     scopeLabel: words.scope,
                     scope: draft.scope,
-                    scopeOptions: SCOPES.map((scope) => ({ value: scope, label: words.scopeLabel(scope) })),
+                    scopeOptions: FACT_SCOPES.map((scope) => ({ value: scope, label: words.scopeLabel(scope) })),
                     forLabel: words.forLabel,
                     forValue: draft.onlyThis ? FOR_THIS : FOR_ALL,
                     forOptions:
@@ -181,7 +180,7 @@ export const SetupWriteCard = (props: SetupWriteCardProps) => {
             }}
             on={{
                 value: (value) => patch({ value }),
-                scope: (value) => patch({ scope: SCOPES.find((scope) => scope === value) ?? "internal" }),
+                scope: (value) => patch({ scope: FACT_SCOPES.find((scope) => scope === value) ?? "internal" }),
                 forWho: (value) => patch({ onlyThis: value === FOR_THIS }),
                 mode: (value) => patch({ mode: MODES.find((mode) => mode === value) ?? "ask" }),
                 limit: (value) => patch({ limit: Number.isFinite(value) ? value : null }),

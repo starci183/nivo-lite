@@ -1,6 +1,5 @@
-import { SCOPES, SUBJECT_TYPES } from "@/lib/brain/shared"
-import type { Scope, SubjectType } from "@/lib/brain/shared"
-import type { RuleMode } from "@/lib/flow-types"
+import { FACT_SCOPES, FACT_SUBJECT_TYPES } from "@/modules/types"
+import type { FactScope, FactSubjectType, FlowRuleMode } from "@/modules/types"
 import type {
     FactWrite,
     Resolution,
@@ -18,7 +17,7 @@ const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
 
 const textOf = (value: unknown): string => (typeof value === "string" ? value : "")
 
-const MODES: ReadonlyArray<RuleMode> = ["auto", "ask", "never"]
+const MODES: ReadonlyArray<FlowRuleMode> = ["auto", "ask", "never"]
 const RESOLUTIONS: ReadonlyArray<Resolution> = ["replace", "keep", "both"]
 
 interface SetupCardWire {
@@ -43,9 +42,9 @@ const toResult = (value: unknown): FactWrite["result"] => {
     return { outcome: textOf(value.outcome), ...(resolution === undefined ? {} : { resolution }) }
 }
 
-const scopeOf = (value: unknown): Scope => SCOPES.find((scope) => scope === value) ?? "internal"
-const subjectTypeOf = (value: unknown): SubjectType => SUBJECT_TYPES.find((type) => type === value) ?? "other"
-const modeOf = (value: unknown): RuleMode => MODES.find((mode) => mode === value) ?? "ask"
+const scopeOf = (value: unknown): FactScope => FACT_SCOPES.find((scope) => scope === value) ?? "internal"
+const subjectTypeOf = (value: unknown): FactSubjectType => FACT_SUBJECT_TYPES.find((type) => type === value) ?? "other"
+const modeOf = (value: unknown): FlowRuleMode => MODES.find((mode) => mode === value) ?? "ask"
 const limitOf = (value: unknown): number | null => (typeof value === "number" ? value : null)
 
 /** One confirm card of the chat as the Setup screen draws it; none for a card whose payload names nothing the catalogue knows. */

@@ -3,7 +3,7 @@ import { useTranslations } from "next-intl"
 import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import type { WorkItemView } from "@/lib/flow-types"
+import type { FlowWorkItemView } from "@/modules/types"
 import type { AccountingQuestionValues } from "@/modules/types"
 import { digitsToNumber } from "@/modules/utils"
 import type { AccountingTranslator } from "@/modules/utils"
@@ -12,7 +12,7 @@ interface AccountingQuestionsValues {
     items: Record<string, AccountingQuestionValues>
 }
 
-const schemaOf = (item: WorkItemView, t: AccountingTranslator, accounting: AccountingTranslator) =>
+const schemaOf = (item: FlowWorkItemView, t: AccountingTranslator, accounting: AccountingTranslator) =>
     z
         .object({
             fields: z.record(z.string(), z.string().trim().max(10_000, t("exceptionMissingHint"))),
@@ -54,7 +54,7 @@ const schemaOf = (item: WorkItemView, t: AccountingTranslator, accounting: Accou
         })
 
 /** Holds every question's independent inputs in one form; callers validate only the addressed item path. */
-export const useAccountingQuestionsForm = (items: ReadonlyArray<WorkItemView>) => {
+export const useAccountingQuestionsForm = (items: ReadonlyArray<FlowWorkItemView>) => {
     const t = useTranslations("office")
     const accounting = useTranslations("workbenchAccounting")
     const schema = useMemo(() => {

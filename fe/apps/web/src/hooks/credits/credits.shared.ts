@@ -1,6 +1,5 @@
 import { forecastRunout } from "@/modules/utils"
 import { dayjs } from "@/modules/dayjs"
-import { CREDITS_PER_USD } from "@/lib/usage-shared"
 import type {
     BillingPlanType,
     BillingWorkspaceType,
@@ -12,6 +11,9 @@ import type {
 /** Plain data of the credits page, and the pure functions that compute it from the rows the page read. */
 
 import type { CreditsData, PlanView } from "@/modules/types"
+
+/** USD value of one credit (be billing_config.credit_usd_value): a model cost spends ceil(cost_usd / CREDIT_USD_VALUE) credits. */
+const CREDIT_USD_VALUE = 0.00113
 
 /** The workspace columns the page reads. */
 type WorkspaceFacts = Pick<BillingWorkspaceType, "status" | "planCode" | "paidUntil">
@@ -86,7 +88,7 @@ export const creditsDataOf = (input: CreditsInput): CreditsData => {
                 ? null
                 : forecastRunout({
                       remaining: limit - used,
-                      last7Credits: input.last7CostUsd * CREDITS_PER_USD,
+                      last7Credits: Math.ceil(input.last7CostUsd / CREDIT_USD_VALUE),
                       today: input.today,
                   }),
         packs: input.packs.map((pack) => ({
