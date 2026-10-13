@@ -25,8 +25,8 @@ import type {
     ShiftsWorkItemView,
 } from "@/modules/types"
 
-/** The shifts GraphQL features emit every list as `[[T!]!]`: the outer array is the list and each element carries its row alone. */
-export const flat = <T>(rows: ReadonlyArray<ReadonlyArray<T>> | null | undefined): Array<T> => (rows ?? []).flat()
+/** A wire list as a mutable array; an absent list is empty. */
+export const listOf = <T>(rows: ReadonlyArray<T> | null | undefined): Array<T> => [...(rows ?? [])]
 
 /** A wire time ("07:00:00" or "07:00") as the "HH:MM" the screens show and compare. */
 export const hhmm = (time: string): string => time.slice(0, 5)
@@ -94,7 +94,7 @@ export const toSwapRowView = (row: ShiftsSwapType): ShiftsSwapRowView => ({
     toStaffId: row.toStaffId,
     reason: row.reason,
     status: row.status,
-    checks: flat(row.checks),
+    checks: listOf(row.checks),
     createdAt: row.createdAt,
     item: toWorkItemView(row.item),
     shiftLine: row.shiftLine,
@@ -105,7 +105,7 @@ const toPosition = (row: ShiftPositionType): ShiftsPositionView => ({ id: row.id
 const toStaff = (row: ShiftStaffType): ShiftsStaffView => ({
     id: row.id,
     name: row.name,
-    positionIds: flat(row.positionIds),
+    positionIds: listOf(row.positionIds),
     wage: row.wage,
     maxWeek: row.maxWeek,
     maxDay: row.maxDay,
@@ -130,7 +130,7 @@ const toBlock = (row: ShiftsBlockType): ShiftsBlockView => ({
 
 const toSettings = (row: ShiftsSettingsType): ShiftsSettingsView => ({
     openingHours: Object.fromEntries(
-        flat(row.openingHours).map((day) => [String(day.weekday), { open: day.open, close: day.close }]),
+        listOf(row.openingHours).map((day) => [String(day.weekday), { open: day.open, close: day.close }]),
     ),
     swapNoticeHours: row.swapNoticeHours,
     leaveNoticeDays: row.leaveNoticeDays,
@@ -141,8 +141,8 @@ const toSettings = (row: ShiftsSettingsType): ShiftsSettingsView => ({
 
 /** Positions, staff, coverage blocks and rules of the shop. */
 export const toSetupView = (row: ShiftsSetupType): ShiftsSetupView => ({
-    positions: flat(row.positions).map(toPosition),
-    staff: flat(row.staff).map(toStaff),
-    blocks: flat(row.blocks).map(toBlock),
+    positions: listOf(row.positions).map(toPosition),
+    staff: listOf(row.staff).map(toStaff),
+    blocks: listOf(row.blocks).map(toBlock),
     settings: toSettings(row.settings),
 })

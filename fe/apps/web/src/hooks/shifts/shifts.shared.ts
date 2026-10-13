@@ -15,7 +15,7 @@ import type {
     ShiftsWeekView,
 } from "@/modules/types"
 import {
-    flat,
+    listOf,
     toAvailRowView,
     toAvailView,
     toLeaveRowView,
@@ -41,21 +41,21 @@ const toSchedule = (row: ShiftsScheduleType): ShiftsScheduleView => ({
     explanationSource: explanationSourceOf(row.evidence),
 })
 
-const toPrior = (rows: ReadonlyArray<ReadonlyArray<ShiftsPriorType>>): Record<string, ReadonlyArray<ShiftsSegView>> =>
+const toPrior = (rows: ReadonlyArray<ShiftsPriorType>): Record<string, ReadonlyArray<ShiftsSegView>> =>
     Object.fromEntries(
-        flat(rows).map((row) => [
+        listOf(rows).map((row) => [
             row.staffId,
-            flat(row.segs).map((seg) => ({ date: seg.date, s: seg.s, e: seg.e, pos: seg.pos })),
+            listOf(row.segs).map((seg) => ({ date: seg.date, s: seg.s, e: seg.e, pos: seg.pos })),
         ]),
     )
 
 const toWeek = (row: ShiftsWeekType): ShiftsWeekView => ({
     monday: row.monday,
     current: row.current === null || row.current === undefined ? null : toSchedule(row.current),
-    shifts: flat(row.shifts).map(toShiftView),
+    shifts: listOf(row.shifts).map(toShiftView),
     publishItem: toWorkItemView(row.publishItem),
-    approvedAvail: flat(row.approvedAvail).map(toAvailView),
-    approvedLeaves: flat(row.approvedLeaves).map((leave) => ({
+    approvedAvail: listOf(row.approvedAvail).map(toAvailView),
+    approvedLeaves: listOf(row.approvedLeaves).map((leave) => ({
         staffId: leave.staffId,
         from: leave.from,
         to: leave.to,
@@ -72,28 +72,28 @@ export const toBenchView = (row: ShiftsBenchType): ShiftsBenchView => ({
     reminderOn: row.reminderOn,
     week: toWeek(row.week),
     requests: {
-        leaves: flat(row.requests.leaves).map(toLeaveRowView),
-        swaps: flat(row.requests.swaps).map(toSwapRowView),
-        availability: flat(row.requests.availability).map(toAvailRowView),
+        leaves: listOf(row.requests.leaves).map(toLeaveRowView),
+        swaps: listOf(row.requests.swaps).map(toSwapRowView),
+        availability: listOf(row.requests.availability).map(toAvailRowView),
     },
-    staffRows: flat(row.staffRows).map((staff) => ({ id: staff.id, name: staff.name })),
-    allAvailability: flat(row.allAvailability).map(toAvailRowView),
+    staffRows: listOf(row.staffRows).map((staff) => ({ id: staff.id, name: staff.name })),
+    allAvailability: listOf(row.allAvailability).map(toAvailRowView),
 })
 
 /** The `shiftsMine` answer as the view of the signed-in person. */
 export const toMineView = (row: ShiftsMineType): ShiftsMineView => ({
     profileId: row.profileId ?? null,
     today: row.today,
-    myShifts: flat(row.myShifts).map((shift) => ({ ...toShiftView(shift), checkedIn: shift.checkedIn })),
-    openShifts: flat(row.openShifts).map(toShiftView),
-    colleagues: flat(row.colleagues).map((person) => ({
+    myShifts: listOf(row.myShifts).map((shift) => ({ ...toShiftView(shift), checkedIn: shift.checkedIn })),
+    openShifts: listOf(row.openShifts).map(toShiftView),
+    colleagues: listOf(row.colleagues).map((person) => ({
         id: person.id,
         name: person.name,
-        positionIds: flat(person.positionIds),
+        positionIds: listOf(person.positionIds),
     })),
-    availability: flat(row.availability).map(toAvailRowView),
-    leaves: flat(row.leaves).map(toLeaveRowView),
-    swaps: flat(row.swaps).map(toSwapRowView),
+    availability: listOf(row.availability).map(toAvailRowView),
+    leaves: listOf(row.leaves).map(toLeaveRowView),
+    swaps: listOf(row.swaps).map(toSwapRowView),
 })
 
 /** The wire figures as the ribbon's view. */

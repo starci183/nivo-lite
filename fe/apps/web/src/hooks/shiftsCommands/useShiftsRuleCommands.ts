@@ -51,7 +51,7 @@ export const useShiftsRuleCommands = (): ShiftsRuleCommands => {
                     noshowMinutes: input.noshowMinutes,
                     overtimeHoursWeek: input.overtimeHoursWeek,
                     openingHours: Object.entries(input.openingHours).flatMap(([weekday, day]) =>
-                        day === null ? [] : [[{ weekday: Number(weekday), open: day.open, close: day.close }]],
+                        day === null ? [] : [{ weekday: Number(weekday), open: day.open, close: day.close }],
                     ),
                 }),
             ),

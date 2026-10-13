@@ -1,5 +1,5 @@
 export {
-    flat,
+    listOf,
     toAvailRowView,
     toAvailView,
     toLeaveRowView,

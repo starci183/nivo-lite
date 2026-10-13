@@ -52,6 +52,3 @@ export type InventoryCommands = InventoryCatalogCommands & InventoryStockCommand
 
 /** The commands one panel needs. */
 export type InventoryCommandSet<Name extends keyof InventoryCommands> = Pick<InventoryCommands, Name>
-
-/** The line groups the contract takes: `[[line]]` per line today, `[line]` once the back end flattens the lists. */
-export const lineGroups = <Line>(lines: ReadonlyArray<Line>): Array<Array<Line>> => lines.map((line) => [line])

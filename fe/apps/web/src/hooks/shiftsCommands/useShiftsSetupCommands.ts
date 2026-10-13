@@ -67,7 +67,7 @@ export const useShiftsSetupCommands = (): ShiftsSetupCommands => {
                 savingStaff.trigger({
                     ...(input.id === null ? {} : { id: input.id }),
                     name: input.name.trim(),
-                    positionIds: input.positionIds.map((id) => [id]),
+                    positionIds: [...input.positionIds],
                     wage: input.wage,
                     maxWeek: input.maxWeek,
                     maxDay: input.maxDay,
@@ -85,7 +85,7 @@ export const useShiftsSetupCommands = (): ShiftsSetupCommands => {
         (input: ShiftsCoverageInput) =>
             finish(() =>
                 savingCoverage.trigger({
-                    weekdays: input.weekdays.map((day) => [day]),
+                    weekdays: [...input.weekdays],
                     start: input.start,
                     end: input.end,
                     positionId: input.positionId,

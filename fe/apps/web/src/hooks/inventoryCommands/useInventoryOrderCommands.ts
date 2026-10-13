@@ -5,7 +5,6 @@ import { useMutateReceiveInventoryPoSwr } from "@/hooks/swr/api/graphql/mutation
 import { useMutateRequestInventorySendSwr } from "@/hooks/swr/api/graphql/mutations/useMutateRequestInventorySendSwr"
 import { useMutateUpdateInventoryPoDraftSwr } from "@/hooks/swr/api/graphql/mutations/useMutateUpdateInventoryPoDraftSwr"
 import type { InventoryOrderCommands } from "./inventoryCommands.shared"
-import { lineGroups } from "./inventoryCommands.shared"
 
 /** The purchase order commands of the inventory workbench through the back end GraphQL door. */
 export const useInventoryOrderCommands = (): InventoryOrderCommands => {
@@ -16,9 +15,9 @@ export const useInventoryOrderCommands = (): InventoryOrderCommands => {
     const { trigger: receivePoTrigger } = useMutateReceiveInventoryPoSwr()
     return useMemo<InventoryOrderCommands>(
         () => ({
-            createPo: async (input) => createPoTrigger({ ...input, lines: lineGroups(input.lines) }),
+            createPo: async (input) => createPoTrigger({ ...input, lines: [...input.lines] }),
             updatePoDraft: async (input) => {
-                await updatePoDraftTrigger({ ...input, lines: lineGroups(input.lines) })
+                await updatePoDraftTrigger({ ...input, lines: [...input.lines] })
                 return null
             },
             requestSend: (poId, kind) => requestSendTrigger({ poId, kind }),
@@ -27,10 +26,10 @@ export const useInventoryOrderCommands = (): InventoryOrderCommands => {
                 return null
             },
             receivePo: async (input) => {
-                const result = await receivePoTrigger({ ...input, lines: lineGroups(input.lines) })
+                const result = await receivePoTrigger({ ...input, lines: [...input.lines] })
                 return {
                     status: result.status === "received" ? "received" : "partially_received",
-                    priceChanges: result.priceChanges.flat(),
+                    priceChanges: result.priceChanges,
                     handedToAccounting: result.handedToAccounting,
                 }
             },

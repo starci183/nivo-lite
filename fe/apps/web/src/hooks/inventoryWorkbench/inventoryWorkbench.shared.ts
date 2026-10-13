@@ -18,10 +18,6 @@ import type {
     SupplierChannel,
 } from "@/modules/types"
 
-/** The row groups the contract emits: `[[row]]` per row today, `[row]` once the back end flattens the lists. */
-const rows = <Row>(groups: ReadonlyArray<ReadonlyArray<Row> | Row> | null | undefined): ReadonlyArray<Row> =>
-    (groups ?? []).flatMap((group) => (Array.isArray(group) ? group : [group]))
-
 const STOCK_STATUSES: ReadonlyArray<StockStatus> = ["out", "low", "ok", "over"]
 
 const SUPPLIER_CHANNELS: ReadonlyArray<SupplierChannel> = ["email", "zalo", "phone"]
@@ -47,19 +43,19 @@ const toItemView = (row: InventoryItemType): ItemView => ({
     sku: row.sku,
     name: row.name,
     unit: row.unit,
-    units: rows(row.units),
+    units: row.units ?? [],
     category: row.category,
     costVnd: row.costVnd,
     sellPriceVnd: row.sellPriceVnd ?? null,
     reorderPoint: row.reorderPoint,
     reorderQty: row.reorderQty,
     supplierId: row.supplierId ?? null,
-    aliases: rows(row.aliases),
+    aliases: row.aliases ?? [],
     active: row.active,
     total: row.total,
     status: stockStatusOf(row.status),
     onOrder: row.onOrder,
-    levels: rows(row.levels),
+    levels: row.levels ?? [],
 })
 
 const toSupplierView = (row: InventorySupplierType) => ({
@@ -91,7 +87,7 @@ const toPoView = (row: InventoryPoType): PoView => ({
     reminders: row.reminders,
     source: row.source === "auto" ? "auto" : "manual",
     createdAt: row.createdAt,
-    lines: rows(row.lines),
+    lines: row.lines ?? [],
 })
 
 const toMovementView = (row: InventoryMovementType) => ({
@@ -123,21 +119,21 @@ const toPendingView = (row: InventoryPendingType): PendingView | null => {
 const toRecipeView = (row: InventoryRecipeType) => ({
     id: row.id,
     name: row.name,
-    aliases: rows(row.aliases),
-    lines: rows(row.lines),
+    aliases: row.aliases ?? [],
+    lines: row.lines ?? [],
 })
 
 /** The `inventoryWorkbench` answer as the view model the blocks already render. */
 export const toInventoryWorkbenchData = (bench: InventoryWorkbenchType): InventoryWorkbenchData => ({
     canManage: bench.canManage,
     defaultLocationId: bench.defaultLocationId ?? null,
-    locations: rows(bench.locations),
-    suppliers: rows(bench.suppliers).map(toSupplierView),
-    items: rows(bench.items).map(toItemView),
-    recipes: rows(bench.recipes).map(toRecipeView),
-    pos: rows(bench.pos).map(toPoView),
-    movements: rows(bench.movements).map(toMovementView),
-    pending: rows(bench.pending).flatMap((row) => {
+    locations: bench.locations ?? [],
+    suppliers: (bench.suppliers ?? []).map(toSupplierView),
+    items: (bench.items ?? []).map(toItemView),
+    recipes: (bench.recipes ?? []).map(toRecipeView),
+    pos: (bench.pos ?? []).map(toPoView),
+    movements: (bench.movements ?? []).map(toMovementView),
+    pending: (bench.pending ?? []).flatMap((row) => {
         const view = toPendingView(row)
         return view === null ? [] : [view]
     }),

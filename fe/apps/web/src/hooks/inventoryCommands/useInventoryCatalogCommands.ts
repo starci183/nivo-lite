@@ -6,7 +6,6 @@ import { useMutateSaveInventoryRecipeSwr } from "@/hooks/swr/api/graphql/mutatio
 import { useMutateSaveInventorySupplierSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSaveInventorySupplierSwr"
 import { useMutateSetInventoryItemActiveSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSetInventoryItemActiveSwr"
 import type { InventoryCatalogCommands } from "./inventoryCommands.shared"
-import { lineGroups } from "./inventoryCommands.shared"
 
 /** The catalogue commands of the inventory workbench (items, suppliers, recipes, locations) through the back end GraphQL door. */
 export const useInventoryCatalogCommands = (): InventoryCatalogCommands => {
@@ -24,7 +23,7 @@ export const useInventoryCatalogCommands = (): InventoryCatalogCommands => {
                 return null
             },
             saveSupplier: (input) => saveSupplierTrigger(input),
-            saveRecipe: async (input) => saveRecipeTrigger({ ...input, lines: lineGroups(input.lines) }),
+            saveRecipe: async (input) => saveRecipeTrigger({ ...input, lines: [...input.lines] }),
             deleteRecipe: async (id) => {
                 await deleteRecipeTrigger({ id })
                 return null

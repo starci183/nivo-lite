@@ -6,7 +6,6 @@ import { useMutateImportInventoryPasteSwr } from "@/hooks/swr/api/graphql/mutati
 import { useMutateTakeInventoryStockSwr } from "@/hooks/swr/api/graphql/mutations/useMutateTakeInventoryStockSwr"
 import { useMutateTransferInventoryStockSwr } from "@/hooks/swr/api/graphql/mutations/useMutateTransferInventoryStockSwr"
 import type { InventoryStockCommands } from "./inventoryCommands.shared"
-import { lineGroups } from "./inventoryCommands.shared"
 
 /** The stock commands of the inventory workbench (import, starter, adjust, count, transfer, low-stock draft) through the back end GraphQL door. */
 export const useInventoryStockCommands = (): InventoryStockCommands => {
@@ -20,7 +19,7 @@ export const useInventoryStockCommands = (): InventoryStockCommands => {
         () => ({
             importPaste: async (raw) => {
                 const result = await importPasteTrigger({ raw })
-                return { ...result, skipped: result.skipped.flat() }
+                return { ...result, skipped: result.skipped }
             },
             applyStarter: (key) => applyStarterTrigger({ key }),
             adjustStock: async (input) => {
@@ -28,7 +27,7 @@ export const useInventoryStockCommands = (): InventoryStockCommands => {
                 return { state: result.state === "waiting" ? "waiting" : "applied" }
             },
             stockTake: async (counts) => {
-                const result = await stockTakeTrigger({ counts: lineGroups(counts) })
+                const result = await stockTakeTrigger({ counts: [...counts] })
                 return { applied: result.applied, waiting: result.waiting, same: result.same }
             },
             transferStock: async (input) => {
