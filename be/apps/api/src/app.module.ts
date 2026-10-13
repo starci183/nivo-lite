@@ -150,7 +150,7 @@ import {
 import {
     AI_GENERATIONS_ERROR_KINDS,
     AI_GENERATIONS_MESSAGES,
-    AI_GENERATIONS_POLL_MS as GENERATION_POLL_MS,
+    AI_GENERATIONS_POLL_MS,
     AiGenerationsModule,
     TextGeneratorService,
 } from "@modules/domain/ai-generations"
@@ -236,9 +236,9 @@ import { LlmModule } from "@modules/integrations/llm"
 import {
     SUPABASE_ACCESS_TOKEN_VERIFIER,
     SUPABASE_AUTH,
-    SUPABASE_STORAGE,
     SUPABASE_ERROR_KINDS,
     SUPABASE_OBJECTS,
+    SUPABASE_STORAGE,
     SupabaseModule,
     createSupabaseAccessTokenVerifier,
 } from "@modules/integrations/supabase"
@@ -297,7 +297,7 @@ import { EventsModule } from "@modules/domain/events"
 import {
     WORKSPACE_INVITES_ERROR_KINDS,
     WORKSPACE_INVITES_MESSAGES,
-    WorkspaceInvitesModule as InvitesModule,
+    WorkspaceInvitesModule,
 } from "@modules/domain/workspace-invites"
 import {
     WORKSPACE_MEMBERS_ERROR_KINDS,
@@ -610,7 +610,11 @@ export class AppModule {
                 EventsModule.register({ isGlobal: true }),
                 WorkspaceMembersModule.register({ isGlobal: true, accounts: SUPABASE_AUTH }),
                 WorkspacesModule.register({ isGlobal: true, ...options.workspaces }),
-                InvitesModule.register({ isGlobal: true, delivery: SUPABASE_AUTH, ...options.workspaceInvites }),
+                WorkspaceInvitesModule.register({
+                    isGlobal: true,
+                    delivery: SUPABASE_AUTH,
+                    ...options.workspaceInvites,
+                }),
                 ConnectionsModule.register({ isGlobal: true, ...options.connections }),
                 ConnectionGrantsModule.register({ isGlobal: true }),
                 ChannelConnectionsModule.register({ isGlobal: true }),
@@ -714,7 +718,11 @@ export class AppModule {
                     syncFreshMs: AGENTS_SYNC_FRESH_MS,
                 }),
                 AgentConnectionsModule.register({ isGlobal: true }),
-                AiGenerationsModule.register({ isGlobal: true, usage: UsageGateService, pollMs: GENERATION_POLL_MS }),
+                AiGenerationsModule.register({
+                    isGlobal: true,
+                    usage: UsageGateService,
+                    pollMs: AI_GENERATIONS_POLL_MS,
+                }),
                 OpenclawAgentSyncModule.register({ isGlobal: true, reloadSettleMs: OPENCLAW_RELOAD_SETTLE_MS }),
                 AgentToolsModule.register({
                     isGlobal: true,
