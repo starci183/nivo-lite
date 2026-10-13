@@ -63,13 +63,14 @@ const build = async (em: MockEntityManager, found: ReadonlyArray<ConnectionRecor
     return { service: moduleRef.get(ConnectionGrantsService), tx, connections }
 }
 
-const grantQueries = (grants: ReadonlyArray<{ agent_id: string; connection_id: string; access: string }> = []) => [
-    [FIND_AGENTS, [AGENT]],
-    [FIND_GRANTS, grants],
-    [UPSERT_GRANT, []],
-    [DELETE_GRANT, []],
-    [INSERT_ACCESS_LOG, []],
-]
+const grantQueries = (grants: ReadonlyArray<{ agent_id: string; connection_id: string; access: string }> = []) =>
+    [
+        [FIND_AGENTS, [AGENT]],
+        [FIND_GRANTS, grants],
+        [UPSERT_GRANT, []],
+        [DELETE_GRANT, []],
+        [INSERT_ACCESS_LOG, []],
+    ] as const
 
 describe("ConnectionGrantsService", () => {
     describe("candidates", () => {

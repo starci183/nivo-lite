@@ -138,7 +138,7 @@ describe("BillingService", () => {
                 [SELECT_MEMBER_ROLE, [{ role: "owner" }]],
                 [SELECT_WORKSPACE_BILLING, workspace],
                 [SELECT_PLAN, plan],
-            ],
+            ] as const,
         })
         const WORKSPACE = [{ status: "active", plan_code: "starter", paid_until: null }]
 

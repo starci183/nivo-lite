@@ -41,7 +41,14 @@ const build = async () => {
         ],
     })
     const members = mock<WorkspaceMembersService>()
-    members.require.mockResolvedValue(undefined)
+    members.require.mockResolvedValue({
+        userId: "user-1",
+        workspaceId: "ws-1",
+        role: "owner",
+        staffId: null,
+        displayName: "An",
+        status: "active",
+    })
     const pillars = mock<ContentPillarsService>()
     pillars.list.mockResolvedValue([])
     const cadence = mock<ContentCadenceService>()
@@ -124,20 +131,27 @@ describe("ContentConfigurationService", () => {
     it("answers blank brand settings when none are stored", async () => {
         const em = mockEntityManager({ query: [SELECT_CONFIGURATION_BRAND, []] })
         const members = mock<WorkspaceMembersService>()
-        members.require.mockResolvedValue(undefined)
+        members.require.mockResolvedValue({
+            userId: "user-1",
+            workspaceId: "ws-1",
+            role: "owner",
+            staffId: null,
+            displayName: "An",
+            status: "active",
+        })
+        const pillars = mock<ContentPillarsService>()
+        const cadence = mock<ContentCadenceService>()
         const moduleRef = await Test.createTestingModule({
             providers: [
                 ContentConfigurationService,
                 { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
                 { provide: WorkspaceMembersService, useValue: members },
-                { provide: ContentPillarsService, useValue: mock<ContentPillarsService>() },
-                { provide: ContentCadenceService, useValue: mock<ContentCadenceService>() },
+                { provide: ContentPillarsService, useValue: pillars },
+                { provide: ContentCadenceService, useValue: cadence },
                 { provide: MESSAGE_CATALOG, useValue: mock<MessageCatalog>() },
             ],
         }).compile()
         const settings = moduleRef.get(ContentConfigurationService)
-        const pillars = moduleRef.get(ContentPillarsService)
-        const cadence = moduleRef.get(ContentCadenceService)
         pillars.list.mockResolvedValue([])
         cadence.list.mockResolvedValue([])
 

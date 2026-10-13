@@ -13,7 +13,14 @@ const OUTSIDE = "2026-11-01T00:00:00.000Z"
 
 const build = async (em: MockEntityManager, at = INSIDE) => {
     const members = mock<WorkspaceMembersService>()
-    members.require.mockResolvedValue(undefined)
+    members.require.mockResolvedValue({
+        userId: "user-1",
+        workspaceId: "ws-1",
+        role: "owner",
+        staffId: null,
+        displayName: "An",
+        status: "active",
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             PromoService,

@@ -1,13 +1,12 @@
 import { createHmac } from "node:crypto"
-import { FakeClock, builder } from "@starci/jest-preset"
+import { FakeClock, builder, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { CLOCK } from "@modules/platform/clock"
 import { Secret } from "@modules/platform/config"
 import { HttpSecurityError, HttpSecurityErrorCode } from "./errors/http-security.error"
 import { HTTP_SECURITY_OPTIONS, WEBHOOK_PROOF_REGISTRY } from "./http-security.decorators"
 import type { HttpSecurityOptions } from "./http-security.options"
-import { WebhookProofRegistryService } from "./webhook-proof-registry.service"
-import type { WebhookProof } from "./webhook-proof.port"
+import type { WebhookProof, WebhookProofRegistry } from "./webhook-proof.port"
 import { WebhookSignatureService } from "./webhook-signature.service"
 
 const NOW = "2026-10-02T03:00:00.000Z"
@@ -25,8 +24,17 @@ const sign = (timestamp: string, body: Buffer, secret = SECRET): string =>
     `sha256=${createHmac("sha256", secret).update(`${timestamp}.`).update(body).digest("hex")}`
 
 const build = async (proofs: ReadonlyArray<WebhookProof> = []) => {
-    const registry = new WebhookProofRegistryService()
-    for (const proof of proofs) registry.add(proof)
+    const registry = mock<WebhookProofRegistry>()
+    const byProvider = new Map(proofs.map((proof) => [proof.provider, proof]))
+    registry.prove.mockImplementation((provider, request) => {
+        const proof = byProvider.get(provider)
+        if (proof === undefined) {
+            return Promise.reject(
+                new HttpSecurityError({ code: HttpSecurityErrorCode.WebhookProviderUnknown, params: { provider } }),
+            )
+        }
+        return proof.prove(request)
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             WebhookSignatureService,

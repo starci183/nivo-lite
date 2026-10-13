@@ -44,7 +44,7 @@ describe("WorkPerformersRegistrarService", () => {
             ],
         }).compile()
 
-        moduleRef.get(WorkPerformersRegistrarService).onModuleInit()
+        expect(moduleRef.get(WorkPerformersRegistrarService).onModuleInit()).toBeUndefined()
 
         expect(registry.add).toHaveBeenNthCalledWith(1, "handoff_lead", handoff)
         expect(registry.add).toHaveBeenNthCalledWith(2, "classify_lead", classify)
