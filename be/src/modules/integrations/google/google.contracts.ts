@@ -53,8 +53,10 @@ export interface GoogleTokenSet {
 /** The values of a spreadsheet cell this integration writes. */
 export type SheetCell = string | number
 
-/** The saved settings of the automation that writes the sheet. */
-export type SheetConfig = Readonly<Record<string, string | number | boolean>>
+/** The saved settings of the automation that writes the sheet, by setting name (spreadsheet id, connection id, flags). */
+export interface SheetConfig {
+    readonly [setting: string]: string | number | boolean
+}
 
 /** The NIVO events the sheet records. */
 export type SheetEventName = "order.confirmed" | "deal.won" | "payment.received" | "lead.created"
@@ -95,10 +97,36 @@ export interface SheetsApi {
     updateCells(spreadsheetId: string, row: number, cells: Readonly<Record<string, SheetCell>>): Promise<void>
 }
 
-/** A created spreadsheet. */
+/** The spreadsheet Google made for a workspace, recorded on the connection so later events write to it. */
 export interface CreatedSpreadsheet {
     /** The Google spreadsheet id. */
     readonly spreadsheetId: string
     /** The url to open it. */
     readonly spreadsheetUrl: string
+}
+
+/** A return path or state token as the request carried it; absent when the request had none. */
+export type ReceivedText = string | null | undefined
+
+/** How a consent ended, written into the return url for the console to show. */
+export type ConsentResult = "ok" | "error"
+
+/** The query key the result lands under: `google` for the Sheets connection, `drive` for the Drive read grant. */
+export type ConsentResultKey = "google" | "drive"
+
+/** The Google consent url; null when Google is not configured on this deployment. */
+export type OptionalConsentUrl = string | null
+
+/** A callback state whose signature checked out and has not expired; null otherwise. */
+export type OptionalOAuthState = OAuthState | null
+
+/** The account email Google vouches for; null when neither the id token nor the userinfo call gives one. */
+export type OptionalAccountEmail = string | null
+
+/** The tokens the account email is read from: the id token first, the userinfo call with the access token second. */
+export interface GoogleIdentityTokens {
+    /** The OpenID id token, whose email claim is read without a network call; null when Google sent none. */
+    readonly idToken: string | null
+    /** The access token the userinfo call is made with when the id token gives no email. */
+    readonly accessToken: string
 }

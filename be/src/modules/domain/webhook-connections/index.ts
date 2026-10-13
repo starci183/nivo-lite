@@ -1,12 +1,8 @@
 export { parseWebhookConnectionsConfig } from "./webhook-connections.config"
-export { WEBHOOK_EVENTS } from "./webhook-connections.contracts"
-export type { StartWebhookInput, WebhookEvent, WebhookTestResult, WebhookView } from "./webhook-connections.contracts"
+export type { WebhookEvent, WebhookTestResult, WebhookView } from "./webhook-connections.contracts"
 export { WebhookConnectionsModule } from "./webhook-connections.module"
 export type { WebhookConnectionsOptions } from "./webhook-connections.options"
 export { WebhookConnectionsService } from "./webhook-connections.service"
-export {
-    WEBHOOK_CONNECTIONS_ERROR_KINDS,
-    WebhookConnectionsError,
-    WebhookConnectionsErrorCode,
-} from "./errors/webhook-connections.error"
+export { WebhookEventsService } from "./webhook-events.service"
+export { WEBHOOK_CONNECTIONS_ERROR_KINDS } from "./errors/webhook-connections.error"
 export { WEBHOOK_CONNECTIONS_MESSAGES } from "./messages/webhook-connections.messages"

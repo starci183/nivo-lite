@@ -3,15 +3,23 @@ import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectHttpClient } from "@modules/platform/http"
 import type { HttpClient } from "@modules/platform/http"
+import { InjectLogger } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
+import { parseJsonText } from "@modules/platform/primitives"
+import { GoogleLogEvent } from "./google.log-events"
 import { GoogleError, GoogleErrorCode } from "./errors/google.error"
 import { InjectGoogleOptions } from "./google.decorators"
 import type { GoogleOptions } from "./google.options"
 import { GOOGLE_SCOPE } from "./google.contracts"
 import type {
     CreatedSpreadsheet,
+    GoogleIdentityTokens,
     GoogleTokenSet,
-    OAuthState,
     OAuthStateInput,
+    OptionalAccountEmail,
+    OptionalConsentUrl,
+    OptionalOAuthState,
+    ReceivedText,
     SheetCell,
     SheetConfig,
     SheetEventIn,
@@ -31,7 +39,7 @@ const textOf = (value: unknown): string | undefined => (typeof value === "string
 
 const a1 = (tab: string, range: string): string => encodeURIComponent(`'${tab}'!${range}`)
 
-const columnLetter = (width: number): string => String.fromCharCode(64 + width)
+const columnLetter = (width: number): string => String.fromCodePoint(64 + width)
 
 @Injectable()
 /** Talks to Google OAuth and the Sheets API for the connections capability: consent urls, tokens, spreadsheets and rows. */
@@ -40,6 +48,7 @@ export class GoogleClient {
         @InjectHttpClient() private readonly http: HttpClient,
         @InjectGoogleOptions() private readonly options: GoogleOptions,
         @InjectClock() private readonly clock: Clock,
+        @InjectLogger() private readonly logger: Logger,
     ) {}
 
     /** True when this deployment has an OAuth client and a site url to return to. */
@@ -48,7 +57,7 @@ export class GoogleClient {
     }
 
     /** The Google consent url for a signed state, or null when Google is not configured. */
-    authUrl(state: string, scope: string = GOOGLE_SCOPE): string | null {
+    authUrl(state: string, scope: string = GOOGLE_SCOPE): OptionalConsentUrl {
         return buildAuthUrl(this.options, state, scope)
     }
 
@@ -58,7 +67,7 @@ export class GoogleClient {
     }
 
     /** The state of a callback when its signature is valid and it has not expired; otherwise null. */
-    verify(value: string | null | undefined): OAuthState | null {
+    verify(value: ReceivedText): OptionalOAuthState {
         return verifyState(stateKey(this.options.channelTokenKey.reveal()), value, this.clock.now().getTime())
     }
 
@@ -91,7 +100,7 @@ export class GoogleClient {
     }
 
     /** The account email: from the id token payload (received directly from Google over TLS), else the userinfo endpoint; null when neither says. */
-    async accountEmail(tokens: Pick<GoogleTokenSet, "idToken" | "accessToken">): Promise<string | null> {
+    async accountEmail(tokens: GoogleIdentityTokens): Promise<OptionalAccountEmail> {
         const fromToken = this.emailOfIdToken(tokens.idToken)
         if (fromToken !== null) return fromToken
         try {
@@ -101,7 +110,8 @@ export class GoogleClient {
                 headers: { authorization: `Bearer ${tokens.accessToken}` },
             })
             return textOf(body.email) || null
-        } catch {
+        } catch (cause) {
+            this.logger.error(GoogleLogEvent.EmailUnavailable, cause)
             return null
         }
     }
@@ -201,12 +211,8 @@ export class GoogleClient {
 
     private emailOfIdToken(idToken: string | null): string | null {
         if (idToken === null) return null
-        try {
-            const payload: unknown = JSON.parse(Buffer.from(idToken.split(".")[1] ?? "", "base64url").toString("utf8"))
-            return isJson(payload) ? textOf(payload.email) || null : null
-        } catch {
-            return null
-        }
+        const read = parseJsonText(Buffer.from(idToken.split(".")[1] ?? "", "base64url").toString("utf8"))
+        return read.ok && isJson(read.value) ? textOf(read.value.email) || null : null
     }
 
     private bearer(token: string): Record<string, string> {

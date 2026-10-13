@@ -1,4 +1,4 @@
-import { isRecord } from "./database-values.policy"
+import { isPlainObject } from "./database-values.policy"
 import { DataSourcesError, DataSourcesErrorCode } from "./errors/data-sources.error"
 import { DATABASE_COPY } from "./messages/database.messages"
 
@@ -10,7 +10,7 @@ interface DriverFacts {
 }
 
 const factsOf = (error: unknown): DriverFacts => {
-    const source = isRecord(error) ? error : {}
+    const source = isPlainObject(error) ? error : {}
     const text = (value: unknown): string => (typeof value === "string" ? value : "")
     const numeric = (value: unknown): number => (typeof value === "number" ? value : 0)
     return {

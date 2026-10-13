@@ -25,7 +25,7 @@ export interface PayosCredential {
 }
 
 /** The pending Zalo authorization stored with the credential. */
-export interface ZaloPkce {
+export interface ZaloSetupPkce {
     /** The PKCE verifier. */
     readonly verifier: string
     /** The one-time state nonce. */
@@ -35,7 +35,7 @@ export interface ZaloPkce {
 }
 
 /** The Zalo credential JSON kept sealed in connection_secrets: the app's keys, the tokens and a pending authorization. */
-export interface ZaloSecret {
+export interface ZaloSetupSecret {
     /** The Zalo app id. */
     readonly appId: string
     /** The Zalo app secret. */
@@ -49,8 +49,8 @@ export interface ZaloSecret {
     /** When the refresh token stops working, ISO 8601. */
     readonly refreshExpiresAt?: string
     /** A started authorization. */
-    readonly pkce?: ZaloPkce
+    readonly pkce?: ZaloSetupPkce
 }
 
-/** How long a started Zalo authorization stays valid, in milliseconds. */
-export const ZALO_PKCE_TTL_MS = 15 * 60_000
+/** A Zalo url built from the site url (callback or permission page); null when the deployment has no site url. */
+export type OptionalZaloUrl = string | null

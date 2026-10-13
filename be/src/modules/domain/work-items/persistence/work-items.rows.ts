@@ -67,6 +67,12 @@ export interface WorkItemRow {
     installation_id: string | null
 }
 
+/** A workspace that has queued work. */
+export interface QueuedWorkspaceRow {
+    /** The workspace id. */
+    workspace_id: string
+}
+
 /** An item closed as settled. */
 export interface ClosedClaimRow {
     /** The item id. */

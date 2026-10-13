@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { ApprovalGate, TextGenerator } from "@modules/domain/module-ops"
+import { ApprovalGate, ModuleTextGenerator } from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -55,7 +55,7 @@ export class ShiftsScheduleService {
         private readonly members: WorkspaceMembersService,
         private readonly data: ShiftsDataService,
         private readonly words: ShiftsTextService,
-        private readonly generator: TextGenerator,
+        private readonly generator: ModuleTextGenerator,
         private readonly gate: ApprovalGate,
     ) {}
 
