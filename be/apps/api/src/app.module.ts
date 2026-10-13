@@ -665,7 +665,7 @@ export class AppModule {
                 }),
                 ConnectionsModule.register({ isGlobal: true, ...options.connections }),
                 ConnectionGrantsModule.register({ isGlobal: true }),
-                DataSourcesModule.register({ isGlobal: true, allowPrivateHosts: options.mail.allowPrivateHosts }),
+                DataSourcesModule.register({ isGlobal: true, ...options.dataSources }),
                 DataHubModule.register({ isGlobal: true }),
                 ChannelConnectionsModule.register({ isGlobal: true }),
                 WebhookConnectionsModule.register({ isGlobal: true, ...options.webhookConnections }),

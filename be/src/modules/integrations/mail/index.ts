@@ -1,6 +1,6 @@
 export { MAIL_ERROR_KINDS } from "./errors/mail.error"
 export { MAIL_MESSAGES } from "./messages/mail.messages"
-export { parseMailConfig } from "./mail.config"
+export { isPublicSite, parseMailConfig } from "./mail.config"
 export { MailModule } from "./mail.module"
 export type { MailOptions } from "./mail.options"
 export { MailError } from "./errors/mail.error"

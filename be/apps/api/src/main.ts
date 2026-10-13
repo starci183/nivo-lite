@@ -10,6 +10,7 @@ import { parseJobsConfig } from "@modules/platform/jobs"
 import { parseQueueConfig } from "@modules/platform/queue"
 import { parseChannelsConfig } from "@modules/domain/channels"
 import { parseConnectionSecretsConfig } from "@modules/domain/connection-secrets"
+import { parseDataSourcesConfig } from "@modules/integrations/data-sources"
 import { parseMailConfig } from "@modules/integrations/mail"
 import { parseTelegramConfig } from "@modules/integrations/telegram"
 import { parseZaloConfig } from "@modules/integrations/zalo"
@@ -65,6 +66,7 @@ const bootstrap = async (): Promise<void> => {
         telegram: parseTelegramConfig(env),
         zalo: parseZaloConfig(env),
         mail: parseMailConfig(env),
+        dataSources: parseDataSourcesConfig(env),
         queue: parseQueueConfig(env),
         jobs: parseJobsConfig(env),
         connections: parseConnectionsConfig(env),

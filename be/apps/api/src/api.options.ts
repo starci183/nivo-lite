@@ -21,6 +21,7 @@ import type { ConnectionSecretsOptions } from "@modules/domain/connection-secret
 import type { PlatformAdminOptions } from "@modules/domain/platform-admin"
 import type { WorkspaceInvitesOptions } from "@modules/domain/workspace-invites"
 import type { WorkspacesOptions } from "@modules/domain/workspaces"
+import type { DataSourcesOptions } from "@modules/integrations/data-sources"
 import type { MailOptions } from "@modules/integrations/mail"
 import type { TelegramOptions } from "@modules/integrations/telegram"
 import type { ZaloOptions } from "@modules/integrations/zalo"
@@ -62,6 +63,8 @@ export interface ApiOptions {
     readonly zalo: ZaloOptions
     /** Outgoing mail: the platform sender and the private-host policy. */
     readonly mail: MailOptions
+    /** The owner own systems the data hub reads: the private-host policy and the personal Telegram app. */
+    readonly dataSources: DataSourcesOptions
     /** The platform team that may use the console. */
     readonly platformAdmin: PlatformAdminOptions
     /** How the pgmq workers run. */
