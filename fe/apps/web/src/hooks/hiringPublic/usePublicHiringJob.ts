@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { useQueryPublicHiringJobSwr } from "@/hooks/swr/api/graphql/queries/useQueryPublicHiringJobSwr"
+import { useQueryPublicHiringJobSwr } from "@/hooks/swr"
 import { toPublicJob } from "./hiringPublic.shared"
 
 /** The public job of a workspace slug and a job slug, read without a session; `isMissing` when the back end knows no such job. */

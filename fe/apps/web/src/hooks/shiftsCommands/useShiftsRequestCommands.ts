@@ -2,8 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
-import { useMutateDecideShiftsAvailabilitySwr } from "@/hooks/swr/api/graphql/mutations/useMutateDecideShiftsAvailabilitySwr"
-import { useMutateDecideWorkItemSwr } from "@/hooks/swr/api/graphql/mutations/useMutateDecideWorkItemSwr"
+import { useMutateDecideShiftsAvailabilitySwr, useMutateDecideWorkItemSwr } from "@/hooks/swr"
 import { toast, useGraphQLWithToast } from "@/modules/toast"
 import { refreshShifts } from "./shiftsCommands.shared"
 import { useShiftsSaved } from "./useShiftsSaved"

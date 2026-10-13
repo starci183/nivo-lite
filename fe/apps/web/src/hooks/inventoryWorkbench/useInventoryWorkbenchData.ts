@@ -1,4 +1,4 @@
-import { useQueryInventoryWorkbenchSwr } from "@/hooks/swr/api/graphql/queries/useQueryInventoryWorkbenchSwr"
+import { useQueryInventoryWorkbenchSwr } from "@/hooks/swr"
 import { toInventoryWorkbenchData } from "./inventoryWorkbench.shared"
 
 /**

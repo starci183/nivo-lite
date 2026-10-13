@@ -2,7 +2,7 @@ import type { UseFormReturn } from "react-hook-form"
 import { useHiringRun } from "@/hooks/hiring"
 import type { FieldOf } from "@/hooks/hiring"
 import type { JobView } from "@/hooks/hiringWire"
-import { useMutateSaveHiringJobSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSaveHiringJobSwr"
+import { useMutateSaveHiringJobSwr } from "@/hooks/swr"
 import { MAX_QUESTIONS, blankQuestion, toJobInput } from "./hiringJobs.shared"
 import type { HiringJobValues, HiringQuestionValues } from "./hiringJobs.shared"
 

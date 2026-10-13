@@ -1,6 +1,5 @@
 import { useMemo } from "react"
-import { useMutateGenerateHiringAdSwr } from "@/hooks/swr/api/graphql/mutations/useMutateGenerateHiringAdSwr"
-import { useMutateSetHiringJobStatusSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSetHiringJobStatusSwr"
+import { useMutateGenerateHiringAdSwr, useMutateSetHiringJobStatusSwr } from "@/hooks/swr"
 
 /** The job commands of the Hiring workbench through the back end GraphQL door. */
 export const useHiringJobCommands = () => {

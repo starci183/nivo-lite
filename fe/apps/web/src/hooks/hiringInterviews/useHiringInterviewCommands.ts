@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { useMutateSetHiringInterviewStatusSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSetHiringInterviewStatusSwr"
+import { useMutateSetHiringInterviewStatusSwr } from "@/hooks/swr"
 
 /** The interview commands of the calendar through the back end GraphQL door. */
 export const useHiringInterviewCommands = () => {

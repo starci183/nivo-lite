@@ -1,7 +1,7 @@
 import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
 import { mutate } from "swr"
-import { QUERY_INVENTORY_WORKBENCH_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryInventoryWorkbenchSwr"
+import { QUERY_INVENTORY_WORKBENCH_SWR_KEY } from "@/hooks/swr"
 import { toast, useGraphQLWithToast } from "@/modules/toast"
 
 /** What one command run leaves on the screen. */

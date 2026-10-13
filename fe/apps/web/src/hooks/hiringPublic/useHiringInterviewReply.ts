@@ -1,7 +1,7 @@
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useHiringFormat } from "@/hooks/hiring"
-import { useMutateRespondHiringInterviewSwr } from "@/hooks/swr/api/graphql/mutations/useMutateRespondHiringInterviewSwr"
+import { useMutateRespondHiringInterviewSwr } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 
 /** What an answer to an invitation or an offer came to, in the reader's words. */

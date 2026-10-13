@@ -1,8 +1,10 @@
 import { useMemo } from "react"
-import { useMutateCancelHiringOfferSwr } from "@/hooks/swr/api/graphql/mutations/useMutateCancelHiringOfferSwr"
-import { useMutateDeleteHiringCandidateSwr } from "@/hooks/swr/api/graphql/mutations/useMutateDeleteHiringCandidateSwr"
-import { useMutateRescreenHiringCandidateSwr } from "@/hooks/swr/api/graphql/mutations/useMutateRescreenHiringCandidateSwr"
-import { useMutateSaveHiringNotesSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSaveHiringNotesSwr"
+import {
+    useMutateCancelHiringOfferSwr,
+    useMutateDeleteHiringCandidateSwr,
+    useMutateRescreenHiringCandidateSwr,
+    useMutateSaveHiringNotesSwr,
+} from "@/hooks/swr"
 
 /** The commands of the candidate drawer through the back end GraphQL door. */
 export const useHiringCandidateCommands = () => {

@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { useQueryPublicHiringOfferSwr } from "@/hooks/swr/api/graphql/queries/useQueryPublicHiringOfferSwr"
+import { useQueryPublicHiringOfferSwr } from "@/hooks/swr"
 import { toPublicOffer } from "./hiringPublic.shared"
 
 /** The job offer of a link token, read without a session; `isMissing` when the link is not valid any more. */

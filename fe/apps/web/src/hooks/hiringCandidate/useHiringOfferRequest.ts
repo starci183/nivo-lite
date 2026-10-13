@@ -2,7 +2,7 @@ import { useState } from "react"
 import type { UseFormReturn } from "react-hook-form"
 import { useHiringRun } from "@/hooks/hiring"
 import type { FieldOf } from "@/hooks/hiring"
-import { useMutateRequestHiringOfferSwr } from "@/hooks/swr/api/graphql/mutations/useMutateRequestHiringOfferSwr"
+import { useMutateRequestHiringOfferSwr } from "@/hooks/swr"
 import type { OfferValues, RequestOutcomeView } from "./hiringCandidate.shared"
 
 /** The offer request of one candidate: the form values, the send that shows what the request came to, and the reset on close. */

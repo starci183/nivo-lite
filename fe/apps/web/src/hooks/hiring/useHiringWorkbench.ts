@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import { EMPTY_BOARD, toHiringWorkbenchData } from "@/hooks/hiringMap"
-import { useQueryHiringWorkbenchSwr } from "@/hooks/swr/api/graphql/queries/useQueryHiringWorkbenchSwr"
+import { useQueryHiringWorkbenchSwr } from "@/hooks/swr"
 import { isForbiddenFailure } from "@/modules/api"
 
 /**

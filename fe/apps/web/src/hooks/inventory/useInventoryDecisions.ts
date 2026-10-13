@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { useMutateDecideWorkItemSwr } from "@/hooks/swr/api/graphql/mutations/useMutateDecideWorkItemSwr"
+import { useMutateDecideWorkItemSwr } from "@/hooks/swr"
 
 /** The decisions the owner takes on the inventory screens. */
 export interface InventoryDecisions {

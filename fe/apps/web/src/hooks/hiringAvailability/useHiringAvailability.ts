@@ -2,7 +2,7 @@ import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useHiringRun } from "@/hooks/hiring"
 import type { HiringMemberView } from "@/hooks/hiringWire"
-import { useMutateSaveHiringAvailabilitySwr } from "@/hooks/swr/api/graphql/mutations/useMutateSaveHiringAvailabilitySwr"
+import { useMutateSaveHiringAvailabilitySwr } from "@/hooks/swr"
 import { WEEKDAYS, memberTexts, parseWindows } from "./hiringAvailability.shared"
 
 /** The availability form: the member being edited, the text of each weekday, the weekdays that are not time ranges, and the save. */
