@@ -81,6 +81,44 @@ export interface MetaWizardBaseProps {
     }
 }
 
+/** The save or next action of the Page step: save when Pages are listed, continue when one is already chosen. */
+const pickStepActions = (
+    view: MetaWizardBaseProps["props"],
+    text: MetaWizardBaseProps["props"]["text"],
+    on: MetaWizardBaseProps["on"],
+): ReadonlyArray<WizardAction> => {
+    if (view.pages.length > 0) {
+        return [nextAction(text.pickSave, on.choose, { isPending: view.isPending, isDisabled: view.pageId === "" })]
+    }
+    if (view.chosen === null) return []
+    return [nextAction(text.next, () => on.go(2))]
+}
+
+/** The Page step body: the list, the chosen Page, or the empty sentence. */
+const PickStepBody = (props: MetaWizardBaseProps) => {
+    const view = props.props
+    const text = view.text
+    if (view.pages.length > 0) {
+        return (
+            <RadioGroup
+                variant="secondary"
+                label={text.pickBody}
+                isLabelHidden
+                isDisabled={view.isPending}
+                value={view.pageId === "" ? null : view.pageId}
+                onValueChange={props.on.page}
+                options={[...view.pages]}
+            />
+        )
+    }
+    if (view.chosen !== null) return <Alert tone="affirmative" title={view.chosen} />
+    return (
+        <Text size="sm" tone="muted">
+            {text.pickNone}
+        </Text>
+    )
+}
+
 /** Draws Facebook and Instagram in the shared wizard frame: login, pick the Page, attach the agents, test. */
 export const MetaWizardBase = (props: MetaWizardBaseProps) => {
     const view = props.props
@@ -101,14 +139,7 @@ export const MetaWizardBase = (props: MetaWizardBaseProps) => {
                 : []),
             closeAction(text.close, on.close),
         ],
-        pick: [
-            ...(view.pages.length > 0
-                ? [nextAction(text.pickSave, on.choose, { isPending: view.isPending, isDisabled: view.pageId === "" })]
-                : view.chosen === null
-                  ? []
-                  : [nextAction(text.next, () => on.go(2))]),
-            back,
-        ],
+        pick: [...pickStepActions(view, text, on), back],
         agent: [nextAction(text.next, on.saveAgents, { isPending: view.isPending }), back],
         test: [nextAction(text.done, on.done), back],
     }[view.step]
@@ -139,23 +170,7 @@ export const MetaWizardBase = (props: MetaWizardBaseProps) => {
             {view.step === "pick" ? (
                 <>
                     <Text size="sm">{text.pickBody}</Text>
-                    {view.pages.length > 0 ? (
-                        <RadioGroup
-                            variant="secondary"
-                            label={text.pickBody}
-                            isLabelHidden
-                            isDisabled={view.isPending}
-                            value={view.pageId === "" ? null : view.pageId}
-                            onValueChange={on.page}
-                            options={[...view.pages]}
-                        />
-                    ) : view.chosen !== null ? (
-                        <Alert tone="affirmative" title={view.chosen} />
-                    ) : (
-                        <Text size="sm" tone="muted">
-                            {text.pickNone}
-                        </Text>
-                    )}
+                    <PickStepBody props={view} on={on} />
                 </>
             ) : null}
             {view.step === "agent" ? (
@@ -221,15 +236,18 @@ export const MetaWizardBase = (props: MetaWizardBaseProps) => {
     )
 }
 
-/** The run and repair buttons of the test step. */
-const ButtonRow = (props: {
+/** Labels and commands of the run and repair buttons. */
+interface ButtonRowProps {
     readonly run: string
     readonly repair: string
     readonly canRepair: boolean
     readonly isDisabled: boolean
     readonly onRun: () => void
     readonly onRepair: () => void
-}) => (
+}
+
+/** The run and repair buttons of the test step. */
+const ButtonRow = (props: ButtonRowProps) => (
     <WizardFooter
         actions={[
             { id: "run", label: props.run, variant: "outline", onPress: props.onRun, isDisabled: props.isDisabled },

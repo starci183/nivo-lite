@@ -47,7 +47,7 @@ const build = async (origin: string | null = "https://nivo.vn") => {
             { provide: ConnectionsService, useValue: connections },
             { provide: CHANNEL_SETUP_CLIENT, useValue: setup },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
-            { provide: LOGGER, useValue: { info: () => undefined, warn: () => undefined, error: () => undefined } },
+            { provide: LOGGER, useValue: mock() },
         ],
     }).compile()
     return { service: moduleRef.get(ChannelConnectionsService), connections, setup }
@@ -77,7 +77,7 @@ describe("ChannelConnectionsService", () => {
             expect(setup.telegramSetWebhook).toHaveBeenCalledWith(
                 TOKEN,
                 "https://nivo.vn/hook/telegram/c1",
-                expect.any(String),
+                connections.create.mock.calls[0]?.[0]?.secret.webhookSecret,
             )
         })
 

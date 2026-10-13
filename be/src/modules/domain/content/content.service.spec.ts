@@ -93,7 +93,11 @@ describe("ContentService", () => {
 
             expect(forced).toEqual([{ workspaceId: "workspace-1", job: "today_reminder", count: 1 }])
             expect(ignored).toEqual([])
-            expect(settings.tickWorkspaces).toHaveBeenCalledWith(expect.any(String), 200, "workspace-1")
+            expect(settings.tickWorkspaces).toHaveBeenCalledWith(
+                "00000000-0000-0000-0000-000000000000",
+                200,
+                "workspace-1",
+            )
         })
 
         it("reads every page of workspaces", async () => {

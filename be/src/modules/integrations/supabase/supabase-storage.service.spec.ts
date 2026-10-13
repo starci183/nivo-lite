@@ -12,8 +12,9 @@ const build = async () => {
     bucket.upload.mockResolvedValue({ data: { id: "1", path: "a/b.mp4", fullPath: "videos/a/b.mp4" }, error: null })
     const storage = mock<SupabaseAdminClient["storage"]>()
     storage.from.mockReturnValue(bucket)
+    const admin = mock<SupabaseAdminClient>({ storage })
     const moduleRef = await Test.createTestingModule({
-        providers: [SupabaseStorageService, { provide: SUPABASE_ADMIN_CLIENT, useValue: { storage } }],
+        providers: [SupabaseStorageService, { provide: SUPABASE_ADMIN_CLIENT, useValue: admin }],
     }).compile()
     return { service: moduleRef.get(SupabaseStorageService), storage, bucket }
 }

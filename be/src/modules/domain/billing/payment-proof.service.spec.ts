@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto"
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
+import { builder, mock } from "@starci/jest-preset"
 import { Secret } from "@modules/platform/config"
 import { BILLING_OPTIONS } from "./billing.decorators"
 import type { BillingOptions } from "./billing.options"
@@ -27,7 +27,7 @@ const build = async (options: BillingOptions = OPTIONS, loaded: ConnectionSecret
     const moduleRef = await Test.createTestingModule({
         providers: [
             PaymentProofService,
-            { provide: BILLING_OPTIONS, useValue: options },
+            { provide: BILLING_OPTIONS, useValue: builder<BillingOptions>(OPTIONS)(options) },
             { provide: ConnectionSecretsService, useValue: secrets },
         ],
     }).compile()
