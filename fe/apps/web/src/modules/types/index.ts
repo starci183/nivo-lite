@@ -1,4 +1,19 @@
 export type {
+    AgentRecord,
+    EventRecord,
+    ExecutionRecord,
+    DraftStatus,
+    LeadJourney,
+    LeadIcon,
+    LeadListItem,
+    LeadPrimaryAction,
+    LeadRecord,
+    LeadStageId,
+    OwnerKind,
+    ResponsibilityRecord,
+    StepStatus,
+} from "./leads"
+export type {
     AccountingAgeing,
     AccountingCredit,
     AccountingInvoice,
@@ -29,4 +44,63 @@ export type {
     ChatbotRole,
     ChatbotThread,
 } from "./chatbot"
+export type {
+    BookingAction,
+    BookingBoard,
+    BookingFiguresView,
+    BookingHoursView,
+    BookingResourceView,
+    BookingServiceView,
+    BookingSettingsView,
+    BookingStatsView,
+    BookingView,
+    BookingWaitView,
+} from "./booking"
 export type { ConsoleIconName, ConsoleNavItem, ConsolePending, ConsoleWorkspace } from "./console"
+export type { DataSlot, SlotLabels } from "./slot"
+export type {
+    AccountsView,
+    AutomationTone,
+    AutomationsBoardView,
+    AutomationsLanguage,
+    AutomationsTranslator,
+    CardView,
+    DetailView,
+    GateView,
+    MessageView,
+    RunRowView,
+    SettingFieldView,
+} from "./automations"
+export type {
+    DeciderKind,
+    DecisionFilter,
+    DecisionKind,
+    DecisionOutcome,
+    DecisionRecord,
+    GateReason,
+} from "./decisions"
+export type {
+    AttentionKind,
+    AttentionRow,
+    AutoActivity,
+    SalesContract,
+    SalesContractStatus,
+    HandoffRow,
+    SalesConversion,
+    SalesDeal,
+    SalesDecision,
+    SalesMetrics,
+    SalesWorkbenchData,
+} from "./sales"
+export type {
+    LeadGenComment,
+    LeadGenHandoff,
+    LeadGenLead,
+    LeadGenMetrics,
+    LeadGenSource,
+    LeadGenWorkbenchData,
+    LeadOrigin,
+    LeadPlatform,
+    LeadScore,
+    LeadSourceKind,
+} from "./leadgen"

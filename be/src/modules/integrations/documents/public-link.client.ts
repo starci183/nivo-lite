@@ -39,7 +39,7 @@ export class PublicLinkClient {
         if (!isPublicHost(url.hostname)) throw new DocumentsError({ code: DocumentsErrorCode.HostPrivate })
         const google = target.kind !== "web"
         const response = await this.http.get(url.toString(), { "User-Agent": "NIVO-OS-Knowledge/1.0" }, LINK_TIMEOUT_MS)
-        const finalHost = new URL(response.url === "" ? url : response.url).hostname
+        const finalHost = new URL(response.url === undefined || response.url === "" ? url : response.url).hostname
         const refused = response.status === 401 || response.status === 403 || response.status === 404
         if (google && (refused || finalHost === GOOGLE_SIGN_IN_HOST)) {
             throw new DocumentsError({ code: DocumentsErrorCode.NotPublic })
@@ -49,7 +49,7 @@ export class PublicLinkClient {
         if (bytes.length > LINK_MAX_BYTES) {
             throw new DocumentsError({ code: DocumentsErrorCode.TooLarge, params: { maxMb: 12 } })
         }
-        const type = response.headers["content-type"] ?? ""
+        const type = response.headers?.["content-type"] ?? ""
         const kind = sniffTextKind(bytes, type)
         if (kind !== null) {
             const text = await textFromBytes(kind, bytes, this.options.readers)

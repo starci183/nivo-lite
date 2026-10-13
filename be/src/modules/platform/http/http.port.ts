@@ -27,10 +27,10 @@ export interface HttpRequest {
 export interface HttpResponse {
     /** The HTTP status code. */
     readonly status: number
-    /** The response headers, names in lower case. */
-    readonly headers: Readonly<Record<string, string>>
-    /** The address the answer came from after redirects. */
-    readonly url: string
+    /** The response headers, names in lower case (absent from a double that answers only a status and a body). */
+    readonly headers?: Readonly<Record<string, string>>
+    /** The address the answer came from after redirects (absent from a double that answers only a status and a body). */
+    readonly url?: string
     /** The parsed JSON body (undefined when the answer had none), a string for `read: "text"`, or a Buffer for `read: "bytes"`. */
     readonly body: unknown
 }

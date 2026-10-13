@@ -3,8 +3,12 @@ import { join } from "node:path"
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { CliModule } from "@features/cli"
+import { AutomationTemplatesModule } from "@modules/domain/automation-templates"
+import { N8nHostModule } from "@modules/integrations/n8n-host"
+import { TemplateFilesModule } from "@modules/integrations/template-files"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import { WorkspacesModule } from "@modules/domain/workspaces"
+import { SepaySimulationModule } from "@modules/domain/sepay-simulation"
 import { SeedSecretsFileClient, WorkspaceSeedModule } from "@modules/domain/workspace-seed"
 import { CORE_FOLDER, NIVO_KNOWLEDGE_MESSAGES, NivoKnowledgeModule } from "@modules/domain/nivo-knowledge"
 import { LlmModule } from "@modules/integrations/llm"
@@ -43,6 +47,9 @@ export class AppModule {
                     folders: [CORE_FOLDER, ...MODULE_CATALOG.map((module) => module.knowledgeFolder)],
                     dir: "fe/apps/web/resources/nivo-knowledge",
                 }),
+                TemplateFilesModule.register({ isGlobal: true, ...options.templateFiles }),
+                AutomationTemplatesModule.register({ isGlobal: true }),
+                N8nHostModule.register({ isGlobal: true, ...options.n8nHost }),
                 SupabaseModule.register({ isGlobal: true, ...options.supabase }),
                 WorkspaceMembersModule.register({ isGlobal: true, accounts: SUPABASE_AUTH }),
                 WorkspacesModule.register({ isGlobal: true, allowFreeWorkspace: true }),
@@ -53,6 +60,7 @@ export class AppModule {
                     print: (line) => process.stdout.write(`${line}\n`),
                 }),
                 AuthorityActionsModule.register({ isGlobal: true }),
+                SepaySimulationModule.register({ isGlobal: true, ...options.sepaySimulation }),
                 ModulesModule.register({ isGlobal: true, categories: MODULE_CATEGORIES, catalog: MODULE_CATALOG }),
                 CliModule,
             ],

@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { listConnections } from "@/lib/channels"
 import { getCurrentMember, isManagerRole } from "@/lib/members"
-import { apiUrl } from "@/modules/config"
+import { developerApiUrl } from "@/modules/config"
 import { readApiKeys } from "@/modules/db"
 import { DevelopersForbiddenBase, DevelopersPageBase } from "./component"
 
@@ -58,7 +58,7 @@ export const DevelopersPage = async () => {
                           }))
                         : [],
                 keysFailed: keys.kind !== "ok",
-                apiBase: `${apiUrl()}/api/v1`,
+                apiBase: `${developerApiUrl()}/api/v1`,
             }}
         />
     )

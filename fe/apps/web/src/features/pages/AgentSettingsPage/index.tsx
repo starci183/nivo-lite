@@ -9,6 +9,7 @@ import { isManagerRole } from "@/lib/members-shared"
 import { getInstallationById } from "@/lib/modules-core"
 import { getSession } from "@/lib/session"
 import { MODULE_KEYS, MODULE_REGISTRY, isModuleKey, pickCopy } from "@/modules/catalog"
+import { readAutomations } from "@/modules/db"
 import { AgentSettingsPageBase } from "./component"
 
 /** What the route hands the page: the type and the instance of the url. */
@@ -33,11 +34,12 @@ const numberOf = (value: unknown): number => (typeof value === "number" ? value 
 export const AgentSettingsPage = async (props: AgentSettingsPageProps) => {
     if (!isModuleKey(props.module)) notFound()
     const moduleKey = props.module
-    const [installation, session, t, localeText] = await Promise.all([
+    const [installation, session, t, localeText, automationsT] = await Promise.all([
         getInstallationById(props.installationId),
         getSession(),
         getTranslations("modulesCore"),
         getLocale(),
+        getTranslations("automations"),
     ])
     if (!installation || installation.moduleKey !== moduleKey) notFound()
     const locale = localeText === "en" ? "en" : "vi"
@@ -58,6 +60,8 @@ export const AgentSettingsPage = async (props: AgentSettingsPageProps) => {
         }
         return c.name
     }
+    const canEdit = isManagerRole(session.member.role)
+    const automations = canEdit ? await readAutomations(session.workspace.id) : null
     const savedTimeout = numberOf(installation.settings.openclawTimeoutSec)
     const bound = options.some(
         (c) =>
@@ -72,7 +76,7 @@ export const AgentSettingsPage = async (props: AgentSettingsPageProps) => {
                 module: moduleKey,
                 glyph: def.glyph,
                 sharedType: installation.isMulti ? pickCopy(def.shortName, locale) : "",
-                canEdit: isManagerRole(session.member.role),
+                canEdit,
                 canGrant: session.member.role === "owner",
                 connections: options.map((c) => ({
                     id: c.id,
@@ -84,6 +88,15 @@ export const AgentSettingsPage = async (props: AgentSettingsPageProps) => {
                 connectionsHref: CONNECTIONS_ROUTE,
                 automationsHref: AUTOMATIONS_ROUTE,
                 automationsScope: moduleKey,
+                ...(automations?.kind === "ok" ? { automations: automations.value } : {}),
+                automationsFailed: automations !== null && automations.kind !== "ok",
+                automationsTexts: {
+                    title: automationsT("moduleTitle"),
+                    seeAll: automationsT("seeAll"),
+                    help: automationsT("moduleHelp"),
+                    failure: automationsT("loadFailed"),
+                },
+                workspaceId: session.workspace.id,
                 extrasKey: def.settingsExtras,
                 timeoutSec:
                     Number.isFinite(savedTimeout) && savedTimeout >= TIMEOUT_MIN
@@ -117,6 +130,8 @@ export const AgentSettingsLoadingPage = () => {
                 connectionsHref: CONNECTIONS_ROUTE,
                 automationsHref: AUTOMATIONS_ROUTE,
                 automationsScope: null,
+                automationsFailed: false,
+                automationsTexts: { title: "", seeAll: "", help: "", failure: "" },
                 extrasKey: null,
                 timeoutSec: DEFAULT_REPLY_TIMEOUT_SEC,
                 holdingMessage: "",

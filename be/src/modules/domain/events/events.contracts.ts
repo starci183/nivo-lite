@@ -8,4 +8,10 @@ export interface EventEntry {
     readonly actor: string
     /** One short sentence for the history view. */
     readonly summary: string
+    /** The customer the line is about, when there is one. */
+    readonly leadId?: string | null
+    /** The work item the line belongs to, when there is one. */
+    readonly workItemId?: string | null
+    /** The evidence behind the line, when there is some. */
+    readonly evidence?: string | null
 }

@@ -63,7 +63,7 @@ export class DriveApiClient {
         if (bytes.length > DRIVE_MAX_BYTES) this.tooLarge()
         const text =
             mode === "media"
-                ? await this.mediaText(name, bytes, response.headers["content-type"] ?? "")
+                ? await this.mediaText(name, bytes, response.headers?.["content-type"] ?? "")
                 : new TextDecoder("utf-8").decode(bytes).replace(/^\ufeff/u, "")
         return { name, text: text.slice(0, DOCUMENT_TEXT_MAX_CHARS) }
     }

@@ -1,4 +1,5 @@
-import type { Outcome, TeamRoster } from "@/modules/api"
+import type { DbOutcome } from "@/modules/db/outcome"
+import type { TeamRoster } from "@/modules/db/team/team.mapper"
 
 /** What a member may do in a workspace. */
 export type TeamRole = "owner" | "manager" | "staff"
@@ -83,8 +84,8 @@ export const canManageMember = (selfRole: TeamRole, member: TeamMemberView): boo
     member.role !== "owner" || selfRole === "owner"
 
 /** The sentence that explains a failed call to the back end api. */
-export const outcomeErrorKey = (outcome: Exclude<Outcome<unknown>, { readonly kind: "ok" }>): TeamErrorKey =>
-    teamErrorKey(outcome.fault.code)
+export const outcomeErrorKey = (outcome: Exclude<DbOutcome<unknown>, { readonly kind: "ok" }>): TeamErrorKey =>
+    teamErrorKey(outcome.code)
 
 /** What the team page draws, built from the roster and the staff rows. */
 export interface TeamViews {
@@ -124,4 +125,4 @@ export const teamViews = (roster: TeamRoster, staff: ReadonlyArray<StaffChoiceVi
 }
 
 /** What a call to the back end api about an invitation answers. */
-export type InviteCall<T> = Outcome<T>
+export type InviteCall<T> = DbOutcome<T>
