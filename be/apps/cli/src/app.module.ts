@@ -1,6 +1,8 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { CliModule } from "@features/cli"
+import { AuthorityActionsModule } from "@modules/domain/authority-actions"
+import { MODULE_CATALOG, MODULE_CATEGORIES, ModulesModule } from "@modules/domain/modules"
 import { ClockModule } from "@modules/platform/clock"
 import { DatabaseModule } from "@modules/platform/database"
 import { LoggingModule } from "@modules/platform/logging"
@@ -23,6 +25,8 @@ export class AppModule {
                     isGlobal: true,
                     connections: options.connections,
                 }),
+                AuthorityActionsModule.register({ isGlobal: true }),
+                ModulesModule.register({ isGlobal: true, categories: MODULE_CATEGORIES, catalog: MODULE_CATALOG }),
                 CliModule,
             ],
         }

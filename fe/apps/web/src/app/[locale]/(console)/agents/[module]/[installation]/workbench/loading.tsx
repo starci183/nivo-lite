@@ -1,6 +1,6 @@
-import { WorkbenchLoading } from "@/features/module-workbench/loading";
+import { AgentWorkbenchLoadingPage } from "@/features/pages/AgentWorkbenchLoadingPage"
 
-/** STATE-8: the workbench slot while it loads - the module's own frame with real labels and skeleton values (inside the module's chrome). */
-const WorkbenchLoadingRoute = () => <WorkbenchLoading />;
+/** The workbench slot while it loads. */
+const Loading = () => <AgentWorkbenchLoadingPage />
 
-export default WorkbenchLoadingRoute;
+export default Loading

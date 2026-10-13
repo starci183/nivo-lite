@@ -1,22 +1,27 @@
-import { notFound } from "next/navigation";
-import { ModuleWorkbench } from "@/features/module-workbench";
-import { getInstallationById } from "@/lib/modules-core";
-import { isModuleKey } from "@/lib/modules-shared";
+import { AgentWorkbenchPage } from "@/features/pages/AgentWorkbenchPage"
 
-type WorkbenchPageProps = {
-  params: Promise<{ module: string; installation: string }>;
-  searchParams: Promise<{ tab?: string | string[]; focus?: string | string[] }>;
-};
+/** The document title of the workbench tab. */
+export { agentWorkbenchMetadata as generateMetadata } from "@/features/pages/AgentWorkbenchPage"
 
-const first = (v: string | string[] | undefined): string | null => (Array.isArray(v) ? (v[0] ?? null) : (v ?? null)) || null;
+type PageProps = {
+    readonly params: Promise<{ module: string; installation: string }>
+    readonly searchParams: Promise<{ tab?: string | string[]; focus?: string | string[] }>
+}
 
-/** Workbench slot of one instance: the module's own working surface, scoped to this instance (its conversations, bookings, prospects and decisions). `?tab=` and `?focus=` are the shared deep-link contract of the agent dashboard frame. */
-const WorkbenchPage = async ({ params, searchParams }: WorkbenchPageProps) => {
-  const { module, installation: installationId } = await params;
-  if (!isModuleKey(module)) notFound();
-  const [query, installation] = await Promise.all([searchParams, getInstallationById(installationId)]);
-  if (!installation || installation.moduleKey !== module) notFound();
-  return <ModuleWorkbench module={module} installation={installation} tab={first(query.tab)} focus={first(query.focus)} />;
-};
+const first = (value: string | string[] | undefined): string | null =>
+    (Array.isArray(value) ? (value[0] ?? null) : (value ?? null)) || null
 
-export default WorkbenchPage;
+/** The workbench slot of one agent instance; the tab and focus of the query are the deep link contract of the agent dashboard frame. */
+const Page = async (props: PageProps) => {
+    const [{ module, installation }, query] = await Promise.all([props.params, props.searchParams])
+    return (
+        <AgentWorkbenchPage
+            module={module}
+            installationId={installation}
+            tab={first(query.tab)}
+            focus={first(query.focus)}
+        />
+    )
+}
+
+export default Page

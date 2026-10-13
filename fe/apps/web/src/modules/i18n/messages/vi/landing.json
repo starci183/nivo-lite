@@ -107,5 +107,6 @@
   "chForm": "Form trên web",
   "chFormText": "Form gửi về cùng danh sách khách hàng.",
   "connectNote": "Hiện chỉ có Chatbot. Các kênh khác nằm trong lộ trình và chưa có ngày cụ thể.",
-  "connectCta": "Dùng thử NIVO OS"
+  "connectCta": "Dùng thử NIVO OS",
+  "flowAiMark": "AI"
 }
