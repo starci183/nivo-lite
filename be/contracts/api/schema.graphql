@@ -1,9 +1,70 @@
+type AcceptInviteType {
+  workspaceId: ID!
+}
+
+input ChangeMemberRoleInput {
+  role: String!
+  userId: ID!
+}
+
+input CreateInviteInput {
+  email: String!
+  role: String!
+  staffId: ID
+}
+
 input CreateWorkspaceInput {
   name: String!
 }
 
 type CreateWorkspaceType {
   id: ID!
+}
+
+type DeviceSessionType {
+  createdAt: String
+  id: ID!
+  ip: String
+  isCurrent: Boolean!
+  lastActiveAt: String
+  userAgent: String
+}
+
+type InvitePreviewType {
+  email: String!
+  role: String!
+  staffName: String
+  state: String!
+  workspaceName: String!
+}
+
+input InviteRefInput {
+  inviteId: ID!
+}
+
+type InviteResultType {
+  delivery: String!
+  email: String!
+  link: String!
+}
+
+input InviteTokenInput {
+  token: String!
+}
+
+type MemberListingType {
+  displayName: String!
+  email: String!
+  lastSignInAt: String
+  role: String!
+  staffId: ID
+  status: String!
+  userId: ID!
+  workspaceId: ID!
+}
+
+input MemberRefInput {
+  userId: ID!
 }
 
 type MemberType {
@@ -21,11 +82,101 @@ type MembershipType {
 }
 
 type Mutation {
+  acceptInvite(input: InviteTokenInput!): AcceptInviteType!
+  changeMemberRole(input: ChangeMemberRoleInput!): Boolean!
+  copyInviteLink(input: InviteRefInput!): InviteResultType!
+  createInvite(input: CreateInviteInput!): InviteResultType!
   createWorkspace(input: CreateWorkspaceInput!): CreateWorkspaceType!
+  removeMember(input: MemberRefInput!): Boolean!
+  resendInvite(input: InviteRefInput!): InviteResultType!
+  revokeInvite(input: InviteRefInput!): Boolean!
+  revokeSession(input: RevokeSessionInput!): Boolean!
+  setMemberStatus(input: SetMemberStatusInput!): Boolean!
+  updateProfile(input: UpdateProfileInput!): Boolean!
+}
+
+type MyAccountType {
+  email: String!
+  name: String!
+  providers: [String!]!
+  sessions: [DeviceSessionType!]!
+}
+
+type PendingInviteType {
+  createdAt: String!
+  email: String!
+  expiresAt: String!
+  id: ID!
+  role: String!
+  staffId: ID
 }
 
 type Query {
+  invitePreview(input: InviteTokenInput!): InvitePreviewType!
+  myAccount: MyAccountType!
   myWorkspaces: [MembershipType!]!
+  workspaceInvites: [PendingInviteType!]!
+  workspaceMembers: [MemberListingType!]!
+  workspaceShell(input: ShellWindowInput!): WorkspaceShellType!
+  workspaceStaff: [StaffOptionType!]!
+}
+
+input RevokeSessionInput {
+  sessionId: ID!
+}
+
+input SetMemberStatusInput {
+  status: String!
+  userId: ID!
+}
+
+type ShellAgentType {
+  id: ID!
+  module: String!
+  name: String!
+  status: String!
+}
+
+type ShellApprovalType {
+  contactName: String
+  draft: String!
+  id: ID!
+  leadId: ID
+  nextAction: String
+}
+
+type ShellExceptionType {
+  contactName: String
+  error: String
+  id: ID!
+  leadId: ID
+  summary: String
+}
+
+input ShellWindowInput {
+  foundingFrom: String!
+  foundingTo: String!
+}
+
+type StaffOptionType {
+  id: ID!
+  name: String!
+  role: String!
+}
+
+input UpdateProfileInput {
+  name: String!
+}
+
+type WorkspaceShellType {
+  agents: [ShellAgentType!]!
+  approvals: [ShellApprovalType!]!
+  exceptions: [ShellExceptionType!]!
+  hasChatbot: Boolean!
+  isFoundingMember: Boolean!
+  leadCount: Int!
+  openResponsibilityCount: Int!
+  pendingDecisions: Int!
 }
 
 type WorkspaceType {

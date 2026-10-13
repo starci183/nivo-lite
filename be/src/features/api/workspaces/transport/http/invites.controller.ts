@@ -21,13 +21,8 @@ export class InvitesController {
 
     /** Shows what the invitation offers before it is accepted. */
     @Get(":token/preview")
-    async preview(
-        @CurrentPrincipal() principal: Principal,
-        @Param() params: InviteTokenRequest,
-    ): Promise<InvitePreviewResponse> {
-        const result = await this.queryBus.execute(
-            new PreviewInviteQuery({ request: { token: params.token }, principal }),
-        )
+    async preview(@Param() params: InviteTokenRequest): Promise<InvitePreviewResponse> {
+        const result = await this.queryBus.execute(new PreviewInviteQuery({ request: { token: params.token } }))
         return toInvitePreviewResponse(result)
     }
 
