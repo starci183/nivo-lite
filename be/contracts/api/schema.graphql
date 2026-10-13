@@ -1,9 +1,407 @@
+input AddResponsibilityInput {
+  dueAt: String = null
+  leadId: ID!
+  nextAction: String!
+  owner: String!
+  title: String!
+}
+
+input AssignResponsibilityInput {
+  dueAt: String = null
+  nextAction: String!
+  owner: String!
+  responsibilityId: ID!
+  title: String = null
+}
+
+input CreateLeadInput {
+  channel: String!
+  company: String!
+  contactName: String!
+  email: String
+  need: String!
+  phone: String
+}
+
 input CreateWorkspaceInput {
   name: String!
 }
 
 type CreateWorkspaceType {
   id: ID!
+}
+
+input DecideSalesDraftInput {
+  decision: String!
+  editedDraft: String
+  id: ID!
+}
+
+input DecideSalesWorkItemInput {
+  basis: String
+  decision: String!
+  edits: SalesWorkEditsInput
+  id: ID!
+  note: String
+}
+
+input DraftLeadExecutionInput {
+  responsibilityId: String!
+}
+
+input HandoffToAccountingInput {
+  id: ID!
+}
+
+type LeadActionQueuedType {
+  id: String!
+  status: String!
+}
+
+type LeadActionResultType {
+  contextSummary: String
+  executionId: String
+  leadId: String
+  responsibilityId: String
+  workItemId: String
+}
+
+input LeadActionStatusInput {
+  id: String!
+}
+
+type LeadActionStatusType {
+  errorCode: String
+  id: String!
+  result: LeadActionResultType
+  status: String!
+}
+
+type LeadAgentType {
+  handle: String!
+  id: ID!
+  module: String!
+  name: String!
+  status: String!
+}
+
+type LeadBoardType {
+  channel: String!
+  company: String!
+  contactName: String!
+  contextSummary: String
+  createdAt: String!
+  id: ID!
+  installationId: ID
+  need: String!
+  nextAction: String
+  origin: String
+  ownerName: String
+  stage: String!
+}
+
+type LeadEventType {
+  actor: String!
+  createdAt: String!
+  evidence: String
+  id: ID!
+  kind: String!
+  leadId: ID
+  summary: String!
+}
+
+type LeadExecutionType {
+  agentId: ID
+  createdAt: String!
+  decidedAt: String
+  decidedBy: String
+  draft: String!
+  id: ID!
+  kind: String!
+  responsibilityId: ID!
+  status: String!
+  workItemId: ID
+  workspaceId: ID!
+}
+
+type LeadFlowCandidateType {
+  amountVnd: Float!
+  id: ID!
+  label: String!
+}
+
+type LeadFlowDecisionType {
+  action: String!
+  createdAt: String!
+  decidedBy: String!
+  deciderKind: String!
+  department: String!
+  id: ID!
+  leadId: ID
+  leadName: String
+  note: String
+  outcome: String!
+  reason: String
+  workItemId: ID
+}
+
+input LeadFlowInput {
+  leadId: String!
+}
+
+type LeadFlowInvoiceType {
+  amountVnd: Float!
+  createdAt: String!
+  dueAt: String
+  id: ID!
+  invoiceNo: String!
+  issuedAt: String
+  issuedBy: ID
+  leadId: ID
+  orderId: ID
+  origin: String!
+  paidAt: String
+  status: String!
+  workspaceId: ID!
+}
+
+type LeadFlowLeadType {
+  channel: String!
+  company: String!
+  contactName: String!
+  id: ID!
+}
+
+type LeadFlowOrderType {
+  amountVnd: Float
+  carrier: String
+  confirmedAt: String
+  confirmedBy: ID
+  createdAt: String!
+  id: ID!
+  inboundEventId: ID
+  items: String!
+  leadId: ID
+  orderNo: String!
+  origin: String!
+  shippedAt: String
+  status: String!
+  trackingCode: String
+  workspaceId: ID!
+}
+
+type LeadFlowProposalFieldType {
+  key: String!
+  kind: String!
+  numberValue: Float
+  stringValue: String
+}
+
+type LeadFlowProposalType {
+  amountVnd: Float
+  candidates: [LeadFlowCandidateType!]
+  confidence: Float
+  draft: String
+  fields: [LeadFlowProposalFieldType!]!
+  outcome: String
+  summary: String!
+}
+
+type LeadFlowResultType {
+  href: String
+  summary: String!
+}
+
+type LeadFlowTransactionType {
+  amountVnd: Float!
+  channel: String!
+  createdAt: String!
+  id: ID!
+  inboundEventId: ID
+  invoiceId: ID
+  occurredAt: String!
+  origin: String!
+  payer: String
+  reference: String
+  status: String!
+  workspaceId: ID!
+}
+
+type LeadFlowType {
+  decisions: [LeadFlowDecisionType!]!
+  invoices: [LeadFlowInvoiceType!]!
+  orders: [LeadFlowOrderType!]!
+  transactions: [LeadFlowTransactionType!]!
+  workItems: [LeadFlowWorkItemType!]!
+}
+
+type LeadFlowWorkItemType {
+  action: String!
+  assignedStaffId: ID
+  assignedStaffName: String
+  chainId: ID
+  completedAt: String
+  createdAt: String!
+  decidedBy: String
+  decidedPath: String
+  department: String!
+  depth: Int!
+  error: String
+  evidenceState: String!
+  executionId: ID
+  hasApprovalCard: Boolean!
+  href: String!
+  id: ID!
+  inboundEventId: ID
+  installationId: ID
+  lead: LeadFlowLeadType
+  leadId: ID
+  missingFields: [String!]!
+  origin: String!
+  parentId: ID
+  proposal: LeadFlowProposalType!
+  reason: String
+  reasons: [String!]!
+  result: LeadFlowResultType
+  status: String!
+  subjectId: ID
+  subjectType: String!
+  updatedAt: String!
+  workspaceId: ID!
+}
+
+type LeadGenCommentType {
+  at: String!
+  author: String!
+  comment: String!
+  draft: String!
+  platform: String!
+  refLabel: String
+  workItemId: String!
+}
+
+type LeadGenHandoffType {
+  at: String!
+  classify: String
+  href: String!
+  key: String!
+  leadId: String!
+  name: String!
+  score: String
+  stage: String!
+}
+
+type LeadGenLeadType {
+  createdAt: String!
+  href: String!
+  id: String!
+  lastAt: String!
+  lastText: String!
+  name: String!
+  origin: LeadGenOriginType!
+  score: String
+  stage: String!
+}
+
+type LeadGenMetricsType {
+  conversionLeads: Int!
+  conversionWindowDays: Int!
+  conversionWon: Int!
+  firstReplyP50Min: Float
+  firstReplySample: Int!
+  hotWaiting: Int!
+  newToday: Int!
+}
+
+type LeadGenOriginType {
+  kind: String!
+  platform: String!
+  refId: String
+  refKind: String
+  refLabel: String
+}
+
+type LeadGenSourceType {
+  hot: Int!
+  key: String!
+  leads: Int!
+  origin: LeadGenOriginType!
+  won: Int!
+}
+
+input LeadGenWorkbenchInput {
+  installationId: String
+}
+
+type LeadGenWorkbenchType {
+  comments: [LeadGenCommentType!]!
+  handoffs: [LeadGenHandoffType!]!
+  leads: [LeadGenLeadType!]!
+  leadsHidden: Int!
+  metrics: LeadGenMetricsType!
+  sources: [LeadGenSourceType!]!
+}
+
+input LeadJourneyInput {
+  leadId: ID!
+}
+
+type LeadJourneyResponsibilityType {
+  createdAt: String!
+  dueAt: String
+  id: ID!
+  leadId: ID!
+  nextAction: String!
+  ownerAgentId: ID
+  ownerKind: String!
+  ownerName: String!
+  status: String!
+  title: String!
+}
+
+type LeadJourneyType {
+  agents: [LeadAgentType!]!
+  events: [LeadEventType!]!
+  executions: [LeadExecutionType!]!
+  lead: LeadRecordType!
+  responsibilities: [LeadJourneyResponsibilityType!]!
+}
+
+type LeadRecordType {
+  channel: String!
+  company: String!
+  contactName: String!
+  contextSummary: String
+  createdAt: String!
+  id: ID!
+  installationId: ID
+  need: String!
+  origin: String
+  stage: String!
+}
+
+type LeadResponsibilityType {
+  dueAt: String
+  id: ID!
+  leadId: ID!
+  nextAction: String!
+  ownerAgentId: ID
+  ownerKind: String!
+  ownerName: String!
+  status: String!
+  title: String!
+}
+
+input MarkOrderShippedInput {
+  carrier: String!
+  orderId: ID!
+  trackingCode: String!
+}
+
+type MarkOrderShippedType {
+  id: ID!
+  notificationId: ID!
+  orderNo: String!
 }
 
 type MemberType {
@@ -21,11 +419,297 @@ type MembershipType {
 }
 
 type Mutation {
+  addResponsibility(input: AddResponsibilityInput!): LeadResponsibilityType!
+  assignResponsibility(input: AssignResponsibilityInput!): LeadResponsibilityType!
+  createLead(input: CreateLeadInput!): LeadActionQueuedType!
   createWorkspace(input: CreateWorkspaceInput!): CreateWorkspaceType!
+  decideSalesDraft(input: DecideSalesDraftInput!): SalesActionType!
+  decideSalesWorkItem(input: DecideSalesWorkItemInput!): SalesActionType!
+  draftLeadExecution(input: DraftLeadExecutionInput!): LeadActionQueuedType!
+  handoffToAccounting(input: HandoffToAccountingInput!): SalesActionType!
+  markOrderShipped(input: MarkOrderShippedInput!): MarkOrderShippedType!
+  recordOutcome(input: RecordOutcomeInput!): RecordOutcomeType!
+  refreshLeadContext(input: RefreshLeadContextInput!): LeadActionQueuedType!
+  retryFailedStep(input: RetryFailedStepInput!): SalesActionType!
+  saveContract(input: SaveContractInput!): SaveContractType!
+  settleWonDeal(input: SettleWonDealInput!): LeadActionQueuedType!
+  stopFailedStep(input: StopFailedStepInput!): StopFailedStepType!
+  suggestLeadOwner(input: SuggestLeadOwnerInput!): LeadActionQueuedType!
 }
 
 type Query {
+  leadActionStatus(input: LeadActionStatusInput!): LeadActionStatusType!
+  leadBoard: [LeadBoardType!]!
+  leadFlow(input: LeadFlowInput!): LeadFlowType!
+  leadGenWorkbench(input: LeadGenWorkbenchInput): LeadGenWorkbenchType!
+  leadJourney(input: LeadJourneyInput!): LeadJourneyType!
   myWorkspaces: [MembershipType!]!
+  salesActionStatus(input: SalesActionStatusInput!): SalesActionType!
+  salesWorkbench: SalesWorkbenchType!
+}
+
+input RecordOutcomeInput {
+  evidence: String!
+  leadId: ID!
+  stage: String!
+}
+
+type RecordOutcomeType {
+  channel: String!
+  company: String!
+  contactName: String!
+  handedToAccounting: Boolean!
+  leadId: ID!
+  need: String!
+  origin: String
+  stage: String!
+}
+
+input RefreshLeadContextInput {
+  leadId: String!
+}
+
+input RetryFailedStepInput {
+  id: ID!
+}
+
+input SalesActionStatusInput {
+  id: ID!
+}
+
+type SalesActionType {
+  errorCode: String
+  id: ID!
+  status: String!
+  workItemId: ID
+}
+
+type SalesActivityType {
+  action: String!
+  at: String!
+  customer: String
+  evidence: String
+  evidenceState: String!
+  href: String!
+  id: ID!
+  leadId: ID
+  summary: String!
+}
+
+type SalesAttentionType {
+  action: String
+  company: String!
+  customer: String!
+  decisionId: ID
+  key: String!
+  kind: String!
+  leadId: ID
+  missing: [String!]!
+  need: String!
+  owner: String
+  since: String!
+  stage: String
+  workItemId: ID
+}
+
+type SalesChoiceType {
+  id: ID!
+  name: String!
+}
+
+type SalesClosedHiddenType {
+  lost: Int!
+  won: Int!
+}
+
+type SalesConversionType {
+  leads: Int!
+  sources: [SalesSourceConversionType!]!
+  windowDays: Int!
+  won: Int!
+}
+
+type SalesDealType {
+  channel: String!
+  closedAt: String
+  closedReason: String
+  company: String!
+  createdAt: String!
+  customer: String!
+  dueAt: String
+  leadId: ID!
+  need: String!
+  nextStep: String
+  owner: String
+  stage: String!
+  valueSource: String
+  valueVnd: Float
+}
+
+type SalesDecidedType {
+  action: String!
+  createdAt: String!
+  decidedBy: String!
+  deciderKind: String!
+  department: String!
+  id: ID!
+  leadId: ID
+  leadName: String
+  note: String
+  outcome: String!
+  reason: String
+  workItemId: ID
+}
+
+type SalesDecisionType {
+  action: String!
+  amountVnd: Float
+  assignedStaffId: ID
+  assignedStaffName: String
+  createdAt: String!
+  customer: String!
+  draft: String!
+  executionId: ID
+  hasAmount: Boolean!
+  id: ID!
+  leadId: ID
+  missing: [String!]!
+  reason: String
+  source: String!
+  summary: String!
+  workItemId: ID
+}
+
+input SalesFieldValueInput {
+  name: String!
+  number: Float
+  text: String
+}
+
+type SalesHandoffInvoiceType {
+  amountVnd: Float!
+  issuedAt: String
+  no: String!
+  paidAt: String
+  status: String!
+}
+
+type SalesHandoffType {
+  amountVnd: Float
+  canHandoff: Boolean!
+  canShip: Boolean!
+  carrier: String
+  confirmedAt: String
+  customer: String!
+  invoice: SalesHandoffInvoiceType
+  items: String!
+  key: String!
+  leadId: ID
+  orderId: ID
+  orderNo: String
+  orderStatus: String!
+  shippedAt: String
+  trackingCode: String
+  work: SalesHandoffWorkType
+}
+
+type SalesHandoffWorkType {
+  error: String
+  id: ID!
+  reason: String
+  status: String!
+}
+
+type SalesMetricsType {
+  conversion: SalesConversionType!
+  openCount: Int!
+  proposalCount: Int!
+  proposalValueVnd: Float!
+  waitingCount: Int!
+  wonCount: Int!
+  wonValueVnd: Float!
+}
+
+type SalesRecurringContractType {
+  amountVnd: Float
+  customerName: String!
+  endsOn: String!
+  id: ID!
+  leadId: ID
+  note: String!
+  plan: String!
+  startsOn: String!
+  status: String!
+}
+
+type SalesSourceConversionType {
+  leads: Int!
+  source: String!
+  won: Int!
+}
+
+input SalesWorkEditsInput {
+  amount_vnd: Float
+  candidateId: ID
+  draft: String
+  fields: [SalesFieldValueInput!]
+}
+
+type SalesWorkbenchType {
+  activity: [SalesActivityType!]!
+  attention: [SalesAttentionType!]!
+  closedHidden: SalesClosedHiddenType!
+  contracts: [SalesRecurringContractType!]!
+  deals: [SalesDealType!]!
+  decided: [SalesDecidedType!]!
+  decisions: [SalesDecisionType!]!
+  handoffs: [SalesHandoffType!]!
+  leadOptions: [SalesChoiceType!]!
+  metrics: SalesMetricsType!
+  nowIso: String!
+  staff: [SalesChoiceType!]!
+}
+
+input SaveContractInput {
+  amountVnd: Float = null
+  contractId: ID = null
+  customerName: String!
+  endsOn: String!
+  leadId: ID = null
+  note: String!
+  plan: String!
+  startsOn: String!
+  status: String!
+}
+
+type SaveContractType {
+  amountVnd: Float
+  customerName: String!
+  endsOn: String!
+  id: ID!
+  leadId: ID
+  note: String!
+  plan: String!
+  startsOn: String!
+  status: String!
+}
+
+input SettleWonDealInput {
+  evidence: String
+  leadId: String!
+}
+
+input StopFailedStepInput {
+  id: ID!
+}
+
+type StopFailedStepType {
+  id: ID!
+  status: String!
+}
+
+input SuggestLeadOwnerInput {
+  leadId: String!
 }
 
 type WorkspaceType {
