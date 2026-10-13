@@ -4,7 +4,7 @@ import { Public, PublicReason } from "@modules/domain/identity"
 import { InjectCommandBus } from "@modules/platform/cqrs"
 import { RateLimit, RateTier } from "@modules/platform/http-security"
 import { GoogleCallbackCommand } from "../../application/google-callback.command"
-import { GoogleCallbackQuery } from "./dto/google-callback.request"
+import { GoogleCallbackRequest } from "./dto/google-callback.request"
 
 @Controller("api/connections/google")
 /** The Google consent callback: its path is registered on the Google OAuth client and stays byte-identical. */
@@ -16,7 +16,7 @@ export class GoogleCallbackController {
     @Redirect()
     @Public({ reason: PublicReason.SignedWebhook })
     @RateLimit(RateTier.Strict)
-    async callback(@Query() query: GoogleCallbackQuery): Promise<{ url: string }> {
+    async callback(@Query() query: GoogleCallbackRequest): Promise<{ url: string }> {
         const outcome = await this.commandBus.execute(
             new GoogleCallbackCommand({ request: { state: query.state, code: query.code, error: query.error } }),
         )

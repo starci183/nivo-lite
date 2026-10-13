@@ -1,7 +1,7 @@
 import { IsOptional, IsString, MaxLength } from "class-validator"
 
 /** The bounded query Meta redirects the browser back with. */
-export class MetaCallbackQuery {
+export class MetaCallbackRequest {
     /** The signed state. */
     @IsOptional()
     @IsString()
@@ -22,7 +22,7 @@ export class MetaCallbackQuery {
 }
 
 /** The bounded hub query of the webhook verification. */
-export class MetaChallengeQueryParams {
+export class MetaChallengeRequest {
     /** The hub mode. */
     @IsOptional()
     @IsString()

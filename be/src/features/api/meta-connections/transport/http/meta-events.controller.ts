@@ -21,7 +21,7 @@ export class MetaEventsController {
         @Req() request: RawBodyRequest<Request>,
         @Headers("x-hub-signature-256") signature: string | undefined,
     ): Promise<void> {
-        await this.commandBus.execute(
+        return this.commandBus.execute(
             new AcceptMetaDeliveryCommand({ request: { rawBody: request.rawBody, signature } }),
         )
     }

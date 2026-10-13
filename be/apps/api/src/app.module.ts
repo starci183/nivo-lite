@@ -1,36 +1,22 @@
 import { Module, type DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
-import { ExtractKnowledgeFactsQueueModule } from "@features/jobs/extract-knowledge-facts"
-import { RunBrainCommandQueueModule } from "@features/jobs/run-brain-command"
-import { IndexKnowledgeSourceQueueModule } from "@features/jobs/index-knowledge-source"
-import { ReembedKnowledgeQueueModule } from "@features/jobs/reembed-knowledge"
 import { AutomationsGraphqlModule, AutomationsHttpModule } from "@features/api/automations"
 import { FlowsGraphqlModule, FlowsHttpModule } from "@features/api/flows"
 import { N8nPipelinesHttpModule } from "@features/api/n8n-pipelines"
-import { EmitN8nEventQueueModule } from "@features/jobs/emit-n8n-event"
-import { RunAutomationCommandQueueModule } from "@features/jobs/run-automation-command"
-import { RunAutomationTickQueueModule } from "@features/jobs/run-automation-tick"
 import { AgentToolsHttpModule } from "@features/api/agent-tools"
 import { AgentsGraphqlModule, AgentsHttpModule } from "@features/api/agents"
 import { ApiKeysGraphqlModule } from "@features/api/api-keys"
-import { OperationsGraphqlModule } from "@features/api/operations"
+import { DataHubGraphqlModule } from "@features/api/data-hub"
+import { HiringGraphqlModule } from "@features/api/hiring"
+import { InventoryGraphqlModule } from "@features/api/inventory"
+import { ShiftsGraphqlModule } from "@features/api/shifts"
 import { OverviewGraphqlModule } from "@features/api/overview"
 import { DecisionsGraphqlModule, DecisionsHttpModule } from "@features/api/decisions"
-import { RunDecisionsQueueModule } from "@features/jobs/run-decisions"
-import { RunSetupTurnQueueModule } from "@features/jobs/run-setup-turn"
-import { GenerateWithAgentQueueModule } from "@features/jobs/generate-with-agent"
-import { SyncAgentsQueueModule } from "@features/jobs/sync-agents"
-import { DraftLoyaltyCampaignQueueModule } from "@features/jobs/draft-loyalty-campaign"
 import { BookingGraphqlModule, BookingHttpModule } from "@features/api/booking"
 import { LoyaltyGraphqlModule, LoyaltyHttpModule } from "@features/api/loyalty"
 import { LoyaltyTillHttpModule } from "@features/api/loyalty-till"
 import { PublicBookingGraphqlModule, PublicBookingHttpModule } from "@features/api/public-booking"
 import { PublicLoyaltyGraphqlModule, PublicLoyaltyHttpModule } from "@features/api/public-loyalty"
-import { CheckConnectionHealthQueueModule } from "@features/jobs/check-connection-health"
-import { CompleteZaloAuthorizationQueueModule } from "@features/jobs/complete-zalo-authorization"
-import { RefreshZaloTokensQueueModule } from "@features/jobs/refresh-zalo-tokens"
-import { RunZaloWizardQueueModule } from "@features/jobs/run-zalo-wizard"
-import { RunChatTurnQueueModule } from "@features/jobs/run-chat-turn"
 import { TelegramHttpModule } from "@features/webhooks/telegram"
 import { ZaloHttpModule } from "@features/webhooks/zalo"
 import { LeadsGraphqlModule, LeadsHttpModule } from "@features/api/leads"
@@ -38,7 +24,6 @@ import { LeadQueriesGraphqlModule } from "@features/api/lead-queries"
 import { LeadActionsGraphqlModule } from "@features/api/lead-actions"
 import { SalesGraphqlModule } from "@features/api/sales"
 import { SalesWorkbenchGraphqlModule } from "@features/api/sales-workbench"
-import { RunLeadActionQueueModule } from "@features/jobs/run-lead-action"
 import { LEAD_ACTIONS_ERROR_KINDS, LEAD_ACTIONS_MESSAGES, LeadActionsModule } from "@modules/domain/lead-actions"
 import { SalesModule } from "@modules/domain/sales"
 import { SalesWorkbenchModule } from "@modules/domain/sales-workbench"
@@ -84,8 +69,6 @@ import { PayosHttpModule } from "@features/webhooks/payos"
 import { SepayHttpModule } from "@features/webhooks/sepay"
 import { SepayFeedHttpModule } from "@features/webhooks/sepay-feed"
 import { VietcombankHttpModule } from "@features/webhooks/vietcombank"
-import { ReconcileBankCreditQueueModule } from "@features/jobs/reconcile-bank-credit"
-import { CreatePaymentOrderQueueModule } from "@features/jobs/create-payment-order"
 import {
     PAYMENT_ORDER_REQUESTS_ERROR_KINDS,
     PAYMENT_ORDER_REQUESTS_MESSAGES,
@@ -127,7 +110,6 @@ import {
     INBOX_SIMULATION_MESSAGES,
     InboxSimulationModule,
 } from "@modules/domain/inbox-simulation"
-import { OperationsJobsQueueModule } from "@features/jobs/operations-jobs"
 import { AccountGraphqlModule } from "@features/api/account"
 import { ShellGraphqlModule } from "@features/api/shell"
 import { KnowledgeGraphqlModule } from "@features/api/knowledge"
@@ -185,7 +167,6 @@ import {
 import { WORK_ITEMS_ERROR_KINDS, WORK_ITEMS_MESSAGES } from "@modules/domain/work-items"
 import { DEEPSEEK_ERROR_KINDS, DEEPSEEK_MESSAGES, DeepseekClient, DeepseekModule } from "@modules/integrations/deepseek"
 import { OPENCLAW_ERROR_KINDS, OPENCLAW_MESSAGES, OpenclawModule } from "@modules/integrations/openclaw"
-import { AGENTS_SYNC_SCHEDULER } from "@modules/queues/agents"
 import {
     AGENT_CONVERSATIONS_ERROR_KINDS,
     AGENT_CONVERSATIONS_MESSAGES,
@@ -208,7 +189,6 @@ import { DATA_HUB_ERROR_KINDS, DATA_HUB_MESSAGES, DataHubModule } from "@modules
 import { DataRecordsModule } from "@modules/domain/data-records"
 import { DataSyncRunsModule } from "@modules/domain/data-sync-runs"
 import { DATA_SOURCES_ERROR_KINDS, DataSourcesModule } from "@modules/integrations/data-sources"
-import { DATA_SYNC_SCHEDULER } from "@modules/queues/data-sync"
 import { CONVERSATIONS_ERROR_KINDS, CONVERSATIONS_MESSAGES, ConversationsModule } from "@modules/domain/conversations"
 import { TelegramInboxModule } from "@modules/domain/telegram-inbox"
 import { ZaloInboxModule } from "@modules/domain/zalo-inbox"
@@ -269,8 +249,6 @@ import { N8N_RUNS_ERROR_KINDS, N8N_RUNS_MESSAGES, N8nRunsModule } from "@modules
 import { MAIL_ERROR_KINDS, MAIL_MESSAGES, MailModule } from "@modules/integrations/mail"
 import { TELEGRAM_ERROR_KINDS, TELEGRAM_MESSAGES, TelegramModule } from "@modules/integrations/telegram"
 import { ZALO_ERROR_KINDS, ZALO_MESSAGES, ZaloModule } from "@modules/integrations/zalo"
-import { CONNECTION_HEALTH_SCHEDULER } from "@modules/queues/connection-health"
-import { ZALO_REFRESH_SCHEDULER } from "@modules/queues/zalo-refresh"
 import { CONTRACTS_ERROR_KINDS, CONTRACTS_MESSAGES, ContractsModule } from "@modules/domain/contracts"
 import { LEADS_ERROR_KINDS, LEADS_MESSAGES, LeadsModule } from "@modules/domain/leads"
 import { LivenessModule } from "@modules/domain/liveness"
@@ -312,8 +290,8 @@ import {
 } from "@modules/domain/workspace-members"
 import { WORKSPACES_ERROR_KINDS, WORKSPACES_MESSAGES, WorkspacesModule } from "@modules/domain/workspaces"
 import { N8N_ERROR_KINDS, N8nModule } from "@modules/integrations/n8n"
-import { AUTOMATION_TICK_SCHEDULER } from "@modules/queues/automation"
 import { ClockModule } from "@modules/platform/clock"
+import { IdsModule } from "@modules/platform/ids"
 import { CONFIG_ERROR_KINDS } from "@modules/platform/config"
 import { CqrsModule } from "@modules/platform/cqrs"
 import { DATABASE_ERROR_KINDS, DatabaseModule, PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -408,16 +386,8 @@ import { VideoProjectsModule } from "@modules/domain/video-projects"
 import { VIDEO_RENDERS_ERROR_KINDS, VIDEO_RENDERS_MESSAGES, VideoRendersModule } from "@modules/domain/video-renders"
 import { FFMPEG_ERROR_KINDS, FFMPEG_MESSAGES, FfmpegModule } from "@modules/integrations/ffmpeg"
 import { TTS_ERROR_KINDS, TTS_MESSAGES, TtsModule } from "@modules/integrations/tts"
-import { CONTENT_TICK_EVERY_MS, CONTENT_TICK_QUEUE, CONTENT_TICK_SCHEDULER } from "@modules/queues/content-tick"
 import { RendersGraphqlModule, RendersHttpModule } from "@features/api/renders"
-import { ApplyBookingStatusQueueModule } from "@features/jobs/apply-booking-status"
-import { PublishContentQueueModule } from "@features/jobs/publish-content"
-import { AcceptMetaEventQueueModule } from "@features/jobs/accept-meta-event"
-import { IssueInviteQueueModule } from "@features/jobs/issue-invite"
-import { RenderVideoQueueModule } from "@features/jobs/render-video"
-import { ConnectionCommandsQueueModule } from "@features/jobs/connection-commands"
-import { RequestRenderQueueModule } from "@features/jobs/request-render"
-import { AGENT_TOOLS_PORTS, DECISIONS_PORTS, type ApiOptions } from "./api.options"
+import { AGENT_TOOLS_PORTS, API_JOB_QUEUES, API_SCHEDULERS, DECISIONS_PORTS, type ApiOptions } from "./api.options"
 @Module({}) /** Every capability is registered once and the three guards run in a fixed order. */
 export class AppModule {
     /** Builds the module from options parsed once at boot; nothing here reads the environment. */
@@ -427,6 +397,7 @@ export class AppModule {
             module: AppModule,
             imports: [
                 ClockModule.register({ isGlobal: true }),
+                IdsModule.register({ isGlobal: true }),
                 LoggingModule.register({ isGlobal: true }),
                 I18nModule.register({
                     isGlobal: true,
@@ -641,14 +612,7 @@ export class AppModule {
                 DatabaseModule.register({ isGlobal: true, connections: [options.database] }),
                 QueueModule.register({
                     isGlobal: true,
-                    schedulers: [
-                        AUTOMATION_TICK_SCHEDULER,
-                        AGENTS_SYNC_SCHEDULER,
-                        { queue: CONTENT_TICK_QUEUE, id: CONTENT_TICK_SCHEDULER, everyMs: CONTENT_TICK_EVERY_MS },
-                        CONNECTION_HEALTH_SCHEDULER,
-                        ZALO_REFRESH_SCHEDULER,
-                        DATA_SYNC_SCHEDULER,
-                    ],
+                    schedulers: API_SCHEDULERS,
                     ...options.queue,
                 }),
                 JobsModule.register({ isGlobal: true, connection: PRIMARY_ENTITY_MANAGER, ...options.jobs }),
@@ -716,7 +680,7 @@ export class AppModule {
                 InventoryModule.register({ isGlobal: true }),
                 ShiftsModule.register({ isGlobal: true }),
                 HiringModule.register({ isGlobal: true, ...options.channels }),
-                OperationsJobsQueueModule,
+                ...API_JOB_QUEUES,
                 ContentItemsModule.register({ isGlobal: true }),
                 ContentSettingsModule.register({ isGlobal: true }),
                 ContentPillarsModule.register({ isGlobal: true }),
@@ -733,12 +697,6 @@ export class AppModule {
                 VideoGraphqlModule,
                 ContentModule.register({ isGlobal: true }),
                 AppCommandsModule.register({ isGlobal: true }),
-                IssueInviteQueueModule,
-                RenderVideoQueueModule,
-                RequestRenderQueueModule,
-                PublishContentQueueModule,
-                AcceptMetaEventQueueModule,
-                ConnectionCommandsQueueModule,
                 RendersHttpModule,
                 RendersGraphqlModule,
                 LivenessModule.register({ isGlobal: true }),
@@ -766,7 +724,6 @@ export class AppModule {
                 LeadsGraphqlModule,
                 LeadQueriesGraphqlModule,
                 LeadActionsGraphqlModule,
-                RunLeadActionQueueModule,
                 SalesGraphqlModule,
                 SalesWorkbenchGraphqlModule,
                 LeadActionsModule.register({ isGlobal: true }),
@@ -817,10 +774,6 @@ export class AppModule {
                 EmailMessagesModule.register({ isGlobal: true }),
                 WorkPerformersModule.register({ isGlobal: true, writer: DeepseekClient }),
                 OfficeCommandCandidatesModule.register({ isGlobal: true, reader: DeepseekClient }),
-                SyncAgentsQueueModule,
-                GenerateWithAgentQueueModule,
-                RunDecisionsQueueModule,
-                RunSetupTurnQueueModule,
                 AgentsHttpModule,
                 AgentsGraphqlModule,
                 AgentToolsHttpModule,
@@ -841,11 +794,7 @@ export class AppModule {
                 AiUsageEventsModule.register({ isGlobal: true }),
                 CreditsModule.register({ isGlobal: true }),
                 CreditsGraphqlModule,
-                ApplyBookingStatusQueueModule,
-                DraftLoyaltyCampaignQueueModule,
                 PaymentOrderRequestsModule.register({ isGlobal: true }),
-                ReconcileBankCreditQueueModule,
-                CreatePaymentOrderQueueModule,
                 CassoHttpModule,
                 PayosHttpModule,
                 SepayHttpModule,
@@ -853,11 +802,6 @@ export class AppModule {
                 VietcombankHttpModule,
                 TelegramHttpModule,
                 ZaloHttpModule,
-                RunChatTurnQueueModule,
-                CheckConnectionHealthQueueModule,
-                CompleteZaloAuthorizationQueueModule,
-                RefreshZaloTokensQueueModule,
-                RunZaloWizardQueueModule,
                 ExternalApiHttpModule,
                 SystemHealthHttpModule,
                 LoyaltyProgramsModule.register({ isGlobal: true }),
@@ -880,11 +824,14 @@ export class AppModule {
                 WorkspacesHttpModule,
                 WorkspacesGraphqlModule,
                 ApiKeysGraphqlModule,
-                OperationsGraphqlModule,
+                InventoryGraphqlModule,
+                ShiftsGraphqlModule,
+                HiringGraphqlModule,
                 OverviewGraphqlModule,
                 AccountGraphqlModule,
                 ShellGraphqlModule,
                 ConnectionsGraphqlModule,
+                DataHubGraphqlModule,
                 InboxGraphqlModule,
                 AgentChatGraphqlModule,
                 InboxSimulationGraphqlModule,
@@ -892,10 +839,6 @@ export class AppModule {
                 AgentChatModule.register({ isGlobal: true }),
                 KnowledgeGraphqlModule,
                 EvidenceGraphqlModule,
-                ExtractKnowledgeFactsQueueModule,
-                RunBrainCommandQueueModule,
-                IndexKnowledgeSourceQueueModule,
-                ReembedKnowledgeQueueModule,
                 GoogleConnectionsHttpModule,
                 MetaConnectionsHttpModule,
                 AutomationsHttpModule,
@@ -903,9 +846,6 @@ export class AppModule {
                 FlowsHttpModule,
                 FlowsGraphqlModule,
                 N8nPipelinesHttpModule,
-                EmitN8nEventQueueModule,
-                RunAutomationTickQueueModule,
-                RunAutomationCommandQueueModule,
                 AdminHttpModule,
                 AdminGraphqlModule,
             ],
