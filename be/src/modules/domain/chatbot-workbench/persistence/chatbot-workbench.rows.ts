@@ -87,7 +87,7 @@ export interface LeadRow {
 }
 
 /** A Chatbot installation and its agent binding. */
-export interface InstallationRow {
+export interface ChatbotInstallationRow {
     /** The stored id value. */
     readonly id: string
     /** The stored agent id value. */
@@ -101,7 +101,7 @@ export interface AgentIdRow {
 }
 
 /** The selected staff display name. */
-export interface StaffRow {
+export interface ChatbotStaffRow {
     /** The stored name value. */
     readonly name: string
 }

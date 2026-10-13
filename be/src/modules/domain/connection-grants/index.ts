@@ -1,4 +1,3 @@
-export type { Access, Purpose } from "./connection-access.policy"
 export { ACCESS_LEVELS, purposeFor } from "./connection-access.policy"
 export type {
     AgentGrantWish,

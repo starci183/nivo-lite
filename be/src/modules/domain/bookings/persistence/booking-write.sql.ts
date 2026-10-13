@@ -30,6 +30,18 @@ FROM public.bookings
 WHERE workspace_id = $1 AND idempotency_key = $2
 LIMIT 1`
 
+/** The next future request or confirmation for a customer's normalised phone; arrived customers are excluded because check-in keeps status confirmed
+ * ($1 workspace, $2 normalised customer phone, $3 current instant). */
+export const SELECT_NEXT_CANCELLABLE_BOOKING = sql`SELECT b.id, b.lead_id, b.customer_name, s.name AS service_name,
+       (extract(epoch FROM b.start_at) * 1000)::float8 AS start_ms
+FROM public.bookings b
+JOIN public.booking_services s ON s.id = b.service_id AND s.workspace_id = b.workspace_id
+WHERE b.workspace_id = $1 AND b.customer_phone = $2
+  AND b.status IN ('requested', 'confirmed') AND b.checked_in_at IS NULL
+  AND b.start_at > $3::timestamptz
+ORDER BY b.start_at, b.id
+LIMIT 1`
+
 /** One booking of a workspace with the timing of its service, locked for the rest of the transaction ($1 workspace, $2 booking). */
 export const SELECT_BOOKING_FOR_UPDATE = sql`SELECT b.id, b.resource_id, b.party_size, b.status, s.duration_min, s.buffer_min,
        (extract(epoch FROM b.start_at) * 1000)::float8 AS start_ms

@@ -133,17 +133,18 @@ describe("BillingService", () => {
     })
 
     describe("renew", () => {
-        const renewRows = (workspace: Array<object>, plan: Array<object>) => ({
-            query: [
-                [SELECT_MEMBER_ROLE, [{ role: "owner" }]],
-                [SELECT_WORKSPACE_BILLING, workspace],
-                [SELECT_PLAN, plan],
-            ] as const,
-        })
         const WORKSPACE = [{ status: "active", plan_code: "starter", paid_until: null }]
 
         it("orders the current plan of the workspace at its price", async () => {
-            const { billing, orders } = await build(mockEntityManager(renewRows(WORKSPACE, [PLAN_ROW])))
+            const { billing, orders } = await build(
+                mockEntityManager({
+                    query: [
+                        [SELECT_MEMBER_ROLE, [{ role: "owner" }]],
+                        [SELECT_WORKSPACE_BILLING, WORKSPACE],
+                        [SELECT_PLAN, [PLAN_ROW]],
+                    ],
+                }),
+            )
 
             await expect(billing.renew("person-1", { workspaceId: "ws-1" })).resolves.toEqual(PAYABLE)
             expect(orders.create).toHaveBeenCalledWith({
@@ -158,9 +159,23 @@ describe("BillingService", () => {
         })
 
         it("refuses a workspace that does not exist or has no plan yet", async () => {
-            const missing = await build(mockEntityManager(renewRows([], [])))
+            const missing = await build(
+                mockEntityManager({
+                    query: [
+                        [SELECT_MEMBER_ROLE, [{ role: "owner" }]],
+                        [SELECT_WORKSPACE_BILLING, []],
+                        [SELECT_PLAN, []],
+                    ],
+                }),
+            )
             const unpaid = await build(
-                mockEntityManager(renewRows([{ status: "pending_payment", plan_code: null, paid_until: null }], [])),
+                mockEntityManager({
+                    query: [
+                        [SELECT_MEMBER_ROLE, [{ role: "owner" }]],
+                        [SELECT_WORKSPACE_BILLING, [{ status: "pending_payment", plan_code: null, paid_until: null }]],
+                        [SELECT_PLAN, []],
+                    ],
+                }),
             )
 
             await expect(missing.billing.renew("person-1", { workspaceId: "ws-1" })).rejects.toMatchObject({
@@ -173,7 +188,13 @@ describe("BillingService", () => {
 
         it("refuses a contract plan and writes no order", async () => {
             const { billing, orders } = await build(
-                mockEntityManager(renewRows(WORKSPACE, [{ ...PLAN_ROW, is_custom: true }])),
+                mockEntityManager({
+                    query: [
+                        [SELECT_MEMBER_ROLE, [{ role: "owner" }]],
+                        [SELECT_WORKSPACE_BILLING, WORKSPACE],
+                        [SELECT_PLAN, [{ ...PLAN_ROW, is_custom: true }]],
+                    ],
+                }),
             )
 
             await expect(billing.renew("person-1", { workspaceId: "ws-1" })).rejects.toMatchObject({

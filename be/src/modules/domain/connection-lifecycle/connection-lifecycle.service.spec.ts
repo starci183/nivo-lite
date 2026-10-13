@@ -71,7 +71,7 @@ describe("ConnectionLifecycleService", () => {
                 connections.wipeSecret.mock.invocationCallOrder[0],
                 connections.patch.mock.invocationCallOrder[0],
             ]
-            expect(order).toEqual([...order].sort((left, right) => left! - right!))
+            expect(order).toEqual([...order].sort((left = 0, right = 0) => left - right))
             expect(connections.remove).not.toHaveBeenCalled()
         })
 

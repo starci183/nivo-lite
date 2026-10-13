@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { BrainCommandsService } from "@modules/domain/brain-commands"
-import type { CommandResult } from "@modules/domain/brain-commands"
+import type { BrainCommandResult } from "@modules/domain/brain-commands"
 import { KnowledgeDriveService, KnowledgeReembedService, KnowledgeSearchService } from "@modules/domain/knowledge"
 import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
 import { DomainError } from "@modules/platform/errors"
@@ -69,7 +69,7 @@ export class BrainCommandRunnerService {
     }
 
     /** Does what the command asks, for the person who asked; answers what the page shows. */
-    private async execute(userId: string, workspaceId: string, command: BrainCommand): Promise<CommandResult> {
+    private async execute(userId: string, workspaceId: string, command: BrainCommand): Promise<BrainCommandResult> {
         switch (command.kind) {
             case "fact.save": {
                 const saved = await this.brain.saveFact(userId, workspaceId, command.form)

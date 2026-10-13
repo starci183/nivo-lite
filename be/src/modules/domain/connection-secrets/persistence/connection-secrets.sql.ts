@@ -38,3 +38,15 @@ JOIN public.connections c ON c.id = s.connection_id
 WHERE c.provider = 'zalo_oa' AND c.status <> 'disconnected' AND s.token_expires_at IS NOT NULL AND s.token_expires_at < $1
 ORDER BY s.token_expires_at
 LIMIT 500`
+
+/** Inserts the sealed credential of a new connection ($1 connection id, $2 sealed text, $3 webhook secret). */
+export const INSERT_STORED_SECRET = sql`INSERT INTO public.connection_secrets (connection_id, ciphertext, webhook_secret) VALUES ($1, $2, $3)`
+
+/** The sealed credential of a connection ($1 connection id). */
+export const FIND_STORED_SECRET = sql`SELECT ciphertext, webhook_secret FROM public.connection_secrets WHERE connection_id = $1 LIMIT 1`
+
+/** Stores or replaces a sealed credential; the webhook secret is replaced only when $4 says so ($1 id, $2 sealed text, $3 webhook secret). */
+export const UPSERT_STORED_SECRET = sql`INSERT INTO public.connection_secrets (connection_id, ciphertext, webhook_secret) VALUES ($1, $2, $3) ON CONFLICT (connection_id) DO UPDATE SET ciphertext = excluded.ciphertext, webhook_secret = CASE WHEN $4::boolean THEN excluded.webhook_secret ELSE public.connection_secrets.webhook_secret END`
+
+/** Wipes the sealed credential of a connection ($1 connection id). */
+export const DELETE_STORED_SECRET = sql`DELETE FROM public.connection_secrets WHERE connection_id = $1`

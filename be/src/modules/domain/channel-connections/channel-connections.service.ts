@@ -5,13 +5,12 @@ import {
     ConnectionsErrorCode,
     ConnectionsService,
     cleanConnectionName,
-    randomSecret,
-    safeEqual,
     sha256,
 } from "@modules/domain/connections"
+import { randomSecret, safeEqual } from "@modules/domain/connection-secrets"
 import type { ConnectionActor, ConnectionRecord, FirstEventState, Provider } from "@modules/domain/connections"
 import { ChannelSetupError, ChannelSetupErrorCode, InjectChannelSetupClient } from "@modules/integrations/channel-setup"
-import type { ChannelSetupClient, ZaloSecret } from "@modules/integrations/channel-setup"
+import type { ChannelSetupClient, ZaloSetupSecret } from "@modules/integrations/channel-setup"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectLogger } from "@modules/platform/logging"
@@ -364,7 +363,7 @@ export class ChannelConnectionsService {
         return connection
     }
 
-    private async zaloSecretOf(connectionId: string): Promise<ZaloSecret> {
+    private async zaloSecretOf(connectionId: string): Promise<ZaloSetupSecret> {
         const sealed = await this.connections.readSecret(connectionId)
         const secret = sealed === null ? null : parseZaloSecret(sealed.plain)
         if (secret === null) throw this.notFound(connectionId)

@@ -254,6 +254,20 @@ export interface KeyedBookingRow {
     readonly holds_slot: boolean
 }
 
+/** The customer's earliest future requested or confirmed booking that has not checked in. */
+export interface CancellableBookingRow {
+    /** The booking to name in the owner's cancellation decision. */
+    readonly id: string
+    /** The customer lead, or null when no lead is linked. */
+    readonly lead_id: string | null
+    /** The name of the customer who booked. */
+    readonly customer_name: string
+    /** The service name from the same workspace. */
+    readonly service_name: string
+    /** The booking start as epoch milliseconds. */
+    readonly start_ms: number
+}
+
 /** The settings of a workspace that never saved any. */
 export const DEFAULT_SETTINGS: BookingSettings = {
     timezone: "Asia/Ho_Chi_Minh",

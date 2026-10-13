@@ -1,7 +1,7 @@
 import {
     addDays,
     hhmmOf,
-    isoOf,
+    bookingIsoOf,
     isoWeekday,
     localDate,
     localHhmm,
@@ -76,9 +76,9 @@ describe("zoned-time.policy", () => {
         })
     })
 
-    describe("isoOf", () => {
+    describe("bookingIsoOf", () => {
         it("writes an instant in ISO 8601", () => {
-            expect(isoOf(Date.UTC(2026, 9, 12, 2, 30))).toBe("2026-10-12T02:30:00.000Z")
+            expect(bookingIsoOf(Date.UTC(2026, 9, 12, 2, 30))).toBe("2026-10-12T02:30:00.000Z")
         })
     })
 })

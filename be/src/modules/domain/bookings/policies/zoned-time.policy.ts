@@ -79,4 +79,4 @@ export const mondayOf = (date: string): string => addDays(date, 1 - isoWeekday(d
 export const hhmmOf = (time: string): string => time.slice(0, 5)
 
 /** The ISO 8601 text of an instant. */
-export const isoOf = (ms: number): string => new Date(ms).toISOString()
+export const bookingIsoOf = (ms: number): string => new Date(ms).toISOString()

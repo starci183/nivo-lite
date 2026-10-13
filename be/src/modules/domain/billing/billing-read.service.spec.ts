@@ -1,11 +1,15 @@
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
+import { builder, mock } from "@starci/jest-preset"
 import { PaymentOrdersService } from "@modules/domain/payment-orders"
 import type { PaymentOrder } from "@modules/domain/payment-orders"
 import { BillingReadService } from "./billing-read.service"
+import type { PayableOrder } from "./billing.contracts"
 import { BillingService } from "./billing.service"
+import { BillingError, BillingErrorCode } from "./errors/billing.error"
 
-const ORDER: PaymentOrder = {
+const BANK = { account: "0123", bank: "MB", holder: "NIVO" }
+
+const orderOf = builder<PaymentOrder>({
     id: "order-1",
     workspaceId: "ws-1",
     planCode: "starter",
@@ -17,34 +21,34 @@ const ORDER: PaymentOrder = {
     createdAt: "2026-10-12T10:00:00.000Z",
     kind: "plan",
     packCode: null,
-    detail: { credits: 3000, cycle: "monthly" },
-}
-const BANK = { account: "0123", bank: "MB", holder: "NIVO" }
-const QR = "https://qr.sepay.vn/img?acc=0123&bank=MB&amount=990000&des=NIVO8F3K2"
-const INSTRUCTIONS = {
-    ...ORDER,
-    qrUrl: QR,
-    bank: BANK,
-    detail: {
-        credits: 3000,
-        from: null,
-        to: null,
-        fromPrice: null,
-        toPrice: null,
-        credit: null,
-        daysLeft: null,
-        paidUntil: null,
-        cycle: "monthly",
-        tierCredits: null,
-        seats: null,
-        promo: null,
-    },
+    detail: { credits: 3000, cycle: "monthly", tierCredits: 0, promo: "yes" },
+})
+
+const DETAIL = {
+    credits: 3000,
+    from: null,
+    to: null,
+    fromPrice: null,
+    toPrice: null,
+    credit: null,
+    daysLeft: null,
+    paidUntil: null,
+    cycle: "monthly",
+    tierCredits: null,
+    seats: null,
+    promo: null,
 }
 
 const build = async () => {
-    const billing = mock<BillingService>()
+    const billing = mock<BillingService>({
+        requireMember: jest.fn(() => Promise.resolve()),
+        payable: jest.fn((order: PaymentOrder): PayableOrder => ({
+            order,
+            qrUrl: `https://qr/${order.orderCode}`,
+            bank: BANK,
+        })),
+    })
     const orders = mock<PaymentOrdersService>()
-    billing.payable.mockReturnValue({ order: ORDER, qrUrl: QR, bank: BANK })
     const moduleRef = await Test.createTestingModule({
         providers: [
             BillingReadService,
@@ -52,28 +56,52 @@ const build = async () => {
             { provide: PaymentOrdersService, useValue: orders },
         ],
     }).compile()
-    return { read: moduleRef.get(BillingReadService), billing, orders }
+    return { reads: moduleRef.get(BillingReadService), billing, orders }
 }
 
 describe("BillingReadService", () => {
-    it("maps a member's orders to payment instructions", async () => {
-        const { read, billing, orders } = await build()
-        orders.list.mockResolvedValue([ORDER])
+    describe("paymentOrders", () => {
+        it("answers each order of the workspace with its payment instructions", async () => {
+            const { reads, billing, orders } = await build()
+            orders.list.mockResolvedValue([orderOf()])
 
-        await expect(read.paymentOrders("user-1", "ws-1")).resolves.toEqual([INSTRUCTIONS])
+            await expect(reads.paymentOrders("user-1", "ws-1")).resolves.toEqual([
+                { ...orderOf(), qrUrl: "https://qr/NIVO8F3K2", bank: BANK, detail: DETAIL },
+            ])
+            expect(billing.requireMember).toHaveBeenCalledWith("user-1", "ws-1")
+        })
 
-        expect(billing.requireMember).toHaveBeenCalledWith("user-1", "ws-1")
-        expect(orders.list).toHaveBeenCalledWith("ws-1")
+        it("reads no order for someone who is not a member", async () => {
+            const { reads, billing, orders } = await build()
+            billing.requireMember.mockRejectedValue(new BillingError({ code: BillingErrorCode.NotMember }))
+
+            await expect(reads.paymentOrders("user-1", "ws-1")).rejects.toMatchObject({
+                code: BillingErrorCode.NotMember,
+            })
+            expect(orders.list).not.toHaveBeenCalled()
+        })
     })
 
-    it("answers null when the member's order or open plan order is missing", async () => {
-        const { read, orders } = await build()
-        orders.find.mockResolvedValue(null)
-        orders.findOpenPlan.mockResolvedValue(null)
+    describe("paymentOrder", () => {
+        it("answers the order with its instructions, or nothing when it is not in the workspace", async () => {
+            const { reads, orders } = await build()
+            orders.find.mockResolvedValueOnce(orderOf()).mockResolvedValueOnce(null)
 
-        await expect(read.paymentOrder("user-1", "ws-1", "order-1")).resolves.toBeNull()
-        await expect(read.openPlanPaymentOrder("user-1", "ws-1")).resolves.toBeNull()
-        expect(orders.find).toHaveBeenCalledWith("ws-1", "order-1")
-        expect(orders.findOpenPlan).toHaveBeenCalledWith("ws-1")
+            await expect(reads.paymentOrder("user-1", "ws-1", "order-1")).resolves.toMatchObject({
+                id: "order-1",
+                qrUrl: "https://qr/NIVO8F3K2",
+            })
+            await expect(reads.paymentOrder("user-1", "ws-1", "order-9")).resolves.toBeNull()
+        })
+    })
+
+    describe("openPlanPaymentOrder", () => {
+        it("answers the open plan order, or nothing when there is none", async () => {
+            const { reads, orders } = await build()
+            orders.findOpenPlan.mockResolvedValueOnce(orderOf({ id: "order-2" })).mockResolvedValueOnce(null)
+
+            await expect(reads.openPlanPaymentOrder("user-1", "ws-1")).resolves.toMatchObject({ id: "order-2" })
+            await expect(reads.openPlanPaymentOrder("user-1", "ws-1")).resolves.toBeNull()
+        })
     })
 })

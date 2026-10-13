@@ -6,7 +6,7 @@ import { INSERT_BOOKING, LOCK_RESOURCE, RELOCATE_BOOKING, SELECT_RESOURCE_SPANS 
 import { toTakenSpan } from "./persistence/booking.rows"
 import type { SpanRow } from "./persistence/booking.rows"
 import { peakLoad } from "./policies/availability.policy"
-import { isoOf } from "./policies/zoned-time.policy"
+import { bookingIsoOf } from "./policies/zoned-time.policy"
 
 /** A booking to write. */
 export interface NewBooking {
@@ -107,8 +107,8 @@ export class BookingReservationService {
         if (booking.holdsSlot && !params.force) {
             const spans = await manager.query<Array<SpanRow>>(SELECT_RESOURCE_SPANS, [
                 booking.resourceId,
-                isoOf(booking.startMs),
-                isoOf(booking.blockEndMs),
+                bookingIsoOf(booking.startMs),
+                bookingIsoOf(booking.blockEndMs),
                 null,
             ])
             const load = peakLoad(spans.map(toTakenSpan), booking.resourceId, booking.startMs, booking.blockEndMs, null)
@@ -121,9 +121,9 @@ export class BookingReservationService {
             booking.customerEmail,
             booking.serviceId,
             booking.resourceId,
-            isoOf(booking.startMs),
-            isoOf(booking.endMs),
-            isoOf(booking.blockEndMs),
+            bookingIsoOf(booking.startMs),
+            bookingIsoOf(booking.endMs),
+            bookingIsoOf(booking.blockEndMs),
             booking.partySize,
             booking.status,
             booking.holdsSlot,
@@ -150,8 +150,8 @@ export class BookingReservationService {
         if (!params.force) {
             const spans = await manager.query<Array<SpanRow>>(SELECT_RESOURCE_SPANS, [
                 params.resourceId,
-                isoOf(params.startMs),
-                isoOf(params.blockEndMs),
+                bookingIsoOf(params.startMs),
+                bookingIsoOf(params.blockEndMs),
                 params.bookingId,
             ])
             const load = peakLoad(
@@ -167,10 +167,10 @@ export class BookingReservationService {
             params.workspaceId,
             params.bookingId,
             params.resourceId,
-            isoOf(params.startMs),
-            isoOf(params.endMs),
-            isoOf(params.blockEndMs),
-            isoOf(params.nowMs),
+            bookingIsoOf(params.startMs),
+            bookingIsoOf(params.endMs),
+            bookingIsoOf(params.blockEndMs),
+            bookingIsoOf(params.nowMs),
         ])
         return "moved"
     }

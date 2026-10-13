@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, builder, fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
 import { EventsService } from "@modules/domain/events"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -8,7 +8,7 @@ import { Secret } from "@modules/platform/config"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import { BankCreditQueue } from "@modules/queues/bank-credit"
+import { BANK_CREDIT_QUEUE, BankCreditQueue } from "@modules/queues/bank-credit"
 import { BankFeedService } from "./bank-feed.service"
 import { BILLING_OPTIONS } from "./billing.decorators"
 import type { BillingOptions } from "./billing.options"
@@ -37,17 +37,33 @@ const FED: Stub = [MARK_CONNECTION_FED, []]
 const AGENT: Stub = [SELECT_BOUND_ACCOUNTING_AGENT, [{ id: "agent-1" }]]
 const NO_AGENT: Stub = [SELECT_BOUND_ACCOUNTING_AGENT, []]
 
-const build = async (stubs: ReadonlyArray<Stub>, options: BillingOptions = OPTIONS) => {
+const build = async (stubs: ReadonlyArray<Stub>, options: Partial<BillingOptions> = {}) => {
     const tx = fakeTransaction(mockEntityManager({ query: stubs }))
-    const credits = mock<BankCreditQueue>()
+    const outbox = recordingQueueOutbox()
     const catalog = mock<MessageCatalog>()
     catalog.get.mockImplementation((key, params, locale) => `${locale}:${key}:${JSON.stringify(params)}`)
     const proof = mock<PaymentProofService>()
     const inbound = mock<InboundEventsService>()
-    const members = mock<WorkspaceMembersService>()
-    const events = mock<EventsService>()
     inbound.recordBankPayment.mockResolvedValue({ duplicate: false, inboundEventId: "event-1" })
     inbound.holdForOwnerCheck.mockResolvedValue(undefined)
+    const credits = mock<BankCreditQueue>({
+        enqueueBankCredit: jest.fn((...[payload, manager]: Parameters<BankCreditQueue["enqueueBankCredit"]>) =>
+            outbox.write(manager, BANK_CREDIT_QUEUE, payload),
+        ),
+    })
+    const members = mock<WorkspaceMembersService>({
+        require: jest.fn(() =>
+            Promise.resolve({
+                userId: "user-1",
+                workspaceId: "ws-1",
+                role: "owner" as const,
+                staffId: null,
+                displayName: "Lan",
+                status: "active" as const,
+            }),
+        ),
+    })
+    const events = mock<EventsService>({ record: jest.fn(() => Promise.resolve()) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             BankFeedService,
@@ -62,7 +78,7 @@ const build = async (stubs: ReadonlyArray<Stub>, options: BillingOptions = OPTIO
             { provide: EventsService, useValue: events },
         ],
     }).compile()
-    return { feed: moduleRef.get(BankFeedService), tx, credits, proof, inbound }
+    return { feed: moduleRef.get(BankFeedService), tx, outbox, proof, inbound, members, events }
 }
 
 const delivery = (body: ProvenDelivery["body"]): ProvenDelivery => ({ connection: CONNECTION, body })
@@ -70,11 +86,56 @@ const raw = (body: object): Buffer => Buffer.from(JSON.stringify(body))
 const refusal = new BillingError({ code: BillingErrorCode.WebhookInvalid })
 
 describe("BankFeedService", () => {
+    describe("acceptManualCredit", () => {
+        const credit = { amount: 150000.4, date: "2026-10-12", content: "NIVO8F3K2", note: "cash", payer: "" }
+
+        it("books the entered money as simulated, enqueues its job and logs the evidence under the member's name", async () => {
+            const { feed, tx, outbox, inbound, members, events } = await build([])
+
+            await expect(feed.acceptManualCredit("user-1", "ws-1", credit)).resolves.toBe(false)
+
+            expect(members.require).toHaveBeenCalledWith("user-1", "ws-1", ["owner", "manager"])
+            expect(inbound.recordBankPayment).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    workspaceId: "ws-1",
+                    origin: "simulated",
+                    sender: null,
+                    amountVnd: 150000,
+                    providerRef: "manual:2026-10-12:150000:NIVO8F3K2",
+                }),
+            )
+            expect(outbox.jobsOf(BANK_CREDIT_QUEUE)).toEqual([
+                {
+                    queue: BANK_CREDIT_QUEUE,
+                    payload: { workspaceId: "ws-1", inboundEventId: "event-1", amountVnd: 150000 },
+                },
+            ])
+            expect(events.record.mock.calls[0]?.[0]).toEqual({
+                workspaceId: "ws-1",
+                kind: "accounting.manual_evidence",
+                actor: "Lan",
+                summary: 'vi:billing.manualEvidenceLog:{"amount":150000,"date":"2026-10-12"}',
+                evidence: "NIVO8F3K2 - cash",
+            })
+            expect(tx.commits).toBe(1)
+        })
+
+        it("answers that the same evidence was already entered and logs nothing again", async () => {
+            const { feed, inbound, outbox, events } = await build([])
+            inbound.recordBankPayment.mockResolvedValue({ duplicate: true, inboundEventId: "event-1" })
+
+            await expect(feed.acceptManualCredit("user-1", "ws-1", credit)).resolves.toBe(true)
+
+            expect(outbox.jobs).toEqual([])
+            expect(events.record).not.toHaveBeenCalled()
+        })
+    })
+
     describe("acceptSimulatedCredit", () => {
         const credit = { amount_vnd: 150000, content: "NIVO8F3K2", sender_name: "Anh Minh", event_id: "tx-1" }
 
         it("proves the secret, records the credit as simulated money and enqueues its job in the same transaction", async () => {
-            const { feed, tx, credits, proof, inbound } = await build([])
+            const { feed, tx, outbox, proof, inbound } = await build([])
 
             await feed.acceptSimulatedCredit({ secret: "s", rawBody: raw(credit) })
 
@@ -89,10 +150,13 @@ describe("BankFeedService", () => {
                 externalRef: "NIVO8F3K2",
                 providerRef: "vietcombank:tx-1",
             })
-            expect(credits.enqueueBankCredit).toHaveBeenCalledWith(
-                { workspaceId: "ws-sim", inboundEventId: "event-1", amountVnd: 150000 },
-                inbound.recordBankPayment.mock.calls[0]?.[0].manager,
-            )
+            expect(outbox.jobsOf(BANK_CREDIT_QUEUE)).toEqual([
+                {
+                    queue: BANK_CREDIT_QUEUE,
+                    payload: { workspaceId: "ws-sim", inboundEventId: "event-1", amountVnd: 150000 },
+                },
+            ])
+            expect(outbox.allInTransaction).toBe(true)
             expect(tx.commits).toBe(1)
         })
 
@@ -112,19 +176,19 @@ describe("BankFeedService", () => {
         })
 
         it("enqueues nothing for a repeated credit", async () => {
-            const { feed, inbound, credits, tx } = await build([])
+            const { feed, inbound, outbox, tx } = await build([])
             inbound.recordBankPayment.mockResolvedValue({ duplicate: true, inboundEventId: "event-1" })
 
             await feed.acceptSimulatedCredit({ secret: "s", rawBody: raw(credit) })
 
-            expect(credits.enqueueBankCredit).not.toHaveBeenCalled()
+            expect(outbox.jobs).toEqual([])
             expect(tx.commits).toBe(1)
         })
 
         it("rolls the event back when its job cannot be enqueued", async () => {
-            const { feed, tx, credits } = await build([])
+            const { feed, tx, outbox } = await build([])
             const failure = new BillingError({ code: BillingErrorCode.WebhookInvalid })
-            credits.enqueueBankCredit.mockRejectedValue(failure)
+            outbox.failNext("write", failure)
 
             await expect(feed.acceptSimulatedCredit({ secret: "s", rawBody: raw(credit) })).rejects.toBe(failure)
 
@@ -138,7 +202,6 @@ describe("BankFeedService", () => {
             })
             const bad = await build([])
             const off = await build([], {
-                ...OPTIONS,
                 simulatedBank: { secret: new Secret("s"), workspaceId: undefined },
             })
 
@@ -162,7 +225,7 @@ describe("BankFeedService", () => {
         const cassoDelivery = { connectionId: "conn-1", rawBody: raw({}), signature: "sig", secureToken: undefined }
 
         it("proves the delivery, marks the connection and books each positive transaction with one job each", async () => {
-            const { feed, tx, credits, proof, inbound } = await build([STATE, FED, AGENT, STATE, FED, AGENT])
+            const { feed, tx, outbox, proof, inbound } = await build([STATE, FED, AGENT, STATE, FED, AGENT])
             proof.proveCasso.mockResolvedValue(
                 delivery({ error: 0, data: [tx1, { ...tx1, id: 8, amount: 5000 }, { id: 9, amount: -1 }] }),
             )
@@ -189,7 +252,7 @@ describe("BankFeedService", () => {
                     providerRef: "casso:7",
                 }),
             )
-            expect(credits.enqueueBankCredit.mock.calls.map(([payload]) => payload)).toEqual([
+            expect(outbox.jobsOf(BANK_CREDIT_QUEUE).map((job) => job.payload)).toEqual([
                 { workspaceId: "ws-1", inboundEventId: "event-7", amountVnd: 150000 },
                 { workspaceId: "ws-1", inboundEventId: "event-8", amountVnd: 5000 },
             ])
@@ -211,14 +274,14 @@ describe("BankFeedService", () => {
         })
 
         it("only remembers the connection when no accounting agent is bound to it", async () => {
-            const { feed, tx, credits, proof, inbound } = await build([STATE, FED, NO_AGENT])
+            const { feed, tx, outbox, proof, inbound } = await build([STATE, FED, NO_AGENT])
             proof.proveCasso.mockResolvedValue(delivery({ error: 0, data: tx1 }))
 
             await feed.acceptCassoDelivery(cassoDelivery)
 
             expect(tx.em.query).toHaveBeenCalledWith(MARK_CONNECTION_FED, expect.anything())
             expect(inbound.recordBankPayment).not.toHaveBeenCalled()
-            expect(credits.enqueueBankCredit).not.toHaveBeenCalled()
+            expect(outbox.jobs).toEqual([])
         })
 
         it("stores a credit of a test connection as simulated money", async () => {
@@ -246,13 +309,13 @@ describe("BankFeedService", () => {
         })
 
         it("enqueues no second job for a redelivered transaction", async () => {
-            const { feed, credits, proof, inbound } = await build([STATE, FED, AGENT])
+            const { feed, outbox, proof, inbound } = await build([STATE, FED, AGENT])
             proof.proveCasso.mockResolvedValue(delivery({ error: 0, data: tx1 }))
             inbound.recordBankPayment.mockResolvedValue({ duplicate: true, inboundEventId: "event-7" })
 
             await feed.acceptCassoDelivery(cassoDelivery)
 
-            expect(credits.enqueueBankCredit).not.toHaveBeenCalled()
+            expect(outbox.jobs).toEqual([])
         })
 
         it("rolls back and fails when a credit cannot be booked, so Casso retries", async () => {

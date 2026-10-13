@@ -1,13 +1,13 @@
 /** The owner of a workspace. */
 export interface OwnerRow {
-    /** The user id of the workspace owner. */
+    /** The account that owns the workspace; provisioning acts in its name. */
     readonly user_id: string
 }
 
 /** One agent of a workspace and the module it works for. */
 export interface AgentRow {
-    /** The agent id. */
+    /** The agent row id a channel binding points at. */
     readonly id: string
-    /** The module the agent serves, such as chatbot or accounting. */
+    /** The product module the agent serves, used to pick the agent a new channel is bound to. */
     readonly module: string
 }
