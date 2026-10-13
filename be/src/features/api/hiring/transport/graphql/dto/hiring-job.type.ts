@@ -63,7 +63,7 @@ export class HiringJobType {
     requirements!: HiringJobRequirementsType
 
     /** The questions. */
-    @Field(() => [[HiringJobQuestionType]])
+    @Field(() => [HiringJobQuestionType])
     questions!: ReadonlyArray<HiringJobQuestionType>
 
     /** The status. */
@@ -71,7 +71,7 @@ export class HiringJobType {
     status!: string
 
     /** The channels the job takes applications from. */
-    @Field(() => [[String]])
+    @Field(() => [String])
     channels!: ReadonlyArray<string>
 
     /** When the job stops taking applications. */

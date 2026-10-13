@@ -38,11 +38,11 @@ export class ShiftsBenchType {
     requests!: ShiftsRequestsType
 
     /** Shop staff rows for the link choice; managers only. */
-    @Field(() => [[ShiftsStaffRowType]])
+    @Field(() => [ShiftsStaffRowType])
     staffRows!: ReadonlyArray<ShiftsStaffRowType>
 
     /** Every availability statement; managers only. */
-    @Field(() => [[ShiftsAvailabilityType]])
+    @Field(() => [ShiftsAvailabilityType])
     allAvailability!: ReadonlyArray<ShiftsAvailabilityType>
 
     /** The ribbon figures; managers only. */

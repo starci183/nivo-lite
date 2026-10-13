@@ -16,6 +16,6 @@ export class ImportPasteType {
     stocked!: number
 
     /** The lines that could not be read. */
-    @Field(() => [[String]])
+    @Field(() => [String])
     skipped!: ReadonlyArray<string>
 }

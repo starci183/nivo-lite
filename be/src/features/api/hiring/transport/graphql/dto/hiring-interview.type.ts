@@ -41,7 +41,7 @@ export class HiringInterviewType {
     durationMin!: number
 
     /** The times offered to the candidate. */
-    @Field(() => [[HiringSlotType]])
+    @Field(() => [HiringSlotType])
     proposedSlots!: ReadonlyArray<HiringSlotType>
 
     /** The confirmed start. */

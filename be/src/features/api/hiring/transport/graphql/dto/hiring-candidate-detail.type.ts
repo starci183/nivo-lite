@@ -6,7 +6,7 @@ import { HiringCvType } from "./hiring-cv.type"
 /** What the candidate drawer opens with. */
 export class HiringCandidateDetailType {
     /** The candidate's timeline. */
-    @Field(() => [[HiringEventType]])
+    @Field(() => [HiringEventType])
     events!: ReadonlyArray<HiringEventType>
 
     /** The CV link, when there is one. */

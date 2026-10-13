@@ -9,6 +9,6 @@ export class ShiftsPriorType {
     staffId!: string
 
     /** The pieces of work. */
-    @Field(() => [[ShiftSegType]])
+    @Field(() => [ShiftSegType])
     segs!: ReadonlyArray<ShiftSegType>
 }

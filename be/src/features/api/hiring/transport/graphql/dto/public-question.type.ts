@@ -20,6 +20,6 @@ export class PublicQuestionType {
     required!: boolean
 
     /** The offered choices. */
-    @Field(() => [[String]])
+    @Field(() => [String])
     choices!: ReadonlyArray<string>
 }

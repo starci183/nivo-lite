@@ -12,6 +12,6 @@ export class ShiftsColleagueType {
     name!: string
 
     /** The positions they work. */
-    @Field(() => [[ID]])
+    @Field(() => [ID])
     positionIds!: ReadonlyArray<string>
 }

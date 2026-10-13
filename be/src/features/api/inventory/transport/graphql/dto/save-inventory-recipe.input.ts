@@ -26,7 +26,7 @@ export class SaveInventoryRecipeInput {
     aliases!: string
 
     /** The ingredients per product. */
-    @Field(() => [[InventoryRecipeLineInput]])
+    @Field(() => [InventoryRecipeLineInput])
     @IsArray()
     @ArrayMaxSize(100)
     @ValidateNested({ each: true })

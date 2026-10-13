@@ -25,7 +25,7 @@ export class ReceiveInventoryPoInput {
     note!: string
 
     /** The received lines. */
-    @Field(() => [[ReceivePoLineInput]])
+    @Field(() => [ReceivePoLineInput])
     @IsArray()
     @ArrayMaxSize(200)
     @ValidateNested({ each: true })

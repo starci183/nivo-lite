@@ -50,7 +50,7 @@ export class HiringCandidateType {
     cvMime!: string | null
 
     /** The answers. */
-    @Field(() => [[HiringAnswerType]])
+    @Field(() => [HiringAnswerType])
     answers!: ReadonlyArray<HiringAnswerType>
 
     /** The days and hours they can work. */
@@ -78,7 +78,7 @@ export class HiringCandidateType {
     scoreLabel!: string | null
 
     /** The screening's per-criterion findings. */
-    @Field(() => [[HiringScoreReasonType]])
+    @Field(() => [HiringScoreReasonType])
     scoreReasons!: ReadonlyArray<HiringScoreReasonType>
 
     /** The screening's one-paragraph summary. */

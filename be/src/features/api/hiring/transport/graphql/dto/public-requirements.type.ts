@@ -4,7 +4,7 @@ import { Field, Int, ObjectType } from "@nestjs/graphql"
 /** The requirements shown to applicants. */
 export class PublicRequirementsType {
     /** Skills. */
-    @Field(() => [[String]])
+    @Field(() => [String])
     skills!: ReadonlyArray<string>
 
     /** Years of experience. */
@@ -16,14 +16,14 @@ export class PublicRequirementsType {
     experienceNote!: string
 
     /** Availability. */
-    @Field(() => [[String]])
+    @Field(() => [String])
     availability!: ReadonlyArray<string>
 
     /** Must have. */
-    @Field(() => [[String]])
+    @Field(() => [String])
     mustHave!: ReadonlyArray<string>
 
     /** Nice to have. */
-    @Field(() => [[String]])
+    @Field(() => [String])
     niceToHave!: ReadonlyArray<string>
 }
