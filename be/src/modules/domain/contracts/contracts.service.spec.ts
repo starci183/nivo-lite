@@ -10,7 +10,7 @@ import type { MessageCatalog, RequestLocale } from "@modules/platform/i18n"
 import type { SaveContractParams } from "./contracts.contracts"
 import { ContractsService } from "./contracts.service"
 import { ContractsErrorCode } from "./errors/contracts.error"
-import { INSERT_CONTRACT, UPDATE_CONTRACT } from "./persistence/contracts.sql"
+import { ATTACH_CONTRACT_LEAD, INSERT_CONTRACT, UPDATE_CONTRACT } from "./persistence/contracts.sql"
 
 const paramsOf = builder<SaveContractParams>({
     workspaceId: "ws-1",
@@ -167,6 +167,17 @@ describe("ContractsService", () => {
             await expect(
                 contracts.saveContract(paramsOf({ contractId: "contract-9", leadId: null })),
             ).rejects.toMatchObject({ code: ContractsErrorCode.NotFound, params: { id: "contract-9" } })
+        })
+    })
+
+    describe("attachLead", () => {
+        it("links the lead to the workspace's contract on the system's behalf", async () => {
+            const em = mockEntityManager({ query: [ATTACH_CONTRACT_LEAD, []] })
+            const { contracts, members } = await build(em)
+
+            await expect(contracts.attachLead("ws-1", "contract-1", "lead-9")).resolves.toBeUndefined()
+            expect(em.query).toHaveBeenCalledWith(ATTACH_CONTRACT_LEAD, ["ws-1", "contract-1", "lead-9"])
+            expect(members.require).not.toHaveBeenCalled()
         })
     })
 })

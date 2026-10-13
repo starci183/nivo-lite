@@ -23,6 +23,7 @@ import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { CustomerTurnsLogEvent } from "./customer-turns.log-events"
 import { detailOf, readCustomerReply } from "./reply-reading.policy"
+import { TurnModulesService } from "./turn-modules.service"
 import { personaOf, turnMessageOf, turnSystemOf } from "./turn-prompt.policy"
 
 /** The language the context and the fixed lines of a turn are written in. */
@@ -60,6 +61,7 @@ export class CustomerTurnRuntimeService implements ChatTurnRuntime {
         private readonly recall: KnowledgeRecallService,
         private readonly hiring: HiringPublicService,
         private readonly profiles: ModuleProfilesService,
+        private readonly modules: TurnModulesService,
     ) {}
 
     /** Proposes the reply of one turn, or answers why it could not. */
@@ -136,19 +138,22 @@ export class CustomerTurnRuntimeService implements ChatTurnRuntime {
             audience: "customer",
             installationId: conversation.installationId,
         })
-        const [authority, recalled, jobs] = await Promise.all([
+        const [authority, recalled, jobs, modules] = await Promise.all([
             this.authority
                 .load({ workspaceId })
                 .then(authorityBrief)
                 .catch((cause: unknown) => this.skip(cause, workspaceId, "authority")),
             this.recall.recall(view, turn.body),
             this.hiring.chatBrief(workspaceId).catch((cause: unknown) => this.skip(cause, workspaceId, "hiring")),
+            this.modules
+                .briefs(conversation)
+                .catch((cause: unknown): ReadonlyArray<string> => [this.skip(cause, workspaceId, "modules")]),
         ])
         return turnSystemOf({
             persona: personaOf(conversation.agent),
             authority,
             recall: recalled.brief,
-            extras: [jobs],
+            extras: [jobs, ...modules],
             contract: this.contractOf(conversation.agent.module),
         })
     }

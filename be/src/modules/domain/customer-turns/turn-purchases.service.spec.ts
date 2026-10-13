@@ -55,6 +55,7 @@ const reply: CustomerReply = {
     knowledgeGap: null,
     application: null,
     loyaltyRewardKey: null,
+    bookingRequest: null,
 }
 const invoice: InvoiceRow = {
     id: "inv-1",

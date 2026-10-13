@@ -113,6 +113,7 @@ export class HiringInterviewsService {
                 mode: request.mode,
                 location,
                 duration_min: Math.max(DURATION_MIN, Math.min(DURATION_MAX, request.durationMin || DURATION_DEFAULT)),
+                contact: candidate.email === "" ? candidate.phone : candidate.email,
             },
         })
         return {

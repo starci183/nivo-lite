@@ -4,6 +4,7 @@ import { AgentKnowledgeModule } from "@modules/domain/agent-knowledge"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./customer-turns.module-definition"
 import { PaymentClaimsService } from "./payment-claims.service"
 import { StaffEscalationService } from "./staff-escalation.service"
+import { TurnModulesService } from "./turn-modules.service"
 import { TurnPurchasesService } from "./turn-purchases.service"
 
 @Module({})
@@ -17,7 +18,7 @@ export class CustomerTurnsModule extends ConfigurableModuleClass {
     /** Registers the capability once in the app that runs the chat-turn jobs. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
-        const services = [PaymentClaimsService, StaffEscalationService, TurnPurchasesService]
+        const services = [PaymentClaimsService, StaffEscalationService, TurnPurchasesService, TurnModulesService]
         const knowledge = AgentKnowledgeModule.register({ isGlobal: false })
         return {
             ...base,

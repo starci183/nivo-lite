@@ -19,6 +19,7 @@ import { ModuleCatalogService } from "./module-catalog.service"
 import { WorkApprovalService } from "./work-approval.service"
 import { WorkChainService } from "./work-chain.service"
 import { WorkDecisionService } from "./work-decision.service"
+import { WorkDrainService } from "./work-drain.service"
 import { WorkPlacementService } from "./work-placement.service"
 import { WorkEngineService } from "./work-engine.service"
 import { WorkIntakeService } from "./work-intake.service"
@@ -76,6 +77,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 WorkApprovalService,
                 WorkChainService,
                 WorkDecisionService,
+                WorkDrainService,
                 WorkPlacementService,
                 WorkEngineService,
                 WorkIntakeService,
@@ -93,6 +95,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 EvidenceService,
                 ModuleCatalogService,
                 WorkDecisionService,
+                WorkDrainService,
                 WorkPlacementService,
                 WorkEngineService,
             ],

@@ -199,6 +199,7 @@ describe("HiringInterviewsService", () => {
             mode: request.mode,
             location: explicit ? "x".repeat(300) : "Main Street",
             duration_min: expected,
+            contact: "alice@example.com",
         }
         expect(gate.request.mock.calls).toEqual([[gateOf({ fields: expectedFields })]])
     })

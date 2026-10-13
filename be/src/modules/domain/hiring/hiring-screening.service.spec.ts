@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { ApprovalGate, TextGenerator } from "@modules/domain/module-ops"
+import { ApprovalGate, ModuleTextGenerator } from "@modules/domain/module-ops"
 import type { PerformContext } from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -106,7 +106,7 @@ const build = async (entityManager: MockEntityManager = mockEntityManager()) => 
     data.candidate.mockResolvedValue(candidateOf())
     data.job.mockResolvedValue(jobOf())
     data.askAttempts.mockResolvedValue(2)
-    const generator = mock<TextGenerator>()
+    const generator = mock<ModuleTextGenerator>()
     generator.generate.mockResolvedValue({ ok: false, output: "" })
     const gate = mock<ApprovalGate>()
     gate.request.mockResolvedValue({ status: "waiting_decision", workItemId: "work-1" })
@@ -117,7 +117,7 @@ const build = async (entityManager: MockEntityManager = mockEntityManager()) => 
             { provide: LOGGER, useValue: logger },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: ApprovalGate, useValue: gate },
-            { provide: TextGenerator, useValue: generator },
+            { provide: ModuleTextGenerator, useValue: generator },
             { provide: HiringDataService, useValue: data },
             { provide: HiringTextService, useValue: words },
         ],

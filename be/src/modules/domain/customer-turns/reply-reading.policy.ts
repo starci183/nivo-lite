@@ -1,3 +1,4 @@
+import type { ChatBookingIntent, ChatBookingRequest } from "@modules/domain/work-performers"
 import type {
     CapturedLead,
     ChatApplicationProposal,
@@ -25,6 +26,12 @@ const EMAIL_MAX = 254
 const AVAILABILITY_MAX = 300
 const QUESTION_ID_MAX = 24
 const ANSWER_MAX = 1000
+const SERVICE_MAX = 160
+const BOOKING_NOTE_MAX = 400
+const PARTY_MAX = 200
+const BOOKING_INTENTS: ReadonlyArray<ChatBookingIntent> = ["book", "reschedule", "cancel", "availability", "waitlist"]
+const HHMM = /^([01]?\d|2[0-3]):[0-5]\d$/u
+const YMD = /^\d{4}-\d{2}-\d{2}$/u
 
 const isLoose = (value: unknown): value is Loose => typeof value === "object" && value !== null && !Array.isArray(value)
 
@@ -125,6 +132,42 @@ export const readChatApplication = (value: unknown): ChatApplicationProposal | n
     }
 }
 
+const hhmmOf = (value: unknown): string | null => {
+    const text = textOf(value, 5)
+    return HHMM.test(text) ? text.padStart(5, "0") : null
+}
+
+const ymdOf = (value: unknown): string | null => {
+    const text = textOf(value, 10)
+    return YMD.test(text) ? text : null
+}
+
+const intentOf = (value: unknown): ChatBookingIntent | null =>
+    BOOKING_INTENTS.find((intent) => intent === value) ?? null
+
+const orNull = (text: string): string | null => (text === "" ? null : text)
+
+/** The appointment request of a reply ("booking_request"): an intent the contract names, every other member read and bounded. */
+export const readChatBookingRequest = (value: unknown): ChatBookingRequest | null => {
+    if (!isLoose(value)) return null
+    const intent = intentOf(value.intent)
+    if (intent === null) return null
+    const party = Number(value.party_size)
+    return {
+        intent,
+        service: textOf(value.service, SERVICE_MAX),
+        date: ymdOf(value.date),
+        time: hhmmOf(value.time),
+        from: hhmmOf(value.from),
+        to: hhmmOf(value.to),
+        partySize: Number.isFinite(party) && party >= 1 ? Math.min(PARTY_MAX, Math.round(party)) : 1,
+        name: textOf(value.contact_name, NAME_MAX),
+        phone: orNull(textOf(value.phone, PHONE_MAX)),
+        email: orNull(textOf(value.email, EMAIL_MAX)),
+        note: orNull(textOf(value.note, BOOKING_NOTE_MAX)),
+    }
+}
+
 const rewardOf = (value: unknown): string | null => {
     if (!isLoose(value) || value.intent !== "redeem") return null
     return textOf(value.reward_key, REWARD_MAX) || null
@@ -143,6 +186,7 @@ export const findingsOf = (value: Loose): ReplyFindings => ({
     knowledgeGap: gapOf(value.knowledge_gap),
     application: readChatApplication(value.application),
     loyaltyRewardKey: rewardOf(value.loyalty),
+    bookingRequest: readChatBookingRequest(value.booking_request),
 })
 
 /**
@@ -164,6 +208,7 @@ export const readCustomerReply = (raw: string, holdingLine: string): CustomerRep
             knowledgeGap: null,
             application: null,
             loyaltyRewardKey: null,
+            bookingRequest: null,
         }
     }
     const needsHuman = parsed.needs_human === true
@@ -202,6 +247,22 @@ export const detailOf = (reply: CustomerReply): Readonly<Record<string, unknown>
                   })),
               },
     loyalty: reply.loyaltyRewardKey === null ? null : { intent: "redeem", reward_key: reply.loyaltyRewardKey },
+    booking_request:
+        reply.bookingRequest === null
+            ? null
+            : {
+                  intent: reply.bookingRequest.intent,
+                  service: reply.bookingRequest.service,
+                  date: reply.bookingRequest.date,
+                  time: reply.bookingRequest.time,
+                  from: reply.bookingRequest.from,
+                  to: reply.bookingRequest.to,
+                  party_size: reply.bookingRequest.partySize,
+                  contact_name: reply.bookingRequest.name,
+                  phone: reply.bookingRequest.phone,
+                  email: reply.bookingRequest.email,
+                  note: reply.bookingRequest.note,
+              },
 })
 
 /** The reason a proposal names, read back. */

@@ -30,6 +30,7 @@ import type {
 import { isKnownPrice } from "./knowledge-price.policy"
 import { findingsOf, humanReasonOf } from "./reply-reading.policy"
 import { StaffEscalationService } from "./staff-escalation.service"
+import { TurnModulesService } from "./turn-modules.service"
 import { TurnPurchasesService } from "./turn-purchases.service"
 import { channelKeyOf } from "./turn-prompt.policy"
 
@@ -111,6 +112,7 @@ export class CustomerOutcomesService implements CustomerOutcomes {
         private readonly purchases: TurnPurchasesService,
         private readonly staff: StaffEscalationService,
         private readonly gaps: KnowledgeGapNotesService,
+        private readonly modules: TurnModulesService,
     ) {}
 
     /** Interprets the proposed reply through the gate and answers what leaves and which lines the workbench shows. */
@@ -135,6 +137,7 @@ export class CustomerOutcomesService implements CustomerOutcomes {
             leadId: handoff.leadId,
         })
         const claim = await this.purchases.recordClaim(ctx, turn, judged.claimOpen, channel)
+        const extra = judged.needsHuman ? { reply: null, lines: [] } : await this.modules.settle(ctx, turn, reply)
         const waiting = judged.needsHuman ? await this.askPerson(ctx, turn, reply, judged, order.leadId) : []
         await this.gaps.note({
             view: viewOf({
@@ -162,12 +165,21 @@ export class CustomerOutcomesService implements CustomerOutcomes {
             claim.changed ||
             application.changed ||
             waiting.length > 0 ||
+            extra.lines.length > 0 ||
             judged.needsHuman
         if (changed) this.drainLater(ctx, order.changed ? DRAIN_STEPS_AFTER_ORDER : DRAIN_STEPS)
         return {
-            reply: application.reply,
+            reply: extra.reply ?? application.reply,
             send: approval.length === 0,
-            lines: [...approval, ...application.lines, ...handoff.lines, ...order.lines, ...claim.lines, ...waiting],
+            lines: [
+                ...approval,
+                ...application.lines,
+                ...handoff.lines,
+                ...order.lines,
+                ...claim.lines,
+                ...extra.lines,
+                ...waiting,
+            ],
         }
     }
 

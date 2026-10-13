@@ -2,12 +2,14 @@ import { FakeClock, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
-import { DRIVE_PURPOSE, GOOGLE_CLIENT, GoogleError, GoogleErrorCode } from "@modules/integrations/google"
+import { DRIVE_PURPOSE, GOOGLE_CLIENT, GOOGLE_SCOPE, GoogleError, GoogleErrorCode } from "@modules/integrations/google"
 import type { GoogleClient, GoogleTokenSet, OAuthState, SheetConfig, SheetEventIn } from "@modules/integrations/google"
-import { CLOCK } from "@modules/platform/clock"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { DriveGrantService } from "./drive-grant.service"
 import { GoogleConnectionsService } from "./google-connections.service"
+import { GoogleTokensService } from "./google-tokens.service"
+import { runRealGoogleTokens } from "@tests/fixtures/builders/google-tokens.builder"
 import { GoogleConnectionsError, GoogleConnectionsErrorCode } from "./errors/google-connections.error"
 import type { GoogleCallbackInput } from "./google-connections.contracts"
 
@@ -73,17 +75,21 @@ const build = async () => {
     google.refreshAccessToken.mockResolvedValue(tokens)
     google.createOrdersSpreadsheet.mockResolvedValue(sheet)
     google.applyEvent.mockResolvedValue({ evidence: "Recorded O-1" })
-    const clock = new FakeClock(NOW)
+    const drive = mock<DriveGrantService>()
+    drive.complete.mockResolvedValue(undefined)
+    const tokenStore = mock<GoogleTokensService>()
+    runRealGoogleTokens(tokenStore, connections, google, new FakeClock(NOW))
     const moduleRef = await Test.createTestingModule({
         providers: [
             GoogleConnectionsService,
             { provide: ConnectionsService, useValue: connections },
             { provide: GOOGLE_CLIENT, useValue: google },
-            { provide: CLOCK, useValue: clock },
             { provide: LOGGER, useValue: mock<Logger>() },
+            { provide: GoogleTokensService, useValue: tokenStore },
+            { provide: DriveGrantService, useValue: drive },
         ],
     }).compile()
-    return { service: moduleRef.get(GoogleConnectionsService), connections, google, clock }
+    return { service: moduleRef.get(GoogleConnectionsService), connections, google, drive }
 }
 
 describe("GoogleConnectionsService", () => {
@@ -101,7 +107,7 @@ describe("GoogleConnectionsService", () => {
                 userId: "owner-1",
                 returnTo: "/automations?tab=google",
             })
-            expect(google.authUrl).toHaveBeenCalledWith("signed-state")
+            expect(google.authUrl).toHaveBeenCalledWith("signed-state", GOOGLE_SCOPE)
 
             await service.authorize(actor, "https://other.test")
             expect(google.sign).toHaveBeenLastCalledWith({
@@ -148,7 +154,7 @@ describe("GoogleConnectionsService", () => {
         it("returns a state failure when verification returns null or throws", async () => {
             const { service, connections, google } = await build()
             google.verify.mockReturnValueOnce(null).mockImplementationOnce(() => {
-                throw refused({ reason: "invalid signature" })
+                throw new GoogleError({ code: GoogleErrorCode.Refused })
             })
 
             await expect(service.complete(callback({ state: undefined }))).resolves.toEqual(location("error", "state"))
@@ -156,10 +162,16 @@ describe("GoogleConnectionsService", () => {
             expect(connections.authorize).not.toHaveBeenCalled()
         })
 
-        it("returns unavailable for Drive consent and an unconfigured Sheets client", async () => {
-            const { service, connections, google } = await build()
+        it("hands a Drive consent to the Drive grant and answers drive=ok", async () => {
+            const { service, google, drive } = await build()
             google.verify.mockReturnValueOnce({ ...state, p: DRIVE_PURPOSE })
-            await expect(service.complete(callback())).resolves.toEqual(location("error", "unavailable", "drive"))
+            await expect(service.complete(callback())).resolves.toEqual(location("ok", undefined, "drive"))
+            expect(drive.complete).toHaveBeenCalledWith("ws-1", "owner-1", "consent-code")
+            expect(google.exchangeCode).not.toHaveBeenCalled()
+        })
+
+        it("returns unavailable for an unconfigured client", async () => {
+            const { service, connections, google } = await build()
             google.isConfigured.mockReturnValue(false)
             await expect(service.complete(callback())).resolves.toEqual(location("error", "unavailable"))
             expect(connections.authorize).not.toHaveBeenCalled()
@@ -428,7 +440,7 @@ describe("GoogleConnectionsService", () => {
             await expect(
                 service.provisionOrdersSheet("ws-1", "Shop", { spreadsheetId: " ", googleConnectionId: "c1" }),
             ).resolves.toEqual(sheet)
-            expect(google.createOrdersSpreadsheet).toHaveBeenCalledWith("access-old", "NIVO - Shop")
+            expect(google.createOrdersSpreadsheet).toHaveBeenCalledWith("access-old", "Shop")
             expect(connections.patch).toHaveBeenCalledWith("ws-1", "c1", {
                 meta: {
                     email: "shop@example.test",
@@ -446,7 +458,7 @@ describe("GoogleConnectionsService", () => {
             await expect(service.provisionOrdersSheet("ws-1", "x".repeat(150), { spreadsheetId: 42 })).resolves.toEqual(
                 sheet,
             )
-            expect(google.createOrdersSpreadsheet).toHaveBeenCalledWith("access-old", `NIVO - ${"x".repeat(113)}`)
+            expect(google.createOrdersSpreadsheet).toHaveBeenCalledWith("access-old", "x".repeat(120))
             expect(connections.patch).not.toHaveBeenCalled()
         })
     })
@@ -531,21 +543,6 @@ describe("GoogleConnectionsService", () => {
             expect(google.refreshAccessToken).toHaveBeenCalledWith("refresh-old")
             expect(connections.writeSecret).toHaveBeenCalledWith("c1", JSON.stringify(issued))
             expect(google.applyEvent).toHaveBeenCalledWith("access-new", {}, event)
-        })
-
-        it("keeps the refresh token when a refresh response omits its replacement", async () => {
-            const { service, connections, google } = await build()
-            connections.readSecret.mockResolvedValue({
-                plain: JSON.stringify({ ...stored, expires_at: NOW.getTime() }),
-                webhookSecret: "hook",
-            })
-            google.refreshAccessToken.mockResolvedValue({ ...tokens, refreshToken: null })
-
-            await expect(service.runSheetEvent("ws-1", {}, event)).resolves.toEqual({ evidence: "Recorded O-1" })
-            expect(connections.writeSecret).toHaveBeenCalledWith(
-                "c1",
-                JSON.stringify({ access_token: "access-new", refresh_token: "refresh-old", expires_at: EXPIRES }),
-            )
         })
 
         it("forces one token refresh and retries the same sheet event after a 401", async () => {

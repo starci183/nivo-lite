@@ -1,11 +1,11 @@
 /** Log events of the google-connections capability. */
 export enum GoogleConnectionsLogEvent {
-    /** The signed state of a consent return could not be read; the browser goes back with `reason=state`. */
+    /** A callback state could not be read; the browser goes back with reason=state. */
     StateUnreadable = "google_connections.state_unreadable",
-    /** The person of a consent return may no longer manage the workspace; the browser goes back with `reason=forbidden`. */
+    /** The person in the state may no longer connect Google; the browser goes back with reason=forbidden. */
     ConsentForbidden = "google_connections.consent_forbidden",
-    /** A refused consent could not be recorded on the connection. */
+    /** A refused consent could not be remembered on the connection; the browser still goes back with the reason. */
     FailureNotRecorded = "google_connections.failure_not_recorded",
-    /** The consent return failed after the state was verified; the browser goes back with `reason=failed`. */
+    /** A consent code could not be turned into a stored connection or grant; the browser goes back with the reason. */
     ConsentFailed = "google_connections.consent_failed",
 }

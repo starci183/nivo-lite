@@ -242,7 +242,7 @@ export class InventoryOrdersService {
                 workspaceId,
                 workItemId: row.work_item_id,
                 decision: "rejected",
-                decidedBy: actor,
+                decidedBy: userId,
             })
         }
         await this.office.logEvidence(workspaceId, {
