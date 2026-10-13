@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { ConnectionsService, randomSecret } from "@modules/domain/connections"
+import { ConnectionsService } from "@modules/domain/connections"
+import { randomSecret } from "@modules/domain/connection-secrets"
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
 import { WorkspacesService } from "@modules/domain/workspaces"
 import { InjectMail, MailError, renderEmail } from "@modules/integrations/mail"

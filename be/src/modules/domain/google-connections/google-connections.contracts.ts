@@ -1,5 +1,5 @@
 /** One Google account a workspace connected. */
-export interface GoogleAccount {
+export interface GoogleConnectionAccount {
     /** The id of the connection. */
     readonly id: string
     /** The account email, blank when Google never said. */
@@ -40,4 +40,16 @@ export interface OrdersSheet {
     readonly spreadsheetId: string
     /** The url to open it. */
     readonly spreadsheetUrl: string
+}
+
+/** Where the browser goes to give Google consent. */
+export interface GoogleConsentStart {
+    /** The Google consent page, carrying the signed state the callback checks. */
+    readonly url: string
+}
+
+/** Whether the Google connection can be offered on this deployment. */
+export interface GoogleAvailability {
+    /** True when Google OAuth credentials are configured; the console hides the connect button otherwise. */
+    readonly configured: boolean
 }

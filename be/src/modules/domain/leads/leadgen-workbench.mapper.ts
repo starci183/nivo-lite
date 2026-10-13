@@ -8,7 +8,7 @@ import type {
 } from "./leadgen-workbench.contracts"
 import type { LeadGenLeadRow, LeadGenWorkbenchRow, LeadGenWorkItemRow } from "./persistence/leadgen-workbench.rows"
 import { conversationFacts, median, vnDayStart } from "./leadgen-conversations.mapper"
-import { clip, firstText, originOf, platformOf, scoreFromFields, text } from "./leadgen-origin.policy"
+import { clip, firstText, leadOriginOf, platformOf, scoreFromFields, text } from "./leadgen-origin.policy"
 
 const DAY_MS = 86_400_000
 const CONVERSION_WINDOW_DAYS = 90
@@ -66,7 +66,7 @@ export const buildLeadGenWorkbench = (rows: LeadGenWorkbenchRow): LeadGenWorkben
             name: lead.contact_name,
             stage: lead.stage,
             score: (scored ? scoreFromFields(fieldsOf(scored)) : null) ?? scoreFromFields(fields),
-            origin: originOf(fields, text(fields.channel_label), lead.channel),
+            origin: leadOriginOf(fields, text(fields.channel_label), lead.channel),
             lastText: last?.text ?? clip(lead.need),
             lastAt: last?.at ?? lead.created_at,
             createdAt: lead.created_at,
@@ -90,7 +90,7 @@ export const buildLeadGenWorkbench = (rows: LeadGenWorkbenchRow): LeadGenWorkben
         .filter((item) => item.action === "reply_comment_public" && item.status === "waiting_decision")
         .map((item) => {
             const fields = fieldsOf(item)
-            const origin = originOf(fields, text(fields.channel_label), "")
+            const origin = leadOriginOf(fields, text(fields.channel_label), "")
             return {
                 workItemId: item.id,
                 platform: origin.platform,

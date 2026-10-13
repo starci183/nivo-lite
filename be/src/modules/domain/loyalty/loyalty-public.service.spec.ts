@@ -73,9 +73,7 @@ const rewardOf = builder<LoyaltyReward>({
     note: "n",
     active: true,
 })
-const catalog = mock<MessageCatalog>({
-    get: (key, params) => `${key}|${String(params.shop)}|${String(params.code)}`,
-})
+const catalog = mock<MessageCatalog>({ get: (key, params) => `${key}|${String(params.shop)}|${String(params.code)}` })
 
 interface Options {
     program?: LoyaltyProgram | null

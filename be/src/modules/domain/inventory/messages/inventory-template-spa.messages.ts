@@ -1,4 +1,4 @@
-import type { InventoryTemplate } from "../inventory-templates"
+import type { InventoryTemplate } from "../inventory.templates"
 
 /** Spa & thẩm mỹ */
 export const SPA_TEMPLATE: InventoryTemplate = {
