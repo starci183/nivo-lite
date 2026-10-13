@@ -5,6 +5,8 @@ export const WORK_PERFORMERS_MESSAGES: MessageBundle = {
     vi: {
         "performers.needsHuman": "Câu trả lời chi tiết cần người duyệt — NIVO đã gửi đề xuất cho chủ doanh nghiệp",
         "performers.emailFooter": "Email này được gửi bởi {{shop}}.",
+        "performers.emailRequestSummary": "Gửi email tới {{to}}: {{subject}}",
+        "performers.cancelBookingSummary": "Yêu cầu hủy lịch {{service}} của {{name}} lúc {{start}}",
         "errors.WORK_PERFORMERS_SUBJECT_MISSING": "Việc này chưa gắn với khách hàng hoặc đơn hàng nào.",
         "errors.WORK_PERFORMERS_ORDER_UNAVAILABLE": "Không tìm thấy đơn hàng, hoặc đơn đã bị hủy.",
         "errors.WORK_PERFORMERS_EMAIL_NOT_SENT": "Chưa gửi được email: {{reason}}",
@@ -68,6 +70,8 @@ export const WORK_PERFORMERS_MESSAGES: MessageBundle = {
         "performers.needsHuman":
             "The detailed answer needs a person: NIVO sent its proposed answer to the owner to approve",
         "performers.emailFooter": "This email was sent by {{shop}}.",
+        "performers.emailRequestSummary": "Email to {{to}}: {{subject}}",
+        "performers.cancelBookingSummary": "Request to cancel {{service}} for {{name}} at {{start}}",
         "errors.WORK_PERFORMERS_SUBJECT_MISSING": "This item is not tied to a customer or an order.",
         "errors.WORK_PERFORMERS_ORDER_UNAVAILABLE": "The order was not found, or it was cancelled.",
         "errors.WORK_PERFORMERS_EMAIL_NOT_SENT": "The email was not sent: {{reason}}",
