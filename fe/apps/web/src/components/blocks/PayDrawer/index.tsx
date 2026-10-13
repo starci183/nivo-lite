@@ -1,226 +1,92 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { Alert, Button, Drawer, Image, Input, MediaFrame, Text } from "@starci/grammar/common"
-import { useTranslations } from "next-intl"
-import type { CreditsData, PayOrder } from "@/hooks/credits/credits.shared"
-import { useLocale } from "@/i18n/client"
-import { intlLocale } from "@/i18n/core"
-import { orderStatusAction } from "@/features/onboarding/actions"
-import { COPY_CLASS_NAME, PAY_CLASS_NAME, QR_CLASS_NAME, QR_WRAP_CLASS_NAME } from "./classNames"
-
-/** What is being paid for: a pack of credits or an upgrade to a plan. */
-export type PayTarget =
-    | { readonly kind: "topup"; readonly packCode: string; readonly credits: number }
-    | { readonly kind: "upgrade"; readonly planCode: string; readonly planName: string; readonly price: number }
-
-export type PayDrawerProps = {
-    readonly target: PayTarget | null
-    readonly order: PayOrder | null
-    readonly bank: CreditsData["bank"]
-    readonly isRegenerating: boolean
-    readonly regenerateError: string | null
-    readonly onRegenerate: () => void
-    /** The transfer landed: the page behind re-reads the balance. */
-    readonly onPaid: () => void
-    readonly onClose: () => void
-}
-
-type Phase = "pending" | "paid" | "expired"
-const POLL_MS = 3000
+import { useFormatter, useTranslations } from "next-intl"
+import { useCreditsPayDrawer, useCreditsPaymentState } from "@/hooks/credits"
+import { PayDrawerBase } from "./component"
 
 const clock = (ms: number) => {
-    const s = Math.max(0, Math.floor(ms / 1000))
-    return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`
+    const seconds = Math.max(0, Math.floor(ms / 1000))
+    return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`
 }
 
-/** One transfer detail: read-only and copyable. */
-const Detail = ({ id, label, value }: { readonly id: string; readonly label: string; readonly value: string }) => {
+/** Connects the transfer drawer to payment settlement, localized amounts, and countdown copy. */
+export const PayDrawer = () => {
+    const drawer = useCreditsPayDrawer()
     const t = useTranslations("credits")
-    return (
-        <Input
-            id={id}
-            name={id}
-            label={label}
-            variant="secondary"
-            value={value}
-            isReadOnly
-            isCopyable
-            copyLabel={t("copy")}
-            copiedLabel={t("copied")}
-        />
-    )
-}
-
-/**
- * The same VietQR transfer screen as the plan payment (code, copyable bank details, countdown, polling the order until the SePay
- * webhook marks it paid), in a Drawer. The order is created and priced on the server; this only displays and polls it.
- */
-export const PayDrawer = ({
-    target,
-    order,
-    bank,
-    isRegenerating,
-    regenerateError,
-    onRegenerate,
-    onPaid,
-    onClose,
-}: PayDrawerProps) => {
-    const t = useTranslations("credits")
-    const locale = useLocale()
-    const money = (n: number) =>
-        new Intl.NumberFormat(intlLocale(locale), {
+    const formatter = useFormatter()
+    const money = (amount: number) =>
+        formatter.number(amount, {
             style: "currency",
             currency: "VND",
             maximumFractionDigits: 0,
-        }).format(n)
-    const [phase, setPhase] = useState<Phase>("pending")
-    const [left, setLeft] = useState<number | null>(null)
-    const orderId = order?.id
-    const expiresAt = order?.expiresAt
+        })
+    const { phase, left } = useCreditsPaymentState(drawer.workspaceId, drawer.order, drawer.onPaid)
+    const credits = drawer.target?.kind === "topup" ? formatter.number(drawer.target.credits) : ""
+    let title = t("payTopup", { credits })
+    let paidDescription = t("paidTopup", { credits })
+    if (drawer.target?.kind === "upgrade") {
+        title = t("payUpgrade", { plan: drawer.target.planName })
+        paidDescription = t("paidUpgrade", { plan: drawer.target.planName })
+    }
+    let view: "paid" | "loading" | "expired" | "awaiting" = "awaiting"
+    if (phase === "paid") view = "paid"
+    else if (!drawer.order && drawer.isRegenerating) view = "loading"
+    else if (phase === "expired" || !drawer.order) view = "expired"
 
-    // A new order starts a new wait.
-    useEffect(() => {
-        setPhase("pending")
-        setLeft(expiresAt ? new Date(expiresAt).getTime() - Date.now() : null)
-    }, [orderId, expiresAt])
-
-    useEffect(() => {
-        if (!orderId || !expiresAt || phase !== "pending") return
-        const end = new Date(expiresAt).getTime()
-        const tick = setInterval(() => {
-            const rest = end - Date.now()
-            setLeft(rest)
-            if (rest <= 0) setPhase("expired")
-        }, 1000)
-        const poll = setInterval(async () => {
-            try {
-                const { status } = await orderStatusAction(orderId)
-                if (status === "paid") {
-                    setPhase("paid")
-                    onPaid()
-                } else if (status === "expired" || status === "cancelled") {
-                    setPhase("expired")
-                }
-            } catch {
-                // Network blip: the next poll retries.
-            }
-        }, POLL_MS)
-        return () => {
-            clearInterval(tick)
-            clearInterval(poll)
-        }
-    }, [orderId, expiresAt, phase, onPaid])
-
-    const title =
-        target?.kind === "upgrade"
-            ? t("payUpgrade", { plan: target.planName })
-            : t("payTopup", {
-                  credits:
-                      target?.kind === "topup" ? new Intl.NumberFormat(intlLocale(locale)).format(target.credits) : "",
-              })
-    const configured = Boolean(bank.account && bank.bank)
-    const footer = (
-        <Button variant="secondary" onPress={onClose}>
-            {t("close")}
-        </Button>
-    )
+    let proration: string | null = null
+    if (
+        drawer.order?.credit !== undefined &&
+        drawer.order.daysLeft !== undefined &&
+        drawer.target?.kind === "upgrade"
+    ) {
+        proration = t("prorationNote", {
+            plan: drawer.target.planName,
+            price: money(drawer.target.price),
+            credit: money(drawer.order.credit),
+            days: drawer.order.daysLeft,
+        })
+    }
 
     return (
-        <Drawer
-            title={title}
-            description={t("payText")}
-            isOpen={target !== null}
-            onOpenChange={(open) => {
-                if (!open) onClose()
+        <PayDrawerBase
+            state={{
+                isOpen: drawer.target !== null,
+                view,
+                isRegenerating: drawer.isRegenerating,
+                isBankConfigured: Boolean(drawer.bank.account && drawer.bank.bank),
+                hasOrder: drawer.order !== null,
             }}
-            closeLabel={t("close")}
-            placement="right"
-            footer={footer}
-        >
-            {phase === "paid" ? (
-                <Alert
-                    tone="affirmative"
-                    title={t("paidTitle")}
-                    description={
-                        target?.kind === "upgrade"
-                            ? t("paidUpgrade", { plan: target.planName })
-                            : t("paidTopup", {
-                                  credits:
-                                      target?.kind === "topup"
-                                          ? new Intl.NumberFormat(intlLocale(locale)).format(target.credits)
-                                          : "",
-                              })
-                    }
-                />
-            ) : phase === "expired" || !order ? (
-                <div className={PAY_CLASS_NAME}>
-                    <Alert tone="cautionary" title={t("expiredTitle")} description={t("expiredText")} />
-                    {regenerateError ? (
-                        <Alert tone="negative" title={t("errGeneric")} description={regenerateError} />
-                    ) : null}
-                    <div>
-                        <Button variant="secondary" isPending={isRegenerating} onPress={onRegenerate}>
-                            {t("regenerate")}
-                        </Button>
-                    </div>
-                </div>
-            ) : (
-                <div className={PAY_CLASS_NAME}>
-                    <div className={QR_WRAP_CLASS_NAME}>
-                        <Text size="sm" weight="medium">
-                            {t("scan")}
-                        </Text>
-                        {configured ? (
-                            <div className={QR_CLASS_NAME}>
-                                <MediaFrame aspect="square" fit="contain">
-                                    <Image
-                                        src={order.qrUrl}
-                                        alt={t("qrAlt")}
-                                        width={256}
-                                        height={256}
-                                        aspect="square"
-                                        fit="contain"
-                                    />
-                                </MediaFrame>
-                            </div>
-                        ) : (
-                            <Alert tone="cautionary" title={t("notConfigured")} />
-                        )}
-                        {left !== null ? (
-                            <Text size="sm" tone="muted">
-                                {t("expiresIn", { time: clock(left) })}
-                            </Text>
-                        ) : null}
-                    </div>
-                    <div className={COPY_CLASS_NAME}>
-                        <Text size="sm" tone="muted">
-                            {t("amount")}
-                        </Text>
-                        <Text size="metric-lead" weight="semibold">
-                            {money(order.amount)}
-                        </Text>
-                        {order.credit !== undefined && order.daysLeft !== undefined && target?.kind === "upgrade" ? (
-                            <Text size="sm" tone="muted">
-                                {t("prorationNote", {
-                                    plan: target.planName,
-                                    price: money(target.price),
-                                    credit: money(order.credit),
-                                    days: order.daysLeft,
-                                })}
-                            </Text>
-                        ) : null}
-                    </div>
-                    <Detail id="credits-pay-bank" label={t("bank")} value={bank.bank} />
-                    <Detail id="credits-pay-account" label={t("account")} value={bank.account} />
-                    <Detail id="credits-pay-holder" label={t("holder")} value={bank.holder} />
-                    <Detail id="credits-pay-content" label={t("content")} value={order.code} />
-                    <Text size="sm" tone="muted">
-                        {t("contentWarn")}
-                    </Text>
-                    <Alert tone="pending" title={t("waiting")} urgency="polite" />
-                </div>
-            )}
-        </Drawer>
+            props={{
+                title,
+                description: t("payText"),
+                closeLabel: t("close"),
+                paidTitle: t("paidTitle"),
+                paidDescription,
+                waitingLabel: t("waiting"),
+                expiredTitle: t("expiredTitle"),
+                expiredDescription: t("expiredText"),
+                errorTitle: t("errGeneric"),
+                regenerateError: drawer.regenerateError,
+                regenerateLabel: t("regenerate"),
+                scanLabel: t("scan"),
+                qrAlt: t("qrAlt"),
+                unconfiguredLabel: t("notConfigured"),
+                countdown: left === null ? null : t("expiresIn", { time: clock(left) }),
+                amountLabel: t("amount"),
+                amount: drawer.order ? money(drawer.order.amount) : "",
+                qrUrl: drawer.order?.qrUrl ?? "",
+                proration,
+                copyLabel: t("copy"),
+                copiedLabel: t("copied"),
+                details: [
+                    { id: "credits-pay-bank", label: t("bank"), value: drawer.bank.bank },
+                    { id: "credits-pay-account", label: t("account"), value: drawer.bank.account },
+                    { id: "credits-pay-holder", label: t("holder"), value: drawer.bank.holder },
+                    { id: "credits-pay-content", label: t("content"), value: drawer.order?.code ?? "" },
+                ],
+                contentWarning: t("contentWarn"),
+            }}
+            on={{ close: drawer.onClose, regenerate: drawer.onRegenerate }}
+        />
     )
 }
