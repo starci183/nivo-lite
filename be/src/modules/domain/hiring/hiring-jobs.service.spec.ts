@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { OfficeLog, TextGenerator } from "@modules/domain/module-ops"
+import { OfficeLog, ModuleTextGenerator } from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -113,7 +113,7 @@ const build = async (entityManager: MockEntityManager) => {
     })
     const data = mock<HiringDataService>()
     data.job.mockResolvedValue(jobOf())
-    const generator = mock<TextGenerator>()
+    const generator = mock<ModuleTextGenerator>()
     const settings = mock<HiringSettingsService>()
     settings.ensure.mockResolvedValue(settingsOf())
     const links = mock<HiringLinksService>()
@@ -129,7 +129,7 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: WorkspaceMembersService, useValue: members },
             { provide: HiringDataService, useValue: data },
             { provide: HiringTextService, useValue: words },
-            { provide: TextGenerator, useValue: generator },
+            { provide: ModuleTextGenerator, useValue: generator },
             { provide: HiringSettingsService, useValue: settings },
             { provide: HiringLinksService, useValue: links },
             { provide: OfficeLog, useValue: office },
