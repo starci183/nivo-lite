@@ -35,12 +35,10 @@ import { ZaloHttpModule } from "@features/webhooks/zalo"
 import { LeadsGraphqlModule, LeadsHttpModule } from "@features/api/leads"
 import { LeadQueriesGraphqlModule } from "@features/api/lead-queries"
 import { LeadActionsGraphqlModule } from "@features/api/lead-actions"
-import { LeadGenWorkbenchGraphqlModule } from "@features/api/leadgen-workbench"
 import { SalesGraphqlModule } from "@features/api/sales"
 import { SalesWorkbenchGraphqlModule } from "@features/api/sales-workbench"
 import { RunLeadActionQueueModule } from "@features/jobs/run-lead-action"
 import { LEAD_ACTIONS_ERROR_KINDS, LEAD_ACTIONS_MESSAGES, LeadActionsModule } from "@modules/domain/lead-actions"
-import { LeadGenWorkbenchModule } from "@modules/domain/leadgen-workbench"
 import { SalesModule } from "@modules/domain/sales"
 import { SalesWorkbenchModule } from "@modules/domain/sales-workbench"
 import { LeadViewsModule } from "@modules/domain/lead-views"
@@ -730,13 +728,11 @@ export class AppModule {
                 LeadsGraphqlModule,
                 LeadQueriesGraphqlModule,
                 LeadActionsGraphqlModule,
-                LeadGenWorkbenchGraphqlModule,
                 RunLeadActionQueueModule,
                 SalesGraphqlModule,
                 SalesWorkbenchGraphqlModule,
                 LeadActionsModule.register({ isGlobal: true }),
                 LeadViewsModule.register({ isGlobal: true }),
-                LeadGenWorkbenchModule.register({ isGlobal: true }),
                 SalesModule.register({ isGlobal: true }),
                 SalesWorkbenchModule.register({ isGlobal: true }),
                 PromoModule.register({ isGlobal: true }),
