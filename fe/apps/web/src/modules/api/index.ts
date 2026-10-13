@@ -130,7 +130,6 @@ export type {
     ModuleInstallationType,
     NivoEntryType,
     OpenApiTestType,
-    DataSyncRunType,
     PreviewSampleType,
     PublicBookingPageType,
     RetrievedPassageType,

@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl"
 import { useState } from "react"
 import {
     CHANNEL_RULES,
+    channelLabel,
     CONTENT_CHANNELS,
     useContentFocus,
     useRequestContentQuickDraft,
@@ -39,7 +40,7 @@ export const ContentQuickIdea = () => {
                 isOpen,
                 topic: form.watch("topic"),
                 channels: form.watch("channels"),
-                channelOptions: CHANNEL_RULES.map((rule) => ({ value: rule.key, label: rule.label })),
+                channelOptions: CHANNEL_RULES.map((rule) => ({ value: rule.key, label: channelLabel(t, rule.key) })),
                 isPending,
                 note: error ? { tone: "error", text: error } : null,
             }}
