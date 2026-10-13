@@ -1,4 +1,4 @@
-import { Global, Module } from "@nestjs/common"
+import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
 import { ExtractKnowledgeFactsQueueModule } from "@features/jobs/extract-knowledge-facts"
@@ -30,6 +30,13 @@ import { RunChatTurnQueueModule } from "@features/jobs/run-chat-turn"
 import { TelegramHttpModule } from "@features/webhooks/telegram"
 import { ZaloHttpModule } from "@features/webhooks/zalo"
 import { LeadsHttpModule } from "@features/api/leads"
+import { PromoGraphqlModule } from "@features/api/promo"
+import { LeadGenGraphqlModule } from "@features/api/leadgen"
+import { ChatbotGraphqlModule } from "@features/api/chatbot"
+import { ChatReplyGraphqlModule } from "@features/api/chatreply"
+import { PromoModule } from "@modules/domain/promo"
+import { ChatbotWorkbenchModule } from "@modules/domain/chatbot-workbench"
+import { CHATREPLY_ERROR_KINDS, CHATREPLY_MESSAGES, ChatReplyModule } from "@modules/domain/chatreply"
 import { AdminHttpModule } from "@features/api/admin"
 import { ModulesHttpModule } from "@features/api/modules"
 import { OfficeHttpModule } from "@features/api/office"
@@ -119,7 +126,7 @@ import {
 import {
     AI_GENERATIONS_ERROR_KINDS,
     AI_GENERATIONS_MESSAGES,
-    AI_GENERATIONS_POLL_MS,
+    AI_GENERATIONS_POLL_MS as GENERATION_POLL_MS,
     AiGenerationsModule,
     TextGeneratorService,
 } from "@modules/domain/ai-generations"
@@ -208,7 +215,6 @@ import {
     SUPABASE_AUTH,
     SUPABASE_ERROR_KINDS,
     SUPABASE_OBJECTS,
-    SUPABASE_STORAGE,
     SupabaseModule,
     createSupabaseAccessTokenVerifier,
 } from "@modules/integrations/supabase"
@@ -263,7 +269,7 @@ import { EventsModule } from "@modules/domain/events"
 import {
     WORKSPACE_INVITES_ERROR_KINDS,
     WORKSPACE_INVITES_MESSAGES,
-    WorkspaceInvitesModule,
+    WorkspaceInvitesModule as InvitesModule,
 } from "@modules/domain/workspace-invites"
 import {
     WORKSPACE_MEMBERS_ERROR_KINDS,
@@ -336,7 +342,7 @@ import { MetaConnectionsHttpModule } from "@features/api/meta-connections"
 import { CONTENT_MESSAGES, ContentModule } from "@modules/domain/content"
 import { CONTENT_ITEMS_ERROR_KINDS, CONTENT_ITEMS_MESSAGES, ContentItemsModule } from "@modules/domain/content-items"
 import { ContentSettingsModule } from "@modules/domain/content-settings"
-import { VIDEO_ASSETS, VIDEO_ERROR_KINDS, VIDEO_MESSAGES, VideoModule } from "@modules/domain/video"
+import { VIDEO_ERROR_KINDS, VIDEO_MESSAGES, VideoModule } from "@modules/domain/video"
 import { VideoProjectVersionsModule } from "@modules/domain/video-project-versions"
 import { VideoProjectsModule } from "@modules/domain/video-projects"
 import { VIDEO_RENDERS_ERROR_KINDS, VIDEO_RENDERS_MESSAGES, VideoRendersModule } from "@modules/domain/video-renders"
@@ -352,21 +358,9 @@ import { RenderVideoQueueModule } from "@features/jobs/render-video"
 import { ConnectionCommandsQueueModule } from "@features/jobs/connection-commands"
 import { RequestRenderQueueModule } from "@features/jobs/request-render"
 import type { ApiOptions } from "./api.options"
-
-/** Until a connection capability provides the Google Drive access of a workspace, no workspace has any. */
-/** Until the decisions capability provides the corrections of the owner, the brain has none to study. */
+import { VideoAssetsBindingModule } from "@modules/domain/video-assets-binding"
 const NO_CORRECTIONS: CorrectionSource = { recent: () => Promise.resolve([]) }
-
 const NO_DRIVE_ACCESS: DriveAccessSource = { forWorkspace: () => null }
-
-@Global()
-@Module({
-    providers: [{ provide: VIDEO_ASSETS, useExisting: SUPABASE_STORAGE }],
-    exports: [VIDEO_ASSETS],
-})
-/** Binds the file store the render job uses to the Supabase storage integration. */
-class VideoAssetsBindingModule {}
-
 @Module({})
 /** Composition root of the API: every capability is registered once and the three guards run in a fixed order. */
 export class AppModule {
@@ -382,6 +376,7 @@ export class AppModule {
                     isGlobal: true,
                     bundles: [
                         DOCUMENTS_MESSAGES,
+                        CHATREPLY_MESSAGES,
                         CONNECTIONS_MESSAGES,
                         CONNECTION_GRANTS_MESSAGES,
                         CHANNEL_CONNECTIONS_MESSAGES,
@@ -470,6 +465,7 @@ export class AppModule {
                     isGlobal: true,
                     kinds: [
                         CONNECTIONS_ERROR_KINDS,
+                        CHATREPLY_ERROR_KINDS,
                         CONNECTION_GRANTS_ERROR_KINDS,
                         CHANNEL_CONNECTIONS_ERROR_KINDS,
                         WEBHOOK_CONNECTIONS_ERROR_KINDS,
@@ -567,11 +563,7 @@ export class AppModule {
                     ],
                     ...options.queue,
                 }),
-                JobsModule.register({
-                    isGlobal: true,
-                    connection: PRIMARY_ENTITY_MANAGER,
-                    ...options.jobs,
-                }),
+                JobsModule.register({ isGlobal: true, connection: PRIMARY_ENTITY_MANAGER, ...options.jobs }),
                 SupabaseModule.register({ isGlobal: true, ...options.supabase }),
                 IdentityModule.register({ isGlobal: true, verifyAccessToken }),
                 ContractsModule.register({ isGlobal: true }),
@@ -581,11 +573,7 @@ export class AppModule {
                 EventsModule.register({ isGlobal: true }),
                 WorkspaceMembersModule.register({ isGlobal: true, accounts: SUPABASE_AUTH }),
                 WorkspacesModule.register({ isGlobal: true, ...options.workspaces }),
-                WorkspaceInvitesModule.register({
-                    isGlobal: true,
-                    delivery: SUPABASE_AUTH,
-                    ...options.workspaceInvites,
-                }),
+                InvitesModule.register({ isGlobal: true, delivery: SUPABASE_AUTH, ...options.workspaceInvites }),
                 ConnectionsModule.register({ isGlobal: true, ...options.connections }),
                 ConnectionGrantsModule.register({ isGlobal: true }),
                 ChannelConnectionsModule.register({ isGlobal: true }),
@@ -628,7 +616,7 @@ export class AppModule {
                 VideoRendersModule.register({ isGlobal: true }),
                 VideoProjectsModule.register({ isGlobal: true }),
                 VideoProjectVersionsModule.register({ isGlobal: true }),
-                VideoAssetsBindingModule,
+                VideoAssetsBindingModule.register({ isGlobal: true }),
                 VideoModule.register({ isGlobal: true, ...options.video }),
                 ContentItemsModule.register({ isGlobal: true }),
                 ContentSettingsModule.register({ isGlobal: true }),
@@ -661,6 +649,13 @@ export class AppModule {
                 BrainModule.register({ isGlobal: true, corrections: NO_CORRECTIONS }),
                 BookingsModule.register({ isGlobal: true }),
                 LeadsHttpModule,
+                PromoModule.register({ isGlobal: true }),
+                ChatReplyModule.register({ isGlobal: true }),
+                PromoGraphqlModule,
+                LeadGenGraphqlModule,
+                ChatbotWorkbenchModule.register({ isGlobal: true }),
+                ChatbotGraphqlModule,
+                ChatReplyGraphqlModule,
                 PlatformAuditModule.register({ isGlobal: true }),
                 AiQuotaOverridesModule.register({ isGlobal: true }),
                 PlatformAdminModule.register({ isGlobal: true, ...options.platformAdmin }),
@@ -677,11 +672,7 @@ export class AppModule {
                     syncFreshMs: AGENTS_SYNC_FRESH_MS,
                 }),
                 AgentConnectionsModule.register({ isGlobal: true }),
-                AiGenerationsModule.register({
-                    isGlobal: true,
-                    usage: UsageGateService,
-                    pollMs: AI_GENERATIONS_POLL_MS,
-                }),
+                AiGenerationsModule.register({ isGlobal: true, usage: UsageGateService, pollMs: GENERATION_POLL_MS }),
                 OpenclawAgentSyncModule.register({ isGlobal: true, reloadSettleMs: OPENCLAW_RELOAD_SETTLE_MS }),
                 AgentToolsModule.register({
                     isGlobal: true,

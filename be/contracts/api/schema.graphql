@@ -1,9 +1,221 @@
+input ApproveLeadGenCommentInput {
+  draft: String
+  workItemId: ID!
+}
+
+input ChatAnswerStatusInput {
+  workItemId: ID!
+}
+
+type ChatHandlingType {
+  conversationId: ID!
+  handledBy: String
+}
+
+type ChatReplyProgressType {
+  delivery: String
+  errorCode: String
+  id: ID!
+  messageId: ID
+  status: String!
+}
+
+input ChatReplyStatusInput {
+  messageId: ID!
+}
+
+type ChatbotConversationType {
+  channel: String!
+  handledBy: String
+  id: ID!
+  lastAt: String!
+  lastRole: String
+  lastText: String!
+  leadId: ID
+  messageCount: Int!
+  name: String!
+  unanswered: Boolean!
+  waiting: Boolean!
+}
+
+type ChatbotEscalationType {
+  draft: String!
+  question: String!
+  since: String!
+  staffName: String
+  workItemId: ID!
+}
+
+type ChatbotGapsType {
+  gaps: [ChatbotKnowledgeGapType!]!
+  lenses: [ChatbotLensType!]!
+}
+
+type ChatbotKnowledgeGapType {
+  attributeGuess: String
+  count: Int!
+  exampleConversationId: ID
+  firstSeenAt: String!
+  id: ID!
+  lastSeenAt: String!
+  module: String!
+  question: String!
+  reopenedCount: Int!
+  status: String!
+  topic: String
+}
+
+type ChatbotLeadType {
+  company: String!
+  email: String
+  id: ID!
+  name: String!
+  need: String!
+  phone: String
+  stage: String!
+}
+
+type ChatbotLensType {
+  audience: String!
+  module: String!
+  name: String!
+}
+
+type ChatbotMessageType {
+  authorKind: String!
+  authorName: String
+  body: String!
+  createdAt: String!
+  delivery: String
+  deliveryError: String
+  id: ID!
+  role: String!
+}
+
+type ChatbotMetricsType {
+  leadsCaptured7d: Int!
+  p50FirstResponseMin: Float
+  sample: Int!
+  today: Int!
+  waiting: Int!
+}
+
+input ChatbotOverviewInput {
+  installationId: ID
+}
+
+type ChatbotOverviewType {
+  conversations: [ChatbotConversationType!]!
+  metrics: ChatbotMetricsType!
+  nowIso: String!
+  workspaceId: ID!
+}
+
+input ChatbotThreadInput {
+  conversationId: ID!
+}
+
+type ChatbotThreadType {
+  conversation: ChatbotConversationType!
+  escalation: ChatbotEscalationType
+  externalId: String
+  handledAt: String
+  lead: ChatbotLeadType
+  messages: [ChatbotMessageType!]!
+}
+
 input CreateWorkspaceInput {
   name: String!
 }
 
 type CreateWorkspaceType {
   id: ID!
+}
+
+type LeadGenCommentStatusType {
+  errorCode: String
+  id: ID!
+  resultHref: String
+  status: String!
+  workStatus: String!
+}
+
+type LeadGenCommentType {
+  at: String!
+  author: String!
+  comment: String!
+  draft: String!
+  platform: String!
+  refLabel: String
+  workItemId: ID!
+}
+
+type LeadGenHandoffType {
+  at: String!
+  classify: String
+  href: String!
+  key: ID!
+  leadId: ID!
+  name: String!
+  score: String
+  stage: String!
+}
+
+type LeadGenLeadType {
+  createdAt: String!
+  href: String!
+  id: ID!
+  lastAt: String!
+  lastText: String!
+  name: String!
+  origin: LeadGenOriginType!
+  score: String
+  stage: String!
+}
+
+type LeadGenMetricsType {
+  conversionLeads: Int!
+  conversionWindowDays: Int!
+  conversionWon: Int!
+  firstReplyP50Min: Float
+  firstReplySample: Int!
+  hotWaiting: Int!
+  newToday: Int!
+}
+
+type LeadGenOriginType {
+  kind: String!
+  platform: String!
+  refId: String
+  refKind: String
+  refLabel: String
+}
+
+type LeadGenSourceType {
+  hot: Int!
+  key: String!
+  leads: Int!
+  origin: LeadGenOriginType!
+  won: Int!
+}
+
+type LeadGenWorkbenchType {
+  comments: [LeadGenCommentType!]!
+  handoffs: [LeadGenHandoffType!]!
+  leads: [LeadGenLeadType!]!
+  leadsHidden: Int!
+  metrics: LeadGenMetricsType!
+  sources: [LeadGenSourceType!]!
+}
+
+input LeadWaitInput {
+  leadId: ID!
+}
+
+type LeadWaitType {
+  hours: Int
+  replied: Boolean!
+  show: Boolean!
 }
 
 type MemberType {
@@ -21,11 +233,80 @@ type MembershipType {
 }
 
 type Mutation {
+  approveLeadGenComment(input: ApproveLeadGenCommentInput!): LeadGenCommentStatusType!
   createWorkspace(input: CreateWorkspaceInput!): CreateWorkspaceType!
+  requestChatAnswer(input: RequestChatAnswerInput!): ChatReplyProgressType!
+  requestChatReply(input: RequestChatReplyInput!): ChatReplyProgressType!
+  setChatHandling(input: SetChatHandlingInput!): ChatHandlingType!
+}
+
+type PromoChatbotStateType {
+  agentId: ID
+  handle: String
+  hasChatbot: Boolean!
+  name: String
+}
+
+type PromoOnboardingStepType {
+  done: Boolean!
+  href: String!
+  key: String!
+}
+
+type PromoStateType {
+  chatbotAgentId: ID
+  hasChatbot: Boolean!
+  isFoundingMember: Boolean!
+  onboarding: [PromoOnboardingStepType!]!
+  websiteLeadStats: WebsiteLeadStatsType!
 }
 
 type Query {
+  chatAnswerStatus(input: ChatAnswerStatusInput!): ChatReplyProgressType!
+  chatReplyStatus(input: ChatReplyStatusInput!): ChatReplyProgressType!
+  chatbotGaps: ChatbotGapsType!
+  chatbotOverview(input: ChatbotOverviewInput!): ChatbotOverviewType!
+  chatbotThread(input: ChatbotThreadInput!): ChatbotThreadType!
+  foundingMember: Boolean!
+  leadGenCommentStatus(input: ReadLeadGenCommentStatusInput!): LeadGenCommentStatusType!
+  leadGenWorkbench(input: ReadLeadGenWorkbenchInput!): LeadGenWorkbenchType!
+  leadWait(input: LeadWaitInput!): LeadWaitType!
   myWorkspaces: [MembershipType!]!
+  promoChatbotState: PromoChatbotStateType!
+  promoState: PromoStateType!
+}
+
+input ReadLeadGenCommentStatusInput {
+  workItemId: ID!
+}
+
+input ReadLeadGenWorkbenchInput {
+  installationId: ID
+}
+
+input RequestChatAnswerInput {
+  conversationId: ID!
+  locale: String! = "vi"
+  text: String
+  workItemId: ID!
+}
+
+input RequestChatReplyInput {
+  body: String!
+  conversationId: ID!
+  locale: String! = "vi"
+}
+
+input SetChatHandlingInput {
+  conversationId: ID!
+  locale: String! = "vi"
+  takeOver: Boolean!
+}
+
+type WebsiteLeadStatsType {
+  afterHoursCount: Int!
+  avgWaitHours: Float
+  count: Int!
 }
 
 type WorkspaceType {
