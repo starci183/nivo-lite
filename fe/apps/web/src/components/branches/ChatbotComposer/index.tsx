@@ -32,6 +32,7 @@ export const ChatbotComposer = (props: ChatbotComposerProps) => (
                             variant="secondary"
                             placeholder={props.placeholder}
                             rows={2}
+                            isDisabled={props.isSending}
                             value={props.draft}
                             onValueChange={props.onDraft}
                         />
@@ -39,7 +40,7 @@ export const ChatbotComposer = (props: ChatbotComposerProps) => (
                     <Button
                         variant="primary"
                         isPending={props.isSending}
-                        isDisabled={props.draft.trim().length === 0}
+                        isDisabled={props.isSending || props.draft.trim().length === 0}
                         onPress={props.onSend}
                         startContent={<Icon source={nivoIconSource("send", "leading")} usage="leading" />}
                     >
