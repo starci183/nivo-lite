@@ -1,54 +1,63 @@
 ---
-title: Bảng câu hỏi thiết lập Chatbot
+title: Chatbot Setup Questionnaire
 kind: setup_checklist
 version: 1
 ---
-# Bảng câu hỏi thiết lập Chatbot
 
-Chatbot chỉ nên bật chạy thật khi các mục dưới đây đã có thông tin được chủ xác nhận. Mỗi mục tương ứng một "cổng" trong màn hình Thiết lập. Hỏi từng mục một, ghi nhận câu trả lời, và nếu thông tin đã có sẵn trong mục Tri thức doanh nghiệp thì đừng hỏi lại: hãy tóm tắt và nhờ chủ xác nhận.
+# Chatbot Setup Questionnaire
 
-## identity — Thông tin doanh nghiệp
-Cần có: tên doanh nghiệp, làm nghề gì, phục vụ nhóm khách nào, địa điểm hoặc khu vực phục vụ.
-Câu hỏi gợi ý: "Bạn giới thiệu giúp mình về doanh nghiệp: tên, bạn làm nghề gì và khách của bạn là ai?"
-Đủ khi: có tên, loại hình dịch vụ hoặc sản phẩm, và ít nhất một điểm nhận diện khách hàng hoặc khu vực.
+The Chatbot should only go live once the owner has confirmed the information for the items below. Each item corresponds to a "gate" on the Setup screen. Ask about one item at a time and record the answer. If the information is already available in Business Knowledge, do not ask for it again: summarize it and ask the owner to confirm.
 
-## products — Sản phẩm, dịch vụ và giá (nếu có bán cho khách)
-Áp dụng khi doanh nghiệp có bán hoặc cung cấp thứ gì đó cho khách. Nếu chủ nói không bán trực tiếp, không có bảng giá hoặc chỉ dùng NIVO nội bộ, ghi nhận "không áp dụng" và xem mục này là đã đủ, không hỏi lại.
-Cần có (khi áp dụng): các sản phẩm hoặc dịch vụ chính, giá hoặc cách báo giá, các khoản phát sinh.
-Gợi ý: nếu danh sách dài, đề nghị chủ thêm thành một nguồn trong mục Tri thức (đặt chủ đề tùy ý, ví dụ "Dịch vụ") thay vì gõ trong chat.
-Đủ khi: có các mục chính kèm giá hoặc quy tắc tính giá rõ ràng, hoặc chủ xác nhận không áp dụng. Không điền giá thay chủ.
+## identity — Business Information
 
-## support_scope — Phạm vi hỗ trợ
-Cần có: Chatbot được trả lời nhóm câu hỏi nào, nhóm nào để nhân viên lo, chủ đề cấm.
-Đủ khi: có danh sách "được trả lời" và danh sách "không trả lời" hoặc chuyển người.
+Required: the business name, what it does, which customer groups it serves, and its location or service area.
+Suggested question: "Could you introduce your business: its name, what you do, and who your customers are?"
+Complete when: the name, type of service or product, and at least one detail identifying the customers or area are available.
 
-## channels — Kênh tiếp nhận
-Cần có: khách nhắn qua đâu (website, Telegram, Zalo, Facebook...), kênh nào bật trước.
-Đủ khi: có ít nhất một kênh và biết kênh đó đã kết nối hay chưa.
+## products — Products, Services, and Prices (if Sold to Customers)
 
-## hours_sla — Giờ làm việc và thời gian phản hồi
-Cần có: giờ mở cửa, ngày nghỉ, bao lâu thì người thật phản hồi một câu chuyển người.
-Đủ khi: có khung giờ cụ thể và cam kết thời gian phản hồi mà chủ chấp nhận.
+Applies when the business sells or provides something to customers. If the owner says they do not sell directly, have no price list, or only use NIVO internally, record "not applicable" and consider this item complete. Do not ask about it again.
+Required (when applicable): the main products or services, prices or how quotes are provided, and any additional charges.
+Suggestion: if the list is long, ask the owner to add it as a source in Knowledge (under any topic, such as "Services") instead of typing it in chat.
+Complete when: the main items have prices or clear pricing rules, or the owner confirms that this item does not apply. Do not fill in prices on the owner's behalf.
 
-## handoff — Khi nào chuyển cho người
-Cần có: tình huống phải chuyển, người nhận (tên hoặc vai trò), kênh liên lạc nội bộ.
-Đủ khi: có ít nhất ba tình huống và một người nhận cụ thể.
+## support_scope — Support Scope
 
-## prohibited — Điều không được hứa
-Cần có: các cam kết bot tuyệt đối không tự đưa ra (giá riêng, giảm giá, bảo hành, hoàn tiền, thời hạn).
-Đủ khi: chủ đã liệt kê hoặc xác nhận bộ giới hạn mặc định của NIVO là đủ.
+Required: which categories of questions the Chatbot may answer, which categories staff should handle, and prohibited topics.
+Complete when: there is an "allowed to answer" list and a "do not answer" or handoff list.
 
-## tone — Giọng điệu
-Cần có: cách xưng hô với khách, mức trang trọng, có dùng emoji không, cụm từ nên hoặc không nên dùng.
-Đủ khi: có cách xưng hô và một mô tả phong cách (hoặc ví dụ một câu trả lời mẫu mà chủ thích).
+## channels — Incoming Channels
 
-## Mục không áp dụng
+Required: where customers send messages (website, Telegram, Zalo, Facebook...), and which channel to enable first.
+Complete when: at least one channel is listed and its connection status is known.
 
-Không phải doanh nghiệp nào cũng có đủ mọi mục. Khi chủ nói rõ một mục không áp dụng ("bên mình không có bảng giá", "chưa dùng Zalo"), agent ghi nhận lý do ngắn gọn, coi mục đó là đã được trả lời, và không hỏi lại. Chỉ nhắc lại nếu chủ đổi ý.
+## hours_sla — Business Hours and Response Time
 
-## Cách hỏi trong chat thiết lập
+Required: opening hours, days off, and how long it takes a human to respond to a handed-off question.
+Complete when: specific hours and a response-time commitment accepted by the owner are available.
 
-- Mỗi lượt chỉ hỏi một mục chưa đủ, ưu tiên mục chặn nhiều việc nhất (products, support_scope).
-- Sau mỗi câu trả lời: xác nhận ngắn, ghi lại, rồi chuyển sang mục kế.
-- Nếu câu trả lời dài (bảng giá, chính sách đổi trả), gợi ý thêm tài liệu vào Tri thức.
-- Khi mọi mục đã có thông tin, nhắc chủ rà lại bên phải rồi bấm "Áp dụng".
+## handoff — When to Hand Off to a Human
+
+Required: situations requiring a handoff, the recipient (name or role), and the internal communication channel.
+Complete when: there are at least three situations and one specific recipient.
+
+## prohibited — Prohibited Promises
+
+Required: commitments the bot must never make on its own (custom prices, discounts, warranties, refunds, deadlines).
+Complete when: the owner has listed them or confirmed that NIVO's default limits are sufficient.
+
+## tone — Tone
+
+Required: how to address customers, the level of formality, whether to use emoji, and phrases to use or avoid.
+Complete when: there is a form of address and a style description (or a sample response the owner likes).
+
+## Items That Do Not Apply
+
+Not every item applies to every business. When the owner explicitly says that an item does not apply ("we do not have a price list", "we do not use Zalo yet"), the agent records a brief reason, considers the item answered, and does not ask about it again. Only revisit it if the owner changes their mind.
+
+## How to Ask Questions in the Setup Chat
+
+- Ask about only one incomplete item per turn, prioritizing the items that block the most work (products, support_scope).
+- After each answer: briefly acknowledge it, record it, then move to the next item.
+- If the answer is long (a price list or return policy), suggest adding a document to Knowledge.
+- When all items have information, remind the owner to review the right-hand side and click "Apply".
