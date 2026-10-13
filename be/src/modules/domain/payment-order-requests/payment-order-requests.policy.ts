@@ -7,7 +7,7 @@ import type {
 } from "./payment-order-requests.contracts"
 import type { RequestStatusRow } from "./persistence/payment-order-requests.rows"
 
-const REQUEST_KINDS: ReadonlyArray<PaymentOrderRequestKind> = ["plan", "renew", "topup", "upgrade"]
+const REQUEST_KINDS: ReadonlyArray<PaymentOrderRequestKind> = ["plan", "renew", "topup", "upgrade", "credit_pack"]
 const TARGET_PATTERN = /^[a-z0-9_-]{1,40}$/
 
 /** Checks the request operation and bounds its target before either reaches persistence. */
@@ -23,9 +23,7 @@ export const targetOf = (params: PaymentOrderRequestParams): string | null => {
 }
 
 /** The cycle, usage tier and seats of a plan request, bounded; a request of another kind carries none of them. */
-export const selectionOf = (
-    params: PaymentOrderRequestParams,
-): RequestSelection => {
+export const selectionOf = (params: PaymentOrderRequestParams): RequestSelection => {
     if (params.kind !== "plan") return { cycle: null, tierCredits: null, seats: null }
     const cycle = params.cycle ?? "monthly"
     const tierCredits = params.tierCredits ?? null

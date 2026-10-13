@@ -1,3 +1,4 @@
+import { creditsOf } from "@modules/domain/ai-usage-events"
 import type {
     AdminConnectionBadge,
     AdminCount,
@@ -12,9 +13,6 @@ const DAY_MS = 86_400_000
 
 /** A live connection with no event for this long counts as silent. */
 export const SILENT_AFTER_MS = 3 * DAY_MS
-
-/** Credits per US dollar of model cost. */
-export const CREDITS_PER_USD = 250
 
 /** How healthy one connection looks. */
 export type ConnectionHealth = "ok" | "error" | "silent"
@@ -148,9 +146,6 @@ export const tally = (values: ReadonlyArray<string>): Array<AdminCount> => {
     for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1)
     return [...counts.entries()].map(([key, count]) => ({ key, count }))
 }
-
-/** Credits for a model cost in US dollars, to two decimals. */
-export const creditsOf = (costUsd: number): number => Math.round(costUsd * CREDITS_PER_USD * 100) / 100
 
 /** A number the driver may have answered as text (bigint, numeric), or null. */
 export const numberOrNull = (value: string | number | null): number | null => (value === null ? null : Number(value))

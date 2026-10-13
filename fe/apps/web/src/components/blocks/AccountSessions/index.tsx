@@ -48,7 +48,7 @@ export const AccountSessions = () => {
                 signOutThis: () =>
                     void run("this", async () => {
                         const outcome = await auth.endSession()
-                        if (outcome.kind === "ok") router.replace(APP_ROUTES.login)
+                        if (outcome.success) router.replace(APP_ROUTES.login)
                     }),
             }}
         />

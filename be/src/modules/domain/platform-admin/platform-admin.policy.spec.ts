@@ -5,7 +5,6 @@ import {
     connectionHealth,
     countByWorkspace,
     creditsFrom,
-    creditsOf,
     filterCounts,
     isPlatformAdmin,
     knowledgeByKind,
@@ -221,10 +220,6 @@ describe("platform-admin policy", () => {
     })
 
     describe("credits", () => {
-        it("converts a model cost to credits with two decimals", () => {
-            expect(creditsOf(0.123)).toBe(30.75)
-        })
-
         it("shows zero use and no limit for a workspace without a quota status", () => {
             expect(creditsFrom(undefined, undefined)).toEqual({ used: 0, limit: null, costUsd: 0, ownLimit: null })
         })

@@ -34,6 +34,11 @@ const query1: TypedDocumentNode<QueryBillingPlansResponse> = gql`
                 priceVnd
                 perSeat
             }
+            packs {
+                creditsPerMonth
+                priceVnd
+                perSeat
+            }
         }
     }
 `

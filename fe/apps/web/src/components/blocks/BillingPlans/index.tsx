@@ -10,8 +10,6 @@ interface BillingPlansProps {
     readonly contactHref: string
 }
 
-/** The id of the plan's own allowance in a usage-tier list. */
-const BASE_TIER = "base"
 const BYTES_PER_GB = 1024 ** 3
 
 /** Connects the plan catalogue: prices come from the back end quote of each selection, never from a calculation here. */
@@ -34,7 +32,7 @@ export const BillingPlans = (props: BillingPlansProps) => {
 
     const cardOf = (plan: Plan): PlanCardView => {
         const name = locale === "vi" ? plan.nameVi : plan.nameEn
-        const features = (locale === "vi" ? plan.features.vi : plan.features.en)
+        const features = locale === "vi" ? plan.features.vi : plan.features.en
         const isCurrent = choices.workspace?.planCode === plan.code
         if (plan.isCustom) {
             return {
@@ -46,7 +44,13 @@ export const BillingPlans = (props: BillingPlansProps) => {
                 badges: [],
                 notes: [],
                 facts: features,
-                action: { kind: "contact", label: t("contactSales"), href: props.contactHref, isPending: false, isDisabled: false },
+                action: {
+                    kind: "contact",
+                    label: t("contactSales"),
+                    href: props.contactHref,
+                    isPending: false,
+                    isDisabled: false,
+                },
             }
         }
         const index = buyable.findIndex((candidate) => candidate.code === plan.code)
@@ -62,7 +66,8 @@ export const BillingPlans = (props: BillingPlansProps) => {
             } else if (quote.cycle === "annual") {
                 price = t("priceYear", { price: money(quote.amountVnd) })
                 notes.push(t("yearlyNote", { price: money(quote.listMonthlyVnd) }))
-                if (plan.annualDiscountPct) badges.push({ label: t("saveBadge", { pct: plan.annualDiscountPct }), tone: "success" })
+                if (plan.annualDiscountPct)
+                    badges.push({ label: t("saveBadge", { pct: plan.annualDiscountPct }), tone: "success" })
             } else {
                 price = t("priceMonth", { price: money(quote.amountVnd) })
                 if (quote.promo && plan.promoMonths) {
@@ -72,17 +77,10 @@ export const BillingPlans = (props: BillingPlansProps) => {
                 }
             }
         }
-        const baseCredits = plan.aiCreditsPerMonth
-        const tierOptions = plan.perSeat
-            ? plan.tiers.map((tier) => ({ id: String(tier.creditsPerMonth), label: t("tierOption", { credits: count(tier.creditsPerMonth) }) }))
-            : [
-                  ...(baseCredits === null || baseCredits === undefined
-                      ? []
-                      : [{ id: BASE_TIER, label: t("tierOption", { credits: count(baseCredits) }) }]),
-                  ...plan.tiers
-                      .filter((tier) => tier.creditsPerMonth !== baseCredits)
-                      .map((tier) => ({ id: String(tier.creditsPerMonth), label: t("tierOption", { credits: count(tier.creditsPerMonth) }) })),
-              ]
+        const tierOptions = plan.tiers.map((tier) => ({
+            id: String(tier.creditsPerMonth),
+            label: t("tierOption", { credits: count(tier.creditsPerMonth) }),
+        }))
         const chosenTier = selection?.tierCredits
         const facts: string[] = []
         if (!plan.perSeat && quote?.creditsPerMonth != null)
@@ -102,7 +100,7 @@ export const BillingPlans = (props: BillingPlansProps) => {
                 tierOptions.length > 1
                     ? {
                           label: t("tierLabel"),
-                          value: chosenTier === null || chosenTier === undefined ? BASE_TIER : String(chosenTier),
+                          value: String(chosenTier ?? plan.tiers[0]?.creditsPerMonth ?? ""),
                           options: tierOptions,
                       }
                     : undefined,
@@ -118,9 +116,24 @@ export const BillingPlans = (props: BillingPlansProps) => {
     }
 
     const groups: PlanGroupView[] = [
-        { id: "individual", title: t("groupIndividual"), text: t("groupIndividualText"), cards: plans.filter((plan) => plan.individual).map(cardOf) },
-        { id: "team", title: t("groupTeam"), text: t("groupTeamText"), cards: plans.filter((plan) => plan.perSeat && !plan.individual && !plan.isCustom).map(cardOf) },
-        { id: "enterprise", title: t("groupEnterprise"), text: t("groupEnterpriseText"), cards: plans.filter((plan) => plan.isCustom).map(cardOf) },
+        {
+            id: "individual",
+            title: t("groupIndividual"),
+            text: t("groupIndividualText"),
+            cards: plans.filter((plan) => plan.individual).map(cardOf),
+        },
+        {
+            id: "team",
+            title: t("groupTeam"),
+            text: t("groupTeamText"),
+            cards: plans.filter((plan) => plan.perSeat && !plan.individual && !plan.isCustom).map(cardOf),
+        },
+        {
+            id: "enterprise",
+            title: t("groupEnterprise"),
+            text: t("groupEnterpriseText"),
+            cards: plans.filter((plan) => plan.isCustom).map(cardOf),
+        },
     ].filter((group) => group.cards.length > 0)
 
     const storage = choices.storage
@@ -148,7 +161,7 @@ export const BillingPlans = (props: BillingPlansProps) => {
             }}
             on={{
                 setCycle: (value) => choices.setCycle(value === "annual" ? "annual" : "monthly"),
-                setTier: (planId, value) => choices.setTier(planId, value === BASE_TIER ? null : Number(value)),
+                setTier: (planId, value) => choices.setTier(planId, Number(value)),
                 setSeats: choices.setSeats,
                 choose: choices.choose,
             }}

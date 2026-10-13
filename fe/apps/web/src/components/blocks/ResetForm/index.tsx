@@ -29,12 +29,12 @@ export const ResetForm = (props: ResetFormProps) => {
         setFailure(undefined)
         startTransition(async () => {
             const outcome = await auth.updatePassword({ password: values.password })
-            if (outcome.kind === "ok") {
+            if (outcome.success) {
                 setDone(true)
                 router.push(loginResetPath())
                 return
             }
-            setFailure({ text: t(authErrorKey(outcome.code)), expired: isLinkInvalid(outcome.code) })
+            setFailure({ text: t(authErrorKey(outcome.error ?? "")), expired: isLinkInvalid(outcome.error ?? "") })
         })
     })
 

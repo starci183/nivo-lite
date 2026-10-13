@@ -7,6 +7,13 @@ WHERE active
 ORDER BY sort
 LIMIT 50`
 
+/** The add-on packs a workspace paid for in the current month (Vietnam time), newest first ($1 workspace). */
+export const SELECT_MONTH_PACK_PURCHASES = sql`SELECT credits::float8 AS credits, price_vnd::float8 AS price_vnd, purchased_at
+FROM public.credit_pack_purchases
+WHERE workspace_id = $1 AND period = date_trunc('month', now() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date
+ORDER BY purchased_at DESC
+LIMIT 200`
+
 /** The top-up lots of a workspace, newest first ($1 workspace). */
 export const SELECT_TOPUP_LOTS = sql`SELECT credits::float8 AS credits, price_vnd::float8 AS price_vnd,
     purchased_at, expires_at, credits_remaining::float8 AS credits_remaining

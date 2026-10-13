@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import { CreditsApiModule } from "../../credits.module"
+import { CreditPacksBoughtResolver } from "./credit-packs-bought.resolver"
 import { CreditPacksResolver } from "./credit-packs.resolver"
 import { CreditQuotaStatusResolver } from "./credit-quota-status.resolver"
 import { CreditRecentCostUsdResolver } from "./credit-recent-cost-usd.resolver"
@@ -10,6 +11,7 @@ import { CreditUsageSummaryResolver } from "./credit-usage-summary.resolver"
     imports: [CreditsApiModule],
     providers: [
         CreditPacksResolver,
+        CreditPacksBoughtResolver,
         CreditTopupLotsResolver,
         CreditQuotaStatusResolver,
         CreditUsageSummaryResolver,

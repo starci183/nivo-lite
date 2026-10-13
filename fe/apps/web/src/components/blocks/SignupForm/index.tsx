@@ -49,12 +49,12 @@ export const SignupForm = (props: SignupFormProps) => {
         setFailure(undefined)
         startTransition(async () => {
             const outcome = await auth.signUp({ ...values, next: props.next })
-            if (outcome.kind !== "ok") {
-                setFailure(t(authErrorKey(outcome.code)))
+            if (!outcome.success || outcome.data === undefined) {
+                setFailure(t(authErrorKey(outcome.error ?? "")))
                 return
             }
-            if (outcome.value.sessionCreated) {
-                router.push(outcome.value.path)
+            if (outcome.data.sessionCreated) {
+                router.push(outcome.data.path)
                 router.refresh()
                 return
             }

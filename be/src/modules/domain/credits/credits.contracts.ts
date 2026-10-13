@@ -53,6 +53,24 @@ export interface UpgradeOrder {
     readonly quote: UpgradeQuote
 }
 
+/** One add-on pack paid for this month. */
+export interface CreditPackPurchase {
+    /** The credits added to the month's allowance. */
+    readonly credits: number
+    /** The price paid in VND. */
+    readonly priceVnd: number
+    /** When it was paid, ISO 8601. */
+    readonly purchasedAt: string
+}
+
+/** The add-on pack a workspace asks to buy. */
+export interface CreditPackParams {
+    /** The workspace that pays. */
+    readonly workspaceId: string
+    /** The credits of the pack, as listed on the workspace's plan. */
+    readonly credits: number
+}
+
 /** The pack a workspace asks to buy. */
 export interface TopupParams {
     /** The workspace that pays. */
