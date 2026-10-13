@@ -2,4 +2,6 @@
 export enum EmailMessagesLogEvent {
     /** The sealed SMTP credential of a connection could not be read. */
     CredentialUnreadable = "email_messages.credential_unreadable",
+    /** A module notice could not be sent or recorded. */
+    NoticeFailed = "email_messages.notice_failed",
 }

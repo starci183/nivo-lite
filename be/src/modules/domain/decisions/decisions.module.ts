@@ -7,6 +7,7 @@ import { AuthorityRulesModule } from "@modules/domain/authority-rules"
 import { MessagesModule } from "@modules/domain/messages"
 import { ResponsibilitiesModule } from "@modules/domain/responsibilities"
 import { WorkItemsModule } from "@modules/domain/work-items"
+import { DecisionsQueueModule } from "@modules/queues/decisions"
 import { DecisionJobsService } from "./decision-jobs.service"
 import { ApprovalRequesterService } from "./approval-requester.service"
 import { CommandBusService } from "./command-bus.service"
@@ -18,6 +19,7 @@ import { ModuleCatalogService } from "./module-catalog.service"
 import { WorkApprovalService } from "./work-approval.service"
 import { WorkChainService } from "./work-chain.service"
 import { WorkDecisionService } from "./work-decision.service"
+import { WorkDrainService } from "./work-drain.service"
 import { WorkPlacementService } from "./work-placement.service"
 import { WorkEngineService } from "./work-engine.service"
 import { WorkIntakeService } from "./work-intake.service"
@@ -25,6 +27,7 @@ import { WORK_PERFORMER_REGISTRY } from "./work-performer.port"
 import {
     DECISION_EVENTS,
     INBOUND_EVENT_STATUS,
+    LEAD_DIRECTORY,
     LEAD_GEN_FLOW,
     OUTBOUND_ACCESS_GATE,
     PAYMENT_RECEIPTS,
@@ -53,7 +56,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
         ]
         return {
             ...base,
-            imports: [...(base.imports ?? []), ...owners],
+            imports: [...(base.imports ?? []), ...owners, DecisionsQueueModule],
             providers: [
                 ...(base.providers ?? []),
                 { provide: WORK_PERFORMER_REGISTRY, useExisting: WorkPerformersService },
@@ -61,7 +64,8 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 { provide: INBOUND_EVENT_STATUS, useClass: options.ports.inboundEventStatus },
                 { provide: DECISION_EVENTS, useClass: options.ports.decisionEvents },
                 { provide: PAYMENT_RECEIPTS, useClass: options.ports.paymentReceipts },
-                { provide: LEAD_GEN_FLOW, useClass: options.ports.leadGenFlow },
+                { provide: LEAD_DIRECTORY, useExisting: options.ports.leadDirectory },
+                { provide: LEAD_GEN_FLOW, useExisting: options.ports.leadGenFlow },
                 { provide: OUTBOUND_ACCESS_GATE, useClass: options.ports.outboundAccessGate },
                 ApprovalRequesterService,
                 CommandBusService,
@@ -73,6 +77,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 WorkApprovalService,
                 WorkChainService,
                 WorkDecisionService,
+                WorkDrainService,
                 WorkPlacementService,
                 WorkEngineService,
                 WorkIntakeService,
@@ -81,6 +86,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
             ],
             exports: [
                 ...owners,
+                DecisionsQueueModule,
                 WORK_PERFORMER_REGISTRY,
                 ApprovalRequesterService,
                 CommandBusService,
@@ -89,6 +95,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 EvidenceService,
                 ModuleCatalogService,
                 WorkDecisionService,
+                WorkDrainService,
                 WorkPlacementService,
                 WorkEngineService,
             ],

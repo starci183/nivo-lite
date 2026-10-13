@@ -12,7 +12,7 @@ export const FIND_ACTION = sql`
     SELECT a.action, a.module_key, a.max_mode, a.label,
            coalesce(
                (SELECT array_agg(n.value ORDER BY n.ordinality)
-                FROM jsonb_array_elements(m.definition -> 'authority_actions') AS e,
+                FROM jsonb_array_elements(coalesce(m.definition -> 'authorityActions', m.definition -> 'authority_actions', '[]'::jsonb)) AS e,
                      jsonb_array_elements_text(coalesce(e.value -> 'next', '[]'::jsonb)) WITH ORDINALITY AS n(value, ordinality)
                 WHERE e.value ->> 'action' = a.action),
                ARRAY[]::text[]

@@ -11,6 +11,8 @@ export enum GoogleConnectionsErrorCode {
     Missing = "GOOGLE_CONNECTIONS_MISSING",
     /** The stored Google tokens were revoked or can no longer be read. */
     Lost = "GOOGLE_CONNECTIONS_LOST",
+    /** The owner unticked the Drive access on the Google consent screen. */
+    ScopeMissing = "GOOGLE_CONNECTIONS_SCOPE_MISSING",
 }
 
 /** How each google-connections code travels. */
@@ -19,6 +21,7 @@ export const GOOGLE_CONNECTIONS_ERROR_KINDS: Record<GoogleConnectionsErrorCode, 
     [GoogleConnectionsErrorCode.StartFailed]: "unavailable",
     [GoogleConnectionsErrorCode.Missing]: "not-found",
     [GoogleConnectionsErrorCode.Lost]: "conflict",
+    [GoogleConnectionsErrorCode.ScopeMissing]: "invalid",
 }
 
 /** The one error class of the google-connections capability. */

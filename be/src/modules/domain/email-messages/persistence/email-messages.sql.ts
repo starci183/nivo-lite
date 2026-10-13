@@ -9,3 +9,8 @@ RETURNING id`
 export const COUNT_SENT_EMAILS = sql`SELECT count(*)::int AS n
 FROM public.email_messages
 WHERE workspace_id = $1::uuid AND status = 'sent' AND created_at >= $2::timestamptz AND ($3::text IS NULL OR via = $3::text)`
+
+/** Whether a waiting customer email is already written down for a work item ($1 workspace, $2 work item id as text). */
+export const FIND_WAITING_EMAIL = sql`SELECT id FROM public.email_messages
+WHERE workspace_id = $1::uuid AND status = 'waiting_decision' AND refs ->> 'work_item_id' = $2::text
+LIMIT 1`

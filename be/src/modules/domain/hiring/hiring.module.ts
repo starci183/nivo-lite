@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { CandidateChat } from "./candidate-chat.port"
+import { ChannelCandidateChatService } from "./channel-candidate-chat.service"
 import { CvStorage } from "./cv-storage.port"
 import { HiringCandidatesService } from "./hiring-candidates.service"
 import { HiringChatService } from "./hiring-chat.service"
@@ -18,8 +19,7 @@ import { HiringTextService } from "./hiring-text.service"
 import { HiringTickService } from "./hiring-tick.service"
 import { HiringWorkbenchService } from "./hiring-workbench.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./hiring.module-definition"
-import { UnavailableCandidateChatService } from "./unavailable-candidate-chat.service"
-import { UnavailableCvStorageService } from "./unavailable-cv-storage.service"
+import { SupabaseCvStorageService } from "./supabase-cv-storage.service"
 
 @Module({})
 /** The hiring capability over the primary Supabase PostgreSQL connection: jobs, applications, screening, interviews, offers and the tick. */
@@ -31,8 +31,8 @@ export class HiringModule extends ConfigurableModuleClass {
             ...base,
             providers: [
                 ...(base.providers ?? []),
-                { provide: CandidateChat, useClass: UnavailableCandidateChatService },
-                { provide: CvStorage, useClass: UnavailableCvStorageService },
+                { provide: CandidateChat, useClass: ChannelCandidateChatService },
+                { provide: CvStorage, useClass: SupabaseCvStorageService },
                 HiringDataService,
                 HiringTextService,
                 HiringLinksService,
