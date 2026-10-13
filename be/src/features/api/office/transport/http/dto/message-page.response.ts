@@ -16,6 +16,10 @@ export class MessageResponse {
     lead_id!: string | null
     /** The work item it mirrors. */
     work_item_id!: string | null
+    /** The customer's name, when the line names one. */
+    lead_name!: string | null
+    /** The department of the work item the line mirrors. */
+    department!: string | null
     /** When it was posted. */
     created_at!: string
 }

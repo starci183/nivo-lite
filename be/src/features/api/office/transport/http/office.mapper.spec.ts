@@ -77,6 +77,8 @@ describe("office mapper", () => {
             body: "hi",
             lead_id: null,
             work_item_id: null,
+            lead_name: null,
+            department: null,
             created_at: "2026-10-12T10:00:00.000Z",
         }
         const last: MessagePage = { messages: [message], next: null }

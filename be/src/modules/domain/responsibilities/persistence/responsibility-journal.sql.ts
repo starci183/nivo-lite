@@ -63,7 +63,7 @@ export const INSERT_RESPONSIBILITY = sql`
 export const LIST_RESPONSIBILITIES = sql`
     SELECT r.id, r.workspace_id, r.lead_id, r.title, r.owner_kind, r.owner_agent_id, r.owner_name, r.next_action,
            to_json(r.due_at) #>> '{}' AS due_at, r.status, to_json(r.created_at) #>> '{}' AS created_at,
-           l.contact_name
+           l.contact_name, l.company, l.stage AS "leadStage"
     FROM public.responsibilities r
     JOIN public.leads l ON l.id = r.lead_id
     WHERE r.workspace_id = $1

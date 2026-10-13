@@ -19,6 +19,7 @@ export type {
     AuthoritySheet,
     DecisionHistoryKind,
     DecisionRecord,
+    ReconcileDetails,
     WorkItemCursor,
     WorkItemPage,
 } from "./decisions-views.contracts"
@@ -28,7 +29,7 @@ export { ApprovalRequesterService } from "./approval-requester.service"
 export { CommandBusService } from "./command-bus.service"
 export { DecisionsService } from "./decisions.service"
 export { EvidenceService } from "./evidence.service"
-export type { DecisionRecord as LeadDecisionRecord } from "./decision-history.contracts"
+export type { LeadDecisionRecord } from "./decision-history.contracts"
 export { ModuleCatalogService } from "./module-catalog.service"
 export { WorkDecisionService } from "./work-decision.service"
 export { WorkEngineService } from "./work-engine.service"

@@ -29,6 +29,8 @@ export enum DecisionsErrorCode {
     ChooseCandidate = "DECISIONS_CHOOSE_CANDIDATE",
     /** Approving this action needs the written basis of the person, and it is too short or absent. */
     BasisRequired = "DECISIONS_BASIS_REQUIRED",
+    /** Holding a waiting item needs a note. */
+    HoldNoteRequired = "DECISIONS_HOLD_NOTE_REQUIRED",
 }
 
 /** How each decisions code travels. */
@@ -46,6 +48,7 @@ export const DECISIONS_ERROR_KINDS: Record<DecisionsErrorCode, ErrorKind> = {
     [DecisionsErrorCode.StillMissing]: "invalid",
     [DecisionsErrorCode.ChooseCandidate]: "invalid",
     [DecisionsErrorCode.BasisRequired]: "invalid",
+    [DecisionsErrorCode.HoldNoteRequired]: "invalid",
 }
 
 /** The one error class of the decisions capability. */

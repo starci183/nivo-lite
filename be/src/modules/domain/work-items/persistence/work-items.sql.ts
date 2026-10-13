@@ -188,6 +188,35 @@ WHERE workspace_id = $1::uuid AND inbound_event_id = $2::uuid AND status = 'queu
     AND (updated_at = created_at OR updated_at < $3::timestamptz - make_interval(secs => $4::int))
 ORDER BY created_at ASC, id ASC LIMIT 1`
 
+/** Sets who an item is assigned to; null takes it back ($1 workspace, $2 item, $3 staff or null, $4 now). */
+export const ASSIGN_WORK_ITEM = sql`
+    WITH changed AS (
+        UPDATE public.work_items
+        SET assigned_staff_id = $3::uuid, updated_at = $4::timestamptz
+        WHERE workspace_id = $1::uuid AND id = $2::uuid
+        RETURNING *
+    )
+    SELECT * FROM changed`
+
+/**
+ * Keeps a waiting item waiting and stores the owner's note on its proposal
+ * ($1 workspace, $2 item, $3 note, $4 actor, $5 now). A row that is no longer waiting answers nothing.
+ */
+export const HOLD_WORK_ITEM = sql`
+    WITH changed AS (
+        UPDATE public.work_items
+        SET proposal = jsonb_set(
+                COALESCE(proposal, '{}'::jsonb),
+                '{fields}',
+                COALESCE(proposal -> 'fields', '{}'::jsonb) || jsonb_build_object('hold_note', $3::text, 'hold_by', $4::text, 'hold_at', $5::text),
+                true
+            ),
+            updated_at = $5::timestamptz
+        WHERE workspace_id = $1::uuid AND id = $2::uuid AND status = 'waiting_decision'
+        RETURNING *
+    )
+    SELECT * FROM changed`
+
 /** Every pending, failed and decision-waiting step of the inbound input, including lease-held work ($1 workspace, $2 event). */
 export const READ_INBOUND_WORK_STATE = sql`SELECT
     (COUNT(*) FILTER (WHERE status = 'queued'))::int AS queued,

@@ -25,6 +25,7 @@ export const DECISIONS_MESSAGES: MessageBundle = {
         "errors.DECISIONS_CHOOSE_CANDIDATE": "Chọn hóa đơn khớp với khoản thanh toán để NIVO tiếp tục.",
         "errors.DECISIONS_BASIS_REQUIRED":
             "Chỉ được ghi nhận đã thanh toán khi có căn cứ xác nhận (ít nhất {{n}} ký tự).",
+        "errors.DECISIONS_HOLD_NOTE_REQUIRED": "Hãy ghi vì sao việc này vẫn cần chờ.",
         "decision.basisNote": "Căn cứ: {{basis}}",
         "engine.failed": "{{dept}} chưa hoàn thành “{{action}}”: {{error}}",
         "engine.ask": "{{dept}} cần bạn quyết định · {{reason}}: {{summary}}",
@@ -81,6 +82,7 @@ export const DECISIONS_MESSAGES: MessageBundle = {
         "errors.DECISIONS_CHOOSE_CANDIDATE": "Choose the invoice that matches this payment so NIVO can continue.",
         "errors.DECISIONS_BASIS_REQUIRED":
             "A payment can only be marked paid with a written basis (at least {{n}} characters).",
+        "errors.DECISIONS_HOLD_NOTE_REQUIRED": "Write why this work should keep waiting.",
         "decision.basisNote": "Basis: {{basis}}",
         "engine.failed": "{{dept}} could not finish “{{action}}”: {{error}}",
         "engine.ask": "{{dept}} needs your decision · {{reason}}: {{summary}}",

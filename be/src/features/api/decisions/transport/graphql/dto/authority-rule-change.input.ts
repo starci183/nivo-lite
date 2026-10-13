@@ -24,6 +24,14 @@ export class AuthorityRuleChangeInput {
     @MaxLength(80)
     action!: string
 
+    /** The module the action belongs to. */
+    @Field()
+    @IsString()
+    @Matches(/^[a-z0-9_]+$/)
+    @MinLength(1)
+    @MaxLength(40)
+    department!: string
+
     /** Run alone, ask a person, or never. */
     @Field()
     @IsIn(["auto", "ask", "never"])
@@ -46,4 +54,11 @@ export class AuthorityRuleChangeInput {
     @Matches(/^[a-z0-9_]+$/, { each: true })
     @MaxLength(60, { each: true })
     required_fields: Array<string> = []
+
+    /** A note on the rule; absent leaves the stored note. */
+    @Field(() => String, { nullable: true })
+    @IsOptional()
+    @IsString()
+    @MaxLength(500)
+    note: string | null = null
 }

@@ -5,8 +5,10 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { AccountingWorkRow, ClosedClaimRow, WorkItemRow } from "./persistence/work-items.rows"
 import {
+    ASSIGN_WORK_ITEM,
     ATTACH_WORK_ITEM_EXECUTION,
     CLAIM_WORK_ITEM,
+    HOLD_WORK_ITEM,
     FIND_WORK_ITEM_BY_DEDUPE,
     INSERT_WORK_ITEM,
     LIST_LEAD_ITEMS,
@@ -30,6 +32,7 @@ import { CLAIM_LEASE_SECONDS } from "./work-items.contracts"
 import type {
     DoneMark,
     NewWorkItem,
+    OptionalStaffId,
     OptionalWorkItem,
     PreparedSave,
     Proposal,
@@ -199,6 +202,31 @@ export class WorkItemsService {
                 waiting.missing,
                 JSON.stringify(waiting.proposal),
                 waiting.executionId,
+                this.now(),
+            ]),
+        )
+    }
+
+    /** Gives an item to a staff member, or takes it back when `staffId` is null. Null when the item is not in the workspace. */
+    async assign(workspaceId: string, id: string, staffId: OptionalStaffId): Promise<OptionalWorkItem> {
+        return this.first(
+            await this.entityManager.query<Array<WorkItemRow>>(ASSIGN_WORK_ITEM, [
+                workspaceId,
+                id,
+                staffId ?? null,
+                this.now(),
+            ]),
+        )
+    }
+
+    /** Records a hold note on a waiting item. Null when it is not waiting in this workspace. */
+    async hold(workspaceId: string, id: string, note: string, actor: string): Promise<OptionalWorkItem> {
+        return this.first(
+            await this.entityManager.query<Array<WorkItemRow>>(HOLD_WORK_ITEM, [
+                workspaceId,
+                id,
+                note,
+                actor,
                 this.now(),
             ]),
         )

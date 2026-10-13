@@ -7,7 +7,9 @@ import {
     IsInt,
     IsISO8601,
     IsOptional,
+    IsString,
     IsUUID,
+    Matches,
     Max,
     MaxLength,
     Min,
@@ -38,6 +40,13 @@ export class ListWorkItemsRequest {
     @ArrayMaxSize(5)
     @IsIn(["queued", "done", "waiting_decision", "rejected", "failed"], { each: true })
     statuses: Array<"queued" | "done" | "waiting_decision" | "rejected" | "failed"> = []
+
+    /** Only this action; absent means every action. */
+    @IsOptional()
+    @IsString()
+    @Matches(/^[a-z0-9_]+$/)
+    @MaxLength(80)
+    action?: string
 
     /** Where the page starts: the `next` cursor of the previous page, sent as `after[createdAt]` and `after[id]`. */
     @IsOptional()

@@ -40,7 +40,10 @@ import type { WorkItemType } from "./dto/work-item.type"
 /** Maps the work item listing of the GraphQL input, with the workspace it names, to the query request. */
 export const toListWorkItemsRequest = (workspaceId: string, input: ListWorkItemsInput): ListWorkItemPageRequest => ({
     workspaceId,
-    ...input,
+    statuses: input.statuses,
+    action: input.action,
+    after: input.after,
+    limit: input.limit,
 })
 
 /** Maps the id of the GraphQL input, with the workspace it names, to the query request. */

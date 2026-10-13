@@ -1013,8 +1013,10 @@ type AuthorityProfileType {
 
 input AuthorityRuleChangeInput {
   action: String!
+  department: String!
   limit_vnd: Int = null
   mode: String!
+  note: String = null
   required_fields: [String!] = []
 }
 
@@ -3706,6 +3708,7 @@ input ListVideoProjectsInput {
 }
 
 input ListWorkItemsInput {
+  action: String
   after: WorkItemCursorInput
   limit: Int = 50
   statuses: [String!] = []
@@ -4350,6 +4353,7 @@ type Mutation {
   approveVideoProject(input: ApproveVideoProjectInput!): VideoProjectType!
   archiveVideoProject(input: ArchiveVideoProjectInput!): VideoProjectType!
   assignResponsibility(input: AssignResponsibilityInput!): LeadResponsibilityType!
+  assignWorkItem(staffId: ID, workItemId: ID!): WorkItemType!
   authorizeGoogle(input: AuthorizeGoogleInput!): AuthorizeUrlType!
   authorizeMeta(input: AuthorizeMetaInput!): MetaAuthorizationType!
   authorizeZalo(input: AuthorizeZaloInput!): ZaloAuthorizationType!
@@ -4408,6 +4412,7 @@ type Mutation {
   generateHiringAd(input: HiringJobRefInput!): GenerateAdType!
   grantAgentConnection(input: GrantAgentConnectionInput!): AgentAckType!
   handoffToAccounting(input: HandoffToAccountingInput!): SalesActionType!
+  holdWorkItem(note: String!, workItemId: ID!): WorkItemType!
   importInventoryPaste(input: ImportInventoryPasteInput!): ImportPasteType!
   installModule(input: InstallModuleInput!): ModuleInstallResultType!
   keepCurrentBrainFact(input: KeepCurrentBrainFactInput!): Int!
@@ -4520,6 +4525,7 @@ type Mutation {
   saveShiftsPosition(input: SaveShiftsPositionInput!): ShiftsRefType!
   saveShiftsSettings(input: SaveShiftsSettingsInput!): Boolean!
   saveShiftsStaff(input: SaveShiftsStaffInput!): ShiftsRefType!
+  saveStaff(input: SaveStaffInput!): StaffOptionType!
   saveTelegramUserSetup(input: SaveTelegramUserSetupInput!): Boolean!
   saveVideoBrand(input: SaveVideoBrandInput!): VideoBrandType!
   saveZaloOaSecret(input: SaveZaloOaSecretInput!): ZaloWizardConnectionType!
@@ -4663,8 +4669,10 @@ type OfficeMessageType {
   author_name: String!
   body: String!
   created_at: String!
+  department: String
   id: ID!
   lead_id: ID
+  lead_name: String
   staff_id: ID
   work_item_id: ID
 }
@@ -5160,6 +5168,7 @@ type Query {
   publicHiringJob(input: PublicHiringJobInput!): PublicJobType!
   publicHiringOffer(input: HiringTokenInput!): PublicOfferType!
   publicLoyaltyPage(input: PublicLoyaltyPageInput!): PublicLoyaltyPageType!
+  reconcileDetails(workItemId: ID!): ReconcileDetailsType!
   responsibilities: [ResponsibilityListingType!]!
   salesActionStatus(input: SalesActionStatusInput!): SalesActionType!
   salesOrder(input: SalesOrderInput!): SalesOrderType
@@ -5229,6 +5238,32 @@ type ReceivePoType {
   priceChanges: [[String!]!]!
   received: Int!
   status: String!
+}
+
+type ReconcileCandidateType {
+  amount_vnd: Float!
+  company: String
+  customer: String
+  due_at: String
+  id: ID!
+  invoice_no: String!
+  issued_at: String
+  order_items: String
+  order_no: String
+  order_status: String
+  status: String!
+}
+
+type ReconcileDetailsType {
+  candidates: [ReconcileCandidateType!]!
+  payment: ReconcilePaymentType!
+}
+
+type ReconcilePaymentType {
+  amount_vnd: Float
+  occurred_at: String
+  payer: String
+  reference: String
 }
 
 input RecordManualEvidenceInput {
@@ -5515,10 +5550,12 @@ type RespondSlotType {
 }
 
 type ResponsibilityListingType {
+  company: String
   contact_name: String!
   created_at: String!
   due_at: String
   id: ID!
+  leadStage: String!
   lead_id: ID!
   next_action: String!
   owner_agent_id: ID
@@ -6205,6 +6242,14 @@ input SaveShiftsStaffInput {
   zaloUserId: String
 }
 
+input SaveStaffInput {
+  active: Boolean
+  email: String
+  id: ID
+  name: String!
+  role: String!
+}
+
 input SaveTelegramUserSetupInput {
   chats: [TelegramPickedChatInput!]!
   connectionId: ID!
@@ -6795,6 +6840,8 @@ type SourceRefType {
 }
 
 type StaffOptionType {
+  active: Boolean!
+  email: String
   id: ID!
   name: String!
   role: String!
@@ -7410,7 +7457,9 @@ type WorkItemType {
   chain_id: ID
   completed_at: String
   created_at: String!
+  decidedBy: String
   decided_path: String
+  deciderName: String
   department: String!
   depth: Int!
   error: String

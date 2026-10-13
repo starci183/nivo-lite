@@ -11,6 +11,7 @@ import type {
     InvoiceListingRow,
     InvoiceRow,
     LastInvoiceNumberRow,
+    ReconcileInvoiceRow,
 } from "./persistence/invoices.rows"
 import type { InvoiceViewRow } from "./persistence/invoice-views.rows"
 import { LIST_LEAD_INVOICES, LIST_WORKBENCH_INVOICES } from "./persistence/invoice-views.sql"
@@ -21,6 +22,7 @@ import {
     LAST_INVOICE_NUMBER,
     LIST_ACCOUNTING_INVOICES,
     LIST_ISSUED_INVOICES,
+    LIST_RECONCILE_INVOICES,
     MARK_INVOICE_PAID,
 } from "./persistence/invoices.sql"
 
@@ -52,6 +54,15 @@ export class InvoicesService {
     /** The newest invoices and their related records for the accounting book. */
     listAccounting(workspaceId: string, limit: number = 1000): Promise<Array<InvoiceAccountingRow>> {
         return this.entityManager.query<Array<InvoiceAccountingRow>>(LIST_ACCOUNTING_INVOICES, [workspaceId, limit])
+    }
+
+    /** The invoices named by a reconciliation, at most fifty, after the caller proved membership. */
+    listForReconcile(workspaceId: string, ids: ReadonlyArray<string>): Promise<Array<ReconcileInvoiceRow>> {
+        if (ids.length === 0) return Promise.resolve([])
+        return this.entityManager.query<Array<ReconcileInvoiceRow>>(LIST_RECONCILE_INVOICES, [
+            workspaceId,
+            ids.slice(0, 50),
+        ])
     }
 
     /** The invoices shown in Sales handoffs, after the caller's membership was proved by the composer. */

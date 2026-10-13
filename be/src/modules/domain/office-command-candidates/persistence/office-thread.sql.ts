@@ -3,8 +3,11 @@ import { sql } from "@modules/platform/database"
 /** One page of the Office thread, newest first, keyset on (created_at, id); `$2` null starts at the newest. */
 export const LIST_MESSAGES = sql`
     SELECT m.id, m.author_kind, m.author_name, m.agent_id, m.staff_id, m.body, m.lead_id, m.work_item_id,
+           l.contact_name AS lead_name, w.department,
            to_json(m.created_at) #>> '{}' AS created_at
     FROM public.messages m
+    LEFT JOIN public.leads l ON l.id = m.lead_id AND l.workspace_id = m.workspace_id
+    LEFT JOIN public.work_items w ON w.id = m.work_item_id AND w.workspace_id = m.workspace_id
     WHERE m.workspace_id = $1
       AND ($2::timestamptz IS NULL OR (m.created_at, m.id) < ($2::timestamptz, $3::uuid))
     ORDER BY m.created_at DESC, m.id DESC
