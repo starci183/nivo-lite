@@ -10,6 +10,7 @@ import { CLOCK } from "@modules/platform/clock"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { ChatTurnQueue } from "@modules/queues/chat-turn"
+import type { MetaInbound } from "./conversations.contracts"
 import { ConversationsService } from "./conversations.service"
 import { FIND_FRONT_AGENT } from "./persistence/conversations.sql"
 
@@ -59,7 +60,8 @@ const build = async (setup: Setup = {}) => {
     const inboundEvents = mock<InboundEventsService>()
     inboundEvents.keepUnrouted.mockResolvedValue(undefined)
     const zalo = mock<ZaloCredentialsService>()
-    const catalog: MessageCatalog = { get: (key) => `<${key}>` }
+    const catalog = mock<MessageCatalog>()
+    catalog.get.mockImplementation((key) => `<${key}>`)
     const moduleRef = await Test.createTestingModule({
         providers: [
             ConversationsService,
@@ -73,7 +75,17 @@ const build = async (setup: Setup = {}) => {
             { provide: ZaloCredentialsService, useValue: zalo },
         ],
     }).compile()
-    return { service: moduleRef.get(ConversationsService), manager, queue, connections, conversations, messages, inboundEvents, zalo }
+    return {
+        service: moduleRef.get(ConversationsService),
+        manager,
+        queue,
+        connections,
+        conversations,
+        messages,
+        inboundEvents,
+        zalo,
+        catalog,
+    }
 }
 
 const telegram = (patch: Record<string, unknown> = {}) => ({
@@ -86,7 +98,22 @@ const telegram = (patch: Record<string, unknown> = {}) => ({
     ...patch,
 })
 
-const zaloMessage = (patch: Record<string, unknown> = {}) => ({ appId: "", userId: "user-1", messageId: "m-1", text: "Hello", ...patch })
+const zaloMessage = (patch: Record<string, unknown> = {}) => ({
+    appId: "",
+    userId: "user-1",
+    messageId: "m-1",
+    text: "Hello",
+    ...patch,
+})
+
+const metaMessage = (patch: Partial<MetaInbound> = {}): MetaInbound => ({
+    platform: "facebook",
+    personId: "person-1",
+    visitor: "Minh Tran",
+    text: "Hello",
+    eventId: "event-1",
+    ...patch,
+})
 
 describe("ConversationsService", () => {
     describe("acceptTelegram", () => {
@@ -96,12 +123,26 @@ describe("ConversationsService", () => {
             await service.acceptTelegram(CONNECTION, telegram(), manager)
 
             expect(conversations.open).toHaveBeenCalledWith(
-                { workspaceId: "ws-1", agentId: "agent-1", channel: "telegram", customerId: "555", visitor: "Minh Tran", connectionId: CONNECTION },
+                {
+                    workspaceId: "ws-1",
+                    agentId: "agent-1",
+                    channel: "telegram",
+                    customerId: "555",
+                    visitor: "Minh Tran",
+                    connectionId: CONNECTION,
+                },
                 manager,
             )
             expect(messages.storeCustomer).toHaveBeenCalledWith("ws-1", "conv-1", "Hello", manager)
             expect(queue.enqueueChatTurn).toHaveBeenCalledWith(
-                { kind: "turn", workspaceId: "ws-1", conversationId: "conv-1", messageId: "msg-1", channelEventId: "tg:555:9", lookupName: false },
+                {
+                    kind: "turn",
+                    workspaceId: "ws-1",
+                    conversationId: "conv-1",
+                    messageId: "msg-1",
+                    channelEventId: "tg:555:9",
+                    lookupName: false,
+                },
                 manager,
             )
         })
@@ -138,10 +179,13 @@ describe("ConversationsService", () => {
 
             await service.acceptTelegram(CONNECTION, telegram(), manager)
 
-            expect(inboundEvents.keepUnrouted).toHaveBeenCalledWith(
-                manager,
-                { workspaceId: "ws-1", channel: "telegram", sender: "Minh Tran", body: "Hello", eventId: "tg:c-1:555:9" },
-            )
+            expect(inboundEvents.keepUnrouted).toHaveBeenCalledWith(manager, {
+                workspaceId: "ws-1",
+                channel: "telegram",
+                sender: "Minh Tran",
+                body: "Hello",
+                eventId: "tg:c-1:555:9",
+            })
             expect(conversations.open).not.toHaveBeenCalled()
             expect(queue.enqueueChatTurn).not.toHaveBeenCalled()
         })
@@ -160,11 +204,25 @@ describe("ConversationsService", () => {
 
             await service.acceptTelegram(CONNECTION, telegram({ text: "/start", isStart: true }), manager)
 
-            expect(conversations.archive).toHaveBeenCalledWith("ws-1", "telegram", CONNECTION, "555", `555:${NOW}`, manager)
+            expect(conversations.archive).toHaveBeenCalledWith(
+                "ws-1",
+                "telegram",
+                CONNECTION,
+                "555",
+                `555:${NOW}`,
+                manager,
+            )
             expect(messages.storeGreeting).toHaveBeenCalledWith("ws-1", "conv-1", "Welcome!", manager)
             expect(messages.storeCustomer).not.toHaveBeenCalled()
             expect(queue.enqueueChatTurn).toHaveBeenCalledWith(
-                { kind: "deliver", workspaceId: "ws-1", conversationId: "conv-1", messageId: "greet-1", channelEventId: "tg:555:9", lookupName: false },
+                {
+                    kind: "deliver",
+                    workspaceId: "ws-1",
+                    conversationId: "conv-1",
+                    messageId: "greet-1",
+                    channelEventId: "tg:555:9",
+                    lookupName: false,
+                },
                 manager,
             )
         })
@@ -174,14 +232,26 @@ describe("ConversationsService", () => {
 
             await service.acceptTelegram(CONNECTION, telegram({ text: "/start", isStart: true }), manager)
 
-            expect(messages.storeGreeting).toHaveBeenCalledWith("ws-1", "conv-1", "<conversations.fallbackGreeting>", manager)
+            expect(messages.storeGreeting).toHaveBeenCalledWith(
+                "ws-1",
+                "conv-1",
+                "<conversations.fallbackGreeting>",
+                manager,
+            )
         })
     })
 
     describe("acceptZalo", () => {
         it("marks the connection received, opens the conversation and asks the job to look the customer name up", async () => {
             const { service, manager, queue, connections, conversations, zalo } = await build()
-            zalo.load.mockResolvedValue({ kind: "ok", value: { secret: { appId: "app-1", appSecret: "s", oaSecret: "o" }, expiresAt: null, workspaceId: "ws-1" } })
+            zalo.load.mockResolvedValue({
+                kind: "ok",
+                value: {
+                    secret: { appId: "app-1", appSecret: "s", oaSecret: "o" },
+                    expiresAt: null,
+                    workspaceId: "ws-1",
+                },
+            })
 
             await service.acceptZalo(CONNECTION, zaloMessage({ appId: "app-1" }), manager)
 
@@ -190,9 +260,23 @@ describe("ConversationsService", () => {
                 { amount: 0, content: "<conversations.zaloGuest>", at: new Date(NOW).toISOString(), text: "Hello" },
                 manager,
             )
-            expect(conversations.open).toHaveBeenCalledWith(expect.objectContaining({ channel: "zalo", customerId: "user-1", visitor: "<conversations.zaloGuest>" }), manager)
+            expect(conversations.open).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    channel: "zalo",
+                    customerId: "user-1",
+                    visitor: "<conversations.zaloGuest>",
+                }),
+                manager,
+            )
             expect(queue.enqueueChatTurn).toHaveBeenCalledWith(
-                { kind: "turn", workspaceId: "ws-1", conversationId: "conv-1", messageId: "msg-1", channelEventId: "zalo:m-1", lookupName: true },
+                {
+                    kind: "turn",
+                    workspaceId: "ws-1",
+                    conversationId: "conv-1",
+                    messageId: "msg-1",
+                    channelEventId: "zalo:m-1",
+                    lookupName: true,
+                },
                 manager,
             )
         })
@@ -215,7 +299,11 @@ describe("ConversationsService", () => {
 
             await service.acceptZalo(CONNECTION, zaloMessage(), manager)
 
-            expect(connections.markReceived).toHaveBeenCalledWith(CONNECTION, expect.objectContaining({ content: "<conversations.zaloGuest>" }), manager)
+            expect(connections.markReceived).toHaveBeenCalledWith(
+                CONNECTION,
+                expect.objectContaining({ content: "<conversations.zaloGuest>" }),
+                manager,
+            )
         })
 
         it("only keeps the message in the inbox when no agent is bound", async () => {
@@ -223,16 +311,26 @@ describe("ConversationsService", () => {
 
             await service.acceptZalo(CONNECTION, zaloMessage(), manager)
 
-            expect(inboundEvents.keepUnrouted).toHaveBeenCalledWith(
-                manager,
-                { workspaceId: "ws-1", channel: "zalo", sender: "<conversations.zaloGuest>", body: "Hello", eventId: "zalo:c-1:m-1" },
-            )
+            expect(inboundEvents.keepUnrouted).toHaveBeenCalledWith(manager, {
+                workspaceId: "ws-1",
+                channel: "zalo",
+                sender: "<conversations.zaloGuest>",
+                body: "Hello",
+                eventId: "zalo:c-1:m-1",
+            })
             expect(queue.enqueueChatTurn).not.toHaveBeenCalled()
         })
 
         it("ignores an event for another Zalo app and one for a connection that is gone", async () => {
             const other = await build()
-            other.zalo.load.mockResolvedValue({ kind: "ok", value: { secret: { appId: "app-2", appSecret: "s", oaSecret: "o" }, expiresAt: null, workspaceId: "ws-1" } })
+            other.zalo.load.mockResolvedValue({
+                kind: "ok",
+                value: {
+                    secret: { appId: "app-2", appSecret: "s", oaSecret: "o" },
+                    expiresAt: null,
+                    workspaceId: "ws-1",
+                },
+            })
             const gone = await build({ connection: false })
 
             await other.service.acceptZalo(CONNECTION, zaloMessage({ appId: "app-1" }), other.manager)
@@ -249,6 +347,151 @@ describe("ConversationsService", () => {
             await service.acceptZalo(CONNECTION, zaloMessage({ appId: "app-1" }), manager)
 
             expect(connections.markReceived).toHaveBeenCalledTimes(1)
+        })
+    })
+
+    describe("acceptMeta", () => {
+        it("ignores a delivery for a refused connection", async () => {
+            const { service, manager, connections, conversations, messages, inboundEvents, queue, catalog } =
+                await build({ connection: false })
+
+            await service.acceptMeta(CONNECTION, metaMessage(), manager)
+
+            expect(connections.intakeOf).toHaveBeenCalledWith(CONNECTION, "meta", manager)
+            expect(manager.query).not.toHaveBeenCalled()
+            expect(catalog.get).not.toHaveBeenCalled()
+            expect(conversations.find).not.toHaveBeenCalled()
+            expect(conversations.open).not.toHaveBeenCalled()
+            expect(messages.storeCustomer).not.toHaveBeenCalled()
+            expect(messages.storeGreeting).not.toHaveBeenCalled()
+            expect(inboundEvents.keepUnrouted).not.toHaveBeenCalled()
+            expect(queue.enqueueChatTurn).not.toHaveBeenCalled()
+        })
+
+        it.each(["facebook", "instagram"] as const)(
+            "keeps an unrouted %s delivery in the inbox with its connection-scoped event id",
+            async (platform) => {
+                const { service, manager, connections, conversations, messages, inboundEvents, queue, catalog } =
+                    await build({ agent: [] })
+
+                await service.acceptMeta(CONNECTION, metaMessage({ platform }), manager)
+
+                expect(connections.intakeOf).toHaveBeenCalledWith(CONNECTION, "meta", manager)
+                expect(manager.query).toHaveBeenCalledWith(FIND_FRONT_AGENT, [CONNECTION])
+                expect(inboundEvents.keepUnrouted).toHaveBeenCalledWith(manager, {
+                    workspaceId: "ws-1",
+                    channel: platform,
+                    sender: "Minh Tran",
+                    body: "Hello",
+                    eventId: "meta:event-1:c-1",
+                })
+                expect(catalog.get).not.toHaveBeenCalled()
+                expect(conversations.find).not.toHaveBeenCalled()
+                expect(conversations.open).not.toHaveBeenCalled()
+                expect(messages.storeCustomer).not.toHaveBeenCalled()
+                expect(queue.enqueueChatTurn).not.toHaveBeenCalled()
+            },
+        )
+
+        it.each(["facebook", "instagram"] as const)(
+            "opens a %s conversation for the person and stores and enqueues their message",
+            async (platform) => {
+                const { service, manager, connections, conversations, messages, inboundEvents, queue, catalog } =
+                    await build()
+
+                await service.acceptMeta(CONNECTION, metaMessage({ platform }), manager)
+
+                expect(connections.intakeOf).toHaveBeenCalledWith(CONNECTION, "meta", manager)
+                expect(manager.query).toHaveBeenCalledWith(FIND_FRONT_AGENT, [CONNECTION])
+                expect(conversations.find).toHaveBeenCalledWith("ws-1", platform, CONNECTION, "person-1", manager)
+                expect(conversations.open).toHaveBeenCalledWith(
+                    {
+                        workspaceId: "ws-1",
+                        agentId: "agent-1",
+                        channel: platform,
+                        customerId: "person-1",
+                        visitor: "Minh Tran",
+                        connectionId: CONNECTION,
+                    },
+                    manager,
+                )
+                expect(messages.storeCustomer).toHaveBeenCalledWith("ws-1", "conv-1", "Hello", manager)
+                expect(queue.enqueueChatTurn).toHaveBeenCalledWith(
+                    {
+                        kind: "turn",
+                        workspaceId: "ws-1",
+                        conversationId: "conv-1",
+                        messageId: "msg-1",
+                        channelEventId: "meta:event-1",
+                        lookupName: false,
+                    },
+                    manager,
+                )
+                expect(catalog.get).not.toHaveBeenCalled()
+                expect(inboundEvents.keepUnrouted).not.toHaveBeenCalled()
+                expect(connections.markReceived).not.toHaveBeenCalled()
+                expect(conversations.archive).not.toHaveBeenCalled()
+                expect(messages.storeGreeting).not.toHaveBeenCalled()
+            },
+        )
+
+        it.each(["facebook", "instagram"] as const)(
+            "uses the %s guest catalog line for an unnamed person with a front agent",
+            async (platform) => {
+                const { service, manager, conversations, catalog } = await build()
+
+                await service.acceptMeta(CONNECTION, metaMessage({ platform, visitor: null }), manager)
+
+                expect(catalog.get).toHaveBeenCalledWith(`conversations.${platform}Guest`, {}, "vi")
+                expect(conversations.open).toHaveBeenCalledWith(
+                    {
+                        workspaceId: "ws-1",
+                        agentId: "agent-1",
+                        channel: platform,
+                        customerId: "person-1",
+                        visitor: `<conversations.${platform}Guest>`,
+                        connectionId: CONNECTION,
+                    },
+                    manager,
+                )
+            },
+        )
+
+        it.each(["facebook", "instagram"] as const)(
+            "uses the %s guest catalog line for an unnamed unrouted person",
+            async (platform) => {
+                const { service, manager, inboundEvents, catalog } = await build({ agent: [] })
+
+                await service.acceptMeta(CONNECTION, metaMessage({ platform, visitor: null }), manager)
+
+                expect(catalog.get).toHaveBeenCalledWith(`conversations.${platform}Guest`, {}, "vi")
+                expect(inboundEvents.keepUnrouted).toHaveBeenCalledWith(manager, {
+                    workspaceId: "ws-1",
+                    channel: platform,
+                    sender: `<conversations.${platform}Guest>`,
+                    body: "Hello",
+                    eventId: "meta:event-1:c-1",
+                })
+            },
+        )
+
+        it("preserves an empty visitor name supplied by Meta", async () => {
+            const { service, manager, conversations, catalog } = await build()
+
+            await service.acceptMeta(CONNECTION, metaMessage({ visitor: "" }), manager)
+
+            expect(catalog.get).not.toHaveBeenCalled()
+            expect(conversations.open).toHaveBeenCalledWith(
+                {
+                    workspaceId: "ws-1",
+                    agentId: "agent-1",
+                    channel: "facebook",
+                    customerId: "person-1",
+                    visitor: "",
+                    connectionId: CONNECTION,
+                },
+                manager,
+            )
         })
     })
 })

@@ -9,7 +9,7 @@ export const parseQueueConfig = (env: EnvSource): QueueConfig => ({
     enabled: env.bool("QUEUE_ENABLED", true),
     concurrency: env.int("QUEUE_CONCURRENCY", 4),
     workspaceConcurrency: env.int("QUEUE_WORKSPACE_CONCURRENCY", 2),
-    pollIntervalMs: env.duration("QUEUE_POLL_INTERVAL", 1500),
+    pollIntervalMs: env.duration("QUEUE_POLL_INTERVAL", 500),
     visibilityTimeoutMs: env.duration("QUEUE_VISIBILITY_TIMEOUT", 60000),
     shutdownGraceMs: env.duration("QUEUE_SHUTDOWN_GRACE", 30000),
 })

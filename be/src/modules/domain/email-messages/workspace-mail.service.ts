@@ -1,5 +1,4 @@
 import { Injectable } from "@nestjs/common"
-import { ConnectionSecretsService } from "@modules/domain/connection-secrets"
 import { ConnectionsService } from "@modules/domain/connections"
 import { InjectMail, MailError } from "@modules/integrations/mail"
 import type { MailClient, SmtpConfig } from "@modules/integrations/mail"
@@ -20,7 +19,7 @@ import type {
     SendEmailResult,
     SendEmailStatus,
 } from "./email-messages.contracts"
-import { smtpConfigOf } from "./smtp-config.policy"
+import { chooseSmtp, smtpConfigOf } from "./smtp-config.policy"
 
 /** Messages a workspace may send per hour: protects the owner's mailbox and NIVO's name. */
 const HOURLY_LIMIT = 120
@@ -50,7 +49,6 @@ export class WorkspaceMailService {
         @InjectLogger() private readonly logger: Logger,
         private readonly log: EmailMessagesService,
         private readonly connections: ConnectionsService,
-        private readonly secrets: ConnectionSecretsService,
     ) {}
 
     /** Sends the email. A refusal or a failure is an answer, never a throw: the attempt is recorded either way. */
@@ -130,11 +128,12 @@ export class WorkspaceMailService {
         workspaceId: string,
         connectionId: string | undefined,
     ): Promise<{ id: string; config: SmtpConfig } | null> {
-        const connection = await this.connections.smtpOf(workspaceId, connectionId ?? null)
+        const records = await this.connections.listByProvider(workspaceId, "smtp", { includeDisconnected: false })
+        const connection = chooseSmtp(records, connectionId)
         if (connection === null) return null
-        const secret = await this.secrets.secretOf(connection.id, "smtp")
-        if (secret.kind !== "ok") return null
-        const password = this.passwordOf(connection.id, secret.value.credential)
+        const secret = await this.connections.readSecret(connection.id)
+        if (secret === null) return null
+        const password = this.passwordOf(connection.id, secret.plain)
         return password === null ? null : { id: connection.id, config: smtpConfigOf(connection.meta, password) }
     }
 

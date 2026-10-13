@@ -1,4 +1,4 @@
-// migrations-sha256: 43ea4814520e18f12f10a4ebb44e767f8dfe4d9a6158a6d1c15cf261261cbf40
+// migrations-sha256: 8e0d9bb0e705edeb354292e9003dcee283fe123dac91f6aba856207e3a44b060
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -925,6 +925,25 @@ isOneToOne: false
                   Relationships: [
                     {
       foreignKeyName: "channel_receipts_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"connection_commands": {
+                  Row: {
+                    "created_at": string,"finished_at": string | null,"id": string,"input": NonNullable<Json>,"kind": string,"outcome": Json | null,"status": string,"user_id": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"finished_at"?: string | null,"id"?: string,"input"?: NonNullable<Json>,"kind": string,"outcome"?: Json | null,"status"?: string,"user_id": string,"workspace_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"finished_at"?: string | null,"id"?: string,"input"?: NonNullable<Json>,"kind"?: string,"outcome"?: Json | null,"status"?: string,"user_id"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "connection_commands_workspace_id_fkey"
       columns: ["workspace_id"]
 isOneToOne: false
       referencedRelation: "workspaces"
@@ -3869,6 +3888,12 @@ isOneToOne: false
                            },
 "booking_reserve":
 { Args: { "p": Json,"p_force"?: boolean }; Returns: string
+                           },
+"connection_command_submit":
+{ Args: { "p_input": Json,"p_kind": string,"p_workspace": string }; Returns: string
+                           },
+"connection_command_take":
+{ Args: { "p_id": string }; Returns: Json
                            },
 "connection_mark_fed":
 { Args: { "p_at": string,"p_connection": string,"p_first_event": Json }; Returns: undefined

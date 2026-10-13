@@ -29,6 +29,20 @@ export interface ZaloInbound {
     readonly text: string
 }
 
+/** The customer's direct message of one Facebook or Instagram event. */
+export interface MetaInbound {
+    /** The platform the message came in on; it is also the conversation channel key. */
+    readonly platform: "facebook" | "instagram"
+    /** Page-scoped (Facebook) or Instagram-scoped id of the customer. */
+    readonly personId: string
+    /** The name Meta gave for the customer, when it did. */
+    readonly visitor: string | null
+    /** What the customer wrote. */
+    readonly text: string
+    /** Stable id of the event: the key of the delivery. */
+    readonly eventId: string
+}
+
 /** The front-door agent bound to a connection. */
 export interface FrontAgent {
     /** The agent id. */

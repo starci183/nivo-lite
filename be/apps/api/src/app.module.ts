@@ -260,6 +260,48 @@ import { I18nModule } from "@modules/platform/i18n"
 import { LoggingModule } from "@modules/platform/logging"
 import { JOBS_ERROR_KINDS, JOBS_MESSAGES, JobsModule } from "@modules/platform/jobs"
 import { QUEUE_ERROR_KINDS, QUEUE_MESSAGES, QueueModule } from "@modules/platform/queue"
+import {
+    CONNECTION_GRANTS_ERROR_KINDS,
+    CONNECTION_GRANTS_MESSAGES,
+    ConnectionGrantsModule,
+} from "@modules/domain/connection-grants"
+import {
+    CHANNEL_CONNECTIONS_ERROR_KINDS,
+    CHANNEL_CONNECTIONS_MESSAGES,
+    ChannelConnectionsModule,
+} from "@modules/domain/channel-connections"
+import {
+    WEBHOOK_CONNECTIONS_ERROR_KINDS,
+    WEBHOOK_CONNECTIONS_MESSAGES,
+    WebhookConnectionsModule,
+} from "@modules/domain/webhook-connections"
+import {
+    GOOGLE_CONNECTIONS_ERROR_KINDS,
+    GOOGLE_CONNECTIONS_MESSAGES,
+    GoogleConnectionsModule,
+} from "@modules/domain/google-connections"
+import {
+    META_CONNECTIONS_ERROR_KINDS,
+    META_CONNECTIONS_MESSAGES,
+    MetaConnectionsModule,
+} from "@modules/domain/meta-connections"
+import { META_INBOX_ERROR_KINDS, META_INBOX_MESSAGES, MetaInboxModule } from "@modules/domain/meta-inbox"
+import { ConnectionLifecycleModule } from "@modules/domain/connection-lifecycle"
+import { ConnectionCommandsModule } from "@modules/domain/connection-commands"
+import { GOOGLE_ERROR_KINDS, GOOGLE_MESSAGES, GoogleModule } from "@modules/integrations/google"
+import { META_ERROR_KINDS, META_MESSAGES, MetaModule } from "@modules/integrations/meta"
+import {
+    CHANNEL_SETUP_ERROR_KINDS,
+    CHANNEL_SETUP_MESSAGES,
+    ChannelSetupModule,
+} from "@modules/integrations/channel-setup"
+import {
+    WEBHOOK_DELIVERY_ERROR_KINDS,
+    WEBHOOK_DELIVERY_MESSAGES,
+    WebhookDeliveryModule,
+} from "@modules/integrations/webhook-delivery"
+import { GoogleConnectionsHttpModule } from "@features/api/google-connections"
+import { MetaConnectionsHttpModule } from "@features/api/meta-connections"
 import { CONTENT_MESSAGES, ContentModule } from "@modules/domain/content"
 import { CONTENT_ITEMS_ERROR_KINDS, CONTENT_ITEMS_MESSAGES, ContentItemsModule } from "@modules/domain/content-items"
 import { ContentSettingsModule } from "@modules/domain/content-settings"
@@ -272,8 +314,10 @@ import { TTS_ERROR_KINDS, TTS_MESSAGES, TtsModule } from "@modules/integrations/
 import { CONTENT_TICK_EVERY_MS, CONTENT_TICK_QUEUE, CONTENT_TICK_SCHEDULER } from "@modules/queues/content-tick"
 import { RendersHttpModule } from "@features/api/renders"
 import { PublishContentQueueModule } from "@features/jobs/publish-content"
+import { AcceptMetaEventQueueModule } from "@features/jobs/accept-meta-event"
 import { IssueInviteQueueModule } from "@features/jobs/issue-invite"
 import { RenderVideoQueueModule } from "@features/jobs/render-video"
+import { ConnectionCommandsQueueModule } from "@features/jobs/connection-commands"
 import { RequestRenderQueueModule } from "@features/jobs/request-render"
 import type { ApiOptions } from "./api.options"
 
@@ -291,6 +335,18 @@ export class AppModule {
                 I18nModule.register({
                     isGlobal: true,
                     bundles: [
+                        CONNECTIONS_MESSAGES,
+                        CONNECTION_GRANTS_MESSAGES,
+                        CHANNEL_CONNECTIONS_MESSAGES,
+                        WEBHOOK_CONNECTIONS_MESSAGES,
+                        GOOGLE_CONNECTIONS_MESSAGES,
+                        META_CONNECTIONS_MESSAGES,
+                        META_INBOX_MESSAGES,
+                        GOOGLE_MESSAGES,
+                        META_MESSAGES,
+                        CHANNEL_SETUP_MESSAGES,
+                        WEBHOOK_DELIVERY_MESSAGES,
+                        HTTP_MESSAGES,
                         AUTOMATION_PIPELINES_MESSAGES,
                         AUTOMATION_RUNS_MESSAGES,
                         AUTOMATION_TEMPLATES_MESSAGES,
@@ -324,9 +380,7 @@ export class AppModule {
                         PAYMENT_ORDERS_MESSAGES,
                         CHANNELS_MESSAGES,
                         CONNECTION_SECRETS_MESSAGES,
-                        CONNECTIONS_MESSAGES,
                         CONVERSATIONS_MESSAGES,
-                        HTTP_MESSAGES,
                         MAIL_MESSAGES,
                         TELEGRAM_MESSAGES,
                         ZALO_MESSAGES,
@@ -361,6 +415,18 @@ export class AppModule {
                 ErrorsModule.register({
                     isGlobal: true,
                     kinds: [
+                        CONNECTIONS_ERROR_KINDS,
+                        CONNECTION_GRANTS_ERROR_KINDS,
+                        CHANNEL_CONNECTIONS_ERROR_KINDS,
+                        WEBHOOK_CONNECTIONS_ERROR_KINDS,
+                        GOOGLE_CONNECTIONS_ERROR_KINDS,
+                        META_CONNECTIONS_ERROR_KINDS,
+                        META_INBOX_ERROR_KINDS,
+                        GOOGLE_ERROR_KINDS,
+                        META_ERROR_KINDS,
+                        CHANNEL_SETUP_ERROR_KINDS,
+                        WEBHOOK_DELIVERY_ERROR_KINDS,
+                        HTTP_ERROR_KINDS,
                         AUTOMATION_PIPELINES_ERROR_KINDS,
                         AUTOMATION_TEMPLATES_ERROR_KINDS,
                         AUTOMATIONS_ERROR_KINDS,
@@ -392,9 +458,7 @@ export class AppModule {
                         PAYMENT_ORDERS_ERROR_KINDS,
                         CHANNELS_ERROR_KINDS,
                         CONNECTION_SECRETS_ERROR_KINDS,
-                        CONNECTIONS_ERROR_KINDS,
                         CONVERSATIONS_ERROR_KINDS,
-                        HTTP_ERROR_KINDS,
                         MAIL_ERROR_KINDS,
                         TELEGRAM_ERROR_KINDS,
                         ZALO_ERROR_KINDS,
@@ -467,6 +531,19 @@ export class AppModule {
                     delivery: SUPABASE_AUTH,
                     ...options.workspaceInvites,
                 }),
+                ConnectionsModule.register({ isGlobal: true, ...options.connections }),
+                ConnectionGrantsModule.register({ isGlobal: true }),
+                ChannelConnectionsModule.register({ isGlobal: true }),
+                WebhookConnectionsModule.register({ isGlobal: true, ...options.webhookConnections }),
+                GoogleConnectionsModule.register({ isGlobal: true }),
+                MetaConnectionsModule.register({ isGlobal: true }),
+                MetaInboxModule.register({ isGlobal: true }),
+                ConnectionLifecycleModule.register({ isGlobal: true }),
+                ConnectionCommandsModule.register({ isGlobal: true }),
+                GoogleModule.register({ isGlobal: true, ...options.google }),
+                MetaModule.register({ isGlobal: true, ...options.meta }),
+                ChannelSetupModule.register({ isGlobal: true, ...options.channelSetup }),
+                WebhookDeliveryModule.register({ isGlobal: true, ...options.webhookDelivery }),
                 HttpModule.register({ isGlobal: true }),
                 N8nModule.register({ isGlobal: true, ...options.n8n }),
                 TemplateFilesModule.register({ isGlobal: true, ...options.templateFiles }),
@@ -481,7 +558,6 @@ export class AppModule {
                 TelegramModule.register({ isGlobal: true, ...options.telegram }),
                 ZaloModule.register({ isGlobal: true, ...options.zalo }),
                 MailModule.register({ isGlobal: true, ...options.mail }),
-                ConnectionsModule.register({ isGlobal: true }),
                 ConnectionSecretsModule.register({ isGlobal: true, ...options.connectionSecrets }),
                 AgentConversationsModule.register({ isGlobal: true }),
                 AgentMessagesModule.register({ isGlobal: true }),
@@ -506,6 +582,8 @@ export class AppModule {
                 RenderVideoQueueModule,
                 RequestRenderQueueModule,
                 PublishContentQueueModule,
+                AcceptMetaEventQueueModule,
+                ConnectionCommandsQueueModule,
                 RendersHttpModule,
                 LivenessModule.register({ isGlobal: true }),
                 BookingsModule.register({ isGlobal: true }),
@@ -611,6 +689,8 @@ export class AppModule {
                 LoyaltyHttpModule,
                 LoyaltyTillHttpModule,
                 WorkspacesHttpModule,
+                GoogleConnectionsHttpModule,
+                MetaConnectionsHttpModule,
                 AutomationsHttpModule,
                 FlowsHttpModule,
                 N8nPipelinesHttpModule,
