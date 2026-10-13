@@ -26,7 +26,7 @@ import type {
     FieldDef,
     GateAction,
     GoogleAccount,
-    L,
+    BilingualLabel,
     Missing,
     PipelineConfig,
     PreviewSample,
@@ -120,7 +120,10 @@ const pick = <T>(set: ReadonlySet<string>, value: string | null | undefined, fal
 const pickOrNull = <T>(set: ReadonlySet<string>, value: string | null | undefined): T | null =>
     value !== null && value !== undefined && inSet<T>(set, value) ? value : null
 
-const text = (value: LocalizedTextType | null | undefined): L => ({ vi: value?.vi ?? "", en: value?.en ?? "" })
+const text = (value: LocalizedTextType | null | undefined): BilingualLabel => ({
+    vi: value?.vi ?? "",
+    en: value?.en ?? "",
+})
 
 const configOf = (value: unknown): PipelineConfig => {
     if (typeof value !== "object" || value === null || Array.isArray(value)) return {}

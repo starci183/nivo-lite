@@ -1,4 +1,4 @@
-import { isModuleKey } from "@/modules/catalog"
+import { MODULE_REGISTRY, isModuleKey } from "@/modules/catalog"
 import type { ModuleKey } from "@/modules/catalog"
 import { agentHref, agentListHref, instancesOf } from "@/modules/installations"
 import { AGENTS_ROUTE } from "@/modules/routes"
@@ -96,3 +96,7 @@ export const typeTargetOf = (
     if (instances.length === 1) return agentHref(module, instances[0].id, tab, query)
     return tab === "setup" ? null : agentListHref(module)
 }
+
+/** The glyph of an agent type; an unknown or missing key falls back to the chatbot glyph. */
+export const moduleGlyphOf = (module: string | null): string =>
+    isModuleKey(module) ? MODULE_REGISTRY[module].glyph : MODULE_REGISTRY.chatbot.glyph

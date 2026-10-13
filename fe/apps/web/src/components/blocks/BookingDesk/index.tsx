@@ -6,14 +6,15 @@ import {
     BOOKING_STATUS_TONE,
     MOVE_ACTION,
     actionsOf,
+    blankPlacementOf,
     dayGroups,
     detailOf,
-    rowOf,
+    placementLabelsOf,
+    bookingRowOf,
     useBookingActions,
     useBookingPlacement,
     useBookingRange,
 } from "@/hooks/bookingDesk"
-import type { PlacementFields } from "@/hooks/bookingDesk"
 import { AUTO_RESOURCE } from "@/components/composites/BookingPlacementDialog"
 import { shiftDate } from "@/modules/i18n"
 import { BookingDeskBase } from "./component"
@@ -30,11 +31,11 @@ export const BookingDesk = (props: BookingDeskProps) => {
     const format = useFormatter()
     const range = useBookingRange()
     const desk = useBookingActions(range.reload)
+    const [openId, setOpenId] = useState<string | null>(null)
     const place = useBookingPlacement(range.board?.timezone ?? "", () => {
         setOpenId(null)
         range.reload()
     })
-    const [openId, setOpenId] = useState<string | null>(null)
     const [cancelId, setCancelId] = useState<string | null>(null)
     const [showCancelled, setShowCancelled] = useState(false)
     const { board } = range
@@ -59,17 +60,7 @@ export const BookingDesk = (props: BookingDeskProps) => {
     const open = board.bookings.find((booking) => booking.id === openId)
     const cancelling = board.bookings.find((booking) => booking.id === cancelId)
     const activeServices = board.services.filter((service) => service.active)
-    const blank: PlacementFields = {
-        serviceId: activeServices[0]?.id ?? "",
-        date: board.today,
-        time: "09:00",
-        resourceId: "",
-        name: "",
-        phone: "",
-        party: 1,
-        note: "",
-        force: false,
-    }
+    const blank = blankPlacementOf(activeServices[0]?.id ?? "", board.today)
     const openAdd = () => {
         if (activeServices.length === 0) return desk.announce("addNoServices", "negative")
         place.open({ kind: "add" }, blank)
@@ -130,7 +121,7 @@ export const BookingDesk = (props: BookingDeskProps) => {
                 days: dayGroups(visible).map((day) => ({
                     id: day.id,
                     label: dayText(day.id),
-                    rows: day.rows.map((booking) => rowOf(booking, words, isToday)),
+                    rows: day.rows.map((booking) => bookingRowOf(booking, words, isToday)),
                 })),
                 empty: {
                     title: t(isToday ? "todayEmptyTitle" : "emptyWeekTitle"),
@@ -153,21 +144,7 @@ export const BookingDesk = (props: BookingDeskProps) => {
                                   place.draft.kind === "add"
                                       ? [{ id: AUTO_RESOURCE, label: t("autoResource") }, ...resourceOptions]
                                       : resourceOptions,
-                              labels: {
-                                  name: t("fCustomer"),
-                                  phone: t("fPhone"),
-                                  service: t("fService"),
-                                  date: t("fDate"),
-                                  time: t("fTime"),
-                                  resource: t("fResource"),
-                                  party: t("fParty"),
-                                  note: t("fNote"),
-                                  notePlaceholder: t("notePlaceholder"),
-                                  force: t("stackAnyway"),
-                                  save: t(place.draft.kind === "add" ? "add" : "save"),
-                                  cancel: t("cancel"),
-                                  close: t("close"),
-                              },
+                              labels: placementLabelsOf(t, place.draft.kind),
                               ...(place.reason === null ? {} : { refusal: t(`reason_${place.reason}`) }),
                               canForce: place.canForce,
                               isPending: place.isBusy,

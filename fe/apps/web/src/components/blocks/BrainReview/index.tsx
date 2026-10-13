@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { SOURCE_KEY, adviceFor, reviewBoardOf, useBrainBoard, useBrainCommand } from "@/hooks/brain"
+import { FACT_SOURCE_KEY, adviceFor, reviewBoardOf, useBrainBoard, useBrainCommand } from "@/hooks/brain"
 import type { ReviewConflict, ReviewSingle } from "@/hooks/brain"
 import type { KnowledgeRowView, RowActionView, RowPartView } from "@/components/composites/KnowledgeRows"
 import type { BrainFact } from "@/modules/types"
@@ -14,7 +14,7 @@ export const BrainReview = () => {
     const board = useBrainBoard()
     const plan = reviewBoardOf(board.facts)
     const byLine = (fact: BrainFact): string =>
-        t("by", { who: fact.proposedBy, source: t(SOURCE_KEY[fact.sourceKind]), trust: fact.trust })
+        t("by", { who: fact.proposedBy, source: t(FACT_SOURCE_KEY[fact.sourceKind]), trust: fact.trust })
     const titleOf = (fact: BrainFact): string => `${fact.subjectLabel} · ${fact.attributeLabel}`
     const decide = (id: string, label: string, action: "apply" | "choose", isPrimary: boolean): RowActionView => ({
         id: `decide-${id}`,

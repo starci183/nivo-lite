@@ -2,7 +2,7 @@ import { useTranslations } from "next-intl"
 import { useQueryMyWorkspacesSwr } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { agentHref } from "@/modules/installations"
-import { figuresOf } from "./chatbotWorkbench.shared"
+import { chatbotFiguresOf } from "./chatbotWorkbench.shared"
 import { useChatbotOverview } from "./useChatbotOverview"
 
 /** How many waiting conversations the "waiting for you" card lists. */
@@ -28,7 +28,7 @@ export const useChatbotWorkbench = (installationId: string | null, focus: string
         userName: member?.displayName ?? "",
         userId: member?.userId ?? "",
         canFillGaps: member?.role === "owner" || member?.role === "manager",
-        figures: figuresOf(t, overview.data?.metrics),
+        figures: chatbotFiguresOf(t, overview.data?.metrics),
         /** The conversations waiting for a person, each leading to the inbox opened on it. */
         waiting: {
             total: overview.data?.metrics.waiting ?? 0,

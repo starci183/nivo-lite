@@ -29,7 +29,7 @@ import {
 } from "./classNames"
 
 /** One choice of a select or one tab. */
-export interface ChoiceView {
+export interface ResponsibilityChoiceView {
     readonly id: string
     readonly label: string
 }
@@ -46,22 +46,22 @@ export interface ResponsibilitiesBoardBaseProps {
         readonly newLeadHref: string
         readonly showFilters: boolean
         readonly ownerLabel: string
-        readonly owners: ReadonlyArray<ChoiceView>
+        readonly owners: ReadonlyArray<ResponsibilityChoiceView>
         readonly owner: string
         readonly dueLabel: string
-        readonly dues: ReadonlyArray<ChoiceView>
+        readonly dues: ReadonlyArray<ResponsibilityChoiceView>
         readonly due: string
         readonly clearLabel: string
         readonly isFiltered: boolean
         readonly tabsLabel: string
-        readonly tabs: ReadonlyArray<ChoiceView>
+        readonly tabs: ReadonlyArray<ResponsibilityChoiceView>
         readonly status: string
         readonly searchLabel: string
         readonly searchPlaceholder: string
         readonly query: string
         readonly filtersLabel: string
         readonly sortLabel: string
-        readonly sorts: ReadonlyArray<ChoiceView>
+        readonly sorts: ReadonlyArray<ResponsibilityChoiceView>
         readonly sort: string
         readonly listTitle: string
         readonly count: string

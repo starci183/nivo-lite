@@ -1,4 +1,4 @@
-export { carriedQuery, operatingModeOf } from "./installations.shared"
+export { carriedQuery, moduleGlyphOf, operatingModeOf } from "./installations.shared"
 export type { ModuleKey } from "@/modules/catalog"
 export type { AgentTab } from "@/modules/installations"
 export { useAddInstance } from "./useAddInstance"

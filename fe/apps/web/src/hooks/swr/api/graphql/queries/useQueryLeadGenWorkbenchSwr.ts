@@ -1,6 +1,6 @@
 import useSWR from "swr"
 import { queryLeadGenWorkbench } from "@/modules/api/graphql/queries/query-lead-gen-workbench"
-import { toLeadGenWorkbenchData } from "@/modules/utils/leadgen"
+import { toLeadGenWorkbenchData } from "@/modules/utils"
 
 /** The SWR key of the leadGenWorkbench query. */
 export const QUERY_LEAD_GEN_WORKBENCH_SWR_KEY = "QUERY_LEAD_GEN_WORKBENCH_SWR"

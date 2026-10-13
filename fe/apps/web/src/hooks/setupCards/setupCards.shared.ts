@@ -120,7 +120,7 @@ export const toCardDecision = (change: SetupWriteDecision): MutateDecideSetupCar
 }
 
 /** The message key of the name of each audience a fact may be written for. */
-export const SCOPE_KEY = {
+export const WRITE_SCOPE_KEY = {
     public: "wScopePublic",
     internal: "wScopeInternal",
     restricted: "wScopeRestricted",

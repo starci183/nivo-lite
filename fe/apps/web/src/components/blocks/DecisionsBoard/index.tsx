@@ -16,7 +16,7 @@ import { navigation } from "@/modules/i18n"
 import { CONSOLE_ROUTES, leadHref } from "@/modules/routes"
 import type { DecisionKind, DecisionRecord } from "@/modules/types"
 import { DecisionsBoardBase } from "./component"
-import type { DecisionListView, DecisionRowView } from "./component"
+import type { DecisionListView, DecisionsBoardRowView } from "./component"
 
 const ALL = "all"
 
@@ -39,7 +39,7 @@ export const DecisionsBoard = (props: DecisionsBoardProps) => {
     const { slot: history, reload } = useDecisionHistory(props.kind, props.department)
     const router = navigation.useRouter()
     const isFiltered = props.kind !== null || props.department !== null
-    const rowOf = (row: DecisionRecord): DecisionRowView => {
+    const rowOf = (row: DecisionRecord): DecisionsBoardRowView => {
         const parts = splitBasis(row.note)
         return {
             id: row.id,

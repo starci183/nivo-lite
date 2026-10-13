@@ -1,4 +1,5 @@
 import type { Installation } from "@/modules/installations"
+import type { ConnectionStatus } from "@/modules/types"
 
 /** The longest name of an agent. */
 export const AGENT_NAME_MAX = 40
@@ -32,9 +33,6 @@ export const holdingMessageOf = (settings: unknown): string => {
     const saved = isRecord(settings) ? settings.holdingMessage : undefined
     return typeof saved === "string" ? saved : ""
 }
-
-/** The status of a connection as the access card words it. */
-export type ConnectionStatus = "pending" | "connected" | "error" | "disconnected"
 
 const CONNECTION_STATUSES: ReadonlyArray<ConnectionStatus> = ["pending", "connected", "error", "disconnected"]
 
