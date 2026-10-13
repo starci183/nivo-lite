@@ -1,13 +1,13 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationSetSetupGateArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { SetSetupGateMutation, SetSetupGateMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `setSetupGate` mutation. */
-export type MutateSetSetupGateRequest = MutationSetSetupGateArgs["input"]
+export type MutateSetSetupGateRequest = WireInput<SetSetupGateMutationVariables["input"]>
 
-type MutateSetSetupGateResponse = Pick<Mutation, "setSetupGate">
+type MutateSetSetupGateResponse = SetSetupGateMutation
 
 const mutation1: TypedDocumentNode<MutateSetSetupGateResponse, InputVariables<MutateSetSetupGateRequest>> = gql`
     mutation SetSetupGate($input: SetSetupGateInput!) {

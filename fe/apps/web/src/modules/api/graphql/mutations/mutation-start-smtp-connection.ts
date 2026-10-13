@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationStartSmtpConnectionArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { StartSmtpConnectionMutation, StartSmtpConnectionMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `startSmtpConnection` mutation. */
-export type MutateStartSmtpConnectionRequest = MutationStartSmtpConnectionArgs["input"]
+type MutateStartSmtpConnectionRequest = WireInput<StartSmtpConnectionMutationVariables["input"]>
 
 /** The response of the `startSmtpConnection` mutation. */
-type MutateStartSmtpConnectionResponse = Pick<Mutation, "startSmtpConnection">
+type MutateStartSmtpConnectionResponse = StartSmtpConnectionMutation
 
 const mutation1: TypedDocumentNode<
     MutateStartSmtpConnectionResponse,

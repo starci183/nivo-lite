@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationRunDocumentImportArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { RunDocumentImportMutation, RunDocumentImportMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `runDocumentImport` mutation. */
-export type MutateRunDocumentImportRequest = MutationRunDocumentImportArgs["input"]
+type MutateRunDocumentImportRequest = WireInput<RunDocumentImportMutationVariables["input"]>
 
 /** The response of the `runDocumentImport` mutation. */
-type MutateRunDocumentImportResponse = Pick<Mutation, "runDocumentImport">
+type MutateRunDocumentImportResponse = RunDocumentImportMutation
 
 const mutation1: TypedDocumentNode<
     MutateRunDocumentImportResponse,

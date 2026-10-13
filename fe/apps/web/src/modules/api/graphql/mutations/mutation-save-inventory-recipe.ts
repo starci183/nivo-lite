@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationSaveInventoryRecipeArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { SaveInventoryRecipeMutation, SaveInventoryRecipeMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `saveInventoryRecipe` mutation. */
-export type MutateSaveInventoryRecipeRequest = MutationSaveInventoryRecipeArgs["input"]
+export type MutateSaveInventoryRecipeRequest = WireInput<SaveInventoryRecipeMutationVariables["input"]>
 
 /** The response of the `saveInventoryRecipe` mutation. */
-type MutateSaveInventoryRecipeResponse = Pick<Mutation, "saveInventoryRecipe">
+type MutateSaveInventoryRecipeResponse = SaveInventoryRecipeMutation
 
 const mutation1: TypedDocumentNode<
     MutateSaveInventoryRecipeResponse,

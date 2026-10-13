@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationRunCsvImportArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { RunCsvImportMutation, RunCsvImportMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `runCsvImport` mutation. */
-export type MutateRunCsvImportRequest = MutationRunCsvImportArgs["input"]
+type MutateRunCsvImportRequest = WireInput<RunCsvImportMutationVariables["input"]>
 
 /** The response of the `runCsvImport` mutation. */
-type MutateRunCsvImportResponse = Pick<Mutation, "runCsvImport">
+type MutateRunCsvImportResponse = RunCsvImportMutation
 
 const mutation1: TypedDocumentNode<MutateRunCsvImportResponse, InputVariables<MutateRunCsvImportRequest>> = gql`
     mutation RunCsvImport($input: RunCsvImportInput!) {

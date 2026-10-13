@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationSimulateInboundArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { SimulateInboundMutation, SimulateInboundMutationVariables } from "../__generated__/graphql"
 
 /** The generated input of the simulator mutation. */
-export type MutateSimulateInboundRequest = MutationSimulateInboundArgs["input"]
+export type MutateSimulateInboundRequest = WireInput<SimulateInboundMutationVariables["input"]>
 
 /** The generated selection returned by the simulator mutation. */
-type MutateSimulateInboundResponse = Pick<Mutation, "simulateInbound">
+type MutateSimulateInboundResponse = SimulateInboundMutation
 
 type Document = TypedDocumentNode<MutateSimulateInboundResponse, InputVariables<MutateSimulateInboundRequest>>
 

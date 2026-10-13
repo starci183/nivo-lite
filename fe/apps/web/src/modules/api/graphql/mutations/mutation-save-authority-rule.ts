@@ -1,13 +1,13 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationSaveAuthorityRuleArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { SaveAuthorityRuleMutation, SaveAuthorityRuleMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `saveAuthorityRule` mutation. */
-export type MutateSaveAuthorityRuleRequest = MutationSaveAuthorityRuleArgs["input"]
+export type MutateSaveAuthorityRuleRequest = WireInput<SaveAuthorityRuleMutationVariables["input"]>
 
-type MutateSaveAuthorityRuleResponse = Pick<Mutation, "saveAuthorityRule">
+type MutateSaveAuthorityRuleResponse = SaveAuthorityRuleMutation
 
 const mutation1: TypedDocumentNode<
     MutateSaveAuthorityRuleResponse,

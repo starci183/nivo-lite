@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationSaveContentCadenceArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { SaveContentCadenceMutation, SaveContentCadenceMutationVariables } from "../__generated__/graphql"
 
 /** The generated input of saveContentCadence. */
-export type MutateSaveContentCadenceRequest = MutationSaveContentCadenceArgs["input"]
+type MutateSaveContentCadenceRequest = WireInput<SaveContentCadenceMutationVariables["input"]>
 
 /** The generated response of saveContentCadence. */
-type MutateSaveContentCadenceResponse = Pick<Mutation, "saveContentCadence">
+type MutateSaveContentCadenceResponse = SaveContentCadenceMutation
 
 type Document = TypedDocumentNode<MutateSaveContentCadenceResponse, InputVariables<MutateSaveContentCadenceRequest>>
 

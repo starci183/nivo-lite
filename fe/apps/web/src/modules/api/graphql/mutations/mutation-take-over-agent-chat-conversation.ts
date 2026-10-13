@@ -1,14 +1,19 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationTakeOverAgentChatConversationArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type {
+    TakeOverAgentChatConversationMutation,
+    TakeOverAgentChatConversationMutationVariables,
+} from "../__generated__/graphql"
 
 /** Generated input of the human takeover mutation. */
-export type MutateTakeOverAgentChatConversationRequest = MutationTakeOverAgentChatConversationArgs["input"]
+export type MutateTakeOverAgentChatConversationRequest = WireInput<
+    TakeOverAgentChatConversationMutationVariables["input"]
+>
 
 /** Generated selection of the human takeover mutation. */
-type MutateTakeOverAgentChatConversationResponse = Pick<Mutation, "takeOverAgentChatConversation">
+type MutateTakeOverAgentChatConversationResponse = TakeOverAgentChatConversationMutation
 
 type Document = TypedDocumentNode<
     MutateTakeOverAgentChatConversationResponse,

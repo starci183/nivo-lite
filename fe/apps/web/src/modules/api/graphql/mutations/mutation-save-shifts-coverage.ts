@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationSaveShiftsCoverageArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { SaveShiftsCoverageMutation, SaveShiftsCoverageMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `saveShiftsCoverage` mutation. */
-export type MutateSaveShiftsCoverageRequest = MutationSaveShiftsCoverageArgs["input"]
+export type MutateSaveShiftsCoverageRequest = WireInput<SaveShiftsCoverageMutationVariables["input"]>
 
 /** The response of the `saveShiftsCoverage` mutation. */
-type MutateSaveShiftsCoverageResponse = Pick<Mutation, "saveShiftsCoverage">
+type MutateSaveShiftsCoverageResponse = SaveShiftsCoverageMutation
 
 const mutation1: TypedDocumentNode<
     MutateSaveShiftsCoverageResponse,
