@@ -4,12 +4,15 @@ import { createAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams } from "../types"
 import type { Query, QueryLeadActionStatusArgs } from "../__generated__/schema"
 
-/** The input of the `leadActionStatus` query. */
-export type QueryLeadActionStatusRequest = QueryLeadActionStatusArgs["input"]
+/** Generated input of the leadActionStatus query. */
+type QueryLeadActionStatusRequest = QueryLeadActionStatusArgs["input"]
 
+/** Generated response of the leadActionStatus query. */
 type QueryLeadActionStatusResponse = Pick<Query, "leadActionStatus">
 
-const query1: TypedDocumentNode<QueryLeadActionStatusResponse, InputVariables<QueryLeadActionStatusRequest>> = gql`
+type Document = TypedDocumentNode<QueryLeadActionStatusResponse, InputVariables<QueryLeadActionStatusRequest>>
+
+const query1: Document = gql`
     query LeadActionStatus($input: LeadActionStatusInput!) {
         leadActionStatus(input: $input) {
             errorCode
@@ -30,23 +33,26 @@ enum QueryLeadActionStatus {
     Query1 = "query1",
 }
 
-const queryMap: Record<
-    QueryLeadActionStatus,
-    TypedDocumentNode<QueryLeadActionStatusResponse, InputVariables<QueryLeadActionStatusRequest>>
-> = {
+const queryMap: Record<QueryLeadActionStatus, Document> = {
     [QueryLeadActionStatus.Query1]: query1,
 }
 
+/** Apollo parameters for the leadActionStatus query. */
 type QueryLeadActionStatusParams = QueryParams<QueryLeadActionStatus, QueryLeadActionStatusRequest> & {
     request: QueryLeadActionStatusRequest
 }
 
-/** The back end `leadActionStatus` query. Rejects with the back end failure (message localized by the server). */
+/** Runs the workspace-scoped leadActionStatus query through the authenticated GraphQL client. */
 export const queryLeadActionStatus = async ({
     query = QueryLeadActionStatus.Query1,
     request,
     signal,
+    headers,
 }: QueryLeadActionStatusParams) => {
-    const apollo = createAuthApolloClient({ signal })
-    return apollo.query({ query: queryMap[query], variables: { input: request } })
+    const apollo = createAuthApolloClient({ signal, headers })
+    return apollo.query({
+        query: queryMap[query],
+        fetchPolicy: "no-cache",
+        variables: { input: request },
+    })
 }

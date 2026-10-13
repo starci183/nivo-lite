@@ -9,6 +9,7 @@ export const CONSOLE_ROUTES = {
     responsibilities: "/responsibilities",
     authority: "/authority",
     decisions: "/decisions",
+    connections: "/connections",
     team: "/team",
     privacy: "/privacy",
     terms: "/terms",

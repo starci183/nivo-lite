@@ -4,12 +4,15 @@ import { createAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams } from "../types"
 import type { Query, QueryAgentDashboardArgs } from "../__generated__/schema"
 
-/** The input of the `agentDashboard` query. */
+/** Generated input of the agentDashboard query. */
 export type QueryAgentDashboardRequest = QueryAgentDashboardArgs["input"]
 
+/** Generated response of the agentDashboard query. */
 type QueryAgentDashboardResponse = Pick<Query, "agentDashboard">
 
-const query1: TypedDocumentNode<QueryAgentDashboardResponse, InputVariables<QueryAgentDashboardRequest>> = gql`
+type Document = TypedDocumentNode<QueryAgentDashboardResponse, InputVariables<QueryAgentDashboardRequest>>
+
+const query1: Document = gql`
     query AgentDashboard($input: AgentDashboardInput!) {
         agentDashboard(input: $input) {
             agent {
@@ -90,23 +93,26 @@ enum QueryAgentDashboard {
     Query1 = "query1",
 }
 
-const queryMap: Record<
-    QueryAgentDashboard,
-    TypedDocumentNode<QueryAgentDashboardResponse, InputVariables<QueryAgentDashboardRequest>>
-> = {
+const queryMap: Record<QueryAgentDashboard, Document> = {
     [QueryAgentDashboard.Query1]: query1,
 }
 
+/** Apollo parameters for the agentDashboard query. */
 type QueryAgentDashboardParams = QueryParams<QueryAgentDashboard, QueryAgentDashboardRequest> & {
     request: QueryAgentDashboardRequest
 }
 
-/** The back end `agentDashboard` query. Rejects with the back end failure (message localized by the server). */
+/** Runs the workspace-scoped agentDashboard query through the authenticated GraphQL client. */
 export const queryAgentDashboard = async ({
     query = QueryAgentDashboard.Query1,
     request,
     signal,
+    headers,
 }: QueryAgentDashboardParams) => {
-    const apollo = createAuthApolloClient({ signal })
-    return apollo.query({ query: queryMap[query], variables: { input: request } })
+    const apollo = createAuthApolloClient({ signal, headers })
+    return apollo.query({
+        query: queryMap[query],
+        fetchPolicy: "no-cache",
+        variables: { input: request },
+    })
 }

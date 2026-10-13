@@ -5,6 +5,7 @@ import { ApplyShiftsImportHandler } from "./application/apply-shifts-import.hand
 import { CheckInShiftsHandler } from "./application/check-in-shifts.handler"
 import { DecideShiftsAvailabilityHandler } from "./application/decide-shifts-availability.handler"
 import { ExplainShiftsScheduleHandler } from "./application/explain-shifts-schedule.handler"
+import { PreviewShiftsImportHandler } from "./application/preview-shifts-import.handler"
 import { ProposeShiftsWeekHandler } from "./application/propose-shifts-week.handler"
 import { ReassignShiftsShiftHandler } from "./application/reassign-shifts-shift.handler"
 import { RemoveShiftsAvailabilityHandler } from "./application/remove-shifts-availability.handler"
@@ -30,6 +31,7 @@ import { SubmitShiftsAvailabilityHandler } from "./application/submit-shifts-ava
         CheckInShiftsHandler,
         DecideShiftsAvailabilityHandler,
         ExplainShiftsScheduleHandler,
+        PreviewShiftsImportHandler,
         ProposeShiftsWeekHandler,
         ReassignShiftsShiftHandler,
         RemoveShiftsAvailabilityHandler,

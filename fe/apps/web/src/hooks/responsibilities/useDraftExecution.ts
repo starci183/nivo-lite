@@ -4,6 +4,7 @@ import { mutate } from "swr"
 import { useMutateDraftLeadExecutionSwr } from "@/hooks/swr/api/graphql/mutations/useMutateDraftLeadExecutionSwr"
 import { useQueryLeadActionStatusSwr } from "@/hooks/swr/api/graphql/queries/useQueryLeadActionStatusSwr"
 import { QUERY_RESPONSIBILITIES_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryResponsibilitiesSwr"
+import { useActiveWorkspace } from "@/hooks/workspaces"
 import { useGraphQLWithToast } from "@/modules/toast"
 
 /** The action that is being written: its id and the responsibility it drafts for. */
@@ -21,10 +22,11 @@ const ENDED = ["succeeded", "failed"]
 export const useDraftExecution = () => {
     const t = useTranslations("responsibilities")
     const runGraphQL = useGraphQLWithToast()
+    const { activeWorkspaceId } = useActiveWorkspace()
     const { trigger } = useMutateDraftLeadExecutionSwr()
     const [starting, setStarting] = useState<string | null>(null)
     const [drafting, setDrafting] = useState<Drafting | null>(null)
-    useQueryLeadActionStatusSwr(drafting === null ? null : { id: drafting.actionId }, {
+    useQueryLeadActionStatusSwr(activeWorkspaceId, drafting?.actionId, {
         refreshInterval: (data) => (data !== undefined && ENDED.includes(data.status) ? 0 : 2000),
         onSuccess: (data) => {
             if (!ENDED.includes(data.status)) return

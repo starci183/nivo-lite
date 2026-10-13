@@ -12,7 +12,7 @@ export const useOfficeTeam = () => {
     const installations = useQueryModuleInstallationsSwr()
     const members = useQueryWorkspaceMembersSwr(activeWorkspaceId)
     const staff = useQueryWorkspaceStaffSwr(activeWorkspaceId)
-    const leads = useQueryLeadBoardSwr()
+    const leads = useQueryLeadBoardSwr(activeWorkspaceId)
     const tasks = useQueryResponsibilitiesSwr()
     return {
         agents: toOfficeAgents(installations.data ?? []),

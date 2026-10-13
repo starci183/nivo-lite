@@ -11,20 +11,20 @@ import { LeadPageLayout } from "@/components/composites/LeadPageLayout"
 /** The lead page with no data yet: the same trail, panels and section titles, every value a skeleton. */
 export const LeadLoadingPage = () => (
     <LeadPageLayout
-        header={<LeadHeader detail={null} channelLabel="" />}
+        header={<LeadHeader />}
         primary={
             <>
-                <LeadExecution detail={null} />
-                <LeadWorkFlow flow={{ isLoading: true }} />
-                <LeadHistory detail={null} />
+                <LeadExecution />
+                <LeadWorkFlow />
+                <LeadHistory />
             </>
         }
         rail={
             <>
-                <LeadResponsibility detail={null} workspaceId="" />
-                <LeadPreviousSteps detail={null} />
-                <LeadContext detail={null} channelLabel="" />
-                <LeadOutcome detail={null} workspaceId="" />
+                <LeadResponsibility />
+                <LeadPreviousSteps />
+                <LeadContext />
+                <LeadOutcome />
             </>
         }
     />

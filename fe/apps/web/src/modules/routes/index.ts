@@ -14,7 +14,12 @@ export { safeNext, safeNextPath } from "./safe-next-path"
 export { LEADS_ROUTES, leadPath, newLeadPath } from "./leads-routes"
 export { AUTH_ROUTES, invitePath, loginPath, loginResetPath, signupPath, workspacesPath } from "./auth-routes"
 export { ADMIN_ROUTES, adminListPath, adminWorkspacePath } from "./admin-routes"
-export { workspaceBillingPath, workspacePaymentPath } from "./workspace-routes"
+export {
+    creditsPath,
+    workspaceBillingPath,
+    workspacePaymentPath,
+    workspaceRenewalPaymentPath,
+} from "./workspace-routes"
 export {
     AGENTS_ROUTE,
     CONSOLE_ROUTES,

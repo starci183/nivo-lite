@@ -1,7 +1,8 @@
 import { Alert, Button, List, ListItem, Region, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
-import { ApprovalCard } from "@/components/blocks/ApprovalCard"
-import type { ExecutionRecord, DataSlot, SlotLabels } from "@/modules/types"
+import { ApprovalCard } from "@/components/composites/ApprovalCard"
+import type { ApprovalCardLabels, ApprovalCardView } from "@/components/composites/ApprovalCard"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 import {
     CARD_BODY_CLASS_NAME,
     EARLIER_LIST_CLASS_NAME,
@@ -12,11 +13,7 @@ import {
 /** One draft with what its approval card says about it. */
 export interface DraftItem {
     readonly id: string
-    readonly execution: ExecutionRecord
-    readonly leadName: string
-    readonly channel: string
-    readonly agentName: string | null
-    readonly nextAction: string
+    readonly view: ApprovalCardView
 }
 
 /** What the panel shows about one lead. */
@@ -36,6 +33,7 @@ export interface ExecutionLabels {
     readonly earlierTitle: string
     readonly earlierMeta: string
     readonly slot: SlotLabels
+    readonly approval: ApprovalCardLabels
 }
 
 /** The words and state of the execution panel. */
@@ -50,6 +48,9 @@ export interface LeadExecutionBaseProps {
     }
     readonly on: {
         readonly draft: () => void
+        readonly toggleEdit: () => void
+        readonly editChange: (value: string) => void
+        readonly decide: (decision: "approved" | "rejected") => void
     }
 }
 
@@ -88,13 +89,7 @@ export const LeadExecutionBase = (props: LeadExecutionBaseProps) => {
                                 </div>
                             </SurfaceCard>
                         ) : (
-                            <ApprovalCard
-                                execution={view.waiting.execution}
-                                leadName={view.waiting.leadName}
-                                channel={view.waiting.channel}
-                                agentName={view.waiting.agentName}
-                                nextAction={view.waiting.nextAction}
-                            />
+                            <ApprovalCard view={view.waiting.view} labels={l.approval} on={on} />
                         )}
                         {view.earlier.length === 0 ? null : (
                             <Region labelledBy="earlier-approvals-title" className={EARLIER_SECTION_CLASS_NAME}>
@@ -107,13 +102,7 @@ export const LeadExecutionBase = (props: LeadExecutionBaseProps) => {
                                 <List className={EARLIER_LIST_CLASS_NAME} label={l.earlierTitle}>
                                     {view.earlier.map((item) => (
                                         <ListItem key={item.id}>
-                                            <ApprovalCard
-                                                execution={item.execution}
-                                                leadName={item.leadName}
-                                                channel={item.channel}
-                                                agentName={item.agentName}
-                                                nextAction={item.nextAction}
-                                            />
+                                            <ApprovalCard view={item.view} labels={l.approval} on={on} />
                                         </ListItem>
                                     ))}
                                 </List>

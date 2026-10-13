@@ -40,42 +40,9 @@ export { readSources } from "./video/read-sources"
 export { markVideoApproved } from "./video/write-approved"
 export { readContentWorkbench } from "./content/read-workbench"
 export { approveContentItem, rejectContentItem } from "./content/write-gate"
-export { CHANNEL_KEYS, channelLabelOf } from "./leads/channels.mapper"
-export type { ChannelLabels } from "./leads/channels.mapper"
-export { readLead } from "./leads/read-lead"
-export { readLeadFlow } from "./leads/read-lead-flow"
-export { readLeadBoard } from "./leads/read-leads"
-export { readAccountingWorkbench } from "./accounting/read-accounting-workbench"
 export { readAgent, readAgents, readInstanceNames } from "./overview/read-agents"
 export { readLeadDetail, readLeads, readOpenResponsibilities, readResponsibilities } from "./overview/read-leads"
 export { readMessages } from "./overview/read-feed"
 export { readOfficePayload } from "./pagedata/read-page-data"
 export type { OfficePayload } from "./pagedata/pagedata.mapper"
-export {
-    readBillingWorkspace,
-    readBillingWorkspaces,
-    readOpenPlanOrder,
-    readPaymentOrder,
-    readPaymentOrders,
-    readPlan,
-    readPlans,
-    readReviewTransactions,
-} from "./billing/read-billing"
-export { writePaymentOrderRequest } from "./billing/write-payment-order-request"
-export type {
-    BillingWorkspace,
-    OrderKind,
-    OrderStatus,
-    PaymentOrder,
-    Plan,
-    WorkspaceStatus,
-} from "./billing/billing.mapper"
-export {
-    readCreditPacks,
-    readQuotaStatus,
-    readRecentCostUsd,
-    readTopupLots,
-    readUsageSummary,
-} from "./credits/read-credits"
-export type { CreditPack, QuotaSnapshot, TopupLot, UsageSummary } from "./credits/credits.mapper"
 export { readInventoryWorkbench } from "./inventory/read-inventory-workbench"

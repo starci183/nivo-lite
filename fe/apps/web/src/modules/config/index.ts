@@ -38,3 +38,5 @@ export const graphqlTuning = {
 
 /** The public origin of the site (providers call back to it); `undefined` when it is not set. */
 export const webSiteOrigin = (): string | undefined => process.env.NEXT_PUBLIC_SITE_URL
+
+export { creditsContactHref } from "./credits"

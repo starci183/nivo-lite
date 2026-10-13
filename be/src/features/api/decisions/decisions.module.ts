@@ -1,7 +1,9 @@
 import { Module } from "@nestjs/common"
 import { CreateResponsibilityHandler } from "./application/create-responsibility.handler"
 import { DecideExecutionHandler } from "./application/decide-execution.handler"
+import { AssignWorkItemHandler } from "./application/assign-work-item.handler"
 import { DecideWorkItemHandler } from "./application/decide-work-item.handler"
+import { HoldWorkItemHandler } from "./application/hold-work-item.handler"
 import { GetWorkItemHandler } from "./application/get-work-item.handler"
 import { ListDecisionHistoryHandler } from "./application/list-decision-history.handler"
 import { ListResponsibilitiesHandler } from "./application/list-responsibilities.handler"
@@ -16,7 +18,9 @@ import { UpdateResponsibilityStatusHandler } from "./application/update-responsi
     providers: [
         CreateResponsibilityHandler,
         DecideExecutionHandler,
+        AssignWorkItemHandler,
         DecideWorkItemHandler,
+        HoldWorkItemHandler,
         GetWorkItemHandler,
         ListDecisionHistoryHandler,
         ListResponsibilitiesHandler,

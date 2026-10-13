@@ -1,17 +1,16 @@
-import type { SWRConfiguration } from "swr"
-import { useGraphqlQuerySwr } from "@/hooks/reuseables/useGraphqlQuerySwr"
+import { noData, useWorkspaceArgSwr } from "@/hooks/workspaceread"
 import { queryAgentDashboard } from "@/modules/api/graphql/queries/query-agent-dashboard"
 import type { QueryAgentDashboardRequest } from "@/modules/api/graphql/queries/query-agent-dashboard"
 
-/** The SWR key of {@link useQueryAgentDashboardSwr}. */
+/** Workspace-scoped cache identity for the agentDashboard query. */
 export const QUERY_AGENT_DASHBOARD_SWR_KEY = "QUERY_AGENT_DASHBOARD_SWR"
 
-/** The back end `agentDashboard` query. Pass `null` to wait for the arguments. */
-export const useQueryAgentDashboardSwr = (request: QueryAgentDashboardRequest | null, config?: SWRConfiguration) =>
-    useGraphqlQuerySwr(
+/** Reads agentDashboard. The workspace id is part of the cache identity; `undefined` pauses the read. */
+export const useQueryAgentDashboardSwr = (workspaceId: string | undefined, request: QueryAgentDashboardRequest) =>
+    useWorkspaceArgSwr(
         QUERY_AGENT_DASHBOARD_SWR_KEY,
+        workspaceId,
         request,
-        (input) => queryAgentDashboard({ request: input }),
-        (data) => data.agentDashboard,
-        config,
+        async (value) =>
+            (await queryAgentDashboard({ request: value })).data?.agentDashboard ?? noData("agentDashboard"),
     )

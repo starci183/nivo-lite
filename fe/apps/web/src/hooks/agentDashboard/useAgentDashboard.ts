@@ -1,4 +1,5 @@
 import { useMemo } from "react"
+import { useActiveWorkspace } from "@/hooks/workspaces"
 import { slotOfSwr } from "@/hooks/slot"
 import { useQueryAgentDashboardSwr } from "@/hooks/swr/api/graphql/queries/useQueryAgentDashboardSwr"
 import type { ModuleKey } from "@/modules/catalog"
@@ -11,7 +12,8 @@ export const useAgentDashboard = (
     module: ModuleKey,
     installationId: string | null,
 ): { readonly slot: DataSlot<AgentDashboardView>; readonly reload: () => void } => {
-    const read = useQueryAgentDashboardSwr({ module, installationId })
+    const { activeWorkspaceId } = useActiveWorkspace()
+    const read = useQueryAgentDashboardSwr(activeWorkspaceId, { module, installationId })
     const view = useMemo(
         () => (read.data === undefined ? undefined : toAgentDashboard(read.data, module, installationId)),
         [read.data, module, installationId],

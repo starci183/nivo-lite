@@ -14,7 +14,6 @@ export type {
     StepStatus,
 } from "./leads"
 export type {
-    AccountingAgeing,
     AccountingCredit,
     AccountingInvoice,
     AccountingInvoiceStatus,
@@ -26,12 +25,10 @@ export type {
     AccountingMeasure,
     AccountingOrder,
     AccountingOrigin,
-    AccountingPeriod,
     AccountingPeriodKey,
     AccountingQuestion,
     AccountingQuestionGroup,
     AccountingSourceKind,
-    AccountingWaiting,
     AccountingWorkbenchData,
 } from "./accounting"
 export type {
@@ -279,3 +276,19 @@ export type {
     DbTableMapping,
     DbTarget,
 } from "./database-wizard"
+export type {
+    CreditsData,
+    CreditsOverviewView,
+    CreditsHistoryRow,
+    PayOrder,
+    PayTarget,
+    PlanView,
+    UpgradeReason,
+} from "./credits"
+export type {
+    AccountingQuestionValues,
+    AccountingQuestionCardData,
+    AccountingQuestionCardView,
+    AccountingQuestionsView,
+} from "./accounting-question-card"
+export type { AccountingDashboardView, AccountingDashboardSectionView } from "./accounting-dashboard"
