@@ -1,47 +1,39 @@
-import type { DescriptionListStatItem } from "@starci/grammar/common"
+import type { ReactNode } from "react"
 import { LeadGenComments } from "@/components/blocks/LeadGenComments"
 import { LeadGenHandoffs } from "@/components/blocks/LeadGenHandoffs"
 import { LeadGenLeads } from "@/components/blocks/LeadGenLeads"
 import { LeadGenSources } from "@/components/blocks/LeadGenSources"
-import { AgentDashboardFrame } from "@/features/agent-dashboard"
-import type { AgentDashboardData } from "@/lib/agent-dashboard-shared"
-import type { LeadGenWorkbenchData } from "@/modules/types"
+import { LeadGenWorkbench } from "@/components/blocks/LeadGenWorkbench"
+import { WORKBENCH_CLASS_NAME } from "./classNames"
 
-/** What the Lead Gen workbench draws: the frame regions, the figures, the data, the tab to open and the tab labels. */
+/** The resolved route state of the Lead Gen workbench. */
 interface LeadGenWorkbenchPageBaseProps {
     readonly props: {
-        readonly dashboard: AgentDashboardData
-        readonly figures: ReadonlyArray<DescriptionListStatItem>
-        readonly data: LeadGenWorkbenchData
-        readonly initialTab: string | null
-        readonly labels: {
-            readonly leads: string
-            readonly sources: string
-            readonly comments: string
-            readonly handoffs: string
-        }
+        /** The selected tab. */
+        readonly tab: string
+        /** The agent the dashboard is read for. */
+        readonly installationId: string | null
+        /** The agent the workbench is read for: set only when the workspace runs several. */
+        readonly workbenchInstallationId: string | null
     }
 }
 
-/** The Lead Gen workbench: the agent dashboard frame around the four Lead Gen areas. */
-export const LeadGenWorkbenchPageBase = (props: LeadGenWorkbenchPageBaseProps) => {
-    const { dashboard, figures, data, initialTab, labels } = props.props
-    return (
-        <AgentDashboardFrame
-            module="lead_gen"
-            data={dashboard}
-            initialTab={initialTab}
-            figures={figures}
-            tabs={[
-                {
-                    id: "leads",
-                    label: labels.leads,
-                    content: <LeadGenLeads rows={data.leads} hidden={data.leadsHidden} />,
-                },
-                { id: "sources", label: labels.sources, content: <LeadGenSources rows={data.sources} /> },
-                { id: "comments", label: labels.comments, content: <LeadGenComments rows={data.comments} /> },
-                { id: "handoffs", label: labels.handoffs, content: <LeadGenHandoffs rows={data.handoffs} /> },
-            ]}
-        />
-    )
+/** The connected area of one tab; each reads the same workbench in the browser. */
+const areaOf = (tab: string, installationId: string | null): ReactNode => {
+    if (tab === "sources") return <LeadGenSources installationId={installationId} />
+    if (tab === "comments") return <LeadGenComments installationId={installationId} />
+    if (tab === "handoffs") return <LeadGenHandoffs installationId={installationId} />
+    return <LeadGenLeads installationId={installationId} />
 }
+
+/** The Lead Gen workbench: the connected frame (dashboard, figures, tab strip) and the connected area of the selected tab under it. */
+export const LeadGenWorkbenchPageBase = (props: LeadGenWorkbenchPageBaseProps) => (
+    <div className={WORKBENCH_CLASS_NAME}>
+        <LeadGenWorkbench
+            tab={props.props.tab}
+            installationId={props.props.installationId}
+            workbenchInstallationId={props.props.workbenchInstallationId}
+        />
+        {areaOf(props.props.tab, props.props.workbenchInstallationId)}
+    </div>
+)
