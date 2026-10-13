@@ -3,6 +3,9 @@ import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./leads.module-definition"
 import { LeadRecordsService } from "./lead-records.service"
 import { LeadsService } from "./leads.service"
+import { LeadGenWorkbenchService } from "./leadgen-workbench.service"
+import { LeadGenCommentService } from "./leadgen-comment.service"
+import { LeadGenPublicCommentService } from "./leadgen-public-comment.service"
 
 @Module({})
 /** The journey of a lead over the primary Supabase PostgreSQL connection. */
@@ -12,8 +15,15 @@ export class LeadsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), LeadsService, LeadRecordsService],
-            exports: [LeadsService, LeadRecordsService],
+            providers: [
+                ...(base.providers ?? []),
+                LeadsService,
+                LeadRecordsService,
+                LeadGenWorkbenchService,
+                LeadGenCommentService,
+                LeadGenPublicCommentService,
+            ],
+            exports: [LeadsService, LeadRecordsService, LeadGenWorkbenchService, LeadGenCommentService],
         }
     }
 }

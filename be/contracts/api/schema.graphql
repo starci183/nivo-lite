@@ -788,6 +788,11 @@ type ApprovalExecutionType {
   work_item_id: ID
 }
 
+input ApproveLeadGenCommentInput {
+  draft: String
+  workItemId: ID!
+}
+
 input AskKnowledgeInput {
   audience: String!
   module: String!
@@ -1088,6 +1093,127 @@ type BrainType {
 input ChangeMemberRoleInput {
   role: String!
   userId: ID!
+}
+
+input ChatAnswerStatusInput {
+  workItemId: ID!
+}
+
+type ChatHandlingType {
+  conversationId: ID!
+  handledBy: String
+}
+
+type ChatReplyProgressType {
+  delivery: String
+  errorCode: String
+  id: ID!
+  messageId: ID
+  status: String!
+}
+
+input ChatReplyStatusInput {
+  messageId: ID!
+}
+
+type ChatbotConversationType {
+  channel: String!
+  handledBy: String
+  id: ID!
+  lastAt: String!
+  lastRole: String
+  lastText: String!
+  leadId: ID
+  messageCount: Int!
+  name: String!
+  unanswered: Boolean!
+  waiting: Boolean!
+}
+
+type ChatbotEscalationType {
+  draft: String!
+  question: String!
+  since: String!
+  staffName: String
+  workItemId: ID!
+}
+
+type ChatbotGapsType {
+  gaps: [ChatbotKnowledgeGapType!]!
+  lenses: [ChatbotLensType!]!
+}
+
+type ChatbotKnowledgeGapType {
+  attributeGuess: String
+  count: Int!
+  exampleConversationId: ID
+  firstSeenAt: String!
+  id: ID!
+  lastSeenAt: String!
+  module: String!
+  question: String!
+  reopenedCount: Int!
+  status: String!
+  topic: String
+}
+
+type ChatbotLeadType {
+  company: String!
+  email: String
+  id: ID!
+  name: String!
+  need: String!
+  phone: String
+  stage: String!
+}
+
+type ChatbotLensType {
+  audience: String!
+  module: String!
+  name: String!
+}
+
+type ChatbotMessageType {
+  authorKind: String!
+  authorName: String
+  body: String!
+  createdAt: String!
+  delivery: String
+  deliveryError: String
+  id: ID!
+  role: String!
+}
+
+type ChatbotMetricsType {
+  leadsCaptured7d: Int!
+  p50FirstResponseMin: Float
+  sample: Int!
+  today: Int!
+  waiting: Int!
+}
+
+input ChatbotOverviewInput {
+  installationId: ID
+}
+
+type ChatbotOverviewType {
+  conversations: [ChatbotConversationType!]!
+  metrics: ChatbotMetricsType!
+  nowIso: String!
+  workspaceId: ID!
+}
+
+input ChatbotThreadInput {
+  conversationId: ID!
+}
+
+type ChatbotThreadType {
+  conversation: ChatbotConversationType!
+  escalation: ChatbotEscalationType
+  externalId: String
+  handledAt: String
+  lead: ChatbotLeadType
+  messages: [ChatbotMessageType!]!
 }
 
 input CheckConnectionInput {
@@ -1741,6 +1867,92 @@ type KnowledgeSuggestionContextType {
   decisions: [SuggestionDecisionType!]!
 }
 
+type LeadGenCommentStatusType {
+  errorCode: String
+  id: ID!
+  resultHref: String
+  status: String!
+  workStatus: String!
+}
+
+type LeadGenCommentType {
+  at: String!
+  author: String!
+  comment: String!
+  draft: String!
+  platform: String!
+  refLabel: String
+  workItemId: ID!
+}
+
+type LeadGenHandoffType {
+  at: String!
+  classify: String
+  href: String!
+  key: ID!
+  leadId: ID!
+  name: String!
+  score: String
+  stage: String!
+}
+
+type LeadGenLeadType {
+  createdAt: String!
+  href: String!
+  id: ID!
+  lastAt: String!
+  lastText: String!
+  name: String!
+  origin: LeadGenOriginType!
+  score: String
+  stage: String!
+}
+
+type LeadGenMetricsType {
+  conversionLeads: Int!
+  conversionWindowDays: Int!
+  conversionWon: Int!
+  firstReplyP50Min: Float
+  firstReplySample: Int!
+  hotWaiting: Int!
+  newToday: Int!
+}
+
+type LeadGenOriginType {
+  kind: String!
+  platform: String!
+  refId: String
+  refKind: String
+  refLabel: String
+}
+
+type LeadGenSourceType {
+  hot: Int!
+  key: String!
+  leads: Int!
+  origin: LeadGenOriginType!
+  won: Int!
+}
+
+type LeadGenWorkbenchType {
+  comments: [LeadGenCommentType!]!
+  handoffs: [LeadGenHandoffType!]!
+  leads: [LeadGenLeadType!]!
+  leadsHidden: Int!
+  metrics: LeadGenMetricsType!
+  sources: [LeadGenSourceType!]!
+}
+
+input LeadWaitInput {
+  leadId: ID!
+}
+
+type LeadWaitType {
+  hours: Int
+  replied: Boolean!
+  show: Boolean!
+}
+
 input LessonMiningStatusInput {
   id: ID!
 }
@@ -1990,6 +2202,7 @@ type Mutation {
   adminResendWorkspaceInvite(input: AdminResendWorkspaceInviteInput!): AdminInviteResentType!
   adminSetWorkspacePlan(input: AdminSetWorkspacePlanInput!): AdminPlanSetType!
   adminSetWorkspaceStatus(input: AdminSetWorkspaceStatusInput!): AdminStatusSetType!
+  approveLeadGenComment(input: ApproveLeadGenCommentInput!): LeadGenCommentStatusType!
   authorizeGoogle(input: AuthorizeGoogleInput!): AuthorizeUrlType!
   authorizeMeta(input: AuthorizeMetaInput!): MetaAuthorizationType!
   authorizeZalo(input: AuthorizeZaloInput!): ZaloAuthorizationType!
@@ -2032,6 +2245,8 @@ type Mutation {
   renameAgent(input: RenameAgentInput!): AgentAckType!
   requestAgentGeneration(input: RequestAgentGenerationInput!): AgentGenerationRequestedType!
   requestAgentSync(input: RequestAgentSyncInput!): AgentAckType!
+  requestChatAnswer(input: RequestChatAnswerInput!): ChatReplyProgressType!
+  requestChatReply(input: RequestChatReplyInput!): ChatReplyProgressType!
   requestLessonMining(input: RequestLessonMiningInput!): BrainCommandRefType!
   requestPaymentOrder(input: RequestPaymentOrderInput!): RequestPaymentOrderType!
   resendInvite(input: InviteRefInput!): InviteResultType!
@@ -2054,6 +2269,7 @@ type Mutation {
   setAgentConnections(input: SetAgentConnectionsInput!): Boolean!
   setAgentStatus(input: SetAgentStatusInput!): AgentAckType!
   setAgentTexts(input: SetAgentTextsInput!): AgentAckType!
+  setChatHandling(input: SetChatHandlingInput!): ChatHandlingType!
   setConnectionAgents(input: SetConnectionAgentsInput!): Boolean!
   setConnectionGrant(input: SetConnectionGrantInput!): Boolean!
   setKnowledgeSuggestionState(input: SetKnowledgeSuggestionStateInput!): Boolean!
@@ -2224,6 +2440,27 @@ type PreviewSampleType {
   variables: JsonObject!
 }
 
+type PromoChatbotStateType {
+  agentId: ID
+  handle: String
+  hasChatbot: Boolean!
+  name: String
+}
+
+type PromoOnboardingStepType {
+  done: Boolean!
+  href: String!
+  key: String!
+}
+
+type PromoStateType {
+  chatbotAgentId: ID
+  hasChatbot: Boolean!
+  isFoundingMember: Boolean!
+  onboarding: [PromoOnboardingStepType!]!
+  websiteLeadStats: WebsiteLeadStatsType!
+}
+
 type ProposalCandidateType {
   amount_vnd: Float!
   id: ID!
@@ -2283,6 +2520,11 @@ type Query {
   billingWorkspace: BillingWorkspaceType!
   billingWorkspaces: [BillingWorkspaceType!]!
   brain: BrainType!
+  chatAnswerStatus(input: ChatAnswerStatusInput!): ChatReplyProgressType!
+  chatReplyStatus(input: ChatReplyStatusInput!): ChatReplyProgressType!
+  chatbotGaps: ChatbotGapsType!
+  chatbotOverview(input: ChatbotOverviewInput!): ChatbotOverviewType!
+  chatbotThread(input: ChatbotThreadInput!): ChatbotThreadType!
   connectionAgents: [ConnectionAgentType!]!
   connectionFirstEvent(input: GetConnectionFirstEventInput!): FirstEventStateType!
   connections: [ConnectionType!]!
@@ -2295,11 +2537,15 @@ type Query {
   decisionHistory(input: ListDecisionHistoryInput!): [DecisionRecordType!]!
   driveLinkedFolder(input: DriveLinkedFolderInput!): DriveFolderType!
   drivePickedFolder(input: DrivePickedFolderInput!): PickedFolderType!
+  foundingMember: Boolean!
   googleConnectionState: GoogleStateType!
   invitePreview(input: InviteTokenInput!): InvitePreviewType!
   knowledgeSource(input: KnowledgeSourceInput!): KnowledgeSourceDetailType!
   knowledgeSources(input: KnowledgeSourcesInput!): [KnowledgeSourceType!]!
   knowledgeSuggestions: KnowledgeSuggestionContextType!
+  leadGenCommentStatus(input: ReadLeadGenCommentStatusInput!): LeadGenCommentStatusType!
+  leadGenWorkbench(input: ReadLeadGenWorkbenchInput!): LeadGenWorkbenchType!
+  leadWait(input: LeadWaitInput!): LeadWaitType!
   lessonMiningStatus(input: LessonMiningStatusInput!): LessonMiningStatusType!
   metaConnection(input: GetMetaConnectionInput!): MetaWizardConnectionType!
   moduleDefinition(input: ModuleKeyInput!): ModuleDefinitionType!
@@ -2316,6 +2562,8 @@ type Query {
   paymentOrder(input: PaymentOrderInput!): BillingPaymentOrderType
   paymentOrderRequestStatus(input: PaymentOrderRequestStatusInput!): PaymentOrderRequestStatusType
   paymentOrders: [BillingPaymentOrderType!]!
+  promoChatbotState: PromoChatbotStateType!
+  promoState: PromoStateType!
   responsibilities: [ResponsibilityListingType!]!
   salesOrder(input: SalesOrderInput!): SalesOrderType
   salesOrders: [SalesOrderType!]!
@@ -2326,6 +2574,14 @@ type Query {
   workspaceShell(input: ShellWindowInput!): WorkspaceShellType!
   workspaceStaff: [StaffOptionType!]!
   zaloConnection(input: GetZaloConnectionInput!): ZaloWizardConnectionType!
+}
+
+input ReadLeadGenCommentStatusInput {
+  workItemId: ID!
+}
+
+input ReadLeadGenWorkbenchInput {
+  installationId: ID
 }
 
 input RecordManualEvidenceInput {
@@ -2358,6 +2614,19 @@ input RequestAgentGenerationInput {
 input RequestAgentSyncInput {
   force: Boolean
   installationId: ID
+}
+
+input RequestChatAnswerInput {
+  conversationId: ID!
+  locale: String! = "vi"
+  text: String
+  workItemId: ID!
+}
+
+input RequestChatReplyInput {
+  body: String!
+  conversationId: ID!
+  locale: String! = "vi"
 }
 
 input RequestLessonMiningInput {
@@ -2550,6 +2819,12 @@ input SetAgentStatusInput {
 input SetAgentTextsInput {
   agentId: ID!
   texts: AgentTextsInput!
+}
+
+input SetChatHandlingInput {
+  conversationId: ID!
+  locale: String! = "vi"
+  takeOver: Boolean!
 }
 
 input SetConnectionAgentsInput {
@@ -2796,6 +3071,12 @@ type WebhookViewType {
   id: ID!
   name: String!
   signingSecret: String!
+}
+
+type WebsiteLeadStatsType {
+  afterHoursCount: Int!
+  avgWaitHours: Float
+  count: Int!
 }
 
 type WizardConnectionType {

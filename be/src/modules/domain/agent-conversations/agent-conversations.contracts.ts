@@ -95,3 +95,17 @@ export type OptionalChannel = string | null
 
 /** A lead's conversation, or null when the customer never talked to an agent. */
 export type OptionalLeadConversation = LeadConversation | null
+
+/** The customer conversation a member may hold or reply in. */
+export interface HumanConversation extends ConversationTarget {
+    /** The customer linked to the conversation. */
+    readonly leadId: string | null
+    /** The person currently holding it, or null when the AI handles it. */
+    readonly handledBy: string | null
+}
+
+/** A scoped customer conversation, absent when it does not belong to the workspace. */
+export type OptionalHumanConversation = HumanConversation | null
+
+/** The human holder, or null when the AI handles the conversation. */
+export type HumanHolder = string | null
