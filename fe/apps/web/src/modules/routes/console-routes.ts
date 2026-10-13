@@ -19,7 +19,8 @@ export const CONSOLE_ROUTES = {
 export const leadHref = (leadId: string): string => `/leads/${leadId}`
 
 /** The chat page of one module agent. */
-export const agentChatHref = (agentId: string): string => `/modules/${agentId}/chat`
+export const agentChatHref = (agentId: string, tab?: string): string =>
+    `/modules/${agentId}/chat${tab === undefined ? "" : `?tab=${tab}`}`
 
 /** The responsibilities board filtered by one query string such as `status=open`. */
 export const responsibilitiesHref = (query: string): string => `${CONSOLE_ROUTES.responsibilities}?${query}`

@@ -1,9 +1,7 @@
 import "server-only"
 import { getTranslations } from "next-intl/server"
-import { request } from "@/modules/api"
-import type { Outcome } from "@/modules/api"
-import { createServerDbClient, markVideoApproved } from "@/modules/db"
-import { isRecord } from "@/modules/video"
+import { writeRenderVideo } from "@/modules/api/video/write-render"
+import { markVideoApproved } from "@/modules/db"
 import { logEvidence } from "./core"
 import type { Performer } from "./engine"
 import type { WorkItem } from "./flow-types"
@@ -47,16 +45,6 @@ export const publishVideoPerformer: Performer = {
     },
 }
 
-const decodeRender = (body: string): Outcome<string> => {
-    try {
-        const parsed: unknown = JSON.parse(body)
-        if (isRecord(parsed) && typeof parsed.renderId === "string") return { kind: "ok", value: parsed.renderId }
-    } catch {
-        return { kind: "unavailable", code: "decode", retryable: false }
-    }
-    return { kind: "unavailable", code: "decode", retryable: false }
-}
-
 /** Queues the render of a draft once the gate allowed it (needs the signed-in session of the person who triggered it). */
 export const renderDraftPerformer: Performer = {
     prepare: (_c, item) =>
@@ -67,19 +55,13 @@ export const renderDraftPerformer: Performer = {
         const projectId = field(item, "project_id")
         const t = await getTranslations({ locale: c.locale, namespace: "video" })
         if (projectId === "") throw new Error(t("gateMissingId"))
-        const client = await createServerDbClient()
-        const token = (await client.auth.getSession()).data.session?.access_token
-        if (token === undefined) throw new Error(t("gateRenderRefused"))
-        const queued = await request(
-            { path: "/video/renders", token, locale: c.locale, method: "POST", body: { projectId } },
-            decodeRender,
-        )
+        const queued = await writeRenderVideo(projectId)
         if (queued.kind !== "ok") throw new Error(t("gateRenderRefused"))
         return {
             summary: t("gateRenderQueued", { title: field(item, "title") }),
             evidence: "captured",
             href: "/agents/video/workbench",
-            detail: queued.value,
+            detail: queued.value.renderId,
         }
     },
 }
