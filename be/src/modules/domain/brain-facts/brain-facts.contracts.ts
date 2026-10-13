@@ -1,9 +1,9 @@
 /** What a fact is about. */
-export type SubjectType =
+export type BrainSubjectType =
     "business" | "product" | "service" | "policy" | "customer" | "person" | "supplier" | "place" | "other"
 
 /** The subject types a fact may have. */
-export const SUBJECT_TYPES: ReadonlyArray<SubjectType> = [
+export const SUBJECT_TYPES: ReadonlyArray<BrainSubjectType> = [
     "business",
     "product",
     "service",
@@ -55,7 +55,7 @@ export interface FactRecord {
     /** The fact id. */
     readonly id: string
     /** What it is about. */
-    readonly subjectType: SubjectType
+    readonly subjectType: BrainSubjectType
     /** The normalised subject. */
     readonly subjectKey: string
     /** The subject as people write it. */
@@ -115,7 +115,7 @@ export type InstallationScope = string | null
 /** What a source says. */
 export interface FactInput {
     /** What the fact is about; a known fact keeps its type. */
-    readonly subjectType?: SubjectType
+    readonly subjectType?: BrainSubjectType
     /** The subject as people write it. */
     readonly subjectLabel: string
     /** The attribute as people write it. */
@@ -145,14 +145,14 @@ export interface FactInput {
 }
 
 /** What recording a fact did. */
-export type ProposeOutcome = "applied" | "proposed" | "conflict" | "reinforced"
+export type BrainProposeOutcome = "applied" | "proposed" | "conflict" | "reinforced"
 
 /** A fact and what recording it did. */
 export interface ProposeResult {
     /** The fact as stored. */
     readonly fact: FactRecord
     /** What happened to it. */
-    readonly outcome: ProposeOutcome
+    readonly outcome: BrainProposeOutcome
 }
 
 /** Which facts a list returns. */

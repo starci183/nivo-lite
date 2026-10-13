@@ -62,6 +62,10 @@ export class WorkItemResponse {
     status!: string
     /** How it was decided: auto or human. */
     decided_path!: string | null
+    /** Who made the latest decision, by the name stored in the decision log. */
+    decidedBy?: string | null
+    /** The display name of that latest decider. */
+    deciderName?: string | null
     /** Why the gate asked. */
     reason!: string | null
     /** Every reason, the first one is `reason`. */

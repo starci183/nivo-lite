@@ -28,9 +28,11 @@ const recordOf = builder<RuleRecordRow>({
 
 const changeOf = builder<RuleChange>({
     action: "send_follow_up",
+    department: "sales",
     mode: "ask",
     limit_vnd: 1000,
     required_fields: ["contact"],
+    note: null,
 })
 
 const build = async (entityManager: MockEntityManager) => {
@@ -114,7 +116,15 @@ describe("AuthorityRulesService", () => {
             const service = await build(em)
 
             await expect(service.save("ws-1", changeOf())).resolves.toEqual(recordOf({ mode: "ask" }))
-            expect(em.query).toHaveBeenCalledWith(UPSERT_RULE, ["ws-1", "send_follow_up", "ask", 1000, ["contact"]])
+            expect(em.query).toHaveBeenCalledWith(UPSERT_RULE, [
+                "ws-1",
+                "send_follow_up",
+                "ask",
+                1000,
+                ["contact"],
+                "sales",
+                null,
+            ])
         })
 
         it("refuses an action the registry does not know", async () => {

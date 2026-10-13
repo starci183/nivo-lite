@@ -35,6 +35,14 @@ export class OfficeMessageType {
     @Field(() => ID, { nullable: true })
     work_item_id?: string | null
 
+    /** The customer's name, when the line names one. */
+    @Field(() => String, { nullable: true })
+    lead_name?: string | null
+
+    /** The department of the work item the line mirrors. */
+    @Field(() => String, { nullable: true })
+    department?: string | null
+
     /** When it was posted, ISO 8601. */
     @Field()
     created_at!: string

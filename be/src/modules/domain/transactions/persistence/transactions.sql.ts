@@ -22,6 +22,13 @@ export const INSERT_TRANSACTION = sql`INSERT INTO public.transactions (workspace
 VALUES ($1::uuid, $2::uuid, 'bank', $3::bigint, $4, $5, 'unmatched', $6)
 RETURNING id, workspace_id, inbound_event_id, amount_vnd::float8 AS amount_vnd, reference, payer, invoice_id, status, origin`
 
+/** The money, the payer, the reference and when a payment happened ($1 workspace, $2 transaction). */
+export const FIND_TRANSACTION_MOMENT = sql`
+    SELECT amount_vnd::float8 AS amount_vnd, payer, reference, to_json(occurred_at) #>> '{}' AS occurred_at
+    FROM public.transactions
+    WHERE workspace_id = $1::uuid AND id = $2::uuid
+    LIMIT 1`
+
 /** Links a payment to the invoice it settled ($1 workspace, $2 transaction, $3 invoice). */
 export const MATCH_TRANSACTION = sql`UPDATE public.transactions SET status = 'matched', invoice_id = $3::uuid
 WHERE workspace_id = $1::uuid AND id = $2::uuid`

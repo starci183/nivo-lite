@@ -24,14 +24,20 @@ export const LIST_RULES = sql`
     ORDER BY r.department ASC, r.action ASC
     LIMIT 500`
 
-/** Creates or replaces the rule of one action; the module comes from the registry, so an unknown action inserts nothing. */
+/**
+ * Creates or replaces the rule of one action. The department must be the module the registry gives that action, so a
+ * mismatched pair inserts nothing. A null note leaves the stored note; a text replaces it
+ * ($1 workspace, $2 action, $3 mode, $4 limit, $5 required fields, $6 department, $7 note or null).
+ */
 export const UPSERT_RULE = sql`
-    INSERT INTO public.authority_rules (workspace_id, department, action, mode, limit_vnd, required_fields)
-    SELECT $1, a.module_key, a.action, $3, $4::bigint, $5::text[]
+    INSERT INTO public.authority_rules (workspace_id, department, action, mode, limit_vnd, required_fields, note)
+    SELECT $1, a.module_key, a.action, $3, $4::bigint, $5::text[], COALESCE($7, '')
     FROM public.authority_actions a
-    WHERE a.action = $2
+    WHERE a.action = $2 AND a.module_key = $6
     ON CONFLICT (workspace_id, department, action) DO UPDATE
-    SET mode = excluded.mode, limit_vnd = excluded.limit_vnd, required_fields = excluded.required_fields, updated_at = now()
+    SET mode = excluded.mode, limit_vnd = excluded.limit_vnd, required_fields = excluded.required_fields,
+        note = CASE WHEN $7::text IS NULL THEN public.authority_rules.note ELSE excluded.note END,
+        updated_at = now()
     RETURNING id, workspace_id, department, action, mode, limit_vnd::float8 AS limit_vnd, required_fields, note,
               to_json(updated_at) #>> '{}' AS updated_at`
 

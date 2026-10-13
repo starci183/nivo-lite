@@ -19,6 +19,7 @@ export type {
     AuthoritySheet,
     DecisionHistoryKind,
     DecisionRecord,
+    ReconcileDetails,
     WorkItemCursor,
     WorkItemPage,
 } from "./decisions-views.contracts"

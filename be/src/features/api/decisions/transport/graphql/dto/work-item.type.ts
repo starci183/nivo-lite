@@ -57,6 +57,14 @@ export class WorkItemType {
     @Field(() => String, { nullable: true })
     decided_path?: string | null
 
+    /** Who made the latest decision, by the name stored in the decision log. */
+    @Field(() => String, { nullable: true })
+    decidedBy?: string | null
+
+    /** The display name of that latest decider. */
+    @Field(() => String, { nullable: true })
+    deciderName?: string | null
+
     /** Why the gate asked. */
     @Field(() => String, { nullable: true })
     reason?: string | null

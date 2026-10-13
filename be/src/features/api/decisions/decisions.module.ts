@@ -8,6 +8,7 @@ import { GetWorkItemHandler } from "./application/get-work-item.handler"
 import { ListDecisionHistoryHandler } from "./application/list-decision-history.handler"
 import { ListResponsibilitiesHandler } from "./application/list-responsibilities.handler"
 import { ListWorkItemPageHandler } from "./application/list-work-item-page.handler"
+import { ReconcileDetailsHandler } from "./application/reconcile-details.handler"
 import { ReadAuthorityHandler } from "./application/read-authority.handler"
 import { SaveRuleHandler } from "./application/save-rule.handler"
 import { SendCommandHandler } from "./application/send-command.handler"
@@ -26,6 +27,7 @@ import { UpdateResponsibilityStatusHandler } from "./application/update-responsi
         ListResponsibilitiesHandler,
         ListWorkItemPageHandler,
         ReadAuthorityHandler,
+        ReconcileDetailsHandler,
         SaveRuleHandler,
         SendCommandHandler,
         UpdateAuthorityHandler,

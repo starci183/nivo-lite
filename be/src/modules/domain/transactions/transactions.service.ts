@@ -7,12 +7,18 @@ import type { TransactionViewRow } from "./persistence/transaction-views.rows"
 import { LIST_INVOICE_TRANSACTIONS } from "./persistence/transaction-views.sql"
 import {
     FIND_TRANSACTION,
+    FIND_TRANSACTION_MOMENT,
     INSERT_TRANSACTION,
     LIST_ACCOUNTING_TRANSACTIONS,
     MATCH_TRANSACTION,
     REVIEW_TRANSACTION,
 } from "./persistence/transactions.sql"
-import type { NewTransaction, OptionalTransaction } from "./transactions.contracts"
+import type {
+    NewTransaction,
+    OptionalTransaction,
+    OptionalTransactionMoment,
+    TransactionMoment,
+} from "./transactions.contracts"
 
 @Injectable()
 /** The payments of a workspace as the ledger sees them: the only writer of public.transactions. */
@@ -22,6 +28,15 @@ export class TransactionsService {
     /** The transaction of the workspace, or null when there is none with that id. */
     async find(workspaceId: string, transactionId: string): Promise<OptionalTransaction> {
         const rows = await this.entityManager.query<Array<TransactionRow>>(FIND_TRANSACTION, [
+            workspaceId,
+            transactionId,
+        ])
+        return rows[0] ?? null
+    }
+
+    /** The money and the moment of a payment, or null when the workspace has no such payment. */
+    async momentOf(workspaceId: string, transactionId: string): Promise<OptionalTransactionMoment> {
+        const rows = await this.entityManager.query<Array<TransactionMoment>>(FIND_TRANSACTION_MOMENT, [
             workspaceId,
             transactionId,
         ])
