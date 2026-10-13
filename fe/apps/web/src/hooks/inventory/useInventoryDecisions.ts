@@ -1,32 +1,32 @@
 import { useMemo } from "react"
-import type { InventoryResult } from "@/hooks/inventoryCommands"
+import { useMutateDecideWorkItemSwr } from "@/hooks/swr/api/graphql/mutations/useMutateDecideWorkItemSwr"
 
 /** The decisions the owner takes on the inventory screens. */
 export interface InventoryDecisions {
     /** Approves a waiting decision; an edited draft replaces the drafted message. */
-    readonly approve: (workItemId: string, editedDraft: string | null) => Promise<InventoryResult<null>>
+    readonly approve: (workItemId: string, editedDraft: string | null) => Promise<null>
     /** Rejects a waiting decision with the note the screen names. */
-    readonly reject: (workItemId: string, note: string) => Promise<InventoryResult<null>>
+    readonly reject: (workItemId: string, note: string) => Promise<null>
 }
 
-/** The Server Actions the connected block entry hands in: each takes one decision object. */
-export interface DecisionActions {
-    readonly approveWork: (decision: {
-        readonly workItemId: string
-        readonly note: string | null
-    }) => Promise<InventoryResult<null>>
-    readonly rejectWork: (decision: {
-        readonly workItemId: string
-        readonly note: string | null
-    }) => Promise<InventoryResult<null>>
-}
-
-/** The approve and reject calls of the waiting decisions. */
-export const useInventoryDecisions = (actions: DecisionActions): InventoryDecisions =>
-    useMemo<InventoryDecisions>(
+/** The approve and reject calls of the waiting decisions through `decideWorkItem`. */
+export const useInventoryDecisions = (): InventoryDecisions => {
+    const { trigger } = useMutateDecideWorkItemSwr()
+    return useMemo<InventoryDecisions>(
         () => ({
-            approve: (workItemId, editedDraft) => actions.approveWork({ workItemId, note: editedDraft }),
-            reject: (workItemId, note) => actions.rejectWork({ workItemId, note }),
+            approve: async (workItemId, editedDraft) => {
+                await trigger({
+                    workItemId,
+                    decision: "approved",
+                    ...(editedDraft === null ? {} : { edits: { draft: editedDraft } }),
+                })
+                return null
+            },
+            reject: async (workItemId, note) => {
+                await trigger({ workItemId, decision: "rejected", note })
+                return null
+            },
         }),
-        [actions],
+        [trigger],
     )
+}

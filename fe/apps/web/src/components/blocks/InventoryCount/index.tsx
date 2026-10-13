@@ -4,21 +4,19 @@ import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { includesText, num, useInventoryFormat, useInventoryRun } from "@/hooks/inventory"
 import type { InventoryWorkbenchData } from "@/modules/types"
-import { useInventoryCommands } from "@/hooks/inventoryCommands"
-import { writeInventoryCommand } from "@/modules/db/inventory/write-inventory-command"
+import { useInventoryStockCommands } from "@/hooks/inventoryCommands"
 import { InventoryCountBase } from "./component"
 
 /** The workbench data and the workspace. */
 interface InventoryCountProps {
     readonly data: InventoryWorkbenchData
-    readonly workspaceId: string
 }
 
 /** The stock count tab: the search text and the typed counts live here, the drawing in the pure half. */
 export const InventoryCount = (props: InventoryCountProps) => {
     const t = useTranslations("workbenchInventory")
     const format = useInventoryFormat()
-    const commands = useInventoryCommands(props.workspaceId, writeInventoryCommand)
+    const commands = useInventoryStockCommands()
     const run = useInventoryRun()
     const [query, setQuery] = useState("")
     const [counts, setCounts] = useState<Readonly<Record<string, string>>>({})

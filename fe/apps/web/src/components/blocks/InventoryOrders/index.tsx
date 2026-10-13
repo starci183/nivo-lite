@@ -11,27 +11,22 @@ import {
     useNewPoDrawer,
 } from "@/hooks/inventory"
 import { usePoDrawer } from "@/hooks/inventoryPo"
-import { writeApproveWork, writeRejectWork } from "@/modules/db/inventory/write-inventory-decisions"
 import type { InventoryWorkbenchData, PoView } from "@/modules/types"
-import { useInventoryCommands } from "@/hooks/inventoryCommands"
-import { writeInventoryCommand } from "@/modules/db/inventory/write-inventory-command"
+import { useInventoryOrderCommands } from "@/hooks/inventoryCommands"
 import { InventoryOrdersBase } from "./component"
 
-/** The workbench data and the workspace. */
+/** The workbench data. */
 interface InventoryOrdersProps {
     readonly data: InventoryWorkbenchData
-    readonly workspaceId: string
 }
-
-const DECISIONS = { approveWork: writeApproveWork, rejectWork: writeRejectWork }
 
 /** The orders tab: the drawers live in their hooks, the drawing in the pure half. */
 export const InventoryOrders = (props: InventoryOrdersProps) => {
     const t = useTranslations("workbenchInventory")
     const format = useInventoryFormat()
-    const { data, workspaceId } = props
-    const commands = useInventoryCommands(workspaceId, writeInventoryCommand)
-    const decisions = useInventoryDecisions(DECISIONS)
+    const { data } = props
+    const commands = useInventoryOrderCommands()
+    const decisions = useInventoryDecisions()
     const poDrawer = usePoDrawer(data.suppliers, data.canManage, commands, decisions)
     const newPoDrawer = useNewPoDrawer(data, commands)
     const factsOf = (po: PoView): string =>

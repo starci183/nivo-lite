@@ -3,14 +3,12 @@
 import { useTranslations } from "next-intl"
 import { openById, useInventoryFormat, useRecipeDrawer } from "@/hooks/inventory"
 import type { InventoryWorkbenchData } from "@/modules/types"
-import { useInventoryCommands } from "@/hooks/inventoryCommands"
-import { writeInventoryCommand } from "@/modules/db/inventory/write-inventory-command"
+import { useInventoryCatalogCommands } from "@/hooks/inventoryCommands"
 import { InventoryRecipesBase } from "./component"
 
 /** The workbench data and the workspace. */
 interface InventoryRecipesProps {
     readonly data: InventoryWorkbenchData
-    readonly workspaceId: string
 }
 
 /** The recipes tab: the drawer lives in its hook, the drawing in the pure half. */
@@ -18,7 +16,7 @@ export const InventoryRecipes = (props: InventoryRecipesProps) => {
     const t = useTranslations("workbenchInventory")
     const format = useInventoryFormat()
     const { data } = props
-    const commands = useInventoryCommands(props.workspaceId, writeInventoryCommand)
+    const commands = useInventoryCatalogCommands()
     const drawer = useRecipeDrawer(data.items, commands)
     return (
         <InventoryRecipesBase

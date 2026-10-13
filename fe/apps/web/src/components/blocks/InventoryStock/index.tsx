@@ -16,14 +16,12 @@ import {
 } from "@/hooks/inventory"
 import type { StockFilter } from "@/hooks/inventory"
 import type { InventoryWorkbenchData, ItemView } from "@/modules/types"
-import { useInventoryCommands } from "@/hooks/inventoryCommands"
-import { writeInventoryCommand } from "@/modules/db/inventory/write-inventory-command"
+import { useInventoryCatalogCommands, useInventoryStockCommands } from "@/hooks/inventoryCommands"
 import { InventoryStockBase } from "./component"
 
 /** The workbench data and the workspace. */
 interface InventoryStockProps {
     readonly data: InventoryWorkbenchData
-    readonly workspaceId: string
 }
 
 const filterOf = (value: string): StockFilter => STOCK_FILTERS.find((filter) => filter === value) ?? "all"
@@ -33,8 +31,8 @@ export const InventoryStock = (props: InventoryStockProps) => {
     const t = useTranslations("workbenchInventory")
     const format = useInventoryFormat()
     const run = useInventoryRun()
-    const { data, workspaceId } = props
-    const commands = useInventoryCommands(workspaceId, writeInventoryCommand)
+    const { data } = props
+    const commands = { ...useInventoryCatalogCommands(), ...useInventoryStockCommands() }
     const itemDrawer = useItemDrawer(data.suppliers, commands)
     const adjustDrawer = useAdjustDrawer(data.locations, data.defaultLocationId, commands)
     const [query, setQuery] = useState("")

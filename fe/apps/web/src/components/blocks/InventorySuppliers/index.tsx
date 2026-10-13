@@ -4,22 +4,20 @@ import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { openById, useInventoryRun, useSupplierDrawer } from "@/hooks/inventory"
 import type { InventoryWorkbenchData, SupplierView } from "@/modules/types"
-import { useInventoryCommands } from "@/hooks/inventoryCommands"
-import { writeInventoryCommand } from "@/modules/db/inventory/write-inventory-command"
+import { useInventoryCatalogCommands } from "@/hooks/inventoryCommands"
 import { InventorySuppliersBase } from "./component"
 
 /** The workbench data and the workspace. */
 interface InventorySuppliersProps {
     readonly data: InventoryWorkbenchData
-    readonly workspaceId: string
 }
 
 /** The suppliers tab: the typed location name lives here, the drawer in its hook, the drawing in the pure half. */
 export const InventorySuppliers = (props: InventorySuppliersProps) => {
     const t = useTranslations("workbenchInventory")
     const run = useInventoryRun()
-    const { data, workspaceId } = props
-    const commands = useInventoryCommands(workspaceId, writeInventoryCommand)
+    const { data } = props
+    const commands = useInventoryCatalogCommands()
     const drawer = useSupplierDrawer(commands)
     const [locationName, setLocationName] = useState("")
     const detailOf = (supplier: SupplierView): string =>

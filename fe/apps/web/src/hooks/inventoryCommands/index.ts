@@ -1,2 +1,4 @@
-export { useInventoryCommands } from "./useInventoryCommands"
-export type { InventoryCommandSet, InventoryResult } from "./inventoryCommands.shared"
+export { useInventoryCatalogCommands } from "./useInventoryCatalogCommands"
+export { useInventoryOrderCommands } from "./useInventoryOrderCommands"
+export { useInventoryStockCommands } from "./useInventoryStockCommands"
+export type { InventoryCommandSet } from "./inventoryCommands.shared"

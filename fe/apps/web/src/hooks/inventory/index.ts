@@ -1,4 +1,5 @@
 export {
+    INVENTORY_TAB_IDS,
     MOVE_KINDS,
     MOVE_TONES,
     PO_LANES,

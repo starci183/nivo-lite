@@ -55,12 +55,7 @@ export { readChatbotOverview } from "./chatbot/read-chatbot-overview"
 export { readChatbotThread } from "./chatbot/read-chatbot-thread"
 export { readChatbotGaps } from "./chatbot/read-chatbot-gaps"
 export { readAgent, readAgents, readInstanceNames } from "./overview/read-agents"
-export {
-    readLeadDetail,
-    readLeads,
-    readOpenResponsibilities,
-    readResponsibilities,
-} from "./overview/read-leads"
+export { readLeadDetail, readLeads, readOpenResponsibilities, readResponsibilities } from "./overview/read-leads"
 export { readMessages } from "./overview/read-feed"
 export { readOfficePayload } from "./pagedata/read-page-data"
 export type { OfficePayload } from "./pagedata/pagedata.mapper"
@@ -98,7 +93,6 @@ export { readDecisions } from "./decisions/read-decisions"
 export { readBookingBoard } from "./booking/read-booking-board"
 export { readInboundEvents } from "./inbox/read-inbound-events"
 export type { InboundEventRow } from "./inbox/read-inbound-events"
-export { readInventoryWorkbench } from "./inventory/read-inventory-workbench"
 export { readBrain } from "./brain/read-brain"
 export { readKnowledgeSource } from "./knowledge/read-source"
 export { readKnowledgeSources } from "./knowledge/read-sources"
