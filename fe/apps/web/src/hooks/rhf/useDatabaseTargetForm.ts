@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl"
 import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { DB_DEFAULT_PORT, DB_ENGINES } from "@/hooks/database-wizard"
+import { DB_DEFAULT_PORT, DB_ENGINES } from "@/modules/utils"
 import type { DbSavedConnection } from "@/modules/types"
 
 /** The values of the database connect form; the port is text while it is typed. */

@@ -1,6 +1,6 @@
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
-import { useAppSelector } from "@/redux/hooks"
+import { useAppSelector } from "@/redux"
 
 /** What one GraphQL query answers: the typed payload, or nothing when the back end sent no data. */
 interface GraphqlAnswer {

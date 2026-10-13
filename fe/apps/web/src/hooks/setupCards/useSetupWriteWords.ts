@@ -1,10 +1,9 @@
 import { useFormatter, useLocale, useTranslations } from "next-intl"
-import type { Scope } from "@/lib/brain/shared"
-import type { RuleMode } from "@/lib/flow-types"
-import { sameValue } from "@/lib/brain/shared"
+import { sameValue } from "@/modules/brain"
+import type { FactScope, FlowRuleMode } from "@/modules/types"
 import { actionDef, isActionKey, pickCopy } from "@/modules/catalog"
 import type { SetupWriteWords } from "@/modules/types"
-import { SCOPE_KEY } from "./setupCards.shared"
+import { WRITE_SCOPE_KEY } from "./setupCards.shared"
 
 /** The words and the small formatters of the confirm cards of the setup chat, in the reader language. */
 export const useSetupWriteWords = (): SetupWriteWords => {
@@ -39,8 +38,8 @@ export const useSetupWriteWords = (): SetupWriteWords => {
         keep: t("wKeep"),
         both: t("wBoth"),
         conflictBody: (current: string) => t("wConflictBody", { current }),
-        scopeLabel: (scope: Scope) => t(SCOPE_KEY[scope]),
-        modeLabel: (mode: RuleMode) => t(`mode_${mode}`),
+        scopeLabel: (scope: FactScope) => t(WRITE_SCOPE_KEY[scope]),
+        modeLabel: (mode: FlowRuleMode) => t(`mode_${mode}`),
         money: (amount: number | null) =>
             amount === null
                 ? t("wLimitNone")

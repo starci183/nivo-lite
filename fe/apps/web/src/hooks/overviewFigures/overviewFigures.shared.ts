@@ -1,6 +1,4 @@
-/** The reasons a decision waits for the owner. */
-export type ReasonCode = "routine" | "missing_data" | "over_authority" | "unclear_outcome" | "not_allowed"
-
+import type { ReasonCode } from "@/modules/types"
 /** Every reason, to narrow a text from the wire. */
 export const REASON_CODES: ReadonlyArray<ReasonCode> = [
     "routine",

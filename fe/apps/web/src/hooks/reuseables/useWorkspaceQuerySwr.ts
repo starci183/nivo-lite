@@ -1,6 +1,6 @@
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
-import { useAppSelector } from "@/redux/hooks"
+import { useAppSelector } from "@/redux"
 
 /** The part of an Apollo query result the hook reads. */
 interface QueryAnswer<TData> {

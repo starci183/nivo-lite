@@ -1,6 +1,6 @@
 import type { GuideContext } from "@/hooks/connection-guides"
 import type { PROVIDERS } from "@/hooks/connection-providers"
-import { VN_BANKS } from "@/lib/vn-banks"
+import { VN_BANK_CODES } from "@/hooks/banks"
 import type { Environment, MoneyProvider, WizardConnection } from "@/modules/types"
 
 /** The steps of the bank and payment wizard, in order. */
@@ -39,19 +39,18 @@ export const connectionNameOf = (webhookName: string): string =>
         .replace(/^NIVO\s*·\s*/u, "")
         .trim()
 
-/** The full name of a bank code, or the code when the bank is not listed. */
-const bankLabel = (code: string): string => VN_BANKS.find((bank) => bank.code === code)?.name ?? code
-
 /** The bank list as the select draws it. */
-export const bankOptions = (): ReadonlyArray<{ readonly id: string; readonly label: string }> =>
-    VN_BANKS.map((bank) => ({ id: bank.code, label: `${bank.name} (${bank.code})` }))
+export const bankOptions = (
+    bankName: (code: string) => string,
+): ReadonlyArray<{ readonly id: string; readonly label: string }> =>
+    VN_BANK_CODES.map((code) => ({ id: code, label: `${bankName(code)} (${code})` }))
 
 /** What the wizard knows, to fill into the provider's copy values. */
 export const moneyContextOf = (form: AccountForm, conn: WizardConnection | null): GuideContext => ({
     name: conn === null ? form.name : conn.name,
     webhookUrl: conn === null ? "" : conn.webhookUrl,
     apiKey: conn === null ? "" : conn.apiKey,
-    bank: conn !== null && conn.bank !== "" ? conn.bank : bankLabel(form.bank),
+    bank: conn !== null && conn.bank !== "" ? conn.bank : form.bank,
     account: conn !== null && conn.account !== "" ? conn.account : form.account,
 })
 

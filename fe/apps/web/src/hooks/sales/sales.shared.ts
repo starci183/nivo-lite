@@ -1,6 +1,6 @@
 import type { BadgeTone } from "@starci/grammar/common"
-import type { DecisionRow, EvidenceState } from "@/lib/flow-types"
-import { workbenchHref } from "@/lib/agent-dashboard-shared"
+import type { FlowDecisionRow, FlowEvidenceState } from "@/modules/types"
+import { agentHref } from "@/modules/installations"
 import type { AttentionKind, LeadStageId } from "@/modules/types"
 
 const MIN = 60_000
@@ -18,7 +18,7 @@ export const ATTENTION_TONES: Readonly<Record<AttentionKind, BadgeTone>> = {
 }
 
 /** The badge tone of how much evidence backs something NIVO did. */
-export const EVIDENCE_TONES: Readonly<Record<EvidenceState, BadgeTone>> = {
+export const EVIDENCE_TONES: Readonly<Record<FlowEvidenceState, BadgeTone>> = {
     pending: "warning",
     captured: "neutral",
     reviewed: "accent",
@@ -27,7 +27,7 @@ export const EVIDENCE_TONES: Readonly<Record<EvidenceState, BadgeTone>> = {
 }
 
 /** The badge tone of how a decision was made. */
-export const OUTCOME_TONES: Readonly<Record<DecisionRow["outcome"], BadgeTone>> = {
+export const OUTCOME_TONES: Readonly<Record<FlowDecisionRow["outcome"], BadgeTone>> = {
     auto_done: "success",
     approved: "accent",
     edited: "warning",
@@ -74,7 +74,7 @@ export const salesTabOf = (key: string | null | undefined): SalesTab | null =>
 
 /** The Decisions tab opened on one pending decision (a link, so the page keys on it and the tab opens at the row). */
 export const decisionHref = (decisionId: string): string =>
-    workbenchHref("sales", { tab: "decisions", focus: decisionId })
+    agentHref("sales", null, "workbench", new URLSearchParams({ tab: "decisions", focus: decisionId }).toString())
 
 /** DOM id of one pending decision, so the Attention surface can jump to it. */
 export const decisionAnchor = (id: string): string => `sales-decision-${id}`

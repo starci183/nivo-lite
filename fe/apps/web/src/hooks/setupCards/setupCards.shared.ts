@@ -1,25 +1,24 @@
-import { SCOPES, SUBJECT_TYPES } from "@/lib/brain/shared"
-import type { Scope, SubjectType } from "@/lib/brain/shared"
-import type { RuleMode } from "@/lib/flow-types"
+import { FACT_SCOPES, FACT_SUBJECT_TYPES } from "@/modules/types"
+import type { FactScope, FactSubjectType, FlowRuleMode } from "@/modules/types"
 import type {
-    FactWrite,
-    Resolution,
-    RuleWrite,
+    SetupFactWrite,
+    SetupResolution,
+    SetupRuleWrite,
     SetupWrite,
-    WriteDecision,
-    WriteStatus,
-} from "@/lib/module-setup-writes"
+    SetupWriteDecision,
+    SetupWriteStatus,
+} from "@/modules/types"
 import type { MutateDecideSetupCardRequest } from "@/modules/api/graphql/mutations/mutation-decide-setup-card"
 import { isActionKey } from "@/modules/catalog"
 
-const WRITE_STATUSES: ReadonlyArray<WriteStatus> = ["proposed", "applied", "rejected", "superseded"]
+const WRITE_STATUSES: ReadonlyArray<SetupWriteStatus> = ["proposed", "applied", "rejected", "superseded"]
 const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
     typeof value === "object" && value !== null && !Array.isArray(value)
 
 const textOf = (value: unknown): string => (typeof value === "string" ? value : "")
 
-const MODES: ReadonlyArray<RuleMode> = ["auto", "ask", "never"]
-const RESOLUTIONS: ReadonlyArray<Resolution> = ["replace", "keep", "both"]
+const MODES: ReadonlyArray<FlowRuleMode> = ["auto", "ask", "never"]
+const RESOLUTIONS: ReadonlyArray<SetupResolution> = ["replace", "keep", "both"]
 
 interface SetupCardWire {
     readonly card: {
@@ -37,15 +36,15 @@ interface SetupCardWire {
     readonly current?: unknown
 }
 
-const toResult = (value: unknown): FactWrite["result"] => {
+const toResult = (value: unknown): SetupFactWrite["result"] => {
     if (!isRecord(value)) return null
     const resolution = RESOLUTIONS.find((candidate) => candidate === value.resolution)
     return { outcome: textOf(value.outcome), ...(resolution === undefined ? {} : { resolution }) }
 }
 
-const scopeOf = (value: unknown): Scope => SCOPES.find((scope) => scope === value) ?? "internal"
-const subjectTypeOf = (value: unknown): SubjectType => SUBJECT_TYPES.find((type) => type === value) ?? "other"
-const modeOf = (value: unknown): RuleMode => MODES.find((mode) => mode === value) ?? "ask"
+const scopeOf = (value: unknown): FactScope => FACT_SCOPES.find((scope) => scope === value) ?? "internal"
+const subjectTypeOf = (value: unknown): FactSubjectType => FACT_SUBJECT_TYPES.find((type) => type === value) ?? "other"
+const modeOf = (value: unknown): FlowRuleMode => MODES.find((mode) => mode === value) ?? "ask"
 const limitOf = (value: unknown): number | null => (typeof value === "number" ? value : null)
 
 /** One confirm card of the chat as the Setup screen draws it; none for a card whose payload names nothing the catalogue knows. */
@@ -65,7 +64,7 @@ export const toSetupWrite = (view: SetupCardWire): SetupWrite | null => {
     }
     if (card.kind === "fact") {
         const gapId = payload.gapId
-        const write: FactWrite = {
+        const write: SetupFactWrite = {
             ...base,
             kind: "fact",
             payload: {
@@ -89,7 +88,7 @@ export const toSetupWrite = (view: SetupCardWire): SetupWrite | null => {
     }
     const action = textOf(payload.action)
     if (card.kind !== "rule" || !isActionKey(action)) return null
-    const write: RuleWrite = {
+    const write: SetupRuleWrite = {
         ...base,
         kind: "rule",
         payload: {
@@ -104,7 +103,7 @@ export const toSetupWrite = (view: SetupCardWire): SetupWrite | null => {
 }
 
 /** The wire decision of the owner on one card. */
-export const toCardDecision = (change: WriteDecision): MutateDecideSetupCardRequest["change"] => {
+export const toCardDecision = (change: SetupWriteDecision): MutateDecideSetupCardRequest["change"] => {
     if (change.decision === "reject") return { decision: "reject" }
     return {
         decision: "confirm",
@@ -121,7 +120,7 @@ export const toCardDecision = (change: WriteDecision): MutateDecideSetupCardRequ
 }
 
 /** The message key of the name of each audience a fact may be written for. */
-export const SCOPE_KEY = {
+export const WRITE_SCOPE_KEY = {
     public: "wScopePublic",
     internal: "wScopeInternal",
     restricted: "wScopeRestricted",

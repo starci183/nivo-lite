@@ -1,8 +1,7 @@
 "use client"
 
 import { useCallback } from "react"
-import { useQueryDashboardSwr } from "@/hooks/swr/api/graphql/queries/useQueryDashboardSwr"
-import { useQueryMyWorkspacesSwr } from "@/hooks/swr/api/graphql/queries/useQueryMyWorkspacesSwr"
+import { useQueryDashboardSwr, useQueryMyWorkspacesSwr } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 
 /**

@@ -1,6 +1,5 @@
 import { useTranslations } from "next-intl"
-import { useQueryAgentsSwr } from "@/hooks/swr/api/graphql/queries/useQueryAgentsSwr"
-import { useQueryResponsibilitiesSwr } from "@/hooks/swr/api/graphql/queries/useQueryResponsibilitiesSwr"
+import { useQueryAgentsSwr, useQueryResponsibilitiesSwr } from "@/hooks/swr"
 import { slotOfSwr } from "@/hooks/slot"
 import type { DataSlot } from "@/modules/types"
 import { toRowModelsFromWire } from "@/modules/responsibilities"
