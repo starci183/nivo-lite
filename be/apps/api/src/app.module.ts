@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common"
+import { Global, Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
 import { AutomationsHttpModule } from "@features/api/automations"
@@ -167,6 +167,7 @@ import {
     SUPABASE_ACCESS_TOKEN_VERIFIER,
     SUPABASE_AUTH,
     SUPABASE_ERROR_KINDS,
+    SUPABASE_STORAGE,
     SupabaseModule,
     createSupabaseAccessTokenVerifier,
 } from "@modules/integrations/supabase"
@@ -294,7 +295,7 @@ import { MetaConnectionsHttpModule } from "@features/api/meta-connections"
 import { CONTENT_MESSAGES, ContentModule } from "@modules/domain/content"
 import { CONTENT_ITEMS_ERROR_KINDS, CONTENT_ITEMS_MESSAGES, ContentItemsModule } from "@modules/domain/content-items"
 import { ContentSettingsModule } from "@modules/domain/content-settings"
-import { VIDEO_ERROR_KINDS, VIDEO_MESSAGES, VideoModule } from "@modules/domain/video"
+import { VIDEO_ASSETS, VIDEO_ERROR_KINDS, VIDEO_MESSAGES, VideoModule } from "@modules/domain/video"
 import { VideoProjectVersionsModule } from "@modules/domain/video-project-versions"
 import { VideoProjectsModule } from "@modules/domain/video-projects"
 import { VIDEO_RENDERS_ERROR_KINDS, VIDEO_RENDERS_MESSAGES, VideoRendersModule } from "@modules/domain/video-renders"
@@ -309,6 +310,14 @@ import { RenderVideoQueueModule } from "@features/jobs/render-video"
 import { ConnectionCommandsQueueModule } from "@features/jobs/connection-commands"
 import { RequestRenderQueueModule } from "@features/jobs/request-render"
 import type { ApiOptions } from "./api.options"
+
+@Global()
+@Module({
+    providers: [{ provide: VIDEO_ASSETS, useExisting: SUPABASE_STORAGE }],
+    exports: [VIDEO_ASSETS],
+})
+/** Binds the file store the render job uses to the Supabase storage integration. */
+class VideoAssetsBindingModule {}
 
 @Module({})
 /** Composition root of the API: every capability is registered once and the three guards run in a fixed order. */
@@ -551,6 +560,7 @@ export class AppModule {
                 VideoRendersModule.register({ isGlobal: true }),
                 VideoProjectsModule.register({ isGlobal: true }),
                 VideoProjectVersionsModule.register({ isGlobal: true }),
+                VideoAssetsBindingModule,
                 VideoModule.register({ isGlobal: true, ...options.video }),
                 ContentItemsModule.register({ isGlobal: true }),
                 ContentSettingsModule.register({ isGlobal: true }),
