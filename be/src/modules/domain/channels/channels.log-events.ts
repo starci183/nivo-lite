@@ -14,4 +14,6 @@ export enum ChannelsLogEvent {
     ZaloAuthorizationRefused = "channels.zalo.authorization-refused",
     /** The first save of renewed Zalo tokens failed and is tried once more. */
     ZaloSaveRetried = "channels.zalo.save-retried",
+    /** A wizard step was refused for a reason the owner can act on; the connection id and the command ride in the fields. */
+    ZaloWizardRefused = "channels.zalo.wizard-refused",
 }

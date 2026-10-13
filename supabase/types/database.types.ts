@@ -3586,6 +3586,25 @@ isOneToOne: false
                     "delivery_id"?: string,"id"?: string,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"provider"?: string,"received_at"?: string
                   }
                   Relationships: []
+                },"zalo_wizard_drafts": {
+                  Row: {
+                    "app_id": string | null,"app_secret": string | null,"connection_id": string,"created_at": string,"oa_secret": string | null
+                  }
+                  Insert: {
+                    "app_id"?: string | null,"app_secret"?: string | null,"connection_id": string,"created_at"?: string,"oa_secret"?: string | null
+                  }
+                  Update: {
+                    "app_id"?: string | null,"app_secret"?: string | null,"connection_id"?: string,"created_at"?: string,"oa_secret"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "zalo_wizard_drafts_connection_id_fkey"
+      columns: ["connection_id"]
+isOneToOne: true
+      referencedRelation: "connections"
+      referencedColumns: ["id"]
+    }
+                  ]
                 }
           }
           Views: {
@@ -3620,6 +3639,15 @@ isOneToOne: false
           Functions: {
             "accept_invite":
 { Args: { "token": string }; Returns: string
+                           },
+"agent_chat_send":
+{ Args: { "p_body": string; "p_conversation": string }; Returns: string
+                           },
+"agent_chat_start":
+{ Args: { "p_agent": string; "p_kind": string; "p_visitor"?: string }; Returns: string
+                           },
+"agent_chat_take_over":
+{ Args: { "p_conversation": string; "p_line"?: string; "p_take": boolean }; Returns: string
                            },
 "admin_signups_per_day":
 { Args: { "p_days"?: number }; Returns: {
@@ -3921,6 +3949,15 @@ isOneToOne: false
                            },
 "zalo_refresh_tick":
 { Args: Record<PropertyKey, never>; Returns: number
+                           },
+"zalo_wizard_begin":
+{ Args: { "p_connection": string }; Returns: string
+                           },
+"zalo_wizard_oa_secret":
+{ Args: { "p_connection": string; "p_oa_secret": string }; Returns: string
+                           },
+"zalo_wizard_start":
+{ Args: { "p_app_id": string; "p_app_secret": string; "p_name": string; "p_workspace": string }; Returns: string
                            }
           }
           Enums: {

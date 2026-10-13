@@ -3,7 +3,7 @@ import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
-import type { FirstEvent, HealthCandidate, HealthMark, IntakeConnection } from "./connections.contracts"
+import type { FirstEvent, HealthCandidate, HealthMark, IntakeConnection, WizardSettlement } from "./connections.contracts"
 import { ConnectionsErrorCode } from "./errors/connections.error"
 import type { HealthCandidateRow, IntakeConnectionRow } from "./persistence/connections.rows"
 import {
@@ -13,6 +13,7 @@ import {
     MARK_CONNECTION_ERROR,
     MARK_CONNECTION_HEALTH,
     MARK_CONNECTION_RECEIVED,
+    SETTLE_WIZARD,
 } from "./persistence/connections.sql"
 
 /** The id every real id sorts after. */
@@ -46,7 +47,7 @@ export class ConnectionsService {
 
     /** The owner authorized the Zalo OA: its id joins the public facts and an error status clears. */
     async applyZaloAuthorization(connectionId: string, oaId?: string): Promise<void> {
-        await this.entityManager.query(APPLY_ZALO_AUTHORIZATION, [connectionId, JSON.stringify(oaId === undefined ? {} : { oa_id: oaId })])
+        await this.entityManager.query(APPLY_ZALO_AUTHORIZATION, [connectionId, JSON.stringify(oaId === undefined ? { authorized: true } : { authorized: true, oa_id: oaId })])
     }
 
     /** A page of the connections the health check judges, in id order, after the given id (empty for the first page). */
@@ -71,5 +72,12 @@ export class ConnectionsService {
             connectionId,
             JSON.stringify({ state: mark.state, reason: mark.reason, checked_at: mark.checkedAt }),
         ])
+    }
+
+    /** Writes the result of a wizard job next to its ticket; a newer ticket on the row means the owner moved on and nothing is written. */
+    async settleWizard(connectionId: string, ticket: string, settlement: WizardSettlement): Promise<void> {
+        const wizard = { ticket, command: settlement.command, state: settlement.state, url: settlement.url, code: settlement.code }
+        const facts = settlement.oaSecretSaved ? { oa_secret_saved: true, wizard } : { wizard }
+        await this.entityManager.query(SETTLE_WIZARD, [connectionId, ticket, JSON.stringify(facts)])
     }
 }

@@ -4,6 +4,7 @@ import { APP_FILTER, APP_GUARD } from "@nestjs/core"
 import { CheckConnectionHealthQueueModule } from "@features/jobs/check-connection-health"
 import { CompleteZaloAuthorizationQueueModule } from "@features/jobs/complete-zalo-authorization"
 import { RefreshZaloTokensQueueModule } from "@features/jobs/refresh-zalo-tokens"
+import { RunZaloWizardQueueModule } from "@features/jobs/run-zalo-wizard"
 import { RunChatTurnQueueModule } from "@features/jobs/run-chat-turn"
 import { TelegramHttpModule } from "@features/webhooks/telegram"
 import { ZaloHttpModule } from "@features/webhooks/zalo"
@@ -28,6 +29,7 @@ import { CONVERSATIONS_ERROR_KINDS, CONVERSATIONS_MESSAGES, ConversationsModule 
 import { InboundEventsModule } from "@modules/domain/inbound-events"
 import { TelegramInboxModule } from "@modules/domain/telegram-inbox"
 import { ZaloInboxModule } from "@modules/domain/zalo-inbox"
+import { ZaloWizardDraftsModule } from "@modules/domain/zalo-wizard-drafts"
 import { AuthGuard, IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } from "@modules/domain/identity"
 import {
     SUPABASE_ACCESS_TOKEN_VERIFIER,
@@ -245,6 +247,7 @@ export class AppModule {
                 ConversationsModule.register({ isGlobal: true }),
                 TelegramInboxModule.register({ isGlobal: true }),
                 ZaloInboxModule.register({ isGlobal: true }),
+                ZaloWizardDraftsModule.register({ isGlobal: true }),
                 FfmpegModule.register({ isGlobal: true, ...options.ffmpeg }),
                 TtsModule.register({ isGlobal: true, ...options.tts }),
                 VideoRendersModule.register({ isGlobal: true }),
@@ -273,6 +276,7 @@ export class AppModule {
                 CheckConnectionHealthQueueModule,
                 CompleteZaloAuthorizationQueueModule,
                 RefreshZaloTokensQueueModule,
+                RunZaloWizardQueueModule,
                 ExternalApiHttpModule,
                 SystemHealthHttpModule,
                 WorkspacesHttpModule,
