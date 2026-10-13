@@ -149,3 +149,14 @@ export const LIST_ON_OPENCLAW = sql`
     WHERE ($1::uuid IS NULL OR i.workspace_id = $1::uuid) AND COALESCE(i.settings ->> 'processor', '') <> 'nivo'
     ORDER BY i.created_at ASC, i.id ASC
     LIMIT $2`
+
+/** What the workspace has for the requirements of a module: connected providers and the head counts ($1 workspace). */
+export const FIND_REQUIREMENT_FACTS = sql`
+    SELECT
+        ARRAY(SELECT DISTINCT c.provider FROM public.connections c
+              WHERE c.workspace_id = $1 AND c.status <> 'disconnected' LIMIT 200) AS providers,
+        (SELECT count(*)::int FROM public.agents a
+         WHERE a.workspace_id = $1 AND a.module IN ('chatbot', 'booking') AND a.status = 'active') AS "chatAgents",
+        (SELECT count(*)::int FROM public.staff s WHERE s.workspace_id = $1 AND s.active) AS staff,
+        (SELECT count(*)::int FROM public.workspace_members m WHERE m.workspace_id = $1 AND m.status = 'active') AS members
+    LIMIT 1`

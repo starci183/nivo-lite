@@ -496,6 +496,13 @@ input ModuleKeyInput {
   key: String!
 }
 
+type ModuleRequirementFactsType {
+  chatAgents: Int!
+  members: Int!
+  providers: [String!]!
+  staff: Int!
+}
+
 type ModuleRequirementsType {
   capabilities: [String!]!
   connections: [String!]!
@@ -675,6 +682,7 @@ type Query {
   moduleDefinition(input: ModuleKeyInput!): ModuleDefinitionType!
   moduleInstallation(input: ModuleInstallationIdInput!): ModuleInstallationType!
   moduleInstallations: [ModuleInstallationType!]!
+  moduleRequirementFacts: ModuleRequirementFactsType!
   modulesCatalog: ModulesCatalogType!
   myWorkspaces: [MembershipType!]!
   officeCommandCandidates: [OfficeCandidateType!]!

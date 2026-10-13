@@ -13,6 +13,7 @@ import type {
     OptionalAgentSyncStatus,
     OptionalRowId,
     OptionalInstallationRecord,
+    RequirementFacts,
 } from "./module-installations.contracts"
 import type { IdRow, SyncStatusRow } from "./persistence/module-installations.rows"
 import {
@@ -21,6 +22,7 @@ import {
     FIND_INSTALLATION,
     FIND_INSTALLATION_BY_ID,
     FIND_OF_AGENT,
+    FIND_REQUIREMENT_FACTS,
     FIND_SYNC_STATUS,
     INSERT_INSTALLATION,
     LIST_BOUND_AGENTS,
@@ -157,6 +159,12 @@ export class InstallationRecordsService {
         ])
         if (row === undefined) return null
         return { ...row, state: row.state === "ok" || row.state === "error" ? row.state : "none" }
+    }
+
+    /** What the workspace has for the requirements of a module: connected providers and head counts. */
+    async requirementFacts(workspaceId: string): Promise<RequirementFacts> {
+        const [row] = await this.entityManager.query<[RequirementFacts]>(FIND_REQUIREMENT_FACTS, [workspaceId])
+        return row
     }
 
     /** Up to `limit` installations that run on OpenClaw, of one workspace or of all when `workspaceId` is null. */

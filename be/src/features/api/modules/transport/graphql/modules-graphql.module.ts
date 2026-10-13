@@ -7,6 +7,7 @@ import { InstallModuleResolver } from "./install-module.resolver"
 import { ModuleDefinitionResolver } from "./module-definition.resolver"
 import { ModuleInstallationResolver } from "./module-installation.resolver"
 import { ModuleInstallationsResolver } from "./module-installations.resolver"
+import { ModuleRequirementFactsResolver } from "./module-requirement-facts.resolver"
 import { ModulesCatalogResolver } from "./modules-catalog.resolver"
 import { PostSetupMessageResolver } from "./post-setup-message.resolver"
 import { RenameInstallationAgentResolver } from "./rename-installation-agent.resolver"
@@ -27,6 +28,7 @@ import { SetupVersionsResolver } from "./setup-versions.resolver"
         ModuleInstallationsResolver,
         ModuleInstallationResolver,
         AgentSyncStatusResolver,
+        ModuleRequirementFactsResolver,
         InstallModuleResolver,
         RenameModuleInstallationResolver,
         RenameInstallationAgentResolver,

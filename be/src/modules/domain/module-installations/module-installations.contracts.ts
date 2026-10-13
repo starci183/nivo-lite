@@ -92,6 +92,18 @@ export interface AgentSyncStatus {
 /** A sync status, or null when the installation is not of the workspace. */
 export type OptionalAgentSyncStatus = AgentSyncStatus | null
 
+/** What a workspace has, as far as the requirements of a module are concerned. */
+export interface RequirementFacts {
+    /** The connection providers that are connected. */
+    readonly providers: ReadonlyArray<string>
+    /** How many active chat agents (chatbot, booking) the workspace has. */
+    readonly chatAgents: number
+    /** How many active staff members the workspace has. */
+    readonly staff: number
+    /** How many active members the workspace has. */
+    readonly members: number
+}
+
 /** An installation that runs on OpenClaw. */
 export interface OpenclawInstallation {
     /** The installation. */

@@ -5,6 +5,7 @@ import { GetAgentSyncStatusHandler } from "./application/get-agent-sync-status.h
 import { GetCatalogHandler } from "./application/get-catalog.handler"
 import { GetInstallationHandler } from "./application/get-installation.handler"
 import { GetModuleHandler } from "./application/get-module.handler"
+import { GetRequirementFactsHandler } from "./application/get-requirement-facts.handler"
 import { GetSetupStateHandler } from "./application/get-setup-state.handler"
 import { InstallModuleHandler } from "./application/install-module.handler"
 import { ListInstallationsHandler } from "./application/list-installations.handler"
@@ -25,6 +26,7 @@ import { SetSetupGateHandler } from "./application/set-setup-gate.handler"
         GetCatalogHandler,
         GetInstallationHandler,
         GetModuleHandler,
+        GetRequirementFactsHandler,
         GetSetupStateHandler,
         InstallModuleHandler,
         ListInstallationsHandler,

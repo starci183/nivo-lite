@@ -8,6 +8,7 @@ import type {
     InstallationMode,
     InstallationRecord,
     InstallationWrite,
+    RequirementFacts,
 } from "@modules/domain/module-installations"
 import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -182,6 +183,12 @@ export class ModuleInstallService {
             await this.installations.saveSettings(workspaceId, installationId, withSetting(current.settings, change)),
         )
         return this.require(workspaceId, installationId)
+    }
+
+    /** What the workspace has for the requirements of a module (connected providers, head counts); any member may look. */
+    async requirementFacts(principalId: string, workspaceId: string): Promise<RequirementFacts> {
+        await this.members.require(principalId, workspaceId)
+        return this.installations.requirementFacts(workspaceId)
     }
 
     /** Where the OpenClaw copy of the agent of an installation stands; any member may look. */

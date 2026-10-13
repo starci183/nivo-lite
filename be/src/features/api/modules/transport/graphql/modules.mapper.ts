@@ -1,6 +1,6 @@
 import type { ModuleDefinition, ModulesCatalog } from "@modules/domain/modules"
 import type { InstallResult, SetupState, SetupVersions } from "@modules/domain/modules"
-import type { AgentSyncStatus, InstallationRecord } from "@modules/domain/module-installations"
+import type { AgentSyncStatus, InstallationRecord, RequirementFacts } from "@modules/domain/module-installations"
 import type { SetupMessageRecord } from "@modules/domain/module-setup-messages"
 import type { SetupSessionRecord } from "@modules/domain/module-setup-sessions"
 import type { CardRecord } from "@modules/domain/module-setup-writes"
@@ -11,6 +11,7 @@ import type { GetAgentSyncStatusRequest } from "../../application/get-agent-sync
 import type { GetCatalogRequest } from "../../application/get-catalog.contracts"
 import type { GetInstallationRequest } from "../../application/get-installation.contracts"
 import type { GetModuleRequest } from "../../application/get-module.contracts"
+import type { GetRequirementFactsRequest } from "../../application/get-requirement-facts.contracts"
 import type { GetSetupStateRequest } from "../../application/get-setup-state.contracts"
 import type { InstallModuleRequest } from "../../application/install-module.contracts"
 import type { ListInstallationsRequest } from "../../application/list-installations.contracts"
@@ -30,6 +31,7 @@ import type { ModuleInstallResultType } from "./dto/module-install-result.type"
 import type { ModuleInstallationIdInput } from "./dto/module-installation-id.input"
 import type { ModuleInstallationType } from "./dto/module-installation.type"
 import type { ModuleKeyInput } from "./dto/module-key.input"
+import type { ModuleRequirementFactsType } from "./dto/module-requirement-facts.type"
 import type { ModulesCatalogType } from "./dto/modules-catalog.type"
 import type { PostSetupMessageInput } from "./dto/post-setup-message.input"
 import type { RenameInstallationAgentInput } from "./dto/rename-installation-agent.input"
@@ -199,3 +201,9 @@ export const toDecideSetupCardRequest = (
     input: DecideSetupCardInput,
     locale: Locale,
 ): DecideSetupCardRequest => ({ workspaceId, locale, ...input })
+
+/** Maps the workspace of the request to the requirement facts request. */
+export const toGetRequirementFactsRequest = (workspaceId: string): GetRequirementFactsRequest => ({ workspaceId })
+
+/** Maps the requirement facts of a workspace to the GraphQL type. */
+export const toModuleRequirementFactsType = (facts: RequirementFacts): ModuleRequirementFactsType => ({ ...facts })
