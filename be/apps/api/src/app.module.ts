@@ -6,6 +6,8 @@ import { FlowsHttpModule } from "@features/api/flows"
 import { N8nPipelinesHttpModule } from "@features/api/n8n-pipelines"
 import { EmitN8nEventQueueModule } from "@features/jobs/emit-n8n-event"
 import { RunAutomationTickQueueModule } from "@features/jobs/run-automation-tick"
+import { LeadsHttpModule } from "@features/api/leads"
+import { AdminHttpModule } from "@features/api/admin"
 import { ModulesHttpModule } from "@features/api/modules"
 import { ExternalApiHttpModule } from "@features/api/external-api"
 import { SystemHealthHttpModule } from "@features/api/system-health"
@@ -34,7 +36,22 @@ import {
 } from "@modules/domain/automation-templates"
 import { FlowsModule } from "@modules/domain/flows"
 import { N8N_RUNS_ERROR_KINDS, N8N_RUNS_MESSAGES, N8nRunsModule } from "@modules/domain/n8n-runs"
+import { CONTRACTS_ERROR_KINDS, CONTRACTS_MESSAGES, ContractsModule } from "@modules/domain/contracts"
+import { LEADS_ERROR_KINDS, LEADS_MESSAGES, LeadsModule } from "@modules/domain/leads"
 import { LivenessModule } from "@modules/domain/liveness"
+import { MessagesModule } from "@modules/domain/messages"
+import {
+    RESPONSIBILITIES_ERROR_KINDS,
+    RESPONSIBILITIES_MESSAGES,
+    ResponsibilitiesModule,
+} from "@modules/domain/responsibilities"
+import { AiQuotaOverridesModule } from "@modules/domain/ai-quota-overrides"
+import {
+    PLATFORM_ADMIN_ERROR_KINDS,
+    PLATFORM_ADMIN_MESSAGES,
+    PlatformAdminModule,
+} from "@modules/domain/platform-admin"
+import { PlatformAuditModule } from "@modules/domain/platform-audit"
 import { AuthorityActionsModule } from "@modules/domain/authority-actions"
 import {
     MODULE_CATALOG,
@@ -76,6 +93,19 @@ import { I18nModule } from "@modules/platform/i18n"
 import { LoggingModule } from "@modules/platform/logging"
 import { JOBS_ERROR_KINDS, JOBS_MESSAGES, JobsModule } from "@modules/platform/jobs"
 import { QUEUE_ERROR_KINDS, QUEUE_MESSAGES, QueueModule } from "@modules/platform/queue"
+import { CONTENT_MESSAGES, ContentModule } from "@modules/domain/content"
+import { CONTENT_ITEMS_ERROR_KINDS, CONTENT_ITEMS_MESSAGES, ContentItemsModule } from "@modules/domain/content-items"
+import { ContentSettingsModule } from "@modules/domain/content-settings"
+import { VIDEO_ERROR_KINDS, VIDEO_MESSAGES, VideoModule } from "@modules/domain/video"
+import { VideoProjectVersionsModule } from "@modules/domain/video-project-versions"
+import { VideoProjectsModule } from "@modules/domain/video-projects"
+import { VIDEO_RENDERS_ERROR_KINDS, VIDEO_RENDERS_MESSAGES, VideoRendersModule } from "@modules/domain/video-renders"
+import { FFMPEG_ERROR_KINDS, FFMPEG_MESSAGES, FfmpegModule } from "@modules/integrations/ffmpeg"
+import { TTS_ERROR_KINDS, TTS_MESSAGES, TtsModule } from "@modules/integrations/tts"
+import { CONTENT_TICK_EVERY_MS, CONTENT_TICK_QUEUE, CONTENT_TICK_SCHEDULER } from "@modules/queues/content-tick"
+import { RendersHttpModule } from "@features/api/renders"
+import { PublishContentQueueModule } from "@features/jobs/publish-content"
+import { RenderVideoQueueModule } from "@features/jobs/render-video"
 import type { ApiOptions } from "./api.options"
 
 @Module({})
@@ -101,14 +131,24 @@ export class AppModule {
                         HTTP_MESSAGES,
                         HTTP_SECURITY_MESSAGES,
                         IDENTITY_MESSAGES,
+                        PLATFORM_ADMIN_MESSAGES,
                         JOBS_MESSAGES,
                         N8N_RUNS_MESSAGES,
+                        LEADS_MESSAGES,
+                        RESPONSIBILITIES_MESSAGES,
+                        CONTRACTS_MESSAGES,
                         MODULES_MESSAGES,
                         PUBLIC_API_MESSAGES,
                         QUEUE_MESSAGES,
                         WORKSPACE_INVITES_MESSAGES,
                         WORKSPACE_MEMBERS_MESSAGES,
                         WORKSPACES_MESSAGES,
+                        FFMPEG_MESSAGES,
+                        TTS_MESSAGES,
+                        VIDEO_MESSAGES,
+                        VIDEO_RENDERS_MESSAGES,
+                        CONTENT_MESSAGES,
+                        CONTENT_ITEMS_MESSAGES,
                     ],
                 }),
                 ErrorsModule.register({
@@ -127,13 +167,22 @@ export class AppModule {
                         N8N_RUNS_ERROR_KINDS,
                         QUEUE_ERROR_KINDS,
                         IDENTITY_ERROR_KINDS,
+                        PLATFORM_ADMIN_ERROR_KINDS,
                         MODULES_ERROR_KINDS,
                         PUBLIC_API_ERROR_KINDS,
                         SUPABASE_ERROR_KINDS,
                         TEMPLATE_FILES_ERROR_KINDS,
+                        LEADS_ERROR_KINDS,
+                        RESPONSIBILITIES_ERROR_KINDS,
+                        CONTRACTS_ERROR_KINDS,
                         WORKSPACE_INVITES_ERROR_KINDS,
                         WORKSPACE_MEMBERS_ERROR_KINDS,
                         WORKSPACES_ERROR_KINDS,
+                        FFMPEG_ERROR_KINDS,
+                        TTS_ERROR_KINDS,
+                        VIDEO_ERROR_KINDS,
+                        VIDEO_RENDERS_ERROR_KINDS,
+                        CONTENT_ITEMS_ERROR_KINDS,
                     ],
                 }),
                 CqrsModule.register({ isGlobal: true }),
@@ -147,7 +196,10 @@ export class AppModule {
                 }),
                 QueueModule.register({
                     isGlobal: true,
-                    schedulers: [AUTOMATION_TICK_SCHEDULER],
+                    schedulers: [
+                        AUTOMATION_TICK_SCHEDULER,
+                        { queue: CONTENT_TICK_QUEUE, id: CONTENT_TICK_SCHEDULER, everyMs: CONTENT_TICK_EVERY_MS },
+                    ],
                     ...options.queue,
                 }),
                 JobsModule.register({
@@ -157,6 +209,10 @@ export class AppModule {
                 }),
                 SupabaseModule.register({ isGlobal: true, ...options.supabase }),
                 IdentityModule.register({ isGlobal: true, verifyAccessToken }),
+                ContractsModule.register({ isGlobal: true }),
+                LeadsModule.register({ isGlobal: true }),
+                MessagesModule.register({ isGlobal: true }),
+                ResponsibilitiesModule.register({ isGlobal: true }),
                 EventsModule.register({ isGlobal: true }),
                 WorkspaceMembersModule.register({ isGlobal: true, accounts: SUPABASE_AUTH }),
                 WorkspacesModule.register({ isGlobal: true, ...options.workspaces }),
@@ -175,7 +231,23 @@ export class AppModule {
                 N8nRunsModule.register({ isGlobal: true }),
                 AutomationsModule.register({ isGlobal: true }),
                 FlowsModule.register({ isGlobal: true }),
+                FfmpegModule.register({ isGlobal: true, ...options.ffmpeg }),
+                TtsModule.register({ isGlobal: true, ...options.tts }),
+                VideoRendersModule.register({ isGlobal: true }),
+                VideoProjectsModule.register({ isGlobal: true }),
+                VideoProjectVersionsModule.register({ isGlobal: true }),
+                VideoModule.register({ isGlobal: true, ...options.video }),
+                ContentItemsModule.register({ isGlobal: true }),
+                ContentSettingsModule.register({ isGlobal: true }),
+                ContentModule.register({ isGlobal: true }),
+                RenderVideoQueueModule,
+                PublishContentQueueModule,
+                RendersHttpModule,
                 LivenessModule.register({ isGlobal: true }),
+                LeadsHttpModule,
+                PlatformAuditModule.register({ isGlobal: true }),
+                AiQuotaOverridesModule.register({ isGlobal: true }),
+                PlatformAdminModule.register({ isGlobal: true, ...options.platformAdmin }),
                 AuthorityActionsModule.register({ isGlobal: true }),
                 ModulesModule.register({ isGlobal: true, categories: MODULE_CATEGORIES, catalog: MODULE_CATALOG }),
                 ModulesHttpModule,
@@ -189,6 +261,7 @@ export class AppModule {
                 N8nPipelinesHttpModule,
                 EmitN8nEventQueueModule,
                 RunAutomationTickQueueModule,
+                AdminHttpModule,
             ],
             providers: [
                 { provide: SUPABASE_ACCESS_TOKEN_VERIFIER, useValue: verifyAccessToken },

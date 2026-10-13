@@ -1,0 +1,92 @@
+import { Alert, Button, Input, SectionHeader, SurfaceCard, Textarea } from "@starci/grammar/common"
+import type { ContentNote, ContentT } from "@/hooks/content"
+import { ACTIONS_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
+
+/** What the brand voice card draws. */
+export interface ContentBrandCardBaseProps {
+    readonly props: {
+        readonly t: ContentT
+        readonly voice: string
+        readonly avoid: string
+        readonly cta: string
+        readonly tags: string
+        readonly canManage: boolean
+        readonly isPending: boolean
+        readonly note: ContentNote | null
+    }
+    readonly on: {
+        readonly voice: (v: string) => void
+        readonly avoid: (v: string) => void
+        readonly cta: (v: string) => void
+        readonly tags: (v: string) => void
+        readonly save: () => void
+        readonly dismissNote: () => void
+    }
+}
+
+/** Draws the brand voice: how posts should sound, what never to say, the usual call to action and the brand hashtags. */
+export const ContentBrandCardBase = (props: ContentBrandCardBaseProps) => {
+    const { t, canManage, isPending } = props.props
+    const locked = !canManage || isPending
+    return (
+        <SurfaceCard ariaLabel={t("settingsBrand")}>
+            <div className={FORM_CLASS_NAME}>
+                <SectionHeader level={2} title={t("settingsBrand")} description={t("settingsBrandBody")} />
+                <Textarea
+                    variant="secondary"
+                    label={t("brandVoice")}
+                    rows={3}
+                    value={props.props.voice}
+                    isDisabled={locked}
+                    onValueChange={props.on.voice}
+                />
+                <Textarea
+                    variant="secondary"
+                    label={t("brandAvoid")}
+                    rows={3}
+                    value={props.props.avoid}
+                    isDisabled={locked}
+                    onValueChange={props.on.avoid}
+                />
+                <Input
+                    id="brand-cta"
+                    name="brand-cta"
+                    label={t("brandCta")}
+                    variant="secondary"
+                    value={props.props.cta}
+                    isDisabled={locked}
+                    onValueChange={props.on.cta}
+                />
+                <Input
+                    id="brand-tags"
+                    name="brand-tags"
+                    label={t("brandHashtags")}
+                    variant="secondary"
+                    value={props.props.tags}
+                    hint={t("fieldHashtagsHint")}
+                    isDisabled={locked}
+                    onValueChange={props.on.tags}
+                />
+                {props.props.note ? (
+                    <Alert
+                        title={props.props.note.text}
+                        tone={props.props.note.tone === "ok" ? "affirmative" : "negative"}
+                        dismissLabel={t("close")}
+                        onDismiss={props.on.dismissNote}
+                    />
+                ) : null}
+                <div className={ACTIONS_CLASS_NAME}>
+                    <Button
+                        variant="primary"
+                        size="sm"
+                        isPending={isPending}
+                        isDisabled={!canManage}
+                        onPress={props.on.save}
+                    >
+                        {t("brandSave")}
+                    </Button>
+                </div>
+            </div>
+        </SurfaceCard>
+    )
+}

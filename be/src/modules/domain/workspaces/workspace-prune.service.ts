@@ -1,0 +1,77 @@
+import { Injectable } from "@nestjs/common"
+import type { EntityManager } from "typeorm"
+import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { eachInOrder } from "@modules/platform/primitives"
+import { WorkspacesError, WorkspacesErrorCode } from "./errors/workspaces.error"
+import { COUNT_ALL_WORKSPACES, DELETE_ONE_WORKSPACE, LIST_ALL_WORKSPACES } from "./persistence/workspace-prune.sql"
+import { CONFIRMATION_WORD, NIVO_WORKSPACE_ID } from "./workspaces.contracts"
+import type { PruneConsole, PruneReport, PruneRequest, WorkspaceBrief } from "./workspaces.contracts"
+
+const NO_PLAN = "no plan"
+
+@Injectable()
+/**
+ * Deletes every workspace except the kept ones, with everything that hangs off them (the schema cascades; platform_audit and
+ * app_errors keep their rows with the workspace link cleared). Sign-in accounts are not deleted. It lists first and deletes only
+ * after the operator types the confirmation word. Permanent: there is no undo.
+ */
+export class WorkspacePruneService {
+    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+
+    /** Lists what is kept and what goes, asks for the confirmation, then deletes workspace by workspace. */
+    async prune(request: PruneRequest, terminal: PruneConsole): Promise<PruneReport> {
+        const keep = new Set([...(request.default === false ? [] : [NIVO_WORKSPACE_ID]), ...(request.keep ?? [])])
+        if (keep.size === 0) throw new WorkspacesError({ code: WorkspacesErrorCode.NothingToKeep })
+        const all = await this.entityManager.query<Array<WorkspaceBrief>>(LIST_ALL_WORKSPACES)
+        const kept = all.filter((workspace) => keep.has(workspace.id))
+        const doomed = all.filter((workspace) => !keep.has(workspace.id))
+        terminal.print("KEEP:")
+        for (const workspace of kept)
+            terminal.print(`  ${workspace.name}  (${workspace.plan_code ?? NO_PLAN})  ${workspace.id}`)
+        if (kept.length !== keep.size) throw new WorkspacesError({ code: WorkspacesErrorCode.KeepNotFound })
+        terminal.print(`DELETE (${doomed.length}):`)
+        for (const workspace of doomed) {
+            terminal.print(
+                `  ${workspace.name}  (${workspace.plan_code ?? NO_PLAN}, ${workspace.status})  ${workspace.id}`,
+            )
+        }
+        if (doomed.length === 0) {
+            terminal.print("Nothing to delete.")
+            return { status: "nothing-to-delete", kept, doomed, left: all.length }
+        }
+        if (request.yes !== true) {
+            const answer = await terminal.ask(
+                `Type ${CONFIRMATION_WORD} to permanently delete these ${doomed.length} workspaces: `,
+            )
+            if (answer.trim() !== CONFIRMATION_WORD) {
+                terminal.print("Cancelled. Nothing deleted.")
+                return { status: "cancelled", kept, doomed, left: all.length }
+            }
+        }
+        const failed = await this.remove(doomed, terminal)
+        const [counted] = await this.entityManager.query<Array<{ total: number }>>(COUNT_ALL_WORKSPACES)
+        const left = counted?.total ?? 0
+        terminal.print(`Done. ${doomed.length - failed} deleted, ${failed} failed, ${left} workspace(s) left.`)
+        if (failed > 0) {
+            throw new WorkspacesError({ code: WorkspacesErrorCode.DeleteFailed, params: { failed } })
+        }
+        return { status: "deleted", kept, doomed, left }
+    }
+
+    /** Deletes the workspaces one by one so a failure leaves the others deleted; answers how many failed. */
+    private async remove(doomed: ReadonlyArray<WorkspaceBrief>, terminal: PruneConsole): Promise<number> {
+        let failed = 0
+        await eachInOrder(doomed, (workspace) =>
+            this.entityManager.query(DELETE_ONE_WORKSPACE, [workspace.id]).then(
+                () => terminal.print(`  deleted ${workspace.name}`),
+                (cause: unknown) => {
+                    failed += 1
+                    terminal.print(
+                        `  FAILED ${workspace.name}: ${cause instanceof Error ? cause.message : String(cause)}`,
+                    )
+                },
+            ),
+        )
+        return failed
+    }
+}

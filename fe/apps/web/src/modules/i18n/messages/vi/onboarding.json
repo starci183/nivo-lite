@@ -107,5 +107,7 @@
   "toWorkspace": "Vào workspace",
   "switchTitle": "Workspace",
   "switchCurrent": "Đang dùng",
-  "switchNew": "Tạo workspace mới"
+  "switchNew": "Tạo workspace mới",
+  "joinLinkText": "Dán liên kết lời mời bạn nhận được để tham gia một workspace.",
+  "errSignupDisabled": "Hiện chưa thể tạo workspace. Hãy nhờ đội ngũ NIVO mở workspace cho bạn."
 }

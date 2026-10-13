@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "note": "Mau kiem tra bai dang: cum nghe nhu cam ket ket qua, cum giam gia kem con so, va tu khoa uu dai. Regex dang chuoi; sua o day, khong sua ma.",
+  "promise": [
+    "cam kết",
+    "đảm bảo (?:kết quả|hiệu quả|khỏi)",
+    "chắc chắn (?:khỏi|hiệu quả|giảm|trắng|đẹp)",
+    "100\\s*%",
+    "khỏi hẳn|hết hẳn|vĩnh viễn"
+  ],
+  "figure": "(?:giảm|khuyến mãi|ưu đãi|tặng|sale)[^.\\n]{0,24}?(\\d{1,3}(?:[.,]\\d{3})*\\s*(?:%|k\\b|đ\\b|nghìn|triệu|tr\\b))",
+  "offer": "ưu đãi|khuyến mãi|giảm|combo|gói|tặng|miễn phí|sự kiện|khai trương"
+}

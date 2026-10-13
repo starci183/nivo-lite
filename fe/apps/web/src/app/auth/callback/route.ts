@@ -1,10 +1,8 @@
 import "server-only"
 
 import { NextResponse, type NextRequest } from "next/server"
-import { postAuthPath } from "@/features/auth/destination"
 import { requestOrigin } from "@/lib/request-origin"
-import { supabaseServer } from "@/lib/supabase/server"
-import { exchangeAuthCode, verifyEmailLink } from "@/modules/db"
+import { exchangeAuthCode, readPostAuthPath, verifyEmailLink } from "@/modules/db"
 import { APP_ROUTES, safeNextPath } from "@/modules/routes"
 
 const EMAIL_LINK_ROUTES: ReadonlySet<string> = new Set(["/auth/confirm", APP_ROUTES.authCallback])
@@ -47,5 +45,5 @@ export const GET = async (request: NextRequest): Promise<NextResponse> => {
         return fail(type === null ? "missing_code" : "link_expired")
     }
     if (isRecovery) return to("/reset-password")
-    return to(await postAuthPath(await supabaseServer(), next, origin))
+    return to(await readPostAuthPath(next, origin))
 }
