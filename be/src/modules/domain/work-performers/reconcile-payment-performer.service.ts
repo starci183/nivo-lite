@@ -13,7 +13,6 @@ import { InboundEventsService } from "@modules/domain/inbound-events"
 import type { OptionalInboundEvent } from "@modules/domain/inbound-events"
 import { InvoicesService } from "@modules/domain/invoices"
 import type { InvoiceRow } from "@modules/domain/invoices"
-import { LeadRecordsService } from "@modules/domain/leads"
 import { OrdersService } from "@modules/domain/orders"
 import { TransactionsService } from "@modules/domain/transactions"
 import type { OptionalTransaction } from "@modules/domain/transactions"
@@ -37,7 +36,6 @@ export class ReconcilePaymentPerformerService implements WorkPerformer {
         private readonly transactions: TransactionsService,
         private readonly invoices: InvoicesService,
         private readonly orders: OrdersService,
-        private readonly leads: LeadRecordsService,
         private readonly inbound: InboundEventsService,
         private readonly workItems: WorkItemsService,
         private readonly evidence: EvidenceService,
@@ -183,18 +181,12 @@ export class ReconcilePaymentPerformerService implements WorkPerformer {
     /** The newest issued invoices with the order number and the customer's name a payment is matched on. */
     private async matchables(ctx: WorkContext): Promise<Array<MatchableInvoice>> {
         const issued = await this.invoices.listIssued(ctx.workspaceId, ISSUED_WINDOW)
-        const orderIds = issued.flatMap((invoice) => (invoice.order_id === null ? [] : [invoice.order_id]))
-        const leadIds = issued.flatMap((invoice) => (invoice.lead_id === null ? [] : [invoice.lead_id]))
-        const [orders, names] = await Promise.all([
-            this.orders.labelsOf(ctx.workspaceId, orderIds),
-            this.leads.namesOf(ctx.workspaceId, leadIds),
-        ])
         return issued.map((invoice) => ({
             id: invoice.id,
             invoiceNo: invoice.invoice_no,
-            orderNo: orders.find((order) => order.id === invoice.order_id)?.order_no ?? null,
+            orderNo: invoice.order_no,
             leadId: invoice.lead_id,
-            name: names.find((lead) => lead.id === invoice.lead_id)?.contact_name ?? null,
+            name: invoice.contact_name,
             amountVnd: invoice.amount_vnd,
         }))
     }
