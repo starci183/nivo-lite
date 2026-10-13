@@ -1,8 +1,245 @@
+type ApiKeyType {
+  createdAt: String!
+  id: ID!
+  lastUsedAt: String
+  name: String!
+  prefix: String!
+  revokedAt: String
+}
+
+input CreateApiKeyInput {
+  name: String!
+}
+
 input CreateWorkspaceInput {
   name: String!
 }
 
 type CreateWorkspaceType {
+  id: ID!
+}
+
+type CreatedApiKeyType {
+  item: ApiKeyType!
+  key: String!
+}
+
+type DashboardAgentType {
+  approvalRule: String!
+  createdAt: String!
+  greeting: String!
+  handle: String!
+  id: ID!
+  instructions: String!
+  knowledge: String!
+  module: String!
+  name: String!
+  role: String!
+  status: String!
+}
+
+type DashboardAuthorityType {
+  goalFirstReplyMinutes: Int
+  goalNewCustomers: Int
+  goalRevenueVnd: Float
+}
+
+type DashboardDecisionType {
+  action: String!
+  createdAt: String!
+  decidedBy: String!
+  deciderKind: String!
+  department: String!
+  id: ID!
+  leadId: ID
+  leadName: String
+  note: String
+  outcome: String!
+  reason: String
+  workItemId: ID
+}
+
+type DashboardEventType {
+  actor: String!
+  createdAt: String!
+  evidence: String
+  id: ID!
+  kind: String!
+  leadId: ID
+  summary: String!
+}
+
+type DashboardExceptionLeadType {
+  channel: String!
+  company: String!
+  contactName: String!
+  id: ID!
+}
+
+type DashboardExceptionType {
+  action: String!
+  assignedStaffName: String
+  contact: String
+  createdAt: String!
+  customer: String
+  department: String!
+  error: String
+  executionId: ID
+  id: ID!
+  lead: DashboardExceptionLeadType
+  leadId: ID
+  origin: String
+  reason: String
+  status: String!
+  summary: String
+}
+
+type DashboardFirstEventType {
+  at: String!
+  leadId: ID!
+}
+
+type DashboardGovernanceDecisionType {
+  createdAt: String!
+  deciderKind: String!
+  leadId: ID
+  outcome: String!
+  workItemId: ID
+}
+
+type DashboardGovernanceInvoiceType {
+  amountVnd: Float
+  id: ID!
+  invoiceNo: String
+  leadId: ID
+  orderId: ID
+  origin: String
+  status: String!
+}
+
+type DashboardGovernanceLeadType {
+  company: String
+  contactName: String
+  createdAt: String!
+  id: ID!
+  origin: String
+  stage: String!
+}
+
+type DashboardGovernanceOrderType {
+  amountVnd: Float
+  id: ID!
+  items: String
+  leadId: ID
+  orderNo: String
+  origin: String
+  status: String!
+}
+
+type DashboardGovernanceTransactionType {
+  amountVnd: Float
+  id: ID!
+  invoiceId: ID
+  origin: String
+  payer: String
+  reference: String
+  status: String!
+}
+
+type DashboardGovernanceType {
+  authority: DashboardAuthorityType
+  decisions7: [DashboardGovernanceDecisionType!]!
+  invoices: [DashboardGovernanceInvoiceType!]!
+  leads: [DashboardGovernanceLeadType!]!
+  orders: [DashboardGovernanceOrderType!]!
+  pendingWithoutWork: Int!
+  recent: [DashboardDecisionType!]!
+  transactions: [DashboardGovernanceTransactionType!]!
+  work: [DashboardGovernanceWorkType!]!
+}
+
+type DashboardGovernanceWorkType {
+  completedAt: String
+  contact: String
+  createdAt: String!
+  customer: String
+  decidedPath: String
+  department: String!
+  id: ID!
+  leadId: ID
+  reason: String
+  status: String!
+  summary: String
+  updatedAt: String!
+}
+
+type DashboardLeadType {
+  company: String
+  contactName: String
+  createdAt: String!
+  id: ID!
+  stage: String!
+}
+
+type DashboardPendingType {
+  createdAt: String!
+  id: ID!
+  leadId: ID
+  responsibilityId: ID!
+}
+
+type DashboardPromoChatbotType {
+  id: ID!
+  knowledge: String!
+}
+
+type DashboardPromoType {
+  approvedCount: Int!
+  chatbot: DashboardPromoChatbotType
+  firstEvents: [DashboardFirstEventType!]!
+  hasCustomerConversation: Boolean!
+  hasLeadConversation: Boolean!
+  hasWon: Boolean!
+  invoiceApproved: Boolean!
+  isFoundingMember: Boolean!
+  websiteLeads: [DashboardWebsiteLeadType!]!
+}
+
+type DashboardResponsibilityLeadType {
+  company: String!
+  contactName: String!
+  id: ID!
+  stage: String!
+}
+
+type DashboardResponsibilityType {
+  createdAt: String!
+  dueAt: String
+  id: ID!
+  lead: DashboardResponsibilityLeadType!
+  leadId: ID!
+  nextAction: String!
+  ownerAgentId: ID
+  ownerKind: String!
+  ownerName: String!
+  status: String!
+  title: String!
+}
+
+type DashboardType {
+  agents: [DashboardAgentType!]!
+  events: [DashboardEventType!]!
+  exceptions: [DashboardExceptionType!]!
+  governance: DashboardGovernanceType!
+  leads: [DashboardLeadType!]!
+  pending: [DashboardPendingType!]!
+  promo: DashboardPromoType!
+  responsibilities: [DashboardResponsibilityType!]!
+  since7: String!
+}
+
+type DashboardWebsiteLeadType {
+  createdAt: String!
   id: ID!
 }
 
@@ -21,11 +258,19 @@ type MembershipType {
 }
 
 type Mutation {
+  createApiKey(input: CreateApiKeyInput!): CreatedApiKeyType!
   createWorkspace(input: CreateWorkspaceInput!): CreateWorkspaceType!
+  revokeApiKey(input: RevokeApiKeyInput!): ApiKeyType!
 }
 
 type Query {
+  apiKeys: [ApiKeyType!]!
+  dashboard: DashboardType!
   myWorkspaces: [MembershipType!]!
+}
+
+input RevokeApiKeyInput {
+  keyId: ID!
 }
 
 type WorkspaceType {
