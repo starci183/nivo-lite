@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useMemo, useState } from "react"
 import {
-    channelRule,
+    channelLabel,
     pad2,
     pillarBalance,
     shiftMonth,
@@ -56,7 +56,7 @@ export const ContentBalancePanel = () => {
                     .map((c) => {
                         const want = slots.filter((s) => s.channel === c.channel).length
                         const have = live.filter((i) => i.channels.includes(c.channel)).length
-                        const label = channelRule(c.channel).label
+                        const label = channelLabel(t, c.channel)
                         return {
                             id: c.channel,
                             label,

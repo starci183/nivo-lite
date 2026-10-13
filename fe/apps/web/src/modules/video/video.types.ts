@@ -9,40 +9,16 @@ export type SceneRole = "hook" | "body" | "cta"
 /** Where a project is in its life. */
 export type ProjectStatus = "draft" | "scripting" | "rendering" | "ready" | "approved" | "published" | "archived"
 
-/** A text in both product languages (data of the goal templates). */
-export interface LocalText {
-    /** Vietnamese text. */
-    readonly vi: string
-    /** English text. */
-    readonly en: string
-}
-
-/** One scene brief of a goal template. */
-export interface TemplateScene {
-    /** The part the scene plays. */
-    readonly role: SceneRole
-    /** What the scene is about. */
-    readonly brief: string
-}
-
-/** A goal template, read from resources/video/templates/goals. */
+/** A goal template: the defaults a new video of that goal starts from. */
 export interface GoalTemplate {
     /** The goal it serves. */
     readonly goal: Goal
-    /** Its place in the list. */
-    readonly order: number
-    /** Name. */
-    readonly label: LocalText
-    /** One line of help. */
-    readonly hint: LocalText
     /** Default target length in seconds. */
     readonly default_seconds: number
     /** Default frame shape. */
     readonly default_aspect: Aspect
     /** Default music track id, if any. */
     readonly music: string | null
-    /** The scene structure. */
-    readonly scenes: ReadonlyArray<TemplateScene>
 }
 
 /** One scene of the script the owner edits. */

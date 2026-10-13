@@ -3,7 +3,7 @@ import { useTranslations } from "next-intl"
 import { useEffect, useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { CHANNEL_RULES, type Cadence } from "@/modules/content"
+import { CHANNEL_RULES, channelLabel, type Cadence } from "@/modules/content"
 
 type ContentCadenceT = ReturnType<typeof useTranslations<"content">>
 const cadenceSchema = (t: ContentCadenceT) =>
@@ -37,7 +37,7 @@ export const useContentCadenceForm = (initial: ReadonlyArray<Cadence>) => {
                 const saved = initial.find((row) => row.channel === rule.key)
                 return {
                     channel: rule.key,
-                    label: rule.label,
+                    label: channelLabel(t, rule.key),
                     on: saved !== undefined && saved.posts_per_week > 0,
                     perWeek: saved && saved.posts_per_week > 0 ? saved.posts_per_week : 3,
                     days: [...(saved?.days ?? [])],
@@ -45,7 +45,7 @@ export const useContentCadenceForm = (initial: ReadonlyArray<Cadence>) => {
                 }
             }),
         }),
-        [initial],
+        [initial, t],
     )
     const form = useForm<ContentCadenceValues>({
         resolver: zodResolver(schema),

@@ -7,9 +7,11 @@ import {
     DURATIONS,
     editorHref,
     GOAL_TEMPLATES,
+    goalHintKey,
+    goalLabelKey,
     useVideoActions,
 } from "@/hooks/video"
-import { useLocale, useTranslations } from "next-intl"
+import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useVideoGoalForm } from "@/hooks/rhf"
 import { navigation } from "@/modules/i18n"
@@ -27,7 +29,6 @@ interface VideoGoalStepProps {
 export const VideoGoalStep = (props: VideoGoalStepProps) => {
     const editor = useVideoEditorData(props)
     const t = useTranslations("video")
-    const lang = useLocale() === "en" ? "en" : "vi"
     const { create, update } = useVideoActions()
     const router = navigation.useRouter()
     const pathname = navigation.usePathname()
@@ -63,8 +64,8 @@ export const VideoGoalStep = (props: VideoGoalStepProps) => {
                 heading: t("goalHeading"),
                 goals: GOAL_TEMPLATES.map((entry) => ({
                     value: entry.goal,
-                    label: entry.label[lang],
-                    description: entry.hint[lang],
+                    label: t(goalLabelKey(entry.goal)),
+                    description: t(goalHintKey(entry.goal)),
                 })),
                 goal: draft.goal,
                 aspectLabel: t("aspectLabel"),

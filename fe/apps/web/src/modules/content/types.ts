@@ -25,29 +25,12 @@ export const CONTENT_STATUSES: ReadonlyArray<ContentStatus> = [
 export const isContentStatus = (value: unknown): value is ContentStatus =>
     CONTENT_STATUSES.some((status) => status === value)
 
-/** The per-channel writing rules from resources/content/channels.json. */
+/** The per-channel limits (content.templates.ts). */
 export interface ChannelRule {
     readonly key: ContentChannel
-    readonly label: string
     readonly short: string
     readonly max_chars: number
     readonly hashtags: { readonly min: number; readonly max: number }
-    readonly rules: string
-}
-
-/** A suggested content theme. */
-export interface PillarPreset {
-    readonly name: string
-    readonly description: string
-    readonly weight: number
-}
-
-/** A suggested posting rhythm of one channel. */
-export interface CadencePreset {
-    readonly channel: ContentChannel
-    readonly posts_per_week: number
-    readonly days: ReadonlyArray<number>
-    readonly time: string
 }
 
 /** A content theme of a workspace. */

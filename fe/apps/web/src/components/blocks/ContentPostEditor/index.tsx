@@ -3,10 +3,10 @@
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import {
-    CHANNEL_OPTIONS,
+    channelLabel,
     CONTENT_CHANNELS,
     channelLimits,
-    channelRule,
+    channelOptions,
     claimWarnings,
     dateText,
     dateTimeText,
@@ -44,7 +44,7 @@ const warningLines = (t: ContentT, list: ReadonlyArray<ChannelWarning>): Array<s
         list.map((w) => {
             const message = warningMessage(w.warning)
             return t("claimWithChannel", {
-                channel: channelRule(w.channel).label,
+                channel: channelLabel(t, w.channel),
                 message: t(message.key, message.values),
             })
         }),
@@ -87,7 +87,7 @@ export const ContentPostEditor = (props: ContentPostEditorProps) => {
         if (found !== undefined) run(found)
     }
     const active = form.channels.includes(tab) ? tab : (form.channels[0] ?? "facebook")
-    const limits = channelLimits(active)
+    const limits = channelLimits(t, active)
     const tile = (m: MediaRef) => mediaTile(m, data.urls)
     const library = data.library.filter((m) => !form.media.some((x) => x.path === m.path))
     const view = postView(t, item, {})
@@ -103,8 +103,8 @@ export const ContentPostEditor = (props: ContentPostEditorProps) => {
                 pillars: data.pillars,
                 statusLabel: view.statusLabel,
                 tone: view.tone,
-                channelOptions: CHANNEL_OPTIONS,
-                tabs: form.channels.map((c) => ({ id: c, label: channelRule(c).label })),
+                channelOptions: channelOptions(t),
+                tabs: form.channels.map((c) => ({ id: c, label: channelLabel(t, c) })),
                 openVariant:
                     form.channels.length === 0
                         ? null

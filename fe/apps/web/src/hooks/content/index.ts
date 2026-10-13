@@ -1,10 +1,10 @@
 export {
-    CHANNEL_OPTIONS,
     CHANNEL_RULES,
     CONTENT_CHANNELS,
     CONTENT_STATUSES,
+    channelLabel,
     channelLimits,
-    channelRule,
+    channelOptions,
     claimWarnings,
     dateText,
     dateTimeText,

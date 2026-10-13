@@ -1,4 +1,4 @@
-import claimsJson from "../../../resources/content/claims.json"
+import { CLAIM_FIGURE, CLAIM_OFFER, CLAIM_PROMISES } from "./content.templates"
 import type { ContentChannel } from "./types"
 
 /** One finding of the pre-approval checks. */
@@ -7,11 +7,8 @@ export type ClaimWarning =
     | { readonly kind: "figure"; readonly figure: string }
     | { readonly kind: "length"; readonly length: number; readonly max: number }
 
-const PROMISE = claimsJson.promise.map((source) => new RegExp(source, "i"))
-const OFFER = new RegExp(claimsJson.offer, "i")
-
 /** Whether a line of knowledge talks about prices, promotions or events. */
-export const isOfferLine = (line: string): boolean => OFFER.test(line)
+export const isOfferLine = (line: string): boolean => CLAIM_OFFER.test(line)
 
 /** The key that makes two warnings the same finding. */
 export const warningKey = (w: ClaimWarning): string => {
@@ -25,13 +22,13 @@ export const warningKey = (w: ClaimWarning): string => {
  * `knowledge` is the business facts the post must stay inside; leave it out to check only for outcome promises.
  */
 export const claimWarnings = (text: string, knowledge?: string): Array<ClaimWarning> => {
-    const promises = PROMISE.flatMap((re) => {
+    const promises = CLAIM_PROMISES.flatMap((re) => {
         const match = re.exec(text)
         return match === null ? [] : [{ kind: "promise" as const, phrase: match[0] }]
     })
     if (knowledge === undefined) return promises
     const facts = knowledge.replace(/\s+/g, "").toLowerCase()
-    const figures = [...text.matchAll(new RegExp(claimsJson.figure, "gi"))].flatMap((match) => {
+    const figures = [...text.matchAll(CLAIM_FIGURE)].flatMap((match) => {
         const figure = match[1].replace(/\s+/g, "").toLowerCase()
         return facts.includes(figure) ? [] : [{ kind: "figure" as const, figure: match[1].trim() }]
     })

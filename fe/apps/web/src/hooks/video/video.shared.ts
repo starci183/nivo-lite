@@ -9,6 +9,8 @@ export {
     editorHref,
     estimateScriptSeconds,
     GOAL_TEMPLATES,
+    goalHintKey,
+    goalLabelKey,
     goalTemplateOf,
     isUuid,
     MUSIC_TRACKS,

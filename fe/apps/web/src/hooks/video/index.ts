@@ -20,6 +20,8 @@ export {
     editorHref,
     estimateScriptSeconds,
     GOAL_TEMPLATES,
+    goalHintKey,
+    goalLabelKey,
     isUuid,
     MUSIC_TRACKS,
     newScene,

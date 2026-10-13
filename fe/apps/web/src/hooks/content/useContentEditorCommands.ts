@@ -1,12 +1,12 @@
 import { useTranslations } from "next-intl"
 import {
-    channelRule,
     copyReadyText,
     type ContentChannel,
     type ContentItem,
     type ItemTransition,
     type MediaRef,
 } from "@/modules/content"
+import { channelLabel } from "./content.shared"
 import type { ActionReply, ContentCommand } from "./useContentCommand"
 import type { ContentEditorFormState } from "@/hooks/rhf"
 import type { EditorSave } from "@/modules/content"
@@ -118,7 +118,7 @@ export const useContentEditorCommands = (input: EditorCommandInput): EditorComma
         copy: (channel) => {
             navigator.clipboard
                 .writeText(copyReadyText(item.variants[channel]))
-                .then(() => command.say("ok", `${channelRule(channel).label}: ${t("copied")}`))
+                .then(() => command.say("ok", `${channelLabel(t, channel)}: ${t("copied")}`))
                 .catch(() => command.say("error", t("copyFailed")))
         },
         markPosted: (channel, proof) =>

@@ -1,6 +1,7 @@
 import type { BadgeTone } from "@starci/grammar/common"
 import {
     CHANNEL_RULES,
+    channelLabel,
     channelRule,
     copyReadyText,
     dateText,
@@ -17,6 +18,7 @@ import {
 
 export {
     CHANNEL_RULES,
+    channelLabel,
     CONTENT_CHANNELS,
     CONTENT_STATUSES,
     channelRule,
@@ -94,9 +96,8 @@ export const postView = (t: ContentT, item: ContentItem, pillarNames: Readonly<R
 })
 
 /** The channel choices of a form. */
-export const CHANNEL_OPTIONS: ReadonlyArray<{ readonly value: string; readonly label: string }> = CHANNEL_RULES.map(
-    (rule) => ({ value: rule.key, label: rule.label }),
-)
+export const channelOptions = (t: ContentT): ReadonlyArray<{ readonly value: string; readonly label: string }> =>
+    CHANNEL_RULES.map((rule) => ({ value: rule.key, label: channelLabel(t, rule.key) }))
 
 /** A picture or video of a post ready to draw. */
 export interface MediaTile {
@@ -151,7 +152,7 @@ export const publishSteps = (t: ContentT, item: ContentItem): Array<PublishStep>
         const proof = done?.url || done?.how
         return {
             channel,
-            label: channelRule(channel).label,
+            label: channelLabel(t, channel),
             text: copyReadyText(item.variants[channel]),
             doneText: done
                 ? `${t("postedAt", { when: dateTimeText(done.at), who: done.by })}${proof ? ` · ${t("postedProof", { proof })}` : ""}`
@@ -182,8 +183,8 @@ export interface QuoteView {
 }
 
 /** The text of each channel as it will be posted. */
-export const quotes = (item: ContentItem): Array<QuoteView> =>
-    item.channels.map((c) => ({ channel: c, label: channelRule(c).label, text: copyReadyText(item.variants[c]) }))
+export const quotes = (t: ContentT, item: ContentItem): Array<QuoteView> =>
+    item.channels.map((c) => ({ channel: c, label: channelLabel(t, c), text: copyReadyText(item.variants[c]) }))
 
 /** The writing limits of a channel, for the editor tab. */
 export interface ChannelLimits {
@@ -193,7 +194,7 @@ export interface ChannelLimits {
 }
 
 /** The limits of a channel. */
-export const channelLimits = (channel: ContentChannel): ChannelLimits => {
+export const channelLimits = (t: ContentT, channel: ContentChannel): ChannelLimits => {
     const rule = channelRule(channel)
-    return { label: rule.label, maxChars: rule.max_chars, showTags: rule.hashtags.max > 0 }
+    return { label: channelLabel(t, channel), maxChars: rule.max_chars, showTags: rule.hashtags.max > 0 }
 }

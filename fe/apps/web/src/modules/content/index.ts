@@ -1,4 +1,6 @@
-export { CHANNEL_RULES, channelRule, slotsForMonth, pillarBalance } from "./calendar"
+export { channelRule, slotsForMonth, pillarBalance } from "./calendar"
+
+export { CHANNEL_RULES, channelLabel } from "./content.templates"
 
 export { claimWarnings, warningMessage } from "./claims"
 

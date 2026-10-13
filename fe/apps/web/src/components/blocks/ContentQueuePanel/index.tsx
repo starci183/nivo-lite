@@ -57,7 +57,7 @@ export const ContentQueuePanel = () => {
                     .filter((i) => i.status === "waiting_approval")
                     .map((i) => ({
                         post: postView(t, i, pillarNames),
-                        quotes: quotes(i),
+                        quotes: quotes(t, i),
                         hasDecision: i.work_item_id !== null,
                     })),
                 ready: data.items.filter((i) => i.status === "approved").map((i) => postView(t, i, pillarNames)),

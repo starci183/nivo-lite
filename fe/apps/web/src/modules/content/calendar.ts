@@ -1,58 +1,10 @@
-import calendarJson from "../../../resources/content/calendar-vn.json"
-import channelsJson from "../../../resources/content/channels.json"
-import presetsJson from "../../../resources/content/pillar-presets.json"
-import { daysInMonth, isoWeekdayOf, pad2, vnToIso } from "./time"
-import {
-    isContentChannel,
-    type Cadence,
-    type CadencePreset,
-    type ChannelRule,
-    type ContentChannel,
-    type ContentItem,
-    type Pillar,
-    type PillarPreset,
-} from "./types"
-
-/** The per-channel writing rules. */
-export const CHANNEL_RULES: ReadonlyArray<ChannelRule> = channelsJson.channels.flatMap((rule) => {
-    const key = rule.key
-    return isContentChannel(key) ? [{ ...rule, key }] : []
-})
-
-/** The rules every post must obey, fed to the writer. */
-export const GUARDRAILS: ReadonlyArray<string> = channelsJson.guardrails
+import { CHANNEL_RULES } from "./content.templates"
+import { daysInMonth, isoWeekdayOf, vnToIso } from "./time"
+import type { Cadence, ChannelRule, ContentChannel, ContentItem, Pillar } from "./types"
 
 /** The rule of one channel (the first channel when none matches). */
 export const channelRule = (channel: ContentChannel): ChannelRule =>
     CHANNEL_RULES.find((rule) => rule.key === channel) ?? CHANNEL_RULES[0]
-
-/** The display name of a channel, or the key itself when unknown. */
-export const contentChannelLabel = (channel: string): string =>
-    CHANNEL_RULES.find((rule) => rule.key === channel)?.label ?? channel
-
-/** Suggested content themes. */
-export const PILLAR_PRESETS: ReadonlyArray<PillarPreset> = presetsJson.pillars
-
-/** Suggested posting rhythms. */
-export const CADENCE_PRESETS: ReadonlyArray<CadencePreset> = presetsJson.cadence.flatMap((row) => {
-    const channel = row.channel
-    return isContentChannel(channel) ? [{ ...row, channel }] : []
-})
-
-/** A holiday, observance or sale day of the Vietnamese calendar. */
-export interface CalendarEvent {
-    readonly key: string
-    readonly name: string
-    readonly kind: string
-    readonly lead_days: number
-    readonly angle: string
-    readonly fixed?: { readonly month: number; readonly day: number }
-    readonly nth?: { readonly month: number; readonly weekday: number; readonly n: number }
-    readonly dates?: Readonly<Record<string, string>>
-}
-
-/** Every known event. */
-export const CALENDAR_EVENTS: ReadonlyArray<CalendarEvent> = calendarJson.events
 
 /** An event placed on a date. */
 export interface DatedEvent {
@@ -62,45 +14,6 @@ export interface DatedEvent {
     readonly date: string
     readonly lead_days: number
     readonly angle: string
-}
-
-/** Day (1..31) of the n-th given weekday (0 = Sunday) of a month. */
-const nthWeekday = (y: number, m: number, weekday: number, n: number): number => {
-    const first = new Date(Date.UTC(y, m - 1, 1)).getUTCDay()
-    return 1 + ((weekday - first + 7) % 7) + (n - 1) * 7
-}
-
-/** The date (yyyy-mm-dd) of an event in a year, or null (a lunar event whose date is not in the list). */
-export const eventDate = (e: CalendarEvent, year: number): string | null => {
-    if (e.fixed !== undefined) return `${year}-${pad2(e.fixed.month)}-${pad2(e.fixed.day)}`
-    if (e.nth !== undefined) {
-        return `${year}-${pad2(e.nth.month)}-${pad2(nthWeekday(year, e.nth.month, e.nth.weekday, e.nth.n))}`
-    }
-    return Object.entries(e.dates ?? {}).find(([name]) => name === String(year))?.[1] ?? null
-}
-
-const DAY_MS = 86_400_000
-
-/**
- * Holidays and observances that matter to a month: events whose date falls inside the month, plus events within `lead_days`
- * after the month ends whose preparation posts belong to this month.
- */
-export const eventsForMonth = (y: number, m: number): Array<DatedEvent> => {
-    const start = Date.UTC(y, m - 1, 1)
-    const end = Date.UTC(y, m, 0)
-    const dated = CALENDAR_EVENTS.flatMap((e) =>
-        [y, y + 1].flatMap((year) => {
-            const date = eventDate(e, year)
-            if (date === null) return []
-            const t = Date.parse(`${date}T00:00:00Z`)
-            const inMonth = t >= start && t <= end
-            const prep = t > end && t - end <= Math.min(e.lead_days, 14) * DAY_MS
-            return inMonth || prep
-                ? [{ key: e.key, name: e.name, kind: e.kind, date, lead_days: e.lead_days, angle: e.angle }]
-                : []
-        }),
-    )
-    return dated.sort((a, b) => a.date.localeCompare(b.date))
 }
 
 /** One posting slot. */

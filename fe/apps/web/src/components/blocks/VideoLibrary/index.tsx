@@ -1,11 +1,12 @@
 "use client"
 
-import { useLocale, useTranslations } from "next-intl"
+import { useTranslations } from "next-intl"
 import { useState } from "react"
 import type { BadgeTone } from "@starci/grammar/common"
 import {
     editorHref,
     GOAL_TEMPLATES,
+    goalLabelKey,
     stepFor,
     useVideoActions,
     useVideoLibraryData,
@@ -28,7 +29,6 @@ const STATUS_TONE: Record<ProjectStatus, BadgeTone> = {
 export const VideoLibrary = () => {
     const library = useVideoLibraryData()
     const t = useTranslations("video")
-    const lang = useLocale() === "en" ? "en" : "vi"
     const { archive, duplicate } = useVideoActions()
     const router = navigation.useRouter()
     const pathname = navigation.usePathname()
@@ -52,6 +52,7 @@ export const VideoLibrary = () => {
                     const working = render?.status === "rendering" || render?.status === "queued"
                     const seconds = render?.durationMs ? Math.round(render.durationMs / 1000) : project.targetSeconds
                     const renders = project.renderCount > 0 ? ` - ${t("renders", { n: project.renderCount })}` : ""
+                    const goal = GOAL_TEMPLATES.find((entry) => entry.goal === project.goal)?.goal
                     return {
                         id: project.id,
                         title: project.title,
@@ -59,7 +60,7 @@ export const VideoLibrary = () => {
                         noPoster: working ? t("status_rendering") : t("notRendered"),
                         statusLabel: t(`status_${project.status}`),
                         statusTone: STATUS_TONE[project.status],
-                        goalLabel: GOAL_TEMPLATES.find((entry) => entry.goal === project.goal)?.label[lang] ?? "",
+                        goalLabel: goal === undefined ? "" : t(goalLabelKey(goal)),
                         aspectLabel: project.aspect,
                         facts: `${t("seconds", { n: seconds })}${renders} - ${t("views")}: ${t("viewsNone")}`,
                         href: editorHref(project.id, stepFor(project.status, project.script.length)),

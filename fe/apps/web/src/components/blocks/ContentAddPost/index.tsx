@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl"
 import { useState } from "react"
 import {
     CHANNEL_RULES,
+    channelLabel,
     CONTENT_CHANNELS,
     toInstant,
     useContentCommand,
@@ -64,7 +65,7 @@ export const ContentAddPost = () => {
                 time,
                 pillarId,
                 channels,
-                channelOptions: CHANNEL_RULES.map((rule) => ({ value: rule.key, label: rule.label })),
+                channelOptions: CHANNEL_RULES.map((rule) => ({ value: rule.key, label: channelLabel(t, rule.key) })),
                 pillarOptions: [{ id: "", label: t("noPillar") }, ...pillars.map((p) => ({ id: p.id, label: p.name }))],
                 isPending: command.isPending,
                 note: command.note,
