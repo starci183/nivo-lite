@@ -16,6 +16,8 @@ import { parseZaloConfig } from "@modules/integrations/zalo"
 import { parsePlatformAdminConfig } from "@modules/domain/platform-admin"
 import { parseWorkspaceInvitesConfig } from "@modules/domain/workspace-invites"
 import { parseWorkspacesConfig } from "@modules/domain/workspaces"
+import { parseDocumentsConfig } from "@modules/integrations/documents"
+import { parseLlmConfig } from "@modules/integrations/llm"
 import { parseN8nConfig } from "@modules/integrations/n8n"
 import { parseTemplateFilesConfig } from "@modules/integrations/template-files"
 import { parseDeepseekConfig } from "@modules/integrations/deepseek"
@@ -48,6 +50,8 @@ const bootstrap = async (): Promise<void> => {
         },
         database: parsePrimaryDatabaseConfig(env),
         supabase: parseSupabaseConfig(env),
+        llm: parseLlmConfig(env),
+        documents: parseDocumentsConfig(env),
         platformAdmin: parsePlatformAdminConfig(env),
         workspaces: parseWorkspacesConfig(env),
         workspaceInvites: parseWorkspaceInvitesConfig(env),

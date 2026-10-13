@@ -1,6 +1,6 @@
-import { NivoBrowse } from "@/features/knowledge/NivoBrowse"
+import { KnowledgeNivoLoadingPage } from "@/features/pages/KnowledgeNivoPage"
 
-/** STATE-8: the NIVO knowledge page itself, with no data yet. */
-const NivoLoading = () => <NivoBrowse isLoading items={[]} />
+/** The base knowledge page itself, with no data yet. */
+const Loading = () => <KnowledgeNivoLoadingPage />
 
-export default NivoLoading
+export default Loading

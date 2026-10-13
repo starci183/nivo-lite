@@ -1,3 +1,5 @@
+import { parseLlmConfig } from "@modules/integrations/llm"
+import type { LlmOptions } from "@modules/integrations/llm"
 import { parseChannelProvisioningConfig } from "@modules/domain/channel-provisioning"
 import type { ChannelProvisioningOptions } from "@modules/domain/channel-provisioning"
 import { parseConnectionsConfig } from "@modules/domain/connections"
@@ -29,6 +31,8 @@ export interface CliAppOptions {
     readonly templateFiles: TemplateFilesOptions
     /** Supabase Auth administration, used by the demo-workspace seed. */
     readonly supabase: SupabaseOptions
+    /** The model provider the base knowledge is embedded with. */
+    readonly llm: LlmOptions
     /** The simulated SePay delivery of the simulate-sepay command. */
     readonly sepaySimulation: SepaySimulationOptions
     /** The credential key and the site addresses channels are connected with. */
@@ -45,6 +49,7 @@ export const parseCliAppOptions = (env: EnvSource): CliAppOptions => ({
     n8nHost: parseN8nHostConfig(env),
     templateFiles: parseTemplateFilesConfig(env),
     supabase: parseSupabaseConfig(env),
+    llm: parseLlmConfig(env),
     sepaySimulation: parseSepaySimulationConfig(
         env,
         async ({ url, headers, body }) => {

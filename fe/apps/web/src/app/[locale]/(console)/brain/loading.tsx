@@ -1,6 +1,6 @@
-import { BrainView } from "@/features/brain"
+import { BrainLoadingPage } from "@/features/pages/BrainPage"
 
-/** STATE-8: the Second Brain page itself, with no data yet - the same tree, its figures, graph and rail rows as skeletons. */
-const BrainLoading = () => <BrainView isLoading facts={[]} documents={[]} lessons={[]} lenses={[]} canWrite business="" />
+/** The Second Brain page itself, with no data yet. */
+const Loading = () => <BrainLoadingPage />
 
-export default BrainLoading
+export default Loading

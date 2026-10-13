@@ -1,4 +1,4 @@
-// migrations-sha256: 8e0d9bb0e705edeb354292e9003dcee283fe123dac91f6aba856207e3a44b060
+// migrations-sha256: 94c261488e018b30a5bc6e277cf385335175de6481f5c4c28a359f22891505f8
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -775,6 +775,25 @@ isOneToOne: false
       referencedColumns: ["id"]
     },{
       foreignKeyName: "bookings_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"brain_commands": {
+                  Row: {
+                    "created_at": string,"error_code": string | null,"finished_at": string | null,"id": string,"kind": string,"payload": NonNullable<Json>,"requested_by": string,"result": Json | null,"status": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"error_code"?: string | null,"finished_at"?: string | null,"id"?: string,"kind": string,"payload"?: NonNullable<Json>,"requested_by": string,"result"?: Json | null,"status"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"error_code"?: string | null,"finished_at"?: string | null,"id"?: string,"kind"?: string,"payload"?: NonNullable<Json>,"requested_by"?: string,"result"?: Json | null,"status"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "brain_commands_workspace_id_fkey"
       columns: ["workspace_id"]
 isOneToOne: false
       referencedRelation: "workspaces"
@@ -4139,6 +4158,12 @@ isOneToOne: false
                            },
 "knowledge_fold":
 { Args: { "t": string }; Returns: string
+                           },
+"brain_command":
+{ Args: { "p_kind": string,"p_payload": Json,"p_workspace": string }; Returns: string
+                           },
+"brain_command_wait":
+{ Args: { "p_id": string }; Returns: Json
                            },
 "knowledge_retry_source":
 { Args: { "p_source": string }; Returns: string

@@ -8,7 +8,15 @@ const build = async (): Promise<FetchHttpClient> => {
     return moduleRef.get(FetchHttpClient)
 }
 
-const responseOf = (status = 200) => mock<Response>({ status })
+const responseOf = (status = 200) =>
+    mock<Response>({
+        status,
+        url: "https://service.test/final",
+        headers: new Headers({ "Content-Type": "text/plain" }),
+    })
+
+const HEADERS = { "content-type": "text/plain" }
+const FINAL = "https://service.test/final"
 
 describe("FetchHttpClient", () => {
     afterEach(() => {
@@ -29,7 +37,7 @@ describe("FetchHttpClient", () => {
                 body: { orderId: "order-1" },
                 timeoutMs: 2500,
             }),
-        ).resolves.toEqual({ status: 201, body: { created: true } })
+        ).resolves.toEqual({ status: 201, headers: HEADERS, url: FINAL, body: { created: true } })
 
         expect(send).toHaveBeenCalledWith("https://service.test/orders", {
             method: "POST",
@@ -47,12 +55,23 @@ describe("FetchHttpClient", () => {
 
         await expect(
             client.request({ method: "GET", url: "https://service.test/health", timeoutMs: 2500 }),
-        ).resolves.toEqual({ status: 204, body: undefined })
+        ).resolves.toEqual({ status: 204, headers: HEADERS, url: FINAL, body: undefined })
 
         expect(fetch).toHaveBeenCalledWith(
             "https://service.test/health",
             expect.objectContaining({ headers: {}, body: undefined }),
         )
+    })
+
+    it("reads the body as text when the request asks for it, even when it is not JSON", async () => {
+        const client = await build()
+        const response = responseOf(502)
+        response.text.mockResolvedValue("<html>bad gateway</html>")
+        jest.spyOn(global, "fetch").mockResolvedValue(response)
+
+        await expect(
+            client.request({ method: "GET", url: "https://service.test/page", read: "text", timeoutMs: 2500 }),
+        ).resolves.toEqual({ status: 502, headers: HEADERS, url: FINAL, body: "<html>bad gateway</html>" })
     })
 
     it("encodes form fields and combines a caller cancellation signal with the deadline", async () => {
@@ -96,7 +115,7 @@ describe("FetchHttpClient", () => {
                 read: "bytes",
                 timeoutMs: 2500,
             }),
-        ).resolves.toEqual({ status: 206, body: Buffer.from([4, 5, 6]) })
+        ).resolves.toEqual({ status: 206, headers: HEADERS, url: FINAL, body: Buffer.from([4, 5, 6]) })
 
         expect(send).toHaveBeenCalledWith(
             "https://service.test/object",

@@ -1,5 +1,6 @@
 import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
+import type { SupabaseObjectsPort } from "./supabase.port"
 import type { SupabaseAdminClient, SupabasePublicClient } from "./supabase.client"
 import type { VerifySupabaseAccessToken } from "./supabase.options"
 
@@ -11,6 +12,13 @@ export const SUPABASE_PUBLIC_CLIENT: unique symbol = Symbol("integrations.supaba
 export const SUPABASE_ACCESS_TOKEN_VERIFIER: unique symbol = Symbol("integrations.supabase.access-token-verifier")
 /** Token of the Auth service domains read accounts and deliver invitations through. */
 export const SUPABASE_AUTH: unique symbol = Symbol("integrations.supabase.auth")
+
+/** Token of the objects service domains issue upload addresses and read stored objects through. */
+export const SUPABASE_OBJECTS: unique symbol = Symbol("integrations.supabase.objects")
+
+/** Injects the objects service. Parameter type: SupabaseObjectsPort. */
+export const InjectSupabaseObjects = (): TypedParameterDecorator<SupabaseObjectsPort> =>
+    injector<SupabaseObjectsPort>(SUPABASE_OBJECTS)
 
 /** Injects the Auth and Storage administrator. Parameter type: SupabaseAdminClient. */
 export const InjectSupabaseAdminClient = (): TypedParameterDecorator<SupabaseAdminClient> =>

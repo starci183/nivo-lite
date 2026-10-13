@@ -168,3 +168,27 @@ export type {
     LeadScore,
     LeadSourceKind,
 } from "./leadgen"
+export { FACT_SUBJECT_TYPES } from "./brain"
+export type {
+    BrainEvidence,
+    BrainExtraction,
+    BrainFact,
+    BrainGap,
+    BrainLens,
+    BrainLesson,
+    FactSource,
+    FactState,
+    FactScope,
+    FactSubjectType,
+} from "./brain"
+export type {
+    DocumentPassage,
+    KnowledgeDocument,
+    KnowledgeDocumentDetail,
+    NivoEntry,
+    NivoItemKind,
+    DocumentKind,
+    DocumentStatus,
+    IdeaDecision,
+    DocumentVisibility,
+} from "./knowledge"

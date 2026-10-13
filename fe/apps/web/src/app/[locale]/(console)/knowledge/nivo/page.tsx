@@ -1,7 +1,8 @@
-import { NivoBrowse } from "@/features/knowledge/NivoBrowse"
-import { listNivoKnowledge } from "@/lib/knowledge/index"
+import { KnowledgeNivoPage } from "@/features/pages/KnowledgeNivoPage"
 
-/** NIVO base knowledge, read-only. */
-const Page = async () => <NivoBrowse items={await listNivoKnowledge()} />
+export { knowledgeNivoMetadata as generateMetadata } from "@/features/pages/KnowledgeNivoPage"
+
+/** The base knowledge of NIVO per module, read-only for every member. */
+const Page = () => <KnowledgeNivoPage />
 
 export default Page

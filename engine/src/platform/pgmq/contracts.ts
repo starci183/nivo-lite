@@ -1,4 +1,4 @@
-// GENERATED from src/lib/jobs/contracts.ts by engine/dev/sync-shared.mjs. Do not edit here: edit the web file and re-run the script.
+// The job contracts the engine worker consumes; kept in step with the be queue contracts by hand now that the sync script is gone.
 /**
  * Background job contracts: the ONE list of queues, job names and payloads shared by every producer (the web app, SQL RPCs) and the
  * worker. The engine's copy (engine/src/platform/pgmq/contracts.ts) is GENERATED from this file by engine/dev/sync-shared.mjs; edit only here.

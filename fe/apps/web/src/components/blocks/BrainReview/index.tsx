@@ -1,0 +1,141 @@
+"use client"
+
+import { useTranslations } from "next-intl"
+import { SOURCE_KEY, adviceFor, reviewBoardOf, useBrainCommand } from "@/hooks/brain"
+import type { ReviewConflict, ReviewSingle } from "@/hooks/brain"
+import type { CommandActions } from "@/hooks/knowledge"
+import type { KnowledgeRowView, RowActionView, RowPartView } from "@/components/composites/KnowledgeRows"
+import { writeCommand } from "@/modules/db/knowledge/write-command"
+import { writeCommandWait } from "@/modules/db/knowledge/write-command-wait"
+import type { BrainFact } from "@/modules/types"
+import { BrainReviewBase } from "./component"
+
+/** Props for the connected review list. */
+interface BrainReviewProps {
+    readonly workspaceId: string
+    readonly facts: ReadonlyArray<BrainFact>
+    /** The moment the page was read, in milliseconds: the age of a value is judged against it. */
+    readonly nowMs: number
+    readonly canDecide: boolean
+    /** True while the page loads: the heading stays and the list is skeleton rows. */
+    readonly isLoading?: boolean
+}
+
+const ACTIONS: CommandActions = { write: writeCommand, wait: writeCommandWait }
+
+/** The connected review list: words each proposal, suggests what to do with it and sends the decision to the back end. */
+export const BrainReview = (props: BrainReviewProps) => {
+    const t = useTranslations("brain")
+    const command = useBrainCommand(props.workspaceId, ACTIONS)
+    const plan = reviewBoardOf(props.facts)
+    const byLine = (fact: BrainFact): string =>
+        t("by", { who: fact.proposedBy, source: t(SOURCE_KEY[fact.sourceKind]), trust: fact.trust })
+    const titleOf = (fact: BrainFact): string => `${fact.subjectLabel} · ${fact.attributeLabel}`
+    const decide = (id: string, label: string, action: "apply" | "choose", isPrimary: boolean): RowActionView => ({
+        id: `decide-${id}`,
+        label,
+        variant: isPrimary ? "primary" : "outline",
+        onPress: () => command.send("fact.decide", { id, action }, { done: t("applied") }),
+    })
+    const reject = (id: string, label: string): RowActionView => ({
+        id: `reject-${id}`,
+        label,
+        variant: "ghost",
+        onPress: () => command.send("fact.decide", { id, action: "reject" }, { done: t("rejected") }),
+    })
+    const gated = (actions: ReadonlyArray<RowActionView>): ReadonlyArray<RowActionView> =>
+        props.canDecide ? actions : []
+    const singleRow = (single: ReviewSingle): KnowledgeRowView => {
+        const advice = adviceFor(single.p, single.current, props.nowMs)
+        const isApply = advice.action === "apply" || advice.action === "schedule"
+        const part: RowPartView = {
+            id: single.p.id,
+            title: t("newValue", { value: single.p.value }),
+            lines: [byLine(single.p), `${t("suggestion")}: ${t(advice.reasonKey, advice.params)}`],
+            actions: gated([decide(single.p.id, t("apply"), "apply", isApply), reject(single.p.id, t("reject"))]),
+        }
+        return {
+            id: single.p.id,
+            title: titleOf(single.p),
+            lines: single.current === null ? [] : [t("currentValue", { value: single.current.value })],
+            badges: single.current === null ? [] : [{ label: t("conflict"), tone: "warning" }],
+            parts: [part],
+        }
+    }
+    const keepAction = (group: ReviewConflict): ReadonlyArray<RowActionView> => {
+        const first = group.options[0]
+        if (group.current === null || first === undefined) return []
+        return gated([
+            {
+                id: `keep-${group.key}`,
+                label: t("keepCurrentValue"),
+                onPress: () =>
+                    command.send(
+                        "fact.keep",
+                        { subjectKey: first.subjectKey, attribute: first.attribute },
+                        { done: t("retireKept") },
+                    ),
+            },
+        ])
+    }
+    const groupRow = (group: ReviewConflict): KnowledgeRowView => ({
+        id: group.key,
+        title: `${group.subjectLabel} · ${group.attributeLabel}`,
+        lines: [
+            t("conflictGroupHint", { n: group.options.length }),
+            ...(group.current === null ? [] : [t("currentValue", { value: group.current.value })]),
+        ],
+        badges: [{ label: t("conflictGroup"), tone: "warning" }],
+        actions: keepAction(group),
+        parts: group.options.map((option, index) => ({
+            id: option.id,
+            title: option.value,
+            lines: [`${t("conflictOption", { n: index + 1 })} · ${byLine(option)}`],
+            actions: gated([decide(option.id, t("apply"), "choose", false)]),
+        })),
+    })
+    const retireRow = (single: ReviewSingle): KnowledgeRowView => ({
+        id: single.p.id,
+        title: titleOf(single.p),
+        lines: [t("retireBody", { value: single.current?.value ?? single.p.value })],
+        badges: [{ label: t("retireBadge"), tone: "warning" }],
+        parts: [
+            {
+                id: single.p.id,
+                title: single.current?.value ?? single.p.value,
+                lines: [byLine(single.p)],
+                actions: gated([
+                    decide(single.p.id, t("retireApply"), "apply", false),
+                    reject(single.p.id, t("retireKeep")),
+                ]),
+            },
+        ],
+    })
+    const note = command.note
+    return (
+        <BrainReviewBase
+            props={{
+                list: {
+                    section: {
+                        id: "brain-review-title",
+                        title: t("tabReview"),
+                        description: t("reviewEmptyBody"),
+                        failTitle: t("loadFailed"),
+                        error: note?.tone === "negative" ? t(note.text) : undefined,
+                        notice: note?.tone === "affirmative" ? note.text : undefined,
+                    },
+                    label: t("tabReview"),
+                    rows: [
+                        ...plan.groups.map(groupRow),
+                        ...plan.singles.map(singleRow),
+                        ...plan.retires.map(retireRow),
+                    ],
+                    isLoading: props.isLoading ?? false,
+                    isPending: command.isPending,
+                    emptyTitle: t("reviewEmptyTitle"),
+                    emptyBody: t("reviewEmptyBody"),
+                },
+            }}
+        />
+    )
+}
