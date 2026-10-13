@@ -82,6 +82,7 @@ export type {
     BrainGapType,
     BrainLensType,
     BrainLessonType,
+    CreditPackPurchaseType,
     CreditPackType,
     CreditQuotaStatusType,
     CreditTopupLotType,

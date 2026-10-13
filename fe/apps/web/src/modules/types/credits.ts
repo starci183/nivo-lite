@@ -27,7 +27,7 @@ export type PackView = {
 /** One payment order as the credits page lists it. */
 export type OrderRow = {
     readonly id: string
-    readonly kind: "plan" | "upgrade" | "topup"
+    readonly kind: "plan" | "upgrade" | "topup" | "credit_pack"
     readonly planCode: string
     readonly packCredits: number | null
     readonly amount: number
@@ -53,6 +53,10 @@ export type CreditsData = {
     /** YYYY-MM-DD the allowance runs out this month at the last 7 days' burn, or null. */
     readonly runout: string | null
     readonly packs: ReadonlyArray<PackView>
+    /** The add-on packs of the workspace's plan (empty on a plan that is no longer sold: the legacy top-up packs apply). */
+    readonly addOns: ReadonlyArray<{ readonly credits: number; readonly price: number }>
+    /** Add-on credits paid for this month. */
+    readonly packsBought: number
     readonly plans: ReadonlyArray<PlanView>
     readonly next: { readonly plan: PlanView } | null
     /** Shown instead of an upgrade on Max and Enterprise. */
@@ -76,6 +80,7 @@ export type PayOrder = {
 /** The product shown in the payment drawer. */
 export type PayTarget =
     | { readonly kind: "topup"; readonly packCode: string; readonly credits: number }
+    | { readonly kind: "credit_pack"; readonly credits: number }
     | { readonly kind: "upgrade"; readonly planCode: string; readonly planName: string; readonly price: number }
 
 /** Settled presentation of the credits overview. */

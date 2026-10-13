@@ -15,6 +15,7 @@ export { useQueryBillingStorageSwr } from "./api/graphql/queries/useQueryBilling
 export { useQueryBillingReviewTransactionsSwr } from "./api/graphql/queries/useQueryBillingReviewTransactionsSwr"
 export { useQueryBillingWorkspacesSwr } from "./api/graphql/queries/useQueryBillingWorkspacesSwr"
 export { useQueryBillingWorkspaceSwr } from "./api/graphql/queries/useQueryBillingWorkspaceSwr"
+export { useQueryCreditPacksBoughtSwr } from "./api/graphql/queries/useQueryCreditPacksBoughtSwr"
 export { useQueryCreditPacksSwr } from "./api/graphql/queries/useQueryCreditPacksSwr"
 export { useQueryCreditQuotaStatusSwr } from "./api/graphql/queries/useQueryCreditQuotaStatusSwr"
 export { useQueryCreditRecentCostUsdSwr } from "./api/graphql/queries/useQueryCreditRecentCostUsdSwr"
