@@ -1,6 +1,7 @@
 {
   "aboutLabel": "About NIVO OS",
   "legalLabel": "Legal",
+  "mainLabel": "Account access",
   "privacyLink": "Privacy policy",
   "termsLink": "Terms of service",
   "headline": "One owner, one next action, evidence for every customer.",
@@ -13,9 +14,6 @@
   "signInText": "Use your work account to open your workspace.",
   "failedTitle": "Sign-in failed",
   "google": "Continue with Google",
-  "demo": "Try NIVO now",
-  "demoDisabled": "Trial sign-in is not enabled.",
-  "demoNotConfigured": "Trial sign-in is not configured.",
   "or": "or",
   "submit": "Sign in",
   "forgot": "Forgot password?",

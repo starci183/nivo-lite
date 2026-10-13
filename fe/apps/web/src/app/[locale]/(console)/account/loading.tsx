@@ -1,6 +1,6 @@
-import { AccountView } from "@/features/account/component"
+import { AccountLoadingPage } from "@/features/pages/AccountPage"
 
-/** STATE-8: the account page itself, with no data yet - the same cards and labels, values and device rows as skeletons. */
-const AccountLoading = () => <AccountView isLoading name="" email="" providers={[]} sessions={[]} sessionsFailed={false} />
+/** The account page itself, with no data yet. */
+const Loading = () => <AccountLoadingPage />
 
-export default AccountLoading
+export default Loading

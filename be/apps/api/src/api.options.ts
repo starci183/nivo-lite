@@ -2,6 +2,7 @@ import type { SupabaseOptions } from "@modules/integrations/supabase"
 import type { BillingOptions } from "@modules/domain/billing"
 import type { ServerOptions } from "@modules/platform/config"
 import type { DatabaseConnectionOptions } from "@modules/platform/database"
+import type { PlatformAdminOptions } from "@modules/domain/platform-admin"
 import type { WorkspaceInvitesOptions } from "@modules/domain/workspace-invites"
 import type { WorkspacesOptions } from "@modules/domain/workspaces"
 import type { HttpSecurityOptions } from "@modules/platform/http-security"
@@ -24,6 +25,8 @@ export interface ApiOptions {
     readonly workspaceInvites: Omit<WorkspaceInvitesOptions, "delivery">
     /** The payment feeds: keys, bank account and the credential key. */
     readonly billing: BillingOptions
+    /** The platform team that may use the console. */
+    readonly platformAdmin: PlatformAdminOptions
     /** How the pgmq workers run. */
     readonly queue: QueueConfig
     /** Who this worker is and how long a job claim lasts. */
