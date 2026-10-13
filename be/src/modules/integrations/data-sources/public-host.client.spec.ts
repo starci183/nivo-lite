@@ -1,4 +1,4 @@
-import { lookup } from "node:dns/promises"
+import dns from "node:dns/promises"
 import type { LookupAddress, LookupAllOptions } from "node:dns"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
@@ -10,9 +10,10 @@ import { DataSourcesError, DataSourcesErrorCode } from "./errors/data-sources.er
 import { PUBLIC_HOST_TEXT } from "./messages/public-host.messages"
 import { PublicHostClient } from "./public-host.client"
 
-jest.mock("node:dns/promises", () => ({ lookup: jest.fn() }))
-
-const lookupMock = jest.mocked<(hostname: string, options: LookupAllOptions) => Promise<Array<LookupAddress>>>(lookup)
+const lookupSpy = jest.spyOn(dns, "lookup")
+const lookupMock = jest.mocked<(hostname: string, options: LookupAllOptions) => Promise<Array<LookupAddress>>>(
+    dns.lookup,
+)
 
 const options = (allowPrivateHosts: boolean): DataSourcesOptions => ({ allowPrivateHosts, telegramUser: null })
 
@@ -39,6 +40,10 @@ const answer = (partial: Partial<HttpResponse> = {}): HttpResponse => ({
 describe("PublicHostClient", () => {
     beforeEach(() => {
         lookupMock.mockReset()
+    })
+
+    afterAll(() => {
+        lookupSpy.mockRestore()
     })
 
     it("reports whether private addresses are allowed", async () => {
