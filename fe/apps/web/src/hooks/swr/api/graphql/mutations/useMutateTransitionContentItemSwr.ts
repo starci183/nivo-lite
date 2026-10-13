@@ -1,5 +1,5 @@
 import { mutateTransitionContentItem } from "@/modules/api/graphql/mutations/mutation-transition-content-item"
-import { useGraphQLMutationSwr } from "@/hooks/reuseables/useGraphQLMutationSwr"
+import { useGraphQLMutationSwr } from "@/hooks/reuseables"
 
 /** The SWR key of the transitionContentItem mutation. */
 export const MUTATE_TRANSITION_CONTENT_ITEM_SWR_KEY = "MUTATE_TRANSITION_CONTENT_ITEM_SWR"

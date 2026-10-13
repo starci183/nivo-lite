@@ -5,8 +5,7 @@ import { useSettledGraphQL } from "@/hooks/connection-wizard"
 import type { Settled } from "@/hooks/connection-wizard"
 import { connectionCheckOf } from "@/hooks/connection-wire"
 import { useConnectionsRefresh } from "@/hooks/connections"
-import { useMutateCheckConnectionSwr } from "@/hooks/swr/api/graphql/mutations/useMutateCheckConnectionSwr"
-import { useMutateConnectTelegramSwr } from "@/hooks/swr/api/graphql/mutations/useMutateConnectTelegramSwr"
+import { useMutateCheckConnectionSwr, useMutateConnectTelegramSwr } from "@/hooks/swr"
 import type { ConnectionCheck, TelegramConnected } from "@/modules/types"
 
 /** The GraphQL commands of the Telegram wizard (the active workspace travels in the request header). */

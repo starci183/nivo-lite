@@ -5,9 +5,11 @@ import { useSettledGraphQL } from "@/hooks/connection-wizard"
 import type { Settled } from "@/hooks/connection-wizard"
 import { webhookVerdictOf, webhookViewOf } from "@/hooks/connection-wire"
 import { useConnectionsRefresh } from "@/hooks/connections"
-import { useMutateFinishWebhookConnectionSwr } from "@/hooks/swr/api/graphql/mutations/useMutateFinishWebhookConnectionSwr"
-import { useMutateStartWebhookConnectionSwr } from "@/hooks/swr/api/graphql/mutations/useMutateStartWebhookConnectionSwr"
-import { useMutateTestWebhookConnectionSwr } from "@/hooks/swr/api/graphql/mutations/useMutateTestWebhookConnectionSwr"
+import {
+    useMutateFinishWebhookConnectionSwr,
+    useMutateStartWebhookConnectionSwr,
+    useMutateTestWebhookConnectionSwr,
+} from "@/hooks/swr"
 import type { WebhookTestVerdict, WebhookView } from "@/modules/types"
 
 /** The GraphQL commands of the webhook wizard (the active workspace travels in the request header). */

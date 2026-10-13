@@ -1,5 +1,5 @@
 import type { SWRConfiguration } from "swr"
-import { useGraphqlQuerySwr } from "@/hooks/reuseables/useGraphqlQuerySwr"
+import { useGraphqlQuerySwr } from "@/hooks/reuseables"
 import { queryOfficeMessages } from "@/modules/api/graphql/queries/query-office-messages"
 import type { QueryOfficeMessagesRequest } from "@/modules/api/graphql/queries/query-office-messages"
 

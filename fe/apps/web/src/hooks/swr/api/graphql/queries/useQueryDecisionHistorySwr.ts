@@ -1,5 +1,5 @@
 import type { SWRConfiguration } from "swr"
-import { useGraphqlQuerySwr } from "@/hooks/reuseables/useGraphqlQuerySwr"
+import { useGraphqlQuerySwr } from "@/hooks/reuseables"
 import { queryDecisionHistory } from "@/modules/api/graphql/queries/query-decision-history"
 import type { QueryDecisionHistoryRequest } from "@/modules/api/graphql/queries/query-decision-history"
 

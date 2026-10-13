@@ -1,8 +1,10 @@
 import { useTranslations } from "next-intl"
-import { useMutateArchiveVideoProjectSwr } from "@/hooks/swr/api/graphql/mutations/useMutateArchiveVideoProjectSwr"
-import { useMutateCreateVideoProjectSwr } from "@/hooks/swr/api/graphql/mutations/useMutateCreateVideoProjectSwr"
-import { useMutateDuplicateVideoProjectSwr } from "@/hooks/swr/api/graphql/mutations/useMutateDuplicateVideoProjectSwr"
-import { useMutateUpdateVideoProjectSwr } from "@/hooks/swr/api/graphql/mutations/useMutateUpdateVideoProjectSwr"
+import {
+    useMutateArchiveVideoProjectSwr,
+    useMutateCreateVideoProjectSwr,
+    useMutateDuplicateVideoProjectSwr,
+    useMutateUpdateVideoProjectSwr,
+} from "@/hooks/swr"
 import type { MutateCreateVideoProjectRequest } from "@/modules/api/graphql/mutations/mutation-create-video-project"
 import type { MutateUpdateVideoProjectRequest } from "@/modules/api/graphql/mutations/mutation-update-video-project"
 import type { ProjectInputs, ScriptScene } from "@/modules/video"

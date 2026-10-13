@@ -1,5 +1,5 @@
-import { useStatusPollSwr } from "@/hooks/reuseables/useStatusPollSwr"
-import type { StatusPollOptions } from "@/hooks/reuseables/useStatusPollSwr"
+import { useStatusPollSwr } from "@/hooks/reuseables"
+import type { StatusPollOptions } from "@/hooks/reuseables"
 import { queryChatReplyStatus } from "@/modules/api/graphql/queries/query-chat-reply-status"
 
 /** The SWR key of the chatReplyStatus query. */
