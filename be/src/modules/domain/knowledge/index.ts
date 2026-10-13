@@ -1,0 +1,8 @@
+export { KNOWLEDGE_ERROR_KINDS } from "./errors/knowledge.error"
+export { KnowledgeDriveService } from "./knowledge-drive.service"
+export { KnowledgeJobsService } from "./knowledge-jobs.service"
+export { KnowledgeReembedService } from "./knowledge-reembed.service"
+export { KnowledgeSearchService } from "./knowledge-search.service"
+export type { DriveAccessSource, Passage, PickedFolder } from "./knowledge.contracts"
+export { KnowledgeModule } from "./knowledge.module"
+export { KNOWLEDGE_MESSAGES } from "./messages/knowledge.messages"
