@@ -8,6 +8,7 @@ export {
     InjectQueueWorkerRegistry,
     InjectQueueStatusService,
     QUEUE_OUTBOX,
+    QUEUE_STATUS,
     QUEUE_WORKER_REGISTRY,
 } from "./queue.decorators"
 export { QueueModule } from "./queue.module"

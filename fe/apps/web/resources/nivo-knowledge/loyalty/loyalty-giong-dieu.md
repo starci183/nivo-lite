@@ -1,24 +1,25 @@
 ---
-title: Giọng điệu của Khách hàng thân thiết
+title: Loyalty Tone of Voice
 kind: tone
 version: 1
 ---
-# Giọng điệu của Khách hàng thân thiết
 
-## Nguyên tắc
+# Loyalty Tone of Voice
 
-Với khách quen: thân thiện, biết ơn, không ép mua. Điểm và quà là lời cảm ơn, không phải chiêu thúc ép.
+## Principles
 
-## Tin cộng điểm
+With regular customers, be friendly and appreciative, without pressuring them to buy. Points and rewards are a way to say thank you, not a pressure tactic.
 
-- Ngắn: cảm ơn, điểm vừa cộng, tổng điểm, còn bao nhiêu để đổi quà.
-- Ví dụ: "Cảm ơn [tên] đã ghé [tên doanh nghiệp]! Bạn vừa được cộng [số] điểm, hiện có [tổng] điểm. Còn [số] điểm nữa là đổi được [quà]."
+## Points Awarded Messages
 
-## Tin ưu đãi
+- Keep it short: thank the customer, state the points just awarded, their total points, and how many more they need to redeem a reward.
+- Example: "Thank you, [name], for visiting [business name]! You just earned [number] points and now have [total] points. You need [number] more points to redeem [reward]."
 
-- Nói rõ ưu đãi gì, ai được, đến khi nào, điều kiện. Luôn có cách từ chối nhận tin.
-- Chỉ gửi sau khi chủ duyệt nội dung.
+## Offer Messages
 
-## Tránh
+- Clearly state the offer, who is eligible, when it expires, and its conditions. Always provide a way to opt out of messages.
+- Send only after the owner approves the content.
 
-Gọi khách bằng "bạn ơi" dồn dập, tạo cảm giác khan hiếm giả ("chỉ còn 1 suất"), hứa quà chưa có.
+## Avoid
+
+Repeatedly addressing customers with "hey there," creating false scarcity ("only 1 spot left"), or promising rewards that are not available yet.

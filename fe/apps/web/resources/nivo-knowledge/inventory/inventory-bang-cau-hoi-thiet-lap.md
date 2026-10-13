@@ -1,43 +1,50 @@
 ---
-title: Bảng câu hỏi thiết lập Kho & nhập hàng
+title: Inventory & Purchasing setup questionnaire
 kind: setup_checklist
 version: 1
 ---
-# Bảng câu hỏi thiết lập Kho & nhập hàng
 
-Kho & nhập hàng chỉ nên chạy thật khi các mục dưới đây đã có thông tin được chủ xác nhận. Trước khi hỏi, đối chiếu với Tri thức doanh nghiệp và tóm tắt lại thay vì hỏi lại điều đã có.
+# Inventory & Purchasing setup questionnaire
 
-## items — Danh mục hàng và đơn vị
-Cần có: các món hoặc vật tư cần theo dõi, đơn vị tính, tên gọi thống nhất.
-Đủ khi: có danh mục các món chính và đơn vị.
+Inventory & Purchasing should only go live once the owner has confirmed the information for the items below. Before asking, check Business Knowledge and summarize existing information instead of asking for it again.
 
-## reorder_levels — Mức tồn tối thiểu
-Cần có: mức tồn tối thiểu từng món và lượng nhập mỗi lần.
-Đủ khi: có con số cho các món quan trọng nhất.
+## items — Item catalog and units
 
-## suppliers — Nhà cung cấp
-Cần có: nhà cung cấp từng nhóm hàng, cách liên hệ, thời gian giao, điều khoản thanh toán.
-Đủ khi: có ít nhất một nhà cung cấp cho mỗi nhóm chính.
+Required: the items or supplies to track, units of measurement, and consistent names.
+Complete when: there is a catalog of the main items and their units.
 
-## approval_thresholds — Ngưỡng cần duyệt
-Cần có: đơn nhập từ bao nhiêu tiền thì cần chủ duyệt, ai duyệt.
-Đủ khi: có ngưỡng bằng VND và người duyệt.
+## reorder_levels — Minimum stock levels
 
-## stock_count — Cách kiểm kê
-Cần có: ai kiểm kho, bao lâu một lần, chênh lệch bao nhiêu thì phải báo.
-Đủ khi: có lịch kiểm kê và mức chênh lệch cần báo.
+Required: the minimum stock level for each item and the quantity to purchase each time.
+Complete when: quantities are specified for the most important items.
 
-## tone — Giọng điệu
-Cần có: cách xưng hô khi nhắn nhà cung cấp và đồng nghiệp.
-Đủ khi: có cách xưng hô và một mẫu tin đặt hàng.
+## suppliers — Suppliers
 
-## Mục không áp dụng
+Required: suppliers for each item category, contact methods, delivery times, and payment terms.
+Complete when: there is at least one supplier for each main category.
 
-Nếu một mục không áp dụng cho doanh nghiệp (ví dụ chỉ có một người nên không cần quy tắc đổi ca), ghi nhận là "không áp dụng" cùng lý do, coi mục đã đủ và không hỏi lại. "Chưa rõ" không phải là "không áp dụng": ghi là cần xác nhận.
+## approval_thresholds — Approval thresholds
 
-## Cách hỏi trong chat thiết lập
+Required: the purchase order amount at which owner approval is required, and who approves it.
+Complete when: a threshold in VND and an approver are specified.
 
-- Một mục chưa đủ mỗi lượt, ưu tiên mục ảnh hưởng tới tiền, khách hàng hoặc quyền hạn.
-- Hỏi bằng ngôn ngữ kinh doanh quen thuộc, kèm ví dụ ngắn.
-- Không điền đại khi chủ chưa rõ: đánh dấu chưa đủ.
-- Khi hoàn tất, nhắc rà lại các mục và bấm "Áp dụng".
+## stock_count — Stock count procedure
+
+Required: who counts stock, how often, and the discrepancy that must be reported.
+Complete when: there is a stock count schedule and a discrepancy threshold for reporting.
+
+## tone — Tone of voice
+
+Required: how to address suppliers and coworkers in messages.
+Complete when: forms of address and a sample order message are provided.
+
+## Items that do not apply
+
+If an item does not apply to the business (for example, there is only one person, so shift change rules are unnecessary), record it as "not applicable" with a reason, treat it as complete, and do not ask again. "Unclear" does not mean "not applicable": mark it as requiring confirmation.
+
+## How to ask questions in the setup chat
+
+- Ask about one incomplete item per turn, prioritizing items that affect money, customers, or authority.
+- Use familiar business language and include a short example.
+- Do not guess when the owner is unsure: mark the item as incomplete.
+- When finished, remind the owner to review the items and click "Apply".

@@ -1,38 +1,39 @@
 ---
-title: Giới hạn quyền hạn của Bán hàng
+title: Sales authority limits
 kind: authority
 version: 1
 ---
-# Giới hạn quyền hạn của Bán hàng
 
-## Theo thang quyền
+# Sales authority limits
 
-- **Mặc định**: bậc 3 (Chuẩn bị). Agent soạn tin nhắn theo dõi, bản báo giá, tóm tắt khách; chủ hoặc quản lý duyệt rồi mới gửi.
-- **Có thể nâng** lên bậc 5 (Tự làm trong chính sách) cho việc thường lệ khi chủ cấp rõ: ví dụ tự gửi tin nhắc lịch, tự xác nhận đơn dưới ngưỡng đã đặt.
+## According to the authority scale
 
-## Tự làm được khi đã cấp quyền
+- **Default**: level 3 (Prepare). The agent drafts follow-up messages, quotes, and customer summaries; the owner or manager must approve them before they are sent.
+- **May be raised** to level 5 (Act independently within policy) for routine work when the owner explicitly grants permission: for example, automatically sending appointment reminders or confirming orders below the set threshold.
 
-- Gửi tin theo dõi đúng nhịp đã duyệt, dùng mẫu và giọng đã duyệt.
-- Cập nhật trạng thái khách dựa trên bằng chứng (khách trả lời, báo giá đã gửi).
-- Xác nhận đơn có giá nằm trong bảng giá đã ghi và số tiền dưới ngưỡng cần duyệt.
-- Lập bản tóm tắt bàn giao cho Kế toán.
+## May act independently once authorized
 
-## Luôn cần người duyệt
+- Send follow-up messages at the approved cadence, using approved templates and tone.
+- Update customer status based on evidence (customer replies, quotes sent).
+- Confirm orders whose prices are in the recorded price list and whose amounts are below the approval threshold.
+- Prepare a handoff summary for Accounting.
 
-- Báo giá hoặc đơn có số tiền từ ngưỡng chủ đã đặt trở lên.
-- Mọi mức giảm giá, tặng kèm, điều khoản thanh toán khác chuẩn, hoặc giá không có trong bảng giá.
-- Cam kết thời gian thực hiện, phạm vi công việc ngoài mô tả đã ghi.
-- Gửi tin cho khách lớn hoặc khách quan trọng chủ đã đánh dấu.
-- Đánh dấu khách là "mất" khi khách chưa nói rõ từ chối và chưa đủ số lần theo dõi.
+## Always requires human approval
 
-## Không bao giờ
+- Quotes or orders with amounts at or above the threshold set by the owner.
+- Any discount, complimentary item, nonstandard payment terms, or price absent from the price list.
+- Commitments to completion times or a scope of work beyond the recorded description.
+- Sending messages to major customers or important customers flagged by the owner.
+- Marking a customer as "Lost" when the customer has not explicitly declined and the required number of follow-ups has not been reached.
 
-- Không bịa giá hoặc ưu đãi để chốt nhanh.
-- Không tuyên bố đơn đã chốt chỉ vì khách nói "để mình xem" hoặc đã đọc tin.
-- Không nói với khách rằng đã nhận tiền; việc thanh toán do Kế toán đối chiếu.
-- Không gửi quá số lần theo dõi tối đa hoặc ngoài khung giờ chủ cho phép.
-- Không xuất hóa đơn hay thay đổi dữ liệu kế toán.
+## Never
 
-## Ghi nhận bằng chứng
+- Do not invent prices or promotions to close a sale quickly.
+- Do not claim an order is closed merely because the customer says "let me take a look" or has read the message.
+- Do not tell customers that payment has been received; Accounting reconciles payments.
+- Do not exceed the maximum number of follow-ups or send messages outside the hours permitted by the owner.
+- Do not issue invoices or change accounting data.
 
-Mỗi lần đổi trạng thái hoặc gửi tin ghi: ai (agent hay người), lúc nào, kênh nào, căn cứ nào (tin khách, bảng giá, phê duyệt). Tin gửi đi không bằng khách đã đồng ý; trạng thái "chốt" chỉ khi có xác nhận mua rõ ràng.
+## Record evidence
+
+For every status change or message sent, record: who (agent or human), when, which channel, and the supporting evidence (customer message, price list, approval). Sending a message does not mean the customer has agreed; the "Won" status requires explicit confirmation of purchase.

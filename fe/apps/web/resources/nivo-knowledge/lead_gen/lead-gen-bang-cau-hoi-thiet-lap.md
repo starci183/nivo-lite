@@ -1,44 +1,53 @@
 ---
-title: Bảng câu hỏi thiết lập Tạo lead
+title: Lead generation setup questionnaire
 kind: setup_checklist
 version: 1
 ---
-# Bảng câu hỏi thiết lập Tạo lead
 
-Tạo lead chỉ nên chạy thật khi các mục dưới đây đã có thông tin được chủ xác nhận. Mỗi mục tương ứng một "cổng" trong màn hình Thiết lập. Hỏi từng mục một; nếu thông tin đã có trong Tri thức doanh nghiệp thì tóm tắt và nhờ chủ xác nhận thay vì hỏi lại.
+# Lead generation setup questionnaire
 
-## icp_area — Khách lý tưởng và khu vực
-Cần có: khách phù hợp là ai (ngành, độ tuổi, nhu cầu), khu vực phục vụ, nhóm khách không phục vụ.
-Đủ khi: có mô tả khách phù hợp và khu vực, hoặc chủ xác nhận phục vụ toàn quốc.
+Lead generation should only go live once the owner has confirmed the information for the items below. Each item corresponds to a "setup gate" on the Setup screen. Ask about one item at a time; if the information is already in Business Knowledge, summarize it and ask the owner to confirm instead of asking again.
 
-## public_offers — Ưu đãi và giá công khai
-Cần có: gói hoặc dịch vụ được nói với người lạ, ưu đãi đang chạy và thời hạn, mức giá được phép công khai.
-Đủ khi: có danh sách ưu đãi và giá công khai. Giá không được công khai thì ghi "báo giá riêng" (cần người duyệt). Không điền giá thay chủ.
+## icp_area — Ideal customers and service area
 
-## qualification — Câu hỏi lọc khách
-Cần có: tối đa 4 câu hỏi, và tiêu chí khách nóng, ấm, lạnh dựa trên câu trả lời (nhu cầu, ngân sách, thời điểm, khu vực).
-Đủ khi: có 1 đến 4 câu hỏi và tiêu chí rõ cho từng mức. Quá 4 câu thì đề nghị chủ rút gọn.
+Required: who the suitable customers are (industry, age, needs), the service area, and customer groups that are not served.
+Complete when: suitable customers and the service area are described, or the owner confirms nationwide service.
 
-## objections — Phản đối thường gặp và cách đáp
-Cần có: các lời chê hay gặp (đắt, xa, chưa tin, để suy nghĩ) và câu trả lời đã được chủ duyệt.
-Đủ khi: có ít nhất ba phản đối và cách đáp. Gặp phản đối chưa có trong danh sách thì chuyển người.
+## public_offers — Public offers and prices
 
-## forbidden_claims — Điều không được nói
-Cần có: cam kết, kết quả, so sánh, từ tuyệt đối hoặc chủ đề cấm. Mặc định đã cấm: nhắc đối thủ, xin CCCD hoặc thông tin ngân hàng, hứa giá hay ưu đãi chưa duyệt.
-Đủ khi: chủ xác nhận danh sách cấm riêng của doanh nghiệp (có thể là "không có thêm").
+Required: packages or services that may be discussed with strangers, current offers and their validity periods, and prices that may be made public.
+Complete when: public offers and prices are listed. For prices that cannot be made public, record "custom quote" (requires an approver). Do not fill in prices on the owner's behalf.
 
-## hours_owner — Giờ làm việc và người nhận lead
-Cần có: giờ người thật trả lời, ngày nghỉ, ai nhận khách nóng (tên và kênh), bao lâu thì người đó phản hồi.
-Đủ khi: có giờ làm việc và ít nhất một người nhận.
+## qualification — Qualifying questions
 
-## tone — Giọng điệu (dùng chung)
-Cần có: cách xưng hô với người lạ trên mạng xã hội và phong cách (thân thiện, chuyên nghiệp, trẻ trung).
-Đủ khi: có cách xưng hô và một câu chào mẫu. Dùng lại giọng đã thiết lập cho agent khác nếu chủ đồng ý.
+Required: at most 4 questions, and criteria for hot, warm, and cold leads based on the answers (needs, budget, timing, area).
+Complete when: there are 1 to 4 questions and clear criteria for each level. If there are more than 4 questions, ask the owner to shorten the list.
 
-## channels_posts — Kết nối Page, Instagram và bài cần theo dõi
-Cần có: Trang Facebook và tài khoản Instagram đã kết nối (nhà cung cấp meta), danh sách bài đăng và quảng cáo cần theo dõi bình luận, form quảng cáo khách hàng tiềm năng nào đưa vào.
-Đủ khi: Page đã kết nối và có ít nhất một bài, quảng cáo hoặc form để theo dõi.
+## objections — Common objections and responses
 
-## Mục không áp dụng
+Required: common objections (expensive, far away, lack of trust, need time to think) and responses approved by the owner.
+Complete when: there are at least three objections and responses. Hand off to a human if an objection is not on the list.
 
-Mục không áp dụng (ví dụ chưa dùng Instagram) thì ghi "không áp dụng" cùng lý do, coi như đủ và không hỏi lại. "Chưa rõ" không phải "không áp dụng": ghi là cần xác nhận.
+## forbidden_claims — Things that must not be said
+
+Required: prohibited commitments, results, comparisons, absolute terms, or topics. Prohibited by default: mentioning competitors, asking for CCCD or banking information, and promising unapproved prices or offers.
+Complete when: the owner confirms the business's own list of prohibitions (which may be "no additional prohibitions").
+
+## hours_owner — Working hours and lead recipients
+
+Required: the hours when a human responds, days off, who receives hot leads (name and channel), and how long that person takes to respond.
+Complete when: working hours and at least one recipient are specified.
+
+## tone — Tone (shared)
+
+Required: how to address strangers and refer to yourself on social media, and the style (friendly, professional, youthful).
+Complete when: the forms of address and a sample greeting are specified. Reuse the tone set up for another agent if the owner agrees.
+
+## channels_posts — Connect Page, Instagram, and posts to monitor
+
+Required: a connected Facebook Page and Instagram account (provider meta), a list of posts and ads whose comments should be monitored, and which lead ad forms to include.
+Complete when: the Page is connected and there is at least one post, ad, or form to monitor.
+
+## Items that do not apply
+
+For an item that does not apply (for example, Instagram is not yet in use), record "not applicable" with the reason, consider it complete, and do not ask again. "Unclear" does not mean "not applicable": record it as requiring confirmation.

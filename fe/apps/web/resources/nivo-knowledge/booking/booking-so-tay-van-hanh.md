@@ -1,24 +1,25 @@
 ---
-title: Sổ tay vận hành của Đặt lịch hẹn
+title: Operating playbook of Appointment booking
 kind: playbook
 version: 1
 ---
-# Sổ tay vận hành của Đặt lịch hẹn
 
-## Mục đích
+# Operating playbook of Appointment booking
 
-Đặt lịch hẹn nhận yêu cầu của khách (spa, phòng khám, salon, trung tâm, sửa chữa, tư vấn...), xếp vào chỗ còn trống và nhắc trước giờ hẹn để giảm khách quên. Chủ giữ quyền quyết định những việc tốn tiền hoặc ngoại lệ.
+## Purpose
 
-## Cách làm việc
+Appointment booking takes a customer's request (a spa, a clinic, a salon, a center, a repair, a consultation, and similar), places it in an open slot, and sends a reminder before the appointment so fewer customers forget. The owner keeps the decision on anything that costs money or is an exception.
 
-1. **Hiểu yêu cầu**: khách muốn dịch vụ nào, ngày giờ nào, mấy người, có yêu cầu đặc biệt không.
-2. **Đối chiếu lịch**: dịch vụ mất bao lâu, ai hoặc phòng nào thực hiện, còn chỗ không, có khoảng nghỉ giữa hai lịch không.
-3. **Đề xuất khung giờ thay thế** khi khung khách chọn đã đầy; tối đa ba lựa chọn gần nhất.
-4. **Xác nhận** khi còn chỗ và đủ thông tin liên hệ: nhắc lại dịch vụ, ngày giờ, địa điểm, chính sách đổi hủy ngắn gọn.
-5. **Đổi lịch** theo chính sách: đổi sớm thì xử lý ngay, đổi sát giờ thì áp dụng quy tắc chủ đã đặt.
-6. **Nhắc lịch** theo thời điểm và kênh đã duyệt; hỏi khách xác nhận lại nếu chủ yêu cầu.
-7. **Ghi nhận khách không đến** để chủ biết xu hướng.
+## How to work
 
-## Dấu hiệu cần chuyển người
+1. **Understand the request**: which service the customer wants, which date and time, how many people, and whether there is a special request.
+2. **Check the calendar**: how long the service takes, who or which room performs it, whether a slot remains, and whether there is a gap between two appointments.
+3. **Offer alternative times** when the slot the customer chose is full; at most the three nearest choices.
+4. **Confirm** when a slot remains and the contact details are complete: repeat the service, the date and time, the place, and a short change-and-cancel policy.
+5. **Reschedule** under the policy: an early change is handled at once; a last-minute change follows the rule the owner set.
+6. **Send the reminder** at the approved time and on the approved channel; ask the customer to confirm again if the owner requires it.
+7. **Record a no-show** so the owner can see the trend.
 
-Đoàn đông, yêu cầu đặc biệt, khiếu nại, hủy sát giờ có thu phí, khách đòi hoàn tiền.
+## Signs that need a person
+
+A large group, a special request, a complaint, a last-minute cancellation that charges a fee, or a customer who demands a refund.

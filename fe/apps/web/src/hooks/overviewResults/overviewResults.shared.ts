@@ -22,20 +22,18 @@ export interface GovStatusRow {
 const moneyOf = (format: GovFormat, amount: number): string =>
     format.number(amount, { style: "currency", currency: "VND", maximumFractionDigits: 0 })
 
+interface StatusRowInput {
+    id: string
+    label: string
+    context: string
+    split: OriginSplit
+    count: OriginSplit
+    unit: string
+    money: boolean
+}
+
 /** One status row; money rows show the record counts under the amounts. */
-const statusRowOf = (
-    t: GovTranslator,
-    format: GovFormat,
-    row: {
-        id: string
-        label: string
-        context: string
-        split: OriginSplit
-        count: OriginSplit
-        unit: string
-        money: boolean
-    },
-): GovStatusRow => {
+const statusRowOf = (t: GovTranslator, format: GovFormat, row: StatusRowInput): GovStatusRow => {
     const value = (n: number): string => (row.money ? moneyOf(format, n) : format.number(n))
     const cell = (key: "live" | "simulated"): GovCell => ({
         origin: key === "live" ? t("resultsLive") : t("resultsSim"),

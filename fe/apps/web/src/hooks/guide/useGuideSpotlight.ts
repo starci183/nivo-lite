@@ -15,9 +15,11 @@ let queuedTarget: string | null = null
 
 /** Takes the queued target, leaving none behind. */
 const takeQueued = (): string | null => {
-    const queued = queuedTarget
-    queuedTarget = null
-    return queued
+    try {
+        return queuedTarget
+    } finally {
+        queuedTarget = null
+    }
 }
 
 /**

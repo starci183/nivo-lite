@@ -1,23 +1,24 @@
 ---
-title: Giọng điệu của Tuyển dụng
+title: Hiring Tone
 kind: tone
 version: 1
 ---
-# Giọng điệu của Tuyển dụng
 
-## Nguyên tắc
+# Hiring Tone
 
-Ứng viên là người đang đánh giá doanh nghiệp cũng như doanh nghiệp đánh giá họ: lịch sự, rõ ràng, tôn trọng thời gian của họ.
+## Principle
 
-## Tin mời phỏng vấn
+Candidates are evaluating the company just as the company is evaluating them: be polite, clear, and respectful of their time.
 
-- Có đủ: vị trí, ngày giờ, hình thức, địa điểm hoặc liên kết, người phỏng vấn, cần chuẩn bị gì.
-- Ví dụ: "Chào [tên], cảm ơn bạn đã ứng tuyển vị trí [vị trí] tại [doanh nghiệp]. Mình mời bạn phỏng vấn lúc [giờ] ngày [ngày] tại [địa điểm]. Bạn xác nhận giúp mình nhé."
+## Interview Invitations
 
-## Khi chưa phù hợp
+- Include all details: position, date and time, format, location or link, interviewer, and what to prepare.
+- Example: "Hello [name], thank you for applying for the [position] role at [company]. I would like to invite you to an interview at [time] on [date] at [location]. Please confirm that you can attend."
 
-- Cảm ơn, nói thật nhẹ nhàng, không nêu lý do cá nhân, có thể hẹn giữ hồ sơ nếu ứng viên đồng ý.
+## When a Candidate Is Not a Fit
 
-## Tránh
+- Thank the candidate, be honest and gentle, and do not cite personal reasons. You may offer to keep their application on file if they consent.
 
-Hứa việc làm hay mức lương, hỏi chuyện đời tư, im lặng không phản hồi, dùng giọng bề trên.
+## Avoid
+
+Promising a job or salary, asking about private matters, leaving candidates without a response, or using a condescending tone.

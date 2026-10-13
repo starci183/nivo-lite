@@ -1,55 +1,65 @@
 ---
-title: Bảng câu hỏi thiết lập Khách hàng thân thiết
+title: Loyalty setup questionnaire
 kind: setup_checklist
 version: 1
 ---
-# Bảng câu hỏi thiết lập Khách hàng thân thiết
 
-Khách hàng thân thiết chỉ nên chạy thật khi các mục dưới đây đã có thông tin được chủ xác nhận. Trước khi hỏi, đối chiếu với Tri thức doanh nghiệp và tóm tắt lại thay vì hỏi lại điều đã có.
+# Loyalty setup questionnaire
 
-## earn_rules — Cách tích điểm
-Cần có: mua bao nhiêu được bao nhiêu điểm, hành động khác được điểm (giới thiệu bạn, đánh giá).
-Đủ khi: có công thức tích điểm cụ thể.
+Loyalty should only go live once the owner has confirmed the information for the items below. Before asking, check Business Knowledge and summarize the information already available instead of asking for it again.
 
-## tiers — Hạng thành viên
-Cần có: các hạng (ví dụ Đồng, Bạc, Vàng), mức chi tiêu để lên từng hạng, quyền lợi của từng hạng.
-Đủ khi: có ít nhất hai hạng với ngưỡng chi tiêu bằng VND.
+## earn_rules — Earning points
 
-## rewards — Danh mục quà
-Cần có: danh mục quà, điểm cần cho mỗi món, giá trị quy đổi bằng tiền.
-Đủ khi: có ít nhất các quà chính và điểm.
+Required: how much spending earns how many points, and other actions that earn points (referring friends, leaving reviews).
+Complete when: a specific formula for earning points is provided.
 
-## limits — Hạn mức tự đổi quà
-Cần có: giá trị quà tối đa agent được tự đổi, trên mức đó hỏi chủ.
-Đủ khi: có hạn mức bằng VND.
+## tiers — Membership tiers
 
-## expiry — Hạn dùng điểm
-Cần có: điểm có hết hạn không, khi nào, báo khách trước bao lâu.
-Đủ khi: có quy tắc hạn dùng hoặc ghi rõ không hết hạn.
+Required: the tiers (for example, Bronze, Silver, Gold), the spending required to reach each tier, and the benefits of each tier.
+Complete when: at least two tiers are defined with spending thresholds in VND.
 
-## promo_rules — Quy tắc gửi khuyến mãi
-Cần có: ai được nhận khuyến mãi, tối đa bao nhiêu tin mỗi tháng, giờ được gửi, cách từ chối nhận.
-Đủ khi: có giới hạn tần suất và giờ gửi.
+## rewards — Reward catalog
 
-## birthday — Quà sinh nhật
-Cần có: có tặng quà hoặc điểm vào sinh nhật khách không, bao nhiêu điểm hoặc quà gì.
-Đủ khi: có mức điểm thưởng, hoặc ghi rõ không tặng.
+Required: the reward catalog, the points required for each item, and the cash equivalent of each reward.
+Complete when: at least the main rewards and their point costs are defined.
 
-## prohibited — Điều không được hứa
-Cần có: quà, giảm giá, hạng thành viên agent không được tự cam kết.
-Đủ khi: có danh sách hoặc xác nhận dùng bộ mặc định của NIVO.
+## limits — Autonomous reward redemption limit
 
-## tone — Giọng điệu
-Cần có: cách xưng hô với khách quen, phong cách thân thiện đến đâu.
-Đủ khi: có cách xưng hô và một tin cảm ơn mẫu.
+Required: the maximum reward value the agent may redeem autonomously; above that amount, ask the owner.
+Complete when: a limit in VND is provided.
 
-## Mục không áp dụng
+## expiry — Point expiration
 
-Nếu một mục không áp dụng cho doanh nghiệp (ví dụ chỉ có một người nên không cần quy tắc đổi ca), ghi nhận là "không áp dụng" cùng lý do, coi mục đã đủ và không hỏi lại. "Chưa rõ" không phải là "không áp dụng": ghi là cần xác nhận.
+Required: whether points expire, when they expire, and how far in advance to notify customers.
+Complete when: an expiration rule is provided, or it is explicitly stated that points do not expire.
 
-## Cách hỏi trong chat thiết lập
+## promo_rules — Rules for sending promotions
 
-- Một mục chưa đủ mỗi lượt, ưu tiên mục ảnh hưởng tới tiền, khách hàng hoặc quyền hạn.
-- Hỏi bằng ngôn ngữ kinh doanh quen thuộc, kèm ví dụ ngắn.
-- Không điền đại khi chủ chưa rõ: đánh dấu chưa đủ.
-- Khi hoàn tất, nhắc rà lại các mục và bấm "Áp dụng".
+Required: who may receive promotions, the maximum number of messages per month, permitted sending hours, and how to opt out.
+Complete when: message frequency limits and sending hours are defined.
+
+## birthday — Birthday rewards
+
+Required: whether customers receive rewards or points on their birthdays, how many points, or which reward.
+Complete when: a bonus point amount is provided, or it is explicitly stated that no reward is given.
+
+## prohibited — Promises that are not allowed
+
+Required: rewards, discounts, and membership tiers the agent may not promise on its own.
+Complete when: a list is provided, or the use of NIVO's default set is confirmed.
+
+## tone — Tone of voice
+
+Required: how to address regular customers and how friendly the tone should be.
+Complete when: forms of address and a sample thank-you message are provided.
+
+## Items that do not apply
+
+If an item does not apply to the business (for example, there is only one person, so shift-change rules are unnecessary), record it as "not applicable" with the reason, consider the item complete, and do not ask again. "Unclear" is not the same as "not applicable": record it as requiring confirmation.
+
+## How to ask questions in the setup chat
+
+- Ask about one incomplete item per turn, prioritizing items that affect money, customers, or authority.
+- Use familiar business language and include a short example.
+- Do not fill in arbitrary answers when the owner is unsure: mark the item as incomplete.
+- When finished, remind the owner to review the items and click "Apply".
