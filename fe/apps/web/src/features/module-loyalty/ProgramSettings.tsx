@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { Alert, Button, Heading, Input, Select, SurfaceCard, Switch, Text } from "@starci/grammar/common";
-import type { SettingsExtraProps } from "@/features/module-settings/registry";
+import type { SettingsExtraProps } from "@/modules/installations";
 import { useT } from "@/i18n/client";
 import { loyalty } from "@/i18n/dict/loyalty";
 import type { LoyaltyConfig } from "@/lib/module-loyalty-shared";

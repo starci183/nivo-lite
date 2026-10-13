@@ -1,4 +1,19 @@
 export type {
+    AgentRecord,
+    EventRecord,
+    ExecutionRecord,
+    DraftStatus,
+    LeadJourney,
+    LeadIcon,
+    LeadListItem,
+    LeadPrimaryAction,
+    LeadRecord,
+    LeadStageId,
+    OwnerKind,
+    ResponsibilityRecord,
+    StepStatus,
+} from "./leads"
+export type {
     AccountingAgeing,
     AccountingCredit,
     AccountingInvoice,
@@ -94,3 +109,4 @@ export type {
     MetaPageOption,
     MetaWizardConnection,
 } from "./connection-wizard"
+export type { DataSlot, SlotLabels } from "./slot"

@@ -7,8 +7,11 @@ import { parseHttpSecurityConfig, RequestValidationService } from "@modules/plat
 import { createJsonLogger, LoggingLogEvent } from "@modules/platform/logging"
 import { parseJobsConfig } from "@modules/platform/jobs"
 import { parseQueueConfig } from "@modules/platform/queue"
+import { parsePlatformAdminConfig } from "@modules/domain/platform-admin"
 import { parseWorkspaceInvitesConfig } from "@modules/domain/workspace-invites"
 import { parseWorkspacesConfig } from "@modules/domain/workspaces"
+import { parseVideoConfig } from "@modules/domain/video"
+import { parseFfmpegConfig } from "@modules/integrations/ffmpeg"
 import { parseSupabaseConfig } from "@modules/integrations/supabase"
 import { parseConnectionsConfig } from "@modules/domain/connections"
 import { parseWebhookConnectionsConfig } from "@modules/domain/webhook-connections"
@@ -16,6 +19,7 @@ import { parseChannelSetupConfig } from "@modules/integrations/channel-setup"
 import { parseGoogleConfig } from "@modules/integrations/google"
 import { parseMetaConfig } from "@modules/integrations/meta"
 import { parseWebhookDeliveryConfig } from "@modules/integrations/webhook-delivery"
+import { parseTtsConfig } from "@modules/integrations/tts"
 import { AppModule } from "./app.module"
 import type { ApiOptions } from "./api.options"
 
@@ -34,6 +38,7 @@ const bootstrap = async (): Promise<void> => {
         },
         database: parsePrimaryDatabaseConfig(env),
         supabase: parseSupabaseConfig(env),
+        platformAdmin: parsePlatformAdminConfig(env),
         workspaces: parseWorkspacesConfig(env),
         workspaceInvites: parseWorkspaceInvitesConfig(env),
         queue: parseQueueConfig(env),
@@ -44,6 +49,9 @@ const bootstrap = async (): Promise<void> => {
         meta: parseMetaConfig(env),
         channelSetup: parseChannelSetupConfig(env),
         webhookDelivery: parseWebhookDeliveryConfig(env),
+        ffmpeg: parseFfmpegConfig(env),
+        tts: parseTtsConfig(env),
+        video: parseVideoConfig(env),
     }
     const app = await NestFactory.create<NestExpressApplication>(AppModule.register(options), { rawBody: true })
     app.set("trust proxy", TRUSTED_PROXY_HOPS)

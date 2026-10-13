@@ -4,9 +4,13 @@ import type { GoogleOptions } from "@modules/integrations/google"
 import type { MetaOptions } from "@modules/integrations/meta"
 import type { WebhookConnectionsOptions } from "@modules/domain/webhook-connections"
 import type { WebhookDeliveryOptions } from "@modules/integrations/webhook-delivery"
+import type { VideoOptions } from "@modules/domain/video"
 import type { SupabaseOptions } from "@modules/integrations/supabase"
+import type { FfmpegOptions } from "@modules/integrations/ffmpeg"
+import type { TtsOptions } from "@modules/integrations/tts"
 import type { ServerOptions } from "@modules/platform/config"
 import type { DatabaseConnectionOptions } from "@modules/platform/database"
+import type { PlatformAdminOptions } from "@modules/domain/platform-admin"
 import type { WorkspaceInvitesOptions } from "@modules/domain/workspace-invites"
 import type { WorkspacesOptions } from "@modules/domain/workspaces"
 import type { HttpSecurityOptions } from "@modules/platform/http-security"
@@ -27,6 +31,8 @@ export interface ApiOptions {
     readonly workspaces: WorkspacesOptions
     /** Invitation links and how long they stay valid. */
     readonly workspaceInvites: Omit<WorkspaceInvitesOptions, "delivery">
+    /** The platform team that may use the console. */
+    readonly platformAdmin: PlatformAdminOptions
     /** How the pgmq workers run. */
     readonly queue: QueueConfig
     /** Who this worker is and how long a job claim lasts. */
@@ -43,4 +49,10 @@ export interface ApiOptions {
     readonly channelSetup: ChannelSetupOptions
     /** Deliveries to tenant-supplied webhook addresses. */
     readonly webhookDelivery: WebhookDeliveryOptions
+    /** How ffmpeg is run. */
+    readonly ffmpeg: FfmpegOptions
+    /** The text-to-speech provider of the video voiceover. */
+    readonly tts: TtsOptions
+    /** Where the video renderer finds its assets and how it runs ffmpeg. */
+    readonly video: VideoOptions
 }

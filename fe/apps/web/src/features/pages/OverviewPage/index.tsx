@@ -1,6 +1,5 @@
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
-import { buildPromoState, getPromoState } from "@/features/promo/queries"
 import { groupByOwner, hourInZone, stamp, toActivityModels, toRowModels } from "@/features/responsibilities/format"
 import type { OwnerGroupModel } from "@/features/responsibilities/format"
 import { getLocale, getT } from "@/i18n/server"
@@ -16,7 +15,7 @@ import {
 import { getDashboardData } from "@/lib/page-data"
 import { listAgents, listRecentEvents, listResponsibilities } from "@/lib/queries"
 import { getSession } from "@/lib/session"
-import { overviewFactsFrom, readLeads, readPendingApprovals } from "@/modules/db"
+import { getPromoState, overviewFactsFrom, readPromoStateFrom, readLeads, readPendingApprovals } from "@/modules/db"
 import { CONSOLE_ROUTES, leadHref, responsibilitiesHref } from "@/modules/routes"
 import { OverviewPageBase } from "./component"
 
@@ -88,7 +87,7 @@ export const OverviewPage = async () => {
                   isTestRunName,
                   { list: responsibilitiesHref("status=waiting_approval"), lead: leadHref },
               ),
-              await buildPromoState(raw.promo),
+              await readPromoStateFrom(raw.promo),
               await attempt(Promise.resolve().then(() => governanceFrom(raw.governance, raw.since7))),
               await attempt(Promise.resolve(workViewsFrom(raw.exceptions))),
           ] as const)
