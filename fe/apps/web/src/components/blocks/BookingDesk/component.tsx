@@ -56,7 +56,7 @@ export interface BookingDeskBaseProps {
     }
     readonly on: {
         readonly add: () => void
-        readonly placementChange: BookingPlacementDialogProps["onChange"]
+        readonly placementChange: (patch: Partial<BookingPlacementDialogProps["fields"]>) => void
         readonly placementSubmit: () => void
         readonly placementClose: () => void
         readonly prev: () => void

@@ -1,13 +1,11 @@
-import { AgentIdRedirectPage } from "@/features/pages/AgentIdRedirectPage"
+import { AgentRecordRedirectPage } from "@/features/pages/AgentRecordRedirectPage"
 
-export { agentIdRedirectMetadata as generateMetadata } from "@/features/pages/AgentIdRedirectPage"
+/** The document title of an old agent url. */
+export { agentRecordRedirectMetadata as generateMetadata } from "@/features/pages/AgentRecordRedirectPage"
 
-/** What the route passes through: the agent id of the old url. */
-interface PageProps {
-    readonly params: Promise<{ readonly agentId: string }>
-}
+type PageProps = { readonly params: Promise<{ agentId: string }> }
 
 /** Moved: an agent's setup lives in its instance (/agents/<module>/<installationId>). The agent chat pages below keep working. */
-const Page = async (props: PageProps) => <AgentIdRedirectPage agentId={(await props.params).agentId} />
+const Page = async ({ params }: PageProps) => <AgentRecordRedirectPage agentId={(await params).agentId} />
 
 export default Page

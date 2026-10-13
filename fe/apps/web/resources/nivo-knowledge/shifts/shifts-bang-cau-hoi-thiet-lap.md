@@ -1,43 +1,50 @@
 ---
-title: Bảng câu hỏi thiết lập Lịch & ca làm
+title: Setup checklist for Shifts and schedules
 kind: setup_checklist
 version: 1
 ---
-# Bảng câu hỏi thiết lập Lịch & ca làm
 
-Lịch & ca làm chỉ nên chạy thật khi các mục dưới đây đã có thông tin được chủ xác nhận. Trước khi hỏi, đối chiếu với Tri thức doanh nghiệp và tóm tắt lại thay vì hỏi lại điều đã có.
+# Setup checklist for Shifts and schedules
 
-## staff_roles — Nhân sự và vai trò
-Cần có: danh sách nhân viên, vai trò từng người, ai được làm ca nào, ai chỉ làm một số ca.
-Đủ khi: có tên hoặc nhóm người và vai trò đủ để xếp ca.
+Shifts and schedules should run for real only when the owner has confirmed the items below. Before asking, check Business knowledge and summarise what is already known instead of asking again.
 
-## opening_hours — Giờ hoạt động
-Cần có: giờ mở và đóng cửa từng ngày, ngày nghỉ cố định, ngày lễ.
-Đủ khi: có khung giờ cho cả tuần.
+## staff_roles — Staff and roles
 
-## coverage — Số người tối thiểu mỗi ca
-Cần có: mỗi ca và vai trò cần tối thiểu bao nhiêu người, ca cao điểm cần thêm bao nhiêu.
-Đủ khi: có con số tối thiểu cho từng ca chính.
+Need: the staff list, each person's role, who may work which shifts, and who may work only some shifts.
+Enough when: there are names or groups of people and roles sufficient to build a schedule.
 
-## swap_leave_rules — Quy tắc đổi ca và xin nghỉ
-Cần có: báo trước bao lâu, đổi ca cần ai đồng ý, ai duyệt xin nghỉ, số ngày nghỉ tối đa liên tiếp.
-Đủ khi: có quy tắc đổi ca và người duyệt nghỉ.
+## opening_hours — Opening hours
 
-## labor_limits — Giới hạn giờ làm
-Cần có: số giờ tối đa mỗi ngày và mỗi tuần, thời gian nghỉ tối thiểu giữa hai ca, quy định tăng ca.
-Đủ khi: có giới hạn bằng số. Không tự đoán theo luật; nếu chủ không rõ, ghi cần xác nhận.
+Need: opening and closing times for each day, fixed days off, and holidays.
+Enough when: there is a time window for the whole week.
 
-## tone — Giọng điệu
-Cần có: cách xưng hô với nhân viên và phong cách nhắc ca.
-Đủ khi: có cách xưng hô và một ví dụ tin nhắc ca.
+## coverage — Minimum people per shift
 
-## Mục không áp dụng
+Need: the minimum number of people for each shift and role, and how many extra a peak shift needs.
+Enough when: there is a minimum number for each main shift.
 
-Nếu một mục không áp dụng cho doanh nghiệp (ví dụ chỉ có một người nên không cần quy tắc đổi ca), ghi nhận là "không áp dụng" cùng lý do, coi mục đã đủ và không hỏi lại. "Chưa rõ" không phải là "không áp dụng": ghi là cần xác nhận.
+## swap_leave_rules — Swap and leave rules
 
-## Cách hỏi trong chat thiết lập
+Need: how much notice is required, who must agree to a swap, who approves leave, and the maximum consecutive days off.
+Enough when: there is a swap rule and a person who approves leave.
 
-- Một mục chưa đủ mỗi lượt, ưu tiên mục ảnh hưởng tới tiền, khách hàng hoặc quyền hạn.
-- Hỏi bằng ngôn ngữ kinh doanh quen thuộc, kèm ví dụ ngắn.
-- Không điền đại khi chủ chưa rõ: đánh dấu chưa đủ.
-- Khi hoàn tất, nhắc rà lại các mục và bấm "Áp dụng".
+## labor_limits — Working-hour limits
+
+Need: the maximum hours per day and per week, the minimum rest between two shifts, and the overtime rule.
+Enough when: the limits are numbers. Do not guess from the law; if the owner is unsure, record that confirmation is needed.
+
+## tone — Tone
+
+Need: how to address staff and the style of shift reminders.
+Enough when: there is a form of address and one example shift reminder.
+
+## Items that do not apply
+
+If an item does not apply to the business (for example there is only one person, so no swap rule is needed), record it as "not applicable" with the reason, treat the item as enough, and do not ask again. "Not yet clear" is not "not applicable": record that confirmation is needed.
+
+## How to ask in the setup chat
+
+- One incomplete item per turn, preferring items that affect money, customers, or authority.
+- Ask in familiar business language, with a short example.
+- Do not fill in a guess when the owner is unsure: mark the item as not enough.
+- When finished, remind them to review the items and press "Apply".

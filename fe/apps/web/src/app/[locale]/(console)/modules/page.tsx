@@ -1,8 +1,8 @@
-import { ModulesRedirectPage } from "@/features/pages/ModulesRedirectPage"
+import { NewModuleRedirectPage } from "@/features/pages/NewModuleRedirectPage"
 
-export { agentIdRedirectMetadata as generateMetadata } from "@/features/pages/AgentIdRedirectPage"
+export { newModuleRedirectMetadata as generateMetadata } from "@/features/pages/NewModuleRedirectPage"
 
 /** Moved: the module catalogue is /agents. */
-const Page = () => <ModulesRedirectPage />
+const Page = () => <NewModuleRedirectPage />
 
 export default Page

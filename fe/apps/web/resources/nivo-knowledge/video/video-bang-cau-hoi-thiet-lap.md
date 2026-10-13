@@ -1,43 +1,50 @@
 ---
-title: Bảng câu hỏi thiết lập Tạo video
+title: Setup questionnaire for Video maker
 kind: setup_checklist
 version: 1
 ---
-# Bảng câu hỏi thiết lập Tạo video
 
-Tạo video chỉ nên chạy thật khi các mục dưới đây đã có thông tin được chủ xác nhận. Trước khi hỏi, đối chiếu với Tri thức doanh nghiệp và tóm tắt lại thay vì hỏi lại điều đã có.
+# Setup questionnaire for Video maker
 
-## brand_assets — Hình ảnh và nhận diện
-Cần có: logo, màu, phông chữ, nhạc nền được phép dùng, nơi lưu ảnh và video gốc.
-Đủ khi: có logo và màu chính, biết nơi lấy hình ảnh.
+Video maker should run for real only when the items below have information the owner has confirmed. Before asking, check Business knowledge and summarize what is already there instead of asking again.
 
-## video_goals — Mục đích và đối tượng
-Cần có: video dùng để làm gì, đối tượng xem, thông điệp ưu tiên.
-Đủ khi: có ít nhất một mục đích và đối tượng.
+## brand_assets — Images and identity
 
-## formats — Định dạng và thời lượng
-Cần có: tỷ lệ khung hình, thời lượng, kênh đăng (TikTok, Reels, YouTube, website).
-Đủ khi: có kênh chính và thời lượng mục tiêu.
+Need: a logo, colours, fonts, background music that may be used, and where the original photos and videos are stored.
+Enough when: there is a logo and a primary colour, and it is known where to get images.
 
-## claims_limits — Điều không được nói
-Cần có: điều không được nói hoặc không được hiện (cam kết, so sánh, giá, hình ảnh nhạy cảm).
-Đủ khi: có danh sách giới hạn hoặc xác nhận dùng bộ mặc định của NIVO.
+## video_goals — Purpose and audience
 
-## approval — Quy trình duyệt
-Cần có: ai xem và duyệt bản nháp, duyệt qua đâu, thời gian phản hồi mong muốn.
-Đủ khi: có người duyệt cụ thể.
+Need: what the video is for, who watches it, and the priority message.
+Enough when: there is at least one purpose and one audience.
 
-## tone — Giọng điệu
-Cần có: giọng của video: vui, chuyên nghiệp, gần gũi; cách xưng hô.
-Đủ khi: có phong cách và một câu mở đầu mẫu.
+## formats — Format and duration
 
-## Mục không áp dụng
+Need: aspect ratio, duration, and the publishing channel (TikTok, Reels, YouTube, website).
+Enough when: there is a primary channel and a target duration.
 
-Nếu một mục không áp dụng cho doanh nghiệp (ví dụ chỉ có một người nên không cần quy tắc đổi ca), ghi nhận là "không áp dụng" cùng lý do, coi mục đã đủ và không hỏi lại. "Chưa rõ" không phải là "không áp dụng": ghi là cần xác nhận.
+## claims_limits — What must not be said
 
-## Cách hỏi trong chat thiết lập
+Need: what must not be said or shown (promises, comparisons, prices, sensitive images).
+Enough when: there is a list of limits, or confirmation to use NIVO's default set.
 
-- Một mục chưa đủ mỗi lượt, ưu tiên mục ảnh hưởng tới tiền, khách hàng hoặc quyền hạn.
-- Hỏi bằng ngôn ngữ kinh doanh quen thuộc, kèm ví dụ ngắn.
-- Không điền đại khi chủ chưa rõ: đánh dấu chưa đủ.
-- Khi hoàn tất, nhắc rà lại các mục và bấm "Áp dụng".
+## approval — Approval process
+
+Need: who reviews and approves the draft, where approval happens, and the expected response time.
+Enough when: there is a specific approver.
+
+## tone — Tone of voice
+
+Need: the video's voice (cheerful, professional, friendly) and how to address the viewer.
+Enough when: there is a style and one sample opening line.
+
+## Items that do not apply
+
+If an item does not apply to the business (for example there is only one person, so no shift-change rule is needed), record it as "does not apply" with the reason, treat the item as enough, and do not ask again. "Not yet clear" is not "does not apply": record it as needing confirmation.
+
+## How to ask in the setup chat
+
+- One incomplete item per turn, preferring items that affect money, customers, or authority.
+- Ask in familiar business language, with a short example.
+- Do not fill in a guess when the owner is not sure: mark it as not enough.
+- When finished, remind them to review the items and press "Apply".

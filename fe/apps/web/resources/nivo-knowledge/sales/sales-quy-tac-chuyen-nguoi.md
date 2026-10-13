@@ -1,33 +1,34 @@
 ---
-title: Quy tắc Bán hàng chuyển cho người
+title: Sales rules for handing off to a human
 kind: escalation
 version: 1
 ---
-# Quy tắc Bán hàng chuyển cho người
 
-## Chuyển cho chủ hoặc quản lý khi
+# Sales rules for handing off to a human
 
-- Số tiền báo giá hoặc đơn đạt hoặc vượt ngưỡng cần duyệt.
-- Khách đòi giảm giá, thương lượng điều khoản, hoặc nói đã có báo giá thấp hơn từ nơi khác.
-- Khách lớn, khách quen, hoặc người quen của chủ (nếu chủ đã đánh dấu).
-- Hợp đồng, điều khoản pháp lý, yêu cầu thay đổi phạm vi.
-- Hai khách tiềm năng có dấu hiệu trùng (cùng công ty hoặc cùng liên hệ) và không chắc nên gộp hay tách.
+## Hand off to the owner or manager when
 
-## Chuyển cho Kế toán (qua bàn giao đơn chốt)
+- The quote or order amount reaches or exceeds the threshold requiring approval.
+- The customer requests a discount, negotiates terms, or says they have received a lower quote elsewhere.
+- The customer is a major customer, a regular customer, or an acquaintance of the owner (if flagged by the owner).
+- Contracts, legal terms, or requests to change the scope are involved.
+- Two leads show signs of being duplicates (the same company or contact), and it is unclear whether to merge them or keep them separate.
 
-Khi đơn đã xác nhận và có đủ thông tin xuất hóa đơn. Gói gồm: tên khách hoặc công ty, mã số thuế khi cần, mục hàng, số lượng, đơn giá, tổng tiền, điều khoản thanh toán, bằng chứng xác nhận. Nếu thiếu thông tin, hỏi khách đúng một câu để bổ sung, đừng chuyển hồ sơ thiếu.
+## Hand off to Accounting (through the confirmed-order handoff)
 
-## Chuyển lại cho Chatbot hoặc nhân viên chăm sóc khi
+When the order is confirmed and all information needed to issue an invoice is available. The handoff package includes: customer or company name, tax identification number when needed, line items, quantities, unit prices, total amount, payment terms, and evidence of confirmation. If information is missing, ask the customer exactly one question to obtain it; do not hand off an incomplete record.
 
-Khách chỉ hỏi hỗ trợ sau bán (không phải cơ hội bán), hoặc có khiếu nại cần xử lý trước khi nói chuyện bán thêm.
+## Hand back to Chatbot or customer support staff when
 
-## Cách trình bày cho chủ
+The customer is only asking for after-sales support (not a sales opportunity), or has a complaint that must be resolved before discussing additional sales.
 
-Một dòng việc cần quyết định, một dòng hậu quả nếu chậm, một hai lựa chọn kèm khuyến nghị:
-"Khách A xin giảm 10% cho đơn 38 triệu. Nếu không trả lời trong hôm nay có thể mất khách. Đề xuất: giảm 5% kèm tặng gói bảo trì tháng đầu. Anh/chị duyệt không?"
+## How to present the issue to the owner
 
-Không gửi nhiều đề xuất cùng lúc cho một khách. Gom lại thành một câu hỏi.
+One line stating the decision needed, one line explaining the consequence of a delay, and one or two options with a recommendation:
+"Customer A requests a 10% discount on an order worth 38 million. We may lose the customer if we do not respond today. Recommendation: a 5% discount plus a free maintenance package for the first month. Do you approve?"
 
-## Khi chủ vắng
+Do not send multiple proposals at once for one customer. Combine them into one question.
 
-Việc chờ duyệt vẫn giữ nguyên trạng thái "chờ", agent không tự quyết thay. Nếu việc quá hạn theo mức phản hồi đã cấu hình, nhắc lại một lần và ghi chú rõ cho khách rằng đang chờ phản hồi từ phía cửa hàng.
+## When the owner is away
+
+Items awaiting approval remain in the "waiting" state; the agent does not decide on the owner's behalf. If an item is overdue according to the configured response timeframe, send one reminder and clearly inform the customer that a response from the store is pending.

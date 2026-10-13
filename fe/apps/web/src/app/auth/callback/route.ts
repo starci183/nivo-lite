@@ -1,9 +1,9 @@
 import "server-only"
 
+import { cookies } from "next/headers"
 import { NextResponse, type NextRequest } from "next/server"
-import { requestOrigin } from "@/lib/request-origin"
-import { exchangeAuthCode, verifyEmailLink } from "@/modules/db"
-import { APP_ROUTES, AUTH_ROUTES, safeNextPath } from "@/modules/routes"
+import { exchangeAuthCode, verifyEmailLink } from "@/modules/auth"
+import { APP_ROUTES, AUTH_ROUTES, requestOrigin, safeNextPath } from "@/modules/routes"
 
 const EMAIL_LINK_ROUTES: ReadonlySet<string> = new Set(["/auth/confirm", APP_ROUTES.authCallback])
 
@@ -38,9 +38,9 @@ export const GET = async (request: NextRequest): Promise<NextResponse> => {
     const code = searchParams.get("code")
     const tokenHash = searchParams.get("token_hash")
     if (code) {
-        if ((await exchangeAuthCode(code)).kind !== "ok") return fail("link_expired")
+        if (!(await exchangeAuthCode(await cookies(), code)).success) return fail("link_expired")
     } else if (tokenHash && type) {
-        if ((await verifyEmailLink(type, tokenHash)).kind !== "ok") return fail("link_expired")
+        if (!(await verifyEmailLink(await cookies(), type, tokenHash)).success) return fail("link_expired")
     } else {
         return fail(type === null ? "missing_code" : "link_expired")
     }

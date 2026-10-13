@@ -10,48 +10,38 @@ import {
     OFFICE_ROUTE,
     ROLE_LABELS,
     useConsoleShell,
+    useCurrentConsoleSession,
     useSignOut,
     useSwitchWorkspace,
     workspaceEntries,
 } from "@/hooks/console"
 import { useLocaleSwitch } from "@/hooks/locale"
-import type { ConsoleWorkspace } from "@/modules/types"
 import { ConsoleHeaderBase } from "./component"
 
-/** What the console layout reads for the top bar: plain session facts and the real counts. */
-type ConsoleHeaderProps = {
-    readonly workspaceName: string
-    readonly userName: string
-    readonly email: string
-    readonly avatarUrl: string | null
-    readonly role: "owner" | "manager" | "staff"
-    readonly workspaces: ReadonlyArray<ConsoleWorkspace>
-    readonly currentWorkspaceId: string
-}
-
 /** The connected console top bar: workspace, search, New menu, language, notifications and the account menu. */
-export const ConsoleHeader = (props: ConsoleHeaderProps) => {
+export const ConsoleHeader = () => {
+    const session = useCurrentConsoleSession()
     const auth = useAuthActions()
-    const shell = useConsoleShell(props.currentWorkspaceId)
+    const shell = useConsoleShell(session.currentWorkspaceId)
     const t = useTranslations("shell")
     const tPromo = useTranslations("promo")
     const router = navigation.useRouter()
     const signOut = useSignOut(auth.endSession)
-    const switchWorkspace = useSwitchWorkspace(props.currentWorkspaceId)
+    const switchWorkspace = useSwitchWorkspace(session.currentWorkspaceId)
     const language = useLocaleSwitch()
     const [query, setQuery] = useState("")
     const [isNotificationsOpen, setNotificationsOpen] = useState(false)
-    const roleLabel = t(ROLE_LABELS[props.role])
-    const workspaces = workspaceEntries(props.workspaces, props.currentWorkspaceId, switchWorkspace)
+    const roleLabel = t(ROLE_LABELS[session.member.role])
+    const workspaces = workspaceEntries(session.workspaces, session.currentWorkspaceId, switchWorkspace)
     const accountEntries: ReadonlyArray<DropdownMenuEntry> = [
         { kind: "section", id: "workspaces", label: t("switchWorkspace"), items: workspaces },
         {
             kind: "section",
             id: "account",
-            label: props.userName,
+            label: session.userName,
             items: [
-                { id: "role", label: `${props.userName} · ${roleLabel}`, isDisabled: true },
-                { id: "email", label: props.email || t("signedIn"), isDisabled: true },
+                { id: "role", label: `${session.userName} · ${roleLabel}`, isDisabled: true },
+                { id: "email", label: session.email || t("signedIn"), isDisabled: true },
                 { id: "account", label: t("navAccount"), href: "/account" },
                 { id: "signout", label: t("signOut"), onAction: signOut.signOut },
             ],
@@ -68,11 +58,11 @@ export const ConsoleHeader = (props: ConsoleHeaderProps) => {
         <ConsoleHeaderBase
             props={{
                 logoLabel: t("brandLogo"),
-                workspaceName: props.workspaceName,
-                userName: props.userName,
-                avatarUrl: props.avatarUrl ?? undefined,
+                workspaceName: session.workspaceName,
+                userName: session.userName,
+                avatarUrl: session.avatarUrl,
                 roleLabel,
-                isStaff: props.role === "staff",
+                isStaff: session.member.role === "staff",
                 isFoundingMember: shell.isFoundingMember,
                 foundingLabel: tPromo("foundingMember"),
                 workspaceEntries: workspaces,

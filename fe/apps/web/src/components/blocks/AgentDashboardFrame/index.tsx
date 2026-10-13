@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import type { ReactNode } from "react"
-import type { DescriptionListStatItem } from "@starci/grammar/common"
 import { useAgentDashboardFrame } from "@/hooks/agentDashboard"
 import type { ModuleKey } from "@/hooks/installations"
 import { AgentDashboardFrameBase } from "./component"
@@ -15,26 +14,29 @@ interface AgentDashboardTab {
     readonly content?: ReactNode
 }
 
-/** What a module hands the frame: the module, its instance, its own figures and tabs. The common regions are read here. */
+/** What a module hands the frame: the module, its instance, its own slots and tabs. The common regions are read here. */
 interface AgentDashboardFrameProps {
     readonly module: ModuleKey
     /** The instance whose dashboard this is; null for the first installation of the type. */
     readonly installationId?: string | null
-    /** The module's own figures and tabs are not known yet. */
+    /** The module's own tabs are not known yet: a tab without content draws a skeleton card. */
     readonly isLoading?: boolean
     /** The page command in the header: omit for "Talk to the agent", null for none. */
     readonly command?: ReactNode | null
-    /** Exactly 4 stat-strip items. */
-    readonly figures: ReadonlyArray<DescriptionListStatItem>
-    readonly figuresFailed?: boolean
+    /** The module's own connected figures block (its four stat items), drawn under the heading. */
+    readonly ribbon?: ReactNode
+    /** The module's own waiting card in place of the dashboard's "waiting for you" region. */
+    readonly waiting?: ReactNode
+    /** A module's own gaps card in place of the built-in one; null shows none. */
+    readonly gaps?: ReactNode
     readonly tabs: ReadonlyArray<AgentDashboardTab>
-    /** The tab id from ?tab=; unknown ids open the first tab. */
+    /** The tab whose label carries the number of decisions waiting for a person. */
+    readonly waitingTab?: string
+    /** The tab id from ?tab=; unknown ids open the first tab. A new value (a link to another tab) selects it. */
     readonly initialTab?: string | null
     /** Controlled selection, for a module whose panels switch tabs themselves. */
     readonly tab?: string
     readonly onTabChange?: (id: string) => void
-    /** A module's own gaps card in place of the built-in one; null shows none. */
-    readonly gaps?: ReactNode
 }
 
 const resolveTab = (tabs: ReadonlyArray<AgentDashboardTab>, id: string | null | undefined): string =>
@@ -45,13 +47,15 @@ export const AgentDashboardFrame = (props: AgentDashboardFrameProps) => {
     const frame = useAgentDashboardFrame({
         module: props.module,
         installationId: props.installationId ?? null,
-        isLoading: props.isLoading === true,
-        figures: props.figures,
-        figuresFailed: props.figuresFailed === true,
         hasOwnCommand: props.command !== undefined,
         hasOwnGaps: props.gaps !== undefined,
     })
     const [own, setOwn] = useState<string>(() => resolveTab(props.tabs, props.initialTab))
+    const [routeTab, setRouteTab] = useState(props.initialTab ?? null)
+    if ((props.initialTab ?? null) !== routeTab) {
+        setRouteTab(props.initialTab ?? null)
+        setOwn(resolveTab(props.tabs, props.initialTab))
+    }
     const selected = resolveTab(props.tabs, props.tab ?? own)
 
     const select = (id: string) => {
@@ -66,6 +70,8 @@ export const AgentDashboardFrame = (props: AgentDashboardFrameProps) => {
         <AgentDashboardFrameBase
             state={{
                 command: props.command ?? null,
+                ribbon: props.ribbon ?? null,
+                waiting: props.waiting ?? null,
                 gaps: props.gaps ?? null,
                 panel: props.tabs.find((tab) => tab.id === selected)?.content ?? null,
             }}
@@ -74,7 +80,7 @@ export const AgentDashboardFrame = (props: AgentDashboardFrameProps) => {
                 ...frame.view,
                 hasPlaceholder: props.isLoading === true,
                 tabsLabel: frame.tabsLabel,
-                tabs: props.tabs.map((tab) => ({ id: tab.id, label: tab.label })),
+                tabs: props.tabs.map((tab) => ({ id: tab.id, label: frame.tabLabel(tab, props.waitingTab) })),
                 selectedTab: selected,
             }}
             on={{ selectTab: select, retry: frame.reload }}

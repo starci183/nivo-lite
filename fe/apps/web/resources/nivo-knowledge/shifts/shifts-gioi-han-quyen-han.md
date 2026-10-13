@@ -1,34 +1,35 @@
 ---
-title: Giới hạn quyền hạn của Lịch & ca làm
+title: Authority limits of Shifts and schedules
 kind: authority
 version: 1
 ---
-# Giới hạn quyền hạn của Lịch & ca làm
 
-## Theo thang quyền
+# Authority limits of Shifts and schedules
 
-- **Mặc định**: bậc 3 (Chuẩn bị). Agent soạn lịch và đề xuất; chủ hoặc quản lý duyệt rồi mới áp dụng.
-- **Có thể nâng** lên bậc 5 (Tự làm trong chính sách) cho việc thường lệ: duyệt đổi ca khi vẫn đủ người tối thiểu, gửi nhắc ca.
+## On the authority ladder
 
-## Tự làm được khi đã cấp quyền
+- **Default**: level 3 (Prepare). The agent drafts the schedule and proposes it; the owner or a manager approves before it is applied.
+- **May be raised** to level 5 (Act within policy) for routine work: approving a swap that still meets the minimum staffing, and sending shift reminders.
 
-- Duyệt đổi ca giữa hai người cùng vai trò khi lịch vẫn đủ người tối thiểu và không ai vượt giới hạn giờ.
-- Gửi nhắc ca đúng khung giờ đã duyệt.
-- Soạn lịch nháp và cập nhật bản nháp.
+## May act alone once granted
 
-## Luôn cần người duyệt
+- Approve a swap between two people in the same role when the schedule still meets the minimum staffing and nobody exceeds the hour limits.
+- Send a shift reminder in the approved time window.
+- Draft a schedule and update the draft.
 
-- Đăng lịch chính thức cho cả đội.
-- Duyệt xin nghỉ (đặc biệt nghỉ dài, nghỉ sát giờ, nghỉ ngày cao điểm).
-- Mọi thay đổi làm ca thiếu người, vượt giới hạn giờ làm hoặc đụng quy định lao động.
-- Thay đổi lương, thưởng, phụ cấp ca.
+## Always needs a person to approve
 
-## Không bao giờ
+- Publish the official schedule for the whole team.
+- Approve leave (especially long leave, last-minute leave, and leave on a peak day).
+- Any change that leaves a shift short of people, exceeds working-hour limits, or touches labor rules.
+- Changes to pay, bonuses, or shift allowances.
 
-- Không bịa quy định lao động, không hứa tăng ca có lương khi chủ chưa nói.
-- Không tiết lộ lịch, lý do nghỉ hay thông tin cá nhân của người này cho người khác.
-- Không tự xóa hoặc phạt nhân viên.
+## Never
 
-## Ghi nhận bằng chứng
+- Do not invent labor rules, and do not promise paid overtime the owner has not stated.
+- Do not reveal one person's schedule, reason for leave, or personal information to another person.
+- Do not delete staff or penalise them on its own.
 
-Mỗi lần duyệt hoặc thay đổi ghi: ai yêu cầu, ai duyệt (agent hay người), quy tắc nào được áp dụng, lịch trước và sau.
+## Record the evidence
+
+Each approval or change records: who asked, who approved (the agent or a person), which rule was applied, and the schedule before and after.

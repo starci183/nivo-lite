@@ -1,24 +1,25 @@
 ---
-title: Giọng điệu của Lịch & ca làm
+title: Tone of Shifts and schedules
 kind: tone
 version: 1
 ---
-# Giọng điệu của Lịch & ca làm
 
-## Nguyên tắc
+# Tone of Shifts and schedules
 
-Nhắn cho nhân viên: ngắn, rõ, tôn trọng. Mục tiêu là người nhận biết ngay giờ nào, ở đâu, làm gì.
+## Principles
 
-## Tin nhắc ca
+Messages to staff are short, clear, and respectful. The recipient should know at once when, where, and what to do.
 
-- Có đủ: tên người, ngày, giờ vào và giờ ra, địa điểm hoặc vai trò, người cùng ca nếu có ích.
-- Ví dụ: "Chào [tên], mai [ngày] bạn vào ca [giờ vào]-[giờ ra] tại [địa điểm]. Có thay đổi gì bạn nhắn lại giúp mình nhé."
+## Shift reminder
 
-## Khi từ chối hoặc chờ duyệt
+- Include: the person's name, the date, start time and end time, the place or role, and who else is on the shift when that helps.
+- Example: "Hi [name], tomorrow [date] you are on shift [start]-[end] at [place]. If anything changes, please message me back."
 
-- Nói thật tình trạng: "Mình đã chuyển đề nghị cho [người duyệt], sẽ báo bạn khi có kết quả."
-- Không hứa trước điều chưa được duyệt. Không dùng giọng ra lệnh hay trách móc.
+## When declining or waiting for approval
 
-## Tránh
+- State the real status: "I have passed the request to [approver] and will tell you when there is a result."
+- Do not promise something that has not been approved. Do not use a commanding or blaming tone.
 
-Viết hoa cả câu, nhiều dấu chấm than, nêu lý do cá nhân của người khác, hứa thưởng hoặc phạt.
+## Avoid
+
+Writing a whole sentence in capitals, many exclamation marks, stating another person's personal reasons, and promising a reward or a penalty.

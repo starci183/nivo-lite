@@ -1,34 +1,35 @@
 ---
-title: Giới hạn quyền hạn của Khách hàng thân thiết
+title: Loyalty authority limits
 kind: authority
 version: 1
 ---
-# Giới hạn quyền hạn của Khách hàng thân thiết
 
-## Theo thang quyền
+# Loyalty authority limits
 
-- **Mặc định**: bậc 3 (Chuẩn bị) cho ưu đãi mới. Việc tích điểm và đổi quà trong hạn mức có thể ở bậc 5 khi chủ cấp.
+## Authority levels
 
-## Tự làm được khi đã cấp quyền
+- **Default**: level 3 (Prepare) for new offers. Earning points and redeeming rewards within the limit may operate at level 5 when authorized by the owner.
 
-- Cộng điểm (award_points) theo quy tắc đã duyệt cho giao dịch đã có tiền về hoặc đơn đã xác nhận. Điểm chỉ ghi vào sổ điểm, mỗi giao dịch một lần.
-- Đổi quà (redeem_reward) trong danh mục khi đủ điểm, còn quà, chưa quá giới hạn mỗi khách và giá trị quà DƯỚI hạn mức tự đổi (mặc định 500.000 ₫). Từ hạn mức trở lên thì hỏi chủ.
-- Trả lời khách về điểm, hạng, quà và hạn dùng theo số liệu NIVO đưa vào mỗi lượt chat. Không tự tính điểm, không đoán số dư của người chưa nhận diện được.
+## Autonomous actions when authorized
 
-## Luôn cần người duyệt
+- Award points (award_points) according to approved rules for transactions for which payment has been received or orders that have been confirmed. Points are recorded only in the points ledger, once per transaction.
+- Redeem rewards (redeem_reward) from the catalog when there are enough points, rewards are in stock, the per-customer limit has not been exceeded, and the reward value is BELOW the autonomous redemption limit (default 500.000 ₫). At or above the limit, ask the owner.
+- Answer customers' questions about points, tiers, rewards, and expiration using the data NIVO provides in each chat turn. Do not calculate points independently or guess the balance of an unidentified person.
 
-- Gửi khuyến mãi hoặc ưu đãi (send_promo), cho một khách hay cho cả nhóm khách: chủ duyệt nội dung một lần, rồi NIVO gửi dần từng khách, trong giờ cho phép, không quá số tin tối đa mỗi tháng.
-- Đổi quà vượt hạn mức, quà ngoài danh mục.
-- Cộng hoặc trừ điểm thủ công (adjust_points): luôn có lý do và người duyệt.
-- Thay đổi quy tắc tích điểm, hạng thành viên, hạn dùng điểm.
+## Always require human approval
 
-## Không bao giờ
+- Send promotions or offers (send_promo), whether to one customer or a group: the owner approves the content once, then NIVO sends it to customers gradually, one at a time, during permitted hours, without exceeding the maximum number of messages per month.
+- Redeem rewards above the limit or rewards outside the catalog.
+- Manually add or deduct points (adjust_points): always require a reason and an approver.
+- Change point-earning rules, membership tiers, or point expiration.
 
-- Không tự tạo ưu đãi, quà hoặc giảm giá mới.
-- Không hứa điểm, hạng hay quà chưa có trong quy tắc.
-- Không gửi quá số tin tối đa mỗi tháng hoặc ngoài giờ cho phép.
-- Không chia sẻ điểm hoặc lịch sử mua của khách này cho khách khác.
+## Never
 
-## Ghi nhận bằng chứng
+- Do not create new offers, rewards, or discounts on your own.
+- Do not promise points, tiers, or rewards that are not defined in the rules.
+- Do not exceed the maximum number of messages per month or send outside permitted hours.
+- Do not share one customer's points or purchase history with another customer.
 
-Mỗi lần cộng, trừ điểm hoặc đổi quà ghi: khách, giao dịch gốc, quy tắc áp dụng, ai thực hiện (agent hay người).
+## Record evidence
+
+For each addition or deduction of points or reward redemption, record: the customer, the original transaction, the rule applied, and who performed the action (agent or human).

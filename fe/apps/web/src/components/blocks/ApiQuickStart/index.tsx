@@ -1,6 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
+import { isManager, useMember } from "@/hooks/member"
 import { useState } from "react"
 import { ApiQuickStartBase } from "./component"
 import type { QuickStartExample } from "./component"
@@ -16,6 +17,7 @@ const JSON_TYPE = '-H "Content-Type: application/json"'
 /** The connected quick start: builds the copy-ready examples for the public API and remembers which one was copied last. */
 export const ApiQuickStart = (props: ApiQuickStartProps) => {
     const t = useTranslations("developers")
+    const member = useMember()
     const [copiedId, setCopiedId] = useState<string>()
     const copy = (id: string, code: string) => {
         navigator.clipboard.writeText(code).then(
@@ -47,6 +49,7 @@ export const ApiQuickStart = (props: ApiQuickStartProps) => {
     }
     const post = (path: string, body: object) =>
         `curl -X POST ${props.base}/${path} \\\n  ${AUTH} \\\n  ${JSON_TYPE} \\\n  -d '${JSON.stringify(body)}'`
+    if (!isManager(member)) return null
     return (
         <ApiQuickStartBase
             props={{

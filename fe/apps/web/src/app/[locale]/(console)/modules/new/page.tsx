@@ -1,13 +1,10 @@
-import { ModulesRedirectPage } from "@/features/pages/ModulesRedirectPage"
+import { NewModuleRedirectPage } from "@/features/pages/NewModuleRedirectPage"
 
-export { agentIdRedirectMetadata as generateMetadata } from "@/features/pages/AgentIdRedirectPage"
+export { newModuleRedirectMetadata as generateMetadata } from "@/features/pages/NewModuleRedirectPage"
 
-/** What the route passes through: the module the old install link named. */
-interface PageProps {
-    readonly searchParams: Promise<{ readonly module?: string }>
-}
+type PageProps = { readonly searchParams: Promise<{ module?: string }> }
 
-/** Moved: installing a module is the Install button of /agents. */
-const Page = async (props: PageProps) => <ModulesRedirectPage module={(await props.searchParams).module} />
+/** The old "add a module" url: forwards to the agent type under /agents. */
+const Page = async ({ searchParams }: PageProps) => <NewModuleRedirectPage module={(await searchParams).module} />
 
 export default Page

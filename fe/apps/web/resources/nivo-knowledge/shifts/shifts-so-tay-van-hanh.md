@@ -1,23 +1,24 @@
 ---
-title: Sổ tay vận hành của Lịch & ca làm
+title: Operating playbook of Shifts and schedules
 kind: playbook
 version: 1
 ---
-# Sổ tay vận hành của Lịch & ca làm
 
-## Mục đích
+# Operating playbook of Shifts and schedules
 
-Lịch & ca làm giúp chủ doanh nghiệp (cửa hàng, quán, phòng khám, xưởng, văn phòng) luôn biết ai làm ca nào, ca nào thiếu người và ai đã xin đổi hay xin nghỉ. Agent soạn lịch, kiểm tra quy tắc rồi đề xuất; người có quyền duyệt quyết định.
+## Purpose
 
-## Cách làm việc
+Shifts and schedules helps a business owner (a shop, cafe, clinic, workshop, or office) always know who works which shift, which shift is short of people, and who has asked to swap or take leave. The agent drafts the schedule, checks the rules, then proposes; the person with approval authority decides.
 
-1. **Đọc nhu cầu**: giờ hoạt động, số người tối thiểu mỗi ca và mỗi vai trò, ngày cao điểm.
-2. **Soạn lịch nháp**: xếp theo vai trò và khả năng của từng người, tôn trọng giới hạn giờ làm và thời gian nghỉ giữa hai ca. Chia ca công bằng, không dồn ca xấu cho một người.
-3. **Kiểm tra trước khi đề xuất**: ca nào thiếu người, ai vượt giờ, ai xin nghỉ trùng ca. Ghi rõ vấn đề còn lại thay vì giấu.
-4. **Đề xuất đăng lịch**: lịch chỉ đến tay nhân viên sau khi người có quyền duyệt.
-5. **Xử lý đổi ca và xin nghỉ**: đối chiếu với quy tắc đã đặt (báo trước bao lâu, ai thay, có đủ người tối thiểu không). Việc trong quy tắc xử lý nhanh; ngoài quy tắc chuyển người duyệt.
-6. **Nhắc ca**: gửi nhắc trước giờ vào ca theo khung giờ chủ đã chọn, kèm giờ, địa điểm và người cùng ca.
+## How to work
 
-## Dấu hiệu cần báo chủ
+1. **Read the demand**: opening hours, the minimum number of people per shift and per role, and peak days.
+2. **Draft the schedule**: assign by role and each person's ability, respecting working-hour limits and the rest time between two shifts. Share shifts fairly, and do not pile the unwanted shifts onto one person.
+3. **Check before proposing**: which shift is short of people, who is over the hour limit, and whose leave overlaps a shift. State the remaining problems instead of hiding them.
+4. **Propose publishing**: staff receive the schedule only after the person with approval authority approves it.
+5. **Handle swaps and leave**: check against the rules already set (how much notice, who covers, and whether the minimum staffing is still met). Work inside the rules is handled quickly; work outside the rules goes to the approver.
+6. **Shift reminders**: send a reminder before the shift starts, in the time window the owner chose, including the time, the place, and who else is on the shift.
 
-Ca thiếu người dưới mức tối thiểu, một người liên tục bị xếp ca dài, nhiều đơn xin nghỉ trùng ngày, đơn xin nghỉ sát giờ.
+## Signs to report to the owner
+
+A shift staffed below the minimum, one person repeatedly assigned long shifts, many leave requests on the same day, and a last-minute leave request.

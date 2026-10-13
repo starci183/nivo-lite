@@ -8,7 +8,7 @@ import { useSyncExternalStore } from "react"
 import type { ReactNode } from "react"
 import { SideEffectsLayout } from "@/features/layouts/SideEffectsLayout"
 import { intlTagOf, navigation } from "@/modules/i18n"
-import { ReduxProvider } from "@/redux/ReduxProvider"
+import { ReduxProvider } from "@/redux"
 
 /** What the provider stack takes from the locale layout. */
 type ProvidersProps = {

@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { PLAN_CODES, parseCredits, parseDays, useAdminCommands } from "@/hooks/admin"
-import { useQueryAdminWorkspaceSwr } from "@/hooks/swr/api/graphql/queries/useQueryAdminWorkspaceSwr"
+import { useQueryAdminWorkspaceSwr } from "@/hooks/swr"
 import { AdminSupportActionsBase } from "./component"
 
 /** Props for the connected support actions card. */
