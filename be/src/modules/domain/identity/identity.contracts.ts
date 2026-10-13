@@ -16,6 +16,8 @@ export enum PublicReason {
     SignedWebhook = "signed-webhook",
     /** A public page the visitor acts on without an account, bounded by an unguessable link token or the rate limit. */
     PublicForm = "public-form",
+    /** A published catalog page (booking page, loyalty check) read without a session; always rate limited. */
+    CatalogRead = "catalog-read",
 }
 
 /** The metadata `@Public` attaches to a door. */

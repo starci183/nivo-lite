@@ -1,0 +1,15 @@
+/** What confirm-booking takes. */
+export interface ConfirmBookingRequest {
+    /** The workspace id. */
+    readonly workspaceId: string
+    /** The id. */
+    readonly id: string
+}
+
+/** What confirm-booking answers. */
+export interface ConfirmBookingResult {
+    /** The status. */
+    readonly status: "requested" | "confirmed" | "rescheduled" | "cancelled" | "no_show" | "done"
+    /** The fee due. */
+    readonly feeDue: boolean
+}

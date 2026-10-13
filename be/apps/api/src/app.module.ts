@@ -2,6 +2,11 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
 import { InventoryHttpModule } from "@features/api/inventory"
+import { BookingHttpModule } from "@features/api/booking"
+import { LoyaltyHttpModule } from "@features/api/loyalty"
+import { LoyaltyTillHttpModule } from "@features/api/loyalty-till"
+import { PublicBookingHttpModule } from "@features/api/public-booking"
+import { PublicLoyaltyHttpModule } from "@features/api/public-loyalty"
 import { CheckConnectionHealthQueueModule } from "@features/jobs/check-connection-health"
 import { CompleteZaloAuthorizationQueueModule } from "@features/jobs/complete-zalo-authorization"
 import { RefreshZaloTokensQueueModule } from "@features/jobs/refresh-zalo-tokens"
@@ -13,6 +18,23 @@ import { AdminHttpModule } from "@features/api/admin"
 import { ModulesHttpModule } from "@features/api/modules"
 import { ExternalApiHttpModule } from "@features/api/external-api"
 import { SystemHealthHttpModule } from "@features/api/system-health"
+import { BOOKINGS_ERROR_KINDS, BOOKINGS_MESSAGES, BookingsModule } from "@modules/domain/bookings"
+import {
+    LOYALTY_CAMPAIGNS_ERROR_KINDS,
+    LOYALTY_CAMPAIGNS_MESSAGES,
+    LoyaltyCampaignsModule,
+} from "@modules/domain/loyalty-campaigns"
+import { LoyaltyCustomerLinksModule } from "@modules/domain/loyalty-customer-links"
+import { LoyaltyCustomersModule } from "@modules/domain/loyalty-customers"
+import {
+    LOYALTY_LEDGER_ERROR_KINDS,
+    LOYALTY_LEDGER_MESSAGES,
+    LoyaltyLedgerModule,
+} from "@modules/domain/loyalty-ledger"
+import { LOYALTY_OTPS_ERROR_KINDS, LOYALTY_OTPS_MESSAGES, LoyaltyOtpsModule } from "@modules/domain/loyalty-otps"
+import { LoyaltyProgramsModule } from "@modules/domain/loyalty-programs"
+import { LoyaltyRewardsModule } from "@modules/domain/loyalty-rewards"
+import { LOYALTY_ERROR_KINDS, LOYALTY_MESSAGES, LoyaltyModule } from "@modules/domain/loyalty"
 import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
 import { WorkspacesHttpModule } from "@features/api/workspaces"
 import { DeductOrderQueueModule } from "@features/jobs/deduct-order"
@@ -157,6 +179,11 @@ export class AppModule {
                         MODULE_OPS_MESSAGES,
                         PLATFORM_ADMIN_MESSAGES,
                         JOBS_MESSAGES,
+                        BOOKINGS_MESSAGES,
+                        LOYALTY_CAMPAIGNS_MESSAGES,
+                        LOYALTY_LEDGER_MESSAGES,
+                        LOYALTY_MESSAGES,
+                        LOYALTY_OTPS_MESSAGES,
                         LEADS_MESSAGES,
                         RESPONSIBILITIES_MESSAGES,
                         CONTRACTS_MESSAGES,
@@ -200,6 +227,11 @@ export class AppModule {
                         MODULES_ERROR_KINDS,
                         PUBLIC_API_ERROR_KINDS,
                         SUPABASE_ERROR_KINDS,
+                        BOOKINGS_ERROR_KINDS,
+                        LOYALTY_CAMPAIGNS_ERROR_KINDS,
+                        LOYALTY_ERROR_KINDS,
+                        LOYALTY_LEDGER_ERROR_KINDS,
+                        LOYALTY_OTPS_ERROR_KINDS,
                         LEADS_ERROR_KINDS,
                         RESPONSIBILITIES_ERROR_KINDS,
                         CONTRACTS_ERROR_KINDS,
@@ -283,6 +315,7 @@ export class AppModule {
                 ReplenishStockQueueModule,
                 DeductOrderQueueModule,
                 InventoryCommandQueueModule,
+                BookingsModule.register({ isGlobal: true }),
                 LeadsHttpModule,
                 PlatformAuditModule.register({ isGlobal: true }),
                 AiQuotaOverridesModule.register({ isGlobal: true }),
@@ -300,6 +333,23 @@ export class AppModule {
                 RefreshZaloTokensQueueModule,
                 ExternalApiHttpModule,
                 SystemHealthHttpModule,
+                LoyaltyProgramsModule.register({ isGlobal: true }),
+                LoyaltyCustomersModule.register({ isGlobal: true }),
+                LoyaltyCustomerLinksModule.register({ isGlobal: true }),
+                LoyaltyRewardsModule.register({ isGlobal: true }),
+                LoyaltyLedgerModule.register({ isGlobal: true }),
+                LoyaltyCampaignsModule.register({ isGlobal: true }),
+                LoyaltyOtpsModule.register({ isGlobal: true, pepper: options.supabase.serviceRoleKey.reveal() }),
+                LoyaltyModule.register({
+                    isGlobal: true,
+                    // Until the chat lanes provide the channel adapters nothing delivers a code, so the public points check cannot unlock yet.
+                    delivery: { deliver: () => Promise.resolve(false) },
+                }),
+                PublicBookingHttpModule,
+                BookingHttpModule,
+                PublicLoyaltyHttpModule,
+                LoyaltyHttpModule,
+                LoyaltyTillHttpModule,
                 WorkspacesHttpModule,
                 AdminHttpModule,
             ],
