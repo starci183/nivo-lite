@@ -5,11 +5,13 @@ import type {
     ExtractionProgress,
     ExtractionRecord,
     ExtractionStart,
+    ExtractionState,
     MaybeExtraction,
 } from "./brain-extractions.contracts"
-import type { BrainExtractionRow } from "./persistence/brain-extractions.rows"
+import type { BrainExtractionRow, ExtractionStateRow } from "./persistence/brain-extractions.rows"
 import {
     FINISH_EXTRACTION,
+    LIST_EXTRACTIONS,
     SAVE_PROGRESS,
     SELECT_EXTRACTION,
     UPSERT_EXTRACTION,
@@ -37,6 +39,12 @@ export class BrainExtractionsService {
     async get(workspaceId: string, sourceId: string): Promise<MaybeExtraction> {
         const [row] = await this.entityManager.query<Array<BrainExtractionRow>>(SELECT_EXTRACTION, [workspaceId, sourceId])
         return row === undefined ? null : toRecord(row)
+    }
+
+    /** Where the reading of every document of the workspace stands. */
+    async states(workspaceId: string): Promise<ReadonlyArray<ExtractionState>> {
+        const rows = await this.entityManager.query<Array<ExtractionStateRow>>(LIST_EXTRACTIONS, [workspaceId])
+        return rows.map((row) => ({ sourceId: row.source_id, status: row.status }))
     }
 
     /** Starts the reading of a document from its first window. */

@@ -3,6 +3,7 @@ export {
     isKnowledgeCommandPayload,
     isKnowledgeReembedPayload,
     isKnowledgeSourcePayload,
+    knowledgeDedupeKey,
 } from "./knowledge.contracts"
 export type { KnowledgeCommandPayload, KnowledgeReembedPayload, KnowledgeSourcePayload } from "./knowledge.contracts"
 export { KnowledgeQueueModule } from "./knowledge.module"

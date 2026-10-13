@@ -51,3 +51,15 @@ export interface VectorWrite {
     /** One vector per id, in the pgvector text form. */
     readonly vectors: ReadonlyArray<string>
 }
+
+/** One stored passage of a source as the Knowledge page shows it. */
+export interface PassageView {
+    /** The passage id. */
+    readonly id: string
+    /** The order of the passage in its source. */
+    readonly order: number
+    /** The text. */
+    readonly content: string
+    /** Whether the passage has a vector. */
+    readonly hasEmbedding: boolean
+}
