@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationCancelHiringOfferArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { CancelHiringOfferMutation, CancelHiringOfferMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `cancelHiringOffer` mutation. */
-export type MutateCancelHiringOfferRequest = MutationCancelHiringOfferArgs["input"]
+export type MutateCancelHiringOfferRequest = WireInput<CancelHiringOfferMutationVariables["input"]>
 
 /** The response of the `cancelHiringOffer` mutation. */
-type MutateCancelHiringOfferResponse = Pick<Mutation, "cancelHiringOffer">
+type MutateCancelHiringOfferResponse = CancelHiringOfferMutation
 
 const mutation1: TypedDocumentNode<
     MutateCancelHiringOfferResponse,

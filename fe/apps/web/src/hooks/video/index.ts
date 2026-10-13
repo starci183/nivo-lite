@@ -9,6 +9,7 @@ export { useVideoEditorData } from "./useVideoEditorData"
 export { useVideoLibraryData } from "./useVideoLibraryData"
 export { useVideoProjectData } from "./useVideoProjectData"
 export { useVideoLibraryGate } from "./useVideoLibraryGate"
+export { useVideoLibrary } from "./useVideoLibrary"
 export { useVideoStepGate } from "./useVideoStepGate"
 export type { VideoStepScope } from "./useVideoStepGate"
 export { useVideoFailed } from "./useVideoFailed"
@@ -29,4 +30,3 @@ export {
     VIDEO_MAX_SECONDS,
 } from "./video.shared"
 export type { EditorStep, ProjectStatus, SceneRole, ScriptScene } from "./video.shared"
-export { useVideoHeaderParts } from "./useVideoHeaderParts"

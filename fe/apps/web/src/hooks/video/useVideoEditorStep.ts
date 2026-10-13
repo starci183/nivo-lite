@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { useQueryVideoProjectSwr } from "@/hooks/swr/api/graphql/queries/useQueryVideoProjectSwr"
+import { useQueryVideoProjectSwr } from "@/hooks/swr"
 import { isUuid, projectViewOf, stepFor } from "./video.shared"
 import type { EditorStep } from "./video.shared"
 

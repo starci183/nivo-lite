@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationCheckConnectionArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { CheckConnectionMutation, CheckConnectionMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `checkConnection` mutation. */
-export type MutateCheckConnectionRequest = MutationCheckConnectionArgs["input"]
+type MutateCheckConnectionRequest = WireInput<CheckConnectionMutationVariables["input"]>
 
 /** The response of the `checkConnection` mutation. */
-type MutateCheckConnectionResponse = Pick<Mutation, "checkConnection">
+type MutateCheckConnectionResponse = CheckConnectionMutation
 
 const mutation1: TypedDocumentNode<MutateCheckConnectionResponse, InputVariables<MutateCheckConnectionRequest>> = gql`
     mutation CheckConnection($input: CheckConnectionInput!) {

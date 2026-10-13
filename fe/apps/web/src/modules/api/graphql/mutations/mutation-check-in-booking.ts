@@ -1,18 +1,20 @@
+import type { CheckInBookingMutation } from "../__generated__/graphql"
 import { gql } from "@apollo/client"
 import type { DocumentNode } from "graphql"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, MutateParams } from "../types"
-import type { MutateCheckInBookingRequest, MutateCheckInBookingResponse } from "./types/check-in-booking"
+import type { MutateCheckInBookingRequest } from "./types/check-in-booking"
 
 const mutation1 = gql`
     mutation CheckInBooking($input: CheckInBookingInput!) {
         checkInBooking(input: $input) {
-            feeDue status
+            feeDue
+            status
         }
     }
 `
 
-export enum MutationCheckInBooking {
+enum MutationCheckInBooking {
     Mutation1 = "mutation1",
 }
 
@@ -21,12 +23,16 @@ const mutationMap: Record<MutationCheckInBooking, DocumentNode> = {
 }
 
 /** Apollo params for {@link mutateCheckInBooking}. */
-export type MutationCheckInBookingParams = MutateParams<MutationCheckInBooking, MutateCheckInBookingRequest>
+type MutationCheckInBookingParams = MutateParams<MutationCheckInBooking, MutateCheckInBookingRequest>
 
 /** Checks a confirmed booking in. */
-export const mutateCheckInBooking = async ({ mutation = MutationCheckInBooking.Mutation1, request, signal }: MutationCheckInBookingParams) => {
+export const mutateCheckInBooking = async ({
+    mutation = MutationCheckInBooking.Mutation1,
+    request,
+    signal,
+}: MutationCheckInBookingParams) => {
     const apollo = createAuthApolloClient({ signal })
-    return apollo.mutate<MutateCheckInBookingResponse, InputVariables<MutateCheckInBookingRequest>>({
+    return apollo.mutate<CheckInBookingMutation, InputVariables<MutateCheckInBookingRequest>>({
         mutation: mutationMap[mutation],
         variables: { input: request },
     })

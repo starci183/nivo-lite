@@ -1,18 +1,20 @@
+import type { ConfirmBookingMutation } from "../__generated__/graphql"
 import { gql } from "@apollo/client"
 import type { DocumentNode } from "graphql"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, MutateParams } from "../types"
-import type { MutateConfirmBookingRequest, MutateConfirmBookingResponse } from "./types/confirm-booking"
+import type { MutateConfirmBookingRequest } from "./types/confirm-booking"
 
 const mutation1 = gql`
     mutation ConfirmBooking($input: ConfirmBookingInput!) {
         confirmBooking(input: $input) {
-            feeDue status
+            feeDue
+            status
         }
     }
 `
 
-export enum MutationConfirmBooking {
+enum MutationConfirmBooking {
     Mutation1 = "mutation1",
 }
 
@@ -21,12 +23,16 @@ const mutationMap: Record<MutationConfirmBooking, DocumentNode> = {
 }
 
 /** Apollo params for {@link mutateConfirmBooking}. */
-export type MutationConfirmBookingParams = MutateParams<MutationConfirmBooking, MutateConfirmBookingRequest>
+type MutationConfirmBookingParams = MutateParams<MutationConfirmBooking, MutateConfirmBookingRequest>
 
 /** Confirms a requested booking. */
-export const mutateConfirmBooking = async ({ mutation = MutationConfirmBooking.Mutation1, request, signal }: MutationConfirmBookingParams) => {
+export const mutateConfirmBooking = async ({
+    mutation = MutationConfirmBooking.Mutation1,
+    request,
+    signal,
+}: MutationConfirmBookingParams) => {
     const apollo = createAuthApolloClient({ signal })
-    return apollo.mutate<MutateConfirmBookingResponse, InputVariables<MutateConfirmBookingRequest>>({
+    return apollo.mutate<ConfirmBookingMutation, InputVariables<MutateConfirmBookingRequest>>({
         mutation: mutationMap[mutation],
         variables: { input: request },
     })

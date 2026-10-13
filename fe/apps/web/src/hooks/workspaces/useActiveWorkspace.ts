@@ -1,7 +1,6 @@
 import { useCallback } from "react"
 import { LocalStorage, StorageId, rememberWorkspaceCookie } from "@/modules/storage"
-import { useAppDispatch, useAppSelector } from "@/redux/hooks"
-import { setActiveWorkspaceId } from "@/redux/slices/workspace"
+import { useAppDispatch, useAppSelector, setActiveWorkspaceId } from "@/redux"
 
 /** The workspace the person works in, and the way to change it (persisted, so the GraphQL client sends it on every operation). */
 export const useActiveWorkspace = () => {
