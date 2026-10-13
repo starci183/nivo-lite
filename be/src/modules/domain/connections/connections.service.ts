@@ -3,12 +3,20 @@ import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
-import type { FirstEvent, HealthCandidate, HealthMark, IntakeConnection } from "./connections.contracts"
+import type {
+    FirstEvent,
+    HealthCandidate,
+    HealthMark,
+    IntakeConnection,
+    OptionalConnectionId,
+    OptionalSmtpConnection,
+} from "./connections.contracts"
 import { ConnectionsErrorCode } from "./errors/connections.error"
-import type { HealthCandidateRow, IntakeConnectionRow } from "./persistence/connections.rows"
+import type { HealthCandidateRow, IntakeConnectionRow, SmtpConnectionRow } from "./persistence/connections.rows"
 import {
     APPLY_ZALO_AUTHORIZATION,
     FIND_INTAKE_CONNECTION,
+    FIND_SMTP_CONNECTION,
     LIST_HEALTH_BATCH,
     MARK_CONNECTION_ERROR,
     MARK_CONNECTION_HEALTH,
@@ -29,9 +37,20 @@ export class ConnectionsService {
         provider: string,
         manager: EntityManager = this.entityManager,
     ): Promise<Outcome<IntakeConnection, ConnectionsErrorCode>> {
-        const row = (await manager.query<Array<IntakeConnectionRow>>(FIND_INTAKE_CONNECTION, [connectionId, provider]))[0]
+        const row = (
+            await manager.query<Array<IntakeConnectionRow>>(FIND_INTAKE_CONNECTION, [connectionId, provider])
+        )[0]
         if (row === undefined) return refused(ConnectionsErrorCode.NotFound)
         return ok({ id: row.id, workspaceId: row.workspace_id, status: row.status })
+    }
+
+    /** The SMTP connection to send with: the one asked for, else the workspace default, else its oldest connected one. */
+    async smtpOf(workspaceId: string, connectionId: OptionalConnectionId): Promise<OptionalSmtpConnection> {
+        const [row] = await this.entityManager.query<Array<SmtpConnectionRow>>(FIND_SMTP_CONNECTION, [
+            workspaceId,
+            connectionId,
+        ])
+        return row === undefined ? null : { id: row.id, meta: row.public_meta ?? {} }
     }
 
     /** Marks the connection as failing with the reason the owner reads on Connections. */
@@ -46,12 +65,18 @@ export class ConnectionsService {
 
     /** The owner authorized the Zalo OA: its id joins the public facts and an error status clears. */
     async applyZaloAuthorization(connectionId: string, oaId?: string): Promise<void> {
-        await this.entityManager.query(APPLY_ZALO_AUTHORIZATION, [connectionId, JSON.stringify(oaId === undefined ? {} : { oa_id: oaId })])
+        await this.entityManager.query(APPLY_ZALO_AUTHORIZATION, [
+            connectionId,
+            JSON.stringify(oaId === undefined ? {} : { oa_id: oaId }),
+        ])
     }
 
     /** A page of the connections the health check judges, in id order, after the given id (empty for the first page). */
     async healthBatch(afterId: string, size: number): Promise<ReadonlyArray<HealthCandidate>> {
-        const rows = await this.entityManager.query<Array<HealthCandidateRow>>(LIST_HEALTH_BATCH, [afterId === "" ? NIL_UUID : afterId, size])
+        const rows = await this.entityManager.query<Array<HealthCandidateRow>>(LIST_HEALTH_BATCH, [
+            afterId === "" ? NIL_UUID : afterId,
+            size,
+        ])
         return rows.map((row) => ({
             id: row.id,
             workspaceId: row.workspace_id,

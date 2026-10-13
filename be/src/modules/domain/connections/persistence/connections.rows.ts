@@ -29,3 +29,11 @@ export interface HealthCandidateRow {
     /** The recorded health state, empty when none. */
     readonly health: string
 }
+
+/** A connection as FIND_SMTP_CONNECTION selects it. */
+export interface SmtpConnectionRow {
+    /** The connection id. */
+    readonly id: string
+    /** The public facts of the connection: host, port, security, user, sender. */
+    readonly public_meta: Record<string, string> | null
+}

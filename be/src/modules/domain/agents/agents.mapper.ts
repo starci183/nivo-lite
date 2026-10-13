@@ -1,4 +1,4 @@
-import type { AgentPersona, AgentRef, AgentSummary } from "./agents.contracts"
+import type { AgentPersona, AgentProfile, AgentRef, AgentSummary } from "./agents.contracts"
 import type { AgentRow } from "./persistence/agents.rows"
 
 /** An agent row as the instance list shows it. */
@@ -10,6 +10,17 @@ export const summaryOf = (row: AgentRow): AgentSummary => ({
     role: row.role,
     status: row.status,
     createdAt: row.created_at,
+})
+
+/** An agent row as the profile a prompt speaks as. */
+export const profileOf = (row: AgentRow): AgentProfile => ({
+    id: row.id,
+    name: row.name,
+    handle: row.handle,
+    role: row.role,
+    instructions: row.instructions,
+    knowledge: row.knowledge,
+    approval_rule: row.approval_rule,
 })
 
 /** An agent row as the reference the Office speaks through. */

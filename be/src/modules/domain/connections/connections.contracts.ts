@@ -51,3 +51,17 @@ export interface HealthMark {
     /** When it was judged, ISO 8601. */
     readonly checkedAt: string
 }
+
+/** The SMTP connection a workspace sends its mail with. */
+export interface SmtpConnection {
+    /** The connection id. */
+    readonly id: string
+    /** The public facts: host, port, security, user, sender names. */
+    readonly meta: Readonly<Record<string, string>>
+}
+
+/** A connection id, or null for the default one. */
+export type OptionalConnectionId = string | null
+
+/** An SMTP connection, or null when the workspace has none connected. */
+export type OptionalSmtpConnection = SmtpConnection | null

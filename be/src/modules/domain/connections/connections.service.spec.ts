@@ -78,7 +78,11 @@ describe("ConnectionsService", () => {
             const { service, em } = await build()
             const inside = mockEntityManager({ query: [MARK_CONNECTION_RECEIVED, []] })
 
-            await service.markReceived("c-1", { amount: 0, content: "Minh", at: "2026-10-12T10:00:00.000Z", text: "Hi" }, inside)
+            await service.markReceived(
+                "c-1",
+                { amount: 0, content: "Minh", at: "2026-10-12T10:00:00.000Z", text: "Hi" },
+                inside,
+            )
 
             expect(inside.query).toHaveBeenCalledWith(MARK_CONNECTION_RECEIVED, [
                 "c-1",
@@ -129,14 +133,21 @@ describe("ConnectionsService", () => {
             ])
             await service.healthBatch("c-1", 100)
 
-            expect(em.query).toHaveBeenNthCalledWith(1, LIST_HEALTH_BATCH, ["00000000-0000-0000-0000-000000000000", 100])
+            expect(em.query).toHaveBeenNthCalledWith(1, LIST_HEALTH_BATCH, [
+                "00000000-0000-0000-0000-000000000000",
+                100,
+            ])
             expect(em.query).toHaveBeenNthCalledWith(2, LIST_HEALTH_BATCH, ["c-1", 100])
         })
 
         it("records the verdict in the public facts", async () => {
             const { service, em } = await build()
 
-            await service.markHealth("c-1", { state: "silent", reason: "no event for 80h", checkedAt: "2026-10-12T10:00:00.000Z" })
+            await service.markHealth("c-1", {
+                state: "silent",
+                reason: "no event for 80h",
+                checkedAt: "2026-10-12T10:00:00.000Z",
+            })
 
             expect(em.query).toHaveBeenCalledWith(MARK_CONNECTION_HEALTH, [
                 "c-1",

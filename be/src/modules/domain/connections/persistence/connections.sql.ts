@@ -41,3 +41,10 @@ LIMIT $2`
 export const MARK_CONNECTION_HEALTH = sql`UPDATE public.connections
 SET public_meta = jsonb_set(public_meta, '{health}', $2::jsonb)
 WHERE id = $1`
+
+/** The SMTP connection to send a workspace's mail with: the one asked for, else the default, else the oldest connected one ($1 workspace, $2 connection or null). */
+export const FIND_SMTP_CONNECTION = sql`SELECT id, public_meta
+FROM public.connections
+WHERE workspace_id = $1::uuid AND provider = 'smtp' AND status = 'connected' AND ($2::uuid IS NULL OR id = $2::uuid)
+ORDER BY is_default DESC, created_at
+LIMIT 1`

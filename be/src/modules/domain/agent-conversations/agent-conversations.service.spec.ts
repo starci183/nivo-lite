@@ -76,28 +76,49 @@ describe("AgentConversationsService", () => {
     })
 
     describe("open", () => {
-        const input = { workspaceId: "ws-1", agentId: "agent-1", channel: "telegram", customerId: "555", visitor: "Minh", connectionId: "c-1" }
+        const input = {
+            workspaceId: "ws-1",
+            agentId: "agent-1",
+            channel: "telegram",
+            customerId: "555",
+            visitor: "Minh",
+            connectionId: "c-1",
+        }
 
         it("opens the conversation in the given transaction and answers it", async () => {
             const { service } = await build()
             const inside = mockEntityManager({ query: [INSERT_CONVERSATION, [refRow]] })
 
             await expect(service.open(input, inside)).resolves.toMatchObject({ id: "conv-1" })
-            expect(inside.query).toHaveBeenCalledWith(INSERT_CONVERSATION, ["ws-1", "agent-1", "telegram", "555", "Minh", "c-1"])
+            expect(inside.query).toHaveBeenCalledWith(INSERT_CONVERSATION, [
+                "ws-1",
+                "agent-1",
+                "telegram",
+                "555",
+                "Minh",
+                "c-1",
+            ])
         })
 
         it("fails loudly when the insert answers no row", async () => {
             const { service } = await build()
             const inside = mockEntityManager({ query: [INSERT_CONVERSATION, []] })
 
-            await expect(service.open(input, inside)).rejects.toMatchObject({ code: AgentConversationsErrorCode.NotStored })
+            await expect(service.open(input, inside)).rejects.toMatchObject({
+                code: AgentConversationsErrorCode.NotStored,
+            })
         })
     })
 
     describe("writes", () => {
         it("archives and rebinds through the given transaction", async () => {
             const { service } = await build()
-            const inside = mockEntityManager({ query: [[ARCHIVE_CONVERSATION, []], [REBIND_CONVERSATION_AGENT, []]] })
+            const inside = mockEntityManager({
+                query: [
+                    [ARCHIVE_CONVERSATION, []],
+                    [REBIND_CONVERSATION_AGENT, []],
+                ],
+            })
 
             await service.archive("ws-1", "telegram", "c-1", "555", "555:1", inside)
             await service.rebind("conv-1", "agent-2", inside)
@@ -122,7 +143,13 @@ describe("AgentConversationsService", () => {
 
             await expect(found.service.targetOf("conv-1")).resolves.toEqual({
                 kind: "ok",
-                value: { id: "conv-1", workspaceId: "ws-1", channel: "telegram", externalId: "555", connectionId: "c-1" },
+                value: {
+                    id: "conv-1",
+                    workspaceId: "ws-1",
+                    channel: "telegram",
+                    externalId: "555",
+                    connectionId: "c-1",
+                },
             })
             await expect(missing.service.targetOf("conv-1")).resolves.toMatchObject({
                 kind: "refused",
