@@ -7,8 +7,11 @@ export const MUTATE_MARK_BOOKING_NO_SHOW_SWR_KEY = "MUTATE_MARK_BOOKING_NO_SHOW_
 
 /** Marks a booking as a no-show. */
 export const useMutateMarkBookingNoShowSwr = () =>
-    useSWRMutation(MUTATE_MARK_BOOKING_NO_SHOW_SWR_KEY, async (_key: string, { arg }: { arg: MutateMarkBookingNoShowRequest }) => {
-        const result = await mutateMarkBookingNoShow({ request: arg })
-        if (!result.data) throw new Error("markBookingNoShow answered no data")
-        return result.data.markBookingNoShow
-    })
+    useSWRMutation(
+        MUTATE_MARK_BOOKING_NO_SHOW_SWR_KEY,
+        async (_key: string, { arg }: { arg: MutateMarkBookingNoShowRequest }) => {
+            const result = await mutateMarkBookingNoShow({ request: arg })
+            if (!result.data) throw new Error("markBookingNoShow answered no data")
+            return result.data.markBookingNoShow
+        },
+    )

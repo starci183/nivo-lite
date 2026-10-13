@@ -3,12 +3,8 @@
 import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
 import { useSWRConfig } from "swr"
-import {
-    isQueryBookingBoardSwrKey,
-    useMutateAddBookingSwr,
-    useMutateMoveBookingSwr,
-} from "@/hooks/swr/api/graphql"
-import { graphQLErrorCode } from "@/modules/api/graphql/errors"
+import { isQueryBookingBoardSwrKey, useMutateAddBookingSwr, useMutateMoveBookingSwr } from "@/hooks/swr/api/graphql"
+import { graphQLErrorCode } from "@/modules/api"
 import { wallInstant } from "@/modules/i18n"
 import { toast } from "@/modules/toast"
 

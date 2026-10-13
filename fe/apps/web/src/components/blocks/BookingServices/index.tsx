@@ -1,22 +1,12 @@
 "use client"
 
+import { useBookingBoard } from "@/hooks/bookingBoard"
 import { useFormatter, useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
-import { useSWRConfig } from "swr"
-import {
-    isQueryBookingBoardSwrKey,
-    useMutateRemoveBookingServiceSwr,
-    useMutateSaveBookingServiceSwr,
-} from "@/hooks/swr/api/graphql"
-import { useGraphQLWithToast } from "@/modules/toast"
-import type { BookingServiceView } from "@/modules/types"
+import { useMutateRemoveBookingServiceSwr, useMutateSaveBookingServiceSwr } from "@/hooks/swr/api/graphql"
+import { useBookingSetupSave } from "@/hooks/bookingSetup"
 import { BookingServicesBase } from "./component"
 import type { ServiceFields } from "./component"
-
-/** What the setup tab hands the connected services list. */
-interface BookingServicesProps {
-    readonly services: ReadonlyArray<BookingServiceView>
-}
 
 /** The form being edited: a new service has no id. */
 interface Draft {
@@ -41,50 +31,44 @@ const digits = (value: string): number | null => {
 }
 
 /** The connected services list: add, edit and remove the services the shop sells by appointment. */
-export const BookingServices = (props: BookingServicesProps) => {
+export const BookingServices = () => {
+    const { board } = useBookingBoard()
     const t = useTranslations("workbenchBooking")
     const format = useFormatter()
-    const withToast = useGraphQLWithToast()
-    const { mutate } = useSWRConfig()
+    const persist = useBookingSetupSave()
     const saveService = useMutateSaveBookingServiceSwr()
     const removeService = useMutateRemoveBookingServiceSwr()
     const [draft, setDraft] = useState<Draft | null>(null)
     const [removeId, setRemoveId] = useState<string | null>(null)
     const [isPending, startTransition] = useTransition()
-    const removing = props.services.find((service) => service.id === removeId)
+    const removing = board.services.find((service) => service.id === removeId)
     const save = () => {
         if (draft === null) return
         const { fields } = draft
         startTransition(async () => {
-            const answer = await withToast(
-                () =>
-                    saveService.trigger({
-                        id: draft.id,
-                        name: fields.name,
-                        description: fields.description,
-                        durationMin: fields.durationMin,
-                        bufferMin: fields.bufferMin,
-                        priceVnd: digits(fields.price),
-                        resourceKind: fields.resourceKind,
-                        followupDays: digits(fields.followup),
-                        active: fields.active,
-                    }),
-                { successMessage: t("saved") },
+            const answer = await persist(() =>
+                saveService.trigger({
+                    id: draft.id,
+                    name: fields.name,
+                    description: fields.description,
+                    durationMin: fields.durationMin,
+                    bufferMin: fields.bufferMin,
+                    priceVnd: digits(fields.price),
+                    resourceKind: fields.resourceKind,
+                    followupDays: digits(fields.followup),
+                    active: fields.active,
+                }),
             )
             if (answer === undefined) return
             setDraft(null)
-            void mutate(isQueryBookingBoardSwrKey)
         })
     }
     const remove = () => {
         if (removeId === null) return
         startTransition(async () => {
-            const answer = await withToast(() => removeService.trigger({ id: removeId }), {
-                successMessage: t("saved"),
-            })
+            const answer = await persist(() => removeService.trigger({ id: removeId }))
             if (answer === undefined) return
             setRemoveId(null)
-            void mutate(isQueryBookingBoardSwrKey)
         })
     }
     return (
@@ -97,7 +81,7 @@ export const BookingServices = (props: BookingServicesProps) => {
                     emptyText: t("servicesEmpty"),
                     editLabel: t("edit"),
                     removeLabel: t("remove"),
-                    rows: props.services.map((service) => ({
+                    rows: board.services.map((service) => ({
                         id: service.id,
                         title: service.name,
                         detail: [
@@ -153,7 +137,7 @@ export const BookingServices = (props: BookingServicesProps) => {
             on={{
                 add: () => setDraft({ id: null, fields: BLANK }),
                 edit: (id) => {
-                    const service = props.services.find((candidate) => candidate.id === id)
+                    const service = board.services.find((candidate) => candidate.id === id)
                     if (service === undefined) return
                     setDraft({
                         id,

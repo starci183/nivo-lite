@@ -7,8 +7,11 @@ export const MUTATE_SAVE_BOOKING_RESOURCE_SWR_KEY = "MUTATE_SAVE_BOOKING_RESOURC
 
 /** Creates or updates a booking resource. */
 export const useMutateSaveBookingResourceSwr = () =>
-    useSWRMutation(MUTATE_SAVE_BOOKING_RESOURCE_SWR_KEY, async (_key: string, { arg }: { arg: MutateSaveBookingResourceRequest }) => {
-        const result = await mutateSaveBookingResource({ request: arg })
-        if (!result.data) throw new Error("saveBookingResource answered no data")
-        return result.data.saveBookingResource
-    })
+    useSWRMutation(
+        MUTATE_SAVE_BOOKING_RESOURCE_SWR_KEY,
+        async (_key: string, { arg }: { arg: MutateSaveBookingResourceRequest }) => {
+            const result = await mutateSaveBookingResource({ request: arg })
+            if (!result.data) throw new Error("saveBookingResource answered no data")
+            return result.data.saveBookingResource
+        },
+    )

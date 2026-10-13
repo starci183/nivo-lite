@@ -7,8 +7,11 @@ export const MUTATE_CANCEL_BOOKING_SWR_KEY = "MUTATE_CANCEL_BOOKING_SWR"
 
 /** Cancels a booking. */
 export const useMutateCancelBookingSwr = () =>
-    useSWRMutation(MUTATE_CANCEL_BOOKING_SWR_KEY, async (_key: string, { arg }: { arg: MutateCancelBookingRequest }) => {
-        const result = await mutateCancelBooking({ request: arg })
-        if (!result.data) throw new Error("cancelBooking answered no data")
-        return result.data.cancelBooking
-    })
+    useSWRMutation(
+        MUTATE_CANCEL_BOOKING_SWR_KEY,
+        async (_key: string, { arg }: { arg: MutateCancelBookingRequest }) => {
+            const result = await mutateCancelBooking({ request: arg })
+            if (!result.data) throw new Error("cancelBooking answered no data")
+            return result.data.cancelBooking
+        },
+    )

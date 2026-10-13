@@ -7,8 +7,11 @@ export const MUTATE_REMOVE_LOYALTY_REWARD_SWR_KEY = "MUTATE_REMOVE_LOYALTY_REWAR
 
 /** Removes one reward of the catalogue. */
 export const useMutateRemoveLoyaltyRewardSwr = () =>
-    useSWRMutation(MUTATE_REMOVE_LOYALTY_REWARD_SWR_KEY, async (_key: string, { arg }: { arg: MutateRemoveLoyaltyRewardRequest }) => {
-        const result = await mutateRemoveLoyaltyReward({ request: arg })
-        if (!result.data) throw new Error("removeLoyaltyReward answered no data")
-        return result.data.removeLoyaltyReward
-    })
+    useSWRMutation(
+        MUTATE_REMOVE_LOYALTY_REWARD_SWR_KEY,
+        async (_key: string, { arg }: { arg: MutateRemoveLoyaltyRewardRequest }) => {
+            const result = await mutateRemoveLoyaltyReward({ request: arg })
+            if (!result.data) throw new Error("removeLoyaltyReward answered no data")
+            return result.data.removeLoyaltyReward
+        },
+    )

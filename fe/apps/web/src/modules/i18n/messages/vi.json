@@ -4651,7 +4651,20 @@
     "errTiers": "Cần giữ ít nhất một hạng.",
     "errTierName": "Hạng nào cũng cần có tên.",
     "errTierOrder": "Mỗi hạng phải bắt đầu ở mức chi tiêu cao hơn hạng trước.",
-    "errHours": "Hãy viết giờ dạng hh:mm, ví dụ 08:00."
+    "errHours": "Hãy viết giờ dạng hh:mm, ví dụ 08:00.",
+    "segLabelTiers": "hạng {tiers}",
+    "segLabelInactive": "lâu không quay lại (từ {days} ngày)",
+    "segLabelBirthday": "sinh nhật trong tháng này",
+    "segLabelSpend": "đã chi từ {value}",
+    "segLabelAll": "tất cả khách thân thiết",
+    "previewFailed": "Chưa đếm được số khách. Thử đổi điều kiện hoặc thử lại sau.",
+    "redeemDone": "Đã đổi quà. Mã: {code}",
+    "block_inactive": "Phần quà này đang tạm dừng.",
+    "block_out_of_stock": "Phần quà này đã hết hàng.",
+    "block_not_enough_points": "Cần {cost} điểm, khách đang có {points} điểm.",
+    "block_limit_reached": "Khách đã đổi đủ {limit} lần cho phần quà này.",
+    "block_tier_required": "Chỉ dành cho hạng {tier} trở lên.",
+    "blockFallback": "Chưa thể đổi phần quà này lúc này."
   },
   "loyaltyPublic": {
     "title": "Xem điểm thân thiết của bạn",
@@ -4678,7 +4691,11 @@
     "noRewards": "Cửa hàng chưa đăng quà nào.",
     "busy": "Vui lòng chờ...",
     "unavailable": "Trang này không còn hoạt động.",
-    "pointsUnit": "điểm"
+    "pointsUnit": "điểm",
+    "errBadPhone": "Số điện thoại chưa đúng. Hãy nhập số bạn đã dùng khi mua hàng.",
+    "errClosed": "Trang này không còn hoạt động.",
+    "errBusy": "Hệ thống đang nhận quá nhiều yêu cầu. Hãy thử lại sau ít phút.",
+    "errWrong": "Mã chưa đúng hoặc đã hết hạn. Hãy yêu cầu mã mới."
   },
   "metaWizard": {
     "stepConnect": "Đăng nhập Facebook",

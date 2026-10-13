@@ -42,8 +42,7 @@ export const usePublicBooking = (page: PublicBookingPage, today: string) => {
             ? null
             : { slug: page.slug, serviceId: fields.serviceId, date: fields.date, party: fields.party },
     )
-    const times =
-        timesQuery.data === undefined ? (timesQuery.error === undefined ? null : []) : timesQuery.data.times
+    const times = timesQuery.data === undefined ? (timesQuery.error === undefined ? null : []) : timesQuery.data.times
 
     const submit = () =>
         startTransition(async () => {

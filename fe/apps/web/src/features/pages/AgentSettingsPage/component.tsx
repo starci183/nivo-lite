@@ -8,7 +8,7 @@ import { AgentSyncCard } from "@/components/blocks/AgentSyncCard"
 import { AutomationsBoard } from "@/components/blocks/AutomationsBoard"
 import { AgentAutomationsFrame } from "@/components/composites/AgentAutomationsFrame"
 import type { AutomationsData } from "@/hooks/automations"
-import { LoyaltyProgramExtras } from "@/features/module-loyalty/ProgramSettings"
+import { LoyaltyProgramSettings } from "@/components/blocks/LoyaltyProgramSettings"
 import type { ModuleScope } from "@/lib/automation-shared"
 import type { Installation } from "@/modules/installations"
 import { COLUMN, GRID } from "./classNames"
@@ -124,7 +124,7 @@ export const AgentSettingsPageBase = (props: AgentSettingsPageBaseProps) => {
                     />
                 ) : null}
                 {installation !== null && props.props.extrasKey === "loyalty_program" ? (
-                    <LoyaltyProgramExtras installation={installation} canEdit={canEdit} />
+                    <LoyaltyProgramSettings canEdit={canEdit} />
                 ) : null}
             </div>
         </div>

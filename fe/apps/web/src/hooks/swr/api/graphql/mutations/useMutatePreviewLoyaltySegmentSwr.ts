@@ -7,8 +7,11 @@ export const MUTATE_PREVIEW_LOYALTY_SEGMENT_SWR_KEY = "MUTATE_PREVIEW_LOYALTY_SE
 
 /** Counts the members a promo segment reaches, with a small sample. */
 export const useMutatePreviewLoyaltySegmentSwr = () =>
-    useSWRMutation(MUTATE_PREVIEW_LOYALTY_SEGMENT_SWR_KEY, async (_key: string, { arg }: { arg: MutatePreviewLoyaltySegmentRequest }) => {
-        const result = await mutatePreviewLoyaltySegment({ request: arg })
-        if (!result.data) throw new Error("previewLoyaltySegment answered no data")
-        return result.data.previewLoyaltySegment
-    })
+    useSWRMutation(
+        MUTATE_PREVIEW_LOYALTY_SEGMENT_SWR_KEY,
+        async (_key: string, { arg }: { arg: MutatePreviewLoyaltySegmentRequest }) => {
+            const result = await mutatePreviewLoyaltySegment({ request: arg })
+            if (!result.data) throw new Error("previewLoyaltySegment answered no data")
+            return result.data.previewLoyaltySegment
+        },
+    )

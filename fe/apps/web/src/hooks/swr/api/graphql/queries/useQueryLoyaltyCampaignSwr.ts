@@ -12,8 +12,12 @@ export const isQueryLoyaltyCampaignSwrKey = (key: unknown): boolean =>
 
 /** One loyalty campaign, polled while the back end drafts its message (status leaves waiting when done). */
 export const useQueryLoyaltyCampaignSwr = (request: QueryLoyaltyCampaignRequest | null, config?: SWRConfiguration) =>
-    useSWR(request === null ? null : [QUERY_LOYALTY_CAMPAIGN_SWR_KEY, request], async (key: readonly [string, QueryLoyaltyCampaignRequest]) => {
-        const result = await queryLoyaltyCampaign({ request: key[1] })
-        if (!result.data) throw new Error("loyaltyCampaign answered no data")
-        return result.data.loyaltyCampaign
-    }, config)
+    useSWR(
+        request === null ? null : [QUERY_LOYALTY_CAMPAIGN_SWR_KEY, request],
+        async (key: readonly [string, QueryLoyaltyCampaignRequest]) => {
+            const result = await queryLoyaltyCampaign({ request: key[1] })
+            if (!result.data) throw new Error("loyaltyCampaign answered no data")
+            return result.data.loyaltyCampaign
+        },
+        config,
+    )

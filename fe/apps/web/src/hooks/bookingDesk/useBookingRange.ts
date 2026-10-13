@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useQueryBookingBoardSwr } from "@/hooks/swr/api/graphql"
 import { shiftDate, weekStartOf } from "@/modules/i18n"
-import { toBookingBoard } from "./bookingDesk.adapter"
+import { toBookingBoard } from "@/hooks/bookingBoard"
 
 /** One week of the desk, in local dates; `null` asks the back end for the week of today. */
 interface Week {

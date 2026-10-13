@@ -7,8 +7,11 @@ export const MUTATE_SAVE_BOOKING_EXCEPTION_SWR_KEY = "MUTATE_SAVE_BOOKING_EXCEPT
 
 /** Adds a closing or a special opening window on one date. */
 export const useMutateSaveBookingExceptionSwr = () =>
-    useSWRMutation(MUTATE_SAVE_BOOKING_EXCEPTION_SWR_KEY, async (_key: string, { arg }: { arg: MutateSaveBookingExceptionRequest }) => {
-        const result = await mutateSaveBookingException({ request: arg })
-        if (!result.data) throw new Error("saveBookingException answered no data")
-        return result.data.saveBookingException
-    })
+    useSWRMutation(
+        MUTATE_SAVE_BOOKING_EXCEPTION_SWR_KEY,
+        async (_key: string, { arg }: { arg: MutateSaveBookingExceptionRequest }) => {
+            const result = await mutateSaveBookingException({ request: arg })
+            if (!result.data) throw new Error("saveBookingException answered no data")
+            return result.data.saveBookingException
+        },
+    )

@@ -1,32 +1,21 @@
 "use client"
 
+import { useBookingBoard } from "@/hooks/bookingBoard"
 import { useFormatter, useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
-import { useSWRConfig } from "swr"
-import {
-    isQueryBookingBoardSwrKey,
-    useMutateRemoveBookingExceptionSwr,
-    useMutateSaveBookingExceptionSwr,
-} from "@/hooks/swr/api/graphql"
-import { useGraphQLWithToast } from "@/modules/toast"
-import type { BookingBoard } from "@/modules/types"
+import { useMutateRemoveBookingExceptionSwr, useMutateSaveBookingExceptionSwr } from "@/hooks/swr/api/graphql"
+import { useBookingSetupSave } from "@/hooks/bookingSetup"
 import { BookingExceptionsBase } from "./component"
 import type { ExceptionFields } from "./component"
 
-/** What the setup tab hands the connected days-off list. */
-interface BookingExceptionsProps {
-    readonly board: BookingBoard
-}
-
 /** The connected days-off list: add a closing or special hours and remove the ones that no longer apply. */
-export const BookingExceptions = (props: BookingExceptionsProps) => {
+export const BookingExceptions = () => {
+    const { board } = useBookingBoard()
     const t = useTranslations("workbenchBooking")
     const format = useFormatter()
-    const withToast = useGraphQLWithToast()
-    const { mutate } = useSWRConfig()
+    const persist = useBookingSetupSave()
     const saveException = useMutateSaveBookingExceptionSwr()
     const removeException = useMutateRemoveBookingExceptionSwr()
-    const { board } = props
     const [fields, setFields] = useState<ExceptionFields>({
         resourceId: "all",
         date: board.today,
@@ -74,28 +63,22 @@ export const BookingExceptions = (props: BookingExceptionsProps) => {
                 change: (patch) => setFields({ ...fields, ...patch }),
                 add: () =>
                     startTransition(async () => {
-                        const answer = await withToast(
-                            () =>
-                                saveException.trigger({
-                                    resourceId: fields.resourceId === "all" ? null : fields.resourceId,
-                                    date: fields.date,
-                                    closed: fields.closed,
-                                    start: fields.start,
-                                    end: fields.end,
-                                    note: fields.note,
-                                }),
-                            { successMessage: t("saved") },
+                        const answer = await persist(() =>
+                            saveException.trigger({
+                                resourceId: fields.resourceId === "all" ? null : fields.resourceId,
+                                date: fields.date,
+                                closed: fields.closed,
+                                start: fields.start,
+                                end: fields.end,
+                                note: fields.note,
+                            }),
                         )
                         if (answer === undefined) return
-                        void mutate(isQueryBookingBoardSwrKey)
                     }),
                 remove: (id) =>
                     startTransition(async () => {
-                        const answer = await withToast(() => removeException.trigger({ id }), {
-                            successMessage: t("saved"),
-                        })
+                        const answer = await persist(() => removeException.trigger({ id }))
                         if (answer === undefined) return
-                        void mutate(isQueryBookingBoardSwrKey)
                     }),
             }}
         />

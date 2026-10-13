@@ -7,8 +7,11 @@ export const MUTATE_VERIFY_LOYALTY_CODE_SWR_KEY = "MUTATE_VERIFY_LOYALTY_CODE_SW
 
 /** Verifies the typed code and unlocks the customer's points and rewards. */
 export const useMutateVerifyLoyaltyCodeSwr = () =>
-    useSWRMutation(MUTATE_VERIFY_LOYALTY_CODE_SWR_KEY, async (_key: string, { arg }: { arg: MutateVerifyLoyaltyCodeRequest }) => {
-        const result = await mutateVerifyLoyaltyCode({ request: arg })
-        if (!result.data) throw new Error("verifyLoyaltyCode answered no data")
-        return result.data.verifyLoyaltyCode
-    })
+    useSWRMutation(
+        MUTATE_VERIFY_LOYALTY_CODE_SWR_KEY,
+        async (_key: string, { arg }: { arg: MutateVerifyLoyaltyCodeRequest }) => {
+            const result = await mutateVerifyLoyaltyCode({ request: arg })
+            if (!result.data) throw new Error("verifyLoyaltyCode answered no data")
+            return result.data.verifyLoyaltyCode
+        },
+    )

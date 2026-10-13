@@ -7,8 +7,11 @@ export const MUTATE_REMOVE_BOOKING_RESOURCE_SWR_KEY = "MUTATE_REMOVE_BOOKING_RES
 
 /** Removes a booking resource. */
 export const useMutateRemoveBookingResourceSwr = () =>
-    useSWRMutation(MUTATE_REMOVE_BOOKING_RESOURCE_SWR_KEY, async (_key: string, { arg }: { arg: MutateRemoveBookingResourceRequest }) => {
-        const result = await mutateRemoveBookingResource({ request: arg })
-        if (!result.data) throw new Error("removeBookingResource answered no data")
-        return result.data.removeBookingResource
-    })
+    useSWRMutation(
+        MUTATE_REMOVE_BOOKING_RESOURCE_SWR_KEY,
+        async (_key: string, { arg }: { arg: MutateRemoveBookingResourceRequest }) => {
+            const result = await mutateRemoveBookingResource({ request: arg })
+            if (!result.data) throw new Error("removeBookingResource answered no data")
+            return result.data.removeBookingResource
+        },
+    )

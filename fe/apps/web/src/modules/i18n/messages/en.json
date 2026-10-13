@@ -4651,7 +4651,20 @@
     "errTiers": "Keep at least one tier.",
     "errTierName": "Every tier needs a name.",
     "errTierOrder": "Each tier must start at a higher spend than the one before.",
-    "errHours": "Write the time as hh:mm, for example 08:00."
+    "errHours": "Write the time as hh:mm, for example 08:00.",
+    "segLabelTiers": "tier {tiers}",
+    "segLabelInactive": "not back for {days} days",
+    "segLabelBirthday": "birthday this month",
+    "segLabelSpend": "spent at least {value}",
+    "segLabelAll": "all loyalty members",
+    "previewFailed": "Could not count the customers. Change the conditions or try again later.",
+    "redeemDone": "Reward redeemed. Code: {code}",
+    "block_inactive": "This reward is paused.",
+    "block_out_of_stock": "This reward is out of stock.",
+    "block_not_enough_points": "Needs {cost} points, the customer has {points}.",
+    "block_limit_reached": "The customer already redeemed this reward {limit} times.",
+    "block_tier_required": "Only for tier {tier} and above.",
+    "blockFallback": "This reward cannot be redeemed right now."
   },
   "loyaltyPublic": {
     "title": "Check your loyalty points",
@@ -4678,7 +4691,11 @@
     "noRewards": "The shop has not listed rewards yet.",
     "busy": "Please wait...",
     "unavailable": "This page is not available.",
-    "pointsUnit": "points"
+    "pointsUnit": "points",
+    "errBadPhone": "That phone number does not look right. Enter the number you used when you bought.",
+    "errClosed": "This page is no longer active.",
+    "errBusy": "Too many requests right now. Try again in a few minutes.",
+    "errWrong": "The code is wrong or has expired. Ask for a new one."
   },
   "metaWizard": {
     "stepConnect": "Log in with Facebook",

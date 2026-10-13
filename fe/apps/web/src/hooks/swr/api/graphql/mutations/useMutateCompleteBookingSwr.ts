@@ -7,8 +7,11 @@ export const MUTATE_COMPLETE_BOOKING_SWR_KEY = "MUTATE_COMPLETE_BOOKING_SWR"
 
 /** Marks a booking done. */
 export const useMutateCompleteBookingSwr = () =>
-    useSWRMutation(MUTATE_COMPLETE_BOOKING_SWR_KEY, async (_key: string, { arg }: { arg: MutateCompleteBookingRequest }) => {
-        const result = await mutateCompleteBooking({ request: arg })
-        if (!result.data) throw new Error("completeBooking answered no data")
-        return result.data.completeBooking
-    })
+    useSWRMutation(
+        MUTATE_COMPLETE_BOOKING_SWR_KEY,
+        async (_key: string, { arg }: { arg: MutateCompleteBookingRequest }) => {
+            const result = await mutateCompleteBooking({ request: arg })
+            if (!result.data) throw new Error("completeBooking answered no data")
+            return result.data.completeBooking
+        },
+    )

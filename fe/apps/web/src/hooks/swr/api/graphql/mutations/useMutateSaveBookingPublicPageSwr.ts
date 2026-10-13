@@ -7,8 +7,11 @@ export const MUTATE_SAVE_BOOKING_PUBLIC_PAGE_SWR_KEY = "MUTATE_SAVE_BOOKING_PUBL
 
 /** Publishes or edits the public booking page of the workspace. */
 export const useMutateSaveBookingPublicPageSwr = () =>
-    useSWRMutation(MUTATE_SAVE_BOOKING_PUBLIC_PAGE_SWR_KEY, async (_key: string, { arg }: { arg: MutateSaveBookingPublicPageRequest }) => {
-        const result = await mutateSaveBookingPublicPage({ request: arg })
-        if (!result.data) throw new Error("saveBookingPublicPage answered no data")
-        return result.data.saveBookingPublicPage
-    })
+    useSWRMutation(
+        MUTATE_SAVE_BOOKING_PUBLIC_PAGE_SWR_KEY,
+        async (_key: string, { arg }: { arg: MutateSaveBookingPublicPageRequest }) => {
+            const result = await mutateSaveBookingPublicPage({ request: arg })
+            if (!result.data) throw new Error("saveBookingPublicPage answered no data")
+            return result.data.saveBookingPublicPage
+        },
+    )

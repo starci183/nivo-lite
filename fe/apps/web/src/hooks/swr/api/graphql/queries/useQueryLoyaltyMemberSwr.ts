@@ -11,8 +11,11 @@ export const isQueryLoyaltyMemberSwrKey = (key: unknown): boolean =>
 
 /** One loyalty member with the ledger timeline and the rewards they can redeem now. */
 export const useQueryLoyaltyMemberSwr = (request: QueryLoyaltyMemberRequest | null) =>
-    useSWR(request === null ? null : [QUERY_LOYALTY_MEMBER_SWR_KEY, request], async (key: readonly [string, QueryLoyaltyMemberRequest]) => {
-        const result = await queryLoyaltyMember({ request: key[1] })
-        if (!result.data) throw new Error("loyaltyMember answered no data")
-        return result.data.loyaltyMember
-    })
+    useSWR(
+        request === null ? null : [QUERY_LOYALTY_MEMBER_SWR_KEY, request],
+        async (key: readonly [string, QueryLoyaltyMemberRequest]) => {
+            const result = await queryLoyaltyMember({ request: key[1] })
+            if (!result.data) throw new Error("loyaltyMember answered no data")
+            return result.data.loyaltyMember
+        },
+    )

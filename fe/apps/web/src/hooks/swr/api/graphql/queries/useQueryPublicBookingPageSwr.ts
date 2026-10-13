@@ -11,9 +11,16 @@ export const isQueryPublicBookingPageSwrKey = (key: unknown): boolean =>
     key === QUERY_PUBLIC_BOOKING_PAGE_SWR_KEY || (Array.isArray(key) && key[0] === QUERY_PUBLIC_BOOKING_PAGE_SWR_KEY)
 
 /** The public booking page of one shop slug (anonymous: no token, no workspace). */
-export const useQueryPublicBookingPageSwr = (request: QueryPublicBookingPageRequest | null, config?: SWRConfiguration) =>
-    useSWR(request === null ? null : [QUERY_PUBLIC_BOOKING_PAGE_SWR_KEY, request], async (key: readonly [string, QueryPublicBookingPageRequest]) => {
-        const result = await queryPublicBookingPage({ request: key[1] })
-        if (!result.data) throw new Error("publicBookingPage answered no data")
-        return result.data.publicBookingPage
-    }, config)
+export const useQueryPublicBookingPageSwr = (
+    request: QueryPublicBookingPageRequest | null,
+    config?: SWRConfiguration,
+) =>
+    useSWR(
+        request === null ? null : [QUERY_PUBLIC_BOOKING_PAGE_SWR_KEY, request],
+        async (key: readonly [string, QueryPublicBookingPageRequest]) => {
+            const result = await queryPublicBookingPage({ request: key[1] })
+            if (!result.data) throw new Error("publicBookingPage answered no data")
+            return result.data.publicBookingPage
+        },
+        config,
+    )

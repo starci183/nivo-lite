@@ -7,8 +7,11 @@ export const MUTATE_DECIDE_WORK_ITEM_SWR_KEY = "MUTATE_DECIDE_WORK_ITEM_SWR"
 
 /** Approves or rejects a waiting work item (with optional edits, such as a corrected promo draft). */
 export const useMutateDecideWorkItemSwr = () =>
-    useSWRMutation(MUTATE_DECIDE_WORK_ITEM_SWR_KEY, async (_key: string, { arg }: { arg: MutateDecideWorkItemRequest }) => {
-        const result = await mutateDecideWorkItem({ request: arg })
-        if (!result.data) throw new Error("decideWorkItem answered no data")
-        return result.data.decideWorkItem
-    })
+    useSWRMutation(
+        MUTATE_DECIDE_WORK_ITEM_SWR_KEY,
+        async (_key: string, { arg }: { arg: MutateDecideWorkItemRequest }) => {
+            const result = await mutateDecideWorkItem({ request: arg })
+            if (!result.data) throw new Error("decideWorkItem answered no data")
+            return result.data.decideWorkItem
+        },
+    )

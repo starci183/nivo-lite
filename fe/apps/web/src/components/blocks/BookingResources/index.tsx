@@ -1,24 +1,17 @@
 "use client"
 
+import { useBookingBoard } from "@/hooks/bookingBoard"
 import { useFormatter, useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
-import { useSWRConfig } from "swr"
 import { WEEK, hoursLineOf, parseWeek } from "@/hooks/bookingSetup"
 import {
-    isQueryBookingBoardSwrKey,
     useMutateRemoveBookingResourceSwr,
     useMutateSaveBookingHoursSwr,
     useMutateSaveBookingResourceSwr,
 } from "@/hooks/swr/api/graphql"
-import { useGraphQLWithToast } from "@/modules/toast"
-import type { BookingBoard } from "@/modules/types"
+import { useBookingSetupSave } from "@/hooks/bookingSetup"
 import { BookingResourcesBase } from "./component"
 import type { ResourceFields } from "./component"
-
-/** What the setup tab hands the connected people and rooms list. */
-interface BookingResourcesProps {
-    readonly board: BookingBoard
-}
 
 /** The form being edited: a new resource has no id and no hours yet. */
 interface Draft {
@@ -30,15 +23,14 @@ interface Draft {
 const BLANK: ResourceFields = { name: "", kind: "staff", capacity: 1, active: true, staffId: "none" }
 
 /** The connected people and rooms list: add, edit and remove them and set their weekly hours. */
-export const BookingResources = (props: BookingResourcesProps) => {
+export const BookingResources = () => {
+    const { board } = useBookingBoard()
     const t = useTranslations("workbenchBooking")
     const format = useFormatter()
-    const withToast = useGraphQLWithToast()
-    const { mutate } = useSWRConfig()
+    const persist = useBookingSetupSave()
     const saveResource = useMutateSaveBookingResourceSwr()
     const saveResourceHours = useMutateSaveBookingHoursSwr()
     const removeResource = useMutateRemoveBookingResourceSwr()
-    const { board } = props
     const [draft, setDraft] = useState<Draft | null>(null)
     const [removeId, setRemoveId] = useState<string | null>(null)
     const [notice, setNotice] = useState<{ readonly ok: boolean; readonly text: string } | null>(null)
@@ -50,21 +42,18 @@ export const BookingResources = (props: BookingResourcesProps) => {
         if (draft === null) return
         const { fields } = draft
         startTransition(async () => {
-            const answer = await withToast(
-                () =>
-                    saveResource.trigger({
-                        id: draft.id,
-                        name: fields.name,
-                        kind: fields.kind,
-                        capacity: fields.capacity,
-                        active: fields.active,
-                        staffId: fields.staffId === "none" ? null : fields.staffId,
-                    }),
-                { successMessage: t("saved") },
+            const answer = await persist(() =>
+                saveResource.trigger({
+                    id: draft.id,
+                    name: fields.name,
+                    kind: fields.kind,
+                    capacity: fields.capacity,
+                    active: fields.active,
+                    staffId: fields.staffId === "none" ? null : fields.staffId,
+                }),
             )
             if (answer === undefined) return
             setDraft(null)
-            void mutate(isQueryBookingBoardSwrKey)
         })
     }
     const saveHours = () => {
@@ -74,11 +63,8 @@ export const BookingResources = (props: BookingResourcesProps) => {
             return setNotice({ ok: false, text: t("hoursInvalid", { day: weekdayName(week.badWeekday) }) })
         const resourceId = draft.id
         startTransition(async () => {
-            const answer = await withToast(() => saveResourceHours.trigger({ resourceId, rows: week.rows }), {
-                successMessage: t("saved"),
-            })
+            const answer = await persist(() => saveResourceHours.trigger({ resourceId, rows: week.rows }))
             if (answer === undefined) return
-            void mutate(isQueryBookingBoardSwrKey)
         })
     }
     return (
@@ -179,12 +165,9 @@ export const BookingResources = (props: BookingResourcesProps) => {
                 confirmRemove: () => {
                     if (removeId === null) return
                     startTransition(async () => {
-                        const answer = await withToast(() => removeResource.trigger({ id: removeId }), {
-                            successMessage: t("saved"),
-                        })
+                        const answer = await persist(() => removeResource.trigger({ id: removeId }))
                         if (answer === undefined) return
                         setRemoveId(null)
-                        void mutate(isQueryBookingBoardSwrKey)
                     })
                 },
                 cancelRemove: () => setRemoveId(null),

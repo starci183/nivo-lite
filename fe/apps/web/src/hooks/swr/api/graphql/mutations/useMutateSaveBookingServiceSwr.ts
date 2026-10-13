@@ -7,8 +7,11 @@ export const MUTATE_SAVE_BOOKING_SERVICE_SWR_KEY = "MUTATE_SAVE_BOOKING_SERVICE_
 
 /** Creates or updates a booking service (id null creates). */
 export const useMutateSaveBookingServiceSwr = () =>
-    useSWRMutation(MUTATE_SAVE_BOOKING_SERVICE_SWR_KEY, async (_key: string, { arg }: { arg: MutateSaveBookingServiceRequest }) => {
-        const result = await mutateSaveBookingService({ request: arg })
-        if (!result.data) throw new Error("saveBookingService answered no data")
-        return result.data.saveBookingService
-    })
+    useSWRMutation(
+        MUTATE_SAVE_BOOKING_SERVICE_SWR_KEY,
+        async (_key: string, { arg }: { arg: MutateSaveBookingServiceRequest }) => {
+            const result = await mutateSaveBookingService({ request: arg })
+            if (!result.data) throw new Error("saveBookingService answered no data")
+            return result.data.saveBookingService
+        },
+    )

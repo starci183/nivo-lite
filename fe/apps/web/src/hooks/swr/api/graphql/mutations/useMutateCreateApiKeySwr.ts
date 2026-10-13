@@ -12,11 +12,8 @@ export const MUTATE_CREATE_API_KEY_SWR_KEY = "MUTATE_CREATE_API_KEY_SWR"
 
 /** SWR mutation for {@link mutateCreateApiKey}: `trigger({ name })` answers the key (secret shown once) and rejects with the back end failure. */
 export const useMutateCreateApiKeySwr = () =>
-    useSWRMutation(
-        MUTATE_CREATE_API_KEY_SWR_KEY,
-        async (_key: string, { arg }: CreateApiKeyArg) => {
-            const result = await mutateCreateApiKey({ request: arg })
-            if (!result.data) throw new Error("createApiKey answered no data")
-            return result.data.createApiKey
-        },
-    )
+    useSWRMutation(MUTATE_CREATE_API_KEY_SWR_KEY, async (_key: string, { arg }: CreateApiKeyArg) => {
+        const result = await mutateCreateApiKey({ request: arg })
+        if (!result.data) throw new Error("createApiKey answered no data")
+        return result.data.createApiKey
+    })

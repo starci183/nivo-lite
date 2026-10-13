@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { notFound } from "next/navigation"
-import type { PublicBookingPageType } from "@/modules/api/graphql/__generated__/schema"
+import type { PublicBookingPageType } from "@/modules/api"
 import { queryPublicBookingPage } from "@/modules/api/graphql/queries"
 import type { PublicBookingPage as PublicBookingPageData } from "@/modules/types"
 import { PublicBookingPageBase } from "./component"

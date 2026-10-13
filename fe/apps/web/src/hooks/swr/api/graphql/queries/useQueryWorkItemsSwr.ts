@@ -11,8 +11,11 @@ export const isQueryWorkItemsSwrKey = (key: unknown): boolean =>
 
 /** The work items of the active workspace, filtered by status (the loyalty pending tab asks for waiting_decision). */
 export const useQueryWorkItemsSwr = (request: QueryWorkItemsRequest | null) =>
-    useSWR(request === null ? null : [QUERY_WORK_ITEMS_SWR_KEY, request], async (key: readonly [string, QueryWorkItemsRequest]) => {
-        const result = await queryWorkItems({ request: key[1] })
-        if (!result.data) throw new Error("workItems answered no data")
-        return result.data.workItems
-    })
+    useSWR(
+        request === null ? null : [QUERY_WORK_ITEMS_SWR_KEY, request],
+        async (key: readonly [string, QueryWorkItemsRequest]) => {
+            const result = await queryWorkItems({ request: key[1] })
+            if (!result.data) throw new Error("workItems answered no data")
+            return result.data.workItems
+        },
+    )

@@ -1,5 +1,5 @@
 import { InventoryWorkbenchPage as WorkbenchInventory } from "@/features/pages/InventoryWorkbenchPage"
-import WorkbenchLoyalty from "@/features/module-loyalty"
+import { LoyaltyWorkbenchPage as WorkbenchLoyalty } from "@/features/pages/LoyaltyWorkbenchPage"
 import WorkbenchHiring from "@/features/module-hiring"
 import { BookingWorkbenchPage } from "@/features/pages/BookingWorkbenchPage"
 import WorkbenchShifts from "@/features/module-shifts"

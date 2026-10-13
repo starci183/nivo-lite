@@ -7,8 +7,11 @@ export const MUTATE_REQUEST_LOYALTY_CODE_SWR_KEY = "MUTATE_REQUEST_LOYALTY_CODE_
 
 /** Asks the back end to send the verification code to the customer's own chat. */
 export const useMutateRequestLoyaltyCodeSwr = () =>
-    useSWRMutation(MUTATE_REQUEST_LOYALTY_CODE_SWR_KEY, async (_key: string, { arg }: { arg: MutateRequestLoyaltyCodeRequest }) => {
-        const result = await mutateRequestLoyaltyCode({ request: arg })
-        if (!result.data) throw new Error("requestLoyaltyCode answered no data")
-        return result.data.requestLoyaltyCode
-    })
+    useSWRMutation(
+        MUTATE_REQUEST_LOYALTY_CODE_SWR_KEY,
+        async (_key: string, { arg }: { arg: MutateRequestLoyaltyCodeRequest }) => {
+            const result = await mutateRequestLoyaltyCode({ request: arg })
+            if (!result.data) throw new Error("requestLoyaltyCode answered no data")
+            return result.data.requestLoyaltyCode
+        },
+    )

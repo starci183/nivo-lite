@@ -12,8 +12,12 @@ export const isQueryBookingBoardSwrKey = (key: unknown): boolean =>
 
 /** The booking workbench board of one range of dates (an empty request answers the current week of the workspace timezone). */
 export const useQueryBookingBoardSwr = (request?: QueryBookingBoardRequest | null, config?: SWRConfiguration) =>
-    useSWR([QUERY_BOOKING_BOARD_SWR_KEY, request ?? null], async (key: readonly [string, QueryBookingBoardRequest | null]) => {
-        const result = await queryBookingBoard({ request: key[1] ?? {} })
-        if (!result.data) throw new Error("bookingBoard answered no data")
-        return result.data.bookingBoard
-    }, config)
+    useSWR(
+        [QUERY_BOOKING_BOARD_SWR_KEY, request ?? null],
+        async (key: readonly [string, QueryBookingBoardRequest | null]) => {
+            const result = await queryBookingBoard({ request: key[1] ?? {} })
+            if (!result.data) throw new Error("bookingBoard answered no data")
+            return result.data.bookingBoard
+        },
+        config,
+    )

@@ -1,5 +1,6 @@
+import { getTranslations } from "next-intl/server"
 import { notFound } from "next/navigation"
-import { BookingWorkbench } from "@/components/blocks/BookingWorkbench"
+import { BookingWorkbenchPageBase } from "./component"
 
 /** What the agent workbench route hands the booking workbench. */
 interface BookingWorkbenchPageProps {
@@ -10,7 +11,22 @@ interface BookingWorkbenchPageProps {
 }
 
 /** /agents/booking/workbench: the calendar of a week, today, the waiting list, the statistics and the setup of the shop. */
-export const BookingWorkbenchPage = (props: BookingWorkbenchPageProps) => {
+export const BookingWorkbenchPage = async (props: BookingWorkbenchPageProps) => {
     if (props.installationId === undefined) notFound()
-    return <BookingWorkbench installationId={props.installationId} initialTab={props.tab ?? null} />
+    const t = await getTranslations("workbenchBooking")
+    return (
+        <BookingWorkbenchPageBase
+            props={{
+                installationId: props.installationId,
+                initialTab: props.tab ?? null,
+                tabs: {
+                    calendar: t("tabCalendar"),
+                    today: t("tabToday"),
+                    waitlist: t("tabWaitlist"),
+                    stats: t("tabStats"),
+                    setup: t("tabSetup"),
+                },
+            }}
+        />
+    )
 }

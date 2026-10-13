@@ -7,8 +7,11 @@ export const MUTATE_ADJUST_LOYALTY_POINTS_SWR_KEY = "MUTATE_ADJUST_LOYALTY_POINT
 
 /** Adjusts the points of one member; posted says the ledger row was written right away. */
 export const useMutateAdjustLoyaltyPointsSwr = () =>
-    useSWRMutation(MUTATE_ADJUST_LOYALTY_POINTS_SWR_KEY, async (_key: string, { arg }: { arg: MutateAdjustLoyaltyPointsRequest }) => {
-        const result = await mutateAdjustLoyaltyPoints({ request: arg })
-        if (!result.data) throw new Error("adjustLoyaltyPoints answered no data")
-        return result.data.adjustLoyaltyPoints
-    })
+    useSWRMutation(
+        MUTATE_ADJUST_LOYALTY_POINTS_SWR_KEY,
+        async (_key: string, { arg }: { arg: MutateAdjustLoyaltyPointsRequest }) => {
+            const result = await mutateAdjustLoyaltyPoints({ request: arg })
+            if (!result.data) throw new Error("adjustLoyaltyPoints answered no data")
+            return result.data.adjustLoyaltyPoints
+        },
+    )

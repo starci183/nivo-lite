@@ -7,8 +7,11 @@ export const MUTATE_REMOVE_BOOKING_WAITLIST_ENTRY_SWR_KEY = "MUTATE_REMOVE_BOOKI
 
 /** Removes one entry of the waiting list. */
 export const useMutateRemoveBookingWaitlistEntrySwr = () =>
-    useSWRMutation(MUTATE_REMOVE_BOOKING_WAITLIST_ENTRY_SWR_KEY, async (_key: string, { arg }: { arg: MutateRemoveBookingWaitlistEntryRequest }) => {
-        const result = await mutateRemoveBookingWaitlistEntry({ request: arg })
-        if (!result.data) throw new Error("removeBookingWaitlistEntry answered no data")
-        return result.data.removeBookingWaitlistEntry
-    })
+    useSWRMutation(
+        MUTATE_REMOVE_BOOKING_WAITLIST_ENTRY_SWR_KEY,
+        async (_key: string, { arg }: { arg: MutateRemoveBookingWaitlistEntryRequest }) => {
+            const result = await mutateRemoveBookingWaitlistEntry({ request: arg })
+            if (!result.data) throw new Error("removeBookingWaitlistEntry answered no data")
+            return result.data.removeBookingWaitlistEntry
+        },
+    )

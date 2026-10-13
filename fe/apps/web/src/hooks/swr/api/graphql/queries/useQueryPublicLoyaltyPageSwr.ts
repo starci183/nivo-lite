@@ -11,8 +11,11 @@ export const isQueryPublicLoyaltyPageSwrKey = (key: unknown): boolean =>
 
 /** The public loyalty page of one shop slug (anonymous). */
 export const useQueryPublicLoyaltyPageSwr = (request: QueryPublicLoyaltyPageRequest | null) =>
-    useSWR(request === null ? null : [QUERY_PUBLIC_LOYALTY_PAGE_SWR_KEY, request], async (key: readonly [string, QueryPublicLoyaltyPageRequest]) => {
-        const result = await queryPublicLoyaltyPage({ request: key[1] })
-        if (!result.data) throw new Error("publicLoyaltyPage answered no data")
-        return result.data.publicLoyaltyPage
-    })
+    useSWR(
+        request === null ? null : [QUERY_PUBLIC_LOYALTY_PAGE_SWR_KEY, request],
+        async (key: readonly [string, QueryPublicLoyaltyPageRequest]) => {
+            const result = await queryPublicLoyaltyPage({ request: key[1] })
+            if (!result.data) throw new Error("publicLoyaltyPage answered no data")
+            return result.data.publicLoyaltyPage
+        },
+    )

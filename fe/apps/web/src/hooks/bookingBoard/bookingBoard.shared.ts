@@ -1,0 +1,42 @@
+import type { BookingBoard } from "@/modules/types"
+
+/** The board shown before the first answer: nothing booked, no setup, a closed public page. */
+export const EMPTY_BOOKING_BOARD: BookingBoard = {
+    timezone: "UTC",
+    today: "1970-01-01",
+    nowMs: 0,
+    from: "1970-01-01",
+    to: "1970-01-01",
+    settings: {
+        timezone: "UTC",
+        slotStepMin: 30,
+        minLeadMin: 0,
+        maxAdvanceDays: 30,
+        cancelWindowHours: 0,
+        depositPct: 0,
+        lateCancelFeePct: 0,
+        noShowFeeVnd: 0,
+        autoConfirm: false,
+        handoffOrder: false,
+        address: "",
+        publicEnabled: false,
+        publicSlug: null,
+        publicNote: "",
+    },
+    services: [],
+    resources: [],
+    hours: [],
+    exceptions: [],
+    bookings: [],
+    waitlist: [],
+    staff: [],
+    figures: {
+        bookingsToday: 0,
+        noShowPct30d: null,
+        finished30d: 0,
+        utilisationPct: null,
+        depositsPending: 0,
+        depositsPendingVnd: 0,
+    },
+    stats: { byResource: [], byStatus: {}, noShowPct: 0, doneRevenueVnd: 0, total: 0 },
+}
