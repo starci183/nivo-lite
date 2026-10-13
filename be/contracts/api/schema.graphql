@@ -1,3 +1,7 @@
+type AcceptInviteType {
+  workspaceId: ID!
+}
+
 type AccountingAgeingType {
   d0: AccountingMeasureType!
   d30: AccountingMeasureType!
@@ -311,6 +315,615 @@ type AccountingWorkbenchType {
   waiting: AccountingWaitingType!
 }
 
+type AdminActivityType {
+  lastCustomerMessageAt: String
+  messages7d: Int!
+  openDecisions: Int!
+}
+
+type AdminAgentSyncType {
+  agentId: ID!
+  checkedAt: String!
+  contextVersion: Int
+  error: String
+  status: String!
+}
+
+type AdminAuditType {
+  action: String!
+  actorEmail: String!
+  createdAt: String!
+  id: ID!
+  workspaceId: ID
+}
+
+type AdminBillingEventType {
+  createdAt: String!
+  id: ID!
+  kind: String!
+}
+
+type AdminConnectionBadgeType {
+  count: Int!
+  error: Int!
+  provider: String!
+  silent: Int!
+}
+
+type AdminConnectionType {
+  environment: String!
+  health: String!
+  id: ID!
+  lastError: String
+  lastEventAt: String
+  name: String!
+  provider: String!
+  status: String!
+}
+
+type AdminCountType {
+  count: Int!
+  key: String!
+}
+
+type AdminCreditsType {
+  costUsd: Float!
+  limit: Float
+  ownLimit: Float
+  used: Float!
+}
+
+type AdminErrorType {
+  createdAt: String!
+  id: ID!
+  message: String!
+  scope: String!
+}
+
+input AdminExtendSubscriptionInput {
+  days: Int!
+  workspaceId: ID!
+}
+
+type AdminHealthType {
+  audits: [AdminAuditType!]!
+  billingEvents: [AdminPlatformBillingEventType!]!
+  errorScopes: [AdminCountType!]!
+  errors: [AdminPlatformErrorType!]!
+  signups: [AdminSignupDayType!]!
+  transferCounts: [AdminCountType!]!
+  transfers: [AdminPlatformTransferType!]!
+  workspaceNames: [AdminWorkspaceNameType!]!
+}
+
+type AdminInviteResentType {
+  delivery: String!
+  email: String!
+}
+
+type AdminInviteType {
+  createdAt: String!
+  email: String!
+  expiresAt: String!
+  id: ID!
+  role: String!
+}
+
+type AdminKnowledgeKindType {
+  byStatus: [AdminCountType!]!
+  kind: String!
+}
+
+type AdminMemberType {
+  displayName: String!
+  email: String
+  role: String!
+  status: String!
+  userId: ID!
+}
+
+type AdminModuleBadgeType {
+  key: String!
+  live: Boolean!
+  status: String!
+}
+
+type AdminModuleType {
+  contextAppliedAt: String
+  contextVersion: Int
+  id: ID!
+  key: String!
+  live: Boolean!
+  operatingMode: String!
+  processor: String!
+  status: String!
+  sync: AdminAgentSyncType
+}
+
+type AdminOrderType {
+  amountVnd: Float!
+  createdAt: String!
+  id: ID!
+  orderCode: String!
+  paidAt: String
+  planCode: String!
+  status: String!
+}
+
+type AdminPlanSetType {
+  creditsLimit: Float
+  planCode: String!
+}
+
+type AdminPlatformBillingEventType {
+  createdAt: String!
+  id: ID!
+  kind: String!
+  workspaceId: ID
+}
+
+type AdminPlatformErrorType {
+  createdAt: String!
+  id: ID!
+  message: String!
+  scope: String!
+  workspaceId: ID
+}
+
+type AdminPlatformTransferType {
+  content: String
+  receivedAt: String!
+  status: String!
+  transferAmount: Float
+}
+
+input AdminResendWorkspaceInviteInput {
+  inviteId: ID!
+  workspaceId: ID!
+}
+
+type AdminSessionType {
+  email: String!
+}
+
+input AdminSetWorkspacePlanInput {
+  creditsLimit: Int = null
+  planCode: String!
+  workspaceId: ID!
+}
+
+input AdminSetWorkspaceStatusInput {
+  status: String!
+  workspaceId: ID!
+}
+
+type AdminSignupDayType {
+  day: String!
+  signups: Int!
+}
+
+type AdminStatusSetType {
+  status: String!
+}
+
+type AdminSubscriptionExtendedType {
+  paidUntil: String!
+}
+
+type AdminTransferType {
+  content: String
+  receivedAt: String!
+  sepayId: Float!
+  status: String!
+  transferAmount: Float
+}
+
+type AdminWorkspaceCountsType {
+  all: Int!
+  attention: Int!
+  idle: Int!
+  unpaid: Int!
+}
+
+type AdminWorkspaceDetailType {
+  activity: AdminActivityType!
+  billingEvents: [AdminBillingEventType!]!
+  connections: [AdminConnectionType!]!
+  credits: AdminCreditsType!
+  errors: [AdminErrorType!]!
+  invites: [AdminInviteType!]!
+  knowledge: [AdminKnowledgeKindType!]!
+  knowledgeTotal: Int!
+  members: [AdminMemberType!]!
+  modules: [AdminModuleType!]!
+  orders: [AdminOrderType!]!
+  transfers: [AdminTransferType!]!
+  workspace: AdminWorkspaceHeaderType!
+}
+
+type AdminWorkspaceHeaderType {
+  createdAt: String!
+  id: ID!
+  name: String!
+  ownerEmail: String
+  paidUntil: String
+  planCode: String
+  status: String!
+}
+
+input AdminWorkspaceInput {
+  workspaceId: ID!
+}
+
+type AdminWorkspaceItemType {
+  attention: Boolean!
+  connectionWarning: Boolean!
+  connections: [AdminConnectionBadgeType!]!
+  createdAt: String!
+  errors24h: Int!
+  id: ID!
+  idle7d: Boolean!
+  lastCustomerMessageAt: String
+  members: Int!
+  messages7d: Int!
+  modules: [AdminModuleBadgeType!]!
+  name: String!
+  openDecisions: Int!
+  ownerEmail: String
+  paidUntil: String
+  planCode: String
+  status: String!
+  unpaid: Boolean!
+}
+
+type AdminWorkspaceListType {
+  counts: AdminWorkspaceCountsType!
+  items: [AdminWorkspaceItemType!]!
+  total: Int!
+}
+
+type AdminWorkspaceNameType {
+  id: ID!
+  name: String!
+}
+
+input AdminWorkspacesInput {
+  filter: String! = "all"
+  query: String! = ""
+}
+
+type AgentAckType {
+  ok: Boolean!
+}
+
+type AgentCommandResultType {
+  chainId: ID
+  created: Boolean
+  depth: Int
+  detail: String
+  item: WorkItemType
+  missing: [String!]
+  ok: Boolean!
+  refused: String
+}
+
+type AgentConnectionType {
+  access: String!
+  id: ID!
+  name: String!
+  provider: String!
+  purpose: String!
+  status: String!
+}
+
+type AgentDashboardAgentType {
+  id: ID!
+  mode: String!
+  name: String!
+}
+
+type AgentDashboardConnectionType {
+  access: String!
+  id: ID!
+  name: String!
+  provider: String!
+  purpose: String!
+  status: String!
+}
+
+type AgentDashboardConnectionsRegionType {
+  data: [AgentDashboardConnectionType!]
+  ok: Boolean!
+}
+
+type AgentDashboardDocumentCountsType {
+  internal: Int!
+  public: Int!
+}
+
+type AgentDashboardDoneRegionType {
+  data: AgentDashboardDoneType
+  ok: Boolean!
+}
+
+type AgentDashboardDoneType {
+  count: Int!
+  items: [AgentDashboardItemType!]!
+}
+
+type AgentDashboardFactCountsType {
+  internal: Int!
+  public: Int!
+  restricted: Int!
+}
+
+type AgentDashboardGapType {
+  count: Int!
+  id: ID!
+  lastSeenAt: String!
+  question: String!
+}
+
+type AgentDashboardGapsType {
+  items: [AgentDashboardGapType!]!
+  openCount: Int!
+}
+
+input AgentDashboardInput {
+  installationId: ID
+  module: String!
+}
+
+type AgentDashboardItemType {
+  action: String!
+  at: String!
+  customer: String!
+  id: ID!
+  leadId: ID
+  resultHref: String
+  title: String!
+}
+
+type AgentDashboardKnowledgeRegionType {
+  data: AgentDashboardKnowledgeType
+  ok: Boolean!
+}
+
+type AgentDashboardKnowledgeType {
+  audience: String!
+  documents: AgentDashboardDocumentCountsType!
+  facts: AgentDashboardFactCountsType!
+  gaps: AgentDashboardGapsType
+}
+
+type AgentDashboardType {
+  agent: AgentDashboardAgentType
+  connections: AgentDashboardConnectionsRegionType!
+  done: AgentDashboardDoneRegionType!
+  knowledge: AgentDashboardKnowledgeRegionType!
+  waiting: AgentDashboardWaitingRegionType!
+}
+
+type AgentDashboardWaitingRegionType {
+  data: AgentDashboardWaitingType
+  ok: Boolean!
+}
+
+type AgentDashboardWaitingType {
+  items: [AgentDashboardItemType!]!
+  total: Int!
+}
+
+type AgentEngineStatusType {
+  gatewayConfigured: Boolean!
+  lastSyncCheckAt: String
+  syncFresh: Boolean!
+  workspaceWritable: Boolean!
+}
+
+input AgentGenMessageInput {
+  content: String!
+  role: String!
+}
+
+input AgentGenerationIdInput {
+  generationId: ID!
+}
+
+type AgentGenerationRequestedType {
+  generationId: ID
+  message: String
+  ok: Boolean!
+  reason: String
+}
+
+type AgentGenerationStatusType {
+  generationId: ID!
+  output: String
+  status: String!
+  timings: JsonObject!
+  usage: AgentGenerationUsageType
+}
+
+type AgentGenerationUsageType {
+  cached_tokens: Int!
+  completion_tokens: Int!
+  cost: Float!
+  model: String
+  prompt_tokens: Int!
+}
+
+input AgentIdInput {
+  agentId: ID!
+}
+
+type AgentSummaryType {
+  createdAt: String!
+  handle: String!
+  id: ID!
+  module: String!
+  name: String!
+  role: String!
+  status: String!
+}
+
+input AgentTextsInput {
+  instructions: String!
+  knowledge: String!
+}
+
+type ApiKeyType {
+  createdAt: String!
+  id: ID!
+  lastUsedAt: String
+  name: String!
+  prefix: String!
+  revokedAt: String
+}
+
+type ApprovalExecutionType {
+  draft: String!
+  id: ID!
+  status: String!
+  work_item_id: ID
+}
+
+input AskKnowledgeInput {
+  audience: String!
+  module: String!
+  question: String!
+}
+
+input AuthorityPatchInput {
+  brand_voice: String
+  goal_first_reply_minutes: Int
+  goal_new_customers: Int
+  goal_note: String
+  goal_revenue_vnd: Int
+  limits_note: String
+  policies: String
+  reply_style: String
+}
+
+type AuthorityProfileType {
+  brand_voice: String!
+  goal_first_reply_minutes: Int
+  goal_new_customers: Int
+  goal_note: String!
+  goal_revenue_vnd: Float
+  limits_note: String!
+  policies: String!
+  reply_style: String!
+  updated_at: String!
+  updated_by: String
+}
+
+input AuthorityRuleChangeInput {
+  action: String!
+  limit_vnd: Int = null
+  mode: String!
+  required_fields: [String!] = []
+}
+
+type AuthorityRuleType {
+  action: String!
+  department: String!
+  id: ID!
+  limit_vnd: Float
+  mode: String!
+  note: String!
+  required_fields: [String!]!
+  updated_at: String!
+  workspace_id: ID!
+}
+
+type AuthoritySheetType {
+  profile: AuthorityProfileType
+  rules: [AuthorityRuleType!]!
+}
+
+input AuthorizeGoogleInput {
+  returnTo: String!
+}
+
+input AuthorizeMetaInput {
+  connectionId: ID
+}
+
+type AuthorizeUrlType {
+  url: String!
+}
+
+input AuthorizeZaloInput {
+  connectionId: ID!
+}
+
+type AutomationCardType {
+  basedOnContext: Int
+  body: String
+  bodyStale: Boolean!
+  bodyVersion: Int!
+  comingSoon: Boolean!
+  config: JsonObject!
+  currentContext: Int
+  def: TemplateDefinitionType!
+  dismissed: Boolean!
+  enabled: Boolean!
+  gate: String
+  google: String
+  key: String!
+  lastRunAt: String
+  missing: [MissingRequirementType!]!
+  pipelineId: ID
+  proposed: Boolean!
+  runCount: Int!
+  sheetUrl: String
+  trust: TrustType!
+}
+
+type AutomationGoogleAccountType {
+  email: String!
+  id: ID!
+  status: String!
+}
+
+type AutomationRunType {
+  createdAt: String!
+  error: String
+  evidence: String
+  finishedAt: String
+  id: ID!
+  message: String
+  pipelineId: ID!
+  status: String!
+  steps: [RunStepType!]!
+  summary: String!
+  templateKey: String!
+  triggerRef: String!
+  workItemId: ID
+}
+
+input AutomationRunsInput {
+  template: String! = ""
+}
+
+type AutomationSuggestionType {
+  key: String!
+  name: LocalizedTextType!
+  reason: LocalizedTextType!
+}
+
+input AutomationSuggestionsInput {
+  module: String! = ""
+}
+
+type AutomationsOverviewType {
+  cards: [AutomationCardType!]!
+  runs: [AutomationRunType!]!
+  sample: PreviewSampleType!
+  shop: ShopContextType!
+}
+
 type BillingBankAccountType {
   account: String!
   bank: String!
@@ -388,6 +1001,157 @@ type BillingWorkspaceType {
   status: String!
 }
 
+type BodyProposalType {
+  body: String!
+  contextVersion: Int
+  generated: Boolean!
+}
+
+type BrainCommandRefType {
+  id: ID!
+}
+
+type BrainEvidenceType {
+  at: String
+  kind: String!
+  label: String!
+  quote: String
+  ref: String!
+}
+
+type BrainExtractionType {
+  sourceId: ID!
+  status: String!
+}
+
+type BrainFactType {
+  attribute: String!
+  attributeLabel: String!
+  decidedAt: String
+  decidedBy: String
+  evidence: [BrainEvidenceType!]!
+  id: ID!
+  installationId: ID
+  modules: [String!]!
+  proposalKind: String!
+  proposedAt: String!
+  proposedBy: String!
+  scope: String!
+  sourceKind: String!
+  status: String!
+  subjectKey: String!
+  subjectLabel: String!
+  subjectType: String!
+  trust: Int!
+  unit: String
+  validFrom: String
+  validTo: String
+  value: String!
+}
+
+type BrainGapType {
+  attributeGuess: String
+  count: Int!
+  id: ID!
+  lastSeenAt: String!
+  module: String!
+  question: String!
+  reopenedCount: Int!
+  topic: String
+}
+
+type BrainLensType {
+  audience: String!
+  module: String!
+  name: String!
+}
+
+type BrainLessonType {
+  appliesWhen: String!
+  body: String!
+  evidence: [BrainEvidenceType!]!
+  id: ID!
+  module: String
+  status: String!
+  title: String!
+}
+
+type BrainType {
+  extractions: [BrainExtractionType!]!
+  facts: [BrainFactType!]!
+  gaps: [BrainGapType!]!
+  gapsOpen: Int!
+  lenses: [BrainLensType!]!
+  lessons: [BrainLessonType!]!
+}
+
+input ChangeMemberRoleInput {
+  role: String!
+  userId: ID!
+}
+
+input CheckConnectionInput {
+  connectionId: ID!
+}
+
+input CheckMetaInput {
+  connectionId: ID!
+  repair: Boolean!
+}
+
+input ChooseMetaPageInput {
+  connectionId: ID!
+  pageId: String!
+}
+
+input ConnectTelegramInput {
+  name: String!
+  token: String!
+}
+
+type ConnectionAgentType {
+  id: ID!
+  module: String!
+  name: String!
+  status: String!
+}
+
+type ConnectionCheckType {
+  lastError: String
+  localOnly: Boolean!
+  pending: Int!
+  provider: String!
+  webhookOk: Boolean!
+}
+
+type ConnectionGrantType {
+  access: String!
+  agentId: ID!
+}
+
+type ConnectionType {
+  agentIds: [ID!]!
+  createdAt: String!
+  createdBy: ID
+  environment: String!
+  firstEvent: FirstEventType
+  grants: [ConnectionGrantType!]!
+  id: ID!
+  isDefault: Boolean!
+  lastError: String
+  lastEventAt: String
+  meta: StringMap!
+  name: String!
+  provider: String!
+  status: String!
+  workspaceId: ID!
+}
+
+input ConnectionWishInput {
+  access: String
+  connectionId: ID!
+}
+
 input CreateAccountingAdjustmentInput {
   correctedAmount: Float
   note: String!
@@ -405,12 +1169,43 @@ type CreateAccountingAdjustmentType {
   targetType: String!
 }
 
+input CreateAgentInput {
+  handle: String!
+  instructions: String!
+  module: String!
+  name: String!
+  role: String!
+}
+
+input CreateApiKeyInput {
+  name: String!
+}
+
+input CreateInviteInput {
+  email: String!
+  role: String!
+  staffId: ID
+}
+
+input CreateKnowledgeUploadInput {
+  filename: String!
+}
+
+input CreateResponsibilityInput {
+  input: NewResponsibilityInput!
+}
+
 input CreateWorkspaceInput {
   name: String!
 }
 
 type CreateWorkspaceType {
   id: ID!
+}
+
+type CreatedApiKeyType {
+  item: ApiKeyType!
+  key: String!
 }
 
 type CreditDailyUsageType {
@@ -471,6 +1266,540 @@ type CreditUsageSummaryType {
   status: CreditQuotaStatusType
 }
 
+type DashboardAgentType {
+  approvalRule: String!
+  createdAt: String!
+  greeting: String!
+  handle: String!
+  id: ID!
+  instructions: String!
+  knowledge: String!
+  module: String!
+  name: String!
+  role: String!
+  status: String!
+}
+
+type DashboardAuthorityType {
+  goalFirstReplyMinutes: Int
+  goalNewCustomers: Int
+  goalRevenueVnd: Float
+}
+
+type DashboardDecisionType {
+  action: String!
+  createdAt: String!
+  decidedBy: String!
+  deciderKind: String!
+  department: String!
+  id: ID!
+  leadId: ID
+  leadName: String
+  note: String
+  outcome: String!
+  reason: String
+  workItemId: ID
+}
+
+type DashboardEventType {
+  actor: String!
+  createdAt: String!
+  evidence: String
+  id: ID!
+  kind: String!
+  leadId: ID
+  summary: String!
+}
+
+type DashboardExceptionLeadType {
+  channel: String!
+  company: String!
+  contactName: String!
+  id: ID!
+}
+
+type DashboardExceptionType {
+  action: String!
+  assignedStaffName: String
+  contact: String
+  createdAt: String!
+  customer: String
+  department: String!
+  error: String
+  executionId: ID
+  id: ID!
+  lead: DashboardExceptionLeadType
+  leadId: ID
+  origin: String
+  reason: String
+  status: String!
+  summary: String
+}
+
+type DashboardFirstEventType {
+  at: String!
+  leadId: ID!
+}
+
+type DashboardGovernanceDecisionType {
+  createdAt: String!
+  deciderKind: String!
+  leadId: ID
+  outcome: String!
+  workItemId: ID
+}
+
+type DashboardGovernanceInvoiceType {
+  amountVnd: Float
+  id: ID!
+  invoiceNo: String
+  leadId: ID
+  orderId: ID
+  origin: String
+  status: String!
+}
+
+type DashboardGovernanceLeadType {
+  company: String
+  contactName: String
+  createdAt: String!
+  id: ID!
+  origin: String
+  stage: String!
+}
+
+type DashboardGovernanceOrderType {
+  amountVnd: Float
+  id: ID!
+  items: String
+  leadId: ID
+  orderNo: String
+  origin: String
+  status: String!
+}
+
+type DashboardGovernanceTransactionType {
+  amountVnd: Float
+  id: ID!
+  invoiceId: ID
+  origin: String
+  payer: String
+  reference: String
+  status: String!
+}
+
+type DashboardGovernanceType {
+  authority: DashboardAuthorityType
+  decisions7: [DashboardGovernanceDecisionType!]!
+  invoices: [DashboardGovernanceInvoiceType!]!
+  leads: [DashboardGovernanceLeadType!]!
+  orders: [DashboardGovernanceOrderType!]!
+  pendingWithoutWork: Int!
+  recent: [DashboardDecisionType!]!
+  transactions: [DashboardGovernanceTransactionType!]!
+  work: [DashboardGovernanceWorkType!]!
+}
+
+type DashboardGovernanceWorkType {
+  completedAt: String
+  contact: String
+  createdAt: String!
+  customer: String
+  decidedPath: String
+  department: String!
+  id: ID!
+  leadId: ID
+  reason: String
+  status: String!
+  summary: String
+  updatedAt: String!
+}
+
+type DashboardLeadType {
+  company: String
+  contactName: String
+  createdAt: String!
+  id: ID!
+  stage: String!
+}
+
+type DashboardPendingType {
+  createdAt: String!
+  id: ID!
+  leadId: ID
+  responsibilityId: ID!
+}
+
+type DashboardPromoChatbotType {
+  id: ID!
+  knowledge: String!
+}
+
+type DashboardPromoType {
+  approvedCount: Int!
+  chatbot: DashboardPromoChatbotType
+  firstEvents: [DashboardFirstEventType!]!
+  hasCustomerConversation: Boolean!
+  hasLeadConversation: Boolean!
+  hasWon: Boolean!
+  invoiceApproved: Boolean!
+  isFoundingMember: Boolean!
+  websiteLeads: [DashboardWebsiteLeadType!]!
+}
+
+type DashboardResponsibilityLeadType {
+  company: String!
+  contactName: String!
+  id: ID!
+  stage: String!
+}
+
+type DashboardResponsibilityType {
+  createdAt: String!
+  dueAt: String
+  id: ID!
+  lead: DashboardResponsibilityLeadType!
+  leadId: ID!
+  nextAction: String!
+  ownerAgentId: ID
+  ownerKind: String!
+  ownerName: String!
+  status: String!
+  title: String!
+}
+
+type DashboardType {
+  agents: [DashboardAgentType!]!
+  events: [DashboardEventType!]!
+  exceptions: [DashboardExceptionType!]!
+  governance: DashboardGovernanceType!
+  leads: [DashboardLeadType!]!
+  pending: [DashboardPendingType!]!
+  promo: DashboardPromoType!
+  responsibilities: [DashboardResponsibilityType!]!
+  since7: String!
+}
+
+type DashboardWebsiteLeadType {
+  createdAt: String!
+  id: ID!
+}
+
+input DecideBrainFactInput {
+  action: String!
+  id: ID!
+  note: String
+  situation: String
+}
+
+input DecideBrainLessonInput {
+  action: String!
+  id: ID!
+}
+
+input DecideExecutionInput {
+  decision: String!
+  editedDraft: String
+  executionId: ID!
+}
+
+input DecideWorkItemInput {
+  basis: String
+  decision: String!
+  edits: WorkEditsInput
+  note: String
+  workItemId: ID!
+}
+
+type DecisionRecordType {
+  action: String!
+  created_at: String!
+  decided_by: String!
+  decider_kind: String!
+  department: String!
+  id: ID!
+  leadName: String
+  lead_id: ID
+  note: String!
+  outcome: String!
+  reason: String
+  work_item_id: ID
+}
+
+input DeleteConnectionInput {
+  connectionId: ID!
+}
+
+input DeleteKnowledgeSourceInput {
+  id: ID!
+}
+
+type DeviceSessionType {
+  createdAt: String
+  id: ID!
+  ip: String
+  isCurrent: Boolean!
+  lastActiveAt: String
+  userAgent: String
+}
+
+input DisconnectConnectionInput {
+  connectionId: ID!
+}
+
+input DismissKnowledgeGapInput {
+  id: ID!
+}
+
+type DocumentPassageType {
+  content: String!
+  hasEmbedding: Boolean!
+  id: ID!
+  order: Int!
+}
+
+type DriveFileType {
+  id: ID!
+  mimeType: String!
+  modifiedTime: String
+  name: String!
+  path: String!
+  size: Float
+}
+
+type DriveFolderType {
+  files: [DriveFileType!]!
+  name: String!
+  truncated: Boolean!
+}
+
+input DriveLinkedFolderInput {
+  url: String!
+}
+
+input DrivePickedFolderInput {
+  folderId: String!
+  token: String!
+}
+
+input EmitAutomationEventInput {
+  data: JsonObject!
+  dedupe: String!
+  event: String!
+}
+
+input EnqueueKnowledgeSourceInput {
+  content: String
+  installationId: ID
+  kind: String!
+  module: String
+  origin: String
+  storagePath: String
+  tags: [String!]
+  title: String!
+  topic: String
+  url: String
+  visibility: String
+}
+
+input FieldValueInput {
+  name: String!
+  number: Float
+  text: String
+}
+
+input FinishWebhookConnectionInput {
+  connectionId: ID!
+}
+
+type FirstEventStateType {
+  firstEvent: FirstEventType
+  status: String!
+}
+
+type FirstEventType {
+  amount: Float!
+  at: String!
+  content: String!
+  text: String
+}
+
+input GetConnectionFirstEventInput {
+  connectionId: ID!
+}
+
+input GetMetaConnectionInput {
+  connectionId: ID!
+}
+
+input GetMoneyConnectionInput {
+  connectionId: ID!
+}
+
+input GetZaloConnectionInput {
+  connectionId: ID!
+}
+
+type GoogleStateType {
+  configured: Boolean!
+}
+
+input GrantAgentConnectionInput {
+  access: String!
+  agentId: ID!
+  connectionId: ID!
+  purpose: String!
+}
+
+input GrantWishInput {
+  access: String
+  agentId: ID!
+}
+
+type InvitePreviewType {
+  email: String!
+  role: String!
+  staffName: String
+  state: String!
+  workspaceName: String!
+}
+
+input InviteRefInput {
+  inviteId: ID!
+}
+
+type InviteResultType {
+  delivery: String!
+  email: String!
+  link: String!
+}
+
+input InviteTokenInput {
+  token: String!
+}
+
+scalar JsonObject
+
+input KeepCurrentBrainFactInput {
+  attribute: String!
+  installationId: ID
+  subjectKey: String!
+}
+
+type KnowledgeSourceDetailType {
+  chunks: [DocumentPassageType!]!
+  source: KnowledgeSourceTextType!
+}
+
+input KnowledgeSourceInput {
+  id: ID!
+}
+
+type KnowledgeSourceTextType {
+  chunkCount: Int!
+  content: String!
+  createdAt: String!
+  error: String
+  id: ID!
+  installationId: ID
+  kind: String!
+  module: String
+  progress: Int!
+  status: String!
+  tags: [String!]!
+  title: String!
+  topic: String
+  updatedAt: String!
+  visibility: String!
+  workspaceId: ID!
+}
+
+type KnowledgeSourceType {
+  chunkCount: Int!
+  createdAt: String!
+  error: String
+  id: ID!
+  installationId: ID
+  kind: String!
+  module: String
+  progress: Int!
+  status: String!
+  tags: [String!]!
+  title: String!
+  topic: String
+  updatedAt: String!
+  visibility: String!
+  workspaceId: ID!
+}
+
+input KnowledgeSourcesInput {
+  module: String
+}
+
+type KnowledgeSuggestionContextType {
+  businessType: String
+  decisions: [SuggestionDecisionType!]!
+}
+
+input LessonMiningStatusInput {
+  id: ID!
+}
+
+type LessonMiningStatusType {
+  corrections: Int
+  errorCode: String
+  id: ID!
+  newCases: Int
+  proposed: Int
+  reason: String
+  status: String!
+}
+
+input ListAgentsInput {
+  module: String
+}
+
+input ListDecisionHistoryInput {
+  department: String = null
+  kind: String = "all"
+  limit: Int = 50
+}
+
+input ListOfficeMessagesInput {
+  before: OfficeThreadCursorInput = null
+  limit: Int = 50
+}
+
+input ListWorkItemsInput {
+  after: WorkItemCursorInput
+  limit: Int = 50
+  statuses: [String!] = []
+}
+
+type LocalizedTextType {
+  en: String!
+  vi: String!
+}
+
+type ManualEvidenceType {
+  duplicate: Boolean!
+}
+
+type MemberListingType {
+  displayName: String!
+  email: String!
+  lastSignInAt: String
+  role: String!
+  staffId: ID
+  status: String!
+  userId: ID!
+  workspaceId: ID!
+}
+
+input MemberRefInput {
+  userId: ID!
+}
+
 type MemberType {
   displayName: String!
   role: String!
@@ -485,10 +1814,374 @@ type MembershipType {
   workspace: WorkspaceType!
 }
 
+type MetaAppObjectType {
+  callbackUrl: String!
+  fields: [String!]!
+  missing: [String!]!
+  urlMatches: Boolean!
+}
+
+type MetaAuthorizationType {
+  connectionId: ID!
+  url: String!
+}
+
+type MetaCheckType {
+  appInstagram: MetaAppObjectType
+  appKnown: Boolean!
+  appPage: MetaAppObjectType
+  igUsername: String!
+  localOnly: Boolean!
+  ok: Boolean!
+  pageId: String!
+  pageName: String!
+  pageSubscription: MetaPageSubscriptionType!
+  redirectUri: String!
+  repaired: Boolean!
+  tokenOk: Boolean!
+  verifyTokenSet: Boolean!
+  wantInstagram: [String!]!
+  wantPage: [String!]!
+  webhookUrl: String!
+}
+
+type MetaPageOptionType {
+  category: String!
+  id: ID!
+  igId: String!
+  igUsername: String!
+  name: String!
+}
+
+type MetaPageSubscriptionType {
+  fields: [String!]!
+  missing: [String!]!
+  subscribed: Boolean!
+}
+
+type MetaWizardConnectionType {
+  agentIds: [ID!]!
+  configured: Boolean!
+  firstEvent: FirstEventType
+  id: ID!
+  igId: String!
+  igUsername: String!
+  name: String!
+  pageId: String!
+  pageName: String!
+  pages: [MetaPageOptionType!]!
+  status: String!
+}
+
+type MissingRequirementType {
+  key: String!
+  kind: String!
+  label: LocalizedTextType!
+}
+
+type ModuleAcceptedCommandType {
+  action: String!
+  command: String!
+  description: ModuleBilingualType!
+  requiredFields: [String!]!
+  subjectType: String!
+}
+
+type ModuleAgentType {
+  capabilities: ModuleBilingualListType!
+  handle: String!
+  instructions: ModuleBilingualType!
+  name: String!
+  role: ModuleBilingualType!
+  summary: ModuleBilingualType!
+}
+
+type ModuleAuthorityActionType {
+  action: String!
+  amountLimit: Boolean!
+  label: ModuleBilingualType!
+  limitVnd: Float
+  maxMode: String
+  mode: String!
+  next: [String!]!
+  note: String!
+  requiredFields: [String!]!
+}
+
+type ModuleBilingualListType {
+  en: [String!]!
+  vi: [String!]!
+}
+
+type ModuleBilingualType {
+  en: String!
+  vi: String!
+}
+
+type ModuleCategoryType {
+  key: String!
+  label: ModuleBilingualType!
+}
+
+type ModuleDefinitionType {
+  accepts: [ModuleAcceptedCommandType!]!
+  agent: ModuleAgentType!
+  audience: String!
+  authorityActions: [ModuleAuthorityActionType!]!
+  available: Boolean!
+  category: String!
+  connectionProviders: [String!]!
+  defaultOperatingMode: String!
+  description: ModuleBilingualType!
+  gates: [ModuleGateType!]!
+  glyph: String!
+  icon: String!
+  includedWithWorkspace: Boolean!
+  key: String!
+  knowledgeFolder: String!
+  mascot: String!
+  multiInstance: Boolean!
+  name: ModuleBilingualType!
+  order: Int!
+  points: ModuleBilingualListType!
+  purpose: String!
+  requires: ModuleRequirementsType!
+  settingsExtras: String
+  shortName: ModuleBilingualType!
+  status: String!
+  workbench: String
+}
+
+type ModuleGateType {
+  hint_en: String!
+  hint_vi: String!
+  key: String!
+  label_en: String!
+  label_vi: String!
+  writes: [ModuleGateWriteType!]
+}
+
+type ModuleGateWriteType {
+  action: String
+  attributeLabel: String
+  field: String
+  kind: String!
+  scope: String
+  subjectType: String
+}
+
+input ModuleKeyInput {
+  key: String!
+}
+
+type ModuleRequirementsType {
+  capabilities: [String!]!
+  connections: [String!]!
+}
+
+type ModulesCatalogType {
+  categories: [ModuleCategoryType!]!
+  modules: [ModuleDefinitionType!]!
+}
+
 type Mutation {
+  acceptInvite(input: InviteTokenInput!): AcceptInviteType!
+  adminExtendSubscription(input: AdminExtendSubscriptionInput!): AdminSubscriptionExtendedType!
+  adminResendWorkspaceInvite(input: AdminResendWorkspaceInviteInput!): AdminInviteResentType!
+  adminSetWorkspacePlan(input: AdminSetWorkspacePlanInput!): AdminPlanSetType!
+  adminSetWorkspaceStatus(input: AdminSetWorkspaceStatusInput!): AdminStatusSetType!
+  authorizeGoogle(input: AuthorizeGoogleInput!): AuthorizeUrlType!
+  authorizeMeta(input: AuthorizeMetaInput!): MetaAuthorizationType!
+  authorizeZalo(input: AuthorizeZaloInput!): ZaloAuthorizationType!
+  cancelOfficeCommand(input: OfficeCandidateIdInput!): OfficeAckType!
+  changeMemberRole(input: ChangeMemberRoleInput!): Boolean!
+  checkConnection(input: CheckConnectionInput!): ConnectionCheckType!
+  checkMeta(input: CheckMetaInput!): MetaCheckType!
+  chooseMetaPage(input: ChooseMetaPageInput!): MetaWizardConnectionType!
+  confirmOfficeCommand(input: OfficeCandidateIdInput!): OfficeConfirmResultType!
+  connectTelegram(input: ConnectTelegramInput!): TelegramConnectedType!
+  copyInviteLink(input: InviteRefInput!): InviteResultType!
   createAccountingAdjustment(input: CreateAccountingAdjustmentInput!): CreateAccountingAdjustmentType!
+  createAgent(input: CreateAgentInput!): AgentSummaryType!
+  createApiKey(input: CreateApiKeyInput!): CreatedApiKeyType!
+  createInvite(input: CreateInviteInput!): InviteResultType!
+  createKnowledgeUpload(input: CreateKnowledgeUploadInput!): UploadAddressType!
+  createResponsibility(input: CreateResponsibilityInput!): ResponsibilityType!
   createWorkspace(input: CreateWorkspaceInput!): CreateWorkspaceType!
+  decideBrainFact(input: DecideBrainFactInput!): BrainFactType!
+  decideBrainLesson(input: DecideBrainLessonInput!): BrainLessonType!
+  decideExecution(input: DecideExecutionInput!): ApprovalExecutionType!
+  decideWorkItem(input: DecideWorkItemInput!): WorkItemType!
+  deleteConnection(input: DeleteConnectionInput!): Boolean!
+  deleteKnowledgeSource(input: DeleteKnowledgeSourceInput!): Boolean!
+  disconnectConnection(input: DisconnectConnectionInput!): Boolean!
+  dismissKnowledgeGap(input: DismissKnowledgeGapInput!): Boolean!
+  emitAutomationEvent(input: EmitAutomationEventInput!): Boolean!
+  enqueueKnowledgeSource(input: EnqueueKnowledgeSourceInput!): SourceRefType!
+  finishWebhookConnection(input: FinishWebhookConnectionInput!): Boolean!
+  grantAgentConnection(input: GrantAgentConnectionInput!): AgentAckType!
+  keepCurrentBrainFact(input: KeepCurrentBrainFactInput!): Int!
+  maintainBrain: Boolean!
+  postOfficeMessage(input: PostOfficeMessageInput!): OfficeMessageType!
+  proposeAutomationBody(input: TemplateKeyInput!): BodyProposalType!
+  proposeOfficeCommand(input: ProposeOfficeCommandInput!): OfficeProposeOutcomeType!
+  recordManualEvidence(input: RecordManualEvidenceInput!): ManualEvidenceType!
+  reembedKnowledge: Boolean!
+  reindexKnowledgeSource(input: ReindexKnowledgeSourceInput!): SourceRefType!
+  removeMember(input: MemberRefInput!): Boolean!
+  renameAgent(input: RenameAgentInput!): AgentAckType!
+  requestAgentGeneration(input: RequestAgentGenerationInput!): AgentGenerationRequestedType!
+  requestAgentSync(input: RequestAgentSyncInput!): AgentAckType!
+  requestLessonMining(input: RequestLessonMiningInput!): BrainCommandRefType!
   requestPaymentOrder(input: RequestPaymentOrderInput!): RequestPaymentOrderType!
+  resendInvite(input: InviteRefInput!): InviteResultType!
+  retryKnowledgeSource(input: RetryKnowledgeSourceInput!): SourceRefType!
+  returnZaloAuthorization(input: ReturnZaloAuthorizationInput!): ZaloWizardConnectionType!
+  revealSepayKey(input: RevealSepayKeyInput!): SepayKeyType!
+  revealWebhookConnection(input: RevealWebhookConnectionInput!): WebhookViewType!
+  revokeAgentConnection(input: RevokeAgentConnectionInput!): AgentAckType!
+  revokeApiKey(input: RevokeApiKeyInput!): ApiKeyType!
+  revokeInvite(input: InviteRefInput!): Boolean!
+  revokeSession(input: RevokeSessionInput!): Boolean!
+  runAutomationNow(input: TemplateKeyInput!): Boolean!
+  runFlow(input: RunFlowInput!): RunFlowType!
+  saveAuthorityRule(input: SaveAuthorityRuleInput!): AuthorityRuleType!
+  saveBrainFact(input: SaveBrainFactInput!): SavedFactType!
+  saveBrainLesson(input: SaveBrainLessonInput!): BrainLessonType!
+  saveProviderKeys(input: SaveProviderKeysInput!): ProviderKeysResultType!
+  saveZaloOaSecret(input: SaveZaloOaSecretInput!): ZaloWizardConnectionType!
+  sendAgentCommand(input: SendAgentCommandInput!): AgentCommandResultType!
+  setAgentConnections(input: SetAgentConnectionsInput!): Boolean!
+  setAgentStatus(input: SetAgentStatusInput!): AgentAckType!
+  setAgentTexts(input: SetAgentTextsInput!): AgentAckType!
+  setConnectionAgents(input: SetConnectionAgentsInput!): Boolean!
+  setConnectionGrant(input: SetConnectionGrantInput!): Boolean!
+  setKnowledgeSuggestionState(input: SetKnowledgeSuggestionStateInput!): Boolean!
+  setMemberStatus(input: SetMemberStatusInput!): Boolean!
+  startMoneyConnection(input: StartMoneyConnectionInput!): WizardConnectionType!
+  startWebhookConnection(input: StartWebhookConnectionInput!): WebhookViewType!
+  startZaloConnection(input: StartZaloConnectionInput!): ZaloWizardConnectionType!
+  testWebhookConnection(input: TestWebhookConnectionInput!): WebhookTestResultType!
+  updateAuthority(input: UpdateAuthorityInput!): AuthorityProfileType!
+  updateAutomationPipeline(input: UpdateAutomationPipelineInput!): AutomationCardType!
+  updateKnowledgeSource(input: UpdateKnowledgeSourceInput!): Boolean!
+  updateMoneyConnection(input: UpdateMoneyConnectionInput!): WizardConnectionType!
+  updateProfile(input: UpdateProfileInput!): Boolean!
+  updateResponsibilityStatus(input: UpdateResponsibilityStatusInput!): ResponsibilityType!
+  updateWebhookEvents(input: UpdateWebhookEventsInput!): WebhookEventsType!
+  wantConnector(input: WantConnectorInput!): Boolean!
+}
+
+type MyAccountType {
+  email: String!
+  name: String!
+  providers: [String!]!
+  sessions: [DeviceSessionType!]!
+}
+
+input NewResponsibilityInput {
+  due_at: String = null
+  lead_id: ID!
+  next_action: String!
+  owner: String!
+  title: String!
+}
+
+type NivoEntryType {
+  body: String!
+  id: ID!
+  kind: String!
+  module: String!
+  slug: String!
+  title: String!
+  updatedAt: String!
+  version: Int!
+}
+
+type OfficeAckType {
+  ok: Boolean!
+}
+
+type OfficeApprovalType {
+  agentName: String
+  agent_id: ID
+  assignedStaffId: ID
+  channel: String!
+  created_at: String!
+  decided_at: String
+  decided_by: String
+  draft: String!
+  id: ID!
+  kind: String!
+  leadId: ID
+  leadName: String
+  nextAction: String!
+  responsibility_id: ID!
+  status: String!
+  work_item_id: ID
+}
+
+input OfficeCandidateIdInput {
+  candidateId: ID!
+}
+
+type OfficeCandidateType {
+  command: String!
+  created_at: String!
+  id: ID!
+  message_id: ID!
+  module: String!
+  payload: JsonObject!
+  refusal_detail: String
+  shown: [OfficeShownRowType!]!
+  status: String!
+  summary: String!
+  work_item_id: ID
+}
+
+type OfficeConfirmResultType {
+  created: Boolean!
+  module: String!
+  workItemId: ID!
+}
+
+type OfficeMessagePageType {
+  messages: [OfficeMessageType!]!
+  next: OfficeThreadCursorType
+}
+
+type OfficeMessageType {
+  agent_id: ID
+  author_kind: String!
+  author_name: String!
+  body: String!
+  created_at: String!
+  id: ID!
+  lead_id: ID
+  staff_id: ID
+  work_item_id: ID
+}
+
+type OfficeProposeOutcomeType {
+  body: String
+  candidate: OfficeCandidateType
+  kind: String!
+}
+
+type OfficeShownRowType {
+  key: String!
+  label: String!
+  value: String!
+}
+
+input OfficeThreadCursorInput {
+  createdAt: String!
+  id: ID!
+}
+
+type OfficeThreadCursorType {
+  createdAt: String!
+  id: ID!
 }
 
 input PaymentOrderInput {
@@ -506,28 +2199,169 @@ type PaymentOrderRequestStatusType {
   status: String!
 }
 
+type PendingInviteType {
+  createdAt: String!
+  email: String!
+  expiresAt: String!
+  id: ID!
+  role: String!
+  staffId: ID
+}
+
+type PickedFolderType {
+  empty: Boolean!
+  files: [DriveFileType!]!
+  name: String!
+  truncated: Boolean!
+}
+
+input PostOfficeMessageInput {
+  body: String!
+}
+
+type PreviewSampleType {
+  neutral: JsonObject!
+  variables: JsonObject!
+}
+
+type ProposalCandidateType {
+  amount_vnd: Float!
+  id: ID!
+  label: String!
+}
+
+type ProposalType {
+  amount_vnd: Float
+  candidates: [ProposalCandidateType!]
+  confidence: Float
+  draft: String
+  fields: JsonObject!
+  outcome: String
+  summary: String!
+}
+
+input ProposeOfficeCommandInput {
+  messageId: ID!
+}
+
+input ProviderKeysInput {
+  apiKey: String
+  checksumKey: String
+  clientId: String
+  secureKey: String
+}
+
+type ProviderKeysResultType {
+  confirmed: Boolean!
+  localOnly: Boolean!
+}
+
 type Query {
   accountingBook: AccountingBookType!
   accountingLedger: [AccountingLedgerEntryType!]!
   accountingWorkbench: AccountingWorkbenchType!
+  adminHealth: AdminHealthType!
+  adminSession: AdminSessionType!
+  adminWorkspace(input: AdminWorkspaceInput!): AdminWorkspaceDetailType!
+  adminWorkspaces(input: AdminWorkspacesInput!): AdminWorkspaceListType!
+  agentConnections(input: AgentIdInput!): [AgentConnectionType!]!
+  agentDashboard(input: AgentDashboardInput!): AgentDashboardType!
+  agentEngineStatus: AgentEngineStatusType!
+  agentGenerationStatus(input: AgentGenerationIdInput!): AgentGenerationStatusType!
+  agents(input: ListAgentsInput!): [AgentSummaryType!]!
+  apiKeys: [ApiKeyType!]!
+  askKnowledge(input: AskKnowledgeInput!): [RetrievedPassageType!]!
+  authority: AuthoritySheetType!
+  automationGoogleAccounts: [AutomationGoogleAccountType!]!
+  automationRuns(input: AutomationRunsInput!): [AutomationRunType!]!
+  automationSuggestions(input: AutomationSuggestionsInput!): [AutomationSuggestionType!]!
+  automations: AutomationsOverviewType!
   billingBankAccount: BillingBankAccountType!
   billingPlan(input: BillingPlanInput!): BillingPlanType
   billingPlans: [BillingPlanType!]!
   billingReviewTransactions(input: BillingReviewTransactionsInput!): [BillingReviewTransactionType!]!
   billingWorkspace: BillingWorkspaceType!
   billingWorkspaces: [BillingWorkspaceType!]!
+  brain: BrainType!
+  connectionAgents: [ConnectionAgentType!]!
+  connectionFirstEvent(input: GetConnectionFirstEventInput!): FirstEventStateType!
+  connections: [ConnectionType!]!
   creditPacks: [CreditPackType!]!
   creditQuotaStatus: CreditQuotaStatusType
   creditRecentCostUsd(input: CreditRecentCostInput!): Float!
   creditTopupLots: [CreditTopupLotType!]!
   creditUsageSummary: CreditUsageSummaryType!
+  dashboard: DashboardType!
+  decisionHistory(input: ListDecisionHistoryInput!): [DecisionRecordType!]!
+  driveLinkedFolder(input: DriveLinkedFolderInput!): DriveFolderType!
+  drivePickedFolder(input: DrivePickedFolderInput!): PickedFolderType!
+  googleConnectionState: GoogleStateType!
+  invitePreview(input: InviteTokenInput!): InvitePreviewType!
+  knowledgeSource(input: KnowledgeSourceInput!): KnowledgeSourceDetailType!
+  knowledgeSources(input: KnowledgeSourcesInput!): [KnowledgeSourceType!]!
+  knowledgeSuggestions: KnowledgeSuggestionContextType!
+  lessonMiningStatus(input: LessonMiningStatusInput!): LessonMiningStatusType!
+  metaConnection(input: GetMetaConnectionInput!): MetaWizardConnectionType!
+  moduleDefinition(input: ModuleKeyInput!): ModuleDefinitionType!
+  modulesCatalog: ModulesCatalogType!
+  moneyConnection(input: GetMoneyConnectionInput!): WizardConnectionType!
+  myAccount: MyAccountType!
   myWorkspaces: [MembershipType!]!
+  nivoKnowledge: [NivoEntryType!]!
+  officeCommandCandidates: [OfficeCandidateType!]!
+  officeDecidedApprovals: [OfficeApprovalType!]!
+  officeMessages(input: ListOfficeMessagesInput!): OfficeMessagePageType!
+  officePendingApprovals: [OfficeApprovalType!]!
   openPlanPaymentOrder: BillingPaymentOrderType
   paymentOrder(input: PaymentOrderInput!): BillingPaymentOrderType
   paymentOrderRequestStatus(input: PaymentOrderRequestStatusInput!): PaymentOrderRequestStatusType
   paymentOrders: [BillingPaymentOrderType!]!
+  responsibilities: [ResponsibilityListingType!]!
   salesOrder(input: SalesOrderInput!): SalesOrderType
   salesOrders: [SalesOrderType!]!
+  workItem(input: WorkItemIdInput!): WorkItemType!
+  workItems(input: ListWorkItemsInput!): WorkItemPageType!
+  workspaceInvites: [PendingInviteType!]!
+  workspaceMembers: [MemberListingType!]!
+  workspaceShell(input: ShellWindowInput!): WorkspaceShellType!
+  workspaceStaff: [StaffOptionType!]!
+  zaloConnection(input: GetZaloConnectionInput!): ZaloWizardConnectionType!
+}
+
+input RecordManualEvidenceInput {
+  amount: Float!
+  content: String!
+  date: String!
+  note: String
+  payer: String
+}
+
+input ReindexKnowledgeSourceInput {
+  content: String
+  sourceId: ID!
+}
+
+input RenameAgentInput {
+  agentId: ID!
+  name: String!
+}
+
+input RequestAgentGenerationInput {
+  kind: String!
+  messages: [AgentGenMessageInput!]!
+  module: String!
+  purpose: String!
+  responseFormat: String!
+  timeoutMs: Int
+}
+
+input RequestAgentSyncInput {
+  force: Boolean
+  installationId: ID
+}
+
+input RequestLessonMiningInput {
+  module: String!
 }
 
 input RequestPaymentOrderInput {
@@ -537,6 +2371,94 @@ input RequestPaymentOrderInput {
 
 type RequestPaymentOrderType {
   id: ID!
+  status: String!
+}
+
+type ResponsibilityListingType {
+  contact_name: String!
+  created_at: String!
+  due_at: String
+  id: ID!
+  lead_id: ID!
+  next_action: String!
+  owner_agent_id: ID
+  owner_kind: String!
+  owner_name: String!
+  status: String!
+  title: String!
+  workspace_id: ID!
+}
+
+type ResponsibilityType {
+  created_at: String!
+  due_at: String
+  id: ID!
+  lead_id: ID!
+  next_action: String!
+  owner_agent_id: ID
+  owner_kind: String!
+  owner_name: String!
+  status: String!
+  title: String!
+  workspace_id: ID!
+}
+
+type RetrievedPassageType {
+  content: String!
+  id: ID!
+  kind: String!
+  layer: String!
+  module: String
+  score: Float!
+  sourceId: ID
+  title: String!
+  topic: String
+  visibility: String!
+}
+
+input RetryKnowledgeSourceInput {
+  id: ID!
+}
+
+input ReturnZaloAuthorizationInput {
+  code: String!
+  oaId: String
+  state: String!
+}
+
+input RevealSepayKeyInput {
+  connectionId: ID!
+}
+
+input RevealWebhookConnectionInput {
+  connectionId: ID!
+}
+
+input RevokeAgentConnectionInput {
+  agentId: ID!
+  connectionId: ID!
+}
+
+input RevokeApiKeyInput {
+  keyId: ID!
+}
+
+input RevokeSessionInput {
+  sessionId: ID!
+}
+
+input RunFlowInput {
+  kind: String!
+  payload: JsonObject!
+}
+
+type RunFlowType {
+  data: JsonObject!
+}
+
+type RunStepType {
+  detail: String
+  label: String!
   status: String!
 }
 
@@ -561,6 +2483,409 @@ type SalesOrderType {
   workspaceId: ID!
 }
 
+input SaveAuthorityRuleInput {
+  change: AuthorityRuleChangeInput!
+}
+
+input SaveBrainFactInput {
+  attributeLabel: String!
+  gapId: ID
+  modules: [String!]!
+  note: String
+  scope: String!
+  subjectLabel: String!
+  subjectType: String!
+  validFrom: String
+  validTo: String
+  value: String!
+}
+
+input SaveBrainLessonInput {
+  appliesWhen: String
+  body: String!
+  module: String
+  title: String!
+}
+
+input SaveProviderKeysInput {
+  connectionId: ID!
+  values: ProviderKeysInput!
+}
+
+input SaveZaloOaSecretInput {
+  connectionId: ID!
+  oaSecret: String!
+}
+
+type SavedFactType {
+  fact: BrainFactType!
+  outcome: String!
+}
+
+input SendAgentCommandInput {
+  command: String!
+  fields: [FieldValueInput!]
+  leadId: ID
+  reason: String!
+  subjectId: ID
+  subjectType: String
+  to: String!
+}
+
+type SepayKeyType {
+  apiKey: String!
+  webhookUrl: String!
+}
+
+input SetAgentConnectionsInput {
+  agentId: ID!
+  connections: [ConnectionWishInput!]!
+}
+
+input SetAgentStatusInput {
+  active: Boolean!
+  agentId: ID!
+}
+
+input SetAgentTextsInput {
+  agentId: ID!
+  texts: AgentTextsInput!
+}
+
+input SetConnectionAgentsInput {
+  agents: [GrantWishInput!]!
+  connectionId: ID!
+}
+
+input SetConnectionGrantInput {
+  access: String
+  agentId: ID!
+  connectionId: ID!
+}
+
+input SetKnowledgeSuggestionStateInput {
+  key: String!
+  state: String
+}
+
+input SetMemberStatusInput {
+  status: String!
+  userId: ID!
+}
+
+type ShellAgentType {
+  id: ID!
+  module: String!
+  name: String!
+  status: String!
+}
+
+type ShellApprovalType {
+  contactName: String
+  draft: String!
+  id: ID!
+  leadId: ID
+  nextAction: String
+}
+
+type ShellExceptionType {
+  contactName: String
+  error: String
+  id: ID!
+  leadId: ID
+  summary: String
+}
+
+input ShellWindowInput {
+  foundingFrom: String!
+  foundingTo: String!
+}
+
+type ShopContextType {
+  hours: String!
+  shop: String!
+  tone: String!
+}
+
+type SourceRefType {
+  id: ID!
+}
+
+type StaffOptionType {
+  id: ID!
+  name: String!
+  role: String!
+}
+
+input StartMoneyConnectionInput {
+  accountNumber: String!
+  bankCode: String!
+  environment: String!
+  holder: String!
+  name: String!
+  provider: String!
+}
+
+input StartWebhookConnectionInput {
+  events: [String!]!
+  name: String!
+  url: String!
+}
+
+input StartZaloConnectionInput {
+  appId: String!
+  appSecret: String!
+  name: String!
+}
+
+scalar StringMap
+
+type SuggestionDecisionType {
+  key: String!
+  state: String!
+}
+
+type TelegramConnectedType {
+  connection: ConnectionType!
+  webhookRegistered: Boolean!
+}
+
+type TemplateAuthorityType {
+  action: String
+  alwaysAsk: Boolean
+}
+
+type TemplateDefinitionType {
+  authority: TemplateAuthorityType!
+  contentMode: String!
+  defaultBody: LocalizedTextType
+  defaults: JsonObject!
+  description: LocalizedTextType!
+  executor: String!
+  guardrails: [LocalizedTextType!]!
+  icon: String!
+  key: String!
+  moduleKey: String
+  n8n: TemplateN8nType
+  name: LocalizedTextType!
+  pack: String!
+  position: Int!
+  requires: TemplateRequirementsType!
+  settings: [TemplateSettingType!]!
+  trigger: TemplateTriggerType!
+  variables: [String!]!
+  version: Int!
+}
+
+input TemplateKeyInput {
+  templateKey: String!
+}
+
+type TemplateN8nType {
+  audience: String!
+  data: [String!]
+  webhook: String!
+}
+
+type TemplateRequirementsType {
+  capabilities: [String!]!
+  channels: [String!]!
+  connections: [String!]!
+  modules: [String!]!
+}
+
+type TemplateSettingType {
+  hint: LocalizedTextType
+  key: String!
+  kind: String!
+  label: LocalizedTextType!
+  max: Float
+  maxLength: Int
+  min: Float
+  required: Boolean
+  suffix: LocalizedTextType
+}
+
+type TemplateTriggerType {
+  event: String!
+  kind: String!
+  line: LocalizedTextType!
+}
+
+input TestWebhookConnectionInput {
+  connectionId: ID!
+}
+
+type TrustType {
+  autoSend: Boolean!
+  offered: Boolean!
+  streak: Int!
+}
+
+input UpdateAuthorityInput {
+  patch: AuthorityPatchInput!
+}
+
+input UpdateAutomationPipelineInput {
+  autoSend: Boolean
+  body: String
+  dismissed: Boolean
+  enabled: Boolean
+  googleConnectionId: ID
+  templateKey: String!
+  values: JsonObject
+}
+
+input UpdateKnowledgeSourceInput {
+  module: String
+  sourceId: ID!
+  tags: [String!]
+  title: String
+  topic: String
+  visibility: String
+}
+
+input UpdateMoneyConnectionInput {
+  accountNumber: String!
+  apiKey: String
+  bankCode: String!
+  connectionId: ID!
+  environment: String!
+  holder: String!
+  name: String!
+}
+
+input UpdateProfileInput {
+  name: String!
+}
+
+input UpdateResponsibilityStatusInput {
+  responsibilityId: ID!
+  status: String!
+}
+
+input UpdateWebhookEventsInput {
+  connectionId: ID!
+  events: [String!]!
+}
+
+type UploadAddressType {
+  path: String!
+  signedUrl: String!
+  token: String!
+}
+
+input WantConnectorInput {
+  connectorId: String!
+}
+
+type WebhookEventsType {
+  events: [String!]!
+}
+
+type WebhookTestResultType {
+  durationMs: Int!
+  error: String
+  ok: Boolean!
+  status: Int
+}
+
+type WebhookViewType {
+  events: [String!]!
+  host: String!
+  id: ID!
+  name: String!
+  signingSecret: String!
+}
+
+type WizardConnectionType {
+  account: String!
+  agentIds: [ID!]!
+  apiKey: String!
+  bankCode: String!
+  credentialsSaved: Boolean!
+  environment: String!
+  firstEvent: FirstEventType
+  holder: String!
+  id: ID!
+  name: String!
+  provider: String!
+  status: String!
+  webhookUrl: String!
+}
+
+input WorkEditsInput {
+  amount_vnd: Int
+  candidateId: ID
+  draft: String
+  fields: [FieldValueInput!]
+}
+
+input WorkItemCursorInput {
+  createdAt: String!
+  id: ID!
+}
+
+type WorkItemCursorType {
+  createdAt: String!
+  id: ID!
+}
+
+input WorkItemIdInput {
+  workItemId: ID!
+}
+
+type WorkItemPageType {
+  items: [WorkItemType!]!
+  next: WorkItemCursorType
+}
+
+type WorkItemType {
+  action: String!
+  assigned_staff_id: ID
+  chain_id: ID
+  completed_at: String
+  created_at: String!
+  decided_path: String
+  department: String!
+  depth: Int!
+  error: String
+  evidence_state: String!
+  execution_id: ID
+  id: ID!
+  inbound_event_id: ID
+  installation_id: ID
+  lead_id: ID
+  missing_fields: [String!]!
+  origin: String!
+  parent_id: ID
+  proposal: ProposalType!
+  reason: String
+  reasons: [String!]!
+  result: WorkResultType
+  status: String!
+  subject_id: ID
+  subject_type: String!
+  updated_at: String!
+  workspace_id: ID!
+}
+
+type WorkResultType {
+  href: String
+  summary: String!
+}
+
+type WorkspaceShellType {
+  agents: [ShellAgentType!]!
+  approvals: [ShellApprovalType!]!
+  exceptions: [ShellExceptionType!]!
+  hasChatbot: Boolean!
+  isFoundingMember: Boolean!
+  leadCount: Int!
+  openResponsibilityCount: Int!
+  pendingDecisions: Int!
+}
+
 type WorkspaceType {
   businessType: String
   createdAt: String!
@@ -568,4 +2893,22 @@ type WorkspaceType {
   name: String!
   ownerId: ID!
   status: String!
+}
+
+type ZaloAuthorizationType {
+  callbackUrl: String!
+  url: String!
+}
+
+type ZaloWizardConnectionType {
+  agentIds: [ID!]!
+  authorized: Boolean!
+  callbackUrl: String!
+  firstEvent: FirstEventType
+  id: ID!
+  name: String!
+  oaId: String!
+  oaSecretSaved: Boolean!
+  status: String!
+  webhookUrl: String!
 }

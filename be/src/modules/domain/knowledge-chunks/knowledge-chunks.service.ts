@@ -2,11 +2,12 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
-import type { ChunkWrite, EmbeddedChunk, StaleChunk, VectorWrite } from "./knowledge-chunks.contracts"
-import type { EmbeddedChunkRow, StaleChunkRow } from "./persistence/knowledge-chunks.rows"
+import type { ChunkWrite, EmbeddedChunk, PassageView, StaleChunk, VectorWrite } from "./knowledge-chunks.contracts"
+import type { EmbeddedChunkRow, PassageViewRow, StaleChunkRow } from "./persistence/knowledge-chunks.rows"
 import {
     DELETE_CHUNKS,
     INSERT_CHUNKS,
+    LIST_PASSAGES,
     SELECT_EMBEDDED_CHUNKS,
     SELECT_STALE_CHUNKS,
     UPDATE_CHUNK_VECTORS,
@@ -42,6 +43,12 @@ export class KnowledgeChunksService {
                 ])
             })
         })
+    }
+
+    /** The stored passages of a source in order, for the Knowledge page; the caller has proven the workspace. */
+    async passagesOf(workspaceId: string, sourceId: string): Promise<ReadonlyArray<PassageView>> {
+        const rows = await this.entityManager.query<Array<PassageViewRow>>(LIST_PASSAGES, [workspaceId, sourceId])
+        return rows.map((row) => ({ id: row.id, order: row.ord, content: row.content, hasEmbedding: row.has_embedding }))
     }
 
     /** The stored passages of a source that have a vector, in order. */

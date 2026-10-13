@@ -1,0 +1,7 @@
+import type { TextRequest, TextResult } from "./module-ops.contracts"
+
+/** The text generator behind the workspace's agent runtime. It is also the injection token. */
+export abstract class TextGenerator {
+    /** Writes one text; a model failure answers `ok: false`, it does not throw. */
+    abstract generate(request: TextRequest): Promise<TextResult>
+}

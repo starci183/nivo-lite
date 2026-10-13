@@ -7,12 +7,15 @@ export enum AiGenerationsErrorCode {
     GenerationFailed = "AI_GENERATIONS_FAILED",
     /** The insert answered no row: the generation was not written. */
     NotCreated = "AI_GENERATIONS_NOT_CREATED",
+    /** The text asked for is not one of the workspace. */
+    GenerationNotFound = "AI_GENERATIONS_NOT_FOUND",
 }
 
 /** How each ai-generations code travels. */
 export const AI_GENERATIONS_ERROR_KINDS: Record<AiGenerationsErrorCode, ErrorKind> = {
     [AiGenerationsErrorCode.GenerationFailed]: "unavailable",
     [AiGenerationsErrorCode.NotCreated]: "internal",
+    [AiGenerationsErrorCode.GenerationNotFound]: "not-found",
 }
 
 /** The one error class of the ai-generations capability. */
