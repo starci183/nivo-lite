@@ -1,0 +1,188 @@
+{
+  "privacy": {
+    "title": "Chính sách quyền riêng tư",
+    "draft": "Bản nháp - cập nhật lần cuối 12/10/2026",
+    "intro": "Chính sách này giải thích NIVO OS thu thập, sử dụng và bảo vệ dữ liệu của bạn như thế nào khi bạn dùng dịch vụ tại nivo.vn.",
+    "sections": [
+      {
+        "id": "who",
+        "title": "1. Chúng tôi là ai",
+        "paragraphs": [
+          "NIVO OS (nivo.vn) do đội ngũ NIVO vận hành. Câu hỏi về quyền riêng tư xin gửi tới support@nivo.vn."
+        ]
+      },
+      {
+        "id": "collect",
+        "title": "2. Dữ liệu chúng tôi thu thập",
+        "items": [
+          "Tài khoản: email, tên hiển thị và thông tin đăng nhập qua Google hoặc email và mật khẩu.",
+          "Dữ liệu không gian làm việc do bạn và nhóm của bạn nhập: khách hàng, đơn hàng, lịch hẹn, ghi chú, cấu hình tự động hóa.",
+          "Tin nhắn từ các kênh bạn kết nối (Zalo OA, Telegram), gồm nội dung và thông tin người gửi mà kênh cung cấp.",
+          "Thông báo thanh toán từ SePay khi bạn kết nối tài khoản ngân hàng: số tiền, nội dung chuyển khoản, thời điểm.",
+          "Tài liệu bạn thêm vào Second Brain (tệp tải lên, liên kết, văn bản dán, tệp chọn từ Google Drive).",
+          "Số liệu sử dụng AI (số lần gọi, lượng token, chi phí) để tính credit AI."
+        ]
+      },
+      {
+        "id": "use",
+        "title": "3. Cách chúng tôi sử dụng dữ liệu",
+        "items": [
+          "Cung cấp và vận hành dịch vụ: lưu dữ liệu, trả lời khách hàng, chạy tự động hóa, đối soát thanh toán.",
+          "Tính credit AI và thanh toán gói dịch vụ.",
+          "Bảo mật, chống lạm dụng và hỗ trợ khi bạn yêu cầu."
+        ],
+        "afterItems": [
+          "Chúng tôi không bán dữ liệu của bạn và không dùng nó để quảng cáo."
+        ]
+      },
+      {
+        "id": "ai",
+        "title": "4. Xử lý bằng AI",
+        "paragraphs": [
+          "Để tạo câu trả lời và đề xuất, nội dung liên quan được gửi tới các nhà cung cấp mô hình AI: OpenRouter để tạo embedding cho Second Brain, và hệ thống AI của NIVO để sinh nội dung. NIVO không dùng dữ liệu của bạn để huấn luyện mô hình."
+        ]
+      },
+      {
+        "id": "storage",
+        "title": "5. Lưu trữ và bảo mật",
+        "paragraphs": [
+          "Dữ liệu được lưu trên Supabase và được kiểm soát truy cập theo từng không gian làm việc. Các khóa và token kết nối (Zalo, Telegram, Google, ngân hàng) được mã hóa bằng AES-256-GCM trước khi lưu. Không có hệ thống nào an toàn tuyệt đối; chúng tôi áp dụng các biện pháp hợp lý để giảm rủi ro."
+        ]
+      },
+      {
+        "id": "retention",
+        "title": "6. Thời gian lưu giữ và xóa dữ liệu",
+        "paragraphs": [
+          "Chúng tôi giữ dữ liệu trong thời gian không gian làm việc còn hoạt động. Khi bạn yêu cầu xóa tài khoản hoặc không gian làm việc, chúng tôi xóa dữ liệu trong vòng 30 ngày, trừ phần pháp luật yêu cầu phải giữ (ví dụ chứng từ thanh toán). Ngắt kết nối một kênh hoặc tài khoản Google sẽ xóa token đã lưu của kết nối đó."
+        ]
+      },
+      {
+        "id": "rights",
+        "title": "7. Quyền của bạn",
+        "paragraphs": [
+          "Bạn có quyền truy cập, chỉnh sửa, xuất, hạn chế xử lý và yêu cầu xóa dữ liệu cá nhân của mình, cũng như rút lại sự đồng ý đã cấp. Hãy gửi yêu cầu tới support@nivo.vn. Bạn chịu trách nhiệm có căn cứ hợp pháp để nhập dữ liệu của khách hàng của mình vào NIVO."
+        ]
+      },
+      {
+        "id": "cookies",
+        "title": "8. Cookie",
+        "paragraphs": [
+          "NIVO chỉ dùng cookie thiết yếu: cookie phiên đăng nhập, cookie ghi nhớ ngôn ngữ và một cookie ngắn hạn kiểm tra quyền truy cập. Chúng tôi không dùng cookie quảng cáo hay theo dõi."
+        ]
+      },
+      {
+        "id": "google",
+        "title": "9. Dữ liệu Google / Google user data",
+        "paragraphs": [
+          "NIVO truy cập Google Drive chỉ thông qua Google Picker, và chỉ với những tệp bạn chủ động chọn (phạm vi drive.file). NIVO cũng truy cập các Google Sheets bạn kết nối (phạm vi drive.file).",
+          "NIVO đọc các tệp đó để thêm vào Second Brain của không gian làm việc và không làm gì khác với chúng."
+        ],
+        "items": [
+          "NIVO không bán hay chuyển dữ liệu Google cho bên thứ ba, không dùng cho quảng cáo, và không dùng để huấn luyện các mô hình AI/ML tổng quát.",
+          "Con người không đọc dữ liệu Google của bạn, trừ khi bạn đồng ý, vì lý do bảo mật hoặc để tuân thủ pháp luật.",
+          "Token Google được lưu mã hóa. Bạn có thể thu hồi bất kỳ lúc nào bằng cách ngắt kết nối trong NIVO hoặc tại myaccount.google.com/permissions."
+        ],
+        "limitedUse": true
+      },
+      {
+        "id": "changes",
+        "title": "10. Thay đổi và liên hệ",
+        "paragraphs": [
+          "Chúng tôi sẽ cập nhật ngày ở đầu trang khi chính sách thay đổi. Liên hệ: support@nivo.vn."
+        ]
+      }
+    ]
+  },
+  "terms": {
+    "title": "Điều khoản sử dụng",
+    "draft": "Bản nháp - cập nhật lần cuối 12/10/2026",
+    "intro": "Khi tạo tài khoản hoặc dùng NIVO OS tại nivo.vn, bạn đồng ý với các điều khoản dưới đây.",
+    "sections": [
+      {
+        "id": "service",
+        "title": "1. Dịch vụ",
+        "paragraphs": [
+          "NIVO OS là phần mềm giúp doanh nghiệp nhỏ quản lý khách hàng, tin nhắn, thanh toán và công việc, với trợ lý AI hỗ trợ. Tính năng có thể thay đổi theo thời gian."
+        ]
+      },
+      {
+        "id": "accounts",
+        "title": "2. Tài khoản và không gian làm việc",
+        "paragraphs": [
+          "Bạn cần cung cấp thông tin đúng và giữ bí mật thông tin đăng nhập. Chủ không gian làm việc chịu trách nhiệm về các thành viên được mời và các kết nối (Zalo OA, Telegram, SePay, Google) mà họ cấu hình."
+        ]
+      },
+      {
+        "id": "plans",
+        "title": "3. Gói dịch vụ và credit AI",
+        "items": [
+          "Mỗi gói có mức credit AI hằng tháng; gói Pro và Max được cộng dồn phần chưa dùng sang tháng kế tiếp (tối đa bằng một tháng).",
+          "Khi hết credit tháng, bạn có thể mua thêm gói nạp. Credit nạp có hiệu lực 12 tháng kể từ ngày mua.",
+          "Thanh toán bằng chuyển khoản ngân hàng qua mã VietQR do SePay xử lý. Đơn hàng được xác nhận khi nhận được khoản chuyển đúng số tiền và nội dung."
+        ]
+      },
+      {
+        "id": "use",
+        "title": "4. Sử dụng chấp nhận được",
+        "items": [
+          "Không dùng NIVO để gửi spam, lừa đảo hoặc nội dung trái pháp luật.",
+          "Không xâm nhập, làm quá tải hệ thống hoặc truy cập dữ liệu của không gian làm việc khác.",
+          "Bạn phải có quyền hợp pháp đối với dữ liệu khách hàng bạn nhập và tuân thủ quy định của Zalo, Telegram, Google và ngân hàng."
+        ]
+      },
+      {
+        "id": "content",
+        "title": "5. Nội dung của khách hàng",
+        "paragraphs": [
+          "Bạn giữ quyền sở hữu dữ liệu và tài liệu bạn đưa vào NIVO. Bạn cấp cho chúng tôi quyền hạn chế để lưu trữ và xử lý chúng nhằm cung cấp dịch vụ, theo Chính sách quyền riêng tư."
+        ]
+      },
+      {
+        "id": "ai",
+        "title": "6. Kết quả do AI tạo ra",
+        "paragraphs": [
+          "AI có thể sai hoặc thiếu sót. Hãy xem lại kết quả trước khi dựa vào hoặc gửi cho khách hàng, nhất là các nội dung về tiền, hợp đồng và pháp lý. Bạn chịu trách nhiệm về quyết định dựa trên kết quả đó."
+        ]
+      },
+      {
+        "id": "availability",
+        "title": "7. Tình trạng dịch vụ",
+        "paragraphs": [
+          "Chúng tôi cố gắng giữ dịch vụ hoạt động ổn định nhưng không cam kết không gián đoạn. Dịch vụ phụ thuộc vào bên thứ ba (Zalo, Telegram, SePay, Google, nhà cung cấp AI) có thể thay đổi hoặc gặp sự cố."
+        ]
+      },
+      {
+        "id": "termination",
+        "title": "8. Chấm dứt",
+        "paragraphs": [
+          "Bạn có thể ngừng dùng và yêu cầu xóa tài khoản bất kỳ lúc nào. Chúng tôi có thể tạm ngưng hoặc chấm dứt tài khoản vi phạm điều khoản này. Credit chưa dùng không được hoàn lại, trừ khi pháp luật quy định khác."
+        ]
+      },
+      {
+        "id": "liability",
+        "title": "9. Giới hạn trách nhiệm",
+        "paragraphs": [
+          "Trong phạm vi pháp luật cho phép, dịch vụ được cung cấp ở trạng thái hiện có, và NIVO không chịu trách nhiệm về thiệt hại gián tiếp hay mất lợi nhuận. Trách nhiệm tối đa của NIVO không vượt quá số tiền bạn đã trả trong 12 tháng gần nhất."
+        ]
+      },
+      {
+        "id": "law",
+        "title": "10. Luật áp dụng",
+        "paragraphs": [
+          "Điều khoản này tuân theo pháp luật Việt Nam. Tranh chấp được giải quyết thương lượng trước, nếu không được thì tại tòa án có thẩm quyền của Việt Nam."
+        ]
+      },
+      {
+        "id": "contact",
+        "title": "11. Liên hệ",
+        "paragraphs": [
+          "Gửi câu hỏi tới support@nivo.vn."
+        ]
+      }
+    ]
+  },
+  "limitedUseSentence": "NIVO's use and transfer of information received from Google APIs to any other app will adhere to the Google API Services User Data Policy, including the Limited Use requirements.",
+  "limitedUseNote": "Nói cách khác: NIVO chỉ dùng dữ liệu nhận từ Google API để cung cấp tính năng bạn yêu cầu, và tuân thủ các yêu cầu Giới hạn sử dụng (Limited Use) trong Chính sách dữ liệu người dùng của Google API Services.",
+  "policyUrl": "https://developers.google.com/terms/api-services-user-data-policy",
+  "siteName": "NIVO OS"
+}

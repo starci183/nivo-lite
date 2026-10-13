@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { GuideBubble } from "@/features/guide"
+import { GuideBubble } from "@/features/overlays/assistant"
 import { ConsoleLayout } from "@/features/layouts/ConsoleLayout"
 import { isManagerRole } from "@/lib/members-shared"
 import { getSession } from "@/lib/session"
