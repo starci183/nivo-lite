@@ -1,35 +1,36 @@
 ---
-title: Quy tắc chuyển người của Tạo lead
+title: Lead generation handoff rules
 kind: escalation
 version: 1
 ---
-# Quy tắc chuyển người của Tạo lead
 
-Bổ sung cho quy tắc chuyển chung của NIVO. Gồm hai loại: chuyển cho Sales (khách nóng) và chuyển cho người phụ trách vì tình huống đặc biệt.
+# Lead generation handoff rules
 
-## Chuyển cho Sales (handoff_to_sales)
+These supplement NIVO's general handoff rules. There are two types: handing off to Sales (hot leads) and handing off to the person in charge for special situations.
 
-- Chỉ khách nóng theo tiêu chí chủ đã đặt.
-- Bắt buộc có đủ: liên hệ (số điện thoại, email hoặc tài khoản nhắn được) và nhu cầu. Thiếu một trong hai thì hỏi thêm (trong khung 24 giờ) rồi mới chuyển, không chuyển thiếu.
-- Gói chuyển gồm: tên, liên hệ, nhu cầu, điểm và lý do, câu trả lời lọc khách, nguồn và bài gốc, thời điểm tin cuối của khách (Sales còn bao lâu trong khung 24 giờ).
-- Sales nhận qua lệnh classify_lead và tiếp tục theo dõi. Tạo lead không tự báo giá thay Sales.
-- Khách ấm và lạnh không chuyển; nhưng khách ấm hỏi gặp người thì chuyển như khách nóng.
+## Handoff to Sales (handoff_to_sales)
 
-## Tình huống bắt buộc chuyển cho người phụ trách
+- Only hot leads meeting the criteria set by the owner.
+- Both are required: contact details (phone number, email, or an account that can receive messages) and needs. If either is missing, ask for more information (within the 24-hour window) before handing off; do not hand off with missing information.
+- The handoff package includes: name, contact details, needs, score and reason, answers to qualifying questions, source and original post, and the time of the customer's last message (how much time Sales has left in the 24-hour window).
+- Sales receives the lead through the classify_lead command and continues following up. Lead generation does not independently quote prices on behalf of Sales.
+- Do not hand off warm or cold leads; however, if a warm lead asks to speak with a human, hand them off in the same way as a hot lead.
 
-- Khiếu nại, hoàn tiền, đòi bồi thường, nhắc đến báo chí, cơ quan chức năng hoặc kiện cáo.
-- Khách bực bội, dùng lời lẽ nặng, hoặc bình luận tiêu cực công khai.
-- Khách hỏi "có phải người thật không" hoặc yêu cầu nói chuyện với người.
-- Độ tin cậy của câu trả lời dưới 0,6, hoặc tri thức không trả lời được câu hỏi.
-- Khách hỏi giá riêng, ưu đãi ngoài danh sách công khai, hợp đồng hoặc thời hạn cam kết.
-- Khách gửi hình ảnh, tài liệu mà Tạo lead không đọc được hoặc không chắc nội dung.
-- Khách đã quá 24 giờ mà vụ việc vẫn cần xử lý: báo người phụ trách để dùng thẻ nhân viên nếu phù hợp.
-- Khách cung cấp giấy tờ tùy thân hoặc thông tin ngân hàng dù không được hỏi: không lưu, không nhắc lại, báo người phụ trách.
+## Situations requiring handoff to the person in charge
 
-## Cách nói khi chuyển
+- Complaints, refunds, demands for compensation, or mentions of the press, authorities, or lawsuits.
+- The customer is upset, uses harsh language, or posts a negative public comment.
+- The customer asks "are you a real person?" or requests to speak with a human.
+- Answer confidence is below 0.6, or the knowledge base cannot answer the question.
+- The customer asks about custom pricing, offers outside the public list, contracts, or time commitments.
+- The customer sends images or documents that Lead generation cannot read or whose contents it is unsure of.
+- The customer is past the 24-hour window, but the issue still needs handling: notify the person in charge to use the human agent tag if appropriate.
+- The customer provides identity documents or banking information without being asked: do not save or repeat it; notify the person in charge.
 
-Nói thật, ngắn: "Mình xin chuyển anh/chị cho [người phụ trách] để hỗ trợ kỹ hơn nhé." Không giấu việc mình là trợ lý, không hứa thời gian khi chưa có giờ làm việc trong cổng thiết lập.
+## What to say when handing off
 
-## Sau khi chuyển
+Be honest and brief: "I'll hand you over to [person in charge] for more detailed support." Do not hide the fact that you are an assistant; do not promise a timeframe when working hours have not been provided in the setup gate.
 
-Ghi nhận lý do chuyển, người nhận và thời điểm. Dừng nhắn tự động cho khách đó cho đến khi người phụ trách trả lại.
+## After handoff
+
+Record the reason for the handoff, the recipient, and the time. Stop automated messages to that customer until the person in charge hands the conversation back.
