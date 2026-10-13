@@ -2,9 +2,15 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { useSetConnectionGrant } from "@/hooks/connections"
-import { useSave } from "@/hooks/modules"
-import { dbFailure, dbOk } from "@/modules/db/outcome"
+import {
+    hasBoundConnection,
+    useAgentConnectionAccess,
+    useAgentInstallation,
+    useAgentRights,
+} from "@/hooks/agentSettings"
+import type { AgentConnectionView } from "@/hooks/agentSettings"
+import { mapSlot, useSlotLabels } from "@/hooks/slot"
+import { AUTOMATION_ROUTES } from "@/modules/routes"
 import { AgentConnectionAccessBase } from "./component"
 import type { AgentConnectionAccessRow } from "./component"
 
@@ -12,79 +18,66 @@ const NONE = "none"
 const LEVELS = ["read", "ask", "auto"] as const
 const PURPOSES = ["inbound_chat", "outbound_chat", "bank_feed", "lead_source"] as const
 const STATUS_TONE = { connected: "success", error: "danger", pending: "warning", disconnected: "neutral" } as const
+const PLACEHOLDER: ReadonlyArray<AgentConnectionAccessRow> = []
 
-/** One connection as the settings page prepared it: its status, what the agent does through it and the level the agent has. */
-type AgentConnection = {
-    readonly id: string
-    readonly label: string
-    readonly status: keyof typeof STATUS_TONE
-    readonly purpose: string | null
-    /** The level of this agent: one of read, ask, auto, or empty for none. */
-    readonly access: string
-}
-
-/** What the settings page hands the block. */
+/** What the settings page hands the card: the instance of the url. */
 type AgentConnectionAccessProps = {
-    readonly agentId: string
-    readonly connections: ReadonlyArray<AgentConnection>
-    /** The workspace owner only; everyone else sees the same levels read-only. */
-    readonly canEdit: boolean
-    readonly manageHref: string
+    readonly installationId: string
+    readonly module: string
 }
 
-/** The connected card of the connections an agent uses: a pick is saved at once and goes back when it is refused. */
+const SHIFTS = "shifts"
+
+/** The connected card of the connections an agent uses: a pick shows at once and goes back when the server refuses it. */
 export const AgentConnectionAccess = (props: AgentConnectionAccessProps) => {
     const t = useTranslations("modulesCore")
+    const slotLabels = useSlotLabels()
+    const { canGrant } = useAgentRights()
+    const installation = useAgentInstallation(props.installationId, props.module).slot.items
+    const { slot, pick, isSaving } = useAgentConnectionAccess(installation?.agentId ?? null, props.module)
     const [local, setLocal] = useState<Readonly<Record<string, string>>>({})
-    const { note, isPending, save } = useSave()
-    const setGrant = useSetConnectionGrant()
-    const levelOf = (connection: AgentConnection): string =>
+    const connections = slot.items ?? []
+    const levelOf = (connection: AgentConnectionView): string =>
         connection.id in local ? (local[connection.id] ?? NONE) : connection.access || NONE
-    const rows: ReadonlyArray<AgentConnectionAccessRow> = props.connections.map((connection) => ({
-        id: connection.id,
-        label: connection.label,
-        statusLabel: t(`connStatus_${connection.status}`),
-        statusTone: STATUS_TONE[connection.status],
-        purposeLabel: PURPOSES.some((purpose) => purpose === connection.purpose)
-            ? t(`grantPurpose_${connection.purpose}`)
-            : "",
-        access: levelOf(connection),
-        isDisconnected: connection.status === "disconnected",
-    }))
+    const rowsOf = (items: ReadonlyArray<AgentConnectionView>): ReadonlyArray<AgentConnectionAccessRow> =>
+        items.map((connection) => ({
+            id: connection.id,
+            label: connection.label,
+            statusLabel: t(`connStatus_${connection.status}`),
+            statusTone: STATUS_TONE[connection.status],
+            purposeLabel: PURPOSES.some((purpose) => purpose === connection.purpose)
+                ? t(`grantPurpose_${connection.purpose}`)
+                : "",
+            access: levelOf(connection),
+            isDisconnected: connection.status === "disconnected",
+        }))
+    const change = async (connection: AgentConnectionView, level: string) => {
+        setLocal((current) => ({ ...current, [connection.id]: level }))
+        await pick(connection, level)
+        setLocal((current) => Object.fromEntries(Object.entries(current).filter(([id]) => id !== connection.id)))
+    }
+    const isUnbound = props.module === SHIFTS && slot.items !== undefined && !hasBoundConnection(connections)
     return (
         <AgentConnectionAccessBase
             props={{
                 title: t("grantTitle"),
                 hint: t("grantHint"),
-                emptyText: t("grantEmpty"),
+                slot: mapSlot(slot, (items) => ({ rows: rowsOf(items) })),
+                placeholder: { rows: PLACEHOLDER },
+                slotLabels: slotLabels(t("grantEmpty")),
                 manageLabel: t("grantManage"),
-                manageHref: props.manageHref,
+                manageHref: AUTOMATION_ROUTES.connections,
                 ownerOnlyText: t("grantOwnerOnly"),
                 levels: [NONE, ...LEVELS].map((level) => ({ id: level, label: t(`grant_${level}`) })),
-                rows,
-                canEdit: props.canEdit,
-                isDisabled: !props.canEdit || isPending,
-                noteTone: note.tone,
-                noteText: note.tone === "saved" ? t("grantSaved") : note.text,
+                canEdit: canGrant,
+                isDisabled: !canGrant || isSaving,
+                notice: isUnbound ? t("shiftsBindChannel") : "",
             }}
             on={{
                 pick: (connectionId, level) => {
-                    const connection = props.connections.find((candidate) => candidate.id === connectionId)
+                    const connection = connections.find((candidate) => candidate.id === connectionId)
                     if (connection === undefined || level === null || level === levelOf(connection)) return
-                    const before = levelOf(connection)
-                    setLocal((current) => ({ ...current, [connectionId]: level }))
-                    save(
-                        async () => {
-                            const granted = await setGrant(
-                                connectionId,
-                                props.agentId,
-                                LEVELS.find((candidate) => candidate === level) ?? null,
-                            )
-                            return granted.kind === "ok" ? dbOk(true) : dbFailure("refused", granted.message)
-                        },
-                        t("grantSaved"),
-                        () => setLocal((current) => ({ ...current, [connectionId]: before })),
-                    )
+                    void change(connection, level)
                 },
             }}
         />

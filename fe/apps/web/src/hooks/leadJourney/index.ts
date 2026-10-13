@@ -3,7 +3,6 @@ export {
     eventIconOf,
     eventKindKeyOf,
     executionsOf,
-    faultTextOf,
     isEvidenceEvent,
     toBullets,
     toSignals,

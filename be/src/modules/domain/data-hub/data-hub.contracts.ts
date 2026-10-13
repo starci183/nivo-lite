@@ -1,4 +1,5 @@
 import type { ConnectionStatus } from "@modules/domain/connections"
+import type { DataEntity, DataRecordInput } from "@modules/domain/data-records"
 
 /** The kinds of connection that bring a workspace's own systems into the data hub. */
 export type DataProvider = "openapi" | "database" | "csv_import" | "imap" | "telegram_user"
@@ -16,20 +17,14 @@ export const DATA_PROVIDERS: ReadonlyArray<DataProvider> = [
 export const isDataProvider = (provider: string): provider is DataProvider =>
     DATA_PROVIDERS.some((candidate) => candidate === provider)
 
-/** What a hub row is about. */
-export type DataEntity = "customer" | "order" | "product" | "transaction" | "message" | "document" | "other"
+/** The provider a lookup is narrowed to; absent means any data provider. */
+export type ProviderFilter = DataProvider | undefined
 
-/** One row for the hub; re-syncing the same external id updates the row. */
-export interface DataRecordInput {
-    /** The source's own stable id (a row key, an API id, a message id). */
-    readonly externalId: string
-    /** One human line: a name, an order number, a subject. */
-    readonly title?: string
-    /** When it happened at the source, when known. */
-    readonly occurredAt?: string | Date | null
-    /** The mapped fields. */
-    readonly data: Readonly<Record<string, unknown>>
-}
+/** The sealed credential of a connection once opened; null when none is stored or it cannot be opened. */
+export type StoredCredential = string | null
+
+/** A schedule in minutes between two syncs; null or absent is manual only. */
+export type SyncMinutes = number | null | undefined
 
 /** A data connection of a workspace, without any secret. */
 export interface DataConnection {
@@ -83,32 +78,6 @@ export interface DataConnector {
     sync(context: DataSyncContext): Promise<DataSyncResult>
 }
 
-/** How a sync run was started. */
-export type DataSyncTrigger = "schedule" | "manual" | "upload" | "push"
-
-/** The state of one sync run. */
-export type DataSyncRunState = "running" | "ok" | "failed"
-
-/** One recorded sync run. */
-export interface DataSyncRun {
-    /** The run id. */
-    readonly id: string
-    /** The connection it synced. */
-    readonly connectionId: string
-    /** How it started. */
-    readonly trigger: DataSyncTrigger
-    /** Where it is. */
-    readonly state: DataSyncRunState
-    /** How many rows it wrote. */
-    readonly rows: number
-    /** The failure, when it failed. */
-    readonly error: string | null
-    /** When it started, ISO 8601. */
-    readonly startedAt: string
-    /** When it ended, ISO 8601; null while it runs. */
-    readonly finishedAt: string | null
-}
-
 /** What changing a data connection takes. */
 export interface DataConnectionChange {
     /** The new name. */
@@ -128,3 +97,5 @@ export interface DataConnectionDraft extends DataConnectionChange {
     /** `pending` for a wizard that is not finished, `connected` otherwise. */
     readonly status?: "pending" | "connected"
 }
+
+export type { DataEntity, DataRecordInput } from "@modules/domain/data-records"

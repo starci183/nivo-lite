@@ -1,11 +1,11 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { useState, useTransition } from "react"
-import { DEAL_STAGES, OPEN_LANES } from "@/hooks/sales"
+import { useState } from "react"
 import { useLeadCommands } from "@/hooks/leads"
-import { faultTextOf } from "@/hooks/leadJourney"
-import { navigation } from "@/modules/i18n"
+import { DEAL_STAGES, OPEN_LANES, useSalesActions } from "@/hooks/sales"
+import { useSalesWorkbench } from "@/hooks/salesworkbench"
+import { useSalesPipelineForm } from "@/hooks/rhf"
 import { leadPath } from "@/modules/routes"
 import type { LeadStageId, SalesDeal } from "@/modules/types"
 import { SalesPipelineBase } from "./component"
@@ -16,25 +16,22 @@ const LANES: ReadonlyArray<LeadStageId> = [...OPEN_LANES, "won", "lost"]
 const isClosing = (stage: LeadStageId): boolean => stage === "won" || stage === "lost"
 const isStage = (value: string): value is LeadStageId => DEAL_STAGES.some((stage) => stage === value)
 
-/** The deals on the board and the workspace they belong to. */
-interface SalesPipelineProps {
-    readonly deals: ReadonlyArray<SalesDeal>
-    readonly closedHidden: { readonly won: number; readonly lost: number }
-    readonly workspaceId: string
-}
-
 /** The pipeline surface: which deal is being moved, to which stage and why live here, the drawing in the pure half. */
-export const SalesPipeline = (props: SalesPipelineProps) => {
+export const SalesPipeline = () => {
     const t = useTranslations("workbenchSales")
     const format = useFormatter()
-    const router = navigation.useRouter()
-    const commands = useLeadCommands(props.workspaceId)
-    const [isPending, startTransition] = useTransition()
+    const commands = useLeadCommands()
+    const actions = useSalesActions()
+    const { data } = useSalesWorkbench()
+    const deals = data?.deals ?? []
+    const closedHidden = data?.closedHidden ?? { won: 0, lost: 0 }
+    const form = useSalesPipelineForm()
+    const { target: selectedTarget, reason } = form.watch()
+    const target = selectedTarget || null
+    const isPending = actions.isMutating || commands.isMutating || form.formState.isSubmitting
     const [movingId, setMovingId] = useState<string | null>(null)
-    const [target, setTarget] = useState<LeadStageId | null>(null)
-    const [reason, setReason] = useState("")
-    const [error, setError] = useState<string | null>(null)
-    const moving = props.deals.find((deal) => deal.leadId === movingId) ?? null
+    const error = form.formState.errors.reason?.message ?? form.formState.errors.target?.message ?? null
+    const moving = deals.find((deal) => deal.leadId === movingId) ?? null
 
     const money = (amount: number): string =>
         format.number(amount, { style: "currency", currency: "VND", maximumFractionDigits: 0 })
@@ -66,36 +63,28 @@ export const SalesPipeline = (props: SalesPipelineProps) => {
         }
     }
     const laneOf = (stage: LeadStageId): LaneView => {
-        const deals = props.deals.filter((deal) => deal.stage === stage)
-        const hidden = stage === "won" || stage === "lost" ? props.closedHidden[stage] : 0
-        const total = deals.reduce((sum, deal) => sum + (deal.valueVnd ?? 0), 0)
-        const count = deals.length + hidden
+        const stageDeals = deals.filter((deal) => deal.stage === stage)
+        const hidden = stage === "won" || stage === "lost" ? closedHidden[stage] : 0
+        const total = stageDeals.reduce((sum, deal) => sum + (deal.valueVnd ?? 0), 0)
+        const count = stageDeals.length + hidden
         return {
             stage,
             title: t(`stage_${stage}`),
             fact: total > 0 ? `${count} · ${compact(total)}` : String(count),
             hiddenText: hidden > 0 ? t("laneMore", { n: hidden }) : null,
-            deals: deals.map(dealOf),
+            deals: stageDeals.map(dealOf),
         }
     }
 
     const close = () => {
         setMovingId(null)
-        setTarget(null)
-        setReason("")
-        setError(null)
+        form.reset({ target: "", reason: "" })
     }
-    const confirm = () => {
-        if (moving === null || target === null) return
-        setError(null)
-        startTransition(async () => {
-            const result = await commands.recordOutcome(moving.leadId, target, reason.trim())
-            if (result.kind === "ok") {
-                close()
-                router.refresh()
-            } else setError(t("actionFailed", { error: faultTextOf(result) }))
-        })
-    }
+    const confirm = form.handleSubmit(async (values) => {
+        if (moving === null || !isStage(values.target) || actions.isMutating || commands.isMutating) return
+        const result = await commands.recordOutcome(moving.leadId, values.target, values.reason)
+        if (result !== undefined) close()
+    })
 
     const needsReason = target !== null && isClosing(target)
     const reasonLabelOf = (stage: LeadStageId | null): string | null => {
@@ -124,6 +113,7 @@ export const SalesPipeline = (props: SalesPipelineProps) => {
                   isIncomplete: target === null || (needsReason && reason.trim().length < MIN_REASON_CHARS),
               }
 
+    if (data === null) return null
     return (
         <SalesPipelineBase
             props={{
@@ -138,8 +128,8 @@ export const SalesPipeline = (props: SalesPipelineProps) => {
             }}
             on={{
                 move: (leadId) => setMovingId(leadId),
-                target: (value) => setTarget(isStage(value) ? value : null),
-                reason: setReason,
+                target: (value) => form.setValue("target", isStage(value) ? value : ""),
+                reason: (value) => form.setValue("reason", value),
                 confirm,
                 close,
             }}

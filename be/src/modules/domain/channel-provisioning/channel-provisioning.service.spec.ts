@@ -48,6 +48,7 @@ const build = async (
         webhookUrl: "https://nivo.vn/hook/sepay/sepay-1",
         apiKey: "nivo-sepay-key",
         bankCode: BANK.bankCode,
+        bank: BANK.bankCode,
         account: "masked-6789",
         holder: BANK.holder,
         credentialsSaved: false,

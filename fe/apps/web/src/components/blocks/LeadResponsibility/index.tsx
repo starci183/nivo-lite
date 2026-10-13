@@ -1,14 +1,22 @@
 "use client"
 
 import { parseDate } from "@internationalized/date"
-import { useFormatter, useTranslations } from "next-intl"
-import { useState, useTransition } from "react"
+import { useTranslations } from "next-intl"
+import { useState } from "react"
 import type { StepFormView } from "@/components/composites/StepForm"
-import { dateOnly, daysUntil, dueFromDate, splitResponsibilities, useLeadCommands, useStepView } from "@/hooks/leads"
-import { faultTextOf } from "@/hooks/leadJourney"
-import { loadingSlot, useSlotLabels } from "@/hooks/slot"
-import { navigation } from "@/modules/i18n"
-import { writeSuggestOwner } from "@/modules/db/leads/write-lead-actions"
+import {
+    dateOnly,
+    dueFromDate,
+    splitResponsibilities,
+    useLeadActions,
+    useLeadCommands,
+    useLeadJourney,
+    useStepView,
+} from "@/hooks/leads"
+import { mapSlot, useSlotLabels } from "@/hooks/slot"
+import { useWatch } from "react-hook-form"
+import { useLeadStepForm } from "@/hooks/rhf"
+import type { LeadStepValues } from "@/hooks/rhf"
 import { LEADS_ROUTES } from "@/modules/routes"
 import type { LeadJourney, ResponsibilityRecord, DataSlot } from "@/modules/types"
 import { LeadResponsibilityBase } from "./component"
@@ -16,23 +24,12 @@ import type { ResponsibilityView } from "./component"
 
 /** The lead the panel acts on and the workspace it belongs to; a null detail draws the loading card. */
 interface LeadResponsibilityProps {
-    readonly detail: LeadJourney | null
-    readonly workspaceId: string
+    readonly leadId?: string
 }
 
 type Mode = "reassign" | "add" | "due"
 
-/** What a person has typed into the step form. */
-interface Fields {
-    readonly title: string
-    readonly owner: string
-    readonly nextAction: string
-    readonly due: string | null
-}
-
 const HUMAN = "human"
-
-const EMPTY_FIELDS: Fields = { title: "", owner: HUMAN, nextAction: "", due: null }
 
 const ownerIdOf = (step: ResponsibilityRecord | null): string =>
     step?.owner_kind === "agent" && step.owner_agent_id ? step.owner_agent_id : HUMAN
@@ -41,21 +38,28 @@ const ownerIdOf = (step: ResponsibilityRecord | null): string =>
 export const LeadResponsibility = (props: LeadResponsibilityProps) => {
     const t = useTranslations("lead")
     const slotLabels = useSlotLabels()
-    const format = useFormatter()
-    const router = navigation.useRouter()
-    const commands = useLeadCommands(props.workspaceId)
-    const [isPending, startTransition] = useTransition()
+    const query = useLeadJourney(props.leadId)
+    const commands = useLeadCommands()
+    const actions = useLeadActions()
+    const isPending = commands.isMutating || actions.isPending
     const [mode, setMode] = useState<Mode | null>(null)
-    const [fields, setFields] = useState<Fields>(EMPTY_FIELDS)
+    const rhf = useLeadStepForm(mode)
+    const values = useWatch({ control: rhf.control })
+    const fields: LeadStepValues = {
+        title: values.title ?? "",
+        owner: values.owner ?? HUMAN,
+        nextAction: values.nextAction ?? "",
+        due: values.due ?? null,
+    }
     const [error, setError] = useState<string | null>(null)
     const [proposeError, setProposeError] = useState<string | null>(null)
-    const detail = props.detail
+    const detail = query.detail
     const { current } = splitResponsibilities(detail?.responsibilities ?? [])
     const agents = detail?.agents ?? []
 
     const open = (next: Mode) => {
         setError(null)
-        setFields({
+        rhf.reset({
             title: "",
             owner: next === "add" ? HUMAN : ownerIdOf(current),
             nextAction: next === "add" ? "" : (current?.next_action ?? ""),
@@ -64,43 +68,34 @@ export const LeadResponsibility = (props: LeadResponsibilityProps) => {
         setMode(next)
     }
     const close = () => setMode(null)
-    const send = async (loaded: LeadJourney, active: ResponsibilityRecord | null) => {
-        const step = { owner: fields.owner, nextAction: fields.nextAction.trim(), dueAt: dueFromDate(fields.due) }
-        if (mode === "add") return commands.addResponsibility(loaded.lead.id, fields.title.trim(), step)
+    const send = async (loaded: LeadJourney, active: ResponsibilityRecord | null, input: LeadStepValues) => {
+        const step = { owner: input.owner, nextAction: input.nextAction, dueAt: dueFromDate(input.due) }
+        if (mode === "add") return commands.addResponsibility(loaded.lead.id, input.title, step)
         if (active === null) return null
         const nextAction = mode === "due" ? active.next_action : step.nextAction
         return commands.assignResponsibility(active.id, { ...step, nextAction })
     }
-    const submit = () => {
+    const submit = rhf.handleSubmit(async (input) => {
         if (detail === null) return
         setError(null)
-        startTransition(async () => {
-            const result = await send(detail, current)
-            if (result === null) {
-                setError(t("noOpenStep"))
-                return
-            }
-            if (result.kind !== "ok") {
-                setError(faultTextOf(result))
-                return
-            }
-            close()
-            router.refresh()
-        })
-    }
+        const result = await send(detail, current, input)
+        if (result === null || result === undefined) {
+            setError(t(result === null ? "noOpenStep" : "saveFailed"))
+            return
+        }
+        close()
+    })
     const propose = () => {
         if (detail === null) return
         setProposeError(null)
-        startTransition(async () => {
-            const result = await writeSuggestOwner(detail.lead.id)
-            if (result.kind === "ok") router.refresh()
-            else setProposeError(result.kind === "unavailable" ? result.code : t("proposeFailed"))
+        void actions.suggestOwner(detail.lead.id).then((result) => {
+            if (result === undefined) setProposeError(t("proposeFailed"))
         })
     }
 
     const stepViewOf = useStepView(agents)
     const view: ResponsibilityView = { current: current === null ? null : stepViewOf(current) }
-    const slot: DataSlot<ResponsibilityView> = detail === null ? loadingSlot() : { items: view }
+    const slot: DataSlot<ResponsibilityView> = mapSlot(query.slot, () => view)
 
     const formLabels: Readonly<Record<Mode, string>> = {
         add: t("formAdd"),
@@ -132,7 +127,7 @@ export const LeadResponsibility = (props: LeadResponsibilityProps) => {
                           })),
                   ],
                   submitLabel: submitLabels[mode],
-                  error,
+                  error: error ?? Object.values(rhf.formState.errors)[0]?.message ?? null,
               }
 
     return (
@@ -140,7 +135,7 @@ export const LeadResponsibility = (props: LeadResponsibilityProps) => {
             props={{
                 slot,
                 form,
-                proposeError,
+                proposeError: proposeError ?? actions.error,
                 isPending,
                 labels: {
                     cardLabel: t("nextStepOwner"),
@@ -173,10 +168,12 @@ export const LeadResponsibility = (props: LeadResponsibilityProps) => {
                 propose,
                 open,
                 close,
-                change: (field, value) => setFields((previous) => ({ ...previous, [field]: value })),
+                change: (field, value) => rhf.setValue(field, value, { shouldDirty: true }),
                 changeDue: (value) =>
-                    setFields((previous) => ({ ...previous, due: value === null ? null : value.toString() })),
-                submit,
+                    rhf.setValue("due", value === null ? null : value.toString(), { shouldDirty: true }),
+                submit: () => {
+                    void submit()
+                },
             }}
         />
     )

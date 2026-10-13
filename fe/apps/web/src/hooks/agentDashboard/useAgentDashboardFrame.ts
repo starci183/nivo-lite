@@ -1,0 +1,163 @@
+import { useFormatter, useTranslations } from "next-intl"
+import type { BadgeTone, DescriptionListStatItem } from "@starci/grammar/common"
+import { useModuleName } from "@/hooks/installations"
+import type { ModuleKey } from "@/hooks/installations"
+import { isProvider, providerKey } from "@/hooks/connection-providers"
+import { decisionsHref } from "@/hooks/decisions"
+import { agentChatHref, AUTOMATION_ROUTES, KNOWLEDGE_ROUTES } from "@/modules/routes"
+import { PENDING_DASHBOARD } from "./agentDashboard.shared"
+import type { ConnectionState, DashboardRow } from "./agentDashboard.shared"
+import { useAgentDashboard } from "./useAgentDashboard"
+
+const CONNECTION_TONE: Readonly<Record<ConnectionState, BadgeTone>> = {
+    connected: "success",
+    error: "danger",
+    pending: "neutral",
+}
+
+/** What the frame hands the hook: the module, its instance and the pieces the module brings itself. */
+interface AgentDashboardFrameInput {
+    readonly module: ModuleKey
+    readonly installationId: string | null
+    readonly isLoading: boolean
+    readonly figures: ReadonlyArray<DescriptionListStatItem>
+    readonly figuresFailed: boolean
+    /** The module brings its own page command: the default "Talk to the agent" is not offered. */
+    readonly hasOwnCommand: boolean
+    /** The module brings its own gaps card: the built-in one is not offered. */
+    readonly hasOwnGaps: boolean
+}
+
+/** The words and figures of the shared anatomy of an agent workbench: the dashboard of the module read in the browser, worded for the frame. */
+export const useAgentDashboardFrame = (input: AgentDashboardFrameInput) => {
+    const t = useTranslations("agentDashboard")
+    const g = useTranslations("governance")
+    const tc = useTranslations("connections")
+    const format = useFormatter()
+    const moduleName = useModuleName(input.module)
+    const { slot, reload } = useAgentDashboard(input.module, input.installationId ?? null)
+    const dashboard = slot.items ?? PENDING_DASHBOARD
+    const isDashboardLoading = slot.isLoading === true
+    const agent = dashboard.agent
+
+    const whenOf = (iso: string | null): string =>
+        iso === null
+            ? ""
+            : format.dateTime(new Date(iso), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+    const actionOf = (action: string): string => (g.has(`action_${action}`) ? g(`action_${action}`) : "")
+    const rowOf = (item: DashboardRow) => ({
+        id: item.id,
+        title: item.title,
+        description: [item.customer, actionOf(item.action), whenOf(item.at)].filter(Boolean).join(" · "),
+        href: item.href,
+    })
+    const isFailed = slot.isError === true
+    const isInternal = dashboard.knowledge.audience === "internal"
+    const gaps = dashboard.knowledge.gaps
+
+    const hasOwnCommand = input.hasOwnCommand
+    const view = {
+        isHeadLoading: isDashboardLoading,
+        isFiguresLoading: input.isLoading === true,
+        ribbonAria: t("ribbonAria"),
+        figures: input.figures,
+        figuresFailed: input.figuresFailed === true,
+        failure: { title: t("regionFailed"), description: t("regionFailedText"), retryLabel: t("retry") },
+        waitingLabel: t("waitingTitle"),
+        waitingFailed: isFailed || dashboard.waiting.isFailed,
+        waiting: {
+            count: dashboard.waiting.total > 0 ? String(dashboard.waiting.total) : null,
+            rows: dashboard.waiting.items.map(rowOf),
+            openLabel: t("waitingOpen"),
+            more:
+                dashboard.waiting.total > dashboard.waiting.items.length
+                    ? t("waitingMore", { n: dashboard.waiting.total - dashboard.waiting.items.length })
+                    : null,
+            emptyMessage: t("waitingEmpty"),
+            emptyDescription: t("waitingEmptyBody"),
+        },
+        doneLabel: t("doneTitle"),
+        doneFailed: isFailed || dashboard.done.isFailed,
+        done: {
+            count: t("doneCount", { n: dashboard.done.count }),
+            logLabel: t("doneLog"),
+            logHref: decisionsHref("policy", input.module),
+            rows: dashboard.done.items.map(rowOf),
+            emptyMessage: t("doneEmpty"),
+            emptyDescription: t("doneEmptyBody"),
+        },
+        connectionsLabel: t("connTitle"),
+        connectionsFailed: isFailed || dashboard.connections.isFailed,
+        connections: {
+            manageLabel: t("connManage"),
+            manageHref: AUTOMATION_ROUTES.connections,
+            rows: dashboard.connections.items.map((connection) => ({
+                id: connection.id,
+                name: connection.name,
+                description: `${isProvider(connection.provider) ? tc(providerKey(connection.provider, "title")) : connection.provider} \u00b7 ${t(`connPurpose_${connection.purpose}`)}`,
+                statusLabel: t(`connStatus_${connection.status}`),
+                statusTone: CONNECTION_TONE[connection.status],
+                accessLabel: t(`connAccess_${connection.access}`),
+            })),
+            emptyMessage: t("connEmpty"),
+            emptyDescription: t("connEmptyBody"),
+        },
+        knowledgeLabel: t("knowTitle"),
+        knowledgeFailed: isFailed || dashboard.knowledge.isFailed,
+        knowledge: {
+            openLabel: t("knowOpen"),
+            openHref: KNOWLEDGE_ROUTES.library,
+            footer: isInternal ? t("knowAudienceInternal") : t("knowAudienceCustomer"),
+            publicTitle: t("knowPublic"),
+            publicDescription: t("knowCounts", {
+                docs: dashboard.knowledge.documents.public,
+                facts: dashboard.knowledge.facts.public,
+            }),
+            internalTitle: t("knowInternal"),
+            internalDescription: isInternal
+                ? [
+                      t("knowCounts", {
+                          docs: dashboard.knowledge.documents.internal,
+                          facts: dashboard.knowledge.facts.internal,
+                      }),
+                      dashboard.knowledge.facts.restricted > 0
+                          ? t("knowRestricted", { n: dashboard.knowledge.facts.restricted })
+                          : "",
+                  ]
+                      .filter(Boolean)
+                      .join(" \u00b7 ")
+                : t("knowInternalOff"),
+            gaps:
+                gaps && !input.hasOwnGaps
+                    ? {
+                          label: t("gapsTitle"),
+                          count: gaps.openCount > 0 ? String(gaps.openCount) : null,
+                          openLabel: t("gapsOpen"),
+                          openHref: KNOWLEDGE_ROUTES.library,
+                          rows: gaps.items.map((gap) => ({
+                              id: gap.id,
+                              title: gap.question,
+                              description: whenOf(gap.lastSeenAt),
+                              asked: t("gapAsked", { n: gap.count }),
+                          })),
+                          emptyMessage: t("gapsEmpty"),
+                          emptyDescription: t("gapsEmptyBody"),
+                      }
+                    : null,
+        },
+    }
+    const mode: { readonly label: string; readonly tone: BadgeTone } | null =
+        agent === null
+            ? null
+            : {
+                  label: agent.mode === "autopilot" ? t("modeAutopilot") : t("modeAssist"),
+                  tone: agent.mode === "autopilot" ? "success" : "accent",
+              }
+    const head = {
+        title: agent?.name || moduleName,
+        isHeadLoading: isDashboardLoading,
+        mode,
+        chat: agent === null || hasOwnCommand ? null : { label: t("commandChat"), href: agentChatHref(agent.id) },
+    }
+    return { head, view, tabsLabel: t("tabsLabel"), reload }
+}
