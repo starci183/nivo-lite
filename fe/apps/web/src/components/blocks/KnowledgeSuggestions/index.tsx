@@ -1,11 +1,8 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useLibraryCommands } from "@/hooks/knowledge"
-import type { LibraryActions } from "@/hooks/knowledge"
+import { useKnowledgeIdeas, useLibraryCommands } from "@/hooks/knowledge"
 import type { KnowledgeRowView } from "@/components/composites/KnowledgeRows"
-import { writeRetrySource } from "@/modules/db/knowledge/write-retry"
-import { writeSuggestionState } from "@/modules/db/knowledge/write-suggestion"
 import { KNOWLEDGE_ROUTES } from "@/modules/routes"
 import type { IdeaDecision } from "@/modules/types"
 import { KnowledgeSuggestionsBase } from "./component"
@@ -16,23 +13,11 @@ interface SuggestionItem {
     readonly state?: IdeaDecision
 }
 
-/** Props for the connected suggestions. */
-interface KnowledgeSuggestionsProps {
-    readonly workspaceId: string
-    /** Ideas still open, never required. */
-    readonly open: ReadonlyArray<SuggestionItem>
-    /** Ideas the owner set aside. */
-    readonly skipped: ReadonlyArray<SuggestionItem>
-    /** True while the page loads: the heading stays and the list is skeleton rows. */
-    readonly isLoading?: boolean
-}
-
-const ACTIONS: LibraryActions = { retry: writeRetrySource, decide: writeSuggestionState }
-
 /** The connected suggestions: opens the add drawer through the address, sets an idea aside or brings it back. */
-export const KnowledgeSuggestions = (props: KnowledgeSuggestionsProps) => {
+export const KnowledgeSuggestions = () => {
     const t = useTranslations("knowledge")
-    const commands = useLibraryCommands(props.workspaceId, ACTIONS)
+    const commands = useLibraryCommands()
+    const ideas = useKnowledgeIdeas()
     const decidedLabelOf = (item: SuggestionItem): string | undefined => {
         if (item.state === undefined) return undefined
         return t(item.state === "dismissed" ? "suggestHidden" : "suggestNA")
@@ -61,6 +46,7 @@ export const KnowledgeSuggestions = (props: KnowledgeSuggestionsProps) => {
             actions: [{ id: "restore", label: t("suggestRestore"), onPress: () => commands.decide(item.key, null) }],
         }
     }
+    if (!ideas.canWrite) return null
     return (
         <KnowledgeSuggestionsBase
             props={{
@@ -72,17 +58,17 @@ export const KnowledgeSuggestions = (props: KnowledgeSuggestionsProps) => {
                         failTitle: t("detailFailed"),
                     },
                     label: t("suggestTitle"),
-                    rows: props.open.map(openRow),
-                    isLoading: props.isLoading ?? false,
+                    rows: ideas.open.map(openRow),
+                    isLoading: ideas.isLoading,
                     isPending: commands.isPending,
                     emptyTitle: t("suggestAllDone"),
                 },
                 skipped:
-                    props.skipped.length === 0
+                    ideas.skipped.length === 0
                         ? undefined
                         : {
                               label: t("suggestSkipped"),
-                              rows: props.skipped.map(skippedRow),
+                              rows: ideas.skipped.map(skippedRow),
                               isLoading: false,
                               isPending: commands.isPending,
                               emptyTitle: t("suggestAllDone"),

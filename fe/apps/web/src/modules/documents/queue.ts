@@ -28,13 +28,21 @@ export interface BatchMeta {
     readonly installationId: string | null
 }
 
+/** The extra details of one document handed to the job queue, on top of the options chosen for the batch. */
+export interface EnqueueMeta extends BatchMeta {
+    /** The ZIP and folders the document came from. */
+    readonly origin?: string | null
+    /** The text of a note or Q&A list (files and links have none). */
+    readonly content?: string
+}
+
 /** One document handed to the job queue. */
 export interface EnqueueItem {
     readonly kind: "file" | "url" | "text" | "faq"
     readonly title: string
     readonly storagePath: string | null
     readonly url: string | null
-    readonly meta: Readonly<Record<string, unknown>>
+    readonly meta: EnqueueMeta
 }
 
 /** The two things a send needs from the outside: bytes to storage, and a document to the queue. */

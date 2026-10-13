@@ -8,7 +8,6 @@ import type { BrainGap, ChatbotOverview, ChatbotThread } from "@/modules/types"
 
 /** The knowledge gaps owners and managers answer from the Second Brain. */
 interface ChatbotWorkbenchGaps {
-    readonly workspaceId: string
     readonly gaps: ReadonlyArray<BrainGap>
 }
 
@@ -32,10 +31,7 @@ interface ChatbotWorkbenchBaseProps {
 /** The Chatbot workbench: the agent dashboard frame around the inbox (conversation list, thread and customer panel). */
 export const ChatbotWorkbenchBase = (props: ChatbotWorkbenchBaseProps) => {
     const { overview } = props.props
-    const gaps =
-        props.props.gaps === null ? null : (
-            <BrainGaps workspaceId={props.props.gaps.workspaceId} gaps={props.props.gaps.gaps} />
-        )
+    const gaps = props.props.gaps === null ? null : <BrainGaps gaps={props.props.gaps.gaps} />
     if (overview === null) {
         return (
             <AgentDashboardFrame
