@@ -1,5 +1,6 @@
 export { useGraphQLMutationSwr } from "./useGraphQLMutationSwr"
 export { useGraphqlQuerySwr } from "./useGraphqlQuerySwr"
+export { useKeyedQuerySwr } from "./useKeyedQuerySwr"
 export { useStatusPollSwr } from "./useStatusPollSwr"
 export { useWorkspaceJobSwr } from "./useWorkspaceJobSwr"
 export { useWorkspaceQuerySwr } from "./useWorkspaceQuerySwr"
