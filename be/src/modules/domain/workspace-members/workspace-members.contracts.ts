@@ -90,6 +90,8 @@ export interface DirectoryAccount {
     readonly lastSignInAt: string | null
     /** The name from the profile, else the email local part. */
     readonly displayName: string
+    /** The picture of the sign-in provider profile (a public provider URL, not a stored object), when the directory knows one. */
+    readonly avatarUrl?: string | null
 }
 
 /** Where the capability reads accounts from; the composition root binds it to the identity provider. */
@@ -120,6 +122,8 @@ export interface AccountOverview {
     readonly name: string
     /** The account email. */
     readonly email: string
+    /** The picture of the sign-in provider profile, or null. */
+    readonly avatarUrl: string | null
     /** The identity providers linked to the account (`google`, `email`). */
     readonly providers: ReadonlyArray<string>
     /** The devices signed in, the current one first. */

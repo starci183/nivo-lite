@@ -74,9 +74,12 @@ export const tickOf = (scheduler: QueueSchedulerDefinition): QueueMessageRow => 
     payload: scheduler.payload ?? {},
 })
 
-/** The delivery a handler receives for one read message; a scheduler tick carries no outbox id and is known by its message id. */
+/**
+ * The delivery a handler receives for one read message; a scheduler tick carries no outbox id and is known by its queue and message
+ * id (pgmq numbers the messages of each queue from 1, so the bare message id of two queues' ticks would be the same job key).
+ */
 export const deliveryOf = (queue: string, row: QueueReadRow, signal: AbortSignal): QueueDelivery => ({
-    id: row.message.outbox_id ?? row.msg_id,
+    id: row.message.outbox_id ?? `${queue}:${row.msg_id}`,
     queue,
     job: row.message.name ?? queue,
     payload: row.message.payload ?? {},
