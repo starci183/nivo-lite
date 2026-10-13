@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationRevokeApiKeyArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { RevokeApiKeyMutation, RevokeApiKeyMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `revokeApiKey` mutation. */
-export type MutateRevokeApiKeyRequest = MutationRevokeApiKeyArgs["input"]
+export type MutateRevokeApiKeyRequest = WireInput<RevokeApiKeyMutationVariables["input"]>
 
 /** The response of the `revokeApiKey` mutation. */
-type MutateRevokeApiKeyResponse = Pick<Mutation, "revokeApiKey">
+type MutateRevokeApiKeyResponse = RevokeApiKeyMutation
 
 const mutation1: TypedDocumentNode<MutateRevokeApiKeyResponse, InputVariables<MutateRevokeApiKeyRequest>> = gql`
     mutation RevokeApiKey($input: RevokeApiKeyInput!) {

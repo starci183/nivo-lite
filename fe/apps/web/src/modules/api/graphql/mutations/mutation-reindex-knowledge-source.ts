@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationReindexKnowledgeSourceArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { ReindexKnowledgeSourceMutation, ReindexKnowledgeSourceMutationVariables } from "../__generated__/graphql"
 
 /** The response of the `reindexKnowledgeSource` mutation: the typed payload straight from the back end contract. */
-type MutateReindexKnowledgeSourceResponse = Pick<Mutation, "reindexKnowledgeSource">
+type MutateReindexKnowledgeSourceResponse = ReindexKnowledgeSourceMutation
 
 /** The input of the `reindexKnowledgeSource` mutation. */
-export type MutateReindexKnowledgeSourceRequest = MutationReindexKnowledgeSourceArgs["input"]
+export type MutateReindexKnowledgeSourceRequest = WireInput<ReindexKnowledgeSourceMutationVariables["input"]>
 
 const mutation1: TypedDocumentNode<
     MutateReindexKnowledgeSourceResponse,

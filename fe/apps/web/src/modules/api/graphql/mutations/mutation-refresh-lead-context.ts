@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationRefreshLeadContextArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { RefreshLeadContextMutation, RefreshLeadContextMutationVariables } from "../__generated__/graphql"
 
 /** Generated input of the refreshLeadContext mutation. */
-export type MutateRefreshLeadContextRequest = MutationRefreshLeadContextArgs["input"]
+export type MutateRefreshLeadContextRequest = WireInput<RefreshLeadContextMutationVariables["input"]>
 
 /** Generated response of the refreshLeadContext mutation. */
-type MutateRefreshLeadContextResponse = Pick<Mutation, "refreshLeadContext">
+type MutateRefreshLeadContextResponse = RefreshLeadContextMutation
 
 type Document = TypedDocumentNode<MutateRefreshLeadContextResponse, InputVariables<MutateRefreshLeadContextRequest>>
 
