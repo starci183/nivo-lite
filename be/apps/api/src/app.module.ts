@@ -30,7 +30,7 @@ import { RunChatTurnQueueModule } from "@features/jobs/run-chat-turn"
 import { TelegramHttpModule } from "@features/webhooks/telegram"
 import { ZaloHttpModule } from "@features/webhooks/zalo"
 import { LeadsHttpModule } from "@features/api/leads"
-import { AdminHttpModule } from "@features/api/admin"
+import { AdminGraphqlModule, AdminHttpModule } from "@features/api/admin"
 import { ModulesHttpModule } from "@features/api/modules"
 import { OfficeHttpModule } from "@features/api/office"
 import { ExternalApiHttpModule } from "@features/api/external-api"
@@ -772,6 +772,7 @@ export class AppModule {
                 RunAutomationTickQueueModule,
                 RunAutomationCommandQueueModule,
                 AdminHttpModule,
+                AdminGraphqlModule,
             ],
             providers: [
                 { provide: SUPABASE_ACCESS_TOKEN_VERIFIER, useValue: verifyAccessToken },
