@@ -219,3 +219,9 @@ export const SELECT_OVERDUE_POS = sql`SELECT id, reminders FROM public.inventory
 WHERE workspace_id = $1 AND status IN ('sent', 'partially_received') AND expected_at IS NOT NULL AND expected_at < $2::date AND reminders < 2
     AND (reminders = 0 OR updated_at < $3::timestamptz)
 LIMIT 20`
+
+/** Reads one submitted command with its input, status and the member who submitted it ($1 command, $2 workspace). */
+export const SELECT_COMMAND = sql`SELECT id, workspace_id, kind, input, status, created_by FROM public.inventory_commands WHERE id = $1::uuid AND workspace_id = $2::uuid LIMIT 1`
+
+/** Settles a queued command once with its status, result and refusal ($1 command, $2 status, $3 result json or null, $4 error code or null, $5 error sentence or null). */
+export const FINISH_COMMAND = sql`SELECT public.inventory_command_finish($1::uuid, $2::text, $3::jsonb, $4::text, $5::text)`

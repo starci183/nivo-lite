@@ -1,6 +1,7 @@
 export { INVENTORY_ERROR_KINDS } from "./errors/inventory.error"
 export { INVENTORY_MESSAGES } from "./messages/inventory.messages"
 export { InventoryCatalogService } from "./inventory-catalog.service"
+export { InventoryCommandService } from "./inventory-command.service"
 export { InventoryImportService } from "./inventory-import.service"
 export { InventoryDispatchService } from "./inventory-dispatch.service"
 export { InventoryLocationsService } from "./inventory-locations.service"

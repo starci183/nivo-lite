@@ -4,6 +4,7 @@ import { InventoryOrderModule } from "@modules/queues/inventory-order"
 import { InventoryReplenishModule } from "@modules/queues/inventory-replenish"
 import { InventoryAutomationService } from "./inventory-automation.service"
 import { InventoryCatalogService } from "./inventory-catalog.service"
+import { InventoryCommandService } from "./inventory-command.service"
 import { InventoryImportService } from "./inventory-import.service"
 import { InventoryDispatchService } from "./inventory-dispatch.service"
 import { InventoryLocationsService } from "./inventory-locations.service"
@@ -36,6 +37,7 @@ export class InventoryModule extends ConfigurableModuleClass {
                 InventoryReplenishService,
                 InventoryReceivingService,
                 InventoryCatalogService,
+                InventoryCommandService,
                 InventoryImportService,
                 InventoryDeductionService,
                 InventoryStockService,
@@ -45,6 +47,7 @@ export class InventoryModule extends ConfigurableModuleClass {
             exports: [
                 InventoryAutomationService,
                 InventoryCatalogService,
+                InventoryCommandService,
                 InventoryImportService,
                 InventoryDispatchService,
                 InventoryLocationsService,

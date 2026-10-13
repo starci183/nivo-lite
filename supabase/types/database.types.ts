@@ -1,4 +1,4 @@
-// migrations-sha256: e3e144e7766e9715934d74083378af9320b607cb603103e6a51110554e624fae
+// migrations-sha256: 44696b92c1da3fed6cf7f7b0184eb556f147b94ebfe6952fa3254d40c8f92f31
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -1640,6 +1640,25 @@ isOneToOne: false
       referencedColumns: ["id"]
     },{
       foreignKeyName: "inbound_events_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"inventory_commands": {
+                  Row: {
+                    "created_at": string,"created_by": string,"error_code": string | null,"error_message": string | null,"finished_at": string | null,"id": string,"input": NonNullable<Json>,"kind": string,"result": Json | null,"status": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"created_by": string,"error_code"?: string | null,"error_message"?: string | null,"finished_at"?: string | null,"id"?: string,"input"?: NonNullable<Json>,"kind": string,"result"?: Json | null,"status"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string,"error_code"?: string | null,"error_message"?: string | null,"finished_at"?: string | null,"id"?: string,"input"?: NonNullable<Json>,"kind"?: string,"result"?: Json | null,"status"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "inventory_commands_workspace_id_fkey"
       columns: ["workspace_id"]
 isOneToOne: false
       referencedRelation: "workspaces"
@@ -3761,6 +3780,12 @@ isOneToOne: false
                            },
 "inventory_apply_movement":
 { Args: { "p_by": string,"p_dedupe": string,"p_delta": number,"p_evidence": string,"p_item": string,"p_kind": string,"p_loc": string,"p_reason": string,"p_ref_id": string,"p_ref_label": string,"p_ref_type": string,"p_unit_cost"?: number,"p_ws": string }; Returns: Json
+                           },
+"inventory_command_finish":
+{ Args: { "p_code": string,"p_id": string,"p_message": string,"p_result": Json,"p_status": string }; Returns: undefined
+                           },
+"inventory_submit":
+{ Args: { "p_input": Json,"p_kind": string,"p_workspace": string }; Returns: string
                            },
 "invite_preview":
 { Args: { "token": string }; Returns: {

@@ -7,6 +7,7 @@ import { SystemHealthHttpModule } from "@features/api/system-health"
 import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
 import { WorkspacesHttpModule } from "@features/api/workspaces"
 import { DeductOrderQueueModule } from "@features/jobs/deduct-order"
+import { InventoryCommandQueueModule } from "@features/jobs/inventory-command"
 import { ReplenishStockQueueModule } from "@features/jobs/replenish-stock"
 import { AuthGuard, IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } from "@modules/domain/identity"
 import {
@@ -132,6 +133,7 @@ export class AppModule {
                 InventoryHttpModule,
                 ReplenishStockQueueModule,
                 DeductOrderQueueModule,
+                InventoryCommandQueueModule,
                 ApiKeysModule.register({ isGlobal: true }),
                 PublicApiModule.register({ isGlobal: true }),
                 ExternalApiHttpModule,

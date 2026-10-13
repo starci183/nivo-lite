@@ -4,4 +4,6 @@ export enum InventoryLogEvent {
     RequestSendFailed = "inventory.request-send-failed",
     /** Drafted purchase orders after a stock movement. */
     OrdersDrafted = "inventory.orders-drafted",
+    /** A member command ended in an error that is not a refusal in words. */
+    CommandFailed = "inventory.command-failed",
 }
