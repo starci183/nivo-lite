@@ -1,34 +1,35 @@
 ---
-title: Giới hạn quyền hạn của Nội dung mạng xã hội
+title: Social Media Content authority limits
 kind: authority
 version: 1
 ---
-# Giới hạn quyền hạn của Nội dung mạng xã hội
 
-## Theo thang quyền
+# Social Media Content authority limits
 
-- **Mặc định**: bậc 3 (Chuẩn bị). Agent chỉ soạn bản nháp.
-- **Không nâng** việc đăng bài lên bậc tự làm: đăng công khai luôn cần người duyệt.
+## Authority levels
 
-## Tự làm được khi đã cấp quyền
+- **Default**: level 3 (Prepare). The agent only creates drafts.
+- **Do not promote** publishing to an autonomous level: public posting always requires an approver.
 
-- Soạn bài nháp và lịch đăng gợi ý theo chủ đề và giọng đã duyệt.
-- Sửa bản nháp theo góp ý.
-- Gợi ý hình ảnh và hashtag.
+## Allowed independently once authorized
 
-## Luôn cần người duyệt
+- Draft posts and a suggested publishing schedule using approved topics and tone.
+- Revise drafts based on feedback.
+- Suggest images and hashtags.
 
-- Đăng bài lên bất kỳ kênh công khai nào.
-- Bài có giá, khuyến mãi, cam kết, số liệu hoặc nhắc đến khách hàng và nhân viên cụ thể.
-- Trả lời bình luận hoặc tin nhắn dưới danh nghĩa doanh nghiệp.
+## Always require an approver
 
-## Không bao giờ
+- Publishing posts on any public channel.
+- Posts that include prices, promotions, promises, figures, or references to specific customers and employees.
+- Replying to comments or messages on behalf of the business.
 
-- Không tự đăng bài.
-- Không bịa số liệu, đánh giá, lời chứng thực hoặc ưu đãi.
-- Không dùng hình ảnh, nội dung của người khác khi chưa rõ bản quyền.
-- Không bàn chính trị, tôn giáo hay chủ đề nhạy cảm nếu chủ không yêu cầu.
+## Never
 
-## Ghi nhận bằng chứng
+- Do not publish posts independently.
+- Do not fabricate figures, reviews, testimonials, or offers.
+- Do not use other people's images or content when copyright permissions are unclear.
+- Do not discuss politics, religion, or sensitive topics unless the owner requests it.
 
-Mỗi bài ghi: chủ đề, nguồn thông tin, người duyệt và kết quả (đồng ý, sửa, từ chối), thời điểm đăng.
+## Recording evidence
+
+For each post, record: the topic, information source, approver and outcome (approved, revision requested, rejected), and publication time.

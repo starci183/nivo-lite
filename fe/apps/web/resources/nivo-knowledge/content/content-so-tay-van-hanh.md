@@ -1,31 +1,32 @@
 ---
-title: Sổ tay vận hành của Nội dung mạng xã hội
+title: Social Media Content Operations Playbook
 kind: playbook
 version: 2
 ---
-# Sổ tay vận hành của Nội dung mạng xã hội
 
-## Mục đích
+# Social Media Content Operations Playbook
 
-Nội dung mạng xã hội giúp doanh nghiệp đăng đều đặn mà không tốn nhiều công. Agent soạn bài và gợi ý lịch đăng từ thông tin thật của doanh nghiệp; chủ duyệt rồi mới đăng.
+## Purpose
 
-## Cách làm việc
+Social Media Content helps businesses post regularly with little effort. The agent drafts posts and suggests a posting schedule based on factual business information; posts are published only after the owner approves them.
 
-1. **Hiểu thương hiệu**: ai là khách mục tiêu, giọng điệu, các chủ đề chính, kênh đăng.
-2. **Lập lịch gợi ý theo tuần**: cân bằng giữa khuyến mãi, kiến thức hữu ích, hậu trường và phản hồi của khách.
-3. **Soạn bài**: mở bằng điều người đọc quan tâm, một thông điệp chính, lời kêu gọi rõ, hashtag vừa phải. Điều chỉnh độ dài theo từng kênh.
-4. **Dùng thông tin thật**: giá, ưu đãi, thời hạn lấy từ Tri thức doanh nghiệp. Chưa có thì hỏi chủ, không đoán.
-5. **Gợi ý hình ảnh**: ảnh hoặc video nào đi kèm, lấy từ kho hình của doanh nghiệp.
-6. **Gửi chủ duyệt**: bản nháp kèm chỗ cần xác nhận. Sửa theo góp ý.
-7. **Rút kinh nghiệm**: bài nào được quan tâm để lần sau soạn tốt hơn.
+## Workflow
 
-## Dấu hiệu cần hỏi chủ
+1. **Understand the brand**: identify the target customers, tone, main topics, and posting channels.
+2. **Suggest a weekly schedule**: balance promotions, useful information, behind-the-scenes content, and customer feedback.
+3. **Draft posts**: open with something readers care about, focus on one main message, include a clear call to action, and use hashtags in moderation. Adjust the length for each channel.
+4. **Use factual information**: take prices, offers, and deadlines from Business Knowledge. If information is missing, ask the owner instead of guessing.
+5. **Suggest visuals**: choose accompanying photos or videos from the business's media library.
+6. **Submit for owner approval**: provide drafts with any points that need confirmation. Revise based on feedback.
+7. **Learn from results**: identify which posts attract interest to improve future drafts.
 
-Chủ đề nhạy cảm, bình luận tiêu cực, so sánh đối thủ, thông tin giá chưa có, thời điểm sự kiện sát ngày.
+## When to Ask the Owner
 
-## Bàn làm việc
+Sensitive topics, negative comments, competitor comparisons, missing pricing information, or events with little time remaining before their date.
 
-- **Lên kế hoạch tháng**: một ý tưởng cho mỗi lần đăng theo tần suất đã chọn, cân bằng giữa các chủ đề theo trọng số, có ngày lễ Việt Nam (Tết, 8/3, 30/4 và 1/5, 2/9, 20/10, 20/11, Black Friday, Noel, các ngày đôi 9.9, 10.10, 11.11, 12.12). Danh sách ngày lễ nằm trong `resources/content/calendar-vn.json`.
-- **Soạn bài**: mỗi kênh một bản (Facebook dài, Zalo OA ngắn, TikTok chú thích và hashtag, Instagram). Quy tắc từng kênh nằm trong `resources/content/channels.json`. Chỉ dùng thông tin thật trong Tri thức doanh nghiệp.
-- **Gửi duyệt**: bài đi qua quyền "Đăng bài" (luôn hỏi chủ). Được duyệt rồi mới có nút Đăng.
-- **Đăng**: sao chép nội dung, tải ảnh, tự đăng, rồi "Đánh dấu đã đăng" kèm đường dẫn bài làm bằng chứng. Tự đăng qua API mạng xã hội sẽ có sau.
+## Workspace
+
+- **Plan the month**: provide one idea for each post at the selected frequency, balance topics according to their weights, and include Vietnamese holidays (Tet, 8/3, 30/4 and 1/5, 2/9, 20/10, 20/11, Black Friday, Noel, and matching month-and-day dates 9.9, 10.10, 11.11, 12.12). The holiday list is in `resources/content/calendar-vn.json`.
+- **Draft posts**: create one version per channel (longer posts for Facebook, short posts for Zalo OA, captions and hashtags for TikTok, and Instagram posts). Each channel's rules are in `resources/content/channels.json`. Use only factual information from Business Knowledge.
+- **Submit for approval**: posts go through the "Publish post" permission (always ask the owner). The Publish button is available only after approval.
+- **Publish**: copy the content, download the images, publish manually, then select "Mark as published" and include the post link as evidence. Automatic publishing through social media APIs will be available later.

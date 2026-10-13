@@ -1,47 +1,55 @@
 ---
-title: Bảng câu hỏi thiết lập Nội dung mạng xã hội
+title: Social Media Content setup questionnaire
 kind: setup_checklist
 version: 1
 ---
-# Bảng câu hỏi thiết lập Nội dung mạng xã hội
 
-Nội dung mạng xã hội chỉ nên chạy thật khi các mục dưới đây đã có thông tin được chủ xác nhận. Trước khi hỏi, đối chiếu với Tri thức doanh nghiệp và tóm tắt lại thay vì hỏi lại điều đã có.
+# Social Media Content setup questionnaire
 
-## channels — Kênh đăng bài
-Cần có: các kênh sẽ đăng, kênh nào ưu tiên, ai quản lý tài khoản.
-Đủ khi: có ít nhất một kênh chính.
+Social Media Content should only go live once the owner has confirmed the information for the items below. Before asking, check Business Knowledge and summarize the information already available instead of asking for it again.
 
-## audience — Khách hàng mục tiêu
-Cần có: khách mục tiêu là ai, họ quan tâm điều gì, dùng ngôn ngữ nào.
-Đủ khi: có mô tả khách mục tiêu ngắn gọn.
+## channels — Publishing channels
 
-## pillars — Chủ đề nội dung
-Cần có: các nhóm nội dung chính (khuyến mãi, kiến thức, hậu trường, câu chuyện khách hàng).
-Đủ khi: có ba nhóm nội dung trở lên.
+Required: the channels to publish on, which channels take priority, and who manages the accounts.
+Complete when: at least one primary channel is specified.
 
-## cadence — Tần suất đăng
-Cần có: mỗi tuần đăng mấy bài, ngày giờ nào, kênh nào.
-Đủ khi: có tần suất và khung giờ.
+## audience — Target customers
 
-## claims_limits — Điều không được nói
-Cần có: điều không được nói (cam kết, so sánh, chủ đề nhạy cảm, từ ngữ cấm).
-Đủ khi: có danh sách giới hạn hoặc xác nhận dùng bộ mặc định của NIVO.
+Required: who the target customers are, what they care about, and which language they use.
+Complete when: there is a brief description of the target customers.
 
-## approval — Quy trình duyệt
-Cần có: ai duyệt bài, duyệt qua đâu, thời gian duyệt mong muốn.
-Đủ khi: có người duyệt cụ thể.
+## pillars — Content topics
 
-## tone — Giọng điệu
-Cần có: giọng thương hiệu: vui, chuyên nghiệp, gần gũi; cách xưng hô.
-Đủ khi: có phong cách và một bài mẫu ngắn.
+Required: the main content categories (promotions, educational content, behind-the-scenes content, and customer stories).
+Complete when: there are at least three content categories.
 
-## Mục không áp dụng
+## cadence — Posting frequency
 
-Nếu một mục không áp dụng cho doanh nghiệp (ví dụ chỉ có một người nên không cần quy tắc đổi ca), ghi nhận là "không áp dụng" cùng lý do, coi mục đã đủ và không hỏi lại. "Chưa rõ" không phải là "không áp dụng": ghi là cần xác nhận.
+Required: how many posts to publish each week, on which days and at what times, and on which channels.
+Complete when: a frequency and time slots are specified.
 
-## Cách hỏi trong chat thiết lập
+## claims_limits — What must not be said
 
-- Một mục chưa đủ mỗi lượt, ưu tiên mục ảnh hưởng tới tiền, khách hàng hoặc quyền hạn.
-- Hỏi bằng ngôn ngữ kinh doanh quen thuộc, kèm ví dụ ngắn.
-- Không điền đại khi chủ chưa rõ: đánh dấu chưa đủ.
-- Khi hoàn tất, nhắc rà lại các mục và bấm "Áp dụng".
+Required: what must not be said (promises, comparisons, sensitive topics, and prohibited words).
+Complete when: there is a list of restrictions or confirmation to use NIVO's defaults.
+
+## approval — Approval process
+
+Required: who approves posts, where approval takes place, and the desired approval turnaround time.
+Complete when: a specific approver is identified.
+
+## tone — Tone of voice
+
+Required: the brand's tone: cheerful, professional, approachable; how to refer to the brand and address the audience.
+Complete when: a style and a short sample post are available.
+
+## Items that do not apply
+
+If an item does not apply to the business (for example, there is only one person, so no shift handover rules are needed), record it as "not applicable" with the reason, treat the item as complete, and do not ask again. "Unclear" does not mean "not applicable": record it as needing confirmation.
+
+## How to ask questions in the setup chat
+
+- Ask about one incomplete item per turn, prioritizing items that affect money, customers, or authority.
+- Ask in familiar business language, with a short example.
+- Do not fill in guesses when the owner is unsure: mark the item as incomplete.
+- When finished, remind the owner to review the items and click "Apply".
