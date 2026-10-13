@@ -11,7 +11,7 @@ export const challengeOf = (verifier: string): string => createHash("sha256").up
 
 /** The callback address to register on the Zalo app: Zalo sends the browser back here with ?code&oa_id&state; null without a site url. */
 export const zaloCallbackUrl = (options: Pick<ChannelSetupOptions, "siteUrl">): string | null =>
-    options.siteUrl ? `${trimSlashes(options.siteUrl)}/api/connections/zalo/oauth/callback` : null
+    options.siteUrl ? `${trimSlashes(options.siteUrl)}/connections/zalo/callback` : null
 
 /** The Zalo permission url (PKCE) the owner opens to authorize the Official Account. */
 export const zaloAuthorizeUrl = (

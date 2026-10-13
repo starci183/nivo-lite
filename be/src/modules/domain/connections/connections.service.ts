@@ -51,6 +51,7 @@ type SecretRow = Pick<ConnectionSecretsRow, "ciphertext" | "webhook_secret">
 export class ConnectionsService {
     private readonly key: Buffer
     private readonly siteUrl: string | undefined
+    private readonly providerUrl: string | undefined
 
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
@@ -60,10 +61,11 @@ export class ConnectionsService {
         if (key === null) throw new ConnectionsError({ code: ConnectionsErrorCode.KeyInvalid })
         this.key = key
         this.siteUrl = options.publicSiteUrl
+        this.providerUrl = options.publicApiUrl ?? options.publicSiteUrl
     }
 
     /** The webhook address a provider must call for a connection (built from the site url even on localhost, for display). */
-    webhookUrl(provider: Provider, connectionId: string, origin: string | undefined = this.siteUrl): string {
+    webhookUrl(provider: Provider, connectionId: string, origin: string | undefined = this.providerUrl): string {
         return webhookUrlFor(provider, connectionId, origin)
     }
 
@@ -74,7 +76,7 @@ export class ConnectionsService {
 
     /** The public https origin providers can reach, or null on localhost, plain http or when unset. */
     publicOrigin(): string | null {
-        return publicSiteUrl(this.siteUrl)
+        return publicSiteUrl(this.providerUrl)
     }
 
     /** Requires an active member of the workspace holding one of the roles; answers who they are. */

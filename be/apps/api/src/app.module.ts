@@ -97,6 +97,7 @@ import {
 } from "@modules/domain/meta-connections"
 import { META_INBOX_ERROR_KINDS, META_INBOX_MESSAGES, MetaInboxModule } from "@modules/domain/meta-inbox"
 import { ConnectionLifecycleModule } from "@modules/domain/connection-lifecycle"
+import { ConnectionCommandsModule } from "@modules/domain/connection-commands"
 import { GOOGLE_ERROR_KINDS, GOOGLE_MESSAGES, GoogleModule } from "@modules/integrations/google"
 import { META_ERROR_KINDS, META_MESSAGES, MetaModule } from "@modules/integrations/meta"
 import {
@@ -130,6 +131,7 @@ import { CONTENT_TICK_EVERY_MS, CONTENT_TICK_QUEUE, CONTENT_TICK_SCHEDULER } fro
 import { RendersHttpModule } from "@features/api/renders"
 import { PublishContentQueueModule } from "@features/jobs/publish-content"
 import { RenderVideoQueueModule } from "@features/jobs/render-video"
+import { ConnectionCommandsQueueModule } from "@features/jobs/connection-commands"
 import type { ApiOptions } from "./api.options"
 
 @Module({})
@@ -263,6 +265,7 @@ export class AppModule {
                 MetaConnectionsModule.register({ isGlobal: true }),
                 MetaInboxModule.register({ isGlobal: true }),
                 ConnectionLifecycleModule.register({ isGlobal: true }),
+                ConnectionCommandsModule.register({ isGlobal: true }),
                 GoogleModule.register({ isGlobal: true, ...options.google }),
                 MetaModule.register({ isGlobal: true, ...options.meta }),
                 ChannelSetupModule.register({ isGlobal: true, ...options.channelSetup }),
@@ -279,6 +282,7 @@ export class AppModule {
                 ContentModule.register({ isGlobal: true }),
                 RenderVideoQueueModule,
                 PublishContentQueueModule,
+                ConnectionCommandsQueueModule,
                 RendersHttpModule,
                 LivenessModule.register({ isGlobal: true }),
                 LeadsHttpModule,

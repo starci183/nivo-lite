@@ -12,7 +12,7 @@ export const parseMetaConfig = (env: EnvSource): MetaOptions => ({
     webhookVerifyToken: env.has("META_WEBHOOK_VERIFY_TOKEN") ? env.secret("META_WEBHOOK_VERIFY_TOKEN") : undefined,
     loginConfigId: env.optional("META_LOGIN_CONFIG_ID"),
     graphVersion: env.optional("META_GRAPH_VERSION"),
-    siteUrl: env.optional("PUBLIC_SITE_URL"),
+    siteUrl: env.optional("PUBLIC_API_URL") ?? env.optional("PUBLIC_SITE_URL"),
     channelTokenKey: env.secret("CHANNEL_TOKEN_KEY"),
     sendPerMinute: env.int("META_SEND_PER_MINUTE", 60),
     timeoutMs: env.duration("META_TIMEOUT", 15_000),

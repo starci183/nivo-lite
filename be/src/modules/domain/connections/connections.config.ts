@@ -9,5 +9,9 @@ export const parseConnectionsConfig = (env: EnvSource): ConnectionsOptions => {
     if (decodeChannelKey(channelTokenKey.reveal()) === null) {
         throw new ConnectionsError({ code: ConnectionsErrorCode.KeyInvalid })
     }
-    return { channelTokenKey, publicSiteUrl: env.optional("PUBLIC_SITE_URL") }
+    return {
+        channelTokenKey,
+        publicSiteUrl: env.optional("PUBLIC_SITE_URL"),
+        publicApiUrl: env.optional("PUBLIC_API_URL"),
+    }
 }

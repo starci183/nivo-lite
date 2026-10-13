@@ -15,7 +15,7 @@ export const parseGoogleConfig = (env: EnvSource): GoogleOptions => ({
     client: readClient(env),
     oauthBase: env.optional("GOOGLE_OAUTH_BASE"),
     sheetsBase: env.optional("GOOGLE_SHEETS_BASE"),
-    siteUrl: env.optional("PUBLIC_SITE_URL"),
+    siteUrl: env.optional("PUBLIC_API_URL") ?? env.optional("PUBLIC_SITE_URL"),
     channelTokenKey: env.secret("CHANNEL_TOKEN_KEY"),
     timeoutMs: env.duration("GOOGLE_TIMEOUT", 10_000),
 })
