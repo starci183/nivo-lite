@@ -36,4 +36,6 @@ export class UpdateMoneyResponse {
     credentialsSaved!: boolean
     /** The firstEvent. */
     firstEvent!: FirstEventBody | null
+    /** The agentIds. */
+    agentIds!: ReadonlyArray<string>
 }

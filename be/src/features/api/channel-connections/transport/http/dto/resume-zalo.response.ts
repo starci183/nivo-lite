@@ -30,4 +30,6 @@ export class ResumeZaloResponse {
     oaId!: string
     /** The firstEvent. */
     firstEvent!: FirstEventBody | null
+    /** The agentIds. */
+    agentIds!: ReadonlyArray<string>
 }

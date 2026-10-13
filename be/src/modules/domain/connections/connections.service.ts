@@ -30,6 +30,7 @@ import {
     DELETE_SECRET,
     FIND_ACTIVE_MEMBER,
     FIND_CONNECTION,
+    FIND_CONNECTION_AGENT_IDS,
     FIND_CONNECTIONS_BY_IDS,
     FIND_LIVE_BY_META,
     FIND_SECRET,
@@ -128,6 +129,15 @@ export class ConnectionsService {
             value,
         ])
         return row === undefined ? null : { id: row.id, workspaceId: row.workspace_id }
+    }
+
+    /** The ids of the agents that use a connection, in the order they were attached. */
+    async agentIds(workspaceId: string, connectionId: string): Promise<ReadonlyArray<string>> {
+        const rows = await this.entityManager.query<Array<{ agent_id: string }>>(FIND_CONNECTION_AGENT_IDS, [
+            workspaceId,
+            connectionId,
+        ])
+        return rows.map((row) => row.agent_id)
     }
 
     /** Every connection of the workspace, oldest first. */

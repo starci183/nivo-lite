@@ -77,6 +77,8 @@ export interface WizardConnection {
     readonly credentialsSaved: boolean
     /** The first event the feed accepted. */
     readonly firstEvent: FirstEvent | null
+    /** The agents that use the connection. */
+    readonly agentIds: ReadonlyArray<string>
 }
 
 /** What saving provider keys answers. */
@@ -117,6 +119,8 @@ export interface ZaloWizardConnection {
     readonly oaId: string
     /** The first event the connection accepted. */
     readonly firstEvent: FirstEvent | null
+    /** The agents that use the connection. */
+    readonly agentIds: ReadonlyArray<string>
 }
 
 /** What asking a provider about a connection answers. */

@@ -407,7 +407,11 @@ export class ChannelConnectionsService {
         return secret
     }
 
-    private wizardView(connection: ConnectionRecord, apiKey: string, credentialsSaved: boolean): WizardConnection {
+    private async wizardView(
+        connection: ConnectionRecord,
+        apiKey: string,
+        credentialsSaved: boolean,
+    ): Promise<WizardConnection> {
         return {
             id: connection.id,
             provider: connection.provider,
@@ -421,10 +425,11 @@ export class ChannelConnectionsService {
             holder: connection.meta.account_holder ?? "",
             credentialsSaved,
             firstEvent: connection.firstEvent,
+            agentIds: await this.connections.agentIds(connection.workspaceId, connection.id),
         }
     }
 
-    private zaloView(connection: ConnectionRecord, secret: ZaloSecret): ZaloWizardConnection {
+    private async zaloView(connection: ConnectionRecord, secret: ZaloSecret): Promise<ZaloWizardConnection> {
         return {
             id: connection.id,
             name: connection.name,
@@ -435,6 +440,7 @@ export class ChannelConnectionsService {
             oaSecretSaved: Boolean(secret.oaSecret),
             oaId: connection.meta.oa_id ?? "",
             firstEvent: connection.firstEvent,
+            agentIds: await this.connections.agentIds(connection.workspaceId, connection.id),
         }
     }
 

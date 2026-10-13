@@ -439,5 +439,8 @@
   "errRate": "Meta is limiting requests right now. Please wait a minute and try again.",
   "errWebhookNoUrl": "This connection has no webhook address yet.",
   "errWebhookUrl": "That address cannot be used. Paste a public https:// address of your n8n, Make or Zapier.",
-  "errWebhookSigning": "NIVO has not turned on webhook signing on this server."
+  "errWebhookSigning": "NIVO has not turned on webhook signing on this server.",
+  "errMetaNoPage": "Pick a Page first.",
+  "errMetaPageGone": "That Page is no longer in your list. Log in with Facebook again.",
+  "errMetaPageInUse": "This Page (or its Instagram account) is already connected in another connection."
 }

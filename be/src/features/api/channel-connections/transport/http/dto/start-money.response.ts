@@ -36,4 +36,6 @@ export class StartMoneyResponse {
     credentialsSaved!: boolean
     /** The firstEvent. */
     firstEvent!: FirstEventBody | null
+    /** The agentIds. */
+    agentIds!: ReadonlyArray<string>
 }

@@ -1,7 +1,7 @@
 import { Drawer } from "@starci/grammar/common"
-import { GoogleWizard } from "@/features/connections/wizard/GoogleWizard"
-import { MetaWizard } from "@/features/connections/wizard/MetaWizard"
 import { DataWizard } from "@/features/connections/wizard/data"
+import { GoogleWizard } from "@/components/blocks/GoogleWizard"
+import { MetaWizard } from "@/components/blocks/MetaWizard"
 import { MoneyWizard } from "@/components/blocks/MoneyWizard"
 import { SmtpWizard } from "@/components/blocks/SmtpWizard"
 import { TelegramWizard } from "@/components/blocks/TelegramWizard"
@@ -92,6 +92,7 @@ export const ConnectionWizardOverlayBase = (props: ConnectionWizardOverlayBasePr
             {target?.kind === "meta" ? (
                 <MetaWizard
                     key={target.resumeId ?? "new"}
+                    workspaceId={wizard.workspaceId}
                     resumeId={target.resumeId}
                     returned={target.returned}
                     agents={wizard.eligible}
@@ -99,7 +100,7 @@ export const ConnectionWizardOverlayBase = (props: ConnectionWizardOverlayBasePr
                 />
             ) : null}
             {target?.kind === "webhook" ? <WebhookWizard workspaceId={wizard.workspaceId} onClose={onClose} /> : null}
-            {target?.kind === "google" ? <GoogleWizard onClose={onClose} /> : null}
+            {target?.kind === "google" ? <GoogleWizard workspaceId={wizard.workspaceId} onClose={onClose} /> : null}
             {target?.kind === "email" ? (
                 <SmtpWizard ownerEmail={wizard.ownerEmail} hasDefault={wizard.hasDefaultSender} onClose={onClose} />
             ) : null}

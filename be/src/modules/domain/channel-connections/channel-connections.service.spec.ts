@@ -39,6 +39,7 @@ const build = async (origin: string | null = "https://nivo.vn") => {
     connections.get.mockResolvedValue(record())
     connections.create.mockResolvedValue("c1")
     connections.findLiveByMeta.mockResolvedValue(null)
+    connections.agentIds.mockResolvedValue(["agent-1"])
     const setup = mock<ChannelSetupClient>()
     setup.zaloCallbackUrl.mockReturnValue("https://nivo.vn/cb")
     setup.zaloAuthorizeUrl.mockReturnValue("https://zalo.test/auth")
@@ -442,6 +443,7 @@ describe("ChannelConnectionsService", () => {
                 oaSecretSaved: false,
                 oaId: "",
                 firstEvent: null,
+                agentIds: ["agent-1"],
             })
         })
 

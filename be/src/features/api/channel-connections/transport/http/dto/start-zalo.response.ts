@@ -30,4 +30,6 @@ export class StartZaloResponse {
     oaId!: string
     /** The firstEvent. */
     firstEvent!: FirstEventBody | null
+    /** The agentIds. */
+    agentIds!: ReadonlyArray<string>
 }

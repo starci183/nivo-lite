@@ -87,3 +87,10 @@ export type {
     ZaloAuthorizeUrl,
     ZaloWizardConnection,
 } from "./connection-wizard"
+export type {
+    MetaAppObject,
+    MetaAuthorization,
+    MetaCheck,
+    MetaPageOption,
+    MetaWizardConnection,
+} from "./connection-wizard"

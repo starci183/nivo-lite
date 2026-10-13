@@ -44,3 +44,6 @@ export const INSERT_CONNECTOR_INTEREST = sql`INSERT INTO public.connector_intere
 
 /** The oldest live connection of a provider whose public fact `key` equals `value` (a Telegram bot id, a Meta Page id). */
 export const FIND_LIVE_BY_META = sql`SELECT id, workspace_id FROM public.connections WHERE provider = $1 AND public_meta ->> $2 = $3 AND status <> 'disconnected' ORDER BY created_at LIMIT 1`
+
+/** The agents that use a connection. */
+export const FIND_CONNECTION_AGENT_IDS = sql`SELECT agent_id FROM public.agent_connections WHERE workspace_id = $1 AND connection_id = $2 ORDER BY created_at`

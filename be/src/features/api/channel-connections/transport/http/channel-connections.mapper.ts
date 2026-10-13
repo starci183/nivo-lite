@@ -64,6 +64,7 @@ export const toStartMoneyResponse = (result: StartMoneyResult): StartMoneyRespon
     holder: result.holder,
     credentialsSaved: result.credentialsSaved,
     firstEvent: result.firstEvent,
+    agentIds: result.agentIds,
 })
 
 /** Maps the HTTP path and body to the UpdateMoney request. */
@@ -96,6 +97,7 @@ export const toUpdateMoneyResponse = (result: UpdateMoneyResult): UpdateMoneyRes
     holder: result.holder,
     credentialsSaved: result.credentialsSaved,
     firstEvent: result.firstEvent,
+    agentIds: result.agentIds,
 })
 
 /** Maps the HTTP path and body to the ResumeConnection request. */
@@ -118,6 +120,7 @@ export const toResumeConnectionResponse = (result: ResumeConnectionResult): Resu
     holder: result.holder,
     credentialsSaved: result.credentialsSaved,
     firstEvent: result.firstEvent,
+    agentIds: result.agentIds,
 })
 
 /** Maps the HTTP path and body to the RevealSepayKey request. */
@@ -164,6 +167,7 @@ export const toStartZaloResponse = (result: StartZaloResult): StartZaloResponse 
     oaSecretSaved: result.oaSecretSaved,
     oaId: result.oaId,
     firstEvent: result.firstEvent,
+    agentIds: result.agentIds,
 })
 
 /** Maps the HTTP path and body to the ResumeZalo request. */
@@ -183,6 +187,7 @@ export const toResumeZaloResponse = (result: ResumeZaloResult): ResumeZaloRespon
     oaSecretSaved: result.oaSecretSaved,
     oaId: result.oaId,
     firstEvent: result.firstEvent,
+    agentIds: result.agentIds,
 })
 
 /** Maps the HTTP path and body to the SaveZaloOaSecret request. */

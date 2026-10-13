@@ -39,7 +39,36 @@ const disconnectRequest = targetRequest("POST", "/disconnect")
 const deleteRequest = targetRequest("DELETE", "")
 const firstEventRequest = targetRequest("GET", "/first-event")
 const sepayKeyRequest = targetRequest("GET", "/sepay-key")
-const metaCheckRequest = targetRequest("POST", "/meta-check", {})
+const metaResumeRequest = targetRequest("GET", "/meta")
+const metaPageRequest = (input: unknown): CommandRequest | null => {
+    if (!isRecord(input) || !isUuid(input.workspaceId) || !isUuid(input.connectionId)) return null
+    const { pageId } = input
+    if (typeof pageId !== "string" || pageId === "" || pageId.length > 64) return null
+    return {
+        workspaceId: input.workspaceId,
+        method: "POST",
+        path: `/connections/${input.connectionId}/meta-page`,
+        body: { pageId },
+    }
+}
+const metaCheckRequest = (input: unknown): CommandRequest | null => {
+    if (!isRecord(input) || !isUuid(input.workspaceId) || !isUuid(input.connectionId)) return null
+    return {
+        workspaceId: input.workspaceId,
+        method: "POST",
+        path: `/connections/${input.connectionId}/meta-check`,
+        body: { repair: input.repair === true },
+    }
+}
+const metaAuthorizeRequest = (input: unknown): CommandRequest | null => {
+    if (!isRecord(input) || !isUuid(input.workspaceId)) return null
+    return {
+        workspaceId: input.workspaceId,
+        method: "POST",
+        path: "/connections/meta/authorize",
+        body: isUuid(input.connectionId) ? { connectionId: input.connectionId } : {},
+    }
+}
 const webhookTestRequest = targetRequest("POST", "/webhook-test")
 
 const grantRequest = (input: unknown): CommandRequest | null => {
@@ -134,6 +163,9 @@ const ERROR_KEYS: Readonly<Record<string, string>> = {
     GOOGLE_CONNECTIONS_NOT_CONFIGURED: "errNotConfigured",
     GOOGLE_CONNECTIONS_START_FAILED: "errStart",
     META_CONNECTIONS_NOT_CONFIGURED: "errNotConfigured",
+    META_CONNECTIONS_NO_PAGE: "errMetaNoPage",
+    META_CONNECTIONS_PAGE_GONE: "errMetaPageGone",
+    META_CONNECTIONS_PAGE_IN_USE: "errMetaPageInUse",
     META_CONNECTIONS_TOKEN_REFUSED: "errMetaToken",
     META_CONNECTIONS_PERMISSION_REFUSED: "errPermission",
     META_CONNECTIONS_RATE_LIMITED: "errRate",
@@ -176,6 +208,12 @@ export const firstEventSchema = schemaOf(firstEventRequest)
 export const sepayKeySchema = schemaOf(sepayKeyRequest)
 /** `POST /connections/:id/meta-check`. */
 export const metaCheckSchema = schemaOf(metaCheckRequest)
+/** `GET /connections/:id/meta`. */
+export const metaResumeSchema = schemaOf(metaResumeRequest)
+/** `POST /connections/:id/meta-page` for `{ workspaceId, connectionId, pageId }`. */
+export const metaPageSchema = schemaOf(metaPageRequest)
+/** `POST /connections/meta/authorize` for `{ workspaceId, connectionId? }`. */
+export const metaAuthorizeSchema = schemaOf(metaAuthorizeRequest)
 /** `POST /connections/:id/webhook-test`. */
 export const webhookTestSchema = schemaOf(webhookTestRequest)
 /** `PUT /connections/:id/grants/:agentId` with the level, or null to remove the access. */

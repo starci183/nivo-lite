@@ -439,5 +439,8 @@
   "errRate": "Meta đang giới hạn số yêu cầu. Vui lòng đợi một phút rồi thử lại.",
   "errWebhookNoUrl": "Kết nối này chưa có địa chỉ webhook.",
   "errWebhookUrl": "Địa chỉ này không dùng được. Hãy dán địa chỉ công khai bắt đầu bằng https:// của n8n, Make hoặc Zapier.",
-  "errWebhookSigning": "NIVO chưa bật chữ ký cho webhook trên máy chủ này."
+  "errWebhookSigning": "NIVO chưa bật chữ ký cho webhook trên máy chủ này.",
+  "errMetaNoPage": "Hãy chọn một Page trước.",
+  "errMetaPageGone": "Page đó không còn trong danh sách của bạn. Hãy đăng nhập Facebook lại.",
+  "errMetaPageInUse": "Page này (hoặc tài khoản Instagram của nó) đã được kết nối ở một kết nối khác."
 }

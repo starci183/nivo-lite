@@ -219,3 +219,63 @@ export interface AgentStepView {
     /** The sentence shown when the workspace has no agent for this connection. */
     readonly none: string
 }
+
+/** One Page waiting for the choice (no token). */
+export interface MetaPageOption {
+    readonly id: string
+    readonly name: string
+    readonly category: string
+    readonly igId: string
+    readonly igUsername: string
+}
+
+/** What the Meta wizard shows of a connection; tokens are never returned. */
+export interface MetaWizardConnection {
+    readonly id: string
+    readonly name: string
+    readonly status: ConnectionStatus
+    /** The Meta app keys are set on this NIVO (otherwise the login cannot start). */
+    readonly configured: boolean
+    readonly pages: ReadonlyArray<MetaPageOption>
+    readonly pageId: string
+    readonly pageName: string
+    readonly igId: string
+    readonly igUsername: string
+    readonly firstEvent: FirstEvent | null
+    readonly agentIds: ReadonlyArray<string>
+}
+
+/** Where the Facebook login goes. */
+export interface MetaAuthorization {
+    readonly connectionId: string
+    readonly url: string
+}
+
+/** One object of the app-level webhook subscription. */
+export interface MetaAppObject {
+    readonly callbackUrl: string
+    readonly fields: ReadonlyArray<string>
+    readonly missing: ReadonlyArray<string>
+    readonly urlMatches: boolean
+}
+
+/** What Meta really has for a connection. */
+export interface MetaCheck {
+    readonly ok: boolean
+    readonly tokenOk: boolean
+    readonly pageId: string
+    readonly pageName: string
+    readonly igUsername: string
+    readonly page: {
+        readonly subscribed: boolean
+        readonly fields: ReadonlyArray<string>
+        readonly missing: ReadonlyArray<string>
+    }
+    readonly appPage: MetaAppObject | null
+    readonly appInstagram: MetaAppObject | null
+    readonly appKnown: boolean
+    readonly webhookUrl: string
+    readonly localOnly: boolean
+    readonly verifyTokenSet: boolean
+    readonly repaired: boolean
+}
