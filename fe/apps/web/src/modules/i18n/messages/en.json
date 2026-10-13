@@ -608,7 +608,49 @@
     "moduleEmpty": "No automation fits this agent yet.",
     "loading": "Loading...",
     "loadFailed": "Could not load automations.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "connectGoogle": "Connect Google",
+    "workspaceChip": "Workspace",
+    "missingModule": "the {name} module",
+    "missingChannelCustomerChat": "a customer chat channel (website, Telegram or Zalo)",
+    "missingConnectionGoogle": "a Google connection",
+    "missingConnectionWebhook": "an n8n / webhook connection",
+    "missingConnectionSmtp": "outgoing email",
+    "missingCapabilityHasOpeningHours": "opening hours in the shop information",
+    "missingCapabilityHasDeposits": "a deposit policy",
+    "missingCapabilityHasDueDates": "payment terms",
+    "missingCapabilityHasAppointments": "appointments",
+    "missingCapabilitySellsOnline": "online marketplace sales",
+    "missingCapabilityHasRecurringContracts": "recurring contracts",
+    "missingCapabilityHasDelivery": "delivery",
+    "patternHasDeposits": "đặt cọc|tiền cọc|cọc trước|deposit",
+    "patternHasAppointments": "đặt lịch|lịch hẹn|hẹn lịch|appointment|booking",
+    "patternSellsOnline": "shopee|lazada|tiktok ?shop|tiki\\b|sàn thương mại",
+    "patternHasRecurringContracts": "hợp đồng|gia hạn|định kỳ|subscription|thuê bao",
+    "patternHasDelivery": "giao hàng|vận chuyển|giao tận nơi|\\bship\\b|freight",
+    "patternDue": "hạn thanh toán|thanh toán sau|công nợ|trả chậm|payment terms|net ?\\d+|\\d+ ngày.{0,20}thanh toán|thanh toán.{0,20}\\d+ ngày",
+    "patternHoursline": "giờ (làm việc|mở cửa)|mở cửa|opening hours|business hours",
+    "patternNegation": "(không|chưa|chẳng|\\bko\\b|\\bno\\b|without)",
+    "auditEnabled": "Switched on the automation: {name}",
+    "auditDisabled": "Switched off the automation: {name}",
+    "auditBodysaved": "Approved the automation message: {name}",
+    "auditStreak": "{count} approvals in a row without edits.",
+    "auditAutosendgranted": "The owner allowed \"{name}\" to send by itself",
+    "auditAutosenddeclined": "The owner did not allow \"{name}\" to send by itself yet",
+    "faultAutomationsComingSoon": "This template is coming soon.",
+    "faultAutomationsRequirementMissing": "It cannot be switched on yet: a requirement of this template is missing.",
+    "faultAutomationsNoMessage": "This template sends no message to a customer, so it has no wording.",
+    "faultAutomationsBodyTooShort": "The wording is too short.",
+    "faultAutomationsBodyUnknownVariable": "The wording uses a blank this template does not offer.",
+    "faultAutomationsGoogleNotUsed": "This automation does not use Google.",
+    "faultAutomationsGoogleAccountUnknown": "This Google account was not found.",
+    "faultAutomationsTrustNotOffered": "Sending by itself has not been offered yet.",
+    "faultAutomationsNothingToChange": "There is nothing to save.",
+    "faultAutomationsPipelineOff": "Switch this automation on first.",
+    "faultAutomationsRunNowUnavailable": "This template cannot be run on demand.",
+    "faultAutomationsNotSaved": "This automation could not be saved.",
+    "faultRefused": "Only the owner and managers can change the automations.",
+    "faultGeneric": "That did not work. Try again in a few minutes."
   },
   "billing": {
     "allWorkspaces": "All workspaces",
@@ -673,7 +715,11 @@
     "modOther": "Other",
     "errForbidden": "Only an owner or manager can renew.",
     "errGeneric": "Something went wrong. Please try again.",
-    "errCustomPlan": "The Enterprise plan renews under your contract with NIVO."
+    "errCustomPlan": "The Enterprise plan renews under your contract with NIVO.",
+    "paymentQueued": "Your payment request is queued.",
+    "paymentReady": "Your payment code is ready.",
+    "paymentFailed": "The payment request failed. Try again.",
+    "loading": "Loading billing details…"
   },
   "brain": {
     "crumbLabel": "Breadcrumb",
@@ -2361,7 +2407,8 @@
     "loading": "Loading...",
     "errorTitle": "Credits & plan could not load",
     "errorText": "Something went wrong while reading your credits and payments. Try again in a moment.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "balanceWithoutPlan": "{used} / {limit} credits"
   },
   "decisions": {
     "crumbLabel": "Breadcrumb",
@@ -5366,7 +5413,9 @@
     "switchCurrent": "Current",
     "switchNew": "Create a new workspace",
     "joinLinkText": "Paste the invitation link you received to join a workspace.",
-    "errSignupDisabled": "Creating a workspace is not available right now. Ask the NIVO team to open one for you."
+    "errSignupDisabled": "Creating a workspace is not available right now. Ask the NIVO team to open one for you.",
+    "paymentLoading": "Loading payment details…",
+    "paymentCreating": "Creating your payment code…"
   },
   "overview": {
     "loadFailed": "The overview could not be loaded. Try again.",
@@ -6576,7 +6625,12 @@
     "evidenceLog": "Manual evidence added: {amount} VND on {date}",
     "adjustLog": "Correction added: {note}",
     "adjustLogAmount": "Correction added: {note} (amount should be {amount} VND)",
-    "loadRefused": "You do not have access to Accounting in this workspace."
+    "loadRefused": "You do not have access to Accounting in this workspace.",
+    "errPayer": "Enter a payer name of up to 200 characters.",
+    "errNote": "Keep the note within 2,000 characters.",
+    "adjustSaved": "Correction recorded.",
+    "manualSaved": "Evidence recorded.",
+    "questionDecided": "Decision recorded."
   },
   "workbenchBooking": {
     "metricToday": "Bookings today",

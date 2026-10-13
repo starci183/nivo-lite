@@ -608,7 +608,49 @@
     "moduleEmpty": "Chưa có tự động hoá nào hợp với agent này.",
     "loading": "Đang tải...",
     "loadFailed": "Chưa tải được tự động hoá.",
-    "retry": "Thử lại"
+    "retry": "Thử lại",
+    "connectGoogle": "Kết nối Google",
+    "workspaceChip": "Workspace",
+    "missingModule": "module {name}",
+    "missingChannelCustomerChat": "một kênh chat với khách (website, Telegram hoặc Zalo)",
+    "missingConnectionGoogle": "kết nối Google",
+    "missingConnectionWebhook": "kết nối n8n / webhook",
+    "missingConnectionSmtp": "Email gửi đi",
+    "missingCapabilityHasOpeningHours": "giờ mở cửa trong thông tin cửa hàng",
+    "missingCapabilityHasDeposits": "chính sách đặt cọc",
+    "missingCapabilityHasDueDates": "hạn thanh toán (công nợ)",
+    "missingCapabilityHasAppointments": "đặt lịch hẹn",
+    "missingCapabilitySellsOnline": "bán trên sàn thương mại điện tử",
+    "missingCapabilityHasRecurringContracts": "hợp đồng định kỳ",
+    "missingCapabilityHasDelivery": "giao hàng",
+    "patternHasDeposits": "đặt cọc|tiền cọc|cọc trước|deposit",
+    "patternHasAppointments": "đặt lịch|lịch hẹn|hẹn lịch|appointment|booking",
+    "patternSellsOnline": "shopee|lazada|tiktok ?shop|tiki\\b|sàn thương mại",
+    "patternHasRecurringContracts": "hợp đồng|gia hạn|định kỳ|subscription|thuê bao",
+    "patternHasDelivery": "giao hàng|vận chuyển|giao tận nơi|\\bship\\b|freight",
+    "patternDue": "hạn thanh toán|thanh toán sau|công nợ|trả chậm|payment terms|net ?\\d+|\\d+ ngày.{0,20}thanh toán|thanh toán.{0,20}\\d+ ngày",
+    "patternHoursline": "giờ (làm việc|mở cửa)|mở cửa|opening hours|business hours",
+    "patternNegation": "(không|chưa|chẳng|\\bko\\b|\\bno\\b|without)",
+    "auditEnabled": "Bật tự động hoá: {name}",
+    "auditDisabled": "Tắt tự động hoá: {name}",
+    "auditBodysaved": "Duyệt lời nhắn tự động hoá: {name}",
+    "auditStreak": "{count} lần duyệt liên tiếp không sửa.",
+    "auditAutosendgranted": "Chủ shop cho phép \"{name}\" tự gửi",
+    "auditAutosenddeclined": "Chủ shop chưa cho \"{name}\" tự gửi",
+    "faultAutomationsComingSoon": "Mẫu này sắp có.",
+    "faultAutomationsRequirementMissing": "Chưa bật được: còn thiếu yêu cầu của mẫu này.",
+    "faultAutomationsNoMessage": "Mẫu này không gửi tin cho khách nên không có lời nhắn.",
+    "faultAutomationsBodyTooShort": "Lời nhắn quá ngắn.",
+    "faultAutomationsBodyUnknownVariable": "Lời nhắn có chỗ trống không dùng được.",
+    "faultAutomationsGoogleNotUsed": "Tự động hoá này không dùng Google.",
+    "faultAutomationsGoogleAccountUnknown": "Không tìm thấy tài khoản Google này.",
+    "faultAutomationsTrustNotOffered": "Chưa đến lúc đề xuất tự gửi.",
+    "faultAutomationsNothingToChange": "Không có thay đổi nào để lưu.",
+    "faultAutomationsPipelineOff": "Hãy bật tự động hoá này trước.",
+    "faultAutomationsRunNowUnavailable": "Mẫu này không chạy thử được.",
+    "faultAutomationsNotSaved": "Không lưu được tự động hoá này.",
+    "faultRefused": "Chỉ chủ shop và quản lý mới chỉnh được tự động hoá.",
+    "faultGeneric": "Chưa làm được. Thử lại sau ít phút."
   },
   "billing": {
     "allWorkspaces": "Tất cả workspace",
@@ -673,7 +715,11 @@
     "modOther": "Khác",
     "errForbidden": "Chỉ chủ sở hữu hoặc quản lý mới gia hạn được.",
     "errGeneric": "Có lỗi xảy ra. Vui lòng thử lại.",
-    "errCustomPlan": "Gói Enterprise được gia hạn theo hợp đồng với NIVO."
+    "errCustomPlan": "Gói Enterprise được gia hạn theo hợp đồng với NIVO.",
+    "paymentQueued": "Yêu cầu thanh toán đã được xếp hàng.",
+    "paymentReady": "Mã thanh toán đã sẵn sàng.",
+    "paymentFailed": "Yêu cầu thanh toán thất bại. Vui lòng thử lại.",
+    "loading": "Đang tải thông tin thanh toán…"
   },
   "brain": {
     "crumbLabel": "Đường dẫn",
@@ -2361,7 +2407,8 @@
     "loading": "Đang tải...",
     "errorTitle": "Không tải được Credit & gói",
     "errorText": "Có lỗi khi đọc credit và thanh toán của bạn. Hãy thử lại sau ít phút.",
-    "retry": "Thử lại"
+    "retry": "Thử lại",
+    "balanceWithoutPlan": "{used} / {limit} credit"
   },
   "decisions": {
     "crumbLabel": "Đường dẫn",
@@ -5366,7 +5413,9 @@
     "switchCurrent": "Đang dùng",
     "switchNew": "Tạo workspace mới",
     "joinLinkText": "Dán liên kết lời mời bạn nhận được để tham gia một workspace.",
-    "errSignupDisabled": "Hiện chưa thể tạo workspace. Hãy nhờ đội ngũ NIVO mở workspace cho bạn."
+    "errSignupDisabled": "Hiện chưa thể tạo workspace. Hãy nhờ đội ngũ NIVO mở workspace cho bạn.",
+    "paymentLoading": "Đang tải thông tin thanh toán…",
+    "paymentCreating": "Đang tạo mã thanh toán…"
   },
   "overview": {
     "loadFailed": "Chưa tải được tổng quan. Hãy thử lại.",
@@ -6576,7 +6625,12 @@
     "evidenceLog": "Đã ghi nhận chứng từ thủ công: {amount} VND ngày {date}",
     "adjustLog": "Đã thêm điều chỉnh: {note}",
     "adjustLogAmount": "Đã thêm điều chỉnh: {note} (số đúng là {amount} VND)",
-    "loadRefused": "Bạn không có quyền xem Kế toán của không gian làm việc này."
+    "loadRefused": "Bạn không có quyền xem Kế toán của không gian làm việc này.",
+    "errPayer": "Nhập tên người chuyển tiền, tối đa 200 ký tự.",
+    "errNote": "Ghi chú không được vượt quá 2.000 ký tự.",
+    "adjustSaved": "Đã ghi nhận điều chỉnh.",
+    "manualSaved": "Đã ghi nhận chứng từ.",
+    "questionDecided": "Đã ghi nhận quyết định."
   },
   "workbenchBooking": {
     "metricToday": "Lịch hẹn hôm nay",
