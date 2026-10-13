@@ -4,9 +4,8 @@ import type { SourceRecord } from "@modules/domain/knowledge-sources"
 import { DocumentsErrorCode, InjectDocuments } from "@modules/integrations/documents"
 import type { DocumentsPort } from "@modules/integrations/documents"
 import { ok, refused } from "@modules/platform/primitives"
-import { InjectKnowledgeOptions } from "./knowledge.decorators"
-import type { KnowledgeOptions } from "./knowledge.options"
-import type { ReadOutcome } from "./knowledge.contracts"
+import { InjectDriveAccessSource } from "./knowledge.decorators"
+import type { DriveAccessSource, ReadOutcome } from "./knowledge.contracts"
 
 /** The part of the text of a link without its scheme, lower case, for comparing a title with its address. */
 const bare = (value: string): string =>
@@ -24,7 +23,7 @@ const nameOf = (path: string): string => path.replace(/^.*\//u, "")
 /** Turns a source into text by its kind: the note itself, an uploaded file, or the page a link points to. */
 export class SourceReaderService {
     constructor(
-        @InjectKnowledgeOptions() private readonly options: KnowledgeOptions,
+        @InjectDriveAccessSource() private readonly driveAccess: DriveAccessSource,
         @InjectDocuments() private readonly documents: DocumentsPort,
         private readonly sources: KnowledgeSourcesService,
     ) {}
@@ -56,7 +55,7 @@ export class SourceReaderService {
     /** The text of a link; a page's own title replaces the title that was made from the address. */
     private async readLink(source: SourceRecord): Promise<ReadOutcome> {
         const url = (source.sourceUrl ?? source.content).trim()
-        const drive = source.createdBy === null ? null : this.options.driveAccess.forWorkspace(source.workspaceId)
+        const drive = source.createdBy === null ? null : this.driveAccess.forWorkspace(source.workspaceId)
         const document = await this.documents.readLink(url, drive)
         const defaulted = source.title.trim() === "" || bare(source.title) === bare(url)
         return ok({

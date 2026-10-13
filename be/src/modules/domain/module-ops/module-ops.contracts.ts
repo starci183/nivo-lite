@@ -41,7 +41,7 @@ export interface ApprovalDecision {
     readonly workItemId: string
     /** The decision. */
     readonly decision: "approved" | "rejected"
-    /** The member who decides. */
+    /** The user id of the member who decides; the gate looks up their name and role. */
     readonly decidedBy: string
 }
 

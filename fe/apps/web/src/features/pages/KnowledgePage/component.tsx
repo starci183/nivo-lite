@@ -1,6 +1,7 @@
 import { PageContainer, Text, TextAction } from "@starci/grammar/common"
 import { KnowledgeAdd } from "@/components/blocks/KnowledgeAdd"
 import { KnowledgeAsk } from "@/components/blocks/KnowledgeAsk"
+import { KnowledgeDriveGrant } from "@/components/blocks/KnowledgeDriveGrant"
 import { KnowledgeLibrary } from "@/components/blocks/KnowledgeLibrary"
 import { KnowledgeSuggestions } from "@/components/blocks/KnowledgeSuggestions"
 import { PageHeading } from "@/components/composites/PageHeading"
@@ -56,6 +57,7 @@ export const KnowledgePageBase = (props: KnowledgePageBaseProps) => (
                     preset={props.props.addPreset}
                 />
             </div>
+            <KnowledgeDriveGrant />
             <KnowledgeLibrary module={props.props.module} />
             <KnowledgeAsk module={props.props.module} />
             <KnowledgeSuggestions />

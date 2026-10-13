@@ -1,6 +1,9 @@
 /** The scope of the Sheets connection: only files NIVO created, plus the account identity. */
 export const GOOGLE_SCOPE = "https://www.googleapis.com/auth/drive.file openid email"
 
+/** The scope of the Second Brain Drive read grant (a Google restricted scope), asked on top of the Sheets one. */
+export const DRIVE_READ_SCOPE = "https://www.googleapis.com/auth/drive.readonly openid email"
+
 /** The purpose a signed state carries for the Drive read grant; the Sheets connection has none. */
 export const DRIVE_PURPOSE = "drive_read"
 

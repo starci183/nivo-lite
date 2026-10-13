@@ -1,4 +1,5 @@
 export {
+    DECISIONS_DRAIN_SCHEDULER,
     DECISIONS_QUEUE,
     DecisionsJob,
     decisionsDedupeKey,

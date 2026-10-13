@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { builder, FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { ApprovalGate, TextGenerator } from "@modules/domain/module-ops"
+import { ApprovalGate, ModuleTextGenerator } from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -151,7 +151,7 @@ const build = async (entityManager: MockEntityManager) => {
     const words = mock<ShiftsTextService>()
     words.text.mockImplementation(text)
     words.week.mockImplementation((monday) => `week:${monday}`)
-    const generator = mock<TextGenerator>()
+    const generator = mock<ModuleTextGenerator>()
     generator.generate.mockResolvedValue({ ok: false, output: "" })
     const gate = mock<ApprovalGate>()
     gate.request.mockResolvedValue({ status: "done", workItemId: "work-1" })
@@ -163,7 +163,7 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: WorkspaceMembersService, useValue: members },
             { provide: ShiftsDataService, useValue: data },
             { provide: ShiftsTextService, useValue: words },
-            { provide: TextGenerator, useValue: generator },
+            { provide: ModuleTextGenerator, useValue: generator },
             { provide: ApprovalGate, useValue: gate },
         ],
     }).compile()

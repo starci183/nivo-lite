@@ -11,6 +11,7 @@ import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { ResponsibilitiesError, ResponsibilitiesErrorCode } from "./errors/responsibilities.error"
 import type {
+    NamedFollowUp,
     NewResponsibility,
     OptionalResponsibility,
     ResponsibilityListing,
@@ -18,11 +19,12 @@ import type {
     ResponsibilityScope,
     ResponsibilityStatus,
 } from "./responsibility-journal.contracts"
-import type { AgentNameRow, LeadNameRow } from "./persistence/responsibility-journal.rows"
+import type { AgentNameRow, LeadNameRow, ResponsibilityIdRow } from "./persistence/responsibility-journal.rows"
 import {
     FIND_AGENT_NAME,
     FIND_LEAD_NAME,
     FIND_OPEN_RESPONSIBILITY,
+    FIND_OPEN_TITLED_RESPONSIBILITY,
     FIND_RESPONSIBILITY,
     INSERT_RESPONSIBILITY,
     LIST_RESPONSIBILITIES,
@@ -73,6 +75,31 @@ export class ResponsibilityJournalService {
             },
             sales?.name ?? ctx.actor,
         )
+    }
+
+    /**
+     * Opens a follow-up owned by a person on the system's behalf (an automation), unless the customer already has an open one with
+     * the same title; answers true when it opened one.
+     */
+    async openNamed(workspaceId: string, task: NamedFollowUp): Promise<boolean> {
+        const open = await this.entityManager.query<Array<ResponsibilityIdRow>>(FIND_OPEN_TITLED_RESPONSIBILITY, [
+            workspaceId,
+            task.leadId,
+            task.title,
+        ])
+        if (open.length > 0) return false
+        await this.insert(
+            workspaceId,
+            {
+                lead_id: task.leadId,
+                title: task.title,
+                owner: "human",
+                next_action: task.nextAction,
+                due_at: task.dueAt,
+            },
+            task.ownerName,
+        )
+        return true
     }
 
     /** The workspace's responsibilities with their customer, open ones first. */

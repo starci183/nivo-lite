@@ -47,3 +47,21 @@ export interface WebhookTestResult {
     /** How long it took, in milliseconds. */
     readonly durationMs: number
 }
+
+/** What a business event carries to its receivers. */
+export interface WebhookEventData {
+    /** Any value the event carries. */
+    readonly [name: string]: unknown
+}
+
+/** One occurrence of a business event to publish to the subscribed webhooks. */
+export interface WebhookPublication {
+    /** The workspace the event happened in. */
+    readonly workspaceId: string
+    /** The event. */
+    readonly event: WebhookEvent
+    /** What it carries. */
+    readonly data: WebhookEventData
+    /** Names the occurrence: publishing it twice queues nothing twice. */
+    readonly dedupe: string
+}

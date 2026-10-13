@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { AgentsService } from "@modules/domain/agents"
-import { BusinessEventsService } from "@modules/domain/automations"
+import { AutomationBusinessEventsService, BusinessEventsService } from "@modules/domain/automations"
 import { EvidenceService } from "@modules/domain/decisions"
 import type {
     Performed,
@@ -36,7 +36,8 @@ export class ConfirmOrderPerformerService implements WorkPerformer {
         private readonly responsibilities: ResponsibilityJournalService,
         @InjectPromptWriter() private readonly deepseek: PromptWriter,
         private readonly evidence: EvidenceService,
-        private readonly events: BusinessEventsService,
+        private readonly events: AutomationBusinessEventsService,
+        private readonly leadEvents: BusinessEventsService,
     ) {}
 
     /** Drafts the order of the input (reading it with one model call only when the channel gave no amount) and finds its customer. */
@@ -95,7 +96,51 @@ export class ConfirmOrderPerformerService implements WorkPerformer {
             summary,
             evidence: textOf(proposal.fields.items) === "" ? null : textOf(proposal.fields.items),
         })
+        await this.publishConfirmed(ctx, order, proposal, by, amount)
         return { summary, evidence: "captured", href: leadHref(order.lead_id), lead_id: order.lead_id }
+    }
+
+    /** `order.confirmed` for the order, and `deal.won` for its customer when it has one: the pipelines and webhooks listening hear them. */
+    private async publishConfirmed(
+        ctx: WorkContext,
+        order: NonNullable<OptionalOrder>,
+        proposal: Proposal,
+        by: PerformedBy,
+        amount: number | null,
+    ): Promise<void> {
+        const buyer = order.lead_id === null ? null : await this.leads.find(ctx.workspaceId, order.lead_id)
+        const customer = buyer?.contact_name ?? textOf(proposal.fields.customer)
+        await this.events.publish(
+            ctx.workspaceId,
+            "order.confirmed",
+            {
+                order_id: order.id,
+                order_no: order.order_no,
+                lead_id: order.lead_id,
+                customer,
+                items: textOf(proposal.fields.items),
+                amount_vnd: amount,
+                channel: buyer?.channel ?? null,
+                confirmed_by: by.name,
+                status: "confirmed",
+            },
+            `order.confirmed:${order.id}`,
+        )
+        if (order.lead_id === null) return
+        await this.events.publish(
+            ctx.workspaceId,
+            "deal.won",
+            {
+                lead_id: order.lead_id,
+                name: customer,
+                company: buyer?.company ?? null,
+                channel: buyer?.channel ?? null,
+                need: buyer?.need ?? null,
+                order_no: order.order_no,
+                amount_vnd: amount,
+            },
+            `deal.won:${order.lead_id}`,
+        )
     }
 
     /** A rejection cancels the draft. */
@@ -193,7 +238,7 @@ export class ConfirmOrderPerformerService implements WorkPerformer {
             origin: item.origin,
         })
         await this.responsibilities.ensureFor(ctx, lead.id)
-        await this.events.leadCreated(ctx.workspaceId, lead, item.origin)
+        await this.leadEvents.leadCreated(ctx.workspaceId, lead, item.origin)
         await this.evidence.log(ctx, {
             lead_id: lead.id,
             work_item_id: item.id,
