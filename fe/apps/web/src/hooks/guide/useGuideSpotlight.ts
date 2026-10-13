@@ -3,8 +3,18 @@ import { useCallback, useEffect, useState } from "react"
 /**
  * After the guide sends someone to a page, the place it named (`data-guide="<target>"`) is scrolled into view and outlined for a
  * moment. The target is held in memory so it survives the client navigation; the element is waited for while the page streams in.
- * The outline is the `[data-guide-spotlight="on"]` rule of the global styles.
+ * The outline is drawn with the Tailwind utilities of SPOTLIGHT, added to the element and taken off again.
  */
+
+/** The utilities that outline the spotlighted element. */
+const SPOTLIGHT = [
+    "outline-2",
+    "outline-solid",
+    "outline-accent",
+    "outline-offset-4",
+    "rounded-xl",
+    "transition-[outline-color]",
+]
 
 const WAIT_MS = 5000
 const SHOW_MS = 2600
@@ -15,9 +25,9 @@ let queuedTarget: string | null = null
 
 /** Takes the queued target, leaving none behind. */
 const takeQueued = (): string | null => {
-    const queued = queuedTarget
+    const [taken] = [queuedTarget]
     queuedTarget = null
-    return queued
+    return taken
 }
 
 /**
@@ -37,9 +47,9 @@ export const useGuideSpotlight = (pathname: string): ((target: string | undefine
             if (element) {
                 const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
                 element.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "center" })
-                element.setAttribute("data-guide-spotlight", "on")
+                element.classList.add(...SPOTLIGHT)
                 outlined = element
-                timer = setTimeout(() => element.removeAttribute("data-guide-spotlight"), SHOW_MS)
+                timer = setTimeout(() => element.classList.remove(...SPOTLIGHT), SHOW_MS)
                 return
             }
             if (Date.now() - started < WAIT_MS) timer = setTimeout(look, LOOK_MS)
@@ -47,7 +57,7 @@ export const useGuideSpotlight = (pathname: string): ((target: string | undefine
         look()
         return () => {
             clearTimeout(timer)
-            outlined?.removeAttribute("data-guide-spotlight")
+            outlined?.classList.remove(...SPOTLIGHT)
         }
     }, [pathname, jumps])
     return useCallback((target, isHere) => {

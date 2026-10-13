@@ -88,3 +88,6 @@ engine/dist/
 /secrets.env
 /.secrets/
 scripts/.render-check.mjs
+
+# Jest coverage output written next to the root by per-suite runs; generated, never tracked.
+coverage-*/
