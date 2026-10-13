@@ -1,13 +1,12 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { useState, useTransition } from "react"
-import { ageOf, STAGE_KEYS, STAGE_ORDER, STAGE_TONES } from "@/hooks/leads"
+import { useState } from "react"
+import { ageOf, STAGE_KEYS, STAGE_ORDER, STAGE_TONES, useLeadActions, useLeadBoard } from "@/hooks/leads"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
-import { writeSuggestOwner } from "@/modules/db/leads/write-lead-actions"
 import { LEADS_ROUTES, leadPath, newLeadPath } from "@/modules/routes"
-import type { LeadListItem, LeadStageId, DataSlot } from "@/modules/types"
+import type { LeadListItem, LeadStageId } from "@/modules/types"
 import { LeadsBoardBase } from "./component"
 import type { BoardView, LeadRowView } from "./component"
 
@@ -15,10 +14,8 @@ const ALL = "all"
 
 /** The leads of the workspace as the page read them, and the search the page was opened with. */
 interface LeadsBoardProps {
-    readonly leads: DataSlot<ReadonlyArray<LeadListItem>>
-    /** The server clock, so server and browser agree on how long ago a lead arrived. */
-    readonly nowIso: string
     readonly initialQuery: string
+    readonly isLoading?: boolean
 }
 
 const isStage = (key: string): key is LeadStageId => STAGE_ORDER.some((stage) => stage === key)
@@ -33,15 +30,22 @@ export const LeadsBoard = (props: LeadsBoardProps) => {
     const [stage, setStage] = useState<string>(ALL)
     const [busyId, setBusyId] = useState<string | null>(null)
     const [failure, setFailure] = useState<{ readonly id: string; readonly text: string } | null>(null)
-    const [isPending, startTransition] = useTransition()
+    const data = useLeadBoard()
+    const actions = useLeadActions()
+    const isPending = actions.isPending
+    const [nowIso] = useState(() => new Date().toISOString())
 
     const agoOf = (iso: string): string => {
-        const age = ageOf(iso, props.nowIso)
+        const age = ageOf(iso, nowIso)
         if (age.unit === "now") return t("agoJustNow")
         if (age.unit === "minutes") return t("agoMinutes", { n: age.n })
         if (age.unit === "hours") return t("agoHours", { n: age.n })
         if (age.unit === "days") return t("agoDays", { n: age.n })
         return format.dateTime(new Date(iso), { dateStyle: "medium", timeStyle: "short" })
+    }
+    const failureOf = (leadId: string): string | null => {
+        if (failure?.id === leadId) return failure.text
+        return busyId === leadId ? actions.error : null
     }
     const rowOf = (lead: LeadListItem): LeadRowView => ({
         id: lead.id,
@@ -53,7 +57,7 @@ export const LeadsBoard = (props: LeadsBoardProps) => {
         stageLabel: t(STAGE_KEYS[lead.stage]),
         stageTone: STAGE_TONES[lead.stage],
         canPropose: lead.owner_name === null,
-        failure: failure?.id === lead.id ? failure.text : null,
+        failure: failureOf(lead.id),
     })
     const viewOf = (leads: ReadonlyArray<LeadListItem>): BoardView => {
         const needle = query.trim().toLowerCase()
@@ -76,16 +80,13 @@ export const LeadsBoard = (props: LeadsBoardProps) => {
             isFiltered: needle !== "" || stage !== ALL,
         }
     }
-    const slot = mapSlot(props.leads, viewOf)
+    const slot = mapSlot(props.isLoading ? { isLoading: true } : data.slot, viewOf)
 
     const propose = (leadId: string) => {
         setFailure(null)
         setBusyId(leadId)
-        startTransition(async () => {
-            const result = await writeSuggestOwner(leadId)
-            if (result.kind === "ok") router.refresh()
-            else setFailure({ id: leadId, text: result.code })
-            setBusyId(null)
+        void actions.suggestOwner(leadId).then((result) => {
+            if (result === undefined) setFailure({ id: leadId, text: t("loadFailedLead") })
         })
     }
 

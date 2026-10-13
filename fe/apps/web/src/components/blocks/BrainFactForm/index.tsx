@@ -1,28 +1,21 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { SCOPE_KEY, TYPE_KEY, useBrainCommand, useFactForm } from "@/hooks/brain"
-import type { FactPreset } from "@/hooks/brain"
-import type { CommandActions } from "@/hooks/knowledge"
-import { writeCommandWait } from "@/modules/db/knowledge/write-command-wait"
-import { writeCommand } from "@/modules/db/knowledge/write-command"
+import { SCOPE_KEY, TYPE_KEY, useBrainCommand, useBrainForm, useFactForm } from "@/hooks/brain"
 import { navigation } from "@/modules/i18n"
 import { KNOWLEDGE_ROUTES } from "@/modules/routes"
 import { FACT_SUBJECT_TYPES } from "@/modules/types"
-import type { BrainFact, BrainLens, FactScope, FactSubjectType } from "@/modules/types"
+import type { FactScope, FactSubjectType } from "@/modules/types"
 import { BrainFactFormBase } from "./component"
 
-/** Props for the connected fact form. */
+/** Props for the connected fact form: what the address asks of it. */
 interface BrainFactFormProps {
-    readonly workspaceId: string
-    /** Whether the address asks for the form to be open. */
-    readonly isOpen: boolean
-    /** The fact in force the form writes a new value for, or null for a new fact. */
-    readonly editing: BrainFact | null
-    /** The suggestion or customer question the form was opened from. */
-    readonly preset: FactPreset | undefined
-    /** The agents a restricted fact may be limited to. */
-    readonly lenses: ReadonlyArray<BrainLens>
+    /** The `fact` of the address: a new fact is being written. */
+    readonly fact: string | undefined
+    /** The `edit` of the address: the fact in force that gets a new value. */
+    readonly edit: string | undefined
+    /** The `answer` of the address: the customer question the fact answers. */
+    readonly answer: string | undefined
 }
 
 const SCOPES: ReadonlyArray<FactScope> = ["public", "internal", "restricted"]
@@ -32,41 +25,40 @@ const subjectTypeOf = (value: string | null, fallback: FactSubjectType): FactSub
 
 const scopeOf = (value: string, fallback: FactScope): FactScope => SCOPES.find((scope) => scope === value) ?? fallback
 
-const ACTIONS: CommandActions = { write: writeCommand, wait: writeCommandWait }
-
-/** The connected fact form: opens and closes through the address and sends the fact to the back end as a command. */
+/** The connected fact form: reads what the address asks for, opens and closes through the address and sends the fact to the back end as a mutation. */
 export const BrainFactForm = (props: BrainFactFormProps) => {
     const t = useTranslations("brain")
     const router = navigation.useRouter()
-    const form = useFactForm(props.editing, props.preset)
-    const command = useBrainCommand(props.workspaceId, ACTIONS)
+    const address = useBrainForm(props)
+    const form = useFactForm(address.editing, address.preset, address.formKey)
+    const command = useBrainCommand()
     const close = () => router.replace(KNOWLEDGE_ROUTES.brain)
     const submit = () => {
         if (!form.isComplete) return
-        command.send("fact.save", form.payload(props.preset?.gapId), { onResult: close })
+        command.send("fact.save", form.payload(address.preset?.gapId), { onResult: close })
     }
-    const note = command.note
     const { state } = form
+    if (!address.canWrite) return null
     return (
         <BrainFactFormBase
             props={{
                 title:
-                    props.editing === null
+                    address.editing === null
                         ? t("formTitleNew")
                         : t("formTitleEdit", {
-                              subject: props.editing.subjectLabel,
-                              attribute: props.editing.attributeLabel,
+                              subject: address.editing.subjectLabel,
+                              attribute: address.editing.attributeLabel,
                           }),
                 closeLabel: t("cancel"),
                 cancelLabel: t("cancel"),
                 saveLabel: t("save"),
                 failTitle: t("loadFailed"),
-                isOpen: props.isOpen,
+                isOpen: address.isOpen,
                 isPending: command.isPending,
                 question:
-                    props.preset?.question === undefined
+                    address.preset?.question === undefined
                         ? undefined
-                        : t("gapAnswerFor", { question: props.preset.question }),
+                        : t("gapAnswerFor", { question: address.preset.question }),
                 typeLabel: t("fSubjectType"),
                 typeOptions: FACT_SUBJECT_TYPES.map((type) => ({ id: type, label: t(TYPE_KEY[type]) })),
                 subjectLabel: t("fSubject"),
@@ -77,7 +69,7 @@ export const BrainFactForm = (props: BrainFactFormProps) => {
                 scopeLabel: t("fScope"),
                 scopeOptions: SCOPES.map((scope) => ({ id: scope, label: t(SCOPE_KEY[scope]) })),
                 modulesLabel: t("fModules"),
-                moduleOptions: props.lenses.map((lens) => ({ id: lens.module, label: lens.name })),
+                moduleOptions: address.lenses.map((lens) => ({ id: lens.module, label: lens.name })),
                 fromLabel: t("fValidFrom"),
                 toLabel: t("fValidTo"),
                 noteLabel: t("fNote"),
@@ -90,7 +82,6 @@ export const BrainFactForm = (props: BrainFactFormProps) => {
                 validFrom: state.validFrom,
                 validTo: state.validTo,
                 note: state.note,
-                error: note?.tone === "negative" ? t(note.text) : undefined,
             }}
             on={{
                 close,

@@ -129,12 +129,22 @@ SET status = 'error',
     updated_at = now()
 WHERE id = $1`
 
-/** The connections of the given providers whose scheduled sync is due, soonest first ($1 providers, $2 page size). */
-export const LIST_DUE_SYNCS = sql`SELECT id
-FROM public.connections
-WHERE provider = ANY($1::text[]) AND status <> 'disconnected' AND next_sync_at IS NOT NULL AND next_sync_at <= now()
-ORDER BY next_sync_at
-LIMIT $2`
+/** Claims the connections of the given providers whose scheduled sync is due: their next sync moves half an hour on, so a second tick does not queue them again, and the sync itself sets the real time ($1 providers, $2 page size). */
+export const CLAIM_DUE_SYNCS = sql`WITH due AS (
+    SELECT id
+    FROM public.connections
+    WHERE provider = ANY($1::text[]) AND status <> 'disconnected' AND next_sync_at IS NOT NULL AND next_sync_at <= now()
+    ORDER BY next_sync_at
+    LIMIT $2
+    FOR UPDATE SKIP LOCKED
+), claimed AS (
+    UPDATE public.connections AS c
+    SET next_sync_at = now() + interval '30 minutes'
+    FROM due
+    WHERE c.id = due.id
+    RETURNING c.id, c.workspace_id
+)
+SELECT id, workspace_id FROM claimed`
 
 /** Makes one SMTP connection the workspace default and every other one a spare ($1 workspace, $2 connection). */
 export const SET_DEFAULT_SMTP = sql`UPDATE public.connections

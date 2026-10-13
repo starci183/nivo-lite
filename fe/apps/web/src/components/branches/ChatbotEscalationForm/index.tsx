@@ -47,6 +47,7 @@ export const ChatbotEscalationForm = (props: ChatbotEscalationFormProps) => (
                 variant="secondary"
                 description={props.draftHint}
                 rows={4}
+                isDisabled={props.isAnswering}
                 value={props.draft}
                 onValueChange={props.onDraft}
             />
@@ -57,7 +58,7 @@ export const ChatbotEscalationForm = (props: ChatbotEscalationFormProps) => (
                 <Button
                     variant="primary"
                     isPending={props.isAnswering}
-                    isDisabled={props.draft.trim().length === 0}
+                    isDisabled={props.isAnswering || props.draft.trim().length === 0}
                     onPress={() => props.onAnswer(true)}
                 >
                     {props.sendLabel}

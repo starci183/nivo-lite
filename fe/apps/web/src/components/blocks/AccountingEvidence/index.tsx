@@ -1,10 +1,10 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { useState, useTransition } from "react"
+import { useState } from "react"
 import { digitsToNumber, moneyOf, vietnamToday } from "@/hooks/accounting"
 import { creditRecordsOf, invoiceRecordsOf, orderRecordsOf } from "@/hooks/accountingRecords"
-import { writeManualEvidence } from "@/modules/db/evidence/write-manual-evidence"
+import { useRecordManualEvidence } from "@/hooks/evidence"
 import { navigation } from "@/modules/i18n"
 import type { AccountingCredit, AccountingInvoice, AccountingOrder } from "@/modules/types"
 import { AccountingEvidenceBase } from "./component"
@@ -25,28 +25,20 @@ interface EvidenceFields {
     readonly note: string
 }
 
-/** How the last save ended: nothing yet, a refusal with its code, or "this evidence already exists". */
-type EvidenceStatus =
-    { readonly kind: "idle" } | { readonly kind: "failed"; readonly code: string } | { readonly kind: "duplicate" }
+/** How the last save ended: nothing yet, a failure the toast already reported, or "this evidence already exists". */
+type EvidenceStatus = { readonly kind: "idle" } | { readonly kind: "failed" } | { readonly kind: "duplicate" }
 
 const EMPTY_FIELDS: EvidenceFields = { amount: "", date: "", content: "", payer: "", note: "" }
-
-/** Catalog key of the message a refusal code stands for. */
-const FAILURE_KEYS: Readonly<Record<string, string>> = {
-    "evidence-amount": "errAmount",
-    "evidence-date": "errDate",
-    "evidence-content": "errContent",
-}
 
 /** The Evidence tab: credits, invoices and orders without an invoice, plus the manual evidence form. */
 export const AccountingEvidence = (props: AccountingEvidenceProps) => {
     const t = useTranslations("workbenchAccounting")
     const format = useFormatter()
     const router = navigation.useRouter()
+    const { record, isRecording } = useRecordManualEvidence()
     const [isFormOpen, setIsFormOpen] = useState(false)
     const [fields, setFields] = useState<EvidenceFields>(EMPTY_FIELDS)
     const [status, setStatus] = useState<EvidenceStatus>({ kind: "idle" })
-    const [isSaving, startSaving] = useTransition()
     const today = vietnamToday()
     const closeForm = () => {
         setIsFormOpen(false)
@@ -55,21 +47,19 @@ export const AccountingEvidence = (props: AccountingEvidenceProps) => {
     }
     const submitForm = () => {
         setStatus({ kind: "idle" })
-        startSaving(async () => {
-            const outcome = await writeManualEvidence({
-                amount: digitsToNumber(fields.amount) ?? 0,
-                date: fields.date === "" ? today : fields.date,
-                content: fields.content,
-                note: fields.note,
-                payer: fields.payer,
-            })
-            if (outcome.kind !== "ok") return setStatus({ kind: "failed", code: outcome.code })
-            if (outcome.value.duplicate) return setStatus({ kind: "duplicate" })
+        void record({
+            amount: digitsToNumber(fields.amount) ?? 0,
+            date: fields.date === "" ? today : fields.date,
+            content: fields.content,
+            note: fields.note,
+            payer: fields.payer,
+        }).then((outcome) => {
+            if (outcome === undefined) return setStatus({ kind: "failed" })
+            if (outcome.duplicate) return setStatus({ kind: "duplicate" })
             router.refresh()
             closeForm()
         })
     }
-    const failureKey = status.kind === "failed" ? (FAILURE_KEYS[status.code] ?? "loadFailedBody") : null
 
     return (
         <AccountingEvidenceBase
@@ -111,8 +101,8 @@ export const AccountingEvidence = (props: AccountingEvidenceProps) => {
                     content: fields.content,
                     payer: fields.payer,
                     note: fields.note,
-                    isSaving,
-                    error: failureKey === null ? null : t(failureKey),
+                    isSaving: isRecording,
+                    error: status.kind === "failed" ? t("loadFailedBody") : null,
                     notice: status.kind === "duplicate" ? t("manualDuplicate") : null,
                 },
             }}

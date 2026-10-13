@@ -1,8 +1,8 @@
 import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
-import { navigation } from "@/modules/i18n"
+import { useSmtpRowPasswordForm, useSmtpRowTestForm } from "@/hooks/rhf"
+import { useSmtpCommands } from "@/hooks/smtp-wizard"
 import type { Connection, RowSmtpView } from "@/modules/types"
-import { useLegacyConnectionCommands } from "./useLegacyConnectionCommands"
 
 /** The SMTP part of a row: what it shows and the commands behind its buttons. */
 export interface SmtpRowPanel {
@@ -19,41 +19,45 @@ export interface SmtpRowPanel {
 /** The panel state (which form is open, its fields, its result) and the three mailbox commands of an SMTP connection row. */
 export const useSmtpRowPanel = (connection: Connection, ownerEmail: string): SmtpRowPanel => {
     const t = useTranslations("connections")
-    const router = navigation.useRouter()
-    const commands = useLegacyConnectionCommands()
+    const commands = useSmtpCommands()
+    const testForm = useSmtpRowTestForm(ownerEmail)
+    const passwordForm = useSmtpRowPasswordForm()
     const [isPending, startTransition] = useTransition()
     const [panel, setPanel] = useState<"test" | "password" | null>(null)
-    const [to, setTo] = useState(ownerEmail)
-    const [password, setPassword] = useState("")
     const [note, setNote] = useState<RowSmtpView["note"]>(null)
+    const to = testForm.watch("to")
+    const password = passwordForm.watch("password")
 
     const close = () => {
         setPanel(null)
-        setPassword("")
+        passwordForm.reset({ password: "" })
     }
-    const test = () =>
-        startTransition(async () => {
-            setNote(null)
-            const result = await commands.sendSmtpTest(connection.id, to)
-            if (!result.ok) return setNote({ tone: "negative", text: result.error })
-            setNote({ tone: "affirmative", text: t("smtpTestOk", { to: result.data.to }) })
-            router.refresh()
-        })
-    const savePassword = () =>
-        startTransition(async () => {
-            setNote(null)
-            const result = await commands.changeSmtpPassword(connection.id, password)
-            if (!result.ok) return setNote({ tone: "negative", text: result.error })
-            close()
-            setNote({ tone: "affirmative", text: t("smtpPasswordChanged") })
-            router.refresh()
-        })
+    const test = testForm.handleSubmit(
+        (values) =>
+            startTransition(async () => {
+                setNote(null)
+                const result = await commands.sendTest(connection.id, values.to, false)
+                if (result.kind !== "ok") return setNote({ tone: "negative", text: result.message })
+                setNote({ tone: "affirmative", text: t("smtpTestOk", { to: result.value.to }) })
+            }),
+        (errors) => setNote({ tone: "negative", text: errors.to?.message ?? "" }),
+    )
+    const savePassword = passwordForm.handleSubmit(
+        (values) =>
+            startTransition(async () => {
+                setNote(null)
+                const result = await commands.changePassword(connection.id, values.password)
+                if (result.kind !== "ok") return setNote({ tone: "negative", text: result.message })
+                close()
+                setNote({ tone: "affirmative", text: t("smtpPasswordChanged") })
+            }),
+        (errors) => setNote({ tone: "negative", text: errors.password?.message ?? "" }),
+    )
     const makeDefault = () =>
         startTransition(async () => {
             setNote(null)
-            const result = await commands.setDefaultSmtp(connection.id)
-            if (!result.ok) return setNote({ tone: "negative", text: result.error })
-            router.refresh()
+            const result = await commands.setDefault(connection.id)
+            if (result.kind !== "ok") return setNote({ tone: "negative", text: result.message })
         })
 
     return {
@@ -78,15 +82,15 @@ export const useSmtpRowPanel = (connection: Connection, ownerEmail: string): Smt
             isPending,
             note,
         },
-        setTo,
-        setPassword,
+        setTo: (value) => testForm.setValue("to", value),
+        setPassword: (value) => passwordForm.setValue("password", value),
         toggle: (next) => {
             setNote(null)
             setPanel(panel === next ? null : next)
         },
         close,
-        test,
-        savePassword,
+        test: () => void test(),
+        savePassword: () => void savePassword(),
         makeDefault,
     }
 }

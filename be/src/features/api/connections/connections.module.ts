@@ -30,6 +30,10 @@ import { StartZaloConnectionHandler } from "./application/start-zalo-connection.
 import { TestWebhookConnectionHandler } from "./application/test-webhook-connection.handler"
 import { UpdateMoneyConnectionHandler } from "./application/update-money-connection.handler"
 import { UpdateWebhookEventsHandler } from "./application/update-webhook-events.handler"
+import { StartSmtpConnectionHandler } from "./application/start-smtp-connection.handler"
+import { SendSmtpTestHandler } from "./application/send-smtp-test.handler"
+import { ChangeSmtpPasswordHandler } from "./application/change-smtp-password.handler"
+import { SetDefaultSmtpHandler } from "./application/set-default-smtp.handler"
 import { WantConnectorHandler } from "./application/want-connector.handler"
 
 @Module({
@@ -65,6 +69,10 @@ import { WantConnectorHandler } from "./application/want-connector.handler"
         TestWebhookConnectionHandler,
         UpdateMoneyConnectionHandler,
         UpdateWebhookEventsHandler,
+        StartSmtpConnectionHandler,
+        SendSmtpTestHandler,
+        ChangeSmtpPasswordHandler,
+        SetDefaultSmtpHandler,
         WantConnectorHandler,
     ],
 })

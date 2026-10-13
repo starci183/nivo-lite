@@ -1,15 +1,7 @@
-import {
-    Alert,
-    Button,
-    Form,
-    Input,
-    NumberField,
-    Select,
-    SurfaceCard,
-    Text,
-    TextAction,
-    Textarea,
-} from "@starci/grammar/common"
+import { Alert, Button, Form, NumberField, SurfaceCard, Text, TextAction, Textarea } from "@starci/grammar/common"
+import { InboxSelectField } from "@/components/composites/InboxSelectField"
+import type { InboxSelectOption } from "@/components/composites/InboxSelectField"
+import { InboxTextField } from "@/components/composites/InboxTextField"
 import {
     EVENT_ID_INPUT_CLASS,
     EVENT_ID_ROW_CLASS,
@@ -20,12 +12,6 @@ import {
     STACK_CLASS,
     SUBMIT_ROW_CLASS,
 } from "./classNames"
-
-/** One option of a select. */
-export interface SimulatorOption {
-    readonly id: string
-    readonly label: string
-}
 
 /** What the form holds. */
 export interface SimulatorValues {
@@ -54,7 +40,7 @@ export interface InboxSimulatorBaseProps {
         readonly title: string
         readonly description: string
         readonly presetsLabel: string
-        readonly presets: ReadonlyArray<SimulatorOption>
+        readonly presets: ReadonlyArray<InboxSelectOption>
         readonly labels: Readonly<
             Record<
                 | "channel"
@@ -76,13 +62,15 @@ export interface InboxSimulatorBaseProps {
                 string
             >
         >
-        readonly channels: ReadonlyArray<SimulatorOption>
-        readonly kinds: ReadonlyArray<SimulatorOption>
+        readonly channels: ReadonlyArray<InboxSelectOption>
+        readonly kinds: ReadonlyArray<InboxSelectOption>
         readonly values: SimulatorValues
         readonly showItems: boolean
-        readonly nameError: string | undefined
+        readonly errors: Readonly<Partial<Record<keyof SimulatorValues, string | undefined>>>
         readonly failure: string | undefined
         readonly result: SimulatorResult | undefined
+        /** Where the owner sees what became of the input. */
+        readonly officeHref: string
         readonly isPending: boolean
     }
     readonly on: {
@@ -94,158 +82,172 @@ export interface InboxSimulatorBaseProps {
 }
 
 /** Inbound simulator: a labelled form plus one-click presets that only fill it. One primary action sends it into NIVO. */
-export const InboxSimulatorBase = ({ props, on }: InboxSimulatorBaseProps) => (
-    <SurfaceCard label={props.title} headingLevel={2}>
-        <div className={STACK_CLASS}>
-            <Text size="sm" tone="muted">
-                {props.description}
-            </Text>
-            <Text size="sm" weight="medium">
-                {props.presetsLabel}
-            </Text>
-            <div className={PRESETS_CLASS}>
-                {props.presets.map((preset) => (
-                    <Button key={preset.id} variant="outline" onPress={() => on.preset(preset.id)}>
-                        {preset.label}
-                    </Button>
-                ))}
-            </div>
-            <Form label={props.title} onSubmit={on.submit} isPending={props.isPending}>
-                <div className={FORM_GRID_CLASS}>
-                    <Select
-                        variant="secondary"
-                        label={props.labels.channel}
-                        name="channel"
-                        options={[...props.channels]}
-                        value={props.values.channel}
-                        isDisabled={props.isPending}
-                        onValueChange={(value) => on.change("channel", value ?? "")}
-                    />
-                    <Select
-                        variant="secondary"
-                        label={props.labels.kind}
-                        name="kind"
-                        options={[...props.kinds]}
-                        value={props.values.kind}
-                        isDisabled={props.isPending}
-                        onValueChange={(value) => on.change("kind", value ?? "")}
-                    />
-                    <Input
-                        id="sim-name"
-                        name="sender_name"
-                        label={props.labels.name}
-                        hint={props.labels.nameHint}
-                        variant="secondary"
-                        isRequired
-                        isDisabled={props.isPending}
-                        value={props.values.name}
-                        isError={props.nameError !== undefined}
-                        errorMessage={props.nameError}
-                        onValueChange={(value) => on.change("name", value)}
-                    />
-                    <Input
-                        id="sim-contact"
-                        name="sender_contact"
-                        label={props.labels.contact}
-                        variant="secondary"
-                        isDisabled={props.isPending}
-                        value={props.values.contact}
-                        onValueChange={(value) => on.change("contact", value)}
-                    />
-                    <div className={FORM_WIDE_CLASS}>
-                        <Textarea
-                            variant="secondary"
-                            label={props.labels.body}
-                            name="body"
-                            rows={3}
-                            isDisabled={props.isPending}
-                            value={props.values.body}
-                            onValueChange={(value) => on.change("body", value)}
-                        />
-                    </div>
-                    {props.showItems ? (
-                        <div className={FORM_WIDE_CLASS}>
-                            <Input
-                                id="sim-items"
-                                name="items"
-                                label={props.labels.items}
-                                variant="secondary"
-                                isDisabled={props.isPending}
-                                value={props.values.items}
-                                onValueChange={(value) => on.change("items", value)}
-                            />
-                        </div>
-                    ) : null}
-                    <NumberField
-                        variant="secondary"
-                        label={props.labels.amount}
-                        name="amount"
-                        minValue={0}
-                        step={1_000_000}
-                        formatOptions={{ maximumFractionDigits: 0 }}
-                        isDisabled={props.isPending}
-                        value={props.values.amount}
-                        onValueChange={(value) => on.change("amount", value)}
-                    />
-                    <Input
-                        id="sim-ref"
-                        name="external_ref"
-                        label={props.labels.reference}
-                        variant="secondary"
-                        isDisabled={props.isPending}
-                        value={props.values.reference}
-                        onValueChange={(value) => on.change("reference", value)}
-                    />
-                    <div className={EVENT_ID_ROW_CLASS}>
-                        <div className={EVENT_ID_INPUT_CLASS}>
-                            <Input
-                                id="sim-event-id"
-                                name="event_id"
-                                label={props.labels.eventId}
-                                hint={props.labels.eventIdHint}
-                                variant="secondary"
-                                isDisabled={props.isPending}
-                                value={props.values.eventId}
-                                onValueChange={(value) => on.change("eventId", value)}
-                            />
-                        </div>
-                        <Button variant="outline" isDisabled={props.isPending} onPress={on.newEventId}>
-                            {props.labels.eventIdNew}
+export const InboxSimulatorBase = (props: InboxSimulatorBaseProps) => {
+    const view = props.props
+    const on = props.on
+    const field = { isPending: view.isPending }
+    return (
+        <SurfaceCard label={view.title} headingLevel={2}>
+            <div className={STACK_CLASS}>
+                <Text size="sm" tone="muted">
+                    {view.description}
+                </Text>
+                <Text size="sm" weight="medium">
+                    {view.presetsLabel}
+                </Text>
+                <div className={PRESETS_CLASS}>
+                    {view.presets.map((preset) => (
+                        <Button
+                            key={preset.id}
+                            variant="outline"
+                            isDisabled={view.isPending}
+                            onPress={() => on.preset(preset.id)}
+                        >
+                            {preset.label}
                         </Button>
-                    </div>
-                    {props.failure === undefined ? null : (
-                        <div className={FORM_WIDE_CLASS}>
-                            <Alert title={props.labels.failTitle} description={props.failure} tone="negative" />
-                        </div>
-                    )}
-                    {props.result === undefined ? null : (
-                        <div className={FORM_WIDE_CLASS}>
-                            <Alert
-                                title={props.result.title}
-                                tone={props.result.tone}
-                                description={
-                                    <span className={RESULT_LINKS_CLASS}>
-                                        {props.result.lines.map((line) => (
-                                            <span key={line}>{line}</span>
-                                        ))}
-                                        {props.result.leadHref === null ? null : (
-                                            <TextAction href={props.result.leadHref}>
-                                                {props.labels.resultLead}
-                                            </TextAction>
-                                        )}
-                                        <TextAction href="/chat">{props.labels.resultOffice}</TextAction>
-                                    </span>
-                                }
-                            />
-                        </div>
-                    )}
-                    <div className={SUBMIT_ROW_CLASS}>
-                        <Button variant="primary" type="submit" isPending={props.isPending}>
-                            {props.labels.submit}
-                        </Button>
-                    </div>
+                    ))}
                 </div>
-            </Form>
-        </div>
-    </SurfaceCard>
-)
+                <Form label={view.title} onSubmit={on.submit} isPending={view.isPending}>
+                    <div className={FORM_GRID_CLASS}>
+                        <InboxSelectField
+                            {...field}
+                            name="channel"
+                            label={view.labels.channel}
+                            options={view.channels}
+                            value={view.values.channel}
+                            error={view.errors.channel}
+                            onChange={(value) => on.change("channel", value)}
+                        />
+                        <InboxSelectField
+                            {...field}
+                            name="kind"
+                            label={view.labels.kind}
+                            options={view.kinds}
+                            value={view.values.kind}
+                            error={view.errors.kind}
+                            onChange={(value) => on.change("kind", value)}
+                        />
+                        <InboxTextField
+                            {...field}
+                            id="sim-name"
+                            name="sender_name"
+                            label={view.labels.name}
+                            hint={view.labels.nameHint}
+                            isRequired
+                            value={view.values.name}
+                            error={view.errors.name}
+                            onChange={(value) => on.change("name", value)}
+                        />
+                        <InboxTextField
+                            {...field}
+                            id="sim-contact"
+                            name="sender_contact"
+                            label={view.labels.contact}
+                            value={view.values.contact}
+                            error={view.errors.contact}
+                            onChange={(value) => on.change("contact", value)}
+                        />
+                        <div className={FORM_WIDE_CLASS}>
+                            <Textarea
+                                variant="secondary"
+                                label={view.labels.body}
+                                name="body"
+                                rows={3}
+                                isDisabled={view.isPending}
+                                value={view.values.body}
+                                isInvalid={view.errors.body !== undefined}
+                                errorMessage={view.errors.body}
+                                onValueChange={(value) => on.change("body", value)}
+                            />
+                        </div>
+                        {view.showItems ? (
+                            <div className={FORM_WIDE_CLASS}>
+                                <InboxTextField
+                                    {...field}
+                                    id="sim-items"
+                                    name="items"
+                                    label={view.labels.items}
+                                    value={view.values.items}
+                                    error={view.errors.items}
+                                    onChange={(value) => on.change("items", value)}
+                                />
+                            </div>
+                        ) : null}
+                        <NumberField
+                            variant="secondary"
+                            label={view.labels.amount}
+                            name="amount"
+                            minValue={0}
+                            step={1_000_000}
+                            formatOptions={{ maximumFractionDigits: 0 }}
+                            isDisabled={view.isPending}
+                            value={view.values.amount}
+                            isInvalid={view.errors.amount !== undefined}
+                            errorMessage={view.errors.amount}
+                            onValueChange={(value) => on.change("amount", value)}
+                        />
+                        <InboxTextField
+                            {...field}
+                            id="sim-ref"
+                            name="external_ref"
+                            label={view.labels.reference}
+                            value={view.values.reference}
+                            error={view.errors.reference}
+                            onChange={(value) => on.change("reference", value)}
+                        />
+                        <div className={EVENT_ID_ROW_CLASS}>
+                            <div className={EVENT_ID_INPUT_CLASS}>
+                                <InboxTextField
+                                    {...field}
+                                    id="sim-event-id"
+                                    name="event_id"
+                                    label={view.labels.eventId}
+                                    hint={view.labels.eventIdHint}
+                                    value={view.values.eventId}
+                                    error={view.errors.eventId}
+                                    onChange={(value) => on.change("eventId", value)}
+                                />
+                            </div>
+                            <Button variant="outline" isDisabled={view.isPending} onPress={on.newEventId}>
+                                {view.labels.eventIdNew}
+                            </Button>
+                        </div>
+                        {view.failure === undefined ? null : (
+                            <div className={FORM_WIDE_CLASS}>
+                                <Alert title={view.labels.failTitle} description={view.failure} tone="negative" />
+                            </div>
+                        )}
+                        {view.result === undefined ? null : (
+                            <div className={FORM_WIDE_CLASS}>
+                                <Alert
+                                    title={view.result.title}
+                                    tone={view.result.tone}
+                                    description={
+                                        <div className={RESULT_LINKS_CLASS}>
+                                            {view.result.lines.map((line) => (
+                                                <Text key={line} size="sm">
+                                                    {line}
+                                                </Text>
+                                            ))}
+                                            {view.result.leadHref === null ? null : (
+                                                <TextAction href={view.result.leadHref}>
+                                                    {view.labels.resultLead}
+                                                </TextAction>
+                                            )}
+                                            <TextAction href={view.officeHref}>{view.labels.resultOffice}</TextAction>
+                                        </div>
+                                    }
+                                />
+                            </div>
+                        )}
+                        <div className={SUBMIT_ROW_CLASS}>
+                            <Button variant="primary" type="submit" isPending={view.isPending}>
+                                {view.labels.submit}
+                            </Button>
+                        </div>
+                    </div>
+                </Form>
+            </div>
+        </SurfaceCard>
+    )
+}

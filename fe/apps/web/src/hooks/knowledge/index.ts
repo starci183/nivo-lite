@@ -1,24 +1,26 @@
 export {
     AGENT_MODULES,
-    DOCUMENT_IDEAS,
     DOCUMENT_STATUS_TONE,
     DOCUMENT_STATUS_KEYS,
-    ideasFor,
-    instanceOptions,
     isAgentModule,
     isDocumentActive,
     isReadyNote,
     moduleFilterOf,
     noteKeyOf,
-    topicsOf,
 } from "@/modules/documents"
-export type { AgentModule, CommandActions, InstanceOption, QueueActions, QueueItem } from "@/modules/documents"
-export { uploadDocument } from "./knowledge.shared"
+export type { AgentModule, QueueItem } from "@/modules/documents"
+export type { ModuleKey } from "@/modules/catalog"
 export { useAddDocuments } from "./useAddDocuments"
+export { useAddInstances } from "./useAddInstances"
+export { useAskModule } from "./useAskModule"
+export { useKnowledgeIdeas } from "./useKnowledgeIdeas"
 export type { AddMode } from "./useAddDocuments"
 export type { AddPreset } from "./useBatchOptions"
 export { useAskKnowledge } from "./useAskKnowledge"
-export { useKnowledgeRealtime } from "./useKnowledgeRealtime"
+export { useKnowledgeSource } from "./useKnowledgeSource"
+export { useKnowledgeSources } from "./useKnowledgeSources"
 export { useLibraryCommands } from "./useLibraryCommands"
-export type { LibraryActions } from "./useLibraryCommands"
+export { useNivoKnowledge } from "./useNivoKnowledge"
+export { useQueueActions } from "./useQueueActions"
 export { useSourceCommands } from "./useSourceCommands"
+export { useWorkspaceMember } from "./useWorkspaceMember"

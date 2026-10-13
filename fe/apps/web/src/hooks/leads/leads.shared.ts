@@ -1,5 +1,13 @@
 import type { BadgeTone } from "@starci/grammar/common"
-import type { LeadJourney, LeadPrimaryAction, LeadStageId, ResponsibilityRecord, StepStatus } from "@/modules/types"
+import type { LeadRecordType } from "@/modules/api"
+import type {
+    LeadJourney,
+    LeadPrimaryAction,
+    LeadRecord,
+    LeadStageId,
+    ResponsibilityRecord,
+    StepStatus,
+} from "@/modules/types"
 
 /** The stages in journey order, as the tabs and the stage choice list them. */
 export const STAGE_ORDER: ReadonlyArray<LeadStageId> = ["new", "qualified", "proposal", "won", "lost"]
@@ -87,3 +95,16 @@ export const ageOf = (iso: string, nowIso: string): { readonly unit: AgeUnit; re
     const days = Math.floor(hours / 24)
     return days < 30 ? { unit: "days", n: days } : { unit: "older", n: days }
 }
+
+/** The lead record every lead read carries, with the stage narrowed to a known one (an unknown stage reads as new). */
+export const leadRecordOf = (lead: LeadRecordType): LeadRecord => ({
+    id: lead.id,
+    contact_name: lead.contactName,
+    company: lead.company,
+    channel: lead.channel,
+    need: lead.need,
+    stage: STAGE_ORDER.find((stage) => stage === lead.stage) ?? "new",
+    context_summary: lead.contextSummary ?? null,
+    origin: lead.origin ?? null,
+    created_at: lead.createdAt,
+})

@@ -1,33 +1,20 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { SCOPE_KEY, SCOPE_TONE, SOURCE_KEY, TYPE_KEY, useBrainCommand } from "@/hooks/brain"
-import type { CommandActions } from "@/hooks/knowledge"
-import { writeCommandWait } from "@/modules/db/knowledge/write-command-wait"
-import { writeCommand } from "@/modules/db/knowledge/write-command"
+import { SCOPE_KEY, SCOPE_TONE, SOURCE_KEY, TYPE_KEY, useBrainBoard, useBrainCommand } from "@/hooks/brain"
 import { KNOWLEDGE_ROUTES } from "@/modules/routes"
 import type { BrainFact } from "@/modules/types"
 import type { KnowledgeRowView } from "@/components/composites/KnowledgeRows"
 import { BrainFactsBase } from "./component"
 
-/** Props for the connected facts list. */
-interface BrainFactsProps {
-    readonly workspaceId: string
-    readonly facts: ReadonlyArray<BrainFact>
-    readonly canWrite: boolean
-    /** True while the page loads: the heading stays and the list is skeleton rows. */
-    readonly isLoading?: boolean
-}
-
-const ACTIONS: CommandActions = { write: writeCommand, wait: writeCommandWait }
-
 /** The connected facts list: the facts in force and the scheduled ones, with a new value and a stop. */
-export const BrainFacts = (props: BrainFactsProps) => {
+export const BrainFacts = () => {
     const t = useTranslations("brain")
     const format = useFormatter()
-    const command = useBrainCommand(props.workspaceId, ACTIONS)
+    const command = useBrainCommand()
+    const board = useBrainBoard()
     const dayOf = (iso: string): string => format.dateTime(new Date(iso), { dateStyle: "medium" })
-    const shown = props.facts.filter(
+    const shown = board.facts.filter(
         (fact) => (fact.status === "active" || fact.status === "scheduled") && fact.proposalKind === "set",
     )
     const validityLines = (fact: BrainFact): ReadonlyArray<string> => {
@@ -48,7 +35,7 @@ export const BrainFacts = (props: BrainFactsProps) => {
             { label: t(SOURCE_KEY[fact.sourceKind]), tone: "neutral" },
             ...scheduledBadge(fact),
         ],
-        actions: props.canWrite
+        actions: board.canWrite
             ? [
                   { id: "edit", label: t("editValue"), href: `${KNOWLEDGE_ROUTES.brain}?edit=${fact.id}` },
                   {
@@ -61,7 +48,6 @@ export const BrainFacts = (props: BrainFactsProps) => {
               ]
             : [],
     })
-    const note = command.note
     return (
         <BrainFactsBase
             props={{
@@ -71,15 +57,13 @@ export const BrainFacts = (props: BrainFactsProps) => {
                         title: t("tabFacts"),
                         description: t("reviewEmptyBody"),
                         failTitle: t("loadFailed"),
-                        error: note?.tone === "negative" ? t(note.text) : undefined,
-                        notice: note?.tone === "affirmative" ? note.text : undefined,
-                        action: props.canWrite
+                        action: board.canWrite
                             ? { id: "add", label: t("addFact"), href: `${KNOWLEDGE_ROUTES.brain}?fact=new` }
                             : undefined,
                     },
                     label: t("tabFacts"),
                     rows: shown.map(rowOf),
-                    isLoading: props.isLoading ?? false,
+                    isLoading: board.isLoading,
                     isPending: command.isPending,
                     emptyTitle: t("factsEmpty"),
                 },

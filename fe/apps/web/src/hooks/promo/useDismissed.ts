@@ -1,4 +1,5 @@
 import { useCallback, useState, useSyncExternalStore } from "react"
+import { readDismissed, subscribeDismissed, writeDismissed } from "@/modules/dismissals"
 import { dismissKey } from "@/modules/promo"
 
 /** What {@link useDismissed} answers. */
@@ -11,41 +12,17 @@ export interface Dismissal {
     readonly dismiss: () => void
 }
 
-const CHANGE_EVENT = "nivo-promo-dismissed"
-
-const subscribe = (onChange: () => void): (() => void) => {
-    window.addEventListener("storage", onChange)
-    window.addEventListener(CHANGE_EVENT, onChange)
-    return () => {
-        window.removeEventListener("storage", onChange)
-        window.removeEventListener(CHANGE_EVENT, onChange)
-    }
-}
-
-const readStored = (id: string): string => {
-    try {
-        return window.localStorage.getItem(dismissKey(id)) === "1" ? "1" : "0"
-    } catch {
-        return "0"
-    }
-}
-
 /** Remembers a dismissed promo card in localStorage; safe when storage is blocked (the dismissal then lasts for this view only). */
 export const useDismissed = (id: string): Dismissal => {
     const stored = useSyncExternalStore(
-        subscribe,
-        () => readStored(id),
+        subscribeDismissed,
+        () => (readDismissed(dismissKey(id)) ? "1" : "0"),
         () => null,
     )
     const [inView, setInView] = useState(false)
     const dismiss = useCallback(() => {
         setInView(true)
-        try {
-            window.localStorage.setItem(dismissKey(id), "1")
-            window.dispatchEvent(new Event(CHANGE_EVENT))
-        } catch {
-            setInView(true)
-        }
+        writeDismissed(dismissKey(id))
     }, [id])
     return { ready: stored !== null, dismissed: inView || stored === "1", dismiss }
 }

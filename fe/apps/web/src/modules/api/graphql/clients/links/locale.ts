@@ -14,8 +14,8 @@ export const createAttachLocaleLink = () =>
         const locale = localeOfCookie()
         return {
             headers: {
-                ...previous.headers,
                 ...(locale === undefined ? {} : { [GraphQLHeadersKey.AcceptLanguage]: locale }),
+                ...previous.headers,
             },
         }
     })

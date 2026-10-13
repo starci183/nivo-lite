@@ -7,11 +7,13 @@ type AutomationsForbiddenProps = {
     readonly body: string
     readonly backLabel: string
     readonly backHref: string
+    /** `bare` draws only the content, for a board that already sits inside a page container. */
+    readonly bare?: boolean
 }
 
 /** The friendly 403 staff see instead of the automations board. */
-export const AutomationsForbidden = (props: AutomationsForbiddenProps) => (
-    <PageContainer measure="product">
+export const AutomationsForbidden = (props: AutomationsForbiddenProps) => {
+    const content = (
         <div className={PAGE_CLASS}>
             <SectionHeader level={1} title={props.title} description={props.body} />
             <div className={LINK_ROW_CLASS}>
@@ -20,5 +22,6 @@ export const AutomationsForbidden = (props: AutomationsForbiddenProps) => (
                 </Button>
             </div>
         </div>
-    </PageContainer>
-)
+    )
+    return props.bare ? content : <PageContainer measure="product">{content}</PageContainer>
+}

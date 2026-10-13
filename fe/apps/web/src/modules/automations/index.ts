@@ -1,5 +1,4 @@
 export { automationBoardOf } from "./board"
-export { automationFaultText } from "./faults"
 export {
     automationFiltersFor,
     automationScopeOf,
@@ -9,3 +8,5 @@ export {
     visibleAutomations,
 } from "./status"
 export type { AutomationFilterKey, AutomationStatus, AutomationValues } from "./status"
+export { automationCardViewOf, automationsOverviewOf, googleAccountViewOf } from "./wire"
+export type { AutomationsOverviewView } from "./wire"

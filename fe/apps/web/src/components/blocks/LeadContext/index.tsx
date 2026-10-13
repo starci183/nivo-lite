@@ -1,20 +1,17 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { useEffect, useState, useTransition } from "react"
+import { useEffect, useState } from "react"
+import { useLeadActions, useLeadJourney } from "@/hooks/leads"
 import { bulletIconOf, toBullets, toSignals } from "@/hooks/leadJourney"
-import { loadingSlot, useSlotLabels } from "@/hooks/slot"
-import { navigation } from "@/modules/i18n"
-import { writeRefreshContext } from "@/modules/db/leads/write-lead-actions"
+import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import type { LeadJourney, DataSlot } from "@/modules/types"
 import { LeadContextBase } from "./component"
 import type { ContextView } from "./component"
 
 /** The lead the card describes; null while it loads. */
 interface LeadContextProps {
-    readonly detail: LeadJourney | null
-    /** The label of the channel the lead came through, already translated when it is a known one. */
-    readonly channelLabel: string
+    readonly leadId?: string
 }
 
 const COPIED_MS = 2000
@@ -23,13 +20,14 @@ const COPIED_MS = 2000
 export const LeadContext = (props: LeadContextProps) => {
     const t = useTranslations("lead")
     const tc = useTranslations("common")
-    const slotLabels = useSlotLabels()
-    const format = useFormatter()
-    const router = navigation.useRouter()
-    const [isPending, startTransition] = useTransition()
     const [error, setError] = useState<string | null>(null)
     const [isCopied, setIsCopied] = useState(false)
-    const detail = props.detail
+    const slotLabels = useSlotLabels()
+    const format = useFormatter()
+    const query = useLeadJourney(props.leadId)
+    const actions = useLeadActions()
+    const isPending = actions.isPending
+    const detail = query.detail
     const lead = detail?.lead ?? null
     const summary = lead?.context_summary ?? null
     const hasBrief = summary !== null && summary.trim().length > 0
@@ -44,11 +42,7 @@ export const LeadContext = (props: LeadContextProps) => {
     const refresh = () => {
         if (lead === null) return
         setError(null)
-        startTransition(async () => {
-            const result = await writeRefreshContext(lead.id)
-            if (result.kind === "ok") router.refresh()
-            else setError(result.kind === "unavailable" ? result.code : t("somethingWrong"))
-        })
+        void actions.refreshContext(lead.id)
     }
     const copy = () => {
         if (lead === null || !hasBrief) return
@@ -67,7 +61,7 @@ export const LeadContext = (props: LeadContextProps) => {
         return {
             contact: loaded.lead.contact_name,
             company: loaded.lead.company,
-            channel: props.channelLabel,
+            channel: query.channelLabel,
             captured: stamp(loaded.lead.created_at),
             need: loaded.lead.need,
             hasBrief,
@@ -81,13 +75,13 @@ export const LeadContext = (props: LeadContextProps) => {
             hasConversation: loaded.events.some((event) => event.kind === "lead.captured" && event.evidence !== null),
         }
     }
-    const slot: DataSlot<ContextView> = detail === null ? loadingSlot() : { items: viewOf(detail) }
+    const slot: DataSlot<ContextView> = mapSlot(query.slot, viewOf)
 
     return (
         <LeadContextBase
             props={{
                 slot,
-                error,
+                error: error ?? actions.error,
                 isPending,
                 labels: {
                     title: t("contextTitle"),
