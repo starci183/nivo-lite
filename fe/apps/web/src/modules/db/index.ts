@@ -59,9 +59,6 @@ export { readLeadDetail, readLeads, readOpenResponsibilities, readResponsibiliti
 export { readMessages } from "./overview/read-feed"
 export { readOfficePayload } from "./pagedata/read-page-data"
 export type { OfficePayload } from "./pagedata/pagedata.mapper"
-export { readAutomations } from "./automations/read-automations"
-export type { GoogleAccount } from "./automations/automations.view"
-export type { AutomationCommandView } from "./automations/write-automation-command"
 export {
     readBillingWorkspace,
     readBillingWorkspaces,
