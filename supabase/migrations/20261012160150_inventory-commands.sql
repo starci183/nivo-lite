@@ -60,7 +60,7 @@ begin
   return v_id;
 end $$;
 
-revoke all on function public.inventory_submit(uuid, text, jsonb) from public, anon;
+revoke execute on function public.inventory_submit(uuid, text, jsonb) from public, anon;
 grant execute on function public.inventory_submit(uuid, text, jsonb) to authenticated;
 
 -- The back end settles a command once: the first answer stays.

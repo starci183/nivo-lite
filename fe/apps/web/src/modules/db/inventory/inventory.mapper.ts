@@ -1,4 +1,3 @@
-import { z } from "zod"
 import type { Database, Json } from "../../../../../../../supabase/types/database.types"
 import type {
     InventoryWorkbenchData,
@@ -66,28 +65,74 @@ export interface InventoryContext {
 }
 
 /** The commands a member may submit, as the database function accepts them. */
-export const inventoryCommandSchema = z.object({
-    workspaceId: z.uuid(),
-    kind: z.enum([
-        "save-item",
-        "set-item-active",
-        "save-supplier",
-        "save-recipe",
-        "delete-recipe",
-        "save-location",
-        "import-paste",
-        "apply-starter",
-        "adjust-stock",
-        "stock-take",
-        "transfer-stock",
-        "draft-low-stock",
-        "create-po",
-        "update-po-draft",
-        "request-send",
-        "cancel-po",
-        "receive-po",
-    ]),
-})
+const COMMAND_KINDS: ReadonlyArray<string> = [
+    "save-item",
+    "set-item-active",
+    "save-supplier",
+    "save-recipe",
+    "delete-recipe",
+    "save-location",
+    "import-paste",
+    "apply-starter",
+    "adjust-stock",
+    "stock-take",
+    "transfer-stock",
+    "draft-low-stock",
+    "create-po",
+    "update-po-draft",
+    "request-send",
+    "cancel-po",
+    "receive-po",
+]
+
+const fieldsOf = (value: unknown): Readonly<Record<string, unknown>> =>
+    typeof value === "object" && value !== null ? Object.fromEntries(Object.entries(value)) : {}
+
+const isJsonObject = (value: unknown): value is { [key: string]: Json | undefined } =>
+    typeof value === "object" && value !== null && !Array.isArray(value)
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu
+
+/** A command the member submitted, checked. */
+interface CommandInput {
+    readonly workspaceId: string
+    readonly kind: string
+    readonly input: Json
+}
+
+type CommandParse = { readonly success: true; readonly data: CommandInput } | { readonly success: false }
+
+/** Bounds a submitted command before it reaches the database function: a workspace id, a known kind and a JSON object. */
+export const inventoryCommandSchema = {
+    safeParse: (value: unknown): CommandParse => {
+        const fields = fieldsOf(value)
+        const { workspaceId, kind, input } = fields
+        if (typeof workspaceId !== "string" || typeof kind !== "string" || !UUID.test(workspaceId))
+            return { success: false }
+        if (!COMMAND_KINDS.includes(kind) || !isJsonObject(input)) return { success: false }
+        return { success: true, data: { workspaceId, kind, input } }
+    },
+}
+
+/** A decision on a waiting work item, checked. */
+interface DecisionInput {
+    readonly workItemId: string
+    readonly note: string | null
+}
+
+type DecisionParse = { readonly success: true; readonly data: DecisionInput } | { readonly success: false }
+
+const NOTE_MAX = 2000
+
+/** Bounds a decision before it reaches the flow: a work item id and a bounded note or edited draft. */
+export const decisionSchema = {
+    safeParse: (value: unknown): DecisionParse => {
+        const { workItemId, note } = fieldsOf(value)
+        if (typeof workItemId !== "string" || !UUID.test(workItemId)) return { success: false }
+        if (note !== null && (typeof note !== "string" || note.length > NOTE_MAX)) return { success: false }
+        return { success: true, data: { workItemId, note } }
+    },
+}
 
 const OPEN_STATUSES: ReadonlyArray<string> = ["draft", "waiting_approval", "sent", "partially_received"]
 

@@ -9,15 +9,24 @@ export interface InventoryDecisions {
     readonly reject: (workItemId: string, note: string) => Promise<InventoryResult<null>>
 }
 
-/** The Server Actions the connected block entry hands in. */
+/** The Server Actions the connected block entry hands in: each takes one decision object. */
 export interface DecisionActions {
-    readonly approveWork: InventoryDecisions["approve"]
-    readonly rejectWork: InventoryDecisions["reject"]
+    readonly approveWork: (decision: {
+        readonly workItemId: string
+        readonly note: string | null
+    }) => Promise<InventoryResult<null>>
+    readonly rejectWork: (decision: {
+        readonly workItemId: string
+        readonly note: string | null
+    }) => Promise<InventoryResult<null>>
 }
 
 /** The approve and reject calls of the waiting decisions. */
 export const useInventoryDecisions = (actions: DecisionActions): InventoryDecisions =>
     useMemo<InventoryDecisions>(
-        () => ({ approve: actions.approveWork, reject: actions.rejectWork }),
-        [actions.approveWork, actions.rejectWork],
+        () => ({
+            approve: (workItemId, editedDraft) => actions.approveWork({ workItemId, note: editedDraft }),
+            reject: (workItemId, note) => actions.rejectWork({ workItemId, note }),
+        }),
+        [actions],
     )

@@ -25,7 +25,11 @@ import type {
 export type InventoryResult<Value> = DbOutcome<Value>
 
 /** The one Server Action that submits a command and waits for its answer, handed in by the connected block. */
-export type InventorySend = (workspaceId: string, kind: string, input: Json) => Promise<InventoryResult<Json>>
+export type InventorySend = (command: {
+    readonly workspaceId: string
+    readonly kind: string
+    readonly input: Json
+}) => Promise<InventoryResult<Json>>
 
 /** The commands of the inventory screens, each typed to what it takes and answers. */
 export interface InventoryCommands {

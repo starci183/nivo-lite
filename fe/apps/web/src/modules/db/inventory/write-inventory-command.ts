@@ -44,21 +44,17 @@ const settled = async (commandId: string, waitedMs: number): Promise<DbOutcome<J
  * Submits one inventory command of a workspace and waits for the answer. The database function proves the caller is an active member and
  * starts the job; the back end runs it as that member and writes the answer on the command row. A refusal carries its sentence as the failure code.
  */
-export const writeInventoryCommand = async (
-    workspaceId: string,
-    kind: string,
-    input: Json,
-): Promise<DbOutcome<Json>> => {
+export const writeInventoryCommand = async (input: unknown): Promise<DbOutcome<Json>> => {
     const principal = await getPrincipal()
     if (principal.kind !== "ok") return dbFailure("refused", "principal")
-    const parsed = inventoryCommandSchema.safeParse({ workspaceId, kind })
+    const parsed = inventoryCommandSchema.safeParse(input)
     if (!parsed.success) return dbFailure("invalid", "inventory-command")
     const client = await createServerDbClient()
     const submitted = toOutcome(
         await client.rpc("inventory_submit", {
             p_workspace: parsed.data.workspaceId,
             p_kind: parsed.data.kind,
-            p_input: input,
+            p_input: parsed.data.input,
         }),
     )
     if (submitted.kind !== "ok") return submitted
