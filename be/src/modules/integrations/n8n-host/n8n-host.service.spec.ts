@@ -1,7 +1,11 @@
+import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
+import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { N8nHostErrorCode } from "./errors/n8n-host.error"
 import type { HostCommand, N8nHostShell } from "./n8n-host.contracts"
+import { N8N_HOST_OPTIONS, N8N_HOST_SHELL } from "./n8n-host.decorators"
+import type { N8nHostOptions } from "./n8n-host.options"
 import { N8nHostLogEvent } from "./n8n-host.log-events"
 import { N8nHostService } from "./n8n-host.service"
 
@@ -10,7 +14,15 @@ const FILES = [
     { name: "Debt", nodes: [] },
 ]
 
-const build = (listings: ReadonlyArray<string>, files: ReadonlyArray<unknown> = FILES) => {
+const OPTIONS: N8nHostOptions = {
+    host: undefined,
+    user: "nivo",
+    keyPath: "/k",
+    knownHostsPath: undefined,
+    container: "n8n-1",
+}
+
+const build = async (listings: ReadonlyArray<string>, files: ReadonlyArray<unknown> = FILES) => {
     const commands: Array<HostCommand> = []
     let listed = 0
     const shell = mock<N8nHostShell>()
@@ -22,21 +34,21 @@ const build = (listings: ReadonlyArray<string>, files: ReadonlyArray<unknown> = 
     })
     shell.workflows.mockResolvedValue(files)
     const logger = mock<Logger>()
-    const options = {
-        host: undefined,
-        user: "nivo",
-        keyPath: "/k",
-        knownHostsPath: undefined,
-        container: "n8n-1",
-    }
-    const host = new N8nHostService(shell, options, logger)
-    return { host, commands, logger }
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            N8nHostService,
+            { provide: N8N_HOST_SHELL, useValue: shell },
+            { provide: N8N_HOST_OPTIONS, useValue: OPTIONS },
+            { provide: LOGGER, useValue: logger },
+        ],
+    }).compile()
+    return { host: moduleRef.get(N8nHostService), commands, logger }
 }
 
 describe("N8nHostService", () => {
     describe("sync", () => {
         it("plans an update for a known name and a create for a new one, and stops at a dry run", async () => {
-            const { host, commands, logger } = build(["7|Daily"])
+            const { host, commands, logger } = await build(["7|Daily"])
 
             const steps = await host.sync({ dryRun: true, restart: true, local: false })
 
@@ -49,7 +61,7 @@ describe("N8nHostService", () => {
         })
 
         it("imports once, activates each workflow and restarts n8n", async () => {
-            const { host, commands } = build(["7|Daily", "7|Daily\n8|Debt"])
+            const { host, commands } = await build(["7|Daily", "7|Daily\n8|Debt"])
 
             const steps = await host.sync({ dryRun: false, restart: true, local: true })
 
@@ -72,7 +84,7 @@ describe("N8nHostService", () => {
         })
 
         it("skips the restart when asked", async () => {
-            const { host, commands } = build(["", "1|Daily\n2|Debt"])
+            const { host, commands } = await build(["", "1|Daily\n2|Debt"])
 
             const steps = await host.sync({ dryRun: false, restart: false, local: false })
 
@@ -81,7 +93,7 @@ describe("N8nHostService", () => {
         })
 
         it("fails when a workflow is missing after the import", async () => {
-            const { host } = build(["", "1|Daily"])
+            const { host } = await build(["", "1|Daily"])
 
             await expect(host.sync({ dryRun: false, restart: true, local: false })).rejects.toMatchObject({
                 code: N8nHostErrorCode.WorkflowMissing,
@@ -89,7 +101,7 @@ describe("N8nHostService", () => {
         })
 
         it("refuses a sync with nothing to import", async () => {
-            const { host } = build([], [])
+            const { host } = await build([], [])
 
             await expect(host.sync({ dryRun: true, restart: true, local: false })).rejects.toMatchObject({
                 code: N8nHostErrorCode.NoWorkflows,
