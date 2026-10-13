@@ -13,6 +13,8 @@ import { RunAutomationCommandQueueModule } from "@features/jobs/run-automation-c
 import { RunAutomationTickQueueModule } from "@features/jobs/run-automation-tick"
 import { AgentToolsHttpModule } from "@features/api/agent-tools"
 import { AgentsHttpModule } from "@features/api/agents"
+import { ApiKeysGraphqlModule } from "@features/api/api-keys"
+import { OverviewGraphqlModule } from "@features/api/overview"
 import { DecisionsHttpModule } from "@features/api/decisions"
 import { RunDecisionsQueueModule } from "@features/jobs/run-decisions"
 import { GenerateWithAgentQueueModule } from "@features/jobs/generate-with-agent"
@@ -53,6 +55,7 @@ import { LoyaltyProgramsModule } from "@modules/domain/loyalty-programs"
 import { LoyaltyRewardsModule } from "@modules/domain/loyalty-rewards"
 import { LOYALTY_ERROR_KINDS, LOYALTY_MESSAGES, LoyaltyModule } from "@modules/domain/loyalty"
 import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
+import { OverviewModule } from "@modules/domain/overview"
 import { CassoHttpModule } from "@features/webhooks/casso"
 import { PayosHttpModule } from "@features/webhooks/payos"
 import { SepayHttpModule } from "@features/webhooks/sepay"
@@ -360,10 +363,7 @@ const NO_CORRECTIONS: CorrectionSource = { recent: () => Promise.resolve([]) }
 const NO_DRIVE_ACCESS: DriveAccessSource = { forWorkspace: () => null }
 
 @Global()
-@Module({
-    providers: [{ provide: VIDEO_ASSETS, useExisting: SUPABASE_STORAGE }],
-    exports: [VIDEO_ASSETS],
-})
+@Module({ providers: [{ provide: VIDEO_ASSETS, useExisting: SUPABASE_STORAGE }], exports: [VIDEO_ASSETS] })
 /** Binds the file store the render job uses to the Supabase storage integration. */
 class VideoAssetsBindingModule {}
 
@@ -567,11 +567,7 @@ export class AppModule {
                     ],
                     ...options.queue,
                 }),
-                JobsModule.register({
-                    isGlobal: true,
-                    connection: PRIMARY_ENTITY_MANAGER,
-                    ...options.jobs,
-                }),
+                JobsModule.register({ isGlobal: true, connection: PRIMARY_ENTITY_MANAGER, ...options.jobs }),
                 SupabaseModule.register({ isGlobal: true, ...options.supabase }),
                 IdentityModule.register({ isGlobal: true, verifyAccessToken }),
                 ContractsModule.register({ isGlobal: true }),
@@ -718,6 +714,7 @@ export class AppModule {
                 ModulesModule.register({ isGlobal: true, categories: MODULE_CATEGORIES, catalog: MODULE_CATALOG }),
                 ModulesHttpModule,
                 ApiKeysModule.register({ isGlobal: true }),
+                OverviewModule.register({ isGlobal: true }),
                 PublicApiModule.register({ isGlobal: true }),
                 PaymentOrdersModule.register({ isGlobal: true }),
                 BillingModule.register({ isGlobal: true, ...options.billing }),
@@ -757,6 +754,8 @@ export class AppModule {
                 LoyaltyTillHttpModule,
                 WorkspacesHttpModule,
                 WorkspacesGraphqlModule,
+                ApiKeysGraphqlModule,
+                OverviewGraphqlModule,
                 ExtractKnowledgeFactsQueueModule,
                 RunBrainCommandQueueModule,
                 IndexKnowledgeSourceQueueModule,
