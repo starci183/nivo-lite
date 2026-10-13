@@ -2,12 +2,9 @@ import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
-import type { Query } from "../__generated__/schema"
+import type { AdminHealthQuery } from "../__generated__/graphql"
 
-/** The response of the `adminHealth` query: the typed payload straight from the back end contract. */
-export type QueryAdminHealthResponse = Pick<Query, "adminHealth">
-
-const query1: TypedDocumentNode<QueryAdminHealthResponse> = gql`
+const query1: TypedDocumentNode<AdminHealthQuery> = gql`
     query AdminHealth {
         adminHealth {
             signups {
@@ -60,7 +57,7 @@ enum QueryAdminHealth {
     Query1 = "query1",
 }
 
-const queryMap: Record<QueryAdminHealth, TypedDocumentNode<QueryAdminHealthResponse>> = {
+const queryMap: Record<QueryAdminHealth, TypedDocumentNode<AdminHealthQuery>> = {
     [QueryAdminHealth.Query1]: query1,
 }
 

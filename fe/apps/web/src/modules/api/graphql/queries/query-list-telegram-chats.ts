@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryListTelegramChatsArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { ListTelegramChatsQuery, ListTelegramChatsQueryVariables } from "../__generated__/graphql"
 
 /** The input of the `listTelegramChats` query. */
-type QueryListTelegramChatsRequest = QueryListTelegramChatsArgs["input"]
+type QueryListTelegramChatsRequest = WireInput<ListTelegramChatsQueryVariables["input"]>
 
 /** The response of the `listTelegramChats` query. */
-type QueryListTelegramChatsResponse = Pick<Query, "listTelegramChats">
+type QueryListTelegramChatsResponse = ListTelegramChatsQuery
 
 const query1: TypedDocumentNode<QueryListTelegramChatsResponse, InputVariables<QueryListTelegramChatsRequest>> = gql`
     query ListTelegramChats($input: ListTelegramChatsInput!) {

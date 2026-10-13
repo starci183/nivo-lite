@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryLessonMiningStatusArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { LessonMiningStatusQuery, LessonMiningStatusQueryVariables } from "../__generated__/graphql"
 
 /** The response of the `lessonMiningStatus` query: the typed payload straight from the back end contract. */
-type QueryLessonMiningStatusResponse = Pick<Query, "lessonMiningStatus">
+type QueryLessonMiningStatusResponse = LessonMiningStatusQuery
 
 /** The input of the `lessonMiningStatus` query. */
-type QueryLessonMiningStatusRequest = QueryLessonMiningStatusArgs["input"]
+type QueryLessonMiningStatusRequest = WireInput<LessonMiningStatusQueryVariables["input"]>
 
 const query1: TypedDocumentNode<QueryLessonMiningStatusResponse, InputVariables<QueryLessonMiningStatusRequest>> = gql`
     query LessonMiningStatus($input: LessonMiningStatusInput!) {

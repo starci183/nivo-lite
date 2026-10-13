@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryMetaConnectionArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { MetaConnectionQuery, MetaConnectionQueryVariables } from "../__generated__/graphql"
 
 /** The variables of the `metaConnection` query. */
-export type QueryMetaConnectionRequest = QueryMetaConnectionArgs["input"]
+type QueryMetaConnectionRequest = WireInput<MetaConnectionQueryVariables["input"]>
 
 /** The response of the `metaConnection` query: the typed payload straight from the back end contract. */
-type QueryMetaConnectionResponse = Pick<Query, "metaConnection">
+type QueryMetaConnectionResponse = MetaConnectionQuery
 
 const query1: TypedDocumentNode<QueryMetaConnectionResponse, InputVariables<QueryMetaConnectionRequest>> = gql`
     query MetaConnection($input: GetMetaConnectionInput!) {

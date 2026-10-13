@@ -1,16 +1,13 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryAgentDashboardArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { LeadGenAgentDashboardQuery, LeadGenAgentDashboardQueryVariables } from "../__generated__/graphql"
 
 /** The generated shared dashboard contract selected for Lead Gen. */
-type QueryLeadGenAgentDashboardRequest = QueryAgentDashboardArgs["input"]
+type QueryLeadGenAgentDashboardRequest = WireInput<LeadGenAgentDashboardQueryVariables["input"]>
 
-/** The QueryLeadGenAgentDashboardResponse of this operation, straight from the generated schema. */
-export type QueryLeadGenAgentDashboardResponse = Pick<Query, "agentDashboard">
-
-type Document = TypedDocumentNode<QueryLeadGenAgentDashboardResponse, InputVariables<QueryLeadGenAgentDashboardRequest>>
+type Document = TypedDocumentNode<LeadGenAgentDashboardQuery, InputVariables<QueryLeadGenAgentDashboardRequest>>
 
 const query1: Document = gql`
     query LeadGenAgentDashboard($input: AgentDashboardInput!) {

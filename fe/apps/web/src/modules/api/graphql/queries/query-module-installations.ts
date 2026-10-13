@@ -2,10 +2,10 @@ import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
-import type { Query } from "../__generated__/schema"
+import type { ModuleInstallationsQuery } from "../__generated__/graphql"
 
 /** The response of the `moduleInstallations` query: the typed payload straight from the back end contract. */
-type QueryModuleInstallationsResponse = Pick<Query, "moduleInstallations">
+type QueryModuleInstallationsResponse = ModuleInstallationsQuery
 
 const query1: TypedDocumentNode<QueryModuleInstallationsResponse> = gql`
     query ModuleInstallations {

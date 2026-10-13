@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryAgentDashboardArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { ChatbotAgentDashboardQuery, ChatbotAgentDashboardQueryVariables } from "../__generated__/graphql"
 
 /** The input of the `agentDashboard` query. */
-type QueryChatbotAgentDashboardRequest = QueryAgentDashboardArgs["input"]
+type QueryChatbotAgentDashboardRequest = WireInput<ChatbotAgentDashboardQueryVariables["input"]>
 
 /** The response of the `agentDashboard` query. */
-type QueryChatbotAgentDashboardResponse = Pick<Query, "agentDashboard">
+type QueryChatbotAgentDashboardResponse = ChatbotAgentDashboardQuery
 
 type Document = TypedDocumentNode<QueryChatbotAgentDashboardResponse, InputVariables<QueryChatbotAgentDashboardRequest>>
 

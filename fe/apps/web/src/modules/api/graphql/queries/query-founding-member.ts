@@ -2,10 +2,10 @@ import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
-import type { Query } from "../__generated__/schema"
+import type { FoundingMemberQuery } from "../__generated__/graphql"
 
 /** The generated workspace founding-member query response. */
-type QueryFoundingMemberResponse = Pick<Query, "foundingMember">
+type QueryFoundingMemberResponse = FoundingMemberQuery
 
 type Document = TypedDocumentNode<QueryFoundingMemberResponse>
 

@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryLeadGenCommentStatusArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { LeadGenCommentStatusQuery, LeadGenCommentStatusQueryVariables } from "../__generated__/graphql"
 
 /** The workspace-scoped status lookup and its generated response. */
-type QueryLeadGenCommentStatusRequest = QueryLeadGenCommentStatusArgs["input"]
+type QueryLeadGenCommentStatusRequest = WireInput<LeadGenCommentStatusQueryVariables["input"]>
 
 /** The QueryLeadGenCommentStatusResponse of this operation, straight from the generated schema. */
-type QueryLeadGenCommentStatusResponse = Pick<Query, "leadGenCommentStatus">
+type QueryLeadGenCommentStatusResponse = LeadGenCommentStatusQuery
 
 type Document = TypedDocumentNode<QueryLeadGenCommentStatusResponse, InputVariables<QueryLeadGenCommentStatusRequest>>
 

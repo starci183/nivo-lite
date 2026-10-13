@@ -2,10 +2,10 @@ import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
-import type { Query } from "../__generated__/schema"
+import type { ApiKeysQuery } from "../__generated__/graphql"
 
 /** The response of the `apiKeys` query: the typed payload straight from the back end contract. */
-type QueryApiKeysResponse = Pick<Query, "apiKeys">
+type QueryApiKeysResponse = ApiKeysQuery
 
 const query1: TypedDocumentNode<QueryApiKeysResponse> = gql`
     query ApiKeys {

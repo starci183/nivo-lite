@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryConnectionFirstEventArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { ConnectionFirstEventQuery, ConnectionFirstEventQueryVariables } from "../__generated__/graphql"
 
 /** The variables of the `connectionFirstEvent` query. */
-export type QueryConnectionFirstEventRequest = QueryConnectionFirstEventArgs["input"]
+type QueryConnectionFirstEventRequest = WireInput<ConnectionFirstEventQueryVariables["input"]>
 
 /** The response of the `connectionFirstEvent` query: the typed payload straight from the back end contract. */
-type QueryConnectionFirstEventResponse = Pick<Query, "connectionFirstEvent">
+type QueryConnectionFirstEventResponse = ConnectionFirstEventQuery
 
 const query1: TypedDocumentNode<
     QueryConnectionFirstEventResponse,

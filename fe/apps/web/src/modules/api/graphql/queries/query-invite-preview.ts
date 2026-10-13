@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createNoAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryInvitePreviewArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { InvitePreviewQuery, InvitePreviewQueryVariables } from "../__generated__/graphql"
 
 /** The input of the `invitePreview` query. */
-export type QueryInvitePreviewRequest = QueryInvitePreviewArgs["input"]
+export type QueryInvitePreviewRequest = WireInput<InvitePreviewQueryVariables["input"]>
 
 /** The response of the `invitePreview` query: the typed payload straight from the back end contract. */
-type QueryInvitePreviewResponse = Pick<Query, "invitePreview">
+type QueryInvitePreviewResponse = InvitePreviewQuery
 
 type Document = TypedDocumentNode<QueryInvitePreviewResponse, InputVariables<QueryInvitePreviewRequest>>
 
