@@ -31,3 +31,12 @@ SELECT id FROM held`
 export const INSERT_UNROUTED_EVENT = sql`INSERT INTO public.inbound_events (workspace_id, channel, kind, origin, sender_name, body, event_id, dedupe_key)
 VALUES ($1, $2, 'message', 'live', $3, $4, $5, $6)
 ON CONFLICT (workspace_id, dedupe_key) DO NOTHING`
+
+/** Hands a finished sale to the order chain as an inbound order, once per sale ($1 workspace, $2 origin, $3 customer, $4 contact, $5 body, $6 amount, $7 sale ref, $8 lead or null); answers a row only when it was new. */
+export const INSERT_ORDER_HANDOFF = sql`WITH created AS (
+    INSERT INTO public.inbound_events (workspace_id, channel, kind, origin, sender_name, sender_contact, body, amount_vnd, external_ref, dedupe_key, lead_id)
+    VALUES ($1, 'manual', 'order', $2, $3, $4, $5, $6, $7, 'order:' || $7, $8)
+    ON CONFLICT (workspace_id, dedupe_key) DO NOTHING
+    RETURNING id
+)
+SELECT id FROM created`

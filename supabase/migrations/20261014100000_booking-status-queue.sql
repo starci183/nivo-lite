@@ -1,6 +1,6 @@
 -- The side effects of a booking that only the back end can do: reminders to plan, the cancellation and no-show fees, the hand-off of a finished booking to
--- the order chain, the notice to the customer. The web app changes a booking through row level security or the desk functions and never calls the back
--- end, so the change itself sends the work: an AFTER trigger puts one message per event on the booking_status queue (pgmq, through job_enqueue so the
+-- the order chain, the notice to the customer. A booking changes through the back end (its GraphQL mutations and the chat jobs) or, for an operator, by hand in SQL; whichever
+-- way, the change itself sends the work: an AFTER trigger puts one message per event on the booking_status queue (pgmq, through job_enqueue so the
 -- outbox row keeps the audit trail), and the apply-booking-status job of the back end consumes it.
 --   created  a new booking (the public page, the desk, a chat)
 --   status   the status changed (confirm, done, no-show, cancel from the desk are plain updates)

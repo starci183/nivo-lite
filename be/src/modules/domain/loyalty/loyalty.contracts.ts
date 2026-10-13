@@ -359,11 +359,3 @@ export interface ApiPromoParams extends ApiCall {
     /** Who the promotion is for. */
     readonly segment: Segment
 }
-
-/** The loyalty command a queue message names. */
-export interface LoyaltyCommandRef {
-    /** The workspace of the command. */
-    readonly workspaceId: string
-    /** The `loyalty_commands` row to run. */
-    readonly commandId: string
-}

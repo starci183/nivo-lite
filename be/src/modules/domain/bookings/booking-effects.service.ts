@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { BookingRemindersService } from "@modules/domain/booking-reminders"
 import { EventsService } from "@modules/domain/events"
+import { InboundEventsService } from "@modules/domain/inbound-events"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -12,13 +13,12 @@ import type { BookingEffects, BookingEvent, BookingNotifier, BookingSettings } f
 import { InjectBookingNotifier } from "./bookings.decorators"
 import {
     CLAIM_EFFECT,
-    INSERT_ORDER_HANDOFF,
     RELEASE_EFFECT,
     SELECT_BOOKING_FOR_EFFECTS,
     SET_BOOKING_FEE,
 } from "./persistence/booking-effects.sql"
 import type { EffectsRow } from "./persistence/booking.rows"
-import { cancelFeeOf, noticeMark, noticeOf } from "./policies/booking-effects.policy"
+import { feeOf, noticeMark, noticeOf, remindersOf } from "./policies/booking-effects.policy"
 import type { NoticeKind } from "./policies/booking-effects.policy"
 import { localDate, localHhmm } from "./policies/zoned-time.policy"
 
@@ -47,10 +47,12 @@ export class BookingEffectsService {
         private readonly models: BookingModelService,
         private readonly reminders: BookingRemindersService,
         private readonly events: EventsService,
+        private readonly inbound: InboundEventsService,
     ) {}
 
     /** Applies the effects of one booking event. */
     async apply(event: BookingEvent): Promise<BookingEffects> {
+        if (event.workspaceId === "" || event.bookingId === "") return NO_EFFECTS
         const settings = await this.models.settings(event.workspaceId)
         const applied = await this.entityManager.transaction((manager) => this.inTransaction(manager, event, settings))
         if (applied === null) return NO_EFFECTS
@@ -87,7 +89,7 @@ export class BookingEffectsService {
         if (closed) await this.logEvidence(manager, event, row)
         return {
             row,
-            effects: { found: true, reminders: live ? "planned" : closed ? "stopped" : "none", feeVnd, handedOff },
+            effects: { found: true, reminders: remindersOf(live, closed), feeVnd, handedOff },
         }
     }
 
@@ -97,12 +99,7 @@ export class BookingEffectsService {
         row: EffectsRow,
         settings: BookingSettings,
     ): Promise<number> {
-        const fee =
-            row.status === "cancelled"
-                ? cancelFeeOf(row, settings.cancelWindowHours, settings.lateCancelFeePct)
-                : row.status === "no_show"
-                  ? settings.noShowFeeVnd
-                  : 0
+        const fee = feeOf(row, settings)
         if (fee <= 0) return row.cancel_fee_vnd
         const set = await manager.query<Array<{ id: string }>>(SET_BOOKING_FEE, [
             event.workspaceId,
@@ -112,24 +109,26 @@ export class BookingEffectsService {
         return set.length > 0 ? fee : row.cancel_fee_vnd
     }
 
-    private async handOff(
+    private handOff(
         manager: EntityManager,
         event: BookingEvent,
         row: EffectsRow,
         settings: BookingSettings,
     ): Promise<boolean> {
-        if (!settings.handoffOrder || row.price_vnd === null || row.price_vnd <= 0) return false
-        const inserted = await manager.query<Array<{ id: string }>>(INSERT_ORDER_HANDOFF, [
-            event.workspaceId,
-            row.origin,
-            row.customer_name,
-            row.customer_phone ?? row.customer_email,
-            this.messages.get("bookings.handoff.body", { service: row.service_name }, STORED_LOCALE),
-            row.price_vnd,
-            event.bookingId,
-            row.lead_id,
-        ])
-        return inserted.length > 0
+        if (!settings.handoffOrder || row.price_vnd === null || row.price_vnd <= 0) return Promise.resolve(false)
+        return this.inbound.handOffOrder(
+            {
+                workspaceId: event.workspaceId,
+                origin: row.origin,
+                sender: row.customer_name,
+                contact: row.customer_phone ?? row.customer_email,
+                body: this.messages.get("bookings.handoff.body", { service: row.service_name }, STORED_LOCALE),
+                amountVnd: row.price_vnd,
+                ref: event.bookingId,
+                leadId: row.lead_id,
+            },
+            manager,
+        )
     }
 
     private async logEvidence(manager: EntityManager, event: BookingEvent, row: EffectsRow): Promise<void> {

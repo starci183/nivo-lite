@@ -5,10 +5,3 @@ export { BookingsModule } from "./bookings.module"
 export { BookingOverviewService } from "./booking-overview.service"
 export { BookingPublicService } from "./booking-public.service"
 export { BookingEffectsService } from "./booking-effects.service"
-export type {
-    BookingEffects,
-    BookingEvent,
-    BookingEventKind,
-    BookingNotice,
-    BookingNotifier,
-} from "./bookings.contracts"

@@ -5,10 +5,11 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InboundEventsError, InboundEventsErrorCode } from "./errors/inbound-events.error"
 import { bankDedupeKey } from "./inbound-dedupe.policy"
-import type { BankPaymentEvent, BankPaymentRecorded, UnroutedMessage } from "./inbound-events.contracts"
+import type { BankPaymentEvent, BankPaymentRecorded, OrderHandoff, UnroutedMessage } from "./inbound-events.contracts"
 import type { EventIdRow } from "./persistence/inbound-events.rows"
 import {
     BUMP_DUPLICATE_EVENT,
+    INSERT_ORDER_HANDOFF,
     HOLD_EVENT_FOR_OWNER,
     INSERT_BANK_EVENT,
     INSERT_UNROUTED_EVENT,
@@ -63,5 +64,20 @@ export class InboundEventsService {
     /** Holds an inbound event for the owner's check until an agent matches it; an event already past that stage is left as it is. */
     async holdForOwnerCheck(eventId: string): Promise<void> {
         await this.entityManager.query(HOLD_EVENT_FOR_OWNER, [eventId])
+    }
+
+    /** Hands a finished sale to the order chain, inside the caller's transaction; the same sale twice is one order. Answers whether it was new. */
+    async handOffOrder(order: OrderHandoff, manager: EntityManager): Promise<boolean> {
+        const rows = await manager.query<Array<{ id: string }>>(INSERT_ORDER_HANDOFF, [
+            order.workspaceId,
+            order.origin,
+            order.sender,
+            order.contact,
+            order.body,
+            order.amountVnd,
+            order.ref,
+            order.leadId,
+        ])
+        return rows.length > 0
     }
 }

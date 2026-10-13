@@ -8,6 +8,7 @@ import {
     BUMP_DUPLICATE_EVENT,
     HOLD_EVENT_FOR_OWNER,
     INSERT_BANK_EVENT,
+    INSERT_ORDER_HANDOFF,
     INSERT_UNROUTED_EVENT,
 } from "./persistence/inbound-events.sql"
 
@@ -119,6 +120,45 @@ describe("InboundEventsService", () => {
             await events.holdForOwnerCheck("event-1")
 
             expect(tx.em.query).toHaveBeenCalledWith(HOLD_EVENT_FOR_OWNER, ["event-1"])
+        })
+    })
+
+    describe("handOffOrder", () => {
+        it.each([
+            ["a newly recorded order", [{ id: "event-order-1" }], true],
+            ["an order already recorded", [], false],
+        ] as const)("answers whether %s was created in the caller's transaction", async (_, rows, created) => {
+            const { events, tx } = await build([])
+            const manager = mockEntityManager({ query: [INSERT_ORDER_HANDOFF, rows] })
+
+            await expect(
+                events.handOffOrder(
+                    {
+                        workspaceId: "ws-1",
+                        origin: "live",
+                        sender: "Mai",
+                        contact: "84912345678",
+                        body: "Haircut",
+                        amountVnd: 200000,
+                        ref: "booking:b-1",
+                        leadId: "lead-1",
+                    },
+                    manager,
+                ),
+            ).resolves.toBe(created)
+
+            expect(manager.query).toHaveBeenCalledTimes(1)
+            expect(manager.query).toHaveBeenCalledWith(INSERT_ORDER_HANDOFF, [
+                "ws-1",
+                "live",
+                "Mai",
+                "84912345678",
+                "Haircut",
+                200000,
+                "booking:b-1",
+                "lead-1",
+            ])
+            expect(tx.em.query).not.toHaveBeenCalled()
         })
     })
 })

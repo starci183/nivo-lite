@@ -14,12 +14,10 @@ export class ApplyStep implements JobStep {
 
     /**
      * Records the step with the token this worker holds FIRST, so a stale token stops here before any effect; then applies the change. Every
-     * effect keeps a mark on the booking, so a repeated delivery changes nothing twice. A payload that is not a booking change is dropped.
+     * effect keeps a mark on the booking, so a repeated delivery changes nothing twice. A payload that is not a booking change finds no booking and does nothing.
      */
     async run(job: ClaimedJob): Promise<void> {
         await this.claims.advance({ jobId: job.jobId, expectedFencingToken: job.fencingToken, step: "apply" })
-        const payload = bookingStatusPayloadOf(job.payload)
-        if (payload === null) return
-        await this.effects.apply({ workspaceId: payload.workspaceId, bookingId: payload.bookingId, kind: payload.kind })
+        await this.effects.apply(bookingStatusPayloadOf(job.payload))
     }
 }

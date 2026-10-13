@@ -1,4 +1,10 @@
-import type { BookingEventKind } from "../bookings.contracts"
+import type {
+    BookingEffects,
+    BookingEventKind,
+    BookingSettings,
+    CancelFeeFacts,
+    ClosedBookingFacts,
+} from "../bookings.contracts"
 
 const HOUR_MS = 3_600_000
 
@@ -13,16 +19,7 @@ export const isLateCancel = (startMs: number, cancelledMs: number | null, window
     cancelledMs !== null && startMs - cancelledMs < windowHours * HOUR_MS
 
 /** The fee of a cancellation: the late-cancel percentage of the price when the customer cancelled late, otherwise none. An owner's own cancellation is free. */
-export const cancelFeeOf = (
-    row: {
-        readonly price_vnd: number | null
-        readonly cancel_reason: string | null
-        readonly start_ms: number
-        readonly cancelled_ms: number | null
-    },
-    windowHours: number,
-    feePct: number,
-): number => {
+export const cancelFeeOf = (row: CancelFeeFacts, windowHours: number, feePct: number): number => {
     if (row.cancel_reason !== null && OWNER_REASONS.includes(row.cancel_reason)) return 0
     if (row.price_vnd === null || row.price_vnd <= 0 || feePct <= 0) return 0
     return isLateCancel(row.start_ms, row.cancelled_ms, windowHours) ? Math.round((row.price_vnd * feePct) / 100) : 0
@@ -38,3 +35,15 @@ export const noticeOf = (kind: BookingEventKind, status: string): NoticeKind | n
 /** The mark that keeps one notice from going out twice for the same state of the booking. */
 export const noticeMark = (notice: NoticeKind, rescheduleCount: number): string =>
     notice === "moved" ? `notice:moved:${rescheduleCount}` : `notice:${notice}`
+
+/** What happened to the reminders of a booking in this state. */
+export const remindersOf = (live: boolean, closed: boolean): BookingEffects["reminders"] => {
+    if (live) return "planned"
+    return closed ? "stopped" : "none"
+}
+
+/** The fee a closed booking owes: the late-cancel fee of a cancellation, the no-show fee of a no-show, otherwise none. */
+export const feeOf = (row: ClosedBookingFacts, settings: BookingSettings): number => {
+    if (row.status === "cancelled") return cancelFeeOf(row, settings.cancelWindowHours, settings.lateCancelFeePct)
+    return row.status === "no_show" ? settings.noShowFeeVnd : 0
+}

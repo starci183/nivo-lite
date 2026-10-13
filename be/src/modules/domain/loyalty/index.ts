@@ -1,8 +1,5 @@
 export { LOYALTY_ERROR_KINDS } from "./errors/loyalty.error"
 export { LoyaltyApiService } from "./loyalty-api.service"
-export { LoyaltyCommandsService } from "./loyalty-commands.service"
-export type { LoyaltyCommandOutcome } from "./loyalty-commands.service"
-export type { LoyaltyCommandRef } from "./loyalty.contracts"
 export { LoyaltyMembersService } from "./loyalty-members.service"
 export { LoyaltyOverviewService } from "./loyalty-overview.service"
 export { LoyaltyPromotionsService } from "./loyalty-promotions.service"
