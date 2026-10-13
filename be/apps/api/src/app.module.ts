@@ -36,8 +36,16 @@ import { LoyaltyRewardsModule } from "@modules/domain/loyalty-rewards"
 import { LOYALTY_ERROR_KINDS, LOYALTY_MESSAGES, LoyaltyModule } from "@modules/domain/loyalty"
 import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
 import { WorkspacesHttpModule } from "@features/api/workspaces"
-import { AGENT_CONVERSATIONS_ERROR_KINDS, AGENT_CONVERSATIONS_MESSAGES, AgentConversationsModule } from "@modules/domain/agent-conversations"
-import { AGENT_MESSAGES_ERROR_KINDS, AGENT_MESSAGES_MESSAGES, AgentMessagesModule } from "@modules/domain/agent-messages"
+import {
+    AGENT_CONVERSATIONS_ERROR_KINDS,
+    AGENT_CONVERSATIONS_MESSAGES,
+    AgentConversationsModule,
+} from "@modules/domain/agent-conversations"
+import {
+    AGENT_MESSAGES_ERROR_KINDS,
+    AGENT_MESSAGES_MESSAGES,
+    AgentMessagesModule,
+} from "@modules/domain/agent-messages"
 import { CHANNELS_ERROR_KINDS, CHANNELS_MESSAGES, ChannelsModule } from "@modules/domain/channels"
 import { ChannelReceiptsModule } from "@modules/domain/channel-receipts"
 import {
@@ -128,6 +136,7 @@ import { FFMPEG_ERROR_KINDS, FFMPEG_MESSAGES, FfmpegModule } from "@modules/inte
 import { TTS_ERROR_KINDS, TTS_MESSAGES, TtsModule } from "@modules/integrations/tts"
 import { CONTENT_TICK_EVERY_MS, CONTENT_TICK_QUEUE, CONTENT_TICK_SCHEDULER } from "@modules/queues/content-tick"
 import { RendersHttpModule } from "@features/api/renders"
+import { ApplyBookingStatusQueueModule } from "@features/jobs/apply-booking-status"
 import { PublishContentQueueModule } from "@features/jobs/publish-content"
 import { RenderVideoQueueModule } from "@features/jobs/render-video"
 import type { ApiOptions } from "./api.options"
@@ -288,9 +297,14 @@ export class AppModule {
                 ContentModule.register({ isGlobal: true }),
                 RenderVideoQueueModule,
                 PublishContentQueueModule,
+                ApplyBookingStatusQueueModule,
                 RendersHttpModule,
                 LivenessModule.register({ isGlobal: true }),
-                BookingsModule.register({ isGlobal: true }),
+                BookingsModule.register({
+                    isGlobal: true,
+                    // Until the chat lanes provide the channel adapters no notice reaches a customer; the effects (reminders, fees, hand-off) do not depend on it.
+                    notifier: { notify: () => Promise.resolve(false) },
+                }),
                 LeadsHttpModule,
                 PlatformAuditModule.register({ isGlobal: true }),
                 AiQuotaOverridesModule.register({ isGlobal: true }),

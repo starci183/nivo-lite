@@ -427,3 +427,46 @@ export interface StatusChange {
     /** Whether a fee is due for the change. */
     readonly feeDue: boolean
 }
+
+/** Why a booking event was sent: it was created, its status changed, or its time or resource changed. */
+export type BookingEventKind = "created" | "status" | "moved"
+
+/** One change of a booking, as the booking_status queue carries it (ids and codes only). */
+export interface BookingEvent {
+    /** The workspace of the booking. */
+    readonly workspaceId: string
+    /** The booking that changed. */
+    readonly bookingId: string
+    /** What kind of change it was. */
+    readonly kind: BookingEventKind
+}
+
+/** A line to the customer in the chat the booking came from. */
+export interface BookingNotice {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The conversation of the customer. */
+    readonly conversationId: string
+    /** What to say. */
+    readonly text: string
+}
+
+/** Carries a notice into the customer's chat; true when it reached the customer. */
+export interface BookingNotifier {
+    /** Delivers one notice. */
+    notify(notice: BookingNotice): Promise<boolean>
+}
+
+/** What applying one booking event did, for the job log. */
+export interface BookingEffects {
+    /** False when the booking no longer exists. */
+    readonly found: boolean
+    /** Whether reminders were planned (`planned`), stopped (`stopped`) or left alone (`none`). */
+    readonly reminders: "planned" | "stopped" | "none"
+    /** The fee recorded on the booking now, 0 when none. */
+    readonly feeVnd: number
+    /** Whether the finished booking was handed to the order chain. */
+    readonly handedOff: boolean
+    /** Whether the customer was told. */
+    readonly notified: boolean
+}

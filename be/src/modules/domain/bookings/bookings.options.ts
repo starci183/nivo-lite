@@ -1,2 +1,7 @@
-/** The booking capability takes no options; the app root decides whether it is global. */
-export type BookingsOptions = Record<never, never>
+import type { BookingNotifier } from "./bookings.contracts"
+
+/** What the booking capability needs from the app root. */
+export interface BookingsOptions {
+    /** Carries the notice of a confirmed, moved or cancelled booking into the chat of the customer. */
+    readonly notifier: BookingNotifier
+}

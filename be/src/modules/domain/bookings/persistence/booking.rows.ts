@@ -321,3 +321,37 @@ export const toFigureRow = (row: WindowRow): FigureRow => ({
     endMs: row.end_ms,
     priceVnd: row.price_vnd,
 })
+
+/** The booking a status event is applied to, with its service name and the instants as epoch milliseconds. */
+export interface EffectsRow {
+    /** The booking id. */
+    readonly id: string
+    /** The status now. */
+    readonly status: string
+    /** The lead of the customer, or null. */
+    readonly lead_id: string | null
+    /** The conversation the booking came from, or null. */
+    readonly conversation_id: string | null
+    /** The customer name. */
+    readonly customer_name: string
+    /** The customer phone. */
+    readonly customer_phone: string | null
+    /** The customer email. */
+    readonly customer_email: string | null
+    /** Whether the row is live or simulated. */
+    readonly origin: string
+    /** Why it was cancelled, or null. */
+    readonly cancel_reason: string | null
+    /** How many times it was moved. */
+    readonly reschedule_count: number
+    /** The name of the service. */
+    readonly service_name: string
+    /** The price in VND, or null. */
+    readonly price_vnd: number | null
+    /** The fee recorded so far. */
+    readonly cancel_fee_vnd: number
+    /** The start instant. */
+    readonly start_ms: number
+    /** The instant it was cancelled, or null. */
+    readonly cancelled_ms: number | null
+}
