@@ -4,7 +4,7 @@ import { join } from "node:path"
 import { FakeClock, builder, mock } from "@starci/jest-preset"
 import { StorageApiError } from "@supabase/storage-js"
 import { VideoRendersService } from "@modules/domain/video-renders"
-import type { SupabaseAdminClient } from "@modules/integrations/supabase"
+import type { SupabaseStorageService } from "@modules/integrations/supabase"
 import type { Logger } from "@modules/platform/logging"
 import { VideoErrorCode } from "./errors/video.error"
 import { RendererService } from "./renderer.service"
@@ -14,7 +14,7 @@ import type { VideoOptions } from "./video.options"
 import { VideoService } from "./video.service"
 import { VideoRenderService } from "./video-render.service"
 
-jest.mock("@modules/integrations/supabase", () => ({ InjectSupabaseAdminClient: () => () => undefined }))
+jest.mock("@modules/integrations/supabase", () => ({ InjectSupabaseStorage: () => () => undefined }))
 
 const WORKSPACE = "0a1b2c3d-0a1b-4c3d-8a1b-0a1b2c3d4e5f"
 const IMAGE = `${WORKSPACE}/photo.jpg`
@@ -31,8 +31,6 @@ const SPEC = {
 }
 
 type ClaimedRender = NonNullable<Awaited<ReturnType<VideoRendersService["claim"]>>>
-type Bucket = ReturnType<SupabaseAdminClient["storage"]["from"]>
-
 const claimOf = builder<ClaimedRender>({ renderId: "render-1", workspaceId: WORKSPACE, spec: SPEC, attempts: 1 })
 
 const outputOf = (dir: string): RenderOutput => ({
@@ -64,45 +62,50 @@ const build = async () => {
     const renderer = mock<RendererService>()
     const logger = mock<Logger>()
     const clock = new FakeClock("2026-10-12T00:00:00.000Z")
-    const bucket = mock<Bucket>()
+    const bucket = mock<SupabaseStorageService>()
     bucket.download.mockResolvedValue({ data: new Blob(["bytes"]), error: null })
     bucket.upload.mockResolvedValue({ data: { id: "1", path: "p", fullPath: "f" }, error: null })
-    const storage = mock<SupabaseAdminClient["storage"]>()
-    storage.from.mockReturnValue(bucket)
-    const supabase = mock<SupabaseAdminClient>({ storage })
     renders.claim.mockResolvedValue(claimOf())
     renderer.render.mockImplementation(async (input: RenderInput) => {
         await writeFile(join(input.workDir, "out.mp4"), "video")
         await writeFile(join(input.workDir, "poster.jpg"), "poster")
         return outputOf(input.workDir)
     })
-    const service = new VideoRenderService(options, video, renders, renderer, supabase, clock, logger)
-    return { service, video, renders, renderer, logger, clock, bucket, storage, options, root }
+    const service = new VideoRenderService(options, video, renders, renderer, bucket, clock, logger)
+    return { service, video, renders, renderer, logger, clock, bucket, options, root }
 }
 
 describe("VideoRenderService", () => {
     describe("render", () => {
         it("downloads the assets, renders, uploads the files, settles the render and removes the work directory", async () => {
-            const { service, video, renderer, bucket, storage, logger, options } = await build()
+            const { service, video, renderer, bucket, logger, options } = await build()
 
             await service.render({ renderId: "render-1" })
 
-            expect(storage.from).toHaveBeenCalledWith("media")
-            expect(bucket.download).toHaveBeenCalledWith(IMAGE)
-            expect(bucket.download).toHaveBeenCalledWith(LOGO)
+            expect(bucket.download).toHaveBeenCalledWith("media", IMAGE)
+            expect(bucket.download).toHaveBeenCalledWith("media", LOGO)
             expect(bucket.download).toHaveBeenCalledTimes(2)
             const input = renderer.render.mock.calls[0]?.[0]
             expect(input?.attempt).toBe(1)
             expect([...(input?.assets.keys() ?? [])]).toEqual([IMAGE, LOGO])
-            expect(storage.from).toHaveBeenCalledWith("videos")
-            expect(bucket.upload).toHaveBeenCalledWith(`${WORKSPACE}/render-1/video.mp4`, expect.any(Buffer), {
-                contentType: "video/mp4",
-                upsert: true,
-            })
-            expect(bucket.upload).toHaveBeenCalledWith(`${WORKSPACE}/render-1/poster.jpg`, expect.any(Buffer), {
-                contentType: "image/jpeg",
-                upsert: true,
-            })
+            expect(bucket.upload).toHaveBeenCalledWith(
+                "videos",
+                `${WORKSPACE}/render-1/video.mp4`,
+                expect.any(Buffer),
+                {
+                    contentType: "video/mp4",
+                    upsert: true,
+                },
+            )
+            expect(bucket.upload).toHaveBeenCalledWith(
+                "videos",
+                `${WORKSPACE}/render-1/poster.jpg`,
+                expect.any(Buffer),
+                {
+                    contentType: "image/jpeg",
+                    upsert: true,
+                },
+            )
             expect(video.completeRender).toHaveBeenCalledWith("render-1", {
                 outputPath: `${WORKSPACE}/render-1/video.mp4`,
                 posterPath: `${WORKSPACE}/render-1/poster.jpg`,

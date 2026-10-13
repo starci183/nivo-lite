@@ -4,7 +4,6 @@ import type { Request } from "express"
 import { SepayTransactionsService } from "@modules/domain/sepay-transactions"
 import { Public, PublicReason } from "@modules/domain/identity"
 import { RateLimit, RateTier } from "@modules/platform/http-security"
-import { SepayAck } from "./dto/sepay.response"
 
 @Controller("api/sepay/webhook")
 /**
@@ -23,7 +22,7 @@ export class SepayWebhook {
     async receive(
         @Req() request: RawBodyRequest<Request>,
         @Headers("authorization") authorization: string | undefined,
-    ): Promise<SepayAck> {
+    ): Promise<{ readonly success: true }> {
         await this.settlement.acceptSepayDelivery({ authorization, rawBody: request.rawBody })
         return { success: true }
     }

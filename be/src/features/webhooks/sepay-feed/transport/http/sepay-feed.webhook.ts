@@ -4,7 +4,6 @@ import type { Request } from "express"
 import { BankFeedService } from "@modules/domain/billing"
 import { Public, PublicReason } from "@modules/domain/identity"
 import { RateLimit, RateTier } from "@modules/platform/http-security"
-import { SepayAck } from "./dto/sepay.response"
 
 @Controller("api/connections/sepay")
 /**
@@ -24,7 +23,7 @@ export class SepayFeedWebhook {
         @Req() request: RawBodyRequest<Request>,
         @Param("connectionId") connectionId: string,
         @Headers("authorization") authorization: string | undefined,
-    ): Promise<SepayAck> {
+    ): Promise<{ readonly success: true }> {
         await this.feed.acceptSepayFeedDelivery({ connectionId, authorization, rawBody: request.rawBody })
         return { success: true }
     }

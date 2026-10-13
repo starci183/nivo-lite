@@ -1,6 +1,7 @@
 import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
 import type { SupabaseAdminClient, SupabasePublicClient } from "./supabase.client"
+import type { SupabaseStorageService } from "./supabase-storage.service"
 import type { VerifySupabaseAccessToken } from "./supabase.options"
 
 /** Token of the integration's Auth and Storage administrator. */
@@ -26,3 +27,10 @@ export const InjectSupabaseAccessTokenVerifier = (): TypedParameterDecorator<Ver
 
 /** Token of the account administration the operator commands use. */
 export const SUPABASE_ACCOUNTS: unique symbol = Symbol("integrations.supabase.accounts")
+
+/** Token of the object storage the domains read and write files through. */
+export const SUPABASE_STORAGE: unique symbol = Symbol("integrations.supabase.storage")
+
+/** Injects the object storage service. Parameter type: SupabaseStorageService. */
+export const InjectSupabaseStorage = (): TypedParameterDecorator<SupabaseStorageService> =>
+    injector<SupabaseStorageService>(SUPABASE_STORAGE)
