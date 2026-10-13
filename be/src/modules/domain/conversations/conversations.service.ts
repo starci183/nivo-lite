@@ -125,6 +125,7 @@ export class ConversationsService {
         await this.chatTurns.enqueueChatTurn(
             {
                 kind: "turn",
+                workspaceId: hearing.workspaceId,
                 conversationId: conversation.id,
                 messageId,
                 channelEventId: hearing.channelEventId,
@@ -139,7 +140,7 @@ export class ConversationsService {
         const greeting = meeting.agent.greeting.trim() || this.catalog.get("conversations.fallbackGreeting", {}, LOCALE)
         const messageId = await this.messages.storeGreeting(meeting.workspaceId, conversation.id, greeting, manager)
         await this.chatTurns.enqueueChatTurn(
-            { kind: "deliver", conversationId: conversation.id, messageId, channelEventId, lookupName: false },
+            { kind: "deliver", workspaceId: meeting.workspaceId, conversationId: conversation.id, messageId, channelEventId, lookupName: false },
             manager,
         )
     }

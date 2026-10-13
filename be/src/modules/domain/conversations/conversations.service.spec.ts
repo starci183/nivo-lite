@@ -101,7 +101,7 @@ describe("ConversationsService", () => {
             )
             expect(messages.storeCustomer).toHaveBeenCalledWith("ws-1", "conv-1", "Hello", manager)
             expect(queue.enqueueChatTurn).toHaveBeenCalledWith(
-                { kind: "turn", conversationId: "conv-1", messageId: "msg-1", channelEventId: "tg:555:9", lookupName: false },
+                { kind: "turn", workspaceId: "ws-1", conversationId: "conv-1", messageId: "msg-1", channelEventId: "tg:555:9", lookupName: false },
                 manager,
             )
         })
@@ -164,7 +164,7 @@ describe("ConversationsService", () => {
             expect(messages.storeGreeting).toHaveBeenCalledWith("ws-1", "conv-1", "Welcome!", manager)
             expect(messages.storeCustomer).not.toHaveBeenCalled()
             expect(queue.enqueueChatTurn).toHaveBeenCalledWith(
-                { kind: "deliver", conversationId: "conv-1", messageId: "greet-1", channelEventId: "tg:555:9", lookupName: false },
+                { kind: "deliver", workspaceId: "ws-1", conversationId: "conv-1", messageId: "greet-1", channelEventId: "tg:555:9", lookupName: false },
                 manager,
             )
         })
@@ -192,7 +192,7 @@ describe("ConversationsService", () => {
             )
             expect(conversations.open).toHaveBeenCalledWith(expect.objectContaining({ channel: "zalo", customerId: "user-1", visitor: "<conversations.zaloGuest>" }), manager)
             expect(queue.enqueueChatTurn).toHaveBeenCalledWith(
-                { kind: "turn", conversationId: "conv-1", messageId: "msg-1", channelEventId: "zalo:m-1", lookupName: true },
+                { kind: "turn", workspaceId: "ws-1", conversationId: "conv-1", messageId: "msg-1", channelEventId: "zalo:m-1", lookupName: true },
                 manager,
             )
         })

@@ -8,4 +8,6 @@ export enum ChannelsLogEvent {
     LeaseNotReleased = "channels.zalo.lease-not-released",
     /** A webhook body was not the JSON its mac covers. */
     ProofBodyUnreadable = "channels.proof.body-unreadable",
+    /** A connection is failing or silent; the owner should look at it. */
+    ConnectionUnhealthy = "channels.connection.unhealthy",
 }

@@ -27,3 +27,17 @@ SET public_meta = public_meta || $2::jsonb,
     last_error = NULL,
     updated_at = now()
 WHERE id = $1`
+
+/** A page of the connections the health check judges, in id order ($1 after id, $2 page size). */
+export const LIST_HEALTH_BATCH = sql`SELECT id, workspace_id, provider, name, status, coalesce(last_error, '') AS last_error,
+       coalesce(last_event_at::text, '') AS last_event_at, created_at::text AS created_at,
+       coalesce(public_meta -> 'health' ->> 'state', '') AS health
+FROM public.connections
+WHERE status <> 'disconnected' AND id > $1
+ORDER BY id
+LIMIT $2`
+
+/** Records the health verdict in the public facts of a connection ($1 connection id, $2 verdict). */
+export const MARK_CONNECTION_HEALTH = sql`UPDATE public.connections
+SET public_meta = jsonb_set(public_meta, '{health}', $2::jsonb)
+WHERE id = $1`

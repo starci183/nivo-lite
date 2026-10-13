@@ -109,3 +109,39 @@ export interface ChannelSenderRegistry {
     /** The sender serving a channel, or undefined. */
     get(channel: string): RegisteredSender
 }
+
+/** What the health check concluded about one connection. */
+export interface HealthVerdict {
+    /** ok, silent or failing. */
+    readonly state: "ok" | "silent" | "failing"
+    /** Why, in a short sentence; empty for ok. */
+    readonly reason: string
+}
+
+/** How many connections a health check saw in each state. */
+export interface HealthSummary {
+    /** Connections judged. */
+    readonly checked: number
+    /** Connections fine. */
+    readonly ok: number
+    /** Connections that went silent. */
+    readonly silent: number
+    /** Connections that are failing. */
+    readonly failing: number
+    /** Connections whose recorded verdict changed. */
+    readonly changed: number
+}
+
+/** The running count of a health check. */
+export interface HealthTally {
+    /** Connections judged. */
+    checked: number
+    /** Connections fine. */
+    ok: number
+    /** Connections that went silent. */
+    silent: number
+    /** Connections that are failing. */
+    failing: number
+    /** Connections whose recorded verdict changed. */
+    changed: number
+}

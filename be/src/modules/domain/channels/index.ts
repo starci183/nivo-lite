@@ -1,4 +1,6 @@
 export { ChannelDeliveryService } from "./channel-delivery.service"
+export { ConnectionHealthService } from "./connection-health.service"
+export { ZaloAuthorizationService } from "./zalo-authorization.service"
 export { InjectChannelSenderRegistry } from "./channels.decorators"
 export { parseChannelsConfig } from "./channels.config"
 export { ChannelsModule } from "./channels.module"
@@ -10,6 +12,7 @@ export type {
     ChannelSenderRegistry,
     DeliveryRequest,
     DeliveryResult,
+    HealthSummary,
     ZaloAuthorization,
     ZaloRefreshSummary,
     ZaloReturn,

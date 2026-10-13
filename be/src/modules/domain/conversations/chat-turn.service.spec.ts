@@ -99,7 +99,7 @@ const build = async (setup: Setup = {}) => {
     return { service: moduleRef.get(ChatTurnService), em, conversations, messages, receipts, delivery, logger, extensions }
 }
 
-const turnPayload = { kind: "turn", conversationId: "conv-1", messageId: "msg-1", channelEventId: "tg:555:9", lookupName: false } as const
+const turnPayload = { kind: "turn", workspaceId: "ws-1", conversationId: "conv-1", messageId: "msg-1", channelEventId: "tg:555:9", lookupName: false } as const
 
 const proposal = (patch: Partial<ChatTurnProposal> = {}): ChatTurnProposal => ({
     reply: "Tea is 50k",

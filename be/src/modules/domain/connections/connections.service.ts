@@ -3,15 +3,20 @@ import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
-import type { FirstEvent, IntakeConnection } from "./connections.contracts"
+import type { FirstEvent, HealthCandidate, HealthMark, IntakeConnection } from "./connections.contracts"
 import { ConnectionsErrorCode } from "./errors/connections.error"
-import type { IntakeConnectionRow } from "./persistence/connections.rows"
+import type { HealthCandidateRow, IntakeConnectionRow } from "./persistence/connections.rows"
 import {
     APPLY_ZALO_AUTHORIZATION,
     FIND_INTAKE_CONNECTION,
+    LIST_HEALTH_BATCH,
     MARK_CONNECTION_ERROR,
+    MARK_CONNECTION_HEALTH,
     MARK_CONNECTION_RECEIVED,
 } from "./persistence/connections.sql"
+
+/** The id every real id sorts after. */
+const NIL_UUID = "00000000-0000-0000-0000-000000000000"
 
 @Injectable()
 /** The status facts of a workspace's connections: the only writer of the connections table that channels need (the full capability is the connections lane's). */
@@ -42,5 +47,29 @@ export class ConnectionsService {
     /** The owner authorized the Zalo OA: its id joins the public facts and an error status clears. */
     async applyZaloAuthorization(connectionId: string, oaId?: string): Promise<void> {
         await this.entityManager.query(APPLY_ZALO_AUTHORIZATION, [connectionId, JSON.stringify(oaId === undefined ? {} : { oa_id: oaId })])
+    }
+
+    /** A page of the connections the health check judges, in id order, after the given id (empty for the first page). */
+    async healthBatch(afterId: string, size: number): Promise<ReadonlyArray<HealthCandidate>> {
+        const rows = await this.entityManager.query<Array<HealthCandidateRow>>(LIST_HEALTH_BATCH, [afterId === "" ? NIL_UUID : afterId, size])
+        return rows.map((row) => ({
+            id: row.id,
+            workspaceId: row.workspace_id,
+            provider: row.provider,
+            name: row.name,
+            status: row.status,
+            lastError: row.last_error,
+            lastEventAt: row.last_event_at,
+            createdAt: row.created_at,
+            health: row.health,
+        }))
+    }
+
+    /** Records the health verdict in the public facts of the connection. */
+    async markHealth(connectionId: string, mark: HealthMark): Promise<void> {
+        await this.entityManager.query(MARK_CONNECTION_HEALTH, [
+            connectionId,
+            JSON.stringify({ state: mark.state, reason: mark.reason, checked_at: mark.checkedAt }),
+        ])
     }
 }

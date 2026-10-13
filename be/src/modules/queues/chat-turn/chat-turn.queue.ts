@@ -10,6 +10,8 @@ export const CHAT_TURN_QUEUE = "chat_turn"
 export interface ChatTurnPayload {
     /** `turn` answers a customer message; `deliver` only pushes a message that is already stored (the greeting of a new visit). */
     readonly kind: "turn" | "deliver"
+    /** The workspace: its concurrency limit is keyed on it. */
+    readonly workspaceId: string
     /** The conversation. */
     readonly conversationId: string
     /** The customer message to answer, or the stored message to deliver. */
@@ -26,6 +28,8 @@ export const isChatTurnPayload = (value: unknown): value is ChatTurnPayload =>
     value !== null &&
     "kind" in value &&
     (value.kind === "turn" || value.kind === "deliver") &&
+    "workspaceId" in value &&
+    typeof value.workspaceId === "string" &&
     "conversationId" in value &&
     typeof value.conversationId === "string" &&
     "messageId" in value &&
@@ -40,8 +44,11 @@ export const isChatTurnPayload = (value: unknown): value is ChatTurnPayload =>
 export class ChatTurnQueue {
     constructor(@InjectQueueOutbox() private readonly outbox: QueueOutbox) {}
 
-    /** Enqueues the turn in the caller's transaction: the job exists exactly when the message it answers is stored. */
+    /** Enqueues the turn in the caller's transaction: the job exists exactly when the message it answers is stored, once per message. */
     enqueueChatTurn(payload: ChatTurnPayload, tx: EntityManager): Promise<void> {
-        return this.outbox.write(tx, CHAT_TURN_QUEUE, payload)
+        return this.outbox.write(tx, CHAT_TURN_QUEUE, payload, {
+            job: `chat-turn.${payload.kind}`,
+            dedupeKey: `chat-turn.${payload.kind}:${payload.messageId}`,
+        })
     }
 }
