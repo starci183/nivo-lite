@@ -1,4 +1,4 @@
-// migrations-sha256: 224a40a4abdd7b14b056ce1084959031f4c94cd7af320187d304e167f84a34bd
+// migrations-sha256: 0b72e466765ba7a8d650fd0d2ddb74d43ee451b17821b9859816c2795ebefb9f
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -303,6 +303,25 @@ isOneToOne: false
       columns: ["key_id"]
 isOneToOne: false
       referencedRelation: "api_keys"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"app_commands": {
+                  Row: {
+                    "created_at": string,"error_code": string | null,"finished_at": string | null,"id": string,"input": NonNullable<Json>,"kind": string,"requested_by": string,"result": Json | null,"state": string,"workspace_id": string | null
+                  }
+                  Insert: {
+                    "created_at"?: string,"error_code"?: string | null,"finished_at"?: string | null,"id"?: string,"input"?: NonNullable<Json>,"kind": string,"requested_by": string,"result"?: Json | null,"state"?: string,"workspace_id"?: string | null
+                  }
+                  Update: {
+                    "created_at"?: string,"error_code"?: string | null,"finished_at"?: string | null,"id"?: string,"input"?: NonNullable<Json>,"kind"?: string,"requested_by"?: string,"result"?: Json | null,"state"?: string,"workspace_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "app_commands_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
       referencedColumns: ["id"]
     }
                   ]
@@ -2821,6 +2840,18 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"platform_admins": {
+                  Row: {
+                    "created_at": string,"email": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"email": string
+                  }
+                  Update: {
+                    "created_at"?: string,"email"?: string
+                  }
+                  Relationships: [
+                  ]
                 },"platform_audit": {
                   Row: {
                     "action": string,"actor_email": string,"actor_id": string | null,"created_at": string,"data": NonNullable<Json>,"id": string,"workspace_id": string | null
@@ -2839,6 +2870,18 @@ isOneToOne: false
       referencedRelation: "workspaces"
       referencedColumns: ["id"]
     }
+                  ]
+                },"platform_flags": {
+                  Row: {
+                    "enabled": boolean,"key": string
+                  }
+                  Insert: {
+                    "enabled"?: boolean,"key": string
+                  }
+                  Update: {
+                    "enabled"?: boolean,"key"?: string
+                  }
+                  Relationships: [
                   ]
                 },"public_api": {
                   Row: {
@@ -3599,6 +3642,39 @@ isOneToOne: false
             "accept_invite":
 { Args: { "token": string }; Returns: string
                            },
+"add_lead_responsibility":
+{ Args: { "p_due"?: string,"p_lead": string,"p_locale"?: string,"p_next_action": string,"p_owner": string,"p_title": string,"p_workspace": string }; Returns: Json
+                           },
+"admin_console_audit":
+{ Args: { "p_action": string,"p_data"?: Json,"p_workspace": string }; Returns: undefined
+                           },
+"admin_console_quota":
+{ Args: { "p_workspace": string }; Returns: Json
+                           },
+"admin_console_signups":
+{ Args: { "p_days"?: number }; Returns: {
+              "day": string,"signups": number
+            }[]
+                           },
+"admin_console_user_emails":
+{ Args: { "p_ids": (string)[] }; Returns: {
+              "email": string,"id": string,"last_sign_in_at": string
+            }[]
+                           },
+"admin_console_workspace_stats":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "last_customer_message_at": string,"members": number,"messages_7d": number,"open_decisions": number,"workspace_id": string
+            }[]
+                           },
+"admin_extend_subscription":
+{ Args: { "p_days": number,"p_workspace": string }; Returns: string
+                           },
+"admin_set_workspace_plan":
+{ Args: { "p_credits"?: number,"p_plan": string,"p_workspace": string }; Returns: Json
+                           },
+"admin_set_workspace_status":
+{ Args: { "p_status": string,"p_workspace": string }; Returns: string
+                           },
 "admin_signups_per_day":
 { Args: { "p_days"?: number }; Returns: {
               "day": string,"signups": number
@@ -3631,6 +3707,9 @@ isOneToOne: false
 "api_rate_hit":
 { Args: { "p_key": string }; Returns: number
                            },
+"assign_lead_responsibility":
+{ Args: { "p_due"?: string,"p_locale"?: string,"p_next_action": string,"p_owner": string,"p_responsibility": string,"p_title"?: string,"p_workspace": string }; Returns: Json
+                           },
 "automation_tick":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
@@ -3651,6 +3730,9 @@ isOneToOne: false
                            },
 "content_tick":
 { Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+"create_free_workspace":
+{ Args: { "p_name": string }; Returns: string
                            },
 "dashboard_data":
 { Args: { "founding_from": string,"founding_to": string,"since7": string,"ws": string }; Returns: Json
@@ -3776,6 +3858,9 @@ isOneToOne: false
 "is_owner":
 { Args: { "ws": string }; Returns: boolean
                            },
+"is_platform_admin":
+{ Args: Record<PropertyKey, never>; Returns: boolean
+                           },
 "job_ack":
 { Args: { "p_msg_id": number,"p_queue": string }; Returns: boolean
                            },
@@ -3814,6 +3899,17 @@ isOneToOne: false
 "knowledge_retry_source":
 { Args: { "p_source": string }; Returns: string
                            },
+"lead_actor_name":
+{ Args: { "p_workspace": string }; Returns: string
+                           },
+"lead_step_json":
+{ Args: { "r": Database["public"]["Tables"]["responsibilities"]["Row"] }; Returns: Json
+                           },
+"lead_step_owner":
+{ Args: { "p_actor": string,"p_owner": string,"p_workspace": string }; Returns: {
+              "o_agent": string,"o_kind": string,"o_name": string
+            }[]
+                           },
 "loyalty_post":
 { Args: { "p_amount_vnd"?: number,"p_by": string,"p_customer": string,"p_evidence"?: string,"p_expires_at"?: string,"p_invoice_id"?: string,"p_kind": string,"p_occurred_at"?: string,"p_order_id"?: string,"p_points": number,"p_ref": string,"p_reward_id"?: string,"p_work_item_id"?: string,"p_workspace": string }; Returns: string
                            },
@@ -3851,6 +3947,21 @@ isOneToOne: false
 "promo_state":
 { Args: { "founding_from": string,"founding_to": string,"ws": string }; Returns: Json
                            },
+"read_app_command":
+{ Args: { "p_id": string }; Returns: Json
+                           },
+"record_lead_outcome":
+{ Args: { "p_evidence": string,"p_lead": string,"p_locale"?: string,"p_stage": string,"p_workspace": string }; Returns: Json
+                           },
+"request_admin_invite_resend":
+{ Args: { "p_invite": string,"p_workspace": string }; Returns: string
+                           },
+"request_invite_command":
+{ Args: { "p_action": string,"p_email"?: string,"p_invite"?: string,"p_role"?: string,"p_staff"?: string,"p_workspace": string }; Returns: string
+                           },
+"request_video_render":
+{ Args: { "p_project": string }; Returns: string
+                           },
 "resolve_installation":
 { Args: { "p_chain"?: string,"p_conversation"?: string,"p_lead"?: string,"p_module": string,"p_ws": string }; Returns: {
               "installation_id": string,"via": string
@@ -3861,6 +3972,9 @@ isOneToOne: false
                            },
 "revoke_my_session":
 { Args: { "session_id": string }; Returns: boolean
+                           },
+"revoke_workspace_invite":
+{ Args: { "p_invite": string,"p_workspace": string }; Returns: undefined
                            },
 "session_bootstrap":
 { Args: Record<PropertyKey, never>; Returns: Json
@@ -3888,6 +4002,11 @@ isOneToOne: false
                            },
 "video_renders_reap":
 { Args: Record<PropertyKey, never>; Returns: number
+                           },
+"workspace_member_contacts":
+{ Args: { "p_workspace": string }; Returns: {
+              "email": string,"last_sign_in_at": string,"user_id": string
+            }[]
                            },
 "workspace_members_directory":
 { Args: { "ws": string }; Returns: {
