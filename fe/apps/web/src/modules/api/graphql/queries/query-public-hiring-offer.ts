@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createNoAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryPublicHiringOfferArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { PublicHiringOfferQuery, PublicHiringOfferQueryVariables } from "../__generated__/graphql"
 
 /** The input of the `publicHiringOffer` query. */
-export type QueryPublicHiringOfferRequest = QueryPublicHiringOfferArgs["input"]
+export type QueryPublicHiringOfferRequest = WireInput<PublicHiringOfferQueryVariables["input"]>
 
 /** The response of the `publicHiringOffer` query. */
-type QueryPublicHiringOfferResponse = Pick<Query, "publicHiringOffer">
+type QueryPublicHiringOfferResponse = PublicHiringOfferQuery
 
 const query1: TypedDocumentNode<QueryPublicHiringOfferResponse, InputVariables<QueryPublicHiringOfferRequest>> = gql`
     query PublicHiringOffer($input: HiringTokenInput!) {

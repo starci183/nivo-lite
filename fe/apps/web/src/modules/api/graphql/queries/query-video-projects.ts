@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryVideoProjectsArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { VideoProjectsQuery, VideoProjectsQueryVariables } from "../__generated__/graphql"
 
 /** The input of the `videoProjects` query. */
-type QueryVideoProjectsRequest = QueryVideoProjectsArgs["input"]
+type QueryVideoProjectsRequest = WireInput<VideoProjectsQueryVariables["input"]>
 
 /** The generated payload of the `videoProjects` query. */
-type QueryVideoProjectsResponse = Pick<Query, "videoProjects">
+type QueryVideoProjectsResponse = VideoProjectsQuery
 
 type Document = TypedDocumentNode<QueryVideoProjectsResponse, InputVariables<QueryVideoProjectsRequest>>
 

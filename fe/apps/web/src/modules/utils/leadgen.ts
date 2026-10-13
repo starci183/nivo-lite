@@ -1,8 +1,7 @@
+import type { LeadGenAgentDashboardQuery, LeadGenWorkbenchQuery } from "@/modules/api"
 import type { AgentDashboardData, ConnectionItem, DashboardItem } from "@/lib/agent-dashboard-shared"
 import { workbenchHref } from "@/lib/agent-dashboard-shared"
 import type { WorkStatus } from "@/lib/flow-types"
-import type { QueryLeadGenAgentDashboardResponse } from "@/modules/api/graphql/queries/query-lead-gen-agent-dashboard"
-import type { QueryLeadGenWorkbenchResponse } from "@/modules/api/graphql/queries/query-lead-gen-workbench"
 import type { LeadGenWorkbenchData, LeadOrigin, LeadPlatform, LeadScore, LeadSourceKind } from "@/modules/types"
 
 const platformOf = (value: string): LeadPlatform => (value === "facebook" || value === "instagram" ? value : "other")
@@ -15,9 +14,7 @@ const workStatusOf = (value: string | null | undefined): WorkStatus | null =>
         ? value
         : null
 
-const originOf = (
-    origin: QueryLeadGenWorkbenchResponse["leadGenWorkbench"]["sources"][number]["origin"],
-): LeadOrigin => ({
+const originOf = (origin: LeadGenWorkbenchQuery["leadGenWorkbench"]["sources"][number]["origin"]): LeadOrigin => ({
     platform: platformOf(origin.platform),
     kind: kindOf(origin.kind),
     refKind: origin.refKind === "post" || origin.refKind === "ad" || origin.refKind === "form" ? origin.refKind : null,
@@ -26,9 +23,7 @@ const originOf = (
 })
 
 /** Normalizes optional GraphQL values and open string fields for the existing workbench views. */
-export const toLeadGenWorkbenchData = (
-    data: QueryLeadGenWorkbenchResponse["leadGenWorkbench"],
-): LeadGenWorkbenchData => ({
+export const toLeadGenWorkbenchData = (data: LeadGenWorkbenchQuery["leadGenWorkbench"]): LeadGenWorkbenchData => ({
     metrics: { ...data.metrics, firstReplyP50Min: data.metrics.firstReplyP50Min ?? null },
     leads: data.leads.map((row) => ({ ...row, score: scoreOf(row.score), origin: originOf(row.origin) })),
     leadsHidden: data.leadsHidden,
@@ -42,7 +37,7 @@ export const toLeadGenWorkbenchData = (
 })
 
 const connectionOf = (
-    connection: NonNullable<QueryLeadGenAgentDashboardResponse["agentDashboard"]["connections"]["data"]>[number],
+    connection: NonNullable<LeadGenAgentDashboardQuery["agentDashboard"]["connections"]["data"]>[number],
 ): ConnectionItem => ({
     id: connection.id,
     name: connection.name,
@@ -60,7 +55,7 @@ const connectionOf = (
 })
 
 const dashboardItemOf = (
-    item: NonNullable<QueryLeadGenAgentDashboardResponse["agentDashboard"]["waiting"]["data"]>["items"][number],
+    item: NonNullable<LeadGenAgentDashboardQuery["agentDashboard"]["waiting"]["data"]>["items"][number],
     href: string,
 ): DashboardItem => ({
     id: item.id,
@@ -72,7 +67,7 @@ const dashboardItemOf = (
 
 /** Adapts the shared dashboard response and points public-comment decisions into this instance's Comments tab. */
 export const toLeadGenAgentDashboard = (
-    dashboard: QueryLeadGenAgentDashboardResponse["agentDashboard"],
+    dashboard: LeadGenAgentDashboardQuery["agentDashboard"],
     installationId: string | null,
 ): AgentDashboardData => {
     const { agent, waiting, done, connections, knowledge } = dashboard

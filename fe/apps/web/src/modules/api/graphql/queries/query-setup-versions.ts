@@ -1,13 +1,13 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QuerySetupVersionsArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { SetupVersionsQuery, SetupVersionsQueryVariables } from "../__generated__/graphql"
 
 /** The input of the `setupVersions` query. */
-export type QuerySetupVersionsRequest = QuerySetupVersionsArgs["input"]
+export type QuerySetupVersionsRequest = WireInput<SetupVersionsQueryVariables["input"]>
 
-type QuerySetupVersionsResponse = Pick<Query, "setupVersions">
+type QuerySetupVersionsResponse = SetupVersionsQuery
 
 const query1: TypedDocumentNode<QuerySetupVersionsResponse, InputVariables<QuerySetupVersionsRequest>> = gql`
     query SetupVersions($input: ModuleInstallationIdInput!) {

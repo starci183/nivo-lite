@@ -2,10 +2,10 @@ import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
-import type { Query } from "../__generated__/schema"
+import type { WorkspaceInvitesQuery } from "../__generated__/graphql"
 
 /** The response of the `workspaceInvites` query: the typed payload straight from the back end contract. */
-type QueryWorkspaceInvitesResponse = Pick<Query, "workspaceInvites">
+type QueryWorkspaceInvitesResponse = WorkspaceInvitesQuery
 
 type Document = TypedDocumentNode<QueryWorkspaceInvitesResponse, Record<string, never>>
 

@@ -176,7 +176,7 @@ export interface PublicBookingService {
 }
 
 /** The public booking page of one shop. */
-export interface PublicBookingPage {
+export interface PublicBookingPageData {
     readonly shop: string
     readonly slug: string
     readonly note: string

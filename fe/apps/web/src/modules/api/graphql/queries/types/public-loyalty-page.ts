@@ -1,7 +1,5 @@
-import type { Query, QueryPublicLoyaltyPageArgs } from "../../__generated__/schema"
+import type { PublicLoyaltyPageQueryVariables } from "../../__generated__/graphql"
+import type { WireInput } from "../../types"
 
 /** The input of the `publicLoyaltyPage` query. */
-export type QueryPublicLoyaltyPageRequest = QueryPublicLoyaltyPageArgs["input"]
-
-/** The response of the `publicLoyaltyPage` query. */
-export type QueryPublicLoyaltyPageResponse = Pick<Query, "publicLoyaltyPage">
+export type QueryPublicLoyaltyPageRequest = WireInput<PublicLoyaltyPageQueryVariables["input"]>

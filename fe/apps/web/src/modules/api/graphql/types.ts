@@ -51,3 +51,15 @@ export interface MutateParams<TMutation, TRequest> extends GraphQLOperationConte
 export interface InputVariables<TInput> {
     input: TInput
 }
+
+/**
+ * A generated input as callers build it: the client preset spells an optional input key as a required `T | null | undefined`
+ * key (avoidOptionals), so every key that may be undefined is made optional again, all the way down.
+ */
+export type WireInput<T> = T extends readonly (infer TItem)[]
+    ? WireInput<TItem>[]
+    : T extends object
+      ? { [K in keyof T as undefined extends T[K] ? K : never]?: WireInput<T[K]> } & {
+            [K in keyof T as undefined extends T[K] ? never : K]: WireInput<T[K]>
+        }
+      : T
