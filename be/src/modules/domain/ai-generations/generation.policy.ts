@@ -18,7 +18,9 @@ const TURN_MARGIN_MS = 3000
 const PURPOSE_MAX = 60
 const FAILURE_MAX = 200
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
+/** Accepts persisted JSON objects while rejecting arrays and null. */
+export const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null && !Array.isArray(value)
 
 const isNumber = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value)
 

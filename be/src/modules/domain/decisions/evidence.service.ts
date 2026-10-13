@@ -30,8 +30,8 @@ export class EvidenceService {
     }
 
     /** Appends one line to the decision log: who decided, how (policy or person), the outcome and why. */
-    async decide(ctx: WorkContext, entry: DecisionEntry): Promise<void> {
-        await this.entityManager.query(INSERT_DECISION, [
+    async decide(ctx: WorkContext, entry: DecisionEntry, manager: EntityManager = this.entityManager): Promise<void> {
+        await manager.query(INSERT_DECISION, [
             ctx.workspaceId,
             entry.work_item_id,
             entry.lead_id,

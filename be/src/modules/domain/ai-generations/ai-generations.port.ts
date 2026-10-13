@@ -1,6 +1,12 @@
 import type { RunUsage } from "@modules/integrations/openclaw"
 import type { Locale } from "@modules/platform/i18n"
 
+/** Applies the result of an already-run generation without making another provider call. */
+export interface GenerationCompletion {
+    /** Dispatches the trusted generation to its owning application. */
+    completeGeneration(workspaceId: string, generationId: string): Promise<void>
+}
+
 /** What the plan allowance says about a workspace that is over it. */
 export interface QuotaBlock {
     /** The sentence to show the person, in the asked language. */
@@ -11,7 +17,7 @@ export interface QuotaBlock {
 export type OptionalQuotaBlock = QuotaBlock | null
 
 /** One metered generation. */
-export interface UsageRecord {
+export interface GenerationUsageRecord {
     /** The workspace. */
     readonly workspaceId: string
     /** The usage kind. */
@@ -32,5 +38,5 @@ export interface UsageGate {
     /** The block when the workspace has used its allowance for the kind. */
     blockedBy(workspaceId: string, kind: string, locale: Locale): Promise<OptionalQuotaBlock>
     /** Meters one finished generation. */
-    record(entry: UsageRecord): Promise<void>
+    record(entry: GenerationUsageRecord): Promise<void>
 }

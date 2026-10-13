@@ -12,9 +12,13 @@ import { InjectAgentsQueue } from "@modules/queues/agents"
 import type { AgentsQueue } from "@modules/queues/agents"
 import type {
     GenerateParams,
+    GenerationContext,
+    GenerationResult,
     GenerationFailure,
     GenerationFailureReason,
     GenerationOutcome,
+    GenerationRequested,
+    OptionalGenerationState,
     OptionalGenerationProgress,
     PollVerdict,
 } from "./ai-generations.contracts"
@@ -24,9 +28,22 @@ import type { AiGenerationsOptions } from "./ai-generations.options"
 import type { UsageGate } from "./ai-generations.port"
 import { EngineStatusService } from "@modules/domain/agents"
 import { AiGenerationsError, AiGenerationsErrorCode } from "./errors/ai-generations.error"
-import { clampTimeout, inputJsonOf, progressOf, purposeOf, verdictOf } from "./generation.policy"
-import type { GenerationProgressRow, InsertedGenerationRow } from "./persistence/ai-generations.rows"
-import { CANCEL_GENERATION, FIND_GENERATION_PROGRESS, INSERT_GENERATION } from "./persistence/ai-generations.sql"
+import { clampTimeout, inputJsonOf, inputOf, isRecord, progressOf, purposeOf, verdictOf } from "./generation.policy"
+import type {
+    GenerationProgressRow,
+    GenerationStateRow,
+    InsertedGenerationRow,
+} from "./persistence/ai-generations.rows"
+import {
+    CANCEL_GENERATION,
+    FIND_GENERATION_PROGRESS,
+    FIND_GENERATION_STATE,
+    INSERT_GENERATION,
+    LOCK_GENERATION_STATE,
+    RECORD_GENERATION_FAILURE,
+    RECORD_GENERATION_RESULT,
+    SET_GENERATION_CONTEXT,
+} from "./persistence/ai-generations.sql"
 import { PauseClient } from "@modules/domain/agents"
 
 const failure = (reason: GenerationFailureReason, message: string): GenerationFailure => ({
@@ -77,6 +94,85 @@ export class GenerationsService {
     async generateFor(userId: string, params: GenerateParams): Promise<GenerationOutcome> {
         await this.members.require(userId, params.workspaceId)
         return this.generate(params)
+    }
+
+    /** Enqueues an authorized application's request and immediately returns its polling id. */
+    async request(
+        params: GenerateParams,
+        context: GenerationContext = {},
+        tx?: EntityManager,
+    ): Promise<GenerationRequested> {
+        const locale = params.locale ?? "vi"
+        const blocked = await this.usage.blockedBy(params.workspaceId, params.kind, locale)
+        const availability = this.engine.availability()
+        if (blocked !== null || availability !== "ready") {
+            throw new AiGenerationsError({
+                code: blocked !== null ? AiGenerationsErrorCode.QuotaBlocked : AiGenerationsErrorCode.EngineUnavailable,
+            })
+        }
+        const enqueue = async (manager: EntityManager): Promise<GenerationRequested> => {
+            const [row] = await manager.query<Array<InsertedGenerationRow>>(INSERT_GENERATION, [
+                params.workspaceId,
+                purposeOf(params.purpose),
+                params.module,
+                params.kind,
+                JSON.stringify({
+                    messages: params.messages,
+                    response_format: params.responseFormat,
+                    timeout_ms: clampTimeout(params.timeoutMs),
+                    context,
+                }),
+            ])
+            if (row === undefined) throw new AiGenerationsError({ code: AiGenerationsErrorCode.NotCreated })
+            await this.queue.enqueueGenerate({ generationId: row.id, workspaceId: params.workspaceId }, manager)
+            return { id: row.id, status: "queued" }
+        }
+        return tx === undefined ? this.entityManager.transaction(enqueue) : enqueue(tx)
+    }
+
+    /** Reads a workspace's request; an optional lock serializes a job's idempotent domain completion. */
+    async state(
+        workspaceId: string,
+        id: string,
+        tx?: EntityManager,
+        lock: boolean = false,
+    ): Promise<OptionalGenerationState> {
+        const [row] = await (tx ?? this.entityManager).query<Array<GenerationStateRow>>(
+            lock ? LOCK_GENERATION_STATE : FIND_GENERATION_STATE,
+            [id, workspaceId],
+        )
+        if (row === undefined) return null
+        const record = (value: unknown): Record<string, unknown> => (isRecord(value) ? value : {})
+        const progress = progressOf(row)
+        return {
+            id: row.id,
+            workspaceId: row.workspace_id,
+            purpose: row.purpose,
+            status: row.status,
+            text: progress.text,
+            errorCode: row.error,
+            input: record(row.input),
+            output: record(row.output),
+            timings: progress.timings,
+            createdAt: new Date(row.created_at).toISOString(),
+            finishedAt: row.finished_at === null ? null : new Date(row.finished_at).toISOString(),
+            messages: inputOf(row.input).messages,
+        }
+    }
+
+    /** Finalizes trusted context inside the same transaction that enqueues all related generations. */
+    async setContext(workspaceId: string, id: string, context: GenerationContext, tx: EntityManager): Promise<void> {
+        await tx.query(SET_GENERATION_CONTEXT, [id, workspaceId, JSON.stringify(context)])
+    }
+
+    /** Records the domain result in the transaction that writes its effects. */
+    async recordResult(workspaceId: string, id: string, result: GenerationResult, tx: EntityManager): Promise<void> {
+        await tx.query(RECORD_GENERATION_RESULT, [id, workspaceId, JSON.stringify(result)])
+    }
+
+    /** Records a stable application error code after the engine or result validation fails. */
+    async recordFailure(workspaceId: string, id: string, code: string, tx: EntityManager): Promise<void> {
+        await tx.query(RECORD_GENERATION_FAILURE, [id, workspaceId, code])
     }
 
     /** For callers that just want the text: the output, or an `AiGenerationsError` carrying the sentence to show. */

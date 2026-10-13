@@ -36,3 +36,27 @@ SELECT usage_kind, module FROM changed`
 export const FAIL_GENERATION = sql`UPDATE public.ai_generations
 SET status = 'error', error = $3, timings = $4::jsonb, finished_at = $5
 WHERE id = $1 AND workspace_id = $2 AND status IN ('queued', 'running')`
+
+/** Durable application context and output ($1 id, $2 workspace); a transaction serializes completion of a root request. */
+export const FIND_GENERATION_STATE = sql`SELECT id, workspace_id, purpose, module, usage_kind, status, input, output,
+error, timings, created_at, finished_at FROM public.ai_generations
+WHERE id = $1 AND workspace_id = $2 LIMIT 1`
+
+/** Locks an existing root request while its application effect is applied ($1 id, $2 workspace). */
+export const LOCK_GENERATION_STATE = sql`SELECT id, workspace_id, purpose, module, usage_kind, status, input, output,
+error, timings, created_at, finished_at FROM public.ai_generations
+WHERE id = $1 AND workspace_id = $2 LIMIT 1 FOR UPDATE`
+
+/** Stores trusted application context before publishing a queued request ($1 id, $2 workspace, $3 context JSON). */
+export const SET_GENERATION_CONTEXT = sql`UPDATE public.ai_generations
+SET input = jsonb_set(input, '{context}', $3::jsonb, true) WHERE id = $1 AND workspace_id = $2`
+
+/** Applies a durable domain result once; idempotent completion is serialized by the caller ($1 id, $2 workspace, $3 result JSON). */
+export const RECORD_GENERATION_RESULT = sql`UPDATE public.ai_generations
+SET output = coalesce(output, '{}'::jsonb) || jsonb_build_object('result', $3::jsonb)
+WHERE id = $1 AND workspace_id = $2 AND status = 'done'`
+
+/** Application validation failure after an engine answer ($1 id, $2 workspace, $3 code). */
+export const RECORD_GENERATION_FAILURE = sql`UPDATE public.ai_generations
+SET status = 'error', error = $3, finished_at = coalesce(finished_at, now())
+WHERE id = $1 AND workspace_id = $2`
