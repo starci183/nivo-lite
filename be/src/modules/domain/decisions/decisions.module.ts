@@ -25,6 +25,7 @@ import { WORK_PERFORMER_REGISTRY } from "./work-performer.port"
 import {
     DECISION_EVENTS,
     INBOUND_EVENT_STATUS,
+    LEAD_DIRECTORY,
     LEAD_GEN_FLOW,
     OUTBOUND_ACCESS_GATE,
     PAYMENT_RECEIPTS,
@@ -61,6 +62,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 { provide: INBOUND_EVENT_STATUS, useClass: options.ports.inboundEventStatus },
                 { provide: DECISION_EVENTS, useClass: options.ports.decisionEvents },
                 { provide: PAYMENT_RECEIPTS, useClass: options.ports.paymentReceipts },
+                { provide: LEAD_DIRECTORY, useExisting: options.ports.leadDirectory },
                 { provide: LEAD_GEN_FLOW, useClass: options.ports.leadGenFlow },
                 { provide: OUTBOUND_ACCESS_GATE, useClass: options.ports.outboundAccessGate },
                 ApprovalRequesterService,

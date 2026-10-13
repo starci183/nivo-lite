@@ -17,6 +17,7 @@ import type {
 import { InventoryCatalogService } from "./inventory-catalog.service"
 import { InventoryLocationsService } from "./inventory-locations.service"
 import { InventoryMovementsService } from "./inventory-movements.service"
+import { inventoryStarterOf } from "./inventory-templates"
 import { MANAGER_ROLES } from "./policies/access-roles.policy"
 import { parseItemTable, skuFromName } from "./policies/item-table.policy"
 import { channelOf } from "./policies/supplier-channel.policy"
@@ -156,6 +157,11 @@ export class InventoryImportService {
         })
         cache.set(key, id)
         return id
+    }
+
+    /** Loads the starter set a key names; an unknown key is invalid. */
+    applyStarterKey(userId: string, workspaceId: string, key: string): Promise<ApplyStarterOutput> {
+        return this.applyStarter(userId, workspaceId, inventoryStarterOf(key))
     }
 
     /** Loads a starter set: suppliers, items (with opening stock) and recipes; items and recipes that already exist are left as they are. */
