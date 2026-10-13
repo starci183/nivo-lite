@@ -2,7 +2,7 @@
 export type GateFieldValue = string | number | boolean | null
 
 /** What a module asks the approval gate to decide: one action on one subject. */
-export interface ApprovalRequest {
+export interface ModuleApprovalRequest {
     /** The workspace the action belongs to. */
     readonly workspaceId: string
     /** Who asks, as shown in the log. */
@@ -26,7 +26,7 @@ export interface ApprovalRequest {
 }
 
 /** What a decision about a gated action ended in. */
-export interface ApprovalResult {
+export interface ModuleApprovalResult {
     /** The status of the work item: `done` when the action ran, `waiting_decision` when a person must decide. */
     readonly status: string
     /** The work item that records the decision. */
@@ -72,7 +72,7 @@ export interface PerformResult {
 }
 
 /** A text the generator was asked for. */
-export interface TextRequest {
+export interface ModuleTextRequest {
     /** The workspace the text is written for. */
     readonly workspaceId: string
     /** The purpose id used for metering, for example `inventory_po_message`. */

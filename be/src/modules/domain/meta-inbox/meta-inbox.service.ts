@@ -3,37 +3,18 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { ConnectionsService } from "@modules/domain/connections"
 import { ConversationsService } from "@modules/domain/conversations"
+import { MetaCommentsService } from "@modules/domain/meta-comments"
+import { MetaThreadsService } from "@modules/domain/meta-threads"
 import { InjectMetaClient } from "@modules/integrations/meta"
 import type { MetaClient, MetaEvent } from "@modules/integrations/meta"
 import { acceptWebhookDelivery, InjectPrimaryEntityManager } from "@modules/platform/database"
-import { eachInOrder } from "@modules/platform/primitives"
+import { eachInOrder, isRecord, parseJsonText } from "@modules/platform/primitives"
 import { InjectQueueOutbox } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
-import { META_INBOUND_QUEUE } from "./meta-inbox.contracts"
-import type { MetaInboundJob } from "./meta-inbox.contracts"
+import { isMetaInboundJob, META_INBOUND_QUEUE } from "./meta-inbox.contracts"
+import type { DeliverySignature, MetaInboundJob, RawDelivery } from "./meta-inbox.contracts"
 import { MetaInboxError, MetaInboxErrorCode } from "./errors/meta-inbox.error"
-import {
-    COMPLETE_META_INBOX,
-    INSERT_META_INBOX,
-    NOTE_META_COMMENT,
-    TOUCH_META_THREAD,
-} from "./persistence/meta-inbox.sql"
-
-/** The raw Meta webhook body, missing when the transport delivered none. */
-type MetaWebhookBody = Buffer | undefined
-
-/** The signature header, missing when the caller sent none. */
-type MetaWebhookSignature = string | undefined
-
-/** JSON stored for a delivery. A non-object parse result keeps the text JSON.stringify would have written. */
-const storedPayload = (value: unknown): object => {
-    if (typeof value === "object" && value !== null) return value
-    return {
-        toJSON(): unknown {
-            return value
-        },
-    }
-}
+import { COMPLETE_META_INBOX, INSERT_META_INBOX } from "./persistence/meta-inbox.sql"
 
 @Injectable()
 /**
@@ -48,14 +29,18 @@ export class MetaInboxService {
         @InjectQueueOutbox() private readonly outbox: QueueOutbox,
         private readonly connections: ConnectionsService,
         private readonly conversations: ConversationsService,
+        private readonly threads: MetaThreadsService,
+        private readonly comments: MetaCommentsService,
     ) {}
 
     /** Verifies and records the delivery; a delivery that carries no event of ours is acknowledged and dropped. */
-    async accept(rawBody: MetaWebhookBody, signature: MetaWebhookSignature): Promise<void> {
+    async accept(rawBody: RawDelivery, signature: DeliverySignature): Promise<void> {
         if (rawBody === undefined || !this.meta.verifyDelivery(signature, rawBody)) {
             throw new MetaInboxError({ code: MetaInboxErrorCode.SignatureInvalid })
         }
-        const body = this.readJson(rawBody)
+        const read = parseJsonText(rawBody.toString("utf8"))
+        if (!read.ok || !isRecord(read.value)) return
+        const body = read.value
         const events = this.meta.parse(body)
         if (events.length === 0) return
         await acceptWebhookDelivery({
@@ -64,9 +49,14 @@ export class MetaInboxService {
             complete: COMPLETE_META_INBOX,
             provider: "meta",
             deliveryId: createHash("sha256").update(rawBody).digest("hex"),
-            payload: storedPayload(body),
+            payload: body,
             process: (manager) => this.process(events, manager),
         })
+    }
+
+    /** Delivers the event a claimed job carries; a payload that is not a queued Meta event is left alone. */
+    async deliverPayload(payload: object): Promise<void> {
+        if (isMetaInboundJob(payload)) await this.deliver(payload)
     }
 
     /**
@@ -93,38 +83,35 @@ export class MetaInboxService {
         )
     }
 
-    private readJson(rawBody: Buffer): unknown {
-        try {
-            return JSON.parse(rawBody.toString("utf8"))
-        } catch (error) {
-            return error instanceof SyntaxError ? null : null
-        }
+    private process(events: ReadonlyArray<MetaEvent>, manager: EntityManager): Promise<void> {
+        return eachInOrder(events, (event) => this.processOne(event, manager))
     }
 
-    private async process(events: ReadonlyArray<MetaEvent>, manager: EntityManager): Promise<void> {
-        await eachInOrder(events, async (event) => {
-            const key = event.platform === "facebook" ? "page_id" : "ig_id"
-            const ownerId = event.platform === "facebook" ? event.page_id : event.ig_id
-            const owner = ownerId === null ? null : await this.connections.findLiveByMeta("meta", key, ownerId, manager)
-            if (owner === null) return
-            const at = new Date(event.timestamp).toISOString()
-            const person = event.sender_psid ?? event.sender_igsid
-            if ((event.kind === "dm" || event.kind === "postback") && person !== null) {
-                await manager.query(TOUCH_META_THREAD, [owner.id, event.platform, person, at])
-            }
-            if ((event.kind === "comment" || event.kind === "mention") && event.comment_id !== null) {
-                await manager.query(NOTE_META_COMMENT, [owner.id, event.comment_id, event.platform, at])
-            }
-            await this.connections.recordEvent(owner.id, {
-                amount: 0,
-                content: event.sender_name ?? event.kind,
-                at,
-                text: (event.text ?? "").slice(0, 160),
-            })
-            const job: MetaInboundJob = { connectionId: owner.id, workspaceId: owner.workspaceId, event }
-            await this.outbox.write(manager, META_INBOUND_QUEUE, job, {
-                dedupeKey: `${META_INBOUND_QUEUE}:${owner.id}:${event.event_key}`,
-            })
+    private async processOne(event: MetaEvent, manager: EntityManager): Promise<void> {
+        const key = event.platform === "facebook" ? "page_id" : "ig_id"
+        const ownerId = event.platform === "facebook" ? event.page_id : event.ig_id
+        const owner = ownerId === null ? null : await this.connections.findLiveByMeta("meta", key, ownerId, manager)
+        if (owner === null) return
+        const at = new Date(event.timestamp).toISOString()
+        const person = event.sender_psid ?? event.sender_igsid
+        if ((event.kind === "dm" || event.kind === "postback") && person !== null) {
+            await this.threads.touch({ connectionId: owner.id, platform: event.platform, userId: person, at }, manager)
+        }
+        if ((event.kind === "comment" || event.kind === "mention") && event.comment_id !== null) {
+            await this.comments.note(
+                { connectionId: owner.id, commentId: event.comment_id, platform: event.platform, at },
+                manager,
+            )
+        }
+        await this.connections.recordEvent(owner.id, {
+            amount: 0,
+            content: event.sender_name ?? event.kind,
+            at,
+            text: (event.text ?? "").slice(0, 160),
+        })
+        const job: MetaInboundJob = { connectionId: owner.id, workspaceId: owner.workspaceId, event }
+        await this.outbox.write(manager, META_INBOUND_QUEUE, job, {
+            dedupeKey: `${META_INBOUND_QUEUE}:${owner.id}:${event.event_key}`,
         })
     }
 }

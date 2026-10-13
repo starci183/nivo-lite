@@ -34,12 +34,11 @@ const build = async () => {
     const members = mock<WorkspaceMembersService>()
     members.require.mockResolvedValue(MEMBER)
     const sessions = mock<SetupSessionsService>()
-    const clock = new FakeClock("2026-10-13T02:00:00.000Z")
     const moduleRef = await Test.createTestingModule({
         providers: [
             ContextNotesService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
-            { provide: CLOCK, useValue: clock },
+            { provide: CLOCK, useValue: new FakeClock("2026-10-13T02:00:00.000Z") },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: SetupSessionsService, useValue: sessions },
         ],

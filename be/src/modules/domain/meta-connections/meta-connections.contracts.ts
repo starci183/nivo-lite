@@ -1,5 +1,5 @@
 import type { ConnectionStatus, FirstEvent } from "@modules/domain/connections"
-import type { AppObject, MetaPageChoice } from "@modules/integrations/meta"
+import type { AppObject, MetaPageChoice, PageSubscription } from "@modules/integrations/meta"
 
 /** The sealed credential of a Meta connection: while the owner is choosing, the Pages they manage; after, the chosen Page only. */
 export interface MetaSecret {
@@ -72,11 +72,7 @@ export interface MetaCheck {
     /** The Instagram username. */
     readonly igUsername: string
     /** The Page subscription. */
-    readonly page: {
-        readonly subscribed: boolean
-        readonly fields: ReadonlyArray<string>
-        readonly missing: ReadonlyArray<string>
-    }
+    readonly page: PageSubscription
     /** The app-level webhook for the page object (null when Meta would not tell). */
     readonly appPage: AppObject | null
     /** The app-level webhook for the instagram object. */
@@ -113,4 +109,17 @@ export interface MetaCallbackInput {
 export interface MetaCallbackResult {
     /** The absolute location to redirect to. */
     readonly location: string
+}
+
+/** The pending connection a login resumes; undefined starts a new one. */
+export type ResumedConnectionId = string | undefined
+
+/** What a Meta webhook verification request carries, read from its `hub.*` query parameters. */
+export interface MetaChallengeQuery {
+    /** `hub.mode`; only `subscribe` is answered. */
+    readonly mode: string | undefined
+    /** `hub.verify_token`; must equal the configured verify token. */
+    readonly verifyToken: string | undefined
+    /** `hub.challenge`, echoed back when the request is ours. */
+    readonly challenge: string | undefined
 }
