@@ -111,7 +111,7 @@ export const loadContextFor = async (
     const own = moduleKey
         ? (ctx.versions[moduleKey] ?? null)
         : Object.values(ctx.versions).length
-          ? Math.max(...Object.values(ctx.versions))
+          ? Math.max(...Object.values(ctx.versions).map(Number))
           : null
     return { text: ctx.text, version: own }
 }
@@ -422,7 +422,7 @@ const contextVersionFor = (def: TemplateDef, versions: Partial<Record<ModuleScop
     def.moduleKey
         ? (versions[def.moduleKey] ?? null)
         : Object.values(versions).length
-          ? Math.max(...Object.values(versions))
+          ? Math.max(...Object.values(versions).map(Number))
           : null
 
 /** Every row the automations screen reads, as `automations_data` returns them. */
