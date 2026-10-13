@@ -2,6 +2,7 @@ import { PublicBookingPage } from "@/features/pages/PublicBookingPage"
 
 export { publicBookingMetadata as generateMetadata } from "@/features/pages/PublicBookingPage"
 
+/** Rendered per request: the public booking page reads the shop slug of the URL. */
 export const dynamic = "force-dynamic"
 
 type PageProps = Parameters<typeof PublicBookingPage>[0]
