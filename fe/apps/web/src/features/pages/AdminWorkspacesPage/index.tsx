@@ -2,9 +2,8 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getFormatter, getTranslations } from "next-intl/server"
 import { adminFormat, workspaceRows } from "@/hooks/admin"
-import { isAdminWorkspaceFilter } from "@/modules/api"
-import { readAdminWorkspaces } from "@/modules/api"
-import type { AdminWorkspaceFilter } from "@/modules/api"
+import { isAdminWorkspaceFilter, readAdminWorkspaces } from "@/modules/db"
+import type { AdminWorkspaceFilter } from "@/modules/db/admin/admin.mapper"
 import { adminListPath } from "@/modules/routes"
 import { AdminWorkspacesPageBase } from "./component"
 
@@ -33,7 +32,7 @@ export const AdminWorkspacesPage = async (props: AdminWorkspacesPageProps) => {
     const filter = isAdminWorkspaceFilter(f) ? f : "all"
     const query = (q ?? "").slice(0, QUERY_MAX)
     const list = await readAdminWorkspaces({ filter, query })
-    if (list.kind === "unavailable") throw new Error(`admin: workspaces ${list.fault.code}`)
+    if (list.kind === "unavailable") throw new Error(`admin: workspaces ${list.code}`)
     if (list.kind !== "ok") notFound()
     return (
         <AdminWorkspacesPageBase

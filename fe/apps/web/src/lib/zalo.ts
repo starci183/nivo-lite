@@ -1,6 +1,5 @@
 import "server-only";
-import { createHash } from "node:crypto";
-import { decryptSecret, encryptSecret, publicSiteUrl } from "./channels";
+import { decryptSecret, encryptSecret } from "./channels";
 import type { Db } from "./core";
 import { supabaseAdmin } from "./supabase/admin";
 import { REFRESH_TTL_MS, ZaloError, refreshTokens, sendCsText } from "./zalo-api";
@@ -53,7 +52,7 @@ const load = async (connectionId: string): Promise<Loaded | null> => {
 export const loadZalo = load;
 
 /** The callback URL to register on the Zalo app: Zalo sends the browser back here with ?code&oa_id&state. */
-export const zaloCallbackUrl = (): string => `${(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3100").replace(/\/$/, "")}/api/connections/zalo/oauth/callback`;
+export const zaloCallbackUrl = (): string => `${(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3100").replace(/\/$/, "")}/connections/zalo/callback`;
 
 /** Persist the credential (and optionally its expiry); `release` also drops the refresh lease. */
 export const saveZaloSecret = async (connectionId: string, secret: ZaloSecret, opts: { expiresAt?: number | null; release?: boolean } = {}): Promise<void> => {
@@ -134,40 +133,6 @@ export const getAccessToken = async (connectionId: string, opts: { stale?: strin
     }
   }
   throw new Error("zalo token refresh is busy; try again");
-};
-
-/** Refresh every Zalo connection whose access token ends within `withinMs` (the 6-hourly job). Returns how many were refreshed / failed. */
-export const refreshDueConnections = async (withinMs = 7 * 3_600_000): Promise<{ refreshed: number; failed: number }> => {
-  const db = supabaseAdmin();
-  const { data: conns } = await db.from("connections").select("id").eq("provider", "zalo_oa").neq("status", "disconnected");
-  const ids = ((conns ?? []) as Array<{ id: string }>).map((c) => c.id);
-  if (!ids.length) return { refreshed: 0, failed: 0 };
-  const { data: secs } = await db.from("connection_secrets").select("connection_id, token_expires_at").in("connection_id", ids);
-  const due = ((secs ?? []) as Array<{ connection_id: string; token_expires_at: string | null }>)
-    .filter((s) => s.token_expires_at !== null && Date.parse(s.token_expires_at) - Date.now() < withinMs).map((s) => s.connection_id);
-  let refreshed = 0;
-  let failed = 0;
-  for (const id of due) {
-    try {
-      await getAccessToken(id, { force: true });
-      refreshed += 1;
-    } catch (e) {
-      failed += 1;
-      console.error("zalo scheduled refresh failed", id, e instanceof Error ? e.message : e);
-    }
-  }
-  return { refreshed, failed };
-};
-
-/** The bearer the scheduled job presents: derived from the service key, so it needs no extra setting and is never stored in the app. */
-export const cronSecret = (): string => createHash("sha256").update(`zalo-cron:${process.env.SUPABASE_SERVICE_ROLE_KEY ?? ""}`).digest("hex");
-
-/** Tell pg_cron where to call (public https only; locally the route is called by hand). */
-export const registerRefreshTarget = async (): Promise<void> => {
-  const origin = publicSiteUrl();
-  if (!origin || !process.env.SUPABASE_SERVICE_ROLE_KEY) return;
-  const { error } = await supabaseAdmin().from("cron_targets").upsert({ name: "zalo-refresh", url: `${origin}/api/connections/zalo/refresh`, secret: cronSecret(), updated_at: new Date().toISOString() });
-  if (error) console.error("zalo cron target not saved", error.message);
 };
 
 /* ------------------------------------------------------------------ delivery */

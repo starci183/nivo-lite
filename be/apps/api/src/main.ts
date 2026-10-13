@@ -1,3 +1,4 @@
+import { parseBillingConfig } from "@modules/domain/billing"
 import { NestFactory } from "@nestjs/core"
 import type { NestExpressApplication } from "@nestjs/platform-express"
 import { SystemClockService } from "@modules/platform/clock"
@@ -7,9 +8,16 @@ import { parseHttpSecurityConfig, RequestValidationService } from "@modules/plat
 import { createJsonLogger, LoggingLogEvent } from "@modules/platform/logging"
 import { parseJobsConfig } from "@modules/platform/jobs"
 import { parseQueueConfig } from "@modules/platform/queue"
+import { parseChannelsConfig } from "@modules/domain/channels"
+import { parseConnectionSecretsConfig } from "@modules/domain/connection-secrets"
+import { parseMailConfig } from "@modules/integrations/mail"
+import { parseTelegramConfig } from "@modules/integrations/telegram"
+import { parseZaloConfig } from "@modules/integrations/zalo"
 import { parsePlatformAdminConfig } from "@modules/domain/platform-admin"
 import { parseWorkspaceInvitesConfig } from "@modules/domain/workspace-invites"
 import { parseWorkspacesConfig } from "@modules/domain/workspaces"
+import { parseDeepseekConfig } from "@modules/integrations/deepseek"
+import { parseOpenclawConfig } from "@modules/integrations/openclaw"
 import { parseVideoConfig } from "@modules/domain/video"
 import { parseFfmpegConfig } from "@modules/integrations/ffmpeg"
 import { parseSupabaseConfig } from "@modules/integrations/supabase"
@@ -35,6 +43,14 @@ const bootstrap = async (): Promise<void> => {
         platformAdmin: parsePlatformAdminConfig(env),
         workspaces: parseWorkspacesConfig(env),
         workspaceInvites: parseWorkspaceInvitesConfig(env),
+        billing: parseBillingConfig(env),
+        openclaw: parseOpenclawConfig(env),
+        deepseek: parseDeepseekConfig(env),
+        connectionSecrets: parseConnectionSecretsConfig(env),
+        channels: parseChannelsConfig(env),
+        telegram: parseTelegramConfig(env),
+        zalo: parseZaloConfig(env),
+        mail: parseMailConfig(env),
         queue: parseQueueConfig(env),
         jobs: parseJobsConfig(env),
         ffmpeg: parseFfmpegConfig(env),

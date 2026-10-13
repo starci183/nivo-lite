@@ -1,4 +1,4 @@
-// migrations-sha256: 224a40a4abdd7b14b056ce1084959031f4c94cd7af320187d304e167f84a34bd
+// migrations-sha256: e47465afb6fd441715bb37ad105741301e468e3b50c01b6e7a5c76817df42566
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -144,13 +144,13 @@ isOneToOne: false
                   ]
                 },"agent_messages": {
                   Row: {
-                    "author_kind": string | null,"author_name": string | null,"body": string,"conversation_id": string,"created_at": string,"delivery_error": string | null,"delivery_status": string | null,"id": string,"role": string,"workspace_id": string
+                    "author_kind": string | null,"author_name": string | null,"body": string,"conversation_id": string,"created_at": string,"delivery_error": string | null,"delivery_status": string | null,"id": string,"in_reply_to": string | null,"role": string,"workspace_id": string
                   }
                   Insert: {
-                    "author_kind"?: string | null,"author_name"?: string | null,"body": string,"conversation_id": string,"created_at"?: string,"delivery_error"?: string | null,"delivery_status"?: string | null,"id"?: string,"role": string,"workspace_id": string
+                    "author_kind"?: string | null,"author_name"?: string | null,"body": string,"conversation_id": string,"created_at"?: string,"delivery_error"?: string | null,"delivery_status"?: string | null,"id"?: string,"in_reply_to"?: string | null,"role": string,"workspace_id": string
                   }
                   Update: {
-                    "author_kind"?: string | null,"author_name"?: string | null,"body"?: string,"conversation_id"?: string,"created_at"?: string,"delivery_error"?: string | null,"delivery_status"?: string | null,"id"?: string,"role"?: string,"workspace_id"?: string
+                    "author_kind"?: string | null,"author_name"?: string | null,"body"?: string,"conversation_id"?: string,"created_at"?: string,"delivery_error"?: string | null,"delivery_status"?: string | null,"id"?: string,"in_reply_to"?: string | null,"role"?: string,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -158,6 +158,12 @@ isOneToOne: false
       columns: ["conversation_id"]
 isOneToOne: false
       referencedRelation: "agent_conversations"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "agent_messages_in_reply_to_fkey"
+      columns: ["in_reply_to"]
+isOneToOne: false
+      referencedRelation: "agent_messages"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "agent_messages_workspace_id_fkey"
@@ -280,7 +286,7 @@ isOneToOne: false
                   }
                   Relationships: [
                     {
-      foreignKeyName: "api_keys_workspace_id_fkey"
+      foreignKeyName: "workspace_api_keys_workspace_id_fkey"
       columns: ["workspace_id"]
 isOneToOne: false
       referencedRelation: "workspaces"
@@ -303,6 +309,25 @@ isOneToOne: false
       columns: ["key_id"]
 isOneToOne: false
       referencedRelation: "api_keys"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"app_commands": {
+                  Row: {
+                    "created_at": string,"error_code": string | null,"finished_at": string | null,"id": string,"input": NonNullable<Json>,"kind": string,"requested_by": string,"result": Json | null,"state": string,"workspace_id": string | null
+                  }
+                  Insert: {
+                    "created_at"?: string,"error_code"?: string | null,"finished_at"?: string | null,"id"?: string,"input"?: NonNullable<Json>,"kind": string,"requested_by": string,"result"?: Json | null,"state"?: string,"workspace_id"?: string | null
+                  }
+                  Update: {
+                    "created_at"?: string,"error_code"?: string | null,"finished_at"?: string | null,"id"?: string,"input"?: NonNullable<Json>,"kind"?: string,"requested_by"?: string,"result"?: Json | null,"state"?: string,"workspace_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "app_commands_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
       referencedColumns: ["id"]
     }
                   ]
@@ -2777,6 +2802,31 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"payment_order_requests": {
+                  Row: {
+                    "answered_at": string | null,"created_at": string,"fault": string | null,"id": string,"kind": string,"order_id": string | null,"requested_by": string,"status": string,"target": string | null,"workspace_id": string
+                  }
+                  Insert: {
+                    "answered_at"?: string | null,"created_at"?: string,"fault"?: string | null,"id"?: string,"kind": string,"order_id"?: string | null,"requested_by": string,"status"?: string,"target"?: string | null,"workspace_id": string
+                  }
+                  Update: {
+                    "answered_at"?: string | null,"created_at"?: string,"fault"?: string | null,"id"?: string,"kind"?: string,"order_id"?: string | null,"requested_by"?: string,"status"?: string,"target"?: string | null,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "payment_order_requests_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "payment_orders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "payment_order_requests_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"payment_orders": {
                   Row: {
                     "amount_vnd": number,"created_at": string,"created_by": string | null,"detail": NonNullable<Json>,"expires_at": string,"id": string,"kind": string,"order_code": string,"pack_code": string | null,"paid_at": string | null,"plan_code": string,"sepay_transaction_id": number | null,"status": string,"workspace_id": string
@@ -2821,6 +2871,19 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"platform_admins": {
+                  Row: {
+                    "created_at": string,"email": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"email": string
+                  }
+                  Update: {
+                    "created_at"?: string,"email"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"platform_audit": {
                   Row: {
                     "action": string,"actor_email": string,"actor_id": string | null,"created_at": string,"data": NonNullable<Json>,"id": string,"workspace_id": string | null
@@ -2840,6 +2903,19 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"platform_flags": {
+                  Row: {
+                    "enabled": boolean,"key": string
+                  }
+                  Insert: {
+                    "enabled"?: boolean,"key": string
+                  }
+                  Update: {
+                    "enabled"?: boolean,"key"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"public_api": {
                   Row: {
                     "created_at": string,"dedupe_key": string,"duplicates": number,"id": string,"key_id": string,"kind": string,"lead_id": string | null,"payload": NonNullable<Json>,"processed_at": string | null,"workspace_id": string
@@ -2857,15 +2933,13 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "api_keys"
       referencedColumns: ["id"]
-    },
-                    {
+    },{
       foreignKeyName: "public_api_lead_id_fkey"
       columns: ["lead_id"]
 isOneToOne: false
       referencedRelation: "leads"
       referencedColumns: ["id"]
-    },
-                    {
+    },{
       foreignKeyName: "public_api_workspace_id_fkey"
       columns: ["workspace_id"]
 isOneToOne: false
@@ -2888,7 +2962,7 @@ isOneToOne: false
                   ]
                 },"responsibilities": {
                   Row: {
-                    "created_at": string,"due_at": string | null,"id": string,"lead_id": string,"next_action": string,"owner_agent_id": string | null,"owner_kind": string,"owner_name": string,"status": string,"title": string,"workspace_id": string
+                    "created_at": string,"due_at": string | null,"id": string,"lead_id": string,"next_action": string,"owner_agent_id": string | null,"owner_kind": string,"owner_name": string,"status": string,"title": string,"workspace_id": string,"lead_step_json": Json | null
                   }
                   Insert: {
                     "created_at"?: string,"due_at"?: string | null,"id"?: string,"lead_id": string,"next_action": string,"owner_agent_id"?: string | null,"owner_kind": string,"owner_name": string,"status"?: string,"title": string,"workspace_id": string
@@ -3297,6 +3371,19 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"telegram_inbox": {
+                  Row: {
+                    "delivery_id": string,"id": string,"payload": NonNullable<Json>,"processed_at": string | null,"provider": string,"received_at": string
+                  }
+                  Insert: {
+                    "delivery_id": string,"id"?: string,"payload": NonNullable<Json>,"processed_at"?: string | null,"provider": string,"received_at"?: string
+                  }
+                  Update: {
+                    "delivery_id"?: string,"id"?: string,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"provider"?: string,"received_at"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"transactions": {
                   Row: {
                     "amount_vnd": number,"channel": string,"created_at": string,"id": string,"inbound_event_id": string | null,"invoice_id": string | null,"occurred_at": string,"origin": string,"payer": string | null,"reference": string | null,"status": string,"workspace_id": string
@@ -3564,6 +3651,19 @@ isOneToOne: false
       referencedColumns: ["code"]
     }
                   ]
+                },"zalo_inbox": {
+                  Row: {
+                    "delivery_id": string,"id": string,"payload": NonNullable<Json>,"processed_at": string | null,"provider": string,"received_at": string
+                  }
+                  Insert: {
+                    "delivery_id": string,"id"?: string,"payload": NonNullable<Json>,"processed_at"?: string | null,"provider": string,"received_at"?: string
+                  }
+                  Update: {
+                    "delivery_id"?: string,"id"?: string,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"provider"?: string,"received_at"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 }
           }
           Views: {
@@ -3599,6 +3699,39 @@ isOneToOne: false
             "accept_invite":
 { Args: { "token": string }; Returns: string
                            },
+"add_lead_responsibility":
+{ Args: { "p_due"?: string,"p_lead": string,"p_locale"?: string,"p_next_action": string,"p_owner": string,"p_title": string,"p_workspace": string }; Returns: Json
+                           },
+"admin_console_audit":
+{ Args: { "p_action": string,"p_data"?: Json,"p_workspace"?: string }; Returns: undefined
+                           },
+"admin_console_quota":
+{ Args: { "p_workspace": string }; Returns: Json
+                           },
+"admin_console_signups":
+{ Args: { "p_days"?: number }; Returns: {
+              "day": string,"signups": number
+            }[]
+                           },
+"admin_console_user_emails":
+{ Args: { "p_ids": (string)[] }; Returns: {
+              "email": string,"id": string,"last_sign_in_at": string
+            }[]
+                           },
+"admin_console_workspace_stats":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "last_customer_message_at": string,"members": number,"messages_7d": number,"open_decisions": number,"workspace_id": string
+            }[]
+                           },
+"admin_extend_subscription":
+{ Args: { "p_days": number,"p_workspace": string }; Returns: string
+                           },
+"admin_set_workspace_plan":
+{ Args: { "p_credits"?: number,"p_plan": string,"p_workspace": string }; Returns: Json
+                           },
+"admin_set_workspace_status":
+{ Args: { "p_status": string,"p_workspace": string }; Returns: string
+                           },
 "admin_signups_per_day":
 { Args: { "p_days"?: number }; Returns: {
               "day": string,"signups": number
@@ -3623,13 +3756,16 @@ isOneToOne: false
 { Args: { "p_hash": string }; Returns: Json
                            },
 "api_key_create":
-{ Args: { "p_name": string; "p_workspace": string }; Returns: Json
+{ Args: { "p_name": string,"p_workspace": string }; Returns: Json
                            },
 "api_key_revoke":
-{ Args: { "p_key": string; "p_workspace": string }; Returns: Json
+{ Args: { "p_key": string,"p_workspace": string }; Returns: Json
                            },
 "api_rate_hit":
 { Args: { "p_key": string }; Returns: number
+                           },
+"assign_lead_responsibility":
+{ Args: { "p_due"?: string,"p_locale"?: string,"p_next_action": string,"p_owner": string,"p_responsibility": string,"p_title"?: string,"p_workspace": string }; Returns: Json
                            },
 "automation_tick":
 { Args: Record<PropertyKey, never>; Returns: boolean
@@ -3649,8 +3785,11 @@ isOneToOne: false
 "booking_reserve":
 { Args: { "p": Json,"p_force"?: boolean }; Returns: string
                            },
-"content_tick":
-{ Args: Record<PropertyKey, never>; Returns: boolean
+"connection_mark_fed":
+{ Args: { "p_at": string,"p_connection": string,"p_first_event": Json }; Returns: undefined
+                           },
+"create_free_workspace":
+{ Args: { "p_name": string }; Returns: string
                            },
 "dashboard_data":
 { Args: { "founding_from": string,"founding_to": string,"since7": string,"ws": string }; Returns: Json
@@ -3776,6 +3915,9 @@ isOneToOne: false
 "is_owner":
 { Args: { "ws": string }; Returns: boolean
                            },
+"is_platform_admin":
+{ Args: Record<PropertyKey, never>; Returns: boolean
+                           },
 "job_ack":
 { Args: { "p_msg_id": number,"p_queue": string }; Returns: boolean
                            },
@@ -3814,6 +3956,15 @@ isOneToOne: false
 "knowledge_retry_source":
 { Args: { "p_source": string }; Returns: string
                            },
+"lead_actor_name":
+{ Args: { "p_workspace": string }; Returns: string
+                           },
+"lead_step_json":
+{ Args: { "r": Database["public"]['Tables']["responsibilities"]['Row'] }; Returns: Json
+                           },
+"lead_step_owner":
+{ Args: { "p_actor": string,"p_owner": string,"p_workspace": string }; Returns: Record<string, unknown>
+                           },
 "loyalty_post":
 { Args: { "p_amount_vnd"?: number,"p_by": string,"p_customer": string,"p_evidence"?: string,"p_expires_at"?: string,"p_invoice_id"?: string,"p_kind": string,"p_occurred_at"?: string,"p_order_id"?: string,"p_points": number,"p_ref": string,"p_reward_id"?: string,"p_work_item_id"?: string,"p_workspace": string }; Returns: string
                            },
@@ -3848,8 +3999,44 @@ isOneToOne: false
 "owns_workspace":
 { Args: { "ws": string }; Returns: boolean
                            },
+"payment_order_request":
+{ Args: { "p_kind": string,"p_target": string,"p_workspace": string }; Returns: string
+                           },
+"post_office_notice":
+{ Args: { "p_body": string,"p_workspace": string }; Returns: undefined
+                           },
 "promo_state":
 { Args: { "founding_from": string,"founding_to": string,"ws": string }; Returns: Json
+                           },
+"read_app_command":
+{ Args: { "p_id": string }; Returns: Json
+                           },
+"record_lead_outcome":
+{ Args: { "p_evidence": string,"p_lead": string,"p_locale"?: string,"p_stage": string,"p_workspace": string }; Returns: Json
+                           },
+"request_admin_invite_resend":
+{ Args: { "p_invite": string,"p_workspace": string }; Returns: string
+                           },
+"request_agent_sync":
+{ Args: { "p_force"?: boolean,"p_installation"?: string,"p_workspace": string }; Returns: string
+                           },
+"request_execution_decision":
+{ Args: { "p_decision": string,"p_edited_draft"?: string,"p_execution": string,"p_locale"?: string,"p_workspace": string }; Returns: string
+                           },
+"request_invite_command":
+{ Args: { "p_action": string,"p_email"?: string,"p_invite"?: string,"p_role"?: string,"p_staff"?: string,"p_workspace": string }; Returns: string
+                           },
+"request_office_confirm":
+{ Args: { "p_candidate": string,"p_locale"?: string,"p_workspace": string }; Returns: string
+                           },
+"request_office_propose":
+{ Args: { "p_locale"?: string,"p_message": string,"p_workspace": string }; Returns: string
+                           },
+"request_video_render":
+{ Args: { "p_project": string }; Returns: string
+                           },
+"request_work_decision":
+{ Args: { "p_basis"?: string,"p_decision": string,"p_edits"?: Json,"p_locale"?: string,"p_note"?: string,"p_work_item": string,"p_workspace": string }; Returns: string
                            },
 "resolve_installation":
 { Args: { "p_chain"?: string,"p_conversation"?: string,"p_lead"?: string,"p_module": string,"p_ws": string }; Returns: {
@@ -3861,6 +4048,9 @@ isOneToOne: false
                            },
 "revoke_my_session":
 { Args: { "session_id": string }; Returns: boolean
+                           },
+"revoke_workspace_invite":
+{ Args: { "p_invite": string,"p_workspace": string }; Returns: undefined
                            },
 "session_bootstrap":
 { Args: Record<PropertyKey, never>; Returns: Json
@@ -3886,13 +4076,29 @@ isOneToOne: false
 "update_my_profile":
 { Args: { "new_display_name": string,"ws": string }; Returns: undefined
                            },
+"usage_notice_post":
+{ Args: { "p_body": string,"p_level": string,"p_period": string,"p_workspace": string }; Returns: boolean
+                           },
+"usage_quota_status":
+{ Args: { "p_workspace": string }; Returns: {
+              "cost_usd": number,"credits_carried": number,"credits_limit": number,"credits_used": number,"fallback_reply": string,"messages_limit": number,"messages_used": number,"period_start": string,"tokens_limit": number,"tokens_used": number,"topup_balance": number
+            }[]
+                           },
 "video_renders_reap":
 { Args: Record<PropertyKey, never>; Returns: number
+                           },
+"workspace_member_contacts":
+{ Args: { "p_workspace": string }; Returns: {
+              "email": string,"last_sign_in_at": string,"user_id": string
+            }[]
                            },
 "workspace_members_directory":
 { Args: { "ws": string }; Returns: {
               "created_at": string,"display_name": string,"email": string,"last_sign_in_at": string,"role": string,"staff_id": string,"status": string,"user_id": string
             }[]
+                           },
+"zalo_authorization_return":
+{ Args: { "p_code": string,"p_oa_id"?: string,"p_state": string }; Returns: string
                            },
 "zalo_refresh_tick":
 { Args: Record<PropertyKey, never>; Returns: number

@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getFormatter, getTranslations } from "next-intl/server"
 import { adminFormat, detailCards, detailFacts } from "@/hooks/admin"
-import { readAdminWorkspace } from "@/modules/api"
+import { readAdminWorkspace } from "@/modules/db"
 import { AdminWorkspacePageBase } from "./component"
 
 /** What the route hands the page: the workspace id of the address. */
@@ -22,7 +22,7 @@ export const AdminWorkspacePage = async (props: AdminWorkspacePageProps) => {
     const format = adminFormat(await getFormatter(), t, new Date())
     const { id } = await props.params
     const detail = await readAdminWorkspace(id)
-    if (detail.kind === "unavailable") throw new Error(`admin: workspace ${detail.fault.code}`)
+    if (detail.kind === "unavailable") throw new Error(`admin: workspace ${detail.code}`)
     if (detail.kind !== "ok") notFound()
     const { workspace, credits, invites } = detail.value
     const facts = detailFacts(detail.value, format, t)
