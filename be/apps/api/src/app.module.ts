@@ -1,4 +1,4 @@
-import { Global, Module } from "@nestjs/common"
+import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
 import { ExtractKnowledgeFactsQueueModule } from "@features/jobs/extract-knowledge-facts"
@@ -60,7 +60,11 @@ import { SepayFeedHttpModule } from "@features/webhooks/sepay-feed"
 import { VietcombankHttpModule } from "@features/webhooks/vietcombank"
 import { ReconcileBankCreditQueueModule } from "@features/jobs/reconcile-bank-credit"
 import { CreatePaymentOrderQueueModule } from "@features/jobs/create-payment-order"
-import { PaymentOrderRequestsModule } from "@modules/domain/payment-order-requests"
+import {
+    PAYMENT_ORDER_REQUESTS_ERROR_KINDS,
+    PAYMENT_ORDER_REQUESTS_MESSAGES,
+    PaymentOrderRequestsModule,
+} from "@modules/domain/payment-order-requests"
 import { BILLING_ERROR_KINDS, BILLING_MESSAGES, BillingModule } from "@modules/domain/billing"
 import {
     INBOUND_EVENTS_ERROR_KINDS,
@@ -75,6 +79,18 @@ import {
 import { CREDITS_ERROR_KINDS, CREDITS_MESSAGES, CreditsModule } from "@modules/domain/credits"
 import { AI_USAGE_EVENTS_MESSAGES, AiUsageEventsModule, UsageGateService } from "@modules/domain/ai-usage-events"
 import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
+import { OrdersGraphqlModule } from "@features/api/orders"
+import { BillingGraphqlModule } from "@features/api/billing"
+import { CreditsGraphqlModule } from "@features/api/credits"
+import { AccountingGraphqlModule } from "@features/api/accounting"
+import { AdjustmentsGraphqlModule } from "@features/api/adjustments"
+import { AccountingModule } from "@modules/domain/accounting"
+import { StaffModule } from "@modules/domain/staff"
+import {
+    ACCOUNTING_ADJUSTMENTS_ERROR_KINDS,
+    ACCOUNTING_ADJUSTMENTS_MESSAGES,
+    AccountingAdjustmentsModule,
+} from "@modules/domain/accounting-adjustments"
 import { WorkspacesGraphqlModule, WorkspacesHttpModule } from "@features/api/workspaces"
 import {
     EMAIL_MESSAGES_ERROR_KINDS,
@@ -359,14 +375,6 @@ const NO_CORRECTIONS: CorrectionSource = { recent: () => Promise.resolve([]) }
 
 const NO_DRIVE_ACCESS: DriveAccessSource = { forWorkspace: () => null }
 
-@Global()
-@Module({
-    providers: [{ provide: VIDEO_ASSETS, useExisting: SUPABASE_STORAGE }],
-    exports: [VIDEO_ASSETS],
-})
-/** Binds the file store the render job uses to the Supabase storage integration. */
-class VideoAssetsBindingModule {}
-
 @Module({})
 /** Composition root of the API: every capability is registered once and the three guards run in a fixed order. */
 export class AppModule {
@@ -375,6 +383,8 @@ export class AppModule {
         const verifyAccessToken = createSupabaseAccessTokenVerifier(options.supabase)
         return {
             module: AppModule,
+            global: true,
+            exports: [VIDEO_ASSETS],
             imports: [
                 ClockModule.register({ isGlobal: true }),
                 LoggingModule.register({ isGlobal: true }),
@@ -408,9 +418,7 @@ export class AppModule {
                         ORDERS_MESSAGES,
                         TRANSACTIONS_MESSAGES,
                         WORK_PERFORMERS_MESSAGES,
-                        API_KEYS_MESSAGES,
-                        AUTHORITY_MESSAGES,
-                        AUTHORITY_RULES_MESSAGES,
+                        ...[API_KEYS_MESSAGES, AUTHORITY_MESSAGES, AUTHORITY_RULES_MESSAGES],
                         DECISIONS_MESSAGES,
                         DEEPSEEK_MESSAGES,
                         EXECUTIONS_MESSAGES,
@@ -421,16 +429,10 @@ export class AppModule {
                         WORK_ITEMS_MESSAGES,
                         AGENT_CONVERSATIONS_MESSAGES,
                         AGENT_MESSAGES_MESSAGES,
-                        BILLING_MESSAGES,
-                        CREDITS_MESSAGES,
-                        INBOUND_EVENTS_MESSAGES,
-                        PAYMENT_ORDERS_MESSAGES,
-                        CHANNELS_MESSAGES,
-                        CONNECTION_SECRETS_MESSAGES,
-                        CONVERSATIONS_MESSAGES,
-                        MAIL_MESSAGES,
-                        TELEGRAM_MESSAGES,
-                        ZALO_MESSAGES,
+                        ...[BILLING_MESSAGES, ACCOUNTING_ADJUSTMENTS_MESSAGES, PAYMENT_ORDER_REQUESTS_MESSAGES],
+                        ...[CREDITS_MESSAGES, INBOUND_EVENTS_MESSAGES, PAYMENT_ORDERS_MESSAGES],
+                        ...[CHANNELS_MESSAGES, CONNECTION_SECRETS_MESSAGES, CONVERSATIONS_MESSAGES],
+                        ...[MAIL_MESSAGES, TELEGRAM_MESSAGES, ZALO_MESSAGES],
                         ERRORS_MESSAGES,
                         HTTP_MESSAGES,
                         HTTP_SECURITY_MESSAGES,
@@ -506,24 +508,17 @@ export class AppModule {
                         WORK_ITEMS_ERROR_KINDS,
                         AGENT_CONVERSATIONS_ERROR_KINDS,
                         AGENT_MESSAGES_ERROR_KINDS,
-                        BILLING_ERROR_KINDS,
-                        CREDITS_ERROR_KINDS,
-                        INBOUND_EVENTS_ERROR_KINDS,
-                        PAYMENT_ORDERS_ERROR_KINDS,
+                        ...[BILLING_ERROR_KINDS, ACCOUNTING_ADJUSTMENTS_ERROR_KINDS],
+                        PAYMENT_ORDER_REQUESTS_ERROR_KINDS,
+                        ...[CREDITS_ERROR_KINDS, INBOUND_EVENTS_ERROR_KINDS, PAYMENT_ORDERS_ERROR_KINDS],
                         CHANNELS_ERROR_KINDS,
                         CONNECTION_SECRETS_ERROR_KINDS,
                         CONVERSATIONS_ERROR_KINDS,
-                        MAIL_ERROR_KINDS,
-                        TELEGRAM_ERROR_KINDS,
-                        ZALO_ERROR_KINDS,
-                        CONFIG_ERROR_KINDS,
-                        DATABASE_ERROR_KINDS,
-                        DOCUMENTS_ERROR_KINDS,
+                        ...[MAIL_ERROR_KINDS, TELEGRAM_ERROR_KINDS, ZALO_ERROR_KINDS],
+                        ...[CONFIG_ERROR_KINDS, DATABASE_ERROR_KINDS, DOCUMENTS_ERROR_KINDS],
                         HTTP_ERROR_KINDS,
                         HTTP_SECURITY_ERROR_KINDS,
-                        JOBS_ERROR_KINDS,
-                        BRAIN_ERROR_KINDS,
-                        BRAIN_FACTS_ERROR_KINDS,
+                        ...[JOBS_ERROR_KINDS, BRAIN_ERROR_KINDS, BRAIN_FACTS_ERROR_KINDS],
                         BRAIN_LESSONS_ERROR_KINDS,
                         KNOWLEDGE_ERROR_KINDS,
                         KNOWLEDGE_SOURCES_ERROR_KINDS,
@@ -567,11 +562,7 @@ export class AppModule {
                     ],
                     ...options.queue,
                 }),
-                JobsModule.register({
-                    isGlobal: true,
-                    connection: PRIMARY_ENTITY_MANAGER,
-                    ...options.jobs,
-                }),
+                JobsModule.register({ isGlobal: true, connection: PRIMARY_ENTITY_MANAGER, ...options.jobs }),
                 SupabaseModule.register({ isGlobal: true, ...options.supabase }),
                 IdentityModule.register({ isGlobal: true, verifyAccessToken }),
                 ContractsModule.register({ isGlobal: true }),
@@ -628,7 +619,6 @@ export class AppModule {
                 VideoRendersModule.register({ isGlobal: true }),
                 VideoProjectsModule.register({ isGlobal: true }),
                 VideoProjectVersionsModule.register({ isGlobal: true }),
-                VideoAssetsBindingModule,
                 VideoModule.register({ isGlobal: true, ...options.video }),
                 ContentItemsModule.register({ isGlobal: true }),
                 ContentSettingsModule.register({ isGlobal: true }),
@@ -707,6 +697,11 @@ export class AppModule {
                     },
                 }),
                 OrdersModule.register({ isGlobal: true }),
+                OrdersGraphqlModule,
+                StaffModule.register({ isGlobal: true }),
+                AccountingAdjustmentsModule.register({ isGlobal: true }),
+                AccountingModule.register({ isGlobal: true }),
+                ...[AccountingGraphqlModule, AdjustmentsGraphqlModule],
                 InvoicesModule.register({ isGlobal: true }),
                 TransactionsModule.register({ isGlobal: true }),
                 EmailMessagesModule.register({ isGlobal: true }),
@@ -725,9 +720,11 @@ export class AppModule {
                 PublicApiModule.register({ isGlobal: true }),
                 PaymentOrdersModule.register({ isGlobal: true }),
                 BillingModule.register({ isGlobal: true, ...options.billing }),
+                BillingGraphqlModule,
                 SepayTransactionsModule.register({ isGlobal: true }),
                 AiUsageEventsModule.register({ isGlobal: true }),
                 CreditsModule.register({ isGlobal: true }),
+                CreditsGraphqlModule,
                 ApplyBookingStatusQueueModule,
                 PaymentOrderRequestsModule.register({ isGlobal: true }),
                 ReconcileBankCreditQueueModule,
@@ -776,6 +773,7 @@ export class AppModule {
                 AdminHttpModule,
             ],
             providers: [
+                { provide: VIDEO_ASSETS, useExisting: SUPABASE_STORAGE },
                 { provide: SUPABASE_ACCESS_TOKEN_VERIFIER, useValue: verifyAccessToken },
                 { provide: APP_FILTER, useClass: ErrorsFilter },
                 { provide: APP_GUARD, useClass: RateLimitGuard },

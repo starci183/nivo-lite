@@ -1,9 +1,474 @@
+type AccountingAgeingType {
+  d0: AccountingMeasureType!
+  d30: AccountingMeasureType!
+  d60: AccountingMeasureType!
+}
+
+type AccountingBookAdjustmentType {
+  correctedAmount: Float
+  createdAt: String!
+  createdBy: String!
+  id: String!
+  note: String!
+  targetId: String!
+  targetType: String!
+}
+
+type AccountingBookDecisionType {
+  action: String!
+  createdAt: String!
+  decidedBy: String!
+  deciderKind: String!
+  id: String!
+  note: String
+  outcome: String!
+  workItemId: String
+}
+
+type AccountingBookInboundType {
+  body: String!
+  channel: String!
+  eventId: String
+  senderName: String
+}
+
+type AccountingBookInvoiceType {
+  amountVnd: Float!
+  createdAt: String!
+  dueAt: String
+  id: String!
+  invoiceNo: String!
+  issuedAt: String
+  issuedBy: String
+  lead: AccountingBookLeadType
+  leadId: String
+  order: AccountingBookOrderBriefType
+  orderId: String
+  origin: String!
+  paidAt: String
+  status: String!
+  workspaceId: String!
+}
+
+type AccountingBookLeadType {
+  company: String
+  contactName: String
+}
+
+type AccountingBookOrderBriefType {
+  amountVnd: Float
+  items: String!
+  orderNo: String!
+  status: String!
+}
+
+type AccountingBookOrderType {
+  amountVnd: Float
+  carrier: String
+  confirmedAt: String
+  confirmedBy: String
+  createdAt: String!
+  id: String!
+  inboundEventId: String
+  items: String!
+  lead: AccountingBookLeadType
+  leadId: String
+  orderNo: String!
+  origin: String!
+  shippedAt: String
+  status: String!
+  trackingCode: String
+  workspaceId: String!
+}
+
+type AccountingBookTransactionType {
+  amountVnd: Float!
+  channel: String!
+  createdAt: String!
+  id: String!
+  inbound: AccountingBookInboundType
+  inboundEventId: String
+  invoiceId: String
+  occurredAt: String!
+  origin: String!
+  payer: String
+  reference: String
+  status: String!
+  workspaceId: String!
+}
+
+type AccountingBookType {
+  adjustments: [AccountingBookAdjustmentType!]!
+  adjustmentsReady: Boolean!
+  decisions: [AccountingBookDecisionType!]!
+  invoices: [AccountingBookInvoiceType!]!
+  orders: [AccountingBookOrderType!]!
+  transactions: [AccountingBookTransactionType!]!
+  works: [AccountingBookWorkType!]!
+}
+
+type AccountingBookWorkType {
+  action: String!
+  createdAt: String!
+  id: String!
+  status: String!
+  subjectId: String
+  subjectType: String!
+}
+
+type AccountingCandidateType {
+  amountVnd: Float!
+  id: String!
+  label: String!
+}
+
+type AccountingCreditType {
+  amount: Float!
+  id: String!
+  invoiceNo: String
+  match: String!
+  occurredAt: String!
+  origin: String!
+  payer: String
+  reference: String
+  sourceKind: String!
+}
+
+type AccountingInvoiceType {
+  amount: Float!
+  createdAt: String!
+  customer: String
+  dueAt: String
+  id: String!
+  invoiceNo: String!
+  issuedAt: String
+  orderNo: String
+  origin: String!
+  paidAt: String
+  status: String!
+}
+
+type AccountingLedgerEntryType {
+  adjustmentCount: Int!
+  amount: Float!
+  at: String!
+  description: String!
+  id: String!
+  kind: String!
+  lineage: [AccountingLineageType!]!
+  linked: String
+  origin: String!
+  status: String!
+  targetId: String!
+  targetType: String!
+}
+
+type AccountingLineageType {
+  amount: Float
+  at: String
+  detail: String
+  kind: String!
+  status: String
+  title: String!
+}
+
+type AccountingMeasureType {
+  count: AccountingSplitType!
+  vnd: AccountingSplitType!
+}
+
+type AccountingOrderType {
+  amount: Float
+  createdAt: String!
+  customer: String
+  id: String!
+  items: String!
+  orderNo: String!
+  origin: String!
+}
+
+type AccountingPeriodType {
+  fromIso: String!
+  income: AccountingMeasureType!
+  key: String!
+  receivable: AccountingMeasureType!
+  toIso: String!
+  unmatched: AccountingMeasureType!
+  weeks: [AccountingWeekType!]!
+}
+
+type AccountingPeriodsType {
+  last: AccountingPeriodType!
+  this: AccountingPeriodType!
+}
+
+type AccountingProposalFieldType {
+  name: String!
+  number: Float
+  text: String
+}
+
+type AccountingProposalType {
+  amountVnd: Float
+  candidates: [AccountingCandidateType!]!
+  confidence: Float
+  draft: String
+  fields: [AccountingProposalFieldType!]!
+  outcome: String
+  summary: String!
+}
+
+type AccountingQuestionLeadType {
+  channel: String!
+  company: String!
+  contactName: String!
+  id: String!
+}
+
+type AccountingQuestionType {
+  group: String!
+  item: AccountingQuestionWorkType!
+}
+
+type AccountingQuestionWorkType {
+  action: String!
+  assignedStaffId: String
+  assignedStaffName: String
+  chainId: String
+  completedAt: String
+  createdAt: String!
+  decidedPath: String
+  department: String!
+  depth: Int!
+  error: String
+  evidenceState: String!
+  executionId: String
+  id: String!
+  inboundEventId: String
+  installationId: String
+  lead: AccountingQuestionLeadType
+  leadId: String
+  missingFields: [String!]!
+  origin: String!
+  parentId: String
+  proposal: AccountingProposalType!
+  reason: String
+  reasons: [String!]!
+  result: AccountingWorkResultType
+  status: String!
+  subjectId: String
+  subjectType: String!
+  updatedAt: String!
+  workspaceId: String!
+}
+
+type AccountingSplitType {
+  live: Float!
+  simulated: Float!
+}
+
+type AccountingStaffType {
+  active: Boolean!
+  createdAt: String!
+  email: String
+  id: String!
+  name: String!
+  role: String!
+  workspaceId: String!
+}
+
+type AccountingWaitingType {
+  count: AccountingSplitType!
+  knownVnd: Float!
+  unknownAmount: Int!
+}
+
+type AccountingWeekType {
+  live: Float!
+  simulated: Float!
+  startIso: String!
+}
+
+type AccountingWorkResultType {
+  href: String
+  summary: String!
+}
+
+type AccountingWorkbenchType {
+  adjustmentsReady: Boolean!
+  ageing: AccountingAgeingType!
+  canAdjust: Boolean!
+  credits: [AccountingCreditType!]!
+  excludedTest: Int!
+  invoices: [AccountingInvoiceType!]!
+  ledger: [AccountingLedgerEntryType!]!
+  now: String!
+  ordersWithoutInvoice: [AccountingOrderType!]!
+  ownerName: String!
+  periods: AccountingPeriodsType!
+  questions: [AccountingQuestionType!]!
+  staff: [AccountingStaffType!]!
+  waiting: AccountingWaitingType!
+}
+
+type BillingBankAccountType {
+  account: String!
+  bank: String!
+  holder: String!
+}
+
+type BillingPaymentDetailsType {
+  credit: Float
+  credits: Float
+  daysLeft: Int
+  from: String
+  fromPrice: Float
+  paidUntil: String
+  to: String
+  toPrice: Float
+}
+
+type BillingPaymentOrderType {
+  amountVnd: Float!
+  bank: BillingBankAccountType!
+  createdAt: String!
+  detail: BillingPaymentDetailsType!
+  expiresAt: String!
+  id: ID!
+  kind: String!
+  orderCode: String!
+  packCode: String
+  paidAt: String
+  planCode: String!
+  qrUrl: String!
+  status: String!
+  workspaceId: ID!
+}
+
+type BillingPlanFeaturesType {
+  en: [String!]!
+  vi: [String!]!
+}
+
+input BillingPlanInput {
+  code: String!
+}
+
+type BillingPlanType {
+  aiCreditsPerMonth: Float
+  code: String!
+  features: BillingPlanFeaturesType!
+  isCustom: Boolean!
+  nameEn: String!
+  nameVi: String!
+  period: String!
+  priceVnd: Float!
+  seats: Int!
+  sort: Int!
+}
+
+type BillingReviewTransactionType {
+  content: String
+  id: Float!
+  receivedAt: String!
+  status: String!
+  transferAmount: Float!
+}
+
+input BillingReviewTransactionsInput {
+  orderIds: [ID!]!
+}
+
+type BillingWorkspaceType {
+  id: ID!
+  name: String!
+  paidUntil: String
+  planCode: String
+  role: String!
+  status: String!
+}
+
+input CreateAccountingAdjustmentInput {
+  correctedAmount: Float
+  note: String!
+  targetId: String!
+  targetType: String!
+}
+
+type CreateAccountingAdjustmentType {
+  correctedAmount: Float
+  createdAt: String!
+  createdBy: String!
+  id: String!
+  note: String!
+  targetId: String!
+  targetType: String!
+}
+
 input CreateWorkspaceInput {
   name: String!
 }
 
 type CreateWorkspaceType {
   id: ID!
+}
+
+type CreditDailyUsageType {
+  credits: Float!
+  day: String!
+  tokens: Float!
+}
+
+type CreditModuleUsageType {
+  calls: Float!
+  costUsd: Float!
+  credits: Float!
+  module: String!
+  tokens: Float!
+}
+
+type CreditPackType {
+  code: String!
+  credits: Float!
+  priceVnd: Float!
+  sort: Int!
+}
+
+type CreditQuotaStatusType {
+  costUsd: Float!
+  creditsCarried: Float!
+  creditsExceeded: Boolean!
+  creditsLimit: Float
+  creditsUsed: Float!
+  fallbackReply: String
+  level: String!
+  messagesExceeded: Boolean!
+  messagesLimit: Float
+  messagesUsed: Float!
+  periodStart: String!
+  ratio: Float!
+  tokensExceeded: Boolean!
+  tokensLimit: Float
+  tokensUsed: Float!
+  topupBalance: Float!
+}
+
+input CreditRecentCostInput {
+  from: String!
+}
+
+type CreditTopupLotType {
+  credits: Float!
+  creditsRemaining: Float!
+  expiresAt: String!
+  priceVnd: Float!
+  purchasedAt: String!
+}
+
+type CreditUsageSummaryType {
+  byModule: [CreditModuleUsageType!]!
+  daily: [CreditDailyUsageType!]!
+  status: CreditQuotaStatusType
 }
 
 type MemberType {
@@ -21,11 +486,79 @@ type MembershipType {
 }
 
 type Mutation {
+  createAccountingAdjustment(input: CreateAccountingAdjustmentInput!): CreateAccountingAdjustmentType!
   createWorkspace(input: CreateWorkspaceInput!): CreateWorkspaceType!
+  requestPaymentOrder(input: RequestPaymentOrderInput!): RequestPaymentOrderType!
+}
+
+input PaymentOrderInput {
+  id: ID!
+}
+
+input PaymentOrderRequestStatusInput {
+  id: ID!
+}
+
+type PaymentOrderRequestStatusType {
+  errorCode: String
+  id: ID!
+  resultId: ID
+  status: String!
 }
 
 type Query {
+  accountingBook: AccountingBookType!
+  accountingLedger: [AccountingLedgerEntryType!]!
+  accountingWorkbench: AccountingWorkbenchType!
+  billingBankAccount: BillingBankAccountType!
+  billingPlan(input: BillingPlanInput!): BillingPlanType
+  billingPlans: [BillingPlanType!]!
+  billingReviewTransactions(input: BillingReviewTransactionsInput!): [BillingReviewTransactionType!]!
+  billingWorkspace: BillingWorkspaceType!
+  billingWorkspaces: [BillingWorkspaceType!]!
+  creditPacks: [CreditPackType!]!
+  creditQuotaStatus: CreditQuotaStatusType
+  creditRecentCostUsd(input: CreditRecentCostInput!): Float!
+  creditTopupLots: [CreditTopupLotType!]!
+  creditUsageSummary: CreditUsageSummaryType!
   myWorkspaces: [MembershipType!]!
+  openPlanPaymentOrder: BillingPaymentOrderType
+  paymentOrder(input: PaymentOrderInput!): BillingPaymentOrderType
+  paymentOrderRequestStatus(input: PaymentOrderRequestStatusInput!): PaymentOrderRequestStatusType
+  paymentOrders: [BillingPaymentOrderType!]!
+  salesOrder(input: SalesOrderInput!): SalesOrderType
+  salesOrders: [SalesOrderType!]!
+}
+
+input RequestPaymentOrderInput {
+  kind: String!
+  target: String
+}
+
+type RequestPaymentOrderType {
+  id: ID!
+  status: String!
+}
+
+input SalesOrderInput {
+  id: ID!
+}
+
+type SalesOrderType {
+  amountVnd: Float
+  carrier: String
+  confirmedAt: String
+  confirmedBy: String
+  createdAt: String!
+  id: ID!
+  items: String!
+  leadId: ID
+  orderNo: String!
+  origin: String!
+  shippedAt: String
+  status: String!
+  trackingCode: String
+  workspaceId: ID!
 }
 
 type WorkspaceType {
