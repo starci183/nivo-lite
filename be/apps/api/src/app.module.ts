@@ -233,6 +233,7 @@ import { TTS_ERROR_KINDS, TTS_MESSAGES, TtsModule } from "@modules/integrations/
 import { CONTENT_TICK_EVERY_MS, CONTENT_TICK_QUEUE, CONTENT_TICK_SCHEDULER } from "@modules/queues/content-tick"
 import { RendersHttpModule } from "@features/api/renders"
 import { ApplyBookingStatusQueueModule } from "@features/jobs/apply-booking-status"
+import { RunLoyaltyCommandQueueModule } from "@features/jobs/run-loyalty-command"
 import { PublishContentQueueModule } from "@features/jobs/publish-content"
 import { IssueInviteQueueModule } from "@features/jobs/issue-invite"
 import { RenderVideoQueueModule } from "@features/jobs/render-video"
@@ -437,6 +438,7 @@ export class AppModule {
                 RequestRenderQueueModule,
                 PublishContentQueueModule,
                 ApplyBookingStatusQueueModule,
+                RunLoyaltyCommandQueueModule,
                 RendersHttpModule,
                 LivenessModule.register({ isGlobal: true }),
                 BookingsModule.register({

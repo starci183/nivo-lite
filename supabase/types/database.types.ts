@@ -1,4 +1,4 @@
-// migrations-sha256: 528f162fe31e837c25c2a3c0407361ab13643795de0e80212fdfc05a92f8727d
+// migrations-sha256: d81d0596874e08ab33e09a52de1664e4caad965dc897123ee9a8f2e837ebbaca
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -2196,6 +2196,32 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"loyalty_commands": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"error_code": string | null,"finished_at": string | null,"id": string,"kind": string,"params": Json,"result": Json | null,"status": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"error_code"?: string | null,"finished_at"?: string | null,"id"?: string,"kind": string,"params"?: Json,"result"?: Json | null,"status"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"error_code"?: string | null,"finished_at"?: string | null,"id"?: string,"kind"?: string,"params"?: Json,"result"?: Json | null,"status"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "loyalty_commands_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },
+                    {
+      foreignKeyName: "loyalty_commands_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"loyalty_customer_links": {
                   Row: {
                     "created_at": string,"customer_id": string,"id": string,"kind": string,"ref": string,"workspace_id": string
@@ -3986,6 +4012,9 @@ isOneToOne: false
 "lead_step_owner":
 { Args: { "p_actor": string,"p_owner": string,"p_workspace": string }; Returns: Record<string, unknown>
                            },
+"loyalty_command_submit":
+{ Args: { "p_kind": string,"p_params": Json,"p_workspace": string }; Returns: string
+                           },
 "loyalty_post":
 { Args: { "p_amount_vnd"?: number,"p_by": string,"p_customer": string,"p_evidence"?: string,"p_expires_at"?: string,"p_invoice_id"?: string,"p_kind": string,"p_occurred_at"?: string,"p_order_id"?: string,"p_points": number,"p_ref": string,"p_reward_id"?: string,"p_work_item_id"?: string,"p_workspace": string }; Returns: string
                            },
@@ -4037,6 +4066,15 @@ isOneToOne: false
                            },
 "public_booking_times":
 { Args: { "p_date": string,"p_party": number,"p_service": string,"p_slug": string,"p_visitor": string }; Returns: Json
+                           },
+"public_loyalty_page":
+{ Args: { "p_slug": string }; Returns: Json
+                           },
+"public_loyalty_result":
+{ Args: { "p_ticket": string }; Returns: Json
+                           },
+"public_loyalty_submit":
+{ Args: { "p_code": string,"p_kind": string,"p_phone": string,"p_slug": string,"p_visitor": string }; Returns: string
                            },
 "read_app_command":
 { Args: { "p_id": string }; Returns: Json

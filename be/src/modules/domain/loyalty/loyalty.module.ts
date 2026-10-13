@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { LoyaltyApiService } from "./loyalty-api.service"
+import { LoyaltyCommandsService } from "./loyalty-commands.service"
 import { LoyaltyEarningService } from "./loyalty-earning.service"
 import { LoyaltyMembersService } from "./loyalty-members.service"
 import { LoyaltyOverviewService } from "./loyalty-overview.service"
@@ -28,8 +29,10 @@ export class LoyaltyModule extends ConfigurableModuleClass {
                 LoyaltyPromotionsService,
                 LoyaltyPublicService,
                 LoyaltyApiService,
+                LoyaltyCommandsService,
             ],
             exports: [
+                LoyaltyCommandsService,
                 LoyaltyOverviewService,
                 LoyaltyMembersService,
                 LoyaltyPromotionsService,
