@@ -1,55 +1,79 @@
-import "server-only";
-import { after } from "next/server";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { actorOf, str, type Executor } from "./automation-runs";
-import { lensFor, lensSources } from "./knowledge/lens";
-import { beginScripting, createProject, runScripting, type VideoCtx } from "./module-video-core";
+import "server-only"
+import { getTranslations } from "next-intl/server"
+import { asciiFold } from "@/modules/video"
+import { createVideoProject } from "@/modules/db/video/write-project"
+import { startVideoScript } from "@/modules/db/video/write-script"
+import type { Executor } from "./automation-runs"
+import { str } from "./automation-runs"
+import { lensFor, lensSources } from "./knowledge/lens"
 
 /**
- * Automation "Soạn video khi có ưu đãi mới" (resources/automation-templates/video_new_offer.json). Default OFF, needs the video module.
- * Trigger: a PUBLIC knowledge source whose topic is Ưu đãi / Khuyến mãi appears after the owner switched the automation on. The tick finds it
- * (offerSources, called from automation-engine.ts scan), the executor creates a draft project and has OpenClaw write the script, then tells the owner in
- * Office. It never renders and never publishes: both stay the owner's click (publish_video is always "ask").
+ * Automation "write a video when a new offer appears" (resources/automation-templates/video_new_offer.json). Default OFF, needs the video module.
+ * Trigger: a PUBLIC knowledge source whose topic is an offer or promotion appears after the owner switched the automation on. The tick finds it
+ * (offerSources, called from automation-engine.ts scan), the executor creates a draft project and has OpenClaw write the script. It never renders
+ * and never publishes: both stay the owner's click (publish_video is always "ask").
+ *
+ * The draft is written under a person's session (row level security): a tick has none, so there the executor skips with a reason until the
+ * back end owns this automation.
  */
-const strip = (s: string): string => s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/gi, "d").toLowerCase();
-export const isOfferTopic = (topic: string | null | undefined): boolean => /\b(uu dai|khuyen mai|promotion|offer)\b/.test(strip(topic ?? ""));
+const strip = (value: string): string => asciiFold(value).toLowerCase()
 
-export type OfferSource = { readonly id: string; readonly title: string };
+/** Whether a knowledge topic names an offer or a promotion. */
+export const isOfferTopic = (topic: string | null | undefined): boolean =>
+    /\b(uu dai|khuyen mai|promotion|offer)\b/.test(strip(topic ?? ""))
+
+/** A new offer source a video can be made from. */
+export type OfferSource = { readonly id: string; readonly title: string }
+
+/** The database handle the knowledge lens takes. */
+type LensDb = Parameters<typeof lensSources>[2]
 
 /** Sources added since the automation was last switched on or saved (and in the last 7 days) that a video can be made from. */
-export const offerSources = async (db: SupabaseClient, ws: string, since: Date, now: Date = new Date()): Promise<Array<OfferSource>> => {
-  const from = new Date(Math.max(since.getTime(), now.getTime() - 7 * 86_400_000)).toISOString();
-  const data = (await lensSources(lensFor(ws, "video"), 200, db)).filter((r) => r.topic !== null && r.created_at >= from).slice(0, 20);
-  return data.filter((r) => isOfferTopic(r.topic)).map((r) => ({ id: r.id, title: r.title }));
-};
+export const offerSources = async (
+    db: LensDb,
+    ws: string,
+    since: Date,
+    now: Date = new Date(),
+): Promise<Array<OfferSource>> => {
+    const from = new Date(Math.max(since.getTime(), now.getTime() - 7 * 86_400_000)).toISOString()
+    const rows = (await lensSources(lensFor(ws, "video"), 200, db))
+        .filter((row) => row.topic !== null && row.created_at >= from)
+        .slice(0, 20)
+    return rows.filter((row) => isOfferTopic(row.topic)).map((row) => ({ id: row.id, title: row.title }))
+}
 
-/** The script takes a minute: it finishes after the tick's response (a long-lived server keeps running; a function platform extends via after()). */
-const later = (fn: () => Promise<unknown>): void => {
-  const safe = () => fn().catch((e) => console.error("video offer script failed:", e instanceof Error ? e.message : e));
-  try {
-    after(safe);
-  } catch {
-    void safe();
-  }
-};
-
-export const videoNewOffer: Executor = async (x, p) => {
-  const sourceId = str(p.source_id);
-  const title = str(p.title) || "Ưu đãi mới";
-  const src = (await lensSources(lensFor(x.ws, "video"), 200, x.db)).find((r) => r.id === sourceId) ?? null;
-  if (!src) return { status: "skipped", steps: [{ label: "Bỏ qua", status: "skipped", detail: "Tri thức này không còn hoặc chưa để công khai." }] };
-  const c: VideoCtx = { db: x.db, ws: x.ws, userId: null, actor: actorOf(x.def) };
-  const project = await createProject(c, {
-    goal: "offer", aspect: "9:16", targetSeconds: 20, title: `Soạn tự động · ${title}`.slice(0, 120),
-    inputs: { sourceIds: [sourceId], notes: "", media: [], auto: true },
-  });
-  if (await beginScripting(c, project.id)) later(() => runScripting(c, project.id, { notify: true }));
-  return {
-    status: "done",
-    steps: [
-      { label: `Tạo bản nháp video từ «${title}»`, status: "done", detail: project.title },
-      { label: "NIVO đang soạn kịch bản, xong sẽ báo bạn trong Văn phòng", status: "done" },
-    ],
-    evidence: `Bản nháp ${project.id}`,
-  };
-};
+/** Creates the draft video of a new offer and starts its script. */
+export const videoNewOffer: Executor = async (x, payload) => {
+    const t = await getTranslations("video")
+    const sourceId = str(payload.source_id)
+    const title = str(payload.title) === "" ? t("automationOfferTitle") : str(payload.title)
+    try {
+        const created = await createVideoProject({
+            goal: "offer",
+            aspect: "9:16",
+            targetSeconds: 20,
+            title: t("automationDraftTitle", { title }).slice(0, 120),
+            inputs: { sourceIds: [sourceId], notes: "", media: [], auto: true },
+        })
+        if (created.kind !== "ok") {
+            return {
+                status: "skipped",
+                steps: [{ label: t("automationSkipped"), status: "skipped", detail: t("automationNeedsSession") }],
+            }
+        }
+        await startVideoScript(created.value.id)
+        return {
+            status: "done",
+            steps: [
+                { label: t("automationStepDraft", { title }), status: "done", detail: created.value.title },
+                { label: t("automationStepScript"), status: "done" },
+            ],
+            evidence: created.value.id,
+        }
+    } catch {
+        return {
+            status: "skipped",
+            steps: [{ label: t("automationSkipped"), status: "skipped", detail: t("automationNeedsSession") }],
+        }
+    }
+}

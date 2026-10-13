@@ -29,3 +29,65 @@ export interface CreatedWorkspace {
     /** The new workspace. */
     readonly id: string
 }
+
+/** The billing statuses support can set by hand. */
+export type SupportStatus = "active" | "past_due"
+
+/** A support change to a billing fact: what it was and what it is now. */
+export interface BillingChange {
+    /** The value before, null when there was none. */
+    readonly from: string | null
+    /** The value now. */
+    readonly to: string
+}
+
+/** The workspace every prune keeps unless told not to. */
+export const NIVO_WORKSPACE_ID = "403f4a6e-306a-4ad0-9363-d304da760d50"
+
+/** The word the operator types to confirm a deletion. */
+export const CONFIRMATION_WORD = "DELETE"
+
+/** What the command line gives a prune, as parsed: every field may be absent. */
+export interface PruneRequest {
+    /** Workspace ids to keep besides the built-in one. */
+    readonly keep?: ReadonlyArray<string>
+    /** False (from `--no-default`) drops the built-in workspace from the kept ones, for a database where it does not exist. */
+    readonly default?: boolean
+    /** True skips the confirmation question. */
+    readonly yes?: boolean
+}
+
+/** One workspace as the prune lists it. */
+export interface WorkspaceBrief {
+    /** The id. */
+    readonly id: string
+    /** The name. */
+    readonly name: string
+    /** The plan code. */
+    readonly plan_code: string | null
+    /** The status. */
+    readonly status: string
+}
+
+/** How a prune ended. */
+export type PruneStatus = "nothing-to-delete" | "cancelled" | "deleted"
+
+/** What a prune answers. */
+export interface PruneReport {
+    /** The status. */
+    readonly status: PruneStatus
+    /** The workspaces kept. */
+    readonly kept: ReadonlyArray<WorkspaceBrief>
+    /** The workspaces that were to be deleted. */
+    readonly doomed: ReadonlyArray<WorkspaceBrief>
+    /** How many workspaces are left. */
+    readonly left: number
+}
+
+/** The operator's terminal: the only place a prune talks to a person. */
+export interface PruneConsole {
+    /** Writes one line. */
+    print(line: string): void
+    /** Asks a question and answers what was typed. */
+    ask(question: string): Promise<string>
+}

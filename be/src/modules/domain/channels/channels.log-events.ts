@@ -1,0 +1,13 @@
+/** Log events of the channels capability. */
+export enum ChannelsLogEvent {
+    /** A scheduled Zalo token refresh failed for one connection; the connection id rides in the fields. */
+    ZaloRefreshFailed = "channels.zalo.refresh-failed",
+    /** A reply could not be pushed to the customer's channel; the reply stays stored and visible. */
+    DeliveryFailed = "channels.delivery.failed",
+    /** The refresh lease could not be released; it expires on its own. */
+    LeaseNotReleased = "channels.zalo.lease-not-released",
+    /** A webhook body was not the JSON its mac covers. */
+    ProofBodyUnreadable = "channels.proof.body-unreadable",
+    /** A connection is failing or silent; the owner should look at it. */
+    ConnectionUnhealthy = "channels.connection.unhealthy",
+}

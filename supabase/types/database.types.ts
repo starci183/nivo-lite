@@ -1,4 +1,4 @@
-// migrations-sha256: 44696b92c1da3fed6cf7f7b0184eb556f147b94ebfe6952fa3254d40c8f92f31
+// migrations-sha256: 65ebca35e2b2dcda747ccd1d98a5f3d0e2970595e728d946026ea2e9f8739b19
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -3918,6 +3918,9 @@ isOneToOne: false
 { Args: { "ws": string }; Returns: {
               "created_at": string,"display_name": string,"email": string,"last_sign_in_at": string,"role": string,"staff_id": string,"status": string,"user_id": string
             }[]
+                           },
+"zalo_authorization_return":
+{ Args: { "p_code": string; "p_oa_id"?: string; "p_state": string }; Returns: string
                            },
 "zalo_refresh_tick":
 { Args: Record<PropertyKey, never>; Returns: number

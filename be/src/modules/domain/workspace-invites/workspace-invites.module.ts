@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
+import { InviteSupportService } from "./invite-support.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./workspace-invites.module-definition"
 import { INVITE_DELIVERY, WORKSPACE_INVITES_OPTIONS } from "./workspace-invites.port"
 import { WorkspaceInvitesService } from "./workspace-invites.service"
@@ -17,8 +18,9 @@ export class WorkspaceInvitesModule extends ConfigurableModuleClass {
                 { provide: WORKSPACE_INVITES_OPTIONS, useValue: options },
                 { provide: INVITE_DELIVERY, useExisting: options.delivery },
                 WorkspaceInvitesService,
+                InviteSupportService,
             ],
-            exports: [WorkspaceInvitesService],
+            exports: [WorkspaceInvitesService, InviteSupportService],
         }
     }
 }

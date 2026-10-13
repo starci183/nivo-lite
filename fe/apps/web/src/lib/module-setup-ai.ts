@@ -5,7 +5,7 @@ import type { Locale } from "@/i18n/core";
 import { businessKnowledgeBrief, setupKnowledgeText } from "./knowledge/index";
 import { moduleDef } from "./module-registry";
 import { sanitizeWrites, writeSpecLines, type OpenGap, type ProposedWrite } from "./module-setup-writes";
-import { MODULE_GATES, gateEntry, type DraftSnapshot, type GateEvidence, type ModuleKey, type SetupFact } from "./modules-shared";
+import { MODULE_GATES, gateEntry, type DraftSnapshot, type GateEntry, type GateEvidence, type ModuleKey, type SetupFact } from "./modules-shared";
 
 /** One turn of the setup chat as the model sees it. */
 export type SetupTurnInput = {
@@ -160,7 +160,7 @@ export const mergeSetupTurn = (draft: DraftSnapshot, gates: GateEvidence, turn: 
     const at = facts.findIndex((x) => x.key === f.key);
     if (at >= 0) facts[at] = f; else facts.push(f);
   }
-  const nextGates: GateEvidence = { ...gates };
+  const nextGates: Record<string, GateEntry> = { ...gates };
   for (const [key, g] of Object.entries(turn.gates)) {
     if (nextGates[key]?.status === "confirmed") continue;
     nextGates[key] = { status: "proposed", evidence: g.evidence };

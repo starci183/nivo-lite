@@ -1,5 +1,6 @@
 import "server-only";
-import { engineCtx } from "./flow-ctx";
+import { getSession } from "./session";
+import { readRequirementFacts } from "@/modules/db";
 import { moduleDef, type ModuleKey } from "./module-registry";
 
 /** One module requirement (resources/modules/<key>/module.json "requires") the workspace does not meet yet. Soft: it never blocks installing or applying. */
@@ -33,17 +34,12 @@ const CONNECTION_LABEL: Readonly<Record<string, { vi: string; en: string }>> = {
 export const unmetRequirements = async (module: ModuleKey): Promise<ReadonlyArray<UnmetRequirement>> => {
   const req = moduleDef(module).requires;
   if (req.capabilities.length === 0 && req.connections.length === 0) return [];
-  const { db, ws } = await engineCtx();
-  const [conns, agents, staff, members] = await Promise.all([
-    db.from("connections").select("provider").eq("workspace_id", ws).neq("status", "disconnected"),
-    db.from("agents").select("id", { count: "exact", head: true }).eq("workspace_id", ws).in("module", ["chatbot", "booking"]).eq("status", "active"),
-    db.from("staff").select("id", { count: "exact", head: true }).eq("workspace_id", ws).eq("active", true),
-    db.from("workspace_members").select("user_id", { count: "exact", head: true }).eq("workspace_id", ws).eq("status", "active"),
-  ]);
+  const read = await readRequirementFacts((await getSession()).workspace.id);
+  const counts = read.kind === "ok" ? read.value : { providers: [], chatAgents: 0, staff: 0, members: 0 };
   const facts: Facts = {
-    providers: new Set(((conns.data ?? []) as Array<{ provider: string }>).map((c) => c.provider)),
-    chatAgents: agents.count ?? 0,
-    staff: (staff.count ?? 0) + Math.max(0, (members.count ?? 0) - 1),
+    providers: new Set(counts.providers),
+    chatAgents: counts.chatAgents,
+    staff: counts.staff + Math.max(0, counts.members - 1),
   };
   const out: Array<UnmetRequirement> = [];
   for (const key of req.capabilities) {

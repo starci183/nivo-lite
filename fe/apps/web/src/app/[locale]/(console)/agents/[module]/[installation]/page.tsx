@@ -1,44 +1,17 @@
-import { notFound } from "next/navigation";
-import { SetupScreen } from "@/features/module-setup/SetupScreen";
-import { isManagerRole } from "@/lib/members-shared";
-import { unmetRequirements } from "@/lib/module-requirements";
-import { loadSetup } from "@/lib/module-actions";
-import { listContextVersions } from "@/lib/modules-core";
-import { isModuleKey } from "@/lib/modules-shared";
-import { getSession } from "@/lib/session";
-import { getT } from "@/i18n/server";
-import { access } from "@/i18n/dict/access";
-import { EmptyNotice } from "@starci/grammar/common";
+import { AgentSetupPage } from "@/features/pages/AgentSetupPage"
 
-type SetupPageProps = { params: Promise<{ module: string; installation: string }> };
+/** The document title of the setup tab. */
+export { agentSetupMetadata as generateMetadata } from "@/features/pages/AgentSetupPage"
 
-/** Setup tab of one instance: its private setup chat with NIVO, the draft, the gate checklist and the versions. Owners and managers only. */
-const SetupPage = async ({ params }: SetupPageProps) => {
-  const { module, installation: installationId } = await params;
-  if (!isModuleKey(module)) notFound();
-  const session = await getSession();
-  if (!isManagerRole(session.member.role)) {
-    const t = await getT(access);
-    return <EmptyNotice message={t("forbidden")} />;
-  }
-  // Setup chat, sessions and context versions are per installation: each instance (each branch's Chatbot) has its own.
-  const [state, versions, unmet] = await Promise.all([loadSetup(installationId), listContextVersions(installationId), unmetRequirements(module)]);
-  if (!state.ok) notFound();
-  return (
-    <SetupScreen
-      moduleKey={module}
-      installation={state.data.installation}
-      initialSession={state.data.session}
-      initialRevisions={state.data.revisions}
-      initialMessages={state.data.messages}
-      initialVersions={versions}
-      unmetRequirements={unmet}
-      initialWrites={state.data.writes}
-    />
-  );
-};
+type PageProps = { readonly params: Promise<{ module: string; installation: string }> }
 
-export default SetupPage;
+/** OpenClaw writes the text of the setup chat, so this screen may wait longer than the platform default. */
+export const maxDuration = 60
 
-/** OpenClaw writes the text (setup chat, Office replies, classification), so these screens may wait longer than the platform default. */
-export const maxDuration = 60;
+/** The setup slot of one agent instance: its private setup chat with NIVO. */
+const Page = async (props: PageProps) => {
+    const { module, installation } = await props.params
+    return <AgentSetupPage module={module} installationId={installation} />
+}
+
+export default Page
