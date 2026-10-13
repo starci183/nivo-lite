@@ -60,3 +60,10 @@ WHERE id = $1 AND workspace_id = $2 AND status = 'done'`
 export const RECORD_GENERATION_FAILURE = sql`UPDATE public.ai_generations
 SET status = 'error', error = $3, finished_at = coalesce(finished_at, now())
 WHERE id = $1 AND workspace_id = $2`
+
+/** Serializes the guide questions of one member of one workspace for the rest of the transaction ($1 lock key). */
+export const LOCK_GUIDE_ASKER = sql`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`
+
+/** How many guide questions a member queued since an instant ($1 workspace, $2 user, $3 since). */
+export const COUNT_GUIDE_ASKS = sql`SELECT count(*) AS asked FROM public.ai_generations
+WHERE workspace_id = $1 AND usage_kind = 'guide' AND input -> 'context' ->> 'requestedBy' = $2 AND created_at >= $3`
