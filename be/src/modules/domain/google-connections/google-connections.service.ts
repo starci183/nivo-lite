@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { ConnectionsService, randomSecret } from "@modules/domain/connections"
+import { ConnectionsService } from "@modules/domain/connections"
+import { randomSecret } from "@modules/domain/connection-secrets"
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
 import {
     DRIVE_PURPOSE,
@@ -18,15 +19,21 @@ import type {
     SheetEventResult,
 } from "@modules/integrations/google"
 import { InjectClock } from "@modules/platform/clock"
+import { InjectLogger } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
+import { isRecord, parseJsonText } from "@modules/platform/primitives"
 import type { Clock } from "@modules/platform/clock"
 import { GoogleConnectionsError, GoogleConnectionsErrorCode } from "./errors/google-connections.error"
 import type {
-    GoogleAccount,
+    GoogleConnectionAccount,
+    GoogleAvailability,
     GoogleCallbackInput,
     GoogleCallbackResult,
+    GoogleConsentStart,
     OrdersSheet,
     StoredGoogleTokens,
 } from "./google-connections.contracts"
+import { GoogleConnectionsLogEvent } from "./google-connections.log-events"
 
 const OWNER = ["owner"] as const
 const MANAGER = ["owner", "manager"] as const
@@ -43,12 +50,20 @@ interface ConsentOutcome {
 const isLive = (connection: ConnectionRecord): boolean => connection.status !== "disconnected"
 
 const parseTokens = (plain: string): Partial<StoredGoogleTokens> => {
-    try {
-        const parsed: unknown = JSON.parse(plain)
-        return typeof parsed === "object" && parsed !== null ? (parsed as Partial<StoredGoogleTokens>) : {}
-    } catch {
-        return {}
+    const read = parseJsonText(plain)
+    if (!read.ok || !isRecord(read.value)) return {}
+    const { access_token, refresh_token, expires_at } = read.value
+    return {
+        ...(typeof access_token === "string" ? { access_token } : {}),
+        ...(typeof refresh_token === "string" ? { refresh_token } : {}),
+        ...(typeof expires_at === "number" ? { expires_at } : {}),
     }
+}
+
+/** The reason a refused consent shows: the person said no, or Google cannot offer the consent; any other error failed. */
+const consentReason = (error: string): string => {
+    if (!isConsentFailure(error)) return "failed"
+    return error === "access_denied" ? "denied" : "unavailable"
 }
 
 @Injectable()
@@ -62,6 +77,7 @@ export class GoogleConnectionsService {
         private readonly connections: ConnectionsService,
         @InjectGoogleClient() private readonly google: GoogleClient,
         @InjectClock() private readonly clock: Clock,
+        @InjectLogger() private readonly logger: Logger,
     ) {}
 
     /** True when Google can be used on this deployment. */
@@ -70,7 +86,7 @@ export class GoogleConnectionsService {
     }
 
     /** Starts the consent (owner): the Google url the browser must go to; the signed state is checked by the callback. */
-    async authorize(actor: ConnectionActor, returnTo: string): Promise<{ readonly url: string }> {
+    async authorize(actor: ConnectionActor, returnTo: string): Promise<GoogleConsentStart> {
         await this.connections.authorize(actor, OWNER)
         if (!this.google.isConfigured()) {
             throw new GoogleConnectionsError({ code: GoogleConnectionsErrorCode.NotConfigured })
@@ -86,13 +102,13 @@ export class GoogleConnectionsService {
     }
 
     /** Whether Google can be used on this deployment (owner or manager). */
-    async state(actor: ConnectionActor): Promise<{ readonly configured: boolean }> {
+    async state(actor: ConnectionActor): Promise<GoogleAvailability> {
         await this.connections.authorize(actor, MANAGER)
         return { configured: this.google.isConfigured() }
     }
 
     /** The live Google accounts of the workspace, for an automation account picker (owner or manager). */
-    async accounts(actor: ConnectionActor): Promise<ReadonlyArray<GoogleAccount>> {
+    async accounts(actor: ConnectionActor): Promise<ReadonlyArray<GoogleConnectionAccount>> {
         await this.connections.authorize(actor, MANAGER)
         const rows = await this.connections.listByProvider(actor.workspaceId, "google", { includeDisconnected: false })
         return rows.map((row) => ({ id: row.id, email: row.meta.email ?? "", status: row.status }))
@@ -123,13 +139,13 @@ export class GoogleConnectionsService {
         const actor: ConnectionActor = { principalId: state.u, workspaceId: state.w }
         try {
             await this.connections.authorize(actor, MANAGER)
-        } catch {
+        } catch (cause) {
+            this.logger.error(GoogleConnectionsLogEvent.ConsentForbidden, cause, { workspaceId: state.w })
             return back("error", "forbidden")
         }
         if (input.error) {
-            await this.recordFailure(state.w, state.u, input.error).catch(() => undefined)
-            const consent = isConsentFailure(input.error)
-            return back("error", consent ? (input.error === "access_denied" ? "denied" : "unavailable") : "failed")
+            await this.recordFailure(state.w, state.u, input.error).catch(this.unrecorded)
+            return back("error", consentReason(input.error))
         }
         if (!input.code) return back("error", "failed")
         try {
@@ -140,12 +156,13 @@ export class GoogleConnectionsService {
         } catch (error) {
             const reason = error instanceof GoogleError ? String(error.params.reason ?? "") : ""
             if (error instanceof GoogleError && isConsentFailure(reason)) {
-                await this.recordFailure(state.w, state.u, reason).catch(() => undefined)
+                await this.recordFailure(state.w, state.u, reason).catch(this.unrecorded)
                 return back("error", "unavailable")
             }
             if (error instanceof GoogleConnectionsError && error.code === GoogleConnectionsErrorCode.Missing) {
                 return back("error", "no_refresh")
             }
+            this.logger.error(GoogleConnectionsLogEvent.ConsentFailed, error, { workspaceId: state.w })
             return back("error", "failed")
         }
     }
@@ -181,10 +198,14 @@ export class GoogleConnectionsService {
     private safeVerify(value: string | undefined) {
         try {
             return this.google.verify(value)
-        } catch {
+        } catch (cause) {
+            this.logger.error(GoogleConnectionsLogEvent.StateUnreadable, cause)
             return null
         }
     }
+
+    private readonly unrecorded = (cause: unknown): void =>
+        this.logger.error(GoogleConnectionsLogEvent.FailureNotRecorded, cause)
 
     private connectionOf(config: SheetConfig): string | null {
         const id = config.googleConnectionId
@@ -301,7 +322,7 @@ export class GoogleConnectionsService {
         } catch (error) {
             if (error instanceof GoogleError && error.params.reason === "invalid_grant") {
                 await this.connections.patch(workspaceId, row.id, { status: "error", lastError: "invalid_grant" })
-                throw new GoogleConnectionsError({ code: GoogleConnectionsErrorCode.Lost })
+                throw new GoogleConnectionsError({ code: GoogleConnectionsErrorCode.Lost, cause: error })
             }
             throw error
         }

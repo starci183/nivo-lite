@@ -1,7 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { KnowledgeChunksService } from "@modules/domain/knowledge-chunks"
-import type { StaleChunk } from "@modules/domain/knowledge-chunks/knowledge-chunks.contracts"
 import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
 import { EmbeddingService } from "./embedding.service"
 import { KnowledgeReembedService } from "./knowledge-reembed.service"
@@ -9,6 +8,8 @@ import { REEMBED_BATCH, REEMBED_MAX_BATCHES } from "./knowledge.contracts"
 import { UsageMeterService } from "./usage-meter.service"
 
 const WS = "11111111-1111-4111-8111-111111111111"
+
+type StaleChunk = Awaited<ReturnType<KnowledgeChunksService["stale"]>>[number]
 
 const stale = (count: number): Array<StaleChunk> =>
     Array.from({ length: count }, (_, i) => ({ id: `c${i}`, text: `text ${i}` }))

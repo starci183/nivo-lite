@@ -1,5 +1,8 @@
 import type { InvoiceRow } from "./persistence/invoices.rows"
 
+/** The states of an invoice a customer's payment claim is checked against: still open, or already paid. */
+export type ClaimableState = "issued" | "paid"
+
 /** An invoice, or null when the workspace has no such invoice. */
 export type OptionalInvoice = InvoiceRow | null
 

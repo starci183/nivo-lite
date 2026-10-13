@@ -1,6 +1,5 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
-import { DecisionsQueueModule } from "@modules/queues/decisions"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./inbox-simulation.module-definition"
 import { InboxSimulationService } from "./inbox-simulation.service"
 import { InboxSimulationWorkerService } from "./inbox-simulation-worker.service"
@@ -13,7 +12,6 @@ export class InboxSimulationModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            imports: [...(base.imports ?? []), DecisionsQueueModule],
             providers: [...(base.providers ?? []), InboxSimulationService, InboxSimulationWorkerService],
             exports: [InboxSimulationService, InboxSimulationWorkerService],
         }

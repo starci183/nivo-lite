@@ -15,10 +15,13 @@ import { KnowledgeSourcesError, KnowledgeSourcesErrorCode } from "./errors/knowl
 import { KNOWLEDGE_UPLOAD_BUCKET, STORAGE_OBJECT_MISSING } from "./knowledge-sources.contracts"
 import type {
     AddSourceInput,
+    DocumentVisibility,
     DeletedSource,
     MaybeNote,
     MaybeSource,
     MaybeUploadedFile,
+    ReadableScope,
+    ReadableSource,
     ReindexInput,
     SourceDetail,
     SourceRef,
@@ -30,10 +33,19 @@ import type {
 import { InjectKnowledgeStorage } from "./knowledge-sources.decorators"
 import { KnowledgeSourcesLogEvent } from "./knowledge-sources.log-events"
 import type { KnowledgeSourcesRow } from "./persistence/knowledge-sources.rows"
-import type { GeneratedIdRow, InstallationRow, SourceIdRow, SourceListRow, SourceTitleRow } from "./persistence/knowledge-sources.rows"
+import type {
+    GeneratedIdRow,
+    KnowledgeInstallationRow,
+    SourceIdRow,
+    SourceListRow,
+    SourceTitleRow,
+} from "./persistence/knowledge-sources.rows"
+import type { ReadableCountRow, ReadableSourceRow } from "./persistence/knowledge-sources.rows"
 import {
+    COUNT_READABLE_SOURCES,
     DELETE_SOURCE,
     INSERT_SOURCE,
+    LIST_READABLE_SOURCES,
     LIST_SOURCES,
     MARK_BLOCKED,
     MARK_EXTRACTING,
@@ -81,7 +93,10 @@ export class KnowledgeSourcesService {
     /** One document of a workspace with its text; any member may read it. */
     async detail(userId: string, workspaceId: string, sourceId: string): Promise<SourceDetail> {
         await this.members.require(userId, workspaceId)
-        const [row] = await this.entityManager.query<Array<SourceListRow>>(SELECT_SOURCE_DETAIL, [workspaceId, sourceId])
+        const [row] = await this.entityManager.query<Array<SourceListRow>>(SELECT_SOURCE_DETAIL, [
+            workspaceId,
+            sourceId,
+        ])
         if (row === undefined) throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
         return toSourceDetail(row)
     }
@@ -250,10 +265,52 @@ export class KnowledgeSourcesService {
         await this.entityManager.query(MARK_FACTS_BLOCKED, [sourceId, workspaceId, note])
     }
 
+    /** The indexed documents an agent's view may read, oldest first; a customer view gets public documents only. */
+    async readableFor(scope: ReadableScope, limit: number): Promise<ReadonlyArray<ReadableSource>> {
+        const rows = await this.entityManager.query<Array<ReadableSourceRow>>(LIST_READABLE_SOURCES, [
+            scope.workspaceId,
+            scope.module,
+            scope.installationId,
+            scope.audience,
+            limit,
+        ])
+        return rows
+            .filter(
+                (row) =>
+                    (row.module === null || row.module === scope.module) &&
+                    (row.installation_id === null || row.installation_id === scope.installationId) &&
+                    (scope.audience === "internal" || row.visibility === "public"),
+            )
+            .map((row) => ({
+                id: row.id,
+                title: row.title,
+                topic: row.topic,
+                kind: row.kind,
+                visibility: row.visibility === "public" ? "public" : "internal",
+                updatedAt: row.updated_at,
+                content: row.content ?? "",
+            }))
+    }
+
+    /** How many indexed documents of one visibility an agent's view may read; a customer view never counts internal ones. */
+    async countReadable(scope: ReadableScope, visibility: DocumentVisibility): Promise<number> {
+        if (scope.audience === "customer" && visibility === "internal") return 0
+        const [row] = await this.entityManager.query<Array<ReadableCountRow>>(COUNT_READABLE_SOURCES, [
+            scope.workspaceId,
+            scope.module,
+            scope.installationId,
+            visibility,
+        ])
+        return row?.count ?? 0
+    }
+
     /** The agent instance a document is kept for, which must belong to the workspace; null when the document is for every instance. */
-    private async instanceOf(workspaceId: string, installationId: string | null): Promise<InstallationRow | null> {
+    private async instanceOf(
+        workspaceId: string,
+        installationId: string | null,
+    ): Promise<KnowledgeInstallationRow | null> {
         if (installationId === null) return null
-        const [row] = await this.entityManager.query<Array<InstallationRow>>(SELECT_INSTALLATION, [
+        const [row] = await this.entityManager.query<Array<KnowledgeInstallationRow>>(SELECT_INSTALLATION, [
             workspaceId,
             installationId,
         ])

@@ -52,8 +52,14 @@ export type {
     RespondOfferOutput,
     RespondOfferParams,
     RespondSlotOutput,
-    RespondSlotParams,
 } from "./hiring-public.contracts"
-export type { HiringBenchView, HiringCandidateDetailView, HiringJobView } from "./hiring-workbench.contracts"
-export type { JobQuestion } from "./hiring.contracts"
-export type { JobQuestionInput, JobRequirementsInput } from "./hiring-operations.contracts"
+export type { HiringBenchView, HiringCandidateDetailView } from "./hiring-workbench.contracts"
+export { toHiringBenchType } from "./hiring-bench.mapper"
+export {
+    toApplyToHiringJobRequest,
+    toMoveHiringCandidateRequest,
+    toRequestHiringInterviewRequest,
+    toRespondHiringInterviewRequest,
+    toSaveHiringJobRequest,
+    toSaveHiringSettingsRequest,
+} from "./hiring-requests.mapper"

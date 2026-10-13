@@ -1,10 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { DocumentsError, DocumentsErrorCode } from "@modules/integrations/documents"
-import { DOCUMENTS } from "@modules/integrations/documents/documents.decorators"
-import type { DriveAccess } from "@modules/integrations/documents/documents.contracts"
-import type { DocumentsPort } from "@modules/integrations/documents"
+import { DOCUMENTS, DocumentsError, DocumentsErrorCode } from "@modules/integrations/documents"
+import type { DocumentsPort, MaybeDriveAccess } from "@modules/integrations/documents"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { KnowledgeDriveService } from "./knowledge-drive.service"
@@ -15,6 +13,8 @@ const WS = "11111111-1111-4111-8111-111111111111"
 const TOKEN = "ya29.a0AfH6SMB-xyz_123abcdefghij"
 const LISTING = { name: "Menus", files: [], truncated: false }
 const FILE = { id: "a", name: "menu.pdf", mimeType: "application/pdf", size: null, modifiedTime: null, path: "" }
+
+type DriveAccess = NonNullable<MaybeDriveAccess>
 
 const build = async (access: DriveAccess | null = null) => {
     const documents = mock<DocumentsPort>()

@@ -67,3 +67,8 @@ export const MARK_INVOICE_PAID = sql`WITH changed AS (
     RETURNING id, workspace_id, order_id, lead_id, invoice_no, amount_vnd, status, origin, issued_by, paid_at
 )
 SELECT id, workspace_id, order_id, lead_id, invoice_no, amount_vnd::float8 AS amount_vnd, status, origin, issued_by, paid_at::text AS paid_at FROM changed`
+
+/** The customer's newest invoice in one status: the newest paid one by payment time, else by creation ($1 workspace, $2 customer, $3 status). */
+export const FIND_LATEST_LEAD_INVOICE = sql`SELECT id, workspace_id, order_id, lead_id, invoice_no, amount_vnd::float8 AS amount_vnd, status, origin, issued_by, paid_at::text AS paid_at
+FROM public.invoices WHERE workspace_id = $1::uuid AND lead_id = $2::uuid AND status = $3::text
+ORDER BY CASE WHEN $3::text = 'paid' THEN paid_at END DESC NULLS LAST, created_at DESC LIMIT 1`
