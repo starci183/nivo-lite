@@ -8,7 +8,7 @@ import type { DbOutcome } from "../outcome"
 import { getPrincipal } from "../principal"
 import type { ZaloAuthorizeUrl } from "@/modules/types"
 import { CHANNEL_FAILURE_KEYS, channelSchemas, invalid } from "./channel-connections.mapper"
-import { WIZARD_WAIT_MS, stepFailed } from "./zalo-view"
+import { WIZARD_WAIT_MS, stepFailed } from "./zalo-view.mapper"
 
 /** Starts the Zalo sign-in of an OA (owner): the database queues the begin step and the permission address comes back from the back end. */
 export const writeZaloAuthorize = async (input: unknown): Promise<DbOutcome<ZaloAuthorizeUrl>> => {

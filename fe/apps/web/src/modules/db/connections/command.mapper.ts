@@ -1,6 +1,6 @@
 import type { Access } from "@/modules/types"
-import { submitCommand } from "../command"
-import type { CommandRequest } from "../command"
+import { submitCommand } from "../connections/submit.mapper"
+import type { CommandRequest } from "../connections/submit.mapper"
 import type { DbOutcome } from "../outcome"
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu

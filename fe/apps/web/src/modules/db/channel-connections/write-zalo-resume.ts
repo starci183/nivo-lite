@@ -6,7 +6,7 @@ import type { DbOutcome } from "../outcome"
 import { getPrincipal } from "../principal"
 import type { ZaloWizardConnection } from "@/modules/types"
 import { CHANNEL_FAILURE_KEYS, channelSchemas, invalid } from "./channel-connections.mapper"
-import { zaloViewOf } from "./zalo-view"
+import { zaloViewOf } from "./zalo-view.mapper"
 
 /** Continues an unfinished or broken Zalo connection (owner); keys are never returned. */
 export const writeZaloResume = async (input: unknown): Promise<DbOutcome<ZaloWizardConnection>> => {

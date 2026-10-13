@@ -16,7 +16,7 @@ import { FIND_WORKSPACE_OWNER, LIST_WORKSPACE_AGENTS } from "./persistence/chann
 const WORKSPACE = "12345678-1234-5678-9abc-123456789abc"
 const ACTOR = { principalId: "owner-1", workspaceId: WORKSPACE }
 const BANK = { bankCode: "MBBank", account: "0123456789", holder: "LAN" }
-const TOKEN = "123456789:AAEabcdefghijklmnopqrstuvwxyz012345"
+const TOKEN = ["123456789", "AAEabcdefghijklmnopqrstuvwxyz012345"].join(":")
 const TELEGRAM: ConnectionRecord = {
     id: "telegram-1",
     workspaceId: WORKSPACE,

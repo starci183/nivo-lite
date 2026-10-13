@@ -1,5 +1,6 @@
 import "server-only"
 
+import { developerApiUrl } from "@/modules/config"
 import { dbFailure, dbOk } from "../outcome"
 import type { DbOutcome } from "../outcome"
 import { readZaloWizard } from "../channels/read-zalo-wizard"
@@ -10,9 +11,8 @@ export const WIZARD_WAIT_MS = 15_000
 
 const trimSlashes = (value: string): string => value.replace(/\/+$/u, "")
 
-/** The address providers call: the api origin when the site knows it, else the site itself (the same site in a local setup). */
-const providerOrigin = (): string =>
-    trimSlashes(process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3100")
+/** The address providers call: the public api origin. */
+const providerOrigin = (): string => trimSlashes(developerApiUrl())
 
 /** The address Zalo sends the browser back to after the OA permissions: a page of the site. */
 const siteCallback = (): string =>

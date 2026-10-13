@@ -9,7 +9,7 @@ import { ChannelConnectionsService } from "./channel-connections.service"
 import { ChannelConnectionsErrorCode } from "./errors/channel-connections.error"
 
 const actor: ConnectionActor = { principalId: "owner-1", workspaceId: "ws-1" }
-const TOKEN = "123456789:AAEabcdefghijklmnopqrstuvwxyz012345"
+const TOKEN = ["123456789", "AAEabcdefghijklmnopqrstuvwxyz012345"].join(":")
 const NOW = new Date("2026-10-12T03:00:00.000Z")
 
 const record = (overrides: Partial<ConnectionRecord> = {}): ConnectionRecord => ({

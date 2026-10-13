@@ -7,7 +7,7 @@ import { dbFailure } from "../outcome"
 import type { DbOutcome } from "../outcome"
 import { getPrincipal } from "../principal"
 import { CHANNEL_FAILURE_KEYS, channelSchemas, invalid } from "./channel-connections.mapper"
-import { WIZARD_WAIT_MS, stepFailed } from "./zalo-view"
+import { WIZARD_WAIT_MS, stepFailed } from "./zalo-view.mapper"
 
 /** Stores the OA Secret Key of the Zalo app's Webhook screen (owner): the database queues its sealing and the back end answers next to the ticket. */
 export const writeZaloOaSecret = async (input: unknown): Promise<DbOutcome<true>> => {

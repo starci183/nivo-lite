@@ -1,9 +1,9 @@
 import "server-only"
 
-import { getPrincipal } from "./principal"
-import { createServerDbClient } from "./server"
-import { dbFailure, dbOk, toOutcome } from "./outcome"
-import type { DbFailureKind, DbOutcome } from "./outcome"
+import { getPrincipal } from "../principal"
+import { createServerDbClient } from "../server"
+import { dbFailure, dbOk, toOutcome } from "../outcome"
+import type { DbFailureKind, DbOutcome } from "../outcome"
 
 /** One console command for the back end: the workspace it acts in, what to run and the fields it takes. */
 export interface CommandRequest {

@@ -1,5 +1,5 @@
-import { submitCommand } from "../command"
-import type { CommandRequest } from "../command"
+import { submitCommand } from "../connections/submit.mapper"
+import type { CommandRequest } from "../connections/submit.mapper"
 import type { DbOutcome } from "../outcome"
 import type { Environment, MoneyProvider } from "@/modules/types"
 

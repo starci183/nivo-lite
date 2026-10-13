@@ -8,7 +8,7 @@ import type { DbOutcome } from "../outcome"
 import { getPrincipal } from "../principal"
 import type { ZaloWizardConnection } from "@/modules/types"
 import { CHANNEL_FAILURE_KEYS, channelSchemas, invalid } from "./channel-connections.mapper"
-import { WIZARD_WAIT_MS, stepFailed, zaloViewOf } from "./zalo-view"
+import { WIZARD_WAIT_MS, stepFailed, zaloViewOf } from "./zalo-view.mapper"
 
 /** Keeps the Zalo app's keys as a pending connection (owner): the database queues their sealing, then the wizard view comes back. */
 export const writeZaloStart = async (input: unknown): Promise<DbOutcome<ZaloWizardConnection>> => {
