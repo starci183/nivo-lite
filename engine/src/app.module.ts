@@ -4,8 +4,6 @@ import { AgentSyncService } from "./features/agent-sync/agent-sync.service";
 import { GenerateHandler } from "./features/generate/generate.handler";
 import { ChatTurnHandler } from "./features/chat-turn/chat-turn.handler";
 import { ConnectionHealthHandler } from "./features/connection-health/connection-health.handler";
-import { KnowledgeJobsModule } from "./features/knowledge-jobs/knowledge-jobs.module";
-import type { KnowledgeJobsOptions } from "./features/knowledge-jobs/knowledge-jobs.config";
 import { HealthController } from "./features/health/health.controller";
 import { N8nEmitHandler } from "./features/n8n-emit/n8n-emit.handler";
 import { N8N_OPTIONS, type N8nOptions } from "./features/n8n-emit/n8n.config";
@@ -32,7 +30,6 @@ export type AppOptions = {
   readonly openclaw: OpenclawOptions;
   readonly n8n: N8nOptions;
   readonly http: HttpOptions;
-  readonly knowledge: KnowledgeJobsOptions;
 };
 
 /**
@@ -44,7 +41,7 @@ export class AppModule {
   static register(o: AppOptions): DynamicModule {
     return {
       module: AppModule,
-      imports: [SupabaseModule.register(o.supabase), NivoModule.register(o.nivo), QueueModule.register(o.queue), JobsModule.register(o.jobs), OpenclawModule.register(o.openclaw), KnowledgeJobsModule.register(o.knowledge)],
+      imports: [SupabaseModule.register(o.supabase), NivoModule.register(o.nivo), QueueModule.register(o.queue), JobsModule.register(o.jobs), OpenclawModule.register(o.openclaw)],
       controllers: [HealthController, ToolsController],
       providers: [
         { provide: HTTP_OPTIONS, useValue: o.http },
