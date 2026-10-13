@@ -1,5 +1,5 @@
 import { mutateSaveContentItem } from "@/modules/api/graphql/mutations/mutation-save-content-item"
-import { useGraphQLMutationSwr } from "@/hooks/reuseables/useGraphQLMutationSwr"
+import { useGraphQLMutationSwr } from "@/hooks/reuseables"
 
 /** The SWR key of the saveContentItem mutation. */
 export const MUTATE_SAVE_CONTENT_ITEM_SWR_KEY = "MUTATE_SAVE_CONTENT_ITEM_SWR"

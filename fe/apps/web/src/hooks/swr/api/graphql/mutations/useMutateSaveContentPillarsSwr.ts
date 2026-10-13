@@ -1,5 +1,5 @@
 import { mutateSaveContentPillars } from "@/modules/api/graphql/mutations/mutation-save-content-pillars"
-import { useGraphQLMutationSwr } from "@/hooks/reuseables/useGraphQLMutationSwr"
+import { useGraphQLMutationSwr } from "@/hooks/reuseables"
 
 /** The SWR key of the saveContentPillars mutation. */
 export const MUTATE_SAVE_CONTENT_PILLARS_SWR_KEY = "MUTATE_SAVE_CONTENT_PILLARS_SWR"

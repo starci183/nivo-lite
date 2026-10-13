@@ -1,5 +1,5 @@
 import { mutateRequestContentDraft } from "@/modules/api/graphql/mutations/mutation-request-content-draft"
-import { useGraphQLMutationSwr } from "@/hooks/reuseables/useGraphQLMutationSwr"
+import { useGraphQLMutationSwr } from "@/hooks/reuseables"
 
 /** The SWR key of the requestContentDraft mutation. */
 export const MUTATE_REQUEST_CONTENT_DRAFT_SWR_KEY = "MUTATE_REQUEST_CONTENT_DRAFT_SWR"

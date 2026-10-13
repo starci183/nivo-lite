@@ -1,5 +1,5 @@
 import { mutateRevokeSession } from "@/modules/api/graphql/mutations/mutation-revoke-session"
-import { useGraphQLMutationSwr } from "@/hooks/reuseables/useGraphQLMutationSwr"
+import { useGraphQLMutationSwr } from "@/hooks/reuseables"
 
 /** The SWR key of the revokeSession mutation. */
 export const MUTATE_REVOKE_SESSION_SWR_KEY = "MUTATE_REVOKE_SESSION_SWR"

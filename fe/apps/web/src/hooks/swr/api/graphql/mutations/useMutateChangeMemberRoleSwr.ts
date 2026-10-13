@@ -1,5 +1,5 @@
 import { mutateChangeMemberRole } from "@/modules/api/graphql/mutations/mutation-change-member-role"
-import { useGraphQLMutationSwr } from "@/hooks/reuseables/useGraphQLMutationSwr"
+import { useGraphQLMutationSwr } from "@/hooks/reuseables"
 
 /** The SWR key of the changeMemberRole mutation. */
 export const MUTATE_CHANGE_MEMBER_ROLE_SWR_KEY = "MUTATE_CHANGE_MEMBER_ROLE_SWR"
