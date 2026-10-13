@@ -14,12 +14,14 @@ describe("MessagesService", () => {
             const manager = mockEntityManager({ query: [INSERT_SYSTEM_MESSAGE, []] })
             const messages = await build()
 
-            await messages.postSystem({
-                workspaceId: "ws-1",
-                leadId: "lead-1",
-                body: "Anh Minh moved to won.",
-                manager,
-            })
+            await expect(
+                messages.postSystem({
+                    workspaceId: "ws-1",
+                    leadId: "lead-1",
+                    body: "Anh Minh moved to won.",
+                    manager,
+                }),
+            ).resolves.toBeUndefined()
 
             expect(manager.query).toHaveBeenCalledWith(INSERT_SYSTEM_MESSAGE, [
                 "ws-1",
@@ -32,7 +34,9 @@ describe("MessagesService", () => {
             const manager = mockEntityManager({ query: [INSERT_SYSTEM_MESSAGE, []] })
             const messages = await build()
 
-            await messages.postSystem({ workspaceId: "ws-1", leadId: null, body: "Hello", manager })
+            await expect(
+                messages.postSystem({ workspaceId: "ws-1", leadId: null, body: "Hello", manager }),
+            ).resolves.toBeUndefined()
 
             expect(manager.query).toHaveBeenCalledWith(INSERT_SYSTEM_MESSAGE, ["ws-1", null, "Hello"])
         })
