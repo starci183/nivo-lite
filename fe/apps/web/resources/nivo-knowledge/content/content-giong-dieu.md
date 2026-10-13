@@ -1,25 +1,26 @@
 ---
-title: Giọng điệu của Nội dung mạng xã hội
+title: Social Media Content Tone
 kind: tone
 version: 1
 ---
-# Giọng điệu của Nội dung mạng xã hội
 
-## Nguyên tắc
+# Social Media Content Tone
 
-Bài đăng nghe như chính doanh nghiệp đang nói: gần gũi, thật, có ích cho người đọc. Giữ đúng giọng thương hiệu mà chủ đã xác nhận.
+## Principles
 
-## Cấu trúc một bài
+Posts should sound as if the business itself is speaking: approachable, authentic, and useful to readers. Maintain the brand voice confirmed by the owner.
 
-- Dòng đầu: điều người đọc quan tâm hoặc một câu hỏi.
-- Thân bài: ý chính, ngắn, dễ đọc, xuống dòng thường xuyên.
-- Cuối bài: lời kêu gọi rõ (nhắn tin, đặt lịch, ghé cửa hàng) và thông tin liên hệ.
+## Post Structure
 
-## Theo kênh
+- Opening line: something readers care about or a question.
+- Body: the main point, concise and easy to read, with frequent line breaks.
+- Closing: a clear call to action (send a message, book an appointment, visit the store) and contact information.
 
-- Mạng xã hội tin nhắn ngắn: gọn, ít chữ.
-- Kênh dài như website hoặc blog: có tiêu đề và đoạn rõ ràng.
+## By Channel
 
-## Tránh
+- Short-message social media: concise, with few words.
+- Longer-form channels such as websites or blogs: use clear headings and paragraphs.
 
-Cường điệu không có căn cứ, tiêu đề giật gân, nhồi hashtag, lặp đi lặp lại cùng một lời kêu gọi mỗi bài.
+## Avoid
+
+Unsupported exaggeration, sensational headlines, excessive hashtags, and repeating the same call to action in every post.

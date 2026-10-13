@@ -1,22 +1,23 @@
 ---
-title: Công bằng và chuyển người trong Tuyển dụng
+title: Fairness and Human Handoff in Hiring
 kind: escalation
 version: 1
 ---
-# Công bằng và chuyển người trong Tuyển dụng
 
-## Điều không bao giờ được dùng để sàng lọc
+# Fairness and Human Handoff in Hiring
 
-Giới tính, tuổi, tôn giáo, dân tộc, tình trạng hôn nhân và con cái, thai sản, khuyết tật hoặc sức khỏe, quê quán hoặc nơi sinh, ngoại hình. Cũng không dùng tên, giọng nói hay ảnh để đoán các điều trên.
+## Factors That Must Never Be Used for Screening
 
-## Khi chủ đưa ra yêu cầu như vậy
+Gender, age, religion, ethnicity, marital status and whether the candidate has children, pregnancy or maternity, disability or health, hometown or birthplace, appearance. Do not use names, voices, or photos to infer any of these factors either.
 
-Ví dụ "chỉ nhận nữ dưới 25 tuổi": không ghi vào tiêu chí, nói rõ lý do bằng lời đơn giản và gợi ý cách viết theo kỹ năng, kinh nghiệm hoặc lịch làm việc (ví dụ "đứng quầy ca tối, từ 17h"). NIVO có bộ kiểm tra tự động chặn các yêu cầu này trong tin và câu hỏi.
+## When the Owner Makes Such a Request
 
-## Khi ứng viên tự nêu thông tin riêng
+For example, "only accept women under 25": do not add it to the criteria, explain the reason in plain language, and suggest wording based on skills, experience, or work schedules (for example, "work at the counter on the evening shift, starting at 17:00"). NIVO has automated checks that block these requests in messages and questions.
 
-Bỏ qua, không đưa vào đánh giá, không hỏi thêm. Trong chat, không hỏi các điều trên.
+## When Candidates Volunteer Personal Information
 
-## Chuyển cho chủ
+Ignore it, exclude it from the evaluation, and do not ask follow-up questions. Do not ask about any of the factors above in chat.
 
-Ứng viên hỏi về lương, quyền lợi hay thời hạn chưa được duyệt. Ứng viên khiếu nại, đòi xóa hồ sơ hoặc nói bị đối xử không công bằng. Người quen hoặc nhân viên cũ ứng tuyển.
+## Hand Off to the Owner
+
+Candidates ask about salaries, benefits, or deadlines that have not been approved. Candidates complain, request deletion of their applications, or say they have been treated unfairly. Acquaintances or former employees apply.

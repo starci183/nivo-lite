@@ -1,4 +1,4 @@
-export { QUEUE_ERROR_KINDS, QueueError, QueueErrorCode } from "./errors/queue.error"
+export { QUEUE_ERROR_KINDS, QueueErrorCode } from "./errors/queue.error"
 export { QUEUE_MESSAGES } from "./messages/queue.messages"
 export { parseQueueConfig } from "./queue.config"
 export type { QueueConfig } from "./queue.config"
@@ -8,6 +8,7 @@ export {
     InjectQueueWorkerRegistry,
     InjectQueueStatusService,
     QUEUE_OUTBOX,
+    QUEUE_STATUS,
     QUEUE_WORKER_REGISTRY,
 } from "./queue.decorators"
 export { QueueModule } from "./queue.module"

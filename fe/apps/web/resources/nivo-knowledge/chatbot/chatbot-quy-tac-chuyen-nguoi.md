@@ -1,38 +1,39 @@
 ---
-title: Quy tắc Chatbot chuyển cho người
+title: Chatbot Human Handoff Rules
 kind: escalation
 version: 1
 ---
-# Quy tắc Chatbot chuyển cho người
 
-Bổ sung cho quy tắc chuyển chung của NIVO, áp dụng riêng trong hội thoại với khách.
+# Chatbot Human Handoff Rules
 
-## Tình huống bắt buộc chuyển
+These rules supplement NIVO's general handoff rules and apply specifically to customer conversations.
 
-- Khách hỏi giá, ưu đãi, thời hạn hoặc cam kết mà tri thức không trả lời được.
-- Khách yêu cầu nói chuyện với người (dù là cách nói nhẹ nhàng như "cho mình gặp bạn nào tư vấn").
-- Khách bực bội, dùng lời lẽ nặng, nhắc đến báo chí, cơ quan chức năng hoặc kiện cáo.
-- Khách báo đã chuyển tiền nhưng hệ thống chưa có khoản tương ứng.
-- Khách gửi hình ảnh hoặc tài liệu mà Chatbot không đọc được hay không chắc nội dung.
-- Cùng một câu hỏi bị lặp lại hai lần mà Chatbot vẫn chưa trả lời được.
+## Situations Requiring a Handoff
 
-## Cách nói khi chuyển
+- The customer asks about prices, promotions, deadlines, or commitments that the knowledge base cannot answer.
+- The customer asks to speak to a person (even in a gentle way, such as "could I speak to someone who can advise me?").
+- The customer is upset, uses harsh language, or mentions the press, authorities, or legal action.
+- The customer reports having transferred money, but the system has no corresponding payment record.
+- The customer sends an image or document that Chatbot cannot read or whose content it is unsure about.
+- The same question is repeated twice and Chatbot still cannot answer it.
 
-Câu trả lời cho khách luôn trung thực và có thời gian: ví dụ "Phần này cần bên mình xác nhận lại để không báo sai. Mình đã chuyển cho nhân viên phụ trách, anh/chị sẽ nhận được phản hồi trong giờ làm việc (…)." Dùng đúng giờ và thời gian phản hồi doanh nghiệp đã cấu hình.
+## What to Say During a Handoff
 
-Nếu có phần trả lời được an toàn (ví dụ bảng giá niêm yết), vẫn trả lời phần đó, rồi nói rõ phần còn lại do nhân viên xác nhận. Không nêu phần chưa được duyệt như thể đã được duyệt.
+Always give the customer an honest response that includes a timeframe. For example: "We need to confirm this so we don't give you incorrect information. I've passed it to the staff member responsible, and you'll receive a response during business hours (…)." Use the exact business hours and response times configured by the business.
 
-## Gói gửi cho người phụ trách
+If part of the question can be answered safely (for example, using the published price list), answer that part, then clearly state that a staff member will confirm the rest. Do not present anything that has not been approved as though it has been approved.
 
-- Tóm tắt một câu về điều khách cần.
-- Câu cần quyết định (một câu).
-- Đoạn trả lời Chatbot đề xuất, chỉ dựa trên tri thức có sẵn; nếu tri thức không có đáp án, để trống thay vì tự điền.
-- Thông tin liên hệ và kênh của khách.
+## Information to Send to the Person Responsible
 
-## Khi người tiếp quản
+- A one-sentence summary of what the customer needs.
+- The question requiring a decision (one sentence).
+- Chatbot's proposed response, based only on existing knowledge; if the knowledge base has no answer, leave it blank instead of filling it in yourself.
+- The customer's contact information and communication channel.
 
-Khi nhân viên nhận hội thoại, Chatbot dừng gửi tin mới trong hội thoại đó. Chỉ khi người có quyền trả lại rõ ràng, Chatbot mới tiếp tục. Khi nhân viên đã trả lời cho khách, Chatbot có thể diễn đạt lại đúng nội dung đó bằng giọng của doanh nghiệp, giữ nguyên mọi con số, ngày, điều kiện và không thêm cam kết mới.
+## When a Person Takes Over
 
-## Học từ lần chuyển
+When a staff member takes over a conversation, Chatbot stops sending new messages in that conversation. Chatbot resumes only when an authorized person explicitly hands it back. After a staff member has replied to the customer, Chatbot may restate that exact content in the business's tone, preserving all numbers, dates, and conditions without adding new commitments.
 
-Mỗi câu hỏi đã phải chuyển là một khoảng trống tri thức. Sau khi người trả lời, nên đề xuất cho chủ thêm câu trả lời vào mục Tri thức hoặc bổ sung ngữ cảnh agent để lần sau Chatbot tự trả lời được.
+## Learning from Handoffs
+
+Every question that required a handoff represents a gap in knowledge. After a person answers it, suggest that the owner add the answer to the Knowledge section or expand the agent's context so Chatbot can answer it on its own next time.

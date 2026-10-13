@@ -1,31 +1,32 @@
 ---
-title: Thu thập khách tiềm năng và bàn giao cho Bán hàng
+title: Collecting Leads and Handing Over to Sales
 kind: playbook
 version: 1
 ---
-# Thu thập khách tiềm năng và bàn giao cho Bán hàng
 
-Một hội thoại tốt kết thúc bằng một khách tiềm năng đủ thông tin để người bán hàng theo tiếp, không phải một danh sách số điện thoại rời rạc.
+# Collecting Leads and Handing Over to Sales
 
-## Thông tin cần có
+A good conversation ends with a lead that has enough information for a salesperson to follow up, rather than a disconnected list of phone numbers.
 
-- **Nhu cầu**: khách muốn gì, dùng cho việc gì, có hạn chót không.
-- **Tên gọi** khách muốn được xưng hô.
-- **Cách liên hệ** ưu tiên (số điện thoại, email, hoặc ngay kênh đang nhắn).
-- **Mức quan tâm**: hỏi giá, hỏi lịch, hay so sánh nhiều nơi.
+## Required Information
 
-Chỉ hỏi thêm khi cần và hỏi từng điều một. Đừng biến cuộc trò chuyện thành biểu mẫu.
+- **Needs**: what the customer wants, what they will use it for, and whether there is a deadline.
+- **Preferred name**: how the customer wants to be addressed.
+- **Preferred contact method** (phone number, email, or the current messaging channel).
+- **Level of interest**: asking about prices, asking about availability, or comparing several providers.
 
-## Đồng ý trước khi bàn giao
+Ask for more information only when needed, one item at a time. Do not turn the conversation into a form.
 
-Chỉ chuyển thông tin cá nhân cho Bán hàng khi khách đã chia sẻ liên hệ với ý định để doanh nghiệp liên lạc lại (ví dụ "nhờ bên mình gọi lại tư vấn"), hoặc chính sách đã duyệt của doanh nghiệp cho phép. Nếu khách chỉ hỏi thông tin chung và không để lại liên hệ, đừng ép.
+## Consent Before Handoff
 
-## Bàn giao
+Share personal information with Sales only when the customer has provided contact details with the intention of having the business contact them (for example, "Please call me back to discuss this"), or when the business's approved policy permits it. If the customer only asks for general information and does not leave contact details, do not pressure them.
 
-Bản tóm tắt gửi sang Bán hàng gồm: nhu cầu bằng lời của khách, thông tin liên hệ, câu hỏi đã được trả lời và đã trả lời bằng nguồn nào, điều khách đang chờ, và điều Chatbot đã hứa (nếu có: ví dụ "sẽ có người gọi lại trong giờ làm việc").
+## Handoff
 
-Bàn giao không phải là chốt đơn. Chatbot không nói với khách rằng đơn đã được xác nhận cho đến khi người có quyền thực sự xác nhận.
+The summary sent to Sales includes the customer's needs in their own words, contact details, the questions already answered and the sources used, what the customer is waiting for, and any promises the Chatbot made (if any, for example, "Someone will call you back during business hours").
 
-## Tránh trùng lặp
+A handoff does not finalize an order. The Chatbot does not tell the customer that an order is confirmed until an authorized person actually confirms it.
 
-Trước khi tạo khách tiềm năng mới, kiểm tra xem khách này đã có hồ sơ chưa (cùng liên hệ hoặc cùng hội thoại). Gộp vào hồ sơ cũ thay vì tạo bản sao.
+## Avoiding Duplicates
+
+Before creating a new lead, check whether the customer already has a record (with the same contact details or in the same conversation). Merge the information into the existing record instead of creating a duplicate.

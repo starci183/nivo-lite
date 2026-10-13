@@ -7,6 +7,9 @@ export interface RenderRequestPayload {
     readonly commandId: string
 }
 
+/** A render request read from a job payload; null when the payload names no command and the job is dropped. */
+export type OptionalRenderRequestPayload = RenderRequestPayload | null
+
 /** Reads a job payload as a render request; null when it names no command. */
-export const renderRequestPayloadOf = (value: object): RenderRequestPayload | null =>
+export const renderRequestPayloadOf = (value: object): OptionalRenderRequestPayload =>
     "commandId" in value && typeof value.commandId === "string" ? { commandId: value.commandId } : null
