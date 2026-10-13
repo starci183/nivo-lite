@@ -66,6 +66,11 @@ export class ConnectionsService {
         return webhookUrlFor(provider, connectionId, origin)
     }
 
+    /** The site origin browsers are sent back to (no trailing slash); the local development origin when none is configured. */
+    siteBase(): string {
+        return (this.siteUrl ?? "http://localhost:3100").replace(/\/+$/u, "")
+    }
+
     /** The public https origin providers can reach, or null on localhost, plain http or when unset. */
     publicOrigin(): string | null {
         return publicSiteUrl(this.siteUrl)
