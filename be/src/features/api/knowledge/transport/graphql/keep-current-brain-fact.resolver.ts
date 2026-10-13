@@ -20,7 +20,9 @@ export class KeepCurrentBrainFactResolver {
         @WorkspaceId() workspaceId: string,
         @Args("input") input: KeepCurrentBrainFactInput,
     ): Promise<number> {
-        const result = await this.commandBus.execute(new KeepCurrentBrainFactCommand({ request: toKeepCurrentBrainFactRequest(workspaceId, input), principal }))
+        const result = await this.commandBus.execute(
+            new KeepCurrentBrainFactCommand({ request: toKeepCurrentBrainFactRequest(workspaceId, input), principal }),
+        )
         return result
     }
 }

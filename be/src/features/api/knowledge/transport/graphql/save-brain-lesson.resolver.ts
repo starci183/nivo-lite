@@ -21,7 +21,9 @@ export class SaveBrainLessonResolver {
         @WorkspaceId() workspaceId: string,
         @Args("input") input: SaveBrainLessonInput,
     ): Promise<BrainLessonType> {
-        const result = await this.commandBus.execute(new SaveBrainLessonCommand({ request: toSaveBrainLessonRequest(workspaceId, input), principal }))
+        const result = await this.commandBus.execute(
+            new SaveBrainLessonCommand({ request: toSaveBrainLessonRequest(workspaceId, input), principal }),
+        )
         return toSaveBrainLessonType(result)
     }
 }

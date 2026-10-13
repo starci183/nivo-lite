@@ -11,4 +11,7 @@ export const toKnowledgeSourceRequest = (workspaceId: string, input: KnowledgeSo
 })
 
 /** Maps the answer to the GraphQL type. */
-export const toKnowledgeSourceType = (result: OpenedKnowledgeSource): KnowledgeSourceDetailType => ({ source: toKnowledgeSourceTextType(result.source), chunks: result.chunks.map((chunk) => ({ ...chunk })) })
+export const toKnowledgeSourceType = (result: OpenedKnowledgeSource): KnowledgeSourceDetailType => ({
+    source: toKnowledgeSourceTextType(result.source),
+    chunks: result.chunks.map((chunk) => ({ ...chunk })),
+})

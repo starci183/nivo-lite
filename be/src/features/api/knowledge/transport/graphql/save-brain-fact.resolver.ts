@@ -21,7 +21,9 @@ export class SaveBrainFactResolver {
         @WorkspaceId() workspaceId: string,
         @Args("input") input: SaveBrainFactInput,
     ): Promise<SavedFactType> {
-        const result = await this.commandBus.execute(new SaveBrainFactCommand({ request: toSaveBrainFactRequest(workspaceId, input), principal }))
+        const result = await this.commandBus.execute(
+            new SaveBrainFactCommand({ request: toSaveBrainFactRequest(workspaceId, input), principal }),
+        )
         return toSaveBrainFactType(result)
     }
 }

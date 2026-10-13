@@ -2,7 +2,10 @@ import type { KeepCurrentBrainFactRequest } from "../../application/keep-current
 import type { KeepCurrentBrainFactInput } from "./dto/keep-current-brain-fact.input"
 
 /** Maps the GraphQL input to the request. */
-export const toKeepCurrentBrainFactRequest = (workspaceId: string, input: KeepCurrentBrainFactInput): KeepCurrentBrainFactRequest => ({
+export const toKeepCurrentBrainFactRequest = (
+    workspaceId: string,
+    input: KeepCurrentBrainFactInput,
+): KeepCurrentBrainFactRequest => ({
     workspaceId,
     subjectKey: input.subjectKey,
     attribute: input.attribute,

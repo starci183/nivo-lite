@@ -185,9 +185,7 @@ export const MESSAGES_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
             },
         ],
         contentMode: "none",
-        guardrails: [
-            text("automationTemplates.daily_report.guardrails.0"),
-        ],
+        guardrails: [text("automationTemplates.daily_report.guardrails.0")],
         variables: [],
         defaultBody: null,
         authority: {
@@ -266,9 +264,7 @@ export const MESSAGES_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
         },
         settings: [],
         contentMode: "fixed",
-        guardrails: [
-            text("automationTemplates.delivery_notice.guardrails.0"),
-        ],
+        guardrails: [text("automationTemplates.delivery_notice.guardrails.0")],
         variables: ["ten_khach", "ten_shop", "ma_phieu", "hang_van_chuyen", "ma_van_don"],
         defaultBody: text("automationTemplates.delivery_notice.defaultBody"),
         authority: {

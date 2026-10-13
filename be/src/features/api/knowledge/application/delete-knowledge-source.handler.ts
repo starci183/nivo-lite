@@ -16,6 +16,10 @@ export class DeleteKnowledgeSourceHandler extends ICQRSHandler<DeleteKnowledgeSo
     }
 
     protected override process(command: DeleteKnowledgeSourceCommand): Promise<void> {
-        return this.brain.removeSource(command.params.principal.id, command.params.request.workspaceId, command.params.request.id)
+        return this.brain.removeSource(
+            command.params.principal.id,
+            command.params.request.workspaceId,
+            command.params.request.id,
+        )
     }
 }

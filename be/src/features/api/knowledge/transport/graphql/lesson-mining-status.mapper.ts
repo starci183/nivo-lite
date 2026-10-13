@@ -4,7 +4,10 @@ import type { LessonMiningStatusInput } from "./dto/lesson-mining-status.input"
 import type { LessonMiningStatusType } from "./dto/lesson-mining-status.type"
 
 /** Maps the GraphQL input to the request. */
-export const toLessonMiningStatusRequest = (workspaceId: string, input: LessonMiningStatusInput): LessonMiningStatusRequest => ({
+export const toLessonMiningStatusRequest = (
+    workspaceId: string,
+    input: LessonMiningStatusInput,
+): LessonMiningStatusRequest => ({
     workspaceId,
     id: input.id,
 })

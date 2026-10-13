@@ -20,7 +20,12 @@ export class DeleteKnowledgeSourceResolver {
         @WorkspaceId() workspaceId: string,
         @Args("input") input: DeleteKnowledgeSourceInput,
     ): Promise<boolean> {
-        await this.commandBus.execute(new DeleteKnowledgeSourceCommand({ request: toDeleteKnowledgeSourceRequest(workspaceId, input), principal }))
+        await this.commandBus.execute(
+            new DeleteKnowledgeSourceCommand({
+                request: toDeleteKnowledgeSourceRequest(workspaceId, input),
+                principal,
+            }),
+        )
         return true
     }
 }

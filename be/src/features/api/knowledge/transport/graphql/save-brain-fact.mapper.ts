@@ -20,4 +20,7 @@ export const toSaveBrainFactRequest = (workspaceId: string, input: SaveBrainFact
 })
 
 /** Maps the answer to the GraphQL type. */
-export const toSaveBrainFactType = (result: ProposeResult): SavedFactType => ({ outcome: result.outcome, fact: toBrainFactType(result.fact) })
+export const toSaveBrainFactType = (result: ProposeResult): SavedFactType => ({
+    outcome: result.outcome,
+    fact: toBrainFactType(result.fact),
+})

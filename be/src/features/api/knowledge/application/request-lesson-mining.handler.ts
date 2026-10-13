@@ -16,6 +16,10 @@ export class RequestLessonMiningHandler extends ICQRSHandler<RequestLessonMining
     }
 
     protected override process(command: RequestLessonMiningCommand): Promise<string> {
-        return this.page.requestMining(command.params.principal.id, command.params.request.workspaceId, command.params.request.module)
+        return this.page.requestMining(
+            command.params.principal.id,
+            command.params.request.workspaceId,
+            command.params.request.module,
+        )
     }
 }

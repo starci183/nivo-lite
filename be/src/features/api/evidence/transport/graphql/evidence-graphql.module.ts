@@ -4,9 +4,7 @@ import { RecordManualEvidenceResolver } from "./record-manual-evidence.resolver"
 
 @Module({
     imports: [EvidenceApiModule],
-    providers: [
-        RecordManualEvidenceResolver,
-    ],
+    providers: [RecordManualEvidenceResolver],
 })
 /** The GraphQL transport of the evidence feature. */
 export class EvidenceGraphqlModule {}

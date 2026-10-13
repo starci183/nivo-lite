@@ -18,7 +18,9 @@ export class MaintainBrainResolver {
         @CurrentPrincipal() principal: Principal,
         @WorkspaceId() workspaceId: string,
     ): Promise<boolean> {
-        await this.commandBus.execute(new MaintainBrainCommand({ request: toMaintainBrainRequest(workspaceId), principal }))
+        await this.commandBus.execute(
+            new MaintainBrainCommand({ request: toMaintainBrainRequest(workspaceId), principal }),
+        )
         return true
     }
 }

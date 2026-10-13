@@ -19,9 +19,7 @@ export class ListAutomationGoogleAccountsResolver {
         @CurrentPrincipal() principal: Principal,
         @WorkspaceId() workspaceId: string,
     ): Promise<Array<AutomationGoogleAccountType>> {
-        const result = await this.queryBus.execute(
-            new ListGoogleAccountsQuery({ request: { workspaceId }, principal }),
-        )
+        const result = await this.queryBus.execute(new ListGoogleAccountsQuery({ request: { workspaceId }, principal }))
         return toAutomationGoogleAccountTypes(result)
     }
 }

@@ -5,7 +5,10 @@ import type { DriveFolderType } from "./dto/drive-folder.type"
 import { toDriveFolderType } from "./knowledge-records.mapper"
 
 /** Maps the GraphQL input to the request. */
-export const toDriveLinkedFolderRequest = (workspaceId: string, input: DriveLinkedFolderInput): DriveLinkedFolderRequest => ({
+export const toDriveLinkedFolderRequest = (
+    workspaceId: string,
+    input: DriveLinkedFolderInput,
+): DriveLinkedFolderRequest => ({
     workspaceId,
     url: input.url,
 })

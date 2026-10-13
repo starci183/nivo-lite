@@ -15,11 +15,10 @@ export class GetBrainResolver {
 
     /** Reads everything the Second Brain page shows. */
     @Query(() => BrainType, { name: "brain" })
-    async brain(
-        @CurrentPrincipal() principal: Principal,
-        @WorkspaceId() workspaceId: string,
-    ): Promise<BrainType> {
-        const result = await this.queryBus.execute(new GetBrainQuery({ request: toGetBrainRequest(workspaceId), principal }))
+    async brain(@CurrentPrincipal() principal: Principal, @WorkspaceId() workspaceId: string): Promise<BrainType> {
+        const result = await this.queryBus.execute(
+            new GetBrainQuery({ request: toGetBrainRequest(workspaceId), principal }),
+        )
         return toGetBrainType(result)
     }
 }

@@ -82,9 +82,7 @@ export const INVENTORY_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
             },
         ],
         contentMode: "none",
-        guardrails: [
-            text("automationTemplates.inventory_supplier_overdue.guardrails.0"),
-        ],
+        guardrails: [text("automationTemplates.inventory_supplier_overdue.guardrails.0")],
         variables: [],
         defaultBody: null,
         authority: {
@@ -130,9 +128,7 @@ export const INVENTORY_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
             },
         ],
         contentMode: "none",
-        guardrails: [
-            text("automationTemplates.inventory_weekly_report.guardrails.0"),
-        ],
+        guardrails: [text("automationTemplates.inventory_weekly_report.guardrails.0")],
         variables: [],
         defaultBody: null,
         authority: {

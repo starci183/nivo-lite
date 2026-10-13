@@ -5,7 +5,10 @@ import type { BrainLessonType } from "./dto/brain-lesson.type"
 import { toBrainLessonType } from "./brain-records.mapper"
 
 /** Maps the GraphQL input to the request. */
-export const toDecideBrainLessonRequest = (workspaceId: string, input: DecideBrainLessonInput): DecideBrainLessonRequest => ({
+export const toDecideBrainLessonRequest = (
+    workspaceId: string,
+    input: DecideBrainLessonInput,
+): DecideBrainLessonRequest => ({
     workspaceId,
     id: input.id,
     action: input.action,

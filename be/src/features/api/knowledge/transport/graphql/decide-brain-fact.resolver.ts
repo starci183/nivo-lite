@@ -21,7 +21,9 @@ export class DecideBrainFactResolver {
         @WorkspaceId() workspaceId: string,
         @Args("input") input: DecideBrainFactInput,
     ): Promise<BrainFactType> {
-        const result = await this.commandBus.execute(new DecideBrainFactCommand({ request: toDecideBrainFactRequest(workspaceId, input), principal }))
+        const result = await this.commandBus.execute(
+            new DecideBrainFactCommand({ request: toDecideBrainFactRequest(workspaceId, input), principal }),
+        )
         return toDecideBrainFactType(result)
     }
 }

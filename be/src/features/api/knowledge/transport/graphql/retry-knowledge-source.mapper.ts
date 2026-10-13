@@ -4,7 +4,10 @@ import type { RetryKnowledgeSourceInput } from "./dto/retry-knowledge-source.inp
 import type { SourceRefType } from "./dto/source-ref.type"
 
 /** Maps the GraphQL input to the request. */
-export const toRetryKnowledgeSourceRequest = (workspaceId: string, input: RetryKnowledgeSourceInput): RetryKnowledgeSourceRequest => ({
+export const toRetryKnowledgeSourceRequest = (
+    workspaceId: string,
+    input: RetryKnowledgeSourceInput,
+): RetryKnowledgeSourceRequest => ({
     workspaceId,
     id: input.id,
 })

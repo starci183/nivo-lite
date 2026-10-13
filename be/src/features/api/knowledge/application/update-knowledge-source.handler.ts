@@ -16,6 +16,10 @@ export class UpdateKnowledgeSourceHandler extends ICQRSHandler<UpdateKnowledgeSo
     }
 
     protected override process(command: UpdateKnowledgeSourceCommand): Promise<void> {
-        return this.sources.updateSource(command.params.principal.id, command.params.request.workspaceId, command.params.request)
+        return this.sources.updateSource(
+            command.params.principal.id,
+            command.params.request.workspaceId,
+            command.params.request,
+        )
     }
 }

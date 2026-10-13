@@ -21,7 +21,9 @@ export class KnowledgeSourcesResolver {
         @WorkspaceId() workspaceId: string,
         @Args("input") input: KnowledgeSourcesInput,
     ): Promise<Array<KnowledgeSourceType>> {
-        const result = await this.queryBus.execute(new KnowledgeSourcesQuery({ request: toKnowledgeSourcesRequest(workspaceId, input), principal }))
+        const result = await this.queryBus.execute(
+            new KnowledgeSourcesQuery({ request: toKnowledgeSourcesRequest(workspaceId, input), principal }),
+        )
         return toKnowledgeSourcesType(result)
     }
 }

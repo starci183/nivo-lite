@@ -19,7 +19,9 @@ export class KnowledgeSuggestionsResolver {
         @CurrentPrincipal() principal: Principal,
         @WorkspaceId() workspaceId: string,
     ): Promise<KnowledgeSuggestionContextType> {
-        const result = await this.queryBus.execute(new KnowledgeSuggestionsQuery({ request: toKnowledgeSuggestionsRequest(workspaceId), principal }))
+        const result = await this.queryBus.execute(
+            new KnowledgeSuggestionsQuery({ request: toKnowledgeSuggestionsRequest(workspaceId), principal }),
+        )
         return toKnowledgeSuggestionsType(result)
     }
 }

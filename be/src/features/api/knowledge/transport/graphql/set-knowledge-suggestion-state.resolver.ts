@@ -20,7 +20,12 @@ export class SetKnowledgeSuggestionStateResolver {
         @WorkspaceId() workspaceId: string,
         @Args("input") input: SetKnowledgeSuggestionStateInput,
     ): Promise<boolean> {
-        await this.commandBus.execute(new SetKnowledgeSuggestionStateCommand({ request: toSetKnowledgeSuggestionStateRequest(workspaceId, input), principal }))
+        await this.commandBus.execute(
+            new SetKnowledgeSuggestionStateCommand({
+                request: toSetKnowledgeSuggestionStateRequest(workspaceId, input),
+                principal,
+            }),
+        )
         return true
     }
 }

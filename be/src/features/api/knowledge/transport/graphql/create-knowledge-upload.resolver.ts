@@ -21,7 +21,12 @@ export class CreateKnowledgeUploadResolver {
         @WorkspaceId() workspaceId: string,
         @Args("input") input: CreateKnowledgeUploadInput,
     ): Promise<UploadAddressType> {
-        const result = await this.commandBus.execute(new CreateKnowledgeUploadCommand({ request: toCreateKnowledgeUploadRequest(workspaceId, input), principal }))
+        const result = await this.commandBus.execute(
+            new CreateKnowledgeUploadCommand({
+                request: toCreateKnowledgeUploadRequest(workspaceId, input),
+                principal,
+            }),
+        )
         return toCreateKnowledgeUploadType(result)
     }
 }

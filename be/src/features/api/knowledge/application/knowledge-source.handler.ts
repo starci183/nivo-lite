@@ -17,6 +17,10 @@ export class KnowledgeSourceHandler extends ICQRSHandler<KnowledgeSourceQuery, O
     }
 
     protected override process(query: KnowledgeSourceQuery): Promise<OpenedKnowledgeSource> {
-        return this.documents.document(query.params.principal.id, query.params.request.workspaceId, query.params.request.id)
+        return this.documents.document(
+            query.params.principal.id,
+            query.params.request.workspaceId,
+            query.params.request.id,
+        )
     }
 }

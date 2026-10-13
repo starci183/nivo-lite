@@ -4,7 +4,10 @@ import type { EnqueueKnowledgeSourceInput } from "./dto/enqueue-knowledge-source
 import type { SourceRefType } from "./dto/source-ref.type"
 
 /** Maps the GraphQL input to the request. */
-export const toEnqueueKnowledgeSourceRequest = (workspaceId: string, input: EnqueueKnowledgeSourceInput): EnqueueKnowledgeSourceRequest => ({
+export const toEnqueueKnowledgeSourceRequest = (
+    workspaceId: string,
+    input: EnqueueKnowledgeSourceInput,
+): EnqueueKnowledgeSourceRequest => ({
     workspaceId,
     kind: input.kind,
     title: input.title,

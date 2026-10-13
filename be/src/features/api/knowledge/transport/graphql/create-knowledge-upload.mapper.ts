@@ -4,7 +4,10 @@ import type { CreateKnowledgeUploadInput } from "./dto/create-knowledge-upload.i
 import type { UploadAddressType } from "./dto/upload-address.type"
 
 /** Maps the GraphQL input to the request. */
-export const toCreateKnowledgeUploadRequest = (workspaceId: string, input: CreateKnowledgeUploadInput): CreateKnowledgeUploadRequest => ({
+export const toCreateKnowledgeUploadRequest = (
+    workspaceId: string,
+    input: CreateKnowledgeUploadInput,
+): CreateKnowledgeUploadRequest => ({
     workspaceId,
     filename: input.filename,
 })

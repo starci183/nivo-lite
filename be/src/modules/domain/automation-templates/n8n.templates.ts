@@ -37,9 +37,7 @@ export const N8N_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
             },
         ],
         contentMode: "fixed",
-        guardrails: [
-            text("automationTemplates.email-daily-report.guardrails.0"),
-        ],
+        guardrails: [text("automationTemplates.email-daily-report.guardrails.0")],
         variables: ["ten_shop", "ngay", "tom_tat", "viec_cho"],
         defaultBody: text("automationTemplates.email-daily-report.defaultBody"),
         authority: {
@@ -166,9 +164,7 @@ export const N8N_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
             },
         ],
         contentMode: "fixed",
-        guardrails: [
-            text("automationTemplates.email-month-ledger.guardrails.0"),
-        ],
+        guardrails: [text("automationTemplates.email-month-ledger.guardrails.0")],
         variables: ["ten_shop", "ky", "tom_tat"],
         defaultBody: text("automationTemplates.email-month-ledger.defaultBody"),
         authority: {

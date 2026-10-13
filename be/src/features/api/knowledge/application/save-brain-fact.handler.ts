@@ -17,6 +17,10 @@ export class SaveBrainFactHandler extends ICQRSHandler<SaveBrainFactCommand, Pro
     }
 
     protected override process(command: SaveBrainFactCommand): Promise<ProposeResult> {
-        return this.brain.saveFact(command.params.principal.id, command.params.request.workspaceId, command.params.request)
+        return this.brain.saveFact(
+            command.params.principal.id,
+            command.params.request.workspaceId,
+            command.params.request,
+        )
     }
 }

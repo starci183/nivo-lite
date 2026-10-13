@@ -6,4 +6,7 @@ import type { KnowledgeSuggestionContextType } from "./dto/knowledge-suggestion-
 export const toKnowledgeSuggestionsRequest = (workspaceId: string): KnowledgeSuggestionsRequest => ({ workspaceId })
 
 /** Maps the answer to the GraphQL type. */
-export const toKnowledgeSuggestionsType = (result: SuggestionContext): KnowledgeSuggestionContextType => ({ decisions: result.decisions.map((decision) => ({ ...decision })), businessType: result.businessType })
+export const toKnowledgeSuggestionsType = (result: SuggestionContext): KnowledgeSuggestionContextType => ({
+    decisions: result.decisions.map((decision) => ({ ...decision })),
+    businessType: result.businessType,
+})

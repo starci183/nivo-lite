@@ -21,7 +21,9 @@ export class RequestLessonMiningResolver {
         @WorkspaceId() workspaceId: string,
         @Args("input") input: RequestLessonMiningInput,
     ): Promise<BrainCommandRefType> {
-        const result = await this.commandBus.execute(new RequestLessonMiningCommand({ request: toRequestLessonMiningRequest(workspaceId, input), principal }))
+        const result = await this.commandBus.execute(
+            new RequestLessonMiningCommand({ request: toRequestLessonMiningRequest(workspaceId, input), principal }),
+        )
         return toRequestLessonMiningType(result)
     }
 }

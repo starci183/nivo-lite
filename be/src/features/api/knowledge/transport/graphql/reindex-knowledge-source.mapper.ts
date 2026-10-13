@@ -4,7 +4,10 @@ import type { ReindexKnowledgeSourceInput } from "./dto/reindex-knowledge-source
 import type { SourceRefType } from "./dto/source-ref.type"
 
 /** Maps the GraphQL input to the request. */
-export const toReindexKnowledgeSourceRequest = (workspaceId: string, input: ReindexKnowledgeSourceInput): ReindexKnowledgeSourceRequest => ({
+export const toReindexKnowledgeSourceRequest = (
+    workspaceId: string,
+    input: ReindexKnowledgeSourceInput,
+): ReindexKnowledgeSourceRequest => ({
     workspaceId,
     sourceId: input.sourceId,
     content: input.content,

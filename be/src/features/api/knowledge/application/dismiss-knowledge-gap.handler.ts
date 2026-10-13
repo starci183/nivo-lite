@@ -16,6 +16,10 @@ export class DismissKnowledgeGapHandler extends ICQRSHandler<DismissKnowledgeGap
     }
 
     protected override process(command: DismissKnowledgeGapCommand): Promise<void> {
-        return this.brain.dismissGap(command.params.principal.id, command.params.request.workspaceId, command.params.request.id)
+        return this.brain.dismissGap(
+            command.params.principal.id,
+            command.params.request.workspaceId,
+            command.params.request.id,
+        )
     }
 }

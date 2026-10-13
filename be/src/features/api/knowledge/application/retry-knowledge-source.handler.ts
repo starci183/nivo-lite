@@ -17,6 +17,10 @@ export class RetryKnowledgeSourceHandler extends ICQRSHandler<RetryKnowledgeSour
     }
 
     protected override process(command: RetryKnowledgeSourceCommand): Promise<SourceRef> {
-        return this.sources.retrySource(command.params.principal.id, command.params.request.workspaceId, command.params.request.id)
+        return this.sources.retrySource(
+            command.params.principal.id,
+            command.params.request.workspaceId,
+            command.params.request.id,
+        )
     }
 }

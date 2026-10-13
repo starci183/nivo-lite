@@ -17,6 +17,10 @@ export class DriveLinkedFolderHandler extends ICQRSHandler<DriveLinkedFolderQuer
     }
 
     protected override process(query: DriveLinkedFolderQuery): Promise<DriveFolderListing> {
-        return this.drive.listLinkedFolder(query.params.principal.id, query.params.request.workspaceId, query.params.request.url)
+        return this.drive.listLinkedFolder(
+            query.params.principal.id,
+            query.params.request.workspaceId,
+            query.params.request.url,
+        )
     }
 }

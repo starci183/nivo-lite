@@ -21,7 +21,9 @@ export class AskKnowledgeResolver {
         @WorkspaceId() workspaceId: string,
         @Args("input") input: AskKnowledgeInput,
     ): Promise<Array<RetrievedPassageType>> {
-        const result = await this.queryBus.execute(new AskKnowledgeQuery({ request: toAskKnowledgeRequest(workspaceId, input), principal }))
+        const result = await this.queryBus.execute(
+            new AskKnowledgeQuery({ request: toAskKnowledgeRequest(workspaceId, input), principal }),
+        )
         return toAskKnowledgeType(result)
     }
 }

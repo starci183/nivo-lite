@@ -21,7 +21,10 @@ export class SaveOpenApiConnectionResolver {
         @Args("input") input: SaveOpenApiConnectionInput,
     ): Promise<string> {
         return this.commandBus.execute(
-            new SaveOpenApiConnectionCommand({ request: toSaveOpenApiConnectionRequest(workspaceId, input), principal }),
+            new SaveOpenApiConnectionCommand({
+                request: toSaveOpenApiConnectionRequest(workspaceId, input),
+                principal,
+            }),
         )
     }
 }

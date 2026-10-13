@@ -12,4 +12,5 @@ export const toAskKnowledgeRequest = (workspaceId: string, input: AskKnowledgeIn
 })
 
 /** Maps the answer to the GraphQL type. */
-export const toAskKnowledgeType = (result: ReadonlyArray<Passage>): Array<RetrievedPassageType> => result.map((passage) => ({ ...passage }))
+export const toAskKnowledgeType = (result: ReadonlyArray<Passage>): Array<RetrievedPassageType> =>
+    result.map((passage) => ({ ...passage }))

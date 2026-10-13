@@ -26,9 +26,7 @@ export const SHIFTS_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
         },
         settings: [],
         contentMode: "none",
-        guardrails: [
-            text("automationTemplates.shifts_leave_gap.guardrails.0"),
-        ],
+        guardrails: [text("automationTemplates.shifts_leave_gap.guardrails.0")],
         variables: [],
         defaultBody: null,
         authority: {
@@ -72,9 +70,7 @@ export const SHIFTS_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
             },
         ],
         contentMode: "none",
-        guardrails: [
-            text("automationTemplates.shifts_month_close.guardrails.0"),
-        ],
+        guardrails: [text("automationTemplates.shifts_month_close.guardrails.0")],
         variables: [],
         defaultBody: null,
         authority: {
@@ -126,9 +122,7 @@ export const SHIFTS_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
             },
         ],
         contentMode: "none",
-        guardrails: [
-            text("automationTemplates.shifts_shift_reminder.guardrails.0"),
-        ],
+        guardrails: [text("automationTemplates.shifts_shift_reminder.guardrails.0")],
         variables: [],
         defaultBody: null,
         authority: {

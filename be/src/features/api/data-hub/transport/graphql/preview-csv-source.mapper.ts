@@ -4,7 +4,10 @@ import type { CsvPreviewType } from "./dto/csv-preview.type"
 import type { PreviewCsvSourceInput } from "./dto/preview-csv-source.input"
 
 /** Maps the GraphQL arguments of previewCsvSource to the request. */
-export const toPreviewCsvSourceRequest = (workspaceId: string, input: PreviewCsvSourceInput): PreviewCsvSourceRequest => ({
+export const toPreviewCsvSourceRequest = (
+    workspaceId: string,
+    input: PreviewCsvSourceInput,
+): PreviewCsvSourceRequest => ({
     workspaceId,
     ...input,
 })

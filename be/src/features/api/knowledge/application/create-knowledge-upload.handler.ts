@@ -17,6 +17,10 @@ export class CreateKnowledgeUploadHandler extends ICQRSHandler<CreateKnowledgeUp
     }
 
     protected override process(command: CreateKnowledgeUploadCommand): Promise<UploadAddress> {
-        return this.sources.createUpload(command.params.principal.id, command.params.request.workspaceId, command.params.request.filename)
+        return this.sources.createUpload(
+            command.params.principal.id,
+            command.params.request.workspaceId,
+            command.params.request.filename,
+        )
     }
 }

@@ -17,6 +17,10 @@ export class KnowledgeSourcesHandler extends ICQRSHandler<KnowledgeSourcesQuery,
     }
 
     protected override process(query: KnowledgeSourcesQuery): Promise<ReadonlyArray<SourceSummary>> {
-        return this.sources.list(query.params.principal.id, query.params.request.workspaceId, query.params.request.module)
+        return this.sources.list(
+            query.params.principal.id,
+            query.params.request.workspaceId,
+            query.params.request.module,
+        )
     }
 }

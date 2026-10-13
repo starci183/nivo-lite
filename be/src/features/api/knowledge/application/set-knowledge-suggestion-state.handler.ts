@@ -16,6 +16,11 @@ export class SetKnowledgeSuggestionStateHandler extends ICQRSHandler<SetKnowledg
     }
 
     protected override process(command: SetKnowledgeSuggestionStateCommand): Promise<void> {
-        return this.suggestions.decide(command.params.principal.id, command.params.request.workspaceId, command.params.request.key, command.params.request.state)
+        return this.suggestions.decide(
+            command.params.principal.id,
+            command.params.request.workspaceId,
+            command.params.request.key,
+            command.params.request.state,
+        )
     }
 }

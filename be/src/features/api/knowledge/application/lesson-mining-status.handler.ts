@@ -17,6 +17,10 @@ export class LessonMiningStatusHandler extends ICQRSHandler<LessonMiningStatusQu
     }
 
     protected override process(query: LessonMiningStatusQuery): Promise<LessonMiningState> {
-        return this.page.miningState(query.params.principal.id, query.params.request.workspaceId, query.params.request.id)
+        return this.page.miningState(
+            query.params.principal.id,
+            query.params.request.workspaceId,
+            query.params.request.id,
+        )
     }
 }

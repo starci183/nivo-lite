@@ -17,6 +17,11 @@ export class DrivePickedFolderHandler extends ICQRSHandler<DrivePickedFolderQuer
     }
 
     protected override process(query: DrivePickedFolderQuery): Promise<PickedFolder> {
-        return this.drive.listPickedFolder(query.params.principal.id, query.params.request.workspaceId, query.params.request.folderId, query.params.request.token)
+        return this.drive.listPickedFolder(
+            query.params.principal.id,
+            query.params.request.workspaceId,
+            query.params.request.folderId,
+            query.params.request.token,
+        )
     }
 }

@@ -128,9 +128,7 @@ export const GROWTH_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
             },
         ],
         contentMode: "none",
-        guardrails: [
-            text("automationTemplates.sheet_orders.guardrails.0"),
-        ],
+        guardrails: [text("automationTemplates.sheet_orders.guardrails.0")],
         variables: [],
         defaultBody: null,
         authority: {

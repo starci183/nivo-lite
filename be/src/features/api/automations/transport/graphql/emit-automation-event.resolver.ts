@@ -20,7 +20,9 @@ export class EmitAutomationEventResolver {
         @WorkspaceId() workspaceId: string,
         @Args("input") input: EmitAutomationEventInput,
     ): Promise<boolean> {
-        await this.commandBus.execute(new EmitEventCommand({ request: toEmitEventRequest(workspaceId, input), principal }))
+        await this.commandBus.execute(
+            new EmitEventCommand({ request: toEmitEventRequest(workspaceId, input), principal }),
+        )
         return true
     }
 }

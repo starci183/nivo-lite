@@ -21,7 +21,9 @@ export class LessonMiningStatusResolver {
         @WorkspaceId() workspaceId: string,
         @Args("input") input: LessonMiningStatusInput,
     ): Promise<LessonMiningStatusType> {
-        const result = await this.queryBus.execute(new LessonMiningStatusQuery({ request: toLessonMiningStatusRequest(workspaceId, input), principal }))
+        const result = await this.queryBus.execute(
+            new LessonMiningStatusQuery({ request: toLessonMiningStatusRequest(workspaceId, input), principal }),
+        )
         return toLessonMiningStatusType(result)
     }
 }

@@ -20,7 +20,12 @@ export class UpdateKnowledgeSourceResolver {
         @WorkspaceId() workspaceId: string,
         @Args("input") input: UpdateKnowledgeSourceInput,
     ): Promise<boolean> {
-        await this.commandBus.execute(new UpdateKnowledgeSourceCommand({ request: toUpdateKnowledgeSourceRequest(workspaceId, input), principal }))
+        await this.commandBus.execute(
+            new UpdateKnowledgeSourceCommand({
+                request: toUpdateKnowledgeSourceRequest(workspaceId, input),
+                principal,
+            }),
+        )
         return true
     }
 }

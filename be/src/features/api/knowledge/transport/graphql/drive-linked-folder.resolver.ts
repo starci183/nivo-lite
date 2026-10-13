@@ -21,7 +21,9 @@ export class DriveLinkedFolderResolver {
         @WorkspaceId() workspaceId: string,
         @Args("input") input: DriveLinkedFolderInput,
     ): Promise<DriveFolderType> {
-        const result = await this.queryBus.execute(new DriveLinkedFolderQuery({ request: toDriveLinkedFolderRequest(workspaceId, input), principal }))
+        const result = await this.queryBus.execute(
+            new DriveLinkedFolderQuery({ request: toDriveLinkedFolderRequest(workspaceId, input), principal }),
+        )
         return toDriveLinkedFolderType(result)
     }
 }

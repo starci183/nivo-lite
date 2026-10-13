@@ -21,7 +21,12 @@ export class EnqueueKnowledgeSourceResolver {
         @WorkspaceId() workspaceId: string,
         @Args("input") input: EnqueueKnowledgeSourceInput,
     ): Promise<SourceRefType> {
-        const result = await this.commandBus.execute(new EnqueueKnowledgeSourceCommand({ request: toEnqueueKnowledgeSourceRequest(workspaceId, input), principal }))
+        const result = await this.commandBus.execute(
+            new EnqueueKnowledgeSourceCommand({
+                request: toEnqueueKnowledgeSourceRequest(workspaceId, input),
+                principal,
+            }),
+        )
         return toEnqueueKnowledgeSourceType(result)
     }
 }

@@ -14,9 +14,7 @@ export class NivoKnowledgeResolver {
 
     /** Lists the base knowledge of NIVO, which every signed-in person may read. */
     @Query(() => [NivoEntryType], { name: "nivoKnowledge" })
-    async nivoKnowledge(
-        @CurrentPrincipal() principal: Principal,
-    ): Promise<Array<NivoEntryType>> {
+    async nivoKnowledge(@CurrentPrincipal() principal: Principal): Promise<Array<NivoEntryType>> {
         const result = await this.queryBus.execute(new NivoKnowledgeQuery({ request: {}, principal }))
         return toNivoKnowledgeType(result)
     }

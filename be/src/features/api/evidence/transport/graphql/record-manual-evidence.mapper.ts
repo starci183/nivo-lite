@@ -3,7 +3,10 @@ import type { RecordManualEvidenceInput } from "./dto/record-manual-evidence.inp
 import type { ManualEvidenceType } from "./dto/manual-evidence.type"
 
 /** Maps the GraphQL input to the request. */
-export const toRecordManualEvidenceRequest = (workspaceId: string, input: RecordManualEvidenceInput): RecordManualEvidenceRequest => ({
+export const toRecordManualEvidenceRequest = (
+    workspaceId: string,
+    input: RecordManualEvidenceInput,
+): RecordManualEvidenceRequest => ({
     workspaceId,
     amount: input.amount,
     date: input.date,

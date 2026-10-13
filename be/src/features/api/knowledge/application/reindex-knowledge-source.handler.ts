@@ -17,6 +17,10 @@ export class ReindexKnowledgeSourceHandler extends ICQRSHandler<ReindexKnowledge
     }
 
     protected override process(command: ReindexKnowledgeSourceCommand): Promise<SourceRef> {
-        return this.sources.reindexSource(command.params.principal.id, command.params.request.workspaceId, command.params.request)
+        return this.sources.reindexSource(
+            command.params.principal.id,
+            command.params.request.workspaceId,
+            command.params.request,
+        )
     }
 }

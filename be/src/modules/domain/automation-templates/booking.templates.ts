@@ -43,9 +43,7 @@ export const BOOKING_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
             },
         ],
         contentMode: "fixed",
-        guardrails: [
-            text("automationTemplates.appointment_reminder.guardrails.0"),
-        ],
+        guardrails: [text("automationTemplates.appointment_reminder.guardrails.0")],
         variables: ["ten_khach", "ten_shop", "dich_vu", "gio_hen", "nguoi_lam", "dia_chi"],
         defaultBody: text("automationTemplates.appointment_reminder.defaultBody"),
         authority: {
@@ -79,9 +77,7 @@ export const BOOKING_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
         },
         settings: [],
         contentMode: "fixed",
-        guardrails: [
-            text("automationTemplates.booking_comeback.guardrails.0"),
-        ],
+        guardrails: [text("automationTemplates.booking_comeback.guardrails.0")],
         variables: ["ten_khach", "ten_shop", "dich_vu", "so_ngay"],
         defaultBody: text("automationTemplates.booking_comeback.defaultBody"),
         authority: {
@@ -157,9 +153,7 @@ export const BOOKING_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
         },
         settings: [],
         contentMode: "fixed",
-        guardrails: [
-            text("automationTemplates.booking_waitlist_notice.guardrails.0"),
-        ],
+        guardrails: [text("automationTemplates.booking_waitlist_notice.guardrails.0")],
         variables: ["ten_khach", "ten_shop", "dich_vu", "gio_hen"],
         defaultBody: text("automationTemplates.booking_waitlist_notice.defaultBody"),
         authority: {

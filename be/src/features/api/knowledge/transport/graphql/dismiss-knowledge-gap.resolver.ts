@@ -20,7 +20,9 @@ export class DismissKnowledgeGapResolver {
         @WorkspaceId() workspaceId: string,
         @Args("input") input: DismissKnowledgeGapInput,
     ): Promise<boolean> {
-        await this.commandBus.execute(new DismissKnowledgeGapCommand({ request: toDismissKnowledgeGapRequest(workspaceId, input), principal }))
+        await this.commandBus.execute(
+            new DismissKnowledgeGapCommand({ request: toDismissKnowledgeGapRequest(workspaceId, input), principal }),
+        )
         return true
     }
 }

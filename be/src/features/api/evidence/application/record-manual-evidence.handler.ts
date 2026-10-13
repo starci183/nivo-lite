@@ -16,6 +16,10 @@ export class RecordManualEvidenceHandler extends ICQRSHandler<RecordManualEviden
     }
 
     protected override process(command: RecordManualEvidenceCommand): Promise<boolean> {
-        return this.feed.acceptManualCredit(command.params.principal.id, command.params.request.workspaceId, command.params.request)
+        return this.feed.acceptManualCredit(
+            command.params.principal.id,
+            command.params.request.workspaceId,
+            command.params.request,
+        )
     }
 }

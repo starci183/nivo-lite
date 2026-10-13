@@ -17,6 +17,10 @@ export class EnqueueKnowledgeSourceHandler extends ICQRSHandler<EnqueueKnowledge
     }
 
     protected override process(command: EnqueueKnowledgeSourceCommand): Promise<SourceRef> {
-        return this.sources.addSource(command.params.principal.id, command.params.request.workspaceId, command.params.request)
+        return this.sources.addSource(
+            command.params.principal.id,
+            command.params.request.workspaceId,
+            command.params.request,
+        )
     }
 }

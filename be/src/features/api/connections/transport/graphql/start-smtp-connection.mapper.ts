@@ -4,7 +4,10 @@ import type { SmtpConnectionType } from "./dto/smtp-connection.type"
 import type { StartSmtpConnectionInput } from "./dto/start-smtp-connection.input"
 
 /** Maps the GraphQL arguments of startSmtpConnection to the request. */
-export const toStartSmtpConnectionRequest = (workspaceId: string, input: StartSmtpConnectionInput): StartSmtpConnectionRequest => ({
+export const toStartSmtpConnectionRequest = (
+    workspaceId: string,
+    input: StartSmtpConnectionInput,
+): StartSmtpConnectionRequest => ({
     workspaceId,
     preset: input.preset,
     host: input.host,

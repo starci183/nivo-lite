@@ -21,7 +21,12 @@ export class ReindexKnowledgeSourceResolver {
         @WorkspaceId() workspaceId: string,
         @Args("input") input: ReindexKnowledgeSourceInput,
     ): Promise<SourceRefType> {
-        const result = await this.commandBus.execute(new ReindexKnowledgeSourceCommand({ request: toReindexKnowledgeSourceRequest(workspaceId, input), principal }))
+        const result = await this.commandBus.execute(
+            new ReindexKnowledgeSourceCommand({
+                request: toReindexKnowledgeSourceRequest(workspaceId, input),
+                principal,
+            }),
+        )
         return toReindexKnowledgeSourceType(result)
     }
 }

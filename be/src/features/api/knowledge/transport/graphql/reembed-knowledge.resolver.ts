@@ -18,7 +18,9 @@ export class ReembedKnowledgeResolver {
         @CurrentPrincipal() principal: Principal,
         @WorkspaceId() workspaceId: string,
     ): Promise<boolean> {
-        await this.commandBus.execute(new ReembedKnowledgeCommand({ request: toReembedKnowledgeRequest(workspaceId), principal }))
+        await this.commandBus.execute(
+            new ReembedKnowledgeCommand({ request: toReembedKnowledgeRequest(workspaceId), principal }),
+        )
         return true
     }
 }

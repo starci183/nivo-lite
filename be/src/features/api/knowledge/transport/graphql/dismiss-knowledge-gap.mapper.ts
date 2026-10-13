@@ -2,7 +2,10 @@ import type { DismissKnowledgeGapRequest } from "../../application/dismiss-knowl
 import type { DismissKnowledgeGapInput } from "./dto/dismiss-knowledge-gap.input"
 
 /** Maps the GraphQL input to the request. */
-export const toDismissKnowledgeGapRequest = (workspaceId: string, input: DismissKnowledgeGapInput): DismissKnowledgeGapRequest => ({
+export const toDismissKnowledgeGapRequest = (
+    workspaceId: string,
+    input: DismissKnowledgeGapInput,
+): DismissKnowledgeGapRequest => ({
     workspaceId,
     id: input.id,
 })

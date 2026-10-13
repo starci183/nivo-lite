@@ -5,11 +5,17 @@ import type { PickedFolderType } from "./dto/picked-folder.type"
 import { toDriveFolderType } from "./knowledge-records.mapper"
 
 /** Maps the GraphQL input to the request. */
-export const toDrivePickedFolderRequest = (workspaceId: string, input: DrivePickedFolderInput): DrivePickedFolderRequest => ({
+export const toDrivePickedFolderRequest = (
+    workspaceId: string,
+    input: DrivePickedFolderInput,
+): DrivePickedFolderRequest => ({
     workspaceId,
     folderId: input.folderId,
     token: input.token,
 })
 
 /** Maps the answer to the GraphQL type. */
-export const toDrivePickedFolderType = (result: PickedFolder): PickedFolderType => ({ ...toDriveFolderType(result), empty: result.empty })
+export const toDrivePickedFolderType = (result: PickedFolder): PickedFolderType => ({
+    ...toDriveFolderType(result),
+    empty: result.empty,
+})

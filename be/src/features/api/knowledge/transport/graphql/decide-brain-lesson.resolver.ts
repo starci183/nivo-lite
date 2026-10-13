@@ -21,7 +21,9 @@ export class DecideBrainLessonResolver {
         @WorkspaceId() workspaceId: string,
         @Args("input") input: DecideBrainLessonInput,
     ): Promise<BrainLessonType> {
-        const result = await this.commandBus.execute(new DecideBrainLessonCommand({ request: toDecideBrainLessonRequest(workspaceId, input), principal }))
+        const result = await this.commandBus.execute(
+            new DecideBrainLessonCommand({ request: toDecideBrainLessonRequest(workspaceId, input), principal }),
+        )
         return toDecideBrainLessonType(result)
     }
 }

@@ -19,9 +19,7 @@ export class GetAutomationsResolver {
         @CurrentPrincipal() principal: Principal,
         @WorkspaceId() workspaceId: string,
     ): Promise<AutomationsOverviewType> {
-        const result = await this.queryBus.execute(
-            new GetAutomationsQuery({ request: { workspaceId }, principal }),
-        )
+        const result = await this.queryBus.execute(new GetAutomationsQuery({ request: { workspaceId }, principal }))
         return toAutomationsOverviewType(result)
     }
 }

@@ -21,7 +21,9 @@ export class RecordManualEvidenceResolver {
         @WorkspaceId() workspaceId: string,
         @Args("input") input: RecordManualEvidenceInput,
     ): Promise<ManualEvidenceType> {
-        const result = await this.commandBus.execute(new RecordManualEvidenceCommand({ request: toRecordManualEvidenceRequest(workspaceId, input), principal }))
+        const result = await this.commandBus.execute(
+            new RecordManualEvidenceCommand({ request: toRecordManualEvidenceRequest(workspaceId, input), principal }),
+        )
         return toRecordManualEvidenceType(result)
     }
 }

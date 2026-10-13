@@ -21,7 +21,9 @@ export class DrivePickedFolderResolver {
         @WorkspaceId() workspaceId: string,
         @Args("input") input: DrivePickedFolderInput,
     ): Promise<PickedFolderType> {
-        const result = await this.queryBus.execute(new DrivePickedFolderQuery({ request: toDrivePickedFolderRequest(workspaceId, input), principal }))
+        const result = await this.queryBus.execute(
+            new DrivePickedFolderQuery({ request: toDrivePickedFolderRequest(workspaceId, input), principal }),
+        )
         return toDrivePickedFolderType(result)
     }
 }
