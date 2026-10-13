@@ -22,6 +22,7 @@ import { DEFAULT_SETTINGS } from "./persistence/booking.rows"
 
 const WORKSPACE = "ws-1"
 const USER = "user-1"
+const REF = { workspaceId: WORKSPACE, id: "b1" }
 /** Wednesday 12:00 in Ho Chi Minh City. */
 const NOW = Date.UTC(2026, 9, 14, 5, 0)
 const HOUR = 3_600_000
@@ -82,6 +83,16 @@ const taken = (resourceId: string): TakenSpan => ({
 })
 
 type Untyped = readonly [unknown, unknown]
+type QueryStub = readonly [string, unknown]
+
+const scheduleOf = (startMs: number) => ({
+    manager: expect.anything(),
+    workspaceId: WORKSPACE,
+    bookingId: "b1",
+    startMs,
+    nowMs: NOW,
+    defaultHours: [24, 2],
+})
 
 const build = async <
     const S extends { readonly [M in string]?: Untyped | ReadonlyArray<Untyped> } = Record<never, never>,
@@ -122,6 +133,12 @@ const build = async <
         ],
     }).compile()
     return { service: moduleRef.get(BookingDeskService), access, models, reservation, reminders, tx }
+}
+
+const buildLocked = (status: string = "confirmed", write?: string, model: BookingModel = modelOf()) => {
+    const query: Array<QueryStub> = [[SELECT_BOOKING_FOR_UPDATE, [{ ...BOOKING, status }]]]
+    if (write !== undefined) query.push([write, []])
+    return build({ query }, model)
 }
 
 describe("BookingDeskService", () => {
@@ -262,167 +279,137 @@ describe("BookingDeskService", () => {
     })
 
     describe("move", () => {
-        it("moves the booking, keeps its length and plans the reminders again", async () => {
-            const { service, reservation, reminders } = await build({ query: [SELECT_BOOKING_FOR_UPDATE, [BOOKING]] })
-
+        it("requires owner or manager access before moving the booking", async () => {
+            const { service, access, reservation } = await buildLocked()
             await expect(service.move(USER, moveOf())).resolves.toEqual({ ok: true, reason: null, id: "b1" })
+            expect(access.require).toHaveBeenCalledWith(USER, WORKSPACE, ["owner", "manager"])
+            expect(reservation.relocate).toHaveBeenCalledWith(expect.objectContaining({ resourceId: "r2" }))
+        })
+    })
 
-            const start = Date.parse("2026-10-15T03:00:00.000Z")
+    describe("moveApproved", () => {
+        it.each([
+            { status: "requested", resourceId: "", chosen: "r1", force: true },
+            { status: "rescheduled", resourceId: "r2", chosen: "r2", force: false },
+        ])("moves a $status booking to resource '$resourceId' and replans reminders", async (params) => {
+            const { service, access, models, reservation, reminders, tx } = await buildLocked(params.status)
+            await expect(service.moveApproved(moveOf(params))).resolves.toEqual({ ok: true, reason: null, id: "b1" })
+            const startMs = Date.parse("2026-10-15T03:00:00.000Z")
+            expect(access.require).not.toHaveBeenCalled()
+            expect(models.settings).toHaveBeenCalledWith(WORKSPACE)
+            expect(tx.em.query).toHaveBeenCalledWith(SELECT_BOOKING_FOR_UPDATE, [WORKSPACE, "b1"])
             expect(reservation.relocate).toHaveBeenCalledWith({
                 manager: expect.anything(),
                 workspaceId: WORKSPACE,
                 bookingId: "b1",
-                resourceId: "r2",
+                resourceId: params.chosen,
                 partySize: 2,
-                startMs: start,
-                endMs: start + HOUR,
-                blockEndMs: start + HOUR + HOUR / 4,
+                startMs,
+                endMs: startMs + HOUR,
+                blockEndMs: startMs + HOUR + HOUR / 4,
                 nowMs: NOW,
-                force: false,
+                force: params.force,
             })
-            expect(reminders.schedule).toHaveBeenCalledWith(
-                expect.objectContaining({ bookingId: "b1", startMs: start, defaultHours: [24, 2] }),
-            )
+            expect(reminders.schedule).toHaveBeenCalledWith(scheduleOf(startMs))
+            expect(tx.commits).toBe(1)
         })
 
-        it("explains a place that is taken or a resource that is missing", async () => {
-            const stubs = { query: [SELECT_BOOKING_FOR_UPDATE, [BOOKING]] } as const
-            const taken_ = await build(stubs)
-            taken_.reservation.relocate.mockResolvedValueOnce("taken")
-            const missing = await build(stubs)
-            missing.reservation.relocate.mockResolvedValueOnce("resource_not_found")
+        it.each<"taken" | "resource_not_found">(["taken", "resource_not_found"])(
+            "answers %s without replanning reminders",
+            async (reason) => {
+                const { service, reservation, reminders, tx } = await buildLocked()
+                reservation.relocate.mockResolvedValueOnce(reason)
+                await expect(service.moveApproved(moveOf())).resolves.toEqual({ ok: false, reason, id: null })
+                expect(tx.em.query).toHaveBeenCalledWith(SELECT_BOOKING_FOR_UPDATE, [WORKSPACE, "b1"])
+                expect(reservation.relocate).toHaveBeenCalledTimes(1)
+                expect(reminders.schedule).not.toHaveBeenCalled()
+            },
+        )
 
-            await expect(taken_.service.move(USER, moveOf())).resolves.toEqual({ ok: false, reason: "taken", id: null })
-            await expect(missing.service.move(USER, moveOf())).resolves.toEqual({
+        it.each(["done", "cancelled", "no_show"])("leaves a %s booking in place", async (status) => {
+            const { service, reservation, reminders, tx } = await buildLocked(status)
+            await expect(service.moveApproved(moveOf())).resolves.toEqual({
                 ok: false,
-                reason: "resource_not_found",
+                reason: "not_movable",
                 id: null,
             })
-            expect(taken_.reminders.schedule).not.toHaveBeenCalled()
-        })
-
-        it("does not move a booking that is closed", async () => {
-            const { service, reservation } = await build({
-                query: [SELECT_BOOKING_FOR_UPDATE, [{ ...BOOKING, status: "done" }]],
-            })
-
-            await expect(service.move(USER, moveOf())).resolves.toEqual({ ok: false, reason: "not_movable", id: null })
+            expect(tx.em.query).toHaveBeenCalledWith(SELECT_BOOKING_FOR_UPDATE, [WORKSPACE, "b1"])
+            expect(tx.em.query).toHaveBeenCalledTimes(1)
             expect(reservation.relocate).not.toHaveBeenCalled()
-        })
-
-        it("fails for a booking the workspace does not have", async () => {
-            const { service } = await build({ query: [SELECT_BOOKING_FOR_UPDATE, []] })
-
-            await expect(service.move(USER, moveOf())).rejects.toMatchObject({ code: BookingsErrorCode.NotFound })
-        })
-    })
-
-    describe("confirm", () => {
-        it("confirms a request and plans its reminders", async () => {
-            const { service, reminders, tx } = await build({
-                query: [
-                    [SELECT_BOOKING_FOR_UPDATE, [{ ...BOOKING, status: "requested" }]],
-                    [CONFIRM_BOOKING, []],
-                ],
-            })
-
-            await expect(service.confirm(USER, { workspaceId: WORKSPACE, id: "b1" })).resolves.toEqual({
-                status: "confirmed",
-                feeDue: false,
-            })
-
-            expect(tx.em.query).toHaveBeenCalledWith(CONFIRM_BOOKING, [WORKSPACE, "b1", new Date(NOW).toISOString()])
-            expect(reminders.schedule).toHaveBeenCalledWith(
-                expect.objectContaining({ bookingId: "b1", startMs: THURSDAY_NINE }),
-            )
-        })
-
-        it("leaves a booking that is not a request as it is", async () => {
-            const { service, reminders } = await build({
-                query: [SELECT_BOOKING_FOR_UPDATE, [{ ...BOOKING, status: "cancelled" }]],
-            })
-
-            await expect(service.confirm(USER, { workspaceId: WORKSPACE, id: "b1" })).resolves.toEqual({
-                status: "cancelled",
-                feeDue: false,
-            })
             expect(reminders.schedule).not.toHaveBeenCalled()
         })
     })
 
+    describe("confirm", () => {
+        it("requires owner or manager access before confirming the request", async () => {
+            const { service, access, tx } = await buildLocked("requested", CONFIRM_BOOKING)
+            await expect(service.confirm(USER, REF)).resolves.toEqual({ status: "confirmed", feeDue: false })
+            expect(access.require).toHaveBeenCalledWith(USER, WORKSPACE, ["owner", "manager"])
+            expect(tx.em.query).toHaveBeenCalledWith(CONFIRM_BOOKING, [WORKSPACE, "b1", new Date(NOW).toISOString()])
+        })
+    })
+
+    describe("confirmApproved", () => {
+        it("confirms the approved request with reminders and skips membership checks", async () => {
+            const { service, access, models, reminders, tx } = await buildLocked("requested", CONFIRM_BOOKING)
+            await expect(service.confirmApproved(REF)).resolves.toEqual({ status: "confirmed", feeDue: false })
+            expect(access.require).not.toHaveBeenCalled()
+            expect(models.settings).toHaveBeenCalledWith(WORKSPACE)
+            expect(tx.em.query).toHaveBeenNthCalledWith(1, SELECT_BOOKING_FOR_UPDATE, [WORKSPACE, "b1"])
+            expect(tx.em.query).toHaveBeenNthCalledWith(2, CONFIRM_BOOKING, [
+                WORKSPACE,
+                "b1",
+                new Date(NOW).toISOString(),
+            ])
+            expect(reminders.schedule).toHaveBeenCalledWith(scheduleOf(THURSDAY_NINE))
+            expect(tx.commits).toBe(1)
+        })
+
+        it.each(["confirmed", "rescheduled", "cancelled", "done", "no_show"])(
+            "leaves an approved %s booking unchanged",
+            async (status) => {
+                const { service, access, reminders, tx } = await buildLocked(status)
+                await expect(service.confirmApproved(REF)).resolves.toEqual({ status, feeDue: false })
+                expect(access.require).not.toHaveBeenCalled()
+                expect(tx.em.query).toHaveBeenCalledWith(SELECT_BOOKING_FOR_UPDATE, [WORKSPACE, "b1"])
+                expect(tx.em.query).toHaveBeenCalledTimes(1)
+                expect(reminders.schedule).not.toHaveBeenCalled()
+            },
+        )
+    })
+
     describe("checkIn", () => {
         it("records the arrival of the customer", async () => {
-            const { service, tx } = await build({
-                query: [
-                    [SELECT_BOOKING_FOR_UPDATE, [BOOKING]],
-                    [CHECK_IN_BOOKING, []],
-                ],
-            })
-
-            await expect(service.checkIn(USER, { workspaceId: WORKSPACE, id: "b1" })).resolves.toEqual({
-                status: "confirmed",
-                feeDue: false,
-            })
-
+            const { service, tx } = await buildLocked("confirmed", CHECK_IN_BOOKING)
+            await expect(service.checkIn(USER, REF)).resolves.toEqual({ status: "confirmed", feeDue: false })
             expect(tx.em.query).toHaveBeenCalledWith(CHECK_IN_BOOKING, [WORKSPACE, "b1", new Date(NOW).toISOString()])
         })
     })
 
     describe("done", () => {
         it("finishes the booking and stops its reminders", async () => {
-            const { service, reminders } = await build({
-                query: [
-                    [SELECT_BOOKING_FOR_UPDATE, [BOOKING]],
-                    [FINISH_BOOKING, []],
-                ],
-            })
-
-            await expect(service.done(USER, { workspaceId: WORKSPACE, id: "b1" })).resolves.toEqual({
-                status: "done",
-                feeDue: false,
-            })
-
+            const { service, reminders } = await buildLocked("confirmed", FINISH_BOOKING)
+            await expect(service.done(USER, REF)).resolves.toEqual({ status: "done", feeDue: false })
             expect(reminders.cancel).toHaveBeenCalledWith(expect.anything(), "b1", "booking_done")
         })
     })
 
     describe("noShow", () => {
-        it("records the no-show, stops the reminders and reports a fee only when the policy has one", async () => {
-            const stubs = {
-                query: [
-                    [SELECT_BOOKING_FOR_UPDATE, [BOOKING]],
-                    [MARK_NO_SHOW, []],
-                ],
-            } as const
-            const free = await build(stubs)
-            const fined = await build(stubs, modelOf({ settings: { ...DEFAULT_SETTINGS, noShowFeeVnd: 50000 } }))
-
-            await expect(free.service.noShow(USER, { workspaceId: WORKSPACE, id: "b1" })).resolves.toEqual({
-                status: "no_show",
-                feeDue: false,
-            })
-            await expect(fined.service.noShow(USER, { workspaceId: WORKSPACE, id: "b1" })).resolves.toEqual({
-                status: "no_show",
-                feeDue: true,
-            })
-            expect(free.reminders.cancel).toHaveBeenCalledWith(expect.anything(), "b1", "no_show")
+        it.each([
+            { fee: 0, feeDue: false },
+            { fee: 50000, feeDue: true },
+        ])("records the no-show with a policy fee of $fee", async ({ fee, feeDue }) => {
+            const model = modelOf({ settings: { ...DEFAULT_SETTINGS, noShowFeeVnd: fee } })
+            const { service, reminders } = await buildLocked("confirmed", MARK_NO_SHOW, model)
+            await expect(service.noShow(USER, REF)).resolves.toEqual({ status: "no_show", feeDue })
+            expect(reminders.cancel).toHaveBeenCalledWith(expect.anything(), "b1", "no_show")
         })
     })
 
     describe("cancel", () => {
         it("cancels the booking, frees its place and stops its reminders", async () => {
-            const { service, reminders, tx } = await build({
-                query: [
-                    [SELECT_BOOKING_FOR_UPDATE, [BOOKING]],
-                    [CANCEL_BOOKING, []],
-                ],
-            })
-
-            await expect(service.cancel(USER, { workspaceId: WORKSPACE, id: "b1" })).resolves.toEqual({
-                status: "cancelled",
-                feeDue: false,
-            })
-
+            const { service, reminders, tx } = await buildLocked("confirmed", CANCEL_BOOKING)
+            await expect(service.cancel(USER, REF)).resolves.toEqual({ status: "cancelled", feeDue: false })
             expect(tx.em.query).toHaveBeenCalledWith(CANCEL_BOOKING, [
                 WORKSPACE,
                 "b1",
@@ -433,22 +420,62 @@ describe("BookingDeskService", () => {
         })
 
         it("refuses a booking that is already closed", async () => {
-            const { service, reminders } = await build({
-                query: [SELECT_BOOKING_FOR_UPDATE, [{ ...BOOKING, status: "no_show" }]],
-            })
-
-            await expect(service.cancel(USER, { workspaceId: WORKSPACE, id: "b1" })).rejects.toMatchObject({
-                code: BookingsErrorCode.NotChangeable,
-            })
+            const { service, reminders } = await buildLocked("no_show")
+            await expect(service.cancel(USER, REF)).rejects.toMatchObject({ code: BookingsErrorCode.NotChangeable })
             expect(reminders.cancel).not.toHaveBeenCalled()
         })
 
         it("refuses a booking the workspace does not have", async () => {
             const { service } = await build({ query: [SELECT_BOOKING_FOR_UPDATE, []] })
-
-            await expect(service.cancel(USER, { workspaceId: WORKSPACE, id: "zzz" })).rejects.toMatchObject({
-                code: BookingsErrorCode.NotFound,
-            })
+            await expect(service.cancel(USER, REF)).rejects.toMatchObject({ code: BookingsErrorCode.NotFound })
         })
+    })
+
+    describe("cancelApproved", () => {
+        it.each(["requested", "confirmed", "rescheduled"])(
+            "cancels the approved %s booking with the supplied reason",
+            async (status) => {
+                const { service, access, reminders, tx } = await buildLocked(status, CANCEL_BOOKING)
+                await expect(service.cancelApproved(REF, "late_customer_cancel")).resolves.toEqual({
+                    status: "cancelled",
+                    feeDue: false,
+                })
+                expect(access.require).not.toHaveBeenCalled()
+                expect(tx.em.query).toHaveBeenNthCalledWith(1, SELECT_BOOKING_FOR_UPDATE, [WORKSPACE, "b1"])
+                expect(tx.em.query).toHaveBeenNthCalledWith(2, CANCEL_BOOKING, [
+                    WORKSPACE,
+                    "b1",
+                    new Date(NOW).toISOString(),
+                    "late_customer_cancel",
+                ])
+                expect(reminders.cancel).toHaveBeenCalledWith(expect.anything(), "b1", "customer_cancelled")
+                expect(tx.commits).toBe(1)
+            },
+        )
+
+        it.each(["cancelled", "done", "no_show"])("keeps the approved %s booking closed", async (status) => {
+            const { service, access, reminders, tx } = await buildLocked(status)
+            await expect(service.cancelApproved(REF, "customer_cancel")).resolves.toEqual({ status, feeDue: false })
+            expect(access.require).not.toHaveBeenCalled()
+            expect(tx.em.query).toHaveBeenCalledWith(SELECT_BOOKING_FOR_UPDATE, [WORKSPACE, "b1"])
+            expect(tx.em.query).toHaveBeenCalledTimes(1)
+            expect(reminders.cancel).not.toHaveBeenCalled()
+        })
+    })
+
+    it.each<"moveApproved" | "confirmApproved" | "cancelApproved">([
+        "moveApproved",
+        "confirmApproved",
+        "cancelApproved",
+    ])("rolls back %s when the approved booking is missing", async (method) => {
+        const { service, reservation, reminders, tx } = await build({ query: [SELECT_BOOKING_FOR_UPDATE, []] })
+        await expect(service[method](moveOf(), "customer_cancel")).rejects.toMatchObject({
+            code: BookingsErrorCode.NotFound,
+        })
+        expect(tx.em.query).toHaveBeenCalledWith(SELECT_BOOKING_FOR_UPDATE, [WORKSPACE, "b1"])
+        expect(tx.rollbacks).toBe(1)
+        expect(reservation.relocate).not.toHaveBeenCalled()
+        expect(reminders.schedule).not.toHaveBeenCalled()
+        expect(reminders.cancel).not.toHaveBeenCalled()
     })
 })

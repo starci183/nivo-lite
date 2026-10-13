@@ -108,7 +108,11 @@ export class BankFeedService {
                         workspaceId,
                         kind: "accounting.manual_evidence",
                         actor: member.displayName,
-                        summary: this.catalog.get("billing.manualEvidenceLog", { amount, date: credit.date }, RECORD_LOCALE),
+                        summary: this.catalog.get(
+                            "billing.manualEvidenceLog",
+                            { amount, date: credit.date },
+                            RECORD_LOCALE,
+                        ),
                         evidence: [credit.content, credit.note ?? ""].filter((part) => part !== "").join(" - "),
                     },
                     tx,

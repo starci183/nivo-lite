@@ -1,9 +1,13 @@
+import { Test } from "@nestjs/testing"
 import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
+import { CLOCK } from "@modules/platform/clock"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { AutomationRunsService } from "@modules/domain/automation-runs"
 import type { RunResult } from "@modules/domain/automation-runs"
 import { AutomationCareExecutorsService } from "./automation-care-executors.service"
 import { AutomationMessagesService } from "./automation-messages.service"
+import { AUTOMATION_OFFICE } from "./automations.decorators"
 import type { AutomationOffice, ExecutorContext, ExecutorMap, ExecutorPayload } from "./automation-ports.contracts"
 import { buildPipelineRow, buildShop, buildTemplate } from "@tests/fixtures/builders/automations.builder"
 import { SELECT_BUILT_IN_CARE, SELECT_CONVERSATION } from "./persistence/automation-readers.sql"
@@ -38,7 +42,7 @@ const runner =
     (key: string, ctx: ExecutorContext, payload: ExecutorPayload): Promise<RunResult> =>
         executors[key]?.(ctx, payload) ?? Promise.reject(new TypeError(`no executor for ${key}`))
 
-const build = (em: MockEntityManager = mockEntityManager()) => {
+const build = async (em: MockEntityManager = mockEntityManager()) => {
     const office = mock<AutomationOffice>()
     const runs = mock<AutomationRunsService>()
     const messages = mock<AutomationMessagesService>()
@@ -56,7 +60,17 @@ const build = (em: MockEntityManager = mockEntityManager()) => {
     messages.conversationOf.mockResolvedValue(CONVERSATION)
     messages.composeAndSend.mockResolvedValue(SENT)
     messages.firstStaffName.mockResolvedValue("Lan")
-    const service = new AutomationCareExecutorsService(em, new FakeClock(NOW), office, runs, messages)
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            AutomationCareExecutorsService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            { provide: CLOCK, useValue: new FakeClock(NOW) },
+            { provide: AUTOMATION_OFFICE, useValue: office },
+            { provide: AutomationRunsService, useValue: runs },
+            { provide: AutomationMessagesService, useValue: messages },
+        ],
+    }).compile()
+    const service = moduleRef.get(AutomationCareExecutorsService)
     return { service, office, runs, messages, run: runner(service.executors()) }
 }
 
@@ -71,7 +85,7 @@ describe("AutomationCareExecutorsService", () => {
         }
 
         it("does nothing for feedback that is not negative", async () => {
-            const { service, messages, runs } = build()
+            const { service, messages, runs } = await build()
             messages.isNegative.mockResolvedValue(false)
 
             await expect(service.checkFeedback(check)).resolves.toBe(false)
@@ -80,7 +94,7 @@ describe("AutomationCareExecutorsService", () => {
         })
 
         it("marks the run and tags the owner in Office when the feedback is negative", async () => {
-            const { service, messages, runs, office } = build()
+            const { service, messages, runs, office } = await build()
             messages.isNegative.mockResolvedValue(true)
 
             await expect(service.checkFeedback(check)).resolves.toBe(true)
@@ -104,7 +118,7 @@ describe("AutomationCareExecutorsService", () => {
         })
 
         it("calls the customer by a standard word when the lead is gone", async () => {
-            const { service, messages } = build()
+            const { service, messages } = await build()
             messages.isNegative.mockResolvedValue(true)
             messages.lead.mockResolvedValue(null)
 
@@ -119,7 +133,7 @@ describe("AutomationCareExecutorsService", () => {
 
         it("thanks a payment through the gate", async () => {
             const em = mockEntityManager({ query: [SELECT_BUILT_IN_CARE, []] })
-            const { run, messages } = build(em)
+            const { run, messages } = await build(em)
 
             await expect(run("thank_payment", context(), payload)).resolves.toBe(SENT)
 
@@ -138,7 +152,7 @@ describe("AutomationCareExecutorsService", () => {
 
         it("falls back on the lead for the dedupe key and on the clock when the payment has no date", async () => {
             const em = mockEntityManager({ query: [SELECT_BUILT_IN_CARE, []] })
-            const { run, messages } = build(em)
+            const { run, messages } = await build(em)
 
             await run("thank_payment", context(), { lead_id: "l-1" })
 
@@ -150,7 +164,7 @@ describe("AutomationCareExecutorsService", () => {
         })
 
         it("skips a payment below the minimum amount", async () => {
-            const { run } = build()
+            const { run } = await build()
 
             const result = await run("thank_payment", context({ minAmount: 500000 }), payload)
 
@@ -159,7 +173,7 @@ describe("AutomationCareExecutorsService", () => {
 
         it("skips when there is no lead, when it has no conversation and when the built-in care message already thanked it", async () => {
             const em = mockEntityManager({ query: [SELECT_BUILT_IN_CARE, [{ id: "w-9" }]] })
-            const { run, messages } = build(em)
+            const { run, messages } = await build(em)
 
             messages.leadOf.mockResolvedValueOnce(null)
             await expect(run("thank_payment", context(), payload)).resolves.toMatchObject({ status: "skipped" })
@@ -181,7 +195,7 @@ describe("AutomationCareExecutorsService", () => {
 
     describe("ask_review", () => {
         it("asks a paying customer for a review", async () => {
-            const { run, messages } = build()
+            const { run, messages } = await build()
 
             await expect(
                 run("ask_review", context(), {
@@ -206,7 +220,7 @@ describe("AutomationCareExecutorsService", () => {
         })
 
         it("skips when there is no lead or no conversation", async () => {
-            const { run, messages } = build()
+            const { run, messages } = await build()
             messages.leadOf.mockResolvedValueOnce(null)
             messages.conversationOf.mockResolvedValueOnce(null)
 
@@ -219,7 +233,7 @@ describe("AutomationCareExecutorsService", () => {
 
     describe("nurture_leads", () => {
         it("follows up an open lead, numbering the follow-ups", async () => {
-            const { run, messages } = build()
+            const { run, messages } = await build()
 
             await expect(run("nurture_leads", context(), { lead_id: "l-1", k: 2, dedupe: "n:l-1:2" })).resolves.toBe(
                 SENT,
@@ -239,7 +253,7 @@ describe("AutomationCareExecutorsService", () => {
         })
 
         it("skips a lead that is gone, won or lost, or without a conversation", async () => {
-            const { run, messages } = build()
+            const { run, messages } = await build()
             messages.leadOf.mockResolvedValueOnce(null)
             messages.leadOf.mockResolvedValueOnce({ ...LEAD, stage: "won" })
             messages.leadOf.mockResolvedValueOnce({ ...LEAD, stage: "lost" })
@@ -258,7 +272,7 @@ describe("AutomationCareExecutorsService", () => {
 
     describe("win_back", () => {
         it("invites a past customer back, always asking the owner, with the offer when there is one", async () => {
-            const { run, messages } = build()
+            const { run, messages } = await build()
 
             await expect(
                 run("win_back", context({ offer: "10% off" }), { lead_id: "l-1", dedupe: "w:l-1" }),
@@ -282,7 +296,7 @@ describe("AutomationCareExecutorsService", () => {
         })
 
         it("skips a lead that is gone or lost, or without a conversation", async () => {
-            const { run, messages } = build()
+            const { run, messages } = await build()
             messages.leadOf.mockResolvedValueOnce(null)
             messages.leadOf.mockResolvedValueOnce({ ...LEAD, stage: "lost" })
             messages.conversationOf.mockResolvedValueOnce(null)
@@ -299,7 +313,7 @@ describe("AutomationCareExecutorsService", () => {
         const payload = { lead_id: "l-1", k: 1, amount_vnd: 250000, invoice_no: "HD1", dedupe: "debt:i-1:1" }
 
         it("reminds a customer about the first overdue invoice through the gate", async () => {
-            const { run, messages, office } = build()
+            const { run, messages, office } = await build()
 
             await expect(run("debt_reminder", context(), payload)).resolves.toEqual(SENT)
 
@@ -311,7 +325,7 @@ describe("AutomationCareExecutorsService", () => {
         })
 
         it("tells the owner from the second reminder on, and puts that step first", async () => {
-            const { run, office } = build()
+            const { run, office } = await build()
 
             const result = await run("debt_reminder", context(), { ...payload, k: 2 })
 
@@ -324,7 +338,7 @@ describe("AutomationCareExecutorsService", () => {
         })
 
         it("treats a missing reminder number as the first", async () => {
-            const { run, office } = build()
+            const { run, office } = await build()
 
             await run("debt_reminder", context(), { lead_id: "l-1" })
 
@@ -332,7 +346,7 @@ describe("AutomationCareExecutorsService", () => {
         })
 
         it("skips when there is no lead, and when the customer has no chat it still tells the owner", async () => {
-            const { run, messages } = build()
+            const { run, messages } = await build()
             messages.leadOf.mockResolvedValueOnce(null)
             messages.conversationOf.mockResolvedValue(null)
 
@@ -350,11 +364,11 @@ describe("AutomationCareExecutorsService", () => {
 
     describe("after_hours", () => {
         const payload = { conversation_id: "cv-1", dedupe: "after:cv-1", text: "t".repeat(300) }
-        const withConversation = (row: object = CONVERSATION) =>
-            mockEntityManager({ query: [SELECT_CONVERSATION, [row]] })
 
         it("answers a lead outside the opening hours, opens a call-back task and tells the owner", async () => {
-            const { run, messages, office } = build(withConversation({ ...CONVERSATION, lead_id: "l-1" }))
+            const { run, messages, office } = await build(
+                mockEntityManager({ query: [SELECT_CONVERSATION, [{ ...CONVERSATION, lead_id: "l-1" }]] }),
+            )
 
             const result = await run("after_hours", context(), payload)
 
@@ -386,7 +400,9 @@ describe("AutomationCareExecutorsService", () => {
         })
 
         it("takes the lead from the payload, a standard staff name and the action without a phone", async () => {
-            const { run, messages, office } = build(withConversation())
+            const { run, messages, office } = await build(
+                mockEntityManager({ query: [SELECT_CONVERSATION, [CONVERSATION]] }),
+            )
             messages.leadOf.mockResolvedValue({ ...LEAD, phone: null })
             messages.firstStaffName.mockResolvedValue(null)
 
@@ -403,7 +419,9 @@ describe("AutomationCareExecutorsService", () => {
         })
 
         it("replies without a lead to a visitor, and skips the call-back task", async () => {
-            const { run, messages, office } = build(withConversation())
+            const { run, messages, office } = await build(
+                mockEntityManager({ query: [SELECT_CONVERSATION, [CONVERSATION]] }),
+            )
             messages.leadOf.mockResolvedValue(null)
             messages.replyWithoutLead.mockResolvedValue({ status: "waiting_approval", steps: [], evidence: undefined })
 
@@ -415,7 +433,11 @@ describe("AutomationCareExecutorsService", () => {
                 dedupe: "after:cv-1",
             })
             expect(office.openFollowUp).not.toHaveBeenCalled()
-            expect(office.postLine).toHaveBeenCalledWith("ws-1", expect.any(String), null)
+            expect(office.postLine).toHaveBeenCalledWith(
+                "ws-1",
+                `after.officeLine${JSON.stringify({ name: "Khach", text: "t".repeat(160) })}`,
+                null,
+            )
             expect(result).toEqual({
                 status: "waiting_approval",
                 steps: [{ label: "after.officeStep{}", status: "done" }],
@@ -424,7 +446,9 @@ describe("AutomationCareExecutorsService", () => {
         })
 
         it("calls an unnamed visitor by a standard word", async () => {
-            const { run, messages } = build(withConversation({ ...CONVERSATION, visitor_name: null }))
+            const { run, messages } = await build(
+                mockEntityManager({ query: [SELECT_CONVERSATION, [{ ...CONVERSATION, visitor_name: null }]] }),
+            )
             messages.leadOf.mockResolvedValue(null)
             messages.replyWithoutLead.mockResolvedValue(SENT)
 
@@ -437,8 +461,10 @@ describe("AutomationCareExecutorsService", () => {
         })
 
         it("skips a conversation that is gone or that a person took over", async () => {
-            const gone = build(mockEntityManager({ query: [SELECT_CONVERSATION, []] }))
-            const taken = build(withConversation({ ...CONVERSATION, handled_by: "u-1" }))
+            const gone = await build(mockEntityManager({ query: [SELECT_CONVERSATION, []] }))
+            const taken = await build(
+                mockEntityManager({ query: [SELECT_CONVERSATION, [{ ...CONVERSATION, handled_by: "u-1" }]] }),
+            )
 
             await expect(gone.run("after_hours", context(), payload)).resolves.toMatchObject({ status: "skipped" })
             await expect(taken.run("after_hours", context(), payload)).resolves.toMatchObject({ status: "skipped" })

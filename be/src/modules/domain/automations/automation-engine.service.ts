@@ -99,6 +99,23 @@ export class AutomationEngineService {
         if (event.event === "message.inbound") await this.onFeedback(loaded, shop, data)
     }
 
+    /**
+     * Starts the customer's receipt by email for a reconciled payment, when the shop switched the receipt pipeline on; only the
+     * receipt, not the other pipelines that hear a payment. One receipt per transaction (or per invoice without one).
+     */
+    async startPaymentReceipt(
+        workspaceId: string,
+        transactionId: string | null,
+        invoiceId: string | null,
+    ): Promise<void> {
+        await this.startN8nEvents({
+            workspaceId,
+            event: "payment.received",
+            data: { transaction_id: transactionId, invoice_id: invoiceId },
+            dedupe: `receipt:${transactionId ?? invoiceId ?? ""}`,
+        })
+    }
+
     /** Starts one run of a template for ONE workspace from code (a loyalty tier-up fires this); a no-op when its pipeline is off. */
     async fireTemplate(request: FireTemplate): Promise<boolean> {
         const item = (await this.loadPipelines(request.workspaceId)).find(

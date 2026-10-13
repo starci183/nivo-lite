@@ -17,11 +17,14 @@ export const promoAvailable = (plan: Plan, history: PromoHistory): boolean =>
     history.promoPayments < plan.promoMonths
 
 const tierOf = (plan: Plan, creditsPerMonth: number | null): PlanTier | null => {
-    if (creditsPerMonth === null) {
-        if (plan.perSeat) throw new BillingError({ code: BillingErrorCode.TierRequired })
+    if (!plan.perSeat) {
+        // The allowance of an individual plan is fixed: more credits are add-on packs, not a different plan price.
+        if (creditsPerMonth !== null && creditsPerMonth !== plan.aiCreditsPerMonth) {
+            throw new BillingError({ code: BillingErrorCode.TierUnknown })
+        }
         return null
     }
-    if (!plan.perSeat && creditsPerMonth === plan.aiCreditsPerMonth) return null
+    if (creditsPerMonth === null) throw new BillingError({ code: BillingErrorCode.TierRequired })
     const found = plan.tiers.find((tier) => tier.creditsPerMonth === creditsPerMonth)
     if (found === undefined) throw new BillingError({ code: BillingErrorCode.TierUnknown })
     return found
@@ -37,10 +40,10 @@ const seatsOf = (plan: Plan, seats: number): number => {
 
 /**
  * The price of a plan selection, worked out from the catalogue only (never from the caller):
- *   monthly   the plan's own allowance costs the plan price, or the intro price while the promo is available; a usage tier costs its
- *             tier price (per seat on a per-seat plan, times the seats); a tier never carries the intro price
- *   annual    the plan's annual price for its own allowance; a tier costs 12 months less the plan's annual discount; a plan without an
- *             annual price (Team) is sold monthly only
+ *   monthly   an individual plan costs the plan price (its allowance is fixed), or the intro price while the promo is available;
+ *             a per-seat plan costs the price of the picked level times the seats, with no intro price
+ *   annual    the plan's annual price; a plan without an annual price (Team) is sold monthly only
+ * Add-on credit packs are not priced here: a pack is its own order and never changes the plan price.
  * A contract plan is never priced here.
  */
 export const quoteSelection = (plan: Plan, selection: PlanSelection, history: PromoHistory): PlanQuote => {

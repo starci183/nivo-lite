@@ -32,7 +32,7 @@ import {
 import { SELECT_HOURS, SELECT_SERVICES } from "./persistence/booking-model.sql"
 import { toWeeklyHours } from "./persistence/booking.rows"
 import type { HoursRow, ServiceRow } from "./persistence/booking.rows"
-import { addDays, isoOf, localDate, mondayOf, zonedMs } from "./policies/zoned-time.policy"
+import { addDays, bookingIsoOf, localDate, mondayOf, zonedMs } from "./policies/zoned-time.policy"
 
 const DAY_MS = 86_400_000
 const MAX_RANGE_DAYS = 366
@@ -41,7 +41,7 @@ const LOCAL_DATE_PATTERN = /^[1-9]\d{3}-\d{2}-\d{2}$/
 const validDate = (date: string): boolean => {
     if (!LOCAL_DATE_PATTERN.test(date)) return false
     const instant = Date.parse(`${date}T00:00:00.000Z`)
-    return Number.isFinite(instant) && isoOf(instant).slice(0, 10) === date
+    return Number.isFinite(instant) && bookingIsoOf(instant).slice(0, 10) === date
 }
 
 @Injectable()
@@ -66,8 +66,8 @@ export class BookingBoardService {
         if (!validDate(from)) throw new BookingsError({ code: BookingsErrorCode.InvalidInput })
         const to = params.to ?? addDays(from, 6)
         this.requireRange(from, to)
-        const fromIso = isoOf(zonedMs(from, "00:00", timezone))
-        const toIso = isoOf(zonedMs(addDays(to, 1), "00:00", timezone))
+        const fromIso = bookingIsoOf(zonedMs(from, "00:00", timezone))
+        const toIso = bookingIsoOf(zonedMs(addDays(to, 1), "00:00", timezone))
         const exceptionsFrom = from < addDays(today, -1) ? from : addDays(today, -1)
         const [services, resources, hours, exceptions, bookings, waitlist, staff, overview] = await Promise.all([
             this.entityManager.query<Array<ServiceRow>>(SELECT_SERVICES, [params.workspaceId]),

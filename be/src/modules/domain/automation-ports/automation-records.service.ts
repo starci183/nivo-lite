@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import type { AutomationRecords, NewLead } from "@modules/domain/automations"
+import type { AutomationRecords, AutomationNewLead } from "@modules/domain/automations"
 import { ContractsService } from "@modules/domain/contracts"
 import { LeadRecordsService } from "@modules/domain/leads"
 
@@ -15,7 +15,7 @@ export class AutomationRecordsService implements AutomationRecords {
     ) {}
 
     /** Creates a live lead for a customer known by name only, moved to the stage asked for, and answers its id. */
-    async createLead(workspaceId: string, lead: NewLead): Promise<string> {
+    async createLead(workspaceId: string, lead: AutomationNewLead): Promise<string> {
         const created = await this.leads.capture({
             workspaceId,
             contactName: lead.contactName,

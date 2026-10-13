@@ -21,7 +21,7 @@ export interface FollowUp {
 }
 
 /** A line in the evidence log. */
-export interface EvidenceEntry {
+export interface AutomationEvidenceEntry {
     /** The lead it is about. */
     readonly leadId?: string | undefined
     /** The kind, for example `automation.owner_notified`. */
@@ -39,13 +39,13 @@ export interface AutomationOffice {
     /** Posts a line from the system in Office, optionally about a lead. */
     postLine(workspaceId: string, body: string, leadId: OptionalLead): Promise<void>
     /** Writes one line to the evidence log. */
-    logEvidence(workspaceId: string, entry: EvidenceEntry): Promise<void>
+    logEvidence(workspaceId: string, entry: AutomationEvidenceEntry): Promise<void>
     /** Opens a follow-up task unless one with the same title is open; answers true when it opened one. */
     openFollowUp(workspaceId: string, task: FollowUp): Promise<boolean>
 }
 
 /** A customer known by name only, to be followed up. */
-export interface NewLead {
+export interface AutomationNewLead {
     /** The name the customer goes by. */
     readonly contactName: string
     /** The channel it came from. */
@@ -59,7 +59,7 @@ export interface NewLead {
 /** The records the automations create or change in other capabilities. */
 export interface AutomationRecords {
     /** Creates an open lead for a customer known by name only and answers its id. */
-    createLead(workspaceId: string, lead: NewLead): Promise<string>
+    createLead(workspaceId: string, lead: AutomationNewLead): Promise<string>
     /** Attaches a lead to a contract that had none. */
     attachContractLead(workspaceId: string, contractId: string, leadId: string): Promise<void>
 }
@@ -129,7 +129,7 @@ export interface AutomationGate {
 }
 
 /** One request to write text. */
-export interface TextRequest {
+export interface AutomationTextRequest {
     /** The workspace the usage is billed to. */
     readonly workspaceId: string
     /** What the text is for. */
@@ -146,7 +146,7 @@ export type GeneratedText = string | null
 /** The one place automations ask a model to write text. */
 export interface AutomationText {
     /** Writes the text, or answers none when the model is unavailable. */
-    generate(request: TextRequest): Promise<GeneratedText>
+    generate(request: AutomationTextRequest): Promise<GeneratedText>
 }
 
 /** The owner's own chat. */

@@ -60,15 +60,17 @@ export interface Plan {
     readonly perSeat: boolean
     /** On sale to new customers; a plan that is not listed still works for the workspaces that have it. */
     readonly listed: boolean
-    /** The bigger monthly allowances the plan can be bought with, smallest first. */
+    /** The per-seat credit levels of a per-seat plan (Team), smallest first; empty on every other plan. */
     readonly tiers: ReadonlyArray<PlanTier>
+    /** The add-on credit packs bought on top of the plan's fixed allowance, smallest first; the plan price never changes with them. */
+    readonly packs: ReadonlyArray<PlanTier>
 }
 
-/** One usage tier: a monthly credit allowance and the price of it. */
+/** One usage row: a per-seat credit level (Team) or an add-on pack, with its own price. */
 export interface PlanTier {
-    /** The credits a month; per seat when the plan is per seat. */
+    /** The credits: a month of one seat for a level, the credits added for a pack. */
     readonly creditsPerMonth: number
-    /** The price of a month in VND; per seat when the plan is per seat. */
+    /** The price in VND: a month of one seat for a level, the pack's own price for a pack. */
     readonly priceVnd: number
     /** The price is per seat. */
     readonly perSeat: boolean
@@ -81,7 +83,7 @@ export type BillingCycle = "monthly" | "annual"
 export interface PlanSelection {
     /** Pay month by month or a year at once. */
     readonly cycle: BillingCycle
-    /** The monthly allowance picked from the usage tiers; null is the plan's own. */
+    /** The per-seat credit level picked on a per-seat plan; null on every other plan. */
     readonly tierCredits: number | null
     /** The seats, for a per-seat plan. */
     readonly seats: number
@@ -170,7 +172,6 @@ export interface PlanOrderParams {
     /** What was picked on the plan; the plan's monthly base for whatever is left out. */
     readonly selection?: PlanSelectionInput
 }
-
 
 /** An order together with what the customer needs to pay it. */
 export interface PayableOrder {

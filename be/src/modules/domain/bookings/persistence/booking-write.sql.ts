@@ -20,14 +20,41 @@ LIMIT 5000`
 /** Writes one booking and answers its id ($1 workspace, $2 customer name, $3 phone, $4 email, $5 service, $6 resource, $7 start, $8 end, $9 block end,
  * $10 party, $11 status, $12 holds the slot, $13 source channel, $14 price, $15 deposit, $16 deposit status, $17 note, $18 conflict note, $19 idempotency key). */
 export const INSERT_BOOKING = sql`INSERT INTO public.bookings (workspace_id, customer_name, customer_phone, customer_email, service_id, resource_id,
-  start_at, end_at, block_end_at, party_size, status, holds_slot, source_channel, price_vnd, deposit_vnd, deposit_status, note, conflict_note, idempotency_key)
-VALUES ($1, $2, $3, $4, $5, $6, $7::timestamptz, $8::timestamptz, $9::timestamptz, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+  start_at, end_at, block_end_at, party_size, status, holds_slot, source_channel, price_vnd, deposit_vnd, deposit_status, note, conflict_note, idempotency_key,
+  conversation_id, lead_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7::timestamptz, $8::timestamptz, $9::timestamptz, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20::uuid, $21::uuid)
 RETURNING id`
 
 /** The booking an idempotency key already created ($1 workspace, $2 key). */
 export const SELECT_BOOKING_BY_KEY = sql`SELECT id, status, holds_slot
 FROM public.bookings
 WHERE workspace_id = $1 AND idempotency_key = $2
+LIMIT 1`
+
+/** The next future request or confirmation for a customer's normalised phone; arrived customers are excluded because check-in keeps status confirmed
+ * ($1 workspace, $2 normalised customer phone, $3 current instant). */
+export const SELECT_NEXT_CANCELLABLE_BOOKING = sql`SELECT b.id, b.lead_id, b.customer_name, s.name AS service_name,
+       (extract(epoch FROM b.start_at) * 1000)::float8 AS start_ms
+FROM public.bookings b
+JOIN public.booking_services s ON s.id = b.service_id AND s.workspace_id = b.workspace_id
+WHERE b.workspace_id = $1 AND b.customer_phone = $2
+  AND b.status IN ('requested', 'confirmed') AND b.checked_in_at IS NULL
+  AND b.start_at > $3::timestamptz
+ORDER BY b.start_at, b.id
+LIMIT 1`
+
+/**
+ * The next booking of a chat that is still open and not yet started: through the chat's lead, else the conversation it was booked in
+ * ($1 workspace, $2 lead or null, $3 conversation, $4 now).
+ */
+export const SELECT_NEXT_CHAT_BOOKING = sql`SELECT b.id, b.lead_id, b.customer_name, s.name AS service_name,
+       (extract(epoch FROM b.start_at) * 1000)::float8 AS start_ms
+FROM public.bookings b
+JOIN public.booking_services s ON s.id = b.service_id AND s.workspace_id = b.workspace_id
+WHERE b.workspace_id = $1 AND ((b.lead_id IS NOT NULL AND b.lead_id = $2::uuid) OR b.conversation_id = $3::uuid)
+  AND b.status IN ('requested', 'confirmed') AND b.checked_in_at IS NULL
+  AND b.start_at > $4::timestamptz
+ORDER BY b.start_at, b.id
 LIMIT 1`
 
 /** One booking of a workspace with the timing of its service, locked for the rest of the transaction ($1 workspace, $2 booking). */

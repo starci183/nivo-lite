@@ -180,7 +180,7 @@ describe("AutomationRunsService", () => {
                 "plain",
                 "2026-10-12T10:30:00.000Z",
                 NOW,
-                expect.any(String),
+                JSON.stringify([{ label: "Loi", status: "failed", detail: "plain" }]),
             ])
         })
 
@@ -195,7 +195,7 @@ describe("AutomationRunsService", () => {
                 "again",
                 "2026-10-12T10:10:00.000Z",
                 null,
-                expect.any(String),
+                JSON.stringify([{ label: "Loi", status: "failed", detail: "again" }]),
             ])
         })
     })

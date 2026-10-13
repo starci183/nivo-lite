@@ -1,3 +1,7 @@
+import type { ChatLink } from "./booking-chat.contracts"
+import type { EntityManager } from "typeorm"
+import type { SlotCheck } from "./policies/availability.policy"
+
 /** A person, room or chair that serves customers; `capacity` customers can be served at the same moment. */
 export interface BookingResource {
     /** The resource id. */
@@ -126,15 +130,7 @@ export type BookingStatus = "requested" | "confirmed" | "rescheduled" | "cancell
 export const ACTIVE_STATUSES: ReadonlyArray<BookingStatus> = ["requested", "confirmed", "rescheduled"]
 
 /** The booking settings with defaults applied. */
-export interface BookingSettings {
-    /** The IANA time zone of the business. */
-    readonly timezone: string
-    /** The step between start times, in minutes. */
-    readonly slotStepMin: number
-    /** The earliest a customer may book, in minutes from now. */
-    readonly minLeadMin: number
-    /** How far ahead a customer may book, in days. */
-    readonly maxAdvanceDays: number
+export interface BookingSettings extends BookingPolicy {
     /** A change later than this many hours before the start is late. */
     readonly cancelWindowHours: number
     /** The deposit as a percentage of the price. */
@@ -160,23 +156,13 @@ export interface BookingSettings {
 }
 
 /** A service the owner sells by appointment, as the public page and the desk list it. */
-export interface BookableService {
-    /** The service id. */
-    readonly id: string
+export interface BookableService extends ServiceSpec {
     /** The name shown to customers. */
     readonly name: string
     /** The description shown to customers. */
     readonly description: string
-    /** The visit length in minutes. */
-    readonly durationMin: number
-    /** The rest after the visit in minutes. */
-    readonly bufferMin: number
     /** The price in VND, or null when it has none. */
     readonly priceVnd: number | null
-    /** The resource kind the service needs. */
-    readonly resourceKind: string | null
-    /** Whether the service takes bookings. */
-    readonly active: boolean
 }
 
 /** Everything the calendar of one workspace is made of. */
@@ -228,9 +214,7 @@ export interface PublicTimes {
 }
 
 /** What a visitor of the public page asks for free times. */
-export interface PublicTimesParams {
-    /** The slug of the page. */
-    readonly slug: string
+export interface PublicTimesParams extends PublicPageParams {
     /** The service. */
     readonly service: string
     /** The local date, `YYYY-MM-DD`. */
@@ -239,10 +223,17 @@ export interface PublicTimesParams {
     readonly party: number
 }
 
+/** Asks for the same calendar availability from a workspace rather than a published page. */
+export interface WorkspaceTimesParams extends Omit<PublicTimesParams, "slug"> {
+    /** The workspace whose booking calendar to read. */ readonly workspaceId: string
+}
+/** The workspace facts chat tools use to resolve an active service and its local day. */
+export interface WorkspaceBookingCatalog {
+    /** The IANA timezone for dates without an explicit day. */ readonly timezone: string
+    /** The active services the workspace offers. */ readonly services: ReadonlyArray<BookableService>
+}
 /** What a visitor of the public page sends to book. */
-export interface PublicBookParams {
-    /** The slug of the page. */
-    readonly slug: string
+export interface PublicBookParams extends PublicPageParams {
     /** The service to book. */
     readonly serviceId: string
     /** The start instant, ISO 8601. */
@@ -262,10 +253,40 @@ export interface PublicBookParams {
     /** The honeypot field; a bot fills it. */
     readonly website: string
 }
-
+/** Records a validated customer request in the workspace calendar, independent of a public page. */
+export interface WorkspaceBookParams extends Omit<PublicBookParams, "slug" | "website" | "token">, Partial<ChatLink> {
+    /** The workspace that receives the request. */ readonly workspaceId: string
+    /** The form token, or complete trusted chat key. */ readonly token: string
+    /** The channel; chat keys already include their namespace. */ readonly sourceChannel: string
+}
+/** Carries validated booking facts into the reservation transaction. */
+export interface BookingPlacementParams {
+    /** The reservation transaction. */ readonly manager: EntityManager
+    /** Settings and fallback resources for placement. */ readonly model: BookingModel
+    /** The active service to book. */ readonly service: BookableService
+    /** Whether the requested start has a free resource. */ readonly check: SlotCheck
+    /** The requested start as epoch milliseconds. */ readonly startMs: number
+    /** The instant used to schedule reminders. */ readonly nowMs: number
+    /** The workspace request supplying channel, email and note. */ readonly request: WorkspaceBookParams
+    /** The trimmed customer name. */ readonly name: string
+    /** The validated, normalised customer phone. */ readonly phone: string
+    /** The clamped party size. */ readonly party: number
+    /** The key that recognizes a repeated request, or null. */ readonly key: string | null
+}
+/** A customer request successfully recorded in the calendar. */
+export interface BookingPlaced {
+    /** Identifies a recorded placement. */ readonly kind: "placed"
+    /** The recorded booking id. */ readonly id: string
+    /** Whether the booking holds a free slot. */ readonly free: boolean
+}
+/** A customer request that has no resource on which it can be recorded. */
+export interface BookingUnplaced {
+    /** Identifies failure to choose a resource. */ readonly kind: "no_resource"
+}
+/** The result of reserving or parking a workspace booking request. */
+export type BookingPlacement = BookingPlaced | BookingUnplaced
 /** How a public booking ended. */
 export type PublicBookState = "confirmed" | "waiting" | "invalid" | "failed"
-
 /** The word for the page to show, never prose. */
 export type PublicBookCode =
     | "name_required"
@@ -276,7 +297,6 @@ export type PublicBookCode =
     | "received_free"
     | "received_taken"
     | "no_resource"
-
 /** The answer to a public booking. */
 export interface PublicBookResult {
     /** Whether the request was recorded. */
@@ -352,25 +372,13 @@ export interface BookingOverview {
 }
 
 /** A booking the owner adds by hand. */
-export interface AddBookingParams {
-    /** The workspace. */
-    readonly workspaceId: string
-    /** The service. */
-    readonly serviceId: string
+export interface AddBookingParams extends Omit<WorkspaceBookParams, "start" | "email" | "token" | "sourceChannel"> {
     /** The resource, empty to pick a free one. */
     readonly resourceId: string
     /** The local date, `YYYY-MM-DD`. */
     readonly date: string
     /** The local time, `HH:MM`. */
     readonly time: string
-    /** How many customers come. */
-    readonly party: number
-    /** The customer name. */
-    readonly name: string
-    /** The customer phone. */
-    readonly phone: string
-    /** The note. */
-    readonly note: string
     /** Whether to take a slot that is taken. */
     readonly force: boolean
 }
@@ -399,11 +407,7 @@ export interface DeskPlacement {
 }
 
 /** A booking the owner moves. */
-export interface MoveBookingParams {
-    /** The workspace. */
-    readonly workspaceId: string
-    /** The booking. */
-    readonly id: string
+export interface MoveBookingParams extends BookingRef {
     /** The new start instant, ISO 8601. */
     readonly startAt: string
     /** The new resource. */
@@ -419,7 +423,6 @@ export interface BookingRef {
     /** The booking. */
     readonly id: string
 }
-
 /** The answer to a status change. */
 export interface StatusChange {
     /** The status the booking has now. */
@@ -427,10 +430,8 @@ export interface StatusChange {
     /** Whether a fee is due for the change. */
     readonly feeDue: boolean
 }
-
 /** Why a booking event was sent: it was created, its status changed, or its time or resource changed. */
 export type BookingEventKind = "created" | "status" | "moved"
-
 /** One change of a booking, as the booking_status queue carries it (ids and codes only). */
 export interface BookingEvent {
     /** The workspace of the booking. */

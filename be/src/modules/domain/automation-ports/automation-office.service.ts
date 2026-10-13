@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import type { AutomationOffice, EvidenceEntry, FollowUp, OptionalLead } from "@modules/domain/automations"
+import type { AutomationOffice, AutomationEvidenceEntry, FollowUp, OptionalLead } from "@modules/domain/automations"
 import { EventsService } from "@modules/domain/events"
 import { MessagesService } from "@modules/domain/messages"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
@@ -22,7 +22,7 @@ export class AutomationOfficeService implements AutomationOffice {
     }
 
     /** Appends one line to the evidence log. */
-    async logEvidence(workspaceId: string, entry: EvidenceEntry): Promise<void> {
+    async logEvidence(workspaceId: string, entry: AutomationEvidenceEntry): Promise<void> {
         await this.events.record({
             workspaceId,
             kind: entry.kind,

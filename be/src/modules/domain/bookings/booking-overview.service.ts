@@ -16,7 +16,7 @@ import { toFigureRow } from "./persistence/booking.rows"
 import type { DepositsRow, FinishedCountRow, WindowRow } from "./persistence/booking.rows"
 import { utilisation } from "./policies/availability.policy"
 import { noShowShare, startingBetween, summariseRange, weightedUtilisation } from "./policies/booking-rules.policy"
-import { addDays, isoOf, localDate, mondayOf, zonedMs } from "./policies/zoned-time.policy"
+import { addDays, bookingIsoOf, localDate, mondayOf, zonedMs } from "./policies/zoned-time.policy"
 
 const DAY_MS = 86_400_000
 const FINISHED_WINDOW_DAYS = 30
@@ -48,21 +48,21 @@ export class BookingOverviewService {
         const [week, finished, deposits, range] = await Promise.all([
             this.entityManager.query<Array<WindowRow>>(SELECT_WINDOW_BOOKINGS, [
                 params.workspaceId,
-                isoOf(weekStart),
-                isoOf(weekEnd),
+                bookingIsoOf(weekStart),
+                bookingIsoOf(weekEnd),
                 instance,
             ]),
             this.entityManager.query<Array<FinishedCountRow>>(SELECT_FINISHED_COUNTS, [
                 params.workspaceId,
-                isoOf(nowMs - FINISHED_WINDOW_DAYS * DAY_MS),
-                isoOf(nowMs),
+                bookingIsoOf(nowMs - FINISHED_WINDOW_DAYS * DAY_MS),
+                bookingIsoOf(nowMs),
                 instance,
             ]),
             this.entityManager.query<Array<DepositsRow>>(SELECT_DEPOSITS_DUE, [params.workspaceId, instance]),
             this.entityManager.query<Array<WindowRow>>(SELECT_OVERLAPPING_BOOKINGS, [
                 params.workspaceId,
-                isoOf(zonedMs(params.from, "00:00", timeZone)),
-                isoOf(zonedMs(addDays(params.to, 1), "00:00", timeZone)),
+                bookingIsoOf(zonedMs(params.from, "00:00", timeZone)),
+                bookingIsoOf(zonedMs(addDays(params.to, 1), "00:00", timeZone)),
             ]),
         ])
         const weekRows = week.map(toFigureRow)
