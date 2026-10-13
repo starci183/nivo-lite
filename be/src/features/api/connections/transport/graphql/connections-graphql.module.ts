@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common"
+import { DataHubGraphqlModule } from "@features/api/data-hub"
 import { ConnectionsApiModule } from "../../connections.module"
 import { AuthorizeGoogleResolver } from "./authorize-google.resolver"
 import { AuthorizeMetaResolver } from "./authorize-meta.resolver"
@@ -34,7 +35,7 @@ import { UpdateWebhookEventsResolver } from "./update-webhook-events.resolver"
 import { WantConnectorResolver } from "./want-connector.resolver"
 
 @Module({
-    imports: [ConnectionsApiModule],
+    imports: [ConnectionsApiModule, DataHubGraphqlModule],
     providers: [
         AuthorizeGoogleResolver,
         AuthorizeMetaResolver,

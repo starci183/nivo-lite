@@ -34,6 +34,9 @@ import { parseTtsConfig } from "@modules/integrations/tts"
 import { AppModule } from "./app.module"
 import type { ApiOptions } from "./api.options"
 
+/** The largest JSON body: a ten megabyte file the browser sends as base64 inside a GraphQL mutation (the data import wizards). */
+const JSON_BODY_LIMIT = "14mb"
+
 /** Proxy hops in front of the API (the Traefik edge): the rate limit keys on the real client address, not on the proxy. */
 const TRUSTED_PROXY_HOPS = 1
 
@@ -77,6 +80,7 @@ const bootstrap = async (): Promise<void> => {
     }
     const app = await NestFactory.create<NestExpressApplication>(AppModule.register(options), { rawBody: true })
     app.set("trust proxy", TRUSTED_PROXY_HOPS)
+    app.useBodyParser("json", { limit: JSON_BODY_LIMIT })
     app.enableCors({ origin: [...options.httpSecurity.allowedOrigins] })
     app.enableShutdownHooks()
     app.useGlobalPipes(app.get(RequestValidationService))
