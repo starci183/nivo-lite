@@ -1,5 +1,6 @@
 export { SHIFTS_ERROR_KINDS } from "./errors/shifts.error"
 export { SHIFTS_MESSAGES } from "./messages/shifts.messages"
+export { ShiftsAlertsService } from "./shifts-alerts.service"
 export {
     toRequestShiftsSwapRequest,
     toSaveShiftsStaffRequest,

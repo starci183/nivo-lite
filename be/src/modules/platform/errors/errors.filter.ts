@@ -22,7 +22,14 @@ export class ErrorsFilter implements ExceptionFilter {
         if (host.getType<string>() === "graphql") return exception
         const http = host.switchToHttp()
         const request = http.getRequest<Request>()
-        const description = this.errors.describe(exception)
+        const params: unknown = request.params
+        const named =
+            typeof params === "object" && params !== null && "connectionId" in params ? params.connectionId : null
+        const connectionId = typeof named === "string" ? named : null
+        const description = this.errors.describe(exception, {
+            scope: "http",
+            context: { route: request.path, method: request.method, connectionId },
+        })
         const locale = this.requestLocale.of(request.headers["accept-language"])
         http.getResponse<Response>()
             .status(description.status)

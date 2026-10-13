@@ -31,6 +31,7 @@ export const useConsoleSession = (): ConsoleSession | undefined => {
             workspaceName: chosen.workspace.name,
             userName: chosen.member.displayName,
             email: account.data.email,
+            avatarUrl: account.data.avatarUrl ?? undefined,
             workspaces: active.map((entry) => ({
                 id: entry.workspace.id,
                 name: entry.workspace.name,

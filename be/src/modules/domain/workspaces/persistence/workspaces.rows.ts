@@ -25,6 +25,12 @@ export interface MembershipRow {
 }
 
 /** The id of a created workspace. */
+export interface TakenRow {
+    /** True when the person already has a workspace or a membership. */
+    taken: boolean
+}
+
+/** The id of a created workspace. */
 export interface CreatedRow {
     /** The new workspace. */
     id: string

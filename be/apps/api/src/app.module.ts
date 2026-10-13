@@ -295,6 +295,7 @@ import { IdsModule } from "@modules/platform/ids"
 import { CONFIG_ERROR_KINDS } from "@modules/platform/config"
 import { CqrsModule } from "@modules/platform/cqrs"
 import { DATABASE_ERROR_KINDS, DatabaseModule, PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { AppErrorsModule } from "@modules/domain/app-errors"
 import { ERRORS_MESSAGES, ErrorsFilter, ErrorsModule } from "@modules/platform/errors"
 import {
     HTTP_SECURITY_ERROR_KINDS,
@@ -610,6 +611,7 @@ export class AppModule {
                 CqrsModule.register({ isGlobal: true }),
                 HttpSecurityModule.register({ isGlobal: true, ...options.httpSecurity }),
                 DatabaseModule.register({ isGlobal: true, connections: [options.database] }),
+                AppErrorsModule.register({ isGlobal: true }),
                 QueueModule.register({
                     isGlobal: true,
                     schedulers: API_SCHEDULERS,

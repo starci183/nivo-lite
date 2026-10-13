@@ -1,5 +1,6 @@
 export { useQueryMyWorkspacesSwr, QUERY_MY_WORKSPACES_SWR_KEY } from "./api/graphql/queries/useQueryMyWorkspacesSwr"
 export { useMutateCreateWorkspaceSwr } from "./api/graphql/mutations/useMutateCreateWorkspaceSwr"
+export { useMutateStartFirstWorkspaceSwr } from "./api/graphql/mutations/useMutateStartFirstWorkspaceSwr"
 export {
     QUERY_ACCOUNTING_WORKBENCH_SWR_KEY,
     useQueryAccountingWorkbenchSwr,

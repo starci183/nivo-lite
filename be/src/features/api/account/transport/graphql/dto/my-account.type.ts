@@ -12,6 +12,10 @@ export class MyAccountType {
     @Field()
     email!: string
 
+    /** The picture of the sign-in provider profile (a public provider URL, so no signed URL is needed), or null. */
+    @Field(() => String, { nullable: true })
+    avatarUrl!: string | null
+
     /** The identity providers linked to the account (`google`, `email`). */
     @Field(() => [String])
     providers!: Array<string>

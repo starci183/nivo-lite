@@ -30,6 +30,12 @@ export interface CreatedWorkspace {
     readonly id: string
 }
 
+/** The first workspace of a person: its id, or null when none was created (signup is off, or they already belong somewhere). */
+export interface FirstWorkspace {
+    /** The new workspace, or null. */
+    readonly id: string | null
+}
+
 /** The billing statuses support can set by hand. */
 export type SupportStatus = "active" | "past_due"
 

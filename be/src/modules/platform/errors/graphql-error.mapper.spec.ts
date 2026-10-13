@@ -32,7 +32,7 @@ describe("formatGraphqlError", () => {
                 extensions: { code: "CALENDARS_NOT_FOUND", kind: "not-found", params: { id: "calendar-1" } },
             },
         )
-        expect(errors.describe).toHaveBeenCalledWith(original)
+        expect(errors.describe).toHaveBeenCalledWith(original, expect.objectContaining({ scope: "graphql" }))
     })
 
     it("describes a malformed operation when the GraphQL error has no original error", () => {
@@ -60,6 +60,6 @@ describe("formatGraphqlError", () => {
             path: undefined,
             extensions: { code: "ERRORS_INTERNAL", kind: "internal", params: {} },
         })
-        expect(errors.describe).toHaveBeenCalledWith(failure)
+        expect(errors.describe).toHaveBeenCalledWith(failure, expect.objectContaining({ scope: "graphql" }))
     })
 })

@@ -12,6 +12,7 @@ type Document = TypedDocumentNode<QueryMyAccountResponse, Record<string, never>>
 const query1: Document = gql`
     query MyAccount {
         myAccount {
+            avatarUrl
             email
             name
             providers
