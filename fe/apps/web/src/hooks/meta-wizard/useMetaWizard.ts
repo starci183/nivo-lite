@@ -1,9 +1,12 @@
 import { useTranslations } from "next-intl"
-import { useEffect, useState, useTransition } from "react"
-import { allAgentIds, useChannelReason, useFirstEvent, useLatest } from "@/hooks/connection-wizard"
+import { useState, useTransition } from "react"
+import { allAgentIds } from "@/hooks/connection-wizard"
+import { metaWizardOf } from "@/hooks/connection-wire"
+import { useFirstEvent, useSetConnectionAgents } from "@/hooks/connections"
+import { useQueryMetaConnectionSwr } from "@/hooks/swr/api/graphql/queries/useQueryMetaConnectionSwr"
 import type { AgentOption, MetaCheck, MetaWizardConnection, WizardNote } from "@/modules/types"
 import { META_STEPS, metaFailureOf, metaStartStepOf } from "./meta-wizard.shared"
-import type { MetaActions } from "./meta-wizard.shared"
+import { useMetaCommands } from "./useMetaCommands"
 
 /** What the Meta wizard needs from its drawer. */
 interface MetaWizardInput {
@@ -12,7 +15,6 @@ interface MetaWizardInput {
     /** How the Facebook login ended when the browser came back: ok, denied, failed, expired, nopages or unavailable. */
     readonly returned: string | undefined
     readonly agents: ReadonlyArray<AgentOption>
-    readonly actions: MetaActions
     /** `changed` is true when something was saved, so the list should refresh. */
     readonly onClose: (changed: boolean) => void
 }
@@ -23,61 +25,48 @@ interface MetaWizardInput {
  */
 export const useMetaWizard = (input: MetaWizardInput) => {
     const tm = useTranslations("metaWizard")
-    const reasonOf = useChannelReason()
+    const commands = useMetaCommands()
+    const setAgentsOf = useSetConnectionAgents()
     const [index, setIndex] = useState(0)
     const [conn, setConn] = useState<MetaWizardConnection | null>(null)
     const [pageId, setPageId] = useState("")
     const [agentIds, setAgentIds] = useState<ReadonlyArray<string>>(allAgentIds(input.agents))
     const [check, setCheck] = useState<MetaCheck | null>(null)
     const [note, setNote] = useState<WizardNote | null>(null)
-    const [resumed, setResumed] = useState(false)
     const [isPending, startTransition] = useTransition()
     const [isChecking, startChecking] = useTransition()
-    const actions = useLatest(input.actions)
+    const resume = useQueryMetaConnectionSwr(input.resumeId, { revalidateOnFocus: false, shouldRetryOnError: false })
     const step = META_STEPS[index] ?? "connect"
-    const watch = useFirstEvent({
-        connectionId: conn === null ? null : conn.id,
-        isActive: step === "test",
-        check: input.actions.checkFirstEvent,
-    })
+    const watch = useFirstEvent({ connectionId: conn === null ? null : conn.id, isActive: step === "test" })
     const firstEvent = watch.event ?? (conn === null ? null : conn.firstEvent)
+    const resumeFailure = resume.error instanceof Error ? resume.error.message : undefined
+    const [adopted, setAdopted] = useState<typeof resume.data>(undefined)
 
-    useEffect(() => {
-        if (input.resumeId === undefined) return undefined
-        const connectionId = input.resumeId
-        let live = true
-        startTransition(async () => {
-            const answer = await actions.current.resume(connectionId)
-            if (!live) return
-            if (answer.kind !== "ok") setNote({ tone: "negative", text: reasonOf(answer.code) })
-            else {
-                const failure = metaFailureOf(input.returned, tm)
-                setConn(answer.value)
-                if (answer.value.agentIds.length > 0) setAgentIds(answer.value.agentIds)
-                const first = answer.value.pages[0]
-                if (answer.value.pages.length === 1 && first !== undefined) setPageId(first.id)
-                if (failure !== null) setNote({ tone: "negative", text: failure })
-                else if (input.returned === "ok") setNote({ tone: "affirmative", text: tm("loggedIn") })
-                setIndex(metaStartStepOf(answer.value, failure !== null))
-            }
-            setResumed(true)
-        })
-        return () => {
-            live = false
-        }
-    }, [input.resumeId, input.returned, actions, reasonOf, tm])
+    // The stored connection arrives once: adopt it while rendering (derived state), not from an effect.
+    if (resume.data !== undefined && resume.data !== adopted) {
+        const stored = metaWizardOf(resume.data)
+        const failure = metaFailureOf(input.returned, tm)
+        setAdopted(resume.data)
+        setConn(stored)
+        if (stored.agentIds.length > 0) setAgentIds(stored.agentIds)
+        const first = stored.pages[0]
+        if (stored.pages.length === 1 && first !== undefined) setPageId(first.id)
+        if (failure !== null) setNote({ tone: "negative", text: failure })
+        else if (input.returned === "ok") setNote({ tone: "affirmative", text: tm("loggedIn") })
+        setIndex(metaStartStepOf(stored, failure !== null))
+    }
 
     const go = (to: number) => {
         setNote(null)
         setIndex(to)
     }
-    const fail = (code: string) => setNote({ tone: "negative", text: reasonOf(code) })
+    const fail = (message: string) => setNote({ tone: "negative", text: message })
 
     const runCheck = (repair: boolean) => {
         if (conn === null) return
         startChecking(async () => {
-            const answer = await input.actions.check(conn.id, repair)
-            if (answer.kind !== "ok") return fail(answer.code)
+            const answer = await commands.check(conn.id, repair)
+            if (answer.kind !== "ok") return fail(answer.message)
             setCheck(answer.value)
         })
     }
@@ -85,16 +74,16 @@ export const useMetaWizard = (input: MetaWizardInput) => {
     const login = () =>
         startTransition(async () => {
             setNote(null)
-            const answer = await input.actions.authorize(conn === null ? undefined : conn.id)
-            if (answer.kind !== "ok") return fail(answer.code)
-            window.location.assign(answer.value.url)
+            const answer = await commands.authorize(conn === null ? undefined : conn.id)
+            if (answer.kind !== "ok") return fail(answer.message)
+            window.location.assign(answer.value)
         })
 
     const choose = () => {
         if (conn === null || pageId === "") return setNote({ tone: "negative", text: tm("pickPick") })
         startTransition(async () => {
-            const answer = await input.actions.choosePage(conn.id, pageId)
-            if (answer.kind !== "ok") return fail(answer.code)
+            const answer = await commands.choosePage(conn.id, pageId)
+            if (answer.kind !== "ok") return fail(answer.message)
             setConn(answer.value)
             go(2)
         })
@@ -103,8 +92,8 @@ export const useMetaWizard = (input: MetaWizardInput) => {
     const saveAgents = () => {
         if (conn === null) return go(3)
         startTransition(async () => {
-            const answer = await input.actions.setAgents(conn.id, agentIds)
-            if (answer.kind !== "ok") return fail(answer.code)
+            const answer = await setAgentsOf(conn.id, agentIds)
+            if (answer.kind !== "ok") return fail(answer.message)
             go(3)
             runCheck(false)
         })
@@ -117,10 +106,10 @@ export const useMetaWizard = (input: MetaWizardInput) => {
         pageId,
         agentIds,
         check,
-        note,
+        note: note ?? (resumeFailure === undefined ? null : ({ tone: "negative", text: resumeFailure } as const)),
         isPending,
         isChecking,
-        isLoading: input.resumeId !== undefined && !resumed,
+        isLoading: input.resumeId !== undefined && resume.data === undefined && resume.error === undefined,
         firstEvent,
         on: {
             go,

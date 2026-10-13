@@ -2,8 +2,9 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
+import { useSetConnectionGrant } from "@/hooks/connections"
 import { useSave } from "@/hooks/modules"
-import { grantAgentAccess } from "@/lib/module-settings-actions"
+import { dbFailure, dbOk } from "@/modules/db/outcome"
 import { AgentConnectionAccessBase } from "./component"
 import type { AgentConnectionAccessRow } from "./component"
 
@@ -36,6 +37,7 @@ export const AgentConnectionAccess = (props: AgentConnectionAccessProps) => {
     const t = useTranslations("modulesCore")
     const [local, setLocal] = useState<Readonly<Record<string, string>>>({})
     const { note, isPending, save } = useSave()
+    const setGrant = useSetConnectionGrant()
     const levelOf = (connection: AgentConnection): string =>
         connection.id in local ? (local[connection.id] ?? NONE) : connection.access || NONE
     const rows: ReadonlyArray<AgentConnectionAccessRow> = props.connections.map((connection) => ({
@@ -72,7 +74,14 @@ export const AgentConnectionAccess = (props: AgentConnectionAccessProps) => {
                     const before = levelOf(connection)
                     setLocal((current) => ({ ...current, [connectionId]: level }))
                     save(
-                        () => grantAgentAccess(connectionId, props.agentId, level),
+                        async () => {
+                            const granted = await setGrant(
+                                connectionId,
+                                props.agentId,
+                                LEVELS.find((candidate) => candidate === level) ?? null,
+                            )
+                            return granted.kind === "ok" ? dbOk(true) : dbFailure("refused", granted.message)
+                        },
                         t("grantSaved"),
                         () => setLocal((current) => ({ ...current, [connectionId]: before })),
                     )

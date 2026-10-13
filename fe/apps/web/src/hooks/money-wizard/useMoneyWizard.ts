@@ -1,10 +1,14 @@
 import { useTranslations } from "next-intl"
-import { useCallback, useEffect, useState, useTransition } from "react"
+import { useCallback, useState, useTransition } from "react"
 import { PROVIDERS } from "@/hooks/connection-providers"
-import { allAgentIds, useChannelReason, useFirstEvent, useLatest } from "@/hooks/connection-wizard"
+import { allAgentIds } from "@/hooks/connection-wizard"
+import { wizardConnectionOf } from "@/hooks/connection-wire"
+import { useFirstEvent, useSetConnectionAgents } from "@/hooks/connections"
+import { useQueryMoneyConnectionSwr } from "@/hooks/swr/api/graphql/queries/useQueryMoneyConnectionSwr"
 import type { AgentOption, Environment, MoneyProvider, WizardConnection, WizardNote } from "@/modules/types"
 import { connectionNameOf, MONEY_STEPS, moneyContextOf, moneyFlagsOf, webhookNameOf } from "./money-wizard.shared"
-import type { AccountForm, FollowDraft, MoneyActions } from "./money-wizard.shared"
+import type { AccountForm, FollowDraft } from "./money-wizard.shared"
+import { useMoneyCommands } from "./useMoneyCommands"
 
 /** What the bank and payment wizard needs from its drawer. */
 interface MoneyWizardInput {
@@ -12,7 +16,6 @@ interface MoneyWizardInput {
     /** Continue this unfinished connection instead of creating a new one. */
     readonly resumeId: string | undefined
     readonly agents: ReadonlyArray<AgentOption>
-    readonly actions: MoneyActions
     /** `changed` is true when something was saved, so the list should refresh. */
     readonly onClose: (changed: boolean) => void
 }
@@ -25,9 +28,10 @@ interface MoneyWizardInput {
  */
 export const useMoneyWizard = (input: MoneyWizardInput) => {
     const tw = useTranslations("connectionWizard")
-    const reasonOf = useChannelReason()
+    const commands = useMoneyCommands()
+    const setAgentsOf = useSetConnectionAgents()
     const def = PROVIDERS[input.provider]
-    const [nav, setNav] = useState({ index: 0, skipped: false, resumed: false })
+    const [nav, setNav] = useState({ index: 0, skipped: false })
     const [form, setForm] = useState<AccountForm>({
         environment: def.environments[0],
         name: "",
@@ -40,12 +44,11 @@ export const useMoneyWizard = (input: MoneyWizardInput) => {
     const [agentIds, setAgentIds] = useState<ReadonlyArray<string>>(allAgentIds(input.agents))
     const [note, setNote] = useState<WizardNote | null>(null)
     const [isPending, startTransition] = useTransition()
-    const actions = useLatest(input.actions)
+    const resume = useQueryMoneyConnectionSwr(input.resumeId, { revalidateOnFocus: false, shouldRetryOnError: false })
     const step = MONEY_STEPS[nav.index] ?? "env"
     const watch = useFirstEvent({
         connectionId: conn === null ? null : conn.id,
         isActive: step === "verify",
-        check: input.actions.checkFirstEvent,
     })
     const received = watch.event !== null || (conn !== null && conn.firstEvent !== null)
     const flags = moneyFlagsOf(def, form, follow, conn)
@@ -63,44 +66,35 @@ export const useMoneyWizard = (input: MoneyWizardInput) => {
         setFollow((current) => ({ ...current, webhookName: webhookNameOf(stored.name), apiKey: stored.apiKey }))
     }, [])
 
-    useEffect(() => {
-        if (input.resumeId === undefined) return undefined
-        const connectionId = input.resumeId
-        let live = true
-        startTransition(async () => {
-            const answer = await actions.current.resume(connectionId)
-            if (!live) return
-            if (answer.kind === "ok") {
-                adopt(answer.value)
-                setFollow((current) => ({ ...current, keysSaved: answer.value.credentialsSaved }))
-                if (answer.value.agentIds.length > 0) setAgentIds(answer.value.agentIds)
-                setNav((current) => ({ ...current, index: 2, resumed: true }))
-            } else {
-                setNote({ tone: "negative", text: reasonOf(answer.code) })
-                setNav((current) => ({ ...current, resumed: true }))
-            }
-        })
-        return () => {
-            live = false
-        }
-    }, [input.resumeId, actions, adopt, reasonOf])
+    const resumeFailure = resume.error instanceof Error ? resume.error.message : undefined
+    const [adopted, setAdopted] = useState<typeof resume.data>(undefined)
+
+    // The stored connection arrives once: adopt it while rendering (derived state), not from an effect.
+    if (resume.data !== undefined && resume.data !== adopted) {
+        const stored = wizardConnectionOf(resume.data)
+        setAdopted(resume.data)
+        adopt(stored)
+        setFollow((current) => ({ ...current, keysSaved: stored.credentialsSaved }))
+        if (stored.agentIds.length > 0) setAgentIds(stored.agentIds)
+        setNav((current) => ({ ...current, index: 2 }))
+    }
 
     const go = (to: number) => {
         setNote(null)
         setNav((current) => ({ ...current, index: to }))
     }
-    const fail = (code: string) => setNote({ tone: "negative", text: reasonOf(code) })
+    const fail = (message: string) => setNote({ tone: "negative", text: message })
 
     /** Saves edits to the existing connection, then moves on (and says what to change on the provider too). */
     const save = (name: string, to: number) => {
         if (conn === null) return
         startTransition(async () => {
-            const answer = await input.actions.update(
+            const answer = await commands.update(
                 conn.id,
                 { ...form, name },
                 input.provider === "sepay" ? follow.apiKey : undefined,
             )
-            if (answer.kind !== "ok") return fail(answer.code)
+            if (answer.kind !== "ok") return fail(answer.message)
             adopt(answer.value)
             go(to)
             setNote({ tone: "affirmative", text: tw("editSaved", { brand: def.brand }) })
@@ -110,8 +104,8 @@ export const useMoneyWizard = (input: MoneyWizardInput) => {
     const create = () => {
         if (conn !== null) return flags.accountDirty ? save(form.name, 2) : go(2)
         startTransition(async () => {
-            const answer = await input.actions.start(input.provider, form)
-            if (answer.kind !== "ok") return fail(answer.code)
+            const answer = await commands.start(input.provider, form)
+            if (answer.kind !== "ok") return fail(answer.message)
             adopt(answer.value)
             go(2)
         })
@@ -122,8 +116,8 @@ export const useMoneyWizard = (input: MoneyWizardInput) => {
         if (flags.followDirty) return save(connectionNameOf(follow.webhookName), flags.needsKeys ? 2 : 3)
         if (flags.keysDone) return go(3)
         startTransition(async () => {
-            const answer = await input.actions.saveKeys(conn.id, follow.values)
-            if (answer.kind !== "ok") return fail(answer.code)
+            const answer = await commands.saveKeys(conn.id, follow.values)
+            if (answer.kind !== "ok") return fail(answer.message)
             setFollow((current) => ({ ...current, keysSaved: true, values: {} }))
             if (!answer.value.confirmed && def.confirmsWebhook === true)
                 setNote({ tone: "informative", text: tw("payosLocal") })
@@ -134,8 +128,8 @@ export const useMoneyWizard = (input: MoneyWizardInput) => {
     const finish = () => {
         if (conn === null) return input.onClose(false)
         startTransition(async () => {
-            const answer = await input.actions.setAgents(conn.id, agentIds)
-            if (answer.kind !== "ok") return fail(answer.code)
+            const answer = await setAgentsOf(conn.id, agentIds)
+            if (answer.kind !== "ok") return fail(answer.message)
             input.onClose(true)
         })
     }
@@ -143,11 +137,11 @@ export const useMoneyWizard = (input: MoneyWizardInput) => {
     return {
         index: nav.index,
         step,
-        isLoading: input.resumeId !== undefined && !nav.resumed,
+        isLoading: input.resumeId !== undefined && resume.data === undefined && resume.error === undefined,
         form,
         conn,
         follow,
-        note,
+        note: note ?? (resumeFailure === undefined ? null : ({ tone: "negative", text: resumeFailure } as const)),
         agentIds,
         isPending,
         received,

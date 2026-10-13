@@ -5,15 +5,11 @@ import { useCopyLabels } from "@/hooks/connection-wizard"
 import { useWebhookWizard, WEBHOOK_STEPS } from "@/hooks/webhook-wizard"
 import { WEBHOOK_EVENTS } from "@/lib/webhook-shared"
 import type { WebhookEvent } from "@/lib/webhook-shared"
-import { writeWebhookTest } from "@/modules/db/connections/write-webhook-test"
-import { writeWebhookFinish } from "@/modules/db/webhook-connections/write-webhook-finish"
-import { writeWebhookStart } from "@/modules/db/webhook-connections/write-webhook-start"
 import type { WebhookTestVerdict } from "@/modules/types"
 import { WebhookWizardBase } from "./component"
 
 /** What the board hands the webhook wizard. */
 interface WebhookWizardProps {
-    readonly workspaceId: string
     /** `changed` is true when something was saved, so the list should refresh. */
     readonly onClose: (changed: boolean) => void
 }
@@ -23,15 +19,9 @@ export const WebhookWizard = (props: WebhookWizardProps) => {
     const t = useTranslations("webhookWizard")
     const tw = useTranslations("connectionWizard")
     const copy = useCopyLabels()
-    const { workspaceId } = props
     const wizard = useWebhookWizard({
         defaultName: t("defaultName"),
         onClose: props.onClose,
-        actions: {
-            start: (form, events) => writeWebhookStart({ workspaceId, ...form, events }),
-            test: (connectionId) => writeWebhookTest({ workspaceId, connectionId }),
-            finish: (connectionId) => writeWebhookFinish({ workspaceId, connectionId }),
-        },
     })
     const eventLabels: Readonly<Record<WebhookEvent, string>> = {
         "lead.created": t("event_lead_created"),

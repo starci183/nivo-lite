@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
+import { useAuthorizeGoogle } from "@/hooks/connections"
 import type { AutomationCardView } from "@/lib/automation-shared"
-import { startGoogleConnect } from "@/lib/google-actions"
 import {
     automationBoardOf,
     automationFaultText,
@@ -29,6 +29,7 @@ export const useAutomationsBoard = (
 ): { readonly view: AutomationsBoardView; readonly on: AutomationsBoardActions } => {
     const { t, locale, workspaceId } = input
     const router = useRouter()
+    const authorizeGoogle = useAuthorizeGoogle()
     const data = useAutomations(input.initial.cards)
     const [filter, setFilter] = useState<AutomationFilterKey>("all")
     const [selected, setSelected] = useState<string | null>(input.focus ?? null)
@@ -71,9 +72,9 @@ export const useAutomationsBoard = (
     const connect = async (card: AutomationCardView, status: AutomationStatus) => {
         const route = CONNECTION_ROUTE[status]
         if (route !== undefined) return router.push(route)
-        const started = await startGoogleConnect(automationFocusPath(card.key))
-        if (started.ok) return window.location.assign(started.data.url)
-        setNotice(started.error)
+        const started = await authorizeGoogle(automationFocusPath(card.key))
+        if (started.kind === "ok") return window.location.assign(started.value)
+        setNotice(started.message)
     }
 
     const toggle = (key: string, next: boolean) => {

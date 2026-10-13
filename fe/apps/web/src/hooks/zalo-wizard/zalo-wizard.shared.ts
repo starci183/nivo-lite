@@ -1,6 +1,5 @@
 import type { CatalogReader } from "@/hooks/connection-wizard"
-import type { DbOutcome } from "@/modules/db/outcome"
-import type { FirstEventState, ZaloAuthorizeUrl, ZaloWizardConnection } from "@/modules/types"
+import type { ZaloWizardConnection } from "@/modules/types"
 
 /** The steps of the Zalo wizard, in order. */
 export const ZALO_STEPS = ["app", "follow", "authorize", "verify", "agent"] as const
@@ -14,18 +13,6 @@ export interface ZaloFields {
     readonly appId: string
     readonly appSecret: string
     readonly oaSecret: string
-}
-
-/** The commands the connected entry hands the Zalo wizard (each one already knows the active workspace). */
-export interface ZaloActions {
-    readonly start: (
-        fields: Pick<ZaloFields, "name" | "appId" | "appSecret">,
-    ) => Promise<DbOutcome<ZaloWizardConnection>>
-    readonly resume: (connectionId: string) => Promise<DbOutcome<ZaloWizardConnection>>
-    readonly saveOaSecret: (connectionId: string, oaSecret: string) => Promise<DbOutcome<true>>
-    readonly authorize: (connectionId: string) => Promise<DbOutcome<ZaloAuthorizeUrl>>
-    readonly setAgents: (connectionId: string, agents: ReadonlyArray<string>) => Promise<DbOutcome<true>>
-    readonly checkFirstEvent: (connectionId: string) => Promise<DbOutcome<FirstEventState>>
 }
 
 /** The sentence for a sign-in that did not end well, or null when it did (or there was none). */

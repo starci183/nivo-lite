@@ -26,7 +26,6 @@ export interface ConnectionWizardOverlayBaseProps {
     readonly props: {
         readonly title: string
         readonly closeLabel: string
-        readonly workspaceId: string
         readonly ownerEmail: string
         readonly target: WizardTargetView | null
         /** Every workspace agent (the data wizards offer all of them). */
@@ -60,16 +59,13 @@ export const ConnectionWizardOverlayBase = (props: ConnectionWizardOverlayBasePr
             {target?.kind === "money" && target.money !== null ? (
                 <MoneyWizard
                     key={target.resumeId ?? "new"}
-                    workspaceId={wizard.workspaceId}
                     provider={target.money}
                     resumeId={target.resumeId}
                     agents={wizard.eligible}
                     onClose={onClose}
                 />
             ) : null}
-            {target?.kind === "telegram" ? (
-                <TelegramWizard workspaceId={wizard.workspaceId} agents={wizard.eligible} onClose={onClose} />
-            ) : null}
+            {target?.kind === "telegram" ? <TelegramWizard agents={wizard.eligible} onClose={onClose} /> : null}
             {target?.kind === "data" ? (
                 <DataWizard
                     key={target.resumeId ?? "new"}
@@ -82,7 +78,6 @@ export const ConnectionWizardOverlayBase = (props: ConnectionWizardOverlayBasePr
             {target?.kind === "zalo" ? (
                 <ZaloWizard
                     key={target.resumeId ?? "new"}
-                    workspaceId={wizard.workspaceId}
                     resumeId={target.resumeId}
                     returned={target.returned}
                     agents={wizard.eligible}
@@ -92,15 +87,14 @@ export const ConnectionWizardOverlayBase = (props: ConnectionWizardOverlayBasePr
             {target?.kind === "meta" ? (
                 <MetaWizard
                     key={target.resumeId ?? "new"}
-                    workspaceId={wizard.workspaceId}
                     resumeId={target.resumeId}
                     returned={target.returned}
                     agents={wizard.eligible}
                     onClose={onClose}
                 />
             ) : null}
-            {target?.kind === "webhook" ? <WebhookWizard workspaceId={wizard.workspaceId} onClose={onClose} /> : null}
-            {target?.kind === "google" ? <GoogleWizard workspaceId={wizard.workspaceId} onClose={onClose} /> : null}
+            {target?.kind === "webhook" ? <WebhookWizard onClose={onClose} /> : null}
+            {target?.kind === "google" ? <GoogleWizard onClose={onClose} /> : null}
             {target?.kind === "email" ? (
                 <SmtpWizard ownerEmail={wizard.ownerEmail} hasDefault={wizard.hasDefaultSender} onClose={onClose} />
             ) : null}

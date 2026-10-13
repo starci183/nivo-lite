@@ -5,15 +5,11 @@ import { GUIDES } from "@/hooks/connection-guides"
 import { PROVIDERS, providerKey } from "@/hooks/connection-providers"
 import { agentChoicesOf, EMPTY_GUIDE_CONTEXT, guideScreensOf, useCopyLabels } from "@/hooks/connection-wizard"
 import { TELEGRAM_STEPS, useTelegramWizard } from "@/hooks/telegram-wizard"
-import { writeTelegram } from "@/modules/db/channel-connections/write-telegram"
-import { writeCheck } from "@/modules/db/connections/write-check"
-import { writeConnectionAgents } from "@/modules/db/connections/write-connection-agents"
 import type { AgentOption } from "@/modules/types"
 import { TelegramWizardBase } from "./component"
 
 /** What the board hands the Telegram wizard. */
 interface TelegramWizardProps {
-    readonly workspaceId: string
     /** The workspace agents that can work through Telegram. */
     readonly agents: ReadonlyArray<AgentOption>
     /** `changed` is true when something was saved, so the list should refresh. */
@@ -25,15 +21,9 @@ export const TelegramWizard = (props: TelegramWizardProps) => {
     const tw = useTranslations("connectionWizard")
     const tc = useTranslations("connections")
     const copy = useCopyLabels()
-    const { workspaceId } = props
     const wizard = useTelegramWizard({
         agents: props.agents,
         onClose: props.onClose,
-        actions: {
-            connect: (form) => writeTelegram({ workspaceId, ...form }),
-            check: (connectionId) => writeCheck({ workspaceId, connectionId }),
-            setAgents: (connectionId, agents) => writeConnectionAgents({ workspaceId, connectionId, agents }),
-        },
     })
     const def = PROVIDERS.telegram
     const screens = guideScreensOf(

@@ -1,19 +1,8 @@
 import type { CatalogReader } from "@/hooks/connection-wizard"
-import type { DbOutcome } from "@/modules/db/outcome"
-import type { FirstEventState, MetaAuthorization, MetaCheck, MetaWizardConnection, WizardNote } from "@/modules/types"
+import type { MetaCheck, MetaWizardConnection, WizardNote } from "@/modules/types"
 
 /** The steps of the Meta wizard, in order. */
 export const META_STEPS = ["connect", "pick", "agent", "test"] as const
-
-/** The commands the connected entry hands the Meta wizard (each one already knows the active workspace). */
-export interface MetaActions {
-    readonly authorize: (connectionId: string | undefined) => Promise<DbOutcome<MetaAuthorization>>
-    readonly resume: (connectionId: string) => Promise<DbOutcome<MetaWizardConnection>>
-    readonly choosePage: (connectionId: string, pageId: string) => Promise<DbOutcome<MetaWizardConnection>>
-    readonly check: (connectionId: string, repair: boolean) => Promise<DbOutcome<MetaCheck>>
-    readonly setAgents: (connectionId: string, agents: ReadonlyArray<string>) => Promise<DbOutcome<true>>
-    readonly checkFirstEvent: (connectionId: string) => Promise<DbOutcome<FirstEventState>>
-}
 
 /** The sentence for a login that did not end well, or null when it did (or there was none). */
 export const metaFailureOf = (returned: string | undefined, m: CatalogReader): string | null => {

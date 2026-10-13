@@ -1,8 +1,7 @@
 import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
 import { ACCESS_LEVELS, purposeFor } from "@/hooks/connection-access"
-import type { DbOutcome } from "@/modules/db/outcome"
-import { navigation } from "@/modules/i18n"
+import type { Settled } from "@/hooks/connection-wizard"
 import type { Access, AccessView, AgentOption, Connection } from "@/modules/types"
 
 /** The picker view of one row and the pick handler; null when the provider is not one agents work through. */
@@ -13,8 +12,8 @@ export interface AgentAccess {
 
 const NONE = "none"
 
-/** Gives one agent a level through the connection, or removes its access (null); the connected row binds the server action. */
-export type GrantCommand = (agentId: string, access: Access | null) => Promise<DbOutcome<true>>
+/** Gives one agent a level through the connection, or removes its access (null); the connected row binds the GraphQL mutation. */
+export type GrantCommand = (agentId: string, access: Access | null) => Promise<Settled<true>>
 
 /**
  * "Which agents work through this connection, and how far": each pick is saved at once with the same grant the agent's own
@@ -28,7 +27,6 @@ export const useAgentAccess = (
     onError: (message: string) => void,
 ): AgentAccess => {
     const t = useTranslations("connections")
-    const router = navigation.useRouter()
     const [pending, startTransition] = useTransition()
     const [local, setLocal] = useState<Readonly<Record<string, Access | null>>>({})
     const accessOf = (agentId: string): Access | null =>
@@ -50,10 +48,9 @@ export const useAgentAccess = (
         setLocal((previous) => ({ ...previous, [agentId]: next }))
         startTransition(async () => {
             const result = await setGrant(agentId, next)
-            if (result.kind === "ok") return router.refresh()
+            if (result.kind === "ok") return
             setLocal((previous) => ({ ...previous, [agentId]: before }))
-            const agent = agents.find((candidate) => candidate.id === agentId)
-            onError(t(result.code, { agent: agent?.name ?? "", connection: connection.name }))
+            onError(result.message)
         })
     }
 

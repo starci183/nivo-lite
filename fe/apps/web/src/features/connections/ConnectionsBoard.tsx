@@ -16,8 +16,6 @@ export type ConnectionsBoardProps = {
     readonly agents: ReadonlyArray<AgentOption>
     readonly localOnly: boolean
     readonly ownerEmail: string
-    /** The workspace the connections belong to; needed to add the first one when the list is empty. */
-    readonly workspaceId?: string
     /** The provider groups to show (default: all). */
     readonly groups?: ReadonlyArray<ProviderGroup>
     /** Always true: this board only draws the embedded variant (kept so the developers page compiles unchanged). */
@@ -29,7 +27,6 @@ export type ConnectionsBoardProps = {
 type ProviderTitle = { readonly provider: Provider; readonly title: string }
 
 type EmbeddedBoardViewProps = {
-    readonly workspaceId: string
     readonly items: ReadonlyArray<Connection>
     readonly agents: ReadonlyArray<AgentOption>
     readonly agentNames: Readonly<Record<string, string>>
@@ -105,12 +102,7 @@ const EmbeddedBoardView = (props: EmbeddedBoardViewProps) => {
                     )}
                 </section>
             ))}
-            <ConnectionWizardOverlay
-                workspaceId={props.workspaceId}
-                items={props.items}
-                agents={props.agents}
-                ownerEmail={props.ownerEmail}
-            />
+            <ConnectionWizardOverlay items={props.items} agents={props.agents} ownerEmail={props.ownerEmail} />
         </>
     )
 }
@@ -143,7 +135,6 @@ export const ConnectionsBoard = (props: ConnectionsBoardProps) => {
     })
     return (
         <EmbeddedBoardView
-            workspaceId={props.workspaceId ?? props.items[0]?.workspaceId ?? ""}
             items={props.items}
             agents={props.agents}
             agentNames={props.agentNames}

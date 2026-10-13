@@ -14,10 +14,10 @@ import { bankLogo } from "@/lib/vn-banks"
 import type { AgentOption, Connection, RowPrimary, RowView } from "@/modules/types"
 import { rowState, statusKey, statusTone } from "./connections.shared"
 import { useAgentAccess } from "./useAgentAccess"
-import type { AgentAccess, GrantCommand } from "./useAgentAccess"
+import type { AgentAccess } from "./useAgentAccess"
 import { useConnectionOverlays } from "./useConnectionOverlays"
 import { useConnectionRowActions } from "./useConnectionRowActions"
-import type { RowCommands } from "./useConnectionRowActions"
+import { useSetConnectionGrant } from "./useSetConnectionGrant"
 import { useSmtpRowPanel } from "./useSmtpRowPanel"
 import type { SmtpRowPanel } from "./useSmtpRowPanel"
 /** What a connection row is given by the page that read it. */
@@ -28,9 +28,6 @@ export interface ConnectionRowViewInput {
     readonly ownerEmail: string
     readonly agents: ReadonlyArray<AgentOption>
     readonly canManage: boolean
-    /** The server actions of the row, bound to its connection by the connected block. */
-    readonly commands: RowCommands
-    readonly setGrant: GrantCommand
 }
 
 /** The commands a row's menu, buttons and dialogs give. */
@@ -58,10 +55,15 @@ export const useConnectionRowView = (
     const { connection: c } = input
     const t = useTranslations("connections")
     const overlays = useConnectionOverlays()
-    const actions = useConnectionRowActions(c, input.commands)
+    const actions = useConnectionRowActions(c)
+    const setGrant = useSetConnectionGrant()
     const smtp: SmtpRowPanel = useSmtpRowPanel(c, input.ownerEmail)
-    const access: AgentAccess = useAgentAccess(c, input.agents, input.canManage, input.setGrant, (text) =>
-        actions.setNote({ tone: "negative", text }),
+    const access: AgentAccess = useAgentAccess(
+        c,
+        input.agents,
+        input.canManage,
+        (agentId, level) => setGrant(c.id, agentId, level),
+        (text) => actions.setNote({ tone: "negative", text }),
     )
 
     const live = c.status !== "disconnected"

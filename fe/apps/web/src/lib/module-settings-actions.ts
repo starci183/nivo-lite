@@ -1,8 +1,6 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { isAccess } from "./connection-access"
-import { setGrant } from "./connection-actions"
 import { enqueueAgentSync } from "./engine-queue"
 import { requireManager } from "./permissions"
 import {
@@ -55,13 +53,3 @@ export const resyncAgent = async (installationId: string): Promise<DbOutcome<boo
         const found = await readInstallation(installationId) // row level security: only installations of this workspace
         return found.kind === "ok" ? dbOk(await enqueueAgentSync(installationId, { force: true })) : found
     })
-
-/** Change how far an agent may go through a connection ("none" removes its access). Workspace owner only; the grant is the one the Connections page makes. */
-export const grantAgentAccess = async (
-    connectionId: string,
-    agentId: string,
-    level: string,
-): Promise<DbOutcome<true>> => {
-    const granted = await setGrant(connectionId, agentId, isAccess(level) ? level : null)
-    return granted.ok ? dbOk(true) : dbFailure("refused", granted.error)
-}

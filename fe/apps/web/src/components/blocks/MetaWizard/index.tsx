@@ -4,18 +4,11 @@ import { useTranslations } from "next-intl"
 import { providerKey } from "@/hooks/connection-providers"
 import { agentChoicesOf } from "@/hooks/connection-wizard"
 import { META_STEPS, metaCheckLines, useMetaWizard } from "@/hooks/meta-wizard"
-import { writeConnectionAgents } from "@/modules/db/connections/write-connection-agents"
-import { writeFirstEvent } from "@/modules/db/connections/write-first-event"
-import { writeMetaAuthorize } from "@/modules/db/connections/write-meta-authorize"
-import { writeMetaCheck } from "@/modules/db/connections/write-meta-check"
-import { writeMetaPage } from "@/modules/db/connections/write-meta-page"
-import { writeMetaResume } from "@/modules/db/connections/write-meta-resume"
 import type { AgentOption } from "@/modules/types"
 import { MetaWizardBase } from "./component"
 
 /** What the board hands the Meta wizard. */
 interface MetaWizardProps {
-    readonly workspaceId: string
     /** Continue this unfinished connection instead of creating a new one. */
     readonly resumeId?: string | undefined
     /** How the Facebook login ended when the browser came back: ok, denied, failed, expired, nopages or unavailable. */
@@ -31,20 +24,11 @@ export const MetaWizard = (props: MetaWizardProps) => {
     const tw = useTranslations("connectionWizard")
     const tc = useTranslations("connections")
     const tm = useTranslations("metaWizard")
-    const { workspaceId } = props
     const wizard = useMetaWizard({
         resumeId: props.resumeId,
         returned: props.returned,
         agents: props.agents,
         onClose: props.onClose,
-        actions: {
-            authorize: (connectionId) => writeMetaAuthorize({ workspaceId, connectionId }),
-            resume: (connectionId) => writeMetaResume({ workspaceId, connectionId }),
-            choosePage: (connectionId, pageId) => writeMetaPage({ workspaceId, connectionId, pageId }),
-            check: (connectionId, repair) => writeMetaCheck({ workspaceId, connectionId, repair }),
-            setAgents: (connectionId, agents) => writeConnectionAgents({ workspaceId, connectionId, agents }),
-            checkFirstEvent: (connectionId) => writeFirstEvent({ workspaceId, connectionId }),
-        },
     })
     const { conn, check, firstEvent } = wizard
     const steps = [tm("stepConnect"), tm("stepPick"), tm("stepAgent"), tm("stepTest")]
