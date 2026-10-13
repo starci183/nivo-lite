@@ -175,7 +175,7 @@ export class ConversationsService {
         eventId: string,
         manager: EntityManager,
     ): Promise<void> {
-        await this.inboundEvents.keepUnrouted({ workspaceId: connection.workspaceId, channel, sender, body, eventId }, manager)
+        await this.inboundEvents.keepUnrouted(manager, { workspaceId: connection.workspaceId, channel, sender, body, eventId })
     }
 
     private async isOtherApp(connectionId: string, appId: string): Promise<boolean> {

@@ -36,6 +36,16 @@ const stored = (secret: ZaloSecret | string, expiresAt: number | null = NOW + HO
     } satisfies ConnectionSecret,
 })
 
+/** The JSON inside a "sealed:" test double text; an unreadable text becomes an object carrying the parse error, so the expectations of the test fail on it. */
+const sealedJson = (sealed: string): object => {
+    try {
+        const parsed: unknown = JSON.parse(sealed.slice("sealed:".length))
+        return typeof parsed === "object" && parsed !== null ? parsed : {}
+    } catch (cause) {
+        return { cause }
+    }
+}
+
 const missing = { kind: "refused" as const, code: ConnectionSecretsErrorCode.NotFound }
 
 const build = async (siteUrl: string | null = "https://nivo.test") => {
@@ -120,7 +130,7 @@ describe("ZaloCredentialsService", () => {
 
             expect(result).toEqual({ url: "https://oauth.test/permission", callbackUrl: "https://nivo.test/connections/zalo/callback" })
             const sealed = String(secrets.save.mock.calls[0]?.[1])
-            const pkce: unknown = Reflect.get(JSON.parse(sealed.slice("sealed:".length)), "pkce")
+            const pkce: unknown = Reflect.get(sealedJson(sealed), "pkce")
             expect(pkce).toEqual({ verifier: expect.any(String), nonce: expect.any(String), exp: NOW + 900_000 })
             expect(zalo.authorizeUrl).toHaveBeenCalledWith(
                 "app-1",
@@ -153,7 +163,7 @@ describe("ZaloCredentialsService", () => {
 
             expect(zalo.exchangeCode).toHaveBeenCalledWith("app-1", "app-secret", "code-1", "verifier-1")
             const sealed = String(secrets.save.mock.calls[0]?.[1])
-            const saved = JSON.parse(sealed.slice("sealed:".length))
+            const saved = sealedJson(sealed)
             expect(saved).toMatchObject({ accessToken: "access-2", refreshToken: "refresh-2", refreshExpiresAt: new Date(NOW + 90 * 86_400_000).toISOString() })
             expect(Reflect.has(saved, "pkce")).toBe(false)
             expect(secrets.save).toHaveBeenCalledWith("c-1", sealed, new Date(NOW + HOUR))

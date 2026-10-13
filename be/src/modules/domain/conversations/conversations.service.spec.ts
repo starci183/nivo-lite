@@ -139,8 +139,8 @@ describe("ConversationsService", () => {
             await service.acceptTelegram(CONNECTION, telegram(), manager)
 
             expect(inboundEvents.keepUnrouted).toHaveBeenCalledWith(
-                { workspaceId: "ws-1", channel: "telegram", sender: "Minh Tran", body: "Hello", eventId: "tg:c-1:555:9" },
                 manager,
+                { workspaceId: "ws-1", channel: "telegram", sender: "Minh Tran", body: "Hello", eventId: "tg:c-1:555:9" },
             )
             expect(conversations.open).not.toHaveBeenCalled()
             expect(queue.enqueueChatTurn).not.toHaveBeenCalled()
@@ -224,8 +224,8 @@ describe("ConversationsService", () => {
             await service.acceptZalo(CONNECTION, zaloMessage(), manager)
 
             expect(inboundEvents.keepUnrouted).toHaveBeenCalledWith(
-                { workspaceId: "ws-1", channel: "zalo", sender: "<conversations.zaloGuest>", body: "Hello", eventId: "zalo:c-1:m-1" },
                 manager,
+                { workspaceId: "ws-1", channel: "zalo", sender: "<conversations.zaloGuest>", body: "Hello", eventId: "zalo:c-1:m-1" },
             )
             expect(queue.enqueueChatTurn).not.toHaveBeenCalled()
         })

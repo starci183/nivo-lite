@@ -4,10 +4,10 @@ import { ZaloCredentialsService } from "@modules/domain/channels"
 import type { ClaimedJob, JobClaims } from "@modules/platform/jobs"
 import { RenewTokensStep } from "./renew-tokens.step"
 
-const claimed = (payload: object = { withinMs: 3_600_000 }): ClaimedJob => ({
-    jobId: "refresh-job-1",
+const claimed = (payload: object = { marker: "payload-1" }): ClaimedJob => ({
+    jobId: "job-1",
     kind: "zalo_refresh",
-    fencingToken: 11,
+    fencingToken: 7,
     currentStep: null,
     payload,
 })
@@ -15,83 +15,52 @@ const claimed = (payload: object = { withinMs: 3_600_000 }): ClaimedJob => ({
 const build = async () => {
     const claims = mock<JobClaims>()
     claims.advance.mockResolvedValue(undefined)
-    const credentials = mock<ZaloCredentialsService>()
-    credentials.refreshDue.mockResolvedValue({ refreshed: 2, failed: 0 })
+    const service = mock<ZaloCredentialsService>()
+    service.refreshFromJob.mockResolvedValue({ refreshed: 2, failed: 1 })
     const moduleRef = await Test.createTestingModule({
-        providers: [RenewTokensStep, { provide: ZaloCredentialsService, useValue: credentials }],
+        providers: [RenewTokensStep, { provide: ZaloCredentialsService, useValue: service }],
     })
         .useMocker((token) =>
             typeof token === "symbol" && token.description === "platform.jobs.claims" ? claims : undefined,
         )
         .compile()
-    return { step: moduleRef.get(RenewTokensStep), claims, credentials }
+    return { step: moduleRef.get(RenewTokensStep), claims, service }
 }
 
 describe("RenewTokensStep", () => {
-    it("waits for the renew write under the held fencing token before refreshing due credentials", async () => {
-        const { step, claims, credentials } = await build()
+    it("records the renew step under the held fencing token before it delegates the payload", async () => {
+        const { step, claims, service } = await build()
         let release: () => void = () => undefined
-        const advanced = new Promise<void>((resolve) => {
-            release = resolve
-        })
-        claims.advance.mockReturnValue(advanced)
+        claims.advance.mockReturnValue(
+            new Promise<void>((resolve) => {
+                release = resolve
+            }),
+        )
 
         const running = step.run(claimed())
 
-        expect(claims.advance.mock.calls).toEqual([
-            [{ jobId: "refresh-job-1", expectedFencingToken: 11, step: "renew" }],
-        ])
-        expect(credentials.refreshDue).not.toHaveBeenCalled()
+        expect(claims.advance.mock.calls).toEqual([[{ jobId: "job-1", expectedFencingToken: 7, step: "renew" }]])
+        expect(service.refreshFromJob).not.toHaveBeenCalled()
         release()
         await expect(running).resolves.toBeUndefined()
-        expect(credentials.refreshDue.mock.calls).toEqual([[3_600_000]])
+        expect(service.refreshFromJob.mock.calls).toEqual([[{ marker: "payload-1" }]])
     })
 
-    it("passes a zero-millisecond horizon through to the refresh", async () => {
-        const { step, claims, credentials } = await build()
-
-        await expect(step.run(claimed({ withinMs: 0 }))).resolves.toBeUndefined()
-
-        expect(claims.advance.mock.calls).toEqual([
-            [{ jobId: "refresh-job-1", expectedFencingToken: 11, step: "renew" }],
-        ])
-        expect(credentials.refreshDue.mock.calls).toEqual([[0]])
-    })
-
-    it.each([{}, { withinMs: "3600000" }])("uses seven hours for an invalid refresh tick: %p", async (payload) => {
-        const { step, claims, credentials } = await build()
-
-        await expect(step.run(claimed(payload))).resolves.toBeUndefined()
-
-        expect(claims.advance.mock.calls).toEqual([
-            [{ jobId: "refresh-job-1", expectedFencingToken: 11, step: "renew" }],
-        ])
-        expect(credentials.refreshDue.mock.calls).toEqual([[25_200_000]])
-    })
-
-    it("propagates a stale-token refusal before refreshing any credential", async () => {
-        const { step, claims, credentials } = await build()
+    it("stops on a stale token before any effect", async () => {
+        const { step, claims, service } = await build()
         const refusal = new Error("JOBS_FENCED_OUT")
         claims.advance.mockRejectedValue(refusal)
 
         await expect(step.run(claimed())).rejects.toBe(refusal)
 
-        expect(claims.advance.mock.calls).toEqual([
-            [{ jobId: "refresh-job-1", expectedFencingToken: 11, step: "renew" }],
-        ])
-        expect(credentials.refreshDue).not.toHaveBeenCalled()
+        expect(service.refreshFromJob).not.toHaveBeenCalled()
     })
 
-    it("propagates a refresh failure after recording the fenced step", async () => {
-        const { step, claims, credentials } = await build()
-        const failure = new Error("credentials unavailable")
-        credentials.refreshDue.mockRejectedValue(failure)
+    it("propagates a failure of the delegated work", async () => {
+        const { step, service } = await build()
+        const failure = new Error("unavailable")
+        service.refreshFromJob.mockRejectedValue(failure)
 
         await expect(step.run(claimed())).rejects.toBe(failure)
-
-        expect(claims.advance.mock.calls).toEqual([
-            [{ jobId: "refresh-job-1", expectedFencingToken: 11, step: "renew" }],
-        ])
-        expect(credentials.refreshDue.mock.calls).toEqual([[3_600_000]])
     })
 })

@@ -5,27 +5,30 @@ import type { WebhookProof } from "./webhook-proof.port"
 const proofOf = (provider: string): WebhookProof => ({ provider, prove: () => Promise.resolve(true) })
 
 describe("WebhookProofRegistryService", () => {
-    it("answers the proof registered for a provider and nothing for another", () => {
+    it("asks the proof registered for a provider with the request", async () => {
         const registry = new WebhookProofRegistryService()
-        const proof = proofOf("zalo")
+        const prove = jest.fn().mockResolvedValue(false)
+        registry.add({ provider: "zalo", prove })
+        const request = { scope: "c1", rawBody: undefined, signature: "mac", timestamp: undefined }
 
-        registry.add(proof)
+        await expect(registry.prove("zalo", request)).resolves.toBe(false)
 
-        expect(registry.get("zalo")).toBe(proof)
-        expect(registry.get("telegram")).toBeUndefined()
+        expect(prove.mock.calls).toEqual([[request]])
+    })
+
+    it("refuses a provider with no proof registered", async () => {
+        const registry = new WebhookProofRegistryService()
+
+        await expect(
+            registry.prove("telegram", { scope: "c1", rawBody: undefined, signature: undefined, timestamp: undefined }),
+        ).rejects.toMatchObject({ code: HttpSecurityErrorCode.WebhookProviderUnknown })
     })
 
     it("refuses a second proof for the same provider", () => {
         const registry = new WebhookProofRegistryService()
         registry.add(proofOf("zalo"))
 
-        let code: unknown
-        try {
-            registry.add(proofOf("zalo"))
-        } catch (error) {
-            code = error instanceof HttpSecurityError ? error.code : error
-        }
-
-        expect(code).toBe(HttpSecurityErrorCode.WebhookProviderUnknown)
+        expect(() => registry.add(proofOf("zalo"))).toThrow(HttpSecurityError)
+        expect(() => registry.add(proofOf("zalo"))).toThrow(expect.objectContaining({ code: HttpSecurityErrorCode.WebhookProviderUnknown }))
     })
 })

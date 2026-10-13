@@ -63,8 +63,8 @@ export class ChannelDeliveryService {
     }
 
     /** The customer's name on the channel, or an empty text when the channel will not say (only Zalo is asked). The name only labels the conversation. */
-    async customerName(target: ConversationTarget): Promise<string> {
-        if (target.channel !== "zalo" || target.externalId === null || target.connectionId === null) return ""
+    customerName(target: ConversationTarget): Promise<string> {
+        if (target.channel !== "zalo" || target.externalId === null || target.connectionId === null) return Promise.resolve("")
         const userId = customerIdOf(target.externalId)
         return this.credentials
             .accessToken(target.connectionId)

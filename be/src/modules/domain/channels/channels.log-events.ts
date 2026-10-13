@@ -10,4 +10,8 @@ export enum ChannelsLogEvent {
     ProofBodyUnreadable = "channels.proof.body-unreadable",
     /** A connection is failing or silent; the owner should look at it. */
     ConnectionUnhealthy = "channels.connection.unhealthy",
+    /** Zalo refused the returned authorization (or the state was wrong); the connection is marked failing. */
+    ZaloAuthorizationRefused = "channels.zalo.authorization-refused",
+    /** The first save of renewed Zalo tokens failed and is tried once more. */
+    ZaloSaveRetried = "channels.zalo.save-retried",
 }

@@ -7,8 +7,8 @@ describe("InboundEventsService", () => {
         const manager = mockEntityManager({ query: [INSERT_UNROUTED_EVENT, []] })
 
         await new InboundEventsService().keepUnrouted(
-            { workspaceId: "ws-1", channel: "telegram", sender: "Minh", body: "Hello", eventId: "tg:c-1:555:9" },
             manager,
+            { workspaceId: "ws-1", channel: "telegram", sender: "Minh", body: "Hello", eventId: "tg:c-1:555:9" },
         )
 
         expect(manager.query).toHaveBeenCalledWith(INSERT_UNROUTED_EVENT, [

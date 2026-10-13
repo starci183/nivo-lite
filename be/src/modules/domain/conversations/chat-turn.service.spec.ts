@@ -69,7 +69,7 @@ const build = async (setup: Setup = {}) => {
             : { kind: "ok", value: { id: "msg-1", role: "user", body: "Price?", deliveryStatus: null } },
     )
     messages.transcript.mockResolvedValue([{ role: "user", body: "Price?" }])
-    messages.storeReply.mockImplementation(async (_ws, _conv, body) => ({ id: "reply-1", body, sent: setup.sent === true }))
+    messages.storeReply.mockImplementation((_ws, _conv, body) => Promise.resolve({ id: "reply-1", body, sent: setup.sent === true }))
     messages.storeLine.mockResolvedValue(undefined)
     messages.replyExists.mockResolvedValue(setup.retry === true)
     const receipts = mock<ChannelReceiptsService>()

@@ -58,3 +58,30 @@ export interface RenderedEmail {
     /** The text part. */
     readonly text: string
 }
+
+/** The values a template placeholder is filled from; a missing or null value becomes empty. */
+export type TemplateVars = Readonly<Record<string, string | number | null | undefined>>
+
+/** What the shop layout wraps around an already rendered plain body. */
+export interface EmailLayoutInput {
+    /** The shop name shown in the header. */
+    readonly shopName: string
+    /** A #rrggbb accent colour; anything else falls back to the default. */
+    readonly accent?: string
+    /** The title line of the email. */
+    readonly title: string
+    /** The plain body: a blank line starts a paragraph, lines starting with "- " form a list. */
+    readonly body: string
+    /** The footer line. */
+    readonly footer: string
+    /** The language of the email (the html lang attribute). */
+    readonly lang: string
+}
+
+/** What the mail server reported for a send: the message id and the recipients it refused. */
+export interface AcceptedInfo {
+    /** The message id the server assigned. */
+    readonly messageId: string
+    /** The recipients the server refused. */
+    readonly rejected: ReadonlyArray<unknown>
+}

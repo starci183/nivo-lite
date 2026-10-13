@@ -13,6 +13,7 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
+import { isChatTurnPayload } from "@modules/queues/chat-turn"
 import type { ChatTurnPayload } from "@modules/queues/chat-turn"
 import { InjectChatTurnExtensions } from "./conversations.decorators"
 import type { ChatTurn, ChatTurnExtensions, ChatTurnProposal, TurnVerdict } from "./conversations.contracts"
@@ -49,6 +50,11 @@ export class ChatTurnService {
         private readonly receipts: ChannelReceiptsService,
         private readonly delivery: ChannelDeliveryService,
     ) {}
+
+    /** Runs the job payload a worker claimed; a payload that is not a chat turn is ignored. */
+    async runFromJob(payload: unknown): Promise<void> {
+        if (isChatTurnPayload(payload)) await this.run(payload)
+    }
 
     /** Runs one queued job: a turn to answer, or an already stored message to push to the customer. */
     async run(payload: ChatTurnPayload): Promise<void> {
@@ -91,9 +97,9 @@ export class ChatTurnService {
         return { ...turn, conversation: { ...turn.conversation, visitorName: name } }
     }
 
-    private async propose(turn: ChatTurn): Promise<ChatTurnProposal | string> {
+    private propose(turn: ChatTurn): Promise<ChatTurnProposal | string> {
         const runtime = this.extensions.runtime()
-        if (runtime === undefined) return UNAVAILABLE
+        if (runtime === undefined) return Promise.resolve(UNAVAILABLE)
         return runtime.propose(turn).catch((cause: unknown) => {
             this.logger.error(ConversationsLogEvent.RuntimeFailed, cause, { conversationId: turn.conversation.id })
             return UNAVAILABLE

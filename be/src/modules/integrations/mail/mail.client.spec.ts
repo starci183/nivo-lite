@@ -1,6 +1,4 @@
-import { lookup } from "node:dns/promises"
 import { Test } from "@nestjs/testing"
-import nodemailer from "nodemailer"
 import { Secret } from "@modules/platform/config"
 import { MailErrorCode } from "./errors/mail.error"
 import { MailClient } from "./mail.client"
@@ -8,11 +6,17 @@ import type { MailMessage, SmtpConfig } from "./mail.contracts"
 import { MAIL_OPTIONS } from "./mail.decorators"
 import type { MailOptions } from "./mail.options"
 
-jest.mock("node:dns/promises", () => ({ lookup: jest.fn() }))
-jest.mock("nodemailer", () => ({ __esModule: true, default: { createTransport: jest.fn() } }))
+const mockLookup = jest.fn()
+const mockCreateTransport = jest.fn()
 
-const lookupMock = jest.mocked(lookup)
-const createTransport = jest.mocked(nodemailer.createTransport)
+jest.mock("node:dns/promises", () => ({ lookup: (...args: ReadonlyArray<unknown>) => mockLookup(...args) }))
+jest.mock("nodemailer", () => ({
+    __esModule: true,
+    default: { createTransport: (...args: ReadonlyArray<unknown>) => mockCreateTransport(...args) },
+}))
+
+const lookupMock = mockLookup
+const createTransport = mockCreateTransport
 
 const PUBLIC: MailOptions = { allowPrivateHosts: false, platform: null, helloName: "nivo.test" }
 const DEV: MailOptions = { ...PUBLIC, allowPrivateHosts: true }
@@ -38,15 +42,17 @@ const build = async (options: MailOptions) => {
 }
 
 const transportAnswering = (answer: unknown) => {
-    const sendMail = typeof answer === "function" ? answer : jest.fn().mockResolvedValue(answer)
+    const sendMail = jest.fn((...args: ReadonlyArray<unknown>): unknown =>
+        typeof answer === "function" ? Reflect.apply(answer, undefined, args) : Promise.resolve(answer),
+    )
     const close = jest.fn()
-    createTransport.mockReturnValue({ sendMail, close } as unknown as ReturnType<typeof nodemailer.createTransport>)
-    return { sendMail: sendMail as jest.Mock, close }
+    createTransport.mockReturnValue({ sendMail, close })
+    return { sendMail, close }
 }
 
 beforeEach(() => {
     jest.resetAllMocks()
-    lookupMock.mockResolvedValue([{ address: "8.8.8.8", family: 4 }] as never)
+    lookupMock.mockResolvedValue([{ address: "8.8.8.8", family: 4 }])
 })
 
 describe("MailClient", () => {
@@ -97,12 +103,12 @@ describe("MailClient", () => {
 
         it("refuses a name that resolves to a private address, to nothing or not at all", async () => {
             const client = await build(PUBLIC)
-            lookupMock.mockResolvedValueOnce([{ address: "10.0.0.5", family: 4 }] as never)
+            lookupMock.mockResolvedValueOnce([{ address: "10.0.0.5", family: 4 }])
             await expect(client.assertSmtpTarget("intranet.example.com", 587)).rejects.toMatchObject({
                 code: MailErrorCode.Connect,
             })
 
-            lookupMock.mockResolvedValueOnce([] as never)
+            lookupMock.mockResolvedValueOnce([])
             await expect(client.assertSmtpTarget("empty.example.com", 587)).rejects.toMatchObject({
                 code: MailErrorCode.Connect,
             })

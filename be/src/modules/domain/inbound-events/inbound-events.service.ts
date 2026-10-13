@@ -6,8 +6,8 @@ import { INSERT_UNROUTED_EVENT } from "./persistence/inbound-events.sql"
 @Injectable()
 /** The inputs the workspace received, as the inbox page lists them; the only writer of inbound_events here. */
 export class InboundEventsService {
-    /** Keeps a message nobody is bound to answer visible in the inbox; the same event twice is one row. */
-    async keepUnrouted(message: UnroutedMessage, manager: EntityManager): Promise<void> {
+    /** Keeps a message nobody is bound to answer visible in the inbox; the same event twice is one row. It writes in the transaction of the caller that already claimed the delivery. */
+    async keepUnrouted(manager: EntityManager, message: UnroutedMessage): Promise<void> {
         await manager.query(INSERT_UNROUTED_EVENT, [
             message.workspaceId,
             message.channel,

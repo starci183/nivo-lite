@@ -144,13 +144,13 @@ isOneToOne: false
                   ]
                 },"agent_messages": {
                   Row: {
-                    "author_kind": string | null,"author_name": string | null,"body": string,"conversation_id": string,"created_at": string,"delivery_error": string | null,"delivery_status": string | null,"id": string,"role": string,"workspace_id": string
+                    "author_kind": string | null,"author_name": string | null,"body": string,"conversation_id": string,"created_at": string,"delivery_error": string | null,"delivery_status": string | null,"id": string,"in_reply_to": string | null,"role": string,"workspace_id": string
                   }
                   Insert: {
-                    "author_kind"?: string | null,"author_name"?: string | null,"body": string,"conversation_id": string,"created_at"?: string,"delivery_error"?: string | null,"delivery_status"?: string | null,"id"?: string,"role": string,"workspace_id": string
+                    "author_kind"?: string | null,"author_name"?: string | null,"body": string,"conversation_id": string,"created_at"?: string,"delivery_error"?: string | null,"delivery_status"?: string | null,"id"?: string,"in_reply_to"?: string | null,"role": string,"workspace_id": string
                   }
                   Update: {
-                    "author_kind"?: string | null,"author_name"?: string | null,"body"?: string,"conversation_id"?: string,"created_at"?: string,"delivery_error"?: string | null,"delivery_status"?: string | null,"id"?: string,"role"?: string,"workspace_id"?: string
+                    "author_kind"?: string | null,"author_name"?: string | null,"body"?: string,"conversation_id"?: string,"created_at"?: string,"delivery_error"?: string | null,"delivery_status"?: string | null,"id"?: string,"in_reply_to"?: string | null,"role"?: string,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -3297,6 +3297,17 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"telegram_inbox": {
+                  Row: {
+                    "delivery_id": string,"id": string,"payload": NonNullable<Json>,"processed_at": string | null,"provider": string,"received_at": string
+                  }
+                  Insert: {
+                    "delivery_id": string,"id"?: string,"payload": NonNullable<Json>,"processed_at"?: string | null,"provider": string,"received_at"?: string
+                  }
+                  Update: {
+                    "delivery_id"?: string,"id"?: string,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"provider"?: string,"received_at"?: string
+                  }
+                  Relationships: []
                 },"transactions": {
                   Row: {
                     "amount_vnd": number,"channel": string,"created_at": string,"id": string,"inbound_event_id": string | null,"invoice_id": string | null,"occurred_at": string,"origin": string,"payer": string | null,"reference": string | null,"status": string,"workspace_id": string
@@ -3564,6 +3575,17 @@ isOneToOne: false
       referencedColumns: ["code"]
     }
                   ]
+                },"zalo_inbox": {
+                  Row: {
+                    "delivery_id": string,"id": string,"payload": NonNullable<Json>,"processed_at": string | null,"provider": string,"received_at": string
+                  }
+                  Insert: {
+                    "delivery_id": string,"id"?: string,"payload": NonNullable<Json>,"processed_at"?: string | null,"provider": string,"received_at"?: string
+                  }
+                  Update: {
+                    "delivery_id"?: string,"id"?: string,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"provider"?: string,"received_at"?: string
+                  }
+                  Relationships: []
                 }
           }
           Views: {
