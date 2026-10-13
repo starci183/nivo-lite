@@ -1,13 +1,13 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationProposeOfficeCommandArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { ProposeOfficeCommandMutation, ProposeOfficeCommandMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `proposeOfficeCommand` mutation. */
-export type MutateProposeOfficeCommandRequest = MutationProposeOfficeCommandArgs["input"]
+export type MutateProposeOfficeCommandRequest = WireInput<ProposeOfficeCommandMutationVariables["input"]>
 
-type MutateProposeOfficeCommandResponse = Pick<Mutation, "proposeOfficeCommand">
+type MutateProposeOfficeCommandResponse = ProposeOfficeCommandMutation
 
 const mutation1: TypedDocumentNode<
     MutateProposeOfficeCommandResponse,

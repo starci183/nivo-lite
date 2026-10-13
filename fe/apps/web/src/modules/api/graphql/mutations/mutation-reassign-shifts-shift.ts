@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationReassignShiftsShiftArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { ReassignShiftsShiftMutation, ReassignShiftsShiftMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `reassignShiftsShift` mutation. */
-export type MutateReassignShiftsShiftRequest = MutationReassignShiftsShiftArgs["input"]
+export type MutateReassignShiftsShiftRequest = WireInput<ReassignShiftsShiftMutationVariables["input"]>
 
 /** The response of the `reassignShiftsShift` mutation. */
-type MutateReassignShiftsShiftResponse = Pick<Mutation, "reassignShiftsShift">
+type MutateReassignShiftsShiftResponse = ReassignShiftsShiftMutation
 
 const mutation1: TypedDocumentNode<
     MutateReassignShiftsShiftResponse,

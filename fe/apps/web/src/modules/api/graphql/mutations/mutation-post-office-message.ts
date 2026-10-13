@@ -1,13 +1,13 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationPostOfficeMessageArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { PostOfficeMessageMutation, PostOfficeMessageMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `postOfficeMessage` mutation. */
-export type MutatePostOfficeMessageRequest = MutationPostOfficeMessageArgs["input"]
+export type MutatePostOfficeMessageRequest = WireInput<PostOfficeMessageMutationVariables["input"]>
 
-type MutatePostOfficeMessageResponse = Pick<Mutation, "postOfficeMessage">
+type MutatePostOfficeMessageResponse = PostOfficeMessageMutation
 
 const mutation1: TypedDocumentNode<
     MutatePostOfficeMessageResponse,

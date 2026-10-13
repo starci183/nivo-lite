@@ -1,14 +1,17 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationRequestContentMonthPlanArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type {
+    RequestContentMonthPlanMutation,
+    RequestContentMonthPlanMutationVariables,
+} from "../__generated__/graphql"
 
 /** Generated input of the `requestContentMonthPlan` mutation. */
-type MutateRequestContentMonthPlanRequest = MutationRequestContentMonthPlanArgs["input"]
+type MutateRequestContentMonthPlanRequest = WireInput<RequestContentMonthPlanMutationVariables["input"]>
 
 /** Generated response of the `requestContentMonthPlan` mutation. */
-type MutateRequestContentMonthPlanResponse = Pick<Mutation, "requestContentMonthPlan">
+type MutateRequestContentMonthPlanResponse = RequestContentMonthPlanMutation
 
 type Document = TypedDocumentNode<
     MutateRequestContentMonthPlanResponse,
