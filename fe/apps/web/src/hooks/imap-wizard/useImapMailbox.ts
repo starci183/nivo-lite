@@ -1,5 +1,6 @@
 "use client"
 
+import { useMemo } from "react"
 import { useQueryLoadImapConnectionSwr } from "@/hooks/swr"
 import { securityOf } from "./imap-wizard.shared"
 import type { ImapMailbox } from "./imap-wizard.shared"
@@ -8,22 +9,25 @@ import type { ImapMailbox } from "./imap-wizard.shared"
 export const useImapMailbox = (resumeId: string | undefined) => {
     const saved = useQueryLoadImapConnectionSwr(resumeId)
     const data = saved.data
-    const view: ImapMailbox | undefined =
-        data === undefined
-            ? undefined
-            : {
-                  id: data.id,
-                  name: data.name,
-                  email: data.email,
-                  host: data.host,
-                  port: data.port,
-                  security: securityOf(data.security),
-                  user: data.user,
-                  folders: data.folders,
-                  sinceDays: data.sinceDays,
-                  syncEveryMinutes: data.syncEveryMinutes ?? null,
-                  agentIds: data.agentIds,
-              }
+    const view = useMemo<ImapMailbox | undefined>(
+        () =>
+            data === undefined
+                ? undefined
+                : {
+                      id: data.id,
+                      name: data.name,
+                      email: data.email,
+                      host: data.host,
+                      port: data.port,
+                      security: securityOf(data.security),
+                      user: data.user,
+                      folders: data.folders,
+                      sinceDays: data.sinceDays,
+                      syncEveryMinutes: data.syncEveryMinutes ?? null,
+                      agentIds: data.agentIds,
+                  },
+        [data],
+    )
     return {
         loading: resumeId !== undefined && saved.isLoading,
         view,

@@ -1,9 +1,14 @@
+import type { ReactNode } from "react"
 import { Drawer } from "@starci/grammar/common"
-import { DataWizard } from "@/features/connections/wizard/data"
+import { CsvImportWizard } from "@/components/blocks/CsvImportWizard"
+import { DatabaseWizard } from "@/components/blocks/DatabaseWizard"
 import { GoogleWizard } from "@/components/blocks/GoogleWizard"
+import { ImapWizard } from "@/components/blocks/ImapWizard"
 import { MetaWizard } from "@/components/blocks/MetaWizard"
 import { MoneyWizard } from "@/components/blocks/MoneyWizard"
+import { OpenApiWizard } from "@/components/blocks/OpenApiWizard"
 import { SmtpWizard } from "@/components/blocks/SmtpWizard"
+import { TelegramUserWizard } from "@/components/blocks/TelegramUserWizard"
 import { TelegramWizard } from "@/components/blocks/TelegramWizard"
 import { WebhookWizard } from "@/components/blocks/WebhookWizard"
 import { ZaloWizard } from "@/components/blocks/ZaloWizard"
@@ -39,6 +44,40 @@ export interface ConnectionWizardOverlayBaseProps {
         /** `changed` is true when something may have been saved, so the page refreshes. */
         readonly close: (changed: boolean) => void
     }
+}
+
+/** What every data-connector wizard takes. */
+interface DataWizardProps {
+    readonly agents: ReadonlyArray<AgentOption>
+    readonly resumeId?: string
+    readonly onClose: (changed: boolean) => void
+}
+
+/** The data-connector wizard of each data provider. */
+const DATA_WIZARDS: Readonly<Partial<Record<Provider, (props: DataWizardProps) => ReactNode>>> = {
+    openapi: OpenApiWizard,
+    database: DatabaseWizard,
+    csv_import: CsvImportWizard,
+    imap: ImapWizard,
+    telegram_user: TelegramUserWizard,
+}
+
+/** What the data wizard switch takes: the wizard props and the data provider to set up. */
+interface DataWizardSwitchProps extends DataWizardProps {
+    readonly provider: Provider
+}
+
+/** The wizard of one data provider, or nothing for a provider without one. */
+const DataWizard = (props: DataWizardSwitchProps) => {
+    const Wizard = DATA_WIZARDS[props.provider]
+    if (Wizard === undefined) return null
+    return (
+        <Wizard
+            agents={props.agents}
+            onClose={props.onClose}
+            {...(props.resumeId === undefined ? {} : { resumeId: props.resumeId })}
+        />
+    )
 }
 
 /** The wizard drawer of every provider: one Drawer, one wizard chosen by the provider's kind. */

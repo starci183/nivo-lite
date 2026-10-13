@@ -31,9 +31,9 @@ export interface DatabaseCommands {
 
 /** The database wizard's test, preview and save bound to the toast helper. */
 export const useDatabaseCommands = (): DatabaseCommands => {
+    const { trigger: triggerSave } = useMutateSaveDatabaseConnectionSwr()
     const settle = useSettledGraphQL()
     const refresh = useConnectionsRefresh()
-    const { trigger: triggerSave } = useMutateSaveDatabaseConnectionSwr()
     return useMemo(
         () => ({
             test: (connectionId, target) =>

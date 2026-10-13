@@ -1,5 +1,2 @@
 export { MAX_CHATS } from "./telegram-user-wizard.shared"
-export type { ChatChoice, PickedChat, TelegramInitial } from "./telegram-user-wizard.shared"
-export { useTelegramUserBoot } from "./useTelegramUserBoot"
 export { useTelegramUserWizard } from "./useTelegramUserWizard"
-export type { TelegramUserWizardState } from "./useTelegramUserWizard"

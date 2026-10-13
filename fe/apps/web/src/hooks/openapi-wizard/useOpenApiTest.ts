@@ -1,72 +1,76 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import type { useOpenApiAuthForm } from "@/hooks/rhf"
 import type { OpenApiTestType } from "@/modules/api"
-import { isOpenApiPullable, openApiAuthOf } from "./openapi-wizard.shared"
+import type { QueryTestOpenApiOperationRequest } from "@/modules/api/graphql/queries/query-test-open-api-operation"
+import { isOpenApiPullable } from "./openapi-wizard.shared"
 import type { OpenApiOp, OpenApiPullDef } from "./openapi-wizard.shared"
 import type { OpenApiCommands } from "./useOpenApiCommands"
 
-/** What the test step of the OpenAPI wizard reads from the wizard. */
+/** What the test step reads of the wizard around it. */
 interface OpenApiTestInput {
-    readonly commands: OpenApiCommands
-    readonly authForm: ReturnType<typeof useOpenApiAuthForm>
-    readonly connectionId: string | null
     readonly ops: ReadonlyArray<OpenApiOp>
     readonly pulls: ReadonlyArray<OpenApiPullDef>
-    /** Stores the pull of one operation (the test fills in the paths it found). */
+    readonly commands: OpenApiCommands
+    /** The saved connection, so the back end can use its stored secret. */
+    readonly connectionId: string | null
+    /** The typed address and sign-in, read when the test runs. */
+    readonly target: () => Pick<QueryTestOpenApiOperationRequest, "baseUrl" | "auth">
     readonly onPull: (op: OpenApiOp, pull: OpenApiPullDef | null) => void
-    readonly onError: (message: string | null) => void
+    /** Shows (or with null clears) the failure line. */
+    readonly fail: (message: string | null) => void
 }
 
-/** The test step of the OpenAPI wizard: which operation is tried, its query, and the answer of the last try. */
-export const useOpenApiTest = ({ commands, authForm, connectionId, ops, pulls, onPull, onError }: OpenApiTestInput) => {
+/** The test step of the OpenAPI wizard: one GET called with the typed settings; a found list fills the empty mapping fields. */
+export const useOpenApiTest = (input: OpenApiTestInput) => {
+    const { ops, pulls, commands, onPull, fail } = input
     const [testOpId, setTestOpId] = useState<string | null>(null)
     const [testQuery, setTestQuery] = useState("")
     const [testing, setTesting] = useState(false)
     const [result, setResult] = useState<OpenApiTestType | null>(null)
-
     const testable = useMemo(() => ops.filter(isOpenApiPullable), [ops])
     const activeTestId = testOpId ?? pulls[0]?.opId ?? testable[0]?.id ?? null
-    const testOp = testable.find((o) => o.id === activeTestId) ?? null
-    const testPull = pulls.find((p) => p.opId === activeTestId)
+    const testOp = testable.find((op) => op.id === activeTestId) ?? null
+    const testPull = pulls.find((pull) => pull.opId === activeTestId)
 
     const runTest = async () => {
-        if (!testOp) return
+        if (testOp === null) return
         setTesting(true)
         setResult(null)
-        const values = authForm.getValues()
         const answer = await commands.test({
-            connectionId,
-            baseUrl: values.baseUrl,
-            auth: openApiAuthOf(values),
+            ...input.target(),
+            connectionId: input.connectionId,
             op: testOp,
-            fixedQuery: testPull ? testPull.fixedQuery : testQuery,
+            fixedQuery: testPull === undefined ? testQuery : testPull.fixedQuery,
             itemsPath: testPull?.itemsPath ?? "",
         })
         setTesting(false)
-        if (answer.kind !== "ok") return onError(answer.message)
-        onError(null)
+        if (answer.kind !== "ok") return fail(answer.message)
+        fail(null)
         setResult(answer.value)
         const found = answer.value
-        if (testPull && found.itemCount > 0) {
-            onPull(testOp, {
-                ...testPull,
-                itemsPath: testPull.itemsPath || found.itemsPath,
-                idField: testPull.idField || found.idField,
-                titleField: testPull.titleField || found.titleField,
-            })
-        }
+        if (testPull === undefined || found.itemCount <= 0) return
+        onPull(testOp, {
+            ...testPull,
+            itemsPath: testPull.itemsPath || found.itemsPath,
+            idField: testPull.idField || found.idField,
+            titleField: testPull.titleField || found.titleField,
+        })
     }
 
     return {
+        testable,
+        activeTestId,
+        testOp,
+        testPull,
+        testQuery,
         testing,
-        test: { testable, activeTestId, testOp, testPull, testQuery, result },
-        runTest,
+        result,
         setTestQuery,
-        setTestOpId: (id: string | null) => {
+        pickOp: (id: string | null) => {
             setTestOpId(id)
             setResult(null)
         },
+        runTest: () => void runTest(),
     }
 }

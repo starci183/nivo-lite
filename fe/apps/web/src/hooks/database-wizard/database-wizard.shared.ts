@@ -1,5 +1,5 @@
 import { z } from "zod"
-import type { DbEngine, DbEntity, DbSavedConnection, DbTableInfo, DbTableMapping } from "@/modules/types"
+import type { DbEngine, DbEntity, DbPreviewRows, DbSavedConnection, DbTableInfo, DbTableMapping } from "@/modules/types"
 import { DB_ENGINES } from "@/modules/utils"
 
 /** A table named by its schema and either of the two spellings of its name. */
@@ -26,6 +26,9 @@ interface DbSavedWire {
     readonly agentIds: ReadonlyArray<string>
 }
 
+/** The steps of the database wizard, in order. */
+export const DB_STEPS = ["connect", "tables", "schedule", "agent"] as const
+
 /** The entities a table can become. */
 export const DB_ENTITIES: ReadonlyArray<DbEntity> = ["customer", "order", "product", "transaction", "other"]
 
@@ -36,7 +39,10 @@ export const DB_MAX_COLUMNS = 30
 export const DB_MAX_ROWS = 5000
 
 /** The sync periods the wizard offers; `minutes` null is manual only. */
-export const DB_SCHEDULES: ReadonlyArray<{ readonly key: string; readonly minutes: number | null }> = [
+export const DB_SCHEDULES: ReadonlyArray<{
+    readonly key: "manual" | "15" | "60" | "360" | "1440"
+    readonly minutes: number | null
+}> = [
     { key: "manual", minutes: null },
     { key: "15", minutes: 15 },
     { key: "60", minutes: 60 },
@@ -100,3 +106,26 @@ export const dbDefaultMapping = (table: DbTableInfo): DbTableMapping => ({
     updatedColumn: guessColumn(table, ["updated_at", "updatedat", "modified_at", "last_modified", "updated"]),
     columns: table.columns.slice(0, DB_MAX_COLUMNS).map((column) => column.name),
 })
+
+/** The select value that stands for "no column" in the optional column pickers. */
+export const DB_NO_COLUMN = "__none"
+
+/** The entity named by a select value; anything unknown is `other`. */
+export const dbEntityOf = (value: string | null): DbEntity => DB_ENTITIES.find((entity) => entity === value) ?? "other"
+
+/** An optional column picked in a select: the column name, or "" for none. */
+export const dbOptionalColumnOf = (value: string | null): string => (!value || value === DB_NO_COLUMN ? "" : value)
+
+/** The columns of a table as select options: the name and its type. */
+export const dbColumnOptions = (table: DbTableInfo): ReadonlyArray<{ readonly id: string; readonly label: string }> =>
+    table.columns.map((column) => ({ id: column.name, label: `${column.name} (${column.type})` }))
+
+/** The preview rows as lines: each cell named by its column, with a stable id per row position. */
+export const dbPreviewLines = (preview: DbPreviewRows): ReadonlyArray<{ readonly id: string; readonly text: string }> =>
+    preview.rows.map((row, position) => ({
+        id: `row-${position}`,
+        text: preview.columns.map((column, cell) => `${column}: ${row[cell] ?? ""}`).join(" · "),
+    }))
+
+/** Only digits, at most 5: what the port field keeps of what is typed. */
+export const dbPortOf = (value: string): string => value.replace(/\D/g, "").slice(0, 5)

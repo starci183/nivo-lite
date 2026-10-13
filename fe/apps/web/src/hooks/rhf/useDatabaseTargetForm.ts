@@ -5,13 +5,12 @@ import { useTranslations } from "next-intl"
 import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { DB_DEFAULT_PORT, DB_ENGINES } from "@/modules/utils"
-import type { DbSavedConnection } from "@/modules/types"
+import type { DbEngine, DbSavedConnection } from "@/modules/types"
 
 /** The values of the database connect form; the port is text while it is typed. */
 export interface DatabaseTargetValues {
     name: string
-    engine: (typeof DB_ENGINES)[number]
+    engine: DbEngine
     host: string
     port: string
     database: string
@@ -22,9 +21,14 @@ export interface DatabaseTargetValues {
 
 /**
  * The database connect form (name, engine, host, port, database, user, password, SSL). The password may stay empty only when
- * the connection already has one stored (`passwordSaved`).
+ * the connection already has one stored (`passwordSaved`). A new connection starts on PostgreSQL at `postgresPort`; a saved one
+ * (`saved`, possibly read after the first render) fills the form when it arrives.
  */
-export const useDatabaseTargetForm = (passwordSaved: boolean, saved: DbSavedConnection | null) => {
+export const useDatabaseTargetForm = (
+    passwordSaved: boolean,
+    saved: DbSavedConnection | null,
+    postgresPort: number,
+) => {
     const t = useTranslations("connectorDatabase")
     const schema = useMemo(
         () =>
@@ -43,20 +47,11 @@ export const useDatabaseTargetForm = (passwordSaved: boolean, saved: DbSavedConn
             }),
         [t, passwordSaved],
     )
-    return useForm<DatabaseTargetValues>({
-        resolver: zodResolver(schema),
-        defaultValues:
+    // A saved connection read after the first render replaces the blank form once (the password is never sent back).
+    const loaded = useMemo<DatabaseTargetValues | undefined>(
+        () =>
             saved === null
-                ? {
-                      name: "",
-                      engine: "postgres",
-                      host: "",
-                      port: String(DB_DEFAULT_PORT.postgres),
-                      database: "",
-                      user: "",
-                      password: "",
-                      ssl: true,
-                  }
+                ? undefined
                 : {
                       name: saved.name,
                       engine: saved.target.engine,
@@ -67,6 +62,21 @@ export const useDatabaseTargetForm = (passwordSaved: boolean, saved: DbSavedConn
                       password: "",
                       ssl: saved.target.ssl,
                   },
+        [saved],
+    )
+    return useForm<DatabaseTargetValues>({
+        resolver: zodResolver(schema),
+        defaultValues: {
+            name: "",
+            engine: "postgres",
+            host: "",
+            port: String(postgresPort),
+            database: "",
+            user: "",
+            password: "",
+            ssl: true,
+        },
+        values: loaded,
         mode: "onChange",
     })
 }

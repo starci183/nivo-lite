@@ -19,6 +19,29 @@ export const TABLE_ENTITIES: ReadonlyArray<Exclude<CsvEntity, "document">> = [
 /** Where the rows come from: an uploaded .csv/.xlsx, a Google Sheets link, rows typed or pasted, or documents. */
 export type CsvSource = "file" | "sheet" | "manual" | "document"
 
+/** The sources an import can read, in the order they are offered. */
+export const CSV_SOURCES: ReadonlyArray<CsvSource> = ["file", "sheet", "manual", "document"]
+
+/** The steps of the import wizard. */
+export type CsvStep = "source" | "data" | "docs" | "map" | "import" | "agent"
+/** The steps of a table import, in order. */
+export const TABLE_STEPS: ReadonlyArray<CsvStep> = ["source", "data", "map", "import", "agent"]
+/** The steps of a documents import, in order. */
+export const DOC_STEPS: ReadonlyArray<CsvStep> = ["source", "docs", "import", "agent"]
+
+/** The rows typed or pasted into the wizard: columns with stable ids, rows with stable ids and one cell per column. */
+export interface Grid {
+    readonly columns: ReadonlyArray<{ readonly id: string; readonly name: string }>
+    readonly rows: ReadonlyArray<{ readonly id: string; readonly cells: ReadonlyArray<string> }>
+}
+
+/** The most rows the typed grid holds; a file is used beyond it. */
+export const MAX_GRID_ROWS = 1000
+
+/** A kind of table rows from a select value; customers when unknown. */
+export const tableEntityOf = (value: string): Exclude<CsvEntity, "document"> =>
+    TABLE_ENTITIES.find((entity) => entity === value) ?? "customer"
+
 /** How a column is read: `phone` keeps digits as text, `number` adds a parsed number, `date` adds a parsed date. */
 export type ColumnKind = "text" | "phone" | "email" | "number" | "date"
 
@@ -82,7 +105,6 @@ export interface CsvSavedImport {
 
 const KINDS: ReadonlyArray<string> = ["text", "phone", "email", "number", "date"]
 const ENTITIES: ReadonlyArray<string> = [...TABLE_ENTITIES, "document"]
-const SOURCES: ReadonlyArray<string> = ["file", "sheet", "manual", "document"]
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null && !Array.isArray(value)
@@ -118,13 +140,13 @@ const entityOf = (value: unknown): CsvEntity => {
 /** Narrows the saved `DataJson` config; null when it is not a config. */
 export const parseConfig = (value: unknown): CsvConfig | null => {
     if (!isRecord(value) || !ENTITIES.includes(String(value.entity))) return null
-    const source = SOURCES.find((candidate) => candidate === value.source)
+    const source = CSV_SOURCES.find((candidate) => candidate === value.source)
     if (source === undefined) return null
     const sheet = typeof value.sheet === "string" ? value.sheet : undefined
     const link = typeof value.link === "string" ? value.link : undefined
     return {
         ...parseMapping(value),
-        source: source === "file" || source === "sheet" || source === "document" ? source : "manual",
+        source,
         entity: entityOf(value.entity),
         ...(sheet === undefined ? {} : { sheet }),
         ...(link === undefined ? {} : { link }),

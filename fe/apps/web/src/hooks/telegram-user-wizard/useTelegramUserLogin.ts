@@ -8,8 +8,6 @@ import type { TelegramUserCommands } from "./useTelegramUserCommands"
 
 /** What the login steps need from the wizard around them. */
 interface TelegramLoginInput {
-    /** The login screen the wizard opens on. */
-    readonly stage: LoginStage
     /** The connection being resumed, if any. */
     readonly resumeId: string | undefined
     readonly forms: ReturnType<typeof useTelegramUserForm>
@@ -23,10 +21,10 @@ interface TelegramLoginInput {
     readonly onCancelled: () => void
 }
 
-/** The phone, code and two-step password steps of the personal Telegram login. */
+/** The phone, code and two-step password steps of the personal Telegram login; `setStage` resumes a login on the server. */
 export const useTelegramUserLogin = (input: TelegramLoginInput) => {
     const { forms, commands, run, fail, onLoggedIn, onCancelled } = input
-    const [stage, setStage] = useState<LoginStage>(input.stage)
+    const [stage, setStage] = useState<LoginStage>("phone")
     const [connId, setConnId] = useState<string | null>(input.resumeId ?? null)
     const [sentVia, setSentVia] = useState<SentVia | null>(null)
 
@@ -82,5 +80,5 @@ export const useTelegramUserLogin = (input: TelegramLoginInput) => {
             onCancelled()
         })
 
-    return { stage, connId, sentVia, sendCode, confirmCode, confirmPassword, resend, cancel }
+    return { stage, connId, sentVia, setStage, sendCode, confirmCode, confirmPassword, resend, cancel }
 }
