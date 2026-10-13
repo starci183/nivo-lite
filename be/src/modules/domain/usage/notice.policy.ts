@@ -5,9 +5,13 @@ const format = (value: number): string => new Intl.NumberFormat("vi-VN").format(
 /** The use of this month in one line: credits, top-up credits left, messages and tokens, each only when it applies. */
 const useLine = (status: QuotaStatus): string =>
     [
-        status.creditsLimit === null ? null : `${format(Math.round(status.creditsUsed))}/${format(status.creditsLimit)} credit`,
+        status.creditsLimit === null
+            ? null
+            : `${format(Math.round(status.creditsUsed))}/${format(status.creditsLimit)} credit`,
         status.topupBalance > 0 ? `${format(status.topupBalance)} credit n\u1ea1p th\u00eam c\u00f2n l\u1ea1i` : null,
-        status.messagesLimit === null ? null : `${format(status.messagesUsed)}/${format(status.messagesLimit)} tin nh\u1eafn`,
+        status.messagesLimit === null
+            ? null
+            : `${format(status.messagesUsed)}/${format(status.messagesLimit)} tin nh\u1eafn`,
         status.tokensLimit === null ? null : `${format(status.tokensUsed)}/${format(status.tokensLimit)} token`,
     ]
         .filter((part): part is string => part !== null)

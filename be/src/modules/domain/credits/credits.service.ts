@@ -75,7 +75,8 @@ export class CreditsService {
         await this.billing.requireManager(userId, params.workspaceId)
         const current = await this.requireActivePlan(params.workspaceId, ["active"])
         const target = await this.billing.findPlan(params.planCode)
-        if (target === null || current.isCustom || target.isCustom) throw new CreditsError({ code: CreditsErrorCode.NotUpgrade })
+        if (target === null || current.isCustom || target.isCustom)
+            throw new CreditsError({ code: CreditsErrorCode.NotUpgrade })
         if (target.sort <= current.sort || target.priceVnd <= current.priceVnd) {
             throw new CreditsError({ code: CreditsErrorCode.NotUpgrade })
         }

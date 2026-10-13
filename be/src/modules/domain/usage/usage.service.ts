@@ -1,5 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { BillingService } from "@modules/domain/billing"
+import { InjectClock } from "@modules/platform/clock"
+import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -24,6 +27,8 @@ export class UsageService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectLogger() private readonly logger: Logger,
+        @InjectClock() private readonly clock: Clock,
+        private readonly billing: BillingService,
     ) {}
 
     /**
@@ -76,9 +81,18 @@ export class UsageService {
     /** This month's figures for the billing card; the caller has proven the workspace role. */
     async summary(workspaceId: string): Promise<UsageSummary> {
         const status = await this.quotaStatus(workspaceId)
-        const from = status === null ? new Date().toISOString().slice(0, 8) + "01" : status.periodStart
-        const rows = await this.entityManager.query<Array<DailyModuleRow>>(SELECT_DAILY_MODULE_USAGE, [workspaceId, from])
+        const from = status === null ? this.clock.now().toISOString().slice(0, 8) + "01" : status.periodStart
+        const rows = await this.entityManager.query<Array<DailyModuleRow>>(SELECT_DAILY_MODULE_USAGE, [
+            workspaceId,
+            from,
+        ])
         return toUsageSummary(status, rows)
+    }
+
+    /** The same figures for an owner or manager of the workspace; refuses anyone else. */
+    async summaryForManager(userId: string, workspaceId: string): Promise<UsageSummary> {
+        await this.billing.requireManager(userId, workspaceId)
+        return this.summary(workspaceId)
     }
 
     /** The model cost in USD of a workspace from a day on (YYYY-MM-DD), the guide left out. */

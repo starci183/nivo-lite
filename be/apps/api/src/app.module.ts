@@ -2,6 +2,9 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
 import { AdminHttpModule } from "@features/api/admin"
+import { BillingHttpModule } from "@features/api/billing"
+import { CreditsHttpModule } from "@features/api/credits"
+import { UsageHttpModule } from "@features/api/usage"
 import { ModulesHttpModule } from "@features/api/modules"
 import { ExternalApiHttpModule } from "@features/api/external-api"
 import { SystemHealthHttpModule } from "@features/api/system-health"
@@ -22,6 +25,8 @@ import {
     PAYMENT_ORDERS_MESSAGES,
     PaymentOrdersModule,
 } from "@modules/domain/payment-orders"
+import { CREDITS_ERROR_KINDS, CREDITS_MESSAGES, CreditsModule } from "@modules/domain/credits"
+import { UsageModule } from "@modules/domain/usage"
 import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
 import { WorkspacesHttpModule } from "@features/api/workspaces"
 import { AuthGuard, IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } from "@modules/domain/identity"
@@ -95,6 +100,7 @@ export class AppModule {
                     bundles: [
                         API_KEYS_MESSAGES,
                         BILLING_MESSAGES,
+                        CREDITS_MESSAGES,
                         INBOUND_EVENTS_MESSAGES,
                         PAYMENT_ORDERS_MESSAGES,
                         ERRORS_MESSAGES,
@@ -115,6 +121,7 @@ export class AppModule {
                     kinds: [
                         API_KEYS_ERROR_KINDS,
                         BILLING_ERROR_KINDS,
+                        CREDITS_ERROR_KINDS,
                         INBOUND_EVENTS_ERROR_KINDS,
                         PAYMENT_ORDERS_ERROR_KINDS,
                         CONFIG_ERROR_KINDS,
@@ -174,6 +181,11 @@ export class AppModule {
                 InboundEventsModule.register({ isGlobal: true }),
                 BillingModule.register({ isGlobal: true, ...options.billing }),
                 SepayTransactionsModule.register({ isGlobal: true }),
+                UsageModule.register({ isGlobal: true }),
+                CreditsModule.register({ isGlobal: true }),
+                BillingHttpModule,
+                CreditsHttpModule,
+                UsageHttpModule,
                 ReconcileBankCreditQueueModule,
                 CassoHttpModule,
                 PayosHttpModule,
