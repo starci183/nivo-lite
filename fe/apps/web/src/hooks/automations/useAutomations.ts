@@ -3,9 +3,12 @@
 import { useTranslations } from "next-intl"
 import { useCallback, useState } from "react"
 import { mutate } from "swr"
-import { QUERY_AUTOMATIONS_SWR_KEY, useQueryAutomationsSwr } from "@/hooks/swr/api/graphql/queries/useQueryAutomationsSwr"
-import { useMutateUpdateAutomationPipelineSwr } from "@/hooks/swr/api/graphql/mutations/useMutateUpdateAutomationPipelineSwr"
-import { useQueryAutomationGoogleAccountsSwr } from "@/hooks/swr/api/graphql/queries/useQueryAutomationGoogleAccountsSwr"
+import {
+    QUERY_AUTOMATIONS_SWR_KEY,
+    useQueryAutomationsSwr,
+    useMutateUpdateAutomationPipelineSwr,
+    useQueryAutomationGoogleAccountsSwr,
+} from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import type { AutomationsOverviewView } from "@/modules/automations"
 import type { AutomationPatch, AutomationsData } from "./automations.shared"

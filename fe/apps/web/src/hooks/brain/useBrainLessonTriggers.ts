@@ -1,6 +1,4 @@
-import { useMutateDecideBrainLessonSwr } from "@/hooks/swr/api/graphql/mutations/useMutateDecideBrainLessonSwr"
-import { useMutateMaintainBrainSwr } from "@/hooks/swr/api/graphql/mutations/useMutateMaintainBrainSwr"
-import { useMutateSaveBrainLessonSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSaveBrainLessonSwr"
+import { useMutateDecideBrainLessonSwr, useMutateMaintainBrainSwr, useMutateSaveBrainLessonSwr } from "@/hooks/swr"
 import type { MutateDecideBrainLessonRequest } from "@/modules/api/graphql/mutations/mutation-decide-brain-lesson"
 import type { MutateSaveBrainLessonRequest } from "@/modules/api/graphql/mutations/mutation-save-brain-lesson"
 

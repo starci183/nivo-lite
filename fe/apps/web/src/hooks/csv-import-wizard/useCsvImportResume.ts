@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { useQueryLoadCsvImportSwr } from "@/hooks/swr/api/graphql/queries/useQueryLoadCsvImportSwr"
+import { useQueryLoadCsvImportSwr } from "@/hooks/swr"
 import { parseConfig } from "./csv-import-wizard.shared"
 import type { CsvSavedImport } from "./csv-import-wizard.shared"
 
@@ -20,7 +20,8 @@ export const useCsvImportResume = (resumeId: string | undefined): CsvImportResum
         if (error instanceof Error) return { saved: null, isLoading: false, error: error.message }
         if (data === undefined) return { saved: null, isLoading, error: undefined }
         const config = parseConfig(data.config)
-        if (config === null) return { saved: null, isLoading: false, error: "loadCsvImport answered an unreadable config" }
+        if (config === null)
+            return { saved: null, isLoading: false, error: "loadCsvImport answered an unreadable config" }
         return {
             saved: {
                 name: data.name,

@@ -3,8 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useCallback, useState } from "react"
 import { useSettledGraphQL } from "@/hooks/connection-wizard"
-import { useMutateRequestDataSyncSwr } from "@/hooks/swr/api/graphql/mutations/useMutateRequestDataSyncSwr"
-import { useQueryDataSyncRunSwr } from "@/hooks/swr/api/graphql/queries/useQueryDataSyncRunSwr"
+import { useMutateRequestDataSyncSwr, useQueryDataSyncRunSwr } from "@/hooks/swr"
 import type { RowNote } from "@/modules/types"
 import { useConnectionsRefresh } from "./useConnectionsRefresh"
 

@@ -1,8 +1,8 @@
 "use client"
 
 import { useCallback } from "react"
-import { useMutateReturnZaloAuthorizationSwr } from "@/hooks/swr/api/graphql/mutations/useMutateReturnZaloAuthorizationSwr"
-import { isRefusedByBackend } from "@/modules/api/graphql/refusal"
+import { useMutateReturnZaloAuthorizationSwr } from "@/hooks/swr"
+import { isRefusedByBackend } from "@/modules/api"
 
 /** What Zalo sends the browser back with after the owner granted the OA permissions. */
 export interface ZaloReturnInput {

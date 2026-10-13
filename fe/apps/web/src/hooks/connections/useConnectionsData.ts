@@ -2,8 +2,7 @@
 
 import { useMemo } from "react"
 import { agentOptionOf, connectionsOf } from "@/hooks/connection-wire"
-import { useQueryConnectionAgentsSwr } from "@/hooks/swr/api/graphql/queries/useQueryConnectionAgentsSwr"
-import { useQueryConnectionsSwr } from "@/hooks/swr/api/graphql/queries/useQueryConnectionsSwr"
+import { useQueryConnectionAgentsSwr, useQueryConnectionsSwr } from "@/hooks/swr"
 
 /** The connections of the workspace and its agents, read from the back end GraphQL API through SWR and mapped for the console. */
 export const useConnectionsData = () => {

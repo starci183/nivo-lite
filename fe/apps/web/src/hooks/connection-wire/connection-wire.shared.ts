@@ -12,7 +12,7 @@ import type {
     WebhookViewType,
     WizardConnectionType,
     ZaloWizardConnectionType,
-} from "@/modules/api/graphql/__generated__/schema"
+} from "@/modules/api"
 import type {
     Access,
     AgentOption,
@@ -33,9 +33,7 @@ import type {
 
 const statusOf = (value: string): ConnectionStatus =>
     value === "pending" || value === "error" || value === "disconnected" ? value : "connected"
-
 const environmentOf = (value: string): Environment => (value === "test" ? "test" : "live")
-
 const accessOf = (value: string): Access => (value === "read" || value === "ask" ? value : "auto")
 
 const metaOf = (value: unknown): Readonly<Record<string, string>> => {

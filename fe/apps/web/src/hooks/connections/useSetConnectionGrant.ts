@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl"
 import { useCallback } from "react"
 import { useSettledGraphQL } from "@/hooks/connection-wizard"
 import type { Settled } from "@/hooks/connection-wizard"
-import { useMutateSetConnectionGrantSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSetConnectionGrantSwr"
+import { useMutateSetConnectionGrantSwr } from "@/hooks/swr"
 import type { Access } from "@/modules/types"
 import { useConnectionsRefresh } from "./useConnectionsRefresh"
 
