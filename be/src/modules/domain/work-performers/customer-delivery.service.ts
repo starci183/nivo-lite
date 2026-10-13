@@ -80,4 +80,32 @@ export class CustomerDeliveryService {
         if (target.kind !== "ok" || target.value.channel === WEBSITE_CHANNEL) return false
         return (await this.channels.deliver({ conversationId, messageId, text })).delivered
     }
+
+    /** Stores the approved answer once with the deciding member's name and records its real delivery outcome. */
+    async approvedInConversation(
+        workspaceId: string,
+        conversationId: string,
+        text: string,
+        memberName: string,
+        workItemId: string,
+    ): Promise<boolean> {
+        const target = await this.conversations.targetOf(conversationId)
+        if (target.kind !== "ok" || target.value.workspaceId !== workspaceId) return false
+        const messageId = await this.messages.storeHumanMessage(
+            workspaceId,
+            conversationId,
+            text,
+            memberName,
+            undefined,
+            workItemId,
+        )
+        const message = await this.messages.find(messageId, conversationId)
+        if (message.kind === "ok" && message.value.deliveryStatus === "sent")
+            return target.value.channel !== WEBSITE_CHANNEL
+        if (target.value.channel === WEBSITE_CHANNEL) {
+            await this.messages.markDelivery(messageId, true)
+            return false
+        }
+        return (await this.channels.deliver({ conversationId, messageId, text })).delivered
+    }
 }

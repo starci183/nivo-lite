@@ -35,6 +35,13 @@ import { LeadsHttpModule } from "@features/api/leads"
 import { AdminGraphqlModule, AdminHttpModule } from "@features/api/admin"
 import { ModulesGraphqlModule, ModulesHttpModule } from "@features/api/modules"
 import { OfficeGraphqlModule, OfficeHttpModule } from "@features/api/office"
+import { PromoGraphqlModule } from "@features/api/promo"
+import { LeadGenGraphqlModule } from "@features/api/leadgen"
+import { ChatbotGraphqlModule } from "@features/api/chatbot"
+import { ChatReplyGraphqlModule } from "@features/api/chatreply"
+import { PromoModule } from "@modules/domain/promo"
+import { ChatbotWorkbenchModule } from "@modules/domain/chatbot-workbench"
+import { CHATREPLY_ERROR_KINDS, CHATREPLY_MESSAGES, ChatReplyModule } from "@modules/domain/chatreply"
 import { ExternalApiHttpModule } from "@features/api/external-api"
 import { SystemHealthHttpModule } from "@features/api/system-health"
 import { BOOKINGS_ERROR_KINDS, BOOKINGS_MESSAGES, BookingsModule } from "@modules/domain/bookings"
@@ -127,7 +134,7 @@ import {
 import {
     AI_GENERATIONS_ERROR_KINDS,
     AI_GENERATIONS_MESSAGES,
-    AI_GENERATIONS_POLL_MS,
+    AI_GENERATIONS_POLL_MS as GENERATION_POLL_MS,
     AiGenerationsModule,
     TextGeneratorService,
 } from "@modules/domain/ai-generations"
@@ -213,9 +220,9 @@ import { LlmModule } from "@modules/integrations/llm"
 import {
     SUPABASE_ACCESS_TOKEN_VERIFIER,
     SUPABASE_AUTH,
+    SUPABASE_STORAGE,
     SUPABASE_ERROR_KINDS,
     SUPABASE_OBJECTS,
-    SUPABASE_STORAGE,
     SupabaseModule,
     createSupabaseAccessTokenVerifier,
 } from "@modules/integrations/supabase"
@@ -274,7 +281,7 @@ import { EventsModule } from "@modules/domain/events"
 import {
     WORKSPACE_INVITES_ERROR_KINDS,
     WORKSPACE_INVITES_MESSAGES,
-    WorkspaceInvitesModule,
+    WorkspaceInvitesModule as InvitesModule,
 } from "@modules/domain/workspace-invites"
 import {
     WORKSPACE_MEMBERS_ERROR_KINDS,
@@ -364,7 +371,6 @@ import { RenderVideoQueueModule } from "@features/jobs/render-video"
 import { ConnectionCommandsQueueModule } from "@features/jobs/connection-commands"
 import { RequestRenderQueueModule } from "@features/jobs/request-render"
 import type { ApiOptions } from "./api.options"
-
 @Module({})
 /** Composition root of the API: every capability is registered once and the three guards run in a fixed order. */
 export class AppModule {
@@ -380,6 +386,7 @@ export class AppModule {
                     isGlobal: true,
                     bundles: [
                         DOCUMENTS_MESSAGES,
+                        CHATREPLY_MESSAGES,
                         CONNECTIONS_MESSAGES,
                         CONNECTION_GRANTS_MESSAGES,
                         CHANNEL_CONNECTIONS_MESSAGES,
@@ -472,6 +479,7 @@ export class AppModule {
                     isGlobal: true,
                     kinds: [
                         CONNECTIONS_ERROR_KINDS,
+                        CHATREPLY_ERROR_KINDS,
                         CONNECTION_GRANTS_ERROR_KINDS,
                         CHANNEL_CONNECTIONS_ERROR_KINDS,
                         WEBHOOK_CONNECTIONS_ERROR_KINDS,
@@ -582,11 +590,7 @@ export class AppModule {
                 EventsModule.register({ isGlobal: true }),
                 WorkspaceMembersModule.register({ isGlobal: true, accounts: SUPABASE_AUTH }),
                 WorkspacesModule.register({ isGlobal: true, ...options.workspaces }),
-                WorkspaceInvitesModule.register({
-                    isGlobal: true,
-                    delivery: SUPABASE_AUTH,
-                    ...options.workspaceInvites,
-                }),
+                InvitesModule.register({ isGlobal: true, delivery: SUPABASE_AUTH, ...options.workspaceInvites }),
                 ConnectionsModule.register({ isGlobal: true, ...options.connections }),
                 ConnectionGrantsModule.register({ isGlobal: true }),
                 ChannelConnectionsModule.register({ isGlobal: true }),
@@ -667,6 +671,13 @@ export class AppModule {
                 BrainModule.register({ isGlobal: true, corrections: { recent: () => Promise.resolve([]) } }),
                 BookingsModule.register({ isGlobal: true }),
                 LeadsHttpModule,
+                PromoModule.register({ isGlobal: true }),
+                ChatReplyModule.register({ isGlobal: true }),
+                PromoGraphqlModule,
+                LeadGenGraphqlModule,
+                ChatbotWorkbenchModule.register({ isGlobal: true }),
+                ChatbotGraphqlModule,
+                ChatReplyGraphqlModule,
                 PlatformAuditModule.register({ isGlobal: true }),
                 AiQuotaOverridesModule.register({ isGlobal: true }),
                 PlatformAdminModule.register({ isGlobal: true, ...options.platformAdmin }),
@@ -683,11 +694,7 @@ export class AppModule {
                     syncFreshMs: AGENTS_SYNC_FRESH_MS,
                 }),
                 AgentConnectionsModule.register({ isGlobal: true }),
-                AiGenerationsModule.register({
-                    isGlobal: true,
-                    usage: UsageGateService,
-                    pollMs: AI_GENERATIONS_POLL_MS,
-                }),
+                AiGenerationsModule.register({ isGlobal: true, usage: UsageGateService, pollMs: GENERATION_POLL_MS }),
                 OpenclawAgentSyncModule.register({ isGlobal: true, reloadSettleMs: OPENCLAW_RELOAD_SETTLE_MS }),
                 AgentToolsModule.register({
                     isGlobal: true,
