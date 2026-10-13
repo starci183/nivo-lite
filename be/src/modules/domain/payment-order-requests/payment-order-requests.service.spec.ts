@@ -1,11 +1,9 @@
 import { Test } from "@nestjs/testing"
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { BillingService } from "@modules/domain/billing"
+import { BillingError, BillingErrorCode, BillingService } from "@modules/domain/billing"
 import type { PayableOrder } from "@modules/domain/billing"
-import { BillingError, BillingErrorCode } from "@modules/domain/billing/errors/billing.error"
-import { CreditsService } from "@modules/domain/credits"
-import { CreditsError, CreditsErrorCode } from "@modules/domain/credits/errors/credits.error"
+import { CreditsError, CreditsErrorCode, CreditsService } from "@modules/domain/credits"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { PaymentOrderRequestsService } from "./payment-order-requests.service"
 import type { RequestRow } from "./persistence/payment-order-requests.rows"
@@ -63,14 +61,6 @@ const build = async (entityManager: MockEntityManager) => {
     return { requests: moduleRef.get(PaymentOrderRequestsService), billing, credits }
 }
 
-const pending = (request: RequestRow = REQUEST) =>
-    mockEntityManager({
-        query: [
-            [SELECT_REQUEST, [request]],
-            [MARK_REQUEST_DONE, []],
-        ],
-    })
-
 const expectAnswered = (entityManager: MockEntityManager) => {
     expect(entityManager.query).toHaveBeenCalledTimes(2)
     expect(entityManager.query).toHaveBeenNthCalledWith(1, SELECT_REQUEST, ["request-1", "ws-1"])
@@ -79,7 +69,7 @@ const expectAnswered = (entityManager: MockEntityManager) => {
 
 describe("PaymentOrderRequestsService", () => {
     it("ignores a payload from another job without reading the database", async () => {
-        const em = mockEntityManager()
+        const em = mockEntityManager({})
         const { requests, billing, credits } = await build(em)
 
         await expect(requests.answer({ requestId: "request-1" })).resolves.toBe("ignored")
@@ -109,7 +99,12 @@ describe("PaymentOrderRequestsService", () => {
     )
 
     it("orders the plan using the requester and target from the database", async () => {
-        const em = pending()
+        const em = mockEntityManager({
+            query: [
+                [SELECT_REQUEST, [REQUEST]],
+                [MARK_REQUEST_DONE, []],
+            ],
+        })
         const { requests, billing, credits } = await build(em)
 
         await expect(requests.answer({ ...PAYLOAD, requestedBy: "other-person", target: "other-plan" })).resolves.toBe(
@@ -119,7 +114,11 @@ describe("PaymentOrderRequestsService", () => {
         expect(billing.orderPlan.mock.calls).toEqual([
             [
                 "person-1",
-                { workspaceId: "ws-1", planCode: "starter", selection: { cycle: "monthly", tierCredits: null, seats: 1 } },
+                {
+                    workspaceId: "ws-1",
+                    planCode: "starter",
+                    selection: { cycle: "monthly", tierCredits: null, seats: 1 },
+                },
             ],
         ])
         expect(billing.renew).not.toHaveBeenCalled()
@@ -129,7 +128,12 @@ describe("PaymentOrderRequestsService", () => {
     })
 
     it("renews the workspace without a target", async () => {
-        const em = pending({ ...REQUEST, kind: "renew", target: null })
+        const em = mockEntityManager({
+            query: [
+                [SELECT_REQUEST, [{ ...REQUEST, kind: "renew", target: null }]],
+                [MARK_REQUEST_DONE, []],
+            ],
+        })
         const { requests, billing, credits } = await build(em)
 
         await expect(requests.answer(PAYLOAD)).resolves.toBe("ordered")
@@ -142,7 +146,12 @@ describe("PaymentOrderRequestsService", () => {
     })
 
     it("tops up the pack from the database", async () => {
-        const em = pending({ ...REQUEST, kind: "topup", target: "credits_1000" })
+        const em = mockEntityManager({
+            query: [
+                [SELECT_REQUEST, [{ ...REQUEST, kind: "topup", target: "credits_1000" }]],
+                [MARK_REQUEST_DONE, []],
+            ],
+        })
         const { requests, billing, credits } = await build(em)
 
         await expect(requests.answer(PAYLOAD)).resolves.toBe("ordered")
@@ -155,7 +164,12 @@ describe("PaymentOrderRequestsService", () => {
     })
 
     it("answers an upgrade with the id of its payable order", async () => {
-        const em = pending({ ...REQUEST, kind: "upgrade", target: "growth" })
+        const em = mockEntityManager({
+            query: [
+                [SELECT_REQUEST, [{ ...REQUEST, kind: "upgrade", target: "growth" }]],
+                [MARK_REQUEST_DONE, []],
+            ],
+        })
         const { requests, billing, credits } = await build(em)
 
         await expect(requests.answer(PAYLOAD)).resolves.toBe("ordered")
@@ -211,7 +225,7 @@ describe("PaymentOrderRequestsService", () => {
     })
 
     it("rethrows a request lookup failure for retry", async () => {
-        const em = mockEntityManager()
+        const em = mockEntityManager({})
         const cause = new Error("request storage unavailable")
         em.query.mockRejectedValue(cause)
         const { requests, billing } = await build(em)
@@ -223,7 +237,12 @@ describe("PaymentOrderRequestsService", () => {
     })
 
     it("rethrows a failure to record the completed request for retry", async () => {
-        const em = pending()
+        const em = mockEntityManager({
+            query: [
+                [SELECT_REQUEST, [REQUEST]],
+                [MARK_REQUEST_DONE, []],
+            ],
+        })
         const cause = new Error("answer storage unavailable")
         em.query.mockResolvedValueOnce([REQUEST]).mockRejectedValueOnce(cause)
         const { requests } = await build(em)
@@ -234,7 +253,7 @@ describe("PaymentOrderRequestsService", () => {
     })
 
     it("rethrows a failure to record a domain refusal for retry", async () => {
-        const em = mockEntityManager()
+        const em = mockEntityManager({})
         const cause = new Error("refusal storage unavailable")
         em.query.mockResolvedValueOnce([REQUEST]).mockRejectedValueOnce(cause)
         const { requests, billing } = await build(em)

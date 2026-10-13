@@ -4,8 +4,9 @@ import { Test } from "@nestjs/testing"
 import { AuthorityActionsService } from "@modules/domain/authority-actions"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { ACCOUNTING_MODULE } from "./accounting.contracts"
 import { MODULE_CATEGORIES } from "./categories.contracts"
-import { ModulesError, ModulesErrorCode } from "./errors/modules.error"
+import { ModulesErrorCode } from "./errors/modules.error"
 import { MODULE_CATALOG } from "./modules.catalog.contracts"
 import { MODULES_OPTIONS } from "./modules.decorators"
 import type { ModulesOptions } from "./modules.options"
@@ -14,45 +15,26 @@ import { LIST_MODULE_KEYS, UPSERT_MODULES } from "./persistence/modules.sql"
 
 const AT = "2026-03-04T05:06:07.000Z"
 const OPTIONS: ModulesOptions = { categories: MODULE_CATEGORIES, catalog: MODULE_CATALOG }
-const BROKEN: ModulesOptions = { categories: [], catalog: MODULE_CATALOG }
 const KEYS = MODULE_CATALOG.map((module) => ({ key: module.key }))
 const ACTIONS = MODULE_CATALOG.flatMap((module) => module.authorityActions)
 
-const issueInvoiceLabel = () => {
-    const accounting = MODULE_CATALOG.find((module) => module.key === "accounting")
-    const action = accounting?.authorityActions.find((item) => item.action === "issue_invoice")
-    if (action === undefined)
-        throw new ModulesError({ code: ModulesErrorCode.NotFound, params: { key: "issue_invoice" } })
-    return action.label
-}
-
-const build = async (entityManager: MockEntityManager = mockEntityManager()) => {
+/** Builds the service over the catalogue options (with `overrides`) and the given entity manager. */
+const build = async (
+    overrides: Partial<ModulesOptions> = {},
+    entityManager: MockEntityManager = mockEntityManager(),
+) => {
+    const options = { ...OPTIONS, ...overrides }
     const authorityActions = mock<AuthorityActionsService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             ModulesService,
-            { provide: MODULES_OPTIONS, useValue: OPTIONS },
+            { provide: MODULES_OPTIONS, useValue: options },
             { provide: CLOCK, useValue: new FakeClock(AT) },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: AuthorityActionsService, useValue: authorityActions },
         ],
     }).compile()
     return { service: moduleRef.get(ModulesService), authorityActions }
-}
-
-const buildBroken = async () => {
-    const entityManager = mockEntityManager()
-    const authorityActions = mock<AuthorityActionsService>()
-    const moduleRef = await Test.createTestingModule({
-        providers: [
-            ModulesService,
-            { provide: MODULES_OPTIONS, useValue: BROKEN },
-            { provide: CLOCK, useValue: new FakeClock(AT) },
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
-            { provide: AuthorityActionsService, useValue: authorityActions },
-        ],
-    }).compile()
-    return { service: moduleRef.get(ModulesService), entityManager }
 }
 
 const syncTransaction = (held = KEYS) =>
@@ -93,7 +75,7 @@ describe("ModulesService", () => {
     describe("sync", () => {
         it("upserts the modules and hands the actions to the authority actions in the same transaction", async () => {
             const tx = syncTransaction()
-            const { service, authorityActions } = await build(tx.em)
+            const { service, authorityActions } = await build({}, tx.em)
             authorityActions.upsertAll.mockResolvedValue({ written: ACTIONS.length, stale: ["retired_action"] })
 
             const report = await service.sync()
@@ -117,7 +99,7 @@ describe("ModulesService", () => {
                         default_required_fields: ["customer", "amount_vnd"],
                         amount_limit: true,
                         max_mode: null,
-                        label: issueInvoiceLabel(),
+                        label: ACCOUNTING_MODULE.authorityActions[0]?.label,
                     },
                 ]),
             )
@@ -125,7 +107,7 @@ describe("ModulesService", () => {
 
         it("writes each module with its columns and its whole definition, stamped with the clock", async () => {
             const tx = syncTransaction()
-            const { service, authorityActions } = await build(tx.em)
+            const { service, authorityActions } = await build({}, tx.em)
             authorityActions.upsertAll.mockResolvedValue({ written: 0, stale: [] })
 
             await service.sync()
@@ -147,7 +129,7 @@ describe("ModulesService", () => {
 
         it("reports the module rows the database holds that the catalogue no longer lists, and deletes nothing", async () => {
             const tx = syncTransaction([...KEYS, { key: "retired" }])
-            const { service, authorityActions } = await build(tx.em)
+            const { service, authorityActions } = await build({}, tx.em)
             authorityActions.upsertAll.mockResolvedValue({ written: 1, stale: [] })
 
             await expect(service.sync()).resolves.toMatchObject({
@@ -156,7 +138,8 @@ describe("ModulesService", () => {
         })
 
         it("refuses a catalogue that breaks its own rules and writes nothing", async () => {
-            const { service, entityManager } = await buildBroken()
+            const entityManager = mockEntityManager()
+            const { service } = await build({ categories: [] }, entityManager)
 
             await expect(service.sync()).rejects.toMatchObject({
                 code: ModulesErrorCode.CatalogInvalid,

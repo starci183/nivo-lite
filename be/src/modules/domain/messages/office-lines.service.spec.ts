@@ -32,14 +32,8 @@ describe("OfficeLinesService", () => {
         await expect(service.post(ctx, lineOf({ dept: "sales", installation_id: "inst-1" }))).resolves.toBeUndefined()
 
         expect(directory.agentOfDepartment).toHaveBeenCalledWith("ws-1", "sales", "inst-1")
-        expect(em.query).toHaveBeenCalledWith(INSERT_MESSAGE, [
-            "ws-1",
-            "agent",
-            "Sales Agent",
-            "agent-1",
-            "Followed up",
-            "lead-1",
-            "item-1",
+        expect(em.query.mock.calls).toEqual([
+            [INSERT_MESSAGE, ["ws-1", "agent", "Sales Agent", "agent-1", "Followed up", "lead-1", "item-1"]],
         ])
     })
 
@@ -57,14 +51,8 @@ describe("OfficeLinesService", () => {
 
         await expect(service.post(ctx, lineOf({ dept: "sales" }))).resolves.toBeUndefined()
 
-        expect(em.query).toHaveBeenCalledWith(INSERT_MESSAGE, [
-            "ws-1",
-            "system",
-            "NIVO",
-            null,
-            "Followed up",
-            "lead-1",
-            "item-1",
+        expect(em.query.mock.calls).toEqual([
+            [INSERT_MESSAGE, ["ws-1", "system", "NIVO", null, "Followed up", "lead-1", "item-1"]],
         ])
     })
 
@@ -75,14 +63,8 @@ describe("OfficeLinesService", () => {
         await expect(service.post(ctx, lineOf({ lead_id: null, work_item_id: null }))).resolves.toBeUndefined()
 
         expect(directory.agentOfDepartment).not.toHaveBeenCalled()
-        expect(em.query).toHaveBeenCalledWith(INSERT_MESSAGE, [
-            "ws-1",
-            "system",
-            "NIVO",
-            null,
-            "Followed up",
-            null,
-            null,
+        expect(em.query.mock.calls).toEqual([
+            [INSERT_MESSAGE, ["ws-1", "system", "NIVO", null, "Followed up", null, null]],
         ])
     })
 
@@ -93,14 +75,8 @@ describe("OfficeLinesService", () => {
         await expect(service.post(ctx, lineOf({ dept: "sales", command: true }))).resolves.toBeUndefined()
 
         expect(directory.agentOfDepartment).not.toHaveBeenCalled()
-        expect(em.query).toHaveBeenCalledWith(INSERT_MESSAGE, [
-            "ws-1",
-            "system",
-            "NIVO Bus",
-            null,
-            "Followed up",
-            "lead-1",
-            "item-1",
+        expect(em.query.mock.calls).toEqual([
+            [INSERT_MESSAGE, ["ws-1", "system", "NIVO Bus", null, "Followed up", "lead-1", "item-1"]],
         ])
     })
 })

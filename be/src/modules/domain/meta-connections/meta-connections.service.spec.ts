@@ -4,6 +4,8 @@ import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@mod
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
 import { INSTAGRAM_FIELDS, META_CLIENT, MetaError, MetaErrorCode, PAGE_FIELDS } from "@modules/integrations/meta"
 import type { AppObject, MetaClient, MetaPageChoice, MetaSubscriptionStatus } from "@modules/integrations/meta"
+import { LOGGER } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
 import { MetaConnectionsErrorCode } from "./errors/meta-connections.error"
 import { MetaConnectionsService } from "./meta-connections.service"
 
@@ -72,6 +74,16 @@ const checkBase = {
     localOnly: false,
     verifyTokenSet: true,
 }
+const goodCheck = {
+    ...checkBase,
+    ok: true,
+    tokenOk: true,
+    page: subscribed,
+    appPage: goodApp.page,
+    appInstagram: goodApp.instagram,
+    appKnown: true,
+    repaired: false,
+}
 
 const build = async () => {
     const connections = mock<ConnectionsService>()
@@ -98,14 +110,16 @@ const build = async () => {
     meta.webhookUrl.mockReturnValue(checkBase.webhookUrl)
     meta.redirectUri.mockReturnValue(checkBase.redirectUri)
     meta.hasVerifyToken.mockReturnValue(true)
+    const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             MetaConnectionsService,
             { provide: ConnectionsService, useValue: connections },
             { provide: META_CLIENT, useValue: meta },
+            { provide: LOGGER, useValue: logger },
         ],
     }).compile()
-    return { service: moduleRef.get(MetaConnectionsService), connections, meta }
+    return { service: moduleRef.get(MetaConnectionsService), connections, meta, logger }
 }
 
 describe("MetaConnectionsService", () => {
@@ -377,15 +391,9 @@ describe("MetaConnectionsService", () => {
             meta.ensureAppSubscriptions.mockRejectedValue(new Error("app token unavailable"))
 
             await expect(service.check(actor, ID, true)).resolves.toEqual({
-                ...checkBase,
+                ...goodCheck,
                 pageName: "Shop Page",
                 igUsername: "shop_ig",
-                ok: true,
-                tokenOk: true,
-                page: subscribed,
-                appPage: goodApp.page,
-                appInstagram: goodApp.instagram,
-                appKnown: true,
                 repaired: true,
             })
 
@@ -396,85 +404,64 @@ describe("MetaConnectionsService", () => {
             expect(connections.patch).toHaveBeenCalledWith("ws-1", ID, { status: "connected", lastError: null })
         })
 
-        const checks: ReadonlyArray<{ label: string; igId?: string; status: MetaSubscriptionStatus; ok: boolean }> = [
-            {
-                label: "no linked Instagram",
-                status: { page: subscribed, app: { page: goodApp.page, instagram: null } },
-                ok: true,
-            },
-            { label: "unknown app subscriptions", igId: "ig-1", status: { page: subscribed, app: null }, ok: true },
-            {
-                label: "missing app Page object",
-                igId: "ig-1",
-                status: { page: subscribed, app: { page: null, instagram: goodApp.instagram } },
-                ok: false,
-            },
-            {
-                label: "wrong app Page URL",
-                status: { page: subscribed, app: { ...goodApp, page: appObject(PAGE_FIELDS, { urlMatches: false }) } },
-                ok: false,
-            },
-            {
-                label: "missing app Page fields",
-                status: { page: subscribed, app: { ...goodApp, page: appObject(PAGE_FIELDS, { missing: ["feed"] }) } },
-                ok: false,
-            },
-            {
-                label: "missing app Instagram object",
-                igId: "ig-1",
-                status: { page: subscribed, app: { page: goodApp.page, instagram: null } },
-                ok: false,
-            },
-            {
-                label: "wrong app Instagram URL",
-                igId: "ig-1",
-                status: {
-                    page: subscribed,
-                    app: { ...goodApp, instagram: appObject(INSTAGRAM_FIELDS, { urlMatches: false }) },
-                },
-                ok: false,
-            },
-            {
-                label: "missing app Instagram fields",
-                igId: "ig-1",
-                status: {
-                    page: subscribed,
-                    app: { ...goodApp, instagram: appObject(INSTAGRAM_FIELDS, { missing: ["comments"] }) },
-                },
-                ok: false,
-            },
-            {
-                label: "all Page and Instagram subscriptions",
-                igId: "ig-1",
-                status: { page: subscribed, app: goodApp },
-                ok: true,
-            },
-            {
-                label: "unsubscribed Page",
-                status: { page: { ...subscribed, subscribed: false }, app: goodApp },
-                ok: false,
-            },
-            {
-                label: "missing Page fields",
-                status: { page: { ...subscribed, missing: ["leadgen"] }, app: goodApp },
-                ok: false,
-            },
+        const checks: ReadonlyArray<
+            readonly [
+                string,
+                string | undefined,
+                MetaSubscriptionStatus["page"],
+                MetaSubscriptionStatus["app"],
+                boolean,
+            ]
+        > = [
+            ["no linked Instagram", undefined, subscribed, { page: goodApp.page, instagram: null }, true],
+            ["unknown app subscriptions", "ig-1", subscribed, null, true],
+            ["missing app Page object", "ig-1", subscribed, { page: null, instagram: goodApp.instagram }, false],
+            [
+                "wrong app Page URL",
+                undefined,
+                subscribed,
+                { ...goodApp, page: appObject(PAGE_FIELDS, { urlMatches: false }) },
+                false,
+            ],
+            [
+                "missing app Page fields",
+                undefined,
+                subscribed,
+                { ...goodApp, page: appObject(PAGE_FIELDS, { missing: ["feed"] }) },
+                false,
+            ],
+            ["missing app Instagram object", "ig-1", subscribed, { page: goodApp.page, instagram: null }, false],
+            [
+                "wrong app Instagram URL",
+                "ig-1",
+                subscribed,
+                { ...goodApp, instagram: appObject(INSTAGRAM_FIELDS, { urlMatches: false }) },
+                false,
+            ],
+            [
+                "missing app Instagram fields",
+                "ig-1",
+                subscribed,
+                { ...goodApp, instagram: appObject(INSTAGRAM_FIELDS, { missing: ["comments"] }) },
+                false,
+            ],
+            ["all Page and Instagram subscriptions", "ig-1", subscribed, goodApp, true],
+            ["unsubscribed Page", undefined, { ...subscribed, subscribed: false }, goodApp, false],
+            ["missing Page fields", undefined, { ...subscribed, missing: ["leadgen"] }, goodApp, false],
         ]
-        it.each(checks)("reports $label exactly", async ({ igId, status, ok }) => {
+        it.each(checks)("reports %s exactly", async (_label, igId, page, app, ok) => {
             const { service, connections, meta } = await build()
             connections.get.mockResolvedValue(record({ meta: igId === undefined ? {} : { ig_id: igId } }))
             connections.readSecret.mockResolvedValue(seal(pageSecret))
-            meta.subscriptionStatus.mockResolvedValue(status)
+            meta.subscriptionStatus.mockResolvedValue({ page, app })
 
             await expect(service.check(actor, ID, false)).resolves.toEqual({
-                ...checkBase,
+                ...goodCheck,
                 ok,
-                tokenOk: true,
-                page: status.page,
-                appPage: status.app?.page ?? null,
-                appInstagram: status.app?.instagram ?? null,
-                appKnown: status.app !== null,
-                repaired: false,
+                page,
+                appPage: app?.page ?? null,
+                appInstagram: app?.instagram ?? null,
+                appKnown: app !== null,
             })
 
             expect(meta.subscribePage).not.toHaveBeenCalled()
@@ -492,18 +479,14 @@ describe("MetaConnectionsService", () => {
             meta.subscriptionStatus.mockResolvedValue({ page: subscribed, app: null })
 
             await expect(service.check(actor, ID, false)).resolves.toEqual({
-                ...checkBase,
+                ...goodCheck,
                 webhookUrl: "",
                 redirectUri: "",
                 localOnly: true,
                 verifyTokenSet: false,
-                ok: true,
-                tokenOk: true,
-                page: subscribed,
                 appPage: null,
                 appInstagram: null,
                 appKnown: false,
-                repaired: false,
             })
         })
 
@@ -541,7 +524,7 @@ describe("MetaConnectionsService", () => {
             else meta.subscriptionStatus.mockRejectedValue(error)
 
             await expect(service.check(actor, ID, repair)).resolves.toEqual({
-                ...checkBase,
+                ...goodCheck,
                 ok: false,
                 tokenOk: false,
                 page: { subscribed: false, fields: [], missing: PAGE_FIELDS },
@@ -585,7 +568,7 @@ describe("MetaConnectionsService", () => {
         it("redirects an invalid or expired state without a connection id", async () => {
             const { service, connections, meta } = await build()
             meta.verify.mockReturnValueOnce(null).mockImplementationOnce(() => {
-                throw new Error("bad state")
+                throw new MetaError({ code: MetaErrorCode.NotConfigured })
             })
 
             await expect(service.complete({ ...callback, state: undefined })).resolves.toEqual(
@@ -699,7 +682,7 @@ describe("MetaConnectionsService", () => {
             const query = { mode: "subscribe", verifyToken: "verify-1", challenge: "challenge-1" }
             meta.challenge.mockReturnValue("challenge-1")
 
-            expect(service.answerChallenge(query)).toBe("challenge-1")
+            await expect(service.respondToChallenge(query)).resolves.toBe("challenge-1")
             expect(meta.challenge).toHaveBeenCalledWith(query)
         })
 

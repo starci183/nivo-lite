@@ -3,8 +3,10 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { Test } from "@nestjs/testing"
 import { FakeClock, builder, mock } from "@starci/jest-preset"
-import { FFMPEG, type Ffmpeg } from "@modules/integrations/ffmpeg"
-import { TTS, TtsError, TtsErrorCode, type Tts } from "@modules/integrations/tts"
+import { FFMPEG } from "@modules/integrations/ffmpeg"
+import type { Ffmpeg } from "@modules/integrations/ffmpeg"
+import { TTS, TtsError, TtsErrorCode } from "@modules/integrations/tts"
+import type { Tts } from "@modules/integrations/tts"
 import { CLOCK } from "@modules/platform/clock"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -69,7 +71,6 @@ const build = async (maxSeconds = 90) => {
     tts.clip.mockResolvedValue({ file: "clip.mp3", cached: false, provider: "edge" })
     const catalog = mock<MessageCatalog>()
     catalog.get.mockReturnValue("min|kg")
-    const clock = new FakeClock("2026-10-12T00:00:00.000Z")
     const moduleRef = await Test.createTestingModule({
         providers: [
             RendererService,
@@ -77,7 +78,7 @@ const build = async (maxSeconds = 90) => {
             { provide: VIDEO_ASSETS, useValue: assets },
             { provide: FFMPEG, useValue: ffmpeg },
             { provide: TTS, useValue: tts },
-            { provide: CLOCK, useValue: clock },
+            { provide: CLOCK, useValue: new FakeClock("2026-10-12T00:00:00.000Z") },
             { provide: MESSAGE_CATALOG, useValue: catalog },
         ],
     }).compile()

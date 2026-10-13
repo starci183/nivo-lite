@@ -1,12 +1,12 @@
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
-import { PaymentProofService } from "@modules/domain/billing"
+import { PaymentProofService, parseJsonObject } from "@modules/domain/billing"
 import type { SepayDelivery } from "@modules/domain/billing"
-import { DomainError } from "@modules/platform/errors"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import {
     COMPLETE_SEPAY_TRANSACTION,
     INSERT_SEPAY_TRANSACTION,
+    SELECT_REVIEW_TRANSACTIONS,
     SETTLE_PAYMENT_ORDER,
     UPDATE_SEPAY_RESULT,
 } from "./persistence/sepay-transactions.sql"
@@ -43,13 +43,47 @@ const build = async (stubs: ReadonlyArray<readonly [string, unknown]>) => {
     return { settlement: moduleRef.get(SepayTransactionsService), tx, proof }
 }
 
-/** The billing key the proof refuses, so settlement stops before it writes. */
-class RefusedBillingKey extends DomainError<"SEPAY_TRANSACTIONS_KEY_REFUSED"> {}
-
 const CLAIMED = [INSERT_SEPAY_TRANSACTION, [{ id: "row-1" }]] as const
 const COMPLETED = [COMPLETE_SEPAY_TRANSACTION, [{ id: "row-1" }]] as const
 
 describe("SepayTransactionsService", () => {
+    describe("review", () => {
+        it("reads nothing for no orders", async () => {
+            const { settlement, tx } = await build([])
+
+            await expect(settlement.review("ws-1", [])).resolves.toEqual([])
+            expect(tx.em.query).not.toHaveBeenCalled()
+        })
+
+        it("maps the transfers of the workspace orders with an ISO receipt time", async () => {
+            const { settlement, tx } = await build([
+                [
+                    SELECT_REVIEW_TRANSACTIONS,
+                    [
+                        {
+                            id: 9001,
+                            status: "underpaid",
+                            transfer_amount: 500000,
+                            received_at: "2026-10-13T09:00:00+07:00",
+                            content: null,
+                        },
+                    ],
+                ],
+            ])
+
+            await expect(settlement.review("ws-1", ["order-1"])).resolves.toEqual([
+                {
+                    id: 9001,
+                    status: "underpaid",
+                    transferAmount: 500000,
+                    receivedAt: "2026-10-13T02:00:00.000Z",
+                    content: null,
+                },
+            ])
+            expect(tx.em.query).toHaveBeenCalledWith(SELECT_REVIEW_TRANSACTIONS, ["ws-1", ["order-1"]])
+        })
+    })
+
     describe("acceptSepayDelivery", () => {
         it("proves the key, claims the transaction, settles the order the transfer names and completes it in one transaction", async () => {
             const { settlement, tx, proof } = await build([
@@ -78,14 +112,15 @@ describe("SepayTransactionsService", () => {
             expect(tx.em.query).toHaveBeenCalledWith(COMPLETE_SEPAY_TRANSACTION, ["row-1"])
         })
 
-        it("touches nothing when the key is refused", async () => {
+        it("touches nothing when the delivery is refused at the door", async () => {
             const { settlement, tx, proof } = await build([])
-            const refusal = new RefusedBillingKey({ code: "SEPAY_TRANSACTIONS_KEY_REFUSED" })
             proof.verifyBillingKey.mockImplementation(() => {
-                throw refusal
+                parseJsonObject(undefined)
             })
 
-            await expect(settlement.acceptSepayDelivery(credit())).rejects.toBe(refusal)
+            await expect(settlement.acceptSepayDelivery(credit())).rejects.toMatchObject({
+                code: "BILLING_WEBHOOK_INVALID",
+            })
 
             expect(tx.outcomes).toEqual([])
             expect(tx.em.query).not.toHaveBeenCalled()
