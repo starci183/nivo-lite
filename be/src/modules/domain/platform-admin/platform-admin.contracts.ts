@@ -265,7 +265,7 @@ export interface AdminKnowledgeKind {
     /** The kind. */
     readonly kind: string
     /** The by status. */
-    readonly byStatus: Readonly<Record<string, number>>
+    readonly byStatus: ReadonlyArray<AdminCount>
 }
 
 /** The activity block of a workspace. */

@@ -1,5 +1,5 @@
 import type { QuotaRow } from "./persistence/ai-usage-events.rows"
-import type { QuotaLevel, QuotaStatus, UsageKind } from "./ai-usage-events.contracts"
+import type { QuotaLevel, QuotaLookup, QuotaStatus, UsageKind } from "./ai-usage-events.contracts"
 import { creditsOf } from "./usage-cost.policy"
 
 /** The soft warning starts at this share of the monthly allowance. */
@@ -59,6 +59,10 @@ export const quotaOf = (row: QuotaRow): QuotaStatus => {
         level: levelOf(messagesExceeded || tokensExceeded || creditsExceeded, ratio),
     }
 }
+
+/** Maps an optional result row to the quota lookup used by browser reads. */
+export const quotaLookupOf = (rows: ReadonlyArray<QuotaRow>): QuotaLookup =>
+    rows[0] === undefined ? null : quotaOf(rows[0])
 
 /** Whether a model call of this kind must NOT be made: customer-facing kinds stop at any allowance, the rest at the tokens or credits. */
 export const stopsCall = (status: QuotaStatus, kind: UsageKind): boolean =>

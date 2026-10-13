@@ -6,7 +6,7 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { OrdersError, OrdersErrorCode } from "./errors/orders.error"
 import type { NewOrderDraft, OptionalOrder, OrderConfirmation, OrderLabel } from "./orders.contracts"
 import { ORDER_NUMBER_ATTEMPTS, orderNumberOf, orderPrefixOf } from "./order-number.policy"
-import type { OrderCountRow, SalesOrderRow } from "./persistence/orders.rows"
+import type { OrderCountRow, SalesOrderListRow, SalesOrderRow } from "./persistence/orders.rows"
 import {
     CANCEL_ORDER,
     CONFIRM_ORDER,
@@ -14,6 +14,7 @@ import {
     FIND_ORDER,
     FIND_ORDER_LABELS,
     INSERT_ORDER_DRAFT,
+    LIST_ORDERS,
     SET_ORDER_STATUS,
 } from "./persistence/orders.sql"
 
@@ -29,6 +30,14 @@ export class OrdersService {
     async find(workspaceId: string, orderId: string): Promise<OptionalOrder> {
         const rows = await this.entityManager.query<Array<SalesOrderRow>>(FIND_ORDER, [workspaceId, orderId])
         return rows[0] ?? null
+    }
+
+    /** The newest orders with customer labels for the workspace's workbenches. */
+    list(workspaceId: string, limit: number = 200): Promise<Array<SalesOrderListRow>> {
+        return this.entityManager.query<Array<SalesOrderListRow>>(LIST_ORDERS, [
+            workspaceId,
+            Math.min(500, Math.max(1, limit)),
+        ])
     }
 
     /** The number and items of the given orders. */

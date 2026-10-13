@@ -136,7 +136,10 @@ export const knowledgeByKind = (
         byStatus[row.status] = (byStatus[row.status] ?? 0) + 1
         kinds.set(row.kind, byStatus)
     }
-    return [...kinds.entries()].map(([kind, byStatus]) => ({ kind, byStatus }))
+    return [...kinds.entries()].map(([kind, byStatus]) => ({
+        kind,
+        byStatus: Object.entries(byStatus).map(([key, count]) => ({ key, count })),
+    }))
 }
 
 /** Counts equal values, in order of first appearance. */

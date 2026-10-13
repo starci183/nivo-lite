@@ -1,5 +1,9 @@
 export { AgentConversationsModule } from "./agent-conversations.module"
 export { AgentConversationsService } from "./agent-conversations.service"
-export { AGENT_CONVERSATIONS_ERROR_KINDS, AgentConversationsErrorCode } from "./errors/agent-conversations.error"
+export {
+    AGENT_CONVERSATIONS_ERROR_KINDS,
+    AgentConversationsError,
+    AgentConversationsErrorCode,
+} from "./errors/agent-conversations.error"
 export { AGENT_CONVERSATIONS_MESSAGES } from "./messages/agent-conversations.messages"
 export type { ConversationRef, ConversationTarget, TurnConversation } from "./agent-conversations.contracts"

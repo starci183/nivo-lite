@@ -4,15 +4,16 @@ import { PaymentProofService, parseJsonObject, sepayPayloadOf } from "@modules/d
 import type { SepayDelivery, SepayPayload } from "@modules/domain/billing"
 import { orderCodesIn } from "@modules/domain/payment-orders"
 import { acceptWebhookDelivery, InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { SettleOutcome } from "./sepay-transactions.contracts"
+import type { ReviewTransaction, SettleOutcome } from "./sepay-transactions.contracts"
 import { transactionStatus } from "./sepay-transactions.policy"
 import {
     COMPLETE_SEPAY_TRANSACTION,
     INSERT_SEPAY_TRANSACTION,
+    SELECT_REVIEW_TRANSACTIONS,
     SETTLE_PAYMENT_ORDER,
     UPDATE_SEPAY_RESULT,
 } from "./persistence/sepay-transactions.sql"
-import type { SettleRow } from "./persistence/sepay-transactions.rows"
+import type { ReviewTransactionRow, SettleRow } from "./persistence/sepay-transactions.rows"
 
 /** The provider name of NIVO's own billing feed in the delivery inbox. */
 const SEPAY_PROVIDER = "sepay"
@@ -28,6 +29,22 @@ export class SepayTransactionsService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly proof: PaymentProofService,
     ) {}
+
+    /** Transfers needing review on the requested orders; the workspace predicate prevents cross-workspace disclosure. */
+    async review(workspaceId: string, orderIds: ReadonlyArray<string>): Promise<Array<ReviewTransaction>> {
+        if (orderIds.length === 0) return []
+        const rows = await this.entityManager.query<Array<ReviewTransactionRow>>(SELECT_REVIEW_TRANSACTIONS, [
+            workspaceId,
+            orderIds,
+        ])
+        return rows.map((row) => ({
+            id: row.id,
+            status: row.status,
+            transferAmount: row.transfer_amount,
+            receivedAt: new Date(row.received_at).toISOString(),
+            content: row.content,
+        }))
+    }
 
     /**
      * Proves, records and settles one SePay delivery from its raw bytes. Only an incoming transfer whose content (or SePay code)

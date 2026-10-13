@@ -1,5 +1,12 @@
 import { sql } from "@modules/platform/database"
 
+/** The newest accounting items' lineage ($1 workspace, $2 how many). */
+export const LIST_ACCOUNTING_WORK_ITEMS = sql`
+    SELECT id, action, status, subject_type, subject_id, to_json(created_at) #>> '{}' AS created_at
+    FROM public.work_items
+    WHERE workspace_id = $1::uuid AND department = 'accounting'
+    ORDER BY created_at DESC, id DESC LIMIT $2::int`
+
 /**
  * Inserts one queued work item and answers it; a second insert with the same dedupe key of the workspace answers nothing
  * ($1 workspace, $2 chain or null for a new chain, $3 depth, $4 department, $5 action, $6 subject type, $7 subject, $8 lead,

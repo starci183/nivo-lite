@@ -27,3 +27,6 @@ export interface TranscriptLine {
     /** What was said. */
     readonly body: string
 }
+
+/** The stable message id of an approved work item, or null for a newly generated id. */
+export type ApprovedMessageId = string | null

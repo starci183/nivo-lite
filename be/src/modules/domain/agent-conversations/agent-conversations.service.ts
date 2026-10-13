@@ -6,6 +6,8 @@ import type { Outcome } from "@modules/platform/primitives"
 import type {
     ConversationRef,
     ConversationTarget,
+    HumanHolder,
+    OptionalHumanConversation,
     OpenConversation,
     OptionalChannel,
     OptionalLeadConversation,
@@ -15,6 +17,7 @@ import { AgentConversationsError, AgentConversationsErrorCode } from "./errors/a
 import type {
     ConversationRefRow,
     ConversationTargetRow,
+    HumanConversationRow,
     LeadConversationRow,
     TurnConversationRow,
 } from "./persistence/agent-conversations.rows"
@@ -27,7 +30,9 @@ import {
     FIND_CONVERSATION_TARGET,
     FIND_TURN_CONVERSATION,
     INSERT_CONVERSATION,
+    LOCK_HUMAN_CONVERSATION,
     REBIND_CONVERSATION_AGENT,
+    SET_HUMAN_HANDLING,
     UPDATE_VISITOR_NAME,
 } from "./persistence/agent-conversations.sql"
 
@@ -130,6 +135,28 @@ export class AgentConversationsService {
     /** A person holds the conversation from now on: the AI stays quiet until they hand it back. */
     async handToPerson(workspaceId: string, conversationId: string, holder: string): Promise<void> {
         await this.entityManager.query(HAND_CONVERSATION_TO_PERSON, [workspaceId, conversationId, holder])
+    }
+
+    /** Locks a workspace's customer conversation in the caller's transaction, or returns null when it is absent. */
+    async lockForHuman(
+        workspaceId: string,
+        conversationId: string,
+        manager: EntityManager,
+    ): Promise<OptionalHumanConversation> {
+        const row = (
+            await manager.query<Array<HumanConversationRow>>(LOCK_HUMAN_CONVERSATION, [workspaceId, conversationId])
+        )[0]
+        return row === undefined ? null : { ...targetOf(row), leadId: row.lead_id, handledBy: row.handled_by }
+    }
+
+    /** A member takes the locked customer conversation over or hands it back to the AI. */
+    async setHumanHandling(
+        workspaceId: string,
+        conversationId: string,
+        holder: HumanHolder,
+        manager: EntityManager,
+    ): Promise<void> {
+        await manager.query(SET_HUMAN_HANDLING, [workspaceId, conversationId, holder])
     }
 
     /** Ties a conversation to the lead the customer became. */

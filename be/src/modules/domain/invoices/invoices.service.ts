@@ -6,12 +6,18 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InvoicesError, InvoicesErrorCode } from "./errors/invoices.error"
 import { INVOICE_NUMBER_ATTEMPTS, dueAtOf, invoicePrefixOf, nextInvoiceNumber } from "./invoice-number.policy"
 import type { IssuedInvoice, NewInvoice, OptionalInvoice } from "./invoices.contracts"
-import type { InvoiceListingRow, InvoiceRow, LastInvoiceNumberRow } from "./persistence/invoices.rows"
+import type {
+    InvoiceAccountingRow,
+    InvoiceListingRow,
+    InvoiceRow,
+    LastInvoiceNumberRow,
+} from "./persistence/invoices.rows"
 import {
     FIND_INVOICE,
     FIND_INVOICE_OF_ORDER,
     INSERT_INVOICE,
     LAST_INVOICE_NUMBER,
+    LIST_ACCOUNTING_INVOICES,
     LIST_ISSUED_INVOICES,
     MARK_INVOICE_PAID,
 } from "./persistence/invoices.sql"
@@ -39,6 +45,11 @@ export class InvoicesService {
     /** The newest issued (unpaid) invoices, the ones an incoming payment may settle. */
     listIssued(workspaceId: string, limit: number): Promise<Array<InvoiceListingRow>> {
         return this.entityManager.query<Array<InvoiceListingRow>>(LIST_ISSUED_INVOICES, [workspaceId, limit])
+    }
+
+    /** The newest invoices and their related records for the accounting book. */
+    listAccounting(workspaceId: string, limit: number = 1000): Promise<Array<InvoiceAccountingRow>> {
+        return this.entityManager.query<Array<InvoiceAccountingRow>>(LIST_ACCOUNTING_INVOICES, [workspaceId, limit])
     }
 
     /** Issues an invoice under the next number of the month; an order that has its invoice already gets that one back. */

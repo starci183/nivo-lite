@@ -24,3 +24,13 @@ export const FAIL_COMMAND = sql`WITH changed AS (
     WHERE workspace_id = $1 AND id = $2 RETURNING id
 )
 SELECT id FROM changed`
+
+/** Writes a queued command and answers its id ($1 workspace, $2 requester, $3 kind, $4 payload as json). */
+export const INSERT_COMMAND = sql`WITH changed AS (
+    INSERT INTO public.brain_commands (workspace_id, requested_by, kind, payload) VALUES ($1, $2, $3, $4::jsonb) RETURNING id
+)
+SELECT id FROM changed`
+
+/** How a command stands for the person who asked ($1 workspace, $2 id, $3 requester). */
+export const SELECT_COMMAND_STATE = sql`SELECT status, result, error_code FROM public.brain_commands
+WHERE workspace_id = $1 AND id = $2 AND requested_by = $3 LIMIT 1`

@@ -8,6 +8,7 @@ import { ChannelDeliveryService } from "./channel-delivery.service"
 import { ConnectionHealthService } from "./connection-health.service"
 import { TelegramProofService } from "./telegram-proof.service"
 import { ZaloProofService } from "./zalo-proof.service"
+import { ZaloConnectService } from "./zalo-connect.service"
 import { ZaloWizardService } from "./zalo-wizard.service"
 
 @Module({})
@@ -27,11 +28,13 @@ export class ChannelsModule extends ConfigurableModuleClass {
                 TelegramProofService,
                 ZaloProofService,
                 ZaloWizardService,
+                ZaloConnectService,
                 { provide: CHANNEL_SENDER_REGISTRY, useExisting: ChannelSenderRegistryService },
             ],
             exports: [
                 ZaloCredentialsService,
                 ZaloWizardService,
+                ZaloConnectService,
                 ChannelDeliveryService,
                 ConnectionHealthService,
                 CHANNEL_SENDER_REGISTRY,

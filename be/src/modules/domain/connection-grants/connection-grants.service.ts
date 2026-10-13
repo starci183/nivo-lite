@@ -3,9 +3,14 @@ import type { EntityManager } from "typeorm"
 import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionActor, ConnectionMember } from "@modules/domain/connections"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { normaliseAccess, planExactly, purposeFor } from "./connection-access.policy"
+import { isAccess, normaliseAccess, planExactly, purposeFor } from "./connection-access.policy"
 import type { Access, GrantChange } from "./connection-access.policy"
-import type { AgentGrantWish, ConnectionGrantWish } from "./connection-grants.contracts"
+import type {
+    AgentGrantWish,
+    ConnectionBoardEntry,
+    ConnectionGrantEntry,
+    ConnectionGrantWish,
+} from "./connection-grants.contracts"
 import { ConnectionGrantsError, ConnectionGrantsErrorCode } from "./errors/connection-grants.error"
 import type { AgentRow, GrantRow } from "./persistence/connection-grants.rows"
 import {
@@ -14,11 +19,13 @@ import {
     FIND_AGENTS,
     FIND_CONNECTION_GRANTS,
     FIND_GRANTS,
+    LIST_WORKSPACE_GRANTS,
     INSERT_ACCESS_LOG,
     UPSERT_GRANT,
 } from "./persistence/connection-grants.sql"
 
 const OWNER_ONLY = ["owner"] as const
+const MANAGER = ["owner", "manager"] as const
 
 const pairKey = (agentId: string, connectionId: string): string => `${agentId}:${connectionId}`
 
@@ -29,6 +36,24 @@ export class ConnectionGrantsService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly connections: ConnectionsService,
     ) {}
+
+    /** Every connection of the workspace with the agents that use it and how far (owner or manager). */
+    async board(actor: ConnectionActor): Promise<ReadonlyArray<ConnectionBoardEntry>> {
+        await this.connections.authorize(actor, MANAGER)
+        const [connections, rows] = await Promise.all([
+            this.connections.list(actor.workspaceId),
+            this.entityManager.query<Array<GrantRow>>(LIST_WORKSPACE_GRANTS, [actor.workspaceId]),
+        ])
+        const byConnection = new Map<string, Array<ConnectionGrantEntry>>()
+        for (const row of rows) {
+            const access = isAccess(row.access) ? row.access : "auto"
+            byConnection.set(row.connection_id, [
+                ...(byConnection.get(row.connection_id) ?? []),
+                { agentId: row.agent_id, access },
+            ])
+        }
+        return connections.map((connection) => ({ connection, grants: byConnection.get(connection.id) ?? [] }))
+    }
 
     /** One agent access to one connection (null removes it). Saved at once from either picker. */
     async setGrant(

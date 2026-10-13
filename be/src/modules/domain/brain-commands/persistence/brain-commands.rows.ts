@@ -21,3 +21,13 @@ export interface CommandIdRow {
     /** The command id. */
     readonly id: string
 }
+
+/** How a command stands, as the person who asked reads it. */
+export interface CommandStateRow {
+    /** Where it stands. */
+    readonly status: CommandStatus
+    /** What it produced when it is done. */
+    readonly result: object | null
+    /** The stored code of why it failed. */
+    readonly error_code: string | null
+}

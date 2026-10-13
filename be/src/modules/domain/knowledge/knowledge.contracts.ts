@@ -1,3 +1,5 @@
+import type { PassageView } from "@modules/domain/knowledge-chunks"
+import type { SourceDetail } from "@modules/domain/knowledge-sources"
 import type { DriveFolderListing, MaybeDriveAccess } from "@modules/integrations/documents"
 import type { LlmUsage } from "@modules/integrations/llm"
 import type { Outcome } from "@modules/platform/primitives"
@@ -164,4 +166,12 @@ export interface IndexRun {
 export interface PickedFolder extends DriveFolderListing {
     /** True when the listing came back with no files or was refused; the owner is asked to pick the files inside. */
     readonly empty: boolean
+}
+
+/** One document with its text and its passages. */
+export interface OpenedKnowledgeSource {
+    /** The document with its text. */
+    readonly source: SourceDetail
+    /** Its passages in order. */
+    readonly chunks: ReadonlyArray<PassageView>
 }

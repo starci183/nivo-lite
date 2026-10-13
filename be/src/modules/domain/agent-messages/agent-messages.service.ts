@@ -3,7 +3,7 @@ import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
-import type { StoredMessage, StoredReply, TranscriptLine } from "./agent-messages.contracts"
+import type { ApprovedMessageId, StoredMessage, StoredReply, TranscriptLine } from "./agent-messages.contracts"
 import { AgentMessagesError, AgentMessagesErrorCode } from "./errors/agent-messages.error"
 import type { LastMessageRow, MessageIdRow, StoredMessageRow, TranscriptRow } from "./persistence/agent-messages.rows"
 import {
@@ -13,6 +13,7 @@ import {
     INSERT_AGENT_REPLY,
     INSERT_CUSTOMER_MESSAGE,
     INSERT_GREETING_MESSAGE,
+    INSERT_HUMAN_MESSAGE,
     INSERT_SYSTEM_LINE,
     LIST_TRANSCRIPT,
     MARK_MESSAGE_DELIVERY,
@@ -90,9 +91,34 @@ export class AgentMessagesService {
         )
     }
 
+    /** Stores a member's reply in the caller's transaction; an approval's stable id reuses the same message on retry. */
+    async storeHumanMessage(
+        workspaceId: string,
+        conversationId: string,
+        body: string,
+        authorName: string,
+        manager: EntityManager = this.entityManager,
+        approvedItemId: ApprovedMessageId = null,
+    ): Promise<string> {
+        const rows = await manager.query<Array<MessageIdRow>>(INSERT_HUMAN_MESSAGE, [
+            approvedItemId,
+            workspaceId,
+            conversationId,
+            body,
+            authorName,
+        ])
+        if (rows[0] === undefined && approvedItemId !== null) return approvedItemId
+        return this.required(rows)
+    }
+
     /** Writes a line the workbench shows between the messages; it is never sent to the customer. */
-    async storeLine(workspaceId: string, conversationId: string, body: string): Promise<void> {
-        await this.entityManager.query(INSERT_SYSTEM_LINE, [workspaceId, conversationId, body])
+    async storeLine(
+        workspaceId: string,
+        conversationId: string,
+        body: string,
+        manager: EntityManager = this.entityManager,
+    ): Promise<void> {
+        await manager.query(INSERT_SYSTEM_LINE, [workspaceId, conversationId, body])
     }
 
     /** One stored message of a conversation, or a refusal when it is not there. */

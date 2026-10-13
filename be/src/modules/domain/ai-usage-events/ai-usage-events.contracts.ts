@@ -85,3 +85,51 @@ export interface QuotaStatus {
 
 /** A status, or null when it cannot be read (metering then fails open). */
 export type QuotaLookup = QuotaStatus | null
+
+/** One day's model use for a module, excluding the free guide. */
+export interface DailyModuleUsage {
+    /** The day in Vietnam time, YYYY-MM-DD. */
+    readonly day: string
+    /** The module or shared usage bucket. */
+    readonly module: string
+    /** Number of model calls. */
+    readonly calls: number
+    /** Prompt and completion tokens. */
+    readonly tokens: number
+    /** Model cost in USD. */
+    readonly costUsd: number
+}
+
+/** One module's use in the current month. */
+export interface ModuleUsage {
+    /** The module or shared usage bucket. */
+    readonly module: string
+    /** Number of model calls. */
+    readonly calls: number
+    /** Prompt and completion tokens. */
+    readonly tokens: number
+    /** Model cost in USD. */
+    readonly costUsd: number
+    /** Credits consumed. */
+    readonly credits: number
+}
+
+/** One day's use in the current month. */
+export interface DailyUsage {
+    /** The day in Vietnam time, YYYY-MM-DD. */
+    readonly day: string
+    /** Prompt and completion tokens. */
+    readonly tokens: number
+    /** Credits consumed. */
+    readonly credits: number
+}
+
+/** The monthly quota and the use grouped for the billing card. */
+export interface UsageSummary {
+    /** The quota when the workspace has one. */
+    readonly status: QuotaLookup
+    /** Modules, ordered by credits consumed. */
+    readonly byModule: ReadonlyArray<ModuleUsage>
+    /** Days in chronological order. */
+    readonly daily: ReadonlyArray<DailyUsage>
+}

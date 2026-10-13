@@ -1,18 +1,32 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { BillingService } from "@modules/domain/billing"
-import { CreditsService } from "@modules/domain/credits"
+import { CreditsError, CreditsErrorCode, CreditsService } from "@modules/domain/credits"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { DomainError } from "@modules/platform/errors"
-import { isPaymentOrderRequestPayload } from "./payment-order-requests.contracts"
-import type { RequestOutcome } from "./payment-order-requests.contracts"
-import type { RequestRow } from "./persistence/payment-order-requests.rows"
-import { MARK_REQUEST_DONE, MARK_REQUEST_FAILED, SELECT_REQUEST } from "./persistence/payment-order-requests.sql"
+import { isPaymentOrderRequestPayload, PAYMENT_ORDER_REQUEST_QUEUE } from "./payment-order-requests.contracts"
+import type {
+    PaymentOrderRequestParams,
+    PaymentOrderRequestStatusLookup,
+    QueuedPaymentOrderRequest,
+    RequestOutcome,
+} from "./payment-order-requests.contracts"
+import { PaymentOrderRequestsError, PaymentOrderRequestsErrorCode } from "./errors/payment-order-requests.error"
+import { targetOf, toRequestStatus } from "./payment-order-requests.policy"
+import type { InsertedRequestRow, RequestRow, RequestStatusRow } from "./persistence/payment-order-requests.rows"
+import {
+    ENQUEUE_REQUEST,
+    INSERT_REQUEST,
+    MARK_EXHAUSTED_REQUEST_FAILED,
+    MARK_REQUEST_DONE,
+    MARK_REQUEST_FAILED,
+    SELECT_REQUEST,
+    SELECT_REQUEST_STATUS,
+} from "./persistence/payment-order-requests.sql"
 
 @Injectable()
 /**
- * Answers the payment order requests members create through the database: it makes the order the request names with the figures of
- * the database (never the caller figures) and writes the order id, or the refusal code, back to the request row.
+ * Creates authorized payment order requests and answers them with database prices through the existing fenced job.
  */
 export class PaymentOrderRequestsService {
     constructor(
@@ -20,6 +34,37 @@ export class PaymentOrderRequestsService {
         private readonly billing: BillingService,
         private readonly credits: CreditsService,
     ) {}
+
+    /** Commits an authorized manager's request and its existing pgmq job together, then answers immediately. */
+    async request(userId: string, params: PaymentOrderRequestParams): Promise<QueuedPaymentOrderRequest> {
+        await this.billing.requireManager(userId, params.workspaceId)
+        const target = targetOf(params)
+        await this.requireTarget(params.kind, target)
+        return this.entityManager.transaction(async (manager) => {
+            const [row] = await manager.query<Array<InsertedRequestRow>>(INSERT_REQUEST, [
+                params.workspaceId,
+                userId,
+                params.kind,
+                target,
+            ])
+            if (row === undefined) {
+                throw new PaymentOrderRequestsError({ code: PaymentOrderRequestsErrorCode.NotCreated })
+            }
+            await manager.query(ENQUEUE_REQUEST, [params.workspaceId, PAYMENT_ORDER_REQUEST_QUEUE, row.id])
+            return { id: row.id, status: "queued" }
+        })
+    }
+
+    /** Reads only this manager's own request; another caller or workspace receives no row. */
+    async status(userId: string, workspaceId: string, id: string): Promise<PaymentOrderRequestStatusLookup> {
+        await this.billing.requireManager(userId, workspaceId)
+        const [row] = await this.entityManager.query<Array<RequestStatusRow>>(SELECT_REQUEST_STATUS, [
+            id,
+            workspaceId,
+            userId,
+        ])
+        return row === undefined ? null : toRequestStatus(row)
+    }
 
     /**
      * Handles one job payload. A payload of another shape or a request that is gone or already answered changes nothing; a
@@ -41,6 +86,25 @@ export class PaymentOrderRequestsService {
             if (!(cause instanceof DomainError)) throw cause
             await this.entityManager.query(MARK_REQUEST_FAILED, [request.id, cause.code])
             return "failed"
+        }
+    }
+
+    /** Records the terminal failure after the queue has exhausted retries, preserving a stable code instead of exception prose. */
+    async fail(payload: unknown, cause: unknown): Promise<void> {
+        if (!isPaymentOrderRequestPayload(payload)) return
+        const code = cause instanceof DomainError ? cause.code : PaymentOrderRequestsErrorCode.JobFailed
+        await this.entityManager.query(MARK_EXHAUSTED_REQUEST_FAILED, [payload.requestId, payload.workspaceId, code])
+    }
+
+    private async requireTarget(kind: PaymentOrderRequestParams["kind"], target: string | null): Promise<void> {
+        if (target === null) return
+        if (kind !== "topup") {
+            await this.billing.requirePlan(target)
+            return
+        }
+        const packs = await this.credits.listPacks()
+        if (!packs.some((pack) => pack.code === target)) {
+            throw new CreditsError({ code: CreditsErrorCode.PackNotFound })
         }
     }
 
