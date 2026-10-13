@@ -113,6 +113,67 @@ describe("ConnectionsService", () => {
             expect(service.publicOrigin()).toBe("https://nivo.vn")
             expect((await build(mockEntityManager())).publicOrigin()).toBeNull()
         })
+
+        it.each([
+            {
+                name: "uses the API url for providers when both public urls are configured",
+                options: {
+                    publicSiteUrl: "https://app.example.com/site/",
+                    publicApiUrl: "https://api.example.com/v1/",
+                },
+                webhook: "https://api.example.com/v1/api/telegram/c1",
+                origin: "https://api.example.com",
+                site: "https://app.example.com/site",
+            },
+            {
+                name: "uses the site url for providers when the API url is absent",
+                options: { publicSiteUrl: "https://app.example.com/site/" },
+                webhook: "https://app.example.com/site/api/telegram/c1",
+                origin: "https://app.example.com",
+                site: "https://app.example.com/site",
+            },
+            {
+                name: "keeps the local browser destination when only the API url is configured",
+                options: { publicSiteUrl: undefined, publicApiUrl: "https://api.example.com/v1/" },
+                webhook: "https://api.example.com/v1/api/telegram/c1",
+                origin: "https://api.example.com",
+                site: "http://localhost:3100",
+            },
+            {
+                name: "uses local defaults when neither public url is configured",
+                options: { publicSiteUrl: undefined },
+                webhook: "http://localhost:3100/api/telegram/c1",
+                origin: null,
+                site: "http://localhost:3100",
+            },
+            {
+                name: "keeps an empty API url instead of falling back to the site url",
+                options: { publicSiteUrl: "https://app.example.com/site/", publicApiUrl: "" },
+                webhook: "/api/telegram/c1",
+                origin: null,
+                site: "https://app.example.com/site",
+            },
+        ])("$name", async ({ options, webhook, origin, site }) => {
+            const moduleRef = await Test.createTestingModule({
+                providers: [
+                    ConnectionsService,
+                    { provide: PRIMARY_ENTITY_MANAGER, useValue: mockEntityManager() },
+                    {
+                        provide: MODULE_OPTIONS_TOKEN,
+                        useValue: { channelTokenKey: new Secret(KEY.toString("base64")), ...options },
+                    },
+                ],
+            }).compile()
+            const service = moduleRef.get(ConnectionsService)
+
+            expect(service.webhookUrl("telegram", "c1")).toBe(webhook)
+            expect(service.webhookUrl("telegram", "c1", undefined)).toBe(webhook)
+            expect(service.webhookUrl("sepay", "c1", "https://override.example.com/")).toBe(
+                "https://override.example.com/api/connections/sepay/c1",
+            )
+            expect(service.publicOrigin()).toBe(origin)
+            expect(service.siteBase()).toBe(site)
+        })
     })
 
     describe("authorize", () => {

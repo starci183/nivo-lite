@@ -12,9 +12,9 @@ describe("PKCE", () => {
 })
 
 describe("zaloCallbackUrl", () => {
-    it("keeps the callback path byte-identical and needs a site url", () => {
+    it("points the callback at the connections page of the site and needs a site url", () => {
         expect(zaloCallbackUrl({ siteUrl: "https://nivo.vn/" })).toBe(
-            "https://nivo.vn/api/connections/zalo/oauth/callback",
+            "https://nivo.vn/connections/zalo/callback",
         )
         expect(zaloCallbackUrl({ siteUrl: undefined })).toBeNull()
     })

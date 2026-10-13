@@ -120,7 +120,7 @@ describe("ChannelSetupClient", () => {
         it("builds the callback and the authorization url from the site url", async () => {
             const { client } = await build()
 
-            expect(client.zaloCallbackUrl()).toBe("https://nivo.vn/api/connections/zalo/oauth/callback")
+            expect(client.zaloCallbackUrl()).toBe("https://nivo.vn/connections/zalo/callback")
             expect(client.zaloAuthorizeUrl("app-1", "verifier", "c.n")).toContain("app_id=app-1")
         })
 
