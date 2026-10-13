@@ -1,0 +1,95 @@
+{
+  "key": "nurture_leads",
+  "version": 1,
+  "pack": "core",
+  "executor": "implemented",
+  "moduleKey": "sales",
+  "icon": "leads",
+  "name": {
+    "vi": "Chăm khách chưa chốt",
+    "en": "Follow up undecided customers"
+  },
+  "description": {
+    "vi": "Khách hỏi rồi im lặng được nhắn hỏi lại, không bỏ sót ai.",
+    "en": "Customers who asked and went quiet get a gentle nudge, so nobody is forgotten."
+  },
+  "trigger": {
+    "kind": "event",
+    "event": "lead.no_reply_after",
+    "line": {
+      "vi": "Khi khách chưa chốt mua hoặc từ chối sau một khoảng thời gian",
+      "en": "When a customer has neither bought nor declined after a while"
+    }
+  },
+  "requires": {
+    "modules": [
+      "sales"
+    ],
+    "channels": [
+      "customer_chat"
+    ],
+    "connections": [],
+    "capabilities": []
+  },
+  "settings": [
+    {
+      "key": "afterHours",
+      "kind": "number",
+      "min": 1,
+      "max": 720,
+      "suffix": {
+        "vi": "giờ",
+        "en": "hours"
+      },
+      "label": {
+        "vi": "Nhắn lại sau",
+        "en": "Follow up after"
+      }
+    },
+    {
+      "key": "maxFollowUps",
+      "kind": "number",
+      "min": 1,
+      "max": 5,
+      "suffix": {
+        "vi": "lần",
+        "en": "times"
+      },
+      "label": {
+        "vi": "Nhắn tối đa",
+        "en": "At most"
+      }
+    }
+  ],
+  "contentMode": "ai_per_case",
+  "guardrails": [
+    {
+      "vi": "Không hứa kết quả, không tự cho giảm giá hay ưu đãi ngoài những gì chủ shop đã ghi.",
+      "en": "No outcome promises and no discounts beyond what the owner wrote."
+    },
+    {
+      "vi": "Không bịa giá, giờ, địa chỉ hay chính sách chưa có trong thông tin cửa hàng.",
+      "en": "Never invent prices, hours, addresses or policies that are not in the shop information."
+    },
+    {
+      "vi": "Mỗi tin ngắn, nhẹ nhàng, không thúc ép.",
+      "en": "Short, gentle, never pushy."
+    }
+  ],
+  "variables": [
+    "ten_khach",
+    "ten_shop",
+    "nhu_cau"
+  ],
+  "defaultBody": {
+    "vi": "Chào {ten_khach}, bên {ten_shop} muốn hỏi bạn đã cân nhắc xong chưa ạ? Nếu cần thêm thông tin về {nhu_cau}, bạn nhắn lại giúp mình nhé.",
+    "en": "Hi {ten_khach}, {ten_shop} wanted to check whether you have decided. If you need more information about {nhu_cau}, just reply."
+  },
+  "authority": {
+    "action": "send_follow_up"
+  },
+  "defaults": {
+    "afterHours": 24,
+    "maxFollowUps": 2
+  }
+}

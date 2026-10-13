@@ -1,0 +1,82 @@
+{
+  "key": "shifts_shift_reminder",
+  "version": 1,
+  "pack": "core",
+  "executor": "implemented",
+  "moduleKey": "shifts",
+  "icon": "calendar",
+  "name": {
+    "vi": "Nhắc ca trước giờ",
+    "en": "Shift reminders"
+  },
+  "description": {
+    "vi": "Nhắc nhân viên trước giờ vào ca, và báo chủ nếu có người chưa vào ca sau vài phút.",
+    "en": "Reminds staff before a shift and alerts the owner when someone has not checked in a few minutes after it started."
+  },
+  "trigger": {
+    "kind": "event",
+    "event": "shift.upcoming",
+    "line": {
+      "vi": "Một khoảng thời gian trước mỗi ca đã đăng",
+      "en": "A while before every published shift"
+    }
+  },
+  "requires": {
+    "modules": [
+      "shifts"
+    ],
+    "channels": [],
+    "connections": [],
+    "capabilities": []
+  },
+  "settings": [
+    {
+      "key": "beforeMinutes",
+      "kind": "number",
+      "min": 10,
+      "max": 240,
+      "suffix": {
+        "vi": "phút",
+        "en": "minutes"
+      },
+      "label": {
+        "vi": "Nhắc trước giờ vào ca",
+        "en": "Remind before the shift"
+      }
+    },
+    {
+      "key": "noShowMinutes",
+      "kind": "number",
+      "min": 5,
+      "max": 60,
+      "suffix": {
+        "vi": "phút",
+        "en": "minutes"
+      },
+      "label": {
+        "vi": "Báo chủ nếu chưa vào ca sau",
+        "en": "Alert the owner if not checked in after"
+      },
+      "hint": {
+        "vi": "Chỉ tính với người đã được xếp ca; nhân viên bấm Vào ca trong Lịch của tôi.",
+        "en": "Only for people scheduled; staff tap Vào ca in their schedule."
+      }
+    }
+  ],
+  "contentMode": "none",
+  "guardrails": [
+    {
+      "vi": "Chỉ nhắc đúng ca đã đăng, đúng giờ và vị trí trong lịch; không thêm hứa hẹn hay thay đổi lịch.",
+      "en": "Only reminds about published shifts with their real time and position; never promises or changes the schedule."
+    }
+  ],
+  "variables": [],
+  "defaultBody": null,
+  "authority": {
+    "action": null
+  },
+  "defaults": {
+    "beforeMinutes": 60,
+    "noShowMinutes": 10
+  }
+}

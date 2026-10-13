@@ -1,0 +1,78 @@
+{
+  "key": "booking_review",
+  "version": 1,
+  "pack": "appointments",
+  "executor": "implemented",
+  "moduleKey": "booking",
+  "icon": "review",
+  "name": {
+    "vi": "Xin đánh giá sau buổi hẹn",
+    "en": "Ask for a review after the visit"
+  },
+  "description": {
+    "vi": "Vài giờ sau khi buổi hẹn xong, NIVO xin khách một lời nhận xét. Khách chê thì bạn được báo trong Văn phòng.",
+    "en": "A few hours after a visit, NIVO asks the customer for feedback."
+  },
+  "trigger": {
+    "kind": "schedule",
+    "event": "booking.done",
+    "line": {
+      "vi": "Một khoảng thời gian sau khi buổi hẹn xong",
+      "en": "A while after the appointment is done"
+    }
+  },
+  "requires": {
+    "modules": [
+      "booking"
+    ],
+    "channels": [
+      "customer_chat"
+    ],
+    "connections": [],
+    "capabilities": [
+      "has_appointments"
+    ]
+  },
+  "settings": [
+    {
+      "key": "afterHours",
+      "kind": "number",
+      "min": 1,
+      "max": 72,
+      "suffix": {
+        "vi": "giờ",
+        "en": "hours"
+      },
+      "label": {
+        "vi": "Hỏi sau",
+        "en": "Ask after"
+      }
+    }
+  ],
+  "contentMode": "fixed",
+  "guardrails": [
+    {
+      "vi": "Chỉ xin nhận xét, không xin đánh giá 5 sao và không tặng quà.",
+      "en": "Ask for feedback only, no star-begging and no gifts."
+    },
+    {
+      "vi": "Không bịa giá, giờ, địa chỉ hay chính sách chưa có trong thông tin cửa hàng.",
+      "en": "Never invent prices, hours, addresses or policies that are not in the shop information."
+    }
+  ],
+  "variables": [
+    "ten_khach",
+    "ten_shop",
+    "dich_vu"
+  ],
+  "defaultBody": {
+    "vi": "Chào {ten_khach}, cảm ơn bạn đã dùng {dich_vu} tại {ten_shop}. Bạn thấy buổi hẹn thế nào ạ? Một lời nhận xét ngắn của bạn giúp bên mình rất nhiều.",
+    "en": "Hi {ten_khach}, thank you for choosing {ten_shop}. How was your visit?"
+  },
+  "authority": {
+    "action": "send_care"
+  },
+  "defaults": {
+    "afterHours": 3
+  }
+}

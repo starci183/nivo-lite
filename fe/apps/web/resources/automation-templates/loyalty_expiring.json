@@ -1,0 +1,64 @@
+{
+  "key": "loyalty_expiring",
+  "version": 1,
+  "pack": "core",
+  "executor": "implemented",
+  "moduleKey": "loyalty",
+  "icon": "moon",
+  "name": {
+    "vi": "Báo điểm sắp hết hạn",
+    "en": "Warn about expiring points"
+  },
+  "description": {
+    "vi": "Nhắc khách có điểm sắp hết hạn để họ kịp đổi quà. Mỗi đợt hết hạn chỉ báo một lần.",
+    "en": "Reminds members whose points are about to expire so they can redeem in time. Once per expiry batch."
+  },
+  "trigger": {
+    "kind": "schedule",
+    "event": "schedule.daily",
+    "line": {
+      "vi": "Mỗi ngày, cho khách có điểm hết hạn trong số ngày cảnh báo của chương trình",
+      "en": "Every day, for members with points expiring within the programme's warning days"
+    }
+  },
+  "requires": {
+    "modules": [
+      "loyalty"
+    ],
+    "channels": [
+      "customer_chat"
+    ],
+    "connections": [],
+    "capabilities": []
+  },
+  "settings": [],
+  "contentMode": "ai_per_case",
+  "guardrails": [
+    {
+      "vi": "Chỉ nêu đúng quà, điểm và quyền lợi đã ghi trong chương trình của cửa hàng.",
+      "en": "Mention only the gifts, points and benefits written in the shop's programme."
+    },
+    {
+      "vi": "Không hứa quà, giảm giá hay hạng thành viên ngoài danh mục.",
+      "en": "Never promise gifts, discounts or tiers outside the catalogue."
+    },
+    {
+      "vi": "Không bịa giá, ngày, địa chỉ hay điều kiện chưa có trong thông tin cửa hàng.",
+      "en": "Never invent prices, dates, addresses or conditions that are not in the shop information."
+    }
+  ],
+  "variables": [
+    "ten_khach",
+    "ten_shop",
+    "diem",
+    "han"
+  ],
+  "defaultBody": {
+    "vi": "Chào {ten_khach}, bạn có {diem} điểm sắp hết hạn vào {han}. Ghé {ten_shop} đổi quà trước ngày đó nhé!",
+    "en": "Hi {ten_khach}, {diem} of your points expire on {han}."
+  },
+  "authority": {
+    "action": "send_promo"
+  },
+  "defaults": {}
+}

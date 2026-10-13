@@ -1,0 +1,81 @@
+{
+  "key": "thank_payment",
+  "version": 1,
+  "pack": "core",
+  "executor": "implemented",
+  "moduleKey": "accounting",
+  "icon": "payment",
+  "name": {
+    "vi": "Cảm ơn khi nhận tiền",
+    "en": "Thank customers when money arrives"
+  },
+  "description": {
+    "vi": "Tiền của khách về, NIVO nhắn một lời cảm ơn trên đúng kênh khách đang chat.",
+    "en": "When a customer's money arrives, NIVO sends a thank-you on the channel they chat on."
+  },
+  "trigger": {
+    "kind": "event",
+    "event": "payment.received",
+    "line": {
+      "vi": "Mỗi khi nhận được một khoản thanh toán đã đối soát",
+      "en": "Every time a payment is matched"
+    }
+  },
+  "requires": {
+    "modules": [
+      "accounting"
+    ],
+    "channels": [
+      "customer_chat"
+    ],
+    "connections": [],
+    "capabilities": []
+  },
+  "settings": [
+    {
+      "key": "minAmount",
+      "kind": "number",
+      "min": 0,
+      "max": 1000000000,
+      "suffix": {
+        "vi": "đồng",
+        "en": "VND"
+      },
+      "label": {
+        "vi": "Chỉ cảm ơn từ số tiền",
+        "en": "Only from this amount"
+      },
+      "hint": {
+        "vi": "Để 0 nếu muốn cảm ơn mọi khoản.",
+        "en": "Leave 0 to thank every payment."
+      }
+    }
+  ],
+  "contentMode": "fixed",
+  "guardrails": [
+    {
+      "vi": "Chỉ cảm ơn và xác nhận số tiền, không hứa thêm gì.",
+      "en": "Only thank and confirm the amount, promise nothing more."
+    },
+    {
+      "vi": "Không bịa giá, giờ, địa chỉ hay chính sách chưa có trong thông tin cửa hàng.",
+      "en": "Never invent prices, hours, addresses or policies that are not in the shop information."
+    }
+  ],
+  "variables": [
+    "ten_khach",
+    "ten_shop",
+    "so_tien",
+    "ma_phieu"
+  ],
+  "defaultBody": {
+    "vi": "Cảm ơn {ten_khach} đã thanh toán {so_tien}. {ten_shop} rất vui được đồng hành cùng bạn!",
+    "en": "Thank you {ten_khach} for paying {so_tien}. {ten_shop} is glad to have you!"
+  },
+  "authority": {
+    "action": "send_care"
+  },
+  "defaults": {
+    "minAmount": 0
+  }
+}

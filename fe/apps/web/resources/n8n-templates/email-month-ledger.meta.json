@@ -1,0 +1,42 @@
+{
+  "key": "email-month-ledger",
+  "version": 1,
+  "pack": "email",
+  "executor": "n8n",
+  "moduleKey": "accounting",
+  "icon": "ledger",
+  "name": { "vi": "Sổ cái tháng gửi kế toán qua email", "en": "Monthly ledger to your accountant by email" },
+  "description": {
+    "vi": "Ngày 1 mỗi tháng, NIVO gửi file CSV sổ cái của tháng trước (tiền về và hoá đơn) tới email kế toán bạn nhập.",
+    "en": "On the 1st of each month NIVO emails last month's ledger CSV (money in and invoices) to the accountant address you enter."
+  },
+  "trigger": {
+    "kind": "schedule",
+    "event": "schedule.monthly",
+    "line": { "vi": "Ngày 1 mỗi tháng (giờ Việt Nam)", "en": "The 1st of each month (Vietnam time)" }
+  },
+  "requires": { "modules": ["accounting"], "channels": [], "connections": ["smtp"], "capabilities": [] },
+  "settings": [
+    { "key": "accountant_email", "kind": "email", "required": true, "label": { "vi": "Email kế toán", "en": "Accountant email" } },
+    { "key": "time", "kind": "time", "label": { "vi": "Gửi lúc", "en": "Send at" } },
+    { "key": "subject", "kind": "text", "label": { "vi": "Tiêu đề email", "en": "Email subject" } },
+    { "key": "body", "kind": "textarea", "label": { "vi": "Nội dung email", "en": "Email body" } }
+  ],
+  "contentMode": "fixed",
+  "guardrails": [{ "vi": "Chỉ dùng số liệu có thật trong NIVO.", "en": "Only real figures from NIVO." }],
+  "variables": ["ten_shop", "ky", "tom_tat"],
+  "defaultBody": {
+    "vi": "Chào bạn,\n\nĐính kèm là sổ cái tháng {ky} của {ten_shop} (file CSV, mở được bằng Excel).\n\nTổng quan:\n{tom_tat}\n\nEmail này do NIVO gửi tự động vào ngày 1 hằng tháng.",
+    "en": "Hello,\n\nAttached is the ledger for {ky} of {ten_shop} (a CSV file that opens in Excel).\n\nOverview:\n{tom_tat}\n\nThis email is sent automatically by NIVO on the 1st of each month."
+  },
+  "authority": { "action": null },
+  "defaults": {
+    "time": "07:00",
+    "subject": "Sổ cái tháng {ky} của {ten_shop}"
+  },
+  "n8n": {
+    "webhook": "nivo/email-month-ledger",
+    "data": ["GET /api/n8n/data/month-ledger"],
+    "audience": "owner"
+  }
+}

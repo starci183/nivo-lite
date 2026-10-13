@@ -1,0 +1,42 @@
+{
+  "key": "email-payment-receipt",
+  "version": 1,
+  "pack": "email",
+  "executor": "n8n",
+  "moduleKey": "accounting",
+  "icon": "receipt",
+  "name": { "vi": "Biên nhận thanh toán qua email", "en": "Payment receipt by email" },
+  "description": {
+    "vi": "Khi tiền về và khách có email, NIVO gửi khách một biên nhận ngắn. Email cho khách đi qua bước kiểm tra quyền (mặc định hỏi bạn trước).",
+    "en": "When money arrives and the customer has an email, NIVO sends a short receipt. Customer emails pass the authority check (asks you first by default)."
+  },
+  "trigger": {
+    "kind": "event",
+    "event": "payment.received",
+    "line": { "vi": "Khi nhận được một khoản thanh toán của khách có email", "en": "When a payment arrives from a customer with an email" }
+  },
+  "requires": { "modules": ["accounting"], "channels": [], "connections": ["smtp"], "capabilities": [] },
+  "settings": [
+    { "key": "subject", "kind": "text", "label": { "vi": "Tiêu đề email", "en": "Email subject" } },
+    { "key": "body", "kind": "textarea", "label": { "vi": "Nội dung email", "en": "Email body" } }
+  ],
+  "contentMode": "fixed",
+  "guardrails": [
+    { "vi": "Chỉ nêu số tiền, mã phiếu và ngày có thật.", "en": "Only the real amount, reference and date." },
+    { "vi": "Không bịa chính sách hay ưu đãi.", "en": "Never invent policies or offers." }
+  ],
+  "variables": ["ten_khach", "ten_shop", "so_tien", "ma_phieu", "ngay"],
+  "defaultBody": {
+    "vi": "Chào {ten_khach},\n\n{ten_shop} xác nhận đã nhận {so_tien} cho phiếu {ma_phieu} vào ngày {ngay}.\n\nCảm ơn bạn đã tin tưởng {ten_shop}. Nếu thông tin chưa đúng, bạn trả lời email này để chúng tôi kiểm tra lại.",
+    "en": "Hello {ten_khach},\n\n{ten_shop} confirms receipt of {so_tien} for {ma_phieu} on {ngay}.\n\nThank you for choosing {ten_shop}. If anything looks wrong, reply to this email and we will check."
+  },
+  "authority": { "action": "send_email" },
+  "defaults": {
+    "subject": "Biên nhận thanh toán {ma_phieu} từ {ten_shop}"
+  },
+  "n8n": {
+    "webhook": "nivo/email-payment-receipt",
+    "data": [],
+    "audience": "customer"
+  }
+}

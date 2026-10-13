@@ -1,0 +1,46 @@
+{
+  "key": "shifts_leave_gap",
+  "version": 1,
+  "pack": "core",
+  "executor": "implemented",
+  "moduleKey": "shifts",
+  "icon": "calendar",
+  "name": {
+    "vi": "Báo thiếu người khi có người xin nghỉ",
+    "en": "Gap alert when someone asks for leave"
+  },
+  "description": {
+    "vi": "Khi nhân viên xin nghỉ, báo chủ ngay ca nào sẽ thiếu người và gợi ý hỏi ai thay.",
+    "en": "When someone asks for leave, tells the owner right away which shifts would be short and who could cover."
+  },
+  "trigger": {
+    "kind": "event",
+    "event": "leave.requested",
+    "line": {
+      "vi": "Khi có đơn xin nghỉ mới",
+      "en": "When a new leave request arrives"
+    }
+  },
+  "requires": {
+    "modules": [
+      "shifts"
+    ],
+    "channels": [],
+    "connections": [],
+    "capabilities": []
+  },
+  "settings": [],
+  "contentMode": "none",
+  "guardrails": [
+    {
+      "vi": "Chỉ báo chủ và gợi ý người rảnh theo lịch và quy tắc đã đặt; không tự duyệt nghỉ hay tự gọi người thay.",
+      "en": "Only tells the owner and suggests free people by schedule and rules; never approves leave or calls a replacement itself."
+    }
+  ],
+  "variables": [],
+  "defaultBody": null,
+  "authority": {
+    "action": null
+  },
+  "defaults": {}
+}

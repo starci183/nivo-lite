@@ -1,0 +1,85 @@
+{
+  "key": "after_hours",
+  "version": 1,
+  "pack": "core",
+  "executor": "implemented",
+  "moduleKey": "chatbot",
+  "icon": "moon",
+  "name": {
+    "vi": "Khách hỏi ngoài giờ",
+    "en": "Messages outside opening hours"
+  },
+  "description": {
+    "vi": "Khách nhắn khi shop đã đóng cửa được báo sẽ có người gọi lại sáng mai, và nhân viên có sẵn một việc cần gọi.",
+    "en": "Customers who write when you are closed are told someone will call back, and staff get a call task."
+  },
+  "trigger": {
+    "kind": "event",
+    "event": "message.outside_hours",
+    "line": {
+      "vi": "Khi khách nhắn ngoài giờ mở cửa",
+      "en": "When a customer writes outside opening hours"
+    }
+  },
+  "requires": {
+    "modules": [
+      "chatbot"
+    ],
+    "channels": [
+      "customer_chat"
+    ],
+    "connections": [],
+    "capabilities": [
+      "has_opening_hours"
+    ]
+  },
+  "settings": [
+    {
+      "key": "openFrom",
+      "kind": "time",
+      "label": {
+        "vi": "Mở cửa từ",
+        "en": "Opens at"
+      },
+      "hint": {
+        "vi": "Chỉ dùng khi NIVO không đọc được giờ mở cửa từ thông tin cửa hàng.",
+        "en": "Used only when NIVO cannot read the hours from your shop information."
+      }
+    },
+    {
+      "key": "openTo",
+      "kind": "time",
+      "label": {
+        "vi": "Đóng cửa lúc",
+        "en": "Closes at"
+      }
+    }
+  ],
+  "contentMode": "fixed",
+  "guardrails": [
+    {
+      "vi": "Chỉ nói sẽ có người gọi lại, không hẹn giờ cụ thể.",
+      "en": "Only say someone will call back, no exact time."
+    },
+    {
+      "vi": "Không bịa giá, giờ, địa chỉ hay chính sách chưa có trong thông tin cửa hàng.",
+      "en": "Never invent prices, hours, addresses or policies that are not in the shop information."
+    }
+  ],
+  "variables": [
+    "ten_khach",
+    "ten_shop",
+    "gio_mo_cua"
+  ],
+  "defaultBody": {
+    "vi": "Cảm ơn bạn đã nhắn cho {ten_shop}. Hiện shop đã ngoài giờ làm việc ({gio_mo_cua}), bên mình sẽ gọi lại cho bạn vào sáng mai nhé!",
+    "en": "Thanks for writing to {ten_shop}. We are closed now ({gio_mo_cua}); someone will call you back tomorrow morning."
+  },
+  "authority": {
+    "action": "reply_customer"
+  },
+  "defaults": {
+    "openFrom": "08:00",
+    "openTo": "21:00"
+  }
+}

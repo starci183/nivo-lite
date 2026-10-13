@@ -1,0 +1,72 @@
+{
+  "key": "inventory_supplier_overdue",
+  "version": 1,
+  "pack": "core",
+  "executor": "implemented",
+  "moduleKey": "inventory",
+  "icon": "truck",
+  "name": {
+    "vi": "Nhắc nhà cung cấp giao trễ",
+    "en": "Overdue supplier reminder"
+  },
+  "description": {
+    "vi": "Đơn đã gửi mà quá hạn giao: soạn sẵn tin nhắc nhẹ nhà cung cấp, bạn duyệt mới gửi (nhắc tối đa 2 lần).",
+    "en": "A sent order past its delivery date: a polite reminder to the supplier is drafted and goes out only after you approve (at most 2 reminders)."
+  },
+  "trigger": {
+    "kind": "schedule",
+    "event": "schedule.daily",
+    "line": {
+      "vi": "Mỗi ngày vào giờ bạn chọn (giờ Việt Nam)",
+      "en": "Every day at the time you pick (Vietnam time)"
+    }
+  },
+  "requires": {
+    "modules": [
+      "inventory"
+    ],
+    "channels": [],
+    "connections": [],
+    "capabilities": []
+  },
+  "settings": [
+    {
+      "key": "time",
+      "kind": "time",
+      "label": {
+        "vi": "Kiểm lúc",
+        "en": "Check at"
+      }
+    },
+    {
+      "key": "graceDays",
+      "kind": "number",
+      "min": 0,
+      "max": 30,
+      "suffix": {
+        "vi": "ngày",
+        "en": "days"
+      },
+      "label": {
+        "vi": "Nhắc khi trễ hơn",
+        "en": "Remind when later than"
+      }
+    }
+  ],
+  "contentMode": "none",
+  "guardrails": [
+    {
+      "vi": "Tin nhắc lịch sự, không trách móc; luôn chờ bạn duyệt trước khi gửi.",
+      "en": "Polite, never blaming; always waits for your approval before sending."
+    }
+  ],
+  "variables": [],
+  "defaultBody": null,
+  "authority": {
+    "action": null
+  },
+  "defaults": {
+    "time": "09:00",
+    "graceDays": 1
+  }
+}
