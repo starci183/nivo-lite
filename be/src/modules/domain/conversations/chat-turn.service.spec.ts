@@ -11,6 +11,7 @@ import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import type { ChatTurnPayload } from "@modules/queues/chat-turn"
 import { ChatTurnExtensionsService } from "./chat-turn-extensions.service"
 import { ChatTurnService } from "./chat-turn.service"
 import { CHAT_TURN_EXTENSIONS } from "./conversations.decorators"
@@ -99,7 +100,7 @@ const build = async (setup: Setup = {}) => {
     return { service: moduleRef.get(ChatTurnService), em, conversations, messages, receipts, delivery, logger, extensions }
 }
 
-const turnPayload = { kind: "turn", workspaceId: "ws-1", conversationId: "conv-1", messageId: "msg-1", channelEventId: "tg:555:9", lookupName: false } as const
+const turnPayload: ChatTurnPayload = { kind: "turn", workspaceId: "ws-1", conversationId: "conv-1", messageId: "msg-1", channelEventId: "tg:555:9", lookupName: false }
 
 const proposal = (patch: Partial<ChatTurnProposal> = {}): ChatTurnProposal => ({
     reply: "Tea is 50k",
@@ -113,8 +114,37 @@ const proposal = (patch: Partial<ChatTurnProposal> = {}): ChatTurnProposal => ({
 const runtimeAnswering = (answer: ChatTurnProposal | string): ChatTurnRuntime => ({ propose: () => Promise.resolve(answer) })
 
 describe("ChatTurnService", () => {
+    describe("runFromJob", () => {
+        it("runs a chat-turn payload", async () => {
+            const { service, conversations, messages, delivery, extensions } = await build()
+            extensions.useRuntime(runtimeAnswering(proposal()))
+
+            await service.runFromJob(turnPayload)
+
+            expect(conversations.turnOf.mock.calls).toEqual([["conv-1"]])
+            expect(messages.find.mock.calls).toEqual([["msg-1", "conv-1"]])
+            expect(messages.storeReply.mock.calls).toEqual([["ws-1", "conv-1", "Tea is 50k", "msg-1"]])
+            expect(delivery.deliver.mock.calls).toEqual([[{ conversationId: "conv-1", messageId: "reply-1", text: "Tea is 50k" }]])
+        })
+
+        it.each([undefined, null, false, 42, "turn", [], {}, { ...turnPayload, kind: "other" }, { ...turnPayload, lookupName: "false" }])(
+            "ignores a payload that is not a chat turn: %p",
+            async (payload) => {
+                const { service, conversations, messages, delivery, logger } = await build()
+
+                await service.runFromJob(payload)
+
+                expect(conversations.turnOf.mock.calls).toEqual([])
+                expect(messages.find.mock.calls).toEqual([])
+                expect(messages.storeReply.mock.calls).toEqual([])
+                expect(delivery.deliver.mock.calls).toEqual([])
+                expect(logger.warn.mock.calls).toEqual([])
+            },
+        )
+    })
+
     describe("run a deliver job", () => {
-        const deliverPayload = { ...turnPayload, kind: "deliver", messageId: "greet-1" } as const
+        const deliverPayload: ChatTurnPayload = { ...turnPayload, kind: "deliver", messageId: "greet-1" }
 
         it("pushes the stored message to the customer", async () => {
             const { service, messages, delivery } = await build()

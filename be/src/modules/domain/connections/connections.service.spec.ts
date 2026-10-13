@@ -10,6 +10,7 @@ import {
     MARK_CONNECTION_ERROR,
     MARK_CONNECTION_HEALTH,
     MARK_CONNECTION_RECEIVED,
+    SETTLE_WIZARD,
 } from "./persistence/connections.sql"
 
 const build = async (
@@ -24,6 +25,7 @@ const build = async (
             [APPLY_ZALO_AUTHORIZATION, []],
             [LIST_HEALTH_BATCH, batch],
             [MARK_CONNECTION_HEALTH, []],
+            [SETTLE_WIZARD, []],
         ],
     })
     const moduleRef = await Test.createTestingModule({
@@ -95,6 +97,60 @@ describe("ConnectionsService", () => {
 
             expect(em.query).toHaveBeenNthCalledWith(1, APPLY_ZALO_AUTHORIZATION, ["c-1", '{"authorized":true,"oa_id":"oa-9"}'])
             expect(em.query).toHaveBeenNthCalledWith(2, APPLY_ZALO_AUTHORIZATION, ["c-1", '{"authorized":true}'])
+        })
+
+        it("settles a wizard command under its connection and ticket", async () => {
+            const { service, em } = await build()
+
+            await service.settleWizard("c-1", "ticket-1", {
+                command: "begin",
+                state: "done",
+                url: "https://oauth.zaloapp.com/authorize",
+                code: "",
+                oaSecretSaved: false,
+            })
+
+            expect(em.query).toHaveBeenCalledWith(SETTLE_WIZARD, [
+                "c-1",
+                "ticket-1",
+                '{"wizard":{"ticket":"ticket-1","command":"begin","state":"done","url":"https://oauth.zaloapp.com/authorize","code":""}}',
+            ])
+        })
+
+        it("includes the saved OA secret fact in a successful wizard settlement", async () => {
+            const { service, em } = await build()
+
+            await service.settleWizard("c-1", "ticket-2", {
+                command: "oa",
+                state: "done",
+                url: "",
+                code: "",
+                oaSecretSaved: true,
+            })
+
+            expect(em.query).toHaveBeenCalledWith(SETTLE_WIZARD, [
+                "c-1",
+                "ticket-2",
+                '{"oa_secret_saved":true,"wizard":{"ticket":"ticket-2","command":"oa","state":"done","url":"","code":""}}',
+            ])
+        })
+
+        it("records the refusal code in a failed wizard settlement", async () => {
+            const { service, em } = await build()
+
+            await service.settleWizard("c-1", "ticket-3", {
+                command: "app",
+                state: "failed",
+                url: "",
+                code: "CHANNELS_SECRET_UNREADABLE",
+                oaSecretSaved: false,
+            })
+
+            expect(em.query).toHaveBeenCalledWith(SETTLE_WIZARD, [
+                "c-1",
+                "ticket-3",
+                '{"wizard":{"ticket":"ticket-3","command":"app","state":"failed","url":"","code":"CHANNELS_SECRET_UNREADABLE"}}',
+            ])
         })
     })
 
