@@ -1,7 +1,7 @@
 import WorkbenchInventory from "@/features/module-inventory"
 import WorkbenchLoyalty from "@/features/module-loyalty"
 import WorkbenchHiring from "@/features/module-hiring"
-import WorkbenchBooking from "@/features/module-booking"
+import { BookingWorkbenchPage } from "@/features/pages/BookingWorkbenchPage"
 import WorkbenchShifts from "@/features/module-shifts"
 import { AgentWorkbenchPage } from "@/features/pages/AgentWorkbenchPage"
 import type { WorkbenchComponent } from "@/features/pages/AgentWorkbenchPage"
@@ -28,7 +28,7 @@ const WORKBENCHES: Readonly<Record<string, WorkbenchComponent>> = {
     accounting: WorkbenchAccounting,
     content: WorkbenchContent,
     inventory: WorkbenchInventory,
-    booking: WorkbenchBooking,
+    booking: BookingWorkbenchPage,
     video: WorkbenchVideo,
     hiring: WorkbenchHiring,
     shifts: WorkbenchShifts,

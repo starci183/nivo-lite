@@ -44,6 +44,18 @@ export type {
     ChatbotRole,
     ChatbotThread,
 } from "./chatbot"
+export type {
+    BookingAction,
+    BookingBoard,
+    BookingFiguresView,
+    BookingHoursView,
+    BookingResourceView,
+    BookingServiceView,
+    BookingSettingsView,
+    BookingStatsView,
+    BookingView,
+    BookingWaitView,
+} from "./booking"
 export type { ConsoleIconName, ConsoleNavItem, ConsolePending, ConsoleWorkspace } from "./console"
 export type { DataSlot, SlotLabels } from "./slot"
 export type {

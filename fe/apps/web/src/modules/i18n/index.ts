@@ -5,3 +5,4 @@ export { DEFAULT_LOCALE, LOCALES, LOCALE_COOKIE, PRODUCT_TIME_ZONE, routing } fr
 
 /** Locale-aware navigation for client components. */
 export const navigation = createNavigation(routing)
+export { isoDayNumber, shiftDate, wallClockText, wallDate, wallInstant, wallMinutes, weekStartOf } from "./zoned-time"
