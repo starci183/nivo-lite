@@ -1,7 +1,5 @@
-import type { Mutation, MutationPreviewLoyaltySegmentArgs } from "../../__generated__/schema"
+import type { PreviewLoyaltySegmentMutationVariables } from "../../__generated__/graphql"
+import type { WireInput } from "../../types"
 
 /** The input of the `previewLoyaltySegment` mutation. */
-export type MutatePreviewLoyaltySegmentRequest = MutationPreviewLoyaltySegmentArgs["input"]
-
-/** The response of the `previewLoyaltySegment` mutation. */
-export type MutatePreviewLoyaltySegmentResponse = Pick<Mutation, "previewLoyaltySegment">
+export type MutatePreviewLoyaltySegmentRequest = WireInput<PreviewLoyaltySegmentMutationVariables["input"]>

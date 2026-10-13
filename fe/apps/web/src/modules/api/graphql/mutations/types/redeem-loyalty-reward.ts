@@ -1,7 +1,5 @@
-import type { Mutation, MutationRedeemLoyaltyRewardArgs } from "../../__generated__/schema"
+import type { RedeemLoyaltyRewardMutationVariables } from "../../__generated__/graphql"
+import type { WireInput } from "../../types"
 
 /** The input of the `redeemLoyaltyReward` mutation. */
-export type MutateRedeemLoyaltyRewardRequest = MutationRedeemLoyaltyRewardArgs["input"]
-
-/** The response of the `redeemLoyaltyReward` mutation. */
-export type MutateRedeemLoyaltyRewardResponse = Pick<Mutation, "redeemLoyaltyReward">
+export type MutateRedeemLoyaltyRewardRequest = WireInput<RedeemLoyaltyRewardMutationVariables["input"]>

@@ -1,13 +1,13 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationSetOperatingModeArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { SetOperatingModeMutation, SetOperatingModeMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `setOperatingMode` mutation. */
-export type MutateSetOperatingModeRequest = MutationSetOperatingModeArgs["input"]
+export type MutateSetOperatingModeRequest = WireInput<SetOperatingModeMutationVariables["input"]>
 
-type MutateSetOperatingModeResponse = Pick<Mutation, "setOperatingMode">
+type MutateSetOperatingModeResponse = SetOperatingModeMutation
 
 const mutation1: TypedDocumentNode<MutateSetOperatingModeResponse, InputVariables<MutateSetOperatingModeRequest>> = gql`
     mutation SetOperatingMode($input: SetOperatingModeInput!) {
