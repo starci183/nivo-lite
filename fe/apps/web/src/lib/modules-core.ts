@@ -3,7 +3,7 @@ import { cache } from "react";
 import { getSession } from "./session";
 import { isModuleKey, type ModuleKey } from "./module-registry";
 import { readActiveContext, readContextVersions, readInstallations } from "@/modules/db";
-export { toSession, toVersion } from "@/modules/db";
+export { toSession } from "@/modules/db";
 import { instancesOf, type ContextVersion, type Installation } from "@/modules/installations";
 
 /**
