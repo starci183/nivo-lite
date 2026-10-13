@@ -1,5 +1,6 @@
 import { createHmac } from "node:crypto"
 import { isIP } from "node:net"
+import { isPrivateAddress } from "@modules/platform/primitives"
 import { N8nError, N8nErrorCode } from "./errors/n8n.error"
 
 /** Answers the addresses a host name resolves to. */
@@ -7,34 +8,9 @@ export type N8nHostResolver = (host: string) => Promise<ReadonlyArray<string>>
 
 const EVENT_PATTERN = /^[a-z][a-z0-9_.-]*$/i
 const EVENT_MAX = 80
-const IPV4_PARTS = 4
-const MAPPED_IPV4 = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/
-const UNIQUE_LOCAL_OR_LINK_LOCAL = /^(fc|fd|fe[89ab])/
 const HTTP_ERROR_FLOOR = 500
 const REQUEST_TIMEOUT = 408
 const TOO_MANY_REQUESTS = 429
-
-/** True for loopback, private, link-local, unique-local, shared and unspecified addresses (IPv4 and IPv6); anything unparsable counts as private. */
-export const isPrivateAddress = (address: string): boolean => {
-    const text = address.toLowerCase().replace(/^\[|\]$/g, "")
-    if (isIP(text) === 6) {
-        const mapped = MAPPED_IPV4.exec(text)
-        if (mapped?.[1] !== undefined) return isPrivateAddress(mapped[1])
-        return text === "::1" || text === "::" || UNIQUE_LOCAL_OR_LINK_LOCAL.test(text)
-    }
-    const parts = text.split(".").map(Number)
-    if (parts.length !== IPV4_PARTS || parts.some((part) => !Number.isInteger(part))) return true
-    const [first = 0, second = 0] = parts
-    return (
-        first === 0 ||
-        first === 10 ||
-        first === 127 ||
-        (first === 169 && second === 254) ||
-        (first === 172 && second >= 16 && second <= 31) ||
-        (first === 192 && second === 168) ||
-        (first === 100 && second >= 64 && second <= 127)
-    )
-}
 
 /**
  * Webhook urls are tenant-supplied, so the server must not be a way into its own network. A target is http(s), carries no

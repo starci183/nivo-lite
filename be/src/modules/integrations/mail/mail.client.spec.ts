@@ -1,4 +1,10 @@
+import dns from "node:dns/promises"
+import type { LookupAddress, LookupAllOptions } from "node:dns"
 import { Test } from "@nestjs/testing"
+import { mock } from "@starci/jest-preset"
+import nodemailer from "nodemailer"
+import type { Transporter } from "nodemailer"
+import type SMTPTransport from "nodemailer/lib/smtp-transport"
 import { Secret } from "@modules/platform/config"
 import { MailErrorCode } from "./errors/mail.error"
 import { MailClient } from "./mail.client"
@@ -6,17 +12,13 @@ import type { EmailLayoutInput, MailMessage, SmtpConfig } from "./mail.contracts
 import { MAIL_OPTIONS } from "./mail.decorators"
 import type { MailOptions } from "./mail.options"
 
-const mockLookup = jest.fn()
-const mockCreateTransport = jest.fn()
+interface LookupOwner {
+    lookup: (hostname: string, options: LookupAllOptions) => Promise<Array<LookupAddress>>
+}
 
-jest.mock("node:dns/promises", () => ({ lookup: (...args: ReadonlyArray<unknown>) => mockLookup(...args) }))
-jest.mock("nodemailer", () => ({
-    __esModule: true,
-    default: { createTransport: (...args: ReadonlyArray<unknown>) => mockCreateTransport(...args) },
-}))
-
-const lookupMock = mockLookup
-const createTransport = mockCreateTransport
+const lookupOwner: LookupOwner = dns
+const lookupMock = jest.spyOn(lookupOwner, "lookup")
+const createTransport = jest.spyOn(nodemailer, "createTransport")
 
 const PUBLIC: MailOptions = { allowPrivateHosts: false, platform: null, helloName: "nivo.test" }
 const DEV: MailOptions = { ...PUBLIC, allowPrivateHosts: true }
@@ -44,18 +46,31 @@ const build = async (options: MailOptions) => {
     return moduleRef.get(MailClient)
 }
 
-const transportAnswering = (answer: unknown) => {
-    const sendMail = jest.fn((...args: ReadonlyArray<unknown>): unknown =>
-        typeof answer === "function" ? Reflect.apply(answer, undefined, args) : Promise.resolve(answer),
-    )
-    const close = jest.fn()
-    createTransport.mockReturnValue({ sendMail, close })
-    return { sendMail, close }
+const transportAnswering = (answer: Partial<SMTPTransport.SentMessageInfo> | Error) => {
+    const transport = mock<Transporter<SMTPTransport.SentMessageInfo, SMTPTransport.Options>>()
+    if (answer instanceof Error) transport.sendMail.mockRejectedValue(answer)
+    else {
+        transport.sendMail.mockResolvedValue({
+            envelope: { from: "owner@example.com", to: ["a@b.vn"] },
+            accepted: [],
+            rejected: [],
+            pending: [],
+            response: "250 accepted",
+            messageId: "<default>",
+            ...answer,
+        })
+    }
+    createTransport.mockReturnValue(transport)
+    return transport
 }
 
 beforeEach(() => {
     jest.resetAllMocks()
     lookupMock.mockResolvedValue([{ address: "8.8.8.8", family: 4 }])
+})
+
+afterAll(() => {
+    jest.restoreAllMocks()
 })
 
 describe("MailClient", () => {
@@ -191,7 +206,7 @@ describe("MailClient", () => {
         })
 
         it("classifies a server failure", async () => {
-            transportAnswering(jest.fn().mockRejectedValue(Object.assign(new Error("denied"), { code: "EAUTH" })))
+            transportAnswering(Object.assign(new Error("denied"), { code: "EAUTH" }))
             const client = await build(PUBLIC)
 
             await expect(client.sendThroughSmtp(config, message)).rejects.toMatchObject({ code: MailErrorCode.Auth })
@@ -225,7 +240,7 @@ describe("MailClient", () => {
         })
 
         it("classifies a platform failure and refuses when no platform sender is configured", async () => {
-            transportAnswering(jest.fn().mockRejectedValue(Object.assign(new Error("slow"), { code: "ETIMEDOUT" })))
+            transportAnswering(Object.assign(new Error("slow"), { code: "ETIMEDOUT" }))
 
             await expect((await build(WITH_PLATFORM)).sendThroughPlatform(message)).rejects.toMatchObject({
                 code: MailErrorCode.Timeout,

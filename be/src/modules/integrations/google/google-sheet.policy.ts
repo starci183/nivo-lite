@@ -1,3 +1,4 @@
+import { isRecord } from "@modules/platform/primitives"
 import { GoogleError, GoogleErrorCode } from "./errors/google.error"
 import { GOOGLE_MESSAGES } from "./messages/google.messages"
 import type { SheetCell, SheetConfig, SheetEventIn, SheetEventResult, SheetsApi } from "./google.contracts"
@@ -49,7 +50,7 @@ export const formatVnTime = (iso: string, now: Date): string => {
 }
 
 /** An amount of dong with vi-VN grouping and the dong sign. */
-export const formatVnd = (amount: number): string => `${new Intl.NumberFormat("vi-VN").format(Math.round(amount))} ₫`
+export const sheetVnd = (amount: number): string => `${new Intl.NumberFormat("vi-VN").format(Math.round(amount))} ₫`
 
 /** The code a row of a won deal carries before any order number exists. */
 export const leadKey = (leadId: string): string => `KH-${leadId.replace(/-/gu, "").slice(0, 8)}`
@@ -147,9 +148,8 @@ const asNumber = (value: unknown): number =>
 
 const nameOf = (item: unknown): string => {
     if (typeof item === "string") return item
-    if (typeof item !== "object" || item === null) return ""
-    const record = item as Record<string, unknown>
-    return asText(record.name ?? record.title)
+    if (!isRecord(item)) return ""
+    return asText(item.name ?? item.title)
 }
 
 const itemsText = (value: unknown): string =>
@@ -199,7 +199,7 @@ export const applySheetEvent = async (
         if (!flagOn(config, "markPaid")) return skipped("evidence.why.paidOff")
         const amount = asNumber(data.amount_vnd)
         const paidText = sheetText("sheet.paidNote", {
-            amount: formatVnd(amount),
+            amount: sheetVnd(amount),
             at: formatVnTime(asText(data.paid_at) || event.occurredAt, now),
         })
         const found = await api.findRow(id, [orderNo, leadCode])

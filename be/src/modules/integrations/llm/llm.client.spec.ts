@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
 import { Secret } from "@modules/platform/config"
-import { HTTP_CLIENT } from "@modules/platform/http/http.decorators"
+import { HTTP_CLIENT } from "@modules/platform/http"
 import type { HttpClient, HttpResponse } from "@modules/platform/http"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"

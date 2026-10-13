@@ -1,16 +1,16 @@
 import { createHmac } from "node:crypto"
-import { parseLead, parseWebhook, safeEqual, verifyChallenge, verifySignature } from "./meta-webhook.policy"
+import { parseLead, parseWebhook, sameToken, verifyChallenge, verifySignature } from "./meta-webhook.policy"
 
 const NOW = 1_800_000_000_000
 const BODY = Buffer.from('{"object":"page"}')
 const signatureOf = (secret: string, body: Buffer = BODY): string =>
     `sha256=${createHmac("sha256", secret).update(body).digest("hex")}`
 
-describe("safeEqual", () => {
+describe("sameToken", () => {
     it("compares strings of any length", () => {
-        expect(safeEqual("abc", "abc")).toBe(true)
-        expect(safeEqual("abc", "abd")).toBe(false)
-        expect(safeEqual("abc", "abcd")).toBe(false)
+        expect(sameToken("abc", "abc")).toBe(true)
+        expect(sameToken("abc", "abd")).toBe(false)
+        expect(sameToken("abc", "abcd")).toBe(false)
     })
 })
 

@@ -1,12 +1,13 @@
-import { Injectable, NotFoundException } from "@nestjs/common"
+import { Injectable, NotFoundException, Optional } from "@nestjs/common"
 import type { GraphQLFormattedError } from "graphql"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
 import { DomainError } from "./domain.error"
-import { InjectErrorsOptions } from "./errors.decorators"
-import type { ErrorDescription, ErrorKind, ErrorParams } from "./errors.contracts"
+import { InjectErrorReporter, InjectErrorsOptions } from "./errors.decorators"
+import type { ErrorDescription, ErrorKind, ErrorParams, FailureSite } from "./errors.contracts"
+import type { ErrorReporter } from "./errors.port"
 import { ERRORS_ERROR_KINDS, ErrorsErrorCode } from "./errors/errors.error"
 import { ErrorsLogEvent } from "./errors.log-events"
 import type { ErrorsOptions } from "./errors.options"
@@ -22,6 +23,7 @@ export class ErrorsService {
         @InjectErrorsOptions() options: ErrorsOptions,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         @InjectLogger() private readonly logger: Logger,
+        @Optional() @InjectErrorReporter() private readonly reporter?: ErrorReporter,
     ) {
         this.kinds = new Map([...options.kinds, ERRORS_ERROR_KINDS].flatMap((table) => Object.entries(table)))
     }
@@ -32,15 +34,17 @@ export class ErrorsService {
 
     /**
      * Describes `error`: a DomainError of a composed capability keeps its code; the framework's not-found (no route matches
-     * the request) is a plain not-found; anything else is logged and masked as internal.
+     * the request) is a plain not-found; anything else is logged, recorded in `app_errors` under the transport's `site` and masked
+     * as internal.
      */
-    describe(error: unknown): ErrorDescription {
+    describe(error: unknown, site: FailureSite = { scope: "api" }): ErrorDescription {
         if (error instanceof NotFoundException) return this.build(ErrorsErrorCode.RouteNotFound, "not-found", {})
         if (error instanceof DomainError) {
             const kind = this.kinds.get(error.code)
             if (kind !== undefined) return this.build(error.code, kind, error.params)
         }
-        this.logger.error(ErrorsLogEvent.Unhandled, error)
+        this.logger.error(ErrorsLogEvent.Unhandled, error, { scope: site.scope })
+        void this.reporter?.report(site.scope, error, site.context)
         return this.build(ErrorsErrorCode.Internal, "internal", {})
     }
 

@@ -6,7 +6,7 @@ import {
     buildCreateBody,
     buildFormatBody,
     formatVnTime,
-    formatVnd,
+    sheetVnd,
     leadHeader,
     leadKey,
     leadsTab,
@@ -36,13 +36,13 @@ const apiOf = (found: { row: number; code: string } | null = null) => {
 describe("sheet copy", () => {
     it("reads the Vietnamese product text and fills placeholders", () => {
         expect(sheetText("sheet.paidNote", { amount: "1", at: "2" })).toContain("1")
-        expect(sheetText("evidence.skipped")).toBe("Bỏ qua · ")
+        expect(sheetText("evidence.skipped")).toBe("B\u1ecf qua \u00b7 ")
         expect(sheetText("no.such.key")).toBe("no.such.key")
     })
 
     it("lists the tabs and the header rows", () => {
-        expect(ordersTab()).toBe("Đơn hàng")
-        expect(leadsTab()).toBe("Khách mới")
+        expect(ordersTab()).toBe("\u0110\u01a1n h\u00e0ng")
+        expect(leadsTab()).toBe("Kh\u00e1ch m\u1edbi")
         expect(orderHeader()).toHaveLength(9)
         expect(leadHeader()).toHaveLength(7)
     })
@@ -55,7 +55,7 @@ describe("formatting", () => {
     })
 
     it("formats dong and lead keys", () => {
-        expect(formatVnd(1234567.4)).toBe("1.234.567 ₫")
+        expect(sheetVnd(1234567.4)).toBe("1.234.567 \u20ab")
         expect(leadKey(LEAD_ID)).toBe("KH-11111111")
     })
 })
@@ -135,7 +135,7 @@ describe("applySheetEvent", () => {
         expect(api.findRow).toHaveBeenCalledWith("sheet-1", ["DH-1", ""])
         expect(api.updateCells).toHaveBeenCalledWith("sheet-1", 4, {
             F: sheetText("sheet.statusPaid"),
-            G: sheetText("sheet.paidNote", { amount: formatVnd(5000), at: "12/10/2026 11:00" }),
+            G: sheetText("sheet.paidNote", { amount: sheetVnd(5000), at: "12/10/2026 11:00" }),
         })
         expect(result.evidence).toContain("DH-1")
     })

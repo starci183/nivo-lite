@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readdir, stat, utimes, writeFile } from "node:fs/promises"
+import fsPromises, { mkdir, mkdtemp, readdir, utimes, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { Test } from "@nestjs/testing"
@@ -13,11 +13,6 @@ import { TtsLogEvent } from "./tts.log-events"
 import type { TtsOptions } from "./tts.options"
 import { TtsService } from "./tts.service"
 
-jest.mock("node:fs/promises", () => {
-    const actual = jest.requireActual<typeof import("node:fs/promises")>("node:fs/promises")
-    return { ...actual, mkdir: jest.fn(actual.mkdir), readdir: jest.fn(actual.readdir), stat: jest.fn(actual.stat) }
-})
-
 const AUDIO = Buffer.alloc(900, 7)
 const signal = new AbortController().signal
 
@@ -26,14 +21,12 @@ const wait = (ms: number): Promise<void> =>
         AbortSignal.timeout(ms).addEventListener("abort", () => resolve(), { once: true })
     })
 
-const optionsOf = builder<TtsOptions>({ provider: "edge", cacheDir: "cache", workDir: "work", minGapMs: 0 })
-
 const sandbox = async (): Promise<{ cacheDir: string; workDir: string }> => {
     const root = await mkdtemp(join(tmpdir(), "nivo-tts-spec-"))
     return { cacheDir: join(root, "cache"), workDir: join(root, "work") }
 }
 
-const build = async (options: TtsOptions) => {
+const build = async (overrides: Partial<TtsOptions> = {}) => {
     const client = mock<TtsClient>({ id: "edge" })
     client.synthesize.mockResolvedValue(AUDIO)
     const logger = mock<Logger>()
@@ -41,7 +34,12 @@ const build = async (options: TtsOptions) => {
         providers: [
             TtsService,
             { provide: TtsClient, useValue: client },
-            { provide: TTS_OPTIONS, useValue: options },
+            {
+                provide: TTS_OPTIONS,
+                useValue: builder<TtsOptions>({ provider: "edge", cacheDir: "cache", workDir: "work", minGapMs: 0 })(
+                    overrides,
+                ),
+            },
             { provide: CLOCK, useValue: new FakeClock("2026-10-12T00:00:00.000Z") },
             { provide: LOGGER, useValue: logger },
         ],
@@ -50,9 +48,13 @@ const build = async (options: TtsOptions) => {
 }
 
 describe("TtsService", () => {
+    afterEach(() => {
+        jest.restoreAllMocks()
+    })
+
     describe("without a provider", () => {
         it("is off, names no provider and refuses to speak", async () => {
-            const { tts, client } = await build(optionsOf({ provider: "none" }))
+            const { tts, client } = await build({ provider: "none" })
 
             expect(tts.enabled).toBe(false)
             expect(tts.providerId).toBe("none")
@@ -64,7 +66,7 @@ describe("TtsService", () => {
     describe("clip", () => {
         it("synthesizes once, stores the clip and answers it from the cache the second time", async () => {
             const dirs = await sandbox()
-            const { tts, client } = await build(optionsOf(dirs))
+            const { tts, client } = await build(dirs)
 
             const first = await tts.clip("Hello", "vi-VN-HoaiMyNeural", 5, signal)
             const second = await tts.clip("Hello", "vi-VN-HoaiMyNeural", 5, signal)
@@ -82,7 +84,7 @@ describe("TtsService", () => {
         })
 
         it("keeps a clip per text, voice and rate", async () => {
-            const { tts, client } = await build(optionsOf(await sandbox()))
+            const { tts, client } = await build(await sandbox())
 
             const clips = [
                 await tts.clip("Hello", "a", 0, signal),
@@ -96,7 +98,7 @@ describe("TtsService", () => {
         })
 
         it("waits the gap between two requests of the provider", async () => {
-            const { tts, client } = await build(optionsOf({ ...(await sandbox()), minGapMs: 5 }))
+            const { tts, client } = await build({ ...(await sandbox()), minGapMs: 5 })
 
             await Promise.all([tts.clip("One", "v", 0, signal), tts.clip("Two", "v", 0, signal)])
 
@@ -104,7 +106,7 @@ describe("TtsService", () => {
         })
 
         it("lets the next clip go on after one failed", async () => {
-            const { tts, client } = await build(optionsOf(await sandbox()))
+            const { tts, client } = await build(await sandbox())
             const failure = new Error("throttled")
             client.synthesize.mockRejectedValueOnce(failure)
 
@@ -118,18 +120,18 @@ describe("TtsService", () => {
         })
 
         it("rethrows a failure to look in the cache that is not a missing file", async () => {
-            const { tts } = await build(optionsOf(await sandbox()))
+            const { tts } = await build(await sandbox())
             const denied = Object.assign(new Error("denied"), { code: "EACCES" })
-            jest.mocked(stat).mockRejectedValueOnce(denied)
+            jest.spyOn(fsPromises, "stat").mockRejectedValueOnce(denied)
 
             await expect(tts.clip("Hello", "v", 0, signal)).rejects.toBe(denied)
         })
 
         it("writes the clip into the work directory when the cache directory cannot be written", async () => {
             const dirs = await sandbox()
-            const { tts, logger } = await build(optionsOf(dirs))
+            const { tts, logger } = await build(dirs)
             const refusal = new Error("read-only volume")
-            jest.mocked(mkdir).mockRejectedValueOnce(refusal)
+            jest.spyOn(fsPromises, "mkdir").mockRejectedValueOnce(refusal)
 
             const clip = await tts.clip("Hello", "v", 0, signal)
 
@@ -146,7 +148,7 @@ describe("TtsService", () => {
                 await writeFile(file, "x")
                 await utimes(file, 1_000 + index, 1_000 + index)
             }
-            const { tts } = await build(optionsOf(dirs))
+            const { tts } = await build(dirs)
 
             await tts.clip("Fresh", "v", 0, signal)
             await wait(300)
@@ -159,9 +161,9 @@ describe("TtsService", () => {
 
         it("logs a cache that cannot be trimmed and carries on", async () => {
             const dirs = await sandbox()
-            const { tts, logger } = await build(optionsOf(dirs))
+            const { tts, logger } = await build(dirs)
             const refusal = new Error("cannot list")
-            jest.mocked(readdir).mockRejectedValueOnce(refusal)
+            jest.spyOn(fsPromises, "readdir").mockRejectedValueOnce(refusal)
 
             await expect(tts.clip("Hello", "v", 0, signal)).resolves.toMatchObject({ cached: false })
             await wait(50)
@@ -172,7 +174,7 @@ describe("TtsService", () => {
 
     describe("onModuleDestroy", () => {
         it("frees the connection of the provider", async () => {
-            const { tts, client } = await build(optionsOf())
+            const { tts, client } = await build()
 
             tts.onModuleDestroy()
 
