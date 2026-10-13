@@ -1,18 +1,12 @@
 import { matchPage } from "./match"
 import { GUIDE_PAGES, pageAt, pagesFor, type GuidePage } from "./sitemap"
-import type { GuideText } from "./text"
-import type { GuideLink, GuideReply, GuideTurn } from "./types"
+import type { GuideLink, GuideMessage, GuideReply, GuideText, GuideTurn } from "./types"
 
 /**
- * The NIVO guide brain, free of Next and of the database so it can be checked on its own: a question that clearly names a place is
- * answered from the site map (no tokens); anything else goes to the model with the map the member may see, and the model answer is
- * cut down to links that exist in that map. The guide only shows the way; it never acts.
+ * The NIVO guide brain, free of React and of the network: a question that clearly names a place is answered from the site map (no
+ * tokens); anything else becomes a prompt for the be text door (usage kind `guide`) with the map the member may see, and the model
+ * answer is cut down to links that exist in that map. The guide only shows the way; it never acts.
  */
-
-/** The model call: system and user messages in, the model text out. */
-export type GuideGenerate = (
-    messages: ReadonlyArray<{ role: "system" | "user"; content: string }>,
-) => Promise<{ ok: true; output: string } | { ok: false }>
 
 /** One question to answer. */
 export interface GuideInput {
@@ -70,14 +64,16 @@ const stringsOf = (value: unknown): ReadonlyArray<string> =>
     Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : []
 
 /** The reply that says the guide cannot answer now. */
-const busyReply = (text: GuideText): GuideReply => ({ answer: text.busy, steps: [], links: [], source: "busy" })
+export const busyReply = (text: GuideText): GuideReply => ({ answer: text.busy, steps: [], links: [], source: "busy" })
 
-/** The answer for a question: from the map when it clearly names a place, else from the model. */
-export const answerGuide = async (input: GuideInput, text: GuideText, generate: GuideGenerate): Promise<GuideReply> => {
-    const question = input.question.trim().slice(0, MAX_QUESTION)
+/** The question as the guide reads it: trimmed and bounded. */
+const questionOf = (input: GuideInput): string => input.question.trim().slice(0, MAX_QUESTION)
+
+/** The answer from the site map when the question is empty or clearly names a place; null when the model must answer. */
+export const mapAnswer = (input: GuideInput, text: GuideText): GuideReply | null => {
+    const question = questionOf(input)
     if (!question) return { answer: text.empty, steps: [], links: [], source: "map" }
-
-    // 1. The site map: a clear hit costs nothing. Staff asking for a settings page are told who does it.
+    // A clear hit costs nothing. Staff asking for a settings page are told who does it.
     const hit = matchPage(question, GUIDE_PAGES, text.keywords)
     if (hit && hit.managerOnly && !input.isManager) {
         return { answer: text.managerOnly(text.title(hit.id)), steps: [], links: [], source: "map" }
@@ -90,31 +86,37 @@ export const answerGuide = async (input: GuideInput, text: GuideText, generate: 
             source: "map",
         }
     }
+    return null
+}
 
-    // 2. The model, with only the pages this member may be sent to.
-    const allowed = pagesFor(input.isManager)
+/** The prompt for the model, with only the pages this member may be sent to. */
+export const guidePrompt = (input: GuideInput, text: GuideText): ReadonlyArray<GuideMessage> => {
     const here = pageAt(input.path)
     const history = input.history
         .slice(-HISTORY_TURNS)
         .map((turn) => `${turn.role === "user" ? "User" : "Guide"}: ${clip(turn.text, HISTORY_CLIP)}`)
         .join("\n")
     const user = [
-        `PAGES (id | name | what it is for | how):\n${mapLines(allowed, text)}`,
+        `PAGES (id | name | what it is for | how):\n${mapLines(pagesFor(input.isManager), text)}`,
         `CURRENT PAGE: ${here ? `${here.id} (${text.title(here.id)})` : input.path}`,
         history ? `CONVERSATION SO FAR:\n${history}` : "",
-        `QUESTION: ${question}`,
+        `QUESTION: ${questionOf(input)}`,
     ]
         .filter(Boolean)
         .join("\n\n")
     const system = [...text.systemLines(input.isManager), text.replyFormat].join("\n")
-    const reply = await generate([
+    return [
         { role: "system", content: system },
         { role: "user", content: user },
-    ])
-    if (!reply.ok) return busyReply(text)
-    const object = parseObject(reply.output)
+    ]
+}
+
+/** The reply the model wrote (null output = it could not answer), cut down to the pages this member may be sent to. */
+export const modelAnswer = (output: string | null, isManager: boolean, text: GuideText): GuideReply => {
+    const object = output === null ? null : parseObject(output)
     const answer = typeof object?.answer === "string" ? clip(object.answer.trim(), MAX_ANSWER) : ""
     if (!answer) return busyReply(text)
+    const allowed = pagesFor(isManager)
     const steps = stringsOf(object?.steps)
         .filter((step) => step.trim() !== "")
         .slice(0, MAX_STEPS)
