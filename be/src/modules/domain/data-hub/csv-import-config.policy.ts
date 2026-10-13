@@ -16,7 +16,7 @@ export const summaryOf = (entity: CsvEntity, total: number): string =>
     `${CSV_COPY.entity[entity]} · ${SUMMARY_FORMAT.format(total)} ${entity === "document" ? CSV_COPY.documentUnit : CSV_COPY.rowUnit}`
 
 /** True for a plain object. */
-export const isRecord = (value: unknown): value is Record<string, unknown> =>
+export const isPlainObject = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null && !Array.isArray(value)
 
 const asText = (value: unknown): string | null => (typeof value === "string" && value !== "" ? value : null)
@@ -30,7 +30,7 @@ const isKind = (value: unknown): value is CsvColumnKind =>
 
 const kindsOf = (value: unknown): Record<string, CsvColumnKind> => {
     const kinds: Record<string, CsvColumnKind> = {}
-    if (!isRecord(value)) return kinds
+    if (!isPlainObject(value)) return kinds
     for (const [header, kind] of Object.entries(value)) if (isKind(kind)) kinds[header] = kind
     return kinds
 }
@@ -54,7 +54,7 @@ const parseJson = (text: string): JsonOutcome => {
 /** The saved setup from a connection's public facts; null when it is missing or damaged. */
 export const readConfig = (meta: Readonly<Record<string, string>> | null | undefined): CsvConfig | null => {
     const { value: parsed } = parseJson(meta?.config ?? "")
-    if (!isRecord(parsed) || parsed.v !== 1 || !isSource(parsed.source) || !isEntity(parsed.entity)) return null
+    if (!isPlainObject(parsed) || parsed.v !== 1 || !isSource(parsed.source) || !isEntity(parsed.entity)) return null
     const sheet = typeof parsed.sheet === "string" ? parsed.sheet : undefined
     const link = typeof parsed.link === "string" ? parsed.link : undefined
     return {
@@ -110,7 +110,7 @@ export const cleanImportName = (raw: string | null | undefined): string => {
 
 /** Checks a mapping that came from the browser: every name must be a real header, every kind a known one. */
 export const cleanMapping = (raw: unknown, headers: ReadonlyArray<string>): CsvMapping => {
-    const input = isRecord(raw) ? raw : {}
+    const input = isPlainObject(raw) ? raw : {}
     const pick = (value: unknown): string | null => {
         if (value === null || value === undefined || value === CSV_NO_COLUMN || value === "") return null
         if (typeof value !== "string" || !headers.includes(value)) {
@@ -118,7 +118,7 @@ export const cleanMapping = (raw: unknown, headers: ReadonlyArray<string>): CsvM
         }
         return value
     }
-    const given = isRecord(input.kinds) ? input.kinds : {}
+    const given = isPlainObject(input.kinds) ? input.kinds : {}
     const kinds: Record<string, CsvColumnKind> = {}
     for (const header of headers) {
         const kind = given[header]

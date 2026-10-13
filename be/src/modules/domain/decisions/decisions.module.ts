@@ -7,6 +7,7 @@ import { AuthorityRulesModule } from "@modules/domain/authority-rules"
 import { MessagesModule } from "@modules/domain/messages"
 import { ResponsibilitiesModule } from "@modules/domain/responsibilities"
 import { WorkItemsModule } from "@modules/domain/work-items"
+import { DecisionsQueueModule } from "@modules/queues/decisions"
 import { DecisionJobsService } from "./decision-jobs.service"
 import { ApprovalRequesterService } from "./approval-requester.service"
 import { CommandBusService } from "./command-bus.service"
@@ -25,6 +26,7 @@ import { WORK_PERFORMER_REGISTRY } from "./work-performer.port"
 import {
     DECISION_EVENTS,
     INBOUND_EVENT_STATUS,
+    LEAD_DIRECTORY,
     LEAD_GEN_FLOW,
     OUTBOUND_ACCESS_GATE,
     PAYMENT_RECEIPTS,
@@ -53,7 +55,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
         ]
         return {
             ...base,
-            imports: [...(base.imports ?? []), ...owners],
+            imports: [...(base.imports ?? []), ...owners, DecisionsQueueModule],
             providers: [
                 ...(base.providers ?? []),
                 { provide: WORK_PERFORMER_REGISTRY, useExisting: WorkPerformersService },
@@ -61,6 +63,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 { provide: INBOUND_EVENT_STATUS, useClass: options.ports.inboundEventStatus },
                 { provide: DECISION_EVENTS, useClass: options.ports.decisionEvents },
                 { provide: PAYMENT_RECEIPTS, useClass: options.ports.paymentReceipts },
+                { provide: LEAD_DIRECTORY, useExisting: options.ports.leadDirectory },
                 { provide: LEAD_GEN_FLOW, useClass: options.ports.leadGenFlow },
                 { provide: OUTBOUND_ACCESS_GATE, useClass: options.ports.outboundAccessGate },
                 ApprovalRequesterService,
@@ -81,6 +84,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
             ],
             exports: [
                 ...owners,
+                DecisionsQueueModule,
                 WORK_PERFORMER_REGISTRY,
                 ApprovalRequesterService,
                 CommandBusService,

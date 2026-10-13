@@ -20,6 +20,8 @@ import type {
     ChatTurnProposal,
     ChatTurnRuntime,
     CustomerOutcomes,
+    RegisteredOutcomes,
+    RegisteredRuntime,
 } from "./conversations.contracts"
 import { FIND_HOLDING_SETTING } from "./persistence/conversations.sql"
 
@@ -88,19 +90,19 @@ const build = async (setup: Setup = {}) => {
     delivery.showTyping.mockResolvedValue(undefined)
     delivery.customerName.mockResolvedValue(setup.name ?? "")
     const logger = mock<Logger>()
-    const extensions = mock<ChatTurnExtensions>()
-    let runtime: ReturnType<ChatTurnExtensions["runtime"]> = undefined
-    let outcomes: ReturnType<ChatTurnExtensions["outcomes"]> = undefined
-    extensions.useRuntime.mockImplementation((next) => {
-        runtime = next
+    let runtime: RegisteredRuntime = undefined
+    let outcomes: RegisteredOutcomes = undefined
+    const extensions = mock<ChatTurnExtensions>({
+        useRuntime: (next) => {
+            runtime = next
+        },
+        useOutcomes: (next) => {
+            outcomes = next
+        },
+        runtime: () => runtime,
+        outcomes: () => outcomes,
     })
-    extensions.useOutcomes.mockImplementation((next) => {
-        outcomes = next
-    })
-    extensions.runtime.mockImplementation(() => runtime)
-    extensions.outcomes.mockImplementation(() => outcomes)
-    const catalog = mock<MessageCatalog>()
-    catalog.get.mockImplementation((key) => `<${key}>`)
+    const catalog = mock<MessageCatalog>({ get: (key) => `<${key}>` })
     const moduleRef = await Test.createTestingModule({
         providers: [
             ChatTurnService,

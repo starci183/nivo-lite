@@ -3,10 +3,8 @@ import { mock } from "@starci/jest-preset"
 import { ChatTurnExtensionsService } from "./chat-turn-extensions.service"
 import type { ChatTurnRuntime, CustomerOutcomes } from "./conversations.contracts"
 
-const build = async (): Promise<ChatTurnExtensionsService> => {
-    const moduleRef = await Test.createTestingModule({
-        providers: [ChatTurnExtensionsService],
-    }).compile()
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({ providers: [ChatTurnExtensionsService] }).compile()
     return moduleRef.get(ChatTurnExtensionsService)
 }
 

@@ -1,41 +1,73 @@
-import type { ConnectionRecord, Environment, FirstEvent, Provider, ConnectionStatus } from "./connections.contracts"
+import type { ConnectionRecord, ConnectionStatus, Environment, FirstEvent, Provider } from "./connections.contracts"
+import { ConnectionsError, ConnectionsErrorCode } from "./errors/connections.error"
 import type { ConnectionSelectRow } from "./persistence/connections.rows"
 
-/** A JSON object of strings, the shape public facts are stored in. */
-const isStringRecord = (value: unknown): value is Readonly<Record<string, string>> =>
+const PROVIDERS: Readonly<Record<Provider, true>> = {
+    telegram: true,
+    sepay: true,
+    zalo_oa: true,
+    payos: true,
+    casso: true,
+    webhook: true,
+    google: true,
+    smtp: true,
+    openapi: true,
+    database: true,
+    csv_import: true,
+    imap: true,
+    telegram_user: true,
+    meta: true,
+}
+
+const STATUSES: Readonly<Record<ConnectionStatus, true>> = {
+    pending: true,
+    connected: true,
+    error: true,
+    disconnected: true,
+}
+
+const isProvider = (value: string): value is Provider => Object.hasOwn(PROVIDERS, value)
+
+const isStatus = (value: string): value is ConnectionStatus => Object.hasOwn(STATUSES, value)
+
+const isRecordObject = (value: unknown): value is Readonly<Record<string, unknown>> =>
     typeof value === "object" && value !== null && !Array.isArray(value)
 
-/** Public facts when they are an object; an array or a scalar is read as none. */
-const stringRecord = (value: unknown): Readonly<Record<string, string>> => (isStringRecord(value) ? value : {})
+const asMeta = (value: unknown): Readonly<Record<string, string>> =>
+    isRecordObject(value)
+        ? Object.fromEntries(
+              Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+          )
+        : {}
 
-/**
- * The column is text. Every stored value is kept, including one the catalog does not name, so a row written before a
- * provider was added still maps.
- */
-const isProvider = (value: string): value is Provider => value.length >= 0
+const asFirstEvent = (value: unknown): FirstEvent | null => {
+    if (!isRecordObject(value)) return null
+    const { amount, content, at, text } = value
+    if (typeof amount !== "number" || typeof content !== "string" || typeof at !== "string") return null
+    return typeof text === "string" ? { amount, content, at, text } : { amount, content, at }
+}
 
-/** The column is text. Every stored status is kept. */
-const isStatus = (value: string): value is ConnectionStatus => value.length >= 0
-
-/** The column is text. Every stored environment is kept; null means live. */
-const isEnvironment = (value: string): value is Environment => value.length >= 0
-
-/** The column is JSON. Every stored value is kept, including null. */
-const isFirstEvent = (value: unknown): value is FirstEvent | null => value === value || Number.isNaN(value)
+const asEnvironment = (value: string | null): Environment => (value === "test" ? "test" : "live")
 
 /** Maps a stored connection row to the record the capability answers; the secret is never part of it. */
-export const toConnectionRecord = (row: ConnectionSelectRow): ConnectionRecord => ({
-    id: row.id,
-    workspaceId: row.workspace_id,
-    provider: isProvider(row.provider) ? row.provider : "sepay",
-    name: row.name,
-    meta: stringRecord(row.public_meta),
-    status: isStatus(row.status) ? row.status : "pending",
-    lastError: row.last_error,
-    environment: row.environment !== null && isEnvironment(row.environment) ? row.environment : "live",
-    isDefault: Boolean(row.is_default),
-    lastEventAt: row.last_event_at,
-    firstEvent: isFirstEvent(row.first_event) ? row.first_event : null,
-    createdBy: row.created_by,
-    createdAt: row.created_at,
-})
+export const toConnectionRecord = (row: ConnectionSelectRow): ConnectionRecord => {
+    const { provider, status } = row
+    if (!isProvider(provider) || !isStatus(status)) {
+        throw new ConnectionsError({ code: ConnectionsErrorCode.NotFound, params: { id: row.id } })
+    }
+    return {
+        id: row.id,
+        workspaceId: row.workspace_id,
+        provider,
+        name: row.name,
+        meta: asMeta(row.public_meta),
+        status,
+        lastError: row.last_error,
+        environment: asEnvironment(row.environment),
+        isDefault: Boolean(row.is_default),
+        lastEventAt: row.last_event_at,
+        firstEvent: asFirstEvent(row.first_event),
+        createdBy: row.created_by,
+        createdAt: row.created_at,
+    }
+}
