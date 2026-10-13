@@ -24,11 +24,16 @@ export class SepaySimulationService {
         if (orderCode === undefined) throw new SepaySimulationError({ code: SepaySimulationErrorCode.OrderCodeMissing })
         if (this.options.apiKey === undefined)
             throw new SepaySimulationError({ code: SepaySimulationErrorCode.KeyMissing })
+        const amountVnd = Number(amount ?? 0)
+        const transactionId = flags.id === undefined ? undefined : Number(flags.id)
+        if (!Number.isFinite(amountVnd) || (transactionId !== undefined && !Number.isFinite(transactionId))) {
+            throw new SepaySimulationError({ code: SepaySimulationErrorCode.NumberInvalid })
+        }
         const body = payloadOf(
             {
                 orderCode,
-                amount: Number(amount ?? 0),
-                transactionId: flags.id === undefined ? undefined : Number(flags.id),
+                amount: amountVnd,
+                transactionId,
                 debit: flags.out === true,
             },
             this.options,

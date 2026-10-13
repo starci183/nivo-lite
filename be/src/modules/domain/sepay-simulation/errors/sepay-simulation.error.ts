@@ -9,6 +9,8 @@ export enum SepaySimulationErrorCode {
     Refused = "SEPAY_SIMULATION_REFUSED",
     /** The command did not get an order code. */
     OrderCodeMissing = "SEPAY_SIMULATION_ORDER_CODE_MISSING",
+    /** The amount or the transaction id is not a number. */
+    NumberInvalid = "SEPAY_SIMULATION_NUMBER_INVALID",
 }
 
 /** How each simulation code travels. */
@@ -16,6 +18,7 @@ export const SEPAY_SIMULATION_ERROR_KINDS: Record<SepaySimulationErrorCode, Erro
     [SepaySimulationErrorCode.KeyMissing]: "unavailable",
     [SepaySimulationErrorCode.Refused]: "unavailable",
     [SepaySimulationErrorCode.OrderCodeMissing]: "invalid",
+    [SepaySimulationErrorCode.NumberInvalid]: "invalid",
 }
 
 /** The one error class of the SePay simulation. */

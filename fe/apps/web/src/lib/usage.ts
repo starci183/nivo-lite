@@ -251,37 +251,3 @@ const notifyOwner = async (workspaceId: string, s: QuotaStatus): Promise<void> =
     console.error("usage notice failed:", e instanceof Error ? e.message : String(e));
   }
 };
-
-/* ------------------------------------------------------------------ billing page summary */
-
-export type UsageSummary = {
-  readonly status: QuotaStatus | null;
-  readonly byModule: ReadonlyArray<{ readonly module: string; readonly calls: number; readonly tokens: number; readonly costUsd: number; readonly credits: number }>;
-  readonly daily: ReadonlyArray<{ readonly day: string; readonly tokens: number; readonly credits: number }>;
-};
-
-/** This month's figures for the billing card. Call only after the caller was verified as owner | manager of the workspace. */
-export const usageSummary = async (workspaceId: string): Promise<UsageSummary> => {
-  const admin = supabaseAdmin();
-  const status = await quotaStatus(workspaceId);
-  const from = status?.periodStart ?? new Date().toISOString().slice(0, 8) + "01";
-  const { data } = await admin.from("ai_usage_daily").select("day, module, calls, prompt_tokens, completion_tokens, cost_usd").eq("workspace_id", workspaceId).neq("kind", "guide").gte("day", from).order("day"); // guide tokens are NIVO's, not the workspace's
-  const rows = (data ?? []) as Array<{ day: string; module: string; calls: number; prompt_tokens: number; completion_tokens: number; cost_usd: number }>;
-  const mod = new Map<string, { module: string; calls: number; tokens: number; costUsd: number }>();
-  const day = new Map<string, { tokens: number; costUsd: number }>();
-  for (const r of rows) {
-    const tokens = Number(r.prompt_tokens) + Number(r.completion_tokens);
-    const m = mod.get(r.module) ?? { module: r.module, calls: 0, tokens: 0, costUsd: 0 };
-    m.calls += Number(r.calls);
-    m.tokens += tokens;
-    m.costUsd += Number(r.cost_usd);
-    mod.set(r.module, m);
-    const d = day.get(r.day) ?? { tokens: 0, costUsd: 0 };
-    day.set(r.day, { tokens: d.tokens + tokens, costUsd: d.costUsd + Number(r.cost_usd) });
-  }
-  return {
-    status,
-    byModule: [...mod.values()].map((m) => ({ ...m, credits: creditsOf(m.costUsd) })).sort((a, b) => b.credits - a.credits),
-    daily: [...day.entries()].map(([d, v]) => ({ day: d, tokens: v.tokens, credits: creditsOf(v.costUsd) })),
-  };
-};
