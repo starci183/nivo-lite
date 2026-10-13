@@ -63,7 +63,7 @@ export class HandoffToSalesPerformerService implements WorkPerformer, OnModuleIn
         }
     }
 
-    /** Writes the package as the lead's brief for Sales, closes the bot's part, and logs the hand-off. */
+    /** Writes the package as the lead's need (and brief when it has none), closes the bot's part, and logs the hand-off. */
     async perform(ctx: WorkContext, item: WorkItem, proposal: Proposal): Promise<Performed> {
         const flow = await this.kit.store.requireByLead(ctx.workspaceId, item.lead_id)
         const need = field(proposal.fields, "need")
@@ -80,7 +80,7 @@ export class HandoffToSalesPerformerService implements WorkPerformer, OnModuleIn
                 lastMessage: this.kit.text(ctx.locale, "label.last-message"),
             },
         })
-        if (flow.lead_id !== null) await this.leads.replaceContext(ctx.workspaceId, flow.lead_id, pack)
+        if (flow.lead_id !== null) await this.leads.handOver(ctx.workspaceId, flow.lead_id, pack)
         await this.kit.store.patch(flow, { state: "handed_off", handed_off_at: this.kit.now(), pending_question: null })
         const level = flow.score ?? "hot"
         await this.kit.log(

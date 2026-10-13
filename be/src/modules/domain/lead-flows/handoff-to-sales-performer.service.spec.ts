@@ -169,7 +169,7 @@ describe("HandoffToSalesPerformerService", () => {
             performer.perform(ctx, itemOf(), { summary: "", fields: { need: "Wholesale tea" } }),
         ).resolves.toMatchObject({ summary: "handoff.done", lead_id: "lead-1" })
 
-        expect(leads.replaceContext).toHaveBeenCalledWith("ws-1", "lead-1", pack)
+        expect(leads.handOver).toHaveBeenCalledWith("ws-1", "lead-1", pack)
         expect(store.patch).toHaveBeenCalledWith(hotFlow, {
             state: "handed_off",
             handed_off_at: NOW,
@@ -186,6 +186,6 @@ describe("HandoffToSalesPerformerService", () => {
             code: LeadFlowsErrorCode.NoFlow,
         })
 
-        expect(leads.replaceContext).not.toHaveBeenCalled()
+        expect(leads.handOver).not.toHaveBeenCalled()
     })
 })
