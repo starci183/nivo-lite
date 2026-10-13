@@ -9,7 +9,11 @@ type LayoutProps = {
 /** The frame slot of one agent instance. */
 const Layout = async (props: LayoutProps) => {
     const { module, installation } = await props.params
-    return <AgentInstanceLayout module={module} installationId={installation}>{props.children}</AgentInstanceLayout>
+    return (
+        <AgentInstanceLayout module={module} installationId={installation}>
+            {props.children}
+        </AgentInstanceLayout>
+    )
 }
 
 export default Layout

@@ -80,7 +80,12 @@ export const InboxFeedBase = ({ props, on }: InboxFeedBaseProps) => (
                           {row.body === "" ? null : <Text overflow="clamp-2">{row.body}</Text>}
                           <div className={FEED_META_CLASS}>
                               {row.meta.map((line) => (
-                                  <Text key={line.key} size="sm" tone={line.strong ? undefined : "muted"} weight={line.strong ? "medium" : undefined}>
+                                  <Text
+                                      key={line.key}
+                                      size="sm"
+                                      tone={line.strong ? undefined : "muted"}
+                                      weight={line.strong ? "medium" : undefined}
+                                  >
                                       {line.text}
                                   </Text>
                               ))}
@@ -92,8 +97,12 @@ export const InboxFeedBase = ({ props, on }: InboxFeedBaseProps) => (
                                           {row.duplicates}
                                       </Text>
                                   )}
-                                  {row.lead === null ? null : <TextAction href={row.lead.href}>{row.lead.label}</TextAction>}
-                                  {row.office === null ? null : <TextAction href={row.office.href}>{row.office.label}</TextAction>}
+                                  {row.lead === null ? null : (
+                                      <TextAction href={row.lead.href}>{row.lead.label}</TextAction>
+                                  )}
+                                  {row.office === null ? null : (
+                                      <TextAction href={row.office.href}>{row.office.label}</TextAction>
+                                  )}
                               </div>
                           )}
                       </li>

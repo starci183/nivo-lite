@@ -25,19 +25,27 @@ export class KnowledgeQueue {
         })
     }
 
-    /** Enqueues the fact extraction of an indexed source in the caller's transaction. */
-    enqueueFacts(payload: KnowledgeSourcePayload, tx: EntityManager): Promise<void> {
+    /** Enqueues the fact extraction of an indexed source in the caller's transaction; `runAt` (epoch ms) keys one reading per indexing, so a source indexed again is read again. */
+    enqueueFacts(payload: KnowledgeSourcePayload, tx: EntityManager, runAt?: number): Promise<void> {
         return this.outbox.write(tx, KNOWLEDGE_QUEUE, payload, {
             job: KnowledgeJob.Facts,
-            dedupeKey: knowledgeDedupeKey(KnowledgeJob.Facts, payload.sourceId),
+            dedupeKey: knowledgeDedupeKey(
+                KnowledgeJob.Facts,
+                payload.sourceId,
+                runAt === undefined ? undefined : `run:${runAt}`,
+            ),
         })
     }
 
-    /** Enqueues the re-embedding of a workspace in the caller's transaction; one job per workspace and model. */
-    enqueueReembed(payload: KnowledgeReembedPayload, tx: EntityManager): Promise<void> {
+    /** Enqueues the re-embedding of a workspace in the caller's transaction; one job per workspace and model, and `continuedAt` (epoch ms) keys the follow-up of a job that hit its batch limit. */
+    enqueueReembed(payload: KnowledgeReembedPayload, tx: EntityManager, continuedAt?: number): Promise<void> {
         return this.outbox.write(tx, KNOWLEDGE_QUEUE, payload, {
             job: KnowledgeJob.Reembed,
-            dedupeKey: knowledgeDedupeKey(KnowledgeJob.Reembed, payload.workspaceId, payload.model),
+            dedupeKey: knowledgeDedupeKey(
+                KnowledgeJob.Reembed,
+                payload.workspaceId,
+                continuedAt === undefined ? payload.model : `${payload.model ?? ""}:next:${continuedAt}`,
+            ),
         })
     }
 }

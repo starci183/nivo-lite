@@ -32,6 +32,23 @@ export const INSERT_UNROUTED_EVENT = sql`INSERT INTO public.inbound_events (work
 VALUES ($1, $2, 'message', 'live', $3, $4, $5, $6)
 ON CONFLICT (workspace_id, dedupe_key) DO NOTHING`
 
+/** One inbound event of the workspace ($1 workspace, $2 event). */
+export const FIND_INBOUND_EVENT = sql`SELECT id, workspace_id, channel, kind, origin, sender_name, sender_contact, body, amount_vnd::float8 AS amount_vnd, external_ref, event_id, lead_id, status
+FROM public.inbound_events
+WHERE workspace_id = $1::uuid AND id = $2::uuid
+LIMIT 1`
+
+/** Sets where an inbound event stands and links the customer the engine found ($1 workspace, $2 event, $3 status or null to keep it, $4 lead or null to keep it). */
+export const MARK_INBOUND_EVENT = sql`UPDATE public.inbound_events
+SET status = COALESCE($3::text, status), lead_id = COALESCE($4::uuid, lead_id)
+WHERE workspace_id = $1::uuid AND id = $2::uuid`
+
+/** Records an input of a channel once per dedupe key; a repeat answers no row ($1 workspace, $2 channel, $3 kind, $4 origin, $5 sender, $6 contact, $7 text, $8 amount, $9 external ref, $10 event id, $11 dedupe key). */
+export const INSERT_INPUT_EVENT = sql`INSERT INTO public.inbound_events (workspace_id, channel, kind, origin, sender_name, sender_contact, body, amount_vnd, external_ref, event_id, dedupe_key)
+VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8::bigint, $9, $10, $11)
+ON CONFLICT (workspace_id, dedupe_key) DO NOTHING
+RETURNING id`
+
 /** Hands a finished sale to the order chain as an inbound order, once per sale ($1 workspace, $2 origin, $3 customer, $4 contact, $5 body, $6 amount, $7 sale ref, $8 lead or null); answers a row only when it was new. */
 export const INSERT_ORDER_HANDOFF = sql`WITH created AS (
     INSERT INTO public.inbound_events (workspace_id, channel, kind, origin, sender_name, sender_contact, body, amount_vnd, external_ref, dedupe_key, lead_id)

@@ -72,12 +72,7 @@ export const ContentCalendarPanelBase = (props: ContentCalendarPanelBaseProps) =
                     onDismiss={props.on.dismissNote}
                 />
             ) : null}
-            <ContentMonthBar
-                title={title}
-                t={t}
-                onShift={props.on.shift}
-                onToday={props.on.today}
-            />
+            <ContentMonthBar title={title} t={t} onShift={props.on.shift} onToday={props.on.today} />
             <div className={GRID_WRAP_CLASS_NAME}>
                 <ContentMonthGrid
                     title={title}
@@ -121,7 +116,9 @@ export const ContentCalendarPanelBase = (props: ContentCalendarPanelBaseProps) =
                             items={props.props.monthItems.map((i) => ({
                                 id: i.id,
                                 label: i.title,
-                                description: <ContentPostFacts post={i} showBrief={false} showPillar noPillar={t("noPillar")} />,
+                                description: (
+                                    <ContentPostFacts post={i} showBrief={false} showPillar noPillar={t("noPillar")} />
+                                ),
                                 trailing: <ContentStatusBadge tone={i.tone} label={i.statusLabel} />,
                             }))}
                         />
@@ -134,7 +131,9 @@ export const ContentCalendarPanelBase = (props: ContentCalendarPanelBaseProps) =
                         <ListRow
                             key={i.id}
                             title={i.title}
-                            description={<ContentPostFacts post={i} showBrief={false} showPillar noPillar={t("noPillar")} />}
+                            description={
+                                <ContentPostFacts post={i} showBrief={false} showPillar noPillar={t("noPillar")} />
+                            }
                             badges={<ContentStatusBadge tone={i.tone} label={i.statusLabel} />}
                             actions={
                                 <Button variant="outline" size="sm" onPress={() => props.on.open(i.id)}>

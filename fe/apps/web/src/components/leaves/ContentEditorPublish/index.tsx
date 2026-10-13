@@ -56,7 +56,14 @@ export const ContentEditorPublish = (props: ContentEditorPublishProps) => (
                                 {props.t("copy")}
                             </Button>
                             {props.files.map((file) => (
-                                <Button key={file.key} variant="outline" size="sm" href={file.url} target="_blank" rel="noreferrer">
+                                <Button
+                                    key={file.key}
+                                    variant="outline"
+                                    size="sm"
+                                    href={file.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                >
                                     {`${props.t("download")}: ${file.name}`}
                                 </Button>
                             ))}

@@ -39,7 +39,10 @@ export class ZaloProofService implements WebhookProof, OnModuleInit {
         return Promise.resolve()
             .then(() => isValidZaloMac(appId, body, oaSecret, request.signature))
             .catch((cause: unknown) => {
-                this.logger.warn(ChannelsLogEvent.ProofBodyUnreadable, { connectionId: request.scope, reason: String(cause) })
+                this.logger.warn(ChannelsLogEvent.ProofBodyUnreadable, {
+                    connectionId: request.scope,
+                    reason: String(cause),
+                })
                 return false
             })
     }

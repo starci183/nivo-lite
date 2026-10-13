@@ -118,6 +118,10 @@ export const moneyProviderOf = (provider: Provider): MoneyProviderId | null => {
 export const isLocalOnly = (siteUrl: string | undefined): boolean => {
     if (siteUrl === undefined || !URL.canParse(siteUrl)) return true
     const url = new URL(siteUrl)
-    const local = url.hostname === "localhost" || url.hostname.endsWith(".localhost") || url.hostname === "127.0.0.1" || url.hostname === "[::1]"
+    const local =
+        url.hostname === "localhost" ||
+        url.hostname.endsWith(".localhost") ||
+        url.hostname === "127.0.0.1" ||
+        url.hostname === "[::1]"
     return url.protocol !== "https:" || local
 }

@@ -79,9 +79,14 @@ describe("N8nQueue", () => {
 
         expect(result).toBe(pending)
         await expect(result).rejects.toBe(failure)
-        expect(outbox.write).toHaveBeenCalledWith(tx, "n8n", { ...PAYLOAD, runId: "run-2" }, {
-            job: "n8n.emit",
-            dedupeKey: "n8n.emit:run-2",
-        })
+        expect(outbox.write).toHaveBeenCalledWith(
+            tx,
+            "n8n",
+            { ...PAYLOAD, runId: "run-2" },
+            {
+                job: "n8n.emit",
+                dedupeKey: "n8n.emit:run-2",
+            },
+        )
     })
 })

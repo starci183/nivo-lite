@@ -1,14 +1,10 @@
 "use client"
 
-import { RouteError } from "@/components/blocks/RouteError"
-import { knowledgeTrail } from "@/features/knowledge/trail"
-import { useT } from "@/i18n/client"
-import { knowledge } from "@/i18n/dict/knowledge"
+import { KnowledgeErrorPage } from "@/features/pages/KnowledgeErrorPage"
 
-/** STATE-8 case-4: a source page whose data fails keeps its trail and the Documents heading, with one Alert and a retry. */
-const SourceError = ({ reset }: { readonly reset: () => void }) => {
-  const t = useT(knowledge)
-  return <RouteError crumbs={knowledgeTrail({ brain: t("crumbBrain"), docs: t("title") })} title={t("title")} message={t("loadFailBody")} onRetry={reset} />
-}
+type ErrorProps = { readonly reset: () => void }
 
-export default SourceError
+/** The document route's error boundary slot. */
+const ErrorBoundary = (props: ErrorProps) => <KnowledgeErrorPage current="source" onRetry={props.reset} />
+
+export default ErrorBoundary

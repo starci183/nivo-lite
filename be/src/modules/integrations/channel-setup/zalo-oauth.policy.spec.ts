@@ -13,9 +13,7 @@ describe("PKCE", () => {
 
 describe("zaloCallbackUrl", () => {
     it("points the callback at the connections page of the site and needs a site url", () => {
-        expect(zaloCallbackUrl({ siteUrl: "https://nivo.vn/" })).toBe(
-            "https://nivo.vn/connections/zalo/callback",
-        )
+        expect(zaloCallbackUrl({ siteUrl: "https://nivo.vn/" })).toBe("https://nivo.vn/connections/zalo/callback")
         expect(zaloCallbackUrl({ siteUrl: undefined })).toBeNull()
     })
 })

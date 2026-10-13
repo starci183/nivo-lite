@@ -66,7 +66,9 @@ export class ChannelProvisioningService {
             accountNumber: flags.account ?? invalid("account"),
             holder: flags.holder ?? invalid("holder"),
         })
-        this.options.print(`sepay connection ${view.id}; paste into SePay: url ${view.webhookUrl}  api key ${view.apiKey}`)
+        this.options.print(
+            `sepay connection ${view.id}; paste into SePay: url ${view.webhookUrl}  api key ${view.apiKey}`,
+        )
         await this.bind(actor, view.id, "sepay", flags)
     }
 
@@ -78,7 +80,9 @@ export class ChannelProvisioningService {
         flags: ProvisionFlags,
     ): Promise<void> {
         if (flags.bind !== true) return
-        const agents: ReadonlyArray<AgentRow> = await this.entityManager.query(LIST_WORKSPACE_AGENTS, [actor.workspaceId])
+        const agents: ReadonlyArray<AgentRow> = await this.entityManager.query(LIST_WORKSPACE_AGENTS, [
+            actor.workspaceId,
+        ])
         const eligible = agents.filter((agent) => purposeFor(agent.module, provider) !== null)
         await this.grants.setConnectionAgents(
             actor,

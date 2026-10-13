@@ -6,6 +6,8 @@ export enum KnowledgeJob {
     Facts = "knowledge.facts",
     /** Re-embeds the chunks of a workspace made by another model than the one in use. */
     Reembed = "knowledge.reembed",
+    /** Carries out a command an owner or manager asked for on the Second Brain or Knowledge page (row in brain_commands). */
+    BrainCommand = "brain.command",
 }
 
 /** The payload of the index and facts jobs: the source to work on, ids only (the handler re-reads the current state). */
@@ -24,6 +26,14 @@ export interface KnowledgeReembedPayload {
     readonly model?: string
 }
 
+/** The payload of the brain command job: the command row to carry out, ids only (the handler re-reads the current state). */
+export interface KnowledgeCommandPayload {
+    /** The brain_commands row. */
+    readonly commandId: string
+    /** The workspace it was asked in. */
+    readonly workspaceId: string
+}
+
 /** The failure reason recorded when a workspace has no credits left: the job fails WITHOUT retrying and the owner tops up, then retries. */
 export const KNOWLEDGE_BLOCKED_CREDITS = "blocked_credits"
 
@@ -32,6 +42,10 @@ const isRecord = (value: unknown): value is Record<string, unknown> => typeof va
 /** True when a job payload is the payload of an index or facts job. */
 export const isKnowledgeSourcePayload = (value: unknown): value is KnowledgeSourcePayload =>
     isRecord(value) && typeof value.sourceId === "string" && typeof value.workspaceId === "string"
+
+/** True when a job payload is the payload of a brain command job. */
+export const isKnowledgeCommandPayload = (value: unknown): value is KnowledgeCommandPayload =>
+    isRecord(value) && typeof value.commandId === "string" && typeof value.workspaceId === "string"
 
 /** True when a job payload is the payload of a reembed job. */
 export const isKnowledgeReembedPayload = (value: unknown): value is KnowledgeReembedPayload =>

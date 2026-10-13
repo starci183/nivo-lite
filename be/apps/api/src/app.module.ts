@@ -1,6 +1,10 @@
-import { Module } from "@nestjs/common"
+import { Global, Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
+import { ExtractKnowledgeFactsQueueModule } from "@features/jobs/extract-knowledge-facts"
+import { RunBrainCommandQueueModule } from "@features/jobs/run-brain-command"
+import { IndexKnowledgeSourceQueueModule } from "@features/jobs/index-knowledge-source"
+import { ReembedKnowledgeQueueModule } from "@features/jobs/reembed-knowledge"
 import { AutomationsHttpModule } from "@features/api/automations"
 import { FlowsHttpModule } from "@features/api/flows"
 import { N8nPipelinesHttpModule } from "@features/api/n8n-pipelines"
@@ -52,6 +56,7 @@ import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules
 import { CassoHttpModule } from "@features/webhooks/casso"
 import { PayosHttpModule } from "@features/webhooks/payos"
 import { SepayHttpModule } from "@features/webhooks/sepay"
+import { SepayFeedHttpModule } from "@features/webhooks/sepay-feed"
 import { VietcombankHttpModule } from "@features/webhooks/vietcombank"
 import { ReconcileBankCreditQueueModule } from "@features/jobs/reconcile-bank-credit"
 import { CreatePaymentOrderQueueModule } from "@features/jobs/create-payment-order"
@@ -68,9 +73,27 @@ import {
     PaymentOrdersModule,
 } from "@modules/domain/payment-orders"
 import { CREDITS_ERROR_KINDS, CREDITS_MESSAGES, CreditsModule } from "@modules/domain/credits"
-import { AiUsageEventsModule } from "@modules/domain/ai-usage-events"
+import { AI_USAGE_EVENTS_MESSAGES, AiUsageEventsModule, UsageGateService } from "@modules/domain/ai-usage-events"
 import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
 import { WorkspacesHttpModule } from "@features/api/workspaces"
+import {
+    EMAIL_MESSAGES_ERROR_KINDS,
+    EMAIL_MESSAGES_MESSAGES,
+    EmailMessagesModule,
+} from "@modules/domain/email-messages"
+import { INVOICES_ERROR_KINDS, INVOICES_MESSAGES, InvoicesModule } from "@modules/domain/invoices"
+import { ORDERS_ERROR_KINDS, ORDERS_MESSAGES, OrdersModule } from "@modules/domain/orders"
+import { TRANSACTIONS_ERROR_KINDS, TRANSACTIONS_MESSAGES, TransactionsModule } from "@modules/domain/transactions"
+import {
+    ConversationLeadsService,
+    HandoffToolService,
+    InboundStatusService,
+    LeadWriterService,
+    OutboundAccessService,
+    WORK_PERFORMERS_ERROR_KINDS,
+    WORK_PERFORMERS_MESSAGES,
+    WorkPerformersModule,
+} from "@modules/domain/work-performers"
 import {
     AGENT_CONNECTIONS_ERROR_KINDS,
     AGENT_CONNECTIONS_MESSAGES,
@@ -81,10 +104,7 @@ import {
     AGENT_TOOLS_MESSAGES,
     AgentToolsModule,
     UnboundBookingToolsService,
-    UnboundConversationLeadsService,
-    UnboundHandoffToolService,
     UnboundKnowledgeSearchService,
-    UnboundLeadWriterService,
 } from "@modules/domain/agent-tools"
 import {
     AGENTS_ERROR_KINDS,
@@ -102,7 +122,6 @@ import {
     AI_GENERATIONS_POLL_MS,
     AiGenerationsModule,
     TextGeneratorService,
-    UnboundUsageGateService,
 } from "@modules/domain/ai-generations"
 import { AUTHORITY_ERROR_KINDS, AUTHORITY_MESSAGES } from "@modules/domain/authority"
 import { AUTHORITY_RULES_ERROR_KINDS, AUTHORITY_RULES_MESSAGES } from "@modules/domain/authority-rules"
@@ -112,9 +131,7 @@ import {
     DECISIONS_MESSAGES,
     DecisionsModule,
     UnboundDecisionEventsService,
-    UnboundInboundEventStatusService,
     UnboundLeadGenFlowService,
-    UnboundOutboundAccessGateService,
     UnboundPaymentReceiptsService,
 } from "@modules/domain/decisions"
 import { EXECUTIONS_ERROR_KINDS, EXECUTIONS_MESSAGES } from "@modules/domain/executions"
@@ -162,10 +179,36 @@ import { TelegramInboxModule } from "@modules/domain/telegram-inbox"
 import { ZaloInboxModule } from "@modules/domain/zalo-inbox"
 import { ZaloWizardDraftsModule } from "@modules/domain/zalo-wizard-drafts"
 import { AuthGuard, IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } from "@modules/domain/identity"
+import { BRAIN_ERROR_KINDS, BRAIN_MESSAGES, BrainModule } from "@modules/domain/brain"
+import type { CorrectionSource } from "@modules/domain/brain"
+import { BrainCommandsModule } from "@modules/domain/brain-commands"
+import { BrainEvalCasesModule } from "@modules/domain/brain-eval-cases"
+import { BrainExtractionsModule } from "@modules/domain/brain-extractions"
+import { BRAIN_FACTS_ERROR_KINDS, BRAIN_FACTS_MESSAGES, BrainFactsModule } from "@modules/domain/brain-facts"
+import { BRAIN_LESSONS_ERROR_KINDS, BRAIN_LESSONS_MESSAGES, BrainLessonsModule } from "@modules/domain/brain-lessons"
+import { KnowledgeChunksModule } from "@modules/domain/knowledge-chunks"
+import { KnowledgeGapsModule } from "@modules/domain/knowledge-gaps"
+import { KNOWLEDGE_ERROR_KINDS, KNOWLEDGE_MESSAGES, KnowledgeModule } from "@modules/domain/knowledge"
+import type { DriveAccessSource } from "@modules/domain/knowledge"
+import {
+    KNOWLEDGE_SOURCES_ERROR_KINDS,
+    KNOWLEDGE_SOURCES_MESSAGES,
+    KnowledgeSourcesModule,
+} from "@modules/domain/knowledge-sources"
+import {
+    CORE_FOLDER,
+    NIVO_KNOWLEDGE_ERROR_KINDS,
+    NIVO_KNOWLEDGE_MESSAGES,
+    NivoKnowledgeModule,
+} from "@modules/domain/nivo-knowledge"
+import { DOCUMENTS_ERROR_KINDS, DOCUMENTS_MESSAGES, DocumentsModule } from "@modules/integrations/documents"
+import { LlmModule } from "@modules/integrations/llm"
 import {
     SUPABASE_ACCESS_TOKEN_VERIFIER,
     SUPABASE_AUTH,
     SUPABASE_ERROR_KINDS,
+    SUPABASE_OBJECTS,
+    SUPABASE_STORAGE,
     SupabaseModule,
     createSupabaseAccessTokenVerifier,
 } from "@modules/integrations/supabase"
@@ -293,7 +336,7 @@ import { MetaConnectionsHttpModule } from "@features/api/meta-connections"
 import { CONTENT_MESSAGES, ContentModule } from "@modules/domain/content"
 import { CONTENT_ITEMS_ERROR_KINDS, CONTENT_ITEMS_MESSAGES, ContentItemsModule } from "@modules/domain/content-items"
 import { ContentSettingsModule } from "@modules/domain/content-settings"
-import { VIDEO_ERROR_KINDS, VIDEO_MESSAGES, VideoModule } from "@modules/domain/video"
+import { VIDEO_ASSETS, VIDEO_ERROR_KINDS, VIDEO_MESSAGES, VideoModule } from "@modules/domain/video"
 import { VideoProjectVersionsModule } from "@modules/domain/video-project-versions"
 import { VideoProjectsModule } from "@modules/domain/video-projects"
 import { VIDEO_RENDERS_ERROR_KINDS, VIDEO_RENDERS_MESSAGES, VideoRendersModule } from "@modules/domain/video-renders"
@@ -310,6 +353,20 @@ import { ConnectionCommandsQueueModule } from "@features/jobs/connection-command
 import { RequestRenderQueueModule } from "@features/jobs/request-render"
 import type { ApiOptions } from "./api.options"
 
+/** Until a connection capability provides the Google Drive access of a workspace, no workspace has any. */
+/** Until the decisions capability provides the corrections of the owner, the brain has none to study. */
+const NO_CORRECTIONS: CorrectionSource = { recent: () => Promise.resolve([]) }
+
+const NO_DRIVE_ACCESS: DriveAccessSource = { forWorkspace: () => null }
+
+@Global()
+@Module({
+    providers: [{ provide: VIDEO_ASSETS, useExisting: SUPABASE_STORAGE }],
+    exports: [VIDEO_ASSETS],
+})
+/** Binds the file store the render job uses to the Supabase storage integration. */
+class VideoAssetsBindingModule {}
+
 @Module({})
 /** Composition root of the API: every capability is registered once and the three guards run in a fixed order. */
 export class AppModule {
@@ -324,6 +381,7 @@ export class AppModule {
                 I18nModule.register({
                     isGlobal: true,
                     bundles: [
+                        DOCUMENTS_MESSAGES,
                         CONNECTIONS_MESSAGES,
                         CONNECTION_GRANTS_MESSAGES,
                         CHANNEL_CONNECTIONS_MESSAGES,
@@ -344,6 +402,12 @@ export class AppModule {
                         AGENT_TOOLS_MESSAGES,
                         AGENTS_MESSAGES,
                         AI_GENERATIONS_MESSAGES,
+                        AI_USAGE_EVENTS_MESSAGES,
+                        EMAIL_MESSAGES_MESSAGES,
+                        INVOICES_MESSAGES,
+                        ORDERS_MESSAGES,
+                        TRANSACTIONS_MESSAGES,
+                        WORK_PERFORMERS_MESSAGES,
                         API_KEYS_MESSAGES,
                         AUTHORITY_MESSAGES,
                         AUTHORITY_RULES_MESSAGES,
@@ -368,10 +432,16 @@ export class AppModule {
                         TELEGRAM_MESSAGES,
                         ZALO_MESSAGES,
                         ERRORS_MESSAGES,
+                        HTTP_MESSAGES,
                         HTTP_SECURITY_MESSAGES,
                         IDENTITY_MESSAGES,
                         PLATFORM_ADMIN_MESSAGES,
                         JOBS_MESSAGES,
+                        BRAIN_FACTS_MESSAGES,
+                        BRAIN_LESSONS_MESSAGES,
+                        BRAIN_MESSAGES,
+                        KNOWLEDGE_MESSAGES,
+                        KNOWLEDGE_SOURCES_MESSAGES,
                         N8N_RUNS_MESSAGES,
                         BOOKINGS_MESSAGES,
                         LOYALTY_CAMPAIGNS_MESSAGES,
@@ -382,6 +452,7 @@ export class AppModule {
                         RESPONSIBILITIES_MESSAGES,
                         CONTRACTS_MESSAGES,
                         MODULES_MESSAGES,
+                        NIVO_KNOWLEDGE_MESSAGES,
                         PUBLIC_API_MESSAGES,
                         QUEUE_MESSAGES,
                         WORKSPACE_INVITES_MESSAGES,
@@ -417,6 +488,11 @@ export class AppModule {
                         AGENT_TOOLS_ERROR_KINDS,
                         AGENTS_ERROR_KINDS,
                         AI_GENERATIONS_ERROR_KINDS,
+                        EMAIL_MESSAGES_ERROR_KINDS,
+                        INVOICES_ERROR_KINDS,
+                        ORDERS_ERROR_KINDS,
+                        TRANSACTIONS_ERROR_KINDS,
+                        WORK_PERFORMERS_ERROR_KINDS,
                         API_KEYS_ERROR_KINDS,
                         AUTHORITY_ERROR_KINDS,
                         AUTHORITY_RULES_ERROR_KINDS,
@@ -442,14 +518,22 @@ export class AppModule {
                         ZALO_ERROR_KINDS,
                         CONFIG_ERROR_KINDS,
                         DATABASE_ERROR_KINDS,
+                        DOCUMENTS_ERROR_KINDS,
+                        HTTP_ERROR_KINDS,
                         HTTP_SECURITY_ERROR_KINDS,
                         JOBS_ERROR_KINDS,
+                        BRAIN_ERROR_KINDS,
+                        BRAIN_FACTS_ERROR_KINDS,
+                        BRAIN_LESSONS_ERROR_KINDS,
+                        KNOWLEDGE_ERROR_KINDS,
+                        KNOWLEDGE_SOURCES_ERROR_KINDS,
                         N8N_ERROR_KINDS,
                         N8N_RUNS_ERROR_KINDS,
                         QUEUE_ERROR_KINDS,
                         IDENTITY_ERROR_KINDS,
                         PLATFORM_ADMIN_ERROR_KINDS,
                         MODULES_ERROR_KINDS,
+                        NIVO_KNOWLEDGE_ERROR_KINDS,
                         PUBLIC_API_ERROR_KINDS,
                         SUPABASE_ERROR_KINDS,
                         TEMPLATE_FILES_ERROR_KINDS,
@@ -551,6 +635,7 @@ export class AppModule {
                 VideoRendersModule.register({ isGlobal: true }),
                 VideoProjectsModule.register({ isGlobal: true }),
                 VideoProjectVersionsModule.register({ isGlobal: true }),
+                VideoAssetsBindingModule,
                 VideoModule.register({ isGlobal: true, ...options.video }),
                 ContentItemsModule.register({ isGlobal: true }),
                 ContentSettingsModule.register({ isGlobal: true }),
@@ -564,6 +649,24 @@ export class AppModule {
                 ConnectionCommandsQueueModule,
                 RendersHttpModule,
                 LivenessModule.register({ isGlobal: true }),
+                HttpModule.register({ isGlobal: true }),
+                LlmModule.register({ isGlobal: true, ...options.llm }),
+                DocumentsModule.register({ isGlobal: true, ...options.documents }),
+                KnowledgeSourcesModule.register({ isGlobal: true, storage: SUPABASE_OBJECTS }),
+                KnowledgeChunksModule.register({ isGlobal: true }),
+                NivoKnowledgeModule.register({
+                    isGlobal: true,
+                    folders: [CORE_FOLDER, ...MODULE_CATALOG.map((module) => module.knowledgeFolder)],
+                    dir: "fe/apps/web/resources/nivo-knowledge",
+                }),
+                KnowledgeModule.register({ isGlobal: true, driveAccess: NO_DRIVE_ACCESS }),
+                BrainFactsModule.register({ isGlobal: true }),
+                KnowledgeGapsModule.register({ isGlobal: true }),
+                BrainLessonsModule.register({ isGlobal: true }),
+                BrainExtractionsModule.register({ isGlobal: true }),
+                BrainCommandsModule.register({ isGlobal: true }),
+                BrainEvalCasesModule.register({ isGlobal: true }),
+                BrainModule.register({ isGlobal: true, corrections: NO_CORRECTIONS }),
                 BookingsModule.register({ isGlobal: true }),
                 LeadsHttpModule,
                 PlatformAuditModule.register({ isGlobal: true }),
@@ -584,7 +687,7 @@ export class AppModule {
                 AgentConnectionsModule.register({ isGlobal: true }),
                 AiGenerationsModule.register({
                     isGlobal: true,
-                    usage: UnboundUsageGateService,
+                    usage: UsageGateService,
                     pollMs: AI_GENERATIONS_POLL_MS,
                 }),
                 OpenclawAgentSyncModule.register({ isGlobal: true, reloadSettleMs: OPENCLAW_RELOAD_SETTLE_MS }),
@@ -592,11 +695,11 @@ export class AppModule {
                     isGlobal: true,
                     ports: {
                         knowledgeSearch: UnboundKnowledgeSearchService,
-                        leadWriter: UnboundLeadWriterService,
+                        leadWriter: LeadWriterService,
                         bookingTools: UnboundBookingToolsService,
                         approvalRequester: ApprovalRequesterService,
-                        handoffTool: UnboundHandoffToolService,
-                        conversationLeads: UnboundConversationLeadsService,
+                        handoffTool: HandoffToolService,
+                        conversationLeads: ConversationLeadsService,
                         toolTokens: ToolTokenService,
                     },
                 }),
@@ -604,13 +707,18 @@ export class AppModule {
                     isGlobal: true,
                     ports: {
                         agentDirectory: AgentsService,
-                        inboundEventStatus: UnboundInboundEventStatusService,
+                        inboundEventStatus: InboundStatusService,
                         decisionEvents: UnboundDecisionEventsService,
                         paymentReceipts: UnboundPaymentReceiptsService,
                         leadGenFlow: UnboundLeadGenFlowService,
-                        outboundAccessGate: UnboundOutboundAccessGateService,
+                        outboundAccessGate: OutboundAccessService,
                     },
                 }),
+                OrdersModule.register({ isGlobal: true }),
+                InvoicesModule.register({ isGlobal: true }),
+                TransactionsModule.register({ isGlobal: true }),
+                EmailMessagesModule.register({ isGlobal: true }),
+                WorkPerformersModule.register({ isGlobal: true, writer: DeepseekClient }),
                 OfficeCommandCandidatesModule.register({ isGlobal: true, reader: DeepseekClient }),
                 SyncAgentsQueueModule,
                 GenerateWithAgentQueueModule,
@@ -635,6 +743,7 @@ export class AppModule {
                 CassoHttpModule,
                 PayosHttpModule,
                 SepayHttpModule,
+                SepayFeedHttpModule,
                 VietcombankHttpModule,
                 TelegramHttpModule,
                 ZaloHttpModule,
@@ -659,6 +768,10 @@ export class AppModule {
                 LoyaltyHttpModule,
                 LoyaltyTillHttpModule,
                 WorkspacesHttpModule,
+                ExtractKnowledgeFactsQueueModule,
+                RunBrainCommandQueueModule,
+                IndexKnowledgeSourceQueueModule,
+                ReembedKnowledgeQueueModule,
                 GoogleConnectionsHttpModule,
                 MetaConnectionsHttpModule,
                 AutomationsHttpModule,

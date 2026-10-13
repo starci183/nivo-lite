@@ -2,7 +2,10 @@
   "goal": "behind_scenes",
   "order": 4,
   "label": { "vi": "Hậu trường", "en": "Behind the scenes" },
-  "hint": { "vi": "Cho khách thấy con người và cách làm việc phía sau.", "en": "Show the people and the work behind the business." },
+  "hint": {
+    "vi": "Cho khách thấy con người và cách làm việc phía sau.",
+    "en": "Show the people and the work behind the business."
+  },
   "default_seconds": 30,
   "default_aspect": "9:16",
   "music": "sunny-pop",

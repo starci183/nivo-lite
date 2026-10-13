@@ -1,6 +1,6 @@
-import en from "@/modules/i18n/messages/en/modules.json"
-import vi from "@/modules/i18n/messages/vi/modules.json"
+import allEn from "@/modules/i18n/messages/en.json"
+import allVi from "@/modules/i18n/messages/vi.json"
 import { defineDict } from "../core"
 
 /** Copy of the Modules area: catalog, purchase flow, agent cards and the agent setup page. */
-export const modules = defineDict("modules", { en, vi })
+export const modules = defineDict("modules", { en: allEn["modules"], vi: allVi["modules"] })

@@ -41,7 +41,12 @@ describe("ZaloWizardDraftsService", () => {
     it("answers an absent draft when the connection has none", async () => {
         const { service, em } = await build()
 
-        await expect(service.draftOf("c-1")).resolves.toEqual({ present: false, appId: "", appSecret: "", oaSecret: "" })
+        await expect(service.draftOf("c-1")).resolves.toEqual({
+            present: false,
+            appId: "",
+            appSecret: "",
+            oaSecret: "",
+        })
         expect(em.query.mock.calls).toEqual([[FIND_WIZARD_DRAFT, ["c-1"]]])
     })
 

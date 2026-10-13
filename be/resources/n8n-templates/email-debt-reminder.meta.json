@@ -19,14 +19,31 @@
   "requires": { "modules": ["accounting"], "channels": [], "connections": ["smtp"], "capabilities": ["has_due_dates"] },
   "settings": [
     { "key": "time", "kind": "time", "label": { "vi": "Kiểm tra lúc", "en": "Check at" } },
-    { "key": "after_days", "kind": "number", "min": 0, "max": 60, "suffix": { "vi": "ngày", "en": "days" }, "label": { "vi": "Nhắc khi quá hạn từ", "en": "Remind when overdue by" } },
-    { "key": "repeat_days", "kind": "number", "min": 1, "max": 90, "suffix": { "vi": "ngày", "en": "days" }, "label": { "vi": "Không nhắc lại trong", "en": "Do not remind again within" } },
+    {
+      "key": "after_days",
+      "kind": "number",
+      "min": 0,
+      "max": 60,
+      "suffix": { "vi": "ngày", "en": "days" },
+      "label": { "vi": "Nhắc khi quá hạn từ", "en": "Remind when overdue by" }
+    },
+    {
+      "key": "repeat_days",
+      "kind": "number",
+      "min": 1,
+      "max": 90,
+      "suffix": { "vi": "ngày", "en": "days" },
+      "label": { "vi": "Không nhắc lại trong", "en": "Do not remind again within" }
+    },
     { "key": "subject", "kind": "text", "label": { "vi": "Tiêu đề email", "en": "Email subject" } }
   ],
   "contentMode": "fixed",
   "guardrails": [
     { "vi": "Lịch sự, không đe doạ, không nhắc tới phí phạt.", "en": "Polite, no threats, no mention of penalties." },
-    { "vi": "Chỉ nêu số tiền, mã phiếu và hạn thanh toán có thật.", "en": "Only the real amount, reference and due date." }
+    {
+      "vi": "Chỉ nêu số tiền, mã phiếu và hạn thanh toán có thật.",
+      "en": "Only the real amount, reference and due date."
+    }
   ],
   "variables": ["ten_khach", "ten_shop", "so_tien", "ma_phieu", "han", "so_ngay_tre"],
   "defaultBody": {

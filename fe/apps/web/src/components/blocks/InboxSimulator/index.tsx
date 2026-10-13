@@ -23,7 +23,16 @@ const isKind = (value: string): value is SimKind => KINDS.some((kind) => kind ==
 /** A fresh simulator event id. The same id sent again is a duplicate; a new id is a new input even with identical text. */
 const newEventId = (): string => `sim-${crypto.randomUUID().slice(0, 8)}`
 
-const EMPTY: Omit<SimulatorValues, "eventId"> = { channel: "zalo", kind: "message", name: "", contact: "", body: "", amount: Number.NaN, reference: "", items: "" }
+const EMPTY: Omit<SimulatorValues, "eventId"> = {
+    channel: "zalo",
+    kind: "message",
+    name: "",
+    contact: "",
+    body: "",
+    amount: Number.NaN,
+    reference: "",
+    items: "",
+}
 
 /** Props for the connected simulator. */
 interface InboxSimulatorProps {
@@ -50,11 +59,52 @@ export const InboxSimulator = (props: InboxSimulatorProps) => {
     useEffect(() => () => timers.current.forEach(clearTimeout), [])
 
     const presets: Readonly<Record<string, Omit<SimulatorValues, "eventId">>> = {
-        zalo: { ...EMPTY, channel: "zalo", kind: "message", name: t("presetNameZalo"), contact: "0901234567", body: t("presetBodyZalo") },
-        o5: { ...EMPTY, channel: "facebook", kind: "order", name: t("presetNameFb"), contact: "0912345678", items: t("presetItems"), amount: 5_000_000, reference: "FB-5M-01" },
-        o45: { ...EMPTY, channel: "facebook", kind: "order", name: t("presetNameFb"), contact: "0912345678", items: t("presetItems"), amount: 45_000_000, reference: "FB-45M-01" },
-        o0: { ...EMPTY, channel: "facebook", kind: "order", name: t("presetNameFb"), contact: "0912345678", items: t("presetItems"), reference: "FB-NOAMT-01" },
-        bank: { ...EMPTY, channel: "bank", kind: "payment", name: t("presetBankName"), body: t("presetBankBody"), amount: 5_000_000, reference: t("presetBankRef") },
+        zalo: {
+            ...EMPTY,
+            channel: "zalo",
+            kind: "message",
+            name: t("presetNameZalo"),
+            contact: "0901234567",
+            body: t("presetBodyZalo"),
+        },
+        o5: {
+            ...EMPTY,
+            channel: "facebook",
+            kind: "order",
+            name: t("presetNameFb"),
+            contact: "0912345678",
+            items: t("presetItems"),
+            amount: 5_000_000,
+            reference: "FB-5M-01",
+        },
+        o45: {
+            ...EMPTY,
+            channel: "facebook",
+            kind: "order",
+            name: t("presetNameFb"),
+            contact: "0912345678",
+            items: t("presetItems"),
+            amount: 45_000_000,
+            reference: "FB-45M-01",
+        },
+        o0: {
+            ...EMPTY,
+            channel: "facebook",
+            kind: "order",
+            name: t("presetNameFb"),
+            contact: "0912345678",
+            items: t("presetItems"),
+            reference: "FB-NOAMT-01",
+        },
+        bank: {
+            ...EMPTY,
+            channel: "bank",
+            kind: "payment",
+            name: t("presetBankName"),
+            body: t("presetBankBody"),
+            amount: 5_000_000,
+            reference: t("presetBankRef"),
+        },
     }
 
     const change = (field: keyof SimulatorValues, value: string | number) => {
@@ -97,7 +147,17 @@ export const InboxSimulator = (props: InboxSimulatorProps) => {
                 tone: duplicate ? "cautionary" : "affirmative",
                 lines: [
                     ...(event.event_id ? [t("eventLine", { id: event.event_id })] : []),
-                    ...(event.amount_vnd ? [t("amountLine", { amount: format.number(event.amount_vnd, { style: "currency", currency: "VND", maximumFractionDigits: 0 }) })] : []),
+                    ...(event.amount_vnd
+                        ? [
+                              t("amountLine", {
+                                  amount: format.number(event.amount_vnd, {
+                                      style: "currency",
+                                      currency: "VND",
+                                      maximumFractionDigits: 0,
+                                  }),
+                              }),
+                          ]
+                        : []),
                 ],
                 leadHref: event.lead_id ? `/leads/${event.lead_id}` : null,
             })

@@ -14,13 +14,16 @@ import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import { WorkspacesModule } from "@modules/domain/workspaces"
 import { SepaySimulationModule } from "@modules/domain/sepay-simulation"
 import { SeedSecretsFileClient, WorkspaceSeedModule } from "@modules/domain/workspace-seed"
+import { CORE_FOLDER, NIVO_KNOWLEDGE_MESSAGES, NivoKnowledgeModule } from "@modules/domain/nivo-knowledge"
+import { LlmModule } from "@modules/integrations/llm"
+import { HttpModule } from "@modules/platform/http"
+import { I18nModule } from "@modules/platform/i18n"
 import { ChannelSetupModule } from "@modules/integrations/channel-setup"
 import { SUPABASE_ACCOUNTS, SUPABASE_AUTH, SupabaseModule } from "@modules/integrations/supabase"
 import { AuthorityActionsModule } from "@modules/domain/authority-actions"
 import { MODULE_CATALOG, MODULE_CATEGORIES, ModulesModule } from "@modules/domain/modules"
 import { ClockModule } from "@modules/platform/clock"
 import { DatabaseModule } from "@modules/platform/database"
-import { HttpModule } from "@modules/platform/http"
 import { LoggingModule } from "@modules/platform/logging"
 import type { CliAppOptions } from "./cli.options"
 
@@ -41,6 +44,14 @@ export class AppModule {
                     isGlobal: true,
                     connections: options.connections,
                 }),
+                I18nModule.register({ isGlobal: true, bundles: [NIVO_KNOWLEDGE_MESSAGES] }),
+                HttpModule.register({ isGlobal: true }),
+                LlmModule.register({ isGlobal: true, ...options.llm }),
+                NivoKnowledgeModule.register({
+                    isGlobal: true,
+                    folders: [CORE_FOLDER, ...MODULE_CATALOG.map((module) => module.knowledgeFolder)],
+                    dir: "fe/apps/web/resources/nivo-knowledge",
+                }),
                 TemplateFilesModule.register({ isGlobal: true, ...options.templateFiles }),
                 AutomationTemplatesModule.register({ isGlobal: true }),
                 N8nHostModule.register({ isGlobal: true, ...options.n8nHost }),
@@ -54,7 +65,6 @@ export class AppModule {
                     print: (line) => process.stdout.write(`${line}\n`),
                 }),
                 AuthorityActionsModule.register({ isGlobal: true }),
-                HttpModule.register({ isGlobal: true }),
                 ConnectionsModule.register({ isGlobal: true, ...options.channelConnections }),
                 ConnectionGrantsModule.register({ isGlobal: true }),
                 ChannelSetupModule.register({ isGlobal: true, ...options.channelSetup }),

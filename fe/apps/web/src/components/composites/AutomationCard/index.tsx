@@ -95,7 +95,11 @@ export const AutomationCard = (props: AutomationCardProps) => (
             <Text size="sm" tone="muted">
                 {props.description}
             </Text>
-            <Text size="xs" tone="muted" startContent={<Icon source={nivoIconSource("trigger", "chip")} usage="chip" />}>
+            <Text
+                size="xs"
+                tone="muted"
+                startContent={<Icon source={nivoIconSource("trigger", "chip")} usage="chip" />}
+            >
                 {props.triggerLine}
             </Text>
             {props.note === undefined ? null : (

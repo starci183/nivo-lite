@@ -31,7 +31,9 @@ export class MetaChannelSender implements ChannelSender, OnModuleInit {
     async send(conversation: ConversationTarget, text: string): Promise<boolean> {
         const platform = conversation.channel === "instagram" ? "instagram" : "facebook"
         if (conversation.connectionId === null || conversation.externalId === null) return false
-        const connection = await this.connections.find(conversation.workspaceId, conversation.connectionId).catch(() => null)
+        const connection = await this.connections
+            .find(conversation.workspaceId, conversation.connectionId)
+            .catch(() => null)
         const sealed = connection === null ? null : await this.connections.readSecret(connection.id).catch(() => null)
         const secret = sealed === null ? {} : parseMetaSecret(sealed.plain)
         if (connection === null || secret.pageId === undefined || secret.pageToken === undefined) return false

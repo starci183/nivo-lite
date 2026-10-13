@@ -36,7 +36,13 @@ interface InboxFeedProps {
 }
 
 const toneOf = (status: string): InboxFeedRow["status"]["tone"] =>
-    status === "processed" ? "success" : status === "needs_decision" ? "warning" : status === "failed" ? "danger" : "neutral"
+    status === "processed"
+        ? "success"
+        : status === "needs_decision"
+          ? "warning"
+          : status === "failed"
+            ? "danger"
+            : "neutral"
 
 /** The connected feed of received inputs: words from the catalogs, relative times and amounts in the active language, a refresh through the router. */
 export const InboxFeed = (props: InboxFeedProps) => {
@@ -60,20 +66,35 @@ export const InboxFeed = (props: InboxFeedProps) => {
                 : [
                       {
                           key: "amount",
-                          text: t("amountLine", { amount: format.number(event.amountVnd, { style: "currency", currency: "VND", maximumFractionDigits: 0 }) }),
+                          text: t("amountLine", {
+                              amount: format.number(event.amountVnd, {
+                                  style: "currency",
+                                  currency: "VND",
+                                  maximumFractionDigits: 0,
+                              }),
+                          }),
                           strong: true,
                       },
                   ]),
-            ...(event.externalRef === null ? [] : [{ key: "ref", text: t("refLine", { ref: event.externalRef }), strong: false }]),
-            ...(event.eventId === null ? [] : [{ key: "event", text: t("eventLine", { id: event.eventId }), strong: false }]),
+            ...(event.externalRef === null
+                ? []
+                : [{ key: "ref", text: t("refLine", { ref: event.externalRef }), strong: false }]),
+            ...(event.eventId === null
+                ? []
+                : [{ key: "event", text: t("eventLine", { id: event.eventId }), strong: false }]),
         ]
         const simulated = event.origin === "simulated"
         return {
             id: event.id,
-            source: bankConnectionOf({ channel: event.channel, event_id: event.eventId })?.name ?? g(`channel_${event.channel}`),
+            source:
+                bankConnectionOf({ channel: event.channel, event_id: event.eventId })?.name ??
+                g(`channel_${event.channel}`),
             kind: g(`kind_${event.kind}`),
             ago: ago(event.createdAt),
-            origin: { label: g(simulated ? "origin_simulated" : "origin_live"), tone: simulated ? "warning" : "success" },
+            origin: {
+                label: g(simulated ? "origin_simulated" : "origin_live"),
+                tone: simulated ? "warning" : "success",
+            },
             status: { label: g(`inbound_${event.status}`), tone: toneOf(event.status) },
             body: event.body,
             meta,

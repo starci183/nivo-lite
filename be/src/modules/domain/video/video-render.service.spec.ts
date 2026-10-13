@@ -1,20 +1,21 @@
 import { mkdir, mkdtemp, readdir, utimes, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { Test } from "@nestjs/testing"
 import { FakeClock, builder, mock } from "@starci/jest-preset"
-import { StorageApiError } from "@supabase/storage-js"
 import { VideoRendersService } from "@modules/domain/video-renders"
-import type { SupabaseAdminClient } from "@modules/integrations/supabase"
+import { CLOCK } from "@modules/platform/clock"
+import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { VideoErrorCode } from "./errors/video.error"
 import { RendererService } from "./renderer.service"
 import type { RenderInput, RenderOutput } from "./renderer.service"
+import type { VideoAssets } from "./video.contracts"
+import { VIDEO_ASSETS, VIDEO_OPTIONS } from "./video.decorators"
 import { VideoLogEvent } from "./video.log-events"
 import type { VideoOptions } from "./video.options"
 import { VideoService } from "./video.service"
 import { VideoRenderService } from "./video-render.service"
-
-jest.mock("@modules/integrations/supabase", () => ({ InjectSupabaseAdminClient: () => () => undefined }))
 
 const WORKSPACE = "0a1b2c3d-0a1b-4c3d-8a1b-0a1b2c3d4e5f"
 const IMAGE = `${WORKSPACE}/photo.jpg`
@@ -31,7 +32,6 @@ const SPEC = {
 }
 
 type ClaimedRender = NonNullable<Awaited<ReturnType<VideoRendersService["claim"]>>>
-type Bucket = ReturnType<SupabaseAdminClient["storage"]["from"]>
 
 const claimOf = builder<ClaimedRender>({ renderId: "render-1", workspaceId: WORKSPACE, spec: SPEC, attempts: 1 })
 
@@ -64,45 +64,49 @@ const build = async () => {
     const renderer = mock<RendererService>()
     const logger = mock<Logger>()
     const clock = new FakeClock("2026-10-12T00:00:00.000Z")
-    const bucket = mock<Bucket>()
-    bucket.download.mockResolvedValue({ data: new Blob(["bytes"]), error: null })
-    bucket.upload.mockResolvedValue({ data: { id: "1", path: "p", fullPath: "f" }, error: null })
-    const storage = mock<SupabaseAdminClient["storage"]>()
-    storage.from.mockReturnValue(bucket)
-    const supabase = mock<SupabaseAdminClient>({ storage })
+    const assets = mock<VideoAssets>()
+    assets.download.mockResolvedValue({ data: new Blob(["bytes"]), error: null })
+    assets.upload.mockResolvedValue({ error: null })
     renders.claim.mockResolvedValue(claimOf())
     renderer.render.mockImplementation(async (input: RenderInput) => {
         await writeFile(join(input.workDir, "out.mp4"), "video")
         await writeFile(join(input.workDir, "poster.jpg"), "poster")
         return outputOf(input.workDir)
     })
-    const service = new VideoRenderService(options, video, renders, renderer, supabase, clock, logger)
-    return { service, video, renders, renderer, logger, clock, bucket, storage, options, root }
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            VideoRenderService,
+            { provide: VIDEO_OPTIONS, useValue: options },
+            { provide: VideoService, useValue: video },
+            { provide: VideoRendersService, useValue: renders },
+            { provide: RendererService, useValue: renderer },
+            { provide: VIDEO_ASSETS, useValue: assets },
+            { provide: CLOCK, useValue: clock },
+            { provide: LOGGER, useValue: logger },
+        ],
+    }).compile()
+    const service = moduleRef.get(VideoRenderService)
+    return { service, video, renders, renderer, logger, clock, assets, options, root }
 }
 
 describe("VideoRenderService", () => {
     describe("render", () => {
         it("downloads the assets, renders, uploads the files, settles the render and removes the work directory", async () => {
-            const { service, video, renderer, bucket, storage, logger, options } = await build()
+            const { service, video, renderer, assets, logger, options } = await build()
 
             await service.render({ renderId: "render-1" })
 
-            expect(storage.from).toHaveBeenCalledWith("media")
-            expect(bucket.download).toHaveBeenCalledWith(IMAGE)
-            expect(bucket.download).toHaveBeenCalledWith(LOGO)
-            expect(bucket.download).toHaveBeenCalledTimes(2)
+            expect(assets.download.mock.calls).toEqual([
+                ["media", IMAGE],
+                ["media", LOGO],
+            ])
             const input = renderer.render.mock.calls[0]?.[0]
             expect(input?.attempt).toBe(1)
             expect([...(input?.assets.keys() ?? [])]).toEqual([IMAGE, LOGO])
-            expect(storage.from).toHaveBeenCalledWith("videos")
-            expect(bucket.upload).toHaveBeenCalledWith(`${WORKSPACE}/render-1/video.mp4`, expect.any(Buffer), {
-                contentType: "video/mp4",
-                upsert: true,
-            })
-            expect(bucket.upload).toHaveBeenCalledWith(`${WORKSPACE}/render-1/poster.jpg`, expect.any(Buffer), {
-                contentType: "image/jpeg",
-                upsert: true,
-            })
+            expect(assets.upload.mock.calls).toEqual([
+                ["videos", `${WORKSPACE}/render-1/video.mp4`, Buffer.from("video"), "video/mp4"],
+                ["videos", `${WORKSPACE}/render-1/poster.jpg`, Buffer.from("poster"), "image/jpeg"],
+            ])
             expect(video.completeRender).toHaveBeenCalledWith("render-1", {
                 outputPath: `${WORKSPACE}/render-1/video.mp4`,
                 posterPath: `${WORKSPACE}/render-1/poster.jpg`,
@@ -145,14 +149,14 @@ describe("VideoRenderService", () => {
         })
 
         it("fails the render for good when an asset is missing or too big", async () => {
-            const { service, video, bucket } = await build()
-            bucket.download.mockResolvedValueOnce({ data: null, error: new StorageApiError("gone", 500, "500") })
+            const { service, video, assets } = await build()
+            assets.download.mockResolvedValueOnce({ data: null, error: new Error("gone") })
 
             await expect(service.render({ renderId: "render-1" })).resolves.toBeUndefined()
 
             expect(video.failRender).toHaveBeenCalledTimes(1)
 
-            bucket.download.mockResolvedValue({ data: new Blob([new Uint8Array(51 * 1024 * 1024)]), error: null })
+            assets.download.mockResolvedValue({ data: new Blob([new Uint8Array(51 * 1024 * 1024)]), error: null })
             await expect(service.render({ renderId: "render-1" })).resolves.toBeUndefined()
 
             expect(video.failRender).toHaveBeenCalledTimes(2)
@@ -194,8 +198,8 @@ describe("VideoRenderService", () => {
         })
 
         it("retries a render whose files could not be uploaded", async () => {
-            const { service, video, bucket } = await build()
-            bucket.upload.mockResolvedValue({ data: null, error: new StorageApiError("down", 500, "500") })
+            const { service, video, assets } = await build()
+            assets.upload.mockResolvedValue({ error: new Error("down") })
 
             await expect(service.render({ renderId: "render-1" })).rejects.toMatchObject({
                 code: VideoErrorCode.StorageFailed,

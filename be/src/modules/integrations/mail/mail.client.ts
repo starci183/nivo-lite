@@ -91,7 +91,12 @@ export class MailClient {
     /** Sends an owner notice through the platform sender, wrapped in the shop layout; the subject is the title on one line. Throws a MailError. */
     sendNoticeThroughPlatform(to: string, notice: EmailLayoutInput): Promise<SentMail> {
         const rendered = renderEmail(notice)
-        return this.sendThroughPlatform({ to, subject: oneLine(notice.title), html: rendered.html, text: rendered.text })
+        return this.sendThroughPlatform({
+            to,
+            subject: oneLine(notice.title),
+            html: rendered.html,
+            text: rendered.text,
+        })
     }
 
     private accepted(info: AcceptedInfo): SentMail {

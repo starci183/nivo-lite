@@ -22,12 +22,8 @@
     }
   },
   "requires": {
-    "modules": [
-      "sales"
-    ],
-    "channels": [
-      "customer_chat"
-    ],
+    "modules": ["sales"],
+    "channels": ["customer_chat"],
     "connections": [],
     "capabilities": []
   },
@@ -75,11 +71,7 @@
       "en": "Never invent prices, hours, addresses or policies that are not in the shop information."
     }
   ],
-  "variables": [
-    "ten_khach",
-    "ten_shop",
-    "uu_dai"
-  ],
+  "variables": ["ten_khach", "ten_shop", "uu_dai"],
   "defaultBody": {
     "vi": "Chào {ten_khach}, lâu rồi {ten_shop} chưa gặp bạn! Tặng bạn {uu_dai}. Bạn muốn ghé lúc nào ạ?",
     "en": "Hi {ten_khach}, we have missed you at {ten_shop}! Here is {uu_dai}. When would you like to visit?"

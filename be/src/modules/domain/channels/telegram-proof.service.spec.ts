@@ -10,7 +10,10 @@ const build = (secret: string | null) => {
     secrets.secretOf.mockResolvedValue(
         secret === null
             ? { kind: "refused", code: ConnectionSecretsErrorCode.NotFound }
-            : { kind: "ok", value: { workspaceId: "ws-1", credential: "123:token", webhookSecret: secret, tokenExpiresAt: null } },
+            : {
+                  kind: "ok",
+                  value: { workspaceId: "ws-1", credential: "123:token", webhookSecret: secret, tokenExpiresAt: null },
+              },
     )
     const registry = mock<WebhookProofRegistry>()
     return { proof: new TelegramProofService(registry, secrets), registry, secrets }

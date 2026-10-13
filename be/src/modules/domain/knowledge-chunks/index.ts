@@ -1,0 +1,5 @@
+export type { ChunkDraft } from "./knowledge-chunks.contracts"
+export { chunkText } from "./chunk.policy"
+export { KnowledgeChunksModule } from "./knowledge-chunks.module"
+export { KnowledgeChunksService } from "./knowledge-chunks.service"
+export { toVector } from "./vector.policy"

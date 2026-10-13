@@ -183,25 +183,21 @@ const main = async () => {
         .select("id")
         .single()
     if (agent.error) throw new Error(`agent: ${agent.error.message}`)
-    await db
-        .from("module_installations")
-        .insert({
-            workspace_id: ws,
-            module_key: "chatbot",
-            agent_id: agent.data.id,
-            status: "live",
-            live_enabled: true,
-            settings: { processor: "openclaw" },
-        })
-    await db
-        .from("connections")
-        .insert({
-            workspace_id: ws,
-            provider: "telegram",
-            name: "E2E failing bot",
-            status: "error",
-            last_error: "token revoked",
-        })
+    await db.from("module_installations").insert({
+        workspace_id: ws,
+        module_key: "chatbot",
+        agent_id: agent.data.id,
+        status: "live",
+        live_enabled: true,
+        settings: { processor: "openclaw" },
+    })
+    await db.from("connections").insert({
+        workspace_id: ws,
+        provider: "telegram",
+        name: "E2E failing bot",
+        status: "error",
+        last_error: "token revoked",
+    })
     console.log(`workspace ${ws.slice(0, 8)} created`)
 
     // ---- start everything

@@ -2,21 +2,14 @@ import { EmptyNotice, SurfaceCard } from "@starci/grammar/common"
 import type { DescriptionListStatItem } from "@starci/grammar/common"
 import { ChatbotInbox } from "@/components/blocks/ChatbotInbox"
 import { AgentDashboardFrame } from "@/features/agent-dashboard"
-import { KnowledgeGapsCard } from "@/features/brain/gaps"
+import { BrainGaps } from "@/components/blocks/BrainGaps"
 import type { AgentDashboardData } from "@/lib/agent-dashboard-shared"
-import type { KnowledgeGap } from "@/lib/brain/gaps-shared"
-import type { ChatbotOverview, ChatbotThread } from "@/modules/types"
+import type { BrainGap, ChatbotOverview, ChatbotThread } from "@/modules/types"
 
-/** The knowledge gaps owners and managers can fill in place, with the agents they can be answered for. */
+/** The knowledge gaps owners and managers answer from the Second Brain. */
 interface ChatbotWorkbenchGaps {
-    readonly gaps: ReadonlyArray<KnowledgeGap>
-    readonly lenses: ReadonlyArray<{
-        readonly module: string
-        readonly name: string
-        readonly audience: "customer" | "internal"
-    }>
-    /** The workspace's name: the subject of an answer when the agent could not guess one. */
-    readonly business: string
+    readonly workspaceId: string
+    readonly gaps: ReadonlyArray<BrainGap>
 }
 
 /** The workbench data, or null when the inbox could not be read, with the words and the frame's common regions. */
@@ -41,11 +34,7 @@ export const ChatbotWorkbenchBase = (props: ChatbotWorkbenchBaseProps) => {
     const { overview } = props.props
     const gaps =
         props.props.gaps === null ? null : (
-            <KnowledgeGapsCard
-                gaps={props.props.gaps.gaps}
-                lenses={props.props.gaps.lenses}
-                business={props.props.gaps.business}
-            />
+            <BrainGaps workspaceId={props.props.gaps.workspaceId} gaps={props.props.gaps.gaps} />
         )
     if (overview === null) {
         return (

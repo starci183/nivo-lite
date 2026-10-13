@@ -169,7 +169,10 @@ export const channelSchemas = {
 export const invalid = (code: string): DbOutcome<never> => ({ kind: "invalid", code })
 
 /** A failure leaves the server as the catalog key of its sentence, so no client needs the error table. */
-export const sendRequest = async <T>(request: ChannelRequest, keyOf: (code: string) => string): Promise<DbOutcome<T>> => {
+export const sendRequest = async <T>(
+    request: ChannelRequest,
+    keyOf: (code: string) => string,
+): Promise<DbOutcome<T>> => {
     const outcome = await submitCommand<T>(request)
     return outcome.kind === "ok" ? outcome : { ...outcome, code: keyOf(outcome.code) }
 }

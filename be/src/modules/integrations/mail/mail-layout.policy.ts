@@ -19,7 +19,11 @@ export const renderTemplate = (template: string, vars: TemplateVars): string =>
         .replace(CONTROL_CHARACTERS, "")
 
 /** A subject is one line. */
-export const oneLine = (text: string, max: number = 200): string => text.replace(/[\r\n]+/gu, " ").trim().slice(0, max)
+export const oneLine = (text: string, max: number = 200): string =>
+    text
+        .replace(/[\r\n]+/gu, " ")
+        .trim()
+        .slice(0, max)
 
 const isBullet = (line: string): boolean => /^\s*[-•]\s+/u.test(line)
 const withoutBullet = (line: string): string => line.replace(/^\s*[-•]\s+/u, "")

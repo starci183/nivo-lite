@@ -19,4 +19,3 @@ export type {
     ResponseFormat,
 } from "./ai-generations.contracts"
 export { TextGeneratorService } from "./text-generator.service"
-export { UnboundUsageGateService } from "./unbound-usage-gate.service"

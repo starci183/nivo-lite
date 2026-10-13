@@ -6,7 +6,12 @@ import { COMPLETE_ZALO_INBOX, INSERT_ZALO_INBOX } from "./persistence/zalo-inbox
 import { ZaloInboxService } from "./zalo-inbox.service"
 
 const BODY = Buffer.from(
-    JSON.stringify({ app_id: "app-1", event_name: "user_send_text", sender: { id: "user-1" }, message: { msg_id: "m-1", text: "Hello" } }),
+    JSON.stringify({
+        app_id: "app-1",
+        event_name: "user_send_text",
+        sender: { id: "user-1" },
+        message: { msg_id: "m-1", text: "Hello" },
+    }),
 )
 
 const build = async (claimed: ReadonlyArray<{ id: string }>) => {
@@ -38,7 +43,11 @@ describe("ZaloInboxService", () => {
             await inbox.acceptZaloDelivery("c-1", BODY)
 
             expect(tx.commits).toBe(1)
-            expect(tx.em.query).toHaveBeenCalledWith(INSERT_ZALO_INBOX, ["zalo", "c-1:m-1", JSON.stringify({ connectionId: "c-1", messageId: "m-1" })])
+            expect(tx.em.query).toHaveBeenCalledWith(INSERT_ZALO_INBOX, [
+                "zalo",
+                "c-1:m-1",
+                JSON.stringify({ connectionId: "c-1", messageId: "m-1" }),
+            ])
             expect(conversations.acceptZalo).toHaveBeenCalledWith(
                 "c-1",
                 { appId: "app-1", userId: "user-1", messageId: "m-1", text: "Hello" },

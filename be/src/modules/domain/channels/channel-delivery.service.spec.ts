@@ -69,11 +69,21 @@ const build = async (found: ConversationTarget | null = target(), lastCustomerAt
             { provide: ZaloCredentialsService, useValue: credentials },
         ],
     }).compile()
-    return { service: moduleRef.get(ChannelDeliveryService), messages, telegram, zalo, logger, secrets, credentials, senders }
+    return {
+        service: moduleRef.get(ChannelDeliveryService),
+        messages,
+        telegram,
+        zalo,
+        logger,
+        secrets,
+        credentials,
+        senders,
+    }
 }
 
 const request = { conversationId: "conv-1", messageId: "msg-1", text: "Hello" }
-const zaloTarget = (patch: Partial<ConversationTarget> = {}) => target({ channel: "zalo", externalId: "user-1", ...patch })
+const zaloTarget = (patch: Partial<ConversationTarget> = {}) =>
+    target({ channel: "zalo", externalId: "user-1", ...patch })
 
 describe("ChannelDeliveryService", () => {
     it("reports no delivery for a conversation that does not exist, and marks nothing", async () => {
@@ -171,7 +181,10 @@ describe("ChannelDeliveryService", () => {
         it("refuses outside the 48-hour window without calling Zalo, and writes the reason on the message", async () => {
             const { service, zalo, messages } = await build(zaloTarget(), NOW - 49 * HOUR)
 
-            await expect(service.deliver(request)).resolves.toEqual({ delivered: false, failure: "zalo_window_expired" })
+            await expect(service.deliver(request)).resolves.toEqual({
+                delivered: false,
+                failure: "zalo_window_expired",
+            })
 
             expect(zalo.sendCsText).not.toHaveBeenCalled()
             expect(messages.markDelivery).toHaveBeenCalledWith("msg-1", false, "zalo_window_expired")
@@ -181,8 +194,14 @@ describe("ChannelDeliveryService", () => {
             const none = await build(zaloTarget({ connectionId: null }))
             const anonymous = await build(zaloTarget({ externalId: null }))
 
-            await expect(none.service.deliver(request)).resolves.toEqual({ delivered: false, failure: "zalo_not_connected" })
-            await expect(anonymous.service.deliver(request)).resolves.toEqual({ delivered: false, failure: "zalo_not_connected" })
+            await expect(none.service.deliver(request)).resolves.toEqual({
+                delivered: false,
+                failure: "zalo_not_connected",
+            })
+            await expect(anonymous.service.deliver(request)).resolves.toEqual({
+                delivered: false,
+                failure: "zalo_not_connected",
+            })
         })
 
         it("renews the token once when Zalo rejects it and sends again with the new one", async () => {
@@ -190,7 +209,10 @@ describe("ChannelDeliveryService", () => {
             credentials.accessToken.mockResolvedValueOnce("access-1")
             credentials.accessToken.mockResolvedValueOnce("access-2")
             zalo.sendCsText.mockRejectedValueOnce(
-                new ZaloError({ code: ZaloErrorCode.Rejected, params: { path: "/v3.0/oa/message/cs", reason: "x", zaloCode: -216 } }),
+                new ZaloError({
+                    code: ZaloErrorCode.Rejected,
+                    params: { path: "/v3.0/oa/message/cs", reason: "x", zaloCode: -216 },
+                }),
             )
 
             await expect(service.deliver(request)).resolves.toEqual({ delivered: true, failure: null })
@@ -203,11 +225,17 @@ describe("ChannelDeliveryService", () => {
             const { service, zalo, credentials, logger } = await build(zaloTarget(), inside)
             credentials.accessToken.mockResolvedValue("access-1")
             zalo.sendCsText.mockRejectedValue(
-                new ZaloError({ code: ZaloErrorCode.Rejected, params: { path: "/v3.0/oa/message/cs", reason: "x", zaloCode: -213 } }),
+                new ZaloError({
+                    code: ZaloErrorCode.Rejected,
+                    params: { path: "/v3.0/oa/message/cs", reason: "x", zaloCode: -213 },
+                }),
             )
 
             await expect(service.deliver(request)).resolves.toEqual({ delivered: false, failure: "zalo_unfollowed" })
-            expect(logger.error).toHaveBeenCalledWith("channels.delivery.failed", expect.anything(), { conversationId: "conv-1", channel: "zalo" })
+            expect(logger.error).toHaveBeenCalledWith("channels.delivery.failed", expect.anything(), {
+                conversationId: "conv-1",
+                channel: "zalo",
+            })
         })
 
         it("lets the caller retry when another worker is renewing the token", async () => {

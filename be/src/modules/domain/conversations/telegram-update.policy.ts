@@ -16,7 +16,10 @@ const visitorOf = (from: unknown): string => {
  * The customer message of one Telegram update, or a refusal for anything the chat does not answer (an edited message, a join, no text). A photo
  * (a transfer screenshot) arrives without text: it is read as what the customer says with it, `photoLabel` plus the caption.
  */
-export const readTelegramUpdate = (photoLabel: string, raw?: Buffer): Outcome<TelegramInbound, ConversationsErrorCode> => {
+export const readTelegramUpdate = (
+    photoLabel: string,
+    raw?: Buffer,
+): Outcome<TelegramInbound, ConversationsErrorCode> => {
     const body = readJsonObject(raw)
     if (body.kind !== "ok") return body
     const message = body.value.message

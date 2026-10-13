@@ -66,13 +66,7 @@ describe("AutomationCommandsService", () => {
             expect(automations.proposeBody).not.toHaveBeenCalled()
             expect(em.query).toHaveBeenCalledTimes(2)
             expect(em.query).toHaveBeenNthCalledWith(1, SELECT_QUEUED_COMMAND, [COMMAND_ID])
-            expect(em.query).toHaveBeenNthCalledWith(2, SETTLE_COMMAND, [
-                COMMAND_ID,
-                "done",
-                "{}",
-                null,
-                new Date(NOW),
-            ])
+            expect(em.query).toHaveBeenNthCalledWith(2, SETTLE_COMMAND, [COMMAND_ID, "done", "{}", null, new Date(NOW)])
         })
 
         it("proposes the wording as its creator and settles done with the body and generated flag", async () => {
