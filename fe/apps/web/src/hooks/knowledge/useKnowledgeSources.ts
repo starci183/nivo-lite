@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { useQueryKnowledgeSourcesSwr } from "@/hooks/swr/api/graphql/queries/useQueryKnowledgeSourcesSwr"
+import { useQueryKnowledgeSourcesSwr } from "@/hooks/swr"
 import { toKnowledgeDocument } from "@/modules/documents"
 import type { ModuleKey } from "@/modules/catalog"
 

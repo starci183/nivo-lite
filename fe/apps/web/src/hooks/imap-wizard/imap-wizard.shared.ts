@@ -78,3 +78,27 @@ export interface ImapMailbox {
     /** Agents that hold a grant on this mailbox. */
     readonly agentIds: ReadonlyArray<string>
 }
+
+/** The `connectorImap` key of each provider's app-password guide. */
+export const IMAP_GUIDE_KEY = {
+    gmail: "guideGmail",
+    outlook: "guideOutlook",
+    zoho: "guideZoho",
+    yahoo: "guideYahoo",
+    other: "guideOther",
+} as const satisfies Record<ImapPresetId, string>
+
+/** The `connectorImap` key of each provider's name. */
+export const IMAP_PRESET_KEY = {
+    gmail: "presetGmail",
+    outlook: "presetOutlook",
+    zoho: "presetZoho",
+    yahoo: "presetYahoo",
+    other: "presetOther",
+} as const satisfies Record<ImapPresetId, string>
+
+/** The `connectorImap` key of each first-sync period. */
+export const IMAP_SINCE_KEY = { 7: "since7", 30: "since30", 90: "since90" } as const satisfies Record<
+    (typeof IMAP_SINCE_DAYS)[number],
+    string
+>

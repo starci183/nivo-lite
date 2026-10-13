@@ -1,10 +1,10 @@
 "use client"
 
 import { useMemo } from "react"
-import { useSettledGraphQL } from "@/hooks/connection-wizard"
+import { answeredData, useSettledGraphQL } from "@/hooks/connection-wizard"
 import type { Settled } from "@/hooks/connection-wizard"
 import { useConnectionsRefresh } from "@/hooks/connections"
-import { useMutateSaveDatabaseConnectionSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSaveDatabaseConnectionSwr"
+import { useMutateSaveDatabaseConnectionSwr } from "@/hooks/swr"
 import { queryPreviewDatabaseTable } from "@/modules/api/graphql/queries/query-preview-database-table"
 import { queryTestDatabase } from "@/modules/api/graphql/queries/query-test-database"
 import type { DbPreviewRows, DbTableInfo, DbTableMapping, DbTarget } from "@/modules/types"
@@ -31,22 +31,26 @@ export interface DatabaseCommands {
 
 /** The database wizard's test, preview and save bound to the toast helper. */
 export const useDatabaseCommands = (): DatabaseCommands => {
+    const { trigger: triggerSave } = useMutateSaveDatabaseConnectionSwr()
     const settle = useSettledGraphQL()
     const refresh = useConnectionsRefresh()
-    const { trigger: triggerSave } = useMutateSaveDatabaseConnectionSwr()
     return useMemo(
         () => ({
             test: (connectionId, target) =>
                 settle(async () => {
-                    const result = await queryTestDatabase({ request: { connectionId, target } })
-                    if (!result.data) throw new Error("testDatabase answered no data")
-                    return result.data.testDatabase
+                    const data = answeredData(
+                        await queryTestDatabase({ request: { connectionId, target } }),
+                        "testDatabase",
+                    )
+                    return data.testDatabase
                 }),
             preview: (connectionId, target, mapping) =>
                 settle(async () => {
-                    const result = await queryPreviewDatabaseTable({ request: { connectionId, target, mapping } })
-                    if (!result.data) throw new Error("previewDatabaseTable answered no data")
-                    const { columns, rows } = result.data.previewDatabaseTable
+                    const data = answeredData(
+                        await queryPreviewDatabaseTable({ request: { connectionId, target, mapping } }),
+                        "previewDatabaseTable",
+                    )
+                    const { columns, rows } = data.previewDatabaseTable
                     return { columns, rows: rows.map((row) => row.cells) }
                 }),
             save: async (form) => {

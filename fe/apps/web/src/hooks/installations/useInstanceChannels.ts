@@ -1,5 +1,5 @@
 import { useCallback } from "react"
-import { useQueryConnectionsSwr } from "@/hooks/swr/api/graphql/queries/useQueryConnectionsSwr"
+import { useQueryConnectionsSwr } from "@/hooks/swr"
 
 /** The names of the connections an agent is bound to (disconnected ones left out); empty while they load or when they cannot be read. */
 export const useInstanceChannels = (): ((agentId: string | null) => ReadonlyArray<string>) => {

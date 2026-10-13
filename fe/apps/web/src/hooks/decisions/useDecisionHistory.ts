@@ -1,4 +1,4 @@
-import { useQueryDecisionHistorySwr } from "@/hooks/swr/api/graphql/queries/useQueryDecisionHistorySwr"
+import { useQueryDecisionHistorySwr } from "@/hooks/swr"
 import { slotOfSwr } from "@/hooks/slot"
 import type { DataSlot, DecisionKind, DecisionRecord } from "@/modules/types"
 import { DECISIONS_LIMIT, toDecisionRecord } from "./decisions.shared"

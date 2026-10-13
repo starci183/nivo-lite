@@ -1,6 +1,8 @@
-import { useMutateDraftLeadExecutionSwr } from "@/hooks/swr/api/graphql/mutations/useMutateDraftLeadExecutionSwr"
-import { useMutateRefreshLeadContextSwr } from "@/hooks/swr/api/graphql/mutations/useMutateRefreshLeadContextSwr"
-import { useMutateSuggestLeadOwnerSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSuggestLeadOwnerSwr"
+import {
+    useMutateDraftLeadExecutionSwr,
+    useMutateRefreshLeadContextSwr,
+    useMutateSuggestLeadOwnerSwr,
+} from "@/hooks/swr"
 import { useLeadAction } from "./useLeadAction"
 
 /** The queued actions the lead header and panels offer. */

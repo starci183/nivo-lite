@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { POLL_MS } from "@/hooks/connection-wizard"
-import { useQueryConnectionFirstEventSwr } from "@/hooks/swr/api/graphql/queries/useQueryConnectionFirstEventSwr"
+import { useQueryConnectionFirstEventSwr } from "@/hooks/swr"
 import type { FirstEvent } from "@/modules/types"
 import { firstEventStateOf } from "@/hooks/connection-wire"
 

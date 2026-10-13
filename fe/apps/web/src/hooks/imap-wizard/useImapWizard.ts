@@ -1,17 +1,18 @@
 "use client"
 
-import { useReducer, useTransition } from "react"
+import { useEffect, useReducer, useRef, useTransition } from "react"
 import { useSetConnectionAgents, useSyncNow } from "@/hooks/connections"
 import { useImapAccountForm } from "@/hooks/rhf"
 import type { ImapAccountValues } from "@/hooks/rhf"
 import { IMAP_PRESETS, IMAP_STEPS, defaultPort, presetOfHost, securityOf } from "./imap-wizard.shared"
 import type { ImapMailbox, ImapPresetId, ImapSecurity } from "./imap-wizard.shared"
 import { useImapCommands } from "./useImapCommands"
+import { useImapMailbox } from "./useImapMailbox"
 
 /** What the mailbox wizard needs from its drawer. */
 interface ImapWizardInput {
-    /** The saved mailbox being edited; absent for a new one. */
-    readonly mailbox: ImapMailbox | undefined
+    /** The saved mailbox being continued or edited; absent for a new one. */
+    readonly resumeId: string | undefined
     /** `changed` is true when something was saved, so the list should refresh. */
     readonly onClose: (changed: boolean) => void
 }
@@ -62,15 +63,26 @@ const merge = (state: ImapWizardState, patch: Partial<ImapWizardState>): ImapWiz
 
 /**
  * The mailbox wizard's state machine: 1 sign-in with a test that lists the folders, 2 folders and how far back the first sync reads,
- * 3 how often to sync (the mailbox is saved here), 4 attach agents. The password goes to the back end once and is never read back.
+ * 3 how often to sync (the mailbox is saved here), 4 attach agents. When resuming, the saved mailbox is read first (`loading`, or
+ * `loadError` when it could not be) and seeds the steps once. The password goes to the back end once and is never read back.
  */
-export const useImapWizard = ({ mailbox, onClose }: ImapWizardInput) => {
+export const useImapWizard = ({ resumeId, onClose }: ImapWizardInput) => {
     const commands = useImapCommands()
     const setConnectionAgents = useSetConnectionAgents()
     const { start: startSync } = useSyncNow()
-    const [state, patch] = useReducer(merge, mailbox, stateOf)
+    const { loading, view: mailbox, error: loadError } = useImapMailbox(resumeId)
+    const [state, patch] = useReducer(merge, undefined, stateOf)
     const [isPending, startTransition] = useTransition()
-    const form = useImapAccountForm(state.savedId !== null, accountOf(mailbox))
+    const form = useImapAccountForm(state.savedId !== null)
+    const { reset } = form
+    const seeded = useRef<string | null>(null)
+    useEffect(() => {
+        if (mailbox === undefined || seeded.current === mailbox.id) return
+        seeded.current = mailbox.id
+        patch(stateOf(mailbox))
+        const account = accountOf(mailbox)
+        if (account !== undefined) reset(account)
+    }, [mailbox, reset])
     const values = form.watch()
 
     const user = values.user.trim() || values.email.trim()
@@ -147,6 +159,8 @@ export const useImapWizard = ({ mailbox, onClose }: ImapWizardInput) => {
     }
 
     return {
+        loading,
+        loadError,
         step: IMAP_STEPS[state.index] ?? "account",
         index: state.index,
         savedId: state.savedId,

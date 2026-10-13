@@ -1,4 +1,4 @@
-import { useQueryLeadBoardSwr } from "@/hooks/swr/api/graphql/queries/useQueryLeadBoardSwr"
+import { useQueryLeadBoardSwr } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import type { DataSlot, LeadListItem } from "@/modules/types"
 import { leadRecordOf } from "./leads.shared"

@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { useQueryKnowledgeSuggestionsSwr } from "@/hooks/swr/api/graphql/queries/useQueryKnowledgeSuggestionsSwr"
+import { useQueryKnowledgeSuggestionsSwr } from "@/hooks/swr"
 import { toSuggestionContext } from "@/modules/documents"
 import type { SuggestionContext } from "@/modules/documents"
 

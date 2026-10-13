@@ -1,4 +1,4 @@
-import type { HiringSettingsType, SaveHiringSettingsInput } from "@/modules/api"
+import type { HiringSettingsType, SaveHiringSettingsRequest } from "@/modules/api"
 
 /** The values of the settings form. */
 export interface SettingsValues {
@@ -29,4 +29,4 @@ export const settingsDefaults = (settings: HiringSettingsType): SettingsValues =
 })
 
 /** The `saveHiringSettings` input of the form values. */
-export const toSettingsInput = (values: SettingsValues): SaveHiringSettingsInput => ({ ...values })
+export const toSettingsInput = (values: SettingsValues): SaveHiringSettingsRequest => ({ ...values })

@@ -1,6 +1,6 @@
 import { linesOf } from "@/hooks/hiring"
 import type { JobQuestionView, JobView } from "@/hooks/hiringWire"
-import type { HiringJobQuestionInput, SaveHiringJobInput } from "@/modules/api"
+import type { HiringJobQuestionRequest, SaveHiringJobRequest } from "@/modules/api"
 
 /** The answer kinds a question can ask for. */
 export const QUESTION_TYPES: ReadonlyArray<string> = ["text", "yesno", "number", "choice"]
@@ -108,7 +108,7 @@ const commaList = (text: string): Array<string> =>
         .map((part) => part.trim())
         .filter((part) => part !== "")
 
-const questionInput = (question: HiringQuestionValues): HiringJobQuestionInput => {
+const questionInput = (question: HiringQuestionValues): HiringJobQuestionRequest => {
     const expectNumber = question.expect.trim() !== "" ? Number(question.expect) : Number.NaN
     return {
         id: question.id,
@@ -123,7 +123,7 @@ const questionInput = (question: HiringQuestionValues): HiringJobQuestionInput =
 }
 
 /** The `saveHiringJob` input of the editor values; `id` is null for a new job. */
-export const toJobInput = (values: HiringJobValues, id: string | null): SaveHiringJobInput => ({
+export const toJobInput = (values: HiringJobValues, id: string | null): SaveHiringJobRequest => ({
     ...(id === null ? {} : { id }),
     title: values.title.trim(),
     position: values.position,
