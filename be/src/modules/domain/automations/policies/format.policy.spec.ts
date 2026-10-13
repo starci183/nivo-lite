@@ -1,4 +1,4 @@
-import { dayText, instantOf, isoOf, isoOrNull, vndText } from "./format.policy"
+import { dayText, instantOf, automationIsoOf, isoOrNull, vndText } from "./format.policy"
 
 describe("vndText", () => {
     it("writes an amount of dong with the thousands separator of Vietnam", () => {
@@ -18,8 +18,8 @@ describe("instants", () => {
     })
 
     it("writes a timestamp as ISO text", () => {
-        expect(isoOf("2026-10-12T10:00:00Z")).toBe("2026-10-12T10:00:00.000Z")
-        expect(isoOf(new Date("2026-10-12T10:00:00.000Z"))).toBe("2026-10-12T10:00:00.000Z")
+        expect(automationIsoOf("2026-10-12T10:00:00Z")).toBe("2026-10-12T10:00:00.000Z")
+        expect(automationIsoOf(new Date("2026-10-12T10:00:00.000Z"))).toBe("2026-10-12T10:00:00.000Z")
     })
 
     it("writes none for no timestamp", () => {

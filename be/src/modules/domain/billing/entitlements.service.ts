@@ -7,7 +7,11 @@ import { BillingService } from "./billing.service"
 import type { Plan, WorkspaceStorage } from "./billing.contracts"
 import { BillingError, BillingErrorCode } from "./errors/billing.error"
 import type { CountRow, StorageBytesRow } from "./persistence/billing.rows"
-import { SELECT_ACTIVE_MEMBER_COUNT, SELECT_PENDING_INVITE_COUNT, SELECT_STORAGE_BYTES } from "./persistence/billing.sql"
+import {
+    SELECT_ACTIVE_MEMBER_COUNT,
+    SELECT_PENDING_INVITE_COUNT,
+    SELECT_STORAGE_BYTES,
+} from "./persistence/billing.sql"
 
 const BYTES_PER_GB = 1024 ** 3
 

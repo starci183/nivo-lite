@@ -1,4 +1,4 @@
-export { InjectChannelSenderRegistry } from "./channels.decorators"
+export { CHANNEL_SENDER_REGISTRY, InjectChannelSenderRegistry } from "./channels.decorators"
 export { ChannelDeliveryService } from "./channel-delivery.service"
 export { ConnectionHealthService } from "./connection-health.service"
 export { parseChannelsConfig } from "./channels.config"

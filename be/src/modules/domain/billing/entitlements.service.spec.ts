@@ -13,15 +13,16 @@ import {
     SELECT_STORAGE_BYTES,
 } from "./persistence/billing.sql"
 
-const NOW = "2026-10-13T10:00:00.000Z"
-const WORKSPACE = "ws-1"
+const NOW = new Date("2026-10-12T10:00:00.000Z")
+const GB = 1024 ** 3
+
 const planOf = builder<Plan>({
     code: "team",
     nameVi: "Nhom",
     nameEn: "Team",
-    priceVnd: 1000,
+    priceVnd: 990000,
     period: "month",
-    seats: 5,
+    seats: 3,
     features: { vi: [], en: [] },
     sort: 1,
     aiCreditsPerMonth: 3000,
@@ -30,25 +31,30 @@ const planOf = builder<Plan>({
     annualDiscountPct: null,
     promoPriceVnd: null,
     promoMonths: null,
-    storageGb: 2,
+    storageGb: 5,
     individual: false,
     perSeat: true,
     listed: true,
     tiers: [],
     packs: [],
 })
+
 const workspaceOf = builder<WorkspaceBilling>({
     status: "active",
     planCode: "team",
     paidUntil: null,
     tierCredits: null,
-    seatCount: 1,
+    seatCount: 3,
     billingCycle: "monthly",
-    billedMonthlyVnd: 1000,
+    billedMonthlyVnd: null,
 })
 
-const build = async (entityManager: MockEntityManager) => {
-    const billing = mock<BillingService>()
+const build = async (entityManager: MockEntityManager, plan: Plan | null = planOf(), workspace = workspaceOf()) => {
+    const billing = mock<BillingService>({
+        findWorkspaceBilling: jest.fn(() => Promise.resolve(workspace)),
+        findPlan: jest.fn(() => Promise.resolve(plan)),
+        requireMember: jest.fn(() => Promise.resolve()),
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             EntitlementsService,
@@ -61,40 +67,115 @@ const build = async (entityManager: MockEntityManager) => {
 }
 
 describe("EntitlementsService", () => {
-    it("reports the stored bytes and the room the plan includes", async () => {
-        const em = mockEntityManager({ query: [SELECT_STORAGE_BYTES, [{ bytes: 2048 }]] })
-        const { entitlements, billing } = await build(em)
-        billing.findWorkspaceBilling.mockResolvedValue(workspaceOf())
-        billing.findPlan.mockResolvedValue(planOf())
+    describe("requireRoomForInvite", () => {
+        it("lets an invitation in while members and pending invitations stay under the paid seats", async () => {
+            const em = mockEntityManager({
+                query: [
+                    [SELECT_ACTIVE_MEMBER_COUNT, [{ count: 1 }]],
+                    [SELECT_PENDING_INVITE_COUNT, [{ count: 1 }]],
+                ],
+            })
+            const { entitlements } = await build(em)
 
-        await expect(entitlements.storageOf("user-1", WORKSPACE)).resolves.toEqual({
-            usedBytes: 2048,
-            quotaBytes: 2 * 1024 ** 3,
+            await expect(entitlements.requireRoomForInvite("ws-1")).resolves.toBeUndefined()
+
+            expect(em.query).toHaveBeenCalledWith(SELECT_PENDING_INVITE_COUNT, ["ws-1", NOW])
         })
-        expect(billing.requireMember).toHaveBeenCalledWith("user-1", WORKSPACE)
+
+        it("refuses an invitation once the paid seats are taken", async () => {
+            const em = mockEntityManager({
+                query: [
+                    [SELECT_ACTIVE_MEMBER_COUNT, [{ count: 2 }]],
+                    [SELECT_PENDING_INVITE_COUNT, [{ count: 1 }]],
+                ],
+            })
+            const { entitlements } = await build(em)
+
+            await expect(entitlements.requireRoomForInvite("ws-1")).rejects.toMatchObject({
+                code: BillingErrorCode.SeatLimitReached,
+            })
+        })
+
+        it("refuses any invitation on an individual plan", async () => {
+            const { entitlements } = await build(mockEntityManager(), planOf({ individual: true }))
+
+            await expect(entitlements.requireRoomForInvite("ws-1")).rejects.toMatchObject({
+                code: BillingErrorCode.PlanIndividualOnly,
+            })
+        })
+
+        it("does not limit a workspace without a plan or a plan that is not per seat", async () => {
+            const unpaid = await build(mockEntityManager(), null, workspaceOf({ planCode: null }))
+            const flat = await build(mockEntityManager(), planOf({ perSeat: false }))
+
+            await expect(unpaid.entitlements.requireRoomForInvite("ws-1")).resolves.toBeUndefined()
+            await expect(flat.entitlements.requireRoomForInvite("ws-1")).resolves.toBeUndefined()
+        })
     })
 
-    it("lets an invitation through when the workspace has no plan", async () => {
-        const { entitlements, billing } = await build(mockEntityManager())
-        billing.findWorkspaceBilling.mockResolvedValue(null)
+    describe("requireRoomForMember", () => {
+        it("refuses a new member once the members fill the paid seats", async () => {
+            const { entitlements } = await build(
+                mockEntityManager({ query: [SELECT_ACTIVE_MEMBER_COUNT, [{ count: 3 }]] }),
+            )
 
-        await expect(entitlements.requireRoomForInvite(WORKSPACE)).resolves.toBeUndefined()
+            await expect(entitlements.requireRoomForMember("ws-1")).rejects.toMatchObject({
+                code: BillingErrorCode.SeatLimitReached,
+            })
+        })
+
+        it("takes a new member while a seat is free, counting a missing row as none", async () => {
+            const { entitlements } = await build(mockEntityManager({ query: [SELECT_ACTIVE_MEMBER_COUNT, []] }))
+
+            await expect(entitlements.requireRoomForMember("ws-1")).resolves.toBeUndefined()
+        })
     })
 
-    it("refuses an invitation when the paid seats are already taken", async () => {
-        const em = mockEntityManager({
-            query: [
-                [SELECT_ACTIVE_MEMBER_COUNT, [{ count: 1 }]],
-                [SELECT_PENDING_INVITE_COUNT, [{ count: 0 }]],
-            ],
-        })
-        const { entitlements, billing } = await build(em)
-        billing.findWorkspaceBilling.mockResolvedValue(workspaceOf())
-        billing.findPlan.mockResolvedValue(planOf())
+    describe("requireStorageFor", () => {
+        it("refuses an upload that passes the storage of the plan, naming the quota in GB", async () => {
+            const { entitlements } = await build(
+                mockEntityManager({ query: [SELECT_STORAGE_BYTES, [{ bytes: 5 * GB - 10 }]] }),
+            )
 
-        await expect(entitlements.requireRoomForInvite(WORKSPACE)).rejects.toMatchObject({
-            code: BillingErrorCode.SeatLimitReached,
+            await expect(entitlements.requireStorageFor("ws-1", 11)).rejects.toMatchObject({
+                code: BillingErrorCode.StorageQuotaExceeded,
+                params: { quotaGb: 5 },
+            })
         })
-        expect(em.query).toHaveBeenCalledWith(SELECT_PENDING_INVITE_COUNT, [WORKSPACE, new Date(NOW)])
+
+        it("takes an upload of unknown size that still fits, and any upload on a plan without a quota", async () => {
+            const fits = await build(mockEntityManager({ query: [SELECT_STORAGE_BYTES, [{ bytes: GB }]] }))
+            const unlimited = await build(
+                mockEntityManager({ query: [SELECT_STORAGE_BYTES, [{ bytes: 99 * GB }]] }),
+                planOf({ storageGb: null }),
+            )
+
+            await expect(fits.entitlements.requireStorageFor("ws-1", -1)).resolves.toBeUndefined()
+            await expect(unlimited.entitlements.requireStorageFor("ws-1", GB)).resolves.toBeUndefined()
+        })
+    })
+
+    describe("storageOf", () => {
+        it("answers the used bytes and the quota of the plan to a member", async () => {
+            const { entitlements, billing } = await build(
+                mockEntityManager({ query: [SELECT_STORAGE_BYTES, [{ bytes: 1234 }]] }),
+            )
+
+            await expect(entitlements.storageOf("user-1", "ws-1")).resolves.toEqual({
+                usedBytes: 1234,
+                quotaBytes: 5 * GB,
+            })
+            expect(billing.requireMember).toHaveBeenCalledWith("user-1", "ws-1")
+        })
+
+        it("answers no stored bytes and no quota for a workspace without a plan", async () => {
+            const { entitlements } = await build(
+                mockEntityManager({ query: [SELECT_STORAGE_BYTES, []] }),
+                null,
+                workspaceOf({ planCode: null }),
+            )
+
+            await expect(entitlements.storageOf("user-1", "ws-1")).resolves.toEqual({ usedBytes: 0, quotaBytes: null })
+        })
     })
 })

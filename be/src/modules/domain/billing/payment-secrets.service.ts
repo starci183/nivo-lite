@@ -11,7 +11,7 @@ import type { ConnectionSecretRow } from "./persistence/bank-feed.rows"
 import { SELECT_CONNECTION_SECRET } from "./persistence/bank-feed.sql"
 
 /** A connection's secrets as the proof of its webhook needs them. */
-export interface ConnectionSecret {
+export interface PaymentSecret {
     /** The workspace the connection belongs to. */
     readonly workspaceId: string
     /** The decrypted credential (a JSON object of the provider keys). */
@@ -21,13 +21,13 @@ export interface ConnectionSecret {
 }
 
 /** The secrets of a connection, or null when they cannot be used. */
-export type SecretLookup = ConnectionSecret | null
+export type PaymentSecretLookup = PaymentSecret | null
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 @Injectable()
 /** Reads the secrets of one payment connection for the proof of its webhook; nothing about a connection is answered without them. */
-export class ConnectionSecretsService {
+export class PaymentSecretsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectBillingOptions() private readonly options: BillingOptions,
@@ -38,7 +38,7 @@ export class ConnectionSecretsService {
      * The secrets of a connection of `provider`, or null when the id is not a connection id, the connection is missing, belongs to
      * another provider, is disconnected, has no secret row or its credential cannot be decrypted (that last case is logged).
      */
-    async load(connectionId: string, provider: string): Promise<SecretLookup> {
+    async load(connectionId: string, provider: string): Promise<PaymentSecretLookup> {
         if (!UUID.test(connectionId)) return null
         const [row] = await this.entityManager.query<Array<ConnectionSecretRow>>(SELECT_CONNECTION_SECRET, [
             connectionId,

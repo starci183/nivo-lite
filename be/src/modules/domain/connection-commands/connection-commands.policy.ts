@@ -9,19 +9,19 @@ import type { WebhookConnectionsService } from "@modules/domain/webhook-connecti
 
 /** The capabilities a command can reach. */
 export interface CommandServices {
-    /** Connections a command can read or ask for. */
+    /** Creates, reads and checks connections; also authorises the actor. */
     readonly connections: ConnectionsService
-    /** Grants a command can set. */
+    /** Sets and revokes which agents may use a connection. */
     readonly grants: ConnectionGrantsService
-    /** Channel connections a command can check, resume or reveal. */
+    /** Probes and binds messaging channel connections. */
     readonly channels: ChannelConnectionsService
-    /** Webhook connections a command can reveal, test or finish. */
+    /** Manages the events an outgoing webhook connection delivers. */
     readonly webhooks: WebhookConnectionsService
-    /** Google connections a command can authorize or resume. */
+    /** Runs Google sign-in and sheet provisioning for a connection. */
     readonly google: GoogleConnectionsService
-    /** Meta connections a command can authorize or resume. */
+    /** Runs Meta (Facebook, Instagram) sign-in and page subscriptions. */
     readonly meta: MetaConnectionsService
-    /** Disconnect and delete for a connection. */
+    /** Disconnects and deletes connections, releasing what they hold. */
     readonly lifecycle: ConnectionLifecycleService
 }
 
@@ -62,11 +62,6 @@ interface Wish {
     readonly access?: Level
 }
 
-/** The access level of a wish, present only when the caller picked one. */
-interface WishAccess {
-    readonly access?: Level
-}
-
 /** A list of wishes: each entry is a bare id or an object with the id and an optional level. */
 const wishesOf = (input: Input, listKey: string, idKey: string): ReadonlyArray<Wish> => {
     const list = input[listKey]
@@ -79,7 +74,7 @@ const wishesOf = (input: Input, listKey: string, idKey: string): ReadonlyArray<W
     })
 }
 
-const withAccess = (wish: Wish): WishAccess => (wish.access === undefined ? {} : { access: wish.access })
+const withAccess = (wish: Wish): Pick<Wish, "access"> => (wish.access === undefined ? {} : { access: wish.access })
 
 const eventsOf = (input: Input): ReadonlyArray<string> => {
     const events = input.events

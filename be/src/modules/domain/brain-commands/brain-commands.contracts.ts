@@ -18,7 +18,7 @@ export interface CommandRecord {
 }
 
 /** What a command produced, or null when it produced nothing. */
-export type CommandResult = object | null
+export type BrainCommandResult = object | null
 
 /** A command, or null when there is none. */
 export type MaybeCommand = CommandRecord | null
@@ -28,7 +28,7 @@ export interface CommandState {
     /** Where it stands. */
     readonly status: CommandStatus
     /** What it produced when it is done, or null. */
-    readonly result: CommandResult
+    readonly result: BrainCommandResult
     /** The stored code of why it failed, or null. */
     readonly errorCode: string | null
 }
