@@ -21,9 +21,9 @@ export class AgentsModule extends ConfigurableModuleClass {
             providers: [
                 ...(base.providers ?? []),
                 { provide: AGENTS_OPTIONS, useValue: parsed },
-                { provide: AGENTS_INSTALLATIONS, useExisting: options.ports.installations },
-                { provide: AGENTS_KNOWLEDGE, useExisting: options.ports.knowledge },
-                { provide: AGENTS_MODULES, useExisting: options.ports.modules },
+                { provide: AGENTS_INSTALLATIONS, useClass: options.ports.installations },
+                { provide: AGENTS_KNOWLEDGE, useClass: options.ports.knowledge },
+                { provide: AGENTS_MODULES, useClass: options.ports.modules },
                 PauseClient,
                 AgentsService,
                 AgentBundleService,

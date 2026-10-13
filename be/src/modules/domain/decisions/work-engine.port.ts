@@ -1,16 +1,16 @@
 import type { InboundStatus, Proposal, WorkContext, WorkItem } from "./decisions.contracts"
-import type { OutboundAccess, PaymentReceiptRequest } from "./work-engine.contracts"
+import type { DecisionPayload, OptionalText, OutboundAccess, PaymentReceiptRequest } from "./work-engine.contracts"
 
 /** The one door to the channel inputs: the engine reports where an input stands. The app root binds it to the inbox capability. */
 export interface InboundEventStatus {
     /** Sets the status of an inbound event; `leadId` links the customer the engine found when it is not null. */
-    mark(ctx: WorkContext, inboundEventId: string, status: InboundStatus, leadId: string | null): Promise<void>
+    mark(ctx: WorkContext, inboundEventId: string, status: InboundStatus, leadId: OptionalText): Promise<void>
 }
 
 /** The one door to the outbound event stream (webhooks, n8n triggers). The app root binds it to the outbound-events capability. */
 export interface DecisionEvents {
     /** Publishes `decision.made`; the dedupe key makes a redelivery publish once. */
-    decisionMade(ctx: WorkContext, payload: Readonly<Record<string, unknown>>, dedupeKey: string): Promise<void>
+    decisionMade(ctx: WorkContext, payload: DecisionPayload, dedupeKey: string): Promise<void>
 }
 
 /** The one door to the payment receipt pipeline. The app root binds it to the n8n triggers. */

@@ -69,8 +69,8 @@ export class AgentToolsService {
     }
 
     /** The tools OpenClaw may call, answered the way a door awaits them. */
-    async describeTools(): Promise<ReadonlyArray<ToolManifestEntry>> {
-        return this.manifest()
+    describeTools(): Promise<ReadonlyArray<ToolManifestEntry>> {
+        return Promise.resolve(this.manifest())
     }
 
     /** Runs one tool for the job named by the token. */

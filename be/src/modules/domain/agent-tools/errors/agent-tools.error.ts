@@ -9,6 +9,8 @@ export enum AgentToolsErrorCode {
     UnknownTool = "AGENT_TOOLS_UNKNOWN_TOOL",
     /** A required argument is empty; the field name rides in the params. */
     ArgumentMissing = "AGENT_TOOLS_ARGUMENT_MISSING",
+    /** The tool exists but its owner is not wired in this app: the agent is told it cannot be used, nothing is pretended. */
+    ToolUnavailable = "AGENT_TOOLS_TOOL_UNAVAILABLE",
 }
 
 /** How each agent tools code travels. */
@@ -16,6 +18,7 @@ export const AGENT_TOOLS_ERROR_KINDS: Record<AgentToolsErrorCode, ErrorKind> = {
     [AgentToolsErrorCode.TokenInvalid]: "unauthenticated",
     [AgentToolsErrorCode.UnknownTool]: "not-found",
     [AgentToolsErrorCode.ArgumentMissing]: "invalid",
+    [AgentToolsErrorCode.ToolUnavailable]: "unavailable",
 }
 
 /** The one error class of the agent tools capability. */

@@ -9,7 +9,7 @@ import type {
     SubjectType,
     WorkItem,
     WorkContext,
-    AcceptedCommand,
+    ModuleCommand,
     ProposalCandidate,
     ProposalFieldValue,
     Proposal,
@@ -135,7 +135,7 @@ export interface AcceptedCommandParts {
     /** The command as sent. */
     readonly input: SendCommandInput
     /** The receiver's definition of the command. */
-    readonly accepted: AcceptedCommand
+    readonly accepted: ModuleCommand
     /** The sender's name for the Office line. */
     readonly sender: string
     /** The address and the fields of the payload. */
@@ -199,3 +199,6 @@ export interface ProposalSeed {
     /** The invoices a payment may settle. */
     readonly candidates?: ReadonlyArray<ProposalCandidate>
 }
+
+/** The data a published decision carries. */
+export type DecisionPayload = Readonly<Record<string, unknown>>

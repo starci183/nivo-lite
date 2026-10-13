@@ -1,3 +1,5 @@
+import type { DeepseekOptions } from "@modules/integrations/deepseek"
+import type { OpenclawOptions } from "@modules/integrations/openclaw"
 import type { SupabaseOptions } from "@modules/integrations/supabase"
 import type { ServerOptions } from "@modules/platform/config"
 import type { DatabaseConnectionOptions } from "@modules/platform/database"
@@ -21,6 +23,10 @@ export interface ApiOptions {
     readonly workspaces: WorkspacesOptions
     /** Invitation links and how long they stay valid. */
     readonly workspaceInvites: Omit<WorkspaceInvitesOptions, "delivery">
+    /** The OpenClaw gateway and the agent workspaces. */
+    readonly openclaw: OpenclawOptions
+    /** The prompt library tunables. */
+    readonly deepseek: DeepseekOptions
     /** How the pgmq workers run. */
     readonly queue: QueueConfig
     /** Who this worker is and how long a job claim lasts. */

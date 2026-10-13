@@ -1,4 +1,4 @@
-import type { AcceptedCommand, ActionEntry, ModuleEntry } from "./decisions.contracts"
+import type { ModuleCommand, ActionEntry, ModuleEntry } from "./decisions.contracts"
 import type { JsonValue } from "./decisions-views.contracts"
 import type { ActionRow, ModuleRow } from "./persistence/module-catalog.rows"
 
@@ -24,7 +24,7 @@ const textsOf = (value: Json | undefined): ReadonlyArray<string> =>
 const bilingualOf = (value: Json | undefined): Bilingual =>
     isObject(value) ? { vi: textOf(value.vi), en: textOf(value.en) } : { vi: "", en: "" }
 
-const commandOf = (value: JsonObject): AcceptedCommand => ({
+const commandOf = (value: JsonObject): ModuleCommand => ({
     command: textOf(value.command),
     action: textOf(value.action),
     subjectType: textOf(value.subject_type),
@@ -32,7 +32,7 @@ const commandOf = (value: JsonObject): AcceptedCommand => ({
     description: bilingualOf(value.description),
 })
 
-const acceptsOf = (definition: Json | undefined): ReadonlyArray<AcceptedCommand> => {
+const acceptsOf = (definition: Json | undefined): ReadonlyArray<ModuleCommand> => {
     const list = isObject(definition) ? definition.accepts : undefined
     return Array.isArray(list) ? list.filter(isObject).map(commandOf) : []
 }

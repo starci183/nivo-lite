@@ -4,6 +4,7 @@ import { AI_GENERATIONS_OPTIONS, AI_GENERATIONS_USAGE } from "./ai-generations.d
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./ai-generations.module-definition"
 import { GenerationRunnerService } from "./generation-runner.service"
 import { GenerationsService } from "./generations.service"
+import { TextGeneratorService } from "./text-generator.service"
 
 @Module({})
 /** Every text the app writes outside customer chat: a queued row, a job that runs it on OpenClaw, and the caller looking at the row. */
@@ -17,11 +18,12 @@ export class AiGenerationsModule extends ConfigurableModuleClass {
             providers: [
                 ...(base.providers ?? []),
                 { provide: AI_GENERATIONS_OPTIONS, useValue: parsed },
-                { provide: AI_GENERATIONS_USAGE, useExisting: options.usage },
+                { provide: AI_GENERATIONS_USAGE, useClass: options.usage },
                 GenerationsService,
                 GenerationRunnerService,
+                TextGeneratorService,
             ],
-            exports: [GenerationsService, GenerationRunnerService],
+            exports: [GenerationsService, GenerationRunnerService, TextGeneratorService],
         }
     }
 }

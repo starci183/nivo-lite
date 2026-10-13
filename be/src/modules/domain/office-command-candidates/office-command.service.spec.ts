@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing"
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import { CommandBusService, ModuleCatalogService } from "@modules/domain/decisions"
 import { OfficeLinesService } from "@modules/domain/messages"
-import type { AcceptedCommand, CommandResult, ModuleEntry, WorkItem } from "@modules/domain/decisions"
+import type { ModuleCommand, CommandResult, ModuleEntry, WorkItem } from "@modules/domain/decisions"
 import { EventsService } from "@modules/domain/events"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
@@ -44,7 +44,7 @@ const manager: WorkspaceMember = {
     displayName: "An",
     status: "active",
 }
-const receipt: AcceptedCommand = {
+const receipt: ModuleCommand = {
     command: "issue_receipt",
     action: "issue_receipt",
     subjectType: "order",

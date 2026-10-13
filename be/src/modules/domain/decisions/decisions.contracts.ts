@@ -161,7 +161,7 @@ export interface WorkPerformer {
 }
 
 /** A command a module accepts from other agents, as its definition declares it. */
-export interface AcceptedCommand {
+export interface ModuleCommand {
     /** The command key. */
     readonly command: string
     /** The action it becomes on the receiver. */
@@ -185,7 +185,7 @@ export interface ModuleEntry {
     /** The full name in both languages. */
     readonly name: Bilingual
     /** The commands the module accepts. */
-    readonly accepts: ReadonlyArray<AcceptedCommand>
+    readonly accepts: ReadonlyArray<ModuleCommand>
 }
 
 /** The part of an authority action the engine reads. */

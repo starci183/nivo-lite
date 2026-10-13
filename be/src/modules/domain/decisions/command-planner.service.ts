@@ -16,7 +16,7 @@ import {
     tooDeep,
 } from "./command-rules.policy"
 import type {
-    AcceptedCommand,
+    ModuleCommand,
     CommandRefusal,
     ModuleEntry,
     SendCommandInput,
@@ -243,7 +243,7 @@ export class CommandPlannerService {
     private async repeats(
         ctx: WorkContext,
         chainId: string,
-        accepted: AcceptedCommand,
+        accepted: ModuleCommand,
         address: SplitPayload,
         dedupeKey: string,
     ): Promise<boolean> {

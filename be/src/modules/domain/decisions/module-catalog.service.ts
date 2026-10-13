@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { Locale } from "@modules/platform/i18n"
-import type { AcceptedCommand, OptionalActionEntry, OptionalModuleEntry } from "./decisions.contracts"
+import type { ModuleCommand, OptionalActionEntry, OptionalModuleEntry } from "./decisions.contracts"
 import { toActionEntry, toModuleEntry } from "./module-catalog.mapper"
 import type { ActionRow, ModuleRow } from "./persistence/module-catalog.rows"
 import { FIND_ACTION, FIND_MODULE } from "./persistence/module-catalog.sql"
@@ -19,7 +19,7 @@ export class ModuleCatalogService {
     }
 
     /** The commands the module accepts from other agents; none for an unknown module. */
-    async acceptsOf(moduleKey: string): Promise<ReadonlyArray<AcceptedCommand>> {
+    async acceptsOf(moduleKey: string): Promise<ReadonlyArray<ModuleCommand>> {
         return (await this.entryOf(moduleKey))?.accepts ?? []
     }
 

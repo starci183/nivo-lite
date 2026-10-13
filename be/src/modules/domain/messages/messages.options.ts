@@ -1,2 +1,7 @@
-/** The messages capability takes no options; the app root decides whether it is global and binds its ports. */
-export type MessagesOptions = Record<never, never>
+import type { InjectionToken } from "@nestjs/common"
+
+/** What the messages capability needs from the app root. */
+export interface MessagesOptions {
+    /** Provider that tells which agent speaks for a department (the agents capability). */
+    readonly agentDirectory: InjectionToken
+}

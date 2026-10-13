@@ -1,11 +1,85 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
+import { AgentToolsHttpModule } from "@features/api/agent-tools"
+import { AgentsHttpModule } from "@features/api/agents"
+import { DecisionsHttpModule } from "@features/api/decisions"
+import { GenerateWithAgentQueueModule } from "@features/jobs/generate-with-agent"
+import { SyncAgentsQueueModule } from "@features/jobs/sync-agents"
 import { ModulesHttpModule } from "@features/api/modules"
+import { OfficeHttpModule } from "@features/api/office"
 import { ExternalApiHttpModule } from "@features/api/external-api"
 import { SystemHealthHttpModule } from "@features/api/system-health"
 import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
 import { WorkspacesHttpModule } from "@features/api/workspaces"
+import {
+    AGENT_CONNECTIONS_ERROR_KINDS,
+    AGENT_CONNECTIONS_MESSAGES,
+    AgentConnectionsModule,
+} from "@modules/domain/agent-connections"
+import {
+    AGENT_TOOLS_ERROR_KINDS,
+    AGENT_TOOLS_MESSAGES,
+    AgentToolsModule,
+    UnboundBookingToolsService,
+    UnboundConversationLeadsService,
+    UnboundHandoffToolService,
+    UnboundKnowledgeSearchService,
+    UnboundLeadWriterService,
+} from "@modules/domain/agent-tools"
+import {
+    AGENTS_ERROR_KINDS,
+    AGENTS_MESSAGES,
+    AGENTS_SYNC_FRESH_MS,
+    AgentsModule,
+    AgentsService,
+    UnboundInstallationsService,
+    UnboundKnowledgeLensService,
+    UnboundModuleProfilesService,
+} from "@modules/domain/agents"
+import {
+    AI_GENERATIONS_ERROR_KINDS,
+    AI_GENERATIONS_MESSAGES,
+    AI_GENERATIONS_POLL_MS,
+    AiGenerationsModule,
+    TextGeneratorService,
+    UnboundUsageGateService,
+} from "@modules/domain/ai-generations"
+import { AUTHORITY_ERROR_KINDS, AUTHORITY_MESSAGES } from "@modules/domain/authority"
+import { AUTHORITY_RULES_ERROR_KINDS, AUTHORITY_RULES_MESSAGES } from "@modules/domain/authority-rules"
+import {
+    ApprovalRequesterService,
+    DECISIONS_ERROR_KINDS,
+    DECISIONS_MESSAGES,
+    DecisionsModule,
+    UnboundDecisionEventsService,
+    UnboundInboundEventStatusService,
+    UnboundLeadGenFlowService,
+    UnboundOutboundAccessGateService,
+    UnboundPaymentReceiptsService,
+} from "@modules/domain/decisions"
+import { EXECUTIONS_ERROR_KINDS, EXECUTIONS_MESSAGES } from "@modules/domain/executions"
+import {
+    OFFICE_COMMAND_CANDIDATES_ERROR_KINDS,
+    OFFICE_COMMAND_CANDIDATES_MESSAGES,
+    OfficeCommandCandidatesModule,
+} from "@modules/domain/office-command-candidates"
+import {
+    OPENCLAW_AGENT_SYNC_ERROR_KINDS,
+    OPENCLAW_AGENT_SYNC_MESSAGES,
+    OPENCLAW_RELOAD_SETTLE_MS,
+    OpenclawAgentSyncModule,
+} from "@modules/domain/openclaw-agent-sync"
+import { RESPONSIBILITIES_ERROR_KINDS, RESPONSIBILITY_JOURNAL_MESSAGES } from "@modules/domain/responsibilities"
+import { WORK_ITEMS_ERROR_KINDS, WORK_ITEMS_MESSAGES } from "@modules/domain/work-items"
+import { DEEPSEEK_ERROR_KINDS, DEEPSEEK_MESSAGES, DeepseekClient, DeepseekModule } from "@modules/integrations/deepseek"
+import {
+    OPENCLAW_ERROR_KINDS,
+    OPENCLAW_MESSAGES,
+    OpenclawModule,
+    ToolTokenService,
+} from "@modules/integrations/openclaw"
+import { AGENTS_SYNC_SCHEDULER } from "@modules/queues/agents"
 import { AuthGuard, IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } from "@modules/domain/identity"
 import {
     SUPABASE_ACCESS_TOKEN_VERIFIER,
@@ -68,7 +142,21 @@ export class AppModule {
                 I18nModule.register({
                     isGlobal: true,
                     bundles: [
+                        AGENT_CONNECTIONS_MESSAGES,
+                        AGENT_TOOLS_MESSAGES,
+                        AGENTS_MESSAGES,
+                        AI_GENERATIONS_MESSAGES,
                         API_KEYS_MESSAGES,
+                        AUTHORITY_MESSAGES,
+                        AUTHORITY_RULES_MESSAGES,
+                        DECISIONS_MESSAGES,
+                        DEEPSEEK_MESSAGES,
+                        EXECUTIONS_MESSAGES,
+                        OFFICE_COMMAND_CANDIDATES_MESSAGES,
+                        OPENCLAW_AGENT_SYNC_MESSAGES,
+                        OPENCLAW_MESSAGES,
+                        RESPONSIBILITY_JOURNAL_MESSAGES,
+                        WORK_ITEMS_MESSAGES,
                         ERRORS_MESSAGES,
                         HTTP_SECURITY_MESSAGES,
                         IDENTITY_MESSAGES,
@@ -84,7 +172,21 @@ export class AppModule {
                 ErrorsModule.register({
                     isGlobal: true,
                     kinds: [
+                        AGENT_CONNECTIONS_ERROR_KINDS,
+                        AGENT_TOOLS_ERROR_KINDS,
+                        AGENTS_ERROR_KINDS,
+                        AI_GENERATIONS_ERROR_KINDS,
                         API_KEYS_ERROR_KINDS,
+                        AUTHORITY_ERROR_KINDS,
+                        AUTHORITY_RULES_ERROR_KINDS,
+                        DECISIONS_ERROR_KINDS,
+                        DEEPSEEK_ERROR_KINDS,
+                        EXECUTIONS_ERROR_KINDS,
+                        OFFICE_COMMAND_CANDIDATES_ERROR_KINDS,
+                        OPENCLAW_AGENT_SYNC_ERROR_KINDS,
+                        OPENCLAW_ERROR_KINDS,
+                        RESPONSIBILITIES_ERROR_KINDS,
+                        WORK_ITEMS_ERROR_KINDS,
                         CONFIG_ERROR_KINDS,
                         DATABASE_ERROR_KINDS,
                         HTTP_SECURITY_ERROR_KINDS,
@@ -110,7 +212,7 @@ export class AppModule {
                 }),
                 QueueModule.register({
                     isGlobal: true,
-                    schedulers: [],
+                    schedulers: [AGENTS_SYNC_SCHEDULER],
                     ...options.queue,
                 }),
                 JobsModule.register({
@@ -130,6 +232,54 @@ export class AppModule {
                 }),
                 LivenessModule.register({ isGlobal: true }),
                 AuthorityActionsModule.register({ isGlobal: true }),
+                OpenclawModule.register({ isGlobal: true, ...options.openclaw }),
+                DeepseekModule.register({ isGlobal: true, ...options.deepseek, generator: TextGeneratorService }),
+                AgentsModule.register({
+                    isGlobal: true,
+                    ports: {
+                        installations: UnboundInstallationsService,
+                        knowledge: UnboundKnowledgeLensService,
+                        modules: UnboundModuleProfilesService,
+                    },
+                    syncFreshMs: AGENTS_SYNC_FRESH_MS,
+                }),
+                AgentConnectionsModule.register({ isGlobal: true }),
+                AiGenerationsModule.register({
+                    isGlobal: true,
+                    usage: UnboundUsageGateService,
+                    pollMs: AI_GENERATIONS_POLL_MS,
+                }),
+                OpenclawAgentSyncModule.register({ isGlobal: true, reloadSettleMs: OPENCLAW_RELOAD_SETTLE_MS }),
+                AgentToolsModule.register({
+                    isGlobal: true,
+                    ports: {
+                        knowledgeSearch: UnboundKnowledgeSearchService,
+                        leadWriter: UnboundLeadWriterService,
+                        bookingTools: UnboundBookingToolsService,
+                        approvalRequester: ApprovalRequesterService,
+                        handoffTool: UnboundHandoffToolService,
+                        conversationLeads: UnboundConversationLeadsService,
+                        toolTokens: ToolTokenService,
+                    },
+                }),
+                DecisionsModule.register({
+                    isGlobal: true,
+                    ports: {
+                        agentDirectory: AgentsService,
+                        inboundEventStatus: UnboundInboundEventStatusService,
+                        decisionEvents: UnboundDecisionEventsService,
+                        paymentReceipts: UnboundPaymentReceiptsService,
+                        leadGenFlow: UnboundLeadGenFlowService,
+                        outboundAccessGate: UnboundOutboundAccessGateService,
+                    },
+                }),
+                OfficeCommandCandidatesModule.register({ isGlobal: true, reader: DeepseekClient }),
+                SyncAgentsQueueModule,
+                GenerateWithAgentQueueModule,
+                AgentsHttpModule,
+                AgentToolsHttpModule,
+                DecisionsHttpModule,
+                OfficeHttpModule,
                 ModulesModule.register({ isGlobal: true, categories: MODULE_CATEGORIES, catalog: MODULE_CATALOG }),
                 ModulesHttpModule,
                 ApiKeysModule.register({ isGlobal: true }),

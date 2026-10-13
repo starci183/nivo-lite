@@ -1,4 +1,4 @@
-import type { AcceptedCommand } from "@modules/domain/decisions"
+import type { ModuleCommand } from "@modules/domain/decisions"
 import type { ProposedCommand } from "@modules/integrations/deepseek"
 import { DomainError } from "@modules/platform/errors"
 import type { MessageRefs, ReadyResolution } from "./office-command-candidates.contracts"
@@ -17,7 +17,7 @@ import {
 
 class SampleError extends DomainError<"SAMPLE"> {}
 
-const accepted = (overrides: Partial<AcceptedCommand>): AcceptedCommand => ({
+const accepted = (overrides: Partial<ModuleCommand>): ModuleCommand => ({
     command: "issue_receipt",
     action: "issue_receipt",
     subjectType: "order",

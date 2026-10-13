@@ -1,4 +1,4 @@
-import type { AcceptedCommand } from "@modules/domain/decisions"
+import type { ModuleCommand } from "@modules/domain/decisions"
 import type { ProposedCommand } from "@modules/integrations/deepseek"
 import { DomainError } from "@modules/platform/errors"
 import type { Locale } from "@modules/platform/i18n"
@@ -74,7 +74,7 @@ export const matchLeads = (body: string, leads: ReadonlyArray<LeadRef>): Readonl
 }
 
 /** What an agent accepts, joined for the reply when a message maps to nothing. */
-export const acceptsText = (locale: Locale, accepts: ReadonlyArray<AcceptedCommand>): string =>
+export const acceptsText = (locale: Locale, accepts: ReadonlyArray<ModuleCommand>): string =>
     accepts.map((accepted) => accepted.description[locale]).join("; ")
 
 const ID_KEYS: ReadonlyArray<string> = ["subject_id", "lead_id"]
@@ -128,7 +128,7 @@ const addressOf = (
  */
 export const resolveCandidate = (
     choice: ProposedCommand,
-    accepts: ReadonlyArray<AcceptedCommand>,
+    accepts: ReadonlyArray<ModuleCommand>,
     refs: MessageRefs,
 ): Resolution => {
     const accepted = accepts.find((candidate) => candidate.command === choice.command)
