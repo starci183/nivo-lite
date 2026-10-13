@@ -39,7 +39,7 @@ const build = async (answers: Record<string, unknown> = {}) => {
             [RELEASE_REFRESH_LEASE]: [],
             [LIST_ZALO_CONNECTIONS_DUE]: [],
             ...answers,
-        }).map(([text, rows]) => [text, rows] as [string, unknown]),
+        }).map(([text, rows]): [string, unknown] => [text, rows]),
     })
     const moduleRef = await Test.createTestingModule({
         providers: [

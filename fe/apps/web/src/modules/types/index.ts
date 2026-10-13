@@ -59,6 +59,19 @@ export type {
 export type { ConsoleIconName, ConsoleNavItem, ConsolePending, ConsoleWorkspace } from "./console"
 export type { DataSlot, SlotLabels } from "./slot"
 export type {
+    AccountsView,
+    AutomationTone,
+    AutomationsBoardView,
+    AutomationsLanguage,
+    AutomationsTranslator,
+    CardView,
+    DetailView,
+    GateView,
+    MessageView,
+    RunRowView,
+    SettingFieldView,
+} from "./automations"
+export type {
     DeciderKind,
     DecisionFilter,
     DecisionKind,

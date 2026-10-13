@@ -1,7 +1,7 @@
 import { MailError, MailErrorCode } from "./errors/mail.error"
 import { classifySmtpFailure } from "./smtp-error.policy"
 
-const failure = (shape: Record<string, unknown>) => Object.assign(new Error(String(shape.message ?? "")), shape)
+const failure = (shape: Record<string, unknown>) => Object.assign(new Error(typeof shape.message === "string" ? shape.message : ""), shape)
 
 describe("classifySmtpFailure", () => {
     it.each([

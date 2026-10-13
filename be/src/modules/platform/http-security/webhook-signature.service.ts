@@ -59,14 +59,7 @@ export class WebhookSignatureService {
     }
 
     private async verifyScoped(delivery: ScopedWebhookDelivery): Promise<void> {
-        const proof = this.proofs.get(delivery.provider)
-        if (!proof) {
-            throw new HttpSecurityError({
-                code: HttpSecurityErrorCode.WebhookProviderUnknown,
-                params: { provider: delivery.provider },
-            })
-        }
-        const proven = await proof.prove({
+        const proven = await this.proofs.prove(delivery.provider, {
             scope: delivery.scope,
             rawBody: delivery.rawBody,
             signature: delivery.signature,

@@ -4,8 +4,9 @@ import { Injectable } from "@nestjs/common"
 import nodemailer from "nodemailer"
 import type SMTPTransport from "nodemailer/lib/smtp-transport"
 import { MailError, MailErrorCode } from "./errors/mail.error"
+import { oneLine, renderEmail } from "./mail-layout.policy"
 import { InjectMailOptions } from "./mail.decorators"
-import type { MailMessage, SentMail, SmtpConfig } from "./mail.contracts"
+import type { AcceptedInfo, EmailLayoutInput, MailMessage, SentMail, SmtpConfig } from "./mail.contracts"
 import type { MailOptions } from "./mail.options"
 import { classifySmtpFailure } from "./smtp-error.policy"
 import { isPrivateAddress, isValidPort, isWellFormedHost, PUBLIC_MAIL_PORTS } from "./smtp-target.policy"
@@ -63,9 +64,9 @@ export class MailClient {
     }
 
     /** Sends one owner notice through the platform sender. Throws a MailError. */
-    async sendThroughPlatform(message: MailMessage): Promise<SentMail> {
+    sendThroughPlatform(message: MailMessage): Promise<SentMail> {
         const platform = this.options.platform
-        if (platform === null) throw new MailError({ code: MailErrorCode.NotConfigured })
+        if (platform === null) return Promise.reject(new MailError({ code: MailErrorCode.NotConfigured }))
         const transport = nodemailer.createTransport(platform.url.reveal())
         return transport
             .sendMail({
@@ -87,7 +88,13 @@ export class MailClient {
             })
     }
 
-    private accepted(info: { readonly messageId: string; readonly rejected: ReadonlyArray<unknown> }): SentMail {
+    /** Sends an owner notice through the platform sender, wrapped in the shop layout; the subject is the title on one line. Throws a MailError. */
+    sendNoticeThroughPlatform(to: string, notice: EmailLayoutInput): Promise<SentMail> {
+        const rendered = renderEmail(notice)
+        return this.sendThroughPlatform({ to, subject: oneLine(notice.title), html: rendered.html, text: rendered.text })
+    }
+
+    private accepted(info: AcceptedInfo): SentMail {
         if (info.rejected.length > 0) {
             throw new MailError({ code: MailErrorCode.Recipient, params: { detail: String(info.rejected[0]) } })
         }
