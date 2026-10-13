@@ -120,7 +120,7 @@ describe("ConversationsService", () => {
         it("opens the conversation of a new customer, stores the message and enqueues the turn", async () => {
             const { service, manager, queue, conversations, messages } = await build()
 
-            await service.acceptTelegram(CONNECTION, telegram(), manager)
+            await expect(service.acceptTelegram(CONNECTION, telegram(), manager)).resolves.toBeUndefined()
 
             expect(conversations.open).toHaveBeenCalledWith(
                 {
