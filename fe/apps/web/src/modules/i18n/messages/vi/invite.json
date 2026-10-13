@@ -1,8 +1,7 @@
 {
   "eyebrow": "LỜI MỜI",
   "title": "Tham gia {workspace}",
-  "lead": "{inviter} mời bạn vào {workspace} với vai trò {role}.",
-  "leadNoInviter": "Bạn được mời vào {workspace} với vai trò {role}.",
+  "lead": "Bạn được mời vào {workspace} với vai trò {role}.",
   "forEmail": "Lời mời này dành cho {email}.",
   "asStaff": "Bạn sẽ được gắn với nhân viên {name}.",
   "roleManager": "Quản lý",
@@ -24,6 +23,5 @@
   "usedTitle": "Lời mời này đã được dùng",
   "usedBody": "Nếu là bạn, chỉ cần đăng nhập.",
   "goSignIn": "Đến trang đăng nhập",
-  "anInviter": "Chủ sở hữu",
   "failed": "Không tham gia được. Hãy thử lại."
 }
