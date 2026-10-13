@@ -199,8 +199,14 @@ describe("platform-admin policy", () => {
                     { kind: "faq", status: "ready" },
                 ]),
             ).toEqual([
-                { kind: "text", byStatus: { ready: 2, failed: 1 } },
-                { kind: "faq", byStatus: { ready: 1 } },
+                {
+                    kind: "text",
+                    byStatus: [
+                        { key: "ready", count: 2 },
+                        { key: "failed", count: 1 },
+                    ],
+                },
+                { kind: "faq", byStatus: [{ key: "ready", count: 1 }] },
             ])
         })
     })

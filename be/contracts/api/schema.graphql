@@ -1,3 +1,280 @@
+type AdminActivityType {
+  lastCustomerMessageAt: String
+  messages7d: Int!
+  openDecisions: Int!
+}
+
+type AdminAgentSyncType {
+  agentId: ID!
+  checkedAt: String!
+  contextVersion: Int
+  error: String
+  status: String!
+}
+
+type AdminAuditType {
+  action: String!
+  actorEmail: String!
+  createdAt: String!
+  id: ID!
+  workspaceId: ID
+}
+
+type AdminBillingEventType {
+  createdAt: String!
+  id: ID!
+  kind: String!
+}
+
+type AdminConnectionBadgeType {
+  count: Int!
+  error: Int!
+  provider: String!
+  silent: Int!
+}
+
+type AdminConnectionType {
+  environment: String!
+  health: String!
+  id: ID!
+  lastError: String
+  lastEventAt: String
+  name: String!
+  provider: String!
+  status: String!
+}
+
+type AdminCountType {
+  count: Int!
+  key: String!
+}
+
+type AdminCreditsType {
+  costUsd: Float!
+  limit: Float
+  ownLimit: Float
+  used: Float!
+}
+
+type AdminErrorType {
+  createdAt: String!
+  id: ID!
+  message: String!
+  scope: String!
+}
+
+input AdminExtendSubscriptionInput {
+  days: Int!
+  workspaceId: ID!
+}
+
+type AdminHealthType {
+  audits: [AdminAuditType!]!
+  billingEvents: [AdminPlatformBillingEventType!]!
+  errorScopes: [AdminCountType!]!
+  errors: [AdminPlatformErrorType!]!
+  signups: [AdminSignupDayType!]!
+  transferCounts: [AdminCountType!]!
+  transfers: [AdminPlatformTransferType!]!
+  workspaceNames: [AdminWorkspaceNameType!]!
+}
+
+type AdminInviteResentType {
+  delivery: String!
+  email: String!
+}
+
+type AdminInviteType {
+  createdAt: String!
+  email: String!
+  expiresAt: String!
+  id: ID!
+  role: String!
+}
+
+type AdminKnowledgeKindType {
+  byStatus: [AdminCountType!]!
+  kind: String!
+}
+
+type AdminMemberType {
+  displayName: String!
+  email: String
+  role: String!
+  status: String!
+  userId: ID!
+}
+
+type AdminModuleBadgeType {
+  key: String!
+  live: Boolean!
+  status: String!
+}
+
+type AdminModuleType {
+  contextAppliedAt: String
+  contextVersion: Int
+  id: ID!
+  key: String!
+  live: Boolean!
+  operatingMode: String!
+  processor: String!
+  status: String!
+  sync: AdminAgentSyncType
+}
+
+type AdminOrderType {
+  amountVnd: Float!
+  createdAt: String!
+  id: ID!
+  orderCode: String!
+  paidAt: String
+  planCode: String!
+  status: String!
+}
+
+type AdminPlanSetType {
+  creditsLimit: Float
+  planCode: String!
+}
+
+type AdminPlatformBillingEventType {
+  createdAt: String!
+  id: ID!
+  kind: String!
+  workspaceId: ID
+}
+
+type AdminPlatformErrorType {
+  createdAt: String!
+  id: ID!
+  message: String!
+  scope: String!
+  workspaceId: ID
+}
+
+type AdminPlatformTransferType {
+  content: String
+  receivedAt: String!
+  status: String!
+  transferAmount: Float
+}
+
+input AdminResendWorkspaceInviteInput {
+  inviteId: ID!
+  workspaceId: ID!
+}
+
+type AdminSessionType {
+  email: String!
+}
+
+input AdminSetWorkspacePlanInput {
+  creditsLimit: Int = null
+  planCode: String!
+  workspaceId: ID!
+}
+
+input AdminSetWorkspaceStatusInput {
+  status: String!
+  workspaceId: ID!
+}
+
+type AdminSignupDayType {
+  day: String!
+  signups: Int!
+}
+
+type AdminStatusSetType {
+  status: String!
+}
+
+type AdminSubscriptionExtendedType {
+  paidUntil: String!
+}
+
+type AdminTransferType {
+  content: String
+  receivedAt: String!
+  sepayId: Float!
+  status: String!
+  transferAmount: Float
+}
+
+type AdminWorkspaceCountsType {
+  all: Int!
+  attention: Int!
+  idle: Int!
+  unpaid: Int!
+}
+
+type AdminWorkspaceDetailType {
+  activity: AdminActivityType!
+  billingEvents: [AdminBillingEventType!]!
+  connections: [AdminConnectionType!]!
+  credits: AdminCreditsType!
+  errors: [AdminErrorType!]!
+  invites: [AdminInviteType!]!
+  knowledge: [AdminKnowledgeKindType!]!
+  knowledgeTotal: Int!
+  members: [AdminMemberType!]!
+  modules: [AdminModuleType!]!
+  orders: [AdminOrderType!]!
+  transfers: [AdminTransferType!]!
+  workspace: AdminWorkspaceHeaderType!
+}
+
+type AdminWorkspaceHeaderType {
+  createdAt: String!
+  id: ID!
+  name: String!
+  ownerEmail: String
+  paidUntil: String
+  planCode: String
+  status: String!
+}
+
+input AdminWorkspaceInput {
+  workspaceId: ID!
+}
+
+type AdminWorkspaceItemType {
+  attention: Boolean!
+  connectionWarning: Boolean!
+  connections: [AdminConnectionBadgeType!]!
+  createdAt: String!
+  errors24h: Int!
+  id: ID!
+  idle7d: Boolean!
+  lastCustomerMessageAt: String
+  members: Int!
+  messages7d: Int!
+  modules: [AdminModuleBadgeType!]!
+  name: String!
+  openDecisions: Int!
+  ownerEmail: String
+  paidUntil: String
+  planCode: String
+  status: String!
+  unpaid: Boolean!
+}
+
+type AdminWorkspaceListType {
+  counts: AdminWorkspaceCountsType!
+  items: [AdminWorkspaceItemType!]!
+  total: Int!
+}
+
+type AdminWorkspaceNameType {
+  id: ID!
+  name: String!
+}
+
+input AdminWorkspacesInput {
+  filter: String! = "all"
+  query: String! = ""
+}
+
 input CreateWorkspaceInput {
   name: String!
 }
@@ -21,10 +298,18 @@ type MembershipType {
 }
 
 type Mutation {
+  adminExtendSubscription(input: AdminExtendSubscriptionInput!): AdminSubscriptionExtendedType!
+  adminResendWorkspaceInvite(input: AdminResendWorkspaceInviteInput!): AdminInviteResentType!
+  adminSetWorkspacePlan(input: AdminSetWorkspacePlanInput!): AdminPlanSetType!
+  adminSetWorkspaceStatus(input: AdminSetWorkspaceStatusInput!): AdminStatusSetType!
   createWorkspace(input: CreateWorkspaceInput!): CreateWorkspaceType!
 }
 
 type Query {
+  adminHealth: AdminHealthType!
+  adminSession: AdminSessionType!
+  adminWorkspace(input: AdminWorkspaceInput!): AdminWorkspaceDetailType!
+  adminWorkspaces(input: AdminWorkspacesInput!): AdminWorkspaceListType!
   myWorkspaces: [MembershipType!]!
 }
 
