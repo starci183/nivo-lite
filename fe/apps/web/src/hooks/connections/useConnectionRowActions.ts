@@ -1,11 +1,15 @@
 import { useTranslations } from "next-intl"
-import { useEffect, useState, useTransition } from "react"
+import { useState, useTransition } from "react"
 import type { RowBusy, RowConfirm } from "@/hooks/connection-rows"
 import type { Settled } from "@/hooks/connection-wizard"
 import type { Connection, RowNote, SepayKeys } from "@/modules/types"
 import { useConnectionRowCommands } from "./useConnectionRowCommands"
 import { useConnectionsRefresh } from "./useConnectionsRefresh"
 import { useSyncNow } from "./useSyncNow"
+
+/** Whether two row notes say the same thing. A finished sync builds a new object on every read. */
+const sameRowNote = (left: RowNote | null, right: RowNote | null): boolean =>
+    left === right || (left !== null && right !== null && left.tone === right.tone && left.text === right.text)
 
 /** The state and commands of one connection row. */
 export interface ConnectionRowActions {
@@ -36,8 +40,14 @@ export const useConnectionRowActions = (connection: Connection): ConnectionRowAc
     const [, startTransition] = useTransition()
     const [busy, setBusy] = useState<RowBusy>(null)
     const [note, setNote] = useState<RowNote | null>(null)
+    const [synced, setSynced] = useState<RowNote | null>(null)
     const [keys, setKeys] = useState<SepayKeys | null>(null)
     const [confirm, setConfirm] = useState<RowConfirm>(null)
+    const outcome = syncNow.outcome
+    if (!sameRowNote(outcome, synced)) {
+        setSynced(outcome)
+        if (outcome !== null) setNote(outcome)
+    }
 
     const run = (kind: Exclude<RowBusy, null>, work: () => Promise<void>) => {
         setBusy(kind)
@@ -100,10 +110,6 @@ export const useConnectionRowActions = (connection: Connection): ConnectionRowAc
         setConfirm(null)
         if (result.kind !== "ok") setNote({ tone: "negative", text: result.message })
     }
-
-    useEffect(() => {
-        if (syncNow.outcome !== null) setNote(syncNow.outcome)
-    }, [syncNow.outcome])
 
     return {
         busy: syncNow.isRunning ? "sync" : busy,

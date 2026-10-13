@@ -1,5 +1,5 @@
 import type { DropdownMenuItem } from "@starci/grammar/common"
-import type { ConsoleIconName, ConsoleWorkspace } from "@/modules/types"
+import type { ConsoleIconName, ConsoleSession, ConsoleWorkspace } from "@/modules/types"
 
 /** The console route of the Office, the page people come to first. */
 export const OFFICE_ROUTE = "/chat"
@@ -92,3 +92,20 @@ export const workspaceEntries = (
         label: workspace.id === currentId ? `${workspace.name} ✓` : workspace.name,
         onAction: () => onSwitch(workspace.id),
     }))
+
+/** The session the console frame draws before it is read (the frame waits for the real one). */
+export const NO_CONSOLE_SESSION: ConsoleSession = {
+    member: { workspaceId: "", userId: "", name: "", role: "staff", staffId: null },
+    workspaceName: "",
+    userName: "",
+    email: "",
+    workspaces: [],
+    currentWorkspaceId: "",
+}
+
+/** Workspace states nobody can work in yet: the owner is sent to the payment step. */
+export const UNPAID_WORKSPACE_STATES: ReadonlySet<string> = new Set(["pending_payment", "cancelled"])
+
+/** A membership role as the console reads it. */
+export const sessionRoleOf = (role: string): ConsoleWorkspace["role"] =>
+    role === "owner" || role === "manager" ? role : "staff"

@@ -1,4 +1,4 @@
-import { useQueryModuleInstallationsSwr } from "@/hooks/swr/api/graphql/queries/useQueryModuleInstallationsSwr"
+import { useQueryModuleInstallationsSwr } from "@/hooks/swr"
 
 /** Departments with several agent instances (one Chatbot per branch): their names; the rules are shared by every instance of a type. */
 export const useInstanceNames = (): Readonly<Record<string, ReadonlyArray<string>>> => {

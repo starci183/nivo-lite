@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl"
 import { useCallback } from "react"
 import { useSettledGraphQL } from "@/hooks/connection-wizard"
 import type { Settled } from "@/hooks/connection-wizard"
-import { useMutateWantConnectorSwr } from "@/hooks/swr/api/graphql/mutations/useMutateWantConnectorSwr"
+import { useMutateWantConnectorSwr } from "@/hooks/swr"
 
 /** Says the workspace wants a planned connector ("I want it", owner or manager); recorded once per workspace. */
 export const useWantConnector = () => {

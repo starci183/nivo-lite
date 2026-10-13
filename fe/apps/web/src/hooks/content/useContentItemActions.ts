@@ -1,7 +1,5 @@
 import { useTranslations } from "next-intl"
-import { useMutateCreateContentItemSwr } from "@/hooks/swr/api/graphql/mutations/useMutateCreateContentItemSwr"
-import { useMutateMoveContentItemSwr } from "@/hooks/swr/api/graphql/mutations/useMutateMoveContentItemSwr"
-import { useMutateDecideWorkItemSwr } from "@/hooks/swr/api/graphql/mutations/useMutateDecideWorkItemSwr"
+import { useMutateCreateContentItemSwr, useMutateMoveContentItemSwr, useMutateDecideWorkItemSwr } from "@/hooks/swr"
 import type { MutateCreateContentItemRequest } from "@/modules/api/graphql/mutations/mutation-create-content-item"
 import { useGraphQLWithToast } from "@/modules/toast"
 

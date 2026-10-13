@@ -1,4 +1,4 @@
-import { useQueryAuthoritySwr } from "@/hooks/swr/api/graphql/queries/useQueryAuthoritySwr"
+import { useQueryAuthoritySwr } from "@/hooks/swr"
 import { slotOfSwr } from "@/hooks/slot"
 import type { DataSlot } from "@/modules/types"
 import { toAuthoritySheet } from "@/modules/authority"

@@ -1,6 +1,6 @@
 import { useTranslations } from "next-intl"
 import { useMemo } from "react"
-import { useQueryWorkspaceShellSwr } from "@/hooks/swr/api/graphql/queries/useQueryWorkspaceShellSwr"
+import { useQueryWorkspaceShellSwr } from "@/hooks/swr"
 import { FOUNDING_OFFER } from "@/modules/promo"
 import type { ConsolePending } from "@/modules/types"
 import { LEADS_ROUTE, OFFICE_ROUTE } from "./console.shared"

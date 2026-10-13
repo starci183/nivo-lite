@@ -1,7 +1,9 @@
-import { useMutateDecideBrainFactSwr } from "@/hooks/swr/api/graphql/mutations/useMutateDecideBrainFactSwr"
-import { useMutateDismissKnowledgeGapSwr } from "@/hooks/swr/api/graphql/mutations/useMutateDismissKnowledgeGapSwr"
-import { useMutateKeepCurrentBrainFactSwr } from "@/hooks/swr/api/graphql/mutations/useMutateKeepCurrentBrainFactSwr"
-import { useMutateSaveBrainFactSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSaveBrainFactSwr"
+import {
+    useMutateDecideBrainFactSwr,
+    useMutateDismissKnowledgeGapSwr,
+    useMutateKeepCurrentBrainFactSwr,
+    useMutateSaveBrainFactSwr,
+} from "@/hooks/swr"
 import type { MutateDecideBrainFactRequest } from "@/modules/api/graphql/mutations/mutation-decide-brain-fact"
 import type { MutateDismissKnowledgeGapRequest } from "@/modules/api/graphql/mutations/mutation-dismiss-knowledge-gap"
 import type { MutateKeepCurrentBrainFactRequest } from "@/modules/api/graphql/mutations/mutation-keep-current-brain-fact"
