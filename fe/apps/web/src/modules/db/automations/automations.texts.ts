@@ -1,5 +1,5 @@
-import en from "@/modules/i18n/messages/en/automations.json"
-import vi from "@/modules/i18n/messages/vi/automations.json"
+import allEn from "@/modules/i18n/messages/en.json"
+import allVi from "@/modules/i18n/messages/vi.json"
 import type { AutomationsLanguages, AutomationsTexts } from "./automations.view"
 
 const textsOf =
@@ -11,4 +11,7 @@ const textsOf =
         )
 
 /** The automations messages in both languages: the labels, the patterns that read a shop and the lines of evidence. */
-export const AUTOMATIONS_LANGUAGES: AutomationsLanguages = { vi: textsOf(vi), en: textsOf(en) }
+export const AUTOMATIONS_LANGUAGES: AutomationsLanguages = {
+    vi: textsOf(allVi.automations),
+    en: textsOf(allEn.automations),
+}

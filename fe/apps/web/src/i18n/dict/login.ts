@@ -1,6 +1,6 @@
-import en from "@/modules/i18n/messages/en/login.json"
-import vi from "@/modules/i18n/messages/vi/login.json"
+import allEn from "@/modules/i18n/messages/en.json"
+import allVi from "@/modules/i18n/messages/vi.json"
 import { defineDict } from "../core"
 
 /** Sign-in screen. */
-export const login = defineDict("login", { en, vi })
+export const login = defineDict("login", { en: allEn["login"], vi: allVi["login"] })

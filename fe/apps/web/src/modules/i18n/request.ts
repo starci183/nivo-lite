@@ -2,21 +2,10 @@ import "server-only"
 import { hasLocale } from "next-intl"
 import { getRequestConfig } from "next-intl/server"
 import { cookies, headers } from "next/headers"
-import { NAMESPACES } from "./namespaces"
 import { LOCALE_COOKIE, PRODUCT_TIME_ZONE, routing } from "./routing"
 
 /** The header the next-intl middleware sets on the request with the locale it negotiated. */
 const LOCALE_HEADER = "x-next-intl-locale"
-
-const loadCatalog = async (locale: string): Promise<Record<string, unknown>> => {
-    const entries = await Promise.all(
-        NAMESPACES.map(async (namespace) => [
-            namespace,
-            (await import(`./messages/${locale}/${namespace}.json`)).default,
-        ]),
-    )
-    return Object.fromEntries(entries)
-}
 
 /**
  * The request config next-intl's plugin loads. The locale is the one the proxy negotiated; routes the proxy does not negotiate
@@ -30,7 +19,7 @@ export default getRequestConfig(async () => {
     return {
         locale,
         timeZone: PRODUCT_TIME_ZONE,
-        messages: await loadCatalog(locale),
+        messages: (await import(`./messages/${locale}.json`)).default,
         getMessageFallback: ({ namespace, key }) => `${namespace ?? ""}.${key}`,
     }
 })
