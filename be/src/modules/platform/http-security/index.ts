@@ -1,4 +1,5 @@
 export { HTTP_SECURITY_ERROR_KINDS } from "./errors/http-security.error"
+export type { OperationRequest } from "./http-security.contracts"
 export { requestOf } from "./execution-request.mapper"
 export { parseHttpSecurityConfig } from "./http-security.config"
 export { InjectWebhookProofRegistry, InjectWebhookSignature } from "./http-security.decorators"

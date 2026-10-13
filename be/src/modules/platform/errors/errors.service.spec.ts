@@ -1,3 +1,5 @@
+import { NotFoundException } from "@nestjs/common"
+import { GraphQLError } from "graphql"
 import { mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import type { Logger } from "@modules/platform/logging"
@@ -76,6 +78,70 @@ describe("ErrorsService", () => {
 
             expect(errors.describe(failure).code).toBe("ERRORS_INTERNAL")
             expect(logger.error).toHaveBeenCalledWith(ErrorsLogEvent.Unhandled, failure)
+        })
+    })
+
+    describe("describe of the framework not-found", () => {
+        it("answers the not-found of an unmatched route as not-found, without logging it", async () => {
+            const { errors, logger } = await build([])
+
+            expect(errors.describe(new NotFoundException())).toEqual({
+                code: ErrorsErrorCode.RouteNotFound,
+                kind: "not-found",
+                status: 404,
+                params: {},
+            })
+            expect(logger.error).not.toHaveBeenCalled()
+        })
+    })
+
+    describe("describeInvalidOperation", () => {
+        it("describes a malformed operation as invalid", async () => {
+            const { errors } = await build([])
+
+            expect(errors.describeInvalidOperation()).toEqual({
+                code: "ERRORS_OPERATION_INVALID",
+                kind: "invalid",
+                status: 400,
+                params: {},
+            })
+        })
+    })
+
+    describe("formatError", () => {
+        it("answers the code, kind and params of the original error of a GraphQL failure", async () => {
+            const { errors } = await build([CALENDARS_ERROR_KINDS])
+            const original = new CalendarsError({ code: "CALENDARS_NOT_FOUND", params: { id: "calendar-1" } })
+            const graphql = new GraphQLError(original.code, { originalError: original, path: ["calendar"] })
+
+            expect(errors.formatError(graphql.toJSON(), graphql)).toEqual({
+                message: "CALENDARS_NOT_FOUND",
+                locations: undefined,
+                path: ["calendar"],
+                extensions: { code: "CALENDARS_NOT_FOUND", kind: "not-found", params: { id: "calendar-1" } },
+            })
+        })
+
+        it("answers an invalid operation for a GraphQL failure without an original error", async () => {
+            const { errors } = await build([])
+            const graphql = new GraphQLError(ErrorsErrorCode.OperationInvalid)
+
+            expect(errors.formatError(graphql.toJSON(), graphql).extensions).toEqual({
+                code: "ERRORS_OPERATION_INVALID",
+                kind: "invalid",
+                params: {},
+            })
+        })
+
+        it("masks a failure that is not a GraphQL error", async () => {
+            const { errors } = await build([])
+            const graphql = new GraphQLError(ErrorsErrorCode.Internal)
+
+            expect(errors.formatError(graphql.toJSON(), new Error("boom")).extensions).toEqual({
+                code: "ERRORS_INTERNAL",
+                kind: "internal",
+                params: {},
+            })
         })
     })
 

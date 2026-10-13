@@ -75,7 +75,7 @@ import {
 import { CREDITS_ERROR_KINDS, CREDITS_MESSAGES, CreditsModule } from "@modules/domain/credits"
 import { AI_USAGE_EVENTS_MESSAGES, AiUsageEventsModule, UsageGateService } from "@modules/domain/ai-usage-events"
 import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
-import { WorkspacesHttpModule } from "@features/api/workspaces"
+import { WorkspacesGraphqlModule, WorkspacesHttpModule } from "@features/api/workspaces"
 import {
     EMAIL_MESSAGES_ERROR_KINDS,
     EMAIL_MESSAGES_MESSAGES,
@@ -287,6 +287,7 @@ import {
     RateLimitGuard,
 } from "@modules/platform/http-security"
 import { HTTP_ERROR_KINDS, HTTP_MESSAGES, HttpModule } from "@modules/platform/http"
+import { GraphqlModule } from "@modules/platform/graphql"
 import { I18nModule } from "@modules/platform/i18n"
 import { LoggingModule } from "@modules/platform/logging"
 import { JOBS_ERROR_KINDS, JOBS_MESSAGES, JobsModule } from "@modules/platform/jobs"
@@ -555,14 +556,8 @@ export class AppModule {
                     ],
                 }),
                 CqrsModule.register({ isGlobal: true }),
-                HttpSecurityModule.register({
-                    isGlobal: true,
-                    ...options.httpSecurity,
-                }),
-                DatabaseModule.register({
-                    isGlobal: true,
-                    connections: [options.database],
-                }),
+                HttpSecurityModule.register({ isGlobal: true, ...options.httpSecurity }),
+                DatabaseModule.register({ isGlobal: true, connections: [options.database] }),
                 QueueModule.register({
                     isGlobal: true,
                     schedulers: [
@@ -607,6 +602,7 @@ export class AppModule {
                 ChannelSetupModule.register({ isGlobal: true, ...options.channelSetup }),
                 WebhookDeliveryModule.register({ isGlobal: true, ...options.webhookDelivery }),
                 HttpModule.register({ isGlobal: true }),
+                GraphqlModule.register({ isGlobal: true }),
                 N8nModule.register({ isGlobal: true, ...options.n8n }),
                 TemplateFilesModule.register({ isGlobal: true, ...options.templateFiles }),
                 AutomationPortsModule.register({ isGlobal: true }),
@@ -649,7 +645,6 @@ export class AppModule {
                 ConnectionCommandsQueueModule,
                 RendersHttpModule,
                 LivenessModule.register({ isGlobal: true }),
-                HttpModule.register({ isGlobal: true }),
                 LlmModule.register({ isGlobal: true, ...options.llm }),
                 DocumentsModule.register({ isGlobal: true, ...options.documents }),
                 KnowledgeSourcesModule.register({ isGlobal: true, storage: SUPABASE_OBJECTS }),
@@ -768,6 +763,7 @@ export class AppModule {
                 LoyaltyHttpModule,
                 LoyaltyTillHttpModule,
                 WorkspacesHttpModule,
+                WorkspacesGraphqlModule,
                 ExtractKnowledgeFactsQueueModule,
                 RunBrainCommandQueueModule,
                 IndexKnowledgeSourceQueueModule,

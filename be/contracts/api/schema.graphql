@@ -1,0 +1,38 @@
+input CreateWorkspaceInput {
+  name: String!
+}
+
+type CreateWorkspaceType {
+  id: ID!
+}
+
+type MemberType {
+  displayName: String!
+  role: String!
+  staffId: ID
+  status: String!
+  userId: ID!
+  workspaceId: ID!
+}
+
+type MembershipType {
+  member: MemberType!
+  workspace: WorkspaceType!
+}
+
+type Mutation {
+  createWorkspace(input: CreateWorkspaceInput!): CreateWorkspaceType!
+}
+
+type Query {
+  myWorkspaces: [MembershipType!]!
+}
+
+type WorkspaceType {
+  businessType: String
+  createdAt: String!
+  id: ID!
+  name: String!
+  ownerId: ID!
+  status: String!
+}

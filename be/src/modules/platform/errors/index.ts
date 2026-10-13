@@ -1,6 +1,6 @@
-export type { DomainErrorInit, ErrorDescription, ErrorKind, ErrorParams } from "./errors.contracts"
+export type { DomainErrorInit, ErrorKind, ErrorParams } from "./errors.contracts"
 export { DomainError } from "./domain.error"
-export { InjectErrorsService } from "./errors.decorators"
+export { ERRORS_SERVICE, InjectErrorsService } from "./errors.decorators"
 export { ErrorsFilter } from "./errors.filter"
 export { ErrorsModule } from "./errors.module"
 export type { ErrorsService } from "./errors.service"
