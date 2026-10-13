@@ -41,6 +41,7 @@ export class LoyaltyModule extends ConfigurableModuleClass {
                 LoyaltyApiService,
             ],
             exports: [
+                LoyaltyCampaignWorkbenchService,
                 LoyaltyBoardService,
                 LoyaltySetupService,
                 LoyaltyOverviewService,

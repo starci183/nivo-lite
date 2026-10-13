@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { HttpError, HttpErrorCode } from "./errors/http.error"
 import type { HttpClient, HttpRequest, HttpResponse } from "./http.port"
+import { sendPinned } from "./pinned-request.client"
 
 @Injectable()
 /** The HttpClient adapter over the global `fetch`; the only place outside a spec that calls it. */
@@ -9,6 +10,7 @@ export class FetchHttpClient implements HttpClient {
     async request(request: HttpRequest): Promise<HttpResponse> {
         const deadline = AbortSignal.timeout(request.timeoutMs)
         const signal = request.signal ? AbortSignal.any([deadline, request.signal]) : deadline
+        if (request.pin !== undefined) return this.pinned(request, request.pin, signal)
         const response = await this.send(request, signal)
         const answer = { status: response.status, headers: this.headersOf(response), url: response.url }
         if (request.read === "bytes") {
@@ -20,6 +22,22 @@ export class FetchHttpClient implements HttpClient {
         const text = await this.received(response.text())
         if (request.read === "text") return { ...answer, body: text }
         return { ...answer, body: text === "" ? undefined : this.parse(text) }
+    }
+
+    /** A request whose socket is opened to the pinned address; the body is read as the request asks. */
+    private async pinned(request: HttpRequest, pin: NonNullable<HttpRequest["pin"]>, signal: AbortSignal): Promise<HttpResponse> {
+        const answer = await sendPinned(new URL(request.url), pin, {
+            method: request.method,
+            headers: { ...this.contentTypeOf(request), ...request.headers },
+            body: this.bodyOf(request),
+            timeoutMs: request.timeoutMs,
+            signal,
+        })
+        const base = { status: answer.status, headers: answer.headers, url: request.url }
+        if (request.read === "bytes") return { ...base, body: answer.body }
+        const text = answer.body.toString("utf8")
+        if (request.read === "text") return { ...base, body: text }
+        return { ...base, body: text === "" ? undefined : this.parse(text) }
     }
 
     /** The headers as a plain map with lower-case names. */
@@ -48,6 +66,7 @@ export class FetchHttpClient implements HttpClient {
                 method: request.method,
                 headers: { ...this.contentTypeOf(request), ...request.headers },
                 body: this.bodyOf(request),
+                redirect: request.redirect ?? "follow",
                 signal,
             })
         } catch (cause) {

@@ -1,17 +1,17 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { redirect } from "next/navigation"
+import { getLocale } from "next-intl/server"
 import * as ai from "./deepseek"
 import { moduleSpec } from "./modules"
 import { getSession } from "./session"
 import { supabaseServer } from "./supabase/server"
 import { getT } from "@/i18n/server"
+import { navigation } from "@/modules/i18n"
+import { loginPath } from "@/modules/routes"
 import { system } from "@/i18n/dict/system"
 import { governance } from "@/i18n/dict/governance"
 import { translator } from "@/i18n/core"
-import { ingest } from "./core"
-import { sendCommandItem } from "./agent-commands"
 import { loadAuthority, resumeWork, runWork, type EngineCtx } from "./engine"
 import { drainAfter, engineCtx } from "./flow-ctx"
 import { customerTurn } from "./customer-turn"
@@ -51,7 +51,13 @@ const run = async <T>(fn: () => Promise<T>): Promise<Outcome<T>> => {
     }
 }
 
-const must = <T>(res: { data: T | null; error: { message: string } | null }): T => {
+/** What a database call answers: the row or the failure. */
+interface DbAnswer<T> {
+    readonly data: T | null
+    readonly error: { readonly message: string } | null
+}
+
+const must = <T>(res: DbAnswer<T>): T => {
     if (res.error) throw new Error(res.error.message)
     if (res.data === null) throw new Error("Not found")
     return res.data
@@ -75,13 +81,6 @@ const logEvent = (
 
 const postSystem = (supabase: Db, workspace_id: string, body: string, lead_id: string | null = null) =>
     supabase.from("messages").insert({ workspace_id, author_kind: "system", author_name: "NIVO", body, lead_id })
-
-const leadInput = (l: Lead): ai.LeadInput => ({
-    contact_name: l.contact_name,
-    company: l.company,
-    channel: l.channel,
-    need: l.need,
-})
 const gov = (c: EngineCtx) => translator(governance, c.locale) as (k: string) => string
 const agentInput = (a: Agent): ai.AgentInput => ({
     name: a.name,
@@ -94,14 +93,16 @@ const agentInput = (a: Agent): ai.AgentInput => ({
 
 /* ------------------------------------------------------------------ auth */
 
+/** Ends the signed-in session and sends the person to the login page of their locale. */
 export const signOut = async () => {
     const supabase = await supabaseServer()
     await supabase.auth.signOut()
-    redirect("/login")
+    navigation.redirect({ href: loginPath(), locale: await getLocale() })
 }
 
 /* ------------------------------------------------------------------ agents (modules) */
 
+/** The setup a person gives an agent: identity, role, instructions, knowledge, greeting and the approval rule. */
 export type AgentSetupInput = {
     name: string
     handle: string
@@ -172,10 +173,11 @@ export const suggestAgentSetup = async (
         return withUsage({ workspaceId: session.workspace.id }, () => ai.designModule(description))
     })
 
-export const updateAgent = async (
-    agentId: string,
-    input: Partial<AgentSetupInput> & { status?: "active" | "paused" },
-): Promise<Outcome<Agent>> =>
+/** The fields of an agent a manager may change: its setup and whether it is active. */
+type AgentUpdate = Partial<AgentSetupInput> & { status?: "active" | "paused" }
+
+/** Changes the setup or the status of an agent (manager only) and records the change in the event log. */
+export const updateAgent = async (agentId: string, input: AgentUpdate): Promise<Outcome<Agent>> =>
     run(async () => {
         await requireManager()
         const { session, supabase } = await ctx()
@@ -194,6 +196,7 @@ export const updateAgent = async (
 
 /* ------------------------------------------------------------------ agent chat (1:1) */
 
+/** The 1:1 conversations with an agent, newest first. */
 export const listConversations = async (agentId: string): Promise<AgentConversation[]> => {
     const { supabase } = await ctx()
     const { data } = await supabase
@@ -204,6 +207,7 @@ export const listConversations = async (agentId: string): Promise<AgentConversat
     return (data ?? []) as AgentConversation[]
 }
 
+/** The messages of one 1:1 conversation, oldest first. */
 export const listAgentMessages = async (conversationId: string): Promise<AgentMessage[]> => {
     const { supabase } = await ctx()
     const { data } = await supabase
@@ -314,184 +318,6 @@ export const sendAgentMessage = async (
                 .single<AgentMessage>(),
         )
         return { reply, capturedLeadId: null }
-    })
-
-/* ------------------------------------------------------------------ leads & the journey */
-
-/** Manual lead capture from the Leads screen: recorded as a manual input and handed to Sales AI through the gate. */
-export const createLead = async (
-    input: ai.LeadInput & { phone?: string; email?: string },
-): Promise<Outcome<{ leadId: string }>> =>
-    run(async () => {
-        const c = await engineCtx()
-        const t = translator(system, c.locale)
-        const contact = input.phone?.trim() || input.email?.trim() || null
-        const { event } = await ingest(
-            c.db,
-            c.ws,
-            {
-                channel: "manual",
-                kind: "lead",
-                origin: "live",
-                sender_name: input.contact_name,
-                sender_contact: contact,
-                body: input.need,
-                amount_vnd: null,
-                external_ref: `${input.channel}:${input.company}`,
-            },
-            (n) => t("duplicateBlocked", { n }),
-        )
-        const item = await sendCommandItem(c, {
-            from: "owner",
-            to: "chatbot",
-            command: "handoff_lead",
-            reason: "manual lead",
-            inboundEventId: event.id,
-            origin: "live",
-            dedupeKey: `handoff_lead:inbound:${event.id}`,
-            payload: {
-                subject_type: "inbound",
-                subject_id: event.id,
-                contact_name: input.contact_name,
-                company: input.company,
-                need: input.need,
-                contact,
-                channel_label: input.channel,
-            },
-        })
-        const leadId = item.lead_id ?? event.lead_id
-        if (!leadId)
-            throw new Error(
-                item.status === "waiting_decision"
-                    ? t("stillMissing", { fields: item.missing_fields.map((f) => gov(c)(`field_${f}`)).join(", ") })
-                    : (item.error ?? "Could not create the lead"),
-            )
-        drainAfter(c)
-        refreshAll()
-        return { leadId }
-    })
-
-const buildContext = async (supabase: Db, ws: string, lead: Lead, history: string[]) => {
-    const summary = await withUsage({ workspaceId: ws }, () => ai.summarizeContext(leadInput(lead), history))
-    await supabase.from("leads").update({ context_summary: summary }).eq("id", lead.id)
-    await logEvent(
-        supabase,
-        ws,
-        lead.id,
-        "context.summarised",
-        "NIVO AI",
-        (await getT(system))("contextCreated"),
-        summary,
-    )
-    return summary
-}
-
-/** Re-generate the context brief of a lead. */
-export const refreshContext = async (leadId: string): Promise<Outcome<string>> =>
-    run(async () => {
-        const { session, supabase } = await ctx()
-        const lead = must(await supabase.from("leads").select("*").eq("id", leadId).single<Lead>())
-        const events = ((await supabase.from("events").select("summary").eq("lead_id", leadId)).data ?? []).map(
-            (e) => e.summary as string,
-        )
-        const summary = await buildContext(supabase, session.workspace.id, lead, events)
-        refreshAll()
-        return summary
-    })
-
-const proposeOwner = async (supabase: Db, ws: string, ownerName: string, leadId: string) => {
-    const lead = must(await supabase.from("leads").select("*").eq("id", leadId).single<Lead>())
-    const all = ((await supabase.from("agents").select("*").eq("workspace_id", ws).eq("status", "active")).data ??
-        []) as Agent[]
-    // Leads are owned by Sales (or a human); the Chatbot captures, Accounting only receives won deals.
-    const agents = all.filter((a) => a.module === "sales").length ? all.filter((a) => a.module === "sales") : all
-    const p = await withUsage({ workspaceId: ws }, () =>
-        ai.proposeResponsibility(leadInput(lead), lead.context_summary ?? "", agents.map(agentInput), ownerName),
-    )
-    const agent = p.owner_kind === "agent" ? (agents.find((a) => a.handle === p.owner_handle) ?? agents[0]) : undefined
-    const resp = must(
-        await supabase
-            .from("responsibilities")
-            .insert({
-                workspace_id: ws,
-                lead_id: lead.id,
-                title: p.title,
-                owner_kind: agent ? "agent" : "human",
-                owner_agent_id: agent?.id ?? null,
-                owner_name: agent?.name ?? ownerName,
-                next_action: p.next_action,
-                due_at: new Date(Date.now() + Math.max(0, p.due_in_days) * 86_400_000).toISOString(),
-            })
-            .select()
-            .single<Responsibility>(),
-    )
-    await logEvent(
-        supabase,
-        ws,
-        lead.id,
-        "responsibility.assigned",
-        "NIVO AI",
-        (await getT(system))("ownerNext", { owner: resp.owner_name, next: resp.next_action }),
-        p.rationale,
-    )
-    await postSystem(
-        supabase,
-        ws,
-        (await getT(system))("ownerSet", {
-            name: lead.contact_name,
-            owner: agent ? `@${agent.handle}` : resp.owner_name,
-            next: resp.next_action,
-        }),
-        lead.id,
-    )
-    return resp
-}
-
-/** Ask AI to propose a responsibility (owner + next action) for a lead that has none. */
-export const suggestResponsibility = async (leadId: string): Promise<Outcome<Responsibility>> =>
-    run(async () => {
-        const { session, supabase } = await ctx()
-        const r = await proposeOwner(supabase, session.workspace.id, session.userName, leadId)
-        refreshAll()
-        return r
-    })
-
-/** Human edits the owner / next action / due date (assignment). owner = "human" or an agent id. */
-export const assignResponsibility = async (
-    responsibilityId: string,
-    input: { owner: "human" | string; next_action: string; due_at: string | null; title?: string },
-): Promise<Outcome<Responsibility>> =>
-    run(async () => {
-        const { session, supabase } = await ctx()
-        const agent =
-            input.owner === "human"
-                ? null
-                : must(await supabase.from("agents").select("*").eq("id", input.owner).single<Agent>())
-        const r = must(
-            await supabase
-                .from("responsibilities")
-                .update({
-                    owner_kind: agent ? "agent" : "human",
-                    owner_agent_id: agent?.id ?? null,
-                    owner_name: agent?.name ?? session.userName,
-                    next_action: input.next_action,
-                    due_at: input.due_at,
-                    ...(input.title ? { title: input.title } : {}),
-                })
-                .eq("id", responsibilityId)
-                .select()
-                .single<Responsibility>(),
-        )
-        await logEvent(
-            supabase,
-            session.workspace.id,
-            r.lead_id,
-            "responsibility.assigned",
-            session.userName,
-            (await getT(system))("ownerNext", { owner: r.owner_name, next: r.next_action }),
-        )
-        refreshAll()
-        return r
     })
 
 /**
@@ -637,137 +463,12 @@ export const decideExecution = async (
         return ex
     })
 
-/**
- * Record the outcome of the journey with its evidence (stage change). A won deal is handed from Sales to Accounting:
- * accounting.issue_invoice runs through the gate; with no agreed amount on record it asks for it (missing data).
- */
-export const recordOutcome = async (leadId: string, stage: Lead["stage"], evidence: string): Promise<Outcome<Lead>> =>
-    run(async () => {
-        const { session, supabase } = await ctx()
-        const lead = must(await supabase.from("leads").update({ stage }).eq("id", leadId).select().single<Lead>())
-        await logEvent(
-            supabase,
-            session.workspace.id,
-            leadId,
-            "outcome.recorded",
-            session.userName,
-            (await getT(system))("stageEvent", { stage: (await getT(system))(`stage_${stage}`) }),
-            evidence || null,
-        )
-        await postSystem(
-            supabase,
-            session.workspace.id,
-            (await getT(system))("stageMsg", {
-                name: lead.contact_name,
-                stage: (await getT(system))(`stage_${stage}`),
-            }),
-            leadId,
-        )
-        if (stage === "won") {
-            // SME flow: a won deal is handed from Sales to Accounting (owner of the invoice step).
-            const acc = ((
-                await supabase
-                    .from("agents")
-                    .select("*")
-                    .eq("workspace_id", session.workspace.id)
-                    .eq("module", "accounting")
-                    .eq("status", "active")
-                    .limit(1)
-            ).data ?? [])[0] as Agent | undefined
-            if (acc) {
-                await supabase.from("responsibilities").insert({
-                    workspace_id: session.workspace.id,
-                    lead_id: leadId,
-                    title: (await getT(system))("invoiceTitle", { name: lead.contact_name }),
-                    owner_kind: "agent",
-                    owner_agent_id: acc.id,
-                    owner_name: acc.name,
-                    next_action: (await getT(system))("invoiceNext"),
-                    due_at: new Date(Date.now() + 86_400_000).toISOString(),
-                })
-                await logEvent(
-                    supabase,
-                    session.workspace.id,
-                    leadId,
-                    "responsibility.assigned",
-                    "Sales Agent",
-                    (await getT(system))("handedEvent", { agent: acc.name }),
-                )
-            }
-            const c = await engineCtx()
-            await runWork(c, {
-                action: "issue_invoice",
-                subject_type: "lead",
-                subject_id: leadId,
-                lead_id: leadId,
-                origin: lead.origin ?? "live",
-                dedupeKey: `issue_invoice:lead:${leadId}`,
-                seed: { amount_vnd: null, fields: {} },
-            })
-            drainAfter(c)
-            await emitEvent(
-                session.workspace.id,
-                "deal.won",
-                {
-                    lead_id: leadId,
-                    name: lead.contact_name,
-                    company: lead.company,
-                    channel: lead.channel,
-                    need: lead.need,
-                    evidence: evidence || null,
-                },
-                `deal.won:${leadId}`,
-            )
-        }
-        refreshAll()
-        return lead
-    })
-
-/** Add the next responsibility after an outcome (keeps the loop going). */
-export const addResponsibility = async (
-    leadId: string,
-    input: { title: string; owner: "human" | string; next_action: string; due_at: string | null },
-): Promise<Outcome<Responsibility>> =>
-    run(async () => {
-        const { session, supabase } = await ctx()
-        const agent =
-            input.owner === "human"
-                ? null
-                : must(await supabase.from("agents").select("*").eq("id", input.owner).single<Agent>())
-        const r = must(
-            await supabase
-                .from("responsibilities")
-                .insert({
-                    workspace_id: session.workspace.id,
-                    lead_id: leadId,
-                    title: input.title,
-                    owner_kind: agent ? "agent" : "human",
-                    owner_agent_id: agent?.id ?? null,
-                    owner_name: agent?.name ?? session.userName,
-                    next_action: input.next_action,
-                    due_at: input.due_at,
-                })
-                .select()
-                .single<Responsibility>(),
-        )
-        await logEvent(
-            supabase,
-            session.workspace.id,
-            leadId,
-            "responsibility.assigned",
-            session.userName,
-            (await getT(system))("ownerNext", { owner: r.owner_name, next: r.next_action }),
-        )
-        refreshAll()
-        return r
-    })
-
 /* ------------------------------------------------------------------ team chat (Office) */
 
 /**
  * Post in the team chat as the signed-in member (author = their display name, staff_id = their staff row when they are one).
  * Owner and manager messages go to NIVO first: "@nivo …" grants authority (goals, policies, rules) and decisions typed in
- * chat ("đồng ý", "duyệt đơn 45 triệu", "từ chối") resume the matching waiting work; NIVO answers in the thread. A staff
+ * chat (Vietnamese phrases for agree, approve the order of 45 million, reject) resume the matching waiting work; NIVO answers in the thread. A staff
  * member who addresses NIVO that way gets a friendly "not allowed" instead.
  * Then the Chatbot checks whether the message answers a customer question it escalated (relayStaffAnswer): it counts when
  * the author is the staff member the open reply_customer item is assigned to; the Chatbot rewrites it for the customer,
@@ -875,8 +576,9 @@ export const sendTeamMessage = async (body: string): Promise<Outcome<Message[]>>
                     return out
                 }
             }
-            for (const a of agents) {
-                // "@Chatbot ghi nhớ: ..." is a note for the agent's context: proposed in its draft (always a proposal; a manager approves it in Setup).
+            /** One agent's reply, written and stored: a context note it was asked to remember, else its answer. */
+            const replyOf = async (a: Agent): Promise<Message> => {
+                // "@Chatbot remember: ..." (in Vietnamese) is a note for the agent's context: proposed in its draft (always a proposal; a manager approves it in Setup).
                 if (note) {
                     const proposed = await proposeContextNote({
                         workspaceId: ws,
@@ -890,22 +592,19 @@ export const sendTeamMessage = async (body: string): Promise<Outcome<Message[]>>
                             agent: a.name,
                             module: proposed.moduleKey,
                         })
-                        out.push(
-                            must(
-                                await supabase
-                                    .from("messages")
-                                    .insert({
-                                        workspace_id: ws,
-                                        author_kind: "agent",
-                                        author_name: a.name,
-                                        agent_id: a.id,
-                                        body: reply,
-                                    })
-                                    .select()
-                                    .single<Message>(),
-                            ),
+                        return must(
+                            await supabase
+                                .from("messages")
+                                .insert({
+                                    workspace_id: ws,
+                                    author_kind: "agent",
+                                    author_name: a.name,
+                                    agent_id: a.id,
+                                    body: reply,
+                                })
+                                .select()
+                                .single<Message>(),
                         )
-                        continue
                     }
                 }
                 const text = await withUsage({ workspaceId: ws }, async () =>
@@ -916,22 +615,26 @@ export const sendTeamMessage = async (body: string): Promise<Outcome<Message[]>>
                         brief + (await knowledgeBrief(c, a.module, body, "internal")),
                     ),
                 )
-                out.push(
-                    must(
-                        await supabase
-                            .from("messages")
-                            .insert({
-                                workspace_id: ws,
-                                author_kind: "agent",
-                                author_name: a.name,
-                                agent_id: a.id,
-                                body: text,
-                            })
-                            .select()
-                            .single<Message>(),
-                    ),
+                return must(
+                    await supabase
+                        .from("messages")
+                        .insert({
+                            workspace_id: ws,
+                            author_kind: "agent",
+                            author_name: a.name,
+                            agent_id: a.id,
+                            body: text,
+                        })
+                        .select()
+                        .single<Message>(),
                 )
             }
+            // The agents answer one after the other, in the order they were mentioned.
+            const replies = await agents.reduce<Promise<Message[]>>(
+                async (done, a) => [...(await done), await replyOf(a)],
+                Promise.resolve([]),
+            )
+            out.push(...replies)
         }
         revalidatePath("/chat")
         return out

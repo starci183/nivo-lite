@@ -3,7 +3,8 @@ export {
     DECISION_KINDS,
     KIND_KEYS,
     decisionsHref,
-    kindOf,
+    decisionKindOf,
     outcomeTone,
     splitBasis,
 } from "./decisions.shared"
+export { useDecisionHistory } from "./useDecisionHistory"

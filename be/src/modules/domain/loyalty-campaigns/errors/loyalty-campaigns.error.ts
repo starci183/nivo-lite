@@ -9,6 +9,8 @@ export enum LoyaltyCampaignsErrorCode {
     NotCreated = "LOYALTY_CAMPAIGNS_NOT_CREATED",
     /** The campaign does not belong to the selected workspace or is gone. */
     NotFound = "LOYALTY_CAMPAIGNS_NOT_FOUND",
+    /** Only a finished draft can be sent for a decision. */
+    NotReady = "LOYALTY_CAMPAIGNS_NOT_READY",
 }
 
 /** How each loyalty campaigns code travels. */
@@ -16,6 +18,7 @@ export const LOYALTY_CAMPAIGNS_ERROR_KINDS: Record<LoyaltyCampaignsErrorCode, Er
     [LoyaltyCampaignsErrorCode.NoRecipients]: "invalid",
     [LoyaltyCampaignsErrorCode.NotCreated]: "internal",
     [LoyaltyCampaignsErrorCode.NotFound]: "not-found",
+    [LoyaltyCampaignsErrorCode.NotReady]: "conflict",
 }
 
 /** The one error class of the loyalty campaigns capability. */

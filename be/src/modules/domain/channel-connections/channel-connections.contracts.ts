@@ -51,7 +51,7 @@ export interface UpdateMoneyInput {
     readonly apiKey?: string | undefined
 }
 
-/** The wizard view of a bank or payment feed; the bank display name is derived from `bankCode` by the caller. */
+/** The wizard view of a bank or payment feed. */
 export interface WizardConnection {
     /** The id of the connection. */
     readonly id: string
@@ -69,6 +69,8 @@ export interface WizardConnection {
     readonly apiKey: string
     /** The bank code. */
     readonly bankCode: string
+    /** The human name of the bank, or the upper-cased code when the bank is not listed. */
+    readonly bank: string
     /** The masked account number. */
     readonly account: string
     /** The account holder. */

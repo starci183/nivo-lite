@@ -1,4 +1,4 @@
-import { Alert, SegmentedControl, SurfaceCard, Text } from "@starci/grammar/common"
+import { SegmentedControl, SurfaceCard, Text } from "@starci/grammar/common"
 import { STACK } from "./classNames"
 
 /** Copy and state of the operating mode card. */
@@ -13,13 +13,11 @@ export interface AgentModeCardBaseProps {
         readonly sharedNote: string
         readonly isDisabled: boolean
         readonly isLoading: boolean
-        readonly failure: string
-        readonly failureTitle: string
     }
     readonly on: { readonly mode: (value: string) => void }
 }
 
-/** Draws the operating mode card: assist or autopilot, what each means and the result of the last change. */
+/** Draws the operating mode card: assist or autopilot, and what each means. */
 export const AgentModeCardBase = (props: AgentModeCardBaseProps) => (
     <SurfaceCard label={props.props.title} headingLevel={2}>
         <div className={STACK}>
@@ -42,9 +40,6 @@ export const AgentModeCardBase = (props: AgentModeCardBaseProps) => (
                 <Text size="xs" tone="muted">
                     {props.props.sharedNote}
                 </Text>
-            )}
-            {props.props.failure === "" ? null : (
-                <Alert title={props.props.failureTitle} description={props.props.failure} tone="negative" />
             )}
         </div>
     </SurfaceCard>

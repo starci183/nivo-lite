@@ -398,7 +398,9 @@
     "approveSend": "Duyệt và gửi",
     "reject": "Từ chối",
     "openLead": "Mở khách hàng",
-    "stillWaiting": "Bản nháp vẫn đang chờ quyết định."
+    "stillWaiting": "Bản nháp vẫn đang chờ quyết định.",
+    "decisionApproved": "Đã duyệt và gửi bản nháp",
+    "decisionRejected": "Đã từ chối bản nháp"
   },
   "auth": {
     "emailLabel": "Email",
@@ -512,7 +514,10 @@
     "readOnlyBody": "Chỉ chủ sở hữu và quản lý mới sửa được Giao quyền. Bạn xem được nội dung ở đây.",
     "loading": "Đang tải phần giao quyền",
     "loadFailTitle": "Chưa tải được phần giao quyền",
-    "loadFailBody": "Cài đặt giao quyền chưa sẵn sàng. Hãy thử lại sau ít phút."
+    "loadFailBody": "Cài đặt giao quyền chưa sẵn sàng. Hãy thử lại sau ít phút.",
+    "errNumber": "Nhập một số nguyên từ 0 trở lên.",
+    "staffReadOnly": "Danh sách nhân viên. Thêm hoặc ngừng nhân viên chưa dùng được.",
+    "staffInvitePerson": "Mời {name} làm thành viên"
   },
   "automations": {
     "crumbLabel": "Đường dẫn",
@@ -608,7 +613,49 @@
     "moduleEmpty": "Chưa có tự động hoá nào hợp với agent này.",
     "loading": "Đang tải...",
     "loadFailed": "Chưa tải được tự động hoá.",
-    "retry": "Thử lại"
+    "retry": "Thử lại",
+    "connectGoogle": "Kết nối Google",
+    "workspaceChip": "Workspace",
+    "missingModule": "module {name}",
+    "missingChannelCustomerChat": "một kênh chat với khách (website, Telegram hoặc Zalo)",
+    "missingConnectionGoogle": "kết nối Google",
+    "missingConnectionWebhook": "kết nối n8n / webhook",
+    "missingConnectionSmtp": "Email gửi đi",
+    "missingCapabilityHasOpeningHours": "giờ mở cửa trong thông tin cửa hàng",
+    "missingCapabilityHasDeposits": "chính sách đặt cọc",
+    "missingCapabilityHasDueDates": "hạn thanh toán (công nợ)",
+    "missingCapabilityHasAppointments": "đặt lịch hẹn",
+    "missingCapabilitySellsOnline": "bán trên sàn thương mại điện tử",
+    "missingCapabilityHasRecurringContracts": "hợp đồng định kỳ",
+    "missingCapabilityHasDelivery": "giao hàng",
+    "patternHasDeposits": "đặt cọc|tiền cọc|cọc trước|deposit",
+    "patternHasAppointments": "đặt lịch|lịch hẹn|hẹn lịch|appointment|booking",
+    "patternSellsOnline": "shopee|lazada|tiktok ?shop|tiki\\b|sàn thương mại",
+    "patternHasRecurringContracts": "hợp đồng|gia hạn|định kỳ|subscription|thuê bao",
+    "patternHasDelivery": "giao hàng|vận chuyển|giao tận nơi|\\bship\\b|freight",
+    "patternDue": "hạn thanh toán|thanh toán sau|công nợ|trả chậm|payment terms|net ?\\d+|\\d+ ngày.{0,20}thanh toán|thanh toán.{0,20}\\d+ ngày",
+    "patternHoursline": "giờ (làm việc|mở cửa)|mở cửa|opening hours|business hours",
+    "patternNegation": "(không|chưa|chẳng|\\bko\\b|\\bno\\b|without)",
+    "auditEnabled": "Bật tự động hoá: {name}",
+    "auditDisabled": "Tắt tự động hoá: {name}",
+    "auditBodysaved": "Duyệt lời nhắn tự động hoá: {name}",
+    "auditStreak": "{count} lần duyệt liên tiếp không sửa.",
+    "auditAutosendgranted": "Chủ shop cho phép \"{name}\" tự gửi",
+    "auditAutosenddeclined": "Chủ shop chưa cho \"{name}\" tự gửi",
+    "faultAutomationsComingSoon": "Mẫu này sắp có.",
+    "faultAutomationsRequirementMissing": "Chưa bật được: còn thiếu yêu cầu của mẫu này.",
+    "faultAutomationsNoMessage": "Mẫu này không gửi tin cho khách nên không có lời nhắn.",
+    "faultAutomationsBodyTooShort": "Lời nhắn quá ngắn.",
+    "faultAutomationsBodyUnknownVariable": "Lời nhắn có chỗ trống không dùng được.",
+    "faultAutomationsGoogleNotUsed": "Tự động hoá này không dùng Google.",
+    "faultAutomationsGoogleAccountUnknown": "Không tìm thấy tài khoản Google này.",
+    "faultAutomationsTrustNotOffered": "Chưa đến lúc đề xuất tự gửi.",
+    "faultAutomationsNothingToChange": "Không có thay đổi nào để lưu.",
+    "faultAutomationsPipelineOff": "Hãy bật tự động hoá này trước.",
+    "faultAutomationsRunNowUnavailable": "Mẫu này không chạy thử được.",
+    "faultAutomationsNotSaved": "Không lưu được tự động hoá này.",
+    "faultRefused": "Chỉ chủ shop và quản lý mới chỉnh được tự động hoá.",
+    "faultGeneric": "Chưa làm được. Thử lại sau ít phút."
   },
   "billing": {
     "allWorkspaces": "Tất cả workspace",
@@ -673,7 +720,11 @@
     "modOther": "Khác",
     "errForbidden": "Chỉ chủ sở hữu hoặc quản lý mới gia hạn được.",
     "errGeneric": "Có lỗi xảy ra. Vui lòng thử lại.",
-    "errCustomPlan": "Gói Enterprise được gia hạn theo hợp đồng với NIVO."
+    "errCustomPlan": "Gói Enterprise được gia hạn theo hợp đồng với NIVO.",
+    "paymentQueued": "Yêu cầu thanh toán đã được xếp hàng.",
+    "paymentReady": "Mã thanh toán đã sẵn sàng.",
+    "paymentFailed": "Yêu cầu thanh toán thất bại. Vui lòng thử lại.",
+    "loading": "Đang tải thông tin thanh toán…"
   },
   "brain": {
     "crumbLabel": "Đường dẫn",
@@ -1636,8 +1687,14 @@
     "stepImport": "Nhập dữ liệu",
     "stepAgent": "Gắn với agent",
     "fieldName": "Tên lần nhập",
+    "nameTooShort": "Hãy đặt tên cho lần nhập này (ít nhất 2 ký tự).",
     "fieldNameHint": "Ví dụ: Khách hàng 2026. Bạn có thể tạo nhiều lần nhập.",
     "fieldEntity": "Các dòng là gì",
+    "starterCustomer": "Họ tên|SĐT|Email|Địa chỉ",
+    "starterOrder": "Mã đơn|Khách hàng|Ngày|Tổng tiền",
+    "starterProduct": "Mã|Tên sản phẩm|Giá|Tồn kho",
+    "starterTransaction": "Mã|Ngày|Nội dung|Số tiền",
+    "starterOther": "Mã|Tên|Ghi chú",
     "entityCustomer": "Khách hàng",
     "entityOrder": "Đơn hàng",
     "entityProduct": "Sản phẩm",
@@ -1778,7 +1835,16 @@
     "every_1440": "Mỗi 24 giờ",
     "saved": "Đã lưu.",
     "agentTitle": "Những trợ lý nào được đọc dữ liệu này",
-    "loading": "Đang tải..."
+    "loading": "Đang tải...",
+    "needName": "Đặt tên cho kết nối.",
+    "needHost": "Nhập địa chỉ máy chủ.",
+    "badPort": "Cổng phải từ 1 đến 65535.",
+    "needDatabase": "Nhập tên cơ sở dữ liệu.",
+    "needUser": "Nhập tên người dùng.",
+    "needPassword": "Nhập mật khẩu của người dùng này.",
+    "engine_postgres": "PostgreSQL",
+    "engine_mysql": "MySQL",
+    "engine_mssql": "SQL Server"
   },
   "connectorImap": {
     "stepAccount": "Hộp thư và đăng nhập",
@@ -1817,6 +1883,11 @@
     "testOk": "Đăng nhập được. Tìm thấy {n} thư mục.",
     "testNeeded": "Hãy kiểm tra kết nối để tiếp tục.",
     "testStale": "Thông tin đã đổi. Hãy kiểm tra kết nối lại.",
+    "errName": "Nhập tên kết nối.",
+    "errEmail": "Nhập địa chỉ hộp thư.",
+    "errHost": "Địa chỉ máy chủ không hợp lệ.",
+    "errPort": "Cổng phải từ 1 đến 65535.",
+    "errPassword": "Nhập mật khẩu ứng dụng của hộp thư.",
     "foldersTitle": "Thư mục cần đọc",
     "foldersHint": "Mặc định chọn INBOX. Chọn thêm thư mục khác nếu cần.",
     "sinceTitle": "Lấy thư từ bao lâu trước ở lần đầu",
@@ -1905,7 +1976,9 @@
     "testOk": "Trạng thái {status}, tìm thấy {n} bản ghi.",
     "testFields": "Các trường của bản ghi đầu tiên: {fields}.",
     "saveAndContinue": "Lưu và tiếp tục",
-    "agentTitle": "Agent được dùng API này"
+    "agentTitle": "Agent được dùng API này",
+    "baseUrlInvalid": "Địa chỉ gốc (base URL) phải bắt đầu bằng http:// hoặc https://.",
+    "authNameRequired": "Nhập tên header hoặc tham số của khoá API."
   },
   "connectorTelegramUser": {
     "stepConsent": "Tên và đồng ý",
@@ -1961,7 +2034,13 @@
     "schedule60": "Mỗi giờ",
     "scheduleHint": "Mỗi lần đọc tối đa 200 tin mới cho mỗi cuộc trò chuyện.",
     "save": "Lưu",
-    "agentTitle": "Agent được đọc những tin nhắn này"
+    "agentTitle": "Agent được đọc những tin nhắn này",
+    "errName": "Hãy đặt tên cho kết nối.",
+    "errConsent": "Hãy đồng ý với phần cam kết.",
+    "errPhone": "Số điện thoại không hợp lệ.",
+    "errCode": "Mã gồm 4 đến 8 chữ số.",
+    "errPassword": "Hãy nhập mật khẩu hai bước.",
+    "loading": "Đang tải."
   },
   "content": {
     "tabCalendar": "Lịch",
@@ -2333,7 +2412,8 @@
     "loading": "Đang tải...",
     "errorTitle": "Không tải được Credit & gói",
     "errorText": "Có lỗi khi đọc credit và thanh toán của bạn. Hãy thử lại sau ít phút.",
-    "retry": "Thử lại"
+    "retry": "Thử lại",
+    "balanceWithoutPlan": "{used} / {limit} credit"
   },
   "decisions": {
     "crumbLabel": "Đường dẫn",
@@ -4033,7 +4113,18 @@
     "flowDueOn": "hạn {date}",
     "flowPaidOn": "đã trả {date}",
     "flowUnmatchedRef": "Mã {ref}",
-    "flowDecidedBy": "{name} · {time}"
+    "flowDecidedBy": "{name} · {time}",
+    "actionQueued": "Đã xếp hàng xử lý khách hàng.",
+    "actionCompleted": "Đã xử lý khách hàng.",
+    "actionFailed": "Chưa thể xử lý khách hàng. Vui lòng thử lại.",
+    "changesSaved": "Đã lưu thay đổi.",
+    "outcomeRecorded": "Đã ghi nhận kết quả.",
+    "errStepTitle": "Nhập tiêu đề bước tiếp theo.",
+    "errStepOwner": "Chọn người phụ trách.",
+    "errStepNext": "Nhập việc tiếp theo.",
+    "errStepDue": "Chọn ngày hợp lệ.",
+    "errOutcomeEvidence": "Nhập bằng chứng cho kết quả này.",
+    "errDraft": "Nhập nội dung tin nhắn."
   },
   "leads": {
     "crumbHome": "Tổng quan",
@@ -4823,7 +4914,19 @@
     "k_notesApprove": "Duyệt và áp dụng",
     "k_notesApproving": "Đang áp dụng...",
     "k_notesApplied": "Đã áp dụng thành phiên bản {version}.",
-    "k_notesFailed": "Chưa làm được"
+    "k_notesFailed": "Chưa làm được",
+    "req_customer_chat": "một kênh chat với khách (website, Telegram hoặc Zalo)",
+    "req_customer_messaging": "một kênh nhắn tin cho khách (Telegram hoặc Zalo)",
+    "req_email": "Email gửi đi",
+    "req_calendar": "kết nối Google (lịch)",
+    "req_staff_directory": "danh sách nhân viên",
+    "req_social_publish": "đăng bài mạng xã hội",
+    "req_video_render": "dựng video",
+    "req_conn_google": "kết nối Google",
+    "req_conn_smtp": "Email gửi đi",
+    "req_conn_webhook": "kết nối n8n / webhook",
+    "req_conn_telegram": "kết nối Telegram",
+    "req_conn_zalo_oa": "kết nối Zalo OA"
   },
   "modules": {
     "eyebrow": "ĐỘI NGŨ AI",
@@ -5002,7 +5105,14 @@
     "autoHelp": "Những việc tự chạy cho agent này. Bạn bật hoặc tắt từng việc.",
     "autoLoadFailed": "Chưa tải được tự động hoá.",
     "autoRetry": "Thử lại",
-    "autoLoading": "Đang tải..."
+    "autoLoading": "Đang tải...",
+    "installed": "Đã cài đặt agent.",
+    "instanceCreated": "Đã tạo agent mới.",
+    "loadFailed": "Không tải được danh sách agent.",
+    "notFound": "Không tìm thấy agent này.",
+    "loyaltyProgramTitle": "Chương trình khách hàng thân thiết",
+    "loyaltyProgramText": "Quy tắc và thành viên của chương trình được quản lý trên bàn làm việc của agent.",
+    "loyaltyProgramOpen": "Mở bàn làm việc"
   },
   "office": {
     "crumbLabel": "Đường dẫn",
@@ -5212,7 +5322,11 @@
     "cmdNeedOrder": "mã đơn hàng (ví dụ #DH-1)",
     "cmdNeedLead": "tên khách hàng",
     "cmdNeedInvoice": "hóa đơn",
-    "cmdNeedOther": "{field}"
+    "cmdNeedOther": "{field}",
+    "retry": "Thử lại",
+    "loadEarlier": "Xem tin nhắn cũ hơn",
+    "approvalSaved": "Đã lưu quyết định",
+    "rejectionSaved": "Đã từ chối"
   },
   "onboarding": {
     "created": "Đã tạo workspace.",
@@ -5327,7 +5441,9 @@
     "switchCurrent": "Đang dùng",
     "switchNew": "Tạo workspace mới",
     "joinLinkText": "Dán liên kết lời mời bạn nhận được để tham gia một workspace.",
-    "errSignupDisabled": "Hiện chưa thể tạo workspace. Hãy nhờ đội ngũ NIVO mở workspace cho bạn."
+    "errSignupDisabled": "Hiện chưa thể tạo workspace. Hãy nhờ đội ngũ NIVO mở workspace cho bạn.",
+    "paymentLoading": "Đang tải thông tin thanh toán…",
+    "paymentCreating": "Đang tạo mã thanh toán…"
   },
   "overview": {
     "loadFailed": "Chưa tải được tổng quan. Hãy thử lại.",
@@ -5616,7 +5732,10 @@
     "menuDraftHuman": "Soạn bản nháp để bạn duyệt",
     "open": "Mở",
     "more": "Thêm",
-    "drafting": "Đang soạn"
+    "drafting": "Đang soạn",
+    "draftQueued": "Đã bắt đầu soạn",
+    "draftReady": "Bản nháp đã sẵn sàng để bạn duyệt",
+    "draftFailed": "Chưa soạn được bản nháp."
   },
   "shell": {
     "navOverview": "Tổng quan",
@@ -6537,7 +6656,12 @@
     "evidenceLog": "Đã ghi nhận chứng từ thủ công: {amount} VND ngày {date}",
     "adjustLog": "Đã thêm điều chỉnh: {note}",
     "adjustLogAmount": "Đã thêm điều chỉnh: {note} (số đúng là {amount} VND)",
-    "loadRefused": "Bạn không có quyền xem Kế toán của không gian làm việc này."
+    "loadRefused": "Bạn không có quyền xem Kế toán của không gian làm việc này.",
+    "errPayer": "Nhập tên người chuyển tiền, tối đa 200 ký tự.",
+    "errNote": "Ghi chú không được vượt quá 2.000 ký tự.",
+    "adjustSaved": "Đã ghi nhận điều chỉnh.",
+    "manualSaved": "Đã ghi nhận chứng từ.",
+    "questionDecided": "Đã ghi nhận quyết định."
   },
   "workbenchBooking": {
     "metricToday": "Lịch hẹn hôm nay",
@@ -7476,6 +7600,13 @@
     "errContractStatus": "Trạng thái phải là một trong: {list}.",
     "errContractAmount": "Giá trị phải từ 0 trở lên.",
     "evContractCreated": "{who} thêm hợp đồng cho {customer}",
-    "evContractUpdated": "{who} cập nhật hợp đồng của {customer}"
+    "evContractUpdated": "{who} cập nhật hợp đồng của {customer}",
+    "formTextTooLong": "Nhập tối đa {n} ký tự.",
+    "salesActionQueued": "Đã xếp hàng thao tác bán hàng.",
+    "salesActionCompleted": "Đã hoàn thành thao tác bán hàng.",
+    "salesActionFailed": "Thao tác bán hàng thất bại ({code}).",
+    "salesActionStopped": "Đã dừng bước bán hàng.",
+    "salesDecisionInvalid": "Điền các trường bắt buộc cho quyết định.",
+    "salesAmountInvalid": "Nhập số tiền hợp lệ."
   }
 }

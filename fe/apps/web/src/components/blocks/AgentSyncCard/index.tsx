@@ -1,8 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useAgentSync, useSave } from "@/hooks/modules"
-import { getAgentSyncStatus, resyncAgent } from "@/lib/module-settings-actions"
+import { useAgentRights, useAgentSync } from "@/hooks/agentSettings"
 import { AgentSyncCardBase } from "./component"
 
 /** The installation whose OpenClaw copy the card follows. */
@@ -17,17 +16,16 @@ const SECONDS_BEFORE_DAYS = 129_600
 /** The connected sync card: follows the OpenClaw copy of the agent and queues a sync on request. The page leaves it out for anyone but owners and managers. */
 export const AgentSyncCard = (props: AgentSyncCardProps) => {
     const t = useTranslations("modulesCore")
-    const { status, isKnown, markSyncing } = useAgentSync(props.installationId, getAgentSyncStatus)
-    const { note, isPending, save } = useSave()
-    const ago = (iso: string): string => {
-        const seconds = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000))
+    const { canEdit } = useAgentRights()
+    const { status, checkedAgoSeconds, isKnown, resync, isQueuing } = useAgentSync(props.installationId)
+    const ago = (seconds: number): string => {
         if (seconds < SECONDS_BEFORE_MINUTES) return t("syncAgo", { n: seconds })
         if (seconds < SECONDS_BEFORE_HOURS) return t("syncAgoMin", { n: Math.round(seconds / 60) })
         if (seconds < SECONDS_BEFORE_DAYS) return t("syncAgoHour", { n: Math.round(seconds / 3600) })
         return t("syncAgoDay", { n: Math.round(seconds / 86_400) })
     }
     const never = t("syncNever")
-    const when = status.checkedAt === null ? "" : ago(status.checkedAt)
+    const when = checkedAgoSeconds === null ? "" : ago(checkedAgoSeconds)
     const line = (() => {
         if (!isKnown) return { text: "…", tone: "neutral" as const }
         if (status.state === "syncing") return { text: t("syncing"), tone: "neutral" as const }
@@ -49,6 +47,7 @@ export const AgentSyncCard = (props: AgentSyncCardProps) => {
             tone: "success" as const,
         }
     })()
+    if (!canEdit) return null
     return (
         <AgentSyncCardBase
             props={{
@@ -56,23 +55,11 @@ export const AgentSyncCard = (props: AgentSyncCardProps) => {
                 lineText: line.text,
                 lineTone: line.tone,
                 resyncLabel: t("resync"),
-                isResyncDisabled: isPending || status.state === "syncing",
-                isQueuing: isPending,
+                isResyncDisabled: isQueuing || status.state === "syncing",
+                isQueuing,
                 help: t("syncHelp"),
-                noteTone: note.tone,
-                noteTitle: note.tone === "saved" ? t("saved") : t("notSaved"),
-                noteText: note.text,
             }}
-            on={{
-                resync: () =>
-                    save(async () => {
-                        const queued = await resyncAgent(props.installationId)
-                        if (queued.kind === "ok" && !queued.value)
-                            return { kind: "unavailable", code: t("resyncFailed") }
-                        if (queued.kind === "ok") markSyncing()
-                        return queued
-                    }, t("saved")),
-            }}
+            on={{ resync: () => void resync() }}
         />
     )
 }

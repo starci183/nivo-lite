@@ -3,9 +3,9 @@
 import type { BadgeTone } from "@starci/grammar/common"
 import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
-import { INVOICE_TONES } from "@/hooks/sales"
-import { useBusyRow } from "@/hooks/workbench"
-import { writeHandoffToAccounting, writeMarkShipped } from "@/modules/db/sales/write-sales-actions"
+import { useSalesShipmentForm } from "@/hooks/rhf"
+import { INVOICE_TONES, useSalesActions } from "@/hooks/sales"
+import { useSalesWorkbench } from "@/hooks/salesworkbench"
 import { leadPath } from "@/modules/routes"
 import type { HandoffRow } from "@/modules/types"
 import { SalesHandoffsBase } from "./component"
@@ -17,86 +17,62 @@ const invoiceToneOf = (row: HandoffRow): BadgeTone => {
     return row.work?.status === "failed" ? "danger" : "warning"
 }
 
-/** The orders and won deals of the hand-off surface. */
-interface SalesHandoffsProps {
-    readonly rows: ReadonlyArray<HandoffRow>
-}
-
-/** What a refused or failed command answers: its kind and, when the service was unavailable, a code. */
-interface FailedResult {
-    readonly kind: string
-    readonly code?: string
-}
-
-/** The order whose shipping drawer is open and what a person has typed into it. */
+/** The order whose shipping drawer is open. */
 interface Shipping {
     readonly key: string
     readonly orderId: string
     readonly orderNo: string | null
     readonly customer: string
-    readonly carrier: string
-    readonly tracking: string
 }
 
 /** The hand-off surface: handing an order to Accounting and marking it shipped live here, the drawing in the pure half. */
-export const SalesHandoffs = (props: SalesHandoffsProps) => {
+export const SalesHandoffs = () => {
     const t = useTranslations("workbenchSales")
     const format = useFormatter()
-    const { router, isPending, startTransition, busyKey, setBusyKey, errors, setErrors } = useBusyRow()
+    const actions = useSalesActions()
+    const { data } = useSalesWorkbench()
+    const rows = data?.handoffs ?? []
+    const form = useSalesShipmentForm()
+    const values = form.watch()
+    const [busyKey, setBusyKey] = useState<string | null>(null)
     const [notes, setNotes] = useState<Readonly<Record<string, string>>>({})
     const [shipping, setShipping] = useState<Shipping | null>(null)
-    const [shipError, setShipError] = useState<string | null>(null)
-    const activeKey = isPending ? busyKey : null
+    const shipError = form.formState.errors.carrier?.message ?? form.formState.errors.tracking?.message ?? null
+    const isPending = actions.isMutating || form.formState.isSubmitting
+    const activeKey = actions.isMutating ? busyKey : null
 
     const money = (amount: number | null): string =>
         amount === null ? "—" : format.number(amount, { style: "currency", currency: "VND", maximumFractionDigits: 0 })
     const day = (iso: string): string => format.dateTime(new Date(iso), { day: "2-digit", month: "2-digit" })
-    const failure = (result: FailedResult): string =>
-        t("actionFailed", { error: result.kind === "unavailable" ? (result.code ?? result.kind) : result.kind })
-    const run = (key: string, orderId: string) => {
-        setErrors((previous) => ({ ...previous, [key]: "" }))
+    const run = async (key: string, orderId: string) => {
+        if (actions.isMutating) return
         setNotes((previous) => ({ ...previous, [key]: "" }))
         setBusyKey(key)
-        startTransition(async () => {
-            const result = await writeHandoffToAccounting(orderId)
-            if (result.kind === "ok") {
-                setNotes((previous) => ({ ...previous, [key]: t(`handoffResult_${result.value.status}`) }))
-                router.refresh()
-            } else setErrors((previous) => ({ ...previous, [key]: failure(result) }))
-            setBusyKey(null)
-        })
+        await actions.handoffToAccounting({ id: orderId })
     }
     const openShip = (key: string) => {
-        const row = props.rows.find((candidate) => candidate.key === key)
-        if (row === undefined || row.orderId === null) return
-        setShipError(null)
+        const row = rows.find((candidate) => candidate.key === key)
+        if (row === undefined || row.orderId === null || actions.isMutating) return
+        form.reset({ carrier: "", tracking: "" })
         setShipping({
             key,
             orderId: row.orderId,
             orderNo: row.orderNo,
             customer: row.customer,
-            carrier: "",
-            tracking: "",
         })
     }
-    const submitShip = () => {
-        if (shipping === null) return
-        setShipError(null)
-        startTransition(async () => {
-            const result = await writeMarkShipped({
-                orderId: shipping.orderId,
-                carrier: shipping.carrier,
-                trackingCode: shipping.tracking,
-            })
-            if (result.kind !== "ok") {
-                setShipError(failure(result))
-                return
-            }
-            setNotes((previous) => ({ ...previous, [shipping.key]: t("shipDone", { no: result.value.orderNo }) }))
-            setShipping(null)
-            router.refresh()
+    const submitShip = form.handleSubmit(async (submitted) => {
+        if (shipping === null || actions.isMutating) return
+        setBusyKey(shipping.key)
+        const result = await actions.markOrderShipped({
+            orderId: shipping.orderId,
+            carrier: submitted.carrier,
+            trackingCode: submitted.tracking,
         })
-    }
+        if (result === undefined) return
+        setNotes((previous) => ({ ...previous, [shipping.key]: t("shipDone", { no: result.orderNo }) }))
+        setShipping(null)
+    })
 
     const itemOf = (row: HandoffRow): HandoffItemView => {
         const isFailed = row.work?.status === "failed" && !row.invoice
@@ -126,7 +102,7 @@ export const SalesHandoffs = (props: SalesHandoffsProps) => {
             errorText: isFailed && row.work?.error ? row.work.error : null,
             hint: row.orderStatus === "won_without_order" && !row.work ? t("wonNoOrderHint") : null,
             note: notes[row.key] ? notes[row.key] : null,
-            error: errors[row.key] ? errors[row.key] : null,
+            error: null,
             canRun,
             runLabel: isFailed ? t("handoffRetry") : t("handoff"),
             canShip: row.canShip,
@@ -134,6 +110,7 @@ export const SalesHandoffs = (props: SalesHandoffsProps) => {
         }
     }
 
+    if (data === null) return null
     return (
         <SalesHandoffsBase
             props={{
@@ -143,8 +120,8 @@ export const SalesHandoffs = (props: SalesHandoffsProps) => {
                 emptyBody: t("handoffEmptyBody"),
                 errorLabel: t("errorLabel"),
                 shipLabel: t("shipAction"),
-                rows: props.rows.map(itemOf),
-                isBusy: activeKey !== null,
+                rows: rows.map(itemOf),
+                isBusy: isPending,
                 ship:
                     shipping === null
                         ? null
@@ -159,20 +136,18 @@ export const SalesHandoffs = (props: SalesHandoffsProps) => {
                               carrierLabel: t("shipCarrier"),
                               carrierHint: t("shipCarrierHint"),
                               trackingLabel: t("shipTracking"),
-                              carrier: shipping.carrier,
-                              tracking: shipping.tracking,
+                              carrier: values.carrier,
+                              tracking: values.tracking,
                               error: shipError,
                               isPending,
                           },
             }}
             on={{
-                run,
+                run: (key, orderId) => void run(key, orderId),
                 ship: openShip,
-                carrier: (value) =>
-                    setShipping((previous) => (previous === null ? null : { ...previous, carrier: value })),
-                tracking: (value) =>
-                    setShipping((previous) => (previous === null ? null : { ...previous, tracking: value })),
-                submit: submitShip,
+                carrier: (value) => form.setValue("carrier", value, { shouldValidate: form.formState.isSubmitted }),
+                tracking: (value) => form.setValue("tracking", value, { shouldValidate: form.formState.isSubmitted }),
+                submit: () => void submitShip(),
                 close: () => setShipping(null),
             }}
         />

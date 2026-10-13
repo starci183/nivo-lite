@@ -1,4 +1,9 @@
-import type { ExplainScheduleOutput, ProposeWeekOutput, RequestOutput } from "@modules/domain/shifts"
+import type {
+    ExplainScheduleOutput,
+    ProposeWeekOutput,
+    ReassignShiftOutput,
+    RequestOutput,
+} from "@modules/domain/shifts"
 import type { AddShiftsDraftShiftRequest } from "../../application/add-shifts-draft-shift.contracts"
 import type { ExplainShiftsScheduleRequest } from "../../application/explain-shifts-schedule.contracts"
 import type { ProposeShiftsWeekRequest } from "../../application/propose-shifts-week.contracts"
@@ -10,6 +15,7 @@ import type { ExplainScheduleType } from "./dto/explain-schedule.type"
 import type { ProposeShiftsWeekInput } from "./dto/propose-shifts-week.input"
 import type { ProposeWeekType } from "./dto/propose-week.type"
 import type { ReassignShiftsShiftInput } from "./dto/reassign-shifts-shift.input"
+import type { ReassignShiftsShiftType } from "./dto/reassign-shifts-shift.type"
 import type { RequestStatusType } from "./dto/request-status.type"
 import type { ShiftsScheduleRefInput } from "./dto/shifts-schedule-ref.input"
 import type { ShiftsShiftRefInput } from "./dto/shifts-shift-ref.input"
@@ -33,13 +39,13 @@ export const toExplainShiftsScheduleRequest = (
 export const toReassignShiftsShiftRequest = (
     workspaceId: string,
     input: ReassignShiftsShiftInput,
-): ReassignShiftsShiftRequest => ({ workspaceId, shiftId: input.shiftId, staffId: input.staffId ?? null })
+): ReassignShiftsShiftRequest => ({ workspaceId, shiftId: input.shiftId, staffId: input.staffId })
 
 /** Maps the GraphQL input to the draft shift request of the workspace it names. */
 export const toAddShiftsDraftShiftRequest = (
     workspaceId: string,
     input: AddShiftsDraftShiftInput,
-): AddShiftsDraftShiftRequest => ({ workspaceId, ...input, staffId: input.staffId ?? null })
+): AddShiftsDraftShiftRequest => ({ workspaceId, ...input })
 
 /** Maps the GraphQL input to the draft shift removal request of the workspace it names. */
 export const toRemoveShiftsDraftShiftRequest = (
@@ -61,6 +67,13 @@ export const toProposeWeekType = (result: ProposeWeekOutput): ProposeWeekType =>
     open: result.open,
     short: result.short,
     costVnd: result.costVnd,
+    ms: result.ms,
+    iterations: result.iterations,
+})
+
+/** Maps the reassignment outcome to the GraphQL type. */
+export const toReassignShiftsShiftType = (result: ReassignShiftOutput): ReassignShiftsShiftType => ({
+    warnings: [...result.warnings],
 })
 
 /** Maps the explanation to the GraphQL type. */
