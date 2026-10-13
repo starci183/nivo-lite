@@ -54,3 +54,28 @@ export type {
     DecisionRecord,
     GateReason,
 } from "./decisions"
+export type {
+    AttentionKind,
+    AttentionRow,
+    AutoActivity,
+    SalesContract,
+    SalesContractStatus,
+    HandoffRow,
+    SalesConversion,
+    SalesDeal,
+    SalesDecision,
+    SalesMetrics,
+    SalesWorkbenchData,
+} from "./sales"
+export type {
+    LeadGenComment,
+    LeadGenHandoff,
+    LeadGenLead,
+    LeadGenMetrics,
+    LeadGenSource,
+    LeadGenWorkbenchData,
+    LeadOrigin,
+    LeadPlatform,
+    LeadScore,
+    LeadSourceKind,
+} from "./leadgen"

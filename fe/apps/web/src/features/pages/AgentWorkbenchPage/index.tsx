@@ -2,17 +2,6 @@ import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { notFound } from "next/navigation"
 import type { ReactNode } from "react"
-import WorkbenchContent from "@/features/pages/ContentWorkbenchPage"
-import WorkbenchInventory from "@/features/module-inventory"
-import WorkbenchAccounting from "@/features/workbench-accounting"
-import WorkbenchLoyalty from "@/features/module-loyalty"
-import WorkbenchChatbot from "@/features/workbench-chatbot"
-import { VideoWorkbenchPage as WorkbenchVideo } from "@/features/pages/VideoWorkbenchPage"
-import WorkbenchHiring from "@/features/module-hiring"
-import WorkbenchSales from "@/features/workbench-sales"
-import WorkbenchBooking from "@/features/module-booking"
-import WorkbenchShifts from "@/features/module-shifts"
-import WorkbenchLeadGen from "@/features/module-lead-gen"
 import { getInstallationById } from "@/lib/modules-core"
 import { MODULE_REGISTRY, isModuleKey } from "@/modules/catalog"
 import { agentHref } from "@/modules/installations"
@@ -32,28 +21,15 @@ type AgentWorkbenchPageProps = {
     readonly tab: string | null
     /** The `focus` of the query: the record a waiting row leads to. */
     readonly focus: string | null
+    /** The workbench of each module by the workbench key of its catalogue entry; the route registers them. A module without one shows the pending state. */
+    readonly workbenches: Readonly<Record<string, WorkbenchComponent>>
 }
 
 /**
  * A workbench is a server component (it may be async). It receives the tab, the focus and the installation it is opened for; a
  * multi-instance type scopes its data to that installation, a single-instance type may ignore it.
  */
-type WorkbenchComponent = (props: Record<string, unknown>) => ReactNode | Promise<ReactNode>
-
-/** The workbench of each module, by the workbench key of its catalogue entry. A module without a line shows the pending state. */
-const WORKBENCHES: Readonly<Record<string, WorkbenchComponent>> = {
-    chatbot: WorkbenchChatbot,
-    sales: WorkbenchSales,
-    loyalty: WorkbenchLoyalty,
-    accounting: WorkbenchAccounting,
-    content: WorkbenchContent,
-    inventory: WorkbenchInventory,
-    booking: WorkbenchBooking,
-    video: WorkbenchVideo,
-    hiring: WorkbenchHiring,
-    shifts: WorkbenchShifts,
-    lead_gen: WorkbenchLeadGen,
-}
+export type WorkbenchComponent = (props: Record<string, unknown>) => ReactNode | Promise<ReactNode>
 
 /** The workbench slot of one instance: the working screen of the module scoped to the instance, or the pending state. */
 export const AgentWorkbenchPage = async (props: AgentWorkbenchPageProps) => {
@@ -61,7 +37,7 @@ export const AgentWorkbenchPage = async (props: AgentWorkbenchPageProps) => {
     const installation = await getInstallationById(props.installationId)
     if (!installation || installation.moduleKey !== props.module) notFound()
     const key = MODULE_REGISTRY[props.module].workbench
-    const Workbench = key === null ? undefined : WORKBENCHES[key]
+    const Workbench = key === null ? undefined : props.workbenches[key]
     if (Workbench !== undefined) return <Workbench tab={props.tab} focus={props.focus} installation={installation} />
     const t = await getTranslations("modulesCore")
     return (

@@ -3894,6 +3894,9 @@ isOneToOne: false
               "created_at": string,"display_name": string,"email": string,"last_sign_in_at": string,"role": string,"staff_id": string,"status": string,"user_id": string
             }[]
                            },
+"zalo_authorization_return":
+{ Args: { "p_code": string; "p_oa_id"?: string; "p_state": string }; Returns: string
+                           },
 "zalo_refresh_tick":
 { Args: Record<PropertyKey, never>; Returns: number
                            }
