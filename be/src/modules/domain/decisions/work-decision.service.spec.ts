@@ -1,9 +1,13 @@
-import { builder, mock } from "@starci/jest-preset"
+import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
+import { LeadReadService } from "@modules/domain/leads"
+import { MessagesService } from "@modules/domain/messages"
 import { ExecutionsService } from "@modules/domain/executions"
 import type { ExecutionRow } from "@modules/domain/executions"
+import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import type { Decider, WorkItem } from "./decisions.contracts"
@@ -106,6 +110,10 @@ const build = async (setup: Setup = {}) => {
             { provide: WorkEngineService, useValue: mock<WorkEngineService>({ resumeWork }) },
             { provide: ExecutionsService, useValue: mock<ExecutionsService>({ find, settle }) },
             { provide: EvidenceService, useValue: mock<EvidenceService>({ log }) },
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: mockEntityManager() },
+            { provide: ResponsibilityJournalService, useValue: mock<ResponsibilityJournalService>() },
+            { provide: LeadReadService, useValue: mock<LeadReadService>() },
+            { provide: MessagesService, useValue: mock<MessagesService>() },
         ],
     }).compile()
     return { service: moduleRef.get(WorkDecisionService), resumeWork, find, settle, log, done, sendCommand, require }

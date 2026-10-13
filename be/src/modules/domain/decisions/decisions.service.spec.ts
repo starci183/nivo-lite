@@ -4,13 +4,11 @@ import { Test } from "@nestjs/testing"
 import { AuthorityService } from "@modules/domain/authority"
 import type { AuthorityProfile } from "@modules/domain/authority"
 import { InvoicesService } from "@modules/domain/invoices"
-import { StaffService } from "@modules/domain/staff"
 import { TransactionsService } from "@modules/domain/transactions"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import type { AuthorityRuleRecord, RuleChange } from "@modules/domain/authority-rules"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
-import { WorkItemsService } from "@modules/domain/work-items"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { WorkItem } from "./decisions.contracts"
 import type { ListWorkItemsQuery } from "./decisions-views.contracts"
@@ -112,8 +110,6 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: EvidenceService, useValue: evidence },
             { provide: AuthorityService, useValue: authority },
             { provide: AuthorityRulesService, useValue: rules },
-            { provide: WorkItemsService, useValue: mock<WorkItemsService>() },
-            { provide: StaffService, useValue: mock<StaffService>() },
             { provide: InvoicesService, useValue: mock<InvoicesService>() },
             { provide: TransactionsService, useValue: mock<TransactionsService>() },
         ],

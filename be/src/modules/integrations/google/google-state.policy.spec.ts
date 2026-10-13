@@ -70,7 +70,7 @@ describe("signState and verifyState", () => {
         expect(verifyState(KEY, signedBody({ w: "a", u: "b", r: "/x", e: NOW + 5 }), NOW)).not.toBeNull()
         expect(verifyState(KEY, signedBody({ w: 1, u: "b", r: "/x", e: NOW + 5 }), NOW)).toBeNull()
         expect(verifyState(KEY, signedBody({ w: "a", u: "b", r: "/x", e: NOW + 5, p: 3 }), NOW)).toBeNull()
-        expect(verifyState(KEY, signedBody(["x"] as unknown as object), NOW)).toBeNull()
+        expect(verifyState(KEY, signedBody(["x"]), NOW)).toBeNull()
         const notJson = Buffer.from("not json").toString("base64url")
         expect(
             verifyState(

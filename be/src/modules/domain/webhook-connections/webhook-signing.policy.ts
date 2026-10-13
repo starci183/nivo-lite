@@ -4,7 +4,7 @@ import type { WebhookEvent } from "./webhook-connections.contracts"
 
 /** True for one of the outgoing events. */
 export const isWebhookEvent = (value: unknown): value is WebhookEvent =>
-    typeof value === "string" && (WEBHOOK_EVENTS as ReadonlyArray<string>).includes(value)
+    typeof value === "string" && WEBHOOK_EVENTS.some((event) => event === value)
 
 /** The distinct valid events of a list, in the order given. */
 export const pickEvents = (events: ReadonlyArray<string>): Array<WebhookEvent> => [

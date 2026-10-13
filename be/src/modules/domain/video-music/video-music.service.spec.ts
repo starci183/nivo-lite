@@ -1,12 +1,28 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
+import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { VideoMusicErrorCode } from "./errors/video-music.error"
 import type { MusicStore } from "./video-music.contracts"
+import { MUSIC_STORE } from "./video-music.decorators"
 import { VideoMusicLogEvent } from "./video-music.log-events"
 import { VideoMusicService } from "./video-music.service"
+
+const build = async () => {
+    const store = mock<MusicStore>()
+    const logger = mock<Logger>()
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            VideoMusicService,
+            { provide: MUSIC_STORE, useValue: store },
+            { provide: LOGGER, useValue: logger },
+        ],
+    }).compile()
+    return { service: moduleRef.get(VideoMusicService), store, logger }
+}
 
 describe("VideoMusicService", () => {
     let dir: string
@@ -22,22 +38,26 @@ describe("VideoMusicService", () => {
     })
 
     it("uploads every bed to the music folder of the media bucket and logs the paths", async () => {
-        const store = mock<MusicStore>()
+        const { service, store, logger } = await build()
         store.upload.mockResolvedValue({ error: null })
-        const logger = mock<Logger>()
 
-        const written = await new VideoMusicService(store, logger).upload(dir)
+        const written = await service.upload(dir)
 
         expect(written).toEqual(["music/sunny-pop.mp3", "music/calm-glow.mp3", "music/bold-beat.mp3"])
-        expect(store.upload).toHaveBeenCalledWith("media", "music/calm-glow.mp3", Buffer.from("calm-glow"), "audio/mpeg")
+        expect(store.upload).toHaveBeenCalledWith(
+            "media",
+            "music/calm-glow.mp3",
+            Buffer.from("calm-glow"),
+            "audio/mpeg",
+        )
         expect(logger.info).toHaveBeenCalledWith(VideoMusicLogEvent.Uploaded, { bucket: "media", paths: written })
     })
 
     it("fails with the storage error of the bed the store refused", async () => {
-        const store = mock<MusicStore>()
+        const { service, store } = await build()
         store.upload.mockResolvedValue({ error: new Error("bucket missing") })
 
-        await expect(new VideoMusicService(store, mock<Logger>()).upload(dir)).rejects.toMatchObject({
+        await expect(service.upload(dir)).rejects.toMatchObject({
             code: VideoMusicErrorCode.StorageFailed,
             params: { path: "music/sunny-pop.mp3" },
         })
