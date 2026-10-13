@@ -1,10 +1,10 @@
+import type { GraphQLResponse } from "@/modules/types"
 import { createClient } from "@supabase/supabase-js"
 import { supabaseAnonKey, supabaseUrl } from "@/modules/config"
 import { APP_ROUTES, AUTH_ROUTES, safeNext } from "@/modules/routes"
 import { isRateLimited, parseEmailRequest, parsePassword, parseSignUp } from "./auth.mapper"
 import { authClient } from "./client"
 import { authFailure, authOk, failureOf } from "./outcome"
-import type { AuthOutcome } from "./outcome"
 
 /** Where a person lands after signing in when no safe destination was asked for: the workspaces home. */
 const HOME_PATH = AUTH_ROUTES.workspaces
@@ -26,7 +26,7 @@ interface SignInInput {
 }
 
 /** Signs in with e-mail and password; the browser client writes the session cookie. */
-export const signInWithPassword = async (input: SignInInput): Promise<AuthOutcome<SignInResult>> => {
+export const signInWithPassword = async (input: SignInInput): Promise<GraphQLResponse<SignInResult>> => {
     const parsed = parseEmailRequest({ email: input.email })
     if (parsed === undefined || input.password === "" || input.password.length > 256) {
         return authFailure("invalid", "sign-in-input")
@@ -48,7 +48,7 @@ export interface SignUpResult {
 }
 
 /** Creates a password account; e-mail links come back through /auth/confirm. */
-export const signUp = async (input: unknown): Promise<AuthOutcome<SignUpResult>> => {
+export const signUp = async (input: unknown): Promise<GraphQLResponse<SignUpResult>> => {
     const parsed = parseSignUp(input)
     if (parsed === undefined) return authFailure("invalid", "sign-up-input")
     const origin = window.location.origin
@@ -65,7 +65,7 @@ export const signUp = async (input: unknown): Promise<AuthOutcome<SignUpResult>>
 }
 
 /** Sends the sign-up confirmation e-mail again. */
-export const resendConfirmation = async (input: unknown): Promise<AuthOutcome<true>> => {
+export const resendConfirmation = async (input: unknown): Promise<GraphQLResponse<true>> => {
     const parsed = parseEmailRequest(input)
     if (parsed === undefined) return authFailure("invalid", "email")
     const origin = window.location.origin
@@ -78,18 +78,18 @@ export const resendConfirmation = async (input: unknown): Promise<AuthOutcome<tr
 }
 
 /** Sends a password-reset link. A well-formed e-mail always answers ok so accounts cannot be enumerated; only a rate limit is reported. */
-export const requestPasswordReset = async (input: unknown): Promise<AuthOutcome<true>> => {
+export const requestPasswordReset = async (input: unknown): Promise<GraphQLResponse<true>> => {
     const parsed = parseEmailRequest(input)
     if (parsed === undefined) return authFailure("invalid", "email")
     const { error } = await authClient().auth.resetPasswordForEmail(parsed.email, {
         redirectTo: confirmUrl(window.location.origin, AUTH_ROUTES.resetPassword),
     })
     const failed = failureOf(error)
-    return failed !== undefined && isRateLimited(failed.code) ? failed : authOk(true)
+    return failed !== undefined && isRateLimited(failed.error ?? "") ? failed : authOk(true)
 }
 
 /** Sets a new password for the person who arrived through the recovery link, then ends every session so they sign in again. */
-export const updatePassword = async (input: unknown): Promise<AuthOutcome<true>> => {
+export const updatePassword = async (input: unknown): Promise<GraphQLResponse<true>> => {
     const parsed = parsePassword(input)
     if (parsed === undefined) return authFailure("invalid", "weak_password")
     const client = authClient()
@@ -103,7 +103,7 @@ export const updatePassword = async (input: unknown): Promise<AuthOutcome<true>>
 }
 
 /** Starts a Google sign-in: answers the provider URL for the browser to open; the return trip lands on /auth/callback. */
-export const startOAuth = async (next: string | undefined): Promise<AuthOutcome<{ readonly url: string }>> => {
+export const startOAuth = async (next: string | undefined): Promise<GraphQLResponse<{ readonly url: string }>> => {
     const origin = window.location.origin
     const safe = safeNext(next, origin)
     const redirectTo = `${origin}${APP_ROUTES.authCallback}${safe === undefined ? "" : `?next=${encodeURIComponent(safe)}`}`
@@ -117,7 +117,7 @@ export const startOAuth = async (next: string | undefined): Promise<AuthOutcome<
 }
 
 /** Ends the browser session, including an already-anonymous one. */
-export const endSession = async (): Promise<AuthOutcome<true>> => {
+export const endSession = async (): Promise<GraphQLResponse<true>> => {
     const { error } = await authClient().auth.signOut()
     if (error === null || error.status === 401) return authOk(true)
     return authFailure("unavailable", error.code ?? "sign-out")
@@ -130,7 +130,7 @@ export interface PasswordChange {
 }
 
 /** Sends the confirmation link for a new sign-in address; the address changes only after the link is opened. */
-export const changeEmail = async (email: string): Promise<AuthOutcome<true>> => {
+export const changeEmail = async (email: string): Promise<GraphQLResponse<true>> => {
     const parsed = parseEmailRequest({ email })
     if (parsed === undefined) return authFailure("invalid", "email-input")
     const client = authClient()
@@ -148,7 +148,7 @@ export const changeEmail = async (email: string): Promise<AuthOutcome<true>> => 
  * Changes the password. The current one is verified on a throwaway client (the browser session is untouched) that is closed
  * again so it never shows up in the device list; then the new one is set.
  */
-export const changePassword = async (input: PasswordChange): Promise<AuthOutcome<true>> => {
+export const changePassword = async (input: PasswordChange): Promise<GraphQLResponse<true>> => {
     const client = authClient()
     const { data } = await client.auth.getSession()
     const email = data.session?.user.email
@@ -169,7 +169,7 @@ export const changePassword = async (input: PasswordChange): Promise<AuthOutcome
 }
 
 /** Signs the account out of every other device and keeps this one. */
-export const signOutOthers = async (): Promise<AuthOutcome<true>> => {
+export const signOutOthers = async (): Promise<GraphQLResponse<true>> => {
     const { error } = await authClient().auth.signOut({ scope: "others" })
     if (error === null) return authOk(true)
     return authFailure(error.status === 401 ? "refused" : "unavailable", error.code ?? "sign-out-others")

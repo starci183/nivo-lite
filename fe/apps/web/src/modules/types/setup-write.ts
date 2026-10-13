@@ -1,5 +1,5 @@
-import type { Scope } from "@/lib/brain/shared"
-import type { RuleMode } from "@/lib/flow-types"
+import type { FactScope, FactSubjectType } from "./brain"
+import type { FlowRuleMode } from "./flow"
 
 /** The instance whose chat this is, when its type allows several (one Chatbot per branch): a fact may be kept for this instance only. */
 export interface SetupWriteInstance {
@@ -44,8 +44,8 @@ export interface SetupWriteWords {
     readonly keep: string
     readonly both: string
     readonly conflictBody: (current: string) => string
-    readonly scopeLabel: (scope: Scope) => string
-    readonly modeLabel: (mode: RuleMode) => string
+    readonly scopeLabel: (scope: FactScope) => string
+    readonly modeLabel: (mode: FlowRuleMode) => string
     readonly money: (amount: number | null) => string
     readonly actionLabel: (action: string) => string
     readonly actionRules: (action: string) => SetupActionRules
@@ -106,3 +106,82 @@ export interface SetupWriteProposal {
     readonly canConfirm: boolean
     readonly isPending: boolean
 }
+
+/** Where a confirm card stands. */
+export type SetupWriteStatus = "proposed" | "applied" | "rejected" | "superseded"
+
+/** How an owner settled a fact that disagrees with the one in force: replace it (history is kept), keep it, or keep both for different situations. */
+export type SetupResolution = "replace" | "keep" | "both"
+
+/** What a decided card did. */
+interface SetupWriteResult {
+    readonly outcome: string
+    readonly factId?: string
+    readonly resolution?: SetupResolution
+    readonly ruleId?: string
+}
+
+/** What every confirm card carries. */
+interface SetupWriteBase {
+    readonly id: string
+    readonly setupSessionId: string
+    readonly sourceMessageId: string | null
+    readonly gateKey: string
+    readonly status: SetupWriteStatus
+    readonly result: SetupWriteResult | null
+    readonly decidedBy: string | null
+    readonly createdAt: string
+}
+
+/** A fact the owner is asked to confirm: subject, attribute, value and scope; `gapId` links it to the customer question it answers. */
+export interface SetupFactWrite extends SetupWriteBase {
+    readonly kind: "fact"
+    readonly payload: {
+        readonly subjectType: FactSubjectType
+        readonly subjectLabel: string
+        readonly attributeLabel: string
+        readonly value: string
+        readonly scope: FactScope
+        readonly gapId?: string
+    }
+    /** The value in force for the same subject and attribute, when there is one. */
+    readonly current: {
+        readonly value: string
+        readonly scope: FactScope
+        readonly modules: ReadonlyArray<string>
+    } | null
+}
+
+/** A rule change the owner is asked to confirm: the complete resulting rule (the unchanged half is copied from the rule in force). */
+export interface SetupRuleWrite extends SetupWriteBase {
+    readonly kind: "rule"
+    readonly payload: {
+        readonly action: string
+        readonly field: "mode" | "limit_vnd"
+        readonly mode: FlowRuleMode
+        readonly limitVnd: number | null
+    }
+    /** The rule in force. */
+    readonly current: { readonly mode: FlowRuleMode; readonly limitVnd: number | null } | null
+}
+
+/** One confirm card of the setup chat. */
+export type SetupWrite = SetupFactWrite | SetupRuleWrite
+
+/** The owner's decision on one card, with their edits. */
+export type SetupWriteDecision =
+    | { readonly decision: "reject" }
+    | {
+          readonly decision: "confirm"
+          readonly fact?: {
+              readonly value: string
+              readonly scope: FactScope
+              readonly subjectLabel?: string
+              readonly attributeLabel?: string
+          }
+          readonly rule?: { readonly mode: FlowRuleMode; readonly limitVnd: number | null }
+          readonly resolution?: SetupResolution
+          readonly situation?: string
+          /** Multi-instance agent (one Chatbot per branch): the fact is for this instance only instead of every instance of the type. */
+          readonly onlyThisAgent?: boolean
+      }

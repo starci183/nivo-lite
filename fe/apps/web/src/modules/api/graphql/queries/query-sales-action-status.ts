@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QuerySalesActionStatusArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { SalesActionStatusQuery, SalesActionStatusQueryVariables } from "../__generated__/graphql"
 
 /** Generated input of the salesActionStatus query. */
-type QuerySalesActionStatusRequest = QuerySalesActionStatusArgs["input"]
+type QuerySalesActionStatusRequest = WireInput<SalesActionStatusQueryVariables["input"]>
 
 /** Generated response of the salesActionStatus query. */
-type QuerySalesActionStatusResponse = Pick<Query, "salesActionStatus">
+type QuerySalesActionStatusResponse = SalesActionStatusQuery
 
 type Document = TypedDocumentNode<QuerySalesActionStatusResponse, InputVariables<QuerySalesActionStatusRequest>>
 

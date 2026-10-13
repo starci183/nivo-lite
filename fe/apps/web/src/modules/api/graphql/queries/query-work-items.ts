@@ -1,15 +1,13 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryWorkItemsArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { WorkItemsQuery, WorkItemsQueryVariables } from "../__generated__/graphql"
 
 /** The input of the `workItems` query. */
-export type QueryWorkItemsRequest = QueryWorkItemsArgs["input"]
+export type QueryWorkItemsRequest = WireInput<WorkItemsQueryVariables["input"]>
 
-type QueryWorkItemsResponse = Pick<Query, "workItems">
-
-const query1: TypedDocumentNode<QueryWorkItemsResponse, InputVariables<QueryWorkItemsRequest>> = gql`
+const query1: TypedDocumentNode<WorkItemsQuery, InputVariables<QueryWorkItemsRequest>> = gql`
     query WorkItems($input: ListWorkItemsInput!) {
         workItems(input: $input) {
             items {
@@ -68,10 +66,7 @@ enum QueryWorkItems {
     Query1 = "query1",
 }
 
-const queryMap: Record<
-    QueryWorkItems,
-    TypedDocumentNode<QueryWorkItemsResponse, InputVariables<QueryWorkItemsRequest>>
-> = {
+const queryMap: Record<QueryWorkItems, TypedDocumentNode<WorkItemsQuery, InputVariables<QueryWorkItemsRequest>>> = {
     [QueryWorkItems.Query1]: query1,
 }
 

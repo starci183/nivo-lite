@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { QueryParams } from "../types"
-import type { Query, QueryShiftsWorkbenchArgs } from "../__generated__/schema"
+import type { QueryParams, WireInput } from "../types"
+import type { ShiftsWorkbenchQuery, ShiftsWorkbenchQueryVariables } from "../__generated__/graphql"
 
 /** The arguments of the `shiftsWorkbench` query. */
-export type QueryShiftsWorkbenchRequest = QueryShiftsWorkbenchArgs
+export type QueryShiftsWorkbenchRequest = WireInput<ShiftsWorkbenchQueryVariables>
 
 /** The response of the `shiftsWorkbench` query. */
-type QueryShiftsWorkbenchResponse = Pick<Query, "shiftsWorkbench">
+type QueryShiftsWorkbenchResponse = ShiftsWorkbenchQuery
 
 const query1: TypedDocumentNode<QueryShiftsWorkbenchResponse, QueryShiftsWorkbenchRequest> = gql`
     query ShiftsWorkbench($week: String) {
@@ -212,15 +212,24 @@ enum QueryShiftsWorkbench {
     Query1 = "query1",
 }
 
-const queryMap: Record<QueryShiftsWorkbench, TypedDocumentNode<QueryShiftsWorkbenchResponse, QueryShiftsWorkbenchRequest>> = {
+const queryMap: Record<
+    QueryShiftsWorkbench,
+    TypedDocumentNode<QueryShiftsWorkbenchResponse, QueryShiftsWorkbenchRequest>
+> = {
     [QueryShiftsWorkbench.Query1]: query1,
 }
 
 /** Apollo params for {@link queryShiftsWorkbench}. */
-type QueryShiftsWorkbenchParams = QueryParams<QueryShiftsWorkbench, QueryShiftsWorkbenchRequest> & { request: QueryShiftsWorkbenchRequest }
+type QueryShiftsWorkbenchParams = QueryParams<QueryShiftsWorkbench, QueryShiftsWorkbenchRequest> & {
+    request: QueryShiftsWorkbenchRequest
+}
 
 /** Runs the `shiftsWorkbench` query. */
-export const queryShiftsWorkbench = async ({ query = QueryShiftsWorkbench.Query1, request, signal }: QueryShiftsWorkbenchParams) => {
+export const queryShiftsWorkbench = async ({
+    query = QueryShiftsWorkbench.Query1,
+    request,
+    signal,
+}: QueryShiftsWorkbenchParams) => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query], variables: request })
 }

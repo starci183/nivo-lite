@@ -1,4 +1,3 @@
-
 /** The translator of the automations messages. */
 export type AutomationsTranslator = (key: string, values?: Record<string, string | number>) => string
 
@@ -174,7 +173,7 @@ export interface AutomationsBoardView {
 /* ------------------------------------------------------------------ domain model */
 
 /** A text in both languages, as the template definitions carry it. */
-export type L = { readonly vi: string; readonly en: string }
+export type BilingualLabel = { readonly vi: string; readonly en: string }
 
 /** The module an automation belongs to. */
 export type ModuleScope = string
@@ -217,21 +216,21 @@ export type FieldDef =
     | {
           readonly key: string
           readonly kind: "number"
-          readonly label: L
-          readonly hint?: L
+          readonly label: BilingualLabel
+          readonly hint?: BilingualLabel
           readonly min: number
           readonly max: number
-          readonly suffix?: L
+          readonly suffix?: BilingualLabel
       }
     | {
           readonly key: string
           readonly kind: "text" | "email"
-          readonly label: L
-          readonly hint?: L
+          readonly label: BilingualLabel
+          readonly hint?: BilingualLabel
           readonly maxLength?: number
       }
-    | { readonly key: string; readonly kind: "time"; readonly label: L; readonly hint?: L }
-    | { readonly key: string; readonly kind: "toggle"; readonly label: L; readonly hint?: L }
+    | { readonly key: string; readonly kind: "time"; readonly label: BilingualLabel; readonly hint?: BilingualLabel }
+    | { readonly key: string; readonly kind: "toggle"; readonly label: BilingualLabel; readonly hint?: BilingualLabel }
 
 /** The authority action a customer message goes through; null sends nothing. */
 export type GateAction =
@@ -262,20 +261,20 @@ export type TemplateDef = {
     /** Exactly one owner: a module, or null for a workspace-wide automation. */
     readonly moduleKey: ModuleScope | null
     readonly icon: AutomationIconWord
-    readonly name: L
+    readonly name: BilingualLabel
     /** One line. */
-    readonly description: L
+    readonly description: BilingualLabel
     /** What starts it: an event every business has, or a schedule. `line` is the plain-words line on the card. */
-    readonly trigger: { readonly kind: "event" | "schedule"; readonly event: string; readonly line: L }
+    readonly trigger: { readonly kind: "event" | "schedule"; readonly event: string; readonly line: BilingualLabel }
     readonly requires: Requires
     readonly settings: ReadonlyArray<FieldDef>
     readonly contentMode: ContentMode
     /** The NIVO frame: what the message must never do. */
-    readonly guardrails: ReadonlyArray<L>
+    readonly guardrails: ReadonlyArray<BilingualLabel>
     /** The variable names usable in the body, without braces. */
     readonly variables: ReadonlyArray<string>
     /** The starting wording; the shop's own version is generated from its context. */
-    readonly defaultBody: L | null
+    readonly defaultBody: BilingualLabel | null
     readonly authority: { readonly action: GateAction; readonly alwaysAsk?: boolean }
     readonly defaults: PipelineConfig
 }
@@ -314,7 +313,7 @@ export type AutomationRunView = {
 export type Missing = {
     readonly kind: "module" | "channel" | "connection" | "capability"
     readonly key: string
-    readonly label: L
+    readonly label: BilingualLabel
     readonly href: string
 }
 
