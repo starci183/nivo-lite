@@ -1,9 +1,94 @@
+type AutomationCardType {
+  basedOnContext: Int
+  body: String
+  bodyStale: Boolean!
+  bodyVersion: Int!
+  comingSoon: Boolean!
+  config: JsonObject!
+  currentContext: Int
+  def: TemplateDefinitionType!
+  dismissed: Boolean!
+  enabled: Boolean!
+  gate: String
+  google: String
+  key: String!
+  lastRunAt: String
+  missing: [MissingRequirementType!]!
+  pipelineId: ID
+  proposed: Boolean!
+  runCount: Int!
+  sheetUrl: String
+  trust: TrustType!
+}
+
+type AutomationRunType {
+  createdAt: String!
+  error: String
+  evidence: String
+  finishedAt: String
+  id: ID!
+  message: String
+  pipelineId: ID!
+  status: String!
+  steps: [RunStepType!]!
+  summary: String!
+  templateKey: String!
+  triggerRef: String!
+  workItemId: ID
+}
+
+input AutomationRunsInput {
+  template: String! = ""
+}
+
+type AutomationSuggestionType {
+  key: String!
+  name: LocalizedTextType!
+  reason: LocalizedTextType!
+}
+
+input AutomationSuggestionsInput {
+  module: String! = ""
+}
+
+type AutomationsOverviewType {
+  cards: [AutomationCardType!]!
+  runs: [AutomationRunType!]!
+  sample: PreviewSampleType!
+  shop: ShopContextType!
+}
+
+type BodyProposalType {
+  body: String!
+  contextVersion: Int
+  generated: Boolean!
+}
+
 input CreateWorkspaceInput {
   name: String!
 }
 
 type CreateWorkspaceType {
   id: ID!
+}
+
+input EmitAutomationEventInput {
+  data: JsonObject!
+  dedupe: String!
+  event: String!
+}
+
+type GoogleAccountType {
+  email: String!
+  id: ID!
+  status: String!
+}
+
+scalar JsonObject
+
+type LocalizedTextType {
+  en: String!
+  vi: String!
 }
 
 type MemberType {
@@ -20,12 +105,131 @@ type MembershipType {
   workspace: WorkspaceType!
 }
 
+type MissingRequirementType {
+  key: String!
+  kind: String!
+  label: LocalizedTextType!
+}
+
 type Mutation {
   createWorkspace(input: CreateWorkspaceInput!): CreateWorkspaceType!
+  emitAutomationEvent(input: EmitAutomationEventInput!): Boolean!
+  proposeAutomationBody(input: TemplateKeyInput!): BodyProposalType!
+  runAutomationNow(input: TemplateKeyInput!): Boolean!
+  runFlow(input: RunFlowInput!): RunFlowType!
+  updateAutomationPipeline(input: UpdateAutomationPipelineInput!): AutomationCardType!
+}
+
+type PreviewSampleType {
+  neutral: JsonObject!
+  variables: JsonObject!
 }
 
 type Query {
+  automationGoogleAccounts: [GoogleAccountType!]!
+  automationRuns(input: AutomationRunsInput!): [AutomationRunType!]!
+  automationSuggestions(input: AutomationSuggestionsInput!): [AutomationSuggestionType!]!
+  automations: AutomationsOverviewType!
   myWorkspaces: [MembershipType!]!
+}
+
+input RunFlowInput {
+  kind: String!
+  payload: JsonObject!
+}
+
+type RunFlowType {
+  data: JsonObject!
+}
+
+type RunStepType {
+  detail: String
+  label: String!
+  status: String!
+}
+
+type ShopContextType {
+  hours: String!
+  shop: String!
+  tone: String!
+}
+
+type TemplateAuthorityType {
+  action: String
+  alwaysAsk: Boolean
+}
+
+type TemplateDefinitionType {
+  authority: TemplateAuthorityType!
+  contentMode: String!
+  defaultBody: LocalizedTextType
+  defaults: JsonObject!
+  description: LocalizedTextType!
+  executor: String!
+  guardrails: [LocalizedTextType!]!
+  icon: String!
+  key: String!
+  moduleKey: String
+  n8n: TemplateN8nType
+  name: LocalizedTextType!
+  pack: String!
+  position: Int!
+  requires: TemplateRequirementsType!
+  settings: [TemplateSettingType!]!
+  trigger: TemplateTriggerType!
+  variables: [String!]!
+  version: Int!
+}
+
+input TemplateKeyInput {
+  templateKey: String!
+}
+
+type TemplateN8nType {
+  audience: String!
+  data: [String!]
+  webhook: String!
+}
+
+type TemplateRequirementsType {
+  capabilities: [String!]!
+  channels: [String!]!
+  connections: [String!]!
+  modules: [String!]!
+}
+
+type TemplateSettingType {
+  hint: LocalizedTextType
+  key: String!
+  kind: String!
+  label: LocalizedTextType!
+  max: Float
+  maxLength: Int
+  min: Float
+  required: Boolean
+  suffix: LocalizedTextType
+}
+
+type TemplateTriggerType {
+  event: String!
+  kind: String!
+  line: LocalizedTextType!
+}
+
+type TrustType {
+  autoSend: Boolean!
+  offered: Boolean!
+  streak: Int!
+}
+
+input UpdateAutomationPipelineInput {
+  autoSend: Boolean
+  body: String
+  dismissed: Boolean
+  enabled: Boolean
+  googleConnectionId: ID
+  templateKey: String!
+  values: JsonObject
 }
 
 type WorkspaceType {
