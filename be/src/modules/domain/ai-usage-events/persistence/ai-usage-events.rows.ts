@@ -23,3 +23,23 @@ export interface QuotaRow {
     /** Top-up credits left, or null. */
     readonly topup_balance: number | null
 }
+
+/** One non-guide daily rollup, aggregated across kinds. */
+export interface DailyModuleUsageRow {
+    /** The day in Vietnam time, YYYY-MM-DD. */
+    readonly day: string
+    /** The module or shared usage bucket. */
+    readonly module: string
+    /** Number of calls. */
+    readonly calls: number
+    /** Prompt and completion tokens. */
+    readonly tokens: number
+    /** Model cost in USD. */
+    readonly cost_usd: number
+}
+
+/** The model cost of a workspace over a selected date range. */
+export interface RecentCostRow {
+    /** Model cost in USD, zero when there are no calls. */
+    readonly cost_usd: number
+}

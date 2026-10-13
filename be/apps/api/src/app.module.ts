@@ -70,7 +70,11 @@ import { SepayFeedHttpModule } from "@features/webhooks/sepay-feed"
 import { VietcombankHttpModule } from "@features/webhooks/vietcombank"
 import { ReconcileBankCreditQueueModule } from "@features/jobs/reconcile-bank-credit"
 import { CreatePaymentOrderQueueModule } from "@features/jobs/create-payment-order"
-import { PaymentOrderRequestsModule } from "@modules/domain/payment-order-requests"
+import {
+    PAYMENT_ORDER_REQUESTS_ERROR_KINDS,
+    PAYMENT_ORDER_REQUESTS_MESSAGES,
+    PaymentOrderRequestsModule,
+} from "@modules/domain/payment-order-requests"
 import { BILLING_ERROR_KINDS, BILLING_MESSAGES, BillingModule } from "@modules/domain/billing"
 import {
     INBOUND_EVENTS_ERROR_KINDS,
@@ -85,6 +89,18 @@ import {
 import { CREDITS_ERROR_KINDS, CREDITS_MESSAGES, CreditsModule } from "@modules/domain/credits"
 import { AI_USAGE_EVENTS_MESSAGES, AiUsageEventsModule, UsageGateService } from "@modules/domain/ai-usage-events"
 import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
+import { OrdersGraphqlModule } from "@features/api/orders"
+import { BillingGraphqlModule } from "@features/api/billing"
+import { CreditsGraphqlModule } from "@features/api/credits"
+import { AccountingGraphqlModule } from "@features/api/accounting"
+import { AdjustmentsGraphqlModule } from "@features/api/adjustments"
+import { AccountingModule } from "@modules/domain/accounting"
+import { StaffModule } from "@modules/domain/staff"
+import {
+    ACCOUNTING_ADJUSTMENTS_ERROR_KINDS,
+    ACCOUNTING_ADJUSTMENTS_MESSAGES,
+    AccountingAdjustmentsModule,
+} from "@modules/domain/accounting-adjustments"
 import { WorkspacesGraphqlModule, WorkspacesHttpModule } from "@features/api/workspaces"
 import { InboxGraphqlModule } from "@features/api/inbox"
 import { AgentChatGraphqlModule } from "@features/api/agentchat"
@@ -143,7 +159,7 @@ import {
 import {
     AI_GENERATIONS_ERROR_KINDS,
     AI_GENERATIONS_MESSAGES,
-    AI_GENERATIONS_POLL_MS as GENERATION_POLL_MS,
+    AI_GENERATIONS_POLL_MS,
     AiGenerationsModule,
     TextGeneratorService,
 } from "@modules/domain/ai-generations"
@@ -229,9 +245,9 @@ import { LlmModule } from "@modules/integrations/llm"
 import {
     SUPABASE_ACCESS_TOKEN_VERIFIER,
     SUPABASE_AUTH,
-    SUPABASE_STORAGE,
     SUPABASE_ERROR_KINDS,
     SUPABASE_OBJECTS,
+    SUPABASE_STORAGE,
     SupabaseModule,
     createSupabaseAccessTokenVerifier,
 } from "@modules/integrations/supabase"
@@ -290,7 +306,7 @@ import { EventsModule } from "@modules/domain/events"
 import {
     WORKSPACE_INVITES_ERROR_KINDS,
     WORKSPACE_INVITES_MESSAGES,
-    WorkspaceInvitesModule as InvitesModule,
+    WorkspaceInvitesModule,
 } from "@modules/domain/workspace-invites"
 import {
     WORKSPACE_MEMBERS_ERROR_KINDS,
@@ -438,6 +454,8 @@ export class AppModule {
                         BILLING_MESSAGES,
                         AGENT_CHAT_MESSAGES,
                         INBOX_SIMULATION_MESSAGES,
+                        ACCOUNTING_ADJUSTMENTS_MESSAGES,
+                        PAYMENT_ORDER_REQUESTS_MESSAGES,
                         CREDITS_MESSAGES,
                         INBOUND_EVENTS_MESSAGES,
                         PAYMENT_ORDERS_MESSAGES,
@@ -530,6 +548,8 @@ export class AppModule {
                         BILLING_ERROR_KINDS,
                         AGENT_CHAT_ERROR_KINDS,
                         INBOX_SIMULATION_ERROR_KINDS,
+                        ACCOUNTING_ADJUSTMENTS_ERROR_KINDS,
+                        PAYMENT_ORDER_REQUESTS_ERROR_KINDS,
                         CREDITS_ERROR_KINDS,
                         INBOUND_EVENTS_ERROR_KINDS,
                         PAYMENT_ORDERS_ERROR_KINDS,
@@ -603,7 +623,11 @@ export class AppModule {
                 EventsModule.register({ isGlobal: true }),
                 WorkspaceMembersModule.register({ isGlobal: true, accounts: SUPABASE_AUTH }),
                 WorkspacesModule.register({ isGlobal: true, ...options.workspaces }),
-                InvitesModule.register({ isGlobal: true, delivery: SUPABASE_AUTH, ...options.workspaceInvites }),
+                WorkspaceInvitesModule.register({
+                    isGlobal: true,
+                    delivery: SUPABASE_AUTH,
+                    ...options.workspaceInvites,
+                }),
                 ConnectionsModule.register({ isGlobal: true, ...options.connections }),
                 ConnectionGrantsModule.register({ isGlobal: true }),
                 ChannelConnectionsModule.register({ isGlobal: true }),
@@ -707,7 +731,11 @@ export class AppModule {
                     syncFreshMs: AGENTS_SYNC_FRESH_MS,
                 }),
                 AgentConnectionsModule.register({ isGlobal: true }),
-                AiGenerationsModule.register({ isGlobal: true, usage: UsageGateService, pollMs: GENERATION_POLL_MS }),
+                AiGenerationsModule.register({
+                    isGlobal: true,
+                    usage: UsageGateService,
+                    pollMs: AI_GENERATIONS_POLL_MS,
+                }),
                 OpenclawAgentSyncModule.register({ isGlobal: true, reloadSettleMs: OPENCLAW_RELOAD_SETTLE_MS }),
                 AgentToolsModule.register({
                     isGlobal: true,
@@ -733,6 +761,12 @@ export class AppModule {
                     },
                 }),
                 OrdersModule.register({ isGlobal: true }),
+                OrdersGraphqlModule,
+                StaffModule.register({ isGlobal: true }),
+                AccountingAdjustmentsModule.register({ isGlobal: true }),
+                AccountingModule.register({ isGlobal: true }),
+                AccountingGraphqlModule,
+                AdjustmentsGraphqlModule,
                 InvoicesModule.register({ isGlobal: true }),
                 TransactionsModule.register({ isGlobal: true }),
                 EmailMessagesModule.register({ isGlobal: true }),
@@ -756,9 +790,11 @@ export class AppModule {
                 PublicApiModule.register({ isGlobal: true }),
                 PaymentOrdersModule.register({ isGlobal: true }),
                 BillingModule.register({ isGlobal: true, ...options.billing }),
+                BillingGraphqlModule,
                 SepayTransactionsModule.register({ isGlobal: true }),
                 AiUsageEventsModule.register({ isGlobal: true }),
                 CreditsModule.register({ isGlobal: true }),
+                CreditsGraphqlModule,
                 ApplyBookingStatusQueueModule,
                 PaymentOrderRequestsModule.register({ isGlobal: true }),
                 ReconcileBankCreditQueueModule,

@@ -4,12 +4,19 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { noticeBody, noticeLevelOf } from "./notice.policy"
-import type { QuotaRow } from "./persistence/ai-usage-events.rows"
-import { INSERT_USAGE_EVENT, POST_USAGE_NOTICE, SELECT_QUOTA_STATUS } from "./persistence/ai-usage-events.sql"
-import { quotaOf, stopsCall } from "./quota.policy"
-import type { QuotaLookup, QuotaStatus, UsageInput, UsageKind } from "./ai-usage-events.contracts"
+import type { DailyModuleUsageRow, QuotaRow, RecentCostRow } from "./persistence/ai-usage-events.rows"
+import {
+    INSERT_USAGE_EVENT,
+    POST_USAGE_NOTICE,
+    SELECT_MONTHLY_USAGE,
+    SELECT_QUOTA_STATUS,
+    SELECT_RECENT_COST,
+} from "./persistence/ai-usage-events.sql"
+import { quotaLookupOf, quotaOf, stopsCall } from "./quota.policy"
+import type { QuotaLookup, QuotaStatus, UsageInput, UsageKind, UsageSummary } from "./ai-usage-events.contracts"
 import { AiUsageEventsLogEvent } from "./ai-usage-events.log-events"
 import { figuresOf } from "./usage-cost.policy"
+import { toDailyModuleUsage, toUsageSummary } from "./usage-summary.mapper"
 
 @Injectable()
 /** Meters every model call of a workspace and answers where the month stands against the allowance; the only writer of ai_usage_events. */
@@ -52,6 +59,24 @@ export class AiUsageEventsService {
             this.logger.error(AiUsageEventsLogEvent.StatusFailed, cause, { workspaceId })
             return null
         }
+    }
+
+    /** The browser's quota read: absence is nullable, while a database failure propagates to the caller. */
+    async readQuotaStatus(workspaceId: string): Promise<QuotaLookup> {
+        return quotaLookupOf(await this.entityManager.query<Array<QuotaRow>>(SELECT_QUOTA_STATUS, [workspaceId]))
+    }
+
+    /** Current-month use for the billing card, after the application proves the caller's manager role. */
+    async usageSummary(workspaceId: string): Promise<UsageSummary> {
+        const status = await this.readQuotaStatus(workspaceId)
+        const rows = await this.entityManager.query<Array<DailyModuleUsageRow>>(SELECT_MONTHLY_USAGE, [workspaceId])
+        return toUsageSummary(status, rows.map(toDailyModuleUsage))
+    }
+
+    /** The model cost from a selected day onward, used by the credits run-out forecast. */
+    async recentCostUsd(workspaceId: string, from: string): Promise<number> {
+        const [row] = await this.entityManager.query<Array<RecentCostRow>>(SELECT_RECENT_COST, [workspaceId, from])
+        return row?.cost_usd ?? 0
     }
 
     /**

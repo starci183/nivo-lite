@@ -2,10 +2,11 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { TransactionsError, TransactionsErrorCode } from "./errors/transactions.error"
-import type { TransactionRow } from "./persistence/transactions.rows"
+import type { TransactionAccountingRow, TransactionRow } from "./persistence/transactions.rows"
 import {
     FIND_TRANSACTION,
     INSERT_TRANSACTION,
+    LIST_ACCOUNTING_TRANSACTIONS,
     MATCH_TRANSACTION,
     REVIEW_TRANSACTION,
 } from "./persistence/transactions.sql"
@@ -23,6 +24,14 @@ export class TransactionsService {
             transactionId,
         ])
         return rows[0] ?? null
+    }
+
+    /** The newest payments and their input records for the accounting book. */
+    listAccounting(workspaceId: string, limit: number = 1000): Promise<Array<TransactionAccountingRow>> {
+        return this.entityManager.query<Array<TransactionAccountingRow>>(LIST_ACCOUNTING_TRANSACTIONS, [
+            workspaceId,
+            limit,
+        ])
     }
 
     /** Records a payment nobody matched yet. */

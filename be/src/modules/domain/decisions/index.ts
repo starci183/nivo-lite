@@ -40,3 +40,5 @@ export { UnboundPaymentReceiptsService } from "./unbound-payment-receipts.servic
 export { DecisionJobsService } from "./decision-jobs.service"
 export type { OutboundAccess } from "./work-engine.contracts"
 export type { InboundEventStatus, OutboundAccessGate } from "./work-engine.port"
+export type { AccountingDecisionRow } from "./persistence/decision-log.rows"
+export type { AccountingWaitingWorkRow } from "./persistence/work-item-views.rows"
