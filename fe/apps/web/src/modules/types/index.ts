@@ -47,7 +47,7 @@ export type {
     PublicBookingAnswer,
     PublicBookingPage,
 } from "./booking"
-export type { ConsoleIconName, ConsoleNavItem, ConsolePending, ConsoleWorkspace } from "./console"
+export type { ConsoleIconName, ConsoleNavItem, ConsolePending, ConsoleSession, ConsoleWorkspace } from "./console"
 export type {
     Access,
     AgentOption,
@@ -171,7 +171,6 @@ export type {
     ShopContext,
     TemplateDef,
     TemplateExecutor,
-    TemplateKey,
     TemplatePack,
 } from "./automations"
 export type { DeciderKind, DecisionKind, DecisionOutcome, DecisionRecord, GateReason } from "./decisions"

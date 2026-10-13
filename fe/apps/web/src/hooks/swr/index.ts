@@ -9,7 +9,7 @@ export {
     useQueryAgentDashboardSwr,
 } from "./api/graphql/queries/useQueryAgentDashboardSwr"
 export { useQueryAgentsSwr } from "./api/graphql/queries/useQueryAgentsSwr"
-export { QUERY_MY_ACCOUNT_SWR_KEY } from "./api/graphql/queries/useQueryMyAccountSwr"
+export { QUERY_MY_ACCOUNT_SWR_KEY, useQueryMyAccountSwr } from "./api/graphql/queries/useQueryMyAccountSwr"
 export { useQueryBillingPlansSwr } from "./api/graphql/queries/useQueryBillingPlansSwr"
 export { useQueryBillingPlanSwr } from "./api/graphql/queries/useQueryBillingPlanSwr"
 export { useQueryBillingPlanQuotesSwr } from "./api/graphql/queries/useQueryBillingPlanQuotesSwr"
