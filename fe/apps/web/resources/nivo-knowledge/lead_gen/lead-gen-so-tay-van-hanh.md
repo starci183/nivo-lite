@@ -1,52 +1,54 @@
 ---
-title: Sổ tay vận hành của Tạo lead
+title: Lead generation operating playbook
 kind: playbook
 version: 2
 ---
-# Sổ tay vận hành của Tạo lead
 
-## Mục đích
+# Lead generation operating playbook
 
-Tạo lead thu khách tiềm năng từ Facebook và Instagram (form quảng cáo khách hàng tiềm năng, tin nhắn Messenger và Instagram, bình luận dưới bài đăng, lượt nhắc tên trên Instagram), lọc bằng tối đa 4 câu hỏi, chấm nóng, ấm hoặc lạnh rồi chuyển khách nóng cho Sales.
+## Purpose
 
-## Khung 24 giờ
+Lead generation captures prospects from Facebook and Instagram (lead ad forms, Messenger and Instagram messages, comments on posts, and Instagram mentions), qualifies them with up to 4 questions, scores them as hot, warm, or cold, and hands hot leads off to Sales.
 
-1. Chỉ được nhắn khi chưa quá 24 giờ kể từ tin cuối cùng của khách. Mỗi tin khách gửi mở lại khung 24 giờ.
-2. Trước mỗi tin gửi đi, kiểm tra thời điểm tin cuối của khách. Quá hạn thì không gửi, ghi lead là "chờ khách nhắn lại" và báo người phụ trách.
-3. Ngoại lệ duy nhất là thẻ nhân viên (human agent) cho một vụ hỗ trợ đang mở, luôn do người duyệt, không bao giờ để quảng cáo.
-4. Bình luận có thêm cách nhắn riêng, xem mục dưới.
+## The 24-hour window
 
-## Cách làm việc
+1. Messages may only be sent within 24 hours of the prospect's last message. Each message the prospect sends reopens the 24-hour window.
+2. Before sending each message, check the time of the prospect's last message. If the window has expired, do not send it; mark the lead as "waiting for the prospect to message again" and notify the person in charge.
+3. The only exception is the human agent tag for an open support case, which always requires human approval and must never be used for advertising.
+4. Comments also support private replies; see the section below.
 
-1. **Ghi nhận**: tạo lead với nguồn, bài hoặc quảng cáo gốc, tên, liên hệ, thời điểm tin cuối. Trùng người thì gộp, không tạo lại.
-2. **Chào**: dùng thông tin công khai, một câu hỏi mở.
-3. **Lọc**: hỏi tối đa 4 câu đã duyệt, mỗi lần một câu. Khách không muốn trả lời thì dừng, không hỏi lại.
-4. **Chấm điểm**: nóng, ấm, lạnh theo tiêu chí của chủ, ghi lý do ngắn.
-5. **Xử lý theo điểm**: nóng thì chuyển Sales; ấm thì gửi thông tin công khai và để lại danh sách chờ; lạnh thì cảm ơn và dừng.
+## Workflow
 
-## Các trạng thái của một khách
+1. **Capture**: create a lead with the source, original post or ad, name, contact information, and time of the last message. Merge duplicate records for the same person instead of creating another lead.
+2. **Greet**: use public information and one open-ended question.
+3. **Qualify**: ask up to 4 approved questions, one at a time. If the prospect does not want to answer, stop and do not ask again.
+4. **Score**: assign hot, warm, or cold according to the owner's criteria and record a brief reason.
+5. **Act on the score**: hand hot leads off to Sales; send warm leads public information and keep them on the waiting list; thank cold leads and stop.
 
-`new` (mới ghi nhận) → `greeted` (đã chào) → `qualifying` (đang hỏi, mỗi lượt một câu, tối đa 4) → một trong ba kết cục:
-- **`handed_off`**: khách nóng có đủ liên hệ và nhu cầu, đã chuyển Sales (lệnh classify_lead). Dừng hỏi ngay khi đủ điều kiện nóng.
-- **`nurturing`**: khách ấm, nhận đúng một tin nhắn lại trong khung 24 giờ; ngoài khung thì Sales soạn tin nhắn lại cho người duyệt.
-- **`closed`**: khách lạnh, nhận một lời cảm ơn lịch sự trong khung 24 giờ (ngoài khung thì đóng im lặng). Khách nhắn lại thì mở lại.
-Khách từ form quảng cáo hoặc lượt nhắc tên không có khung nhắn: chấm điểm ngay (`scored`), nóng thì chuyển Sales, ấm thì Sales nhắn lại, lạnh thì đóng.
-Khi cần người (khiếu nại, hoàn tiền, bực bội, hỏi người thật, độ tin cậy dưới 0,6, tri thức không trả lời được) khách chuyển sang `escalated`: bot dừng, đến khi người trả cuộc trò chuyện lại.
+## Lead states
 
-Mỗi lượt khách nhắn chỉ tốn tối đa một lần gọi mô hình AI (để đọc câu trả lời tự do thành tín hiệu: nhu cầu, liên hệ, ngân sách, thời điểm, khu vực, cảm xúc). Điểm nóng, ấm, lạnh do quy tắc tính, không do mô hình quyết.
+`new` (just captured) → `greeted` (greeted) → `qualifying` (asking questions, one per turn, up to 4) → one of three outcomes:
 
-## Bình luận công khai
+- **`handed_off`**: a hot lead with complete contact information and needs details has been handed off to Sales (the classify_lead command). Stop asking questions as soon as the lead meets the hot-lead criteria.
+- **`nurturing`**: a warm lead receives exactly one follow-up message within the 24-hour window; outside the window, Sales drafts a follow-up message for human approval.
+- **`closed`**: a cold lead receives one polite thank-you message within the 24-hour window (outside the window, close silently). Reopen if the prospect messages again.
+  Prospects from ad forms or mentions have no messaging window: score them immediately (`scored`), hand hot leads off to Sales, have Sales follow up with warm leads, and close cold leads.
+  When human involvement is needed (complaints, refunds, frustration, requests for a real person, confidence below 0.6, or questions the knowledge base cannot answer), the lead moves to `escalated`: the bot stops until a person hands the conversation back.
 
-- Trả lời công khai ngắn gọn cho bình luận có quan tâm, mời khách xem tin nhắn riêng.
-- Bình luận trung tính hoặc tích cực: trả lời tự động khi đã cấp quyền. Bình luận tiêu cực: soạn nháp, chờ người duyệt.
-- Không ẩn, không xóa bình luận của khách. Không tranh cãi dưới bài.
-- Không đưa số điện thoại, email hay thông tin cá nhân lên bình luận công khai.
+Each prospect message turn uses at most one AI model call (to interpret free-form answers as signals: needs, contact information, budget, timing, area, and sentiment). Rules calculate the hot, warm, or cold score; the model does not decide it.
 
-## Nhắn riêng một lần
+## Public comments
 
-- Với mỗi bình luận, chỉ được nhắn riêng (private reply) đúng một lần. Ghi lại mã bình luận đã nhắn; có thêm tin của khách thì đi tiếp bằng tin nhắn thường trong khung 24 giờ.
-- Tin nhắn riêng đầu tiên phải nhắc đến bài hoặc quảng cáo khách đã bình luận và không quảng cáo dài.
+- Reply briefly in public to comments expressing interest and invite prospects to check their private messages.
+- Neutral or positive comments: reply automatically when authorized. Negative comments: draft a reply and wait for human approval.
+- Do not hide or delete prospects' comments. Do not argue in the comments on a post.
+- Do not include phone numbers, email addresses, or personal information in public comments.
 
-## Khi nào chuyển người
+## One-time private replies
 
-Xem quy tắc chuyển người: khiếu nại, hoàn tiền, khách bực bội, khách hỏi "có phải người thật không", độ tin cậy dưới 0,6, câu hỏi về giá hay cam kết mà tri thức không trả lời được.
+- For each comment, a private reply may be sent exactly once. Record the ID of the comment that received a reply; if the prospect sends another message, continue with regular messages within the 24-hour window.
+- The first private message must refer to the post or ad the prospect commented on and must not contain lengthy advertising.
+
+## When to escalate to a person
+
+See the escalation rules: complaints, refunds, frustrated prospects, prospects asking "Are you a real person?", confidence below 0.6, or questions about prices or commitments that the knowledge base cannot answer.
