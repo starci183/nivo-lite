@@ -1,4 +1,4 @@
-import { Global, Module } from "@nestjs/common"
+import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
 import { ExtractKnowledgeFactsQueueModule } from "@features/jobs/extract-knowledge-facts"
@@ -79,6 +79,10 @@ import { CREDITS_ERROR_KINDS, CREDITS_MESSAGES, CreditsModule } from "@modules/d
 import { AI_USAGE_EVENTS_MESSAGES, AiUsageEventsModule, UsageGateService } from "@modules/domain/ai-usage-events"
 import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
 import { WorkspacesGraphqlModule, WorkspacesHttpModule } from "@features/api/workspaces"
+import { AccountGraphqlModule } from "@features/api/account"
+import { ShellGraphqlModule } from "@features/api/shell"
+import { ACCOUNTS_ERROR_KINDS, ACCOUNTS_MESSAGES, AccountsModule } from "@modules/domain/accounts"
+import { ShellModule } from "@modules/domain/shell"
 import {
     EMAIL_MESSAGES_ERROR_KINDS,
     EMAIL_MESSAGES_MESSAGES,
@@ -339,7 +343,7 @@ import { MetaConnectionsHttpModule } from "@features/api/meta-connections"
 import { CONTENT_MESSAGES, ContentModule } from "@modules/domain/content"
 import { CONTENT_ITEMS_ERROR_KINDS, CONTENT_ITEMS_MESSAGES, ContentItemsModule } from "@modules/domain/content-items"
 import { ContentSettingsModule } from "@modules/domain/content-settings"
-import { VIDEO_ASSETS, VIDEO_ERROR_KINDS, VIDEO_MESSAGES, VideoModule } from "@modules/domain/video"
+import { VIDEO_ERROR_KINDS, VIDEO_MESSAGES, VideoModule } from "@modules/domain/video"
 import { VideoProjectVersionsModule } from "@modules/domain/video-project-versions"
 import { VideoProjectsModule } from "@modules/domain/video-projects"
 import { VIDEO_RENDERS_ERROR_KINDS, VIDEO_RENDERS_MESSAGES, VideoRendersModule } from "@modules/domain/video-renders"
@@ -361,11 +365,6 @@ import type { ApiOptions } from "./api.options"
 const NO_CORRECTIONS: CorrectionSource = { recent: () => Promise.resolve([]) }
 
 const NO_DRIVE_ACCESS: DriveAccessSource = { forWorkspace: () => null }
-
-@Global()
-@Module({ providers: [{ provide: VIDEO_ASSETS, useExisting: SUPABASE_STORAGE }], exports: [VIDEO_ASSETS] })
-/** Binds the file store the render job uses to the Supabase storage integration. */
-class VideoAssetsBindingModule {}
 
 @Module({})
 /** Composition root of the API: every capability is registered once and the three guards run in a fixed order. */
@@ -432,7 +431,6 @@ export class AppModule {
                         TELEGRAM_MESSAGES,
                         ZALO_MESSAGES,
                         ERRORS_MESSAGES,
-                        HTTP_MESSAGES,
                         HTTP_SECURITY_MESSAGES,
                         IDENTITY_MESSAGES,
                         PLATFORM_ADMIN_MESSAGES,
@@ -457,6 +455,7 @@ export class AppModule {
                         QUEUE_MESSAGES,
                         WORKSPACE_INVITES_MESSAGES,
                         WORKSPACE_MEMBERS_MESSAGES,
+                        ACCOUNTS_MESSAGES,
                         WORKSPACES_MESSAGES,
                         FFMPEG_MESSAGES,
                         TTS_MESSAGES,
@@ -519,7 +518,6 @@ export class AppModule {
                         CONFIG_ERROR_KINDS,
                         DATABASE_ERROR_KINDS,
                         DOCUMENTS_ERROR_KINDS,
-                        HTTP_ERROR_KINDS,
                         HTTP_SECURITY_ERROR_KINDS,
                         JOBS_ERROR_KINDS,
                         BRAIN_ERROR_KINDS,
@@ -545,6 +543,7 @@ export class AppModule {
                         CONTRACTS_ERROR_KINDS,
                         WORKSPACE_INVITES_ERROR_KINDS,
                         WORKSPACE_MEMBERS_ERROR_KINDS,
+                        ACCOUNTS_ERROR_KINDS,
                         WORKSPACES_ERROR_KINDS,
                         FFMPEG_ERROR_KINDS,
                         TTS_ERROR_KINDS,
@@ -578,6 +577,8 @@ export class AppModule {
                 WorkspaceMembersModule.register({ isGlobal: true, accounts: SUPABASE_AUTH }),
                 WorkspacesModule.register({ isGlobal: true, ...options.workspaces }),
                 WorkspaceInvitesModule.register({ isGlobal: true, delivery: SUPABASE_AUTH, ...options.workspaceInvites }),
+                AccountsModule.register({ isGlobal: true }),
+                ShellModule.register({ isGlobal: true }),
                 ConnectionsModule.register({ isGlobal: true, ...options.connections }),
                 ConnectionGrantsModule.register({ isGlobal: true }),
                 ChannelConnectionsModule.register({ isGlobal: true }),
@@ -620,8 +621,7 @@ export class AppModule {
                 VideoRendersModule.register({ isGlobal: true }),
                 VideoProjectsModule.register({ isGlobal: true }),
                 VideoProjectVersionsModule.register({ isGlobal: true }),
-                VideoAssetsBindingModule,
-                VideoModule.register({ isGlobal: true, ...options.video }),
+                VideoModule.register({ isGlobal: true, ...options.video, assets: SUPABASE_STORAGE }),
                 ContentItemsModule.register({ isGlobal: true }),
                 ContentSettingsModule.register({ isGlobal: true }),
                 ContentModule.register({ isGlobal: true }),
@@ -760,6 +760,8 @@ export class AppModule {
                 WorkspacesGraphqlModule,
                 ApiKeysGraphqlModule,
                 OverviewGraphqlModule,
+                AccountGraphqlModule,
+                ShellGraphqlModule,
                 ExtractKnowledgeFactsQueueModule,
                 RunBrainCommandQueueModule,
                 IndexKnowledgeSourceQueueModule,
