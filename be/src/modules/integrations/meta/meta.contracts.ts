@@ -118,9 +118,12 @@ export interface MetaLead {
 /** A tag that lets a real person answer after the standard window. */
 export type MessageTag = "HUMAN_AGENT"
 
+/** How a send goes out: a plain response inside the 24-hour window, or a HUMAN_AGENT tagged message after it. */
+export type SendVia = "standard" | "human_agent"
+
 /** Whether a Page may message a person now. */
 export type WindowVerdict =
-    | { readonly ok: true; readonly via: "standard" | "human_agent" }
+    | { readonly ok: true; readonly via: SendVia }
     | { readonly ok: false; readonly reason: "no_user_message" | "window_expired" | "human_agent_expired" }
 
 /** Whether a private reply to a comment may be sent now. */
@@ -198,24 +201,30 @@ export interface AppObject {
     readonly urlMatches: boolean
 }
 
+/** Whether the app is subscribed to one Page, and to which of the fields it needs. */
+export interface PageSubscription {
+    /** Whether the app is subscribed to the Page; false means no event of the Page reaches the webhook. */
+    readonly subscribed: boolean
+    /** The fields subscribed. */
+    readonly fields: ReadonlyArray<string>
+    /** Wanted fields that are missing. */
+    readonly missing: ReadonlyArray<string>
+}
+
+/** The app's own webhook subscription per object. */
+export interface AppSubscriptions {
+    /** The `page` object; null when the app has no subscription for it. */
+    readonly page: AppObject | null
+    /** The `instagram` object; null when the app has no subscription for it. */
+    readonly instagram: AppObject | null
+}
+
 /** What Meta really has: the Page subscription and the app subscription. */
 export interface MetaSubscriptionStatus {
     /** The Page is subscribed to the app, and which fields. */
-    readonly page: {
-        /** Whether the app is subscribed to the Page. */
-        readonly subscribed: boolean
-        /** The fields subscribed. */
-        readonly fields: ReadonlyArray<string>
-        /** Wanted fields that are missing. */
-        readonly missing: ReadonlyArray<string>
-    }
+    readonly page: PageSubscription
     /** The app's own webhook subscription per object; null when it could not be read. */
-    readonly app: {
-        /** The `page` object. */
-        readonly page: AppObject | null
-        /** The `instagram` object. */
-        readonly instagram: AppObject | null
-    } | null
+    readonly app: AppSubscriptions | null
 }
 
 /** What `ensureAppSubscriptions` did. */
@@ -255,3 +264,103 @@ export interface MetaStateInput {
     /** The path to return to. */
     readonly returnTo: string
 }
+
+/** A return path, state token or signature header as the request carried it; absent when the request had none. */
+export type ReceivedText = string | null | undefined
+
+/** A url of this deployment that Meta is given (redirect, webhook, login); null when the site url or the app is missing. */
+export type OptionalMetaUrl = string | null
+
+/** A callback state whose signature checked out, has not expired and is a Meta one; null otherwise. */
+export type OptionalMetaState = MetaState | null
+
+/** The `hub.challenge` to echo back; null when the verification request is not ours. */
+export type OptionalChallenge = string | null
+
+/** A person's display name as Meta gives it; null when Meta does not give one. */
+export type OptionalProfileName = string | null
+
+/** An instant in epoch milliseconds; null when it is not known. */
+export type OptionalInstant = number | null
+
+/** The site url a public-reachability check reads. */
+export interface MetaSite {
+    /** The public origin of the site; undefined when the deployment sets none. */
+    readonly siteUrl: string | undefined
+}
+
+/** The Page token a Graph read acts with. */
+export interface MetaPageToken {
+    /** The Page access token. */
+    readonly pageToken: string
+}
+
+/** A Page and the token that can read its webhook subscription. */
+export interface MetaPageCredentials {
+    /** The Page whose subscribed apps are read. */
+    readonly pageId: string
+    /** The Page access token. */
+    readonly pageToken: string
+}
+
+/** The Page token and the linked Instagram account a mention lookup reads through. */
+export interface MetaInstagramAccess {
+    /** The Page access token. */
+    readonly pageToken: string
+    /** The linked Instagram account id; null means the mention cannot be read. */
+    readonly igId: string | null
+}
+
+/** The text and author of an Instagram mention; each null when Meta does not give it. */
+export interface MetaMention {
+    /** The comment or caption text that mentioned the account. */
+    readonly text: string | null
+    /** The username of who wrote it. */
+    readonly username: string | null
+}
+
+/** At most four requests of fifty Pages each are read when listing the Pages a person manages. */
+export const PAGE_REQUESTS_MAX = 4
+
+/** Meta's hourly budget of private replies per Page; the client refuses locally beyond it. */
+export const PRIVATE_REPLIES_PER_HOUR = 750
+
+/** The query parameters of one Graph call; an undefined value is left out of the url. */
+export type GraphParams = Readonly<Record<string, string | number | boolean | undefined>>
+
+/** How one Graph API call is made. */
+export interface GraphCall {
+    /** The access token the call acts with; app or Page token depending on the edge. */
+    readonly token?: string
+    /** The HTTP method; GET when absent. */
+    readonly method?: "GET" | "POST" | "DELETE"
+    /** The query parameters. */
+    readonly params?: GraphParams
+    /** The JSON body of a POST. */
+    readonly body?: unknown
+    /** How long the call waits for the answer; the configured timeout when absent. */
+    readonly timeoutMs?: number
+}
+
+/** What one Graph call answered: the JSON body, or the classified failure and what is known about it. */
+export type GraphResult =
+    | {
+          /** True: the call answered with a JSON object. */
+          readonly ok: true
+          /** The JSON object Meta answered. */
+          readonly body: Readonly<Record<string, unknown>>
+      }
+    | {
+          /** False: the call failed; the other fields say how. */
+          readonly ok: false
+          /** The failure class that picks how the caller reacts. */
+          readonly failure: MetaFailure
+          /** The HTTP status, 0 when Meta was not reached. */
+          readonly status: number
+          /** Meta's error text, kept for the log and the owner. */
+          readonly detail: string
+          /** True when Meta could not be reached at all. */
+          readonly unreachable: boolean
+          /** The thrown error behind an unreachable call. */
+          readonly cause?: unknown
+      }

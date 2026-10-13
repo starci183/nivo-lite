@@ -40,8 +40,8 @@ export const verifyChallenge = (query: HubQuery, verifyToken: string | undefined
 
 type Obj = Record<string, unknown>
 
-const obj = (value: unknown): Obj | null =>
-    value && typeof value === "object" && !Array.isArray(value) ? (value as Obj) : null
+const isObj = (value: unknown): value is Obj => typeof value === "object" && value !== null && !Array.isArray(value)
+const obj = (value: unknown): Obj | null => (isObj(value) ? value : null)
 const arr = (value: unknown): Array<unknown> => (Array.isArray(value) ? value : [])
 const str = (value: unknown): string | null => {
     if (typeof value === "string" && value !== "") return value
@@ -145,11 +145,7 @@ const fromMessaging = (
     return null
 }
 
-const fromFacebookChange = (entryId: string | null, change: Obj, time: number): MetaEvent | null => {
-    const field = str(change.field)
-    const value = obj(change.value)
-    if (!field || !value) return null
-    if (field === "messages" || field === "messaging_postbacks") return fromMessaging("facebook", entryId, value, time)
+const fromFacebookChange = (entryId: string | null, field: string, value: Obj, time: number): MetaEvent | null => {
     if (field === "leadgen") {
         const leadgenId = str(value.leadgen_id)
         if (!leadgenId) return null
@@ -191,11 +187,7 @@ const fromFacebookChange = (entryId: string | null, change: Obj, time: number): 
     return null
 }
 
-const fromInstagramChange = (entryId: string | null, change: Obj, time: number): MetaEvent | null => {
-    const field = str(change.field)
-    const value = obj(change.value)
-    if (!field || !value) return null
-    if (field === "messages" || field === "messaging_postbacks") return fromMessaging("instagram", entryId, value, time)
+const fromInstagramChange = (entryId: string | null, field: string, value: Obj, time: number): MetaEvent | null => {
     if (field === "comments") {
         const commentId = str(value.id)
         const from = obj(value.from)
@@ -225,6 +217,23 @@ const fromInstagramChange = (entryId: string | null, change: Obj, time: number):
     return null
 }
 
+/** One `changes` item: messages go the way of the messaging items, the other fields by platform. */
+const fromChange = (platform: MetaPlatform, entryId: string | null, change: Obj, time: number): MetaEvent | null => {
+    const field = str(change.field)
+    const value = obj(change.value)
+    if (!field || !value) return null
+    if (field === "messages" || field === "messaging_postbacks") return fromMessaging(platform, entryId, value, time)
+    return platform === "facebook"
+        ? fromFacebookChange(entryId, field, value, time)
+        : fromInstagramChange(entryId, field, value, time)
+}
+
+/** The platform a webhook object names: "page" is Facebook, "instagram" is Instagram, anything else is none. */
+const platformOf = (object: string | null): MetaPlatform | null => {
+    if (object === "page") return "facebook"
+    return object === "instagram" ? "instagram" : null
+}
+
 /**
  * A webhook body to normalised events. Object "page" is Facebook, object "instagram" is Instagram; anything else (or garbage)
  * gives []. Echoes of our own sends, delivery/read receipts, reactions and our own comments are dropped.
@@ -232,7 +241,7 @@ const fromInstagramChange = (entryId: string | null, change: Obj, time: number):
 export const parseWebhook = (body: unknown, now: number): Array<MetaEvent> => {
     const root = obj(body)
     const object = root ? str(root.object) : null
-    const platform: MetaPlatform | null = object === "page" ? "facebook" : object === "instagram" ? "instagram" : null
+    const platform = platformOf(object)
     if (!root || !platform) return []
     const out: Array<MetaEvent> = []
     for (const rawEntry of arr(root.entry)) {
@@ -247,10 +256,7 @@ export const parseWebhook = (body: unknown, now: number): Array<MetaEvent> => {
         for (const rawChange of arr(entry.changes)) {
             const change = obj(rawChange)
             if (!change) continue
-            const event =
-                platform === "facebook"
-                    ? fromFacebookChange(entryId, change, time)
-                    : fromInstagramChange(entryId, change, time)
+            const event = fromChange(platform, entryId, change, time)
             if (event) out.push(event)
         }
     }

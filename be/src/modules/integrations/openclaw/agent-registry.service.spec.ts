@@ -11,34 +11,36 @@ import type { OpenclawFiles } from "./openclaw-files.port"
 const AGENT = "ws-0123abcd-chatbot"
 const CONFIG = "/state/openclaw.json"
 
-const optionsOf = builder<OpenclawOptions>({
-    gateway: null,
-    turnTimeoutMs: 90_000,
-    settleMs: 3000,
-    configDir: "/state",
-    gatewayStateDir: "/home/node/.openclaw",
-    manageAgents: true,
-    toolSecret: null,
-})
-
 /** A disk in memory: the files port over a map of path to text. */
 const memoryFiles = (initial: Record<string, string> = {}) => {
     const store = new Map(Object.entries(initial))
-    const files = mock<OpenclawFiles>({
+    const files: Partial<OpenclawFiles> = {
         readText: jest.fn((path: string) => store.get(path) ?? null),
         writeText: jest.fn((path: string, content: string) => {
             store.set(path, content)
         }),
-    })
+    }
     return { files, store }
 }
 
-const build = async (options: OpenclawOptions, files: OpenclawFiles) => {
+const build = async (overrides: Partial<OpenclawOptions> = {}, disk = memoryFiles()) => {
+    const files = mock<OpenclawFiles>(disk.files)
     const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentRegistryService,
-            { provide: OPENCLAW_OPTIONS, useValue: options },
+            {
+                provide: OPENCLAW_OPTIONS,
+                useValue: builder<OpenclawOptions>({
+                    gateway: null,
+                    turnTimeoutMs: 90_000,
+                    settleMs: 3000,
+                    configDir: "/state",
+                    gatewayStateDir: "/home/node/.openclaw",
+                    manageAgents: true,
+                    toolSecret: null,
+                })(overrides),
+            },
             { provide: OPENCLAW_FILES, useValue: files },
             { provide: LOGGER, useValue: logger },
         ],
@@ -70,7 +72,7 @@ const stored = (store: Map<string, string>): Stored => {
 describe("AgentRegistryService", () => {
     describe("workspaceDirs", () => {
         it("answers the local and the gateway view of the workspace", async () => {
-            const { registry } = await build(optionsOf(), memoryFiles().files)
+            const { registry } = await build()
 
             expect(registry.workspaceDirs(AGENT)).toEqual({
                 local: `/state/workspace-${AGENT}`,
@@ -79,7 +81,7 @@ describe("AgentRegistryService", () => {
         })
 
         it("answers null without a config directory", async () => {
-            const { registry } = await build(optionsOf({ configDir: undefined }), memoryFiles().files)
+            const { registry } = await build({ configDir: undefined })
 
             expect(registry.workspaceDirs(AGENT)).toBeNull()
         })
@@ -88,7 +90,7 @@ describe("AgentRegistryService", () => {
     describe("register", () => {
         it("writes the agent and keeps the implicit main agent as the default", async () => {
             const disk = memoryFiles({ [CONFIG]: JSON.stringify({ gateway: { reload: { mode: "hybrid" } } }) })
-            const { registry, logger } = await build(optionsOf(), disk.files)
+            const { registry, logger } = await build({}, disk)
 
             expect(registry.register(AGENT, "Bot")).toBe(true)
 
@@ -113,7 +115,7 @@ describe("AgentRegistryService", () => {
 
         it("creates the file when there is none and does not rewrite an entry that is current", async () => {
             const disk = memoryFiles()
-            const { registry } = await build(optionsOf(), disk.files)
+            const { registry } = await build({}, disk)
 
             expect(registry.register(AGENT, "Bot")).toBe(true)
             expect(registry.register(AGENT, "Bot")).toBe(false)
@@ -130,7 +132,7 @@ describe("AgentRegistryService", () => {
                     },
                 }),
             })
-            const { registry } = await build(optionsOf(), disk.files)
+            const { registry } = await build({}, disk)
 
             expect(registry.register(AGENT, "Bot")).toBe(true)
 
@@ -146,7 +148,7 @@ describe("AgentRegistryService", () => {
             const disk = memoryFiles({
                 [CONFIG]: JSON.stringify({ agents: { list: [{ id: "other", default: true }] } }),
             })
-            const { registry } = await build(optionsOf(), disk.files)
+            const { registry } = await build({}, disk)
 
             registry.register(AGENT, "Bot")
 
@@ -155,15 +157,15 @@ describe("AgentRegistryService", () => {
 
         it("treats a config that is not an object as empty", async () => {
             const disk = memoryFiles({ [CONFIG]: "[1,2]" })
-            const { registry } = await build(optionsOf(), disk.files)
+            const { registry } = await build({}, disk)
 
             expect(registry.register(AGENT, "Bot")).toBe(true)
             expect(stored(disk.store).agents.list).toHaveLength(2)
         })
 
         it("refuses when registration is off or has no config directory", async () => {
-            const off = await build(optionsOf({ manageAgents: false }), memoryFiles().files)
-            const none = await build(optionsOf({ configDir: undefined }), memoryFiles().files)
+            const off = await build({ manageAgents: false })
+            const none = await build({ configDir: undefined })
 
             expect(() => off.registry.register(AGENT, "Bot")).toThrow(
                 expect.objectContaining({ code: OpenclawErrorCode.RegistrationOff }),
@@ -175,7 +177,7 @@ describe("AgentRegistryService", () => {
 
         it("refuses to overwrite a config it cannot read", async () => {
             const disk = memoryFiles({ [CONFIG]: "{ broken" })
-            const { registry, logger } = await build(optionsOf(), disk.files)
+            const { registry, logger } = await build({}, disk)
 
             expect(() => registry.register(AGENT, "Bot")).toThrow(
                 expect.objectContaining({ code: OpenclawErrorCode.ConfigInvalid }),
@@ -188,7 +190,7 @@ describe("AgentRegistryService", () => {
     describe("has and isCurrent", () => {
         it("sees a registered agent and nothing before", async () => {
             const disk = memoryFiles()
-            const { registry } = await build(optionsOf(), disk.files)
+            const { registry } = await build({}, disk)
             expect(registry.has(AGENT)).toBe(false)
             expect(registry.isCurrent(AGENT, "Bot")).toBe(false)
 
@@ -202,14 +204,14 @@ describe("AgentRegistryService", () => {
         })
 
         it("answers false without a config directory", async () => {
-            const { registry } = await build(optionsOf({ configDir: undefined }), memoryFiles().files)
+            const { registry } = await build({ configDir: undefined })
 
             expect(registry.has(AGENT)).toBe(false)
             expect(registry.isCurrent(AGENT, "Bot")).toBe(false)
         })
 
         it("answers false when the config cannot be read", async () => {
-            const { registry } = await build(optionsOf(), memoryFiles({ [CONFIG]: "{ broken" }).files)
+            const { registry } = await build({}, memoryFiles({ [CONFIG]: "{ broken" }))
 
             expect(registry.has(AGENT)).toBe(false)
             expect(registry.isCurrent(AGENT, "Bot")).toBe(false)
@@ -219,7 +221,7 @@ describe("AgentRegistryService", () => {
             const disk = memoryFiles({
                 [CONFIG]: JSON.stringify({ agents: { list: [{ id: AGENT, workspace: "/elsewhere" }] } }),
             })
-            const { registry } = await build(optionsOf(), disk.files)
+            const { registry } = await build({}, disk)
 
             expect(registry.has(AGENT)).toBe(false)
         })

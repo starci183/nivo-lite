@@ -1,3 +1,5 @@
+import childProcess, { ChildProcess } from "node:child_process"
+import { PassThrough } from "node:stream"
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import { FfmpegErrorCode } from "./errors/ffmpeg.error"
@@ -5,48 +7,30 @@ import { FfmpegClient } from "./ffmpeg.client"
 import { FFMPEG_OPTIONS } from "./ffmpeg.decorators"
 import type { FfmpegOptions } from "./ffmpeg.options"
 
-type Listener = (...args: Array<unknown>) => void
-
-/** The smallest emitter the client listens to: handlers by event name. */
-class FakeEmitter {
-    private readonly handlers = new Map<string, Array<Listener>>()
-
-    on(event: string, handler: Listener): this {
-        this.handlers.set(event, [...(this.handlers.get(event) ?? []), handler])
-        return this
-    }
-
-    emit(event: string, ...args: Array<unknown>): void {
-        for (const handler of this.handlers.get(event) ?? []) handler(...args)
-    }
-}
-
-class FakeChild extends FakeEmitter {
-    readonly stdout = new FakeEmitter()
-    readonly stderr = new FakeEmitter()
-    readonly kill = jest.fn()
-}
-
+/** A child that never ran: its streams are fed by the test and its kill is recorded. */
 interface Spawned {
-    command: string
-    args: ReadonlyArray<string>
-    cwd: string
-    child: FakeChild
+    readonly child: ChildProcess
+    readonly stdout: PassThrough
+    readonly stderr: PassThrough
+    readonly kill: jest.SpyInstance
 }
 
-interface SpawnOptions {
-    cwd: string
+const spawned: Array<Spawned> = []
+
+const idleChild = (): Spawned => {
+    const stdout = new PassThrough()
+    const stderr = new PassThrough()
+    const child = Object.assign(new ChildProcess(), { stdout, stderr })
+    return { child, stdout, stderr, kill: jest.spyOn(child, "kill").mockReturnValue(true) }
 }
 
-const mockSpawned: Array<Spawned> = []
+const spawnChild = (): ChildProcess => {
+    const next = idleChild()
+    spawned.push(next)
+    return next.child
+}
 
-jest.mock("node:child_process", () => ({
-    spawn: (command: string, args: ReadonlyArray<string>, options: SpawnOptions) => {
-        const child = new FakeChild()
-        mockSpawned.push({ command, args, cwd: options.cwd, child })
-        return child
-    },
-}))
+const spawnSpy = jest.spyOn(childProcess, "spawn")
 
 const optionsOf = builder<FfmpegOptions>({ nice: false })
 
@@ -57,14 +41,15 @@ const build = async (options: FfmpegOptions) => {
     return moduleRef.get(FfmpegClient)
 }
 
-const lastChild = (): FakeChild => {
-    const spawned = mockSpawned[mockSpawned.length - 1]
-    if (spawned === undefined) return new FakeChild()
-    return spawned.child
-}
+const lastChild = (): Spawned => spawned[spawned.length - 1] ?? idleChild()
 
 beforeEach(() => {
-    mockSpawned.length = 0
+    spawned.length = 0
+    spawnSpy.mockImplementation(spawnChild)
+})
+
+afterAll(() => {
+    spawnSpy.mockRestore()
 })
 
 describe("FfmpegClient", () => {
@@ -77,32 +62,29 @@ describe("FfmpegClient", () => {
             })
             lastChild().stderr.emit("data", Buffer.from("frame done"))
             lastChild().stdout.emit("data", Buffer.from("ignored"))
-            lastChild().emit("close", 0)
+            lastChild().child.emit("close", 0)
 
             await expect(running).resolves.toEqual({ stdout: "ignored", stderr: "frame done" })
 
-            expect(mockSpawned[0]).toMatchObject({
-                command: "ffmpeg",
-                args: ["-hide_banner", "-nostdin", "-y", "-i", "in.mp4", "out.mp4"],
-                cwd: "work",
-            })
+            expect(spawnSpy.mock.calls).toEqual([
+                ["ffmpeg", ["-hide_banner", "-nostdin", "-y", "-i", "in.mp4", "out.mp4"], { cwd: "work" }],
+            ])
         })
 
         it("lowers the priority with nice unless the run is urgent", async () => {
             const ffmpeg = await build(optionsOf({ nice: true }))
             const signal = new AbortController().signal
             const lowered = ffmpeg.run("ffmpeg", ["a"], { signal, cwd: "." })
-            lastChild().emit("close", 0)
+            lastChild().child.emit("close", 0)
             await lowered
             const urgent = ffmpeg.run("ffprobe", ["b"], { signal, cwd: ".", urgent: true })
-            lastChild().emit("close", 0)
+            lastChild().child.emit("close", 0)
             await urgent
 
-            expect(mockSpawned[0]).toMatchObject({
-                command: "nice",
-                args: ["-n", "10", "ffmpeg", "-hide_banner", "-nostdin", "-y", "a"],
-            })
-            expect(mockSpawned[1]).toMatchObject({ command: "ffprobe", args: ["b"] })
+            expect(spawnSpy.mock.calls).toEqual([
+                ["nice", ["-n", "10", "ffmpeg", "-hide_banner", "-nostdin", "-y", "a"], { cwd: "." }],
+                ["ffprobe", ["b"], { cwd: "." }],
+            ])
         })
 
         it("reports the output time of a run that asks for the timeline", async () => {
@@ -117,11 +99,11 @@ describe("FfmpegClient", () => {
                 "data",
                 Buffer.from("out_time_us=1500000\nprogress=continue\nout_time_us=2000000\n"),
             )
-            lastChild().emit("close", 0)
+            lastChild().child.emit("close", 0)
             await running
 
             expect(seconds).toEqual([1.5, 2])
-            expect(mockSpawned[0]?.args.slice(0, 6)).toEqual([
+            expect(spawnSpy.mock.calls[0]?.[1]?.slice(0, 6)).toEqual([
                 "-hide_banner",
                 "-nostdin",
                 "-y",
@@ -135,7 +117,7 @@ describe("FfmpegClient", () => {
             const ffmpeg = await build(optionsOf())
             const running = ffmpeg.run("ffmpeg", ["x"], { signal: new AbortController().signal, cwd: "." })
             lastChild().stderr.emit("data", Buffer.from("Invalid data"))
-            lastChild().emit("close", 1)
+            lastChild().child.emit("close", 1)
 
             await expect(running).rejects.toMatchObject({
                 code: FfmpegErrorCode.Failed,
@@ -146,7 +128,7 @@ describe("FfmpegClient", () => {
         it("fails when the tool was stopped by a signal", async () => {
             const ffmpeg = await build(optionsOf())
             const running = ffmpeg.run("ffmpeg", ["x"], { signal: new AbortController().signal, cwd: "." })
-            lastChild().emit("close", null)
+            lastChild().child.emit("close", null)
 
             await expect(running).rejects.toMatchObject({ params: { reason: "exit signal" } })
         })
@@ -155,7 +137,7 @@ describe("FfmpegClient", () => {
             const ffmpeg = await build(optionsOf())
             const cause = new Error("ENOENT")
             const running = ffmpeg.run("ffmpeg", ["x"], { signal: new AbortController().signal, cwd: "." })
-            lastChild().emit("error", cause)
+            lastChild().child.emit("error", cause)
 
             await expect(running).rejects.toMatchObject({ params: { reason: "could not start" }, cause })
         })
@@ -164,13 +146,13 @@ describe("FfmpegClient", () => {
             const ffmpeg = await build(optionsOf())
             const abort = new AbortController()
             const running = ffmpeg.run("ffmpeg", ["x"], { signal: abort.signal, cwd: "." })
-            const child = lastChild()
+            const { child, kill } = lastChild()
             abort.abort()
 
             await expect(running).rejects.toMatchObject({ params: { reason: "aborted" } })
             child.emit("close", 0)
 
-            expect(child.kill).toHaveBeenCalledWith("SIGKILL")
+            expect(kill).toHaveBeenCalledWith("SIGKILL")
         })
 
         it("kills the tool when it runs longer than its timeout", async () => {
@@ -191,20 +173,23 @@ describe("FfmpegClient", () => {
             const ffmpeg = await build(optionsOf())
             const measuring = ffmpeg.probeDuration("clip.mp3", new AbortController().signal)
             lastChild().stdout.emit("data", Buffer.from("12.5\n"))
-            lastChild().emit("close", 0)
+            lastChild().child.emit("close", 0)
 
             await expect(measuring).resolves.toBe(12.5)
-            expect(mockSpawned[0]).toMatchObject({
-                command: "ffprobe",
-                args: ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", "clip.mp3"],
-            })
+            expect(spawnSpy.mock.calls).toEqual([
+                [
+                    "ffprobe",
+                    ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", "clip.mp3"],
+                    { cwd: "." },
+                ],
+            ])
         })
 
         it("fails when ffprobe prints no usable duration", async () => {
             const ffmpeg = await build(optionsOf())
             const measuring = ffmpeg.probeDuration("clip.mp3", new AbortController().signal)
             lastChild().stdout.emit("data", Buffer.from("N/A"))
-            lastChild().emit("close", 0)
+            lastChild().child.emit("close", 0)
 
             await expect(measuring).rejects.toMatchObject({ params: { tool: "ffprobe", reason: "no duration" } })
         })

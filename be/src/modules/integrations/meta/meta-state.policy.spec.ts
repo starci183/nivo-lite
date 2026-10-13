@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto"
 import { MetaErrorCode } from "./errors/meta.error"
-import { metaStateKey, safeReturnTo, signMetaState, verifyMetaState } from "./meta-state.policy"
+import { metaReturnTo, metaStateKey, signMetaState, verifyMetaState } from "./meta-state.policy"
 
 const NOW = 1_800_000_000_000
 const TTL = 10 * 60 * 1000
@@ -12,12 +12,12 @@ const signedBody = (body: object, key: Buffer = KEY): string => {
     return `${encoded}.${createHmac("sha256", key).update(encoded).digest().toString("base64url")}`
 }
 
-describe("safeReturnTo", () => {
+describe("metaReturnTo", () => {
     it("keeps a same-site path and refuses the rest", () => {
-        expect(safeReturnTo("/agents")).toBe("/agents")
-        expect(safeReturnTo("//evil")).toBe("/connections")
-        expect(safeReturnTo("/a\nb")).toBe("/connections")
-        expect(safeReturnTo(undefined)).toBe("/connections")
+        expect(metaReturnTo("/agents")).toBe("/agents")
+        expect(metaReturnTo("//evil")).toBe("/connections")
+        expect(metaReturnTo("/a\nb")).toBe("/connections")
+        expect(metaReturnTo(undefined)).toBe("/connections")
     })
 })
 

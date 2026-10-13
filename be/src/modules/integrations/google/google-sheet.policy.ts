@@ -1,3 +1,4 @@
+import { isRecord } from "@modules/platform/primitives"
 import { GoogleError, GoogleErrorCode } from "./errors/google.error"
 import { GOOGLE_MESSAGES } from "./messages/google.messages"
 import type { SheetCell, SheetConfig, SheetEventIn, SheetEventResult, SheetsApi } from "./google.contracts"
@@ -147,9 +148,8 @@ const asNumber = (value: unknown): number =>
 
 const nameOf = (item: unknown): string => {
     if (typeof item === "string") return item
-    if (typeof item !== "object" || item === null) return ""
-    const record = item as Record<string, unknown>
-    return asText(record.name ?? record.title)
+    if (!isRecord(item)) return ""
+    return asText(item.name ?? item.title)
 }
 
 const itemsText = (value: unknown): string =>

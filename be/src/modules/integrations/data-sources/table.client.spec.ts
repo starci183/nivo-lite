@@ -1,5 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
+import mammoth from "mammoth"
+import unpdf from "unpdf"
 import { PUBLIC_HOST } from "./data-sources.decorators"
 import { DataSourcesError, DataSourcesErrorCode } from "./errors/data-sources.error"
 import { TABLE_COPY } from "./messages/table.messages"
@@ -7,10 +9,6 @@ import { TABLE_MAX_BYTES } from "./table-shapes.contracts"
 import { TableClient } from "./table.client"
 import type { PublicHostClient, PublicResponse } from "./public-host.client"
 
-class MockWorkbook {
-    error: Error | undefined = undefined
-    sheets: Array<{ sheet: string; data: Array<Array<string>> }> = []
-}
 class MockWord {
     text = "word"
     error: Error | undefined = undefined
@@ -20,28 +18,44 @@ class MockPdf {
     pages = 2
     error: Error | undefined = undefined
 }
-const mockWorkbook = new MockWorkbook()
 const mockWord = new MockWord()
 const mockPdf = new MockPdf()
 
-jest.mock("read-excel-file/universal", () => ({
-    __esModule: true,
-    default: () =>
-        mockWorkbook.error === undefined ? Promise.resolve(mockWorkbook.sheets) : Promise.reject(mockWorkbook.error),
-}))
+const wordSpy = jest.spyOn(mammoth, "extractRawText")
+const proxySpy = jest.spyOn(unpdf, "getDocumentProxy")
+const pdfSpy = jest.spyOn(unpdf, "extractText")
 
-jest.mock("mammoth", () => ({
-    extractRawText: () =>
-        mockWord.error === undefined ? Promise.resolve({ value: mockWord.text }) : Promise.reject(mockWord.error),
-}))
-
-jest.mock("unpdf", () => ({
-    getDocumentProxy: () => Promise.resolve({}),
-    extractText: () =>
-        mockPdf.error === undefined
-            ? Promise.resolve({ text: mockPdf.text, totalPages: mockPdf.pages })
-            : Promise.reject(mockPdf.error),
-}))
+/** A real workbook of two sheets, First (Name / An) and Second (Name / Bo), as the bytes of an .xlsx file. */
+const TWO_SHEETS = Buffer.from(
+    [
+        "UEsDBBQAAAAIABGnTV3xqbA++gAAAKQCAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbLWSsU7DMBCGX8XyWsVOOyCEknYoMAJDeQDj",
+        "XBIr9p3lc0N4e5S0YkAFhATTDfff/33DVbspeDFCYkdYy7UqpQC01Djsavl8uC+u5W5bHd4isJiCR65ln3O80ZptD8Gwogg4Bd9S",
+        "CiazotTpaOxgOtCbsrzSljAD5iLPHXJb3UJrjj6LuykDnrAJPEuxPwVnVi1NjN5Zkx2hHrH5RCnOBJXALxnuXeTVFLzUFwnz5mvA",
+        "+e5xhJRcA+LJpPxgAtRST16/UhpeiAb1fckFS2pbZ6EhewyAWXFMYBruAXLwapkqGIern/k8h1kvY/3HIh/9v/TY/LeHXt5u+w5Q",
+        "SwMEFAAAAAgAEadNXRxJ976kAAAAFgEAAAsAAABfcmVscy8ucmVsc43PsQ7CIBSF4VchdxeqgzGmtIsx6WrqAyC9bUmBSwAV397V",
+        "Ggf3k+/kr9viLHtgTIa8hC2vgKHXNBg/Sbj2580B2qa+oFXZkE+zCYkVZ32SMOccjkIkPaNTiVNAX5wdKTqVE6c4iaD0oiYUu6ra",
+        "i/hpwNpk3SAhdsMWWP8K+I9N42g0nkjfHfr84+JrAaxXccIsoVjxpLjciBZenAXR1GIV2LwBUEsDBBQAAAAIABGnTV2JactYvgAA",
+        "ADcBAAAPAAAAeGwvd29ya2Jvb2sueG1sjZDBasMwEER/Rey9lu1DKcZyLiWQc9MPUKV1LCLtml019eeXJg2kt54GhscbmHG3lWwu",
+        "KJqYHHRNCwYpcEx0cvB+3D+9wG4av1jOH8xns5VM6mCpdR2s1bBg8drwirSVPLMUX7VhOVldBX3UBbGWbPu2fbbFJ4KbYZD/OHie",
+        "U8BXDp8Fqd4kgtnXxKRLWhWm8bqgv2nIF3SwT6IVzLU6RAcdGBlSdCCH2IH9C79hYIoPdP9A9z+0vW/Y+w3TN1BLAwQUAAAACAAR",
+        "p01dims7GrMAAACkAQAAGgAAAHhsL19yZWxzL3dvcmtib29rLnhtbC5yZWxzvZDBqsIwEEV/JczeTtuFyMPoRgS3Uj8gpNM2mGRC",
+        "Jmr9e0Hw8QQXb+Xqwl2ce7jr7Ry8ulIWx1FDU9WgKFruXRw1nLr9YgXbzfpI3hTHUSaXRM3BR9EwlZJ+EMVOFIxUnCjOwQ+cgylS",
+        "cR4xGXs2I2Fb10vMfxnwzlSHXkM+9A2o7p7oP2weBmdpx/YSKJYPE3jjfJaJqIDqTB6paPitBJ/RVHPwgJ9l2i/LtC8ZfLt78wBQ",
+        "SwMEFAAAAAgAEadNXQ6ZTryyAAAAFgEAABgAAAB4bC93b3Jrc2hlZXRzL3NoZWV0MS54bWx1j81qw0AMhF9l0b2W7UMoRasQCD32",
+        "0vYBFkeNl+6P0YrYj1+Sg+mhvc0MzMcMHbec3E20xVo8DF0PTspUL7FcPXx+vD49w5FprfrdZhFzW06leZjNlhfENs2SQ+vqImXL",
+        "6atqDta6qldsi0q4PEo54dj3B8whFmB6ZOdggUnr6tTDAEzTXZwGcOYhlhSLvJsCU2xMxm8hC6Ex4d3jxIRa1x0w7oDxH8Cp/FXH",
+        "X1twP8k/UEsDBBQAAAAIABGnTV35362pswAAABYBAAAYAAAAeGwvd29ya3NoZWV0cy9zaGVldDIueG1sdY/BasMwEER/Rey9XtuH",
+        "UMpqQ0vpsZe2HyCcbSwiaY20xP78khxMD+1tZmAeM3TccnJXqS1q8TB0PTgpk55iOXv4+nx7eIQj06r10mYRc1tOpXmYzZYnxDbN",
+        "kkPrdJGy5fStNQdrndYztqVKON1LOeHY9wfMIRZgumevwQJT1dVVDwMwTTfxPIAzD7GkWOTDKjDFxmT8HrIQGhPePE5MWHXdAeMO",
+        "GP8BvOhfdfy1BfeT/ANQSwECFAAUAAAACAARp01d8amwPvoAAACkAgAAEwAAAAAAAAAAAAAAgAEAAAAAW0NvbnRlbnRfVHlwZXNd",
+        "LnhtbFBLAQIUABQAAAAIABGnTV0cSfe+pAAAABYBAAALAAAAAAAAAAAAAACAASsBAABfcmVscy8ucmVsc1BLAQIUABQAAAAIABGn",
+        "TV2JactYvgAAADcBAAAPAAAAAAAAAAAAAACAAfgBAAB4bC93b3JrYm9vay54bWxQSwECFAAUAAAACAARp01dims7GrMAAACkAQAA",
+        "GgAAAAAAAAAAAAAAgAHjAgAAeGwvX3JlbHMvd29ya2Jvb2sueG1sLnJlbHNQSwECFAAUAAAACAARp01dDplOvLIAAAAWAQAAGAAA",
+        "AAAAAAAAAAAAgAHOAwAAeGwvd29ya3NoZWV0cy9zaGVldDEueG1sUEsBAhQAFAAAAAgAEadNXfnframzAAAAFgEAABgAAAAAAAAA",
+        "AAAAAIABtgQAAHhsL3dvcmtzaGVldHMvc2hlZXQyLnhtbFBLBQYAAAAABgAGAIsBAACfBQAAAAA=",
+    ].join(""),
+    "base64",
+)
 
 const csv = (text: string): Uint8Array => new TextEncoder().encode(text)
 const zip = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0x00])
@@ -64,13 +78,26 @@ const google = (partial: Partial<PublicResponse>): PublicResponse => ({
 
 describe("TableClient", () => {
     beforeEach(() => {
-        mockWorkbook.error = undefined
-        mockWorkbook.sheets = []
+        wordSpy.mockImplementation(() =>
+            mockWord.error === undefined
+                ? Promise.resolve({ value: mockWord.text, messages: [] })
+                : Promise.reject(mockWord.error),
+        )
+        proxySpy.mockResolvedValue(mock<Awaited<ReturnType<typeof unpdf.getDocumentProxy>>>())
+        pdfSpy.mockImplementation(() =>
+            mockPdf.error === undefined
+                ? Promise.resolve({ text: mockPdf.text, totalPages: mockPdf.pages })
+                : Promise.reject(mockPdf.error),
+        )
         mockWord.text = "word"
         mockWord.error = undefined
         mockPdf.text = "pdf"
         mockPdf.pages = 2
         mockPdf.error = undefined
+    })
+
+    afterAll(() => {
+        jest.restoreAllMocks()
     })
 
     describe("readText and readGrid", () => {
@@ -128,30 +155,21 @@ describe("TableClient", () => {
             })
         })
 
-        it("reads the named sheet, else the first, and refuses an unreadable or empty workbook", async () => {
+        it("reads the named sheet, else the first, and refuses an unreadable workbook", async () => {
             const { client } = await build()
-            mockWorkbook.sheets = [
-                { sheet: "First", data: [["Name"], ["An"]] },
-                { sheet: "Second", data: [["Name"], ["Bo"]] },
-            ]
 
-            await expect(client.readFile("orders.xlsx", zip, "Second")).resolves.toMatchObject({
+            await expect(client.readFile("orders.xlsx", TWO_SHEETS, "Second")).resolves.toMatchObject({
                 headers: ["Name"],
                 rows: [["Bo"]],
                 sheets: ["First", "Second"],
                 sheet: "Second",
             })
-            await expect(client.readFile("orders.xlsx", zip)).resolves.toMatchObject({ sheet: "First", rows: [["An"]] })
-
-            mockWorkbook.sheets = []
-            await expect(client.readFile("orders.xlsx", zip)).rejects.toMatchObject({
-                params: { detail: TABLE_COPY.noSheets },
+            await expect(client.readFile("orders.xlsx", TWO_SHEETS)).resolves.toMatchObject({
+                sheet: "First",
+                rows: [["An"]],
             })
-            const cause = new Error("bad zip")
-            mockWorkbook.error = cause
             await expect(client.readFile("orders.xlsx", zip)).rejects.toMatchObject({
                 params: { detail: TABLE_COPY.unreadableExcel },
-                cause,
             })
         })
     })

@@ -1,49 +1,30 @@
 import { PassThrough } from "node:stream"
+import { MsEdgeTTS } from "msedge-tts"
 import { TtsErrorCode } from "./errors/tts.error"
 import { TtsClient } from "./tts.client"
 
-interface MockSession {
+/** What one SDK connection was asked to do. */
+interface Session {
     voice: string
     rate: string
     closed: boolean
 }
 
-const mockSessions: Array<MockSession> = []
+const sessions = new Map<MsEdgeTTS, Session>()
 const mockStreams: Array<PassThrough> = []
 const mockState = { offline: false }
 
-interface StreamOptions {
-    rate: string
+const sessionOf = (tts: MsEdgeTTS): Session => {
+    const known = sessions.get(tts) ?? { voice: "", rate: "", closed: false }
+    sessions.set(tts, known)
+    return known
 }
 
-interface StreamResult {
-    audioStream: PassThrough
-}
+const mockSessions = (): Array<Session> => [...sessions.values()]
 
-jest.mock("msedge-tts", () => ({
-    OUTPUT_FORMAT: { AUDIO_24KHZ_96KBITRATE_MONO_MP3: "mp3" },
-    MsEdgeTTS: class {
-        private readonly session: MockSession = { voice: "", rate: "", closed: false }
-
-        constructor() {
-            mockSessions.push(this.session)
-        }
-
-        setMetadata(voice: string): Promise<void> {
-            this.session.voice = voice
-            return mockState.offline ? Promise.reject(new Error("offline")) : Promise.resolve()
-        }
-
-        toStream(_text: string, options: StreamOptions): StreamResult {
-            this.session.rate = options.rate
-            return { audioStream: mockStreams.shift() ?? new PassThrough() }
-        }
-
-        close(): void {
-            this.session.closed = true
-        }
-    },
-}))
+const setMetadata = jest.spyOn(MsEdgeTTS.prototype, "setMetadata")
+const toStream = jest.spyOn(MsEdgeTTS.prototype, "toStream")
+const close = jest.spyOn(MsEdgeTTS.prototype, "close")
 
 const REQUEST = { text: "Hello", voice: "vi-VN-HoaiMyNeural", ratePct: 0 }
 const AUDIO = Buffer.alloc(900, 1)
@@ -60,9 +41,24 @@ const speaking = (...chunks: Array<Buffer>): PassThrough => {
 }
 
 beforeEach(() => {
-    mockSessions.length = 0
+    sessions.clear()
     mockStreams.length = 0
     mockState.offline = false
+    setMetadata.mockImplementation(function (this: MsEdgeTTS, voice: string) {
+        sessionOf(this).voice = voice
+        return mockState.offline ? Promise.reject(new Error("offline")) : Promise.resolve()
+    })
+    toStream.mockImplementation(function (this: MsEdgeTTS, _text: string, options) {
+        sessionOf(this).rate = String(options?.rate ?? "")
+        return { audioStream: mockStreams.shift() ?? new PassThrough(), metadataStream: null }
+    })
+    close.mockImplementation(function (this: MsEdgeTTS) {
+        sessionOf(this).closed = true
+    })
+})
+
+afterAll(() => {
+    jest.restoreAllMocks()
 })
 
 describe("TtsClient", () => {
@@ -73,7 +69,7 @@ describe("TtsClient", () => {
         const audio = await tts.synthesize({ ...REQUEST, ratePct: 12.4 }, new AbortController().signal)
 
         expect(audio.length).toBe(900)
-        expect(mockSessions[0]).toMatchObject({ voice: "vi-VN-HoaiMyNeural", rate: "+12%" })
+        expect(mockSessions()[0]).toMatchObject({ voice: "vi-VN-HoaiMyNeural", rate: "+12%" })
     })
 
     it("writes a negative rate with its own sign and reuses the connection for the same voice", async () => {
@@ -83,8 +79,8 @@ describe("TtsClient", () => {
         await tts.synthesize({ ...REQUEST, ratePct: -5 }, new AbortController().signal)
         await tts.synthesize(REQUEST, new AbortController().signal)
 
-        expect(mockSessions).toHaveLength(1)
-        expect(mockSessions[0]?.rate).toBe("+0%")
+        expect(mockSessions()).toHaveLength(1)
+        expect(mockSessions()[0]?.rate).toBe("+0%")
     })
 
     it("opens a new connection when the voice changes and closes the old one", async () => {
@@ -94,7 +90,7 @@ describe("TtsClient", () => {
         await tts.synthesize(REQUEST, new AbortController().signal)
         await tts.synthesize({ ...REQUEST, voice: "vi-VN-NamMinhNeural" }, new AbortController().signal)
 
-        expect(mockSessions.map((session) => [session.voice, session.closed])).toEqual([
+        expect(mockSessions().map((session) => [session.voice, session.closed])).toEqual([
             ["vi-VN-HoaiMyNeural", true],
             ["vi-VN-NamMinhNeural", false],
         ])
@@ -108,7 +104,7 @@ describe("TtsClient", () => {
             code: TtsErrorCode.Retryable,
         })
 
-        expect(mockSessions[0]?.closed).toBe(true)
+        expect(mockSessions()[0]?.closed).toBe(true)
     })
 
     it("treats a stream error as retryable", async () => {
@@ -169,6 +165,6 @@ describe("TtsClient", () => {
 
         tts.close()
 
-        expect(mockSessions[0]?.closed).toBe(true)
+        expect(mockSessions()[0]?.closed).toBe(true)
     })
 })

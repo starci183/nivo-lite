@@ -1,12 +1,18 @@
+import { Test } from "@nestjs/testing"
 import { HttpSecurityError, HttpSecurityErrorCode } from "./errors/http-security.error"
 import { WebhookProofRegistryService } from "./webhook-proof-registry.service"
 import type { WebhookProof } from "./webhook-proof.port"
+
+const build = async (): Promise<WebhookProofRegistryService> => {
+    const moduleRef = await Test.createTestingModule({ providers: [WebhookProofRegistryService] }).compile()
+    return moduleRef.get(WebhookProofRegistryService)
+}
 
 const proofOf = (provider: string): WebhookProof => ({ provider, prove: () => Promise.resolve(true) })
 
 describe("WebhookProofRegistryService", () => {
     it("asks the proof registered for a provider with the request", async () => {
-        const registry = new WebhookProofRegistryService()
+        const registry = await build()
         const prove = jest.fn().mockResolvedValue(false)
         registry.add({ provider: "zalo", prove })
         const request = { scope: "c1", rawBody: undefined, signature: "mac", timestamp: undefined }
@@ -17,15 +23,15 @@ describe("WebhookProofRegistryService", () => {
     })
 
     it("refuses a provider with no proof registered", async () => {
-        const registry = new WebhookProofRegistryService()
+        const registry = await build()
 
         await expect(
             registry.prove("telegram", { scope: "c1", rawBody: undefined, signature: undefined, timestamp: undefined }),
         ).rejects.toMatchObject({ code: HttpSecurityErrorCode.WebhookProviderUnknown })
     })
 
-    it("refuses a second proof for the same provider", () => {
-        const registry = new WebhookProofRegistryService()
+    it("refuses a second proof for the same provider", async () => {
+        const registry = await build()
         registry.add(proofOf("zalo"))
 
         expect(() => registry.add(proofOf("zalo"))).toThrow(HttpSecurityError)

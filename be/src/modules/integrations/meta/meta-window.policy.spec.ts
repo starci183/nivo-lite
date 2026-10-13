@@ -54,7 +54,7 @@ describe("chunkText", () => {
     })
 
     it("splits by bytes on Instagram and cuts a text with no break where it must", () => {
-        const accented = "é".repeat(900)
+        const accented = "\u00e9".repeat(900)
         const chunks = chunkText("instagram", accented)
 
         expect(chunks.length).toBeGreaterThan(1)
