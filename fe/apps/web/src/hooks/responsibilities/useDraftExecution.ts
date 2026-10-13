@@ -1,9 +1,11 @@
 import { useTranslations } from "next-intl"
 import { useCallback, useState } from "react"
 import { mutate } from "swr"
-import { useMutateDraftLeadExecutionSwr } from "@/hooks/swr/api/graphql/mutations/useMutateDraftLeadExecutionSwr"
-import { useQueryLeadActionStatusSwr } from "@/hooks/swr/api/graphql/queries/useQueryLeadActionStatusSwr"
-import { QUERY_RESPONSIBILITIES_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryResponsibilitiesSwr"
+import {
+    useMutateDraftLeadExecutionSwr,
+    useQueryLeadActionStatusSwr,
+    QUERY_RESPONSIBILITIES_SWR_KEY,
+} from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { useGraphQLWithToast } from "@/modules/toast"
 

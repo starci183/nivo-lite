@@ -1,7 +1,7 @@
 import { useTranslations } from "next-intl"
 import { useCallback, useRef, useState } from "react"
 import { useRevalidateLeadViews } from "@/hooks/leads"
-import { useQuerySalesActionStatusSwr } from "@/hooks/swr/api/graphql/queries/useQuerySalesActionStatusSwr"
+import { useQuerySalesActionStatusSwr } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import type { SalesActionType } from "@/modules/api"
 import { toast, useGraphQLWithToast } from "@/modules/toast"
