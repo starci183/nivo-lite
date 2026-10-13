@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import { GetLoyaltyCampaignResolver } from "./get-loyalty-campaign.resolver"
 import { DraftCampaignResolver } from "./draft-campaign.resolver"
+import { SubmitLoyaltyCampaignResolver } from "./submit-loyalty-campaign.resolver"
 import { LoyaltyApiModule } from "../../loyalty.module"
 import { LoyaltyBoardResolver } from "./loyalty-board.resolver"
 import { LoyaltyProgramResolver } from "./loyalty-program.resolver"
@@ -20,6 +21,7 @@ import { UpdateLoyaltyMemberResolver } from "./update-loyalty-member.resolver"
     providers: [
         GetLoyaltyCampaignResolver,
         DraftCampaignResolver,
+        SubmitLoyaltyCampaignResolver,
         LoyaltyBoardResolver,
         LoyaltyProgramResolver,
         LoyaltyMemberResolver,

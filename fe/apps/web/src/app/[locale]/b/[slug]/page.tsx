@@ -1,14 +1,12 @@
-import type { Metadata } from "next"
-import { getTranslations } from "next-intl/server"
-import { notFound } from "next/navigation"
+import { PublicBookingPage } from "@/features/pages/PublicBookingPage"
 
-/** The document title of the page; it is never indexed. */
-export const generateMetadata = async (): Promise<Metadata> => {
-    const t = await getTranslations("workbenchBooking")
-    return { title: t("publicTitle"), robots: { index: false } }
-}
+export { publicBookingMetadata as generateMetadata } from "@/features/pages/PublicBookingPage"
 
-/** Public booking page of one shop. The page is rebuilt over the back end GraphQL API; until then the route answers not found. */
-const Page = () => notFound()
+export const dynamic = "force-dynamic"
+
+type PageProps = Parameters<typeof PublicBookingPage>[0]
+
+/** Public booking page of one shop. */
+const Page = (props: PageProps) => <PublicBookingPage params={props.params} />
 
 export default Page

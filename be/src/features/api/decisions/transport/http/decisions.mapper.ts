@@ -29,6 +29,7 @@ import type { WorkItemResponse } from "./dto/work-item.response"
 export const toListWorkItemsRequest = (workspaceId: string, input: ListWorkItemsRequest): ListWorkItemPageRequest => ({
     workspaceId,
     statuses: input.statuses,
+    action: input.action,
     after: input.after,
     limit: input.limit,
 })

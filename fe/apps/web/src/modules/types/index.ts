@@ -52,6 +52,9 @@ export type {
     BookingStatsView,
     BookingView,
     BookingWaitView,
+    PublicBookingAnswer,
+    PublicBookingPage,
+    PublicBookingService,
 } from "./booking"
 export type { ConsoleIconName, ConsoleNavItem, ConsolePending, ConsoleWorkspace } from "./console"
 export type {
@@ -234,6 +237,15 @@ export type {
     IdeaDecision,
     DocumentVisibility,
 } from "./knowledge"
+export type {
+    AgentDashboardView,
+    DashboardConnection,
+    DashboardRow,
+    DashboardDone,
+    DashboardKnowledge,
+    DashboardRegion,
+    DashboardWaiting,
+} from "./agent-dashboard"
 export type {
     ShiftsAvailRowView,
     ShiftsAvailView,

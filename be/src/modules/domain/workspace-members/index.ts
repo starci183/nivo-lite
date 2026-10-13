@@ -1,6 +1,6 @@
 export { WORKSPACE_MEMBERS_ERROR_KINDS } from "./errors/workspace-members.error"
 export { WORKSPACE_MEMBERS_MESSAGES } from "./messages/workspace-members.messages"
-export { canDecide, isManagerRole } from "./role.policy"
+export { canDecide, isManagerRole, PresentedRole } from "./role.policy"
 export type {
     AccountDirectory,
     AccountOverview,

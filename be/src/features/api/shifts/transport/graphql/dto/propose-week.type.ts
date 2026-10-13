@@ -26,4 +26,12 @@ export class ProposeWeekType {
     /** The estimated wage cost in dong. */
     @Field(() => Float)
     costVnd!: number
+
+    /** How long the solver ran, in milliseconds. */
+    @Field(() => Int)
+    ms!: number
+
+    /** How many starts the solver tried. */
+    @Field(() => Int)
+    iterations!: number
 }

@@ -54,6 +54,8 @@ const connectionOf = (row: BoundConnectionRow, purpose: Purpose): BoundConnectio
     id: row.id,
     provider: row.provider,
     name: row.name,
+    botUsername: row.bot_username,
+    accountMasked: row.account_masked,
     status: row.status,
     access: accessOf(row.access),
     purpose,

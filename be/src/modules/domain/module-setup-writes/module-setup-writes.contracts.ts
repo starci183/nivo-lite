@@ -1,5 +1,5 @@
 import type { RuleMode } from "@modules/domain/authority-rules"
-import type { Scope, SubjectType } from "@modules/domain/brain-facts"
+import type { BrainSubjectType, Scope } from "@modules/domain/brain-facts"
 
 /** The states of a confirm card of the setup chat. */
 export type CardStatus = "proposed" | "applied" | "rejected" | "superseded"
@@ -7,7 +7,7 @@ export type CardStatus = "proposed" | "applied" | "rejected" | "superseded"
 /** A fact the owner is asked to confirm: subject, attribute, value and who may read it. */
 export interface FactCardPayload {
     /** What the fact is about. */
-    readonly subjectType: SubjectType
+    readonly subjectType: BrainSubjectType
     /** The subject as people write it. */
     readonly subjectLabel: string
     /** The attribute as people write it. */

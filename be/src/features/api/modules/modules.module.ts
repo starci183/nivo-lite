@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common"
 import { ApplySetupHandler } from "./application/apply-setup.handler"
+import { ContextNotesHandler } from "./application/context-notes.handler"
+import { DismissContextNoteHandler } from "./application/dismiss-context-note.handler"
 import { DecideSetupCardHandler } from "./application/decide-setup-card.handler"
 import { GetAgentSyncStatusHandler } from "./application/get-agent-sync-status.handler"
 import { GetCatalogHandler } from "./application/get-catalog.handler"
@@ -8,6 +10,7 @@ import { GetModuleHandler } from "./application/get-module.handler"
 import { GetRequirementFactsHandler } from "./application/get-requirement-facts.handler"
 import { GetSetupStateHandler } from "./application/get-setup-state.handler"
 import { InstallModuleHandler } from "./application/install-module.handler"
+import { InstanceOfRecordHandler } from "./application/instance-of-record.handler"
 import { ListInstallationsHandler } from "./application/list-installations.handler"
 import { ListSetupVersionsHandler } from "./application/list-setup-versions.handler"
 import { PostSetupMessageHandler } from "./application/post-setup-message.handler"
@@ -21,6 +24,8 @@ import { SetSetupGateHandler } from "./application/set-setup-gate.handler"
 @Module({
     providers: [
         ApplySetupHandler,
+        ContextNotesHandler,
+        DismissContextNoteHandler,
         DecideSetupCardHandler,
         GetAgentSyncStatusHandler,
         GetCatalogHandler,
@@ -29,6 +34,7 @@ import { SetSetupGateHandler } from "./application/set-setup-gate.handler"
         GetRequirementFactsHandler,
         GetSetupStateHandler,
         InstallModuleHandler,
+        InstanceOfRecordHandler,
         ListInstallationsHandler,
         ListSetupVersionsHandler,
         PostSetupMessageHandler,

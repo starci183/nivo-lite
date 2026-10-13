@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import { AgentsApiModule } from "../../agents.module"
+import { AgentConnectionCandidatesResolver } from "./agent-connection-candidates.resolver"
 import { AgentConnectionsResolver } from "./agent-connections.resolver"
 import { AgentDashboardResolver } from "./agent-dashboard.resolver"
 import { AgentEngineStatusResolver } from "./agent-engine-status.resolver"
@@ -20,6 +21,7 @@ import { SetAgentTextsResolver } from "./set-agent-texts.resolver"
         AgentsResolver,
         AgentDashboardResolver,
         AgentEngineStatusResolver,
+        AgentConnectionCandidatesResolver,
         AgentConnectionsResolver,
         RequestAgentGenerationResolver,
         AgentGenerationStatusResolver,

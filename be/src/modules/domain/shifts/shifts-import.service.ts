@@ -5,7 +5,7 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ShiftsError, ShiftsErrorCode } from "./errors/shifts.error"
 import { ShiftsDataService } from "./shifts-data.service"
 import { ShiftsTextService } from "./shifts-text.service"
-import type { ApplyImportOutput, ApplyImportParams } from "./shifts-operations.contracts"
+import type { ApplyImportOutput, ApplyImportParams, PreviewImportOutput } from "./shifts-operations.contracts"
 import { APPLY_IMPORT } from "./persistence/shifts.sql"
 import { MANAGER_ROLES } from "./policies/access-roles.policy"
 import { parseImport, POSITION_COLORS } from "./policies/import-text.policy"
@@ -19,6 +19,27 @@ export class ShiftsImportService {
         private readonly data: ShiftsDataService,
         private readonly words: ShiftsTextService,
     ) {}
+
+    /** Reads the text into positions, people and coverage, and the lines that could not be read. Writes nothing. */
+    async previewImport(userId: string, workspaceId: string, request: ApplyImportParams): Promise<PreviewImportOutput> {
+        await this.members.require(userId, workspaceId, MANAGER_ROLES)
+        const setup = await this.data.loadSetup(workspaceId, false)
+        const parsed = parseImport(
+            request,
+            setup.positions.map((position) => position.name),
+        )
+        return {
+            positions: parsed.positions,
+            staff: parsed.staff,
+            blocks: parsed.blocks,
+            errors: parsed.errors.map((error) =>
+                this.words.text("shifts.import.line", {
+                    line: error.line,
+                    reason: this.words.text(`shifts.import.${error.code}`, { subject: error.subject }),
+                }),
+            ),
+        }
+    }
 
     /** Reads the text and, when every line is readable, adds what it describes; otherwise changes nothing. */
     async applyImport(userId: string, workspaceId: string, request: ApplyImportParams): Promise<ApplyImportOutput> {

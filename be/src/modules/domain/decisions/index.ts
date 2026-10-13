@@ -19,6 +19,7 @@ export type {
     AuthoritySheet,
     DecisionHistoryKind,
     DecisionRecord,
+    ReconcileDetails,
     WorkItemCursor,
     WorkItemPage,
 } from "./decisions-views.contracts"
@@ -28,12 +29,13 @@ export { ApprovalRequesterService } from "./approval-requester.service"
 export { CommandBusService } from "./command-bus.service"
 export { DecisionsService } from "./decisions.service"
 export { EvidenceService } from "./evidence.service"
-export type { DecisionRecord as LeadDecisionRecord } from "./decision-history.contracts"
+export type { LeadDecisionRecord } from "./decision-history.contracts"
 export { ModuleCatalogService } from "./module-catalog.service"
 export { WorkDecisionService } from "./work-decision.service"
+export { WorkPlacementService } from "./work-placement.service"
 export { WorkEngineService } from "./work-engine.service"
 export { formatVnd } from "./work-engine.policy"
-export { InjectWorkPerformerRegistry } from "./work-performer.port"
+export { InjectWorkPerformerRegistry, WORK_PERFORMER_REGISTRY } from "./work-performer.port"
 export type { WorkPerformerRegistry } from "./work-performer.port"
 export { UnboundDecisionEventsService } from "./unbound-decision-events.service"
 export { UnboundLeadGenFlowService } from "./unbound-lead-gen-flow.service"

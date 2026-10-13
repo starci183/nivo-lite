@@ -28,6 +28,7 @@ export {
     agentSetupHref,
     leadFlowHref,
     leadHref,
+    policyLogHref,
     responsibilitiesHref,
     teamInviteHref,
     workItemHref,

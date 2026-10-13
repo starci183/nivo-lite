@@ -1,4 +1,4 @@
-import type { Scope, SubjectType } from "@modules/domain/brain-facts"
+import type { BrainSubjectType, Scope } from "@modules/domain/brain-facts"
 
 /** One correction the owner made of an agent's work, as the decisions record keeps it. */
 export interface Correction {
@@ -49,7 +49,7 @@ export interface MineResult {
 /** A fact an owner or manager writes on the Second Brain page. */
 export interface FactForm {
     /** What it is about. */
-    readonly subjectType: SubjectType
+    readonly subjectType: BrainSubjectType
     /** The subject. */
     readonly subjectLabel: string
     /** The attribute. */

@@ -1,4 +1,6 @@
-/** A tab panel: its commands row above the content (GAP-3). */
+/** A tab panel: its commands row above the content. */
 export const PANEL_CLASS_NAME = "flex min-w-0 flex-col gap-3"
-/** A wrapping row of actions (GAP-2 case-3). */
-export const TOOLBAR_CLASS_NAME = "flex flex-wrap items-center gap-2"
+/** A wrapping row of actions. */
+export const TOOLBAR_CLASS_NAME = "flex flex-wrap items-center gap-2 empty:hidden"
+/** The header and the panel stack with the same spacing in every state. */
+export const FRAME_CLASS_NAME = "flex min-w-0 flex-col gap-6"

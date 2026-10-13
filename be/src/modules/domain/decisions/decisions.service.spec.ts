@@ -3,10 +3,14 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { AuthorityService } from "@modules/domain/authority"
 import type { AuthorityProfile } from "@modules/domain/authority"
+import { InvoicesService } from "@modules/domain/invoices"
+import { StaffService } from "@modules/domain/staff"
+import { TransactionsService } from "@modules/domain/transactions"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import type { AuthorityRuleRecord, RuleChange } from "@modules/domain/authority-rules"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
+import { WorkItemsService } from "@modules/domain/work-items"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { WorkItem } from "./decisions.contracts"
 import type { ListWorkItemsQuery } from "./decisions-views.contracts"
@@ -89,9 +93,11 @@ const changeOf = builder<RuleChange>({
     mode: "ask",
     limit_vnd: 1000,
     required_fields: ["customer"],
+    department: "sales",
+    note: null,
 })
 
-const queryOf = builder<ListWorkItemsQuery>({ statuses: ["waiting_decision"], after: null, limit: 2 })
+const queryOf = builder<ListWorkItemsQuery>({ statuses: ["waiting_decision"], action: null, after: null, limit: 2 })
 
 const build = async (entityManager: MockEntityManager) => {
     const members = mock<WorkspaceMembersService>({ require: jest.fn().mockResolvedValue(memberOf()) })
@@ -106,6 +112,10 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: EvidenceService, useValue: evidence },
             { provide: AuthorityService, useValue: authority },
             { provide: AuthorityRulesService, useValue: rules },
+            { provide: WorkItemsService, useValue: mock<WorkItemsService>() },
+            { provide: StaffService, useValue: mock<StaffService>() },
+            { provide: InvoicesService, useValue: mock<InvoicesService>() },
+            { provide: TransactionsService, useValue: mock<TransactionsService>() },
         ],
     }).compile()
     return { service: moduleRef.get(DecisionsService), members, evidence, authority, rules }
@@ -122,7 +132,7 @@ describe("DecisionsService", () => {
                 next: { createdAt: CURSOR_AT, id: "b" },
             })
             expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
-            expect(em.query).toHaveBeenCalledWith(LIST_WORK_ITEMS, ["ws-1", ["waiting_decision"], null, null, 3])
+            expect(em.query).toHaveBeenCalledWith(LIST_WORK_ITEMS, ["ws-1", ["waiting_decision"], null, null, 3, null])
         })
 
         it("continues after a cursor and clamps the page size", async () => {
@@ -133,7 +143,7 @@ describe("DecisionsService", () => {
             await expect(
                 service.listWorkItems("user-1", "ws-1", queryOf({ statuses: [], after, limit: 1000 })),
             ).resolves.toEqual({ items: [itemOf({ id: "z" })], next: null })
-            expect(em.query).toHaveBeenCalledWith(LIST_WORK_ITEMS, ["ws-1", [], "2026-10-12T00:00:00Z", "y", 101])
+            expect(em.query).toHaveBeenCalledWith(LIST_WORK_ITEMS, ["ws-1", [], "2026-10-12T00:00:00Z", "y", 101, null])
         })
     })
 

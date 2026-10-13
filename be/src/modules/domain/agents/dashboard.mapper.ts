@@ -29,8 +29,14 @@ export const clip = (text: string, max: number): string => {
     return flat.length > max ? `${flat.slice(0, max - 1).trimEnd()}…` : flat
 }
 
+/** The workbench link that opens the decision for one work item. */
+export const decisionHrefOf = (module: string, installationId: string | null, workItemId: string): string => {
+    const base = installationId === null ? `/agents/${module}` : `/agents/${module}/${installationId}`
+    return `${base}/workbench?focus=${workItemId}`
+}
+
 /** One work item row as a dashboard line. */
-export const itemOf = (row: DashboardItemRow): DashboardItem => ({
+export const itemOf = (row: DashboardItemRow, decisionHref: string): DashboardItem => ({
     id: row.id,
     title: clip(row.summary ?? "", SUMMARY_MAX),
     action: row.action,
@@ -38,6 +44,7 @@ export const itemOf = (row: DashboardItemRow): DashboardItem => ({
     at: row.at,
     leadId: row.lead_id,
     resultHref: row.result_href === "" ? null : row.result_href,
+    decisionHref,
 })
 
 /** The count of rows before the limit; every row of a page carries it. */
@@ -59,6 +66,8 @@ export const connectionItemsOf = (bound: ReadonlyArray<BoundConnection>): Readon
                 id: connection.id,
                 name: connection.name,
                 provider: connection.provider,
+                botUsername: connection.botUsername,
+                accountMasked: connection.accountMasked,
                 status: statusOf(connection.status),
                 access: connection.access,
                 purpose: connection.purpose,

@@ -1,4 +1,9 @@
-import { Field, ID, ObjectType } from "@nestjs/graphql"
+import { Field, ID, ObjectType, registerEnumType } from "@nestjs/graphql"
+import { GovernanceDecidedPath, GovernanceWorkReason, GovernanceWorkStatus } from "@modules/domain/overview"
+
+registerEnumType(GovernanceWorkStatus, { name: "GovernanceWorkStatus" })
+registerEnumType(GovernanceDecidedPath, { name: "GovernanceDecidedPath" })
+registerEnumType(GovernanceWorkReason, { name: "GovernanceWorkReason" })
 
 @ObjectType()
 /** A work item row behind the governance figures. */
@@ -16,16 +21,16 @@ export class DashboardGovernanceWorkType {
     department!: string
 
     /** The work status. */
-    @Field()
-    status!: string
+    @Field(() => GovernanceWorkStatus)
+    status!: GovernanceWorkStatus
 
     /** The reason code, or null. */
-    @Field(() => String, { nullable: true })
-    reason!: string | null
+    @Field(() => GovernanceWorkReason, { nullable: true })
+    reason!: GovernanceWorkReason | null
 
     /** `auto`, `human` or null. */
-    @Field(() => String, { nullable: true })
-    decidedPath!: string | null
+    @Field(() => GovernanceDecidedPath, { nullable: true })
+    decidedPath!: GovernanceDecidedPath | null
 
     /** When it was created, ISO 8601. */
     @Field()

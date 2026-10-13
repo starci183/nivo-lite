@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import { KnowledgeApiModule } from "../../knowledge.module"
 import { KnowledgeSourcesResolver } from "./knowledge-sources.resolver"
 import { KnowledgeSourceResolver } from "./knowledge-source.resolver"
+import { NivoKnowledgeCountResolver } from "./nivo-knowledge-count.resolver"
 import { NivoKnowledgeResolver } from "./nivo-knowledge.resolver"
 import { KnowledgeSuggestionsResolver } from "./knowledge-suggestions.resolver"
 import { AskKnowledgeResolver } from "./ask-knowledge.resolver"
@@ -31,6 +32,7 @@ import { LessonMiningStatusResolver } from "./lesson-mining-status.resolver"
     providers: [
         KnowledgeSourcesResolver,
         KnowledgeSourceResolver,
+        NivoKnowledgeCountResolver,
         NivoKnowledgeResolver,
         KnowledgeSuggestionsResolver,
         AskKnowledgeResolver,

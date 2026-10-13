@@ -1,27 +1,29 @@
 "use client"
 
+import { useVideoEditorData, editorHref, type EditorStep } from "@/hooks/video"
 import { useTranslations } from "next-intl"
-import { editorHref } from "@/hooks/video"
-import type { EditorStep } from "@/hooks/video"
+
 import { navigation } from "@/modules/i18n"
 import { VideoEditorStepperBase } from "./component"
 
 /** The steps of the wizard, in order. */
 const STEPS: ReadonlyArray<EditorStep> = ["goal", "inputs", "script", "preview", "result"]
 
+/** What the page tells the step. */
 interface VideoEditorStepperProps {
-    /** The video being edited, or null while it does not exist yet (only the first step opens). */
-    readonly projectId: string | null
-    readonly step: EditorStep
-    readonly canEdit: boolean
+    /** The step named in the address. */
+    readonly tab: string | null
+    /** The video named in the address, or the new-video command. */
+    readonly focus: string | null
 }
 
 /** The wizard header: the way back to the library and the five steps, each a place in the address. */
 export const VideoEditorStepper = (props: VideoEditorStepperProps) => {
+    const editor = useVideoEditorData(props)
     const t = useTranslations("video")
     const router = navigation.useRouter()
     const pathname = navigation.usePathname()
-    const { projectId } = props
+    const projectId = editor.project?.id ?? null
     return (
         <VideoEditorStepperBase
             props={{
@@ -33,8 +35,8 @@ export const VideoEditorStepper = (props: VideoEditorStepperProps) => {
                     label: t(`step_${id}`),
                     isDisabled: id !== "goal" && projectId === null,
                 })),
-                current: props.step,
-                viewOnly: props.canEdit ? null : t("viewOnly"),
+                current: editor.step,
+                viewOnly: editor.canEdit ? null : t("viewOnly"),
             }}
             on={{
                 select: (id) => {

@@ -3,10 +3,15 @@
 import { useLocale, useTranslations } from "next-intl"
 import { useState } from "react"
 import type { BadgeTone } from "@starci/grammar/common"
-import { editorHref, GOAL_TEMPLATES, stepFor, useVideoFailure, useVideoRefresh } from "@/hooks/video"
-import type { ProjectStatus, ProjectView } from "@/hooks/video"
+import {
+    editorHref,
+    GOAL_TEMPLATES,
+    stepFor,
+    useVideoActions,
+    useVideoLibraryData,
+    type ProjectStatus,
+} from "@/hooks/video"
 import { navigation } from "@/modules/i18n"
-import { archiveVideoProject, duplicateVideoProject } from "@/modules/db/video/write-project"
 import { VideoLibraryBase } from "./component"
 
 const STATUS_TONE: Record<ProjectStatus, BadgeTone> = {
@@ -19,28 +24,21 @@ const STATUS_TONE: Record<ProjectStatus, BadgeTone> = {
     archived: "neutral",
 }
 
-interface VideoLibraryProps {
-    readonly projects: ReadonlyArray<ProjectView>
-    readonly canEdit: boolean
-}
-
 /** The library of the workspace's videos; while one is being scripted or rendered the page reads again every few seconds. */
-export const VideoLibrary = (props: VideoLibraryProps) => {
+export const VideoLibrary = () => {
+    const library = useVideoLibraryData()
     const t = useTranslations("video")
     const lang = useLocale() === "en" ? "en" : "vi"
-    const failure = useVideoFailure()
+    const { archive, duplicate } = useVideoActions()
     const router = navigation.useRouter()
     const pathname = navigation.usePathname()
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    useVideoRefresh(props.projects.some((entry) => entry.status === "scripting" || entry.status === "rendering"))
-
-    const act = async (work: () => Promise<{ readonly kind: string; readonly code?: string }>) => {
+    const act = async (work: () => Promise<unknown>) => {
         setBusy(true)
         setError(null)
         const done = await work()
-        if (done.kind !== "ok") setError(t("actionFailed", { error: failure(done.code ?? "default") }))
-        router.refresh()
+        if (done === undefined) setError(t("err_default"))
         setBusy(false)
     }
 
@@ -48,8 +46,8 @@ export const VideoLibrary = (props: VideoLibraryProps) => {
         <VideoLibraryBase
             props={{
                 title: t("tabLibrary"),
-                meta: t("libraryCount", { n: props.projects.length }),
-                entries: props.projects.map((project) => {
+                meta: t("libraryCount", { n: library.projects.length }),
+                entries: library.projects.map((project) => {
                     const render = project.render
                     const working = render?.status === "rendering" || render?.status === "queued"
                     const seconds = render?.durationMs ? Math.round(render.durationMs / 1000) : project.targetSeconds
@@ -74,16 +72,16 @@ export const VideoLibrary = (props: VideoLibraryProps) => {
                 openLabel: t("open"),
                 duplicateLabel: t("duplicate"),
                 archiveLabel: t("archive"),
-                viewOnly: props.canEdit ? null : t("viewOnly"),
+                viewOnly: library.canEdit ? null : t("viewOnly"),
                 error,
                 dismissLabel: t("back"),
-                canEdit: props.canEdit,
+                canEdit: library.canEdit,
                 busy,
             }}
             on={{
                 create: () => router.push(`${pathname}${editorHref("new", "goal")}`),
-                duplicate: (id) => void act(() => duplicateVideoProject(id)),
-                archive: (id) => void act(() => archiveVideoProject(id, true)),
+                duplicate: (id) => void act(() => duplicate(id)),
+                archive: (id) => void act(() => archive(id)),
                 dismissError: () => setError(null),
             }}
         />

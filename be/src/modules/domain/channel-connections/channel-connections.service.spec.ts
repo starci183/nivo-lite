@@ -5,9 +5,9 @@ import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connecti
 import { CHANNEL_SETUP_CLIENT, ChannelSetupError, ChannelSetupErrorCode } from "@modules/integrations/channel-setup"
 import type { ChannelSetupClient } from "@modules/integrations/channel-setup"
 import { CLOCK } from "@modules/platform/clock"
+import { LOGGER } from "@modules/platform/logging"
 import { ChannelConnectionsService } from "./channel-connections.service"
 import { ChannelConnectionsErrorCode } from "./errors/channel-connections.error"
-
 const actor: ConnectionActor = { principalId: "owner-1", workspaceId: "ws-1" }
 const TOKEN = ["123456789", "AAEabcdefghijklmnopqrstuvwxyz012345"].join(":")
 const NOW = new Date("2026-10-12T03:00:00.000Z")
@@ -47,11 +47,11 @@ const build = async (origin: string | null = "https://nivo.vn") => {
             { provide: ConnectionsService, useValue: connections },
             { provide: CHANNEL_SETUP_CLIENT, useValue: setup },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
+            { provide: LOGGER, useValue: { info: () => undefined, warn: () => undefined, error: () => undefined } },
         ],
     }).compile()
     return { service: moduleRef.get(ChannelConnectionsService), connections, setup }
 }
-
 const zaloSecret = (extra: object = {}) =>
     JSON.stringify({ appId: "123456", appSecret: "secret-app", oaSecret: "", ...extra })
 

@@ -30,4 +30,8 @@ export class AgentDashboardItemType {
     /** The href the finished work recorded as its evidence, or null. */
     @Field(() => String, { nullable: true })
     resultHref?: string | null
+
+    /** The workbench link that opens this decision. */
+    @Field()
+    decisionHref!: string
 }

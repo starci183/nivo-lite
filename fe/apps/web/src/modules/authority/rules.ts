@@ -108,8 +108,9 @@ export const draftsFrom = (rules: ReadonlyArray<StoredRule>): Record<string, Rul
         ),
     )
 
-/** One rule to write: the action and the three values the back end keeps. */
+/** One rule to write: the module, the action and the three values the back end keeps. */
 export interface RuleChange {
+    readonly department: ModuleKey
     readonly action: ActionKey
     readonly mode: AuthorityMode
     readonly limit: number | null
@@ -139,7 +140,7 @@ export const ruleChanges = (
                 slice === "scope"
                     ? before.mode === after.mode && before.limit === after.limit
                     : before.required.join() === after.required.join()
-            return same ? [] : [{ action, mode: next.mode, limit: next.limit, required: next.required }]
+            return same ? [] : [{ department: group.department, action, mode: next.mode, limit: next.limit, required: next.required }]
         }),
     )
 

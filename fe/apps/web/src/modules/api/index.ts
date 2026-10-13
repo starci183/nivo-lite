@@ -1,3 +1,4 @@
+export { graphQLErrorCode } from "./graphql/errors"
 export { isForbiddenFailure, isNotFoundFailure, isUnauthenticatedFailure } from "./graphql/failure"
 export type { GraphQLResponse } from "./graphql/types"
 export type {
@@ -74,6 +75,7 @@ export type {
     AutomationsOverviewType,
     BillingPlanType,
     BillingWorkspaceType,
+    BookingBoardType,
     BrainEvidenceType,
     BrainExtractionType,
     BrainFactType,
@@ -105,12 +107,18 @@ export type {
     LeadRecordType,
     LessonMiningStatusType,
     LocalizedTextType,
+    LoyaltyBoardType,
+    LoyaltyConfigType,
+    LoyaltyMemberType,
+    LoyaltyRewardType,
+    LoyaltyTierType,
     MarkOrderShippedInput,
     MissingRequirementType,
     ModuleInstallationType,
     NivoEntryType,
     OpenApiTestType,
     PreviewSampleType,
+    PublicBookingPageType,
     RetrievedPassageType,
     RetryFailedStepInput,
     RunStepType,
@@ -124,3 +132,17 @@ export type {
     TemplateSettingType,
 } from "./graphql/__generated__/schema"
 export { putPresigned } from "./rest/uploads/put-presigned"
+export type {
+    ContentAiRequestedType,
+    ContentAiStatusType,
+    ContentAiWarningType,
+    ContentConfigurationType,
+    ContentItemType,
+    ContentMediaType,
+    ContentWorkbenchType,
+    VideoBrandType,
+    VideoMediaType,
+    VideoRenderStatusType,
+    VideoScriptStatusType,
+    VideoProjectType,
+} from "./graphql/__generated__/schema"

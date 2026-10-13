@@ -1,5 +1,7 @@
+export { STAFF_ERROR_KINDS, StaffError, StaffErrorCode } from "./errors/staff.error"
+export { STAFF_MESSAGES } from "./messages/staff.messages"
 export { StaffModule } from "./staff.module"
 export { StaffService } from "./staff.service"
 export { StaffDirectoryService } from "./staff-directory.service"
-export type { StaffRecord } from "./staff.contracts"
+export type { StaffRecord, StaffWrite } from "./staff.contracts"
 export type { StaffRow } from "./persistence/staff.rows"

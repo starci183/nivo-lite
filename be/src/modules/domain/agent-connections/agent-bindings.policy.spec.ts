@@ -28,6 +28,8 @@ const connectionRow = builder<BoundConnectionRow>({
     created_at: "2026-10-01T00:00:00.000Z",
     access: "ask",
     purpose: "outbound_chat",
+    bot_username: null,
+    account_masked: null,
 })
 
 const agentOf = builder<BoundAgent>({
@@ -111,6 +113,8 @@ describe("agent bindings policy", () => {
                     id: "c1",
                     provider: "telegram",
                     name: "Shop bot",
+                    botUsername: null,
+                    accountMasked: null,
                     status: "connected",
                     access: "ask",
                     purpose: "outbound_chat",

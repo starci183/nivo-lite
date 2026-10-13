@@ -50,4 +50,12 @@ export class ResponsibilityListingType {
     /** The customer's name. */
     @Field()
     contact_name!: string
+
+    /** The customer's company. */
+    @Field(() => String, { nullable: true })
+    company?: string | null
+
+    /** The customer's journey stage. */
+    @Field()
+    leadStage!: string
 }

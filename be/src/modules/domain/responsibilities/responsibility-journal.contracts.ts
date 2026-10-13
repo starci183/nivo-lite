@@ -49,6 +49,10 @@ export interface NewResponsibility {
 export interface ResponsibilityListing extends ResponsibilityRecord {
     /** The customer's name. */
     readonly contact_name: string
+    /** The customer's company. */
+    readonly company: string | null
+    /** The customer's journey stage. */
+    readonly leadStage: string
 }
 
 /** Who acts and in which workspace; a work context satisfies it structurally. */

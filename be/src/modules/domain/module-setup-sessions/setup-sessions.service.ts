@@ -70,6 +70,15 @@ export class SetupSessionsService {
     async close(sessionId: string): Promise<void> {
         await this.entityManager.query(CLOSE_SESSION, [sessionId])
     }
+
+    /** Takes one fact out of the open draft of an installation; a closed session is left as it is. */
+    async dropFact(installationId: string, factKey: string): Promise<void> {
+        const latest = await this.latest(installationId)
+        if (latest === null || latest.status !== "draft") return
+        const facts = latest.draft.facts.filter((fact) => fact.key !== factKey)
+        if (facts.length === latest.draft.facts.length) return
+        await this.save(latest.id, { draft: { ...latest.draft, facts }, gateEvidence: latest.gateEvidence })
+    }
 }
 
 const UNIQUE_VIOLATION = "23505"

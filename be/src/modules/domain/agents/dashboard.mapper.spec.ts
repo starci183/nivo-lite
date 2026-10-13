@@ -2,7 +2,16 @@ import { builder } from "@starci/jest-preset"
 import type { BoundConnection } from "@modules/domain/agent-connections"
 import type { LensCounts } from "./agents.contracts"
 import type { Installation } from "./agents.port"
-import { agentIdOf, agentOf, clip, connectionItemsOf, itemOf, knowledgeOf, totalOf } from "./dashboard.mapper"
+import {
+    agentIdOf,
+    agentOf,
+    clip,
+    connectionItemsOf,
+    decisionHrefOf,
+    itemOf,
+    knowledgeOf,
+    totalOf,
+} from "./dashboard.mapper"
 import type { DashboardItemRow } from "./persistence/dashboard.rows"
 
 const rowOf = builder<DashboardItemRow>({
@@ -23,6 +32,8 @@ const connectionOf = builder<BoundConnection>({
     status: "connected",
     access: "auto",
     purpose: "inbound_chat",
+    botUsername: "shop_bot",
+    accountMasked: null,
 })
 
 const COUNTS: LensCounts = {
@@ -37,8 +48,13 @@ describe("dashboard mapper", () => {
         expect(clip("abcdefghij", 5)).toBe("abcd…")
     })
 
+    it("builds the workbench link of a decision", () => {
+        expect(decisionHrefOf("chatbot", "i1", "wi1")).toBe("/agents/chatbot/i1/workbench?focus=wi1")
+        expect(decisionHrefOf("chatbot", null, "wi1")).toBe("/agents/chatbot/workbench?focus=wi1")
+    })
+
     it("maps a work item row to a line", () => {
-        expect(itemOf(rowOf())).toEqual({
+        expect(itemOf(rowOf(), "/agents/chatbot/i1/workbench?focus=wi1")).toEqual({
             id: "wi1",
             title: "Customer asks the price",
             action: "reply_customer",
@@ -46,16 +62,17 @@ describe("dashboard mapper", () => {
             at: "2026-10-12T09:00:00.000Z",
             leadId: "l1",
             resultHref: null,
+            decisionHref: "/agents/chatbot/i1/workbench?focus=wi1",
         })
     })
 
     it("fills what a row lacks and keeps a recorded href", () => {
-        expect(itemOf(rowOf({ summary: null, customer: null, result_href: "/leads/l1" }))).toMatchObject({
+        expect(itemOf(rowOf({ summary: null, customer: null, result_href: "/leads/l1" }), "/x")).toMatchObject({
             title: "",
             customer: "",
             resultHref: "/leads/l1",
         })
-        expect(itemOf(rowOf({ result_href: "" })).resultHref).toBeNull()
+        expect(itemOf(rowOf({ result_href: "" }), "/x").resultHref).toBeNull()
     })
 
     it("reads the total of a page from its first row", () => {
@@ -76,6 +93,8 @@ describe("dashboard mapper", () => {
             id: "c1",
             name: "Shop bot",
             provider: "telegram",
+            botUsername: "shop_bot",
+            accountMasked: null,
             status: "connected",
             access: "auto",
             purpose: "inbound_chat",

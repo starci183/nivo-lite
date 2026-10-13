@@ -33,6 +33,7 @@ import {
     agentIdOf,
     agentOf,
     connectionItemsOf,
+    decisionHrefOf,
     itemOf,
     knowledgeOf,
     totalOf,
@@ -117,9 +118,10 @@ export class AgentsService {
         const installation = await this.installationOf(query)
         // A multi-instance type shows only its own instance's work; a single-instance type keeps reading the whole department.
         const scopeId = installation?.isMulti === true ? installation.id : null
+        const installationId = installation?.id ?? null
         const [waiting, done, connections, knowledge] = await Promise.all([
-            this.settle("waiting", () => this.waiting(query, scopeId)),
-            this.settle("done", () => this.done(query, scopeId)),
+            this.settle("waiting", () => this.waiting(query, scopeId, installationId)),
+            this.settle("done", () => this.done(query, scopeId, installationId)),
             this.settle("connections", async () =>
                 connectionItemsOf(await this.connectionsOf(agentIdOf(installation))),
             ),
@@ -209,7 +211,11 @@ export class AgentsService {
         }
     }
 
-    private async waiting(query: DashboardQuery, scopeId: string | null): Promise<WaitingData> {
+    private async waiting(
+        query: DashboardQuery,
+        scopeId: string | null,
+        installationId: string | null,
+    ): Promise<WaitingData> {
         const rows = await this.entityManager.query<Array<DashboardItemRow>>(LIST_WAITING_ITEMS, [
             query.workspaceId,
             query.module,
@@ -217,10 +223,17 @@ export class AgentsService {
             TEST_RUN_PATTERN,
             LIST_LIMIT,
         ])
-        return { total: totalOf(rows), items: rows.map(itemOf) }
+        return {
+            total: totalOf(rows),
+            items: rows.map((row) => itemOf(row, decisionHrefOf(query.module, installationId, row.id))),
+        }
     }
 
-    private async done(query: DashboardQuery, scopeId: string | null): Promise<DoneData> {
+    private async done(
+        query: DashboardQuery,
+        scopeId: string | null,
+        installationId: string | null,
+    ): Promise<DoneData> {
         const since = new Date(this.clock.now().getTime() - DONE_WINDOW_DAYS * DAY_MS).toISOString()
         const rows = await this.entityManager.query<Array<DashboardItemRow>>(LIST_DONE_ITEMS, [
             query.workspaceId,
@@ -230,7 +243,10 @@ export class AgentsService {
             since,
             LIST_LIMIT,
         ])
-        return { count: totalOf(rows), items: rows.map(itemOf) }
+        return {
+            count: totalOf(rows),
+            items: rows.map((row) => itemOf(row, decisionHrefOf(query.module, installationId, row.id))),
+        }
     }
 
     private connectionsOf(agentId: OptionalId): Promise<ReadonlyArray<BoundConnection>> {

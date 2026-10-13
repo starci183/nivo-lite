@@ -185,9 +185,11 @@ export class SetupCardsService {
         const definition = module.authorityActions.find((candidate) => candidate.action === base.action)
         const saved = await this.rules.save(workspaceId, {
             action: base.action,
+            department: module.key,
             mode,
             limit_vnd: definition?.amountLimit === true ? limitVnd : null,
             required_fields: have.requiredFields,
+            note: null,
         })
         const limit = saved.limit_vnd === null ? "" : ` < ${saved.limit_vnd}`
         await this.events.record({

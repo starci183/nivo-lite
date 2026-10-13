@@ -21,11 +21,14 @@ interface PaymentEvidence {
     readonly invoiceId?: string | null
 }
 
+/** A governance enum as the back end names it ("WaitingDecision") in the snake_case the figures compare with ("waiting_decision"). */
+const wire = (value: string | null | undefined): string => (value ?? "").replace(/([a-z])([A-Z])/g, "$1_$2").toLowerCase()
+
 const MINUTE_MS = 60_000
 const RECENT_LIMIT = 5
 
 const reasonOf = (value: string | null | undefined): ReasonCode | null =>
-    REASON_CODES.find((reason) => reason === value) ?? null
+    REASON_CODES.find((reason) => reason === wire(value)) ?? null
 
 const has = (ids: ReadonlySet<string>, id: string | null | undefined): boolean =>
     id !== null && id !== undefined && ids.has(id)
@@ -60,8 +63,8 @@ const departmentsOf = (work: GovernanceRows["work"], since7: string): Governance
             const mine = work.filter((x) => x.department === module.key)
             return {
                 department: module.key,
-                done7d: mine.filter((x) => x.status === "done" && (x.completedAt ?? "") >= since7).length,
-                waiting: mine.filter((x) => x.status === "waiting_decision").length,
+                done7d: mine.filter((x) => wire(x.status) === "done" && (x.completedAt ?? "") >= since7).length,
+                waiting: mine.filter((x) => wire(x.status) === "waiting_decision").length,
                 lastActivityAt: mine.reduce<string | null>(
                     (latest, x) => (latest === null || x.updatedAt > latest ? x.updatedAt : latest),
                     null,
@@ -81,8 +84,8 @@ const exceptionsOf = (work: GovernanceRows["work"]): Governance["exceptions"] =>
     }
     for (const x of work) {
         const reason = reasonOf(x.reason)
-        if (x.status === "failed") counts.failed += 1
-        else if (x.status === "waiting_decision" && reason !== null) counts[reason] += 1
+        if (wire(x.status) === "failed") counts.failed += 1
+        else if (wire(x.status) === "waiting_decision" && reason !== null) counts[reason] += 1
     }
     return counts
 }
@@ -102,7 +105,7 @@ export const governanceFrom = (rows: GovernanceRows, since7: string): Governance
     const createdByItem = new Map(work.map((x) => [x.id, x.createdAt]))
     const waits = decisions.flatMap((d) => {
         const created = d.workItemId ? createdByItem.get(d.workItemId) : undefined
-        return d.deciderKind !== "policy" && created !== undefined
+        return wire(d.deciderKind) !== "policy" && created !== undefined
             ? [(Date.parse(d.createdAt) - Date.parse(created)) / MINUTE_MS]
             : []
     })
@@ -141,14 +144,14 @@ export const governanceFrom = (rows: GovernanceRows, since7: string): Governance
                 test.work.size,
         },
         efficiency: {
-            autoDone7d: decisions.filter((d) => d.deciderKind === "policy" && d.outcome === "auto_done").length,
+            autoDone7d: decisions.filter((d) => wire(d.deciderKind) === "policy" && wire(d.outcome) === "auto_done").length,
             askedHuman7d: work.filter(
-                (x) => x.createdAt >= since7 && (x.decidedPath === "human" || x.status === "waiting_decision"),
+                (x) => x.createdAt >= since7 && (wire(x.decidedPath) === "human" || wire(x.status) === "waiting_decision"),
             ).length,
             medianDecisionMinutes: median === null ? null : Math.round(median),
         },
         // Counted once: waiting work items (test runs excluded) + legacy pending approvals that have no work item.
-        pendingDecisions: work.filter((x) => x.status === "waiting_decision").length + rows.pendingWithoutWork,
+        pendingDecisions: work.filter((x) => wire(x.status) === "waiting_decision").length + rows.pendingWithoutWork,
         exceptions: exceptionsOf(work),
         departments: departmentsOf(work, since7),
         recentDecisions: rows.recent
@@ -172,7 +175,7 @@ export const waitingWorkFrom = (exceptions: Dashboard["exceptions"]): Array<Wait
     exceptions
         .filter(
             (x) =>
-                x.status === "waiting_decision" &&
+                wire(x.status) === "waiting_decision" &&
                 !isTestRunName(x.lead?.contactName, x.lead?.company, x.summary, x.contact, x.customer),
         )
         .map((x) => ({

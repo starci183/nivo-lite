@@ -6,6 +6,8 @@ export interface ListWorkItemPageRequest {
     readonly workspaceId: string
     /** Only these statuses; empty means every status. */
     readonly statuses: ReadonlyArray<WorkStatus>
+    /** Only this action; null means every action. */
+    readonly action: string | null | undefined
     /** Where the page starts; absent for the first page. */
     readonly after?: WorkItemCursor
     /** The page size, clamped to 1..100. */

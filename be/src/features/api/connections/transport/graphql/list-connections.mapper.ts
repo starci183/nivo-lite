@@ -11,6 +11,8 @@ export const toListConnectionsRequest = (workspaceId: string): ListConnectionsRe
 export const toListConnectionsType = (result: ReadonlyArray<ConnectionBoardEntry>): Array<ConnectionType> =>
     result.map((entry) => ({
         ...entry.connection,
+        botUsername: entry.botUsername,
+        accountMasked: entry.accountMasked,
         agentIds: entry.grants.map((grant) => grant.agentId),
         grants: entry.grants,
     }))

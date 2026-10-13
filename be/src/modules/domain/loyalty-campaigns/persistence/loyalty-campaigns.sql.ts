@@ -32,6 +32,14 @@ UPDATE public.loyalty_campaigns c SET draft = $3, draft_ms = $4, status = 'draft
 WHERE c.workspace_id = $1 AND c.id = $2 AND c.status = 'waiting'
 RETURNING c.id) SELECT id FROM changed`
 
+/** Links a finished draft to the work item that will decide it ($1 workspace, $2 campaign, $3 work item, $4 status). */
+export const ATTACH_CAMPAIGN_DECISION = sql`WITH changed AS (
+UPDATE public.loyalty_campaigns
+SET work_item_id = $3, status = $4
+WHERE workspace_id = $1 AND id = $2 AND status = 'draft' AND work_item_id IS NULL
+RETURNING id)
+SELECT id FROM changed`
+
 /** Records terminal drafting failure without changing an already completed or approved campaign ($1 workspace, $2 campaign). */
 export const FAIL_CAMPAIGN_DRAFT = sql`UPDATE public.loyalty_campaigns SET status = 'failed', finished_at = now()
 WHERE workspace_id = $1 AND id = $2 AND status = 'waiting'`

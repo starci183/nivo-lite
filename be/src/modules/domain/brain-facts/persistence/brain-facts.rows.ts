@@ -1,4 +1,4 @@
-import type { Evidence, FactSource, FactStatus, ProposalKind, Scope, SubjectType } from "../brain-facts.contracts"
+import type { BrainSubjectType, Evidence, FactSource, FactStatus, ProposalKind, Scope } from "../brain-facts.contracts"
 
 /** One row of public.brain_facts; timestamps arrive as Date or text depending on the driver. */
 export interface BrainFactRow {
@@ -9,7 +9,7 @@ export interface BrainFactRow {
     /** The one agent instance that reads it, or null. */
     readonly installation_id: string | null
     /** What it is about. */
-    readonly subject_type: SubjectType
+    readonly subject_type: BrainSubjectType
     /** The normalised subject. */
     readonly subject_key: string
     /** The subject as written. */

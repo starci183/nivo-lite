@@ -16,6 +16,13 @@ export const NOTICE_OF_ACTION: Readonly<Record<BookingAction, string>> = {
     cancel: "did_cancel",
 }
 
+/** The id of the detail action that opens the move dialog; it is not a status change. */
+export const MOVE_ACTION = "move"
+
+/** Whether a booking can still be moved. */
+export const isMovable = (status: string): boolean =>
+    status === "requested" || status === "confirmed" || status === "rescheduled"
+
 /** The actions a booking offers in its current state, primary first. */
 export const actionsOf = (status: string, checkedIn: boolean): ReadonlyArray<BookingAction> => {
     if (status === "requested") return ["confirm", "cancel"]
@@ -139,11 +146,16 @@ export const detailOf = (booking: BookingView, words: DeskWords) => ({
     items: detailItems(booking, words),
     ...(booking.leadId === null ? {} : { customerHref: `/leads/${booking.leadId}` }),
     customerLabel: words.say("viewCustomer"),
-    actions: actionsOf(booking.status, booking.checkedIn).map((action) => ({
-        id: action,
-        label: words.say(ACTION_KEY[action]),
-        variant: actionVariant(action),
-    })),
+    actions: [
+        ...actionsOf(booking.status, booking.checkedIn).map((action) => ({
+            id: action,
+            label: words.say(ACTION_KEY[action]),
+            variant: actionVariant(action),
+        })),
+        ...(isMovable(booking.status)
+            ? [{ id: MOVE_ACTION, label: words.say("move"), variant: "outline" as const }]
+            : []),
+    ],
 })
 
 /** The bookings of a range grouped by local day, oldest first. */

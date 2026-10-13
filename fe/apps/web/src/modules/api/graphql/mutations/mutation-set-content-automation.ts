@@ -1,0 +1,58 @@
+import { gql } from "@apollo/client"
+import type { TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient } from "../clients"
+import type { InputVariables, MutateParams } from "../types"
+import type { Mutation, MutationSetContentAutomationArgs } from "../__generated__/schema"
+
+/** The generated input of setContentAutomation. */
+export type MutateSetContentAutomationRequest = MutationSetContentAutomationArgs["input"]
+
+/** The generated response of setContentAutomation. */
+type MutateSetContentAutomationResponse = Pick<Mutation, "setContentAutomation">
+
+type Document = TypedDocumentNode<MutateSetContentAutomationResponse, InputVariables<MutateSetContentAutomationRequest>>
+
+const mutation1: Document = gql`
+    mutation SetContentAutomation($input: SetContentAutomationInput!) {
+        setContentAutomation(input: $input) {
+            workspaceId
+            brandVoice
+            avoid
+            cta
+            hashtags
+            automations {
+                todayReminder
+                offerDraft
+                weeklySummary
+            }
+            marks {
+                key
+                value
+            }
+        }
+    }
+`
+
+enum MutationSetContentAutomation {
+    Mutation1 = "mutation1",
+}
+
+const mutationMap: Record<MutationSetContentAutomation, Document> = {
+    [MutationSetContentAutomation.Mutation1]: mutation1,
+}
+
+/** Apollo options for setContentAutomation. */
+type MutateSetContentAutomationParams = MutateParams<MutationSetContentAutomation, MutateSetContentAutomationRequest>
+
+/** setContentAutomation in the selected workspace, authorized by the back end. */
+export const mutateSetContentAutomation = async ({
+    mutation = MutationSetContentAutomation.Mutation1,
+    request,
+    signal,
+}: MutateSetContentAutomationParams) => {
+    const apollo = createAuthApolloClient({ signal })
+    return apollo.mutate({
+        mutation: mutationMap[mutation],
+        variables: { input: request },
+    })
+}

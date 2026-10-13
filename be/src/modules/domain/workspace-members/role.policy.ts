@@ -3,6 +3,29 @@ import type { Outcome } from "@modules/platform/primitives"
 import { WorkspaceMembersErrorCode } from "./errors/workspace-members.error"
 import type { DecisionItem, SeatPair, SeatRule, WorkspaceMember, WorkspaceRole } from "./workspace-members.contracts"
 
+/** The role a member holds, as the console names it. */
+export enum PresentedRole {
+    /** Grants full control of the workspace. */
+    Owner = "owner",
+    /** Grants setup and agent administration. */
+    Manager = "manager",
+    /** Grants day-to-day use without administration. */
+    Staff = "staff",
+}
+
+const PRESENTED = new Map<WorkspaceRole, PresentedRole>([
+    ["owner", PresentedRole.Owner],
+    ["manager", PresentedRole.Manager],
+    ["staff", PresentedRole.Staff],
+])
+
+/** The console name of a membership role. */
+export const presentedRole = (role: WorkspaceRole): PresentedRole => {
+    const presented = PRESENTED.get(role)
+    if (presented === undefined) return PresentedRole.Staff
+    return presented
+}
+
 /** True for owner and manager. */
 export const isManagerRole = (role: WorkspaceRole): boolean => role === "owner" || role === "manager"
 

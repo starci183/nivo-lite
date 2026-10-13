@@ -151,6 +151,8 @@ describe("ShiftsScheduleService", () => {
                 open: 0,
                 short: 0,
                 costVnd: 60000,
+                ms: 0,
+                iterations: 6,
             })
 
             expect(members.require.mock.calls).toEqual([["user-1", "ws-1", ["owner", "manager"]]])
@@ -241,6 +243,8 @@ describe("ShiftsScheduleService", () => {
                 open: 0,
                 short: 0,
                 costVnd: 0,
+                ms: 0,
+                iterations: 6,
             })
 
             expect(em.query.mock.calls).toHaveLength(2)
@@ -280,6 +284,8 @@ describe("ShiftsScheduleService", () => {
                 open: 1,
                 short: 1,
                 costVnd: 60000,
+                ms: 0,
+                iterations: 6,
             })
 
             expect(em.query.mock.calls[1]).toEqual([

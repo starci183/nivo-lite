@@ -35,6 +35,21 @@ export const LIST_ACCOUNTING_INVOICES = sql`
     WHERE i.workspace_id = $1::uuid
     ORDER BY i.created_at DESC, i.id DESC LIMIT $2::int`
 
+/**
+ * The invoices a reconciliation proposes, with the customer, the order and both statuses
+ * ($1 workspace, $2 invoice ids).
+ */
+export const LIST_RECONCILE_INVOICES = sql`
+    SELECT i.id, i.invoice_no, i.amount_vnd::float8 AS amount_vnd, i.status,
+           l.contact_name AS customer, NULLIF(l.company, '') AS company,
+           o.order_no, NULLIF(o.items, '') AS order_items, o.status AS order_status,
+           to_json(i.issued_at) #>> '{}' AS issued_at, to_json(i.due_at) #>> '{}' AS due_at
+    FROM public.invoices i
+    LEFT JOIN public.orders o ON o.id = i.order_id AND o.workspace_id = i.workspace_id
+    LEFT JOIN public.leads l ON l.id = i.lead_id AND l.workspace_id = i.workspace_id
+    WHERE i.workspace_id = $1::uuid AND i.id = ANY($2::uuid[])
+    LIMIT 50`
+
 /** The highest invoice number that starts with the prefix ($1 workspace, $2 prefix). */
 export const LAST_INVOICE_NUMBER = sql`SELECT max(invoice_no) AS invoice_no
 FROM public.invoices WHERE workspace_id = $1::uuid AND invoice_no LIKE $2 || '%'`

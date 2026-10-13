@@ -2,7 +2,7 @@ import { AgentAutomations } from "@/components/blocks/AgentAutomations"
 import { AgentConnectionAccess } from "@/components/blocks/AgentConnectionAccess"
 import { AgentIdentityCard } from "@/components/blocks/AgentIdentityCard"
 import { AgentLiveCard } from "@/components/blocks/AgentLiveCard"
-import { AgentLoyaltyExtras } from "@/components/blocks/AgentLoyaltyExtras"
+import { LoyaltyProgramSettings } from "@/components/blocks/LoyaltyProgramSettings"
 import { AgentModeCard } from "@/components/blocks/AgentModeCard"
 import { AgentReplyCard } from "@/components/blocks/AgentReplyCard"
 import { AgentSyncCard } from "@/components/blocks/AgentSyncCard"
@@ -39,7 +39,7 @@ export const AgentSettingsPageBase = (props: AgentSettingsPageBaseProps) => {
                     <AgentReplyCard installationId={installationId} module={module} />
                 ) : null}
                 {props.props.extrasKey === "loyalty_program" ? (
-                    <AgentLoyaltyExtras installationId={installationId} module={module} />
+                    <LoyaltyProgramSettings />
                 ) : null}
             </div>
         </div>

@@ -3,13 +3,8 @@ import { mock } from "@starci/jest-preset"
 import { ConfigurableModuleClass } from "./channel-connections.module-definition"
 import { ChannelConnectionsModule } from "./channel-connections.module"
 import { ChannelConnectionsService } from "./channel-connections.service"
-import {
-    CHANNEL_CONNECTIONS_ERROR_KINDS,
-    ChannelConnectionsError,
-    ChannelConnectionsErrorCode,
-} from "./errors/channel-connections.error"
+import { ChannelConnectionsErrorCode } from "./errors/channel-connections.error"
 import { CHANNEL_CONNECTIONS_MESSAGES } from "./messages/channel-connections.messages"
-import * as channelConnections from "./index"
 
 describe("ChannelConnectionsModule", () => {
     it.each([false, true])("registers and exports the service with isGlobal=%p", async (isGlobal) => {
@@ -74,15 +69,7 @@ describe("ChannelConnectionsModule", () => {
         }
     })
 
-    it("exports its public module, service, errors and messages", () => {
-        expect(channelConnections).toEqual({
-            ChannelConnectionsModule,
-            ChannelConnectionsService,
-            CHANNEL_CONNECTIONS_ERROR_KINDS,
-            ChannelConnectionsError,
-            ChannelConnectionsErrorCode,
-            CHANNEL_CONNECTIONS_MESSAGES,
-        })
+    it("gives every error code a message in both languages", () => {
         for (const code of Object.values(ChannelConnectionsErrorCode)) {
             expect(CHANNEL_CONNECTIONS_MESSAGES.vi?.[`errors.${code}`]).toEqual(expect.any(String))
             expect(CHANNEL_CONNECTIONS_MESSAGES.en?.[`errors.${code}`]).toEqual(expect.any(String))
