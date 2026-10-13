@@ -17,7 +17,6 @@ import { GetMoneyConnectionResolver } from "./get-money-connection.resolver"
 import { GetZaloConnectionResolver } from "./get-zalo-connection.resolver"
 import { ListConnectionAgentsResolver } from "./list-connection-agents.resolver"
 import { ListConnectionsResolver } from "./list-connections.resolver"
-import { ListGoogleAccountsResolver } from "./list-google-accounts.resolver"
 import { ReturnZaloAuthorizationResolver } from "./return-zalo-authorization.resolver"
 import { RevealSepayKeyResolver } from "./reveal-sepay-key.resolver"
 import { RevealWebhookConnectionResolver } from "./reveal-webhook-connection.resolver"
@@ -54,7 +53,6 @@ import { WantConnectorResolver } from "./want-connector.resolver"
         GetZaloConnectionResolver,
         ListConnectionAgentsResolver,
         ListConnectionsResolver,
-        ListGoogleAccountsResolver,
         ReturnZaloAuthorizationResolver,
         RevealSepayKeyResolver,
         RevealWebhookConnectionResolver,

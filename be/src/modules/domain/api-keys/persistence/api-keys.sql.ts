@@ -4,7 +4,7 @@ import { sql } from "@modules/platform/database"
 export const API_KEY_AUTH = sql`SELECT public.api_key_auth($1) AS auth`
 
 /** The role of an active member of a workspace ($1 workspace, $2 user). */
-export const SELECT_MEMBER = sql`SELECT role FROM public.workspace_members
+export const SELECT_MEMBER = sql`SELECT role, display_name FROM public.workspace_members
 WHERE workspace_id = $1 AND user_id = $2 AND status = 'active'
 LIMIT 1`
 
