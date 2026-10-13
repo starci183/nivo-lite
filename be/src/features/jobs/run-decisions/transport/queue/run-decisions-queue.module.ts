@@ -3,7 +3,7 @@ import type { OnModuleInit } from "@nestjs/common"
 import { InjectJobProcessorRegistry } from "@modules/platform/jobs"
 import type { JobProcessorRegistry } from "@modules/platform/jobs"
 import { RunDecisionsModule } from "../../run-decisions.module"
-import { DecisionsProcessor } from "./decisions.processor"
+import { DecisionsProcessor } from "./run-decisions.processor"
 
 @Module({ imports: [RunDecisionsModule], providers: [DecisionsProcessor] })
 /** Registers the decisions processor with the job runner when the app boots. */
