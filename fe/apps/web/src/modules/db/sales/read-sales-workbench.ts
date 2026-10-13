@@ -1,4 +1,3 @@
-"use server"
 import "server-only"
 
 import { isTestRunName, listDecisions, listWorkItems } from "@/lib/flow-queries"
@@ -8,7 +7,7 @@ import { dbFailure, dbOk, toOutcome } from "../outcome"
 import type { DbOutcome } from "../outcome"
 import { toLeadRecord, toResponsibilityRecord } from "../leads/leads.mapper"
 import { toContract } from "../contracts/contracts.mapper"
-import { toInvoice, toOrder } from "../orders/orders.mapper"
+import { toInvoice, toOrder } from "@/modules/utils"
 import { autoDoneItemsOf, buildSalesWorkbench, conversationIdsOf } from "./sales.mapper"
 
 const LEADS_LIMIT = 500

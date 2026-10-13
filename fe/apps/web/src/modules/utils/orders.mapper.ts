@@ -1,23 +1,23 @@
-import type { Database } from "../../../../../../../supabase/types/database.types"
+import type { Database } from "../../../../../../supabase/types/database.types"
 import type { Invoice, Order, Origin, WorkItemView } from "@/lib/flow-types"
 import type { HandoffRow, LeadRecord } from "@/modules/types"
 
 type Tables = Database["public"]["Tables"]
 
 /** One generated row of public.orders. */
-export type OrdersRow = Tables["orders"]["Row"]
+type OrdersRow = Tables["orders"]["Row"]
 /** One generated row of public.invoices. */
-export type InvoicesRow = Tables["invoices"]["Row"]
+type InvoicesRow = Tables["invoices"]["Row"]
 
 /** The rows the hand-off surface is derived from. */
-export interface HandoffRows {
+interface HandoffRows {
     readonly invoices: ReadonlyArray<Invoice>
     readonly items: ReadonlyArray<WorkItemView>
     readonly leads: ReadonlyArray<LeadRecord>
 }
 
 /** The lookups the hand-off surface shares with the rest of the workbench. */
-export interface HandoffLook {
+interface HandoffLook {
     /** The orders that are not cancelled. */
     readonly orders: ReadonlyArray<Order>
     readonly leadById: ReadonlyMap<string, LeadRecord>

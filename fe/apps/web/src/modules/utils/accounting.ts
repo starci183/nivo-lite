@@ -33,7 +33,7 @@ export const dayOf = (format: AccountingFormat, iso: string | null | undefined, 
         : format.dateTime(new Date(iso), { day: "2-digit", month: "2-digit", ...(withYear ? { year: "numeric" } : {}) })
 
 /** Day, month and clock time in Vietnam time. */
-export const stampOf = (format: AccountingFormat, iso: string | null | undefined): string =>
+export const accountingStampOf = (format: AccountingFormat, iso: string | null | undefined): string =>
     iso === null || iso === undefined
         ? "-"
         : format.dateTime(new Date(iso), {
@@ -155,7 +155,7 @@ export const lineageItemsOf = (
         id: `${step.kind}-${position}`,
         title: step.kind === "decision" && STEP_ACTIONS.includes(step.title) ? t(`action_${step.title}`) : step.title,
         dateTime: step.at,
-        timeLabel: step.at === null ? null : stampOf(format, step.at),
+        timeLabel: step.at === null ? null : accountingStampOf(format, step.at),
         kindLabel: t(`step_${step.kind}`),
         isCorrection: step.kind === "adjustment",
         amountText: stepAmountOf(t, format, step),

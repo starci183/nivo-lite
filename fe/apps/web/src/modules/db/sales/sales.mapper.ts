@@ -1,76 +1,20 @@
-import type { DecisionRow, Invoice, Order, WorkItemView } from "@/lib/flow-types"
-import { handoffsOf } from "../orders/orders.mapper"
+import type { Order, WorkItemView } from "@/lib/flow-types"
+import { handoffsOf } from "@/modules/utils"
 import type {
     AttentionKind,
     AttentionRow,
     AutoActivity,
-    SalesContract,
     LeadRecord,
     LeadStageId,
-    ResponsibilityRecord,
     SalesConversion,
     SalesDeal,
     SalesDecision,
     SalesMetrics,
     SalesWorkbenchData,
 } from "@/modules/types"
-
-/** A customer conversation the workbench watches for an unanswered message. */
-export interface ConversationSlim {
-    readonly id: string
-    readonly lead_id: string | null
-    readonly handled_by: string | null
-}
-
-/** One message of such a conversation. */
-export interface MessageSlim {
-    readonly conversation_id: string
-    readonly role: string
-    readonly body: string
-    readonly created_at: string
-}
-
-/** A legacy draft still waiting for approval. */
-export interface DraftSlim {
-    readonly id: string
-    readonly responsibility_id: string
-    readonly draft: string
-    readonly created_at: string
-}
-
-/** A recorded outcome of a lead. */
-export interface OutcomeSlim {
-    readonly lead_id: string | null
-    readonly evidence: string | null
-    readonly created_at: string
-}
-
-/** The evidence line of something NIVO did by policy. */
-export interface AutoEvidenceSlim {
-    readonly work_item_id: string | null
-    readonly evidence: string | null
-}
-
-/** Everything the Sales workbench is derived from. */
-export interface SalesRows {
-    readonly nowMs: number
-    readonly leads: ReadonlyArray<LeadRecord>
-    readonly steps: ReadonlyArray<ResponsibilityRecord>
-    readonly orders: ReadonlyArray<Order>
-    readonly invoices: ReadonlyArray<Invoice>
-    readonly conversations: ReadonlyArray<ConversationSlim>
-    /** The newest messages of those conversations, newest first. */
-    readonly messages: ReadonlyArray<MessageSlim>
-    readonly drafts: ReadonlyArray<DraftSlim>
-    readonly staff: ReadonlyArray<{ readonly id: string; readonly name: string }>
-    readonly outcomes: ReadonlyArray<OutcomeSlim>
-    readonly items: ReadonlyArray<WorkItemView>
-    readonly decided: ReadonlyArray<DecisionRow>
-    readonly autoEvidence: ReadonlyArray<AutoEvidenceSlim>
-    readonly contracts: ReadonlyArray<SalesContract>
-    /** True when a customer name marks a test run (UAT or debug leads), which no figure counts. */
-    readonly isTestRun: (...names: ReadonlyArray<string | null | undefined>) => boolean
-}
+import { lookupsOf } from "./sales-lookups.mapper"
+import type { SalesLookups } from "./sales-lookups.mapper"
+import type { ConversationSlim, MessageSlim, SalesRows } from "./sales.rows"
 
 const MIN = 60_000
 const OPEN_STAGES: ReadonlyArray<LeadStageId> = ["new", "qualified", "proposal"]
@@ -128,63 +72,12 @@ const textOf = (value: unknown): string => {
     return typeof value === "number" ? String(value) : ""
 }
 
-interface Lookups {
-    readonly leadById: ReadonlyMap<string, LeadRecord>
-    readonly openStepByLead: ReadonlyMap<string, ResponsibilityRecord>
-    readonly orders: ReadonlyArray<Order>
-    readonly orderByLead: ReadonlyMap<string, Order>
-    readonly quoteByLead: ReadonlyMap<string, number>
-    readonly waitingByLead: ReadonlyMap<string, WorkItemView>
-    readonly closedByLead: ReadonlyMap<string, { reason: string | null; at: string }>
-}
-
-const lookupsOf = (rows: SalesRows): Lookups => {
-    const openStepByLead = new Map<string, ResponsibilityRecord>()
-    for (const step of rows.steps) if (!openStepByLead.has(step.lead_id)) openStepByLead.set(step.lead_id, step)
-    const orders = rows.orders.filter((order) => order.status !== "cancelled")
-    const orderByLead = new Map<string, Order>()
-    for (const order of orders)
-        if (order.lead_id && !orderByLead.has(order.lead_id)) orderByLead.set(order.lead_id, order)
-    const quoteByLead = new Map<string, number>()
-    for (const item of rows.items) {
-        const amount = item.proposal.amount_vnd
-        if (
-            item.action === "send_quote" &&
-            item.lead_id &&
-            item.status !== "rejected" &&
-            typeof amount === "number" &&
-            !quoteByLead.has(item.lead_id)
-        ) {
-            quoteByLead.set(item.lead_id, amount)
-        }
-    }
-    const waitingByLead = new Map<string, WorkItemView>()
-    for (const item of rows.items) {
-        if (item.lead_id && item.status === "waiting_decision" && !waitingByLead.has(item.lead_id))
-            waitingByLead.set(item.lead_id, item)
-    }
-    const closedByLead = new Map<string, { reason: string | null; at: string }>()
-    for (const event of rows.outcomes) {
-        if (event.lead_id && !closedByLead.has(event.lead_id))
-            closedByLead.set(event.lead_id, { reason: event.evidence, at: event.created_at })
-    }
-    return {
-        leadById: new Map(rows.leads.map((lead) => [lead.id, lead])),
-        openStepByLead,
-        orders,
-        orderByLead,
-        quoteByLead,
-        waitingByLead,
-        closedByLead,
-    }
-}
-
 const valueSourceOf = (order: Order | undefined, quote: number | null | undefined): SalesDeal["valueSource"] => {
     if (order?.amount_vnd != null) return "order"
     return quote == null ? null : "quote"
 }
 
-const dealOf = (lead: LeadRecord, look: Lookups): SalesDeal => {
+const dealOf = (lead: LeadRecord, look: SalesLookups): SalesDeal => {
     const order = look.orderByLead.get(lead.id)
     const quote = look.quoteByLead.get(lead.id)
     const step = look.openStepByLead.get(lead.id)
@@ -208,7 +101,7 @@ const dealOf = (lead: LeadRecord, look: Lookups): SalesDeal => {
     }
 }
 
-const decisionsOf = (rows: SalesRows, look: Lookups): ReadonlyArray<SalesDecision> => {
+const decisionsOf = (rows: SalesRows, look: SalesLookups): ReadonlyArray<SalesDecision> => {
     const fromItems = rows.items
         .filter((item) => item.department === "sales" && item.status === "waiting_decision")
         .map((item): SalesDecision => ({
@@ -257,7 +150,7 @@ const decisionsOf = (rows: SalesRows, look: Lookups): ReadonlyArray<SalesDecisio
 
 const attentionOf = (
     rows: SalesRows,
-    look: Lookups,
+    look: SalesLookups,
     decisions: ReadonlyArray<SalesDecision>,
 ): ReadonlyArray<AttentionRow> => {
     const stageOf = (leadId: string | null): LeadStageId | null =>
@@ -379,7 +272,7 @@ const activityOf = (rows: SalesRows): ReadonlyArray<AutoActivity> => {
 
 const metricsOf = (
     rows: SalesRows,
-    look: Lookups,
+    look: SalesLookups,
     openDeals: ReadonlyArray<SalesDeal>,
     waitingCount: number,
 ): SalesMetrics => {
