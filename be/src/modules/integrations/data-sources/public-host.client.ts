@@ -119,7 +119,7 @@ export class PublicHostClient {
                 params: { detail: PUBLIC_HOST_TEXT.schemeOnly },
             })
         }
-        await this.resolve(url.hostname)
+        const pin = await this.resolve(url.hostname)
         return this.http
             .request({
                 method,
@@ -130,6 +130,7 @@ export class PublicHostClient {
                 ...(init.bytes !== undefined ? { bytes: init.bytes } : {}),
                 read: "text",
                 redirect: "manual",
+                pin: { address: pin.address, family: pin.family },
                 timeoutMs: init.timeoutMs ?? DEFAULT_TIMEOUT_MS,
             })
             .catch((cause: unknown) => {
