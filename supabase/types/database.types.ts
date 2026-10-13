@@ -1,4 +1,4 @@
-// migrations-sha256: 0b72e466765ba7a8d650fd0d2ddb74d43ee451b17821b9859816c2795ebefb9f
+// migrations-sha256: 2dff8b6c3e34d0ddd1658f0b4e95778a7a4b8075498785ab1b18f50001348460
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -3646,7 +3646,7 @@ isOneToOne: false
 { Args: { "p_due"?: string,"p_lead": string,"p_locale"?: string,"p_next_action": string,"p_owner": string,"p_title": string,"p_workspace": string }; Returns: Json
                            },
 "admin_console_audit":
-{ Args: { "p_action": string,"p_data"?: Json,"p_workspace": string }; Returns: undefined
+{ Args: { "p_action": string,"p_data"?: Json,"p_workspace"?: string }; Returns: undefined
                            },
 "admin_console_quota":
 { Args: { "p_workspace": string }; Returns: Json

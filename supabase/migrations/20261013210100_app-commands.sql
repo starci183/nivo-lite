@@ -83,7 +83,7 @@ begin
   return v_id;
 end;
 $$;
-revoke all on function public.request_invite_command(uuid, text, uuid, text, text, uuid) from public, anon;
+revoke execute on function public.request_invite_command(uuid, text, uuid, text, text, uuid) from public, anon;
 grant execute on function public.request_invite_command(uuid, text, uuid, text, text, uuid) to authenticated;
 
 -- Platform staff ask the back end to send a pending invitation of any workspace again.
@@ -109,7 +109,7 @@ begin
   return v_id;
 end;
 $$;
-revoke all on function public.request_admin_invite_resend(uuid, uuid) from public, anon;
+revoke execute on function public.request_admin_invite_resend(uuid, uuid) from public, anon;
 grant execute on function public.request_admin_invite_resend(uuid, uuid) to authenticated;
 
 -- An owner or manager asks the back end to render a video project: it builds the spec, opens the render and queues the render-video job.
@@ -141,7 +141,7 @@ begin
   return v_id;
 end;
 $$;
-revoke all on function public.request_video_render(uuid) from public, anon;
+revoke execute on function public.request_video_render(uuid) from public, anon;
 grant execute on function public.request_video_render(uuid) to authenticated;
 
 -- The requester reads one command: { state, result, errorCode }. An invitation link in the result is handed over once and dropped from the row.
@@ -166,5 +166,5 @@ begin
   return jsonb_build_object('state', c.state, 'result', v_result, 'errorCode', c.error_code);
 end;
 $$;
-revoke all on function public.read_app_command(uuid) from public, anon;
+revoke execute on function public.read_app_command(uuid) from public, anon;
 grant execute on function public.read_app_command(uuid) to authenticated;

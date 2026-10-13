@@ -38,7 +38,7 @@ begin
   return v_id;
 end;
 $$;
-revoke all on function public.create_free_workspace(text) from public, anon;
+revoke execute on function public.create_free_workspace(text) from public, anon;
 grant execute on function public.create_free_workspace(text) to authenticated;
 
 create or replace function public.revoke_workspace_invite(p_workspace uuid, p_invite uuid)
@@ -67,7 +67,7 @@ begin
   values (p_workspace, 'member.invite_revoked', coalesce(v_actor, ''), v_email);
 end;
 $$;
-revoke all on function public.revoke_workspace_invite(uuid, uuid) from public, anon;
+revoke execute on function public.revoke_workspace_invite(uuid, uuid) from public, anon;
 grant execute on function public.revoke_workspace_invite(uuid, uuid) to authenticated;
 
 create or replace function public.workspace_member_contacts(p_workspace uuid)
@@ -88,7 +88,7 @@ begin
      where m.workspace_id = p_workspace;
 end;
 $$;
-revoke all on function public.workspace_member_contacts(uuid) from public, anon;
+revoke execute on function public.workspace_member_contacts(uuid) from public, anon;
 grant execute on function public.workspace_member_contacts(uuid) to authenticated;
 
 /* ------------------------------------------------------------------ the lead journey */
@@ -115,10 +115,11 @@ begin
   return v_name;
 end;
 $$;
-revoke all on function public.lead_actor_name(uuid) from public, anon, authenticated;
+revoke execute on function public.lead_actor_name(uuid) from public, anon, authenticated;
 
 -- Resolves who owns a step: 'human' is the caller, any other value must be the id of an agent of the workspace.
 create or replace function public.lead_step_owner(p_workspace uuid, p_owner text, p_actor text, out o_kind text, out o_agent uuid, out o_name text)
+returns record
 language plpgsql
 stable
 security definer
@@ -141,7 +142,7 @@ begin
   o_kind := 'agent';
 end;
 $$;
-revoke all on function public.lead_step_owner(uuid, text, text) from public, anon, authenticated;
+revoke execute on function public.lead_step_owner(uuid, text, text) from public, anon, authenticated;
 
 create or replace function public.lead_step_json(r public.responsibilities)
 returns jsonb
@@ -155,7 +156,7 @@ as $$
     'dueAt', to_char(r.due_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'), 'status', r.status
   );
 $$;
-revoke all on function public.lead_step_json(public.responsibilities) from public, anon, authenticated;
+revoke execute on function public.lead_step_json(public.responsibilities) from public, anon, authenticated;
 
 create or replace function public.record_lead_outcome(p_workspace uuid, p_lead uuid, p_stage text, p_evidence text, p_locale text default 'vi')
 returns jsonb
@@ -218,7 +219,7 @@ begin
   );
 end;
 $$;
-revoke all on function public.record_lead_outcome(uuid, uuid, text, text, text) from public, anon;
+revoke execute on function public.record_lead_outcome(uuid, uuid, text, text, text) from public, anon;
 grant execute on function public.record_lead_outcome(uuid, uuid, text, text, text) to authenticated;
 
 create or replace function public.add_lead_responsibility(
@@ -249,7 +250,7 @@ begin
   return public.lead_step_json(v_row);
 end;
 $$;
-revoke all on function public.add_lead_responsibility(uuid, uuid, text, text, text, timestamptz, text) from public, anon;
+revoke execute on function public.add_lead_responsibility(uuid, uuid, text, text, text, timestamptz, text) from public, anon;
 grant execute on function public.add_lead_responsibility(uuid, uuid, text, text, text, timestamptz, text) to authenticated;
 
 create or replace function public.assign_lead_responsibility(
@@ -282,5 +283,5 @@ begin
   return public.lead_step_json(v_row);
 end;
 $$;
-revoke all on function public.assign_lead_responsibility(uuid, uuid, text, text, timestamptz, text, text) from public, anon;
+revoke execute on function public.assign_lead_responsibility(uuid, uuid, text, text, timestamptz, text, text) from public, anon;
 grant execute on function public.assign_lead_responsibility(uuid, uuid, text, text, timestamptz, text, text) to authenticated;

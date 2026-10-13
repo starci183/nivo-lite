@@ -28,7 +28,7 @@ as $$
       where a.email = lower(btrim(coalesce(auth.jwt() ->> 'email', '')))
     );
 $$;
-revoke all on function public.is_platform_admin() from public, anon;
+revoke execute on function public.is_platform_admin() from public, anon;
 grant execute on function public.is_platform_admin() to authenticated;
 
 /* ------------------------------------------------------------------ read policies */
@@ -107,7 +107,7 @@ begin
     select u.id, u.email::text, u.last_sign_in_at from auth.users u where u.id = any (p_ids);
 end;
 $$;
-revoke all on function public.admin_console_user_emails(uuid[]) from public, anon;
+revoke execute on function public.admin_console_user_emails(uuid[]) from public, anon;
 grant execute on function public.admin_console_user_emails(uuid[]) to authenticated;
 
 -- The counts the workspace list needs, one row per workspace.
@@ -125,7 +125,7 @@ begin
   return query select s.workspace_id, s.members, s.last_customer_message_at, s.messages_7d, s.open_decisions from public.admin_workspace_stats() s;
 end;
 $$;
-revoke all on function public.admin_console_workspace_stats() from public, anon;
+revoke execute on function public.admin_console_workspace_stats() from public, anon;
 grant execute on function public.admin_console_workspace_stats() to authenticated;
 
 -- New sign-ups per day (Vietnam time) for the health page.
@@ -143,7 +143,7 @@ begin
   return query select s.day, s.signups from public.admin_signups_per_day(p_days) s;
 end;
 $$;
-revoke all on function public.admin_console_signups(int) from public, anon;
+revoke execute on function public.admin_console_signups(int) from public, anon;
 grant execute on function public.admin_console_signups(int) to authenticated;
 
 -- This month's credits of one workspace against its allowance: { credits_used, credits_limit, cost_usd } or null.
@@ -167,13 +167,13 @@ begin
   return v_result;
 end;
 $$;
-revoke all on function public.admin_console_quota(uuid) from public, anon;
+revoke execute on function public.admin_console_quota(uuid) from public, anon;
 grant execute on function public.admin_console_quota(uuid) to authenticated;
 
 /* ------------------------------------------------------------------ audit */
 
 -- Writes what the staff member viewed or changed. Staff only; the actor is the caller.
-create or replace function public.admin_console_audit(p_action text, p_workspace uuid, p_data jsonb default '{}'::jsonb)
+create or replace function public.admin_console_audit(p_action text, p_workspace uuid default null, p_data jsonb default '{}'::jsonb)
 returns void
 language plpgsql
 security definer
@@ -187,7 +187,7 @@ begin
   values (lower(btrim(auth.jwt() ->> 'email')), auth.uid(), left(p_action, 80), p_workspace, coalesce(p_data, '{}'::jsonb));
 end;
 $$;
-revoke all on function public.admin_console_audit(text, uuid, jsonb) from public, anon;
+revoke execute on function public.admin_console_audit(text, uuid, jsonb) from public, anon;
 grant execute on function public.admin_console_audit(text, uuid, jsonb) to authenticated;
 
 /* ------------------------------------------------------------------ support actions */
@@ -240,7 +240,7 @@ begin
   return v_after;
 end;
 $$;
-revoke all on function public.admin_extend_subscription(uuid, int) from public, anon;
+revoke execute on function public.admin_extend_subscription(uuid, int) from public, anon;
 grant execute on function public.admin_extend_subscription(uuid, int) to authenticated;
 
 -- Marks the workspace active or past due (billing status only).
@@ -272,7 +272,7 @@ begin
   return p_status;
 end;
 $$;
-revoke all on function public.admin_set_workspace_status(uuid, text) from public, anon;
+revoke execute on function public.admin_set_workspace_status(uuid, text) from public, anon;
 grant execute on function public.admin_set_workspace_status(uuid, text) to authenticated;
 
 -- Moves a workspace to an active plan and gives it its own monthly credit allowance (null clears it so the plan's applies).
@@ -312,5 +312,8 @@ begin
   return jsonb_build_object('planCode', v_plan, 'creditsLimit', p_credits);
 end;
 $$;
-revoke all on function public.admin_set_workspace_plan(uuid, text, bigint) from public, anon;
+revoke execute on function public.admin_set_workspace_plan(uuid, text, bigint) from public, anon;
 grant execute on function public.admin_set_workspace_plan(uuid, text, bigint) to authenticated;
+
+-- The trigger function is not callable as a function by anyone; triggers fire without an EXECUTE grant.
+revoke execute on function public.workspaces_billing_guard() from public, anon, authenticated;
