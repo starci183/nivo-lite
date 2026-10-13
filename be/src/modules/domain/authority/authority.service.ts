@@ -10,8 +10,13 @@ import type {
     OptionalAuthorityProfile,
 } from "./authority.contracts"
 import { AuthorityError, AuthorityErrorCode } from "./errors/authority.error"
-import type { AuthorityProfileRow, AuthorityRow } from "./persistence/authority.rows"
-import { FIND_AUTHORITY, FIND_AUTHORITY_PROFILE, UPSERT_AUTHORITY } from "./persistence/authority.sql"
+import type { AuthorityProfileRow, AuthorityRow, CreatedAuthorityRow } from "./persistence/authority.rows"
+import {
+    CREATE_AUTHORITY_IF_MISSING,
+    FIND_AUTHORITY,
+    FIND_AUTHORITY_PROFILE,
+    UPSERT_AUTHORITY,
+} from "./persistence/authority.sql"
 
 @Injectable()
 /** The owner's goals and house rules: the only owner of the authority table. */
@@ -30,6 +35,14 @@ export class AuthorityService {
             await this.entityManager.query<Array<AuthorityProfileRow>>(FIND_AUTHORITY_PROFILE, [workspaceId])
         )[0]
         return row ?? null
+    }
+
+    /** Creates the empty sheet of a workspace that has none; true only when this call created it (a concurrent call answers false). */
+    async ensureSheet(workspaceId: string): Promise<boolean> {
+        const created = await this.entityManager.query<Array<CreatedAuthorityRow>>(CREATE_AUTHORITY_IF_MISSING, [
+            workspaceId,
+        ])
+        return created.length > 0
     }
 
     /** Lays the patch over the stored sheet and saves the result, stamped with who saved it. */

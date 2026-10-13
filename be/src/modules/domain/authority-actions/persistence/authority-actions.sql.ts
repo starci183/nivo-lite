@@ -26,3 +26,11 @@ RETURNING action`
 
 /** Reads the keys of the authority action rows the database holds, bounded. */
 export const LIST_ACTION_KEYS = sql`SELECT action FROM public.authority_actions ORDER BY action LIMIT 500`
+
+/** Reads every authority action row of the catalogue, in module and position order, bounded. */
+export const LIST_AUTHORITY_ACTIONS = sql`
+SELECT action, module_key, sort_order, default_mode, default_limit_vnd::float8 AS default_limit_vnd, default_required_fields,
+       amount_limit, max_mode, label
+FROM public.authority_actions
+ORDER BY module_key, sort_order, action
+LIMIT 500`

@@ -1,6 +1,7 @@
 import { AGENTS_SYNC_SCHEDULER } from "@modules/queues/agents"
 import { AUTOMATION_TICK_SCHEDULER } from "@modules/queues/automation"
 import { SHIFTS_TICK_SCHEDULER } from "@modules/queues/shifts"
+import { DECISIONS_DRAIN_SCHEDULER } from "@modules/queues/decisions"
 import { CONNECTION_HEALTH_SCHEDULER } from "@modules/queues/connection-health"
 import { CONTENT_TICK_EVERY_MS, CONTENT_TICK_QUEUE, CONTENT_TICK_SCHEDULER } from "@modules/queues/content-tick"
 import { DATA_SYNC_SCHEDULER } from "@modules/queues/data-sync"
@@ -12,12 +13,14 @@ import { RunBrainCommandQueueModule } from "@features/jobs/run-brain-command"
 import { IndexKnowledgeSourceQueueModule } from "@features/jobs/index-knowledge-source"
 import { ReembedKnowledgeQueueModule } from "@features/jobs/reembed-knowledge"
 import { EmitN8nEventQueueModule } from "@features/jobs/emit-n8n-event"
+import { EmitWebhookEventQueueModule } from "@features/jobs/emit-webhook-event"
 import { RunAutomationCommandQueueModule } from "@features/jobs/run-automation-command"
 import { RunAutomationTickQueueModule } from "@features/jobs/run-automation-tick"
 import { RunDecisionsQueueModule } from "@features/jobs/run-decisions"
 import { RunSetupTurnQueueModule } from "@features/jobs/run-setup-turn"
 import { GenerateWithAgentQueueModule } from "@features/jobs/generate-with-agent"
 import { SyncAgentsQueueModule } from "@features/jobs/sync-agents"
+import { DrainWorkQueueModule } from "@features/jobs/drain-work"
 import { DraftLoyaltyCampaignQueueModule } from "@features/jobs/draft-loyalty-campaign"
 import { CheckConnectionHealthQueueModule } from "@features/jobs/check-connection-health"
 import { CompleteZaloAuthorizationQueueModule } from "@features/jobs/complete-zalo-authorization"
@@ -48,11 +51,19 @@ import { CustomerOutcomesService, CustomerTurnRuntimeService } from "@modules/do
 import { InstallationDirectoryService } from "@modules/domain/modules"
 import {
     ApprovalRequesterService,
-    UnboundDecisionEventsService,
+    DECISIONS_ERROR_KINDS,
+    DECISIONS_MESSAGES,
+    ModuleApprovalGateService,
+    ModulePerformersService,
     UnboundLeadGenFlowService,
-    UnboundPaymentReceiptsService,
 } from "@modules/domain/decisions"
 import { LeadReadService } from "@modules/domain/leads"
+import {
+    AUTOMATIONS_ERROR_KINDS,
+    AUTOMATIONS_MESSAGES,
+    AutomationBusinessEventsService,
+    AutomationPaymentReceiptsService,
+} from "@modules/domain/automations"
 import {
     BookingToolsService,
     ConversationLeadsService,
@@ -62,6 +73,13 @@ import {
     OutboundAccessService,
 } from "@modules/domain/work-performers"
 import { ToolTokenService } from "@modules/integrations/openclaw"
+import { ModuleTextGeneratorService } from "@modules/domain/ai-generations"
+import { ModuleOutboundMailService } from "@modules/domain/email-messages"
+import { MODULE_OPS_ERROR_KINDS, MODULE_OPS_MESSAGES } from "@modules/domain/module-ops"
+import type { ModuleOpsPorts } from "@modules/domain/module-ops"
+import { AUTOMATION_PORTS_MESSAGES } from "@modules/domain/automation-ports"
+import { FLOW_ENGINE_ERROR_KINDS, FLOW_ENGINE_MESSAGES } from "@modules/domain/flow-engine"
+import { DriveGrantService } from "@modules/domain/google-connections"
 import type { DocumentsOptions } from "@modules/integrations/documents"
 import type { LlmOptions } from "@modules/integrations/llm"
 import type { ChannelSetupOptions } from "@modules/integrations/channel-setup"
@@ -157,9 +175,17 @@ export interface ApiOptions {
     readonly video: VideoOptions
 }
 
+/** The ports the business modules (hiring, shifts, inventory) work through: the real gate, mailer and text generator. */
+export const MODULE_OPS_PORTS: ModuleOpsPorts = {
+    performers: ModulePerformersService,
+    approvalGate: ModuleApprovalGateService,
+    outboundMail: ModuleOutboundMailService,
+    textGenerator: ModuleTextGeneratorService,
+}
+
 /**
- * The ports G19 plugs in: the installations, knowledge lens and module profiles the agents capability reads, and the AI step and
- * outcome handler of every customer chat turn.
+ * The ports G19 plugs in: the installations, knowledge lens and module profiles the agents capability reads, the AI step and
+ * outcome handler of every customer chat turn, and the connection points of the automations, business modules and decisions.
  */
 export const G19_PORTS = {
     agents: {
@@ -168,6 +194,20 @@ export const G19_PORTS = {
         modules: ModuleProfilesService,
     },
     chatTurn: { runtime: CustomerTurnRuntimeService, outcomes: CustomerOutcomesService },
+    /** The message bundles of the automations, decisions, module-ops, automation ports and flow engine. */
+    messages: [
+        AUTOMATIONS_MESSAGES,
+        DECISIONS_MESSAGES,
+        MODULE_OPS_MESSAGES,
+        AUTOMATION_PORTS_MESSAGES,
+        FLOW_ENGINE_MESSAGES,
+    ],
+    /** Their error kind tables. */
+    errorKinds: [AUTOMATIONS_ERROR_KINDS, DECISIONS_ERROR_KINDS, MODULE_OPS_ERROR_KINDS, FLOW_ENGINE_ERROR_KINDS],
+    /** The ports of the business modules (hiring, shifts, inventory): the real gate, mailer and text generator. */
+    moduleOps: MODULE_OPS_PORTS,
+    /** The provider of the Google Drive access of a workspace, for the knowledge capability. */
+    driveAccess: DriveGrantService,
 }
 
 /** The ports the agent-tools capability reaches the rest of the app through. */
@@ -185,8 +225,8 @@ export const AGENT_TOOLS_PORTS = {
 export const DECISIONS_PORTS = {
     agentDirectory: AgentsService,
     inboundEventStatus: InboundStatusService,
-    decisionEvents: UnboundDecisionEventsService,
-    paymentReceipts: UnboundPaymentReceiptsService,
+    decisionEvents: AutomationBusinessEventsService,
+    paymentReceipts: AutomationPaymentReceiptsService,
     leadDirectory: LeadReadService,
     leadGenFlow: UnboundLeadGenFlowService,
     outboundAccessGate: OutboundAccessService,
@@ -200,12 +240,14 @@ export const API_JOB_QUEUES = [
     IndexKnowledgeSourceQueueModule,
     ReembedKnowledgeQueueModule,
     EmitN8nEventQueueModule,
+    EmitWebhookEventQueueModule,
     RunAutomationCommandQueueModule,
     RunAutomationTickQueueModule,
     RunDecisionsQueueModule,
     RunSetupTurnQueueModule,
     GenerateWithAgentQueueModule,
     SyncAgentsQueueModule,
+    DrainWorkQueueModule,
     DraftLoyaltyCampaignQueueModule,
     CheckConnectionHealthQueueModule,
     CompleteZaloAuthorizationQueueModule,
@@ -233,6 +275,7 @@ export const API_SCHEDULERS: ReadonlyArray<QueueSchedulerDefinition> = [
     AUTOMATION_TICK_SCHEDULER,
     SHIFTS_TICK_SCHEDULER,
     AGENTS_SYNC_SCHEDULER,
+    DECISIONS_DRAIN_SCHEDULER,
     { queue: CONTENT_TICK_QUEUE, id: CONTENT_TICK_SCHEDULER, everyMs: CONTENT_TICK_EVERY_MS },
     CONNECTION_HEALTH_SCHEDULER,
     ZALO_REFRESH_SCHEDULER,

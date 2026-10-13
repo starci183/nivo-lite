@@ -149,7 +149,7 @@ import {
 } from "@modules/domain/ai-generations"
 import { AUTHORITY_ERROR_KINDS, AUTHORITY_MESSAGES } from "@modules/domain/authority"
 import { AUTHORITY_RULES_ERROR_KINDS, AUTHORITY_RULES_MESSAGES } from "@modules/domain/authority-rules"
-import { DECISIONS_ERROR_KINDS, DECISIONS_MESSAGES, DecisionsModule } from "@modules/domain/decisions"
+import { DecisionsModule } from "@modules/domain/decisions"
 import { EXECUTIONS_ERROR_KINDS, EXECUTIONS_MESSAGES } from "@modules/domain/executions"
 import {
     OFFICE_COMMAND_CANDIDATES_ERROR_KINDS,
@@ -227,8 +227,8 @@ import {
 import { INVENTORY_ERROR_KINDS, INVENTORY_MESSAGES, InventoryModule } from "@modules/domain/inventory"
 import { SHIFTS_ERROR_KINDS, SHIFTS_MESSAGES, ShiftsModule } from "@modules/domain/shifts"
 import { HIRING_ERROR_KINDS, HIRING_MESSAGES, HiringModule } from "@modules/domain/hiring"
-import { MODULE_OPS_ERROR_KINDS, MODULE_OPS_MESSAGES, ModuleOpsModule } from "@modules/domain/module-ops"
-import { AUTOMATIONS_ERROR_KINDS, AUTOMATIONS_MESSAGES, AutomationsModule } from "@modules/domain/automations"
+import { ModuleOpsModule } from "@modules/domain/module-ops"
+import { AutomationsModule } from "@modules/domain/automations"
 import { AutomationCommandsModule } from "@modules/domain/automation-commands"
 import { AutomationPortsModule } from "@modules/domain/automation-ports"
 import {
@@ -424,7 +424,7 @@ export class AppModule {
                         AUTOMATION_PIPELINES_MESSAGES,
                         AUTOMATION_RUNS_MESSAGES,
                         AUTOMATION_TEMPLATES_MESSAGES,
-                        AUTOMATIONS_MESSAGES,
+                        ...G19_PORTS.messages,
                         AGENT_CONNECTIONS_MESSAGES,
                         AGENT_TOOLS_MESSAGES,
                         AGENTS_MESSAGES,
@@ -438,7 +438,6 @@ export class AppModule {
                         API_KEYS_MESSAGES,
                         AUTHORITY_MESSAGES,
                         AUTHORITY_RULES_MESSAGES,
-                        DECISIONS_MESSAGES,
                         DEEPSEEK_MESSAGES,
                         EXECUTIONS_MESSAGES,
                         OFFICE_COMMAND_CANDIDATES_MESSAGES,
@@ -472,7 +471,6 @@ export class AppModule {
                         SHIFTS_MESSAGES,
                         HIRING_MESSAGES,
                         JOBS_MESSAGES,
-                        MODULE_OPS_MESSAGES,
                         PLATFORM_ADMIN_MESSAGES,
                         BRAIN_FACTS_MESSAGES,
                         BRAIN_LESSONS_MESSAGES,
@@ -528,7 +526,7 @@ export class AppModule {
                         HTTP_ERROR_KINDS,
                         AUTOMATION_PIPELINES_ERROR_KINDS,
                         AUTOMATION_TEMPLATES_ERROR_KINDS,
-                        AUTOMATIONS_ERROR_KINDS,
+                        ...G19_PORTS.errorKinds,
                         AGENT_CONNECTIONS_ERROR_KINDS,
                         AGENT_TOOLS_ERROR_KINDS,
                         AGENTS_ERROR_KINDS,
@@ -541,7 +539,6 @@ export class AppModule {
                         API_KEYS_ERROR_KINDS,
                         AUTHORITY_ERROR_KINDS,
                         AUTHORITY_RULES_ERROR_KINDS,
-                        DECISIONS_ERROR_KINDS,
                         DEEPSEEK_ERROR_KINDS,
                         EXECUTIONS_ERROR_KINDS,
                         OFFICE_COMMAND_CANDIDATES_ERROR_KINDS,
@@ -584,7 +581,6 @@ export class AppModule {
                         INVENTORY_ERROR_KINDS,
                         SHIFTS_ERROR_KINDS,
                         HIRING_ERROR_KINDS,
-                        MODULE_OPS_ERROR_KINDS,
                         PLATFORM_ADMIN_ERROR_KINDS,
                         MODULES_ERROR_KINDS,
                         NIVO_KNOWLEDGE_ERROR_KINDS,
@@ -706,7 +702,7 @@ export class AppModule {
                 RendersHttpModule,
                 RendersGraphqlModule,
                 LivenessModule.register({ isGlobal: true }),
-                ModuleOpsModule.register({ isGlobal: true }),
+                ModuleOpsModule.register({ isGlobal: true, ports: G19_PORTS.moduleOps }),
                 LlmModule.register({ isGlobal: true, ...options.llm }),
                 DocumentsModule.register({ isGlobal: true, ...options.documents }),
                 KnowledgeSourcesModule.register({ isGlobal: true, storage: SUPABASE_OBJECTS }),
@@ -717,7 +713,7 @@ export class AppModule {
                     folders: [CORE_FOLDER, ...MODULE_CATALOG.map((module) => module.knowledgeFolder)],
                     dir: "fe/apps/web/resources/nivo-knowledge",
                 }),
-                KnowledgeModule.register({ isGlobal: true, driveAccess: { forWorkspace: () => null } }),
+                KnowledgeModule.register({ isGlobal: true, driveAccess: G19_PORTS.driveAccess }),
                 BrainFactsModule.register({ isGlobal: true }),
                 KnowledgeGapsModule.register({ isGlobal: true }),
                 BrainLessonsModule.register({ isGlobal: true }),
