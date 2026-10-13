@@ -164,3 +164,14 @@ export const downloadNameOf = (title: string): string => {
         .slice(0, 50)
     return `${stem === "" ? "video" : stem}.mp4`
 }
+
+
+type RenderParsed = { readonly success: true; readonly data: string } | { readonly success: false }
+
+/** Bounds the id of the project a person asks to render. */
+export const renderProjectSchema = {
+    safeParse: (projectId: string): RenderParsed =>
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu.test(projectId)
+            ? { success: true, data: projectId }
+            : { success: false },
+}

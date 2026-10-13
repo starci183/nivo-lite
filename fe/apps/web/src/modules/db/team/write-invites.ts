@@ -1,49 +1,72 @@
 "use server"
 import "server-only"
 
-import { apiRequest, decodeInviteResult, decodeNothing, decoded } from "@/modules/api"
-import type { Outcome } from "@/modules/api"
+import { awaitCommand } from "../commands/read-command"
+import { getPrincipal } from "../principal"
+import { dbFailure, dbOk } from "../outcome"
+import type { DbOutcome } from "../outcome"
+import { rpcFailure } from "../rpc-failure"
+import { createServerDbClient } from "../server"
+import { inviteInputSchema, inviteRefSchema, inviteResultOf } from "./team.mapper"
+import type { InviteResultItem } from "./team.mapper"
 
-/** What a person types to invite someone. */
-interface InviteInput {
-    readonly email: string
-    readonly role: "manager" | "staff"
-    /** The staff row the account will be, or null. */
-    readonly staffId: string | null
+/** The invitation command the back end serves: it mints the token, emails the person and answers the link. */
+const serve = async (commandId: string): Promise<DbOutcome<InviteResultItem>> => {
+    const answer = await awaitCommand(commandId)
+    if (answer.kind !== "ok") return answer
+    const result = inviteResultOf(answer.value)
+    return result === null ? dbFailure("unavailable", "invite-shape") : dbOk(result)
 }
 
-const invitePath = (inviteId: string, tail: string): string =>
-    `/workspaces/invites/${encodeURIComponent(inviteId)}${tail}`
+/** Invites someone by email; the database proves the caller is an owner or a manager and queues the back end job that sends it. */
+export const writeInviteCreate = async (workspaceId: string, input: unknown): Promise<DbOutcome<InviteResultItem>> => {
+    const principal = await getPrincipal()
+    if (principal.kind !== "ok") return dbFailure("refused", "principal")
+    const parsed = inviteInputSchema.safeParse(workspaceId, input)
+    if (!parsed.success) return dbFailure("invalid", "invite-input")
+    const client = await createServerDbClient()
+    const { data, error } = await client.rpc("request_invite_command", {
+        p_workspace: parsed.data.workspaceId,
+        p_action: "create",
+        p_email: parsed.data.email,
+        p_role: parsed.data.role,
+        ...(parsed.data.staffId === null ? {} : { p_staff: parsed.data.staffId }),
+    })
+    return error === null ? serve(data) : rpcFailure(error)
+}
 
-/** Invites someone by email; the back end proves the caller is an owner or a manager of the workspace. */
-export const writeInviteCreate = async (workspaceId: string, input: InviteInput) =>
-    decoded(
-        await apiRequest<unknown>("/workspaces/invites", {
-            method: "POST",
-            workspaceId,
-            body: {
-                email: input.email.trim(),
-                role: input.role,
-                ...(input.staffId === null ? {} : { staffId: input.staffId }),
-            },
-        }),
-        decodeInviteResult,
-    )
+const reissue = async (action: "resend" | "link", workspaceId: string, inviteId: string) => {
+    const principal = await getPrincipal()
+    if (principal.kind !== "ok") return dbFailure("refused", "principal")
+    const parsed = inviteRefSchema.safeParse(workspaceId, inviteId)
+    if (!parsed.success) return dbFailure("invalid", "invite-input")
+    const client = await createServerDbClient()
+    const { data, error } = await client.rpc("request_invite_command", {
+        p_workspace: parsed.data.workspaceId,
+        p_action: action,
+        p_invite: parsed.data.inviteId,
+    })
+    return error === null ? serve(data) : rpcFailure(error)
+}
 
-/** Sends an invitation again. */
-export const writeInviteResend = async (workspaceId: string, inviteId: string) =>
-    decoded(
-        await apiRequest<unknown>(invitePath(inviteId, "/resend"), { method: "POST", workspaceId }),
-        decodeInviteResult,
-    )
+/** Sends an invitation again with a fresh link. */
+export const writeInviteResend = async (workspaceId: string, inviteId: string): Promise<DbOutcome<InviteResultItem>> =>
+    reissue("resend", workspaceId, inviteId)
 
-/** Mints a fresh link for an invitation. */
-export const writeInviteLink = async (workspaceId: string, inviteId: string) =>
-    decoded(
-        await apiRequest<unknown>(invitePath(inviteId, "/link"), { method: "POST", workspaceId }),
-        decodeInviteResult,
-    )
+/** Mints a fresh link for an invitation without emailing it. */
+export const writeInviteLink = async (workspaceId: string, inviteId: string): Promise<DbOutcome<InviteResultItem>> =>
+    reissue("link", workspaceId, inviteId)
 
-/** Revokes an invitation. */
-export const writeInviteRevoke = async (workspaceId: string, inviteId: string): Promise<Outcome<null>> =>
-    decoded(await apiRequest<unknown>(invitePath(inviteId, ""), { method: "DELETE", workspaceId }), decodeNothing)
+/** Revokes an invitation; the database proves the caller is an owner or a manager. */
+export const writeInviteRevoke = async (workspaceId: string, inviteId: string): Promise<DbOutcome<null>> => {
+    const principal = await getPrincipal()
+    if (principal.kind !== "ok") return dbFailure("refused", "principal")
+    const parsed = inviteRefSchema.safeParse(workspaceId, inviteId)
+    if (!parsed.success) return dbFailure("invalid", "invite-input")
+    const client = await createServerDbClient()
+    const { error } = await client.rpc("revoke_workspace_invite", {
+        p_workspace: parsed.data.workspaceId,
+        p_invite: parsed.data.inviteId,
+    })
+    return error === null ? dbOk(null) : rpcFailure(error)
+}

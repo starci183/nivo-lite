@@ -66,7 +66,7 @@ node scripts/env-sync.mjs --check      # counts and missing names, nothing is pu
 node scripts/env-sync.mjs              # pushes ENGINE_ENV (stack), API_ENV (api runtime), WEB_ENV (public values) and the web build args to the "production" environment
 ```
 
-Also set the GitHub variable `NEXT_PUBLIC_API_URL=https://api.nivo.vn` in the `production` environment (the default is the same). `ENGINE_SHARED_SECRET` is no longer used; leave it until the engine is gone.
+Also set the GitHub variable `NEXT_PUBLIC_DEVELOPER_API_URL=https://api.nivo.vn` in the `production` environment (the default is the same). `ENGINE_SHARED_SECRET` is no longer used; leave it until the engine is gone.
 Do not seal production secrets into the repository: `.starcistacks` stays value-free for now.
 
 ## 3. Merge
