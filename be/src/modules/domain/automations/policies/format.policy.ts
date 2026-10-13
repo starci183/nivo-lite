@@ -8,10 +8,11 @@ export const vndText = (amount: number | null | undefined): string =>
 export const instantOf = (value: string | Date): number => new Date(value).getTime()
 
 /** The ISO 8601 text of a timestamp the driver answered as a string or as a date. */
-export const isoOf = (value: string | Date): string => new Date(value).toISOString()
+export const automationIsoOf = (value: string | Date): string => new Date(value).toISOString()
 
 /** The same value as an ISO text, or null when there is none. */
-export const isoOrNull = (value: string | Date | null): string | null => (value === null ? null : isoOf(value))
+export const isoOrNull = (value: string | Date | null): string | null =>
+    value === null ? null : automationIsoOf(value)
 
 /** The day (dd/mm/yyyy) of an ISO date (`yyyy-mm-dd`). */
 export const dayText = (isoDay: string): string => isoDay.split("-").reverse().join("/")

@@ -1,6 +1,6 @@
 export { BankFeedService } from "./bank-feed.service"
 export { parseBillingConfig } from "./billing.config"
-export { BILLING_ERROR_KINDS } from "./errors/billing.error"
+export { BILLING_ERROR_KINDS, BillingError, BillingErrorCode } from "./errors/billing.error"
 export { BILLING_MESSAGES } from "./messages/billing.messages"
 export { BillingModule } from "./billing.module"
 export { BillingService } from "./billing.service"

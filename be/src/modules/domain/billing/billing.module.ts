@@ -5,7 +5,7 @@ import { BankFeedService } from "./bank-feed.service"
 import { BillingReadService } from "./billing-read.service"
 import { BillingService } from "./billing.service"
 import { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./billing.module-definition"
-import { ConnectionSecretsService } from "./connection-secrets.service"
+import { PaymentSecretsService } from "./payment-secrets.service"
 import { EntitlementsService } from "./entitlements.service"
 import { PaymentProofService } from "./payment-proof.service"
 @Module({})
@@ -23,7 +23,7 @@ export class BillingModule extends ConfigurableModuleClass {
                 BillingReadService,
                 EntitlementsService,
                 PaymentProofService,
-                ConnectionSecretsService,
+                PaymentSecretsService,
                 BankFeedService,
             ],
             exports: [

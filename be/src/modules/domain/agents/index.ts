@@ -1,14 +1,11 @@
-export { AGENTS_ERROR_KINDS, AgentsError, AgentsErrorCode } from "./errors/agents.error"
+export { AGENTS_ERROR_KINDS } from "./errors/agents.error"
 export { AGENTS_MESSAGES } from "./messages/agents.messages"
 export { AgentBundleService } from "./agent-bundle.service"
-export { AGENTS_INSTALLATIONS, AGENTS_KNOWLEDGE, AGENTS_MODULES, InjectInstallations } from "./agents.decorators"
+export { AGENTS_INSTALLATIONS, InjectInstallations } from "./agents.decorators"
 export { AgentsModule } from "./agents.module"
 export { AGENTS_SYNC_FRESH_MS } from "./agents.options"
-export type { AgentsOptions, AgentsPorts } from "./agents.options"
 export type {
     BaseRule,
-    ContextGate,
-    ContextVersion,
     Installation,
     InstallationDirectory,
     InstallationRef,
@@ -25,16 +22,13 @@ export { PauseClient } from "./pause.client"
 export type {
     AgentBundle,
     AgentDashboardData,
-    AgentRef,
     AgentSummary,
+    Audience,
+    LensCounts,
+    OptionalId,
+    OptionalOpenGaps,
+    OptionalText,
     AgentTexts,
-    DashboardQuery,
     EngineStatus,
-    NewAgent,
     AgentProfile,
-    OptionalAgentProfile,
-    OptionalAgentRef,
-    Processor,
 } from "./agents.contracts"
-export { UnboundKnowledgeLensService } from "./unbound-knowledge-lens.service"
-export { UnboundModuleProfilesService } from "./unbound-module-profiles.service"
