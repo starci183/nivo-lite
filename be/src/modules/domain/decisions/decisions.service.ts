@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AuthorityService } from "@modules/domain/authority"
 import type { AuthorityPatch, AuthorityProfile } from "@modules/domain/authority"
+import { AuthorityActionsService } from "@modules/domain/authority-actions"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import type { AuthorityRuleRecord, RuleChange } from "@modules/domain/authority-rules"
 import { InvoicesService } from "@modules/domain/invoices"
@@ -61,6 +62,7 @@ export class DecisionsService {
         private readonly members: WorkspaceMembersService,
         private readonly authority: AuthorityService,
         private readonly rules: AuthorityRulesService,
+        private readonly actions: AuthorityActionsService,
         private readonly evidence: EvidenceService,
         private readonly invoices: InvoicesService,
         private readonly transactions: TransactionsService,
@@ -136,9 +138,17 @@ export class DecisionsService {
         return saved
     }
 
-    /** Saves the rule of one action; owner and manager only. */
+    /**
+     * Saves the rule of one action; owner and manager only. The catalogue has the last word: an action outside the registry or under
+     * another department is refused, and so is "auto" for an action that can never run by itself, whichever door the change came through.
+     */
     async saveRule(principalId: string, workspaceId: string, change: RuleChange): Promise<AuthorityRuleRecord> {
         const member = await this.members.require(principalId, workspaceId, MANAGERS)
+        const record = (await this.actions.list(this.entityManager)).find((entry) => entry.action === change.action)
+        if (record?.module_key !== change.department)
+            throw new DecisionsError({ code: DecisionsErrorCode.UnknownAction, params: { action: change.action } })
+        if (change.mode === "auto" && record.max_mode !== null)
+            throw new DecisionsError({ code: DecisionsErrorCode.ModeCapped, params: { action: change.action } })
         const saved = await this.rules.save(workspaceId, change)
         const limit = change.limit_vnd === null ? "" : ` < ${change.limit_vnd}`
         const summary = `${saved.department}.${saved.action} -> ${change.mode}${limit}`

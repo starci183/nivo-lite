@@ -29,3 +29,8 @@ export const UPDATE_CONTRACT = sql`WITH changed AS (
 SELECT id, lead_id, customer_name, plan, to_char(starts_on, 'YYYY-MM-DD') AS starts_on,
     to_char(ends_on, 'YYYY-MM-DD') AS ends_on, amount_vnd::float8 AS amount_vnd, status, note
 FROM changed`
+
+/** Links a lead of the workspace to a contract of the workspace that had none ($1 workspace, $2 contract, $3 lead). */
+export const ATTACH_CONTRACT_LEAD = sql`UPDATE public.contracts SET lead_id = $3::uuid, updated_at = now()
+WHERE workspace_id = $1::uuid AND id = $2::uuid AND lead_id IS NULL
+  AND EXISTS (SELECT 1 FROM public.leads WHERE workspace_id = $1::uuid AND id = $3::uuid)`

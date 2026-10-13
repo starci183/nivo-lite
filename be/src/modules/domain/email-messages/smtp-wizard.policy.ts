@@ -16,8 +16,7 @@ const PORT_MAX = 65535
 
 /** The outcome of cleaning the form: the form, or the first problem found. */
 export type SmtpFormVerdict =
-    | { readonly ok: true; readonly form: SmtpForm }
-    | { readonly ok: false; readonly code: EmailMessagesErrorCode }
+    { readonly ok: true; readonly form: SmtpForm } | { readonly ok: false; readonly code: EmailMessagesErrorCode }
 
 const clean = (text: string, max: number): string => text.trim().slice(0, max)
 
@@ -40,7 +39,8 @@ export const cleanSmtpForm = (input: SmtpFormInput): SmtpFormVerdict => {
     if (!Number.isInteger(input.port) || input.port < 1 || input.port > PORT_MAX) {
         return { ok: false, code: EmailMessagesErrorCode.SmtpPort }
     }
-    if (fromName === "" || user === "" || fromEmail === "") return { ok: false, code: EmailMessagesErrorCode.SmtpFields }
+    if (fromName === "" || user === "" || fromEmail === "")
+        return { ok: false, code: EmailMessagesErrorCode.SmtpFields }
     if (!isMailAddress(fromEmail) || (replyTo !== "" && !isMailAddress(replyTo))) {
         return { ok: false, code: EmailMessagesErrorCode.SmtpEmail }
     }
