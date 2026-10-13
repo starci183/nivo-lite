@@ -15,7 +15,7 @@ export const SCOPE_TONE: Readonly<Record<FactScope, "success" | "neutral" | "war
 }
 
 /** The catalog key of each source label. */
-export const SOURCE_KEY: Readonly<
+export const FACT_SOURCE_KEY: Readonly<
     Record<FactSource, "srcOwner" | "srcManager" | "srcDocument" | "srcSystem" | "srcStaff" | "srcCustomer" | "srcAi">
 > = {
     owner: "srcOwner",

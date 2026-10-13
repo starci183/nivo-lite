@@ -1,10 +1,10 @@
 import { createFormatter } from "next-intl"
-import { TIME_ZONE } from "@/i18n/core"
+import { PRODUCT_TIME_ZONE } from "@/modules/i18n"
 import type { RespT } from "./rows"
 
 const DAY_MS = 86_400_000
 
-const dayFormatter = createFormatter({ locale: "en-CA", timeZone: TIME_ZONE })
+const dayFormatter = createFormatter({ locale: "en-CA", timeZone: PRODUCT_TIME_ZONE })
 
 /** Calendar day in the workspace time zone, as UTC midnight milliseconds. */
 const dayStart = (date: Date): number => {

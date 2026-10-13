@@ -19,3 +19,9 @@ export const routing = {
     alternateLinks: false,
     localeCookie: { name: LOCALE_COOKIE, maxAge: 60 * 60 * 24 * 365, sameSite: "lax" as const, path: "/" },
 }
+
+/** The Intl (BCP 47) tag of one app locale, for the UI kit's date and number parts; anything unknown reads as the default. */
+export const intlTagOf = (locale: string): string => (locale === "en" ? "en-GB" : "vi-VN")
+
+/** One of the app locales, or the default for anything else (a stale cookie, an unknown option). */
+export const appLocaleOf = (value: string): (typeof LOCALES)[number] => (value === "en" ? "en" : DEFAULT_LOCALE)

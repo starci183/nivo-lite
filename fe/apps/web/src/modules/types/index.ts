@@ -45,7 +45,7 @@ export type {
     BookingHoursView,
     BookingView,
     PublicBookingAnswer,
-    PublicBookingPage,
+    PublicBookingPageData,
 } from "./booking"
 export type { ConsoleIconName, ConsoleNavItem, ConsolePending, ConsoleSession, ConsoleWorkspace } from "./console"
 export type {
@@ -158,7 +158,7 @@ export type {
     GateAction,
     GateView,
     GoogleAccount,
-    L,
+    BilingualLabel,
     MessageView,
     Missing,
     ModuleScope,
@@ -198,7 +198,14 @@ export type {
     LeadScore,
     LeadSourceKind,
 } from "./leadgen"
-export type { FlowDecisionRow, FlowEvidenceState, FlowRuleMode, FlowWorkItemView, FlowWorkStatus } from "./flow"
+export type {
+    FlowDecisionRow,
+    FlowEvidenceState,
+    FlowRuleMode,
+    FlowWorkItemView,
+    FlowWorkStatus,
+    ReasonCode,
+} from "./flow"
 export { FACT_SCOPES, FACT_SUBJECT_TYPES } from "./brain"
 export type {
     BrainEvidence,
@@ -299,3 +306,5 @@ export type {
     AccountingQuestionCardView,
     AccountingQuestionsView,
 } from "./accounting-question-card"
+export type { ProgramCopy, TierErrorView } from "./loyalty-program"
+export type { GraphQLResponse } from "./outcome"

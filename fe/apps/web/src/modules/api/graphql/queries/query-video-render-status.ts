@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryVideoRenderStatusArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { VideoRenderStatusQuery, VideoRenderStatusQueryVariables } from "../__generated__/graphql"
 
 /** The input of the `videoRenderStatus` query. */
-type QueryVideoRenderStatusRequest = QueryVideoRenderStatusArgs["input"]
+type QueryVideoRenderStatusRequest = WireInput<VideoRenderStatusQueryVariables["input"]>
 
 /** The generated payload of the `videoRenderStatus` query. */
-type QueryVideoRenderStatusResponse = Pick<Query, "videoRenderStatus">
+type QueryVideoRenderStatusResponse = VideoRenderStatusQuery
 
 type Document = TypedDocumentNode<QueryVideoRenderStatusResponse, InputVariables<QueryVideoRenderStatusRequest>>
 

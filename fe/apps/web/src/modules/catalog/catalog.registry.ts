@@ -9,7 +9,7 @@ import { LOYALTY } from "./loyalty"
 import { VIDEO } from "./video"
 import { CONTENT } from "./content"
 import { HIRING } from "./hiring"
-import { MODULE_KEYS } from "./catalog.keys"
+import { ACTION_KEYS, MODULE_KEYS } from "./catalog.keys"
 import type { ActionKey, ModuleKey } from "./catalog.keys"
 import type { ModuleDef, RegistryAction } from "./catalog.types"
 
@@ -28,10 +28,22 @@ export const MODULE_REGISTRY: Readonly<Record<ModuleKey, ModuleDef>> = {
     hiring: HIRING,
 }
 
+/** Whether every authority action has been given the module that owns it. */
+const isCompleteActionModule = (value: Partial<Record<ActionKey, ModuleKey>>): value is Record<ActionKey, ModuleKey> =>
+    ACTION_KEYS.every((action) => value[action] !== undefined)
+
+/** Which module owns each authority action, read from the catalogue. */
+const actionModuleOfRegistry = (): Readonly<Record<ActionKey, ModuleKey>> => {
+    const owner: Partial<Record<ActionKey, ModuleKey>> = {}
+    for (const key of MODULE_KEYS) {
+        for (const entry of MODULE_REGISTRY[key].authorityActions) owner[entry.action] = key
+    }
+    if (!isCompleteActionModule(owner)) throw new Error("catalogue action is missing its module")
+    return owner
+}
+
 /** Which module owns each authority action (its department). */
-export const ACTION_MODULE: Readonly<Record<ActionKey, ModuleKey>> = Object.fromEntries(
-    MODULE_KEYS.flatMap((key) => MODULE_REGISTRY[key].authorityActions.map((a) => [a.action, key] as const)),
-) as Record<ActionKey, ModuleKey>
+export const ACTION_MODULE: Readonly<Record<ActionKey, ModuleKey>> = actionModuleOfRegistry()
 
 /** The definition of an authority action; throws for a key that is not in the catalogue. */
 export const actionDef = (action: ActionKey): RegistryAction => {

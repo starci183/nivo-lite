@@ -11,7 +11,7 @@ export {
 export type { Aspect } from "./video.constants"
 export { isUuid } from "./video.guards"
 export { estimateScriptSeconds, newScene } from "./video.script"
-export { aspectKey, GOAL_TEMPLATES, goalHintKey, goalLabelKey, isGoal, goalTemplateOf } from "./video.templates"
+export { aspectKey, GOAL_TEMPLATES, isGoal, goalTemplateOf } from "./video.templates"
 export { editorHref, stepFor } from "./video.links"
 export type { EditorStep } from "./video.links"
 export type {

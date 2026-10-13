@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryWorkspaceShellArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { WorkspaceShellQuery, WorkspaceShellQueryVariables } from "../__generated__/graphql"
 
 /** The input of the `workspaceShell` query. */
-export type QueryWorkspaceShellRequest = QueryWorkspaceShellArgs["input"]
+export type QueryWorkspaceShellRequest = WireInput<WorkspaceShellQueryVariables["input"]>
 
 /** The response of the `workspaceShell` query: the typed payload straight from the back end contract. */
-type QueryWorkspaceShellResponse = Pick<Query, "workspaceShell">
+type QueryWorkspaceShellResponse = WorkspaceShellQuery
 
 type Document = TypedDocumentNode<QueryWorkspaceShellResponse, InputVariables<QueryWorkspaceShellRequest>>
 
