@@ -6,7 +6,10 @@ import { FlowsHttpModule } from "@features/api/flows"
 import { N8nPipelinesHttpModule } from "@features/api/n8n-pipelines"
 import { EmitN8nEventQueueModule } from "@features/jobs/emit-n8n-event"
 import { RunAutomationTickQueueModule } from "@features/jobs/run-automation-tick"
+import { ModulesHttpModule } from "@features/api/modules"
+import { ExternalApiHttpModule } from "@features/api/external-api"
 import { SystemHealthHttpModule } from "@features/api/system-health"
+import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
 import { WorkspacesHttpModule } from "@features/api/workspaces"
 import { AuthGuard, IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } from "@modules/domain/identity"
 import {
@@ -32,6 +35,15 @@ import {
 import { FlowsModule } from "@modules/domain/flows"
 import { N8N_RUNS_ERROR_KINDS, N8N_RUNS_MESSAGES, N8nRunsModule } from "@modules/domain/n8n-runs"
 import { LivenessModule } from "@modules/domain/liveness"
+import { AuthorityActionsModule } from "@modules/domain/authority-actions"
+import {
+    MODULE_CATALOG,
+    MODULE_CATEGORIES,
+    MODULES_ERROR_KINDS,
+    MODULES_MESSAGES,
+    ModulesModule,
+} from "@modules/domain/modules"
+import { PUBLIC_API_ERROR_KINDS, PUBLIC_API_MESSAGES, PublicApiModule } from "@modules/domain/public-api"
 import { EventsModule } from "@modules/domain/events"
 import {
     WORKSPACE_INVITES_ERROR_KINDS,
@@ -84,12 +96,15 @@ export class AppModule {
                         AUTOMATION_RUNS_MESSAGES,
                         AUTOMATION_TEMPLATES_MESSAGES,
                         AUTOMATIONS_MESSAGES,
+                        API_KEYS_MESSAGES,
                         ERRORS_MESSAGES,
                         HTTP_MESSAGES,
                         HTTP_SECURITY_MESSAGES,
                         IDENTITY_MESSAGES,
                         JOBS_MESSAGES,
                         N8N_RUNS_MESSAGES,
+                        MODULES_MESSAGES,
+                        PUBLIC_API_MESSAGES,
                         QUEUE_MESSAGES,
                         WORKSPACE_INVITES_MESSAGES,
                         WORKSPACE_MEMBERS_MESSAGES,
@@ -102,6 +117,7 @@ export class AppModule {
                         AUTOMATION_PIPELINES_ERROR_KINDS,
                         AUTOMATION_TEMPLATES_ERROR_KINDS,
                         AUTOMATIONS_ERROR_KINDS,
+                        API_KEYS_ERROR_KINDS,
                         CONFIG_ERROR_KINDS,
                         DATABASE_ERROR_KINDS,
                         HTTP_SECURITY_ERROR_KINDS,
@@ -111,6 +127,8 @@ export class AppModule {
                         N8N_RUNS_ERROR_KINDS,
                         QUEUE_ERROR_KINDS,
                         IDENTITY_ERROR_KINDS,
+                        MODULES_ERROR_KINDS,
+                        PUBLIC_API_ERROR_KINDS,
                         SUPABASE_ERROR_KINDS,
                         TEMPLATE_FILES_ERROR_KINDS,
                         WORKSPACE_INVITES_ERROR_KINDS,
@@ -158,6 +176,12 @@ export class AppModule {
                 AutomationsModule.register({ isGlobal: true }),
                 FlowsModule.register({ isGlobal: true }),
                 LivenessModule.register({ isGlobal: true }),
+                AuthorityActionsModule.register({ isGlobal: true }),
+                ModulesModule.register({ isGlobal: true, categories: MODULE_CATEGORIES, catalog: MODULE_CATALOG }),
+                ModulesHttpModule,
+                ApiKeysModule.register({ isGlobal: true }),
+                PublicApiModule.register({ isGlobal: true }),
+                ExternalApiHttpModule,
                 SystemHealthHttpModule,
                 WorkspacesHttpModule,
                 AutomationsHttpModule,

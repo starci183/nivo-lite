@@ -154,5 +154,6 @@
   "errNotReady": "Corrections are not available yet: the workspace data still needs its update.",
   "evidenceLog": "Manual evidence added: {amount} VND on {date}",
   "adjustLog": "Correction added: {note}",
-  "adjustLogAmount": "Correction added: {note} (amount should be {amount} VND)"
+  "adjustLogAmount": "Correction added: {note} (amount should be {amount} VND)",
+  "loadRefused": "You do not have access to Accounting in this workspace."
 }

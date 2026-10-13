@@ -4,7 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Button, DropdownMenu, Text } from "@starci/grammar/common";
 import type { BadgeTone, DropdownMenuEntry } from "@starci/grammar/common";
-import { nivoIconSource, TileIcon, type IconName } from "@/ui";
+import { nivoIconSource, type IconName } from "@/components/leaves/Icon"
+import { TileIcon } from "@/components/composites/TileIcon"
 import { useT } from "@/i18n/client";
 import { responsibilities } from "@/i18n/dict/responsibilities";
 import { draftExecution } from "@/lib/actions";

@@ -1,4 +1,5 @@
 import { NestFactory } from "@nestjs/core"
+import type { NestExpressApplication } from "@nestjs/platform-express"
 import { SystemClockService } from "@modules/platform/clock"
 import { EnvSource, parseServerConfig } from "@modules/platform/config"
 import { parsePrimaryDatabaseConfig } from "@modules/platform/database"
@@ -13,6 +14,9 @@ import { parseTemplateFilesConfig } from "@modules/integrations/template-files"
 import { parseSupabaseConfig } from "@modules/integrations/supabase"
 import { AppModule } from "./app.module"
 import type { ApiOptions } from "./api.options"
+
+/** Proxy hops in front of the API (the Traefik edge): the rate limit keys on the real client address, not on the proxy. */
+const TRUSTED_PROXY_HOPS = 1
 
 /** Reads the environment once, composes the API from parsed options and serves until a shutdown signal. */
 const bootstrap = async (): Promise<void> => {
@@ -33,7 +37,8 @@ const bootstrap = async (): Promise<void> => {
         n8n: parseN8nConfig(env),
         templateFiles: parseTemplateFilesConfig(env),
     }
-    const app = await NestFactory.create(AppModule.register(options), { rawBody: true })
+    const app = await NestFactory.create<NestExpressApplication>(AppModule.register(options), { rawBody: true })
+    app.set("trust proxy", TRUSTED_PROXY_HOPS)
     app.enableCors({ origin: [...options.httpSecurity.allowedOrigins] })
     app.enableShutdownHooks()
     app.useGlobalPipes(app.get(RequestValidationService))

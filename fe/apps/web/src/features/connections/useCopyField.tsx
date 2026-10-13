@@ -3,7 +3,7 @@
 import { Icon } from "@starci/grammar/common"
 import { useT } from "@/i18n/client"
 import { connectionWizard } from "@/i18n/dict/connectionWizard"
-import { nivoIconSource, type IconName } from "@/ui"
+import { nivoIconSource, type IconName } from "@/components/leaves/Icon"
 
 /** A NIVO glyph in the shape Grammar's in-field actions take (`{ className }`); decorative, the action keeps its label. */
 const glyph = (name: IconName) => {

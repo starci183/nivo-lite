@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Alert, Button, EmptyNotice, ListItem, SurfaceListCard, Text } from "@starci/grammar/common";
-import { canDecideItem, useMember } from "@/features/shell/member-context";
+import { canDecideItem, useMember } from "@/hooks/member"
 import { useT } from "@/i18n/client";
 import { content } from "@/i18n/dict/content";
 import { decideWorkItem } from "@/lib/flow-actions";
