@@ -13,6 +13,10 @@ export enum AiGenerationsErrorCode {
     EngineUnavailable = "AI_GENERATIONS_ENGINE_UNAVAILABLE",
     /** The text asked for is not one of the workspace. */
     GenerationNotFound = "AI_GENERATIONS_NOT_FOUND",
+    /** The caller may not ask for this usage kind under this module (NIVO-paid kinds are never requested from the app). */
+    KindNotAllowed = "AI_GENERATIONS_KIND_NOT_ALLOWED",
+    /** The member asked the NIVO guide more often than the window allows. */
+    GuideRateLimited = "AI_GENERATIONS_GUIDE_RATE_LIMITED",
 }
 
 /** How each ai-generations code travels. */
@@ -22,6 +26,8 @@ export const AI_GENERATIONS_ERROR_KINDS: Record<AiGenerationsErrorCode, ErrorKin
     [AiGenerationsErrorCode.QuotaBlocked]: "forbidden",
     [AiGenerationsErrorCode.EngineUnavailable]: "unavailable",
     [AiGenerationsErrorCode.GenerationNotFound]: "not-found",
+    [AiGenerationsErrorCode.KindNotAllowed]: "forbidden",
+    [AiGenerationsErrorCode.GuideRateLimited]: "rate-limited",
 }
 
 /** The one error class of the ai-generations capability. */

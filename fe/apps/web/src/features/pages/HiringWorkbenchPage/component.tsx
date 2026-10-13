@@ -9,12 +9,8 @@ import { HiringOnboarding } from "@/components/blocks/HiringOnboarding"
 import { HiringPipeline } from "@/components/blocks/HiringPipeline"
 import { HiringSettings } from "@/components/blocks/HiringSettings"
 
-/** The words of the page: the four figure names (real values are drawn by the figures block) and the tab names. */
+/** The words of the page: the tab names (the figures block words its own figures). */
 interface HiringWorkbenchLabels {
-    readonly roles: string
-    readonly pipeline: string
-    readonly interviews: string
-    readonly offers: string
     readonly jobs: string
     readonly candidates: string
     readonly interviewsTab: string
@@ -35,7 +31,7 @@ export interface HiringWorkbenchPageBaseProps {
 
 /**
  * Draws the Hiring workbench: the agent dashboard frame around the six Hiring surfaces. Every surface is a self-connected block that
- * reads the board itself; the frame ribbon holds the figure names and the real values sit in the first tab.
+ * reads the board itself; the connected figures block fills the frame ribbon.
  */
 export const HiringWorkbenchPageBase = (props: HiringWorkbenchPageBaseProps) => {
     const { installationId, tab, focus, labels } = props.props
@@ -45,22 +41,12 @@ export const HiringWorkbenchPageBase = (props: HiringWorkbenchPageBaseProps) => 
                 module="hiring"
                 installationId={installationId}
                 initialTab={tab}
-                figures={[
-                    { id: "roles", term: labels.roles, description: "-" },
-                    { id: "pipeline", term: labels.pipeline, description: "-" },
-                    { id: "interviews", term: labels.interviews, description: "-" },
-                    { id: "offers", term: labels.offers, description: "-" },
-                ]}
+                ribbon={<HiringFigures />}
                 tabs={[
                     {
                         id: "jobs",
                         label: labels.jobs,
-                        content: (
-                            <>
-                                <HiringFigures />
-                                <HiringJobs />
-                            </>
-                        ),
+                        content: <HiringJobs />,
                     },
                     { id: "candidates", label: labels.candidates, content: <HiringPipeline /> },
                     { id: "interviews", label: labels.interviewsTab, content: <HiringInterviews /> },

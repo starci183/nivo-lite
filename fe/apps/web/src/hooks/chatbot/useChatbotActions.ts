@@ -1,17 +1,16 @@
 import { useLocale, useTranslations } from "next-intl"
 import { useCallback } from "react"
 import { useSWRConfig } from "swr"
-import { useMutateRequestChatAnswerSwr } from "@/hooks/swr/api/graphql/mutations/useMutateRequestChatAnswerSwr"
-import { useMutateRequestChatReplySwr } from "@/hooks/swr/api/graphql/mutations/useMutateRequestChatReplySwr"
-import { useMutateSetChatHandlingSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSetChatHandlingSwr"
 import {
+    QUERY_AGENT_DASHBOARD_SWR_KEY,
     QUERY_CHAT_ANSWER_STATUS_SWR_KEY,
-    useQueryChatAnswerStatusSwr,
-} from "@/hooks/swr/api/graphql/queries/useQueryChatAnswerStatusSwr"
-import {
     QUERY_CHAT_REPLY_STATUS_SWR_KEY,
+    useMutateRequestChatAnswerSwr,
+    useMutateRequestChatReplySwr,
+    useMutateSetChatHandlingSwr,
+    useQueryChatAnswerStatusSwr,
     useQueryChatReplyStatusSwr,
-} from "@/hooks/swr/api/graphql/queries/useQueryChatReplyStatusSwr"
+} from "@/hooks/swr"
 import { CHATBOT_IDLE, useChatbotStore } from "@/hooks/zustand/chatbot"
 import { useGraphQLWithToast } from "@/modules/toast"
 import type { ChatbotTranslator } from "./chatbot.shared"
@@ -21,7 +20,7 @@ const REFRESHED_KEYS: ReadonlyArray<unknown> = [
     "QUERY_CHATBOT_OVERVIEW_SWR",
     "QUERY_CHATBOT_THREAD_SWR",
     "QUERY_CHATBOT_GAPS_SWR",
-    "QUERY_CHATBOT_AGENT_DASHBOARD_SWR",
+    QUERY_AGENT_DASHBOARD_SWR_KEY,
 ]
 
 /** What the status poll reports about a queued delivery. */

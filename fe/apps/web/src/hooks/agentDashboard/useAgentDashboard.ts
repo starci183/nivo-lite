@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { slotOfSwr } from "@/hooks/slot"
-import { useQueryAgentDashboardSwr } from "@/hooks/swr/api/graphql/queries/useQueryAgentDashboardSwr"
+import { useQueryAgentDashboardSwr } from "@/hooks/swr"
 import type { ModuleKey } from "@/modules/catalog"
 import type { DataSlot } from "@/modules/types"
 import { toAgentDashboard } from "./agentDashboard.shared"

@@ -993,6 +993,12 @@ input ArchiveVideoProjectInput {
   projectId: ID!
 }
 
+input AskGuideInput {
+  history: [GuideTurnInput!]!
+  path: String!
+  question: String!
+}
+
 input AskKnowledgeInput {
   audience: String!
   module: String!
@@ -2860,6 +2866,16 @@ input GrantWishInput {
   agentId: ID!
 }
 
+type GuideAskedType {
+  generationId: ID!
+  status: String!
+}
+
+input GuideTurnInput {
+  role: String!
+  text: String!
+}
+
 input HandoffToAccountingInput {
   id: ID!
 }
@@ -4495,6 +4511,7 @@ type Mutation {
   approveLeadGenComment(input: ApproveLeadGenCommentInput!): LeadGenCommentStatusType!
   approveVideoProject(input: ApproveVideoProjectInput!): VideoProjectType!
   archiveVideoProject(input: ArchiveVideoProjectInput!): VideoProjectType!
+  askGuide(input: AskGuideInput!): GuideAskedType!
   assignResponsibility(input: AssignResponsibilityInput!): LeadResponsibilityType!
   assignWorkItem(input: AssignWorkItemInput!): WorkItemType!
   authorizeGoogle(input: AuthorizeGoogleInput!): AuthorizeUrlType!

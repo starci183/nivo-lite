@@ -22,14 +22,6 @@ export const useGuideText = (): GuideText => {
             managerOnly: (title) => copy("coreManagerOnly", { title }),
             busy: copy("coreBusy"),
             open: (title) => copy("coreOpen", { title }),
-            systemLines: (isManager) => [
-                copy("coreSystemIntro"),
-                copy("coreSystemStyle"),
-                copy("coreRulesTitle"),
-                ...stringsOf(map.raw("rules")).map((line) => `- ${line}`),
-                `- ${copy(isManager ? "coreAudienceManager" : "coreAudienceStaff")}`,
-            ],
-            replyFormat: copy("coreReplyFormat"),
         }
     }, [map, copy])
 }

@@ -198,16 +198,7 @@ export type {
     LeadScore,
     LeadSourceKind,
 } from "./leadgen"
-export type {
-    FlowDecisionRow,
-    FlowEvidenceState,
-    FlowInvoice,
-    FlowOrder,
-    FlowOrigin,
-    FlowRuleMode,
-    FlowWorkItemView,
-    FlowWorkStatus,
-} from "./flow"
+export type { FlowDecisionRow, FlowEvidenceState, FlowRuleMode, FlowWorkItemView, FlowWorkStatus } from "./flow"
 export { FACT_SCOPES, FACT_SUBJECT_TYPES } from "./brain"
 export type {
     BrainEvidence,
@@ -232,15 +223,6 @@ export type {
     IdeaDecision,
     DocumentVisibility,
 } from "./knowledge"
-export type {
-    AgentDashboardView,
-    DashboardConnection,
-    DashboardRow,
-    DashboardDone,
-    DashboardKnowledge,
-    DashboardRegion,
-    DashboardWaiting,
-} from "./agent-dashboard"
 export type {
     ShiftsAvailRowView,
     ShiftsAvailView,
@@ -306,4 +288,3 @@ export type {
     AccountingQuestionCardView,
     AccountingQuestionsView,
 } from "./accounting-question-card"
-export type { AccountingDashboardView, AccountingDashboardSectionView } from "./accounting-dashboard"

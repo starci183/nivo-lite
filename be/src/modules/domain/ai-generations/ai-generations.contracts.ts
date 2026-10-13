@@ -210,3 +210,31 @@ export interface GenerationStatus {
     /** Milliseconds from the start of the run to each named mark. */
     readonly timings: Readonly<Record<string, number>>
 }
+
+/** One earlier turn of a NIVO guide conversation, as the browser kept it. */
+export interface GuideTurn {
+    /** Who said it. */
+    readonly role: "user" | "guide"
+    /** What was said. */
+    readonly text: string
+}
+
+/** One question to the NIVO guide: the question and where the member is; the be builds the prompt. */
+export interface GuideAsk {
+    /** The workspace the caller names in X-Workspace-Id; the service proves their membership. */
+    readonly workspaceId: string
+    /** The question as typed. */
+    readonly question: string
+    /** The console path the member is on. */
+    readonly path: string
+    /** The last turns of the conversation. */
+    readonly history: ReadonlyArray<GuideTurn>
+    /** The language of the prompt words. */
+    readonly locale: Locale
+}
+
+/** The words the guide prompt is built from, in one language. */
+export interface GuideWords {
+    /** The text of a catalog key. */
+    readonly text: (key: string) => string
+}

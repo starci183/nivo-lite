@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { useQuerySalesWorkbenchSwr } from "@/hooks/swr/api/graphql/queries/useQuerySalesWorkbenchSwr"
+import { useQuerySalesWorkbenchSwr } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { salesWorkbenchViewOf } from "./salesworkbench.shared"
 
@@ -16,6 +16,8 @@ export const useSalesWorkbench = () => {
         data,
         nowIso: data?.nowIso ?? NOT_READ_ISO,
         isLoading: query.isLoading,
+        /** The read failed. */
+        isFailed: query.error !== undefined,
         retry: () => {
             void query.mutate()
         },

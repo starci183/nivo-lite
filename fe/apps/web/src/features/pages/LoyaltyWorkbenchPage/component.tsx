@@ -29,17 +29,12 @@ export const LoyaltyWorkbenchPageBase = (props: LoyaltyWorkbenchPageBaseProps) =
             module="loyalty"
             installationId={p.installationId}
             initialTab={p.initialTab}
-            figures={[]}
+            ribbon={<LoyaltyFigures />}
             tabs={[
                 {
                     id: "overview",
                     label: p.tabs.overview,
-                    content: (
-                        <>
-                            <LoyaltyFigures />
-                            <LoyaltyOverview />
-                        </>
-                    ),
+                    content: <LoyaltyOverview />,
                 },
                 { id: "members", label: p.tabs.members, content: <LoyaltyMembers /> },
                 { id: "rewards", label: p.tabs.rewards, content: <LoyaltyRewards /> },

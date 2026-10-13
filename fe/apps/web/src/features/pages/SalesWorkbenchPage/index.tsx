@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server"
 import { salesTabOf } from "@/hooks/sales"
 import { SalesWorkbenchPageBase } from "./component"
 
@@ -7,11 +8,29 @@ interface SalesWorkbenchPageProps {
     readonly tab?: string | null
     /** The pending decision to highlight. */
     readonly focus?: string | null
+    /** The Sales agent instance the workbench opens for. */
+    readonly installationId?: string
 }
 
-/** The server shell: resolves the tab from the route and hands the connected workbench its state. */
-export const SalesWorkbenchPage = (props: SalesWorkbenchPageProps) => {
+/** The server shell: resolves the tab from the route, words the tabs and hands the page its ids. */
+export const SalesWorkbenchPage = async (props: SalesWorkbenchPageProps) => {
+    const t = await getTranslations("workbenchSales")
     const focus = props.focus ?? null
-    const tab = salesTabOf(props.tab) ?? (focus ? "decisions" : "attention")
-    return <SalesWorkbenchPageBase props={{ tab, focus }} />
+    return (
+        <SalesWorkbenchPageBase
+            props={{
+                installationId: props.installationId ?? null,
+                tab: salesTabOf(props.tab) ?? (focus ? "decisions" : "attention"),
+                focus,
+                tabs: {
+                    attention: t("tab_attention"),
+                    pipeline: t("tab_pipeline"),
+                    decisions: t("tab_decisions"),
+                    handoff: t("tab_handoff"),
+                    contracts: t("tab_contracts"),
+                    activity: t("tab_activity"),
+                },
+            }}
+        />
+    )
 }

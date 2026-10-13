@@ -1,7 +1,7 @@
 import { z } from "zod"
 import type { FlowWorkItemView } from "@/modules/types"
-import { workbenchHref } from "@/lib/agent-dashboard-shared"
 import { isActionKey, isModuleKey } from "@/modules/catalog"
+import { agentHref } from "@/modules/installations"
 import type {
     AccountingLedgerEntryType,
     AccountingProposalType,
@@ -108,7 +108,14 @@ const questionItemOf = (item: AccountingQuestionWorkType): FlowWorkItemView => (
                   channel: item.lead.channel,
               },
     hasApprovalCard: false,
-    href: item.leadId ? `/leads/${item.leadId}` : workbenchHref("accounting", { tab: "questions", focus: item.id }),
+    href: item.leadId
+        ? `/leads/${item.leadId}`
+        : agentHref(
+              "accounting",
+              null,
+              "workbench",
+              new URLSearchParams({ tab: "questions", focus: item.id }).toString(),
+          ),
 })
 
 /** Normalizes optional GraphQL fields and the backend-owned status strings for the ledger presentation. */
