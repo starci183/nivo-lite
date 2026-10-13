@@ -4,19 +4,23 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
 import { InjectConnectionSecretsOptions } from "./connection-secrets.decorators"
-import type { ConnectionSecret } from "./connection-secrets.contracts"
+import type { ConnectionSecret, OptionalStoredSecret } from "./connection-secrets.contracts"
 import type { ConnectionSecretsOptions } from "./connection-secrets.options"
 import { ConnectionSecretsError, ConnectionSecretsErrorCode } from "./errors/connection-secrets.error"
-import type { ConnectionIdRow, ConnectionSecretRow } from "./persistence/connection-secrets.rows"
+import type { ConnectionIdRow, ConnectionSecretRow, StoredSecretRow } from "./persistence/connection-secrets.rows"
 import {
+    DELETE_STORED_SECRET,
     FIND_CONNECTION_SECRET,
+    FIND_STORED_SECRET,
+    INSERT_STORED_SECRET,
+    UPSERT_STORED_SECRET,
     LIST_ZALO_CONNECTIONS_DUE,
     RELEASE_REFRESH_LEASE,
     SAVE_SECRET,
     SAVE_SECRET_WITH_EXPIRY,
     TRY_REFRESH_LEASE,
 } from "./persistence/connection-secrets.sql"
-import { openSecret, parseTokenKey, sealSecret } from "./secret-cipher.policy"
+import { openSecret, parseTokenKey, randomSecret, sealSecret } from "./secret-cipher.policy"
 
 @Injectable()
 /** Seals and opens the credential of a connection and keeps its token lease; the only reader and writer of connection_secrets. */
@@ -72,6 +76,39 @@ export class ConnectionSecretsService {
     async save(connectionId: string, sealed: string, expiresAt?: Date): Promise<void> {
         if (expiresAt === undefined) await this.entityManager.query(SAVE_SECRET, [connectionId, sealed])
         else await this.entityManager.query(SAVE_SECRET_WITH_EXPIRY, [connectionId, sealed, expiresAt])
+    }
+
+    /** Seals and inserts the credential of a new connection, inside the caller's transaction when one is handed in. */
+    async create(
+        connectionId: string,
+        plain: string,
+        webhookSecret: string,
+        manager: EntityManager = this.entityManager,
+    ): Promise<void> {
+        await manager.query(INSERT_STORED_SECRET, [connectionId, sealSecret(this.key, plain), webhookSecret])
+    }
+
+    /** The opened credential of a connection, or null when it has none; throws when it cannot be opened with the current key. */
+    async read(connectionId: string): Promise<OptionalStoredSecret> {
+        const [row] = await this.entityManager.query<Array<StoredSecretRow>>(FIND_STORED_SECRET, [connectionId])
+        return row === undefined
+            ? null
+            : { plain: openSecret(this.key, row.ciphertext), webhookSecret: row.webhook_secret }
+    }
+
+    /** Seals and stores the credential; the webhook secret changes only when one is given (a new row gets a random one). */
+    async write(connectionId: string, plain: string, webhookSecret?: string): Promise<void> {
+        await this.entityManager.query(UPSERT_STORED_SECRET, [
+            connectionId,
+            sealSecret(this.key, plain),
+            webhookSecret ?? randomSecret(),
+            webhookSecret !== undefined,
+        ])
+    }
+
+    /** Deletes the stored credential of a connection. */
+    async wipe(connectionId: string): Promise<void> {
+        await this.entityManager.query(DELETE_STORED_SECRET, [connectionId])
     }
 
     /** Takes the refresh lease when nobody holds a live one; false when another caller has it. */

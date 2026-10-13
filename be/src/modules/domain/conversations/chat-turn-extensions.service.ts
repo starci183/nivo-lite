@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type {
     ChatTurnExtensions,
     ChatTurnRuntime,
@@ -6,29 +6,22 @@ import type {
     RegisteredOutcomes,
     RegisteredRuntime,
 } from "./conversations.contracts"
+import { InjectChatTurnOutcomes, InjectChatTurnRuntime } from "./conversations.decorators"
 
 @Injectable()
-/** Holds the AI step and the outcome handler the owners of those flows plug in once at start; without them a turn falls back to the holding line. */
+/** Holds the AI step and the outcome handler the app root plugs in; without them a turn falls back to the holding line. */
 export class ChatTurnExtensionsService implements ChatTurnExtensions {
-    private current: RegisteredRuntime = undefined
-    private handler: RegisteredOutcomes = undefined
+    constructor(
+        @Optional() @InjectChatTurnRuntime() private readonly current?: ChatTurnRuntime,
+        @Optional() @InjectChatTurnOutcomes() private readonly handler?: CustomerOutcomes,
+    ) {}
 
-    /** Registers the AI step. */
-    useRuntime(runtime: ChatTurnRuntime): void {
-        this.current = runtime
-    }
-
-    /** Registers the outcome handler. */
-    useOutcomes(outcomes: CustomerOutcomes): void {
-        this.handler = outcomes
-    }
-
-    /** The registered AI step, or undefined. */
+    /** The plugged AI step, or undefined. */
     runtime(): RegisteredRuntime {
         return this.current
     }
 
-    /** The registered outcome handler, or undefined. */
+    /** The plugged outcome handler, or undefined. */
     outcomes(): RegisteredOutcomes {
         return this.handler
     }

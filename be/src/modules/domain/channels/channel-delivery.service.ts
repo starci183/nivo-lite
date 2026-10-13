@@ -12,7 +12,7 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { InjectChannelSenderRegistry } from "./channels.decorators"
-import type { ChannelSenderRegistry, DeliveryRequest, DeliveryResult } from "./channels.contracts"
+import type { ChannelSenderRegistry, DeliveryRequest, DeliveryResult, PersonMessage } from "./channels.contracts"
 import { ChannelsLogEvent } from "./channels.log-events"
 import { ChannelsError, ChannelsErrorCode } from "./errors/channels.error"
 import { ZaloCredentialsService } from "./zalo-credentials.service"
@@ -77,6 +77,21 @@ export class ChannelDeliveryService {
                 })
                 return ""
             })
+    }
+
+    /**
+     * Sends one text to a person outside any conversation (a shift message to a staff member): a Telegram chat through the workspace's
+     * bot on that connection, or a Zalo user through the OA (a rejected token is refreshed once). Throws when it did not go out, so the
+     * caller records the failure; no 48-hour window applies, the person is staff, not a customer.
+     */
+    async sendToPerson(request: PersonMessage): Promise<void> {
+        if (request.provider === "zalo_oa") {
+            await this.sendZaloText(request.connectionId, request.recipientId, request.text)
+            return
+        }
+        const token = await this.secrets.botToken(request.workspaceId, request.connectionId)
+        if (token.kind !== "ok") throw new ChannelsError({ code: ChannelsErrorCode.ConnectionNotFound })
+        await this.telegram.sendMessage(token.value, request.recipientId, request.text)
     }
 
     private async send(target: ConversationTarget, text: string): Promise<DeliveryResult> {

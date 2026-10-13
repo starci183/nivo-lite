@@ -16,7 +16,7 @@ import { eachInOrder } from "@modules/platform/primitives"
 import { isChatTurnPayload } from "@modules/queues/chat-turn"
 import type { ChatTurnPayload } from "@modules/queues/chat-turn"
 import { InjectChatTurnExtensions } from "./conversations.decorators"
-import type { ChatTurn, ChatTurnExtensions, ChatTurnProposal, TurnVerdict } from "./conversations.contracts"
+import type { CustomerTurn, ChatTurnExtensions, ChatTurnProposal, TurnVerdict } from "./conversations.contracts"
 import { ConversationsLogEvent } from "./conversations.log-events"
 import type { HoldingSettingRow } from "./persistence/conversations.rows"
 import { FIND_HOLDING_SETTING } from "./persistence/conversations.sql"
@@ -74,7 +74,7 @@ export class ChatTurnService {
         else await this.respond(named, answer)
     }
 
-    private async load(payload: ChatTurnPayload): Promise<ChatTurn | undefined> {
+    private async load(payload: ChatTurnPayload): Promise<CustomerTurn | undefined> {
         const conversation = await this.conversations.turnOf(payload.conversationId)
         const message = await this.messages.find(payload.messageId, payload.conversationId)
         if (conversation.kind !== "ok" || message.kind !== "ok") {
@@ -90,14 +90,14 @@ export class ChatTurnService {
         }
     }
 
-    private async named(turn: ChatTurn): Promise<ChatTurn> {
+    private async named(turn: CustomerTurn): Promise<CustomerTurn> {
         const name = await this.delivery.customerName(turn.conversation)
         if (name === "") return turn
         await this.conversations.rename(turn.conversation.id, name)
         return { ...turn, conversation: { ...turn.conversation, visitorName: name } }
     }
 
-    private propose(turn: ChatTurn): Promise<ChatTurnProposal | string> {
+    private propose(turn: CustomerTurn): Promise<ChatTurnProposal | string> {
         const runtime = this.extensions.runtime()
         if (runtime === undefined) return Promise.resolve(UNAVAILABLE)
         return runtime.propose(turn).catch((cause: unknown) => {
@@ -106,7 +106,7 @@ export class ChatTurnService {
         })
     }
 
-    private async respond(turn: ChatTurn, proposal: ChatTurnProposal): Promise<void> {
+    private async respond(turn: CustomerTurn, proposal: ChatTurnProposal): Promise<void> {
         const outcomes = this.extensions.outcomes()
         const verdict = outcomes === undefined ? this.plainVerdict(proposal) : await outcomes.settle(turn, proposal)
         if (verdict.send) await this.sendReply(turn, verdict.reply)
@@ -121,7 +121,7 @@ export class ChatTurnService {
         }
     }
 
-    private async holdOver(turn: ChatTurn, reason: string): Promise<void> {
+    private async holdOver(turn: CustomerTurn, reason: string): Promise<void> {
         const outcomes = this.extensions.outcomes()
         const lines = outcomes === undefined ? [] : await outcomes.holdOver(turn, reason)
         const since = new Date(this.clock.now().getTime() - HOLDING_WINDOW_MS)
@@ -138,7 +138,7 @@ export class ChatTurnService {
     }
 
     /** Stores the reply to the customer message once and pushes it to the channel unless a previous attempt already did. */
-    private async sendReply(turn: ChatTurn, text: string): Promise<void> {
+    private async sendReply(turn: CustomerTurn, text: string): Promise<void> {
         const stored = await this.messages.storeReply(
             turn.conversation.workspaceId,
             turn.conversation.id,

@@ -73,6 +73,20 @@ export interface ZaloRefreshSummary {
     readonly failed: number
 }
 
+/** One text to a person (a staff member) on a connection, outside any conversation. */
+export interface PersonMessage {
+    /** The workspace that sends. */
+    readonly workspaceId: string
+    /** The connection it leaves through. */
+    readonly connectionId: string
+    /** The provider of the connection. */
+    readonly provider: "telegram" | "zalo_oa"
+    /** The Telegram chat id or the Zalo user id. */
+    readonly recipientId: string
+    /** The text. */
+    readonly text: string
+}
+
 /** One reply to push to the customer's own channel. */
 export interface DeliveryRequest {
     /** The conversation the reply belongs to. */

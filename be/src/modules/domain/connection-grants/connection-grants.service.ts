@@ -1,12 +1,15 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { AgentAccessLogService } from "@modules/domain/agent-access-log"
+import { AgentBindingsService } from "@modules/domain/agent-connections"
+import type { Access } from "@modules/domain/agent-connections"
 import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionActor, ConnectionMember } from "@modules/domain/connections"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { isAccess, normaliseAccess, planExactly, purposeFor } from "./connection-access.policy"
-import type { Access, GrantChange, RequestedGrant } from "./connection-access.policy"
+import type { GrantChange, RequestedGrant } from "./connection-access.policy"
 import type {
     AgentGrantWish,
     ConnectionBoardEntry,
@@ -17,14 +20,11 @@ import type {
 import { ConnectionGrantsError, ConnectionGrantsErrorCode } from "./errors/connection-grants.error"
 import type { AgentRow, GrantRow } from "./persistence/connection-grants.rows"
 import {
-    DELETE_GRANT,
     FIND_AGENT_GRANTS,
     FIND_AGENTS,
     FIND_CONNECTION_GRANTS,
     FIND_GRANTS,
     LIST_WORKSPACE_GRANTS,
-    INSERT_ACCESS_LOG,
-    UPSERT_GRANT,
 } from "./persistence/connection-grants.sql"
 
 const OWNER_ONLY = ["owner"] as const
@@ -50,6 +50,8 @@ export class ConnectionGrantsService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly connections: ConnectionsService,
         private readonly members: WorkspaceMembersService,
+        private readonly bindings: AgentBindingsService,
+        private readonly accessLog: AgentAccessLogService,
     ) {}
 
     /**
@@ -201,7 +203,10 @@ export class ConnectionGrantsService {
             const was = before.get(pairKey(agent.id, connection.id)) ?? null
             if (was === change.access) return
             if (change.access === null) {
-                await tx.query(DELETE_GRANT, [actor.workspaceId, agent.id, connection.id])
+                await this.bindings.removeGrant(
+                    { workspaceId: actor.workspaceId, agentId: agent.id, connectionId: connection.id },
+                    tx,
+                )
             } else {
                 const purpose = purposeFor(agent.module, connection.provider)
                 if (purpose === null) {
@@ -216,19 +221,31 @@ export class ConnectionGrantsService {
                         params: { connection: connection.name },
                     })
                 }
-                await tx.query(UPSERT_GRANT, [agent.id, connection.id, actor.workspaceId, purpose, change.access])
+                await this.bindings.writeGrant(
+                    {
+                        workspaceId: actor.workspaceId,
+                        agentId: agent.id,
+                        connectionId: connection.id,
+                        purpose,
+                        access: change.access,
+                    },
+                    tx,
+                )
             }
-            await tx.query(INSERT_ACCESS_LOG, [
-                actor.workspaceId,
-                connection.id,
-                agent.id,
-                connection.name,
-                agent.name,
-                was,
-                change.access,
-                actor.principalId,
-                member.displayName,
-            ])
+            await this.accessLog.record(
+                {
+                    workspaceId: actor.workspaceId,
+                    connectionId: connection.id,
+                    agentId: agent.id,
+                    connectionName: connection.name,
+                    agentName: agent.name,
+                    before: was,
+                    after: change.access,
+                    changedBy: actor.principalId,
+                    changedByName: member.displayName,
+                },
+                tx,
+            )
         })
     }
 }

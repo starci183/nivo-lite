@@ -14,13 +14,13 @@ import { waitingConversationId } from "./conversation.policy"
 import type {
     AgentIdRow,
     ConversationRow,
-    InstallationRow,
+    ChatbotInstallationRow,
     LeadBriefRow,
     LeadRow,
     LensRow,
     MessageBriefRow,
     MessageRow,
-    StaffRow,
+    ChatbotStaffRow,
     WaitingRow,
 } from "./persistence/chatbot-workbench.rows"
 import {
@@ -93,7 +93,7 @@ export class ChatbotWorkbenchService {
         const [staff] =
             item?.assigned_staff_id === undefined || item.assigned_staff_id === null
                 ? []
-                : await this.entityManager.query<Array<StaffRow>>(FIND_CHATBOT_STAFF, [
+                : await this.entityManager.query<Array<ChatbotStaffRow>>(FIND_CHATBOT_STAFF, [
                       workspaceId,
                       item.assigned_staff_id,
                   ])
@@ -132,9 +132,10 @@ export class ChatbotWorkbenchService {
     /** Multiple installations each use their own agent; a single installation also includes legacy Chatbot agents. */
     private async agentIds(request: ChatbotOverviewRequest): Promise<Array<string>> {
         if (request.installationId !== null && request.installationId !== undefined) {
-            const installations = await this.entityManager.query<Array<InstallationRow>>(LIST_CHATBOT_INSTALLATIONS, [
-                request.workspaceId,
-            ])
+            const installations = await this.entityManager.query<Array<ChatbotInstallationRow>>(
+                LIST_CHATBOT_INSTALLATIONS,
+                [request.workspaceId],
+            )
             const own = installations.find((row) => row.id === request.installationId)
             if (own === undefined) return []
             if (installations.length > 1) return own.agent_id === null ? [] : [own.agent_id]

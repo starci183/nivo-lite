@@ -1,19 +1,19 @@
 /** The agent columns a grant check reads. */
 export interface AgentRow {
-    /** The agent id. */
+    /** The agent row id a grant is keyed by. */
     readonly id: string
-    /** The display name shown in the access log. */
+    /** The display name shown next to the grant in the console. */
     readonly name: string
-    /** The module the agent belongs to, used to decide which providers it may use. */
+    /** The product module the agent serves, which bounds the connections it may be granted. */
     readonly module: string
 }
 
 /** The columns of a stored grant. */
 export interface GrantRow {
-    /** The agent the grant is for. */
+    /** The agent that holds the grant. */
     readonly agent_id: string
-    /** The connection the grant allows. */
+    /** The connection the agent is allowed to use. */
     readonly connection_id: string
-    /** The access level stored for the pair: ask, read or auto. */
+    /** The stored access level, parsed into an Access before use. */
     readonly access: string
 }

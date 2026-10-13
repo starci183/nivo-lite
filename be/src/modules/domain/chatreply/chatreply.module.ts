@@ -1,7 +1,5 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
-import { ChatTurnModule } from "@modules/queues/chat-turn"
-import { DecisionsQueueModule } from "@modules/queues/decisions"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./chatreply.module-definition"
 import { ChatReplyService } from "./chatreply.service"
 import { ChatReplyStatusService } from "./chatreply-status.service"
@@ -14,7 +12,6 @@ export class ChatReplyModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            imports: [...(base.imports ?? []), ChatTurnModule, DecisionsQueueModule],
             providers: [...(base.providers ?? []), ChatReplyService, ChatReplyStatusService],
             exports: [ChatReplyService, ChatReplyStatusService],
         }
