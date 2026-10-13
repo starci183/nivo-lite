@@ -21,6 +21,19 @@ const query1: TypedDocumentNode<QueryBillingPlansResponse> = gql`
             sort
             aiCreditsPerMonth
             isCustom
+            priceAnnualVnd
+            annualDiscountPct
+            promoPriceVnd
+            promoMonths
+            storageGb
+            individual
+            perSeat
+            listed
+            tiers {
+                creditsPerMonth
+                priceVnd
+                perSeat
+            }
         }
     }
 `

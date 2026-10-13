@@ -98,7 +98,7 @@ const EXTEND_DAYS_MAX = 366
 const CREDITS_MAX = 100_000_000
 
 /** The plan codes a workspace can be moved to; the server re-checks that the plan exists and is on sale. */
-export const PLAN_CODES = ["starter", "pro", "max", "enterprise"] as const
+export const PLAN_CODES = ["start", "pro", "max", "team", "enterprise", "starter", "pro_v1", "max_v1"] as const
 
 /** The whole days typed, or undefined when the text is not a day count in range. */
 export const parseDays = (text: string): number | undefined => {

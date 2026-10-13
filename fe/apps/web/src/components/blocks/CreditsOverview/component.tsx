@@ -45,6 +45,8 @@ export const CreditsOverviewBase = (props: CreditsOverviewBaseProps) => {
                                         title: copy.labels.upgrade,
                                         plansTitle: copy.labels.plans,
                                         plansLabel: copy.labels.plansLabel,
+                                        plansCta: copy.labels.plansCta,
+                                        plansHref: copy.labels.plansHref,
                                         loading: copy.labels.loading,
                                         isSkeleton,
                                     }}

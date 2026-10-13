@@ -33,6 +33,10 @@ const query1: TypedDocumentNode<QueryPaymentOrderResponse, InputVariables<QueryP
                 paidUntil
                 to
                 toPrice
+                cycle
+                tierCredits
+                seats
+                promo
             }
             qrUrl
             bank {

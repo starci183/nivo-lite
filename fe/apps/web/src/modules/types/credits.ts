@@ -5,11 +5,16 @@ export type PlanView = {
     readonly nameEn: string
     /** Monthly credits (null = unlimited). */
     readonly credits: number | null
+    /** The price of one month (per seat on a per-seat plan). */
     readonly price: number
-    /** VND per monthly credit. */
-    readonly perCredit: number
     readonly seats: number
     readonly isCustom: boolean
+    /** One person only: no other members can be invited. */
+    readonly individual: boolean
+    /** The price is per seat. */
+    readonly perSeat: boolean
+    /** Storage included in GB (null = not capped). */
+    readonly storageGb: number | null
 }
 
 /** A pack as the credits page shows it. */
@@ -17,15 +22,7 @@ export type PackView = {
     readonly code: string
     readonly credits: number
     readonly price: number
-    readonly perCredit: number
-    readonly discountPct: number
 }
-
-/** Why this plan is recommended, from real data. */
-export type UpgradeReason =
-    | { readonly kind: "topups"; readonly credits: number; readonly saving: number }
-    | { readonly kind: "cheaper"; readonly pct: number }
-    | { readonly kind: "plain" }
 
 /** One payment order as the credits page lists it. */
 export type OrderRow = {
@@ -57,7 +54,7 @@ export type CreditsData = {
     readonly runout: string | null
     readonly packs: ReadonlyArray<PackView>
     readonly plans: ReadonlyArray<PlanView>
-    readonly next: { readonly plan: PlanView; readonly reason: UpgradeReason } | null
+    readonly next: { readonly plan: PlanView } | null
     /** Shown instead of an upgrade on Max and Enterprise. */
     readonly contact: { readonly plan: PlanView | null; readonly href: string } | null
     readonly orders: ReadonlyArray<OrderRow>
@@ -99,7 +96,6 @@ export interface CreditsOverviewView {
         readonly id: string
         readonly title: string
         readonly description: string
-        readonly discount: string
         readonly pending: boolean
         readonly disabled: boolean
         readonly target: PayTarget
@@ -108,7 +104,6 @@ export interface CreditsOverviewView {
         readonly name: string
         readonly line: string
         readonly price: string
-        readonly reason: string
         readonly action: string
         readonly pending: boolean
         readonly disabled: boolean

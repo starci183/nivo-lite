@@ -1,10 +1,12 @@
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { BillingOverview } from "@/components/blocks/BillingOverview"
+import { BillingPlans } from "@/components/blocks/BillingPlans"
 import { BrandLogo } from "@/components/blocks/BrandLogo"
 import { LocaleSwitch } from "@/components/blocks/LocaleSwitch"
 import { WorkspacesAccount } from "@/components/blocks/WorkspacesAccount"
 import { WorkspacesFrame } from "@/components/composites/WorkspacesFrame"
+import { creditsContactHref } from "@/modules/config"
 import { AUTH_ROUTES } from "@/modules/routes"
 
 /** The document title of the page. */
@@ -29,6 +31,7 @@ export const BillingPage = async (props: BillingPageProps) => {
             account={<WorkspacesAccount />}
         >
             <BillingOverview workspaceId={props.workspaceId} />
+            <BillingPlans workspaceId={props.workspaceId} contactHref={creditsContactHref()} />
         </WorkspacesFrame>
     )
 }

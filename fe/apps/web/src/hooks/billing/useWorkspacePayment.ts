@@ -63,11 +63,18 @@ export const useWorkspacePayment = (selectors: WorkspacePaymentSelectors) => {
 
     const regenerate = () => {
         if (!planCode || plan.data?.isCustom) return
-        if (selectors.renewing) {
+        if (selectors.renewing && payment?.kind !== "plan") {
             void requesting.request({ kind: "renew" })
             return
         }
-        void requesting.request({ kind: "plan", target: planCode })
+        const detail = payment?.detail
+        void requesting.request({
+            kind: "plan",
+            target: planCode,
+            cycle: detail?.cycle === "annual" ? "annual" : "monthly",
+            tierCredits: detail?.tierCredits ?? null,
+            seats: detail?.seats ?? null,
+        })
     }
     const left = expiresAt ? Math.max(0, dayjs(expiresAt).diff(now)) : undefined
     const error =

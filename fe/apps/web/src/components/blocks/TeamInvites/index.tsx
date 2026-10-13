@@ -2,6 +2,7 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
+import { useIndividualPlan } from "@/hooks/billing"
 import { useMember } from "@/hooks/member"
 import { ROLE_KEYS, isTeamManager, useCopyInviteLink, useInviteCommands, useTeam } from "@/hooks/team"
 import type { InviteSentView } from "@/hooks/team"
@@ -20,7 +21,8 @@ export const TeamInvites = () => {
     const t = useTranslations("team")
     const format = useFormatter()
     const member = useMember()
-    const isAllowed = member !== null && isTeamManager(member.role)
+    const isIndividual = useIndividualPlan(member?.workspaceId)
+    const isAllowed = member !== null && isTeamManager(member.role) && !isIndividual
     const { views, isLoading } = useTeam(member?.workspaceId ?? "", isAllowed)
     const commands = useInviteCommands()
     const copyToClipboard = useCopyInviteLink()
