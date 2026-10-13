@@ -40,6 +40,9 @@ COPY --from=manifests /app ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
 COPY --from=build /app/be/dist be/dist
+# The fonts and music beds the video render reads (VIDEO_ASSETS_DIR).
+COPY be/assets/video be/assets/video
+ENV VIDEO_ASSETS_DIR=/app/be/assets/video
 
 USER node
 EXPOSE 3000

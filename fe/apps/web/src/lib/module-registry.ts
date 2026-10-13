@@ -1,20 +1,17 @@
 /**
- * The module registry, typed access. The data comes from resources/modules/<key>/module.json through the build-time generator
- * (scripts/gen-module-registry.mjs -> module-registry.generated.ts), so client and server read the same constants and nothing reads
- * the file system at runtime. Pure: safe in client components. Every hard-coded "chatbot | sales | accounting" check goes through here.
+ * The module registry, typed access. The data is the catalogue mirror in modules/catalog (the typed catalogue of the back end is the
+ * source, served by GET /modules), so client and server read the same constants and nothing reads the file system at runtime.
+ * Pure: safe in client components. Every hard-coded "chatbot | sales | accounting" check goes through here.
  */
 import type { Locale } from "@/i18n/core";
 import {
-  ACTION_KEYS, MODULE_CATEGORIES, MODULE_KEYS, MODULE_REGISTRY,
+  ACTION_KEYS, ACTION_MODULE, MODULE_CATEGORIES, MODULE_KEYS, MODULE_REGISTRY, actionDef, isActionKey, isModuleKey,
   type ActionKey, type Bilingual, type ModuleCategory, type ModuleCategoryKey, type ModuleDef, type ModuleKey, type RegistryAction, type RegistryCommand, type RegistryGate,
-} from "./module-registry.generated";
+} from "@/modules/catalog";
 
-export { ACTION_KEYS, MODULE_CATEGORIES, MODULE_KEYS, MODULE_REGISTRY };
+export { ACTION_KEYS, ACTION_MODULE, MODULE_CATEGORIES, MODULE_KEYS, MODULE_REGISTRY, actionDef, isActionKey, isModuleKey };
 export type { ActionKey, Bilingual, ModuleCategory, ModuleCategoryKey, ModuleDef, ModuleKey, RegistryAction, RegistryCommand, RegistryGate };
 
-export const isModuleKey = (value: string | undefined | null): value is ModuleKey =>
-  typeof value === "string" && Object.prototype.hasOwnProperty.call(MODULE_REGISTRY, value);
-export const isActionKey = (value: string | undefined | null): value is ActionKey => typeof value === "string" && (ACTION_KEYS as ReadonlyArray<string>).includes(value);
 
 /** The definition of a module; throws for a key that is not in the registry (use isModuleKey first on user input). */
 export const moduleDef = (key: ModuleKey): ModuleDef => MODULE_REGISTRY[key];
@@ -33,15 +30,6 @@ export const moduleShortName = (key: ModuleKey, locale: Locale): string => pick(
 export const modulesByCategory = (): ReadonlyArray<{ readonly category: ModuleCategory; readonly modules: ReadonlyArray<ModuleDef> }> =>
   MODULE_CATEGORIES.map((category) => ({ category, modules: listModules().filter((m) => m.category === category.key) })).filter((g) => g.modules.length > 0);
 
-/** Which module owns each authority action (its department). */
-export const ACTION_MODULE: Readonly<Record<ActionKey, ModuleKey>> = Object.fromEntries(
-  listModules().flatMap((m) => m.authorityActions.map((a) => [a.action, m.key] as const)),
-) as Record<ActionKey, ModuleKey>;
-export const actionDef = (action: ActionKey): RegistryAction => {
-  const found = MODULE_REGISTRY[ACTION_MODULE[action]].authorityActions.find((a) => a.action === action);
-  if (!found) throw new Error(`unknown action ${action}`);
-  return found;
-};
 
 /** Modules whose agent talks to customers: only public knowledge may reach their OpenClaw workspace. */
 export const audienceOf = (key: ModuleKey): "customer" | "internal" => MODULE_REGISTRY[key].audience;

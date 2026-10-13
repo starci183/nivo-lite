@@ -1,8 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getLocale } from "@/i18n/server";
-import { translator, type Locale } from "@/i18n/core";
+import { getLocale, getT } from "@/i18n/server";
 import { moduleSetup } from "@/i18n/dict/moduleSetup";
 import { modulesCore } from "@/i18n/dict/modulesCore";
 import { enqueueAgentSync } from "./engine-queue";
@@ -12,18 +11,22 @@ import type { SetupWrite, WriteDecision } from "./module-setup-writes";
 import { decideWrite, loadWrites, openGapsFor, storeWrites } from "./module-setup-writes-server";
 import { engineCtx } from "./flow-ctx";
 import { withUsage } from "./usage";
-import {
-  INSTALLATION_SELECT, getInstallationById, toInstallation, toSession, toVersion, type InstallationRow,
-} from "./modules-core";
-import {
-  MODULE_GATES, allGatesConfirmed, cleanInstanceName, gateEntry, gateLabel, instanceNameKey, isModuleKey, snapshotOf,
-  type ContextSnapshot, type ContextVersion, type GateEvidence, type Installation, type ModuleKey, type OperatingMode, type SetupMessage, type SetupRevision, type SetupSession,
-} from "./modules-shared";
-import { ensureDraftSession, fail, installModuleCore, loadInstallation, logEvent, moduleName, type Db } from "./module-install";
+import { getInstallationById } from "./modules-core";
+import { agentHref, isModuleKey, type Installation, type ModuleKey, type OperatingMode, type SetupMessage, type SetupRevision, type SetupSession } from "./modules-shared";
 import { requireManager } from "./permissions";
 import { getSession } from "./session";
-import { supabaseServer } from "./supabase/server";
 import type { Outcome } from "./types";
+import type { DbOutcome } from "@/modules/db";
+import {
+  dbFailure, dbOk, readSessionMessages, readSetupCard, readSetupSession, readSetupState, writeApplySetup, writeDraftSession, writeGate, writeInstallModule,
+  writeModuleLive, writeOperatingMode, writeRenameAgent, writeRenameInstance, writeSetupMessage, writeSetupTurn,
+} from "@/modules/db";
+
+/**
+ * The server actions of the agent catalogue, the setup chat and the settings tab. The database is reached only through modules/db
+ * (modules, module-setup); what stays here is the part that is not the database: who may act, the model call of the setup chat,
+ * the Second Brain and the authority gate, the queue and the revalidation. Wave 3 moves the orchestration to the back end.
+ */
 
 /* ------------------------------------------------------------------ helpers */
 
@@ -35,64 +38,69 @@ const run = async <T>(fn: () => Promise<T>): Promise<Outcome<T>> => {
   }
 };
 
-type SessionRowShape = Parameters<typeof toSession>[0];
-type MessageRow = { id: string; setup_session_id: string; role: "user" | "assistant"; author: string; body: string; created_at: string };
+/** The value of an outcome of modules/db, or the plain text of a failure the screens show (known codes are translated). */
+const unwrap = async <T>(outcome: DbOutcome<T>): Promise<T> => {
+  if (outcome.kind === "ok") return outcome.value;
+  const t = await getT(modulesCore);
+  const ts = await getT(moduleSetup);
+  const known: Record<string, string> = {
+    "instance-name": t("instanceNameInvalid"),
+    "instance-name-taken": t("instanceNameTaken"),
+    "single-instance-only": t("instanceSingleOnly"),
+    "needs-version": t("liveNeedsVersion"),
+    "gates-unconfirmed": ts("applyHint"),
+    unchanged: ts("applyUnchanged"),
+  };
+  throw new Error(known[outcome.code] ?? `${outcome.kind}: ${outcome.code}`);
+};
 
-const toMessage = (r: MessageRow): SetupMessage => ({ id: r.id, setupSessionId: r.setup_session_id, role: r.role, author: r.author, body: r.body, createdAt: r.created_at });
 const refresh = () => revalidatePath("/", "layout");
 
 /* ------------------------------------------------------------------ catalogue */
 
-/** Install a module: its installation, its agent (reused when the workspace already has one), its default authority rules, the first setup session and the OpenClaw sync. Any module of the registry. */
+/** Install a module: its installation, its agent (reused when the workspace already has one), its default authority rules, the first setup session and the OpenClaw sync. Any module of the catalogue. */
 export const installModule = async (moduleKey: ModuleKey): Promise<Outcome<{ moduleKey: ModuleKey; installationId: string }>> =>
   run(async () => {
     if (!isModuleKey(moduleKey)) throw new Error("Unknown agent");
     await requireManager();
     const session = await getSession();
-    const db = await supabaseServer();
-    const r = await installModuleCore(db, { workspaceId: session.workspace.id, moduleKey, locale: await getLocale(), actorName: session.userName });
+    const result = await unwrap(await writeInstallModule({ workspaceId: session.workspace.id, moduleKey, locale: await getLocale() }));
+    // OpenClaw gets the agent's copy right away (base knowledge + the module's gates); the setup chat itself already runs through openclaw.generate.
+    await enqueueAgentSync(result.installationId, { force: true }).catch(() => false);
     refresh();
-    return { moduleKey, installationId: r.installationId };
+    return { moduleKey, installationId: result.installationId };
   });
 
+/** Install an agent from the catalogue and answer the page to open (the refusal code carries the text the screen shows). */
+export const installAgent = async (moduleKey: string): Promise<DbOutcome<string>> => {
+  if (!isModuleKey(moduleKey)) return dbFailure("invalid", "module");
+  const installed = await installModule(moduleKey);
+  return installed.ok ? dbOk(agentHref(moduleKey, null)) : dbFailure("unavailable", installed.error);
+};
+
 /**
- * Add another instance of a multi-instance type ("Thêm Chatbot mới": one per branch, brand or Fanpage): a new installation with its own
- * agent, setup chat and connections. Authority rules stay per type (shared by every instance).
+ * Add another instance of a multi-instance type (one Chatbot per branch, brand or Fanpage): a new installation with its own agent, setup
+ * chat and connections. Authority rules stay per type (shared by every instance).
  */
 export const addInstance = async (moduleKey: ModuleKey, name: string): Promise<Outcome<{ moduleKey: ModuleKey; installationId: string }>> =>
   run(async () => {
     if (!isModuleKey(moduleKey)) throw new Error("Unknown agent");
     await requireManager();
-    const t = translator(modulesCore, await getLocale());
-    if (!isMultiInstance(moduleKey)) throw new Error(t("instanceSingleOnly"));
-    const clean = cleanInstanceName(name);
-    if (!clean) throw new Error(t("instanceNameInvalid"));
+    if (!isMultiInstance(moduleKey)) throw new Error((await getT(modulesCore))("instanceSingleOnly"));
     const session = await getSession();
-    const db = await supabaseServer();
-    const taken = await db.from("module_installations").select("name").eq("workspace_id", session.workspace.id).eq("module_key", moduleKey);
-    fail(taken.error);
-    if (((taken.data ?? []) as Array<{ name: string }>).some((r) => instanceNameKey(r.name) === instanceNameKey(clean))) throw new Error(t("instanceNameTaken"));
-    const r = await installModuleCore(db, { workspaceId: session.workspace.id, moduleKey, locale: await getLocale(), actorName: session.userName, newInstance: true, name: clean });
+    const result = await unwrap(await writeInstallModule({ workspaceId: session.workspace.id, moduleKey, locale: await getLocale(), newInstance: true, name }));
+    await enqueueAgentSync(result.installationId, { force: true }).catch(() => false);
     refresh();
-    return { moduleKey, installationId: r.installationId };
+    return { moduleKey, installationId: result.installationId };
   });
 
 /** Rename an instance (its label in lists, the chrome and Office). Unique per type in the workspace, case-insensitive. */
 export const renameInstance = async (installationId: string, name: string): Promise<Outcome<Installation>> =>
   run(async () => {
     await requireManager();
-    const t = translator(modulesCore, await getLocale());
-    const clean = cleanInstanceName(name);
-    if (!clean) throw new Error(t("instanceNameInvalid"));
-    const db = await supabaseServer();
-    const installation = await loadInstallation(db, installationId);
-    const taken = await db.from("module_installations").select("id, name").eq("workspace_id", installation.workspaceId).eq("module_key", installation.moduleKey).neq("id", installationId);
-    fail(taken.error);
-    if (((taken.data ?? []) as Array<{ name: string }>).some((r) => instanceNameKey(r.name) === instanceNameKey(clean))) throw new Error(t("instanceNameTaken"));
-    const upd = await db.from("module_installations").update({ name: clean }).eq("id", installationId);
-    fail(upd.error);
+    const renamed = await unwrap(await writeRenameInstance({ installationId, name }));
     refresh();
-    return loadInstallation(db, installationId);
+    return renamed;
   });
 
 /* ------------------------------------------------------------------ setup chat */
@@ -114,90 +122,54 @@ export const loadSetup = async (installationId: string): Promise<Outcome<SetupSt
   run(async () => {
     await requireManager();
     const session = await getSession();
-    const db = await supabaseServer();
+    const db = (await engineCtx()).db;
     // The installation list is cached for the request (the instance layout reads it too), so this costs no request of its own.
     const installation = await getInstallationById(installationId);
     if (!installation) throw new Error("Not found");
-    // Sessions and the whole chat in ONE wave (the chat is filtered through its session's installation), instead of 4 sequential reads.
-    const [sessionRows, chatRows] = await Promise.all([
-      db.from("module_setup_sessions").select("*").eq("installation_id", installation.id).order("revision"),
-      db.from("module_setup_messages").select("*, session:module_setup_sessions!inner(installation_id)").eq("session.installation_id", installation.id).order("created_at"),
-    ]);
-    fail(sessionRows.error);
-    fail(chatRows.error);
-    const rows = (sessionRows.data ?? []) as Array<SessionRowShape>;
-    const latest = rows.at(-1) ?? null;
-    if (latest && latest.status === "draft") {
-      const messages = ((chatRows.data ?? []) as unknown as Array<MessageRow & { session?: unknown }>).map(({ session: _s, ...m }) => toMessage(m));
-      const writes = await loadWrites(db, session.workspace.id, rows.map((r) => r.id));
-      return { installation, session: toSession(latest), revisions: rows.map((r) => ({ id: r.id, revision: r.revision, status: r.status })) as Array<SetupRevision>, messages, writes };
+    // Sessions and the whole chat in ONE wave (the chat is filtered through its session's installation).
+    let state = await unwrap(await readSetupState(installation.id));
+    let draft = state.draft;
+    if (draft === null) {
+      // No open draft yet (first visit, or the last revision was applied): create it, then read again.
+      draft = await unwrap(await writeDraftSession({ installationId: installation.id, locale: await getLocale() }));
+      state = await unwrap(await readSetupState(installation.id));
     }
-    // No open draft yet (first visit, or the last revision was applied): create it, then read again.
-    const draft = await ensureDraftSession(db, session.workspace.id, installation, await getLocale());
-    const sessions = await db.from("module_setup_sessions").select("id, revision, status").eq("installation_id", installation.id).order("revision");
-    fail(sessions.error);
-    const revisions = (sessions.data ?? []) as Array<SetupRevision>;
-    return { installation, session: draft, revisions, messages: await listInstallationMessages(db, revisions.map((r) => r.id)), writes: await loadWrites(db, session.workspace.id, revisions.map((r) => r.id)) };
+    const writes = await loadWrites(db, session.workspace.id, state.revisions.map((r) => r.id));
+    return { installation, session: draft, revisions: state.revisions, messages: state.messages, writes };
   });
-
-/** The chat of several revisions at once, oldest first (RLS keeps it owner/manager-only). */
-const listInstallationMessages = async (db: Db, sessionIds: ReadonlyArray<string>): Promise<Array<SetupMessage>> => {
-  if (sessionIds.length === 0) return [];
-  const { data, error } = await db.from("module_setup_messages").select("*").in("setup_session_id", [...sessionIds]).order("created_at");
-  fail(error);
-  return ((data ?? []) as Array<MessageRow>).map(toMessage);
-};
-
-const listSetupMessages = async (db: Db, sessionId: string): Promise<Array<SetupMessage>> => {
-  const { data, error } = await db.from("module_setup_messages").select("*").eq("setup_session_id", sessionId).order("created_at");
-  fail(error);
-  return ((data ?? []) as Array<MessageRow>).map(toMessage);
-};
 
 /** Messages of a setup session (initial load and refresh). */
 export const listSetupChat = async (setupSessionId: string): Promise<Outcome<Array<SetupMessage>>> =>
   run(async () => {
     await requireManager();
-    return listSetupMessages(await supabaseServer(), setupSessionId);
+    return unwrap(await readSessionMessages(setupSessionId));
   });
 
 /** One owner message: ONE model call, merged into the draft; NIVO's reply is stored as the next chat message. */
 export const sendSetupMessage = async (setupSessionId: string, text: string): Promise<Outcome<{ session: SetupSession; messages: Array<SetupMessage>; writes: Array<SetupWrite> }>> =>
   run(async () => {
-    const member = await requireManager();
-    const body = text.trim().slice(0, 4000);
-    if (!body) throw new Error("Empty message");
-    const ctxSession = await getSession();
-    const db = await supabaseServer();
-    const locale = await getLocale();
-    const ws = ctxSession.workspace.id;
+    await requireManager();
+    const ctx = await engineCtx();
+    const ws = ctx.ws;
+    const draftSession = await unwrap(await readSetupSession(setupSessionId));
+    if (draftSession.status !== "draft") throw new Error("Not found");
+    const installation = await getInstallationById(draftSession.installationId);
+    if (!installation) throw new Error("Not found");
+    const history = await unwrap(await readSessionMessages(setupSessionId));
 
-    const sessionRow = await db.from("module_setup_sessions").select("*").eq("id", setupSessionId).maybeSingle();
-    fail(sessionRow.error);
-    if (!sessionRow.data || sessionRow.data.status !== "draft") throw new Error("Not found");
-    const draftSession = toSession(sessionRow.data);
-    const installation = await loadInstallation(db, draftSession.installationId);
-    const history = await listSetupMessages(db, setupSessionId);
-
-    const inserted = await db.from("module_setup_messages").insert({ workspace_id: ws, setup_session_id: setupSessionId, role: "user", author: member.displayName, body }).select("id").single();
-    fail(inserted.error);
-    if (!inserted.data) throw new Error("Not found");
+    const message = await unwrap(await writeSetupMessage({ setupSessionId, body: text }));
 
     // The customer questions the agent could not answer yet (knowledge gaps) are part of what the chat asks about.
-    const gaps = await openGapsFor(db, ws, installation.moduleKey);
+    const gaps = await openGapsFor(ws, installation.moduleKey);
     const turn = await withUsage({ workspaceId: ws }, () => runSetupTurn({
-      moduleKey: installation.moduleKey, installationId: installation.id, locale, draft: draftSession.draft, gates: draftSession.gateEvidence,
-      history: history.map((m) => ({ role: m.role, body: m.body })), message: body, gaps,
+      moduleKey: installation.moduleKey, installationId: installation.id, locale: ctx.locale, draft: draftSession.draft, gates: draftSession.gateEvidence,
+      history: history.map((m) => ({ role: m.role, body: m.body })), message: message.body, gaps,
     }));
     const merged = mergeSetupTurn(draftSession.draft, draftSession.gateEvidence, turn);
-    const updated = await db.from("module_setup_sessions").update({ draft_snapshot: merged.draft, gate_evidence: merged.gates }).eq("id", setupSessionId).select().single();
-    fail(updated.error);
-    const reply = await db.from("module_setup_messages").insert({ workspace_id: ws, setup_session_id: setupSessionId, role: "assistant", author: "NIVO", body: turn.reply });
-    fail(reply.error);
+    const updated = await unwrap(await writeSetupTurn({ setupSessionId, reply: turn.reply, draft: merged.draft, gates: merged.gates }));
     // What the owner said becomes confirm cards (facts for the Second Brain, authority rules); nothing is written until they confirm.
-    await storeWrites(db, ws, setupSessionId, inserted.data.id as string, turn.writes);
-    const writes = await loadWrites(db, ws, [setupSessionId]);
-    return { session: toSession(updated.data), messages: await listSetupMessages(db, setupSessionId), writes };
+    await storeWrites(ws, setupSessionId, message.id, turn.writes);
+    return { session: updated, messages: await unwrap(await readSessionMessages(setupSessionId)), writes: await loadWrites(ctx.db, ws, [setupSessionId]) };
   });
 
 /**
@@ -208,14 +180,11 @@ export const decideSetupWrite = async (writeId: string, change: WriteDecision): 
   run(async () => {
     await requireManager();
     const c = await engineCtx();
-    const row = await c.db.from("module_setup_writes").select("setup_session_id").eq("id", writeId).maybeSingle();
-    fail(row.error);
-    if (!row.data) throw new Error("Not found");
-    const sessionRow = await c.db.from("module_setup_sessions").select("installation_id").eq("id", row.data.setup_session_id).single();
-    fail(sessionRow.error);
-    if (!sessionRow.data) throw new Error("Not found");
-    const installation = await loadInstallation(c.db, sessionRow.data.installation_id);
-    const written = await decideWrite(c.db, c, installation.moduleKey, c.locale, writeId, change, { id: installation.id, isMulti: installation.isMulti });
+    const card = await unwrap(await readSetupCard(writeId));
+    const session = await unwrap(await readSetupSession(card.setupSessionId));
+    const installation = await getInstallationById(session.installationId);
+    if (!installation) throw new Error("Not found");
+    const written = await decideWrite(c, installation.moduleKey, c.locale, writeId, change, { id: installation.id, isMulti: installation.isMulti });
     refresh();
     return written;
   });
@@ -225,96 +194,21 @@ export const setGate = async (
   setupSessionId: string, gateKey: string, change: { action: "confirm" | "reopen" | "edit"; evidence?: string },
 ): Promise<Outcome<SetupSession>> =>
   run(async () => {
-    const member = await requireManager();
-    const db = await supabaseServer();
-    const row = await db.from("module_setup_sessions").select("*").eq("id", setupSessionId).maybeSingle();
-    fail(row.error);
-    if (!row.data || row.data.status !== "draft") throw new Error("Not found");
-    const session = toSession(row.data);
-    const installation = await loadInstallation(db, session.installationId);
-    if (!MODULE_GATES[installation.moduleKey].some((g) => g.key === gateKey)) throw new Error("Unknown gate");
-    const current = gateEntry(session.gateEvidence, gateKey);
-    const evidence = change.action === "edit" ? (change.evidence ?? "").trim().slice(0, 800) : current.evidence;
-    if (change.action !== "reopen" && !evidence) throw new Error("Nothing to confirm yet");
-    const gates: GateEvidence = {
-      ...session.gateEvidence,
-      [gateKey]: change.action === "reopen"
-        ? { status: "proposed", evidence }
-        : { status: "confirmed", evidence, confirmed_by: member.displayName, confirmed_at: new Date().toISOString() },
-    };
-    const updated = await db.from("module_setup_sessions").update({ gate_evidence: gates }).eq("id", setupSessionId).select().single();
-    fail(updated.error);
-    return toSession(updated.data);
+    await requireManager();
+    return unwrap(await writeGate({ setupSessionId, gateKey, action: change.action, evidence: change.evidence ?? "" }));
   });
 
 /* ------------------------------------------------------------------ apply */
 
-const BLOCK_START = "### NIVO setup";
-const BLOCK_END = "### end NIVO setup";
-const stripBlock = (text: string): string => text.replace(/\n*### NIVO setup[\s\S]*?### end NIVO setup\s*/g, "").trimEnd();
-
-/** The text written into the agent: behaviour rules into `instructions`, business knowledge into `knowledge`. */
-const agentTexts = (moduleKey: ModuleKey, snapshot: ContextSnapshot, version: number, locale: Locale) => {
-  const gates = MODULE_GATES[moduleKey];
-  const rules = gates.map((g) => `- ${gateLabel(g, locale)}: ${gateEntry(snapshot.gates, g.key).evidence}`).join("\n");
-  const facts = snapshot.facts.map((f) => `- ${f.text}`).join("\n");
-  const instructions = `${BLOCK_START} v${version}\nConfirmed by the owner. Follow these rules exactly; when something is not covered, say a team member will confirm.\n${rules}\n${BLOCK_END}`;
-  const knowledge = `${BLOCK_START} v${version}\n${snapshot.summary}\n${facts}\n${rules}\n${BLOCK_END}`;
-  return { instructions, knowledge };
-};
-
 /** Apply the draft: a new immutable context version becomes the one in use, and the module's agent runs on it right away. */
 export const applySetup = async (installationId: string): Promise<Outcome<{ version: number }>> =>
   run(async () => {
-    const member = await requireManager();
-    const ctxSession = await getSession();
-    const db = await supabaseServer();
-    const locale = await getLocale();
-    const ws = ctxSession.workspace.id;
-    const t = translator(moduleSetup, locale);
-
-    const installation = await loadInstallation(db, installationId);
-    const draft = await ensureDraftSession(db, ws, installation, locale);
-    if (!allGatesConfirmed(installation.moduleKey, draft.gateEvidence)) throw new Error(t("applyHint"));
-    const snapshot = snapshotOf(draft.draft, draft.gateEvidence);
-
-    const latest = await db.from("module_context_versions").select("*").eq("installation_id", installationId).order("version", { ascending: false }).limit(1).maybeSingle();
-    fail(latest.error);
-    const last: ContextVersion | null = latest.data ? toVersion(latest.data) : null;
-    if (last && installation.activeContextVersionId === last.id && JSON.stringify(last.snapshot) === JSON.stringify(snapshot)) throw new Error(t("applyUnchanged"));
-    const version = (last?.version ?? 0) + 1;
-
-    const created = await db.from("module_context_versions").insert({
-      workspace_id: ws, installation_id: installationId, version, snapshot, applied_by: member.displayName,
-    }).select().single();
-    fail(created.error);
-
-    // Notes proposed from Office are part of this version now.
-    await db.from("module_context_notes").update({ status: "applied", applied_version: version, decided_by: member.displayName, decided_at: new Date().toISOString() }).eq("installation_id", installationId).eq("status", "pending");
-
-    const nextStatus = installation.status === "installing" || installation.status === "setup" ? "ready" : installation.status;
-    const upd = await db.from("module_installations").update({ active_context_version_id: created.data.id, status: nextStatus }).eq("id", installationId);
-    fail(upd.error);
-
-    if (installation.agentId) {
-      const agent = await db.from("agents").select("instructions, knowledge").eq("id", installation.agentId).single();
-      fail(agent.error);
-      const texts = agentTexts(installation.moduleKey, snapshot, version, locale);
-      const agentUpd = await db.from("agents").update({
-        instructions: `${stripBlock(agent.data?.instructions ?? "")}\n\n${texts.instructions}`.trim(),
-        knowledge: `${stripBlock(agent.data?.knowledge ?? "")}\n\n${texts.knowledge}`.trim(),
-      }).eq("id", installation.agentId);
-      fail(agentUpd.error);
-    }
-
-    const closed = await db.from("module_setup_sessions").update({ status: "applied" }).eq("id", draft.id);
-    fail(closed.error);
-    await ensureDraftSession(db, ws, installation, locale);
-    await logEvent(db, ws, "module.context_applied", member.displayName, `${moduleName(installation.moduleKey, locale)} v${version}`);
+    await requireManager();
+    const applied = await unwrap(await writeApplySetup({ installationId, locale: await getLocale() }));
     // The agent's OpenClaw copy (AGENTS.md, SOUL.md, knowledge/) follows the new active version (no-op unless the module runs on OpenClaw).
     await enqueueAgentSync(installationId);
     refresh();
-    return { version };
+    return applied;
   });
 
 /* ------------------------------------------------------------------ settings */
@@ -323,45 +217,61 @@ export const applySetup = async (installationId: string): Promise<Outcome<{ vers
 export const renameModule = async (installationId: string, name: string): Promise<Outcome<Installation>> =>
   run(async () => {
     await requireManager();
-    const db = await supabaseServer();
-    const clean = name.trim().slice(0, 40);
-    if (clean.length < 2) throw new Error("Name too short");
-    const installation = await loadInstallation(db, installationId);
-    if (!installation.agentId) throw new Error("Not found");
-    const upd = await db.from("agents").update({ name: clean }).eq("id", installation.agentId);
-    fail(upd.error);
+    const renamed = await unwrap(await writeRenameAgent({ installationId, name }));
     await enqueueAgentSync(installationId);
     refresh();
-    return loadInstallation(db, installationId);
+    return renamed;
   });
 
 /** Operating mode: autopilot applies the Authority rules as configured; assist is a gate in the engine that downgrades "auto" to "ask" (rules are never rewritten). */
 export const setOperatingMode = async (installationId: string, mode: OperatingMode): Promise<Outcome<Installation>> =>
   run(async () => {
     await requireManager();
-    if (mode !== "assist" && mode !== "autopilot") throw new Error("Invalid mode");
-    const session = await getSession();
-    const db = await supabaseServer();
-    const installation = await loadInstallation(db, installationId);
-    const upd = await db.from("module_installations").update({ operating_mode: mode }).eq("id", installationId);
-    fail(upd.error);
+    const updated = await unwrap(await writeOperatingMode({ installationId, mode }));
     refresh();
-    return loadInstallation(db, installationId);
+    return updated;
   });
 
 /** Live on/off: live = the agent acts on channels; paused = it stays silent. Going live needs an applied version. */
 export const setModuleLive = async (installationId: string, on: boolean): Promise<Outcome<Installation>> =>
   run(async () => {
     await requireManager();
-    const db = await supabaseServer();
-    const installation = await loadInstallation(db, installationId);
-    if (on && !installation.activeContextVersionId) throw new Error((translator(modulesCore, await getLocale()))("liveNeedsVersion"));
-    const upd = await db.from("module_installations").update({ live_enabled: on, status: on ? "live" : "paused" }).eq("id", installationId);
-    fail(upd.error);
-    if (installation.agentId) {
-      const agentUpd = await db.from("agents").update({ status: on ? "active" : "paused" }).eq("id", installation.agentId);
-      fail(agentUpd.error);
-    }
+    const updated = await unwrap(await writeModuleLive({ installationId, on }));
     refresh();
-    return loadInstallation(db, installationId);
+    return updated;
   });
+
+/* ------------------------------------------------------------------ settings cards (one outcome vocabulary) */
+
+const toDb = <T>(outcome: Outcome<T>): DbOutcome<true> => (outcome.ok ? dbOk(true) : dbFailure("invalid", outcome.error));
+
+/** Save the name of an agent; for a multi-instance agent the instance label and its agent share the name. */
+export const saveAgentName = async (installationId: string, name: string, isInstance: boolean): Promise<DbOutcome<true>> => {
+  if (!isInstance) return toDb(await renameModule(installationId, name));
+  const renamed = await renameInstance(installationId, name);
+  return renamed.ok ? toDb(await renameModule(installationId, name.trim().slice(0, 40))) : toDb(renamed);
+};
+
+/** Choose how an agent runs. */
+export const chooseOperatingMode = async (installationId: string, mode: OperatingMode): Promise<DbOutcome<true>> =>
+  toDb(await setOperatingMode(installationId, mode));
+
+/** Switch an agent live or paused. */
+export const chooseLive = async (installationId: string, on: boolean): Promise<DbOutcome<true>> => toDb(await setModuleLive(installationId, on));
+
+/* ------------------------------------------------------------------ setup chat (one outcome vocabulary) */
+
+const valueOf = <T>(outcome: Outcome<T>): DbOutcome<T> => (outcome.ok ? dbOk(outcome.data) : dbFailure("unavailable", outcome.error));
+
+/** One owner message of the setup chat; answers the session, the chat and the cards as they are after the turn. */
+export const postSetupMessage = async (setupSessionId: string, text: string) => valueOf(await sendSetupMessage(setupSessionId, text));
+
+/** The owner decides one confirm card of the setup chat. */
+export const decideCard = async (writeId: string, change: WriteDecision) => valueOf(await decideSetupWrite(writeId, change));
+
+/** The owner confirms, reopens or edits one gate of the draft. */
+export const changeGate = async (setupSessionId: string, gateKey: string, change: { action: "confirm" | "reopen" | "edit"; evidence?: string }) =>
+  valueOf(await setGate(setupSessionId, gateKey, change));
+
+/** The owner applies the draft as the next version. */
+export const applyDraft = async (installationId: string) => valueOf(await applySetup(installationId));

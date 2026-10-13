@@ -1,14 +1,19 @@
-import { LeadsList } from "@/features/leads-list"
-import { listLeads } from "@/lib/queries"
+import { LeadsPage } from "@/features/pages/LeadsPage"
 
-type LeadsPageProps = { readonly searchParams: Promise<{ q?: string | string[]; new?: string | string[] }> }
+/** The document title of this page. */
+export { leadsPageMetadata as generateMetadata } from "@/features/pages/LeadsPage"
 
-const first = (v: string | string[] | undefined): string => (Array.isArray(v) ? (v[0] ?? "") : (v ?? ""))
-
-/** Leads list: every lead with its owner, stage and next action. `?q=` prefills search, `?new=1` opens the form. */
-const LeadsPage = async ({ searchParams }: LeadsPageProps) => {
-  const [leads, params] = await Promise.all([listLeads(), searchParams])
-  return <LeadsList leads={leads} nowIso={new Date().toISOString()} initialQuery={first(params.q)} initialFormOpen={first(params.new) === "1"} />
+interface PageProps {
+    readonly searchParams: Promise<{ q?: string | string[]; new?: string | string[] }>
 }
 
-export default LeadsPage
+const firstOf = (value: string | string[] | undefined): string =>
+    Array.isArray(value) ? (value[0] ?? "") : (value ?? "")
+
+/** The leads route: mounts the page with the query it was opened with. */
+const Page = async (props: PageProps) => {
+    const query = await props.searchParams
+    return <LeadsPage query={firstOf(query.q)} openForm={firstOf(query.new) === "1"} />
+}
+
+export default Page
