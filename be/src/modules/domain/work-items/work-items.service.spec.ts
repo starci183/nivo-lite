@@ -14,6 +14,7 @@ import {
     MARK_WORK_ITEM_REJECTED,
     MARK_WORK_ITEM_STILL_WAITING,
     MARK_WORK_ITEM_WAITING,
+    LIST_WORKSPACES_WITH_QUEUED_WORK,
     NEXT_QUEUED_WORK_ITEM,
     REOPEN_WAITING_WORK_ITEM,
     SAVE_PREPARED_WORK_ITEM,
@@ -130,6 +131,15 @@ describe("WorkItemsService", () => {
             expect((await (await build(taken)).claim("ws-1", "item-1"))?.id).toBe("item-1")
             expect(taken.query).toHaveBeenCalledWith(CLAIM_WORK_ITEM, ["item-1", "ws-1", NOW, 120])
             expect(await (await build(held)).claim("ws-1", "item-1")).toBeNull()
+        })
+
+        it("lists the workspaces with free queued work, longest waiting first", async () => {
+            const em = mockEntityManager({
+                query: [LIST_WORKSPACES_WITH_QUEUED_WORK, [{ workspace_id: "ws-1" }, { workspace_id: "ws-2" }]],
+            })
+
+            expect(await (await build(em)).workspacesWithQueued(50)).toEqual(["ws-1", "ws-2"])
+            expect(em.query).toHaveBeenCalledWith(LIST_WORKSPACES_WITH_QUEUED_WORK, [NOW, 120, 50])
         })
 
         it("finds the next free queued item", async () => {

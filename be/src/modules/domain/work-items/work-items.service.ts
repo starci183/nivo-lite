@@ -3,7 +3,7 @@ import type { EntityManager } from "typeorm"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { AccountingWorkRow, ClosedClaimRow, WorkItemRow } from "./persistence/work-items.rows"
+import type { AccountingWorkRow, ClosedClaimRow, QueuedWorkspaceRow, WorkItemRow } from "./persistence/work-items.rows"
 import {
     ASSIGN_WORK_ITEM,
     ATTACH_WORK_ITEM_EXECUTION,
@@ -15,6 +15,7 @@ import {
     LIST_LEAD_ITEMS,
     LIST_WORKBENCH_ITEMS,
     LIST_ACCOUNTING_WORK_ITEMS,
+    LIST_WORKSPACES_WITH_QUEUED_WORK,
     MARK_WORK_ITEM_DONE,
     MARK_WORK_ITEM_FAILED,
     MARK_WORK_ITEM_REJECTED,
@@ -155,6 +156,16 @@ export class WorkItemsService {
                 CLAIM_LEASE_SECONDS,
             ]),
         )
+    }
+
+    /** Up to `limit` workspaces with a queued chain step free to take, the one waiting longest first. */
+    async workspacesWithQueued(limit: number): Promise<ReadonlyArray<string>> {
+        const rows = await this.entityManager.query<Array<QueuedWorkspaceRow>>(LIST_WORKSPACES_WITH_QUEUED_WORK, [
+            this.now(),
+            CLAIM_LEASE_SECONDS,
+            limit,
+        ])
+        return rows.map((row) => row.workspace_id)
     }
 
     /** The oldest available queued step of this inbound input; never selects another event or a live input. */

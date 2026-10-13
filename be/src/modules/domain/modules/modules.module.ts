@@ -13,6 +13,7 @@ import { ModulesService } from "./modules.service"
 import { SetupCardsService } from "./setup-cards.service"
 import { SetupChatService } from "./setup-chat.service"
 import { SetupTurnService } from "./setup-turn.service"
+import { WorkspaceSetupService } from "./workspace-setup.service"
 
 @Module({})
 /**
@@ -33,6 +34,7 @@ export class ModulesModule extends ConfigurableModuleClass {
             SetupChatService,
             SetupCardsService,
             SetupTurnService,
+            WorkspaceSetupService,
         ]
         const tables = [
             ModuleInstallationsModule.register({}),

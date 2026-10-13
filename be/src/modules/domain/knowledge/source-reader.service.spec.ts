@@ -3,8 +3,9 @@ import { builder, mock } from "@starci/jest-preset"
 import { KnowledgeSourcesService, MAX_UPLOAD_BYTES, StoredNote } from "@modules/domain/knowledge-sources"
 import type { SourceRecord } from "@modules/domain/knowledge-sources"
 import { DOCUMENTS, DocumentsErrorCode } from "@modules/integrations/documents"
-import type { DocumentsPort } from "@modules/integrations/documents"
-import { KNOWLEDGE_OPTIONS } from "./knowledge.decorators"
+import type { DocumentsPort, DriveAccess } from "@modules/integrations/documents"
+import { DRIVE_ACCESS_SOURCE } from "./knowledge.decorators"
+import type { DriveAccessSource } from "./knowledge.contracts"
 import { SourceReaderService } from "./source-reader.service"
 
 const WS = "11111111-1111-4111-8111-111111111111"
@@ -29,16 +30,19 @@ const sourceOf = builder<SourceRecord>({
 const build = async () => {
     const documents = mock<DocumentsPort>()
     const sources = mock<KnowledgeSourcesService>()
-    const forWorkspace = jest.fn().mockReturnValue("drive-access")
+    const driveAccess = mock<DriveAccessSource>()
+    const drive = mock<DriveAccess>()
+    driveAccess.forWorkspace.mockReturnValue(drive)
+    const { forWorkspace } = driveAccess
     const moduleRef = await Test.createTestingModule({
         providers: [
             SourceReaderService,
-            { provide: KNOWLEDGE_OPTIONS, useValue: { driveAccess: { forWorkspace } } },
+            { provide: DRIVE_ACCESS_SOURCE, useValue: driveAccess },
             { provide: DOCUMENTS, useValue: documents },
             { provide: KnowledgeSourcesService, useValue: sources },
         ],
     }).compile()
-    return { reader: moduleRef.get(SourceReaderService), documents, sources, forWorkspace }
+    return { reader: moduleRef.get(SourceReaderService), documents, sources, forWorkspace, drive }
 }
 
 describe("SourceReaderService", () => {
@@ -129,7 +133,7 @@ describe("SourceReaderService", () => {
             })
 
         it("reads the page with the Drive access of the workspace and keeps a title that was chosen", async () => {
-            const { reader, documents, forWorkspace } = await build()
+            const { reader, documents, forWorkspace, drive } = await build()
             documents.readLink.mockResolvedValue({ text: "Page text", title: "Page title" })
 
             await expect(reader.read(link())).resolves.toEqual({
@@ -138,7 +142,7 @@ describe("SourceReaderService", () => {
             })
 
             expect(forWorkspace).toHaveBeenCalledWith(WS)
-            expect(documents.readLink).toHaveBeenCalledWith("https://example.com/page", "drive-access")
+            expect(documents.readLink).toHaveBeenCalledWith("https://example.com/page", drive)
         })
 
         it("takes the title of the page when the title was made from the address", async () => {
@@ -152,7 +156,7 @@ describe("SourceReaderService", () => {
         })
 
         it("takes the title of the page when there was none, reading the address from the content", async () => {
-            const { reader, documents } = await build()
+            const { reader, documents, drive } = await build()
             documents.readLink.mockResolvedValue({ text: "Page text", title: "Menu" })
 
             await expect(reader.read(link({ title: " ", sourceUrl: null }))).resolves.toEqual({
@@ -160,7 +164,7 @@ describe("SourceReaderService", () => {
                 value: { text: "Page text", title: "Menu" },
             })
 
-            expect(documents.readLink).toHaveBeenCalledWith("https://example.com/page", "drive-access")
+            expect(documents.readLink).toHaveBeenCalledWith("https://example.com/page", drive)
         })
 
         it("keeps the title when the page has none", async () => {
