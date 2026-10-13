@@ -1,24 +1,30 @@
 import { Injectable } from "@nestjs/common"
-import { ConnectionsError, ConnectionsErrorCode, ConnectionsService, randomSecret } from "@modules/domain/connections"
+import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
+import { randomSecret } from "@modules/domain/connection-secrets"
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
 import { INSTAGRAM_FIELDS, InjectMetaClient, MetaError, MetaErrorCode, PAGE_FIELDS } from "@modules/integrations/meta"
-import type { MetaClient, MetaFailure } from "@modules/integrations/meta"
+import type { MetaClient } from "@modules/integrations/meta"
+import { InjectLogger } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
 import { MetaConnectionsError, MetaConnectionsErrorCode } from "./errors/meta-connections.error"
 import type {
     MetaAuthorization,
     MetaCallbackInput,
     MetaCallbackResult,
+    MetaChallengeQuery,
     MetaCheck,
     MetaSecret,
     MetaWizardConnection,
+    ResumedConnectionId,
 } from "./meta-connections.contracts"
+import { MetaConnectionsLogEvent } from "./meta-connections.log-events"
 import { connectionIdOfReturn, parseMetaSecret } from "./meta-secret.policy"
 
 const OWNER = ["owner"] as const
 const MANAGER = ["owner", "manager"] as const
 const DEFAULT_NAME = "Facebook & Instagram"
 
-const FAILURE_CODES: Partial<Record<MetaFailure, MetaConnectionsErrorCode>> = {
+const FAILURE_CODES: Readonly<Partial<Record<string, MetaConnectionsErrorCode>>> = {
     token: MetaConnectionsErrorCode.TokenRefused,
     permission: MetaConnectionsErrorCode.PermissionRefused,
     rate_limited: MetaConnectionsErrorCode.RateLimited,
@@ -33,13 +39,14 @@ export class MetaConnectionsService {
     constructor(
         private readonly connections: ConnectionsService,
         @InjectMetaClient() private readonly meta: MetaClient,
+        @InjectLogger() private readonly logger: Logger,
     ) {}
 
     /**
      * Wizard step 1: (re)starts the Meta login. A PENDING connection is created on first use (so the choice and the agents have a
      * place to live) and the signed state (workspace, person, connection, 10 minutes) goes to Meta.
      */
-    async authorize(actor: ConnectionActor, connectionId: string | undefined): Promise<MetaAuthorization> {
+    async authorize(actor: ConnectionActor, connectionId: ResumedConnectionId): Promise<MetaAuthorization> {
         await this.connections.authorize(actor, OWNER)
         if (!this.meta.isConfigured()) {
             throw new MetaConnectionsError({ code: MetaConnectionsErrorCode.NotConfigured })
@@ -90,7 +97,9 @@ export class MetaConnectionsService {
             throw new MetaConnectionsError({ code: MetaConnectionsErrorCode.PageInUse })
         }
         await this.viaMeta(() => this.meta.subscribePage(choice.id, choice.token))
-        await this.meta.ensureAppSubscriptions().catch(() => undefined)
+        await this.meta
+            .ensureAppSubscriptions()
+            .catch((cause: unknown) => this.logger.error(MetaConnectionsLogEvent.AppSubscriptionFailed, cause))
         const sealed: MetaSecret = { pageId: choice.id, pageToken: choice.token }
         await this.connections.writeSecret(connection.id, JSON.stringify(sealed))
         await this.connections.patch(actor.workspaceId, connection.id, {
@@ -134,7 +143,9 @@ export class MetaConnectionsService {
         try {
             if (repair) {
                 await this.meta.subscribePage(page.pageId, page.pageToken)
-                await this.meta.ensureAppSubscriptions().catch(() => undefined)
+                await this.meta
+                    .ensureAppSubscriptions()
+                    .catch((cause: unknown) => this.logger.error(MetaConnectionsLogEvent.AppSubscriptionFailed, cause))
             }
             const status = await this.meta.subscriptionStatus({ ...page })
             const igOk =
@@ -176,6 +187,7 @@ export class MetaConnectionsService {
                     repaired: repair,
                 }
             }
+            if (!(error instanceof MetaError)) throw error
             throw this.mapMeta(error)
         }
     }
@@ -210,33 +222,43 @@ export class MetaConnectionsService {
             if (error instanceof ConnectionsError && error.code === ConnectionsErrorCode.Forbidden) {
                 return back("denied", connectionId)
             }
+            this.logger.error(MetaConnectionsLogEvent.CallbackFailed, error, { connectionId })
             return back("failed", connectionId)
         }
     }
 
     /** Answers the webhook verification request of Meta: the challenge when it carries our verify token, otherwise a forbidden error. */
-    answerChallenge(query: {
-        mode: string | undefined
-        verifyToken: string | undefined
-        challenge: string | undefined
-    }): string {
+    answerChallenge(query: MetaChallengeQuery): string {
         const answer = this.meta.challenge(query)
         if (answer === null) throw new ConnectionsError({ code: ConnectionsErrorCode.Forbidden })
         return answer
     }
 
+    /** Answers the webhook verification request the way a handler awaits it; a request without our verify token is refused. */
+    respondToChallenge(query: MetaChallengeQuery): Promise<string> {
+        return Promise.resolve(this.answerChallenge(query))
+    }
+
     /** Stops a disconnecting Page from sending its events to the app (best effort: a dead token has nothing to cancel). */
     async release(connection: ConnectionRecord): Promise<void> {
         if (connection.provider !== "meta") return
-        const secret = await this.secretOf(connection.id).catch(() => ({}) as MetaSecret)
+        const secret = await this.secretOf(connection.id).catch((cause: unknown): MetaSecret => {
+            this.logger.error(MetaConnectionsLogEvent.ReleaseFailed, cause, { connectionId: connection.id })
+            return {}
+        })
         if (!secret.pageId || !secret.pageToken) return
-        await this.meta.unsubscribePage(secret.pageId, secret.pageToken).catch(() => undefined)
+        await this.meta
+            .unsubscribePage(secret.pageId, secret.pageToken)
+            .catch((cause: unknown) =>
+                this.logger.error(MetaConnectionsLogEvent.ReleaseFailed, cause, { connectionId: connection.id }),
+            )
     }
 
     private safeVerify(value: string | undefined) {
         try {
             return this.meta.verify(value)
-        } catch {
+        } catch (cause) {
+            this.logger.error(MetaConnectionsLogEvent.StateUnreadable, cause)
             return null
         }
     }
@@ -288,19 +310,19 @@ export class MetaConnectionsService {
         try {
             return await call()
         } catch (error) {
+            if (!(error instanceof MetaError)) throw error
             throw this.mapMeta(error)
         }
     }
 
-    private mapMeta(error: unknown): unknown {
-        if (!(error instanceof MetaError)) return error
+    private mapMeta(error: MetaError): MetaConnectionsError {
         if (error.code === MetaErrorCode.NotConfigured) {
             return new MetaConnectionsError({ code: MetaConnectionsErrorCode.NotConfigured, cause: error })
         }
         if (error.code === MetaErrorCode.Unreachable) {
             return new MetaConnectionsError({ code: MetaConnectionsErrorCode.Network, cause: error })
         }
-        const code = FAILURE_CODES[String(error.params.failure) as MetaFailure] ?? MetaConnectionsErrorCode.Failed
+        const code = FAILURE_CODES[String(error.params.failure)] ?? MetaConnectionsErrorCode.Failed
         return new MetaConnectionsError({ code, cause: error })
     }
 }

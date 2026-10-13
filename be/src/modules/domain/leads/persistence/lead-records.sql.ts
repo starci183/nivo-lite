@@ -45,3 +45,8 @@ WHERE workspace_id = $1::uuid AND id = $2::uuid AND stage <> 'lost'`
 export const FIND_LEAD_NAMES = sql`SELECT id, contact_name
 FROM public.leads WHERE workspace_id = $1::uuid AND id = ANY($2::uuid[])
 LIMIT 200`
+
+/** A hot lead goes to Sales with the lead flow's package as its need; a brief it already has is kept. */
+export const HAND_OVER_LEAD_NEED = sql`
+    UPDATE public.leads SET need = $3, context_summary = coalesce(context_summary, $3)
+    WHERE workspace_id = $1 AND id = $2`

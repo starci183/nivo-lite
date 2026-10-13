@@ -32,13 +32,12 @@ const memberOf = builder<LoyaltyMember>({
     note: "",
 })
 const paramsOf = builder<CampaignParams>({ workspaceId: "ws-1", name: "", segment: ANY, brief: "", createdBy: "Owner" })
-const catalog = mock<MessageCatalog>()
-catalog.get.mockImplementation(
-    (key, params) =>
+const catalog = mock<MessageCatalog>({
+    get: (key, params) =>
         `${key}|${Object.entries(params)
             .map(([name, value]) => `${name}=${String(value)}`)
             .join(",")}`,
-)
+})
 
 interface Options {
     members: ReadonlyArray<LoyaltyMember>
