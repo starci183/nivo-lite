@@ -49,3 +49,16 @@ export type CustomerMatch = LoyaltyCustomer | null
 
 /** A text that may be missing: a phone, an email or an id. */
 export type MaybeText = string | null
+
+/** A profile birthday as a calendar date, or null when absent. */
+export type CustomerBirthday = string | null
+
+/** The profile fields an owner may change without changing a customer's identity or balance. */
+export interface CustomerPatch {
+    /** The name, when changed. A blank name leaves the existing name. */
+    readonly name?: string
+    /** The birthday, when changed; null clears it. */
+    readonly birthday?: CustomerBirthday
+    /** The owner's note, when changed. */
+    readonly note?: string
+}

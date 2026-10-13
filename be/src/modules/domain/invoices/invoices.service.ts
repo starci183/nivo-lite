@@ -6,7 +6,12 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InvoicesError, InvoicesErrorCode } from "./errors/invoices.error"
 import { INVOICE_NUMBER_ATTEMPTS, dueAtOf, invoicePrefixOf, nextInvoiceNumber } from "./invoice-number.policy"
 import type { IssuedInvoice, NewInvoice, OptionalInvoice } from "./invoices.contracts"
-import type { InvoiceListingRow, InvoiceRow, LastInvoiceNumberRow } from "./persistence/invoices.rows"
+import type {
+    InvoiceAccountingRow,
+    InvoiceListingRow,
+    InvoiceRow,
+    LastInvoiceNumberRow,
+} from "./persistence/invoices.rows"
 import type { InvoiceViewRow } from "./persistence/invoice-views.rows"
 import { LIST_LEAD_INVOICES, LIST_WORKBENCH_INVOICES } from "./persistence/invoice-views.sql"
 import {
@@ -14,6 +19,7 @@ import {
     FIND_INVOICE_OF_ORDER,
     INSERT_INVOICE,
     LAST_INVOICE_NUMBER,
+    LIST_ACCOUNTING_INVOICES,
     LIST_ISSUED_INVOICES,
     MARK_INVOICE_PAID,
 } from "./persistence/invoices.sql"
@@ -38,9 +44,14 @@ export class InvoicesService {
         return rows[0] ?? null
     }
 
-    /** The newest issued (unpaid) invoices, the ones an incoming payment may settle. */
-    listIssued(workspaceId: string, limit: number): Promise<Array<InvoiceListingRow>> {
-        return this.entityManager.query<Array<InvoiceListingRow>>(LIST_ISSUED_INVOICES, [workspaceId, limit])
+    /** The newest unpaid invoices of the payment's origin, so simulation cannot settle live sales. */
+    listIssued(workspaceId: string, limit: number, origin: string = "live"): Promise<Array<InvoiceListingRow>> {
+        return this.entityManager.query<Array<InvoiceListingRow>>(LIST_ISSUED_INVOICES, [workspaceId, limit, origin])
+    }
+
+    /** The newest invoices and their related records for the accounting book. */
+    listAccounting(workspaceId: string, limit: number = 1000): Promise<Array<InvoiceAccountingRow>> {
+        return this.entityManager.query<Array<InvoiceAccountingRow>>(LIST_ACCOUNTING_INVOICES, [workspaceId, limit])
     }
 
     /** The invoices shown in Sales handoffs, after the caller's membership was proved by the composer. */
@@ -63,12 +74,13 @@ export class InvoicesService {
         return this.insert(input, prefix, last?.invoice_no ?? null, 0)
     }
 
-    /** Marks an invoice paid and answers it. */
-    async markPaid(workspaceId: string, invoiceId: string): Promise<InvoiceRow> {
+    /** Marks an invoice paid only within the payment's origin and answers it. */
+    async markPaid(workspaceId: string, invoiceId: string, origin: string = "live"): Promise<InvoiceRow> {
         const rows = await this.entityManager.query<Array<InvoiceRow>>(MARK_INVOICE_PAID, [
             workspaceId,
             invoiceId,
             this.clock.now().toISOString(),
+            origin,
         ])
         const [paid] = rows
         if (paid === undefined) throw new InvoicesError({ code: InvoicesErrorCode.NotFound })

@@ -15,14 +15,20 @@ export type {
     WorkPerformer,
     WorkStatus,
 } from "./decisions.contracts"
-export type { AuthoritySheet, WorkItemCursor, WorkItemPage } from "./decisions-views.contracts"
+export type {
+    AuthoritySheet,
+    DecisionHistoryKind,
+    DecisionRecord,
+    WorkItemCursor,
+    WorkItemPage,
+} from "./decisions-views.contracts"
 export type { DecisionVerdict, FieldValue, WireEdits } from "./work-decision.contracts"
 export { DecisionsModule } from "./decisions.module"
 export { ApprovalRequesterService } from "./approval-requester.service"
 export { CommandBusService } from "./command-bus.service"
 export { DecisionsService } from "./decisions.service"
 export { EvidenceService } from "./evidence.service"
-export type { DecisionRecord } from "./decision-history.contracts"
+export type { DecisionRecord as LeadDecisionRecord } from "./decision-history.contracts"
 export { ModuleCatalogService } from "./module-catalog.service"
 export { WorkDecisionService } from "./work-decision.service"
 export { WorkEngineService } from "./work-engine.service"
@@ -35,3 +41,5 @@ export { UnboundPaymentReceiptsService } from "./unbound-payment-receipts.servic
 export { DecisionJobsService } from "./decision-jobs.service"
 export type { OutboundAccess } from "./work-engine.contracts"
 export type { InboundEventStatus, OutboundAccessGate } from "./work-engine.port"
+export type { AccountingDecisionRow } from "./persistence/decision-log.rows"
+export type { AccountingWaitingWorkRow } from "./persistence/work-item-views.rows"

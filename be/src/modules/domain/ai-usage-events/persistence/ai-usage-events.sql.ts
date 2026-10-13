@@ -14,3 +14,20 @@ LIMIT 1`
 
 /** Tells the workspace once per month and level that its allowance is near or used up ($1 workspace, $2 period, $3 level, $4 body). */
 export const POST_USAGE_NOTICE = sql`SELECT public.usage_notice_post($1, $2::date, $3, $4) AS posted`
+
+/** Non-guide usage in the current Vietnam month, by day and module ($1 workspace). */
+export const SELECT_MONTHLY_USAGE = sql`SELECT to_char(created_at AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYY-MM-DD') AS day,
+    COALESCE(module, 'other') AS module, COUNT(*)::float8 AS calls,
+    SUM(prompt_tokens + completion_tokens)::float8 AS tokens, SUM(cost_usd)::float8 AS cost_usd
+FROM public.ai_usage_events
+WHERE workspace_id = $1 AND kind <> 'guide'
+    AND created_at >= (date_trunc('month', current_timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh') AT TIME ZONE 'Asia/Ho_Chi_Minh')
+GROUP BY 1, module
+ORDER BY day, module
+LIMIT 2000`
+
+/** Non-guide model cost from a selected day onward ($1 workspace, $2 from day). */
+export const SELECT_RECENT_COST = sql`SELECT COALESCE(SUM(cost_usd), 0)::float8 AS cost_usd
+FROM public.ai_usage_events
+WHERE workspace_id = $1 AND kind <> 'guide'
+    AND created_at >= ($2::date::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh')`

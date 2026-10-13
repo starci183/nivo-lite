@@ -8,10 +8,11 @@ WHERE workspace_id = $1::uuid AND id = $2::uuid`
 export const FIND_LEAD = sql`SELECT id, workspace_id, contact_name, company, channel, need, stage, context_summary, phone, email, origin
 FROM public.leads WHERE workspace_id = $1::uuid AND id = $2::uuid LIMIT 1`
 
-/** The customer an input belongs to; a phone beats an email beats a name ($1 workspace, $2 phone, $3 email, $4 name, $5 channel). */
+/** The customer of the same origin; a phone beats an email beats a name ($1 workspace, $2 phone, $3 email, $4 name, $5 channel, $6 origin). */
 export const MATCH_LEAD = sql`SELECT id, workspace_id, contact_name, company, channel, need, stage, context_summary, phone, email, origin
 FROM public.leads
 WHERE workspace_id = $1::uuid
+  AND COALESCE(origin, 'live') = $6::text
   AND (
     ($2::text IS NOT NULL AND phone = $2::text)
     OR ($3::text IS NOT NULL AND email = $3::text)

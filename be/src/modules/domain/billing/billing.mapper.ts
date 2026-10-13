@@ -1,5 +1,5 @@
-import type { Plan, PlanFeatures, WorkspaceBilling } from "./billing.contracts"
-import type { PlanRow, WorkspaceBillingRow } from "./persistence/billing.rows"
+import type { BillingWorkspace, Plan, PlanFeatures, PlanLookup, WorkspaceBilling } from "./billing.contracts"
+import type { BillingWorkspaceRow, PlanRow, WorkspaceBillingRow } from "./persistence/billing.rows"
 
 const linesOf = (value: unknown): ReadonlyArray<string> =>
     Array.isArray(value) ? value.filter((line): line is string => typeof line === "string") : []
@@ -30,3 +30,17 @@ export const toWorkspaceBilling = (row: WorkspaceBillingRow): WorkspaceBilling =
     planCode: row.plan_code,
     paidUntil: row.paid_until === null ? null : new Date(row.paid_until).toISOString(),
 })
+
+/** Maps a billing workspace with the caller's membership. */
+export const toBillingWorkspace = (row: BillingWorkspaceRow): BillingWorkspace => ({
+    ...toWorkspaceBilling(row),
+    id: row.id,
+    name: row.name,
+    role: row.role,
+})
+
+/** Maps a single-plan lookup, preserving the absent-plan result. */
+export const toPlanLookup = (rows: ReadonlyArray<PlanRow>): PlanLookup => {
+    const row = rows[0]
+    return row === undefined ? null : toPlan(row)
+}

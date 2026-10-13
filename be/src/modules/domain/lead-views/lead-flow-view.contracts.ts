@@ -1,4 +1,4 @@
-import type { DecisionRecord } from "@modules/domain/decisions"
+import type { LeadDecisionRecord as DecisionRecord } from "@modules/domain/decisions"
 import type { InvoiceViewRow } from "@modules/domain/invoices"
 import type { LeadView } from "@modules/domain/leads"
 import type { OrdersWorkbenchRow } from "@modules/domain/orders"

@@ -20,6 +20,24 @@ export interface SalesOrderRow {
     readonly origin: string
     /** Who confirmed it. */
     readonly confirmed_by: string | null
+    /** When the order was confirmed. */
+    readonly confirmed_at: string | null
+    /** When the order was created. */
+    readonly created_at: string
+    /** When the carrier received the order. */
+    readonly shipped_at: string | null
+    /** The carrier handling the shipment. */
+    readonly carrier: string | null
+    /** The carrier's tracking reference. */
+    readonly tracking_code: string | null
+}
+
+/** An order with its workspace-scoped customer labels. */
+export interface SalesOrderListRow extends SalesOrderRow {
+    /** The customer's name. */
+    readonly contact_name: string | null
+    /** The customer's company. */
+    readonly company: string | null
 }
 
 /** The count of the orders numbered with a prefix. */

@@ -1,7 +1,15 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
+import { BookingExceptionsModule } from "@modules/domain/booking-exceptions"
+import { BookingHoursModule } from "@modules/domain/booking-hours"
+import { BookingResourcesModule } from "@modules/domain/booking-resources"
+import { BookingServicesModule } from "@modules/domain/booking-services"
+import { BookingSettingsModule } from "@modules/domain/booking-settings"
+import { BookingWaitlistModule } from "@modules/domain/booking-waitlist"
 import { BookingRemindersModule } from "@modules/domain/booking-reminders"
 import { BookingDeskService } from "./booking-desk.service"
+import { BookingBoardService } from "./booking-board.service"
+import { BookingSetupService } from "./booking-setup.service"
 import { BookingEffectsService } from "./booking-effects.service"
 import { BookingModelService } from "./booking-model.service"
 import { BookingOverviewService } from "./booking-overview.service"
@@ -22,7 +30,16 @@ export class BookingsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            imports: [...(base.imports ?? []), BookingRemindersModule.register({})],
+            imports: [
+                ...(base.imports ?? []),
+                BookingRemindersModule.register({}),
+                BookingServicesModule.register({}),
+                BookingResourcesModule.register({}),
+                BookingHoursModule.register({}),
+                BookingExceptionsModule.register({}),
+                BookingSettingsModule.register({}),
+                BookingWaitlistModule.register({}),
+            ],
             providers: [
                 ...(base.providers ?? []),
                 { provide: BOOKINGS_NOTIFIER, useValue: options.notifier ?? NO_NOTICE },
@@ -32,8 +49,17 @@ export class BookingsModule extends ConfigurableModuleClass {
                 BookingDeskService,
                 BookingOverviewService,
                 BookingEffectsService,
+                BookingBoardService,
+                BookingSetupService,
             ],
-            exports: [BookingPublicService, BookingDeskService, BookingOverviewService, BookingEffectsService],
+            exports: [
+                BookingPublicService,
+                BookingDeskService,
+                BookingOverviewService,
+                BookingEffectsService,
+                BookingBoardService,
+                BookingSetupService,
+            ],
         }
     }
 }

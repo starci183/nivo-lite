@@ -1,3 +1,5 @@
-export { StaffDirectoryModule } from "./staff.module"
+export { StaffModule } from "./staff.module"
+export { StaffService } from "./staff.service"
 export { StaffDirectoryService } from "./staff-directory.service"
 export type { StaffRecord } from "./staff.contracts"
+export type { StaffRow } from "./persistence/staff.rows"

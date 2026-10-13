@@ -1,3 +1,4 @@
+import type { EntityManager } from "typeorm"
 import type {
     AdvanceWrite,
     ClaimedJob,
@@ -10,6 +11,9 @@ import type {
     RunKey,
 } from "./jobs.contracts"
 import type { FencedProcessor } from "./fenced.processor"
+
+/** A domain write performed in the transaction that holds the current job's fence. */
+export type JobFenceAction = (tx: EntityManager) => Promise<void>
 
 /** The one door to the job row; `platform/jobs` implements it and nothing else writes the table. */
 export interface JobClaims {

@@ -1,5 +1,5 @@
 import type { ContractResult } from "@modules/domain/contracts"
-import type { DecisionRecord as DecisionRow } from "@modules/domain/decisions"
+import type { LeadDecisionRecord as DecisionRow } from "@modules/domain/decisions"
 import type { InvoiceViewRow as Invoice } from "@modules/domain/invoices"
 import type { OrdersWorkbenchRow as Order } from "@modules/domain/orders"
 import type { LeadView as LeadRecord } from "@modules/domain/leads"

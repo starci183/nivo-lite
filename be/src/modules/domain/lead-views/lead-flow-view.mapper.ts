@@ -10,7 +10,7 @@ import type {
     LeadFlowView,
     LeadFlowWorkItemView,
 } from "./lead-flow-view.contracts"
-import type { DecisionRecord } from "@modules/domain/decisions"
+import type { LeadDecisionRecord as DecisionRecord } from "@modules/domain/decisions"
 import type { InvoiceViewRow } from "@modules/domain/invoices"
 import type { OrdersWorkbenchRow } from "@modules/domain/orders"
 import type { TransactionViewRow } from "@modules/domain/transactions"

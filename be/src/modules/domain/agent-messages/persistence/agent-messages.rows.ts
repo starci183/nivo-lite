@@ -29,3 +29,15 @@ export interface LastMessageRow {
     /** When it was written, ISO 8601. */
     readonly created_at: string
 }
+
+/** A row in the agent chat thread. */
+export interface ChatMessageRow {
+    /** The message. */
+    readonly id: string
+    /** The stored speaker. */
+    readonly role: string
+    /** The message text. */
+    readonly body: string
+    /** Creation instant as text. */
+    readonly created_at: string
+}

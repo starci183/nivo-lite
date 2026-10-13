@@ -15,6 +15,8 @@ export interface LeadMatch {
     readonly name: string | null
     /** The channel label, used with the name. */
     readonly channel: string | null
+    /** Matches the same origin; omitted inputs belong to the live workflow. */
+    readonly origin?: "live" | "simulated"
 }
 
 /** What capturing a new customer takes. */

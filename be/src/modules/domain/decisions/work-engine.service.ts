@@ -9,7 +9,6 @@ import type { Logger } from "@modules/platform/logging"
 import type {
     Decider,
     GateVerdict,
-    InboundEventRecord,
     OptionalAuthorityRule,
     Performed,
     Prepared,
@@ -20,6 +19,7 @@ import type {
     WorkPerformer,
     WorkSpec,
 } from "./decisions.contracts"
+import type { InboundWorkSource } from "./inbound-work.contracts"
 import { DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
 import { evaluateGate } from "./gate.policy"
 import { ModuleCatalogService } from "./module-catalog.service"
@@ -105,6 +105,11 @@ export class WorkEngineService {
         return claimed === null ? null : this.process(ctx, claimed, {})
     }
 
+    /** Processes only the queued steps of the named inbound input, bounded by the same worker batch limit. */
+    runInboundQueued(ctx: WorkContext, eventId: string, limit: number): Promise<number> {
+        return this.drain(ctx, limit, 0, eventId)
+    }
+
     /**
      * The decision resumes the same work: guarded transition (double clicks are safe), the person's edits merged, a rejection
      * stops the work with the action's undo, an approval goes through the gate with `humanApproved`, performs, logs and
@@ -128,7 +133,7 @@ export class WorkEngineService {
     /** Starts the department's work for one recorded input: the same path for simulated and live inputs. */
     startInboundWork(
         ctx: WorkContext,
-        event: InboundEventRecord,
+        event: InboundWorkSource,
         action: string,
         seed: ProposalSeed,
         leadId: OptionalText,
@@ -146,7 +151,7 @@ export class WorkEngineService {
     }
 
     /** An order input goes to Sales `confirm_order` through the gate (then Accounting `issue_invoice` by the chain). */
-    startOrderWork(ctx: WorkContext, event: InboundEventRecord, order: OrderStart): Promise<WorkItem> {
+    startOrderWork(ctx: WorkContext, event: InboundWorkSource, order: OrderStart): Promise<WorkItem> {
         return this.startInboundWork(
             ctx,
             event,
@@ -156,14 +161,22 @@ export class WorkEngineService {
         )
     }
 
-    private async drain(ctx: WorkContext, remaining: number, done: number): Promise<number> {
+    private async drain(
+        ctx: WorkContext,
+        remaining: number,
+        done: number,
+        eventId: OptionalText = null,
+    ): Promise<number> {
         if (remaining <= 0) return done
-        const candidate = await this.items.nextQueued(ctx.workspaceId)
+        const candidate =
+            eventId === null
+                ? await this.items.nextQueued(ctx.workspaceId)
+                : await this.items.nextInboundQueued(ctx.workspaceId, eventId)
         if (candidate === null) return done
         const claimed = await this.items.claim(ctx.workspaceId, candidate.id)
-        if (claimed === null) return this.drain(ctx, remaining - 1, done)
+        if (claimed === null) return this.drain(ctx, remaining - 1, done, eventId)
         await this.process(ctx, claimed, {})
-        return this.drain(ctx, remaining - 1, done + 1)
+        return this.drain(ctx, remaining - 1, done + 1, eventId)
     }
 
     /** One pass of the gate over a claimed item: prepare, judge, then perform or ask. Any failure fails the item. */

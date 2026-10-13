@@ -12,7 +12,7 @@ import type {
     OptionalOrdersWorkbench,
 } from "./orders.contracts"
 import { ORDER_NUMBER_ATTEMPTS, orderNumberOf, orderPrefixOf } from "./order-number.policy"
-import type { OrderCountRow, OrdersWorkbenchRow, SalesOrderRow } from "./persistence/orders.rows"
+import type { OrderCountRow, OrdersWorkbenchRow, SalesOrderListRow, SalesOrderRow } from "./persistence/orders.rows"
 import {
     CANCEL_ORDER,
     CONFIRM_ORDER,
@@ -21,6 +21,7 @@ import {
     FIND_ORDER_LABELS,
     INSERT_ORDER_DRAFT,
     LIST_LEAD_ORDERS,
+    LIST_ORDERS,
     LIST_WORKBENCH_ORDERS,
     SET_ORDER_STATUS,
     SHIP_ORDER,
@@ -38,6 +39,14 @@ export class OrdersService {
     async find(workspaceId: string, orderId: string): Promise<OptionalOrder> {
         const rows = await this.entityManager.query<Array<SalesOrderRow>>(FIND_ORDER, [workspaceId, orderId])
         return rows[0] ?? null
+    }
+
+    /** The newest orders with customer labels for the workspace's workbenches. */
+    list(workspaceId: string, limit: number = 200): Promise<Array<SalesOrderListRow>> {
+        return this.entityManager.query<Array<SalesOrderListRow>>(LIST_ORDERS, [
+            workspaceId,
+            Math.min(500, Math.max(1, limit)),
+        ])
     }
 
     /** The latest non-draft orders for the Sales workbench. */

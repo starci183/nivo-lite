@@ -20,6 +20,13 @@ UPDATE public.work_items SET status = 'rejected', completed_at = $3::timestamptz
 WHERE workspace_id = $1::uuid AND id = $2::uuid AND status = 'failed' RETURNING *
 ) SELECT * FROM changed`
 
+/** The newest accounting items' lineage ($1 workspace, $2 how many). */
+export const LIST_ACCOUNTING_WORK_ITEMS = sql`
+    SELECT id, action, status, subject_type, subject_id, to_json(created_at) #>> '{}' AS created_at
+    FROM public.work_items
+    WHERE workspace_id = $1::uuid AND department = 'accounting'
+    ORDER BY created_at DESC, id DESC LIMIT $2::int`
+
 /**
  * Inserts one queued work item and answers it; a second insert with the same dedupe key of the workspace answers nothing
  * ($1 workspace, $2 chain or null for a new chain, $3 depth, $4 department, $5 action, $6 subject type, $7 subject, $8 lead,
@@ -174,3 +181,16 @@ export const SETTLE_WAITING_CLAIMS = sql`
         RETURNING id, inbound_event_id
     )
     SELECT id, inbound_event_id FROM changed`
+
+/** The oldest available queued step belonging to this inbound input only ($1 workspace, $2 event, $3 now, $4 lease seconds). */
+export const NEXT_INBOUND_QUEUED_WORK_ITEM = sql`SELECT * FROM public.work_items
+WHERE workspace_id = $1::uuid AND inbound_event_id = $2::uuid AND status = 'queued' AND reason IS NULL
+    AND (updated_at = created_at OR updated_at < $3::timestamptz - make_interval(secs => $4::int))
+ORDER BY created_at ASC, id ASC LIMIT 1`
+
+/** Every pending, failed and decision-waiting step of the inbound input, including lease-held work ($1 workspace, $2 event). */
+export const READ_INBOUND_WORK_STATE = sql`SELECT
+    (COUNT(*) FILTER (WHERE status = 'queued'))::int AS queued,
+    (COUNT(*) FILTER (WHERE status = 'failed'))::int AS failed,
+    (COUNT(*) FILTER (WHERE status = 'waiting_decision'))::int AS waiting
+FROM public.work_items WHERE workspace_id = $1::uuid AND inbound_event_id = $2::uuid`

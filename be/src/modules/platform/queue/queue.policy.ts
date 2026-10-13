@@ -29,19 +29,22 @@ export const backoffSecondsOf = (attempt: number): number => secondsOf(BACKOFF_M
 /** True when the start that just failed was the last one the job gets. */
 export const isExhausted = (attempt: number): boolean => attempt >= ATTEMPTS
 
-/** True for a failure that ends the job at once, without retries: an unrecoverable error, or a job no handler names. */
+/** Ends a job on an existing queue refusal or an owning domain error that explicitly marks its server-created failure unrecoverable. */
 export const isUnrecoverable = (cause: unknown): boolean =>
-    cause instanceof QueueError &&
-    (cause.code === QueueErrorCode.Unrecoverable || cause.code === QueueErrorCode.HandlerMissing)
+    cause instanceof QueueError
+        ? cause.code === QueueErrorCode.Unrecoverable || cause.code === QueueErrorCode.HandlerMissing
+        : cause instanceof DomainError && cause.params.unrecoverable === 1
 
-/** The pause a handler asked for with a retry-after error, in whole seconds, or undefined for the default backoff. */
+/** Keeps existing queue retry behavior and honors owning domain errors with a finite retryAfterSeconds hint of 1 to 3600 seconds. */
 export const retryAfterSecondsOf = (cause: unknown): number | undefined => {
-    if (cause instanceof DomainError && Number.isFinite(Number(cause.params.retryAfterSeconds))) {
-        return Math.max(0, Math.ceil(Number(cause.params.retryAfterSeconds)))
+    if (cause instanceof QueueError) {
+        if (cause.code !== QueueErrorCode.RetryAfter) return undefined
+        const seconds = Number(cause.params.seconds)
+        return Number.isFinite(seconds) ? Math.max(0, Math.ceil(seconds)) : undefined
     }
-    if (!(cause instanceof QueueError) || cause.code !== QueueErrorCode.RetryAfter) return undefined
-    const seconds = Number(cause.params.seconds)
-    return Number.isFinite(seconds) ? Math.max(0, Math.ceil(seconds)) : undefined
+    if (!(cause instanceof DomainError)) return undefined
+    const seconds = Number(cause.params.retryAfterSeconds)
+    return Number.isFinite(seconds) && seconds >= 1 && seconds <= 3600 ? Math.ceil(seconds) : undefined
 }
 
 /** Why a delivery failed, as the outbox row keeps it: the reason of a queue error, else the message of the failure. */

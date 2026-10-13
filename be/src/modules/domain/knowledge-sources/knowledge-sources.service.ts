@@ -19,7 +19,9 @@ import type {
     MaybeSource,
     MaybeUploadedFile,
     ReindexInput,
+    SourceDetail,
     SourceRef,
+    SourceSummary,
     StoredNote,
     UpdateSourceInput,
     UploadAddress,
@@ -27,10 +29,11 @@ import type {
 import { InjectKnowledgeStorage } from "./knowledge-sources.decorators"
 import { KnowledgeSourcesLogEvent } from "./knowledge-sources.log-events"
 import type { KnowledgeSourcesRow } from "./persistence/knowledge-sources.rows"
-import type { GeneratedIdRow, InstallationRow, SourceIdRow, SourceTitleRow } from "./persistence/knowledge-sources.rows"
+import type { GeneratedIdRow, InstallationRow, SourceIdRow, SourceListRow, SourceTitleRow } from "./persistence/knowledge-sources.rows"
 import {
     DELETE_SOURCE,
     INSERT_SOURCE,
+    LIST_SOURCES,
     MARK_BLOCKED,
     MARK_EXTRACTING,
     MARK_FACTS_BLOCKED,
@@ -44,11 +47,12 @@ import {
     SELECT_INSTALLATION,
     SELECT_NEW_ID,
     SELECT_SOURCE,
+    SELECT_SOURCE_DETAIL,
     SET_PROGRESS,
     UPDATE_SOURCE_META,
 } from "./persistence/knowledge-sources.sql"
 import { normalizeSource, normalizeUpdate, replacementContent, safeFileName } from "./source-input.policy"
-import { toSourceRecord } from "./source-record.mapper"
+import { toSourceDetail, toSourceRecord, toSourceSummary } from "./source-record.mapper"
 
 /** Who may change the knowledge of a workspace. */
 const MANAGERS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
@@ -64,6 +68,21 @@ export class KnowledgeSourcesService {
         private readonly members: WorkspaceMembersService,
         private readonly queue: KnowledgeQueue,
     ) {}
+
+    /** The documents of a workspace, newest first and without their text; any member may read them. */
+    async list(userId: string, workspaceId: string, module?: string): Promise<ReadonlyArray<SourceSummary>> {
+        await this.members.require(userId, workspaceId)
+        const rows = await this.entityManager.query<Array<SourceListRow>>(LIST_SOURCES, [workspaceId, module ?? null])
+        return rows.map(toSourceSummary)
+    }
+
+    /** One document of a workspace with its text; any member may read it. */
+    async detail(userId: string, workspaceId: string, sourceId: string): Promise<SourceDetail> {
+        await this.members.require(userId, workspaceId)
+        const [row] = await this.entityManager.query<Array<SourceListRow>>(SELECT_SOURCE_DETAIL, [workspaceId, sourceId])
+        if (row === undefined) throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
+        return toSourceDetail(row)
+    }
 
     /** Adds a document and queues its indexing; the row and the job are written in one transaction. */
     async addSource(userId: string, workspaceId: string, input: AddSourceInput): Promise<SourceRef> {

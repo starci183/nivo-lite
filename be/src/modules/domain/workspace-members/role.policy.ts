@@ -1,7 +1,7 @@
 import { ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
 import { WorkspaceMembersErrorCode } from "./errors/workspace-members.error"
-import type { DecisionItem, WorkspaceMember, WorkspaceRole } from "./workspace-members.contracts"
+import type { DecisionItem, SeatPair, SeatRule, WorkspaceMember, WorkspaceRole } from "./workspace-members.contracts"
 
 /** True for owner and manager. */
 export const isManagerRole = (role: WorkspaceRole): boolean => role === "owner" || role === "manager"
@@ -28,4 +28,22 @@ export const canDecide = (member: WorkspaceMember, item: DecisionItem): boolean 
     if (isManagerRole(member.role)) return true
     if (item.assigneeKind && item.assigneeKind !== "staff") return false
     return member.staffId !== null && item.assigneeId === member.staffId
+}
+
+/**
+ * Whether an owner or manager may change another member's seat: only they act, never on oneself for access, an owner
+ * row and the owner role are for owners.
+ */
+export const judgeSeatChange = (pair: SeatPair, rule: SeatRule): Outcome<true, WorkspaceMembersErrorCode> => {
+    if (!isManagerRole(pair.actor.role)) return refused(WorkspaceMembersErrorCode.ChangeNotAllowed)
+    if (rule.forbidSelf && pair.actor.userId === pair.target.userId) {
+        return refused(WorkspaceMembersErrorCode.SelfForbidden)
+    }
+    if (pair.target.role === "owner" && pair.actor.role !== "owner") {
+        return refused(WorkspaceMembersErrorCode.ChangeNotAllowed)
+    }
+    if (rule.nextRole === "owner" && pair.actor.role !== "owner") {
+        return refused(WorkspaceMembersErrorCode.ChangeNotAllowed)
+    }
+    return ok(true)
 }

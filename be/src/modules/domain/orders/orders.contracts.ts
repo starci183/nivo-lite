@@ -53,3 +53,38 @@ export interface OrderLabel {
     /** What was ordered. */
     readonly items: string
 }
+
+/** A workspace order in the authenticated read contract. */
+export interface SalesOrderView {
+    /** The order id. */
+    readonly id: string
+    /** The workspace id. */
+    readonly workspaceId: string
+    /** The linked lead id. */
+    readonly leadId: string | null
+    /** The order number. */
+    readonly orderNo: string
+    /** The ordered items. */
+    readonly items: string
+    /** The known amount in VND. */
+    readonly amountVnd: number | null
+    /** The order state. */
+    readonly status: string
+    /** Live or simulated origin. */
+    readonly origin: string
+    /** The person who confirmed the order. */
+    readonly confirmedBy: string | null
+    /** The confirmation instant. */
+    readonly confirmedAt: string | null
+    /** The creation instant. */
+    readonly createdAt: string
+    /** The shipment instant. */
+    readonly shippedAt: string | null
+    /** The carrier name. */
+    readonly carrier: string | null
+    /** The tracking reference. */
+    readonly trackingCode: string | null
+}
+
+/** A selected order read view, absent when the workspace has no such order. */
+export type SalesOrderViewLookup = SalesOrderView | null

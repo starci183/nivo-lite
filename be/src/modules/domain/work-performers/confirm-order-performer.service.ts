@@ -176,6 +176,7 @@ export class ConfirmOrderPerformerService implements WorkPerformer {
             email,
             name: event?.sender_name ?? null,
             channel,
+            origin: item.origin,
         })
         if (known !== null) return known
         const lead = await this.leads.capture({

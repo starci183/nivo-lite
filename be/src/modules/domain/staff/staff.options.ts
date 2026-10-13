@@ -1,2 +1,2 @@
-/** The capability has no options; the app root chooses its visibility. */
+/** The staff capability takes no options; its importer decides whether it is global. */
 export type StaffOptions = Record<never, never>

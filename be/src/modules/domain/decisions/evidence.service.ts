@@ -3,8 +3,9 @@ import type { EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { DecisionEntry, EvidenceEntry, WorkContext } from "./decisions.contracts"
-import { INSERT_DECISION } from "./persistence/decision-log.sql"
-import { LIST_DECISION_HISTORY } from "./persistence/decision-history.sql"
+import type { AccountingDecisionRow } from "./persistence/decision-log.rows"
+import { INSERT_DECISION, LIST_ACCOUNTING_DECISIONS } from "./persistence/decision-log.sql"
+import { LIST_LEAD_DECISION_HISTORY } from "./persistence/decision-history.sql"
 import type { DecisionHistoryQuery, DecisionRecord } from "./decision-history.contracts"
 
 const jsonOrNull = (value: object | null | undefined): string | null =>
@@ -20,13 +21,18 @@ export class EvidenceService {
 
     /** Reads a bounded decision history after the composer proved workspace membership. */
     listDecisions(workspaceId: string, query: DecisionHistoryQuery): Promise<Array<DecisionRecord>> {
-        return this.entityManager.query<Array<DecisionRecord>>(LIST_DECISION_HISTORY, [
+        return this.entityManager.query<Array<DecisionRecord>>(LIST_LEAD_DECISION_HISTORY, [
             workspaceId,
             query.leadId ?? null,
             query.humanDepartment ?? null,
             query.oldestFirst ?? false,
             Math.min(1000, Math.max(1, Math.floor(query.limit))),
         ])
+    }
+
+    /** The newest accounting decisions' lineage for the accounting book. */
+    listAccounting(workspaceId: string, limit: number = 500): Promise<Array<AccountingDecisionRow>> {
+        return this.entityManager.query<Array<AccountingDecisionRow>>(LIST_ACCOUNTING_DECISIONS, [workspaceId, limit])
     }
 
     /** Appends one line to the workspace's evidence log; the events capability is its only writer. */

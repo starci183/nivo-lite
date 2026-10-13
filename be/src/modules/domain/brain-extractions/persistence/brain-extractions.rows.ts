@@ -23,3 +23,11 @@ export interface BrainExtractionRow {
     /** Active facts that lost their evidence. */
     readonly orphan_fact_ids: ReadonlyArray<string> | null
 }
+
+/** One row of the extraction list. */
+export interface ExtractionStateRow {
+    /** The document. */
+    readonly source_id: string
+    /** Where the reading stands. */
+    readonly status: ExtractionStatus
+}

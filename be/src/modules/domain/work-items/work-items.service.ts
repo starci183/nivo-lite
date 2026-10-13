@@ -3,7 +3,7 @@ import type { EntityManager } from "typeorm"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { ClosedClaimRow, WorkItemRow } from "./persistence/work-items.rows"
+import type { AccountingWorkRow, ClosedClaimRow, WorkItemRow } from "./persistence/work-items.rows"
 import {
     ATTACH_WORK_ITEM_EXECUTION,
     CLAIM_WORK_ITEM,
@@ -11,6 +11,7 @@ import {
     INSERT_WORK_ITEM,
     LIST_LEAD_ITEMS,
     LIST_WORKBENCH_ITEMS,
+    LIST_ACCOUNTING_WORK_ITEMS,
     MARK_WORK_ITEM_DONE,
     MARK_WORK_ITEM_FAILED,
     MARK_WORK_ITEM_REJECTED,
@@ -22,6 +23,8 @@ import {
     SAVE_PREPARED_WORK_ITEM,
     SETTLE_WAITING_CLAIMS,
     STOP_FAILED_WORK_ITEM,
+    NEXT_INBOUND_QUEUED_WORK_ITEM,
+    READ_INBOUND_WORK_STATE,
 } from "./persistence/work-items.sql"
 import { CLAIM_LEASE_SECONDS } from "./work-items.contracts"
 import type {
@@ -35,6 +38,7 @@ import type {
     WorkItem,
     WorkResult,
 } from "./work-items.contracts"
+import type { InboundWorkState } from "./inbound-work-state.contracts"
 import { requireWorkItem, toWorkItem } from "./work-items.mapper"
 
 @Injectable()
@@ -77,6 +81,11 @@ export class WorkItemsService {
         manager: EntityManager = this.entityManager,
     ): Promise<OptionalWorkItem> {
         return this.first(await manager.query<Array<WorkItemRow>>(STOP_FAILED_WORK_ITEM, [workspaceId, id, this.now()]))
+    }
+
+    /** The newest accounting work items' lineage for the accounting book. */
+    listAccounting(workspaceId: string, limit: number = 500): Promise<Array<AccountingWorkRow>> {
+        return this.entityManager.query<Array<AccountingWorkRow>>(LIST_ACCOUNTING_WORK_ITEMS, [workspaceId, limit])
     }
 
     /** Inserts a queued item; null when the dedupe key of the workspace is already used. The id comes from the database. */
@@ -129,6 +138,27 @@ export class WorkItemsService {
                 CLAIM_LEASE_SECONDS,
             ]),
         )
+    }
+
+    /** The oldest available queued step of this inbound input; never selects another event or a live input. */
+    async nextInboundQueued(workspaceId: string, eventId: string): Promise<OptionalWorkItem> {
+        return this.first(
+            await this.entityManager.query<Array<WorkItemRow>>(NEXT_INBOUND_QUEUED_WORK_ITEM, [
+                workspaceId,
+                eventId,
+                this.now(),
+                CLAIM_LEASE_SECONDS,
+            ]),
+        )
+    }
+
+    /** Counts all steps of the input, including work leased to another attempt, so a worker never acknowledges unfinished work. */
+    async inboundState(workspaceId: string, eventId: string): Promise<InboundWorkState> {
+        const [row] = await this.entityManager.query<Array<InboundWorkState>>(READ_INBOUND_WORK_STATE, [
+            workspaceId,
+            eventId,
+        ])
+        return row ?? { queued: 0, failed: 0, waiting: 0 }
     }
 
     /** Guarded transition of a decision: only an item that waits becomes queued again; null otherwise. */

@@ -15,6 +15,8 @@ export enum DecisionsJob {
     ProposeCommand = "office.propose-command",
     /** The owner confirmed a command card: the command bus sends it. */
     ConfirmCommand = "office.confirm-command",
+    /** An owner-created simulated inbound event follows the same department work engine as live inputs. */
+    SimulateInbound = "inbox.simulate-inbound",
 }
 
 /** A queued Sales step to process, plus the identity of this retry. */
@@ -95,6 +97,16 @@ export interface ConfirmCommandPayload extends DecisionsJobScope {
     readonly candidateId: string
 }
 
+/** The payload of a simulated-input job; the stored event supplies every customer field. */
+export interface SimulateInboundPayload extends DecisionsJobScope {
+    /** Discriminates this payload from decisions and Office commands on the same queue. */
+    readonly kind: "simulate_inbound"
+    /** The input recorded in the same transaction as this job. */
+    readonly inboundEventId: string
+    /** The order's item description, which the inbound table has no column for. */
+    readonly items: string
+}
+
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
 
 const isScope = (value: Record<string, unknown>): boolean =>
@@ -155,6 +167,14 @@ export const isProposeCommandPayload = (value: unknown): value is ProposeCommand
 /** True when the value is the payload of a confirm-command job. */
 export const isConfirmCommandPayload = (value: unknown): value is ConfirmCommandPayload =>
     isRecord(value) && isScope(value) && typeof value.candidateId === "string"
+
+/** True when the value is a simulated-input payload. */
+export const isSimulateInboundPayload = (value: unknown): value is SimulateInboundPayload =>
+    isRecord(value) &&
+    isScope(value) &&
+    value.kind === "simulate_inbound" &&
+    typeof value.inboundEventId === "string" &&
+    typeof value.items === "string"
 
 /** The dedupe key of a decisions job: one job per job name and subject, so a double click decides once. */
 export const decisionsDedupeKey = (job: DecisionsJob, subject: string): string => `${job}:${subject}`
