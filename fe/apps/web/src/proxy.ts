@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { onPublicOrigin } from "./lib/request-origin"
 import { PERF_ENABLED, PERF_PATH_HEADER, PERF_RID_HEADER } from "./lib/supabase/perf"
 import { sessionCookieOptions } from "./modules/config"
-import { refreshSession } from "./modules/db"
+import { refreshSession } from "./modules/auth"
 import { routing } from "./modules/i18n"
 import { APP_ROUTES } from "./modules/routes"
 
@@ -104,7 +104,7 @@ export const proxy = async (original: NextRequest): Promise<NextResponse> => {
         return url
     }
 
-    if (principal.kind !== "ok") {
+    if (!principal.success) {
         if (isPublic) return response
         const url = loginUrl()
         url.searchParams.set("next", `${pathname}${request.nextUrl.search}`)

@@ -67,20 +67,20 @@ export const LoginForm = (props: LoginFormProps) => {
                 password: values.password,
                 next: props.next,
             })
-            if (outcome.kind === "ok") {
-                router.push(outcome.value.path)
+            if (outcome.success && outcome.data !== undefined) {
+                router.push(outcome.data.path)
                 router.refresh()
                 return
             }
-            fail(outcome.code)
+            fail(outcome.error ?? "")
         })
     })
     const google = () => {
         setFeedback({ canResend: false })
         setGooglePending(true)
         void auth.startOAuth(props.next).then((outcome) => {
-            if (outcome.kind === "ok") {
-                window.location.assign(outcome.value.url)
+            if (outcome.success && outcome.data !== undefined) {
+                window.location.assign(outcome.data.url)
                 return
             }
             setFeedback({ error: a("errGeneric"), canResend: false })
@@ -92,8 +92,8 @@ export const LoginForm = (props: LoginFormProps) => {
         const email = form.getValues("email")
         startResend(async () => {
             const outcome = await auth.resendConfirmation({ email, next: props.next })
-            if (outcome.kind === "ok") setFeedback({ info: t("confirmSent"), canResend: false })
-            else fail(outcome.code)
+            if (outcome.success) setFeedback({ info: t("confirmSent"), canResend: false })
+            else fail(outcome.error ?? "")
         })
     }
 

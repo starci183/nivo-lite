@@ -31,12 +31,12 @@ export const ForgotForm = (props: ForgotFormProps) => {
         setFailure(undefined)
         startTransition(async () => {
             const outcome = await auth.requestPasswordReset({ email: values.email })
-            if (outcome.kind === "ok") {
+            if (outcome.success) {
                 setSentTo(values.email.trim().toLowerCase())
                 resending.arm()
                 return
             }
-            setFailure(t(authErrorKey(outcome.code)))
+            setFailure(t(authErrorKey(outcome.error ?? "")))
         })
     })
 
