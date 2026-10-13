@@ -67,3 +67,11 @@ export interface LeadConversationRow {
     /** The customer's name. */
     visitor_name: string | null
 }
+
+/** The scoped customer conversation a member locks before changing its handling. */
+export interface HumanConversationRow extends ConversationTargetRow {
+    /** The customer. */
+    readonly lead_id: string | null
+    /** Who holds the conversation. */
+    readonly handled_by: string | null
+}
