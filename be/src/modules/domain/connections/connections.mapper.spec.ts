@@ -37,9 +37,9 @@ describe("toConnectionRecord", () => {
     })
 
     it("falls back to empty meta, live and not default for odd stored values", () => {
-        const odd = { ...row, public_meta: [], environment: null, is_default: null } as unknown as ConnectionSelectRow
+        const odd: ConnectionSelectRow = { ...row, public_meta: [], environment: null, is_default: null }
 
         expect(toConnectionRecord(odd)).toMatchObject({ meta: {}, environment: "live", isDefault: false })
-        expect(toConnectionRecord({ ...odd, public_meta: null as never })).toMatchObject({ meta: {} })
+        expect(toConnectionRecord({ ...odd, public_meta: null })).toMatchObject({ meta: {} })
     })
 })
