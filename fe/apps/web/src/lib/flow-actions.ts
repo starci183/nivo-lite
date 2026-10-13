@@ -464,14 +464,12 @@ export async function takeOverConversation(
             .eq("id", conversationId)
             .eq("workspace_id", c.ws)
         if (error) throw new Error(error.message)
-        await c.db
-            .from("agent_messages")
-            .insert({
-                workspace_id: c.ws,
-                conversation_id: conversationId,
-                role: "system",
-                body: T(c)(take ? "takenOver" : "returnedToAi", { user: c.actor }),
-            })
+        await c.db.from("agent_messages").insert({
+            workspace_id: c.ws,
+            conversation_id: conversationId,
+            role: "system",
+            body: T(c)(take ? "takenOver" : "returnedToAi", { user: c.actor }),
+        })
         return { handled_by }
     })
 }

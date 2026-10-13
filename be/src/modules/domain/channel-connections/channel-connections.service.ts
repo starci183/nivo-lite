@@ -8,11 +8,7 @@ import {
     sha256,
 } from "@modules/domain/connections"
 import type { ConnectionActor, ConnectionRecord, FirstEventState, Provider } from "@modules/domain/connections"
-import {
-    ChannelSetupError,
-    ChannelSetupErrorCode,
-    InjectChannelSetupClient,
-} from "@modules/integrations/channel-setup"
+import { ChannelSetupError, ChannelSetupErrorCode, InjectChannelSetupClient } from "@modules/integrations/channel-setup"
 import type { ChannelSetupClient, ZaloSecret } from "@modules/integrations/channel-setup"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"

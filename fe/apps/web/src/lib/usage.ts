@@ -321,14 +321,12 @@ const notifyOwner = async (workspaceId: string, s: QuotaStatus): Promise<void> =
             .from("ai_usage_notices")
             .insert({ workspace_id: workspaceId, period: s.periodStart, level })
         if (error) return // 23505: already told this month
-        await admin
-            .from("messages")
-            .insert({
-                workspace_id: workspaceId,
-                author_kind: "system",
-                author_name: "NIVO",
-                body: noticeBody(level, s),
-            })
+        await admin.from("messages").insert({
+            workspace_id: workspaceId,
+            author_kind: "system",
+            author_name: "NIVO",
+            body: noticeBody(level, s),
+        })
     } catch (e) {
         console.error("usage notice failed:", e instanceof Error ? e.message : String(e))
     }

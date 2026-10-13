@@ -236,14 +236,12 @@ export const startConversation = async (
                 .single<AgentConversation>(),
         )
         if (agent.greeting) {
-            await supabase
-                .from("agent_messages")
-                .insert({
-                    workspace_id: session.workspace.id,
-                    conversation_id: conv.id,
-                    role: "agent",
-                    body: agent.greeting,
-                })
+            await supabase.from("agent_messages").insert({
+                workspace_id: session.workspace.id,
+                conversation_id: conv.id,
+                role: "agent",
+                body: agent.greeting,
+            })
         }
         return conv
     })

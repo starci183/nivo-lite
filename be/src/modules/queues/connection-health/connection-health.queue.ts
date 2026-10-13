@@ -11,7 +11,10 @@ export interface ConnectionHealthPayload {
 
 /** True when a job payload is the payload of a connection-health tick. */
 export const isConnectionHealthPayload = (value: unknown): value is ConnectionHealthPayload =>
-    typeof value === "object" && value !== null && "silentAfterHours" in value && typeof value.silentAfterHours === "number"
+    typeof value === "object" &&
+    value !== null &&
+    "silentAfterHours" in value &&
+    typeof value.silentAfterHours === "number"
 
 const SILENT_AFTER_HOURS = 72
 const CHECK_EVERY_MS = 15 * 60_000

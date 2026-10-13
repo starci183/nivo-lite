@@ -24,13 +24,11 @@ const make = async (provider, creds) => {
         .insert({ workspace_id: ws.id, provider, name: `check ${provider}`, status: "pending", environment: "live" })
         .select("id")
         .single()
-    await admin
-        .from("connection_secrets")
-        .insert({
-            connection_id: data.id,
-            ciphertext: encrypt(JSON.stringify(creds)),
-            webhook_secret: randomBytes(8).toString("hex"),
-        })
+    await admin.from("connection_secrets").insert({
+        connection_id: data.id,
+        ciphertext: encrypt(JSON.stringify(creds)),
+        webhook_secret: randomBytes(8).toString("hex"),
+    })
     return data.id
 }
 const post = async (path, body, headers = {}) => {

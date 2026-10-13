@@ -94,13 +94,11 @@ export const startWebhookConnection = async (input: {
             .select("id")
             .single()
         if (error || !row) throw new Error(error?.message ?? "Không lưu được kết nối.")
-        const saved = await db
-            .from("connection_secrets")
-            .insert({
-                connection_id: row.id as string,
-                ciphertext: encryptSecret(JSON.stringify({ url: url.toString() })),
-                webhook_secret: randomSecret(),
-            })
+        const saved = await db.from("connection_secrets").insert({
+            connection_id: row.id as string,
+            ciphertext: encryptSecret(JSON.stringify({ url: url.toString() })),
+            webhook_secret: randomSecret(),
+        })
         if (saved.error) {
             await db
                 .from("connections")

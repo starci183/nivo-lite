@@ -60,6 +60,8 @@ export const parseCliAppOptions = (env: EnvSource): CliAppOptions => ({
     ),
     channelConnections: parseConnectionsConfig(env),
     channelSetup: parseChannelSetupConfig(env),
-    channelProvisioning: parseChannelProvisioningConfig(env, (line) => process.stdout.write(`${line}
-`)),
+    channelProvisioning: parseChannelProvisioningConfig(env, (line) =>
+        process.stdout.write(`${line}
+`),
+    ),
 })

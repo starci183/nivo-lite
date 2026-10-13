@@ -67,7 +67,8 @@ const wishesOf = (input: Input, listKey: string, idKey: string): ReadonlyArray<W
     })
 }
 
-const withAccess = (wish: Wish): { readonly access?: Level } => (wish.access === undefined ? {} : { access: wish.access })
+const withAccess = (wish: Wish): { readonly access?: Level } =>
+    wish.access === undefined ? {} : { access: wish.access }
 
 const eventsOf = (input: Input): ReadonlyArray<string> => {
     const events = input.events
@@ -96,7 +97,12 @@ export const COMMANDS: Readonly<Record<string, Runner>> = {
     "connection.disconnect": (s, a, i) => s.lifecycle.disconnect(a, connectionOf(i)),
     "connection.delete": (s, a, i) => s.lifecycle.remove(a, connectionOf(i)),
     "grant.set": (s, a, i) =>
-        s.grants.setGrant(a, connectionOf(i), idField(i, "agentId"), i.access === null ? null : levelOf(i.access, "access")),
+        s.grants.setGrant(
+            a,
+            connectionOf(i),
+            idField(i, "agentId"),
+            i.access === null ? null : levelOf(i.access, "access"),
+        ),
     "grant.connection-agents": (s, a, i) =>
         s.grants.setConnectionAgents(
             a,
@@ -133,7 +139,11 @@ export const COMMANDS: Readonly<Record<string, Runner>> = {
     "money.reveal-key": (s, a, i) => s.channels.revealSepayKey(a, connectionOf(i)),
     "money.provider-keys": (s, a, i) => s.channels.saveProviderKeys(a, connectionOf(i), valuesOf(i)),
     "webhook.start": (s, a, i) =>
-        s.webhooks.start(a, { name: textOf(i.name, "name", 120), url: textOf(i.url, "url", 2048), events: eventsOf(i) }),
+        s.webhooks.start(a, {
+            name: textOf(i.name, "name", 120),
+            url: textOf(i.url, "url", 2048),
+            events: eventsOf(i),
+        }),
     "webhook.reveal": (s, a, i) => s.webhooks.reveal(a, connectionOf(i)),
     "webhook.events": (s, a, i) => s.webhooks.updateEvents(a, connectionOf(i), eventsOf(i)),
     "webhook.test": (s, a, i) => s.webhooks.test(a, connectionOf(i)),

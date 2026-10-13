@@ -63,7 +63,9 @@ export class ConnectionSecretsService {
     async botToken(workspaceId: string, connectionId: string): Promise<Outcome<string, ConnectionSecretsErrorCode>> {
         const secret = await this.secretOf(connectionId, "telegram")
         if (secret.kind !== "ok") return secret
-        return secret.value.workspaceId === workspaceId ? ok(secret.value.credential) : refused(ConnectionSecretsErrorCode.NotFound)
+        return secret.value.workspaceId === workspaceId
+            ? ok(secret.value.credential)
+            : refused(ConnectionSecretsErrorCode.NotFound)
     }
 
     /** Replaces the sealed credential; with an expiry it also records the end of the access token and drops the refresh lease. */
@@ -74,7 +76,11 @@ export class ConnectionSecretsService {
 
     /** Takes the refresh lease when nobody holds a live one; false when another caller has it. */
     async takeLease(connectionId: string, until: Date, now: Date): Promise<boolean> {
-        const rows = await this.entityManager.query<Array<ConnectionIdRow>>(TRY_REFRESH_LEASE, [connectionId, until, now])
+        const rows = await this.entityManager.query<Array<ConnectionIdRow>>(TRY_REFRESH_LEASE, [
+            connectionId,
+            until,
+            now,
+        ])
         return rows.length > 0
     }
 

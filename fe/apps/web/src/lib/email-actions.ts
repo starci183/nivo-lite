@@ -117,13 +117,11 @@ export const startSmtpConnection = async (input: SmtpInput): Promise<Outcome<Smt
             .select("id")
             .single()
         if (error || !row) throw new Error(error?.message ?? "connection not saved")
-        const saved = await db
-            .from("connection_secrets")
-            .insert({
-                connection_id: row.id,
-                ciphertext: encryptSecret(JSON.stringify({ password })),
-                webhook_secret: randomSecret(),
-            })
+        const saved = await db.from("connection_secrets").insert({
+            connection_id: row.id,
+            ciphertext: encryptSecret(JSON.stringify({ password })),
+            webhook_secret: randomSecret(),
+        })
         if (saved.error) {
             await db.from("connections").delete().eq("id", row.id)
             throw new Error(saved.error.message)

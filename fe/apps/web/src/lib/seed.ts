@@ -530,29 +530,27 @@ export const seedWorkspace = async (supabase: SupabaseClient, ws: string, ownerN
         lead_id: l?.id ?? null,
         created_at: ago(min),
     })
-    await supabase
-        .from("messages")
-        .insert([
-            msg("system", M.newLeadOwnerTaken(C.contact_name, ch.form), 60 * 26, C),
-            msg("human", M.cTaken, 60 * 24),
-            msg("system", M.newLeadAssigned(F.contact_name, ch.zalo), 60 * 4, F),
-            msg("system", M.newLeadAssigned(A.contact_name, ch.zalo), 170, A),
-            msg("agent", M.aReady, 160, A),
-            msg("agent", M.dWon, 60 * 47, D),
-            msg("human", M.askWaiting, 40),
-            msg("agent", M.answerWaiting, 39),
-            msg("system", M.newLeadNoOwner(B.contact_name, ch.form), 25, B),
-            msg("human", M.chatbotNeed, 20),
-            {
-                workspace_id: ws,
-                author_kind: "agent",
-                author_name: acc.name,
-                agent_id: acc.id,
-                body: M.accNext,
-                lead_id: D.id,
-                created_at: ago(60 * 46),
-            },
-        ])
+    await supabase.from("messages").insert([
+        msg("system", M.newLeadOwnerTaken(C.contact_name, ch.form), 60 * 26, C),
+        msg("human", M.cTaken, 60 * 24),
+        msg("system", M.newLeadAssigned(F.contact_name, ch.zalo), 60 * 4, F),
+        msg("system", M.newLeadAssigned(A.contact_name, ch.zalo), 170, A),
+        msg("agent", M.aReady, 160, A),
+        msg("agent", M.dWon, 60 * 47, D),
+        msg("human", M.askWaiting, 40),
+        msg("agent", M.answerWaiting, 39),
+        msg("system", M.newLeadNoOwner(B.contact_name, ch.form), 25, B),
+        msg("human", M.chatbotNeed, 20),
+        {
+            workspace_id: ws,
+            author_kind: "agent",
+            author_name: acc.name,
+            agent_id: acc.id,
+            body: M.accNext,
+            lead_id: D.id,
+            created_at: ago(60 * 46),
+        },
+    ])
 
     // Operating flow: authority, default rules and the simulated flow examples (also backfilled from the session for old workspaces).
     await ensureFlowDefaults(supabase, ws, ownerName, locale)
@@ -617,19 +615,17 @@ export const seedDemoStaffAccount = async (ws: string): Promise<void> => {
             }
         }
         if (!userId) return
-        await admin
-            .from("workspace_members")
-            .upsert(
-                {
-                    workspace_id: ws,
-                    user_id: userId,
-                    role: "staff",
-                    staff_id: staffId,
-                    display_name: DEMO_STAFF.name,
-                    status: "active",
-                },
-                { onConflict: "workspace_id,user_id" },
-            )
+        await admin.from("workspace_members").upsert(
+            {
+                workspace_id: ws,
+                user_id: userId,
+                role: "staff",
+                staff_id: staffId,
+                display_name: DEMO_STAFF.name,
+                status: "active",
+            },
+            { onConflict: "workspace_id,user_id" },
+        )
     } catch (e) {
         console.error("demo staff account failed", e)
     }

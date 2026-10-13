@@ -430,14 +430,12 @@ const applyCustomerOut = async (
                 item.status === "done"
                     ? t("verdictAuto")
                     : t("verdictAsk", { reason: gov(`reason_${item.reason ?? "routine"}`) })
-            await supabase
-                .from("agent_messages")
-                .insert({
-                    workspace_id: ws,
-                    conversation_id: conv.id,
-                    role: "system",
-                    body: t("chatHandoff", { verdict }),
-                })
+            await supabase.from("agent_messages").insert({
+                workspace_id: ws,
+                conversation_id: conv.id,
+                role: "system",
+                body: t("chatHandoff", { verdict }),
+            })
         }
     }
 
@@ -478,14 +476,12 @@ const applyCustomerOut = async (
         if (openOrders.some((o) => same(o.items) === wanted)) {
             await supabase.from("inbound_events").update({ status: "processed", lead_id: leadId }).eq("id", event.id)
         } else if (!duplicate) {
-            await supabase
-                .from("agent_messages")
-                .insert({
-                    workspace_id: ws,
-                    conversation_id: conv.id,
-                    role: "system",
-                    body: t("orderRecorded", { items: order.items, amount: formatVnd(order.amount_vnd, c.locale) }),
-                })
+            await supabase.from("agent_messages").insert({
+                workspace_id: ws,
+                conversation_id: conv.id,
+                role: "system",
+                body: t("orderRecorded", { items: order.items, amount: formatVnd(order.amount_vnd, c.locale) }),
+            })
             const item = await startOrderWork(c, event, {
                 items: order.items,
                 amount_vnd: order.amount_vnd,
@@ -529,14 +525,12 @@ const applyCustomerOut = async (
                 conversationId: conv.id,
             })
             if (created)
-                await supabase
-                    .from("agent_messages")
-                    .insert({
-                        workspace_id: ws,
-                        conversation_id: conv.id,
-                        role: "system",
-                        body: t("claimRecorded", { no: claimOpen.invoice_no }),
-                    })
+                await supabase.from("agent_messages").insert({
+                    workspace_id: ws,
+                    conversation_id: conv.id,
+                    role: "system",
+                    body: t("claimRecorded", { no: claimOpen.invoice_no }),
+                })
             // A repeated claim joins the check already open: the input is handled, nothing new to decide.
             else
                 await supabase

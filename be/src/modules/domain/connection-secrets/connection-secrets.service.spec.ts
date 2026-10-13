@@ -68,7 +68,9 @@ describe("ConnectionSecretsService", () => {
         it("seals a credential that secretOf opens again", async () => {
             const { service } = await build({ [FIND_CONNECTION_SECRET]: [] })
             const sealed = service.seal("hello")
-            const opened = await (await build({ [FIND_CONNECTION_SECRET]: [row({ ciphertext: sealed })] })).service.secretOf("c-1", "telegram")
+            const opened = await (
+                await build({ [FIND_CONNECTION_SECRET]: [row({ ciphertext: sealed })] })
+            ).service.secretOf("c-1", "telegram")
 
             expect(opened).toMatchObject({ kind: "ok", value: { credential: "hello" } })
         })
@@ -80,7 +82,12 @@ describe("ConnectionSecretsService", () => {
 
             await expect(service.secretOf("c-1", "telegram")).resolves.toEqual({
                 kind: "ok",
-                value: { workspaceId: "ws-1", credential: "123:token", webhookSecret: "hook-secret", tokenExpiresAt: null },
+                value: {
+                    workspaceId: "ws-1",
+                    credential: "123:token",
+                    webhookSecret: "hook-secret",
+                    tokenExpiresAt: null,
+                },
             })
             expect(em.query).toHaveBeenCalledWith(FIND_CONNECTION_SECRET, ["c-1"])
         })
@@ -98,13 +105,24 @@ describe("ConnectionSecretsService", () => {
             const other = await build({ [FIND_CONNECTION_SECRET]: [row()] })
             const gone = await build({ [FIND_CONNECTION_SECRET]: [row({ status: "disconnected" })] })
 
-            await expect(missing.service.secretOf("c-1", "telegram")).resolves.toMatchObject({ kind: "refused", code: ConnectionSecretsErrorCode.NotFound })
-            await expect(other.service.secretOf("c-1", "zalo_oa")).resolves.toMatchObject({ kind: "refused", code: ConnectionSecretsErrorCode.NotFound })
-            await expect(gone.service.secretOf("c-1", "telegram")).resolves.toMatchObject({ kind: "refused", code: ConnectionSecretsErrorCode.NotFound })
+            await expect(missing.service.secretOf("c-1", "telegram")).resolves.toMatchObject({
+                kind: "refused",
+                code: ConnectionSecretsErrorCode.NotFound,
+            })
+            await expect(other.service.secretOf("c-1", "zalo_oa")).resolves.toMatchObject({
+                kind: "refused",
+                code: ConnectionSecretsErrorCode.NotFound,
+            })
+            await expect(gone.service.secretOf("c-1", "telegram")).resolves.toMatchObject({
+                kind: "refused",
+                code: ConnectionSecretsErrorCode.NotFound,
+            })
         })
 
         it("refuses a credential sealed with another key and names the failure", async () => {
-            const { service } = await build({ [FIND_CONNECTION_SECRET]: [row({ ciphertext: sealSecret(randomBytes(32), "x") })] })
+            const { service } = await build({
+                [FIND_CONNECTION_SECRET]: [row({ ciphertext: sealSecret(randomBytes(32), "x") })],
+            })
 
             await expect(service.secretOf("c-1", "telegram")).resolves.toMatchObject({
                 kind: "refused",
@@ -119,13 +137,19 @@ describe("ConnectionSecretsService", () => {
             const { service } = await build({ [FIND_CONNECTION_SECRET]: [row()] })
 
             await expect(service.botToken("ws-1", "c-1")).resolves.toEqual({ kind: "ok", value: "123:token" })
-            await expect(service.botToken("ws-2", "c-1")).resolves.toMatchObject({ kind: "refused", code: ConnectionSecretsErrorCode.NotFound })
+            await expect(service.botToken("ws-2", "c-1")).resolves.toMatchObject({
+                kind: "refused",
+                code: ConnectionSecretsErrorCode.NotFound,
+            })
         })
 
         it("passes the refusal of a connection that is gone", async () => {
             const { service } = await build()
 
-            await expect(service.botToken("ws-1", "c-1")).resolves.toMatchObject({ kind: "refused", code: ConnectionSecretsErrorCode.NotFound })
+            await expect(service.botToken("ws-1", "c-1")).resolves.toMatchObject({
+                kind: "refused",
+                code: ConnectionSecretsErrorCode.NotFound,
+            })
         })
     })
 
@@ -166,7 +190,9 @@ describe("ConnectionSecretsService", () => {
 
     describe("dueZalo", () => {
         it("answers the ids of the connections whose token ends before the horizon", async () => {
-            const { service, em } = await build({ [LIST_ZALO_CONNECTIONS_DUE]: [{ connection_id: "c-1" }, { connection_id: "c-2" }] })
+            const { service, em } = await build({
+                [LIST_ZALO_CONNECTIONS_DUE]: [{ connection_id: "c-1" }, { connection_id: "c-2" }],
+            })
             const horizon = new Date("2026-10-12T17:00:00.000Z")
 
             await expect(service.dueZalo(horizon)).resolves.toEqual(["c-1", "c-2"])

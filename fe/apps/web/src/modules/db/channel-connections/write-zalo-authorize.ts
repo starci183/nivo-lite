@@ -20,6 +20,7 @@ export const writeZaloAuthorize = async (input: unknown): Promise<DbOutcome<Zalo
     const ticket = await writeZaloWizardBegin(connectionId)
     if (ticket.kind !== "ok") return { ...ticket, code: ticket.kind === "refused" ? "errNone" : "errGeneric" }
     const result = await readZaloWizardResult(connectionId, ticket.value, WIZARD_WAIT_MS)
-    if (result.kind !== "ok" || result.value.state !== "done" || result.value.url === "") return stepFailed("errGeneric")
+    if (result.kind !== "ok" || result.value.state !== "done" || result.value.url === "")
+        return stepFailed("errGeneric")
     return { kind: "ok", value: { url: result.value.url } }
 }

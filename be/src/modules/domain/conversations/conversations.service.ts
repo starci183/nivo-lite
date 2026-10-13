@@ -141,7 +141,14 @@ export class ConversationsService {
         const agent = await this.frontAgentOf(connectionId, manager)
         const eventId = `meta:${inbound.eventId}`
         if (agent === undefined) {
-            await this.keepUnrouted(connection.value, inbound.platform, visitor, inbound.text, `${eventId}:${connectionId}`, manager)
+            await this.keepUnrouted(
+                connection.value,
+                inbound.platform,
+                visitor,
+                inbound.text,
+                `${eventId}:${connectionId}`,
+                manager,
+            )
             return
         }
         await this.hear(
