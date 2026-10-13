@@ -52,3 +52,7 @@ LIMIT 1`
 /** Ties a conversation to the lead the customer became ($1 workspace, $2 conversation, $3 lead). */
 export const ATTACH_CONVERSATION_LEAD = sql`UPDATE public.agent_conversations SET lead_id = $3::uuid
 WHERE workspace_id = $1::uuid AND id = $2::uuid`
+
+/** A person holds the conversation from now on: the AI stays quiet until they hand it back ($1 workspace, $2 conversation, $3 holder). */
+export const HAND_CONVERSATION_TO_PERSON = sql`UPDATE public.agent_conversations SET handled_by = $3, handled_at = now()
+WHERE workspace_id = $1::uuid AND id = $2::uuid`

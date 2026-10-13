@@ -21,6 +21,7 @@ import type {
 import {
     ARCHIVE_CONVERSATION,
     ATTACH_CONVERSATION_LEAD,
+    HAND_CONVERSATION_TO_PERSON,
     FIND_LATEST_LEAD_CONVERSATION,
     FIND_CONVERSATION,
     FIND_CONVERSATION_TARGET,
@@ -124,6 +125,11 @@ export class AgentConversationsService {
         return row === undefined
             ? null
             : { id: row.id, agentId: row.agent_id, channel: row.channel, visitorName: row.visitor_name }
+    }
+
+    /** A person holds the conversation from now on: the AI stays quiet until they hand it back. */
+    async handToPerson(workspaceId: string, conversationId: string, holder: string): Promise<void> {
+        await this.entityManager.query(HAND_CONVERSATION_TO_PERSON, [workspaceId, conversationId, holder])
     }
 
     /** Ties a conversation to the lead the customer became. */

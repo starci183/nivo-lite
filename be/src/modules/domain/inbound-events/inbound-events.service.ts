@@ -4,10 +4,11 @@ import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InboundEventsError, InboundEventsErrorCode } from "./errors/inbound-events.error"
-import { bankDedupeKey } from "./inbound-dedupe.policy"
+import { bankDedupeKey, eventDedupeKey } from "./inbound-dedupe.policy"
 import type {
     BankPaymentEvent,
     BankPaymentRecorded,
+    InboundInput,
     OptionalEventStatus,
     OptionalId,
     OptionalInboundEvent,
@@ -19,6 +20,7 @@ import {
     FIND_INBOUND_EVENT,
     HOLD_EVENT_FOR_OWNER,
     INSERT_BANK_EVENT,
+    INSERT_INPUT_EVENT,
     INSERT_UNROUTED_EVENT,
     MARK_INBOUND_EVENT,
 } from "./persistence/inbound-events.sql"
@@ -83,5 +85,30 @@ export class InboundEventsService {
     /** Sets where an event stands (null keeps it) and links the customer the engine found (null keeps it). */
     async mark(workspaceId: string, eventId: string, status: OptionalEventStatus, leadId: OptionalId): Promise<void> {
         await this.entityManager.query(MARK_INBOUND_EVENT, [workspaceId, eventId, status, leadId])
+    }
+
+    /** Records an input a channel delivered (a customer lead, say); the same event id twice is one input and counts as a repeat. */
+    async recordInput(input: InboundInput): Promise<BankPaymentRecorded> {
+        const key = eventDedupeKey(input.channel, input.kind, input.eventId)
+        const [created] = await this.entityManager.query<Array<EventIdRow>>(INSERT_INPUT_EVENT, [
+            input.workspaceId,
+            input.channel,
+            input.kind,
+            input.origin,
+            input.senderName,
+            input.senderContact,
+            input.body,
+            null,
+            input.externalRef,
+            input.eventId.trim(),
+            key,
+        ])
+        if (created !== undefined) return { duplicate: false, inboundEventId: created.id }
+        const [repeated] = await this.entityManager.query<Array<EventIdRow>>(BUMP_DUPLICATE_EVENT, [
+            input.workspaceId,
+            key,
+            this.clock.now(),
+        ])
+        return { duplicate: true, inboundEventId: repeated?.id ?? "" }
     }
 }

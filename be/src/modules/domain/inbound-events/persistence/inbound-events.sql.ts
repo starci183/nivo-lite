@@ -42,3 +42,9 @@ LIMIT 1`
 export const MARK_INBOUND_EVENT = sql`UPDATE public.inbound_events
 SET status = COALESCE($3::text, status), lead_id = COALESCE($4::uuid, lead_id)
 WHERE workspace_id = $1::uuid AND id = $2::uuid`
+
+/** Records an input of a channel once per dedupe key; a repeat answers no row ($1 workspace, $2 channel, $3 kind, $4 origin, $5 sender, $6 contact, $7 text, $8 amount, $9 external ref, $10 event id, $11 dedupe key). */
+export const INSERT_INPUT_EVENT = sql`INSERT INTO public.inbound_events (workspace_id, channel, kind, origin, sender_name, sender_contact, body, amount_vnd, external_ref, event_id, dedupe_key)
+VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8::bigint, $9, $10, $11)
+ON CONFLICT (workspace_id, dedupe_key) DO NOTHING
+RETURNING id`

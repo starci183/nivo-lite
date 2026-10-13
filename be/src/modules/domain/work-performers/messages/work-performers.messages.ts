@@ -3,6 +3,7 @@ import type { MessageBundle } from "@modules/platform/i18n"
 /** Display text of the lines the performers write into the workspace (summaries, evidence, replies), Vietnamese and English. */
 export const WORK_PERFORMERS_MESSAGES: MessageBundle = {
     vi: {
+        "performers.needsHuman": "Câu trả lời chi tiết cần người duyệt — NIVO đã gửi đề xuất cho chủ doanh nghiệp",
         "performers.emailFooter": "Email này được gửi bởi {{shop}}.",
         "errors.WORK_PERFORMERS_SUBJECT_MISSING": "Việc này chưa gắn với khách hàng hoặc đơn hàng nào.",
         "errors.WORK_PERFORMERS_ORDER_UNAVAILABLE": "Không tìm thấy đơn hàng, hoặc đơn đã bị hủy.",
@@ -64,6 +65,8 @@ export const WORK_PERFORMERS_MESSAGES: MessageBundle = {
         "performers.internalInvoice": "Hóa đơn nội bộ (chưa phát hành HĐĐT)",
     },
     en: {
+        "performers.needsHuman":
+            "The detailed answer needs a person: NIVO sent its proposed answer to the owner to approve",
         "performers.emailFooter": "This email was sent by {{shop}}.",
         "errors.WORK_PERFORMERS_SUBJECT_MISSING": "This item is not tied to a customer or an order.",
         "errors.WORK_PERFORMERS_ORDER_UNAVAILABLE": "The order was not found, or it was cancelled.",

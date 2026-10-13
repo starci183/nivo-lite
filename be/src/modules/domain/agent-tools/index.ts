@@ -48,7 +48,4 @@ export type {
 export { isToolName, TOOL_MANIFEST } from "./tool-manifest.policy"
 export type { ToolName } from "./tool-manifest.policy"
 export { UnboundBookingToolsService } from "./unbound-booking-tools.service"
-export { UnboundConversationLeadsService } from "./unbound-conversation-leads.service"
-export { UnboundHandoffToolService } from "./unbound-handoff-tool.service"
 export { UnboundKnowledgeSearchService } from "./unbound-knowledge-search.service"
-export { UnboundLeadWriterService } from "./unbound-lead-writer.service"

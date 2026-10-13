@@ -3,6 +3,11 @@ import type { DynamicModule } from "@nestjs/common"
 import { CarePerformer } from "./care.performer"
 import { ClassifyLeadPerformer } from "./classify-lead.performer"
 import { ConfirmOrderPerformer } from "./confirm-order.performer"
+import { ConversationLeadsService } from "./conversation-leads.service"
+import { HandoffToolService } from "./handoff-tool.service"
+import { InboundStatusService } from "./inbound-status.service"
+import { LeadWriterService } from "./lead-writer.service"
+import { OutboundAccessService } from "./outbound-access.service"
 import { CustomerDeliveryService } from "./customer-delivery.service"
 import { FollowUpPerformer } from "./follow-up.performer"
 import { HandoffLeadPerformer } from "./handoff-lead.performer"
@@ -45,6 +50,19 @@ export class WorkPerformersModule extends ConfigurableModuleClass {
                 ReplyCustomerPerformer,
                 SendEmailPerformer,
                 WorkPerformersRegistrar,
+                ConversationLeadsService,
+                HandoffToolService,
+                InboundStatusService,
+                LeadWriterService,
+                OutboundAccessService,
+            ],
+            exports: [
+                PerformerKitService,
+                ConversationLeadsService,
+                HandoffToolService,
+                InboundStatusService,
+                LeadWriterService,
+                OutboundAccessService,
             ],
         }
     }
