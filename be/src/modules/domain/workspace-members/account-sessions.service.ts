@@ -1,18 +1,17 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectAccountDirectory } from "@modules/domain/workspace-members"
-import type { AccountDirectory } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { AccountOverview, DeviceSession } from "./accounts.contracts"
-import { AccountsError, AccountsErrorCode } from "./errors/accounts.error"
-import type { ProviderRow, RevokedRow, SessionRow } from "./persistence/accounts.rows"
-import { LIST_PROVIDERS, LIST_SESSIONS, REVOKE_SESSION } from "./persistence/accounts.sql"
+import { WorkspaceMembersError, WorkspaceMembersErrorCode } from "./errors/workspace-members.error"
+import type { ProviderRow, RevokedRow, SessionRow } from "./persistence/account-sessions.rows"
+import { LIST_PROVIDERS, LIST_SESSIONS, REVOKE_SESSION } from "./persistence/account-sessions.sql"
+import type { AccountDirectory, AccountOverview, DeviceSession } from "./workspace-members.contracts"
+import { InjectAccountDirectory } from "./workspace-members.port"
 
 const isoOf = (value: Date | string | null): string | null => (value === null ? null : new Date(value).toISOString())
 
 @Injectable()
 /** The signed-in person's own account: linked sign-in methods and signed-in devices. */
-export class AccountsService {
+export class AccountSessionsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectAccountDirectory() private readonly accounts: AccountDirectory,
@@ -44,8 +43,10 @@ export class AccountsService {
 
     /** Signs another device of the account out; the session the request runs on is refused. */
     async revokeSession(userId: string, sessionId: string, currentSessionId?: string): Promise<void> {
-        if (sessionId === currentSessionId) throw new AccountsError({ code: AccountsErrorCode.CurrentSession })
+        if (sessionId === currentSessionId)
+            throw new WorkspaceMembersError({ code: WorkspaceMembersErrorCode.CurrentSession })
         const [row] = await this.entityManager.query<Array<RevokedRow>>(REVOKE_SESSION, [userId, sessionId])
-        if (row === undefined || !row.revoked) throw new AccountsError({ code: AccountsErrorCode.SessionNotFound })
+        if (row === undefined || !row.revoked)
+            throw new WorkspaceMembersError({ code: WorkspaceMembersErrorCode.SessionNotFound })
     }
 }

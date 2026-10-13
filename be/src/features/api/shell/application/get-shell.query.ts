@@ -1,5 +1,5 @@
 import { Query } from "@nestjs/cqrs"
-import type { ShellFacts } from "@modules/domain/shell"
+import type { ShellFacts } from "@modules/domain/workspaces"
 import type { ExecuteParams } from "@modules/platform/cqrs"
 import type { GetShellRequest } from "./get-shell.contracts"
 

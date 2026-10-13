@@ -1,6 +1,6 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { ShellService } from "@modules/domain/shell"
-import type { ShellFacts } from "@modules/domain/shell"
+import { WorkspaceShellService } from "@modules/domain/workspaces"
+import type { ShellFacts } from "@modules/domain/workspaces"
 import { ICQRSHandler } from "@modules/platform/cqrs"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -11,7 +11,7 @@ import { GetShellQuery } from "./get-shell.query"
 export class GetShellHandler extends ICQRSHandler<GetShellQuery, ShellFacts> {
     constructor(
         @InjectLogger() logger: Logger,
-        private readonly shell: ShellService,
+        private readonly shell: WorkspaceShellService,
     ) {
         super(logger)
     }

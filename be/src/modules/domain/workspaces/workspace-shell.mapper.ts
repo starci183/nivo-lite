@@ -1,4 +1,4 @@
-import type { ShellAgent, ShellApproval, ShellException, ShellFacts } from "./shell.contracts"
+import type { ShellAgent, ShellApproval, ShellException, ShellFacts } from "./workspaces.contracts"
 
 type JsonRecord = { readonly [key: string]: unknown }
 

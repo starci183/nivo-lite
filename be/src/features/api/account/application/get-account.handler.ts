@@ -1,6 +1,6 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { AccountsService } from "@modules/domain/accounts"
-import type { AccountOverview } from "@modules/domain/accounts"
+import { AccountSessionsService } from "@modules/domain/workspace-members"
+import type { AccountOverview } from "@modules/domain/workspace-members"
 import { ICQRSHandler } from "@modules/platform/cqrs"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -11,7 +11,7 @@ import { GetAccountQuery } from "./get-account.query"
 export class GetAccountHandler extends ICQRSHandler<GetAccountQuery, AccountOverview> {
     constructor(
         @InjectLogger() logger: Logger,
-        private readonly accounts: AccountsService,
+        private readonly accounts: AccountSessionsService,
     ) {
         super(logger)
     }

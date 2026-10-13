@@ -1,4 +1,4 @@
-import type { AccountOverview } from "@modules/domain/accounts"
+import type { AccountOverview } from "@modules/domain/workspace-members"
 import type { MyAccountType } from "./dto/my-account.type"
 
 /** Maps the account overview to the GraphQL type. */

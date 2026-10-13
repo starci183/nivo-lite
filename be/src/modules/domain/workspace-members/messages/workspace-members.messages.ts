@@ -16,6 +16,10 @@ export const WORKSPACE_MEMBERS_MESSAGES: MessageBundle = {
             "B\u1ea1n kh\u00f4ng th\u1ec3 th\u1ef1c hi\u1ec7n thao t\u00e1c n\u00e0y v\u1edbi ch\u00ednh t\u00e0i kho\u1ea3n c\u1ee7a m\u00ecnh.",
         "errors.WORKSPACE_MEMBERS_LAST_OWNER":
             "Kh\u00f4ng gian l\u00e0m vi\u1ec7c c\u1ea7n \u00edt nh\u1ea5t m\u1ed9t ch\u1ee7 s\u1edf h\u1eefu \u0111ang ho\u1ea1t \u0111\u1ed9ng.",
+        "errors.WORKSPACE_MEMBERS_CURRENT_SESSION":
+            "\u0110\u00e2y l\u00e0 thi\u1ebft b\u1ecb b\u1ea1n \u0111ang d\u00f9ng; h\u00e3y \u0111\u0103ng xu\u1ea5t b\u00ecnh th\u01b0\u1eddng.",
+        "errors.WORKSPACE_MEMBERS_SESSION_NOT_FOUND":
+            "Kh\u00f4ng t\u00ecm th\u1ea5y phi\u00ean \u0111\u0103ng nh\u1eadp n\u00e0y.",
     },
     en: {
         "errors.WORKSPACE_MEMBERS_WORKSPACE_REQUIRED": "The request names no workspace.",
@@ -25,5 +29,7 @@ export const WORKSPACE_MEMBERS_MESSAGES: MessageBundle = {
         "errors.WORKSPACE_MEMBERS_CHANGE_NOT_ALLOWED": "You may not change this member.",
         "errors.WORKSPACE_MEMBERS_SELF_FORBIDDEN": "You cannot do this to your own account.",
         "errors.WORKSPACE_MEMBERS_LAST_OWNER": "A workspace needs at least one active owner.",
+        "errors.WORKSPACE_MEMBERS_CURRENT_SESSION": "This is the device you are using; sign out the usual way.",
+        "errors.WORKSPACE_MEMBERS_SESSION_NOT_FOUND": "That session was not found.",
     },
 }

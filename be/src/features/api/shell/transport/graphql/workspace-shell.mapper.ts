@@ -1,4 +1,4 @@
-import type { ShellFacts } from "@modules/domain/shell"
+import type { ShellFacts } from "@modules/domain/workspaces"
 import type { GetShellRequest } from "../../application/get-shell.contracts"
 import type { ShellWindowInput } from "./dto/shell-window.input"
 import type { WorkspaceShellType } from "./dto/workspace-shell.type"

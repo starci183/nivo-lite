@@ -1,5 +1,5 @@
 import { Query } from "@nestjs/cqrs"
-import type { AccountOverview } from "@modules/domain/accounts"
+import type { AccountOverview } from "@modules/domain/workspace-members"
 import type { ExecuteParams } from "@modules/platform/cqrs"
 import type { GetAccountRequest } from "./get-account.contracts"
 

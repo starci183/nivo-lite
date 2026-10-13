@@ -1,5 +1,0 @@
-export type { AccountOverview } from "./accounts.contracts"
-export { ACCOUNTS_ERROR_KINDS } from "./errors/accounts.error"
-export { ACCOUNTS_MESSAGES } from "./messages/accounts.messages"
-export { AccountsModule } from "./accounts.module"
-export { AccountsService } from "./accounts.service"

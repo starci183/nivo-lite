@@ -81,8 +81,6 @@ import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
 import { WorkspacesGraphqlModule, WorkspacesHttpModule } from "@features/api/workspaces"
 import { AccountGraphqlModule } from "@features/api/account"
 import { ShellGraphqlModule } from "@features/api/shell"
-import { ACCOUNTS_ERROR_KINDS, ACCOUNTS_MESSAGES, AccountsModule } from "@modules/domain/accounts"
-import { ShellModule } from "@modules/domain/shell"
 import {
     EMAIL_MESSAGES_ERROR_KINDS,
     EMAIL_MESSAGES_MESSAGES,
@@ -187,7 +185,6 @@ import { ZaloInboxModule } from "@modules/domain/zalo-inbox"
 import { ZaloWizardDraftsModule } from "@modules/domain/zalo-wizard-drafts"
 import { AuthGuard, IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } from "@modules/domain/identity"
 import { BRAIN_ERROR_KINDS, BRAIN_MESSAGES, BrainModule } from "@modules/domain/brain"
-import type { CorrectionSource } from "@modules/domain/brain"
 import { BrainCommandsModule } from "@modules/domain/brain-commands"
 import { BrainEvalCasesModule } from "@modules/domain/brain-eval-cases"
 import { BrainExtractionsModule } from "@modules/domain/brain-extractions"
@@ -196,7 +193,6 @@ import { BRAIN_LESSONS_ERROR_KINDS, BRAIN_LESSONS_MESSAGES, BrainLessonsModule }
 import { KnowledgeChunksModule } from "@modules/domain/knowledge-chunks"
 import { KnowledgeGapsModule } from "@modules/domain/knowledge-gaps"
 import { KNOWLEDGE_ERROR_KINDS, KNOWLEDGE_MESSAGES, KnowledgeModule } from "@modules/domain/knowledge"
-import type { DriveAccessSource } from "@modules/domain/knowledge"
 import {
     KNOWLEDGE_SOURCES_ERROR_KINDS,
     KNOWLEDGE_SOURCES_MESSAGES,
@@ -360,12 +356,6 @@ import { ConnectionCommandsQueueModule } from "@features/jobs/connection-command
 import { RequestRenderQueueModule } from "@features/jobs/request-render"
 import type { ApiOptions } from "./api.options"
 
-/** Until a connection capability provides the Google Drive access of a workspace, no workspace has any. */
-/** Until the decisions capability provides the corrections of the owner, the brain has none to study. */
-const NO_CORRECTIONS: CorrectionSource = { recent: () => Promise.resolve([]) }
-
-const NO_DRIVE_ACCESS: DriveAccessSource = { forWorkspace: () => null }
-
 @Module({})
 /** Composition root of the API: every capability is registered once and the three guards run in a fixed order. */
 export class AppModule {
@@ -455,7 +445,6 @@ export class AppModule {
                         QUEUE_MESSAGES,
                         WORKSPACE_INVITES_MESSAGES,
                         WORKSPACE_MEMBERS_MESSAGES,
-                        ACCOUNTS_MESSAGES,
                         WORKSPACES_MESSAGES,
                         FFMPEG_MESSAGES,
                         TTS_MESSAGES,
@@ -543,7 +532,6 @@ export class AppModule {
                         CONTRACTS_ERROR_KINDS,
                         WORKSPACE_INVITES_ERROR_KINDS,
                         WORKSPACE_MEMBERS_ERROR_KINDS,
-                        ACCOUNTS_ERROR_KINDS,
                         WORKSPACES_ERROR_KINDS,
                         FFMPEG_ERROR_KINDS,
                         TTS_ERROR_KINDS,
@@ -576,9 +564,11 @@ export class AppModule {
                 EventsModule.register({ isGlobal: true }),
                 WorkspaceMembersModule.register({ isGlobal: true, accounts: SUPABASE_AUTH }),
                 WorkspacesModule.register({ isGlobal: true, ...options.workspaces }),
-                WorkspaceInvitesModule.register({ isGlobal: true, delivery: SUPABASE_AUTH, ...options.workspaceInvites }),
-                AccountsModule.register({ isGlobal: true }),
-                ShellModule.register({ isGlobal: true }),
+                WorkspaceInvitesModule.register({
+                    isGlobal: true,
+                    delivery: SUPABASE_AUTH,
+                    ...options.workspaceInvites,
+                }),
                 ConnectionsModule.register({ isGlobal: true, ...options.connections }),
                 ConnectionGrantsModule.register({ isGlobal: true }),
                 ChannelConnectionsModule.register({ isGlobal: true }),
@@ -643,14 +633,14 @@ export class AppModule {
                     folders: [CORE_FOLDER, ...MODULE_CATALOG.map((module) => module.knowledgeFolder)],
                     dir: "fe/apps/web/resources/nivo-knowledge",
                 }),
-                KnowledgeModule.register({ isGlobal: true, driveAccess: NO_DRIVE_ACCESS }),
+                KnowledgeModule.register({ isGlobal: true, driveAccess: { forWorkspace: () => null } }),
                 BrainFactsModule.register({ isGlobal: true }),
                 KnowledgeGapsModule.register({ isGlobal: true }),
                 BrainLessonsModule.register({ isGlobal: true }),
                 BrainExtractionsModule.register({ isGlobal: true }),
                 BrainCommandsModule.register({ isGlobal: true }),
                 BrainEvalCasesModule.register({ isGlobal: true }),
-                BrainModule.register({ isGlobal: true, corrections: NO_CORRECTIONS }),
+                BrainModule.register({ isGlobal: true, corrections: { recent: () => Promise.resolve([]) } }),
                 BookingsModule.register({ isGlobal: true }),
                 LeadsHttpModule,
                 PlatformAuditModule.register({ isGlobal: true }),

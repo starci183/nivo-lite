@@ -1,5 +1,5 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { AccountsService } from "@modules/domain/accounts"
+import { AccountSessionsService } from "@modules/domain/workspace-members"
 import { ICQRSHandler } from "@modules/platform/cqrs"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -10,7 +10,7 @@ import { RevokeSessionCommand } from "./revoke-session.command"
 export class RevokeSessionHandler extends ICQRSHandler<RevokeSessionCommand, void> {
     constructor(
         @InjectLogger() logger: Logger,
-        private readonly accounts: AccountsService,
+        private readonly accounts: AccountSessionsService,
     ) {
         super(logger)
     }
