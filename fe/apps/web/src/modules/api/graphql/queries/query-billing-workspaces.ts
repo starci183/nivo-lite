@@ -1,9 +1,9 @@
 import { gql, type TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
-import type { Query } from "../__generated__/schema"
+import type { BillingWorkspacesQuery } from "../__generated__/graphql"
 
-type QueryBillingWorkspacesResponse = Pick<Query, "billingWorkspaces">
+type QueryBillingWorkspacesResponse = BillingWorkspacesQuery
 
 const query1: TypedDocumentNode<QueryBillingWorkspacesResponse> = gql`
     query BillingWorkspaces {

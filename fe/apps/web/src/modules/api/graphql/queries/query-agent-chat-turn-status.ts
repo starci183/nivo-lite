@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryAgentChatTurnStatusArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { AgentChatTurnStatusQuery, AgentChatTurnStatusQueryVariables } from "../__generated__/graphql"
 
 /** Generated variables of the queued turn status query. */
-type QueryAgentChatTurnStatusRequest = QueryAgentChatTurnStatusArgs["input"]
+type QueryAgentChatTurnStatusRequest = WireInput<AgentChatTurnStatusQueryVariables["input"]>
 
 /** Generated selection of the queued turn status query. */
-type QueryAgentChatTurnStatusResponse = Pick<Query, "agentChatTurnStatus">
+type QueryAgentChatTurnStatusResponse = AgentChatTurnStatusQuery
 
 type Document = TypedDocumentNode<QueryAgentChatTurnStatusResponse, InputVariables<QueryAgentChatTurnStatusRequest>>
 
