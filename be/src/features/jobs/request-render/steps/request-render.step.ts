@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { AppCommandsService } from "@modules/domain/app-commands"
-import { VideoService } from "@modules/domain/video"
+import { VideoService } from "@modules/domain/video/video.service"
 import { DomainError } from "@modules/platform/errors"
 import { InjectJobClaims } from "@modules/platform/jobs"
 import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
