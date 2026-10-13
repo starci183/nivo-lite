@@ -8,7 +8,7 @@ import { toGetBookingOverviewRequest, toGetBookingOverviewResponse } from "./get
 import { GetBookingOverviewParamsRequest, GetBookingOverviewSearchRequest } from "./dto/get-booking-overview.request"
 import type { GetBookingOverviewResponse } from "./dto/get-booking-overview.response"
 import { AddBookingCommand } from "../../application/add-booking.command"
-import { toAddBookingRequest, toAddBookingResponse } from "./add-booking.mapper"
+import { toHttpAddBookingRequest, toAddBookingResponse } from "./add-booking.mapper"
 import { AddBookingParamsRequest, AddBookingBodyRequest } from "./dto/add-booking.request"
 import type { AddBookingResponse } from "./dto/add-booking.response"
 import { MoveBookingCommand } from "../../application/move-booking.command"
@@ -65,7 +65,7 @@ export class BookingController {
         @Body() body: AddBookingBodyRequest,
     ): Promise<AddBookingResponse> {
         const result = await this.commandBus.execute(
-            new AddBookingCommand({ request: toAddBookingRequest(params, body), principal }),
+            new AddBookingCommand({ request: toHttpAddBookingRequest(params, body), principal }),
         )
         return toAddBookingResponse(result)
     }
