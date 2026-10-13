@@ -292,6 +292,7 @@ import { IdsModule } from "@modules/platform/ids"
 import { CONFIG_ERROR_KINDS } from "@modules/platform/config"
 import { CqrsModule } from "@modules/platform/cqrs"
 import { DATABASE_ERROR_KINDS, DatabaseModule, PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { AppErrorsModule } from "@modules/domain/app-errors"
 import { ERRORS_MESSAGES, ErrorsFilter, ErrorsModule } from "@modules/platform/errors"
 import {
     HTTP_SECURITY_ERROR_KINDS,
@@ -401,9 +402,7 @@ export class AppModule {
         return {
             module: AppModule,
             imports: [
-                ClockModule.register({ isGlobal: true }),
-                IdsModule.register({ isGlobal: true }),
-                LoggingModule.register({ isGlobal: true }),
+                ...[ClockModule, IdsModule, LoggingModule].map((module) => module.register({ isGlobal: true })),
                 I18nModule.register({
                     isGlobal: true,
                     bundles: [
@@ -616,6 +615,7 @@ export class AppModule {
                 CqrsModule.register({ isGlobal: true }),
                 HttpSecurityModule.register({ isGlobal: true, ...options.httpSecurity }),
                 DatabaseModule.register({ isGlobal: true, connections: [options.database] }),
+                AppErrorsModule.register({ isGlobal: true }),
                 QueueModule.register({
                     isGlobal: true,
                     schedulers: API_SCHEDULERS,
@@ -653,8 +653,7 @@ export class AppModule {
                 MetaModule.register({ isGlobal: true, ...options.meta }),
                 ChannelSetupModule.register({ isGlobal: true, ...options.channelSetup }),
                 WebhookDeliveryModule.register({ isGlobal: true, ...options.webhookDelivery }),
-                HttpModule.register({ isGlobal: true }),
-                GraphqlModule.register({ isGlobal: true }),
+                ...[HttpModule.register({ isGlobal: true }), GraphqlModule.register({ isGlobal: true })],
                 N8nModule.register({ isGlobal: true, ...options.n8n }),
                 AutomationPortsModule.register({ isGlobal: true }),
                 AutomationTemplatesModule.register({ isGlobal: true }),

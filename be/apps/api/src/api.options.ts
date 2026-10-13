@@ -1,5 +1,6 @@
 import { AGENTS_SYNC_SCHEDULER } from "@modules/queues/agents"
 import { AUTOMATION_TICK_SCHEDULER } from "@modules/queues/automation"
+import { SHIFTS_TICK_SCHEDULER } from "@modules/queues/shifts"
 import { CONNECTION_HEALTH_SCHEDULER } from "@modules/queues/connection-health"
 import { CONTENT_TICK_EVERY_MS, CONTENT_TICK_QUEUE, CONTENT_TICK_SCHEDULER } from "@modules/queues/content-tick"
 import { DATA_SYNC_SCHEDULER } from "@modules/queues/data-sync"
@@ -36,6 +37,7 @@ import { RequestRenderQueueModule } from "@features/jobs/request-render"
 import { DeductOrderQueueModule } from "@features/jobs/deduct-order"
 import { ReplenishStockQueueModule } from "@features/jobs/replenish-stock"
 import { HiringTickQueueModule } from "@features/jobs/hiring-tick"
+import { RunShiftsAlertsQueueModule } from "@features/jobs/run-shifts-alerts"
 import { AgentsService } from "@modules/domain/agents"
 import {
     AgentKnowledgeLensService,
@@ -223,11 +225,13 @@ export const API_JOB_QUEUES = [
     DeductOrderQueueModule,
     ReplenishStockQueueModule,
     HiringTickQueueModule,
+    RunShiftsAlertsQueueModule,
 ]
 
 /** The recurring ticks the api schedules on the queue. */
 export const API_SCHEDULERS: ReadonlyArray<QueueSchedulerDefinition> = [
     AUTOMATION_TICK_SCHEDULER,
+    SHIFTS_TICK_SCHEDULER,
     AGENTS_SYNC_SCHEDULER,
     { queue: CONTENT_TICK_QUEUE, id: CONTENT_TICK_SCHEDULER, everyMs: CONTENT_TICK_EVERY_MS },
     CONNECTION_HEALTH_SCHEDULER,

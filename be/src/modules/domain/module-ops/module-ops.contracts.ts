@@ -115,6 +115,18 @@ export interface MailNotice {
     readonly refs?: Readonly<Record<string, string>>
     /** The gate decision that allowed the mail, when there is one. */
     readonly workItemId?: string
+    /** Files sent with the notice (a CSV summary), when there are any. */
+    readonly attachments?: ReadonlyArray<MailNoticeAttachment>
+}
+
+/** One file sent with a notice. */
+export interface MailNoticeAttachment {
+    /** The file name. */
+    readonly filename: string
+    /** The text content. */
+    readonly content: string
+    /** The media type. */
+    readonly contentType: string
 }
 
 /** What sending a notice ended in. */

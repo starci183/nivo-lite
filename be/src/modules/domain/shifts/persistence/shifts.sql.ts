@@ -155,6 +155,3 @@ export const DECIDE_LEAVE = sql`SELECT public.shifts_decide_leave($1::uuid, $2::
 
 /** Applies the quick import ($1 workspace, $2 positions json, $3 people json, $4 coverage json). */
 export const APPLY_IMPORT = sql`SELECT public.shifts_import_apply($1::uuid, $2::jsonb, $3::jsonb, $4::jsonb) AS counts`
-
-/** Records one message sent to a person as evidence ($1 workspace, $2 person, $3 schedule, $4 shift, $5 kind, $6 channel, $7 status, $8 body). */
-export const RECORD_NOTIFICATION = sql`SELECT public.shifts_record_notification($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::text, $6::text, $7::text, $8::text)`

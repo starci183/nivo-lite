@@ -4714,6 +4714,7 @@ type Mutation {
   shareVideoProject(input: ShareVideoProjectInput!): VideoShareType!
   simulateInbound(input: SimulateInboundInput!): SimulateInboundType!
   startAgentChatConversation(input: StartAgentChatConversationInput!): CreatedAgentChatConversationType!
+  startFirstWorkspace: StartFirstWorkspaceType!
   startMoneyConnection(input: StartMoneyConnectionInput!): WizardConnectionType!
   startSmtpConnection(input: StartSmtpConnectionInput!): SmtpConnectionType!
   startTelegramLogin(input: StartTelegramLoginInput!): TelegramLoginStartedType!
@@ -4748,6 +4749,7 @@ type Mutation {
 }
 
 type MyAccountType {
+  avatarUrl: String
   email: String!
   name: String!
   providers: [String!]!
@@ -7065,6 +7067,10 @@ input StartAgentChatConversationInput {
   agentId: ID!
   kind: String!
   visitorName: String = null
+}
+
+type StartFirstWorkspaceType {
+  id: ID
 }
 
 input StartMoneyConnectionInput {
