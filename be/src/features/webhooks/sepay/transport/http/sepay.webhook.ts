@@ -4,7 +4,11 @@ import type { Request } from "express"
 import { SepayTransactionsService } from "@modules/domain/sepay-transactions"
 import { Public, PublicReason } from "@modules/domain/identity"
 import { RateLimit, RateTier } from "@modules/platform/http-security"
-import { SepayAck } from "./dto/sepay.response"
+
+/** What SePay counts as a delivered webhook: HTTP 200 or 201 with `{"success": true}`; it retries every other answer. */
+export interface SepayAck {
+    success: true
+}
 
 @Controller("api/sepay/webhook")
 /**

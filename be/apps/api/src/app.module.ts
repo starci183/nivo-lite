@@ -52,6 +52,7 @@ import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules
 import { CassoHttpModule } from "@features/webhooks/casso"
 import { PayosHttpModule } from "@features/webhooks/payos"
 import { SepayHttpModule } from "@features/webhooks/sepay"
+import { SepayFeedHttpModule } from "@features/webhooks/sepay-feed"
 import { VietcombankHttpModule } from "@features/webhooks/vietcombank"
 import { ReconcileBankCreditQueueModule } from "@features/jobs/reconcile-bank-credit"
 import { CreatePaymentOrderQueueModule } from "@features/jobs/create-payment-order"
@@ -633,6 +634,7 @@ export class AppModule {
                 CassoHttpModule,
                 PayosHttpModule,
                 SepayHttpModule,
+                SepayFeedHttpModule,
                 VietcombankHttpModule,
                 TelegramHttpModule,
                 ZaloHttpModule,
