@@ -3,19 +3,16 @@ import type { DynamicModule } from "@nestjs/common"
 import { ActionPerformerRegistry } from "./action-performer.port"
 import { ApprovalGate } from "./approval-gate.port"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./module-ops.module-definition"
-import { ActionPerformersService } from "./action-performers.service"
 import { LoggingOfficeLogService } from "./logging-office-log.service"
 import { OfficeLog } from "./office-log.port"
 import { OutboundMail } from "./outbound-mail.port"
-import { TextGenerator } from "./text-generator.port"
-import { UnavailableApprovalGateService } from "./unavailable-approval-gate.service"
-import { UnavailableOutboundMailService } from "./unavailable-outbound-mail.service"
-import { UnavailableTextGeneratorService } from "./unavailable-text-generator.service"
+import { ModuleTextGenerator } from "./text-generator.port"
 
 @Module({})
 /**
  * The shared base of the business modules (hiring, shifts, inventory): the performer registry and the four ports they work
- * through, bound to the degraded adapters until the owning capabilities (decisions, office, agents, mail) provide the real ones.
+ * through. The app root names the class behind each port: the decisions capability owns the registry and the gate, the
+ * email-messages capability the mailer and the ai-generations capability the text generator.
  */
 export class ModuleOpsModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app. */
@@ -25,13 +22,13 @@ export class ModuleOpsModule extends ConfigurableModuleClass {
             ...base,
             providers: [
                 ...(base.providers ?? []),
-                { provide: ActionPerformerRegistry, useClass: ActionPerformersService },
-                { provide: ApprovalGate, useClass: UnavailableApprovalGateService },
+                { provide: ActionPerformerRegistry, useClass: options.ports.performers },
+                { provide: ApprovalGate, useClass: options.ports.approvalGate },
                 { provide: OfficeLog, useClass: LoggingOfficeLogService },
-                { provide: OutboundMail, useClass: UnavailableOutboundMailService },
-                { provide: TextGenerator, useClass: UnavailableTextGeneratorService },
+                { provide: OutboundMail, useClass: options.ports.outboundMail },
+                { provide: ModuleTextGenerator, useClass: options.ports.textGenerator },
             ],
-            exports: [ActionPerformerRegistry, ApprovalGate, OfficeLog, OutboundMail, TextGenerator],
+            exports: [ActionPerformerRegistry, ApprovalGate, OfficeLog, OutboundMail, ModuleTextGenerator],
         }
     }
 }

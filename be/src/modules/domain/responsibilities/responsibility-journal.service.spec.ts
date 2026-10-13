@@ -21,6 +21,7 @@ import {
     FIND_AGENT_NAME,
     FIND_LEAD_NAME,
     FIND_OPEN_RESPONSIBILITY,
+    FIND_OPEN_TITLED_RESPONSIBILITY,
     INSERT_RESPONSIBILITY,
     LIST_RESPONSIBILITIES,
     UPDATE_RESPONSIBILITY_STATUS,
@@ -278,6 +279,47 @@ describe("ResponsibilityJournalService", () => {
             await service.markWaitingApproval(ctx, "resp-1")
 
             expect(em.query).toHaveBeenCalledWith(UPDATE_RESPONSIBILITY_STATUS, ["ws-1", "resp-1", "waiting_approval"])
+        })
+    })
+
+    describe("openNamed", () => {
+        const task = {
+            leadId: "lead-1",
+            title: "Nurture Binh",
+            ownerName: "Linh",
+            nextAction: "Call back",
+            dueAt: "2026-10-14T10:00:00.000Z",
+        }
+
+        it("opens a human follow-up owned by the named person", async () => {
+            const em = mockEntityManager({
+                query: [
+                    [FIND_OPEN_TITLED_RESPONSIBILITY, []],
+                    [INSERT_RESPONSIBILITY, [rowOf({ owner_kind: "human", owner_agent_id: null, owner_name: "Linh" })]],
+                ],
+            })
+            const { service } = await build(em)
+
+            await expect(service.openNamed("ws-1", task)).resolves.toBe(true)
+            expect(em.query).toHaveBeenCalledWith(FIND_OPEN_TITLED_RESPONSIBILITY, ["ws-1", "lead-1", "Nurture Binh"])
+            expect(em.query).toHaveBeenCalledWith(INSERT_RESPONSIBILITY, [
+                "ws-1",
+                "lead-1",
+                "Nurture Binh",
+                "human",
+                null,
+                "Linh",
+                "Call back",
+                "2026-10-14T10:00:00.000Z",
+            ])
+        })
+
+        it("opens nothing when the customer has an open one with the same title", async () => {
+            const em = mockEntityManager({ query: [FIND_OPEN_TITLED_RESPONSIBILITY, [{ id: "resp-1" }]] })
+            const { service } = await build(em)
+
+            await expect(service.openNamed("ws-1", task)).resolves.toBe(false)
+            expect(em.query).not.toHaveBeenCalledWith(INSERT_RESPONSIBILITY, expect.anything())
         })
     })
 })

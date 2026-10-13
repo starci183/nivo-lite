@@ -18,4 +18,4 @@ export { DeepseekModule } from "./deepseek.module"
 export type { DeepseekTextGenerator } from "./deepseek.port"
 export { authorityBrief } from "./prompts.policy"
 
-export { InjectDeepseekClient } from "./deepseek.decorators"
+export { DEEPSEEK_CLIENT, InjectDeepseekClient } from "./deepseek.decorators"

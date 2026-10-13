@@ -126,4 +126,18 @@ describe("webhook signing policy", () => {
             expect(policy.signDelivery(key, timestamp, body)).toBe(expected)
         })
     })
+
+    describe("deliveryVerdict", () => {
+        it.each([
+            [200, "delivered"],
+            [204, "delivered"],
+            [null, "retry"],
+            [429, "retry"],
+            [503, "retry"],
+            [404, "refused"],
+            [301, "refused"],
+        ] as const)("reads status %j as %j", (status, expected) => {
+            expect(policy.deliveryVerdict(status)).toBe(expected)
+        })
+    })
 })

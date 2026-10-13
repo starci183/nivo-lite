@@ -7,6 +7,7 @@ import { KnowledgeIndexingService } from "./knowledge-indexing.service"
 import { KnowledgeJobsService } from "./knowledge-jobs.service"
 import { KnowledgeReembedService } from "./knowledge-reembed.service"
 import { KnowledgeSearchService } from "./knowledge-search.service"
+import { DRIVE_ACCESS_SOURCE } from "./knowledge.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./knowledge.module-definition"
 import { SourceReaderService } from "./source-reader.service"
 import { UsageMeterService } from "./usage-meter.service"
@@ -21,6 +22,7 @@ export class KnowledgeModule extends ConfigurableModuleClass {
             ...base,
             providers: [
                 ...(base.providers ?? []),
+                { provide: DRIVE_ACCESS_SOURCE, useExisting: options.driveAccess },
                 UsageMeterService,
                 EmbeddingService,
                 SourceReaderService,

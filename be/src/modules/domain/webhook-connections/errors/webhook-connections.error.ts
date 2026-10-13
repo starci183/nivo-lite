@@ -13,6 +13,8 @@ export enum WebhookConnectionsErrorCode {
     SigningUnavailable = "WEBHOOK_CONNECTIONS_SIGNING_UNAVAILABLE",
     /** The connection holds no webhook address. */
     NoUrl = "WEBHOOK_CONNECTIONS_NO_URL",
+    /** The receiver did not accept a delivery yet (no answer, a rate limit or a server error); the queue retries it. */
+    DeliveryFailed = "WEBHOOK_CONNECTIONS_DELIVERY_FAILED",
 }
 
 /** How each webhook-connections code travels. */
@@ -22,6 +24,7 @@ export const WEBHOOK_CONNECTIONS_ERROR_KINDS: Record<WebhookConnectionsErrorCode
     [WebhookConnectionsErrorCode.UrlRefused]: "invalid",
     [WebhookConnectionsErrorCode.SigningUnavailable]: "unavailable",
     [WebhookConnectionsErrorCode.NoUrl]: "not-found",
+    [WebhookConnectionsErrorCode.DeliveryFailed]: "unavailable",
 }
 
 /** The one error class of the webhook-connections capability. */
