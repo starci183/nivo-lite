@@ -1,22 +1,19 @@
-import { Decisions } from "@/features/decisions";
-import type { Department } from "@/lib/flow-types";
-import { MODULE_KEYS } from "@/lib/module-registry";
+import { DecisionsPage } from "@/features/pages/DecisionsPage"
 
-type DecisionsPageProps = { readonly searchParams: Promise<{ kind?: string | string[]; dept?: string | string[] }> };
+/** The document title of this page. */
+export { decisionsPageMetadata as generateMetadata } from "@/features/pages/DecisionsPage"
 
-const first = (v: string | string[] | undefined): string => (Array.isArray(v) ? (v[0] ?? "") : (v ?? ""));
-const KINDS = ["policy", "human", "rejected"] as const;
-const DEPTS: ReadonlyArray<Department> = MODULE_KEYS;
+interface PageProps {
+    readonly searchParams: Promise<{ kind?: string | string[]; dept?: string | string[] }>
+}
 
-/** Decision history. `?kind=policy|human|rejected&dept=chatbot|sales|accounting` filter the list. */
-const DecisionsPage = async ({ searchParams }: DecisionsPageProps) => {
-  const params = await searchParams;
-  const kind = KINDS.find((k) => k === first(params.kind)) ?? null;
-  const dept = DEPTS.find((d) => d === first(params.dept)) ?? null;
-  return <Decisions kind={kind} dept={dept} />;
-};
+const firstOf = (value: string | string[] | undefined): string =>
+    Array.isArray(value) ? (value[0] ?? "") : (value ?? "")
 
-export default DecisionsPage;
+/** The decisions route: `?kind=policy|human|rejected&dept=<module>` filter the history. */
+const Page = async (props: PageProps) => {
+    const query = await props.searchParams
+    return <DecisionsPage kind={firstOf(query.kind)} department={firstOf(query.dept)} />
+}
 
-/** OpenClaw writes the text (setup chat, Office replies, classification), so these screens may wait longer than the platform default. */
-export const maxDuration = 60;
+export default Page

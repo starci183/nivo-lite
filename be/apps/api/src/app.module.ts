@@ -2,6 +2,12 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
 import { InventoryHttpModule } from "@features/api/inventory"
+import { AgentToolsHttpModule } from "@features/api/agent-tools"
+import { AgentsHttpModule } from "@features/api/agents"
+import { DecisionsHttpModule } from "@features/api/decisions"
+import { RunDecisionsQueueModule } from "@features/jobs/run-decisions"
+import { GenerateWithAgentQueueModule } from "@features/jobs/generate-with-agent"
+import { SyncAgentsQueueModule } from "@features/jobs/sync-agents"
 import { BookingHttpModule } from "@features/api/booking"
 import { LoyaltyHttpModule } from "@features/api/loyalty"
 import { LoyaltyTillHttpModule } from "@features/api/loyalty-till"
@@ -16,6 +22,7 @@ import { ZaloHttpModule } from "@features/webhooks/zalo"
 import { LeadsHttpModule } from "@features/api/leads"
 import { AdminHttpModule } from "@features/api/admin"
 import { ModulesHttpModule } from "@features/api/modules"
+import { OfficeHttpModule } from "@features/api/office"
 import { ExternalApiHttpModule } from "@features/api/external-api"
 import { SystemHealthHttpModule } from "@features/api/system-health"
 import { BOOKINGS_ERROR_KINDS, BOOKINGS_MESSAGES, BookingsModule } from "@modules/domain/bookings"
@@ -36,10 +43,99 @@ import { LoyaltyProgramsModule } from "@modules/domain/loyalty-programs"
 import { LoyaltyRewardsModule } from "@modules/domain/loyalty-rewards"
 import { LOYALTY_ERROR_KINDS, LOYALTY_MESSAGES, LoyaltyModule } from "@modules/domain/loyalty"
 import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
+import { CassoHttpModule } from "@features/webhooks/casso"
+import { PayosHttpModule } from "@features/webhooks/payos"
+import { SepayHttpModule } from "@features/webhooks/sepay"
+import { VietcombankHttpModule } from "@features/webhooks/vietcombank"
+import { ReconcileBankCreditQueueModule } from "@features/jobs/reconcile-bank-credit"
+import { CreatePaymentOrderQueueModule } from "@features/jobs/create-payment-order"
+import { PaymentOrderRequestsModule } from "@modules/domain/payment-order-requests"
+import { BILLING_ERROR_KINDS, BILLING_MESSAGES, BillingModule } from "@modules/domain/billing"
+import {
+    INBOUND_EVENTS_ERROR_KINDS,
+    INBOUND_EVENTS_MESSAGES,
+    InboundEventsModule,
+} from "@modules/domain/inbound-events"
+import {
+    PAYMENT_ORDERS_ERROR_KINDS,
+    PAYMENT_ORDERS_MESSAGES,
+    PaymentOrdersModule,
+} from "@modules/domain/payment-orders"
+import { CREDITS_ERROR_KINDS, CREDITS_MESSAGES, CreditsModule } from "@modules/domain/credits"
+import { AiUsageEventsModule } from "@modules/domain/ai-usage-events"
+import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
 import { WorkspacesHttpModule } from "@features/api/workspaces"
 import { DeductOrderQueueModule } from "@features/jobs/deduct-order"
 import { InventoryCommandQueueModule } from "@features/jobs/inventory-command"
 import { ReplenishStockQueueModule } from "@features/jobs/replenish-stock"
+import {
+    AGENT_CONNECTIONS_ERROR_KINDS,
+    AGENT_CONNECTIONS_MESSAGES,
+    AgentConnectionsModule,
+} from "@modules/domain/agent-connections"
+import {
+    AGENT_TOOLS_ERROR_KINDS,
+    AGENT_TOOLS_MESSAGES,
+    AgentToolsModule,
+    UnboundBookingToolsService,
+    UnboundConversationLeadsService,
+    UnboundHandoffToolService,
+    UnboundKnowledgeSearchService,
+    UnboundLeadWriterService,
+} from "@modules/domain/agent-tools"
+import {
+    AGENTS_ERROR_KINDS,
+    AGENTS_MESSAGES,
+    AGENTS_SYNC_FRESH_MS,
+    AgentsModule,
+    AgentsService,
+    UnboundInstallationsService,
+    UnboundKnowledgeLensService,
+    UnboundModuleProfilesService,
+} from "@modules/domain/agents"
+import {
+    AI_GENERATIONS_ERROR_KINDS,
+    AI_GENERATIONS_MESSAGES,
+    AI_GENERATIONS_POLL_MS,
+    AiGenerationsModule,
+    TextGeneratorService,
+    UnboundUsageGateService,
+} from "@modules/domain/ai-generations"
+import { AUTHORITY_ERROR_KINDS, AUTHORITY_MESSAGES } from "@modules/domain/authority"
+import { AUTHORITY_RULES_ERROR_KINDS, AUTHORITY_RULES_MESSAGES } from "@modules/domain/authority-rules"
+import {
+    ApprovalRequesterService,
+    DECISIONS_ERROR_KINDS,
+    DECISIONS_MESSAGES,
+    DecisionsModule,
+    UnboundDecisionEventsService,
+    UnboundInboundEventStatusService,
+    UnboundLeadGenFlowService,
+    UnboundOutboundAccessGateService,
+    UnboundPaymentReceiptsService,
+} from "@modules/domain/decisions"
+import { EXECUTIONS_ERROR_KINDS, EXECUTIONS_MESSAGES } from "@modules/domain/executions"
+import {
+    OFFICE_COMMAND_CANDIDATES_ERROR_KINDS,
+    OFFICE_COMMAND_CANDIDATES_MESSAGES,
+    OfficeCommandCandidatesModule,
+} from "@modules/domain/office-command-candidates"
+import {
+    OPENCLAW_AGENT_SYNC_ERROR_KINDS,
+    OPENCLAW_AGENT_SYNC_MESSAGES,
+    OPENCLAW_RELOAD_SETTLE_MS,
+    OpenclawAgentSyncModule,
+} from "@modules/domain/openclaw-agent-sync"
+import { RESPONSIBILITY_JOURNAL_MESSAGES } from "@modules/domain/responsibilities"
+import { WORK_ITEMS_ERROR_KINDS, WORK_ITEMS_MESSAGES } from "@modules/domain/work-items"
+import { DEEPSEEK_ERROR_KINDS, DEEPSEEK_MESSAGES, DeepseekClient, DeepseekModule } from "@modules/integrations/deepseek"
+import {
+    OPENCLAW_ERROR_KINDS,
+    OPENCLAW_MESSAGES,
+    OpenclawModule,
+    ToolTokenService,
+} from "@modules/integrations/openclaw"
+import { AGENTS_SYNC_SCHEDULER } from "@modules/queues/agents"
 import {
     AGENT_CONVERSATIONS_ERROR_KINDS,
     AGENT_CONVERSATIONS_MESSAGES,
@@ -59,7 +155,6 @@ import {
 } from "@modules/domain/connection-secrets"
 import { CONNECTIONS_ERROR_KINDS, CONNECTIONS_MESSAGES, ConnectionsModule } from "@modules/domain/connections"
 import { CONVERSATIONS_ERROR_KINDS, CONVERSATIONS_MESSAGES, ConversationsModule } from "@modules/domain/conversations"
-import { InboundEventsModule } from "@modules/domain/inbound-events"
 import { TelegramInboxModule } from "@modules/domain/telegram-inbox"
 import { ZaloInboxModule } from "@modules/domain/zalo-inbox"
 import { AuthGuard, IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } from "@modules/domain/identity"
@@ -163,9 +258,28 @@ export class AppModule {
                 I18nModule.register({
                     isGlobal: true,
                     bundles: [
+                        AGENT_CONNECTIONS_MESSAGES,
+                        AGENT_TOOLS_MESSAGES,
+                        AGENTS_MESSAGES,
+                        AI_GENERATIONS_MESSAGES,
+                        API_KEYS_MESSAGES,
+                        AUTHORITY_MESSAGES,
+                        AUTHORITY_RULES_MESSAGES,
+                        DECISIONS_MESSAGES,
+                        DEEPSEEK_MESSAGES,
+                        EXECUTIONS_MESSAGES,
+                        OFFICE_COMMAND_CANDIDATES_MESSAGES,
+                        OPENCLAW_AGENT_SYNC_MESSAGES,
+                        OPENCLAW_MESSAGES,
+                        RESPONSIBILITY_JOURNAL_MESSAGES,
+                        WORK_ITEMS_MESSAGES,
                         AGENT_CONVERSATIONS_MESSAGES,
                         AGENT_MESSAGES_MESSAGES,
                         API_KEYS_MESSAGES,
+                        BILLING_MESSAGES,
+                        CREDITS_MESSAGES,
+                        INBOUND_EVENTS_MESSAGES,
+                        PAYMENT_ORDERS_MESSAGES,
                         CHANNELS_MESSAGES,
                         CONNECTION_SECRETS_MESSAGES,
                         CONNECTIONS_MESSAGES,
@@ -207,9 +321,28 @@ export class AppModule {
                 ErrorsModule.register({
                     isGlobal: true,
                     kinds: [
+                        AGENT_CONNECTIONS_ERROR_KINDS,
+                        AGENT_TOOLS_ERROR_KINDS,
+                        AGENTS_ERROR_KINDS,
+                        AI_GENERATIONS_ERROR_KINDS,
+                        API_KEYS_ERROR_KINDS,
+                        AUTHORITY_ERROR_KINDS,
+                        AUTHORITY_RULES_ERROR_KINDS,
+                        DECISIONS_ERROR_KINDS,
+                        DEEPSEEK_ERROR_KINDS,
+                        EXECUTIONS_ERROR_KINDS,
+                        OFFICE_COMMAND_CANDIDATES_ERROR_KINDS,
+                        OPENCLAW_AGENT_SYNC_ERROR_KINDS,
+                        OPENCLAW_ERROR_KINDS,
+                        RESPONSIBILITIES_ERROR_KINDS,
+                        WORK_ITEMS_ERROR_KINDS,
                         AGENT_CONVERSATIONS_ERROR_KINDS,
                         AGENT_MESSAGES_ERROR_KINDS,
                         API_KEYS_ERROR_KINDS,
+                        BILLING_ERROR_KINDS,
+                        CREDITS_ERROR_KINDS,
+                        INBOUND_EVENTS_ERROR_KINDS,
+                        PAYMENT_ORDERS_ERROR_KINDS,
                         CHANNELS_ERROR_KINDS,
                         CONNECTION_SECRETS_ERROR_KINDS,
                         CONNECTIONS_ERROR_KINDS,
@@ -236,7 +369,6 @@ export class AppModule {
                         LOYALTY_LEDGER_ERROR_KINDS,
                         LOYALTY_OTPS_ERROR_KINDS,
                         LEADS_ERROR_KINDS,
-                        RESPONSIBILITIES_ERROR_KINDS,
                         CONTRACTS_ERROR_KINDS,
                         WORKSPACE_INVITES_ERROR_KINDS,
                         WORKSPACE_MEMBERS_ERROR_KINDS,
@@ -260,6 +392,7 @@ export class AppModule {
                 QueueModule.register({
                     isGlobal: true,
                     schedulers: [
+                        AGENTS_SYNC_SCHEDULER,
                         { queue: CONTENT_TICK_QUEUE, id: CONTENT_TICK_SCHEDULER, everyMs: CONTENT_TICK_EVERY_MS },
                         CONNECTION_HEALTH_SCHEDULER,
                         ZALO_REFRESH_SCHEDULER,
@@ -275,8 +408,8 @@ export class AppModule {
                 IdentityModule.register({ isGlobal: true, verifyAccessToken }),
                 ContractsModule.register({ isGlobal: true }),
                 LeadsModule.register({ isGlobal: true }),
-                MessagesModule.register({ isGlobal: true }),
-                ResponsibilitiesModule.register({ isGlobal: true }),
+                MessagesModule.register({ isGlobal: true, agentDirectory: AgentsService }),
+                ResponsibilitiesModule.register({ isGlobal: true, agentDirectory: AgentsService }),
                 EventsModule.register({ isGlobal: true }),
                 WorkspaceMembersModule.register({ isGlobal: true, accounts: SUPABASE_AUTH }),
                 WorkspacesModule.register({ isGlobal: true, ...options.workspaces }),
@@ -327,10 +460,71 @@ export class AppModule {
                 AiQuotaOverridesModule.register({ isGlobal: true }),
                 PlatformAdminModule.register({ isGlobal: true, ...options.platformAdmin }),
                 AuthorityActionsModule.register({ isGlobal: true }),
+                OpenclawModule.register({ isGlobal: true, ...options.openclaw }),
+                DeepseekModule.register({ isGlobal: true, ...options.deepseek, generator: TextGeneratorService }),
+                AgentsModule.register({
+                    isGlobal: true,
+                    ports: {
+                        installations: UnboundInstallationsService,
+                        knowledge: UnboundKnowledgeLensService,
+                        modules: UnboundModuleProfilesService,
+                    },
+                    syncFreshMs: AGENTS_SYNC_FRESH_MS,
+                }),
+                AgentConnectionsModule.register({ isGlobal: true }),
+                AiGenerationsModule.register({
+                    isGlobal: true,
+                    usage: UnboundUsageGateService,
+                    pollMs: AI_GENERATIONS_POLL_MS,
+                }),
+                OpenclawAgentSyncModule.register({ isGlobal: true, reloadSettleMs: OPENCLAW_RELOAD_SETTLE_MS }),
+                AgentToolsModule.register({
+                    isGlobal: true,
+                    ports: {
+                        knowledgeSearch: UnboundKnowledgeSearchService,
+                        leadWriter: UnboundLeadWriterService,
+                        bookingTools: UnboundBookingToolsService,
+                        approvalRequester: ApprovalRequesterService,
+                        handoffTool: UnboundHandoffToolService,
+                        conversationLeads: UnboundConversationLeadsService,
+                        toolTokens: ToolTokenService,
+                    },
+                }),
+                DecisionsModule.register({
+                    isGlobal: true,
+                    ports: {
+                        agentDirectory: AgentsService,
+                        inboundEventStatus: UnboundInboundEventStatusService,
+                        decisionEvents: UnboundDecisionEventsService,
+                        paymentReceipts: UnboundPaymentReceiptsService,
+                        leadGenFlow: UnboundLeadGenFlowService,
+                        outboundAccessGate: UnboundOutboundAccessGateService,
+                    },
+                }),
+                OfficeCommandCandidatesModule.register({ isGlobal: true, reader: DeepseekClient }),
+                SyncAgentsQueueModule,
+                GenerateWithAgentQueueModule,
+                RunDecisionsQueueModule,
+                AgentsHttpModule,
+                AgentToolsHttpModule,
+                DecisionsHttpModule,
+                OfficeHttpModule,
                 ModulesModule.register({ isGlobal: true, categories: MODULE_CATEGORIES, catalog: MODULE_CATALOG }),
                 ModulesHttpModule,
                 ApiKeysModule.register({ isGlobal: true }),
                 PublicApiModule.register({ isGlobal: true }),
+                PaymentOrdersModule.register({ isGlobal: true }),
+                BillingModule.register({ isGlobal: true, ...options.billing }),
+                SepayTransactionsModule.register({ isGlobal: true }),
+                AiUsageEventsModule.register({ isGlobal: true }),
+                CreditsModule.register({ isGlobal: true }),
+                PaymentOrderRequestsModule.register({ isGlobal: true }),
+                ReconcileBankCreditQueueModule,
+                CreatePaymentOrderQueueModule,
+                CassoHttpModule,
+                PayosHttpModule,
+                SepayHttpModule,
+                VietcombankHttpModule,
                 TelegramHttpModule,
                 ZaloHttpModule,
                 RunChatTurnQueueModule,

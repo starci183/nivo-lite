@@ -5,6 +5,7 @@ import type { DynamicModule } from "@nestjs/common"
 import { CliModule } from "@features/cli"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import { WorkspacesModule } from "@modules/domain/workspaces"
+import { SepaySimulationModule } from "@modules/domain/sepay-simulation"
 import { SeedSecretsFileClient, WorkspaceSeedModule } from "@modules/domain/workspace-seed"
 import { SUPABASE_ACCOUNTS, SUPABASE_AUTH, SupabaseModule } from "@modules/integrations/supabase"
 import { AuthorityActionsModule } from "@modules/domain/authority-actions"
@@ -41,6 +42,7 @@ export class AppModule {
                     print: (line) => process.stdout.write(`${line}\n`),
                 }),
                 AuthorityActionsModule.register({ isGlobal: true }),
+                SepaySimulationModule.register({ isGlobal: true, ...options.sepaySimulation }),
                 ModulesModule.register({ isGlobal: true, categories: MODULE_CATEGORIES, catalog: MODULE_CATALOG }),
                 CliModule,
             ],

@@ -95,6 +95,13 @@ export type {
     SupplierInput,
     TransferInput,
 } from "./inventory-commands"
+    DeciderKind,
+    DecisionFilter,
+    DecisionKind,
+    DecisionOutcome,
+    DecisionRecord,
+    GateReason,
+} from "./decisions"
 export type {
     AttentionKind,
     AttentionRow,

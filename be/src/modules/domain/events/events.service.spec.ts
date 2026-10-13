@@ -27,6 +27,33 @@ describe("EventsService", () => {
                 "an@example.test",
                 null,
                 null,
+                null,
+            ])
+        })
+
+        it("carries the customer, the work item and the raw evidence when given", async () => {
+            const em = mockEntityManager({ query: [INSERT_EVENT, []] })
+
+            await (
+                await build(em)
+            ).record({
+                workspaceId: "ws-1",
+                kind: "work.asked",
+                actor: "Sales",
+                summary: "ask",
+                leadId: "lead-1",
+                workItemId: "work-1",
+                evidence: "raw",
+            })
+
+            expect(em.query).toHaveBeenCalledWith(INSERT_EVENT, [
+                "ws-1",
+                "work.asked",
+                "Sales",
+                "ask",
+                "lead-1",
+                "work-1",
+                "raw",
             ])
         })
 
@@ -54,6 +81,7 @@ describe("EventsService", () => {
                 "Linh",
                 "Stage",
                 "lead-1",
+                null,
                 "Sent",
             ])
             expect(em.query).not.toHaveBeenCalled()

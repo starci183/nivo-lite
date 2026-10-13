@@ -17,8 +17,6 @@ const PUBLIC_PATHS = [
     "/invite",
     "/api/telegram",
     "/api/connections",
-    "/api/bank",
-    "/api/sepay",
     "/api/engine",
     "/api/v1",
     "/api/automation",

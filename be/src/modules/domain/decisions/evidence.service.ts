@@ -1,0 +1,49 @@
+import { Injectable } from "@nestjs/common"
+import type { EntityManager } from "typeorm"
+import { EventsService } from "@modules/domain/events"
+import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import type { DecisionEntry, EvidenceEntry, WorkContext } from "./decisions.contracts"
+import { INSERT_DECISION } from "./persistence/decision-log.sql"
+
+const jsonOrNull = (value: object | null | undefined): string | null =>
+    value === null || value === undefined ? null : JSON.stringify(value)
+
+@Injectable()
+/** The two append-only logs: the evidence log of what happened and the decision log of who decided what. */
+export class EvidenceService {
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly events: EventsService,
+    ) {}
+
+    /** Appends one line to the workspace's evidence log; the events capability is its only writer. */
+    async log(ctx: WorkContext, entry: EvidenceEntry): Promise<void> {
+        await this.events.record({
+            workspaceId: ctx.workspaceId,
+            kind: entry.kind,
+            actor: entry.actor,
+            summary: entry.summary,
+            leadId: entry.lead_id ?? null,
+            workItemId: entry.work_item_id ?? null,
+            evidence: entry.evidence ?? null,
+        })
+    }
+
+    /** Appends one line to the decision log: who decided, how (policy or person), the outcome and why. */
+    async decide(ctx: WorkContext, entry: DecisionEntry): Promise<void> {
+        await this.entityManager.query(INSERT_DECISION, [
+            ctx.workspaceId,
+            entry.work_item_id,
+            entry.lead_id,
+            entry.department,
+            entry.action,
+            entry.decided_by,
+            entry.decider_kind,
+            entry.outcome,
+            entry.reason ?? null,
+            entry.note ?? null,
+            jsonOrNull(entry.before),
+            jsonOrNull(entry.after),
+        ])
+    }
+}

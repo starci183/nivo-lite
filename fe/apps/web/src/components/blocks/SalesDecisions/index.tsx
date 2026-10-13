@@ -2,7 +2,7 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { useEffect, useState, useTransition } from "react"
-import { splitBasis } from "@/features/decisions/format"
+import { splitBasis } from "@/hooks/decisions"
 import { canDecideItem, useMember } from "@/hooks/member"
 import { ageParts, decisionAnchor, isStale, KNOWN_FIELDS, OUTCOME_TONES } from "@/hooks/sales"
 import { EMPTY_TYPED, editsOf, fieldKey } from "@/hooks/salesdecisions"
