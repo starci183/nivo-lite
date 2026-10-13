@@ -222,3 +222,23 @@ export type {
     IdeaDecision,
     DocumentVisibility,
 } from "./knowledge"
+export type {
+    ShiftsAvailRowView,
+    ShiftsAvailView,
+    ShiftsBenchView,
+    ShiftsBlockView,
+    ShiftsFiguresView,
+    ShiftsLeaveRowView,
+    ShiftsLeaveSpanView,
+    ShiftsMineView,
+    ShiftsPositionView,
+    ShiftsScheduleView,
+    ShiftsSegView,
+    ShiftsSettingsView,
+    ShiftsSetupView,
+    ShiftsShiftView,
+    ShiftsStaffView,
+    ShiftsSwapRowView,
+    ShiftsWeekView,
+    ShiftsWorkItemView,
+} from "./shifts"

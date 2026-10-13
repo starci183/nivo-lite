@@ -1,0 +1,165 @@
+"use client"
+
+import { useTranslations } from "next-intl"
+import { useState } from "react"
+import { useShiftsFormat } from "@/hooks/shifts"
+import { useShiftsRequestCommands } from "@/hooks/shiftsCommands"
+import type { ShiftsBenchView, ShiftsWorkItemView } from "@/modules/types"
+import { ShiftsRequestsBase } from "./component"
+import type { RequestRowView, RequestSectionView } from "./component"
+
+/** The bench whose requests are listed. */
+interface ShiftsRequestsProps {
+    readonly bench: ShiftsBenchView
+}
+
+const RECENT_LIMIT = 8
+
+/** The leave, swap and availability requests of the staff with approve and decline, through the back end GraphQL API. */
+export const ShiftsRequests = (props: ShiftsRequestsProps) => {
+    const t = useTranslations("shifts")
+    const format = useShiftsFormat()
+    const commands = useShiftsRequestCommands()
+    const [busy, setBusy] = useState(false)
+    const { staff } = props.bench.setup
+    const { leaves, swaps, availability } = props.bench.requests
+    const name = (id: string | null): string => staff.find((person) => person.id === id)?.name ?? "-"
+    const span = (from: string, to: string): string =>
+        to === from ? format.dayMonth(from) : `${format.dayMonth(from)} - ${format.dayMonth(to)}`
+    const statusOf = (status: string, item: ShiftsWorkItemView | null): Pick<RequestRowView, "tone" | "badge"> => {
+        if (status === "approved")
+            return { tone: "success", badge: t(item?.decidedPath === "auto" ? "stAuto" : "stApproved") }
+        if (status === "declined") return { tone: "neutral", badge: t("stDeclined") }
+        return { tone: "warning", badge: t(item?.status === "waiting_decision" ? "stWaiting" : "stPending") }
+    }
+    const itemRow = (
+        id: string,
+        title: string,
+        notes: ReadonlyArray<string>,
+        status: string,
+        item: ShiftsWorkItemView | null,
+    ): RequestRowView => ({
+        id,
+        title,
+        notes: notes.filter((note) => note !== ""),
+        ...statusOf(status, item),
+        decision: item?.status === "waiting_decision" ? { kind: "item", targetId: item.id } : null,
+    })
+    const leaveTitle = (from: string, to: string, staffId: string): string =>
+        `${name(staffId)}: ${format.dayFull(from)}${to === from ? "" : ` - ${format.dayMonth(to)}`}`
+    const swapTitle = (kind: string, from: string | null, to: string, shiftLine: string): string =>
+        kind === "claim"
+            ? t("claimLine", { name: name(to), shift: shiftLine })
+            : t("swapLine", { from: name(from), to: name(to), shift: shiftLine })
+
+    const sections: Array<RequestSectionView> = [
+        {
+            id: "leave",
+            title: t("reqLeave"),
+            hint: t("reqLeaveHint"),
+            rows: leaves
+                .filter((leave) => leave.status === "pending")
+                .map((leave) =>
+                    itemRow(
+                        leave.id,
+                        leaveTitle(leave.from, leave.to, leave.staffId),
+                        [leave.reason, leave.item?.summary ?? ""],
+                        leave.status,
+                        leave.item,
+                    ),
+                ),
+        },
+        {
+            id: "swap",
+            title: t("reqSwap"),
+            hint: t("reqSwapHint"),
+            rows: swaps
+                .filter((swap) => swap.status === "pending")
+                .map((swap) =>
+                    itemRow(
+                        swap.id,
+                        swapTitle(swap.kind, swap.fromStaffId, swap.toStaffId, swap.shiftLine),
+                        [swap.checks.length > 0 ? `${t("outsideRules")}: ${swap.checks.join(" ")}` : "", swap.reason],
+                        swap.status,
+                        swap.item,
+                    ),
+                ),
+        },
+        {
+            id: "availability",
+            title: t("reqAvail"),
+            hint: t("reqAvailHint"),
+            rows: availability
+                .filter((row) => row.status === "pending")
+                .map((row) => ({
+                    id: row.id,
+                    title: `${name(row.staffId)}: ${t(row.available ? "canWork" : "cannotWork")} ${row.date === null ? format.weekdayName(row.weekday ?? 0, "long") : format.dayMonth(row.date)} ${row.start}-${row.end}`,
+                    notes: row.note === "" ? [] : [row.note],
+                    tone: "warning",
+                    badge: t("stPending"),
+                    decision: { kind: "availability", targetId: row.id },
+                })),
+        },
+    ]
+    const recent = [
+        ...leaves
+            .filter((leave) => leave.status !== "pending")
+            .map((leave) => ({
+                id: leave.id,
+                at: leave.createdAt,
+                title: `${name(leave.staffId)} · ${t("kindLeave")} ${span(leave.from, leave.to)}`,
+                status: leave.status,
+                item: leave.item,
+            })),
+        ...swaps
+            .filter((swap) => swap.status !== "pending")
+            .map((swap) => ({
+                id: swap.id,
+                at: swap.createdAt,
+                title: `${name(swap.toStaffId)} · ${t(swap.kind === "claim" ? "kindClaim" : "kindSwap")} ${swap.shiftLine}`,
+                status: swap.status,
+                item: swap.item,
+            })),
+    ]
+        .sort((a, b) => b.at.localeCompare(a.at))
+        .slice(0, RECENT_LIMIT)
+        .map((entry) => ({
+            id: entry.id,
+            title: entry.title,
+            notes: [],
+            ...statusOf(entry.status, entry.item),
+            decision: null,
+        }))
+    const openSections = sections.filter((section) => section.rows.length > 0)
+
+    const run = async (job: () => Promise<boolean>): Promise<void> => {
+        setBusy(true)
+        await job()
+        setBusy(false)
+    }
+    const decide = (kind: "item" | "availability", targetId: string, approve: boolean): Promise<void> =>
+        run(() =>
+            kind === "item"
+                ? commands.decideItem(targetId, approve ? "approved" : "rejected")
+                : commands.decideAvailability(targetId, approve),
+        )
+
+    return (
+        <ShiftsRequestsBase
+            props={{
+                emptyTitle: t("reqNoneTitle"),
+                emptyBody: t("reqNoneBody"),
+                recentTitle: t("reqRecent"),
+                approveLabel: t("approve"),
+                declineLabel: t("decline"),
+                sections: openSections,
+                recent,
+                isBusy: busy,
+            }}
+            on={{
+                approve: (kind, targetId) => void decide(kind, targetId, true),
+                decline: (kind, targetId) => void decide(kind, targetId, false),
+            }}
+        />
+    )
+}

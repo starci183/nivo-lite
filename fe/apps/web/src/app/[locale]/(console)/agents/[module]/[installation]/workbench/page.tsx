@@ -2,7 +2,7 @@ import { InventoryWorkbenchPage as WorkbenchInventory } from "@/features/pages/I
 import WorkbenchLoyalty from "@/features/module-loyalty"
 import WorkbenchHiring from "@/features/module-hiring"
 import { BookingWorkbenchPage } from "@/features/pages/BookingWorkbenchPage"
-import WorkbenchShifts from "@/features/module-shifts"
+import { ShiftsWorkbenchPage as WorkbenchShifts } from "@/features/pages/ShiftsWorkbenchPage"
 import { AgentWorkbenchPage } from "@/features/pages/AgentWorkbenchPage"
 import type { WorkbenchComponent } from "@/features/pages/AgentWorkbenchPage"
 import WorkbenchContent from "@/features/pages/ContentWorkbenchPage"

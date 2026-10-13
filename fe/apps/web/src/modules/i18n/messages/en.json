@@ -5897,7 +5897,13 @@
     "sendAvail": "Send",
     "availSent": "Sent. The owner will approve it.",
     "mySwaps": "My swap requests",
-    "you": "you"
+    "you": "you",
+    "leaveDone": "Leave approved.",
+    "leaveSent": "Leave request sent, waiting for approval.",
+    "swapDone": "Shift swapped.",
+    "swapSent": "Swap request sent, waiting for approval.",
+    "claimDone": "Shift claimed.",
+    "claimSent": "Claim sent, waiting for approval."
   },
   "slot": {
     "forbidden": "You do not have access to this section.",

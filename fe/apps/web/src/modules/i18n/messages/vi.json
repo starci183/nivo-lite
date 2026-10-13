@@ -5897,7 +5897,13 @@
     "sendAvail": "Gửi",
     "availSent": "Đã gửi. Chủ cửa hàng sẽ duyệt.",
     "mySwaps": "Yêu cầu đổi ca của tôi",
-    "you": "bạn"
+    "you": "bạn",
+    "leaveDone": "Đơn nghỉ đã được duyệt.",
+    "leaveSent": "Đơn xin nghỉ đã gửi, đang chờ chủ duyệt.",
+    "swapDone": "Đã đổi ca.",
+    "swapSent": "Yêu cầu đổi ca đang chờ chủ duyệt.",
+    "claimDone": "Bạn đã nhận ca.",
+    "claimSent": "Đăng ký của bạn đang chờ chủ duyệt."
   },
   "slot": {
     "forbidden": "Bạn chưa có quyền xem phần này.",
