@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { ConnectionsService, randomSecret } from "@modules/domain/connections"
+import { ConnectionsService } from "@modules/domain/connections"
+import { randomSecret } from "@modules/domain/connection-secrets"
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
 import {
     DRIVE_PURPOSE,
@@ -24,7 +25,7 @@ import { isRecord, parseJsonText } from "@modules/platform/primitives"
 import type { Clock } from "@modules/platform/clock"
 import { GoogleConnectionsError, GoogleConnectionsErrorCode } from "./errors/google-connections.error"
 import type {
-    GoogleAccount,
+    GoogleConnectionAccount,
     GoogleAvailability,
     GoogleCallbackInput,
     GoogleCallbackResult,
@@ -107,7 +108,7 @@ export class GoogleConnectionsService {
     }
 
     /** The live Google accounts of the workspace, for an automation account picker (owner or manager). */
-    async accounts(actor: ConnectionActor): Promise<ReadonlyArray<GoogleAccount>> {
+    async accounts(actor: ConnectionActor): Promise<ReadonlyArray<GoogleConnectionAccount>> {
         await this.connections.authorize(actor, MANAGER)
         const rows = await this.connections.listByProvider(actor.workspaceId, "google", { includeDisconnected: false })
         return rows.map((row) => ({ id: row.id, email: row.meta.email ?? "", status: row.status }))

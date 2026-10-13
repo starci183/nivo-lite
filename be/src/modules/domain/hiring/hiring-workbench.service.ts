@@ -43,10 +43,10 @@ import type {
 } from "./persistence/hiring-workbench.rows"
 import { MANAGER_ROLES } from "./policies/access-roles.policy"
 import { toCandidate, toInterview, toJob, toOffer } from "./policies/row-mappers.policy"
-import { addDays, isoOf, isoOrNull, vnInstant, vnParts } from "./policies/vn-time.policy"
+import { addDays, hiringIsoOf, isoOrNull, vnInstant, vnClockParts } from "./policies/vn-time.policy"
 
 const iso = isoOrNull
-const isoS = (value: Date | string): string => isoOf(value)
+const isoS = (value: Date | string): string => hiringIsoOf(value)
 
 /** A week range. */
 interface WeekBounds {
@@ -58,7 +58,7 @@ interface WeekBounds {
 
 /** The Monday-to-Monday bounds of the current week on the Vietnam calendar. */
 const weekBounds = (now: Date): WeekBounds => {
-    const parts = vnParts(now)
+    const parts = vnClockParts(now)
     const back = (parts.weekday + 6) % 7
     const from = vnInstant(parts.year, parts.month, parts.day - back, 0)
     return { from, to: addDays(from, 7) }

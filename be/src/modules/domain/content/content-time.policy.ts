@@ -39,7 +39,7 @@ export const vnParts = (instant: Date): VnParts => {
 }
 
 /** The ISO instant of a Vietnam wall-clock time. */
-export const vnToIso = (y: number, m: number, day: number, h = 0, min = 0): string =>
+export const vnToIso = (y: number, m: number, day: number, h: number = 0, min: number = 0): string =>
     new Date(Date.UTC(y, m - 1, day, h, min) - VN_OFFSET_MS).toISOString()
 
 /** A number as two digits. */

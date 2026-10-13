@@ -1,4 +1,4 @@
-export { randomSecret, safeEqual, sha256 } from "./connection-cipher.policy"
+export { sha256 } from "./connection-cipher.policy"
 export { cleanConnectionName } from "./connection-name.policy"
 export { parseConnectionsConfig } from "./connections.config"
 export type {

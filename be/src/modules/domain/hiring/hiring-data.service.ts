@@ -55,7 +55,7 @@ import type {
     TextRow,
 } from "./persistence/hiring.rows"
 import { toCandidate, toInterview, toJob, toOffer, toSettings } from "./policies/row-mappers.policy"
-import { isoOf } from "./policies/vn-time.policy"
+import { hiringIsoOf } from "./policies/vn-time.policy"
 
 /** Who can interview: an active member and whether they own the workspace. */
 export interface Interviewer {
@@ -189,7 +189,7 @@ export class HiringDataService {
         const rows = await this.entityManager.query<Array<BusyRow>>(SELECT_BUSY, [workspaceId, userId])
         return rows.flatMap((row): Array<Slot> => {
             if (row.status === "confirmed" && row.slot_start !== null && row.slot_end !== null) {
-                return [{ start: isoOf(row.slot_start), end: isoOf(row.slot_end) }]
+                return [{ start: hiringIsoOf(row.slot_start), end: hiringIsoOf(row.slot_end) }]
             }
             return (row.proposed_slots ?? []).map((slot) => ({ start: slot.start, end: slot.end }))
         })

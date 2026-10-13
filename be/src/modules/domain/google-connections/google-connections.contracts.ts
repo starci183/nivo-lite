@@ -1,5 +1,5 @@
 /** One Google account a workspace connected. */
-export interface GoogleAccount {
+export interface GoogleConnectionAccount {
     /** The id of the connection. */
     readonly id: string
     /** The account email, blank when Google never said. */

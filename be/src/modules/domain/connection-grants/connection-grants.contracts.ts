@@ -1,5 +1,5 @@
 import type { ConnectionRecord } from "@modules/domain/connections"
-import type { Access } from "./connection-access.policy"
+import type { Access } from "@modules/domain/agent-connections"
 
 /** One agent wanted on a connection; without a level it keeps its current one (or starts at ask). */
 export interface AgentGrantWish {

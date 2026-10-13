@@ -332,7 +332,7 @@ export const planUser = (input: PlanUserInput): string =>
         .join("\n\n")
 
 /** Parses an object from a model answer that may contain a fence or surrounding prose. */
-export const parseJsonObject = (text: string): Record<string, unknown> | null => {
+export const parseContentJson = (text: string): Record<string, unknown> | null => {
     const parse = (source: string): Record<string, unknown> | null => {
         const outcome = parseObject(source)
         return outcome.kind === "parsed" ? outcome.value : null

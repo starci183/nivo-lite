@@ -18,7 +18,7 @@ import {
     cleanHashtags,
     draftVariants,
     isJsonObject,
-    parseJsonObject,
+    parseContentJson,
     planIdeas,
     trimmedText,
 } from "./content-ai-prompt.policy"
@@ -66,8 +66,8 @@ export class ContentAiCompletionService {
                 }
                 if (state.status !== "done" || state.text === null) return
                 if (
-                    parseJsonObject(state.text) === null &&
-                    (await this.retryUnreadable(state, root, childContext, context, tx))
+                    parseContentJson(state.text) === null &&
+                    (await this.askAgainAfterUnreadable(state, root, childContext, context, tx))
                 )
                     return
                 const states = await Promise.all(
@@ -99,7 +99,7 @@ export class ContentAiCompletionService {
             throw new ContentAiError({ code: ContentAiErrorCode.DraftingBlocked })
     }
 
-    private async retryUnreadable(
+    private async askAgainAfterUnreadable(
         state: GenerationState,
         root: GenerationState,
         child: Record<string, unknown>,
@@ -136,7 +136,7 @@ export class ContentAiCompletionService {
         tx: EntityManager,
     ): Promise<Record<string, unknown>> {
         const state = await this.generations.state(root.workspaceId, idsOf(context)[0] ?? root.id, tx)
-        const parsed = parseJsonObject(state?.text ?? "")
+        const parsed = parseContentJson(state?.text ?? "")
         if (parsed === null) throw new ContentAiError({ code: ContentAiErrorCode.InvalidAnswer })
         await this.requireDrafting(root.workspaceId)
         const itemId = trimmedText(context.itemId)
@@ -232,7 +232,7 @@ export class ContentAiCompletionService {
         const slots = Array.isArray(context.slots) ? context.slots.filter(isPlannedSlot) : []
         const accepted = new Map<number, { title: string; brief: string }>()
         for (const state of states) {
-            const parsed = parseJsonObject(state.text ?? "")
+            const parsed = parseContentJson(state.text ?? "")
             if (parsed === null) throw new ContentAiError({ code: ContentAiErrorCode.InvalidAnswer })
             const child = objectOf(state.input.context)
             const allowed = Array.isArray(child.allowedSlots) ? child.allowedSlots : []

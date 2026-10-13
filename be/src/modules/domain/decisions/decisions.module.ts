@@ -7,6 +7,7 @@ import { AuthorityRulesModule } from "@modules/domain/authority-rules"
 import { MessagesModule } from "@modules/domain/messages"
 import { ResponsibilitiesModule } from "@modules/domain/responsibilities"
 import { WorkItemsModule } from "@modules/domain/work-items"
+import { DecisionsQueueModule } from "@modules/queues/decisions"
 import { DecisionJobsService } from "./decision-jobs.service"
 import { ApprovalRequesterService } from "./approval-requester.service"
 import { CommandBusService } from "./command-bus.service"
@@ -54,7 +55,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
         ]
         return {
             ...base,
-            imports: [...(base.imports ?? []), ...owners],
+            imports: [...(base.imports ?? []), ...owners, DecisionsQueueModule],
             providers: [
                 ...(base.providers ?? []),
                 { provide: WORK_PERFORMER_REGISTRY, useExisting: WorkPerformersService },
@@ -83,6 +84,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
             ],
             exports: [
                 ...owners,
+                DecisionsQueueModule,
                 WORK_PERFORMER_REGISTRY,
                 ApprovalRequesterService,
                 CommandBusService,

@@ -1,11 +1,3 @@
-/** One generated row of public.connection_secrets. */
-export interface ConnectionSecretsRow {
-    /** The sealed credential. */
-    readonly ciphertext: string
-    /** The secret the provider signs its webhooks with. */
-    readonly webhook_secret: string
-}
-
 /** The columns the service reads of a connection. */
 export interface ConnectionSelectRow {
     /** The connection row id every command and grant refers to. */

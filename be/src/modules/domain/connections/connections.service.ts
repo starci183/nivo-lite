@@ -1,11 +1,13 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { ConnectionSecretsService } from "@modules/domain/connection-secrets"
+import { ConnectorInterestService } from "@modules/domain/connector-interest"
+import type { OptionalStoredSecret } from "@modules/domain/connection-secrets"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
-import { decodeChannelKey, decryptSecret, encryptSecret, randomSecret } from "./connection-cipher.policy"
 import { cleanConnectionName } from "./connection-name.policy"
 import { isPlannedConnector } from "./connector-catalog.policy"
 import { publicSiteUrl, webhookUrlFor } from "./connection-url.policy"
@@ -28,7 +30,6 @@ import type {
     OptionalConnectionId,
     OptionalConnectionOwner,
     OptionalConnectionRecord,
-    OptionalConnectionSecret,
     OptionalPublicOrigin,
     OptionalRecordedEvent,
     Provider,
@@ -43,7 +44,6 @@ import { ConnectionsLogEvent } from "./connections.log-events"
 import type { ConnectionsOptions } from "./connections.options"
 import { ConnectionsError, ConnectionsErrorCode } from "./errors/connections.error"
 import type {
-    ConnectionSecretsRow,
     ConnectionSelectRow,
     HealthCandidateRow,
     IntakeConnectionRow,
@@ -53,7 +53,6 @@ import type {
 import {
     APPLY_ZALO_AUTHORIZATION,
     DELETE_CONNECTION,
-    DELETE_SECRET,
     FIND_ACTIVE_MEMBER,
     FIND_CONNECTION,
     FIND_CONNECTION_AGENT_IDS,
@@ -62,10 +61,7 @@ import {
     FIND_CONNECTIONS_BY_IDS,
     FIND_INTAKE_CONNECTION,
     FIND_LIVE_BY_META,
-    FIND_SECRET,
     INSERT_CONNECTION,
-    INSERT_CONNECTOR_INTEREST,
-    INSERT_SECRET,
     LIST_CONNECTIONS,
     LIST_CONNECTIONS_BY_PROVIDER,
     CLAIM_DUE_SYNCS,
@@ -77,13 +73,10 @@ import {
     MARK_SYNCED,
     PATCH_CONNECTION,
     RECORD_EVENT,
-    UPSERT_SECRET,
     SET_DEFAULT_SMTP,
     SET_SYNC_SCHEDULE,
     SETTLE_WIZARD,
 } from "./persistence/connections.sql"
-
-type SecretRow = Pick<ConnectionSecretsRow, "ciphertext" | "webhook_secret">
 
 /** The id every real id sorts after. */
 const NIL_UUID = "00000000-0000-0000-0000-000000000000"
@@ -91,7 +84,6 @@ const NIL_UUID = "00000000-0000-0000-0000-000000000000"
 @Injectable()
 /** The connections of a workspace and their sealed secrets, reached only through the primary EntityManager. */
 export class ConnectionsService {
-    private readonly key: Buffer
     private readonly siteUrl: string | undefined
     private readonly providerUrl: string | undefined
 
@@ -99,10 +91,9 @@ export class ConnectionsService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectConnectionsOptions() options: ConnectionsOptions,
         @InjectLogger() private readonly logger: Logger,
+        private readonly secrets: ConnectionSecretsService,
+        private readonly interest: ConnectorInterestService,
     ) {
-        const key = decodeChannelKey(options.channelTokenKey.reveal())
-        if (key === null) throw new ConnectionsError({ code: ConnectionsErrorCode.KeyInvalid })
-        this.key = key
         this.siteUrl = options.publicSiteUrl
         this.providerUrl = options.publicApiUrl ?? options.publicSiteUrl
     }
@@ -224,7 +215,7 @@ export class ConnectionsService {
             ])
             if (row === undefined) throw new ConnectionsError({ code: ConnectionsErrorCode.NotFound })
             const id = row.id
-            await tx.query(INSERT_SECRET, [id, encryptSecret(this.key, input.secret.plain), input.secret.webhookSecret])
+            await this.secrets.create(id, input.secret.plain, input.secret.webhookSecret, tx)
             return id
         }
         return manager === undefined ? this.entityManager.transaction(write) : write(manager)
@@ -250,11 +241,9 @@ export class ConnectionsService {
     }
 
     /** Opens the stored secret of a connection; null when there is none or it cannot be opened with the current key. */
-    async readSecret(connectionId: string): Promise<OptionalConnectionSecret> {
-        const [row] = await this.entityManager.query<Array<SecretRow>>(FIND_SECRET, [connectionId])
-        if (row === undefined) return null
+    async readSecret(connectionId: string): Promise<OptionalStoredSecret> {
         try {
-            return { plain: decryptSecret(this.key, row.ciphertext), webhookSecret: row.webhook_secret }
+            return await this.secrets.read(connectionId)
         } catch (cause) {
             this.logger.error(ConnectionsLogEvent.SecretUnreadable, cause, { connectionId })
             return null
@@ -262,18 +251,13 @@ export class ConnectionsService {
     }
 
     /** Seals and stores the credential; the webhook secret changes only when one is given (a new row gets a random one). */
-    async writeSecret(connectionId: string, plain: string, webhookSecret?: string): Promise<void> {
-        await this.entityManager.query(UPSERT_SECRET, [
-            connectionId,
-            encryptSecret(this.key, plain),
-            webhookSecret ?? randomSecret(),
-            webhookSecret !== undefined,
-        ])
+    writeSecret(connectionId: string, plain: string, webhookSecret?: string): Promise<void> {
+        return this.secrets.write(connectionId, plain, webhookSecret)
     }
 
     /** Deletes the stored secret of a connection. */
-    async wipeSecret(connectionId: string): Promise<void> {
-        await this.entityManager.query(DELETE_SECRET, [connectionId])
+    wipeSecret(connectionId: string): Promise<void> {
+        return this.secrets.wipe(connectionId)
     }
 
     /** Deletes a connection of the workspace (its secret and bindings go with it); a missing one is a typed not-found. */
@@ -314,7 +298,7 @@ export class ConnectionsService {
         if (!isPlannedConnector(connectorId)) {
             throw new ConnectionsError({ code: ConnectionsErrorCode.ConnectorNotFound, params: { id: connectorId } })
         }
-        await this.entityManager.query(INSERT_CONNECTOR_INTEREST, [actor.workspaceId, connectorId, actor.principalId])
+        await this.interest.note(actor.workspaceId, connectorId, actor.principalId)
     }
 
     /** The connection a delivery arrived on, or a refusal when it is missing, disconnected or of another provider. */

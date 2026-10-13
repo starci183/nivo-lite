@@ -20,13 +20,13 @@ const parseJson = (raw: string): ImapParsedJson => {
     }
 }
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
+const isPlainObject = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
 
 /** Reads the stored credential JSON; throws a plain sentence when it is missing or broken. */
 export const parseCredential = (raw: string): ImapCredential => {
     const { value } = parseJson(raw)
     if (
-        isRecord(value) &&
+        isPlainObject(value) &&
         typeof value.host === "string" &&
         typeof value.user === "string" &&
         typeof value.password === "string" &&
@@ -46,7 +46,7 @@ export const parseCredential = (raw: string): ImapCredential => {
 /** Reads the saved settings from the public meta; a broken one falls back to INBOX and 30 days. */
 export const parseConfig = (meta: Readonly<Record<string, string>>): ImapConfig => {
     const { value } = parseJson(meta.config ?? "{}")
-    if (!isRecord(value)) return { folders: ["INBOX"], sinceDays: DEFAULT_SINCE_DAYS }
+    if (!isPlainObject(value)) return { folders: ["INBOX"], sinceDays: DEFAULT_SINCE_DAYS }
     const folders = Array.isArray(value.folders)
         ? value.folders
               .filter((entry): entry is string => typeof entry === "string" && entry.length > 0 && entry.length <= 200)

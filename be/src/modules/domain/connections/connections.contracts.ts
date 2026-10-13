@@ -124,14 +124,6 @@ export interface ConnectionPatch {
     readonly lastError?: string | null
 }
 
-/** A stored secret opened for use. */
-export interface ConnectionSecret {
-    /** The decrypted credential. */
-    readonly plain: string
-    /** The webhook secret. */
-    readonly webhookSecret: string
-}
-
 /** What a webhook that authenticated an event reports for its connection. */
 export interface ConnectionEvent {
     /** The amount of the event. */
@@ -255,9 +247,6 @@ export type OptionalConnectionRecord = ConnectionRecord | null
 
 /** The connection that owns a public fact; null when no live connection claims it. */
 export type OptionalConnectionOwner = ConnectionOwner | null
-
-/** An opened connection secret; null when none is stored or it cannot be opened with the current key. */
-export type OptionalConnectionSecret = ConnectionSecret | null
 
 /** What recording an event answers; null when the connection does not exist. */
 export type OptionalRecordedEvent = RecordedEvent | null
