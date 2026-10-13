@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
+import { AdminHttpModule } from "@features/api/admin"
 import { ModulesHttpModule } from "@features/api/modules"
 import { ExternalApiHttpModule } from "@features/api/external-api"
 import { SystemHealthHttpModule } from "@features/api/system-health"
@@ -14,7 +15,14 @@ import {
     SupabaseModule,
     createSupabaseAccessTokenVerifier,
 } from "@modules/integrations/supabase"
+import { AiQuotaOverridesModule } from "@modules/domain/ai-quota-overrides"
 import { LivenessModule } from "@modules/domain/liveness"
+import {
+    PLATFORM_ADMIN_ERROR_KINDS,
+    PLATFORM_ADMIN_MESSAGES,
+    PlatformAdminModule,
+} from "@modules/domain/platform-admin"
+import { PlatformAuditModule } from "@modules/domain/platform-audit"
 import { AuthorityActionsModule } from "@modules/domain/authority-actions"
 import {
     MODULE_CATALOG,
@@ -85,6 +93,7 @@ export class AppModule {
                         ERRORS_MESSAGES,
                         HTTP_SECURITY_MESSAGES,
                         IDENTITY_MESSAGES,
+                        PLATFORM_ADMIN_MESSAGES,
                         JOBS_MESSAGES,
                         MODULES_MESSAGES,
                         PUBLIC_API_MESSAGES,
@@ -110,6 +119,7 @@ export class AppModule {
                         JOBS_ERROR_KINDS,
                         QUEUE_ERROR_KINDS,
                         IDENTITY_ERROR_KINDS,
+                        PLATFORM_ADMIN_ERROR_KINDS,
                         MODULES_ERROR_KINDS,
                         PUBLIC_API_ERROR_KINDS,
                         SUPABASE_ERROR_KINDS,
@@ -167,6 +177,9 @@ export class AppModule {
                 PublishContentQueueModule,
                 RendersHttpModule,
                 LivenessModule.register({ isGlobal: true }),
+                PlatformAuditModule.register({ isGlobal: true }),
+                AiQuotaOverridesModule.register({ isGlobal: true }),
+                PlatformAdminModule.register({ isGlobal: true, ...options.platformAdmin }),
                 AuthorityActionsModule.register({ isGlobal: true }),
                 ModulesModule.register({ isGlobal: true, categories: MODULE_CATEGORIES, catalog: MODULE_CATALOG }),
                 ModulesHttpModule,
@@ -175,6 +188,7 @@ export class AppModule {
                 ExternalApiHttpModule,
                 SystemHealthHttpModule,
                 WorkspacesHttpModule,
+                AdminHttpModule,
             ],
             providers: [
                 { provide: SUPABASE_ACCESS_TOKEN_VERIFIER, useValue: verifyAccessToken },
