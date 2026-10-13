@@ -23,6 +23,9 @@ export class ModulesModule extends ConfigurableModuleClass {
     /** Registers the capability once per app with the catalogue the app root names. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
+        if (options.catalogOnly === true) {
+            return { ...base, providers: [...(base.providers ?? []), ModulesService], exports: [ModulesService] }
+        }
         const providers = [
             ModulesService,
             ModuleInstallService,

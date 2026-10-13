@@ -1,6 +1,7 @@
 import { builder, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { AgentsService } from "@modules/domain/agents"
+import { BusinessEventsService } from "@modules/domain/automations"
 import { EvidenceService } from "@modules/domain/decisions"
 import type { Proposal, WorkContext, WorkItem } from "@modules/domain/decisions"
 import { InboundEventsService } from "@modules/domain/inbound-events"
@@ -124,6 +125,7 @@ describe("ConfirmOrderPerformerService", () => {
         const writer = mock<PromptWriter>()
         writer.extractOrder.mockResolvedValue({ items: "2 tea boxes", amount_vnd: 280000, confidence: 0.9 })
         const evidence = mock<EvidenceService>()
+        const events = mock<BusinessEventsService>()
         const moduleRef = await Test.createTestingModule({
             providers: [
                 ConfirmOrderPerformerService,
@@ -135,6 +137,7 @@ describe("ConfirmOrderPerformerService", () => {
                 { provide: ResponsibilityJournalService, useValue: responsibilities },
                 { provide: PROMPT_WRITER, useValue: writer },
                 { provide: EvidenceService, useValue: evidence },
+                { provide: BusinessEventsService, useValue: events },
             ],
         }).compile()
         return {
@@ -146,6 +149,7 @@ describe("ConfirmOrderPerformerService", () => {
             responsibilities,
             writer,
             evidence,
+            events,
         }
     }
 
@@ -211,7 +215,7 @@ describe("ConfirmOrderPerformerService", () => {
         })
 
         it("captures an unnamed sender as a new customer and logs the capture", async () => {
-            const { service, orders, leads, inbound, agents, responsibilities, evidence } = await build()
+            const { service, orders, leads, inbound, agents, responsibilities, evidence, events } = await build()
             inbound.find.mockResolvedValue(eventOf({ sender_name: null, sender_contact: null, amount_vnd: 150000 }))
             agents.agentOfDepartment.mockResolvedValue({ id: "agent-1", name: "Mai" })
             const item = itemOf({
@@ -236,6 +240,7 @@ describe("ConfirmOrderPerformerService", () => {
                 origin: "live",
             })
             expect(responsibilities.ensureFor).toHaveBeenCalledWith(ctx, "lead-2")
+            expect(events.leadCreated).toHaveBeenCalledWith("ws-1", expect.objectContaining({ id: "lead-2" }), "live")
             expect(evidence.log).toHaveBeenCalledWith(ctx, {
                 lead_id: "lead-2",
                 work_item_id: "item-1",
